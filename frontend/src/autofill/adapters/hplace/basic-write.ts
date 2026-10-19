@@ -214,27 +214,48 @@ export async function settleBasicStateDriver(
   ) as HTMLInputElement | undefined;
   if (!selected || signal?.aborted) return false;
   const document = selected.ownerDocument;
-  const controls = basicControls(document);
-  return (Object.keys(basicSpecs) as BasicKey[]).every((childKey) => {
-    const spec = basicSpecs[childKey];
-    if (!("parent" in spec) || spec.parent !== key) return true;
-    const active =
-      key === "militaryStatus"
-        ? spec.target === "noneMilitary"
-          ? selected.value === "03"
-          : ["01", "04"].includes(selected.value)
-        : selected.value === "true";
-    if (!active) return true;
-    const nodes = document.querySelectorAll(`[name="${spec.name}"]`);
-    return (
-      nodes.length === 0 ||
-      controls.some(
-        (c) =>
-          c.key === childKey &&
-          c.elements[0].closest(".subject") === selected.closest(".subject"),
-      )
-    );
-  });
+  const url = document.URL;
+  const expected = basicTarget(key, item.profileValue ?? "");
+  const ready = () => {
+    const controls = basicControls(document);
+    return (Object.keys(basicSpecs) as BasicKey[]).every((childKey) => {
+      const spec = basicSpecs[childKey];
+      if (!("parent" in spec) || spec.parent !== key) return true;
+      const active =
+        key === "militaryStatus"
+          ? spec.target === "noneMilitary"
+            ? selected.value === "03"
+            : ["01", "04"].includes(selected.value)
+          : selected.value === "true";
+      if (!active) return true;
+      const nodes = document.querySelectorAll(`[name="${spec.name}"]`);
+      return (
+        nodes.length === 0 ||
+        controls.some(
+          (c) =>
+            c.key === childKey &&
+            c.elements[0].closest(".subject") === selected.closest(".subject"),
+        )
+      );
+    });
+  };
+  const deadline = Date.now() + 1500;
+  while (true) {
+    if (
+      signal?.aborted ||
+      document.URL !== url ||
+      !ownedBasicControl(handle) ||
+      !item.selected ||
+      item.disabled ||
+      !bindingApproved(key, item) ||
+      basicTarget(key, item.profileValue ?? "") !== expected ||
+      basicValue(handle) !== expected
+    )
+      return false;
+    if (ready()) return true;
+    if (Date.now() >= deadline) return false;
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
 }
 function linkedTargetsOwned(element: Element): boolean {
   const group = element.closest("[data-rel-id]");
