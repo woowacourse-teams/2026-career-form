@@ -2,8 +2,8 @@
 
 > Issue: CF-281
 > Collected: 2026-10-19
-> Approval-Digest: acf6371d55c2272e43692af2e5a7010dc364ddd8162a37b4d7811aeea30b05b8
-> Source-Revision: eac609ea083a39ef9c92217abf4cf36affbca43a
+> Approval-Digest: f2f0727ce2014c09ef0ec6cf3df54c6f4b44d96e4947aa890fa069fa6f457ec8
+> Source-Revision: 25ffdcba6bea7406a704b0499e079867a9893e89
 
 ## generic-category-semantic-matching
 
