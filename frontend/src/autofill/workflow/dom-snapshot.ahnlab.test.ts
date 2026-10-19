@@ -25,7 +25,7 @@ afterEach(() => document.body.replaceChildren());
 function collect(mutate?: () => void) {
   document.body.innerHTML = readFileSync(FIXTURE, "utf8");
   mutate?.();
-  const snapshot = collectFieldsSnapshot(document);
+  const snapshot = collectFieldsSnapshot(document, undefined, { titleNameCues: true });
   const fields = snapshot.request.sections.flatMap((section) => [
     ...section.fields,
     ...(section.items ?? []).flatMap((item) => item.fields),
@@ -112,6 +112,10 @@ describe("AhnLab sanitized application form", () => {
     });
     expect(postalField.semanticContext?.inputMode).toBeUndefined();
     expect(postalField.semanticContext?.autocomplete).toBeUndefined();
+    expect(postalField.semanticContext?.labels).toContainEqual({
+      source: "label",
+      text: "우편번호",
+    });
   });
 
   it("gains a postal display name only after an in-memory aria-label mutation", () => {
