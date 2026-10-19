@@ -21,6 +21,7 @@ function mountWorkflow(
   existing: boolean | "all" = false,
   withAction = true,
   spaced: boolean | "province" = false,
+  liveShape = false,
 ) {
   setHplacePage(
     "https://synthetic.recruiter.im/mrs2/applicant/resume/writeResume",
@@ -55,6 +56,22 @@ function mountWorkflow(
     document.querySelector("span.postCode")!.textContent = "00001";
   }
   if (existing === "all") s.inputs()[2].value = addressExpected.detail;
+  if (liveShape) {
+    const row = s.button.closest('[data-row="address"]')!;
+    row.className = "row in-span no-margin address";
+    const container = document.createElement("div");
+    container.className = "span per85";
+    const inner = document.createElement("div");
+    inner.className = "row";
+    const zip = row.querySelector(".addresszipcode")!;
+    zip.className = "span per100 addresszipcode";
+    zip.append(...s.inputs().slice(1));
+    inner.append(zip);
+    container.append(inner);
+    row.append(container);
+    s.button.className = "btn btn-add";
+    s.inputs()[1].className = s.inputs()[2].className = "text";
+  }
   let detailWrites = 0;
   s.inputs()[2].addEventListener("input", () => detailWrites++);
   const fields = collectFieldsSnapshot(document).request.sections.flatMap(
@@ -87,15 +104,21 @@ function mountWorkflow(
           snapshotId: r.snapshotId,
           mode: "ADAPTER",
           analysisStatus: "COMPLETE",
-          preparationPlans: withAction
-            ? [
-                {
-                  command: "SEARCH_ADDRESS",
-                  actionCandidateId: "staged-address-action",
-                  expectedEffect: "ADDRESS_SELECTED",
-                },
-              ]
-            : [],
+          preparationPlans:
+            withAction &&
+            r.sections.some((s) =>
+              s.actionCandidates.some(
+                (a) => a.domId === "hplace.mrs2.currentAddress.search",
+              ),
+            )
+              ? [
+                  {
+                    command: "SEARCH_ADDRESS",
+                    actionCandidateId: "staged-address-action",
+                    expectedEffect: "ADDRESS_SELECTED",
+                  },
+                ]
+              : [],
         }),
         analyzeFields: async (r) => {
           calls++;
@@ -178,4 +201,17 @@ it("reports all three committed values with an approved province abbreviation", 
   const { s } = mountWorkflow(false, true, "province");
   expect(await screen.findByLabelText("입력 완료 3개")).toBeVisible();
   expect(s.inputs()[1].value).toBe("서울 가상구 가상새봄로 50");
+});
+
+it("starts staged SEARCH_ADDRESS from the exact live btn-add address triplet", async () => {
+  const { s, detailWrites } = mountWorkflow(false, true, false, true);
+  expect(await screen.findByLabelText("입력 완료 3개")).toBeVisible();
+  expect(s.inputs().map((e) => e.value)).toEqual([
+    "00001",
+    addressExpected.address,
+    addressExpected.detail,
+  ]);
+  expect(s.events.filter((e) => e === "open")).toHaveLength(1);
+  expect(s.events).not.toContain("forbidden");
+  expect(detailWrites()).toBe(0);
 });
