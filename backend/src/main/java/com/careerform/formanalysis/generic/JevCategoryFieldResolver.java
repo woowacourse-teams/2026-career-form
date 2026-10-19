@@ -259,7 +259,7 @@ public final class JevCategoryFieldResolver {
                 .filter(key -> !SectionCategories.NONE.equals(SectionCategories.categoryOf(key)))
                 .toList();
         Map<String, String> criteria = new LinkedHashMap<>();
-        keys.forEach(key -> criteria.put(key, "Applicant profile field " + key));
+        keys.forEach(key -> criteria.put(key, GenericProfileSemantics.describe(key)));
         Map<String, Binding> bindings = new LinkedHashMap<>();
         if (keys.containsAll(List.of("personal.personal.koreanFamilyName", "personal.personal.koreanGivenName"))) {
             bindings.put("KOREAN_FULL_NAME", new NameBinding(DerivedRecipe.KOREAN_FULL_NAME));
@@ -290,16 +290,17 @@ public final class JevCategoryFieldResolver {
             context.put("parent", parentContext);
         }
 
+        boolean extended = confirmed && GenericProfileSemantics.extendsVocabulary(category);
         List<Question> questions = new ArrayList<>();
         Map<String, String> assignment = new LinkedHashMap<>();
         for (FieldCandidate field : section.fields()) {
-            assignment.put(field.candidateId(), add(questions, observation(field, -1)));
+            assignment.put(field.candidateId(), add(questions, observation(field, -1, extended)));
         }
         if (section.items() != null) {
             Map<String, List<String>> askedRows = new HashMap<>();
             for (int row = 0; row < section.items().size(); row++) {
                 Item item = section.items().get(row);
-                String fingerprint = fingerprint(item);
+                String fingerprint = fingerprint(item, extended);
                 List<String> asked = askedRows.get(fingerprint);
                 if (asked != null) {
                     for (int index = 0; index < item.fields().size(); index++) {
@@ -309,7 +310,7 @@ public final class JevCategoryFieldResolver {
                 }
                 List<String> ids = new ArrayList<>();
                 for (FieldCandidate field : item.fields()) {
-                    String id = add(questions, observation(field, row));
+                    String id = add(questions, observation(field, row, extended));
                     ids.add(id);
                     assignment.put(field.candidateId(), id);
                 }
@@ -357,24 +358,24 @@ public final class JevCategoryFieldResolver {
     }
 
     /** 행 번호와 후보 id를 뺀 라벨·칸 종류 순서. 같으면 같은 구조의 반복 행으로 본다. */
-    private static String fingerprint(Item item) {
+    private static String fingerprint(Item item, boolean extended) {
         List<String> parts = new ArrayList<>();
         parts.add(String.valueOf(item.itemGroupId()));
         for (FieldCandidate field : item.fields()) {
-            Map<String, Object> observation = observation(field, -1);
+            Map<String, Object> observation = observation(field, -1, extended);
             observation.remove("repeat");
             parts.add(observation.toString());
         }
         return String.join("\u0001", parts);
     }
 
-    private static Map<String, Object> observation(FieldCandidate field, int row) {
+    private static Map<String, Object> observation(FieldCandidate field, int row, boolean extended) {
         Map<String, Object> result = new LinkedHashMap<>();
         if (row >= 0) {
             result.put("rowIndex", row);
         }
-        text(result, "label", field.displayName());
-        text(result, "placeholder", field.placeholder());
+        put(result, "label", GenericProfileSemantics.project(field.displayName(), extended));
+        put(result, "placeholder", GenericProfileSemantics.project(field.placeholder(), extended));
         result.put("element", field.element());
         result.put("control", field.control());
         result.put("visibility", field.visibility());
@@ -382,21 +383,35 @@ public final class JevCategoryFieldResolver {
         if (context != null) {
             if (context.labels() != null) {
                 List<String> labels = context.labels().stream()
-                    .map(label -> ProviderSemanticSanitizer.sanitize(label.text()))
+                    .map(label -> GenericProfileSemantics.project(label.text(), extended))
                     .filter(Objects::nonNull).distinct().toList();
                 if (!labels.isEmpty()) {
                     result.put("labels", labels);
+                    result.put("labelSources", context.labels().stream()
+                        .filter(label -> GenericProfileSemantics.project(label.text(), extended) != null)
+                        .map(GenericFieldsRequest.SemanticLabel::source).distinct().toList());
                 }
             }
             if (context.inputType() != null) {
                 result.put("inputType", context.inputType());
             }
+            if (context.inputMode() != null) {
+                result.put("inputMode", context.inputMode());
+            }
             if (context.autocomplete() != null) {
                 result.put("autocomplete", context.autocomplete());
             }
+            if (context.required() != null) {
+                result.put("required", context.required());
+            }
+            if (context.multiple() != null) {
+                result.put("multiple", context.multiple());
+            }
+            if (context.maxLength() != null) {
+                result.put("maxLength", context.maxLength());
+            }
             if (context.repeat() != null) {
-                result.put("repeat", Map.of("rowIndex", context.repeat().rowIndex(),
-                    "rowCount", context.repeat().rowCount()));
+                result.put("repeat", Map.of("rowIndex", context.repeat().rowIndex()));
             }
         }
         if (field.options() != null) {
@@ -405,6 +420,12 @@ public final class JevCategoryFieldResolver {
                 .filter(Objects::nonNull).distinct().toList());
         }
         return result;
+    }
+
+    private static void put(Map<String, Object> target, String key, String safe) {
+        if (safe != null) {
+            target.put(key, safe);
+        }
     }
 
     private static void text(Map<String, Object> target, String key, String raw) {
