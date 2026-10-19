@@ -34,7 +34,7 @@ function collect() {
     ...section.fields,
     ...(section.items ?? []).flatMap((item) => item.fields),
   ]);
-  const fieldFor = (element: HTMLInputElement) => fields.find((field) => {
+  const fieldFor = (element: HTMLInputElement | HTMLSelectElement) => fields.find((field) => {
     const lookup = snapshot.registry.lookupField(field.candidateId);
     return "handle" in lookup && lookup.handle.elements.includes(element);
   })!;
@@ -121,4 +121,33 @@ it("preserves the recovered SK birth-date label instead of adding its title", ()
   expect(before).not.toContainEqual({ source: "label", text: "생년월일" });
   input.removeAttribute("title");
   expect(collect().fieldFor(input).semanticContext?.labels).toEqual(before);
+}, 30_000);
+
+it("collects the preserved hidden SK select through title fallback only", () => {
+  load("sk-careers-application-form");
+  const select = document.querySelector<HTMLSelectElement>("#prsMilitarySvcStatus");
+  expect(select).not.toBeNull();
+  if (!select) throw new Error("Missing preserved SK military status select");
+  const hiddenBranch = select.closest(".military-data[hidden]");
+  const question = select.closest(".selectric-container");
+  expect(hiddenBranch).not.toBeNull();
+  expect(question).not.toBeNull();
+  if (!question) throw new Error("Missing preserved SK military status question");
+  // Naming text remains in the original hidden subtree; it is not removed to
+  // manufacture a title-only effective cue.
+  expect(question.querySelector(".select-label")?.textContent).toContain("대상 분류");
+  const originalQuestion = question.outerHTML;
+  expect(select.labels).toHaveLength(0);
+  expect(select.getAttribute("aria-label")).toBeNull();
+  expect(select.getAttribute("aria-labelledby")).toBeNull();
+  expect(select.getAttribute("placeholder")).toBeNull();
+
+  const field = collect().fieldFor(select);
+  expect(field).toBeDefined();
+  expect(field.visibility).toBe("hidden");
+  expect(field.semanticContext?.labels?.filter((label) =>
+    ["label", "aria-label", "aria-labelledby", "placeholder"].includes(label.source),
+  )).toEqual([{ source: "label", text: "대상 분류" }]);
+  expect(question.outerHTML).toBe(originalQuestion);
+  expect(hiddenBranch?.hasAttribute("hidden")).toBe(true);
 }, 30_000);
