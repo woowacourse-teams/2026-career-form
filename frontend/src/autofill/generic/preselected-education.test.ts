@@ -65,11 +65,11 @@ function api(abstain = false) {
   const client = {
     analyzePreparation: vi.fn(async () => { throw new Error("Generic path only"); }),
     analyzeFields: vi.fn(async () => { throw new Error("Generic path only"); }),
-    classifySections: vi.fn(async (request: { snapshotId: string; sections: { sectionId: string }[] }) => ({
+    classifySections: vi.fn(async (request: Parameters<NonNullable<AnalysisApiClient["classifySections"]>>[0]): ReturnType<NonNullable<AnalysisApiClient["classifySections"]>> => ({
       schemaVersion: 1, snapshotId: request.snapshotId, status: "COMPLETE",
       sections: request.sections.map((section) => ({ sectionId: section.sectionId, category: "education", confidence: 1 })),
     })),
-    decideInteractions: vi.fn(async (request: InteractionDecisionRequest) => ({
+    decideInteractions: vi.fn(async (request: InteractionDecisionRequest): ReturnType<NonNullable<AnalysisApiClient["decideInteractions"]>> => ({
       schemaVersion: 2, snapshotId: request.snapshotId, mode: "GENERIC", status: "COMPLETE",
       decisions: request.decisions.map((decision) => {
         const text = { HIGH_SCHOOL: "고등학교", ASSOCIATE: "전문대학", BACHELOR: "대학교", MASTER: "대학원(석사)", DOCTOR: "대학원(박사)" }[decision.targetKind!];
@@ -77,7 +77,7 @@ function api(abstain = false) {
         return { decisionId: decision.decisionId, role: decision.role, selection: candidate ? "SELECTED" : "ABSTAINED", candidateId: candidate ? candidate.candidateId : null };
       }),
     })),
-    analyzeGenericFields: vi.fn(async (request: GenericFieldsRequest) => {
+    analyzeGenericFields: vi.fn(async (request: GenericFieldsRequest): ReturnType<NonNullable<AnalysisApiClient["analyzeGenericFields"]>> => {
       requests.push(request);
       return {
         schemaVersion: 3, snapshotId: request.snapshotId, status: "COMPLETE", diagnostics: { jevCalls: 0, elapsedMs: 0 },
@@ -89,8 +89,8 @@ function api(abstain = false) {
         })),
       };
     }),
-  };
-  return { client: client as unknown as AnalysisApiClient, requests };
+  } satisfies AnalysisApiClient;
+  return { client, requests };
 }
 
 describe("preselected generic education", () => {
