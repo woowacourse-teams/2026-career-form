@@ -18,6 +18,8 @@ public final class HplaceFormFingerprint {
     public static final String EMAIL = "hplace.registration.email";
     public static final String DETAIL_SECTION = "hplace-detail-basic";
     public static final String ENGLISH_NAME = "hplace.detail.englishName";
+    public static final String ENGLISH_GIVEN_FIRST = ENGLISH_NAME + ".givenFirst";
+    public static final String ENGLISH_FAMILY_FIRST = ENGLISH_NAME + ".familyFirst";
     public static final String BIRTHDAY = "hplace.detail.birthday";
     public static final String DETAIL_ADDRESS = "hplace.detail.detailAddress";
     public static final String EMERGENCY_PHONE = "hplace.detail.emergencyPhone";
@@ -27,7 +29,7 @@ public final class HplaceFormFingerprint {
     private static final Set<String> DETAIL_SELECTS = Set.of(
         "hplace.detail.nationality", "hplace.detail.disabilityGrade", "hplace.detail.disabilityType",
         "hplace.detail.militaryRank", "hplace.detail.dischargeType");
-    private static final Set<String> DETAIL_TEXTS = Set.of(ENGLISH_NAME, BIRTHDAY, DETAIL_ADDRESS, EMERGENCY_PHONE,
+    private static final Set<String> DETAIL_TEXTS = Set.of(ENGLISH_NAME, ENGLISH_GIVEN_FIRST, ENGLISH_FAMILY_FIRST, BIRTHDAY, DETAIL_ADDRESS, EMERGENCY_PHONE,
         "hplace.detail.veteranNumber", "hplace.detail.veteranRelation", "hplace.detail.serviceStartDate",
         "hplace.detail.serviceEndDate", "hplace.detail.exemptionReason");
     private static final Set<String> DETAIL_FIELDS = java.util.stream.Stream.of(DETAIL_TEXTS, DETAIL_RADIOS, DETAIL_SELECTS)
@@ -90,7 +92,7 @@ public final class HplaceFormFingerprint {
         Set<String> names = new HashSet<>();
         Set<String> ids = new HashSet<>();
         return section.fields().stream().allMatch(field -> field.domName() != null && allowed.contains(field.domName())
-            && names.add(field.domName()) && ids.add(field.candidateId())
+            && names.add(field.domName().equals(ENGLISH_GIVEN_FIRST) || field.domName().equals(ENGLISH_FAMILY_FIRST) ? ENGLISH_NAME : field.domName()) && ids.add(field.candidateId())
             && field.domName().equals(field.domId())
             && matchesControl(field.domName(), field.element(), field.control())
             && field.visibility() == Visibility.VISIBLE

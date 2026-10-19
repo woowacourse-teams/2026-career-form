@@ -871,6 +871,28 @@
   ],
   "fieldRules": [
     {
+      "structuralName": "hplace.detail.englishName.givenFirst",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DERIVED",
+        "recipe": "ENGLISH_FULL_NAME_GIVEN_FIRST"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.detail.englishName.givenFirst"
+    },
+    {
+      "structuralName": "hplace.detail.englishName.familyFirst",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DERIVED",
+        "recipe": "ENGLISH_FULL_NAME_FAMILY_FIRST"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.detail.englishName.familyFirst"
+    },
+    {
       "structuralName": "hplace.mrs2.basic.chineseName",
       "element": "input",
       "control": "text",

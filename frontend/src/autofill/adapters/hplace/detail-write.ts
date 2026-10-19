@@ -13,7 +13,11 @@ function approved(key: DetailKey, item: ReviewPlanItem): boolean {
     a.interactionStatus === "READY" &&
     a.writePlan?.command === "SET_TEXT" &&
     (key === "englishName"
-      ? b?.type === "DERIVED" && b.recipe === "ENGLISH_FULL_NAME_GIVEN_FIRST"
+      ? b?.type === "DERIVED" &&
+        [
+          "ENGLISH_FULL_NAME_GIVEN_FIRST",
+          "ENGLISH_FULL_NAME_FAMILY_FIRST",
+        ].includes(b.recipe)
       : b?.type === "DIRECT" &&
         b.profileFieldKey ===
           (
@@ -79,6 +83,12 @@ export async function writeDetail(
     item.candidateId === handle.candidateId &&
     item.analysis?.candidateId === handle.candidateId &&
     approved(key, item) &&
+    (key !== "englishName" ||
+      (item.analysis?.valueBinding?.type === "DERIVED" &&
+        item.analysis.valueBinding.recipe ===
+          (handle.candidate.domName?.endsWith(".familyFirst")
+            ? "ENGLISH_FULL_NAME_FAMILY_FIRST"
+            : "ENGLISH_FULL_NAME_GIVEN_FIRST"))) &&
     ownedDetailControl(handle)?.input === input &&
     (key !== "detailAddress" ||
       detailAddressMatches(handle, expectedAddress)) &&

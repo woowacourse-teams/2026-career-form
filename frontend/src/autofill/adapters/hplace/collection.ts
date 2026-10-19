@@ -1,3 +1,4 @@
+import { englishNameDomName } from "./english-name";
 import {
   basicControls,
   basicName,
@@ -133,8 +134,10 @@ function collectDetailFields(
     const reason = registrationBlockReason([input]);
     const candidate = {
       candidateId: `field-${index + 1}`,
-      domId: detailNames[key],
-      domName: detailNames[key],
+      domId:
+        key === "englishName" ? englishNameDomName(input) : detailNames[key],
+      domName:
+        key === "englishName" ? englishNameDomName(input) : detailNames[key],
       element: "input" as const,
       control: "text" as const,
       displayName: {
@@ -158,7 +161,10 @@ function collectDetailFields(
         elements: [input],
         optionElements: new Map(),
         signature: createStructuralSignature([input]),
-        isCurrentContext: () => detailControls(document)?.[key] === input,
+        isCurrentContext: () =>
+          detailControls(document)?.[key] === input &&
+          (key !== "englishName" ||
+            candidate.domName === englishNameDomName(input)),
       },
       reason,
     );

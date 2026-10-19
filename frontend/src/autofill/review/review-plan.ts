@@ -322,7 +322,10 @@ function itemForAnalysis(
     return unavailableItem(
       analysis.candidateId,
       fieldLabel,
-      "연결할 프로필 항목이 없습니다.",
+      "handle" in local &&
+        local.handle.candidate.domName === "hplace.detail.englishName"
+        ? "영문 이름 순서 안내 없음"
+        : "연결할 프로필 항목이 없습니다.",
     );
   }
   if (analysis.interactionStatus !== "READY" || !analysis.writePlan) {

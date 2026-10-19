@@ -1,3 +1,4 @@
+import { englishNameDomName } from "./english-name";
 import { isHplaceDocument } from "./fingerprint";
 import type { FieldCandidateHandle } from "../../dom/types";
 export const detailSectionId = "hplace-detail-basic";
@@ -109,8 +110,11 @@ export function ownedDetailControl(
 ): { key: DetailKey; input: HTMLInputElement } | undefined {
   const key = (Object.keys(detailNames) as DetailKey[]).find(
     (k) =>
-      handle.candidate.domName === detailNames[k] &&
-      handle.candidate.domId === detailNames[k],
+      handle.candidate.domName ===
+        (k === "englishName" && handle.elements[0] instanceof HTMLInputElement
+          ? englishNameDomName(handle.elements[0])
+          : detailNames[k]) &&
+      handle.candidate.domId === handle.candidate.domName,
   );
   const input = handle.elements[0];
   if (
