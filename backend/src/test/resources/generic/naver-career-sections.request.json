@@ -1,0 +1,422 @@
+{
+  "schemaVersion": 2,
+  "snapshotId": "naver-step2-sanitized",
+  "site": {
+    "host": "example.test",
+    "pathPattern": "/apply"
+  },
+  "sections": [
+    {
+      "sectionId": "sec-career",
+      "displayName": "경력사항",
+      "category": "CAREER",
+      "fields": [],
+      "items": [
+        {
+          "itemId": "career-0",
+          "itemGroupId": "career",
+          "fields": [
+            {
+              "candidateId": "nv-career-corp-0",
+              "element": "input",
+              "control": "text",
+              "visibility": "visible",
+              "displayName": "회사명",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "회사명"
+                  }
+                ],
+                "inputType": "text",
+                "maxLength": 100,
+                "repeat": {
+                  "groupId": "career",
+                  "rowIndex": 0,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "nv-career-dept-0",
+              "element": "input",
+              "control": "text",
+              "visibility": "visible",
+              "displayName": "부서명",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "부서명"
+                  }
+                ],
+                "inputType": "text",
+                "maxLength": 100,
+                "repeat": {
+                  "groupId": "career",
+                  "rowIndex": 0,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "nv-career-job-0",
+              "element": "input",
+              "control": "text",
+              "visibility": "visible",
+              "displayName": "업무내용(요약)",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "placeholder",
+                    "text": "업무내용(요약)"
+                  }
+                ],
+                "inputType": "text",
+                "maxLength": 30,
+                "repeat": {
+                  "groupId": "career",
+                  "rowIndex": 0,
+                  "rowCount": 2
+                }
+              }
+            }
+          ]
+        },
+        {
+          "itemId": "career-1",
+          "itemGroupId": "career",
+          "fields": [
+            {
+              "candidateId": "nv-career-corp-1",
+              "element": "input",
+              "control": "text",
+              "visibility": "visible",
+              "displayName": "회사명",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "회사명"
+                  }
+                ],
+                "inputType": "text",
+                "maxLength": 100,
+                "repeat": {
+                  "groupId": "career",
+                  "rowIndex": 1,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "nv-career-dept-1",
+              "element": "input",
+              "control": "text",
+              "visibility": "visible",
+              "displayName": "부서명",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "부서명"
+                  }
+                ],
+                "inputType": "text",
+                "maxLength": 100,
+                "repeat": {
+                  "groupId": "career",
+                  "rowIndex": 1,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "nv-career-job-1",
+              "element": "input",
+              "control": "text",
+              "visibility": "visible",
+              "displayName": "업무내용(요약)",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "placeholder",
+                    "text": "업무내용(요약)"
+                  }
+                ],
+                "inputType": "text",
+                "maxLength": 30,
+                "repeat": {
+                  "groupId": "career",
+                  "rowIndex": 1,
+                  "rowCount": 2
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sectionId": "sec-cert",
+      "displayName": "자격사항",
+      "category": "CERTIFICATE",
+      "fields": [],
+      "items": [
+        {
+          "itemId": "cert-0",
+          "itemGroupId": "cert",
+          "fields": [
+            {
+              "candidateId": "nv-cert-name",
+              "element": "input",
+              "control": "text",
+              "visibility": "visible",
+              "displayName": "자격/면허종류",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "placeholder",
+                    "text": "자격/면허종류"
+                  }
+                ],
+                "inputType": "text",
+                "maxLength": 50,
+                "repeat": {
+                  "groupId": "cert",
+                  "rowIndex": 0,
+                  "rowCount": 1
+                }
+              }
+            },
+            {
+              "candidateId": "nv-cert-popup-search",
+              "element": "input",
+              "control": "text",
+              "visibility": "hidden",
+              "displayName": "자격/면허종류명",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "placeholder",
+                    "text": "자격/면허종류명"
+                  }
+                ],
+                "inputType": "text",
+                "maxLength": 50,
+                "repeat": {
+                  "groupId": "cert",
+                  "rowIndex": 0,
+                  "rowCount": 1
+                }
+              }
+            },
+            {
+              "candidateId": "nv-cert-grade",
+              "element": "select",
+              "control": "select",
+              "visibility": "visible",
+              "displayName": "등급",
+              "options": [
+                {
+                  "optionId": "nv-cert-grade-o0",
+                  "displayName": "등급"
+                },
+                {
+                  "optionId": "nv-cert-grade-o1",
+                  "displayName": "1급"
+                },
+                {
+                  "optionId": "nv-cert-grade-o2",
+                  "displayName": "2급"
+                },
+                {
+                  "optionId": "nv-cert-grade-o3",
+                  "displayName": "3급"
+                },
+                {
+                  "optionId": "nv-cert-grade-o4",
+                  "displayName": "A등급"
+                },
+                {
+                  "optionId": "nv-cert-grade-o5",
+                  "displayName": "B등급"
+                },
+                {
+                  "optionId": "nv-cert-grade-o6",
+                  "displayName": "기타"
+                }
+              ],
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "등급"
+                  }
+                ],
+                "repeat": {
+                  "groupId": "cert",
+                  "rowIndex": 0,
+                  "rowCount": 1
+                }
+              }
+            },
+            {
+              "candidateId": "nv-cert-issuer",
+              "element": "input",
+              "control": "text",
+              "visibility": "visible",
+              "displayName": "발급기관",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "placeholder",
+                    "text": "발급기관"
+                  }
+                ],
+                "inputType": "text",
+                "maxLength": 100,
+                "repeat": {
+                  "groupId": "cert",
+                  "rowIndex": 0,
+                  "rowCount": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sectionId": "sec-lang",
+      "displayName": "어학사항",
+      "category": "LANGUAGE",
+      "fields": [],
+      "items": [
+        {
+          "itemId": "lang-0",
+          "itemGroupId": "lang",
+          "fields": [
+            {
+              "candidateId": "nv-lang-test",
+              "element": "input",
+              "control": "text",
+              "visibility": "visible",
+              "displayName": "시험",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "placeholder",
+                    "text": "시험"
+                  }
+                ],
+                "inputType": "text",
+                "maxLength": 50,
+                "repeat": {
+                  "groupId": "lang",
+                  "rowIndex": 0,
+                  "rowCount": 1
+                }
+              }
+            },
+            {
+              "candidateId": "nv-lang-grade",
+              "element": "select",
+              "control": "select",
+              "visibility": "visible",
+              "displayName": "등급",
+              "options": [
+                {
+                  "optionId": "nv-lang-grade-o0",
+                  "displayName": "등급"
+                },
+                {
+                  "optionId": "nv-lang-grade-o1",
+                  "displayName": "없음"
+                },
+                {
+                  "optionId": "nv-lang-grade-o2",
+                  "displayName": "A"
+                },
+                {
+                  "optionId": "nv-lang-grade-o3",
+                  "displayName": "B"
+                },
+                {
+                  "optionId": "nv-lang-grade-o4",
+                  "displayName": "Novice High"
+                },
+                {
+                  "optionId": "nv-lang-grade-o5",
+                  "displayName": "Novice Mid/Low"
+                },
+                {
+                  "optionId": "nv-lang-grade-o6",
+                  "displayName": "기타"
+                }
+              ],
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "등급"
+                  }
+                ],
+                "repeat": {
+                  "groupId": "lang",
+                  "rowIndex": 0,
+                  "rowCount": 1
+                }
+              }
+            },
+            {
+              "candidateId": "nv-lang-score",
+              "element": "input",
+              "control": "text",
+              "visibility": "visible",
+              "displayName": "점수",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "placeholder",
+                    "text": "점수"
+                  }
+                ],
+                "inputType": "text",
+                "maxLength": 5,
+                "repeat": {
+                  "groupId": "lang",
+                  "rowIndex": 0,
+                  "rowCount": 1
+                }
+              }
+            },
+            {
+              "candidateId": "nv-lang-issuer",
+              "element": "input",
+              "control": "text",
+              "visibility": "visible",
+              "displayName": "발급기관",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "발급기관"
+                  }
+                ],
+                "inputType": "text",
+                "maxLength": 50,
+                "repeat": {
+                  "groupId": "lang",
+                  "rowIndex": 0,
+                  "rowCount": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

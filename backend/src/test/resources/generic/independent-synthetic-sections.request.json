@@ -1,0 +1,260 @@
+{
+  "schemaVersion": 2,
+  "snapshotId": "independent-synthetic-apply",
+  "site": {
+    "host": "synthetic.example.test",
+    "pathPattern": "/apply"
+  },
+  "sections": [
+    {
+      "sectionId": "s-exp",
+      "displayName": "경력",
+      "category": "CAREER",
+      "fields": [
+        {
+          "candidateId": "sy-exp-duty",
+          "element": "textarea",
+          "control": "textarea",
+          "visibility": "visible",
+          "displayName": "담당 업무",
+          "semanticContext": {
+            "labels": [
+              {
+                "source": "label",
+                "text": "담당 업무"
+              }
+            ],
+            "maxLength": 500,
+            "required": true
+          }
+        },
+        {
+          "candidateId": "sy-exp-project",
+          "element": "textarea",
+          "control": "textarea",
+          "visibility": "visible",
+          "displayName": "주요 프로젝트 상세",
+          "semanticContext": {
+            "labels": [
+              {
+                "source": "label",
+                "text": "주요 프로젝트 상세"
+              }
+            ],
+            "maxLength": 800
+          }
+        },
+        {
+          "candidateId": "sy-exp-employer",
+          "element": "input",
+          "control": "text",
+          "visibility": "visible",
+          "displayName": "근무처",
+          "semanticContext": {
+            "labels": [
+              {
+                "source": "label",
+                "text": "근무처"
+              }
+            ],
+            "inputType": "text"
+          }
+        }
+      ],
+      "items": null
+    },
+    {
+      "sectionId": "s-lic",
+      "displayName": "자격증",
+      "category": "CERTIFICATE",
+      "fields": [
+        {
+          "candidateId": "sy-lic-title",
+          "element": "input",
+          "control": "text",
+          "visibility": "visible",
+          "displayName": "자격증명",
+          "semanticContext": {
+            "labels": [
+              {
+                "source": "label",
+                "text": "자격증명"
+              }
+            ],
+            "inputType": "text",
+            "required": true
+          }
+        },
+        {
+          "candidateId": "sy-lic-level",
+          "element": "select",
+          "control": "select",
+          "visibility": "visible",
+          "displayName": "취득 등급",
+          "options": [
+            {
+              "optionId": "sy-lic-level-o0",
+              "displayName": "선택하세요"
+            },
+            {
+              "optionId": "sy-lic-level-o1",
+              "displayName": "1급"
+            },
+            {
+              "optionId": "sy-lic-level-o2",
+              "displayName": "2급"
+            },
+            {
+              "optionId": "sy-lic-level-o3",
+              "displayName": "기능사"
+            },
+            {
+              "optionId": "sy-lic-level-o4",
+              "displayName": "기사"
+            }
+          ],
+          "semanticContext": {
+            "labels": [
+              {
+                "source": "label",
+                "text": "취득 등급"
+              }
+            ]
+          }
+        },
+        {
+          "candidateId": "sy-lic-org",
+          "element": "input",
+          "control": "text",
+          "visibility": "visible",
+          "displayName": "수여 기관",
+          "semanticContext": {
+            "labels": [
+              {
+                "source": "label",
+                "text": "수여 기관"
+              }
+            ],
+            "inputType": "text"
+          }
+        }
+      ],
+      "items": null
+    },
+    {
+      "sectionId": "s-lang",
+      "displayName": "외국어 시험",
+      "category": "LANGUAGE",
+      "fields": [
+        {
+          "candidateId": "sy-lang-exam",
+          "element": "select",
+          "control": "select",
+          "visibility": "visible",
+          "displayName": "어학 시험명",
+          "options": [
+            {
+              "optionId": "sy-lang-exam-o0",
+              "displayName": "선택하세요"
+            },
+            {
+              "optionId": "sy-lang-exam-o1",
+              "displayName": "TOEIC"
+            },
+            {
+              "optionId": "sy-lang-exam-o2",
+              "displayName": "TOEFL"
+            },
+            {
+              "optionId": "sy-lang-exam-o3",
+              "displayName": "OPIc"
+            },
+            {
+              "optionId": "sy-lang-exam-o4",
+              "displayName": "JLPT"
+            }
+          ],
+          "semanticContext": {
+            "labels": [
+              {
+                "source": "label",
+                "text": "어학 시험명"
+              }
+            ]
+          }
+        },
+        {
+          "candidateId": "sy-lang-points",
+          "element": "input",
+          "control": "text",
+          "visibility": "visible",
+          "displayName": "성적",
+          "semanticContext": {
+            "labels": [
+              {
+                "source": "label",
+                "text": "성적"
+              }
+            ],
+            "inputType": "number",
+            "maxLength": 4
+          }
+        },
+        {
+          "candidateId": "sy-lang-level",
+          "element": "select",
+          "control": "select",
+          "visibility": "visible",
+          "displayName": "급수",
+          "options": [
+            {
+              "optionId": "sy-lang-level-o0",
+              "displayName": "선택하세요"
+            },
+            {
+              "optionId": "sy-lang-level-o1",
+              "displayName": "N1"
+            },
+            {
+              "optionId": "sy-lang-level-o2",
+              "displayName": "N2"
+            },
+            {
+              "optionId": "sy-lang-level-o3",
+              "displayName": "IH"
+            },
+            {
+              "optionId": "sy-lang-level-o4",
+              "displayName": "AL"
+            }
+          ],
+          "semanticContext": {
+            "labels": [
+              {
+                "source": "label",
+                "text": "급수"
+              }
+            ]
+          }
+        },
+        {
+          "candidateId": "sy-lang-body",
+          "element": "input",
+          "control": "text",
+          "visibility": "visible",
+          "displayName": "주관 기관",
+          "semanticContext": {
+            "labels": [
+              {
+                "source": "label",
+                "text": "주관 기관"
+              }
+            ],
+            "inputType": "text"
+          }
+        }
+      ],
+      "items": null
+    }
+  ]
+}
