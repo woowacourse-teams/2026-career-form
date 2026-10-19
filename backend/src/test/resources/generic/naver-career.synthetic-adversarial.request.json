@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 2,
+  "snapshotId": "synthetic-adversarial-career-structure",
+  "site": {"host": "example.test", "pathPattern": "/apply"},
+  "sections": [
+    {
+      "sectionId": "sec-career",
+      "displayName": "경력사항",
+      "category": "CAREER",
+      "fields": [],
+      "items": [
+        {
+          "itemId": "career-0",
+          "itemGroupId": "career",
+          "fields": [
+            {
+              "candidateId": "nv-career-corp-0",
+              "element": "input", "control": "text", "visibility": "visible",
+              "displayName": "회사명",
+              "semanticContext": {
+                "labels": [{"source": "label", "text": "회사명"}],
+                "inputType": "text", "maxLength": 100,
+                "repeat": {"groupId": "career", "rowIndex": 0, "rowCount": 2}
+              }
+            },
+            {
+              "candidateId": "nv-career-dept-0",
+              "element": "input", "control": "text", "visibility": "visible",
+              "displayName": "부서명",
+              "semanticContext": {
+                "labels": [{"source": "label", "text": "부서명"}],
+                "inputType": "text", "maxLength": 100,
+                "repeat": {"groupId": "career", "rowIndex": 0, "rowCount": 2}
+              }
+            },
+            {
+              "candidateId": "nv-career-job-0",
+              "element": "input", "control": "text", "visibility": "visible",
+              "displayName": "업무내용(요약)",
+              "semanticContext": {
+                "labels": [{"source": "placeholder", "text": "업무내용(요약)"}],
+                "inputType": "text", "maxLength": 30,
+                "repeat": {"groupId": "career", "rowIndex": 0, "rowCount": 2}
+              }
+            },
+            {
+              "candidateId": "synthetic-project-detail-0",
+              "element": "input", "control": "text", "visibility": "visible",
+              "displayName": "주요 프로젝트 상세",
+              "semanticContext": {
+                "labels": [{"source": "placeholder", "text": "주요 프로젝트 상세"}],
+                "inputType": "text", "maxLength": 30,
+                "repeat": {"groupId": "career", "rowIndex": 0, "rowCount": 2}
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

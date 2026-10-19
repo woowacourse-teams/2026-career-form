@@ -259,13 +259,12 @@ class GenericFieldsResolverTest {
     private static final List<String> FIXTURES =
         List.of("naver-career-sections.request.json", "independent-synthetic-sections.request.json");
 
-    /** 구조 의미가 명확한 칸만 담은 이상적인 JEV 판단. 점수·언어 발급기관·프로젝트 상세·검색 팝업 칸은 일부러 뺀다. */
+    /** 전달 경로 특성화용 판단. 동시 존재하는 점수·등급은 아래 payload 기반 판단에서 함께 기권한다. */
     private static final Map<String, String> IDEAL = Map.ofEntries(
         Map.entry("CAREER|업무내용(요약)", RESPONSIBILITIES), Map.entry("CAREER|담당 업무", RESPONSIBILITIES),
         Map.entry("CERTIFICATE|자격/면허종류", CERTIFICATE_NAME), Map.entry("CERTIFICATE|자격증명", CERTIFICATE_NAME),
         Map.entry("CERTIFICATE|발급기관", CERTIFICATE_ISSUER), Map.entry("CERTIFICATE|수여 기관", CERTIFICATE_ISSUER),
-        Map.entry("LANGUAGE|시험", TEST_NAME), Map.entry("LANGUAGE|어학 시험명", TEST_NAME),
-        Map.entry("LANGUAGE|등급", TEST_GRADE), Map.entry("LANGUAGE|급수", TEST_GRADE));
+        Map.entry("LANGUAGE|시험", TEST_NAME), Map.entry("LANGUAGE|어학 시험명", TEST_NAME));
 
     private static String ideal(String category, String label) {
         return IDEAL.get(category + "|" + label);
@@ -349,8 +348,9 @@ class GenericFieldsResolverTest {
                 assertThat(mapping.categoryConfirmed()).isTrue();
                 assertThat(mapping.reason()).isNull();
             });
+            // 두 원본 모두 별도 점수·등급 칸이 함께 있다. 같은 키의 단독 대상은 별도 ablation 검사에서 확인한다.
             assertThat(expected.values().stream().filter(java.util.Objects::nonNull).distinct().toList())
-                .containsExactlyInAnyOrderElementsOf(TARGET_KEYS);
+                .containsExactlyInAnyOrderElementsOf(TARGET_KEYS.stream().filter(key -> !TEST_GRADE.equals(key)).toList());
         }
     }
 
@@ -493,6 +493,136 @@ class GenericFieldsResolverTest {
         for (var call : http.calls()) {
             var observation = call.state().path("fields").path("field_0");
             assertThat(observation.has("label")).as(call.category()).isEqualTo("CAREER".equals(call.category()));
+        }
+    }
+
+    @Test
+    @DisplayName("두 구조에서 점수만 또는 등급만 물으면 기존 등급·점수 키를 전달한다")
+    void scoreOnlyAndGradeOnlyUseExistingResultKey() {
+        for (String name : FIXTURES) {
+            boolean sourceStructure = name.equals(FIXTURES.getFirst());
+            String scoreId = sourceStructure ? "nv-lang-score" : "sy-lang-points";
+            String gradeId = sourceStructure ? "nv-lang-grade" : "sy-lang-level";
+            for (String omittedId : List.of(scoreId, gradeId)) {
+                var local = new GenericFieldsJevHttp();
+                local.respond(GenericFieldsResolverTest::languageResultReply);
+                var request = languageRequest(fixture(name), omittedId);
+                var resolution = new JevCategoryFieldResolver(GenericFieldsJevHttp.client(local), FIELDS,
+                    CATEGORIES, 1, 5, 10, 8000).resolve(request);
+
+                String targetId = omittedId.equals(scoreId) ? gradeId : scoreId;
+                assertThat(resolution.mappings().get(targetId).profileFieldKey())
+                    .as(name + " " + targetId).isEqualTo(TEST_GRADE);
+                var criteria = local.calls().getFirst().request().path("questions").path("field_0").path("criteria");
+                var resultContract = GenericFieldsJevHttp.JSON.readTree(criteria.path(TEST_GRADE).asString());
+                assertThat(resultContract.path("profileFieldKey").asString()).isEqualTo(TEST_GRADE);
+                List<String> kinds = new ArrayList<>();
+                resultContract.path("acceptedTargetKinds").forEach(kind -> kinds.add(kind.asString()));
+                assertThat(kinds).containsExactlyInAnyOrder("NUMERIC_SCORE", "GRADE");
+                assertThat(local.bodies()).allSatisfy(body -> assertThat(body)
+                    .doesNotContain("rowCount", "profileItemCount", "currentValue"));
+            }
+        }
+    }
+
+    @Test
+    @DisplayName("점수와 등급이 한 기록에 함께 있고 구조로 결정할 수 없으면 둘 다 기권한다")
+    void competingScoreAndGradeTargetsAbstain() {
+        for (String name : FIXTURES) {
+            var local = new GenericFieldsJevHttp();
+            local.respond(GenericFieldsResolverTest::languageResultReply);
+            var resolution = new JevCategoryFieldResolver(GenericFieldsJevHttp.client(local), FIELDS,
+                CATEGORIES, 1, 5, 10, 8000).resolve(languageRequest(fixture(name), null));
+
+            String scoreId = name.equals(FIXTURES.getFirst()) ? "nv-lang-score" : "sy-lang-points";
+            String gradeId = name.equals(FIXTURES.getFirst()) ? "nv-lang-grade" : "sy-lang-level";
+            assertThat(resolution.mappings().get(scoreId).profileFieldKey()).isNull();
+            assertThat(resolution.mappings().get(gradeId).profileFieldKey()).isNull();
+            assertThat(local.calls()).hasSize(1);
+        }
+    }
+
+    /** 원본은 점수와 등급을 함께 가진다. 단독 칸 검사는 반대 칸만 제거한 명시적인 합성 ablation이다. */
+    private static GenericFieldsRequest languageRequest(GenericFieldsRequest source, String omittedId) {
+        var language = source.sections().stream()
+            .filter(section -> "LANGUAGE".equals(section.category())).findFirst().orElseThrow();
+        var candidates = askedCandidates(language).stream()
+            .filter(candidate -> !candidate.candidateId().equals(omittedId)).toList();
+        return new GenericFieldsRequest(2, "synthetic-language-ablation", source.site(),
+            List.of(new GenericFieldsRequest.Section("language", null, language.displayName(),
+                candidates, null, "LANGUAGE")));
+    }
+
+    /** 원본 라벨이나 후보 ID가 아니라 실제 공급자 payload의 구조 계약과 정제 관측만 읽는 모의 판단. */
+    private static GenericFieldsJevHttp.Reply languageResultReply(GenericFieldsJevHttp.Call call) {
+        String description = call.request().path("questions").path(call.questionIds().getFirst())
+            .path("criteria").path(TEST_GRADE).asString();
+        if (!description.startsWith("{")) {
+            return answerAll(call, JevClient.ABSTAIN, 0.9);
+        }
+        var contract = GenericFieldsJevHttp.JSON.readTree(description);
+        Set<String> accepted = new HashSet<>();
+        contract.path("acceptedTargetKinds").forEach(kind -> accepted.add(kind.asString()));
+        Map<String, String> kinds = new java.util.LinkedHashMap<>();
+        for (String id : call.questionIds()) {
+            var observation = call.state().path("fields").path(id);
+            Set<String> terms = new HashSet<>(List.of(observation.path("label").asString().split("; ")));
+            if (terms.stream().anyMatch(Set.of("점수", "성적", "score", "test score")::contains)) {
+                kinds.put(id, "NUMERIC_SCORE");
+            }
+            else if (terms.contains("grade") || terms.contains("grade or level")) {
+                kinds.put(id, "GRADE");
+            }
+        }
+        boolean ambiguous = kinds.containsValue("NUMERIC_SCORE") && kinds.containsValue("GRADE");
+        Map<String, String> choices = new java.util.LinkedHashMap<>();
+        kinds.forEach((id, kind) -> choices.put(id, !ambiguous && accepted.contains(kind) ? TEST_GRADE : null));
+        if (ambiguous) {
+            assertThat(contract.path("multipleTargetPolicy").asString())
+                .isEqualTo("ABSTAIN_IF_UNRESOLVED");
+        }
+        return answers(call, choices, 0.9);
+    }
+
+    @Test
+    @DisplayName("출처 구조의 명시적 합성 변이와 독립 합성 구조에서 업무내용과 프로젝트 상세를 구분한다")
+    void responsibilitiesAndProjectDetailsAreDistinctOnBothStructures() {
+        for (String name : List.of("naver-career.synthetic-adversarial.request.json", FIXTURES.getLast())) {
+            var request = fixture(name);
+            var career = request.sections().stream().filter(section -> "CAREER".equals(section.category()))
+                .findFirst().orElseThrow();
+            assertThat(askedCandidates(career))
+                .as(name + " must include a project-details counterexample")
+                .anyMatch(candidate -> candidate.candidateId().contains("project"));
+            var local = new GenericFieldsJevHttp();
+            local.respond(call -> {
+                Map<String, String> choices = new java.util.LinkedHashMap<>();
+                for (String id : call.questionIds()) {
+                    Set<String> terms = new HashSet<>(List.of(call.state().path("fields").path(id)
+                        .path("label").asString().split("; ")));
+                    choices.put(id, terms.contains("job duties") && !terms.contains("project")
+                        ? RESPONSIBILITIES : null);
+                }
+                return answers(call, choices, 0.9);
+            });
+            var careerOnly = new GenericFieldsRequest(2, request.snapshotId(), request.site(), List.of(career));
+            var resolution = new JevCategoryFieldResolver(GenericFieldsJevHttp.client(local), FIELDS,
+                CATEGORIES, 1, 5, 10, 8000).resolve(careerOnly);
+
+            String dutyId = name.equals(FIXTURES.getLast()) ? "sy-exp-duty" : "nv-career-job-0";
+            assertThat(resolution.mappings().get(dutyId).profileFieldKey()).isEqualTo(RESPONSIBILITIES);
+            var projectIds = request.fieldCandidateIdsInTraversalOrder().stream()
+                .filter(id -> id.contains("project")).toList();
+            assertThat(projectIds).isNotEmpty().allSatisfy(id ->
+                assertThat(resolution.mappings().get(id).profileFieldKey()).isNull());
+            assertThat(local.calls()).allSatisfy(call -> {
+                List<String> observedLabels = new ArrayList<>();
+                call.state().path("fields").forEach(node -> observedLabels.add(node.path("label").asString()));
+                assertThat(observedLabels)
+                    .anyMatch(label -> List.of(label.split("; ")).contains("project"));
+                assertThat(call.criteria(call.questionIds().getFirst()))
+                    .noneMatch(key -> key.startsWith("projects."));
+            });
         }
     }
 

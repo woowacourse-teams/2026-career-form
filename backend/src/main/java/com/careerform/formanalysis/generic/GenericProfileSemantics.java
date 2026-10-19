@@ -31,10 +31,22 @@ final class GenericProfileSemantics {
         new Term("issuing organization", List.of("수여기관", "주관기관", "시행기관", "발행기관", "발급처",
             "issuingorganization", "issuingbody")),
         new Term("exam", List.of("시험", "exam")),
+        new Term("test score", List.of("시험점수", "성적", "점수", "testscore")),
         new Term("grade or level", List.of("급수", "레벨", "level"))
     );
 
     private static final String PLAIN = "Applicant profile field ";
+
+    /** 기존 등급·점수 계약을 공급자와 payload 검사에서 같은 구조로 읽는다. 실제 프로필 값은 담지 않는다. */
+    private static final String LANGUAGE_RESULT_CRITERION = """
+        {
+          "profileFieldKey": "languages.languageTest.grade",
+          "meaning": "The numeric score or grade/level of one language test result.",
+          "acceptedTargetKinds": ["NUMERIC_SCORE", "GRADE"],
+          "multipleTargetPolicy": "ABSTAIN_IF_UNRESOLVED",
+          "abstainWhen": "Separate score and grade controls compete in the same record and structure alone \
+        cannot identify the right target without a profile value. Do not force either target."
+        }""";
 
     /** 값 없이 읽을 수 있는 의미 설명. 목록에 없는 키는 기존 한 줄 설명을 그대로 쓴다. */
     private static final Map<String, String> MEANINGS = Map.of(
@@ -49,11 +61,7 @@ final class GenericProfileSemantics {
             + "or license record. An issuing organization of a language test is not this field.",
         "languages.languageTest.testName",
         ": the name of the language proficiency exam taken (시험, 시험명). "
-            + "Not the language itself, its score, or its grade.",
-        "languages.languageTest.grade",
-        ": the grade or level label of a language test result, only for a grade or level field. "
-            + "A free-text score or points field (점수, 성적) is not this field; choose ABSTAIN when only "
-            + "a numeric score is asked."
+            + "Not the language itself, its score, or its grade."
     );
 
     private GenericProfileSemantics() {
@@ -64,6 +72,9 @@ final class GenericProfileSemantics {
     }
 
     static String describe(String key) {
+        if ("languages.languageTest.grade".equals(key)) {
+            return LANGUAGE_RESULT_CRITERION;
+        }
         return PLAIN + key + MEANINGS.getOrDefault(key, "");
     }
 
