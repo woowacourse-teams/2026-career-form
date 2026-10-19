@@ -305,7 +305,7 @@ export function WorkflowScreens({
             자동 기입에서 제외할 항목이 있는지 확인해 주세요.
           </p>
         )}
-        {reviewTab === "blocked" && blockedItems.length > 0 && (
+        {reviewTab === "blocked" && tiered && (
           <section
             role="tabpanel"
             id={`${reviewTabsId}-blocked-panel`}
@@ -313,6 +313,9 @@ export function WorkflowScreens({
             className={resultStyles.review}
             aria-label="입력 불가 항목"
           >
+            {blockedItems.length === 0 && (
+              <p className={resultStyles.empty}>입력 불가 항목이 없어요.</p>
+            )}
             {blockedItems.map((item) => (
               <article className={resultStyles.row} key={item.candidateId}>
                 <div className={resultStyles.heading} data-has-values="true">

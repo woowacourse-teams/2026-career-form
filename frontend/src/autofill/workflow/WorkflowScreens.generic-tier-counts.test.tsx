@@ -83,6 +83,16 @@ describe("generic review tier counts", () => {
     expect(within(blockedPanel).queryByText(/확인 칸/)).toBeNull();
   });
 
+  it("renders the controlled panel when there are no blocked items", () => {
+    renderReview([...autos, ...reviews]);
+
+    fireEvent.click(screen.getByRole("tab", { name: "입력 불가 0" }));
+
+    expect(
+      screen.getByRole("tabpanel", { name: "입력 불가 0" }),
+    ).toHaveTextContent("입력 불가 항목이 없어요.");
+  });
+
   it("keeps the two tabs and counts for items without a generic grade", () => {
     renderReview([
       base("static-1", "정적 칸 1"),
