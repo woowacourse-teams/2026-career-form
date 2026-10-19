@@ -9,11 +9,16 @@ import static com.careerform.formanalysis.generic.GenericFieldsJevHttp.client;
 import static com.careerform.formanalysis.generic.GenericFieldsJevHttp.request;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
+import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -55,12 +60,140 @@ class GenericDateTextMatchingTest {
 
     private final GenericFieldsJevHttp http = new GenericFieldsJevHttp();
 
+    @Test
+    @DisplayName("fixture와 독립 합성 문서의 실제 분류 응답 범주를 매칭 요청으로 전달하고 전체 경로를 캡처한다")
+    void classificationResponsesDriveMatchingForBothSourceStructures() throws Exception {
+        var fixture = Path.of("../frontend/fixtures/dom-snapshots/ahnlab-write-resume-form/sanitized.html");
+        String synthetic = """
+            <section><h2>인적사항</h2><table><tr>
+              <th><label for="calendar-date">생년월일</label></th>
+              <td><input id="calendar-date" type="text" readonly placeholder="YYYY-MM-DD"></td>
+            </tr></table></section>
+            """;
+        var structures = List.of(
+            sourceStructure(fixture.toString(), Files.readString(fixture), "birthday"),
+            sourceStructure("independent-synthetic-calendar-table", synthetic, "calendar-date"));
+        for (var structure : structures) {
+            for (String providerCategory : List.of("PERSONAL", "MIXED", "ABSTAIN", "EDUCATION")) {
+                int classificationCallIndex = http.calls().size();
+                http.respond(call -> answerAll(call, providerCategory, 0.95));
+                var classificationRequest = new SectionClassificationRequest(1, "synthetic-snapshot",
+                    new SectionClassificationRequest.Site("example.test", "/apply"),
+                    List.of(new SectionClassificationRequest.Section("source-section", null, structure.title(),
+                        List.of(structure.candidate().displayName()),
+                        List.of(SectionClassificationRequest.ControlKind.TEXT), false)));
+                var classification = new SectionClassificationService(
+                    Optional.of(new JevSectionClassifier(client(http), CATEGORIES)),
+                    new FormAnalysisRouter(POLICIES), CATEGORIES).classify(classificationRequest);
+                var returnedSection = classification.sections().getFirst();
+                assertThat(classification.status()).isEqualTo(SectionClassificationResponse.Status.COMPLETE);
+                assertThat(returnedSection.category()).isEqualTo(providerCategory);
+                var classificationCall = http.calls().get(classificationCallIndex);
+                assertThat(classificationCall.questionIds()).containsExactly("section_0");
+                var observedSection = classificationCall.state().path("sections").path("section_0");
+                assertThat(observedSection.path("labels").get(0).asString()).isEqualTo("birth date");
+                assertThat(observedSection.path("controlKinds").get(0).asString()).isEqualTo("text");
+
+                for (String selected : List.of(DATE, "DATE_PART:" + DATE + ":YEAR",
+                    "DATE_PART:" + DATE + ":MONTH", "DATE_PART:" + DATE + ":DAY", "ABSTAIN")) {
+                    boolean excluded = returnedSection.category().equals("EDUCATION");
+                    String providerChoice = excluded ? "ABSTAIN" : selected;
+                    int matchingCallIndex = http.calls().size();
+                    http.respond(call -> answerAll(call, providerChoice, 0.95));
+                    var matchingRequest = new GenericFieldsRequest(2, classification.snapshotId(),
+                        new GenericFieldsRequest.Site("example.test", "/apply"),
+                        List.of(new Section(returnedSection.sectionId(), null, structure.title(),
+                            List.of(structure.candidate()), null, returnedSection.category())), DATE_WRITES);
+                    var result = service().analyze(matchingRequest).fields().getFirst();
+                    var matchingCall = http.calls().get(matchingCallIndex);
+                    var observation = matchingCall.state().path("fields").path("field_0");
+                    assertThat(observation.path("label").asString()).isEqualTo("birth date");
+                    assertThat(observation.path("element").asString()).isEqualTo("input");
+                    assertThat(observation.path("control").asString()).isEqualTo("text");
+                    assertThat(observation.path("visibility").asString()).isEqualTo("visible");
+                    assertThat(matchingRequest.sections().getFirst().category())
+                        .isEqualTo(returnedSection.category());
+                    var criteria = matchingCall.criteria("field_0");
+                    assertThat(criteria.contains(DATE)).isEqualTo(!excluded);
+                    for (String part : PARTS) {
+                        assertThat(criteria.contains("DATE_PART:" + DATE + ":" + part)).isEqualTo(!excluded);
+                    }
+                    if (!excluded && selected.equals(DATE)) {
+                        assertThat(result.profileFieldKey()).isEqualTo(DATE);
+                        assertThat(result.binding()).isNull();
+                        assertThat(result.reason()).isNull();
+                        assertThat(result.interactionStatus().name()).isEqualTo("READY");
+                        assertThat(result.writePlan().command().name())
+                            .isEqualTo(Boolean.TRUE.equals(structure.candidate().readonly())
+                                ? "SELECT_DATE" : "SET_TEXT");
+                    }
+                    else {
+                        assertUnmatched(result);
+                    }
+                    Map<String, Object> trace = new LinkedHashMap<>();
+                    trace.put("source", structure.source());
+                    trace.put("sourceSha256", structure.sha256());
+                    trace.put("projection", "test-only label-for/input-id projection, not the FE collector");
+                    trace.put("visibilityMode", "modeled VISIBLE; no CSS or geometry evaluation");
+                    trace.put("providerMode", "MOCK_HTTP; not live JEV classification or selection");
+                    trace.put("classificationRequest", classificationRequest);
+                    trace.put("classificationProviderRequest", classificationCall.request());
+                    trace.put("classificationMockChoice", providerCategory);
+                    trace.put("classificationResponse", classification);
+                    trace.put("matchingRequest", matchingRequest);
+                    trace.put("matchingProviderRequest", matchingCall.request());
+                    trace.put("requestedChoiceCase", selected);
+                    trace.put("matchingMockChoice", providerChoice);
+                    trace.put("response", result);
+                    Map<String, Object> outcome = new LinkedHashMap<>();
+                    outcome.put("profileFieldKey", result.profileFieldKey());
+                    outcome.put("binding", result.binding());
+                    outcome.put("reason", result.reason());
+                    outcome.put("interactionStatus", result.interactionStatus());
+                    outcome.put("writePlan", result.writePlan());
+                    trace.put("outcome", outcome);
+                    System.out.println("CF280_TRACE " + JSON.writeValueAsString(trace));
+                }
+            }
+        }
+    }
+
+    private record SourceStructure(String source, String sha256, String title, FieldCandidate candidate) {
+    }
+
+    /** Test-only projection of a known sanitized source, not a production DOM collector. */
+    private static SourceStructure sourceStructure(String source, String html, String inputId) throws Exception {
+        var input = Pattern.compile("<input\\b[^>]*\\bid=\"" + Pattern.quote(inputId) + "\"[^>]*>")
+            .matcher(html);
+        assertThat(input.find()).as("source input").isTrue();
+        String tag = input.group();
+        assertThat(tag).contains("type=\"text\"");
+        var label = Pattern.compile("<label\\b[^>]*\\bfor=\"" + Pattern.quote(inputId)
+            + "\"[^>]*>([^<]+)</label>").matcher(html);
+        assertThat(label.find()).as("source label-for association").isTrue();
+        String title = null;
+        var heading = Pattern.compile("<h2\\b[^>]*>([^<]+)</h2>").matcher(html.substring(0, input.start()));
+        while (heading.find()) {
+            title = heading.group(1).trim();
+        }
+        assertThat(title).isNotNull();
+        var placeholder = Pattern.compile("\\bplaceholder=\"([^\"]+)\"").matcher(tag);
+        var candidate = new FieldCandidate("date", FormElement.INPUT, FormControl.TEXT, Visibility.VISIBLE,
+            label.group(1).trim(), null, null, placeholder.find() ? placeholder.group(1) : null,
+            tag.matches("(?s).*\\sdisabled(?:\\s|=|>).*") ? true : null,
+            tag.matches("(?s).*\\sreadonly(?:\\s|=|>).*") ? true : null, null, null,
+            new GenericFieldsRequest.SemanticContext(null, GenericFieldsRequest.InputType.TEXT, null, null,
+                null, null, null, null));
+        String sha256 = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+            .digest(html.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        return new SourceStructure(source, sha256, title, candidate);
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"PERSONAL", "MIXED", "ABSTAIN"})
     @DisplayName("PERSONAL·MIXED·ABSTAIN 섹션의 전체 날짜 TEXT는 DIRECT birthDate와 DATE_PART 3종을 선택지로 받는다")
     void directDateIsOfferedForPersonalMixedAndAbstain(String category) {
         for (FieldCandidate structure : List.of(EDITABLE, READONLY)) {
-            http.calls();
             int before = http.calls().size();
             analyze(category, structure, null);
             var criteria = http.calls().get(before).criteria("field_0");
@@ -72,10 +205,7 @@ class GenericDateTextMatchingTest {
     @Test
     @DisplayName("섹션이 PERSONAL이 아닌 다른 범주로 확정되면 birthDate 자체가 선택지에 없다")
     void directDateIsAbsentWhenAnotherCategoryIsConfirmed() {
-        for (String category : List.of("EDUCATION", "CAREER", "CERTIFICATION")) {
-            if (!CATEGORIES.contains(category)) {
-                continue;
-            }
+        for (String category : List.of("EDUCATION", "CAREER", "CERTIFICATE")) {
             int before = http.calls().size();
             analyze(category, EDITABLE, null);
             var criteria = http.calls().get(before).criteria("field_0");
@@ -171,6 +301,7 @@ class GenericDateTextMatchingTest {
 
     private static void assertUnmatched(GenericFieldsResponse.Field field) {
         assertThat(field.profileFieldKey()).isNull();
+        assertThat(field.reason()).isNull();
         assertThat(JSON.valueToTree(field).has("binding")).isFalse();
         assertThat(field.interactionStatus().name()).isEqualTo("BLOCKED");
         assertThat(field.autofillPolicy()).isNull();
