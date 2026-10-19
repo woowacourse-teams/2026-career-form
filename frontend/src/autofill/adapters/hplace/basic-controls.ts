@@ -276,8 +276,15 @@ export function basicControls(document: Document): BasicControl[] {
             return [];
         }
         for (const e of elements as HTMLInputElement[]) {
-          const label = e.labels?.[0]?.textContent?.trim();
+          const wrapper = e.closest("label");
+          const label =
+            wrapper?.querySelector("span.label")?.textContent?.trim() ??
+            wrapper?.textContent?.trim();
           if (
+            !wrapper ||
+            !Array.from(e.labels ?? []).includes(wrapper) ||
+            wrapper.closest(".subject") !== subject ||
+            wrapper.querySelectorAll("input").length !== 1 ||
             (spec.options as Record<string, string>)[e.value] !== label ||
             options.has(e.value)
           )

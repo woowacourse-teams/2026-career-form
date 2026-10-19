@@ -183,7 +183,7 @@ function collectDetailFields(
               displayName:
                 e instanceof HTMLOptionElement
                   ? e.textContent!.trim()
-                  : (e as HTMLInputElement).labels![0].textContent!.trim(),
+                  : (spec.options as Record<string, string>)[optionId],
             })),
     };
     const handle = {

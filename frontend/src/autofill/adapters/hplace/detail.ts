@@ -56,8 +56,7 @@ export function detailControls(document: Document): DetailControls | undefined {
     !birthday ||
     !detailAddress ||
     englishName.closest(".subject") !== birthday.closest(".subject") ||
-    birthday.dataset.dates !== "birthday:YMD" ||
-    !birthday.classList.contains("date")
+    birthday.dataset.dates !== "birthday:YMD"
   )
     return undefined;
   for (const input of [englishName, birthday]) {

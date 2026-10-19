@@ -144,7 +144,8 @@ export function basicValue(handle: FieldCandidateHandle): string | undefined {
     return selected.length === 0
       ? ""
       : selected.length === 1
-        ? selected[0].labels?.[0]?.textContent?.trim()
+        ? (basicSpecs[control.key] as { options: Record<string, string> })
+            .options[selected[0].value]
         : undefined;
   }
   return input.value;
@@ -312,8 +313,9 @@ export async function writeBasic(
       (e) =>
         (e instanceof HTMLOptionElement
           ? e.textContent?.trim()
-          : (e as HTMLInputElement).labels?.[0]?.textContent?.trim()) ===
-        target,
+          : (spec.options as Record<string, string>)[
+              (e as HTMLInputElement).value
+            ]) === target,
     );
     if (matches.length !== 1) return false;
     chosen = matches[0];
