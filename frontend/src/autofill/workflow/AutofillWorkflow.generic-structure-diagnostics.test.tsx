@@ -1,9 +1,8 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { fixturePolicy } from "../../test/fixtures/execution-policy";
 import { createEmptyProfile, type Profile } from "../../profile/model";
-import type { InteractionDecisionRequest } from "../api/interaction-types";
 import type { AnalysisApiClient } from "../api/types";
 import { setAutofillDebugEnabled } from "../debug/autofill-debug";
 import { AutofillWorkflow } from "./AutofillWorkflow";
@@ -49,8 +48,10 @@ function profileWithCareers(count: number): Profile {
   return profile;
 }
 
-function createClient() {
-  const analyzeGenericFields = vi.fn(async (request) => ({
+function createClient(): AnalysisApiClient {
+  const analyzeGenericFields = vi.fn<
+    NonNullable<AnalysisApiClient["analyzeGenericFields"]>
+  >(async (request) => ({
     schemaVersion: 3 as const,
     snapshotId: request.snapshotId,
     status: "COMPLETE" as const,
@@ -67,30 +68,38 @@ function createClient() {
     ),
   }));
   return {
-    analyzePreparation: vi.fn(async (request: { snapshotId: string }) => ({
-      snapshotId: request.snapshotId,
-      mode: "GENERIC" as const,
-      analysisStatus: "COMPLETE" as const,
-      preparationPlans: [],
-    })),
-    analyzeFields: vi.fn(async (request) => ({
-      snapshotId: request.snapshotId,
-      mode: "GENERIC" as const,
-      analysisStatus: "COMPLETE" as const,
-      fields: [],
-    })),
-    classifySections: vi.fn(async (request) => ({
-      schemaVersion: 1 as const,
-      snapshotId: request.snapshotId,
-      status: "COMPLETE" as const,
-      sections: request.sections.map((section: { sectionId: string }) => ({
-        sectionId: section.sectionId,
-        category: "careers",
-        confidence: 1,
-      })),
-    })),
+    analyzePreparation: vi.fn<AnalysisApiClient["analyzePreparation"]>(
+      async (request) => ({
+        snapshotId: request.snapshotId,
+        mode: "GENERIC" as const,
+        analysisStatus: "COMPLETE" as const,
+        preparationPlans: [],
+      }),
+    ),
+    analyzeFields: vi.fn<AnalysisApiClient["analyzeFields"]>(
+      async (request) => ({
+        snapshotId: request.snapshotId,
+        mode: "GENERIC" as const,
+        analysisStatus: "COMPLETE" as const,
+        fields: [],
+      }),
+    ),
+    classifySections: vi.fn<NonNullable<AnalysisApiClient["classifySections"]>>(
+      async (request) => ({
+        schemaVersion: 1 as const,
+        snapshotId: request.snapshotId,
+        status: "COMPLETE" as const,
+        sections: request.sections.map((section: { sectionId: string }) => ({
+          sectionId: section.sectionId,
+          category: "careers",
+          confidence: 1,
+        })),
+      }),
+    ),
     analyzeGenericFields,
-    decideInteractions: vi.fn(async (request: InteractionDecisionRequest) => ({
+    decideInteractions: vi.fn<
+      NonNullable<AnalysisApiClient["decideInteractions"]>
+    >(async (request) => ({
       schemaVersion: 2 as const,
       snapshotId: request.snapshotId,
       status: "COMPLETE" as const,
@@ -102,11 +111,11 @@ function createClient() {
         candidateId: decision.candidates[0]!.candidateId,
       })),
     })),
-  } as unknown as AnalysisApiClient;
+  };
 }
 
 async function reachResult(client: AnalysisApiClient, profile: Profile) {
-  render(
+  const { container } = render(
     <AutofillWorkflow
       repository={{ load: async () => profile }}
       apiClient={client}
@@ -119,14 +128,14 @@ async function reachResult(client: AnalysisApiClient, profile: Profile) {
   });
   fireEvent.click(proceed);
   await screen.findByRole("heading", { name: "기입 결과" });
+  return container;
 }
 
 describe("generic structure diagnostics on the result screen", () => {
   it("reports not-run for a document with an installed policy", async () => {
     mountPlainForm();
     const client = createClient();
-    (client as { loadExecutionPolicy?: unknown }).loadExecutionPolicy =
-      async () => fixturePolicy("sk");
+    client.loadExecutionPolicy = async () => fixturePolicy("sk");
 
     await reachResult(client, profileWithCareers(0));
 
@@ -146,10 +155,15 @@ describe("generic structure diagnostics on the result screen", () => {
 
   it("lists the rows added by the loop and logs status and counts only", async () => {
     mountCareerForm();
+    const inputSentinel = "SYNTHETIC_INPUT_SENTINEL_274";
+    const profileSentinel = "SYNTHETIC_PROFILE_SENTINEL_274";
+    document.querySelector<HTMLInputElement>("input")!.value = inputSentinel;
+    const profile = profileWithCareers(3);
+    profile.careers[0]!.values.companyName = profileSentinel;
     setAutofillDebugEnabled(true);
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
-    await reachResult(createClient(), profileWithCareers(3));
+    const result = await reachResult(createClient(), profile);
 
     expect(screen.getByText("자동으로 한 일")).toBeVisible();
     expect(screen.getAllByText("행 추가")).toHaveLength(2);
@@ -161,6 +175,10 @@ describe("generic structure diagnostics on the result screen", () => {
     expect(lines[0]).toContain("ran-with-actions");
     expect(lines[0]).toContain("완료 2");
     expect(lines[0]).not.toContain("경력");
+    for (const sentinel of [inputSentinel, profileSentinel]) {
+      expect(result).not.toHaveTextContent(sentinel);
+      expect(JSON.stringify(lines)).not.toContain(sentinel);
+    }
   });
 
   it("shows the section title and a fixed reason for a blocked action", async () => {
