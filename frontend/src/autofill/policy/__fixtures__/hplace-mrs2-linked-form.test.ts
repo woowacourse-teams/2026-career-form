@@ -131,3 +131,11 @@ it("removes listeners, polls and pending clicks on dispose", () => {
   expect(disabled('[name="row[0].text"]')).toBe(false);
   expect(vi.getTimerCount()).toBe(0);
 });
+
+it("binds one emulator per root", () => {
+  const form = installLinkedForm(el("#frm"), { init: false });
+  expect(installLinkedForm(el("#frm"))).toBe(form);
+  el('[name="row[0].kind"][value="50"]').click();
+  form.dispose();
+  expect(installLinkedForm(el("#frm"), { init: false })).not.toBe(form);
+});

@@ -30,12 +30,15 @@ const relIds = (element: Element) => {
 export interface LinkedFormEmulator {
   dispose(): void;
 }
-const active = new Set<LinkedFormEmulator>();
+const active = new Map<Element, LinkedFormEmulator>();
 
 export function installLinkedForm(
   target: Element,
   { init = true }: { init?: boolean } = {},
 ): LinkedFormEmulator {
+  // One emulator per root, like the site's single body-level binding.
+  const existing = active.get(target);
+  if (existing) return existing;
   const intervals = new Set<ReturnType<typeof setInterval>>();
   const timeouts = new Set<ReturnType<typeof setTimeout>>();
   let poll: ReturnType<typeof setInterval> | undefined;
@@ -216,14 +219,14 @@ export function installLinkedForm(
       timeouts.forEach(clearTimeout);
       intervals.clear();
       timeouts.clear();
-      active.delete(emulator);
+      active.delete(target);
     },
   };
-  active.add(emulator);
+  active.set(target, emulator);
   return emulator;
 }
 
 /** Call from `afterEach`: clears every installed emulator's listeners and timers. */
 export function disposeLinkedForms(): void {
-  for (const emulator of Array.from(active)) emulator.dispose();
+  for (const emulator of Array.from(active.values())) emulator.dispose();
 }
