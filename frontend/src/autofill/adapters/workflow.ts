@@ -2,6 +2,7 @@ import {
   isBasicStateDriver,
   writeBasic,
   settleBasicStateDriver,
+  prefersBasicProfileValue,
 } from "./hplace/basic-write";
 import { ownedBasicControl } from "./hplace/basic-controls";
 import {
@@ -164,6 +165,7 @@ const genericWorkflowAdapter: WorkflowAdapter = {
 
 const hplaceWorkflowAdapter: WorkflowAdapter = {
   ...genericWorkflowAdapter,
+  prefersProfileValue: prefersBasicProfileValue,
   isStateDriver: (item, name) =>
     isRegistrationItem(item, name) || isBasicStateDriver(item, name),
   stateDriverStage: (item, handle) =>
@@ -212,6 +214,10 @@ function resolveWorkflowAdapter(source: string | Document): WorkflowAdapter {
       return policy;
     return {
       ...policy,
+      prefersProfileValue: (handle, analysis) =>
+        handle.owner === "legacy"
+          ? prefersBasicProfileValue(handle, analysis)
+          : policy.prefersProfileValue?.(handle, analysis) === true,
       isStateDriver: (item, name) =>
         hplaceWorkflowAdapter.isStateDriver(item, name) ||
         policy.isStateDriver(item, name),

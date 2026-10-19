@@ -1,3 +1,4 @@
+import type { MatchedFieldAnalysis } from "../../api/types";
 import type { FieldCandidateHandle } from "../../dom/types";
 import type { ReviewPlanItem } from "../../review/review-plan";
 import {
@@ -6,6 +7,7 @@ import {
   basicName,
   ownedBasicControl,
   type BasicKey,
+  type BasicControl,
 } from "./basic-controls";
 export function isBasicStateDriver(
   item: ReviewPlanItem,
@@ -15,7 +17,10 @@ export function isBasicStateDriver(
     ["veteranStatus", "disabilityStatus", "militaryStatus"] as BasicKey[]
   ).some((key) => name === basicName(key) && bindingApproved(key, item));
 }
-function bindingApproved(key: BasicKey, item: ReviewPlanItem): boolean {
+function bindingApproved(
+  key: BasicKey,
+  item: Pick<ReviewPlanItem, "analysis">,
+): boolean {
   const spec = basicSpecs[key],
     a = item.analysis,
     b = a?.valueBinding;
@@ -72,6 +77,52 @@ function bindingApproved(key: BasicKey, item: ReviewPlanItem): boolean {
     Object.entries(b.optionMap).every(
       ([source, target]) => allowed[source] === target,
     )
+  );
+}
+// Only these two verified HTML false defaults may yield to the profile.
+// Read disabled dependents too: even an uncollected rate or hidden value is data.
+function emptyBooleanDefault(control: BasicControl): boolean {
+  if (control.key !== "veteranStatus" && control.key !== "disabilityStatus")
+    return false;
+  const selected = control.elements.filter(
+    (e): e is HTMLInputElement => e instanceof HTMLInputElement && e.checked,
+  );
+  if (
+    selected.length !== 1 ||
+    selected[0].value !== "false" ||
+    !selected[0].defaultChecked ||
+    control.elements.some(
+      (e) =>
+        e !== selected[0] && e instanceof HTMLInputElement && e.defaultChecked,
+    )
+  )
+    return false;
+  const prefix = control.key === "veteranStatus" ? "patriot" : "handicap";
+  const subject = selected[0].closest(".subject");
+  return Array.from(
+    selected[0].ownerDocument.querySelectorAll<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >(
+      `input[name^="${prefix}."],select[name^="${prefix}."],textarea[name^="${prefix}."],[data-rel-target="${prefix}"]`,
+    ),
+  ).every(
+    (e) =>
+      control.elements.includes(e as HTMLInputElement) ||
+      (e.closest(".subject") === subject &&
+        (e instanceof HTMLInputElement && ["radio", "checkbox"].includes(e.type)
+          ? !e.checked
+          : e.value === "")),
+  );
+}
+export function prefersBasicProfileValue(
+  handle: FieldCandidateHandle,
+  analysis: MatchedFieldAnalysis,
+): boolean {
+  const control = ownedBasicControl(handle);
+  return (
+    !!control &&
+    bindingApproved(control.key, { analysis }) &&
+    emptyBooleanDefault(control)
   );
 }
 export function basicValue(handle: FieldCandidateHandle): string | undefined {
@@ -229,6 +280,7 @@ export async function writeBasic(
   if (!target) return false;
   const original = basicValue(handle),
     url = elements[0].ownerDocument.URL;
+  const defaultOverride = target === "대상" && emptyBooleanDefault(control);
   let expected = original;
   const current = () =>
     currentRun() &&
@@ -245,10 +297,11 @@ export async function writeBasic(
     ownedBasicControl(handle) !== undefined &&
     basicDateOrder(handle, target) &&
     linkedTargetsOwned(elements[0]) &&
-    basicValue(handle) === expected;
+    basicValue(handle) === expected &&
+    (!defaultOverride || expected !== original || emptyBooleanDefault(control));
   if (
     original === undefined ||
-    (original !== "" && original !== target) ||
+    (original !== "" && original !== target && !defaultOverride) ||
     !current()
   )
     return false;
