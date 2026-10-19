@@ -122,6 +122,25 @@ class GenericFieldsApiTest {
     }
 
     @Test
+    @DisplayName("비식별 fixture 요청도 API 경계를 통과하고 공급자 요청에는 행 개수가 없다")
+    void fixtureRequestPassesBoundaryWithoutRowCounts() throws Exception {
+        String body;
+        try (var stream = GenericFieldsApiTest.class.getResourceAsStream("/generic/naver-career-sections.request.json")) {
+            body = new String(java.util.Objects.requireNonNull(stream).readAllBytes(),
+                java.nio.charset.StandardCharsets.UTF_8);
+        }
+        http.respond(call -> GenericFieldsJevHttp.answerAll(call, "certifications.certificate.issuer", 0.9));
+
+        mockMvc.perform(post("/api/v1/generic/fields/analyze")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("COMPLETE"));
+
+        assertThat(http.bodies()).hasSize(3).allSatisfy(sent -> assertThat(sent).doesNotContain("rowCount"));
+    }
+
+    @Test
     @DisplayName("정적 정책 host 요청은 JEV를 호출하지 않고 빈 칸 목록의 STATIC_POLICY_PRESENT를 반환한다")
     void staticPolicyHostDoesNotCallJev() throws Exception {
         mockMvc.perform(post("/api/v1/generic/fields/analyze")

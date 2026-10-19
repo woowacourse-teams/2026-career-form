@@ -130,6 +130,24 @@ class GenericFieldsServiceTest {
         assertThat(components(GenericFieldsResponse.Diagnostics.class)).containsExactly("jevCalls", "elapsedMs");
     }
 
+    @Test
+    @DisplayName("대상 키 응답은 보존되고 같은 라벨의 다른 범주 칸은 오연결되지 않는다")
+    void keepsTargetKeyAndDoesNotCrossLinkSameLabelAcrossCategories() {
+        var issuer = "certifications.certificate.issuer";
+        for (String name : List.of("naver-career-sections.request.json", "independent-synthetic-sections.request.json")) {
+            http.respond(call -> answerAll(call, issuer, 0.7));
+
+            var response = service(notRegistered()).analyze(GenericFieldsJevHttp.fixture(name));
+
+            assertThat(response.status()).isEqualTo(Status.COMPLETE);
+            var linked = response.fields().stream().filter(field -> issuer.equals(field.profileFieldKey())).toList();
+            assertThat(linked).isNotEmpty().allSatisfy(field -> assertThat(field.categoryConfirmed()).isTrue());
+            assertThat(linked.stream().map(Field::candidateId)).noneMatch(id -> id.contains("lang"));
+            assertThat(response.fields().stream().filter(field -> field.candidateId().contains("lang")))
+                .allSatisfy(field -> assertThat(field.profileFieldKey()).isNull());
+        }
+    }
+
     private GenericFieldsService service(CompanyFormPolicyProvider policies) {
         var resolver = new JevCategoryFieldResolver(GenericFieldsJevHttp.client(http), FIELDS, CATEGORIES, 3, 5, 10,
             8000);
