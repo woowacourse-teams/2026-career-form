@@ -257,6 +257,9 @@ export function gradeGenericField(input: GradeFieldInput): FieldGradeResult {
   if (hasFormatKeyMismatch(input)) {
     return { grade: "BLOCKED", reason: "FORMAT_KEY_MISMATCH" };
   }
+  if (input.confidence >= AUTO_CONFIDENCE_MIN && hasUnpairedNamePart(input)) {
+    return { grade: "REVIEW", reason: "UNPAIRED_NAME_PART" };
+  }
   if (!input.categoryConfirmed) {
     return { grade: "REVIEW", reason: "CATEGORY_UNCONFIRMED" };
   }
@@ -267,9 +270,6 @@ export function gradeGenericField(input: GradeFieldInput): FieldGradeResult {
     if (!input.displayName?.trim() &&
       !input.labels?.some((label) => label.text.trim())) {
       return { grade: "REVIEW", reason: "NO_FIELD_CONTEXT" };
-    }
-    if (hasUnpairedNamePart(input)) {
-      return { grade: "REVIEW", reason: "UNPAIRED_NAME_PART" };
     }
     return { grade: "AUTO" };
   }

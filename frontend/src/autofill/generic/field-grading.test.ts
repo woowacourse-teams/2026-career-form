@@ -651,6 +651,10 @@ describe("gradeGenericField unpaired English name part", () => {
     expect(gradeGenericField(single({ sectionSiblingKeys: undefined }))).toEqual(review);
   });
 
+  it("reports the partial-name risk before an unconfirmed category", () => {
+    expect(gradeGenericField(single({ categoryConfirmed: false }))).toEqual(review);
+  });
+
   it.each([
     [given, family],
     [family, given],
