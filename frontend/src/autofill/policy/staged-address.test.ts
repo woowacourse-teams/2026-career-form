@@ -313,14 +313,14 @@ it("validates the address policy in the extension service worker without a docum
     vi.unstubAllGlobals();
   }
 });
-it("does not misreport an unexpectedly visible zipcode as hidden", () => {
+it("accepts a visible text.hidden zipcode as a readback-only companion", () => {
   const s = mountAddress();
   s.inputs()[0].style.display = "";
   expect(
     collectPreparationSnapshot(document)
       .request.sections.flatMap((s) => s.actionCandidates)
       .some((a) => a.domId === "hplace.mrs2.currentAddress.search"),
-  ).toBe(false);
+  ).toBe(true);
 });
 
 it.each(["profile", "abort", "wrong-message", "original-node"])(

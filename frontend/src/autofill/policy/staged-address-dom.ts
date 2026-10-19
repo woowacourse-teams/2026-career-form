@@ -50,7 +50,9 @@ export function stagedAddressNodes(document: Document) {
         !e.disabled &&
         !e.matches(":disabled") &&
         !e.closest('[inert],[aria-hidden="true"]') &&
-        (policy.fields[i].hidden ? !visible(e, true) : visible(e)),
+        // `hidden` identifies the site's text.hidden companion, not computed CSS.
+        // Some live tenants visibly render it; it is still readback-only.
+        (policy.fields[i].hidden ? e.classList.contains("hidden") : visible(e)),
     )
   )
     return;
