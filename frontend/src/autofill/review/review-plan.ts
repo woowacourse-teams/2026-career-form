@@ -252,6 +252,25 @@ function nativeRadioValue(handle: FieldCandidateHandle): string | undefined {
     : radio.value;
 }
 
+const NATIVE_DECIMAL = /^\d+(?:\.\d+)?$/;
+
+/** A native number input keeps the normalized decimal the run wrote (3.65 for
+ * 3.650); the same number is not an existing value. */
+function sameNativeDecimal(
+  handle: FieldCandidateHandle,
+  page: string,
+  profile: string,
+): boolean {
+  const left = page.trim(),
+    right = profile.trim();
+  return (
+    nativeOwnership(handle)?.field.type === "number" &&
+    NATIVE_DECIMAL.test(left) &&
+    NATIVE_DECIMAL.test(right) &&
+    Number(left) === Number(right)
+  );
+}
+
 function currentValue(handle: FieldCandidateHandle): string {
   const customValue = customFieldValue(handle);
   if (customValue !== undefined) return customValue;
@@ -873,7 +892,12 @@ function itemForAnalysis(
             ? schoolRegionSearchValues(resolvedProfileValue.value)
             : [resolvedProfileValue.value]
         ).some((value) => normalized(pageValue) === normalized(value))
-      : pageValue.trim() !== resolvedProfileValue.value.trim());
+      : pageValue.trim() !== resolvedProfileValue.value.trim() &&
+        !sameNativeDecimal(
+          lookup.handle,
+          pageValue,
+          resolvedProfileValue.value,
+        ));
   if (hasConflict) {
     return {
       candidateId: analysis.candidateId,
