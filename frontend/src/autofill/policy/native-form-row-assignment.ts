@@ -1,3 +1,4 @@
+import { observedGradeLabel } from "./exam-grade-alias";
 import { approveNativeGpa } from "./native-form-gpa";
 import { universityAdditionalMajors } from "../profile/university-additional-majors";
 import {
@@ -92,6 +93,18 @@ function profileValue(
 ): string | undefined {
   const resolved = resolveValueBinding(profile, field.binding, index);
   if (resolved.status !== "resolved") return;
+  if (
+    field.type === "select" &&
+    field.dynamicOptions?.codeFormat === "OBSERVED"
+  ) {
+    const select = row.querySelector<HTMLSelectElement>(
+      `select[name="${CSS.escape(rawNativeName(field.rawName, physicalIndex))}"]`,
+    );
+    return observedGradeLabel(
+      resolved.value,
+      select ? Array.from(select.options, (o) => text(o.textContent)) : [],
+    );
+  }
   if (!field.date) return resolved.value;
   const source =
     field.date.role === "END"
