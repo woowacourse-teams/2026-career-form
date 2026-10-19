@@ -1,5 +1,20 @@
 /** Synthetic: public T:1211–1693 / W:1406–1588, live-dom/repeat-rows.md.
- * Real wrapSubject / row.loop containment; invented values, no applicant data. */
+ * Real wrapSubject / row.loop containment; invented values, no applicant data.
+ *
+ * Opt-in live-shaped options (CF-177 C0). Defaults keep the original DOM byte
+ * for byte (asserted by hplace-mrs2-education.synthetic.test.ts).
+ * Sources: template T=gs-writeResumeTemplate.js (140 T:1066–1190, 141/142
+ * T:1199–1440, major T:1503–1575), W=gs-writeResume.js:1505 (addCollege reads
+ * the wrapCollege data-dateinputformat), live-dom/step2-education-career.md and
+ * live-eval snapshots-2026-10-19T07-37-11.917Z (names, types, disabled,
+ * data-rel-*, data-dates and option counts only). Values are absent; codes are
+ * the platform-wide public code tables, never tenant Sn values.
+ * - `dateInputFormat`: section date precision token (`:YM` | `:YMD`).
+ * - `highschool`: renders section 140 gated by `data-rel-id=highschool`.
+ * - `liveGating`: renders 141/142 rows with the degree wrapper, disabled
+ *   `data-rel-target` controls and the major focus-poll relation.
+ * Either live option installs the linkedForm emulator on `#frm`; call
+ * `disposeLinkedForms()` in `afterEach`. */
 import seed from "../../../../../backend/src/main/resources/policies/hplace-mrs2-v4.json";
 import {
   installExecutionPolicy,
@@ -10,15 +25,43 @@ import { nativeOwnership } from "../native-form-collection";
 import { buildReviewPlan } from "../../review/review-plan";
 import { createEmptyProfile, type Profile } from "../../../profile/model";
 import type { FieldsAnalyzeResponse } from "../../api/types";
+import { installLinkedForm } from "./hplace-mrs2-linked-form";
+export type EducationDateFormat = "YM" | "YMD";
+export interface HighschoolFixtureOptions {
+  /** Template `!data.isRequired` branch: a leading value="" 작성안함 radio. */
+  emptyRadio?: boolean;
+  /** Tenant-optional day/night radios (absent on some tenants). */
+  dayOrNight?: boolean;
+}
+export interface EducationFixtureOptions {
+  dateInputFormat?: EducationDateFormat;
+  liveGating?: boolean;
+  highschool?: false | HighschoolFixtureOptions;
+}
 export const widget = (prefix: string, kind: string, property: string) =>
   `<div class="span"><div class="search"><label><input type="search" data-type="${kind}"></label><div class="searchResult"></div></div><input type="hidden" name="${prefix}.${property}Name"><span class="searchResultName"></span><input class="hidden" name="${prefix}.${property}Code"></div>`;
 export const majorRow = (parent: string, index: number) =>
   `<div class="row loop" data-loop="collegeMajor"><input type="hidden" name="${parent}.collegeMajor[${index}].collegeMajorSn">${widget(`${parent}.collegeMajor[${index}]`, "major", "major")}${["주전공", "복수전공", "부전공"].map((label, i) => `<label><input type="radio" name="${parent}.collegeMajor[${index}].majorTypeCode" data-rel-target="${parent}" value="0${i + 1}">${label}</label>`).join("")}<select name="${parent}.collegeMajor[${index}].majorCategoryCode" data-rel-target="${parent}"><option value=""></option><option value="118">공학계열(컴퓨터·통신)</option><option value="135">기타</option></select>${["주간", "야간"].map((label, i) => `<label><input type="radio" name="${parent}.collegeMajor[${index}].dayOrNight" data-rel-target="${parent}" value="0${i + 1}">${label}</label>`).join("")}<button type="button" data-button="add" data-rel-target="${parent}"></button><button type="button" data-button="remove"></button></div>`;
-export const collegeRow = (kind: string, index: number, majors = 1) => {
+export const collegeRow = (
+  kind: string,
+  index: number,
+  majors = 1,
+  format: EducationDateFormat = "YM",
+) => {
   const parent = `${kind}[${index}]`;
-  return `<div class="wrapSubject" data-loop="${kind}" data-index="${index}">${widget(parent, "college", "academy")}<label><input type="radio" name="${parent}.degreeTypeCode" value="${kind === "college" ? "50" : "62"}">${kind === "college" ? "학사" : "석사"}</label><input name="${parent}.entranceDate" data-dates="${parent}.date:YM college graduationCriteriaDate"><input name="${parent}.graduationDate" data-dates="${parent}.date:END"><div class="subject"><div class="subject" data-wrap="major">${Array.from({ length: majors }, (_, j) => majorRow(parent, j)).join("")}</div></div><input type="number" name="${parent}.score" step="0.001" min="0" data-rel-id="${parent}.perfectScore" data-rel-target="${parent}"><select name="${parent}.perfectScore" data-rel-target="${parent}.perfectScore" disabled><option value="">만점기준</option>${["3.0", "3.5", "4.0", "4.3", "4.5", "5.0", "7.0", "20", "100"].map((v) => `<option value="${v}">${v}</option>`).join("")}</select><input type="number" name="${parent}.majorCredits"><input type="number" name="${parent}.majorAverageScore"><select name="${parent}.majorPerfectScore"><option value=""></option><option value="4.5">4.5</option></select></div>`;
+  return `<div class="wrapSubject" data-loop="${kind}" data-index="${index}">${widget(parent, "college", "academy")}<label><input type="radio" name="${parent}.degreeTypeCode" value="${kind === "college" ? "50" : "62"}">${kind === "college" ? "학사" : "석사"}</label><input name="${parent}.entranceDate" data-dates="${parent}.date:${format} college graduationCriteriaDate"><input name="${parent}.graduationDate" data-dates="${parent}.date:END"><div class="subject"><div class="subject" data-wrap="major">${Array.from({ length: majors }, (_, j) => majorRow(parent, j)).join("")}</div></div><input type="number" name="${parent}.score" step="0.001" min="0" data-rel-id="${parent}.perfectScore" data-rel-target="${parent}"><select name="${parent}.perfectScore" data-rel-target="${parent}.perfectScore" disabled><option value="">만점기준</option>${["3.0", "3.5", "4.0", "4.3", "4.5", "5.0", "7.0", "20", "100"].map((v) => `<option value="${v}">${v}</option>`).join("")}</select><input type="number" name="${parent}.majorCredits"><input type="number" name="${parent}.majorAverageScore"><select name="${parent}.majorPerfectScore"><option value=""></option><option value="4.5">4.5</option></select></div>`;
 };
-export function mountEducation(count = 2, majors = 1, majorEnabled = false) {
+export function mountEducation(
+  count = 2,
+  majors = 1,
+  majorEnabled = false,
+  {
+    dateInputFormat = "YM",
+    liveGating = false,
+    highschool = false,
+  }: EducationFixtureOptions = {},
+) {
+  const row = liveGating ? liveCollegeRow : collegeRow;
   window.history.replaceState({}, "", "/mrs2/applicant/resume/writeResume");
   const policy = structuredClone(
     seed.executionPolicy,
@@ -27,9 +70,13 @@ export function mountEducation(count = 2, majors = 1, majorEnabled = false) {
     seed.executionPolicy.browserPolicy.nativeForm.assetPaths
       .map((src) => `<script src="${src}"></script>`)
       .join("") +
-    `<form id="frm"><div id="wrapResume">${["college", "graduateSchool"].map((kind, i) => `<section class="writeResume" data-code="${141 + i}"><div class="wrapCollege" data-wrap="collegeLoop" data-type="${kind}" data-required="true" data-dateinputformat="YM">${Array.from({ length: i ? 1 : count }, (_, j) => collegeRow(kind, j, majors)).join("")}</div><div class="collegeBtnSet"><button type="button" data-button="addCollege" data-loopname="${kind}"></button></div></section>`).join("")}</div></form>`;
+    `<form id="frm"><div id="wrapResume">${highschool ? highschoolSection(dateInputFormat, highschool) : ""}${["college", "graduateSchool"].map((kind, i) => `<section class="writeResume" data-code="${141 + i}"><div class="wrapCollege" data-wrap="collegeLoop" data-type="${kind}" data-required="true" data-dateinputformat="${dateInputFormat}">${Array.from({ length: i ? 1 : count }, (_, j) => row(kind, j, majors, dateInputFormat)).join("")}</div><div class="collegeBtnSet"><button type="button" data-button="addCollege" data-loopname="${kind}"></button></div></section>`).join("")}</div></form>`;
   const wireParent = (parent: Element) => {
     const root = parent.querySelector("[data-wrap=major]")!;
+    if (liveGating) {
+      wireMajorAdd(root, (p, j) => liveMajorRow(p, j, false));
+      return;
+    }
     wireMajorAdd(root);
     for (const input of root.querySelectorAll<
       HTMLInputElement | HTMLButtonElement
@@ -50,41 +97,53 @@ export function mountEducation(count = 2, majors = 1, majorEnabled = false) {
         .querySelector("[data-wrap=collegeLoop]")!;
       root.insertAdjacentHTML(
         "beforeend",
-        collegeRow(kind, root.children.length),
+        row(
+          kind,
+          root.children.length,
+          1,
+          (root.getAttribute("data-dateinputformat") ??
+            "YM") as EducationDateFormat,
+        ),
       );
       wireParent(root.lastElementChild!);
     };
   }
-  document.querySelector("#frm")!.addEventListener(
-    "blur",
-    (event) => {
-      const input = event.target;
-      if (
-        !(input instanceof HTMLInputElement) ||
-        !input.name.endsWith(".score")
-      )
-        return;
-      setTimeout(() => {
-        const scale = input.parentElement!.querySelector<HTMLSelectElement>(
-          '[name$=".perfectScore"]',
-        )!;
-        scale.disabled = false;
-      }, 50);
-    },
-    true,
-  );
+  if (liveGating || highschool)
+    installLinkedForm(document.querySelector("#frm")!);
+  if (!liveGating)
+    document.querySelector("#frm")!.addEventListener(
+      "blur",
+      (event) => {
+        const input = event.target;
+        if (
+          !(input instanceof HTMLInputElement) ||
+          !input.name.endsWith(".score")
+        )
+          return;
+        setTimeout(() => {
+          const scale = input.parentElement!.querySelector<HTMLSelectElement>(
+            '[name$=".perfectScore"]',
+          )!;
+          scale.disabled = false;
+        }, 50);
+      },
+      true,
+    );
   installExecutionPolicy(document, policy);
   return policy;
 }
-export function wireMajorAdd(root: Element) {
+export function wireMajorAdd(
+  root: Element,
+  newRow: (parent: string, index: number) => string = majorRow,
+) {
   const children = Array.from(root.children);
   children.forEach((row, i) => {
     const button = row.querySelector<HTMLButtonElement>("[data-button=add]")!;
     button.hidden = i !== children.length - 1;
     button.onclick = () => {
       const parent = button.dataset.relTarget!;
-      root.insertAdjacentHTML("beforeend", majorRow(parent, children.length));
-      wireMajorAdd(root);
+      root.insertAdjacentHTML("beforeend", newRow(parent, children.length));
+      wireMajorAdd(root, newRow);
     };
   });
 }
@@ -187,5 +246,169 @@ export function educationItem(
     ...state,
     handle: l.handle,
     item: state.review.items.find((i) => i.candidateId === field.candidateId)!,
+  };
+}
+
+type CodeLabel = readonly [code: string, label: string];
+const policyOptions = (name: string): CodeLabel[] => {
+  const field = seed.executionPolicy.browserPolicy.nativeForm.sections
+    .flatMap((s) => s.fields as readonly { name: string; options?: object }[])
+    .find((f) => f.name === name);
+  if (!field?.options) throw new Error(`missing options ${name}`);
+  return Object.entries(field.options as Record<string, string>).map(
+    ([label, code]) => [code, label] as const,
+  );
+};
+// Platform-wide public code tables (live-dom/step2-education-career.md).
+const LOCATION = () => policyOptions("hplace.mrs2.highschool.locationCode");
+const MAJOR_CATEGORY = () =>
+  policyOptions("hplace.mrs2.college.major0.majorCategoryCode");
+const HIGHSCHOOL_CATEGORY: readonly CodeLabel[] = [
+  ["01", "인문"],
+  ["02", "상업"],
+  ["03", "공업"],
+  ["04", "전산정보"],
+  ["05", "예술"],
+  ["06", "농업"],
+  ["07", "과학"],
+  ["08", "외국어"],
+  ["09", "체육"],
+  ["10", "마이스터"],
+  ["11", "특성화"],
+  ["12", "자율형 사립"],
+  ["13", "자율형 공립"],
+  ["99", "기타"],
+];
+const COLLEGE_CATEGORY: readonly CodeLabel[] = [
+  ["01", "가정"],
+  ["02", "간호"],
+  ["03", "건축"],
+  ["04", "공학"],
+  ["05", "농림"],
+  ["06", "사범"],
+  ["07", "법정"],
+  ["08", "사회"],
+  ["09", "상경"],
+  ["10", "신학"],
+  ["11", "어문"],
+  ["12", "예체"],
+  ["13", "의학"],
+  ["14", "인문"],
+  ["15", "자연"],
+  ["16", "부동산"],
+  ["17", "축수산"],
+  ["18", "보건"],
+  ["99", "기타"],
+];
+const GRADUATION: readonly CodeLabel[] = [
+  ["01", "졸업"],
+  ["02", "졸업예정"],
+  ["03", "수료"],
+  ["04", "중퇴"],
+  ["05", "휴학"],
+  ["07", "재학"],
+  ["08", "검정고시"],
+];
+const DAY_OR_NIGHT: readonly CodeLabel[] = [
+  ["01", "주간"],
+  ["02", "야간"],
+];
+const MAJOR_TYPE: readonly CodeLabel[] = [
+  ["01", "주전공"],
+  ["02", "복수전공"],
+  ["03", "부전공"],
+  ["04", "연계전공"],
+  ["05", "융합전공"],
+];
+const radios = (name: string, codes: readonly CodeLabel[], attrs = "") =>
+  `<div class="span radio">${codes.map(([code, label]) => `<label><input type="radio" name="${name}" value="${code}"${attrs}><span class="label">${label}</span></label>`).join("")}</div>`;
+const select = (name: string, codes: readonly CodeLabel[], attrs = "") =>
+  `<label class="span select"><select name="${name}"${attrs}><option value=""></option>${codes.map(([code, label]) => `<option value="${code}">${label}</option>`).join("")}</select></label>`;
+const searchWidget = (
+  prefix: string,
+  kind: string,
+  property: string,
+  queryAttrs: string,
+  hiddenAttrs: string,
+  codeAttrs: string,
+) =>
+  `<div class="span"><div class="search"><label><input type="search" class="text" data-type="${kind}"${queryAttrs}></label><div class="searchResult"></div></div><input type="hidden" name="${prefix}.${property}ActivitySn"${hiddenAttrs}><input type="hidden" name="${prefix}.${property}Name"${hiddenAttrs}><span class="searchResultName"></span><input type="text" name="${prefix}.${property}Code" class="hidden"${codeAttrs}></div>`;
+
+/** Section 140 (T:1066–1190): every control waits for a graduation click. */
+export function highschoolSection(
+  format: EducationDateFormat = "YM",
+  { emptyRadio = false, dayOrNight = false }: HighschoolFixtureOptions = {},
+) {
+  const gate = ` data-rel-target="highschool" disabled`;
+  return `<section class="writeResume" data-code="140"><div class="subject"><div class="span per100 radio" data-rel-id="highschool">${emptyRadio ? `<label><input type="radio" name="highschool.graduationTypeCode" value=""><span class="label">작성안함</span></label>` : ""}${GRADUATION.filter(
+    ([code]) => code !== "03",
+  )
+    .map(
+      ([code, label]) =>
+        `<label><input type="radio" name="highschool.graduationTypeCode" value="${code}" required><span class="label">${label}</span></label>`,
+    )
+    .join(
+      "",
+    )}</div>${searchWidget("highschool", "highschool", "academy", gate, gate, `${gate} required`)}${select("highschool.locationCode", LOCATION(), gate)}${select("highschool.highschoolCategoryCode", HIGHSCHOOL_CATEGORY, gate)}${dayOrNight ? radios("highschool.dayOrNight", DAY_OR_NIGHT, gate) : ""}<label class="span date"><input type="text" name="highschool.entranceDate" data-dates="highschoolDate:${format}  highschool graduationCriteriaDate" class="text date start"${gate} required><input type="text" name="highschool.graduationDate" data-dates="highschoolDate:END" class="text date end"${gate} required></label></div></section>`;
+}
+
+/** Live-shaped major row (T:1503–1575). New rows render their details disabled. */
+export const liveMajorRow = (parent: string, index: number, gated = true) => {
+  const row = `${parent}.collegeMajor[${index}]`;
+  const outer = ` data-rel-target="${parent}"${gated ? " disabled" : ""}`;
+  const detail = ` data-rel-target="${row}" disabled`;
+  return `<div class="row loop" data-loop="collegeMajor"><div class="wrapBtn"><button type="button" data-button="add"${outer}></button><button type="button" data-button="remove"${outer}></button></div><div class="span"><div class="search"><label><input type="search" class="text" data-type="major"${outer}></label><div class="searchResult"></div></div><input type="hidden" name="${row}.collegeMajorSn"><input type="hidden" name="${row}.majorName"><span class="searchResultName"></span><input type="text" name="${row}.majorCode" class="hidden"${outer} data-rel-id="${row}"></div>${radios(`${row}.majorTypeCode`, MAJOR_TYPE, detail)}${select(`${row}.majorCategoryCode`, MAJOR_CATEGORY(), `${detail} required data-rel-id="${row}.majorCategoryCode" data-rel-type="with" data-rel-value="125,126,127,128"`)}${radios(`${row}.dayOrNight`, DAY_OR_NIGHT, detail)}</div>`;
+};
+
+/** Live-shaped 141/142 row (T:1211–1440): a degree click opens the row. */
+export const liveCollegeRow = (
+  kind: string,
+  index: number,
+  majors = 1,
+  format: EducationDateFormat = "YM",
+) => {
+  const parent = `${kind}[${index}]`;
+  const gate = ` data-rel-target="${parent}" disabled`;
+  const degrees: readonly CodeLabel[] =
+    kind === "college"
+      ? [
+          ["40", "전문학사"],
+          ["50", "학사"],
+        ]
+      : [
+          ["62", "석사"],
+          ["72", "박사"],
+        ];
+  return `<div class="wrapSubject" data-loop="${kind}" data-index="${index}"><input type="hidden" name="${parent}.academyActivitySn"><div class="span per100 radio" data-rel-id="${parent}">${degrees.map(([code, label]) => `<label><input type="radio" name="${parent}.degreeTypeCode" value="${code}" required><span class="label">${label}</span></label>`).join("")}</div><div class="span"><div class="search"><label><input type="search" class="text" data-type="college"${gate}></label><div class="searchResult"></div></div><input type="hidden" name="${parent}.academyName"><span class="searchResultName"></span><input type="text" name="${parent}.academyCode" class="hidden"${gate} required></div>${select(`${parent}.locationCode`, LOCATION(), gate)}${radios(
+    `${parent}.headOrBranch`,
+    [
+      ["01", "본교"],
+      ["02", "분교"],
+    ],
+    gate,
+  )}<label class="span date"><input type="text" name="${parent}.entranceDate" data-dates="${parent}.date:${format} college graduationCriteriaDate" class="text date start"${gate} required><input type="text" name="${parent}.graduationDate" data-dates="${parent}.date:END" class="text date end"${gate} required></label>${radios(
+    `${parent}.entranceTypeCode`,
+    [
+      ["01", "입학"],
+      ["02", "편입"],
+    ],
+    gate,
+  )}${radios(`${parent}.graduationTypeCode`, GRADUATION, gate)}${select(`${parent}.collegeCategoryCode`, COLLEGE_CATEGORY, gate)}<div class="subject"><div class="subject" data-wrap="major">${Array.from({ length: majors }, (_, j) => liveMajorRow(parent, j)).join("")}</div></div><div class="subject"><input type="number" name="${parent}.score" step="0.001" min="0" data-rel-id="${parent}.perfectScore"${gate}><select name="${parent}.perfectScore" data-rel-target="${parent}.perfectScore" disabled><option value="">만점기준</option>${["3.0", "3.5", "4.0", "4.3", "4.5", "5.0", "7.0", "20", "100"].map((v) => `<option value="${v}">${v}</option>`).join("")}</select></div></div>`;
+};
+
+/** Synthetic high-school entry for section 140 (not part of educationProfile). */
+export function highschoolEntry(): Profile["education"][number] {
+  return {
+    id: "highschool-a",
+    sectionId: "highSchool",
+    values: {
+      academicProcess: "고등학교",
+      schoolName: "합성고등학교",
+      attendanceType: "주간",
+      completionStatus: "졸업",
+      schoolRegion: "서울",
+      startDate: "2016-03-01",
+      endDate: "2019-02-01",
+    },
   };
 }
