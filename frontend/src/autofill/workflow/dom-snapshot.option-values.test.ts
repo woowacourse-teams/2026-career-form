@@ -65,7 +65,7 @@ async function analyzeControl(
     "utf8",
   );
   const snapshot = collectFieldsSnapshot(document);
-  const control = document.querySelector(controlSelector)!;
+  const control = document.querySelector<HTMLInputElement | HTMLSelectElement>(controlSelector)!;
   const field = snapshot.request.sections
     .flatMap((section) => [
       ...section.fields,
