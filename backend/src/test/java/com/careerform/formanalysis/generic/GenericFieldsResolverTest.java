@@ -400,6 +400,102 @@ class GenericFieldsResolverTest {
         assertThat(limitHttp.calls().getLast().state().path("fields").size()).isEqualTo(1);
     }
 
+    @Test
+    @DisplayName("대상 키의 criteria 설명은 키 이름만 되풀이하지 않고 서로 구별된다")
+    void criteriaDescribeMeaningBeyondKeyName() {
+        for (String name : FIXTURES) {
+            var local = new GenericFieldsJevHttp();
+            local.respond(call -> answerAll(call, null, 0.9));
+            new JevCategoryFieldResolver(GenericFieldsJevHttp.client(local), FIELDS, CATEGORIES, 3, 5, 10, 8000)
+                .resolve(fixture(name));
+
+            Set<String> descriptions = new HashSet<>();
+            for (var call : local.calls()) {
+                String question = call.questionIds().getFirst();
+                for (String key : TARGET_KEYS) {
+                    var node = call.request().path("questions").path(question).path("criteria").path(key);
+                    if (node.isMissingNode()) {
+                        continue;
+                    }
+                    assertThat(node.asString()).as(name + " " + key).contains(key)
+                        .isNotEqualTo("Applicant profile field " + key);
+                    descriptions.add(node.asString());
+                }
+            }
+            assertThat(descriptions).hasSize(TARGET_KEYS.size());
+        }
+    }
+
+    @Test
+    @DisplayName("두 독립 fixture에서 대상 칸의 라벨 의미가 정제 뒤에도 공급자 관측에 남는다")
+    void targetFieldsKeepMeaningfulObservation() {
+        for (String name : FIXTURES) {
+            GenericFieldsRequest request = fixture(name);
+            var local = new GenericFieldsJevHttp();
+            local.respond(call -> idealReply(request, call));
+            new JevCategoryFieldResolver(GenericFieldsJevHttp.client(local), FIELDS, CATEGORIES, 3, 5, 10, 8000)
+                .resolve(request);
+
+            for (var call : local.calls()) {
+                var section = request.sections().stream()
+                    .filter(candidate -> candidate.category().equals(call.category())).findFirst().orElseThrow();
+                List<FieldCandidate> asked = askedCandidates(section);
+                for (int index = 0; index < asked.size(); index++) {
+                    if (ideal(section.category(), asked.get(index).displayName()) == null) {
+                        continue;
+                    }
+                    var observation = call.state().path("fields").path("field_" + index);
+                    assertThat(observation.has("label") || observation.has("labels"))
+                        .as(name + " " + asked.get(index).displayName()).isTrue();
+                }
+            }
+        }
+    }
+
+    @Test
+    @DisplayName("공급자 관측은 구조 필드를 전달하고 행 개수는 보내지 않으며 rowIndex만 유지한다")
+    void observationProjectsStructureWithoutCounts() {
+        var naverHttp = new GenericFieldsJevHttp();
+        naverHttp.respond(call -> answerAll(call, null, 0.9));
+        new JevCategoryFieldResolver(GenericFieldsJevHttp.client(naverHttp), FIELDS, CATEGORIES, 3, 5, 10, 8000)
+            .resolve(fixture(FIXTURES.getFirst()));
+        var syntheticHttp = new GenericFieldsJevHttp();
+        syntheticHttp.respond(call -> answerAll(call, null, 0.9));
+        new JevCategoryFieldResolver(GenericFieldsJevHttp.client(syntheticHttp), FIELDS, CATEGORIES, 3, 5, 10, 8000)
+            .resolve(fixture(FIXTURES.getLast()));
+
+        assertThat(naverHttp.bodies()).allSatisfy(body -> assertThat(body).doesNotContain("rowCount"));
+        assertThat(syntheticHttp.bodies()).allSatisfy(body -> assertThat(body).doesNotContain("rowCount"));
+        var naverFields = new ArrayList<tools.jackson.databind.JsonNode>();
+        naverHttp.calls().forEach(call -> call.state().path("fields").forEach(naverFields::add));
+        assertThat(naverFields).anySatisfy(node -> {
+            assertThat(node.path("maxLength").asInt()).isEqualTo(30);
+            assertThat(node.path("repeat").path("rowIndex").asInt(-1)).isZero();
+            assertThat(node.path("labelSources").size()).isPositive();
+        });
+        var syntheticFields = new ArrayList<tools.jackson.databind.JsonNode>();
+        syntheticHttp.calls().forEach(call -> call.state().path("fields").forEach(syntheticFields::add));
+        assertThat(syntheticFields).anySatisfy(node -> {
+            assertThat(node.path("maxLength").asInt()).isEqualTo(500);
+            assertThat(node.path("required").asBoolean()).isTrue();
+        });
+    }
+
+    @Test
+    @DisplayName("라벨 의미 보강은 확정된 경력·자격·어학 섹션에만 적용된다")
+    void labelVocabularyAppliesOnlyToConfirmedCareerCertificateLanguageSections() {
+        http.respond(call -> answerAll(call, null, 0.9));
+        resolver(3, 5, 10).resolve(request("example.test", List.of(
+            section("career", "CAREER", List.of(field("c-career", "업무내용"))),
+            section("education", "EDUCATION", List.of(field("c-education", "업무내용"))),
+            section("mixed", "MIXED", List.of(field("c-mixed", "업무내용"))))));
+
+        for (var call : http.calls()) {
+            var observation = call.state().path("fields").path("field_0");
+            assertThat(observation.has("label")).as(call.category()).isEqualTo("CAREER".equals(call.category()));
+        }
+    }
+
     private JevCategoryFieldResolver resolver(int sectionConcurrency, int batchSize, int maxConcurrent) {
         JevClient client = GenericFieldsJevHttp.client(http);
         return new JevCategoryFieldResolver(client, FIELDS, CATEGORIES, sectionConcurrency, batchSize,
