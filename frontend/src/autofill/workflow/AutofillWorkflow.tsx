@@ -358,11 +358,21 @@ function PolicyReadyWorkflow({
         completedComponentStateDrivers.current.clear();
         // Generic documents prepare themselves: the loop decides each
         // structural action locally and asks only for interaction decisions.
-        // Documents with an installed policy and clients without these
-        // endpoints keep the approved preparation flow below.
+        // Documents with site-specific policy and clients without these
+        // endpoints keep the approved preparation flow below. The common
+        // provider policy alone declares no structure, so it does not block
+        // the loop.
+        const installedPolicy = executionPolicy(pageDocument);
+        const siteSpecificPolicy =
+          !!installedPolicy &&
+          (!!installedPolicy.browserPolicy ||
+            !!installedPolicy.componentPolicy ||
+            installedPolicy.searches.length > 0 ||
+            installedPolicy.failureScopes.length > 0 ||
+            !!installedPolicy.address);
         if (
           companyId === "generic" &&
-          !executionPolicy(pageDocument) &&
+          !siteSpecificPolicy &&
           apiClient.decideInteractions &&
           apiClient.classifySections &&
           apiClient.analyzeGenericFields
