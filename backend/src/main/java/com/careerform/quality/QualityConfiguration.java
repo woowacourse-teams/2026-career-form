@@ -15,7 +15,11 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 @ConditionalOnProperty(prefix = "career-form.quality", name = "enabled", havingValue = "true")
 public class QualityConfiguration {
     @Bean public QualityRepair qualityRepair(QualityStore store, QualityRegistry registry, QualityRollup rollup,
-        @Value("${management.metrics.tags.env:local}") String environment) { return new QualityRepair(store, registry, rollup, Clock.systemUTC(), environment); }
+        @Value("${management.metrics.tags.env:local}") String environment,
+        @Value("${career-form.quality.repair-batch-size:16}") int batchSize,
+        @Value("${career-form.quality.repair-budget-ms:1000}") long budgetMs) {
+        return new QualityRepair(store, registry, rollup, Clock.systemUTC(), environment, batchSize, java.time.Duration.ofMillis(budgetMs));
+    }
 
     @Bean public QualityDailyBatch qualityBatch(QualityStore store, QualityRegistry registry,
         @Value("${management.metrics.tags.env:local}") String environment,
