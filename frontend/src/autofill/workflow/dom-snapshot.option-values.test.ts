@@ -109,10 +109,13 @@ const certificateGrade = (grade: string): Profile => {
 
 // Sanitized structure only; the API response is a mock, not live evidence.
 describe("generic select and radio option values on sanitized fixtures", () => {
-  it("converts the military status radio through its fixed option labels", async () => {
+  it.each([
+    ["ahnlab-write-resume-form", "#militaryType"],
+    ["sk-careers-application-form", "#prsMilitarySvcStatus"],
+  ])("converts the fixed military status label on %s", async (fixture, selector) => {
     const { grade, field } = await analyzeControl(
-      "ahnlab-write-resume-form",
-      "#militaryType",
+      fixture,
+      selector,
       "military.military.militaryStatus",
       militaryProfile("military-status:served"),
     );
@@ -126,10 +129,13 @@ describe("generic select and radio option values on sanitized fixtures", () => {
     expect(grade).toEqual({ grade: "AUTO" });
   });
 
-  it("blocks the military status radio when no page label corresponds", async () => {
+  it.each([
+    ["ahnlab-write-resume-form", "#militaryType"],
+    ["sk-careers-application-form", "#prsMilitarySvcStatus"],
+  ])("blocks an unmatched military status on %s", async (fixture, selector) => {
     const { grade } = await analyzeControl(
-      "ahnlab-write-resume-form",
-      "#militaryType",
+      fixture,
+      selector,
       "military.military.militaryStatus",
       militaryProfile("military-status:unknown"),
     );
@@ -152,6 +158,48 @@ describe("generic select and radio option values on sanitized fixtures", () => {
       valueBinding: { type: "LOOKUP", optionMap: { A등급: "A등급" } },
     });
     expect(grade).toEqual({ grade: "AUTO" });
+  });
+
+  // Existing sanitized snapshot provenance: SK #187, fixture review.md.
+  // This free-text profile field has no fixed option set to mask exact matching.
+  it("normalizes a free-text conversation level on an unrelated select fixture", async () => {
+    const profile = createEmptyProfile();
+    profile.languages.push({
+      id: "entry-1",
+      sectionId: "languageSkill",
+      values: { conversationalLevel: " 상 " },
+    });
+    const { grade, field } = await analyzeControl(
+      "sk-careers-application-form",
+      '[name="lngabConversation"]',
+      "languages.languageSkill.conversationalLevel",
+      profile,
+    );
+
+    expect(field).toMatchObject({
+      valueBinding: { type: "LOOKUP", optionMap: { " 상 ": "상" } },
+    });
+    expect(grade).toEqual({ grade: "AUTO" });
+  });
+
+  it("blocks a numeric score on an unrelated conversation level select", async () => {
+    const profile = createEmptyProfile();
+    profile.languages.push({
+      id: "entry-1",
+      sectionId: "languageSkill",
+      values: { conversationalLevel: "850" },
+    });
+    const { grade } = await analyzeControl(
+      "sk-careers-application-form",
+      '[name="lngabConversation"]',
+      "languages.languageSkill.conversationalLevel",
+      profile,
+    );
+
+    expect(grade).toEqual({
+      grade: "BLOCKED",
+      reason: "OPTION_VALUE_UNMATCHED",
+    });
   });
 
   it.each([
