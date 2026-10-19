@@ -3,6 +3,7 @@ import { installExecutionPolicy } from "../workflow/execution-policy";
 import { getWorkflowAdapter } from "../adapters/workflow";
 import { getWriteAdapter } from "../adapters/write";
 import { collectFieldsSnapshot } from "../dom/collect";
+import { matchesResultValue } from "../workflow/result-value-match";
 import {
   onSiteEnter,
   takeSiteEnters,
@@ -332,9 +333,18 @@ it.each([
     expect(["written" in result && result.written, select.value]).toEqual(
       code ? [true, code] : [false, ""],
     );
-    if (code)
+    if (code) {
       expect(
         getWriteAdapter(document).verifyRetained?.(field.handle, field.item),
       ).toBe(true);
+      expect(
+        matchesResultValue(
+          field.item,
+          select.selectedOptions[0].textContent!,
+          profile,
+          field.handle,
+        ),
+      ).toBe(true);
+    }
   },
 );
