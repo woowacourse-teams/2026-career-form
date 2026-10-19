@@ -180,3 +180,33 @@ export function showResults(
     });
   }
 }
+
+/**
+ * Whether the site's own (page-world) handler would see Enter. A content
+ * script override of `keyCode` lives on its own event wrapper only, so read
+ * through the prototype getter like the page world does.
+ */
+export const siteSeesEnter = (e: Event) =>
+  e instanceof KeyboardEvent &&
+  Object.getOwnPropertyDescriptor(
+    KeyboardEvent.prototype,
+    "keyCode",
+  )!.get!.call(e) === 13;
+
+let siteEnters = 0;
+
+/** Returns how many gated site searches ran since the last call, then resets. */
+export function takeSiteEnters() {
+  const count = siteEnters;
+  siteEnters = 0;
+  return count;
+}
+
+/** Wraps a site-simulating keypress listener so it reacts only to Enter it can see. */
+export const onSiteEnter =
+  <E extends Event>(listener: (e: E) => void) =>
+  (e: E) => {
+    if (!siteSeesEnter(e)) return;
+    siteEnters++;
+    listener(e);
+  };
