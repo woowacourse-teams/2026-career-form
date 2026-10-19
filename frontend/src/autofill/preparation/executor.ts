@@ -1,3 +1,4 @@
+import { debugPreparationCounts } from "../debug/structural-diagnostics";
 import {
   executionPolicy,
   nativePolicyRequired,
@@ -206,7 +207,7 @@ function failure(
   };
 }
 
-export async function executeApprovedPreparationPlans(
+async function executeApprovedPreparationPlansInternal(
   options: PreparationExecutionOptions,
 ): Promise<PreparationExecutionResult> {
   const first = options.approvedPlans.find(({ approved }) => approved);
@@ -477,4 +478,16 @@ async function executePreparation({
     executedPlanCount,
     unavailableActionCandidateIds: [...unavailableActionCandidateIds],
   };
+}
+
+export async function executeApprovedPreparationPlans(
+  options: PreparationExecutionOptions,
+): Promise<PreparationExecutionResult> {
+  const result = await executeApprovedPreparationPlansInternal(options);
+  debugPreparationCounts(
+    "preparation",
+    options.approvedPlans.filter((p) => p.approved).length,
+    result.executedPlanCount,
+  );
+  return result;
 }

@@ -1,3 +1,8 @@
+import { browser } from "wxt/browser";
+import {
+  debugRunBuild,
+  debugPreparationCounts,
+} from "../debug/structural-diagnostics";
 import { runtimeRules } from "../policy/runtime-rules";
 import {
   nativePolicyRequired,
@@ -102,6 +107,9 @@ export function AutofillWorkflow(props: WorkflowProps) {
   useEffect(() => {
     let active = true;
     const url = props.pageDocument.URL;
+    void debugRunBuild(() =>
+      browser.runtime.sendMessage({ type: "AUTOFILL_GET_INSTALLED_BUILD" }),
+    );
     setLoaded(false);
     setError(undefined);
     const siteUrl = new URL(url);
@@ -394,6 +402,11 @@ function PolicyReadyWorkflow({
         }
         const snapshot = collectPreparationSnapshot(pageDocument);
         const analysis = await apiClient.analyzePreparation(snapshot.request);
+        debugPreparationCounts(
+          "preparation",
+          analysis.preparationPlans.length,
+          0,
+        );
         if (!active) return;
         if (isUnsupportedHplace(pageDocument)) {
           setStage("unsupported");

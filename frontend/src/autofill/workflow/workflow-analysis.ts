@@ -1,3 +1,4 @@
+import { debugReviewDecisions } from "../debug/structural-diagnostics";
 import { prepareNativeMajorsAfterSchool } from "./native-major-preparation";
 import { nativePolicyRequired } from "./execution-policy";
 import { nativeForm } from "../policy/native-form-collection";
@@ -601,6 +602,7 @@ export function createAnalyzeFields({
       plan.items.push(...run.nativeMajors.unavailable);
     const finishReviewLog = startLocalTiming("review-log");
     debugReviewPlan(plan);
+    debugReviewDecisions(plan, snapshot.registry);
     finishReviewLog();
     observeQuality(() =>
       apiClient.quality?.review(snapshot.request.snapshotId, plan.items),
