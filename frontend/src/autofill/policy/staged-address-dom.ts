@@ -26,7 +26,14 @@ export function stagedAddressNodes(document: Document) {
   const root = one(document, form.rootSelector);
   const buttons = Array.from(document.querySelectorAll(policy.triggerSelector));
   if (buttons.length !== 1) {
-    debugCollectionSkip(policy.actionId, "owner-mismatch", "trigger-count");
+    if (buttons.length === 0)
+      debugCollectionSkip(
+        policy.actionId,
+        "section-missing",
+        "address-trigger",
+      );
+    else
+      debugCollectionSkip(policy.actionId, "owner-mismatch", "trigger-count");
     return;
   }
   const button = buttons[0];

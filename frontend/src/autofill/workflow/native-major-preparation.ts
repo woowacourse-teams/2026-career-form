@@ -111,6 +111,7 @@ export async function prepareNativeMajorsAfterSchool({
         refreshSnapshot: async () =>
           executableSnapshot(collectPreparationSnapshot(document)),
         countRepeatableGroups: (s, p) => s.countRepeatableGroups?.(p) ?? -1,
+        diagnosticsStage: "preparation-majors",
       });
       if (result.status !== "completed")
         throw new Error("Major preparation failed");

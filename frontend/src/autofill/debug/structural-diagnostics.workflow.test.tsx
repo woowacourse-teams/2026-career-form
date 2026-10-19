@@ -1,4 +1,4 @@
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { browser } from "wxt/browser";
 import { AutofillWorkflow } from "../workflow/AutofillWorkflow";
@@ -7,6 +7,17 @@ import { createEmptyProfile } from "../../profile/model";
 import { resetHplacePage } from "../workflow/test-utils/hplace.fixture";
 import { installExecutionPolicy } from "../workflow/execution-policy";
 import { setAutofillDebugEnabled } from "./autofill-debug";
+import {
+  educationProfile,
+  mountEducation,
+} from "../policy/__fixtures__/hplace-mrs2-education.synthetic";
+import { setHplacePage } from "../workflow/test-utils/hplace.fixture";
+import {
+  catalogResponder,
+  exactTitleCatalog,
+  renderNativeWorkflow,
+} from "../workflow/test-utils/hplace-native-workflow";
+import { expectHarnessLine } from "../workflow/test-utils/harness-diagnostic-line";
 const { send } = vi.hoisted(() => ({ send: vi.fn<() => Promise<unknown>>() }));
 vi.mock("wxt/browser", () => ({
   browser: { runtime: { sendMessage: send } },
@@ -77,8 +88,49 @@ it.each([false, true])(
         `[CareerForm] build revision=${"a".repeat(40)} source_state=CLEAN`,
       );
       expect(log).toHaveBeenCalledWith(
-        "[CareerForm] stage name=preparation collected=0 accepted=0 rejected=0 planned=0 executed=0",
+        "[CareerForm] stage name=preparation-plan collected=0 accepted=0 rejected=0 planned=0 executed=0",
       );
     } else expect(log).not.toHaveBeenCalled();
   },
 );
+
+it("names each preparation stage line by its caller", async () => {
+  setHplacePage(
+    "https://synthetic.recruiter.im/mrs2/applicant/resume/writeResume",
+  );
+  send.mockReset().mockResolvedValue(undefined);
+  for (const method of [
+    "log",
+    "table",
+    "groupCollapsed",
+    "groupEnd",
+    "debug",
+    "warn",
+  ] as const)
+    vi.spyOn(console, method).mockImplementation(() => {});
+  const log = vi.spyOn(console, "info").mockImplementation(() => {});
+  setAutofillDebugEnabled(true);
+  const policy = mountEducation(1, 1, true);
+  renderNativeWorkflow({
+    policy,
+    profile: educationProfile(),
+    searchResponder: catalogResponder(exactTitleCatalog()),
+  });
+  await screen.findByText("기입 결과", {}, { timeout: 15000 });
+  await waitFor(() =>
+    expect(
+      document.querySelector<HTMLInputElement>(
+        '[name="college[0].academyName"]',
+      )!.value,
+    ).toBe("합성대학 A"),
+  );
+  const lines = log.mock.calls.map(([line]) => line as string);
+  for (const line of lines)
+    expectHarnessLine(line, ["합성대학", "가상복수전공", "가상부전공"]);
+  const stages = lines
+    .filter((line) => line.startsWith("[CareerForm] stage name=preparation"))
+    .map((line) => /stage name=([a-z-]+)/.exec(line)![1]);
+  expect(stages).toContain("preparation-plan");
+  expect(stages).toContain("preparation-initial");
+  expect(stages).toContain("preparation-majors");
+}, 30000);
