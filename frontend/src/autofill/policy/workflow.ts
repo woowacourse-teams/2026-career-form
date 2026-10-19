@@ -5,12 +5,12 @@ import {
   executeCommittedSearch,
   committedSearchMatches,
 } from "./committed-search";
+import { currentNativeOwner, nativeForm } from "./native-form-collection";
 import {
-  currentNativeOwner,
-  nativeForm,
-  rawNativeName,
-} from "./native-form-collection";
-import { nativeWriteAdapter, settleNativeDriver } from "./native-form-write";
+  nativeFieldControls,
+  nativeWriteAdapter,
+  settleNativeDriver,
+} from "./native-form-write";
 import type { WorkflowAdapter } from "../adapters/workflow";
 import type { MatchedFieldAnalysis } from "../api/types";
 import type { FieldCandidateHandle } from "../dom/types";
@@ -338,14 +338,12 @@ export function policyWorkflowAdapter(document: Document): WorkflowAdapter {
         return o
           ? [
               ...handle.elements,
-              ...(o.field.driver?.dependencies ?? []).flatMap((n) => {
-                const f = o.section.fields.find((f) => f.name === n)!;
-                return Array.from(
-                  o.row.querySelectorAll(
-                    `[name="${CSS.escape(rawNativeName(f.rawName, o.index))}"]`,
-                  ),
-                );
-              }),
+              ...(o.field.driver?.dependencies ?? []).flatMap((n) =>
+                nativeFieldControls(
+                  o,
+                  o.section.fields.find((f) => f.name === n)!,
+                ),
+              ),
             ]
           : [];
       }

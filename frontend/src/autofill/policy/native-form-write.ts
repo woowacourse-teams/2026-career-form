@@ -18,7 +18,32 @@ import {
   type NativeOwnership,
 } from "./native-form-collection";
 import { text, visible } from "./primitives";
+import { searchNodes } from "./native-form-search-dom";
+import type { NativeField } from "./native-form-contract";
 
+/**
+ * The row controls a native field occupies. A search field resolves to its
+ * query: the hidden name input of the tuple never becomes visible, so a driver
+ * waiting on it would never settle. An unrecognised widget falls back to the
+ * named inputs, which never satisfy "enabled" and so keep dependents deferred.
+ */
+export function nativeFieldControls(
+  o: NativeOwnership,
+  f: NativeField,
+): Element[] {
+  const query = f.search ? searchNodes(o.row, f, o.index)?.query : undefined;
+  if (query) return [query];
+  return Array.from(
+    o.row.querySelectorAll(
+      `[name="${CSS.escape(rawNativeName(f.rawName, o.index))}"]`,
+    ),
+  );
+}
+/** The site enables a search tuple's name/code inputs with its query. */
+function searchTupleEnabled(o: NativeOwnership, f: NativeField) {
+  const n = f.search ? searchNodes(o.row, f, o.index) : undefined;
+  return !n || (!n.name.matches(":disabled") && !n.code.matches(":disabled"));
+}
 const driverControls = new WeakMap<FieldCandidateHandle, Set<string>>();
 const fail = { handled: true, written: false } as const;
 function peerControl(o: NativeOwnership, name: string) {
@@ -230,14 +255,13 @@ export const nativeWriteAdapter: CompanyWriteAdapter = {
       driverControls.set(
         handle,
         new Set(
-          o.field.driver.dependencies.filter((name) => {
-            const f = o.section.fields.find((f) => f.name === name)!;
-            return (
-              o.row.querySelector(
-                `[name="${CSS.escape(rawNativeName(f.rawName, o.index))}"]`,
-              ) !== null
-            );
-          }),
+          o.field.driver.dependencies.filter(
+            (name) =>
+              nativeFieldControls(
+                o,
+                o.section.fields.find((f) => f.name === name)!,
+              ).length > 0,
+          ),
         ),
       );
     const kind = o.field.type,
@@ -331,16 +355,13 @@ export async function settleNativeDriver(
       .filter((r) => !r.whenLabel || r.whenLabel === item.profileValue)
       .every((r) => {
         const f = o.section.fields.find((f) => f.name === r.field)!;
-        const found = Array.from(
-          o.row.querySelectorAll(
-            `[name="${CSS.escape(rawNativeName(f.rawName, o.index))}"]`,
-          ),
-        );
+        const found = nativeFieldControls(o, f);
         if (found.length === 0 && !driverControls.get(handle)?.has(r.field))
           return true;
         return (
           found.length > 0 &&
           (f.type === "radio" || found.length === 1) &&
+          (r.state !== "enabled" || searchTupleEnabled(o, f)) &&
           found.every((e) =>
             r.state === "enabled"
               ? visible(e) && !("readOnly" in e && e.readOnly)
