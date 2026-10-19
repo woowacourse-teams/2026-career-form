@@ -29,7 +29,7 @@ function load(fixture: string, scope?: string) {
 }
 
 function collect() {
-  const snapshot = collectFieldsSnapshot(document);
+  const snapshot = collectFieldsSnapshot(document, undefined, { titleNameCues: true });
   const fields = snapshot.request.sections.flatMap((section) => [
     ...section.fields,
     ...(section.items ?? []).flatMap((item) => item.fields),

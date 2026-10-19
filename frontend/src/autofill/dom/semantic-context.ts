@@ -366,6 +366,7 @@ interface ContextOptions {
   generic?: boolean;
   group?: readonly HTMLElement[];
   recoverBrokenLabels?: boolean;
+  titleNameCues?: boolean;
 }
 
 const NAME_CUE_SOURCES: ReadonlySet<NonNullable<SemanticContext["labels"]>[number]["source"]> = new Set([
@@ -377,6 +378,7 @@ function genericContextLabels(
   section: Element | null,
   group?: readonly HTMLElement[],
   recoverBrokenLabels = false,
+  titleNameCues = false,
 ): NonNullable<SemanticContext["labels"]> {
   const labels: NonNullable<SemanticContext["labels"]> = [];
   const add = (source: NonNullable<SemanticContext["labels"]>[number]["source"], value?: string | null) => {
@@ -419,7 +421,7 @@ function genericContextLabels(
   add("placeholder", element.getAttribute("placeholder"));
   // A control with no other name cue falls back to its title text, reusing the
   // existing label source so the shared API contract stays unchanged.
-  if (!group && !labels.some((label) => NAME_CUE_SOURCES.has(label.source)))
+  if (titleNameCues && !group && !labels.some((label) => NAME_CUE_SOURCES.has(label.source)))
     add("label", element.getAttribute("title"));
   add("legend", textOf(element.closest("fieldset")?.querySelector(":scope > legend") ?? null));
   const row = structuralRow(element);
@@ -446,7 +448,7 @@ export function collectSemanticContext(
   options: ContextOptions = {},
 ): SemanticContext {
   const labels = options.generic
-    ? genericContextLabels(element, section, options.group, options.recoverBrokenLabels)
+    ? genericContextLabels(element, section, options.group, options.recoverBrokenLabels, options.titleNameCues)
     : contextLabels(element, section);
   const context: SemanticContext = labels.length ? { labels } : {};
   if (

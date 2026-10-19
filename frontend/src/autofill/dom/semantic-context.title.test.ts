@@ -1,16 +1,30 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { collectSemanticContext } from "./semantic-context";
+import { collectFieldsSnapshot, collectFieldsSnapshotWithDropdowns } from "./collect";
 
 function labelsOf(html: string, generic = true) {
   document.body.innerHTML = html;
   const input = document.querySelector<HTMLElement>("input")!;
-  return collectSemanticContext(input, null, { generic }).labels ?? [];
+  return collectSemanticContext(input, null, { generic, titleNameCues: true }).labels ?? [];
 }
 
 describe("generic title-only name cue", () => {
   beforeEach(() => {
     document.body.innerHTML = "";
+  });
+
+  it("omits title cues by default and includes them only in opted-in generic collection", async () => {
+    document.body.innerHTML = '<input type="text" title="우편번호" />';
+    const labels = (snapshot: ReturnType<typeof collectFieldsSnapshot>) =>
+      snapshot.request.sections[0]?.fields[0]?.semanticContext?.labels ?? [];
+    expect(labels(collectFieldsSnapshot(document))).toEqual([]);
+    expect(labels(collectFieldsSnapshot(document, undefined, { titleNameCues: true }))).toEqual([
+      { source: "label", text: "우편번호" },
+    ]);
+    expect(labels(await collectFieldsSnapshotWithDropdowns(document))).toEqual([
+      { source: "label", text: "우편번호" },
+    ]);
   });
 
   it("carries the title text as a label when no other name cue exists", () => {
@@ -53,6 +67,6 @@ describe("generic title-only name cue", () => {
   it.each(["radio", "checkbox"])("does not turn a %s option title into a group question", (type) => {
     document.body.innerHTML = `<div><input type="${type}" title="첫 번째 선택지" /><input type="${type}" title="두 번째 선택지" /></div>`;
     const group = Array.from(document.querySelectorAll<HTMLInputElement>("input"));
-    expect(collectSemanticContext(group[0]!, null, { generic: true, group }).labels ?? []).toEqual([]);
+    expect(collectSemanticContext(group[0]!, null, { generic: true, group, titleNameCues: true }).labels ?? []).toEqual([]);
   });
 });
