@@ -137,6 +137,26 @@ describe("preselected generic education", () => {
     expect(assign).not.toHaveBeenCalled();
   }, 120_000);
 
+  it("preserves a valid first option without emitting selection events", async () => {
+    const selects = mount("synthetic");
+    selects.forEach((select) => select.options[0]!.remove());
+    const before = selects.map((select) => select.value);
+    expect(selects[0]!.selectedIndex).toBe(0);
+    const changed = vi.fn();
+    selects.forEach((select) => {
+      select.addEventListener("input", changed);
+      select.addEventListener("change", changed);
+    });
+    const result = await runGenericStructureLoop({
+      document,
+      profile,
+      apiClient: api().client,
+    });
+    expect(result.context.educationRows.size).toBe(2);
+    expect(selects.map((select) => select.value)).toEqual(before);
+    expect(changed).not.toHaveBeenCalled();
+  });
+
   it("blocks a mismatched graduate row without rewriting or reassigning it", async () => {
     const selects = mount("synthetic");
     selects[1]!.value = "postgrad";
