@@ -368,6 +368,10 @@ interface ContextOptions {
   recoverBrokenLabels?: boolean;
 }
 
+const NAME_CUE_SOURCES: ReadonlySet<NonNullable<SemanticContext["labels"]>[number]["source"]> = new Set([
+  "label", "aria-label", "aria-labelledby", "placeholder",
+]);
+
 function genericContextLabels(
   element: HTMLElement,
   section: Element | null,
@@ -413,6 +417,10 @@ function genericContextLabels(
     add("description", question?.description);
   }
   add("placeholder", element.getAttribute("placeholder"));
+  // A control with no other name cue falls back to its title text, reusing the
+  // existing label source so the shared API contract stays unchanged.
+  if (!group && !labels.some((label) => NAME_CUE_SOURCES.has(label.source)))
+    add("label", element.getAttribute("title"));
   add("legend", textOf(element.closest("fieldset")?.querySelector(":scope > legend") ?? null));
   const row = structuralRow(element);
   let current = element.parentElement;
