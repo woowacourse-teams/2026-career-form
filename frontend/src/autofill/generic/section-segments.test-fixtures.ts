@@ -77,7 +77,9 @@ export const defaultStyleOf: StyleOf = (element) => ({
 
 /** Fields of one collection pass (CF-198 labels), mapped to segment input. */
 export function collectSegmentFields(document: Document): SegmentField[] {
-  const { request, registry } = collectFieldsSnapshot(document);
+  const { request, registry } = collectFieldsSnapshot(document, undefined, {
+    mixedSectionDetection: false,
+  });
   return request.sections
     .flatMap((section) => [
       ...section.fields,

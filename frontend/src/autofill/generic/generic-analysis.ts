@@ -50,8 +50,23 @@ export const GENERIC_UNLINKED_REASON = "UNLINKED";
 
 export interface GenericFieldGrade {
   grade: FieldGrade;
-  reason?: GradeReason | GenericSectionFailure | typeof GENERIC_UNLINKED_REASON;
+  reason?:
+    | GradeReason
+    | GenericSectionFailure
+    | typeof GENERIC_UNLINKED_REASON
+    | WritePlanReason;
 }
+
+const WRITE_PLAN_REASON = {
+  BLOCKED: "WRITE_PLAN_BLOCKED",
+  MANUAL_REVEAL_REQUIRED: "WRITE_PLAN_MANUAL_REVEAL",
+  SYSTEM_CONTROL: "WRITE_PLAN_SYSTEM_CONTROL",
+  UNVERIFIED: "WRITE_PLAN_UNVERIFIED",
+  READY: "WRITE_PLAN_MISSING",
+} as const;
+
+export type WritePlanReason =
+  (typeof WRITE_PLAN_REASON)[keyof typeof WRITE_PLAN_REASON];
 
 export interface GenericSectionResult {
   sectionId: string;
@@ -342,30 +357,40 @@ function convertSection(
       choiceValue,
       candidate.options,
     );
+    const grade = gradeGenericField({
+      profileFieldKey,
+      composite,
+      confidence: response.confidence,
+      categoryConfirmed: response.categoryConfirmed && categoryOpen,
+      hasProfileValue: resolution === "resolved" || resolution === "ambiguous",
+      control: candidate.control,
+      inputType: candidate.semanticContext?.inputType,
+      inputMode: candidate.semanticContext?.inputMode,
+      autocomplete: candidate.semanticContext?.autocomplete,
+      maxLength: candidate.semanticContext?.maxLength,
+      displayName: candidate.displayName,
+      labels: candidate.semanticContext?.labels,
+      title: element.getAttribute("title") ?? undefined,
+      placeholder: element.getAttribute("placeholder") ?? undefined,
+      options: candidate.options,
+      ...(choiceControl && !composite
+        ? { optionValueCheck: { profileValue: choiceValue } }
+        : {}),
+      rowSiblings,
+      sectionSiblingKeys: matched.flatMap((sibling) =>
+        sibling.index !== index && sibling.response.profileFieldKey
+          ? [sibling.response.profileFieldKey]
+          : [],
+      ),
+    });
     grades.push([
       candidateId,
-      gradeGenericField({
-        profileFieldKey,
-        composite,
-        confidence: response.confidence,
-        categoryConfirmed: response.categoryConfirmed && categoryOpen,
-        hasProfileValue:
-          resolution === "resolved" || resolution === "ambiguous",
-        control: candidate.control,
-        inputType: candidate.semanticContext?.inputType,
-        inputMode: candidate.semanticContext?.inputMode,
-        autocomplete: candidate.semanticContext?.autocomplete,
-        maxLength: candidate.semanticContext?.maxLength,
-        displayName: candidate.displayName,
-        labels: candidate.semanticContext?.labels,
-        title: element.getAttribute("title") ?? undefined,
-        placeholder: element.getAttribute("placeholder") ?? undefined,
-        options: candidate.options,
-        ...(choiceControl && !composite
-          ? { optionValueCheck: { profileValue: choiceValue } }
-          : {}),
-        rowSiblings,
-      }),
+      !response.writePlan && grade.grade !== "BLOCKED"
+        ? {
+            grade: "BLOCKED",
+            reason: WRITE_PLAN_REASON[response.interactionStatus],
+          }
+        : grade,
     ]);
     fields.push({
       candidateId,
