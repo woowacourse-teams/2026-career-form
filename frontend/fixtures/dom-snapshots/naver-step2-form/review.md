@@ -68,7 +68,7 @@
 | 작업 소유 브라우저·서버 종료 확인 | WebView 측정 뷰 종료, 임시 폴더 삭제 확인 |
 | 원본 대응표·페이지 내부 임시 참조 폐기 | 추출 함수가 반환 전 대응표를 비움, REPL 세션은 일회성 |
 | 임시 검토 파일 정리 확인 | Aside 세션 폴더의 정제 파일 6개 삭제, 남은 파일 0 |
-| 등록 경로 / 연결 테스트 | `frontend/fixtures/dom-snapshots/naver-step2-form/`; `frontend/src/autofill/workflow/dom-snapshot.naver-search.integration.test.ts` |
+| 등록 경로 / 연결 테스트 | `frontend/fixtures/dom-snapshots/naver-step2-form/`; `frontend/src/autofill/workflow/dom-snapshot.naver-search.integration.test.ts`; `frontend/src/autofill/workflow/dom-snapshot.option-values.test.ts` |
 | 최종 판정: 등록 가능 / 보류 / 수집 중단 | 등록 가능 (정제 HTML sha256 24ee92f36ecbc1508734760ec48552f83a053ae134bd7bc05d1e2d33d333afc6) |
 
 ## 공백 정규화 기록
