@@ -22,6 +22,9 @@ export type WriteFailureCode =
   | "DATE_ROLLBACK_FAILED"
   | "SEARCH_SELECTION_UNVERIFIED"
   | "VALUE_MATCH_UNRECORDED"
-  | "OPTION_UNMATCHED";
+  | "OPTION_UNMATCHED"
+  | "DRIVER_LIMIT_REACHED"
+  | "DRIVER_SELECTION_UNCONFIRMED"
+  | "ROW_DRIVER_UNCONFIRMED";
 
 export type FailureReporter = (code: WriteFailureCode) => void;
