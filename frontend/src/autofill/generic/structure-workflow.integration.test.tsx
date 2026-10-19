@@ -228,7 +228,7 @@ describe("structure loop through the entire workflow", () => {
       majors(items).find((item) => item.profileEntryId === "bachelor")
         ?.disabled,
     ).not.toBe(true);
-    const reviewTab = screen.getAllByRole("tab")[1]!;
+    const reviewTab = screen.getByRole("tab", { name: /입력 불가/ });
     fireEvent.click(reviewTab);
     const panel = document.getElementById(
       reviewTab.getAttribute("aria-controls")!,
