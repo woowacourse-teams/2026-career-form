@@ -197,18 +197,19 @@ export function runDomPlan(
           break;
         case "KEY": {
           if (!validDomPlan([step])) return false;
+          // Legacy codes go in the init dict: a property override would stay on
+          // this world's event wrapper and the site's handler would read 0.
           const event = new KeyboardEvent(step.event!, {
             key: step.key,
             ...(step.code ? { code: step.code } : {}),
+            ...(step.legacyEnter
+              ? { keyCode: 13, charCode: 13, which: 13 }
+              : {}),
             bubbles: true,
             cancelable: step.legacyEnter === true,
           });
-          if (step.legacyEnter) {
-            Object.defineProperties(event, {
-              keyCode: { get: () => 13 },
-              which: { get: () => 13 },
-            });
-          }
+          if (step.legacyEnter && (event.keyCode !== 13 || event.which !== 13))
+            return false;
           node.dispatchEvent(event);
           break;
         }

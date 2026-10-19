@@ -1,14 +1,17 @@
-import { afterEach, expect, it } from "vitest";
+import { afterEach, beforeEach, expect, it } from "vitest";
 import { installExecutionPolicy } from "../workflow/execution-policy";
 import { getWorkflowAdapter } from "../adapters/workflow";
 import { getWriteAdapter } from "../adapters/write";
 import { collectFieldsSnapshot } from "../dom/collect";
 import {
+  onSiteEnter,
+  takeSiteEnters,
   mountSearch,
   searchItem,
   showResults,
   widget,
 } from "./__fixtures__/hplace-mrs2-search.synthetic";
+beforeEach(() => void takeSiteEnters());
 afterEach(() => installExecutionPolicy(document));
 const metadata = (grade: boolean, score: boolean) => ({
   "data-gradeflag": String(grade),
@@ -69,13 +72,16 @@ it.each([
     mount();
     const { handle, item } = searchItem("가상 어학시험");
     expect(collected()).toEqual(["synthetic.search.name"]);
-    handle.elements[0].addEventListener("keypress", () =>
-      showResults(
-        handle.elements[0],
-        ["가상 어학시험"],
-        () => setTimeout(() => detail(grade, score), 30),
-        "234",
-        metadata(grade, score),
+    handle.elements[0].addEventListener(
+      "keypress",
+      onSiteEnter(() =>
+        showResults(
+          handle.elements[0],
+          ["가상 어학시험"],
+          () => setTimeout(() => detail(grade, score), 30),
+          "234",
+          metadata(grade, score),
+        ),
       ),
     );
     expect(
@@ -120,13 +126,16 @@ it.each(["ybm", "unknown", "missing", "special-code"])(
       delete (meta as Record<string, string>)["data-gradeflag"];
     if (mode === "unknown")
       (meta as Record<string, string>)["data-authorization"] = "required";
-    handle.elements[0].addEventListener("keypress", () =>
-      showResults(
-        handle.elements[0],
-        ["가상 어학시험"],
-        () => clicks++,
-        mode === "special-code" ? "00091" : "234",
-        meta,
+    handle.elements[0].addEventListener(
+      "keypress",
+      onSiteEnter(() =>
+        showResults(
+          handle.elements[0],
+          ["가상 어학시험"],
+          () => clicks++,
+          mode === "special-code" ? "00091" : "234",
+          meta,
+        ),
       ),
     );
     expect(
@@ -137,6 +146,7 @@ it.each(["ybm", "unknown", "missing", "special-code"])(
         new AbortController().signal,
       ),
     ).toBe(false);
+    expect(takeSiteEnters()).toBe(1);
     expect(clicks).toBe(0);
     expect(widget().code.value).toBe("");
   },
@@ -190,13 +200,16 @@ it("allows only a truly hidden empty default marker and refuses populated detail
 it("does not accept tuple alone when exam detail was never replaced", async () => {
   mount();
   const { handle, item } = searchItem("가상 어학시험");
-  handle.elements[0].addEventListener("keypress", () =>
-    showResults(
-      handle.elements[0],
-      ["가상 어학시험"],
-      undefined,
-      "234",
-      metadata(false, false),
+  handle.elements[0].addEventListener(
+    "keypress",
+    onSiteEnter(() =>
+      showResults(
+        handle.elements[0],
+        ["가상 어학시험"],
+        undefined,
+        "234",
+        metadata(false, false),
+      ),
     ),
   );
   expect(
@@ -207,24 +220,28 @@ it("does not accept tuple alone when exam detail was never replaced", async () =
       new AbortController().signal,
     ),
   ).toBe(false);
+  expect(takeSiteEnters()).toBe(1);
   expect(collected()).toEqual(["synthetic.search.name"]);
 });
 it("guards the click when a user populates detail while results are pending", async () => {
   mount();
   const { handle, item } = searchItem("가상 어학시험");
   let clicks = 0;
-  handle.elements[0].addEventListener("keypress", () => {
-    const input = document.createElement("input");
-    input.value = "사용자 입력";
-    document.querySelector('[data-template="detail"]')!.append(input);
-    showResults(
-      handle.elements[0],
-      ["가상 어학시험"],
-      () => clicks++,
-      "234",
-      metadata(true, false),
-    );
-  });
+  handle.elements[0].addEventListener(
+    "keypress",
+    onSiteEnter(() => {
+      const input = document.createElement("input");
+      input.value = "사용자 입력";
+      document.querySelector('[data-template="detail"]')!.append(input);
+      showResults(
+        handle.elements[0],
+        ["가상 어학시험"],
+        () => clicks++,
+        "234",
+        metadata(true, false),
+      );
+    }),
+  );
   expect(
     await getWorkflowAdapter(document).executeStateDriver?.(
       document,
@@ -233,6 +250,7 @@ it("guards the click when a user populates detail while results are pending", as
       new AbortController().signal,
     ),
   ).toBe(false);
+  expect(takeSiteEnters()).toBe(1);
   expect(clicks).toBe(0);
 });
 it("retains an inert structural placeholder for an authenticated row without reading its values", () => {

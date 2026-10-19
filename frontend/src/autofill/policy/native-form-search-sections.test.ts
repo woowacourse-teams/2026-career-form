@@ -1,4 +1,5 @@
 import { resolveValueBinding } from "../profile/value-binding";
+import { onSiteEnter } from "./__fixtures__/hplace-mrs2-search.synthetic";
 import { createEmptyProfile } from "../../profile/model";
 import { afterEach, expect, it } from "vitest";
 import seed from "../../../../backend/src/main/resources/policies/hplace-mrs2-v4.json";
@@ -168,27 +169,30 @@ it.each([true, false])(
       "hplace.mrs2.license.licenseName",
       "가상자격증",
     );
-    handle.elements[0].addEventListener("keypress", () => {
-      const span = handle.elements[0].closest(".span")!,
-        box = span.querySelector(".searchResult")!;
-      box.innerHTML =
-        '<ul class="searchResultList"><li><button type="button" class="ellipsis" data-code="123" title="가상자격증" data-usescore="false" data-privateinfo="' +
-        registration +
-        '">가상자격증</button></li></ul>';
-      box.querySelector("button")!.addEventListener("click", () => {
-        (
-          span.querySelector('[name$="licenseName"]') as HTMLInputElement
-        ).value = "가상자격증";
-        (
-          span.querySelector('[name$="licenseCode"]') as HTMLInputElement
-        ).value = "123";
-        span.querySelector(".searchResultName")!.textContent = "가상자격증";
-        if (!registration)
+    handle.elements[0].addEventListener(
+      "keypress",
+      onSiteEnter(() => {
+        const span = handle.elements[0].closest(".span")!,
+          box = span.querySelector(".searchResult")!;
+        box.innerHTML =
+          '<ul class="searchResultList"><li><button type="button" class="ellipsis" data-code="123" title="가상자격증" data-usescore="false" data-privateinfo="' +
+          registration +
+          '">가상자격증</button></li></ul>';
+        box.querySelector("button")!.addEventListener("click", () => {
           (
-            document.querySelector("[data-privateremove]") as HTMLElement
-          ).style.display = "none";
-      });
-    });
+            span.querySelector('[name$="licenseName"]') as HTMLInputElement
+          ).value = "가상자격증";
+          (
+            span.querySelector('[name$="licenseCode"]') as HTMLInputElement
+          ).value = "123";
+          span.querySelector(".searchResultName")!.textContent = "가상자격증";
+          if (!registration)
+            (
+              document.querySelector("[data-privateremove]") as HTMLElement
+            ).style.display = "none";
+        });
+      }),
+    );
     expect(
       await getWorkflowAdapter(document).executeStateDriver?.(
         document,
@@ -347,26 +351,29 @@ it.each(["score", "grade"])(
     const query = document.querySelector<HTMLInputElement>(
       '[data-type="foreignExam"]',
     )!;
-    query.addEventListener("keypress", () => {
-      const results = query
-        .closest("div.search")!
-        .querySelector(".searchResult")!;
-      results.innerHTML = `<ul class="searchResultList"><li><button class="ellipsis" type="button" data-code="EX001" title="합성 어학시험" data-gradeflag="${kind === "grade"}" data-scoreflag="${kind === "score"}" data-setupcode="" data-setupvalue="" data-perfactgrade="200">합성 어학시험</button></li></ul>`;
-      results.querySelector("button")!.addEventListener("click", () => {
-        const row = query.closest("[data-loop]")!;
-        row.querySelector<HTMLInputElement>(
-          '[name$=".languageExamName"]',
-        )!.value = "합성 어학시험";
-        row.querySelector<HTMLInputElement>(
-          '[name$=".languageExamCode"]',
-        )!.value = "EX001";
-        row.querySelector(".searchResultName")!.textContent = "합성 어학시험";
-        row.querySelector('[data-template="detail"]')!.innerHTML =
-          kind === "score"
-            ? '<input type="number" name="languageExam[0].score" min="0" max="9999"><input type="number" name="languageExam[0].perfectScore"><input name="languageExam[0].examDate"><input type="hidden" name="languageExam[0].languageExamSn">'
-            : '<select name="languageExam[0].gradeCode"><option value=""></option><option value="G2">2급</option></select><input type="hidden" name="languageExam[0].languageExamSn">';
-      });
-    });
+    query.addEventListener(
+      "keypress",
+      onSiteEnter(() => {
+        const results = query
+          .closest("div.search")!
+          .querySelector(".searchResult")!;
+        results.innerHTML = `<ul class="searchResultList"><li><button class="ellipsis" type="button" data-code="EX001" title="합성 어학시험" data-gradeflag="${kind === "grade"}" data-scoreflag="${kind === "score"}" data-setupcode="" data-setupvalue="" data-perfactgrade="200">합성 어학시험</button></li></ul>`;
+        results.querySelector("button")!.addEventListener("click", () => {
+          const row = query.closest("[data-loop]")!;
+          row.querySelector<HTMLInputElement>(
+            '[name$=".languageExamName"]',
+          )!.value = "합성 어학시험";
+          row.querySelector<HTMLInputElement>(
+            '[name$=".languageExamCode"]',
+          )!.value = "EX001";
+          row.querySelector(".searchResultName")!.textContent = "합성 어학시험";
+          row.querySelector('[data-template="detail"]')!.innerHTML =
+            kind === "score"
+              ? '<input type="number" name="languageExam[0].score" min="0" max="9999"><input type="number" name="languageExam[0].perfectScore"><input name="languageExam[0].examDate"><input type="hidden" name="languageExam[0].languageExamSn">'
+              : '<select name="languageExam[0].gradeCode"><option value=""></option><option value="G2">2급</option></select><input type="hidden" name="languageExam[0].languageExamSn">';
+        });
+      }),
+    );
     const searchItem = item(
       "hplace.mrs2.foreignExam.languageExamName",
       "합성 어학시험",

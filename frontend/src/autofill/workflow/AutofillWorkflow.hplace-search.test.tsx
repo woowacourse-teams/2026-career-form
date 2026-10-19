@@ -5,6 +5,7 @@ import { createEmptyProfile } from "../../profile/model";
 import { setHplacePage, resetHplacePage } from "./test-utils/hplace.fixture";
 import { installExecutionPolicy } from "./execution-policy";
 import {
+  onSiteEnter,
   mountSearch,
   showResults,
   widget,
@@ -47,26 +48,29 @@ it("searches once then recollects replaced exam detail before writing only the n
   )!;
   let searches = 0,
     clicks = 0;
-  query.addEventListener("keypress", () => {
-    searches++;
-    showResults(
-      query,
-      ["가상 어학시험"],
-      () => {
-        clicks++;
-        document.querySelector('[data-template="detail"]')!.innerHTML =
-          '<input type="number" name="entry.score" min="0" max="9999"><input type="number" name="entry.perfectScore"><input name="entry.examDate"><input type="hidden" name="entry.languageExamSn">';
-      },
-      "123",
-      {
-        "data-gradeflag": "false",
-        "data-scoreflag": "true",
-        "data-setupcode": "",
-        "data-setupvalue": "",
-        "data-perfactgrade": "200",
-      },
-    );
-  });
+  query.addEventListener(
+    "keypress",
+    onSiteEnter(() => {
+      searches++;
+      showResults(
+        query,
+        ["가상 어학시험"],
+        () => {
+          clicks++;
+          document.querySelector('[data-template="detail"]')!.innerHTML =
+            '<input type="number" name="entry.score" min="0" max="9999"><input type="number" name="entry.perfectScore"><input name="entry.examDate"><input type="hidden" name="entry.languageExamSn">';
+        },
+        "123",
+        {
+          "data-gradeflag": "false",
+          "data-scoreflag": "true",
+          "data-setupcode": "",
+          "data-setupvalue": "",
+          "data-perfactgrade": "200",
+        },
+      );
+    }),
+  );
   const analyzeFields = vi.fn(
     async (r: FieldsAnalyzeRequest): Promise<FieldsAnalyzeResponse> => ({
       snapshotId: r.snapshotId,

@@ -6,6 +6,7 @@ import {
   fireEvent,
 } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
+import { onSiteEnter } from "../policy/__fixtures__/hplace-mrs2-search.synthetic";
 import { AutofillWorkflow } from "./AutofillWorkflow";
 import {
   mountEducation,
@@ -52,9 +53,9 @@ it.each([
       e.preventDefault();
       forbidden++;
     });
-    document
-      .querySelector("#frm")!
-      .addEventListener("keypress", function search(e) {
+    document.querySelector("#frm")!.addEventListener(
+      "keypress",
+      onSiteEnter(function search(e) {
         const input = e.target;
         if (!(input instanceof HTMLInputElement) || input.type !== "search")
           return;
@@ -93,7 +94,8 @@ it.each([
             ) ?? [])
             e.disabled = false;
         };
-      });
+      }),
+    );
     document.querySelector("#frm")!.addEventListener("click", (e) => {
       const el = e.target;
       if (el instanceof Element && el.matches("[data-button=add]")) adds++;

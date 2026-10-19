@@ -136,3 +136,86 @@ it("rejects primary activation in other address provider plans", async () => {
   policy.searchPlan = activation;
   expect(validAddressProviderPolicy(policy)).toBe(false);
 });
+it("carries legacy Enter codes on the native event so a page-world handler reads 13", () => {
+  // A content-script property override is invisible to the site's own world;
+  // read through the prototype getters the page world uses.
+  const nativeKeyCode = Object.getOwnPropertyDescriptor(
+    KeyboardEvent.prototype,
+    "keyCode",
+  )!.get!;
+  const nativeCharCode = Object.getOwnPropertyDescriptor(
+    KeyboardEvent.prototype,
+    "charCode",
+  )!.get!;
+  const nativeWhich = Object.getOwnPropertyDescriptor(
+    UIEvent.prototype,
+    "which",
+  )!.get!;
+  document.body.innerHTML = '<input type="search">';
+  const input = document.querySelector("input")!;
+  const seen: unknown[] = [];
+  input.addEventListener("keypress", (e) =>
+    seen.push([
+      nativeKeyCode.call(e),
+      nativeCharCode.call(e),
+      nativeWhich.call(e),
+      Object.hasOwn(e, "keyCode"),
+      Object.hasOwn(e, "which"),
+    ]),
+  );
+  expect(
+    runDomPlan(
+      [
+        {
+          op: "KEY",
+          target: "query",
+          event: "keypress",
+          key: "Enter",
+          code: "Enter",
+          legacyEnter: true,
+        },
+      ],
+      { query: input },
+      {},
+      () => true,
+    ),
+  ).toBe(true);
+  expect(seen).toEqual([[13, 13, 13, false, false]]);
+});
+it("fails a legacy Enter step at once when the browser ignores legacy init codes", () => {
+  const Native = KeyboardEvent;
+  vi.stubGlobal(
+    "KeyboardEvent",
+    class extends Native {
+      constructor(type: string, init?: KeyboardEventInit) {
+        super(type, { ...init, keyCode: 0, charCode: 0, which: 0 });
+      }
+    },
+  );
+  try {
+    document.body.innerHTML = '<input type="search">';
+    const input = document.querySelector("input")!;
+    let pressed = 0;
+    input.addEventListener("keypress", () => pressed++);
+    expect(
+      runDomPlan(
+        [
+          {
+            op: "KEY",
+            target: "query",
+            event: "keypress",
+            key: "Enter",
+            code: "Enter",
+            legacyEnter: true,
+          },
+        ],
+        { query: input },
+        {},
+        () => true,
+      ),
+    ).toBe(false);
+    expect(pressed).toBe(0);
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
