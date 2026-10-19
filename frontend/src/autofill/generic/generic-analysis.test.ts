@@ -185,7 +185,12 @@ async function run(
   return { snapshot, result, byName, ...calls };
 }
 
-const WRITE_PLAN_REASON = {"BLOCKED":"WRITE_PLAN_BLOCKED","MANUAL_REVEAL_REQUIRED":"WRITE_PLAN_MANUAL_REVEAL","SYSTEM_CONTROL":"WRITE_PLAN_SYSTEM_CONTROL","UNVERIFIED":"WRITE_PLAN_UNVERIFIED"} as const;
+const WRITE_PLAN_REASON = {
+  BLOCKED: "WRITE_PLAN_BLOCKED",
+  MANUAL_REVEAL_REQUIRED: "WRITE_PLAN_MANUAL_REVEAL",
+  SYSTEM_CONTROL: "WRITE_PLAN_SYSTEM_CONTROL",
+  UNVERIFIED: "WRITE_PLAN_UNVERIFIED",
+} as const;
 
 describe("generic section analysis", () => {
   it.each([
@@ -193,25 +198,31 @@ describe("generic section analysis", () => {
     "MANUAL_REVEAL_REQUIRED",
     "SYSTEM_CONTROL",
     "UNVERIFIED",
-  ] as const)("keeps a matched %s field without a write plan blocked for execution, not missing data", async (interactionStatus) => {
-    document.body.innerHTML = '<label>학교명<input name="school"></label>';
-    const { byName } = await run({
-      field: () => ({ interactionStatus, writePlan: undefined }),
-    });
-    const { field, grade } = byName("school");
-    expect(field).toMatchObject({ matchType: "MATCH", interactionStatus });
-    expect(field).not.toHaveProperty("writePlan");
-    expect(grade).toEqual({
-      grade: "BLOCKED",
-      reason: WRITE_PLAN_REASON[interactionStatus],
-    });
-  });
+  ] as const)(
+    "keeps a matched %s field without a write plan blocked for execution, not missing data",
+    async (interactionStatus) => {
+      document.body.innerHTML = '<label>학교명<input name="school"></label>';
+      const { byName } = await run({
+        field: () => ({ interactionStatus, writePlan: undefined }),
+      });
+      const { field, grade } = byName("school");
+      expect(field).toMatchObject({ matchType: "MATCH", interactionStatus });
+      expect(field).not.toHaveProperty("writePlan");
+      expect(grade).toEqual({
+        grade: "BLOCKED",
+        reason: WRITE_PLAN_REASON[interactionStatus],
+      });
+    },
+  );
 
   it("reserves the missing-value grade for a genuinely absent local value without a write plan", async () => {
     document.body.innerHTML = '<label>학교명<input name="school"></label>';
-    const { byName } = await run({
-      field: () => ({ interactionStatus: "BLOCKED", writePlan: undefined }),
-    }, createEmptyProfile());
+    const { byName } = await run(
+      {
+        field: () => ({ interactionStatus: "BLOCKED", writePlan: undefined }),
+      },
+      createEmptyProfile(),
+    );
     expect(byName("school").grade).toEqual({
       grade: "BLOCKED",
       reason: "NO_PROFILE_VALUE",

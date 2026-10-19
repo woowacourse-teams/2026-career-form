@@ -341,7 +341,12 @@ function workflow(
   return { analyze, stages, state, item, addressRun };
 }
 
-const WRITE_PLAN_REASON = {"BLOCKED":"WRITE_PLAN_BLOCKED","MANUAL_REVEAL_REQUIRED":"WRITE_PLAN_MANUAL_REVEAL","SYSTEM_CONTROL":"WRITE_PLAN_SYSTEM_CONTROL","UNVERIFIED":"WRITE_PLAN_UNVERIFIED"} as const;
+const WRITE_PLAN_REASON = {
+  BLOCKED: "WRITE_PLAN_BLOCKED",
+  MANUAL_REVEAL_REQUIRED: "WRITE_PLAN_MANUAL_REVEAL",
+  SYSTEM_CONTROL: "WRITE_PLAN_SYSTEM_CONTROL",
+  UNVERIFIED: "WRITE_PLAN_UNVERIFIED",
+} as const;
 
 describe("generic section flow", () => {
   it.each([
@@ -349,47 +354,57 @@ describe("generic section flow", () => {
     "MANUAL_REVEAL_REQUIRED",
     "SYSTEM_CONTROL",
     "UNVERIFIED",
-  ] as const)("displays the execution block for %s without claiming the saved school is missing", async (interactionStatus) => {
-    document.body.innerHTML = '<h2>학력</h2><label>학교명<input name="school"></label>';
-    const api = createClient({
-      field: () => ({ interactionStatus, writePlan: undefined }),
-    });
-    const run = workflow(api.client);
-    await run.analyze();
-    const item = run.item("school");
-    expect(item).toMatchObject({
-      genericGrade: "BLOCKED",
-      genericReasonCode: WRITE_PLAN_REASON[interactionStatus],
-      selected: false,
-      disabled: true,
-    });
-    expect(item.analysis).not.toHaveProperty("writePlan");
-    render(
-      <WorkflowScreens
-        stage="review"
-        preparationItems={[]}
-        warnings={[]}
-        revealedPreparationKeys={new Set()}
-        selectedPreparationKeys={new Set()}
-        setRevealedPreparationKeys={() => undefined}
-        setSelectedPreparationKeys={() => undefined}
-        executePreparation={async () => undefined}
-        reviewItems={run.state.reviewItems}
-        partial={false}
-        toggleReviewItem={() => undefined}
-        executeWrites={async () => undefined}
-        results={[]}
-        adapter={getWorkflowAdapter(document)}
-        workflowDiagnostics={[]}
-        exceptionTitle=""
-        onExit={() => undefined}
-      />,
-    );
-    const row = screen.getByRole("button", { name: /학교명.*필드로 이동/ }).closest("article")!;
-    expect(within(row).getByText(genericItemReason(item))).toBeVisible();
-    expect(within(row).queryByText(genericReasonText("NO_PROFILE_VALUE"))).toBeNull();
-    expect(within(row).queryByRole("button", { name: /포함하기/ })).toBeNull();
-  });
+  ] as const)(
+    "displays the execution block for %s without claiming the saved school is missing",
+    async (interactionStatus) => {
+      document.body.innerHTML =
+        '<h2>학력</h2><label>학교명<input name="school"></label>';
+      const api = createClient({
+        field: () => ({ interactionStatus, writePlan: undefined }),
+      });
+      const run = workflow(api.client);
+      await run.analyze();
+      const item = run.item("school");
+      expect(item).toMatchObject({
+        genericGrade: "BLOCKED",
+        genericReasonCode: WRITE_PLAN_REASON[interactionStatus],
+        selected: false,
+        disabled: true,
+      });
+      expect(item.analysis).not.toHaveProperty("writePlan");
+      render(
+        <WorkflowScreens
+          stage="review"
+          preparationItems={[]}
+          warnings={[]}
+          revealedPreparationKeys={new Set()}
+          selectedPreparationKeys={new Set()}
+          setRevealedPreparationKeys={() => undefined}
+          setSelectedPreparationKeys={() => undefined}
+          executePreparation={async () => undefined}
+          reviewItems={run.state.reviewItems}
+          partial={false}
+          toggleReviewItem={() => undefined}
+          executeWrites={async () => undefined}
+          results={[]}
+          adapter={getWorkflowAdapter(document)}
+          workflowDiagnostics={[]}
+          exceptionTitle=""
+          onExit={() => undefined}
+        />,
+      );
+      const row = screen
+        .getByRole("button", { name: /학교명.*필드로 이동/ })
+        .closest("article")!;
+      expect(within(row).getByText(genericItemReason(item))).toBeVisible();
+      expect(
+        within(row).queryByText(genericReasonText("NO_PROFILE_VALUE")),
+      ).toBeNull();
+      expect(
+        within(row).queryByRole("button", { name: /포함하기/ }),
+      ).toBeNull();
+    },
+  );
 
   it("splits, classifies, matches by category and grades before review", async () => {
     mountSyntheticForm();

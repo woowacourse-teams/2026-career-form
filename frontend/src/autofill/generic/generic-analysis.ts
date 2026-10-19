@@ -64,7 +64,8 @@ const WRITE_PLAN_REASON = {
   READY: "WRITE_PLAN_MISSING",
 } as const;
 
-export type WritePlanReason = (typeof WRITE_PLAN_REASON)[keyof typeof WRITE_PLAN_REASON];
+export type WritePlanReason =
+  (typeof WRITE_PLAN_REASON)[keyof typeof WRITE_PLAN_REASON];
 
 export interface GenericSectionResult {
   sectionId: string;
@@ -363,7 +364,10 @@ function convertSection(
     grades.push([
       candidateId,
       !response.writePlan && grade.grade !== "BLOCKED"
-        ? { grade: "BLOCKED", reason: WRITE_PLAN_REASON[response.interactionStatus] }
+        ? {
+            grade: "BLOCKED",
+            reason: WRITE_PLAN_REASON[response.interactionStatus],
+          }
         : grade,
     ]);
     fields.push({
