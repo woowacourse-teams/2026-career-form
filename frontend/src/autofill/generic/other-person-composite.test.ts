@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { createEmptyProfile, type Profile } from "../../profile/model";
 import type { GenericFieldsResponse } from "../api/types";
@@ -162,7 +164,7 @@ describe("single English name part", () => {
   const REVIEW = { grade: "REVIEW", reason: "UNPAIRED_NAME_PART" };
 
   it.each(["englishGivenName", "englishFamilyName"])(
-    "leaves a lone %s match for review and does not write it unapproved",
+    "leaves a lone %s match unselected for review",
     async (field) => {
       document.body.innerHTML =
         '<form><h2>인적사항</h2><label>영문 이름<input name="en"></label><label>이메일<input name="mail"></label></form>';
@@ -190,13 +192,15 @@ describe("single English name part", () => {
 
   it("grades each repeat row's keys by their own row", async () => {
     document.body.innerHTML =
-      '<form><h2>가족</h2><ul><li><label>Family name<input name="fam"></label><label>Given name<input name="giv"></label></li><li><label>Family name<input name="fam2"></label></li></ul></form>';
+      '<form><h2>가족</h2><div class="list"><div data-repeater-item><input name="fam" aria-label="Family name"><input name="giv" aria-label="Given name"></div><div data-repeater-item><input name="fam2" aria-label="Family name"><input name="other" aria-label="Other name"></div><button type="button">추가</button></div></form>';
     const run = await approveAll({
       fam: direct("personal.personal.englishFamilyName"),
       giv: direct("personal.personal.englishGivenName"),
+      fam2: direct("personal.personal.englishFamilyName"),
     });
     expect(run.grade("fam")).toEqual({ grade: "AUTO" });
     expect(run.grade("giv")).toEqual({ grade: "AUTO" });
+    expect(run.grade("fam2")).toEqual(REVIEW);
   });
 
   it("writes the composed full name when the response is an English recipe", async () => {
@@ -206,4 +210,52 @@ describe("single English name part", () => {
     expect(run.grade("en")).toEqual({ grade: "AUTO" });
     expect(input("en").value).toBe("Synthfamily Synthgiven");
   });
+});
+
+describe.each([
+  ["ahnlab-write-resume-form", "englishName"],
+  ["lg-ai-research-birth-split-email", "name"],
+])("name safety on the sanitized %s structure", (fixture, fieldId) => {
+  function mount(labelText: string) {
+    document.body.innerHTML = readFileSync(
+      join(process.cwd(), `fixtures/dom-snapshots/${fixture}/sanitized.html`),
+      "utf8",
+    );
+    const field = document.getElementById(fieldId) as HTMLInputElement;
+    field.name = "subject";
+    document.querySelector(`label[for="${fieldId}"]`)!.textContent = labelText;
+    return field;
+  }
+
+  it("blocks an unrelated person's recipe and keeps the applicant's recipe writable", async () => {
+    const other = mount("보호자 영문 성명");
+    const blocked = await approveAll({
+      subject: recipe("ENGLISH_FULL_NAME_GIVEN_FIRST"),
+    });
+    expect(blocked.grade("subject")).toEqual(OTHER);
+    expect(blocked.written("subject")).toBe(false);
+    expect(other.value).toBe("");
+
+    const own = mount("지원자 영문 이름");
+    const allowed = await approveAll({
+      subject: recipe("ENGLISH_FULL_NAME_GIVEN_FIRST"),
+    });
+    expect(allowed.grade("subject")).toEqual({ grade: "AUTO" });
+    expect(own.value).toBe("Synthgiven Synthfamily");
+  });
+
+  it.each(["englishGivenName", "englishFamilyName"])(
+    "does not automatically select the unpaired %s mapping",
+    async (part) => {
+      mount("영문 이름");
+      const run = await approveAll({
+        subject: direct(`personal.personal.${part}`),
+      });
+      expect(run.grade("subject")).toEqual({
+        grade: "REVIEW",
+        reason: "UNPAIRED_NAME_PART",
+      });
+      expect(run.item("subject")).toMatchObject({ selected: false });
+    },
+  );
 });
