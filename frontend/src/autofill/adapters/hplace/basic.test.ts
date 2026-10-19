@@ -439,3 +439,59 @@ it("fails settling a driver reverted by a later status interaction", async () =>
     ),
   ).toBe(false);
 });
+
+it.each([
+  ["남", "M"],
+  ["남성", "M"],
+  ["남자", "M"],
+  [" m ", "M"],
+  [" MaLe ", "M"],
+  ["여", "F"],
+  ["여성", "F"],
+  ["여자", "F"],
+  [" f ", "F"],
+  [" FeMaLe ", "F"],
+])(
+  "maps run-1 gender synonym %s to %s with the legacy writer",
+  async (gender, expected) => {
+    mountBasicDetail();
+    const p = createEmptyProfile();
+    p.personal.gender = gender;
+    const snapshot = collectFieldsSnapshot(document);
+    const items = buildReviewPlan({
+      registry: snapshot.registry,
+      profile: p,
+      analysis: basicAnalysis(snapshot.request),
+    }).items.filter((i) => i.fieldLabel === "성별");
+    items.forEach((i) => {
+      i.selected = true;
+    });
+    await executeApprovedWritesAfterPageSettles({
+      items,
+      registry: snapshot.registry,
+      document,
+      approvedCandidateIds: new Set(items.map((i) => i.candidateId)),
+    });
+    expect(
+      document.querySelector<HTMLInputElement>('[name="genderFlag"]:checked')
+        ?.value,
+    ).toBe(expected);
+  },
+);
+it.each(["unknown", "남녀", "male-other"])(
+  "leaves unknown gender %s unmatched",
+  async (gender) => {
+    mountBasicDetail();
+    const p = createEmptyProfile();
+    p.personal.gender = gender;
+    const snapshot = collectFieldsSnapshot(document);
+    const items = buildReviewPlan({
+      registry: snapshot.registry,
+      profile: p,
+      analysis: basicAnalysis(snapshot.request),
+    }).items;
+    expect(
+      items.find((i) => i.fieldLabel === "성별")?.profileValue,
+    ).toBeUndefined();
+  },
+);

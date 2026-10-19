@@ -241,9 +241,20 @@ function lookupValue(
 ): ValueBindingResolution {
   const source = directValue(profile, binding.profileFieldKey, itemIndex);
   if (source.status !== "resolved") return source;
+  // Interpret only the explicit gender LOOKUP aliases; leave DIRECT text intact.
+  const gender = source.value.trim().toLowerCase();
+  const genderAlias =
+    binding.profileFieldKey === "personal.personal.gender"
+      ? ["남", "남성", "남자", "m", "male"].includes(gender)
+        ? "남성"
+        : ["여", "여성", "여자", "f", "female"].includes(gender)
+          ? "여성"
+          : ""
+      : "";
   const value =
     binding.optionMap[source.value] ??
-    binding.optionMap[standardValueLabel(source.value) ?? ""];
+    binding.optionMap[standardValueLabel(source.value) ?? ""] ??
+    (genderAlias ? binding.optionMap[genderAlias] : undefined);
   return value
     ? {
         status: "resolved",
