@@ -112,6 +112,10 @@ describe("AhnLab sanitized application form", () => {
     });
     expect(postalField.semanticContext?.inputMode).toBeUndefined();
     expect(postalField.semanticContext?.autocomplete).toBeUndefined();
+    expect(postalField.semanticContext?.labels).toContainEqual({
+      source: "label",
+      text: "우편번호",
+    });
   });
 
   it("gains a postal display name only after an in-memory aria-label mutation", () => {
