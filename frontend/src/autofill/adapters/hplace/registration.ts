@@ -1,3 +1,4 @@
+import { debugCollectionSkip } from "../../debug/structural-diagnostics";
 import { isHplaceDocument } from "./fingerprint";
 import type {
   FieldCandidateHandle,
@@ -66,11 +67,19 @@ function ownAction(document: Document, form: HTMLFormElement): boolean {
 export function registrationControls(
   document: Document,
 ): RegistrationControls | undefined {
+  const reject = () => {
+    debugCollectionSkip(
+      registrationSectionId,
+      "owner-mismatch",
+      "legacy-registration-anchors",
+    );
+    return undefined;
+  };
   if (
     document.location?.pathname !== "/app/applicant/registResume" ||
     !isHplaceDocument(document)
   )
-    return undefined;
+    return reject();
   const forms = document.querySelectorAll('[id="frm"]');
   const sections = document.querySelectorAll('[id="loginForm"]');
   const form = forms[0];
@@ -84,7 +93,7 @@ export function registrationControls(
     form.method !== "post" ||
     !ownAction(document, form)
   )
-    return undefined;
+    return reject();
   const name = oneInput(document, "name", "text", "name");
   const mobile = ["mobile1", "mobile2", "mobile3"].map((id) =>
     oneInput(document, id, "text", ""),
@@ -105,7 +114,7 @@ export function registrationControls(
     combined.matches(":disabled, [aria-disabled=true]") ||
     mobile.some((input) => !input)
   )
-    return undefined;
+    return reject();
   const submitted = Array.from(form.elements).filter(successfulControl);
   if (
     all.some(
@@ -117,7 +126,7 @@ export function registrationControls(
         ),
     )
   )
-    return undefined;
+    return reject();
   const phone = mobile as HTMLInputElement[];
   if (
     !subject(name, "성명") ||
@@ -134,7 +143,7 @@ export function registrationControls(
     email.closest(".subject") !== confirm.closest(".subject") ||
     confirm.getAttribute("data-type") !== "email"
   )
-    return undefined;
+    return reject();
   return { name: [name], mobile: phone, email: [email, confirm] };
 }
 

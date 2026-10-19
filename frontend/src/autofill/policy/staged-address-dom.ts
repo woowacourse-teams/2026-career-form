@@ -1,3 +1,4 @@
+import { debugCollectionSkip } from "../debug/structural-diagnostics";
 import type { StagedAddress } from "./staged-address-contract";
 import { nativeForm, nativeDocument } from "./native-form-collection";
 import { visible } from "./primitives";
@@ -24,7 +25,10 @@ export function stagedAddressNodes(document: Document) {
   const form = nativeForm(document)!;
   const root = one(document, form.rootSelector);
   const buttons = Array.from(document.querySelectorAll(policy.triggerSelector));
-  if (buttons.length !== 1) return;
+  if (buttons.length !== 1) {
+    debugCollectionSkip(policy.actionId, "owner-mismatch", "trigger-count");
+    return;
+  }
   const button = buttons[0];
   const row = button.closest(policy.rowSelector);
   if (
@@ -34,11 +38,22 @@ export function stagedAddressNodes(document: Document) {
     button.textContent?.trim() !== policy.triggerLabel ||
     !row ||
     !root?.contains(row)
-  )
+  ) {
+    debugCollectionSkip(policy.actionId, "owner-mismatch", "trigger-row-root");
     return;
+  }
   const fields = policy.fields.map((f) =>
     one(document, `input[name="${CSS.escape(f.rawName)}"]`),
   );
+  if (
+    fields[0] instanceof HTMLInputElement &&
+    !fields[0].classList.contains("hidden")
+  )
+    debugCollectionSkip(
+      policy.actionId,
+      "zip-companion",
+      "expected-text.hidden",
+    );
   if (
     !fields.every(
       (e, i) =>
@@ -54,10 +69,19 @@ export function stagedAddressNodes(document: Document) {
         // Some live tenants visibly render it; it is still readback-only.
         (policy.fields[i].hidden ? e.classList.contains("hidden") : visible(e)),
     )
-  )
+  ) {
+    debugCollectionSkip(policy.actionId, "owner-mismatch", "triplet-contract");
     return;
+  }
   const postcode = one(row, policy.postcodeSelector);
-  if (!postcode) return;
+  if (!postcode) {
+    debugCollectionSkip(
+      policy.actionId,
+      "owner-mismatch",
+      "postcode-display-count",
+    );
+    return;
+  }
   return {
     policy,
     button,

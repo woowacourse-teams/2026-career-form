@@ -1,3 +1,7 @@
+import {
+  debugCollectionSkip,
+  type StructuralSkipReason,
+} from "../../debug/structural-diagnostics";
 import { detailControls, detailSectionId } from "./detail";
 import type { FieldCandidateHandle } from "../../dom/types";
 export const basicSpecs = {
@@ -202,9 +206,18 @@ export function basicControls(document: Document): BasicControl[] {
   for (const key of Object.keys(basicSpecs) as BasicKey[]) {
     const add = (): BasicControl[] => {
       const spec = basicSpecs[key];
+      const reject = (
+        reason: StructuralSkipReason = "owner-mismatch",
+      ): BasicControl[] => {
+        debugCollectionSkip(basicName(key), reason, "legacy-control-contract");
+        return [];
+      };
       const elements = Array.from(
         document.querySelectorAll(`[name="${spec.name}"]`),
       );
+      if (!elements.length) return reject("control-missing");
+      if (elements.some((e) => e.matches(":disabled")))
+        return reject("disabled");
       const subject = elements[0]?.closest(".subject");
       if (
         !subject ||
@@ -220,12 +233,12 @@ export function basicControls(document: Document): BasicControl[] {
             usable(e),
         )
       )
-        return [];
+        return reject();
       if (
         key === "gender" &&
         subject !== document.getElementById("englishName")?.closest(".subject")
       )
-        return [];
+        return reject();
       if (
         key === "serviceEndDate" &&
         !collected.some(
@@ -234,7 +247,7 @@ export function basicControls(document: Document): BasicControl[] {
             c.elements[0].closest(".subject") === subject,
         )
       )
-        return [];
+        return reject();
       if ("parent" in spec) {
         const parent = collected.find((c) => c.key === spec.parent);
         const selected = parent?.elements.filter(
@@ -252,7 +265,7 @@ export function basicControls(document: Document): BasicControl[] {
               : ["01", "04"].includes(selected[0].value)
             : selected[0].value === "true")
         )
-          return [];
+          return reject();
       }
       const options = new Map<string, HTMLElement>();
       if (spec.kind === "radio") {
@@ -262,7 +275,7 @@ export function basicControls(document: Document): BasicControl[] {
             (e) => e instanceof HTMLInputElement && e.type === "radio",
           )
         )
-          return [];
+          return reject();
         if ("rel" in spec) {
           const group = elements[0].closest("[data-rel-id]");
           if (
@@ -273,7 +286,7 @@ export function basicControls(document: Document): BasicControl[] {
             group.getAttribute("data-rel-value") !==
               (key === "militaryStatus" ? "01,04 03" : "true")
           )
-            return [];
+            return reject();
         }
         for (const e of elements as HTMLInputElement[]) {
           const wrapper = e.closest("label");
@@ -288,7 +301,7 @@ export function basicControls(document: Document): BasicControl[] {
             (spec.options as Record<string, string>)[e.value] !== label ||
             options.has(e.value)
           )
-            return [];
+            return reject("label-mismatch");
           options.set(e.value, e);
         }
       } else if (spec.kind === "text") {
@@ -305,7 +318,7 @@ export function basicControls(document: Document): BasicControl[] {
                 key === "serviceStartDate" ? "start" : "end",
               )))
         )
-          return [];
+          return reject();
       } else {
         const select = elements[0];
         if (
@@ -313,11 +326,11 @@ export function basicControls(document: Document): BasicControl[] {
           !(select instanceof HTMLSelectElement) ||
           select.multiple
         )
-          return [];
+          return reject();
         const codes = new Set<string>();
         for (const o of select.options) {
           if (!o.value) continue;
-          if (codes.has(o.value)) return [];
+          if (codes.has(o.value)) return reject("option-mismatch");
           codes.add(o.value);
           if (
             (spec.options as Record<string, string>)[o.value] ===
@@ -327,7 +340,7 @@ export function basicControls(document: Document): BasicControl[] {
           )
             options.set(o.value, o);
         }
-        if (!options.size) return [];
+        if (!options.size) return reject("option-mismatch");
       }
       return [{ key, elements: elements as BasicControl["elements"], options }];
     };

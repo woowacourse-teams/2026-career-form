@@ -1,3 +1,4 @@
+import { debugCollectionSkip } from "../../debug/structural-diagnostics";
 import { englishNameDomName } from "./english-name";
 import {
   basicControls,
@@ -46,6 +47,12 @@ export function collectHplaceFields(
         (key, index) => {
           const inputs = controls[key];
           const reason = registrationBlockReason(inputs);
+          if (reason)
+            debugCollectionSkip(
+              registrationNames[key],
+              reason === "disabled" ? "disabled" : "owner-mismatch",
+              reason,
+            );
           const candidate = {
             candidateId: `field-${index + 1}`,
             domId: registrationNames[key],
@@ -132,6 +139,12 @@ function collectDetailFields(
   ).map((key, index) => {
     const input = controls[key]!;
     const reason = registrationBlockReason([input]);
+    if (reason)
+      debugCollectionSkip(
+        detailNames[key],
+        reason === "disabled" ? "disabled" : "owner-mismatch",
+        reason,
+      );
     const candidate = {
       candidateId: `field-${index + 1}`,
       domId:

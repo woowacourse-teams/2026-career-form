@@ -1,3 +1,4 @@
+import { debugRuntimeSkip } from "../../debug/structural-diagnostics";
 import type { MatchedFieldAnalysis } from "../../api/types";
 import type { FieldCandidateHandle } from "../../dom/types";
 import type { ReviewPlanItem } from "../../review/review-plan";
@@ -253,7 +254,14 @@ export async function settleBasicStateDriver(
     )
       return false;
     if (ready()) return true;
-    if (Date.now() >= deadline) return false;
+    if (Date.now() >= deadline) {
+      debugRuntimeSkip(
+        basicName(key),
+        "disabled-timeout",
+        "legacy-linked-controls",
+      );
+      return false;
+    }
     await new Promise((resolve) => setTimeout(resolve, 25));
   }
 }

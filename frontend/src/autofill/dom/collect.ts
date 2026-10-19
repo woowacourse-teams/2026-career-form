@@ -1,3 +1,4 @@
+import { withStructuralCollection } from "../debug/structural-diagnostics";
 import {
   collectNativeFields,
   collectNativePreparation,
@@ -355,7 +356,7 @@ function collectFieldElements(
     : native;
 }
 
-export function collectFieldsSnapshot(
+function collectFieldsSnapshotInternal(
   document: Document,
   dropdowns: ReadonlyMap<HTMLElement, ButtonDropdown> = new Map(),
   options: {
@@ -1119,7 +1120,7 @@ function repeatableItemElementsForAction(
   return hasTypedItems ? [] : singleGroupItems();
 }
 
-export function collectPreparationSnapshot(
+function collectPreparationSnapshotInternal(
   document: Document,
   options: {
     /** Opt out of mixed section detection; omitted keeps it on. */
@@ -1348,4 +1349,23 @@ export function collectPreparationSnapshot(
       return action ? genericFormGroupFor(action)?.maximumRows : undefined;
     },
   };
+}
+
+export function collectPreparationSnapshot(
+  document: Document,
+  options: Parameters<typeof collectPreparationSnapshotInternal>[1] = {},
+): PreparationCollectedSnapshot {
+  return withStructuralCollection("preparation", () =>
+    collectPreparationSnapshotInternal(document, options),
+  );
+}
+
+export function collectFieldsSnapshot(
+  document: Document,
+  dropdowns: ReadonlyMap<HTMLElement, ButtonDropdown> = new Map(),
+  options: Parameters<typeof collectFieldsSnapshotInternal>[2] = {},
+): CollectedSnapshot<FieldsAnalyzeRequest> {
+  return withStructuralCollection("fields", () =>
+    collectFieldsSnapshotInternal(document, dropdowns, options),
+  );
 }

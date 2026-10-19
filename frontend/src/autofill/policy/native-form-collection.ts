@@ -1,3 +1,4 @@
+import { debugCollectionSkip } from "../debug/structural-diagnostics";
 import {
   nativeNestedRows,
   nativeNestedPreparationCurrent,
@@ -62,15 +63,23 @@ export const rawNativeName = (name: string, index?: number) =>
   name.replace("{index}", String(index));
 export function nativeForm(document: Document): NativeForm | undefined {
   const p = executionPolicy(document)?.browserPolicy;
-  return p?.schemaVersion === 2 && validNativeForm(p.nativeForm)
-    ? p.nativeForm
-    : undefined;
+  const valid = p?.schemaVersion === 2 && validNativeForm(p.nativeForm);
+  if (p?.schemaVersion === 2 && !valid)
+    debugCollectionSkip("hplace-mrs2", "policy-missing", "native-form-schema");
+  return valid ? p.nativeForm : undefined;
 }
 export function nativeDocument(
   document: Document,
   form = nativeForm(document),
 ): boolean {
-  if (!form || new URL(document.URL).pathname !== form.path) return false;
+  if (!form || new URL(document.URL).pathname !== form.path) {
+    debugCollectionSkip(
+      "hplace-mrs2",
+      "policy-missing",
+      "native-path-contract",
+    );
+    return false;
+  }
   const roots = document.querySelectorAll(form.rootSelector),
     forms = document.querySelectorAll(form.formSelector);
   if (
@@ -78,8 +87,10 @@ export function nativeDocument(
     !(forms[0] instanceof HTMLFormElement) ||
     roots.length !== 1 ||
     !forms[0].contains(roots[0])
-  )
+  ) {
+    debugCollectionSkip("hplace-mrs2", "owner-mismatch", "form-root-count");
     return false;
+  }
   const paths = Array.from(document.querySelectorAll("script[src]")).flatMap(
     (s) => {
       try {
@@ -90,9 +101,16 @@ export function nativeDocument(
       }
     },
   );
-  return form.assetPaths.every((path) =>
+  const matches = form.assetPaths.every((path) =>
     paths.some((actual) => actual.endsWith(path)),
   );
+  if (!matches)
+    debugCollectionSkip(
+      "hplace-mrs2",
+      "asset-path",
+      "same-origin-asset-suffix",
+    );
+  return matches;
 }
 export function nativeRows(
   root: Element,
@@ -145,8 +163,17 @@ function scopes(document: Document, form: NativeForm) {
     const roots = Array.from(
       document.querySelectorAll(section.selector),
     ).filter((r) => r === owner || owner.contains(r));
-    if (roots.length !== 1 || !visible(roots[0], true)) return [];
+    if (roots.length !== 1 || !visible(roots[0], true)) {
+      debugCollectionSkip(
+        section.id,
+        roots.length !== 1 ? "section-missing" : "section-hidden",
+        "native-section-root",
+      );
+      return [];
+    }
     const rows = nativeRows(roots[0], section);
+    if (!rows)
+      debugCollectionSkip(section.id, "row-identity", "native-row-contract");
     return rows ? [{ section, root: roots[0], rows }] : [];
   });
 }
@@ -280,19 +307,31 @@ export function collectNativeFields(
       const excluded = section.fields.some((f) =>
         excludedSearchRow(row, f, index),
       );
-      if (excluded && !section.excludedRow) continue;
+      if (excluded && !section.excludedRow) {
+        debugCollectionSkip(section.id, "excluded-row", "native-row-exclusion");
+        continue;
+      }
       for (const field of section.fields) {
         const childRow =
           field.nestedIndex === undefined
             ? undefined
             : nativeNestedRows(row, section, index!)?.[field.nestedIndex];
-        if (field.nestedIndex !== undefined && !childRow) continue;
+        if (field.nestedIndex !== undefined && !childRow) {
+          debugCollectionSkip(field.name, "owner-mismatch", "nested-row");
+          continue;
+        }
         if (
           excluded
             ? field.name !== section.excludedRow!.name
             : !searchGate(row, field, section.fields, index)
-        )
+        ) {
+          debugCollectionSkip(
+            field.name,
+            "dependency-inactive",
+            "native-search-gate",
+          );
           continue;
+        }
         const elements = controls(row, field, index);
         if (
           !elements.length ||
@@ -302,8 +341,20 @@ export function collectNativeFields(
             elements.some(
               (e) => !visible(e) || ("readOnly" in e && e.readOnly),
             ))
-        )
+        ) {
+          debugCollectionSkip(
+            field.name,
+            elements.some((e) => claimed.has(e))
+              ? "legacy-owner"
+              : !elements.length
+                ? "control-missing"
+                : elements.some((e) => e.matches(":disabled"))
+                  ? "disabled"
+                  : "owner-mismatch",
+            "native-field-contract",
+          );
           continue;
+        }
         const unitMismatch = elements.some(
           (e) => !nativeUnitMatches(e, row, field.unit),
         );
@@ -461,6 +512,18 @@ export function collectNativePreparation(
       const candidates: PreparationAnalyzeRequest["sections"][number]["actionCandidates"] =
         [];
       if (
+        section.action &&
+        (!section.enabled ||
+          !section.rows ||
+          !rows.length ||
+          rows.length >= section.rows.maxCount)
+      )
+        debugCollectionSkip(
+          section.action.id,
+          "row-add-guard",
+          !rows.length ? "zero-rows" : "row-limit-or-disabled",
+        );
+      if (
         section.enabled &&
         section.action &&
         section.rows &&
@@ -486,6 +549,12 @@ export function collectNativePreparation(
                 : e.closest(section.rows!.selector.replace(":scope > ", "")) ===
                   rows.at(-1)),
         );
+        if (buttons.length !== 1)
+          debugCollectionSkip(
+            section.action.id,
+            "owner-mismatch",
+            "native-add-button-count",
+          );
         if (buttons.length === 1) {
           const candidateId = `native-action-${actions.size}`;
           const candidate = {
@@ -537,7 +606,14 @@ export function collectNativePreparation(
         for (const [index, parent] of rows.entries()) {
           const n = section.nested,
             children = nativeNestedRows(parent, section, index);
-          if (!children) continue;
+          if (!children) {
+            debugCollectionSkip(
+              section.id,
+              "row-identity",
+              "nested-preparation-rows",
+            );
+            continue;
+          }
           const buttons = Array.from(
             parent.querySelectorAll(n.action.selector),
           ).filter(
@@ -557,7 +633,14 @@ export function collectNativePreparation(
                 ].join(" "),
               ),
           );
-          if (buttons.length !== 1) continue;
+          if (buttons.length !== 1) {
+            debugCollectionSkip(
+              section.id,
+              "owner-mismatch",
+              "nested-add-button-count",
+            );
+            continue;
+          }
           const candidateId = `native-action-${actions.size}`,
             itemId = `${section.id}-item-${index}`;
           const candidate = {

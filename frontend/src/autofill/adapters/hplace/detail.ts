@@ -1,3 +1,7 @@
+import {
+  debugCollectionSkip,
+  type StructuralSkipReason,
+} from "../../debug/structural-diagnostics";
 import { englishNameDomName } from "./english-name";
 import { isHplaceDocument } from "./fingerprint";
 import type { FieldCandidateHandle } from "../../dom/types";
@@ -11,19 +15,25 @@ export const detailNames = {
 export type DetailKey = keyof typeof detailNames;
 export type DetailControls = Partial<Record<DetailKey, HTMLInputElement>>;
 export function detailControls(document: Document): DetailControls | undefined {
+  const reject = (
+    reason: StructuralSkipReason = "owner-mismatch",
+    detail = "legacy-detail-anchors",
+  ) => {
+    debugCollectionSkip(detailSectionId, reason, detail);
+    return undefined;
+  };
   if (
     document.location.pathname !== "/mrs2/applicant/resume/writeResume" ||
     !isHplaceDocument(document)
   )
-    return undefined;
+    return reject();
   const forms = document.querySelectorAll('[id="frm"]');
   const form = forms[0];
-  if (forms.length !== 1 || !(form instanceof HTMLFormElement))
-    return undefined;
+  if (forms.length !== 1 || !(form instanceof HTMLFormElement)) return reject();
   const sections = ["11", "13"].map((code) =>
     form.querySelectorAll(`section.writeResume[data-code="${code}"]`),
   );
-  if (sections.some((s) => s.length !== 1)) return undefined;
+  if (sections.some((s) => s.length !== 1)) return reject();
   const one = (
     name: string,
     id: string,
@@ -59,14 +69,14 @@ export function detailControls(document: Document): DetailControls | undefined {
     englishName.closest(".subject") !== birthday.closest(".subject") ||
     birthday.dataset.dates !== "birthday:YMD"
   )
-    return undefined;
+    return reject();
   for (const input of [englishName, birthday]) {
     const labels = document.querySelectorAll(`label[for="${input.id}"]`);
     if (
       labels.length !== 1 ||
       labels[0].closest(".subject") !== input.closest(".subject")
     )
-      return undefined;
+      return reject("label-mismatch", "owned-title-label");
   }
   const row = detailAddress.closest('[data-row="address"]');
   const bases = document.querySelectorAll('[name="currentAddress.address"]');
@@ -82,7 +92,7 @@ export function detailControls(document: Document): DetailControls | undefined {
     base.form !== form ||
     base.closest('[data-row="address"]') !== row
   )
-    return undefined;
+    return reject();
   const emergencyPhone = one(
     "emergencyContact.contact",
     "",
@@ -97,7 +107,7 @@ export function detailControls(document: Document): DetailControls | undefined {
         .closest(".row")
         ?.querySelectorAll('[name="emergencyContact.comment"]').length !== 1)
   )
-    return undefined;
+    return reject();
   return {
     englishName,
     birthday,
