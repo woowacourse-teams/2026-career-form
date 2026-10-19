@@ -2,9 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { InteractionDecisionProvider } from "../api/interaction-types";
 import { collectFieldsSnapshot } from "../dom/collect";
-import {
-  executeReadonlySearch,
-} from "../interaction/readonly-search-executor";
+import { executeReadonlySearch } from "../interaction/readonly-search-executor";
 import {
   isQueryInput,
   queryCandidates,
@@ -54,12 +52,16 @@ function fixture(kind: "table" | "dialog", delayed = false) {
       <dt>상세</dt><dd><input aria-label="상세" data-dependent></dd></dl>
     </div></section>
     <section aria-label="어학"><label>등록번호<input data-unrelated></label></section>
-    ${kind === "table"
-      ? `<section id="popup" data-search-surface style="display:none">${content}</section>`
-      : `<div id="popup" role="dialog" style="display:none">${content}</div>`}`;
+    ${
+      kind === "table"
+        ? `<section id="popup" data-search-surface style="display:none">${content}</section>`
+        : `<div id="popup" role="dialog" style="display:none">${content}</div>`
+    }`;
   const popup = document.querySelector<HTMLElement>("#popup")!;
   const target = document.querySelector<HTMLInputElement>("[data-target]")!;
-  const query = popup.querySelector<HTMLInputElement>("input:not([type=button])")!;
+  const query = popup.querySelector<HTMLInputElement>(
+    "input:not([type=button])",
+  )!;
   const opener = document.querySelector<HTMLButtonElement>("[data-open]")!;
   const confirm = popup.querySelector<HTMLElement>("[data-confirm]")!;
   const search = popup.querySelector<HTMLButtonElement>("[data-search]")!;
@@ -107,25 +109,45 @@ function fixture(kind: "table" | "dialog", delayed = false) {
   function idFor(element: HTMLInputElement) {
     return fields.find((field) => {
       const lookup = snapshot.registry.lookupField(field.candidateId);
-      return (lookup.status === "ready" || lookup.status === "blocked") &&
-        lookup.handle.elements[0] === element;
+      return (
+        (lookup.status === "ready" || lookup.status === "blocked") &&
+        lookup.handle.elements[0] === element
+      );
     })!.candidateId;
   }
   const targetId = idFor(target);
   const surface = new SearchSurface(
     "same-document-dialog",
-    popup, popup, opener, target,
+    popup,
+    popup,
+    opener,
+    target,
   );
-  function item(element: HTMLInputElement, key: string, entry: string, search = false): ReviewPlanItem {
+  function item(
+    element: HTMLInputElement,
+    key: string,
+    entry: string,
+    search = false,
+  ): ReviewPlanItem {
     const candidateId = idFor(element);
     return {
-      candidateId, fieldLabel: element.getAttribute("aria-label") ?? "등록번호",
-      profileEntryId: entry, currentValue: "", profileValue: VALUE,
-      previewValue: VALUE, status: "needs-review", selected: true,
-      disabled: false, revealed: true, reason: "",
+      candidateId,
+      fieldLabel: element.getAttribute("aria-label") ?? "등록번호",
+      profileEntryId: entry,
+      currentValue: "",
+      profileValue: VALUE,
+      previewValue: VALUE,
+      status: "needs-review",
+      selected: true,
+      disabled: false,
+      revealed: true,
+      reason: "",
       analysis: {
-        candidateId, matchType: "MATCH", mappingStatus: "LLM_SUGGESTED",
-        autofillPolicy: "CONDITIONAL", interactionStatus: "READY",
+        candidateId,
+        matchType: "MATCH",
+        mappingStatus: "LLM_SUGGESTED",
+        autofillPolicy: "CONDITIONAL",
+        interactionStatus: "READY",
         valueBinding: { type: "DIRECT", profileFieldKey: key },
         writePlan: { command: search ? "SEARCH_SELECTION" : "SET_TEXT" },
       },
@@ -133,33 +155,67 @@ function fixture(kind: "table" | "dialog", delayed = false) {
   }
   const items = [
     item(target, "education.university.majorName", "education-1", true),
-    item(document.querySelector("[data-dependent]")!, "education.university.additionalMajorName", "education-1"),
-    item(document.querySelector("[data-unrelated]")!, "languages.languageTest.registrationNo", "language-1"),
+    item(
+      document.querySelector("[data-dependent]")!,
+      "education.university.additionalMajorName",
+      "education-1",
+    ),
+    item(
+      document.querySelector("[data-unrelated]")!,
+      "languages.languageTest.registrationNo",
+      "language-1",
+    ),
   ];
-  const approvedCandidateIds = new Set(items.map(({ candidateId }) => candidateId));
+  const approvedCandidateIds = new Set(
+    items.map(({ candidateId }) => candidateId),
+  );
   return {
-    popup, target, query, opener, confirm, search, direct, forbidden, surface,
-    snapshot, targetId,
-    setMode(mode: typeof resultMode) { resultMode = mode; },
+    popup,
+    target,
+    query,
+    opener,
+    confirm,
+    search,
+    direct,
+    forbidden,
+    surface,
+    snapshot,
+    targetId,
+    setMode(mode: typeof resultMode) {
+      resultMode = mode;
+    },
     async run(genericPopupRecovery = false) {
       const pending = executeReadonlySearch({
-        document, registry: snapshot.registry, targetCandidateId: targetId,
-        canonicalFieldKey: "education.university.majorName", expectedValue: VALUE,
-        decisionProvider, genericPopupRecovery,
+        document,
+        registry: snapshot.registry,
+        targetCandidateId: targetId,
+        canonicalFieldKey: "education.university.majorName",
+        expectedValue: VALUE,
+        decisionProvider,
+        genericPopupRecovery,
       });
       await vi.runAllTimersAsync();
       return pending;
     },
     async batch(scope?: "row") {
       const results: ApprovedWriteResult[] = items.map(({ candidateId }) => ({
-        candidateId, status: "skipped", reason: "pending",
+        candidateId,
+        status: "skipped",
+        reason: "pending",
       }));
       const pending = executeApprovedSearchWrites({
-        items, registry: snapshot.registry, approvedCandidateIds, results,
-        followUpHaltScope: scope, interactionDecisionProvider: decisionProvider,
-        writeOrdinary: (item) => executeApprovedWrites({
-          items: [item], registry: snapshot.registry, approvedCandidateIds,
-        })[0]!,
+        items,
+        registry: snapshot.registry,
+        approvedCandidateIds,
+        results,
+        followUpHaltScope: scope,
+        interactionDecisionProvider: decisionProvider,
+        writeOrdinary: (item) =>
+          executeApprovedWrites({
+            items: [item],
+            registry: snapshot.registry,
+            approvedCandidateIds,
+          })[0]!,
       });
       await vi.runAllTimersAsync();
       await pending;
@@ -183,7 +239,10 @@ describe.each(["table", "dialog"] as const)("%s search popup", (kind) => {
     expect(queryControls(test.surface)).toEqual([]);
     const pause = vi.spyOn(SearchSession.prototype, "pause");
     const result = await test.run();
-    expect(result).toMatchObject({ status: "failed", reason: "search_query_not_found" });
+    expect(result).toMatchObject({
+      status: "failed",
+      reason: "search_query_not_found",
+    });
     expect(pause).not.toHaveBeenCalled();
     expect(test.query.value).toBe("");
     test.query.style.display = "block";
@@ -196,12 +255,16 @@ describe.each(["table", "dialog"] as const)("%s search popup", (kind) => {
     vi.useFakeTimers();
     const test = fixture(kind, true);
     const pause = SearchSession.prototype.pause;
-    vi.spyOn(SearchSession.prototype, "pause").mockImplementation(function (ms) {
-      test.query.style.display = "block";
-      return pause.call(this, ms);
-    });
+    vi.spyOn(SearchSession.prototype, "pause").mockImplementation(
+      function (this: SearchSession, ms) {
+        test.query.style.display = "block";
+        return pause.call(this, ms);
+      },
+    );
     const result = await test.run(true);
-    expect(result, JSON.stringify(result)).toMatchObject({ status: "selected" });
+    expect(result, JSON.stringify(result)).toMatchObject({
+      status: "selected",
+    });
     expect(test.query.value).toBe(VALUE);
     expect(test.target.value).toBe(VALUE);
     expect(test.surface.closure()).toBe("closed");
@@ -213,13 +276,23 @@ describe.each(["table", "dialog"] as const)("%s search popup", (kind) => {
     vi.useFakeTimers();
     const test = fixture(kind, true);
     const pause = SearchSession.prototype.pause;
-    vi.spyOn(SearchSession.prototype, "pause").mockImplementation(function (ms) {
-      test.query.style.display = "block";
-      return pause.call(this, ms);
-    });
+    vi.spyOn(SearchSession.prototype, "pause").mockImplementation(
+      function (this: SearchSession, ms) {
+        test.query.style.display = "block";
+        return pause.call(this, ms);
+      },
+    );
     const results = await test.batch("row");
-    expect(results.map(({ status }) => status), JSON.stringify(results)).toEqual(["written", "written", "written"]);
-    expect(results.some((result) => result.status === "skipped" && result.code === "UNSUPPORTED_CONTROL")).toBe(false);
+    expect(
+      results.map(({ status }) => status),
+      JSON.stringify(results),
+    ).toEqual(["written", "written", "written"]);
+    expect(
+      results.some(
+        (result) =>
+          result.status === "skipped" && result.code === "UNSUPPORTED_CONTROL",
+      ),
+    ).toBe(false);
     expect(test.direct).not.toHaveBeenCalled();
     expect(test.forbidden).not.toHaveBeenCalled();
   });
@@ -253,6 +326,106 @@ describe.each(["table", "dialog"] as const)("%s search popup", (kind) => {
     expect(result).toMatchObject({ reason: "multiple_search_query_inputs" });
     expect(test.query.value).toBe("");
     expect(second.value).toBe("");
+    expect(test.forbidden).not.toHaveBeenCalled();
+  });
+
+  it("closes an empty confirmation-only popup and holds only the dependent row", async () => {
+    vi.useFakeTimers();
+    const test = fixture(kind);
+    test.setMode("empty");
+    const result = await test.run(true);
+    expect(result).toMatchObject({ reason: "search_results_not_found" });
+    expect(result).not.toHaveProperty("surfaceLeftOpen");
+    expect(test.surface.closure()).toBe("closed");
+    expect(test.target.value).toBe("");
+    expect(test.direct).not.toHaveBeenCalled();
+    expect(test.forbidden).not.toHaveBeenCalled();
+
+    const batch = fixture(kind);
+    batch.setMode("empty");
+    const results = await batch.batch("row");
+    expect(results[0]).not.toHaveProperty("surfaceLeftOpen");
+    expect(results[1]).toMatchObject({ failureCode: "SEARCH_FOLLOWUP_HALTED" });
+    expect(results[2]).toMatchObject({ status: "written" });
+    expect(batch.surface.closure()).toBe("closed");
+    expect(batch.target.value).toBe("");
+    expect(batch.direct).not.toHaveBeenCalled();
+    expect(batch.forbidden).not.toHaveBeenCalled();
+  });
+
+  it("keeps the static default confirmation popup open and holds every later item", async () => {
+    vi.useFakeTimers();
+    const test = fixture(kind);
+    test.setMode("empty");
+    const results = await test.batch();
+    expect(results[0]).toMatchObject({
+      surfaceLeftOpen: true,
+      surfaceLeftOpenReason: "no_safe_close_control",
+    });
+    expect(results.slice(1)).toEqual([
+      expect.objectContaining({ failureCode: "SEARCH_FOLLOWUP_HALTED" }),
+      expect.objectContaining({ failureCode: "SEARCH_FOLLOWUP_HALTED" }),
+    ]);
+    expect(test.surface.closure()).toBe("open");
+    expect(test.forbidden).not.toHaveBeenCalled();
+  });
+
+  it("keeps an unsafe popup open with a reason and holds every later item", async () => {
+    vi.useFakeTimers();
+    const test = fixture(kind);
+    test.setMode("empty");
+    test.confirm.remove();
+    const results = await test.batch("row");
+    expect(results[0]).toMatchObject({
+      surfaceLeftOpen: true,
+      surfaceLeftOpenReason: "no_safe_close_control",
+    });
+    expect(results.slice(1)).toEqual([
+      expect.objectContaining({ failureCode: "SEARCH_FOLLOWUP_HALTED" }),
+      expect.objectContaining({ failureCode: "SEARCH_FOLLOWUP_HALTED" }),
+    ]);
+    expect(test.surface.closure()).toBe("open");
+    expect(test.direct).not.toHaveBeenCalled();
+    expect(test.forbidden).not.toHaveBeenCalled();
+  });
+
+  it("requires confirmed closure after the click or holds every later item", async () => {
+    vi.useFakeTimers();
+    const test = fixture(kind);
+    test.setMode("empty");
+    const clicked = vi.fn((event: Event) => event.stopImmediatePropagation());
+    test.confirm.addEventListener("click", clicked, true);
+    const results = await test.batch("row");
+    expect(clicked).toHaveBeenCalledTimes(1);
+    expect(results[0]).toMatchObject({
+      surfaceLeftOpen: true,
+      surfaceLeftOpenReason: "close_not_confirmed",
+    });
+    expect(results.slice(1)).toEqual([
+      expect.objectContaining({ failureCode: "SEARCH_FOLLOWUP_HALTED" }),
+      expect.objectContaining({ failureCode: "SEARCH_FOLLOWUP_HALTED" }),
+    ]);
+    expect(test.surface.closure()).toBe("open");
+    expect(test.forbidden).not.toHaveBeenCalled();
+  });
+
+  it("never uses confirmation cleanup after result activation", async () => {
+    vi.useFakeTimers();
+    const test = fixture(kind);
+    test.setMode("unreflected");
+    const clicked = vi.fn();
+    test.confirm.addEventListener("click", clicked);
+    const results = await test.batch("row");
+    expect(results[0]).toMatchObject({
+      surfaceLeftOpen: true,
+      surfaceLeftOpenReason: "no_safe_close_control",
+    });
+    expect(results.slice(1)).toEqual([
+      expect.objectContaining({ failureCode: "SEARCH_FOLLOWUP_HALTED" }),
+      expect.objectContaining({ failureCode: "SEARCH_FOLLOWUP_HALTED" }),
+    ]);
+    expect(clicked).not.toHaveBeenCalled();
+    expect(test.surface.closure()).toBe("open");
     expect(test.forbidden).not.toHaveBeenCalled();
   });
 });

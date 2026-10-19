@@ -151,19 +151,30 @@ function validateRegionContext(
     throw new SearchFailure("unverified_search_form");
 }
 
-/** Close a popup this search opened using only a safe bare close control. */
+/** Prefer bare close; generic failures before result activation may confirm. */
 function closeOwnedSurface(
   surface: SearchSurface,
+  allowConfirmation: boolean,
 ): SurfaceLeftOpenReason | undefined {
   if (surface.kind === "inline-listbox") return undefined;
   if (surface.closure() !== "open") return undefined;
-  const control = Array.from(
+  const controls = Array.from(
     surface.container.querySelectorAll<HTMLElement>(
       "button, a[href], input[type=button]",
     ),
-  ).find(
-    (element) => isSafeSurfaceCloseClick(element, surface.container).allowed,
   );
+  const control =
+    controls.find(
+      (element) => isSafeSurfaceCloseClick(element, surface.container).allowed,
+    ) ??
+    (allowConfirmation
+      ? controls.find(
+          (element) =>
+            isSafeSurfaceCloseClick(element, surface.container, {
+              allowConfirmation: true,
+            }).allowed,
+        )
+      : undefined);
   if (!control) return "no_safe_close_control";
   try {
     control.click();
@@ -209,6 +220,7 @@ export async function executeReadonlySearch(
   let effect: SearchEffect = "none";
   let identity: TargetIdentity | undefined;
   let surface: SearchSurface | undefined;
+  let selectionStarted = false;
   let followUpObservation: ReturnType<typeof captureSearchFollowUp>;
   try {
     session.check();
@@ -645,6 +657,7 @@ export async function executeReadonlySearch(
       ? captureSearchFollowUp(selectionBinding.scope, identity.target)
       : undefined;
     trace("결과 선택 클릭", candidate.element);
+    selectionStarted = true;
     const resultLink =
       candidate.element.tagName === "A"
         ? (candidate.element as HTMLAnchorElement)
@@ -759,7 +772,12 @@ export async function executeReadonlySearch(
     const reason =
       error instanceof SearchFailure ? error.reason : "execution_failed";
     debugSearchFailure(targetCandidateId, step, reason, effect, error);
-    const leftOpenReason = surface ? closeOwnedSurface(surface) : undefined;
+    const leftOpenReason = surface
+      ? closeOwnedSurface(
+          surface,
+          args.genericPopupRecovery === true && !selectionStarted,
+        )
+      : undefined;
     return {
       status: effect === "none" ? "unsupported" : "failed",
       targetCandidateId,
