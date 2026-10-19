@@ -657,3 +657,12 @@
 - Source-Revision: 79a3dd19f1fc99bcfb4ac0482bf9d2c3f9a944c6
 - 승인한 후보 12개에 맞춰 아직 병합되지 않은 [CF-192 bundle](../raw/issues/CF-192/manifest.md)을 갱신했다.
 - [Greeting 지원서에서 프로필 가져오기](topics/greeting-profile-import.md)에 재가져오기 생략 조건과 실사이트 테스트 범위를 반영했다.
+
+
+## [2026-10-19] ingest | CF-177 Hplace 공통 실행 정책과 필드 현황
+
+- Approval-Digest: 5a54ecda82fcd8b70574c9b3b35910433c10db4823ea2ad8b15ef0bd74df4b97
+- Source-Revision: c35f229db509ad1fc7d3cc440729a026afb359db
+- 승인 후보 파일 전체 UTF-8 바이트의 SHA-256을 재확인하고 [CF-177 bundle](../raw/issues/CF-177/manifest.md)에 계약·현황·결정·관측·검증·후속 후보를 수집했다.
+- [Hplace 어댑터](topics/adapter-hplace.md)를 추가하고 [개발 경계](topics/adapter-development.md), [필드 현황](topics/adapter-field-inventory.md)의 Current와 History를 갱신했다. 다른 회사 현황과 기존 raw는 보존했다.
+- 127키/사이트 전용27행, 로컬 구현/과거 관측/PENDING-live, 호환 배포 순서를 구분하며 실제 지원값·계정·세션·대화 전문은 저장하지 않았다.
