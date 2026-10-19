@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { render, screen, within } from "@testing-library/react";
 import { fixturePolicy } from "../../test/fixtures/execution-policy";
 import { createEmptyProfile, type Profile } from "../../profile/model";
 import { resolveDocumentCompany } from "../adapters/company";
@@ -17,6 +18,8 @@ import type {
 import type { InteractionDecisionRequest } from "../api/interaction-types";
 import type { collectFieldsSnapshot } from "../dom/collect";
 import type { ReviewPlanItem } from "../review/review-plan";
+import { WorkflowScreens } from "../workflow/WorkflowScreens";
+import { genericItemReason, genericReasonText } from "./grade-reason-text";
 import { executeApprovedWritesAfterPageSettles } from "../write/executor";
 import { installExecutionPolicy } from "../workflow/execution-policy";
 import { createWriteRevealedFields } from "../workflow/revealed-fields";
@@ -338,7 +341,56 @@ function workflow(
   return { analyze, stages, state, item, addressRun };
 }
 
+const WRITE_PLAN_REASON = {"BLOCKED":"WRITE_PLAN_BLOCKED","MANUAL_REVEAL_REQUIRED":"WRITE_PLAN_MANUAL_REVEAL","SYSTEM_CONTROL":"WRITE_PLAN_SYSTEM_CONTROL","UNVERIFIED":"WRITE_PLAN_UNVERIFIED"} as const;
+
 describe("generic section flow", () => {
+  it.each([
+    "BLOCKED",
+    "MANUAL_REVEAL_REQUIRED",
+    "SYSTEM_CONTROL",
+    "UNVERIFIED",
+  ] as const)("displays the execution block for %s without claiming the saved school is missing", async (interactionStatus) => {
+    document.body.innerHTML = '<h2>학력</h2><label>학교명<input name="school"></label>';
+    const api = createClient({
+      field: () => ({ interactionStatus, writePlan: undefined }),
+    });
+    const run = workflow(api.client);
+    await run.analyze();
+    const item = run.item("school");
+    expect(item).toMatchObject({
+      genericGrade: "BLOCKED",
+      genericReasonCode: WRITE_PLAN_REASON[interactionStatus],
+      selected: false,
+      disabled: true,
+    });
+    expect(item.analysis).not.toHaveProperty("writePlan");
+    render(
+      <WorkflowScreens
+        stage="review"
+        preparationItems={[]}
+        warnings={[]}
+        revealedPreparationKeys={new Set()}
+        selectedPreparationKeys={new Set()}
+        setRevealedPreparationKeys={() => undefined}
+        setSelectedPreparationKeys={() => undefined}
+        executePreparation={async () => undefined}
+        reviewItems={run.state.reviewItems}
+        partial={false}
+        toggleReviewItem={() => undefined}
+        executeWrites={async () => undefined}
+        results={[]}
+        adapter={getWorkflowAdapter(document)}
+        workflowDiagnostics={[]}
+        exceptionTitle=""
+        onExit={() => undefined}
+      />,
+    );
+    const row = screen.getByRole("button", { name: /학교명.*필드로 이동/ }).closest("article")!;
+    expect(within(row).getByText(genericItemReason(item))).toBeVisible();
+    expect(within(row).queryByText(genericReasonText("NO_PROFILE_VALUE"))).toBeNull();
+    expect(within(row).queryByRole("button", { name: /포함하기/ })).toBeNull();
+  });
+
   it("splits, classifies, matches by category and grades before review", async () => {
     mountSyntheticForm();
     const api = createClient();

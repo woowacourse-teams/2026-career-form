@@ -4,6 +4,7 @@ import type { GENERIC_STRUCTURE_BLOCKED_REASON } from "./structure-context";
 import {
   GENERIC_BLOCKED_REASON,
   GENERIC_UNLINKED_REASON,
+  type GenericFieldGrade,
   type GenericSectionFailure,
 } from "./generic-analysis";
 
@@ -11,11 +12,22 @@ type KnownReasonCode =
   | GradeReason
   | GenericSectionFailure
   | typeof GENERIC_UNLINKED_REASON
-  | typeof GENERIC_STRUCTURE_BLOCKED_REASON;
+  | typeof GENERIC_STRUCTURE_BLOCKED_REASON
+  | NonNullable<GenericFieldGrade["reason"]>;
 
 // A new reason code fails type checking here until it gets a sentence.
 const REASON_TEXT: Readonly<Record<KnownReasonCode, string>> = {
   NO_PROFILE_VALUE: "저장된 프로필에 입력할 값이 없습니다.",
+  WRITE_PLAN_BLOCKED:
+    "현재 페이지 상태에서 이 칸은 입력이 막혀 있어 직접 입력해야 합니다.",
+  WRITE_PLAN_MANUAL_REVEAL:
+    "칸을 직접 펼쳐야 해서 자동으로 입력하지 않습니다.",
+  WRITE_PLAN_SYSTEM_CONTROL:
+    "시스템이 관리하는 칸이라 자동으로 입력하지 않습니다.",
+  WRITE_PLAN_UNVERIFIED:
+    "입력 방법이 검증되지 않아 자동으로 입력하지 않습니다.",
+  WRITE_PLAN_MISSING:
+    "안전한 입력 방법을 확인하지 못해 직접 입력해야 합니다.",
   COUNTRY_CODE_OPTIONS: "국가 번호 선택지라서 직접 확인해 주세요.",
   NON_DATE_FIELD: "날짜 입력 칸이 아니라서 직접 확인해 주세요.",
   MIXED_EDUCATION_RECORD: "여러 학력 기록이 섞여 있어 직접 확인해 주세요.",
