@@ -59,11 +59,19 @@ async function analyzeControl(
   controlSelector: string,
   profileFieldKey: string,
   profile: Profile,
+  scopeSelector?: string,
 ) {
   document.body.innerHTML = readFileSync(
     join(FIXTURES, fixture, "sanitized.html"),
     "utf8",
   );
+  if (scopeSelector) {
+    // Keep the original section, labels and options; unrelated sections are
+    // covered by the page-collection tests, not these option-conversion cases.
+    const scope = document.querySelector(scopeSelector)!;
+    expect(scope).not.toBeNull();
+    document.body.replaceChildren(scope);
+  }
   const snapshot = collectFieldsSnapshot(document);
   const control = document.querySelector<HTMLInputElement | HTMLSelectElement>(controlSelector)!;
   const field = snapshot.request.sections
@@ -110,14 +118,15 @@ const certificateGrade = (grade: string): Profile => {
 // Sanitized structure only; the API response is a mock, not live evidence.
 describe("generic select and radio option values on sanitized fixtures", () => {
   it.each([
-    ["ahnlab-write-resume-form", "#militaryType"],
-    ["sk-careers-application-form", "#prsMilitarySvcStatus"],
-  ])("converts the fixed military status label on %s", async (fixture, selector) => {
+    ["ahnlab-write-resume-form", "#militaryType", undefined],
+    ["sk-careers-application-form", "#prsMilitarySvcStatus", "#applyContentUserInfo"],
+  ])("converts the fixed military status label on %s", async (fixture, selector, scope) => {
     const { grade, field } = await analyzeControl(
       fixture,
       selector,
       "military.military.militaryStatus",
       militaryProfile("military-status:served"),
+      scope,
     );
 
     expect(field).toMatchObject({
@@ -130,14 +139,15 @@ describe("generic select and radio option values on sanitized fixtures", () => {
   });
 
   it.each([
-    ["ahnlab-write-resume-form", "#militaryType"],
-    ["sk-careers-application-form", "#prsMilitarySvcStatus"],
-  ])("blocks an unmatched military status on %s", async (fixture, selector) => {
+    ["ahnlab-write-resume-form", "#militaryType", undefined],
+    ["sk-careers-application-form", "#prsMilitarySvcStatus", "#applyContentUserInfo"],
+  ])("blocks an unmatched military status on %s", async (fixture, selector, scope) => {
     const { grade } = await analyzeControl(
       fixture,
       selector,
       "military.military.militaryStatus",
       militaryProfile("military-status:unknown"),
+      scope,
     );
 
     expect(grade).toEqual({
@@ -174,6 +184,7 @@ describe("generic select and radio option values on sanitized fixtures", () => {
       '[name="lngabConversation"]',
       "languages.languageSkill.conversationalLevel",
       profile,
+      "#applyContentLanguage",
     );
 
     expect(field).toMatchObject({
@@ -194,6 +205,7 @@ describe("generic select and radio option values on sanitized fixtures", () => {
       '[name="lngabConversation"]',
       "languages.languageSkill.conversationalLevel",
       profile,
+      "#applyContentLanguage",
     );
 
     expect(grade).toEqual({
