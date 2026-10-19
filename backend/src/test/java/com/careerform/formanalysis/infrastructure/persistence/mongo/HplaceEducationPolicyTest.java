@@ -78,4 +78,24 @@ class HplaceEducationPolicyTest {
         assertThatCode(()->policy(updated)).doesNotThrowAnyException();
     }
 
+    @Test void acceptsYearMonthOrFullDateForEveryEducationDate() {
+        var tree=MAPPER.valueToTree(HplaceCompanyFormPolicyFactory.createNative().executionPolicy());
+        var formats=new java.util.TreeMap<String,List<String>>();
+        for (var section:tree.path("browserPolicy").path("nativeForm").path("sections")) {
+            if (!List.of("hplace-mrs2-highschool","hplace-mrs2-college","hplace-mrs2-graduateSchool").contains(section.path("id").asText())) continue;
+            for (var field:section.path("fields")) {
+                if (!field.has("date")) continue;
+                var values=new java.util.ArrayList<String>();
+                field.path("date").path("formats").forEach(v->values.add(v.asText()));
+                formats.put(field.path("name").asText(),values);
+            }
+        }
+        assertThat(formats.keySet()).containsExactlyInAnyOrder(
+            "hplace.mrs2.highschool.entranceDate","hplace.mrs2.highschool.graduationDate",
+            "hplace.mrs2.college.entranceDate","hplace.mrs2.college.graduationDate",
+            "hplace.mrs2.graduateSchool.entranceDate","hplace.mrs2.graduateSchool.graduationDate");
+        assertThat(formats.values()).allSatisfy(v->assertThat(v).containsExactly("YM","YMD"));
+        assertThatCode(()->policy(HplaceCompanyFormPolicyFactory.createNative())).doesNotThrowAnyException();
+    }
+
 }
