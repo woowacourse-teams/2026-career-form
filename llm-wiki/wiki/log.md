@@ -657,3 +657,9 @@
 - Source-Revision: 79a3dd19f1fc99bcfb4ac0482bf9d2c3f9a944c6
 - 승인한 후보 12개에 맞춰 아직 병합되지 않은 [CF-192 bundle](../raw/issues/CF-192/manifest.md)을 갱신했다.
 - [Greeting 지원서에서 프로필 가져오기](topics/greeting-profile-import.md)에 재가져오기 생략 조건과 실사이트 테스트 범위를 반영했다.
+
+## [2026-10-19] ingest | CF-281 범용 범주 안 JEV 매칭 누락 원인과 의미 근거 보강
+
+- Approval-Digest: acf6371d55c2272e43692af2e5a7010dc364ddd8162a37b4d7811aeea30b05b8
+- Source-Revision: eac609ea083a39ef9c92217abf4cf36affbca43a
+- 승인한 후보 3개를 [CF-281 bundle](../raw/issues/CF-281/manifest.md)로 수집하고 [범용 범주 안 JEV 매칭 누락 원인과 의미 근거 보강](topics/generic-category-semantic-matching.md)을 추가했다.
