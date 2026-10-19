@@ -1,4 +1,6 @@
 import { nativeProfileAssignment } from "../policy/native-form-row-assignment";
+import { nativeOwnership } from "../policy/native-form-collection";
+import { text } from "../policy/primitives";
 import { executionPolicy } from "../workflow/execution-policy";
 import { isSplitEmailTarget, SPLIT_EMAIL_REASON } from "../dom/split-email";
 import type { WriteFailureCode } from "../write/failure";
@@ -221,9 +223,40 @@ export function resolveProfileFieldValue(
     : { status: "missing", sensitive: parts.sensitive };
 }
 
+/** Native radios carry site codes (50, LEAVE) while profile values are policy
+ * labels. A single checked radio whose normalized label maps to exactly its
+ * own code reads as that label; anything else keeps the raw code so a foreign
+ * value still conflicts. The 작성안함 empty radio stays empty. */
+function nativeRadioValue(handle: FieldCandidateHandle): string | undefined {
+  const field = nativeOwnership(handle)?.field;
+  if (field?.type !== "radio" || handle.candidate.control !== "radio") return;
+  const radios = handle.elements.filter(
+    (element): element is HTMLInputElement =>
+      element instanceof HTMLInputElement,
+  );
+  const checked = radios.filter((radio) => radio.checked);
+  if (checked.length !== 1) return;
+  const labelOf = (radio: HTMLInputElement) =>
+    text(radio.labels?.[0]?.textContent);
+  const [radio] = checked;
+  const label = labelOf(radio);
+  if (radio.value === "")
+    return field.emptyRadioLabel && label === field.emptyRadioLabel
+      ? ""
+      : undefined;
+  return label &&
+    field.options?.[label] === radio.value &&
+    radios.filter((other) => labelOf(other) === label).length === 1 &&
+    radios.filter((other) => other.value === radio.value).length === 1
+    ? label
+    : radio.value;
+}
+
 function currentValue(handle: FieldCandidateHandle): string {
   const customValue = customFieldValue(handle);
   if (customValue !== undefined) return customValue;
+  const nativeRadio = nativeRadioValue(handle);
+  if (nativeRadio !== undefined) return nativeRadio;
   if (
     handle.candidate.control === "radio" ||
     handle.candidate.control === "checkbox"
