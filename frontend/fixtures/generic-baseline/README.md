@@ -14,6 +14,8 @@ Issue #236에서 추가했고, generic-autofill-jev-agent 계획의 Task 15가 �
 - `vite.config.ts`: `/api`를 이미 실행 중인 로컬 백엔드로 proxy한다. 기본 백엔드는
   `http://127.0.0.1:18080`이고 `CF_BASELINE_BACKEND_URL`로 바꾼다.
 - `run-baseline.mjs`: Playwright headless Chromium 러너다. 실행마다 새 browser context를 만든다.
+- `collector.mjs`: 기존 로컬 quality snapshot/review 콜백을 관찰한다. snapshot별 candidate와 DOM id,
+  클라이언트에서 병합한 최종 review 바인딩을 수집하며 원래 콜백도 그대로 실행한다. 별도 API 호출은 없다.
 - `combine-timing.mjs`: provider별 timing 파일을 공통 메타데이터와 함께 하나로 합친다.
 
 드라이버는 provider 키를 읽거나 전달하거나 기록하지 않는다. 키는 사람이 승인한 방식으로 백엔드 프로세스
@@ -90,6 +92,9 @@ node fixtures/generic-baseline/run-baseline.mjs --check-only --out /tmp/cf-drive
 - `timing-<provider>.json`: 실행별 기록과 측정 조건이다. 실행별 기록에는 다음을 담는다.
   - 소요 시간(첫 분석 요청 시작부터 마지막 분석 응답까지)과 nearest-rank p95
   - 준비·칸·상호작용 분석 요청 수, 칸 분석 응답 상태와 경고
+    (범용 응답의 필드별 `LLM_UNAVAILABLE`도 포함), 요청 실패 코드
+  - 범용 섹션 분류 요청 수(`section_classification_requests`). 칸 요청 수에는 기존 및 범용 칸 분석이
+    모두 포함되며, 섹션 분류는 칸 요청 수에 포함하지 않는다.
   - 그룹별 추가 전후 행 수, provider 호출 수(백엔드 지표 차이)
   - 판정 요약과 매핑된 프로필 필드 키, 실패 이유
 - `combine-timing.mjs` 출력은 측정 revision, 수집 파일 sha256, 페이지·정답·프로필 sha256과
@@ -102,6 +107,11 @@ node fixtures/generic-baseline/run-baseline.mjs --check-only --out /tmp/cf-drive
 `MAPPING_NO_MATCH`다. 바르게 매핑했으나 쓰지 않은 입력란의 사유는 다음과 같다.
 `READY`이면서 `ALLOWED`면 `WRITE_FAILED`, `READY`이면서 확인이 필요한 정책이면
 `USER_NOT_APPROVED`, 그 밖은 `WRITE_BLOCKED`다. token과 비용은 관측하지 않아 0과 `null`로 둔다.
+
+범용 응답의 원시 binding이 아니라 운영 workflow의 quality review에 전달된 최종 analysis로 매핑을
+판정한다. candidate id는 snapshot마다 달라지거나 재사용될 수 있어 snapshot의 registry에서 얻은
+DOM id로 합친다. review 전 실패해도 snapshot에서 발견한 입력란은 미매핑으로 남는다. 기존 정적
+칸 분석 응답 수집도 유지한다. 정답·프로필과 AUTOFILLABLE 분모는 바꾸지 않는다.
 
 ## 측정 뒤 정답 보정과 재채점
 
