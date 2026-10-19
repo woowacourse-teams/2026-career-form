@@ -49,6 +49,7 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [범용 합성 값 표현의 frontend 검증 경계](topics/generic-binding-frontend-validation.md) | v3 binding 검증, 이름 레시피·날짜 부분 select 소비와 등급, BE·FE 동시 배포 | 2026-10-18 |
 | [범용 검색 실패의 후속 보류 범위와 팝업 정리](topics/generic-search-failure-isolation.md) | 같은 행으로 제한한 보류, 팝업 닫기와 실사이트 분기 미확인 경계 | 2026-10-18 |
 | [검색 표면 닫기 판정과 실패 사유 타입](topics/generic-search-surface-close-safety.md) | 순수 닫기의 금지 패턴 제외, 닫기 사유 특성화와 공유 타입 | 2026-10-18 |
+| [범용 전체 날짜 텍스트 칸 JEV 매칭 조사](topics/generic-date-text-matching-investigation.md) | 전체 날짜 TEXT의 DIRECT·DATE_PART 경로 추적, BE 결함 미재현과 실사이트 미확인 범위 | 2026-10-19 |
 | [검토된 DOM 스냅샷 fixture의 공백 정규화](topics/dom-snapshot-fixture-whitespace.md) | pre-commit 공백 검사 통과를 위한 승인된 공백만 정규화 기록 | 2026-10-18 |
 | [입력 위치 표시와 설치 안내](topics/autofill-follow-and-install.md) | 기본 필드 추적, 확인 필요 결과와 첫 설치 안내 | 2026-09-22 |
 | [프로젝트 컨벤션](topics/project-conventions.md) | 공통, Git과 스택별 규약 | 2026-08-22 |
