@@ -602,12 +602,12 @@ export function createAnalyzeFields({
       plan.items.push(...run.nativeMajors.unavailable);
     const finishReviewLog = startLocalTiming("review-log");
     debugReviewPlan(plan);
-    debugReviewDecisions(plan, snapshot.registry);
     finishReviewLog();
     observeQuality(() =>
       apiClient.quality?.review(snapshot.request.snapshotId, plan.items),
     );
     if (plan.status === "blocked") {
+      debugReviewDecisions(plan, snapshot.registry);
       setExceptionTitle("이 페이지에서는 자동 기입을 진행할 수 없습니다");
       setStage("exception");
       return;
@@ -645,6 +645,7 @@ export function createAnalyzeFields({
     }
     setWarnings(analysisWarnings);
     if (plan.items.length === 0) {
+      debugReviewDecisions(plan, snapshot.registry);
       if (await refreshAfterWrites()) return;
       setReviewItems([]);
       setResults([]);
@@ -707,6 +708,9 @@ export function createAnalyzeFields({
           : automatic;
       }),
     );
+    // Diagnostics describe the items that will actually execute, after adapter
+    // promotion and explicit review/option gates have decided their selection.
+    debugReviewDecisions({ ...plan, items: automaticItems }, snapshot.registry);
     finishAutomaticItems();
     setReviewItems(automaticItems);
     if (options.reviewOnly || genericResult) {
