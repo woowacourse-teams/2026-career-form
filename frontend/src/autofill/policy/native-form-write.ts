@@ -42,6 +42,11 @@ export function nativeTarget(
   if (!nativeUnitMatches(el, o.row, o.field.unit)) return;
   const f = o.field;
   if (f.gpa) return nativeGpaTarget(handle, value);
+  if (f.type === "select" && f.dynamicOptions?.codeFormat === "OBSERVED")
+    return observedGradeLabel(
+      value,
+      o.observedOptions.map((opt) => opt.label),
+    );
   if (f.date) {
     if (!(el instanceof HTMLInputElement) || el.type !== "text") return;
     const peer = f.date.peer ? peerControl(o, f.date.peer) : undefined,
