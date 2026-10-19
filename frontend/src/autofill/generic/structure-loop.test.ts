@@ -482,6 +482,42 @@ describe("runGenericStructureLoop", () => {
       ).toContain("대학원 학교명");
     });
 
+    it("selects row kinds when the initial prompt omits its value attribute", async () => {
+      educationDocument();
+      document.querySelectorAll("select").forEach((select) => {
+        select.options[0].removeAttribute("value");
+        select.options[0].textContent = "선택";
+      });
+      const result = await runGenericStructureLoop({
+        document,
+        profile,
+        apiClient: mockApi({ category: "EDUCATION" }).client,
+      });
+      expect(
+        Array.from(document.querySelectorAll("select"), (select) => select.value),
+      ).toEqual(["B", "M"]);
+      expect(result.actions.filter((action) => action.result === "done")).toHaveLength(2);
+    });
+
+    it("preserves a meaningful preselected row kind that conflicts with the profile", async () => {
+      educationDocument();
+      const first = document.querySelector("select")!;
+      first.value = "M";
+      const result = await runGenericStructureLoop({
+        document,
+        profile,
+        apiClient: mockApi({ category: "EDUCATION" }).client,
+      });
+      expect(first.value).toBe("M");
+      expect(result.actions).toContainEqual({
+        kind: "SELECT_ROW_KIND",
+        sectionTitle: "학력",
+        result: "blocked",
+        reason: "ROW_KIND_MISMATCH",
+        rowIndex: 0,
+      });
+    });
+
     it("blocks only the row whose revealed fields belong to another stage", async () => {
       educationDocument();
       const result = await runGenericStructureLoop({

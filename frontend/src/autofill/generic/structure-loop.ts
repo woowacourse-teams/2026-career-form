@@ -914,7 +914,12 @@ export async function runGenericStructureLoop(
     if (!kind) return blockRow("NO_PROFILE_STAGE");
     const optionId = byTarget.get(TARGET_OF_ROW_KIND[kind]);
     if (!optionId) return blockRow("ROW_KIND_OPTION_UNDECIDED");
-    const preselected = select.value !== "";
+    const selectedOption = select.options[select.selectedIndex];
+    const implicitPrompt =
+      select.selectedIndex === 0 &&
+      selectedOption?.getAttribute("value") === null &&
+      selectedOption.text.trim() === "선택";
+    const preselected = select.value !== "" && !implicitPrompt;
     if (preselected && select.selectedIndex !== Number(optionId))
       return blockRow("ROW_KIND_MISMATCH");
     if (aborted()) return false;
