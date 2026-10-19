@@ -50,7 +50,7 @@ const MAX_ACTIONS_PER_SECTION = 10;
 const MAX_FAILURES_PER_CANDIDATE = 2;
 const MAX_ITERATIONS = 200;
 const MAX_LABEL_LENGTH = 120;
-const COLLECTION_OPTIONS = { mixedSectionDetection: false } as const;
+const COLLECTION_OPTIONS = { mixedSectionDetection: false, titleNameCues: true } as const;
 
 export type StructureActionKind =
   "ADD_ROW" | "REVEAL_SECTION" | "SELECT_ROW_KIND";

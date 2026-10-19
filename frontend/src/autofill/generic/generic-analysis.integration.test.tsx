@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { fixturePolicy } from "../../test/fixtures/execution-policy";
 import { createEmptyProfile, type Profile } from "../../profile/model";
 import { resolveDocumentCompany } from "../adapters/company";
@@ -393,6 +393,7 @@ describe("generic section flow", () => {
           onExit={() => undefined}
         />,
       );
+      fireEvent.click(screen.getByRole("tab", { name: "입력 불가 1" }));
       const row = screen
         .getByRole("button", { name: /학교명.*필드로 이동/ })
         .closest("article")!;

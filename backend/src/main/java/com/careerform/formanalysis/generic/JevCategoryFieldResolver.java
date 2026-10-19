@@ -1,11 +1,15 @@
 package com.careerform.formanalysis.generic;
 
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
@@ -30,6 +34,7 @@ import com.careerform.formanalysis.exception.TokenLimitExceeded;
 import com.careerform.formanalysis.generic.GenericFieldsRequest.FieldCandidate;
 import com.careerform.formanalysis.generic.GenericFieldsRequest.Item;
 import com.careerform.formanalysis.generic.GenericFieldsRequest.Section;
+import com.careerform.formanalysis.generic.GenericFieldsRequest.SemanticSource;
 import com.careerform.formanalysis.generic.GenericFieldsResponse.Reason;
 import com.careerform.formanalysis.generic.GenericFieldsResponse.Binding;
 import com.careerform.formanalysis.generic.GenericFieldsResponse.DatePart;
@@ -49,6 +54,16 @@ public final class JevCategoryFieldResolver {
 
     static final String ABSTAIN_CRITERION =
         "No supported unambiguous applicant profile field, or insufficient de-identified meaning.";
+    private static final String ENGLISH_NAME_GUIDANCE =
+        "English name fields: a field asking for one complete applicant name takes the full-name recipe whose "
+            + "order is explicitly supported by englishNameOrderEvidence: GIVEN_FIRST or FAMILY_FIRST. "
+            + "This finite observation preserves explicit fixed statements lost by vocabulary projection; "
+            + "the order of words in sanitized labels is not ordering evidence. If evidence is absent or CONFLICT, "
+            + "choose ABSTAIN for a whole-name target; never assume an order or choose one partial name instead. "
+            + "A field that asks "
+            + "only for the family name or only for the given name takes that single name field. Only fields of "
+            + "the same section's direct fields or the same repeated Item row are siblings; do not pair names "
+            + "across rows or sections. Field count alone does not distinguish a whole name from a partial name.";
     private static final Logger log = LoggerFactory.getLogger(JevCategoryFieldResolver.class);
 
     private final JevClient client;
@@ -244,7 +259,9 @@ public final class JevCategoryFieldResolver {
         Map<String, Object> state = new LinkedHashMap<>();
         state.put("section", section);
         state.put("fields", observed);
-        state.put("confusionBoundaries", fields.promptGuidance());
+        state.put("confusionBoundaries", work.nameGuidance().isEmpty()
+            ? fields.promptGuidance()
+            : fields.promptGuidance() + "\n" + work.nameGuidance());
         return state;
     }
 
@@ -259,7 +276,7 @@ public final class JevCategoryFieldResolver {
                 .filter(key -> !SectionCategories.NONE.equals(SectionCategories.categoryOf(key)))
                 .toList();
         Map<String, String> criteria = new LinkedHashMap<>();
-        keys.forEach(key -> criteria.put(key, "Applicant profile field " + key));
+        keys.forEach(key -> criteria.put(key, GenericProfileSemantics.describe(key)));
         Map<String, Binding> bindings = new LinkedHashMap<>();
         if (keys.containsAll(List.of("personal.personal.koreanFamilyName", "personal.personal.koreanGivenName"))) {
             bindings.put("KOREAN_FULL_NAME", new NameBinding(DerivedRecipe.KOREAN_FULL_NAME));
@@ -268,8 +285,22 @@ public final class JevCategoryFieldResolver {
             bindings.put("ENGLISH_FULL_NAME_GIVEN_FIRST", new NameBinding(DerivedRecipe.ENGLISH_FULL_NAME_GIVEN_FIRST));
             bindings.put("ENGLISH_FULL_NAME_FAMILY_FIRST", new NameBinding(DerivedRecipe.ENGLISH_FULL_NAME_FAMILY_FIRST));
         }
+        String nameGuidance = "";
+        if (bindings.containsKey("ENGLISH_FULL_NAME_GIVEN_FIRST")) {
+            criteria.put("personal.personal.englishFamilyName", "Applicant profile field personal.personal.englishFamilyName"
+                + "; choose it only for a field that asks for the family name alone");
+            criteria.put("personal.personal.englishGivenName", "Applicant profile field personal.personal.englishGivenName"
+                + "; choose it only for a field that asks for the given name alone");
+            nameGuidance = ENGLISH_NAME_GUIDANCE;
+        }
         bindings.keySet().forEach(recipe -> criteria.put(recipe,
             "Explicit combined full-name target using this exact order: " + recipe));
+        if (!nameGuidance.isEmpty()) {
+            criteria.put("ENGLISH_FULL_NAME_GIVEN_FIRST",
+                "Whole English name, only with explicit GIVEN_FIRST evidence; otherwise ABSTAIN.");
+            criteria.put("ENGLISH_FULL_NAME_FAMILY_FIRST",
+                "Whole English name, only with explicit FAMILY_FIRST evidence; otherwise ABSTAIN.");
+        }
         keys.stream().filter(fields::isDateField).forEach(key -> {
             for (DatePart part : DatePart.values()) {
                 String id = "DATE_PART:" + key + ":" + part;
@@ -290,16 +321,17 @@ public final class JevCategoryFieldResolver {
             context.put("parent", parentContext);
         }
 
+        boolean extended = confirmed && GenericProfileSemantics.extendsVocabulary(category);
         List<Question> questions = new ArrayList<>();
         Map<String, String> assignment = new LinkedHashMap<>();
         for (FieldCandidate field : section.fields()) {
-            assignment.put(field.candidateId(), add(questions, observation(field, -1)));
+            assignment.put(field.candidateId(), add(questions, observation(field, -1, extended)));
         }
         if (section.items() != null) {
             Map<String, List<String>> askedRows = new HashMap<>();
             for (int row = 0; row < section.items().size(); row++) {
                 Item item = section.items().get(row);
-                String fingerprint = fingerprint(item);
+                String fingerprint = fingerprint(item, extended);
                 List<String> asked = askedRows.get(fingerprint);
                 if (asked != null) {
                     for (int index = 0; index < item.fields().size(); index++) {
@@ -309,7 +341,7 @@ public final class JevCategoryFieldResolver {
                 }
                 List<String> ids = new ArrayList<>();
                 for (FieldCandidate field : item.fields()) {
-                    String id = add(questions, observation(field, row));
+                    String id = add(questions, observation(field, row, extended));
                     ids.add(id);
                     assignment.put(field.candidateId(), id);
                 }
@@ -322,7 +354,7 @@ public final class JevCategoryFieldResolver {
             section.items().forEach(item -> item.fields().forEach(field -> candidates.put(field.candidateId(), field)));
         }
         return new SectionWork(confirmed, Map.copyOf(criteria), context, List.copyOf(questions), assignment,
-            Map.copyOf(bindings), candidates);
+            Map.copyOf(bindings), candidates, nameGuidance);
     }
 
     private static boolean matchesDatePart(FieldCandidate candidate, DatePart part) {
@@ -357,24 +389,28 @@ public final class JevCategoryFieldResolver {
     }
 
     /** 행 번호와 후보 id를 뺀 라벨·칸 종류 순서. 같으면 같은 구조의 반복 행으로 본다. */
-    private static String fingerprint(Item item) {
+    private static String fingerprint(Item item, boolean extended) {
         List<String> parts = new ArrayList<>();
         parts.add(String.valueOf(item.itemGroupId()));
         for (FieldCandidate field : item.fields()) {
-            Map<String, Object> observation = observation(field, -1);
+            Map<String, Object> observation = observation(field, -1, extended);
             observation.remove("repeat");
             parts.add(observation.toString());
         }
         return String.join("\u0001", parts);
     }
 
-    private static Map<String, Object> observation(FieldCandidate field, int row) {
+    private static Map<String, Object> observation(FieldCandidate field, int row, boolean extended) {
         Map<String, Object> result = new LinkedHashMap<>();
         if (row >= 0) {
             result.put("rowIndex", row);
         }
-        text(result, "label", field.displayName());
-        text(result, "placeholder", field.placeholder());
+        put(result, "label", GenericProfileSemantics.project(field.displayName(), extended));
+        put(result, "placeholder", GenericProfileSemantics.project(field.placeholder(), extended));
+        String orderEvidence = englishNameOrderEvidence(field);
+        if (orderEvidence != null) {
+            result.put("englishNameOrderEvidence", orderEvidence);
+        }
         result.put("element", field.element());
         result.put("control", field.control());
         result.put("visibility", field.visibility());
@@ -382,21 +418,35 @@ public final class JevCategoryFieldResolver {
         if (context != null) {
             if (context.labels() != null) {
                 List<String> labels = context.labels().stream()
-                    .map(label -> ProviderSemanticSanitizer.sanitize(label.text()))
+                    .map(label -> GenericProfileSemantics.project(label.text(), extended))
                     .filter(Objects::nonNull).distinct().toList();
                 if (!labels.isEmpty()) {
                     result.put("labels", labels);
+                    result.put("labelSources", context.labels().stream()
+                        .filter(label -> GenericProfileSemantics.project(label.text(), extended) != null)
+                        .map(GenericFieldsRequest.SemanticLabel::source).distinct().toList());
                 }
             }
             if (context.inputType() != null) {
                 result.put("inputType", context.inputType());
             }
+            if (context.inputMode() != null) {
+                result.put("inputMode", context.inputMode());
+            }
             if (context.autocomplete() != null) {
                 result.put("autocomplete", context.autocomplete());
             }
+            if (context.required() != null) {
+                result.put("required", context.required());
+            }
+            if (context.multiple() != null) {
+                result.put("multiple", context.multiple());
+            }
+            if (context.maxLength() != null) {
+                result.put("maxLength", context.maxLength());
+            }
             if (context.repeat() != null) {
-                result.put("repeat", Map.of("rowIndex", context.repeat().rowIndex(),
-                    "rowCount", context.repeat().rowCount()));
+                result.put("repeat", Map.of("rowIndex", context.repeat().rowIndex()));
             }
         }
         if (field.options() != null) {
@@ -405,6 +455,43 @@ public final class JevCategoryFieldResolver {
                 .filter(Objects::nonNull).distinct().toList());
         }
         return result;
+    }
+
+    /** Preserve only explicit, complete fixed ordering statements, never their raw text or arbitrary token order. */
+    private static String englishNameOrderEvidence(FieldCandidate field) {
+        List<String> statements = new ArrayList<>();
+        statements.add(field.displayName());
+        statements.add(field.placeholder());
+        if (field.semanticContext() != null && field.semanticContext().labels() != null) {
+            field.semanticContext().labels().stream()
+                .filter(label -> label.source() != SemanticSource.LEGEND
+                    && label.source() != SemanticSource.SECTION_HEADING)
+                .forEach(label -> statements.add(label.text()));
+        }
+        Set<String> orders = new HashSet<>();
+        for (String statement : statements) {
+            if (statement == null) {
+                continue;
+            }
+            String normalized = Normalizer.normalize(statement, Normalizer.Form.NFKC)
+                .toLowerCase(Locale.ROOT).replaceAll("\\s+", " ").trim();
+            String wrapper = "(?:(?:english )?full name(?:\\s*:\\s*|\\s*\\(\\s*))?";
+            if (normalized.matches(wrapper
+                + "(?:given name then family name|given name first,? family name last)\\)?")) {
+                orders.add("GIVEN_FIRST");
+            }
+            else if (normalized.matches(wrapper
+                + "(?:family name then given name|family name first,? given name last)\\)?")) {
+                orders.add("FAMILY_FIRST");
+            }
+        }
+        return orders.size() > 1 ? "CONFLICT" : orders.stream().findFirst().orElse(null);
+    }
+
+    private static void put(Map<String, Object> target, String key, String safe) {
+        if (safe != null) {
+            target.put(key, safe);
+        }
     }
 
     private static void text(Map<String, Object> target, String key, String raw) {
@@ -447,7 +534,8 @@ public final class JevCategoryFieldResolver {
         List<Question> questions,
         Map<String, String> assignment,
         Map<String, Binding> bindings,
-        Map<String, FieldCandidate> candidates
+        Map<String, FieldCandidate> candidates,
+        String nameGuidance
     ) {
     }
 
