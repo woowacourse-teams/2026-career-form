@@ -19,6 +19,7 @@ import { resolveValueBinding } from "../profile/value-binding";
 import { datePartOf, matchDatePartOption } from "./date-part-options";
 import {
   gradeGenericField,
+  matchProfileValueOption,
   type FieldGrade,
   type GradeComposite,
   type GradeReason,
@@ -334,6 +335,10 @@ function convertSection(
               confidence: sibling.response.confidence,
             }))
         : undefined;
+    const direct =
+      composite || !profileFieldKey
+        ? undefined
+        : resolveProfileFieldValue(profile, profileFieldKey, itemIndex);
     const resolution =
       composite?.type === "DERIVED"
         ? resolveValueBinding(profile, composite, itemIndex).status
@@ -341,8 +346,17 @@ function convertSection(
           ? localDate !== undefined && datePartOf(localDate, composite.part)
             ? "resolved"
             : "missing"
-          : resolveProfileFieldValue(profile, profileFieldKey!, itemIndex)
-              .status;
+          : direct!.status;
+    const choiceControl =
+      candidate.control === "select" || candidate.control === "radio";
+    // Local only: the stored value is compared with the options, never sent.
+    const choiceValue =
+      choiceControl && direct?.status === "resolved" ? direct.value : undefined;
+    const choiceOption = matchProfileValueOption(
+      profileFieldKey,
+      choiceValue,
+      candidate.options,
+    );
     const grade = gradeGenericField({
       profileFieldKey,
       composite,
@@ -359,6 +373,9 @@ function convertSection(
       title: element.getAttribute("title") ?? undefined,
       placeholder: element.getAttribute("placeholder") ?? undefined,
       options: candidate.options,
+      ...(choiceControl && !composite
+        ? { optionValueCheck: { profileValue: choiceValue } }
+        : {}),
       rowSiblings,
       sectionSiblingKeys: matched.flatMap((sibling) =>
         sibling.index !== index && sibling.response.profileFieldKey
@@ -387,7 +404,13 @@ function convertSection(
                 profileFieldKey: profileFieldKey!,
                 optionMap: dateOptionMap(composite, localDate, candidate),
               }
-            : { type: "DIRECT", profileFieldKey: profileFieldKey! },
+            : choiceValue !== undefined && choiceOption !== undefined
+              ? {
+                  type: "LOOKUP",
+                  profileFieldKey: profileFieldKey!,
+                  optionMap: { [choiceValue]: choiceOption },
+                }
+              : { type: "DIRECT", profileFieldKey: profileFieldKey! },
       autofillPolicy: response.autofillPolicy!,
       mappingStatus: "LLM_SUGGESTED",
       interactionStatus: response.interactionStatus,

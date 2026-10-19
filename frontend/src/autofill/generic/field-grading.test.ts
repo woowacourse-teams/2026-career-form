@@ -684,3 +684,75 @@ describe("gradeGenericField date part selects", () => {
     ).toEqual({ grade: "AUTO" });
   });
 });
+
+describe("gradeGenericField select and radio option values", () => {
+  const key = "military.military.militaryStatus";
+  const radio = (value: string | undefined, ...names: string[]) =>
+    input({
+      profileFieldKey: key,
+      control: "radio",
+      displayName: "병역구분",
+      options: options(...names),
+      optionValueCheck: { profileValue: value },
+    });
+
+  it.each([
+    ["a stored standard value id", "military-status:served", ["비대상", "군필", "미필"]],
+    ["a stored standard label", "군필", ["비대상", "군필", "미필"]],
+    ["another unrelated option set", "군필", ["대상 아님", "군필", "복무중"]],
+  ])("keeps %s with exactly one matching option as AUTO", (_name, value, names) => {
+    expect(gradeGenericField(radio(value, ...names))).toEqual({ grade: "AUTO" });
+  });
+
+  it.each([
+    ["no matching option", "military-status:served", ["비대상", "미필"]],
+    ["two matching options", "군필", ["군필", " 군필 ", "미필"]],
+    ["a missing local value", undefined, ["군필", "미필"]],
+    ["no options at all", "군필", []],
+  ])("blocks a radio with %s", (_name, value, names) => {
+    expect(gradeGenericField(radio(value, ...names))).toEqual({
+      grade: "BLOCKED",
+      reason: "OPTION_VALUE_UNMATCHED",
+    });
+  });
+
+  it.each([
+    ["a language score and grade options", "languages.languageTest.grade", "850", ["A등급", "B등급"]],
+    ["another score and grade options", "languages.languageTest.grade", "7.5", ["1급", "2급"]],
+  ])("blocks a numeric value on a grade select (%s)", (_name, scoreKey, value, names) => {
+    expect(
+      gradeGenericField(
+        input({
+          profileFieldKey: scoreKey,
+          control: "select",
+          options: options(...names),
+          optionValueCheck: { profileValue: value },
+        }),
+      ),
+    ).toEqual({ grade: "BLOCKED", reason: "OPTION_VALUE_UNMATCHED" });
+  });
+
+  it("matches a free-text value only on a normalized exact option", () => {
+    const grade = (value: string, ...names: string[]) =>
+      gradeGenericField(
+        input({
+          profileFieldKey: "certifications.certificate.grade",
+          control: "select",
+          options: options(...names),
+          optionValueCheck: { profileValue: value },
+        }),
+      );
+    expect(grade("1급", "1급", "2급").grade).toBe("AUTO");
+    expect(grade(" ＡＢ ", "ab", "cd").grade).toBe("AUTO");
+    expect(grade("1급", "1급 이상", "2급").reason).toBe("OPTION_VALUE_UNMATCHED");
+  });
+
+  it("does not check text controls or fields without the check input", () => {
+    expect(
+      gradeGenericField(input({ control: "text", optionValueCheck: { profileValue: "x" } })),
+    ).toEqual({ grade: "AUTO" });
+    expect(
+      gradeGenericField(input({ control: "select", options: options("가") })),
+    ).toEqual({ grade: "AUTO" });
+  });
+});
