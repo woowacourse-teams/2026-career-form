@@ -1,4 +1,7 @@
-import { debugPreparationCounts } from "../debug/structural-diagnostics";
+import {
+  debugStageCounts,
+  type DebugStageName,
+} from "../debug/structural-diagnostics";
 import {
   executionPolicy,
   nativePolicyRequired,
@@ -53,6 +56,8 @@ export interface PreparationExecutionOptions {
     snapshot: PreparationSnapshot,
   ) => OptionSelectionResult;
   waitForExpectedFields?: (plan: PreparationPlan) => Promise<boolean>;
+  /** `stage name=` of the count line; callers name their pass. */
+  diagnosticsStage?: DebugStageName;
 }
 
 export type PreparationFailureReason =
@@ -484,8 +489,8 @@ export async function executeApprovedPreparationPlans(
   options: PreparationExecutionOptions,
 ): Promise<PreparationExecutionResult> {
   const result = await executeApprovedPreparationPlansInternal(options);
-  debugPreparationCounts(
-    "preparation",
+  debugStageCounts(
+    options.diagnosticsStage ?? "preparation",
     options.approvedPlans.filter((p) => p.approved).length,
     result.executedPlanCount,
   );

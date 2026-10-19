@@ -1,7 +1,7 @@
 /** Synthetic public-template fixture: T:2634–2753,2774–2870,3789–3862.
  * 900001 is a virtual test-only tenant Sn, never a shipped verified code.
  */
-import { afterEach, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import seed from "../../../../backend/src/main/resources/policies/hplace-mrs2-v4.json";
 import { collectFieldsSnapshot } from "../dom/collect";
 import {
@@ -13,6 +13,8 @@ import { getWriteAdapter } from "../adapters/write";
 import type { ReviewPlanItem } from "../review/review-plan";
 import { nativeOwnership } from "./native-form-collection";
 import { mountSyntheticNative } from "./__fixtures__/hplace-mrs2-native.synthetic";
+import { setAutofillDebugEnabled } from "../debug/autofill-debug";
+import { expectHarnessLine } from "../workflow/test-utils/harness-diagnostic-line";
 afterEach(() => installExecutionPolicy(document));
 function mount() {
   mountSyntheticNative(0);
@@ -207,4 +209,45 @@ it("requires the end date to become disabled after selecting current employment"
       signal,
     }),
   ).toBe(true);
+});
+
+/** CF-177 C6 (F13): a visible policy-unsupported subject prints one neutral
+ * line per collection; no title, reason text or page value. */
+describe("unsupported section diagnostics", () => {
+  const CANARY = "합성수상명CANARY";
+  afterEach(() => {
+    setAutofillDebugEnabled(false);
+    vi.restoreAllMocks();
+  });
+  const award = `<section class="writeResume" data-code="18"><div class="subject" data-code="170" data-wrap="award"><div class="row loop" data-loop="award"><input type="text" name="award[0].awardName" value="${CANARY}"><button type="button" data-button="add"></button></div></div></section>`;
+  const collect = (html: string) => {
+    const policy = mount();
+    document
+      .querySelector("#wrapResume")!
+      .insertAdjacentHTML("beforeend", html);
+    installExecutionPolicy(document, policy);
+    setAutofillDebugEnabled(true);
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    const snapshot = collectFieldsSnapshot(document);
+    const lines = log.mock.calls.map(([line]) => line as string);
+    for (const line of lines)
+      expectHarnessLine(line, [CANARY, "수상", "프로필 키 없음"]);
+    return { snapshot, lines };
+  };
+  it("prints exactly one unsupported-section line for a visible subject", () => {
+    const { snapshot, lines } = collect(award);
+    expect(
+      lines.filter((line) => line.includes("unsupported-section")),
+    ).toEqual([
+      "[CareerForm] skip stage=collect key=hplace-mrs2-unsupported-170 reason=unsupported-section detail=profile-key-missing",
+    ]);
+    expect(JSON.stringify(snapshot.request)).not.toContain(CANARY);
+    expect(
+      snapshot.request.sections.some((s) => s.sectionId.includes("170")),
+    ).toBe(false);
+  });
+  it("prints nothing without the subject", () => {
+    const { lines } = collect("");
+    expect(lines.join("\n")).not.toContain("unsupported-section");
+  });
 });

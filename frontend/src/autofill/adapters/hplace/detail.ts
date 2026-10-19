@@ -22,11 +22,24 @@ export function detailControls(document: Document): DetailControls | undefined {
     debugCollectionSkip(detailSectionId, reason, detail);
     return undefined;
   };
-  if (
-    document.location.pathname !== "/mrs2/applicant/resume/writeResume" ||
-    !isHplaceDocument(document)
-  )
+  // Steps 2/3 of the same writeResume page carry no detail sections 11/13.
+  const missingSection = () => {
+    const forms = document.querySelectorAll('[id="frm"]');
+    return (
+      forms.length === 1 &&
+      ["11", "13"].some(
+        (code) =>
+          forms[0].querySelectorAll(`section.writeResume[data-code="${code}"]`)
+            .length === 0,
+      )
+    );
+  };
+  if (document.location.pathname !== "/mrs2/applicant/resume/writeResume")
     return reject();
+  if (!isHplaceDocument(document))
+    return missingSection()
+      ? reject("section-missing", "legacy-detail-section")
+      : reject();
   const forms = document.querySelectorAll('[id="frm"]');
   const form = forms[0];
   if (forms.length !== 1 || !(form instanceof HTMLFormElement)) return reject();

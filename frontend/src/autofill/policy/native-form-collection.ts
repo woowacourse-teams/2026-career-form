@@ -1,4 +1,5 @@
 import { debugCollectionSkip } from "../debug/structural-diagnostics";
+import { isAutofillDebugEnabled } from "../debug/autofill-debug";
 import {
   nativeNestedRows,
   nativeNestedPreparationCurrent,
@@ -264,6 +265,34 @@ export function currentNativeOwner(
     return;
   return o;
 }
+/** Neutral detail per policy reason; titles and reason text never reach a line. */
+const unsupportedDetails: Readonly<Record<string, string>> = {
+  "프로필 키 없음": "profile-key-missing",
+};
+/** One debug line per visible policy-unsupported subject inside the root. */
+function debugUnsupportedSections(document: Document, form: NativeForm) {
+  if (!isAutofillDebugEnabled()) return;
+  const root = document.querySelector(form.rootSelector);
+  if (!root) return;
+  for (const unsupported of form.unsupportedSections) {
+    const code = /data-code=['"]?([^'"\]]*)['"]?\]/.exec(
+      unsupported.selector,
+    )?.[1];
+    if (!code || !/^\d{1,4}$/.test(code)) continue;
+    let nodes: Element[];
+    try {
+      nodes = Array.from(root.querySelectorAll(unsupported.selector));
+    } catch {
+      continue;
+    }
+    if (!nodes.some((node) => visible(node, true))) continue;
+    debugCollectionSkip(
+      `hplace-mrs2-unsupported-${code}`,
+      "unsupported-section",
+      unsupportedDetails[unsupported.reason] ?? "policy-unsupported",
+    );
+  }
+}
 export function collectNativeFields(
   document: Document,
   snapshotId: string,
@@ -294,6 +323,7 @@ export function collectNativeFields(
       registry,
       request: { schemaVersion: 2, snapshotId, site, sections },
     };
+  debugUnsupportedSections(document, form);
   let next = 0;
   for (const { section, root, rows } of scopes(document, form)) {
     const fields: FieldCandidate[] = [];
@@ -312,12 +342,22 @@ export function collectNativeFields(
         continue;
       }
       for (const field of section.fields) {
+        const childRows =
+          field.nestedIndex === undefined
+            ? undefined
+            : nativeNestedRows(row, section, index!);
         const childRow =
           field.nestedIndex === undefined
             ? undefined
-            : nativeNestedRows(row, section, index!)?.[field.nestedIndex];
+            : childRows?.[field.nestedIndex];
         if (field.nestedIndex !== undefined && !childRow) {
-          debugCollectionSkip(field.name, "owner-mismatch", "nested-row");
+          if (childRows && field.nestedIndex >= childRows.length)
+            debugCollectionSkip(
+              field.name,
+              "control-missing",
+              "nested-row-absent",
+            );
+          else debugCollectionSkip(field.name, "owner-mismatch", "nested-row");
           continue;
         }
         if (
@@ -521,7 +561,11 @@ export function collectNativePreparation(
         debugCollectionSkip(
           section.action.id,
           "row-add-guard",
-          !rows.length ? "zero-rows" : "row-limit-or-disabled",
+          !section.enabled
+            ? "section-disabled"
+            : !rows.length
+              ? "zero-rows"
+              : "row-limit-or-disabled",
         );
       if (
         section.enabled &&
@@ -614,31 +658,42 @@ export function collectNativePreparation(
             );
             continue;
           }
-          const buttons = Array.from(
-            parent.querySelectorAll(n.action.selector),
-          ).filter(
-            (e): e is HTMLButtonElement =>
-              e instanceof HTMLButtonElement &&
-              e.type === "button" &&
-              visible(e) &&
-              e.closest(`[data-loop="${n.namePrefix}"]`) === children.at(-1) &&
-              e.getAttribute("data-rel-target") ===
-                `${section.rows!.namePrefix}[${index}]` &&
-              !forbidden.test(
-                [
-                  e.textContent,
-                  e.name,
-                  e.id,
-                  e.getAttribute("data-button"),
-                ].join(" "),
-              ),
-          );
-          if (buttons.length !== 1) {
-            debugCollectionSkip(
-              section.id,
-              "owner-mismatch",
-              "nested-add-button-count",
+          const owned = (allowDisabled: boolean) =>
+            Array.from(parent.querySelectorAll(n.action.selector)).filter(
+              (e): e is HTMLButtonElement =>
+                e instanceof HTMLButtonElement &&
+                e.type === "button" &&
+                visible(e, allowDisabled) &&
+                e.closest(`[data-loop="${n.namePrefix}"]`) ===
+                  children.at(-1) &&
+                e.getAttribute("data-rel-target") ===
+                  `${section.rows!.namePrefix}[${index}]` &&
+                !forbidden.test(
+                  [
+                    e.textContent,
+                    e.name,
+                    e.id,
+                    e.getAttribute("data-button"),
+                  ].join(" "),
+                ),
             );
+          const buttons = owned(false);
+          if (buttons.length !== 1) {
+            // Diagnostics only: the disabled add never becomes a candidate.
+            const candidates =
+              buttons.length || !isAutofillDebugEnabled() ? [] : owned(true);
+            if (candidates.length === 1 && candidates[0].matches(":disabled"))
+              debugCollectionSkip(
+                section.id,
+                "disabled",
+                "nested-add-disabled",
+              );
+            else
+              debugCollectionSkip(
+                section.id,
+                "owner-mismatch",
+                "nested-add-button-count",
+              );
             continue;
           }
           const candidateId = `native-action-${actions.size}`,

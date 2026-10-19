@@ -1,7 +1,7 @@
 import { browser } from "wxt/browser";
 import {
   debugRunBuild,
-  debugPreparationCounts,
+  debugStageCounts,
 } from "../debug/structural-diagnostics";
 import { runtimeRules } from "../policy/runtime-rules";
 import {
@@ -402,8 +402,8 @@ function PolicyReadyWorkflow({
         }
         const snapshot = collectPreparationSnapshot(pageDocument);
         const analysis = await apiClient.analyzePreparation(snapshot.request);
-        debugPreparationCounts(
-          "preparation",
+        debugStageCounts(
+          "preparation-plan",
           analysis.preparationPlans.length,
           0,
         );
@@ -606,6 +606,7 @@ function PolicyReadyWorkflow({
       const result = await executeApprovedPreparationPlans({
         approvedPlans: runnablePlans,
         ...preparationOptions(preparationSnapshot),
+        diagnosticsStage: "preparation-initial",
       });
 
       if (result.status !== "completed") {
@@ -690,6 +691,7 @@ function PolicyReadyWorkflow({
           const followUpResult = await executeApprovedPreparationPlans({
             approvedPlans: followUpPlans,
             ...preparationOptions(followUpSnapshot),
+            diagnosticsStage: "preparation-follow-up",
           });
 
           if (followUpResult.status !== "completed") {

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   collectFieldsSnapshot,
   collectPreparationSnapshot,
@@ -11,6 +11,9 @@ import {
   mountSyntheticNative,
   syntheticNativePolicy,
 } from "./__fixtures__/hplace-mrs2-native.synthetic";
+import { mountEducation } from "./__fixtures__/hplace-mrs2-education.synthetic";
+import { setAutofillDebugEnabled } from "../debug/autofill-debug";
+import { expectHarnessLine } from "../workflow/test-utils/harness-diagnostic-line";
 
 afterEach(() => installExecutionPolicy(document));
 describe("nativeForm single-depth contract", () => {
@@ -125,4 +128,48 @@ it("omits disabled native dependents and recollects them only after enabling", (
   expect(names()).not.toContain("hplace.mrs2.career.company");
   company.disabled = false;
   expect(names()).toContain("hplace.mrs2.career.company");
+});
+
+/** CF-177 C6: a nested field whose child row is not rendered yet is a missing
+ * control, not an ownership failure. */
+describe("nested field diagnostics", () => {
+  afterEach(() => {
+    setAutofillDebugEnabled(false);
+    document.body.replaceChildren();
+    vi.restoreAllMocks();
+  });
+  const skips = (collect: () => void) => {
+    setAutofillDebugEnabled(true);
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    collect();
+    const all = log.mock.calls.map(([line]) => line as string);
+    for (const line of all) expectHarnessLine(line, ["합성"]);
+    return all
+      .filter((line) => line.startsWith("[CareerForm] skip"))
+      .join("\n");
+  };
+  it("reports an absent second major row as a missing control", () => {
+    mountEducation(1, 1, true);
+    const lines = skips(() => collectFieldsSnapshot(document));
+    expect(lines).toContain(
+      "[CareerForm] skip stage=collect key=hplace.mrs2.college.major1.majorName reason=control-missing detail=nested-row-absent",
+    );
+    expect(lines).not.toMatch(
+      /key=hplace\.mrs2\.college\.major1\.\S+ reason=owner-mismatch/,
+    );
+    expect(lines).not.toContain("key=hplace.mrs2.college.major0.majorName");
+  });
+  it("keeps an unowned major wrapper an owner mismatch", () => {
+    mountEducation(1, 1, true);
+    document
+      .querySelector('[data-loop="college"] [data-wrap="major"]')!
+      .replaceChildren();
+    const lines = skips(() => collectFieldsSnapshot(document));
+    expect(lines).toContain(
+      "[CareerForm] skip stage=collect key=hplace.mrs2.college.major0.majorName reason=owner-mismatch detail=nested-row",
+    );
+    expect(lines).not.toMatch(
+      /key=hplace\.mrs2\.college\.\S+ reason=control-missing detail=nested-row-absent/,
+    );
+  });
 });
