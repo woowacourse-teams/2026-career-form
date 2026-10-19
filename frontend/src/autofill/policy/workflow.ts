@@ -31,6 +31,7 @@ import {
   visible,
 } from "./primitives";
 import type { FieldRule } from "./types";
+import { sameValueBinding } from "./binding-equality";
 
 function verifiedPriority(
   rule: FieldRule | undefined,
@@ -270,8 +271,7 @@ export function policyWorkflowAdapter(document: Document): WorkflowAdapter {
             (f) =>
               f.name === name &&
               f.driver &&
-              JSON.stringify(f.binding) ===
-                JSON.stringify(item.analysis?.valueBinding),
+              sameValueBinding(f.binding, item.analysis?.valueBinding),
           ),
       ) ||
       (item.analysis?.writePlan?.command === "SELECT_OPTION" &&

@@ -6,6 +6,7 @@ import {
 import { nativeSingleEntityAssigned } from "./native-form-row-assignment";
 import { nativeUnitMatches } from "./native-form-unit";
 import { committedSearchMatches } from "./committed-search";
+import { sameValueBinding } from "./binding-equality";
 import type { FieldCandidateHandle } from "../dom/types";
 import type { ReviewPlanItem } from "../review/review-plan";
 import type { CompanyWriteAdapter } from "../adapters/write";
@@ -149,8 +150,7 @@ function authorized(handle: FieldCandidateHandle, item: ReviewPlanItem) {
     item.analysis?.candidateId !== handle.candidateId ||
     item.analysis.mappingStatus !== "ADAPTER_VERIFIED" ||
     item.analysis.interactionStatus !== "READY" ||
-    JSON.stringify(item.analysis.valueBinding) !==
-      JSON.stringify(o.field.binding) ||
+    !sameValueBinding(item.analysis.valueBinding, o.field.binding) ||
     /(?:^|\.)existYn$/.test(o.field.rawName) ||
     handle.elements.some((e) => !visible(e) || ("readOnly" in e && e.readOnly))
   )

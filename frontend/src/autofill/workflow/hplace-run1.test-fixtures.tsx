@@ -141,8 +141,14 @@ export function analysis(
       }),
   };
 }
-export function run(policy: ExecutionPolicy, p = profile()) {
-  const fields = vi.fn(async (r: FieldsAnalyzeRequest) => analysis(r, policy));
+export function run(
+  policy: ExecutionPolicy,
+  p = profile(),
+  shape: (r: FieldsAnalyzeResponse) => FieldsAnalyzeResponse = (r) => r,
+) {
+  const fields = vi.fn(async (r: FieldsAnalyzeRequest) =>
+    shape(analysis(r, policy)),
+  );
   render(
     <AutofillWorkflow
       pageDocument={document}

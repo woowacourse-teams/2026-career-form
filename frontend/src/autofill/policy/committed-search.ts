@@ -1,3 +1,4 @@
+import { sameValueBinding } from "./binding-equality";
 import {
   nativeRowWritable,
   recordNativeRowWrite,
@@ -43,8 +44,7 @@ function approved(handle: FieldCandidateHandle, item: ReviewPlanItem) {
     item.analysis.mappingStatus !== "ADAPTER_VERIFIED" ||
     item.analysis.interactionStatus !== "READY" ||
     item.analysis.writePlan?.command !== "SET_TEXT" ||
-    JSON.stringify(item.analysis.valueBinding) !==
-      JSON.stringify(o.field.binding) ||
+    !sameValueBinding(item.analysis.valueBinding, o.field.binding) ||
     !item.profileValue?.trim()
   )
     return;
