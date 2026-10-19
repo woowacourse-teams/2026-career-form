@@ -630,3 +630,58 @@ describe("gradeGenericField other-person composite name recipes", () => {
     ).toEqual({ grade: "BLOCKED", reason: "NO_PROFILE_VALUE" });
   });
 });
+
+describe("gradeGenericField unpaired English name part", () => {
+  const given = "personal.personal.englishGivenName";
+  const family = "personal.personal.englishFamilyName";
+  const review = { grade: "REVIEW", reason: "UNPAIRED_NAME_PART" };
+  const single = (override: Partial<GradeFieldInput> = {}) =>
+    input({ profileFieldKey: given, displayName: "영문 이름", sectionSiblingKeys: [], ...override });
+
+  it.each([given, family])("downgrades %s matched without its pair to REVIEW", (key) => {
+    expect(gradeGenericField(single({ profileFieldKey: key }))).toEqual(review);
+    expect(
+      gradeGenericField(single({ profileFieldKey: key, sectionSiblingKeys: [
+        "personal.personal.koreanFamilyName", "contact.contact.email",
+      ] })),
+    ).toEqual(review);
+  });
+
+  it("treats a missing sibling list as no pair", () => {
+    expect(gradeGenericField(single({ sectionSiblingKeys: undefined }))).toEqual(review);
+  });
+
+  it.each([
+    [given, family],
+    [family, given],
+  ])("keeps %s AUTO when its pair %s is matched in the same section", (key, pair) => {
+    expect(
+      gradeGenericField(single({ profileFieldKey: key, sectionSiblingKeys: [pair] })),
+    ).toEqual({ grade: "AUTO" });
+  });
+
+  it("keeps non-name keys and name recipes unaffected", () => {
+    expect(gradeGenericField(input({ sectionSiblingKeys: [] }))).toEqual({ grade: "AUTO" });
+    expect(
+      gradeGenericField(single({
+        profileFieldKey: undefined,
+        composite: { type: "DERIVED", recipe: "ENGLISH_FULL_NAME_GIVEN_FIRST" },
+      })),
+    ).toEqual({ grade: "AUTO" });
+  });
+
+  it("never lifts a lower grade: low confidence stays BLOCKED, moderate stays REVIEW", () => {
+    expect(gradeGenericField(single({ confidence: 0.4 }))).toEqual({
+      grade: "BLOCKED", reason: "LOW_CONFIDENCE",
+    });
+    expect(gradeGenericField(single({ confidence: 0.6 }))).toEqual({
+      grade: "REVIEW", reason: "MODERATE_CONFIDENCE",
+    });
+  });
+
+  it("keeps other-person blocking ahead of the pair check", () => {
+    expect(gradeGenericField(single({ displayName: "추천인 영문 이름" }))).toEqual({
+      grade: "BLOCKED", reason: "OTHER_PERSON_CONTEXT",
+    });
+  });
+});

@@ -348,6 +348,11 @@ function convertSection(
         placeholder: element.getAttribute("placeholder") ?? undefined,
         options: candidate.options,
         rowSiblings,
+        sectionSiblingKeys: matched.flatMap((sibling) =>
+          sibling.index !== index && sibling.response.profileFieldKey
+            ? [sibling.response.profileFieldKey]
+            : [],
+        ),
       }),
     ]);
     fields.push({

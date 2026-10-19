@@ -25,7 +25,8 @@ export type GradeReason =
   | "DATE_PART_OPTIONS_MISMATCH"
   | "NO_FIELD_CONTEXT"
   | "FORMAT_KEY_MISMATCH"
-  | "OTHER_PERSON_CONTEXT";
+  | "OTHER_PERSON_CONTEXT"
+  | "UNPAIRED_NAME_PART";
 
 /** A match whose value is composed: a name recipe or one part of a date. */
 export type GradeComposite =
@@ -63,6 +64,11 @@ export interface GradeFieldInput extends Pick<
   options?: readonly { displayName: string }[];
   /** Other matched fields in the same repeat row, excluding this field. */
   rowSiblings?: readonly GradeSibling[];
+  /**
+   * Profile keys matched on the other fields of the same section (the same
+   * row for a repeat section), whatever their kind.
+   */
+  sectionSiblingKeys?: readonly string[];
 }
 
 export interface FieldGradeResult {
@@ -196,6 +202,21 @@ function hasOtherPersonContext(input: GradeFieldInput): boolean {
   ].some((text) => OTHER_PERSON_ROLE.test(text ?? ""));
 }
 
+const ENGLISH_NAME_PAIR: Readonly<Record<string, string>> = {
+  "personal.personal.englishGivenName": "personal.personal.englishFamilyName",
+  "personal.personal.englishFamilyName": "personal.personal.englishGivenName",
+};
+
+/** A single English name part matched without its counterpart nearby would fill only half a name. */
+function hasUnpairedNamePart(input: GradeFieldInput): boolean {
+  const pair = ENGLISH_NAME_PAIR[input.profileFieldKey ?? ""];
+  return (
+    input.composite === undefined &&
+    pair !== undefined &&
+    !(input.sectionSiblingKeys ?? []).includes(pair)
+  );
+}
+
 function hasFormatKeyMismatch(input: GradeFieldInput): boolean {
   if (input.inputType === "email" || input.inputType === "tel") {
     return !isProfileFieldType(input.profileFieldKey, input.inputType);
@@ -246,6 +267,9 @@ export function gradeGenericField(input: GradeFieldInput): FieldGradeResult {
     if (!input.displayName?.trim() &&
       !input.labels?.some((label) => label.text.trim())) {
       return { grade: "REVIEW", reason: "NO_FIELD_CONTEXT" };
+    }
+    if (hasUnpairedNamePart(input)) {
+      return { grade: "REVIEW", reason: "UNPAIRED_NAME_PART" };
     }
     return { grade: "AUTO" };
   }

@@ -33,6 +33,8 @@ const REASON_TEXT: Readonly<Record<KnownReasonCode, string>> = {
     "입력 형식이 연결된 프로필 항목과 맞지 않아 입력할 수 없습니다.",
   OTHER_PERSON_CONTEXT:
     "지원자 본인이 아닌 다른 사람의 정보 칸으로 보여 입력하지 않습니다.",
+  UNPAIRED_NAME_PART:
+    "성과 이름이 나뉘지 않은 칸에 이름 한쪽만 연결됐습니다. 값을 확인한 뒤 선택해 주세요.",
   CLASSIFY_UNAVAILABLE: "섹션 분류를 하지 못해 이 영역은 입력할 수 없습니다.",
   ANALYZE_UNAVAILABLE: "칸 분석을 하지 못해 이 영역은 입력할 수 없습니다.",
   ENDPOINT_UNAVAILABLE:
