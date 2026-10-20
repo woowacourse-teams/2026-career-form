@@ -157,3 +157,21 @@ it("뒤늦은 값 준비 실패가 이미 확인한 값 준비와 사유를 모�
     }),
   );
 });
+
+it("bounds queued reports while an earlier background message is stalled", async () => {
+  let release!: () => void;
+  let sent = 0;
+  const queue = new QualityReportQueue(async () => {
+    sent++;
+    if (sent === 1)
+      await new Promise<void>((resolve) => {
+        release = resolve;
+      });
+  });
+  for (let index = 0; index < 100; index++)
+    queue.enqueue(`run-${index}`, null, {}, {}, "COMPLETED");
+  await Promise.resolve();
+  release();
+  await queue.drain();
+  expect(sent).toBe(64);
+});
