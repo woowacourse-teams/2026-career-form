@@ -1,5 +1,9 @@
 import { resolveValueBinding } from "../profile/value-binding";
 import { onSiteEnter } from "./__fixtures__/hplace-mrs2-search.synthetic";
+import {
+  disposeLinkedForms,
+  installLinkedForm,
+} from "./__fixtures__/hplace-mrs2-linked-form";
 import { createEmptyProfile } from "../../profile/model";
 import { afterEach, expect, it } from "vitest";
 import seed from "../../../../backend/src/main/resources/policies/hplace-mrs2-v4.json";
@@ -19,7 +23,10 @@ import {
   executeApprovedPreparationPlans,
   type PreparationSnapshot,
 } from "../preparation/executor";
-afterEach(() => installExecutionPolicy(document));
+afterEach(() => {
+  disposeLinkedForms();
+  installExecutionPolicy(document);
+});
 const search = (prefix: string, type: string) =>
   `<div class="span"><div class="search"><label><input type="search" data-type="${type}"></label><div class="searchResult"></div></div><input type="hidden" name="${prefix}.academyName"><span class="searchResultName"></span><input class="hidden" name="${prefix}.academyCode"></div>`;
 const college = (name: string, index: number) =>
@@ -30,7 +37,10 @@ function mount() {
     seed.executionPolicy.browserPolicy.nativeForm.assetPaths
       .map((src) => `<script src="${src}"></script>`)
       .join("") +
-    `<form id="frm"><div id="wrapResume"><section class="writeResume" data-code="140"><label><input type="radio" name="highschool.graduationTypeCode" value="01">졸업</label>${search("highschool", "highschool")}<input name="highschool.entranceDate" data-dates="highschoolDate:YM highschool graduationCriteriaDate"><input name="highschool.graduationDate" data-dates="highschoolDate:END"></section>${["college", "graduateSchool"].map((name, i) => `<section class="writeResume" data-code="${141 + i}"><div class="wrapCollege" data-wrap="collegeLoop" data-type="${name}">${college(name, 0)}</div><div class="collegeBtnSet"><button type="button" data-button="addCollege" data-loopname="${name}">추가</button><button type="button" data-button="removeCollege" data-loopname="${name}">삭제</button></div></section>`).join("")}<section class="writeResume" data-code="18"><div class="subject" data-code="168" data-wrap="license"><div class="loop" data-loop="license"><div class="span"><div class="search"><label><input type="search" data-type="license"></label><div class="searchResult"></div></div><input type="hidden" name="license[0].licenseName"><span class="searchResultName"></span><input class="hidden" name="license[0].licenseCode"></div><input name="license[0].organization" maxlength="64"><div data-privateremove="test"><input name="license[0].registNumber" maxlength="32"></div><input name="license[0].acquireDate" data-dates="license[0].licenseDate:YMD"><button type="button" data-button="add"></button></div></div></section></div></form>`;
+    `<form id="frm"><div id="wrapResume"><section class="writeResume" data-code="140"><label><input type="radio" name="highschool.graduationTypeCode" value="01">졸업</label>${search("highschool", "highschool")}<input name="highschool.entranceDate" data-dates="highschoolDate:YM highschool graduationCriteriaDate"><input name="highschool.graduationDate" data-dates="highschoolDate:END"></section>${["college", "graduateSchool"].map((name, i) => `<section class="writeResume" data-code="${141 + i}"><div class="wrapCollege" data-wrap="collegeLoop" data-type="${name}">${college(name, 0)}</div><div class="collegeBtnSet"><button type="button" data-button="addCollege" data-loopname="${name}">추가</button><button type="button" data-button="removeCollege" data-loopname="${name}">삭제</button></div></section>`).join("")}<section class="writeResume" data-code="18"><div class="subject" data-code="168" data-wrap="license"><div class="loop" data-loop="license"><div class="span"><div class="search"><label><input type="search" data-type="license"></label><div class="searchResult"></div></div><input type="hidden" name="license[0].licenseName"><span class="searchResultName"></span><input class="hidden" name="license[0].licenseCode" data-rel-id="license[0]"></div><input name="license[0].organization" maxlength="64" data-rel-target="license[0]" disabled><div data-privateremove="test"><input name="license[0].registNumber" maxlength="64" data-rel-target="license[0]" disabled></div><input name="license[0].acquireDate" data-dates="license[0].licenseDate:YMD" data-rel-target="license[0]" disabled><button type="button" data-button="add"></button></div></div></section></div></form>`;
+  // Live license rows (C12 fixtures hplace-mrs2-step3-*): licenseCode
+  // (data-rel-id) opens organization/registNumber/acquireDate.
+  installLinkedForm(document.querySelector("#frm")!);
   installExecutionPolicy(
     document,
     structuredClone(seed.executionPolicy) as unknown as ExecutionPolicy,
@@ -182,9 +192,13 @@ it.each([true, false])(
           (
             span.querySelector('[name$="licenseName"]') as HTMLInputElement
           ).value = "가상자격증";
-          (
-            span.querySelector('[name$="licenseCode"]') as HTMLInputElement
-          ).value = "123";
+          const code = span.querySelector(
+            '[name$="licenseCode"]',
+          ) as HTMLInputElement;
+          code.value = "123";
+          // Site selection focuses the code input; the linkedForm focus poll
+          // then opens the row (W:1820–1900).
+          code.focus();
           span.querySelector(".searchResultName")!.textContent = "가상자격증";
           if (!registration)
             (
@@ -208,6 +222,19 @@ it.each([true, false])(
     expect(names.includes("hplace.mrs2.license.registNumber")).toBe(
       registration,
     );
+    if (registration) {
+      const number = item(
+        "hplace.mrs2.license.registNumber",
+        "SYN-REG-0001-0002-0003-0004-0005-0006-0007",
+      );
+      expect(number.handle.elements[0].disabled).toBe(false);
+      expect(
+        getWriteAdapter(document).tryWrite(number.handle, number.item),
+      ).toEqual({ handled: true, written: true });
+      expect(number.handle.elements[0].value).toBe(
+        "SYN-REG-0001-0002-0003-0004-0005-0006-0007",
+      );
+    }
     const date = item("hplace.mrs2.license.acquireDate", "2024-02-29");
     expect(getWriteAdapter(document).tryWrite(date.handle, date.item)).toEqual({
       handled: true,
