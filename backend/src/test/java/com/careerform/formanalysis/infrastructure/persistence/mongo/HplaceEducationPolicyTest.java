@@ -98,4 +98,39 @@ class HplaceEducationPolicyTest {
         assertThatCode(()->policy(HplaceCompanyFormPolicyFactory.createNative())).doesNotThrowAnyException();
     }
 
+    @Test void majorSearchesWaitForTheirDetailsAndAttendanceUsesPolicyLabels() {
+        var tree=MAPPER.valueToTree(HplaceCompanyFormPolicyFactory.createNative().executionPolicy());
+        var drivers=new java.util.TreeMap<String,List<String>>();
+        for (var section:tree.path("browserPolicy").path("nativeForm").path("sections")) {
+            for (var field:section.path("fields")) {
+                var name=field.path("name").asText();
+                if (!name.matches("hplace\\.mrs2\\.(college|graduateSchool)\\.major[0-2]\\.majorName")) continue;
+                var deps=new java.util.ArrayList<String>();
+                field.path("driver").path("dependencies").forEach(v->deps.add(v.asText()));
+                var settled=new java.util.ArrayList<String>();
+                field.path("driver").path("settled").forEach(v->{
+                    assertThat(v.path("state").asText()).isEqualTo("enabled");
+                    settled.add(v.path("field").asText());
+                });
+                assertThat(settled).isEqualTo(deps);
+                drivers.put(name,deps);
+            }
+        }
+        assertThat(drivers).hasSize(6);
+        drivers.forEach((name,deps)->{
+            var prefix=name.substring(0,name.length()-"majorName".length());
+            var expected=new java.util.ArrayList<>(List.of(prefix+"majorTypeCode",prefix+"majorCategoryCode"));
+            if (prefix.endsWith("major0.")) expected.add(prefix+"dayOrNight");
+            assertThat(deps).as(name).isEqualTo(expected);
+        });
+        var attendance=java.util.stream.StreamSupport.stream(tree.path("browserPolicy").path("normalizations").spliterator(),false)
+            .filter(r->r.path("keys").toString().contains("attendanceType")).findFirst().orElseThrow();
+        var keys=new java.util.ArrayList<String>();
+        attendance.path("keys").forEach(v->keys.add(v.asText()));
+        assertThat(keys).containsExactlyInAnyOrder("education.highSchool.attendanceType","education.university.attendanceType","education.graduateSchool.attendanceType");
+        assertThat(attendance.path("values").path("attendance:day").asText()).isEqualTo("주간");
+        assertThat(attendance.path("values").path("attendance:night").asText()).isEqualTo("야간");
+        assertThatCode(()->policy(HplaceCompanyFormPolicyFactory.createNative())).doesNotThrowAnyException();
+    }
+
 }

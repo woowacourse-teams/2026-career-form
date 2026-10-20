@@ -23,6 +23,7 @@ import {
   protectedSearchRow,
   namedSearchControl,
   recordSearchReceipt,
+  searchName,
   searchReceipt,
 } from "./native-form-search-dom";
 
@@ -388,6 +389,32 @@ export async function executeCommittedSearch(
             }
           : contextChanged,
       );
+    const dependencyControls = (name: string) => {
+      const field = o.section.fields.find((f) => f.name === name);
+      return field
+        ? Array.from(
+            o.row.querySelectorAll(
+              `[name="${CSS.escape(searchName(field.rawName, o.index))}"]`,
+            ),
+          )
+        : [];
+    };
+    // Row details the site enables only after the commit (major type,
+    // category, day/night). A LICENSE registration hidden by its metadata is
+    // checked strictly below instead.
+    const dependencies = (
+      s.kind === "EXAM" ? [] : (o.field.driver?.dependencies ?? [])
+    ).filter((name) => {
+      const field = o.section.fields.find((f) => f.name === name);
+      return !(
+        s.kind === "LICENSE" &&
+        meta.registration === "false" &&
+        field?.rawName === s.registrationName
+      );
+    });
+    const presentBefore = new Set(
+      dependencies.filter((name) => dependencyControls(name).length > 0),
+    );
     button.click();
     const tupleCurrent = () =>
       current() &&
@@ -410,27 +437,7 @@ export async function executeCommittedSearch(
         const reg = namedSearchControl(o.row, s.registrationName!, o.index);
         if (reg && visible(reg, true)) return unsafe("registration-visible");
       }
-      const dependencies: SearchExit = {
-        reason: "disabled-timeout",
-        detail: "committed-search-dependencies",
-      };
-      if (s.kind !== "EXAM")
-        return (o.field.driver?.dependencies ?? []).every((name) => {
-          const field = o.section.fields.find((f) => f.name === name)!;
-          if (
-            s.kind === "LICENSE" &&
-            meta.registration === "false" &&
-            field.rawName === s.registrationName
-          )
-            return true;
-          const control = namedSearchControl(o.row, field.rawName, o.index);
-          return (
-            !control ||
-            (visible(control) && !("readOnly" in control && control.readOnly))
-          );
-        })
-          ? undefined
-          : dependencies;
+      if (s.kind !== "EXAM") return;
       const examDetail: SearchExit = {
         reason: "disabled-timeout",
         detail: "committed-search-exam-detail",
@@ -455,6 +462,26 @@ export async function executeCommittedSearch(
         ? undefined
         : examDetail;
     };
+    /**
+     * Soft: every dependency the row had before the click is enabled again
+     * (a radio as its whole group, anything else as exactly one control).
+     * Absent dependencies stay absent; vanished or duplicated ones never
+     * settle and end like a timeout.
+     */
+    const dependentsEnabled = () =>
+      dependencies.every((name) => {
+        const found = dependencyControls(name);
+        if (!found.length) return !presentBefore.has(name);
+        const radio = found.every(
+          (e) => e instanceof HTMLInputElement && e.type === "radio",
+        );
+        return (
+          (radio || found.length === 1) &&
+          found.every(
+            (e) => visible(e) && !("readOnly" in e && e.readOnly === true),
+          )
+        );
+      });
     const settleDeadline = Date.now() + s.timeoutMs;
     while (current() && unsettled() && Date.now() < settleDeadline)
       await pause(view, 10);
@@ -482,14 +509,29 @@ export async function executeCommittedSearch(
         : [],
     });
     completed = committedSearchMatches(handle, item);
-    return (
-      completed ||
-      fail({
+    if (!completed)
+      return fail({
         reason: "readback-mismatch",
         detail: "committed-search-receipt",
         code: "SEARCH_UNCONFIRMED",
-      })
-    );
+      });
+    // The tuple is committed and recorded; waiting for its details never
+    // undoes that. Details still disabled stay uncollected for this pass.
+    while (
+      current() &&
+      committedSearchMatches(handle, item) &&
+      !dependentsEnabled() &&
+      Date.now() < settleDeadline
+    )
+      await pause(view, 10);
+    if (!dependentsEnabled())
+      debugRuntimeSkip(
+        key,
+        "disabled-timeout",
+        "committed-search-dependencies",
+        "write",
+      );
+    return committedSearchMatches(handle, item);
   } finally {
     // Restore only our unchanged query. Committed tuples, foreign results, and user edits are never reset.
     if (

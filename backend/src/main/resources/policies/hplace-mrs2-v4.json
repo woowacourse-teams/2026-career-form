@@ -2978,8 +2978,25 @@
                 "driver": {
                   "stage": 3,
                   "timeoutMs": 1500,
-                  "dependencies": [],
-                  "settled": []
+                  "dependencies": [
+                    "hplace.mrs2.college.major0.majorTypeCode",
+                    "hplace.mrs2.college.major0.majorCategoryCode",
+                    "hplace.mrs2.college.major0.dayOrNight"
+                  ],
+                  "settled": [
+                    {
+                      "field": "hplace.mrs2.college.major0.majorTypeCode",
+                      "state": "enabled"
+                    },
+                    {
+                      "field": "hplace.mrs2.college.major0.majorCategoryCode",
+                      "state": "enabled"
+                    },
+                    {
+                      "field": "hplace.mrs2.college.major0.dayOrNight",
+                      "state": "enabled"
+                    }
+                  ]
                 }
               },
               {
@@ -3097,8 +3114,20 @@
                 "driver": {
                   "stage": 3,
                   "timeoutMs": 1500,
-                  "dependencies": [],
-                  "settled": []
+                  "dependencies": [
+                    "hplace.mrs2.college.major1.majorTypeCode",
+                    "hplace.mrs2.college.major1.majorCategoryCode"
+                  ],
+                  "settled": [
+                    {
+                      "field": "hplace.mrs2.college.major1.majorTypeCode",
+                      "state": "enabled"
+                    },
+                    {
+                      "field": "hplace.mrs2.college.major1.majorCategoryCode",
+                      "state": "enabled"
+                    }
+                  ]
                 }
               },
               {
@@ -3202,8 +3231,20 @@
                 "driver": {
                   "stage": 3,
                   "timeoutMs": 1500,
-                  "dependencies": [],
-                  "settled": []
+                  "dependencies": [
+                    "hplace.mrs2.college.major2.majorTypeCode",
+                    "hplace.mrs2.college.major2.majorCategoryCode"
+                  ],
+                  "settled": [
+                    {
+                      "field": "hplace.mrs2.college.major2.majorTypeCode",
+                      "state": "enabled"
+                    },
+                    {
+                      "field": "hplace.mrs2.college.major2.majorCategoryCode",
+                      "state": "enabled"
+                    }
+                  ]
                 }
               },
               {
@@ -3635,8 +3676,25 @@
                 "driver": {
                   "stage": 3,
                   "timeoutMs": 1500,
-                  "dependencies": [],
-                  "settled": []
+                  "dependencies": [
+                    "hplace.mrs2.graduateSchool.major0.majorTypeCode",
+                    "hplace.mrs2.graduateSchool.major0.majorCategoryCode",
+                    "hplace.mrs2.graduateSchool.major0.dayOrNight"
+                  ],
+                  "settled": [
+                    {
+                      "field": "hplace.mrs2.graduateSchool.major0.majorTypeCode",
+                      "state": "enabled"
+                    },
+                    {
+                      "field": "hplace.mrs2.graduateSchool.major0.majorCategoryCode",
+                      "state": "enabled"
+                    },
+                    {
+                      "field": "hplace.mrs2.graduateSchool.major0.dayOrNight",
+                      "state": "enabled"
+                    }
+                  ]
                 }
               },
               {
@@ -3754,8 +3812,20 @@
                 "driver": {
                   "stage": 3,
                   "timeoutMs": 1500,
-                  "dependencies": [],
-                  "settled": []
+                  "dependencies": [
+                    "hplace.mrs2.graduateSchool.major1.majorTypeCode",
+                    "hplace.mrs2.graduateSchool.major1.majorCategoryCode"
+                  ],
+                  "settled": [
+                    {
+                      "field": "hplace.mrs2.graduateSchool.major1.majorTypeCode",
+                      "state": "enabled"
+                    },
+                    {
+                      "field": "hplace.mrs2.graduateSchool.major1.majorCategoryCode",
+                      "state": "enabled"
+                    }
+                  ]
                 }
               },
               {
@@ -3859,8 +3929,20 @@
                 "driver": {
                   "stage": 3,
                   "timeoutMs": 1500,
-                  "dependencies": [],
-                  "settled": []
+                  "dependencies": [
+                    "hplace.mrs2.graduateSchool.major2.majorTypeCode",
+                    "hplace.mrs2.graduateSchool.major2.majorCategoryCode"
+                  ],
+                  "settled": [
+                    {
+                      "field": "hplace.mrs2.graduateSchool.major2.majorTypeCode",
+                      "state": "enabled"
+                    },
+                    {
+                      "field": "hplace.mrs2.graduateSchool.major2.majorCategoryCode",
+                      "state": "enabled"
+                    }
+                  ]
                 }
               },
               {
@@ -4408,7 +4490,19 @@
         "placeholderValues": []
       },
       "fields": [],
-      "normalizations": [],
+      "normalizations": [
+        {
+          "keys": [
+            "education.highSchool.attendanceType",
+            "education.university.attendanceType",
+            "education.graduateSchool.attendanceType"
+          ],
+          "values": {
+            "attendance:day": "주간",
+            "attendance:night": "야간"
+          }
+        }
+      ],
       "reveals": [],
       "collection": {
         "actions": [],
