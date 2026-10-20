@@ -10,11 +10,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Component;
 
-@Component
-@ConditionalOnProperty(prefix = "career-form.quality", name = "enabled", havingValue = "true")
 public final class QualityObservationExecutor implements AutoCloseable {
     private static final long WAIT_MILLIS = 250;
     private static final QualityObservationExecutor SHARED = new QualityObservationExecutor();

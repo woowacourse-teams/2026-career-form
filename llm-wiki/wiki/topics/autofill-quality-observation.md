@@ -4,7 +4,7 @@
 > Status: Current
 > Current: [CF-164 자동 입력 품질 관측과 사람 확인 분모](../../raw/issues/CF-164/documents/autofill-quality-observation.md)
 > History: [CF-164 자동 입력 품질 관측과 사람 확인 분모](../../raw/issues/CF-164/documents/autofill-quality-observation.md)
-> Updated: 2026-10-14
+> Updated: 2026-10-20
 
 ## 현재 상태
 
@@ -28,3 +28,5 @@
 - [실사이트 자동 입력 평가](live-autofill-evaluation.md)
 - [자동 기입 품질 report의 전송 시점](quality-report-lifecycle.md)
 - [사이트별 자동 입력 결과와 일별 그래프](autofill-quality-dashboard.md)
+
+등록과 저장 접수, 분석 응답 대기 제거와 지연 집계는 [비동기 품질 처리](async-quality-observation.md)를 따른다.

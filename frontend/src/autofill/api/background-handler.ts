@@ -65,6 +65,7 @@ export function createAnalysisMessageHandler({
       "qualityRun" in message ? message.qualityRun : undefined,
       source,
     );
+    quality.start(qualityOwner);
     const publicLink =
       qualityOwner && message.type === "AUTOFILL_ANALYZE_FIELDS"
         ? publicApplicationLink(source?.url, message.payload.site?.host ?? "")
@@ -94,11 +95,11 @@ export function createAnalysisMessageHandler({
             ...(message.type === "AUTOFILL_ANALYZE_PREPARATION"
               ? {
                   "X-Career-Form-Capabilities": qualityOwner
-                    ? "address-search-v1,quality-v1"
+                    ? "address-search-v1,quality-v2"
                     : "address-search-v1",
                 }
               : qualityOwner
-                ? { "X-Career-Form-Capabilities": "quality-v1" }
+                ? { "X-Career-Form-Capabilities": "quality-v2" }
                 : {}),
           },
           body: JSON.stringify(message.payload),

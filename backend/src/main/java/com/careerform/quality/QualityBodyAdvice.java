@@ -1,7 +1,6 @@
 package com.careerform.quality;
 
 import java.lang.reflect.Type;
-import java.util.Arrays;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,20 +25,9 @@ import com.careerform.formanalysis.application.FormAnalysisRouter.RouteKind;
 @ConditionalOnProperty(prefix = "career-form.quality", name = "enabled", havingValue = "true")
 public final class QualityBodyAdvice extends RequestBodyAdviceAdapter implements ResponseBodyAdvice<Object> {
     private static final Logger log = LoggerFactory.getLogger(QualityBodyAdvice.class);
-    private final QualityCollectionService collector;
-    private final QualityRegistry registry;
-    private final QualityObservationExecutor observer;
+    private final QualityAsyncService observations;
 
-    public QualityBodyAdvice(QualityCollectionService collector) { this(collector, null); }
-
-    public QualityBodyAdvice(QualityCollectionService collector, QualityRegistry registry) { this(collector, registry, QualityObservationExecutor.shared()); }
-
-    @org.springframework.beans.factory.annotation.Autowired
-    public QualityBodyAdvice(QualityCollectionService collector, QualityRegistry registry, QualityObservationExecutor observer) {
-        this.collector = collector;
-        this.registry = registry;
-        this.observer = observer;
-    }
+    public QualityBodyAdvice(QualityAsyncService observations) { this.observations = observations; }
 
     @Override
     public boolean supports(MethodParameter parameter, Type type, Class<? extends HttpMessageConverter<?>> converter) {
@@ -61,50 +49,38 @@ public final class QualityBodyAdvice extends RequestBodyAdviceAdapter implements
         var scope = QualityScope.current().orElse(null);
         if (scope == null || scope.observed()) { return body; }
         try {
-            var snapshot = scope.request() instanceof FieldsAnalysisRequest fields && body instanceof FieldsAnalysisResponse result
-                ? QualityProjection.fields(fields, result) : null;
-            var host = scope.request() instanceof FieldsAnalysisRequest fields ? fields.site().host()
-                : scope.request() instanceof PreparationAnalysisRequest preparation ? preparation.site().host()
-                : scope.request() instanceof InteractionDecisionRequest interaction ? interaction.site().host() : "UNKNOWN";
-            var decision = scope.decision().orElse(null);
-            var route = decision == null ? "UNKNOWN" : decision.kind() == RouteKind.GENERIC ? "GENERIC" : decision.greeting() ? "GREETING"
-                : decision.companyKey() != null ? "STATIC" : "UNKNOWN";
-            var publicLink = snapshot == null ? null : QualityPublicLinks.validate(host, request.getHeaders().getFirst("X-Career-Form-Public-Application"));
-            var run = request.getHeaders().getFirst("X-Career-Form-Run");
-            var token = request.getHeaders().getFirst("X-Career-Form-Report-Token");
-            var extension = request.getHeaders().getFirst("X-Career-Form-Version");
-            var identitySeed = run == null ? java.util.UUID.randomUUID().toString() : run;
-            var capable = request.getHeaders().getOrDefault("X-Career-Form-Capabilities", java.util.List.of()).stream()
-                .flatMap(value -> Arrays.stream(value.split(","))).anyMatch(value -> value.trim().equals("quality-v1"));
-            var event = new QualityCollectionService.RequestEvent(decision == null ? "UNKNOWN" : decision.operation().name(),
-                response instanceof org.springframework.http.server.ServletServerHttpResponse servlet ? servlet.getServletResponse().getStatus() : 200,
-                scope.durationMs(), snapshot == null ? null : snapshot.counts(), scope.calls(), decision == null ? "UNKNOWN" : decision.kind().name(),
-                org.slf4j.MDC.get("requestId"), resultState(body), reasons(snapshot));
             scope.observed(true);
-            var receipt = observer.observe(() -> {
-                var identity = host.equals("UNKNOWN") ? null : QualitySite.identify(host, decision == null ? null : decision.companyKey(),
-                    decision != null && decision.greeting(), registry != null && snapshot != null
-                        && registry.dedicated(host.toLowerCase(java.util.Locale.ROOT), snapshot.structureKey()), identitySeed);
-                var group = identity == null ? collector.group("UNKNOWN", "UNKNOWN", "UNKNOWN", null, null)
-                    : collector.group(identity, snapshot == null ? "UNKNOWN" : snapshot.structureKey(), route,
-                        decision == null ? null : decision.policyVersion(), extension, event.calls());
-                return collector.observe(group, event, snapshot, run, token, capable, publicLink);
-            });
-            if (receipt != null) {
-                response.getHeaders().set("X-Career-Form-Run", receipt.runId());
-                response.getHeaders().set("X-Career-Form-Report-Token", receipt.token());
-                response.getHeaders().set("Cache-Control", "no-store");
-            }
+            observations.observeCaptured(budget -> capture(scope, body, request, response, budget));
+            response.getHeaders().set("Cache-Control", "no-store");
         } catch (RuntimeException exception) {
             log.warn("QUALITY_RESPONSE_OBSERVATION_UNAVAILABLE");
         }
         return body;
     }
 
-    private java.util.Map<String, Long> reasons(QualityProjection.Snapshot snapshot) {
-        return snapshot == null ? java.util.Map.of() : snapshot.fields().stream().filter(field -> !field.mapped() || !field.eligible())
-            .collect(java.util.stream.Collectors.toUnmodifiableMap(field -> (field.mapped() ? "WRITE|SERVER_WRITE_UNAVAILABLE|" : "MAPPING|NOT_MAPPED|")
-                + field.control(), field -> 1L, Long::sum));
+    private QualityObservationCapture capture(QualityScope scope, Object body, ServerHttpRequest request,
+                                               ServerHttpResponse response, QualityCaptureBudget budget) {
+        var snapshot = scope.request() instanceof FieldsAnalysisRequest fields && body instanceof FieldsAnalysisResponse result
+            ? QualityCapturedSnapshot.from(fields, result, budget) : null;
+        var host = budget.text(scope.request() instanceof FieldsAnalysisRequest fields ? fields.site().host()
+            : scope.request() instanceof PreparationAnalysisRequest preparation ? preparation.site().host()
+            : scope.request() instanceof InteractionDecisionRequest interaction ? interaction.site().host() : "UNKNOWN", 253);
+        var decision = scope.decision().orElse(null);
+        var route = decision == null ? "UNKNOWN" : decision.kind() == RouteKind.GENERIC ? "GENERIC" : decision.greeting() ? "GREETING"
+            : decision.companyKey() != null ? "STATIC" : "UNKNOWN";
+        var publicLink = snapshot == null ? null : budget.text(QualityPublicLinks.validate(host, request.getHeaders().getFirst("X-Career-Form-Public-Application")), 512);
+        var connection = observations.connection(request.getHeaders().getFirst("X-Career-Form-Quality-Run"),
+            request.getHeaders().getFirst("X-Career-Form-Quality-Key"));
+        budget.text(connection, 64);
+        var extension = budget.text(request.getHeaders().getFirst("X-Career-Form-Version"), 128);
+        var calls = budget.calls(scope.calls());
+        var event = new QualityCollectionService.RequestEvent(decision == null ? "UNKNOWN" : decision.operation().name(),
+            response instanceof org.springframework.http.server.ServletServerHttpResponse servlet ? servlet.getServletResponse().getStatus() : 200,
+            scope.durationMs(), null, calls, decision == null ? "UNKNOWN" : decision.kind().name(),
+            budget.text(org.slf4j.MDC.get("requestId"), 128), resultState(body), java.util.Map.of());
+        var metadata = new QualityAsyncService.Observation(connection, host, budget.text(decision == null ? null : decision.companyKey(), 128),
+            decision != null && decision.greeting(), route, decision == null ? null : decision.policyVersion(), extension, publicLink, event, null);
+        return new QualityObservationCapture(metadata, snapshot);
     }
 
     private String resultState(Object body) {
