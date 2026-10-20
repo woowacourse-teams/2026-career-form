@@ -68,7 +68,10 @@ class HplaceFormFingerprintTest {
     void detailedShapeRejectsMissingDuplicateMixedOrNestedFields() {
         var fields = List.of(detailField("englishName"), detailField("birthday"), detailField("detailAddress"));
         assertThat(fingerprint.matches(detailRequest(fields, null))).isTrue();
-        assertThat(fingerprint.matches(detailRequest(fields.subList(0, 2), null))).isFalse();
+        // The current address is optional (com2us has none); name and birthday stay required.
+        assertThat(fingerprint.matches(detailRequest(fields.subList(0, 2), null))).isTrue();
+        assertThat(fingerprint.matches(detailRequest(List.of(fields.get(0), fields.get(2)), null))).isFalse();
+        assertThat(fingerprint.matches(detailRequest(List.of(fields.get(1), fields.get(2)), null))).isFalse();
         assertThat(fingerprint.matches(detailRequest(List.of(fields.get(0), fields.get(1), fields.get(1)), null))).isFalse();
         assertThat(fingerprint.matches(detailRequest(List.of(fields.get(0), fields.get(1), field("email")), null))).isFalse();
         assertThat(fingerprint.matches(detailRequest(fields, List.of(new Item("row", List.of(detailField("emergencyPhone"))))))).isFalse();

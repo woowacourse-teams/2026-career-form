@@ -33,17 +33,19 @@ export function detailAnalysis(
             : "ALLOWED",
         writePlan: { command: "SET_TEXT" },
         valueBinding:
-          f.domName === "hplace.detail.englishName"
-            ? { type: "DERIVED", recipe: "ENGLISH_FULL_NAME_GIVEN_FIRST" }
-            : {
-                type: "DIRECT",
-                profileFieldKey:
-                  f.domName === "hplace.detail.birthday"
-                    ? "personal.personal.birthDate"
-                    : f.domName === "hplace.detail.detailAddress"
-                      ? "contact.contact.addressLine2"
-                      : "contact.contact.emergencyPhoneNumber",
-              },
+          f.domName === "hplace.detail.englishName.familyFirst"
+            ? { type: "DERIVED", recipe: "ENGLISH_FULL_NAME_FAMILY_FIRST" }
+            : f.domName?.startsWith("hplace.detail.englishName")
+              ? { type: "DERIVED", recipe: "ENGLISH_FULL_NAME_GIVEN_FIRST" }
+              : {
+                  type: "DIRECT",
+                  profileFieldKey:
+                    f.domName === "hplace.detail.birthday"
+                      ? "personal.personal.birthDate"
+                      : f.domName === "hplace.detail.detailAddress"
+                        ? "contact.contact.addressLine2"
+                        : "contact.contact.emergencyPhoneNumber",
+                },
       })),
   };
 }

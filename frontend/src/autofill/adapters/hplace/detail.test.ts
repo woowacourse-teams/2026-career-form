@@ -53,7 +53,8 @@ it("collects only verified detail fields and recognizes their platform", () => {
   expect(
     snapshot.request.sections.flatMap((s) => s.fields.map((f) => f.domName)),
   ).toEqual([
-    "hplace.detail.englishName",
+    // No order guide on this page: family-first default (2026-10-20).
+    "hplace.detail.englishName.familyFirst",
     "hplace.detail.birthday",
     "hplace.detail.detailAddress",
     "hplace.detail.emergencyPhone",
@@ -71,7 +72,7 @@ it("writes approved controls and formats the birth date", async () => {
   expect(results.filter((r) => r.status === "written")).toHaveLength(4);
   expect(
     (document.getElementById("englishName") as HTMLInputElement).value,
-  ).toBe("Synthetic Tester");
+  ).toBe("Tester Synthetic");
   expect((document.getElementById("birthday") as HTMLInputElement).value).toBe(
     "2000.02.29",
   );
@@ -331,4 +332,46 @@ it("stops after the base address changes in the detail input handler", async () 
   });
   expect(results[0].status).toBe("skipped");
   expect(changes).toBe(0);
+});
+
+it("keeps the detail fields on a tenant without any current-address control", async () => {
+  mountDetail();
+  document.querySelector('[data-row="address"]')!.remove();
+  expect(resolveDocumentCompany(document)).toBe("hplace");
+  expect(isUnsupportedHplace(document)).toBe(false);
+  const profile = createEmptyProfile();
+  profile.personal.birthDate = "2000-02-29";
+  const snapshot = collectFieldsSnapshot(document);
+  expect(
+    snapshot.request.sections.flatMap((s) => s.fields.map((f) => f.domName)),
+  ).toEqual([
+    "hplace.detail.englishName.familyFirst",
+    "hplace.detail.birthday",
+  ]);
+  const plan = buildReviewPlan({
+    registry: snapshot.registry,
+    profile,
+    analysis: detailAnalysis(snapshot.request),
+  });
+  const birthday = plan.items.filter(
+    (i) => i.profileFieldKey === "personal.personal.birthDate",
+  );
+  await executeApprovedWritesAfterPageSettles({
+    items: birthday,
+    registry: snapshot.registry,
+    approvedCandidateIds: new Set(birthday.map((i) => i.candidateId)),
+    document,
+  });
+  expect((document.getElementById("birthday") as HTMLInputElement).value).toBe(
+    "2000.02.29",
+  );
+});
+it("still fails closed when only part of the current address remains", () => {
+  mountDetail();
+  document.querySelector('[name="currentAddress.detailAddress"]')!.remove();
+  expect(collectFieldsSnapshot(document).request.sections).not.toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ sectionId: "hplace-detail-basic" }),
+    ]),
+  );
 });

@@ -15,7 +15,9 @@ import { resetHplacePage } from "./test-utils/hplace.fixture";
 
 afterEach(resetHplacePage);
 
-// Mirrors the active policy: English-name order has not been verified.
+// Mirrors the active policy: an English name without a verified order (plain
+// domName) is not mapped. This page has no guide, so the collector sends the
+// family-first domName (2026-10-20 default), which the policy maps.
 function activeDetailAnalysis(
   request: FieldsAnalyzeRequest,
 ): FieldsAnalyzeResponse {
@@ -91,11 +93,11 @@ it.each([false, true])(
     };
     const view = render(<AutofillWorkflow {...props} />);
     expect(
-      await screen.findByLabelText(`입력 완료 ${emergency ? 3 : 2}개`),
+      await screen.findByLabelText(`입력 완료 ${emergency ? 4 : 3}개`),
     ).toBeVisible();
     expect(fields).toHaveBeenCalledTimes(1);
     expect(preparation).toHaveBeenCalledTimes(1);
-    expect(inputs).toHaveBeenCalledTimes(emergency ? 3 : 2);
+    expect(inputs).toHaveBeenCalledTimes(emergency ? 4 : 3);
     expect(clicks).not.toHaveBeenCalled();
     expect(
       (document.getElementById("birthday") as HTMLInputElement).value,
@@ -115,7 +117,7 @@ it.each([false, true])(
     expect(await screen.findByText("기입 결과")).toBeVisible();
     expect(fields).toHaveBeenCalledTimes(2);
     expect(preparation).toHaveBeenCalledTimes(2);
-    expect(inputs).toHaveBeenCalledTimes(emergency ? 3 : 2);
+    expect(inputs).toHaveBeenCalledTimes(emergency ? 4 : 3);
     expect(clicks).not.toHaveBeenCalled();
   },
 );
@@ -195,7 +197,8 @@ it("does not confirm retained writes when the profile changes after the last inp
     />,
   );
   expect(await screen.findByText("기입 결과")).toBeVisible();
-  expect(screen.getByLabelText("확인 필요 2개")).toBeVisible();
+  // English name (family-first default), birthday and detail address.
+  expect(screen.getByLabelText("확인 필요 3개")).toBeVisible();
 });
 
 it("rechecks the address identity after later fields change it", async () => {

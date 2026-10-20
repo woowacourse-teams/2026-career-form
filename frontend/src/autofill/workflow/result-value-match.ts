@@ -224,7 +224,9 @@ export function matchesResultValue(
     binding?.type === "DIRECT" &&
     binding.profileFieldKey === basicSpecs[basic.key].profile
   ) {
-    return basicTarget(basic.key, right) === left;
+    return (
+      basicTarget(basic.key, right, handle.elements[0]?.ownerDocument) === left
+    );
   }
   if (binding?.type === "LOOKUP" || binding?.type === "BUTTON_OPTION")
     return false;

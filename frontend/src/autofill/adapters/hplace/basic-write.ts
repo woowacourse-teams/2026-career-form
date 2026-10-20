@@ -151,9 +151,29 @@ export function basicValue(handle: FieldCandidateHandle): string | undefined {
   }
   return input.value;
 }
-export function basicTarget(key: BasicKey, value: string): string | undefined {
+/** Service-date precision declared by the page's start-date token. Tenants
+ * use `:YM` (gsenc, abl, careerhyundai, com2us) or `:YMD` (huonsgroup). */
+export function serviceDatePrecision(
+  document: Document,
+): "YM" | "YMD" | undefined {
+  const token = document
+    .querySelector('[name="military.militaryStartDate"]')
+    ?.getAttribute("data-dates");
+  return token === "military.militaryDate:YM"
+    ? "YM"
+    : token === "military.militaryDate:YMD"
+      ? "YMD"
+      : undefined;
+}
+export function basicTarget(
+  key: BasicKey,
+  value: string,
+  document?: Document,
+): string | undefined {
   if (!value.trim()) return undefined;
   if (key !== "serviceStartDate" && key !== "serviceEndDate") return value;
+  const precision = document ? serviceDatePrecision(document) : "YM";
+  if (!precision) return undefined;
   const m = /^(\d{4})[-.](\d{2})(?:[-.](\d{2}))?$/.exec(value);
   if (!m) return undefined;
   const y = Number(m[1]),
@@ -165,7 +185,9 @@ export function basicTarget(key: BasicKey, value: string): string | undefined {
     date.getUTCFullYear() === y &&
     date.getUTCMonth() === month - 1 &&
     date.getUTCDate() === day
-    ? `${m[1]}.${m[2]}`
+    ? precision === "YMD"
+      ? `${m[1]}.${m[2]}.${String(day).padStart(2, "0")}`
+      : `${m[1]}.${m[2]}`
     : undefined;
 }
 export function basicDateOrder(
@@ -183,7 +205,7 @@ export function basicDateOrder(
   if (!other || other.closest(".subject") !== input.closest(".subject"))
     return false;
   if (!other.value) return true;
-  const otherValue = basicTarget(otherKey, other.value);
+  const otherValue = basicTarget(otherKey, other.value, input.ownerDocument);
   return (
     otherValue !== undefined &&
     otherValue === other.value &&
@@ -204,7 +226,12 @@ export async function settleBasicStateDriver(
     !item.selected ||
     item.disabled ||
     !bindingApproved(control.key, item) ||
-    basicValue(handle) !== basicTarget(control.key, item.profileValue ?? "")
+    basicValue(handle) !==
+      basicTarget(
+        control.key,
+        item.profileValue ?? "",
+        handle.elements[0]?.ownerDocument,
+      )
   )
     return false;
   const key = control.key;
@@ -216,7 +243,7 @@ export async function settleBasicStateDriver(
   if (!selected || signal?.aborted) return false;
   const document = selected.ownerDocument;
   const url = document.URL;
-  const expected = basicTarget(key, item.profileValue ?? "");
+  const expected = basicTarget(key, item.profileValue ?? "", document);
   const ready = () => {
     const controls = basicControls(document);
     return (Object.keys(basicSpecs) as BasicKey[]).every((childKey) => {
@@ -249,7 +276,7 @@ export async function settleBasicStateDriver(
       !item.selected ||
       item.disabled ||
       !bindingApproved(key, item) ||
-      basicTarget(key, item.profileValue ?? "") !== expected ||
+      basicTarget(key, item.profileValue ?? "", document) !== expected ||
       basicValue(handle) !== expected
     )
       return false;
@@ -306,7 +333,7 @@ export async function writeBasic(
   if (!control) return false;
   const { key, elements, options } = control;
   const value = item.profileValue;
-  const target = basicTarget(key, value ?? "");
+  const target = basicTarget(key, value ?? "", elements[0].ownerDocument);
   if (!target) return false;
   const original = basicValue(handle),
     url = elements[0].ownerDocument.URL;

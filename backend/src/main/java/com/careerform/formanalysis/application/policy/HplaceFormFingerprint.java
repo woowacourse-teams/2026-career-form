@@ -23,7 +23,8 @@ public final class HplaceFormFingerprint {
     public static final String BIRTHDAY = "hplace.detail.birthday";
     public static final String DETAIL_ADDRESS = "hplace.detail.detailAddress";
     public static final String EMERGENCY_PHONE = "hplace.detail.emergencyPhone";
-    private static final Set<String> DETAIL_REQUIRED = Set.of(ENGLISH_NAME, BIRTHDAY, DETAIL_ADDRESS);
+    // The current address is optional: some tenants (com2us) render no address row.
+    private static final Set<String> DETAIL_REQUIRED = Set.of(ENGLISH_NAME, BIRTHDAY);
     private static final Set<String> DETAIL_RADIOS = Set.of(
         "hplace.detail.gender", "hplace.detail.veteranStatus", "hplace.detail.disabilityStatus", "hplace.detail.militaryStatus");
     private static final Set<String> DETAIL_SELECTS = Set.of(

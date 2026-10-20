@@ -106,12 +106,11 @@ it.each(["이름 + 성", "이름+성", "First Last", "Given Family", "성 + 이�
   },
 );
 
-it.each(["absent", "ambiguous", "foreign-subject", "duplicate"])(
+it.each(["ambiguous", "foreign-subject", "duplicate"])(
   "keeps English order unsupported with a precise reason for %s guidance",
   async (fault) => {
     mountLive();
     const guide = document.querySelector(".wrapGuide")!;
-    if (fault === "absent") guide.remove();
     if (fault === "ambiguous")
       guide.firstElementChild!.textContent = "이름 + 성 / 성 + 이름";
     if (fault === "foreign-subject") {
@@ -149,3 +148,12 @@ it.each(["absent", "ambiguous", "foreign-subject", "duplicate"])(
     expect(plan.items[0].reason).toBe("영문 이름 순서 안내 없음");
   },
 );
+
+it("defaults to family-first when the page has no English-name guide at all", () => {
+  mountLive();
+  document.querySelector(".wrapGuide")!.remove();
+  const english = collectFieldsSnapshot(document)
+    .request.sections.flatMap((s) => s.fields)
+    .find((f) => f.displayName === "영문이름")!;
+  expect(english.domName).toBe("hplace.detail.englishName.familyFirst");
+});

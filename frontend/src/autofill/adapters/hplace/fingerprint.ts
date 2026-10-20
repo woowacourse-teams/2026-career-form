@@ -30,9 +30,8 @@ export function isHplaceDocument(document: Document): boolean {
     document.querySelector(
       'form#frm section.writeResume[data-code="11"] input#englishName[name="englishName"]',
     ) &&
-    document.querySelector(
-      'form#frm section.writeResume[data-code="13"] input[name="currentAddress.detailAddress"]',
-    )
+    // Section 13 itself, not its address: some tenants have no address row.
+    document.querySelector('form#frm section.writeResume[data-code="13"]')
   )
     return true;
 

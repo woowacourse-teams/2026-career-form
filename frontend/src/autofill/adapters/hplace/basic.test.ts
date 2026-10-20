@@ -221,9 +221,10 @@ it("does not collect disabled dependents or dependencies with the wrong relation
 it("does not map service end date when the site's date precision is unverified", () => {
   mountBasicDetail();
   activateBasicDetails();
+  // YM and YMD are verified (huonsgroup uses YMD); anything else fails closed.
   document
     .querySelector('[name="military.militaryStartDate"]')!
-    .setAttribute("data-dates", "military.militaryDate:YMD");
+    .setAttribute("data-dates", "military.militaryDate:Y");
   expect(
     collectFieldsSnapshot(document).request.sections[0].fields.map(
       (f) => f.domName,
@@ -250,6 +251,33 @@ it("recognizes the verified month precision when comparing an existing service d
   if (lookup.status !== "ready") throw new Error("fixture missing");
   expect(matchesResultValue(item, "2020.01", "2020-01-10", lookup.handle)).toBe(
     true,
+  );
+});
+it("recognizes the day precision of a YMD tenant when comparing a service date", () => {
+  mountBasicDetail();
+  activateBasicDetails();
+  document
+    .querySelector('[name="military.militaryStartDate"]')!
+    .setAttribute("data-dates", "military.militaryDate:YMD");
+  const profile = createEmptyProfile();
+  profile.military.serviceStartDate = "2020-01-10";
+  const snapshot = collectFieldsSnapshot(document);
+  const item = buildReviewPlan({
+    registry: snapshot.registry,
+    profile,
+    analysis: basicAnalysis(snapshot.request),
+  }).items.find(
+    (i) =>
+      i.analysis?.valueBinding?.profileFieldKey ===
+      "military.military.serviceStartDate",
+  )!;
+  const lookup = snapshot.registry.lookupField(item.candidateId);
+  if (lookup.status !== "ready") throw new Error("fixture missing");
+  expect(
+    matchesResultValue(item, "2020.01.10", "2020-01-10", lookup.handle),
+  ).toBe(true);
+  expect(matchesResultValue(item, "2020.01", "2020-01-10", lookup.handle)).toBe(
+    false,
   );
 });
 it.each(["beforeMutation", "focus", "change"])(

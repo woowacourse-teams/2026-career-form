@@ -25,7 +25,7 @@ it("keeps collection unchanged and emits nothing with debug off", () => {
 });
 it.each([
   ["label", "hplace.detail.gender", "label-mismatch"],
-  ["guide", "hplace.detail.englishName", "guide-missing"],
+  ["guide", "hplace.detail.englishName", "guide-ambiguous"],
   ["zip", "hplace.mrs2.currentAddress.search", "zip-companion"],
   ["asset", "hplace-mrs2", "asset-path"],
 ] as const)(
@@ -39,7 +39,9 @@ it.each([
         .querySelector('[name="genderFlag"]')!
         .closest("label")!
         .querySelector("span")!.textContent = "잘못된 라벨";
-    if (kind === "guide") document.querySelector(".wrapGuide")!.remove();
+    if (kind === "guide")
+      document.querySelector(".wrapGuide")!.firstElementChild!.textContent =
+        "이름 + 성 / 성 + 이름";
     if (kind === "zip")
       document.querySelector('[name="currentAddress.zipCode"]')!.className =
         "text";

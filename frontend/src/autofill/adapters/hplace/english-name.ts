@@ -1,5 +1,7 @@
 import { debugCollectionSkip } from "../../debug/structural-diagnostics";
-/** Only company guidance owned by the applicant subject establishes name order. */
+/** Company guidance owned by the applicant subject establishes name order.
+ * Without any guide the user-chosen default is family-first ("HONG GILDONG",
+ * 2026-10-20); a present but unreadable or duplicated guide stays unfilled. */
 export function englishNameOrder(
   input: HTMLInputElement,
 ): "givenFirst" | "familyFirst" | undefined {
@@ -8,10 +10,22 @@ export function englishNameOrder(
   const guides = Array.from(
     subject.querySelectorAll("div.wrapGuide > div.guide.englishName"),
   ).filter((e) => e.closest(".subject") === subject);
+  if (!guides.length) {
+    // A guide elsewhere on the page may still be meant for this field.
+    if (input.ownerDocument.querySelector("div.guide.englishName")) {
+      debugCollectionSkip(
+        "hplace.detail.englishName",
+        "guide-ambiguous",
+        "foreign-guide",
+      );
+      return;
+    }
+    return "familyFirst";
+  }
   if (guides.length !== 1) {
     debugCollectionSkip(
       "hplace.detail.englishName",
-      guides.length ? "guide-ambiguous" : "guide-missing",
+      "guide-ambiguous",
       "owned-guide-count",
     );
     return;

@@ -50,7 +50,11 @@ function legacyValueRetained(
 ): boolean {
   const basic = ownedBasicControl(handle);
   const target = basic
-    ? basicTarget(basic.key, item.profileValue ?? "")
+    ? basicTarget(
+        basic.key,
+        item.profileValue ?? "",
+        handle.elements[0]?.ownerDocument,
+      )
     : undefined;
   return (
     (ownedDetailControl(handle)?.key !== "detailAddress" ||

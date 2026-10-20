@@ -69,16 +69,20 @@ export function detailControls(document: Document): DetailControls | undefined {
   };
   const englishName = one("englishName", "englishName", 64, sections[0][0]);
   const birthday = one("birthday", "birthday", undefined, sections[0][0]);
-  const detailAddress = one(
-    "currentAddress.detailAddress",
-    "",
-    128,
-    sections[1][0],
-  );
+  // Some tenants (com2us, 2026-10-20) render section 13 without any current
+  // address. Only a page with no address control at all may omit it; any
+  // partial address structure is still verified below and fails closed.
+  const addressPresent =
+    document.querySelector(
+      '[name^="currentAddress."], [data-row="address"]',
+    ) !== null;
+  const detailAddress = addressPresent
+    ? one("currentAddress.detailAddress", "", 128, sections[1][0])
+    : undefined;
   if (
     !englishName ||
     !birthday ||
-    !detailAddress ||
+    (addressPresent && !detailAddress) ||
     englishName.closest(".subject") !== birthday.closest(".subject") ||
     birthday.dataset.dates !== "birthday:YMD"
   )
@@ -91,19 +95,20 @@ export function detailControls(document: Document): DetailControls | undefined {
     )
       return reject("label-mismatch", "owned-title-label");
   }
-  const row = detailAddress.closest('[data-row="address"]');
+  const row = detailAddress?.closest('[data-row="address"]');
   const bases = document.querySelectorAll('[name="currentAddress.address"]');
   const base = bases[0];
   if (
-    !row ||
-    row.querySelectorAll('button[type="button"][data-type="currentAddress"]')
-      .length !== 1 ||
-    bases.length !== 1 ||
-    !(base instanceof HTMLInputElement) ||
-    base.type !== "text" ||
-    !base.readOnly ||
-    base.form !== form ||
-    base.closest('[data-row="address"]') !== row
+    detailAddress &&
+    (!row ||
+      row.querySelectorAll('button[type="button"][data-type="currentAddress"]')
+        .length !== 1 ||
+      bases.length !== 1 ||
+      !(base instanceof HTMLInputElement) ||
+      base.type !== "text" ||
+      !base.readOnly ||
+      base.form !== form ||
+      base.closest('[data-row="address"]') !== row)
   )
     return reject();
   const emergencyPhone = one(
@@ -124,7 +129,7 @@ export function detailControls(document: Document): DetailControls | undefined {
   return {
     englishName,
     birthday,
-    detailAddress,
+    ...(detailAddress ? { detailAddress } : {}),
     ...(emergencyPhone ? { emergencyPhone } : {}),
   };
 }

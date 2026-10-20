@@ -312,7 +312,12 @@ export function basicControls(document: Document): BasicControl[] {
           input.type !== "text" ||
           ("max" in spec && input.maxLength !== spec.max) ||
           ("date" in spec &&
-            (input.dataset.dates !== spec.date ||
+            ((key === "serviceStartDate"
+              ? ![
+                  "military.militaryDate:YM",
+                  "military.militaryDate:YMD",
+                ].includes(input.dataset.dates ?? "")
+              : input.dataset.dates !== spec.date) ||
               !input.classList.contains("date") ||
               !input.classList.contains(
                 key === "serviceStartDate" ? "start" : "end",
