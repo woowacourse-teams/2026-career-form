@@ -265,6 +265,7 @@ function PolicyReadyWorkflow({
     reviewItems,
     fieldsSnapshot,
     pageDocument,
+    profile,
   );
   const [resultRegistry, setResultRegistry] = useState<CandidateRegistry>();
   const [partial, setPartial] = useState(false);

@@ -1,4 +1,7 @@
+import { PROFILE_CATEGORIES } from "../../profile/field-definitions";
+import type { Profile, RepeatedProfileCategoryId } from "../../profile/model";
 import type { FieldCandidate } from "../api/types";
+import { isAutofillProfileFieldKey } from "../profile/profile-field-key";
 import {
   reviewItemsForDisplay,
   type ReviewPlanItem,
@@ -8,6 +11,8 @@ export interface ReviewDiagnosticContext {
   candidate: FieldCandidate;
   sectionCategory: string;
   repeatRowIndex: number | null;
+  fieldOrdinal?: number | null;
+  pageSectionOrdinal?: number;
 }
 
 type Grade = "AUTO" | "REVIEW" | "BLOCKED";
@@ -31,6 +36,20 @@ export interface ReviewDiagnosticField {
   controlKind: ControlKind;
   mapped: boolean;
   mappedKeyCategory: string | null;
+  fieldOrdinal: number | null;
+  pageSectionOrdinal: number | null;
+  profileFieldKey: string | null;
+  profileSectionId: string | null;
+  profileRowOrdinal: number | null;
+}
+
+// This is a dev-only gate and must never ship in a production build.
+export function localDiagnosticsEnabled(): boolean {
+  return (
+    import.meta.env.DEV === true &&
+    import.meta.env.VITE_LOCAL_WORKFLOW_DIAGNOSTICS === "1" &&
+    import.meta.env.VITE_API_BASE_URL === "http://localhost:8080"
+  );
 }
 
 function controlKind(candidate: FieldCandidate | undefined): ControlKind {
@@ -47,10 +66,11 @@ function controlKind(candidate: FieldCandidate | undefined): ControlKind {
   return candidate.control === "button" ? "other" : candidate.control;
 }
 
-/** Explicit projection: page/profile text and candidate identifiers never leave this boundary. */
+/** Explicit projection: page/profile text and internal identifiers never leave this boundary. */
 export function buildReviewDiagnostics(
   items: readonly ReviewPlanItem[],
   contexts: ReadonlyMap<string, ReviewDiagnosticContext>,
+  profile?: Profile,
 ) {
   // Match WorkflowScreens' displayed fields and panels, not internal items.
   const displayedItems = reviewItemsForDisplay(items);
@@ -65,10 +85,38 @@ export function buildReviewDiagnostics(
   );
   const fields: ReviewDiagnosticField[] = displayedItems.map((item) => {
     const context = contexts.get(item.candidateId);
-    const key =
-      item.profileFieldKey ??
-      item.analysis?.valueBinding?.profileFieldKey ??
-      item.analysis?.profileFieldKey;
+    // Match execution's valueBinding-before-legacy precedence. Multi-source
+    // derived recipes have no single observable canonical source key.
+    const binding = item.analysis?.valueBinding;
+    const rawKey = binding
+      ? binding.type !== "DERIVED" ||
+        binding.recipe === "YEAR_MONTH" ||
+        binding.recipe === "BOOLEAN_YN"
+        ? binding.profileFieldKey
+        : undefined
+      : (item.analysis?.profileFieldKey ?? item.profileFieldKey);
+    const key = rawKey && isAutofillProfileFieldKey(rawKey) ? rawKey : null;
+    let profileSectionId: string | null = null;
+    let profileRowOrdinal: number | null = null;
+    const category = key
+      ? PROFILE_CATEGORIES.find((entry) => entry.id === key.split(".")[0])
+      : undefined;
+    if (profile && category?.repeatable && item.profileEntryId) {
+      const entries = profile[category.id as RepeatedProfileCategoryId];
+      const boundEntries = entries.filter(
+        (entry) => entry.id === item.profileEntryId,
+      );
+      const entry = boundEntries.length === 1 ? boundEntries[0] : undefined;
+      if (
+        entry &&
+        category.sections.some((section) => section.id === entry.sectionId)
+      ) {
+        profileSectionId = entry.sectionId;
+        profileRowOrdinal = entries
+          .filter((row) => row.sectionId === entry.sectionId)
+          .indexOf(entry);
+      }
+    }
     return {
       grade: exceptionalItems.has(item)
         ? item.genericGrade === "BLOCKED"
@@ -85,6 +133,11 @@ export function buildReviewDiagnostics(
       controlKind: controlKind(context?.candidate),
       mapped: !!key || item.analysis?.matchType === "MATCH",
       mappedKeyCategory: key?.split(".")[0] ?? null,
+      fieldOrdinal: context?.fieldOrdinal ?? null,
+      pageSectionOrdinal: context?.pageSectionOrdinal ?? null,
+      profileFieldKey: key,
+      profileSectionId,
+      profileRowOrdinal,
     };
   });
   const empty = (): Record<Grade, Record<string, number>> => ({
@@ -112,13 +165,10 @@ export function buildReviewDiagnostics(
 export function emitReviewDiagnostics(
   items: readonly ReviewPlanItem[],
   contexts: ReadonlyMap<string, ReviewDiagnosticContext>,
+  profile?: Profile,
 ): void {
-  if (
-    import.meta.env.VITE_LOCAL_WORKFLOW_DIAGNOSTICS !== "1" ||
-    import.meta.env.VITE_API_BASE_URL !== "http://localhost:8080"
-  )
-    return;
+  if (!localDiagnosticsEnabled()) return;
   console.info(
-    `[CareerForm] 진단 요약: ${JSON.stringify(buildReviewDiagnostics(items, contexts))}`,
+    `[CareerForm] 진단 요약: ${JSON.stringify(buildReviewDiagnostics(items, contexts, profile))}`,
   );
 }

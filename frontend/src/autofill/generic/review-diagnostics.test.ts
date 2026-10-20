@@ -4,6 +4,7 @@ import type { ReviewPlanItem } from "../review/review-plan";
 import {
   buildReviewDiagnostics,
   emitReviewDiagnostics,
+  localDiagnosticsEnabled,
   type ReviewDiagnosticContext,
 } from "./review-diagnostics";
 
@@ -73,6 +74,14 @@ const contexts = new Map<string, ReviewDiagnosticContext>(
   ]),
 );
 
+const unobservedBinding = {
+  fieldOrdinal: null,
+  pageSectionOrdinal: null,
+  profileFieldKey: null,
+  profileSectionId: null,
+  profileRowOrdinal: null,
+};
+
 afterEach(() => {
   vi.unstubAllEnvs();
   vi.restoreAllMocks();
@@ -83,6 +92,7 @@ describe("buildReviewDiagnostics", () => {
     const result = buildReviewDiagnostics(items, contexts);
     expect(result.fields).toEqual([
       {
+        ...unobservedBinding,
         grade: "AUTO",
         reasonCode: null,
         sectionCategory: "education",
@@ -90,8 +100,10 @@ describe("buildReviewDiagnostics", () => {
         controlKind: "text",
         mapped: true,
         mappedKeyCategory: "education",
+        profileFieldKey: "education.university.schoolName",
       },
       {
+        ...unobservedBinding,
         grade: "REVIEW",
         reasonCode: "NO_FIELD_CONTEXT",
         sectionCategory: "education",
@@ -99,8 +111,10 @@ describe("buildReviewDiagnostics", () => {
         controlKind: "month",
         mapped: true,
         mappedKeyCategory: "education",
+        profileFieldKey: "education.university.startDate",
       },
       {
+        ...unobservedBinding,
         grade: "BLOCKED",
         reasonCode: "UNLINKED",
         sectionCategory: "education",
@@ -110,6 +124,7 @@ describe("buildReviewDiagnostics", () => {
         mappedKeyCategory: null,
       },
       {
+        ...unobservedBinding,
         grade: "BLOCKED",
         reasonCode: "UNLINKED",
         sectionCategory: "none",
@@ -137,8 +152,6 @@ describe("buildReviewDiagnostics", () => {
     const serialized = JSON.stringify(result);
     expect(serialized).not.toContain("PRIVATE");
     expect(serialized).not.toContain("private-id");
-    expect(serialized).not.toContain("schoolName");
-    expect(serialized).not.toContain("startDate");
   });
 
   it("handles empty input without phantom counts", () => {
@@ -191,6 +204,13 @@ describe("buildReviewDiagnostics", () => {
 });
 
 describe("emitReviewDiagnostics", () => {
+  it("requires the development build", () => {
+    vi.stubEnv("DEV", false);
+    vi.stubEnv("VITE_LOCAL_WORKFLOW_DIAGNOSTICS", "1");
+    vi.stubEnv("VITE_API_BASE_URL", "http://localhost:8080");
+    expect(localDiagnosticsEnabled()).toBe(false);
+  });
+
   it("emits nothing with the local flag off", () => {
     vi.stubEnv("VITE_LOCAL_WORKFLOW_DIAGNOSTICS", "0");
     vi.stubEnv("VITE_API_BASE_URL", "http://localhost:8080");
@@ -208,6 +228,7 @@ describe("emitReviewDiagnostics", () => {
   });
 
   it("emits one compact synthetic JSON console line when enabled", () => {
+    vi.stubEnv("DEV", true);
     vi.stubEnv("VITE_LOCAL_WORKFLOW_DIAGNOSTICS", "1");
     vi.stubEnv("VITE_API_BASE_URL", "http://localhost:8080");
     const info = vi.spyOn(console, "info");

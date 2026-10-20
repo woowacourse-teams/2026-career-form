@@ -197,8 +197,16 @@ it.each([undefined, "AUTO", "REVIEW"] as const)(
     // All three displayed entries lack context metadata, including BLOCKED.
     // Literal order also checks the UI helper's available-first stable sort.
     const result = buildReviewDiagnostics(items, new Map());
+    const unobservedBinding = {
+      fieldOrdinal: null,
+      pageSectionOrdinal: null,
+      profileFieldKey: null,
+      profileSectionId: null,
+      profileRowOrdinal: null,
+    };
     expect(result.fields).toEqual([
       {
+        ...unobservedBinding,
         grade: "AUTO",
         reasonCode: null,
         sectionCategory: "none",
@@ -208,6 +216,7 @@ it.each([undefined, "AUTO", "REVIEW"] as const)(
         mappedKeyCategory: null,
       },
       {
+        ...unobservedBinding,
         grade: "REVIEW",
         reasonCode: "NO_FIELD_CONTEXT",
         sectionCategory: "none",
@@ -217,6 +226,7 @@ it.each([undefined, "AUTO", "REVIEW"] as const)(
         mappedKeyCategory: null,
       },
       {
+        ...unobservedBinding,
         grade: "BLOCKED",
         reasonCode: "STRUCTURE_BLOCKED",
         sectionCategory: "none",
