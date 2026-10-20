@@ -21,6 +21,7 @@ import { text, visible } from "./primitives";
 import { observedGradeLabel } from "./exam-grade-alias";
 import { searchNodes } from "./native-form-search-dom";
 import type { NativeField } from "./native-form-contract";
+import type { FailureReporter, WriteFailureCode } from "../write/failure";
 
 /**
  * The row controls a native field occupies. A search field resolves to its
@@ -188,19 +189,33 @@ function authorized(handle: FieldCandidateHandle, item: ReviewPlanItem) {
     return;
   return o;
 }
+function optionLabel(o: NativeOwnership, profileLabel: string) {
+  return o.field.dynamicOptions?.codeFormat === "OBSERVED"
+    ? observedGradeLabel(
+        profileLabel,
+        o.observedOptions.map((opt) => opt.label),
+      )
+    : profileLabel;
+}
+function choiceOptions(handle: FieldCandidateHandle) {
+  const el = handle.elements[0];
+  return el instanceof HTMLSelectElement
+    ? Array.from(el.options)
+    : handle.elements.filter(
+        (e): e is HTMLInputElement => e instanceof HTMLInputElement,
+      );
+}
+const choiceLabel = (e: HTMLOptionElement | HTMLInputElement) =>
+  text(
+    e instanceof HTMLOptionElement ? e.textContent : e.labels?.[0]?.textContent,
+  );
 function selectedOption(
   o: NativeOwnership,
   handle: FieldCandidateHandle,
   profileLabel: string,
 ): HTMLOptionElement | HTMLInputElement | undefined {
   const dynamic = o.field.dynamicOptions;
-  const label =
-    dynamic?.codeFormat === "OBSERVED"
-      ? observedGradeLabel(
-          profileLabel,
-          o.observedOptions.map((opt) => opt.label),
-        )
-      : profileLabel;
+  const label = optionLabel(o, profileLabel);
   const observed = o.observedOptions.filter((opt) => opt.label === label);
   const code =
     dynamic &&
@@ -213,21 +228,12 @@ function selectedOption(
       ? observed[0].code
       : o.field.options?.[label];
   if (!code) return;
-  const el = handle.elements[0];
-  const all =
-    el instanceof HTMLSelectElement
-      ? Array.from(el.options)
-      : (handle.elements as HTMLInputElement[]);
-  const labelOf = (e: HTMLOptionElement | HTMLInputElement) =>
-    text(
-      e instanceof HTMLOptionElement
-        ? e.textContent
-        : e.labels?.[0]?.textContent,
-    );
-  const options = all.filter((e) => labelOf(e) === label || e.value === code);
+  const options = choiceOptions(handle).filter(
+    (e) => choiceLabel(e) === label || e.value === code,
+  );
   if (
     options.length !== 1 ||
-    labelOf(options[0]) !== label ||
+    choiceLabel(options[0]) !== label ||
     options[0].value !== code ||
     options[0].disabled ||
     options[0].closest("optgroup:disabled")
@@ -235,6 +241,42 @@ function selectedOption(
     return;
   if (dynamic && options[0] !== observed[0]?.element) return;
   return options[0];
+}
+/**
+ * Whether the page offers the profile label: "absent" only when no
+ * non-placeholder option carries it at all (the profile value is not
+ * representable here); any other refusal of `selectedOption` (duplicate
+ * labels, code drift, a disabled option, element mismatch) is "structural".
+ */
+export function nativeOptionPresence(
+  o: NativeOwnership,
+  handle: FieldCandidateHandle,
+  profileLabel: string,
+): "present" | "absent" | "structural" {
+  if (selectedOption(o, handle, profileLabel)) return "present";
+  const label = optionLabel(o, profileLabel);
+  return label &&
+    choiceOptions(handle).some(
+      (e) => e.value !== "" && choiceLabel(e) === label,
+    )
+    ? "structural"
+    : "absent";
+}
+/** The failure code of a non-search native driver that did not write. */
+export function nativeDriverFailure(
+  handle: FieldCandidateHandle,
+  item: ReviewPlanItem,
+): WriteFailureCode {
+  const o = currentNativeOwner(handle);
+  if (!o || handle.elements.some((e) => !e.isConnected)) return "FIELD_CHANGED";
+  if (handle.elements.some((e) => e.matches(":disabled") || !visible(e, true)))
+    return "FIELD_DISABLED";
+  if (handle.elements.some((e) => "readOnly" in e && e.readOnly))
+    return "FIELD_READONLY";
+  return ["select", "radio"].includes(o.field.type) &&
+    nativeOptionPresence(o, handle, item.profileValue ?? "") === "absent"
+    ? "OPTION_UNMATCHED"
+    : "DRIVER_SELECTION_UNCONFIRMED";
 }
 export function nativeValueMatches(
   handle: FieldCandidateHandle,
@@ -356,10 +398,20 @@ export async function settleNativeDriver(
   item: ReviewPlanItem,
   signal: AbortSignal,
   current?: () => boolean,
+  report?: FailureReporter,
 ): Promise<boolean> {
   const o = currentNativeOwner(handle),
     driver = o?.field.driver;
-  if (!o || !driver || !nativeValueMatches(handle, item)) return false;
+  const failed = () => {
+    if (!signal.aborted)
+      report?.(
+        currentNativeOwner(handle)
+          ? "DRIVER_SELECTION_UNCONFIRMED"
+          : "FIELD_CHANGED",
+      );
+    return false;
+  };
+  if (!o || !driver || !nativeValueMatches(handle, item)) return failed();
   const ready = () =>
     !signal.aborted &&
     current?.() !== false &&
@@ -390,7 +442,7 @@ export async function settleNativeDriver(
       view.clearTimeout(timer);
       view.clearInterval(poll);
       signal.removeEventListener("abort", finish);
-      resolve(ready());
+      resolve(ready() || failed());
     };
     const check = () => {
       if (signal.aborted || current?.() === false || ready()) finish();
