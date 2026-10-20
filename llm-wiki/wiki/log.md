@@ -730,3 +730,11 @@
 - 4차 후보 파일(K66–K69) 전체 UTF-8 바이트의 SHA-256을 재확인하고, 아직 병합되지 않은 [CF-177 bundle](../raw/issues/CF-177/manifest.md)에 새 문서를 추가했다. 앞선 절과 문서는 바꾸지 않고 topic 절 세 개를 덧붙였다.
 - [Hplace 어댑터](topics/adapter-hplace.md), [개발 경계](topics/adapter-development.md), [필드 현황](topics/adapter-field-inventory.md)의 Current와 History를 갱신하고 생년월일 선택 앵커(K62 정정), 홍길동 예시 순서(K64 정정), 구조 미확인 칸 표시, 진단 로그 기본 꺼짐을 반영했다. 키별 집계는 바꾸지 않았다.
 - 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.
+
+## [2026-10-20] ingest | CF-177 Hplace 후속 보완 묶음과 저장 페이지 재로드 보고
+
+- Approval-Digest: 47b52e686c57595fd3b1f51c382fa6aa0bbe447631c0dab2b4b9c3c38cbc1bda
+- Source-Revision: b80992013b59475c28f3164e904c70355c3778d0
+- 5차 후보 파일(K70–K76, K75-1 포함) 전체 UTF-8 바이트의 SHA-256을 재확인하고, 아직 병합되지 않은 [CF-177 bundle](../raw/issues/CF-177/manifest.md)에 새 문서를 추가했다. 앞선 절과 문서는 바꾸지 않고 topic 절 세 개를 덧붙였다.
+- [Hplace 어댑터](topics/adapter-hplace.md), [개발 경계](topics/adapter-development.md), [필드 현황](topics/adapter-field-inventory.md)의 Current와 History를 갱신하고 칸 단위 독립 인식(K66 정정), native 실행기 효율, 안내 구분, 전 프로필 시드, 금지 동작·재실행 회귀, 저장 후 다시 연 페이지의 기존 행 보고, CI 한도를 반영했다. 키별 집계는 바꾸지 않았다.
+- 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.

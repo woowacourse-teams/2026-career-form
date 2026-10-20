@@ -70,7 +70,7 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [회사 어댑터 개발](topics/adapter-development.md) | 프론트 회사 어댑터와 백엔드 정책 경계 | 2026-10-20 |
 | [Greeting 플랫폼 판정과 실행 어댑터](topics/greeting-platform-routing.md) | BE의 Greeting 판정과 FE 어댑터 지정,문맥 검증 | 2026-09-27 |
 | [Greeting 공통 어댑터](topics/adapter-greeting.md) | 기업별 화면 차이와 안전한 필드 입력,검증 범위 | 2026-10-07 |
-| [Hplace 공통 어댑터](topics/adapter-hplace.md) | MRS2 실행 정책, 127키 현황, step 1–3 실화면 검증, 미검증 테넌트 시연 수정과 배포 경계 | 2026-10-20 |
+| [Hplace 공통 어댑터](topics/adapter-hplace.md) | MRS2 실행 정책, 127키 현황, step 1–3 실화면 검증, 칸 단위 인식·재실행 멱등성·저장 페이지 재로드 보고와 배포 경계 | 2026-10-20 |
 | [SK,현대 실시간 옵션 선택 보완](topics/adapter-live-option-selection.md) | 현재 회사 화면의 유일 옵션만 선택하는 어학 보완 | 2026-09-09 |
 | [현대 어댑터](topics/adapter-hyundai.md) | 현대 주소,국적,학력 수집,입력과 검증 제한 | 2026-09-08 |
 | [SK 어댑터](topics/adapter-sk.md) | SK 조건부 입력과 검증 제한 | 2026-09-08 |

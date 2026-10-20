@@ -100,3 +100,29 @@
 > Collected: 2026-10-20
 > Approval-Digest: 1f3a2c11feb57fc5644601525129931c8a94c47711ea779bde7c6e96b59ba32d
 > Source-Revision: 82bf5e6cc0a00110f3b8efaf36fad800055ad6ad
+
+이 절부터 아래 세 절은 2026-10-20에 별도로 승인된 5차 후보 K70–K76의 수집이다. 승인 대상은 후보 파일 `knowledge-candidates-r5.md` 전체 UTF-8 바이트이고 절의 Approval-Digest는 그 SHA-256이다. 앞선 절과 문서는 바꾸지 않았다.
+
+## adapter-hplace
+
+> Payload: [Hplace 후속 보완 묶음: 칸 단위 인식, 효율, 안내, 시드, 재실행 멱등성](documents/live-followup-bundle.md)
+> Supersedes: [Hplace 미검증 테넌트 후속 수정과 구조 미확인 칸 표시](documents/live-kdi-unverified.md)
+> Collected: 2026-10-20
+> Approval-Digest: 47b52e686c57595fd3b1f51c382fa6aa0bbe447631c0dab2b4b9c3c38cbc1bda
+> Source-Revision: b80992013b59475c28f3164e904c70355c3778d0
+
+## adapter-field-inventory
+
+> Payload: [Hplace 후속 보완 묶음: 칸 단위 인식, 효율, 안내, 시드, 재실행 멱등성](documents/live-followup-bundle.md)
+> Supersedes: [Hplace 미검증 테넌트 후속 수정과 구조 미확인 칸 표시](documents/live-kdi-unverified.md)
+> Collected: 2026-10-20
+> Approval-Digest: 47b52e686c57595fd3b1f51c382fa6aa0bbe447631c0dab2b4b9c3c38cbc1bda
+> Source-Revision: b80992013b59475c28f3164e904c70355c3778d0
+
+## adapter-development
+
+> Payload: [Hplace 후속 보완 묶음: 칸 단위 인식, 효율, 안내, 시드, 재실행 멱등성](documents/live-followup-bundle.md)
+> Supersedes: [Hplace 미검증 테넌트 후속 수정과 구조 미확인 칸 표시](documents/live-kdi-unverified.md)
+> Collected: 2026-10-20
+> Approval-Digest: 47b52e686c57595fd3b1f51c382fa6aa0bbe447631c0dab2b4b9c3c38cbc1bda
+> Source-Revision: b80992013b59475c28f3164e904c70355c3778d0

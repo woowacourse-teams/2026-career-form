@@ -2,8 +2,8 @@
 
 > Topic: adapter-field-inventory
 > Status: Current
-> Current: [CF-177 KDI·구조 미확인 근거](../../raw/issues/CF-177/documents/live-kdi-unverified.md)
-> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-field-inventory.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-field-inventory.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-field-inventory.md); [CF-94 근거](../../raw/issues/CF-94/documents/adapter-field-inventory.md); [CF-160 근거](../../raw/issues/CF-160/documents/adapter-field-inventory.md); [CF-168 근거](../../raw/issues/CF-168/documents/adapter-field-inventory.md); [CF-169 근거](../../raw/issues/CF-169/documents/adapter-field-inventory.md); [CF-177 근거](../../raw/issues/CF-177/documents/adapter-field-inventory.md); [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md); [CF-177 C12·C13·시연 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md); [CF-177 KDI·구조 미확인 근거](../../raw/issues/CF-177/documents/live-kdi-unverified.md)
+> Current: [CF-177 후속 보완 묶음 근거](../../raw/issues/CF-177/documents/live-followup-bundle.md)
+> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-field-inventory.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-field-inventory.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-field-inventory.md); [CF-94 근거](../../raw/issues/CF-94/documents/adapter-field-inventory.md); [CF-160 근거](../../raw/issues/CF-160/documents/adapter-field-inventory.md); [CF-168 근거](../../raw/issues/CF-168/documents/adapter-field-inventory.md); [CF-169 근거](../../raw/issues/CF-169/documents/adapter-field-inventory.md); [CF-177 근거](../../raw/issues/CF-177/documents/adapter-field-inventory.md); [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md); [CF-177 C12·C13·시연 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md); [CF-177 KDI·구조 미확인 근거](../../raw/issues/CF-177/documents/live-kdi-unverified.md); [CF-177 후속 보완 묶음 근거](../../raw/issues/CF-177/documents/live-followup-bundle.md)
 > Updated: 2026-10-20
 
 ## 현재 상태
@@ -378,7 +378,7 @@ BE 정적 규칙과 FE 수집·반복행 준비·검색·날짜·선택 실행�
 | 프로젝트154 발주처·근무지(사이트 필수) | gsenc·abl 빈칸 유지 | 프로필 키 없음. 확인 필요에 표시하지 않으므로 사용자가 저장 전 직접 입력. abl 기여도도 미기입 |
 | 자격증 등록번호 | 3사 실구조 maxlength 64, licenseCode 선택 뒤 활성 | REGISTRATION gate가 닫히면 미수집(기존과 같음) |
 | 병역 기간(복무 시작·종료) | 시작일 토큰 `:YM`은 월, `:YMD`(huonsgroup)는 일까지 기입·비교 | 그 밖의 토큰은 거부. 시작일 미인식 시 병역 하위가 함께 비던 연쇄를 수정 |
-| 상세 기본정보(영문 이름·생년월일·성별·국적·보훈·장애·병역) | 섹션 13에 주소 제어가 전혀 없는 화면(com2us)도 처리 | 일부만 있는 주소 구조는 차단 유지 |
+| 상세 기본정보(영문 이름·생년월일·성별·국적·보훈·장애·병역) | 플랫폼 지문만 인식 조건이며 영문 이름·생년월일·현주소·비상연락처를 칸 단위로 독립 검증(com2us·kdi처럼 칸이 없어도 처리) | 형식이 다른 칸만 입력 불가 표시, 나머지는 정상 처리 |
 | step 2 합성 builder 대조 | 3사 정제 fixture와 게이팅 속성 일치 | gsenc 대학 계열 없음, gsenc·abl 대학원 입학구분 없음, abl 전공 평점, careerhyundai 고교 주야간·YMD 학력 날짜, abl step 2 고교 없음 |
 | 다전공 2·3번째 전공 주야간 | 주전공에만 연결(main-major-only, 기존과 같음) | 프로필의 주야간은 학교 단위 값 하나 |
 | 1단계 구조 미확인 칸 | 화면에 있고 열려 있으며 프로필 값이 있지만 상세·기본 계약을 통과하지 못한 칸은 `입력 불가(화면 구조 확인 불가)`로 확인 필요에 표시 | 화면에 없는 칸·닫힌 조건부 칸·값 없는 칸·범용 실행은 제외 |
