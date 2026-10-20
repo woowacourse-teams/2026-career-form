@@ -2,8 +2,8 @@
 
 > Issue: CF-304
 > Collected: 2026-10-20
-> Approval-Digest: 1108aa1ba82a47216d323d6afa6b94c3701f461a2395b504bead10a29d77c15e
-> Source-Revision: 18e5479736319c06365d7f6b33e8aea898f1d890
+> Approval-Digest: 7a00004c1382c5d9a3dc7c67868c7828594f155b5e905e79b2a5d00585d37e3d
+> Source-Revision: f0dc5cfb9ebeb2aaa4dc2f4806d0fc7f7063c16a
 
 ## frontend-browser-testing
 
