@@ -8,7 +8,6 @@ import {
 
 export default defineConfig({
   test: {
-    maxWorkers: 1,
     reporters: ["default", createRequireBrowserSuite()],
     css: {
       include: /WorkflowResults\.module\.css|sidepanel\/App\.module\.css/,
