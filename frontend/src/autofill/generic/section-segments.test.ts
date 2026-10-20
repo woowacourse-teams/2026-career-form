@@ -178,7 +178,7 @@ function fixture(name: string): string {
 
 // Collecting the large sanitized form is slow under JSDOM; same bound as its
 // existing snapshot test.
-const LARGE_FIXTURE_TIMEOUT_MS = 30_000;
+const LARGE_FIXTURE_TIMEOUT_MS = 120_000;
 
 describe("segmentGenericSections existing sanitized fixtures (read-only)", () => {
   it("keeps the heading-less split-email form as one section", () => {

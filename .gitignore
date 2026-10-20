@@ -15,6 +15,7 @@ frontend/node_modules/
 frontend/.output/
 frontend/.wxt/
 frontend/coverage/
+frontend/.vitest-reports/
 
 # IntelliJ IDEA
 .idea/

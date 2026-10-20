@@ -309,7 +309,7 @@ describe("gradeGenericField on sanitized fixtures", () => {
     expect(gradeTable("lg-ai-research-birth-split-email", table)).toEqual(
       Object.fromEntries(Object.entries(table).map(([k, v]) => [k, v.grade])),
     );
-  }, 30_000);
+  }, 120_000);
 
   it("grades sk-careers-application-form fields as listed", () => {
     const table: Record<string, Mock> = {
@@ -366,7 +366,7 @@ describe("gradeGenericField on sanitized fixtures", () => {
     expect(gradeTable("sk-careers-application-form", table)).toEqual(
       Object.fromEntries(Object.entries(table).map(([k, v]) => [k, v.grade])),
     );
-  }, 30_000);
+  }, 120_000);
 });
 
 describe("gradeGenericField other-person context", () => {
@@ -500,7 +500,7 @@ describe("gradeGenericField other-person context on sanitized fixtures", () => {
     expect(
       gradeByName(fields, /^추천인 이름/, "personal.personal.koreanFamilyName"),
     ).toEqual(blocked);
-  }, 30_000);
+  }, 120_000);
 
   it("keeps the applicant's own fields of lg-ai-research-birth-split-email unchanged", () => {
     const fields = collectFields("lg-ai-research-birth-split-email");
@@ -510,7 +510,7 @@ describe("gradeGenericField other-person context on sanitized fixtures", () => {
     expect(
       gradeByName(fields, /^이름/, "personal.personal.koreanFamilyName"),
     ).toEqual({ grade: "AUTO" });
-  }, 30_000);
+  }, 120_000);
 });
 
 describe("gradeGenericField composite name recipes", () => {

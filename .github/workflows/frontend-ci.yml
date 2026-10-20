@@ -9,9 +9,14 @@ permissions:
   contents: read
 
 jobs:
-  frontend:
+  test:
+    name: 테스트 shard ${{ matrix.shard }}/8
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
     defaults:
       run:
         working-directory: frontend
@@ -33,5 +38,48 @@ jobs:
           npm exec -- playwright --version
           node --input-type=module -e 'import { chromium } from "playwright"; const browser = await chromium.launch(); console.log("Chromium", browser.version()); await browser.close();'
           uname -sr
-      - name: 단위 및 브라우저 테스트와 통합 커버리지 검증
-        run: npm run coverage
+          nproc
+      # One worker per shard: parallel jsdom workers on one hosted runner made
+      # heavy fixture tests 2-3x slower and hit their timeouts (CF-304).
+      - name: 단위 및 브라우저 테스트 shard 실행
+        run: npm run coverage:shard -- --shard=${{ matrix.shard }}/8 --maxWorkers=1
+      - name: shard 보고서 업로드
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: vitest-blob-${{ matrix.shard }}
+          path: frontend/.vitest-reports/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
+  coverage:
+    name: 통합 커버리지 검증
+    needs: test
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: 프론트엔드 의존성 설치
+        run: npm ci
+      - name: shard 보고서 다운로드
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: vitest-blob-*
+          path: frontend/.vitest-reports/
+          merge-multiple: true
+      - name: shard 보고서 수 확인
+        run: |
+          ls -l .vitest-reports
+          test "$(find .vitest-reports -name 'blob-*-8.json' | wc -l)" -eq 8
+      - name: 병합 결과의 테스트, 브라우저 수집과 커버리지 기준 검증
+        run: npm run coverage:merge

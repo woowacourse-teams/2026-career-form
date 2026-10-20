@@ -698,3 +698,10 @@
 - Source-Revision: e0730141498ad616f3f0325caac3fc196e998bf5
 - 승인한 후보 4개를 [CF-296 bundle](../raw/issues/CF-296/manifest.md)에 기록했다.
 - [비동기 품질 처리](topics/async-quality-observation.md)와 [보고 시점](topics/quality-report-lifecycle.md)을 현재 구조로 갱신했다.
+
+## [2026-10-20] ingest | CF-304 프론트 테스트 shard 분할과 병합 검증
+
+- Approval-Digest: 1353a9195e46ac8fd65e3b6c6fb4ce01fc241997b71801d04ea16584531abb88
+- Source-Revision: c200452ef88ebab2ecbb148a70f58d54eb229f92
+- 승인한 후보 6개(ADR, topic 갱신, Vitest 동작 사실, shard 수 결정 근거, 제품 수집 캐시 근거, 진단 근거)를 [CF-304 bundle](../raw/issues/CF-304/manifest.md)에 기록했다.
+- [프론트 브라우저 테스트](topics/frontend-browser-testing.md)의 CI 경계를 shard 실행과 병합 검증으로 갱신하고 CF-178 실행 경계를 History로 옮겼다.

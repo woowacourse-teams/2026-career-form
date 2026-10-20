@@ -14,7 +14,7 @@ const FIXTURE = join(
   process.cwd(),
   "fixtures/dom-snapshots/sk-careers-application-form/sanitized.html",
 );
-const TIMEOUT_MS = 30_000;
+const TIMEOUT_MS = 120_000;
 
 beforeEach(() => {
   (
