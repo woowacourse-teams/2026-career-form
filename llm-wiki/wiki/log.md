@@ -701,7 +701,7 @@
 
 ## [2026-10-20] ingest | CF-304 프론트 테스트 shard 분할과 병합 검증
 
-- Approval-Digest: 7a00004c1382c5d9a3dc7c67868c7828594f155b5e905e79b2a5d00585d37e3d
-- Source-Revision: f0dc5cfb9ebeb2aaa4dc2f4806d0fc7f7063c16a
-- 승인한 후보 5개(ADR, topic 갱신, Vitest 동작 사실, shard 수 결정 근거, 진단 근거)를 [CF-304 bundle](../raw/issues/CF-304/manifest.md)에 기록했다.
+- Approval-Digest: 1353a9195e46ac8fd65e3b6c6fb4ce01fc241997b71801d04ea16584531abb88
+- Source-Revision: c200452ef88ebab2ecbb148a70f58d54eb229f92
+- 승인한 후보 6개(ADR, topic 갱신, Vitest 동작 사실, shard 수 결정 근거, 제품 수집 캐시 근거, 진단 근거)를 [CF-304 bundle](../raw/issues/CF-304/manifest.md)에 기록했다.
 - [프론트 브라우저 테스트](topics/frontend-browser-testing.md)의 CI 경계를 shard 실행과 병합 검증으로 갱신하고 CF-178 실행 경계를 History로 옮겼다.

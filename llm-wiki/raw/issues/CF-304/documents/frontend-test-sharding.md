@@ -2,7 +2,7 @@
 
 근거: [CF-304](https://github.com/woowacourse-teams/2026-career-form/issues/304).
 
-Approval-Digest: 7a00004c1382c5d9a3dc7c67868c7828594f155b5e905e79b2a5d00585d37e3d
+Approval-Digest: 1353a9195e46ac8fd65e3b6c6fb4ce01fc241997b71801d04ea16584531abb88
 
 ## 실행 계약
 
@@ -13,6 +13,13 @@ Approval-Digest: 7a00004c1382c5d9a3dc7c67868c7828594f155b5e905e79b2a5d00585d37e3
 - CI는 `npm run coverage:shard -- --shard=<i>/8 --maxWorkers=1`을 여덟 job에서 실행한다. 각 shard는 기본 보고를 로그에 출력하고 blob 보고서를 artifact(보존 1일)로 올린다.
 - `통합 커버리지 검증` job은 보고서 여덟 개가 모두 있는지 확인한 뒤 `npm run coverage:merge`를 실행한다. 테스트 실패, browser 명세 미수집, 커버리지 기준 미달 중 하나라도 있으면 실패한다.
 - `continue-on-error`나 재시도로 실패를 성공으로 바꾸지 않는다. 프론트엔드 CI는 브랜치 보호 필수 검사에 포함되지 않는다.
+
+## 제품 수집 캐시와 테스트 제한 시간
+
+- `genericFormGroupFor(element)`는 입력칸마다 `genericFormGroups(document)`로 문서 전체 그룹을 다시 계산했다. `genericFormGroups(root)`는 이제 `cachedDomRead(root, "generic-form-groups", ...)`로 동기 읽기 패스 안에서만 결과를 재사용한다. 패스 밖이나 다음 패스에서는 다시 계산한다(`generic-form-groups.test.ts`).
+- 로컬 단일 워커 coverage 기준으로 무거운 fixture 6개 파일이 189초에서 134초로, 전체 테스트 시간 합계가 943초에서 774초로 줄었다. 결과값 고정 테스트를 포함한 전체 테스트가 기대값 변경 없이 통과했다.
+- 캐시 뒤 남은 비용은 `collectSemanticContext` 37%, `genericLabelOf` 22%, `trustedLabels` 18%다(대형 범용 폼 기준).
+- 상태를 바꿔 가며 분석을 반복하는 테스트는 평소 CI에서도 15~20초가 걸려 느린 러너에서 30초를 넘었다. 이미 30초를 명시한 실사이트 fixture 테스트 6개 파일(`generic-analysis.integration`, `structure-loop`, `section-segments`, `dom-snapshot.sk-careers`, `dom-snapshot.title-only`, `field-grading`)의 제한을, 같은 종류 테스트가 쓰던 120초로 맞췄다. unit 기본 `testTimeout` 15초와 단언, 기대값은 그대로다.
 
 ## Vitest 4.1.10 동작
 
