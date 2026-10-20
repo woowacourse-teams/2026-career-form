@@ -2,9 +2,9 @@
 
 > Topic: adapter-field-inventory
 > Status: Current
-> Current: [CF-177 현재 근거](../../raw/issues/CF-177/documents/adapter-field-inventory.md)
-> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-field-inventory.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-field-inventory.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-field-inventory.md); [CF-94 근거](../../raw/issues/CF-94/documents/adapter-field-inventory.md); [CF-160 근거](../../raw/issues/CF-160/documents/adapter-field-inventory.md); [CF-168 근거](../../raw/issues/CF-168/documents/adapter-field-inventory.md); [CF-169 근거](../../raw/issues/CF-169/documents/adapter-field-inventory.md); [CF-177 근거](../../raw/issues/CF-177/documents/adapter-field-inventory.md)
-> Updated: 2026-10-19
+> Current: [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md)
+> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-field-inventory.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-field-inventory.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-field-inventory.md); [CF-94 근거](../../raw/issues/CF-94/documents/adapter-field-inventory.md); [CF-160 근거](../../raw/issues/CF-160/documents/adapter-field-inventory.md); [CF-168 근거](../../raw/issues/CF-168/documents/adapter-field-inventory.md); [CF-169 근거](../../raw/issues/CF-169/documents/adapter-field-inventory.md); [CF-177 근거](../../raw/issues/CF-177/documents/adapter-field-inventory.md); [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md)
+> Updated: 2026-10-20
 
 ## 현재 상태
 
@@ -154,13 +154,13 @@ BE 정적 규칙과 FE 수집·반복행 준비·검색·날짜·선택 실행�
 최종 자동 검증은 FE 2,205개 통과·19개 건너뜀, BE 381개 통과·실패 없음, 타입·lint·빌드·하네스와 독립 리뷰 통과다. 전체 FE 포맷 검사의 기존 CJ fixture 구문 오류는 별도이며 변경 파일 포맷을 확인했다. 부전공만 있는 대학과 재직중의 조건부 날짜는 자동 회귀 범위로 구분한다. 성별 및 숫자점수형·등급형 시험을 포함한 합성 테스트 프로필을 사용하며 실제 값·계정·세션을 문서에 기록하지 않는다. 다른 회사 전체 양식이나 저장·제출 성공을 주장하지 않는다.
 
 
-## Hplace 공통 정책 현황 (CF-177, 2026-10-19)
+## Hplace 공통 정책 현황 (CF-177, 2026-10-19, 2026-10-20 보강)
 
-다른 회사의 위 현황은 유지한다. 아래 표는 [CF-177 승인 근거](../../raw/issues/CF-177/documents/adapter-field-inventory.md)의 Hplace 전수 대조이며 설치 성공률이 아니다.
+다른 회사의 위 현황은 유지한다. 아래 표는 [CF-177 승인 근거](../../raw/issues/CF-177/documents/adapter-field-inventory.md)의 Hplace 전수 대조이며 설치 성공률이 아니다. 2026-10-20 step 2·3 실화면 수정으로 바뀐 실행 조건은 [step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md)에 따라 해당 행과 아래 보강 절에 반영했다. 키별 지원 분류 수는 바꾸지 않았다.
 
 ### 현재 상태
 
-아래 프로필 전수표는 **13범주 127키를 각각 한 번** 포함한다. 등록/step1·2·3 범위는 제한 열에서 구분하며 v1/JOBDA 입력은 모든 키에 공통으로 구조 미확인·인증 후 사용자 화면 대기다. `구현`은 활성 로컬 정책과 FE 실행 경로가 있다는 뜻이며 운영 DB 활성화나 최신 설치 확장 성공을 뜻하지 않는다. 모든 신규 v4 항목은 설치 평가 PENDING-live다.
+아래 프로필 전수표는 **13범주 127키를 각각 한 번** 포함한다. 등록/step1·2·3 범위는 제한 열에서 구분하며 v1/JOBDA 입력은 모든 키에 공통으로 구조 미확인·인증 후 사용자 화면 대기다. `구현`은 활성 로컬 정책과 FE 실행 경로가 있다는 뜻이며 운영 DB 활성화를 뜻하지 않는다. 2026-10-20 live-eval 하네스에서 `1759db5`와 `f586619` CLEAN 빌드로 abl·careerhyundai·gsenc의 step 1–3 실화면 평가를 통과했다. 이는 단계 단위 결과이며 이 표의 각 키가 모든 테넌트에서 입력됐다는 뜻은 아니다. C12–C14와 포커스 없는 창·사이드 패널(H7)은 남아 있다.
 
 #### 산출 방법과 근거
 
@@ -201,48 +201,48 @@ BE 정적 규칙과 FE 수집·반복행 준비·검색·날짜·선택 실행�
 
 | 대상 | 현재 구현·검증 | 제한 |
 | --- | --- | --- |
-| `education.highSchool.academicProcess` — 학업과정 | 미지원 사유: 의미 불일치 | 검정고시 학업과정을 graduationTypeCode/고교 계열로 대체하지 않음; 현 정책은 completionStatus만 연결 |
+| `education.highSchool.academicProcess` — 학업과정 | 미지원 사유: 의미 불일치 | 검정고시 학업과정을 graduationTypeCode/고교 계열로 대체하지 않음; 현 정책은 completionStatus만 연결; `대입 검정고시` 프로필은 고교 섹션 전체 입력 불가, 08 선택지를 정책에 넣지 않고 `01 졸업`을 체크하지 않음(전용 binding은 실화면 검증 뒤 별도 후보, H4) |
 | `education.highSchool.qualificationPassDate` — 합격일자 | 미지원 사유: 의미 불일치 | 검정고시 합격일과 일반 졸업일의 동일 의미 계약 없음 |
-| `education.highSchool.schoolName` — 학교명 | 구현 / 정책 키: `hplace.mrs2.highschool.academyName` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·YM 기간 검증 |
-| `education.highSchool.attendanceType` — 주·야간 | 구현 / 정책 키: `hplace.mrs2.highschool.dayOrNight` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·YM 기간 검증 |
-| `education.highSchool.completionStatus` — 재학 상태 | 구현 / 정책 키: `hplace.mrs2.highschool.graduationTypeCode` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·YM 기간 검증 |
-| `education.highSchool.schoolRegion` — 학교 소재지 | 구현 / 정책 키: `hplace.mrs2.highschool.locationCode` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·YM 기간 검증 |
-| `education.highSchool.startDate` — 입학일 | 구현 / 정책 키: `hplace.mrs2.highschool.entranceDate` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·YM 기간 검증 |
-| `education.highSchool.endDate` — 졸업일 | 구현 / 정책 키: `hplace.mrs2.highschool.graduationDate` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·YM 기간 검증 |
+| `education.highSchool.schoolName` — 학교명 | 구현 / 정책 키: `hplace.mrs2.highschool.academyName` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·섹션별 YM/YMD 기간 검증 |
+| `education.highSchool.attendanceType` — 주·야간 | 구현 / 정책 키: `hplace.mrs2.highschool.dayOrNight` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·섹션별 YM/YMD 기간 검증; 표준값 `attendance:day`/`attendance:night`는 정책 `normalizations`로 `주간`/`야간`에 대응 |
+| `education.highSchool.completionStatus` — 재학 상태 | 구현 / 정책 키: `hplace.mrs2.highschool.graduationTypeCode` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·섹션별 YM/YMD 기간 검증; 검색 필드 의존 driver는 같은 위젯 query로 판정, 위젯 미인식 시 보류하고 driver 실패 시 학교 검색도 보류 |
+| `education.highSchool.schoolRegion` — 학교 소재지 | 구현 / 정책 키: `hplace.mrs2.highschool.locationCode` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·섹션별 YM/YMD 기간 검증 |
+| `education.highSchool.startDate` — 입학일 | 구현 / 정책 키: `hplace.mrs2.highschool.entranceDate` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·섹션별 YM/YMD 기간 검증; 정책 formats `["YM","YMD"]`, 정밀도는 섹션 `data-dates` 토큰(careerhyundai 학력 YMD, gsenc·abl 학력 YM) |
+| `education.highSchool.endDate` — 졸업일 | 구현 / 정책 키: `hplace.mrs2.highschool.graduationDate` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·섹션별 YM/YMD 기간 검증; 정책 formats `["YM","YMD"]`, 정밀도는 섹션 `data-dates` 토큰(careerhyundai 학력 YMD, gsenc·abl 학력 YM) |
 | `education.university.schoolType` — 학교 유형 | 미지원 사유: 의미 불일치 | 전문대학/대학교와 degreeLevel(전문학사/학사)은 별도 키; 학위 키만 연결 |
-| `education.university.degreeLevel` — 학위구분 | 구현 / 정책 키: `hplace.mrs2.college.degreeTypeCode` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·YM 기간 검증 |
-| `education.university.schoolName` — 학교명 | 구현 / 정책 키: `hplace.mrs2.college.academyName` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·YM 기간 검증 |
-| `education.university.attendanceType` — 주·야간 | 구현 / 정책 키: `hplace.mrs2.college.major0.dayOrNight` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·YM 기간 검증; 주전공 한 행에만 연결 |
-| `education.university.startDate` — 입학일 | 구현 / 정책 키: `hplace.mrs2.college.entranceDate` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·YM 기간 검증 |
-| `education.university.endDate` — 졸업일 | 구현 / 정책 키: `hplace.mrs2.college.graduationDate` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·YM 기간 검증 |
-| `education.university.completionStatus` — 재학 상태 | 구현 / 정책 키: `hplace.mrs2.college.graduationTypeCode` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·YM 기간 검증 |
-| `education.university.schoolRegion` — 학교 소재지 | 구현 / 정책 키: `hplace.mrs2.college.locationCode` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·YM 기간 검증 |
-| `education.university.gpaScore` — 평점 | 구현 / 정책 키: `hplace.mrs2.college.score` | step2; 동일 학교 숫자 GPA pair, score→scale 활성/정확 옵션/두 값 최종 확인; PASS/FAIL 제외 |
+| `education.university.degreeLevel` — 학위구분 | 구현 / 정책 키: `hplace.mrs2.college.degreeTypeCode` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·섹션별 YM/YMD 기간 검증; 검색 필드 의존 driver는 같은 위젯 query로 판정, 위젯 미인식 시 보류하고 driver 실패 시 학교 검색도 보류 |
+| `education.university.schoolName` — 학교명 | 구현 / 정책 키: `hplace.mrs2.college.academyName` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·섹션별 YM/YMD 기간 검증 |
+| `education.university.attendanceType` — 주·야간 | 구현 / 정책 키: `hplace.mrs2.college.major0.dayOrNight` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·섹션별 YM/YMD 기간 검증; 주전공 한 행에만 연결; 표준값 `attendance:day`/`attendance:night`는 정책 `normalizations`로 `주간`/`야간`에 대응 |
+| `education.university.startDate` — 입학일 | 구현 / 정책 키: `hplace.mrs2.college.entranceDate` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·섹션별 YM/YMD 기간 검증; 정책 formats `["YM","YMD"]`, 정밀도는 섹션 `data-dates` 토큰(careerhyundai 학력 YMD, gsenc·abl 학력 YM) |
+| `education.university.endDate` — 졸업일 | 구현 / 정책 키: `hplace.mrs2.college.graduationDate` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·섹션별 YM/YMD 기간 검증; 정책 formats `["YM","YMD"]`, 정밀도는 섹션 `data-dates` 토큰(careerhyundai 학력 YMD, gsenc·abl 학력 YM) |
+| `education.university.completionStatus` — 재학 상태 | 구현 / 정책 키: `hplace.mrs2.college.graduationTypeCode` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·섹션별 YM/YMD 기간 검증 |
+| `education.university.schoolRegion` — 학교 소재지 | 구현 / 정책 키: `hplace.mrs2.college.locationCode` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·섹션별 YM/YMD 기간 검증 |
+| `education.university.gpaScore` — 평점 | 구현 / 정책 키: `hplace.mrs2.college.score` | step2; 동일 학교 숫자 GPA pair, score→scale 활성/정확 옵션/두 값 최종 확인; PASS/FAIL 제외; 사이트가 정규화한 자기 기입(합성 `3.650` → `3.65`)은 두 값이 십진수이고 수치가 같을 때만 같은 값 |
 | `education.university.gpaScale` — 기준평점 | 구현 / 정책 키: `hplace.mrs2.college.perfectScore` | step2; 동일 학교 숫자 GPA pair, score→scale 활성/정확 옵션/두 값 최종 확인; PASS/FAIL 제외 |
 | `education.university.totalCredits` — 총 이수학점 | 미지원 사유: 의미 불일치 | 한국타이어 majorCredits는 전공 이수학점; 총 이수학점으로 대체 금지 |
-| `education.university.majorField` — 주전공 계열 | 구현 / 정책 키: `hplace.mrs2.college.major0.majorCategoryCode` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·YM 기간 검증; 세부 계열 정확 일치만(넓은 프로필 계열 대부분 수동, 기타 가능) |
-| `education.university.majorName` — 주전공명 | 구현 / 정책 키: `hplace.mrs2.college.major0.majorName`, `hplace.mrs2.college.major0.majorTypeCode` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·YM 기간 검증 |
-| `education.university.transferStatus` — 편입유무 | 구현 / 정책 키: `hplace.mrs2.college.entranceTypeCode` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·YM 기간 검증 |
+| `education.university.majorField` — 주전공 계열 | 구현 / 정책 키: `hplace.mrs2.college.major0.majorCategoryCode` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·섹션별 YM/YMD 기간 검증; 세부 계열 정확 일치만(넓은 프로필 계열 대부분 수동, 기타 가능) |
+| `education.university.majorName` — 주전공명 | 구현 / 정책 키: `hplace.mrs2.college.major0.majorName`, `hplace.mrs2.college.major0.majorTypeCode` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·섹션별 YM/YMD 기간 검증 |
+| `education.university.transferStatus` — 편입유무 | 구현 / 정책 키: `hplace.mrs2.college.entranceTypeCode` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·섹션별 YM/YMD 기간 검증 |
 | `education.university.doubleMajorStatus` — 복수전공유무 | 구현 / 정책 키: `hplace.mrs2.college.major1.majorName`, `hplace.mrs2.college.major2.majorName` | step2; universityAdditionalMajors의 간접 소비/유무 검증·압축 슬롯 1/2; 별도 유무 칸 직접 쓰기 아님; 중첩 부모 보존 |
 | `education.university.minorStatus` — 부전공유무 | 구현 / 정책 키: `hplace.mrs2.college.major1.majorName`, `hplace.mrs2.college.major2.majorName` | step2; universityAdditionalMajors의 간접 소비/유무 검증·압축 슬롯 1/2; 별도 유무 칸 직접 쓰기 아님; 중첩 부모 보존 |
 | `education.university.additionalMajorField` — 복수전공 계열 | 구현 / 정책 키: `hplace.mrs2.college.major1.majorCategoryCode`, `hplace.mrs2.college.major2.majorCategoryCode` | step2; universityAdditionalMajors의 간접 소비/유무 검증·압축 슬롯 1/2; 별도 유무 칸 직접 쓰기 아님; 중첩 부모 보존; 세부 계열 정확 일치만(넓은 프로필 계열 대부분 수동, 기타 가능) |
 | `education.university.additionalMajorName` — 복수전공명 | 구현 / 정책 키: `hplace.mrs2.college.major1.majorName`, `hplace.mrs2.college.major1.majorTypeCode`, `hplace.mrs2.college.major1.majorCategoryCode`, `hplace.mrs2.college.major2.majorName`, `hplace.mrs2.college.major2.majorTypeCode`, `hplace.mrs2.college.major2.majorCategoryCode` | step2; universityAdditionalMajors의 간접 소비/유무 검증·압축 슬롯 1/2; 별도 유무 칸 직접 쓰기 아님; 중첩 부모 보존 |
 | `education.university.minorField` — 부전공 계열 | 구현 / 정책 키: `hplace.mrs2.college.major1.majorCategoryCode`, `hplace.mrs2.college.major2.majorCategoryCode` | step2; universityAdditionalMajors의 간접 소비/유무 검증·압축 슬롯 1/2; 별도 유무 칸 직접 쓰기 아님; 중첩 부모 보존; 세부 계열 정확 일치만(넓은 프로필 계열 대부분 수동, 기타 가능) |
 | `education.university.minorName` — 부전공명 | 구현 / 정책 키: `hplace.mrs2.college.major1.majorName`, `hplace.mrs2.college.major2.majorName` | step2; universityAdditionalMajors의 간접 소비/유무 검증·압축 슬롯 1/2; 별도 유무 칸 직접 쓰기 아님; 중첩 부모 보존 |
-| `education.graduateSchool.degreeLevel` — 학위구분 | 구현 / 정책 키: `hplace.mrs2.graduateSchool.degreeTypeCode` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·YM 기간 검증 |
+| `education.graduateSchool.degreeLevel` — 학위구분 | 구현 / 정책 키: `hplace.mrs2.graduateSchool.degreeTypeCode` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·섹션별 YM/YMD 기간 검증; 검색 필드 의존 driver는 같은 위젯 query로 판정, 위젯 미인식 시 보류하고 driver 실패 시 학교 검색도 보류 |
 | `education.graduateSchool.combinedDegreeStatus` — 석박사 통합여부 | 미지원 사유: 의미 불일치 | 확인된 학위 선택지는 석사/박사; 통합학위 선택·변환 없음 |
 | `education.graduateSchool.country` — 국가 | 미지원 사유: 의미 불일치 | locationCode 학교 소재지와 국가 프로필을 동일시하지 않음 |
-| `education.graduateSchool.schoolName` — 학교명 | 구현 / 정책 키: `hplace.mrs2.graduateSchool.academyName` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·YM 기간 검증 |
-| `education.graduateSchool.attendanceType` — 주·야간 | 구현 / 정책 키: `hplace.mrs2.graduateSchool.major0.dayOrNight` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·YM 기간 검증; 주전공 한 행에만 연결 |
-| `education.graduateSchool.schoolRegion` — 학교 소재지 | 구현 / 정책 키: `hplace.mrs2.graduateSchool.locationCode` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·YM 기간 검증 |
-| `education.graduateSchool.startDate` — 입학일 | 구현 / 정책 키: `hplace.mrs2.graduateSchool.entranceDate` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·YM 기간 검증 |
-| `education.graduateSchool.endDate` — 졸업일 | 구현 / 정책 키: `hplace.mrs2.graduateSchool.graduationDate` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·YM 기간 검증 |
-| `education.graduateSchool.admissionType` — 입학구분 | 구현 / 정책 키: `hplace.mrs2.graduateSchool.entranceTypeCode` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·YM 기간 검증 |
-| `education.graduateSchool.completionStatus` — 졸업구분 | 구현 / 정책 키: `hplace.mrs2.graduateSchool.graduationTypeCode` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·YM 기간 검증 |
-| `education.graduateSchool.gpaScore` — 평점 | 구현 / 정책 키: `hplace.mrs2.graduateSchool.score` | step2; 동일 학교 숫자 GPA pair, score→scale 활성/정확 옵션/두 값 최종 확인; PASS/FAIL 제외 |
+| `education.graduateSchool.schoolName` — 학교명 | 구현 / 정책 키: `hplace.mrs2.graduateSchool.academyName` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·섹션별 YM/YMD 기간 검증 |
+| `education.graduateSchool.attendanceType` — 주·야간 | 구현 / 정책 키: `hplace.mrs2.graduateSchool.major0.dayOrNight` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·섹션별 YM/YMD 기간 검증; 주전공 한 행에만 연결; 표준값 `attendance:day`/`attendance:night`는 정책 `normalizations`로 `주간`/`야간`에 대응 |
+| `education.graduateSchool.schoolRegion` — 학교 소재지 | 구현 / 정책 키: `hplace.mrs2.graduateSchool.locationCode` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·섹션별 YM/YMD 기간 검증 |
+| `education.graduateSchool.startDate` — 입학일 | 구현 / 정책 키: `hplace.mrs2.graduateSchool.entranceDate` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·섹션별 YM/YMD 기간 검증; 정책 formats `["YM","YMD"]`, 정밀도는 섹션 `data-dates` 토큰(careerhyundai 학력 YMD, gsenc·abl 학력 YM) |
+| `education.graduateSchool.endDate` — 졸업일 | 구현 / 정책 키: `hplace.mrs2.graduateSchool.graduationDate` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·섹션별 YM/YMD 기간 검증; 정책 formats `["YM","YMD"]`, 정밀도는 섹션 `data-dates` 토큰(careerhyundai 학력 YMD, gsenc·abl 학력 YM) |
+| `education.graduateSchool.admissionType` — 입학구분 | 구현 / 정책 키: `hplace.mrs2.graduateSchool.entranceTypeCode` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·섹션별 YM/YMD 기간 검증 |
+| `education.graduateSchool.completionStatus` — 졸업구분 | 구현 / 정책 키: `hplace.mrs2.graduateSchool.graduationTypeCode` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·섹션별 YM/YMD 기간 검증 |
+| `education.graduateSchool.gpaScore` — 평점 | 구현 / 정책 키: `hplace.mrs2.graduateSchool.score` | step2; 동일 학교 숫자 GPA pair, score→scale 활성/정확 옵션/두 값 최종 확인; PASS/FAIL 제외; 사이트가 정규화한 자기 기입(합성 `3.650` → `3.65`)은 두 값이 십진수이고 수치가 같을 때만 같은 값 |
 | `education.graduateSchool.gpaScale` — 만점기준 | 구현 / 정책 키: `hplace.mrs2.graduateSchool.perfectScore` | step2; 동일 학교 숫자 GPA pair, score→scale 활성/정확 옵션/두 값 최종 확인; PASS/FAIL 제외 |
-| `education.graduateSchool.majorField` — 주전공 계열 | 구현 / 정책 키: `hplace.mrs2.graduateSchool.major0.majorCategoryCode` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·YM 기간 검증; 세부 계열 정확 일치만(넓은 프로필 계열 대부분 수동, 기타 가능) |
-| `education.graduateSchool.majorName` — 주전공명 | 구현 / 정책 키: `hplace.mrs2.graduateSchool.major0.majorName`, `hplace.mrs2.graduateSchool.major0.majorTypeCode` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·YM 기간 검증 |
+| `education.graduateSchool.majorField` — 주전공 계열 | 구현 / 정책 키: `hplace.mrs2.graduateSchool.major0.majorCategoryCode` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·섹션별 YM/YMD 기간 검증; 세부 계열 정확 일치만(넓은 프로필 계열 대부분 수동, 기타 가능) |
+| `education.graduateSchool.majorName` — 주전공명 | 구현 / 정책 키: `hplace.mrs2.graduateSchool.major0.majorName`, `hplace.mrs2.graduateSchool.major0.majorTypeCode` | step2/140·141·142; 기존 학교 전체 보호, 학교 검색 tuple/학위·옵션·섹션별 YM/YMD 기간 검증 |
 | `education.graduateSchool.doubleMajorStatus` — 복수전공유무 | 구현 / 정책 키: `hplace.mrs2.graduateSchool.major1.majorName`, `hplace.mrs2.graduateSchool.major2.majorName` | step2; universityAdditionalMajors의 간접 소비/유무 검증·압축 슬롯 1/2; 별도 유무 칸 직접 쓰기 아님; 중첩 부모 보존 |
 | `education.graduateSchool.minorStatus` — 부전공유무 | 구현 / 정책 키: `hplace.mrs2.graduateSchool.major1.majorName`, `hplace.mrs2.graduateSchool.major2.majorName` | step2; universityAdditionalMajors의 간접 소비/유무 검증·압축 슬롯 1/2; 별도 유무 칸 직접 쓰기 아님; 중첩 부모 보존 |
 | `education.graduateSchool.additionalMajorField` — 복수전공 계열 | 구현 / 정책 키: `hplace.mrs2.graduateSchool.major1.majorCategoryCode`, `hplace.mrs2.graduateSchool.major2.majorCategoryCode` | step2; universityAdditionalMajors의 간접 소비/유무 검증·압축 슬롯 1/2; 별도 유무 칸 직접 쓰기 아님; 중첩 부모 보존; 세부 계열 정확 일치만(넓은 프로필 계열 대부분 수동, 기타 가능) |
@@ -264,7 +264,7 @@ BE 정적 규칙과 FE 수집·반복행 준비·검색·날짜·선택 실행�
 | `languages.languageTest.testName` — 시험명 | 구현 / 정책 키: `hplace.mrs2.foreignExam.languageExamName` | step3/165 비인증만; YBM/EXAM_CODE 사용자 처리, detail 재수집; 등급-only 또는 점수-only |
 | `languages.languageTest.registrationNo` — 등록번호 | 구현 / 정책 키: `hplace.mrs2.foreignExam.registNumber` | step3/165 비인증만; YBM/EXAM_CODE 사용자 처리, detail 재수집; 등급-only 또는 점수-only |
 | `languages.languageTest.acquisitionDate` — 취득일 | 미지원 사유: 의미 불일치 | 취득일과 languageExam.examDate(응시일)의 의미가 다름 |
-| `languages.languageTest.grade` — 등급·점수 | 구현 / 정책 키: `hplace.mrs2.foreignExam.gradeCode`, `hplace.mrs2.foreignExam.score` | step3/165 비인증만; YBM/EXAM_CODE 사용자 처리, detail 재수집; 등급-only 또는 점수-only |
+| `languages.languageTest.grade` — 등급·점수 | 구현 / 정책 키: `hplace.mrs2.foreignExam.gradeCode`, `hplace.mrs2.foreignExam.score` | step3/165 비인증만; YBM/EXAM_CODE 사용자 처리, detail 재수집; 등급-only 또는 점수-only; 같은 옵션이 없고 전체 표기 옵션이 정확히 하나일 때만 닫힌 ACTFL 약어 표(NL·NM·NH·IL·IM·IM1–3·IH·AL·AM·AH)로 확장, 기입·행 배정·결과 확인이 같은 규칙 |
 | `languages.languageTest.evidenceDocumentPath` — 증빙 서류 위치 | 미지원 사유: 사용자 처리(인증·파일) | 파일 선택/업로드는 명시 제외; EXCLUDED_FIELD_IDS로 자동입력 키에서 제외하되 127키 전수표에는 유지 |
 | `languages.languageSkill.language` — 외국어 | 구현 / 정책 키: `hplace.mrs2.foreignAbility.languageCode` | step3/166 한국타이어 관측, GS에는 없음; 정확 label/code만; 작문·독해 별도 사용자 입력 |
 | `languages.languageSkill.conversationalLevel` — 회화수준 | 구현 / 정책 키: `hplace.mrs2.foreignAbility.speakingLevelCodeSn` | step3/166 한국타이어 관측, GS에는 없음; 정확 label/code만; 작문·독해 별도 사용자 입력 |
@@ -276,7 +276,7 @@ BE 정적 규칙과 FE 수집·반복행 준비·검색·날짜·선택 실행�
 | `certifications.certificate.name` — 자격증명 | 구현 / 정책 키: `hplace.mrs2.license.licenseName` | step3/168; 검색 metadata 검증, 등록번호 privateinfo=true, 취득일 YMD |
 | `certifications.certificate.grade` — 등급 | 미지원 사유: 의미 불일치 | usescore 점수와 자격증 등급을 서로 대체하지 않음 |
 | `certifications.certificate.registrationNo` — 등록번호 | 구현 / 정책 키: `hplace.mrs2.license.registNumber` | step3/168; 검색 metadata 검증, 등록번호 privateinfo=true, 취득일 YMD |
-| `certifications.certificate.issuer` — 발급기관 | 구현 / 정책 키: `hplace.mrs2.license.organization` | step3/168; 검색 metadata 검증, 등록번호 privateinfo=true, 취득일 YMD |
+| `certifications.certificate.issuer` — 발급기관 | 구현 / 정책 키: `hplace.mrs2.license.organization` | step3/168; 검색 metadata 검증, 등록번호 privateinfo=true, 취득일 YMD; 검색 확정 뒤 비동기 활성화를 soft로 대기, 보류 시 `ROW_SEARCH_UNCONFIRMED` |
 | `certifications.certificate.acquisitionDate` — 취득일 | 구현 / 정책 키: `hplace.mrs2.license.acquireDate` | step3/168; 검색 metadata 검증, 등록번호 privateinfo=true, 취득일 YMD |
 | `certifications.certificate.evidenceDocumentPath` — 증빙 서류 위치 | 미지원 사유: 사용자 처리(인증·파일) | 파일 선택/업로드는 명시 제외; EXCLUDED_FIELD_IDS로 자동입력 키에서 제외하되 127키 전수표에는 유지 |
 
@@ -285,14 +285,14 @@ BE 정적 규칙과 FE 수집·반복행 준비·검색·날짜·선택 실행�
 | 대상 | 현재 구현·검증 | 제한 |
 | --- | --- | --- |
 | `careers.career.companyName` — 직장명 | 구현 / 정책 키: `hplace.mrs2.career.company` | step2/153; 기존 엔티티 전체 보호, 정확 신원 소비 후 빈 행만 배정; 날짜 YMD |
-| `careers.career.employmentType` — 고용형태 | 구현 / 정책 키: `hplace.mrs2.career.careerCriteriaCodeSn` | step2/153; 기존 엔티티 전체 보호, 정확 신원 소비 후 빈 행만 배정; 날짜 YMD |
+| `careers.career.employmentType` — 고용형태 | 구현 / 정책 키: `hplace.mrs2.career.careerCriteriaCodeSn` | step2/153; 기존 엔티티 전체 보호, 정확 신원 소비 후 빈 행만 배정; 날짜 YMD; 선택지 카탈로그는 테넌트마다 다름(careerhyundai 7개 라벨, 아르바이트·기타 없음; 이전 GS리테일·한국타이어 관측형 9개). 활성 옵션에 프로필 라벨이 없으면 경력 행을 추가하지 않고 `OPTION_UNMATCHED` 1회 보고 |
 | `careers.career.startDate` — 입사일 | 구현 / 정책 키: `hplace.mrs2.career.entranceDate` | step2/153; 기존 엔티티 전체 보호, 정확 신원 소비 후 빈 행만 배정; 날짜 YMD |
 | `careers.career.endDate` — 퇴사일 | 구현 / 정책 키: `hplace.mrs2.career.leavingDate` | step2/153; 기존 엔티티 전체 보호, 정확 신원 소비 후 빈 행만 배정; 날짜 YMD |
 | `careers.career.employmentStatus` — 재직 여부 | 구현 / 정책 키: `hplace.mrs2.career.workingStatusCode` | step2/153; 기존 엔티티 전체 보호, 정확 신원 소비 후 빈 행만 배정; 날짜 YMD |
 | `careers.career.department` — 근무부서 | 구현 / 정책 키: `hplace.mrs2.career.department` | step2/153; 기존 엔티티 전체 보호, 정확 신원 소비 후 빈 행만 배정; 날짜 YMD |
 | `careers.career.position` — 최종직위 | 구현 / 정책 키: `hplace.mrs2.career.position` | step2/153; 기존 엔티티 전체 보호, 정확 신원 소비 후 빈 행만 배정; 날짜 YMD |
 | `careers.career.responsibilities` — 담당업무 | 구현 / 정책 키: `hplace.mrs2.career.assignedTask` | step2/153; 기존 엔티티 전체 보호, 정확 신원 소비 후 빈 행만 배정; 날짜 YMD |
-| `careers.career.terminationReason` — 종료사유 | 구현 / 정책 키: `hplace.mrs2.career.retirementReason` | step2/153; 기존 엔티티 전체 보호, 정확 신원 소비 후 빈 행만 배정; 날짜 YMD |
+| `careers.career.terminationReason` — 종료사유 | 구현 / 정책 키: `hplace.mrs2.career.retirementReason` | step2/153; 기존 엔티티 전체 보호, 정확 신원 소비 후 빈 행만 배정; 날짜 YMD; 값이 없어 사용 불가인 항목(재직중 경력 등)도 자기 행 itemIndex 유지 |
 
 #### 프로젝트 (5키)
 
@@ -361,6 +361,15 @@ BE 정적 규칙과 FE 수집·반복행 준비·검색·날짜·선택 실행�
 | `health.health.healthStatusOrValue` — 상태·값 | 미지원 사유: 의미 불일치 | 키·몸무게·시력 등의 단위/타입과 범용 상태값을 추정 결합하지 않음 |
 | `health.health.healthDate` — 진단·확인일 | 미지원 사유: 구조 미확인 | 전용 건강 진단일 제어 미확인 |
 | `health.health.healthDetails` — 상세내용 | 미지원 사유: 의미 불일치 | physicalRemark 단일칸과 반복 건강정보 상세의 의미 계약 없음 |
+
+### step 2·3 실화면 수정 보강 (2026-10-20)
+
+| 대상 | 현재 구현·검증 | 제한 |
+| --- | --- | --- |
+| 검색 종속 항목(전공 구분·계열·주야간, 자격증 발급기관 등) | 검색 확정 뒤 행 기입·receipt를 먼저 기록하고 종속 활성화는 soft 대기; 시간 초과에도 기입 유지 | `disabled-timeout` 진단만 남김. linkedForm은 focus 200ms poll·blur 평가로 비동기이며 포커스 없는 창·사이드 패널은 별도 수동 확인(H7) |
+| 보류된 종속 항목 | 비검색 driver 종속은 `ROW_DRIVER_UNCONFIRMED`, 검색 driver 종속은 `ROW_SEARCH_UNCONFIRMED`; 행 안 수집 후보가 없는 종속은 값 없는 고정 id 수동 행(등급·점수는 1행 병합) | REGISTRATION gate, 기존 값 exit, 라이브 값이 있는 칸, 이미 수집된 칸은 행을 만들지 않음 |
+| native select/radio 선택지 | 활성 옵션에 프로필 라벨이 하나도 없을 때만 `OPTION_UNMATCHED`로 입력 불가, 프로필 항목·itemIndex 유지 | 중복·비활성 같은 구조 실패에는 프로필 탓 코드를 붙이지 않음; 검색 칸과 Greeting button dropdown은 대상 아님 |
+| native 라디오 리뷰 현재값 | 체크된 사이트 코드가 정책 options에서 정확히 대응될 때만 정책 라벨로 비교 | 그 밖에는 원래 코드로 충돌 보호; 작성안함 빈 라디오는 빈 값 |
 
 ### 사이트 전용 항목 (127키 집계와 별도)
 

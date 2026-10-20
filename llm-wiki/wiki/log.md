@@ -666,3 +666,11 @@
 - 승인 후보 파일 전체 UTF-8 바이트의 SHA-256을 재확인하고 [CF-177 bundle](../raw/issues/CF-177/manifest.md)에 계약·현황·결정·관측·검증·후속 후보를 수집했다.
 - [Hplace 어댑터](topics/adapter-hplace.md)를 추가하고 [개발 경계](topics/adapter-development.md), [필드 현황](topics/adapter-field-inventory.md)의 Current와 History를 갱신했다. 다른 회사 현황과 기존 raw는 보존했다.
 - 127키/사이트 전용27행, 로컬 구현/과거 관측/PENDING-live, 호환 배포 순서를 구분하며 실제 지원값·계정·세션·대화 전문은 저장하지 않았다.
+
+## [2026-10-20] ingest | CF-177 Hplace step 2·3 실화면 수정
+
+- Approval-Digest: fdbe4510fabdf1aa3e1f9a6e7373ba1558ada47bdde352eea116187bcf17ef52
+- Source-Revision: f5866191b17bb75cd5250c76f8bc2f6242ab1a54
+- 승인 후보 파일의 신규 후보 절(K41–K55) UTF-8 바이트의 SHA-256을 재확인하고, 아직 병합되지 않은 [CF-177 bundle](../raw/issues/CF-177/manifest.md)에 새 문서를 추가했다. 기존 7개 문서와 manifest 머리말은 바꾸지 않고 topic 절 세 개를 덧붙였다.
+- [Hplace 어댑터](topics/adapter-hplace.md), [개발 경계](topics/adapter-development.md), [필드 현황](topics/adapter-field-inventory.md)의 Current와 History를 갱신하고 검색 확정·driver 실행·선택지·날짜 정밀도·live-eval 하네스 경계를 반영했다. 키별 지원 분류 수는 바꾸지 않았다.
+- 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.
