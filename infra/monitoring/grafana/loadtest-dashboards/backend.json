@@ -586,6 +586,376 @@
           "calcs": []
         }
       }
+    },
+    {
+      "id": 203,
+      "type": "row",
+      "title": "품질 비동기 작업",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 32,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 20,
+      "title": "품질 작업 대기 / 실행 중",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 33,
+        "w": 8,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max by (instance, service) (quality_tasks_waiting{env=\"$env\",service=\"career-form-backend\"})",
+          "legendFormat": "{{instance}} 대기"
+        },
+        {
+          "refId": "B",
+          "expr": "max by (instance, service) (quality_tasks_active{env=\"$env\",service=\"career-form-backend\"})",
+          "legendFormat": "{{instance}} 실행 중"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "noValue": "데이터 없음",
+          "custom": {
+            "spanNulls": false
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        }
+      },
+      "description": "인스턴스별 대기와 실행 중 작업 수입니다. 대기는 캡처 준비와 지연 재접수 작업을 포함합니다. 기본 접수 상한 64개는 준비, 대기, 실행 중 작업의 합이며 실행 작업자는 1개입니다. 품질 비활성, 수집 누락 또는 시계열 미생성은 0으로 채우지 않습니다."
+    },
+    {
+      "id": 21,
+      "title": "품질 작업 보관 예산",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 33,
+        "w": 8,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max by (instance, service) (quality_tasks_retained_bytes{env=\"$env\",service=\"career-form-backend\"})",
+          "legendFormat": "{{instance}} 보관 예산"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "min": 0,
+          "noValue": "데이터 없음",
+          "custom": {
+            "spanNulls": false
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        }
+      },
+      "description": "인스턴스별 접수 작업의 예약 및 보관 예산입니다. 기본 상한 4MiB이며 캡처 중 임시 예약과 지연 재접수, 실행 중 작업도 포함합니다. 실제 전체 JVM heap 또는 RSS 사용량이 아닙니다. 품질 비활성, 수집 누락 또는 시계열 미생성은 0으로 채우지 않습니다."
+    },
+    {
+      "id": 22,
+      "title": "품질 작업 평균 큐 대기시간",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 33,
+        "w": 8,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum by (instance, service) (rate(quality_tasks_queue_wait_seconds_sum{env=\"$env\",service=\"career-form-backend\"}[$__rate_interval])) / sum by (instance, service) (rate(quality_tasks_queue_wait_seconds_count{env=\"$env\",service=\"career-form-backend\"}[$__rate_interval]))) and on (instance, service) (sum by (instance, service) (rate(quality_tasks_queue_wait_seconds_count{env=\"$env\",service=\"career-form-backend\"}[$__rate_interval])) > 0)",
+          "legendFormat": "{{instance}} 평균 대기"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "noValue": "데이터 없음",
+          "custom": {
+            "spanNulls": false
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        }
+      },
+      "description": "선택한 rate 구간의 sum 증가율을 count 증가율로 나눈 평균입니다. 접수 준비가 끝난 뒤 최초 실행 시작까지 측정하며 캡처 시간과 후속 지연 재접수 대기는 제외합니다. 관측 0건이면 평균을 표시하지 않습니다. 품질 비활성, 수집 누락 또는 시계열 미생성은 0으로 채우지 않습니다."
+    },
+    {
+      "id": 23,
+      "title": "품질 작업 평균 실행시간",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 40,
+        "w": 8,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum by (instance, service) (rate(quality_tasks_execution_seconds_sum{env=\"$env\",service=\"career-form-backend\"}[$__rate_interval])) / sum by (instance, service) (rate(quality_tasks_execution_seconds_count{env=\"$env\",service=\"career-form-backend\"}[$__rate_interval]))) and on (instance, service) (sum by (instance, service) (rate(quality_tasks_execution_seconds_count{env=\"$env\",service=\"career-form-backend\"}[$__rate_interval])) > 0)",
+          "legendFormat": "{{instance}} 평균 실행"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "noValue": "데이터 없음",
+          "custom": {
+            "spanNulls": false
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        }
+      },
+      "description": "선택한 rate 구간의 sum 증가율을 count 증가율로 나눈 평균입니다. 작업자에서 실행한 각 시도 단위이며 지연 재접수 사이의 대기는 제외합니다. 논리적 작업 전체 완료 시간이나 HTTP 응답 시간이 아닙니다. 실패한 실행도 포함하며 관측 0건이면 표시하지 않습니다. 품질 비활성, 수집 누락 또는 시계열 미생성은 0으로 채우지 않습니다."
+    },
+    {
+      "id": 24,
+      "title": "품질 작업 결과별 발생률",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 40,
+        "w": 8,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (instance, service, outcome) (rate(quality_tasks_total{env=\"$env\",service=\"career-form-backend\"}[$__rate_interval]))",
+          "legendFormat": "{{instance}} {{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "min": 0,
+          "noValue": "데이터 없음",
+          "custom": {
+            "spanNulls": false
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        }
+      },
+      "description": "초당 작업 종료 또는 접수 거절 발생 수를 outcome별로 표시합니다. completed는 큐 작업 완료, rejected는 접수 또는 크기 검증 거절, failed는 실행 실패, expired는 만료입니다. interrupted와 shutdown 등 노출된 다른 결과도 표시합니다. completed는 품질 기록 전량의 영속 저장 보장이 아닙니다. 결과 시계열은 첫 발생 때 생성될 수 있어 첫 단발 이벤트가 rate에 나타나지 않을 수 있습니다. 품질 비활성, 수집 누락 또는 시계열 미생성은 0으로 채우지 않습니다."
+    },
+    {
+      "id": 25,
+      "title": "품질 집계 대기 원본 수",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 40,
+        "w": 8,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max by (instance, service) (quality_aggregate_pending{env=\"$env\",service=\"career-form-backend\"})",
+          "legendFormat": "{{instance}} 집계 대기"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "noValue": "데이터 없음",
+          "custom": {
+            "spanNulls": false
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        }
+      },
+      "description": "인스턴스별 집계 갱신을 기다리는 고유 원본 수입니다. 동일 원본의 변경은 합쳐지므로 이벤트나 작업 개수가 아닙니다. 약 60초 주기로 처리하지만 큐 적체와 재시도로 반영이 더 늦어질 수 있습니다. 0만으로 저장과 집계 성공을 판정하지 않습니다. 품질 비활성, 수집 누락 또는 시계열 미생성은 0으로 채우지 않습니다."
+    },
+    {
+      "id": 26,
+      "title": "품질 집계 최장 대기시간",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 47,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max by (instance, service) (quality_aggregate_oldest_seconds{env=\"$env\",service=\"career-form-backend\"})",
+          "legendFormat": "{{instance}} 최장 대기"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "noValue": "데이터 없음",
+          "custom": {
+            "spanNulls": false
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        }
+      },
+      "description": "현재 집계 대기 원본 중 가장 오래된 원본의 대기시간입니다. 대기가 없으면 0입니다. 집계 갱신 재표시가 이어져도 기존 대기 시작 시각은 유지합니다. 장시간 상승하면 집계 결과별 발생률과 함께 확인합니다. 품질 비활성, 수집 누락 또는 시계열 미생성은 0으로 채우지 않습니다."
+    },
+    {
+      "id": 27,
+      "title": "품질 집계 결과별 발생률",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 47,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (instance, service, outcome) (rate(quality_aggregate_total{env=\"$env\",service=\"career-form-backend\"}[$__rate_interval]))",
+          "legendFormat": "{{instance}} {{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "min": 0,
+          "noValue": "데이터 없음",
+          "custom": {
+            "spanNulls": false
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        }
+      },
+      "description": "초당 집계 처리 결과를 outcome별로 표시합니다. completed는 대기 항목 처리 완료이며 원본이 이미 없으면 갱신 없이 완료될 수도 있습니다. retry는 재시도 예정, failed는 집계 예외, discarded는 재시도 소진, expired는 보관 만료, rejected는 대기 용량 초과입니다. 한 시도에 failed와 retry 또는 discarded가 함께 기록될 수 있으므로 합계를 처리 원본 수로 해석하지 않습니다. 첫 단발 이벤트가 rate에 나타나지 않을 수 있습니다. 품질 비활성, 수집 누락 또는 시계열 미생성은 0으로 채우지 않습니다."
     }
   ],
   "tags": [
