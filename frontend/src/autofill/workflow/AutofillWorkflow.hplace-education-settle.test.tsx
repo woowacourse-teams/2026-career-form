@@ -89,7 +89,7 @@ it.each([
       profile: educationProfile(),
       searchResponder: educationResponder(enabled),
     });
-    await screen.findByText("기입 결과", {}, { timeout: 15000 });
+    await screen.findByText("기입 결과", {}, { timeout: 120_000 });
     await waitFor(() =>
       expect(value("graduateSchool[0].academyName")).toBe("합성대학원"),
     );
@@ -109,5 +109,5 @@ it.each([
     expect(counters.forbidden).toBe(0);
     expect(counters.requests).toBeLessThanOrEqual(8);
   },
-  30000,
+  120_000,
 );

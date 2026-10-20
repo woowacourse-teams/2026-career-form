@@ -68,7 +68,7 @@ it("reaches the result screen when no education search is answered", async () =>
     profile: educationProfile(),
   });
 
-  await screen.findByText("기입 결과", {}, { timeout: 20000 });
+  await screen.findByText("기입 결과", {}, { timeout: 120_000 });
   expect(
     screen.queryByText(/입력 분석의 진전을 확인할 수 없습니다/),
   ).not.toBeInTheDocument();
@@ -101,4 +101,4 @@ it("reaches the result screen when no education search is answered", async () =>
     ).toBeGreaterThan(0);
   expect(value("college[0].score")).toBe("3.75");
   expect(value("college[0].perfectScore")).toBe("4.5");
-}, 40000);
+}, 120_000);

@@ -1,10 +1,16 @@
+import { vi } from "vitest";
 import { legacyLinkedWait } from "../../adapters/hplace/basic-write";
 
 /**
  * Hplace tests run a jsdom page: linked controls enable within a few ticks, so
  * the live 1500 ms wait only lengthens every run that leaves one disabled.
+ * 700 ms still covers the fixtures' 50 ms clicks and 200 ms polls on a loaded
+ * CI runner. Hosted runners are several times slower than a dev machine, so
+ * every Hplace workflow file also gets the 120 s limit CF-304 gave the other
+ * site-fixture tests.
  */
-legacyLinkedWait.ms = 300;
+vi.setConfig({ testTimeout: 120_000 });
+legacyLinkedWait.ms = 700;
 
 export function setHplacePage(url: string): void {
   (

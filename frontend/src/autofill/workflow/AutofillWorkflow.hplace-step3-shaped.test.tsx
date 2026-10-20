@@ -352,5 +352,5 @@ it.each(TENANTS)(
     // Native analysis budget (K17); live 2026-10-20 used 2 fields requests.
     expect(counters.requests).toBeLessThanOrEqual(8);
   },
-  180000,
+  120_000,
 );

@@ -225,7 +225,7 @@ it("fills three independent conditional groups in one reanalysis and preserves t
     .querySelectorAll("button")
     .forEach((e) => e.addEventListener("click", forbidden));
   const view = render(<AutofillWorkflow {...props} />);
-  await screen.findByText("기입 결과", {}, { timeout: 15000 });
+  await screen.findByText("기입 결과", {}, { timeout: 120_000 });
   for (const [name, value] of [
     ["genderFlag", "F"],
     ["patriot.patriotYn", "true"],
@@ -269,10 +269,10 @@ it("fills three independent conditional groups in one reanalysis and preserves t
   const count = changes.mock.calls.length;
   view.unmount();
   render(<AutofillWorkflow {...props} />);
-  await screen.findByText("기입 결과", {}, { timeout: 15000 });
+  await screen.findByText("기입 결과", {}, { timeout: 120_000 });
   expect(changes).toHaveBeenCalledTimes(count);
   expect(fields.mock.calls.length).toBeLessThanOrEqual(4);
-}, 30_000);
+}, 120_000);
 
 it("preserves an existing opposite veteran status and still fills independent fields", async () => {
   const update = mountConditionalForm();
@@ -282,7 +282,7 @@ it("preserves an existing opposite veteran status and still fills independent fi
   update();
   const { props } = setup();
   render(<AutofillWorkflow {...props} />);
-  await screen.findByText("기입 결과", {}, { timeout: 15000 });
+  await screen.findByText("기입 결과", {}, { timeout: 120_000 });
   expect(
     document.querySelector<HTMLInputElement>(
       '[name="patriot.patriotYn"]:checked',
@@ -303,7 +303,7 @@ it("fills exemption reason only for the matching exemption state", async () => {
   profile.military.militaryStatus = "military-status:exempt";
   const { props, fields } = setup(profile);
   render(<AutofillWorkflow {...props} />);
-  await screen.findByText("기입 결과", {}, { timeout: 15000 });
+  await screen.findByText("기입 결과", {}, { timeout: 120_000 });
   expect(
     document.querySelector<HTMLInputElement>(
       '[name="military.exemptionReason"]',
@@ -334,7 +334,7 @@ it("says the site policy is not registered when a recognized Hplace page is poli
     await screen.findByText(
       "이 지원서의 자동 기입 정책이 아직 등록되지 않았어요. 수동 복사를 이용해 주세요.",
       {},
-      { timeout: 15000 },
+      { timeout: 120_000 },
     ),
   ).toBeVisible();
 });

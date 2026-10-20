@@ -373,7 +373,7 @@ it.each(TENANTS)(
     // Native analysis budget (K17); live 2026-10-20 used 5 fields requests.
     expect(counters.requests).toBeLessThanOrEqual(8);
   },
-  180000,
+  120_000,
 );
 
 /** Every named control on the page as applicants see it (radios by value). */

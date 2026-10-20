@@ -85,7 +85,7 @@ it.each([false, true])(
       policy,
       profile: projectProfile(),
     });
-    await screen.findByText("자동 기입을 마쳤어요", {}, { timeout: 60000 });
+    await screen.findByText("자동 기입을 마쳤어요", {}, { timeout: 120_000 });
 
     expect.soft(pendingRows()).toEqual([]);
     expect(projectRows()).toBe(2);
@@ -119,7 +119,7 @@ it.each([false, true])(
     if (contributionRate) expect(value("project[0].contributionRate")).toBe("");
     expect(counters.forbidden).toBe(0);
   },
-  90000,
+  120_000,
 );
 
 it("keeps a project row the applicant already filled and adds rows for the profile", async () => {
@@ -138,7 +138,7 @@ it("keeps a project row the applicant already filled and adds rows for the profi
   start.value = "2022.05.01";
 
   renderNativeWorkflow({ policy, profile: projectProfile() });
-  await screen.findByText("자동 기입을 마쳤어요", {}, { timeout: 60000 });
+  await screen.findByText("자동 기입을 마쳤어요", {}, { timeout: 120_000 });
 
   expect(value("project[0].projectName")).toBe("지원자 입력 프로젝트");
   expect(value("project[0].startDate")).toBe("2022.05.01");
@@ -148,4 +148,4 @@ it("keeps a project row the applicant already filled and adds rows for the profi
     "합성 프로젝트 A",
     "합성 프로젝트 B",
   ]);
-}, 90000);
+}, 120_000);

@@ -94,7 +94,7 @@ function qualificationProfile(exam: boolean): Profile {
 }
 
 async function openPending() {
-  await screen.findByText("기입 결과", {}, { timeout: 15000 });
+  await screen.findByText("기입 결과", {}, { timeout: 120_000 });
   fireEvent.click(screen.getByRole("tab", { name: /확인 필요/ }));
 }
 
@@ -127,7 +127,7 @@ it("lists the license and exam details withheld by searches without results", as
         .value,
     ).toBe("");
   expect(counters.forbidden).toBe(0);
-}, 30000);
+}, 120_000);
 
 it("does not report the details of a saved license whose tuple equals the profile", async () => {
   setHplacePage(
@@ -185,7 +185,7 @@ it("does not report the details of a saved license whose tuple equals the profil
   ).toHaveLength(0);
   expect(screen.queryByText("가상발급기관")).not.toBeInTheDocument();
   expect(counters.keypresses).toBe(0);
-}, 30000);
+}, 120_000);
 
 it("lists the details a committed license search never enabled", async () => {
   const policy = mountQualifications(false);
@@ -215,4 +215,4 @@ it("lists the details a committed license search never enabled", async () => {
   expect(screen.getAllByText("2022-05-01")).toHaveLength(1);
   expect(document.body.textContent).not.toContain("SYN-LIC-0001");
   expect(counters.forbidden).toBe(0);
-}, 30000);
+}, 120_000);

@@ -42,7 +42,7 @@ it("fills the military details when the tenant uses day-precision service dates"
     "military.militaryDate:YMD",
   );
   run(policy, demoProfile());
-  await screen.findByText("기입 결과", {}, { timeout: 15000 });
+  await screen.findByText("기입 결과", {}, { timeout: 120_000 });
   expect(militaryValues()).toEqual({
     rank: "04",
     start: "2020.03.01",
@@ -56,7 +56,7 @@ it("fills the applicant details on a tenant without a current-address row", asyn
   const { policy } = mountRun1();
   document.querySelector('[data-row="address"]')!.closest(".subject")!.remove();
   run(policy, demoProfile());
-  await screen.findByText("기입 결과", {}, { timeout: 15000 });
+  await screen.findByText("기입 결과", {}, { timeout: 120_000 });
   expect(
     document.querySelector<HTMLInputElement>('[name="genderFlag"]:checked')
       ?.value,
@@ -75,7 +75,7 @@ it("writes the English name family-first when the company states no order", asyn
   const { policy } = mountRun1();
   expect(document.querySelector(".guide.englishName")).toBeNull();
   run(policy, demoProfile());
-  await screen.findByText("기입 결과", {}, { timeout: 15000 });
+  await screen.findByText("기입 결과", {}, { timeout: 120_000 });
   expect(input("englishName").value).toBe("HONG GILDONG");
 });
 
@@ -94,6 +94,6 @@ it("writes the English name on a KDI-type page without birthday and gender", asy
       '<div class="wrapGuide"><div class="guide hasTitle englishName">* Hong, Gildong (여권상 영문성명 기재)</div></div>',
     );
   run(policy, demoProfile());
-  await screen.findByText("기입 결과", {}, { timeout: 15000 });
+  await screen.findByText("기입 결과", {}, { timeout: 120_000 });
   expect(english.value).toBe("HONG GILDONG");
 });

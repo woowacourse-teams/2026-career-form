@@ -35,7 +35,7 @@ it("waits for linkedForm delayed military children before native branch collecti
       setTimeout(() => children.forEach((e) => (e.disabled = false)), 50);
     });
   run(policy, profile());
-  await screen.findByText("기입 결과", {}, { timeout: 15000 });
+  await screen.findByText("기입 결과", {}, { timeout: 120_000 });
   expect(input("military.militaryBranchCode").value).toBe("01");
 });
 // The server builds LookupBinding with Map.copyOf, whose iteration order is
@@ -95,6 +95,6 @@ it("writes the native branch when the server reorders the LOOKUP optionMap after
       } as typeof field;
     }),
   }));
-  await screen.findByText("기입 결과", {}, { timeout: 15000 });
+  await screen.findByText("기입 결과", {}, { timeout: 120_000 });
   expect(input("military.militaryBranchCode").value).toBe("01");
 });

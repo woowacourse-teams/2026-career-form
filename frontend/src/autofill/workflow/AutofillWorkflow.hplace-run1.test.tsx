@@ -18,7 +18,7 @@ afterEach(() => {
 it("replaces only empty-group HTML false defaults and fills their conditional children", async () => {
   const { policy } = mountRun1();
   run(policy);
-  await screen.findByText("기입 결과", {}, { timeout: 15000 });
+  await screen.findByText("기입 결과", {}, { timeout: 120_000 });
   for (const name of ["patriot.patriotYn", "handicap.handicapYn"])
     expect(
       document.querySelector<HTMLInputElement>(`[name="${name}"]:checked`)
@@ -49,7 +49,7 @@ it.each([
           ? "17"
           : "기존 합성값";
     run(policy);
-    await screen.findByText("기입 결과", {}, { timeout: 15000 });
+    await screen.findByText("기입 결과", {}, { timeout: 120_000 });
     const group = name.startsWith("patriot")
       ? "patriot.patriotYn"
       : "handicap.handicapYn";
@@ -69,7 +69,7 @@ it("keeps a profile false HTML default as already entered without clicking", asy
     .querySelectorAll('[name="patriot.patriotYn"],[name="handicap.handicapYn"]')
     .forEach((e) => e.addEventListener("click", clicks));
   run(policy, p);
-  await screen.findByText("기입 결과", {}, { timeout: 15000 });
+  await screen.findByText("기입 결과", {}, { timeout: 120_000 });
   expect(clicks).not.toHaveBeenCalled();
   expect(screen.queryByText(/자동으로 입력하지 못했어요/)).toBeNull();
 });

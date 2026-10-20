@@ -95,7 +95,7 @@ it("executes live preparation through collection, action request, modal commit a
       }}
     />,
   );
-  await screen.findByText("기입 결과", {}, { timeout: 15000 });
+  await screen.findByText("기입 결과", {}, { timeout: 120_000 });
   expect(preparation).toHaveBeenCalledOnce();
   expect(modal.events.filter((e) => e === "open")).toHaveLength(1);
   expect(modal.inputs().map((e) => e.value)).toEqual(

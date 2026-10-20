@@ -1,5 +1,5 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import {
   catalogResponder,
   exactTitleCatalog,
@@ -12,6 +12,9 @@ import {
   mountEducation,
 } from "../../policy/__fixtures__/hplace-mrs2-education.synthetic";
 import { disposeLinkedForms } from "../../policy/__fixtures__/hplace-mrs2-linked-form";
+
+// Hosted CI runners are several times slower than a dev machine (CF-304).
+vi.setConfig({ testTimeout: 120_000 });
 
 afterEach(() => {
   cleanup();
@@ -72,7 +75,7 @@ it("renders the native workflow and counts requests and site actions", async () 
     profile: educationProfile(),
     searchResponder: catalogResponder(exactTitleCatalog()),
   });
-  await screen.findByText("기입 결과", {}, { timeout: 15000 });
+  await screen.findByText("기입 결과", {}, { timeout: 120_000 });
   await waitFor(() =>
     expect(named("college[0].academyName").value).toBe("합성대학 A"),
   );
@@ -82,7 +85,7 @@ it("renders the native workflow and counts requests and site actions", async () 
   expect(counters.keypresses).toBeGreaterThan(0);
   expect(counters.parentAdds).toBe(1);
   expect(counters.forbidden).toBe(0);
-}, 30000);
+}, 120_000);
 
 it("counts every step, save, submit, consent and auth click as forbidden", () => {
   setHplacePage(

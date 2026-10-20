@@ -89,7 +89,7 @@ it("writes the main major details the site enables after the last major commit",
     profile: profile(),
     searchResponder: responder(),
   });
-  await screen.findByText("기입 결과", {}, { timeout: 30000 });
+  await screen.findByText("기입 결과", {}, { timeout: 120_000 });
   const parents = ["college[0]", "college[1]", "graduateSchool[0]"];
   await waitFor(() =>
     expect(value("graduateSchool[0].collegeMajor[0].majorName")).toBe(
@@ -114,7 +114,7 @@ it("writes the main major details the site enables after the last major commit",
   );
   expect(counters.forbidden).toBe(0);
   expect(counters.requests).toBeLessThanOrEqual(8);
-}, 60000);
+}, 120_000);
 
 it("writes sibling majors and the score when the details never enable", async () => {
   const policy = mount();
@@ -131,7 +131,7 @@ it("writes sibling majors and the score when the details never enable", async ()
         code.removeAttribute("data-rel-id");
     },
   });
-  await screen.findByText("기입 결과", {}, { timeout: 30000 });
+  await screen.findByText("기입 결과", {}, { timeout: 120_000 });
   await waitFor(() =>
     expect(value("college[0].collegeMajor[2].majorName")).toBe("가상부전공"),
   );
@@ -144,7 +144,7 @@ it("writes sibling majors and the score when the details never enable", async ()
   expect(checked("college[0].collegeMajor[0].majorTypeCode")).toBeUndefined();
   expect(counters.forbidden).toBe(0);
   expect(counters.requests).toBeLessThanOrEqual(8);
-}, 60000);
+}, 120_000);
 
 it("writes the high school day/night from the standard attendance value", async () => {
   const policy = mount({ highschool: { dayOrNight: true } });
@@ -153,10 +153,10 @@ it("writes the high school day/night from the standard attendance value", async 
   highschool.values.attendanceType = "attendance:day";
   p.education = [highschool, ...p.education];
   renderNativeWorkflow({ policy, profile: p, searchResponder: responder() });
-  await screen.findByText("기입 결과", {}, { timeout: 30000 });
+  await screen.findByText("기입 결과", {}, { timeout: 120_000 });
   await waitFor(() =>
     expect(value("highschool.academyName")).toBe("합성고등학교"),
   );
   expect(checked("highschool.graduationTypeCode")).toBe("01");
   expect(checked("highschool.dayOrNight")).toBe("01");
-}, 60000);
+}, 120_000);

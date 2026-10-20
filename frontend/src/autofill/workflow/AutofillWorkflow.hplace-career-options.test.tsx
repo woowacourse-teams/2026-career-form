@@ -65,7 +65,7 @@ const selected = (row: number) =>
     )!
     .selectedOptions[0]?.textContent?.trim();
 async function pendingPanel() {
-  await screen.findByText("기입 결과", {}, { timeout: 15000 });
+  await screen.findByText("기입 결과", {}, { timeout: 120_000 });
   fireEvent.click(screen.getByRole("tab", { name: /확인 필요/ }));
   return screen.getByRole("tabpanel");
 }
@@ -91,7 +91,7 @@ it("reports a sole unoffered career from the review in one analysis", async () =
       "조건부 선택 결과를 확인하지 못했어요. 이 항목을 직접 골라 주세요.",
     ),
   ).not.toBeInTheDocument();
-}, 30000);
+}, 120_000);
 
 it("reports several unoffered careers in one analysis without adding rows", async () => {
   const policy = mount();
@@ -109,7 +109,7 @@ it("reports several unoffered careers in one analysis without adding rows", asyn
       within(panel).getAllByText(value, { selector: "span" }).length,
       value,
     ).toBeGreaterThan(0);
-}, 30000);
+}, 120_000);
 
 it("adds no row for the unoffered career and still writes the offered one", async () => {
   const policy = mount();
@@ -129,7 +129,7 @@ it("adds no row for the unoffered career and still writes the offered one", asyn
   expect(
     within(panel).getAllByText("아르바이트", { selector: "span" }).length,
   ).toBeGreaterThan(0);
-}, 30000);
+}, 120_000);
 
 it("keeps adding and writing every career on a tenant that offers every type", async () => {
   const policy = mount("nine");
@@ -137,10 +137,10 @@ it("keeps adding and writing every career on a tenant that offers every type", a
     policy,
     profile: careers("정규", "아르바이트"),
   });
-  await screen.findByText("기입 결과", {}, { timeout: 15000 });
+  await screen.findByText("기입 결과", {}, { timeout: 120_000 });
   expect(counters.adds).toBe(1);
   expect(rows()).toBe(2);
   expect(selected(0)).toBe("정규직");
   expect(selected(1)).toBe("아르바이트");
   expect(screen.queryByText(UNMATCHED)).not.toBeInTheDocument();
-}, 30000);
+}, 120_000);

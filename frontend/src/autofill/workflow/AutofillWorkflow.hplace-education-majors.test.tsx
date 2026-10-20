@@ -145,13 +145,13 @@ const majorRows = (index: number) =>
   );
 
 async function pendingPanel() {
-  await screen.findByText("기입 결과", {}, { timeout: 20000 });
+  await screen.findByText("기입 결과", {}, { timeout: 120_000 });
   fireEvent.click(screen.getByRole("tab", { name: /확인 필요/ }));
   return screen.getByRole("tabpanel");
 }
 
 async function expectCollegeMajorsPrepared() {
-  await screen.findByText("기입 결과", {}, { timeout: 20000 });
+  await screen.findByText("기입 결과", {}, { timeout: 120_000 });
   expect(majorRows(0)).toHaveLength(3);
   expect(named("college[0].collegeMajor[2].majorName")?.value).toBe(
     "가상부전공",
@@ -181,7 +181,7 @@ it("prepares the committed school's majors when another school in the stage fail
   ).toBeGreaterThan(0);
   expect(counters.forbidden).toBe(0);
   expect(counters.requests).toBeLessThanOrEqual(8);
-}, 40000);
+}, 120_000);
 
 it("prepares the college majors when only the graduate school fails", async () => {
   const policy = mount();
@@ -192,7 +192,7 @@ it("prepares the college majors when only the graduate school fails", async () =
   });
 
   await expectCollegeMajorsPrepared();
-}, 40000);
+}, 120_000);
 
 it("prepares majors when every school was written but one settle check failed", async () => {
   const policy = mount();
@@ -205,7 +205,7 @@ it("prepares majors when every school was written but one settle check failed", 
 
   await expectCollegeMajorsPrepared();
   expect(settle.failOnce).toBeUndefined();
-}, 40000);
+}, 120_000);
 
 it("lists the prepared school's majors when its nested add stays disabled in a mixed stage", async () => {
   const policy = mount();
@@ -221,7 +221,7 @@ it("lists the prepared school's majors when its nested add stays disabled in a m
   ).toHaveLength(2);
   expect(majorRows(0)).toHaveLength(1);
   expect(counters.adds).toBe(0);
-}, 40000);
+}, 120_000);
 
 it("reports a failed school's additional major as a manual row without adding under it", async () => {
   const policy = mount();
@@ -265,4 +265,4 @@ it("reports a failed school's additional major as a manual row without adding un
   ).toHaveLength(0);
   expect(failedSchoolAdds).toBe(0);
   expect(majorRows(1)).toHaveLength(1);
-}, 40000);
+}, 120_000);

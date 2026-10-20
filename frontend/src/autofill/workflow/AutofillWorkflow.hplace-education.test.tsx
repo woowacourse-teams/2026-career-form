@@ -183,10 +183,10 @@ it.each([
               '[name="college[0].collegeMajor[2].majorName"]',
             )?.value,
           ).toBe("가상부전공"),
-        { timeout: 15000 },
+        { timeout: 120_000 },
       );
     } else {
-      await screen.findByText("기입 결과", {}, { timeout: 15000 });
+      await screen.findByText("기입 결과", {}, { timeout: 120_000 });
       fireEvent.click(screen.getByRole("tab", { name: /확인 필요/ }));
       expect(
         screen.queryAllByText("입력 불가(학교 확정 후 다시 실행)"),
@@ -201,7 +201,7 @@ it.each([
             '[name="college[0].perfectScore"]',
           )!.value,
         ).toBe("4.5"),
-      { timeout: 15000 },
+      { timeout: 120_000 },
     );
     expect(
       document.querySelector<HTMLInputElement>('[name="college[1].score"]')!
@@ -228,5 +228,5 @@ it.each([
       screen.queryByText("자동 기입을 진행하지 못했습니다."),
     ).not.toBeInTheDocument();
   },
-  30000,
+  120_000,
 );

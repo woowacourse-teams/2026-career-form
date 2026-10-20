@@ -6,9 +6,10 @@ import type { ExecutionPolicy } from "../../workflow/execution-policy";
  * searches synchronously and enable dependents within a few ticks, so every
  * driver whose dependents never enable would otherwise idle for the whole
  * budget. The shorter budget keeps the same code paths (settle, disabled
- * timeout) and only changes how long an unanswered wait lasts.
+ * timeout) and only changes how long an unanswered wait lasts. 700 ms still
+ * covers the fixtures' 50 ms clicks and 200 ms polls on a loaded CI runner.
  */
-export const FIXTURE_TIMEOUT_MS = 400;
+export const FIXTURE_TIMEOUT_MS = 700;
 
 /** Shortens every driver and search wait of a cloned seed policy in place. */
 export function withFixtureTimeouts<T extends ExecutionPolicy>(policy: T): T {

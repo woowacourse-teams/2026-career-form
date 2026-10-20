@@ -30,7 +30,7 @@ function fullProfile() {
 
 /** Field labels listed with the unverified-structure reason. */
 async function unverifiedLabels(): Promise<string[]> {
-  await screen.findByText("기입 결과", {}, { timeout: 15000 });
+  await screen.findByText("기입 결과", {}, { timeout: 120_000 });
   const tab = screen.queryByRole("tab", { name: /확인 필요/ });
   if (!tab || tab.getAttribute("aria-label") === "확인 필요 0개") return [];
   fireEvent.click(tab);

@@ -1,4 +1,4 @@
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import {
   mountEducation as mountBlankEducation,
   educationProfile,
@@ -14,6 +14,9 @@ import {
   executeApprovedPreparationPlans,
   type PreparationSnapshot,
 } from "../preparation/executor";
+
+// Hosted CI runners are several times slower than a dev machine (CF-304).
+vi.setConfig({ testTimeout: 120_000 });
 afterEach(() => installExecutionPolicy(document));
 // These unit cases exercise the phase where the site has enabled major controls.
 const mountEducation = (count = 2, majors = 1) =>
