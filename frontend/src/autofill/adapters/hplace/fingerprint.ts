@@ -38,7 +38,8 @@ export function hplaceDocumentKind(
       ),
     ) &&
     document.querySelector(
-      'form#frm section.writeResume[data-code="11"] input#englishName[name="englishName"]',
+      // Sections 11 and 13 are the DOM markers; no single field is required.
+      'form#frm section.writeResume[data-code="11"]',
     ) &&
     // Section 13 itself, not its address: some tenants have no address row.
     document.querySelector('form#frm section.writeResume[data-code="13"]')

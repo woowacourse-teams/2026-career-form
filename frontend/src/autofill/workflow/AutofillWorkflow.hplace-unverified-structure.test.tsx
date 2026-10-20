@@ -46,24 +46,21 @@ async function unverifiedLabels(): Promise<string[]> {
     .sort();
 }
 
-it("lists the visible detail fields when the detail structure cannot be verified", async () => {
+it("lists only the fields whose own structure cannot be verified", async () => {
   const { policy } = mountRun1();
-  // A present but malformed birthday makes the whole legacy contract fail.
+  // Each field is verified on its own: a malformed birthday and an English
+  // name with the wrong length are dropped, everything else is still filled.
   input("birthday").setAttribute("data-dates", "birthday:YM");
+  input("englishName").setAttribute("maxlength", "32");
   run(policy, fullProfile());
   const labels = await unverifiedLabels();
-  expect(labels).toEqual(
-    // Profile labels; the English name keeps the page label.
-    [
-      "병역 상태",
-      "보훈 대상 여부",
-      "생년월일",
-      "성별",
-      "영문이름",
-      "장애 여부",
-    ].sort(),
-  );
+  expect(labels).toEqual(["생년월일", "영문이름"]);
   expect(input("englishName").value).toBe("");
+  expect(
+    document.querySelector<HTMLInputElement>('[name="genderFlag"]:checked')
+      ?.value,
+  ).toBe("M");
+  expect(input("military.militaryPositionCode").value).toBe("04");
 });
 
 it("lists a conditional child that opened but whose structure is unverified", async () => {

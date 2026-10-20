@@ -97,7 +97,7 @@ it.each([
   "wrong-type",
   "foreign-script",
   "wrong-step",
-])("fails closed for %s detail structure", (fault) => {
+])("drops only the malformed field, or the whole section for %s", (fault) => {
   mountDetail();
   if (fault === "duplicate")
     document.body.append(
@@ -114,12 +114,21 @@ it.each([
       "https://other.example/mrs2/release/js/applicant/writeResume/writeResume.js";
   if (fault === "wrong-step")
     document.querySelector("section")!.setAttribute("data-code", "21");
-  const snapshot = collectFieldsSnapshot(document);
-  expect(
-    snapshot.request.sections
-      .flatMap((s) => s.fields)
-      .some((f) => f.domName?.startsWith("hplace.detail.")),
-  ).toBe(false);
+  const names = collectFieldsSnapshot(document)
+    .request.sections.flatMap((s) => s.fields)
+    .map((f) => f.domName ?? "");
+  const dropped = {
+    duplicate: "hplace.detail.englishName",
+    "outside-row": "hplace.detail.detailAddress",
+    "wrong-type": "hplace.detail.birthday",
+  }[fault];
+  if (!dropped) {
+    // Platform faults (foreign assets, wrong step) still drop the section.
+    expect(names.some((n) => n.startsWith("hplace.detail."))).toBe(false);
+    return;
+  }
+  expect(names.some((n) => n.startsWith(dropped))).toBe(false);
+  expect(names.filter((n) => n.startsWith("hplace.detail.")).length).toBe(2);
 });
 it.each([
   "existing",
@@ -366,14 +375,17 @@ it("keeps the detail fields on a tenant without any current-address control", as
     "2000.02.29",
   );
 });
-it("still fails closed when only part of the current address remains", () => {
+it("drops only the address when part of the current address remains", () => {
   mountDetail();
   document.querySelector('[name="currentAddress.detailAddress"]')!.remove();
-  expect(collectFieldsSnapshot(document).request.sections).not.toEqual(
-    expect.arrayContaining([
-      expect.objectContaining({ sectionId: "hplace-detail-basic" }),
-    ]),
-  );
+  expect(
+    collectFieldsSnapshot(document).request.sections.flatMap((s) =>
+      s.fields.map((f) => f.domName),
+    ),
+  ).toEqual([
+    "hplace.detail.englishName.familyFirst",
+    "hplace.detail.birthday",
+  ]);
 });
 
 it("keeps the English name on a tenant without birthday and gender (KDI-type)", () => {
@@ -390,14 +402,17 @@ it("keeps the English name on a tenant without birthday and gender (KDI-type)", 
     "hplace.detail.detailAddress",
   ]);
 });
-it("still fails closed when the birthday control is malformed", () => {
+it("drops only the birthday when its control is malformed", () => {
   mountDetail();
   document
     .getElementById("birthday")!
     .setAttribute("data-dates", "birthday:YM");
-  expect(collectFieldsSnapshot(document).request.sections).not.toEqual(
-    expect.arrayContaining([
-      expect.objectContaining({ sectionId: "hplace-detail-basic" }),
-    ]),
-  );
+  expect(
+    collectFieldsSnapshot(document).request.sections.flatMap((s) =>
+      s.fields.map((f) => f.domName),
+    ),
+  ).toEqual([
+    "hplace.detail.englishName.familyFirst",
+    "hplace.detail.detailAddress",
+  ]);
 });

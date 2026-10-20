@@ -61,8 +61,14 @@ it("skips controls the page hides or disables", () => {
 
 it("lists the detail address and carries the family-first English name to copy", () => {
   mountRun1();
-  breakDetail();
+  // A partial address structure and a wrong-length English name are dropped
+  // on their own; the (valid) birthday is not listed.
+  document
+    .querySelector('[name="currentAddress.address"]')!
+    .removeAttribute("readonly");
+  input("englishName").setAttribute("maxlength", "32");
   const listed = rows();
+  expect(listed.map((row) => row.fieldLabel)).not.toContain("생년월일");
   expect(listed.map((row) => row.fieldLabel)).toContain("상세주소");
   const english = listed.find((row) => row.fieldLabel === "영문이름");
   expect(english?.previewValue).toBe("HONG GILDONG");

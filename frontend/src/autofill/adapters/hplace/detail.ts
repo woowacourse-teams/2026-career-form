@@ -67,73 +67,78 @@ export function detailControls(document: Document): DetailControls | undefined {
       ? input
       : undefined;
   };
-  const englishName = one("englishName", "englishName", 64, sections[0][0]);
-  // Some tenants (KDI, 2026-10-20) have no birthday or gender at all. Only a
-  // page without any birthday control may omit it; a malformed one fails.
-  const birthdayPresent = document.querySelector('[name="birthday"]') !== null;
-  const birthday = birthdayPresent
-    ? one("birthday", "birthday", undefined, sections[0][0])
-    : undefined;
-  // Some tenants (com2us, 2026-10-20) render section 13 without any current
-  // address. Only a page with no address control at all may omit it; any
-  // partial address structure is still verified below and fails closed.
-  const addressPresent =
-    document.querySelector(
-      '[name^="currentAddress."], [data-row="address"]',
-    ) !== null;
-  const detailAddress = addressPresent
-    ? one("currentAddress.detailAddress", "", 128, sections[1][0])
-    : undefined;
-  if (
-    !englishName ||
-    (birthdayPresent &&
-      (!birthday ||
-        englishName.closest(".subject") !== birthday.closest(".subject") ||
-        birthday.dataset.dates !== "birthday:YMD")) ||
-    (addressPresent && !detailAddress)
-  )
-    return reject();
-  for (const input of birthday ? [englishName, birthday] : [englishName]) {
+  const skip = (
+    key: DetailKey,
+    reason: StructuralSkipReason = "owner-mismatch",
+    detail = "legacy-detail-anchors",
+  ) => {
+    debugCollectionSkip(detailNames[key], reason, detail);
+    return undefined;
+  };
+  const ownedLabel = (input: HTMLInputElement) => {
     const labels = document.querySelectorAll(`label[for="${input.id}"]`);
+    return (
+      labels.length === 1 &&
+      labels[0].closest(".subject") === input.closest(".subject")
+    );
+  };
+  // Each field is verified on its own: a missing control is simply absent
+  // (tenants differ: com2us has no address, KDI no birthday), and a present
+  // but malformed control drops only that field. Everything else in the
+  // section keeps working, and unverified-structure reports the dropped one.
+  const englishName = (() => {
+    if (!document.querySelector('[name="englishName"]')) return undefined;
+    const input = one("englishName", "englishName", 64, sections[0][0]);
+    if (!input) return skip("englishName");
+    return ownedLabel(input)
+      ? input
+      : skip("englishName", "label-mismatch", "owned-title-label");
+  })();
+  const birthday = (() => {
+    if (!document.querySelector('[name="birthday"]')) return undefined;
+    const input = one("birthday", "birthday", undefined, sections[0][0]);
+    if (!input || input.dataset.dates !== "birthday:YMD")
+      return skip("birthday");
+    return ownedLabel(input)
+      ? input
+      : skip("birthday", "label-mismatch", "owned-title-label");
+  })();
+  const detailAddress = (() => {
     if (
-      labels.length !== 1 ||
-      labels[0].closest(".subject") !== input.closest(".subject")
+      !document.querySelector('[name^="currentAddress."], [data-row="address"]')
     )
-      return reject("label-mismatch", "owned-title-label");
-  }
-  const row = detailAddress?.closest('[data-row="address"]');
-  const bases = document.querySelectorAll('[name="currentAddress.address"]');
-  const base = bases[0];
-  if (
-    detailAddress &&
-    (!row ||
+      return undefined;
+    const input = one("currentAddress.detailAddress", "", 128, sections[1][0]);
+    const row = input?.closest('[data-row="address"]');
+    const bases = document.querySelectorAll('[name="currentAddress.address"]');
+    const base = bases[0];
+    return input &&
+      row &&
       row.querySelectorAll('button[type="button"][data-type="currentAddress"]')
-        .length !== 1 ||
-      bases.length !== 1 ||
-      !(base instanceof HTMLInputElement) ||
-      base.type !== "text" ||
-      !base.readOnly ||
-      base.form !== form ||
-      base.closest('[data-row="address"]') !== row)
-  )
-    return reject();
-  const emergencyPhone = one(
-    "emergencyContact.contact",
-    "",
-    64,
-    sections[1][0],
-  );
-  if (
-    document.querySelector('[name="emergencyContact.contact"]') &&
-    (!emergencyPhone ||
-      emergencyPhone.getAttribute("data-validType") !== "PHONE" ||
-      emergencyPhone
+        .length === 1 &&
+      bases.length === 1 &&
+      base instanceof HTMLInputElement &&
+      base.type === "text" &&
+      base.readOnly &&
+      base.form === form &&
+      base.closest('[data-row="address"]') === row
+      ? input
+      : skip("detailAddress");
+  })();
+  const emergencyPhone = (() => {
+    if (!document.querySelector('[name="emergencyContact.contact"]'))
+      return undefined;
+    const input = one("emergencyContact.contact", "", 64, sections[1][0]);
+    return input &&
+      input.getAttribute("data-validType") === "PHONE" &&
+      input
         .closest(".row")
-        ?.querySelectorAll('[name="emergencyContact.comment"]').length !== 1)
-  )
-    return reject();
+        ?.querySelectorAll('[name="emergencyContact.comment"]').length === 1
+      ? input
+      : skip("emergencyPhone");
+  })();
   return {
-    englishName,
+    ...(englishName ? { englishName } : {}),
     ...(birthday ? { birthday } : {}),
     ...(detailAddress ? { detailAddress } : {}),
     ...(emergencyPhone ? { emergencyPhone } : {}),

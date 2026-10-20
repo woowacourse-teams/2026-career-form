@@ -235,11 +235,6 @@ export function basicControls(document: Document): BasicControl[] {
       )
         return reject();
       if (
-        key === "gender" &&
-        subject !== document.getElementById("englishName")?.closest(".subject")
-      )
-        return reject();
-      if (
         key === "serviceEndDate" &&
         !collected.some(
           (c) =>

@@ -61,14 +61,19 @@ it("keeps a duplicated detail section an owner mismatch", () => {
   ]);
 });
 
-it("keeps other detail anchor rejects an owner mismatch", () => {
+it("reports a malformed detail field by its own key and keeps the section", () => {
   withPolicy(mountDetail);
   document
     .querySelector<HTMLInputElement>('[name="englishName"]')!
     .setAttribute("maxlength", "32");
-  expect(detail(skips())).toEqual([
-    "[CareerForm] skip stage=collect key=hplace-detail-basic reason=owner-mismatch detail=legacy-detail-anchors",
+  const lines = skips();
+  expect(
+    lines.filter((line) => line.includes("key=hplace.detail.englishName ")),
+  ).toEqual([
+    "[CareerForm] skip stage=collect key=hplace.detail.englishName reason=owner-mismatch detail=legacy-detail-anchors",
   ]);
+  // The section itself is still collected: no section-level reject line.
+  expect(detail(lines)).toEqual([]);
 });
 
 it("reports a step page without detail sections as a missing section", () => {

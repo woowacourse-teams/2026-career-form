@@ -73,7 +73,9 @@ class HplaceFormFingerprintTest {
         // Birthday is optional too (KDI has none); the English name stays required.
         assertThat(fingerprint.matches(detailRequest(List.of(fields.get(0), fields.get(2)), null))).isTrue();
         assertThat(fingerprint.matches(detailRequest(List.of(fields.get(0)), null))).isTrue();
-        assertThat(fingerprint.matches(detailRequest(List.of(fields.get(1), fields.get(2)), null))).isFalse();
+        // Every detail field is optional on its own; the section only needs one allowed field.
+        assertThat(fingerprint.matches(detailRequest(List.of(fields.get(1), fields.get(2)), null))).isTrue();
+        assertThat(fingerprint.matches(detailRequest(List.of(), null))).isFalse();
         assertThat(fingerprint.matches(detailRequest(List.of(fields.get(0), fields.get(1), fields.get(1)), null))).isFalse();
         assertThat(fingerprint.matches(detailRequest(List.of(fields.get(0), fields.get(1), field("email")), null))).isFalse();
         assertThat(fingerprint.matches(detailRequest(fields, List.of(new Item("row", List.of(detailField("emergencyPhone"))))))).isFalse();
