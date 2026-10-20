@@ -73,8 +73,9 @@ export function hplaceUnverifiedRows(
   request: FieldsAnalyzeRequest,
   profile: Profile,
 ): ReviewPlanItem[] {
+  // Detached documents (overlay/demo pages) have no location.
   if (
-    document.location.pathname !== "/mrs2/applicant/resume/writeResume" ||
+    document.location?.pathname !== "/mrs2/applicant/resume/writeResume" ||
     !isHplaceDocument(document)
   )
     return [];
