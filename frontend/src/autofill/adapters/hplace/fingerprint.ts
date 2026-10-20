@@ -6,7 +6,8 @@ export function isHplaceDocument(document: Document): boolean {
   if (
     !location ||
     !/^https?:$/.test(location.protocol) ||
-    !tenantHost.test(location.hostname.toLowerCase())
+    // Same normalization as the backend: lower-case, one trailing dot removed.
+    !tenantHost.test(location.hostname.toLowerCase().replace(/\.$/, ""))
   ) {
     return false;
   }

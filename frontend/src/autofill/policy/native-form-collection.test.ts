@@ -12,10 +12,15 @@ import {
   syntheticNativePolicy,
 } from "./__fixtures__/hplace-mrs2-native.synthetic";
 import { mountEducation } from "./__fixtures__/hplace-mrs2-education.synthetic";
+import { appendCareerSection } from "./__fixtures__/hplace-mrs2-career.synthetic";
+import { disposeLinkedForms } from "./__fixtures__/hplace-mrs2-linked-form";
 import { setAutofillDebugEnabled } from "../debug/autofill-debug";
 import { expectHarnessLine } from "../workflow/test-utils/harness-diagnostic-line";
 
-afterEach(() => installExecutionPolicy(document));
+afterEach(() => {
+  disposeLinkedForms();
+  installExecutionPolicy(document);
+});
 describe("nativeForm single-depth contract", () => {
   it("accepts the bounded v2 contract without changing wire schema 2", () => {
     expect(validExecutionPolicy(syntheticNativePolicy())).toBe(true);
@@ -171,5 +176,29 @@ describe("nested field diagnostics", () => {
     expect(lines).not.toMatch(
       /key=hplace\.mrs2\.college\.\S+ reason=control-missing detail=nested-row-absent/,
     );
+  });
+});
+
+describe("request privacy", () => {
+  it("never serializes page input values or search queries into analysis requests", () => {
+    mountEducation(1, 1, false, { liveGating: true, highschool: {} });
+    appendCareerSection(1);
+    const SENTINEL = "SENTINEL_PAGE_VALUE_7f3a";
+    for (const control of document.querySelectorAll<
+      HTMLInputElement | HTMLTextAreaElement
+    >(
+      'input[type="text"], input[type="search"], input[type="hidden"], input[type="number"], textarea',
+    ))
+      control.value = `${SENTINEL}-${control.name || control.type}`;
+    document.querySelector<HTMLInputElement>(
+      '[name="college[0].degreeTypeCode"]',
+    )!.checked = true;
+    const fields = JSON.stringify(collectFieldsSnapshot(document).request);
+    const preparation = JSON.stringify(
+      collectPreparationSnapshot(document).request,
+    );
+    expect(fields).not.toContain(SENTINEL);
+    expect(preparation).not.toContain(SENTINEL);
+    expect(fields).not.toContain('"value"');
   });
 });
