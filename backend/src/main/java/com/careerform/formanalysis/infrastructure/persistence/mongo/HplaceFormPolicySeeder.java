@@ -5,13 +5,21 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
+/**
+ * Insert-only bootstrap of the Hplace policy documents (legacy v3, native v4) in every
+ * deployed profile, like {@link StartupPolicySeeder}. Existing versions are never modified:
+ * a changed policy ships as a new version, and the active-version pointer
+ * ({@code careerform.hplace.active-policy-version}) is raised by a person after the matching
+ * extension build is installed.
+ */
 @Component
-@Profile("local")
-final class LocalHplaceFormPolicySeeder implements ApplicationRunner {
+@Profile({"local", "dev", "staging", "prod"})
+final class HplaceFormPolicySeeder implements ApplicationRunner {
+    static final String[] PROFILES = {"local", "dev", "staging", "prod"};
 
     private final FormAnalysisPolicyMongoRepository policies;
 
-    LocalHplaceFormPolicySeeder(FormAnalysisPolicyMongoRepository policies) {
+    HplaceFormPolicySeeder(FormAnalysisPolicyMongoRepository policies) {
         this.policies = policies;
     }
 
