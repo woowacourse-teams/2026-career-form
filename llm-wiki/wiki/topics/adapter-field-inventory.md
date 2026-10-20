@@ -2,8 +2,8 @@
 
 > Topic: adapter-field-inventory
 > Status: Current
-> Current: [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md)
-> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-field-inventory.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-field-inventory.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-field-inventory.md); [CF-94 근거](../../raw/issues/CF-94/documents/adapter-field-inventory.md); [CF-160 근거](../../raw/issues/CF-160/documents/adapter-field-inventory.md); [CF-168 근거](../../raw/issues/CF-168/documents/adapter-field-inventory.md); [CF-169 근거](../../raw/issues/CF-169/documents/adapter-field-inventory.md); [CF-177 근거](../../raw/issues/CF-177/documents/adapter-field-inventory.md); [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md)
+> Current: [CF-177 C12·C13·시연 수정 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md)
+> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-field-inventory.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-field-inventory.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-field-inventory.md); [CF-94 근거](../../raw/issues/CF-94/documents/adapter-field-inventory.md); [CF-160 근거](../../raw/issues/CF-160/documents/adapter-field-inventory.md); [CF-168 근거](../../raw/issues/CF-168/documents/adapter-field-inventory.md); [CF-169 근거](../../raw/issues/CF-169/documents/adapter-field-inventory.md); [CF-177 근거](../../raw/issues/CF-177/documents/adapter-field-inventory.md); [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md); [CF-177 C12·C13·시연 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md)
 > Updated: 2026-10-20
 
 ## 현재 상태
@@ -160,7 +160,7 @@ BE 정적 규칙과 FE 수집·반복행 준비·검색·날짜·선택 실행�
 
 ### 현재 상태
 
-아래 프로필 전수표는 **13범주 127키를 각각 한 번** 포함한다. 등록/step1·2·3 범위는 제한 열에서 구분하며 v1/JOBDA 입력은 모든 키에 공통으로 구조 미확인·인증 후 사용자 화면 대기다. `구현`은 활성 로컬 정책과 FE 실행 경로가 있다는 뜻이며 운영 DB 활성화를 뜻하지 않는다. 2026-10-20 live-eval 하네스에서 `1759db5`와 `f586619` CLEAN 빌드로 abl·careerhyundai·gsenc의 step 1–3 실화면 평가를 통과했다. 이는 단계 단위 결과이며 이 표의 각 키가 모든 테넌트에서 입력됐다는 뜻은 아니다. C12–C14와 포커스 없는 창·사이드 패널(H7)은 남아 있다.
+아래 프로필 전수표는 **13범주 127키를 각각 한 번** 포함한다. 등록/step1·2·3 범위는 제한 열에서 구분하며 v1/JOBDA 입력은 모든 키에 공통으로 구조 미확인·인증 후 사용자 화면 대기다. `구현`은 활성 로컬 정책과 FE 실행 경로가 있다는 뜻이며 운영 DB 활성화를 뜻하지 않는다. 2026-10-20 live-eval 하네스에서 `1759db5`와 `f586619` CLEAN 빌드로 abl·careerhyundai·gsenc의 step 1–3 실화면 평가를 통과했다. 이는 단계 단위 결과이며 이 표의 각 키가 모든 테넌트에서 입력됐다는 뜻은 아니다. 이후 `4962c96`·`6a7a141`에서도 3사 step 1–3이 통과했다. C12·C13은 완료, C14는 불필요로 종료했고 포커스 없는 창·사이드 패널(H7)은 남아 있다.
 
 #### 산출 방법과 근거
 
@@ -178,8 +178,8 @@ BE 정적 규칙과 FE 수집·반복행 준비·검색·날짜·선택 실행�
 | `personal.personal.koreanGivenName` — 국문 이름 | 구현 / 정책 키: `hplace.registration.name` | 등록 화면만; 이름 결합/분할전화/이메일 확인 소유 그룹; 상세 표시값 쓰기 아님 |
 | `personal.personal.hanjaFamilyName` — 한자 성 | 구현 / 정책 키: `hplace.mrs2.basic.chineseName` | step1/11; HANJA_FULL_NAME은 성·이름 둘 다 있어야 trim 후 결합; GS 관측, 한국타이어에는 없음 |
 | `personal.personal.hanjaGivenName` — 한자 이름 | 구현 / 정책 키: `hplace.mrs2.basic.chineseName` | step1/11; HANJA_FULL_NAME은 성·이름 둘 다 있어야 trim 후 결합; GS 관측, 한국타이어에는 없음 |
-| `personal.personal.englishFamilyName` — 영문 성 | 미지원 사유: 의미 불일치 | englishName 단일칸의 성·이름 순서 근거 없음; legacy NO_MATCH |
-| `personal.personal.englishGivenName` — 영문 이름 | 미지원 사유: 의미 불일치 | englishName 단일칸의 성·이름 순서 근거 없음; legacy NO_MATCH |
+| `personal.personal.englishFamilyName` — 영문 성 | 구현 / 정책 키: `hplace.detail.englishName.{familyFirst,givenFirst}` | step1/11 단일칸. 회사 안내가 순서를 명시하면 그 순서, 안내가 전혀 없으면 성 이름(2026-10-20 사용자 결정), 다른 영역·중복·모호한 안내는 미기입 |
+| `personal.personal.englishGivenName` — 영문 이름 | 구현 / 정책 키: `hplace.detail.englishName.{familyFirst,givenFirst}` | 영문 성과 같은 단일칸·순서 규칙 |
 | `personal.personal.gender` — 성별 | 구현 / 정책 키: `hplace.detail.gender` | step1; 현재 활성 제어와 정확 옵션·소유·기존 값·프로필 재확인 |
 | `personal.personal.birthDate` — 생년월일 | 구현 / 정책 키: `hplace.detail.birthday` | step1; 현재 활성 제어와 정확 옵션·소유·기존 값·프로필 재확인 |
 | `personal.personal.nationality` — 국적 | 구현 / 정책 키: `hplace.detail.nationality` | step1; 현재 활성 제어와 정확 옵션·소유·기존 값·프로필 재확인 |
@@ -298,11 +298,11 @@ BE 정적 규칙과 FE 수집·반복행 준비·검색·날짜·선택 실행�
 
 | 대상 | 현재 구현·검증 | 제한 |
 | --- | --- | --- |
-| `projects.project.startDate` — 활동 시작일 | 미지원 사유: 구조 미확인 | 154 enabled:false; 두 테넌트 step2 화면 없음 확인, 다른 화면 구조 미확인. 비활성 정책 키: `hplace.mrs2.project.startDate` |
-| `projects.project.endDate` — 활동 종료일 | 미지원 사유: 구조 미확인 | 154 enabled:false; 두 테넌트 step2 화면 없음 확인, 다른 화면 구조 미확인. 비활성 정책 키: `hplace.mrs2.project.endDate` |
-| `projects.project.projectName` — 프로젝트 이름 | 미지원 사유: 구조 미확인 | 154 enabled:false; 두 테넌트 step2 화면 없음 확인, 다른 화면 구조 미확인. 비활성 정책 키: `hplace.mrs2.project.projectName` |
-| `projects.project.role` — 담당 역할 | 미지원 사유: 구조 미확인 | 154 enabled:false; 두 테넌트 step2 화면 없음 확인, 다른 화면 구조 미확인. 비활성 정책 키: `hplace.mrs2.project.role` |
-| `projects.project.activityDetails` — 활동 상세내역 | 미지원 사유: 의미 불일치 | performWork/comment와 활동 상세내역의 확정 의미 계약 없음; 154 비활성 |
+| `projects.project.startDate` — 활동 시작일 | 구현 / 정책 키: `hplace.mrs2.project.startDate`. gsenc·abl matched | step2/154; YMD |
+| `projects.project.endDate` — 활동 종료일 | 구현 / 정책 키: `hplace.mrs2.project.endDate`. gsenc·abl matched | step2/154; YMD |
+| `projects.project.projectName` — 프로젝트 이름 | 구현 / 정책 키: `hplace.mrs2.project.projectName`. gsenc·abl matched | step2/154; 행 구동자(입력 뒤 나머지 칸 활성), maxlength 128. 기존 값이 있는 행은 보존하고 빈 행·추가 행에 배정 |
+| `projects.project.role` — 담당 역할 | 구현 / 정책 키: `hplace.mrs2.project.role`. gsenc·abl matched | step2/154; maxlength 128 |
+| `projects.project.activityDetails` — 활동 상세내역 | 미지원 사유: 의미 불일치 | performWork/comment와 활동 상세내역의 확정 의미 계약 없음 |
 
 #### 논문·특허 (3키)
 
@@ -371,6 +371,19 @@ BE 정적 규칙과 FE 수집·반복행 준비·검색·날짜·선택 실행�
 | native select/radio 선택지 | 활성 옵션에 프로필 라벨이 하나도 없을 때만 `OPTION_UNMATCHED`로 입력 불가, 프로필 항목·itemIndex 유지 | 중복·비활성 같은 구조 실패에는 프로필 탓 코드를 붙이지 않음; 검색 칸과 Greeting button dropdown은 대상 아님 |
 | native 라디오 리뷰 현재값 | 체크된 사이트 코드가 정책 options에서 정확히 대응될 때만 정책 라벨로 비교 | 그 밖에는 원래 코드로 충돌 보호; 작성안함 빈 라디오는 빈 값 |
 
+### C12·C13·시연 수정 보강 (2026-10-20)
+
+| 대상 | 현재 구현·검증 | 제한 |
+| --- | --- | --- |
+| 프로젝트154 발주처·근무지(사이트 필수) | gsenc·abl 빈칸 유지 | 프로필 키 없음. 확인 필요에 표시하지 않으므로 사용자가 저장 전 직접 입력. abl 기여도도 미기입 |
+| 자격증 등록번호 | 3사 실구조 maxlength 64, licenseCode 선택 뒤 활성 | REGISTRATION gate가 닫히면 미수집(기존과 같음) |
+| 병역 기간(복무 시작·종료) | 시작일 토큰 `:YM`은 월, `:YMD`(huonsgroup)는 일까지 기입·비교 | 그 밖의 토큰은 거부. 시작일 미인식 시 병역 하위가 함께 비던 연쇄를 수정 |
+| 상세 기본정보(영문 이름·생년월일·성별·국적·보훈·장애·병역) | 섹션 13에 주소 제어가 전혀 없는 화면(com2us)도 처리 | 일부만 있는 주소 구조는 차단 유지 |
+| step 2 합성 builder 대조 | 3사 정제 fixture와 게이팅 속성 일치 | gsenc 대학 계열 없음, gsenc·abl 대학원 입학구분 없음, abl 전공 평점, careerhyundai 고교 주야간·YMD 학력 날짜, abl step 2 고교 없음 |
+| 다전공 2·3번째 전공 주야간 | 주전공에만 연결(main-major-only, 기존과 같음) | 프로필의 주야간은 학교 단위 값 하나 |
+
+실화면 matched는 84키(3사 공통 65, 일부 테넌트 19: 프로젝트 4는 abl·gsenc)다.
+
 ### 사이트 전용 항목 (127키 집계와 별도)
 
 | 대상 | 현재 구현·검증 | 제한 |
@@ -407,11 +420,11 @@ BE 정적 규칙과 FE 수집·반복행 준비·검색·날짜·선택 실행�
 
 | 대상 | 현재 구현·검증 | 제한 |
 | --- | --- | --- |
-| 프로필 127키 / 구현 | 89 | 키 단위, 사이트 전용 항목 제외 |
+| 프로필 127키 / 구현 | 95 | 키 단위, 사이트 전용 항목 제외 |
 | 프로필 127키 / 화면 없음 확인 | 1 | 키 단위, 사이트 전용 항목 제외 |
 | 프로필 127키 / 프로필 키 없음 | 0 | 키 단위, 사이트 전용 항목 제외 |
-| 프로필 127키 / 의미 불일치 | 15 | 키 단위, 사이트 전용 항목 제외 |
-| 프로필 127키 / 구조 미확인 | 20 | 키 단위, 사이트 전용 항목 제외 |
+| 프로필 127키 / 의미 불일치 | 13 | 키 단위, 사이트 전용 항목 제외 |
+| 프로필 127키 / 구조 미확인 | 16 | 키 단위, 사이트 전용 항목 제외 |
 | 프로필 127키 / 사용자 처리(인증·파일) | 2 | 키 단위, 사이트 전용 항목 제외 |
 | 프로필 127키 / 명시 제외 | 0 | 키 단위, 사이트 전용 항목 제외 |
 

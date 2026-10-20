@@ -707,3 +707,11 @@
 - 승인 후보 파일의 신규 후보 절(K41–K55) UTF-8 바이트의 SHA-256을 재확인하고, 아직 병합되지 않은 [CF-177 bundle](../raw/issues/CF-177/manifest.md)에 새 문서를 추가했다. 기존 7개 문서와 manifest 머리말은 바꾸지 않고 topic 절 세 개를 덧붙였다.
 - [Hplace 어댑터](topics/adapter-hplace.md), [개발 경계](topics/adapter-development.md), [필드 현황](topics/adapter-field-inventory.md)의 Current와 History를 갱신하고 검색 확정·driver 실행·선택지·날짜 정밀도·live-eval 하네스 경계를 반영했다. 키별 지원 분류 수는 바꾸지 않았다.
 - 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.
+
+## [2026-10-20] ingest | CF-177 Hplace C12·C13와 미검증 테넌트 시연 수정
+
+- Approval-Digest: 542da5f91de838b7628a627f71c8299e1434cc346667f7aea70ea92d50921a61
+- Source-Revision: 6a7a14174ccf6b21ae691254fbec78bb63aa22e1
+- 3차 후보 파일(K56–K65) 전체 UTF-8 바이트의 SHA-256을 재확인하고, 아직 병합되지 않은 [CF-177 bundle](../raw/issues/CF-177/manifest.md)에 새 문서를 추가했다. 기존 문서와 manifest의 앞선 절은 바꾸지 않고 topic 절 세 개를 덧붙였다.
+- [Hplace 어댑터](topics/adapter-hplace.md), [개발 경계](topics/adapter-development.md), [필드 현황](topics/adapter-field-inventory.md)의 Current와 History를 갱신하고 정제 fixture 대조, 프로젝트154 활성화, C14 종료, 지원 방식 판별, 현주소 없는 기본정보, 병역 날짜 정밀도, 영문 이름 순서 기본값을 반영했다. 키별 집계는 구현 95·의미 불일치 13·구조 미확인 16으로 바꿨다.
+- 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.

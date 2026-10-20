@@ -48,3 +48,29 @@
 > Collected: 2026-10-20
 > Approval-Digest: fdbe4510fabdf1aa3e1f9a6e7373ba1558ada47bdde352eea116187bcf17ef52
 > Source-Revision: f5866191b17bb75cd5250c76f8bc2f6242ab1a54
+
+## adapter-hplace
+
+> Payload: [Hplace 실화면 정제 fixture, 프로젝트 활성화와 미검증 테넌트 시연 수정](documents/live-c12-c13-demo.md)
+> Supersedes: [CF-177 step 2·3 실화면 수정 근거](documents/live-step23.md)
+> Collected: 2026-10-20
+> Approval-Digest: 542da5f91de838b7628a627f71c8299e1434cc346667f7aea70ea92d50921a61
+> Source-Revision: 6a7a14174ccf6b21ae691254fbec78bb63aa22e1
+
+이 절부터 아래 세 절은 2026-10-20에 별도로 승인된 3차 후보 K56–K65의 수집이다. 승인 대상은 후보 파일 `knowledge-candidates-r3.md` 전체 UTF-8 바이트이고 절의 Approval-Digest는 그 SHA-256이다. 앞선 절과 문서는 바꾸지 않았다. 새 payload는 앞선 근거를 보강하며, 바꾸지 않은 내용은 Supersedes가 가리키는 문서를 따른다.
+
+## adapter-field-inventory
+
+> Payload: [Hplace 실화면 정제 fixture, 프로젝트 활성화와 미검증 테넌트 시연 수정](documents/live-c12-c13-demo.md)
+> Supersedes: [CF-177 step 2·3 실화면 수정 근거](documents/live-step23.md)
+> Collected: 2026-10-20
+> Approval-Digest: 542da5f91de838b7628a627f71c8299e1434cc346667f7aea70ea92d50921a61
+> Source-Revision: 6a7a14174ccf6b21ae691254fbec78bb63aa22e1
+
+## adapter-development
+
+> Payload: [Hplace 실화면 정제 fixture, 프로젝트 활성화와 미검증 테넌트 시연 수정](documents/live-c12-c13-demo.md)
+> Supersedes: [CF-177 step 2·3 실화면 수정 근거](documents/live-step23.md)
+> Collected: 2026-10-20
+> Approval-Digest: 542da5f91de838b7628a627f71c8299e1434cc346667f7aea70ea92d50921a61
+> Source-Revision: 6a7a14174ccf6b21ae691254fbec78bb63aa22e1

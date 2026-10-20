@@ -2,8 +2,8 @@
 
 > Topic: adapter-development
 > Status: Current
-> Current: [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md)
-> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-development.md); [CF-94 근거](../../raw/issues/CF-94/documents/adapter-development.md); [CF-177 근거](../../raw/issues/CF-177/documents/adapter-development.md); [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md)
+> Current: [CF-177 C12·C13·시연 수정 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md)
+> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-development.md); [CF-94 근거](../../raw/issues/CF-94/documents/adapter-development.md); [CF-177 근거](../../raw/issues/CF-177/documents/adapter-development.md); [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md); [CF-177 C12·C13·시연 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md)
 > Updated: 2026-10-20
 
 ## 현재 상태
@@ -53,6 +53,12 @@ FE는 SK·현대의 기존 선택 우선순위를 유지하며 유일한 최상�
 ### 호환 배포와 검증 한계
 
 새 확장 배포 → 대상 설치/보급 확인 → BE v4 DB 활성 포인터 순으로 활성화한다. 구 확장은 새 capability/DERIVED enum 때문에 정책 전체를 거부할 수 있으며 구 validator probe는 실제 브라우저 검증을 대신하지 않는다. resource enabled는 운영 활성화가 아니다. 2026-10-20 live-eval 하네스에서 `f586619`의 3사 step 1–3 실화면 평가가 통과해 검색·주소·linkedForm 미확인 상태를 정정했다. C12–C14, 포커스 없는 창·사이드 패널(H7)과 공식 WSL/Linux 검증은 별도이며 이번 수집에서 migration·배포를 실행하지 않았다.
+
+2026-10-20 C13에서 v4 resource의 프로젝트154를 활성화했다. seeder가 insert-only이므로 기존 DB에는 자동 반영되지 않으며 운영 반영 방식은 사람이 정한다. 상세 기본정보의 현주소를 선택 앵커로 바꾼 변경은 FE 상세 앵커, FE MRS2 플랫폼 지문(섹션 13 존재), BE `HplaceFormFingerprint.DETAIL_REQUIRED`(영문 이름·생년월일)를 함께 바꿔야 한다.
+
+### 실화면 정제 fixture와 builder 대조
+
+C12는 페이지 함수로 원본 섹션을 새 비활성 문서에 허용 목록 복사해 등록했다(`frontend/fixtures/dom-snapshots/hplace-mrs2-step{2,3}-*`). 값·체크 상태와 모든 표시 텍스트를 지우고 id는 익명화, 선택지 코드와 `data-rel-value`는 같은 합성 코드표, 5자리 이상 숫자는 합성 번호로 바꾼다. 등록 전에는 브라우저 안 원본 대조, 하네스 구조 스냅샷과의 컨트롤 수 독립 대조, offline Chromium 외부 요청 0건을 확인했다. 첫 허용 목록에서 섹션 header·`data-dateinputformat`·`data-rel-value`·행 속성이 빠져 넓힌 뒤 재승인했다. id 익명화 때문에 템플릿 id에 의존하는 legacy 상세 모듈은 이 fixture로 재현되지 않는다. 대조 결과 게이팅 속성(disabled·data-rel-*·data-dates·선택지 수)은 builder와 같았고 tenant 선택 항목과 섹션 16 구성(경력153·프로젝트154·부가 항목)만 달랐다. 실구조로 native 수집을 비교할 때는 정책 `rootSelector`와 자산 태그 골격만 합성한다.
 
 live-eval 하네스는 하네스가 소유하지 않는 상주 Chromium에 CDP로 붙고 브라우저·context·지원서 탭·전용 프로필을 닫거나 지우지 않는다. 평가 round 밖에서만 저장 핸들러 없는 단계 이동 요청을 보내며 다음·임시저장·제출 버튼과 단계 탭은 누르지 않는다. 로컬 BE가 내보내는 정책의 canonical nativeForm이 대상 HEAD 정책과 다르거나 확인되지 않으면 명시 허용 없이 실행하지 않는다. seeder가 insert-only라 정책을 고친 뒤에는 사람이 승인한 로컬 DB 재설정으로 재시드하고 지문 match를 확인한다. 보고에는 키·상태·개수만 남기고 값·URL·쿼리·쿠키·HTML은 남기지 않는다.
 
