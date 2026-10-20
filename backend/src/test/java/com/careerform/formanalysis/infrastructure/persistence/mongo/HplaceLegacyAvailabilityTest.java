@@ -58,4 +58,10 @@ class HplaceLegacyAvailabilityTest {
         assertThat(provider(4).find()).isInstanceOf(Unavailable.class);
         verify(policies, never()).findByCompanyKeyAndVersion("hplace", 3);
     }
+    @Test void stagedAddressNodeIsComputedOncePerPolicy() {
+        when(policies.findByCompanyKeyAndVersion("hplace", 4)).thenReturn(Optional.of(HplaceCompanyFormPolicyFactory.createNative()));
+        var policy = ((Available) provider(4).find()).policy();
+        assertThat(policy.stagedAddress().path("sectionId").asText()).isEqualTo("hplace-mrs2-currentAddress");
+        assertThat(policy.stagedAddress()).isSameAs(policy.stagedAddress());
+    }
 }

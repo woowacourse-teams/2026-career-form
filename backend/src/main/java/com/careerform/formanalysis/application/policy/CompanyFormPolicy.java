@@ -27,6 +27,8 @@ public final class CompanyFormPolicy {
     private final FieldsFingerprint fieldsFingerprint;
     private final List<ActionRule> actionRules;
     private final List<FieldRule> fieldRules;
+    // 불변 executionPolicy에서 파생되는 staged address 노드의 지연 캐시(요청마다 재직렬화 방지)
+    private volatile com.fasterxml.jackson.databind.JsonNode stagedAddress;
 
     private CompanyFormPolicy(
         String companyKey,
@@ -88,11 +90,15 @@ public final class CompanyFormPolicy {
         }
         requireUniqueActionRules(actionRules);
         requireUniqueFieldRules(fieldRules);
+        // address 노드는 SEARCH_ADDRESS 규칙이 있을 때만 한 번 계산한다.
+        String addressActionId = sectionContracts.isEmpty() || actionRules.stream()
+            .noneMatch(r -> r.kind()==ActionKind.SEARCH_ADDRESS && r.structuralNames().size()==1) ? null
+            : StagedAddressContract.address(executionPolicy).path("actionId").asText();
         for (ActionRule rule : actionRules) {
             validateActionRule(rule, preparationFingerprint.requiredSectionIds(), isSupportedProfileKey);
             if (!sectionContracts.isEmpty()) {
                 boolean address = rule.kind()==ActionKind.SEARCH_ADDRESS && rule.structuralNames().size()==1
-                    && StagedAddressContract.address(executionPolicy).path("actionId").asText().equals(rule.structuralName());
+                    && addressActionId.equals(rule.structuralName());
                 if (!address && (rule.kind()!=ActionKind.ADD || sectionContracts.stream().flatMap(c->c.actions().stream())
                     .noneMatch(a->a.structuralNames().contains(rule.structuralName())))) invalidPolicy();
             }
@@ -115,6 +121,11 @@ public final class CompanyFormPolicy {
 
     public List<SectionContract> sectionContracts() { return sectionContracts; }
     public com.careerform.formanalysis.dto.ExecutionPolicy executionPolicy() { return executionPolicy; }
+    public com.fasterxml.jackson.databind.JsonNode stagedAddress() {
+        var address = stagedAddress;
+        if (address == null) stagedAddress = address = StagedAddressContract.address(executionPolicy);
+        return address;
+    }
 
     public String companyKey() {
         return companyKey;

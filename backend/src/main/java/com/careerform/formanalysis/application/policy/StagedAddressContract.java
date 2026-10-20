@@ -64,7 +64,7 @@ final class StagedAddressContract {
         }
     }
     static List<CompanyFormPolicy.ActionStructure> actions(CompanyFormPolicy policy) {
-        var a=address(policy.executionPolicy());
+        var a=policy.stagedAddress();
         return a.path("enabled").asBoolean()?List.of(new CompanyFormPolicy.ActionStructure(a.path("actionId").asText(),PreparationAnalysisRequest.FormElement.BUTTON,PreparationAnalysisRequest.FormControl.BUTTON)):List.of();
     }
     static boolean preparation(JsonNode a, PreparationAnalysisRequest.Section s, Set<String> ids) {
