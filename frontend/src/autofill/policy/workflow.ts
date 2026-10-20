@@ -7,6 +7,7 @@ import {
 } from "./committed-search";
 import { currentNativeOwner, nativeForm } from "./native-form-collection";
 import {
+  nativeDriverFailure,
   nativeFieldControls,
   nativeWriteAdapter,
   settleNativeDriver,
@@ -125,7 +126,7 @@ export function policyWorkflowAdapter(document: Document): WorkflowAdapter {
       handle,
       item,
       signal,
-      _report,
+      report,
       beforeMutation,
     ) {
       if (handle.owner !== "native") return undefined;
@@ -136,9 +137,17 @@ export function policyWorkflowAdapter(document: Document): WorkflowAdapter {
       )
         return false;
       if (currentNativeOwner(handle)?.field.search)
-        return executeCommittedSearch(handle, item, signal, beforeMutation);
+        return executeCommittedSearch(
+          handle,
+          item,
+          signal,
+          beforeMutation,
+          report,
+        );
       const result = nativeWriteAdapter.tryWrite(handle, item);
-      return result.handled && result.written;
+      if (result.handled && result.written) return true;
+      if (!signal.aborted) report?.(nativeDriverFailure(handle, item));
+      return false;
     },
     prefersProfileValue: priority,
     normalizeProfileValue(key, value) {
@@ -325,7 +334,13 @@ export function policyWorkflowAdapter(document: Document): WorkflowAdapter {
           (!context.beforeMutation || (await context.beforeMutation())) &&
           (currentNativeOwner(handle)?.field.search
             ? committedSearchMatches(handle, context.item)
-            : await settleNativeDriver(handle, context.item, context.signal)) &&
+            : await settleNativeDriver(
+                handle,
+                context.item,
+                context.signal,
+                undefined,
+                failure,
+              )) &&
           (!context.beforeMutation || (await context.beforeMutation()))
         : ruleFor(handle.candidate.domName)?.priority
           ? settlePolicySelection(doc, handle)
