@@ -40,10 +40,14 @@ public final class QualityObservationFilter extends OncePerRequestFilter {
             } finally {
                 if (!scope.observed()) {
                     try {
-                        var event = new QualityCollectionService.RequestEvent(operation(request.getRequestURI()), failed ? 500 : response.getStatus(),
-                            scope.durationMs(), null, scope.calls());
-                        observations.observe(new QualityAsyncService.Observation(null, "UNKNOWN", null, false, "UNKNOWN",
-                            null, null, null, event, null));
+                        var operation = operation(request.getRequestURI());
+                        var status = failed ? 500 : response.getStatus();
+                        var duration = scope.durationMs();
+                        observations.observeCaptured(budget -> {
+                            var event = new QualityCollectionService.RequestEvent(operation, status, duration, null, budget.calls(scope.calls()));
+                            return new QualityObservationCapture(new QualityAsyncService.Observation(null, "UNKNOWN", null, false, "UNKNOWN",
+                                null, null, null, event, null), null);
+                        });
                     } catch (RuntimeException exception) {
                         log.warn("QUALITY_REQUEST_OBSERVATION_UNAVAILABLE");
                     }

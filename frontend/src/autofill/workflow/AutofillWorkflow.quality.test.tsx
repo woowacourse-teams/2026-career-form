@@ -19,7 +19,10 @@ it.each([false, true])(
       release = resolve;
     });
     const quality = new QualityObservation(async (message) => {
-      reports.push((message as { payload: QualityReport }).payload);
+      reports.push(
+        ...(message as { payload: { reports: QualityReport[] } }).payload
+          .reports,
+      );
       if (stalled) await reporting;
       return { ok: true };
     });

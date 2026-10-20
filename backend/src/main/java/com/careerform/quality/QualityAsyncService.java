@@ -9,9 +9,16 @@ public final class QualityAsyncService {
     private final QualityTaskQueue tasks;
     private final QualityCollectionService collector;
     private final QualityRegistry registry;
+    private final java.util.function.Function<QualityCapturedSnapshot, QualityProjection.Snapshot> projector;
     private final ObjectMapper mapper = new ObjectMapper();
 
     public QualityAsyncService(QualityRegistration registration, QualityTaskQueue tasks, QualityCollectionService collector, QualityRegistry registry) {
+        this(registration, tasks, collector, registry, QualityCapturedSnapshot::project);
+    }
+
+    QualityAsyncService(QualityRegistration registration, QualityTaskQueue tasks, QualityCollectionService collector, QualityRegistry registry,
+                        java.util.function.Function<QualityCapturedSnapshot, QualityProjection.Snapshot> projector) {
+        this.projector = projector;
         this.registration = registration;
         this.tasks = tasks;
         this.collector = collector;
@@ -36,7 +43,22 @@ public final class QualityAsyncService {
         }));
     }
 
-    public boolean observe(Observation observation) { return tasks.submit(bytes(observation), () -> collect(observation)); }
+    public boolean observeCaptured(java.util.function.Function<QualityCaptureBudget, QualityObservationCapture> capture) {
+        return tasks.submitCaptured(limit -> {
+            var budget = new QualityCaptureBudget(limit);
+            var captured = capture.apply(budget);
+            return new QualityTaskQueue.Prepared(budget.bytes(), new java.util.concurrent.Callable<Boolean>() {
+                private Observation observation;
+                public Boolean call() {
+                    if (observation == null) {
+                        observation = captured.project(projector);
+                        tasks.requireEventSize(bytes(observation));
+                    }
+                    return collect(observation);
+                }
+            });
+        });
+    }
 
     private boolean collect(Observation observation) {
         var context = observation.connection() == null ? null : registration.find(observation.connection());
@@ -60,16 +82,36 @@ public final class QualityAsyncService {
     }
 
     public void report(String runId, String token, QualityCollectionService.Report report) {
-        QualityReports.validate(report);
-        var retained = bytes(report);
-        registration.report(runId, token, report.eventId(), context -> tasks.submit(retained, () -> {
-            var current = registration.find(context.connection());
-            if (current == null) { throw new QualityAdmissionException(401); }
-            if (!current.persisted() || report.snapshotId() != null && !current.snapshots().contains(QualityProjection.digest(report.snapshotId()))) { return false; }
-            collector.reportRegistered(current.runId(), current.tokenHash(), report);
-            return true;
-        }));
+        reportBatch(runId, token, java.util.List.of(report));
     }
+
+    public void reportBatch(String runId, String token, java.util.List<QualityCollectionService.Report> reports) {
+        QualityReports.validateBatch(reports);
+        var eventBytes = reports.size() == 1 ? bytes(reports.getFirst()) : bytes(java.util.Map.of("reports", reports));
+        var retained = QualityReports.retainedBytes(reports);
+        registration.reportBatch(runId, token, reports.stream().map(QualityCollectionService.Report::eventId).toList(), context -> {
+            var pending = reports.stream().filter(report -> !context.events().contains(QualityProjection.digest(report.eventId()))).toList();
+            var connection = context.connection();
+            return tasks.submit(retained, eventBytes, new java.util.concurrent.Callable<Boolean>() {
+                private java.util.List<PendingReport> remaining;
+                public Boolean call() {
+                    var current = registration.find(connection);
+                    if (current == null) { throw new QualityAdmissionException(401); }
+                    if (!current.persisted()) { return false; }
+                    if (remaining == null) { remaining = pending.stream().map(report -> new PendingReport(report,
+                        report.snapshotId() == null ? null : QualityProjection.digest(report.snapshotId()))).toList(); }
+                    var ready = remaining.stream().filter(member -> member.snapshotKey() == null || current.snapshots().contains(member.snapshotKey()))
+                        .findFirst().orElse(null);
+                    if (ready == null) { return false; }
+                    collector.reportRegistered(current.runId(), current.tokenHash(), ready.report());
+                    remaining = remaining.stream().filter(member -> member != ready).toList();
+                    return remaining.isEmpty();
+                }
+            });
+        });
+    }
+
+    private record PendingReport(QualityCollectionService.Report report, String snapshotKey) { }
 
     private int bytes(Object event) { return mapper.writeValueAsBytes(event).length; }
 }

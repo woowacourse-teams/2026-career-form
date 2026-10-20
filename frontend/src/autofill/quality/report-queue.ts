@@ -1,5 +1,5 @@
 import type { QualityReport, QualityState } from "./observation";
-import { qualityIdentity } from "./identity";
+import { batchReports, type QualityBatch } from "./report-batch";
 
 interface BufferedReport {
   run: string;
@@ -84,29 +84,11 @@ export class QualityReportQueue {
       buffered.length
         ? buffered
         : [{ run, snapshotId, fields: {}, identities: {} }];
-    for (const [index, report] of reports.entries()) {
-      const fields = Object.entries(report.fields);
-      for (let offset = 0; offset < Math.max(1, fields.length); offset += 300) {
-        this.send(report.run, {
-          eventId: this.eventId(),
-          snapshotId: report.snapshotId,
-          fields: Object.fromEntries(fields.slice(offset, offset + 300)),
-          identities: offset === 0 ? report.identities : {},
-          finished:
-            index === reports.length - 1 && offset + 300 >= fields.length
-              ? finished
-              : null,
-        });
-      }
-    }
+    for (const batch of batchReports(reports, finished)) this.send(run, batch);
   }
 
-  private eventId(): string {
-    return qualityIdentity();
-  }
-
-  private send(run: string, payload: QualityReport): void {
-    if (!run || !payload.eventId) return;
+  private send(run: string, payload: QualityBatch): void {
+    if (!run || !payload.reports.length) return;
     const bytes = new TextEncoder().encode(JSON.stringify(payload)).length;
     if (
       this.pendingCount >= 64 ||

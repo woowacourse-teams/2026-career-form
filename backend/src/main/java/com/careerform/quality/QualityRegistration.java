@@ -77,17 +77,21 @@ public final class QualityRegistration {
     }
 
     public synchronized void report(String runId, String token, String eventId, Function<Context, Boolean> admit) {
+        reportBatch(runId, token, java.util.List.of(eventId), admit);
+    }
+
+    public synchronized void reportBatch(String runId, String token, java.util.List<String> eventIds, Function<Context, Boolean> admit) {
         expire();
         var context = runs.get(runId);
         if (context == null || token == null || !token.matches("[0-9a-f]{64}")
             || !MessageDigest.isEqual(context.tokenHash().getBytes(StandardCharsets.US_ASCII),
                 QualityProjection.digest(token).getBytes(StandardCharsets.US_ASCII))) { reject(401); }
-        var event = QualityProjection.digest(eventId);
-        if (context.events().contains(event)) { return; }
-        if (context.events().size() >= 200) { reject(400); }
+        var events = eventIds.stream().map(QualityProjection::digest).collect(Collectors.toUnmodifiableSet());
+        if (context.events().containsAll(events)) { return; }
+        var combined = Stream.concat(context.events().stream(), events.stream()).collect(Collectors.toUnmodifiableSet());
+        if (combined.size() > 200) { reject(400); }
         if (!Boolean.TRUE.equals(admit.apply(context))) { reject(429); }
-        var next = new Context(context.connection(), context.runId(), context.tokenHash(), context.createdAt(),
-            Stream.concat(context.events().stream(), Stream.of(event)).collect(Collectors.toUnmodifiableSet()), context.persisted(), context.snapshots());
+        var next = new Context(context.connection(), context.runId(), context.tokenHash(), context.createdAt(), combined, context.persisted(), context.snapshots());
         runs.put(runId, next);
         connections.put(next.connection(), next);
     }
