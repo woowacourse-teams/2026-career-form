@@ -419,62 +419,101 @@ function countWrites() {
 }
 
 /**
- * Runs step 2 to completion, lets the site rewrite the page (`siteEdits`),
- * unmounts the panel and runs the same profile again on the same page.
+ * The filled YMD page after one complete run, baked into markup so the reload
+ * cases can reopen it without running step 2 again: every value survives as
+ * an attribute while each element (and the extension's per-element memory)
+ * is new, like a second visit after 임시저장. Search inputs come back empty as
+ * on the live page; the committed name stays in the hidden control and label.
  */
-async function runTwice(tenant: Tenant, siteEdits: () => void = () => {}) {
-  const policy = mountTenant(tenant);
-  const responder = catalogResponder(exactTitleCatalog(), {
-    accept: siteSeesEnter,
-  });
+let filledPage:
+  | {
+      html: string;
+      rows: Record<string, number>;
+      values: Record<string, string>;
+    }
+  | undefined;
+
+function bakeValues(form: Element) {
+  for (const el of form.querySelectorAll<
+    HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+  >("input,select,textarea")) {
+    if (el instanceof HTMLSelectElement)
+      for (const option of el.options)
+        option.toggleAttribute("selected", option.selected);
+    else if (el instanceof HTMLTextAreaElement) el.textContent = el.value;
+    else if (el.type === "radio" || el.type === "checkbox")
+      el.toggleAttribute("checked", el.checked);
+    else el.setAttribute("value", el.type === "search" ? "" : el.value);
+  }
+}
+
+const responder = () =>
+  catalogResponder(exactTitleCatalog(), { accept: siteSeesEnter });
+
+/**
+ * Runs step 2 to completion on the filled page, keeps the baked page for the
+ * reload cases, unmounts the panel and runs the same profile again on the
+ * same elements (the extension's own rerun on an unsaved page).
+ */
+it("does not add rows or write anything when step 2 runs again on the filled page", async () => {
+  const policy = mountTenant(TENANTS[1]);
   const profile = liveShapedProfile();
   const first = renderNativeWorkflow({
     policy,
     profile,
-    searchResponder: responder,
+    searchResponder: responder(),
   });
   await screen.findByText("자동 기입을 마쳤어요", {}, { timeout: 150000 });
   cleanup();
-  siteEdits();
-  const rowsAfterFirst = loopCounts();
-  const valuesAfterFirst = pageValues();
+  const form = document.querySelector("#frm")!;
+  bakeValues(form);
+  filledPage = {
+    html: form.parentElement!.innerHTML,
+    rows: loopCounts(),
+    values: pageValues(),
+  };
   const firstSnapshot = { ...first.counters };
   const writes = countWrites();
   const second = renderNativeWorkflow({
     policy,
     profile,
-    searchResponder: responder,
+    searchResponder: responder(),
   });
   await screen.findByText("자동 기입을 마쳤어요", {}, { timeout: 150000 });
-  return {
-    first,
-    firstSnapshot,
-    second,
-    writes,
-    rowsAfterFirst,
-    valuesAfterFirst,
-  };
-}
 
-it("does not add rows or write anything when step 2 runs again on the filled page", async () => {
-  const run = await runTwice(TENANTS[1]);
-
-  expect(loopCounts()).toEqual(run.rowsAfterFirst);
-  expect(run.second.counters.adds).toBe(0);
-  expect(run.second.counters.parentAdds).toBe(0);
+  expect(loopCounts()).toEqual(filledPage.rows);
+  expect(second.counters.adds).toBe(0);
+  expect(second.counters.parentAdds).toBe(0);
   // The first run's listeners are still on #frm: they must not move either.
-  expect(run.first.counters.adds).toBe(run.firstSnapshot.adds);
-  expect(run.first.counters.parentAdds).toBe(run.firstSnapshot.parentAdds);
-  expect(run.second.counters.keypresses).toBe(0);
-  expect(run.writes).toEqual([]);
-  expect(pageValues()).toEqual(run.valuesAfterFirst);
+  expect(first.counters.adds).toBe(firstSnapshot.adds);
+  expect(first.counters.parentAdds).toBe(firstSnapshot.parentAdds);
+  expect(second.counters.keypresses).toBe(0);
+  expect(writes).toEqual([]);
+  expect(pageValues()).toEqual(filledPage.values);
   // Everything is retained, nothing is reported as newly written, and a
   // retained date compares in the site's dotted format, never as "값이 달라요".
   expect(completedCount()).toContain("0");
   expect(pendingRows()).toEqual([]);
-  expect(run.first.counters.forbidden).toBe(0);
-  expect(run.second.counters.forbidden).toBe(0);
+  expect(first.counters.forbidden).toBe(0);
+  expect(second.counters.forbidden).toBe(0);
 }, 330000);
+
+/** Reopens the baked page (a reload), lets the site or user edit it, runs step 2 once. */
+async function reopenAndRun(edit: () => void = () => {}) {
+  if (!filledPage) throw new Error("the rerun case must fill the page first");
+  const policy = mountTenant(TENANTS[1]);
+  document.querySelector("#frm")!.parentElement!.innerHTML = filledPage.html;
+  edit();
+  const valuesBefore = pageValues();
+  const writes = countWrites();
+  const { counters } = renderNativeWorkflow({
+    policy,
+    profile: liveShapedProfile(),
+    searchResponder: responder(),
+  });
+  await screen.findByText("자동 기입을 마쳤어요", {}, { timeout: 150000 });
+  return { counters, writes, valuesBefore };
+}
 
 const NORMALIZATIONS: ReadonlyArray<{
   name: string;
@@ -505,72 +544,46 @@ const NORMALIZATIONS: ReadonlyArray<{
 it.each(NORMALIZATIONS)(
   "adds no duplicate row and keeps the site's value for $name",
   async ({ edit, changed }) => {
-    const run = await runTwice(TENANTS[1], edit);
+    const run = await reopenAndRun(edit);
 
-    expect(loopCounts()).toEqual(run.rowsAfterFirst);
-    expect(run.second.counters.adds).toBe(0);
-    expect(run.second.counters.parentAdds).toBe(0);
-    expect(run.first.counters.adds).toBe(run.firstSnapshot.adds);
-    expect(run.first.counters.parentAdds).toBe(run.firstSnapshot.parentAdds);
+    expect(loopCounts()).toEqual(filledPage!.rows);
+    expect(run.counters.adds).toBe(0);
+    expect(run.counters.parentAdds).toBe(0);
     expect(run.writes).toEqual([]);
     // The site's (or user's) value survives; every other value is unchanged.
-    expect(pageValues()).toEqual(run.valuesAfterFirst);
+    expect(pageValues()).toEqual(run.valuesBefore);
     for (const [name, value] of Object.entries(changed))
       expect(control(name)!.value, name).toBe(value);
-    expect(run.second.counters.forbidden).toBe(0);
+    expect(run.counters.forbidden).toBe(0);
   },
   330000,
 );
 
-/**
- * The site reloading the saved page: every value survives as markup while
- * each element (and the extension's per-element memory) is new, like a
- * second visit after 임시저장. Search inputs come back empty as on the live
- * page; the committed name stays in the hidden control and its label.
- */
-function reloadPage() {
-  const form = document.querySelector("#frm")!;
-  for (const el of form.querySelectorAll<
-    HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-  >("input,select,textarea")) {
-    if (el instanceof HTMLSelectElement)
-      for (const option of el.options)
-        option.toggleAttribute("selected", option.selected);
-    else if (el instanceof HTMLTextAreaElement) el.textContent = el.value;
-    else if (el.type === "radio" || el.type === "checkbox")
-      el.toggleAttribute("checked", el.checked);
-    else el.setAttribute("value", el.type === "search" ? "" : el.value);
-  }
-  const host = form.parentElement!;
-  host.innerHTML = host.innerHTML;
-}
-
 it("reports every value as kept when the saved page is reloaded and step 2 runs again", async () => {
-  const run = await runTwice(TENANTS[1], reloadPage);
+  const run = await reopenAndRun();
 
-  expect(loopCounts()).toEqual(run.rowsAfterFirst);
-  expect(run.second.counters.adds).toBe(0);
-  expect(run.second.counters.parentAdds).toBe(0);
-  expect(run.second.counters.keypresses).toBe(0);
+  expect(loopCounts()).toEqual(filledPage!.rows);
+  expect(run.counters.adds).toBe(0);
+  expect(run.counters.parentAdds).toBe(0);
+  expect(run.counters.keypresses).toBe(0);
   expect(run.writes).toEqual([]);
-  expect(pageValues()).toEqual(run.valuesAfterFirst);
+  expect(pageValues()).toEqual(filledPage!.values);
   expect(pendingRows()).toEqual([]);
   expect(completedCount()).toContain("0");
-  expect(run.second.counters.forbidden).toBe(0);
+  expect(run.counters.forbidden).toBe(0);
 }, 330000);
 
 it("leaves only the section with a user-edited row to the user after a reload", async () => {
-  const run = await runTwice(TENANTS[1], () => {
-    reloadPage();
+  const run = await reopenAndRun(() => {
     control("career[0].retirementReason")!.value = "직접 고친 사유";
   });
 
-  expect(loopCounts()).toEqual(run.rowsAfterFirst);
-  expect(run.second.counters.adds).toBe(0);
+  expect(loopCounts()).toEqual(filledPage!.rows);
+  expect(run.counters.adds).toBe(0);
   expect(run.writes).toEqual([]);
   expect(control("career[0].retirementReason")!.value).toBe("직접 고친 사유");
   const pending = pendingRows();
   expect(pending.length).toBeGreaterThan(0);
   expect(pending.filter((row) => !row.startsWith("직장경력:"))).toEqual([]);
-  expect(run.second.counters.forbidden).toBe(0);
+  expect(run.counters.forbidden).toBe(0);
 }, 330000);

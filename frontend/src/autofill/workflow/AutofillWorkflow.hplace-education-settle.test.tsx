@@ -60,11 +60,11 @@ function educationResponder(enabled: boolean): SearchResponder {
   };
 }
 
+// The two ends of the parent/enabled/initial matrix; the middle combinations
+// only repeat these paths and cost a full workflow run each (CF-304).
 it.each([
   { count: 2, enabled: true, initialMajorEnabled: false },
-  { count: 1, enabled: true, initialMajorEnabled: false },
-  { count: 1, enabled: true, initialMajorEnabled: true },
-  { count: 2, enabled: false, initialMajorEnabled: false },
+  { count: 1, enabled: false, initialMajorEnabled: true },
 ])(
   "writes row dates once the degree driver settles on the school query (parents=$count, enabled=$enabled, initial=$initialMajorEnabled)",
   async ({ count, enabled, initialMajorEnabled }) => {

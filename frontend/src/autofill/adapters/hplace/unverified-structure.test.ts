@@ -48,6 +48,28 @@ it("returns nothing off the writeResume path", () => {
   expect(labels()).toEqual([]);
 });
 
+it("returns nothing for a field the page does not render", () => {
+  mountRun1();
+  document.querySelector('label[for="birthday"]')!.remove();
+  input("birthday").remove();
+  expect(labels()).toEqual([]);
+});
+
+it("skips unverified fields without a profile value", () => {
+  mountRun1();
+  breakDetail();
+  const p = fullProfile();
+  p.personal.birthDate = "";
+  p.personal.englishFamilyName = "";
+  const listed = hplaceUnverifiedRows(
+    document,
+    collectFieldsSnapshot(document).request,
+    p,
+  ).map((row) => row.fieldLabel);
+  expect(listed).not.toContain("생년월일");
+  expect(listed).not.toContain("영문이름");
+});
+
 it("skips controls the page hides or disables", () => {
   mountRun1();
   breakDetail();

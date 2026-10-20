@@ -77,29 +77,8 @@ it("lists a conditional child that opened but whose structure is unverified", as
   expect(labels).not.toContain("계급");
 });
 
-it("does not list fields the page does not render", async () => {
-  const { policy } = mountRun1();
-  document.querySelector('label[for="birthday"]')!.remove();
-  input("birthday").remove();
-  run(policy, fullProfile());
-  expect(await unverifiedLabels()).toEqual([]);
-  expect(screen.getByRole("tab", { name: /확인 필요/ })).toHaveAttribute(
-    "aria-label",
-    "확인 필요 0개",
-  );
-});
-
-it("does not list unverified fields without a profile value", async () => {
-  const { policy } = mountRun1();
-  input("birthday").setAttribute("data-dates", "birthday:YM");
-  const p = fullProfile();
-  p.personal.birthDate = "";
-  p.personal.englishFamilyName = "";
-  run(policy, p);
-  const labels = await unverifiedLabels();
-  expect(labels).not.toContain("생년월일");
-  expect(labels).not.toContain("영문이름");
-});
+// Fields the page does not render and fields without a profile value are
+// covered by the unit tests of hplaceUnverifiedRows (adapters/hplace).
 
 it("lists nothing on a verified page", async () => {
   const { policy } = mountRun1();

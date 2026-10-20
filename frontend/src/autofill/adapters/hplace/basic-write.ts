@@ -10,12 +10,6 @@ import {
   type BasicKey,
   type BasicControl,
 } from "./basic-controls";
-/**
- * How long a legacy linked-control write waits for the site to enable the
- * dependent controls. Live budget; tests shorten it through the hplace fixture.
- */
-export const legacyLinkedWait = { ms: 1500 };
-
 export function isBasicStateDriver(
   item: ReviewPlanItem,
   name?: string,
@@ -275,7 +269,7 @@ export async function settleBasicStateDriver(
       );
     });
   };
-  const deadline = Date.now() + legacyLinkedWait.ms;
+  const deadline = Date.now() + 1500;
   while (true) {
     if (
       signal?.aborted ||
