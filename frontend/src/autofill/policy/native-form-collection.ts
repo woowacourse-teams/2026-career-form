@@ -35,7 +35,7 @@ import type {
   PreparationAnalyzeRequest,
   SiteDescriptor,
 } from "../api/types";
-import { executionPolicy } from "../workflow/execution-policy";
+import { executionPolicy, policyDigest } from "../workflow/execution-policy";
 import { visible } from "./primitives";
 import {
   validNativeForm,
@@ -62,12 +62,29 @@ export const nativeOwnership = (handle: FieldCandidateHandle) =>
   owners.get(handle);
 export const rawNativeName = (name: string, index?: number) =>
   name.replace("{index}", String(index));
+/** 정책은 객체 단위로 통째 설치되므로 검증 결과를 정책 객체별로 한 번만 계산한다. */
+const validatedForms = new WeakMap<object, NativeForm | undefined>();
+/** 같은 NativeForm 객체의 내용 지문은 한 번만 직렬화한다. */
+const formDigests = new WeakMap<NativeForm, string>();
+export const nativeFormDigest = (form: NativeForm) => {
+  let digest = formDigests.get(form);
+  if (digest === undefined) {
+    digest = JSON.stringify(form);
+    formDigests.set(form, digest);
+  }
+  return digest;
+};
+const sameNativeForm = (a: NativeForm, b: NativeForm) =>
+  a === b || nativeFormDigest(a) === nativeFormDigest(b);
 export function nativeForm(document: Document): NativeForm | undefined {
   const p = executionPolicy(document)?.browserPolicy;
-  const valid = p?.schemaVersion === 2 && validNativeForm(p.nativeForm);
-  if (p?.schemaVersion === 2 && !valid)
+  if (p?.schemaVersion !== 2) return undefined;
+  if (validatedForms.has(p)) return validatedForms.get(p);
+  const form = validNativeForm(p.nativeForm) ? p.nativeForm : undefined;
+  if (!form)
     debugCollectionSkip("hplace-mrs2", "policy-missing", "native-form-schema");
-  return valid ? p.nativeForm : undefined;
+  validatedForms.set(p, form);
+  return form;
 }
 export function nativeDocument(
   document: Document,
@@ -178,6 +195,18 @@ function scopes(document: Document, form: NativeForm) {
     return rows ? [{ section, root: roots[0], rows }] : [];
   });
 }
+/** 소유 섹션 하나의 범위만 계산한다. scopes()와 같은 검사를 섹션 단위로 적용한다. */
+function ownerScope(document: Document, form: NativeForm, sectionId: string) {
+  const owner = document.querySelector(form.rootSelector)!;
+  const section = form.sections.find((s) => s.id === sectionId);
+  if (!section) return undefined;
+  const roots = Array.from(document.querySelectorAll(section.selector)).filter(
+    (r) => r === owner || owner.contains(r),
+  );
+  if (roots.length !== 1 || !visible(roots[0], true)) return undefined;
+  const rows = nativeRows(roots[0], section);
+  return rows ? { section, root: roots[0], rows } : undefined;
+}
 function controls(row: Element, field: NativeField, index?: number) {
   if (field.search) {
     const n = searchNodes(row, field, index);
@@ -224,15 +253,13 @@ export function currentNativeOwner(
   if (
     !form ||
     document.URL !== o.url ||
-    JSON.stringify(form) !== o.digest ||
+    nativeFormDigest(form) !== o.digest ||
     !nativeDocument(document, form) ||
     !o.root.isConnected ||
     !o.row.isConnected
   )
     return;
-  const scope = scopes(document, form).find(
-    (s) => s.section.id === o.section.id,
-  );
+  const scope = ownerScope(document, form, o.section.id);
   if (
     !scope ||
     scope.root !== o.root ||
@@ -309,12 +336,12 @@ export function collectNativeFields(
       if ("handle" in found) {
         found.handle.owner = "legacy";
         const previous = found.handle.isCurrentContext;
-        const digest = JSON.stringify(executionPolicy(document)?.browserPolicy),
+        const digest = policyDigest(executionPolicy(document)?.browserPolicy),
           url = document.URL;
         found.handle.isCurrentContext = () =>
           previous?.() !== false &&
           document.URL === url &&
-          JSON.stringify(executionPolicy(document)?.browserPolicy) === digest;
+          policyDigest(executionPolicy(document)?.browserPolicy) === digest;
         found.handle.elements.forEach((e) => claimed.add(e));
       }
     }
@@ -493,7 +520,7 @@ export function collectNativeFields(
                 ? e.textContent!.trim()
                 : (e as HTMLInputElement).labels![0].textContent!.trim(),
           })),
-          digest: JSON.stringify(form),
+          digest: nativeFormDigest(form),
           url: document.URL,
         });
         registry.registerField(
@@ -621,7 +648,7 @@ export function collectNativePreparation(
               const now = nativeForm(document);
               return (
                 !!now &&
-                JSON.stringify(now) === JSON.stringify(form) &&
+                sameNativeForm(now, form) &&
                 nativeDocument(document, now) &&
                 buttons[0].type === "button" &&
                 buttons[0].matches(section.action!.selector) &&
@@ -707,7 +734,7 @@ export function collectNativePreparation(
             visibility: "visible" as const,
           };
           const url = document.URL,
-            digest = JSON.stringify(form);
+            digest = nativeFormDigest(form);
           registry.registerAction({
             kind: "action",
             owner: "native",
@@ -723,7 +750,10 @@ export function collectNativePreparation(
                 child = nativeNestedRows(parent, section, index);
               return (
                 document.URL === url &&
-                JSON.stringify(nativeForm(document)) === digest &&
+                (() => {
+                  const now = nativeForm(document);
+                  return !!now && nativeFormDigest(now) === digest;
+                })() &&
                 nativeDocument(document) &&
                 !!current &&
                 current[index] === parent &&

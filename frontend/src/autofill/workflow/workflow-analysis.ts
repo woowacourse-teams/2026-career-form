@@ -20,7 +20,11 @@ import { runtimeRules } from "../policy/runtime-rules";
 import { dismissCompletedAutocomplete } from "../interaction/autocomplete-completion";
 import { driverContinuationGuard } from "./driver-continuation";
 import { startLocalTiming } from "../debug/local-timing";
-import { executionPolicy, installExecutionPolicy } from "./execution-policy";
+import {
+  executionPolicy,
+  installExecutionPolicy,
+  policyDigest,
+} from "./execution-policy";
 import { activeModal } from "../interaction/search-surface-dom";
 import { localWorkflowLog } from "../debug/local-workflow";
 import { captureComponentWriteRegistry } from "./static-fields-session";
@@ -186,13 +190,13 @@ export function createAnalyzeFields({
   let analysisGeneration = 0;
   const companyId = resolveDocumentCompany(pageDocument);
   const nativeDigest = nativePolicyRequired(pageDocument)
-    ? JSON.stringify(executionPolicy(pageDocument)?.browserPolicy)
+    ? policyDigest(executionPolicy(pageDocument)?.browserPolicy)
     : undefined;
   const rejectChangedHplaceContext = () => {
     const currentCompany = resolveDocumentCompany(pageDocument);
     if (
       nativeDigest !== undefined &&
-      JSON.stringify(executionPolicy(pageDocument)?.browserPolicy) !==
+      policyDigest(executionPolicy(pageDocument)?.browserPolicy) !==
         nativeDigest
     ) {
       setExceptionTitle(
@@ -450,7 +454,7 @@ export function createAnalyzeFields({
 
     if (
       nativeDigest !== undefined &&
-      JSON.stringify(analysis.executionPolicy?.browserPolicy) !== nativeDigest
+      policyDigest(analysis.executionPolicy?.browserPolicy) !== nativeDigest
     ) {
       setExceptionTitle(
         "페이지 실행 정책이 변경되었습니다. 다시 시작해 주세요",

@@ -3,7 +3,7 @@ import {
   type CandidateRegistry,
 } from "../dom/candidate-registry";
 import type { FieldsSection, PreparationAnalyzeRequest } from "../api/types";
-import { executionPolicy } from "../workflow/execution-policy";
+import { executionPolicy, policyDigest } from "../workflow/execution-policy";
 import { sameAddressNodes, stagedAddressNodes } from "./staged-address-dom";
 export function collectStagedAddress(
   document: Document,
@@ -12,11 +12,11 @@ export function collectStagedAddress(
 ) {
   const n = stagedAddressNodes(document);
   if (!n) return;
-  const digest = JSON.stringify(executionPolicy(document)),
+  const digest = policyDigest(executionPolicy(document)),
     url = document.URL;
   const current = () =>
     document.URL === url &&
-    JSON.stringify(executionPolicy(document)) === digest &&
+    policyDigest(executionPolicy(document)) === digest &&
     sameAddressNodes(n, stagedAddressNodes(document));
   const existing = sections.flatMap((s) => s.fields);
   const reusedIndexes = new Set<number>();
@@ -76,7 +76,7 @@ export function collectStagedAddressAction(
 ) {
   const n = stagedAddressNodes(document);
   if (!n) return;
-  const digest = JSON.stringify(executionPolicy(document)),
+  const digest = policyDigest(executionPolicy(document)),
     url = document.URL;
   const candidate = {
     candidateId: "staged-address-action",
@@ -96,7 +96,7 @@ export function collectStagedAddressAction(
     signature: createStructuralSignature([n.button]),
     isCurrentContext: () =>
       document.URL === url &&
-      JSON.stringify(executionPolicy(document)) === digest &&
+      policyDigest(executionPolicy(document)) === digest &&
       sameAddressNodes(n, stagedAddressNodes(document)),
   });
   sections.push({

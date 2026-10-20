@@ -4,7 +4,10 @@ import {
   mountAddress,
   addressPolicy,
 } from "./__fixtures__/hplace-mrs2-address.synthetic";
-import { installExecutionPolicy } from "../workflow/execution-policy";
+import {
+  executionPolicy,
+  installExecutionPolicy,
+} from "../workflow/execution-policy";
 import {
   collectFieldsSnapshot,
   collectPreparationSnapshot,
@@ -132,6 +135,7 @@ it.each([
   "abort",
   "url",
   "policy",
+  "policy-replaced",
   "profile",
   "original",
   "staging",
@@ -144,6 +148,11 @@ it.each([
       if (change === "abort") s.controller.abort();
       if (change === "url") history.replaceState({}, "", "/other");
       if (change === "policy") installExecutionPolicy(document);
+      if (change === "policy-replaced")
+        installExecutionPolicy(
+          document,
+          structuredClone(executionPolicy(document)),
+        );
       if (change === "profile")
         s.setCurrent({ ...addressExpected, detail: "변경" });
       if (change === "original") s.inputs()[0].value = "사용자";

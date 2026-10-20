@@ -1,5 +1,5 @@
 import type { FieldCandidateHandle } from "../dom/types";
-import { executionPolicy } from "../workflow/execution-policy";
+import { executionPolicy, policyDigest } from "../workflow/execution-policy";
 import { sameAddressNodes, stagedAddressNodes } from "./staged-address-dom";
 import { visible } from "./primitives";
 type Nodes = NonNullable<ReturnType<typeof stagedAddressNodes>>;
@@ -12,7 +12,7 @@ export function recordStagedAddress(nodes: Nodes) {
     nodes,
     values: nodes.fields.map((f) => f.value),
     url: nodes.row.ownerDocument.URL,
-    policy: JSON.stringify(executionPolicy(nodes.row.ownerDocument)),
+    policy: policyDigest(executionPolicy(nodes.row.ownerDocument)) ?? "",
   });
 }
 export function stagedAddressReceipt(handle: FieldCandidateHandle) {
@@ -36,7 +36,7 @@ export function stagedAddressReceipt(handle: FieldCandidateHandle) {
   if (
     !receipt ||
     receipt.url !== document.URL ||
-    receipt.policy !== JSON.stringify(executionPolicy(document)) ||
+    receipt.policy !== (policyDigest(executionPolicy(document)) ?? "") ||
     !sameAddressNodes(receipt.nodes, n) ||
     !n.fields.every((f, i) => !!f.value && f.value === receipt.values[i]) ||
     n.postcode.textContent?.trim() !== receipt.values[0]

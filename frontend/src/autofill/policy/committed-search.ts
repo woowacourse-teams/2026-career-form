@@ -3,7 +3,7 @@ import {
   nativeRowWritable,
   recordNativeRowWrite,
 } from "./native-form-row-state";
-import { executionPolicy } from "../workflow/execution-policy";
+import { executionPolicy, policyDigest } from "../workflow/execution-policy";
 import type { FieldCandidateHandle } from "../dom/types";
 import type { ReviewPlanItem } from "../review/review-plan";
 import { catalogApprovalForItem } from "../profile/catalog-identity";
@@ -18,6 +18,7 @@ import type { FailureReporter, WriteFailureCode } from "../write/failure";
 import {
   emptySearchTuple,
   searchTuple,
+  sameSearchTuple,
   searchNodes,
   sameSearchNodes,
   protectedSearchRow,
@@ -159,17 +160,22 @@ export async function executeCommittedSearch(
   if (committedSearchMatches(handle, item))
     return !beforeMutation || (await beforeMutation());
   const view = n.query.ownerDocument.defaultView!;
-  const identity = () =>
-    JSON.stringify([
-      item.profileValue,
-      item.profileFieldKey,
-      item.searchIdentity,
-      item.catalogMatch,
-      item.analysis,
-    ]);
-  const captured = identity();
+  // ReviewPlanItem은 제자리에서 바뀌지 않고 필드째 교체되므로 참조로 비교한다.
+  const captured = {
+    profileValue: item.profileValue,
+    profileFieldKey: item.profileFieldKey,
+    searchIdentity: item.searchIdentity,
+    catalogMatch: item.catalogMatch,
+    analysis: item.analysis,
+  };
+  const sameIdentity = () =>
+    item.profileValue === captured.profileValue &&
+    item.profileFieldKey === captured.profileFieldKey &&
+    item.searchIdentity === captured.searchIdentity &&
+    item.catalogMatch === captured.catalogMatch &&
+    item.analysis === captured.analysis;
   const current = () =>
-    identity() === captured &&
+    sameIdentity() &&
     !signal.aborted &&
     !!approved(handle, item) &&
     nativeRowWritable(o, [n.query, n.name, n.code]) &&
@@ -417,11 +423,9 @@ export async function executeCommittedSearch(
     );
     button.click();
     const tupleCurrent = () =>
-      current() &&
-      JSON.stringify(searchTuple(n)) === JSON.stringify([value, code, value]);
+      current() && sameSearchTuple(searchTuple(n), [value, code, value]);
     /** Why the committed result is not settled yet; undefined once it is. */
-    const unsettled = (): SearchExit | undefined => {
-      if (!current()) return contextChanged;
+    const unsettledInContext = (): SearchExit | undefined => {
       if (emptySearchTuple(n))
         return {
           reason: "result-click-no-effect",
@@ -462,6 +466,8 @@ export async function executeCommittedSearch(
         ? undefined
         : examDetail;
     };
+    const unsettled = (): SearchExit | undefined =>
+      current() ? unsettledInContext() : contextChanged;
     /**
      * Soft: every dependency the row had before the click is enabled again
      * (a radio as its whole group, anything else as exactly one control).
@@ -483,7 +489,8 @@ export async function executeCommittedSearch(
         );
       });
     const settleDeadline = Date.now() + s.timeoutMs;
-    while (current() && unsettled() && Date.now() < settleDeadline)
+    // current()는 틱당 한 번만 평가한다. unsettledInContext는 문맥 검사를 반복하지 않는다.
+    while (current() && unsettledInContext() && Date.now() < settleDeadline)
       await pause(view, 10);
     if (beforeMutation && !(await beforeMutation())) return false;
     const exit = unsettled();
@@ -499,9 +506,10 @@ export async function executeCommittedSearch(
       row: o.row,
       value,
       code,
-      policy: JSON.stringify(s),
+      policy: policyDigest(s)!,
       url: o.url,
-      form: JSON.stringify(executionPolicy(o.row.ownerDocument)?.browserPolicy),
+      form:
+        policyDigest(executionPolicy(o.row.ownerDocument)?.browserPolicy) ?? "",
       metadata: meta,
       detail: newDetail,
       details: newDetail

@@ -259,9 +259,11 @@ it("does not reuse a receipt after the document policy changes", async () => {
       new AbortController().signal,
     ),
   ).toBe(true);
-  if (policy.browserPolicy?.schemaVersion !== 2) throw new Error();
-  policy.browserPolicy.nativeForm.maxFieldsRequests = 6;
-  installExecutionPolicy(document, policy);
+  // 정책은 객체째 교체되어 설치된다. 설치된 객체를 제자리에서 고치지 않는다.
+  const replaced = structuredClone(policy);
+  if (replaced.browserPolicy?.schemaVersion !== 2) throw new Error();
+  replaced.browserPolicy.nativeForm.maxFieldsRequests = 6;
+  installExecutionPolicy(document, replaced);
   const fresh = searchItem("가상학교");
   expect(
     getWriteAdapter(document).verifyRetained?.(fresh.handle, fresh.item),

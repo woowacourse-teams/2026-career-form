@@ -11,6 +11,7 @@ import {
   mountSyntheticNative,
   syntheticNativePolicy,
 } from "./__fixtures__/hplace-mrs2-native.synthetic";
+import { nativeForm } from "./native-form-collection";
 import { mountEducation } from "./__fixtures__/hplace-mrs2-education.synthetic";
 import { appendCareerSection } from "./__fixtures__/hplace-mrs2-career.synthetic";
 import { disposeLinkedForms } from "./__fixtures__/hplace-mrs2-linked-form";
@@ -20,6 +21,29 @@ import { expectHarnessLine } from "../workflow/test-utils/harness-diagnostic-lin
 afterEach(() => {
   disposeLinkedForms();
   installExecutionPolicy(document);
+});
+describe("nativeForm validation memo", () => {
+  it("revalidates a replaced policy object and rejects an invalid replacement", () => {
+    mountSyntheticNative(1);
+    const first = syntheticNativePolicy();
+    installExecutionPolicy(document, first);
+    const form = nativeForm(document);
+    expect(form).toBe(
+      first.browserPolicy?.schemaVersion === 2
+        ? first.browserPolicy.nativeForm
+        : undefined,
+    );
+    expect(nativeForm(document)).toBe(form);
+    const invalid = structuredClone(first);
+    if (invalid.browserPolicy?.schemaVersion !== 2) throw new Error();
+    (invalid.browserPolicy.nativeForm as { path: unknown }).path = 7;
+    installExecutionPolicy(document, invalid);
+    expect(nativeForm(document)).toBeUndefined();
+    const second = syntheticNativePolicy();
+    installExecutionPolicy(document, second);
+    expect(nativeForm(document)).toBeDefined();
+    expect(nativeForm(document)).not.toBe(form);
+  });
 });
 describe("nativeForm single-depth contract", () => {
   it("accepts the bounded v2 contract without changing wire schema 2", () => {

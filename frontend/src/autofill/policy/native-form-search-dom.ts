@@ -1,4 +1,4 @@
-import { executionPolicy } from "../workflow/execution-policy";
+import { executionPolicy, policyDigest } from "../workflow/execution-policy";
 import type { NativeField, NativeSearch } from "./native-form-contract";
 import { visible } from "./primitives";
 export const searchName = (name: string, index?: number) =>
@@ -62,6 +62,8 @@ export function sameSearchNodes(a: SearchNodes, b: SearchNodes | undefined) {
 export function searchTuple(n: SearchNodes) {
   return [n.name.value, n.code.value, n.display.textContent?.trim() ?? ""];
 }
+export const sameSearchTuple = (a: readonly string[], b: readonly string[]) =>
+  a.length === b.length && a.every((x, i) => x === b[i]);
 export function emptySearchTuple(n: SearchNodes) {
   return searchTuple(n).every((x) => x === "");
 }
@@ -124,12 +126,11 @@ export function searchReceipt(
     !r ||
     r.url !== row.ownerDocument.URL ||
     r.form !==
-      JSON.stringify(executionPolicy(row.ownerDocument)?.browserPolicy) ||
+      (policyDigest(executionPolicy(row.ownerDocument)?.browserPolicy) ?? "") ||
     r.row !== row ||
-    r.policy !== JSON.stringify(field.search) ||
+    r.policy !== policyDigest(field.search) ||
     !sameSearchNodes(r.nodes, n) ||
-    JSON.stringify(searchTuple(n)) !==
-      JSON.stringify([r.value, r.code, r.value]) ||
+    !sameSearchTuple(searchTuple(n), [r.value, r.code, r.value]) ||
     r.details.some((e) => !e.isConnected || !row.contains(e)) ||
     (r.detail && row.querySelector(field.search.detailSelector!) !== r.detail)
   )

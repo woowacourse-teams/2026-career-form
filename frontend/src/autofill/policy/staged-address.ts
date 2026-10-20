@@ -49,8 +49,13 @@ export async function runStagedAddress({
     return fail("owner-mismatch", "original-contract");
   const p = n.policy,
     url = document.URL,
-    policy = JSON.stringify(executionPolicy(document)),
-    approved = JSON.stringify(expected);
+    // 정책은 객체째 설치되므로 시작 시점 객체와의 참조 비교로 교체를 감지한다.
+    policy = executionPolicy(document),
+    approved = {
+      postalCode: expected.postalCode,
+      address: expected.address,
+      detail: expected.detail,
+    };
   const desired = [expected.postalCode, expected.address, expected.detail];
   if (!validStagedRoad(expected.address))
     return fail(
@@ -78,8 +83,10 @@ export async function runStagedAddress({
   const current = () =>
     !signal.aborted &&
     document.URL === url &&
-    JSON.stringify(expected) === approved &&
-    JSON.stringify(executionPolicy(document)) === policy &&
+    expected.postalCode === approved.postalCode &&
+    expected.address === approved.address &&
+    expected.detail === approved.detail &&
+    executionPolicy(document) === policy &&
     sameAddressNodes(n, stagedAddressNodes(document));
   const profile = async () => {
     try {
@@ -120,15 +127,23 @@ export async function runStagedAddress({
     detail: HTMLInputElement | undefined,
     detailBefore = "";
   const fresh = () => current() && untouched();
+  /**
+   * `valid`는 저장 프로필 재로드를 포함한 전체 검사이고, `tick`은 틱마다 도는 동기 검사다.
+   * `tick`이 있으면 전체 검사는 대기 시작 전과 결과를 돌려주기 직전에만 수행한다.
+   */
   const wait = async <T>(
     read: () => T | undefined,
     valid: () => Promise<boolean>,
+    tick?: () => boolean,
   ) => {
     const deadline = Date.now() + p.timeoutMs;
+    let first = true;
     do {
-      if (!(await valid())) return;
+      if (tick && !first ? !tick() : !(await valid())) return;
+      first = false;
       const result = read();
-      if (result !== undefined) return result;
+      if (result !== undefined)
+        return !tick || (tick() && (await valid())) ? result : undefined;
       await pause(view);
     } while (Date.now() < deadline);
   };
@@ -145,6 +160,7 @@ export async function runStagedAddress({
         (await profile()) &&
         fresh() &&
         !document.querySelector(p.confirmSelector),
+      () => fresh() && !document.querySelector(p.confirmSelector),
     );
     if (!modal) return fail("control-missing", "modal-open");
     close = one(modal, p.modalCloseSelector);
@@ -261,27 +277,31 @@ export async function runStagedAddress({
         }
       | undefined;
     let hostSeen = false;
-    const host = await wait(() => {
-      const candidate = one(content, p.resultsSelector);
-      hostSeen ||= !!candidate;
-      const matches = candidate ? results(candidate) : [];
-      if (!candidate || !matches.length) {
-        previous = undefined;
-        return;
-      }
-      if (
-        previous?.host === candidate &&
-        previous.matches.length === matches.length &&
-        previous.matches.every(
-          (m, i) =>
-            m.select === matches[i].select &&
-            m.address === matches[i].address &&
-            m.zip === matches[i].zip,
-        )
-      ) {
-        if (Date.now() - previous.since >= 40) return candidate;
-      } else previous = { host: candidate, matches, since: Date.now() };
-    }, guarded);
+    const host = await wait(
+      () => {
+        const candidate = one(content, p.resultsSelector);
+        hostSeen ||= !!candidate;
+        const matches = candidate ? results(candidate) : [];
+        if (!candidate || !matches.length) {
+          previous = undefined;
+          return;
+        }
+        if (
+          previous?.host === candidate &&
+          previous.matches.length === matches.length &&
+          previous.matches.every(
+            (m, i) =>
+              m.select === matches[i].select &&
+              m.address === matches[i].address &&
+              m.zip === matches[i].zip,
+          )
+        ) {
+          if (Date.now() - previous.since >= 40) return candidate;
+        } else previous = { host: candidate, matches, since: Date.now() };
+      },
+      guarded,
+      owned,
+    );
     // A results host that never matched is a contract miss, not an ambiguous result.
     if (!host)
       return hostSeen
@@ -308,7 +328,7 @@ export async function runStagedAddress({
       stage[0].value === desired[0] &&
       road(stage[1].value) === road(desired[1]);
     if (
-      !(await wait(() => (staged() ? true : undefined), guarded)) ||
+      !(await wait(() => (staged() ? true : undefined), guarded, owned)) ||
       detail.value !== detailBefore
     )
       return fail("result-click-no-effect", "result-staging");
@@ -342,6 +362,8 @@ export async function runStagedAddress({
       !(await wait(
         () => (visible(commit) && !commit.disabled ? true : undefined),
         commitReady,
+        () =>
+          owned() && complete() && !document.querySelector(p.confirmSelector),
       ))
     )
       return fail("submit-disabled-timeout", "submit-ready");
@@ -389,6 +411,10 @@ export async function runStagedAddress({
         (await guarded()) &&
         complete() &&
         one(document, p.confirmSelector) === confirmation,
+      () =>
+        owned() &&
+        complete() &&
+        one(document, p.confirmSelector) === confirmation,
     );
     if (!confirmVisible) return fail("confirm-missing", "confirm-visible");
     const ok = one(confirmation, p.confirmOkSelector);
@@ -423,6 +449,7 @@ export async function runStagedAddress({
           ? true
           : undefined,
       profile,
+      current,
     );
     if (!committed) return fail("readback-mismatch", "commit-readback");
     recordStagedAddress(n);
