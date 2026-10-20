@@ -2,9 +2,9 @@
  * 임시 개발용 자동 기입 진단 로그.
  *
  * 개발자 도구 Console에 수집 → 분석 → 리뷰 계획 → 기입 → 검색 단계별로
- * 값 원문과 실패 사유를 출력한다. 테스트 모드에서는 꺼지고,
- * `VITE_AUTOFILL_DEBUG=false`로 빌드하면 모든 출력이 꺼진다.
- * 릴리스 전 제거하거나 기본값을 끄도록 바꿔야 한다.
+ * 값 원문과 실패 사유를 출력한다. 기본은 꺼져 있고(일반·릴리스 빌드에서
+ * Console 출력 없음), 개발이나 실평가 하네스처럼 `VITE_AUTOFILL_DEBUG=true`로
+ * 빌드할 때만 켜진다. 테스트 모드에서는 항상 꺼진다.
  */
 import {
   createStructuralSignature,
@@ -22,9 +22,14 @@ import type { ApprovedWriteResult } from "../write/write-result";
 
 const PREFIX = "[CareerForm]";
 
-let enabled =
-  import.meta.env.MODE !== "test" &&
-  import.meta.env.VITE_AUTOFILL_DEBUG !== "false";
+export function defaultDebugEnabled(env: {
+  MODE?: string;
+  VITE_AUTOFILL_DEBUG?: string;
+}): boolean {
+  return env.MODE !== "test" && env.VITE_AUTOFILL_DEBUG === "true";
+}
+
+let enabled = defaultDebugEnabled(import.meta.env);
 
 export function isAutofillDebugEnabled(): boolean {
   return enabled;
