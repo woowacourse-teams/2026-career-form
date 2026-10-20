@@ -132,6 +132,21 @@ function wireCareerAdd(subject: Element, options: CareerFixtureOptions) {
       wireCareerAdd(subject, options);
     };
 }
+function wireProjectAdd(
+  subject: Element,
+  project: NonNullable<CareerFixtureOptions["project"]>,
+) {
+  for (const button of subject.querySelectorAll<HTMLButtonElement>(
+    ":scope > .loop [data-button=add]",
+  ))
+    button.onclick = () => {
+      subject.insertAdjacentHTML(
+        "beforeend",
+        projectRow(subject.children.length, project),
+      );
+      wireProjectAdd(subject, project);
+    };
+}
 /** Appends section 16 to an already mounted `#wrapResume` (e.g. mountEducation). */
 export function appendCareerSection(
   rows = 2,
@@ -140,6 +155,10 @@ export function appendCareerSection(
   const root = document.querySelector("#wrapResume")!;
   root.insertAdjacentHTML("beforeend", careerSection(rows, options));
   wireCareerAdd(root.lastElementChild!.firstElementChild!, options);
+  const project = root.lastElementChild!.querySelector(
+    ":scope > [data-wrap=project]",
+  );
+  if (project && options.project) wireProjectAdd(project, options.project);
   installLinkedForm(document.querySelector("#frm")!);
 }
 /** Standalone section-16 page with the v4 seed policy installed. */

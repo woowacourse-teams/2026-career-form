@@ -191,7 +191,15 @@ describe("preparation diagnostics", () => {
     expect(skips.join("\n")).not.toContain("nested-add-disabled");
   });
   it("reports a disabled section before its zero rows", () => {
-    mountCareer(1);
+    const policy = mountCareer(1);
+    if (policy.browserPolicy?.schemaVersion !== 2) throw new Error();
+    // Any disabled section; the seed project section is enabled since C13.
+    const project = policy.browserPolicy.nativeForm.sections.find(
+      (section) => section.id === "hplace-mrs2-project",
+    )!;
+    project.enabled = false;
+    project.reason = "테스트용 비활성";
+    installExecutionPolicy(document, policy);
     document
       .querySelector('section[data-code="16"]')!
       .insertAdjacentHTML(

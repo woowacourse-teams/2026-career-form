@@ -97,7 +97,7 @@ it("contains nine career and four project mappings without semantic substitution
   expect(career.fields).toHaveLength(9);
   expect(project.fields).toHaveLength(4);
   expect(language.fields).toHaveLength(2);
-  expect(project.enabled).toBe(false);
+  expect(project.enabled).toBe(true);
   expect(language.enabled).toBe(true);
   expect(
     basic.fields.find((f) => f.rawName === "latestSalary")!.binding,
@@ -124,8 +124,6 @@ it("contains nine career and four project mappings without semantic substitution
 it("collects nine career and four project fields independently in each synthetic row", () => {
   const policy = mount();
   if (policy.browserPolicy?.schemaVersion !== 2) throw new Error();
-  // Project activation is test-only; production remains disabled until live evidence.
-  policy.browserPolicy.nativeForm.sections[2].enabled = true;
   const career = document.querySelector('[data-wrap="career"]')!;
   career.innerHTML = [0, 1]
     .map(

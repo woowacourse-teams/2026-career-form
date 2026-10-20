@@ -49,6 +49,21 @@ class HplaceNativePolicyTest {
         assertThat(company.writePlan().command().name()).isEqualTo("SET_TEXT");
         assertThat(response.executionPolicy().browserPolicy().get("schemaVersion")).isEqualTo(2);
     }
+    @Test void mapsProjectRowsFromTheSeedPolicy() throws Exception {
+        var request=new ObjectMapper().readValue("""
+            {"schemaVersion":2,"snapshotId":"native-test","site":{"host":"new-tenant.recruiter.im","pathPattern":"/mrs2/applicant/resume/writeResume"},
+             "sections":[{"sectionId":"hplace-mrs2-project","fields":[],"items":[{"itemId":"row-opaque","itemGroupId":"hplace.mrs2.project","fields":[
+              {"candidateId":"name","element":"input","control":"text","visibility":"visible","domId":"hplace.mrs2.project.projectName","domName":"hplace.mrs2.project.projectName","semanticContext":{"repeat":{"groupId":"hplace.mrs2.project","rowIndex":0,"rowCount":1}}},
+              {"candidateId":"role","element":"input","control":"text","visibility":"visible","domId":"hplace.mrs2.project.role","domName":"hplace.mrs2.project.role","semanticContext":{"repeat":{"groupId":"hplace.mrs2.project","rowIndex":0,"rowCount":1}}}
+             ]}]}]}
+            """, com.careerform.formanalysis.dto.FieldsAnalysisRequest.class);
+        var response=service(HplaceCompanyFormPolicyFactory.createNative()).analyze(request);
+        assertThat(response.mode().name()).isEqualTo("ADAPTER");
+        assertThat(response.fields()).allMatch(f->f instanceof com.careerform.formanalysis.dto.FieldsAnalysisResponse.MatchedFieldAnalysis);
+        assertThat(response.fields().stream().map(f->((com.careerform.formanalysis.dto.FieldsAnalysisResponse.MatchedFieldAnalysis)f).valueBinding()).toList())
+            .containsExactly(new com.careerform.formanalysis.application.port.FieldMappingResolver.DirectBinding("projects.project.projectName"),
+                new com.careerform.formanalysis.application.port.FieldMappingResolver.DirectBinding("projects.project.role"));
+    }
     @Test void rejectsCrossGroupAndNoncontiguousIndices() throws Exception {
         for (var request:java.util.List.of(career("hplace.mrs2.project",0,1),career("hplace.mrs2.career",1,2))) {
             assertThat(service(HplaceCompanyFormPolicyFactory.createNative()).analyze(request).analysisStatus().name()).isEqualTo("BLOCKED");

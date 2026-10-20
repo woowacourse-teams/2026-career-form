@@ -2310,8 +2310,7 @@
             "id": "hplace-mrs2-project",
             "title": "프로젝트",
             "selector": "section.writeResume[data-code='16'] > .subject[data-code='154'][data-wrap='project']",
-            "enabled": false,
-            "reason": "실DOM 확인 대기: 구조 미확인",
+            "enabled": true,
             "anchors": ["hplace.mrs2.project.projectName"],
             "rows": {
               "selector": ":scope > .loop[data-loop='project']",
