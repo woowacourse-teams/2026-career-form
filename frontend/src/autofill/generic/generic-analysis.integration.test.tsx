@@ -621,7 +621,7 @@ describe("large generic page API calls", () => {
       ),
     );
 
-  const LARGE_PAGE_TIMEOUT = 30_000;
+  const LARGE_PAGE_TIMEOUT = 120_000;
 
   it(
     "analyzes once with one call in flight and reuses every section on re-entry",

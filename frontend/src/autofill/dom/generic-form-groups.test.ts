@@ -1,6 +1,7 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { genericFormGroupFor, genericFormGroups } from "./generic-form-groups";
+import { withDomReadPass } from "./read-pass";
 
 describe("generic form groups", () => {
   beforeEach(() => {
@@ -119,5 +120,58 @@ describe("generic form groups", () => {
     `;
 
     expect(genericFormGroups(document)).toEqual([]);
+  });
+});
+
+describe("generic form groups within a DOM read pass", () => {
+  const PAGE = `
+    <div class="panel-random">
+      <div class="heading-random"><h3>자격 및 면허</h3></div>
+      <div class="body-random">
+        <div class="row-random" ismultirow="true">
+          <input name="credentialName0" />
+          <input name="credentialDate0" />
+        </div>
+        <div class="controls-random"><button type="button">항목 추가</button></div>
+      </div>
+    </div>
+  `;
+
+  beforeEach(() => {
+    document.body.innerHTML = PAGE;
+  });
+
+  it("computes the document groups once per read pass", () => {
+    const query = vi.spyOn(document, "querySelectorAll");
+    try {
+      const [first, second, owner] = withDomReadPass(() => [
+        genericFormGroups(document),
+        genericFormGroups(document),
+        genericFormGroupFor(document.querySelector("input")!),
+      ]);
+
+      expect(second).toBe(first);
+      expect(owner).toBe(first[0]);
+      expect(query).toHaveBeenCalledTimes(1);
+    } finally {
+      query.mockRestore();
+    }
+  });
+
+  it("recomputes outside a read pass and in a new read pass", () => {
+    const outside = genericFormGroups(document);
+    const inPass = withDomReadPass(() => genericFormGroups(document));
+    const nextPass = withDomReadPass(() => genericFormGroups(document));
+
+    expect(genericFormGroups(document)).not.toBe(outside);
+    expect(nextPass).not.toBe(inPass);
+    expect(nextPass).toEqual(inPass);
+  });
+
+  it("reflects a DOM change made after the read pass ends", () => {
+    withDomReadPass(() => genericFormGroups(document));
+    document.querySelector("button")!.remove();
+
+    expect(withDomReadPass(() => genericFormGroups(document))).toEqual([]);
   });
 });
