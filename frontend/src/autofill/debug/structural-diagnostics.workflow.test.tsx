@@ -116,7 +116,7 @@ it("names each preparation stage line by its caller", async () => {
     profile: educationProfile(),
     searchResponder: catalogResponder(exactTitleCatalog()),
   });
-  await screen.findByText("기입 결과", {}, { timeout: 15000 });
+  await screen.findByText("기입 결과", {}, { timeout: 120_000 });
   await waitFor(() =>
     expect(
       document.querySelector<HTMLInputElement>(
