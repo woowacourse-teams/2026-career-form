@@ -99,6 +99,13 @@ import {
   type GenericStructureContext,
 } from "../generic/structure-context";
 
+import {
+  createStructureDiagnostics,
+  structureConsoleLine,
+  type StructureDiagnostics,
+} from "../generic/structure-diagnostics";
+import { debugWarn } from "../debug/autofill-debug";
+
 export { localItemCount, shouldRunRevealPlan } from "./workflow-model";
 
 export function AutofillWorkflow(props: WorkflowProps) {
@@ -206,6 +213,9 @@ function PolicyReadyWorkflow({
   const [addressResult, setAddressResult] = useState<AddressResult>();
   const executionPending = useRef(false);
   const structureActions = useRef<StructureLoopAction[]>([]);
+  const structureDiagnostics = useRef<StructureDiagnostics | undefined>(
+    undefined,
+  );
   const genericStructure = useRef<GenericStructureContext | undefined>(
     undefined,
   );
@@ -390,6 +400,11 @@ function PolicyReadyWorkflow({
             onAction: (action) => structureActions.current.push(action),
           });
           if (!active) return;
+          structureDiagnostics.current = createStructureDiagnostics(
+            true,
+            structureActions.current,
+          );
+          debugWarn(structureConsoleLine(structureDiagnostics.current));
           genericStructure.current = structure.context;
           genericCollector.current = (document, signal) =>
             collectGenericStructureSnapshot(
@@ -399,6 +414,10 @@ function PolicyReadyWorkflow({
             );
           await analyzeFields(loadedProfile);
           return;
+        }
+        if (companyId === "generic") {
+          structureDiagnostics.current = createStructureDiagnostics(false, []);
+          debugWarn(structureConsoleLine(structureDiagnostics.current));
         }
         const snapshot = collectPreparationSnapshot(pageDocument);
         const analysis = await apiClient.analyzePreparation(snapshot.request);
@@ -942,6 +961,7 @@ function PolicyReadyWorkflow({
       executeWrites={executeWrites}
       results={results}
       analysisSummary={analysisSummary}
+      structureDiagnostics={structureDiagnostics.current}
       addressResult={addressResult}
       adapter={adapter}
       workflowDiagnostics={workflowDiagnostics}

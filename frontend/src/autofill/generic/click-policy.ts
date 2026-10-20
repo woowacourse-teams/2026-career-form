@@ -22,6 +22,7 @@ const FORBIDDEN_LABELS = [
 ];
 
 const BARE_CLOSE_LABEL = /^(닫기|close|[x×✕])$/i;
+const BARE_CONFIRMATION_LABEL = /^(확인|confirm|ok)$/i;
 const SUBMIT_INPUT_TYPES = new Set(["submit", "reset", "image"]);
 const NON_NAVIGATING_HREF = /^(#|javascript:\s*void\s*\(\s*0\s*\)\s*;?)$/i;
 
@@ -50,14 +51,28 @@ export function isSafeStructuralClick(
 /**
  * Whether an element in a search surface the extension opened may be clicked
  * to close it. Same structural checks as isSafeStructuralClick, but the label
- * must be a bare close label and must not name any other forbidden action.
+ * must be a bare close label. Generic failed searches may explicitly opt into
+ * confirmation-only cleanup before result activation.
  */
 export function isSafeSurfaceCloseClick(
   element: Element,
   scope: Element,
+  { allowConfirmation = false }: { allowConfirmation?: boolean } = {},
 ): ClickDecision {
   const reason = blockReason(element, scope, true);
-  return reason ? { allowed: false, reason } : { allowed: true };
+  if (!reason) return { allowed: true };
+  if (!allowConfirmation || reason !== "forbidden-label")
+    return { allowed: false, reason };
+  if (
+    !element.matches("button[type='button' i], input[type='button' i]") ||
+    element.closest("[aria-disabled='true' i]") ||
+    Array.from(element.attributes).some((attribute) =>
+      /^form/i.test(attribute.name),
+    ) ||
+    !BARE_CONFIRMATION_LABEL.test(labelOf(element))
+  )
+    return { allowed: false, reason: "forbidden-label" };
+  return { allowed: true };
 }
 
 function blockReason(

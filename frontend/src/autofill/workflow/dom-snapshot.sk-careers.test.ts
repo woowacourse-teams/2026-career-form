@@ -60,7 +60,7 @@ function load(mutate?: () => void) {
 // each repeatable section added. Not evidence of live-site success rates.
 describe("SK careers sanitized application form structure", () => {
   it("keeps policy collection requests unchanged when generic label recovery is requested", async () => {
-    load();
+    document.body.innerHTML = readFileSync(FIXTURE, "utf8");
     const withoutSnapshotId = (snapshot: ReturnType<typeof collectFieldsSnapshot>) => {
       const { snapshotId: _snapshotId, ...request } = snapshot.request;
       return request;

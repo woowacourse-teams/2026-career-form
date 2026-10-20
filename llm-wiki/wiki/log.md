@@ -1,5 +1,19 @@
 # Wiki Log
 
+## [2026-10-19] ingest | CF-280 분류 추적 게이트 보완
+
+- Approval-Digest: 93111e1673e3486b37ce6fe5adbd51226592b1737c7eccdfc613ec4bcda86bb6
+- Source-Revision: 8688dfd5dcaf2f958ee2a915ace52c0f92c9b755
+- 아직 병합되지 않은 [CF-280 bundle](../raw/issues/CF-280/manifest.md)에 fixture 투영 출처와 분류 서비스 응답부터 매칭까지의 오프라인 추적 후보를 추가했다.
+- [날짜 텍스트 칸 매칭 조사](topics/generic-date-text-matching-investigation.md)에 mock 공급자 경계와 실제 분류 파이프라인, FE collector·실사이트 CSS 미실행 한계를 구분했다.
+
+## [2026-10-19] ingest | CF-280 범용 전체 날짜 텍스트 칸 매칭 조사
+
+- Approval-Digest: 7f7a1af804f79e38d63b1b046937d0fd7a33a8355d3c7698d727f2f3b6fab8e3
+- Source-Revision: 8f9a02657ff1856b570e2dd98c97a15a90486190
+- 승인한 두 후보를 [CF-280 bundle](../raw/issues/CF-280/manifest.md)에 기록하고 [전체 날짜 텍스트 칸 매칭 조사](topics/generic-date-text-matching-investigation.md)를 추가했다.
+- 기존 raw는 변경하지 않았다. 모의 응답은 코드 경로만 보이며 실제 JEV 판단과 실사이트 CSS 상태는 미확인으로 남긴다.
+
 ## [2026-10-18] ingest | CF-260 범용 구조 반복 실행과 학력 행 격리
 
 - Approval-Digest: 3af32cb932097163bced35189944304b518e3778188cbd73b763cfa764e1128c
@@ -658,6 +672,18 @@
 - 승인한 후보 12개에 맞춰 아직 병합되지 않은 [CF-192 bundle](../raw/issues/CF-192/manifest.md)을 갱신했다.
 - [Greeting 지원서에서 프로필 가져오기](topics/greeting-profile-import.md)에 재가져오기 생략 조건과 실사이트 테스트 범위를 반영했다.
 
+## [2026-10-19] ingest | CF-281 범용 범주 안 JEV 매칭 누락 원인과 의미 근거 보강
+
+- Approval-Digest: acf6371d55c2272e43692af2e5a7010dc364ddd8162a37b4d7811aeea30b05b8
+- Source-Revision: eac609ea083a39ef9c92217abf4cf36affbca43a
+- 승인한 후보 3개를 [CF-281 bundle](../raw/issues/CF-281/manifest.md)로 수집하고 [범용 범주 안 JEV 매칭 누락 원인과 의미 근거 보강](topics/generic-category-semantic-matching.md)을 추가했다.
+
+## [2026-10-19] ingest | CF-281 Astra 게이트 B1·B2 정정
+
+- Approval-Digest: f2f0727ce2014c09ef0ec6cf3df54c6f4b44d96e4947aa890fa069fa6f457ec8
+- Source-Revision: 25ffdcba6bea7406a704b0499e079867a9893e89
+- 사용자 사전 승인 범위에서 후보 4개로 아직 병합되지 않은 [CF-281 bundle](../raw/issues/CF-281/manifest.md)을 갱신했다.
+- 기존 등급·점수 계약을 등급 전용으로 좁힌 잘못된 설명을 정정하고, 원본에는 없는 프로젝트 상세 반례를 별도 합성 변이로 명시한 출처를 반영했다.
 
 ## [2026-10-19] ingest | CF-177 Hplace 공통 실행 정책과 필드 현황
 
@@ -666,6 +692,13 @@
 - 승인 후보 파일 전체 UTF-8 바이트의 SHA-256을 재확인하고 [CF-177 bundle](../raw/issues/CF-177/manifest.md)에 계약·현황·결정·관측·검증·후속 후보를 수집했다.
 - [Hplace 어댑터](topics/adapter-hplace.md)를 추가하고 [개발 경계](topics/adapter-development.md), [필드 현황](topics/adapter-field-inventory.md)의 Current와 History를 갱신했다. 다른 회사 현황과 기존 raw는 보존했다.
 - 127키/사이트 전용27행, 로컬 구현/과거 관측/PENDING-live, 호환 배포 순서를 구분하며 실제 지원값·계정·세션·대화 전문은 저장하지 않았다.
+
+## [2026-10-20] ingest | CF-288 분석 응답과 품질 관측의 비동기 분리
+
+- Approval-Digest: 541589a83e078dd8c571a98b42c1ffd6b5e7bb1e05be47336ad246322b7458a9
+- Source-Revision: 541f4c2e473b8575e00ac1d154c41bec9b96fa61
+- 승인한 정책 후보 3개와 ADR 전문을 [CF-288 bundle](../raw/issues/CF-288/manifest.md)에 기록했다.
+- [비동기 품질 처리](topics/async-quality-observation.md)를 추가하고 기존 품질 관측, report 시점과 이전 실행기의 인터럽트 계약에 현재 구조를 연결했다.
 
 ## [2026-10-20] ingest | CF-177 Hplace step 2·3 실화면 수정
 

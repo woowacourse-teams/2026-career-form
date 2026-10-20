@@ -46,6 +46,8 @@ import tools.jackson.databind.json.JsonMapper;
 
 @DisplayName("범용 분류와 칸 매칭 경로의 HTTP 품질 관측")
 class QualityGenericObservationTest {
+    @org.junit.jupiter.api.extension.RegisterExtension
+    final QualityTestRuntime runtime = new QualityTestRuntime();
     private static final String CLASSIFY = "/api/v1/generic/sections/classify";
     private static final String FIELDS = "/api/v1/generic/fields/analyze";
     private static final String LABEL = "SYNTHETIC_LABEL_6604";
@@ -110,11 +112,12 @@ class QualityGenericObservationTest {
     }
 
     private MockMvc observed() {
-        return MockMvcBuilders.standaloneSetup(new Controller()).setControllerAdvice(new QualityBodyAdvice(collector))
-            .addFilters(new QualityObservationFilter(collector)).build();
+        return MockMvcBuilders.standaloneSetup(new Controller()).setControllerAdvice(new QualityBodyAdvice(runtime.service(collector, null)))
+            .addFilters(new QualityObservationFilter(runtime.service(collector, null))).build();
     }
 
     private QualityRecord captured() {
+        runtime.await();
         var captor = ArgumentCaptor.forClass(QualityRecord.class);
         verify(store, times(1)).insert(captor.capture());
         return captor.getValue();
@@ -210,7 +213,7 @@ class QualityGenericObservationTest {
     @Test
     @DisplayName("기존 세 경로와 새 두 경로의 필터 대상 판정")
     void keepsExistingPathDecisions() {
-        var filter = new QualityObservationFilter(collector);
+        var filter = new QualityObservationFilter(runtime.service(collector, null));
         for (var path : new String[] {"/api/v1/fields/analyze", "/api/v1/preparation/analyze",
             "/api/v1/generic/interaction-decisions", CLASSIFY, FIELDS}) {
             assertThat(filter.shouldNotFilter(new MockHttpServletRequest("POST", path))).as(path).isFalse();

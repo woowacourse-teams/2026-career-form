@@ -50,7 +50,7 @@ const MAX_ACTIONS_PER_SECTION = 10;
 const MAX_FAILURES_PER_CANDIDATE = 2;
 const MAX_ITERATIONS = 200;
 const MAX_LABEL_LENGTH = 120;
-const COLLECTION_OPTIONS = { mixedSectionDetection: false } as const;
+const COLLECTION_OPTIONS = { mixedSectionDetection: false, titleNameCues: true } as const;
 
 export type StructureActionKind =
   "ADD_ROW" | "REVEAL_SECTION" | "SELECT_ROW_KIND";
@@ -533,7 +533,6 @@ export async function runGenericStructureLoop(
           first instanceof HTMLSelectElement &&
           !handledSelects.has(first) &&
           rowIndex < profile.education.length &&
-          (first.selectedIndex <= 0 || first.value === "") &&
           Array.from(first.options).filter(
             (option) => option.value !== "" && option.textContent?.trim(),
           ).length >= 2
@@ -903,15 +902,20 @@ export async function runGenericStructureLoop(
     if (!kind) return blockRow("NO_PROFILE_STAGE");
     const optionId = byTarget.get(TARGET_OF_ROW_KIND[kind]);
     if (!optionId) return blockRow("ROW_KIND_OPTION_UNDECIDED");
+    const preselected = select.value !== "";
+    if (preselected && select.selectedIndex !== Number(optionId))
+      return blockRow("ROW_KIND_MISMATCH");
     if (aborted()) return false;
     const release = acquireDocumentRun(document);
     if (!release) return blockRow("run-in-progress");
     try {
       actionCounts.set(scope, used + 1);
-      select.selectedIndex = Number(optionId);
-      select.dispatchEvent(new Event("input", { bubbles: true }));
-      select.dispatchEvent(new Event("change", { bubbles: true }));
-      await settle();
+      if (!preselected) {
+        select.selectedIndex = Number(optionId);
+        select.dispatchEvent(new Event("input", { bubbles: true }));
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+        await settle();
+      }
       if (document.URL !== initialUrl) return blockRow("URL_CHANGED");
       if (rowElement) {
         const entry = profile.education[rowIndex]!;

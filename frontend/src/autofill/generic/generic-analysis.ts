@@ -19,6 +19,7 @@ import { resolveValueBinding } from "../profile/value-binding";
 import { datePartOf, matchDatePartOption } from "./date-part-options";
 import {
   gradeGenericField,
+  matchProfileValueOption,
   type FieldGrade,
   type GradeComposite,
   type GradeReason,
@@ -49,8 +50,23 @@ export const GENERIC_UNLINKED_REASON = "UNLINKED";
 
 export interface GenericFieldGrade {
   grade: FieldGrade;
-  reason?: GradeReason | GenericSectionFailure | typeof GENERIC_UNLINKED_REASON;
+  reason?:
+    | GradeReason
+    | GenericSectionFailure
+    | typeof GENERIC_UNLINKED_REASON
+    | WritePlanReason;
 }
+
+const WRITE_PLAN_REASON = {
+  BLOCKED: "WRITE_PLAN_BLOCKED",
+  MANUAL_REVEAL_REQUIRED: "WRITE_PLAN_MANUAL_REVEAL",
+  SYSTEM_CONTROL: "WRITE_PLAN_SYSTEM_CONTROL",
+  UNVERIFIED: "WRITE_PLAN_UNVERIFIED",
+  READY: "WRITE_PLAN_MISSING",
+} as const;
+
+export type WritePlanReason =
+  (typeof WRITE_PLAN_REASON)[keyof typeof WRITE_PLAN_REASON];
 
 export interface GenericSectionResult {
   sectionId: string;
@@ -319,6 +335,10 @@ function convertSection(
               confidence: sibling.response.confidence,
             }))
         : undefined;
+    const direct =
+      composite || !profileFieldKey
+        ? undefined
+        : resolveProfileFieldValue(profile, profileFieldKey, itemIndex);
     const resolution =
       composite?.type === "DERIVED"
         ? resolveValueBinding(profile, composite, itemIndex).status
@@ -326,29 +346,51 @@ function convertSection(
           ? localDate !== undefined && datePartOf(localDate, composite.part)
             ? "resolved"
             : "missing"
-          : resolveProfileFieldValue(profile, profileFieldKey!, itemIndex)
-              .status;
+          : direct!.status;
+    const choiceControl =
+      candidate.control === "select" || candidate.control === "radio";
+    // Local only: the stored value is compared with the options, never sent.
+    const choiceValue =
+      choiceControl && direct?.status === "resolved" ? direct.value : undefined;
+    const choiceOption = matchProfileValueOption(
+      profileFieldKey,
+      choiceValue,
+      candidate.options,
+    );
+    const grade = gradeGenericField({
+      profileFieldKey,
+      composite,
+      confidence: response.confidence,
+      categoryConfirmed: response.categoryConfirmed && categoryOpen,
+      hasProfileValue: resolution === "resolved" || resolution === "ambiguous",
+      control: candidate.control,
+      inputType: candidate.semanticContext?.inputType,
+      inputMode: candidate.semanticContext?.inputMode,
+      autocomplete: candidate.semanticContext?.autocomplete,
+      maxLength: candidate.semanticContext?.maxLength,
+      displayName: candidate.displayName,
+      labels: candidate.semanticContext?.labels,
+      title: element.getAttribute("title") ?? undefined,
+      placeholder: element.getAttribute("placeholder") ?? undefined,
+      options: candidate.options,
+      ...(choiceControl && !composite
+        ? { optionValueCheck: { profileValue: choiceValue } }
+        : {}),
+      rowSiblings,
+      sectionSiblingKeys: matched.flatMap((sibling) =>
+        sibling.index !== index && sibling.response.profileFieldKey
+          ? [sibling.response.profileFieldKey]
+          : [],
+      ),
+    });
     grades.push([
       candidateId,
-      gradeGenericField({
-        profileFieldKey,
-        composite,
-        confidence: response.confidence,
-        categoryConfirmed: response.categoryConfirmed && categoryOpen,
-        hasProfileValue:
-          resolution === "resolved" || resolution === "ambiguous",
-        control: candidate.control,
-        inputType: candidate.semanticContext?.inputType,
-        inputMode: candidate.semanticContext?.inputMode,
-        autocomplete: candidate.semanticContext?.autocomplete,
-        maxLength: candidate.semanticContext?.maxLength,
-        displayName: candidate.displayName,
-        labels: candidate.semanticContext?.labels,
-        title: element.getAttribute("title") ?? undefined,
-        placeholder: element.getAttribute("placeholder") ?? undefined,
-        options: candidate.options,
-        rowSiblings,
-      }),
+      !response.writePlan && grade.grade !== "BLOCKED"
+        ? {
+            grade: "BLOCKED",
+            reason: WRITE_PLAN_REASON[response.interactionStatus],
+          }
+        : grade,
     ]);
     fields.push({
       candidateId,
@@ -362,7 +404,13 @@ function convertSection(
                 profileFieldKey: profileFieldKey!,
                 optionMap: dateOptionMap(composite, localDate, candidate),
               }
-            : { type: "DIRECT", profileFieldKey: profileFieldKey! },
+            : choiceValue !== undefined && choiceOption !== undefined
+              ? {
+                  type: "LOOKUP",
+                  profileFieldKey: profileFieldKey!,
+                  optionMap: { [choiceValue]: choiceOption },
+                }
+              : { type: "DIRECT", profileFieldKey: profileFieldKey! },
       autofillPolicy: response.autofillPolicy!,
       mappingStatus: "LLM_SUGGESTED",
       interactionStatus: response.interactionStatus,

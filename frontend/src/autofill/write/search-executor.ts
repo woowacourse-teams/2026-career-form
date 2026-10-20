@@ -514,6 +514,7 @@ export async function executeApprovedSearchWrites({
       targetCandidateId: item.candidateId,
       canonicalFieldKey: expectedKey,
       expectedValue,
+      ...(followUpHaltScope === "row" ? { genericPopupRecovery: true } : {}),
       ...(catalogMatch ? { catalogMatch } : {}),
       ...(localSearchPlan
         ? { searchValues: localSearchPlan.forms.map((form) => form.name) }

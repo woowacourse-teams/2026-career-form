@@ -102,5 +102,6 @@ title/placeholder만 읽기). 기존 registry로 해석한 요소의 자체 속�
 
 `frontend/fixtures/dom-snapshots/ahnlab-write-resume-form/`에 v4 HTML을 무변경 등록한다.
 연결 테스트는 `frontend/src/autofill/workflow/dom-snapshot.ahnlab.test.ts`다.
+선택지 값 변환 검증은 `frontend/src/autofill/workflow/dom-snapshot.option-values.test.ts`가 이어서 사용한다.
 최종 판정은 등록 가능이다. 이번 오프라인 검사에서 생성한 Chromium context와 browser는
 종료했다. 추출 코드의 원본 대응표와 브라우저 세션은 이 작업에서 접근하지 않았다.

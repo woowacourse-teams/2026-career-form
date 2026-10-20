@@ -19,18 +19,25 @@ public final class QualityCollectionService {
     private final QualityRollup rollup;
     private final QualityRegistry registry;
     private final SecureRandom random = new SecureRandom();
+    private final QualityDirtySources dirty;
 
     public QualityCollectionService(QualityStore store, Clock clock, String environment, String buildVersion) {
         this(store, clock, environment, buildVersion, null, null);
     }
 
     public QualityCollectionService(QualityStore store, Clock clock, String environment, String buildVersion, QualityRollup rollup, QualityRegistry registry) {
+        this(store, clock, environment, buildVersion, rollup, registry, null);
+    }
+
+    public QualityCollectionService(QualityStore store, Clock clock, String environment, String buildVersion, QualityRollup rollup,
+                                    QualityRegistry registry, QualityDirtySources dirty) {
         this.store = store;
         this.clock = clock;
         this.environment = environment;
         this.buildVersion = buildVersion;
         this.rollup = rollup;
         this.registry = registry;
+        this.dirty = dirty;
     }
 
     public record AiCall(String provider, String operation, String outcome, long durationMs, String modelVersion) {
@@ -134,13 +141,30 @@ public final class QualityCollectionService {
 
     private Receipt observeLinked(QualityRecord.Group group, RequestEvent event, QualityProjection.Snapshot snapshot,
                                   String runId, String token, boolean reportingCapable, String publicLink) {
+        return observeLinked(group, event, snapshot, runId, token, reportingCapable, publicLink, false);
+    }
+
+    public void register(String runId, String tokenHash, java.time.Instant createdAt) {
+        var run = new Run(tokenHash, QualityExecution.start(createdAt, Map.of()), Map.of(), false);
+        if (!insert(new QualityRecord(runId, QualityRecord.Kind.EXECUTION, group("UNKNOWN", "UNKNOWN", "UNKNOWN", null, null),
+            0, createdAt, createdAt.plusSeconds(30L * 86400), run))) { throw unavailable(); }
+    }
+
+    public void observeRegistered(QualityRecord.Group group, RequestEvent event, QualityProjection.Snapshot snapshot,
+                                  String runId, String tokenHash, String publicLink) {
+        observeLinked(group, event, snapshot, runId, tokenHash, true, publicLink, true);
+    }
+
+    private Receipt observeLinked(QualityRecord.Group group, RequestEvent event, QualityProjection.Snapshot snapshot,
+                                  String runId, String token, boolean reportingCapable, String publicLink, boolean hashed) {
         var now = clock.instant();
         if (reportingCapable && runId != null) {
-            var previous = owned(runId, token);
-            if (!previous.group().host().equals(group.host())) { throw unavailable(); }
-            if (group.identity() == QualitySite.Status.UNVERIFIED && previous.group().identity() == QualitySite.Status.UNVERIFIED) {
+            var previous = owned(runId, token, hashed);
+            var initializing = hashed && previous.group().host().equals("UNKNOWN") && ((Run) previous.payload()).snapshots().isEmpty();
+            if (!initializing && !previous.group().host().equals(group.host())) { throw unavailable(); }
+            if (!initializing && group.identity() == QualitySite.Status.UNVERIFIED && previous.group().identity() == QualitySite.Status.UNVERIFIED) {
                 group = group.withSite(previous.group().site());
-            } else if (!previous.group().site().equals(group.site()) && !((Run) previous.payload()).snapshots().isEmpty()
+            } else if (!initializing && !previous.group().site().equals(group.site()) && !((Run) previous.payload()).snapshots().isEmpty()
                 && !((Run) previous.payload()).snapshots().values().stream().map(link -> link.group().site()).toList().contains(group.site())) { throw unavailable(); }
         }
         if (registry != null && snapshot != null && QualityPublicLinks.validate(group.host(), publicLink) != null) {
@@ -165,25 +189,33 @@ public final class QualityCollectionService {
             return receipt;
         }
         for (var attempt = 0; attempt < 5; attempt++) {
-            var previous = owned(runId, token);
-            if (!previous.group().host().equals(group.host())) {
+            var previous = owned(runId, token, hashed);
+            var initializing = hashed && previous.group().host().equals("UNKNOWN") && ((Run) previous.payload()).snapshots().isEmpty();
+            if (!initializing && !previous.group().host().equals(group.host())) {
                 throw unavailable();
             }
             var next = attach((Run) previous.payload(), snapshot, group, publicLink);
-            var changed = previous.withPayload(next);
+            var changed = initializing ? new QualityRecord(previous.id(), previous.kind(), group, previous.revision() + 1,
+                previous.createdAt(), previous.expiresAt(), next) : previous.withPayload(next);
             if (store.replace(previous, changed)) {
                 maintain(changed);
                 insert(new QualityRecord("request_" + UUID.randomUUID(), QualityRecord.Kind.REQUEST, group, 0, now,
                     now.plusSeconds(30L * 86400), event.linked(runId, snapshot, "VALIDATED")));
-                return new Receipt(runId, token);
+                return hashed ? null : new Receipt(runId, token);
             }
         }
         throw unavailable();
     }
 
     public void report(String runId, String token, Report report) {
+        report(runId, token, report, false);
+    }
+
+    public void reportRegistered(String runId, String tokenHash, Report report) { report(runId, tokenHash, report, true); }
+
+    private void report(String runId, String token, Report report, boolean hashed) {
         for (var attempt = 0; attempt < 5; attempt++) {
-            var previous = owned(runId, token);
+            var previous = owned(runId, token, hashed);
             var original = (Run) previous.payload();
             if (report.eventId() != null && original.execution().events().contains(QualityProjection.digest(report.eventId()))) {
                 maintain(previous);
@@ -211,7 +243,7 @@ public final class QualityCollectionService {
         throw unavailable();
     }
 
-    private QualityRecord owned(String runId, String token) {
+    private QualityRecord owned(String runId, String token, boolean hashed) {
         if (runId == null || !runId.matches("[0-9a-f]{32}") || token == null || !token.matches("[0-9a-f]{64}")) {
             throw unavailable();
         }
@@ -219,7 +251,7 @@ public final class QualityCollectionService {
         var run = (Run) record.payload();
         if (!QualityRetention.reportAllowed(record.createdAt(), clock.instant())
             || !MessageDigest.isEqual(run.tokenHash().getBytes(StandardCharsets.US_ASCII),
-                QualityProjection.digest(token).getBytes(StandardCharsets.US_ASCII))) {
+                (hashed ? token : QualityProjection.digest(token)).getBytes(StandardCharsets.US_ASCII))) {
             throw unavailable();
         }
         return record;
@@ -280,7 +312,8 @@ public final class QualityCollectionService {
         try {
             if (registry != null && record.kind() == QualityRecord.Kind.REQUEST
                 && ((RequestEvent) record.payload()).counts() != null && !record.group().structure().equals("UNKNOWN")) { registry.observe(record.group(), record.createdAt()); }
-            if (rollup != null) { rollup.observe(record); }
+            if (dirty != null) { dirty.mark(record); }
+            else if (rollup != null) { rollup.observe(record); }
         } catch (RuntimeException exception) {
             org.slf4j.LoggerFactory.getLogger(QualityCollectionService.class).warn("QUALITY_DERIVED_OBSERVATION_UNAVAILABLE");
         }

@@ -63,15 +63,12 @@ export class AnalysisServiceError extends Error {
 
 export class RuntimeAnalysisApiClient implements AnalysisApiClient {
   readonly quality: QualityObservation;
-  private reportingSupported = false;
   constructor(
     private readonly sendMessage: SendMessage = (message) =>
       browser.runtime.sendMessage(message),
   ) {
     this.quality = new QualityObservation((message) =>
-      this.reportingSupported
-        ? this.sendMessage(message)
-        : Promise.resolve(undefined),
+      this.sendMessage(message),
     );
   }
 
@@ -144,8 +141,7 @@ export class RuntimeAnalysisApiClient implements AnalysisApiClient {
     });
     try {
       const analysis = validateFieldsResponse(request, response);
-      if (this.reportingSupported)
-        observeQuality(() => this.quality.readySnapshot(request.snapshotId));
+      observeQuality(() => this.quality.readySnapshot(request.snapshotId));
       return analysis;
     } catch (error) {
       debugApiMessage(
@@ -188,7 +184,6 @@ export class RuntimeAnalysisApiClient implements AnalysisApiClient {
         envelope.status,
       );
     }
-    this.reportingSupported = envelope.quality === true;
     return envelope.data;
   }
 }

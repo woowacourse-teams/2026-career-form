@@ -361,6 +361,8 @@ function collectFieldsSnapshotInternal(
   dropdowns: ReadonlyMap<HTMLElement, ButtonDropdown> = new Map(),
   options: {
     recoverBrokenLabels?: boolean;
+    /** Opt in to title-only name cues on the generic path. */
+    titleNameCues?: boolean;
     /** Opt out of mixed section detection; omitted keeps it on. */
     mixedSectionDetection?: boolean;
   } = {},
@@ -664,6 +666,7 @@ function collectFieldsSnapshotInternal(
             const semanticContext = collectSemanticContext(first, container, {
               generic,
               recoverBrokenLabels: generic && options.recoverBrokenLabels,
+              titleNameCues: generic && options.titleNameCues,
               ...(generic && isChoice && !customRadio && grouped.length > 1
                 ? { group: grouped }
                 : {}),
@@ -848,6 +851,7 @@ export async function collectFieldsSnapshotWithDropdowns(
   if (!release)
     return collectFieldsSnapshot(document, new Map(), {
       recoverBrokenLabels: true,
+      titleNameCues: true,
       ...options,
     });
   try {
@@ -860,6 +864,7 @@ export async function collectFieldsSnapshotWithDropdowns(
     );
     return collectFieldsSnapshot(document, dropdowns, {
       recoverBrokenLabels: true,
+      titleNameCues: true,
       ...options,
     });
   } finally {
