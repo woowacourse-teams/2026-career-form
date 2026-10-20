@@ -25,6 +25,7 @@ export type WriteFailureCode =
   | "OPTION_UNMATCHED"
   | "DRIVER_LIMIT_REACHED"
   | "DRIVER_SELECTION_UNCONFIRMED"
-  | "ROW_DRIVER_UNCONFIRMED";
+  | "ROW_DRIVER_UNCONFIRMED"
+  | "STRUCTURE_UNVERIFIED";
 
 export type FailureReporter = (code: WriteFailureCode) => void;

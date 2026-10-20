@@ -21,6 +21,7 @@ const guidance: Record<WriteFailureCode, string> = {
     "검색 결과의 선택 동작을 안전하게 확인하지 못해 입력을 보류했어요.",
   SEARCH_FOLLOWUP_HALTED: "앞선 검색 실패로 후속 입력을 보류했어요.",
   NESTED_MAJOR_NOT_READY: "입력 불가(학교 확정 후 다시 실행)",
+  STRUCTURE_UNVERIFIED: "입력 불가(화면 구조 확인 불가)",
   EXAM_SCORE_NOT_READY:
     "시험명 선택 뒤에도 점수 칸을 확인하지 못했어요. 시험명을 목록에서 다시 고른 뒤 점수를 입력해 주세요.",
   ROW_SEARCH_UNCONFIRMED:

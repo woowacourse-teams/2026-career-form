@@ -5,6 +5,7 @@ import {
 } from "../debug/structural-diagnostics";
 import { prepareNativeMajorsAfterSchool } from "./native-major-preparation";
 import { reportNativeMajorsOfFailedSchools } from "./native-major-unavailable";
+import { hplaceUnverifiedRows } from "../adapters/hplace/unverified-structure";
 import {
   createNativeDependentState,
   nativeDependentRows,
@@ -617,6 +618,13 @@ export function createAnalyzeFields({
     });
     if (run.nativeMajors?.unavailable.length)
       plan.items.push(...run.nativeMajors.unavailable);
+    // Step-1 legacy fields present but structurally unverified (AGENTS.md).
+    // The page may resolve as "hplace" or as the native "policy" engine; the
+    // helper itself requires the Hplace fingerprint and the writeResume path.
+    if (analysis.mode !== "GENERIC")
+      plan.items.push(
+        ...hplaceUnverifiedRows(pageDocument, snapshot.request, loadedProfile),
+      );
     // Dependents a native driver withheld and this pass did not collect.
     if (native && analysis.mode !== "GENERIC" && run.nativeDependents)
       plan.items.push(
