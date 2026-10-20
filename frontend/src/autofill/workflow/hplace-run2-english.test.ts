@@ -160,6 +160,8 @@ it("defaults to family-first when the page has no English-name guide at all", ()
 
 it.each([
   ["* Hong, Gildong (여권상 영문성명 기재)", ".familyFirst"],
+  // The same order repeated is still one order.
+  ["* Hong, Gildong (예: HONG GILDONG)", ".familyFirst"],
   ["예) HONG GILDONG", ".familyFirst"],
   ["ex) Gildong Hong", ".givenFirst"],
   ["예) Gil-dong Hong", ".givenFirst"],

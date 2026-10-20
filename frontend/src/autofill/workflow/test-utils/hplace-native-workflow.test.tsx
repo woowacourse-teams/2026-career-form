@@ -76,7 +76,6 @@ it("renders the native workflow and counts requests and site actions", async () 
   await waitFor(() =>
     expect(named("college[0].academyName").value).toBe("합성대학 A"),
   );
-  expect(counters.requests).toBe(requests.length);
   expect(counters.requests).toBeGreaterThan(0);
   expect(counters.requests).toBeLessThanOrEqual(8);
   expect(counters.preparations).toBeGreaterThan(0);

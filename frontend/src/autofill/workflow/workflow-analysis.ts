@@ -11,6 +11,7 @@ import {
   nativeDependentRows,
   rememberNativeDependents,
   ROW_DRIVER_REASON,
+  ROW_SEARCH_REASON,
 } from "./native-dependent-rows";
 import { nativePolicyRequired } from "./execution-policy";
 import { nativeForm, nativeOwnership } from "../policy/native-form-collection";
@@ -821,9 +822,7 @@ export function createAnalyzeFields({
         reason: deferredDriverReason(
           ownFailure?.code,
           analysis.mode === "GENERIC",
-          byDriver
-            ? ROW_DRIVER_REASON
-            : "검색 결과를 확정하지 못해 이 행의 입력을 보류했습니다. 검색 항목과 같은 행의 정보를 직접 확인해 주세요.",
+          byDriver ? ROW_DRIVER_REASON : ROW_SEARCH_REASON,
         ),
         failureCode:
           ownFailure?.code ??

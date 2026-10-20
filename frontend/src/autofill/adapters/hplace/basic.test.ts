@@ -196,8 +196,23 @@ it("rejects an unverified selected option even with the expected label", () => {
 });
 it.each(["2020-02-30", "2020-13-01", "2020-00-01", "1899-12-01"])(
   "rejects invalid service date %s",
-  (value) => expect(basicTarget("serviceStartDate", value)).toBeUndefined(),
+  (value) => {
+    mountBasicDetail();
+    activateBasicDetails();
+    expect(basicTarget("serviceStartDate", value, document)).toBeUndefined();
+  },
 );
+it("never invents a day for a month-only profile date on a YMD tenant", () => {
+  mountBasicDetail();
+  activateBasicDetails();
+  document
+    .querySelector('[name="military.militaryStartDate"]')!
+    .setAttribute("data-dates", "military.militaryDate:YMD");
+  expect(basicTarget("serviceStartDate", "2020-01", document)).toBeUndefined();
+  expect(basicTarget("serviceStartDate", "2020-01-10", document)).toBe(
+    "2020.01.10",
+  );
+});
 it("does not collect disabled dependents or dependencies with the wrong relation", () => {
   mountBasicDetail();
   activateBasicDetails();

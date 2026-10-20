@@ -151,7 +151,8 @@
     "표시 텍스트가 없으므로 라벨·선택지 문구 기반 판정은 이 fixture로 검증할 수 없다",
     "선택지 value는 합성 코드라 공통 코드표 대응은 검증할 수 없다",
     "설치 확장 revision, 실사이트 성공률, 저장·제출 호환성의 근거가 아니다",
-    "maxlength·step·max·minlength 속성 중 숫자 형식(최대 4자리, 소수 4자리)에 맞지 않는 값은 제거했다"
+    "maxlength·step·max·minlength 속성 중 숫자 형식(최대 4자리, 소수 4자리)에 맞지 않는 값은 제거했다",
+    "추출 코드와 RED·변이 로그 근거(.git/cf-workflow/live-eval/…)는 저장소 밖 로컬 Git 메타데이터이며 커밋되지 않았다. 추출 코드는 기록한 SHA-256으로만 대조할 수 있다"
   ],
   "review": {
     "privacy": {
@@ -167,7 +168,7 @@
   },
   "reproduction": {
     "command": "cd frontend && npx vitest run --project unit src/autofill/policy/hplace-mrs2-live-fidelity.test.ts",
-    "product_revision": "1026408d (CF-177, develop 반영 후) + C12 커밋의 테스트 builder 변경",
+    "product_revision": "102640806f80121051888de62d97d033957324d9 (CF-177, develop 반영 후) + 700d73d (C12 fixture·builder 대조)",
     "observed": [
       "섹션별 컨트롤 단위 이름·타입·초기 disabled·data-rel-target/-id·data-dates·select 선택지 수와 게이팅 wrapper의 data-rel-id/-type/-value 수가 tenant 옵션을 준 C0 builder와 같다",
       "v4 정책 native 수집이 실구조와 builder에서 같은 섹션·필드를 읽는다(마운트가 자산 script 태그와 #wrapResume 골격만 합성)"

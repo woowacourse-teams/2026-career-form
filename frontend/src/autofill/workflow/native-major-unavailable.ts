@@ -7,10 +7,12 @@ import {
   nativeRepeatableProfileCount,
 } from "../policy/native-form-row-assignment";
 import { resolveValueBinding } from "../profile/value-binding";
-import type { NativeMajorPreparationState } from "./native-major-preparation";
+import {
+  reportUnavailable,
+  type NativeMajorPreparationState,
+} from "./native-major-preparation";
 
-const ROW_SEARCH_REASON =
-  "검색 결과를 확정하지 못해 이 행의 입력을 보류했습니다. 검색 항목과 같은 행의 정보를 직접 확인해 주세요.";
+import { ROW_SEARCH_REASON } from "./native-dependent-rows";
 
 /**
  * A school whose search did not commit never gets its additional major rows:
@@ -60,7 +62,7 @@ export function reportNativeMajorsOfFailedSchools({
         continue;
       const value = resolveValueBinding(profile, field.binding, index);
       if (value.status !== "resolved") continue;
-      state.unavailable.push({
+      reportUnavailable(state, {
         candidateId: `native-missing-${owner.section.id}-${owner.index}-${field.nestedIndex}`,
         fieldLabel: field.label,
         profileFieldKey: field.binding.profileFieldKey,

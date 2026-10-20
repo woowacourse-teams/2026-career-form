@@ -5,7 +5,7 @@
     "basic": "GS step1 live structural observation; T:29,184,188,1021,1031",
     "career": "GS/한국타이어 step2 실DOM 확인. 고용형태 tenant Sn은 라벨과 수집 코드 쌍으로 고정. WORK/LEAVE 확인. 확장 입력은 미검증.",
     "foreignAbility": "한국타이어 step3 실DOM 확인. 언어 코드 01–34 전체 실관측 쌍 포함. 회화수준은 정확 라벨과 관측 Sn 쌍 검증. 작문/독해는 수동. 확장 입력 미검증.",
-    "native": "공개 템플릿 기반; T:2634–2753,2774–2870,3789–3862. 실DOM 확인 대기. 미확인 옵션 코드표 없음.",
+    "native": "공개 템플릿 기반; T:2634–2753,2774–2870,3789–3862. 프로젝트 154는 2026-10-20 실화면 정제 fixture(gsenc·abl)와 실평가로 구조를 확인해 활성화. 미확인 옵션 코드표 없음.",
     "unmapped": [
       "career.salary ≠ latestSalary",
       "project.performWork/comment ≠ activityDetails",

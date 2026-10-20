@@ -34,7 +34,7 @@ export function detailControls(document: Document): DetailControls | undefined {
       )
     );
   };
-  if (document.location.pathname !== "/mrs2/applicant/resume/writeResume")
+  if (document.location?.pathname !== "/mrs2/applicant/resume/writeResume")
     return reject();
   if (!isHplaceDocument(document))
     return missingSection()

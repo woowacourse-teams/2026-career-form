@@ -86,6 +86,10 @@ it("does not list fields the page does not render", async () => {
   input("birthday").remove();
   run(policy, fullProfile());
   expect(await unverifiedLabels()).toEqual([]);
+  expect(screen.getByRole("tab", { name: /확인 필요/ })).toHaveAttribute(
+    "aria-label",
+    "확인 필요 0개",
+  );
 });
 
 it("does not list unverified fields without a profile value", async () => {
@@ -104,4 +108,8 @@ it("lists nothing on a verified page", async () => {
   const { policy } = mountRun1();
   run(policy, fullProfile());
   expect(await unverifiedLabels()).toEqual([]);
+  expect(screen.getByRole("tab", { name: /확인 필요/ })).toHaveAttribute(
+    "aria-label",
+    "확인 필요 0개",
+  );
 });

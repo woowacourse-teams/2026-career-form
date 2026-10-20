@@ -15,6 +15,15 @@ import {
 import { resolveValueBinding } from "../profile/value-binding";
 import type { ReviewPlanItem } from "../review/review-plan";
 
+/** Reports one manual row once; re-reporting in a later pass must not duplicate it. */
+export function reportUnavailable(
+  state: NativeMajorPreparationState,
+  item: ReviewPlanItem,
+): void {
+  if (!state.unavailable.some((row) => row.candidateId === item.candidateId))
+    state.unavailable.push(item);
+}
+
 export type NativeMajorPreparationState = {
   attempted: WeakSet<Element>;
   unavailable: ReviewPlanItem[];
@@ -131,7 +140,7 @@ export async function prepareNativeMajorsAfterSchool({
         continue;
       const value = resolveValueBinding(profile, field.binding, index);
       if (value.status !== "resolved") continue;
-      state.unavailable.push({
+      reportUnavailable(state, {
         candidateId: `native-missing-${owner.section.id}-${owner.index}-${field.nestedIndex}`,
         fieldLabel: field.label,
         profileFieldKey: field.binding.profileFieldKey,

@@ -54,6 +54,8 @@ class HplaceNativePolicyTest {
             {"schemaVersion":2,"snapshotId":"native-test","site":{"host":"new-tenant.recruiter.im","pathPattern":"/mrs2/applicant/resume/writeResume"},
              "sections":[{"sectionId":"hplace-mrs2-project","fields":[],"items":[{"itemId":"row-opaque","itemGroupId":"hplace.mrs2.project","fields":[
               {"candidateId":"name","element":"input","control":"text","visibility":"visible","domId":"hplace.mrs2.project.projectName","domName":"hplace.mrs2.project.projectName","semanticContext":{"repeat":{"groupId":"hplace.mrs2.project","rowIndex":0,"rowCount":1}}},
+              {"candidateId":"start","element":"input","control":"text","visibility":"visible","domId":"hplace.mrs2.project.startDate","domName":"hplace.mrs2.project.startDate","semanticContext":{"repeat":{"groupId":"hplace.mrs2.project","rowIndex":0,"rowCount":1}}},
+              {"candidateId":"end","element":"input","control":"text","visibility":"visible","domId":"hplace.mrs2.project.endDate","domName":"hplace.mrs2.project.endDate","semanticContext":{"repeat":{"groupId":"hplace.mrs2.project","rowIndex":0,"rowCount":1}}},
               {"candidateId":"role","element":"input","control":"text","visibility":"visible","domId":"hplace.mrs2.project.role","domName":"hplace.mrs2.project.role","semanticContext":{"repeat":{"groupId":"hplace.mrs2.project","rowIndex":0,"rowCount":1}}}
              ]}]}]}
             """, com.careerform.formanalysis.dto.FieldsAnalysisRequest.class);
@@ -62,6 +64,8 @@ class HplaceNativePolicyTest {
         assertThat(response.fields()).allMatch(f->f instanceof com.careerform.formanalysis.dto.FieldsAnalysisResponse.MatchedFieldAnalysis);
         assertThat(response.fields().stream().map(f->((com.careerform.formanalysis.dto.FieldsAnalysisResponse.MatchedFieldAnalysis)f).valueBinding()).toList())
             .containsExactly(new com.careerform.formanalysis.application.port.FieldMappingResolver.DirectBinding("projects.project.projectName"),
+                new com.careerform.formanalysis.application.port.FieldMappingResolver.DirectBinding("projects.project.startDate"),
+                new com.careerform.formanalysis.application.port.FieldMappingResolver.DirectBinding("projects.project.endDate"),
                 new com.careerform.formanalysis.application.port.FieldMappingResolver.DirectBinding("projects.project.role"));
     }
     @Test void rejectsCrossGroupAndNoncontiguousIndices() throws Exception {

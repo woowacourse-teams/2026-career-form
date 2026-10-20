@@ -22,7 +22,7 @@ import { nativeFieldControls } from "../policy/native-form-write";
 import { committedSearchMatches } from "../policy/committed-search";
 import { resolveValueBinding } from "../profile/value-binding";
 
-const ROW_SEARCH_REASON =
+export const ROW_SEARCH_REASON =
   "검색 결과를 확정하지 못해 이 행의 입력을 보류했습니다. 검색 항목과 같은 행의 정보를 직접 확인해 주세요.";
 export const ROW_DRIVER_REASON =
   "조건부 선택을 확정하지 못해 이 행의 입력을 보류했습니다. 선택 항목과 같은 행의 정보를 직접 확인해 주세요.";

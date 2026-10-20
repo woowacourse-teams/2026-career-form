@@ -168,14 +168,16 @@ export function serviceDatePrecision(
 export function basicTarget(
   key: BasicKey,
   value: string,
-  document?: Document,
+  document: Document,
 ): string | undefined {
   if (!value.trim()) return undefined;
   if (key !== "serviceStartDate" && key !== "serviceEndDate") return value;
-  const precision = document ? serviceDatePrecision(document) : "YM";
+  const precision = serviceDatePrecision(document);
   if (!precision) return undefined;
   const m = /^(\d{4})[-.](\d{2})(?:[-.](\d{2}))?$/.exec(value);
   if (!m) return undefined;
+  // A day-precision page needs a day from the profile; never invent one.
+  if (precision === "YMD" && !m[3]) return undefined;
   const y = Number(m[1]),
     month = Number(m[2]),
     day = Number(m[3] ?? 1);

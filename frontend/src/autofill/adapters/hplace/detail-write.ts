@@ -1,5 +1,12 @@
 import { normalizeAddress, type AddressIdentity } from "../../address/match";
 import type { FieldCandidateHandle } from "../../dom/types";
+/** The recipe an English-name candidate may be written with; none without a verified order. */
+const englishNameRecipe = (domName: string | undefined) =>
+  domName?.endsWith(".familyFirst")
+    ? "ENGLISH_FULL_NAME_FAMILY_FIRST"
+    : domName?.endsWith(".givenFirst")
+      ? "ENGLISH_FULL_NAME_GIVEN_FIRST"
+      : undefined;
 import type { ReviewPlanItem } from "../../review/review-plan";
 import { ownedDetailControl, type DetailKey } from "./detail";
 import { registrationBlockReason } from "./registration";
@@ -86,9 +93,7 @@ export async function writeDetail(
     (key !== "englishName" ||
       (item.analysis?.valueBinding?.type === "DERIVED" &&
         item.analysis.valueBinding.recipe ===
-          (handle.candidate.domName?.endsWith(".familyFirst")
-            ? "ENGLISH_FULL_NAME_FAMILY_FIRST"
-            : "ENGLISH_FULL_NAME_GIVEN_FIRST"))) &&
+          englishNameRecipe(handle.candidate.domName))) &&
     ownedDetailControl(handle)?.input === input &&
     (key !== "detailAddress" ||
       detailAddressMatches(handle, expectedAddress)) &&

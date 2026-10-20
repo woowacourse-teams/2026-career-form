@@ -66,7 +66,8 @@ const resolved = (profile: Profile, profileFieldKey: string) =>
  * but were not collected because their structure failed the verified
  * contract. They are reported as "입력 불가" instead of staying silently empty.
  * Fields the page does not render, closed conditional fields and fields
- * without a profile value are not reported. No values are copied.
+ * without a profile value are not reported. Rows carry no page values; only the English-name row carries the profile
+ * name in the user-chosen default order so it can be copied.
  */
 export function hplaceUnverifiedRows(
   document: Document,

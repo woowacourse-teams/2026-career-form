@@ -42,7 +42,7 @@ export function englishNameOrder(
   if (!matches.length) {
     const familyFirst = [...text.matchAll(/\bhong\s*,?\s+gil-?dong\b/gi)];
     const givenFirst = [...text.matchAll(/\bgil-?dong\s*,?\s+hong\b/gi)];
-    if (familyFirst.length + givenFirst.length === 1)
+    if (familyFirst.length > 0 !== givenFirst.length > 0)
       return familyFirst.length ? "familyFirst" : "givenFirst";
     debugCollectionSkip(
       "hplace.detail.englishName",
