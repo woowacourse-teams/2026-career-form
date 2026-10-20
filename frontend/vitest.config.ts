@@ -1,30 +1,15 @@
 import { playwright } from "@vitest/browser-playwright";
 import { configDefaults, defineConfig } from "vitest/config";
-import type { Reporter } from "vitest/reporters";
 import { searchFixtureServer } from "./tests/browser/search-fixture-server.ts";
-
-let browserRequested = true;
-const requireBrowserSuite: Reporter = {
-  onInit(vitest) {
-    browserRequested =
-      vitest.config.project.length !== 1 || vitest.config.project[0] !== "unit";
-  },
-  onTestRunStart(specifications) {
-    if (
-      browserRequested &&
-      !specifications.some((specification) => specification.pool === "browser")
-    ) {
-      throw new Error(
-        "Browser tests were not collected. Use test:unit for unit-only runs.",
-      );
-    }
-  },
-};
+import {
+  coverageThresholds,
+  createRequireBrowserSuite,
+} from "./tests/vitest/run-policy.ts";
 
 export default defineConfig({
   test: {
     maxWorkers: 1,
-    reporters: ["default", requireBrowserSuite],
+    reporters: ["default", createRequireBrowserSuite()],
     css: {
       include: /WorkflowResults\.module\.css|sidepanel\/App\.module\.css/,
       modules: { classNameStrategy: "scoped" },
@@ -43,12 +28,7 @@ export default defineConfig({
       ],
       provider: "v8",
       reportOnFailure: true,
-      thresholds: {
-        branches: 80,
-        functions: 80,
-        lines: 80,
-        statements: 80,
-      },
+      thresholds: coverageThresholds(process.argv),
     },
     projects: [
       {
