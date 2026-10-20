@@ -5,8 +5,14 @@ import {
 } from "../debug/structural-diagnostics";
 import { prepareNativeMajorsAfterSchool } from "./native-major-preparation";
 import { reportNativeMajorsOfFailedSchools } from "./native-major-unavailable";
+import {
+  createNativeDependentState,
+  nativeDependentRows,
+  rememberNativeDependents,
+  ROW_DRIVER_REASON,
+} from "./native-dependent-rows";
 import { nativePolicyRequired } from "./execution-policy";
-import { nativeForm } from "../policy/native-form-collection";
+import { nativeForm, nativeOwnership } from "../policy/native-form-collection";
 import { getWriteAdapter } from "../adapters/write";
 import { runtimeRules } from "../policy/runtime-rules";
 import { dismissCompletedAutocomplete } from "../interaction/autocomplete-completion";
@@ -611,6 +617,16 @@ export function createAnalyzeFields({
     });
     if (run.nativeMajors?.unavailable.length)
       plan.items.push(...run.nativeMajors.unavailable);
+    // Dependents a native driver withheld and this pass did not collect.
+    if (native && analysis.mode !== "GENERIC" && run.nativeDependents)
+      plan.items.push(
+        ...nativeDependentRows(
+          run.nativeDependents,
+          snapshot.request,
+          snapshot.registry,
+          loadedProfile,
+        ),
+      );
     const finishReviewLog = startLocalTiming("review-log");
     debugReviewPlan(plan);
     finishReviewLog();
@@ -786,15 +802,24 @@ export function createAnalyzeFields({
           handle.itemIndex,
         );
       const ownFailure = failure && failure.key === key ? failure : undefined;
+      // A dependent withheld by a non-search native driver names that cause.
+      const byDriver =
+        !ownFailure &&
+        !!source &&
+        !!run.nativeDependents?.driverDeferred.has(source);
       return {
         candidateId: item.candidateId,
         status: "skipped",
         reason: deferredDriverReason(
           ownFailure?.code,
           analysis.mode === "GENERIC",
-          "검색 결과를 확정하지 못해 이 행의 입력을 보류했습니다. 검색 항목과 같은 행의 정보를 직접 확인해 주세요.",
+          byDriver
+            ? ROW_DRIVER_REASON
+            : "검색 결과를 확정하지 못해 이 행의 입력을 보류했습니다. 검색 항목과 같은 행의 정보를 직접 확인해 주세요.",
         ),
-        failureCode: ownFailure?.code ?? "ROW_SEARCH_UNCONFIRMED",
+        failureCode:
+          ownFailure?.code ??
+          (byDriver ? "ROW_DRIVER_UNCONFIRMED" : "ROW_SEARCH_UNCONFIRMED"),
       };
     };
     const finishDriverDiscovery = startLocalTiming("driver-discovery");
@@ -1005,6 +1030,13 @@ export function createAnalyzeFields({
         }
         const nextGroups = new Set(failedGroups);
         const nextCompleted = new Set(completedStateDriverKeys);
+        // Native drivers whose own value is verified though a dependent did
+        // not settle: written, with only the dependents deferred.
+        const verifiedDrivers = new Set<number>();
+        const nativeDependents =
+          native && analysis.mode !== "GENERIC"
+            ? (run.nativeDependents ??= createNativeDependentState())
+            : undefined;
         for (const [index, driver] of currentStateDriverItems.entries()) {
           if (successful[index]) {
             nextCompleted.add(driver.key);
@@ -1039,7 +1071,26 @@ export function createAnalyzeFields({
                 element.isConnected && element.ownerDocument === pageDocument,
             )
           ) {
-            dependencies.forEach((element) => nextGroups.add(element));
+            const own = new Set<Element>([
+              ...driver.handle.elements,
+              ...(driver.handle.customElements ?? []),
+            ]);
+            const nativeDriver =
+              !!nativeDependents && driver.handle.owner === "native";
+            const nonSearch =
+              nativeDriver && !nativeOwnership(driver.handle)?.field.search;
+            dependencies.forEach((element) => {
+              nextGroups.add(element);
+              if (nonSearch && !own.has(element))
+                nativeDependents!.driverDeferred.add(element);
+            });
+            if (
+              nonSearch &&
+              writesVerified &&
+              stateSelectionResults[index]?.status === "written" &&
+              !dependencies.some((element) => own.has(element))
+            )
+              verifiedDrivers.add(index);
             nextCompleted.add(driver.key);
             continue;
           }
@@ -1078,7 +1129,25 @@ export function createAnalyzeFields({
           });
         }
         if (run.controller.signal.aborted) return true;
+        if (nativeDependents)
+          currentStateDriverItems.forEach((driver, index) => {
+            if (driver.handle.owner === "native")
+              rememberNativeDependents(
+                nativeDependents,
+                driver.handle,
+                driver.item,
+                !successful[index],
+              );
+          });
         currentStateDriverItems.forEach((driver, index) => {
+          if (verifiedDrivers.has(index)) {
+            onWriteResult?.(
+              driver.item,
+              { candidateId: driver.item.candidateId, status: "written" },
+              snapshot.registry,
+            );
+            return;
+          }
           const element =
             driver.handle.elements[0] ?? driver.handle.customElements?.[0];
           const failureCode =
@@ -1468,6 +1537,15 @@ export function createAnalyzeFields({
             snapshot.registry,
           );
         });
+        if (native && analysis.mode !== "GENERIC")
+          for (const { handle, item } of currentStateDriverItems)
+            if (handle.owner === "native")
+              rememberNativeDependents(
+                (run.nativeDependents ??= createNativeDependentState()),
+                handle,
+                item,
+                false,
+              );
         const nextCompletedStateDriverKeys = new Set(completedStateDriverKeys);
         currentStateDriverItems.forEach(({ key }) =>
           nextCompletedStateDriverKeys.add(key),

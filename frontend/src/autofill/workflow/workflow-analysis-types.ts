@@ -1,4 +1,5 @@
 import type { NativeMajorPreparationState } from "./native-major-preparation";
+import type { NativeDependentState } from "./native-dependent-rows";
 import type {
   AnalyzeFieldsSnapshot,
   StaticFieldsSession,
@@ -39,6 +40,7 @@ type AddressRun = {
   nativeFieldsRequests?: number;
   nativeProgress?: string;
   nativeMajors?: NativeMajorPreparationState;
+  nativeDependents?: NativeDependentState;
   button?: Element;
   task?: Promise<AddressResult>;
 };
