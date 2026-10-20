@@ -1,3 +1,4 @@
+import { configure } from "@testing-library/react";
 import { vi } from "vitest";
 
 /**
@@ -6,6 +7,9 @@ import { vi } from "vitest";
  * gave the other site-fixture tests.
  */
 vi.setConfig({ testTimeout: 120_000 });
+// The result screen waits for live-budget site timers (1.5 s per linked
+// control); the global 3 s findBy* limit is too short on a hosted runner.
+configure({ asyncUtilTimeout: 30_000 });
 
 export function setHplacePage(url: string): void {
   (
