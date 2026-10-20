@@ -1,5 +1,13 @@
-import { nativeProfileAssignment } from "../policy/native-form-row-assignment";
-import { nativeOwnership } from "../policy/native-form-collection";
+import {
+  nativeProfileAssignment,
+  nativeUnofferedEntries,
+} from "../policy/native-form-row-assignment";
+import {
+  currentNativeOwner,
+  nativeOwnership,
+} from "../policy/native-form-collection";
+import { nativeOptionPresence } from "../policy/native-form-write";
+import type { NativeSection } from "../policy/native-form-contract";
 import { text } from "../policy/primitives";
 import { executionPolicy } from "../workflow/execution-policy";
 import { isSplitEmailTarget, SPLIT_EMAIL_REASON } from "../dom/split-email";
@@ -294,6 +302,77 @@ function currentValue(handle: FieldCandidateHandle): string {
     return selected?.value ? (selected.textContent ?? "") : "";
   }
   return handle.elements[0]?.value ?? "";
+}
+
+const NATIVE_OPTION_ABSENT_REASON =
+  "지원서 선택지에 프로필 값과 같은 항목이 없어 자동 기입하지 않았습니다.";
+const NATIVE_UNOFFERED_ROW_REASON =
+  "지원서 선택지에 없는 항목이라 행을 추가하지 않았습니다.";
+
+/**
+ * Whether a native select/radio offers the profile label (C9). Search,
+ * search-gated (options arrive with the result) and disabled controls (the
+ * row gate is still closed) are left to the write-time checks.
+ */
+function nativeChoicePresence(
+  handle: FieldCandidateHandle,
+  label: string,
+): "present" | "absent" | "structural" | undefined {
+  const owner = currentNativeOwner(handle);
+  if (
+    !owner ||
+    owner.field.search ||
+    owner.field.gate ||
+    (owner.field.type !== "select" && owner.field.type !== "radio") ||
+    handle.elements.some((element) => element.matches(":disabled"))
+  )
+    return;
+  return nativeOptionPresence(owner, handle, label);
+}
+
+/** Profile entries left without a row because the tenant does not offer
+ * their row driver label (C9, H4): reported once each, never written. */
+function nativeUnofferedItems(
+  analysis: FieldsAnalyzeResponse,
+  profile: Profile,
+  registry: CandidateRegistry,
+): ReviewPlanItem[] {
+  const sections = new Map<
+    string,
+    { document: Document; section: NativeSection }
+  >();
+  for (const field of analysis.fields) {
+    const lookup = registry.lookupField(field.candidateId);
+    if (lookup.status !== "ready" && lookup.status !== "blocked") continue;
+    const owner = nativeOwnership(lookup.handle);
+    if (owner?.section.rows && !sections.has(owner.section.id))
+      sections.set(owner.section.id, {
+        document: owner.row.ownerDocument,
+        section: owner.section,
+      });
+  }
+  return [...sections.values()].flatMap(({ document, section }) =>
+    nativeUnofferedEntries(document, section, profile).map(
+      ({ field, index, entryId, value }) => ({
+        candidateId: `native-unoffered-${section.id}-${index}`,
+        fieldLabel: field.label,
+        ...(field.binding.profileFieldKey
+          ? { profileFieldKey: field.binding.profileFieldKey }
+          : {}),
+        profileEntryId: entryId,
+        itemIndex: index,
+        currentValue: "",
+        profileValue: value,
+        previewValue: value,
+        status: "unavailable" as const,
+        selected: false,
+        disabled: true,
+        revealed: false,
+        reason: NATIVE_UNOFFERED_ROW_REASON,
+        failureCode: "OPTION_UNMATCHED" as const,
+      }),
+    ),
+  );
 }
 
 function unavailableItem(
@@ -938,6 +1017,38 @@ function itemForAnalysis(
         : {}),
     };
   }
+  const optionPresence = nativeChoicePresence(
+    lookup.handle,
+    resolvedProfileValue.value,
+  );
+  if (optionPresence === "absent") {
+    return {
+      ...unavailableItem(
+        analysis.candidateId,
+        fieldLabel,
+        NATIVE_OPTION_ABSENT_REASON,
+        analysis,
+      ),
+      ...(binding.type === "DIRECT"
+        ? { profileFieldKey: binding.profileFieldKey }
+        : {}),
+      ...(resolvedProfileValue.profileEntryId
+        ? { profileEntryId: resolvedProfileValue.profileEntryId }
+        : {}),
+      ...(itemIndex !== undefined ? { itemIndex } : {}),
+      currentValue: pageValue,
+      profileValue: resolvedProfileValue.value,
+      previewValue: resolvedProfileValue.value,
+      failureCode: "OPTION_UNMATCHED",
+    };
+  }
+  if (optionPresence === "structural")
+    return unavailableItem(
+      analysis.candidateId,
+      fieldLabel,
+      "지원서 선택값을 하나로 확인할 수 없어 자동 기입하지 않았습니다.",
+      analysis,
+    );
   if (analysis.autofillPolicy === "CONDITIONAL") {
     return {
       candidateId: analysis.candidateId,
@@ -1089,14 +1200,20 @@ export function buildReviewPlan({
       components && analysis.mode === "ADAPTER",
     ),
   );
+  const unoffered =
+    analysis.mode === "ADAPTER"
+      ? nativeUnofferedItems(analysis, profile, registry)
+      : [];
   return {
     status: analysis.analysisStatus === "PARTIAL" ? "partial" : "ready",
-    items:
-      components && analysis.mode === "ADAPTER"
+    items: [
+      ...(components && analysis.mode === "ADAPTER"
         ? approveComponentGpaPairs(
             rejectDuplicateRepeatedBindings(items),
             registry,
           )
-        : rejectDuplicateRepeatedBindings(items),
+        : rejectDuplicateRepeatedBindings(items)),
+      ...unoffered,
+    ],
   };
 }

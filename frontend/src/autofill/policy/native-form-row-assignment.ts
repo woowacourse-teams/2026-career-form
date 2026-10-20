@@ -143,6 +143,53 @@ function ownership(
     url: document.URL,
   };
 }
+/** Row-gating selects whose catalog varies by tenant (careerhyundai offers
+ * seven employment types, gsenc·abl nine). */
+const catalogDrivers = (section: NativeSection) =>
+  section.fields.filter(
+    (f) =>
+      f.driver &&
+      f.type === "select" &&
+      f.dynamicOptions?.codeFormat === "POSITIVE_INTEGER" &&
+      !f.search &&
+      f.nestedIndex === undefined,
+  );
+/**
+ * Profile entries whose row driver label no non-placeholder option on the
+ * page carries (the same test as `nativeOptionPresence` "absent"). With no
+ * rendered row there is no catalog to read, so nothing is excluded.
+ */
+function unofferedEntries(
+  section: NativeSection,
+  rows: readonly Element[],
+  profile: Profile,
+  count: number,
+): Set<number> {
+  const unoffered = new Set<number>();
+  for (const field of catalogDrivers(section)) {
+    const selects = rows.flatMap((row, i) =>
+      Array.from(
+        row.querySelectorAll<HTMLSelectElement>(
+          `select[name="${CSS.escape(rawNativeName(field.rawName, i))}"]`,
+        ),
+      ),
+    );
+    if (!selects.length) continue;
+    const offered = new Set(
+      selects.flatMap((select) =>
+        Array.from(select.options)
+          .filter((o) => o.value !== "")
+          .map((o) => text(o.textContent)),
+      ),
+    );
+    for (let index = 0; index < count; index++) {
+      const resolved = resolveValueBinding(profile, field.binding, index);
+      if (resolved.status === "resolved" && !offered.has(resolved.value))
+        unoffered.add(index);
+    }
+  }
+  return unoffered;
+}
 function assignments(
   document: Document,
   section: NativeSection,
@@ -255,11 +302,17 @@ function assignments(
       existing.set(row, "이미 입력된 항목입니다. 기존 행은 수정하지 않습니다.");
     }
   }
+  // An entry the tenant's catalog cannot express never gets an added row: it
+  // only takes a blank row the page already has, after the offered entries.
+  const unoffered = unofferedEntries(section, rows, profile, entries.length);
   const remaining = entries.map((_, i) => i).filter((i) => !used.has(i));
-  const required = occupied + result.size + remaining.length;
+  const offered = remaining.filter((i) => !unoffered.has(i));
+  const order = [...offered, ...remaining.filter((i) => unoffered.has(i))];
+  const required = occupied + result.size + offered.length;
   if (required > section.rows.maxCount) return null;
+  const unplaced = order.slice(blank.length).filter((i) => unoffered.has(i));
   blank.forEach((row, i) => {
-    const index = remaining[i];
+    const index = order[i];
     if (index !== undefined) {
       result.set(row, index);
       assigned.set(row, {
@@ -273,7 +326,7 @@ function assignments(
       });
     }
   });
-  return { result, required, existing, root, rows };
+  return { result, required, existing, root, rows, unplaced };
 }
 export function nativeRepeatableProfileCount(
   document: Document,
@@ -316,6 +369,40 @@ export function nativeRepeatableProfileCount(
   if (state) captureNativePreparationRows(state.root, state.rows);
   return state?.required ?? null;
 }
+/** A profile entry left without a row because the tenant does not offer its
+ * row driver label; the review reports it instead of adding a row. */
+export interface NativeUnofferedEntry {
+  field: NativeField;
+  index: number;
+  entryId: string;
+  value: string;
+}
+export function nativeUnofferedEntries(
+  document: Document,
+  section: NativeSection,
+  profile: Profile,
+): NativeUnofferedEntry[] {
+  if (!section.enabled || section.singleEntity || !section.identityFields)
+    return [];
+  const field = catalogDrivers(section)[0];
+  const state = field && assignments(document, section, profile);
+  if (!state) return [];
+  return state.unplaced.flatMap((index) => {
+    const resolved = resolveValueBinding(profile, field.binding, index);
+    return resolved.status === "resolved" && resolved.profileEntryId
+      ? [
+          {
+            field,
+            index,
+            entryId: resolved.profileEntryId,
+            value: resolved.value,
+          },
+        ]
+      : [];
+  });
+}
+const QUALIFICATION_REASON =
+  "입력 불가(검정고시 학력 — 사용자 처리): 검정고시 학력은 지원서에서 직접 선택해 주세요.";
 function singleEntityAssignment(
   o: NativeOwnership,
   profile: Profile,
@@ -336,6 +423,10 @@ function singleEntityAssignment(
       reason: "프로필 항목 없음: 해당 학력 항목을 등록하지 않았습니다.",
     };
   if (entries.length !== 1) return blocked;
+  // The policy leaves the site's 검정고시 graduation out on purpose: a
+  // qualification-exam profile must never be checked as 졸업 (H4).
+  if (entries[0].values.academicProcess === "대입 검정고시")
+    return { reason: QUALIFICATION_REASON };
   const profileDigest = JSON.stringify(entries),
     previous = assigned.get(o.row);
   if (
