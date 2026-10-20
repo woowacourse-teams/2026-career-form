@@ -13,6 +13,9 @@
  * - `highschool`: renders section 140 gated by `data-rel-id=highschool`.
  * - `liveGating`: renders 141/142 rows with the degree wrapper, disabled
  *   `data-rel-target` controls and the major focus-poll relation.
+ * - `collegeCategory` / `graduateEntranceType` / `majorScore`: tenant
+ *   variations of the live rows seen in the C12 sanitized fixtures
+ *   (fixtures/dom-snapshots/hplace-mrs2-step2-*). Only with `liveGating`.
  * Either live option installs the linkedForm emulator on `#frm`; call
  * `disposeLinkedForms()` in `afterEach`. */
 import seed from "../../../../../backend/src/main/resources/policies/hplace-mrs2-v4.json";
@@ -33,11 +36,39 @@ export interface HighschoolFixtureOptions {
   /** Tenant-optional day/night radios (absent on some tenants). */
   dayOrNight?: boolean;
 }
+type PerKind = { college?: boolean; graduateSchool?: boolean };
 export interface EducationFixtureOptions {
   dateInputFormat?: EducationDateFormat;
   liveGating?: boolean;
   highschool?: false | HighschoolFixtureOptions;
+  /** Live rows: the 계열 select per kind (default: both rendered). */
+  collegeCategory?: PerKind;
+  /** Live graduateSchool rows: 입학/편입 radios (default: rendered). */
+  graduateEntranceType?: boolean;
+  /** Live rows: 전공 이수학점/평점/만점 per kind (default: absent). */
+  majorScore?: PerKind;
 }
+/** Per-row live variations derived from EducationFixtureOptions. */
+export interface LiveRowShape {
+  collegeCategory?: boolean;
+  entranceType?: boolean;
+  majorScore?: boolean;
+}
+const liveRowShape = (
+  kind: string,
+  {
+    collegeCategory = {},
+    graduateEntranceType = true,
+    majorScore = {},
+  }: EducationFixtureOptions,
+): LiveRowShape => {
+  const key = kind as keyof PerKind;
+  return {
+    collegeCategory: collegeCategory[key] ?? true,
+    entranceType: kind === "graduateSchool" ? graduateEntranceType : true,
+    majorScore: majorScore[key] ?? false,
+  };
+};
 export const widget = (prefix: string, kind: string, property: string) =>
   `<div class="span"><div class="search"><label><input type="search" data-type="${kind}"></label><div class="searchResult"></div></div><input type="hidden" name="${prefix}.${property}Name"><span class="searchResultName"></span><input class="hidden" name="${prefix}.${property}Code"></div>`;
 export const majorRow = (parent: string, index: number) =>
@@ -55,13 +86,22 @@ export function mountEducation(
   count = 2,
   majors = 1,
   majorEnabled = false,
-  {
+  options: EducationFixtureOptions = {},
+) {
+  const {
     dateInputFormat = "YM",
     liveGating = false,
     highschool = false,
-  }: EducationFixtureOptions = {},
-) {
-  const row = liveGating ? liveCollegeRow : collegeRow;
+  } = options;
+  const row = (
+    kind: string,
+    index: number,
+    majors: number,
+    format: EducationDateFormat,
+  ) =>
+    liveGating
+      ? liveCollegeRow(kind, index, majors, format, liveRowShape(kind, options))
+      : collegeRow(kind, index, majors, format);
   window.history.replaceState({}, "", "/mrs2/applicant/resume/writeResume");
   const policy = structuredClone(
     seed.executionPolicy,
@@ -366,6 +406,11 @@ export const liveCollegeRow = (
   index: number,
   majors = 1,
   format: EducationDateFormat = "YM",
+  {
+    collegeCategory = true,
+    entranceType = true,
+    majorScore = false,
+  }: LiveRowShape = {},
 ) => {
   const parent = `${kind}[${index}]`;
   const gate = ` data-rel-target="${parent}" disabled`;
@@ -386,15 +431,23 @@ export const liveCollegeRow = (
       ["02", "분교"],
     ],
     gate,
-  )}<label class="span date"><input type="text" name="${parent}.entranceDate" data-dates="${parent}.date:${format} college graduationCriteriaDate" class="text date start"${gate} required><input type="text" name="${parent}.graduationDate" data-dates="${parent}.date:END" class="text date end"${gate} required></label>${radios(
-    `${parent}.entranceTypeCode`,
-    [
-      ["01", "입학"],
-      ["02", "편입"],
-    ],
-    gate,
-  )}${radios(`${parent}.graduationTypeCode`, GRADUATION, gate)}${select(`${parent}.collegeCategoryCode`, COLLEGE_CATEGORY, gate)}<div class="subject"><div class="subject" data-wrap="major">${Array.from({ length: majors }, (_, j) => liveMajorRow(parent, j)).join("")}</div></div><div class="subject"><input type="number" name="${parent}.score" step="0.001" min="0" data-rel-id="${parent}.perfectScore"${gate}><select name="${parent}.perfectScore" data-rel-target="${parent}.perfectScore" disabled><option value="">만점기준</option>${["3.0", "3.5", "4.0", "4.3", "4.5", "5.0", "7.0", "20", "100"].map((v) => `<option value="${v}">${v}</option>`).join("")}</select></div></div>`;
+  )}<label class="span date"><input type="text" name="${parent}.entranceDate" data-dates="${parent}.date:${format} college graduationCriteriaDate" class="text date start"${gate} required><input type="text" name="${parent}.graduationDate" data-dates="${parent}.date:END" class="text date end"${gate} required></label>${
+    entranceType
+      ? radios(
+          `${parent}.entranceTypeCode`,
+          [
+            ["01", "입학"],
+            ["02", "편입"],
+          ],
+          gate,
+        )
+      : ""
+  }${radios(`${parent}.graduationTypeCode`, GRADUATION, gate)}${collegeCategory ? select(`${parent}.collegeCategoryCode`, COLLEGE_CATEGORY, gate) : ""}<div class="subject"><div class="subject" data-wrap="major">${Array.from({ length: majors }, (_, j) => liveMajorRow(parent, j)).join("")}</div></div><div class="subject"><input type="number" name="${parent}.score" step="0.001" min="0" data-rel-id="${parent}.perfectScore"${gate}><select name="${parent}.perfectScore" data-rel-target="${parent}.perfectScore" disabled><option value="">만점기준</option>${["3.0", "3.5", "4.0", "4.3", "4.5", "5.0", "7.0", "20", "100"].map((v) => `<option value="${v}">${v}</option>`).join("")}</select></div>${majorScore ? liveMajorScore(parent, gate) : ""}</div>`;
 };
+
+/** Live 전공 평점 subject (abl college rows): credits, average and its scale. */
+const liveMajorScore = (parent: string, gate: string) =>
+  `<div class="subject"><input type="number" data-validlength="5" min="0" max="1000" data-limit="decimal(5,1)" name="${parent}.majorCredits"${gate} required><input type="number" min="0" max="1000" name="${parent}.majorAverageScore" data-rel-id="${parent}.majorPerfectScore" data-limit="decimal(6,3)" step="0.001"${gate} required><select name="${parent}.majorPerfectScore" data-rel-target="${parent}.majorPerfectScore" disabled required><option value="">만점기준</option>${["3.0", "3.5", "4.0", "4.3", "4.5", "5.0", "7.0", "20", "100"].map((v) => `<option value="${v}">${v}</option>`).join("")}</select></div>`;
 
 /** Synthetic high-school entry for section 140 (not part of educationProfile). */
 export function highschoolEntry(): Profile["education"][number] {

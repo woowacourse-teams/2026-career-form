@@ -1,0 +1,184 @@
+{
+  "fixture_id": "hplace-mrs2-step2-gsenc",
+  "site_id": "gsenc",
+  "issue_number": 177,
+  "collected_on": "2026-10-20",
+  "provenance": "SANITIZED_SNAPSHOT",
+  "installed_revision": "UNVERIFIED",
+  "revision_evidence": {
+    "method": "NOT_APPLICABLE",
+    "metadata": null,
+    "metadata_sha256": null,
+    "unverified_reason": "구조 수집은 확장을 실행하지 않는다. 페이지 원본 구조만 읽었다"
+  },
+  "scope": {
+    "description": "Hplace MRS2 writeResume 2단계 빈 양식(저장 없는 단계 재이동 직후)의 section.writeResume[data-code] 140, 141, 142, 16. 계정·탭·버튼 영역 밖 섹션과 팝업은 제외",
+    "sections": [
+      {
+        "code": "140",
+        "label": "고교",
+        "controls": 14,
+        "by_kind": {
+          "input:radio": 6,
+          "input:search": 1,
+          "input:hidden": 2,
+          "input:text": 3,
+          "select:select": 2
+        },
+        "disabled": 8,
+        "loops": [],
+        "select_option_counts": [47, 15],
+        "choice_groups": 1
+      },
+      {
+        "code": "141",
+        "label": "대학",
+        "controls": 34,
+        "by_kind": {
+          "input:hidden": 4,
+          "input:radio": 20,
+          "input:search": 2,
+          "input:text": 4,
+          "select:select": 3,
+          "input:number": 1
+        },
+        "disabled": 28,
+        "loops": ["college@0", "collegeMajor@1"],
+        "select_option_counts": [47, 42, 10],
+        "choice_groups": 6
+      },
+      {
+        "code": "142",
+        "label": "대학원",
+        "controls": 33,
+        "by_kind": {
+          "input:hidden": 4,
+          "input:radio": 18,
+          "input:search": 2,
+          "input:text": 4,
+          "select:select": 4,
+          "input:number": 1
+        },
+        "disabled": 27,
+        "loops": ["graduateSchool@0", "collegeMajor@1"],
+        "select_option_counts": [47, 20, 42, 10],
+        "choice_groups": 5
+      },
+      {
+        "code": "16",
+        "label": "경력·프로젝트(154)",
+        "controls": 16,
+        "by_kind": {
+          "select:select": 1,
+          "input:text": 13,
+          "input:radio": 2
+        },
+        "disabled": 14,
+        "loops": ["career@0", "project@0"],
+        "select_option_counts": [10],
+        "choice_groups": 1
+      }
+    ],
+    "control_total": 97,
+    "controls": {
+      "input:radio": 46,
+      "input:search": 5,
+      "input:hidden": 10,
+      "input:text": 24,
+      "select:select": 10,
+      "input:number": 2
+    },
+    "excluded": ["섹션 밖 폼 영역(지원자 정보·탭·단계 버튼·팝업)"]
+  },
+  "failure": {
+    "stage": "FIXTURE_FIDELITY",
+    "expected": "C0 합성 builder의 이름·타입·disabled·data-rel-*·data-dates·선택지 수가 실화면 구조와 같다",
+    "actual": "C12 대조에서 게이팅 속성은 같고, 행 버튼·tenant 선택 항목·섹션 16의 프로젝트(154)·부가 항목이 builder에 없었다",
+    "conditions": [
+      "2·3단계는 저장된 적이 없어 저장 없는 단계 재이동 직후 빈 양식이다",
+      "disabled는 사이트 linkedForm이 렌더 직후 정한 초기 상태다"
+    ]
+  },
+  "sanitization": {
+    "removed": [
+      "입력값, 선택·체크 상태, textarea 본문",
+      "모든 표시 텍스트(→[TEXT])",
+      "placeholder·title·style·href·이벤트 속성 등 허용 목록 밖 속성",
+      "script·style·img·svg 등 실행·미디어 노드",
+      "계정류 class/id 영역(이번 수집 0곳)"
+    ],
+    "replaced": [
+      "id → anon-id-N(for 동시 치환)",
+      "선택지·라디오·체크박스 value 코드와 data-rel-value → opt-N(문서 안 일관 치환)",
+      "5자리 이상 숫자 → snN(이번 수집 0건)"
+    ],
+    "preserved": [
+      "태그·부모/형제·반복 행 관계",
+      "name(템플릿 토큰), type, class 토큰",
+      "maxlength/minlength/min/max/step(숫자만), required/disabled/readonly 상태",
+      "data-code/loop/wrap/type/button/dates/dateinputformat/required/index/loopname/rel-id/rel-target/rel-type/rel-value/limit/validlength/input-type/maxlength/minlength"
+    ],
+    "preserved_common_text": "없음. 모든 텍스트를 [TEXT]로 치환했다",
+    "redacted_text_count": 395,
+    "anonymized_ids": 0,
+    "anonymized_names": 0,
+    "synthetic_option_codes": 335,
+    "synthetic_digits": 0,
+    "dropped_attributes": {
+      "placeholder": 21,
+      "value": 36,
+      "title": 22,
+      "size": 2,
+      "style": 2
+    },
+    "dropped_tags": {},
+    "dropped_data_values": 0,
+    "dropped_class_tokens": 0,
+    "account_regions": 0,
+    "broken_for": 0,
+    "display_none_markers": 19,
+    "visibility_hidden_markers": 0,
+    "extraction_code": {
+      "path": ".git/cf-workflow/live-eval/c12/extract.mjs (v2)",
+      "sha256": "7c9646d17cad5740a2bc78407493c1e239aff177d590a438306a1519b7611d9f",
+      "runner_sha256": "674bff39c3bf19ad5075a5a7d1fa5e9b6491b998f93fb00c0c297cc40db489d2",
+      "approved_by_human": true,
+      "approval": "2026-10-20 H2 수집 승인(v1) 후 허용 목록 확장 v2 재승인. 러너의 abl 2단계 섹션 축소는 승인 대상의 부분집합"
+    }
+  },
+  "synthetic_behavior": [
+    "원본 computed display:none 요소에 data-fixture-display=\"none\" 표식을 추가했다(실제 속성 아님)",
+    "이벤트·서버·linkedForm 동작은 없다. 게이팅 동작이 필요하면 테스트가 hplace-mrs2-linked-form 에뮬레이터를 별도로 붙인다",
+    "대조 테스트 마운트는 정책 지문에 필요한 페이지 골격(자산 script 태그, form#frm 아래 #wrapResume)만 합성한다. 섹션 내부는 추가하지 않는다"
+  ],
+  "limitations": [
+    "사이트 스크립트(linkedForm, 검색, 날짜 위젯, 행 추가)와 서버 응답은 재현하지 않는다",
+    "표시 텍스트가 없으므로 라벨·선택지 문구 기반 판정은 이 fixture로 검증할 수 없다",
+    "선택지 value는 합성 코드라 공통 코드표 대응은 검증할 수 없다",
+    "설치 확장 revision, 실사이트 성공률, 저장·제출 호환성의 근거가 아니다"
+  ],
+  "review": {
+    "privacy": {
+      "result": "PASSED",
+      "human_reviewed": true,
+      "reviewed_on": "2026-10-20"
+    },
+    "structure": {
+      "result": "PASSED",
+      "human_reviewed": true,
+      "reviewed_on": "2026-10-20"
+    }
+  },
+  "reproduction": {
+    "command": "cd frontend && npx vitest run --project unit src/autofill/policy/hplace-mrs2-live-fidelity.test.ts",
+    "product_revision": "1026408d (CF-177, develop 반영 후) + C12 커밋의 테스트 builder 변경",
+    "observed": [
+      "섹션별 컨트롤 단위 이름·타입·초기 disabled·data-rel-target/-id·data-dates·select 선택지 수와 게이팅 wrapper의 data-rel-id/-type/-value 수가 tenant 옵션을 준 C0 builder와 같다",
+      "v4 정책 native 수집이 실구조와 builder에서 같은 섹션·필드를 읽는다(마운트가 자산 script 태그와 #wrapResume 골격만 합성)"
+    ],
+    "mutation_check": "C12 builder 옵션 전 RED 9건: 대학 계열·대학원 입학구분·전공 평점·프로젝트(154)·경험 기술 차이로 섹션 대조와 native 수집 대조가 실패했다(.git/cf-workflow/live-eval/step23-C12-red.log)",
+    "external_requests": "Playwright Chromium offline=true, JavaScript 비활성, 파일 외 요청 전부 차단: 외부 요청 시도 0건",
+    "structure_check": "브라우저 안에서 원본 섹션과 정제 문서의 컨트롤 수·종류·disabled·반복 행 순서·선택지 수·data-rel-target·data-dates 수 동일. 하네스 구조 스냅샷과 섹션별 컨트롤 수 독립 대조 일치"
+  },
+  "sanitized_html_sha256": "b5f434a7080ab91b6d0bbcb1753823e5165c7339b73b5215f3ebaf2e1a7379d8"
+}

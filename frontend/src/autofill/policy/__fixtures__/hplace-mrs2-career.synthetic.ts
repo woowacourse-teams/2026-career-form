@@ -9,6 +9,10 @@
  * - Rows are gated like the site: the employment type select
  *   (`data-rel-id=career[i]`) opens the row, and the LEAVE radio
  *   (`data-rel-type=with data-rel-value=LEAVE`) opens the leaving date.
+ * - `project` / `experienceBuilder`: the section-16 subjects after the career
+ *   rows, as seen in the C12 sanitized fixtures
+ *   (fixtures/dom-snapshots/hplace-mrs2-step2-*). A filled projectName
+ *   (`data-rel-id=project[i]`) opens the rest of its row.
  * The linkedForm emulator is bound to `#frm`; call `disposeLinkedForms()` in
  * `afterEach`. */
 import seed from "../../../../../backend/src/main/resources/policies/hplace-mrs2-v4.json";
@@ -51,6 +55,10 @@ export interface CareerFixtureOptions {
   dateInputFormat?: "YM" | "YMD";
   /** abl-type salary column. */
   salary?: boolean;
+  /** Project subject (data-code 154) with this many rows (default 1). */
+  project?: { rows?: number; contributionRate?: boolean };
+  /** abl-type 경험 기술 textarea subject. */
+  experienceBuilder?: boolean;
 }
 const labelsOf = (labels: CareerFixtureOptions["labels"] = "nine") =>
   labels === "nine"
@@ -90,8 +98,27 @@ export function careerRow(index: number, options: CareerFixtureOptions = {}) {
       "",
     )}</div><label class="span per35 date"><input type="text" data-rel-target="${row}" data-dates="${row}.careerDate:${options.dateInputFormat ?? "YMD"} forbiddenAfterToday" name="${row}.entranceDate" class="text date start" disabled><input type="text" data-rel-target="${row}.workingStatusCode" data-dates="${row}.careerDate:END forbiddenAfterToday" name="${row}.leavingDate" class="text date end" disabled></label></div><div class="row in-span half-margin">${text("department", 128)}${text("position", 64)}</div><div class="row in-span half-margin">${text("assignedTask", 216)}</div>${options.salary ? `<div class="row in-span half-margin"><span class="span label money"><input type="number" max="2147483648" name="${row}.salary" class="text"${gate}></span></div>` : ""}<div class="row in-span half-margin">${text("retirementReason", 512)}</div></div>`;
 }
+/** Live project row (C12 fixtures): projectName drives the row. */
+export function projectRow(
+  index: number,
+  {
+    contributionRate = false,
+  }: NonNullable<CareerFixtureOptions["project"]> = {},
+) {
+  const row = `project[${index}]`;
+  const gate = ` data-rel-target="${row}" disabled`;
+  const text = (name: string, attributes = gate) =>
+    `<div class="span"><input type="text" maxlength="128" name="${row}.${name}" class="text"${attributes}></div>`;
+  return `<div class="row loop" data-loop="project"><div class="row in-span no-margin"><div class="span per20 btn"><div class="wrapBtn"><button type="button" data-button="add"></button><button type="button" data-button="remove"></button><button type="button" data-button="reset"></button></div></div>${text("projectName", ` data-rel-id="${row}"`)}</div><div class="row in-span half-margin">${text("clientName", `${gate} required`)}${text("workplace", `${gate} required`)}</div><div class="row in-span half-margin"><label class="span per35 date"><input type="text" class="text date start" data-dates="${row}.projectDate:YMD" name="${row}.startDate"${gate} required><input type="text" class="text date end" data-dates="${row}.projectDate:END" name="${row}.endDate"${gate} required></label></div><div class="row in-span half-margin">${contributionRate ? `<span class="span label percent"><input type="number" data-input-type="positive" max="100" step="1" name="${row}.contributionRate" class="text"${gate}></span>` : ""}${text("role")}</div></div>`;
+}
 export function careerSection(rows = 2, options: CareerFixtureOptions = {}) {
-  return `<section class="writeResume" data-code="16"><div class="subject" data-code="153" data-wrap="career">${Array.from({ length: rows }, (_, i) => careerRow(i, options)).join("")}</div></section>`;
+  const project = options.project
+    ? `<div class="subject" data-wrap="project" data-code="154" data-type="project">${Array.from({ length: options.project.rows ?? 1 }, (_, i) => projectRow(i, options.project)).join("")}</div>`
+    : "";
+  const experience = options.experienceBuilder
+    ? `<div class="subject"><textarea data-maxlength="1000" data-minlength="" name="experienceBuilder.textInput" class="textarea" maxlength="1000"></textarea><input type="hidden" name="experienceBuilder.resumeBuilderSn"></div>`
+    : "";
+  return `<section class="writeResume" data-code="16"><div class="subject" data-code="153" data-wrap="career">${Array.from({ length: rows }, (_, i) => careerRow(i, options)).join("")}</div>${project}${experience}</section>`;
 }
 function wireCareerAdd(subject: Element, options: CareerFixtureOptions) {
   for (const button of subject.querySelectorAll<HTMLButtonElement>(
