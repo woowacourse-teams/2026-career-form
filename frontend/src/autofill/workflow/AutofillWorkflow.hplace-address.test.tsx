@@ -29,6 +29,7 @@ function mountWorkflow(
   const s = mountAddress(
     spaced
       ? {
+          pageChrome: true,
           results: [
             {
               ...addressExpected,
@@ -39,7 +40,7 @@ function mountWorkflow(
             },
           ],
         }
-      : {},
+      : { pageChrome: true },
   );
   document.head.innerHTML =
     '<script src="/mrs2/release/js/applicant/writeResume/writeResume.js"></script><script src="/mrs2/release/js/applicant/writeResume/writeResumeTemplate.js"></script>';
@@ -168,6 +169,10 @@ it("uses one staged owner for the triplet and never writes its reused legacy det
     addressExpected.detail,
   ]);
   expect(s.events.filter((e) => e === "open")).toHaveLength(1);
+  // Step tabs, 이전/임시저장/다음, 동의 and 인증 stay untouched; only the
+  // modal's own 저장 (an approved local copy) is clicked.
+  expect(s.events).not.toContain("forbidden");
+  expect(s.events).not.toContain("form-submit");
   expect(detailWrites()).toBe(0);
   expect(calls()).toBeLessThanOrEqual(3);
 });

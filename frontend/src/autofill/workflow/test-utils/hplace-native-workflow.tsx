@@ -9,6 +9,11 @@
  * live on `#frm` listeners, so they vanish with the mounted DOM.
  */
 import { render } from "@testing-library/react";
+import { afterEach } from "vitest";
+import {
+  isForbiddenClick,
+  mountPageChrome,
+} from "../../policy/__fixtures__/hplace-mrs2-page-chrome";
 import { AutofillWorkflow } from "../AutofillWorkflow";
 import type { ExecutionPolicy } from "../execution-policy";
 import type { Profile } from "../../../profile/model";
@@ -45,12 +50,22 @@ export interface NativeWorkflowCounters {
   adds: number;
   /** `[data-button=addCollege]` clicks. */
   parentAdds: number;
-  /** submits and remove/reset/removeCollege/resetSearchResult/submit/file clicks. */
+  /**
+   * Submits and clicks on remove/reset/removeCollege/resetSearchResult,
+   * submit, file, step tabs, 다음/이전/임시저장/저장/제출, 동의 and 인증
+   * (see `isForbiddenClick`), anywhere in the document.
+   */
   forbidden: number;
 }
 export interface RenderNativeWorkflowOptions {
   policy: ExecutionPolicy;
   profile: Profile;
+  /**
+   * Mounts the step tabs, the 이전/임시저장/다음 bar, a 동의 checkbox and an
+   * 인증 button around the sections. Default true; pass false for pages that
+   * must stay byte-identical.
+   */
+  pageChrome?: boolean;
   /** Omit for a site that never answers searches. */
   searchResponder?: SearchResponder;
   /** Optional post-processing of each analyzeFields response. */
@@ -212,17 +227,22 @@ export function catalogResponder(
   };
 }
 
-const FORBIDDEN =
-  "[data-button=remove],[data-button=reset],[data-button=removeCollege],[data-button=resetSearchResult],button[type=submit],input[type=file]";
+// Document-level listeners outlive the mounted page; drop them after each test.
+const disposers: Array<() => void> = [];
+afterEach(() => {
+  for (const dispose of disposers.splice(0)) dispose();
+});
 
 export function renderNativeWorkflow({
   policy,
   profile,
   searchResponder,
   shapeFields = (r) => r,
+  pageChrome = true,
 }: RenderNativeWorkflowOptions): NativeWorkflowRender {
   const form = document.querySelector("#frm");
   if (!form) throw new Error("mount the native page before rendering");
+  if (pageChrome) mountPageChrome(form);
   const counters: NativeWorkflowCounters = {
     requests: 0,
     preparations: 0,
@@ -232,9 +252,18 @@ export function renderNativeWorkflow({
     forbidden: 0,
   };
   const requests: FieldsAnalyzeRequest[] = [];
-  form.addEventListener("submit", (e) => {
+  const onSubmit = (e: Event) => {
     e.preventDefault();
     counters.forbidden++;
+  };
+  const onForbiddenClick = (e: Event) => {
+    if (isForbiddenClick(e.target)) counters.forbidden++;
+  };
+  document.addEventListener("submit", onSubmit, true);
+  document.addEventListener("click", onForbiddenClick, true);
+  disposers.push(() => {
+    document.removeEventListener("submit", onSubmit, true);
+    document.removeEventListener("click", onForbiddenClick, true);
   });
   form.addEventListener("keypress", (e) => {
     const query = e.target;
@@ -249,7 +278,6 @@ export function renderNativeWorkflow({
       if (!(el instanceof Element)) return;
       if (el.matches("[data-button=add]")) counters.adds++;
       if (el.matches("[data-button=addCollege]")) counters.parentAdds++;
-      if (el.matches(FORBIDDEN)) counters.forbidden++;
     },
     true,
   );

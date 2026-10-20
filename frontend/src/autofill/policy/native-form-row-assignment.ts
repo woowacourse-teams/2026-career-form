@@ -277,6 +277,25 @@ function assignments(
         : [],
     );
     if (matches.length > 1 || matches.some((i) => used.has(i))) return null;
+    // A populated row that differs from an entry in exactly one identity field
+    // is most likely that entry after the site normalized a value (a reformatted
+    // date, a suffixed school name). Adding another row would duplicate it, so
+    // the section goes to the user like any other conflicting existing row.
+    if (
+      !matches.length &&
+      identity.length > 1 &&
+      entries.some(
+        (_, index) =>
+          !used.has(index) &&
+          identity.filter(
+            (f) =>
+              fieldValue(row, f, physicalIndex) ===
+              profileValue(profile, f, index, row, physicalIndex),
+          ).length ===
+            identity.length - 1,
+      )
+    )
+      return null;
     if (matches.length === 1) {
       const index = matches[0];
       if (

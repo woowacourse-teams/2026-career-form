@@ -375,3 +375,160 @@ it.each(TENANTS)(
   },
   180000,
 );
+
+/** Every named control on the page as applicants see it (radios by value). */
+function pageValues(): Record<string, string> {
+  return Object.fromEntries(
+    Array.from(
+      document.querySelectorAll<
+        HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+      >("#frm input[name],#frm select[name],#frm textarea[name]"),
+      (e) =>
+        e instanceof HTMLInputElement && e.type === "radio"
+          ? [`${e.name}=${e.value}`, String(e.checked)]
+          : [e.name, e.value],
+    ),
+  );
+}
+const loopCounts = () =>
+  Object.fromEntries(
+    ["college", "graduateSchool", "collegeMajor", "career"].map((loop) => [
+      loop,
+      document.querySelectorAll(`[data-loop="${loop}"]`).length,
+    ]),
+  );
+const completedCount = () =>
+  screen.getByRole("tab", { name: /^입력 완료 \d+개$/ }).textContent;
+
+/** Counts value writes (input/change on named controls) from now on. */
+function countWrites() {
+  const seen: string[] = [];
+  const record = (event: Event) => {
+    const target = event.target;
+    if (
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLSelectElement ||
+      target instanceof HTMLTextAreaElement
+    )
+      if (target.name) seen.push(`${event.type}:${target.name}`);
+  };
+  const form = document.querySelector("#frm")!;
+  for (const type of ["input", "change"])
+    form.addEventListener(type, record, true);
+  return seen;
+}
+
+/**
+ * Runs step 2 to completion, lets the site rewrite the page (`siteEdits`),
+ * unmounts the panel and runs the same profile again on the same page.
+ */
+async function runTwice(tenant: Tenant, siteEdits: () => void = () => {}) {
+  const policy = mountTenant(tenant);
+  const responder = catalogResponder(exactTitleCatalog(), {
+    accept: siteSeesEnter,
+  });
+  const profile = liveShapedProfile();
+  const first = renderNativeWorkflow({
+    policy,
+    profile,
+    searchResponder: responder,
+  });
+  await screen.findByText("자동 기입을 마쳤어요", {}, { timeout: 150000 });
+  cleanup();
+  siteEdits();
+  const rowsAfterFirst = loopCounts();
+  const valuesAfterFirst = pageValues();
+  const firstSnapshot = { ...first.counters };
+  const writes = countWrites();
+  const second = renderNativeWorkflow({
+    policy,
+    profile,
+    searchResponder: responder,
+  });
+  await screen.findByText("자동 기입을 마쳤어요", {}, { timeout: 150000 });
+  return {
+    first,
+    firstSnapshot,
+    second,
+    writes,
+    rowsAfterFirst,
+    valuesAfterFirst,
+  };
+}
+
+it("does not add rows or write anything when step 2 runs again on the filled page", async () => {
+  const run = await runTwice(TENANTS[1]);
+
+  expect(loopCounts()).toEqual(run.rowsAfterFirst);
+  expect(run.second.counters.adds).toBe(0);
+  expect(run.second.counters.parentAdds).toBe(0);
+  // The first run's listeners are still on #frm: they must not move either.
+  expect(run.first.counters.adds).toBe(run.firstSnapshot.adds);
+  expect(run.first.counters.parentAdds).toBe(run.firstSnapshot.parentAdds);
+  expect(run.second.counters.keypresses).toBe(0);
+  expect(run.writes).toEqual([]);
+  expect(pageValues()).toEqual(run.valuesAfterFirst);
+  // Everything is retained, nothing is reported as newly written.
+  expect(completedCount()).toContain("0");
+  expect(run.first.counters.forbidden).toBe(0);
+  expect(run.second.counters.forbidden).toBe(0);
+}, 330000);
+
+const NORMALIZATIONS: ReadonlyArray<{
+  name: string;
+  edit: () => void;
+  changed: Record<string, string>;
+}> = [
+  {
+    name: "a career date the site reformats from 2019.03.01 to 2019-03-01",
+    edit: () => {
+      control("career[0].entranceDate")!.value = "2019-03-01";
+    },
+    changed: { "career[0].entranceDate": "2019-03-01" },
+  },
+  {
+    name: "a school name the site suffixes after the committed search",
+    edit: () => {
+      const name = control("college[0].academyName")!;
+      name.value = "합성대학 A (본교)";
+      name
+        .closest("div.span")!
+        .querySelector("span.searchResultName > span")!.textContent =
+        "합성대학 A (본교)";
+    },
+    changed: { "college[0].academyName": "합성대학 A (본교)" },
+  },
+];
+
+it.each(NORMALIZATIONS)(
+  "adds no duplicate row and keeps the site's value for $name",
+  async ({ edit, changed }) => {
+    const run = await runTwice(TENANTS[1], edit);
+
+    expect(loopCounts()).toEqual(run.rowsAfterFirst);
+    expect(run.second.counters.adds).toBe(0);
+    expect(run.second.counters.parentAdds).toBe(0);
+    expect(run.first.counters.adds).toBe(run.firstSnapshot.adds);
+    expect(run.first.counters.parentAdds).toBe(run.firstSnapshot.parentAdds);
+    expect(run.writes).toEqual([]);
+    // The site's (or user's) value survives; every other value is unchanged.
+    expect(pageValues()).toEqual(run.valuesAfterFirst);
+    for (const [name, value] of Object.entries(changed))
+      expect(control(name)!.value, name).toBe(value);
+    expect(run.second.counters.forbidden).toBe(0);
+  },
+  330000,
+);
+
+// Known gap (not fixed here, outside row assignment): on a rerun the review
+// compares each retained date with the profile's ISO value instead of the
+// site's dotted format, so every identical date is reported as "값이 달라요".
+it.fails(
+  "reports retained dates as already entered when step 2 runs again",
+  async () => {
+    await runTwice(TENANTS[1]);
+
+    expect(pendingRows()).toEqual([]);
+  },
+  330000,
+);

@@ -7,6 +7,7 @@ import {
 } from "./hplace-mrs2-native.synthetic";
 import { installExecutionPolicy } from "../../workflow/execution-policy";
 import { getWorkflowAdapter } from "../../adapters/workflow";
+import { isForbiddenClick, mountPageChrome } from "./hplace-mrs2-page-chrome";
 import type { AddressValue } from "../../address/types";
 export const addressExpected = {
   postalCode: "00001",
@@ -109,6 +110,8 @@ export function mountAddress(
     loadingRow?: boolean;
     duplicateDelay?: number;
     confirmRevealDelay?: number;
+    /** Step tabs, 이전/임시저장/다음 bar, 동의 and 인증 around the sections. */
+    pageChrome?: boolean;
   } = {},
 ) {
   mountSyntheticNative(0);
@@ -126,6 +129,7 @@ export function mountAddress(
   const button = document.querySelector<HTMLButtonElement>(
     '[data-type="currentAddress"]',
   )!;
+  if (options.pageChrome) mountPageChrome();
   const events: string[] = [];
   const event = (name: string) => {
     events.push(name);
@@ -138,6 +142,15 @@ export function mountAddress(
   document
     .querySelectorAll('[data-button="copyAddress"],button[type="submit"]')
     .forEach((e) => e.addEventListener("click", () => event("forbidden")));
+  if (options.pageChrome) {
+    // Document-level, so it must drop itself once this page is replaced.
+    const onClick = (e: Event) => {
+      if (!button.isConnected)
+        document.removeEventListener("click", onClick, true);
+      else if (isForbiddenClick(e.target)) event("forbidden");
+    };
+    document.addEventListener("click", onClick, true);
+  }
   button.addEventListener("click", () => {
     event("open");
     document.body.insertAdjacentHTML(

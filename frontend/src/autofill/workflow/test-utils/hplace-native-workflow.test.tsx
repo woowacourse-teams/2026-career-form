@@ -83,3 +83,50 @@ it("renders the native workflow and counts requests and site actions", async () 
   expect(counters.parentAdds).toBe(1);
   expect(counters.forbidden).toBe(0);
 }, 30000);
+
+it("counts every step, save, submit, consent and auth click as forbidden", () => {
+  setHplacePage(
+    "https://synthetic.recruiter.im/mrs2/applicant/resume/writeResume",
+  );
+  const policy = mountEducation(1, 1, true);
+  const { counters } = renderNativeWorkflow({
+    policy,
+    profile: educationProfile(),
+  });
+  document.body.insertAdjacentHTML(
+    "beforeend",
+    '<span role="button" class="stray">다음</span><button type="button" class="strayPrev"> 이전 </button><button type="button" class="straySave">저장</button><button type="button" class="strayFinal">최종제출</button><button type="button" class="strayId">본인확인</button><label class="strayAgree"><input type="checkbox" name="terms"> 위 내용에 동의합니다</label><input type="file" class="strayFile"><div id="modal" class="modal-bg"><div class="modal"><button type="button" data-button="modalSubmit">저장</button></div></div>',
+  );
+  const forbiddenClicks = [
+    'nav#tab button[data-step="2"]',
+    '#tab button[data-step="3"]',
+    ".btnPrev",
+    ".btnTemp",
+    ".btnNext",
+    '#frm input[name="agreeAll"]',
+    ".btnAuth",
+    ".stray",
+    ".strayPrev",
+    ".straySave",
+    ".strayFinal",
+    ".strayId",
+    ".strayAgree",
+    ".strayFile",
+  ];
+  for (const selector of forbiddenClicks) {
+    const before = counters.forbidden;
+    document.querySelector<HTMLElement>(selector)!.click();
+    expect(counters.forbidden, selector).toBeGreaterThan(before);
+  }
+  // The staged-address modal's commit button is an approved local copy.
+  const before = counters.forbidden;
+  document
+    .querySelector<HTMLElement>('#modal button[data-button="modalSubmit"]')!
+    .click();
+  expect(counters.forbidden).toBe(before);
+  // The chrome sits beside the sections, never inside one.
+  expect(
+    document.querySelector("section.writeResume nav,section .bottomBar"),
+  ).toBeNull();
+  expect(document.querySelector("nav#tab + form#frm")).not.toBeNull();
+});
