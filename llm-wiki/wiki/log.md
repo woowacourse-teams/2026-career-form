@@ -684,3 +684,10 @@
 - Source-Revision: 25ffdcba6bea7406a704b0499e079867a9893e89
 - 사용자 사전 승인 범위에서 후보 4개로 아직 병합되지 않은 [CF-281 bundle](../raw/issues/CF-281/manifest.md)을 갱신했다.
 - 기존 등급·점수 계약을 등급 전용으로 좁힌 잘못된 설명을 정정하고, 원본에는 없는 프로젝트 상세 반례를 별도 합성 변이로 명시한 출처를 반영했다.
+
+## [2026-10-20] ingest | CF-288 분석 응답과 품질 관측의 비동기 분리
+
+- Approval-Digest: 541589a83e078dd8c571a98b42c1ffd6b5e7bb1e05be47336ad246322b7458a9
+- Source-Revision: 541f4c2e473b8575e00ac1d154c41bec9b96fa61
+- 승인한 정책 후보 3개와 ADR 전문을 [CF-288 bundle](../raw/issues/CF-288/manifest.md)에 기록했다.
+- [비동기 품질 처리](topics/async-quality-observation.md)를 추가하고 기존 품질 관측, report 시점과 이전 실행기의 인터럽트 계약에 현재 구조를 연결했다.

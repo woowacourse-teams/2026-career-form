@@ -4,7 +4,7 @@
 > Status: Current
 > Current: [CF-204 품질 report 전송 시점](../../raw/issues/CF-204/documents/quality-report-lifecycle.md)
 > History: [CF-204 품질 report 전송 시점](../../raw/issues/CF-204/documents/quality-report-lifecycle.md)
-> Updated: 2026-10-13
+> Updated: 2026-10-20
 
 ## 현재 상태
 
@@ -19,3 +19,5 @@ snapshot별 API, 300 필드 분할, 기존 128KiB 제한과 네트워크 재시�
 ## 관련 주제
 
 - [자동 입력 품질 관측과 사람 확인 요청](autofill-quality-observation.md)
+
+등록과 저장 접수, 분석 응답 대기 제거와 지연 집계는 [비동기 품질 처리](async-quality-observation.md)를 따른다.

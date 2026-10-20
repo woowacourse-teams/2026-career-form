@@ -21,16 +21,9 @@ import jakarta.servlet.http.HttpServletResponse;
 public final class QualityObservationFilter extends OncePerRequestFilter {
     private static final Logger log = LoggerFactory.getLogger(QualityObservationFilter.class);
     private static final Set<String> PATHS = Set.of("/api/v1/fields/analyze", "/api/v1/preparation/analyze", "/api/v1/generic/interaction-decisions", "/api/v1/generic/sections/classify", "/api/v1/generic/fields/analyze");
-    private final QualityCollectionService collector;
-    private final QualityObservationExecutor observer;
+    private final QualityAsyncService observations;
 
-    public QualityObservationFilter(QualityCollectionService collector) { this(collector, QualityObservationExecutor.shared()); }
-
-    @org.springframework.beans.factory.annotation.Autowired
-    public QualityObservationFilter(QualityCollectionService collector, QualityObservationExecutor observer) {
-        this.collector = collector;
-        this.observer = observer;
-    }
+    public QualityObservationFilter(QualityAsyncService observations) { this.observations = observations; }
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) { return !PATHS.contains(request.getRequestURI()) || !request.getMethod().equals("POST"); }
@@ -49,8 +42,8 @@ public final class QualityObservationFilter extends OncePerRequestFilter {
                     try {
                         var event = new QualityCollectionService.RequestEvent(operation(request.getRequestURI()), failed ? 500 : response.getStatus(),
                             scope.durationMs(), null, scope.calls());
-                        observer.observe(() -> collector.observe(collector.group("UNKNOWN", "UNKNOWN", "UNKNOWN", null, null),
-                            event, null, null, null, false));
+                        observations.observe(new QualityAsyncService.Observation(null, "UNKNOWN", null, false, "UNKNOWN",
+                            null, null, null, event, null));
                     } catch (RuntimeException exception) {
                         log.warn("QUALITY_REQUEST_OBSERVATION_UNAVAILABLE");
                     }

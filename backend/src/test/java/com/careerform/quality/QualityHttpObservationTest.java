@@ -32,6 +32,8 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 @DisplayName("분석 응답 계약을 보존하는 HTTP 품질 관측")
 class QualityHttpObservationTest {
+    @org.junit.jupiter.api.extension.RegisterExtension
+    final QualityTestRuntime runtime = new QualityTestRuntime();
     private final QualityStore store = mock(QualityStore.class);
     private final QualityCollectionService collector = new QualityCollectionService(store,
         Clock.fixed(Instant.parse("2030-01-01T00:00:00Z"), ZoneOffset.UTC), "test", "test-build");
@@ -53,16 +55,38 @@ class QualityHttpObservationTest {
     }
 
     @Test
+    void returnsResponseWhileDatabaseWorkRemainsRunningUntilExplicitRelease() throws Exception {
+        var entered = new java.util.concurrent.CountDownLatch(1);
+        var release = new java.util.concurrent.CountDownLatch(1);
+        var completed = new java.util.concurrent.CountDownLatch(1);
+        org.mockito.Mockito.doAnswer(invocation -> {
+            entered.countDown();
+            try { release.await(); return true; }
+            finally { completed.countDown(); }
+        }).when(store).insert(any());
+        var mvc = MockMvcBuilders.standaloneSetup(new Controller()).setControllerAdvice(new QualityBodyAdvice(runtime.service(collector, null)))
+            .addFilters(new QualityObservationFilter(runtime.service(collector, null))).build();
+        try {
+            mvc.perform(post("/api/v1/fields/analyze").contentType(MediaType.APPLICATION_JSON).content(request))
+                .andExpect(status().isOk()).andExpect(jsonPath("snapshotId").value("sample"));
+            assertThat(entered.await(2, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            assertThat(completed.getCount()).isEqualTo(1);
+        } finally { release.countDown(); }
+        runtime.await();
+    }
+
+    @Test
     @DisplayName("응답 JSON을 바꾸지 않고 실제 AI 호출과 수집 건수를 기록한다")
     void preservesResponseAndObservesRealCalls() throws Exception {
         when(store.insert(any())).thenReturn(true);
         var mvc = MockMvcBuilders.standaloneSetup(new Controller())
-            .setControllerAdvice(new QualityBodyAdvice(collector))
-            .addFilters(new QualityObservationFilter(collector)).build();
+            .setControllerAdvice(new QualityBodyAdvice(runtime.service(collector, null)))
+            .addFilters(new QualityObservationFilter(runtime.service(collector, null))).build();
         mvc.perform(post("/api/v1/fields/analyze").contentType(MediaType.APPLICATION_JSON).content(request))
             .andExpect(status().isOk()).andExpect(jsonPath("snapshotId").value("sample"))
             .andExpect(jsonPath("quality").doesNotExist());
         var captured = org.mockito.ArgumentCaptor.forClass(QualityRecord.class);
+        runtime.await();
         verify(store).insert(captured.capture());
         var event = (QualityCollectionService.RequestEvent) captured.getValue().payload();
         assertThat(event.counts().discovered()).isEqualTo(1);
@@ -78,8 +102,8 @@ class QualityHttpObservationTest {
     void isolatesStorageFailure() throws Exception {
         when(store.insert(any())).thenThrow(new IllegalStateException("synthetic-store-failure"));
         var mvc = MockMvcBuilders.standaloneSetup(new Controller())
-            .setControllerAdvice(new QualityBodyAdvice(collector))
-            .addFilters(new QualityObservationFilter(collector)).build();
+            .setControllerAdvice(new QualityBodyAdvice(runtime.service(collector, null)))
+            .addFilters(new QualityObservationFilter(runtime.service(collector, null))).build();
         mvc.perform(post("/api/v1/fields/analyze").contentType(MediaType.APPLICATION_JSON).content(request))
             .andExpect(status().isOk());
         assertThat(QualityScope.current()).isEmpty();
@@ -90,10 +114,11 @@ class QualityHttpObservationTest {
     void recordsRejectedRequest() throws Exception {
         when(store.insert(any())).thenReturn(true);
         var mvc = MockMvcBuilders.standaloneSetup(new Controller())
-            .setControllerAdvice(new QualityBodyAdvice(collector))
-            .addFilters(new QualityObservationFilter(collector)).build();
+            .setControllerAdvice(new QualityBodyAdvice(runtime.service(collector, null)))
+            .addFilters(new QualityObservationFilter(runtime.service(collector, null))).build();
         mvc.perform(post("/api/v1/fields/analyze").contentType(MediaType.APPLICATION_JSON).content("{}"))
             .andExpect(status().is4xxClientError());
+        runtime.await();
         verify(store).insert(any());
         assertThat(QualityScope.current()).isEmpty();
     }
@@ -101,12 +126,13 @@ class QualityHttpObservationTest {
     @Test
     void recordsUnhandledFailureAsFiveHundred() throws Exception {
         when(store.insert(any())).thenReturn(true);
-        var mvc = MockMvcBuilders.standaloneSetup(new Controller()).setControllerAdvice(new QualityBodyAdvice(collector))
-            .addFilters(new QualityObservationFilter(collector)).build();
+        var mvc = MockMvcBuilders.standaloneSetup(new Controller()).setControllerAdvice(new QualityBodyAdvice(runtime.service(collector, null)))
+            .addFilters(new QualityObservationFilter(runtime.service(collector, null))).build();
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> mvc.perform(post("/api/v1/fields/analyze")
             .contentType(MediaType.APPLICATION_JSON).content(request.replace("sample", "fail"))))
             .isInstanceOf(jakarta.servlet.ServletException.class);
         var captured = org.mockito.ArgumentCaptor.forClass(QualityRecord.class);
+        runtime.await();
         verify(store).insert(captured.capture());
         assertThat(((QualityCollectionService.RequestEvent) captured.getValue().payload()).status()).isEqualTo(500);
     }
@@ -114,8 +140,8 @@ class QualityHttpObservationTest {
     @Test
     void slowObservationCannotConsumeTheAnalysisResponseDeadline() {
         org.mockito.Mockito.doAnswer(invocation -> { Thread.sleep(4000); return true; }).when(store).insert(any());
-        var mvc = MockMvcBuilders.standaloneSetup(new Controller()).setControllerAdvice(new QualityBodyAdvice(collector))
-            .addFilters(new QualityObservationFilter(collector)).build();
+        var mvc = MockMvcBuilders.standaloneSetup(new Controller()).setControllerAdvice(new QualityBodyAdvice(runtime.service(collector, null)))
+            .addFilters(new QualityObservationFilter(runtime.service(collector, null))).build();
         org.junit.jupiter.api.Assertions.assertTimeout(java.time.Duration.ofSeconds(2), () -> {
             mvc.perform(post("/api/v1/fields/analyze").contentType(MediaType.APPLICATION_JSON).content(request))
                 .andExpect(status().isOk()).andExpect(jsonPath("snapshotId").value("sample"));
@@ -126,8 +152,8 @@ class QualityHttpObservationTest {
     @Test
     void slowFallbackObservationPreservesRejectedResponseDeadline() {
         org.mockito.Mockito.doAnswer(invocation -> { Thread.sleep(4000); return true; }).when(store).insert(any());
-        var mvc = MockMvcBuilders.standaloneSetup(new Controller()).setControllerAdvice(new QualityBodyAdvice(collector))
-            .addFilters(new QualityObservationFilter(collector)).build();
+        var mvc = MockMvcBuilders.standaloneSetup(new Controller()).setControllerAdvice(new QualityBodyAdvice(runtime.service(collector, null)))
+            .addFilters(new QualityObservationFilter(runtime.service(collector, null))).build();
         org.junit.jupiter.api.Assertions.assertTimeout(java.time.Duration.ofSeconds(2), () -> {
             mvc.perform(post("/api/v1/fields/analyze").contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().is4xxClientError());

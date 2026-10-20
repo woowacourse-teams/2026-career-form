@@ -1,7 +1,6 @@
 package com.careerform.quality;
 
 import java.lang.reflect.Type;
-import java.util.Arrays;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,20 +25,9 @@ import com.careerform.formanalysis.application.FormAnalysisRouter.RouteKind;
 @ConditionalOnProperty(prefix = "career-form.quality", name = "enabled", havingValue = "true")
 public final class QualityBodyAdvice extends RequestBodyAdviceAdapter implements ResponseBodyAdvice<Object> {
     private static final Logger log = LoggerFactory.getLogger(QualityBodyAdvice.class);
-    private final QualityCollectionService collector;
-    private final QualityRegistry registry;
-    private final QualityObservationExecutor observer;
+    private final QualityAsyncService observations;
 
-    public QualityBodyAdvice(QualityCollectionService collector) { this(collector, null); }
-
-    public QualityBodyAdvice(QualityCollectionService collector, QualityRegistry registry) { this(collector, registry, QualityObservationExecutor.shared()); }
-
-    @org.springframework.beans.factory.annotation.Autowired
-    public QualityBodyAdvice(QualityCollectionService collector, QualityRegistry registry, QualityObservationExecutor observer) {
-        this.collector = collector;
-        this.registry = registry;
-        this.observer = observer;
-    }
+    public QualityBodyAdvice(QualityAsyncService observations) { this.observations = observations; }
 
     @Override
     public boolean supports(MethodParameter parameter, Type type, Class<? extends HttpMessageConverter<?>> converter) {
@@ -70,31 +58,18 @@ public final class QualityBodyAdvice extends RequestBodyAdviceAdapter implements
             var route = decision == null ? "UNKNOWN" : decision.kind() == RouteKind.GENERIC ? "GENERIC" : decision.greeting() ? "GREETING"
                 : decision.companyKey() != null ? "STATIC" : "UNKNOWN";
             var publicLink = snapshot == null ? null : QualityPublicLinks.validate(host, request.getHeaders().getFirst("X-Career-Form-Public-Application"));
-            var run = request.getHeaders().getFirst("X-Career-Form-Run");
-            var token = request.getHeaders().getFirst("X-Career-Form-Report-Token");
+            var connection = observations.connection(request.getHeaders().getFirst("X-Career-Form-Quality-Run"),
+                request.getHeaders().getFirst("X-Career-Form-Quality-Key"));
             var extension = request.getHeaders().getFirst("X-Career-Form-Version");
-            var identitySeed = run == null ? java.util.UUID.randomUUID().toString() : run;
-            var capable = request.getHeaders().getOrDefault("X-Career-Form-Capabilities", java.util.List.of()).stream()
-                .flatMap(value -> Arrays.stream(value.split(","))).anyMatch(value -> value.trim().equals("quality-v1"));
             var event = new QualityCollectionService.RequestEvent(decision == null ? "UNKNOWN" : decision.operation().name(),
                 response instanceof org.springframework.http.server.ServletServerHttpResponse servlet ? servlet.getServletResponse().getStatus() : 200,
                 scope.durationMs(), snapshot == null ? null : snapshot.counts(), scope.calls(), decision == null ? "UNKNOWN" : decision.kind().name(),
                 org.slf4j.MDC.get("requestId"), resultState(body), reasons(snapshot));
             scope.observed(true);
-            var receipt = observer.observe(() -> {
-                var identity = host.equals("UNKNOWN") ? null : QualitySite.identify(host, decision == null ? null : decision.companyKey(),
-                    decision != null && decision.greeting(), registry != null && snapshot != null
-                        && registry.dedicated(host.toLowerCase(java.util.Locale.ROOT), snapshot.structureKey()), identitySeed);
-                var group = identity == null ? collector.group("UNKNOWN", "UNKNOWN", "UNKNOWN", null, null)
-                    : collector.group(identity, snapshot == null ? "UNKNOWN" : snapshot.structureKey(), route,
-                        decision == null ? null : decision.policyVersion(), extension, event.calls());
-                return collector.observe(group, event, snapshot, run, token, capable, publicLink);
-            });
-            if (receipt != null) {
-                response.getHeaders().set("X-Career-Form-Run", receipt.runId());
-                response.getHeaders().set("X-Career-Form-Report-Token", receipt.token());
-                response.getHeaders().set("Cache-Control", "no-store");
-            }
+            observations.observe(new QualityAsyncService.Observation(connection, host, decision == null ? null : decision.companyKey(),
+                decision != null && decision.greeting(), route,
+                decision == null ? null : decision.policyVersion(), extension, publicLink, event, snapshot));
+            response.getHeaders().set("Cache-Control", "no-store");
         } catch (RuntimeException exception) {
             log.warn("QUALITY_RESPONSE_OBSERVATION_UNAVAILABLE");
         }
