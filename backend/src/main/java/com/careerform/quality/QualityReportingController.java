@@ -30,8 +30,8 @@ public final class QualityReportingController {
     }
 
     @PostMapping("/api/v1/quality/executions/{runId}/report")
-    public ResponseEntity<Void> report(@PathVariable String runId, @RequestBody QualityCollectionService.Report report, HttpServletRequest request) {
-        observations.report(runId, QualityApiFilter.bearer(request), report);
+    public ResponseEntity<Void> report(@PathVariable String runId, @RequestBody QualityReportRequest report, HttpServletRequest request) {
+        observations.reportBatch(runId, QualityApiFilter.bearer(request), report.entries());
         return ResponseEntity.accepted().build();
     }
 

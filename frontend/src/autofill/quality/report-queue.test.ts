@@ -1,6 +1,7 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { QualityReportQueue } from "./report-queue";
 import type { QualityReport, QualityState } from "./observation";
+import type { QualityBatch } from "./report-batch";
 
 afterEach(() => vi.useRealTimers());
 
@@ -13,7 +14,7 @@ const written: QualityState = {
 };
 
 function reporting() {
-  const messages: { qualityRun: string; payload: QualityReport }[] = [];
+  const messages: { qualityRun: string; payload: QualityBatch }[] = [];
   const queue = new QualityReportQueue(async (message) => {
     messages.push(message as (typeof messages)[number]);
   });
@@ -36,7 +37,7 @@ it("시간이 지나도 진행 중에는 보내지 않고 최종 관측과 종�
   queue.enqueue("run", "snapshot", {}, {}, "COMPLETED");
   await queue.drain();
   expect(messages).toHaveLength(1);
-  expect(messages[0].payload).toMatchObject({
+  expect(messages[0].payload.reports[0]).toMatchObject({
     snapshotId: "snapshot",
     identities: { c1: "e1" },
     fields: { c1: { ...written, retained: true, reason: null } },
@@ -44,7 +45,7 @@ it("시간이 지나도 진행 중에는 보내지 않고 최종 관측과 종�
   });
 });
 
-it("여러 snapshot과 300개 초과 필드를 빠짐없이 보내고 마지막에만 종료 상태를 넣는다", async () => {
+it("여러 snapshot과 300개 초과 필드를 한 배치에 담고 마지막에만 종료 상태를 넣는다", async () => {
   const { queue, messages } = reporting();
   const fields = Object.fromEntries(
     Array.from({ length: 301 }, (_, i) => [`c${i}`, written]),
@@ -62,23 +63,14 @@ it("여러 snapshot과 300개 초과 필드를 빠짐없이 보내고 마지막�
   queue.enqueue("run", "second", fields, identities, null);
   queue.enqueue("run", "second", {}, {}, "COMPLETED");
   await queue.drain();
-  expect(messages).toHaveLength(3);
-  expect(messages.map(({ payload }) => payload.finished)).toEqual([
-    null,
-    null,
-    "COMPLETED",
+  expect(messages).toHaveLength(1);
+  const reports = messages[0].payload.reports;
+  expect(reports.map((report) => report.finished)).toEqual([null, "COMPLETED"]);
+  expect(reports.map((report) => Object.keys(report.fields).length)).toEqual([
+    1, 301,
   ]);
-  expect(
-    messages.map(({ payload }) => Object.keys(payload.fields).length),
-  ).toEqual([1, 300, 1]);
-  expect(messages[1].payload.identities).toEqual(identities);
-  expect(messages[2].payload.identities).toEqual({});
-  expect(
-    Object.assign(
-      {},
-      ...messages.slice(1).map(({ payload }) => payload.fields),
-    ),
-  ).toEqual(fields);
+  expect(reports[1].identities).toEqual(identities);
+  expect(reports[1].fields).toEqual(fields);
 });
 
 it("한 실행을 종료해도 다른 실행의 진행 중 관측은 보내지 않는다", async () => {
@@ -98,7 +90,7 @@ it("관측이 없는 실행도 종료 상태를 한 번 보낸다", async () => 
   queue.enqueue("run", null, {}, {}, "CANCELLED");
   await queue.drain();
   expect(messages).toHaveLength(1);
-  expect(messages[0].payload).toMatchObject({
+  expect(messages[0].payload.reports[0]).toMatchObject({
     snapshotId: null,
     fields: {},
     identities: {},
@@ -143,17 +135,21 @@ it("뒤늦은 값 준비 실패가 이미 확인한 값 준비와 사유를 모�
   await queue.drain();
   expect(send).toHaveBeenCalledWith(
     expect.objectContaining({
-      payload: expect.objectContaining({
-        fields: {
-          candidate: {
-            bound: true,
-            attempted: false,
-            written: false,
-            retained: false,
-            reason: "NOT_APPROVED",
-          },
-        },
-      }),
+      payload: {
+        reports: [
+          expect.objectContaining({
+            fields: {
+              candidate: {
+                bound: true,
+                attempted: false,
+                written: false,
+                retained: false,
+                reason: "NOT_APPROVED",
+              },
+            },
+          }),
+        ],
+      },
     }),
   );
 });
@@ -174,4 +170,30 @@ it("bounds queued reports while an earlier background message is stalled", async
   release();
   await queue.drain();
   expect(sent).toBe(64);
+});
+
+it("50개 스냅샷의 작은 보고를 실행당 한 번의 배치로 전달한다", async () => {
+  const { queue, messages } = reporting();
+  for (let index = 0; index < 50; index++)
+    queue.enqueue(
+      "run",
+      `snapshot-${index}`,
+      { c1: written },
+      { c1: "e1" },
+      null,
+    );
+  queue.enqueue("run", "snapshot-49", {}, {}, "COMPLETED");
+  await queue.drain();
+  expect(messages).toHaveLength(1);
+  const batch = messages[0].payload as unknown as { reports: QualityReport[] };
+  expect(batch.reports).toHaveLength(50);
+  expect(batch.reports[0]).toMatchObject({
+    snapshotId: "snapshot-0",
+    fields: { c1: written },
+    finished: null,
+  });
+  expect(batch.reports[49]).toMatchObject({
+    snapshotId: "snapshot-49",
+    finished: "COMPLETED",
+  });
 });

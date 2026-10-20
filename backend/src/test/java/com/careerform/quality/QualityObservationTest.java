@@ -19,6 +19,46 @@ class QualityObservationTest {
     private final ObjectMapper mapper = new ObjectMapper();
 
     @Test
+    void capturedProjectionPreservesThePreviouslyStoredStructureFingerprint() {
+        var semantic = new FieldsAnalysisRequest.SemanticContext(List.of(new FieldsAnalysisRequest.SemanticLabel(FieldsAnalysisRequest.SemanticSource.LABEL, "이메일")),
+         FieldsAnalysisRequest.InputType.TEXT, null, FieldsAnalysisRequest.Autocomplete.EMAIL, true, null, 120,
+         new FieldsAnalysisRequest.RepeatContext("repeat", 0, 2));
+        var field = new FieldsAnalysisRequest.FieldCandidate("c1", FieldsAnalysisRequest.FormElement.INPUT, FieldsAnalysisRequest.FormControl.TEXT,
+         FieldsAnalysisRequest.Visibility.VISIBLE, null, null, null, null, null, null, null, null, semantic);
+        var request = new FieldsAnalysisRequest(2, "snapshot", new FieldsAnalysisRequest.Site("synthetic.test", "/"), List.of(
+         new FieldsAnalysisRequest.Section("section", null, null, List.of(field), List.of(new FieldsAnalysisRequest.Item("item", List.of(
+          new FieldsAnalysisRequest.FieldCandidate("c2", FieldsAnalysisRequest.FormElement.SELECT, FieldsAnalysisRequest.FormControl.SELECT,
+          FieldsAnalysisRequest.Visibility.HIDDEN, null, null, null, null, true, null, null, List.of(new FieldsAnalysisRequest.Option("option", "합성")))))))));
+        assertThat(QualityCapturedSnapshot.from(request, FieldsAnalysisResponse.llmUnavailable("snapshot"), new QualityCaptureBudget(131072))
+            .project().structureKey()).isEqualTo("3f54d2706574948b1b64c62d8addf3dffc83882bbb5c60bee25c4963332f0edf");
+    }
+
+    @Test
+    void capturedStructureIsImmutablePrivateAndEquivalentToOriginalProjection() throws Exception {
+        var original = request("synthetic-private", "email");
+        var mutable = new java.util.ArrayList<>(original.sections().getFirst().fields());
+        var source = new FieldsAnalysisRequest(2, original.snapshotId(), original.site(), List.of(
+            new FieldsAnalysisRequest.Section("section", null, "private-section", mutable, null)));
+        var response = matched(source.snapshotId(), "synthetic-private-field");
+        var expected = QualityProjection.fields(source, response);
+        var budget = new QualityCaptureBudget(131072);
+        var captured = QualityCapturedSnapshot.from(source, response, budget);
+        mutable.clear();
+        assertThat(captured.project()).isEqualTo(expected);
+        assertThat(captured.toString()).doesNotContain("private");
+        assertThat(mapper.writeValueAsString(captured)).doesNotContain("private-section", "domId", "domName", "pathPattern");
+        assertThat(budget.bytes()).isBetween(1L, 131072L);
+    }
+
+    @Test
+    void rejectsCaptureBeforeRetainingOversizedIdentifiers() {
+        assertThatThrownBy(() -> QualityCapturedSnapshot.from(
+            new FieldsAnalysisRequest(2, "x".repeat(20000), new FieldsAnalysisRequest.Site("example.test", "/"), List.of()),
+            FieldsAnalysisResponse.complete("x".repeat(20000), List.of()), new QualityCaptureBudget(131072)))
+            .isInstanceOf(QualityAdmissionException.class);
+    }
+
+    @Test
     @DisplayName("원문 라벨과 DOM 식별자 및 경로를 저장하지 않는다")
     void excludesRawPageTextAndIdentifiers() throws Exception {
         var request = request("synthetic-private", "email");

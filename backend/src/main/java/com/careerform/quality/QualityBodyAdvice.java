@@ -49,26 +49,8 @@ public final class QualityBodyAdvice extends RequestBodyAdviceAdapter implements
         var scope = QualityScope.current().orElse(null);
         if (scope == null || scope.observed()) { return body; }
         try {
-            var snapshot = scope.request() instanceof FieldsAnalysisRequest fields && body instanceof FieldsAnalysisResponse result
-                ? QualityProjection.fields(fields, result) : null;
-            var host = scope.request() instanceof FieldsAnalysisRequest fields ? fields.site().host()
-                : scope.request() instanceof PreparationAnalysisRequest preparation ? preparation.site().host()
-                : scope.request() instanceof InteractionDecisionRequest interaction ? interaction.site().host() : "UNKNOWN";
-            var decision = scope.decision().orElse(null);
-            var route = decision == null ? "UNKNOWN" : decision.kind() == RouteKind.GENERIC ? "GENERIC" : decision.greeting() ? "GREETING"
-                : decision.companyKey() != null ? "STATIC" : "UNKNOWN";
-            var publicLink = snapshot == null ? null : QualityPublicLinks.validate(host, request.getHeaders().getFirst("X-Career-Form-Public-Application"));
-            var connection = observations.connection(request.getHeaders().getFirst("X-Career-Form-Quality-Run"),
-                request.getHeaders().getFirst("X-Career-Form-Quality-Key"));
-            var extension = request.getHeaders().getFirst("X-Career-Form-Version");
-            var event = new QualityCollectionService.RequestEvent(decision == null ? "UNKNOWN" : decision.operation().name(),
-                response instanceof org.springframework.http.server.ServletServerHttpResponse servlet ? servlet.getServletResponse().getStatus() : 200,
-                scope.durationMs(), snapshot == null ? null : snapshot.counts(), scope.calls(), decision == null ? "UNKNOWN" : decision.kind().name(),
-                org.slf4j.MDC.get("requestId"), resultState(body), reasons(snapshot));
             scope.observed(true);
-            observations.observe(new QualityAsyncService.Observation(connection, host, decision == null ? null : decision.companyKey(),
-                decision != null && decision.greeting(), route,
-                decision == null ? null : decision.policyVersion(), extension, publicLink, event, snapshot));
+            observations.observeCaptured(budget -> capture(scope, body, request, response, budget));
             response.getHeaders().set("Cache-Control", "no-store");
         } catch (RuntimeException exception) {
             log.warn("QUALITY_RESPONSE_OBSERVATION_UNAVAILABLE");
@@ -76,10 +58,29 @@ public final class QualityBodyAdvice extends RequestBodyAdviceAdapter implements
         return body;
     }
 
-    private java.util.Map<String, Long> reasons(QualityProjection.Snapshot snapshot) {
-        return snapshot == null ? java.util.Map.of() : snapshot.fields().stream().filter(field -> !field.mapped() || !field.eligible())
-            .collect(java.util.stream.Collectors.toUnmodifiableMap(field -> (field.mapped() ? "WRITE|SERVER_WRITE_UNAVAILABLE|" : "MAPPING|NOT_MAPPED|")
-                + field.control(), field -> 1L, Long::sum));
+    private QualityObservationCapture capture(QualityScope scope, Object body, ServerHttpRequest request,
+                                               ServerHttpResponse response, QualityCaptureBudget budget) {
+        var snapshot = scope.request() instanceof FieldsAnalysisRequest fields && body instanceof FieldsAnalysisResponse result
+            ? QualityCapturedSnapshot.from(fields, result, budget) : null;
+        var host = budget.text(scope.request() instanceof FieldsAnalysisRequest fields ? fields.site().host()
+            : scope.request() instanceof PreparationAnalysisRequest preparation ? preparation.site().host()
+            : scope.request() instanceof InteractionDecisionRequest interaction ? interaction.site().host() : "UNKNOWN", 253);
+        var decision = scope.decision().orElse(null);
+        var route = decision == null ? "UNKNOWN" : decision.kind() == RouteKind.GENERIC ? "GENERIC" : decision.greeting() ? "GREETING"
+            : decision.companyKey() != null ? "STATIC" : "UNKNOWN";
+        var publicLink = snapshot == null ? null : budget.text(QualityPublicLinks.validate(host, request.getHeaders().getFirst("X-Career-Form-Public-Application")), 512);
+        var connection = observations.connection(request.getHeaders().getFirst("X-Career-Form-Quality-Run"),
+            request.getHeaders().getFirst("X-Career-Form-Quality-Key"));
+        budget.text(connection, 64);
+        var extension = budget.text(request.getHeaders().getFirst("X-Career-Form-Version"), 128);
+        var calls = budget.calls(scope.calls());
+        var event = new QualityCollectionService.RequestEvent(decision == null ? "UNKNOWN" : decision.operation().name(),
+            response instanceof org.springframework.http.server.ServletServerHttpResponse servlet ? servlet.getServletResponse().getStatus() : 200,
+            scope.durationMs(), null, calls, decision == null ? "UNKNOWN" : decision.kind().name(),
+            budget.text(org.slf4j.MDC.get("requestId"), 128), resultState(body), java.util.Map.of());
+        var metadata = new QualityAsyncService.Observation(connection, host, budget.text(decision == null ? null : decision.companyKey(), 128),
+            decision != null && decision.greeting(), route, decision == null ? null : decision.policyVersion(), extension, publicLink, event, null);
+        return new QualityObservationCapture(metadata, snapshot);
     }
 
     private String resultState(Object body) {

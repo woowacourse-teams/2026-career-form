@@ -14,6 +14,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 
 public final class QualityTaskQueue implements AutoCloseable {
+    private static final long CAPTURE_RESERVATION_MULTIPLIER = 16;
     private final ScheduledThreadPoolExecutor worker;
     private final Set<Job> admitted = new HashSet<>();
     private final int capacity;
@@ -48,8 +49,12 @@ public final class QualityTaskQueue implements AutoCloseable {
         meters.gauge("quality.tasks.waiting", this, QualityTaskQueue::waiting);
     }
 
-    public synchronized boolean submit(long retainedBytes, Callable<Boolean> action) {
-        if (closed || Thread.currentThread().isInterrupted() || retainedBytes < 0 || retainedBytes > eventCapacity
+    public boolean submit(long retainedBytes, Callable<Boolean> action) {
+        return submit(retainedBytes, retainedBytes, action);
+    }
+
+    public synchronized boolean submit(long retainedBytes, long eventBytes, Callable<Boolean> action) {
+        if (closed || Thread.currentThread().isInterrupted() || retainedBytes < 0 || eventBytes < 0 || eventBytes > eventCapacity
             || admitted.size() >= capacity || retainedBytes > byteCapacity - bytes) {
             outcome("rejected");
             return false;
@@ -59,6 +64,54 @@ public final class QualityTaskQueue implements AutoCloseable {
         bytes += retainedBytes;
         schedule(job, 0);
         return admitted.contains(job);
+    }
+
+    public record Prepared(long bytes, Callable<Boolean> action) { }
+
+    public boolean submitCaptured(java.util.function.Supplier<Prepared> capture) {
+        return submitCaptured(limit -> capture.get());
+    }
+
+    public boolean submitCaptured(java.util.function.Function<Long, Prepared> capture) {
+        var reservation = eventCapacity > byteCapacity / CAPTURE_RESERVATION_MULTIPLIER
+            ? byteCapacity : eventCapacity * CAPTURE_RESERVATION_MULTIPLIER;
+        Job job;
+        synchronized (this) {
+            if (closed || Thread.currentThread().isInterrupted() || admitted.size() >= capacity || reservation > byteCapacity - bytes) {
+                outcome("rejected");
+                return false;
+            }
+            job = new Job(reservation, null, clock.instant());
+            job.preparing = true;
+            admitted.add(job);
+            bytes += reservation;
+        }
+        try {
+            var prepared = capture.apply(job.bytes);
+            synchronized (this) {
+                job.preparing = false;
+                if (closed || prepared == null || prepared.action() == null || prepared.bytes() < 0 || prepared.bytes() > job.bytes) {
+                    finish(job, closed ? "shutdown" : "rejected");
+                    return false;
+                }
+                bytes -= job.bytes - prepared.bytes();
+                job.bytes = prepared.bytes();
+                job.action = prepared.action();
+                job.readyAt = clock.instant();
+                schedule(job, 0);
+                return admitted.contains(job);
+            }
+        } catch (RuntimeException exception) {
+            synchronized (this) { job.preparing = false; finish(job, "rejected"); }
+            return false;
+        } catch (Error error) {
+            synchronized (this) { job.preparing = false; finish(job, "failed"); }
+            throw error;
+        }
+    }
+
+    public void requireEventSize(long eventBytes) {
+        if (eventBytes < 0 || eventBytes > eventCapacity) { throw new QualityAdmissionException(413); }
     }
 
     public synchronized long retainedBytes() { return bytes; }
@@ -80,7 +133,7 @@ public final class QualityTaskQueue implements AutoCloseable {
                 return;
             }
             if (!job.started) {
-                meters.timer("quality.tasks.queue.wait").record(Duration.between(job.created, clock.instant()).abs());
+                meters.timer("quality.tasks.queue.wait").record(Duration.between(job.readyAt, clock.instant()).abs());
                 job.started = true;
             }
             job.running = true;
@@ -90,6 +143,7 @@ public final class QualityTaskQueue implements AutoCloseable {
         var completed = true;
         var result = "completed";
         try { completed = job.action.call(); }
+        catch (QualityAdmissionException exception) { result = "rejected"; }
         catch (InterruptedException exception) { Thread.currentThread().interrupt(); result = "interrupted"; }
         catch (Exception exception) { result = "failed"; }
         finally {
@@ -117,14 +171,16 @@ public final class QualityTaskQueue implements AutoCloseable {
         closed = true;
         worker.shutdownNow();
         for (var job : Set.copyOf(admitted)) {
-            if (!job.running) { finish(job, "shutdown"); }
+            if (!job.running && !job.preparing) { finish(job, "shutdown"); }
         }
     }
 
     private static final class Job {
-        private final long bytes;
-        private final Callable<Boolean> action;
+        private long bytes;
+        private Callable<Boolean> action;
         private final Instant created;
+        private Instant readyAt;
+        private boolean preparing;
         private boolean started;
         private boolean running;
 
@@ -132,6 +188,7 @@ public final class QualityTaskQueue implements AutoCloseable {
             this.bytes = bytes;
             this.action = action;
             this.created = created;
+            this.readyAt = created;
         }
     }
 }
