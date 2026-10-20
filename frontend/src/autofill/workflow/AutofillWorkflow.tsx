@@ -150,6 +150,20 @@ function PolicyReadyWorkflow({
   addressSearch = runtimeAddressSearch,
 }: WorkflowProps) {
   const companyId = resolveDocumentCompany(pageDocument);
+  // Analysis may replace the installed policy mid-run. The structure loop
+  // stays tied to the policy present when the workflow started, so a document
+  // that began with site-specific policy never falls back to it.
+  const siteSpecificPolicyAtStart = useMemo(() => {
+    const policy = executionPolicy(pageDocument);
+    return (
+      !!policy &&
+      (!!policy.browserPolicy ||
+        !!policy.componentPolicy ||
+        policy.searches.length > 0 ||
+        policy.failureScopes.length > 0 ||
+        !!policy.address)
+    );
+  }, [pageDocument]);
   const staticFieldsSession = useRef<StaticFieldsSession | undefined>(
     undefined,
   );
@@ -362,17 +376,9 @@ function PolicyReadyWorkflow({
         // endpoints keep the approved preparation flow below. The common
         // provider policy alone declares no structure, so it does not block
         // the loop.
-        const installedPolicy = executionPolicy(pageDocument);
-        const siteSpecificPolicy =
-          !!installedPolicy &&
-          (!!installedPolicy.browserPolicy ||
-            !!installedPolicy.componentPolicy ||
-            installedPolicy.searches.length > 0 ||
-            installedPolicy.failureScopes.length > 0 ||
-            !!installedPolicy.address);
         if (
           companyId === "generic" &&
-          !siteSpecificPolicy &&
+          !siteSpecificPolicyAtStart &&
           apiClient.decideInteractions &&
           apiClient.classifySections &&
           apiClient.analyzeGenericFields
@@ -521,7 +527,13 @@ function PolicyReadyWorkflow({
       run.controller.abort();
       observeQuality(() => apiClient.quality?.finish("CANCELLED"));
     };
-  }, [apiClient, pageDocument, repository, companyId]);
+  }, [
+    apiClient,
+    pageDocument,
+    repository,
+    companyId,
+    siteSpecificPolicyAtStart,
+  ]);
 
   useEffect(() => {
     if (stage === "result" || stage === "exception" || stage === "unsupported")
