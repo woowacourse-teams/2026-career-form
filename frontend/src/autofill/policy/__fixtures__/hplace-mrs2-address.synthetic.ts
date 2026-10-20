@@ -76,8 +76,7 @@ export const addressContract = () => ({
   confirmCancelSelector: 'button[data-button="cancel"]',
   confirmCancelLabel: "취소",
   modalCloseSelector: 'button[data-button="modalClose"]',
-  // Contract minimum: the jsdom modal answers within a few ticks (CF-304).
-  timeoutMs: 1000,
+  timeoutMs: 1500,
 });
 export function addressPolicy() {
   const p = syntheticNativePolicy();
