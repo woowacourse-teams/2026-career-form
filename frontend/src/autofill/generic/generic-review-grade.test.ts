@@ -4,6 +4,7 @@ import {
   reviewItemsForDisplay,
   type ReviewPlanItem,
 } from "../review/review-plan";
+import { approvedReviewExecution } from "../workflow/workflow-write-items";
 import {
   applyGenericGrade,
   genericGradeFor,
@@ -137,7 +138,7 @@ describe("reviewItemsForDisplay with generic grades", () => {
     ]);
   });
 
-  it("shows only unavailable items graded BLOCKED by the generic path", () => {
+  it("shows graded unavailable items (BLOCKED, REVIEW, AUTO) of the generic path", () => {
     const blocked = applyGenericGrade(unavailable("blocked"), {
       grade: "BLOCKED",
       reason: GENERIC_UNLINKED_REASON,
@@ -149,7 +150,42 @@ describe("reviewItemsForDisplay with generic grades", () => {
       reviewItemsForDisplay([item(), blocked, review]).map(
         (i) => i.candidateId,
       ),
-    ).toEqual(["field-1", "blocked"]);
+    ).toEqual(["field-1", "blocked", "review"]);
+  });
+
+  it("hides hidden controls even when graded or available", () => {
+    const hiddenReview = {
+      ...applyGenericGrade(unavailable("hidden-review"), { grade: "REVIEW" }),
+      hiddenFromReview: true,
+    };
+    const hiddenBlocked = {
+      ...applyGenericGrade(unavailable("hidden-blocked"), {
+        grade: "BLOCKED",
+        reason: GENERIC_UNLINKED_REASON,
+      }),
+      hiddenFromReview: true,
+    };
+    const hiddenAvailable = item({
+      candidateId: "hidden-available",
+      hiddenFromReview: true,
+    });
+    expect(
+      reviewItemsForDisplay([
+        item(),
+        hiddenReview,
+        hiddenBlocked,
+        hiddenAvailable,
+      ]).map((i) => i.candidateId),
+    ).toEqual(["field-1"]);
+  });
+
+  it("keeps hidden candidates in write targeting", () => {
+    const hidden = item({ candidateId: "hidden-key", hiddenFromReview: true });
+    const { approvedCandidateIds } = approvedReviewExecution(
+      [item(), hidden],
+      new Set(),
+    );
+    expect([...approvedCandidateIds]).toEqual(["field-1", "hidden-key"]);
   });
 
   it("keeps static output identical for the same input", () => {

@@ -1,5 +1,6 @@
 import { PROFILE_CATEGORIES } from "../../profile/field-definitions";
 import { matchDatePartOption, type DatePart } from "./date-part-options";
+import { matchOptionIndexAny, normalizeOptionText } from "./option-match";
 import type {
   DerivedRecipe,
   FieldCandidate,
@@ -92,9 +93,6 @@ const EDUCATION_RECORDS = new Set([
 const POSTAL_TEXT =
   /우편\s*번호|\bpostal(?:[\s_-]*code)?\b|\bzip(?:[\s_-]*code)?\b/i;
 
-const normalizeOptionText = (text: string): string =>
-  text.normalize("NFKC").replace(/\s+/g, " ").trim().toLowerCase();
-
 /** Labels of the fixed option set a profile field defines, empty when it has none. */
 function fixedOptionLabels(
   profileFieldKey: string | undefined,
@@ -119,8 +117,8 @@ function fixedOptionLabels(
 
 /**
  * The page option a stored value maps to, or undefined unless exactly one
- * option matches. Evidence is the normalized value itself or the label the
- * profile field's fixed option set gives it; nothing is guessed beyond that.
+ * option matches under the generic rules of option-match.ts. Evidence is the
+ * value itself or the label the profile field's fixed option set gives it.
  */
 export function matchProfileValueOption(
   profileFieldKey: string | undefined,
@@ -128,15 +126,12 @@ export function matchProfileValueOption(
   options: readonly { displayName: string }[] | undefined,
 ): string | undefined {
   if (!profileValue?.trim()) return undefined;
-  const accepted = new Set(
-    [profileValue, ...fixedOptionLabels(profileFieldKey, profileValue)].map(
-      normalizeOptionText,
-    ),
+  const list = options ?? [];
+  const index = matchOptionIndexAny(
+    [profileValue, ...fixedOptionLabels(profileFieldKey, profileValue)],
+    list.map((option) => option.displayName),
   );
-  const matches = (options ?? []).filter((option) =>
-    accepted.has(normalizeOptionText(option.displayName)),
-  );
-  return matches.length === 1 ? matches[0]!.displayName : undefined;
+  return index === null ? undefined : list[index]!.displayName;
 }
 
 function hasUnmatchedOptionValue(input: GradeFieldInput): boolean {

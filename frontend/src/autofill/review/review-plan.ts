@@ -94,6 +94,8 @@ export interface ReviewPlanItem {
   genericGrade?: "AUTO" | "REVIEW" | "BLOCKED";
   /** Generic-path only: the grade reason or section failure code. */
   genericReasonCode?: string;
+  /** Generic-path only: the control is hidden on the page; display filter only. */
+  hiddenFromReview?: boolean;
   failureCode?: WriteFailureCode;
   analysis?: MatchedFieldAnalysis;
   dateApproval?: DateTargetApproval;
@@ -122,7 +124,8 @@ export function reviewItemsForDisplay(
     .map((item, index) => ({ item, index }))
     .filter(
       ({ item }) =>
-        item.status !== "unavailable" || item.genericGrade === "BLOCKED",
+        !item.hiddenFromReview &&
+        (item.status !== "unavailable" || item.genericGrade !== undefined),
     )
     .sort((left, right) => {
       const leftOrder = left.item.status === "available" ? 0 : 1;
@@ -299,7 +302,79 @@ function certificateSearchValuePlan(
   });
 }
 
+/**
+ * A single editable input without a calendar widget whose accepted date
+ * format, read from its own type, placeholder and constraints, is year-month.
+ */
+function isYearMonthOnlyTarget(handle: FieldCandidateHandle): boolean {
+  const element = handle.elements[0];
+  if (handle.elements.length !== 1 || !(element instanceof HTMLInputElement))
+    return false;
+  if (calendarSurfaceFor(element) || dayCalendarSurfaceFor(element))
+    return false;
+  const target = resolveDateTargetFormat(handle);
+  return (
+    target.status === "resolved" &&
+    (target.format === "YYYY-MM" || target.format === "YYYY.MM")
+  );
+}
+
+/**
+ * A SELECT_DATE target that is a plain editable year-month-only control needs
+ * no calendar interaction: plan it as an ordinary text write so the date
+ * format path derives and validates YYYY-MM. Anything else is unchanged.
+ */
+function withYearMonthWritePlan(
+  analysis: FieldAnalysis,
+  registry: CandidateRegistry,
+  generic: boolean,
+): FieldAnalysis {
+  if (
+    !generic ||
+    analysis.matchType === "NO_MATCH" ||
+    analysis.interactionStatus !== "READY" ||
+    analysis.writePlan?.command !== "SELECT_DATE"
+  )
+    return analysis;
+  const binding =
+    analysis.valueBinding ??
+    (analysis.profileFieldKey
+      ? { type: "DIRECT" as const, profileFieldKey: analysis.profileFieldKey }
+      : undefined);
+  if (
+    binding?.type !== "DIRECT" ||
+    profileFieldParts(binding.profileFieldKey)?.inputType !== "date"
+  )
+    return analysis;
+  const lookup = registry.lookupField(analysis.candidateId);
+  return lookup.status === "ready" && isYearMonthOnlyTarget(lookup.handle)
+    ? { ...analysis, writePlan: { command: "SET_TEXT" } }
+    : analysis;
+}
+
 function itemForAnalysis(
+  analysis: FieldAnalysis,
+  profile: Profile,
+  registry: CandidateRegistry,
+  ignoreCurrentValueCandidateIds: ReadonlySet<string>,
+  freshDefaultCandidateIds: ReadonlySet<string>,
+  normalizeDirectValue?: (profileFieldKey: string, value: string) => string,
+  generic = true,
+  components = false,
+): ReviewPlanItem {
+  return itemForResolvedAnalysis(
+    withYearMonthWritePlan(analysis, registry, generic),
+    profile,
+    registry,
+    ignoreCurrentValueCandidateIds,
+    freshDefaultCandidateIds,
+    normalizeDirectValue,
+    generic,
+    components,
+  );
+}
+
+function itemForResolvedAnalysis(
   analysis: FieldAnalysis,
   profile: Profile,
   registry: CandidateRegistry,
@@ -986,8 +1061,8 @@ export function buildReviewPlan({
       resolveDocumentCompany(document) === "components"
     );
   });
-  const items = analysis.fields.map((field) =>
-    itemForAnalysis(
+  const items = analysis.fields.map((field) => {
+    const item = itemForAnalysis(
       field,
       profile,
       registry,
@@ -996,8 +1071,13 @@ export function buildReviewPlan({
       normalizeDirectValue,
       analysis.mode === "GENERIC",
       components && analysis.mode === "ADAPTER",
-    ),
-  );
+    );
+    if (analysis.mode !== "GENERIC") return item;
+    const lookup = registry.lookupField(field.candidateId);
+    return lookup.status === "blocked" && lookup.reason === "hidden"
+      ? { ...item, hiddenFromReview: true }
+      : item;
+  });
   return {
     status: analysis.analysisStatus === "PARTIAL" ? "partial" : "ready",
     items:

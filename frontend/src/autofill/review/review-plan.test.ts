@@ -315,6 +315,36 @@ describe("review plan", () => {
     ).toEqual(["available-1", "available-2", "needs-review", "conflict"]);
   });
 
+  it("flags a hidden generic control for display hiding but keeps it in the plan", () => {
+    const profile = createEmptyProfile();
+    profile.contact.email = "me@example.test";
+    const registry = registryWithTextField();
+    (document.body.lastElementChild as HTMLInputElement).hidden = true;
+
+    const plan = buildReviewPlan({
+      analysis: response([allowedEmail]),
+      profile,
+      registry,
+    });
+
+    expect(plan.items).toHaveLength(1);
+    expect(plan.items[0]).toMatchObject({ hiddenFromReview: true });
+    expect(reviewItemsForDisplay(plan.items)).toEqual([]);
+  });
+
+  it("does not flag hidden controls on the static path", () => {
+    const registry = registryWithTextField();
+    (document.body.lastElementChild as HTMLInputElement).hidden = true;
+
+    const plan = buildReviewPlan({
+      analysis: response([allowedEmail], "COMPLETE", "ADAPTER"),
+      profile: createEmptyProfile(),
+      registry,
+    });
+
+    expect(plan.items[0]?.hiddenFromReview).toBeUndefined();
+  });
+
   it("selects a ready allowed value when the page field is empty", () => {
     const profile = createEmptyProfile();
     profile.contact.email = "me@example.test";
@@ -1392,3 +1422,69 @@ it.each(["valid", "wrong-name", "wrong-label", "wrong-binding", "untrusted"])(
 );
 
 afterEach(() => installExecutionPolicy(document));
+
+describe("year-month-only SELECT_DATE targets", () => {
+  const selectDate = (key: string) =>
+    ({
+      candidateId: "date-field",
+      matchType: "MATCH",
+      valueBinding: { type: "DIRECT", profileFieldKey: key },
+      autofillPolicy: "ALLOWED",
+      mappingStatus: "LLM_SUGGESTED",
+      interactionStatus: "READY",
+      writePlan: { command: "SELECT_DATE" },
+    }) as const;
+  const planFor = (
+    birthDate: string,
+    options: { placeholder?: string; type?: string },
+  ) => {
+    const profile = createEmptyProfile();
+    profile.personal.birthDate = birthDate;
+    const { registry } = registryWithDateInput({
+      placeholder: options.placeholder,
+      type: options.type,
+    });
+    return buildReviewPlan({
+      analysis: response([selectDate("personal.personal.birthDate")]),
+      profile,
+      registry,
+    }).items[0]!;
+  };
+
+  it.each([
+    ["a YYYY.MM placeholder", { placeholder: "YYYY.MM" }, "2001.02", "YYYY.MM"],
+    ["a month input", { type: "month" }, "2001-02", "YYYY-MM"],
+  ])("writes a full profile date as year-month for %s", (_name, options, value, format) => {
+    const item = planFor("2001-02-03", options);
+
+    expect(item).toMatchObject({
+      status: "available",
+      selected: true,
+      disabled: false,
+      profileValue: value,
+      previewValue: value,
+      dateApproval: { format },
+      analysis: { writePlan: { command: "SET_TEXT" } },
+    });
+    expect(item.calendarApproval).toBeUndefined();
+  });
+
+  it("keeps a full-date target on the SELECT_DATE path", () => {
+    const item = planFor("2001-02-03", { placeholder: "YYYY.MM.DD" });
+
+    expect(item.selected).toBe(false);
+    expect(item.analysis?.writePlan?.command).toBe("SELECT_DATE");
+    expect(item.dateApproval).toBeUndefined();
+  });
+
+  it.each([
+    ["an empty date", ""],
+    ["a malformed date", "2001-13-99"],
+  ])("keeps a year-month target blocked for %s", (_name, birthDate) => {
+    const item = planFor(birthDate, { placeholder: "YYYY.MM" });
+
+    expect(item.selected).toBe(false);
+    expect(item.status).toBe("unavailable");
+    expect(item.dateApproval).toBeUndefined();
+  });
+});
