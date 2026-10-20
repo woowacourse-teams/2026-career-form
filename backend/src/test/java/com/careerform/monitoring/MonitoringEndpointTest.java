@@ -30,6 +30,8 @@ import org.springframework.test.context.ActiveProfiles;
 // Monitoring tests do not require a database; seed behavior is covered separately.
 @org.springframework.test.context.bean.override.mockito.MockitoBean(
     name = "startupPolicySeeder", types = org.springframework.boot.ApplicationRunner.class)
+@org.springframework.test.context.bean.override.mockito.MockitoBean(
+    name = "hplaceFormPolicySeeder", types = org.springframework.boot.ApplicationRunner.class)
 @ActiveProfiles("dev")
 @ExtendWith(OutputCaptureExtension.class)
 class MonitoringEndpointTest {

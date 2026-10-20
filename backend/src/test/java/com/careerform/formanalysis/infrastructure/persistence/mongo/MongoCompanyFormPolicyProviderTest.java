@@ -48,7 +48,7 @@ class MongoCompanyFormPolicyProviderTest {
     }
 
     @Test
-    @DisplayName("등록되지 않은 host 또는 path는 generic 대상이다")
+    @DisplayName("등록되지 않은 host와 등록 host의 다른 path를 구분한다")
     void reportsAnUnregisteredSite() {
         when(companies.findByHost("unknown.example")).thenReturn(Optional.empty());
 
@@ -58,8 +58,49 @@ class MongoCompanyFormPolicyProviderTest {
         when(companies.findByHost("www.skcareers.com"))
             .thenReturn(Optional.of(company()));
 
-        assertThat(provider.find("www.skcareers.com", "/Other/Page/*"))
-            .isInstanceOf(NotRegistered.class);
+        assertThat(provider.find("www.skcareers.com", "/Other/Page/*").getClass().getSimpleName())
+            .isEqualTo("RegisteredPathMismatch");
+    }
+
+    @Test
+    @DisplayName("등록 host의 다른 경로는 공유 Hplace·Greeting 조회 없이 범용 경로를 유지한다")
+    void keepsRegisteredOtherPathsGenericWithoutSharedPolicies() {
+        var router = new com.careerform.formanalysis.application.FormAnalysisRouter(provider,
+            (host, path) -> { throw new AssertionError("shared Greeting lookup"); },
+            () -> { throw new AssertionError("Greeting policy lookup"); },
+            () -> { throw new AssertionError("Hplace policy lookup"); });
+        for (String host : List.of("www.skcareers.com", "talent.hyundai.com", "jobs.greetinghr.com")) {
+            when(companies.findByHost(host)).thenReturn(Optional.of(new FormAnalysisCompanyDocument("synthetic", "synthetic", host, List.of("/registered/"), 2)));
+            String path = "/mrs2/applicant/resume/writeResume";
+            assertThat(router.routeGeneric(host, path)).isEqualTo(com.careerform.formanalysis.application.FormAnalysisRouter.GenericRouteKind.GENERIC);
+            assertThat(router.route(new FieldsAnalysisRequest(2, "synthetic", new FieldsAnalysisRequest.Site(host, path), List.of())).kind())
+                .isEqualTo(com.careerform.formanalysis.application.FormAnalysisRouter.RouteKind.GENERIC);
+            assertThat(router.route(new PreparationAnalysisRequest(2, "synthetic", new PreparationAnalysisRequest.Site(host, path), List.of())).kind())
+                .isEqualTo(com.careerform.formanalysis.application.FormAnalysisRouter.RouteKind.GENERIC);
+        }
+    }
+
+    @Test
+    void rejectsDocumentsForAnotherHostBeforeRegisteredRouting() {
+        when(companies.findByHost("other.example")).thenReturn(Optional.of(company()));
+        for(String path:List.of("/Recruit/Apply/example","/other"))
+            assertThat(provider.find("other.example",path)).isInstanceOf(Unavailable.class);
+    }
+
+    @Test
+    void neverRoutesRegisteredSupplierHostsToGenericOnPathMismatch() {
+        var router = new com.careerform.formanalysis.application.FormAnalysisRouter(provider,
+            (host, path) -> { throw new AssertionError("shared Greeting lookup"); },
+            () -> { throw new AssertionError("Greeting policy lookup"); },
+            () -> { throw new AssertionError("Hplace policy lookup"); });
+        for(String host:List.of("synthetic.recruiter.co.kr","synthetic.recruiter.im")) {
+            when(companies.findByHost(host)).thenReturn(Optional.of(new FormAnalysisCompanyDocument("synthetic","synthetic",host,List.of("/registered/"),2)));
+            for(String path:List.of("/mrs2/applicant/resume/other","/outside")) {
+                assertThat(router.routeGeneric(host,path)).isEqualTo(com.careerform.formanalysis.application.FormAnalysisRouter.GenericRouteKind.POLICY_UNAVAILABLE);
+                assertThat(router.route(new FieldsAnalysisRequest(2,"synthetic",new FieldsAnalysisRequest.Site(host,path),List.of())).kind()).isEqualTo(com.careerform.formanalysis.application.FormAnalysisRouter.RouteKind.POLICY_UNAVAILABLE);
+                assertThat(router.route(new PreparationAnalysisRequest(2,"synthetic",new PreparationAnalysisRequest.Site(host,path),List.of())).kind()).isEqualTo(com.careerform.formanalysis.application.FormAnalysisRouter.RouteKind.POLICY_UNAVAILABLE);
+            }
+        }
     }
 
     @Test

@@ -19,12 +19,16 @@ import com.careerform.formanalysis.dto.PreparationAnalysisRequest;
 
 public final class CompanyFormPolicy {
 
+    private final List<SectionContract> sectionContracts;
+    private final com.careerform.formanalysis.dto.ExecutionPolicy executionPolicy;
     private final String companyKey;
     private final long version;
     private final PreparationFingerprint preparationFingerprint;
     private final FieldsFingerprint fieldsFingerprint;
     private final List<ActionRule> actionRules;
     private final List<FieldRule> fieldRules;
+    // 불변 executionPolicy에서 파생되는 staged address 노드의 지연 캐시(요청마다 재직렬화 방지)
+    private volatile com.fasterxml.jackson.databind.JsonNode stagedAddress;
 
     private CompanyFormPolicy(
         String companyKey,
@@ -32,8 +36,12 @@ public final class CompanyFormPolicy {
         PreparationFingerprint preparationFingerprint,
         FieldsFingerprint fieldsFingerprint,
         List<ActionRule> actionRules,
-        List<FieldRule> fieldRules
+        List<FieldRule> fieldRules,
+        List<SectionContract> sectionContracts,
+        com.careerform.formanalysis.dto.ExecutionPolicy executionPolicy
     ) {
+        this.sectionContracts = List.copyOf(sectionContracts);
+        this.executionPolicy = executionPolicy;
         this.companyKey = companyKey;
         this.version = version;
         this.preparationFingerprint = preparationFingerprint;
@@ -51,6 +59,16 @@ public final class CompanyFormPolicy {
         List<FieldRule> fieldRules,
         Predicate<String> isSupportedProfileKey
     ) {
+        return create(companyKey, version, preparationFingerprint, fieldsFingerprint, actionRules, fieldRules,
+            List.of(), null, isSupportedProfileKey);
+    }
+
+    public static CompanyFormPolicy create(String companyKey, long version, PreparationFingerprint preparationFingerprint,
+        FieldsFingerprint fieldsFingerprint, List<ActionRule> actionRules, List<FieldRule> fieldRules,
+        List<SectionContract> sectionContracts, com.careerform.formanalysis.dto.ExecutionPolicy executionPolicy,
+        Predicate<String> isSupportedProfileKey) {
+        if (sectionContracts == null || sectionContracts.size() > 16
+            || sectionContracts.stream().map(SectionContract::sectionId).distinct().count() != sectionContracts.size()) invalidPolicy();
         requireText(companyKey);
         if (version < 1
             || preparationFingerprint == null
@@ -60,32 +78,53 @@ public final class CompanyFormPolicy {
             || isSupportedProfileKey == null) {
             invalidPolicy();
         }
-        if ((preparationFingerprint.noActionPreparation()
-                || fieldsFingerprint.anySection())
-            && !"greeting".equals(companyKey)) {
+        if (preparationFingerprint.noActionPreparation()
+            && !"greeting".equals(companyKey) && !"hplace".equals(companyKey)) {
             invalidPolicy();
         }
-        if (preparationFingerprint.noActionPreparation() && !actionRules.isEmpty()) {
+        if (fieldsFingerprint.anySection() && !"greeting".equals(companyKey)) {
+            invalidPolicy();
+        }
+        if (preparationFingerprint.noActionPreparation() && !actionRules.isEmpty() && sectionContracts.isEmpty()) {
             invalidPolicy();
         }
         requireUniqueActionRules(actionRules);
         requireUniqueFieldRules(fieldRules);
+        // address 노드는 SEARCH_ADDRESS 규칙이 있을 때만 한 번 계산한다.
+        String addressActionId = sectionContracts.isEmpty() || actionRules.stream()
+            .noneMatch(r -> r.kind()==ActionKind.SEARCH_ADDRESS && r.structuralNames().size()==1) ? null
+            : StagedAddressContract.address(executionPolicy).path("actionId").asText();
         for (ActionRule rule : actionRules) {
             validateActionRule(rule, preparationFingerprint.requiredSectionIds(), isSupportedProfileKey);
+            if (!sectionContracts.isEmpty()) {
+                boolean address = rule.kind()==ActionKind.SEARCH_ADDRESS && rule.structuralNames().size()==1
+                    && addressActionId.equals(rule.structuralName());
+                if (!address && (rule.kind()!=ActionKind.ADD || sectionContracts.stream().flatMap(c->c.actions().stream())
+                    .noneMatch(a->a.structuralNames().contains(rule.structuralName())))) invalidPolicy();
+            }
         }
         for (FieldRule rule : fieldRules) {
             if (rule == null || !isSupportedBinding(rule.valueBinding(), isSupportedProfileKey)) {
                 invalidPolicy();
             }
         }
+        var validatedContracts = NativePolicyContract.validate(sectionContracts, fieldRules, executionPolicy);
         return new CompanyFormPolicy(
             companyKey,
             version,
             preparationFingerprint,
             fieldsFingerprint,
             actionRules,
-            fieldRules
+            fieldRules, validatedContracts, executionPolicy
         );
+    }
+
+    public List<SectionContract> sectionContracts() { return sectionContracts; }
+    public com.careerform.formanalysis.dto.ExecutionPolicy executionPolicy() { return executionPolicy; }
+    public com.fasterxml.jackson.databind.JsonNode stagedAddress() {
+        var address = stagedAddress;
+        if (address == null) stagedAddress = address = StagedAddressContract.address(executionPolicy);
+        return address;
     }
 
     public String companyKey() {

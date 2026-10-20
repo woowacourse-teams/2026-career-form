@@ -55,6 +55,7 @@ export class AnalysisServiceError extends Error {
   constructor(
     message: string,
     readonly status?: 404,
+    readonly code?: "POLICY_INCOMPATIBLE",
   ) {
     super(message);
     this.name = "AnalysisServiceError";
@@ -75,9 +76,22 @@ export class RuntimeAnalysisApiClient implements AnalysisApiClient {
   async loadExecutionPolicy(
     site: import("./types").SiteDescriptor,
   ): Promise<ExecutionPolicy | undefined> {
+    const incompatible = () =>
+      new AnalysisServiceError(
+        errorMessages.INVALID_RESPONSE,
+        undefined,
+        "POLICY_INCOMPATIBLE",
+      );
+    // The background validates the served policy; an unusable response on
+    // this path means the server's policy is newer than this extension.
     const response = await this.request({
       type: "AUTOFILL_LOAD_EXECUTION_POLICY",
       payload: site,
+    }).catch((error: unknown) => {
+      throw error instanceof AnalysisServiceError &&
+        error.message === errorMessages.INVALID_RESPONSE
+        ? incompatible()
+        : error;
     });
     if (
       !response ||
@@ -86,8 +100,7 @@ export class RuntimeAnalysisApiClient implements AnalysisApiClient {
     )
       throw new AnalysisServiceError(errorMessages.INVALID_RESPONSE);
     if (response.executionPolicy === null) return undefined;
-    if (!validExecutionPolicy(response.executionPolicy))
-      throw new AnalysisServiceError(errorMessages.INVALID_RESPONSE);
+    if (!validExecutionPolicy(response.executionPolicy)) throw incompatible();
     return response.executionPolicy;
   }
 

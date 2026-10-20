@@ -68,6 +68,15 @@ export function executionPolicyForSite(site: {
     site.host.toLowerCase() + policyPath(site.pathPattern),
   );
 }
+const nativeDocuments = new WeakMap<Document, string>();
+export function nativePolicyRequired(document: Document): boolean {
+  const url = nativeDocuments.get(document);
+  if (url !== document.URL) {
+    nativeDocuments.delete(document);
+    return false;
+  }
+  return url !== undefined;
+}
 const policies = new WeakMap<
   Document,
   { url: string; policy: ExecutionPolicy }
@@ -76,6 +85,9 @@ export function installExecutionPolicy(
   document: Document,
   policy?: ExecutionPolicy,
 ) {
+  nativePolicyRequired(document);
+  if (policy?.browserPolicy?.schemaVersion === 2)
+    nativeDocuments.set(document, document.URL);
   const url = new URL(document.URL);
   const key = url.host.toLowerCase() + policyPath(url.pathname);
   if (!policy) {
@@ -91,6 +103,17 @@ export function executionPolicy(
 ): ExecutionPolicy | undefined {
   const entry = policies.get(document);
   return entry?.url === document.URL ? entry.policy : undefined;
+}
+const policyDigests = new WeakMap<object, string>();
+/** 정책 객체는 설치 뒤 바뀌지 않으므로 객체별로 한 번만 직렬화한 내용 지문을 돌려준다. */
+export function policyDigest(policy: object | undefined): string | undefined {
+  if (!policy) return undefined;
+  let digest = policyDigests.get(policy);
+  if (digest === undefined) {
+    digest = JSON.stringify(policy);
+    policyDigests.set(policy, digest);
+  }
+  return digest;
 }
 export function searchRule(document: Document, name: string | undefined) {
   const policy = executionPolicy(document);

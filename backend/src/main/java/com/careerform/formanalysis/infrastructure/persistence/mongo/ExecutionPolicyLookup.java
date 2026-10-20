@@ -3,12 +3,21 @@ import org.springframework.stereotype.Component;
 import com.careerform.formanalysis.dto.ExecutionPolicy;
 @Component
 public final class ExecutionPolicyLookup {
+    private final MongoHplacePolicyProvider hplace;
     private final FormAnalysisCompanyMongoRepository companies;
     private final FormAnalysisPolicyMongoRepository policies;
     private final com.careerform.formanalysis.application.port.GreetingDomainEvidence domains;
     private final MongoGreetingPolicyProvider greeting;
     private final org.springframework.data.mongodb.core.MongoTemplate mongo;
     public ExecutionPolicyLookup(FormAnalysisCompanyMongoRepository companies, FormAnalysisPolicyMongoRepository policies, com.careerform.formanalysis.application.port.GreetingDomainEvidence domains, MongoGreetingPolicyProvider greeting, org.springframework.data.mongodb.core.MongoTemplate mongo) {
+        this(companies, policies, domains, greeting, mongo,
+            new MongoHplacePolicyProvider(policies, new com.careerform.formanalysis.application.SupportedProfileFields(), 4));
+    }
+    @org.springframework.beans.factory.annotation.Autowired
+    public ExecutionPolicyLookup(FormAnalysisCompanyMongoRepository companies, FormAnalysisPolicyMongoRepository policies,
+        com.careerform.formanalysis.application.port.GreetingDomainEvidence domains, MongoGreetingPolicyProvider greeting,
+        org.springframework.data.mongodb.core.MongoTemplate mongo, MongoHplacePolicyProvider hplace) {
+        this.hplace = hplace;
         this.mongo = mongo;
         this.companies = companies; this.policies = policies; this.domains = domains; this.greeting = greeting;
     }
@@ -27,6 +36,10 @@ public final class ExecutionPolicyLookup {
             return company.filter(c -> c.pathPrefixes() != null && c.pathPrefixes().stream().anyMatch(path::startsWith))
                 .flatMap(c -> policies.findByCompanyKeyAndVersion(c.companyKey(), c.activePolicyVersion()))
                 .map(FormAnalysisPolicyDocument::executionPolicy).orElse(null);
+        }
+        if (com.careerform.formanalysis.application.policy.HplaceApplicantSite.matches(host, path)) {
+            return com.careerform.formanalysis.application.policy.HplaceApplicantSite.DETAIL_PATH.equals(path)
+                ? hplace.executionPolicy() : null;
         }
         return switch (domains.classify(host, path)) {
             case POSITIVE -> greeting.executionPolicy();

@@ -1,3 +1,15 @@
+import {
+  isBasicStateDriver,
+  writeBasic,
+  settleBasicStateDriver,
+  prefersBasicProfileValue,
+} from "./hplace/basic-write";
+import { ownedBasicControl } from "./hplace/basic-controls";
+import {
+  isRegistrationItem,
+  settleRegistration,
+  writeRegistration,
+} from "./hplace/write";
 import { startLocalTiming } from "../debug/local-timing";
 import { hiddenCodeAdapters } from "../policy/hidden-code";
 import { componentWorkflowAdapter } from "../policy/components/workflow";
@@ -151,18 +163,89 @@ const genericWorkflowAdapter: WorkflowAdapter = {
   revealedProfileFieldKey: () => undefined,
 };
 
+const hplaceWorkflowAdapter: WorkflowAdapter = {
+  ...genericWorkflowAdapter,
+  prefersProfileValue: prefersBasicProfileValue,
+  isStateDriver: (item, name) =>
+    isRegistrationItem(item, name) || isBasicStateDriver(item, name),
+  stateDriverStage: (item, handle) =>
+    ownedBasicControl(handle) &&
+    isBasicStateDriver(item, handle.candidate.domName)
+      ? 1
+      : undefined,
+  settleStateDriver: (_document, handle, _report, context) =>
+    handle.candidate.domName?.startsWith("hplace.detail.")
+      ? settleBasicStateDriver(handle, context?.signal, context?.item)
+      : Promise.resolve(
+          !!context && settleRegistration(handle, context.item, context.signal),
+        ),
+  stateDriverFailureGroup: (item, handle) =>
+    isBasicStateDriver(item, handle.candidate.domName)
+      ? (handle.elements[0]?.closest(".subject") ?? undefined)
+      : undefined,
+  executeStateDriver: (
+    document,
+    handle,
+    item,
+    signal,
+    report,
+    beforeMutation,
+  ) =>
+    ownedBasicControl(handle)
+      ? writeBasic(handle, item, () => !signal.aborted, beforeMutation)
+      : writeRegistration(
+          document,
+          handle,
+          item,
+          signal,
+          report,
+          beforeMutation,
+        ),
+};
+
 function resolveWorkflowAdapter(source: string | Document): WorkflowAdapter {
   if (typeof source !== "string") {
     const configured = hiddenCodeAdapters(source);
     if (configured) return configured.workflow;
   }
-  if (typeof source !== "string" && executionPolicy(source)?.browserPolicy)
-    return policyWorkflowAdapter(source);
+  if (typeof source !== "string" && executionPolicy(source)?.browserPolicy) {
+    const policy = policyWorkflowAdapter(source);
+    if (executionPolicy(source)?.browserPolicy?.schemaVersion !== 2)
+      return policy;
+    return {
+      ...policy,
+      prefersProfileValue: (handle, analysis) =>
+        handle.owner === "legacy"
+          ? prefersBasicProfileValue(handle, analysis)
+          : policy.prefersProfileValue?.(handle, analysis) === true,
+      isStateDriver: (item, name) =>
+        hplaceWorkflowAdapter.isStateDriver(item, name) ||
+        policy.isStateDriver(item, name),
+      stateDriverStage: (item, handle) =>
+        handle.owner === "legacy"
+          ? hplaceWorkflowAdapter.stateDriverStage?.(item, handle)
+          : policy.stateDriverStage?.(item, handle),
+      executeStateDriver: (...args) =>
+        args[1].owner === "legacy"
+          ? hplaceWorkflowAdapter.executeStateDriver!(...args)
+          : policy.executeStateDriver!(...args),
+      settleStateDriver: (...args) =>
+        args[1].owner === "legacy"
+          ? hplaceWorkflowAdapter.settleStateDriver!(...args)
+          : policy.settleStateDriver!(...args),
+      stateDriverFailureGroup: (item, handle) =>
+        handle.owner === "legacy"
+          ? hplaceWorkflowAdapter.stateDriverFailureGroup?.(item, handle)
+          : policy.stateDriverFailureGroup?.(item, handle),
+    };
+  }
   switch (
     typeof source === "string"
       ? resolveCompany(source)
       : resolveDocumentCompany(source)
   ) {
+    case "hplace":
+      return hplaceWorkflowAdapter;
     case "components":
       return typeof source === "string"
         ? genericWorkflowAdapter
@@ -173,24 +256,69 @@ function resolveWorkflowAdapter(source: string | Document): WorkflowAdapter {
   }
 }
 
-
 export function getWorkflowAdapter(source: string | Document): WorkflowAdapter {
   const adapter = resolveWorkflowAdapter(source);
-  if (import.meta.env.VITE_LOCAL_WORKFLOW_DIAGNOSTICS !== "1" ||
-      import.meta.env.VITE_API_BASE_URL !== "http://localhost:8080") return adapter;
+  if (
+    import.meta.env.VITE_LOCAL_WORKFLOW_DIAGNOSTICS !== "1" ||
+    import.meta.env.VITE_API_BASE_URL !== "http://localhost:8080"
+  )
+    return adapter;
   return {
     ...adapter,
-    ...(adapter.executeStateDriver ? { executeStateDriver: async (...args: Parameters<NonNullable<WorkflowAdapter["executeStateDriver"]>>) => {
-      const finish = startLocalTiming("driver-execute", { field: args[1].candidate.domName ?? "", command: args[2].analysis?.writePlan?.command ?? "" });
-      try { return await adapter.executeStateDriver!(...args); } finally { finish(); }
-    } } : {}),
-    ...(adapter.waitForStateDriverReady ? { waitForStateDriverReady: async (...args: Parameters<NonNullable<WorkflowAdapter["waitForStateDriverReady"]>>) => {
-      const finish = startLocalTiming("driver-ready", { field: args[1].candidate.domName ?? "" });
-      try { return await adapter.waitForStateDriverReady!(...args); } finally { finish(); }
-    } } : {}),
-    ...(adapter.settleStateDriver ? { settleStateDriver: async (...args: Parameters<NonNullable<WorkflowAdapter["settleStateDriver"]>>) => {
-      const finish = startLocalTiming("driver-settle", { field: args[1].candidate.domName ?? "" });
-      try { return await adapter.settleStateDriver!(...args); } finally { finish(); }
-    } } : {}),
+    ...(adapter.executeStateDriver
+      ? {
+          executeStateDriver: async (
+            ...args: Parameters<
+              NonNullable<WorkflowAdapter["executeStateDriver"]>
+            >
+          ) => {
+            const finish = startLocalTiming("driver-execute", {
+              field: args[1].candidate.domName ?? "",
+              command: args[2].analysis?.writePlan?.command ?? "",
+            });
+            try {
+              return await adapter.executeStateDriver!(...args);
+            } finally {
+              finish();
+            }
+          },
+        }
+      : {}),
+    ...(adapter.waitForStateDriverReady
+      ? {
+          waitForStateDriverReady: async (
+            ...args: Parameters<
+              NonNullable<WorkflowAdapter["waitForStateDriverReady"]>
+            >
+          ) => {
+            const finish = startLocalTiming("driver-ready", {
+              field: args[1].candidate.domName ?? "",
+            });
+            try {
+              return await adapter.waitForStateDriverReady!(...args);
+            } finally {
+              finish();
+            }
+          },
+        }
+      : {}),
+    ...(adapter.settleStateDriver
+      ? {
+          settleStateDriver: async (
+            ...args: Parameters<
+              NonNullable<WorkflowAdapter["settleStateDriver"]>
+            >
+          ) => {
+            const finish = startLocalTiming("driver-settle", {
+              field: args[1].candidate.domName ?? "",
+            });
+            try {
+              return await adapter.settleStateDriver!(...args);
+            } finally {
+              finish();
+            }
+          },
+        }
+      : {}),
   };
 }

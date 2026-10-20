@@ -49,6 +49,20 @@ export default defineBackground(() => {
     storage: browser.storage.local,
   });
   browser.runtime.onMessage.addListener((message, sender) => {
+    if (message?.type === "AUTOFILL_GET_INSTALLED_BUILD") {
+      const snapshot = (
+        globalThis as typeof globalThis & {
+          __careerFormBuildInfo?: () => unknown;
+        }
+      ).__careerFormBuildInfo;
+      return Promise.resolve(
+        snapshot?.() ?? {
+          schema_version: "1.0",
+          revision: null,
+          source_state: "UNKNOWN",
+        },
+      );
+    }
     if (message?.type === "AUTOFILL_LOAD_EXECUTION_POLICY")
       return loadPolicyForSender(message, sender);
     const profileResponse = handleProfileWrite(message, sender);

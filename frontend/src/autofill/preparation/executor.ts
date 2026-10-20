@@ -1,4 +1,13 @@
+import {
+  debugStageCounts,
+  type DebugStageName,
+} from "../debug/structural-diagnostics";
+import {
+  executionPolicy,
+  nativePolicyRequired,
+} from "../workflow/execution-policy";
 import { acquireDocumentRun } from "../interaction/document-run";
+import { resolveDocumentCompany } from "../adapters/company";
 import type { PreparationPlan } from "../api/types";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import type { ActionCandidateHandle } from "../dom/types";
@@ -47,6 +56,8 @@ export interface PreparationExecutionOptions {
     snapshot: PreparationSnapshot,
   ) => OptionSelectionResult;
   waitForExpectedFields?: (plan: PreparationPlan) => Promise<boolean>;
+  /** `stage name=` of the count line; callers name their pass. */
+  diagnosticsStage?: DebugStageName;
 }
 
 export type PreparationFailureReason =
@@ -201,7 +212,7 @@ function failure(
   };
 }
 
-export async function executeApprovedPreparationPlans(
+async function executeApprovedPreparationPlansInternal(
   options: PreparationExecutionOptions,
 ): Promise<PreparationExecutionResult> {
   const first = options.approvedPlans.find(({ approved }) => approved);
@@ -216,13 +227,38 @@ export async function executeApprovedPreparationPlans(
   const release = document ? acquireDocumentRun(document) : undefined;
   if (document && !release) return failure("run-in-progress", 0);
   const url = document?.URL;
+  const nativeDigest =
+    document && nativePolicyRequired(document)
+      ? JSON.stringify(executionPolicy(document)?.browserPolicy)
+      : undefined;
+  if (
+    nativeDigest !== undefined &&
+    options.approvedPlans.some(({ approved, plan }) => {
+      if (!approved) return false;
+      const action = options.initialSnapshot.registry.lookupAction(
+        plan.actionCandidateId,
+      );
+      return (
+        plan.command !== "ADD_REPEATABLE_GROUP" ||
+        action.status !== "ready" ||
+        action.handle.owner !== "native"
+      );
+    })
+  ) {
+    release?.();
+    return failure("action-not-executable", 0);
+  }
   try {
     return await executePreparation({
       ...options,
       assertCurrent: () =>
         !options.signal?.aborted &&
         options.assertCurrent?.() !== false &&
-        document?.URL === url,
+        document?.URL === url &&
+        (nativeDigest === undefined ||
+          JSON.stringify(executionPolicy(document!)?.browserPolicy) ===
+            nativeDigest) &&
+        (!document || resolveDocumentCompany(document) !== "hplace"),
     });
   } finally {
     release?.();
@@ -447,4 +483,16 @@ async function executePreparation({
     executedPlanCount,
     unavailableActionCandidateIds: [...unavailableActionCandidateIds],
   };
+}
+
+export async function executeApprovedPreparationPlans(
+  options: PreparationExecutionOptions,
+): Promise<PreparationExecutionResult> {
+  const result = await executeApprovedPreparationPlansInternal(options);
+  debugStageCounts(
+    options.diagnosticsStage ?? "preparation",
+    options.approvedPlans.filter((p) => p.approved).length,
+    result.executedPlanCount,
+  );
+  return result;
 }
