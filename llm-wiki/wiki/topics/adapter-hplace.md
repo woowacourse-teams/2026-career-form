@@ -2,8 +2,8 @@
 
 > Topic: adapter-hplace
 > Status: Current
-> Current: [CF-177 C12·C13·시연 수정 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md)
-> History: [CF-177 근거](../../raw/issues/CF-177/documents/adapter-hplace.md); [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md); [CF-177 C12·C13·시연 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md)
+> Current: [CF-177 KDI·구조 미확인 근거](../../raw/issues/CF-177/documents/live-kdi-unverified.md)
+> History: [CF-177 근거](../../raw/issues/CF-177/documents/adapter-hplace.md); [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md); [CF-177 C12·C13·시연 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md); [CF-177 KDI·구조 미확인 근거](../../raw/issues/CF-177/documents/live-kdi-unverified.md)
 > Updated: 2026-10-20
 
 ## 현재 상태
@@ -29,9 +29,11 @@ MRS2 등록의 이름·휴대전화·이메일과 기존 기본정보 계약을 
 - **자격증 등록번호:** maxlength 64이며 검색 결과 선택이 hidden code 입력을 focus해 linkedForm이 발급기관·등록번호·취득일을 연다.
 - **C14 종료:** 실화면 step 3에서 metadata 이탈 진단이 0건이라 null/undefined 허용 보강은 하지 않았다.
 - **지원 방식 판별:** 공고 상세·position API·공개 리소스로는 구분되지 않고 "지원하기" 뒤 도착 경로가 기준이다. `/app/applicant/registResume`는 MRS2, `/v1/applicant/write-resume/login`은 v1, `www.jobda.im/jobflex/login`은 JOBDA다(표본: ligdna v1, dorco JOBDA, huonsgroup·com2us·kdi MRS2).
-- **현주소 없는 기본정보:** com2us처럼 섹션 13에 주소 제어가 전혀 없으면 현주소 없이 상세 기본정보(영문 이름·생년월일·성별·국적·보훈·장애·병역)를 처리한다. 일부만 있는 주소 구조는 계속 차단한다.
+- **현주소·생년월일 없는 기본정보:** com2us처럼 섹션 13에 주소 제어가 전혀 없거나 kdi처럼 생년월일·성별 칸이 없어도 상세 기본정보를 처리한다. 상세 섹션의 필수 앵커는 영문 이름 하나이며, 칸이 있는데 형식이 다른 주소·생년월일은 계속 차단한다(FE 앵커·플랫폼 지문·BE `DETAIL_REQUIRED` 동시 변경).
 - **병역 날짜 정밀도:** 시작일 토큰이 `:YM`이면 월, `:YMD`(huonsgroup)면 일까지 기입·비교한다. 시작일을 인식하지 못하면 병역 하위 칸 전체가 비는 연쇄가 있었다.
-- **영문 이름 순서:** 회사 안내가 순서를 명시하면 그 순서, 안내가 전혀 없으면 성 이름(사용자 결정), 안내가 다른 영역에만 있거나 중복·모호하면 미기입이다. 안내 없는 회사가 이름 성 순서를 기대할 수 있다는 한계가 있다.
+- **영문 이름 순서:** 회사 안내가 순서를 명시하면 그 순서, 순서 문구 없이 홍길동 표준 예시가 한 순서로만 있으면 예시 순서(kdi `Hong, Gildong`→성 이름, 같은 순서 반복 허용, 쉼표 없이 띄어쓰기), 안내가 전혀 없으면 성 이름(사용자 결정)이다. 안내가 다른 영역에만 있거나 중복·섞인 순서·홍길동 아닌 예시는 미기입이고, 순서 접미사 없는 후보는 BE 응답과 무관하게 FE 쓰기에서 거부한다. 안내 없는 회사가 이름 성 순서를 기대할 수 있다는 한계가 있다.
+- **구조 미확인 칸 표시:** 1단계에서 칸이 화면에 있고 열려 있으며 프로필 값이 있는데 상세·기본 계약을 통과하지 못하면 결과 "확인 필요"에 `입력 불가(화면 구조 확인 불가)`(`STRUCTURE_UNVERIFIED`)로 표시한다. 화면에 없는 칸·닫힌 조건부 칸·값 없는 칸·범용 실행은 제외하며, location이 없는 분리 문서에서는 판정 전에 빠져나온다.
+- **진단 로그:** 기본으로 꺼져 있고 `VITE_AUTOFILL_DEBUG=true` 빌드에서만 켜진다(하네스는 명시해 빌드). 시연 중 콘솔 오류(CSP `script-src:` 오타, fonts.gstatic.com CORS)는 사이트 쪽이다.
 
 ## 검증과 배포 경계
 

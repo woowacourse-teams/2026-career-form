@@ -2,8 +2,8 @@
 
 > Topic: adapter-development
 > Status: Current
-> Current: [CF-177 C12·C13·시연 수정 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md)
-> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-development.md); [CF-94 근거](../../raw/issues/CF-94/documents/adapter-development.md); [CF-177 근거](../../raw/issues/CF-177/documents/adapter-development.md); [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md); [CF-177 C12·C13·시연 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md)
+> Current: [CF-177 KDI·구조 미확인 근거](../../raw/issues/CF-177/documents/live-kdi-unverified.md)
+> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-development.md); [CF-94 근거](../../raw/issues/CF-94/documents/adapter-development.md); [CF-177 근거](../../raw/issues/CF-177/documents/adapter-development.md); [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md); [CF-177 C12·C13·시연 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md); [CF-177 KDI·구조 미확인 근거](../../raw/issues/CF-177/documents/live-kdi-unverified.md)
 > Updated: 2026-10-20
 
 ## 현재 상태
@@ -54,7 +54,7 @@ FE는 SK·현대의 기존 선택 우선순위를 유지하며 유일한 최상�
 
 새 확장 배포 → 대상 설치/보급 확인 → BE v4 DB 활성 포인터 순으로 활성화한다. 구 확장은 새 capability/DERIVED enum 때문에 정책 전체를 거부할 수 있으며 구 validator probe는 실제 브라우저 검증을 대신하지 않는다. resource enabled는 운영 활성화가 아니다. 2026-10-20 live-eval 하네스에서 `f586619`의 3사 step 1–3 실화면 평가가 통과해 검색·주소·linkedForm 미확인 상태를 정정했다. C12–C14, 포커스 없는 창·사이드 패널(H7)과 공식 WSL/Linux 검증은 별도이며 이번 수집에서 migration·배포를 실행하지 않았다.
 
-2026-10-20 C13에서 v4 resource의 프로젝트154를 활성화했다. seeder가 insert-only이므로 기존 DB에는 자동 반영되지 않으며 운영 반영 방식은 사람이 정한다. 상세 기본정보의 현주소를 선택 앵커로 바꾼 변경은 FE 상세 앵커, FE MRS2 플랫폼 지문(섹션 13 존재), BE `HplaceFormFingerprint.DETAIL_REQUIRED`(영문 이름·생년월일)를 함께 바꿔야 한다.
+2026-10-20 C13에서 v4 resource의 프로젝트154를 활성화했다. seeder가 insert-only이므로 기존 DB에는 자동 반영되지 않으며 운영 반영 방식은 사람이 정한다. 상세 기본정보의 현주소를 선택 앵커로 바꾼 변경은 FE 상세 앵커, FE MRS2 플랫폼 지문(섹션 13 존재), BE `HplaceFormFingerprint.DETAIL_REQUIRED`(영문 이름만)를 함께 바꿔야 한다. 생년월일도 같은 규칙으로 선택 앵커가 됐다(kdi). 개발용 진단 출력은 기본으로 꺼져 있고 `VITE_AUTOFILL_DEBUG=true`로 빌드할 때만 켜진다.
 
 ### 실화면 정제 fixture와 builder 대조
 

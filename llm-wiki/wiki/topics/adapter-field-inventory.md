@@ -2,8 +2,8 @@
 
 > Topic: adapter-field-inventory
 > Status: Current
-> Current: [CF-177 C12·C13·시연 수정 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md)
-> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-field-inventory.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-field-inventory.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-field-inventory.md); [CF-94 근거](../../raw/issues/CF-94/documents/adapter-field-inventory.md); [CF-160 근거](../../raw/issues/CF-160/documents/adapter-field-inventory.md); [CF-168 근거](../../raw/issues/CF-168/documents/adapter-field-inventory.md); [CF-169 근거](../../raw/issues/CF-169/documents/adapter-field-inventory.md); [CF-177 근거](../../raw/issues/CF-177/documents/adapter-field-inventory.md); [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md); [CF-177 C12·C13·시연 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md)
+> Current: [CF-177 KDI·구조 미확인 근거](../../raw/issues/CF-177/documents/live-kdi-unverified.md)
+> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-field-inventory.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-field-inventory.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-field-inventory.md); [CF-94 근거](../../raw/issues/CF-94/documents/adapter-field-inventory.md); [CF-160 근거](../../raw/issues/CF-160/documents/adapter-field-inventory.md); [CF-168 근거](../../raw/issues/CF-168/documents/adapter-field-inventory.md); [CF-169 근거](../../raw/issues/CF-169/documents/adapter-field-inventory.md); [CF-177 근거](../../raw/issues/CF-177/documents/adapter-field-inventory.md); [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md); [CF-177 C12·C13·시연 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md); [CF-177 KDI·구조 미확인 근거](../../raw/issues/CF-177/documents/live-kdi-unverified.md)
 > Updated: 2026-10-20
 
 ## 현재 상태
@@ -178,10 +178,10 @@ BE 정적 규칙과 FE 수집·반복행 준비·검색·날짜·선택 실행�
 | `personal.personal.koreanGivenName` — 국문 이름 | 구현 / 정책 키: `hplace.registration.name` | 등록 화면만; 이름 결합/분할전화/이메일 확인 소유 그룹; 상세 표시값 쓰기 아님 |
 | `personal.personal.hanjaFamilyName` — 한자 성 | 구현 / 정책 키: `hplace.mrs2.basic.chineseName` | step1/11; HANJA_FULL_NAME은 성·이름 둘 다 있어야 trim 후 결합; GS 관측, 한국타이어에는 없음 |
 | `personal.personal.hanjaGivenName` — 한자 이름 | 구현 / 정책 키: `hplace.mrs2.basic.chineseName` | step1/11; HANJA_FULL_NAME은 성·이름 둘 다 있어야 trim 후 결합; GS 관측, 한국타이어에는 없음 |
-| `personal.personal.englishFamilyName` — 영문 성 | 구현 / 정책 키: `hplace.detail.englishName.{familyFirst,givenFirst}` | step1/11 단일칸. 회사 안내가 순서를 명시하면 그 순서, 안내가 전혀 없으면 성 이름(2026-10-20 사용자 결정), 다른 영역·중복·모호한 안내는 미기입 |
+| `personal.personal.englishFamilyName` — 영문 성 | 구현 / 정책 키: `hplace.detail.englishName.{familyFirst,givenFirst}` | step1/11 단일칸. 회사 안내가 순서를 명시하면 그 순서, 순서 문구 없이 홍길동 예시만 한 순서로 있으면 예시 순서(kdi), 안내가 전혀 없으면 성 이름(2026-10-20 사용자 결정). 다른 영역·중복·섞인 순서·홍길동 아닌 예시는 미기입 |
 | `personal.personal.englishGivenName` — 영문 이름 | 구현 / 정책 키: `hplace.detail.englishName.{familyFirst,givenFirst}` | 영문 성과 같은 단일칸·순서 규칙 |
 | `personal.personal.gender` — 성별 | 구현 / 정책 키: `hplace.detail.gender` | step1; 현재 활성 제어와 정확 옵션·소유·기존 값·프로필 재확인 |
-| `personal.personal.birthDate` — 생년월일 | 구현 / 정책 키: `hplace.detail.birthday` | step1; 현재 활성 제어와 정확 옵션·소유·기존 값·프로필 재확인 |
+| `personal.personal.birthDate` — 생년월일 | 구현 / 정책 키: `hplace.detail.birthday` | step1; 현재 활성 제어와 정확 옵션·소유·기존 값·프로필 재확인. 칸이 전혀 없는 화면(kdi)은 생략, 있는데 `birthday:YMD`가 아니면 차단 |
 | `personal.personal.nationality` — 국적 | 구현 / 정책 키: `hplace.detail.nationality` | step1; 현재 활성 제어와 정확 옵션·소유·기존 값·프로필 재확인 |
 
 #### 연락처와 주소 (8키)
@@ -381,6 +381,8 @@ BE 정적 규칙과 FE 수집·반복행 준비·검색·날짜·선택 실행�
 | 상세 기본정보(영문 이름·생년월일·성별·국적·보훈·장애·병역) | 섹션 13에 주소 제어가 전혀 없는 화면(com2us)도 처리 | 일부만 있는 주소 구조는 차단 유지 |
 | step 2 합성 builder 대조 | 3사 정제 fixture와 게이팅 속성 일치 | gsenc 대학 계열 없음, gsenc·abl 대학원 입학구분 없음, abl 전공 평점, careerhyundai 고교 주야간·YMD 학력 날짜, abl step 2 고교 없음 |
 | 다전공 2·3번째 전공 주야간 | 주전공에만 연결(main-major-only, 기존과 같음) | 프로필의 주야간은 학교 단위 값 하나 |
+| 1단계 구조 미확인 칸 | 화면에 있고 열려 있으며 프로필 값이 있지만 상세·기본 계약을 통과하지 못한 칸은 `입력 불가(화면 구조 확인 불가)`로 확인 필요에 표시 | 화면에 없는 칸·닫힌 조건부 칸·값 없는 칸·범용 실행은 제외 |
+| 복무 시작·종료일(YMD 테넌트) | 월 단위 프로필 값은 일을 지어내지 않고 거부 | 일 단위 값만 기입 |
 
 실화면 matched는 84키(3사 공통 65, 일부 테넌트 19: 프로젝트 4는 abl·gsenc)다.
 

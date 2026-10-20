@@ -74,3 +74,29 @@
 > Collected: 2026-10-20
 > Approval-Digest: 542da5f91de838b7628a627f71c8299e1434cc346667f7aea70ea92d50921a61
 > Source-Revision: 6a7a14174ccf6b21ae691254fbec78bb63aa22e1
+
+## adapter-hplace
+
+> Payload: [Hplace 미검증 테넌트 후속 수정과 구조 미확인 칸 표시](documents/live-kdi-unverified.md)
+> Supersedes: [CF-177 C12·C13·시연 수정 근거](documents/live-c12-c13-demo.md)
+> Collected: 2026-10-20
+> Approval-Digest: 1f3a2c11feb57fc5644601525129931c8a94c47711ea779bde7c6e96b59ba32d
+> Source-Revision: 82bf5e6cc0a00110f3b8efaf36fad800055ad6ad
+
+이 절부터 아래 세 절은 2026-10-20에 별도로 승인된 4차 후보 K66–K69의 수집이다. 승인 대상은 후보 파일 `knowledge-candidates-r4.md` 전체 UTF-8 바이트이고 절의 Approval-Digest는 그 SHA-256이다. 앞선 절과 문서는 바꾸지 않았다.
+
+## adapter-field-inventory
+
+> Payload: [Hplace 미검증 테넌트 후속 수정과 구조 미확인 칸 표시](documents/live-kdi-unverified.md)
+> Supersedes: [CF-177 C12·C13·시연 수정 근거](documents/live-c12-c13-demo.md)
+> Collected: 2026-10-20
+> Approval-Digest: 1f3a2c11feb57fc5644601525129931c8a94c47711ea779bde7c6e96b59ba32d
+> Source-Revision: 82bf5e6cc0a00110f3b8efaf36fad800055ad6ad
+
+## adapter-development
+
+> Payload: [Hplace 미검증 테넌트 후속 수정과 구조 미확인 칸 표시](documents/live-kdi-unverified.md)
+> Supersedes: [CF-177 C12·C13·시연 수정 근거](documents/live-c12-c13-demo.md)
+> Collected: 2026-10-20
+> Approval-Digest: 1f3a2c11feb57fc5644601525129931c8a94c47711ea779bde7c6e96b59ba32d
+> Source-Revision: 82bf5e6cc0a00110f3b8efaf36fad800055ad6ad
