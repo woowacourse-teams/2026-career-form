@@ -152,7 +152,12 @@ export function buildResultModel(input: ResultModelInput): ResultModel {
     } else if (
       (failureCode ?? item.failureCode) &&
       !recoveredRetry &&
-      !(failureCode === "ROW_SEARCH_UNCONFIRMED" && entry?.unchanged && matches)
+      !(
+        (failureCode === "ROW_SEARCH_UNCONFIRMED" ||
+          failureCode === "ROW_DRIVER_UNCONFIRMED") &&
+        entry?.unchanged &&
+        matches
+      )
     ) {
       review("입력 못함", failureCode ?? item.failureCode);
     } else if (entry?.unchanged && matches) {

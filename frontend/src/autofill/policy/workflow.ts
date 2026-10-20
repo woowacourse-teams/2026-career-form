@@ -9,6 +9,7 @@ import { currentNativeOwner, nativeForm } from "./native-form-collection";
 import {
   nativeDriverFailure,
   nativeFieldControls,
+  nativeValueMatches,
   nativeWriteAdapter,
   settleNativeDriver,
 } from "./native-form-write";
@@ -350,9 +351,15 @@ export function policyWorkflowAdapter(document: Document): WorkflowAdapter {
     stateDriverFailureTargets(item, handle) {
       if (handle.owner === "native") {
         const o = currentNativeOwner(handle);
+        // A non-search driver whose own value is verified keeps its write;
+        // only the dependents it could not settle are deferred.
+        const own =
+          o && !o.field.search && nativeValueMatches(handle, item)
+            ? []
+            : handle.elements;
         return o
           ? [
-              ...handle.elements,
+              ...own,
               ...(o.field.driver?.dependencies ?? []).flatMap((n) =>
                 nativeFieldControls(
                   o,
