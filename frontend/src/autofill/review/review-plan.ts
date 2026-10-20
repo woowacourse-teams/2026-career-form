@@ -586,7 +586,17 @@ function itemForAnalysis(
       boundProfileValue.status === "ambiguous"
         ? "반복 프로필 항목을 하나로 안전하게 결정할 수 없습니다."
         : "입력할 프로필 값이 없습니다.";
-    return unavailableItem(analysis.candidateId, fieldLabel, reason, analysis);
+    const item = unavailableItem(
+      analysis.candidateId,
+      fieldLabel,
+      reason,
+      analysis,
+    );
+    // A native row bound to its own entry keeps that entry, so another
+    // entry's value is never reported as this row's saved value.
+    return typeof nativeIndex === "number"
+      ? { ...item, itemIndex: nativeIndex }
+      : item;
   }
   const catalogSource =
     binding.type !== "DERIVED"
