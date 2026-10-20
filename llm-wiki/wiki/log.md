@@ -691,3 +691,10 @@
 - Source-Revision: 541f4c2e473b8575e00ac1d154c41bec9b96fa61
 - 승인한 정책 후보 3개와 ADR 전문을 [CF-288 bundle](../raw/issues/CF-288/manifest.md)에 기록했다.
 - [비동기 품질 처리](topics/async-quality-observation.md)를 추가하고 기존 품질 관측, report 시점과 이전 실행기의 인터럽트 계약에 현재 구조를 연결했다.
+
+## [2026-10-20] ingest | CF-296 품질 가공 경계 이동과 배치 보고
+
+- Approval-Digest: a0fe90430f2ca019308b9afcef2767a057cb22986e6ae6f486e20ef30982d2da
+- Source-Revision: e0730141498ad616f3f0325caac3fc196e998bf5
+- 승인한 후보 4개를 [CF-296 bundle](../raw/issues/CF-296/manifest.md)에 기록했다.
+- [비동기 품질 처리](topics/async-quality-observation.md)와 [보고 시점](topics/quality-report-lifecycle.md)을 현재 구조로 갱신했다.
