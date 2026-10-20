@@ -1,3 +1,11 @@
+import { legacyLinkedWait } from "../../adapters/hplace/basic-write";
+
+/**
+ * Hplace tests run a jsdom page: linked controls enable within a few ticks, so
+ * the live 1500 ms wait only lengthens every run that leaves one disabled.
+ */
+legacyLinkedWait.ms = 300;
+
 export function setHplacePage(url: string): void {
   (
     globalThis as unknown as {

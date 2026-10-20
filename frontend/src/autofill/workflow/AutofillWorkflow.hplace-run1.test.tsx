@@ -29,11 +29,10 @@ it("replaces only empty-group HTML false defaults and fills their conditional ch
   expect(input("handicap.handicapContentsCode").value).toBe("17");
 });
 it.each([
+  // One dependent per control shape: text, select, coded select.
   "patriot.patriotNumber",
-  "patriot.relationship",
   "patriot.patriotRate",
   "handicap.handicapGradeCode",
-  "handicap.handicapContentsCode",
 ])(
   "protects HTML false default when dependent %s is populated",
   async (name) => {

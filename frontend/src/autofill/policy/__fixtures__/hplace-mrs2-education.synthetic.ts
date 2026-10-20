@@ -19,6 +19,7 @@
  * Either live option installs the linkedForm emulator on `#frm`; call
  * `disposeLinkedForms()` in `afterEach`. */
 import seed from "../../../../../backend/src/main/resources/policies/hplace-mrs2-v4.json";
+import { withFixtureTimeouts } from "./hplace-mrs2-timeouts";
 import {
   installExecutionPolicy,
   type ExecutionPolicy,
@@ -103,9 +104,9 @@ export function mountEducation(
       ? liveCollegeRow(kind, index, majors, format, liveRowShape(kind, options))
       : collegeRow(kind, index, majors, format);
   window.history.replaceState({}, "", "/mrs2/applicant/resume/writeResume");
-  const policy = structuredClone(
-    seed.executionPolicy,
-  ) as unknown as ExecutionPolicy;
+  const policy = withFixtureTimeouts(
+    structuredClone(seed.executionPolicy) as unknown as ExecutionPolicy,
+  );
   document.body.innerHTML =
     seed.executionPolicy.browserPolicy.nativeForm.assetPaths
       .map((src) => `<script src="${src}"></script>`)

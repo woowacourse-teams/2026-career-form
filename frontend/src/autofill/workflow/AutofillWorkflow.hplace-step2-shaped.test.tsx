@@ -468,8 +468,10 @@ it("does not add rows or write anything when step 2 runs again on the filled pag
   expect(run.second.counters.keypresses).toBe(0);
   expect(run.writes).toEqual([]);
   expect(pageValues()).toEqual(run.valuesAfterFirst);
-  // Everything is retained, nothing is reported as newly written.
+  // Everything is retained, nothing is reported as newly written, and a
+  // retained date compares in the site's dotted format, never as "값이 달라요".
   expect(completedCount()).toContain("0");
+  expect(pendingRows()).toEqual([]);
   expect(run.first.counters.forbidden).toBe(0);
   expect(run.second.counters.forbidden).toBe(0);
 }, 330000);
@@ -519,14 +521,6 @@ it.each(NORMALIZATIONS)(
   },
   330000,
 );
-
-// A retained date is compared in the site's dotted format, not as the
-// profile's ISO value, so an identical date is never reported as a difference.
-it("reports retained dates as already entered when step 2 runs again", async () => {
-  await runTwice(TENANTS[1]);
-
-  expect(pendingRows()).toEqual([]);
-}, 330000);
 
 /**
  * The site reloading the saved page: every value survives as markup while
