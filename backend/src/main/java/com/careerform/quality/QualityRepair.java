@@ -42,7 +42,7 @@ public final class QualityRepair {
         var kinds = List.of(QualityRecord.Kind.REQUEST, QualityRecord.Kind.EXECUTION);
         while (observed < batchSize && System.nanoTime() - started < budgetNanos) {
             var kind = kinds.get(kindIndex);
-            var limit = Math.toIntExact(batchSize - observed);
+            var limit = 1;
             var records = store.list(new QualityStore.Query(kind, environment, null, null, null,
                 ceiling.minusSeconds(30L * 86400), ceiling.plusNanos(1), offset, limit), now);
             var processed = 0;

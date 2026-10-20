@@ -23,15 +23,19 @@ class QualityRepairTest {
             QualityRecord.Kind.REQUEST, group, 0, now, now.plusSeconds(86400),
             new QualityCollectionService.RequestEvent("FIELDS", 200, 1, null, List.of()))).toList();
         var store = mock(QualityStore.class);
+        var maximumLoaded = new java.util.concurrent.atomic.AtomicInteger();
         when(store.list(any(), any())).thenAnswer(call -> {
             QualityStore.Query query = call.getArgument(0);
-            return query.kind() == QualityRecord.Kind.REQUEST
-                ? originals.stream().skip(query.offset()).limit(query.limit()).toList() : List.of();
+            var values = query.kind() == QualityRecord.Kind.REQUEST
+                ? originals.stream().skip(query.offset()).limit(query.limit()).toList() : List.<QualityRecord>of();
+            maximumLoaded.accumulateAndGet(values.size(), Math::max);
+            return values;
         });
         var repair = new QualityRepair(store, mock(QualityRegistry.class), mock(QualityRollup.class),
             Clock.fixed(now, ZoneOffset.UTC), "test");
         assertThat(repair.repair().observed()).isEqualTo(16);
         assertThat(repair.repair().observed()).isEqualTo(1);
+        assertThat(maximumLoaded.get()).isEqualTo(1);
     }
 
     @Test
