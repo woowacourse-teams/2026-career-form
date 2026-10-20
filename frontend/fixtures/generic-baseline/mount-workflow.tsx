@@ -9,6 +9,10 @@ import { collectPreparationSnapshot } from "../../src/autofill/dom/collect";
 import { AutofillWorkflow } from "../../src/autofill/workflow/AutofillWorkflow";
 import { localItemCount } from "../../src/autofill/workflow/workflow-model";
 import { parseProfileImport } from "../../src/profile/profile-transfer";
+import {
+  installClientAnalysisCollector,
+  type ClientAnalysis,
+} from "./collector.mjs";
 
 interface AnalysisEvent {
   type: string;
@@ -35,6 +39,7 @@ declare global {
   interface Window {
     __cfBaseline: {
       events: AnalysisEvent[];
+      clientAnalyses: ClientAnalysis[];
       diagnoses: PlanDiagnosis[];
       pageErrors: string[];
     };
@@ -70,6 +75,7 @@ const profile = parseProfileImport(JSON.stringify(profileExport));
 const repository = { load: async () => profile };
 const state: Window["__cfBaseline"] = {
   events: [],
+  clientAnalyses: [],
   diagnoses: [],
   pageErrors: [],
 };
@@ -161,6 +167,7 @@ function mountWorkflow(): void {
   const apiClient = new RuntimeAnalysisApiClient((message) =>
     sendMessage(backgroundHandler, message),
   );
+  installClientAnalysisCollector(apiClient.quality, state.clientAnalyses);
   const host = document.createElement("career-form-profile-panel");
   host.dataset.baselineWorkflow = "";
   document.body.append(host);

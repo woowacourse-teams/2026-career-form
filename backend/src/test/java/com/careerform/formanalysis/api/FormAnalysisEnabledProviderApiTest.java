@@ -43,6 +43,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @SpringBootTest(properties = {
     "spring.mongodb.uri=mongodb://localhost/career-form-test",
     "career-form.llm.enabled=true",
+    "career-form.analysis.provider=openai",
     "career-form.analysis.calendar-provider=openai",
     "CAREER_FORM_LLM_TIMEOUT=41s",
     "spring.ai.openai.timeout=45s",

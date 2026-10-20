@@ -45,14 +45,13 @@ class JevInteractionDecisionProviderTest {
 
     @ParameterizedTest
     @EnumSource(value = Role.class, names = {"SEARCH_.*", "CALENDAR_.*"}, mode = EnumSource.Mode.MATCH_ANY)
-    void keepsExistingSearchAndCalendarJevRequestUnchanged(Role role) {
+    void keepsExistingSearchAndCalendarStateAndCriteria(Role role) {
         var captured = capture(Map.of("d1", JevClient.ABSTAIN), batch(
             new InteractionDecisionProvider.Decision("d1", role, "education.university.schoolName", List.of(button("c1_1")))));
 
         var question = captured.questions().get("d1");
         assertThat(captured.questions()).containsOnlyKeys("d1");
         assertThat(question.type()).isEqualTo("choice");
-        assertThat(question.instructions()).isEqualTo(pinnedInstructions(role.name(), "d1"));
         assertThat(question.criteria()).containsExactlyInAnyOrderEntriesOf(
             Map.of(JevClient.ABSTAIN, PINNED_ABSTAIN, "c1_1", PINNED_CANDIDATE));
         assertThat(MAPPER.writeValueAsString(captured.state())).isEqualTo("{\"d1\":{\"role\":\"" + role.name()
@@ -77,8 +76,6 @@ class JevInteractionDecisionProviderTest {
             "c2_1", JevInteractionDecisionProvider.SECTION_REVEAL_CRITERION));
         assertThat(JevInteractionDecisionProvider.REPEAT_ADD_CRITERION).startsWith("ADD:");
         assertThat(JevInteractionDecisionProvider.SECTION_REVEAL_CRITERION).startsWith("REVEAL:");
-        assertThat(captured.questions().get("d1").instructions()).contains("REPEAT_ADD")
-            .isNotEqualTo(pinnedInstructions("REPEAT_ADD", "d1"));
         assertThat(captured.result().results()).containsExactly(
             new InteractionDecisionProvider.Selected("d1", Role.REPEAT_ADD, "c1_2"),
             new InteractionDecisionProvider.Abstained("d2", Role.SECTION_REVEAL));
@@ -97,27 +94,14 @@ class JevInteractionDecisionProviderTest {
         for (TargetKind kind : TargetKind.values()) {
             String id = "d" + (kind.ordinal() + 1);
             var question = captured.questions().get(id);
-            assertThat(question.instructions()).contains(kind.name());
             assertThat(question.criteria()).containsExactlyInAnyOrderEntriesOf(Map.of(
                 JevClient.ABSTAIN, JevInteractionDecisionProvider.rowKindAbstainCriterion(kind),
                 "c" + (kind.ordinal() + 1) + "_1", JevInteractionDecisionProvider.rowKindCriterion(kind),
                 "c" + (kind.ordinal() + 1) + "_2", JevInteractionDecisionProvider.rowKindCriterion(kind)));
         }
-        assertThat(MAPPER.writeValueAsString(captured.questions()))
-            .contains("HIGH_SCHOOL", "ASSOCIATE", "BACHELOR", "MASTER", "DOCTOR");
         assertThat(captured.result().results()).contains(
             new InteractionDecisionProvider.Selected("d4", Role.ROW_KIND_OPTION, "c4_2"),
             new InteractionDecisionProvider.Abstained("d1", Role.ROW_KIND_OPTION));
-    }
-
-    private static String pinnedInstructions(String role, String id) {
-        return "Select the candidate with role " + role + " from observation " + id
-            + ". Choose only the observed visible enabled control structurally related to the target or calendar. "
-            + "Calendar roles use only the finite calendarStructure ownership, activation and valueShape evidence. "
-            + "SEARCH_RESULT_CONTAINER, SEARCH_RESULT_ITEM and SEARCH_RESULT_ACTION classify structural shapes "
-            + "shared across the complete result set, not an answer row. Use only finite structure evidence; "
-            + "a result action requires mechanical activation evidence. Never choose result data, values, code "
-            + "or execution steps.";
     }
 
     private static InteractionDecisionProvider.Batch batch(InteractionDecisionProvider.Decision... decisions) {

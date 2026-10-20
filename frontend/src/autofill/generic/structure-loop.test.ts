@@ -60,6 +60,7 @@ const KEY_OF_SCHOOL_LABEL: Record<string, string> = {
 };
 
 interface MockOptions {
+  category?: string;
   abstain?: Array<"REPEAT_ADD" | "SECTION_REVEAL" | "ROW_KIND_OPTION">;
   /** Key returned for graduate school rows instead of the right one. */
   graduateKey?: string;
@@ -128,6 +129,7 @@ function mockApi(options: MockOptions = {}) {
         sections: request.sections.map((section) => ({
           sectionId: section.sectionId,
           category:
+            options.category ??
             CATEGORY_OF_TITLE.find(([pattern]) =>
               pattern.test(section.title ?? ""),
             )?.[1] ?? "NONE",
@@ -210,7 +212,7 @@ function recordQa(name: string, evidence: unknown) {
 }
 
 describe("runGenericStructureLoop", () => {
-  it("grows one career row to three without touching save or next", async () => {
+  it.each(["careers", "CAREER"])("grows one career row to three without touching save or next (%s)", async (category) => {
     document.body.innerHTML = `<form action="/submit"><section>
       <h3>경력</h3>
       <div id="rows">${careerRow(0)}</div>
@@ -236,7 +238,7 @@ describe("runGenericStructureLoop", () => {
       ...createEmptyProfile(),
       careers: entries(3, "career"),
     };
-    const api = mockApi();
+    const api = mockApi({ category });
     const onAction = vi.fn();
 
     const result = await runGenericStructureLoop({
@@ -375,6 +377,116 @@ describe("runGenericStructureLoop", () => {
     });
   });
 
+  it.each(["REPEAT_ADD", undefined])(
+    "keeps the existing row mappable when no add click happened (%s)",
+    async (abstained) => {
+      document.body.innerHTML = `<section>
+      <h3>경력</h3>
+      <div id="rows">${careerRow(0)}</div>
+      ${abstained ? '<button type="button" id="add">경력 추가</button>' : ""}
+    </section>`;
+      const result = await runGenericStructureLoop({
+        document,
+        profile: { ...createEmptyProfile(), careers: entries(3, "career") },
+        apiClient: mockApi(abstained ? { abstain: ["REPEAT_ADD"] } : {})
+          .client,
+      });
+      const row = document.querySelector("[ismultirow]")!;
+      if (abstained) expect(result.sections[0]?.status).toBe("BLOCKED");
+      expect(
+        [...result.context.blockedScopes.keys()].some((scope) =>
+          scope.contains(row),
+        ),
+      ).toBe(false);
+    },
+  );
+
+  it("offers a repeat group only the add controls its own section holds", async () => {
+    document.body.innerHTML = `<form><div><section>
+      <h3>학력</h3>
+      <div id="education-rows"><div ismultirow="true">
+        <label>학교명<input name="school0" /></label>
+        <label>전공<input name="major0" /></label>
+      </div></div>
+      <button type="button" id="add-education">학력 추가</button>
+    </section><section>
+      <h3>경력</h3>
+      <div id="career-rows">${careerRow(0)}${careerRow(1)}</div>
+    </section>
+    <button type="button" id="add-career">경력 추가</button></div></form>`;
+    const api = mockApi({ abstain: ["REPEAT_ADD"] });
+
+    const result = await runGenericStructureLoop({
+      document,
+      profile: {
+        ...createEmptyProfile(),
+        education: entries(2, "university"),
+        careers: entries(3, "career"),
+      },
+      apiClient: api.client,
+    });
+
+    const asked = api.decisions
+      .flatMap(({ decisions }) => decisions)
+      .filter(({ role }) => role === "REPEAT_ADD");
+    expect(
+      result.questions.flatMap(({ candidates }) => candidates),
+    ).not.toContain("경력 추가");
+    expect(asked).toHaveLength(1);
+    expect(asked[0]!.candidates).toEqual([
+      expect.objectContaining({
+        relationToTarget: "SAME_CONTAINER",
+        semanticContext: {
+          labels: [
+            { source: "label", text: "학력 추가" },
+            { source: "section-heading", text: "학력" },
+          ],
+        },
+      }),
+    ]);
+  });
+
+  it("describes an in-row add control by what it observes", async () => {
+    document.body.innerHTML = `<section>
+      <h3>자격사항</h3>
+      <div id="rows"><div ismultirow="true">
+        <label>자격증명<input name="cert0" /></label>
+        <label>발급기관<input name="issuer0" /></label>
+        <button type="button" id="add" aria-label="자격 행 추가">+</button>
+      </div></div>
+    </section>`;
+    const api = mockApi({ abstain: ["REPEAT_ADD"] });
+
+    await runGenericStructureLoop({
+      document,
+      profile: {
+        ...createEmptyProfile(),
+        certifications: entries(2, "certificate"),
+      },
+      apiClient: api.client,
+    });
+
+    const asked = api.decisions
+      .flatMap(({ decisions }) => decisions)
+      .filter(({ role }) => role === "REPEAT_ADD");
+    expect(asked).toHaveLength(1);
+    expect(asked[0]!.candidates).toEqual([
+      {
+        candidateId: expect.any(String),
+        element: "button",
+        control: "button",
+        visibility: "visible",
+        relationToTarget: "SAME_REPEAT_ROW",
+        semanticContext: {
+          labels: [
+            { source: "aria-label", text: "자격 행 추가" },
+            { source: "section-heading", text: "자격사항" },
+          ],
+        },
+      },
+    ]);
+  });
+
   it("never offers a forbidden control for a repeat group", async () => {
     document.body.innerHTML = `<form><section>
       <h3>경력</h3>
@@ -433,13 +545,13 @@ describe("runGenericStructureLoop", () => {
       ],
     };
 
-    it("links the bachelor and master entries by row kind option without the mixed-section rules", async () => {
+    it.each(["education", "EDUCATION"])("links the bachelor and master entries by row kind option without the mixed-section rules (%s)", async (category) => {
       educationDocument();
       // The default collection does use the mixed rules on this document.
       collectFieldsSnapshot(document);
       expect(vi.mocked(detectMixedSectionGroup)).toHaveBeenCalled();
       vi.clearAllMocks();
-      const api = mockApi();
+      const api = mockApi({ category });
 
       const result = await runGenericStructureLoop({
         document,
@@ -478,6 +590,42 @@ describe("runGenericStructureLoop", () => {
           .flatMap((section) => section.fields)
           .map((field) => field.displayName),
       ).toContain("대학원 학교명");
+    });
+
+    it("selects row kinds when the initial prompt omits its value attribute", async () => {
+      educationDocument();
+      document.querySelectorAll("select").forEach((select) => {
+        select.options[0].removeAttribute("value");
+        select.options[0].textContent = "선택";
+      });
+      const result = await runGenericStructureLoop({
+        document,
+        profile,
+        apiClient: mockApi({ category: "EDUCATION" }).client,
+      });
+      expect(
+        Array.from(document.querySelectorAll("select"), (select) => select.value),
+      ).toEqual(["B", "M"]);
+      expect(result.actions.filter((action) => action.result === "done")).toHaveLength(2);
+    });
+
+    it("preserves a meaningful preselected row kind that conflicts with the profile", async () => {
+      educationDocument();
+      const first = document.querySelector("select")!;
+      first.value = "M";
+      const result = await runGenericStructureLoop({
+        document,
+        profile,
+        apiClient: mockApi({ category: "EDUCATION" }).client,
+      });
+      expect(first.value).toBe("M");
+      expect(result.actions).toContainEqual({
+        kind: "SELECT_ROW_KIND",
+        sectionTitle: "학력",
+        result: "blocked",
+        reason: "ROW_KIND_MISMATCH",
+        rowIndex: 0,
+      });
     });
 
     it("blocks only the row whose revealed fields belong to another stage", async () => {

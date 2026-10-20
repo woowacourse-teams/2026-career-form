@@ -32,12 +32,15 @@ class StructureInteractionDecisionContractTest {
         TargetKind.BACHELOR, "학사 (4년제)",
         TargetKind.MASTER, "석사 3건 SYNTHETIC_NAME_7310",
         TargetKind.DOCTOR, "PhD 박사");
-    private static final Map<TargetKind, String> CANONICAL = Map.of(
-        TargetKind.HIGH_SCHOOL, "high school", TargetKind.ASSOCIATE, "associate",
-        TargetKind.BACHELOR, "bachelor", TargetKind.MASTER, "master", TargetKind.DOCTOR, "doctor");
+    private static final Map<TargetKind, String> MASKED_LABELS = Map.of(
+        TargetKind.HIGH_SCHOOL, "고등학교 졸업 SYNTHETIC_NAME_<number>",
+        TargetKind.ASSOCIATE, "전문학사 <number>.<number>",
+        TargetKind.BACHELOR, "학사 (4년제)",
+        TargetKind.MASTER, "석사 3건 SYNTHETIC_NAME_<number>",
+        TargetKind.DOCTOR, "PhD 박사");
 
     @Test
-    void roundTripsEveryRowKindTargetToItsOptionWithoutProfileOrCurrentValues() {
+    void roundTripsEveryRowKindTargetWithMaskedRawOptionLabels() {
         String json = """
             {"schemaVersion":2,"snapshotId":"row-kind-snapshot","site":{"host":"example.test","pathPattern":"/apply"},
             "decisions":[%s]}
@@ -65,7 +68,7 @@ class StructureInteractionDecisionContractTest {
                     .findFirst().orElseThrow();
                 answers.put(id, JevClient.ABSTAIN);
                 for (JsonNode candidate : tree.get(id).get("candidates")) {
-                    if (candidate.get("labels").get(0).get("text").asString().equals(CANONICAL.get(kind))) {
+                    if (candidate.get("labels").get(0).get("text").asString().equals(MASKED_LABELS.get(kind))) {
                         answers.put(id, candidate.get("candidateId").asString());
                     }
                 }
@@ -79,13 +82,14 @@ class StructureInteractionDecisionContractTest {
         assertThat(response.decisions()).extracting(InteractionDecisionResponse.Decision::candidateId)
             .containsExactly("opt-0-high_school", "opt-1-associate", "opt-2-bachelor", "opt-3-master",
                 "opt-4-doctor");
-        assertThat(captured.get()).contains("HIGH_SCHOOL", "ASSOCIATE", "BACHELOR", "MASTER", "DOCTOR")
-            .doesNotContain("SYNTHETIC_NAME_7310", "2019", "3건", "4년제", "opt-", "kind-", "row-kind-snapshot",
+        assertThat(captured.get()).contains("HIGH_SCHOOL", "ASSOCIATE", "BACHELOR", "MASTER", "DOCTOR",
+            "SYNTHETIC_NAME_<number>", "3건", "4년제")
+            .doesNotContain("SYNTHETIC_NAME_7310", "2019", "opt-", "kind-", "row-kind-snapshot",
                 "example.test", "\"value", "profile", "count");
     }
 
     @Test
-    void asksRepeatAddThroughJevWithoutCurrentValues() {
+    void asksRepeatAddThroughJevWithMaskedRawLabels() {
         String json = """
             {"schemaVersion":2,"snapshotId":"repeat-snapshot","site":{"host":"example.test","pathPattern":"/apply"},
             "decisions":[{"decisionId":"add-row","role":"REPEAT_ADD","canonicalFieldKey":"careers.career.companyName",
@@ -107,7 +111,7 @@ class StructureInteractionDecisionContractTest {
 
         assertThat(response.decisions()).containsExactly(InteractionDecisionResponse.Decision.selected(
             "add-row", InteractionDecisionRequest.Role.REPEAT_ADD, "add-button"));
-        assertThat(captured.get()).contains("REPEAT_ADD", "ADD:")
+        assertThat(captured.get()).contains("REPEAT_ADD", "ADD:", "경력 추가 SYNTHETIC_COMPANY_<number>")
             .doesNotContain("SYNTHETIC_COMPANY_5521", "add-button", "repeat-snapshot", "\"value", "profile", "count");
     }
 
