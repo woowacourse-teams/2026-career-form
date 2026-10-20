@@ -21,16 +21,20 @@ npm run coverage
 - `browser` collects only `*.browser.test.ts(x)` and uses Playwright Chromium.
 - `npm test` runs both projects. For a targeted unit test, use
   `npm run test:unit -- path/to/file.test.ts`.
-- The default reporter rejects a combined run that collects no browser
-  specifications. Do not override reporters in the CI coverage command.
+- The default reporter rejects a combined run, or a merge of shard reports,
+  that collects no browser specifications. CI shards use the blob reporter;
+  the merge step keeps the configured reporters and applies this check.
 - An absent browser installation is an error, not a skipped test.
-- One worker bounds memory and CPU contention for instrumented DOM tests.
+- Vitest uses its default worker count. A single worker made CI time equal
+  the sum of all test files and pushed heavy jsdom fixture tests past their
+  limits on slow runners (CF-304).
 - The unit runner allows 15 seconds for integrations containing two
   independently bounded five-second workflows. Production timeouts and
   assertions are unchanged. The browser project
   keeps Vitest's default test timeout.
 - Coverage includes the same product sources and keeps all four 80%
-  thresholds. `reportOnFailure` prints coverage even when a test fails; it
+  thresholds. A `--shard` run skips the thresholds because it holds only part
+  of the suite; `npm run coverage:merge` checks them on the merged coverage. `reportOnFailure` prints coverage even when a test fails; it
   does not change the failing exit status.
 
 For a visible browser run:
@@ -107,12 +111,17 @@ was relaxed.
 
 `.github/workflows/frontend-ci.yml` runs on pull requests and pushes to
 `develop`/`main`. It uses pinned Actions, Node 22, the npm lockfile cache,
-Chromium with Linux dependencies, `contents: read`, and a 30-minute limit.
+Chromium with Linux dependencies and `contents: read`.
 
-CI executes `npm run coverage` once: that command runs both projects and
-checks their combined product coverage. No `continue-on-error` or retry
-turns a failure into success. The workflow records runtime versions in its
-log and does not upload screenshots, traces or artifacts.
+CI splits the suite into three shard jobs (`npm run coverage:shard --
+--shard=<i>/3`, 20-minute limit each). Each shard uploads its blob report as
+an artifact kept for one day. The `통합 커버리지 검증` job checks that all
+three reports exist and runs `npm run coverage:merge`, which fails on any
+test failure, on missing browser specifications, or on coverage below the
+thresholds. Locally, `npm run coverage` still runs both projects in one
+command with the same checks. No `continue-on-error` or retry turns a failure
+into success. Blob reports contain test names, failure messages and coverage
+only; the workflow does not upload screenshots or traces.
 
 The user explicitly approved including this protected workflow in CF-178.
 The Issue and PR still require `harness-change`; shared-file validation is
