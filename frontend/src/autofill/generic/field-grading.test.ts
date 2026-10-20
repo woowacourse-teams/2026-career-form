@@ -40,7 +40,9 @@ describe("gradeGenericField boundaries", () => {
 
   it("returns REVIEW just below the AUTO boundary down to the REVIEW boundary", () => {
     const below = AUTO_CONFIDENCE_MIN - 0.01;
-    expect(gradeGenericField(input({ confidence: below })).grade).toBe("REVIEW");
+    expect(gradeGenericField(input({ confidence: below })).grade).toBe(
+      "REVIEW",
+    );
     expect(
       gradeGenericField(input({ confidence: REVIEW_CONFIDENCE_MIN })).grade,
     ).toBe("REVIEW");
@@ -67,7 +69,10 @@ describe("gradeGenericField boundaries", () => {
 });
 
 describe("gradeGenericField checks", () => {
-  it.each(["personal.personal.nationality", "contact.contact.residenceCountry"])(
+  it.each([
+    "personal.personal.nationality",
+    "contact.contact.residenceCountry",
+  ])(
     "blocks %s on a select whose options are country calling codes",
     (profileFieldKey) => {
       expect(
@@ -144,7 +149,10 @@ describe("gradeGenericField checks", () => {
         input({
           profileFieldKey: "education.university.schoolName",
           rowSiblings: [
-            { profileFieldKey: "education.graduateSchool.major", confidence: 0.9 },
+            {
+              profileFieldKey: "education.graduateSchool.major",
+              confidence: 0.9,
+            },
           ],
         }),
       ),
@@ -218,7 +226,9 @@ function collectFields(name: string): FieldCandidate[] {
 function gradeTable(name: string, table: Record<string, Mock>) {
   const fields = collectFields(name);
   const entries = Object.entries(table).map(([displayName, mock]) => {
-    const field = fields.find((candidate) => candidate.displayName === displayName);
+    const field = fields.find(
+      (candidate) => candidate.displayName === displayName,
+    );
     if (!field) throw new Error(`fixture field missing: ${displayName}`);
     return { displayName, mock, field };
   });
@@ -258,13 +268,43 @@ afterEach(() => document.body.replaceChildren());
 describe("gradeGenericField on sanitized fixtures", () => {
   it("grades lg-ai-research-birth-split-email fields as listed", () => {
     const table: Record<string, Mock> = {
-      "이름 *": { key: "personal.personal.koreanFamilyName", confidence: 0.9, grade: "AUTO" },
-      "전화번호 *": { key: "contact.contact.phoneNumber", confidence: 0.8, grade: "AUTO" },
-      "성별 *": { key: "personal.personal.gender", confidence: 0.65, grade: "REVIEW" },
-      "년": { key: "personal.personal.birthDate", confidence: 0.9, grade: "BLOCKED" },
-      "이메일 아이디": { key: "contact.contact.email", confidence: 0.7, confirmed: false, grade: "REVIEW" },
-      "링크": { key: "contact.contact.addressLine2", confidence: 0.9, hasValue: false, grade: "BLOCKED" },
-      "선택하세요.": { key: "personal.personal.nationality", confidence: 0.95, grade: "AUTO" },
+      "이름 *": {
+        key: "personal.personal.koreanFamilyName",
+        confidence: 0.9,
+        grade: "AUTO",
+      },
+      "전화번호 *": {
+        key: "contact.contact.phoneNumber",
+        confidence: 0.8,
+        grade: "AUTO",
+      },
+      "성별 *": {
+        key: "personal.personal.gender",
+        confidence: 0.65,
+        grade: "REVIEW",
+      },
+      년: {
+        key: "personal.personal.birthDate",
+        confidence: 0.9,
+        grade: "BLOCKED",
+      },
+      "이메일 아이디": {
+        key: "contact.contact.email",
+        confidence: 0.7,
+        confirmed: false,
+        grade: "REVIEW",
+      },
+      링크: {
+        key: "contact.contact.addressLine2",
+        confidence: 0.9,
+        hasValue: false,
+        grade: "BLOCKED",
+      },
+      "선택하세요.": {
+        key: "personal.personal.nationality",
+        confidence: 0.95,
+        grade: "AUTO",
+      },
     };
     expect(gradeTable("lg-ai-research-birth-split-email", table)).toEqual(
       Object.fromEntries(Object.entries(table).map(([k, v]) => [k, v.grade])),
@@ -273,15 +313,55 @@ describe("gradeGenericField on sanitized fixtures", () => {
 
   it("grades sk-careers-application-form fields as listed", () => {
     const table: Record<string, Mock> = {
-      "성명 *": { key: "personal.personal.koreanFamilyName", confidence: 0.95, grade: "AUTO" },
-      "생년월일 *": { key: "personal.personal.birthDate", confidence: 0.9, grade: "AUTO" },
-      "휴대폰 번호 *": { key: "contact.contact.phoneNumber", confidence: 0.85, grade: "AUTO" },
-      "이메일 *": { key: "contact.contact.email", confidence: 0.9, grade: "AUTO", row: "contact" },
-      "보조 이메일": { key: "contact.contact.email", confidence: 0.8, grade: "REVIEW", row: "contact" },
-      "병역구분 *": { key: "military.military.status", confidence: 0.4, grade: "BLOCKED" },
-      "대학 학교명 1*": { key: "education.university.schoolName", confidence: 0.9, grade: "BLOCKED", row: "edu" },
-      "대학원 학교명 1": { key: "education.graduateSchool.schoolName", confidence: 0.9, grade: "BLOCKED", row: "edu" },
-      "대학 전공 1*": { key: "education.university.major", confidence: 0.9, grade: "AUTO" },
+      "성명 *": {
+        key: "personal.personal.koreanFamilyName",
+        confidence: 0.95,
+        grade: "AUTO",
+      },
+      "생년월일 *": {
+        key: "personal.personal.birthDate",
+        confidence: 0.9,
+        grade: "AUTO",
+      },
+      "휴대폰 번호 *": {
+        key: "contact.contact.phoneNumber",
+        confidence: 0.85,
+        grade: "AUTO",
+      },
+      "이메일 *": {
+        key: "contact.contact.email",
+        confidence: 0.9,
+        grade: "AUTO",
+        row: "contact",
+      },
+      "보조 이메일": {
+        key: "contact.contact.email",
+        confidence: 0.8,
+        grade: "REVIEW",
+        row: "contact",
+      },
+      "병역구분 *": {
+        key: "military.military.status",
+        confidence: 0.4,
+        grade: "BLOCKED",
+      },
+      "대학 학교명 1*": {
+        key: "education.university.schoolName",
+        confidence: 0.9,
+        grade: "BLOCKED",
+        row: "edu",
+      },
+      "대학원 학교명 1": {
+        key: "education.graduateSchool.schoolName",
+        confidence: 0.9,
+        grade: "BLOCKED",
+        row: "edu",
+      },
+      "대학 전공 1*": {
+        key: "education.university.major",
+        confidence: 0.9,
+        grade: "AUTO",
+      },
     };
     expect(gradeTable("sk-careers-application-form", table)).toEqual(
       Object.fromEntries(Object.entries(table).map(([k, v]) => [k, v.grade])),
@@ -303,11 +383,16 @@ describe("gradeGenericField other-person context", () => {
     ["contact.contact.email", "Guarantor email"],
     ["contact.contact.phoneNumber", "Guardian phone"],
     ["contact.contact.phoneNumber", "Emergency contact phone"],
-  ])("blocks %s labelled %s even at full confidence", (profileFieldKey, name) => {
-    expect(
-      gradeGenericField(input({ profileFieldKey, displayName: name, confidence: 1 })),
-    ).toEqual(blocked);
-  });
+  ])(
+    "blocks %s labelled %s even at full confidence",
+    (profileFieldKey, name) => {
+      expect(
+        gradeGenericField(
+          input({ profileFieldKey, displayName: name, confidence: 1 }),
+        ),
+      ).toEqual(blocked);
+    },
+  );
 
   it.each(["displayName", "label", "title", "placeholder"] as const)(
     "reads the role vocabulary from %s",
@@ -330,11 +415,15 @@ describe("gradeGenericField other-person context", () => {
       profileFieldKey: "contact.contact.phoneNumber",
       displayName: "추천인 연락처",
     };
-    expect(gradeGenericField(input({ ...own, hasProfileValue: false }))).toEqual({
+    expect(
+      gradeGenericField(input({ ...own, hasProfileValue: false })),
+    ).toEqual({
       grade: "BLOCKED",
       reason: "NO_PROFILE_VALUE",
     });
-    expect(gradeGenericField(input({ ...own, inputType: "tel" }))).toEqual(blocked);
+    expect(gradeGenericField(input({ ...own, inputType: "tel" }))).toEqual(
+      blocked,
+    );
   });
 
   it("does not block keys that are not applicant personal or contact keys", () => {
@@ -349,7 +438,10 @@ describe("gradeGenericField other-person context", () => {
     ).toEqual({ grade: "AUTO" });
     expect(
       gradeGenericField(
-        input({ profileFieldKey: "careers.career.companyName", displayName: "추천인 소속" }),
+        input({
+          profileFieldKey: "careers.career.companyName",
+          displayName: "추천인 소속",
+        }),
       ),
     ).toEqual({ grade: "AUTO" });
   });
@@ -363,18 +455,27 @@ describe("gradeGenericField other-person context", () => {
     ["personal.personal.koreanFamilyName", "이름"],
     ["contact.contact.addressLine1", "주소"],
     ["contact.contact.phoneNumber", "Applicant phone"],
-  ])("leaves the applicant's own %s field labelled %s unchanged", (profileFieldKey, name) => {
-    expect(gradeGenericField(input({ profileFieldKey, displayName: name }))).toEqual({
-      grade: "AUTO",
-    });
-  });
+  ])(
+    "leaves the applicant's own %s field labelled %s unchanged",
+    (profileFieldKey, name) => {
+      expect(
+        gradeGenericField(input({ profileFieldKey, displayName: name })),
+      ).toEqual({
+        grade: "AUTO",
+      });
+    },
+  );
 });
 
 // Role-vocabulary evidence from unrelated sanitized structures; keys are fixed
 // mocks and the grading input mirrors what generic analysis passes.
 describe("gradeGenericField other-person context on sanitized fixtures", () => {
-  function gradeByName(name: string, pattern: RegExp, key: string) {
-    const field = collectFields(name).find((candidate) =>
+  function gradeByName(
+    fields: readonly FieldCandidate[],
+    pattern: RegExp,
+    key: string,
+  ) {
+    const field = fields.find((candidate) =>
       pattern.test(candidate.displayName ?? ""),
     );
     if (!field) throw new Error(`fixture field missing: ${pattern}`);
@@ -392,13 +493,23 @@ describe("gradeGenericField other-person context on sanitized fixtures", () => {
   const blocked = { grade: "BLOCKED", reason: "OTHER_PERSON_CONTEXT" };
 
   it("blocks referrer fields of kakao-greeting-email", () => {
-    expect(gradeByName("kakao-greeting-email", /^추천인 이메일/, "contact.contact.email")).toEqual(blocked);
-    expect(gradeByName("kakao-greeting-email", /^추천인 이름/, "personal.personal.koreanFamilyName")).toEqual(blocked);
+    const fields = collectFields("kakao-greeting-email");
+    expect(
+      gradeByName(fields, /^추천인 이메일/, "contact.contact.email"),
+    ).toEqual(blocked);
+    expect(
+      gradeByName(fields, /^추천인 이름/, "personal.personal.koreanFamilyName"),
+    ).toEqual(blocked);
   }, 30_000);
 
   it("keeps the applicant's own fields of lg-ai-research-birth-split-email unchanged", () => {
-    expect(gradeByName("lg-ai-research-birth-split-email", /^전화번호/, "contact.contact.phoneNumber")).toEqual({ grade: "AUTO" });
-    expect(gradeByName("lg-ai-research-birth-split-email", /^이름/, "personal.personal.koreanFamilyName")).toEqual({ grade: "AUTO" });
+    const fields = collectFields("lg-ai-research-birth-split-email");
+    expect(
+      gradeByName(fields, /^전화번호/, "contact.contact.phoneNumber"),
+    ).toEqual({ grade: "AUTO" });
+    expect(
+      gradeByName(fields, /^이름/, "personal.personal.koreanFamilyName"),
+    ).toEqual({ grade: "AUTO" });
   }, 30_000);
 });
 
@@ -484,9 +595,9 @@ describe("gradeGenericField date part selects", () => {
   });
 
   it("does not block a date part select as NON_DATE_FIELD but still blocks a plain DIRECT date select", () => {
-    expect(
-      gradeGenericField(part("YEAR", numbered(1990, 2010))),
-    ).toEqual({ grade: "AUTO" });
+    expect(gradeGenericField(part("YEAR", numbered(1990, 2010)))).toEqual({
+      grade: "AUTO",
+    });
     expect(
       gradeGenericField(
         input({
@@ -505,37 +616,40 @@ describe("gradeGenericField date part selects", () => {
     ["MONTH", numbered(1, 12, "월", true)],
     ["DAY", numbered(1, 31, "일")],
     ["DAY", numbered(1, 31, "", true)],
-  ] as const)("passes a %s select whose options fit the part", (kind, names) => {
-    expect(gradeGenericField(part(kind, names))).toEqual({ grade: "AUTO" });
-  });
+  ] as const)(
+    "passes a %s select whose options fit the part",
+    (kind, names) => {
+      expect(gradeGenericField(part(kind, names))).toEqual({ grade: "AUTO" });
+    },
+  );
 
   it("blocks a text control and options that do not fit the part", () => {
     const mismatch = { grade: "BLOCKED", reason: "DATE_PART_OPTIONS_MISMATCH" };
     expect(
-      gradeGenericField(part("YEAR", numbered(1990, 2010), { control: "text" })),
+      gradeGenericField(
+        part("YEAR", numbered(1990, 2010), { control: "text" }),
+      ),
     ).toEqual(mismatch);
     expect(
       gradeGenericField(part("MONTH", ["4.5", "4.0", "3.5", "3.0", "2.5"])),
     ).toEqual(mismatch);
-    expect(
-      gradeGenericField(part("MONTH", numbered(1990, 2010))),
-    ).toEqual(mismatch);
-    expect(
-      gradeGenericField(part("DAY", numbered(1, 12))),
-    ).not.toEqual(mismatch);
-    expect(
-      gradeGenericField(part("DAY", ["가", "나", "다"])),
-    ).toEqual(mismatch);
+    expect(gradeGenericField(part("MONTH", numbered(1990, 2010)))).toEqual(
+      mismatch,
+    );
+    expect(gradeGenericField(part("DAY", numbered(1, 12)))).not.toEqual(
+      mismatch,
+    );
+    expect(gradeGenericField(part("DAY", ["가", "나", "다"]))).toEqual(
+      mismatch,
+    );
   });
 
   it("blocks when the local date part is missing from the options or ambiguous", () => {
     const mismatch = { grade: "BLOCKED", reason: "DATE_PART_OPTIONS_MISMATCH" };
-    expect(
-      gradeGenericField(part("YEAR", numbered(2005, 2020))),
-    ).toEqual(mismatch);
-    expect(
-      gradeGenericField(part("MONTH", numbered(2, 12))),
-    ).toEqual(mismatch);
+    expect(gradeGenericField(part("YEAR", numbered(2005, 2020)))).toEqual(
+      mismatch,
+    );
+    expect(gradeGenericField(part("MONTH", numbered(2, 12)))).toEqual(mismatch);
     expect(
       gradeGenericField(part("MONTH", [...numbered(1, 12), "01월"])),
     ).toEqual(mismatch);
@@ -567,6 +681,78 @@ describe("gradeGenericField date part selects", () => {
       gradeGenericField(
         part("YEAR", numbered(1990, 2010), { rowSiblings: [sibling("MONTH")] }),
       ),
+    ).toEqual({ grade: "AUTO" });
+  });
+});
+
+describe("gradeGenericField select and radio option values", () => {
+  const key = "military.military.militaryStatus";
+  const radio = (value: string | undefined, ...names: string[]) =>
+    input({
+      profileFieldKey: key,
+      control: "radio",
+      displayName: "병역구분",
+      options: options(...names),
+      optionValueCheck: { profileValue: value },
+    });
+
+  it.each([
+    ["a stored standard value id", "military-status:served", ["비대상", "군필", "미필"]],
+    ["a stored standard label", "군필", ["비대상", "군필", "미필"]],
+    ["another unrelated option set", "군필", ["대상 아님", "군필", "복무중"]],
+  ])("keeps %s with exactly one matching option as AUTO", (_name, value, names) => {
+    expect(gradeGenericField(radio(value, ...names))).toEqual({ grade: "AUTO" });
+  });
+
+  it.each([
+    ["no matching option", "military-status:served", ["비대상", "미필"]],
+    ["two matching options", "군필", ["군필", " 군필 ", "미필"]],
+    ["a missing local value", undefined, ["군필", "미필"]],
+    ["no options at all", "군필", []],
+  ])("blocks a radio with %s", (_name, value, names) => {
+    expect(gradeGenericField(radio(value, ...names))).toEqual({
+      grade: "BLOCKED",
+      reason: "OPTION_VALUE_UNMATCHED",
+    });
+  });
+
+  it.each([
+    ["a language score and grade options", "languages.languageTest.grade", "850", ["A등급", "B등급"]],
+    ["another score and grade options", "languages.languageTest.grade", "7.5", ["1급", "2급"]],
+  ])("blocks a numeric value on a grade select (%s)", (_name, scoreKey, value, names) => {
+    expect(
+      gradeGenericField(
+        input({
+          profileFieldKey: scoreKey,
+          control: "select",
+          options: options(...names),
+          optionValueCheck: { profileValue: value },
+        }),
+      ),
+    ).toEqual({ grade: "BLOCKED", reason: "OPTION_VALUE_UNMATCHED" });
+  });
+
+  it("matches a free-text value only on a normalized exact option", () => {
+    const grade = (value: string, ...names: string[]) =>
+      gradeGenericField(
+        input({
+          profileFieldKey: "certifications.certificate.grade",
+          control: "select",
+          options: options(...names),
+          optionValueCheck: { profileValue: value },
+        }),
+      );
+    expect(grade("1급", "1급", "2급").grade).toBe("AUTO");
+    expect(grade(" ＡＢ ", "ab", "cd").grade).toBe("AUTO");
+    expect(grade("1급", "1급 이상", "2급").reason).toBe("OPTION_VALUE_UNMATCHED");
+  });
+
+  it("does not check text controls or fields without the check input", () => {
+    expect(
+      gradeGenericField(input({ control: "text", optionValueCheck: { profileValue: "x" } })),
+    ).toEqual({ grade: "AUTO" });
+    expect(
+      gradeGenericField(input({ control: "select", options: options("가") })),
     ).toEqual({ grade: "AUTO" });
   });
 });

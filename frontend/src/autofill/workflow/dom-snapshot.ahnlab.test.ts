@@ -25,7 +25,7 @@ afterEach(() => document.body.replaceChildren());
 function collect(mutate?: () => void) {
   document.body.innerHTML = readFileSync(FIXTURE, "utf8");
   mutate?.();
-  const snapshot = collectFieldsSnapshot(document);
+  const snapshot = collectFieldsSnapshot(document, undefined, { titleNameCues: true });
   const fields = snapshot.request.sections.flatMap((section) => [
     ...section.fields,
     ...(section.items ?? []).flatMap((item) => item.fields),
@@ -66,11 +66,13 @@ function mockApi(
             profileFieldKey: key ?? null,
             confidence: 1,
             categoryConfirmed: true,
-            ...(key ? {
-              interactionStatus: "READY" as const,
-              autofillPolicy: "ALLOWED" as const,
-              writePlan: { command: "SET_TEXT" as const },
-            } : { interactionStatus: "BLOCKED" as const }),
+            ...(key
+              ? {
+                  interactionStatus: "READY" as const,
+                  autofillPolicy: "ALLOWED" as const,
+                  writePlan: { command: "SET_TEXT" as const },
+                }
+              : { interactionStatus: "BLOCKED" as const }),
           };
         }),
       ),
@@ -84,11 +86,14 @@ function mockApi(
 describe("AhnLab sanitized application form", () => {
   it("keeps broken single-control labels in the generic collection path", async () => {
     collect(() => {
-      document.querySelector('label[for="englishName"]')!
+      document
+        .querySelector('label[for="englishName"]')!
         .setAttribute("for", "missing-target");
     });
     const snapshot = await collectFieldsSnapshotWithDropdowns(document);
-    const fields = snapshot.request.sections.flatMap((section) => section.fields);
+    const fields = snapshot.request.sections.flatMap(
+      (section) => section.fields,
+    );
     expect(fields[0]?.displayName).toBe("영문이름");
     expect(fields[0]?.semanticContext?.labels).toContainEqual({
       source: "label",
@@ -112,6 +117,10 @@ describe("AhnLab sanitized application form", () => {
     });
     expect(postalField.semanticContext?.inputMode).toBeUndefined();
     expect(postalField.semanticContext?.autocomplete).toBeUndefined();
+    expect(postalField.semanticContext?.labels).toContainEqual({
+      source: "label",
+      text: "우편번호",
+    });
   });
 
   it("gains a postal display name only after an in-memory aria-label mutation", () => {
@@ -142,7 +151,10 @@ describe("AhnLab sanitized application form", () => {
       );
     });
     expect(heading.parentElement!.querySelectorAll("input")).toHaveLength(4);
-    expect(additional.map((field) => field.control)).toEqual(["checkbox", "text"]);
+    expect(additional.map((field) => field.control)).toEqual([
+      "checkbox",
+      "text",
+    ]);
     expect(additional[0]?.options).toHaveLength(3);
     const result = await analyzeGenericFields(
       snapshot,
@@ -165,55 +177,61 @@ describe("AhnLab sanitized application form", () => {
     ["original title", "contact.contact.postalCode", "AUTO"],
     ["autocomplete mutation", "contact.contact.addressLine1", "BLOCKED"],
     ["autocomplete mutation", "contact.contact.postalCode", "AUTO"],
-  ])("applies %s with %s before review and writing", async (hint, key, expectedGrade) => {
-    const { snapshot, postalField, postal } = collect(() => {
-      if (hint === "autocomplete mutation")
-        document.querySelector<HTMLInputElement>('input[title="우편번호"]')!
-          .autocomplete = "postal-code";
-    });
-    const profile = createEmptyProfile();
-    profile.contact.addressLine1 = "합성 기본주소";
-    profile.contact.postalCode = "12345";
-    const result = await analyzeGenericFields(
-      snapshot,
-      document,
-      mockApi(new Map([[postalField.candidateId, key]])),
-      profile,
-      createGenericAnalysisCache(),
-    );
-    const grade = result.grades.get(postalField.candidateId);
-    expect(grade?.grade).toBe(expectedGrade);
-    if (expectedGrade === "BLOCKED")
-      expect(grade?.reason).toBe("FORMAT_KEY_MISMATCH");
-    const plan = buildReviewPlan({
-      analysis: result.analysis,
-      profile,
-      registry: snapshot.registry,
-    });
-    const items = plan.items.map((item) =>
-      applyGenericGrade(item, result.grades.get(item.candidateId)),
-    );
-    const item = items.find((entry) => entry.candidateId === postalField.candidateId)!;
-    const events: string[] = [];
-    postal.addEventListener("input", () => events.push("input"));
-    postal.addEventListener("change", () => events.push("change"));
-    if (expectedGrade === "BLOCKED") {
-      expect(item).toMatchObject({ selected: false, disabled: true });
-    }
-    const writes = executeApprovedWrites({
-      items,
-      approvedCandidateIds: new Set([postalField.candidateId]),
-      registry: snapshot.registry,
-    });
-    if (expectedGrade === "BLOCKED") {
-      expect(postal.value).toBe("");
-      expect(events).toEqual([]);
-      expect(writes.every((write) => write.status !== "written")).toBe(true);
-    } else {
-      expect(postal.value).toBe("12345");
-      expect(writes.some((write) => write.status === "written")).toBe(true);
-    }
-  });
+  ])(
+    "applies %s with %s before review and writing",
+    async (hint, key, expectedGrade) => {
+      const { snapshot, postalField, postal } = collect(() => {
+        if (hint === "autocomplete mutation")
+          document.querySelector<HTMLInputElement>(
+            'input[title="우편번호"]',
+          )!.autocomplete = "postal-code";
+      });
+      const profile = createEmptyProfile();
+      profile.contact.addressLine1 = "합성 기본주소";
+      profile.contact.postalCode = "12345";
+      const result = await analyzeGenericFields(
+        snapshot,
+        document,
+        mockApi(new Map([[postalField.candidateId, key]])),
+        profile,
+        createGenericAnalysisCache(),
+      );
+      const grade = result.grades.get(postalField.candidateId);
+      expect(grade?.grade).toBe(expectedGrade);
+      if (expectedGrade === "BLOCKED")
+        expect(grade?.reason).toBe("FORMAT_KEY_MISMATCH");
+      const plan = buildReviewPlan({
+        analysis: result.analysis,
+        profile,
+        registry: snapshot.registry,
+      });
+      const items = plan.items.map((item) =>
+        applyGenericGrade(item, result.grades.get(item.candidateId)),
+      );
+      const item = items.find(
+        (entry) => entry.candidateId === postalField.candidateId,
+      )!;
+      const events: string[] = [];
+      postal.addEventListener("input", () => events.push("input"));
+      postal.addEventListener("change", () => events.push("change"));
+      if (expectedGrade === "BLOCKED") {
+        expect(item).toMatchObject({ selected: false, disabled: true });
+      }
+      const writes = executeApprovedWrites({
+        items,
+        approvedCandidateIds: new Set([postalField.candidateId]),
+        registry: snapshot.registry,
+      });
+      if (expectedGrade === "BLOCKED") {
+        expect(postal.value).toBe("");
+        expect(events).toEqual([]);
+        expect(writes.every((write) => write.status !== "written")).toBe(true);
+      } else {
+        expect(postal.value).toBe("12345");
+        expect(writes.some((write) => write.status === "written")).toBe(true);
+      }
+    },
+  );
 
   it.each(["contact.contact.phoneNumber", "contact.contact.email"])(
     "blocks the referrer contact field matched to the applicant's own %s",
@@ -263,4 +281,74 @@ describe("AhnLab sanitized application form", () => {
       expect(writes.every((write) => write.status !== "written")).toBe(true);
     },
   );
+
+  it("blocks a referrer name field matched to a Korean full name recipe", async () => {
+    const { snapshot, fields } = collect(() => {
+      // A name field labelled with the role word, in an enabled referrer area.
+      document.querySelector('label[for="anon-id-4"]')!.textContent =
+        "추천인 성명";
+    });
+    const target = document.getElementById("anon-id-4") as HTMLInputElement;
+    const referrerName = fields.find((field) => {
+      const lookup = snapshot.registry.lookupField(field.candidateId);
+      return "handle" in lookup && lookup.handle.elements.includes(target);
+    })!;
+    expect(referrerName.displayName).toBe("추천인 성명");
+    const profile = createEmptyProfile();
+    profile.personal.koreanFamilyName = "합성";
+    profile.personal.koreanGivenName = "이름";
+    const api = mockApi();
+    const analyze = api.analyzeGenericFields;
+    api.analyzeGenericFields = async (request) => {
+      const response = await analyze(request);
+      return {
+        ...response,
+        fields: response.fields.map((field) =>
+          field.candidateId === referrerName.candidateId
+            ? {
+                ...field,
+                confidence: 1,
+                categoryConfirmed: true,
+                interactionStatus: "READY" as const,
+                autofillPolicy: "ALLOWED" as const,
+                writePlan: { command: "SET_TEXT" as const },
+                binding: {
+                  type: "DERIVED" as const,
+                  recipe: "KOREAN_FULL_NAME" as const,
+                },
+              }
+            : field,
+        ),
+      };
+    };
+    const result = await analyzeGenericFields(
+      snapshot,
+      document,
+      api,
+      profile,
+      createGenericAnalysisCache(),
+    );
+    expect(result.grades.get(referrerName.candidateId)).toEqual({
+      grade: "BLOCKED",
+      reason: "OTHER_PERSON_CONTEXT",
+    });
+    const plan = buildReviewPlan({
+      analysis: result.analysis,
+      profile,
+      registry: snapshot.registry,
+    });
+    const items = plan.items.map((item) =>
+      applyGenericGrade(item, result.grades.get(item.candidateId)),
+    );
+    expect(
+      items.find((item) => item.candidateId === referrerName.candidateId),
+    ).toMatchObject({ selected: false, disabled: true });
+    const writes = executeApprovedWrites({
+      items,
+      approvedCandidateIds: new Set([referrerName.candidateId]),
+      registry: snapshot.registry,
+    });
+    expect(target.value).toBe("");
+    expect(writes.every((write) => write.status !== "written")).toBe(true);
+  });
 });

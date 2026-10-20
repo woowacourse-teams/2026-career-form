@@ -215,6 +215,77 @@ describe("isSafeStructuralClick", () => {
   });
 });
 
+describe.each(["section", "dialog"])("confirmation cleanup in %s", (kind) => {
+  function confirmation(html: string) {
+    document.body.innerHTML =
+      kind === "section"
+        ? `<section data-scope><table><tbody><tr><td>${html}</td></tr></tbody></table></section>`
+        : `<div role="dialog" data-scope><aside>${html}</aside></div>`;
+    return {
+      scope: document.querySelector("[data-scope]")!,
+      target: document.querySelector("[data-target]")!,
+    };
+  }
+
+  it.each(["확인", "confirm", "ok"])(
+    "allows only opted-in bare %s",
+    (label) => {
+      const { scope, target } = confirmation(
+        `<button type="button" data-target>${label}</button>`,
+      );
+      expect(isSafeSurfaceCloseClick(target, scope)).toMatchObject({
+        allowed: false,
+      });
+      expect(
+        isSafeSurfaceCloseClick(target, scope, { allowConfirmation: true }),
+      ).toEqual({ allowed: true });
+    },
+  );
+
+  it.each([
+    '<button type="button" hidden data-target>확인</button>',
+    '<div style="display:none"><button type="button" data-target>확인</button></div>',
+    '<button type="button" disabled data-target>확인</button>',
+    '<div aria-disabled="true"><button type="button" data-target>확인</button></div>',
+    '<input type="submit" value="확인" data-target>',
+    '<button type="submit" data-target>확인</button>',
+    "<form><button data-target>확인</button></form>",
+    '<a href="#" data-target>확인</a>',
+    "<a data-target>확인</a>",
+    '<button type="button" target="_blank" data-target>확인</button>',
+    ...[
+      "form",
+      "formaction",
+      "formmethod",
+      "formtarget",
+      "formenctype",
+      "formnovalidate",
+    ].map(
+      (attribute) =>
+        `<button type="button" ${attribute}="test" data-target>확인</button>`,
+    ),
+    ...["저장", "제출", "이동", "검색", "삭제", "직접입력"].map(
+      (label) =>
+        `<button type="button" aria-label="${label}" data-target>확인</button>`,
+    ),
+  ])("rejects confirmation hazard %s", (html) => {
+    const { scope, target } = confirmation(html);
+    expect(
+      isSafeSurfaceCloseClick(target, scope, { allowConfirmation: true }),
+    ).toMatchObject({ allowed: false });
+  });
+
+  it("rejects confirmation outside the owned surface", () => {
+    const { scope, target } = confirmation(
+      '<button type="button" data-target>확인</button>',
+    );
+    document.body.append(target);
+    expect(
+      isSafeSurfaceCloseClick(target, scope, { allowConfirmation: true }),
+    ).toMatchObject({ allowed: false });
+  });
+});
+
 describe("isSafeSurfaceCloseClick", () => {
   beforeEach(() => {
     document.body.innerHTML = "";
