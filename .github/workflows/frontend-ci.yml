@@ -10,13 +10,13 @@ permissions:
 
 jobs:
   test:
-    name: 테스트 shard ${{ matrix.shard }}/3
+    name: 테스트 shard ${{ matrix.shard }}/8
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
     defaults:
       run:
         working-directory: frontend
@@ -39,8 +39,10 @@ jobs:
           node --input-type=module -e 'import { chromium } from "playwright"; const browser = await chromium.launch(); console.log("Chromium", browser.version()); await browser.close();'
           uname -sr
           nproc
+      # One worker per shard: parallel jsdom workers on one hosted runner made
+      # heavy fixture tests 2-3x slower and hit their timeouts (CF-304).
       - name: 단위 및 브라우저 테스트 shard 실행
-        run: npm run coverage:shard -- --shard=${{ matrix.shard }}/3
+        run: npm run coverage:shard -- --shard=${{ matrix.shard }}/8 --maxWorkers=1
       - name: shard 보고서 업로드
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -78,6 +80,6 @@ jobs:
       - name: shard 보고서 수 확인
         run: |
           ls -l .vitest-reports
-          test "$(find .vitest-reports -name 'blob-*-3.json' | wc -l)" -eq 3
+          test "$(find .vitest-reports -name 'blob-*-8.json' | wc -l)" -eq 8
       - name: 병합 결과의 테스트, 브라우저 수집과 커버리지 기준 검증
         run: npm run coverage:merge

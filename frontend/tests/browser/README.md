@@ -25,9 +25,9 @@ npm run coverage
   that collects no browser specifications. CI shards use the blob reporter;
   the merge step keeps the configured reporters and applies this check.
 - An absent browser installation is an error, not a skipped test.
-- Vitest uses its default worker count. A single worker made CI time equal
-  the sum of all test files and pushed heavy jsdom fixture tests past their
-  limits on slow runners (CF-304).
+- Local runs use Vitest's default worker count. CI runs one worker per
+  shard: on a 4 vCPU hosted runner, parallel workers made heavy jsdom fixture
+  tests 2-3x slower and pushed them past their timeouts (CF-304).
 - The unit runner allows 15 seconds for integrations containing two
   independently bounded five-second workflows. Production timeouts and
   assertions are unchanged. The browser project
@@ -113,10 +113,10 @@ was relaxed.
 `develop`/`main`. It uses pinned Actions, Node 22, the npm lockfile cache,
 Chromium with Linux dependencies and `contents: read`.
 
-CI splits the suite into three shard jobs (`npm run coverage:shard --
---shard=<i>/3`, 20-minute limit each). Each shard uploads its blob report as
-an artifact kept for one day. The `통합 커버리지 검증` job checks that all
-three reports exist and runs `npm run coverage:merge`, which fails on any
+CI splits the suite into eight shard jobs (`npm run coverage:shard --
+--shard=<i>/8 --maxWorkers=1`, 20-minute limit each). Each shard prints the
+default report and uploads its blob report as an artifact kept for one day.
+The `통합 커버리지 검증` job checks that all eight reports exist and runs `npm run coverage:merge`, which fails on any
 test failure, on missing browser specifications, or on coverage below the
 thresholds. Locally, `npm run coverage` still runs both projects in one
 command with the same checks. No `continue-on-error` or retry turns a failure

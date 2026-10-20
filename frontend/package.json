@@ -9,7 +9,7 @@
   "scripts": {
     "build": "wxt build && node scripts/assert-build.mjs",
     "coverage": "vitest run --coverage",
-    "coverage:shard": "vitest run --coverage --reporter=blob",
+    "coverage:shard": "vitest run --coverage --reporter=default --reporter=blob",
     "coverage:merge": "vitest run --merge-reports --coverage",
     "dev": "wxt",
     "format": "prettier --write .",
