@@ -59,8 +59,73 @@ class InteractionObservationProjectorTest {
         assertThat(project(Role.SEARCH_POPUP_OPENER, "석사 학교명 검색", null).labels())
             .extracting(InteractionDecisionProvider.SemanticLabel::text)
             .containsExactly("school name; search");
+        assertThat(project(Role.SEARCH_POPUP_OPENER, "내용추가 학력사항 삭제 저장 학교명 검색", null).labels())
+            .extracting(InteractionDecisionProvider.SemanticLabel::text)
+            .containsExactly("school name; search");
         assertThat(projector().project(request(Role.SEARCH_POPUP_OPENER, "검색", null)).batch().decisions()
             .getFirst().targetKind()).isNull();
+    }
+
+    @Test
+    void keepsRepeatAddControlAndSectionHeadingAsCanonicalEvidence() {
+        Candidate candidate = new Candidate("add-button", Element.BUTTON, Control.BUTTON, Visibility.VISIBLE,
+            null, null, null, RelationToTarget.SAME_REPEAT_ROW,
+            new SemanticContext(List.of(new SemanticLabel(SemanticSource.LABEL, "내용추가"),
+                new SemanticLabel(SemanticSource.SECTION_HEADING, "학력사항* SYNTHETIC_NAME_7310")), null));
+        var request = new InteractionDecisionRequest(2, "repeat-snapshot",
+            new InteractionDecisionRequest.Site("example.test", "/application"),
+            List.of(new Decision("add-row", Role.REPEAT_ADD, "education.university.schoolName", List.of(candidate))));
+
+        var projected = projector().project(request).batch().decisions().getFirst().candidates().getFirst();
+
+        assertThat(projected.labels()).containsExactly(
+            new InteractionDecisionProvider.SemanticLabel("label", "add"),
+            new InteractionDecisionProvider.SemanticLabel("section-heading", "education"));
+        assertThat(projected.relationToTarget()).isEqualTo(RelationToTarget.SAME_REPEAT_ROW);
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "내용추가|add", "행 추가|add", "항목 추가|add", "ADD|add",
+        "학력사항*|education", "Education|education", "경력사항|career", "Career|career",
+        "자격사항|certificate", "Certification|certificate", "Certificate|certificate",
+        "어학사항|language", "Language|language", "프로젝트|project", "Project|project",
+        "논문|publication", "Publication|publication", "삭제|delete", "Delete|delete", "Remove|delete",
+        "저장|save", "Save|save", "초기화|reset", "Reset|reset"
+    })
+    void keepsFiniteStructureVocabularyOnlyForStructureActions(String label, String expected) {
+        for (Role role : List.of(Role.REPEAT_ADD, Role.SECTION_REVEAL)) {
+            assertThat(project(role, label + " SYNTHETIC_NAME_7310", null).labels())
+                .extracting(InteractionDecisionProvider.SemanticLabel::text).containsExactly(expected);
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "Address|''", "Additional info|''", "padding|''", "Unsaved|''", "saved-search|search",
+        "educational|''", "careers|''", "uncertified|''", "languages|''", "projection|''",
+        "publications|''", "deleted|''", "removed|''", "preset|''"
+    })
+    void rejectsNewEnglishVocabularyInsideOtherWords(String label, String expected) {
+        for (Role role : List.of(Role.REPEAT_ADD, Role.SECTION_REVEAL)) {
+            var labels = project(role, label, null).labels();
+            if (expected.isEmpty()) {
+                assertThat(labels).isEmpty();
+            }
+            else {
+                assertThat(labels).extracting(InteractionDecisionProvider.SemanticLabel::text).containsExactly(expected);
+            }
+        }
+    }
+
+    @Test
+    void retainsStructureActionsBeforeGenericTermsAtSixTermLimit() {
+        for (Role role : List.of(Role.REPEAT_ADD, Role.SECTION_REVEAL)) {
+            assertThat(project(role, "학교명 대학교 대학원 고등학교 검색 입력 추가 삭제 저장 초기화 학력", null).labels())
+                .extracting(InteractionDecisionProvider.SemanticLabel::text)
+                .containsExactly("delete; save; reset; add; education; school name");
+        }
+        assertThat(project(Role.REPEAT_ADD, "SYNTHETIC_NAME_7310 2019.03", null).labels()).isEmpty();
     }
 
     private static InteractionDecisionProvider.Candidate project(Role role, String label, TargetKind kind) {

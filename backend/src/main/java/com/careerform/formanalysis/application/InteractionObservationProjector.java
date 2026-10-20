@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import org.springframework.stereotype.Component;
 
@@ -40,6 +42,29 @@ final class InteractionObservationProjector {
         term("confirm", "confirm"),
         term("submit", "submit")
     );
+    private static final List<Term> STRUCTURE_TERMS = Stream.concat(Stream.of(
+        term("삭제", "delete"),
+        wordTerm("delete", "delete"),
+        wordTerm("remove", "delete"),
+        term("저장", "save"),
+        wordTerm("save", "save"),
+        term("초기화", "reset"),
+        wordTerm("reset", "reset"),
+        term("추가", "add"),
+        wordTerm("add", "add"),
+        term("학력", "education"),
+        wordTerm("education", "education"),
+        term("경력", "career"),
+        wordTerm("career", "career"),
+        term("자격", "certificate"),
+        wordTerm("certificat", "certificate"),
+        term("어학", "language"),
+        wordTerm("language", "language"),
+        term("프로젝트", "project"),
+        wordTerm("project", "project"),
+        term("논문", "publication"),
+        wordTerm("publication", "publication")
+    ), TERMS.stream()).toList();
     private static final List<Term> EDUCATION_LEVEL_TERMS = List.of(
         term("고등학교", "high school"),
         term("high school", "high school"),
@@ -81,7 +106,9 @@ final class InteractionObservationProjector {
                 candidates.add(project(candidateAlias, candidate,
                     decision.role().name().startsWith("SEARCH_RESULT_"),
                     decision.role().name().startsWith("CALENDAR_"),
-                    decision.role() == InteractionDecisionRequest.Role.ROW_KIND_OPTION));
+                    decision.role() == InteractionDecisionRequest.Role.ROW_KIND_OPTION,
+                    decision.role() == InteractionDecisionRequest.Role.REPEAT_ADD
+                        || decision.role() == InteractionDecisionRequest.Role.SECTION_REVEAL));
                 candidateIds.put(candidateAlias, candidate.candidateId());
             }
             decisions.add(new InteractionDecisionProvider.Decision(
@@ -110,7 +137,8 @@ final class InteractionObservationProjector {
         InteractionDecisionRequest.Candidate candidate,
         boolean resultRole,
         boolean calendarRole,
-        boolean rowKindRole
+        boolean rowKindRole,
+        boolean structureRole
     ) {
         List<InteractionDecisionProvider.SemanticLabel> labels = new ArrayList<>();
         if (!resultRole && !calendarRole && candidate.semanticContext() != null
@@ -119,7 +147,7 @@ final class InteractionObservationProjector {
                 : candidate.semanticContext().labels()) {
                 String sanitized = rowKindRole
                     ? sanitizeEducationLevel(label.text())
-                    : sanitize(label.text());
+                    : sanitize(label.text(), structureRole);
                 if (sanitized != null) {
                     labels.add(new InteractionDecisionProvider.SemanticLabel(
                         label.source().name().toLowerCase(Locale.ROOT)
@@ -146,7 +174,7 @@ final class InteractionObservationProjector {
         );
     }
 
-    private static String sanitize(String raw) {
+    private static String sanitize(String raw, boolean structureRole) {
         if (raw == null || raw.isBlank()) {
             return null;
         }
@@ -155,8 +183,9 @@ final class InteractionObservationProjector {
             .replaceAll("\\s+", " ")
             .trim();
         Set<String> canonical = new LinkedHashSet<>();
-        for (Term term : TERMS) {
-            if (normalized.contains(term.match())) {
+        for (Term term : structureRole ? STRUCTURE_TERMS : TERMS) {
+            if (term.wordPattern() == null ? normalized.contains(term.match())
+                : term.wordPattern().matcher(normalized).find()) {
                 canonical.add(term.canonical());
                 if (canonical.size() == MAX_TERMS) {
                     break;
@@ -189,10 +218,15 @@ final class InteractionObservationProjector {
     }
 
     private static Term term(String match, String canonical) {
-        return new Term(match, canonical);
+        return new Term(match, canonical, null);
     }
 
-    private record Term(String match, String canonical) {
+    private static Term wordTerm(String match, String canonical) {
+        return new Term(match, canonical, Pattern.compile("\\b" + match
+            + (match.equals("certificat") ? "[a-z]*" : "") + "\\b", Pattern.UNICODE_CHARACTER_CLASS));
+    }
+
+    private record Term(String match, String canonical, Pattern wordPattern) {
     }
 
     record Projection(
