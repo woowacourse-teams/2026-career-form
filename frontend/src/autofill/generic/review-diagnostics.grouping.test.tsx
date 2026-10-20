@@ -9,7 +9,10 @@ import { afterEach, expect, it, vi } from "vitest";
 import type { WorkflowAdapter } from "../adapters/workflow";
 import type { ReviewPlanItem } from "../review/review-plan";
 import { WorkflowScreens } from "../workflow/WorkflowScreens";
-import { buildReviewDiagnostics } from "./review-diagnostics";
+import {
+  buildReviewDiagnostics,
+  type ReviewDiagnosticContext,
+} from "./review-diagnostics";
 
 afterEach(cleanup);
 
@@ -31,6 +34,30 @@ function field(
     genericGrade: "AUTO",
     ...overrides,
   };
+}
+
+function renderReview(items: readonly ReviewPlanItem[]) {
+  render(
+    <WorkflowScreens
+      stage="review"
+      preparationItems={[]}
+      warnings={[]}
+      revealedPreparationKeys={new Set()}
+      selectedPreparationKeys={new Set()}
+      setRevealedPreparationKeys={vi.fn()}
+      setSelectedPreparationKeys={vi.fn()}
+      executePreparation={vi.fn()}
+      reviewItems={items}
+      partial={false}
+      toggleReviewItem={vi.fn()}
+      executeWrites={vi.fn()}
+      results={[]}
+      adapter={{} as WorkflowAdapter}
+      workflowDiagnostics={[]}
+      exceptionTitle=""
+      onExit={vi.fn()}
+    />,
+  );
 }
 
 it("exports actual review panel membership instead of the source generic grade", () => {
@@ -72,27 +99,22 @@ it("exports actual review panel membership instead of the source generic grade",
     }),
   ];
   const before = structuredClone(items);
-  render(
-    <WorkflowScreens
-      stage="review"
-      preparationItems={[]}
-      warnings={[]}
-      revealedPreparationKeys={new Set()}
-      selectedPreparationKeys={new Set()}
-      setRevealedPreparationKeys={vi.fn()}
-      setSelectedPreparationKeys={vi.fn()}
-      executePreparation={vi.fn()}
-      reviewItems={items}
-      partial={false}
-      toggleReviewItem={vi.fn()}
-      executeWrites={vi.fn()}
-      results={[]}
-      adapter={{} as WorkflowAdapter}
-      workflowDiagnostics={[]}
-      exceptionTitle=""
-      onExit={vi.fn()}
-    />,
+  const contexts = new Map<string, ReviewDiagnosticContext>(
+    items.map((entry, index) => [
+      entry.candidateId,
+      {
+        candidate: {
+          candidateId: entry.candidateId,
+          element: "input",
+          control: "text",
+          visibility: "visible",
+        },
+        sectionCategory: "none",
+        repeatRowIndex: index,
+      },
+    ]),
   );
+  renderReview(items);
   // The selected-count badge also includes selected exceptional items (4),
   // while the planned panel contains only field 0. Compare item membership.
   expect(screen.getByRole("tab", { name: "자동 기입 예정 4" })).toBeVisible();
@@ -105,7 +127,7 @@ it("exports actual review panel membership instead of the source generic grade",
     },
     { tab: "입력 불가 1", grade: "BLOCKED", labels: ["Field 5"] },
   ];
-  const diagnostics = buildReviewDiagnostics(items, new Map());
+  const diagnostics = buildReviewDiagnostics(items, contexts);
   for (const group of expected) {
     fireEvent.click(screen.getByRole("tab", { name: group.tab }));
     const panel = screen.getByRole("tabpanel", { name: group.tab });
@@ -115,42 +137,112 @@ it("exports actual review panel membership instead of the source generic grade",
       );
     }
     expect(
-      diagnostics.fields.flatMap((entry, index) =>
-        entry.grade === group.grade ? [items[index]!.fieldLabel] : [],
-      ),
-    ).toEqual(group.labels);
+      diagnostics.fields
+        .filter((entry) => entry.grade === group.grade)
+        .map((entry) => items[entry.repeatRowIndex!]!.fieldLabel)
+        .sort(),
+    ).toEqual([...group.labels].sort());
   }
   expect(diagnostics.fields).toHaveLength(items.length);
-  expect(diagnostics.fields.map((entry) => entry.reasonCode)).toEqual([
-    null,
-    null,
-    "MODERATE_CONFIDENCE",
-    null,
-    null,
-    "STRUCTURE_BLOCKED",
-    "NO_FIELD_CONTEXT",
-  ]);
+  for (const entry of diagnostics.fields) {
+    expect(entry.reasonCode).toBe(
+      items[entry.repeatRowIndex!]!.genericReasonCode ?? null,
+    );
+  }
   expect(items).toEqual(before);
 });
 
-it("retains entries without display metadata rather than filtering to match counts", () => {
-  const hidden = field(0, {
-    genericGrade: undefined,
-    status: "unavailable",
-    selected: false,
-    disabled: true,
-    genericReasonCode: "UNLINKED",
-  });
-  const result = buildReviewDiagnostics([hidden], new Map());
-  expect(result.fields).toEqual([
-    {
-      grade: "BLOCKED",
-      reasonCode: "UNLINKED",
-      sectionCategory: "none",
-      repeatRowIndex: null,
-      controlKind: "other",
-      mapped: false,
-      mappedKeyCategory: null,
-    },
-  ]);
-});
+// The previous retention test covered all internal review items. Diagnostics
+// describe the review screen instead, so unavailable non-BLOCKED items must
+// be absent just as they are in the real panels. Missing context is not a filter.
+it.each([undefined, "AUTO", "REVIEW"] as const)(
+  "omits unavailable %s entries while preserving every displayed field",
+  (genericGrade) => {
+    const items = [
+      field(0, {
+        genericGrade: "BLOCKED",
+        genericReasonCode: "STRUCTURE_BLOCKED",
+        status: "unavailable",
+        selected: false,
+        disabled: true,
+      }),
+      field(1, {
+        genericGrade,
+        status: "unavailable",
+        selected: false,
+        disabled: true,
+        genericReasonCode: "UNLINKED",
+      }),
+      field(2),
+      field(3, {
+        genericGrade: "REVIEW",
+        genericReasonCode: "NO_FIELD_CONTEXT",
+        selected: false,
+      }),
+    ];
+    const before = structuredClone(items);
+    renderReview(items);
+    const groups = [
+      { tab: "자동 기입 예정 1", label: "Field 2" },
+      { tab: "확인 필요 1", label: "Field 3" },
+      { tab: "입력 불가 1", label: "Field 0" },
+    ];
+    for (const group of groups) {
+      fireEvent.click(screen.getByRole("tab", { name: group.tab }));
+      const panel = screen.getByRole("tabpanel", { name: group.tab });
+      expect(panel.querySelectorAll(":scope > article")).toHaveLength(1);
+      expect(within(panel).getByText(group.label)).toBeVisible();
+      expect(within(panel).queryByText("Field 1")).toBeNull();
+    }
+    // All three displayed entries lack context metadata, including BLOCKED.
+    // Literal order also checks the UI helper's available-first stable sort.
+    const result = buildReviewDiagnostics(items, new Map());
+    expect(result.fields).toEqual([
+      {
+        grade: "AUTO",
+        reasonCode: null,
+        sectionCategory: "none",
+        repeatRowIndex: null,
+        controlKind: "other",
+        mapped: false,
+        mappedKeyCategory: null,
+      },
+      {
+        grade: "REVIEW",
+        reasonCode: "NO_FIELD_CONTEXT",
+        sectionCategory: "none",
+        repeatRowIndex: null,
+        controlKind: "other",
+        mapped: false,
+        mappedKeyCategory: null,
+      },
+      {
+        grade: "BLOCKED",
+        reasonCode: "STRUCTURE_BLOCKED",
+        sectionCategory: "none",
+        repeatRowIndex: null,
+        controlKind: "other",
+        mapped: false,
+        mappedKeyCategory: null,
+      },
+    ]);
+    expect(result.counts).toEqual({
+      byGradeReasonCode: {
+        AUTO: { none: 1 },
+        REVIEW: { NO_FIELD_CONTEXT: 1 },
+        BLOCKED: { STRUCTURE_BLOCKED: 1 },
+      },
+      byGradeRepeatRowIndex: {
+        AUTO: { none: 1 },
+        REVIEW: { none: 1 },
+        BLOCKED: { none: 1 },
+      },
+      byGradeControlKind: {
+        AUTO: { other: 1 },
+        REVIEW: { other: 1 },
+        BLOCKED: { other: 1 },
+      },
+    });
+    expect(items).toEqual(before);
+  },
+);

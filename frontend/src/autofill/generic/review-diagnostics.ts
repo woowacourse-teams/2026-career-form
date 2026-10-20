@@ -52,10 +52,10 @@ export function buildReviewDiagnostics(
   items: readonly ReviewPlanItem[],
   contexts: ReadonlyMap<string, ReviewDiagnosticContext>,
 ) {
-  // Match WorkflowScreens' review panels, not the earlier generic grade.
-  // Keep every diagnostic entry even when it is not displayed by the UI.
+  // Match WorkflowScreens' displayed fields and panels, not internal items.
+  const displayedItems = reviewItemsForDisplay(items);
   const exceptionalItems = new Set(
-    reviewItemsForDisplay(items).filter(
+    displayedItems.filter(
       (item) =>
         item.status !== "available" ||
         item.analysis?.writePlan?.command === "SELECT_DATE" ||
@@ -63,7 +63,7 @@ export function buildReviewDiagnostics(
         !item.selected,
     ),
   );
-  const fields: ReviewDiagnosticField[] = items.map((item) => {
+  const fields: ReviewDiagnosticField[] = displayedItems.map((item) => {
     const context = contexts.get(item.candidateId);
     const key =
       item.profileFieldKey ??
