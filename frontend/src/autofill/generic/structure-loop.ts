@@ -172,6 +172,13 @@ const REPEAT_CATEGORY_BY_RESPONSE = new Map<string, ProfileCategoryId>([
   ["PROJECT", "projects"],
   ["PUBLICATION", "publications"],
 ]);
+// Declining to add a row leaves the existing rows untouched, so they stay mappable.
+const NO_CLICK_ADD_REASONS = new Set([
+  "REPEAT_ADD_ABSTAINED",
+  "INTERACTION_UNAVAILABLE",
+  "NO_ADD_CONTROL",
+]);
+
 const TARGET_OF_ROW_KIND: Record<EducationRowKind, TargetKind> = {
   HIGH_SCHOOL: "HIGH_SCHOOL",
   JUNIOR_COLLEGE: "ASSOCIATE",
@@ -316,7 +323,8 @@ export async function runGenericStructureLoop(
     section.reason = reason;
     blocked.set(key, section);
     const scope = groupScopes.get(key);
-    if (scope) context.blockedScopes.set(scope, reason);
+    if (scope && !NO_CLICK_ADD_REASONS.has(reason))
+      context.blockedScopes.set(scope, reason);
     record({
       kind: "ADD_ROW",
       ...(section.title ? { sectionTitle: section.title } : {}),

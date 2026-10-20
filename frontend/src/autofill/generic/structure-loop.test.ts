@@ -377,6 +377,30 @@ describe("runGenericStructureLoop", () => {
     });
   });
 
+  it.each(["REPEAT_ADD", undefined])(
+    "keeps the existing row mappable when no add click happened (%s)",
+    async (abstained) => {
+      document.body.innerHTML = `<section>
+      <h3>경력</h3>
+      <div id="rows">${careerRow(0)}</div>
+      ${abstained ? '<button type="button" id="add">경력 추가</button>' : ""}
+    </section>`;
+      const result = await runGenericStructureLoop({
+        document,
+        profile: { ...createEmptyProfile(), careers: entries(3, "career") },
+        apiClient: mockApi(abstained ? { abstain: ["REPEAT_ADD"] } : {})
+          .client,
+      });
+      const row = document.querySelector("[ismultirow]")!;
+      if (abstained) expect(result.sections[0]?.status).toBe("BLOCKED");
+      expect(
+        [...result.context.blockedScopes.keys()].some((scope) =>
+          scope.contains(row),
+        ),
+      ).toBe(false);
+    },
+  );
+
   it("never offers a forbidden control for a repeat group", async () => {
     document.body.innerHTML = `<form><section>
       <h3>경력</h3>
