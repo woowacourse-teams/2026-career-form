@@ -28,6 +28,42 @@ class QualityReportingHttpTest {
     };
 
     @Test
+    void acceptsBatchOnceValidatesAllMembersAndKeepsLegacyReports() throws Exception {
+        var collector = new QualityCollectionService(store, Clock.systemUTC(), "test", "build");
+        var access = new QualityAccess(Clock.systemUTC(), "", "", org.mockito.Mockito.mock(QualityAccess.SessionStore.class));
+        var service = runtime.service(collector, null);
+        var mvc = MockMvcBuilders.standaloneSetup(new QualityReportingController(service)).addFilters(new QualityApiFilter(access)).build();
+        var credentials = service.register(new QualityRegistration.Input("a".repeat(32), "b".repeat(64)));
+        var endpoint = "/api/v1/quality/executions/" + credentials.runId() + "/report";
+        var reports = java.util.stream.IntStream.range(0, 50).mapToObj(index ->
+            new QualityCollectionService.Report("batch-" + index, null, Map.of(), index == 49 ? QualityExecution.Status.COMPLETED : null)).toList();
+        var body = new ObjectMapper().writeValueAsString(Map.of("reports", reports));
+        mvc.perform(post(endpoint).contentType(MediaType.APPLICATION_JSON).header("Authorization", "Bearer " + credentials.token()).content(body))
+            .andExpect(status().isAccepted());
+        mvc.perform(post(endpoint).contentType(MediaType.APPLICATION_JSON).header("Authorization", "Bearer " + credentials.token()).content(body))
+            .andExpect(status().isAccepted());
+        org.awaitility.Awaitility.await().atMost(java.time.Duration.ofSeconds(10)).untilAsserted(() ->
+            assertThat(((QualityCollectionService.Run) records.get(credentials.runId()).payload()).execution().events()).hasSize(50));
+        runtime.await();
+        var run = (QualityCollectionService.Run) records.get(credentials.runId()).payload();
+        assertThat(run.execution().events()).hasSize(50);
+        assertThat(run.execution().terminal()).isEqualTo(QualityExecution.Status.COMPLETED);
+        mvc.perform(post(endpoint).contentType(MediaType.APPLICATION_JSON).header("Authorization", "Bearer " + "f".repeat(64)).content(body))
+            .andExpect(status().isUnauthorized());
+        mvc.perform(post(endpoint).contentType(MediaType.APPLICATION_JSON).header("Authorization", "Bearer " + credentials.token()).content("{\"reports\":[null]}"))
+            .andExpect(status().isBadRequest());
+        var invalid = "{\"reports\":[{\"eventId\":\"valid\",\"fields\":{}},{\"eventId\":\"\",\"fields\":{}}]}";
+        mvc.perform(post(endpoint).contentType(MediaType.APPLICATION_JSON).header("Authorization", "Bearer " + credentials.token()).content(invalid))
+            .andExpect(status().isBadRequest());
+        mvc.perform(post(endpoint).contentType(MediaType.APPLICATION_JSON).header("Authorization", "Bearer " + credentials.token()).content("{\"reports\":[]}"))
+            .andExpect(status().isBadRequest());
+        mvc.perform(post(endpoint).contentType(MediaType.APPLICATION_JSON).header("Authorization", "Bearer " + credentials.token()).content(" ".repeat(131073)))
+            .andExpect(status().isPayloadTooLarge());
+        runtime.await();
+        assertThat(((QualityCollectionService.Run) records.get(credentials.runId()).payload()).execution().events()).hasSize(50);
+    }
+
+    @Test
     void acceptsOwnedReportsAndPreservesManagementAccessControl() throws Exception {
         var collector = new QualityCollectionService(store, Clock.systemUTC(), "test", "build");
         var access = new QualityAccess(Clock.systemUTC(), "", "", org.mockito.Mockito.mock(QualityAccess.SessionStore.class));

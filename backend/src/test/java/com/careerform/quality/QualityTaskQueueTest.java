@@ -14,6 +14,81 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 class QualityTaskQueueTest {
     @Test
+    void captureCanRetainMoreThanTheWireLimitWithoutExceedingTheTotalMemoryBudget() throws Exception {
+        var done = new CountDownLatch(1);
+        try (var queue = new QualityTaskQueue(1, 100, 10, Duration.ofSeconds(30), Clock.systemUTC(), new SimpleMeterRegistry())) {
+            assertThat(queue.submitCaptured(() -> new QualityTaskQueue.Prepared(20, () -> { done.countDown(); return true; }))).isTrue();
+            assertThat(done.await(2, TimeUnit.SECONDS)).isTrue();
+        }
+    }
+
+    @Test
+    void bodyLimitAndRetainedMemoryLimitAreEnforcedSeparatelyForBatches() throws Exception {
+        var entered = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
+        try (var queue = new QualityTaskQueue(3, 20, 10, Duration.ofSeconds(30), Clock.systemUTC(), new SimpleMeterRegistry())) {
+            try {
+                assertThat(queue.submit(15, 10, () -> { entered.countDown(); release.await(); return true; })).isTrue();
+                assertThat(entered.await(2, TimeUnit.SECONDS)).isTrue();
+                assertThat(queue.retainedBytes()).isEqualTo(15);
+                assertThat(queue.submit(6, 1, () -> true)).isFalse();
+                assertThat(queue.submit(1, 11, () -> true)).isFalse();
+            } finally { release.countDown(); }
+        }
+    }
+
+    @Test
+    void queueWaitDoesNotIncludeSynchronousCaptureTime() throws Exception {
+        var now = new java.util.concurrent.atomic.AtomicReference<>(Instant.parse("2030-01-01T00:00:00Z"));
+        var clock = new Clock() {
+            public ZoneId getZone() { return ZoneId.of("UTC"); }
+            public Clock withZone(ZoneId zone) { return this; }
+            public Instant instant() { return now.get(); }
+        };
+        var meters = new SimpleMeterRegistry();
+        try (var queue = new QualityTaskQueue(1, 10, 10, Duration.ofSeconds(30), clock, meters)) {
+            assertThat(queue.submitCaptured(() -> {
+                now.set(now.get().plusSeconds(5));
+                return new QualityTaskQueue.Prepared(5, () -> true);
+            })).isTrue();
+            org.awaitility.Awaitility.await().atMost(Duration.ofSeconds(2)).until(() -> queue.waiting() == 0 && queue.active() == 0);
+            assertThat(meters.get("quality.tasks.queue.wait").timer().totalTime(TimeUnit.SECONDS)).isZero();
+        }
+    }
+
+    @Test
+    void captureReservesBeforePreparationAndReleasesOnlyAfterPreparationExits() throws Exception {
+        var entered = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
+        var queue = new QualityTaskQueue(1, 10, 10, Duration.ofSeconds(30), Clock.systemUTC(), new SimpleMeterRegistry());
+        try (var caller = java.util.concurrent.Executors.newSingleThreadExecutor()) {
+            var result = caller.submit(() -> queue.submitCaptured(() -> {
+                entered.countDown();
+                try { release.await(); } catch (InterruptedException exception) { throw new IllegalStateException(exception); }
+                return new QualityTaskQueue.Prepared(5, () -> true);
+            }));
+            try {
+                assertThat(entered.await(2, TimeUnit.SECONDS)).isTrue();
+                assertThat(queue.submitCaptured(() -> { throw new AssertionError("rejected capture ran"); })).isFalse();
+                queue.close();
+                assertThat(queue.retainedBytes()).isEqualTo(10);
+            } finally { release.countDown(); }
+            assertThat(result.get(2, TimeUnit.SECONDS)).isFalse();
+            assertThat(queue.retainedBytes()).isZero();
+        } finally { release.countDown(); queue.close(); }
+    }
+
+    @Test
+    void captureFailureAndOversizedPreparationReleaseReservation() {
+        try (var queue = new QualityTaskQueue(1, 10, 10, Duration.ofSeconds(30), Clock.systemUTC(), new SimpleMeterRegistry())) {
+            assertThat(queue.submitCaptured(() -> { throw new IllegalArgumentException("capture too large"); })).isFalse();
+            assertThat(queue.retainedBytes()).isZero();
+            assertThat(queue.submitCaptured(() -> new QualityTaskQueue.Prepared(11, () -> true))).isFalse();
+            assertThat(queue.retainedBytes()).isZero();
+        }
+    }
+
+    @Test
     void failureReleasesCapacityWithoutCopyingRequestScope() throws Exception {
         var meters = new SimpleMeterRegistry();
         var completed = new CountDownLatch(1);

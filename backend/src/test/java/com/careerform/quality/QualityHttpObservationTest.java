@@ -55,6 +55,32 @@ class QualityHttpObservationTest {
     }
 
     @Test
+    void projectionCanRemainBlockedAfterHttpResponseCompletes() throws Exception {
+        var entered = new java.util.concurrent.CountDownLatch(1);
+        var release = new java.util.concurrent.CountDownLatch(1);
+        when(store.insert(any())).thenReturn(true);
+        try (var queue = new QualityTaskQueue(64, 4194304, 131072, java.time.Duration.ofSeconds(30), Clock.systemUTC(), new SimpleMeterRegistry())) {
+            var service = new QualityAsyncService(new QualityRegistration(256, Clock.systemUTC(), new SimpleMeterRegistry()), queue, collector, null,
+                capture -> {
+                    entered.countDown();
+                    try { release.await(); } catch (InterruptedException exception) { throw new IllegalStateException(exception); }
+                    return capture.project();
+                });
+            var mvc = MockMvcBuilders.standaloneSetup(new Controller()).setControllerAdvice(new QualityBodyAdvice(service))
+                .addFilters(new QualityObservationFilter(service)).build();
+            try (var caller = java.util.concurrent.Executors.newSingleThreadExecutor()) {
+                var response = caller.submit(() -> mvc.perform(post("/api/v1/fields/analyze").contentType(MediaType.APPLICATION_JSON).content(request))
+                    .andExpect(status().isOk()).andExpect(jsonPath("snapshotId").value("sample")));
+                try {
+                    assertThat(entered.await(2, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+                    response.get(2, java.util.concurrent.TimeUnit.SECONDS);
+                    assertThat(release.getCount()).isEqualTo(1);
+                } finally { release.countDown(); }
+            }
+        }
+    }
+
+    @Test
     void returnsResponseWhileDatabaseWorkRemainsRunningUntilExplicitRelease() throws Exception {
         var entered = new java.util.concurrent.CountDownLatch(1);
         var release = new java.util.concurrent.CountDownLatch(1);
