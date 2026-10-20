@@ -6,6 +6,7 @@ import type {
   TargetKind,
 } from "../api/interaction-types";
 import type {
+  ActionCandidate,
   AnalysisApiClient,
   FieldCandidate,
   SectionClassifyRequest,
@@ -127,6 +128,7 @@ interface RowGroup {
 interface Observation {
   prep: PreparationCollectedSnapshot;
   groups: RowGroup[];
+  sections: GenericSection<LoopField>[];
   fieldsSnapshot: ReturnType<typeof collectFieldsSnapshot>;
   fieldCount: number;
 }
@@ -137,6 +139,8 @@ interface ActionRef {
   label: string;
   sectionId: string;
   rows?: number;
+  /** What the preparation collector observed about the control. */
+  observed: ActionCandidate;
 }
 
 type Point =
@@ -244,6 +248,34 @@ function visibleControlCount(document: Document): number {
       if (view?.getComputedStyle(node).display === "none") return false;
     return true;
   }).length;
+}
+
+function normalizedLabel(text: string | null | undefined): string {
+  return truncated(text?.replace(/\s+/g, " ").trim() ?? "");
+}
+
+/** The control's own name with the attribute or text it was read from. */
+function controlLabel(
+  element: HTMLElement,
+): { source: "aria-label" | "label" | "title"; text: string } | undefined {
+  const aria = normalizedLabel(element.getAttribute("aria-label"));
+  if (aria) return { source: "aria-label", text: aria };
+  const text = normalizedLabel(element.textContent);
+  if (text) return { source: "label", text };
+  const title = normalizedLabel(element.getAttribute("title"));
+  return title ? { source: "title", text: title } : undefined;
+}
+
+/** The server rejects a structure question holding any other candidate. */
+function isOfferableAddControl({ observed }: ActionRef): boolean {
+  return (
+    observed.visibility === "visible" &&
+    observed.control === "button" &&
+    observed.element !== "select" &&
+    !observed.disabled &&
+    !observed.readonly &&
+    !observed.inert
+  );
 }
 
 function sectionCacheKey(section: GenericSection<LoopField>): string {
@@ -453,6 +485,7 @@ export async function runGenericStructureLoop(
     return {
       prep,
       groups: [...groups.values()],
+      sections,
       fieldsSnapshot,
       fieldCount: fields.size,
     };
@@ -475,6 +508,33 @@ export async function runGenericStructureLoop(
       if (found) return found;
     }
     return undefined;
+  }
+
+  /**
+   * The widest ancestor of the group's rows holding no field of another
+   * section. Parts of the group's own section (same heading) may share it.
+   */
+  function groupScope(
+    group: RowGroup,
+    sections: readonly GenericSection<LoopField>[],
+  ): Element | undefined {
+    const first = group.rows[0]?.fields[0]?.element;
+    let scope =
+      first && (genericRowFor(first)?.parentElement ?? first.parentElement);
+    if (!scope) return undefined;
+    const foreign = sections
+      .filter(
+        (section) =>
+          !group.rows.includes(section) &&
+          (!group.title || section.title !== group.title),
+      )
+      .flatMap((section) => section.fields.map(({ element }) => element));
+    while (
+      scope.parentElement &&
+      !foreign.some((element) => scope!.parentElement!.contains(element))
+    )
+      scope = scope.parentElement;
+    return scope;
   }
 
   const isCollapsedControl = (
@@ -507,6 +567,7 @@ export async function runGenericStructureLoop(
           label: truncated(candidate.displayName ?? ""),
           sectionId: section.sectionId,
           ...(rows !== undefined ? { rows } : {}),
+          observed: candidate,
         });
       }
     return refs;
@@ -529,10 +590,13 @@ export async function runGenericStructureLoop(
       }
       const needed = repeatedEntries(profile, group.category);
       if (needed === undefined || section.status === "BLOCKED") continue;
+      const scope = groupScope(group, observation.sections);
       const owned = refs.filter(
         (ref) =>
           ref.rows !== undefined &&
-          ownerGroup(ref.element, observation.groups) === group,
+          isOfferableAddControl(ref) &&
+          ownerGroup(ref.element, observation.groups) === group &&
+          scope?.contains(ref.element) === true,
       );
       const rows = owned[0]?.rows || group.rows.length;
       if (rows < needed)
@@ -604,12 +668,43 @@ export async function runGenericStructureLoop(
       : {}),
   });
 
+  /** Only observed evidence: the control's own name, the group's heading. */
+  const repeatAddCandidate = (
+    ref: ActionRef,
+    group: RowGroup,
+  ): InteractionCandidate => {
+    const inRow = group.rows.some((row) => {
+      const first = row.fields[0]?.element;
+      return first ? genericRowFor(first)?.contains(ref.element) : false;
+    });
+    const own = controlLabel(ref.element);
+    const heading = normalizedLabel(group.title);
+    const labels = [
+      ...(own ? [own] : []),
+      ...(heading
+        ? [{ source: "section-heading" as const, text: heading }]
+        : []),
+    ];
+    return {
+      candidateId: ref.candidateId,
+      element: ref.observed.element as InteractionCandidate["element"],
+      control: "button",
+      visibility: ref.observed.visibility,
+      // Owned controls sit inside the group's scope (see groupScope).
+      relationToTarget: inRow ? "SAME_REPEAT_ROW" : "SAME_CONTAINER",
+      ...(labels.length > 0 ? { semanticContext: { labels } } : {}),
+    };
+  };
+
   /** Asks once; undefined means the server could not decide. */
   async function askButtons(
     role: "REPEAT_ADD" | "SECTION_REVEAL",
     canonicalFieldKey: string,
     refs: ActionRef[],
     observation: Observation,
+    describeCandidate: (
+      ref: ActionRef,
+    ) => InteractionCandidate = interactionCandidate,
   ): Promise<string | null | undefined> {
     questions.push({ role, candidates: refs.map(({ label }) => label) });
     if (!apiClient.decideInteractions) return undefined;
@@ -623,7 +718,7 @@ export async function runGenericStructureLoop(
             decisionId: "structure",
             role,
             canonicalFieldKey,
-            candidates: refs.map(interactionCandidate),
+            candidates: refs.map(describeCandidate),
           },
         ],
       });
@@ -673,7 +768,13 @@ export async function runGenericStructureLoop(
       const category = group.category as ProfileCategoryId;
       const key = profileKeyOf(category);
       const chosenId = key
-        ? await askButtons("REPEAT_ADD", key, point.actions, observation)
+        ? await askButtons(
+            "REPEAT_ADD",
+            key,
+            point.actions,
+            observation,
+            (ref) => repeatAddCandidate(ref, group),
+          )
         : undefined;
       if (chosenId === undefined) {
         blockGroup(group, "INTERACTION_UNAVAILABLE");

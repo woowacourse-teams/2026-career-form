@@ -401,6 +401,92 @@ describe("runGenericStructureLoop", () => {
     },
   );
 
+  it("offers a repeat group only the add controls its own section holds", async () => {
+    document.body.innerHTML = `<form><div><section>
+      <h3>학력</h3>
+      <div id="education-rows"><div ismultirow="true">
+        <label>학교명<input name="school0" /></label>
+        <label>전공<input name="major0" /></label>
+      </div></div>
+      <button type="button" id="add-education">학력 추가</button>
+    </section><section>
+      <h3>경력</h3>
+      <div id="career-rows">${careerRow(0)}${careerRow(1)}</div>
+    </section>
+    <button type="button" id="add-career">경력 추가</button></div></form>`;
+    const api = mockApi({ abstain: ["REPEAT_ADD"] });
+
+    const result = await runGenericStructureLoop({
+      document,
+      profile: {
+        ...createEmptyProfile(),
+        education: entries(2, "university"),
+        careers: entries(3, "career"),
+      },
+      apiClient: api.client,
+    });
+
+    const asked = api.decisions
+      .flatMap(({ decisions }) => decisions)
+      .filter(({ role }) => role === "REPEAT_ADD");
+    expect(
+      result.questions.flatMap(({ candidates }) => candidates),
+    ).not.toContain("경력 추가");
+    expect(asked).toHaveLength(1);
+    expect(asked[0]!.candidates).toEqual([
+      expect.objectContaining({
+        relationToTarget: "SAME_CONTAINER",
+        semanticContext: {
+          labels: [
+            { source: "label", text: "학력 추가" },
+            { source: "section-heading", text: "학력" },
+          ],
+        },
+      }),
+    ]);
+  });
+
+  it("describes an in-row add control by what it observes", async () => {
+    document.body.innerHTML = `<section>
+      <h3>자격사항</h3>
+      <div id="rows"><div ismultirow="true">
+        <label>자격증명<input name="cert0" /></label>
+        <label>발급기관<input name="issuer0" /></label>
+        <button type="button" id="add" aria-label="자격 행 추가">+</button>
+      </div></div>
+    </section>`;
+    const api = mockApi({ abstain: ["REPEAT_ADD"] });
+
+    await runGenericStructureLoop({
+      document,
+      profile: {
+        ...createEmptyProfile(),
+        certifications: entries(2, "certificate"),
+      },
+      apiClient: api.client,
+    });
+
+    const asked = api.decisions
+      .flatMap(({ decisions }) => decisions)
+      .filter(({ role }) => role === "REPEAT_ADD");
+    expect(asked).toHaveLength(1);
+    expect(asked[0]!.candidates).toEqual([
+      {
+        candidateId: expect.any(String),
+        element: "button",
+        control: "button",
+        visibility: "visible",
+        relationToTarget: "SAME_REPEAT_ROW",
+        semanticContext: {
+          labels: [
+            { source: "aria-label", text: "자격 행 추가" },
+            { source: "section-heading", text: "자격사항" },
+          ],
+        },
+      },
+    ]);
+  });
+
   it("never offers a forbidden control for a repeat group", async () => {
     document.body.innerHTML = `<form><section>
       <h3>경력</h3>
