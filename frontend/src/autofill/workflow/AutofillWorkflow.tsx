@@ -15,9 +15,11 @@ import {
   type StaticFieldsSession,
 } from "./static-fields-session";
 import { componentBasicControls } from "../policy/components/fingerprint";
+import { AnalysisServiceError } from "../api/runtime-client";
 import {
   resolveDocumentCompany,
   isUnsupportedHplace,
+  unsupportedHplaceKind,
 } from "../adapters/company";
 import {
   createPreparationOptions,
@@ -132,11 +134,20 @@ export function AutofillWorkflow(props: WorkflowProps) {
         setLoaded(true);
       })
       .catch((error: unknown) => {
-        if (active)
+        if (!active) return;
+        if (
+          error instanceof AnalysisServiceError &&
+          error.code === "POLICY_INCOMPATIBLE"
+        ) {
           setError(
-            "사이트 정책을 불러오지 못했습니다. " +
-              (error instanceof Error ? error.message : "다시 실행해 주세요."),
+            "지원서 정책이 이 확장 버전과 맞지 않아요. 확장을 최신 버전으로 업데이트한 뒤 다시 시도해 주세요.",
           );
+          return;
+        }
+        setError(
+          "사이트 정책을 불러오지 못했습니다. " +
+            (error instanceof Error ? error.message : "다시 실행해 주세요."),
+        );
       });
     return () => {
       active = false;
@@ -989,6 +1000,11 @@ function PolicyReadyWorkflow({
       workflowDiagnostics={workflowDiagnostics}
       exceptionTitle={exceptionTitle}
       unsupportedImageUrl={unsupportedImageUrl}
+      unsupportedKind={
+        stage === "unsupported"
+          ? unsupportedHplaceKind(pageDocument)
+          : undefined
+      }
       onExit={onExit}
       exitInToolbar={exitInToolbar}
       currentCategory={currentCategory}

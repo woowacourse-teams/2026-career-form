@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import publicDocuments from "./__fixtures__/public-documents.json";
-import { isHplaceDocument } from "./fingerprint";
+import { hplaceDocumentKind, isHplaceDocument } from "./fingerprint";
 
 type PublicDocument = (typeof publicDocuments)[number];
 
@@ -337,3 +337,46 @@ function rehost(fixture: PublicDocument, url: string): PublicDocument {
     styles: fixture.styles.map((href) => href.replace(origin, target.origin)),
   };
 }
+
+describe("Hplace fingerprint kind", () => {
+  it("names the branch that matched", () => {
+    expect(hplaceDocumentKind(page(builder))).toBe("builder");
+    expect(hplaceDocumentKind(page(jobda))).toBe("builder");
+    expect(hplaceDocumentKind(page(v1))).toBe("v1");
+    expect(hplaceDocumentKind(page(login))).toBe("mrs2");
+  });
+
+  it("names the registration form when its scripts and login section match", () => {
+    const origin = new URL(login.url).origin;
+    const source = page({
+      ...login,
+      scripts: [
+        `${origin}/mrs2/release/js/applicant/applicantCommon.js`,
+        `${origin}/mrs2/release/js/applicant/login/registResume.js`,
+      ],
+      styles: [`${origin}/mrs2/css/applicant/applicant.css`],
+      ids: [],
+      forms: [],
+    });
+    const form = source.createElement("form");
+    form.id = "frm";
+    const section = source.createElement("section");
+    section.className = "writeResume";
+    section.id = "loginForm";
+    form.append(section);
+    source.body.append(form);
+    expect(hplaceDocumentKind(source)).toBe("registration");
+  });
+
+  it("reports no kind exactly when the boolean check is false", () => {
+    for (const fixture of publicDocuments) {
+      const source = page(fixture);
+      expect(hplaceDocumentKind(source) !== undefined).toBe(
+        isHplaceDocument(source),
+      );
+    }
+    expect(hplaceDocumentKind(page(notice))).toBe(
+      notice.expected ? "mrs2" : undefined,
+    );
+  });
+});

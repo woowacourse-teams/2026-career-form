@@ -2,10 +2,12 @@ import { render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { createEmptyProfile } from "../../profile/model";
+import { AnalysisServiceError } from "../api/runtime-client";
 import type { AnalysisApiClient } from "../api/types";
 import { AutofillWorkflow } from "./AutofillWorkflow";
 import {
   renderHplaceLogin,
+  setHplacePage,
   resetHplacePage,
 } from "./test-utils/hplace.fixture";
 
@@ -142,3 +144,75 @@ it.each(["missing", "failed"] as const)(
     ).toBe("");
   },
 );
+
+function renderUnsupported() {
+  const apiClient: AnalysisApiClient = {
+    analyzePreparation: vi.fn<AnalysisApiClient["analyzePreparation"]>(),
+    analyzeFields: vi.fn<AnalysisApiClient["analyzeFields"]>(),
+  };
+  render(
+    <AutofillWorkflow
+      apiClient={apiClient}
+      repository={{ load: async () => createEmptyProfile() }}
+      pageDocument={document}
+      onExit={() => undefined}
+    />,
+  );
+}
+
+it("names the new applicant app as the unsupported reason", async () => {
+  renderHplaceLogin();
+  renderUnsupported();
+  expect(await screen.findByText("아직 지원하지 않아요")).toBeVisible();
+  expect(
+    screen.getByText(
+      "이 채용 사이트의 지원서 방식(신형 지원자 앱)은 아직 지원하지 않아요.",
+    ),
+  ).toBeVisible();
+});
+
+it("names the career builder as the unsupported reason", async () => {
+  setHplacePage("https://tenant.recruiter.co.kr/career/jobs/1");
+  document.head.innerHTML =
+    '<script src="/_next/static/chunks/app/(main)/(jobflex)/career/jobs/page-abc123.js"></script>';
+  document.body.innerHTML = [
+    "loading-root",
+    "modal-root",
+    "slate-hovering-toolbar",
+    "tooltip-root",
+    "message-root",
+    "popup-root",
+  ]
+    .map((id) => `<div id="${id}"></div>`)
+    .join("");
+  renderUnsupported();
+  expect(
+    await screen.findByText(
+      "이 채용 사이트의 지원서 방식(경력 빌더형)은 아직 지원하지 않아요.",
+    ),
+  ).toBeVisible();
+});
+
+it("asks for an extension update when the served policy is incompatible", async () => {
+  render(
+    <AutofillWorkflow
+      pageDocument={document}
+      repository={{ load: async () => createEmptyProfile() }}
+      onExit={() => undefined}
+      apiClient={{
+        loadExecutionPolicy: async () => {
+          throw new AnalysisServiceError(
+            "분석 서버 응답을 확인할 수 없습니다.",
+            undefined,
+            "POLICY_INCOMPATIBLE",
+          );
+        },
+        analyzePreparation: vi.fn(),
+        analyzeFields: vi.fn(),
+      }}
+    />,
+  );
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "지원서 정책이 이 확장 버전과 맞지 않아요. 확장을 최신 버전으로 업데이트한 뒤 다시 시도해 주세요.",
+  );
+});

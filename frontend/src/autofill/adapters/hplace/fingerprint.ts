@@ -1,7 +1,16 @@
 const tenantHost =
   /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.(?:recruiter\.co\.kr|recruiter\.im)$/;
 
+export type HplaceDocumentKind = "mrs2" | "registration" | "v1" | "builder";
+
 export function isHplaceDocument(document: Document): boolean {
+  return hplaceDocumentKind(document) !== undefined;
+}
+
+/** Which fingerprint branch matched, or undefined when none did. */
+export function hplaceDocumentKind(
+  document: Document,
+): HplaceDocumentKind | undefined {
   const location = document.location;
   if (
     !location ||
@@ -9,7 +18,7 @@ export function isHplaceDocument(document: Document): boolean {
     // Same normalization as the backend: lower-case, one trailing dot removed.
     !tenantHost.test(location.hostname.toLowerCase().replace(/\.$/, ""))
   ) {
-    return false;
+    return undefined;
   }
 
   const scripts = resourcePaths(document, "script[src]", "src");
@@ -34,7 +43,7 @@ export function isHplaceDocument(document: Document): boolean {
     // Section 13 itself, not its address: some tenants have no address row.
     document.querySelector('form#frm section.writeResume[data-code="13"]')
   )
-    return true;
+    return "mrs2";
 
   if (
     scripts.some((path) =>
@@ -49,7 +58,7 @@ export function isHplaceDocument(document: Document): boolean {
         section.id === "loginForm" && section.closest("form")?.id === "frm",
     )
   )
-    return true;
+    return "registration";
 
   if (
     scripts.some((path) =>
@@ -66,7 +75,7 @@ export function isHplaceDocument(document: Document): boolean {
       "popup-root",
     )
   ) {
-    return true;
+    return "builder";
   }
 
   if (
@@ -74,7 +83,7 @@ export function isHplaceDocument(document: Document): boolean {
     styles.some((path) => /^\/v1\/applicant\/index-[\w-]+\.css$/.test(path)) &&
     hasIds("root", "tooltip-root", "overlay-root")
   ) {
-    return true;
+    return "v1";
   }
 
   if (
@@ -82,10 +91,10 @@ export function isHplaceDocument(document: Document): boolean {
       path.endsWith("/mit-common/js/custom/jquery.midasit.common.js"),
     )
   ) {
-    return false;
+    return undefined;
   }
 
-  return (
+  const legacyMrs2 =
     (scripts.some((path) => path.endsWith("/mrs2/release/js/rsaCommon.js")) &&
       hasIds("appsiteSn", "systemKindCode", "jobnoticeSn", "mrs2")) ||
     (scripts.some((path) =>
@@ -94,8 +103,8 @@ export function isHplaceDocument(document: Document): boolean {
       styles.some((path) =>
         path.endsWith("/mrs2/css/applicant/applicant.css"),
       ) &&
-      document.querySelector("form#frm") !== null)
-  );
+      document.querySelector("form#frm") !== null);
+  return legacyMrs2 ? "mrs2" : undefined;
 }
 
 function resourcePaths(

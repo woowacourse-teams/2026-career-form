@@ -316,3 +316,25 @@ it("fills exemption reason only for the matching exemption state", async () => {
   ).toBe("");
   expect(fields).toHaveBeenCalledTimes(2);
 });
+
+it("says the site policy is not registered when a recognized Hplace page is policy-blocked", async () => {
+  mountConditionalForm();
+  const { props } = setup();
+  props.apiClient.analyzeFields = vi.fn<AnalysisApiClient["analyzeFields"]>(
+    async (request) => ({
+      snapshotId: request.snapshotId,
+      mode: "ADAPTER",
+      analysisStatus: "BLOCKED",
+      fields: [],
+      blockCode: "ADAPTER_POLICY_UNAVAILABLE",
+    }),
+  );
+  render(<AutofillWorkflow {...props} />);
+  expect(
+    await screen.findByText(
+      "이 지원서의 자동 기입 정책이 아직 등록되지 않았어요. 수동 복사를 이용해 주세요.",
+      {},
+      { timeout: 15000 },
+    ),
+  ).toBeVisible();
+});

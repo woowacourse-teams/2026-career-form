@@ -438,7 +438,12 @@ export function createAnalyzeFields({
     }
 
     if (analysis.analysisStatus === "BLOCKED") {
-      setExceptionTitle("이 페이지에서는 자동 기입을 진행할 수 없습니다");
+      setExceptionTitle(
+        analysis.blockCode === "ADAPTER_POLICY_UNAVAILABLE" &&
+          resolveDocumentCompany(pageDocument) === "hplace"
+          ? "이 지원서의 자동 기입 정책이 아직 등록되지 않았어요. 수동 복사를 이용해 주세요."
+          : "이 페이지에서는 자동 기입을 진행할 수 없습니다",
+      );
       setStage("exception");
       return;
     }

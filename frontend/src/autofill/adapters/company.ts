@@ -4,7 +4,7 @@ import {
   executionPolicy,
 } from "../workflow/execution-policy";
 import { detailControls } from "./hplace/detail";
-import { isHplaceDocument } from "./hplace/fingerprint";
+import { hplaceDocumentKind, isHplaceDocument } from "./hplace/fingerprint";
 import { registrationControls } from "./hplace/registration";
 
 export type CompanyId = "policy" | "generic" | "components" | "hplace";
@@ -25,6 +25,19 @@ export function isUnsupportedHplace(document: Document): boolean {
     !registrationControls(document) &&
     !detailControls(document)
   );
+}
+
+/**
+ * Why a recognized Hplace page is unsupported, when its application type is
+ * known to be outside the MRS2 flow. Informational only: routing still uses
+ * isUnsupportedHplace.
+ */
+export function unsupportedHplaceKind(
+  document: Document,
+): "v1" | "builder" | undefined {
+  if (!isUnsupportedHplace(document)) return undefined;
+  const kind = hplaceDocumentKind(document);
+  return kind === "v1" || kind === "builder" ? kind : undefined;
 }
 
 const hplaceDocuments = new WeakMap<Document, { url: string; host: string }>();
