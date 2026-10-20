@@ -1,4 +1,5 @@
 import { observedGradeLabel } from "./exam-grade-alias";
+import { debugRuntimeSkip } from "../debug/structural-diagnostics";
 import { approveNativeGpa } from "./native-form-gpa";
 import { universityAdditionalMajors } from "../profile/university-additional-majors";
 import {
@@ -10,6 +11,7 @@ import type { Profile, ProfileEntry } from "../../profile/model";
 import type { FieldCandidateHandle } from "../dom/types";
 import { resolveValueBinding } from "../profile/value-binding";
 import { formatProfileDate } from "../profile/date-format";
+import { standardValueLabel } from "../../profile/standard-values";
 import {
   nativeForm,
   nativeDocument,
@@ -105,7 +107,11 @@ function profileValue(
       select ? Array.from(select.options, (o) => text(o.textContent)) : [],
     );
   }
-  if (!field.date) return resolved.value;
+  // Option fields hold the standard label (주간) for a DIRECT standard token (attendance:day).
+  if (!field.date)
+    return field.options && field.binding.type === "DIRECT"
+      ? (standardValueLabel(resolved.value) ?? resolved.value)
+      : resolved.value;
   const source =
     field.date.role === "END"
       ? row.querySelector<HTMLInputElement>(
@@ -190,6 +196,28 @@ function unofferedEntries(
   }
   return unoffered;
 }
+/** Why an existing row is left alone and, when its identity matched, which profile entry it holds. */
+interface ExistingRow {
+  reason: string;
+  index?: number;
+}
+/** A retained value equals the profile value; a numeric grade compares as a number (3.65 = 3.650). */
+function sameRetainedValue(
+  field: NativeField,
+  value: string | undefined,
+  expected: string | undefined,
+): boolean {
+  if (value === undefined || expected === undefined) return false;
+  if (value === expected) return true;
+  return (
+    !!field.gpa &&
+    /^\d+(\.\d+)?$/.test(value) &&
+    /^\d+(\.\d+)?$/.test(expected) &&
+    Number(value) === Number(expected)
+  );
+}
+/** Each bail cause is logged once per document and section. */
+const diagnosed = new WeakMap<Document, Set<string>>();
 function assignments(
   document: Document,
   section: NativeSection,
@@ -208,10 +236,24 @@ function assignments(
   const roots = Array.from(document.querySelectorAll(section.selector)).filter(
     (e) => document.querySelector(form.rootSelector)?.contains(e),
   );
-  if (roots.length !== 1) return null;
+  const bail = (cause: string) => {
+    const seen = diagnosed.get(document) ?? new Set<string>();
+    diagnosed.set(document, seen);
+    if (!seen.has(`${section.id}:${cause}`)) {
+      seen.add(`${section.id}:${cause}`);
+      debugRuntimeSkip(
+        section.id,
+        "row-identity",
+        `native-row-assignment:${cause}`,
+        "prepare",
+      );
+    }
+    return null;
+  };
+  if (roots.length !== 1) return bail("section-root");
   const root = roots[0],
     rows = nativeRows(root, section);
-  if (!rows) return null;
+  if (!rows) return bail("row-contract");
   const entries = (profile[action.categoryId] as ProfileEntry[]).filter(
     (e) => e.sectionId === action.profileSectionId,
   );
@@ -219,7 +261,7 @@ function assignments(
     digest = JSON.stringify(form),
     used = new Set<number>(),
     result = new Map<Element, number>(),
-    existing = new Map<Element, string>(),
+    existing = new Map<Element, ExistingRow>(),
     blank: Element[] = [];
   let occupied = 0;
   for (const [physicalIndex, row] of rows.entries()) {
@@ -233,7 +275,7 @@ function assignments(
         (children.length > previous.children.length &&
           !nativeNestedPreparationCurrent(row, rows))
       )
-        return null;
+        return bail("nested-rows-changed");
       previous.children = [...children];
     }
     if (
@@ -245,7 +287,7 @@ function assignments(
       entries[previous.index]?.id === previous.entryId &&
       (nativeRowBlank(row) || nativeRowHasWrites(o))
     ) {
-      if (used.has(previous.index)) return null;
+      if (used.has(previous.index)) return bail("entry-reused");
       used.add(previous.index);
       result.set(row, previous.index);
     }
@@ -258,7 +300,9 @@ function assignments(
       continue;
     }
     occupied++;
-    existing.set(row, "기존 입력 행은 보존하며 사용자 확인이 필요합니다.");
+    existing.set(row, {
+      reason: "기존 입력 행은 보존하며 사용자 확인이 필요합니다.",
+    });
     const excluded = section.fields.some((f) =>
       excludedSearchRow(row, f, physicalIndex),
     );
@@ -266,7 +310,7 @@ function assignments(
       section.fields.find((f) => f.name === name)!,
     );
     if (identity.some((f) => fieldValue(row, f, physicalIndex) === undefined))
-      return null;
+      return bail("identity-unreadable");
     const matches = entries.flatMap((_, index) =>
       identity.every(
         (f) =>
@@ -276,7 +320,8 @@ function assignments(
         ? [index]
         : [],
     );
-    if (matches.length > 1 || matches.some((i) => used.has(i))) return null;
+    if (matches.length > 1 || matches.some((i) => used.has(i)))
+      return bail("identity-ambiguous");
     // A populated row that differs from an entry in exactly one identity field
     // is most likely that entry after the site normalized a value (a reformatted
     // date, a suffixed school name). Adding another row would duplicate it, so
@@ -295,7 +340,7 @@ function assignments(
             identity.length - 1,
       )
     )
-      return null;
+      return bail("identity-near-match");
     if (matches.length === 1) {
       const index = matches[0];
       if (
@@ -311,14 +356,20 @@ function assignments(
           ).some((e) => nativeControlValue(e) !== "");
           return (
             populated &&
-            (value === undefined ||
-              value !== profileValue(profile, f, index, row, physicalIndex))
+            !sameRetainedValue(
+              f,
+              value,
+              profileValue(profile, f, index, row, physicalIndex),
+            )
           );
         })
       )
-        return null;
+        return bail("existing-value-conflict");
       used.add(index);
-      existing.set(row, "이미 입력된 항목입니다. 기존 행은 수정하지 않습니다.");
+      existing.set(row, {
+        reason: "이미 입력된 항목입니다. 기존 행은 수정하지 않습니다.",
+        index,
+      });
     }
   }
   // An entry the tenant's catalog cannot express never gets an added row: it
@@ -328,7 +379,7 @@ function assignments(
   const offered = remaining.filter((i) => !unoffered.has(i));
   const order = [...offered, ...remaining.filter((i) => unoffered.has(i))];
   const required = occupied + result.size + offered.length;
-  if (required > section.rows.maxCount) return null;
+  if (required > section.rows.maxCount) return bail("row-limit");
   const unplaced = order.slice(blank.length).filter((i) => unoffered.has(i));
   blank.forEach((row, i) => {
     const index = order[i];
@@ -425,7 +476,7 @@ const QUALIFICATION_REASON =
 function singleEntityAssignment(
   o: NativeOwnership,
   profile: Profile,
-): number | { reason: string } {
+): number | ExistingRow {
   const field = o.section.fields.find(
     (f) => f.name === o.section.identityFields?.[0],
   )!;
@@ -470,13 +521,16 @@ function singleEntityAssignment(
   const expected = resolveValueBinding(profile, field.binding, 0);
   return expected.status === "resolved" &&
     fieldValue(o.row, field, 0) === expected.value
-    ? { reason: "이미 입력된 항목입니다. 기존 엔티티는 수정하지 않습니다." }
+    ? {
+        reason: "이미 입력된 항목입니다. 기존 엔티티는 수정하지 않습니다.",
+        index: 0,
+      }
     : blocked;
 }
 export function nativeProfileAssignment(
   handle: FieldCandidateHandle,
   profile: Profile,
-): number | { reason: string } | undefined {
+): number | ExistingRow | undefined {
   const o = nativeOwnership(handle);
   if (!o?.section.identityFields) return;
   if (o.section.singleEntity) return singleEntityAssignment(o, profile);
@@ -502,10 +556,9 @@ export function nativeProfileAssignment(
   if (index !== undefined && !approveNativeGpa(handle, profile, index))
     return { reason: "숫자 평점과 만점기준을 함께 확인해 주세요." };
   return (
-    index ?? {
-      reason:
-        state?.existing.get(o.row) ??
-        "행 신원을 확인할 수 없어 해당 섹션은 사용자 확인이 필요합니다.",
+    index ??
+    state?.existing.get(o.row) ?? {
+      reason: "행 신원을 확인할 수 없어 해당 섹션은 사용자 확인이 필요합니다.",
     }
   );
 }

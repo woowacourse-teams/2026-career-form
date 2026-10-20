@@ -520,15 +520,63 @@ it.each(NORMALIZATIONS)(
   330000,
 );
 
-// Known gap (not fixed here, outside row assignment): on a rerun the review
-// compares each retained date with the profile's ISO value instead of the
-// site's dotted format, so every identical date is reported as "값이 달라요".
-it.fails(
-  "reports retained dates as already entered when step 2 runs again",
-  async () => {
-    await runTwice(TENANTS[1]);
+// A retained date is compared in the site's dotted format, not as the
+// profile's ISO value, so an identical date is never reported as a difference.
+it("reports retained dates as already entered when step 2 runs again", async () => {
+  await runTwice(TENANTS[1]);
 
-    expect(pendingRows()).toEqual([]);
-  },
-  330000,
-);
+  expect(pendingRows()).toEqual([]);
+}, 330000);
+
+/**
+ * The site reloading the saved page: every value survives as markup while
+ * each element (and the extension's per-element memory) is new, like a
+ * second visit after 임시저장. Search inputs come back empty as on the live
+ * page; the committed name stays in the hidden control and its label.
+ */
+function reloadPage() {
+  const form = document.querySelector("#frm")!;
+  for (const el of form.querySelectorAll<
+    HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+  >("input,select,textarea")) {
+    if (el instanceof HTMLSelectElement)
+      for (const option of el.options)
+        option.toggleAttribute("selected", option.selected);
+    else if (el instanceof HTMLTextAreaElement) el.textContent = el.value;
+    else if (el.type === "radio" || el.type === "checkbox")
+      el.toggleAttribute("checked", el.checked);
+    else el.setAttribute("value", el.type === "search" ? "" : el.value);
+  }
+  const host = form.parentElement!;
+  host.innerHTML = host.innerHTML;
+}
+
+it("reports every value as kept when the saved page is reloaded and step 2 runs again", async () => {
+  const run = await runTwice(TENANTS[1], reloadPage);
+
+  expect(loopCounts()).toEqual(run.rowsAfterFirst);
+  expect(run.second.counters.adds).toBe(0);
+  expect(run.second.counters.parentAdds).toBe(0);
+  expect(run.second.counters.keypresses).toBe(0);
+  expect(run.writes).toEqual([]);
+  expect(pageValues()).toEqual(run.valuesAfterFirst);
+  expect(pendingRows()).toEqual([]);
+  expect(completedCount()).toContain("0");
+  expect(run.second.counters.forbidden).toBe(0);
+}, 330000);
+
+it("leaves only the section with a user-edited row to the user after a reload", async () => {
+  const run = await runTwice(TENANTS[1], () => {
+    reloadPage();
+    control("career[0].retirementReason")!.value = "직접 고친 사유";
+  });
+
+  expect(loopCounts()).toEqual(run.rowsAfterFirst);
+  expect(run.second.counters.adds).toBe(0);
+  expect(run.writes).toEqual([]);
+  expect(control("career[0].retirementReason")!.value).toBe("직접 고친 사유");
+  const pending = pendingRows();
+  expect(pending.length).toBeGreaterThan(0);
+  expect(pending.filter((row) => !row.startsWith("직장경력:"))).toEqual([]);
+  expect(run.second.counters.forbidden).toBe(0);
+}, 330000);

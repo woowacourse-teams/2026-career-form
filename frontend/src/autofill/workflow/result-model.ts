@@ -8,6 +8,7 @@ import { savedResultValues } from "./result-preview";
 import { isSkippedByApproval } from "./workflow-model";
 import { matchesResultValue } from "./result-value-match";
 import { resultFieldLabel } from "./result-label";
+import { nativeRetainedValueMatches } from "../policy/native-form-write";
 
 export interface ResultModelInput {
   reviewItems: readonly ReviewPlanItem[];
@@ -36,6 +37,13 @@ export interface ResultModel {
 }
 function pendingReason(item: ReviewPlanItem): string {
   if (item.status === "conflict") return "기존 값과 다름";
+  // A retained native row whose page value differs from its matched entry.
+  if (
+    item.status === "unavailable" &&
+    item.itemIndex !== undefined &&
+    item.currentValue.trim()
+  )
+    return "기존 값과 다름";
   if (
     item.status === "needs-review" ||
     /선택|반복|후보/.test(item.reason) ||
@@ -143,6 +151,15 @@ export function buildResultModel(input: ResultModelInput): ResultModel {
           ? "등록된 정보 없음"
           : "자동 입력 미지원",
       );
+    } else if (
+      item.status === "unavailable" &&
+      !written &&
+      item.itemIndex !== undefined &&
+      live?.handle &&
+      saved.length === 1 &&
+      nativeRetainedValueMatches(live.handle, saved[0].value)
+    ) {
+      skip("기존 값 유지");
     } else if (
       matches &&
       (failureCode === "SEARCH_SELECTION_UNVERIFIED" ||

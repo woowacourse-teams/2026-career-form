@@ -19,7 +19,7 @@ import {
 } from "./native-form-collection";
 import { text, visible } from "./primitives";
 import { observedGradeLabel } from "./exam-grade-alias";
-import { searchNodes } from "./native-form-search-dom";
+import { searchNodes, searchTuple } from "./native-form-search-dom";
 import type { NativeField } from "./native-form-contract";
 import type { FailureReporter, WriteFailureCode } from "../write/failure";
 
@@ -296,6 +296,46 @@ export function nativeValueMatches(
   }
   const target = nativeTarget(handle, value);
   return target !== undefined && handle.elements[0].value === target;
+}
+/**
+ * Whether a row the run must not touch already holds `expected` in the site's
+ * own format (dotted date, option label, committed search name). Unlike
+ * nativeValueMatches it needs no selected, authorized item: it only reports.
+ */
+export function nativeRetainedValueMatches(
+  handle: FieldCandidateHandle,
+  expected: string,
+): boolean {
+  const o = currentNativeOwner(handle),
+    el = handle.elements[0];
+  if (!o || !el || !expected) return false;
+  if (o.field.search) {
+    const nodes = searchNodes(o.row, o.field, o.index);
+    if (!nodes) return false;
+    const [name, code, display] = searchTuple(nodes);
+    return (
+      name === expected &&
+      display === name &&
+      /^[A-Za-z0-9_-]{1,64}$/.test(code) &&
+      !/^0+$/.test(code)
+    );
+  }
+  if (o.field.type === "select" || o.field.type === "radio") {
+    const option = selectedOption(o, handle, expected);
+    return (
+      !!option &&
+      (option instanceof HTMLOptionElement ? option.selected : option.checked)
+    );
+  }
+  // A retained grade has no approval record; the number itself decides (3.65 = 3.650).
+  if (o.field.gpa)
+    return (
+      /^\d+(\.\d+)?$/.test(el.value) &&
+      /^\d+(\.\d+)?$/.test(expected) &&
+      Number(el.value) === Number(expected)
+    );
+  const target = nativeTarget(handle, expected);
+  return target !== undefined && el.value === target;
 }
 export const nativeWriteAdapter: CompanyWriteAdapter = {
   tryWrite(handle, item) {

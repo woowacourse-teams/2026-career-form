@@ -6,7 +6,10 @@ import {
   currentNativeOwner,
   nativeOwnership,
 } from "../policy/native-form-collection";
-import { nativeOptionPresence } from "../policy/native-form-write";
+import {
+  nativeOptionPresence,
+  nativeTarget,
+} from "../policy/native-form-write";
 import type { NativeSection } from "../policy/native-form-contract";
 import { text } from "../policy/primitives";
 import { executionPolicy } from "../workflow/execution-policy";
@@ -264,6 +267,16 @@ const NATIVE_DECIMAL = /^\d+(?:\.\d+)?$/;
 
 /** A native number input keeps the normalized decimal the run wrote (3.65 for
  * 3.650); the same number is not an existing value. */
+/** The page already shows the profile value in the site's own format (e.g. a dotted date). */
+function sameNativeTarget(
+  handle: FieldCandidateHandle,
+  page: string,
+  profile: string,
+): boolean {
+  return (
+    handle.owner === "native" && nativeTarget(handle, profile) === page.trim()
+  );
+}
 function sameNativeDecimal(
   handle: FieldCandidateHandle,
   page: string,
@@ -586,13 +599,44 @@ function itemForAnalysis(
         ? profileFieldParts(binding.profileFieldKey)
         : undefined;
   const nativeIndex = nativeProfileAssignment(lookup.handle, profile);
-  if (typeof nativeIndex === "object")
-    return unavailableItem(
+  if (typeof nativeIndex === "object") {
+    const item = unavailableItem(
       analysis.candidateId,
       fieldLabel,
       nativeIndex.reason,
       analysis,
     );
+    // A retained row keeps its matched entry, so the result can tell a value
+    // the page already holds from one that really differs.
+    const retained =
+      nativeIndex.index !== undefined
+        ? resolveValueBinding(profile, binding, nativeIndex.index)
+        : undefined;
+    if (nativeIndex.index === undefined) return item;
+    const retainedValue =
+      retained?.status === "resolved"
+        ? binding.type === "DIRECT" && normalizeDirectValue
+          ? normalizeDirectValue(binding.profileFieldKey, retained.value)
+          : retained.value
+        : undefined;
+    return {
+      ...item,
+      itemIndex: nativeIndex.index,
+      ...(retained?.status === "resolved"
+        ? {
+            ...(binding.type === "DIRECT"
+              ? { profileFieldKey: binding.profileFieldKey }
+              : {}),
+            ...(retained.profileEntryId
+              ? { profileEntryId: retained.profileEntryId }
+              : {}),
+            currentValue: currentValue(lookup.handle),
+            profileValue: retainedValue!,
+            previewValue: retainedValue!,
+          }
+        : {}),
+    };
+  }
   let itemIndex = nativeIndex ?? lookup.handle.itemIndex;
   // A mixed-section row is bound through its local assignment (C8).
   const mixed = lookup.handle.mixedSectionRow;
@@ -983,6 +1027,11 @@ function itemForAnalysis(
         ).some((value) => normalized(pageValue) === normalized(value))
       : pageValue.trim() !== resolvedProfileValue.value.trim() &&
         !sameNativeDecimal(
+          lookup.handle,
+          pageValue,
+          resolvedProfileValue.value,
+        ) &&
+        !sameNativeTarget(
           lookup.handle,
           pageValue,
           resolvedProfileValue.value,
