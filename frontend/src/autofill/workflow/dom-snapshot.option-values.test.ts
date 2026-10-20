@@ -141,7 +141,7 @@ describe("generic select and radio option values on sanitized fixtures", () => {
   it.each([
     ["ahnlab-write-resume-form", "#militaryType", undefined],
     ["sk-careers-application-form", "#prsMilitarySvcStatus", "#applyContentUserInfo"],
-  ])("blocks an unmatched military status on %s", async (fixture, selector, scope) => {
+  ])("leaves an unmatched military status for review on %s", async (fixture, selector, scope) => {
     const { grade } = await analyzeControl(
       fixture,
       selector,
@@ -151,7 +151,7 @@ describe("generic select and radio option values on sanitized fixtures", () => {
     );
 
     expect(grade).toEqual({
-      grade: "BLOCKED",
+      grade: "REVIEW",
       reason: "OPTION_VALUE_UNMATCHED",
     });
   });
@@ -209,7 +209,7 @@ describe("generic select and radio option values on sanitized fixtures", () => {
     );
 
     expect(grade).toEqual({
-      grade: "BLOCKED",
+      grade: "REVIEW",
       reason: "OPTION_VALUE_UNMATCHED",
     });
   });
@@ -218,7 +218,7 @@ describe("generic select and radio option values on sanitized fixtures", () => {
     ["a grade that is not an option", "#licenseGrd0", "Z등급"],
     ["a numeric score", "#licenseGrd0", "850"],
     ["a numeric score on the language grade", "#langGrd", "850"],
-  ])("blocks %s on the grade select", async (_name, selector, value) => {
+  ])("leaves %s on the grade select for review", async (_name, selector, value) => {
     const { grade } = await analyzeControl(
       "naver-step2-form",
       selector,
@@ -239,7 +239,7 @@ describe("generic select and radio option values on sanitized fixtures", () => {
     );
 
     expect(grade).toEqual({
-      grade: "BLOCKED",
+      grade: "REVIEW",
       reason: "OPTION_VALUE_UNMATCHED",
     });
   });

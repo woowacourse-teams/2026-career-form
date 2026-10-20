@@ -970,7 +970,13 @@ function itemForResolvedAnalysis(
     profileValue: resolvedProfileValue.value,
     previewValue: resolvedProfileValue.value,
     status: "available",
-    selected: analysis.writePlan.command === "SELECT_DATE" ? false : true,
+    // A calendar target whose approval was built from a complete profile date
+    // (format resolved by the calendar surface) is a format difference, not an
+    // ambiguity, so it is auto-selected. Conflicts returned earlier.
+    selected:
+      analysis.writePlan.command === "SELECT_DATE"
+        ? generic && !!(calendarApproval || dayCalendarApproval)
+        : true,
     disabled: false,
     revealed: true,
     reason:
@@ -980,8 +986,10 @@ function itemForResolvedAnalysis(
             ? "지원서에 같은 날짜가 이미 입력되어 있습니다."
             : "지원서에 같은 연월이 이미 입력되어 있습니다."
           : dayCalendarApproval
-            ? "달력 날짜를 확인한 뒤 선택해 주세요."
-            : "달력 연월을 확인한 뒤 선택해 주세요."
+            ? "달력을 열어 저장된 날짜를 선택해 입력합니다."
+            : calendarApproval
+              ? "달력을 열어 저장된 연월을 선택해 입력합니다."
+              : "달력 연월을 확인한 뒤 선택해 주세요."
         : "저장된 값과 지원서 필드가 명확히 연결되었습니다.",
     analysis,
     ...(verifiedFreshDefault

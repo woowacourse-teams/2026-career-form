@@ -11,6 +11,11 @@ import type {
 export const AUTO_CONFIDENCE_MIN = 0.8;
 /** Lower bound (inclusive) of confidence for REVIEW; below it is BLOCKED. */
 export const REVIEW_CONFIDENCE_MIN = 0.5;
+/**
+ * Lower bound (inclusive) of confidence at which an exact, non-derived profile
+ * key with a consistent section and row is promoted to AUTO.
+ */
+export const PROMOTE_CONFIDENCE_MIN = 0.35;
 
 export type FieldGrade = "AUTO" | "REVIEW" | "BLOCKED";
 
@@ -134,6 +139,7 @@ export function matchProfileValueOption(
   return index === null ? undefined : list[index]!.displayName;
 }
 
+/** Whether a profile value exists but no page option matches it. */
 function hasUnmatchedOptionValue(input: GradeFieldInput): boolean {
   if (!input.optionValueCheck) return false;
   if (input.control !== "select" && input.control !== "radio") return false;
@@ -319,6 +325,26 @@ function hasFormatKeyMismatch(input: GradeFieldInput): boolean {
 }
 
 /**
+ * A match below the AUTO boundary that is still as safe as an exact one: its
+ * own profile key (no derived recipe or date part), no half name, no lower
+ * duplicate in the row, and some field context. Category confirmation and the
+ * section and row checks have already passed by the time this runs.
+ */
+function isPromotableExactMatch(input: GradeFieldInput): boolean {
+  return (
+    input.confidence >= PROMOTE_CONFIDENCE_MIN &&
+    input.composite === undefined &&
+    Boolean(input.profileFieldKey) &&
+    !hasUnpairedNamePart(input) &&
+    !isLowerDuplicate(input) &&
+    Boolean(
+      input.displayName?.trim() ||
+        input.labels?.some((label) => label.text.trim()),
+    )
+  );
+}
+
+/**
  * Grades one generic-document match with pure code checks. Reads only its
  * input: no DOM, network, or global state.
  */
@@ -346,7 +372,16 @@ export function gradeGenericField(input: GradeFieldInput): FieldGradeResult {
     return { grade: "BLOCKED", reason: "FORMAT_KEY_MISMATCH" };
   }
   if (hasUnmatchedOptionValue(input)) {
-    return { grade: "BLOCKED", reason: "OPTION_VALUE_UNMATCHED" };
+    // A stored value that names no page option needs the applicant's choice.
+    // Without a value or any option there is nothing to choose, and a link
+    // below the promote boundary is too weak to offer, so those stay blocked.
+    const canChoose =
+      input.optionValueCheck?.profileValue?.trim() &&
+      (input.options?.length ?? 0) > 0 &&
+      input.confidence >= PROMOTE_CONFIDENCE_MIN;
+    return canChoose
+      ? { grade: "REVIEW", reason: "OPTION_VALUE_UNMATCHED" }
+      : { grade: "BLOCKED", reason: "OPTION_VALUE_UNMATCHED" };
   }
   if (input.confidence >= AUTO_CONFIDENCE_MIN && hasUnpairedNamePart(input)) {
     return { grade: "REVIEW", reason: "UNPAIRED_NAME_PART" };
@@ -366,6 +401,7 @@ export function gradeGenericField(input: GradeFieldInput): FieldGradeResult {
     }
     return { grade: "AUTO" };
   }
+  if (isPromotableExactMatch(input)) return { grade: "AUTO" };
   if (input.confidence >= REVIEW_CONFIDENCE_MIN) {
     return { grade: "REVIEW", reason: "MODERATE_CONFIDENCE" };
   }

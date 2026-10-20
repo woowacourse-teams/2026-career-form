@@ -5,6 +5,7 @@ import type { FieldCandidate } from "../api/types";
 import { collectFieldsSnapshot } from "../dom/collect";
 import {
   AUTO_CONFIDENCE_MIN,
+  PROMOTE_CONFIDENCE_MIN,
   REVIEW_CONFIDENCE_MIN,
   gradeGenericField,
   type GradeFieldInput,
@@ -29,6 +30,7 @@ describe("gradeGenericField boundaries", () => {
   it("defines the boundaries in one place", () => {
     expect(AUTO_CONFIDENCE_MIN).toBe(0.8);
     expect(REVIEW_CONFIDENCE_MIN).toBe(0.5);
+    expect(PROMOTE_CONFIDENCE_MIN).toBe(0.35);
   });
 
   it("returns AUTO for a confirmed, checked match above the AUTO boundary", () => {
@@ -38,20 +40,42 @@ describe("gradeGenericField boundaries", () => {
     ).toBe("AUTO");
   });
 
-  it("returns REVIEW just below the AUTO boundary down to the REVIEW boundary", () => {
-    const below = AUTO_CONFIDENCE_MIN - 0.01;
-    expect(gradeGenericField(input({ confidence: below })).grade).toBe(
-      "REVIEW",
-    );
-    expect(
-      gradeGenericField(input({ confidence: REVIEW_CONFIDENCE_MIN })).grade,
-    ).toBe("REVIEW");
+  it.each([0.79, 0.5, 0.49, 0.35])(
+    "promotes an exact key at %s to AUTO",
+    (confidence) => {
+      expect(gradeGenericField(input({ confidence }))).toEqual({
+        grade: "AUTO",
+      });
+    },
+  );
+
+  it("returns BLOCKED just below the promote boundary", () => {
+    expect(gradeGenericField(input({ confidence: 0.34 }))).toEqual({
+      grade: "BLOCKED",
+      reason: "LOW_CONFIDENCE",
+    });
   });
 
-  it("returns BLOCKED below the REVIEW boundary", () => {
+  it.each([
+    ["a lower duplicate in the row", {
+      rowSiblings: [
+        { profileFieldKey: base.profileFieldKey, confidence: 0.9 },
+      ],
+    }],
+    ["no field context", { displayName: undefined }],
+  ] as const)("does not promote an exact key with %s", (_name, override) => {
     expect(
-      gradeGenericField(input({ confidence: REVIEW_CONFIDENCE_MIN - 0.01 })),
+      gradeGenericField(input({ confidence: 0.6, ...override })),
+    ).toEqual({ grade: "REVIEW", reason: "MODERATE_CONFIDENCE" });
+    expect(
+      gradeGenericField(input({ confidence: 0.4, ...override })),
     ).toEqual({ grade: "BLOCKED", reason: "LOW_CONFIDENCE" });
+  });
+
+  it("does not promote an unconfirmed category", () => {
+    expect(
+      gradeGenericField(input({ confidence: 0.4, categoryConfirmed: false })),
+    ).toEqual({ grade: "REVIEW", reason: "CATEGORY_UNCONFIRMED" });
   });
 
   it("returns REVIEW when the category is not confirmed", () => {
@@ -281,7 +305,7 @@ describe("gradeGenericField on sanitized fixtures", () => {
       "성별 *": {
         key: "personal.personal.gender",
         confidence: 0.65,
-        grade: "REVIEW",
+        grade: "AUTO",
       },
       년: {
         key: "personal.personal.birthDate",
@@ -342,7 +366,7 @@ describe("gradeGenericField on sanitized fixtures", () => {
       },
       "병역구분 *": {
         key: "military.military.status",
-        confidence: 0.4,
+        confidence: 0.3,
         grade: "BLOCKED",
       },
       "대학 학교명 1*": {
@@ -534,6 +558,17 @@ describe("gradeGenericField composite name recipes", () => {
     });
   });
 
+  it("does not promote a derived recipe below the REVIEW boundary", () => {
+    expect(gradeGenericField(recipe({ confidence: 0.4 }))).toEqual({
+      grade: "BLOCKED",
+      reason: "LOW_CONFIDENCE",
+    });
+    expect(gradeGenericField(recipe({ confidence: 0.35 }))).toEqual({
+      grade: "BLOCKED",
+      reason: "LOW_CONFIDENCE",
+    });
+  });
+
   it("blocks a recipe whose profile values are not all present", () => {
     expect(gradeGenericField(recipe({ hasProfileValue: false }))).toEqual({
       grade: "BLOCKED",
@@ -705,8 +740,6 @@ describe("gradeGenericField select and radio option values", () => {
   });
 
   it.each([
-    ["no matching option", "military-status:served", ["비대상", "미필"]],
-    ["two matching options", "군필", ["군필", " 군필 ", "미필"]],
     ["a missing local value", undefined, ["군필", "미필"]],
     ["no options at all", "군필", []],
   ])("blocks a radio with %s", (_name, value, names) => {
@@ -717,9 +750,34 @@ describe("gradeGenericField select and radio option values", () => {
   });
 
   it.each([
+    ["no matching option", "military-status:served", ["비대상", "미필"]],
+    ["two matching options", "군필", ["군필", " 군필 ", "미필"]],
+  ])("leaves a radio with %s for the applicant to choose", (_name, value, names) => {
+    expect(gradeGenericField(radio(value, ...names))).toEqual({
+      grade: "REVIEW",
+      reason: "OPTION_VALUE_UNMATCHED",
+    });
+  });
+
+  it("keeps an unmatched option blocked below the promote boundary", () => {
+    expect(
+      gradeGenericField({ ...radio("군필", "비대상", "미필"), confidence: 0.34 }),
+    ).toEqual({ grade: "BLOCKED", reason: "OPTION_VALUE_UNMATCHED" });
+  });
+
+  it("keeps a missing profile value blocked ahead of the option check", () => {
+    expect(
+      gradeGenericField({
+        ...radio("군필", "비대상", "미필"),
+        hasProfileValue: false,
+      }),
+    ).toEqual({ grade: "BLOCKED", reason: "NO_PROFILE_VALUE" });
+  });
+
+  it.each([
     ["a language score and grade options", "languages.languageTest.grade", "850", ["A등급", "B등급"]],
     ["another score and grade options", "languages.languageTest.grade", "7.5", ["1급", "2급"]],
-  ])("blocks a numeric value on a grade select (%s)", (_name, scoreKey, value, names) => {
+  ])("leaves a numeric value on a grade select for the applicant (%s)", (_name, scoreKey, value, names) => {
     expect(
       gradeGenericField(
         input({
@@ -729,7 +787,7 @@ describe("gradeGenericField select and radio option values", () => {
           optionValueCheck: { profileValue: value },
         }),
       ),
-    ).toEqual({ grade: "BLOCKED", reason: "OPTION_VALUE_UNMATCHED" });
+    ).toEqual({ grade: "REVIEW", reason: "OPTION_VALUE_UNMATCHED" });
   });
 
   it("matches a free-text value only on a normalized exact option", () => {

@@ -34,21 +34,21 @@ describe("generic option matching in grading", () => {
 
   it("never auto-fills a containment-only option", () => {
     expect(select("우수", "선택", "우수 등급", "보통 등급")).toEqual({
-      grade: "BLOCKED",
+      grade: "REVIEW",
       reason: "OPTION_VALUE_UNMATCHED",
     });
   });
 
-  it("keeps an ambiguous token-set match blocked", () => {
+  it("leaves an ambiguous token-set match for review", () => {
     expect(select("우수 등급", "등급 우수", "우수, 등급")).toEqual({
-      grade: "BLOCKED",
+      grade: "REVIEW",
       reason: "OPTION_VALUE_UNMATCHED",
     });
   });
 
-  it("keeps a value that names no option blocked", () => {
+  it("leaves a value that names no option for review", () => {
     expect(select("우수", "보통 등급", "미흡 등급")).toEqual({
-      grade: "BLOCKED",
+      grade: "REVIEW",
       reason: "OPTION_VALUE_UNMATCHED",
     });
   });

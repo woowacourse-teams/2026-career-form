@@ -1012,7 +1012,7 @@ describe("generic select and radio option values", () => {
   it.each([
     ["a radio group without the label", radios("비대상", "미필")],
     ["a radio group with a duplicate label", radios("군필", "군필", "미필")],
-  ])("blocks a stored military status on %s", async (_name, html) => {
+  ])("leaves a stored military status for review on %s", async (_name, html) => {
     document.body.innerHTML = html;
 
     const { byName } = await run(
@@ -1024,7 +1024,7 @@ describe("generic select and radio option values", () => {
       valueBinding: { type: "DIRECT" },
     });
     expect(byName("choice").grade).toEqual({
-      grade: "BLOCKED",
+      grade: "REVIEW",
       reason: "OPTION_VALUE_UNMATCHED",
     });
   });
@@ -1049,7 +1049,7 @@ describe("generic select and radio option values", () => {
   it.each([
     ["a certificate grade", "certifications.certificate.grade", select("A등급", "B등급")],
     ["a language score", "languages.languageTest.grade", select("1급", "2급")],
-  ])("blocks a numeric value on %s select", async (_name, key, html) => {
+  ])("leaves a numeric value on %s select for review", async (_name, key, html) => {
     document.body.innerHTML = html;
     const profile = createEmptyProfile();
     profile.certifications.push({
@@ -1062,7 +1062,7 @@ describe("generic select and radio option values", () => {
     const { byName } = await run({ field: choice(key) }, profile);
 
     expect(byName("choice").grade).toEqual({
-      grade: "BLOCKED",
+      grade: "REVIEW",
       reason: "OPTION_VALUE_UNMATCHED",
     });
   });
