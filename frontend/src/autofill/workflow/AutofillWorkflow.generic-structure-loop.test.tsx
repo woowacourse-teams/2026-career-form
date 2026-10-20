@@ -1,4 +1,4 @@
-import { render, waitFor } from "@testing-library/react";
+import { cleanup, render, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { fixturePolicy } from "../../test/fixtures/execution-policy";
@@ -9,6 +9,7 @@ import { AutofillWorkflow } from "./AutofillWorkflow";
 import { installExecutionPolicy } from "./execution-policy";
 
 afterEach(() => {
+  cleanup();
   installExecutionPolicy(document);
   document.body.replaceChildren();
 });
@@ -140,8 +141,54 @@ describe("generic structure loop gate in the workflow", () => {
   it("keeps the preparation analysis when the document has an execution policy", async () => {
     const rowCount = mountCareerForm();
     const api = createClient();
+    api.client.analyzeFields = async (request) => ({
+      snapshotId: request.snapshotId,
+      mode: "ADAPTER",
+      analysisStatus: "COMPLETE",
+      fields: [],
+      executionPolicy: fixturePolicy("sk"),
+    });
     (api.client as { loadExecutionPolicy?: unknown }).loadExecutionPolicy =
       async () => fixturePolicy("sk");
+
+    renderWorkflow(api.client, profileWithCareers(3));
+    await waitFor(() => expect(api.analyzePreparation).toHaveBeenCalled());
+
+    expect(api.decideInteractions).not.toHaveBeenCalled();
+    expect(rowCount()).toBe(1);
+  });
+
+  it("uses the structure loop when only the common provider policy is installed", async () => {
+    const rowCount = mountCareerForm();
+    const api = createClient();
+    (api.client as { loadExecutionPolicy?: unknown }).loadExecutionPolicy =
+      async () => ({
+        ...fixturePolicy("sk"),
+        browserPolicy: undefined,
+        componentPolicy: undefined,
+        searches: [],
+        failureScopes: [],
+        address: null,
+      });
+
+    renderWorkflow(api.client, profileWithCareers(3));
+    await waitFor(() => expect(api.analyzeGenericFields).toHaveBeenCalled());
+
+    expect(rowCount()).toBe(3);
+    expect(api.analyzePreparation).not.toHaveBeenCalled();
+    expect(api.decideInteractions).toHaveBeenCalled();
+  });
+
+  it("keeps the preparation analysis for site searches without an engine policy", async () => {
+    const rowCount = mountCareerForm();
+    const api = createClient();
+    (api.client as { loadExecutionPolicy?: unknown }).loadExecutionPolicy =
+      async () => ({
+        ...fixturePolicy("sk"),
+        browserPolicy: undefined,
+        componentPolicy: undefined,
+        address: null,
+      });
 
     renderWorkflow(api.client, profileWithCareers(3));
     await waitFor(() => expect(api.analyzePreparation).toHaveBeenCalled());

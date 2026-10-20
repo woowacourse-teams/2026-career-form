@@ -126,6 +126,27 @@ describe("layer query input (C11)", () => {
     ]);
   });
 
+  const workplaceGroup = (inner: string) =>
+    `<div class="search" id="group0"><label for="target0">직장명</label><input id="target0" readonly><button id="opener0" type="button">검색</button>${inner}</div>`;
+
+  it("accepts a company lookup layer for a workplace field", () => {
+    document.body.innerHTML = workplaceGroup(layer("layer", "회사명 조회"));
+    const { opener, observation } = start();
+    show("layer");
+    const surface = observation.discover(opener)!;
+    expect(queryControls(surface)).toEqual([
+      document.querySelector("#layer div input"),
+    ]);
+  });
+
+  it("keeps rejecting a school lookup layer for a workplace field", () => {
+    document.body.innerHTML = workplaceGroup(layer("layer", "학교명 조회"));
+    const { opener, observation } = start();
+    show("layer");
+    const surface = observation.discover(opener)!;
+    expect(queryControls(surface)).toEqual([]);
+  });
+
   it("does not accept it when the heading lacks the target subject", () => {
     document.body.innerHTML = fieldGroup(0, layer("layer", "조회"));
     const { opener, observation } = start();

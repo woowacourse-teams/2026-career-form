@@ -9,6 +9,11 @@ import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { chromium } from "playwright";
+import {
+  fieldAnalysis,
+  fieldResponse,
+  isFieldAnalysisEvent,
+} from "./collector.mjs";
 
 const DRIVER_DIR = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(DRIVER_DIR, "../../..");
@@ -349,31 +354,27 @@ async function driveWorkflow(page) {
       await write.waitFor({ state: "detached", timeout: RUN_TIMEOUT_MS });
       continue;
     }
-    await page.waitForTimeout(200);
+    try {
+      await prepare
+        .or(write)
+        .or(panel.getByRole("heading", { name: "기입 결과" }))
+        .or(panel.getByText("자동 기입은 완료하지 않았습니다"))
+        .or(panel.getByText("아직 지원하지 않아요"))
+        .first()
+        .waitFor({
+          state: "attached",
+          timeout: Math.max(1, deadline - Date.now()),
+        });
+    } catch (error) {
+      if (error.name !== "TimeoutError") throw error;
+      break;
+    }
   }
   return { status: "TIMEOUT", reason: "workflow did not finish", steps };
 }
 
-function fieldAnalysis(events) {
-  const domIds = new Map();
-  const analyses = new Map();
-  for (const event of events) {
-    if (event.type !== "AUTOFILL_ANALYZE_FIELDS") continue;
-    for (const section of event.request?.sections ?? []) {
-      const fields = [
-        ...section.fields,
-        ...(section.items ?? []).flatMap((item) => item.fields),
-      ];
-      for (const field of fields) domIds.set(field.candidateId, field.domId);
-    }
-    for (const field of event.response?.fields ?? [])
-      analyses.set(field.candidateId, field);
-  }
-  return { domIds, analyses };
-}
-
-function judge(events, initial, final, retained) {
-  const { domIds, analyses } = fieldAnalysis(events);
+function judge(events, initial, final, retained, clientAnalyses) {
+  const { domIds, analyses } = fieldAnalysis(events, clientAnalyses);
   const initialValues = new Map(initial.map((item) => [item.id, item.value]));
   const finalValues = new Map(final.map((item) => [item.id, item.value]));
   const retainedValues = new Map(retained.map((item) => [item.id, item.value]));
@@ -449,8 +450,8 @@ function judge(events, initial, final, retained) {
   );
 }
 
-function mappedKeys(events) {
-  const { domIds, analyses } = fieldAnalysis(events);
+function mappedKeys(events, clientAnalyses) {
+  const { domIds, analyses } = fieldAnalysis(events, clientAnalyses);
   return Object.fromEntries(
     [...domIds]
       .filter(([, domId]) => /^c\d{3}$/.test(domId ?? ""))
@@ -534,10 +535,10 @@ async function runOnce(browser, index) {
   const preparationRequests = analysisEvents.filter(
     (event) => event.type === "AUTOFILL_ANALYZE_PREPARATION",
   );
-  const fieldRequests = analysisEvents.filter(
-    (event) => event.type === "AUTOFILL_ANALYZE_FIELDS",
-  );
-  const candidates = args.diagnose ? [] : judge(state.events, initial, final, retained);
+  const fieldRequests = analysisEvents.filter(isFieldAnalysisEvent);
+  const candidates = args.diagnose
+    ? []
+    : judge(state.events, initial, final, retained, state.clientAnalyses);
   const failures = [];
   if (outcome.status !== "RESULT")
     failures.push(`${outcome.status}${outcome.reason ? `: ${outcome.reason}` : ""}`);
@@ -558,19 +559,14 @@ async function runOnce(browser, index) {
       analysis_duration_ms: durationMs,
       wall_ms: wallMs,
       preparation_requests: preparationRequests.length,
+      section_classification_requests: analysisEvents.filter(
+        (event) => event.type === "AUTOFILL_GENERIC_CLASSIFY_SECTIONS",
+      ).length,
       field_requests: fieldRequests.length,
       interaction_requests: analysisEvents.filter(
         (event) => event.type === "AUTOFILL_DECIDE_INTERACTIONS",
       ).length,
-      field_responses: fieldRequests.map((event) => ({
-        ok: event.ok ?? false,
-        analysis_status: event.response?.analysisStatus ?? null,
-        warning_codes: event.response?.warningCodes ?? [],
-        fields: event.response?.fields?.length ?? 0,
-        matches:
-          event.response?.fields?.filter((field) => field.matchType === "MATCH")
-            .length ?? 0,
-      })),
+      field_responses: fieldRequests.map(fieldResponse),
       preparation_plans: preparationRequests.flatMap(
         (event) =>
           event.response?.preparationPlans?.map((plan) => plan.command) ?? [],
@@ -585,7 +581,10 @@ async function runOnce(browser, index) {
       ...(args.diagnose ? { add_plan_diagnoses: state.diagnoses } : {}),
       ...(args.diagnose
         ? {}
-        : { summary: summary(candidates), mapped_keys: mappedKeys(state.events) }),
+        : {
+            summary: summary(candidates),
+            mapped_keys: mappedKeys(state.events, state.clientAnalyses),
+          }),
     },
     candidates,
   };
