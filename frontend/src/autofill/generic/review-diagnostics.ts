@@ -1,5 +1,8 @@
 import type { FieldCandidate } from "../api/types";
-import type { ReviewPlanItem } from "../review/review-plan";
+import {
+  reviewItemsForDisplay,
+  type ReviewPlanItem,
+} from "../review/review-plan";
 
 export interface ReviewDiagnosticContext {
   candidate: FieldCandidate;
@@ -49,6 +52,17 @@ export function buildReviewDiagnostics(
   items: readonly ReviewPlanItem[],
   contexts: ReadonlyMap<string, ReviewDiagnosticContext>,
 ) {
+  // Match WorkflowScreens' review panels, not the earlier generic grade.
+  // Keep every diagnostic entry even when it is not displayed by the UI.
+  const exceptionalItems = new Set(
+    reviewItemsForDisplay(items).filter(
+      (item) =>
+        item.status !== "available" ||
+        item.analysis?.writePlan?.command === "SELECT_DATE" ||
+        item.searchValuePlan ||
+        !item.selected,
+    ),
+  );
   const fields: ReviewDiagnosticField[] = items.map((item) => {
     const context = contexts.get(item.candidateId);
     const key =
@@ -56,13 +70,15 @@ export function buildReviewDiagnostics(
       item.analysis?.valueBinding?.profileFieldKey ??
       item.analysis?.profileFieldKey;
     return {
-      grade:
-        item.genericGrade ??
-        (item.disabled || item.status === "unavailable"
+      grade: exceptionalItems.has(item)
+        ? item.genericGrade === "BLOCKED"
+          ? "BLOCKED"
+          : "REVIEW"
+        : item.disabled || item.status === "unavailable"
           ? "BLOCKED"
           : item.selected
             ? "AUTO"
-            : "REVIEW"),
+            : "REVIEW",
       reasonCode: item.genericReasonCode ?? item.failureCode ?? null,
       sectionCategory: context?.sectionCategory ?? "none",
       repeatRowIndex: context?.repeatRowIndex ?? null,
