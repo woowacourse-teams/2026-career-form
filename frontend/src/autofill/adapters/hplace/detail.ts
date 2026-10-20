@@ -68,7 +68,12 @@ export function detailControls(document: Document): DetailControls | undefined {
       : undefined;
   };
   const englishName = one("englishName", "englishName", 64, sections[0][0]);
-  const birthday = one("birthday", "birthday", undefined, sections[0][0]);
+  // Some tenants (KDI, 2026-10-20) have no birthday or gender at all. Only a
+  // page without any birthday control may omit it; a malformed one fails.
+  const birthdayPresent = document.querySelector('[name="birthday"]') !== null;
+  const birthday = birthdayPresent
+    ? one("birthday", "birthday", undefined, sections[0][0])
+    : undefined;
   // Some tenants (com2us, 2026-10-20) render section 13 without any current
   // address. Only a page with no address control at all may omit it; any
   // partial address structure is still verified below and fails closed.
@@ -81,13 +86,14 @@ export function detailControls(document: Document): DetailControls | undefined {
     : undefined;
   if (
     !englishName ||
-    !birthday ||
-    (addressPresent && !detailAddress) ||
-    englishName.closest(".subject") !== birthday.closest(".subject") ||
-    birthday.dataset.dates !== "birthday:YMD"
+    (birthdayPresent &&
+      (!birthday ||
+        englishName.closest(".subject") !== birthday.closest(".subject") ||
+        birthday.dataset.dates !== "birthday:YMD")) ||
+    (addressPresent && !detailAddress)
   )
     return reject();
-  for (const input of [englishName, birthday]) {
+  for (const input of birthday ? [englishName, birthday] : [englishName]) {
     const labels = document.querySelectorAll(`label[for="${input.id}"]`);
     if (
       labels.length !== 1 ||
@@ -128,7 +134,7 @@ export function detailControls(document: Document): DetailControls | undefined {
     return reject();
   return {
     englishName,
-    birthday,
+    ...(birthday ? { birthday } : {}),
     ...(detailAddress ? { detailAddress } : {}),
     ...(emergencyPhone ? { emergencyPhone } : {}),
   };

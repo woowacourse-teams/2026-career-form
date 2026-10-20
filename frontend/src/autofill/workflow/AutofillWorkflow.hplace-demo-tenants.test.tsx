@@ -78,3 +78,22 @@ it("writes the English name family-first when the company states no order", asyn
   await screen.findByText("기입 결과", {}, { timeout: 15000 });
   expect(input("englishName").value).toBe("HONG GILDONG");
 });
+
+it("writes the English name on a KDI-type page without birthday and gender", async () => {
+  const { policy } = mountRun1();
+  const english = input("englishName");
+  document.querySelector('label[for="birthday"]')!.remove();
+  input("birthday").remove();
+  document
+    .querySelectorAll('[name="genderFlag"]')
+    .forEach((e) => e.closest("label")!.remove());
+  english
+    .closest(".subject")!
+    .insertAdjacentHTML(
+      "afterbegin",
+      '<div class="wrapGuide"><div class="guide hasTitle englishName">* Hong, Gildong (여권상 영문성명 기재)</div></div>',
+    );
+  run(policy, demoProfile());
+  await screen.findByText("기입 결과", {}, { timeout: 15000 });
+  expect(english.value).toBe("HONG GILDONG");
+});

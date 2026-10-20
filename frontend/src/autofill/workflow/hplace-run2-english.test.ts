@@ -157,3 +157,23 @@ it("defaults to family-first when the page has no English-name guide at all", ()
     .find((f) => f.displayName === "영문이름")!;
   expect(english.domName).toBe("hplace.detail.englishName.familyFirst");
 });
+
+it.each([
+  ["* Hong, Gildong (여권상 영문성명 기재)", ".familyFirst"],
+  ["예) HONG GILDONG", ".familyFirst"],
+  ["ex) Gildong Hong", ".givenFirst"],
+  ["예) Gil-dong Hong", ".givenFirst"],
+  // Two different sample orders, or no standard sample: still ambiguous.
+  ["Hong, Gildong 또는 Gildong Hong", ""],
+  ["예) Kim, Minsu", ""],
+])(
+  "reads the order of the standard sample name in guide %j (KDI-type)",
+  (text, suffix) => {
+    mountLive();
+    document.querySelector(".guide.englishName")!.textContent = text;
+    const english = collectFieldsSnapshot(document)
+      .request.sections.flatMap((s) => s.fields)
+      .find((f) => f.displayName === "영문이름")!;
+    expect(english.domName).toBe(`hplace.detail.englishName${suffix}`);
+  },
+);

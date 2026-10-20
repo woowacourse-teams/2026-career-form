@@ -375,3 +375,29 @@ it("still fails closed when only part of the current address remains", () => {
     ]),
   );
 });
+
+it("keeps the English name on a tenant without birthday and gender (KDI-type)", () => {
+  mountDetail();
+  document.querySelector('label[for="birthday"]')!.remove();
+  document.getElementById("birthday")!.remove();
+  expect(resolveDocumentCompany(document)).toBe("hplace");
+  expect(
+    collectFieldsSnapshot(document).request.sections.flatMap((s) =>
+      s.fields.map((f) => f.domName),
+    ),
+  ).toEqual([
+    "hplace.detail.englishName.familyFirst",
+    "hplace.detail.detailAddress",
+  ]);
+});
+it("still fails closed when the birthday control is malformed", () => {
+  mountDetail();
+  document
+    .getElementById("birthday")!
+    .setAttribute("data-dates", "birthday:YM");
+  expect(collectFieldsSnapshot(document).request.sections).not.toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ sectionId: "hplace-detail-basic" }),
+    ]),
+  );
+});

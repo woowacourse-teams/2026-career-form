@@ -36,6 +36,21 @@ export function englishNameOrder(
       /이름\s*\+\s*성|성\s*\+\s*이름|First\s+Last|Given\s+Family/gi,
     ),
   ];
+  // No order phrase: follow the order of the platform's standard sample name
+  // (홍길동) when exactly one sample order appears (KDI "Hong, Gildong",
+  // 2026-10-20 user decision). Any other or mixed sample stays ambiguous.
+  if (!matches.length) {
+    const familyFirst = [...text.matchAll(/\bhong\s*,?\s+gil-?dong\b/gi)];
+    const givenFirst = [...text.matchAll(/\bgil-?dong\s*,?\s+hong\b/gi)];
+    if (familyFirst.length + givenFirst.length === 1)
+      return familyFirst.length ? "familyFirst" : "givenFirst";
+    debugCollectionSkip(
+      "hplace.detail.englishName",
+      "guide-ambiguous",
+      "sample-order",
+    );
+    return;
+  }
   if (
     matches.length !== 1 ||
     !/^\s*-?\s*$/.test(text.slice(0, matches[0].index))
