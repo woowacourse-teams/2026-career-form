@@ -20,14 +20,14 @@ SK·LG·카카오의 구조 보존 사람 검토는 아직 미실시다.
 
 ## 2026-10-20 추가 등록 (CF-177 C12)
 
-| 픽스처 | 판정 | 재현 | 요약 |
-| --- | --- | --- | --- |
-| [hplace-mrs2-step2-gsenc](hplace-mrs2-step2-gsenc/review.md) | 등록 가능 | builder 대조 | 섹션 140·141·142·16, 컨트롤 97. 텍스트 전부 `[TEXT]` |
-| [hplace-mrs2-step2-careerhyundai](hplace-mrs2-step2-careerhyundai/review.md) | 등록 가능 | builder 대조 | 섹션 140·141·142·16, 컨트롤 97. 고교 주야간, YMD 학력 날짜 |
-| [hplace-mrs2-step2-abl](hplace-mrs2-step2-abl/review.md) | 등록 가능 | builder 대조 | 섹션 141·142·16(이 tenant는 140 없음), 컨트롤 91. 전공 평점·기여도·경험 기술 |
-| [hplace-mrs2-step3-gsenc](hplace-mrs2-step3-gsenc/review.md) | 등록 가능 | 구조 단언 | 섹션 18, 컨트롤 11. 자격증 등록번호 maxlength 64·licenseCode 게이팅 |
-| [hplace-mrs2-step3-careerhyundai](hplace-mrs2-step3-careerhyundai/review.md) | 등록 가능 | 구조 단언 | 섹션 18, 컨트롤 33 |
-| [hplace-mrs2-step3-abl](hplace-mrs2-step3-abl/review.md) | 등록 가능 | 구조 단언 | 섹션 18, 컨트롤 36 |
+| 픽스처                                                                       | 판정      | 재현         | 요약                                                                         |
+| ---------------------------------------------------------------------------- | --------- | ------------ | ---------------------------------------------------------------------------- |
+| [hplace-mrs2-step2-gsenc](hplace-mrs2-step2-gsenc/review.md)                 | 등록 가능 | builder 대조 | 섹션 140·141·142·16, 컨트롤 97. 텍스트 전부 `[TEXT]`                         |
+| [hplace-mrs2-step2-careerhyundai](hplace-mrs2-step2-careerhyundai/review.md) | 등록 가능 | builder 대조 | 섹션 140·141·142·16, 컨트롤 97. 고교 주야간, YMD 학력 날짜                   |
+| [hplace-mrs2-step2-abl](hplace-mrs2-step2-abl/review.md)                     | 등록 가능 | builder 대조 | 섹션 141·142·16(이 tenant는 140 없음), 컨트롤 91. 전공 평점·기여도·경험 기술 |
+| [hplace-mrs2-step3-gsenc](hplace-mrs2-step3-gsenc/review.md)                 | 등록 가능 | 구조 단언    | 섹션 18, 컨트롤 11. 자격증 등록번호 maxlength 64·licenseCode 게이팅          |
+| [hplace-mrs2-step3-careerhyundai](hplace-mrs2-step3-careerhyundai/review.md) | 등록 가능 | 구조 단언    | 섹션 18, 컨트롤 33                                                           |
+| [hplace-mrs2-step3-abl](hplace-mrs2-step3-abl/review.md)                     | 등록 가능 | 구조 단언    | 섹션 18, 컨트롤 36                                                           |
 
 사람 개인정보·구조 검토 통과(2026-10-20). 사이트 스크립트·서버 동작은 재현하지 않으며 게이팅이 필요한 테스트는 linkedForm 에뮬레이터를 따로 붙인다.
 
