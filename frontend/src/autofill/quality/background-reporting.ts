@@ -56,6 +56,8 @@ function validReport(value: unknown): value is QualityReport {
   const fields = Object.entries(report.fields);
   const identities = Object.entries(report.identities);
   return (
+    (report.snapshotId !== null ||
+      (fields.length === 0 && identities.length === 0)) &&
     fields.length <= 2000 &&
     identities.length <= 2000 &&
     fields.every(
@@ -80,6 +82,26 @@ function validReport(value: unknown): value is QualityReport {
         reference.length <= 2048 &&
         /^e[1-9]\d{0,7}(?:\.e[1-9]\d{0,7}){0,99}$/.test(reference),
     )
+  );
+}
+
+function validPayload(value: unknown): boolean {
+  if (validReport(value)) return true;
+  if (
+    !value ||
+    typeof value !== "object" ||
+    Object.keys(value).length !== 1 ||
+    !("reports" in value)
+  )
+    return false;
+  const reports = value.reports;
+  return (
+    Array.isArray(reports) &&
+    reports.length > 0 &&
+    reports.length <= 200 &&
+    reports.every(validReport) &&
+    new Set(reports.map((report) => report.eventId)).size === reports.length &&
+    reports.slice(0, -1).every((report) => report.finished === null)
   );
 }
 
@@ -182,7 +204,7 @@ export class BackgroundQualityReporting {
       return undefined;
     const parsed = message as { qualityRun?: unknown; payload?: unknown };
     const owner = this.owner(parsed.qualityRun, source);
-    if (!owner || !validReport(parsed.payload) || !this.baseUrl)
+    if (!owner || !validPayload(parsed.payload) || !this.baseUrl)
       return { ok: false };
     const body = JSON.stringify(parsed.payload);
     const bytes = new TextEncoder().encode(body).length;
