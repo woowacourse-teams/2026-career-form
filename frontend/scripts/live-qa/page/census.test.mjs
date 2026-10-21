@@ -390,6 +390,7 @@ describe("discardResidue", () => {
     expect(discardResidue(frames("a", "b", ""), frames("a", "b", ""))).toEqual({
       verified: true,
       unexpected: 0,
+      rekeyed: 0,
       before: 2,
       after: 2,
       formLost: false,
@@ -397,6 +398,28 @@ describe("discardResidue", () => {
       sameStep: true,
       controls: { before: 3, after: 3 },
     });
+  });
+  it("matches a control the reload re-keyed by value, but not a new value", () => {
+    const rekey = (list, n, key) => {
+      list[0].controls[n].key = key;
+      return list;
+    };
+    expect(
+      discardResidue(
+        frames("a", "b"),
+        rekey(frames("a", "b"), 1, "tmpl-guid2"),
+      ),
+    ).toMatchObject({ verified: true, unexpected: 0, rekeyed: 1 });
+    expect(
+      discardResidue(
+        frames("a", "b"),
+        rekey(frames("a", "SYNTH"), 1, "tmpl-guid2"),
+      ),
+    ).toMatchObject({ verified: false, unexpected: 1, rekeyed: 0 });
+    // A re-keyed control cannot reuse a value a stable key already holds.
+    expect(
+      discardResidue(frames("a", ""), rekey(frames("a", "a"), 1, "tmpl-guid2")),
+    ).toMatchObject({ verified: false, unexpected: 1 });
   });
   it("fails when a run value replaced a pre-run value, even if the count matches", () => {
     expect(

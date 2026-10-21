@@ -72,7 +72,9 @@ const RULES = `
 반복 행(학력·경력·어학·자격증·프로젝트 등): 화면에 이미 있는 행의 칸은 위 규칙으로 분류한다. 추가로 rowExpansion에 섹션별로 existingRows(화면에 있는 행 수), profileEntries(그 섹션에 넣을 프로필 항목 수), extraRowsExpected(행 추가 버튼으로 더 만들어야 할 행 수, 추가 버튼이 없어 보이면 0으로 하고 note), autofillablePerRow(한 행에서 AUTOFILLABLE인 칸 수)를 적는다.
 
 input.addButtons(있으면)는 화면에 보이는 '추가' 버튼 문구다. 섹션에 행(칸)이 0개라도 해당 추가 버튼이 있으면 existingRows=0, extraRowsExpected=profileEntries로 보고 autofillablePerRow는 그 섹션에 보통 있는 칸 중 프로필로 채울 수 있는 칸 수로 추정한다(note에 "estimated").
-type이 button 또는 button-select인 칸은 커스텀 드롭다운이다(selectOptions가 있으면 선택지). 버튼에 보이는 안내 문구는 값이 아니다.
+type이 button 또는 button-select인 칸은 커스텀 드롭다운이다(selectOptions가 있으면 선택지). 버튼에 보이는 안내 문구는 값이 아니다. 값이 이미 들어 있는지(hasValue)는 판정에 쓰지 않는다.
+selectOptions가 placeholder뿐인 select는 앞 칸을 고르면 선택지가 로드되는 종속 select일 수 있다. 프로필 값이 있으면 AUTOFILLABLE로 두고 note에 "dependent select"를 적는다.
+autofillablePerRow에는 행을 만든 뒤 선택에 따라 드러나는 칸(학교명·전공·학점 등)도 포함한다. 확장이 쓴 칸이 아니라 사람이 채울 수 있는 칸을 센다.
 모든 controls[].i 를 빠짐없이 한 번씩 포함해야 한다.
 `;
 

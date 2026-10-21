@@ -425,7 +425,10 @@ export function stripFingerprints(frames) {
 // on the same page (and Hplace step) with most of its controls, and every
 // control that holds a value afterwards (hidden ones included) must hold the
 // value it had before the run. Compared per control, so swapped checkbox
-// states count too. An error or login page is not a success.
+// states count too. A control whose key the reload re-generated (SK names its
+// hidden row templates with a per-load GUID) is matched by value against the
+// pre-run values that no stable key accounted for. An error or login page is
+// not a success.
 export function discardResidue(
   beforeRun,
   afterDiscard,
@@ -434,12 +437,29 @@ export function discardResidue(
   const controls = (frames) => frames.flatMap((f) => f.controls);
   const keyed = (f, c) => `${f.key ?? "main"}|${c.key}`;
   const was = {};
+  const pool = {};
   for (const f of beforeRun)
-    for (const c of f.controls) was[keyed(f, c)] = c.fp;
+    for (const c of f.controls) {
+      was[keyed(f, c)] = c.fp;
+      if (c.fp) pool[c.fp] = (pool[c.fp] ?? 0) + 1;
+    }
   let unexpected = 0;
+  let rekeyed = 0;
+  const unknown = [];
   for (const f of afterDiscard)
-    for (const c of f.controls)
-      if (c.fp && was[keyed(f, c)] !== c.fp) unexpected++;
+    for (const c of f.controls) {
+      if (!c.fp) continue;
+      const k = keyed(f, c);
+      if (!Object.prototype.hasOwnProperty.call(was, k)) unknown.push(c.fp);
+      else if (was[k] !== c.fp) unexpected++;
+      else pool[c.fp]--;
+    }
+  for (const fp of unknown) {
+    if (pool[fp] > 0) {
+      pool[fp]--;
+      rekeyed++;
+    } else unexpected++;
+  }
   const mainUrl = (frames) => frames.find((f) => f.main)?.frame ?? null;
   const count = {
     before: controls(beforeRun).length,
@@ -453,6 +473,7 @@ export function discardResidue(
   return {
     verified: unexpected === 0 && !formLost && sameUrl && sameStep && !shrunk,
     unexpected,
+    rekeyed,
     before: controls(beforeRun).filter((c) => c.hasValue).length,
     after: controls(afterDiscard).filter((c) => c.hasValue).length,
     formLost,
