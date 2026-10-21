@@ -2,7 +2,11 @@
 import { describe, expect, it } from "vitest";
 import { buildGradeInput } from "./grade-input.mjs";
 import { joinResults } from "./join.mjs";
-import { aggregatePage, renderReport } from "./aggregate.mjs";
+import {
+  HPLACE_POLICY_EXCLUSIONS,
+  aggregatePage,
+  renderReport,
+} from "./aggregate.mjs";
 
 const control = (i, name, extra = {}) => ({
   i,
@@ -223,6 +227,26 @@ const joined = {
 const run = {
   panel: { stage: "result", counts: { completed: 9, needsReview: 1 } },
 };
+
+describe("HPLACE_POLICY_EXCLUSIONS", () => {
+  it("matches the documented exclusions and no other address cell", () => {
+    for (const ref of [
+      "i=3 college[0].collegeCategoryCode",
+      "i=9 college[0].collegeMajor[1].dayOrNight",
+      "new college[1].collegeMajor[2].dayOrNight",
+      "i=20 languageTest[0].examDate",
+      "i=16 residentAddress.zipCode",
+      "i=18 residentAddress.detailAddress",
+    ])
+      expect(HPLACE_POLICY_EXCLUSIONS.test(ref), ref).toBe(true);
+    for (const ref of [
+      "i=13 currentAddress.zipCode",
+      "i=8 college[0].collegeMajor[0].dayOrNight",
+      "i=21 languageTest[0].acquisitionDate",
+    ])
+      expect(HPLACE_POLICY_EXCLUSIONS.test(ref), ref).toBe(false);
+  });
+});
 
 describe("aggregatePage", () => {
   it("counts correct + wrong + missed, including cells of rows that were never created", () => {

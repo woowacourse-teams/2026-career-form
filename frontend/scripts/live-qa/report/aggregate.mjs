@@ -7,9 +7,12 @@
 // kind, `unverifiable`: reported, never part of the denominator. The app's own panel counts
 // are kept next to it for comparison; they count items, not controls.
 
-// Fields the Hplace adapter leaves out on purpose (llm-wiki adapter-field-inventory).
+// Fields the Hplace adapter leaves out on purpose (llm-wiki adapter-field-inventory):
+// the college category, day/night of the extra majors, the language exam date
+// and the resident-registration address (the adapter fills the current
+// address only).
 export const HPLACE_POLICY_EXCLUSIONS =
-  /collegeCategoryCode|collegeMajor\[[12]\]\.dayOrNight|examDate/;
+  /collegeCategoryCode|collegeMajor\[[12]\]\.dayOrNight|examDate|residentAddress\./;
 
 export function aggregatePage({
   label,
