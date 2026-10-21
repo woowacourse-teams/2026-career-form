@@ -1,0 +1,194 @@
+{
+  "schemaVersion": 1,
+  "snapshot": "lg-ai-research-birth-split-email",
+  "status": "UNREVIEWED",
+  "expectedRoute": "generic",
+  "actualRoute": "generic",
+  "scored": false,
+  "metrics": {
+    "registered": 10,
+    "exercisable": 7,
+    "approved": 7,
+    "attempted": 7,
+    "reportedWritten": 7,
+    "correct": 6,
+    "wrong": 1,
+    "held": 0,
+    "unscored": 0,
+    "reportedSuccessButWrong": 1,
+    "preservedViolated": 0
+  },
+  "byControlKind": {
+    "text": {
+      "registered": 4,
+      "exercisable": 3,
+      "approved": 3,
+      "attempted": 3,
+      "reportedWritten": 3,
+      "correct": 2,
+      "wrong": 1,
+      "held": 0,
+      "unscored": 0,
+      "reportedSuccessButWrong": 1,
+      "preservedViolated": 0
+    },
+    "select": {
+      "registered": 5,
+      "exercisable": 4,
+      "approved": 4,
+      "attempted": 4,
+      "reportedWritten": 4,
+      "correct": 4,
+      "wrong": 0,
+      "held": 0,
+      "unscored": 0,
+      "reportedSuccessButWrong": 0,
+      "preservedViolated": 0
+    },
+    "checkbox": {
+      "registered": 1,
+      "exercisable": 0,
+      "approved": 0,
+      "attempted": 0,
+      "reportedWritten": 0,
+      "correct": 0,
+      "wrong": 0,
+      "held": 0,
+      "unscored": 0,
+      "reportedSuccessButWrong": 0,
+      "preservedViolated": 0
+    }
+  },
+  "fields": [
+    {
+      "ordinal": 0,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "correct",
+      "approved": true,
+      "reportedWritten": true,
+      "preservedViolated": false,
+      "writeCode": "WRITTEN"
+    },
+    {
+      "ordinal": 1,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(2) > input:nth-child(2)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "correct",
+      "approved": true,
+      "reportedWritten": true,
+      "preservedViolated": false,
+      "writeCode": "WRITTEN"
+    },
+    {
+      "ordinal": 2,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(3) > div:nth-child(2) > select:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "select",
+      "outcome": "correct",
+      "approved": true,
+      "reportedWritten": true,
+      "preservedViolated": false,
+      "writeCode": "WRITTEN"
+    },
+    {
+      "ordinal": 3,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(4) > div:nth-child(2) > div:nth-child(1) > select:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "select",
+      "outcome": "correct",
+      "approved": true,
+      "reportedWritten": true,
+      "preservedViolated": false,
+      "writeCode": "WRITTEN"
+    },
+    {
+      "ordinal": 4,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(4) > div:nth-child(2) > div:nth-child(2) > select:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "select",
+      "outcome": "correct",
+      "approved": true,
+      "reportedWritten": true,
+      "preservedViolated": false,
+      "writeCode": "WRITTEN"
+    },
+    {
+      "ordinal": 5,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(4) > div:nth-child(2) > div:nth-child(3) > select:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "select",
+      "outcome": "correct",
+      "approved": true,
+      "reportedWritten": true,
+      "preservedViolated": false,
+      "writeCode": "WRITTEN"
+    },
+    {
+      "ordinal": 6,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(5) > div:nth-child(2) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "wrong",
+      "approved": true,
+      "reportedWritten": true,
+      "preservedViolated": false,
+      "writeCode": "WRITTEN"
+    },
+    {
+      "ordinal": 7,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(5) > div:nth-child(2) > div:nth-child(3) > select:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "select",
+      "outcome": "preserved",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 8,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(8) > input:nth-child(2)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "preserved",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 9,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(9) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "checkbox",
+      "outcome": "preserved",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    }
+  ],
+  "diagnostics": [
+    "WRONG_VALUES"
+  ]
+}
