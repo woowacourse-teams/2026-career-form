@@ -12,48 +12,48 @@
     {
       "snapshot": "hplace-mrs2-step2-abl",
       "status": "NOT_GENERIC_ROUTE",
-      "reason": "Hplace fingerprint scripts removed during sanitization",
-      "documentUrl": "https://write-accuracy.example.test/hplace-mrs2-step2-abl",
+      "reason": "ROUTE_FINGERPRINT_SANITIZED",
+      "documentUrl": "https://fixture.recruiter.co.kr/mrs2/applicant/resume/writeResume",
       "expectedRoute": "hplace",
       "routeCheck": "NOT_REPRODUCIBLE_OFFLINE"
     },
     {
       "snapshot": "hplace-mrs2-step2-careerhyundai",
       "status": "NOT_GENERIC_ROUTE",
-      "reason": "Hplace fingerprint scripts removed during sanitization",
-      "documentUrl": "https://write-accuracy.example.test/hplace-mrs2-step2-careerhyundai",
+      "reason": "ROUTE_FINGERPRINT_SANITIZED",
+      "documentUrl": "https://fixture.recruiter.co.kr/mrs2/applicant/resume/writeResume",
       "expectedRoute": "hplace",
       "routeCheck": "NOT_REPRODUCIBLE_OFFLINE"
     },
     {
       "snapshot": "hplace-mrs2-step2-gsenc",
       "status": "NOT_GENERIC_ROUTE",
-      "reason": "Hplace fingerprint scripts removed during sanitization",
-      "documentUrl": "https://write-accuracy.example.test/hplace-mrs2-step2-gsenc",
+      "reason": "ROUTE_FINGERPRINT_SANITIZED",
+      "documentUrl": "https://fixture.recruiter.co.kr/mrs2/applicant/resume/writeResume",
       "expectedRoute": "hplace",
       "routeCheck": "NOT_REPRODUCIBLE_OFFLINE"
     },
     {
       "snapshot": "hplace-mrs2-step3-abl",
       "status": "NOT_GENERIC_ROUTE",
-      "reason": "Hplace fingerprint scripts removed during sanitization",
-      "documentUrl": "https://write-accuracy.example.test/hplace-mrs2-step3-abl",
+      "reason": "ROUTE_FINGERPRINT_SANITIZED",
+      "documentUrl": "https://fixture.recruiter.co.kr/mrs2/applicant/resume/writeResume",
       "expectedRoute": "hplace",
       "routeCheck": "NOT_REPRODUCIBLE_OFFLINE"
     },
     {
       "snapshot": "hplace-mrs2-step3-careerhyundai",
       "status": "NOT_GENERIC_ROUTE",
-      "reason": "Hplace fingerprint scripts removed during sanitization",
-      "documentUrl": "https://write-accuracy.example.test/hplace-mrs2-step3-careerhyundai",
+      "reason": "ROUTE_FINGERPRINT_SANITIZED",
+      "documentUrl": "https://fixture.recruiter.co.kr/mrs2/applicant/resume/writeResume",
       "expectedRoute": "hplace",
       "routeCheck": "NOT_REPRODUCIBLE_OFFLINE"
     },
     {
       "snapshot": "hplace-mrs2-step3-gsenc",
       "status": "NOT_GENERIC_ROUTE",
-      "reason": "Hplace fingerprint scripts removed during sanitization",
-      "documentUrl": "https://write-accuracy.example.test/hplace-mrs2-step3-gsenc",
+      "reason": "ROUTE_FINGERPRINT_SANITIZED",
+      "documentUrl": "https://fixture.recruiter.co.kr/mrs2/applicant/resume/writeResume",
       "expectedRoute": "hplace",
       "routeCheck": "NOT_REPRODUCIBLE_OFFLINE"
     },
