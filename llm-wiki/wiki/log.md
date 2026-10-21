@@ -753,3 +753,11 @@
 - 승인된 후보 4개를 [CF-271 bundle](../raw/issues/CF-271/manifest.md)에 기록하고 CF-193 계측 문서를 대체했다.
 - [선택적 이용 계측](topics/usage-analytics.md)의 Current와 History를 갱신하고 가져오기 이벤트 의미, 비교 저장 경계, 발생 화면과 계측 도구 범위를 반영했다.
 - 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.
+
+## [2026-10-21] ingest | CF-312 숨은 다른 단계 control의 학력 행 단계 검사 제외
+
+- Approval-Digest: a3e5bc3e0b8bda65a9fa8cb88dd5be5b92e6e6a2e3634c372b6905d203446686
+- Source-Revision: cc49b605ada7dddc16ae21ba5ffc599071daad72
+- 승인된 후보 3개를 [CF-312 bundle](../raw/issues/CF-312/manifest.md)에 기록하고 CF-307 구조 반복 실행 후속 조사 문서를 대체했다.
+- [범용 구조 반복 실행](topics/generic-structure-loop.md)의 Current와 History를 갱신하고 미확정 가설 절을 확인된 경계로 바꿨다.
+- 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.
