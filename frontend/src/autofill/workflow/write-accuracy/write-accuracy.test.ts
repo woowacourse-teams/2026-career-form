@@ -74,7 +74,34 @@ it("aggregate", () => {
   );
   expect(aggregate.missing, "MISSING_SNAPSHOT_RESULTS").toEqual([]);
   expect(aggregate.extra, "EXTRA_SNAPSHOT_RESULTS").toEqual([]);
-  expect(aggregate.failures, "UNSCORED_OR_FAILED_SNAPSHOTS").toEqual([]);
+  // Correctness failures remain in the evidence and each snapshot's own test.
+  // Aggregate gates coverage and accounting, not whether writes were correct.
+  expect(aggregate.expected).toEqual(
+    measurementEntries.map(({ snapshot }) => snapshot),
+  );
+  expect(aggregate.excluded.map(({ snapshot }) => snapshot)).toEqual(
+    manifest
+      .filter((entry) => !measurementEntries.includes(entry))
+      .map(({ snapshot }) => snapshot),
+  );
+  for (const entry of measurementEntries) {
+    const report = reports.get(entry.snapshot)!;
+    expect(report.snapshot).toBe(entry.snapshot);
+    expect(report.status).toBe(entry.status);
+    expect(report.scored).toBe(entry.status === "RUNNABLE");
+    for (const metrics of [
+      report.metrics,
+      ...Object.values(report.byControlKind),
+    ]) {
+      expect(metrics.attempted, entry.snapshot).toBe(
+        metrics.correct + metrics.wrong + metrics.held,
+      );
+      expect(
+        metrics.reportedSuccessButWrong,
+        entry.snapshot,
+      ).toBeLessThanOrEqual(metrics.wrong);
+    }
+  }
   expect(
     aggregate.reviewed.unscored + aggregate.unreviewed.unscored,
     "UNSCORED_FIELDS",

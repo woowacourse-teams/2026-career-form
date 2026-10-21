@@ -14,7 +14,7 @@ import {
 import type { SnapshotManifestEntry } from "./schema";
 import { syntheticProfile } from "./fixtures";
 import { loadTruth, parseTruth } from "./truth";
-import { assertManifestRoutes, manifest } from "./manifest";
+import { assertManifestRoutes, isMeasured, manifest } from "./manifest";
 
 const entry: SnapshotManifestEntry = {
   snapshot: "synthetic",
@@ -167,8 +167,37 @@ it("covers every snapshot directory with the initial route and review classifica
     .filter((item) => item.isDirectory())
     .map((item) => item.name)
     .sort();
-  expect(manifest.map(({ snapshot }) => snapshot).sort()).toEqual(snapshots);
+  expect(
+    manifest
+      .filter(({ snapshot }) => snapshots.includes(snapshot))
+      .map(({ snapshot }) => snapshot)
+      .sort(),
+  ).toEqual(snapshots);
   expect(() => assertManifestRoutes(manifest)).not.toThrow();
+  for (const entry of manifest) {
+    expect([
+      "RUNNABLE",
+      "UNREVIEWED",
+      "NO_SNAPSHOT",
+      "ABORTED",
+      "NOT_GENERIC_ROUTE",
+    ]).toContain(entry.status);
+    if (!snapshots.includes(entry.snapshot))
+      expect(["NO_SNAPSHOT", "ABORTED"]).toContain(entry.status);
+  }
+  const aggregate = aggregateAccuracy(manifest, new Map());
+  expect(aggregate.expected).toEqual(
+    manifest.filter(isMeasured).map(({ snapshot }) => snapshot),
+  );
+  expect(aggregate.missing).toEqual(aggregate.expected);
+  expect(aggregate.excluded.map(({ snapshot }) => snapshot)).toEqual(
+    manifest.filter((entry) => !isMeasured(entry)).map(({ snapshot }) => snapshot),
+  );
+  expect(
+    manifest
+      .filter(({ status }) => status === "NO_SNAPSHOT")
+      .map(({ snapshot }) => snapshot),
+  ).toEqual(["naver-education-stage"]);
   expect(
     manifest
       .filter(({ status }) => status === "RUNNABLE")
