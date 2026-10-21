@@ -178,20 +178,25 @@ export function WorkflowScreens({
     const selectedCount = reviewItems.filter(
       (item) => item.selected && !item.disabled,
     ).length;
-    const exceptionalItems = reviewItemsForDisplay(reviewItems).filter(
+    // Only generic documents carry a grade. Static and component documents
+    // keep their calendar and search fields in review regardless of selection.
+    const tiered = reviewItems.some((item) => item.genericGrade);
+    const displayedItems = reviewItemsForDisplay(reviewItems);
+    // Panel membership follows what will be written automatically. On the
+    // generic path a selected, available item belongs to the planned panel even
+    // when its write plan opens a calendar or a search popup.
+    const exceptionalItems = displayedItems.filter(
       (item) =>
         item.status !== "available" ||
-        isCalendar(item) ||
-        item.searchValuePlan ||
-        !item.selected,
+        !item.selected ||
+        item.genericGrade === "BLOCKED" ||
+        (!tiered && (isCalendar(item) || item.searchValuePlan !== undefined)),
     );
-    const plannedItems = reviewItemsForDisplay(reviewItems).filter(
+    const plannedItems = displayedItems.filter(
       (item) =>
         item.selected && !item.disabled && !exceptionalItems.includes(item),
     );
-    // Only generic documents carry a grade: split blocked items into their
-    // own tab so they are not counted as needing review.
-    const tiered = reviewItems.some((item) => item.genericGrade);
+    const plannedCount = tiered ? plannedItems.length : selectedCount;
     const blockedItems = tiered
       ? exceptionalItems.filter((item) => item.genericGrade === "BLOCKED")
       : [];
@@ -225,7 +230,7 @@ export function WorkflowScreens({
             aria-selected={reviewTab === "planned"}
             onClick={() => setReviewTab("planned")}
           >
-            자동 기입 예정 <strong>{selectedCount}</strong>
+            자동 기입 예정 <strong>{plannedCount}</strong>
           </button>
           <button
             type="button"

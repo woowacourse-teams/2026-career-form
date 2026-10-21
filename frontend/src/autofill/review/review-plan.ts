@@ -922,6 +922,18 @@ function itemForResolvedAnalysis(
         : {}),
     };
   }
+  // Preselect only when the write-time search compares results with the stored
+  // name alone. Alternative query forms (certificate name+grade splits, region
+  // aliases, approved catalog queries) can select a different name.
+  const selectsOriginalSearchName =
+    generic &&
+    searchCommand &&
+    binding.type === "DIRECT" &&
+    !catalogMatch &&
+    !binding.profileFieldKey.endsWith(".schoolRegion") &&
+    (!searchValuePlan ||
+      (searchValuePlan.forms.length === 1 &&
+        searchValuePlan.forms[0]?.kind === "original-exact"));
   if (analysis.autofillPolicy === "CONDITIONAL") {
     return {
       candidateId: analysis.candidateId,
@@ -937,11 +949,13 @@ function itemForResolvedAnalysis(
       currentValue: pageValue,
       profileValue: resolvedProfileValue.value,
       previewValue: resolvedProfileValue.value,
-      status: "needs-review",
-      selected: false,
+      status: selectsOriginalSearchName ? "available" : "needs-review",
+      selected: selectsOriginalSearchName,
       disabled: false,
       revealed: true,
-      reason: "지원서 조건을 확인한 뒤 선택해 주세요.",
+      reason: selectsOriginalSearchName
+        ? "검색 결과에서 저장된 값과 정확히 일치하는 항목만 선택해 입력합니다."
+        : "지원서 조건을 확인한 뒤 선택해 주세요.",
       analysis,
       ...(verifiedFreshDefault
         ? { verifiedFreshDefaultValue: component!.labels.defaultMajor }
