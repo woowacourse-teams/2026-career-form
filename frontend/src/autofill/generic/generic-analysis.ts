@@ -314,7 +314,8 @@ function convertSection(
     const response = outcome.fields[index];
     if (!response) throw new Error("Section result does not match its fields");
     return (response.profileFieldKey || compositeOf(response)) &&
-      response.reason === undefined
+      response.reason === undefined &&
+      !isHidden(field.element)
       ? [{ index, response }]
       : [];
   });
@@ -350,11 +351,7 @@ function convertSection(
     const rowSiblings: GradeSibling[] | undefined =
       section.boundary === "repeat-row"
         ? matched
-            .filter(
-              (sibling) =>
-                sibling.index !== index &&
-                !isHidden(section.fields[sibling.index]!.element),
-            )
+            .filter((sibling) => sibling.index !== index)
             .map((sibling) => ({
               profileFieldKey: sibling.response.profileFieldKey ?? undefined,
               composite: compositeOf(sibling.response),
