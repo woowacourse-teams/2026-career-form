@@ -70,10 +70,10 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [회사 어댑터 개발](topics/adapter-development.md) | 프론트 회사 어댑터와 백엔드 정책 경계 | 2026-10-20 |
 | [Greeting 플랫폼 판정과 실행 어댑터](topics/greeting-platform-routing.md) | BE의 Greeting 판정과 FE 어댑터 지정,문맥 검증 | 2026-09-27 |
 | [Greeting 공통 어댑터](topics/adapter-greeting.md) | 기업별 화면 차이와 안전한 필드 입력,검증 범위, 검색 서버 액션 요청 구조 | 2026-10-21 |
-| [Hplace 공통 어댑터](topics/adapter-hplace.md) | MRS2 실행 정책, 127키 현황, step 1–3 실화면 검증, 칸 단위 인식·재실행 멱등성·저장 페이지 재로드 보고, 저장·조회·무저장 이동 요청 구조와 배포 경계 | 2026-10-21 |
+| [Hplace 공통 어댑터](topics/adapter-hplace.md) | MRS2 실행 정책, 127키 현황, step 1–3 실화면 검증, 칸 단위 인식·재실행 멱등성·저장 페이지 재로드 보고, 저장·조회·무저장 이동 요청 구조, 4단계 분석 예외와 패널 집계, 배포 경계 | 2026-10-22 |
 | [SK,현대 실시간 옵션 선택 보완](topics/adapter-live-option-selection.md) | 현재 회사 화면의 유일 옵션만 선택하는 어학 보완 | 2026-09-09 |
 | [현대 어댑터](topics/adapter-hyundai.md) | 현대 주소,국적,학력 수집,입력과 검증 제한, 페이지의 Map·Set 재정의 | 2026-10-21 |
-| [SK 어댑터](topics/adapter-sk.md) | SK 조건부 입력과 검증 제한 | 2026-09-08 |
+| [SK 어댑터](topics/adapter-sk.md) | SK 조건부 입력과 검증 제한, R262309형 고교 행의 추가 버튼 재식별 실패 | 2026-10-22 |
 | [어댑터 필드 현황](topics/adapter-field-inventory.md) | 회사별 구현과 자동,수동 검증 상태 | 2026-10-20 |
 | [LLM Wiki 지식 모델](topics/llm-wiki-knowledge-model.md) | Issue raw, topic Wiki와 승인 digest | 2026-08-22 |
 | [지원서 분석 API](topics/application-form-analysis-api.md) | schema v2와 검색 역할, OpenAI/Jev 단일 공급자 계약 | 2026-09-23 |
@@ -87,7 +87,7 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [범용 등급의 다른 사람 대상 칸 차단](topics/generic-other-person-context.md) | 추천인·보증인 등 다른 사람 대상 칸에 본인 정보 키가 매칭되면 BLOCKED | 2026-10-18 |
 | [범용 검토 화면의 3단계 표시](topics/generic-review-tiers.md) | 자동·확인 필요·입력 불가 표시, 연결 못한 칸 노출과 이유 문구 변환 | 2026-10-18 |
 | [DOM fixture 표시 텍스트 검토와 재현 경계](topics/dom-snapshot-review-boundaries.md) | v4 무변경 보존, 표시 텍스트 검토와 mock·실사이트 근거 구분 | 2026-10-18 |
-| [실사이트 자동 입력 평가 워크플로우](topics/live-autofill-evaluation.md) | 사전 분모, DOM 검증, 후보 관측 일치, 설치본 snapshot 기반 보고와 새로고침 원복·대화상자 자동 처리 함정 | 2026-10-21 |
+| [실사이트 자동 입력 평가 워크플로우](topics/live-autofill-evaluation.md) | 사전 분모, DOM 검증, 후보 관측 일치, 설치본 snapshot 기반 보고, 새로고침 원복·대화상자 자동 처리 함정, 원복 재키 대조와 표시 규칙의 한계 | 2026-10-22 |
 | [범용 자동 기입 검색 표면](topics/generic-autofill-search.md) | 범용 자격증 반복 행, 검색, 후속 재검토, 혼합 학력 행, role 없는 레이어 검색, 공급자 중립 검색 결과 구조 해석과 기존 CJ 계약 및 실사이트 검증 경계 | 2026-10-01 |
 | [범용 날짜 형식 변환과 로컬 승인](topics/generic-date-format.md) | 날짜 DIRECT 변환, 로컬 승인 재검증과 자동/실사이트 검증 구분 | 2026-09-24 |
 | [범용 연월 달력 선택과 로컬 실행 경계](topics/generic-calendar-selection.md) | DOM 소유권, 개별 승인, 역할 판별과 연월, 연월일 달력 실행의 안전 경계 | 2026-09-28 |

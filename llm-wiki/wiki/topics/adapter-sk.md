@@ -2,9 +2,9 @@
 
 > Topic: adapter-sk
 > Status: Current
-> Current: [SK 어학 상태 드라이버 실패의 행 단위 격리](../../raw/issues/CF-169/documents/adapter-sk.md)
-> History: [근거 1](../../raw/issues/CF-46/documents/adapter-sk.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-sk.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-sk.md); [CF-169 근거](../../raw/issues/CF-169/documents/adapter-sk.md)
-> Updated: 2026-10-08
+> Current: [CF-310 R262309 고교 행 근거](../../raw/issues/CF-310/documents/sk-highschool-row-reidentification.md)
+> History: [근거 1](../../raw/issues/CF-46/documents/adapter-sk.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-sk.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-sk.md); [CF-169 근거](../../raw/issues/CF-169/documents/adapter-sk.md); [CF-310 R262309 고교 행 근거](../../raw/issues/CF-310/documents/sk-highschool-row-reidentification.md)
+> Updated: 2026-10-22
 
 ## 현재 상태
 
@@ -48,3 +48,7 @@ SK 병역은 대상 라디오→군필/미필/면제/복무중 분류→노출�
 ## CF-99 결과 패널 진단 (2026-09-24)
 
 학교·자격증·시험 검색은 결과 없음, 정확 일치 없음, 복수 후보, 시간 초과, 선택 미확인과 시험 성적란 준비 실패를 값 없는 허용 코드로 전달한다. 브리지는 요청 및 필드 문맥과 코드 허용 목록을 검증하며 기존 유일 결과 선택과 지원 범위는 유지한다. 상세 근거는 [CF-99 승인 결정](../../raw/issues/CF-99/documents/autofill-follow-and-install.md)을 따른다.
+
+## CF-310 R262309형 고교 행과 추가 버튼 재식별 (2026-10-22)
+
+공고 R262309의 고등학교 행에는 학교명 입력(`eduhgEducationName`)과 지역 선택이 없고 학업과정·재학상태·입학년월·졸업년월만 있다. SK 정책의 고교 행 추가 규칙은 `requiredSelector`로 행 안에 학교명 입력이 정확히 하나 있을 때만 후속 추가 버튼을 같은 동작으로 인정하므로, 이 공고에서는 첫 행을 추가한 뒤 재식별에 실패해(`action-not-reidentified`) "화면 갱신 뒤 추가 동작을 다시 찾지 못했습니다 (고등학교 학력 정보 추가)" 예외로 멈춘다. 2026-10-21 4회와 2026-10-22 실사이트 QA 하네스 1회에서 재현됐고, 같은 날 R262303·R262305(학교명·지역 있음)는 정상 동작했다. 추가 뒤 원래 버튼이 숨고 행 안 버튼이 보이는 것은 모든 SK 공고의 정상 동작이라 원인이 아니다. 수정은 재식별을 학교명 입력에 의존하지 않게 바꾸고 이 행 구조의 fixture로 회귀 테스트를 두는 방향이다. 근거는 [CF-310 R262309 고교 행 근거](../../raw/issues/CF-310/documents/sk-highschool-row-reidentification.md)를 따른다.

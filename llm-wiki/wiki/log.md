@@ -761,3 +761,11 @@
 - 승인된 후보 5개를 [CF-310 bundle](../raw/issues/CF-310/manifest.md)에 기록하고 승인 후보 스냅샷의 SHA-256을 재확인했다.
 - [Hplace 어댑터](topics/adapter-hplace.md), [Greeting 어댑터](topics/adapter-greeting.md), [현대 어댑터](topics/adapter-hyundai.md), [실사이트 평가](topics/live-autofill-evaluation.md)의 Current와 History를 갱신하고 MRS2 저장·조회·무저장 이동 요청, Greeting 검색 서버 액션, 현대 Map·Set 재정의, 새로고침 원복과 Playwright 대화상자 자동 처리를 반영했다. 어댑터 동작과 필드 현황은 바꾸지 않았다.
 - 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.
+
+## [2026-10-22] ingest | CF-310 실사이트 QA 측정에서 확인한 SK 행 구조, 에이치닷 4단계·패널, 하네스 한계
+
+- Approval-Digest: 6e367ec4018bfd976fab32c98e94b94d35cfc59d33de0747f61917e65736919f
+- Source-Revision: 733c097092f54154e8be5e91bb4b10863b75c193
+- 승인된 후보 5개를 [CF-310 bundle](../raw/issues/CF-310/manifest.md)의 두 번째 수집으로 기록하고 승인 후보 스냅샷의 SHA-256을 재확인했다.
+- [SK 어댑터](topics/adapter-sk.md), [Hplace 어댑터](topics/adapter-hplace.md), [실사이트 평가](topics/live-autofill-evaluation.md)의 Current와 History를 갱신하고 R262309형 고교 행의 재식별 실패, 4단계 분석 `BAD_REQUEST`와 패널 집계 의미, 원복 재키 대조와 표시 규칙의 한계를 반영했다.
+- 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.
