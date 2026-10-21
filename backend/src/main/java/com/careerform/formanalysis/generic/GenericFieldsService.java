@@ -1,6 +1,7 @@
 package com.careerform.formanalysis.generic;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -47,11 +48,23 @@ public final class GenericFieldsService {
             return GenericFieldsResponse.policyUnavailable(request.snapshotId());
         }
         long startedAt = System.nanoTime();
-        Map<String, Mapping> mappings = Map.of();
+        Map<String, Mapping> mappings = new HashMap<>();
+        for (Section section : request.sections()) {
+            List<FieldCandidate> candidates = new ArrayList<>(section.fields());
+            if (section.items() != null) {
+                section.items().forEach(item -> candidates.addAll(item.fields()));
+            }
+            for (FieldCandidate candidate : candidates) {
+                String key = GenericProfileSemantics.certificateDateKey(section.category(), candidate);
+                if (key != null) {
+                    mappings.put(candidate.candidateId(), new Mapping(key, 1.0, true, null));
+                }
+            }
+        }
         int jevCalls = 0;
         if (resolver.isPresent()) {
             JevCategoryFieldResolver.Resolution resolution = resolver.get().resolve(request);
-            mappings = resolution.mappings();
+            resolution.mappings().forEach(mappings::putIfAbsent);
             jevCalls = resolution.jevCalls();
         }
         List<Field> fields = new ArrayList<>();

@@ -477,7 +477,7 @@ describe("generic section flow", () => {
     const api = createClient({
       field: (candidate) =>
         candidate.domName === "major"
-          ? { confidence: 0.6 }
+          ? { profileFieldKey: "personal.personal.englishGivenName", confidence: 0.9 }
           : candidate.domName === "email"
             ? {
                 profileFieldKey: null,
@@ -491,6 +491,7 @@ describe("generic section flow", () => {
     });
     const profile = fullProfile();
     profile.education[0]!.values.schoolName = "";
+    profile.personal.englishGivenName = "Synthetic";
     const run = workflow(api.client, profile);
 
     await run.analyze();
@@ -499,7 +500,7 @@ describe("generic section flow", () => {
     expect(run.item("major")).toMatchObject({ selected: false });
     expect(run.state.grades?.get(run.item("major").candidateId)).toEqual({
       grade: "REVIEW",
-      reason: "MODERATE_CONFIDENCE",
+      reason: "UNPAIRED_NAME_PART",
     });
     for (const [name, reason] of [
       ["school", "NO_PROFILE_VALUE"],

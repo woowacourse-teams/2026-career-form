@@ -1,5 +1,6 @@
 import { PROFILE_CATEGORIES } from "../../profile/field-definitions";
 import { matchDatePartOption, type DatePart } from "./date-part-options";
+import { matchOptionIndexAny, normalizeOptionText } from "./option-match";
 import type {
   DerivedRecipe,
   FieldCandidate,
@@ -10,6 +11,11 @@ import type {
 export const AUTO_CONFIDENCE_MIN = 0.8;
 /** Lower bound (inclusive) of confidence for REVIEW; below it is BLOCKED. */
 export const REVIEW_CONFIDENCE_MIN = 0.5;
+/**
+ * Lower bound (inclusive) of confidence at which an exact, non-derived profile
+ * key with a consistent section and row is promoted to AUTO.
+ */
+export const PROMOTE_CONFIDENCE_MIN = 0.35;
 
 export type FieldGrade = "AUTO" | "REVIEW" | "BLOCKED";
 
@@ -92,9 +98,6 @@ const EDUCATION_RECORDS = new Set([
 const POSTAL_TEXT =
   /우편\s*번호|\bpostal(?:[\s_-]*code)?\b|\bzip(?:[\s_-]*code)?\b/i;
 
-const normalizeOptionText = (text: string): string =>
-  text.normalize("NFKC").replace(/\s+/g, " ").trim().toLowerCase();
-
 /** Labels of the fixed option set a profile field defines, empty when it has none. */
 function fixedOptionLabels(
   profileFieldKey: string | undefined,
@@ -119,8 +122,8 @@ function fixedOptionLabels(
 
 /**
  * The page option a stored value maps to, or undefined unless exactly one
- * option matches. Evidence is the normalized value itself or the label the
- * profile field's fixed option set gives it; nothing is guessed beyond that.
+ * option matches under the generic rules of option-match.ts. Evidence is the
+ * value itself or the label the profile field's fixed option set gives it.
  */
 export function matchProfileValueOption(
   profileFieldKey: string | undefined,
@@ -128,17 +131,15 @@ export function matchProfileValueOption(
   options: readonly { displayName: string }[] | undefined,
 ): string | undefined {
   if (!profileValue?.trim()) return undefined;
-  const accepted = new Set(
-    [profileValue, ...fixedOptionLabels(profileFieldKey, profileValue)].map(
-      normalizeOptionText,
-    ),
+  const list = options ?? [];
+  const index = matchOptionIndexAny(
+    [profileValue, ...fixedOptionLabels(profileFieldKey, profileValue)],
+    list.map((option) => option.displayName),
   );
-  const matches = (options ?? []).filter((option) =>
-    accepted.has(normalizeOptionText(option.displayName)),
-  );
-  return matches.length === 1 ? matches[0]!.displayName : undefined;
+  return index === null ? undefined : list[index]!.displayName;
 }
 
+/** Whether a profile value exists but no page option matches it. */
 function hasUnmatchedOptionValue(input: GradeFieldInput): boolean {
   if (!input.optionValueCheck) return false;
   if (input.control !== "select" && input.control !== "radio") return false;
@@ -324,6 +325,26 @@ function hasFormatKeyMismatch(input: GradeFieldInput): boolean {
 }
 
 /**
+ * A match below the AUTO boundary that is still as safe as an exact one: its
+ * own profile key (no derived recipe or date part), no half name, no lower
+ * duplicate in the row, and some field context. Category confirmation and the
+ * section and row checks have already passed by the time this runs.
+ */
+function isPromotableExactMatch(input: GradeFieldInput): boolean {
+  return (
+    input.confidence >= PROMOTE_CONFIDENCE_MIN &&
+    input.composite === undefined &&
+    Boolean(input.profileFieldKey) &&
+    !hasUnpairedNamePart(input) &&
+    !isLowerDuplicate(input) &&
+    Boolean(
+      input.displayName?.trim() ||
+        input.labels?.some((label) => label.text.trim()),
+    )
+  );
+}
+
+/**
  * Grades one generic-document match with pure code checks. Reads only its
  * input: no DOM, network, or global state.
  */
@@ -351,7 +372,16 @@ export function gradeGenericField(input: GradeFieldInput): FieldGradeResult {
     return { grade: "BLOCKED", reason: "FORMAT_KEY_MISMATCH" };
   }
   if (hasUnmatchedOptionValue(input)) {
-    return { grade: "BLOCKED", reason: "OPTION_VALUE_UNMATCHED" };
+    // A stored value that names no page option needs the applicant's choice.
+    // Without a value or any option there is nothing to choose, and a link
+    // below the promote boundary is too weak to offer, so those stay blocked.
+    const canChoose =
+      input.optionValueCheck?.profileValue?.trim() &&
+      (input.options?.length ?? 0) > 0 &&
+      input.confidence >= PROMOTE_CONFIDENCE_MIN;
+    return canChoose
+      ? { grade: "REVIEW", reason: "OPTION_VALUE_UNMATCHED" }
+      : { grade: "BLOCKED", reason: "OPTION_VALUE_UNMATCHED" };
   }
   if (input.confidence >= AUTO_CONFIDENCE_MIN && hasUnpairedNamePart(input)) {
     return { grade: "REVIEW", reason: "UNPAIRED_NAME_PART" };
@@ -371,6 +401,7 @@ export function gradeGenericField(input: GradeFieldInput): FieldGradeResult {
     }
     return { grade: "AUTO" };
   }
+  if (isPromotableExactMatch(input)) return { grade: "AUTO" };
   if (input.confidence >= REVIEW_CONFIDENCE_MIN) {
     return { grade: "REVIEW", reason: "MODERATE_CONFIDENCE" };
   }

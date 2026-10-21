@@ -1,12 +1,18 @@
 package com.careerform.formanalysis.generic;
 
 import java.text.Normalizer;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
+import com.careerform.formanalysis.generic.GenericFieldsRequest.FieldCandidate;
+import com.careerform.formanalysis.generic.GenericFieldsRequest.FormControl;
+import com.careerform.formanalysis.generic.GenericFieldsRequest.FormElement;
+import com.careerform.formanalysis.generic.GenericFieldsRequest.InputType;
+import com.careerform.formanalysis.generic.GenericFieldsRequest.SemanticSource;
 import com.careerform.formanalysis.infrastructure.adapter.ProviderSemanticSanitizer;
 
 /**
@@ -65,6 +71,32 @@ final class GenericProfileSemantics {
     );
 
     private GenericProfileSemantics() {
+    }
+
+    /** 저장된 자격증은 취득한 항목이므로 취득·응시 공용 날짜도 자격 취득일에 연결한다. */
+    static String certificateDateKey(String category, FieldCandidate candidate) {
+        var context = candidate.semanticContext();
+        if (!"CERTIFICATE".equals(category) || candidate.element() != FormElement.INPUT
+            || candidate.control() != FormControl.TEXT || context == null
+            || !(context.inputType() == InputType.DATE
+                || context.inputType() == InputType.TEXT && Integer.valueOf(10).equals(context.maxLength()))) {
+            return null;
+        }
+        List<String> labels = new ArrayList<>();
+        labels.add(candidate.displayName());
+        labels.add(candidate.placeholder());
+        if (context.labels() != null) {
+            context.labels().stream()
+                .filter(label -> label.source() == SemanticSource.LABEL
+                    || label.source() == SemanticSource.ARIA_LABEL
+                    || label.source() == SemanticSource.ARIA_LABELLEDBY
+                    || label.source() == SemanticSource.PLACEHOLDER)
+                .forEach(label -> labels.add(label.text()));
+        }
+        boolean acquiredDate = labels.stream().filter(java.util.Objects::nonNull)
+            .map(label -> Normalizer.normalize(label, Normalizer.Form.NFKC).replaceAll("[\\s/·]+", ""))
+            .anyMatch(label -> label.matches(".*취득(?:일자?|응시일).*"));
+        return acquiredDate ? "certifications.certificate.acquisitionDate" : null;
     }
 
     static boolean extendsVocabulary(String category) {
