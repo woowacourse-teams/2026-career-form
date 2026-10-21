@@ -27,6 +27,7 @@ import {
   type EducationRowKind,
 } from "../profile/education-row-kind";
 import { genericRowFor } from "../dom/repeatable-rows";
+import { displayState } from "../dom/read-pass";
 import { acquireDocumentRun } from "../interaction/document-run";
 import {
   bindGenericStructureRows,
@@ -248,6 +249,27 @@ function visibleControlCount(document: Document): number {
       if (view?.getComputedStyle(node).display === "none") return false;
     return true;
   }).length;
+}
+
+/** Same ancestor visibility predicate as dom/collect.ts, without writability. */
+function isHidden(element: Element): boolean {
+  if (
+    element instanceof HTMLElement &&
+    (element.hidden ||
+      element.closest("[hidden], [aria-hidden='true']") ||
+      element.closest("[style*='display: none'], [style*='display:none']"))
+  )
+    return true;
+  if (!element.ownerDocument.defaultView) return false;
+  for (
+    let current: Element | null = element;
+    current;
+    current = current.parentElement
+  ) {
+    const style = displayState(current);
+    if (style.display === "none" || style.visibility === "hidden") return true;
+  }
+  return false;
 }
 
 function normalizedLabel(text: string | null | undefined): string {
@@ -1113,8 +1135,13 @@ export async function runGenericStructureLoop(
           profile,
           createGenericAnalysisCache(),
         );
+        const visibleIds = new Set(
+          row.fields
+            .filter(({ element }) => !isHidden(element))
+            .map(({ candidate }) => candidate.candidateId),
+        );
         keys = analysis.analysis.fields.flatMap((field) =>
-          ids.has(field.candidateId) &&
+          visibleIds.has(field.candidateId) &&
           field.matchType === "MATCH" &&
           field.valueBinding &&
           "profileFieldKey" in field.valueBinding &&
