@@ -74,6 +74,14 @@
       "routeCheck": "ASSERTED"
     },
     {
+      "snapshot": "naver-education-stage",
+      "status": "NO_SNAPSHOT",
+      "reason": "Pending Issue A: todo 4 awaits human privacy and structure review",
+      "documentUrl": "https://write-accuracy.example.test/naver-education-stage",
+      "expectedRoute": "generic",
+      "routeCheck": "ASSERTED"
+    },
+    {
       "snapshot": "naver-panel-loss",
       "status": "ABORTED",
       "reason": "Collection aborted: panel lifecycle, not field structure",
