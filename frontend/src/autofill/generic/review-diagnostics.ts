@@ -74,13 +74,16 @@ export function buildReviewDiagnostics(
 ) {
   // Match WorkflowScreens' displayed fields and panels, not internal items.
   const displayedItems = reviewItemsForDisplay(items);
+  const tiered = items.some((item) => item.genericGrade);
   const exceptionalItems = new Set(
     displayedItems.filter(
       (item) =>
         item.status !== "available" ||
-        item.analysis?.writePlan?.command === "SELECT_DATE" ||
-        item.searchValuePlan ||
-        !item.selected,
+        !item.selected ||
+        item.genericGrade === "BLOCKED" ||
+        (!tiered &&
+          (item.analysis?.writePlan?.command === "SELECT_DATE" ||
+            item.searchValuePlan !== undefined)),
     ),
   );
   const fields: ReviewDiagnosticField[] = displayedItems.map((item) => {
@@ -119,7 +122,7 @@ export function buildReviewDiagnostics(
     }
     return {
       grade: exceptionalItems.has(item)
-        ? item.genericGrade === "BLOCKED"
+        ? tiered && item.genericGrade === "BLOCKED"
           ? "BLOCKED"
           : "REVIEW"
         : item.disabled || item.status === "unavailable"
@@ -167,6 +170,9 @@ export function emitReviewDiagnostics(
   contexts: ReadonlyMap<string, ReviewDiagnosticContext>,
   profile?: Profile,
 ): void {
+  // Inline literal so production bundles drop the output below as dead code;
+  // a call to the gate function alone is not inlined by the minifier.
+  if (import.meta.env.DEV !== true) return;
   if (!localDiagnosticsEnabled()) return;
   console.info(
     `[CareerForm] 진단 요약: ${JSON.stringify(buildReviewDiagnostics(items, contexts, profile))}`,

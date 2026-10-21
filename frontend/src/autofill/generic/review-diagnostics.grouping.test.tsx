@@ -115,15 +115,19 @@ it("exports actual review panel membership instead of the source generic grade",
     ]),
   );
   renderReview(items);
-  // The selected-count badge also includes selected exceptional items (4),
-  // while the planned panel contains only field 0. Compare item membership.
-  expect(screen.getByRole("tab", { name: "자동 기입 예정 4" })).toBeVisible();
+  // On the generic path a selected, available calendar or search field is
+  // planned like any other; the badge equals the planned row count.
+  expect(screen.getByRole("tab", { name: "자동 기입 예정 3" })).toBeVisible();
   const expected = [
-    { tab: "자동 기입 예정 4", grade: "AUTO", labels: ["Field 0"] },
     {
-      tab: "확인 필요 5",
+      tab: "자동 기입 예정 3",
+      grade: "AUTO",
+      labels: ["Field 0", "Field 3", "Field 4"],
+    },
+    {
+      tab: "확인 필요 3",
       grade: "REVIEW",
-      labels: ["Field 1", "Field 2", "Field 3", "Field 4", "Field 6"],
+      labels: ["Field 1", "Field 2", "Field 6"],
     },
     { tab: "입력 불가 1", grade: "BLOCKED", labels: ["Field 5"] },
   ];
@@ -153,9 +157,9 @@ it("exports actual review panel membership instead of the source generic grade",
 });
 
 // The previous retention test covered all internal review items. Diagnostics
-// describe the review screen instead, so unavailable non-BLOCKED items must
-// be absent just as they are in the real panels. Missing context is not a filter.
-it.each([undefined, "AUTO", "REVIEW"] as const)(
+// describe the review screen instead, so ungraded unavailable items must be
+// absent just as they are in the real panels. Missing context is not a filter.
+it.each([undefined] as const)(
   "omits unavailable %s entries while preserving every displayed field",
   (genericGrade) => {
     const items = [
@@ -253,6 +257,46 @@ it.each([undefined, "AUTO", "REVIEW"] as const)(
         BLOCKED: { other: 1 },
       },
     });
+    expect(items).toEqual(before);
+  },
+);
+// Graded unavailable items stay visible in the review panel, and controls
+// hidden on the page never reach the panels; diagnostics follow both.
+it.each(["AUTO", "REVIEW"] as const)(
+  "reports unavailable %s entries in the review panel and omits hidden ones",
+  (genericGrade) => {
+    const items = [
+      field(0),
+      field(1, {
+        genericGrade,
+        status: "unavailable",
+        selected: false,
+        disabled: true,
+        genericReasonCode: "UNLINKED",
+      }),
+      field(2, { hiddenFromReview: true }),
+    ];
+    const before = structuredClone(items);
+    renderReview(items);
+    const groups = [
+      { tab: "자동 기입 예정 1", label: "Field 0" },
+      { tab: "확인 필요 1", label: "Field 1" },
+    ];
+    for (const group of groups) {
+      fireEvent.click(screen.getByRole("tab", { name: group.tab }));
+      const panel = screen.getByRole("tabpanel", { name: group.tab });
+      expect(panel.querySelectorAll(":scope > article")).toHaveLength(1);
+      expect(within(panel).getByText(group.label)).toBeVisible();
+      expect(within(panel).queryByText("Field 2")).toBeNull();
+    }
+    expect(screen.getByRole("tab", { name: "입력 불가 0" })).toBeVisible();
+    const result = buildReviewDiagnostics(items, new Map());
+    expect(
+      result.fields.map(({ grade, reasonCode }) => ({ grade, reasonCode })),
+    ).toEqual([
+      { grade: "AUTO", reasonCode: null },
+      { grade: "REVIEW", reasonCode: "UNLINKED" },
+    ]);
     expect(items).toEqual(before);
   },
 );
