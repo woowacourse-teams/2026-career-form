@@ -1,3 +1,17 @@
+import { ownedBasicControl } from "../adapters/hplace/basic-controls";
+import {
+  writeBasic,
+  basicValue,
+  basicTarget,
+  basicDateOrder,
+} from "../adapters/hplace/basic-write";
+import {
+  detailAddressMatches,
+  writeDetail,
+} from "../adapters/hplace/detail-write";
+import { ownedDetailControl } from "../adapters/hplace/detail";
+import type { AddressIdentity } from "../address/match";
+import { resolveDocumentCompany } from "../adapters/company";
 import { runtimeRules } from "../policy/runtime-rules";
 import { startLocalTiming } from "../debug/local-timing";
 import { executionPolicy } from "../workflow/execution-policy";
@@ -5,6 +19,7 @@ import { getWriteAdapter } from "../adapters/write";
 import { resultFieldState } from "../workflow/result-field-state";
 import { acquireDocumentRun } from "../interaction/document-run";
 import type { InteractionDecisionProvider } from "../api/interaction-types";
+import type { FieldCandidateHandle } from "../dom/types";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import type { SearchFollowUpControl } from "../interaction/search-follow-up";
 import type { ReviewPlanItem } from "../review/review-plan";
@@ -12,7 +27,7 @@ import { componentGpaSafe } from "../policy/components/gpa";
 import { matchesResultValue } from "../workflow/result-value-match";
 import { executeApprovedCalendarWrite } from "./calendar-executor";
 import { executeButtonDropdownWrite } from "./button-dropdown-executor";
-import { skipped, type ApprovedWriteResult } from "./write-result";
+import { skipped, written, type ApprovedWriteResult } from "./write-result";
 import { debugWriteRun } from "../debug/autofill-debug";
 import {
   executeApprovedSearchWrites,
@@ -26,6 +41,37 @@ import {
 export { executeApprovedWrites } from "./native-executor";
 export type { WriteResultListener } from "./native-executor";
 export type { ApprovedWriteResult } from "./write-result";
+
+function legacyValueRetained(
+  handle: FieldCandidateHandle,
+  item: ReviewPlanItem,
+  initialValue: string | undefined,
+  address?: AddressIdentity,
+): boolean {
+  const basic = ownedBasicControl(handle);
+  const target = basic
+    ? basicTarget(
+        basic.key,
+        item.profileValue ?? "",
+        handle.elements[0]?.ownerDocument,
+      )
+    : undefined;
+  return (
+    (ownedDetailControl(handle)?.key !== "detailAddress" ||
+      detailAddressMatches(handle, address)) &&
+    item.profileValue === initialValue &&
+    (basic
+      ? target !== undefined &&
+        basicDateOrder(handle, target) &&
+        basicValue(handle) === target
+      : matchesResultValue(
+          item,
+          handle.elements[0]?.value ?? "",
+          item.profileValue ?? "",
+          handle,
+        ))
+  );
+}
 
 /** Verify retained state without dispatching events or invoking a writer. */
 function settledAdapterResult(
@@ -113,6 +159,7 @@ export async function executeApprovedWritesAfterPageSettles({
   settledRegistry,
   currentOrdinaryRegistry,
   onSearchFollowUp,
+  hplaceAddress,
   followUpHaltScope,
 }: {
   items: readonly ReviewPlanItem[];
@@ -130,6 +177,8 @@ export async function executeApprovedWritesAfterPageSettles({
   signal?: AbortSignal;
   document?: Document;
   calendarOnly?: boolean;
+  /** Local profile identity only; never included in analysis requests. */
+  hplaceAddress?: AddressIdentity;
   /** Component-engine readback registry, with the original candidate IDs safely rebound. */
   settledRegistry?: () =>
     CandidateRegistry | undefined | Promise<CandidateRegistry | undefined>;
@@ -152,6 +201,7 @@ export async function executeApprovedWritesAfterPageSettles({
       ? (first.handle.elements[0] ?? first.handle.customElements?.[0])
           ?.ownerDocument
       : undefined);
+  const companyId = document ? resolveDocumentCompany(document) : "generic";
   const componentWorkflow = document
     ? executionPolicy(document)?.componentPolicy?.workflow
     : undefined;
@@ -174,10 +224,83 @@ export async function executeApprovedWritesAfterPageSettles({
         ),
       ),
     );
+  const initialValues = items.map((item) => item.profileValue);
   const url = document?.URL;
+  const nativeDigest =
+    document && executionPolicy(document)?.browserPolicy?.schemaVersion === 2
+      ? JSON.stringify(executionPolicy(document)?.browserPolicy)
+      : undefined;
   const runCurrent = () =>
-    !signal?.aborted && assertCurrent?.() !== false && document?.URL === url;
+    !signal?.aborted &&
+    assertCurrent?.() !== false &&
+    document?.URL === url &&
+    (nativeDigest === undefined ||
+      JSON.stringify(executionPolicy(document!)?.browserPolicy) ===
+        nativeDigest) &&
+    (!document || resolveDocumentCompany(document) !== "hplace");
   try {
+    if (companyId === "hplace" && !calendarOnly) {
+      const results: ApprovedWriteResult[] = [];
+      const seen = new Set<string>();
+      const current = () =>
+        !signal?.aborted &&
+        assertCurrent?.() !== false &&
+        document?.URL === url &&
+        resolveDocumentCompany(document!) === "hplace";
+      for (const item of items) {
+        if (beforeWrite) await beforeWrite(item);
+        const lookup = registry.lookupField(item.candidateId);
+        const success =
+          approvedCandidateIds.has(item.candidateId) &&
+          !seen.has(item.candidateId) &&
+          lookup.status === "ready" &&
+          (ownedBasicControl(lookup.handle)
+            ? await writeBasic(lookup.handle, item, current, beforeMutation)
+            : await writeDetail(
+                lookup.handle,
+                item,
+                current,
+                beforeMutation,
+                hplaceAddress,
+              ));
+        seen.add(item.candidateId);
+        const result = success
+          ? written(item.candidateId)
+          : skipped(
+              item.candidateId,
+              "needs-verification",
+              "REVIEW_UNAVAILABLE",
+              "검증된 상세 지원서 필드만 입력할 수 있습니다.",
+            );
+        results.push(result);
+      }
+      const profileRetained = beforeMutation ? await beforeMutation() : true;
+      return results.map((result, index) => {
+        const item = items[index];
+        const lookup = registry.lookupField(item.candidateId);
+        const retained =
+          profileRetained &&
+          current() &&
+          lookup.status === "ready" &&
+          legacyValueRetained(
+            lookup.handle,
+            item,
+            initialValues[index],
+            hplaceAddress,
+          );
+        const finalResult =
+          result.status === "written" && !retained
+            ? skipped(
+                item.candidateId,
+                "needs-verification",
+                "RETAINED_VALUE_UNCONFIRMED",
+                "입력한 값이 유지되는지 확인하지 못했습니다.",
+              )
+            : result;
+        if (current()) onResult?.(item, finalResult, registry);
+        return finalResult;
+      });
+    }
     if (calendarOnly) {
       const calendarResults: ApprovedWriteResult[] = [];
       let halted = false;
@@ -296,6 +419,28 @@ export async function executeApprovedWritesAfterPageSettles({
             };
         }
         const lookup = registry.lookupField(item.candidateId);
+        if (lookup.status === "ready" && lookup.handle.owner === "legacy") {
+          const success = ownedBasicControl(lookup.handle)
+            ? await writeBasic(lookup.handle, item, runCurrent, beforeMutation)
+            : await writeDetail(
+                lookup.handle,
+                item,
+                runCurrent,
+                beforeMutation,
+                hplaceAddress,
+              );
+          return {
+            result: success
+              ? written(item.candidateId)
+              : skipped(
+                  item.candidateId,
+                  "needs-verification",
+                  "REVIEW_UNAVAILABLE",
+                  "검증된 기존 필드만 입력할 수 있습니다.",
+                ),
+            effect: "continue",
+          };
+        }
         if (lookup.status === "ready" && lookup.handle.buttonDropdown)
           return {
             result: await executeButtonDropdownWrite({
@@ -375,6 +520,26 @@ export async function executeApprovedWritesAfterPageSettles({
           "STALE_TARGET",
           "실행 중 프로필 또는 지원서 상태가 변경되어 입력 결과를 확인해 주세요.",
         );
+      const legacy = registry.lookupField(item.candidateId);
+      if ("handle" in legacy && legacy.handle.owner === "legacy") {
+        const lookup = legacy;
+        const retained =
+          lookup.status === "ready" &&
+          legacyValueRetained(
+            lookup.handle,
+            item,
+            initialValues[index],
+            hplaceAddress,
+          );
+        return retained
+          ? result
+          : skipped(
+              item.candidateId,
+              "needs-verification",
+              "RETAINED_VALUE_UNCONFIRMED",
+              "입력한 값이 유지되는지 확인하지 못했습니다.",
+            );
+      }
       if (item.analysis?.writePlan?.command === "SEARCH_SELECTION")
         return settledSearchSelectionResult(item, registry, result);
       if (item.analysis?.writePlan?.command === "SELECT_DATE") return result;

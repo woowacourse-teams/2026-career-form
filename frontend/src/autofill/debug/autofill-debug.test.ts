@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CandidateRegistry } from "../dom/candidate-registry";
 import type { ReviewPlanItem } from "../review/review-plan";
+import { defaultDebugEnabled } from "./autofill-debug";
 import {
   debugReviewPlan,
   debugWriteRun,
@@ -146,5 +147,17 @@ describe("autofill debug log", () => {
         "final.status": "written",
       }),
     ]);
+  });
+});
+
+describe("default debug switch", () => {
+  it.each([
+    [{ MODE: "production" }, false],
+    [{ MODE: "development" }, false],
+    [{ MODE: "production", VITE_AUTOFILL_DEBUG: "true" }, true],
+    [{ MODE: "development", VITE_AUTOFILL_DEBUG: "false" }, false],
+    [{ MODE: "test", VITE_AUTOFILL_DEBUG: "true" }, false],
+  ])("%j → %s (off unless explicitly enabled)", (env, expected) => {
+    expect(defaultDebugEnabled(env)).toBe(expected);
   });
 });

@@ -1,3 +1,15 @@
+import { nativeGpaComplete } from "../policy/native-form-gpa";
+import { normalizeStagedRoad } from "../policy/staged-address-road";
+import { stagedAddressReceipt } from "../policy/staged-address-receipt";
+import { nativeOwnership } from "../policy/native-form-collection";
+import { nativeTarget, nativeValueMatches } from "../policy/native-form-write";
+import {
+  ownedBasicControl,
+  basicSpecs,
+} from "../adapters/hplace/basic-controls";
+import { basicTarget } from "../adapters/hplace/basic-write";
+import { ownedDetailControl } from "../adapters/hplace/detail";
+import { detailTargetValue } from "../adapters/hplace/detail-write";
 import { componentRules } from "../policy/runtime-rules";
 import { componentSelector } from "../policy/component-dom";
 import { executionPolicy } from "./execution-policy";
@@ -117,6 +129,22 @@ export function matchesResultValue(
   expected: string,
   handle?: FieldCandidateHandle,
 ): boolean {
+  const address = handle && stagedAddressReceipt(handle);
+  if (address)
+    return (
+      address.value === current &&
+      (address.index === 1
+        ? normalizeStagedRoad(address.value) === normalizeStagedRoad(expected)
+        : address.value === expected)
+    );
+  if (handle?.owner === "native")
+    return (
+      nativeValueMatches(handle, item) &&
+      (!nativeOwnership(handle)?.field.gpa || nativeGpaComplete(handle)) &&
+      (nativeOwnership(handle)?.field.search
+        ? current.trim() === expected
+        : current.trim() === (nativeTarget(handle, expected) ?? expected))
+    );
   const left = current.trim();
   const right = expected.trim();
   if (!left || !right) return false;
@@ -185,10 +213,38 @@ export function matchesResultValue(
   );
   if (componentDisplayMatch !== undefined) return componentDisplayMatch;
   const binding = item.analysis?.valueBinding;
+  const basic = handle && ownedBasicControl(handle);
+  if (
+    basic &&
+    (basic.key === "serviceStartDate" || basic.key === "serviceEndDate") &&
+    handle?.candidateId === item.candidateId &&
+    item.analysis?.candidateId === item.candidateId &&
+    item.analysis.mappingStatus === "ADAPTER_VERIFIED" &&
+    item.analysis.writePlan?.command === "SET_TEXT" &&
+    binding?.type === "DIRECT" &&
+    binding.profileFieldKey === basicSpecs[basic.key].profile
+  ) {
+    return (
+      basicTarget(basic.key, right, handle.elements[0]?.ownerDocument) === left
+    );
+  }
   if (binding?.type === "LOOKUP" || binding?.type === "BUTTON_OPTION")
     return false;
   if (binding?.type === "DERIVED" && binding.recipe !== "YEAR_MONTH")
     return false;
+  if (
+    handle &&
+    ownedDetailControl(handle)?.key === "birthday" &&
+    handle.candidateId === item.candidateId &&
+    item.analysis?.candidateId === item.candidateId &&
+    item.analysis.mappingStatus === "ADAPTER_VERIFIED" &&
+    item.analysis.writePlan?.command === "SET_TEXT" &&
+    binding?.type === "DIRECT" &&
+    binding.profileFieldKey === "personal.personal.birthDate"
+  ) {
+    const target = detailTargetValue("birthday", right);
+    return target !== undefined && left === target;
+  }
   const key = binding?.profileFieldKey ?? item.profileFieldKey;
   const kind = key ? fieldTypes.get(key) : undefined;
   const precision = componentDatePrecision(item, key, handle);

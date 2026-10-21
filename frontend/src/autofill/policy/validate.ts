@@ -1,3 +1,4 @@
+import { validNativeForm } from "./native-form-contract";
 import { validRuntimeRules } from "./runtime-rules";
 import { validHiddenCodeContract } from "./hidden-code/contract";
 import type { BrowserPolicy } from "./types";
@@ -5,6 +6,62 @@ import type { BrowserPolicy } from "./types";
 export function validBrowserPolicy(value: unknown): value is BrowserPolicy {
   if (!value || typeof value !== "object") return false;
   const p = value as BrowserPolicy;
+  if (p.schemaVersion === 2) {
+    if (
+      Object.keys(p).some(
+        (k) =>
+          ![
+            "schemaVersion",
+            "nativeForm",
+            "runtimeRules",
+            "fields",
+            "normalizations",
+            "reveals",
+            "collection",
+            "repeatHints",
+            "educationHints",
+            "freshRowFields",
+            "freshDefaults",
+            "stateDrivers",
+            "searchStageBase",
+            "searchRowStride",
+            "refreshAfterPass",
+            "diagnosticsTitle",
+            "addressAction",
+            "mainWorldBridge",
+          ].includes(k),
+      )
+    )
+      return false;
+    if (
+      p.runtimeRules &&
+      Object.keys(p.runtimeRules).some(
+        (k) =>
+          ![
+            "sectionSelector",
+            "presentationSelector",
+            "placeholderAttributes",
+            "placeholderValues",
+          ].includes(k),
+      )
+    )
+      return false;
+    const { nativeForm, ...base } = p;
+    return (
+      validNativeForm(nativeForm) &&
+      Array.isArray(p.fields) &&
+      Array.isArray(p.collection?.actions) &&
+      Array.isArray(p.reveals) &&
+      Array.isArray(p.stateDrivers) &&
+      p.fields.length === 0 &&
+      p.collection.actions.length === 0 &&
+      p.reveals.length === 0 &&
+      p.stateDrivers.length === 0 &&
+      !p.hiddenCodeContract &&
+      p.mainWorldBridge === "NONE" &&
+      validBrowserPolicy({ ...base, schemaVersion: 1 })
+    );
+  }
   const str = (x: unknown): x is string =>
     typeof x === "string" && x.length > 0 && x.length <= 1500;
   const list = (x: unknown): x is string[] =>

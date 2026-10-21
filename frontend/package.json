@@ -20,7 +20,7 @@
     "test:panel": "node scripts/test-panel-layer.mjs",
     "test:unit": "vitest run --project unit",
     "typecheck": "wxt prepare && tsc --noEmit",
-    "zip": "wxt zip && node scripts/assert-zip.mjs",
+    "zip": "node scripts/assert-release-flags.mjs && wxt zip && node scripts/assert-zip.mjs",
     "dev:site": "vite --config vite.site.config.ts",
     "build:site": "vite build --config vite.site.config.ts && node scripts/assert-site-build.mjs",
     "preview:site": "vite preview --config vite.site.config.ts"

@@ -291,3 +291,38 @@ it("recovers from an unavailable local store on a later first event", async () =
   await handle(firstView);
   expect(payloads).toHaveLength(1);
 });
+
+it.each(["greeting_import_viewed", "greeting_import_saved"])(
+  "allows repeatable %s while stripping imported data",
+  async (event) => {
+    const { handle, payloads } = collector();
+    for (const surface of ["in_page_panel", "side_panel"]) {
+      await handle({
+        type: "ANALYTICS_TRACK",
+        event,
+        properties: {
+          surface,
+          page_host: "apply.example.test",
+          value: "synthetic",
+          count: 3,
+          profile: { email: "synthetic@example.test" },
+          url: "https://apply.example.test/private",
+        },
+      });
+    }
+    expect(payloads).toEqual([
+      expect.objectContaining({
+        event,
+        properties: {
+          surface: "in_page_panel",
+          page_host: "apply.example.test",
+          $process_person_profile: false,
+        },
+      }),
+      expect.objectContaining({
+        event,
+        properties: { surface: "side_panel", $process_person_profile: false },
+      }),
+    ]);
+  },
+);

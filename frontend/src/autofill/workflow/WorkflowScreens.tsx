@@ -74,6 +74,7 @@ interface WorkflowScreensProps {
   workflowDiagnostics: readonly WorkflowDiagnostic[];
   exceptionTitle: string;
   unsupportedImageUrl?: string;
+  unsupportedKind?: "v1" | "builder";
   onLocate?(candidateId: string): boolean;
   operatedCategories?: readonly string[];
   onLocateSection?(candidateIds: readonly string[], category?: string): boolean;
@@ -103,6 +104,7 @@ export function WorkflowScreens({
   structureDiagnostics,
   exceptionTitle,
   unsupportedImageUrl,
+  unsupportedKind,
   onExit,
   onLocate,
   onLocateSection,
@@ -512,6 +514,13 @@ export function WorkflowScreens({
           이 지원서 페이지는 아직 자동 기입을 지원하지 않아요. 수동 복사는 계속
           사용할 수 있어요.
         </p>
+        {unsupportedKind && (
+          <p className={styles.lead}>
+            이 채용 사이트의 지원서 방식(
+            {unsupportedKind === "v1" ? "신형 지원자 앱" : "경력 빌더형"})은
+            아직 지원하지 않아요.
+          </p>
+        )}
         {!exitInToolbar && (
           <button className={styles.primary} type="button" onClick={onExit}>
             수동 복사로 돌아가기

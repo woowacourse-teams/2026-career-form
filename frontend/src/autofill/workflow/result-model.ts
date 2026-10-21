@@ -8,6 +8,7 @@ import { savedResultValues } from "./result-preview";
 import { isSkippedByApproval } from "./workflow-model";
 import { matchesResultValue } from "./result-value-match";
 import { resultFieldLabel } from "./result-label";
+import { nativeRetainedValueMatches } from "../policy/native-form-write";
 
 export interface ResultModelInput {
   reviewItems: readonly ReviewPlanItem[];
@@ -36,6 +37,13 @@ export interface ResultModel {
 }
 function pendingReason(item: ReviewPlanItem): string {
   if (item.status === "conflict") return "기존 값과 다름";
+  // A retained native row whose page value differs from its matched entry.
+  if (
+    item.status === "unavailable" &&
+    item.itemIndex !== undefined &&
+    item.currentValue.trim()
+  )
+    return "기존 값과 다름";
   if (
     item.status === "needs-review" ||
     /선택|반복|후보/.test(item.reason) ||
@@ -144,6 +152,15 @@ export function buildResultModel(input: ResultModelInput): ResultModel {
           : "자동 입력 미지원",
       );
     } else if (
+      item.status === "unavailable" &&
+      !written &&
+      item.itemIndex !== undefined &&
+      live?.handle &&
+      saved.length === 1 &&
+      nativeRetainedValueMatches(live.handle, saved[0].value)
+    ) {
+      skip("기존 값 유지");
+    } else if (
       matches &&
       (failureCode === "SEARCH_SELECTION_UNVERIFIED" ||
         failureCode === "VALUE_MATCH_UNRECORDED")
@@ -152,11 +169,18 @@ export function buildResultModel(input: ResultModelInput): ResultModel {
     } else if (
       (failureCode ?? item.failureCode) &&
       !recoveredRetry &&
-      !(failureCode === "ROW_SEARCH_UNCONFIRMED" && entry?.unchanged && matches)
+      !(
+        (failureCode === "ROW_SEARCH_UNCONFIRMED" ||
+          failureCode === "ROW_DRIVER_UNCONFIRMED") &&
+        entry?.unchanged &&
+        matches
+      )
     ) {
       review("입력 못함", failureCode ?? item.failureCode);
     } else if (entry?.unchanged && matches) {
       skip("기존 값 유지");
+    } else if (item.status === "conflict" && !written && !matches) {
+      review("기존 값과 다름");
     } else if (
       result?.status === "skipped" &&
       !isSkippedByApproval(result) &&

@@ -1,3 +1,4 @@
+import { nativeValueMatches } from "../policy/native-form-write";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import type { FieldCandidateHandle } from "../dom/types";
 import type { ReviewPlanItem } from "../review/review-plan";
@@ -17,6 +18,8 @@ function retainedStateDriverValue(
   handle: FieldCandidateHandle,
   value: string,
 ): boolean {
+  if (handle.owner === "native")
+    return item.profileValue === value && nativeValueMatches(handle, item);
   const command = item.analysis?.writePlan?.command;
   if (command === "SELECT_OPTION") {
     const select = handle.elements[0];

@@ -173,8 +173,11 @@ export class CandidateRegistry {
   withReadCache<T>(read: () => T): T {
     const previous = this.readCache;
     this.readCache = new Map();
-    try { return withDomReadPass(read); }
-    finally { this.readCache = previous; }
+    try {
+      return withDomReadPass(read);
+    } finally {
+      this.readCache = previous;
+    }
   }
 
   lookupField(candidateId: string): CandidateLookup<FieldCandidateHandle> {
@@ -198,10 +201,7 @@ export class CandidateRegistry {
     if (!registered) {
       return { status: "unknown" };
     }
-    if (
-      registered.handle.kind === "field" &&
-      registered.handle.isCurrentContext?.() === false
-    ) {
+    if (registered.handle.isCurrentContext?.() === false) {
       return { status: "stale" };
     }
     const elements =
@@ -233,12 +233,18 @@ export class CandidateRegistry {
     // A disabled placeholder option, or an initially hidden combobox menu,
     // must not make its owning field unavailable. The concrete target option
     // is checked immediately before its write instead.
-    const targetOnly = registered.handle.kind === "field" && targetOnlyRadio(elements);
+    const targetOnly =
+      registered.handle.kind === "field" && targetOnlyRadio(elements);
     const currentBlockReason = elements
       .map(liveBlockReason)
-      .find((reason) => reason !== undefined && !(targetOnly && reason === "disabled"));
-    const registeredReason = targetOnly && registered.blockedReason === "disabled"
-      ? undefined : registered.blockedReason;
+      .find(
+        (reason) =>
+          reason !== undefined && !(targetOnly && reason === "disabled"),
+      );
+    const registeredReason =
+      targetOnly && registered.blockedReason === "disabled"
+        ? undefined
+        : registered.blockedReason;
     if (registeredReason || currentBlockReason) {
       return {
         status: "blocked",

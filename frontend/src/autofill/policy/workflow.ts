@@ -1,3 +1,18 @@
+import { runStagedAddress } from "./staged-address";
+import { stagedAddressPolicy } from "./staged-address-dom";
+import { nativeRepeatableProfileCount } from "./native-form-row-assignment";
+import {
+  executeCommittedSearch,
+  committedSearchMatches,
+} from "./committed-search";
+import { currentNativeOwner, nativeForm } from "./native-form-collection";
+import {
+  nativeDriverFailure,
+  nativeFieldControls,
+  nativeValueMatches,
+  nativeWriteAdapter,
+  settleNativeDriver,
+} from "./native-form-write";
 import type { WorkflowAdapter } from "../adapters/workflow";
 import type { MatchedFieldAnalysis } from "../api/types";
 import type { FieldCandidateHandle } from "../dom/types";
@@ -18,6 +33,7 @@ import {
   visible,
 } from "./primitives";
 import type { FieldRule } from "./types";
+import { sameValueBinding } from "./binding-equality";
 
 function verifiedPriority(
   rule: FieldRule | undefined,
@@ -106,6 +122,34 @@ export function policyWorkflowAdapter(document: Document): WorkflowAdapter {
     );
   };
   return {
+    async executeStateDriver(
+      _doc,
+      handle,
+      item,
+      signal,
+      report,
+      beforeMutation,
+    ) {
+      if (handle.owner !== "native") return undefined;
+      if (
+        signal.aborted ||
+        (beforeMutation && !(await beforeMutation())) ||
+        signal.aborted
+      )
+        return false;
+      if (currentNativeOwner(handle)?.field.search)
+        return executeCommittedSearch(
+          handle,
+          item,
+          signal,
+          beforeMutation,
+          report,
+        );
+      const result = nativeWriteAdapter.tryWrite(handle, item);
+      if (result.handled && result.written) return true;
+      if (!signal.aborted) report?.(nativeDriverFailure(handle, item));
+      return false;
+    },
     prefersProfileValue: priority,
     normalizeProfileValue(key, value) {
       const normalized = text(value);
@@ -177,12 +221,40 @@ export function policyWorkflowAdapter(document: Document): WorkflowAdapter {
       const target = option(el, item.profileValue ?? "", rule);
       return !!target && el.selectedOptions[0] !== target;
     },
-    runAddress: runKakaoAddress,
+    runAddress: (options) =>
+      stagedAddressPolicy(document)
+        ? runStagedAddress(options)
+        : runKakaoAddress(options),
+    get addressFieldNames() {
+      return stagedAddressPolicy(document)?.fields.map((f) => f.name);
+    },
     get diagnosticsTitle() {
       return config()?.diagnosticsTitle;
     },
+    followUpRepeatableAction: (id) =>
+      !!id &&
+      !!nativeForm(document)?.sections.some(
+        (section) =>
+          section.nested && id.startsWith(section.nested.action.idPrefix),
+      ),
+    repeatableProfileCount: (id, profile) =>
+      nativeRepeatableProfileCount(document, id, profile),
     repeatedProfileSectionHint: (id) =>
-      id ? config()?.repeatHints[id] : undefined,
+      id
+        ? (() => {
+            const section = nativeForm(document)?.sections.find(
+              (s) =>
+                s.action?.id === id ||
+                (s.nested && id.startsWith(s.nested.action.idPrefix)),
+            );
+            return section?.action
+              ? {
+                  categoryId: section.action.categoryId,
+                  sectionId: section.action.profileSectionId,
+                }
+              : config()?.repeatHints[id];
+          })()
+        : undefined,
     educationSectionHint: (label) =>
       Object.entries(config()?.educationHints ?? {}).find(([part]) =>
         label.toLowerCase().includes(part),
@@ -202,15 +274,27 @@ export function policyWorkflowAdapter(document: Document): WorkflowAdapter {
     isFreshRowDefault: (name) =>
       !!name && !!config()?.freshDefaults.includes(name),
     isStateDriver: (item, name) =>
-      item.analysis?.writePlan?.command === "SELECT_OPTION" &&
-      !!config()?.stateDrivers.some(
-        (r) =>
-          r.name === name &&
-          item.analysis?.valueBinding?.profileFieldKey === r.key &&
-          item.analysis?.valueBinding?.type === r.binding,
-      ),
+      !!nativeForm(document)?.sections.some(
+        (s) =>
+          s.enabled &&
+          s.fields.some(
+            (f) =>
+              f.name === name &&
+              f.driver &&
+              sameValueBinding(f.binding, item.analysis?.valueBinding),
+          ),
+      ) ||
+      (item.analysis?.writePlan?.command === "SELECT_OPTION" &&
+        !!config()?.stateDrivers.some(
+          (r) =>
+            r.name === name &&
+            item.analysis?.valueBinding?.profileFieldKey === r.key &&
+            item.analysis?.valueBinding?.type === r.binding,
+        )),
     stateDriverStage(item, handle) {
       if (!item.selected || item.disabled) return;
+      if (handle.owner === "native")
+        return currentNativeOwner(handle)?.field.driver?.stage;
       const rule = ruleFor(handle.candidate.domName);
       if (verifiedPriority(rule, item.analysis))
         return rule?.stage ?? undefined;
@@ -245,13 +329,46 @@ export function policyWorkflowAdapter(document: Document): WorkflowAdapter {
       searchRule(doc, handle.candidate.domName)
         ? isJqueryAutocompleteBridgeReady(doc, handle, context)
         : Promise.resolve(true),
-    settleStateDriver: (doc, handle, failure, context) =>
-      ruleFor(handle.candidate.domName)?.priority
-        ? settlePolicySelection(doc, handle)
-        : searchRule(doc, handle.candidate.domName)
-          ? confirmJqueryAutocomplete(doc, handle, failure, context)
-          : Promise.resolve(true),
+    settleStateDriver: async (doc, handle, failure, context) =>
+      handle.owner === "native"
+        ? !!context &&
+          (!context.beforeMutation || (await context.beforeMutation())) &&
+          (currentNativeOwner(handle)?.field.search
+            ? committedSearchMatches(handle, context.item)
+            : await settleNativeDriver(
+                handle,
+                context.item,
+                context.signal,
+                undefined,
+                failure,
+              )) &&
+          (!context.beforeMutation || (await context.beforeMutation()))
+        : ruleFor(handle.candidate.domName)?.priority
+          ? settlePolicySelection(doc, handle)
+          : searchRule(doc, handle.candidate.domName)
+            ? confirmJqueryAutocomplete(doc, handle, failure, context)
+            : Promise.resolve(true),
     stateDriverFailureTargets(item, handle) {
+      if (handle.owner === "native") {
+        const o = currentNativeOwner(handle);
+        // A non-search driver whose own value is verified keeps its write;
+        // only the dependents it could not settle are deferred.
+        const own =
+          o && !o.field.search && nativeValueMatches(handle, item)
+            ? []
+            : handle.elements;
+        return o
+          ? [
+              ...own,
+              ...(o.field.driver?.dependencies ?? []).flatMap((n) =>
+                nativeFieldControls(
+                  o,
+                  o.section.fields.find((f) => f.name === n)!,
+                ),
+              ),
+            ]
+          : [];
+      }
       const name = handle.candidate.domName;
       const dependencies = name
         ? config()?.failureDependencies?.[name]
@@ -274,6 +391,7 @@ export function policyWorkflowAdapter(document: Document): WorkflowAdapter {
       ];
     },
     stateDriverFailureGroup(item, handle) {
+      if (handle.owner === "native") return currentNativeOwner(handle)?.row;
       const input = handle.elements[0];
       if (
         !input?.isConnected ||

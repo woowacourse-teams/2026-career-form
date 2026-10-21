@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Profile } from "../model";
-import type { ProfileRepository } from "../profile-repository";
+import {
+  countCompletedCategories,
+  type ProfileRepository,
+} from "../profile-repository";
+import type { AnalyticsProperties, TrackEvent } from "../../analytics/events";
 import { ImportCategoryList } from "./ImportCategoryList";
 import { ImportConfirmCards } from "./ImportConfirmCards";
 import { ImportSummary } from "./ImportSummary";
@@ -29,6 +33,7 @@ import reviewCss from "./ImportReview.module.css?inline";
 
 interface Props {
   repository: ProfileRepository;
+  analytics?: { track: TrackEvent; properties: AnalyticsProperties };
   readCandidates(): Promise<readonly ImportCandidate[]>;
   onSaved(profile: Profile, savedCount: number): void;
   onClose(): void;
@@ -67,6 +72,7 @@ function startingState(
 /** One-screen review: new values start selected, overwrites and sensitive values start off. */
 export function PageImport({
   repository,
+  analytics,
   readCandidates,
   onSaved,
   onClose,
@@ -206,6 +212,18 @@ export function PageImport({
         baseline,
         toImportSelection(model, chosen),
       );
+      const trackSaved: TrackEvent = (event, properties) => {
+        try {
+          analytics?.track(event, properties);
+        } catch {
+          // Telemetry must not turn a completed save into a failure.
+        }
+      };
+      if (analytics) {
+        trackSaved("greeting_import_saved", analytics.properties);
+        if (countCompletedCategories(saved) > 0)
+          trackSaved("profile_first_saved", analytics.properties);
+      }
       if (alive.current) {
         present(undefined);
         onSaved(saved, count);

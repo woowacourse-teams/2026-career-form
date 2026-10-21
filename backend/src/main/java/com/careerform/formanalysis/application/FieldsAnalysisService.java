@@ -97,7 +97,7 @@ public final class FieldsAnalysisService {
             return FieldsAnalysisResponse.llmUnavailable(request.snapshotId());
         }
         if (request.fieldCandidatesInTraversalOrder().isEmpty()) {
-            return FieldsAnalysisResponse.complete(request.snapshotId(), mode, List.of());
+            return FieldsAnalysisResponse.complete(request.snapshotId(), mode, List.of()).withExecutionPolicy(route.executionPolicy());
         }
         try {
             FieldMappingResolver.Resolution resolution =
@@ -107,7 +107,7 @@ public final class FieldsAnalysisService {
                 request.snapshotId(),
                 mode,
                 mapFieldsInRequestOrder(request, resolution, mappingStatus, route.greeting())
-            );
+            ).withExecutionPolicy(route.executionPolicy());
         }
         catch (ResolverException exception) {
             return mode == Mode.ADAPTER
