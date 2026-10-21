@@ -1,0 +1,27 @@
+failed to load config from /home/dbsghwns1209/workspaces/2026-career-form/.worktrees/CF-313/frontend/vitest.config.ts
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Startup Error [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯⎯[39m
+Error: Cannot find module '@vitest/browser-playwright' imported from '/home/dbsghwns1209/workspaces/2026-career-form/.worktrees/CF-313/frontend/vitest.config.ts'
+    at fetchModule (file:///root/.npm/_npx/69c381f8ad94b576/node_modules/vite/dist/node/chunks/node.js:36152:32)
+    at RunnableDevEnvironment.fetchModule (file:///root/.npm/_npx/69c381f8ad94b576/node_modules/vite/dist/node/chunks/node.js:37032:10)
+    at fetchModule (file:///root/.npm/_npx/69c381f8ad94b576/node_modules/vite/dist/node/chunks/node.js:36965:17)
+    at handleInvoke (file:///root/.npm/_npx/69c381f8ad94b576/node_modules/vite/dist/node/chunks/node.js:25347:27)
+    at EventEmitter.listenerForInvokeHandler (file:///root/.npm/_npx/69c381f8ad94b576/node_modules/vite/dist/node/chunks/node.js:25402:19)
+    at EventEmitter.emit (node:events:519:28)
+    at Object.send (file:///root/.npm/_npx/69c381f8ad94b576/node_modules/vite/dist/node/chunks/node.js:15872:37)
+    at Object.invoke (file:///root/.npm/_npx/69c381f8ad94b576/node_modules/vite/dist/node/module-runner.js:616:31)
+    at Object.invoke (file:///root/.npm/_npx/69c381f8ad94b576/node_modules/vite/dist/node/module-runner.js:669:31)
+    at ModuleRunner.getModuleInformation (file:///root/.npm/_npx/69c381f8ad94b576/node_modules/vite/dist/node/module-runner.js:1228:28) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  runnerError: Error: RunnerError
+      at reviveInvokeError (file:///root/.npm/_npx/69c381f8ad94b576/node_modules/vite/dist/node/module-runner.js:557:64)
+      at Object.invoke (file:///root/.npm/_npx/69c381f8ad94b576/node_modules/vite/dist/node/module-runner.js:630:11)
+      at async ModuleRunner.getModuleInformation (file:///root/.npm/_npx/69c381f8ad94b576/node_modules/vite/dist/node/module-runner.js:1228:7)
+      at async request (file:///root/.npm/_npx/69c381f8ad94b576/node_modules/vite/dist/node/module-runner.js:1245:83)
+      at async eval (/home/dbsghwns1209/workspaces/2026-career-form/.worktrees/CF-313/frontend/vitest.config.ts:5:31)
+      at async ESModulesEvaluator.runInlinedModule (file:///root/.npm/_npx/69c381f8ad94b576/node_modules/vite/dist/node/module-runner.js:825:3)
+      at async ModuleRunner.directRequest (file:///root/.npm/_npx/69c381f8ad94b576/node_modules/vite/dist/node/module-runner.js:1288:59)
+      at async ModuleRunner.cachedRequest (file:///root/.npm/_npx/69c381f8ad94b576/node_modules/vite/dist/node/module-runner.js:1195:73)
+      at async ModuleRunner.import (file:///root/.npm/_npx/69c381f8ad94b576/node_modules/vite/dist/node/module-runner.js:1150:10)
+      at async runnerImport (file:///root/.npm/_npx/69c381f8ad94b576/node_modules/vite/dist/node/chunks/node.js:37205:18)
+}

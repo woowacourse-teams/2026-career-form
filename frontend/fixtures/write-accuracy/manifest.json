@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "snapshots": [
+    {
+      "snapshot": "ahnlab-write-resume-form",
+      "status": "RUNNABLE",
+      "reason": "Reviewed v4 sanitized structure",
+      "documentUrl": "https://write-accuracy.example.test/ahnlab-write-resume-form",
+      "expectedRoute": "generic",
+      "routeCheck": "ASSERTED"
+    },
+    {
+      "snapshot": "hplace-mrs2-step2-abl",
+      "status": "NOT_GENERIC_ROUTE",
+      "reason": "Hplace fingerprint scripts removed during sanitization",
+      "documentUrl": "https://write-accuracy.example.test/hplace-mrs2-step2-abl",
+      "expectedRoute": "hplace",
+      "routeCheck": "NOT_REPRODUCIBLE_OFFLINE"
+    },
+    {
+      "snapshot": "hplace-mrs2-step2-careerhyundai",
+      "status": "NOT_GENERIC_ROUTE",
+      "reason": "Hplace fingerprint scripts removed during sanitization",
+      "documentUrl": "https://write-accuracy.example.test/hplace-mrs2-step2-careerhyundai",
+      "expectedRoute": "hplace",
+      "routeCheck": "NOT_REPRODUCIBLE_OFFLINE"
+    },
+    {
+      "snapshot": "hplace-mrs2-step2-gsenc",
+      "status": "NOT_GENERIC_ROUTE",
+      "reason": "Hplace fingerprint scripts removed during sanitization",
+      "documentUrl": "https://write-accuracy.example.test/hplace-mrs2-step2-gsenc",
+      "expectedRoute": "hplace",
+      "routeCheck": "NOT_REPRODUCIBLE_OFFLINE"
+    },
+    {
+      "snapshot": "hplace-mrs2-step3-abl",
+      "status": "NOT_GENERIC_ROUTE",
+      "reason": "Hplace fingerprint scripts removed during sanitization",
+      "documentUrl": "https://write-accuracy.example.test/hplace-mrs2-step3-abl",
+      "expectedRoute": "hplace",
+      "routeCheck": "NOT_REPRODUCIBLE_OFFLINE"
+    },
+    {
+      "snapshot": "hplace-mrs2-step3-careerhyundai",
+      "status": "NOT_GENERIC_ROUTE",
+      "reason": "Hplace fingerprint scripts removed during sanitization",
+      "documentUrl": "https://write-accuracy.example.test/hplace-mrs2-step3-careerhyundai",
+      "expectedRoute": "hplace",
+      "routeCheck": "NOT_REPRODUCIBLE_OFFLINE"
+    },
+    {
+      "snapshot": "hplace-mrs2-step3-gsenc",
+      "status": "NOT_GENERIC_ROUTE",
+      "reason": "Hplace fingerprint scripts removed during sanitization",
+      "documentUrl": "https://write-accuracy.example.test/hplace-mrs2-step3-gsenc",
+      "expectedRoute": "hplace",
+      "routeCheck": "NOT_REPRODUCIBLE_OFFLINE"
+    },
+    {
+      "snapshot": "kakao-greeting-email",
+      "status": "UNREVIEWED",
+      "reason": "README records pending human structure review",
+      "documentUrl": "https://write-accuracy.example.test/kakao-greeting-email",
+      "expectedRoute": "generic",
+      "routeCheck": "ASSERTED"
+    },
+    {
+      "snapshot": "lg-ai-research-birth-split-email",
+      "status": "UNREVIEWED",
+      "reason": "README records pending human structure review",
+      "documentUrl": "https://write-accuracy.example.test/lg-ai-research-birth-split-email",
+      "expectedRoute": "generic",
+      "routeCheck": "ASSERTED"
+    },
+    {
+      "snapshot": "naver-panel-loss",
+      "status": "ABORTED",
+      "reason": "Collection aborted: panel lifecycle, not field structure",
+      "documentUrl": "https://write-accuracy.example.test/naver-panel-loss",
+      "expectedRoute": "generic",
+      "routeCheck": "ASSERTED"
+    },
+    {
+      "snapshot": "naver-step2-form",
+      "status": "RUNNABLE",
+      "reason": "Human privacy and structure review passed",
+      "documentUrl": "https://write-accuracy.example.test/naver-step2-form",
+      "expectedRoute": "generic",
+      "routeCheck": "ASSERTED"
+    },
+    {
+      "snapshot": "sk-careers-application-form",
+      "status": "NOT_GENERIC_ROUTE",
+      "reason": "Product browser policy route; excluded from generic measurement",
+      "policyFixture": "sk",
+      "documentUrl": "https://write-accuracy.example.test/sk-careers-application-form",
+      "expectedRoute": "policy",
+      "routeCheck": "ASSERTED"
+    }
+  ]
+}
