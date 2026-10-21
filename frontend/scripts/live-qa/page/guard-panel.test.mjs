@@ -86,7 +86,10 @@ describe("installGuard", () => {
     ["본인 인증", '<a id="x">본인인증</a>'],
     ["전체 동의", '<label id="x"><input type="checkbox">전체 동의</label>'],
     ["로그아웃", '<a id="x">로그아웃</a>'],
-    ["onclick fnSave", '<a id="x" onclick="fnSave()"><i></i></a>'],
+    [
+      "onclick fnSave",
+      '<a id="x" onclick="window.fnSave && fnSave()"><i></i></a>',
+    ],
     ["href goNext", '<a id="x" href="javascript:goNext()"></a>'],
     [
       "class btn_next",
@@ -111,7 +114,7 @@ describe("installGuard", () => {
     ["an icon titled 임시저장", '<a id="x"><img title="임시저장"></a>'],
     [
       "an SMS request",
-      '<button type="button" id="x" onclick="sendSms()">요청</button>',
+      '<button type="button" id="x" onclick="window.sendSms && sendSms()">요청</button>',
     ],
   ])("blocks %s", (_, markup) => {
     document.body.innerHTML = markup;
@@ -122,7 +125,7 @@ describe("installGuard", () => {
   it.each([
     [
       "경력 추가",
-      '<button type="button" id="x" onclick="addCareer()">경력 추가</button>',
+      '<button type="button" id="x" onclick="window.addCareer && addCareer()">경력 추가</button>',
     ],
     [
       "자격증 추가",

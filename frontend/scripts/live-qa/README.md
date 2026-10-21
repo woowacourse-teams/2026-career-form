@@ -97,7 +97,7 @@ node scripts/live-qa/cli.mjs start                                      # 설치
 | 공통 보호     | 지원분야·직무(SK `appJobRole*`, `title`·`.select-label` 문구 포함), 동의, 잠긴 신원 칸(disabled·readonly), 현대 `inExGb`(국내/해외), 에이치닷 섹션 안의 `contact`·`applySector` 숨김 칸 | 새 지원서에서 사이트가 미리 정해 두는 값이다                                                                      |
 
 - 현대 버튼형 select, Greeting 콤보박스와 토글처럼 DOM으로 안전하게 비울 수 없는 위젯은 지우지 않고 `cleared.widgetsLeft`에 개수만 남긴다.
-- 현대 페이지는 `Map`과 `Set`을 재정의한다. 페이지 함수(`page/*.mjs`)는 둘을 쓰지 않는다(테스트로 고정). 여러 인자는 `callInPage`로 넘긴다.
+- 현대 페이지는 `Map`과 `Set`을 polyfill로 바꿔 둔다. 페이지에 넣는 함수(`page/*.mjs`와 `keepalive.mjs`의 페이지 함수)는 둘을 쓰지 않는다(`page/page-functions.test.mjs`로 고정). 여러 인자는 `callInPage`로 넘긴다.
 - 칸 번호 `i`는 프레임을 가로질러 이어지고, 같은 주소의 iframe은 순번으로 구분한다.
 - 에이치닷 4단계(자기소개서)처럼 입력할 칸이 없는 단계는 확장이 예외 화면을 띄울 수 있다. 결과는 `measured: false`로 남는다.
 

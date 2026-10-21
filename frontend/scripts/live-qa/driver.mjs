@@ -500,12 +500,17 @@ export async function discardPage(page, { dialogs = null } = {}) {
     // A same-document move (URL with #) would keep the values: drop the hash
     // and confirm through a marker that a new document was loaded.
     const marker = randomBytes(6).toString("hex");
-    await bounded(
+    // Without the marker a same-document move would look like a new document.
+    const planted = await bounded(
       page.evaluate((m) => {
         window.__careerFormLiveQaDiscard = m;
+        return true;
       }, marker),
       EVALUATE_MS,
+      false,
     );
+    if (planted !== true)
+      return { how: "navigate", ok: false, code: "page-unresponsive" };
     const target = new URL(page.url());
     target.hash = "";
     try {

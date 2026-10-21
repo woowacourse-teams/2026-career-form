@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { callInPage, framesCensus } from "./driver.mjs";
+import { callInPage, discardPage, framesCensus } from "./driver.mjs";
 
 describe("callInPage", () => {
   it("passes several JSON arguments to a self-contained function", async () => {
@@ -54,5 +54,28 @@ describe("framesCensus", () => {
     expect(calls[0]).toContain('"known":["f"]');
     expect(calls[1]).toContain('"known":null');
     expect(calls[2]).toContain('"known":null');
+  });
+});
+
+describe("discardPage", () => {
+  it("fails closed when the new-document marker cannot be planted", async () => {
+    let navigated = false;
+    const page = {
+      url: () => "https://x.example/ko/o/1/apply",
+      on: () => {},
+      off: () => {},
+      evaluate: async () => {
+        throw new Error("Execution context was destroyed");
+      },
+      goto: async () => {
+        navigated = true;
+      },
+    };
+    await expect(discardPage(page)).resolves.toEqual({
+      how: "navigate",
+      ok: false,
+      code: "page-unresponsive",
+    });
+    expect(navigated).toBe(false);
   });
 });
