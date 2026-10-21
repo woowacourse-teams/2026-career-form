@@ -61,6 +61,62 @@ const coded = (code, message, extra = {}) =>
 const aborted = (review = null) =>
   coded("aborted", "The run was interrupted.", { review });
 
+// Dry run of clearForm on every frame: what a clear would remove, as counts
+// and control names (never values). A form that holds saved values must be
+// cleared by a person before a round, or the extension's writes cannot be told
+// apart from what was there. On Hplace MRS2 it walks steps 1-3 by no-save
+// moves and returns to the step it started on.
+export async function savedData(page, { allowHosts = [] } = {}) {
+  const SAVED = [
+    "hiddenRowIds",
+    "disabledCleared",
+    "searchDisplays",
+    "text",
+    "textarea",
+    "select",
+    "radioGroups",
+    "checkbox",
+  ];
+  const dryFrames = async () => {
+    const merged = { fields: [] };
+    for (const f of page.frames()) {
+      const r = await bounded(
+        callInPage(f, clearForm, { dryRun: true }).catch(() => null),
+        EVALUATE_MS,
+      );
+      if (!r) continue;
+      for (const [k, v] of Object.entries(r))
+        if (typeof v === "number") merged[k] = (merged[k] ?? 0) + v;
+      merged.fields.push(...(r.fields ?? []));
+    }
+    merged.saved = SAVED.some((k) => (merged[k] ?? 0) > 0);
+    return merged;
+  };
+  return onGuardedTab(page, { allowHosts }, async () => {
+    const st = await bounded(page.evaluate(readStep), EVALUATE_MS);
+    const hplace =
+      st?.formPresent &&
+      st.step &&
+      /\/mrs2\/applicant\/resume\/writeResume/i.test(
+        new URL(page.url()).pathname,
+      );
+    if (!hplace) return { how: "page", ...(await dryFrames()) };
+    const origin = st.step;
+    const steps = {};
+    for (const n of [1, 2, 3]) {
+      const moved = await gotoStep(page, n);
+      steps[n] = moved.ok ? await dryFrames() : { error: moved.code };
+    }
+    const back = await gotoStep(page, origin);
+    return {
+      how: "hplace-steps",
+      steps,
+      returned: back.ok,
+      saved: Object.values(steps).some((s) => s.saved === true),
+    };
+  });
+}
+
 // Clicks one of the extension panel's controls. A failure becomes a coded
 // error: Playwright's message would quote the page.
 async function press(locator, code, signal, review = null) {

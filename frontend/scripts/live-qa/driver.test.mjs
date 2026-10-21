@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { callInPage, discardPage, framesCensus } from "./driver.mjs";
+import { callInPage, discardPage, framesCensus, savedData } from "./driver.mjs";
 
 describe("callInPage", () => {
   it("passes several JSON arguments to a self-contained function", async () => {
@@ -77,5 +77,43 @@ describe("discardPage", () => {
       code: "page-unresponsive",
     });
     expect(navigated).toBe(false);
+  });
+});
+
+describe("savedData", () => {
+  it("reports a non-Hplace page from one dry run without moving it", async () => {
+    const dry = {
+      text: 2,
+      select: 0,
+      radioGroups: 1,
+      fields: ["email", "tel"],
+    };
+    const frame = {
+      url: () => "https://x.example/ko/o/1/apply",
+      evaluate: async (x) =>
+        typeof x === "string"
+          ? dry
+          : x.toString().includes("serviceWorker")
+            ? false
+            : { formPresent: false },
+    };
+    const page = {
+      ...frame,
+      mainFrame: () => frame,
+      frames: () => [frame],
+      on: () => {},
+      off: () => {},
+      route: async () => {},
+      unroute: async () => {},
+      goto: async () => {
+        throw new Error("must not navigate");
+      },
+    };
+    await expect(savedData(page)).resolves.toMatchObject({
+      how: "page",
+      saved: true,
+      text: 2,
+      fields: ["email", "tel"],
+    });
   });
 });

@@ -12,8 +12,14 @@
 //   Blanking those breaks row creation, so only visible controls are cleared.
 // - Job selection, consent and the Hyundai 국내/해외 toggle (pre-selected on a
 //   fresh form) are never touched.
+//
+// options.dryRun: change nothing; count what a clear would remove and list the
+// names of those controls in `fields` (names only, never values). A 비대상
+// radio that is still at its default is not counted then.
 export function clearForm(options) {
   const ignoreLayout = Boolean(options && options.ignoreLayout);
+  const dry = Boolean(options && options.dryRun);
+  const fields = [];
   const counts = {
     hiddenRowIds: 0,
     disabledCleared: 0,
@@ -44,6 +50,9 @@ export function clearForm(options) {
     e.closest(
       "career-form-profile-panel, [data-career-form-side-panel-launcher]",
     );
+  const note = (el) => {
+    if (dry) fields.push(el.getAttribute("name") || el.id || el.tagName);
+  };
   const textOf = (e) => {
     const parts = [
       e.getAttribute("aria-label") ?? "",
@@ -94,8 +103,9 @@ export function clearForm(options) {
     if (type === "hidden") {
       if (protectedName.test(name)) continue;
       if (inSection(el) && el.value) {
-        el.value = "";
+        if (!dry) el.value = "";
         counts.hiddenRowIds++;
+        note(el);
       }
       continue;
     }
@@ -118,40 +128,53 @@ export function clearForm(options) {
       if (!inSection(el)) continue;
       if (type === "radio" || type === "checkbox") {
         if (el.checked) {
-          el.checked = false;
-          el.defaultChecked = false;
+          if (!dry) {
+            el.checked = false;
+            el.defaultChecked = false;
+          }
           counts.disabledCleared++;
+          note(el);
         }
       } else if (el.tagName === "SELECT") {
         if (el.value) {
-          for (const o of el.options) o.defaultSelected = false;
-          el.selectedIndex = 0;
-          if (el.value) el.selectedIndex = -1;
+          if (!dry) {
+            for (const o of el.options) o.defaultSelected = false;
+            el.selectedIndex = 0;
+            if (el.value) el.selectedIndex = -1;
+          }
           counts.disabledCleared++;
+          note(el);
         }
       } else if (el.value) {
-        el.value = "";
+        if (!dry) el.value = "";
         counts.disabledCleared++;
+        note(el);
       }
       continue;
     }
     if (el.tagName === "SELECT") {
       if (!el.value) continue;
-      for (const o of el.options) o.defaultSelected = false;
-      el.selectedIndex = 0;
-      if (el.value && hplace) el.selectedIndex = -1;
-      fire(el);
+      if (!dry) {
+        for (const o of el.options) o.defaultSelected = false;
+        el.selectedIndex = 0;
+        if (el.value && hplace) el.selectedIndex = -1;
+        fire(el);
+      }
       counts.select++;
+      note(el);
     } else if (el.tagName === "TEXTAREA") {
       if (el.readOnly) {
         if (el.value) counts.skippedReadonly++;
         continue;
       }
       if (!el.value) continue;
-      el.defaultValue = "";
-      setValue(HTMLTextAreaElement.prototype, el, "");
-      fire(el);
+      if (!dry) {
+        el.defaultValue = "";
+        setValue(HTMLTextAreaElement.prototype, el, "");
+        fire(el);
+      }
       counts.textarea++;
+      note(el);
     } else if (type === "radio") {
       const key = name || "_unnamed" + radioOrder.length;
       if (!radios[key]) {
@@ -161,23 +184,29 @@ export function clearForm(options) {
       radios[key].push(el);
     } else if (type === "checkbox") {
       if (!el.checked) continue;
-      el.defaultChecked = false;
-      el.click();
-      if (el.checked) {
-        el.checked = false;
-        fire(el);
+      if (!dry) {
+        el.defaultChecked = false;
+        el.click();
+        if (el.checked) {
+          el.checked = false;
+          fire(el);
+        }
       }
       counts.checkbox++;
+      note(el);
     } else {
       if (el.readOnly && !(hplace && addressName.test(name))) {
         if (el.value) counts.skippedReadonly++;
         continue;
       }
       if (!el.value) continue;
-      el.defaultValue = "";
-      setValue(HTMLInputElement.prototype, el, "");
-      fire(el);
+      if (!dry) {
+        el.defaultValue = "";
+        setValue(HTMLInputElement.prototype, el, "");
+        fire(el);
+      }
       counts.text++;
+      note(el);
     }
   }
   if (!hplace) {
@@ -214,30 +243,38 @@ export function clearForm(options) {
         counts.widgetsLeft++;
   }
   if (hplace) {
-    for (const span of root.querySelectorAll("span.postCode"))
-      span.textContent = "";
+    if (!dry)
+      for (const span of root.querySelectorAll("span.postCode"))
+        span.textContent = "";
     for (const span of root.querySelectorAll(
       "section.writeResume span.searchResultName",
     ))
       if (span.textContent.trim()) {
-        span.textContent = "";
+        if (!dry) span.textContent = "";
         counts.searchDisplays++;
       }
-    for (const b of root.querySelectorAll(
-      '[data-button="resetAddressResult"], .resetAddressResult, #resetAddressResult',
-    ))
-      b.remove();
+    if (!dry)
+      for (const b of root.querySelectorAll(
+        '[data-button="resetAddressResult"], .resetAddressResult, #resetAddressResult',
+      ))
+        b.remove();
   }
   for (const key of radioOrder) {
     const group = radios[key];
-    if (!group.some((r) => r.checked)) continue;
+    const on = group.find((r) => r.checked);
+    if (!on) continue;
+    const isDefault = defaultFalse.indexOf(key) >= 0;
+    // A 비대상 radio still at its template default is not saved data.
+    if (dry && isDefault && on.value === "false") continue;
+    counts.radioGroups++;
+    note(on);
+    if (dry) continue;
     for (const r of group) {
       r.checked = false;
       r.defaultChecked = false;
     }
     group[0].dispatchEvent(new Event("change", { bubbles: true }));
-    counts.radioGroups++;
-    if (defaultFalse.indexOf(key) >= 0) {
+    if (isDefault) {
       const target = group.find((r) => r.value === "false");
       if (target) {
         target.defaultChecked = true;
@@ -245,5 +282,6 @@ export function clearForm(options) {
       }
     }
   }
+  if (dry) counts.fields = fields;
   return counts;
 }

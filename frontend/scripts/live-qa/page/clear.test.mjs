@@ -41,6 +41,40 @@ describe("clearForm on an Hplace MRS2 step", () => {
     expect(counts).toMatchObject({ hiddenRowIds: 1, searchDisplays: 1 });
   });
 
+  it("in dry-run mode counts and names what it would clear without touching the page", () => {
+    const before = document.body.innerHTML;
+    const counts = clearForm({ ignoreLayout: true, dryRun: true });
+    expect(document.body.innerHTML).toBe(before);
+    expect(counts).toMatchObject({
+      hiddenRowIds: 1,
+      searchDisplays: 1,
+      text: 2,
+      disabledCleared: 2,
+      radioGroups: 2,
+    });
+    expect(counts.fields).toEqual([
+      "college[0].academyActivitySn",
+      "college[0].majorName",
+      "college[0].credit",
+      "college[0].perfectScore",
+      "currentAddress.address",
+      "college[0].dayOrNight",
+      "patriot.patriotYn",
+    ]);
+    expect(JSON.stringify(counts)).not.toContain("저장");
+  });
+
+  it("in dry-run mode does not count a 비대상 radio that is still at its default", () => {
+    document.querySelector('[name="patriot.patriotYn"][value="true"]').checked =
+      false;
+    document.querySelector(
+      '[name="patriot.patriotYn"][value="false"]',
+    ).checked = true;
+    const counts = clearForm({ ignoreLayout: true, dryRun: true });
+    expect(counts.radioGroups).toBe(1);
+    expect(counts.fields).not.toContain("patriot.patriotYn");
+  });
+
   it("keeps navigation keys, job selection and restores the site's 비대상 default", () => {
     clearForm({ ignoreLayout: true });
     expect(value('[name="resumeSn"]')).toBe("77");
