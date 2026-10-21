@@ -2,9 +2,9 @@
 
 > Topic: adapter-hyundai
 > Status: Current
-> Current: [현대 어학 상태 드라이버 실패의 행 단위 격리](../../raw/issues/CF-169/documents/adapter-hyundai.md)
-> History: [근거 1](../../raw/issues/CF-46/documents/adapter-hyundai.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-hyundai.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-hyundai.md); [CF-169 근거](../../raw/issues/CF-169/documents/adapter-hyundai.md)
-> Updated: 2026-10-08
+> Current: [CF-310 Map·Set 재정의 근거](../../raw/issues/CF-310/documents/hyundai-map-set-override.md)
+> History: [근거 1](../../raw/issues/CF-46/documents/adapter-hyundai.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-hyundai.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-hyundai.md); [CF-169 근거](../../raw/issues/CF-169/documents/adapter-hyundai.md); [CF-310 Map·Set 재정의 근거](../../raw/issues/CF-310/documents/hyundai-map-set-override.md)
+> Updated: 2026-10-21
 
 ## 현재 상태
 
@@ -13,6 +13,10 @@
 CF-82는 열린 버튼 메뉴의 현재 visible `data-code` 옵션을 수집해 표준 ID 별칭과 정확히 하나로 일치할 때만 클릭하도록 보완한다. 정적 코드 사전과 첫 후보 추측은 사용하지 않고, 클릭 뒤 표시 라벨과 hidden code를 확인한다. 상세 제한은 [CF-82 근거](../../raw/issues/CF-82/documents/adapter/live-option-selection.md)를 따른다.
 
 CF-169는 어학 언어와 시험 상태 드라이버의 실패를 `.field-group`이 두 드라이버를 각각 하나씩 소유하는 같은 행으로 격리한다. 컨테이너가 여러 행을 포함하거나 드라이버가 밖이면 기존처럼 전체를 중단하며 국적은 근거가 없어 제외한다. 상세는 [CF-169 근거](../../raw/issues/CF-169/documents/adapter-hyundai.md)를 따른다.
+
+## 페이지 전역 재정의 (2026-10-21)
+
+현대자동차 지원서(`talent.hyundai.com/apply/applyWrite.hc`)는 `window.Map`과 `window.Set`을 native가 아닌 polyfill로 바꿔 둔다. 그래서 `page.evaluate`로 페이지 world에 넣는 함수는 둘을 쓰지 않는다. 2026-10-21 실사이트 QA의 일회성 스크립트에서 `Map`을 순회하던 입력 비우기 함수(`clearForm`)가 이 페이지에서 멈췄다. 이를 옮긴 하네스(`frontend/scripts/live-qa`)는 둘을 쓰지 않고, `page/*.mjs`와 `keepalive.mjs`의 페이지 함수 열 개를 `page/page-functions.test.mjs`로 고정한다. 근거는 [CF-310 Map·Set 재정의](../../raw/issues/CF-310/documents/hyundai-map-set-override.md)를 따른다.
 
 ## 변경 이유
 

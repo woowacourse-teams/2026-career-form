@@ -2,9 +2,9 @@
 
 > Topic: live-autofill-evaluation
 > Status: Current
-> Current: [CF-173 평가 계약 1.1과 설치본 근거](../../raw/issues/CF-173/documents/evaluation-contract-1.1.md)
-> History: [CF-124 최초 공용 실행 계약](../../raw/issues/CF-124/documents/adr/124-ai-operated-live-autofill-evaluation.md); [CF-124 사전 판정 분모와 평가 보고서](../../raw/issues/CF-124/documents/reports/2026-09-28-live-autofill-evaluation.md); [CF-173 평가 계약 1.1](../../raw/issues/CF-173/documents/evaluation-contract-1.1.md)
-> Updated: 2026-10-09
+> Current: [CF-310 원복·대화상자 근거](../../raw/issues/CF-310/documents/live-browser-pitfalls.md)
+> History: [CF-124 최초 공용 실행 계약](../../raw/issues/CF-124/documents/adr/124-ai-operated-live-autofill-evaluation.md); [CF-124 사전 판정 분모와 평가 보고서](../../raw/issues/CF-124/documents/reports/2026-09-28-live-autofill-evaluation.md); [CF-173 평가 계약 1.1](../../raw/issues/CF-173/documents/evaluation-contract-1.1.md); [CF-310 원복·대화상자 근거](../../raw/issues/CF-310/documents/live-browser-pitfalls.md)
+> Updated: 2026-10-21
 
 ## 현재 상태
 
@@ -19,6 +19,14 @@ Console의 `[CareerForm]` 로그는 수집, 분석, 리뷰, 기입과 검색 실
 계약 `1.1`의 실사이트 보고서는 익명 후보 관측과 개수 요약을 함께 받으며 재계산한 개수가 다르면 거부한다. CLI와 동일한 FAILED/DEFERRED 원인 집계, 익명 근거 및 미발견 AUTOFILLABLE 개수를 출력한다.
 
 평가 전 설치본의 background service worker 컨텍스트에서 `globalThis.__careerFormBuildInfo()`를 조회한다. 이는 지원서 값이나 DOM을 읽지 않는 빌드 메타데이터 조회다. 빌드 시 삽입된 불변 snapshot이므로 unpacked 파일이 재빌드로 덮어써져도 재로드 전에는 기존 설치본 revision을 반환한다. CLEAN·전체 SHA·canonical digest·설치본 확인 방법이 맞을 때만 VERIFIED이며 DIRTY/UNKNOWN 또는 조회 불가는 UNVERIFIED로 남긴다. 상세 판정은 [CF-173 ADR](../../raw/issues/CF-173/documents/adr/173-installed-build-revision-evidence.md)을 따른다.
+
+## 실사이트 브라우저 운영 함정 (2026-10-21)
+
+이 절은 2026-10-21 실사이트 QA에서 확인한 함정이다. 새로고침 원복의 잔존 값은 당시 일회성 스크립트 실행에서 나왔고 대화상자 자동 처리는 Playwright 1.64.0 소스에서 확인했으며, `frontend/scripts/live-qa` 실사이트 QA 하네스(CF-177 live-eval 도구에서 일부를 옮김)가 둘을 막는다. 원복은 하네스가 실행 뒤 합성 값을 버리려고 같은 지원서를 저장 없이 다시 여는 동작이며 평가 계약 1.1을 바꾸지 않는다.
+
+- **새로고침 원복 금지:** Chrome은 새로고침 때 입력값을 복원한다. 2026-10-21 Greeting 지원서 두 곳에서 `reload` 뒤 합성 값이 남았다. 원복은 일반 페이지에서 `#`을 뗀 주소로 새로 이동하고 marker로 새 문서인지 확인하며(에이치닷은 저장 없이 같은 단계를 다시 연다), 이어서 같은 주소·단계인지, 칸 수가 실행 전의 80% 이상인지, 값이 남은 칸이 실행 전 값과 같은지 검증한다.
+- **대화상자 자동 처리:** Playwright(1.64.0)는 context와 page 어디에도 `dialog` listener가 없으면 `beforeunload`는 수락하고 나머지는 닫는다(확인창은 취소로 답한다). CDP로 평가 브라우저에 붙으면 사람이 그 브라우저에서 쓰는 탭까지 적용되므로, 하네스의 모든 명령은 붙을 때 context 전체에 listener를 먼저 걸어, 사람이 쓰는 탭에서는 로그인 연장 확인창만 수락하고 나머지는 사람에게 남긴다. 하네스가 구동하는 탭은 따로 맡아 사이트 대화상자를 취소하고, 페이지 이탈 확인은 원복하는 동안에만 수락한다.
+- 근거는 [CF-310 원복·대화상자](../../raw/issues/CF-310/documents/live-browser-pitfalls.md)를 따른다.
 
 ## 과거 실행 근거
 

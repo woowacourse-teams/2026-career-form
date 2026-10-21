@@ -2,9 +2,9 @@
 
 > Topic: adapter-greeting
 > Status: Current
-> Current: [Greeting 어학 수준 선택지 불일치의 필드 단위 보류](../../raw/issues/CF-168/documents/adapter-greeting.md)
-> History: [CF-94 근거](../../raw/issues/CF-94/documents/adapter-greeting.md); [CF-160 근거](../../raw/issues/CF-160/documents/adapter-greeting.md); [CF-162 근거](../../raw/issues/CF-162/documents/adapter-greeting.md); [CF-168 근거](../../raw/issues/CF-168/documents/adapter-greeting.md)
-> Updated: 2026-10-08
+> Current: [CF-310 검색 서버 액션 근거](../../raw/issues/CF-310/documents/greeting-search-server-action.md)
+> History: [CF-94 근거](../../raw/issues/CF-94/documents/adapter-greeting.md); [CF-160 근거](../../raw/issues/CF-160/documents/adapter-greeting.md); [CF-162 근거](../../raw/issues/CF-162/documents/adapter-greeting.md); [CF-168 근거](../../raw/issues/CF-168/documents/adapter-greeting.md); [CF-310 검색 서버 액션 근거](../../raw/issues/CF-310/documents/greeting-search-server-action.md)
+> Updated: 2026-10-21
 
 ## 현재 상태
 
@@ -23,6 +23,10 @@ FE는 SK·현대의 기존 선택 우선순위를 유지하며 유일한 최상�
 `routingContext`, `executionAdapterId`, Greeting 전용 capability/header와 사용자별 토큰·만료·서버 메모리는 사용하지 않는다. 도메인별 DNS 결과 캐시는 내부 성능 최적화이며 사용자 세션 계약이 아니다. 준비 API → 필요한 준비 동작·재수집 → 필드 매핑 API → 로컬 값 결합·입력 순서를 유지하고, 서버 어댑터 지정을 위한 추가 준비 요청은 만들지 않는다. 기존 주소 검색 capability와 공통 입력 명령은 유지한다.
 
 카카오모빌리티 기본정보·병역/보훈/장애·대학교/대학원 대응 항목은 정확한 DOM·행·선택 코드·기존 값과 조건부 노출을 검증한다. 이름 없는 이메일 combobox의 `이메일주소`와 `이메일` 표시명은 각각 유일한 칸일 때만 연결한다. 국적은 해당 칸이 있는 양식에서 유일한 표시명과 코드·선택 상태를 검증한다. 인증·기업 질문·파일·동의·저장·제출은 실행하지 않는다.
+
+## 검색 요청 구조 (2026-10-21)
+
+학교·전공 검색은 지원 페이지 주소(`/<언어>/o/<공고 번호>/apply`)로 보내는 Next.js 서버 액션(`Next-Action` 헤더가 붙은 POST)이며 별도 API 경로가 없다. 2026-10-21 실행에서 바이트로 기록한 검색 본문은 12–43바이트였다(kakaogames·kurly). 경로에 `apply`가 들어가므로 경로 낱말로 저장성 요청을 막으면 검색까지 막힌다. 실사이트 QA 하네스(`frontend/scripts/live-qa`)는 헤더와 본문 모양으로 조회를 구분한다. 근거는 [CF-310 검색 서버 액션](../../raw/issues/CF-310/documents/greeting-search-server-action.md)을 따른다.
 
 ## 검증과 제한
 

@@ -753,3 +753,11 @@
 - 승인된 후보 4개를 [CF-271 bundle](../raw/issues/CF-271/manifest.md)에 기록하고 CF-193 계측 문서를 대체했다.
 - [선택적 이용 계측](topics/usage-analytics.md)의 Current와 History를 갱신하고 가져오기 이벤트 의미, 비교 저장 경계, 발생 화면과 계측 도구 범위를 반영했다.
 - 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.
+
+## [2026-10-21] ingest | CF-310 실사이트 QA 하네스의 요청 구조와 브라우저 운영 함정
+
+- Approval-Digest: 613b4acd5fd87f8d2186b4ac401715fbed539b93eea1421f11163fb5591ee258
+- Source-Revision: 149b350a7ed85aefcb65448f816c6901d30f2b12
+- 승인된 후보 5개를 [CF-310 bundle](../raw/issues/CF-310/manifest.md)에 기록하고 승인 후보 스냅샷의 SHA-256을 재확인했다.
+- [Hplace 어댑터](topics/adapter-hplace.md), [Greeting 어댑터](topics/adapter-greeting.md), [현대 어댑터](topics/adapter-hyundai.md), [실사이트 평가](topics/live-autofill-evaluation.md)의 Current와 History를 갱신하고 MRS2 저장·조회·무저장 이동 요청, Greeting 검색 서버 액션, 현대 Map·Set 재정의, 새로고침 원복과 Playwright 대화상자 자동 처리를 반영했다. 어댑터 동작과 필드 현황은 바꾸지 않았다.
+- 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.
