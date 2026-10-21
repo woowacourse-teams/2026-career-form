@@ -745,3 +745,11 @@
 - 5차 후보 파일(K70–K76, K75-1 포함) 전체 UTF-8 바이트의 SHA-256을 재확인하고, 아직 병합되지 않은 [CF-177 bundle](../raw/issues/CF-177/manifest.md)에 새 문서를 추가했다. 앞선 절과 문서는 바꾸지 않고 topic 절 세 개를 덧붙였다.
 - [Hplace 어댑터](topics/adapter-hplace.md), [개발 경계](topics/adapter-development.md), [필드 현황](topics/adapter-field-inventory.md)의 Current와 History를 갱신하고 칸 단위 독립 인식(K66 정정), native 실행기 효율, 안내 구분, 전 프로필 시드, 금지 동작·재실행 회귀, 저장 후 다시 연 페이지의 기존 행 보고, CI 한도를 반영했다. 키별 집계는 바꾸지 않았다.
 - 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.
+
+## [2026-10-21] ingest | CF-271 Greeting 가져오기 진입과 저장 완료 계측
+
+- Approval-Digest: dbc296eaa5b5917ca69dc5431dd4f54ef1543cbfb1c8cf8c22a0ca85da05d840
+- Source-Revision: 0de01651f6ce0d02f56038013c724d212096e987
+- 승인된 후보 4개를 [CF-271 bundle](../raw/issues/CF-271/manifest.md)에 기록하고 CF-193 계측 문서를 대체했다.
+- [선택적 이용 계측](topics/usage-analytics.md)의 Current와 History를 갱신하고 가져오기 이벤트 의미, 비교 저장 경계, 발생 화면과 계측 도구 범위를 반영했다.
+- 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.
