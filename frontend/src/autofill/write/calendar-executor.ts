@@ -121,6 +121,45 @@ function approvedDayTarget(
   return approval.target;
 }
 
+function dayValueRetained(
+  target: HTMLInputElement,
+  approval: NonNullable<ReviewPlanItem["dayCalendarApproval"]>,
+): boolean {
+  // Without a declared notation the widget may pick any supported one;
+  // the exact day is still required.
+  return (
+    canonicalDayCalendarValue(target.value, approval.targetFormat) ===
+    approval.targetDate
+  );
+}
+
+/**
+ * Re-reads an approved calendar target after the page has settled and
+ * confirms it is still the same connected input holding the approved date.
+ */
+export function calendarValueSettled(
+  item: ReviewPlanItem,
+  registry: CandidateRegistry,
+): boolean {
+  if (item.dayCalendarApproval) {
+    const target = approvedDayTarget(item, registry);
+    return (
+      !!target &&
+      target.isConnected &&
+      revalidateDayCalendarApproval(item.dayCalendarApproval).status ===
+        "valid" &&
+      dayValueRetained(target, item.dayCalendarApproval)
+    );
+  }
+  const target = approvedTarget(item, registry);
+  return (
+    !!target &&
+    target.isConnected &&
+    revalidateCalendarApproval(item.calendarApproval!).status === "valid" &&
+    target.value === item.calendarApproval!.targetYearMonth
+  );
+}
+
 async function executeApprovedDayCalendarWrite(
   args: ExecuteApprovedCalendarWriteArgs,
 ): Promise<ApprovedCalendarWriteExecution> {
@@ -135,11 +174,7 @@ async function executeApprovedDayCalendarWrite(
   const approval = item.dayCalendarApproval!;
   const valid = () =>
     revalidateDayCalendarApproval(approval).status === "valid";
-  const retained = () =>
-    // Without a declared notation the widget may pick any supported one;
-    // the exact day is still required.
-    canonicalDayCalendarValue(target.value, approval.targetFormat) ===
-    approval.targetDate;
+  const retained = () => dayValueRetained(target, approval);
   if (!valid() || !current(args))
     return stop(item.candidateId, "STALE_TARGET", STALE);
 

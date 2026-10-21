@@ -25,7 +25,10 @@ import type { SearchFollowUpControl } from "../interaction/search-follow-up";
 import type { ReviewPlanItem } from "../review/review-plan";
 import { componentGpaSafe } from "../policy/components/gpa";
 import { matchesResultValue } from "../workflow/result-value-match";
-import { executeApprovedCalendarWrite } from "./calendar-executor";
+import {
+  calendarValueSettled,
+  executeApprovedCalendarWrite,
+} from "./calendar-executor";
 import { executeButtonDropdownWrite } from "./button-dropdown-executor";
 import { skipped, written, type ApprovedWriteResult } from "./write-result";
 import { debugWriteRun } from "../debug/autofill-debug";
@@ -542,7 +545,15 @@ export async function executeApprovedWritesAfterPageSettles({
       }
       if (item.analysis?.writePlan?.command === "SEARCH_SELECTION")
         return settledSearchSelectionResult(item, registry, result);
-      if (item.analysis?.writePlan?.command === "SELECT_DATE") return result;
+      if (item.analysis?.writePlan?.command === "SELECT_DATE")
+        return calendarValueSettled(item, registry)
+          ? result
+          : skipped(
+              item.candidateId,
+              "needs-verification",
+              "RETAINED_VALUE_UNCONFIRMED",
+              "입력한 값이 유지되는지 확인하지 못했습니다.",
+            );
       if (item.catalogMatch) {
         const verified = settledGenericResult(
           item,
