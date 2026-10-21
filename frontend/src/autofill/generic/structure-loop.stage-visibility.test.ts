@@ -254,6 +254,44 @@ async function analyze(fixture: (typeof fixtures)[number], scenario: Scenario) {
   };
 }
 
+it("keeps a hidden-first radio group with a visible other-stage member fail-closed", async () => {
+  const run = await analyze(
+    {
+      name: "mixed visibility radio row",
+      html: () => `<section><h3>학력</h3><table><tbody>
+        <tr data-repeatable-group><td>${stageSelect}</td>
+        <td><label>고등학교 학교명<input name="school"></label></td>
+        <td><label>확인<input name="unapproved"></label></td>
+        <td><div hidden><label>전공 A<input type="radio" name="major" value="a"></label></div>
+        <label>전공 B<input type="radio" name="major" value="b"></label></td>
+        </tr></tbody></table></section>`,
+      school: "[name=school]",
+      hidden: "[name=major]",
+      otherKey: "education.university.majorName",
+    },
+    "hidden-only",
+  );
+  const lookup = run.snapshot.registry.lookupField(run.hiddenId);
+  expect("handle" in lookup && lookup.handle.elements).toEqual(
+    Array.from(document.querySelectorAll('[name="major"]')),
+  );
+  expect(run.loop.actions).toContainEqual(
+    expect.objectContaining({
+      kind: "SELECT_ROW_KIND",
+      result: "blocked",
+      reason: "STAGE_KEY_MISMATCH",
+      rowIndex: 0,
+    }),
+  );
+  expect([...run.loop.context.blockedScopes.values()]).toContain(
+    "STAGE_KEY_MISMATCH",
+  );
+  expect(run.result.grades.get(run.schoolId)).toEqual({
+    grade: "BLOCKED",
+    reason: "MIXED_EDUCATION_RECORD",
+  });
+});
+
 describe.each(fixtures)("$name stage visibility", (fixture) => {
   it("1 ignores only hidden other-stage keys and maps visible high school without writes", async () => {
     const run = await analyze(fixture, "hidden-only");

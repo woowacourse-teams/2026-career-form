@@ -10,8 +10,8 @@ import type {
   SectionClassifyRequest,
   SectionControlKind,
 } from "../api/types";
-import type { CollectedSnapshot } from "../dom/collect";
-import { displayState } from "../dom/read-pass";
+import { isFieldCandidateHidden, type CollectedSnapshot } from "../dom/collect";
+import type { FieldCandidateHandle } from "../dom/types";
 import {
   resolveProfileFieldValue,
   type ReviewPlanItem,
@@ -110,6 +110,7 @@ export function createGenericAnalysisCache(): GenericAnalysisCache {
 
 interface SegmentField {
   element: Element;
+  handle: FieldCandidateHandle;
   label?: string;
   control: string;
   candidate: FieldCandidate;
@@ -282,27 +283,6 @@ function dateOptionMap(
     : {};
 }
 
-/** Same ancestor visibility predicate as dom/collect.ts, without writability. */
-function isHidden(element: Element): boolean {
-  if (
-    element instanceof HTMLElement &&
-    (element.hidden ||
-      element.closest("[hidden], [aria-hidden='true']") ||
-      element.closest("[style*='display: none'], [style*='display:none']"))
-  )
-    return true;
-  if (!element.ownerDocument.defaultView) return false;
-  for (
-    let current: Element | null = element;
-    current;
-    current = current.parentElement
-  ) {
-    const style = displayState(current);
-    if (style.display === "none" || style.visibility === "hidden") return true;
-  }
-  return false;
-}
-
 function convertSection(
   entry: SectionEntry,
   outcome: SectionOutcome,
@@ -310,15 +290,20 @@ function convertSection(
 ): { fields: FieldAnalysis[]; grades: [string, GenericFieldGrade][] } {
   const { section } = entry;
   const categoryOpen = !UNCONFIRMED_CATEGORIES.has(outcome.category);
-  const matched = section.fields.flatMap((field, index) => {
+  const matched = section.fields.flatMap((_, index) => {
     const response = outcome.fields[index];
     if (!response) throw new Error("Section result does not match its fields");
     return (response.profileFieldKey || compositeOf(response)) &&
-      response.reason === undefined &&
-      !isHidden(field.element)
+      response.reason === undefined
       ? [{ index, response }]
       : [];
   });
+  const visibleRowMatches =
+    section.boundary === "repeat-row"
+      ? matched.filter(
+          ({ index }) => !isFieldCandidateHidden(section.fields[index]!.handle),
+        )
+      : undefined;
   const fields: FieldAnalysis[] = [];
   const grades: [string, GenericFieldGrade][] = [];
   section.fields.forEach(({ candidate, itemIndex, element }, index) => {
@@ -348,16 +333,13 @@ function convertSection(
       fields.push(noMatch(candidateId));
       return;
     }
-    const rowSiblings: GradeSibling[] | undefined =
-      section.boundary === "repeat-row"
-        ? matched
-            .filter((sibling) => sibling.index !== index)
-            .map((sibling) => ({
-              profileFieldKey: sibling.response.profileFieldKey ?? undefined,
-              composite: compositeOf(sibling.response),
-              confidence: sibling.response.confidence,
-            }))
-        : undefined;
+    const rowSiblings: GradeSibling[] | undefined = visibleRowMatches
+      ?.filter((sibling) => sibling.index !== index)
+      .map((sibling) => ({
+        profileFieldKey: sibling.response.profileFieldKey ?? undefined,
+        composite: compositeOf(sibling.response),
+        confidence: sibling.response.confidence,
+      }));
     const direct =
       composite || !profileFieldKey
         ? undefined
@@ -479,6 +461,7 @@ export async function analyzeGenericFields(
     else
       segmentFields.push({
         element,
+        handle,
         label: candidate.displayName,
         control: candidate.control,
         candidate,
