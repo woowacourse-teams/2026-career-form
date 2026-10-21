@@ -1,7 +1,7 @@
 # DOM snapshot review: naver-education-stage
 
-Status: DONE_PENDING_HUMAN_REVIEW. This is a committed review candidate,
-not an approved registration or a benchmark denominator.
+Status: HUMAN_REVIEW_APPROVED (2026-10-22). This is a committed, human-reviewed
+candidate; it is not itself an approved benchmark denominator.
 
 ## Scope and authorization
 
@@ -63,16 +63,17 @@ Both stage branches remain children of the same education row.
 
 ## Human gates
 
-인간 개인정보·구조 검토: PENDING (PR 본문에 명시, 머지 전 확인 필요)
+인간 개인정보·구조 검토: APPROVED — 사람(프로젝트 소유자)이 2026-10-22 개인정보와 구조를 승인함
 
 Commit-before-review deviation: the coordinator authorized committing this
-sanitized fixture before human review. This does not approve registration,
-benchmark eligibility, or merge; both human reviews remain pending.
+sanitized fixture before human review. Both human reviews were subsequently
+approved on 2026-10-22; this does not by itself approve benchmark
+eligibility or merge.
 
-| Review                                                             | Result               | Date         |
-| ------------------------------------------------------------------ | -------------------- | ------------ |
-| Residual personal/account/session information                      | PENDING HUMAN REVIEW | Not approved |
-| Stage branching, same-row ownership, and hidden-state preservation | PENDING HUMAN REVIEW | Not approved |
+| Review                                                             | Result           | Date       |
+| ------------------------------------------------------------------ | ---------------- | ---------- |
+| Residual personal/account/session information                      | APPROVED (human) | 2026-10-22 |
+| Stage branching, same-row ownership, and hidden-state preservation | APPROVED (human) | 2026-10-22 |
 
 The reviewer must separately answer:
 
@@ -85,8 +86,8 @@ The reviewer must separately answer:
    search/calendar behavior, and unrelated sections acceptable for this
    narrow structural baseline?
 
-Do not infer structural approval from privacy approval. No metadata.json is
-issued as an approved registration until those reviews pass.
+Do not infer structural approval from privacy approval. The project owner
+answered privacy and structure separately and approved both on 2026-10-22.
 
 ## Offline verification
 
@@ -119,5 +120,5 @@ scripts, or server behavior. It does not establish live-site accuracy.
 ## Handoff
 
 Fixture commit authorized by the coordinator; no push, PR, merge, or Wiki write. The existing `naver-step2-form`
-fixture is unchanged. Final registration and benchmark eligibility remain
-blocked on the two human reviews.
+fixture is unchanged. The two human reviews were approved
+on 2026-10-22; benchmark eligibility is not established by this fixture alone.
