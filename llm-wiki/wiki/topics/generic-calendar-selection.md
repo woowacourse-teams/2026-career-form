@@ -2,8 +2,8 @@
 
 > Topic: generic-calendar-selection
 > Status: Current
-> Current: [CF-307 날짜 기본 선택과 반복 열 근거](../../raw/issues/CF-307/documents/generic-calendar-selection.md)
-> History: [근거 1](../../raw/issues/CF-104/documents/adr/104-generic-calendar-selection.md); [근거 2](../../raw/issues/CF-118/documents/generic-calendar-selection.md); [CF-307 날짜 기본 선택과 반복 열 근거](../../raw/issues/CF-307/documents/generic-calendar-selection.md)
+> Current: [CF-313 달력 기입의 공통 최종 값 확인](../../raw/issues/CF-313/documents/generic-calendar-selection.md)
+> History: [근거 1](../../raw/issues/CF-104/documents/adr/104-generic-calendar-selection.md); [근거 2](../../raw/issues/CF-118/documents/generic-calendar-selection.md); [CF-307 날짜 기본 선택과 반복 열 근거](../../raw/issues/CF-307/documents/generic-calendar-selection.md); [CF-313 달력 기입의 공통 최종 값 확인](../../raw/issues/CF-313/documents/generic-calendar-selection.md)
 > Updated: 2026-10-21
 
 ## 현재 상태
@@ -14,8 +14,10 @@
 
 CF-118부터 ui-datepicker 계열 연월일 달력은 월 승인과 분리된 일 단위 승인으로 처리한다. 공유 루트 달력의 소유권은 닫힌 상태에서 대상 opener를 활성화한 뒤 그 달력 하나만 표시되는지로 증명하고, 월 select는 0~11 값과 라벨이 일치할 때만 신뢰한다. 연도·월 변경 뒤 DOM을 재조회해 정확한 일자 하나만 누른다. 한 입력칸에 월 달력과 연월일 달력이 함께 감지되면 보류한다.
 
+CF-313부터 `SELECT_DATE` 기입도 다른 기입 명령과 같은 공통 최종 확인을 거친다. settle 단계에서 대상 입력의 최종 값을 다시 읽어 승인 날짜와 대조하고, 불일치·노드 교체·분리가 있으면 `RETAINED_VALUE_UNCONFIRMED` 확인 필요로 보고한다. 상세 조건과 재현 시점은 [CF-313 근거](../../raw/issues/CF-313/documents/generic-calendar-selection.md)를 따른다.
+
 가상화·화살표 전용 탐색, 인라인 달력과 그 밖의 날짜 위젯은 자동 추정하지 않는다. 합성 fixture 및 설치 UI 테스트의 성공은 실제 지원서 입력 검증으로 간주하지 않는다.
 
 ## 변경 이유
 
-읽기 전용 달력은 단순 텍스트 형식 변환과 다른 UI 상태 전이가 필요하다. 회사별 고정 DOM과 무제한 클릭 실행을 피하면서 개인정보와 사용자의 개별 승인을 보존하기 위해 로컬 상태 머신 경계를 선택했다. CF-118은 의미 매핑이 입사일·종료일을 `SELECT_DATE`로 판단해도 월 달력만 조작할 수 있던 한계를, 공유 루트 연월일 달력의 소유권 증명과 정확한 일자 확인으로 보완했다. CF-307은 이 승인 경계를 유지하면서 기본 선택과 라벨 없는 동일 반복 열의 날짜 단위 근거를 보완한다.
+읽기 전용 달력은 단순 텍스트 형식 변환과 다른 UI 상태 전이가 필요하다. 회사별 고정 DOM과 무제한 클릭 실행을 피하면서 개인정보와 사용자의 개별 승인을 보존하기 위해 로컬 상태 머신 경계를 선택했다. CF-118은 의미 매핑이 입사일·종료일을 `SELECT_DATE`로 판단해도 월 달력만 조작할 수 있던 한계를, 공유 루트 연월일 달력의 소유권 증명과 정확한 일자 확인으로 보완했다. CF-307은 이 승인 경계를 유지하면서 기본 선택과 라벨 없는 동일 반복 열의 날짜 단위 근거를 보완한다. CF-313은 달력 실행기 성공만으로 입력 완료를 보고해 페이지가 값을 되돌린 경우를 놓치던 결함을 공통 최종 값 확인으로 보완한다.

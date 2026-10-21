@@ -753,3 +753,11 @@
 - 승인된 후보 4개를 [CF-271 bundle](../raw/issues/CF-271/manifest.md)에 기록하고 CF-193 계측 문서를 대체했다.
 - [선택적 이용 계측](topics/usage-analytics.md)의 Current와 History를 갱신하고 가져오기 이벤트 의미, 비교 저장 경계, 발생 화면과 계측 도구 범위를 반영했다.
 - 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.
+
+## [2026-10-21] ingest | CF-313 오프라인 기입 정확도 측정과 달력 최종 확인
+
+- Approval-Digest: 7c2efdcde535f2e513f787da9c444f7014e643c42b7700b2296460049497292f
+- Source-Revision: cdd1bd0f10765a040096ce32f143cca9f552a6f2
+- 승인된 후보 C1~C3과 실측 기준선을 [CF-313 bundle](../raw/issues/CF-313/manifest.md)에 기록했다.
+- [오프라인 기입 정확도 측정](topics/offline-write-accuracy.md)을 새로 만들고 [범용 연월 달력 선택](topics/generic-calendar-selection.md)의 Current와 History를 갱신했다.
+- 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.
