@@ -11,6 +11,7 @@ import type {
   SectionControlKind,
 } from "../api/types";
 import type { CollectedSnapshot } from "../dom/collect";
+import { displayState } from "../dom/read-pass";
 import {
   resolveProfileFieldValue,
   type ReviewPlanItem,
@@ -281,6 +282,27 @@ function dateOptionMap(
     : {};
 }
 
+/** Same ancestor visibility predicate as dom/collect.ts, without writability. */
+function isHidden(element: Element): boolean {
+  if (
+    element instanceof HTMLElement &&
+    (element.hidden ||
+      element.closest("[hidden], [aria-hidden='true']") ||
+      element.closest("[style*='display: none'], [style*='display:none']"))
+  )
+    return true;
+  if (!element.ownerDocument.defaultView) return false;
+  for (
+    let current: Element | null = element;
+    current;
+    current = current.parentElement
+  ) {
+    const style = displayState(current);
+    if (style.display === "none" || style.visibility === "hidden") return true;
+  }
+  return false;
+}
+
 function convertSection(
   entry: SectionEntry,
   outcome: SectionOutcome,
@@ -328,7 +350,11 @@ function convertSection(
     const rowSiblings: GradeSibling[] | undefined =
       section.boundary === "repeat-row"
         ? matched
-            .filter((sibling) => sibling.index !== index)
+            .filter(
+              (sibling) =>
+                sibling.index !== index &&
+                !isHidden(section.fields[sibling.index]!.element),
+            )
             .map((sibling) => ({
               profileFieldKey: sibling.response.profileFieldKey ?? undefined,
               composite: compositeOf(sibling.response),
