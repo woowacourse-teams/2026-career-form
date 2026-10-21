@@ -135,8 +135,22 @@ function derivedValue(
   itemIndex?: number,
 ): ValueBindingResolution {
   const recipe = binding.recipe;
+  if (recipe === "UNIVERSITY_MAIN_MAJOR_CLASSIFICATION") {
+    const key = binding.profileFieldKey;
+    if (
+      !key ||
+      !/^education\.(university|graduateSchool)\.majorName$/.test(key)
+    )
+      return { status: "unknown", sensitive: false };
+    const source = directValue(profile, key, itemIndex);
+    return source.status === "resolved"
+      ? { ...source, value: "주전공" }
+      : source;
+  }
   const majorRecipe =
-    /^UNIVERSITY_ADDITIONAL_MAJOR_([12])_(NAME|CLASSIFICATION|FIELD)$/.exec(recipe);
+    /^UNIVERSITY_ADDITIONAL_MAJOR_([12])_(NAME|CLASSIFICATION|FIELD)$/.exec(
+      recipe,
+    );
   if (majorRecipe) {
     const section = binding.profileFieldKey?.split(".")[1] ?? "university";
     const entries = profile.education.filter(
@@ -148,8 +162,12 @@ function derivedValue(
     const major =
       entry &&
       universityAdditionalMajors(entry.values)?.[Number(majorRecipe[1]) - 1];
-    const value = majorRecipe[2] === "NAME" ? major?.name
-      : majorRecipe[2] === "FIELD" ? major?.field : major?.classification;
+    const value =
+      majorRecipe[2] === "NAME"
+        ? major?.name
+        : majorRecipe[2] === "FIELD"
+          ? major?.field
+          : major?.classification;
     return major && value
       ? {
           status: "resolved",
@@ -188,6 +206,13 @@ function derivedValue(
       ? { status: "resolved", value: match[1], sensitive: source.sensitive }
       : { status: "missing", sensitive: source.sensitive };
   }
+  if (recipe === "HANJA_FULL_NAME") {
+    const family = profile.personal.hanjaFamilyName?.trim();
+    const given = profile.personal.hanjaGivenName?.trim();
+    return family && given
+      ? { status: "resolved", value: `${family}${given}`, sensitive: false }
+      : { status: "missing", sensitive: false };
+  }
   const family = profile.personal.koreanFamilyName?.trim();
   const given = profile.personal.koreanGivenName?.trim();
   const englishFamily = profile.personal.englishFamilyName?.trim();
@@ -216,9 +241,20 @@ function lookupValue(
 ): ValueBindingResolution {
   const source = directValue(profile, binding.profileFieldKey, itemIndex);
   if (source.status !== "resolved") return source;
+  // Interpret only the explicit gender LOOKUP aliases; leave DIRECT text intact.
+  const gender = source.value.trim().toLowerCase();
+  const genderAlias =
+    binding.profileFieldKey === "personal.personal.gender"
+      ? ["남", "남성", "남자", "m", "male"].includes(gender)
+        ? "남성"
+        : ["여", "여성", "여자", "f", "female"].includes(gender)
+          ? "여성"
+          : ""
+      : "";
   const value =
     binding.optionMap[source.value] ??
-    binding.optionMap[standardValueLabel(source.value) ?? ""];
+    binding.optionMap[standardValueLabel(source.value) ?? ""] ??
+    (genderAlias ? binding.optionMap[genderAlias] : undefined);
   return value
     ? {
         status: "resolved",

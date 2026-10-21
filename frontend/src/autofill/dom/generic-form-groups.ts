@@ -1,3 +1,5 @@
+import { cachedDomRead } from "./read-pass";
+
 export const CONTROL_SELECTOR =
   "input:not([type='hidden']):not([type='button']):not([type='submit']):not([type='reset']), select, textarea";
 const SINGLE_ROW_MARKER =
@@ -184,6 +186,12 @@ function groupFromSeed(seed: Element): GenericFormGroup | undefined {
 }
 
 export function genericFormGroups(root: ParentNode): GenericFormGroup[] {
+  return cachedDomRead(root, "generic-form-groups", () =>
+    computeGenericFormGroups(root),
+  );
+}
+
+function computeGenericFormGroups(root: ParentNode): GenericFormGroup[] {
   const groups: GenericFormGroup[] = [];
   for (const seed of Array.from(root.querySelectorAll(SINGLE_ROW_MARKER))) {
     const group = groupFromSeed(seed);

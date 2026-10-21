@@ -24,7 +24,7 @@ public final class FieldsAnalysisController {
     @PostMapping("/api/v1/fields/analyze")
     public FieldsAnalysisResponse analyze(@Valid @RequestBody FieldsAnalysisRequest request) {
         var response = service.analyze(request);
-        return executionPolicies != null && response.mode() == FieldsAnalysisResponse.Mode.ADAPTER && response.blockCode() == null
+        return response.executionPolicy() == null && executionPolicies != null && response.mode() == FieldsAnalysisResponse.Mode.ADAPTER && response.blockCode() == null
             ? response.withExecutionPolicy(executionPolicies.find(request.site().host(), request.site().pathPattern())) : response;
     }
 }

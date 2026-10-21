@@ -77,7 +77,20 @@ SDK, 자동 페이지 수집, 세션 녹화, 사용자 프로필 생성은 사�
 
 전송 항목은 이벤트 이름, `surface`, 무작위 `distinct_id`이며 지원서 안 패널에만 `page_host`(호스트명)를 추가합니다. 프로필 값, 지원서 입력값, 전체 URL, 쿠키와 Referer는 전송하지 않습니다. 익명 식별자 `analyticsDistinctId`는 확장의 `chrome.storage.local` 또는 웹 사이트의 `localStorage`에 저장합니다. 계측 실패는 사용자 작업을 막지 않습니다.
 
-이벤트는 `autofill_start_clicked`, `profile_copy_clicked`, `profile_management_clicked`, `profile_export_clicked`, `profile_import_clicked`, `landing_viewed`, `onboarding_viewed`, `install_link_clicked`입니다. 가져오기는 파일 선택 버튼을 누른 시점이며 실제 가져오기 성공을 뜻하지 않습니다. 복사와 자동 기입도 클릭 수이지 완료 수가 아닙니다.
+허용 이벤트의 정본은 `src/analytics/events.ts`입니다.
+
+| 화면                   | 이벤트                                                                                                                        | 기록 시점                                                                                                            |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| 패널                   | `autofill_start_clicked`, `autofill_open_succeeded`, `autofill_open_failed`                                                   | 자동 기입 버튼 클릭과 자동 기입 화면 열기의 성공, 실패                                                               |
+| 패널                   | `profile_copy_clicked`, `profile_management_clicked`                                                                          | 복사, 프로필 관리 버튼 클릭                                                                                          |
+| 지원서 안 패널         | `greeting_import_viewed`                                                                                                      | Greeting 지원서에서 가져오기 버튼으로 검토 화면을 연 시점. 읽기 성공을 뜻하지 않음                                   |
+| 지원서 안 패널         | `greeting_import_saved`                                                                                                       | 가져오기에서 선택한 값의 저장이 성공한 시점                                                                          |
+| 옵션                   | `profile_export_clicked`, `profile_import_clicked`                                                                            | JSON 파일 내보내기, 가져오기 버튼 클릭. 가져오기는 파일 선택 버튼을 누른 시점이며 실제 가져오기 성공을 뜻하지 않음   |
+| 확장 온보딩            | `onboarding_first_viewed`, `quick_profile_viewed`, `quick_profile_skipped`                                                    | 온보딩 최초 진입, 단계형 등록 진입과 값 없이 건너뛰기                                                                |
+| 공통                   | `profile_first_saved`                                                                                                         | 단계형 등록, 옵션 화면, Greeting 가져오기에서 비어 있지 않은 프로필을 처음 저장한 시점                               |
+| 웹 사이트, 확장 온보딩 | `landing_viewed`, `onboarding_viewed`, `install_link_clicked`, `onboarding_autofill_selected`, `onboarding_postings_selected` | 소개, 온보딩 진입, 설치 링크 클릭과 온보딩 시작 목적 선택. 확장 온보딩은 같은 화면을 `extension_onboarding`으로 기록 |
+
+`onboarding_first_viewed`와 `profile_first_saved`는 백그라운드가 익명 식별자별로 한 번만 전송하며 재전송 시 최초 발생 시각을 유지합니다. 복사와 자동 기입 시작도 클릭 수이지 완료 수가 아닙니다.
 
 `site/policies.ts`의 계측 고지는 검토용 초안입니다. 실제 운영 수집 설정, IP 등 접속 정보 처리, 보유 기간과 국외 이전 등은 사람이 검토한 뒤 확정해야 합니다.
 

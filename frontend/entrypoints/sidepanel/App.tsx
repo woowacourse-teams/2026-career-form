@@ -331,6 +331,7 @@ export function App({
       {importActive && readImportCandidates ? (
         <main className={styles.main} aria-label="프로필 가져오기 화면">
           <PageImport
+            analytics={{ track, properties: analyticsProperties }}
             repository={repository}
             readCandidates={readImportCandidates}
             onClose={() => setImportActive(false)}
@@ -367,6 +368,11 @@ export function App({
                   onClick={() => {
                     setImportSavedCount(undefined);
                     setImportActive(true);
+                    try {
+                      track("greeting_import_viewed", analyticsProperties);
+                    } catch {
+                      // Reading and reviewing remain available without telemetry.
+                    }
                   }}
                 >
                   지원서에서 가져오기

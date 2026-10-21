@@ -405,4 +405,153 @@ describe("readonly search collection, response and review contract", () => {
       },
     });
   });
+
+  describe("generic search preselection", () => {
+    const certificateItem = (name: string, grade: string) => {
+      document.body.innerHTML = `<fieldset><legend>자격증·면허증</legend><dl><dt>자격증명</dt><dd>
+      <input type="text" readonly aria-label="자격증명">
+      <button type="button">자격증명 검색</button>
+    </dd></dl></fieldset>`;
+      const snapshot = collectFieldsSnapshot(document);
+      const candidate = snapshot.request.sections.flatMap((entry) => [
+        ...entry.fields,
+        ...(entry.items?.flatMap((item) => item.fields) ?? []),
+      ])[0]!;
+      const profile: Profile = {
+        ...createEmptyProfile(),
+        certifications: [
+          {
+            id: "certificate-1",
+            sectionId: "certificate",
+            values: { name, grade },
+          },
+        ],
+      };
+      return buildReviewPlan({
+        analysis: {
+          snapshotId: snapshot.request.snapshotId,
+          mode: "GENERIC",
+          analysisStatus: "COMPLETE",
+          fields: [
+            {
+              candidateId: candidate.candidateId,
+              matchType: "MATCH",
+              valueBinding: {
+                type: "DIRECT",
+                profileFieldKey: "certifications.certificate.name",
+              },
+              mappingStatus: "LLM_SUGGESTED",
+              interactionStatus: "READY",
+              autofillPolicy: "CONDITIONAL",
+              writePlan: { command: "SEARCH_SELECTION" },
+            },
+          ],
+        },
+        registry: snapshot.registry,
+        profile,
+      }).items[0]!;
+    };
+
+    it("preselects a school-name search whose query is the stored name alone", () => {
+      const { snapshot, response, profile } = setup(
+        "university",
+        "schoolName",
+        "학교명",
+      );
+      const { items } = buildReviewPlan({
+        analysis: validateFieldsResponse(snapshot.request, response),
+        registry: snapshot.registry,
+        profile,
+      });
+
+      expect(items[0]).toMatchObject({
+        status: "available",
+        selected: true,
+        disabled: false,
+        reason:
+          "검색 결과에서 저장된 값과 정확히 일치하는 항목만 선택해 입력합니다.",
+      });
+    });
+
+    it("preselects a certificate search with only the original-exact form", () => {
+      const item = certificateItem("synthetic certificate", "level 2");
+
+      expect(item.searchValuePlan?.forms).toEqual([
+        { kind: "original-exact", name: "synthetic certificate" },
+      ]);
+      expect(item).toMatchObject({ status: "available", selected: true });
+    });
+
+    it("leaves a certificate name-and-grade split unselected", () => {
+      const item = certificateItem("synthetic certificate level 2", "level 2");
+
+      expect(item.searchValuePlan?.forms).toEqual([
+        { kind: "original-exact", name: "synthetic certificate level 2" },
+        {
+          kind: "name-and-grade",
+          name: "synthetic certificate",
+          grade: "level 2",
+        },
+      ]);
+      expect(item).toMatchObject({ status: "needs-review", selected: false });
+    });
+
+    it("leaves a search with a page-value conflict unselected", () => {
+      const { snapshot, response, profile } = setup(
+        "university",
+        "schoolName",
+        "학교명",
+      );
+      document.querySelector<HTMLInputElement>("input")!.value = "다른 학교";
+      const { items } = buildReviewPlan({
+        analysis: validateFieldsResponse(snapshot.request, response),
+        registry: snapshot.registry,
+        profile,
+      });
+
+      expect(items[0]).toMatchObject({
+        status: "conflict",
+        selected: false,
+      });
+    });
+
+    it("keeps a non-search conditional field unselected", () => {
+      document.body.innerHTML = `<div><label>국적</label><input type="text" aria-label="국적"></div>`;
+      const snapshot = collectFieldsSnapshot(document);
+      const candidate = snapshot.request.sections.flatMap((entry) => [
+        ...entry.fields,
+        ...(entry.items?.flatMap((item) => item.fields) ?? []),
+      ])[0]!;
+      const profile = createEmptyProfile();
+      profile.personal.nationality = "대한민국";
+      const { items } = buildReviewPlan({
+        analysis: {
+          snapshotId: snapshot.request.snapshotId,
+          mode: "GENERIC",
+          analysisStatus: "COMPLETE",
+          fields: [
+            {
+              candidateId: candidate.candidateId,
+              matchType: "MATCH",
+              valueBinding: {
+                type: "DIRECT",
+                profileFieldKey: "personal.personal.nationality",
+              },
+              mappingStatus: "LLM_SUGGESTED",
+              interactionStatus: "READY",
+              autofillPolicy: "CONDITIONAL",
+              writePlan: { command: "SET_TEXT" },
+            },
+          ],
+        },
+        registry: snapshot.registry,
+        profile,
+      });
+
+      expect(items[0]).toMatchObject({
+        status: "needs-review",
+        selected: false,
+      });
+    });
+  });
 });

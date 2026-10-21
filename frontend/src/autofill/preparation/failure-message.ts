@@ -27,7 +27,7 @@ export function preparationFailureMessage(
     case "invalid-group-count":
       return "지원서의 추가 항목 수를 확인하지 못했습니다";
     case "group-count-not-incremented":
-      return "추가 동작의 반영을 확인하지 못했습니다";
+      return "항목이 추가되지 않았습니다. 공고의 최대 항목 수 또는 추가 조건을 확인해 주세요";
     case "refresh-failed":
       return "지원서 화면을 다시 읽지 못했습니다";
     case "target-not-visible":

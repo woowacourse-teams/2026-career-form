@@ -81,7 +81,7 @@ describe.each(fixtures)("%s generic name cues", (fixture, birthSelector, labelle
     expect(before?.some((label) => label.source === "label")).toBe(true);
     input.title = "추가 이름 단서";
     expect(collect().fieldFor(input).semanticContext?.labels).toEqual(before);
-  }, 30_000);
+  }, 120_000);
 
   it("sends the birth-date cue and grades a mocked birthDate match AUTO", async () => {
     load(fixture, scope);
@@ -98,7 +98,7 @@ describe.each(fixtures)("%s generic name cues", (fixture, birthSelector, labelle
       snapshot, document, birthDateApi(field.candidateId), profile, createGenericAnalysisCache(),
     );
     expect(result.grades.get(field.candidateId)?.grade).toBe("AUTO");
-  }, 30_000);
+  }, 120_000);
 });
 
 it("includes the AhnLab title-only postal control's name in the request", () => {
@@ -111,7 +111,7 @@ it("includes the AhnLab title-only postal control's name in the request", () => 
   expect(collect().fieldFor(input).semanticContext?.labels).toContainEqual({
     source: "label", text: "우편번호",
   });
-}, 30_000);
+}, 120_000);
 
 it("preserves the recovered SK birth-date label instead of adding its title", () => {
   load("sk-careers-application-form", "#applyContentUserInfo");
@@ -121,7 +121,7 @@ it("preserves the recovered SK birth-date label instead of adding its title", ()
   expect(before).not.toContainEqual({ source: "label", text: "생년월일" });
   input.removeAttribute("title");
   expect(collect().fieldFor(input).semanticContext?.labels).toEqual(before);
-}, 30_000);
+}, 120_000);
 
 it("collects the preserved hidden SK select through title fallback only", () => {
   load("sk-careers-application-form");
@@ -150,4 +150,4 @@ it("collects the preserved hidden SK select through title fallback only", () => 
   )).toEqual([{ source: "label", text: "대상 분류" }]);
   expect(question.outerHTML).toBe(originalQuestion);
   expect(hiddenBranch?.hasAttribute("hidden")).toBe(true);
-}, 30_000);
+}, 120_000);

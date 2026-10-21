@@ -1,3 +1,6 @@
+import { normalizeStagedRoad } from "../policy/staged-address-road";
+import { stagedAddressNodes } from "../policy/staged-address-dom";
+import { runStagedAddress } from "../policy/staged-address";
 import { executionPolicy } from "./execution-policy";
 import { runKakaoAddress } from "../address/kakao-executor";
 import { localWorkflowLog } from "../debug/local-workflow";
@@ -44,6 +47,135 @@ export async function runAddressAnalysis({
   onWriteResult?: WriteResultListener;
   setAddressResult: (result: Awaited<NonNullable<AddressRun["task"]>>) => void;
 }): Promise<FieldsAnalyzeResponse | undefined> {
+  const staged = stagedAddressNodes(pageDocument);
+  if (staged) {
+    // A populated original triplet belongs to the existing detail-only path.
+    // Once this run owns an empty triplet it retains sole ownership, even on failure.
+    if (!run.task && (!run.button || run.button !== staged.button))
+      return analysis;
+    if (!run.task && staged.fields.some((f) => f.value !== "")) {
+      const result = await runStagedAddress({
+        document: pageDocument,
+        button: staged.button,
+        expected: addressValue(profile),
+        loadCurrent: async () => addressValue(await repository.load()),
+        signal: run.controller.signal,
+        search: addressSearch,
+      });
+      if (run.controller.signal.aborted) return;
+      // The runner performs only readback for populated originals. Partial or
+      // conflicting originals retain the independent legacy detail-only path.
+      if (result.status === "written") {
+        setAddressResult(result);
+        return withoutAddressFields(
+          analysis,
+          snapshot,
+          staged.policy.fields.flatMap((f) => [
+            f.name,
+            ...(f.legacyName ? [f.legacyName] : []),
+          ]),
+        );
+      }
+      return analysis;
+    }
+    const fields = snapshot.request.sections.flatMap((s) => [
+      ...s.fields,
+      ...(s.items ?? []).flatMap((i) => i.fields),
+    ]);
+    const candidates = staged.policy.fields.map((f, index) => {
+      const found = fields.filter(
+        (c) =>
+          c.domName === f.name ||
+          (!!f.legacyName && c.domName === f.legacyName),
+      );
+      if (found.length !== 1) return;
+      const candidate = found[0],
+        lookup = snapshot.registry.lookupField(candidate.candidateId);
+      const mapping = analysis.fields.find(
+        (m) => m.candidateId === candidate.candidateId,
+      );
+      return analysis.mode === "ADAPTER" &&
+        candidate.domId === candidate.domName &&
+        candidate.element === "input" &&
+        candidate.control === "text" &&
+        candidate.visibility === (f.hidden ? "hidden" : "visible") &&
+        !!candidate.readonly === f.readonly &&
+        !candidate.disabled &&
+        !candidate.inert &&
+        "handle" in lookup &&
+        lookup.handle.isCurrentContext?.() !== false &&
+        lookup.handle.elements.length === 1 &&
+        lookup.handle.elements[0] === staged.fields[index] &&
+        mapping?.matchType === "MATCH" &&
+        mapping.mappingStatus === "ADAPTER_VERIFIED" &&
+        mapping.valueBinding?.type === "DIRECT" &&
+        mapping.valueBinding.profileFieldKey === f.key
+        ? candidate
+        : undefined;
+    });
+    const names = staged.policy.fields.flatMap((f) => [
+      f.name,
+      ...(f.legacyName ? [f.legacyName] : []),
+    ]);
+    if (!candidates.every(Boolean))
+      return withoutAddressFields(analysis, snapshot, names);
+    const original = staged.fields.map((f) => f.value);
+    onActivity?.("address");
+    if (!run.task) {
+      const onClick = () => {
+        onAddressOperation?.(staged.button);
+      };
+      staged.button.addEventListener("click", onClick, { once: true });
+      run.task = runStagedAddress({
+        document: pageDocument,
+        button: staged.button,
+        expected: addressValue(profile),
+        loadCurrent: async () => addressValue(await repository.load()),
+        signal: run.controller.signal,
+        search: addressSearch,
+      }).finally(() => staged.button.removeEventListener("click", onClick));
+    }
+    const result = await run.task;
+    if (run.controller.signal.aborted) return;
+    setAddressResult(result);
+    const latest = stagedAddressNodes(pageDocument),
+      expected = addressValue(await repository.load());
+    const target = [expected.postalCode, expected.address, expected.detail];
+    if (
+      result.status === "written" &&
+      latest &&
+      latest.fields.every(
+        (f, i) =>
+          f === staged.fields[i] &&
+          (i === 1
+            ? normalizeStagedRoad(f.value) === normalizeStagedRoad(target[i])
+            : f.value === target[i]),
+      )
+    ) {
+      candidates.forEach((candidate, i) => {
+        if (staged.fields[i].value === original[i]) return;
+        onWriteResult?.(
+          {
+            candidateId: candidate!.candidateId,
+            fieldLabel: ["우편번호", "기본주소", "상세주소"][i],
+            profileFieldKey: staged.policy.fields[i].key,
+            currentValue: original[i],
+            profileValue: target[i],
+            previewValue: target[i],
+            status: "available",
+            selected: true,
+            disabled: false,
+            revealed: true,
+            reason: result.reason,
+          },
+          { candidateId: candidate!.candidateId, status: "written" },
+          snapshot.registry,
+        );
+      });
+    }
+    onActivity?.("matching");
+    return withoutAddressFields(analysis, snapshot, names);
+  }
   const policy = executionPolicy(pageDocument)?.address;
   const runner =
     policy?.provider === "KAKAO" ? runKakaoAddress : adapter.runAddress;

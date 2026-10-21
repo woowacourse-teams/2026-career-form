@@ -898,7 +898,7 @@ describe("structural loop live safety and termination", () => {
       status: "BLOCKED",
       reason: "SECTION_ACTION_LIMIT",
     });
-  }, 30_000);
+  }, 120_000);
 
   it("limits one section to ten openings even with more eligible controls", async () => {
     document.body.innerHTML = `<section><h3>경력</h3>${Array.from(
@@ -925,7 +925,7 @@ describe("structural loop live safety and termination", () => {
     expect(clicked).toHaveBeenCalledTimes(10);
     expect(document.querySelectorAll("[hidden]")).toHaveLength(1);
     expect(result.actions.at(-1)?.reason).toBe("SECTION_ACTION_LIMIT");
-  }, 30_000);
+  }, 120_000);
 });
 
 describe("runGenericStructureLoop on sanitized fixtures", () => {

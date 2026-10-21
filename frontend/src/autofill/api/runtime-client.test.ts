@@ -132,6 +132,28 @@ describe("RuntimeAnalysisApiClient", () => {
     expect(sendMessage).toHaveBeenCalledTimes(1);
   });
 
+  it("marks an unusable served execution policy as incompatible", async () => {
+    const site = { host: "a.example", pathPattern: "/" };
+    for (const response of [
+      { ok: false as const, code: "INVALID_RESPONSE" as const },
+      { ok: true as const, data: { executionPolicy: { schemaVersion: 99 } } },
+    ]) {
+      const client = new RuntimeAnalysisApiClient(vi.fn(async () => response));
+      await expect(client.loadExecutionPolicy(site)).rejects.toMatchObject({
+        code: "POLICY_INCOMPATIBLE",
+      });
+    }
+    const other = new RuntimeAnalysisApiClient(
+      vi.fn(async () => ({
+        ok: false as const,
+        code: "SERVER_ERROR" as const,
+      })),
+    );
+    await expect(other.loadExecutionPolicy(site)).rejects.toMatchObject({
+      code: undefined,
+    });
+  });
+
   it("rejects malformed background envelopes without exposing their contents", async () => {
     const sendMessage = vi.fn(async () => ({ secret: "raw server response" }));
     const client = new RuntimeAnalysisApiClient(sendMessage);

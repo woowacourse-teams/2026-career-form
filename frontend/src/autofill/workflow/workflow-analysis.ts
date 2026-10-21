@@ -1,15 +1,39 @@
+import {
+  debugReviewDecisions,
+  debugRuntimeSkip,
+  debugStageCounts,
+} from "../debug/structural-diagnostics";
+import { prepareNativeMajorsAfterSchool } from "./native-major-preparation";
+import { reportNativeMajorsOfFailedSchools } from "./native-major-unavailable";
+import { hplaceUnverifiedRows } from "../adapters/hplace/unverified-structure";
+import {
+  createNativeDependentState,
+  nativeDependentRows,
+  rememberNativeDependents,
+  ROW_DRIVER_REASON,
+  ROW_SEARCH_REASON,
+} from "./native-dependent-rows";
+import { nativePolicyRequired } from "./execution-policy";
+import { nativeForm, nativeOwnership } from "../policy/native-form-collection";
 import { getWriteAdapter } from "../adapters/write";
 import { runtimeRules } from "../policy/runtime-rules";
 import { dismissCompletedAutocomplete } from "../interaction/autocomplete-completion";
 import { driverContinuationGuard } from "./driver-continuation";
 import { startLocalTiming } from "../debug/local-timing";
-import { executionPolicy, installExecutionPolicy } from "./execution-policy";
+import {
+  executionPolicy,
+  installExecutionPolicy,
+  policyDigest,
+} from "./execution-policy";
 import { activeModal } from "../interaction/search-surface-dom";
 import { localWorkflowLog } from "../debug/local-workflow";
 import { captureComponentWriteRegistry } from "./static-fields-session";
 import { hasComponentFieldCandidates } from "../policy/components/fingerprint";
 import { observeQuality } from "../quality/safe-observation";
-import { resolveDocumentCompany } from "../adapters/company";
+import {
+  resolveDocumentCompany,
+  isUnsupportedHplace,
+} from "../adapters/company";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import { componentGpaSafe } from "../policy/components/gpa";
 import { resultFieldState } from "./result-field-state";
@@ -165,6 +189,31 @@ export function createAnalyzeFields({
     : undefined;
   let analysisGeneration = 0;
   const companyId = resolveDocumentCompany(pageDocument);
+  const nativeDigest = nativePolicyRequired(pageDocument)
+    ? policyDigest(executionPolicy(pageDocument)?.browserPolicy)
+    : undefined;
+  const rejectChangedHplaceContext = () => {
+    const currentCompany = resolveDocumentCompany(pageDocument);
+    if (
+      nativeDigest !== undefined &&
+      policyDigest(executionPolicy(pageDocument)?.browserPolicy) !==
+        nativeDigest
+    ) {
+      setExceptionTitle(
+        "페이지 실행 정책이 변경되었습니다. 다시 시작해 주세요",
+      );
+      setStage("exception");
+      return true;
+    }
+    if (
+      currentCompany === companyId ||
+      (companyId !== "hplace" && currentCompany !== "hplace")
+    )
+      return false;
+    setExceptionTitle("페이지 실행 방식이 변경되었습니다. 다시 시작해 주세요");
+    setStage("exception");
+    return true;
+  };
   const analyzeFields = async (
     loadedProfile: Profile,
     ignoreFreshRowDefaults = false,
@@ -173,6 +222,11 @@ export function createAnalyzeFields({
     genericPass = 0,
     options: SearchFollowUpAnalysisOptions = {},
   ) => {
+    if (isUnsupportedHplace(pageDocument)) {
+      setStage("unsupported");
+      return;
+    }
+    if (rejectChangedHplaceContext()) return;
     const currentAnalysisGeneration = ++analysisGeneration;
     completedDriverKeys.current = completedStateDriverKeys;
     deferredDriverGroups.current = failedGroups;
@@ -197,17 +251,63 @@ export function createAnalyzeFields({
     setStage("analyzing");
     setResultRegistry?.(undefined);
     onActivity?.("matching");
-    const snapshot = await collectFields(
-      pageDocument,
-      run.controller.signal,
-    );
+    const snapshot = await collectFields(pageDocument, run.controller.signal);
     if (
       run.controller.signal.aborted ||
       currentAnalysisGeneration !== analysisGeneration
     )
       return;
+    if (isUnsupportedHplace(pageDocument)) {
+      setStage("unsupported");
+      return;
+    }
 
+    if (rejectChangedHplaceContext()) return;
     const analysisStarted = performance.now();
+    // Share the budget across factories in this workflow run. Hplace basic
+    // fields batch together; unexpected dependency chains must fail closed.
+    const native = nativeForm(pageDocument);
+    // The last allowed request only reports; it never runs drivers (K17 ≤ 8).
+    let nativeFinalPass = false;
+    if (native) {
+      const progress = JSON.stringify([...completedStateDriverKeys].sort());
+      const limit = native.sections.some(
+        (s) =>
+          s.enabled &&
+          s.rows &&
+          snapshot.request.sections.some((actual) => actual.sectionId === s.id),
+      )
+        ? native.maxFieldsRequests
+        : Math.min(3, native.maxFieldsRequests);
+      const exhausted = (run.nativeFieldsRequests ?? 0) >= limit;
+      if (exhausted || run.nativeProgress === progress) {
+        if (!exhausted)
+          debugRuntimeSkip(
+            "native-analysis",
+            "analysis-limit",
+            "no-progress",
+            "collect",
+          );
+        setExceptionTitle(
+          "입력 분석의 진전을 확인할 수 없습니다. 남은 항목을 직접 확인해 주세요",
+        );
+        setStage("exception");
+        return;
+      }
+      run.nativeFieldsRequests = (run.nativeFieldsRequests ?? 0) + 1;
+      run.nativeProgress = progress;
+      nativeFinalPass = run.nativeFieldsRequests >= limit;
+    }
+    if (companyId === "hplace") {
+      if ((run.hplaceFieldsRequests ?? 0) >= 3) {
+        setExceptionTitle(
+          "에이치닷 입력 분석 한도에 도달했습니다. 남은 항목을 직접 확인해 주세요",
+        );
+        setStage("exception");
+        return;
+      }
+      run.hplaceFieldsRequests = (run.hplaceFieldsRequests ?? 0) + 1;
+    }
     const finishQualitySnapshot = startLocalTiming("quality-snapshot");
     observeQuality(() =>
       apiClient.quality?.snapshot(
@@ -249,7 +349,11 @@ export function createAnalyzeFields({
         ? analyzeFieldsSnapshot(snapshot)
         : apiClient.analyzeFields(snapshot.request)));
     if (genericResult && genericStructure)
-      analysis = applyGenericStructureAnalysis(analysis, snapshot, genericStructure);
+      analysis = applyGenericStructureAnalysis(
+        analysis,
+        snapshot,
+        genericStructure,
+      );
     finishMapping();
     const finishAnalysisLog = startLocalTiming("analysis-log");
     debugAnalysis(snapshot, analysis);
@@ -259,6 +363,10 @@ export function createAnalyzeFields({
       currentAnalysisGeneration !== analysisGeneration
     )
       return;
+    if (isUnsupportedHplace(pageDocument)) {
+      setStage("unsupported");
+      return;
+    }
     if (
       options.reviewOnly &&
       JSON.stringify(await repository.load()) !== JSON.stringify(loadedProfile)
@@ -267,6 +375,7 @@ export function createAnalyzeFields({
       setStage("exception");
       return;
     }
+    if (rejectChangedHplaceContext()) return;
     if (pageDocument.URL !== snapshotUrl) {
       setExceptionTitle(
         "분석 후 지원서 페이지가 변경되었습니다. 다시 시작해 주세요",
@@ -290,8 +399,10 @@ export function createAnalyzeFields({
       return;
     }
     if (
-      executionPolicy(pageDocument)?.componentPolicy?.workflow
-        .requireVerifiedMapping &&
+      (executionPolicy(pageDocument)?.componentPolicy?.workflow
+        .requireVerifiedMapping ||
+        resolveDocumentCompany(pageDocument) === "hplace" ||
+        nativePolicyRequired(pageDocument)) &&
       (analysis.mode !== "ADAPTER" ||
         analysis.fields.some(
           (field) => field.mappingStatus !== "ADAPTER_VERIFIED",
@@ -331,11 +442,26 @@ export function createAnalyzeFields({
     }
 
     if (analysis.analysisStatus === "BLOCKED") {
-      setExceptionTitle("이 페이지에서는 자동 기입을 진행할 수 없습니다");
+      setExceptionTitle(
+        analysis.blockCode === "ADAPTER_POLICY_UNAVAILABLE" &&
+          resolveDocumentCompany(pageDocument) === "hplace"
+          ? "이 지원서의 자동 기입 정책이 아직 등록되지 않았어요. 수동 복사를 이용해 주세요."
+          : "이 페이지에서는 자동 기입을 진행할 수 없습니다",
+      );
       setStage("exception");
       return;
     }
 
+    if (
+      nativeDigest !== undefined &&
+      policyDigest(analysis.executionPolicy?.browserPolicy) !== nativeDigest
+    ) {
+      setExceptionTitle(
+        "페이지 실행 정책이 변경되었습니다. 다시 시작해 주세요",
+      );
+      setStage("exception");
+      return;
+    }
     // Generic field analysis has no site engine. Keep the separately loaded
     // provider contract without retaining the previous site's mapping engine.
     const providerPolicy =
@@ -385,10 +511,7 @@ export function createAnalyzeFields({
             .refreshAfterPass)
       )
         return false;
-      const next = await collectFields(
-        pageDocument,
-        run.controller.signal,
-      );
+      const next = await collectFields(pageDocument, run.controller.signal);
       if (
         run.controller.signal.aborted ||
         currentAnalysisGeneration !== analysisGeneration
@@ -503,6 +626,25 @@ export function createAnalyzeFields({
       finishPlan();
       return preparedPlan;
     });
+    if (run.nativeMajors?.unavailable.length)
+      plan.items.push(...run.nativeMajors.unavailable);
+    // Step-1 legacy fields present but structurally unverified (AGENTS.md).
+    // The page may resolve as "hplace" or as the native "policy" engine; the
+    // helper itself requires the Hplace fingerprint and the writeResume path.
+    if (analysis.mode !== "GENERIC")
+      plan.items.push(
+        ...hplaceUnverifiedRows(pageDocument, snapshot.request, loadedProfile),
+      );
+    // Dependents a native driver withheld and this pass did not collect.
+    if (native && analysis.mode !== "GENERIC" && run.nativeDependents)
+      plan.items.push(
+        ...nativeDependentRows(
+          run.nativeDependents,
+          snapshot.request,
+          snapshot.registry,
+          loadedProfile,
+        ),
+      );
     const finishReviewLog = startLocalTiming("review-log");
     debugReviewPlan(plan);
     finishReviewLog();
@@ -510,6 +652,7 @@ export function createAnalyzeFields({
       apiClient.quality?.review(snapshot.request.snapshotId, plan.items),
     );
     if (plan.status === "blocked") {
+      debugReviewDecisions(plan, snapshot.registry);
       setExceptionTitle("이 페이지에서는 자동 기입을 진행할 수 없습니다");
       setStage("exception");
       return;
@@ -547,6 +690,7 @@ export function createAnalyzeFields({
     }
     setWarnings(analysisWarnings);
     if (plan.items.length === 0) {
+      debugReviewDecisions(plan, snapshot.registry);
       if (await refreshAfterWrites()) return;
       setReviewItems([]);
       setResults([]);
@@ -609,6 +753,9 @@ export function createAnalyzeFields({
           : automatic;
       }),
     );
+    // Diagnostics describe the items that will actually execute, after adapter
+    // promotion and explicit review/option gates have decided their selection.
+    debugReviewDecisions({ ...plan, items: automaticItems }, snapshot.registry);
     finishAutomaticItems();
     setReviewItems(automaticItems);
     if (options.reviewOnly || genericResult) {
@@ -655,6 +802,42 @@ export function createAnalyzeFields({
       setStage("exception");
       return;
     }
+    const deferredResultFor = (item: ReviewPlanItem): ApprovedWriteResult => {
+      const lookup = snapshot.registry.lookupField(item.candidateId);
+      const handle =
+        lookup.status === "ready" || lookup.status === "blocked"
+          ? lookup.handle
+          : undefined;
+      const source = handle?.elements[0] ?? handle?.customElements?.[0];
+      const failure = source
+        ? deferredDriverFailures.current.get(source)
+        : undefined;
+      const key =
+        handle &&
+        stateDriverKey(
+          item,
+          handle.candidate.domName ?? handle.candidate.domId,
+          handle.itemIndex,
+        );
+      const ownFailure = failure && failure.key === key ? failure : undefined;
+      // A dependent withheld by a non-search native driver names that cause.
+      const byDriver =
+        !ownFailure &&
+        !!source &&
+        !!run.nativeDependents?.driverDeferred.has(source);
+      return {
+        candidateId: item.candidateId,
+        status: "skipped",
+        reason: deferredDriverReason(
+          ownFailure?.code,
+          analysis.mode === "GENERIC",
+          byDriver ? ROW_DRIVER_REASON : ROW_SEARCH_REASON,
+        ),
+        failureCode:
+          ownFailure?.code ??
+          (byDriver ? "ROW_DRIVER_UNCONFIRMED" : "ROW_SEARCH_UNCONFIRMED"),
+      };
+    };
     const finishDriverDiscovery = startLocalTiming("driver-discovery");
     const stateDriverItems = snapshot.registry.withReadCache(() =>
       automaticItems.flatMap((item) => {
@@ -696,6 +879,61 @@ export function createAnalyzeFields({
       }),
     );
     finishDriverDiscovery();
+    if (nativeFinalPass && stateDriverItems.length > 0) {
+      // Report-only end: no driver and no ordinary write runs on this request.
+      const pendingStage = Math.min(
+        ...stateDriverItems.map((driver) => driver.stage),
+      );
+      debugStageCounts(
+        "drivers",
+        stateDriverItems.filter((driver) => driver.stage === pendingStage)
+          .length,
+        0,
+      );
+      debugRuntimeSkip(
+        "native-analysis",
+        "analysis-limit",
+        "budget",
+        "collect",
+      );
+      setResults(
+        snapshot.registry.withReadCache(() =>
+          automaticItems.flatMap((item): ApprovedWriteResult[] => {
+            if (belongsToFailedGroup(item, snapshot, failedGroups))
+              return [deferredResultFor(item)];
+            const lookup = snapshot.registry.lookupField(item.candidateId);
+            if (
+              (lookup.status === "ready" || lookup.status === "blocked") &&
+              completedStateDriverKeys.has(
+                stateDriverKey(
+                  item,
+                  lookup.handle.candidate.domName ??
+                    lookup.handle.candidate.domId,
+                  lookup.handle.itemIndex,
+                ),
+              )
+            )
+              return [{ candidateId: item.candidateId, status: "written" }];
+            if (
+              item.disabled ||
+              !(item.selected || item.status === "needs-review")
+            )
+              return [];
+            return [
+              {
+                candidateId: item.candidateId,
+                status: "skipped",
+                outcome: "needs-verification",
+                reason: "입력 분석 한도에 도달해 자동으로 입력하지 않았습니다.",
+                failureCode: "DRIVER_LIMIT_REACHED",
+              },
+            ];
+          }),
+        ),
+      );
+      setStage("result");
+      return;
+    }
     if (stateDriverItems.length > 0) {
       if (analysis.mode === "GENERIC" && genericPass >= 3) {
         setWarnings([
@@ -762,6 +1000,8 @@ export function createAnalyzeFields({
         });
       };
       logDriverPhase("drivers-start");
+      const plannedDrivers = currentStateDriverItems.length;
+      const stateSelectionResults: ApprovedWriteResult[] = [];
       const reportFor = (item: ReviewPlanItem) => (code: WriteFailureCode) => {
         if (!run.controller.signal.aborted)
           failureCodes.set(item.candidateId, code);
@@ -806,6 +1046,13 @@ export function createAnalyzeFields({
         }
         const nextGroups = new Set(failedGroups);
         const nextCompleted = new Set(completedStateDriverKeys);
+        // Native drivers whose own value is verified though a dependent did
+        // not settle: written, with only the dependents deferred.
+        const verifiedDrivers = new Set<number>();
+        const nativeDependents =
+          native && analysis.mode !== "GENERIC"
+            ? (run.nativeDependents ??= createNativeDependentState())
+            : undefined;
         for (const [index, driver] of currentStateDriverItems.entries()) {
           if (successful[index]) {
             nextCompleted.add(driver.key);
@@ -840,7 +1087,26 @@ export function createAnalyzeFields({
                 element.isConnected && element.ownerDocument === pageDocument,
             )
           ) {
-            dependencies.forEach((element) => nextGroups.add(element));
+            const own = new Set<Element>([
+              ...driver.handle.elements,
+              ...(driver.handle.customElements ?? []),
+            ]);
+            const nativeDriver =
+              !!nativeDependents && driver.handle.owner === "native";
+            const nonSearch =
+              nativeDriver && !nativeOwnership(driver.handle)?.field.search;
+            dependencies.forEach((element) => {
+              nextGroups.add(element);
+              if (nonSearch && !own.has(element))
+                nativeDependents!.driverDeferred.add(element);
+            });
+            if (
+              nonSearch &&
+              writesVerified &&
+              stateSelectionResults[index]?.status === "written" &&
+              !dependencies.some((element) => own.has(element))
+            )
+              verifiedDrivers.add(index);
             nextCompleted.add(driver.key);
             continue;
           }
@@ -879,7 +1145,25 @@ export function createAnalyzeFields({
           });
         }
         if (run.controller.signal.aborted) return true;
+        if (nativeDependents)
+          currentStateDriverItems.forEach((driver, index) => {
+            if (driver.handle.owner === "native")
+              rememberNativeDependents(
+                nativeDependents,
+                driver.handle,
+                driver.item,
+                !successful[index],
+              );
+          });
         currentStateDriverItems.forEach((driver, index) => {
+          if (verifiedDrivers.has(index)) {
+            onWriteResult?.(
+              driver.item,
+              { candidateId: driver.item.candidateId, status: "written" },
+              snapshot.registry,
+            );
+            return;
+          }
           const element =
             driver.handle.elements[0] ?? driver.handle.customElements?.[0];
           const failureCode =
@@ -918,6 +1202,50 @@ export function createAnalyzeFields({
               );
             }
           });
+        }
+        if (nativeForm(pageDocument)) {
+          currentStateDriverItems.forEach(({ item, handle }, index) => {
+            const name = handle.candidate.domName;
+            if (successful[index] || !name?.startsWith("hplace")) return;
+            debugRuntimeSkip(
+              name,
+              "driver-deferred",
+              !writesVerified
+                ? "driver-ready"
+                : stateSelectionResults[index]?.status === "written"
+                  ? "driver-settle"
+                  : "driver-write",
+              "write",
+              failureCodes.get(item.candidateId) ?? "SEARCH_UNCONFIRMED",
+            );
+          });
+          // A partially successful stage still prepares the majors of its
+          // committed schools; failed schools report their extra majors.
+          if (writesVerified && analysis.mode !== "GENERIC") {
+            const majors = (run.nativeMajors ??= {
+              attempted: new WeakSet(),
+              unavailable: [],
+            });
+            await prepareNativeMajorsAfterSchool({
+              document: pageDocument,
+              profile: loadedProfile,
+              handles: currentStateDriverItems
+                .filter((_, index) => successful[index])
+                .map((driver) => driver.handle),
+              state: majors,
+              apiClient,
+              signal: run.controller.signal,
+              beforeMutation: profileCurrent,
+            });
+            reportNativeMajorsOfFailedSchools({
+              document: pageDocument,
+              profile: loadedProfile,
+              handles: currentStateDriverItems
+                .filter((_, index) => !successful[index])
+                .map((driver) => driver.handle),
+              state: majors,
+            });
+          }
         }
         await analyzeFields(
           loadedProfile,
@@ -963,12 +1291,13 @@ export function createAnalyzeFields({
       );
       logDriverPhase("drivers-ready", driversReady);
       if (!driversReady.every(Boolean)) {
+        if (nativeForm(pageDocument))
+          debugStageCounts("drivers", plannedDrivers, 0);
         if (await deferFailedGroups(driversReady)) return;
         setExceptionTitle("조건부 선택 메뉴를 안전하게 준비하지 못했습니다");
         setStage("exception");
         return;
       }
-      const stateSelectionResults: ApprovedWriteResult[] = [];
       for (const { item, captured, stage } of currentStateDriverItems) {
         const lookup = snapshot.registry.lookupField(item.candidateId);
         if (
@@ -1134,10 +1463,38 @@ export function createAnalyzeFields({
         if (result?.status === "skipped" && result.failureCode)
           reportFor(item)(result.failureCode);
         if (result?.status !== "written") {
+          if (nativeForm(pageDocument) && lookup.handle.owner === "native") {
+            // Native drivers of one stage run as one batch. Only later drivers
+            // whose controls the failed driver defers are dropped (no result).
+            const deferred = new Set(
+              adapter.stateDriverFailureTargets?.(item, lookup.handle) ??
+                lookup.handle.elements,
+            );
+            for (
+              let later = currentStateDriverItems.length - 1;
+              later >= stateSelectionResults.length;
+              later--
+            ) {
+              const { handle } = currentStateDriverItems[later];
+              if (
+                [...handle.elements, ...(handle.customElements ?? [])].some(
+                  (element) => deferred.has(element),
+                )
+              )
+                currentStateDriverItems.splice(later, 1);
+            }
+            continue;
+          }
           currentStateDriverItems.splice(stateSelectionResults.length);
           break;
         }
       }
+      if (nativeForm(pageDocument))
+        debugStageCounts(
+          "drivers",
+          plannedDrivers,
+          stateSelectionResults.length,
+        );
       if (
         stateSelectionResults.every((result) => result.status === "written")
       ) {
@@ -1196,6 +1553,15 @@ export function createAnalyzeFields({
             snapshot.registry,
           );
         });
+        if (native && analysis.mode !== "GENERIC")
+          for (const { handle, item } of currentStateDriverItems)
+            if (handle.owner === "native")
+              rememberNativeDependents(
+                (run.nativeDependents ??= createNativeDependentState()),
+                handle,
+                item,
+                false,
+              );
         const nextCompletedStateDriverKeys = new Set(completedStateDriverKeys);
         currentStateDriverItems.forEach(({ key }) =>
           nextCompletedStateDriverKeys.add(key),
@@ -1216,6 +1582,18 @@ export function createAnalyzeFields({
           });
           completedGenericStateDrivers.current = nextCompletedGenericDrivers;
         }
+        await prepareNativeMajorsAfterSchool({
+          document: pageDocument,
+          profile: loadedProfile,
+          handles: currentStateDriverItems.map((driver) => driver.handle),
+          state: (run.nativeMajors ??= {
+            attempted: new WeakSet(),
+            unavailable: [],
+          }),
+          apiClient,
+          signal: run.controller.signal,
+          beforeMutation: profileCurrent,
+        });
         await analyzeFields(
           loadedProfile,
           ignoreFreshRowDefaults,
@@ -1368,6 +1746,7 @@ export function createAnalyzeFields({
       return;
     }
     if (run.controller.signal.aborted) return;
+    if (rejectChangedHplaceContext()) return;
     setStage("writing");
     const componentTargets = executionPolicy(pageDocument)?.componentPolicy
       ?.workflow.captureDriverResults
@@ -1408,10 +1787,7 @@ export function createAnalyzeFields({
             // Full collection retains row identity, option and context checks
             // when a replaced or changed control cannot reuse its old handle.
             ordinaryRegistry = rebindComponentWrites(
-              await collectFields(
-                pageDocument,
-                run.controller.signal,
-              ),
+              await collectFields(pageDocument, run.controller.signal),
             );
             return ordinaryRegistry;
           }
@@ -1422,6 +1798,24 @@ export function createAnalyzeFields({
         ? (item) => presentField(snapshot.registry, item)
         : undefined,
       signal: run.controller.signal,
+      ...(companyId === "hplace" || nativePolicyRequired(pageDocument)
+        ? {
+            hplaceAddress: {
+              address: loadedProfile.contact.addressLine1 ?? "",
+              postalCode: loadedProfile.contact.postalCode ?? "",
+            },
+            assertCurrent: () =>
+              currentAnalysisGeneration === analysisGeneration &&
+              addressRun.current === run,
+            beforeMutation: async () =>
+              !run.controller.signal.aborted &&
+              pageDocument.URL === snapshotUrl &&
+              currentAnalysisGeneration === analysisGeneration &&
+              addressRun.current === run &&
+              JSON.stringify(await repository.load()) ===
+                JSON.stringify(loadedProfile),
+          }
+        : {}),
       ...(componentTargets
         ? {
             settledRegistry: () => {
@@ -1621,36 +2015,7 @@ export function createAnalyzeFields({
       );
       return;
     }
-    const deferredResults = deferredItems.map((item): ApprovedWriteResult => {
-      const lookup = snapshot.registry.lookupField(item.candidateId);
-      const handle =
-        lookup.status === "ready" || lookup.status === "blocked"
-          ? lookup.handle
-          : undefined;
-      const source = handle?.elements[0] ?? handle?.customElements?.[0];
-      const failure = source
-        ? deferredDriverFailures.current.get(source)
-        : undefined;
-      const key =
-        handle &&
-        stateDriverKey(
-          item,
-          handle.candidate.domName ?? handle.candidate.domId,
-          handle.itemIndex,
-        );
-      const ownFailure = failure && failure.key === key ? failure : undefined;
-      const result: ApprovedWriteResult = {
-        candidateId: item.candidateId,
-        status: "skipped",
-        reason: deferredDriverReason(
-          ownFailure?.code,
-          analysis.mode === "GENERIC",
-          "검색 결과를 확정하지 못해 이 행의 입력을 보류했습니다. 검색 항목과 같은 행의 정보를 직접 확인해 주세요.",
-        ),
-        failureCode: ownFailure?.code ?? "ROW_SEARCH_UNCONFIRMED",
-      };
-      return result;
-    });
+    const deferredResults = deferredItems.map(deferredResultFor);
     const finalResults = [
       ...writeResults,
       ...retainedDriverResults,

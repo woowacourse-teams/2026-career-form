@@ -2,9 +2,9 @@
 
 > Topic: adapter-development
 > Status: Current
-> Current: [Greeting을 포함한 어댑터 경계](../../raw/issues/CF-94/documents/adapter-development.md)
-> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-development.md); [CF-94 근거](../../raw/issues/CF-94/documents/adapter-development.md)
-> Updated: 2026-09-28
+> Current: [CF-177 후속 보완 묶음 근거](../../raw/issues/CF-177/documents/live-followup-bundle.md)
+> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-development.md); [CF-94 근거](../../raw/issues/CF-94/documents/adapter-development.md); [CF-177 근거](../../raw/issues/CF-177/documents/adapter-development.md); [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md); [CF-177 C12·C13·시연 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md); [CF-177 KDI·구조 미확인 근거](../../raw/issues/CF-177/documents/live-kdi-unverified.md); [CF-177 후속 보완 묶음 근거](../../raw/issues/CF-177/documents/live-followup-bundle.md)
+> Updated: 2026-10-20
 
 ## 현재 상태
 
@@ -35,3 +35,31 @@ FE는 SK·현대의 기존 선택 우선순위를 유지하며 유일한 최상�
 ## Greeting 필드 확장 후속 경계
 
 고교·대학 추가전공·경력·어학·자격증을 기존 BE 정책과 FE 실행기로 연결했다. 대학 추가전공은 기존 DERIVED 형식의 공통 규칙 목록을 확장하며 준비·필드 API의 필드는 추가하지 않는다. 수집·행 준비·검색 선택·재수집·결과 확인을 함께 검증한다. 최신 설치 브라우저 전체 실행은 확정하지 못했으며 상세 지원 범위와 관측 한계는 Greeting 어댑터 및 필드 현황을 따른다.
+
+
+## Hplace와 공통 실행 정책 (CF-177)
+
+기존 회사 정책을 우선하고 공급자의 정확한 호스트·경로·자산·소유 구조로 공유 정책을 선택한다. 전용 등록/기본정보 writer와 공통 native writer의 물리 노드별 소유를 끝까지 유지한다. v4 문서가 없을 때만 유효 v3 바인딩을 사용하고 잘못된 v4나 조회 예외는 차단한다. seeder(`StartupPolicySeeder`, `HplaceFormPolicySeeder`)는 local/dev/staging/prod 모두에서 없는 문서만 insert하며, 정책을 고치면 새 버전으로만 추가하고 활성 버전 포인터는 사람이 올린다. `hplace-mrs2-v4.json`은 SHA-256을 테스트로 고정해 제자리 수정이 실패한다. DB 없이 뜨는 dev 프로필 테스트는 두 seeder를 모두 mock해야 한다.
+
+외곽 API schemaVersion2를 유지하면서 DB v4 sectionContracts와 BrowserPolicy v2 nativeForm을 추가했다. 이는 단순 selector 추가가 아니라 scoped fields, 연속 행 index/count, stage DAG, native driver·날짜·숫자·textarea 정착, 중첩 전공과 GPA 쌍의 실행 계약 확장이다. 행 identity와 값 결합은 로컬에 남고 wire에는 구조와 고정 표시명만 보낸다. fields는 일반 최대3, 활성 반복 native section에서는 최대8이며 완료 driver 집합의 진전이 없으면 중단한다. native 소유 driver는 stage 단위 한 pass로 모두 실행하고 실패 driver와 대상 요소가 겹치는 뒤 driver만 결과 없이 제외한다. 마지막 허용 요청에서 실행할 driver가 남으면 기입 없이 결과만 내고 `DRIVER_LIMIT_REACHED`로 보고한다. SK·현대·Greeting 등 non-native는 첫 실패 정지를 유지하며, 예산 상향과 9번째 요청은 기각했다.
+
+### 검색·주소·행 프로토콜
+
+- committed-search는 같은 위젯·행의 query/Name/Code/display와 새 결과 소유를 검증한다. 제한된 legacy Enter keypress13, 유일한 정확 title·nonzero code·metadata 및 최종 tuple readback이 필요하다. Enter의 keyCode/charCode/which는 `KeyboardEventInit`로 넘겨야 page world에 전달되고, 브라우저가 무시하면 즉시 실패한다. 확정이 통과하면 즉시 행 기입과 receipt를 기록하고 종속 control은 soft로 기다려 시간 초과에는 `disabled-timeout` 진단만 남긴다. 검색 필드에 의존하는 driver는 같은 위젯 query로 판정하고 위젯을 인식하지 못하면 보류한다. 학교의 지역 근거가 없으면 catalog requiredDetail은 수동이다. 인증 시험은 클릭 전에 차단하고 inert placeholder로 실제 행 index/count만 보존한다.
+- staged-address는 현주소3값 승인, 정확한 도로/우편번호 결과, 모달 readback·detail, 주소 전용 primary-pointer, 동기 소유 확인창, 원래 triplet/span과 닫힘을 순서대로 검증한다. 모달 저장은 로컬 복사이며 지원서 저장 허용이 아니다. 실패 시 캡처한 cancel→modalClose만 정리하고 소유가 불명확하면 사용자 처리를 안내한다. 원래 hidden/readonly 직접쓰기와 rollback, 공용 pointer 연산은 허용하지 않는다.
+- 기존 엔티티 전체를 보호하고 일치하는 프로필을 소비한 뒤 빈 행에만 배정한다. 중첩 전공은 부모·역할·노드집합을 함께 확인하며 depth2/부모20/전공3 상한과 ADD +1·형제 불변을 검사한다. 숫자 GPA는 같은 부모의 score/scale 두 값이 모두 유지되어야 완료다. 알려지지 않은 tenant 한도와 required 미지원 값을 추정하지 않는다.
+- 리뷰는 native 소유·검색 아닌 select/radio에만 선택지 존재를 검사해 `OPTION_UNMATCHED`를 붙이며 Greeting button dropdown으로 일반화하지 않는다. native 라디오의 리뷰 현재값은 정책 라벨이고, nativeOwnership이 없는 SK·현대·Greeting 핸들은 영향이 없다. 결과 모델의 기존 값 유지 예외에 `ROW_DRIVER_UNCONFIRMED`를 더했다.
+
+### 호환 배포와 검증 한계
+
+새 확장 배포 → 대상 설치/보급 확인 → BE v4 DB 활성 포인터 순으로 활성화한다. 구 확장은 새 capability/DERIVED enum 때문에 정책 전체를 거부할 수 있으며 구 validator probe는 실제 브라우저 검증을 대신하지 않는다. resource enabled는 운영 활성화가 아니다. 2026-10-20 live-eval 하네스에서 `f586619`의 3사 step 1–3 실화면 평가가 통과해 검색·주소·linkedForm 미확인 상태를 정정했다. C12–C14, 포커스 없는 창·사이드 패널(H7)과 공식 WSL/Linux 검증은 별도이며 이번 수집에서 migration·배포를 실행하지 않았다.
+
+2026-10-20 C13에서 v4 resource의 프로젝트154를 활성화했다. 운영 DB 삽입은 AI가 하지 않으며 운영 반영과 활성 포인터 전환은 사람이 한다. 상세 기본정보는 후속 보완에서 칸 단위 독립 인식으로 바뀌어 FE 상세 앵커(칸별), FE MRS2 플랫폼 지문(섹션 11·13 존재), BE `HplaceFormFingerprint.DETAIL_REQUIRED`(빈 집합, 허용 필드 1개 이상)를 함께 바꿨다. BE는 staged address 정책 노드를 정책 객체당 한 번만 계산하고, 컨트롤러의 2차 정책 조회 생략은 v3 폴백 응답에서 실행 정책이 빠지는 동작 변경이라 반영하지 않았다. 행 배정이 막힌 사유는 디버그 로그에 `native-row-assignment:<cause>`로 섹션당 한 번 남는다(`debugCollectionSkip`은 수집 범위 밖에서 버려지므로 `debugRuntimeSkip`). frontend CI는 30분 한도에 걸리는 느린 workflow 테스트(실제 타이머 대기) 때문에 develop에서도 자주 취소되며, 한도·샤딩 조정은 공유 보호 영역이라 별도 하네스 Issue 후보다. 개발용 진단 출력은 기본으로 꺼져 있고 `VITE_AUTOFILL_DEBUG=true`로 빌드할 때만 켜진다.
+
+### 실화면 정제 fixture와 builder 대조
+
+C12는 페이지 함수로 원본 섹션을 새 비활성 문서에 허용 목록 복사해 등록했다(`frontend/fixtures/dom-snapshots/hplace-mrs2-step{2,3}-*`). 값·체크 상태와 모든 표시 텍스트를 지우고 id는 익명화, 선택지 코드와 `data-rel-value`는 같은 합성 코드표, 5자리 이상 숫자는 합성 번호로 바꾼다. 등록 전에는 브라우저 안 원본 대조, 하네스 구조 스냅샷과의 컨트롤 수 독립 대조, offline Chromium 외부 요청 0건을 확인했다. 첫 허용 목록에서 섹션 header·`data-dateinputformat`·`data-rel-value`·행 속성이 빠져 넓힌 뒤 재승인했다. id 익명화 때문에 템플릿 id에 의존하는 legacy 상세 모듈은 이 fixture로 재현되지 않는다. 대조 결과 게이팅 속성(disabled·data-rel-*·data-dates·선택지 수)은 builder와 같았고 tenant 선택 항목과 섹션 16 구성(경력153·프로젝트154·부가 항목)만 달랐다. 실구조로 native 수집을 비교할 때는 정책 `rootSelector`와 자산 태그 골격만 합성한다.
+
+live-eval 하네스는 하네스가 소유하지 않는 상주 Chromium에 CDP로 붙고 브라우저·context·지원서 탭·전용 프로필을 닫거나 지우지 않는다. 평가 round 밖에서만 저장 핸들러 없는 단계 이동 요청을 보내며 다음·임시저장·제출 버튼과 단계 탭은 누르지 않는다. 로컬 BE가 내보내는 정책의 canonical nativeForm이 대상 HEAD 정책과 다르거나 확인되지 않으면 명시 허용 없이 실행하지 않는다. seeder가 insert-only라 정책을 고친 뒤에는 사람이 승인한 로컬 DB 재설정으로 재시드하고 지문 match를 확인한다. 보고에는 키·상태·개수만 남기고 값·URL·쿼리·쿠키·HTML은 남기지 않는다.
+
+현재 계약·결정·과거 관측·단계별 검증의 상세는 [Hplace 어댑터](adapter-hplace.md)와 Current raw를 따른다.
