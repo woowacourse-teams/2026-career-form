@@ -517,6 +517,13 @@ function hasGenericConflict(
   );
 }
 
+/** The control this run wrote, so the settle readback reads the same one. */
+const writtenTargets = new WeakMap<FieldCandidateHandle, Element>();
+
+function settleElement(handle: FieldCandidateHandle) {
+  return readbackWriteElement(handle, writtenTargets.get(handle));
+}
+
 function writeGeneric(
   item: ReviewPlanItem,
   handle: FieldCandidateHandle,
@@ -524,6 +531,7 @@ function writeGeneric(
 ): WriteOutcome {
   const command = item.analysis!.writePlan!.command,
     value = item.profileValue!;
+  writtenTargets.delete(handle);
   if (strict && hasGenericConflict(item, handle))
     return { written: false, reason: CONFLICT, code: "CONFLICT" };
   if (command === "SET_TEXT") {
@@ -545,6 +553,7 @@ function writeGeneric(
         reason: "날짜·숫자·길이 형식을 손실 없이 확인할 수 없습니다.",
         code: "UNSUPPORTED_FORMAT",
       };
+    writtenTargets.set(handle, element);
     if (item.dateApproval && element.value === value) return { written: true };
     resetValueTracker(element);
     if (!setNativeValue(element, value)) {
@@ -580,6 +589,7 @@ function writeGeneric(
           ? { failureCode: "OPTION_UNMATCHED" as const }
           : {}),
       };
+    writtenTargets.set(handle, select);
     resetValueTracker(select);
     if (
       !setNativeValue(select, option.value) ||
@@ -604,6 +614,7 @@ function writeGeneric(
     (strict && expected === "radio" && radioEscapesCapturedRow(handle, option))
   )
     return { written: false, reason: UNSAFE, code: "UNSUPPORTED_CONTROL" };
+  writtenTargets.set(handle, option);
   resetValueTracker(option);
   if (!setNativeChecked(option))
     return { written: false, reason: UNSAFE, code: "EXECUTION_FAILED" };
@@ -624,7 +635,7 @@ function catalogChoiceIsCurrent(
   const approval = catalogApprovalForItem(item);
   if (approval.status === "invalid") return false;
   if (approval.status === "legacy") return true;
-  const select = readbackWriteElement(handle);
+  const select = settleElement(handle);
   if (select instanceof HTMLSelectElement) {
     const matches = [...select.options].filter(
       (option) =>
@@ -901,7 +912,7 @@ function retainedGenericValue(
     value = item.profileValue;
   if (!command || !value) return false;
   const approval = catalogApprovalForItem(item);
-  const element = handle.buttonDropdown?.trigger ?? readbackWriteElement(handle);
+  const element = handle.buttonDropdown?.trigger ?? settleElement(handle);
   if (
     approval.status === "selected" &&
     element &&
@@ -923,7 +934,7 @@ function retainedGenericValue(
       dropdownValue(handle.buttonDropdown) === value
     );
   if (command === "SET_TEXT") {
-    const input = readbackWriteElement(handle);
+    const input = settleElement(handle);
     if (!input?.isConnected) return false;
     return input instanceof HTMLInputElement &&
       input.getAttribute("role") === "combobox"
@@ -931,7 +942,7 @@ function retainedGenericValue(
       : input.value === value;
   }
   if (command === "SELECT_OPTION") {
-    const select = readbackWriteElement(handle);
+    const select = settleElement(handle);
     return (
       select instanceof HTMLSelectElement &&
       select.isConnected &&
