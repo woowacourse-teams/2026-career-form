@@ -113,6 +113,13 @@ async function runBatch(replaceLaterControls: boolean) {
       } : {}),
     };
   });
+  const originalEntries = new Map(
+    ids.map((id) => {
+      const lookup = registry.lookupField(id);
+      if (!("handle" in lookup)) throw new Error("Missing synthetic handle");
+      return [id, lookup.handle] as const;
+    }),
+  );
   const visited: string[] = [];
   const results = await executeApprovedWritesAfterPageSettles({
     items,
@@ -123,7 +130,7 @@ async function runBatch(replaceLaterControls: boolean) {
       visited.push(item.candidateId);
     },
   });
-  return { results, registry, originalLater, calendarSelected, visited };
+  return { results, registry, originalLater, originalEntries, calendarSelected, visited };
 }
 
 describe("ordinary writes after a calendar render", () => {
@@ -136,22 +143,32 @@ describe("ordinary writes after a calendar render", () => {
   });
 
   it("writes the same later fields after calendar selection replaces their controls", async () => {
-    const { results, registry, originalLater, calendarSelected, visited } =
+    const { results, registry, originalLater, originalEntries, calendarSelected, visited } =
       await runBatch(true);
     expect(calendarSelected).toBe(true);
     expect(originalLater.every((input) => !input.isConnected)).toBe(true);
-    expect(registry.lookupField("note-3").status).toBe("stale");
-    expect(registry.lookupField("note-4").status).toBe("stale");
+    for (const [index, id] of ["note-3", "note-4"].entries()) {
+      const lookup = registry.lookupField(id);
+      expect(lookup.status).toBe("ready");
+      if (!("handle" in lookup)) throw new Error("Missing recovered handle");
+      expect(lookup.handle.elements).toEqual([document.getElementById(id)]);
+      expect(lookup.handle.elements[0]).not.toBe(originalLater[index]);
+    }
+    for (const id of ["note-1", "note-2", "month-target"]) {
+      const lookup = registry.lookupField(id);
+      if (!("handle" in lookup)) throw new Error("Missing sibling handle");
+      expect(lookup.handle).toBe(originalEntries.get(id));
+    }
     expect(results.slice(0, 2).map((result) => result.code)).toEqual([
       "WRITTEN", "WRITTEN",
     ]);
     expect(results[2]).toMatchObject({
-      status: "skipped",
-      code: "RETAINED_VALUE_UNCONFIRMED",
+      status: "written",
+      code: "WRITTEN",
     });
-    // The current executor stops before even visiting the later controls;
-    // these result codes are batch-stop propagation, not native write attempts.
-    expect(visited).toEqual(["note-1", "note-2", "month-target"]);
+    expect(visited).toEqual([
+      "note-1", "note-2", "month-target", "note-3", "note-4",
+    ]);
     expect(results.slice(3).map((result) => result.code)).toEqual([
       "WRITTEN", "WRITTEN",
     ]);

@@ -4,6 +4,100 @@ import type { FieldCandidateHandle } from "./types";
 type NativeFieldElement =
   HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
 
+function nodeIdentity(element: Element): string {
+  return JSON.stringify([
+    element.tagName,
+    element.getAttribute("type"),
+    element.id,
+    element.getAttribute("name"),
+    element.getAttribute("role"),
+    element.getAttribute("aria-label"),
+    element.getAttribute("aria-labelledby"),
+    element.getAttribute("data-item-id"),
+    element.getAttribute("data-item-group-id"),
+    element.getAttribute("placeholder"),
+    element instanceof HTMLLabelElement
+      ? [element.htmlFor, element.textContent?.replace(/\s+/g, " ").trim()]
+      : undefined,
+  ]);
+}
+
+/** Capture while connected: detached nodes no longer retain their section/row. */
+function controlStructure(control: NativeFieldElement): string {
+  const ancestors: unknown[] = [];
+  for (let node = control.parentElement; node; node = node.parentElement) {
+    const identity = nodeIdentity(node);
+    const peers = Array.from(node.parentElement?.children ?? []).filter(
+      (peer) => nodeIdentity(peer) === identity,
+    );
+    ancestors.push([identity, peers.indexOf(node), peers.length]);
+  }
+  return JSON.stringify([
+    nodeIdentity(control),
+    ancestors,
+  ]);
+}
+
+export function controlIdentity(control: NativeFieldElement): string {
+  return JSON.stringify([
+    controlStructure(control),
+    Array.from(control.labels ?? [], (label) => nodeIdentity(label)),
+    control.getAttribute("aria-label"),
+    (control.getAttribute("aria-labelledby") ?? "")
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((id) => [id, control.ownerDocument.getElementById(id)?.textContent]),
+  ]);
+}
+
+export function captureControlState(controls: readonly NativeFieldElement[]) {
+  return controls.map((control) => ({
+    control,
+    structure: controlStructure(control),
+    identity: controlIdentity(control),
+    value: control.value,
+    checked:
+      control instanceof HTMLInputElement &&
+      (control.type === "checkbox" || control.type === "radio")
+        ? control.checked
+        : undefined,
+  }));
+}
+
+/**
+ * Existing nodes retain object identity. Replacements need one unique structural
+ * match; neither their ordinal nor their value may disambiguate duplicate nodes.
+ * New controls are allowed, but no old control may disappear or change state.
+ */
+export function correspondingControls(
+  before: ReturnType<typeof captureControlState>,
+  controls: readonly NativeFieldElement[],
+  target?: NativeFieldElement,
+): Map<NativeFieldElement, NativeFieldElement> | undefined {
+  const current = captureControlState(controls);
+  const matches = new Map<NativeFieldElement, NativeFieldElement>();
+  const used = new Set<NativeFieldElement>();
+  for (const old of before) {
+    const candidates = current.filter(
+      ({ structure }) => structure === old.structure,
+    );
+    const same = candidates.find(({ control }) => control === old.control);
+    const match = same ?? (candidates.length === 1 ? candidates[0] : undefined);
+    if (
+      !match ||
+      match.identity !== old.identity ||
+      used.has(match.control) ||
+      (old.control === target && match.control !== target) ||
+      (old.control !== target &&
+        (match.value !== old.value || match.checked !== old.checked))
+    )
+      return undefined;
+    used.add(match.control);
+    matches.set(old.control, match.control);
+  }
+  return matches;
+}
+
 /** The same visibility rule used by collection, without site-specific cases. */
 export function isVisibleWriteElement(element: HTMLElement): boolean {
   if (

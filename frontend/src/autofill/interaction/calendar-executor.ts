@@ -12,6 +12,7 @@ import { selectDeferredCalendarMonth } from "./calendar-month-widget";
 import { displayedDayCalendarRoots, isDisplayed } from "./day-calendar-surface";
 export { CALENDAR_MAX_ROLE_REQUESTS } from "../api/calendar-role-contract";
 import type { InteractionDecisionProvider } from "../api/interaction-types";
+import { captureControlState, correspondingControls } from "../dom/write-target";
 
 export const CALENDAR_FIELD_TIMEOUT_MS = 15_000;
 export const CALENDAR_MAX_ACTIVATIONS = 8;
@@ -123,6 +124,7 @@ export async function executeCalendarSelection(
   const before = new Map(
     controls().map((control) => [control, stateOf(control)]),
   );
+  const structuralBefore = captureControlState(controls());
   const othersUnchanged = () =>
     controls().length === before.size &&
     controls().every((control) => {
@@ -167,16 +169,7 @@ export async function executeCalendarSelection(
       return { status: "needs-verification", reason: "calendar_aborted" };
     if (!targetIsStable())
       return { status: "needs-verification", reason: "stale_target" };
-    if (
-      controls().length !== before.size ||
-      Array.from(before).some(
-        ([control, state]) =>
-          control !== args.target &&
-          (!control.isConnected ||
-            stateOf(control).value !== state.value ||
-            stateOf(control).checked !== state.checked),
-      )
-    )
+    if (!correspondingControls(structuralBefore, controls(), args.target))
       return { status: "needs-verification", reason: "other_input_changed" };
     if (read(args.target) !== args.targetYearMonth)
       return {

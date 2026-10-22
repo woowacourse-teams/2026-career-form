@@ -1,5 +1,10 @@
 import { displayState, withDomReadPass } from "./read-pass";
-import { isWritableWriteElement } from "./write-target";
+import {
+  captureControlState,
+  controlIdentity,
+  correspondingControls,
+  isWritableWriteElement,
+} from "./write-target";
 import { targetOnlyRadio } from "../policy/radio-validation";
 import type {
   ActionCandidateHandle,
@@ -81,6 +86,122 @@ export class CandidateRegistry {
   private readonly fields = new Map<string, Registered<FieldCandidateHandle>>();
   private readonly fieldItemCounts = new Map<string, number>();
   private readonly fieldItemElements = new Map<string, Element[]>();
+  private readonly replacementState = new Map<
+    string,
+    {
+      before: ReturnType<typeof captureControlState>;
+      contextCurrent: () => boolean;
+      row?: Element;
+    }
+  >();
+
+  /** Called once before the batch, while collected row callbacks are valid. */
+  captureReplacementState(): void {
+    this.replacementState.clear();
+    for (const [id, { handle }] of this.fields) {
+      if (this.lookupField(id).status === "stale") continue;
+      const rows = this.fieldItemElements.get(
+        this.fieldItemKey(handle.sectionId, handle.itemGroupId),
+      );
+      const row =
+        handle.itemIndex !== undefined ? rows?.[handle.itemIndex] : undefined;
+      const parents = (rows ?? []).map((element) => ({
+        element,
+        parent: element.parentElement,
+        siblings: Array.from(element.parentElement?.children ?? []),
+      }));
+      const kinds = handle.mixedSectionRow?.group.kindSelects.map((select) => ({
+        select,
+        value: select.value,
+      }));
+      const rowChoices = () =>
+        (rows ?? []).flatMap((element) =>
+          Array.from(
+            element.querySelectorAll<HTMLInputElement | HTMLSelectElement>(
+              "select, input[type='radio']",
+            ),
+          ),
+        );
+      const choicesBefore = captureControlState(rowChoices());
+      const contextWasCurrent = handle.isCurrentContext?.() !== false;
+      this.replacementState.set(id, {
+        before: captureControlState(handle.elements),
+        ...(row ? { row } : {}),
+        contextCurrent: () =>
+          contextWasCurrent &&
+          (!handle.isCurrentContext || !!row) &&
+          ((handle.itemId === undefined && handle.itemIndex === undefined) ||
+            (!!row && rows?.length === this.fieldItemCount(id))) &&
+          parents.every(
+            ({ element, parent, siblings }) =>
+              element.isConnected &&
+              element.parentElement === parent &&
+              parent?.children.length === siblings.length &&
+              siblings.every((sibling, index) => parent.children[index] === sibling),
+          ) &&
+          (kinds?.every(
+            ({ select, value }) => select.isConnected && select.value === value,
+          ) ?? true) &&
+          correspondingControls(choicesBefore, rowChoices()) !== undefined,
+      });
+    }
+  }
+
+  /**
+   * The caller must separately preserve the approved profile binding. Complex
+   * controls and approvals containing popup/opener/option objects are not moved.
+   */
+  revalidateField(candidateId: string, allowReplacement: boolean): boolean {
+    const entry = this.fields.get(candidateId);
+    const snapshot = this.replacementState.get(candidateId);
+    if (!entry || !snapshot) return false;
+    const { handle } = entry;
+    const lookup = this.lookupField(candidateId);
+    if (lookup.status !== "stale")
+      return handle.elements.every(
+        (element, index) =>
+          controlIdentity(element) === snapshot.before[index]?.identity,
+      );
+    if (
+      !allowReplacement ||
+      handle.owner === "legacy" ||
+      handle.elements.length !== 1 ||
+      handle.elements[0].isConnected ||
+      handle.customElements?.length ||
+      handle.buttonDropdown ||
+      handle.optionElements.size ||
+      !snapshot.contextCurrent()
+    )
+      return false;
+    const correspondence = correspondingControls(
+      snapshot.before,
+      Array.from(
+        handle.elements[0].ownerDocument.querySelectorAll<
+          HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+        >("input, select, textarea"),
+      ),
+    );
+    const replacement = correspondence?.get(handle.elements[0]);
+    if (
+      !replacement ||
+      (snapshot.row && !snapshot.row.contains(replacement))
+    )
+      return false;
+    const rebound: FieldCandidateHandle = {
+      ...handle,
+      elements: [replacement],
+      signature: createStructuralSignature([replacement]),
+      ...(handle.isCurrentContext
+        ? {
+            isCurrentContext: () =>
+              snapshot.contextCurrent() &&
+              snapshot.row?.contains(replacement) === true,
+          }
+        : {}),
+    };
+    this.fields.set(candidateId, { ...entry, handle: rebound });
+    return this.lookupField(candidateId).status === "ready";
+  }
 
   private fieldItemKey(sectionId: string, itemGroupId?: string): string {
     return `${sectionId}::${itemGroupId ?? ""}`;

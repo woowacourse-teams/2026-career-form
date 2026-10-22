@@ -3,6 +3,13 @@ import type { InteractionDecisionProvider } from "../api/interaction-types";
 import { traceHold, traceTrigger } from "../debug/write-trace";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import {
+  captureControlState,
+  correspondingControls,
+  isVisibleWriteElement,
+} from "../dom/write-target";
+import { openCalendarPopups } from "../interaction/calendar-surface";
+import { displayedDayCalendarRoots } from "../interaction/day-calendar-surface";
+import {
   executeReadonlySearch,
   type ReadonlySearchExecutionResult,
   type ReadonlySearchFailureReason,
@@ -99,6 +106,22 @@ export function bindingKey(item: ReviewPlanItem): string | undefined {
   return item.profileEntryId && key
     ? `${item.profileEntryId}:${key}`
     : undefined;
+}
+
+function approvedBinding(item: ReviewPlanItem): string {
+  return JSON.stringify([
+    item.candidateId,
+    item.profileFieldKey,
+    item.profileEntryId,
+    item.itemIndex,
+    item.profileValue,
+    item.analysis?.candidateId,
+    item.analysis?.mappingStatus,
+    item.analysis?.valueBinding,
+    item.analysis?.writePlan,
+    item.selected,
+    item.disabled,
+  ]);
 }
 
 function captureFieldGroup(registry: CandidateRegistry, candidateId: string) {
@@ -367,6 +390,13 @@ export async function executeApprovedSearchWrites({
     ? createInteractionDecisionSession(interactionDecisionProvider)
     : undefined;
   let searchCount = 0;
+  registry.captureReplacementState();
+  const approvedBindings = new Map(
+    items.map((item) => [item, approvedBinding(item)]),
+  );
+  const genericItems = new Set(
+    items.filter((item) => item.analysis?.mappingStatus === "LLM_SUGGESTED"),
+  );
 
   for (const [index, item] of items.entries()) {
     if (heldIndexes.has(index)) continue;
@@ -413,14 +443,77 @@ export async function executeApprovedSearchWrites({
         );
       return true;
     }
+    if (genericItems.has(item)) {
+      const command = item.analysis?.writePlan?.command;
+      const allowReplacement =
+        command !== "SELECT_DATE" &&
+        command !== "SEARCH_SELECTION" &&
+        !item.calendarApproval &&
+        !item.dayCalendarApproval &&
+        item.analysis?.valueBinding?.type === "DIRECT";
+      if (
+        approvedBindings.get(item) !== approvedBinding(item) ||
+        !registry.revalidateField(item.candidateId, allowReplacement)
+      ) {
+        results[index] = skipped(
+          item.candidateId,
+          "needs-verification",
+          "STALE_TARGET",
+          STALE,
+          "STRUCTURE_UNVERIFIED",
+        );
+        onResult?.(item, results[index]!);
+        continue;
+      }
+    }
     if (item.analysis?.writePlan?.command !== "SEARCH_SELECTION") {
       if (writeOrdinary) {
+        const lookup = registry.lookupField(item.candidateId);
+        const target = "handle" in lookup ? lookup.handle.elements[0] : undefined;
+        const document = target?.ownerDocument;
+        const popup = item.calendarApproval?.popup ?? item.dayCalendarApproval?.popup;
+        const controls = () =>
+          document
+            ? Array.from(
+                document.querySelectorAll<
+                  HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+                >("input, select, textarea"),
+              ).filter((control) => !popup?.contains(control))
+            : [];
+        const before = captureControlState(controls());
         const execution = await writeOrdinary(item);
         const result = "result" in execution ? execution.result : execution;
         const effect = "result" in execution ? execution.effect : "continue";
         results[index] = result;
         onResult?.(item, result);
         if (effect === "stop") {
+          const correspondence = correspondingControls(before, controls(), target);
+          const closed =
+            document &&
+            !(result.status === "skipped" && result.surfaceLeftOpen) &&
+            openCalendarPopups(document).length === 0 &&
+            displayedDayCalendarRoots(document).length === 0 &&
+            !Array.from(
+              document.querySelectorAll<HTMLElement>(
+                "dialog[open], [role='dialog'], [aria-modal='true'], [role='listbox'], iframe",
+              ),
+            ).some(isVisibleWriteElement);
+          // Only a proven identity-preserving render can relax this stop.
+          // Changed values, unknown effects and open surfaces keep the hold.
+          if (
+            item.analysis?.mappingStatus === "LLM_SUGGESTED" &&
+            approvedBindings.get(item) === approvedBinding(item) &&
+            result.status === "skipped" &&
+            (result.code === "STALE_TARGET" ||
+              result.code === "RETAINED_VALUE_UNCONFIRMED") &&
+            target &&
+            (target.value === item.profileValue ||
+              target.value === before.find((old) => old.control === target)?.value) &&
+            closed &&
+            correspondence &&
+            [...correspondence].some(([old, current]) => old !== current)
+          )
+            continue;
           traceTrigger(item.candidateId, {
             triggerHasProfileEntryId: item.profileEntryId !== undefined,
           });
@@ -439,6 +532,7 @@ export async function executeApprovedSearchWrites({
               "needs-verification",
               "STALE_TARGET",
               "이전 입력 결과를 확인할 수 없어 후속 입력을 중단했습니다.",
+              "FIELD_CHANGED",
             );
           }
           return true;
