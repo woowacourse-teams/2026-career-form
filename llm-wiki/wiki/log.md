@@ -767,3 +767,11 @@
 - 승인된 후보 C1~C3과 실측 기준선을 [CF-313 bundle](../raw/issues/CF-313/manifest.md)에 기록했다.
 - [오프라인 기입 정확도 측정](topics/offline-write-accuracy.md)을 새로 만들고 [범용 연월 달력 선택](topics/generic-calendar-selection.md)의 Current와 History를 갱신했다.
 - 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.
+
+## [2026-10-22] ingest | CF-314 실사이트 기입 정확도 재평가와 측정 절차 정정
+
+- Approval-Digest: 3b1b53de6da1130d6b2be74e11daeec4eb5ead2032558d24e250d1b88b7a691b
+- Source-Revision: bf66253f85182b607d91503716f577bf74952147
+- 승인된 지식 후보 세 교훈과 실측 수치를 [CF-314 bundle](../raw/issues/CF-314/manifest.md)에 기록하고 CF-173 평가 계약 1.1 측정 절차를 이 topic의 현재 근거로 대체했다.
+- [실사이트 자동 입력 평가 워크플로우](topics/live-autofill-evaluation.md)의 Current와 History를 갱신하고 가시 칸 두 시점 측정, 단계별 지표 분리, 숨은 중복 칸 판정을 반영했다.
+- 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.

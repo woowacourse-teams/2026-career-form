@@ -2,9 +2,9 @@
 
 > Topic: live-autofill-evaluation
 > Status: Current
-> Current: [CF-173 평가 계약 1.1과 설치본 근거](../../raw/issues/CF-173/documents/evaluation-contract-1.1.md)
-> History: [CF-124 최초 공용 실행 계약](../../raw/issues/CF-124/documents/adr/124-ai-operated-live-autofill-evaluation.md); [CF-124 사전 판정 분모와 평가 보고서](../../raw/issues/CF-124/documents/reports/2026-09-28-live-autofill-evaluation.md); [CF-173 평가 계약 1.1](../../raw/issues/CF-173/documents/evaluation-contract-1.1.md)
-> Updated: 2026-10-09
+> Current: [CF-314 실사이트 기입 정확도 재평가와 측정 절차](../../raw/issues/CF-314/documents/live-autofill-recheck-2026-10-22.md)
+> History: [CF-124 최초 공용 실행 계약](../../raw/issues/CF-124/documents/adr/124-ai-operated-live-autofill-evaluation.md); [CF-124 사전 판정 분모와 평가 보고서](../../raw/issues/CF-124/documents/reports/2026-09-28-live-autofill-evaluation.md); [CF-173 평가 계약 1.1](../../raw/issues/CF-173/documents/evaluation-contract-1.1.md); [CF-314 실사이트 기입 정확도 재평가와 측정 절차](../../raw/issues/CF-314/documents/live-autofill-recheck-2026-10-22.md)
+> Updated: 2026-10-22
 
 ## 현재 상태
 
@@ -17,6 +17,8 @@
 Console의 `[CareerForm]` 로그는 수집, 분석, 리뷰, 기입과 검색 실패의 현장 진단에 사용한다. 값, 요청과 응답 원문, 스크린샷을 보관하지 않고 최종 결과는 실제 DOM으로 판정한다.
 
 계약 `1.1`의 실사이트 보고서는 익명 후보 관측과 개수 요약을 함께 받으며 재계산한 개수가 다르면 거부한다. CLI와 동일한 FAILED/DEFERRED 원인 집계, 익명 근거 및 미발견 AUTOFILLABLE 개수를 출력한다.
+
+계약 `1.1`의 측정 절차는 [CF-314 재평가](../../raw/issues/CF-314/documents/live-autofill-recheck-2026-10-22.md)에서 세 가지로 보정한다. 기입 직후 세는 값은 상한이며 40분 keepalive 재로드가 값을 지우므로, +0.5초와 재렌더 이후 두 번 가시 칸만 센다. 매핑 정확도와 최종 정답 입력률은 단계가 다른 지표로 분리한다. 같은 행의 숨은 중복 칸은 가시 필드 판정과 실제 기입 대상을 가르므로 성공은 가시 칸으로만 판정한다. 2026-10-22 `naver-careers`와 `woowahan-recruitment` 재측정에서 매핑 정확도 35/35, 매핑 재현율 35/57, 재렌더 후 가시 칸 유지 6/48과 0/16을 확인했고, 원인별 후속으로 #318, #319, #320을 승격했다.
 
 평가 전 설치본의 background service worker 컨텍스트에서 `globalThis.__careerFormBuildInfo()`를 조회한다. 이는 지원서 값이나 DOM을 읽지 않는 빌드 메타데이터 조회다. 빌드 시 삽입된 불변 snapshot이므로 unpacked 파일이 재빌드로 덮어써져도 재로드 전에는 기존 설치본 revision을 반환한다. CLEAN·전체 SHA·canonical digest·설치본 확인 방법이 맞을 때만 VERIFIED이며 DIRTY/UNKNOWN 또는 조회 불가는 UNVERIFIED로 남긴다. 상세 판정은 [CF-173 ADR](../../raw/issues/CF-173/documents/adr/173-installed-build-revision-evidence.md)을 따른다.
 
@@ -33,3 +35,5 @@ Console의 `[CareerForm]` 로그는 수집, 분석, 리뷰, 기입과 검색 실
 확장 프로그램이 발견한 필드만 분모로 사용하면 미발견 필드를 제외해 실제 커버리지를 부풀린다. 제품 실행과 독립적인 사전 판정 분모를 먼저 동결하고 정확도와 재현율을 분리했다.
 
 CF-173은 집계 요약과 후보 관측의 일치 검증, 원인별 집계 및 설치본 revision 근거를 추가했다. 기존 사용자 승인·입력·DOM 검증 경계는 바꾸지 않았으며 새 실사이트 자동 입력 결과를 측정한 작업은 아니다.
+
+기입 시점 값과 사용자가 보는 값을 같은 성공으로 세면 재렌더로 사라진 값을 성공에 포함해 정확도를 과대평가한다. 매핑 정확도 100%와 최종 가시 유지 0/16이 같은 사이트에서 나올 수 있으므로 두 단계를 분리하고, 성공 판정을 재렌더 이후 가시 칸으로 고정했다. 숨은 중복 칸은 그룹 가시성 판정과 실제 기입 대상이 달라질 수 있어 가시 칸 기준 판정을 유지한다.
