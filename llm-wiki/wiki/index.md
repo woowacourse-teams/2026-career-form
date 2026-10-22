@@ -80,7 +80,7 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [지원서 분석 데이터 경계](topics/application-form-analysis-data-boundary.md) | 비식별 공급자 투영과 로컬 DOM 실행 경계 | 2026-09-23 |
 | [OpenAI 분석 예산과 안전 진단](topics/openai-analysis-budget-and-diagnostics.md) | 준비,필드/상호작용 시간 예산 분리와 비식별 실패 분류 | 2026-09-24 |
 | [Jev,OpenAI 호출 추적](topics/provider-call-tracing.md) | LangSmith Java SDK, 비식별 투영과 관측 실패 격리 | 2026-10-01 |
-| [범용 분할 이메일 보호](topics/generic-split-email-safety.md) | 아이디 칸의 전체 주소 입력 차단과 쓰기 직전 재검증 | 2026-10-01 |
+| [범용 분할 이메일 보호](topics/generic-split-email-safety.md) | 아이디 칸의 전체 주소 입력 차단과 쓰기 직전 재검증, 도메인 select의 값도 판정 근거 | 2026-10-22 |
 | [범용 자동 기입 평가 기준선](topics/generic-autofill-evaluation-baselines.md) | 계약 1.1 원인별 집계, 설치 revision 근거와 비교 보류 및 과거 기준선 | 2026-10-09 |
 | [범용 폼 컨텍스트 수집](topics/generic-form-context.md) | 문서 회사 기준 수집 선택, 동기 읽기 캐시 경계와 혼합 전후 비교 | 2026-10-15 |
 | [범용 칸 라벨 문맥과 형식 검사](topics/generic-field-context-safety.md) | 끊긴 라벨 복원, 문맥 없는 칸의 REVIEW와 로컬 형식 검사 | 2026-10-18 |

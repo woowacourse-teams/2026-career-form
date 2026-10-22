@@ -791,3 +791,11 @@
 - 승인된 후보 5개를 [CF-310 bundle](../raw/issues/CF-310/manifest.md)의 세 번째 수집으로 기록하고 승인 후보 스냅샷의 SHA-256을 재확인했다.
 - [SK 어댑터](topics/adapter-sk.md), [Greeting 어댑터](topics/adapter-greeting.md), [Hplace 어댑터](topics/adapter-hplace.md), [현대 어댑터](topics/adapter-hyundai.md), [실사이트 평가](topics/live-autofill-evaluation.md)의 Current와 History를 갱신하고 v38·v18 별칭 위치, 재학 상태 select 기준 재식별, 수락 필드 0건의 분석 생략, 버튼형 선택지 코드 한계, 재설치 뒤 재진입과 응답 없는 탭 처리를 반영했다.
 - 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.
+
+## [2026-10-22] ingest | CF-310 분할 이메일 판정의 도메인 값 근거
+
+- Approval-Digest: c3c933ce146ec66b3958185c45de2324286cfc9db5328bf598208472fae6e941
+- Source-Revision: e8e5894173856ba86ca4c3dbdc95ba1aff818dfc
+- 승인된 후보 1개를 [CF-310 bundle](../raw/issues/CF-310/manifest.md)의 네 번째 수집으로 기록하고 승인 후보 스냅샷의 SHA-256을 재확인했다.
+- [범용 분할 이메일 보호](topics/generic-split-email-safety.md)의 Current와 History를 갱신하고 선택지 값도 판정 근거로 삼는 변경을 반영했다.
+- 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.

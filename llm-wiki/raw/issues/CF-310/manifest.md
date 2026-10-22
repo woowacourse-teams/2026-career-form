@@ -16,12 +16,19 @@
 > Approval-Response-3: 수정 작업에서 나온 Wiki 지식 후보 5개를 모두 승인합니다. CF-310 raw와 topic Wiki에 반영해 같은 PR에 올려 주세요.
 > Approval-Date-3: 2026-10-22
 > Source-Revision-3: c5d703f411b7220829268ddf260a289e6cf48814
+> Collected-4: 2026-10-22
+> Approval-Digest-4: c3c933ce146ec66b3958185c45de2324286cfc9db5328bf598208472fae6e941
+> Approval-Response-4: 승인해줄게.
+> Approval-Date-4: 2026-10-22
+> Source-Revision-4: e8e5894173856ba86ca4c3dbdc95ba1aff818dfc
 
 승인 digest는 사람이 위 응답으로 승인한 [후보 다섯 개의 스냅샷](documents/approved-candidates.md) 전체 UTF-8 바이트의 SHA-256이다. 스냅샷은 승인을 요청한 메시지의 후보 목록을 그대로 옮겼고, 승인 응답과 후보만 기록하며 대화 전문은 수집하지 않는다. 네 payload는 각 topic의 앞선 근거를 보강하는 새 운영 지식이며, 바꾸지 않은 내용은 Supersedes가 가리키는 문서를 따른다. 후보 2의 12–43바이트는 본문 크기를 바이트로 기록한 두 지원서(kakaogames·kurly)의 범위이고, 글자 수로 기록한 다른 실행은 바이트 범위의 근거가 아니다. 각 payload의 승인 후보 절은 어미만 한다체로 바꿔 옮겼다.
 
 2026-10-22에는 하네스로 열린 탭 16개 전부를 측정한 뒤 두 번째 후보 다섯 개를 승인받았다. Approval-Digest-2는 [두 번째 승인 후보 스냅샷](documents/approved-candidates-2.md) 전체 UTF-8 바이트의 SHA-256이고, 세 payload(adapter-sk, adapter-hplace, live-autofill-evaluation)는 각각 후보 1, 후보 2·4, 후보 3·5를 담는다. 같은 topic의 앞선 CF-310 payload는 이 payload가 대체하며 바꾸지 않은 내용은 그대로 따른다.
 
 2026-10-22 결함 수정 뒤 세 번째 후보 다섯 개를 승인받았다. Approval-Digest-3는 [세 번째 승인 후보 스냅샷](documents/approved-candidates-3.md) 전체 UTF-8 바이트의 SHA-256이고, 다섯 payload(adapter-sk, adapter-greeting, adapter-hplace, adapter-hyundai, live-autofill-evaluation)는 각각 후보 2와 1의 SK 부분, 후보 1의 Greeting 부분, 후보 3, 후보 4, 후보 5를 담는다. 같은 topic의 앞선 payload는 새 payload가 대체한다.
+
+2026-10-22 테스트 경량화에서 네 번째 후보 하나를 승인받았다. Approval-Digest-4는 [네 번째 승인 후보 스냅샷](documents/approved-candidates-4.md) 전체 UTF-8 바이트의 SHA-256이고, payload(generic-split-email-safety)는 CF-138 근거를 대체한다.
 
 ## adapter-hplace
 
@@ -82,3 +89,8 @@
 
 > Payload: [확장 재설치 뒤 탭 재진입과 응답 없는 탭의 CDP 차단](documents/live-harness-reinstall-and-hung-tab.md)
 > Supersedes: [CF-310 원복 재키·표시 규칙](documents/live-harness-residue-and-display.md)
+
+## generic-split-email-safety
+
+> Payload: [분할 이메일 판정: 도메인 select의 값도 근거로 본다](documents/split-email-domain-value.md)
+> Supersedes: [CF-138 범용 분할 이메일 오입력 차단](../CF-138/documents/generic-split-email-safety.md)
