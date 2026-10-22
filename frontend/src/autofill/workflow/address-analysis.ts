@@ -184,16 +184,6 @@ export async function runAddressAnalysis({
     const buttons = pageDocument.querySelectorAll(policy.triggerSelector);
     if (buttons.length === 1) run.button = buttons[0];
   }
-  localWorkflowLog("address-enter", {
-    snapshotId: snapshot.request.snapshotId,
-    hasButton: !!run.button,
-    hasRunner: !!runner,
-    hasTask: !!run.task,
-  });
-  if (!run.button || !runner)
-    return adapter.addressRequiresSearch
-      ? withoutAddressFields(analysis, snapshot, addressNames)
-      : analysis;
   const keys = [
     "contact.contact.postalCode",
     "contact.contact.addressLine1",
@@ -203,9 +193,54 @@ export async function runAddressAnalysis({
     ...section.fields,
     ...(section.items ?? []).flatMap((item) => item.fields),
   ]);
+  // Generic (non-adapter) pages have no policy provider and no adapter runner.
+  // The Kakao postcode widget is vendor-generic, so the same executor can run
+  // there when the three address keys map one-to-one onto visible native text
+  // controls with the expected readonly split.
+  const mappingFor = (candidateId: string) =>
+    analysis.fields.find((field) => field.candidateId === candidateId);
+  const genericAddressFields = keys.map((key) => {
+    const matches = fields.filter((field) => {
+      const mapping = mappingFor(field.candidateId);
+      return (
+        mapping !== undefined &&
+        "valueBinding" in mapping &&
+        mapping.valueBinding?.type === "DIRECT" &&
+        mapping.valueBinding.profileFieldKey === key
+      );
+    });
+    return matches.length === 1 ? matches[0] : undefined;
+  });
+  // Sites that already publish the postcode separately (or not at all) only
+  // expose the road address plus its detail line, so require those two and
+  // treat the postcode as optional.
+  const genericRequired: readonly number[] = [1, 2];
+  const genericFieldIsUsable = (field: (typeof genericAddressFields)[number], index: number) => {
+    if (!field) return false;
+    const mapping = mappingFor(field.candidateId);
+    return (
+      field.element === "input" &&
+      field.control === "text" &&
+      field.visibility === "visible" &&
+      !field.disabled &&
+      !field.inert &&
+      !!field.readonly === index < 2 &&
+      mapping?.matchType === "MATCH" &&
+      mapping.mappingStatus === "LLM_SUGGESTED"
+    );
+  };
+  const genericAddressPermitted =
+    analysis.mode !== "ADAPTER" &&
+    !policy &&
+    !adapter.runAddress &&
+    genericRequired.every((index) =>
+      genericFieldIsUsable(genericAddressFields[index], index),
+    ) &&
+    (genericAddressFields[0] === undefined ||
+      genericFieldIsUsable(genericAddressFields[0], 0));
   const permitted =
-    analysis.mode === "ADAPTER" &&
-    addressNames.length === 3 &&
+    (analysis.mode === "ADAPTER" &&
+      addressNames.length === 3 &&
     addressNames.every((name, index) => {
       const candidates = fields.filter(
         (field) => field.domId === name || field.domName === name,
@@ -229,12 +264,61 @@ export async function runAddressAnalysis({
         mapping.valueBinding?.type === "DIRECT" &&
         mapping.valueBinding.profileFieldKey === keys[index]
       );
-    });
-  const addressTargets = permitted
-    ? addressNames.flatMap((name, index) => {
-        const candidate = fields.find(
+    })) ||
+    genericAddressPermitted;
+  const effectiveAddressNames = genericAddressPermitted
+    ? genericAddressFields.flatMap((field) =>
+        field ? [field.domName ?? field.domId ?? ""] : [],
+      )
+    : addressNames;
+  const effectiveRunner = genericAddressPermitted
+    ? runKakaoAddress
+    : runner;
+  if (genericAddressPermitted && !run.button) {
+    // Generic pages have no trigger selector: accept exactly one search-style
+    // trigger inside the first address control's own row.
+    const first = genericAddressFields[0]
+      ? snapshot.registry.lookupField(genericAddressFields[0].candidateId)
+      : undefined;
+    const element =
+      first && "handle" in first ? first.handle.elements[0] : undefined;
+    const scope = element?.closest("tr, li, dd, section, div") ?? null;
+    const triggers = scope
+      ? Array.from(
+          scope.querySelectorAll<HTMLElement>("button, [role='button']"),
+        ).filter((button) => {
+          const name =
+            button.getAttribute("aria-label") ??
+            button.getAttribute("title") ??
+            button.textContent ??
+            "";
+          return /검색|우편번호|주소/.test(name);
+        })
+      : [];
+    if (triggers.length === 1) run.button = triggers[0];
+  }
+  localWorkflowLog("address-enter", {
+    snapshotId: snapshot.request.snapshotId,
+    hasButton: !!run.button,
+    hasRunner: !!effectiveRunner,
+    hasTask: !!run.task,
+  });
+  if (!run.button || !effectiveRunner)
+    return adapter.addressRequiresSearch || genericAddressPermitted
+      ? withoutAddressFields(analysis, snapshot, effectiveAddressNames)
+      : analysis;
+  const candidateSlots = genericAddressPermitted
+    ? genericAddressFields.flatMap((field, index) =>
+        field ? [{ field, index }] : [],
+      )
+    : addressNames.map((name, index) => ({
+        field: fields.find(
           (field) => (field.domId ?? field.domName) === name,
-        )!;
+        )!,
+        index,
+      }));
+  const addressTargets = permitted
+    ? candidateSlots.flatMap(({ field: candidate, index }) => {
         const lookup = snapshot.registry.lookupField(candidate.candidateId);
         if (lookup.status !== "ready" && lookup.status !== "blocked") return [];
         const element = lookup.handle.elements[0];
@@ -263,7 +347,7 @@ export async function runAddressAnalysis({
       if (button) onAddressOperation?.(button);
     };
     button?.addEventListener("click", onClick, { once: true });
-    run.task = runner({
+    run.task = effectiveRunner({
       document: pageDocument,
       button,
       expected: addressValue(profile),
@@ -315,7 +399,7 @@ export async function runAddressAnalysis({
     }
   }
   onActivity?.("matching");
-  return withoutAddressFields(analysis, snapshot, addressNames);
+  return withoutAddressFields(analysis, snapshot, effectiveAddressNames);
 }
 
 function withoutAddressFields(

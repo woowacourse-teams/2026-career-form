@@ -815,8 +815,24 @@ export async function executeApprovedSearchWrites({
       // These failures occur before result activation. Absence of the open flag
       // is the search transaction's closure contract for these known failures;
       // unknown effects and selection/retention failures cannot use this path.
+      // A trigger whose search never touched the page ("none") cannot have
+      // changed any other field, so its failure is no reason to hold unrelated
+      // approved items. Same-section items stay held below.
+      const untouchedPage = failedResult?.effect === "none";
       const structuralOnly =
-        failedResult?.effect === "interaction-started" &&
+        failedResult !== undefined &&
+        (untouchedPage ||
+          (failedResult.effect === "interaction-started" &&
+            [
+          "search_query_not_found",
+          "multiple_search_query_inputs",
+          "search_submit_not_found",
+          "multiple_search_submits",
+          "unverified_search_form",
+          "search_results_not_found",
+          "multiple_matching_results",
+          "result_set_incomplete",
+        ].includes(failedResult.reason))) &&
         failedResult.surfaceLeftOpen !== true &&
         [
           "search_query_not_found",

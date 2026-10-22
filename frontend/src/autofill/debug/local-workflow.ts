@@ -9,4 +9,11 @@ export function localWorkflowLog(
   )
     return;
   console.info("[CareerForm local workflow]", phase, detail);
+  // Local QA bridge: the isolated content-script console is not always
+  // observable from tooling, so mirror the same value-free phase to the page.
+  try {
+    window.postMessage({ careerFormLocalLog: phase, detail }, "*");
+  } catch {
+    // A page without messaging support simply keeps the console line.
+  }
 }
