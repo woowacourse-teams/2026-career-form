@@ -303,9 +303,14 @@ export async function executeApprovedCalendarWrite(
     : undefined;
 
   try {
+    const lookup = args.registry.lookupField(item.candidateId);
     const execution = await executeCalendarSelection({
       target,
       targetYearMonth: approval.targetYearMonth,
+      allowControlReplacement:
+        item.analysis?.mappingStatus === "LLM_SUGGESTED" &&
+        "handle" in lookup &&
+        lookup.handle.owner !== "legacy",
       interactionDecisionProvider: decisionProvider,
       canonicalFieldKey: approval.profileFieldKey ?? "calendar-month",
       assertCurrent: () =>

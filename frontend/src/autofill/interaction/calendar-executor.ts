@@ -30,6 +30,7 @@ export interface ExecuteCalendarSelectionArgs {
   canonicalFieldKey?: string;
   signal?: AbortSignal;
   assertCurrent?: () => boolean;
+  allowControlReplacement?: boolean;
 }
 
 function targetParts(
@@ -124,7 +125,9 @@ export async function executeCalendarSelection(
   const before = new Map(
     controls().map((control) => [control, stateOf(control)]),
   );
-  const structuralBefore = captureControlState(controls());
+  const structuralBefore = args.allowControlReplacement
+    ? captureControlState(controls())
+    : undefined;
   const othersUnchanged = () =>
     controls().length === before.size &&
     controls().every((control) => {
@@ -169,7 +172,18 @@ export async function executeCalendarSelection(
       return { status: "needs-verification", reason: "calendar_aborted" };
     if (!targetIsStable())
       return { status: "needs-verification", reason: "stale_target" };
-    if (!correspondingControls(structuralBefore, controls(), args.target))
+    if (
+      structuralBefore
+        ? !correspondingControls(structuralBefore, controls(), args.target)
+        : controls().length !== before.size ||
+          Array.from(before).some(
+            ([control, state]) =>
+              control !== args.target &&
+              (!control.isConnected ||
+                stateOf(control).value !== state.value ||
+                stateOf(control).checked !== state.checked),
+          )
+    )
       return { status: "needs-verification", reason: "other_input_changed" };
     if (read(args.target) !== args.targetYearMonth)
       return {

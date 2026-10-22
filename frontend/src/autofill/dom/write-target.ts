@@ -51,17 +51,32 @@ export function controlIdentity(control: NativeFieldElement): string {
 }
 
 export function captureControlState(controls: readonly NativeFieldElement[]) {
-  return controls.map((control) => ({
-    control,
-    structure: controlStructure(control),
-    identity: controlIdentity(control),
-    value: control.value,
-    checked:
-      control instanceof HTMLInputElement &&
-      (control.type === "checkbox" || control.type === "radio")
-        ? control.checked
-        : undefined,
-  }));
+  return controls.map((control) => {
+    const owners: Element[] = [];
+    for (let node = control.parentElement; node; node = node.parentElement) {
+      const identity = nodeIdentity(node);
+      // A cloned owning boundary or ordinal-only ancestor is not an identity.
+      if (
+        node.matches("fieldset, section, [role='group'], form") ||
+        Array.from(node.parentElement?.children ?? []).filter(
+          (peer) => nodeIdentity(peer) === identity,
+        ).length > 1
+      )
+        owners.push(node);
+    }
+    return {
+      control,
+      owners,
+      structure: controlStructure(control),
+      identity: controlIdentity(control),
+      value: control.value,
+      checked:
+        control instanceof HTMLInputElement &&
+        (control.type === "checkbox" || control.type === "radio")
+          ? control.checked
+          : undefined,
+    };
+  });
 }
 
 /**
@@ -85,6 +100,9 @@ export function correspondingControls(
     const match = same ?? (candidates.length === 1 ? candidates[0] : undefined);
     if (
       !match ||
+      old.owners.some(
+        (owner) => !owner.isConnected || !owner.contains(match.control),
+      ) ||
       match.identity !== old.identity ||
       used.has(match.control) ||
       (old.control === target && match.control !== target) ||

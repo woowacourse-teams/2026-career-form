@@ -495,8 +495,11 @@ export async function executeApprovedSearchWrites({
         const effect = "result" in execution ? execution.effect : "continue";
         results[index] = result;
         onResult?.(item, result);
-        if (effect === "stop") {
-          const correspondence = correspondingControls(before, controls(), target);
+        if (
+          effect === "stop" ||
+          (genericItems.has(item) &&
+            item.analysis?.writePlan?.command === "SELECT_DATE")
+        ) {
           const closed =
             document &&
             !(result.status === "skipped" && result.surfaceLeftOpen) &&
@@ -507,6 +510,8 @@ export async function executeApprovedSearchWrites({
                 "dialog[open], [role='dialog'], [aria-modal='true'], [role='listbox'], iframe",
               ),
             ).some(isVisibleWriteElement);
+          if (effect !== "stop" && closed) continue;
+          const correspondence = correspondingControls(before, controls(), target);
           // Only a proven identity-preserving render can relax this stop.
           // Changed values, unknown effects and open surfaces keep the hold.
           if (
