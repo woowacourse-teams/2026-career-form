@@ -58,6 +58,30 @@ function dispatchValueEvents(element: Element): void {
   element.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
+/**
+ * React records the last value it observed through the element instance
+ * setter. A native-setter write must invalidate that record so the following
+ * input event is treated as a user change and reaches framework state.
+ */
+function resetValueTracker(element: Element): void {
+  const tracker = (
+    element as Element & {
+      _valueTracker?: { setValue(value: string): void };
+    }
+  )._valueTracker;
+  tracker?.setValue("");
+}
+
+/** Mirror the browser's text-editing event, not an untyped Event. */
+function inputEvent(value: string): InputEvent {
+  return new InputEvent("input", {
+    bubbles: true,
+    composed: true,
+    inputType: "insertText",
+    data: value,
+  });
+}
+
 function setNativeValue(
   element: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
   value: string,
@@ -522,10 +546,11 @@ function writeGeneric(
         code: "UNSUPPORTED_FORMAT",
       };
     if (item.dateApproval && element.value === value) return { written: true };
+    resetValueTracker(element);
     if (!setNativeValue(element, value)) {
       return { written: false, reason: UNSAFE, code: "EXECUTION_FAILED" };
     }
-    element.dispatchEvent(new Event("input", { bubbles: true }));
+    element.dispatchEvent(inputEvent(value));
     if (item.dateApproval && element.value !== value)
       return { written: false, reason: RETENTION, code: "EXECUTION_FAILED" };
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -555,6 +580,7 @@ function writeGeneric(
           ? { failureCode: "OPTION_UNMATCHED" as const }
           : {}),
       };
+    resetValueTracker(select);
     if (
       !setNativeValue(select, option.value) ||
       select.selectedOptions[0] !== option
@@ -578,9 +604,16 @@ function writeGeneric(
     (strict && expected === "radio" && radioEscapesCapturedRow(handle, option))
   )
     return { written: false, reason: UNSAFE, code: "UNSUPPORTED_CONTROL" };
+  resetValueTracker(option);
   if (!setNativeChecked(option))
     return { written: false, reason: UNSAFE, code: "EXECUTION_FAILED" };
   dispatchValueEvents(option);
+  // Radio change handlers are derived from click by frameworks such as React.
+  // Notify through the same activation event a user produces.
+  if (expected === "radio")
+    option.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, composed: true }),
+    );
   return { written: true };
 }
 
@@ -891,21 +924,24 @@ function retainedGenericValue(
     );
   if (command === "SET_TEXT") {
     const input = readbackWriteElement(handle);
+    if (!input?.isConnected) return false;
     return input instanceof HTMLInputElement &&
       input.getAttribute("role") === "combobox"
       ? retainedComboboxValue(handle, value)
-      : input?.value === value;
+      : input.value === value;
   }
   if (command === "SELECT_OPTION") {
     const select = readbackWriteElement(handle);
     return (
       select instanceof HTMLSelectElement &&
+      select.isConnected &&
       nativeSelectOption(handle, value) === select.selectedOptions[0]
     );
   }
   const option = nativeChoiceOption(handle, value);
   return Boolean(
-    option?.checked &&
+    option?.isConnected &&
+    option.checked &&
     (command === "CHECK_RADIO" || command === "CHECK_CHECKBOX"),
   );
 }
