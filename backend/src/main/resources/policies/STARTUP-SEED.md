@@ -12,7 +12,7 @@
 
 ## 스냅샷에 추가된 버전
 
-- SK v38 (2026-10-22, CF-310): v37에서 두 가지만 바뀐다. 고등학교 학력 행 추가 규칙(`btnAddEducationHigh`)의 `requiredSelector`를 학교명 입력 대신 재학 상태 select(`select[name='eduhgEducationStatus']`)로 바꿔, 학교명·지역 입력이 없는 고교 행 구조(R262309형)에서도 후속 추가 버튼을 다시 식별한다. 장애구분 select(`prsDisabledType`)에 프로필 문구 `심하지 않은 장애인`/`심한 장애인`을 사이트 선택지 `경증(기존4급~6급)`/`중증(기존1급~3급)`으로 잇는 normalization을 더한다. 빈 DB에서는 v38이 활성이고, 기존 DB의 활성 버전 전환은 별도 절차다.
+- SK v38 (2026-10-22, CF-310): v37에서 두 가지만 바뀐다. 고등학교 학력 행 추가 규칙(`btnAddEducationHigh`)의 `requiredSelector`를 학교명 입력 대신 재학 상태 select(`select[name='eduhgEducationStatus']`)로 바꿔, 학교명·지역 입력이 없는 고교 행 구조(R262309형)에서도 후속 추가 버튼을 다시 식별한다. 장애구분(`prsDisabledType`) LookupBinding의 optionMap에 프로필 문구 `심한 장애인`→`중증(기존1급~3급)`, `심하지 않은 장애인`→`경증(기존4급~6급)` 별칭을 더한다. 빈 DB에서는 v38이 활성이고, 기존 DB의 활성 버전 전환은 별도 절차다.
 - 그리팅 v18 (2026-10-22, CF-310): v17에서 장애 정도(`...disability.degreeOfDisability`) LookupBinding의 optionMap에 프로필 문구 `심한 장애인`→`중증(심한장애)`, `심하지 않은 장애인`→`경증(심하지 않은 장애)` 별칭만 더한다. 2026-10-22 실사이트 QA에서 Greeting 4곳 모두 이 칸이 비어 있었다.
 
 기존 `Local*Seeder` 클래스는 자동 실행 빈에서 제외했다. 이전 정책 팩토리를 사용하는 회귀 테스트와의 호환을 위해 남겨 두었으며, 실행 시 초기화는 `StartupPolicySeeder`만 담당한다. `backend/scripts/migrate-*.mjs`는 자동 실행하지 않는다.

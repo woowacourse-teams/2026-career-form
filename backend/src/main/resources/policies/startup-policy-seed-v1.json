@@ -2601,7 +2601,9 @@
             "profileFieldKey": "disability.disability.disabilityGrade",
             "optionMap": {
               "중증": "중증(기존1급~3급)",
-              "경증": "경증(기존4급~6급)"
+              "경증": "경증(기존4급~6급)",
+              "심한 장애인": "중증(기존1급~3급)",
+              "심하지 않은 장애인": "경증(기존4급~6급)"
             },
             "_class": "com.careerform.formanalysis.application.port.FieldMappingResolver$LookupBinding"
           },
@@ -3767,15 +3769,6 @@
             }
           ],
           "normalizations": [
-            {
-              "keys": [
-                "disability.disability.disabilityGrade"
-              ],
-              "values": {
-                "심하지 않은 장애인": "경증(기존4급~6급)",
-                "심한 장애인": "중증(기존1급~3급)"
-              }
-            },
             {
               "keys": [
                 "military.military.militaryStatus"
