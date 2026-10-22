@@ -229,3 +229,56 @@ it("does not complete a field whose only filled control is a hidden duplicate", 
   expect(result.pending).toHaveLength(1);
   expect(resultFieldState(registry, document, "field")?.value).toBe("");
 });
+
+
+it("reads a visible control after it becomes disabled", () => {
+  document.body.innerHTML = '<label>점수<input id="point" value="900" /></label>';
+  const input = document.querySelector("input")!;
+  const registry = new CandidateRegistry();
+  registry.registerField({
+    kind: "field",
+    candidateId: "field",
+    sectionId: "section",
+    candidate: {
+      candidateId: "field",
+      element: "input",
+      control: "text",
+      displayName: "점수",
+      visibility: "visible",
+    },
+    elements: [input],
+    optionElements: new Map(),
+    signature: createStructuralSignature([input]),
+  });
+  input.disabled = true;
+  expect(resultFieldState(registry, document, "field")).toMatchObject({
+    visible: true,
+    value: "900",
+  });
+});
+
+it("keeps the pre-stage-A reading when the group has no visible control", () => {
+  document.body.innerHTML =
+    '<div hidden><label>점수<input id="point" value="900" /></label></div>';
+  const input = document.querySelector("input")!;
+  const registry = new CandidateRegistry();
+  registry.registerField({
+    kind: "field",
+    candidateId: "field",
+    sectionId: "section",
+    candidate: {
+      candidateId: "field",
+      element: "input",
+      control: "text",
+      displayName: "점수",
+      visibility: "hidden",
+    },
+    elements: [input],
+    optionElements: new Map(),
+    signature: createStructuralSignature([input]),
+  });
+  expect(resultFieldState(registry, document, "field")).toMatchObject({
+    visible: false,
+    value: "900",
+  });
+});

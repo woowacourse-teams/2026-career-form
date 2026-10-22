@@ -2,8 +2,9 @@ import { stagedAddressReceipt } from "../policy/staged-address-receipt";
 import { componentEmploymentStatusValue } from "../policy/components/write";
 import { customFieldValue } from "../dom/custom-field-value";
 import {
-  isVisibleEnabledElement,
-  primaryWriteElement,
+  hasVisibleWriteElement,
+  isVisibleWriteElement,
+  readbackWriteElement,
 } from "../dom/write-target";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 
@@ -16,16 +17,17 @@ export function resultFieldState(
   if (!lookup || (lookup.status !== "ready" && lookup.status !== "blocked"))
     return undefined;
   const handle = lookup.handle;
-  const target = primaryWriteElement(handle);
+  const visible = hasVisibleWriteElement(handle);
+  const target = readbackWriteElement(handle);
   const element = target ?? handle.customElements?.[0];
   if (!element) return { visible: false, value: "", handle };
-  const style = target
+  const style = visible
     ? undefined
     : pageDocument.defaultView?.getComputedStyle(element);
   const address = stagedAddressReceipt(handle);
   const hidden =
     !address?.visible &&
-    (target
+    (visible
       ? false
       : handle.candidate.visibility === "hidden" ||
         (lookup.status === "blocked" && lookup.reason === "hidden") ||
@@ -34,8 +36,9 @@ export function resultFieldState(
   let value =
     element instanceof HTMLSelectElement
       ? (element.selectedOptions[0]?.textContent ?? "")
-      : target && "value" in target
-        ? target.value
+      : element instanceof HTMLInputElement ||
+          element instanceof HTMLTextAreaElement
+        ? element.value
         : "";
   if (
     handle.candidate.control === "radio" ||
@@ -46,7 +49,7 @@ export function resultFieldState(
       return (
         control instanceof HTMLInputElement &&
         control.checked &&
-        (!target || isVisibleEnabledElement(control))
+        (!visible || isVisibleWriteElement(control))
       );
     });
     value = selected?.map((option) => option.displayName).join(", ") ?? "";

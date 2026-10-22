@@ -50,11 +50,39 @@ export function isWritableWriteElement(element: HTMLElement): boolean {
 
 /**
  * Pick the control the user can actually see and edit. A grouped handle may
- * contain hidden duplicates; writes and their readback must use this target.
+ * contain hidden duplicates; writes must use this target.
  */
 export function primaryWriteElement(
   handle: FieldCandidateHandle,
 ): NativeFieldElement | undefined {
   const visibleEnabled = handle.elements.filter(isVisibleEnabledElement);
   return visibleEnabled.find(isWritableWriteElement) ?? visibleEnabled[0];
+}
+
+/** Whether the group owns any visible native control at all. */
+export function hasVisibleWriteElement(handle: FieldCandidateHandle): boolean {
+  return handle.elements.some(isVisibleWriteElement);
+}
+
+/**
+ * Pick the control used to read back a write. This is deliberately different
+ * from the write target: a control that became disabled or readonly after a
+ * successful write must still be read. Prefer the element actually written,
+ * then the first visible control regardless of disabled/readOnly, and only
+ * when the group has no visible control at all fall back to the pre-stage-A
+ * first element (static adapters rely on that for hidden-only widgets).
+ */
+export function readbackWriteElement(
+  handle: FieldCandidateHandle,
+  written?: Element,
+): NativeFieldElement | undefined {
+  if (
+    (written instanceof HTMLInputElement ||
+      written instanceof HTMLSelectElement ||
+      written instanceof HTMLTextAreaElement) &&
+    handle.elements.includes(written)
+  )
+    return written;
+  const visible = handle.elements.filter(isVisibleWriteElement);
+  return visible[0] ?? handle.elements[0];
 }

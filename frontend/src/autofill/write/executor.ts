@@ -16,7 +16,7 @@ import { runtimeRules } from "../policy/runtime-rules";
 import { startLocalTiming } from "../debug/local-timing";
 import { executionPolicy } from "../workflow/execution-policy";
 import { getWriteAdapter } from "../adapters/write";
-import { primaryWriteElement } from "../dom/write-target";
+import { readbackWriteElement } from "../dom/write-target";
 import { resultFieldState } from "../workflow/result-field-state";
 import { acquireDocumentRun } from "../interaction/document-run";
 import type { InteractionDecisionProvider } from "../api/interaction-types";
@@ -89,7 +89,7 @@ function settledAdapterResult(
       ? lookup.handle
       : undefined;
   const element =
-    (handle && primaryWriteElement(handle)) ??
+    (handle && readbackWriteElement(handle)) ??
     handle?.elements[0] ??
     handle?.customElements?.[0];
   if (!handle || !element?.isConnected || handle.isCurrentContext?.() === false)

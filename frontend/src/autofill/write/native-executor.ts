@@ -2,6 +2,7 @@ import { isSplitEmailTarget, SPLIT_EMAIL_REASON } from "../dom/split-email";
 import {
   isVisibleWriteElement,
   primaryWriteElement,
+  readbackWriteElement,
 } from "../dom/write-target";
 import {
   skipped,
@@ -373,7 +374,7 @@ function retainedComboboxValue(
   handle: FieldCandidateHandle,
   value: string,
 ): boolean {
-  const input = primaryWriteElement(handle);
+  const input = readbackWriteElement(handle);
   if (!(input instanceof HTMLInputElement) || input.value !== value)
     return false;
   const listbox = comboboxParts(input);
@@ -390,7 +391,7 @@ function nativeSelectOption(
   value: string,
   match?: ApprovedCatalogMatch,
 ): HTMLOptionElement | undefined {
-  const select = primaryWriteElement(handle),
+  const select = readbackWriteElement(handle),
     option = profileOption(handle, value, match);
   if (
     !(select instanceof HTMLSelectElement) ||
@@ -462,11 +463,11 @@ function hasGenericConflict(
   const value = item.profileValue!,
     command = item.analysis!.writePlan!.command;
   if (command === "SET_TEXT") {
-    const current = primaryWriteElement(handle)?.value ?? "";
+    const current = readbackWriteElement(handle)?.value ?? "";
     return current !== "" && current !== value && current !== item.currentValue;
   }
   if (command === "SELECT_OPTION") {
-    const select = primaryWriteElement(handle);
+    const select = readbackWriteElement(handle);
     const current =
       select instanceof HTMLSelectElement
         ? select.selectedOptions[0]?.value
@@ -590,7 +591,7 @@ function catalogChoiceIsCurrent(
   const approval = catalogApprovalForItem(item);
   if (approval.status === "invalid") return false;
   if (approval.status === "legacy") return true;
-  const select = primaryWriteElement(handle);
+  const select = readbackWriteElement(handle);
   if (select instanceof HTMLSelectElement) {
     const matches = [...select.options].filter(
       (option) =>
@@ -637,7 +638,7 @@ function rememberNativeCatalogChoice(
 ): boolean {
   const approval = catalogApprovalForItem(item);
   if (approval.status !== "selected") return approval.status !== "invalid";
-  const element = primaryWriteElement(handle);
+  const element = readbackWriteElement(handle);
   const option =
     element instanceof HTMLSelectElement
       ? element.selectedOptions[0]
@@ -867,7 +868,7 @@ function retainedGenericValue(
     value = item.profileValue;
   if (!command || !value) return false;
   const approval = catalogApprovalForItem(item);
-  const element = handle.buttonDropdown?.trigger ?? primaryWriteElement(handle);
+  const element = handle.buttonDropdown?.trigger ?? readbackWriteElement(handle);
   if (
     approval.status === "selected" &&
     element &&
@@ -889,14 +890,14 @@ function retainedGenericValue(
       dropdownValue(handle.buttonDropdown) === value
     );
   if (command === "SET_TEXT") {
-    const input = primaryWriteElement(handle);
+    const input = readbackWriteElement(handle);
     return input instanceof HTMLInputElement &&
       input.getAttribute("role") === "combobox"
       ? retainedComboboxValue(handle, value)
       : input?.value === value;
   }
   if (command === "SELECT_OPTION") {
-    const select = primaryWriteElement(handle);
+    const select = readbackWriteElement(handle);
     return (
       select instanceof HTMLSelectElement &&
       nativeSelectOption(handle, value) === select.selectedOptions[0]

@@ -22,8 +22,9 @@ import {
 } from "../policy/components/gpa";
 import { customFieldValue } from "../dom/custom-field-value";
 import {
-  isVisibleEnabledElement,
-  primaryWriteElement,
+  hasVisibleWriteElement,
+  isVisibleWriteElement,
+  readbackWriteElement,
 } from "../dom/write-target";
 import { normalizeDisplayName } from "../write/display-name";
 import {
@@ -308,17 +309,18 @@ function currentValue(handle: FieldCandidateHandle): string {
     handle.candidate.control === "radio" ||
     handle.candidate.control === "checkbox"
   ) {
+    const visible = hasVisibleWriteElement(handle);
     return handle.elements
       .filter(
         (element): element is HTMLInputElement =>
           element instanceof HTMLInputElement &&
           element.checked &&
-          isVisibleEnabledElement(element),
+          (!visible || isVisibleWriteElement(element)),
       )
       .map((element) => element.value)
       .join(", ");
   }
-  const select = primaryWriteElement(handle);
+  const select = readbackWriteElement(handle);
   if (select instanceof HTMLSelectElement) {
     const selected = select.selectedOptions[0];
     return selected?.value ? (selected.textContent ?? "") : "";
