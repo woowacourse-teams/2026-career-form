@@ -1,6 +1,7 @@
 import { fixturePolicy } from "../../../test/fixtures/execution-policy";
 import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
-usePolicyFixture("greeting");
+// Only fail-closed paths run here: cap the live wait budgets (wait-cap.ts).
+usePolicyFixture("greeting", { capWaits: 300 });
 import { afterEach, expect, it } from "vitest";
 import { CATALOG_VERSION } from "../../../profile/catalog";
 import {
@@ -95,7 +96,7 @@ async function run(
     profile,
     registry,
     analysis: {
-executionPolicy: fixturePolicy("greeting"),
+      executionPolicy: fixturePolicy("greeting", { capWaits: 300 }),
       snapshotId: "snapshot",
       mode: "ADAPTER",
       analysisStatus: "COMPLETE",

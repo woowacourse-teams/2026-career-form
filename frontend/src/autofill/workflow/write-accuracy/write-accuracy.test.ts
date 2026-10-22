@@ -1,6 +1,11 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { afterEach, beforeAll, expect, it } from "vitest";
+import { afterEach, beforeAll, expect, it, vi } from "vitest";
+
+// Each snapshot runs the whole generic write path with its real settle
+// waits; hosted CI runners took 24 s for the Greeting e-mail snapshot against
+// the 15 s default, so this file gets the site-fixture budget (CF-304).
+vi.setConfig({ testTimeout: 120_000 });
 import { installExecutionPolicy } from "../execution-policy";
 import {
   loadSnapshot,
