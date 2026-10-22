@@ -4,6 +4,22 @@ import {
   debugStageCounts,
 } from "../debug/structural-diagnostics";
 import { prepareNativeMajorsAfterSchool } from "./native-major-preparation";
+
+/** Fields the collected request carries, across sections and their items. */
+function countRequestFields(request: {
+  sections: { fields: unknown[]; items?: { fields: unknown[] }[] }[];
+}): number {
+  return request.sections.reduce(
+    (count, section) =>
+      count +
+      section.fields.length +
+      (section.items ?? []).reduce(
+        (total, item) => total + item.fields.length,
+        0,
+      ),
+    0,
+  );
+}
 import { reportNativeMajorsOfFailedSchools } from "./native-major-unavailable";
 import { hplaceUnverifiedRows } from "../adapters/hplace/unverified-structure";
 import {
@@ -343,11 +359,33 @@ export function createAnalyzeFields({
         cache,
       );
     }
+    // A step without an analyzable field (Hplace MRS2 step 4 holds only
+    // cover-letter textareas no section contract owns) has nothing to map.
+    // The server rejects an empty request, so end with an empty plan instead.
+    const emptyRequest =
+      !genericResult && countRequestFields(snapshot.request) === 0;
+    if (emptyRequest)
+      debugRuntimeSkip(
+        "fields-analysis",
+        "section-missing",
+        "no-analyzable-field",
+        "collect",
+      );
     let analysis =
       genericResult?.analysis ??
-      (await (analyzeFieldsSnapshot
-        ? analyzeFieldsSnapshot(snapshot)
-        : apiClient.analyzeFields(snapshot.request)));
+      (emptyRequest
+        ? {
+            snapshotId: snapshot.request.snapshotId,
+            mode: "ADAPTER" as const,
+            analysisStatus: "COMPLETE" as const,
+            // The server echoes the installed policy; keep it so the native
+            // policy digest check below sees the same policy.
+            executionPolicy: executionPolicy(pageDocument),
+            fields: [],
+          }
+        : await (analyzeFieldsSnapshot
+            ? analyzeFieldsSnapshot(snapshot)
+            : apiClient.analyzeFields(snapshot.request)));
     if (genericResult && genericStructure)
       analysis = applyGenericStructureAnalysis(
         analysis,
@@ -417,16 +455,7 @@ export function createAnalyzeFields({
     onAnalysis?.({
       mode: analysis.mode,
       durationMs: Math.round(performance.now() - analysisStarted),
-      fieldCount: snapshot.request.sections.reduce(
-        (count, section) =>
-          count +
-          section.fields.length +
-          (section.items ?? []).reduce(
-            (total, item) => total + item.fields.length,
-            0,
-          ),
-        0,
-      ),
+      fieldCount: countRequestFields(snapshot.request),
       matchedCount: analysis.fields.filter(
         (field) => field.matchType === "MATCH",
       ).length,

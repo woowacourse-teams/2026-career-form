@@ -27,9 +27,9 @@ class StartupPolicySeederTest {
         }
         var documents = ArgumentCaptor.forClass(Document.class);
         var order = inOrder(mongo);
-        order.verify(mongo, times(3)).insert(documents.capture(), eq("form_analysis_policies"));
+        order.verify(mongo, times(5)).insert(documents.capture(), eq("form_analysis_policies"));
         assertThat(documents.getAllValues()).extracting(d -> d.get("version", Number.class).longValue())
-            .containsExactly(37L, 24L, 17L);
+            .containsExactly(37L, 38L, 24L, 17L, 18L);
         order.verify(mongo).insert(any(Document.class), eq("execution_provider_policies"));
         order.verify(mongo, times(3)).insert(any(Document.class), eq("form_analysis_companies"));
     }
@@ -40,7 +40,7 @@ class StartupPolicySeederTest {
         when(mongo.exists(any(Query.class), anyString())).thenReturn(true);
         new StartupPolicySeeder(mongo).run(null);
         verify(mongo, never()).insert(any(Document.class), anyString());
-        verify(mongo, times(7)).exists(any(Query.class), anyString());
+        verify(mongo, times(9)).exists(any(Query.class), anyString());
         verifyNoMoreInteractions(mongo);
     }
 
