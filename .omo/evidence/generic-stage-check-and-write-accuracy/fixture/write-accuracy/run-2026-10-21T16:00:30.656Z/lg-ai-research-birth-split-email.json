@@ -1,0 +1,188 @@
+{
+  "schemaVersion": 1,
+  "snapshot": "lg-ai-research-birth-split-email",
+  "status": "UNREVIEWED",
+  "expectedRoute": "generic",
+  "actualRoute": "generic",
+  "scored": false,
+  "metrics": {
+    "registered": 10,
+    "exercisable": 0,
+    "approved": 0,
+    "attempted": 0,
+    "reportedWritten": 0,
+    "correct": 0,
+    "wrong": 0,
+    "held": 0,
+    "unscored": 10,
+    "reportedSuccessButWrong": 0,
+    "preservedViolated": 0
+  },
+  "byControlKind": {
+    "text": {
+      "registered": 4,
+      "exercisable": 0,
+      "approved": 0,
+      "attempted": 0,
+      "reportedWritten": 0,
+      "correct": 0,
+      "wrong": 0,
+      "held": 0,
+      "unscored": 4,
+      "reportedSuccessButWrong": 0,
+      "preservedViolated": 0
+    },
+    "select": {
+      "registered": 5,
+      "exercisable": 0,
+      "approved": 0,
+      "attempted": 0,
+      "reportedWritten": 0,
+      "correct": 0,
+      "wrong": 0,
+      "held": 0,
+      "unscored": 5,
+      "reportedSuccessButWrong": 0,
+      "preservedViolated": 0
+    },
+    "checkbox": {
+      "registered": 1,
+      "exercisable": 0,
+      "approved": 0,
+      "attempted": 0,
+      "reportedWritten": 0,
+      "correct": 0,
+      "wrong": 0,
+      "held": 0,
+      "unscored": 1,
+      "reportedSuccessButWrong": 0,
+      "preservedViolated": 0
+    }
+  },
+  "fields": [
+    {
+      "ordinal": 0,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 1,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(2) > input:nth-child(2)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 2,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(3) > div:nth-child(2) > select:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "select",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 3,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(4) > div:nth-child(2) > div:nth-child(1) > select:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "select",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 4,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(4) > div:nth-child(2) > div:nth-child(2) > select:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "select",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 5,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(4) > div:nth-child(2) > div:nth-child(3) > select:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "select",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 6,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(5) > div:nth-child(2) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 7,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(5) > div:nth-child(2) > div:nth-child(3) > select:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "select",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 8,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(8) > input:nth-child(2)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 9,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(9) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "checkbox",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    }
+  ],
+  "diagnostics": [
+    "MISSING_TRUTH",
+    "UNSCORED_FIELDS"
+  ]
+}

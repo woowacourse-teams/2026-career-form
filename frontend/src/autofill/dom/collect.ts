@@ -46,7 +46,7 @@ import {
   CandidateRegistry,
   createStructuralSignature,
 } from "./candidate-registry";
-import type { CandidateBlockReason } from "./types";
+import type { CandidateBlockReason, FieldCandidateHandle } from "./types";
 import {
   collectSemanticContext,
   semanticText,
@@ -164,6 +164,13 @@ function repeatableItemGroupId(element: Element): string | undefined {
     ?.replace(/[-_]?item$/i, "")
     .replace(/[^a-z0-9가-힣]/gi, "")
     .toLowerCase();
+}
+
+/** A grouped candidate remains visible while any owned native control is visible. */
+export function isFieldCandidateHidden(handle: FieldCandidateHandle): boolean {
+  const elements =
+    handle.elements.length > 0 ? handle.elements : (handle.customElements ?? []);
+  return elements.every(isHidden);
 }
 
 function isHidden(element: HTMLElement): boolean {

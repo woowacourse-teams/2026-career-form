@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Offline write accuracy truth",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "snapshot", "fields"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "snapshot": { "type": "string", "minLength": 1 },
+    "fields": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ordinal",
+          "structurePath",
+          "profileFieldKey",
+          "rowIndex",
+          "controlKind",
+          "expectedDomState",
+          "exercisable"
+        ],
+        "properties": {
+          "ordinal": { "type": "integer", "minimum": 0 },
+          "structurePath": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^body(?: > [a-z][a-z0-9-]*:nth-child\\([1-9]\\d*\\))*$"
+            }
+          },
+          "profileFieldKey": { "type": ["string", "null"], "minLength": 1 },
+          "rowIndex": { "type": ["integer", "null"], "minimum": 0 },
+          "controlKind": {
+            "enum": [
+              "text",
+              "select",
+              "radio",
+              "checkbox",
+              "textarea",
+              "button",
+              "custom"
+            ]
+          },
+          "expectedDomState": {
+            "type": "object",
+            "additionalProperties": false,
+            "minProperties": 1,
+            "maxProperties": 1,
+            "properties": {
+              "value": { "type": "string" },
+              "checkedValues": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "text": { "type": "string" }
+            }
+          },
+          "exercisable": { "type": "boolean" },
+          "exercisableReason": { "type": "string", "minLength": 1 },
+          "preserve": { "const": true },
+          "writeCommand": {
+            "enum": [
+              "SET_TEXT",
+              "SELECT_OPTION",
+              "CHECK_RADIO",
+              "CHECK_CHECKBOX",
+              "SELECT_BUTTON_OPTION",
+              "SEARCH_SELECTION",
+              "SELECT_DATE"
+            ]
+          },
+          "binding": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["type", "part"],
+                "properties": {
+                  "type": { "const": "DATE_PART" },
+                  "part": { "enum": ["YEAR", "MONTH", "DAY"] }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["type", "recipe"],
+                "properties": {
+                  "type": { "const": "DERIVED" },
+                  "recipe": {
+                    "enum": [
+                      "KOREAN_FULL_NAME",
+                      "HANJA_FULL_NAME",
+                      "ENGLISH_FULL_NAME_GIVEN_FIRST",
+                      "ENGLISH_FULL_NAME_FAMILY_FIRST"
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "exercisable": { "const": false } } },
+            "then": { "required": ["exercisableReason"] }
+          },
+          {
+            "if": {
+              "properties": { "profileFieldKey": { "type": "null" } },
+              "not": { "required": ["binding"] }
+            },
+            "then": { "required": ["preserve"] }
+          },
+          {
+            "if": { "required": ["preserve"] },
+            "then": { "properties": { "exercisable": { "const": false } } }
+          }
+        ]
+      }
+    }
+  }
+}

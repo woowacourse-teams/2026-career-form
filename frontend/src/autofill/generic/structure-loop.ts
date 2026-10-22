@@ -15,6 +15,7 @@ import type {
 import {
   collectFieldsSnapshot,
   collectPreparationSnapshot,
+  isFieldCandidateHidden,
   type PreparationCollectedSnapshot,
 } from "../dom/collect";
 import {
@@ -1113,8 +1114,20 @@ export async function runGenericStructureLoop(
           profile,
           createGenericAnalysisCache(),
         );
+        const visibleIds = new Set(
+          row.fields
+            .filter(({ candidate }) => {
+              const lookup = rowSnapshot.registry.lookupField(
+                candidate.candidateId,
+              );
+              return (
+                "handle" in lookup && !isFieldCandidateHidden(lookup.handle)
+              );
+            })
+            .map(({ candidate }) => candidate.candidateId),
+        );
         keys = analysis.analysis.fields.flatMap((field) =>
-          ids.has(field.candidateId) &&
+          visibleIds.has(field.candidateId) &&
           field.matchType === "MATCH" &&
           field.valueBinding &&
           "profileFieldKey" in field.valueBinding &&

@@ -1,0 +1,778 @@
+{
+  "schemaVersion": 1,
+  "snapshot": "kakao-greeting-email",
+  "fields": [
+    {
+      "ordinal": 0,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": null,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": "합성지원자"
+      },
+      "exercisable": true,
+      "binding": {
+        "type": "DERIVED",
+        "recipe": "KOREAN_FULL_NAME"
+      }
+    },
+    {
+      "ordinal": 1,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > div:nth-child(3) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": null,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": "Applicant Synthetic"
+      },
+      "exercisable": true,
+      "binding": {
+        "type": "DERIVED",
+        "recipe": "ENGLISH_FULL_NAME_GIVEN_FIRST"
+      }
+    },
+    {
+      "ordinal": 2,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > div:nth-child(7) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "profileFieldKey": "personal.personal.nationality",
+      "rowIndex": null,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": "대한민국"
+      },
+      "exercisable": false,
+      "exercisableReason": "검색형 combobox다. review.md: 선택지 목록이 열릴 때만 그려져 스냅샷에 없어 오프라인에서 올바른 선택을 만들 수 없다"
+    },
+    {
+      "ordinal": 3,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > div:nth-child(8) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "profileFieldKey": "contact.contact.email",
+      "rowIndex": null,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": "synthetic@example.test"
+      },
+      "exercisable": true
+    },
+    {
+      "ordinal": 4,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > div:nth-child(9) > div:nth-child(2) > input:nth-child(2)"
+      ],
+      "profileFieldKey": "contact.contact.phoneNumber",
+      "rowIndex": null,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": "01012345678"
+      },
+      "exercisable": true
+    },
+    {
+      "ordinal": 5,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(3) > div:nth-child(4) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": null,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "합성 프로필에 병역 값이 없어 비워 둬야 한다",
+      "preserve": true
+    },
+    {
+      "ordinal": 6,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(3) > div:nth-child(1) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": null,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "합성 프로필에 장애 값이 없어 비워 둬야 한다",
+      "preserve": true
+    },
+    {
+      "ordinal": 7,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(4) > div:nth-child(3) > div:nth-child(1) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": null,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "합성 프로필에 보훈 값이 없어 비워 둬야 한다",
+      "preserve": true
+    },
+    {
+      "ordinal": 8,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": null,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "합성 프로필 고등학교 항목에 국가 값이 없어 비워 둬야 한다",
+      "preserve": true
+    },
+    {
+      "ordinal": 9,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "profileFieldKey": "education.highSchool.schoolName",
+      "rowIndex": null,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": "합성고등학교"
+      },
+      "exercisable": false,
+      "exercisableReason": "검색형 combobox다. review.md: 선택지 목록이 열릴 때만 그려져 스냅샷에 없어 오프라인에서 올바른 선택을 만들 수 없다"
+    },
+    {
+      "ordinal": 10,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(3) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "합성 프로필 대학교 항목에 국가 값이 없어 비워 둬야 한다",
+      "preserve": true
+    },
+    {
+      "ordinal": 11,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(3) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "profileFieldKey": "education.university.schoolName",
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": "합성대학교"
+      },
+      "exercisable": false,
+      "exercisableReason": "검색형 combobox다. review.md: 선택지 목록이 열릴 때만 그려져 스냅샷에 없어 오프라인에서 올바른 선택을 만들 수 없다"
+    },
+    {
+      "ordinal": 12,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(3) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(10) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "profileFieldKey": "education.university.gpaScore",
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": "3.5"
+      },
+      "exercisable": true
+    },
+    {
+      "ordinal": 13,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(3) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(11) > div:nth-child(1) > div:nth-child(2) > input:nth-child(1)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "합성 프로필에 총이수학점 값이 없어 비워 둬야 한다",
+      "preserve": true
+    },
+    {
+      "ordinal": 14,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(3) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(12) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "profileFieldKey": "education.university.majorName",
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": "컴퓨터공학"
+      },
+      "exercisable": false,
+      "exercisableReason": "검색형 combobox다. review.md: 선택지 목록이 열릴 때만 그려져 스냅샷에 없어 오프라인에서 올바른 선택을 만들 수 없다"
+    },
+    {
+      "ordinal": 15,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(4) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "합성 프로필에 대학원 항목이 없어 비워 둬야 한다",
+      "preserve": true
+    },
+    {
+      "ordinal": 16,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(4) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "합성 프로필에 대학원 항목이 없어 비워 둬야 한다",
+      "preserve": true
+    },
+    {
+      "ordinal": 17,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(4) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(10) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "합성 프로필에 대학원 항목이 없어 비워 둬야 한다",
+      "preserve": true
+    },
+    {
+      "ordinal": 18,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(4) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(11) > div:nth-child(1) > div:nth-child(2) > input:nth-child(1)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "합성 프로필에 대학원 항목이 없어 비워 둬야 한다",
+      "preserve": true
+    },
+    {
+      "ordinal": 19,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(4) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(12) > div:nth-child(1) > div:nth-child(2) > input:nth-child(1)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "합성 프로필에 대학원 항목이 없어 비워 둬야 한다",
+      "preserve": true
+    },
+    {
+      "ordinal": 20,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(4) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(13) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "합성 프로필에 대학원 항목이 없어 비워 둬야 한다",
+      "preserve": true
+    },
+    {
+      "ordinal": 21,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(4) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "profileFieldKey": "careers.career.companyName",
+      "rowIndex": null,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": "합성회사"
+      },
+      "exercisable": false,
+      "exercisableReason": "검색형 combobox다. review.md: 선택지 목록이 열릴 때만 그려져 스냅샷에 없어 오프라인에서 올바른 선택을 만들 수 없다"
+    },
+    {
+      "ordinal": 22,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(4) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > label:nth-child(3) > input:nth-child(1)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": null,
+      "controlKind": "checkbox",
+      "expectedDomState": {
+        "checkedValues": []
+      },
+      "exercisable": false,
+      "exercisableReason": "합성 경력은 퇴사 상태라 재직 중 체크박스는 해제 상태를 유지해야 한다",
+      "preserve": true
+    },
+    {
+      "ordinal": 23,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(4) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(4) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "profileFieldKey": "careers.career.department",
+      "rowIndex": null,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": "개발팀"
+      },
+      "exercisable": true
+    },
+    {
+      "ordinal": 24,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(4) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "profileFieldKey": "careers.career.position",
+      "rowIndex": null,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": "개발자"
+      },
+      "exercisable": true
+    },
+    {
+      "ordinal": 25,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(4) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(6) > div:nth-child(2) > textarea:nth-child(1)"
+      ],
+      "profileFieldKey": "careers.career.responsibilities",
+      "rowIndex": null,
+      "controlKind": "textarea",
+      "expectedDomState": {
+        "value": "합성 프로젝트 개발"
+      },
+      "exercisable": true
+    },
+    {
+      "ordinal": 26,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "profileFieldKey": "languages.languageTest.testName",
+      "rowIndex": null,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": "TOEIC"
+      },
+      "exercisable": false,
+      "exercisableReason": "검색형 combobox다. review.md: 선택지 목록이 열릴 때만 그려져 스냅샷에 없어 오프라인에서 올바른 선택을 만들 수 없다"
+    },
+    {
+      "ordinal": 27,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "profileFieldKey": "languages.languageTest.registrationNo",
+      "rowIndex": null,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": "SYNTHETIC-002"
+      },
+      "exercisable": true
+    },
+    {
+      "ordinal": 28,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > div:nth-child(2) > input:nth-child(1)"
+      ],
+      "profileFieldKey": "languages.languageTest.grade",
+      "rowIndex": null,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": "900"
+      },
+      "exercisable": true
+    },
+    {
+      "ordinal": 29,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > div:nth-child(2) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": null,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "합성 프로필에 어학 만점기준 값이 없어 비워 둬야 한다",
+      "preserve": true
+    },
+    {
+      "ordinal": 30,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > div:nth-child(4) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "profileFieldKey": "certifications.certificate.name",
+      "rowIndex": null,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": "합성자격"
+      },
+      "exercisable": false,
+      "exercisableReason": "검색형 combobox다. review.md: 선택지 목록이 열릴 때만 그려져 스냅샷에 없어 오프라인에서 올바른 선택을 만들 수 없다"
+    },
+    {
+      "ordinal": 31,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > div:nth-child(4) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": null,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "합성 프로필 자격증에 등급 값이 없어 비워 둬야 한다",
+      "preserve": true
+    },
+    {
+      "ordinal": 32,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > div:nth-child(4) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "profileFieldKey": "certifications.certificate.issuer",
+      "rowIndex": null,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": "합성기관"
+      },
+      "exercisable": true
+    },
+    {
+      "ordinal": 33,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > div:nth-child(4) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(4) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "profileFieldKey": "certifications.certificate.registrationNo",
+      "rowIndex": null,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": "SYNTHETIC-001"
+      },
+      "exercisable": true
+    },
+    {
+      "ordinal": 34,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > div:nth-child(4) > div:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": null,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "합성 프로필 자격증은 1건이라 두 번째와 세 번째 자격증 칸은 비워 둬야 한다",
+      "preserve": true
+    },
+    {
+      "ordinal": 35,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > div:nth-child(4) > div:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": null,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "합성 프로필 자격증은 1건이라 두 번째와 세 번째 자격증 칸은 비워 둬야 한다",
+      "preserve": true
+    },
+    {
+      "ordinal": 36,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > div:nth-child(4) > div:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": null,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "합성 프로필 자격증은 1건이라 두 번째와 세 번째 자격증 칸은 비워 둬야 한다",
+      "preserve": true
+    },
+    {
+      "ordinal": 37,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > div:nth-child(4) > div:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(4) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": null,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "합성 프로필 자격증은 1건이라 두 번째와 세 번째 자격증 칸은 비워 둬야 한다",
+      "preserve": true
+    },
+    {
+      "ordinal": 38,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > div:nth-child(4) > div:nth-child(4) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": null,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "합성 프로필 자격증은 1건이라 두 번째와 세 번째 자격증 칸은 비워 둬야 한다",
+      "preserve": true
+    },
+    {
+      "ordinal": 39,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > div:nth-child(4) > div:nth-child(4) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": null,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "합성 프로필 자격증은 1건이라 두 번째와 세 번째 자격증 칸은 비워 둬야 한다",
+      "preserve": true
+    },
+    {
+      "ordinal": 40,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > div:nth-child(4) > div:nth-child(4) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": null,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "합성 프로필 자격증은 1건이라 두 번째와 세 번째 자격증 칸은 비워 둬야 한다",
+      "preserve": true
+    },
+    {
+      "ordinal": 41,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > div:nth-child(4) > div:nth-child(4) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(4) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": null,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "합성 프로필 자격증은 1건이라 두 번째와 세 번째 자격증 칸은 비워 둬야 한다",
+      "preserve": true
+    },
+    {
+      "ordinal": 42,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(7) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > textarea:nth-child(1)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": null,
+      "controlKind": "textarea",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "자기소개 문항으로 프로필 값이 없다",
+      "preserve": true
+    },
+    {
+      "ordinal": 43,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(7) > div:nth-child(1) > div:nth-child(3) > div:nth-child(2) > textarea:nth-child(1)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": null,
+      "controlKind": "textarea",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "자기소개 문항으로 프로필 값이 없다",
+      "preserve": true
+    },
+    {
+      "ordinal": 44,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(8) > div:nth-child(1) > div:nth-child(3) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": null,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "추천인 정보는 프로필 값이 없다",
+      "preserve": true
+    },
+    {
+      "ordinal": 45,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(8) > div:nth-child(1) > div:nth-child(3) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": null,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "추천인 정보는 프로필 값이 없다",
+      "preserve": true
+    },
+    {
+      "ordinal": 46,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(8) > div:nth-child(1) > div:nth-child(3) > div:nth-child(2) > div:nth-child(3) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": null,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "추천인 정보는 프로필 값이 없다",
+      "preserve": true
+    },
+    {
+      "ordinal": 47,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(8) > div:nth-child(1) > div:nth-child(3) > div:nth-child(2) > div:nth-child(4) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": null,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "추천인 정보는 프로필 값이 없다",
+      "preserve": true
+    },
+    {
+      "ordinal": 48,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(9) > div:nth-child(1) > div:nth-child(2) > label:nth-child(1) > input:nth-child(1)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": null,
+      "controlKind": "checkbox",
+      "expectedDomState": {
+        "checkedValues": []
+      },
+      "exercisable": false,
+      "exercisableReason": "개인정보 동의는 사용자가 직접 해야 한다",
+      "preserve": true
+    },
+    {
+      "ordinal": 49,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(9) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > label:nth-child(1) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": null,
+      "controlKind": "checkbox",
+      "expectedDomState": {
+        "checkedValues": []
+      },
+      "exercisable": false,
+      "exercisableReason": "개인정보 동의는 사용자가 직접 해야 한다",
+      "preserve": true
+    },
+    {
+      "ordinal": 50,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(9) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > label:nth-child(1) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": null,
+      "controlKind": "checkbox",
+      "expectedDomState": {
+        "checkedValues": []
+      },
+      "exercisable": false,
+      "exercisableReason": "개인정보 동의는 사용자가 직접 해야 한다",
+      "preserve": true
+    },
+    {
+      "ordinal": 51,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(9) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > label:nth-child(1) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": null,
+      "controlKind": "checkbox",
+      "expectedDomState": {
+        "checkedValues": []
+      },
+      "exercisable": false,
+      "exercisableReason": "개인정보 동의는 사용자가 직접 해야 한다",
+      "preserve": true
+    },
+    {
+      "ordinal": 52,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(9) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(4) > label:nth-child(1) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": null,
+      "controlKind": "checkbox",
+      "expectedDomState": {
+        "checkedValues": []
+      },
+      "exercisable": false,
+      "exercisableReason": "개인정보 동의는 사용자가 직접 해야 한다",
+      "preserve": true
+    }
+  ]
+}

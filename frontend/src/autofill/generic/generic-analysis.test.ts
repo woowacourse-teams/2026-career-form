@@ -193,6 +193,33 @@ const WRITE_PLAN_REASON = {
 } as const;
 
 describe("generic section analysis", () => {
+  it("keeps hidden English name-pair evidence available to name grading", async () => {
+    document.body.innerHTML = `<section><h2>인적사항</h2>
+      <label>영문 이름<input name="given"></label>
+      <div hidden><label>영문 성<input name="family"></label></div></section>`;
+    const profile = fullProfile();
+    profile.personal.englishGivenName = "Synthetic";
+    profile.personal.englishFamilyName = "Applicant";
+    const { byName } = await run(
+      {
+        field: (candidate) => ({
+          profileFieldKey:
+            candidate.domName === "given"
+              ? "personal.personal.englishGivenName"
+              : "personal.personal.englishFamilyName",
+          confidence: 1,
+          categoryConfirmed: true,
+          autofillPolicy: "ALLOWED",
+          interactionStatus: "READY",
+          writePlan: { command: "SET_TEXT" },
+        }),
+      },
+      profile,
+    );
+    expect(byName("given").grade).toEqual({ grade: "AUTO" });
+    expect(byName("family").grade).toEqual({ grade: "AUTO" });
+  });
+
   it.each([
     "BLOCKED",
     "MANUAL_REVEAL_REQUIRED",

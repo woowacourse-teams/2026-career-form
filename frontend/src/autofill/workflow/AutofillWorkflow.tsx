@@ -27,6 +27,7 @@ import {
   preparationExceptionTitle,
 } from "./preparation-options";
 import { useWriteProgress } from "./use-write-progress";
+import { useReviewDiagnostics } from "./use-review-diagnostics";
 import { useOperatedFields } from "./use-operated-fields";
 import { resultFieldOptions, resultFieldState } from "./result-field-state";
 import {
@@ -284,6 +285,14 @@ function PolicyReadyWorkflow({
     useState<
       CollectedSnapshot<ReturnType<typeof collectFieldsSnapshot>["request"]>
     >();
+  const onGenericGrades = useReviewDiagnostics(
+    stage,
+    companyId,
+    reviewItems,
+    fieldsSnapshot,
+    pageDocument,
+    profile,
+  );
   const [resultRegistry, setResultRegistry] = useState<CandidateRegistry>();
   const [partial, setPartial] = useState(false);
   const [warnings, setWarnings] = useState<string[]>([]);
@@ -315,6 +324,7 @@ function PolicyReadyWorkflow({
       onAddressOperation: (element) =>
         recordOperation(element, "연락처와 주소"),
       onAnalysis: setAnalysisSummary,
+      onGenericGrades,
       adapter: getWorkflowAdapter(pageDocument),
       addressRun,
       addressSearch,

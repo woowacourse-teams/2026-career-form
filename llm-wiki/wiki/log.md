@@ -762,6 +762,20 @@
 - [Hplace 어댑터](topics/adapter-hplace.md), [Greeting 어댑터](topics/adapter-greeting.md), [현대 어댑터](topics/adapter-hyundai.md), [실사이트 평가](topics/live-autofill-evaluation.md)의 Current와 History를 갱신하고 MRS2 저장·조회·무저장 이동 요청, Greeting 검색 서버 액션, 현대 Map·Set 재정의, 새로고침 원복과 Playwright 대화상자 자동 처리를 반영했다. 어댑터 동작과 필드 현황은 바꾸지 않았다.
 - 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.
 
+## [2026-10-21] ingest | CF-312 숨은 다른 단계 control의 학력 행 단계 검사 제외
+
+- Approval-Digest: a3e5bc3e0b8bda65a9fa8cb88dd5be5b92e6e6a2e3634c372b6905d203446686
+- Source-Revision: cc49b605ada7dddc16ae21ba5ffc599071daad72
+- 승인된 후보 3개를 [CF-312 bundle](../raw/issues/CF-312/manifest.md)에 기록하고 CF-307 구조 반복 실행 후속 조사 문서를 대체했다.
+- [범용 구조 반복 실행](topics/generic-structure-loop.md)의 Current와 History를 갱신하고 미확정 가설 절을 확인된 경계로 바꿨다.
+
+## [2026-10-21] ingest | CF-313 오프라인 기입 정확도 측정과 달력 최종 확인
+
+- Approval-Digest: 7c2efdcde535f2e513f787da9c444f7014e643c42b7700b2296460049497292f
+- Source-Revision: cdd1bd0f10765a040096ce32f143cca9f552a6f2
+- 승인된 후보 C1~C3과 실측 기준선을 [CF-313 bundle](../raw/issues/CF-313/manifest.md)에 기록했다.
+- [오프라인 기입 정확도 측정](topics/offline-write-accuracy.md)을 새로 만들고 [범용 연월 달력 선택](topics/generic-calendar-selection.md)의 Current와 History를 갱신했다.
+
 ## [2026-10-22] ingest | CF-310 실사이트 QA 측정에서 확인한 SK 행 구조, 에이치닷 4단계·패널, 하네스 한계
 
 - Approval-Digest: 6e367ec4018bfd976fab32c98e94b94d35cfc59d33de0747f61917e65736919f
