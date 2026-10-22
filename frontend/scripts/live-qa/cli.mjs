@@ -217,6 +217,12 @@ const commands = {
       .catch(() => {});
     print(`opened ${brief(page.url())}`);
   },
+  async close(context) {
+    const page = await pageAt(context, positional[0]);
+    const url = brief(page.url());
+    await page.close();
+    print(`closed ${url}`);
+  },
   async goto(context) {
     const page = await pageAt(context, positional[0]);
     await page
@@ -540,7 +546,7 @@ async function main() {
   if (offline[cmd]) return offline[cmd]();
   if (!commands[cmd]) {
     print(
-      "commands: start [--build dir] [--profile file] | keepalive [<tab>] [--every min] [--threshold min] [--force] | tabs | open <url> | goto <tab> <url> | text <tab> | stepinfo <tab> | step <tab> <1-4> [--force] | saved [<tab>] | census <tab> --label L | run <tab> --label L [--no-clear] [--no-approve] [--timeout s] | discard <tab> | grade-input <labels> | join <labels> | report <labels> --verdicts a.json[,b.json] [--uncreated f] [--names f] | workflow-script <pregrade|verify>\n<tab> = url-substring or 'url-substring|page text'",
+      "commands: start [--build dir] [--profile file] | keepalive [<tab>] [--every min] [--threshold min] [--force] | tabs | open <url> | close <tab> | goto <tab> <url> | text <tab> | stepinfo <tab> | step <tab> <1-4> [--force] | saved [<tab>] | census <tab> --label L | run <tab> --label L [--no-clear] [--no-approve] [--timeout s] | discard <tab> | grade-input <labels> | join <labels> | report <labels> --verdicts a.json[,b.json] [--uncreated f] [--names f] | workflow-script <pregrade|verify>\n<tab> = url-substring or 'url-substring|page text'",
     );
     process.exitCode = cmd ? 1 : 0;
     return;
