@@ -390,13 +390,22 @@ export async function executeApprovedSearchWrites({
     ? createInteractionDecisionSession(interactionDecisionProvider)
     : undefined;
   let searchCount = 0;
-  registry.captureReplacementState();
   const approvedBindings = new Map(
     items.map((item) => [item, approvedBinding(item)]),
   );
   const genericItems = new Set(
-    items.filter((item) => item.analysis?.mappingStatus === "LLM_SUGGESTED"),
+    items.filter(
+      (item) =>
+        item.analysis?.mappingStatus === "LLM_SUGGESTED" &&
+        !registry.isLegacyField(item.candidateId),
+    ),
   );
+  if (
+    items.some((item) =>
+      approvedCandidateIds.has(item.candidateId) && genericItems.has(item),
+    )
+  )
+    registry.captureReplacementState();
 
   for (const [index, item] of items.entries()) {
     if (heldIndexes.has(index)) continue;
@@ -501,7 +510,7 @@ export async function executeApprovedSearchWrites({
           // Only a proven identity-preserving render can relax this stop.
           // Changed values, unknown effects and open surfaces keep the hold.
           if (
-            item.analysis?.mappingStatus === "LLM_SUGGESTED" &&
+            genericItems.has(item) &&
             approvedBindings.get(item) === approvedBinding(item) &&
             result.status === "skipped" &&
             (result.code === "STALE_TARGET" ||

@@ -95,6 +95,10 @@ export class CandidateRegistry {
     }
   >();
 
+  isLegacyField(candidateId: string): boolean {
+    return this.fields.get(candidateId)?.handle.owner === "legacy";
+  }
+
   /** Called once before the batch, while collected row callbacks are valid. */
   captureReplacementState(): void {
     this.replacementState.clear();
