@@ -168,3 +168,64 @@ it.each(["written", "unchanged", "failed"] as const)(
       expect(result.pending[0].failureCode).toBe("SEARCH_UNCONFIRMED");
   },
 );
+
+it("does not complete a field whose only filled control is a hidden duplicate", () => {
+  document.body.innerHTML = `<fieldset>
+    <label>Gender<input type="radio" name="gender" value="F" />여성</label>
+    <label>Gender<input type="radio" name="gender" value="M" />남성</label>
+    <div hidden><label>Gender<input type="radio" name="gender" value="M" />남성</label></div>
+  </fieldset>`;
+  const [visibleFemale, visibleMale, hiddenMale] = Array.from(
+    document.querySelectorAll<HTMLInputElement>("input"),
+  );
+  hiddenMale.checked = true;
+  const registry = new CandidateRegistry();
+  registry.registerField({
+    kind: "field",
+    candidateId: "field",
+    sectionId: "section",
+    candidate: {
+      candidateId: "field",
+      element: "input",
+      control: "radio",
+      displayName: "Gender",
+      visibility: "visible",
+      options: [
+        { optionId: "female", displayName: "여성" },
+        { optionId: "male", displayName: "남성" },
+        { optionId: "hidden-male", displayName: "남성" },
+      ],
+    },
+    elements: [visibleFemale, visibleMale, hiddenMale],
+    optionElements: new Map([
+      ["female", visibleFemale],
+      ["male", visibleMale],
+      ["hidden-male", hiddenMale],
+    ]),
+    signature: createStructuralSignature([
+      visibleFemale,
+      visibleMale,
+      hiddenMale,
+    ]),
+  });
+  const item: ReviewPlanItem = {
+    candidateId: "field",
+    fieldLabel: "Gender",
+    currentValue: "",
+    profileValue: "남성",
+    previewValue: "남성",
+    status: "available",
+    selected: true,
+    disabled: false,
+    revealed: true,
+    reason: "",
+  };
+  const result = buildResultModel({
+    reviewItems: [item],
+    results: [{ candidateId: "field", status: "written" }],
+    fieldStateFor: (id) => resultFieldState(registry, document, id),
+  });
+  expect(result.completed).toHaveLength(0);
+  expect(result.pending).toHaveLength(1);
+  expect(resultFieldState(registry, document, "field")?.value).toBe("");
+});

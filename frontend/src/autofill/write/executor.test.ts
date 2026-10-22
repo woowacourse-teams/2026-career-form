@@ -1741,3 +1741,48 @@ describe("calendar-only document run", () => {
     });
   });
 });
+
+describe("visible write targets", () => {
+  it("writes the visible control and leaves a hidden duplicate first in the handle unchanged", () => {
+    const hidden = document.createElement("input");
+    hidden.name = "schoolName";
+    const visible = document.createElement("input");
+    visible.name = "schoolName";
+    const wrapper = document.createElement("div");
+    wrapper.hidden = true;
+    wrapper.append(hidden);
+    document.body.append(wrapper, visible);
+    const registry = new CandidateRegistry();
+    registry.registerField({
+      kind: "field",
+      candidateId: "field-1",
+      candidate: {
+        candidateId: "field-1",
+        element: "input",
+        control: "text",
+        visibility: "visible",
+      },
+      elements: [hidden, visible],
+      optionElements: new Map(),
+      sectionId: "section-1",
+      signature: createStructuralSignature([hidden, visible]),
+    });
+
+    const result = executeApprovedWrites({
+      items: [reviewItem(textAnalysis, "합성고등학교")],
+      approvedCandidateIds: new Set(["field-1"]),
+      registry,
+    });
+
+    expect(visible.value).toBe("합성고등학교");
+    expect(hidden.value).toBe("");
+    expect(result).toEqual([
+      {
+        candidateId: "field-1",
+        status: "written",
+        outcome: "success",
+        code: "WRITTEN",
+      },
+    ]);
+  });
+});

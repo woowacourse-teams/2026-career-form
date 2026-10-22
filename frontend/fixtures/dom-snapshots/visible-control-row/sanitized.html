@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>fixture</title>
+  </head>
+  <body>
+    <form>
+      <section>
+        <h2>Education</h2>
+        <div data-repeatable-group>
+          <label>School name<input name="schoolName" /></label>
+          <div hidden>
+            <label>School name<input name="schoolName" /></label>
+          </div>
+          <fieldset>
+            <legend>Attendance</legend>
+            <div hidden>
+              <label><input type="radio" name="attendance" value="day" />주간</label>
+            </div>
+            <label><input type="radio" name="attendance" value="day" />주간</label>
+            <label><input type="radio" name="attendance" value="night" />야간</label>
+          </fieldset>
+        </div>
+      </section>
+    </form>
+  </body>
+</html>
