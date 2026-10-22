@@ -151,6 +151,13 @@ class WorkflowContractTest(unittest.TestCase):
         self.assertEqual("", ref_input.get("default", ""))
         steps = workflow["jobs"]["start"]["steps"]
         base = next(step for step in steps if step.get("id") == "base")
+        self.assertLess(
+            steps.index(base),
+            next(
+                index for index, step in enumerate(steps)
+                if "git switch --create" in step.get("run", "")
+            ),
+        )
         self.assertEqual("${{ inputs.ref }}", base["env"]["REF_INPUT"])
         self.assertNotIn("${{", base["run"])
         self.assertIn("merge-base --is-ancestor", base["run"])
@@ -178,8 +185,13 @@ class WorkflowContractTest(unittest.TestCase):
             older = git("rev-parse", "origin/develop~1")
             head = git("rev-parse", "origin/develop")
             side = git("rev-parse", "side")
+            hex_tag = next(
+                name for name in ("abcdef0", "fedcba9") if not head.startswith(name)
+            )
+            git("tag", hex_tag, head)
 
             cases = {
+                hex_tag: (1, None, None),
                 "": (0, head, "develop HEAD"),
                 older[:7]: (0, older, "지정 커밋"),
                 older.upper(): (0, older, "지정 커밋"),
