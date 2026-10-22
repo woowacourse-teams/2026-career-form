@@ -1786,3 +1786,37 @@ describe("visible write targets", () => {
     ]);
   });
 });
+
+describe("framework re-render settle", () => {
+  it("never reports completion when a framework re-render removes the value before settle readback", async () => {
+    const input = document.createElement("input");
+    input.addEventListener("input", () => {
+      setTimeout(() => {
+        input.value = "";
+      }, 0);
+    });
+    const registry = register(input, {
+      candidateId: "field-1",
+      element: "input",
+      control: "text",
+      visibility: "visible",
+    });
+
+    const results = await executeApprovedWritesAfterPageSettles({
+      items: [reviewItem(textAnalysis, "example")],
+      approvedCandidateIds: new Set(["field-1"]),
+      registry,
+    });
+
+    expect(input.value).toBe("");
+    expect(results).toEqual([
+      {
+        candidateId: "field-1",
+        status: "skipped",
+        outcome: "needs-verification",
+        code: "RETAINED_VALUE_UNCONFIRMED",
+        reason: "입력 후 값이 유지되지 않아 확인이 필요합니다.",
+      },
+    ]);
+  });
+});

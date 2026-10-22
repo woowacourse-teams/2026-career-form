@@ -206,6 +206,7 @@ it("covers every snapshot directory with the initial route and review classifica
       "ahnlab-write-resume-form",
       "naver-step2-form",
       "visible-control-row",
+      "framework-rerender",
     ]);
   expect(
     manifest

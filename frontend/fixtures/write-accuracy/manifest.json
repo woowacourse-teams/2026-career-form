@@ -113,6 +113,14 @@
       "documentUrl": "https://write-accuracy.example.test/visible-control-row",
       "expectedRoute": "generic",
       "routeCheck": "ASSERTED"
+    },
+    {
+      "snapshot": "framework-rerender",
+      "status": "RUNNABLE",
+      "reason": "Synthetic framework-controlled form for Issue 324 stage B",
+      "documentUrl": "https://write-accuracy.example.test/framework-rerender",
+      "expectedRoute": "generic",
+      "routeCheck": "ASSERTED"
     }
   ]
 }

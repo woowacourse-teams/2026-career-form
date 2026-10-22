@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>fixture</title>
+  </head>
+  <body>
+    <form id="framework-root">
+      <section>
+        <h2>Education</h2>
+        <label>School name<input name="schoolName" /></label>
+        <label
+          >Attendance<select name="attendanceType">
+            <option value="">Choose</option>
+            <option value="day">주간</option>
+            <option value="night">야간</option>
+          </select></label
+        >
+      </section>
+      <fieldset>
+        <legend>Nationality</legend>
+        <label
+          ><input type="radio" name="nationality" value="대한민국" />대한민국</label
+        ><label><input type="radio" name="nationality" value="OTHER" />OTHER</label>
+      </fieldset>
+    </form>
+    <script data-fixture-runtime>
+      (function (document) {
+        var text = document.querySelector("input[name='schoolName']");
+        var select = document.querySelector("select[name='attendanceType']");
+        var radios = Array.prototype.slice.call(
+          document.querySelectorAll("input[name='nationality']"),
+        );
+        var state = { schoolName: "", attendanceType: "", nationality: "" };
+        var nativeValue = Object.getOwnPropertyDescriptor(
+          HTMLInputElement.prototype,
+          "value",
+        );
+        // React-style value tracker: the instance setter records the tracked
+        // value, while a prototype-setter write bypasses it like React's.
+        var tracker = { value: text.value };
+        Object.defineProperty(text, "value", {
+          configurable: true,
+          get: function () {
+            return nativeValue.get.call(text);
+          },
+          set: function (next) {
+            nativeValue.set.call(text, String(next));
+            tracker.value = String(next);
+          },
+        });
+        var pending = false;
+        function render() {
+          pending = false;
+          text.value = state.schoolName;
+          select.value = state.attendanceType;
+          radios.forEach(function (radio) {
+            radio.checked = radio.value === state.nationality;
+          });
+        }
+        function scheduleRender() {
+          if (pending) return;
+          pending = true;
+          queueMicrotask(render);
+        }
+        // A text editor accepts only the browser InputEvent contract and
+        // ignores unchanged tracker values.
+        document.addEventListener(
+          "input",
+          function (event) {
+            if (event.target === text) {
+              var accepted =
+                event instanceof InputEvent &&
+                typeof event.inputType === "string" &&
+                event.inputType !== "";
+              if (accepted && text.value !== tracker.value) {
+                tracker.value = text.value;
+                state.schoolName = text.value;
+              }
+            }
+            scheduleRender();
+          },
+          true,
+        );
+        document.addEventListener(
+          "change",
+          function (event) {
+            if (event.target === select) state.attendanceType = select.value;
+            scheduleRender();
+          },
+          true,
+        );
+        // React derives radio change from click, not from the change event.
+        document.addEventListener(
+          "click",
+          function (event) {
+            if (radios.indexOf(event.target) === -1) return;
+            state.nationality = event.target.checked ? event.target.value : "";
+            scheduleRender();
+          },
+          true,
+        );
+      })(document);
+    </script>
+  </body>
+</html>

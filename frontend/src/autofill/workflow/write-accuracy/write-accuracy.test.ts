@@ -82,6 +82,31 @@ it("writes only the visible controls in the visible-control-row fixture", () => 
   });
 });
 
+it("keeps written values through the framework re-render", async () => {
+  const entry = measurementEntries.find(
+    ({ snapshot }) => snapshot === "framework-rerender",
+  )!;
+  loadSnapshot(entry);
+  const report = await runWriteAccuracy({
+    document,
+    entry,
+    profile: syntheticProfile(),
+    truth: loadTruth(entry.snapshot),
+  });
+  reports.set(entry.snapshot, report);
+  expect(report.metrics).toMatchObject({
+    registered: 3,
+    exercisable: 3,
+    approved: 3,
+    attempted: 3,
+    reportedWritten: 3,
+    correct: 3,
+    wrong: 0,
+    held: 0,
+    preservedViolated: 0,
+  });
+});
+
 it("aggregate", () => {
   const aggregate = aggregateAccuracy(manifest, reports);
   writeFileSync(
