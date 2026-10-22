@@ -7,7 +7,14 @@ import {
 } from "../dom/candidate-registry";
 import type { ReviewPlanItem } from "../review/review-plan";
 import { executeApprovedWritesAfterPageSettles } from "../write/executor";
-import { beginWriteTrace, emitWriteTrace, traceHold } from "./write-trace";
+import { executeApprovedSearchWrites } from "../write/search-executor";
+import { skipped } from "../write/write-result";
+import {
+  beginWriteTrace,
+  emitWriteTrace,
+  traceHold,
+  traceTrigger,
+} from "./write-trace";
 
 const LABEL = "라벨-X9Q2";
 const VALUE = "값-Z7K4-synthetic";
@@ -69,6 +76,9 @@ const ROW_KEYS = [
   "heldByBatchHalt",
   "haltKind",
   "haltTriggerOrdinal",
+  "interactionReason",
+  "surfaceLeftOpen",
+  "triggerHasProfileEntryId",
 ].sort();
 
 beforeEach(() => {
@@ -135,6 +145,9 @@ describe("write trace rows", () => {
       heldByBatchHalt: false,
       haltKind: "",
       haltTriggerOrdinal: null,
+      interactionReason: "",
+      surfaceLeftOpen: null,
+      triggerHasProfileEntryId: null,
     });
     expect(rows[1]).toMatchObject({
       writeOrdinal: null,
@@ -171,7 +184,7 @@ describe("write trace rows", () => {
     const table = vi.spyOn(console, "table").mockImplementation(() => {});
     beginWriteTrace();
     traceHold("field-2", {
-      kind: "followUp",
+      kind: "search-followup-selected",
       triggerCandidateId: "field-1",
       batch: true,
     });
@@ -194,13 +207,78 @@ describe("write trace rows", () => {
     expect(rows[1]).toMatchObject({
       writeOrdinal: 2,
       heldByBatchHalt: true,
-      haltKind: "followUp",
+      haltKind: "search-followup-selected",
       haltTriggerOrdinal: 1,
       failureCode: "SEARCH_FOLLOWUP_HALTED",
       code: "STALE_TARGET",
     });
     expect(JSON.stringify(table.mock.calls)).not.toContain(OPTION_TEXT);
   });
+
+  it.each([
+    ["SELECT_DATE", "calendar-stop"],
+    ["SET_TEXT", "ordinary-stop"],
+  ] as const)(
+    "records the trigger and halt kind when a %s stop holds later items",
+    async (command, haltKind) => {
+      enableDiagnostics();
+      const items = [
+        { ...item("field-1", command), profileEntryId: "entry-1" },
+        item("field-2"),
+        item("field-3", "SEARCH_SELECTION"),
+      ];
+      const table = vi.spyOn(console, "table").mockImplementation(() => {});
+      beginWriteTrace();
+      const results: Parameters<typeof emitWriteTrace>[4] = [];
+      const registry = new CandidateRegistry();
+      const approved = new Set(items.map((entry) => entry.candidateId));
+
+      await executeApprovedSearchWrites({
+        items,
+        approvedCandidateIds: approved,
+        registry,
+        results: results as never,
+        writeOrdinary: (entry) => {
+          if (command === "SELECT_DATE")
+            traceTrigger(entry.candidateId, {
+              interactionReason: "other_input_changed",
+            });
+          return {
+            result: skipped(
+              entry.candidateId,
+              "needs-verification",
+              "RETAINED_VALUE_UNCONFIRMED",
+              `${VALUE} ${LABEL}`,
+            ),
+            effect: "stop",
+          };
+        },
+      });
+      emitWriteTrace(items, approved, registry, results, results);
+
+      const rows = table.mock.calls[0]![0] as Record<string, unknown>[];
+      expect(rows[0]).toMatchObject({
+        heldByBatchHalt: false,
+        haltKind: "",
+        interactionReason:
+          command === "SELECT_DATE" ? "other_input_changed" : "",
+        surfaceLeftOpen: null,
+        triggerHasProfileEntryId: true,
+      });
+      for (const row of rows.slice(1))
+        expect(row).toMatchObject({
+          heldByBatchHalt: true,
+          haltKind,
+          haltTriggerOrdinal: 1,
+          interactionReason: "",
+          surfaceLeftOpen: null,
+          triggerHasProfileEntryId: null,
+        });
+      const everything = JSON.stringify(table.mock.calls);
+      for (const secret of [LABEL, VALUE, SELECTOR_ID, OPTION_TEXT])
+        expect(everything).not.toContain(secret);
+    },
+  );
 
   it("emits nothing outside a development build", () => {
     enableDiagnostics(false);
