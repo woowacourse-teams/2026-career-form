@@ -63,7 +63,9 @@ type ExecuteApprovedSearchWritesArgs = {
   /**
    * How far an unconfirmed search failure holds later approved items. The
    * default "all" holds the rest of the list; "row" holds only items of the same
-   * profile entry (and items whose entry is unknown), then continues.
+   * profile entry (and items whose entry is unknown), then continues. A trigger
+   * without an entry can instead use unchanged, collected structural groups after
+   * a closed, pre-selection failure.
    */
   followUpHaltScope?: "all" | "row";
   writeOrdinary?: (
@@ -97,6 +99,43 @@ export function bindingKey(item: ReviewPlanItem): string | undefined {
   return item.profileEntryId && key
     ? `${item.profileEntryId}:${key}`
     : undefined;
+}
+
+function captureFieldGroup(registry: CandidateRegistry, candidateId: string) {
+  const lookup = registry.lookupField(candidateId);
+  if (!("handle" in lookup)) return undefined;
+  const handle = lookup.handle;
+  if (
+    !handle.sectionId ||
+    handle.sectionId === "section-root" ||
+    (handle.itemId !== undefined && handle.itemIndex === undefined)
+  )
+    return undefined;
+  const elements = [...handle.elements, ...(handle.customElements ?? [])];
+  if (!elements.length) return undefined;
+  // Singleton handles have no row-context callback. Remember their whole parent
+  // chain too, so a moved control cannot retain its old collected group identity.
+  const parents = elements.flatMap((element) => {
+    const chain: { element: Element; parent: Element | null }[] = [];
+    for (let node: Element | null = element; node; node = node.parentElement)
+      chain.push({ element: node, parent: node.parentElement });
+    return chain;
+  });
+  return {
+    sectionId: handle.sectionId,
+    itemId: handle.itemId,
+    isCurrent: () => {
+      const current = registry.lookupField(candidateId);
+      return (
+        "handle" in current &&
+        current.handle === handle &&
+        parents.every(
+          ({ element, parent }) =>
+            element.isConnected && element.parentElement === parent,
+        )
+      );
+    },
+  };
 }
 
 function skipped(
@@ -519,6 +558,22 @@ export async function executeApprovedSearchWrites({
       item.analysis.writePlan?.command === "SEARCH_SELECTION" &&
       item.analysis.valueBinding?.type === "DIRECT" &&
       item.analysis.valueBinding.profileFieldKey === expectedKey;
+    const structuralGroups =
+      followUpHaltScope === "row" && item.profileEntryId === undefined
+        ? new Map(
+            items
+              .slice(index)
+              .filter(
+                (candidate) =>
+                  approvedCandidateIds.has(candidate.candidateId) &&
+                  isSelectableApproved(candidate),
+              )
+              .map((candidate) => [
+                candidate.candidateId,
+                captureFieldGroup(registry, candidate.candidateId),
+              ]),
+          )
+        : undefined;
     if (!normalized(input.value)) searchCount++;
     const result = await executeReadonlySearch({
       document: input.ownerDocument,
@@ -649,6 +704,25 @@ export async function executeApprovedSearchWrites({
         followUpHaltScope === "row" &&
         item.profileEntryId !== undefined &&
         failedResult?.surfaceLeftOpen !== true;
+      // These failures occur before result activation. Absence of the open flag
+      // is the search transaction's closure contract for these known failures;
+      // unknown effects and selection/retention failures cannot use this path.
+      const structuralOnly =
+        failedResult?.effect === "interaction-started" &&
+        failedResult.surfaceLeftOpen !== true &&
+        [
+          "search_query_not_found",
+          "multiple_search_query_inputs",
+          "search_submit_not_found",
+          "multiple_search_submits",
+          "unverified_search_form",
+          "search_results_not_found",
+          "multiple_matching_results",
+          "result_set_incomplete",
+        ].includes(failedResult.reason) &&
+        structuralGroups !== undefined &&
+        [...structuralGroups.values()].every((group) => group?.isCurrent());
+      const triggerGroup = structuralGroups?.get(item.candidateId);
       traceTrigger(item.candidateId, {
         interactionReason: failedResult?.reason ?? "",
         surfaceLeftOpen: failedResult?.surfaceLeftOpen === true,
@@ -667,11 +741,22 @@ export async function executeApprovedSearchWrites({
           laterEntry !== item.profileEntryId
         )
           continue;
+        const laterGroup = structuralGroups?.get(items[later]!.candidateId);
+        if (
+          structuralOnly &&
+          triggerGroup &&
+          laterGroup &&
+          (laterGroup.sectionId !== triggerGroup.sectionId ||
+            (triggerGroup.itemId !== undefined &&
+              laterGroup.itemId !== undefined &&
+              laterGroup.itemId !== triggerGroup.itemId))
+        )
+          continue;
         heldIndexes.add(later);
         traceHold(items[later]!.candidateId, {
           kind: "search-unconfirmed",
           triggerCandidateId: item.candidateId,
-          batch: !rowOnly,
+          batch: !rowOnly && !structuralOnly,
         });
         results[later] = skipped(
           items[later]!.candidateId,
@@ -681,7 +766,7 @@ export async function executeApprovedSearchWrites({
           "SEARCH_FOLLOWUP_HALTED",
         );
       }
-      if (!rowOnly) return true;
+      if (!rowOnly && !structuralOnly) return true;
     }
   }
   return false;
