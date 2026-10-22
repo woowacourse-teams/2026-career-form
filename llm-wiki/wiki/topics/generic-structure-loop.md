@@ -2,8 +2,8 @@
 
 > Topic: generic-structure-loop
 > Status: Current
-> Current: [CF-307 고등학교 행 단계 검사 후속 조사](../../raw/issues/CF-307/documents/generic-structure-loop.md)
-> History: [CF-260 구조 반복 실행](../../raw/issues/CF-260/documents/generic-structure-loop.md); [CF-307 고등학교 행 단계 검사 후속 조사](../../raw/issues/CF-307/documents/generic-structure-loop.md)
+> Current: [CF-312 숨은 다른 단계 control의 단계 검사 제외](../../raw/issues/CF-312/documents/generic-structure-loop.md)
+> History: [CF-260 구조 반복 실행](../../raw/issues/CF-260/documents/generic-structure-loop.md); [CF-307 고등학교 행 단계 검사 후속 조사](../../raw/issues/CF-307/documents/generic-structure-loop.md); [CF-312 숨은 다른 단계 control의 단계 검사 제외](../../raw/issues/CF-312/documents/generic-structure-loop.md)
 > Updated: 2026-10-21
 
 ## 현재 상태
@@ -14,17 +14,14 @@
 
 학력 행은 `ROW_KIND_OPTION`으로 확정한 로컬 기록으로 단계와 항목 인덱스를 연결한다. 캐시 키도 단계를 구분한다. 보류 매핑은 공유 계획의 중복 검사 전에 제거하고 후속 검토에도 입력 불가 상태를 다시 적용한다.
 
-## 미해결 관측과 후속 가설
+## 숨은 다른 단계 control
 
-CF-307의 기존 NAVER 두 분석 기록에서 고등학교 행 전체가 `STRUCTURE_BLOCKED`였고,
-재매칭 control 하나가 `education.university.minorName`, `MANUAL_REVEAL_REQUIRED`, 명령 없음,
-confidence 약 0.46~0.47이었다. 현재 단계 검사는 writability와 무관하게 MATCH key를 모아
-다른 단계 key가 있으면 `STAGE_KEY_MISMATCH`로 행을 차단한다.
-숨은 대학 분기 control일 가능성과 쓰기 불가·숨은 key 제외 방향은 미검증 가설이며 결정이나
-수정 완료가 아니다. 코드 조건·기존 기록과 검증 한계는 [현재 근거](../../raw/issues/CF-307/documents/generic-structure-loop.md)를 따른다.
+같은 행에 있지만 숨겨진 다른 학력 단계 control은 행을 차단하지 않는다. 단계 검사는 registry handle이 보이는 행 후보의 MATCH key만 모으므로, 숨은 대학 분기 control의 `education.university.*` 매칭이 보이는 고등학교 행을 `STAGE_KEY_MISMATCH`로 만들지 않는다. 보이는 다른 단계 key가 있으면 계속 차단한다.
+
+묶음 후보의 가시성은 후보가 소유한 모든 native control로 판정하며, 모두 숨겨졌을 때만 숨김이다. 더 좁은 판정은 일부만 보이는 후보를 차단 검사에서 빠뜨리는 fail-open이었다. 반복 행 섹션의 등급 sibling도 같은 기준으로 숨은 후보를 제외한다. 조건과 검증 경계는 [CF-312 근거](../../raw/issues/CF-312/documents/generic-structure-loop.md)를 따른다.
 
 ## 변경 이유
 
 회사 유래 혼합 학력 규칙을 범용 준비에서 분리하면서 기본 수집과 정적 정책의 동작을 보존하기 위해서다. 한 행의 잘못된 매핑이 다른 단계의 유효한 행까지 중복 대상으로 보류하지 않게 한다.
 
-CF-260에서는 합성 workflow의 실제 승인 쓰기와 기본 주입 생략 회귀를 검증했다. 당시 실사이트, 설치 확장과 실제 공급자는 검증 범위가 아니었다. CF-307은 기존 실사이트 분석의 미해결 행 차단 관측을 추가하며 실제 지원서 기입 검증으로 확대하지 않는다. [구조 행동 ADR](generic-autonomous-structural-actions.md)은 제안 상태를 유지하며, 이 문서는 구현된 경계와 후속 가설을 구분한다.
+CF-260에서는 합성 workflow의 실제 승인 쓰기와 기본 주입 생략 회귀를 검증했다. 당시 실사이트, 설치 확장과 실제 공급자는 검증 범위가 아니었다. CF-307은 기존 실사이트 분석의 미해결 행 차단 관측을 추가하며 실제 지원서 기입 검증으로 확대하지 않는다. CF-312는 그 관측을 정제 fixture로 재현해 숨은 다른 단계 control을 단계 검사와 행 등급 sibling에서 제외하되, 일부만 보이는 묶음 후보는 계속 검사해 fail-open을 막았다. [구조 행동 ADR](generic-autonomous-structural-actions.md)은 제안 상태를 유지하며, 이 문서는 구현된 경계를 기록한다.
