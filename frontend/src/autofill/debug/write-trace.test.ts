@@ -231,29 +231,58 @@ describe("write trace rows", () => {
       beginWriteTrace();
       const results: Parameters<typeof emitWriteTrace>[4] = [];
       const registry = new CandidateRegistry();
+      for (const entry of items) {
+        const input = document.createElement("input");
+        input.id = entry.candidateId;
+        input.setAttribute("aria-label", LABEL);
+        input.value = entry.currentValue;
+        document.body.append(input);
+        registry.registerField({
+          kind: "field",
+          candidateId: entry.candidateId,
+          candidate: {
+            candidateId: entry.candidateId,
+            element: "input",
+            control: "text",
+            visibility: "visible",
+          },
+          elements: [input],
+          optionElements: new Map(),
+          sectionId: "section-1",
+          signature: createStructuralSignature([input]),
+        });
+      }
       const approved = new Set(items.map((entry) => entry.candidateId));
+      const writeOrdinary = vi.fn((entry: ReviewPlanItem) => {
+        if (command === "SELECT_DATE")
+          traceTrigger(entry.candidateId, {
+            interactionReason: "other_input_changed",
+          });
+        return {
+          result: skipped(
+            entry.candidateId,
+            "needs-verification",
+            "RETAINED_VALUE_UNCONFIRMED",
+            `${VALUE} ${LABEL}`,
+          ),
+          effect: "stop" as const,
+        };
+      });
 
-      await executeApprovedSearchWrites({
+      const halted = await executeApprovedSearchWrites({
         items,
         approvedCandidateIds: approved,
         registry,
         results: results as never,
-        writeOrdinary: (entry) => {
-          if (command === "SELECT_DATE")
-            traceTrigger(entry.candidateId, {
-              interactionReason: "other_input_changed",
-            });
-          return {
-            result: skipped(
-              entry.candidateId,
-              "needs-verification",
-              "RETAINED_VALUE_UNCONFIRMED",
-              `${VALUE} ${LABEL}`,
-            ),
-            effect: "stop",
-          };
-        },
+        writeOrdinary,
       });
+      expect(halted).toBe(true);
+      expect(writeOrdinary).toHaveBeenCalledExactlyOnceWith(items[0]);
+      expect(results.map((result) => result.code)).toEqual([
+        "RETAINED_VALUE_UNCONFIRMED",
+        "STALE_TARGET",
+        "STALE_TARGET",
+      ]);
       emitWriteTrace(items, approved, registry, results, results);
 
       const rows = table.mock.calls[0]![0] as Record<string, unknown>[];
