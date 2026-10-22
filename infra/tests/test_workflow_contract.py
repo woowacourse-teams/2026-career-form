@@ -14,6 +14,13 @@ ROOT = Path(__file__).resolve().parents[2]
 WORKFLOWS = ROOT / ".github" / "workflows"
 
 
+def _isolated_git_env(**extra: str) -> dict[str, str]:
+    # Git 훅 안에서는 GIT_DIR 등이 실제 저장소를 가리키므로 임시 저장소 명령에서 제거한다.
+    env = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
+    env.update(extra)
+    return env
+
+
 class WorkflowContractTest(unittest.TestCase):
     def test_backend_ci_runs_gradle_contract_on_pull_requests(self) -> None:
         workflow = self._workflow("backend-ci.yml")
@@ -180,7 +187,7 @@ class WorkflowContractTest(unittest.TestCase):
             repo = self._release_repository(root)
             git = lambda *args: subprocess.run(
                 ["git", "-C", str(repo), *args],
-                check=True, capture_output=True, text=True,
+                check=True, capture_output=True, text=True, env=_isolated_git_env(),
             ).stdout.strip()
             older = git("rev-parse", "origin/develop~1")
             head = git("rev-parse", "origin/develop")
@@ -207,10 +214,9 @@ class WorkflowContractTest(unittest.TestCase):
                     result = subprocess.run(
                         ["bash", "-c", base["run"]], cwd=repo,
                         check=False, capture_output=True, text=True,
-                        env={
-                            **os.environ, "REF_INPUT": value,
-                            "GITHUB_OUTPUT": str(output),
-                        },
+                        env=_isolated_git_env(
+                            REF_INPUT=value, GITHUB_OUTPUT=str(output),
+                        ),
                     )
                     self.assertEqual(code, result.returncode, result.stderr)
                     outputs = dict(
@@ -438,12 +444,13 @@ class WorkflowContractTest(unittest.TestCase):
             ["git", "init", "--quiet", "--bare", str(origin)],
             ["git", "init", "--quiet", "-b", "develop", str(repo)],
         ]
+        env = _isolated_git_env()
         for command in commands:
-            subprocess.run(command, check=True, capture_output=True)
+            subprocess.run(command, check=True, capture_output=True, env=env)
         git = lambda *args: subprocess.run(
             ["git", "-C", str(repo), "-c", "user.name=test",
              "-c", "user.email=test@example.com", *args],
-            check=True, capture_output=True,
+            check=True, capture_output=True, env=env,
         )
         git("commit", "--quiet", "--allow-empty", "-m", "first")
         git("commit", "--quiet", "--allow-empty", "-m", "second")
