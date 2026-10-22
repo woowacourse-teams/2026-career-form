@@ -5,7 +5,6 @@
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import type { ReviewPlanItem } from "../review/review-plan";
 import type { ApprovedWriteResult } from "../write/write-result";
-import { localDiagnosticsEnabled } from "../generic/review-diagnostics";
 
 export type WriteTraceHold = {
   kind: "followUp" | "surfaceLeftOpen" | "unconfirmedSearch";
@@ -33,12 +32,26 @@ export function traceWrite(
   candidateId: string,
   patch: Omit<WriteTraceEntry, "hold">,
 ): void {
-  if (!localDiagnosticsEnabled()) return;
+  // Inline on purpose: the bundler folds this to a constant, so production
+  // builds drop the whole trace instead of keeping it behind a function call.
+  if (
+    import.meta.env.DEV !== true ||
+    import.meta.env.VITE_LOCAL_WORKFLOW_DIAGNOSTICS !== "1" ||
+    import.meta.env.VITE_API_BASE_URL !== "http://localhost:8080"
+  )
+    return;
   entries.set(candidateId, { ...entries.get(candidateId), ...patch });
 }
 
 export function traceHold(candidateId: string, hold: WriteTraceHold): void {
-  if (!localDiagnosticsEnabled()) return;
+  // Inline on purpose: the bundler folds this to a constant, so production
+  // builds drop the whole trace instead of keeping it behind a function call.
+  if (
+    import.meta.env.DEV !== true ||
+    import.meta.env.VITE_LOCAL_WORKFLOW_DIAGNOSTICS !== "1" ||
+    import.meta.env.VITE_API_BASE_URL !== "http://localhost:8080"
+  )
+    return;
   entries.set(candidateId, { ...entries.get(candidateId), hold });
 }
 
@@ -105,7 +118,14 @@ export function emitWriteTrace(
   executed: readonly ApprovedWriteResult[] | undefined,
   finalResults: readonly ApprovedWriteResult[],
 ): void {
-  if (!localDiagnosticsEnabled()) return;
+  // Inline on purpose: the bundler folds this to a constant, so production
+  // builds drop the whole trace instead of keeping it behind a function call.
+  if (
+    import.meta.env.DEV !== true ||
+    import.meta.env.VITE_LOCAL_WORKFLOW_DIAGNOSTICS !== "1" ||
+    import.meta.env.VITE_API_BASE_URL !== "http://localhost:8080"
+  )
+    return;
   try {
     const rows = buildWriteTraceRows(
       items,
