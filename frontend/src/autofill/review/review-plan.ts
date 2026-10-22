@@ -21,6 +21,10 @@ import {
   type ComponentGpaApproval,
 } from "../policy/components/gpa";
 import { customFieldValue } from "../dom/custom-field-value";
+import {
+  isVisibleEnabledElement,
+  primaryWriteElement,
+} from "../dom/write-target";
 import { normalizeDisplayName } from "../write/display-name";
 import {
   isReadonlySearchEligible,
@@ -307,17 +311,19 @@ function currentValue(handle: FieldCandidateHandle): string {
     return handle.elements
       .filter(
         (element): element is HTMLInputElement =>
-          element instanceof HTMLInputElement && element.checked,
+          element instanceof HTMLInputElement &&
+          element.checked &&
+          isVisibleEnabledElement(element),
       )
       .map((element) => element.value)
       .join(", ");
   }
-  const select = handle.elements[0];
+  const select = primaryWriteElement(handle);
   if (select instanceof HTMLSelectElement) {
     const selected = select.selectedOptions[0];
     return selected?.value ? (selected.textContent ?? "") : "";
   }
-  return handle.elements[0]?.value ?? "";
+  return select?.value ?? "";
 }
 
 const NATIVE_OPTION_ABSENT_REASON =

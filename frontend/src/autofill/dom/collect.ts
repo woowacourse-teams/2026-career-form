@@ -169,7 +169,9 @@ function repeatableItemGroupId(element: Element): string | undefined {
 /** A grouped candidate remains visible while any owned native control is visible. */
 export function isFieldCandidateHidden(handle: FieldCandidateHandle): boolean {
   const elements =
-    handle.elements.length > 0 ? handle.elements : (handle.customElements ?? []);
+    handle.elements.length > 0
+      ? handle.elements
+      : (handle.customElements ?? []);
   return elements.every(isHidden);
 }
 
@@ -225,6 +227,19 @@ function blockReason(element: HTMLElement): CandidateBlockReason | undefined {
     return "readonly";
   }
   return undefined;
+}
+
+function handleBlockReason(
+  elements: Array<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
+  first: HTMLElement,
+): CandidateBlockReason | undefined {
+  if (elements.length === 0) return blockReason(first);
+  const reasons = elements.map(blockReason);
+  if (reasons.some((reason) => reason === undefined)) return undefined;
+  return (
+    reasons.find((reason) => reason !== "hidden") ??
+    reasons.find((reason) => reason !== undefined)
+  );
 }
 
 function visibility(element: HTMLElement): "visible" | "hidden" {
@@ -788,7 +803,7 @@ function collectFieldsSnapshotInternal(
                   ...customElements,
                 ]),
               },
-              blockReason(first),
+              handleBlockReason(elementsForHandle, first as HTMLElement),
             );
           }
           // Ambiguous rows carry no group id and no count; review keeps them

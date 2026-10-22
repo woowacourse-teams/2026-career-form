@@ -1,5 +1,9 @@
 import { isSplitEmailTarget, SPLIT_EMAIL_REASON } from "../dom/split-email";
 import {
+  isVisibleWriteElement,
+  primaryWriteElement,
+} from "../dom/write-target";
+import {
   skipped,
   written,
   outcomeForWriteCode,
@@ -89,6 +93,7 @@ function profileOptions(
     .filter((option) => normalizeDisplayName(option.displayName) === desired)
     .map((option) => handle.optionElements.get(option.optionId))
     .filter((option): option is HTMLElement => Boolean(option))
+    .filter(isVisibleWriteElement)
     .filter(
       (option) =>
         !match ||
@@ -138,7 +143,7 @@ function writableHandle(
 function forbiddenGenericReason(
   handle: FieldCandidateHandle,
 ): string | undefined {
-  const element = handle.elements[0];
+  const element = primaryWriteElement(handle) ?? handle.elements[0];
   if (
     !element ||
     handle.candidate.element === "custom" ||
@@ -338,7 +343,7 @@ function writeCombobox(
   handle: FieldCandidateHandle,
   value: string,
 ): WriteOutcome {
-  const input = handle.elements[0];
+  const input = primaryWriteElement(handle);
   const listbox =
     input instanceof HTMLInputElement ? comboboxParts(input) : undefined;
   const option = profileOption(handle, value);
@@ -368,7 +373,7 @@ function retainedComboboxValue(
   handle: FieldCandidateHandle,
   value: string,
 ): boolean {
-  const input = handle.elements[0];
+  const input = primaryWriteElement(handle);
   if (!(input instanceof HTMLInputElement) || input.value !== value)
     return false;
   const listbox = comboboxParts(input);
@@ -385,7 +390,7 @@ function nativeSelectOption(
   value: string,
   match?: ApprovedCatalogMatch,
 ): HTMLOptionElement | undefined {
-  const select = handle.elements[0],
+  const select = primaryWriteElement(handle),
     option = profileOption(handle, value, match);
   if (
     !(select instanceof HTMLSelectElement) ||
@@ -457,11 +462,11 @@ function hasGenericConflict(
   const value = item.profileValue!,
     command = item.analysis!.writePlan!.command;
   if (command === "SET_TEXT") {
-    const current = handle.elements[0]?.value ?? "";
+    const current = primaryWriteElement(handle)?.value ?? "";
     return current !== "" && current !== value && current !== item.currentValue;
   }
   if (command === "SELECT_OPTION") {
-    const select = handle.elements[0];
+    const select = primaryWriteElement(handle);
     const current =
       select instanceof HTMLSelectElement
         ? select.selectedOptions[0]?.value
@@ -497,7 +502,7 @@ function writeGeneric(
   if (strict && hasGenericConflict(item, handle))
     return { written: false, reason: CONFLICT, code: "CONFLICT" };
   if (command === "SET_TEXT") {
-    const element = handle.elements[0];
+    const element = primaryWriteElement(handle);
     if (
       element instanceof HTMLInputElement &&
       element.getAttribute("role") === "combobox"
@@ -529,7 +534,7 @@ function writeGeneric(
   }
   if (command === "SELECT_OPTION") {
     const approval = catalogApprovalForItem(item);
-    const select = handle.elements[0],
+    const select = primaryWriteElement(handle),
       option = nativeSelectOption(
         handle,
         value,
@@ -585,7 +590,7 @@ function catalogChoiceIsCurrent(
   const approval = catalogApprovalForItem(item);
   if (approval.status === "invalid") return false;
   if (approval.status === "legacy") return true;
-  const select = handle.elements[0];
+  const select = primaryWriteElement(handle);
   if (select instanceof HTMLSelectElement) {
     const matches = [...select.options].filter(
       (option) =>
@@ -632,7 +637,7 @@ function rememberNativeCatalogChoice(
 ): boolean {
   const approval = catalogApprovalForItem(item);
   if (approval.status !== "selected") return approval.status !== "invalid";
-  const element = handle.elements[0];
+  const element = primaryWriteElement(handle);
   const option =
     element instanceof HTMLSelectElement
       ? element.selectedOptions[0]
@@ -681,7 +686,11 @@ function writeItem(
       return { written: false, reason: STALE, code: "STALE_TARGET" };
   }
   const adapter = getWriteAdapter(
-    (handle.elements[0] ?? handle.customElements?.[0])?.ownerDocument ?? "",
+    (
+      primaryWriteElement(handle) ??
+      handle.elements[0] ??
+      handle.customElements?.[0]
+    )?.ownerDocument ?? "",
   );
   const attempt = adapter.tryWrite(handle, item);
   if (attempt.handled)
@@ -839,8 +848,11 @@ export function executeApprovedWrites({
       lookup = item && registry.lookupField(item.candidateId);
     if (item && lookup?.status === "ready")
       getWriteAdapter(
-        (lookup.handle.elements[0] ?? lookup.handle.customElements?.[0])
-          ?.ownerDocument ?? "",
+        (
+          primaryWriteElement(lookup.handle) ??
+          lookup.handle.elements[0] ??
+          lookup.handle.customElements?.[0]
+        )?.ownerDocument ?? "",
       ).afterWrite?.(lookup.handle, item);
   });
   return results;
@@ -855,7 +867,7 @@ function retainedGenericValue(
     value = item.profileValue;
   if (!command || !value) return false;
   const approval = catalogApprovalForItem(item);
-  const element = handle.buttonDropdown?.trigger ?? handle.elements[0];
+  const element = handle.buttonDropdown?.trigger ?? primaryWriteElement(handle);
   if (
     approval.status === "selected" &&
     element &&
@@ -877,18 +889,19 @@ function retainedGenericValue(
       dropdownValue(handle.buttonDropdown) === value
     );
   if (command === "SET_TEXT") {
-    const input = handle.elements[0];
+    const input = primaryWriteElement(handle);
     return input instanceof HTMLInputElement &&
       input.getAttribute("role") === "combobox"
       ? retainedComboboxValue(handle, value)
       : input?.value === value;
   }
-  if (command === "SELECT_OPTION")
+  if (command === "SELECT_OPTION") {
+    const select = primaryWriteElement(handle);
     return (
-      handle.elements[0] instanceof HTMLSelectElement &&
-      nativeSelectOption(handle, value) ===
-        handle.elements[0].selectedOptions[0]
+      select instanceof HTMLSelectElement &&
+      nativeSelectOption(handle, value) === select.selectedOptions[0]
     );
+  }
   const option = nativeChoiceOption(handle, value);
   return Boolean(
     option?.checked &&

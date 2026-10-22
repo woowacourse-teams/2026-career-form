@@ -21,6 +21,7 @@ import {
 } from "../../generic/structure-context";
 import { buildReviewPlan } from "../../review/review-plan";
 import { executeApprovedWritesAfterPageSettles } from "../../write/executor";
+import { primaryWriteElement } from "../../dom/write-target";
 import { approvedReviewExecution } from "../workflow-write-items";
 import { addMetrics } from "./report";
 export { assertAccuracyReport, aggregateAccuracy } from "./report";
@@ -295,10 +296,13 @@ export async function runWriteAccuracy({
     const reportedWritten = write?.status === "written";
     const changed =
       JSON.stringify(readState(document, candidate)) !== initialStates[ordinal];
-    const preserve =
-      field?.preserve === true ||
-      !approved ||
-      fields[ordinal].visibility === "hidden";
+    const lookup = snapshot.registry.lookupField(candidateId);
+    const handle = "handle" in lookup ? lookup.handle : undefined;
+    const visibleTarget =
+      !!handle &&
+      (primaryWriteElement(handle) !== undefined ||
+        (handle.customElements?.length ?? 0) > 0);
+    const preserve = field?.preserve === true || !approved || !visibleTarget;
     const preservedViolated = preserve && changed;
     const outcome = !field
       ? "unscored"

@@ -1,4 +1,5 @@
 import { displayState, withDomReadPass } from "./read-pass";
+import { isWritableWriteElement } from "./write-target";
 import { targetOnlyRadio } from "../policy/radio-validation";
 import type {
   ActionCandidateHandle,
@@ -235,20 +236,28 @@ export class CandidateRegistry {
     // is checked immediately before its write instead.
     const targetOnly =
       registered.handle.kind === "field" && targetOnlyRadio(elements);
-    const currentBlockReason = elements
-      .map(liveBlockReason)
-      .find(
-        (reason) =>
-          reason !== undefined && !(targetOnly && reason === "disabled"),
-      );
+    const targetVisible = elements.some(isWritableWriteElement);
+    const reasons = elements.map(liveBlockReason);
+    // A hidden duplicate must not block a handle that still owns a visible,
+    // enabled control. Prefer the visible control's reason when none is usable.
+    const currentBlockReason = targetVisible
+      ? undefined
+      : (reasons.find(
+          (reason) => reason !== undefined && reason !== "hidden",
+        ) ?? reasons.find((reason) => reason !== undefined));
     const registeredReason =
-      targetOnly && registered.blockedReason === "disabled"
+      (targetOnly && registered.blockedReason === "disabled") ||
+      (targetVisible && registered.blockedReason === "hidden")
         ? undefined
         : registered.blockedReason;
-    if (registeredReason || currentBlockReason) {
+    const blockedReason =
+      targetOnly && currentBlockReason === "disabled"
+        ? undefined
+        : currentBlockReason;
+    if (registeredReason || blockedReason) {
       return {
         status: "blocked",
-        reason: registeredReason ?? currentBlockReason!,
+        reason: registeredReason ?? blockedReason!,
         handle: registered.handle,
       };
     }

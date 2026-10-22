@@ -1,5 +1,9 @@
 import { componentEmploymentStatusValue } from "../policy/components/write";
 import { customFieldValue } from "../dom/custom-field-value";
+import {
+  isVisibleEnabledElement,
+  primaryWriteElement,
+} from "../dom/write-target";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import type { ReviewPlanItem } from "../review/review-plan";
 import type { ApprovedWriteResult } from "../write/executor";
@@ -53,11 +57,15 @@ function stillReflected(
   const lookup = registry.lookupField(item.candidateId);
   if (lookup.status !== "ready" && lookup.status !== "blocked") return false;
   const handle = lookup.handle;
-  const element = handle.elements[0];
+  const target = primaryWriteElement(handle);
+  const element = target ?? handle.customElements?.[0];
+  if (!element) return false;
   let value =
     element instanceof HTMLSelectElement
       ? (element.selectedOptions[0]?.textContent ?? "")
-      : (element?.value ?? "");
+      : target && "value" in target
+        ? target.value
+        : "";
   if (
     handle.candidate.control === "radio" ||
     handle.candidate.control === "checkbox"
@@ -66,7 +74,11 @@ function stillReflected(
       handle.candidate.options
         ?.filter((option) => {
           const control = handle.optionElements.get(option.optionId);
-          return control instanceof HTMLInputElement && control.checked;
+          return (
+            control instanceof HTMLInputElement &&
+            control.checked &&
+            (!target || isVisibleEnabledElement(control))
+          );
         })
         .map((option) => option.displayName)
         .join(", ") ?? "";
@@ -98,7 +110,8 @@ function visibleDisabledTextField(
 ): boolean {
   const lookup = registry.lookupField(item.candidateId);
   if (lookup.status !== "blocked" || lookup.reason !== "disabled") return false;
-  const element = lookup.handle.elements[0];
+  const element =
+    primaryWriteElement(lookup.handle) ?? lookup.handle.elements[0];
   if (
     !(
       element instanceof HTMLInputElement ||
@@ -190,7 +203,10 @@ export function createProgressTracker() {
         lookup.status === "ready" || lookup.status === "blocked"
           ? lookup.handle
           : undefined;
-      const element = handle?.elements[0] ?? handle?.customElements?.[0];
+      const element =
+        (handle && primaryWriteElement(handle)) ??
+        handle?.elements[0] ??
+        handle?.customElements?.[0];
       const registryIds =
         candidateIds.get(registry) ?? new Map<string, string>();
       let id = progressIdFor(item.candidateId, registry);
