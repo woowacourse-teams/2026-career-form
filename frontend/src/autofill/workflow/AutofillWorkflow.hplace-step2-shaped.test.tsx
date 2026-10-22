@@ -310,7 +310,10 @@ function pendingRows(): string[] {
   );
 }
 
-it.each(TENANTS)(
+// Only the YM tenant runs the full first fill here: the YMD tenant's date
+// precision is covered by the address, demo-tenant, license, project, step 3
+// and native-form-date suites, and the rerun case below still mounts it.
+it.each(TENANTS.filter((tenant) => tenant.format === "YM"))(
   "fills step 2 like the live $name tenant with nothing left to review",
   async (tenant) => {
     const policy = mountTenant(tenant);

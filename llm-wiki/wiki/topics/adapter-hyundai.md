@@ -2,9 +2,9 @@
 
 > Topic: adapter-hyundai
 > Status: Current
-> Current: [현대 어학 상태 드라이버 실패의 행 단위 격리](../../raw/issues/CF-169/documents/adapter-hyundai.md)
-> History: [근거 1](../../raw/issues/CF-46/documents/adapter-hyundai.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-hyundai.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-hyundai.md); [CF-169 근거](../../raw/issues/CF-169/documents/adapter-hyundai.md)
-> Updated: 2026-10-08
+> Current: [CF-310 버튼형 선택지 코드 근거](../../raw/issues/CF-310/documents/hyundai-button-select-codes.md)
+> History: [근거 1](../../raw/issues/CF-46/documents/adapter-hyundai.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-hyundai.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-hyundai.md); [CF-169 근거](../../raw/issues/CF-169/documents/adapter-hyundai.md); [CF-310 Map·Set 재정의 근거](../../raw/issues/CF-310/documents/hyundai-map-set-override.md); [CF-310 버튼형 선택지 코드 근거](../../raw/issues/CF-310/documents/hyundai-button-select-codes.md)
+> Updated: 2026-10-22
 
 ## 현재 상태
 
@@ -13,6 +13,10 @@
 CF-82는 열린 버튼 메뉴의 현재 visible `data-code` 옵션을 수집해 표준 ID 별칭과 정확히 하나로 일치할 때만 클릭하도록 보완한다. 정적 코드 사전과 첫 후보 추측은 사용하지 않고, 클릭 뒤 표시 라벨과 hidden code를 확인한다. 상세 제한은 [CF-82 근거](../../raw/issues/CF-82/documents/adapter/live-option-selection.md)를 따른다.
 
 CF-169는 어학 언어와 시험 상태 드라이버의 실패를 `.field-group`이 두 드라이버를 각각 하나씩 소유하는 같은 행으로 격리한다. 컨테이너가 여러 행을 포함하거나 드라이버가 밖이면 기존처럼 전체를 중단하며 국적은 근거가 없어 제외한다. 상세는 [CF-169 근거](../../raw/issues/CF-169/documents/adapter-hyundai.md)를 따른다.
+
+## 페이지 전역 재정의 (2026-10-21)
+
+현대자동차 지원서(`talent.hyundai.com/apply/applyWrite.hc`)는 `window.Map`과 `window.Set`을 native가 아닌 polyfill로 바꿔 둔다. 그래서 `page.evaluate`로 페이지 world에 넣는 함수는 둘을 쓰지 않는다. 2026-10-21 실사이트 QA의 일회성 스크립트에서 `Map`을 순회하던 입력 비우기 함수(`clearForm`)가 이 페이지에서 멈췄다. 이를 옮긴 하네스(`frontend/scripts/live-qa`)는 둘을 쓰지 않고, `page/*.mjs`와 `keepalive.mjs`의 페이지 함수 열 개를 `page/page-functions.test.mjs`로 고정한다. 근거는 [CF-310 Map·Set 재정의](../../raw/issues/CF-310/documents/hyundai-map-set-override.md)를 따른다.
 
 ## 변경 이유
 
@@ -69,3 +73,7 @@ ID 없는 현대 프로젝트·논문 구조 식별로 준비 단계 차단을 �
 ## CF-99 결과 패널 진단 (2026-09-24)
 
 학교·전공 검색은 정확 일치 없음, 복수 후보, 시간 초과, 선택 미확인을 값 없는 진단 코드로 전달한다. 시험 선택 뒤 성적란 준비 실패도 구분한다. 기존 유일 결과·코드 확인과 지원 범위는 유지한다. 상세 근거는 [CF-99 승인 결정](../../raw/issues/CF-99/documents/autofill-follow-and-install.md)을 따른다.
+
+## 버튼형 선택지의 코드 수집 한계 (2026-10-22)
+
+전과/편입(`tranGb`)과 종료사유(`retResCd`)는 `btn-select` 버튼과 같은 이름의 hidden input으로 이루어지고, 선택지는 레이어를 열 때만 DOM에 그려진다. 실사이트 QA 하네스는 선택지 문구는 담지만 hidden에 들어갈 코드는 담지 못한다. 정책 v24에는 두 칸의 규칙이 없고, 버튼형 규칙(`ButtonOptionBinding`)은 optionMap과 optionCodeMap을 모두 요구하므로 매핑은 레이어를 연 상태의 코드 수집이 선행돼야 한다. 프로필 편입유무 `해당`은 `전과 후`·`편입 전`·`편입 후` 중 하나로 정할 수 없다. 근거는 [CF-310 버튼형 선택지 코드 근거](../../raw/issues/CF-310/documents/hyundai-button-select-codes.md)를 따른다.

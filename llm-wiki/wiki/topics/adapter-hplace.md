@@ -2,9 +2,9 @@
 
 > Topic: adapter-hplace
 > Status: Current
-> Current: [CF-177 후속 보완 묶음 근거](../../raw/issues/CF-177/documents/live-followup-bundle.md)
-> History: [CF-177 근거](../../raw/issues/CF-177/documents/adapter-hplace.md); [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md); [CF-177 C12·C13·시연 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md); [CF-177 KDI·구조 미확인 근거](../../raw/issues/CF-177/documents/live-kdi-unverified.md); [CF-177 후속 보완 묶음 근거](../../raw/issues/CF-177/documents/live-followup-bundle.md)
-> Updated: 2026-10-20
+> Current: [CF-310 빈 단계 분석 생략 근거](../../raw/issues/CF-310/documents/hplace-empty-step-analysis-skip.md)
+> History: [CF-177 근거](../../raw/issues/CF-177/documents/adapter-hplace.md); [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md); [CF-177 C12·C13·시연 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md); [CF-177 KDI·구조 미확인 근거](../../raw/issues/CF-177/documents/live-kdi-unverified.md); [CF-177 후속 보완 묶음 근거](../../raw/issues/CF-177/documents/live-followup-bundle.md); [CF-310 요청 구조 근거](../../raw/issues/CF-310/documents/hplace-mrs2-requests.md); [CF-310 4단계 분석·패널 근거](../../raw/issues/CF-310/documents/hplace-step4-analyze-and-panel.md); [CF-310 빈 단계 분석 생략 근거](../../raw/issues/CF-310/documents/hplace-empty-step-analysis-skip.md)
+> Updated: 2026-10-22
 
 ## 현재 상태
 
@@ -42,6 +42,24 @@ MRS2 등록의 이름·휴대전화·이메일과 기존 기본정보 계약을 
 - **안내 구분:** 정책 비호환(`POLICY_INCOMPATIBLE`)은 확장 업데이트 안내, 정책 미등록(`ADAPTER_POLICY_UNAVAILABLE`)은 정책 없음 안내, v1 지원자 앱·채용 빌더 페이지는 미지원 사유를 보인다(`hplaceDocumentKind()`). `npm run zip`은 `VITE_AUTOFILL_DEBUG=true`면 실패한다.
 - **금지 동작과 재실행:** 공용 workflow 테스트 하네스가 단계 탭·이전·임시저장·다음·제출·동의·인증 클릭과 모든 submit을 금지로 집계하고(허용은 staged address 모달의 자체 저장뿐), 같은 프로필로 2단계를 두 번 실행하거나 사이트가 날짜·학교명을 정규화한 뒤에도 행·검색·입력이 늘지 않는다. 신원 필드 둘 이상인 섹션에서 기존 행이 한 필드만 다르면 중복 행을 추가하지 않고 섹션을 사용자 처리로 넘긴다.
 - **저장 후 다시 연 페이지:** 신원이 맞는 기존 행은 짝인 프로필 항목(`itemIndex`)을 유지하고, 결과는 승인·선택 없이 사이트 형식(점 날짜·옵션 라벨·검색명·숫자 평점)으로 비교해 같으면 "기존 값 유지", 다르면 "기존 값과 다름"으로 보고한다. 기존 행 충돌 검사와 검토 계획의 충돌 판정도 같은 형식으로 비교하며 주/야간 같은 표준 토큰은 라벨로 바꾼다. 사용자가 직접 고친 값이 있는 행의 섹션은 그대로 사용자 처리로 남는다(안내 문구는 아직 "자동으로 입력하지 못했어요"라 후속 과제). gsenc·abl 2단계 실화면에서 76·71건 "입력 못함"이 직접 고친 직장경력 17건으로 줄었다.
+
+## 요청 구조 (2026-10-21)
+
+- 저장은 `/mrs2/applicant/resume/saveStep<단계>`로 간다. 하단 임시저장 버튼(`data-type="tempSave"`)만 같은 경로에 `validateYn=false`를 붙여 저장하고 이동하지 않는다. 작성 모드 1–4단계의 단계 탭과 다음 버튼은 `type="submit"`이라 검증을 거쳐 `validateYn=true`로 저장한 뒤 이동한다. 5단계의 `saveStep5`는 임시저장이 아니라 최종제출이다.
+- `/mrs2/applicant/resume/step<단계>.json`은 화면이 단계 데이터를 불러오는 POST이며 저장하지 않는다.
+- 학교·전공·자격증·어학 조회는 `/com/code/retrieve*List` POST다(2026-10-21 다섯 테넌트에서 관측).
+- 무저장 단계 이동은 사이트 `locationSubmit`과 같이 `resumeSn`, `recruitNoticeSn`, `step`만 담아 `writeResume`에 보내는 POST다. 사이트도 미리보기 모드와 5단계 화면에서는 저장 없이 이 요청만 보낸다.
+- 실사이트 QA 하네스(`frontend/scripts/live-qa`, CF-177 live-eval 도구에서 일부를 옮김)의 요청 허용 목록과 원복이 이 구조를 쓴다. 근거는 [CF-310 요청 구조](../../raw/issues/CF-310/documents/hplace-mrs2-requests.md)를 따른다.
+
+## 4단계 분석 예외와 결과 패널 집계 (2026-10-22)
+
+- 4단계(자기소개서)는 컨트롤이 자기소개서 textarea뿐이라 에이치닷 섹션 수집기가 모두 건너뛰고 필드 수집 16개가 전부 거절된다(accepted=0). 확장은 그래도 `AUTOFILL_ANALYZE_FIELDS`를 호출하고 백엔드가 `BAD_REQUEST`를 돌려줘 패널이 "현재 지원서 구조를 분석할 수 없습니다" 예외로 끝난다. 2026-10-22 다섯 테넌트(abl·careerhyundai·gsenc·gsretail·hankooktire) 모두 재현됐다. 기대 동작은 수락 필드 0건이면 분석을 부르지 않고 안내를 보여 주는 것이다.
+- 패널 "입력 완료"는 실행 뒤 DOM에서 값이 있는 칸 수와 같다. 저장 값을 지우지 않은 지원서에서는 저장 행을 같은 값으로 다시 채운 칸도 포함되므로 확장이 새로 쓴 칸 수가 아니다. "확인 필요"는 1–3단계 15페이지에서 모두 0건이었지만 빈 칸이 47개(의도적 미지원 46 + 논문 발표 여부 1) 있었다. 패널 수치는 항목 단위 참고값이고 입력률은 DOM 칸 단위로 센다.
+- 근거는 [CF-310 4단계 분석·패널 근거](../../raw/issues/CF-310/documents/hplace-step4-analyze-and-panel.md)를 따른다.
+
+## 수락 필드 0건인 단계의 분석 생략 (2026-10-22)
+
+확장 워크플로는 수집 요청의 필드 수가 0이면 `AUTOFILL_ANALYZE_FIELDS`를 부르지 않고 `ADAPTER/COMPLETE`, 필드 없음, 설치된 `executionPolicy`를 그대로 넣은 분석으로 진행해 결과 화면으로 끝난다. 정책을 넣지 않으면 네이티브 정책 digest 대조에서 "페이지 실행 정책이 변경되었습니다" 예외가 난다. 수정 빌드로 GS건설 4단계를 재측정하면 예외 없이 입력 완료 0·확인 필요 0이다. 근거는 [CF-310 빈 단계 분석 생략 근거](../../raw/issues/CF-310/documents/hplace-empty-step-analysis-skip.md)를 따른다.
 
 ## 검증과 배포 경계
 

@@ -14,7 +14,9 @@ import {
 
 async function settleWorkflow() {
   for (let pass = 0; pass < 30; pass++) {
-    await act(async () => { await vi.runAllTimersAsync(); });
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
     if (!document.querySelector('[aria-busy="true"]')) return;
   }
 }
@@ -40,7 +42,9 @@ it("selects both Hyundai drivers, fills corresponding detail display/code/months
   const clicks = renderApplication();
   const first = await run(fixtureProfile());
   await settleWorkflow();
-  expect(first.getByRole("heading", { name: "자동 기입을 마쳤어요" })).toBeInTheDocument();
+  expect(
+    first.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
+  ).toBeInTheDocument();
   expect(first.queryByRole("button", { name: /값 보기|포함하기/ })).toBeNull();
   expect([control("milCd").value, hidden("milCd")]).toEqual(["필", "1"]);
   expect([control("milDitinc").value, hidden("milDitinc")]).toEqual([
@@ -108,7 +112,9 @@ it("writes Hyundai disability status and newly enabled details within one run", 
   const first = run(profile);
 
   await settleWorkflow();
-  expect(first.getByRole("heading", { name: "자동 기입을 마쳤어요" })).toBeInTheDocument();
+  expect(
+    first.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
+  ).toBeInTheDocument();
   expect(first.queryByRole("button", { name: /값 보기|포함하기/ })).toBeNull();
   expect([
     control("injuryYn").value,

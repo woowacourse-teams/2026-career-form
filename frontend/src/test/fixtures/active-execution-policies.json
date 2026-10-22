@@ -1,6 +1,6 @@
 {
   "sk": {
-    "version": 37,
+    "version": 38,
     "executionPolicy": {
       "version": 1,
       "searches": [
@@ -630,7 +630,7 @@
               "rowSelector": "div.form-item-group.educationhigh-item",
               "rootSelector": "#applyContentAcademic.apply-form-box.education-root",
               "assetSelector": "div.form-item-asset",
-              "requiredSelector": "input[name='eduhgEducationName']"
+              "requiredSelector": "select[name='eduhgEducationStatus']"
             },
             {
               "id": "btnAddEducationUniv",

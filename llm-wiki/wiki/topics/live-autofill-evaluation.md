@@ -2,8 +2,8 @@
 
 > Topic: live-autofill-evaluation
 > Status: Current
-> Current: [CF-314 실사이트 기입 정확도 재평가와 측정 절차](../../raw/issues/CF-314/documents/live-autofill-recheck-2026-10-22.md)
-> History: [CF-124 최초 공용 실행 계약](../../raw/issues/CF-124/documents/adr/124-ai-operated-live-autofill-evaluation.md); [CF-124 사전 판정 분모와 평가 보고서](../../raw/issues/CF-124/documents/reports/2026-09-28-live-autofill-evaluation.md); [CF-173 평가 계약 1.1](../../raw/issues/CF-173/documents/evaluation-contract-1.1.md); [CF-314 실사이트 기입 정확도 재평가와 측정 절차](../../raw/issues/CF-314/documents/live-autofill-recheck-2026-10-22.md)
+> Current: [CF-310 재설치·응답 없는 탭 근거](../../raw/issues/CF-310/documents/live-harness-reinstall-and-hung-tab.md)
+> History: [CF-124 최초 공용 실행 계약](../../raw/issues/CF-124/documents/adr/124-ai-operated-live-autofill-evaluation.md); [CF-124 사전 판정 분모와 평가 보고서](../../raw/issues/CF-124/documents/reports/2026-09-28-live-autofill-evaluation.md); [CF-173 평가 계약 1.1](../../raw/issues/CF-173/documents/evaluation-contract-1.1.md); [CF-310 원복·대화상자 근거](../../raw/issues/CF-310/documents/live-browser-pitfalls.md); [CF-310 원복 재키·표시 규칙 근거](../../raw/issues/CF-310/documents/live-harness-residue-and-display.md); [CF-310 재설치·응답 없는 탭 근거](../../raw/issues/CF-310/documents/live-harness-reinstall-and-hung-tab.md); [CF-314 실사이트 기입 정확도 재평가와 측정 절차](../../raw/issues/CF-314/documents/live-autofill-recheck-2026-10-22.md)
 > Updated: 2026-10-22
 
 ## 현재 상태
@@ -21,6 +21,26 @@ Console의 `[CareerForm]` 로그는 수집, 분석, 리뷰, 기입과 검색 실
 계약 `1.1`의 측정 절차는 [CF-314 재평가](../../raw/issues/CF-314/documents/live-autofill-recheck-2026-10-22.md)에서 세 가지로 보정한다. 기입 직후 세는 값은 상한이며 40분 keepalive 재로드가 값을 지우므로, +0.5초와 재렌더 이후 두 번 가시 칸만 센다. 매핑 정확도와 최종 정답 입력률은 단계가 다른 지표로 분리한다. 같은 행의 숨은 중복 칸은 가시 필드 판정과 실제 기입 대상을 가르므로 성공은 가시 칸으로만 판정한다. 2026-10-22 `naver-careers`와 `woowahan-recruitment` 재측정에서 매핑 정확도 35/35, 매핑 재현율 35/57, 재렌더 후 가시 칸 유지 6/48과 0/16을 확인했고, 원인별 후속으로 #318, #319, #320을 승격했다.
 
 평가 전 설치본의 background service worker 컨텍스트에서 `globalThis.__careerFormBuildInfo()`를 조회한다. 이는 지원서 값이나 DOM을 읽지 않는 빌드 메타데이터 조회다. 빌드 시 삽입된 불변 snapshot이므로 unpacked 파일이 재빌드로 덮어써져도 재로드 전에는 기존 설치본 revision을 반환한다. CLEAN·전체 SHA·canonical digest·설치본 확인 방법이 맞을 때만 VERIFIED이며 DIRTY/UNKNOWN 또는 조회 불가는 UNVERIFIED로 남긴다. 상세 판정은 [CF-173 ADR](../../raw/issues/CF-173/documents/adr/173-installed-build-revision-evidence.md)을 따른다.
+
+## 실사이트 브라우저 운영 함정 (2026-10-21)
+
+이 절은 2026-10-21 실사이트 QA에서 확인한 함정이다. 새로고침 원복의 잔존 값은 당시 일회성 스크립트 실행에서 나왔고 대화상자 자동 처리는 Playwright 1.64.0 소스에서 확인했으며, `frontend/scripts/live-qa` 실사이트 QA 하네스(CF-177 live-eval 도구에서 일부를 옮김)가 둘을 막는다. 원복은 하네스가 실행 뒤 합성 값을 버리려고 같은 지원서를 저장 없이 다시 여는 동작이며 평가 계약 1.1을 바꾸지 않는다.
+
+- **새로고침 원복 금지:** Chrome은 새로고침 때 입력값을 복원한다. 2026-10-21 Greeting 지원서 두 곳에서 `reload` 뒤 합성 값이 남았다. 원복은 일반 페이지에서 `#`을 뗀 주소로 새로 이동하고 marker로 새 문서인지 확인하며(에이치닷은 저장 없이 같은 단계를 다시 연다), 이어서 같은 주소·단계인지, 칸 수가 실행 전의 80% 이상인지, 값이 남은 칸이 실행 전 값과 같은지 검증한다.
+- **대화상자 자동 처리:** Playwright(1.64.0)는 context와 page 어디에도 `dialog` listener가 없으면 `beforeunload`는 수락하고 나머지는 닫는다(확인창은 취소로 답한다). CDP로 평가 브라우저에 붙으면 사람이 그 브라우저에서 쓰는 탭까지 적용되므로, 하네스의 모든 명령은 붙을 때 context 전체에 listener를 먼저 걸어, 사람이 쓰는 탭에서는 로그인 연장 확인창만 수락하고 나머지는 사람에게 남긴다. 하네스가 구동하는 탭은 따로 맡아 사이트 대화상자를 취소하고, 페이지 이탈 확인은 원복하는 동안에만 수락한다.
+- 근거는 [CF-310 원복·대화상자](../../raw/issues/CF-310/documents/live-browser-pitfalls.md)를 따른다.
+
+## 원복 재키 대조와 표시 규칙의 한계 (2026-10-22)
+
+- **원복 재키 대조:** SK는 숨은 행 템플릿 입력의 `name`에 붙는 GUID 접미사를 페이지를 열 때마다 새로 만든다. 이름으로만 대조하면 값이 같아도 원복 검증이 실패하므로(2026-10-22 R262303 첫 실행 46칸), 하네스는 같은 이름끼리 비교한 뒤 실행 전에 없던 이름의 칸을 실행 전 값 지문 풀과 대조해 `rekeyed`로 센다.
+- **표시 규칙의 한계:** 실행 후 값의 지문이 페이지 전체의 실행 전 지문 중 하나와 같으면 같은 칸이 아니어도 실행 전 값으로 보고 표시하지 않으며, 판정은 `UNVERIFIABLE`이 된다. 숫자 표기 차이(`3.650`/`3.65`)도 같은 값으로 보지 않는다. 2026-10-22 한국타이어 2단계에서 실행 중 생긴 값 12칸이 이렇게 가려졌다. 정답을 부풀리지 않는 방향의 한계이며, 같은 칸끼리 대조와 숫자 정규화가 개선 후보다.
+- 근거는 [CF-310 원복 재키·표시 규칙 근거](../../raw/issues/CF-310/documents/live-harness-residue-and-display.md)를 따른다.
+
+## 확장 재설치 뒤 탭 재진입과 응답 없는 탭 (2026-10-22)
+
+- **재설치 뒤 재진입:** `start`로 확장을 바꾸면 열려 있던 탭에는 새 콘텐츠 스크립트가 붙지 않아 실행이 `panel-trigger-missing`으로 실패한다. 같은 주소로 다시 이동(`goto`, 에이치닷은 `step`)한 뒤 실행한다.
+- **응답 없는 탭:** 렌더러가 멈춘 탭 하나가 Playwright의 CDP 접속 전체를 30초 시간 초과로 막고 `step`·`stepinfo`도 `TimeoutError`로 끝난다. `/json/list`의 페이지 target마다 WebSocket으로 `Runtime.evaluate`를 보내 응답 시간으로 멈춘 탭을 찾고, 브라우저 세션의 `Target.createTarget`으로 같은 주소의 새 탭을 만든 뒤 `Target.closeTarget`으로 멈춘 탭만 닫는다. 브라우저는 재시작하지 않는다.
+- 근거는 [CF-310 재설치·응답 없는 탭 근거](../../raw/issues/CF-310/documents/live-harness-reinstall-and-hung-tab.md)를 따른다.
 
 ## 과거 실행 근거
 
