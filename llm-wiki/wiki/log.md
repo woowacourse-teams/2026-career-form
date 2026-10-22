@@ -760,4 +760,10 @@
 - Source-Revision: cc49b605ada7dddc16ae21ba5ffc599071daad72
 - 승인된 후보 3개를 [CF-312 bundle](../raw/issues/CF-312/manifest.md)에 기록하고 CF-307 구조 반복 실행 후속 조사 문서를 대체했다.
 - [범용 구조 반복 실행](topics/generic-structure-loop.md)의 Current와 History를 갱신하고 미확정 가설 절을 확인된 경계로 바꿨다.
+## [2026-10-21] ingest | CF-313 오프라인 기입 정확도 측정과 달력 최종 확인
+
+- Approval-Digest: 7c2efdcde535f2e513f787da9c444f7014e643c42b7700b2296460049497292f
+- Source-Revision: cdd1bd0f10765a040096ce32f143cca9f552a6f2
+- 승인된 후보 C1~C3과 실측 기준선을 [CF-313 bundle](../raw/issues/CF-313/manifest.md)에 기록했다.
+- [오프라인 기입 정확도 측정](topics/offline-write-accuracy.md)을 새로 만들고 [범용 연월 달력 선택](topics/generic-calendar-selection.md)의 Current와 History를 갱신했다.
 - 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.

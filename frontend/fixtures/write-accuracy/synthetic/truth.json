@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "snapshot": "synthetic",
+  "fields": [
+    {
+      "ordinal": 0,
+      "structurePath": [
+        "body > form:nth-child(1) > label:nth-child(2) > input:nth-child(1)"
+      ],
+      "profileFieldKey": "personal.personal.koreanFamilyName",
+      "rowIndex": null,
+      "controlKind": "text",
+      "expectedDomState": { "value": "합성" },
+      "exercisable": true
+    },
+    {
+      "ordinal": 1,
+      "structurePath": [
+        "body > form:nth-child(1) > label:nth-child(3) > select:nth-child(1)"
+      ],
+      "profileFieldKey": "personal.personal.gender",
+      "rowIndex": null,
+      "controlKind": "select",
+      "expectedDomState": { "value": "male" },
+      "exercisable": true
+    },
+    {
+      "ordinal": 2,
+      "structurePath": [
+        "body > form:nth-child(1) > fieldset:nth-child(4) > label:nth-child(2) > input:nth-child(1)",
+        "body > form:nth-child(1) > fieldset:nth-child(4) > label:nth-child(3) > input:nth-child(1)"
+      ],
+      "profileFieldKey": "personal.personal.nationality",
+      "rowIndex": null,
+      "controlKind": "radio",
+      "expectedDomState": { "checkedValues": ["대한민국"] },
+      "exercisable": true
+    }
+  ]
+}
