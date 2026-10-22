@@ -88,7 +88,7 @@
 ## live-autofill-evaluation
 
 > Payload: [확장 재설치 뒤 탭 재진입과 응답 없는 탭의 CDP 차단](documents/live-harness-reinstall-and-hung-tab.md)
-> Supersedes: [CF-310 원복 재키·표시 규칙](documents/live-harness-residue-and-display.md)
+> Supersedes: [CF-310 원복 재키·표시 규칙](documents/live-harness-residue-and-display.md); [CF-314 실사이트 기입 정확도 재평가와 측정 절차 정정](../CF-314/documents/live-autofill-recheck-2026-10-22.md)
 
 ## generic-split-email-safety
 

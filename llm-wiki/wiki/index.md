@@ -87,7 +87,7 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [범용 등급의 다른 사람 대상 칸 차단](topics/generic-other-person-context.md) | 추천인·보증인 등 다른 사람 대상 칸에 본인 정보 키가 매칭되면 BLOCKED | 2026-10-18 |
 | [범용 검토 화면의 3단계 표시](topics/generic-review-tiers.md) | 자동·확인 필요·입력 불가 표시, 연결 못한 칸 노출과 이유 문구 변환 | 2026-10-18 |
 | [DOM fixture 표시 텍스트 검토와 재현 경계](topics/dom-snapshot-review-boundaries.md) | v4 무변경 보존, 표시 텍스트 검토와 mock·실사이트 근거 구분 | 2026-10-18 |
-| [실사이트 자동 입력 평가 워크플로우](topics/live-autofill-evaluation.md) | 사전 분모, DOM 검증, 후보 관측 일치, 설치본 snapshot 기반 보고, 새로고침 원복·대화상자 자동 처리 함정, 원복 재키 대조와 표시 규칙의 한계, 재설치 뒤 탭 재진입과 응답 없는 탭 | 2026-10-22 |
+| [실사이트 자동 입력 평가 워크플로우](topics/live-autofill-evaluation.md) | 사전 분모, DOM 검증, 후보 관측 일치, 설치본 snapshot과 가시 칸 두 시점 측정, 새로고침 원복·대화상자 자동 처리 함정, 원복 재키 대조와 표시 규칙의 한계, 재설치 뒤 탭 재진입과 응답 없는 탭 | 2026-10-22 |
 | [오프라인 기입 정확도 측정](topics/offline-write-accuracy.md) | 결과 전 고정 정답, 제품 경로 판정, 보존식 집계와 스냅샷별 기준선 | 2026-10-21 |
 | [범용 자동 기입 검색 표면](topics/generic-autofill-search.md) | 범용 자격증 반복 행, 검색, 후속 재검토, 혼합 학력 행, role 없는 레이어 검색, 공급자 중립 검색 결과 구조 해석과 기존 CJ 계약 및 실사이트 검증 경계 | 2026-10-01 |
 | [범용 날짜 형식 변환과 로컬 승인](topics/generic-date-format.md) | 날짜 DIRECT 변환, 로컬 승인 재검증과 자동/실사이트 검증 구분 | 2026-09-24 |
