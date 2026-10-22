@@ -1,0 +1,158 @@
+{
+  "schemaVersion": 1,
+  "snapshot": "lg-ai-research-birth-split-email",
+  "fields": [
+    {
+      "ordinal": 0,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": null,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": "합성지원자"
+      },
+      "exercisable": true,
+      "binding": {
+        "type": "DERIVED",
+        "recipe": "KOREAN_FULL_NAME"
+      }
+    },
+    {
+      "ordinal": 1,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(2) > input:nth-child(2)"
+      ],
+      "profileFieldKey": "contact.contact.phoneNumber",
+      "rowIndex": null,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": "01012345678"
+      },
+      "exercisable": true
+    },
+    {
+      "ordinal": 2,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(3) > div:nth-child(2) > select:nth-child(1)"
+      ],
+      "profileFieldKey": "personal.personal.gender",
+      "rowIndex": null,
+      "controlKind": "select",
+      "expectedDomState": {
+        "value": "opt-3"
+      },
+      "exercisable": true
+    },
+    {
+      "ordinal": 3,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(4) > div:nth-child(2) > div:nth-child(1) > select:nth-child(1)"
+      ],
+      "profileFieldKey": "personal.personal.birthDate",
+      "rowIndex": null,
+      "controlKind": "select",
+      "expectedDomState": {
+        "value": "1998"
+      },
+      "exercisable": true,
+      "binding": {
+        "type": "DATE_PART",
+        "part": "YEAR"
+      }
+    },
+    {
+      "ordinal": 4,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(4) > div:nth-child(2) > div:nth-child(2) > select:nth-child(1)"
+      ],
+      "profileFieldKey": "personal.personal.birthDate",
+      "rowIndex": null,
+      "controlKind": "select",
+      "expectedDomState": {
+        "value": "3"
+      },
+      "exercisable": true,
+      "binding": {
+        "type": "DATE_PART",
+        "part": "MONTH"
+      }
+    },
+    {
+      "ordinal": 5,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(4) > div:nth-child(2) > div:nth-child(3) > select:nth-child(1)"
+      ],
+      "profileFieldKey": "personal.personal.birthDate",
+      "rowIndex": null,
+      "controlKind": "select",
+      "expectedDomState": {
+        "value": "14"
+      },
+      "exercisable": true,
+      "binding": {
+        "type": "DATE_PART",
+        "part": "DAY"
+      }
+    },
+    {
+      "ordinal": 6,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(5) > div:nth-child(2) > input:nth-child(1)"
+      ],
+      "profileFieldKey": "contact.contact.email",
+      "rowIndex": null,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": "synthetic"
+      },
+      "exercisable": true
+    },
+    {
+      "ordinal": 7,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(5) > div:nth-child(2) > div:nth-child(3) > select:nth-child(1)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": null,
+      "controlKind": "select",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "분리 이메일 도메인 select다. 합성 도메인이 선택지에 없고 직접입력 선택 뒤 나타나는 입력란이 스냅샷에 없어(review.md 관찰하지 못한 동작) 올바른 최종 상태를 만들 수 없으므로 기존 상태를 유지해야 한다",
+      "preserve": true
+    },
+    {
+      "ordinal": 8,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(8) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": null,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "합성 프로필에 링크 값이 없어 비워 둬야 한다",
+      "preserve": true
+    },
+    {
+      "ordinal": 9,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(9) > input:nth-child(1)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": null,
+      "controlKind": "checkbox",
+      "expectedDomState": {
+        "checkedValues": []
+      },
+      "exercisable": false,
+      "exercisableReason": "숨겨진 개인정보 동의 체크박스로 사용자가 직접 동의해야 한다",
+      "preserve": true
+    }
+  ]
+}

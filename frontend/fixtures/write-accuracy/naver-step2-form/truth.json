@@ -1,0 +1,670 @@
+{
+  "schemaVersion": 1,
+  "snapshot": "naver-step2-form",
+  "fields": [
+    {
+      "ordinal": 0,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > select:nth-child(1)"
+      ],
+      "profileFieldKey": "education.highSchool.academicProcess",
+      "rowIndex": 0,
+      "controlKind": "select",
+      "expectedDomState": {
+        "value": "opt-1"
+      },
+      "exercisable": true
+    },
+    {
+      "ordinal": 1,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > select:nth-child(1)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": 0,
+      "controlKind": "select",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "합성 프로필에 학교 소재지 값이 없어 비워 둬야 한다",
+      "preserve": true
+    },
+    {
+      "ordinal": 2,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(3) > input:nth-child(2)"
+      ],
+      "profileFieldKey": "education.highSchool.schoolName",
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": "합성고등학교"
+      },
+      "exercisable": false,
+      "exercisableReason": "읽기 전용 칸이며 검색 팝업 선택으로만 채워진다. review.md: 조회 팝업 결과와 페이지 스크립트가 스냅샷에 없어 오프라인에서 올바른 선택을 만들 수 없다"
+    },
+    {
+      "ordinal": 3,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(3) > div:nth-child(4) > div:nth-child(1) > div:nth-child(4) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "숨겨진 영역(조회 팝업 또는 다른 학력 구분용 블록)으로 쓰면 안 된다",
+      "preserve": true
+    },
+    {
+      "ordinal": 4,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(3) > div:nth-child(4) > div:nth-child(1) > div:nth-child(6) > div:nth-child(2) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "숨겨진 영역(조회 팝업 또는 다른 학력 구분용 블록)으로 쓰면 안 된다",
+      "preserve": true
+    },
+    {
+      "ordinal": 5,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(4) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "profileFieldKey": "education.highSchool.startDate",
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": "2014-03"
+      },
+      "exercisable": false,
+      "exercisableReason": "읽기 전용 날짜 칸이며 달력으로만 채워진다. review.md: 달력과 페이지 스크립트가 스냅샷에 없다"
+    },
+    {
+      "ordinal": 6,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(4) > div:nth-child(2) > input:nth-child(2)"
+      ],
+      "profileFieldKey": "education.highSchool.endDate",
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": "2017-02"
+      },
+      "exercisable": false,
+      "exercisableReason": "읽기 전용 날짜 칸이며 달력으로만 채워진다. review.md: 달력과 페이지 스크립트가 스냅샷에 없다"
+    },
+    {
+      "ordinal": 7,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > select:nth-child(1)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": 0,
+      "controlKind": "select",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "숨겨진 대학 이상 학력 블록이다. 화면의 학력 행은 고등학교 구조라 쓰면 안 된다",
+      "preserve": true
+    },
+    {
+      "ordinal": 8,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > select:nth-child(1)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": 0,
+      "controlKind": "select",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "숨겨진 대학 이상 학력 블록이다. 화면의 학력 행은 고등학교 구조라 쓰면 안 된다",
+      "preserve": true
+    },
+    {
+      "ordinal": 9,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(3) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "숨겨진 대학 이상 학력 블록이다. 화면의 학력 행은 고등학교 구조라 쓰면 안 된다",
+      "preserve": true
+    },
+    {
+      "ordinal": 10,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(3) > div:nth-child(4) > div:nth-child(1) > div:nth-child(4) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "숨겨진 대학 이상 학력 블록이다. 화면의 학력 행은 고등학교 구조라 쓰면 안 된다",
+      "preserve": true
+    },
+    {
+      "ordinal": 11,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(3) > div:nth-child(4) > div:nth-child(1) > div:nth-child(6) > div:nth-child(2) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "숨겨진 대학 이상 학력 블록이다. 화면의 학력 행은 고등학교 구조라 쓰면 안 된다",
+      "preserve": true
+    },
+    {
+      "ordinal": 12,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(4) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "숨겨진 대학 이상 학력 블록이다. 화면의 학력 행은 고등학교 구조라 쓰면 안 된다",
+      "preserve": true
+    },
+    {
+      "ordinal": 13,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(4) > div:nth-child(4) > div:nth-child(1) > div:nth-child(4) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "숨겨진 대학 이상 학력 블록이다. 화면의 학력 행은 고등학교 구조라 쓰면 안 된다",
+      "preserve": true
+    },
+    {
+      "ordinal": 14,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(4) > div:nth-child(4) > div:nth-child(1) > div:nth-child(6) > div:nth-child(2) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "숨겨진 대학 이상 학력 블록이다. 화면의 학력 행은 고등학교 구조라 쓰면 안 된다",
+      "preserve": true
+    },
+    {
+      "ordinal": 15,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(5) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "숨겨진 대학 이상 학력 블록이다. 화면의 학력 행은 고등학교 구조라 쓰면 안 된다",
+      "preserve": true
+    },
+    {
+      "ordinal": 16,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(5) > div:nth-child(4) > div:nth-child(1) > div:nth-child(4) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "숨겨진 대학 이상 학력 블록이다. 화면의 학력 행은 고등학교 구조라 쓰면 안 된다",
+      "preserve": true
+    },
+    {
+      "ordinal": 17,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(5) > div:nth-child(4) > div:nth-child(1) > div:nth-child(6) > div:nth-child(2) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "숨겨진 대학 이상 학력 블록이다. 화면의 학력 행은 고등학교 구조라 쓰면 안 된다",
+      "preserve": true
+    },
+    {
+      "ordinal": 18,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(6) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "숨겨진 대학 이상 학력 블록이다. 화면의 학력 행은 고등학교 구조라 쓰면 안 된다",
+      "preserve": true
+    },
+    {
+      "ordinal": 19,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(7) > select:nth-child(1)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": 0,
+      "controlKind": "select",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "숨겨진 대학 이상 학력 블록이다. 화면의 학력 행은 고등학교 구조라 쓰면 안 된다",
+      "preserve": true
+    },
+    {
+      "ordinal": 20,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(8) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "숨겨진 대학 이상 학력 블록이다. 화면의 학력 행은 고등학교 구조라 쓰면 안 된다",
+      "preserve": true
+    },
+    {
+      "ordinal": 21,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(8) > div:nth-child(2) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "숨겨진 대학 이상 학력 블록이다. 화면의 학력 행은 고등학교 구조라 쓰면 안 된다",
+      "preserve": true
+    },
+    {
+      "ordinal": 22,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(9) > select:nth-child(1)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": 0,
+      "controlKind": "select",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "숨겨진 대학 이상 학력 블록이다. 화면의 학력 행은 고등학교 구조라 쓰면 안 된다",
+      "preserve": true
+    },
+    {
+      "ordinal": 23,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > select:nth-child(1)"
+      ],
+      "profileFieldKey": "careers.career.employmentType",
+      "rowIndex": 0,
+      "controlKind": "select",
+      "expectedDomState": {
+        "value": "opt-19"
+      },
+      "exercisable": true
+    },
+    {
+      "ordinal": 24,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > input:nth-child(2)"
+      ],
+      "profileFieldKey": "careers.career.companyName",
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": "합성회사"
+      },
+      "exercisable": false,
+      "exercisableReason": "읽기 전용 칸이며 검색 팝업 선택으로만 채워진다. review.md: 조회 팝업 결과와 페이지 스크립트가 스냅샷에 없어 오프라인에서 올바른 선택을 만들 수 없다"
+    },
+    {
+      "ordinal": 25,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(4) > div:nth-child(1) > div:nth-child(4) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "숨겨진 영역(조회 팝업 또는 다른 학력 구분용 블록)으로 쓰면 안 된다",
+      "preserve": true
+    },
+    {
+      "ordinal": 26,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(4) > div:nth-child(1) > div:nth-child(6) > div:nth-child(2) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "숨겨진 영역(조회 팝업 또는 다른 학력 구분용 블록)으로 쓰면 안 된다",
+      "preserve": true
+    },
+    {
+      "ordinal": 27,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > input:nth-child(2)"
+      ],
+      "profileFieldKey": "careers.career.department",
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": "개발팀"
+      },
+      "exercisable": true
+    },
+    {
+      "ordinal": 28,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(4) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "profileFieldKey": "careers.career.startDate",
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": "2021-03-01"
+      },
+      "exercisable": false,
+      "exercisableReason": "읽기 전용 날짜 칸이며 달력으로만 채워진다. review.md: 달력과 페이지 스크립트가 스냅샷에 없다"
+    },
+    {
+      "ordinal": 29,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(4) > div:nth-child(2) > input:nth-child(2)"
+      ],
+      "profileFieldKey": "careers.career.endDate",
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": "2025-02-01"
+      },
+      "exercisable": false,
+      "exercisableReason": "읽기 전용 날짜 칸이며 달력으로만 채워진다. review.md: 달력과 페이지 스크립트가 스냅샷에 없다"
+    },
+    {
+      "ordinal": 30,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > input:nth-child(2)"
+      ],
+      "profileFieldKey": "careers.career.position",
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": "개발자"
+      },
+      "exercisable": true
+    },
+    {
+      "ordinal": 31,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(6) > input:nth-child(2)"
+      ],
+      "profileFieldKey": "careers.career.responsibilities",
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": "합성 프로젝트 개발"
+      },
+      "exercisable": true
+    },
+    {
+      "ordinal": 32,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(3) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "profileFieldKey": "certifications.certificate.name",
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": "합성자격"
+      },
+      "exercisable": false,
+      "exercisableReason": "읽기 전용 칸이며 검색 팝업 선택으로만 채워진다. review.md: 조회 팝업 결과와 페이지 스크립트가 스냅샷에 없어 오프라인에서 올바른 선택을 만들 수 없다"
+    },
+    {
+      "ordinal": 33,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(3) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(4) > div:nth-child(1) > div:nth-child(4) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "숨겨진 영역(조회 팝업 또는 다른 학력 구분용 블록)으로 쓰면 안 된다",
+      "preserve": true
+    },
+    {
+      "ordinal": 34,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(3) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(4) > div:nth-child(1) > div:nth-child(6) > div:nth-child(2) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "숨겨진 영역(조회 팝업 또는 다른 학력 구분용 블록)으로 쓰면 안 된다",
+      "preserve": true
+    },
+    {
+      "ordinal": 35,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(3) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > select:nth-child(1)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": 0,
+      "controlKind": "select",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "합성 프로필 자격증에 등급 값이 없어 비워 둬야 한다",
+      "preserve": true
+    },
+    {
+      "ordinal": 36,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(3) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "profileFieldKey": "certifications.certificate.acquisitionDate",
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": "2025-02-15"
+      },
+      "exercisable": false,
+      "exercisableReason": "읽기 전용 날짜 칸이며 달력으로만 채워진다. review.md: 달력과 페이지 스크립트가 스냅샷에 없다"
+    },
+    {
+      "ordinal": 37,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(3) > div:nth-child(2) > div:nth-child(1) > div:nth-child(4) > input:nth-child(2)"
+      ],
+      "profileFieldKey": "certifications.certificate.issuer",
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": "합성기관"
+      },
+      "exercisable": true
+    },
+    {
+      "ordinal": 38,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(4) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > select:nth-child(1)"
+      ],
+      "profileFieldKey": "languages.languageTest.language",
+      "rowIndex": 0,
+      "controlKind": "select",
+      "expectedDomState": {
+        "value": "opt-36"
+      },
+      "exercisable": true
+    },
+    {
+      "ordinal": 39,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(4) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > input:nth-child(2)"
+      ],
+      "profileFieldKey": "languages.languageTest.testName",
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": "TOEIC"
+      },
+      "exercisable": false,
+      "exercisableReason": "읽기 전용 칸이며 검색 팝업 선택으로만 채워진다. review.md: 조회 팝업 결과와 페이지 스크립트가 스냅샷에 없어 오프라인에서 올바른 선택을 만들 수 없다"
+    },
+    {
+      "ordinal": 40,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(4) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(4) > div:nth-child(1) > div:nth-child(4) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "숨겨진 영역(조회 팝업 또는 다른 학력 구분용 블록)으로 쓰면 안 된다",
+      "preserve": true
+    },
+    {
+      "ordinal": 41,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(4) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(4) > div:nth-child(1) > div:nth-child(6) > div:nth-child(2) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "숨겨진 영역(조회 팝업 또는 다른 학력 구분용 블록)으로 쓰면 안 된다",
+      "preserve": true
+    },
+    {
+      "ordinal": 42,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(4) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > select:nth-child(1)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": 0,
+      "controlKind": "select",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "TOEIC 점수형 시험이라 합성 프로필에 등급 선택지에 해당하는 값이 없어 비워 둬야 한다",
+      "preserve": true
+    },
+    {
+      "ordinal": 43,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(4) > div:nth-child(2) > div:nth-child(1) > div:nth-child(4) > input:nth-child(2)"
+      ],
+      "profileFieldKey": "languages.languageTest.grade",
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": "900"
+      },
+      "exercisable": true
+    },
+    {
+      "ordinal": 44,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(4) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "profileFieldKey": "languages.languageTest.acquisitionDate",
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": "2025-01-15"
+      },
+      "exercisable": false,
+      "exercisableReason": "읽기 전용 날짜 칸이며 달력으로만 채워진다. review.md: 달력과 페이지 스크립트가 스냅샷에 없다"
+    },
+    {
+      "ordinal": 45,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(4) > div:nth-child(2) > div:nth-child(1) > div:nth-child(6) > input:nth-child(2)"
+      ],
+      "profileFieldKey": null,
+      "rowIndex": 0,
+      "controlKind": "text",
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "합성 프로필 어학 항목에 발급기관 값이 없어 비워 둬야 한다",
+      "preserve": true
+    }
+  ]
+}

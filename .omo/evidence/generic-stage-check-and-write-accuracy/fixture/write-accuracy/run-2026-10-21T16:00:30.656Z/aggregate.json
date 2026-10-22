@@ -1,0 +1,243 @@
+{
+  "schemaVersion": 1,
+  "expected": [
+    "ahnlab-write-resume-form",
+    "kakao-greeting-email",
+    "lg-ai-research-birth-split-email",
+    "naver-step2-form"
+  ],
+  "missing": [],
+  "extra": [],
+  "failures": [
+    "ahnlab-write-resume-form",
+    "kakao-greeting-email",
+    "lg-ai-research-birth-split-email",
+    "naver-step2-form"
+  ],
+  "reviewed": {
+    "registered": 84,
+    "exercisable": 0,
+    "approved": 0,
+    "attempted": 0,
+    "reportedWritten": 0,
+    "correct": 0,
+    "wrong": 0,
+    "held": 0,
+    "unscored": 84,
+    "reportedSuccessButWrong": 0,
+    "preservedViolated": 0
+  },
+  "unreviewed": {
+    "registered": 63,
+    "exercisable": 0,
+    "approved": 0,
+    "attempted": 0,
+    "reportedWritten": 0,
+    "correct": 0,
+    "wrong": 0,
+    "held": 0,
+    "unscored": 63,
+    "reportedSuccessButWrong": 0,
+    "preservedViolated": 0
+  },
+  "byControlKind": {
+    "text": {
+      "reviewed": {
+        "registered": 58,
+        "exercisable": 0,
+        "approved": 0,
+        "attempted": 0,
+        "reportedWritten": 0,
+        "correct": 0,
+        "wrong": 0,
+        "held": 0,
+        "unscored": 58,
+        "reportedSuccessButWrong": 0,
+        "preservedViolated": 0
+      },
+      "unreviewed": {
+        "registered": 48,
+        "exercisable": 0,
+        "approved": 0,
+        "attempted": 0,
+        "reportedWritten": 0,
+        "correct": 0,
+        "wrong": 0,
+        "held": 0,
+        "unscored": 48,
+        "reportedSuccessButWrong": 0,
+        "preservedViolated": 0
+      }
+    },
+    "radio": {
+      "reviewed": {
+        "registered": 4,
+        "exercisable": 0,
+        "approved": 0,
+        "attempted": 0,
+        "reportedWritten": 0,
+        "correct": 0,
+        "wrong": 0,
+        "held": 0,
+        "unscored": 4,
+        "reportedSuccessButWrong": 0,
+        "preservedViolated": 0
+      },
+      "unreviewed": {
+        "registered": 0,
+        "exercisable": 0,
+        "approved": 0,
+        "attempted": 0,
+        "reportedWritten": 0,
+        "correct": 0,
+        "wrong": 0,
+        "held": 0,
+        "unscored": 0,
+        "reportedSuccessButWrong": 0,
+        "preservedViolated": 0
+      }
+    },
+    "select": {
+      "reviewed": {
+        "registered": 21,
+        "exercisable": 0,
+        "approved": 0,
+        "attempted": 0,
+        "reportedWritten": 0,
+        "correct": 0,
+        "wrong": 0,
+        "held": 0,
+        "unscored": 21,
+        "reportedSuccessButWrong": 0,
+        "preservedViolated": 0
+      },
+      "unreviewed": {
+        "registered": 5,
+        "exercisable": 0,
+        "approved": 0,
+        "attempted": 0,
+        "reportedWritten": 0,
+        "correct": 0,
+        "wrong": 0,
+        "held": 0,
+        "unscored": 5,
+        "reportedSuccessButWrong": 0,
+        "preservedViolated": 0
+      }
+    },
+    "checkbox": {
+      "reviewed": {
+        "registered": 1,
+        "exercisable": 0,
+        "approved": 0,
+        "attempted": 0,
+        "reportedWritten": 0,
+        "correct": 0,
+        "wrong": 0,
+        "held": 0,
+        "unscored": 1,
+        "reportedSuccessButWrong": 0,
+        "preservedViolated": 0
+      },
+      "unreviewed": {
+        "registered": 7,
+        "exercisable": 0,
+        "approved": 0,
+        "attempted": 0,
+        "reportedWritten": 0,
+        "correct": 0,
+        "wrong": 0,
+        "held": 0,
+        "unscored": 7,
+        "reportedSuccessButWrong": 0,
+        "preservedViolated": 0
+      }
+    },
+    "textarea": {
+      "reviewed": {
+        "registered": 0,
+        "exercisable": 0,
+        "approved": 0,
+        "attempted": 0,
+        "reportedWritten": 0,
+        "correct": 0,
+        "wrong": 0,
+        "held": 0,
+        "unscored": 0,
+        "reportedSuccessButWrong": 0,
+        "preservedViolated": 0
+      },
+      "unreviewed": {
+        "registered": 3,
+        "exercisable": 0,
+        "approved": 0,
+        "attempted": 0,
+        "reportedWritten": 0,
+        "correct": 0,
+        "wrong": 0,
+        "held": 0,
+        "unscored": 3,
+        "reportedSuccessButWrong": 0,
+        "preservedViolated": 0
+      }
+    }
+  },
+  "excluded": [
+    {
+      "snapshot": "hplace-mrs2-step2-abl",
+      "status": "NOT_GENERIC_ROUTE",
+      "reason": "Hplace fingerprint scripts removed during sanitization",
+      "expectedRoute": "hplace",
+      "routeCheck": "NOT_REPRODUCIBLE_OFFLINE"
+    },
+    {
+      "snapshot": "hplace-mrs2-step2-careerhyundai",
+      "status": "NOT_GENERIC_ROUTE",
+      "reason": "Hplace fingerprint scripts removed during sanitization",
+      "expectedRoute": "hplace",
+      "routeCheck": "NOT_REPRODUCIBLE_OFFLINE"
+    },
+    {
+      "snapshot": "hplace-mrs2-step2-gsenc",
+      "status": "NOT_GENERIC_ROUTE",
+      "reason": "Hplace fingerprint scripts removed during sanitization",
+      "expectedRoute": "hplace",
+      "routeCheck": "NOT_REPRODUCIBLE_OFFLINE"
+    },
+    {
+      "snapshot": "hplace-mrs2-step3-abl",
+      "status": "NOT_GENERIC_ROUTE",
+      "reason": "Hplace fingerprint scripts removed during sanitization",
+      "expectedRoute": "hplace",
+      "routeCheck": "NOT_REPRODUCIBLE_OFFLINE"
+    },
+    {
+      "snapshot": "hplace-mrs2-step3-careerhyundai",
+      "status": "NOT_GENERIC_ROUTE",
+      "reason": "Hplace fingerprint scripts removed during sanitization",
+      "expectedRoute": "hplace",
+      "routeCheck": "NOT_REPRODUCIBLE_OFFLINE"
+    },
+    {
+      "snapshot": "hplace-mrs2-step3-gsenc",
+      "status": "NOT_GENERIC_ROUTE",
+      "reason": "Hplace fingerprint scripts removed during sanitization",
+      "expectedRoute": "hplace",
+      "routeCheck": "NOT_REPRODUCIBLE_OFFLINE"
+    },
+    {
+      "snapshot": "naver-panel-loss",
+      "status": "ABORTED",
+      "reason": "Collection aborted: panel lifecycle, not field structure",
+      "expectedRoute": "generic",
+      "routeCheck": "ASSERTED"
+    },
+    {
+      "snapshot": "sk-careers-application-form",
+      "status": "NOT_GENERIC_ROUTE",
+      "reason": "Product browser policy route; excluded from generic measurement",
+      "expectedRoute": "policy",
+      "routeCheck": "ASSERTED"
+    }
+  ]
+}
