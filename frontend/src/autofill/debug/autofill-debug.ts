@@ -19,6 +19,7 @@ import type {
 } from "../api/types";
 import type { ReviewPlan, ReviewPlanItem } from "../review/review-plan";
 import type { ApprovedWriteResult } from "../write/write-result";
+import { emitWriteTrace } from "./write-trace";
 
 const PREFIX = "[CareerForm]";
 
@@ -265,6 +266,7 @@ export function debugWriteRun(
   executed: readonly ApprovedWriteResult[] | undefined,
   finalResults: ApprovedWriteResult[],
 ): ApprovedWriteResult[] {
+  emitWriteTrace(items, approvedCandidateIds, registry, executed, finalResults);
   if (!enabled) return finalResults;
   const approved = items.filter((item) =>
     approvedCandidateIds.has(item.candidateId),

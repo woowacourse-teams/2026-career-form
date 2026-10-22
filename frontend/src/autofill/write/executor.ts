@@ -33,6 +33,7 @@ import {
 import { executeButtonDropdownWrite } from "./button-dropdown-executor";
 import { skipped, written, type ApprovedWriteResult } from "./write-result";
 import { debugWriteRun } from "../debug/autofill-debug";
+import { beginWriteTrace, traceWrite } from "../debug/write-trace";
 import {
   executeApprovedSearchWrites,
   settledSearchSelectionResult,
@@ -246,6 +247,7 @@ export async function executeApprovedWritesAfterPageSettles({
         nativeDigest) &&
     (!document || resolveDocumentCompany(document) !== "hplace");
   try {
+    beginWriteTrace();
     if (companyId === "hplace" && !calendarOnly) {
       const results: ApprovedWriteResult[] = [];
       const seen = new Set<string>();
@@ -547,10 +549,17 @@ export async function executeApprovedWritesAfterPageSettles({
               "입력한 값이 유지되는지 확인하지 못했습니다.",
             );
       }
-      if (item.analysis?.writePlan?.command === "SEARCH_SELECTION")
-        return settledSearchSelectionResult(item, registry, result);
-      if (item.analysis?.writePlan?.command === "SELECT_DATE")
-        return calendarValueSettled(item, registry)
+      if (item.analysis?.writePlan?.command === "SEARCH_SELECTION") {
+        const settled = settledSearchSelectionResult(item, registry, result);
+        traceWrite(item.candidateId, {
+          valueAtSettle: settled.status === "written",
+        });
+        return settled;
+      }
+      if (item.analysis?.writePlan?.command === "SELECT_DATE") {
+        const retained = calendarValueSettled(item, registry);
+        traceWrite(item.candidateId, { valueAtSettle: retained });
+        return retained
           ? result
           : skipped(
               item.candidateId,
@@ -558,6 +567,7 @@ export async function executeApprovedWritesAfterPageSettles({
               "RETAINED_VALUE_UNCONFIRMED",
               "입력한 값이 유지되는지 확인하지 못했습니다.",
             );
+      }
       if (item.catalogMatch) {
         const verified = settledGenericResult(
           item,

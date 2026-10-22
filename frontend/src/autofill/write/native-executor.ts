@@ -1,3 +1,4 @@
+import { traceWrite } from "../debug/write-trace";
 import { isSplitEmailTarget, SPLIT_EMAIL_REASON } from "../dom/split-email";
 import {
   isVisibleWriteElement,
@@ -534,8 +535,14 @@ function writeGeneric(
   writtenTargets.delete(handle);
   if (strict && hasGenericConflict(item, handle))
     return { written: false, reason: CONFLICT, code: "CONFLICT" };
+  traceWrite(item.candidateId, {
+    targetFound: false,
+    setterCalled: false,
+    valueAfterWrite: false,
+  });
   if (command === "SET_TEXT") {
     const element = primaryWriteElement(handle);
+    traceWrite(item.candidateId, { targetFound: element !== undefined });
     if (
       element instanceof HTMLInputElement &&
       element.getAttribute("role") === "combobox"
@@ -556,6 +563,7 @@ function writeGeneric(
     writtenTargets.set(handle, element);
     if (item.dateApproval && element.value === value) return { written: true };
     resetValueTracker(element);
+    traceWrite(item.candidateId, { setterCalled: true });
     if (!setNativeValue(element, value)) {
       return { written: false, reason: UNSAFE, code: "EXECUTION_FAILED" };
     }
@@ -565,6 +573,7 @@ function writeGeneric(
     element.dispatchEvent(new Event("change", { bubbles: true }));
     if (item.dateApproval && element.value !== value)
       return { written: false, reason: RETENTION, code: "EXECUTION_FAILED" };
+    traceWrite(item.candidateId, { valueAfterWrite: element.value === value });
     return { written: true };
   }
   if (command === "SELECT_OPTION") {
@@ -591,12 +600,16 @@ function writeGeneric(
       };
     writtenTargets.set(handle, select);
     resetValueTracker(select);
+    traceWrite(item.candidateId, { targetFound: true, setterCalled: true });
     if (
       !setNativeValue(select, option.value) ||
       select.selectedOptions[0] !== option
     )
       return { written: false, reason: UNSAFE, code: "EXECUTION_FAILED" };
     dispatchValueEvents(select);
+    traceWrite(item.candidateId, {
+      valueAfterWrite: select.selectedOptions[0] === option,
+    });
     return { written: true };
   }
   const option = nativeChoiceOption(handle, value);
@@ -616,9 +629,11 @@ function writeGeneric(
     return { written: false, reason: UNSAFE, code: "UNSUPPORTED_CONTROL" };
   writtenTargets.set(handle, option);
   resetValueTracker(option);
+  traceWrite(item.candidateId, { targetFound: true, setterCalled: true });
   if (!setNativeChecked(option))
     return { written: false, reason: UNSAFE, code: "EXECUTION_FAILED" };
   dispatchValueEvents(option);
+  traceWrite(item.candidateId, { valueAfterWrite: option.checked });
   // Radio change handlers are derived from click by frameworks such as React.
   // Notify through the same activation event a user produces.
   if (expected === "radio")
@@ -969,7 +984,9 @@ export function settledGenericResult(
       "STALE_TARGET",
       "페이지가 변경되어 입력 결과를 확인할 수 없습니다.",
     );
-  return retainedGenericValue(item, lookup.handle)
+  const retained = retainedGenericValue(item, lookup.handle);
+  traceWrite(item.candidateId, { valueAtSettle: retained });
+  return retained
     ? written(item.candidateId)
     : skipped(
         item.candidateId,
