@@ -2,9 +2,9 @@
 
 > Topic: adapter-hyundai
 > Status: Current
-> Current: [CF-310 Map·Set 재정의 근거](../../raw/issues/CF-310/documents/hyundai-map-set-override.md)
-> History: [근거 1](../../raw/issues/CF-46/documents/adapter-hyundai.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-hyundai.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-hyundai.md); [CF-169 근거](../../raw/issues/CF-169/documents/adapter-hyundai.md); [CF-310 Map·Set 재정의 근거](../../raw/issues/CF-310/documents/hyundai-map-set-override.md)
-> Updated: 2026-10-21
+> Current: [CF-310 버튼형 선택지 코드 근거](../../raw/issues/CF-310/documents/hyundai-button-select-codes.md)
+> History: [근거 1](../../raw/issues/CF-46/documents/adapter-hyundai.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-hyundai.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-hyundai.md); [CF-169 근거](../../raw/issues/CF-169/documents/adapter-hyundai.md); [CF-310 Map·Set 재정의 근거](../../raw/issues/CF-310/documents/hyundai-map-set-override.md); [CF-310 버튼형 선택지 코드 근거](../../raw/issues/CF-310/documents/hyundai-button-select-codes.md)
+> Updated: 2026-10-22
 
 ## 현재 상태
 
@@ -73,3 +73,7 @@ ID 없는 현대 프로젝트·논문 구조 식별로 준비 단계 차단을 �
 ## CF-99 결과 패널 진단 (2026-09-24)
 
 학교·전공 검색은 정확 일치 없음, 복수 후보, 시간 초과, 선택 미확인을 값 없는 진단 코드로 전달한다. 시험 선택 뒤 성적란 준비 실패도 구분한다. 기존 유일 결과·코드 확인과 지원 범위는 유지한다. 상세 근거는 [CF-99 승인 결정](../../raw/issues/CF-99/documents/autofill-follow-and-install.md)을 따른다.
+
+## 버튼형 선택지의 코드 수집 한계 (2026-10-22)
+
+전과/편입(`tranGb`)과 종료사유(`retResCd`)는 `btn-select` 버튼과 같은 이름의 hidden input으로 이루어지고, 선택지는 레이어를 열 때만 DOM에 그려진다. 실사이트 QA 하네스는 선택지 문구는 담지만 hidden에 들어갈 코드는 담지 못한다. 정책 v24에는 두 칸의 규칙이 없고, 버튼형 규칙(`ButtonOptionBinding`)은 optionMap과 optionCodeMap을 모두 요구하므로 매핑은 레이어를 연 상태의 코드 수집이 선행돼야 한다. 프로필 편입유무 `해당`은 `전과 후`·`편입 전`·`편입 후` 중 하나로 정할 수 없다. 근거는 [CF-310 버튼형 선택지 코드 근거](../../raw/issues/CF-310/documents/hyundai-button-select-codes.md)를 따른다.

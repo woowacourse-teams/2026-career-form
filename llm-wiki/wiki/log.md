@@ -783,3 +783,11 @@
 - 승인된 후보 5개를 [CF-310 bundle](../raw/issues/CF-310/manifest.md)의 두 번째 수집으로 기록하고 승인 후보 스냅샷의 SHA-256을 재확인했다.
 - [SK 어댑터](topics/adapter-sk.md), [Hplace 어댑터](topics/adapter-hplace.md), [실사이트 평가](topics/live-autofill-evaluation.md)의 Current와 History를 갱신하고 R262309형 고교 행의 재식별 실패, 4단계 분석 `BAD_REQUEST`와 패널 집계 의미, 원복 재키 대조와 표시 규칙의 한계를 반영했다.
 - 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.
+
+## [2026-10-22] ingest | CF-310 결함 수정에서 확인한 정책 별칭 위치, SK v38 재식별, 빈 단계 분석 생략, 현대 코드 수집 한계, 하네스 재진입
+
+- Approval-Digest: 9fd9bbce11f926e2cc6027742160d7265ecdcdc034a816df189c47238a86477c
+- Source-Revision: c5d703f411b7220829268ddf260a289e6cf48814
+- 승인된 후보 5개를 [CF-310 bundle](../raw/issues/CF-310/manifest.md)의 세 번째 수집으로 기록하고 승인 후보 스냅샷의 SHA-256을 재확인했다.
+- [SK 어댑터](topics/adapter-sk.md), [Greeting 어댑터](topics/adapter-greeting.md), [Hplace 어댑터](topics/adapter-hplace.md), [현대 어댑터](topics/adapter-hyundai.md), [실사이트 평가](topics/live-autofill-evaluation.md)의 Current와 History를 갱신하고 v38·v18 별칭 위치, 재학 상태 select 기준 재식별, 수락 필드 0건의 분석 생략, 버튼형 선택지 코드 한계, 재설치 뒤 재진입과 응답 없는 탭 처리를 반영했다.
+- 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.

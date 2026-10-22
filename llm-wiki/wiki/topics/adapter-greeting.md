@@ -2,9 +2,9 @@
 
 > Topic: adapter-greeting
 > Status: Current
-> Current: [CF-310 검색 서버 액션 근거](../../raw/issues/CF-310/documents/greeting-search-server-action.md)
-> History: [CF-94 근거](../../raw/issues/CF-94/documents/adapter-greeting.md); [CF-160 근거](../../raw/issues/CF-160/documents/adapter-greeting.md); [CF-162 근거](../../raw/issues/CF-162/documents/adapter-greeting.md); [CF-168 근거](../../raw/issues/CF-168/documents/adapter-greeting.md); [CF-310 검색 서버 액션 근거](../../raw/issues/CF-310/documents/greeting-search-server-action.md)
-> Updated: 2026-10-21
+> Current: [CF-310 v18 장애 정도 별칭 근거](../../raw/issues/CF-310/documents/greeting-v18-disability-alias.md)
+> History: [CF-94 근거](../../raw/issues/CF-94/documents/adapter-greeting.md); [CF-160 근거](../../raw/issues/CF-160/documents/adapter-greeting.md); [CF-162 근거](../../raw/issues/CF-162/documents/adapter-greeting.md); [CF-168 근거](../../raw/issues/CF-168/documents/adapter-greeting.md); [CF-310 검색 서버 액션 근거](../../raw/issues/CF-310/documents/greeting-search-server-action.md); [CF-310 v18 장애 정도 별칭 근거](../../raw/issues/CF-310/documents/greeting-v18-disability-alias.md)
+> Updated: 2026-10-22
 
 ## 현재 상태
 
@@ -27,6 +27,10 @@ FE는 SK·현대의 기존 선택 우선순위를 유지하며 유일한 최상�
 ## 검색 요청 구조 (2026-10-21)
 
 학교·전공 검색은 지원 페이지 주소(`/<언어>/o/<공고 번호>/apply`)로 보내는 Next.js 서버 액션(`Next-Action` 헤더가 붙은 POST)이며 별도 API 경로가 없다. 2026-10-21 실행에서 바이트로 기록한 검색 본문은 12–43바이트였다(kakaogames·kurly). 경로에 `apply`가 들어가므로 경로 낱말로 저장성 요청을 막으면 검색까지 막힌다. 실사이트 QA 하네스(`frontend/scripts/live-qa`)는 헤더와 본문 모양으로 조회를 구분한다. 근거는 [CF-310 검색 서버 액션](../../raw/issues/CF-310/documents/greeting-search-server-action.md)을 따른다.
+
+## v18: 장애 정도 optionMap 별칭 (2026-10-22)
+
+장애 정도(`...disability.degreeOfDisability`)는 서버 fieldRule의 LookupBinding optionMap이 프로필 값을 사이트 선택지로 바꾼다. v17에는 `중증`·`경증`과 사이트 문구 자체만 있어 프로필 문구 `심하지 않은 장애인`이 네 곳에서 비었다. v18은 `심한 장애인`→`중증(심한장애)`, `심하지 않은 장애인`→`경증(심하지 않은 장애)`를 더하고, 로컬 백엔드 재측정에서 카카오게임즈의 이 칸이 채워졌다(패널 96·12). 브라우저 정책 자원에는 이 칸의 optionMap이 없으므로 별칭은 시드 fieldRule에 둔다. 근거는 [CF-310 v18 근거](../../raw/issues/CF-310/documents/greeting-v18-disability-alias.md)를 따른다.
 
 ## 검증과 제한
 
