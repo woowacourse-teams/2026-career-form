@@ -63,6 +63,10 @@ jobs:
               echo "ref에 해당하는 커밋이 없거나 하나로 정해지지 않습니다: $ref" >&2
               exit 1
             fi
+            if [[ "$release_sha" != "$ref"* ]]; then
+              echo "ref가 같은 이름의 브랜치나 tag로 해석됩니다: $ref" >&2
+              exit 1
+            fi
             if ! git merge-base --is-ancestor "$release_sha" "$develop_sha"; then
               echo "ref 커밋이 develop 이력에 없습니다: $release_sha" >&2
               exit 1
