@@ -7,7 +7,11 @@ import type { ReviewPlanItem } from "../review/review-plan";
 import type { ApprovedWriteResult } from "../write/write-result";
 
 export type WriteTraceHold = {
-  kind: "followUp" | "surfaceLeftOpen" | "unconfirmedSearch";
+  kind:
+    | "calendar-stop"
+    | "ordinary-stop"
+    | "search-followup-selected"
+    | "search-unconfirmed";
   /** The item whose result halted this one. */
   triggerCandidateId: string;
   /** True when the halt reached beyond the triggering row. */
@@ -20,6 +24,9 @@ interface WriteTraceEntry {
   valueAfterWrite?: boolean;
   valueAtSettle?: boolean;
   hold?: WriteTraceHold;
+  interactionReason?: string;
+  surfaceLeftOpen?: boolean;
+  triggerHasProfileEntryId?: boolean;
 }
 
 const entries = new Map<string, WriteTraceEntry>();
@@ -31,6 +38,25 @@ export function beginWriteTrace(): void {
 export function traceWrite(
   candidateId: string,
   patch: Omit<WriteTraceEntry, "hold">,
+): void {
+  // Inline on purpose: the bundler folds this to a constant, so production
+  // builds drop the whole trace instead of keeping it behind a function call.
+  if (
+    import.meta.env.DEV !== true ||
+    import.meta.env.VITE_LOCAL_WORKFLOW_DIAGNOSTICS !== "1" ||
+    import.meta.env.VITE_API_BASE_URL !== "http://localhost:8080"
+  )
+    return;
+  entries.set(candidateId, { ...entries.get(candidateId), ...patch });
+}
+
+/** Code identifiers only: the internal reason, never a message or value. */
+export function traceTrigger(
+  candidateId: string,
+  patch: Pick<
+    WriteTraceEntry,
+    "interactionReason" | "surfaceLeftOpen" | "triggerHasProfileEntryId"
+  >,
 ): void {
   // Inline on purpose: the bundler folds this to a constant, so production
   // builds drop the whole trace instead of keeping it behind a function call.
@@ -107,6 +133,9 @@ export function buildWriteTraceRows(
       haltTriggerOrdinal: hold
         ? (writeOrdinals.get(hold.triggerCandidateId) ?? null)
         : null,
+      interactionReason: entry?.interactionReason ?? "",
+      surfaceLeftOpen: entry?.surfaceLeftOpen ?? null,
+      triggerHasProfileEntryId: entry?.triggerHasProfileEntryId ?? null,
     };
   });
 }

@@ -1,6 +1,6 @@
 import { createInteractionDecisionSession } from "../api/interaction-decision-session";
 import type { InteractionDecisionProvider } from "../api/interaction-types";
-import { traceHold } from "../debug/write-trace";
+import { traceHold, traceTrigger } from "../debug/write-trace";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import {
   executeReadonlySearch,
@@ -382,8 +382,19 @@ export async function executeApprovedSearchWrites({
         results[index] = result;
         onResult?.(item, result);
         if (effect === "stop") {
+          traceTrigger(item.candidateId, {
+            triggerHasProfileEntryId: item.profileEntryId !== undefined,
+          });
           for (let later = index + 1; later < items.length; later++) {
             if (!approvedCandidateIds.has(items[later]!.candidateId)) continue;
+            traceHold(items[later]!.candidateId, {
+              kind:
+                item.analysis?.writePlan?.command === "SELECT_DATE"
+                  ? "calendar-stop"
+                  : "ordinary-stop",
+              triggerCandidateId: item.candidateId,
+              batch: true,
+            });
             results[later] = skipped(
               items[later]!.candidateId,
               "needs-verification",
@@ -608,10 +619,13 @@ export async function executeApprovedSearchWrites({
     onResult?.(item, results[index]!);
     if (result.status === "selected" && result.followUp?.controls.length) {
       onSearchFollowUp?.(item, result.followUp.controls);
+      traceTrigger(item.candidateId, {
+        triggerHasProfileEntryId: item.profileEntryId !== undefined,
+      });
       for (let later = index + 1; later < items.length; later++) {
         if (!approvedCandidateIds.has(items[later]!.candidateId)) continue;
         traceHold(items[later]!.candidateId, {
-          kind: "followUp",
+          kind: "search-followup-selected",
           triggerCandidateId: item.candidateId,
           batch: true,
         });
@@ -635,6 +649,11 @@ export async function executeApprovedSearchWrites({
         followUpHaltScope === "row" &&
         item.profileEntryId !== undefined &&
         failedResult?.surfaceLeftOpen !== true;
+      traceTrigger(item.candidateId, {
+        interactionReason: failedResult?.reason ?? "",
+        surfaceLeftOpen: failedResult?.surfaceLeftOpen === true,
+        triggerHasProfileEntryId: item.profileEntryId !== undefined,
+      });
       for (let later = index + 1; later < items.length; later++) {
         if (
           !approvedCandidateIds.has(items[later]!.candidateId) ||
@@ -650,10 +669,7 @@ export async function executeApprovedSearchWrites({
           continue;
         heldIndexes.add(later);
         traceHold(items[later]!.candidateId, {
-          kind:
-            failedResult?.surfaceLeftOpen === true
-              ? "surfaceLeftOpen"
-              : "unconfirmedSearch",
+          kind: "search-unconfirmed",
           triggerCandidateId: item.candidateId,
           batch: !rowOnly,
         });

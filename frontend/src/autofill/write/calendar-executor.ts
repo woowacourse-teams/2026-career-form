@@ -1,3 +1,4 @@
+import { traceTrigger } from "../debug/write-trace";
 import type { InteractionDecisionProvider } from "../api/interaction-types";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import { executeCalendarSelection } from "../interaction/calendar-executor";
@@ -209,12 +210,14 @@ async function executeApprovedDayCalendarWrite(
       interactionDecisionProvider: args.interactionDecisionProvider,
       canonicalFieldKey: approval.profileFieldKey ?? "calendar-day",
     });
-    if (execution.status !== "completed")
+    if (execution.status !== "completed") {
+      traceTrigger(item.candidateId, { interactionReason: execution.reason });
       return stop(
         item.candidateId,
         "RETAINED_VALUE_UNCONFIRMED",
         `달력 선택 결과를 확인할 수 없어 후속 자동 기입을 중단했습니다. (${execution.reason})`,
       );
+    }
   } catch {
     return stop(
       item.candidateId,
@@ -313,12 +316,14 @@ export async function executeApprovedCalendarWrite(
         revalidateCalendarApproval(approval).status === "valid",
       signal: args.signal,
     });
-    if (execution.status !== "completed")
+    if (execution.status !== "completed") {
+      traceTrigger(item.candidateId, { interactionReason: execution.reason });
       return stop(
         item.candidateId,
         "RETAINED_VALUE_UNCONFIRMED",
         `달력 선택 결과를 확인할 수 없어 후속 자동 기입을 중단했습니다. (${execution.reason})`,
       );
+    }
   } catch {
     return stop(
       item.candidateId,
