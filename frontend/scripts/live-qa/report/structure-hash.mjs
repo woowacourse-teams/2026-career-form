@@ -4,7 +4,11 @@
 //
 // The hash covers `controls` (without the index `i`, in page order) and
 // `addButtons`. `url` and `label` stay out: two postings of one form share a
-// structure and should share a grading.
+// structure and should share a grading. Hidden companions of a code or name
+// control (`companionOf`, census.mjs) stay out too: they are derived from the
+// visible control, appended after every other control, and never graded as
+// cells of their own, so a grading made before they were collected still
+// applies.
 
 import { createHash } from "node:crypto";
 
@@ -20,11 +24,13 @@ export function canonicalJson(value) {
 }
 
 export function structureHash(gradeInput) {
-  const controls = (gradeInput.controls ?? []).map((c) => {
-    const rest = { ...c };
-    delete rest.i;
-    return rest;
-  });
+  const controls = (gradeInput.controls ?? [])
+    .filter((c) => c.companionOf === undefined)
+    .map((c) => {
+      const rest = { ...c };
+      delete rest.i;
+      return rest;
+    });
   const body = canonicalJson({
     controls,
     addButtons: gradeInput.addButtons ?? [],

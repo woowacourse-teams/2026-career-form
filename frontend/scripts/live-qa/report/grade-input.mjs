@@ -21,6 +21,8 @@ const KEPT = [
   "readonly",
   "maxLength",
   "role",
+  "hidden",
+  "companionOf",
 ];
 const present = (value) =>
   value !== undefined &&

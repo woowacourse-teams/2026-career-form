@@ -5,6 +5,7 @@
 // panel-trigger-missing until the tab is opened again at the same address.
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import { bounded } from "./browser.mjs";
 import { claimDialogs } from "./dialogs.mjs";
 import {
@@ -70,6 +71,22 @@ const HYUNDAI_WRITE = /applyWrite/i;
 
 // Whether the extension's content script is on the page: its floating
 // launcher is the one element it always mounts. Unknown (hung tab) is false.
+// The content script mounts its launcher some time after the document is
+// ready, so a re-entered tab is polled until the launcher shows or the
+// budget runs out.
+export async function waitForContentScript(
+  page,
+  timeoutMs = 5000,
+  { pollMs = 500, now = Date.now, wait = delay } = {},
+) {
+  const deadline = now() + timeoutMs;
+  for (;;) {
+    if (await hasContentScript(page, Math.min(timeoutMs, 5000))) return true;
+    if (now() >= deadline) return false;
+    await wait(pollMs);
+  }
+}
+
 export async function hasContentScript(page, timeoutMs = 5000) {
   const count = await bounded(
     page.locator(LAUNCHER_SELECTOR).count(),
@@ -146,6 +163,10 @@ export async function recoverContentScripts(
     reopenStep = reopenStepDefault,
     reopenAddress = reopenAddressDefault,
     checkTimeoutMs = 5000,
+    // After a reinstall the old content script's launcher element stays in
+    // the DOM although its script context is gone, so the presence check
+    // cannot tell a live script from an orphaned one: re-enter every tab.
+    assumeStale = false,
   } = {},
 ) {
   const result = {
@@ -158,7 +179,8 @@ export async function recoverContentScripts(
   for (const page of pages) {
     result.checked += 1;
     const url = brief(page.url());
-    if (await hasContentScript(page, checkTimeoutMs)) continue;
+    if (!assumeStale && (await hasContentScript(page, checkTimeoutMs)))
+      continue;
     const kind = reentryKind(page.url());
     if (kind === "person") {
       result.needsPerson.push(url);
@@ -173,7 +195,7 @@ export async function recoverContentScripts(
     if (
       reopened?.ok &&
       brief(after) === url &&
-      (await hasContentScript(page, checkTimeoutMs))
+      (await waitForContentScript(page, checkTimeoutMs))
     )
       result.recovered.push(url);
     else result.stillMissing.push(url);

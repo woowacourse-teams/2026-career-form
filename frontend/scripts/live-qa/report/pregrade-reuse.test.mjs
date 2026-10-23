@@ -10,9 +10,11 @@ import {
   estimatePregrade,
   formatPregradeLines,
   loadStructureIndex,
+  reuseIndexOf,
   reusePregrade,
   saveStructureIndex,
 } from "./pregrade-reuse.mjs";
+import { structureHash } from "./structure-hash.mjs";
 
 const HASH_A = "a".repeat(64);
 const HASH_B = "b".repeat(64);
@@ -114,6 +116,44 @@ describe("reusePregrade", () => {
     expect(await loadStructureIndex(out)).toEqual({});
     await saveStructureIndex(out, index);
     expect(await loadStructureIndex(out)).toEqual(index);
+  });
+
+  it("derives the index of a --reuse-from directory that predates hashes", async () => {
+    const input = {
+      label: "old-page",
+      controls: [{ i: 0, type: "text", name: "a", label: "A" }],
+      addButtons: ["추가"],
+    };
+    await writeFile(
+      join(previous, "grade/old-page.input.json"),
+      JSON.stringify(input),
+    );
+    await writeFile(
+      join(previous, "grade/old-page.final.json"),
+      JSON.stringify(final("old-page")),
+    );
+    // An input without a final beside it is not a grading to reuse.
+    await writeFile(
+      join(previous, "grade/ungraded.input.json"),
+      JSON.stringify({ ...input, controls: [] }),
+    );
+    const derived = await reuseIndexOf(previous);
+    expect(Object.keys(derived)).toEqual([structureHash(input)]);
+    const index = {};
+    const result = await reusePregrade({
+      outDir: out,
+      label: "new-page",
+      hash: structureHash(input),
+      index,
+      reuseDirs: [previous],
+    });
+    expect(result).toEqual({ status: "reused", reusedFrom: "old-page" });
+    expect(
+      await readJson(join(out, "grade/new-page.final.json")),
+    ).toMatchObject({
+      label: "new-page",
+      reusedFrom: { label: "old-page" },
+    });
   });
 
   it("skips index entries whose final file is gone", async () => {

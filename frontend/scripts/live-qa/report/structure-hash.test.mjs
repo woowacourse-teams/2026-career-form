@@ -63,6 +63,27 @@ describe("structureHash", () => {
     expect(new Set(hashes).size).toBe(4);
   });
 
+  it("ignores hidden companion controls so older gradings still match", () => {
+    const base = {
+      controls: [{ i: 0, type: "text", name: "licenseCd", label: "자격" }],
+      addButtons: [],
+    };
+    const withCompanion = {
+      controls: [
+        ...base.controls,
+        {
+          i: 1,
+          type: "hidden",
+          name: "licenseName",
+          hidden: true,
+          companionOf: 0,
+        },
+      ],
+      addButtons: [],
+    };
+    expect(structureHash(withCompanion)).toBe(structureHash(base));
+  });
+
   it("does not depend on key order inside a control", () => {
     const a = structureHash({
       controls: [{ i: 0, type: "text", name: "a" }],

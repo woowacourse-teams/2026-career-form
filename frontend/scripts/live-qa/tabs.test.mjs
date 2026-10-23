@@ -8,6 +8,7 @@ import {
   aliasesForUrl,
   hasContentScript,
   readTabAliases,
+  waitForContentScript,
   recoverContentScripts,
   reentryKind,
   resolveTabSpec,
@@ -124,7 +125,45 @@ describe("hasContentScript", () => {
   });
 });
 
+describe("waitForContentScript", () => {
+  it("polls until the launcher shows and gives up at the deadline", async () => {
+    let t = 0;
+    const clock = {
+      now: () => t,
+      wait: async (ms) => {
+        t += ms;
+      },
+    };
+    const late = fakePage(SK);
+    const original = late.locator;
+    late.locator = (sel) =>
+      t >= 1000 ? { count: async () => 1 } : original.call(late, sel);
+    expect(
+      await waitForContentScript(late, 3000, { pollMs: 500, ...clock }),
+    ).toBe(true);
+    expect(t).toBe(1000);
+    t = 0;
+    expect(
+      await waitForContentScript(fakePage(SK), 1000, { pollMs: 500, ...clock }),
+    ).toBe(false);
+    expect(t).toBe(1000);
+  });
+});
+
 describe("recoverContentScripts", () => {
+  it("re-enters a tab that still shows a launcher when assumeStale is set", async () => {
+    // After a reinstall the orphaned launcher element is still in the DOM.
+    const page = fakePage(SK, { launcher: true });
+    const result = await recoverContentScripts(context(page), {
+      assumeStale: true,
+    });
+    expect(page.gotos).toEqual([
+      "https://www.skcareers.com/Application/Write?id=1",
+    ]);
+    expect(result.recovered).toEqual([
+      "https://www.skcareers.com/Application/Write",
+    ]);
+  });
   it("re-enters only application tabs that lost the script and reports briefed urls", async () => {
     const fine = fakePage(GREETING, { launcher: true });
     const sk = fakePage(SK);

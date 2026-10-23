@@ -87,6 +87,19 @@ const SAVED_COUNTS = [
 // still hold the value their HTML gave them (the site's defaults, e.g. a
 // 비대상 radio or a select at its first option). `saved` counts only the
 // fields that are neither.
+// Hidden row ids (Hplace `...Sn`) whose row holds no other removable field:
+// the server keeps such an id for an empty builder row (2026-10-23 and
+// 2026-10-24 ABL step 2 `experienceBuilder.resumeBuilderSn` survived every
+// reset), so it is the site's own state, not a saved value.
+export function lonelyRowIds(fields) {
+  const rowOf = (n) => (n.includes(".") ? n.slice(0, n.lastIndexOf(".")) : "");
+  return fields.filter((n) => {
+    if (!/Sn$/.test(n)) return false;
+    const row = rowOf(n);
+    return !fields.some((o) => o !== n && rowOf(o) === row && !/Sn$/.test(o));
+  });
+}
+
 async function dryClear(page) {
   const merged = { fields: [], defaultFields: [] };
   for (const f of page.frames()) {
@@ -100,6 +113,8 @@ async function dryClear(page) {
     merged.fields.push(...(r.fields ?? []));
     merged.defaultFields.push(...(r.defaultFields ?? []));
   }
+  for (const n of lonelyRowIds(merged.fields))
+    if (!merged.defaultFields.includes(n)) merged.defaultFields.push(n);
   merged.accountFields = merged.fields.filter((n) => IDENTITY_FIELD.test(n));
   const others = merged.fields.filter(
     (n) => !IDENTITY_FIELD.test(n) && !merged.defaultFields.includes(n),

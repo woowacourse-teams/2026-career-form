@@ -329,6 +329,9 @@ const commands = {
         // them at their own address (tabs.mjs).
         recovery = await recoverContentScripts(context, {
           allowHosts: await apiHosts(),
+          assumeStale: true,
+          // The launcher mounts a few seconds after re-entry.
+          checkTimeoutMs: 15000,
         });
       }
       let lock = await readInstallLock(paths);

@@ -10,6 +10,7 @@ import {
   planCaptures,
   runPage,
   savedData,
+  lonelyRowIds,
   withKeepalive,
 } from "./driver.mjs";
 
@@ -190,6 +191,22 @@ describe("savedData", () => {
     });
     dry.fields.push("school");
     await expect(savedData(page)).resolves.toMatchObject({ saved: true });
+  });
+});
+
+describe("lonelyRowIds", () => {
+  it("treats a hidden row id with no sibling value as the site's own state", () => {
+    expect(
+      lonelyRowIds([
+        "experienceBuilder.resumeBuilderSn",
+        "college[0].academyActivitySn",
+        "college[0].academyName",
+        "career[1].careerCriteriaCodeSn",
+      ]),
+    ).toEqual([
+      "experienceBuilder.resumeBuilderSn",
+      "career[1].careerCriteriaCodeSn",
+    ]);
   });
 });
 

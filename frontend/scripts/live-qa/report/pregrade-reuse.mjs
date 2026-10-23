@@ -7,7 +7,8 @@
 // indexes of the directories given with --reuse-from, in order.
 
 import { existsSync } from "node:fs";
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, readdir, writeFile } from "node:fs/promises";
+import { structureHash } from "./structure-hash.mjs";
 import { resolve } from "node:path";
 
 export const STRUCTURE_INDEX = "grade/structure-index.json";
@@ -27,6 +28,25 @@ const writeJson = (path, value) =>
 export async function loadStructureIndex(dir) {
   const path = resolve(dir, STRUCTURE_INDEX);
   return existsSync(path) ? await readJson(path) : {};
+}
+
+// A result directory written before structure hashes existed has no index:
+// its gradings are found by hashing each `grade/<label>.input.json` that has
+// a `final.json` beside it. Entries of a real index win.
+export async function reuseIndexOf(dir) {
+  const index = await loadStructureIndex(dir);
+  const grade = resolve(dir, "grade");
+  if (!existsSync(grade)) return index;
+  for (const name of await readdir(grade)) {
+    const label = /^(.+)\.input\.json$/.exec(name)?.[1];
+    if (!label) continue;
+    const finalFile = resolve(grade, `${label}.final.json`);
+    if (!existsSync(finalFile)) continue;
+    const input = await readJson(resolve(grade, name));
+    const hash = input.structureHash ?? structureHash(input);
+    index[hash] ??= { label, finalFile, at: null };
+  }
+  return index;
 }
 
 export function saveStructureIndex(dir, index) {
@@ -59,7 +79,7 @@ export async function reusePregrade({
   // The page structure changed: the old grading no longer applies.
   if (previousHash && previousHash !== hash) delete index[previousHash];
   const sources = [index];
-  for (const dir of reuseDirs) sources.push(await loadStructureIndex(dir));
+  for (const dir of reuseDirs) sources.push(await reuseIndexOf(dir));
   for (const source of sources) {
     const entry = source[hash];
     if (!entry || entry.finalFile === finalFile || !existsSync(entry.finalFile))

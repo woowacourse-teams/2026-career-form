@@ -120,7 +120,7 @@ node scripts/live-qa/cli.mjs start                                      # 설치
 - 상태 디렉터리는 CF-177 live-eval과 같은 `~/.career-form-live-eval`이라 기존 로그인이 유지된다. `LIVE_QA_STATE_DIR`로 바꿀 수 있다.
 - `start`는 실행 중인 서비스 워커가 보고하는 revision을 출력한다. 확장의 API 호스트는 빌드 manifest의 `host_permissions`에서 읽어 요청 차단에서 제외한다.
 - 재설치 판정: 실행 중인 revision이 빌드와 다르거나, 설치본 manifest의 `host_permissions`가 빌드 manifest와 다르면(revision이 같아도 API 호스트가 다른 빌드) 설치본을 바꾸고 reload한다. `--reinstall`은 무조건 재설치한다. 출력의 `reinstalled`가 이유(`revision`, `api-hosts`, `flag`)다.
-- 재설치 뒤 복구: 확장을 바꾸면 열려 있던 탭에는 새 콘텐츠 스크립트가 붙지 않아 다음 `run`이 `panel-trigger-missing`으로 끝난다(2026-10-22). 그래서 `start`는 reload 뒤 지원서 탭마다 확장 런처(`[data-career-form-side-panel-launcher]`)가 있는지 보고, 없으면 같은 주소로 다시 들어간다. 에이치닷 `writeResume`은 현재 단계를 무저장 이동으로 다시 열고, 그 밖은 `#`을 뗀 같은 주소로 이동한다(이탈 확인창은 이동 중에만 수락). 현대차 `talent.hyundai.com`의 `applyWrite`는 같은 주소로 다시 열면 본문이 비므로 `needsPerson`으로 알리고 사람이 목록에서 다시 들어간다. 결과는 `recovery: {recovered, stillMissing, needsPerson}`이며, 로그인 만료로 다른 주소로 간 탭은 `stillMissing`에 남는다.
+- 재설치 뒤 복구: 확장을 바꾸면 열려 있던 탭에는 새 콘텐츠 스크립트가 붙지 않아 다음 `run`이 `panel-trigger-missing`으로 끝난다(2026-10-22). 옛 런처 요소는 DOM에 남아 있어 있는지 여부로는 살아 있는 스크립트를 가릴 수 없으므로, `start`는 재설치 뒤 지원서 탭을 모두 같은 주소로 다시 들어간 다음 확장 런처(`[data-career-form-side-panel-launcher]`)가 있는지 확인한다. 에이치닷 `writeResume`은 현재 단계를 무저장 이동으로 다시 열고, 그 밖은 `#`을 뗀 같은 주소로 이동한다(이탈 확인창은 이동 중에만 수락). 현대차 `talent.hyundai.com`의 `applyWrite`는 같은 주소로 다시 열면 본문이 비므로 `needsPerson`으로 알리고 사람이 목록에서 다시 들어간다. 결과는 `recovery: {recovered, stillMissing, needsPerson}`이며, 로그인 만료로 다른 주소로 간 탭은 `stillMissing`에 남는다.
 - 설치본 잠금: 평가 브라우저와 설치본은 이 컴퓨터의 모든 세션이 같이 쓴다. `start`가 설치하면 `<상태 디렉터리>/extension.lock.json`에 설치한 세션(pid, 부모·조부모 pid, 시각, revision, API 호스트)을 적는다. 다른 세션의 lock이 살아 있는데(그 세션의 프로세스 중 하나가 살아 있고 현재 프로세스 계보와 겹치지 않음) 재설치가 필요하면 `install-locked`로 거부하고 lock 주인을 출력한다. `--force`를 주면 경고만 하고 진행한다. 재설치하지 않을 때도 lock의 revision이 실행 중인 revision과 다르면 `install-lock-revision-mismatch` 경고를 낸다. 프로세스가 모두 끝난 lock은 무시한다.
 
 ## 탭·환경 관리
@@ -162,7 +162,7 @@ node scripts/live-qa/cli.mjs start                                      # 설치
 | 공통 보호     | 지원분야·직무(SK `appJobRole*`, `title`·`.select-label` 문구 포함), 동의, 잠긴 신원 칸(disabled·readonly), 현대 `inExGb`(국내/해외), 에이치닷 섹션 안의 `contact`·`applySector` 숨김 칸 | 새 지원서에서 사이트가 미리 정해 두는 값이다                                                                      |
 
 - 현대 버튼형 select, Greeting 콤보박스와 토글처럼 DOM으로 안전하게 비울 수 없는 위젯은 지우지 않고 `cleared.widgetsLeft`에 개수만 남긴다.
-- 점검(`dryRun`)은 지울 칸 이름을 `fields`에, 그중 HTML이 준 값 그대로인 칸(사이트 기본값)을 `defaultFields`에 따로 담는다. 숨은 input(에이치닷 행 ID)은 기본값으로 보지 않는다.
+- 점검(`dryRun`)은 지울 칸 이름을 `fields`에, 그중 HTML이 준 값 그대로인 칸(사이트 기본값)을 `defaultFields`에 따로 담는다. 숨은 input(에이치닷 행 ID)은 기본값으로 보지 않되, 같은 행에 다른 값이 하나도 없는 행 ID(`...Sn`, 예: 빈 경험 빌더의 `experienceBuilder.resumeBuilderSn`)는 서버가 빈 행에 붙이는 자체 상태라 `saved`가 `defaultFields`로 분류한다(`driver.mjs`의 `lonelyRowIds`). 2026-10-23·24 ABL 2단계에서 `reset`을 해도 이 ID만 남았다.
 - 현대 페이지는 `Map`과 `Set`을 polyfill로 바꿔 둔다. 페이지에 넣는 함수(`page/*.mjs`와 `keepalive.mjs`의 페이지 함수)는 둘을 쓰지 않는다(`page/page-functions.test.mjs`로 고정). 여러 인자는 `callInPage`로 넘긴다.
 - 칸 번호 `i`는 프레임을 가로질러 이어지고, 같은 주소의 iframe은 순번으로 구분한다.
 - 에이치닷 4단계(자기소개서)처럼 입력할 칸이 없는 단계는 확장이 예외 화면을 띄울 수 있다. 결과는 `measured: false`로 남는다.
