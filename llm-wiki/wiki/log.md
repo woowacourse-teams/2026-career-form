@@ -823,3 +823,11 @@
 - 승인된 후보 6개를 [CF-327 bundle](../raw/issues/CF-327/manifest.md)에 기록하고 승인 후보 스냅샷의 SHA-256을 확인했다.
 - [배포 Runbook](topics/deployment-runbook.md), [CI/CD 설정](topics/cicd-setup.md), [Hplace 공통 어댑터](topics/adapter-hplace.md)의 Current와 History를 갱신하고 [확장 프로그램 릴리스](topics/extension-release.md), [확장·백엔드 호환 배포](topics/release-compatibility.md)를 신설했다.
 - workflow 11개와 infra 스크립트를 구현 기준으로 대조했고, 운영 host 주소·포트 값·시크릿 값·대화 전문은 저장하지 않았다.
+
+## [2026-10-23] ingest | CF-323 릴리스 시작 기준 커밋 선택
+
+- Approval-Digest: 657002f335f7ca06d16eeec0d7e8b4c8e669da4b86130cf31ec5afafcf2aee92
+- Source-Revision: 576973c
+- 승인된 후보 1개를 [CF-323 bundle](../raw/issues/CF-323/manifest.md)에 기록하고 CF-327 운영 배포 파이프라인 근거 위에 Start release 기준 커밋 선택을 얹었다.
+- [배포 Runbook](topics/deployment-runbook.md)의 Current를 CF-323으로 바꾸고 CF-327을 History에 남겼다. 현재 상태에 Start release 기준 커밋 선택을 반영했다.
+- 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.

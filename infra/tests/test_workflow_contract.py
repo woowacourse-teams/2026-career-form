@@ -14,6 +14,13 @@ ROOT = Path(__file__).resolve().parents[2]
 WORKFLOWS = ROOT / ".github" / "workflows"
 
 
+def _isolated_git_env(**extra: str) -> dict[str, str]:
+    # Git 훅 안에서는 GIT_DIR 등이 실제 저장소를 가리키므로 임시 저장소 명령에서 제거한다.
+    env = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
+    env.update(extra)
+    return env
+
+
 class WorkflowContractTest(unittest.TestCase):
     def test_backend_ci_runs_gradle_contract_on_pull_requests(self) -> None:
         workflow = self._workflow("backend-ci.yml")
@@ -142,7 +149,85 @@ class WorkflowContractTest(unittest.TestCase):
         self.assertIn("--body-file", script)
         self.assertIn("gh workflow run deploy-staging.yml", script)
         self.assertIn('--ref "$branch"', script)
-        self.assertNotIn("commit_sha", script)
+
+    def test_start_release_accepts_optional_develop_base_commit(self) -> None:
+        workflow = self._workflow("start-release.yml")
+
+        ref_input = workflow["on"]["workflow_dispatch"]["inputs"]["ref"]
+        self.assertEqual("false", ref_input["required"])
+        self.assertEqual("", ref_input.get("default", ""))
+        steps = workflow["jobs"]["start"]["steps"]
+        base = next(step for step in steps if step.get("id") == "base")
+        self.assertLess(
+            steps.index(base),
+            next(
+                index for index, step in enumerate(steps)
+                if "git switch --create" in step.get("run", "")
+            ),
+        )
+        self.assertEqual("${{ inputs.ref }}", base["env"]["REF_INPUT"])
+        self.assertNotIn("${{", base["run"])
+        self.assertIn("merge-base --is-ancestor", base["run"])
+        create = next(step for step in steps if "gh pr create" in step.get("run", ""))
+        self.assertEqual("${{ steps.base.outputs.sha }}", create["env"]["RELEASE_SHA"])
+        self.assertEqual(
+            "${{ steps.base.outputs.source }}", create["env"]["BASE_SOURCE"]
+        )
+        self.assertIn('git switch --create "$branch" "$RELEASE_SHA"', create["run"])
+        self.assertNotIn("git rev-parse origin/develop", create["run"])
+
+    def test_start_release_base_commit_resolves_only_develop_history(self) -> None:
+        workflow = self._workflow("start-release.yml")
+        base = next(
+            step for step in workflow["jobs"]["start"]["steps"]
+            if step.get("id") == "base"
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            repo = self._release_repository(root)
+            git = lambda *args: subprocess.run(
+                ["git", "-C", str(repo), *args],
+                check=True, capture_output=True, text=True, env=_isolated_git_env(),
+            ).stdout.strip()
+            older = git("rev-parse", "origin/develop~1")
+            head = git("rev-parse", "origin/develop")
+            side = git("rev-parse", "side")
+            hex_tag = next(
+                name for name in ("abcdef0", "fedcba9") if not head.startswith(name)
+            )
+            git("tag", hex_tag, head)
+
+            cases = {
+                hex_tag: (1, None, None),
+                "": (0, head, "develop HEAD"),
+                older[:7]: (0, older, "지정 커밋"),
+                older.upper(): (0, older, "지정 커밋"),
+                side: (1, None, None),
+                "0" * 40: (1, None, None),
+                "develop": (1, None, None),
+                "HEAD~1": (1, None, None),
+            }
+            for value, (code, sha, source) in cases.items():
+                with self.subTest(ref=value):
+                    output = root / f"output-{len(list(root.iterdir()))}"
+                    output.write_text("", encoding="utf-8")
+                    result = subprocess.run(
+                        ["bash", "-c", base["run"]], cwd=repo,
+                        check=False, capture_output=True, text=True,
+                        env=_isolated_git_env(
+                            REF_INPUT=value, GITHUB_OUTPUT=str(output),
+                        ),
+                    )
+                    self.assertEqual(code, result.returncode, result.stderr)
+                    outputs = dict(
+                        line.split("=", 1)
+                        for line in output.read_text(encoding="utf-8").splitlines()
+                    )
+                    if code:
+                        self.assertEqual({}, outputs)
+                        self.assertTrue(result.stderr.strip())
+                    else:
+                        self.assertEqual({"sha": sha, "source": source}, outputs)
 
     def test_generated_release_body_passes_current_pr_contract(self) -> None:
         workflow = self._workflow("start-release.yml")
@@ -150,25 +235,24 @@ class WorkflowContractTest(unittest.TestCase):
             step for step in workflow["jobs"]["start"]["steps"]
             if "gh pr create" in step.get("run", "")
         )
+        release_sha = "0123456789012345678901234567890123456789"
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             for name in ("git", "gh"):
                 executable = root / name
-                executable.write_text(
-                    "#!/bin/sh\nprintf '%s\\n' "
-                    "0123456789012345678901234567890123456789\n",
-                    encoding="utf-8",
-                )
+                executable.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
                 executable.chmod(0o700)
             result = subprocess.run(
                 ["bash", "-c", step["run"]], check=False, capture_output=True, text=True,
                 env={
                     **os.environ, "VERSION": "1.2.0", "RUNNER_TEMP": directory,
+                    "RELEASE_SHA": release_sha, "BASE_SOURCE": "지정 커밋",
                     "PATH": f"{directory}:{os.environ['PATH']}",
                 },
             )
             self.assertEqual(0, result.returncode, result.stderr)
             body = (root / "release-pr.md").read_text(encoding="utf-8")
+        self.assertIn(f"지정 커밋 `{release_sha}`", body)
         validation = validate_pr({
             "title": "[Release] 1.2.0 운영 반영", "body": body,
             "head": {"ref": "release/1.2.0"}, "base": {"ref": "main"},
@@ -352,6 +436,31 @@ class WorkflowContractTest(unittest.TestCase):
                     if uses:
                         with self.subTest(filename=filename, uses=uses):
                             self.assertRegex(uses, r"^[^@]+@[0-9a-f]{40}$")
+
+    def _release_repository(self, root: Path) -> Path:
+        origin = root / "origin.git"
+        repo = root / "repo"
+        commands = [
+            ["git", "init", "--quiet", "--bare", str(origin)],
+            ["git", "init", "--quiet", "-b", "develop", str(repo)],
+        ]
+        env = _isolated_git_env()
+        for command in commands:
+            subprocess.run(command, check=True, capture_output=True, env=env)
+        git = lambda *args: subprocess.run(
+            ["git", "-C", str(repo), "-c", "user.name=test",
+             "-c", "user.email=test@example.com", *args],
+            check=True, capture_output=True, env=env,
+        )
+        git("commit", "--quiet", "--allow-empty", "-m", "first")
+        git("commit", "--quiet", "--allow-empty", "-m", "second")
+        git("switch", "--quiet", "-c", "side", "HEAD~1")
+        git("commit", "--quiet", "--allow-empty", "-m", "side")
+        git("switch", "--quiet", "develop")
+        git("remote", "add", "origin", str(origin))
+        git("push", "--quiet", "origin", "develop", "side")
+        git("fetch", "--quiet", "origin")
+        return repo
 
     def _workflow(self, filename: str) -> dict[str, object]:
         path = WORKFLOWS / filename

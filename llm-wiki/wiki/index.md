@@ -59,7 +59,7 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [기존 아키텍처 결정](topics/architecture-decisions.md) | CF-41 이전 ADR 현재본 | 2026-08-22 |
 | [확장 프로그램 설계](topics/extension-design.md) | UI 흐름과 검토 자산 | 2026-08-22 |
 | [CI/CD 설정](topics/cicd-setup.md) | 배포 변수·시크릿 전체, deploy.sh 계약, 운영 LLM 비활성 이력, HTTP 공개 상태 | 2026-10-23 |
-| [배포 Runbook](topics/deployment-runbook.md) | main 병합 분류, digest 재사용, tag·동기화 PR, 자동 rollback, 릴리스 점검표 | 2026-10-23 |
+| [배포 Runbook](topics/deployment-runbook.md) | 릴리스 기준 커밋 선택, main 병합 분류, digest 재사용, tag·동기화 PR, 자동 rollback, 릴리스 점검표 | 2026-10-23 |
 | [확장 프로그램 릴리스](topics/extension-release.md) | 수동 ZIP 빌드, origin 주입, 버전 상향, Web Store 게시와 보급 확인 | 2026-10-23 |
 | [확장·백엔드 호환 배포](topics/release-compatibility.md) | 호환 장치, 응답 스키마 협상 규칙, 확장 먼저 게시 순서, 1.4.0 사례 | 2026-10-23 |
 | [공용 모니터링 시스템](topics/monitoring-system.md) | 중앙 수집, 환경별 알림, 호스트 디스크 감시와 검증 경계 | 2026-10-02 |
