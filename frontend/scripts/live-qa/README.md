@@ -99,6 +99,18 @@ node scripts/live-qa/cli.mjs start                                      # 설치
 
 - 상태 디렉터리는 CF-177 live-eval과 같은 `~/.career-form-live-eval`이라 기존 로그인이 유지된다. `LIVE_QA_STATE_DIR`로 바꿀 수 있다.
 - `start`는 실행 중인 서비스 워커가 보고하는 revision을 출력한다. 확장의 API 호스트는 빌드 manifest의 `host_permissions`에서 읽어 요청 차단에서 제외한다.
+- 재설치 판정: 실행 중인 revision이 빌드와 다르거나, 설치본 manifest의 `host_permissions`가 빌드 manifest와 다르면(revision이 같아도 API 호스트가 다른 빌드) 설치본을 바꾸고 reload한다. `--reinstall`은 무조건 재설치한다. 출력의 `reinstalled`가 이유(`revision`, `api-hosts`, `flag`)다.
+- 재설치 뒤 복구: 확장을 바꾸면 열려 있던 탭에는 새 콘텐츠 스크립트가 붙지 않아 다음 `run`이 `panel-trigger-missing`으로 끝난다(2026-10-22). 그래서 `start`는 reload 뒤 지원서 탭마다 확장 런처(`[data-career-form-side-panel-launcher]`)가 있는지 보고, 없으면 같은 주소로 다시 들어간다. 에이치닷 `writeResume`은 현재 단계를 무저장 이동으로 다시 열고, 그 밖은 `#`을 뗀 같은 주소로 이동한다(이탈 확인창은 이동 중에만 수락). 현대차 `talent.hyundai.com`의 `applyWrite`는 같은 주소로 다시 열면 본문이 비므로 `needsPerson`으로 알리고 사람이 목록에서 다시 들어간다. 결과는 `recovery: {recovered, stillMissing, needsPerson}`이며, 로그인 만료로 다른 주소로 간 탭은 `stillMissing`에 남는다.
+- 설치본 잠금: 평가 브라우저와 설치본은 이 컴퓨터의 모든 세션이 같이 쓴다. `start`가 설치하면 `<상태 디렉터리>/extension.lock.json`에 설치한 세션(pid, 부모·조부모 pid, 시각, revision, API 호스트)을 적는다. 다른 세션의 lock이 살아 있는데(그 세션의 프로세스 중 하나가 살아 있고 현재 프로세스 계보와 겹치지 않음) 재설치가 필요하면 `install-locked`로 거부하고 lock 주인을 출력한다. `--force`를 주면 경고만 하고 진행한다. 재설치하지 않을 때도 lock의 revision이 실행 중인 revision과 다르면 `install-lock-revision-mismatch` 경고를 낸다. 프로세스가 모두 끝난 lock은 무시한다.
+
+## 탭·환경 관리
+
+측정 중 생기는 탭·환경 문제를 하네스 명령으로 처리한다. 모두 상주 브라우저를 재시작하지 않는다.
+
+- `cli.mjs health [--timeout 초]`: Playwright를 거치지 않고 `/json/list`의 page target마다 WebSocket으로 `Runtime.evaluate`를 보내 응답 시간(ms)과 상태(`ok`, `timeout`, `ws-error`)를 표로 출력한다. 멈춘 탭이 있으면 exit 1과 함께 `hung: [...]`를 JSON으로 출력한다. 렌더러가 멈춘 탭 하나가 Playwright의 CDP 접속 전체를 30초 시간 초과로 막기 때문에(2026-10-22), `run`·`step`이 연달아 `TimeoutError`나 `panel-trigger-missing`으로 끝나면 먼저 이 명령으로 확인한다. 기본 timeout은 5초다.
+- `cli.mjs replace <url-substring> | --all-hung`: 멈춘 탭을 같은 주소(`#` 제외)의 새 탭으로 바꾼다. 브라우저 세션에서 `Target.createTarget`으로 새 탭을 먼저 만들고 `Target.closeTarget`으로 그 탭만 닫는다. 로그인 쿠키는 같은 브라우저라 유지된다. `<url-substring>`은 정확히 하나의 target과 일치해야 하며 아니면 `tab-not-unique`다. 교체 뒤 모든 target을 다시 점검해 새 탭이 응답하는지 출력한다. 기록에는 brief 주소(origin + 경로)만 남는다. 새 탭은 사이트가 다시 불러오므로 임시저장하지 않은 값은 남지 않는다.
+- `cli.mjs lock [--show]`: 설치본 lock을 현재 세션의 것으로 갱신한다(긴 측정을 시작하기 전에 실행하면 다른 세션의 `start`가 재설치를 거부한다). 다른 세션의 lock을 넘겨받으면 `takenFrom`에 이전 주인을 출력한다. `--show`는 현재 lock과 `heldByOther`만 보여 준다.
+- `cli.mjs alias <name> <spec>` / `alias --list` / `alias <name> --remove`: 탭 식별 키(`url-substring` 또는 `url-substring|화면 문구`)를 이름으로 `<out>/tabs.json`(권한 600)에 저장한다. 이름은 `[A-Za-z0-9_-]`만 쓴다. 현대처럼 주소가 같은 탭을 문구로 가른 키를 회차마다 다시 적지 않기 위한 것이다. `tabs`는 각 탭 옆에 일치하는 별칭을 `@name`으로 표시한다(문구가 있는 별칭은 화면 문구까지 확인). 별칭은 `<tab>` 인자 자리에 그대로 쓴다.
 
 ## 측정 순서
 
