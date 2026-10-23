@@ -55,7 +55,7 @@
 
 **병합**
 
-- PR을 Ready로 전환하고 승인받은 뒤 **Merge Commit**으로만 병합한다. Squash나 Rebase는 classify 또는 tree 검사에서 실패한다.
+- PR을 Ready로 전환하고 승인받은 뒤 **Merge Commit**으로만 병합한다. classify와 tree 검사는 병합 방식을 보지 않고 PR의 merge commit sha와 head sha만 비교하므로 Squash로 병합해도 배포 자체는 성공한다(1.2.0·1.3.0 선례). 그러나 Squash는 main을 release·develop의 조상이 아니게 만들어 다음 릴리스에서 main을 release에 수동 병합해 이력을 이어야 하고(1.4.0의 `chore: 릴리스 소스 유지와 main 병합 이력 연결`), `harness/policies/github-ruleset.md`가 정한 release→main Merge Commit 정책과도 어긋난다. 저장소 설정은 세 병합 방식을 모두 허용하므로 병합 담당자가 지킨다. Merge Commit이어도 `git log --first-parent main`은 릴리스마다 한 줄만 보여 준다.
 
 **병합 후**
 
