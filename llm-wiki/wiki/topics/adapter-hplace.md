@@ -2,9 +2,9 @@
 
 > Topic: adapter-hplace
 > Status: Current
-> Current: [CF-310 빈 단계 분석 생략 근거](../../raw/issues/CF-310/documents/hplace-empty-step-analysis-skip.md)
-> History: [CF-177 근거](../../raw/issues/CF-177/documents/adapter-hplace.md); [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md); [CF-177 C12·C13·시연 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md); [CF-177 KDI·구조 미확인 근거](../../raw/issues/CF-177/documents/live-kdi-unverified.md); [CF-177 후속 보완 묶음 근거](../../raw/issues/CF-177/documents/live-followup-bundle.md); [CF-310 요청 구조 근거](../../raw/issues/CF-310/documents/hplace-mrs2-requests.md); [CF-310 4단계 분석·패널 근거](../../raw/issues/CF-310/documents/hplace-step4-analyze-and-panel.md); [CF-310 빈 단계 분석 생략 근거](../../raw/issues/CF-310/documents/hplace-empty-step-analysis-skip.md)
-> Updated: 2026-10-22
+> Current: [CF-327 활성 정책 버전 설정값 근거](../../raw/issues/CF-327/documents/hplace-active-policy-version.md)
+> History: [CF-177 근거](../../raw/issues/CF-177/documents/adapter-hplace.md); [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md); [CF-177 C12·C13·시연 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md); [CF-177 KDI·구조 미확인 근거](../../raw/issues/CF-177/documents/live-kdi-unverified.md); [CF-177 후속 보완 묶음 근거](../../raw/issues/CF-177/documents/live-followup-bundle.md); [CF-310 요청 구조 근거](../../raw/issues/CF-310/documents/hplace-mrs2-requests.md); [CF-310 4단계 분석·패널 근거](../../raw/issues/CF-310/documents/hplace-step4-analyze-and-panel.md); [CF-310 빈 단계 분석 생략 근거](../../raw/issues/CF-310/documents/hplace-empty-step-analysis-skip.md); [CF-327 활성 정책 버전 설정값 근거](../../raw/issues/CF-327/documents/hplace-active-policy-version.md)
+> Updated: 2026-10-23
 
 ## 현재 상태
 
@@ -67,7 +67,11 @@ MRS2 등록의 이름·휴대전화·이메일과 기존 기본정보 계약을 
 
 2026-10-20 live-eval 하네스로 `1759db5`와 `f586619`(C9·C7·C11 포함) CLEAN 빌드에서 abl·careerhyundai·gsenc의 step 1–3 실화면 평가를 통과했고 두 실행의 수치는 같았다. 이로써 이전의 검색·주소·linkedForm 미확인 상태를 정정한다. 이후 `4962c96`(C13)과 `6a7a141`(시연 수정)에서도 3사 step 1–3이 모두 통과했다. 후속 보완 묶음 `b809920`에서는 빈 페이지(careerhyundai)와 임시저장 값이 남은 페이지(gsenc·abl)를 함께 돌려, 사용자가 직접 고친 행의 섹션만 확인 필요로 남았다. 포커스 없는 창·사이드 패널 동작(H7), 공식 WSL/Linux 검증과 운영 배포는 별도다. 하네스는 상주 Chromium에 CDP로 붙고 무저장 단계 이동만 하며, 서빙 정책 지문이 대상 HEAD 정책과 match일 때만 평가한다. 정책을 고친 뒤에는 사람이 승인한 로컬 DB 재설정으로 재시드해야 한다.
 
-새 확장 배포 → 대상 설치/보급 확인 → BE v4 DB 활성 포인터 변경 순서를 따른다. resource enabled를 운영 활성화로 해석하지 않으며 이 수집에서 migration·배포를 실행하지 않는다.
+새 확장 배포 → 대상 설치/보급 확인 → BE 배포 순서를 따른다. resource enabled를 운영 활성화로 해석하지 않으며 이 수집에서 migration·배포를 실행하지 않는다.
+
+## 활성 정책 버전은 설정값 (2026-10-23)
+
+활성 정책 버전은 DB 포인터가 아니라 Spring 속성 `careerform.hplace.active-policy-version`이며 기본값이 4다. `HplaceFormPolicySeeder`는 v3·v4 문서를 없을 때만 insert하고 `MongoHplacePolicyProvider`는 설정값으로 문서를 고른다(4가 없으면 3). `application-prod.yml`, `infra/compose.deploy.yaml`, deploy workflow 어디서도 이 값을 전달하지 않아 백엔드 배포 즉시 v4가 활성화되고 운영에서 끌 레버가 없다. 끄거나 v3로 되돌리려면 설정 전달 경로를 추가하는 infra 변경이 필요하다. 이전 raw의 "DB 활성 포인터를 사람이 올린다"는 서술은 이 내용으로 정정하며, 그 결과 [확장·백엔드 호환 배포](release-compatibility.md)의 순서가 v4 활성화를 제어하는 유일한 수단이다. 근거는 [CF-327 활성 정책 버전 설정값 근거](../../raw/issues/CF-327/documents/hplace-active-policy-version.md)를 따른다.
 
 ## 변경 이유
 

@@ -58,8 +58,10 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [ADR 작성 규약](topics/adr-authoring.md) | ADR 판단과 Issue raw 기록 | 2026-08-22 |
 | [기존 아키텍처 결정](topics/architecture-decisions.md) | CF-41 이전 ADR 현재본 | 2026-08-22 |
 | [확장 프로그램 설계](topics/extension-design.md) | UI 흐름과 검토 자산 | 2026-08-22 |
-| [CI/CD 설정](topics/cicd-setup.md) | 배포 환경 준비 계약 | 2026-08-22 |
-| [배포 Runbook](topics/deployment-runbook.md) | 배포, hotfix와 rollback 절차 | 2026-08-22 |
+| [CI/CD 설정](topics/cicd-setup.md) | 배포 변수·시크릿 전체, deploy.sh 계약, 운영 LLM 비활성 이력, HTTP 공개 상태 | 2026-10-23 |
+| [배포 Runbook](topics/deployment-runbook.md) | main 병합 분류, digest 재사용, tag·동기화 PR, 자동 rollback, 릴리스 점검표 | 2026-10-23 |
+| [확장 프로그램 릴리스](topics/extension-release.md) | 수동 ZIP 빌드, origin 주입, 버전 상향, Web Store 게시와 보급 확인 | 2026-10-23 |
+| [확장·백엔드 호환 배포](topics/release-compatibility.md) | 호환 장치, 응답 스키마 협상 규칙, 확장 먼저 게시 순서, 1.4.0 사례 | 2026-10-23 |
 | [공용 모니터링 시스템](topics/monitoring-system.md) | 중앙 수집, 환경별 알림, 호스트 디스크 감시와 검증 경계 | 2026-10-02 |
 | [자동 입력 품질 관측과 사람 확인 요청](topics/autofill-quality-observation.md) | 실제 경로 및 버전별 지표, 사람 참고 분모와 평일 확인 요청 | 2026-10-07 |
 | [사이트별 자동 입력 결과와 일별 그래프](topics/autofill-quality-dashboard.md) | 관측 표본 비율, 회사별 사이트와 KST 일별 공백 처리 | 2026-10-14 |
@@ -70,7 +72,7 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [회사 어댑터 개발](topics/adapter-development.md) | 프론트 회사 어댑터와 백엔드 정책 경계 | 2026-10-20 |
 | [Greeting 플랫폼 판정과 실행 어댑터](topics/greeting-platform-routing.md) | BE의 Greeting 판정과 FE 어댑터 지정,문맥 검증 | 2026-09-27 |
 | [Greeting 공통 어댑터](topics/adapter-greeting.md) | 기업별 화면 차이와 안전한 필드 입력,검증 범위, 검색 서버 액션 요청 구조, v18 장애 정도 별칭 | 2026-10-22 |
-| [Hplace 공통 어댑터](topics/adapter-hplace.md) | MRS2 실행 정책, 127키 현황, step 1–3 실화면 검증, 칸 단위 인식·재실행 멱등성·저장 페이지 재로드 보고, 저장·조회·무저장 이동 요청 구조, 4단계 분석 예외와 패널 집계, 빈 단계 분석 생략, 배포 경계 | 2026-10-22 |
+| [Hplace 공통 어댑터](topics/adapter-hplace.md) | MRS2 실행 정책, 127키 현황, step 1–3 실화면 검증, 칸 단위 인식·재실행 멱등성·저장 페이지 재로드 보고, 저장·조회·무저장 이동 요청 구조, 4단계 분석 예외와 패널 집계, 빈 단계 분석 생략, 배포 경계, 활성 정책 버전 설정값 | 2026-10-23 |
 | [SK,현대 실시간 옵션 선택 보완](topics/adapter-live-option-selection.md) | 현재 회사 화면의 유일 옵션만 선택하는 어학 보완 | 2026-09-09 |
 | [현대 어댑터](topics/adapter-hyundai.md) | 현대 주소,국적,학력 수집,입력과 검증 제한, 페이지의 Map·Set 재정의, 버튼형 선택지 코드 수집 한계 | 2026-10-22 |
 | [SK 어댑터](topics/adapter-sk.md) | SK 조건부 입력과 검증 제한, R262309형 고교 행의 추가 버튼 재식별 실패, v38 재학 상태 select 기준 재식별과 장애구분 별칭 | 2026-10-22 |
