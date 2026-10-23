@@ -547,6 +547,60 @@ describe("renderReport", () => {
     expect(md).not.toContain("SK 소계");
   });
 
+  it("compares capture verdicts with the DOM verdict and lists the disagreements", () => {
+    const withCapture = aggregatePage({
+      label: "sk-a",
+      joined: {
+        ...joined,
+        rows: joined.rows.map((r) => ({
+          ...r,
+          section: "기본",
+          label: `칸${r.i}`,
+          type: "text",
+          expected: `값${r.i}`,
+        })),
+      },
+      verdict,
+      run,
+      captureVerdict: [
+        { i: 0, seen: "값0" },
+        { i: 1, seen: "" },
+        { i: 3, seen: "" },
+        { i: 5, seen: "엉뚱" },
+      ],
+    });
+    expect(withCapture.capture).toMatchObject({
+      compared: 4,
+      agreed: 3,
+      notVisible: 6,
+      disagreements: [{ i: 1, dom: "CORRECT", seen: "", expected: "값1" }],
+    });
+    const md = renderReport({
+      title: "QA",
+      meta: { apiOrigin: "x", date: "d" },
+      pages: [
+        withCapture,
+        aggregatePage({ label: "gr-b", joined, verdict, run }),
+      ],
+      names: { "sk-a": "SK · A" },
+    });
+    expect(md).toContain("- 캡처·DOM 일치율: 3 / 4 = 75.0% (안 보임 6)");
+    expect(md).toMatch(/\| SK · A \|[^\n]*캡처 대조 3\/4/);
+    expect(md).toContain("## 캡처·DOM 불일치");
+    expect(md).toContain("### SK · A");
+    expect(md).toContain("| 1 | CORRECT | (비어 있음) | 값1 |");
+    expect(md).not.toContain("### gr-b");
+  });
+
+  it("adds nothing about captures when no page has one", () => {
+    const md = renderReport({
+      title: "QA",
+      meta: { apiOrigin: "x", date: "d" },
+      pages: [aggregatePage({ label: "gr-b", joined, verdict, run })],
+    });
+    expect(md).not.toContain("캡처");
+  });
+
   it("prints a dash instead of NaN when nothing could be measured", () => {
     const empty = {
       ...verdict,

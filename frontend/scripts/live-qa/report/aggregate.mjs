@@ -11,6 +11,8 @@
 // the college category, day/night of the extra majors, the language exam date
 // and the resident-registration address (the adapter fills the current
 // address only).
+import { compareCaptures } from "./capture-compare.mjs";
+
 export const HPLACE_POLICY_EXCLUSIONS =
   /collegeCategoryCode|collegeMajor\[[12]\]\.dayOrNight|examDate|residentAddress\./;
 
@@ -78,6 +80,8 @@ export function aggregatePage({
   run,
   uncreatedCells = 0,
   policyPattern = null,
+  // grade/<label>.capture.json, when the run left captures.
+  captureVerdict = null,
 }) {
   const panel = run?.panel ?? null;
   const guardFailed = run?.guard?.passed === false;
@@ -158,6 +162,9 @@ export function aggregatePage({
     missedRefs: verdict.items
       .filter((it) => it.kind === "MISSED")
       .map((it) => it.ref),
+    capture: captureVerdict
+      ? compareCaptures({ joined, verdict, captureVerdict })
+      : null,
   };
 }
 
@@ -197,6 +204,7 @@ export function renderReport({ title, meta, pages, names = {} }) {
     `- 빌드(측정 당시): ${revisions.length ? revisions.join(", ") : "기록 없음"}${revisions.length > 1 ? " ⚠ 페이지마다 다름" : ""}`,
     `- API: \`${meta.apiOrigin}\``,
     `- 측정일: ${meta.date}`,
+    ...captureSummaryLines(measured),
     `- 확인 불가 비율: ${unverifiable} / (${denominator} + ${unverifiable}) = ${pct(denominator + unverifiable > 0 ? (unverifiable / (denominator + unverifiable)) * 100 : null)} (측정 품질 지표: 낮을수록 좋음)`,
     "",
     "| 페이지 | 화면 전체 칸 (전+신규) | 입력 가능 칸 | 확장이 입력 | 정답 | 오입력 | 누락 | 확인 불가 | 입력률 | 정책 반영 | 행 (기대/생성) | 앱 패널 | 비고 |",
@@ -214,6 +222,7 @@ export function renderReport({ title, meta, pages, names = {} }) {
       p.widgetsLeft ? `⚠ 비우지 못한 위젯 ${p.widgetsLeft}` : "",
       ...(p.warnings ?? []).map((w) => `⚠ ${w}`),
       p.expectationErrors ? `채점 오류 ${p.expectationErrors}` : "",
+      p.capture ? `캡처 대조 ${p.capture.agreed}/${p.capture.compared}` : "",
     ]
       .filter(Boolean)
       .join(", ");
@@ -243,6 +252,42 @@ export function renderReport({ title, meta, pages, names = {} }) {
     "- 입력 가능 칸 = 정답 + 오입력 + 누락(새 행과 만들어지지 않은 행의 칸 포함). 확인 불가(실행 전 값이 그대로 남아 비교할 수 없는 칸)는 따로 센다.",
     "- 정책 반영 = 에이치닷에서 위키에 문서화된 의도적 미지원 칸을 뺀 입력률(합계는 에이치닷 페이지만).",
     "- 앱 패널 = 결과 화면의 `입력 완료 / 확인 필요`(항목 단위).",
+    ...captureDisagreementLines(measured, names),
   );
   return lines.join("\n") + "\n";
+}
+
+const captured = (pages) => pages.filter((p) => p.capture);
+
+// Overall agreement of the capture verdicts with the DOM verdicts. Nothing
+// when no page has a capture.
+function captureSummaryLines(pages) {
+  const list = captured(pages);
+  if (!list.length) return [];
+  const sum = (k) => list.reduce((a, p) => a + p.capture[k], 0);
+  const compared = sum("compared");
+  return [
+    `- 캡처·DOM 일치율: ${sum("agreed")} / ${compared} = ${pct(compared > 0 ? (sum("agreed") / compared) * 100 : null)} (안 보임 ${sum("notVisible")})`,
+  ];
+}
+
+function captureDisagreementLines(pages, names) {
+  const list = captured(pages).filter((p) => p.capture.disagreements.length);
+  if (!captured(pages).length) return [];
+  const lines = ["", "## 캡처·DOM 불일치", ""];
+  if (!list.length) return [...lines, "불일치 없음."];
+  for (const p of list) {
+    lines.push(
+      `### ${names[p.label] ?? p.label}`,
+      "",
+      "| i | DOM 판정 | 캡처 값 | 기대값 |",
+      "| --- | --- | --- | --- |",
+      ...p.capture.disagreements.map(
+        (d) =>
+          `| ${d.i} | ${d.dom} | ${d.seen === "" ? "(비어 있음)" : d.seen} | ${d.expected} |`,
+      ),
+      "",
+    );
+  }
+  return lines;
 }

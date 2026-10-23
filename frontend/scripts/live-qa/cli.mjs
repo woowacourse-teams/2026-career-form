@@ -50,6 +50,7 @@ import {
   renderReport,
 } from "./report/aggregate.mjs";
 import { buildGradeInput } from "./report/grade-input.mjs";
+import { buildCaptureInput } from "./report/capture-compare.mjs";
 import { joinResults } from "./report/join.mjs";
 import {
   formatPregradeLines,
@@ -554,18 +555,31 @@ const offline = {
     for (const line of formatPregradeLines(results)) print(line);
   },
   async join() {
+    const captureLabels = [];
     for (const label of positional) {
+      const run = await readJson(join(outDir, `${label}.run.json`));
       const joined = joinResults({
         label,
         final: await readJson(join(outDir, `grade/${label}.final.json`)),
         census: await readJson(join(outDir, `${label}.census.json`)),
-        run: await readJson(join(outDir, `${label}.run.json`)),
+        run,
       });
       await writeJson(join(outDir, `grade/${label}.joined.json`), joined);
+      // Runs with captures (test-account tabs) also get the capture judge's
+      // input: capture files and expected values only, no DOM result.
+      const captures = Array.isArray(run.captures) ? run.captures : [];
+      if (captures.length) {
+        await writeJson(
+          join(outDir, `grade/${label}.capture-input.json`),
+          buildCaptureInput({ joined, captures, baseDir: outDir }),
+        );
+        captureLabels.push(label);
+      }
       print(
-        `${label} rows=${joined.rows.length} new=${joined.addedOrUnmatchedAfterControls.length}`,
+        `${label} rows=${joined.rows.length} new=${joined.addedOrUnmatchedAfterControls.length} captures=${captures.length}`,
       );
     }
+    print(`captureLabels: ${JSON.stringify(captureLabels)}`);
   },
   // --verdicts a.json,b.json: verify-workflow results (arrays of page verdicts).
   // --uncreated file.json: {label: cells} for rows the run never created.
@@ -588,12 +602,16 @@ const offline = {
               .flatMap((f) => f.controls)
               .filter((c) => c.added),
           };
+      const capturePath = join(outDir, `grade/${label}.capture.json`);
       pages.push(
         aggregatePage({
           label,
           joined,
           verdict: verdicts[label],
           run,
+          captureVerdict: existsSync(capturePath)
+            ? await readJson(capturePath)
+            : null,
           uncreatedCells: uncreated[label] ?? 0,
           policyPattern: label.startsWith("hp-")
             ? HPLACE_POLICY_EXCLUSIONS
