@@ -24,6 +24,7 @@ import { claimDialogs, installDialogPolicy } from "./dialogs.mjs";
 import {
   APPLICATION_PATH,
   brief,
+  callInPage,
   discardPage,
   framesCensus,
   gotoStep,
@@ -34,8 +35,19 @@ import {
   runPage,
   safeError,
   savedData,
+  withKeepalive,
 } from "./driver.mjs";
 import { keepAlivePage } from "./keepalive.mjs";
+import {
+  SCOPE_FILE,
+  describeTab,
+  inScope,
+  parsePick,
+  pickScope,
+  postingStatus,
+  renderScopeTable,
+  scopeFromSpecs,
+} from "./scope.mjs";
 import {
   TEST_ACCOUNTS_FILE,
   isTestAccount,
@@ -74,6 +86,10 @@ const VALUE_OPTIONS = [
   "max",
   "every",
   "threshold",
+  "keepalive-every",
+  "keepalive-threshold",
+  "pick",
+  "tabs",
 ];
 const positional = rest.filter(
   (a, k) =>
@@ -141,6 +157,50 @@ async function connect() {
     leaveHosts: await readTestAccounts(paths.root),
   });
   return attached;
+}
+
+// Captions of visible "추가" buttons (row-adding controls), for the graders.
+const addButtonTexts = (page) =>
+  page.evaluate(() =>
+    [].slice
+      .call(document.querySelectorAll("button, a, input[type=button]"))
+      .filter((e) => {
+        const r = e.getBoundingClientRect();
+        return r.width > 0 && r.height > 0;
+      })
+      .map((e) =>
+        (e.textContent || e.value || e.getAttribute("aria-label") || "")
+          .replace(/\s+/g, " ")
+          .trim(),
+      )
+      .filter(
+        (t, k, a) => /추가/.test(t) && t.length < 40 && a.indexOf(t) === k,
+      ),
+  );
+
+// run/census/saved/reset keep the other application tabs' sessions alive
+// while they work (driver.mjs withKeepalive): --keepalive-every <minutes>
+// (default 10, 0 turns it off) and --keepalive-threshold <minutes> (default
+// 30, Hplace countdown).
+const keepaliveOptions = () => ({
+  everyMinutes: Number(opt("keepalive-every", 10)),
+  thresholdMinutes: Number(opt("keepalive-threshold", 30)),
+});
+const keptAlive = (context, page, fn) =>
+  withKeepalive(context, page, fn, keepaliveOptions());
+
+// census and run refuse tabs outside <out>/scope.json (the `scope` command's
+// choice) unless --ignore-scope is given. Without the file nothing is refused.
+async function assertInScope(page) {
+  const file = join(outDir, SCOPE_FILE);
+  if (flag("ignore-scope") || !existsSync(file)) return;
+  if (!inScope(page.url(), await readJson(file)))
+    throw Object.assign(
+      new Error(
+        "This tab is not in the measurement scope; run `scope --pick ...` again or pass --ignore-scope.",
+      ),
+      { code: "tab-not-in-scope" },
+    );
 }
 
 function controlTable(frames, onlyChanged = false) {
@@ -260,6 +320,44 @@ const commands = {
         .slice(0, Number(opt("max", 6000))),
     );
   },
+  // Shows every open http tab by platform with its posting status and writes
+  // the person's choice (--pick hplace=2,greeting=1,sk=1,hyundai=0 or
+  // --tabs spec1,spec2) to <out>/scope.json. Without a choice it exits 2.
+  async scope(context) {
+    const tabs = [];
+    for (const page of httpPages(context)) {
+      const status = await bounded(
+        callInPage(page.mainFrame(), postingStatus, {
+          applicationPattern: APPLICATION_PATH.source,
+        }).catch(() => null),
+        8000,
+      );
+      tabs.push(describeTab(page.url(), status));
+    }
+    print(renderScopeTable(tabs));
+    const specs = opt("tabs");
+    const pick = opt("pick");
+    if (!specs && !pick) {
+      console.error(
+        "플랫폼별로 몇 곳을 돌릴지 --pick hplace=N,greeting=N,sk=N,hyundai=N 으로 정해 달라 (또는 --tabs <spec1,spec2>). generic은 이번 범위 밖이다.",
+      );
+      process.exitCode = 2;
+      return;
+    }
+    const scope = specs
+      ? scopeFromSpecs(
+          tabs,
+          specs
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean),
+        )
+      : pickScope(tabs, parsePick(pick));
+    await ensureOut();
+    const file = { at: new Date().toISOString(), ...scope };
+    await writeJson(join(outDir, SCOPE_FILE), file);
+    print(file);
+  },
   async stepinfo(context) {
     print(await (await pageAt(context, positional[0])).evaluate(readStep));
   },
@@ -283,14 +381,18 @@ const commands = {
           APPLICATION_PATH.test(new URL(p.url()).pathname),
         );
     const hosts = await apiHosts();
-    const report = [];
-    for (const page of pages) {
-      const result = await savedData(page, { allowHosts: hosts }).catch(
-        (error) => ({ ...safeError(error), saved: null }),
-      );
-      report.push({ tab: brief(page.url()), ...result });
-    }
+    const { report, keepalive } = await keptAlive(context, null, async () => {
+      const report = [];
+      for (const page of pages) {
+        const result = await savedData(page, { allowHosts: hosts }).catch(
+          (error) => ({ ...safeError(error), saved: null }),
+        );
+        report.push({ tab: brief(page.url()), ...result });
+      }
+      return { report };
+    });
     print(report);
+    if (keepalive?.length) print({ keepalive });
     const needs = report.filter((r) => r.saved === true);
     if (needs.length)
       console.error(
@@ -325,42 +427,38 @@ const commands = {
       process.exitCode = 2;
       return;
     }
-    const result = await resetPage(page, { site: siteFor(page.url()), allowHosts });
+    const result = await keptAlive(context, page, () =>
+      resetPage(page, { site: siteFor(page.url()), allowHosts }),
+    );
     print(result);
     if (!result.ok) process.exitCode = 1;
   },
   async census(context) {
     const page = await pageAt(context, positional[0]);
+    await assertInScope(page);
     const label = opt("label", "census");
     await ensureOut();
-    // The salt is thrown away: fingerprints are not needed in the file.
-    const frames = stripFingerprints(
-      await framesCensus(page, { salt: randomBytes(16).toString("hex") }),
-    );
-    const addButtons = await page.evaluate(() =>
-      [].slice
-        .call(document.querySelectorAll("button, a, input[type=button]"))
-        .filter((e) => {
-          const r = e.getBoundingClientRect();
-          return r.width > 0 && r.height > 0;
-        })
-        .map((e) =>
-          (e.textContent || e.value || e.getAttribute("aria-label") || "")
-            .replace(/\s+/g, " ")
-            .trim(),
-        )
-        .filter(
-          (t, k, a) => /추가/.test(t) && t.length < 40 && a.indexOf(t) === k,
+    const { frames, addButtons, keepalive } = await keptAlive(
+      context,
+      page,
+      async () => ({
+        // The salt is thrown away: fingerprints are not needed in the file.
+        frames: stripFingerprints(
+          await framesCensus(page, { salt: randomBytes(16).toString("hex") }),
         ),
+        addButtons: await addButtonTexts(page),
+      }),
     );
     await writeJson(join(outDir, `${label}.census.json`), frames);
     await writeJson(join(outDir, `${label}.addbuttons.json`), addButtons);
     print(
       `url=${brief(page.url())}\n${controlTable(frames)}\naddButtons=${JSON.stringify(addButtons)}`,
     );
+    if (keepalive?.length) print({ keepalive });
   },
   async run(context) {
     const page = await pageAt(context, positional[0]);
+    await assertInScope(page);
     const label = opt("label", "run");
     await ensureOut();
     // Ctrl-C or a kill stops the round but still lets the cleanup (discard
@@ -375,30 +473,36 @@ const commands = {
     process.on("SIGINT", stop);
     process.on("SIGTERM", stop);
     const id = await extensionIdForDirectory(paths.extension);
-    const result = await runPage(page, {
-      label,
-      clear: !flag("no-clear"),
-      approveReview: !flag("no-approve"),
-      timeoutMs: Number(opt("timeout", 300)) * 1000,
-      allowHosts: await apiHosts(),
-      build: await installedBuild(context, id),
-      signal: controller.signal,
-      // Test accounts: record values instead of hiding pre-run ones.
-      recordValues: isTestAccount(
-        page.url(),
-        await readTestAccounts(paths.root),
-      ),
-      profile: await (async () => {
-        const seeded = await seededProfile();
-        if (!seeded) {
-          console.error(
-            "warning: no seeded profile record (run start); synthetic values that the page already held stay hidden.",
-          );
-          return null;
-        }
-        return readJson(seeded.path);
-      })(),
-    }).finally(() => {
+    const result = await keptAlive(context, page, async () =>
+      runPage(page, {
+        label,
+        clear: !flag("no-clear"),
+        approveReview: !flag("no-approve"),
+        timeoutMs: Number(opt("timeout", 300)) * 1000,
+        allowHosts: await apiHosts(),
+        build: await installedBuild(context, id),
+        signal: controller.signal,
+        // Test accounts: record values instead of hiding pre-run ones.
+        recordValues: isTestAccount(
+          page.url(),
+          await readTestAccounts(paths.root),
+        ),
+        // Section captures (test-account tabs only) go next to the run file.
+        captureDir: flag("no-capture")
+          ? null
+          : join(outDir, `${label}.captures`),
+        profile: await (async () => {
+          const seeded = await seededProfile();
+          if (!seeded) {
+            console.error(
+              "warning: no seeded profile record (run start); synthetic values that the page already held stay hidden.",
+            );
+            return null;
+          }
+          return readJson(seeded.path);
+        })(),
+      }),
+    ).finally(() => {
       process.off("SIGINT", stop);
       process.off("SIGTERM", stop);
     });
@@ -602,7 +706,7 @@ async function main() {
   if (offline[cmd]) return offline[cmd]();
   if (!commands[cmd]) {
     print(
-      "commands: start [--build dir] [--profile file] | keepalive [<tab>] [--every min] [--threshold min] [--force] | tabs | open <url> | close <tab> | goto <tab> <url> | text <tab> | stepinfo <tab> | step <tab> <1-4> [--force] | saved [<tab>] | reset <tab> --yes | census <tab> --label L | run <tab> --label L [--no-clear] [--no-approve] [--timeout s] | discard <tab> | grade-input <labels> | join <labels> | report <labels> --verdicts a.json[,b.json] [--uncreated f] [--names f] | workflow-script <pregrade|verify>\n<tab> = url-substring or 'url-substring|page text'",
+      "commands: start [--build dir] [--profile file] | keepalive [<tab>] [--every min] [--threshold min] [--force] | tabs | scope [--pick hplace=N,greeting=N,sk=N,hyundai=N | --tabs spec1,spec2] | open <url> | close <tab> | goto <tab> <url> | text <tab> | stepinfo <tab> | step <tab> <1-4> [--force] | saved [<tab>] | reset <tab> --yes | census <tab> --label L [--ignore-scope] | run <tab> --label L [--no-clear] [--no-approve] [--no-capture] [--ignore-scope] [--timeout s] | discard <tab> | grade-input <labels> | join <labels> | report <labels> --verdicts a.json[,b.json] [--uncreated f] [--names f] | workflow-script <pregrade|verify>\n<tab> = url-substring or 'url-substring|page text'\nrun/census/saved/reset: [--keepalive-every min (10, 0=off)] [--keepalive-threshold min (30)]",
     );
     process.exitCode = cmd ? 1 : 0;
     return;
