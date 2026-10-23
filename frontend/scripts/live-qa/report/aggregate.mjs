@@ -14,6 +14,63 @@
 export const HPLACE_POLICY_EXCLUSIONS =
   /collegeCategoryCode|collegeMajor\[[12]\]\.dayOrNight|examDate|residentAddress\./;
 
+// Judge kinds that take an AUTOFILLABLE control out of `correct`.
+const NOT_CORRECT = ["WRONG", "MISSED", "EXPECTATION_ERROR", "UNVERIFIABLE"];
+const REF_INDEX = /^i=(\d+)(?:\s|$)/;
+
+// Recounts every total of a verdict from its items and the joined rows. The
+// model's numbers are not trusted (two 2026-10-22 verdicts disagreed with
+// their own items); fields that differ are listed in `mismatches`.
+export function recountVerdict(verdict, joined) {
+  const items = verdict.items ?? [];
+  const autofillableRows = {};
+  let autofillable = 0;
+  for (const r of joined.rows ?? [])
+    if (r.category === "AUTOFILLABLE") {
+      autofillable++;
+      autofillableRows[r.i] = true;
+    }
+  const count = (kind) => items.filter((it) => it.kind === kind).length;
+  // An AUTOFILLABLE control is correct unless an item says otherwise; the
+  // same control in two items still counts once.
+  const notCorrect = {};
+  for (const it of items) {
+    if (!NOT_CORRECT.includes(it.kind)) continue;
+    const i = REF_INDEX.exec(it.ref ?? "")?.[1];
+    if (i !== undefined && autofillableRows[i]) notCorrect[i] = true;
+  }
+  const extraCorrect = count("EXTRA_CORRECT");
+  const extraWrong = count("EXTRA_WRONG");
+  const recount = {
+    autofillable,
+    correct: autofillable - Object.keys(notCorrect).length,
+    wrong: count("WRONG"),
+    missed: count("MISSED"),
+    expectationErrors: count("EXPECTATION_ERROR"),
+    unverifiable: count("UNVERIFIABLE"),
+    extraWritten: extraCorrect + extraWrong,
+    extraCorrect,
+    extraWrong,
+    // Expected rows come from the pre-grading; observed rows stay the
+    // judge's reading of the new controls.
+    createdRowsExpected: Array.isArray(joined.rowExpansion)
+      ? joined.rowExpansion.reduce((a, r) => a + (r.extraRowsExpected ?? 0), 0)
+      : (verdict.createdRowsExpected ?? 0),
+    createdRowsObserved: verdict.createdRowsObserved ?? 0,
+  };
+  const mismatches = [];
+  for (const [field, value] of Object.entries(recount))
+    if (
+      field !== "createdRowsObserved" &&
+      verdict[field] !== undefined &&
+      verdict[field] !== value
+    )
+      mismatches.push(
+        `verdict-mismatch:${field} model=${verdict[field]} recount=${value}`,
+      );
+  return { ...recount, mismatches };
+}
+
 export function aggregatePage({
   label,
   joined,
@@ -41,13 +98,15 @@ export function aggregatePage({
   };
   // A run whose guard blocked a site action is not a valid measurement.
   if (!verdict || guardFailed) return { ...base, measured: false };
-  const unverifiable = verdict.unverifiable ?? 0;
+  const model = verdict;
+  verdict = { ...model, ...recountVerdict(model, joined) };
+  const unverifiable = verdict.unverifiable;
   // `uncreatedCells` is a number or {cells, policyCells}.
   const given =
     typeof uncreatedCells === "object" && uncreatedCells
       ? uncreatedCells
       : { cells: uncreatedCells ?? 0, policyCells: 0 };
-  const warnings = [];
+  const warnings = [...verdict.mismatches];
   let estimatedUncreated = 0;
   const shortRows = verdict.createdRowsExpected - verdict.createdRowsObserved;
   if (shortRows > 0 && !given.cells) {

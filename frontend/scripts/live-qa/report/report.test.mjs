@@ -204,12 +204,15 @@ describe("joinResults", () => {
   });
 });
 
+// Totals agree with the items: 10 AUTOFILLABLE rows, 3 of them not correct.
 const verdict = {
   autofillable: 10,
   correct: 7,
   wrong: 1,
   missed: 2,
   expectationErrors: 0,
+  unverifiable: 0,
+  extraWritten: 4,
   extraCorrect: 4,
   extraWrong: 0,
   createdRowsExpected: 3,
@@ -218,11 +221,19 @@ const verdict = {
     { ref: "i=3 college[0].collegeCategoryCode", kind: "MISSED" },
     { ref: "i=4 jobNm", kind: "MISSED" },
     { ref: "i=5 x", kind: "WRONG", written: "bad" },
+    { ref: "new career[1].a", kind: "EXTRA_CORRECT" },
+    { ref: "new career[1].b", kind: "EXTRA_CORRECT" },
+    { ref: "new career[1].c", kind: "EXTRA_CORRECT" },
+    { ref: "new career[1].d", kind: "EXTRA_CORRECT" },
   ],
 };
 const joined = {
-  rows: Array.from({ length: 12 }, (_, i) => ({ i })),
+  rows: Array.from({ length: 12 }, (_, i) => ({
+    i,
+    category: i < 10 ? "AUTOFILLABLE" : "NO_PROFILE_KEY",
+  })),
   addedOrUnmatchedAfterControls: [{}, {}, {}],
+  rowExpansion: [{ section: "S", extraRowsExpected: 3, autofillablePerRow: 0 }],
 };
 const run = {
   panel: { stage: "result", counts: { completed: 9, needsReview: 1 } },
@@ -360,10 +371,24 @@ describe("aggregatePage", () => {
     const page = aggregatePage({
       label: "gr-x",
       joined,
-      verdict: { ...verdict, unverifiable: 2 },
+      verdict: {
+        ...verdict,
+        correct: 5,
+        unverifiable: 2,
+        items: [
+          ...verdict.items,
+          { ref: "i=6 y", kind: "UNVERIFIABLE" },
+          { ref: "i=7 z", kind: "UNVERIFIABLE" },
+        ],
+      },
       run,
     });
-    expect(page).toMatchObject({ denominator: 14, unverifiable: 2 });
+    expect(page).toMatchObject({
+      correct: 9,
+      denominator: 12,
+      unverifiable: 2,
+      warnings: ["rows-not-created:3>2"],
+    });
   });
 
   it("reports a page without a verdict as not measured", () => {
@@ -455,10 +480,22 @@ describe("renderReport", () => {
       createdRowsObserved: 0,
       items: [],
     };
+    const nothing = {
+      ...joined,
+      rows: joined.rows.map((r) => ({ ...r, category: "NOT_A_FIELD" })),
+      rowExpansion: [],
+    };
     const md = renderReport({
       title: "QA",
       meta: { apiOrigin: "x", date: "d" },
-      pages: [aggregatePage({ label: "hp-x-s4", joined, verdict: empty, run })],
+      pages: [
+        aggregatePage({
+          label: "hp-x-s4",
+          joined: nothing,
+          verdict: empty,
+          run,
+        }),
+      ],
     });
     expect(md).not.toContain("NaN");
   });
