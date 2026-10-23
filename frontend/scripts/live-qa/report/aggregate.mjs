@@ -164,19 +164,43 @@ export function aggregatePage({
 const pct = (n) =>
   n === null || !Number.isFinite(n) ? "—" : `${n.toFixed(1)}%`;
 
+const PLATFORM_NAMES = {
+  hp: "에이치닷",
+  gr: "Greeting",
+  sk: "SK",
+  hy: "현대자동차",
+};
+export const platformName = (label) =>
+  PLATFORM_NAMES[label.split("-")[0]] ?? "기타";
+
+// A subtotal or total row over measured pages, in the table's column order.
+function sumRow(name, pages) {
+  const sum = (k, list = pages) => list.reduce((a, p) => a + p[k], 0);
+  const denominator = sum("denominator");
+  const policy = pages.filter((p) => p.policyApplies);
+  const policyDenominator =
+    sum("denominator", policy) - sum("policyMissed", policy);
+  return `| **${name}** | | ${denominator} | ${sum("written")} | ${sum("correct")} | ${sum("wrong")} | ${sum("missed")} | ${sum("unverifiable")} | ${pct(denominator > 0 ? (sum("correct") / denominator) * 100 : null)} | ${policy.length && policyDenominator > 0 ? pct((sum("correct", policy) / policyDenominator) * 100) : "—"} | | | |`;
+}
+
 export function renderReport({ title, meta, pages, names = {} }) {
   const revisions = [
     ...new Set(pages.map((p) => p.revision).filter(Boolean)),
   ].map((r) => `\`${String(r).slice(0, 7)}\``);
+  const measured = pages.filter((p) => p.measured);
+  const sum = (k) => measured.reduce((a, p) => a + p[k], 0);
+  const unverifiable = sum("unverifiable");
+  const denominator = sum("denominator");
   const lines = [
     `# ${title}`,
     "",
     `- 빌드(측정 당시): ${revisions.length ? revisions.join(", ") : "기록 없음"}${revisions.length > 1 ? " ⚠ 페이지마다 다름" : ""}`,
     `- API: \`${meta.apiOrigin}\``,
     `- 측정일: ${meta.date}`,
+    `- 확인 불가 비율: ${unverifiable} / (${denominator} + ${unverifiable}) = ${pct(denominator + unverifiable > 0 ? (unverifiable / (denominator + unverifiable)) * 100 : null)} (측정 품질 지표: 낮을수록 좋음)`,
     "",
-    "| 페이지 | 화면 전체 칸 (전+신규) | 입력 가능 칸 | 확장이 입력 | 정답 | 오입력 | 누락 | 입력률 | 정책 반영 | 행 (기대/생성) | 앱 패널 | 비고 |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| 페이지 | 화면 전체 칸 (전+신규) | 입력 가능 칸 | 확장이 입력 | 정답 | 오입력 | 누락 | 확인 불가 | 입력률 | 정책 반영 | 행 (기대/생성) | 앱 패널 | 비고 |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
   ];
   for (const p of pages) {
     const name = names[p.label] ?? p.label;
@@ -189,31 +213,30 @@ export function renderReport({ title, meta, pages, names = {} }) {
       p.error ? `⚠ ${p.error}` : "",
       p.widgetsLeft ? `⚠ 비우지 못한 위젯 ${p.widgetsLeft}` : "",
       ...(p.warnings ?? []).map((w) => `⚠ ${w}`),
-      p.unverifiable ? `확인 불가 ${p.unverifiable}` : "",
       p.expectationErrors ? `채점 오류 ${p.expectationErrors}` : "",
     ]
       .filter(Boolean)
       .join(", ");
     if (!p.measured) {
       lines.push(
-        `| ${name} | ${total} | 측정 안 됨 | — | — | — | — | — | — | — | ${panel} | ${notes} |`,
+        `| ${name} | ${total} | 측정 안 됨 | — | — | — | — | — | — | — | — | ${panel} | ${notes} |`,
       );
       continue;
     }
     lines.push(
-      `| ${name} | ${total} | ${p.denominator} | ${p.written} | ${p.correct} | ${p.wrong} | ${p.missed} | ${pct(p.rate)} | ${p.policyApplies ? pct(p.policyRate) : "—"} | ${p.rowsExpected}/${p.rowsObserved} | ${panel} | ${notes} |`,
+      `| ${name} | ${total} | ${p.denominator} | ${p.written} | ${p.correct} | ${p.wrong} | ${p.missed} | ${p.unverifiable} | ${pct(p.rate)} | ${p.policyApplies ? pct(p.policyRate) : "—"} | ${p.rowsExpected}/${p.rowsObserved} | ${panel} | ${notes} |`,
     );
   }
-  const measured = pages.filter((p) => p.measured);
-  const sum = (k, list = measured) => list.reduce((a, p) => a + p[k], 0);
   if (measured.length) {
-    const denominator = sum("denominator");
-    const policy = measured.filter((p) => p.policyApplies);
-    const policyDenominator =
-      sum("denominator", policy) - sum("policyMissed", policy);
-    lines.push(
-      `| **합계** | | ${denominator} | ${sum("written")} | ${sum("correct")} | ${sum("wrong")} | ${sum("missed")} | ${pct(denominator > 0 ? (sum("correct") / denominator) * 100 : null)} | ${policy.length && policyDenominator > 0 ? pct((sum("correct", policy) / policyDenominator) * 100) : "—"} | | | |`,
-    );
+    const platforms = [...new Set(measured.map((p) => platformName(p.label)))];
+    for (const platform of platforms)
+      lines.push(
+        sumRow(
+          `${platform} 소계`,
+          measured.filter((p) => platformName(p.label) === platform),
+        ),
+      );
+    lines.push(sumRow("합계", measured));
   }
   lines.push(
     "",

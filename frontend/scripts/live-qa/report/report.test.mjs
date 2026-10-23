@@ -468,6 +468,85 @@ describe("renderReport", () => {
     expect(md).toContain("⚠ run-timeout");
   });
 
+  it("shows the unverifiable column and ratio as a measurement-quality line", () => {
+    const withUnverifiable = {
+      ...verdict,
+      correct: 5,
+      unverifiable: 2,
+      items: [
+        ...verdict.items,
+        { ref: "i=6 y", kind: "UNVERIFIABLE" },
+        { ref: "i=7 z", kind: "UNVERIFIABLE" },
+      ],
+    };
+    const md = renderReport({
+      title: "QA",
+      meta: { apiOrigin: "x", date: "d" },
+      pages: [
+        aggregatePage({
+          label: "gr-a",
+          joined,
+          verdict: withUnverifiable,
+          run,
+        }),
+        aggregatePage({ label: "sk-b", joined, verdict, run }),
+        aggregatePage({ label: "hy-c", joined, run: { error: { code: "x" } } }),
+      ],
+    });
+    // gr-a: denominator 12, unverifiable 2; sk-b: 14, 0 → 2 / 28 = 7.1%.
+    expect(md).toContain(
+      "- 확인 불가 비율: 2 / (26 + 2) = 7.1% (측정 품질 지표: 낮을수록 좋음)",
+    );
+    expect(md).toContain("| 누락 | 확인 불가 | 입력률 |");
+    expect(md).toMatch(/\| gr-a \|[^\n]*\| 2 \| 2 \| 75\.0% \|/);
+    expect(md).toMatch(/\| sk-b \|[^\n]*\| 2 \| 0 \| 78\.6% \|/);
+    expect(md).not.toContain("확인 불가 2");
+  });
+
+  it("adds a subtotal row per platform that has a measured page", () => {
+    const md = renderReport({
+      title: "QA",
+      meta: { apiOrigin: "x", date: "d" },
+      pages: [
+        aggregatePage({
+          label: "hp-a-s2",
+          joined,
+          verdict,
+          run,
+          policyPattern: /collegeCategoryCode/,
+        }),
+        aggregatePage({
+          label: "hp-b-s2",
+          joined,
+          verdict,
+          run,
+          policyPattern: /collegeCategoryCode/,
+        }),
+        aggregatePage({ label: "gr-c", joined, verdict, run }),
+        aggregatePage({ label: "zz-d", joined, verdict, run }),
+        aggregatePage({ label: "sk-e", joined, run: { error: { code: "x" } } }),
+      ],
+    });
+    const rows = md.split("\n").filter((l) => l.startsWith("| **"));
+    expect(rows.map((l) => l.split(" | ")[0])).toEqual([
+      "| **에이치닷 소계**",
+      "| **Greeting 소계**",
+      "| **기타 소계**",
+      "| **합계**",
+    ]);
+    // Two Hplace pages: 28 cells, 22 correct, policy rate 22 / 26.
+    expect(rows[0]).toBe(
+      "| **에이치닷 소계** | | 28 | 24 | 22 | 2 | 4 | 0 | 78.6% | 84.6% | | | |",
+    );
+    expect(rows[1]).toBe(
+      "| **Greeting 소계** | | 14 | 12 | 11 | 1 | 2 | 0 | 78.6% | — | | | |",
+    );
+    expect(rows[3]).toBe(
+      "| **합계** | | 56 | 48 | 44 | 4 | 8 | 0 | 78.6% | 84.6% | | | |",
+    );
+    expect(md).not.toContain("SK 소계");
+  });
+
   it("prints a dash instead of NaN when nothing could be measured", () => {
     const empty = {
       ...verdict,
