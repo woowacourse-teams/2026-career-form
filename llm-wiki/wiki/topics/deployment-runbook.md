@@ -2,9 +2,9 @@
 
 > Topic: deployment-runbook
 > Status: Current
-> Current: [CF-323 릴리스 시작 기준 커밋 선택](../../raw/issues/CF-323/documents/start-release-base-commit.md)
-> History: [근거 1](../../raw/issues/CF-41/documents/docs/operations/deployment-runbook.md); [CF-327 운영 배포 파이프라인 근거](../../raw/issues/CF-327/documents/deployment-pipeline.md); [CF-323 릴리스 시작 기준 커밋 선택](../../raw/issues/CF-323/documents/start-release-base-commit.md)
-> Updated: 2026-10-23
+> Current: [CF-333 정책 활성 버전과 배포 뒤 전환](../../raw/issues/CF-333/documents/policy-active-version-and-deploy.md)
+> History: [근거 1](../../raw/issues/CF-41/documents/docs/operations/deployment-runbook.md); [CF-327 운영 배포 파이프라인 근거](../../raw/issues/CF-327/documents/deployment-pipeline.md); [CF-323 릴리스 시작 기준 커밋 선택](../../raw/issues/CF-323/documents/start-release-base-commit.md); [CF-333 정책 활성 버전과 배포 뒤 전환](../../raw/issues/CF-333/documents/policy-active-version-and-deploy.md)
+> Updated: 2026-10-24
 
 ## 현재 상태
 
@@ -15,6 +15,10 @@ Start release는 선택 입력 `ref`를 비우면 `develop` HEAD를, 채우면 `
 릴리스 절차는 CF-41의 Release·Hotfix 순서(릴리스 시작 workflow → Draft PR·staging 확인 → health·수동 E2E → Ready·승인·Merge Commit → digest 확인 → tag·동기화 PR)를 유지하되, 병합 전에 staging 배포 SHA가 release head와 같은지, `origin/main`의 모든 커밋이 release에 포함됐는지, 운영 설정에 새 필수값이 없는지, 확장 보급이 끝났는지 확인한다. 병합은 Merge Commit만 쓴다. 병합 후에는 digest 일치, `v<ver>` tag, 동기화 PR Merge Commit, 스토어 확장으로 운영 스모크를 확인한다. 최초 배포, 진단 명령, DB host 점검은 CF-41 근거를 따른다.
 
 확장 프로그램 릴리스는 [확장 프로그램 릴리스](extension-release.md), 확장과 백엔드의 배포 순서는 [확장·백엔드 호환 배포](release-compatibility.md), 설정 레버는 [CI/CD 설정](cicd-setup.md)을 따른다. 배포, 확장 게시, revert 승인과 수동 복구는 사람이 수행한다.
+
+## 정책 활성 버전과 배포 뒤 전환 (2026-10-24)
+
+정책 활성 버전은 회사 문서의 `activePolicyVersion`에 있고, 기동 seeder(#212)는 빈 DB만 채우며 기존 DB의 활성 버전은 바꾸지 않는다. 전환 명령·API가 없어 사람이 DB에서 직접 바꾼다. 2026-10-24 dev는 사람이 SK 38·Greeting 18로 바꾼 뒤에야 dev API가 v38을 줬고, 운영의 37·24·17은 그 시점 main(v1.4.0) seed와 일치했다. 릴리스 점검은 4값(배포 커밋, 그 커밋의 seed 활성 버전, DB 활성 버전, API 응답)을 대조하고, develop이 main에 들어가 운영 seed가 바뀌면 배포 직후 운영 DB 전환을 사람이 승인·실행한다. 새 정책 검증은 새 볼륨 로컬 스택에서 한다. seeder의 환경별 자동 적용과 보호된 전환 경로는 #337에서 다룬다. 근거는 [CF-333 정책 활성 버전과 배포 뒤 전환](../../raw/issues/CF-333/documents/policy-active-version-and-deploy.md)을 따른다.
 
 ## 변경 이유
 

@@ -2,9 +2,9 @@
 
 > Topic: live-autofill-evaluation
 > Status: Current
-> Current: [CF-310 재설치·응답 없는 탭 근거](../../raw/issues/CF-310/documents/live-harness-reinstall-and-hung-tab.md)
-> History: [CF-124 최초 공용 실행 계약](../../raw/issues/CF-124/documents/adr/124-ai-operated-live-autofill-evaluation.md); [CF-124 사전 판정 분모와 평가 보고서](../../raw/issues/CF-124/documents/reports/2026-09-28-live-autofill-evaluation.md); [CF-173 평가 계약 1.1](../../raw/issues/CF-173/documents/evaluation-contract-1.1.md); [CF-310 원복·대화상자 근거](../../raw/issues/CF-310/documents/live-browser-pitfalls.md); [CF-310 원복 재키·표시 규칙 근거](../../raw/issues/CF-310/documents/live-harness-residue-and-display.md); [CF-310 재설치·응답 없는 탭 근거](../../raw/issues/CF-310/documents/live-harness-reinstall-and-hung-tab.md); [CF-314 실사이트 기입 정확도 재평가와 측정 절차](../../raw/issues/CF-314/documents/live-autofill-recheck-2026-10-22.md)
-> Updated: 2026-10-22
+> Current: [CF-333 테스트 계정 모드·설치본 잠금·채점 재사용 근거](../../raw/issues/CF-333/documents/live-harness-test-account-mode.md)
+> History: [CF-124 최초 공용 실행 계약](../../raw/issues/CF-124/documents/adr/124-ai-operated-live-autofill-evaluation.md); [CF-124 사전 판정 분모와 평가 보고서](../../raw/issues/CF-124/documents/reports/2026-09-28-live-autofill-evaluation.md); [CF-173 평가 계약 1.1](../../raw/issues/CF-173/documents/evaluation-contract-1.1.md); [CF-310 원복·대화상자 근거](../../raw/issues/CF-310/documents/live-browser-pitfalls.md); [CF-310 원복 재키·표시 규칙 근거](../../raw/issues/CF-310/documents/live-harness-residue-and-display.md); [CF-310 재설치·응답 없는 탭 근거](../../raw/issues/CF-310/documents/live-harness-reinstall-and-hung-tab.md); [CF-314 실사이트 기입 정확도 재평가와 측정 절차](../../raw/issues/CF-314/documents/live-autofill-recheck-2026-10-22.md); [CF-333 테스트 계정 모드·설치본 잠금·채점 재사용 근거](../../raw/issues/CF-333/documents/live-harness-test-account-mode.md)
+> Updated: 2026-10-24
 
 ## 현재 상태
 
@@ -41,6 +41,17 @@ Console의 `[CareerForm]` 로그는 수집, 분석, 리뷰, 기입과 검색 실
 - **재설치 뒤 재진입:** `start`로 확장을 바꾸면 열려 있던 탭에는 새 콘텐츠 스크립트가 붙지 않아 실행이 `panel-trigger-missing`으로 실패한다. 같은 주소로 다시 이동(`goto`, 에이치닷은 `step`)한 뒤 실행한다.
 - **응답 없는 탭:** 렌더러가 멈춘 탭 하나가 Playwright의 CDP 접속 전체를 30초 시간 초과로 막고 `step`·`stepinfo`도 `TimeoutError`로 끝난다. `/json/list`의 페이지 target마다 WebSocket으로 `Runtime.evaluate`를 보내 응답 시간으로 멈춘 탭을 찾고, 브라우저 세션의 `Target.createTarget`으로 같은 주소의 새 탭을 만든 뒤 `Target.closeTarget`으로 멈춘 탭만 닫는다. 브라우저는 재시작하지 않는다.
 - 근거는 [CF-310 재설치·응답 없는 탭 근거](../../raw/issues/CF-310/documents/live-harness-reinstall-and-hung-tab.md)를 따른다.
+
+## 테스트 계정 모드, 설치본 잠금, 채점 재사용 (2026-10-24)
+
+CF-333(#333)은 `frontend/scripts/live-qa` 하네스에 테스트 계정 모드를 넣었다. 평가 계약 1.1의 분모·판정 규칙은 그대로다.
+
+- **테스트 계정 모드:** 하네스는 확장을 시험하는 도구이지 지원서를 쓰는 도구가 아니다. 사람이 상태 디렉터리의 allowlist 파일에 적은 호스트의 탭에서만 실행 전·후 값을 기록하고(계정 신원 칸만 가림), `reset`이 화면을 비운 뒤 사이트 자체의 임시저장으로 빈 양식을 저장해 서버 저장값을 지운다. 섹션 캡처와 차단된 임시저장 본문도 이 탭에서만 남긴다. 제출·동의·본인 인증·파일은 테스트 계정에서도 막는다. 2026-10-23 실험(5페이지)에서 확인 불가 68칸 → 12칸, 정답 229/274(83.6%) → 285/330(86.4%), 오입력 0이었고, 남은 12칸은 사이트 기본값 7칸과 어학·자격 코드 칸 5칸이라 CF-333은 사이트 기본값(`siteDefault`)을 저장값과 구분하고 코드 칸의 숨은 이름 칸을 함께 수집한다.
+- **측정 범위와 품질 지표:** 측정 전에 `scope`로 플랫폼별 몇 곳을 돌릴지 사람이 정하고, 보고서는 "확인 불가 비율"을 측정 품질 지표로 첫 줄에 적는다. 캡처 판정(캡처와 기대값만 보고 DOM 판정은 보지 않음)과 DOM 판정의 일치율을 코드로 대조한다.
+- **설치본 잠금:** 평가 브라우저와 설치본은 같은 기기의 모든 세션이 공유한다. 2026-10-22에는 측정 직후 다른 세션이 다른 빌드를 설치했고, 유효성은 `run.json`의 `build.revision`으로 검증했다. `start`는 설치한 세션의 프로세스 계보(pid·부모·조부모)를 `extension.lock.json`에 적고, 다른 세션의 잠금이 살아 있으면 `install-locked`로 재설치를 거부한다(`--force`만 예외). revision이 같아도 manifest의 API 호스트가 다르면 재설치한다. 멈춘 탭은 `health`·`replace`로 Playwright 없이 처리한다.
+- **채점 재사용과 합계 재계산:** 2026-10-22 측정에서 사전 채점 93개 에이전트(약 710만 토큰)와 판정 57개(약 590만 토큰)가 회차마다 반복됐고 채점자가 바뀌면 분모도 바뀌었다. 값 없는 구조의 해시가 같으면 이전 `final.json`을 재사용한다. 판정 2건의 합계가 자기 항목과 어긋났으므로 보고서는 판정 파일의 숫자 필드를 믿지 않고 항목과 joined 행에서 다시 세며, 다르면 `verdict-mismatch`로 표시한다.
+- **새 정책 검증 환경:** 기동 seeder는 기존 DB의 활성 버전을 바꾸지 않으므로 새 정책 버전은 새 볼륨 로컬 스택에서 검증하거나 dev DB의 활성 버전을 사람이 바꾼 뒤 확인한다. 배포 관점은 [배포 Runbook](deployment-runbook.md)을 따른다.
+- 근거는 [CF-333 테스트 계정 모드·설치본 잠금·채점 재사용](../../raw/issues/CF-333/documents/live-harness-test-account-mode.md)을 따른다.
 
 ## 과거 실행 근거
 

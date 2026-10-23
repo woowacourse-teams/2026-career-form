@@ -2,9 +2,9 @@
 
 > Topic: adapter-hyundai
 > Status: Current
-> Current: [CF-310 버튼형 선택지 코드 근거](../../raw/issues/CF-310/documents/hyundai-button-select-codes.md)
-> History: [근거 1](../../raw/issues/CF-46/documents/adapter-hyundai.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-hyundai.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-hyundai.md); [CF-169 근거](../../raw/issues/CF-169/documents/adapter-hyundai.md); [CF-310 Map·Set 재정의 근거](../../raw/issues/CF-310/documents/hyundai-map-set-override.md); [CF-310 버튼형 선택지 코드 근거](../../raw/issues/CF-310/documents/hyundai-button-select-codes.md)
-> Updated: 2026-10-22
+> Current: [CF-333 작성 화면 재진입 불가·경력 칸 결함 근거](../../raw/issues/CF-333/documents/hyundai-applywrite-reentry-and-career-fields.md)
+> History: [근거 1](../../raw/issues/CF-46/documents/adapter-hyundai.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-hyundai.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-hyundai.md); [CF-169 근거](../../raw/issues/CF-169/documents/adapter-hyundai.md); [CF-310 Map·Set 재정의 근거](../../raw/issues/CF-310/documents/hyundai-map-set-override.md); [CF-310 버튼형 선택지 코드 근거](../../raw/issues/CF-310/documents/hyundai-button-select-codes.md); [CF-333 작성 화면 재진입 불가·경력 칸 결함 근거](../../raw/issues/CF-333/documents/hyundai-applywrite-reentry-and-career-fields.md)
+> Updated: 2026-10-24
 
 ## 현재 상태
 
@@ -17,6 +17,13 @@ CF-169는 어학 언어와 시험 상태 드라이버의 실패를 `.field-group
 ## 페이지 전역 재정의 (2026-10-21)
 
 현대자동차 지원서(`talent.hyundai.com/apply/applyWrite.hc`)는 `window.Map`과 `window.Set`을 native가 아닌 polyfill로 바꿔 둔다. 그래서 `page.evaluate`로 페이지 world에 넣는 함수는 둘을 쓰지 않는다. 2026-10-21 실사이트 QA의 일회성 스크립트에서 `Map`을 순회하던 입력 비우기 함수(`clearForm`)가 이 페이지에서 멈췄다. 이를 옮긴 하네스(`frontend/scripts/live-qa`)는 둘을 쓰지 않고, `page/*.mjs`와 `keepalive.mjs`의 페이지 함수 열 개를 `page/page-functions.test.mjs`로 고정한다. 근거는 [CF-310 Map·Set 재정의](../../raw/issues/CF-310/documents/hyundai-map-set-override.md)를 따른다.
+
+## 작성 화면 재진입 불가와 경력 칸 결함 (2026-10-24)
+
+- **재진입 불가:** 작성 화면(`applyWrite.hc`)은 같은 주소로 다시 접속하면 본문이 비어 하네스가 재진입할 수 없다. 확장 재설치나 탭 교체 뒤에는 사람이 사이트의 지원서 목록에서 다시 들어가야 하며, 하네스 `start`의 복구는 이 화면을 `needsPerson`으로 알린다.
+- **입사·퇴사연월일 일자 누락:** 경력 행의 `tranStartDt`·`tranEndDt`(YYYY-MM-DD, `maxLength 10`)에 연월만 들어간다. 같은 페이지의 자격 취득연월일은 온전히 들어가므로 형식 변환이 아니라 값 손실이다(2026-10-21·22 3곳 × 2행 재현). 프로필의 경력 기간이 연월 단위라 일자 보정은 정책 결정이 필요하다.
+- **종료사유 자유입력 오배치:** 종료사유 select(`retResCd`)는 비운 채 "기타"일 때만 유효한 자유입력(`retResEtcCont`)에 사유 원문을 쓴다. 어휘 별칭("계약기간 만료" ↔ "계약만료")과 버튼형 선택지 코드 수집이 선행돼야 한다. 두 결함과 자격 등급 `단일등급` 미매핑의 수정은 #335, 학교명 검색 미확정은 #336에서 다룬다.
+- 근거는 [CF-333 작성 화면 재진입 불가·경력 칸 결함](../../raw/issues/CF-333/documents/hyundai-applywrite-reentry-and-career-fields.md)을 따른다.
 
 ## 변경 이유
 
