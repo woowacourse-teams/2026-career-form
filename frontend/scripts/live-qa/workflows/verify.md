@@ -2,12 +2,16 @@
 
 확장 실행 뒤 `join`으로 만든 `grade/<label>.joined.json`을 페이지마다 판정자 1명이 판정하고, 정답이 아닌 항목은 반박 담당이 원자료를 다시 열어 확인한다. 결과 배열을 파일로 저장해 `report --verdicts`에 넘긴다.
 
+캡처가 있는 페이지(테스트 계정 탭의 `run`이 남긴 `run.json.captures`)는 Judge와 병렬로 캡처 판정자가 `grade/<label>.capture-input.json`의 캡처 이미지와 기대값 목록만 보고 화면에 보이는 값을 `grade/<label>.capture.json`에 적는다. 캡처 판정자는 DOM 판정, joined, run 파일을 열지 않는다. 두 판정의 대조는 `report`가 코드로 한다(`report/capture-compare.mjs`). 캡처가 없는 label은 Capture 단계를 건너뛴다.
+
 ## 실행
 
 1. `node scripts/live-qa/cli.mjs run <tab> --label <label>`
-2. `node scripts/live-qa/cli.mjs join <label...>`
-3. `node scripts/live-qa/cli.mjs workflow-script verify --out <작업 폴더 안 경로>`가 출력한 경로를 Workflow 도구의 `scriptPath`로 넘긴다. `args`: `{ "dir": "<out>/grade", "labels": [...] }`
-4. 결과(JSON 배열)를 `<out>/grade/verdicts.json`으로 저장하고 `node scripts/live-qa/cli.mjs report <label...> --verdicts <out>/grade/verdicts.json`
+2. `node scripts/live-qa/cli.mjs join <label...>` — 마지막 줄 `captureLabels: [...]`가 캡처가 있는 label이다.
+3. `node scripts/live-qa/cli.mjs workflow-script verify --out <작업 폴더 안 경로>`가 출력한 경로를 Workflow 도구의 `scriptPath`로 넘긴다. `args`: `{ "dir": "<out>/grade", "labels": [...], "captureLabels": [...] }` (`captureLabels`는 `join`이 출력한 배열, 없으면 생략)
+4. 결과(JSON 배열)를 `<out>/grade/verdicts.json`으로 저장하고 `node scripts/live-qa/cli.mjs report <label...> --verdicts <out>/grade/verdicts.json`. 결과의 `captureWritten`이 `false`인 label은 캡처 판정을 다시 돌린다.
+
+숫자 필드(`correct`, `missed` 등)는 스키마 호환을 위해 남아 있지만 보고서는 쓰지 않는다. `report`가 `items`와 joined 행에서 다시 세고, 모델 숫자와 다르면 비고에 `verdict-mismatch`로 표시한다.
 
 판정 종류: `CORRECT`, `WRONG`, `MISSED`, `EXTRA_CORRECT`, `EXTRA_WRONG`, `EXPECTATION_ERROR`, `UNVERIFIABLE`(실행 전 값이나 마운트 기본값이 그대로 남아 비교할 수 없는 칸, 분모 밖에서 따로 셈). 날짜 구분자, 전화 하이픈, `코드|문구` 같은 형식 차이는 정답으로 본다.
 
@@ -29,6 +33,11 @@ export const meta = {
         "one judge per page classifies every AUTOFILLABLE control and every added row control",
     },
     {
+      title: "Capture",
+      detail:
+        "independent reader writes what each capture shows, without the DOM verdict",
+    },
+    {
       title: "Challenge",
       detail: "skeptic re-checks all non-correct items per page",
     },
@@ -36,6 +45,7 @@ export const meta = {
 };
 const DIR = args.dir;
 const PROFILE = `${DIR}/profile.synthetic.json`;
+const CAPTURE_LABELS = args.captureLabels ?? [];
 const KINDS = [
   "CORRECT",
   "WRONG",
@@ -92,6 +102,36 @@ const JUDGE_SCHEMA = {
   ],
 };
 
+const CAPTURE_SCHEMA = {
+  type: "object",
+  properties: {
+    label: { type: "string" },
+    captureWritten: { type: "boolean" },
+    seenCount: { type: "integer" },
+    emptyCount: { type: "integer" },
+    notVisibleCount: { type: "integer" },
+    note: { type: "string" },
+  },
+  required: [
+    "label",
+    "captureWritten",
+    "seenCount",
+    "emptyCount",
+    "notVisibleCount",
+    "note",
+  ],
+};
+
+const capturePrompt = (
+  label,
+) => `화면 캡처 읽기. 자료는 ${DIR}/${label}.capture-input.json 하나뿐이다.
+- captures[]: 실행 뒤 화면 캡처 파일(file, 절대경로 PNG)과 섹션 이름(name), 그 캡처에 들어 있을 칸 번호(controls). Read 도구로 PNG를 열어 본다.
+- expected[]: 칸 번호 i, 섹션, 라벨, type, 기대값(합성 프로필). 기대값은 칸을 찾는 데만 쓰고, 보이는 값을 기대값에 맞춰 적지 않는다.
+할 일: expected의 각 i에 대해 캡처에서 그 칸을 찾아 화면에 보이는 값을 seen에 그대로 적는다. 칸은 보이는데 비어 있으면 빈 문자열 "", 어느 캡처에서도 칸을 찾지 못하면 null. select·라디오·체크박스는 선택된 문구를 적는다. 날짜·전화는 보이는 형식 그대로 적는다.
+결과를 ${DIR}/${label}.capture.json 에 Write 도구로 저장한다. 형식: [{"i": <번호>, "seen": "<값>" | "" | null}, ...] (expected의 모든 i를 한 번씩).
+금지: ${DIR}/${label}.joined.json, *.run.json, *.final.json, *.input.json, verdicts, 그리고 다른 판정자의 결과를 열지 마라. backend/policies, frontend/src/autofill 코드도 읽지 마라. 캡처와 capture-input.json만 본다.
+StructuredOutput으로 label, captureWritten(파일 저장 성공 여부), seenCount(값이 보인 칸 수), emptyCount(빈 칸 수), notVisibleCount(null 칸 수), note를 반환한다.`;
+
 const judgePrompt = (label) => `실사이트 자동 기입 QA 판정. 자료:
 - ${DIR}/${label}.joined.json : rows[]는 실행 전 화면의 각 칸(i, name, label, section)과 독립 사전 채점(category, profileKey, expected), 실행 후 값(written = 실행 후 값의 표시, afterHasValue, changed, preexistingValue). 실행 전에 보이는 칸 값을 비웠으므로 written이 있으면 실행이 만든 값이다. written은 실행 전 페이지에 없던 값이나 합성 프로필 값일 때만 표시되고, 그 밖의 값(실행 전 값과 같은 값, 마운트될 때부터 있던 값)은 개인정보 보호로 null이다. select의 written은 "code|표시문구", 라디오는 "표시문구 [v=값]".
   widgetsLeft는 초기화가 비우지 못한 커스텀 위젯 수다. 0보다 크면 그 위젯이 있는 행을 확장이 기존 행으로 보고 건너뛸 수 있으므로, 그런 행의 MISSED는 note에 "widget-left"를 적는다.
@@ -119,18 +159,35 @@ const challengePrompt = (
 판정자 결과: ${JSON.stringify(j)}
 각 항목의 최종 kind를 다시 정하고 note에 근거를 남긴다. 판정자의 CORRECT 수가 틀렸다고 보이면 숫자도 고친다. 동일한 스키마로 최종 결과를 StructuredOutput으로 반환하라(숫자 필드는 최종 판정 기준으로 다시 센 값).`;
 
+// Judge and Capture run side by side; the capture reader never sees the
+// judge's result. Labels without captures skip the Capture phase.
 const results = await pipeline(
   args.labels,
   (label) =>
-    agent(judgePrompt(label), {
-      label: `judge:${label}`,
-      phase: "Judge",
-      schema: JUDGE_SCHEMA,
-      model: "sonnet",
-    }),
-  (j, label) => {
+    parallel([
+      () =>
+        agent(judgePrompt(label), {
+          label: `judge:${label}`,
+          phase: "Judge",
+          schema: JUDGE_SCHEMA,
+          model: "sonnet",
+        }),
+      () =>
+        CAPTURE_LABELS.includes(label)
+          ? agent(capturePrompt(label), {
+              label: `capture:${label}`,
+              phase: "Capture",
+              schema: CAPTURE_SCHEMA,
+              model: "sonnet",
+            })
+          : Promise.resolve(null),
+    ]),
+  ([j, cap], label) => {
     if (!j) return null;
-    if (!j.items.length) return { ...j, challenged: false };
+    const captureWritten = CAPTURE_LABELS.includes(label)
+      ? Boolean(cap?.captureWritten)
+      : null;
+    if (!j.items.length) return { ...j, challenged: false, captureWritten };
     return agent(challengePrompt(label, j), {
       label: `challenge:${label}`,
       phase: "Challenge",
@@ -140,6 +197,7 @@ const results = await pipeline(
         ? {
             ...c,
             challenged: true,
+            captureWritten,
             judgeCounts: {
               correct: j.correct,
               wrong: j.wrong,
@@ -148,7 +206,7 @@ const results = await pipeline(
               extraWrong: j.extraWrong,
             },
           }
-        : { ...j, challenged: "failed" },
+        : { ...j, challenged: "failed", captureWritten },
     );
   },
 );

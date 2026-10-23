@@ -62,7 +62,15 @@ import {
   renderReport,
 } from "./report/aggregate.mjs";
 import { buildGradeInput } from "./report/grade-input.mjs";
+import { buildCaptureInput } from "./report/capture-compare.mjs";
 import { joinResults } from "./report/join.mjs";
+import {
+  formatPregradeLines,
+  loadStructureIndex,
+  reusePregrade,
+  saveStructureIndex,
+} from "./report/pregrade-reuse.mjs";
+import { structureHash } from "./report/structure-hash.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const frontend = resolve(here, "../..");
@@ -86,6 +94,7 @@ const VALUE_OPTIONS = [
   "max",
   "every",
   "threshold",
+  "reuse-from",
 ];
 const positional = rest.filter(
   (a, k) =>
@@ -428,7 +437,10 @@ const commands = {
       process.exitCode = 2;
       return;
     }
-    const result = await resetPage(page, { site: siteFor(page.url()), allowHosts });
+    const result = await resetPage(page, {
+      site: siteFor(page.url()),
+      allowHosts,
+    });
     print(result);
     if (!result.ok) process.exitCode = 1;
   },
@@ -755,29 +767,63 @@ const offline = {
     await writeFile(join(outDir, "grade/profile.synthetic.json"), content, {
       mode: 0o600,
     });
+    // --reuse-from dir1,dir2: earlier result directories whose
+    // grade/structure-index.json may hold a grading of the same structure.
+    const reuseDirs = opt("reuse-from", "")
+      .split(",")
+      .filter(Boolean)
+      .map((d) => resolve(d));
+    const index = await loadStructureIndex(outDir);
+    const results = [];
     for (const label of positional) {
       const frames = await readJson(join(outDir, `${label}.census.json`));
       const add = existsSync(join(outDir, `${label}.addbuttons.json`))
         ? await readJson(join(outDir, `${label}.addbuttons.json`))
         : [];
       const input = buildGradeInput(label, frames, add);
-      await writeJson(join(outDir, `grade/${label}.input.json`), input);
-      print(`${label} controls=${input.controlCount}`);
+      const hash = structureHash(input);
+      await writeJson(join(outDir, `grade/${label}.input.json`), {
+        ...input,
+        structureHash: hash,
+      });
+      const reuse = await reusePregrade({
+        outDir,
+        label,
+        hash,
+        index,
+        reuseDirs,
+      });
+      results.push({ label, controls: input.controlCount, hash, ...reuse });
     }
+    await saveStructureIndex(outDir, index);
+    for (const line of formatPregradeLines(results)) print(line);
   },
   async join() {
+    const captureLabels = [];
     for (const label of positional) {
+      const run = await readJson(join(outDir, `${label}.run.json`));
       const joined = joinResults({
         label,
         final: await readJson(join(outDir, `grade/${label}.final.json`)),
         census: await readJson(join(outDir, `${label}.census.json`)),
-        run: await readJson(join(outDir, `${label}.run.json`)),
+        run,
       });
       await writeJson(join(outDir, `grade/${label}.joined.json`), joined);
+      // Runs with captures (test-account tabs) also get the capture judge's
+      // input: capture files and expected values only, no DOM result.
+      const captures = Array.isArray(run.captures) ? run.captures : [];
+      if (captures.length) {
+        await writeJson(
+          join(outDir, `grade/${label}.capture-input.json`),
+          buildCaptureInput({ joined, captures, baseDir: outDir }),
+        );
+        captureLabels.push(label);
+      }
       print(
-        `${label} rows=${joined.rows.length} new=${joined.addedOrUnmatchedAfterControls.length}`,
+        `${label} rows=${joined.rows.length} new=${joined.addedOrUnmatchedAfterControls.length} captures=${captures.length}`,
       );
     }
+    print(`captureLabels: ${JSON.stringify(captureLabels)}`);
   },
   // --verdicts a.json,b.json: verify-workflow results (arrays of page verdicts).
   // --uncreated file.json: {label: cells} for rows the run never created.
@@ -800,12 +846,16 @@ const offline = {
               .flatMap((f) => f.controls)
               .filter((c) => c.added),
           };
+      const capturePath = join(outDir, `grade/${label}.capture.json`);
       pages.push(
         aggregatePage({
           label,
           joined,
           verdict: verdicts[label],
           run,
+          captureVerdict: existsSync(capturePath)
+            ? await readJson(capturePath)
+            : null,
           uncreatedCells: uncreated[label] ?? 0,
           policyPattern: label.startsWith("hp-")
             ? HPLACE_POLICY_EXCLUSIONS

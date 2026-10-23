@@ -56,7 +56,15 @@
 이 하네스는 확장을 시험하는 도구이지 지원서를 쓰는 도구가 아니다. 그래서 로그인이 테스트 계정인 탭에서는 위의 값 은닉 규칙과 저장 금지를 일부 푼다. 어떤 탭이 테스트 계정인지는 사람이 `~/.career-form-live-eval/test-accounts.json`에 적는다.
 
 ```json
-{ "hosts": ["www.skcareers.com", "*.recruiter.co.kr", "talent.hyundai.com", "*.greetinghr.com", "recruit.kakaogames.com"] }
+{
+  "hosts": [
+    "www.skcareers.com",
+    "*.recruiter.co.kr",
+    "talent.hyundai.com",
+    "*.greetinghr.com",
+    "recruit.kakaogames.com"
+  ]
+}
 ```
 
 - `*.`로 시작하면 그 도메인과 하위 도메인, 아니면 호스트가 정확히 같아야 한다. 파일이 없거나 깨져 있으면 아무 탭도 테스트 계정이 아니다.
@@ -119,16 +127,19 @@ node scripts/live-qa/cli.mjs start                                      # 설치
    - label은 `<platform>-<site>[-s<step>]` 형식이다. 예: `hp-gsenc-s2`, `gr-kurly`, `sk-r262303`, `hy-backend`
    - `<tab>`은 URL 일부 또는 `URL 일부|화면 문구`다. 현대처럼 주소가 같은 탭을 구분할 때 쓴다.
    - 에이치닷은 `cli.mjs step <tab> <1-4>`로 단계를 옮기며 1–4단계를 모두 수집한다.
-3. 사전 채점: `cli.mjs grade-input <labels>`를 실행한 뒤 [workflows/pregrade.md](workflows/pregrade.md)를 따른다. **확장을 실행하기 전에 분모를 동결한다.**
+3. 사전 채점: `cli.mjs grade-input <labels> [--reuse-from <dir1,dir2>]`를 실행한 뒤 [workflows/pregrade.md](workflows/pregrade.md)를 따른다. **확장을 실행하기 전에 분모를 동결한다.**
+   - 구조 해시가 같은 채점이 이미 있으면 `final.json`을 복사하고 `reused-from=<label>`로 표시한다(아래 "채점 재사용과 집계"). 마지막 줄 `labelsToGrade: [...]`만 워크플로 `args.labels`로 넘긴다. 비어 있으면 채점을 돌리지 않는다.
    - Claude Code의 Workflow 도구는 작업 폴더 안의 스크립트만 읽는다. `cli.mjs workflow-script <name> --out <작업 폴더 안 경로>`로 꺼낸다. `--out`은 스크립트 파일 위치만 바꾼다. 측정 데이터의 `dir`는 `args`로 따로 넘긴다.
 4. 실행: `cli.mjs run <tab> --label <label>`
    - 초기화, 실행 전 수집, 클릭 가드, 자동 기입("확인 필요" 포함), 실행 후 수집, 원복을 차례로 한다.
    - 실행 전에 `saved`로 저장된 값이 없는지 확인한다.
    - `--no-clear`, `--no-approve`를 쓸 수 있다. 원복을 생략하는 옵션은 없다. 차단을 푼 뒤 사이트가 자동 저장하면 합성 값이 실제 지원서에 남기 때문이다.
 5. 결합과 판정: `cli.mjs join <labels>`를 실행한 뒤 [workflows/verify.md](workflows/verify.md)를 따른다.
+   - `run.json`에 캡처(`captures`, 테스트 계정 탭)가 있는 label은 `grade/<label>.capture-input.json`(캡처 파일 경로와 AUTOFILLABLE 칸의 기대값만)을 함께 쓰고, 마지막 줄 `captureLabels: [...]`에 나열한다. 이 배열을 verify 워크플로 `args.captureLabels`로 넘기면 Judge와 병렬로 캡처 판정이 돌아 `grade/<label>.capture.json`을 쓴다.
 6. 보고서: `cli.mjs report <labels> --verdicts <file> [--uncreated <file>] [--names <file>]`
    - `--uncreated`는 `{label: 칸 수}` 또는 `{label: {cells, policyCells}}` 형식이다. 확장이 만들지 못한 행의 칸을 분모에 넣고, `policyCells`는 그중 정책 제외 칸이다.
    - 생략했는데 행이 덜 만들어졌으면, 사전 채점의 행 추가 예상(행 수 × 행당 칸 수)으로 칸 수를 추정해 넣고 "추정"으로 표시한다.
+   - `grade/<label>.capture.json`이 있으면 캡처 판정과 DOM 판정을 대조해 비고에 `캡처 대조 일치/비교`, 메타 줄에 전체 일치율, 표 아래 `## 캡처·DOM 불일치` 절에 불일치 칸(i, DOM 판정, 캡처 값, 기대값)을 적는다. 캡처가 하나도 없으면 아무것도 추가하지 않는다.
 
 ## 초기화 규칙(`page/clear.mjs`)과 플랫폼별 주의
 
@@ -148,7 +159,18 @@ node scripts/live-qa/cli.mjs start                                      # 설치
 - 입력 가능 칸 = 정답 + 오입력 + 누락. 새로 만든 행의 칸과 만들어지지 않은 행의 칸을 포함한다.
 - 입력률 = 정답 ÷ 입력 가능 칸이다.
 - 에이치닷은 위키에 문서화된 의도적 미지원 칸을 뺀 입력률("정책 반영" 열)도 낸다. 대상은 대학 계열, 다전공 2·3번째 주야간, 어학 응시일이다.
-- 보고서에는 측정 당시 실행 중이던 확장 revision(페이지마다 다르면 표시), 실행 오류(⚠), 가드 실패(측정 무효), 기대 행보다 적게 만든 경우의 경고, `UNVERIFIABLE` 수를 함께 적는다.
+- 확인 불가 비율 = 확인 불가 ÷ (입력 가능 칸 + 확인 불가). 첫 표 위 메타 줄에 측정 품질 지표로 적는다. 낮을수록 좋고, 저장값이 남아 있으면 올라간다. 표에는 페이지별 "확인 불가" 열이 있다.
+- 합계 행 앞에 측정된 페이지가 있는 플랫폼(에이치닷, Greeting, SK, 현대자동차, 기타)별 소계 행을 둔다.
+- 캡처·DOM 일치율 = 캡처 판정과 DOM 판정이 일치한 칸 ÷ 대조한 칸. 캡처가 있는 페이지에서만 계산하고, `UNVERIFIABLE`·`EXPECTATION_ERROR` 칸과 캡처에 안 보이는 칸(`안 보임`)은 대조에서 뺀다.
+- 보고서에는 측정 당시 실행 중이던 확장 revision(페이지마다 다르면 표시), 실행 오류(⚠), 가드 실패(측정 무효), 기대 행보다 적게 만든 경우의 경고, 모델 합계와 재계산이 어긋난 필드(`⚠ verdict-mismatch:<필드> model=X recount=Y`)를 함께 적는다.
+
+## 채점 재사용과 집계
+
+- **구조 해시.** `grade-input`은 값 없는 구조(`controls`에서 칸 번호 `i`를 뺀 것, `addButtons`)를 정렬 키 canonical JSON으로 직렬화해 SHA-256을 `grade/<label>.input.json`의 `structureHash`에 쓴다. 주소와 label은 넣지 않으므로 같은 양식의 다른 공고도 같은 해시가 된다.
+- **structure-index.** `grade/structure-index.json`은 `{ "<hash>": { label, finalFile, at } }`로 어느 label의 `final.json`이 그 구조의 채점인지 기록한다. `grade-input`은 현재 `--out`의 index, 그다음 `--reuse-from <dir1,dir2>`로 준 이전 결과 디렉터리의 index 순서로 같은 해시를 찾아 `final.json`을 `grade/<label>.final.json`으로 복사한다(`label`을 바꾸고 `reusedFrom: { label, finalFile, hash }`를 붙인다). 이미 있는 `final.json`의 해시가 같으면 `unchanged`, 구조가 바뀌었으면 옛 index 항목을 지우고 다시 채점한다.
+- **출력.** label마다 `<label> controls=N hash=<앞 12자리> reused-from=<label> | unchanged | grading-needed`, 요약 `pregrade: K pages need grading (labels: [...]), M reused; agents=3K; est-tokens≈T`, 그리고 `labelsToGrade: [...]`를 낸다. 토큰 추정은 2026-10-22 측정(31페이지 1,296칸, 사전 채점 93 에이전트 약 710만 토큰)에 맞춘 상수(페이지당 3 에이전트, 에이전트당 2.5만 + 칸당 1.3천)다.
+- **합계 재계산.** 판정 파일의 숫자 필드(`autofillable`, `correct`, `wrong`, `missed`, `expectationErrors`, `unverifiable`, `extraCorrect`, `extraWrong`, `extraWritten`, `createdRowsExpected`)는 더 이상 믿지 않는다. `report`가 `items`와 joined 행에서 다시 센다: `autofillable`은 `category === "AUTOFILLABLE"`인 행 수, `wrong`·`missed`·`expectationErrors`·`unverifiable`·`extraCorrect`·`extraWrong`은 kind별 항목 수, `correct`는 `autofillable`에서 AUTOFILLABLE 행을 가리키는 `WRONG`·`MISSED`·`EXPECTATION_ERROR`·`UNVERIFIABLE` 항목(같은 `i`는 한 번)을 뺀 값, `createdRowsExpected`는 `rowExpansion`의 `extraRowsExpected` 합이다. `createdRowsObserved`만 모델 값을 쓴다. AUTOFILLABLE이 아닌 행이나 새 행의 `MISSED`는 누락(분모)에 들어가지만 `correct`를 줄이지 않는다. 모델 숫자와 다르면 비고에 `⚠ verdict-mismatch`로 남긴다.
+- **캡처 대조.** `report/capture-compare.mjs`가 AUTOFILLABLE 행마다 DOM 판정(`items`에 없으면 `CORRECT`)과 캡처 판정의 `seen`을 비교한다. 정규화(공백·하이픈·점·슬래시 제거, 소문자, `code|문구`와 라디오 `문구 [v=값]`은 문구만) 뒤 `CORRECT`는 `seen`이 기대값과 같을 때, `MISSED`는 `seen`이 빈 문자열일 때, `WRONG`은 `seen`이 비어 있지 않고 기대값과 다를 때 일치다. `UNVERIFIABLE`·`EXPECTATION_ERROR`와 `seen`이 `null`(안 보임)인 칸은 대조하지 않는다. 캡처 판정 입력에는 기대값(합성 프로필)만 들어가고 DOM 결과는 들어가지 않는다.
 
 ## 테스트
 

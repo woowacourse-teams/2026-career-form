@@ -5,11 +5,11 @@
 ## 실행
 
 1. `node scripts/live-qa/cli.mjs census <tab> --label <label>`로 구조를 모은다.
-2. `node scripts/live-qa/cli.mjs grade-input <label...>`로 채점 입력과 프로필 사본을 만든다.
+2. `node scripts/live-qa/cli.mjs grade-input <label...> [--reuse-from <dir1,dir2>]`로 채점 입력과 프로필 사본을 만든다. 구조 해시가 같은 `final.json`이 현재 `--out`이나 `--reuse-from` 디렉터리에 있으면 복사해 두고 `reused-from=<label>`로 표시한다. 마지막에 채점이 필요한 페이지 수, 에이전트 수, 예상 토큰과 `labelsToGrade: [...]`를 출력한다.
 3. `node scripts/live-qa/cli.mjs workflow-script pregrade --out <작업 폴더 안 경로>`가 출력한 경로를 Claude Code Workflow 도구의 `scriptPath`로 넘긴다. `args`는 다음과 같다.
    - `dir`: `<out>/grade` (기본 `~/.career-form-live-eval/live-qa/grade`)
    - `defs`: 저장소의 `frontend/src/profile/field-definitions.ts` 절대 경로
-   - `labels`: 채점할 label 배열
+   - `labels`: `grade-input`이 출력한 `labelsToGrade` 배열만 그대로 넘긴다. 재사용된 페이지(`reused-from`)와 `unchanged` 페이지는 채점하지 않는다. 비어 있으면 워크플로를 돌리지 않는다.
 
 분류: `AUTOFILLABLE`, `NO_PROFILE_KEY`, `PROFILE_VALUE_MISSING`, `OPTION_MISSING`, `CONDITIONAL_NOT_APPLICABLE`, `FORBIDDEN`, `NOT_A_FIELD`. 반복 행은 `rowExpansion`에 기존 행 수, 프로필 항목 수, 추가로 만들어야 할 행 수, 행당 입력 가능 칸 수를 적는다.
 
