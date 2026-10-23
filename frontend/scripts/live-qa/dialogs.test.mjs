@@ -61,6 +61,31 @@ describe("installDialogPolicy", () => {
   });
 });
 
+describe("installDialogPolicy on test-account tabs", () => {
+  it("accepts the leave-page prompt only on allowlisted hosts", async () => {
+    const context = new EventEmitter();
+    const testTab = Object.assign(new EventEmitter(), {
+      url: () => "https://www.skcareers.com/Application/Index/R1",
+    });
+    const otherTab = Object.assign(new EventEmitter(), {
+      url: () => "https://example.test/apply",
+    });
+    const release = installDialogPolicy(context, {
+      leaveHosts: ["www.skcareers.com"],
+    });
+    const leaveTest = open(context, testTab, "beforeunload", "");
+    const leaveOther = open(context, otherTab, "beforeunload", "");
+    const confirmTest = open(context, testTab, "confirm", "저장하시겠습니까?");
+    await flush();
+    expect([leaveTest.answer, leaveOther.answer, confirmTest.answer]).toEqual([
+      "accept",
+      null,
+      null,
+    ]);
+    release();
+  });
+});
+
 describe("claimDialogs", () => {
   it("dismisses site dialogs, keeps the login, and records no message text", async () => {
     const context = new EventEmitter();
@@ -106,6 +131,33 @@ describe("claimDialogs", () => {
       "beforeunload: accepted-for-discard",
       "confirm: dismissed",
     ]);
+    claim.release();
+  });
+
+  it("confirms site prompts only while a test-account reset allows it", async () => {
+    const context = new EventEmitter();
+    const page = new EventEmitter();
+    const claim = claimDialogs(page);
+    claim.allowConfirm(true);
+    const ask = open(context, page, "confirm", "임시저장 하시겠습니까?");
+    const done = open(context, page, "alert", "임시저장 되었습니다.");
+    const leave = open(context, page, "beforeunload", "");
+    claim.allowConfirm(false);
+    const later = open(context, page, "confirm", "임시저장 하시겠습니까?");
+    await flush();
+    expect([ask.answer, done.answer, leave.answer, later.answer]).toEqual([
+      "accept",
+      "accept",
+      null,
+      "dismiss",
+    ]);
+    expect(claim.log).toEqual([
+      "confirm: accepted-for-reset",
+      "alert: accepted-for-reset",
+      "beforeunload: left-open",
+      "confirm: dismissed",
+    ]);
+    expect(JSON.stringify(claim.log)).not.toMatch(/임시저장/);
     claim.release();
   });
 });

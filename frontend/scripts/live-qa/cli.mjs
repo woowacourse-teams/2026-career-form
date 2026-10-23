@@ -8,6 +8,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   attachBrowser,
+  bounded,
   ensureDeveloperMode,
   extensionIdForDirectory,
   findBrowser,
@@ -19,7 +20,7 @@ import {
   seedProfile,
   statePaths,
 } from "./browser.mjs";
-import { installDialogPolicy } from "./dialogs.mjs";
+import { claimDialogs, installDialogPolicy } from "./dialogs.mjs";
 import {
   APPLICATION_PATH,
   brief,
@@ -29,11 +30,18 @@ import {
   httpPages,
   onGuardedTab,
   pageAt,
+  resetPage,
   runPage,
   safeError,
   savedData,
 } from "./driver.mjs";
 import { keepAlivePage } from "./keepalive.mjs";
+import {
+  TEST_ACCOUNTS_FILE,
+  isTestAccount,
+  readTestAccounts,
+  siteFor,
+} from "./sites.mjs";
 import { stripFingerprints } from "./page/census.mjs";
 import { readStep } from "./page/hplace-step.mjs";
 import {
@@ -129,7 +137,9 @@ async function connect() {
       new Error("No evaluation browser is running (run: start)."),
       { code: "browser-not-running" },
     );
-  installDialogPolicy(attached.context);
+  installDialogPolicy(attached.context, {
+    leaveHosts: await readTestAccounts(paths.root),
+  });
   return attached;
 }
 
@@ -217,10 +227,19 @@ const commands = {
       .catch(() => {});
     print(`opened ${brief(page.url())}`);
   },
+  // Closes a tab. The site's leave-page prompt, if any, is accepted: the
+  // harness never leaves values worth keeping on a tab it drove.
   async close(context) {
     const page = await pageAt(context, positional[0]);
     const url = brief(page.url());
-    await page.close();
+    const claim = claimDialogs(page);
+    claim.allowLeave(true);
+    try {
+      await page.close({ runBeforeUnload: true });
+      await bounded(page.waitForEvent("close"), 10000);
+    } finally {
+      claim.release();
+    }
     print(`closed ${url}`);
   },
   async goto(context) {
@@ -275,8 +294,40 @@ const commands = {
     const needs = report.filter((r) => r.saved === true);
     if (needs.length)
       console.error(
-        `${needs.length} form(s) hold saved values; a person clears them (and temp-saves) before a round: ${needs.map((r) => r.tab).join(", ")}`,
+        `${needs.length} form(s) hold saved values; clear them with 'reset <tab> --yes' (test accounts) or by hand before a round: ${needs.map((r) => r.tab).join(", ")}`,
       );
+  },
+  // Test-account reset: clears the form in the page and temp-saves it empty,
+  // so the server copy no longer holds values from earlier rounds. Only for
+  // hosts listed in <state dir>/test-accounts.json, and only with --yes.
+  async reset(context) {
+    const page = await pageAt(context, positional[0]);
+    const hosts = await readTestAccounts(paths.root);
+    const allowlist = join(paths.root, TEST_ACCOUNTS_FILE);
+    if (!isTestAccount(page.url(), hosts)) {
+      print({
+        ok: false,
+        code: "account-not-allowlisted",
+        message: `reset temp-saves an empty form on the site. List this tab's host in ${allowlist} ({"hosts": [...]}) only if the login is a test account.`,
+      });
+      process.exitCode = 2;
+      return;
+    }
+    const allowHosts = await apiHosts();
+    if (!flag("yes")) {
+      print({
+        ok: false,
+        code: "confirmation-required",
+        saved: await savedData(page, { allowHosts }),
+        message:
+          "Re-run with --yes to clear the form in the page and temp-save it empty.",
+      });
+      process.exitCode = 2;
+      return;
+    }
+    const result = await resetPage(page, { site: siteFor(page.url()), allowHosts });
+    print(result);
+    if (!result.ok) process.exitCode = 1;
   },
   async census(context) {
     const page = await pageAt(context, positional[0]);
@@ -332,6 +383,11 @@ const commands = {
       allowHosts: await apiHosts(),
       build: await installedBuild(context, id),
       signal: controller.signal,
+      // Test accounts: record values instead of hiding pre-run ones.
+      recordValues: isTestAccount(
+        page.url(),
+        await readTestAccounts(paths.root),
+      ),
       profile: await (async () => {
         const seeded = await seededProfile();
         if (!seeded) {
@@ -546,7 +602,7 @@ async function main() {
   if (offline[cmd]) return offline[cmd]();
   if (!commands[cmd]) {
     print(
-      "commands: start [--build dir] [--profile file] | keepalive [<tab>] [--every min] [--threshold min] [--force] | tabs | open <url> | close <tab> | goto <tab> <url> | text <tab> | stepinfo <tab> | step <tab> <1-4> [--force] | saved [<tab>] | census <tab> --label L | run <tab> --label L [--no-clear] [--no-approve] [--timeout s] | discard <tab> | grade-input <labels> | join <labels> | report <labels> --verdicts a.json[,b.json] [--uncreated f] [--names f] | workflow-script <pregrade|verify>\n<tab> = url-substring or 'url-substring|page text'",
+      "commands: start [--build dir] [--profile file] | keepalive [<tab>] [--every min] [--threshold min] [--force] | tabs | open <url> | close <tab> | goto <tab> <url> | text <tab> | stepinfo <tab> | step <tab> <1-4> [--force] | saved [<tab>] | reset <tab> --yes | census <tab> --label L | run <tab> --label L [--no-clear] [--no-approve] [--timeout s] | discard <tab> | grade-input <labels> | join <labels> | report <labels> --verdicts a.json[,b.json] [--uncreated f] [--names f] | workflow-script <pregrade|verify>\n<tab> = url-substring or 'url-substring|page text'",
     );
     process.exitCode = cmd ? 1 : 0;
     return;

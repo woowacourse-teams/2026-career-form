@@ -78,9 +78,17 @@ function lookupArguments(body) {
   );
 }
 
+// Never allowed, even while a test-account reset saves: anything that could
+// submit, consent, verify or finish an application.
+export const SUBMIT_WORDS =
+  /final|submit|apply|oath|agree|consent|verify|cert|auth|sms|otp|complete|logout/i;
+
+// options.saveHost (test-account reset only): writes to that one host are
+// allowed unless path or query carry a SUBMIT_WORDS word. Other hosts keep
+// the normal fail-closed rules.
 export function classifyRequest(
   { method, url, headers = {}, postData = null },
-  { allowHosts = [] } = {},
+  { allowHosts = [], saveHost = null } = {},
 ) {
   const verb = String(method).toUpperCase();
   if (READ_METHODS.includes(verb))
@@ -105,6 +113,11 @@ export function classifyRequest(
     query = decodeURIComponent(query);
   } catch {
     // Malformed escapes: test the raw query.
+  }
+  if (saveHost && u.host === saveHost) {
+    if (SUBMIT_WORDS.test(u.pathname) || SUBMIT_WORDS.test(query))
+      return block("submit-like-during-reset");
+    return allow("reset-save", "test-account reset save");
   }
   if (MUTATION_WORDS.test(query)) return block("mutation-query");
   for (const lookup of LOOKUPS)

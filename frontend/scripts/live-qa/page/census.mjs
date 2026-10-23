@@ -23,6 +23,11 @@
 //   shares its text with the synthetic profile, or that the run left alone, is
 //   never shown: small value sets (남성, 있음) would give it away.
 // `prior` (key -> fp) marks controls as changed or added.
+// - recordValues (test-account mode): every value is shown, whether or not
+//   the run wrote it, and a control that still holds its mount value is
+//   flagged `mountedAsIs`. Only account identity fields (identityPattern, a
+//   regex source) that hold a pre-run value which is not a synthetic profile
+//   value are masked as "[account]".
 export function census(prior, options) {
   const opts = options ?? {};
   const ignoreLayout = Boolean(opts.ignoreLayout);
@@ -30,6 +35,10 @@ export function census(prior, options) {
   const salt = String(opts.salt ?? "");
   const known = opts.known ?? null;
   const synthetic = opts.synthetic ?? [];
+  const recordValues = Boolean(opts.recordValues);
+  const identity = opts.identityPattern
+    ? new RegExp(opts.identityPattern, "i")
+    : null;
   const clean = (s, n = 80) =>
     String(s ?? "")
       .replace(/\s+/g, " ")
@@ -386,7 +395,17 @@ export function census(prior, options) {
     const showable = preexisting
       ? syntheticValue && o.changed === true && !mounted
       : syntheticValue || syntheticText || !mounted;
-    if (prior && known && watched && o.fp && showable) o.shown = show;
+    if (recordValues) {
+      if (o.fp) {
+        // Without a pre-run value set every value counts as pre-run.
+        const fromBefore = known ? preexisting : true;
+        const identityField =
+          Boolean(identity) && identity.test(o.name + " " + o.label);
+        o.shown =
+          fromBefore && !syntheticValue && identityField ? "[account]" : show;
+        if (mounted) o.mountedAsIs = true;
+      }
+    } else if (prior && known && watched && o.fp && showable) o.shown = show;
   });
   return {
     url: location.origin + location.pathname,

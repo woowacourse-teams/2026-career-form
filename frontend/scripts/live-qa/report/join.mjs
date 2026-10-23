@@ -35,6 +35,8 @@ function index(controls) {
 export function joinResults({ label, final, census, run }) {
   const pre = index(flatten(pageIndexed(census)));
   const after = index(flatten(run.after ?? []));
+  // Test-account runs record values before the run too (after the clear).
+  const before = run.testAccount ? index(flatten(run.before ?? [])) : {};
   const graded = {};
   for (const g of final.controls) graded[g.i] = g;
   const used = {};
@@ -56,9 +58,15 @@ export function joinResults({ label, final, census, run }) {
       afterHasValue: Boolean(ac?.hasValue),
       written: ac?.shown ?? null,
       changed: Boolean(ac?.changed),
-      // The value after the run was already on the page before it: it is not
-      // shown, so the judge cannot compare it with the expectation.
+      // The value after the run was already on the page before it. Outside
+      // test-account mode it is not shown, so the judge cannot compare it.
       preexistingValue: Boolean(ac?.preexisting),
+      ...(run.testAccount
+        ? {
+            beforeValue: before[k]?.shown ?? null,
+            mountedAsIs: Boolean(ac?.mountedAsIs),
+          }
+        : {}),
     });
   }
   const addedOrUnmatchedAfterControls = Object.entries(after)
@@ -70,9 +78,11 @@ export function joinResults({ label, final, census, run }) {
       label: (c.label ?? "").slice(0, 60),
       written: c.shown ?? null,
       hasValue: Boolean(c.hasValue),
+      ...(run.testAccount ? { mountedAsIs: Boolean(c.mountedAsIs) } : {}),
     }));
   return {
     label,
+    testAccount: Boolean(run.testAccount),
     panel: run.panel ?? null,
     // Custom widgets the clear step left filled: rows holding them can look
     // like existing rows to the extension.

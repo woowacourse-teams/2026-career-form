@@ -4,12 +4,18 @@
 // handler name) and on file inputs and step tabs, plus form submission by
 // event or by script. The extension's own panel and launcher are exempt. Only
 // counters and fixed UI captions are kept; no values are read.
-export function installGuard() {
+//
+// options.allowSave (test-account mode, used by `reset`): save, temp-save and
+// 이전/다음 moves are allowed; submit, apply, preview, consent, verification,
+// logout, file inputs and step tabs stay blocked.
+export function installGuard(options) {
   if (window.__careerFormLiveQa) window.__careerFormLiveQa.disarm();
+  const allowSave = Boolean(options && options.allowSave);
   const state = {
     forbiddenClicks: 0,
     formSubmissions: 0,
     passed: true,
+    allowSave,
     // Fixed UI identity of blocked controls (never input values).
     blocked: [],
   };
@@ -52,11 +58,14 @@ export function installGuard() {
       .filter(Boolean);
   // Forbidden anywhere in an identifier (not "final": 최종학력 fields; not
   // "cert": 자격증 fields).
-  const ANY_WORD =
-    /^(save|submit|temp|preview|sms|otp|verify|agree|agreement|consent|logout|signout)$/;
+  const ANY_WORD = allowSave
+    ? /^(submit|preview|sms|otp|verify|agree|agreement|consent|logout|signout)$/
+    : /^(save|submit|temp|preview|sms|otp|verify|agree|agreement|consent|logout|signout)$/;
   // Forbidden only as the whole identifier apart from filler words ("goNext",
   // "btn_next", "nextStep"), so "addPrevCareer" or "nextJob" stay clickable.
-  const WHOLE_WORD = /^(next|prev|previous|back|apply|send)$/;
+  const WHOLE_WORD = allowSave
+    ? /^(apply|send)$/
+    : /^(next|prev|previous|back|apply|send)$/;
   const FILLER =
     /^(btn|button|go|fn|do|on|click|move|to|js|step|page|ico|icon|arrow|link)$/;
   const forbiddenIdentifier = (identifier) => {
@@ -66,10 +75,12 @@ export function installGuard() {
     return rest.length === 1 && WHOLE_WORD.test(rest[0]);
   };
   // The whole caption is a step move: 다음, 다음 단계로, 이전으로, Next, Back.
-  const NAVIGATION =
-    /^(?:(?:이전|다음)(?:\s*(?:단계|페이지))?\s*(?:으로|로)?|(?:prev(?:ious)?|next|back|continue)(?:\s*(?:step|page))?)\s*[>›»<‹«]?$/i;
-  const CAPTION =
-    /임시\s*저장|최종\s*제출|제출|미리\s*보기|\bYBM\b|지원\s*하기|지원서\s*(?:제출|접수)|작성\s*완료|인증\s*(?:번호|요청|하기)|본인\s*인증|(?:전체|모두|약관)\s*동의|로그아웃|저장|submit|temp.?save|save.?temp|preview/i;
+  const NAVIGATION = allowSave
+    ? /$^/
+    : /^(?:(?:이전|다음)(?:\s*(?:단계|페이지))?\s*(?:으로|로)?|(?:prev(?:ious)?|next|back|continue)(?:\s*(?:step|page))?)\s*[>›»<‹«]?$/i;
+  const CAPTION = allowSave
+    ? /최종\s*제출|제출|미리\s*보기|\bYBM\b|지원\s*하기|지원서\s*(?:제출|접수)|작성\s*완료|인증\s*(?:번호|요청|하기)|본인\s*인증|(?:전체|모두|약관)\s*동의|로그아웃|submit|preview/i
+    : /임시\s*저장|최종\s*제출|제출|미리\s*보기|\bYBM\b|지원\s*하기|지원서\s*(?:제출|접수)|작성\s*완료|인증\s*(?:번호|요청|하기)|본인\s*인증|(?:전체|모두|약관)\s*동의|로그아웃|저장|submit|temp.?save|save.?temp|preview/i;
   const forbidden = (element) => {
     if (!(element instanceof Element)) return false;
     const control = element.closest(CONTROL);

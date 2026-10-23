@@ -109,11 +109,15 @@ describe("savedData", () => {
         throw new Error("must not navigate");
       },
     };
+    // Login identity fields come back after any reset: they are reported
+    // apart and do not make the form "saved".
     await expect(savedData(page)).resolves.toMatchObject({
       how: "page",
-      saved: true,
+      saved: false,
+      savedAny: true,
       text: 2,
       fields: ["email", "tel"],
+      accountFields: ["email", "tel"],
     });
   });
 });

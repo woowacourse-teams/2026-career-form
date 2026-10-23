@@ -161,3 +161,50 @@ describe("classifyRequest", () => {
     ).toBe("block");
   });
 });
+
+describe("classifyRequest with saveHost (test-account reset)", () => {
+  const reset = { ...api, saveHost: "gsenc.recruiter.co.kr" };
+
+  it("allows the site's own save writes while a reset runs", () => {
+    const r = classifyRequest(
+      post("https://gsenc.recruiter.co.kr/mrs2/applicant/resume/saveStep1"),
+      reset,
+    );
+    expect(r).toMatchObject({ action: "allow", reason: "reset-save" });
+    expect(r.log).toBe(
+      "allowed POST gsenc.recruiter.co.kr/mrs2/applicant/resume/saveStep1 (test-account reset save)",
+    );
+    expect(
+      classifyRequest(
+        post("https://gsenc.recruiter.co.kr/mrs2/applicant/resume/tempSave?draft=1"),
+        reset,
+      ).action,
+    ).toBe("allow");
+  });
+
+  it.each([
+    "https://gsenc.recruiter.co.kr/app/applicant/saveResumeSubmitOath",
+    "https://gsenc.recruiter.co.kr/mrs2/applicant/resume/finalSubmit",
+    "https://gsenc.recruiter.co.kr/mrs2/applicant/apply",
+    "https://gsenc.recruiter.co.kr/mrs2/applicant/resume/save?agree=Y",
+    "https://gsenc.recruiter.co.kr/auth/sms",
+  ])("still blocks a submit-like write %s", (url) => {
+    expect(classifyRequest(post(url), reset)).toMatchObject({
+      action: "block",
+      reason: "submit-like-during-reset",
+    });
+  });
+
+  it("keeps other hosts on the normal rules", () => {
+    expect(
+      classifyRequest(
+        post("https://abl.recruiter.co.kr/mrs2/applicant/resume/saveStep1"),
+        reset,
+      ).action,
+    ).toBe("block");
+    expect(
+      classifyRequest(post("https://www.google-analytics.com/g/collect"), reset)
+        .action,
+    ).toBe("block");
+  });
+});

@@ -351,6 +351,74 @@ describe("census", () => {
     expect(titled.label).toBe("장애구분");
   });
 
+  describe("recordValues (test-account mode)", () => {
+    const identityPattern = "email|phone|name|이름|성명";
+    const record = (prior, extra = {}) =>
+      pass(prior, { recordValues: true, identityPattern, ...extra });
+
+    it("shows every value, masking only account identity fields that hold a pre-run, non-synthetic value", () => {
+      document.body.innerHTML = `
+        <form id="frm">
+          <label for="nm">성명</label><input id="nm" name="name" value="실제이름">
+          <label for="em">이메일</label><input id="em" name="email" value="real@example.test">
+          <label for="sc">학교</label><input id="sc" name="school" value="저장된학교">
+          <label><input type="radio" name="gender" value="M" checked>남</label>
+        </form>`;
+      const { known, prior } = baseline();
+      const synthetic = [];
+      const after = record(prior, { known, synthetic });
+      const byName = Object.fromEntries(after.controls.map((c) => [c.name, c]));
+      expect(byName.name).toMatchObject({ preexisting: true, shown: "[account]" });
+      expect(byName.email).toMatchObject({ preexisting: true, shown: "[account]" });
+      expect(byName.school).toMatchObject({ preexisting: true, shown: "저장된학교" });
+      expect(byName.gender).toMatchObject({ preexisting: true, shown: "남 [v=M]" });
+      expect(JSON.stringify(after)).not.toMatch(/실제이름|real@example/);
+    });
+
+    it("shows an identity field once the run wrote a synthetic value into it", () => {
+      document.body.innerHTML = `
+        <form id="frm"><label for="nm">성명</label><input id="nm" name="name" value="실제이름"></form>`;
+      const { known, prior } = baseline();
+      document.getElementById("nm").value = "테스트지원자";
+      const synthetic = [fingerprint(SALT, "테스트지원자")];
+      const name = record(prior, { known, synthetic }).controls[0];
+      expect(name).toMatchObject({ changed: true, shown: "테스트지원자" });
+      expect(name.preexisting).toBeUndefined();
+    });
+
+    it("records values on a first pass (no pre-run set) and flags mount values", () => {
+      document.body.innerHTML = `
+        <form id="frm"><label for="sc">학교</label><input id="sc" name="school" value="저장된학교">
+        <label for="em">이메일</label><input id="em" name="email" value="real@example.test"></form>`;
+      const first = record(null);
+      const byName = Object.fromEntries(first.controls.map((c) => [c.name, c]));
+      expect(byName.school.shown).toBe("저장된학교");
+      expect(byName.email.shown).toBe("[account]");
+      const { known, prior } = baseline();
+      const row = document.createElement("div");
+      row.innerHTML = `<label for="mj">전공</label><input id="mj" name="major" value="템플릿기본값">`;
+      document.getElementById("frm").append(row);
+      window.__careerFormLiveQaMounts.flush();
+      const major = record(prior, { known }).controls.find(
+        (c) => c.name === "major",
+      );
+      expect(major).toMatchObject({
+        added: true,
+        shown: "템플릿기본값",
+        mountedAsIs: true,
+      });
+    });
+
+    it("still hides everything without recordValues", () => {
+      document.body.innerHTML = `
+        <form id="frm"><label for="sc">학교</label><input id="sc" name="school" value="저장된학교"></form>`;
+      const { known, prior } = baseline();
+      const school = pass(prior, { known }).controls[0];
+      expect(school.shown).toBeUndefined();
+      expect(school.mountedAsIs).toBeUndefined();
+    });
+  });
+
   it("does not use Map or Set, which some sites replace", () => {
     // Hyundai's page scripts replace Map/Set; page functions must not need them.
     expect(census.toString()).not.toMatch(/\b(Map|Set)\b/);

@@ -19,9 +19,11 @@ import { clearForm } from "./page/clear.mjs";
 import { installGuard } from "./page/guard.mjs";
 import { readStep, submitStepNavigation } from "./page/hplace-step.mjs";
 import { panelFailureCode, panelState } from "./page/panel.mjs";
+import { clickTempSave } from "./page/temp-save.mjs";
 import { claimDialogs } from "./dialogs.mjs";
 import { keepAlivePage } from "./keepalive.mjs";
 import { classifyRequest } from "./requests.mjs";
+import { IDENTITY_FIELD } from "./sites.mjs";
 
 const EVALUATE_MS = 8000;
 const WRITE_BUTTON = /^(?:[1-9][0-9]*개 항목 기입하기|선택하지 않고 계속)$/;
@@ -66,46 +68,61 @@ const aborted = (review = null) =>
 // cleared by a person before a round, or the extension's writes cannot be told
 // apart from what was there. On Hplace MRS2 it walks steps 1-3 by no-save
 // moves and returns to the step it started on.
-export async function savedData(page, { allowHosts = [] } = {}) {
-  const SAVED = [
-    "hiddenRowIds",
-    "disabledCleared",
-    "searchDisplays",
-    "text",
-    "textarea",
-    "select",
-    "radioGroups",
-    "checkbox",
-  ];
-  const dryFrames = async () => {
-    const merged = { fields: [] };
-    for (const f of page.frames()) {
-      const r = await bounded(
-        callInPage(f, clearForm, { dryRun: true }).catch(() => null),
-        EVALUATE_MS,
-      );
-      if (!r) continue;
-      for (const [k, v] of Object.entries(r))
-        if (typeof v === "number") merged[k] = (merged[k] ?? 0) + v;
-      merged.fields.push(...(r.fields ?? []));
-    }
-    merged.saved = SAVED.some((k) => (merged[k] ?? 0) > 0);
-    return merged;
-  };
-  return onGuardedTab(page, { allowHosts }, async () => {
-    const st = await bounded(page.evaluate(readStep), EVALUATE_MS);
-    const hplace =
-      st?.formPresent &&
+const SAVED_COUNTS = [
+  "hiddenRowIds",
+  "disabledCleared",
+  "searchDisplays",
+  "text",
+  "textarea",
+  "select",
+  "radioGroups",
+  "checkbox",
+];
+
+// What a clear would remove from every frame (counts and control names, never
+// values). `accountFields` are the identity fields the site fills from the
+// login (name, email, phone): they come back after any reset, so `saved`
+// counts only the other fields.
+async function dryClear(page) {
+  const merged = { fields: [] };
+  for (const f of page.frames()) {
+    const r = await bounded(
+      callInPage(f, clearForm, { dryRun: true }).catch(() => null),
+      EVALUATE_MS,
+    );
+    if (!r) continue;
+    for (const [k, v] of Object.entries(r))
+      if (typeof v === "number") merged[k] = (merged[k] ?? 0) + v;
+    merged.fields.push(...(r.fields ?? []));
+  }
+  merged.accountFields = merged.fields.filter((n) => IDENTITY_FIELD.test(n));
+  const others = merged.fields.filter((n) => !IDENTITY_FIELD.test(n));
+  merged.savedAny = SAVED_COUNTS.some((k) => (merged[k] ?? 0) > 0);
+  merged.saved = others.length > 0;
+  return merged;
+}
+
+const hplaceForm = (page, st) =>
+  Boolean(
+    st?.formPresent &&
       st.step &&
       /\/mrs2\/applicant\/resume\/writeResume/i.test(
         new URL(page.url()).pathname,
-      );
-    if (!hplace) return { how: "page", ...(await dryFrames()) };
+      ),
+  );
+
+// Dry run of clearForm on every frame: what a clear would remove, as counts
+// and control names (never values). On Hplace MRS2 it walks steps 1-3 by
+// no-save moves and returns to the step it started on.
+export async function savedData(page, { allowHosts = [] } = {}) {
+  return onGuardedTab(page, { allowHosts }, async () => {
+    const st = await bounded(page.evaluate(readStep), EVALUATE_MS);
+    if (!hplaceForm(page, st)) return { how: "page", ...(await dryClear(page)) };
     const origin = st.step;
     const steps = {};
     for (const n of [1, 2, 3]) {
       const moved = await gotoStep(page, n);
-      steps[n] = moved.ok ? await dryFrames() : { error: moved.code };
+      steps[n] = moved.ok ? await dryClear(page) : { error: moved.code };
     }
     const back = await gotoStep(page, origin);
     return {
@@ -115,6 +132,191 @@ export async function savedData(page, { allowHosts = [] } = {}) {
       saved: Object.values(steps).some((s) => s.saved === true),
     };
   });
+}
+
+// Test-account reset: clears the form in the page, then presses the site's
+// own 임시저장 so the server copy is empty too, then re-opens the form from
+// the server and reports what a clear would still remove. Hplace walks steps
+// 1-3. Requires a site profile with a temp-save control; the guard stays
+// armed in its relaxed form (submit, consent, verification and file inputs
+// still blocked) and only writes to the tab's own host that carry no
+// submit-like word are allowed.
+export async function resetPage(page, { site, allowHosts = [] } = {}) {
+  if (!site?.tempSave)
+    return {
+      ok: false,
+      code: site ? "no-server-draft" : "site-unknown",
+      message: site
+        ? "This site keeps no server draft; a clear in the page is enough."
+        : "No site profile for this tab.",
+    };
+  if (await serviceWorkerControlled(page))
+    throw coded(
+      "service-worker-active",
+      "A service worker controls this tab; its requests cannot be blocked.",
+    );
+  const host = new URL(page.url()).host;
+  const dialogs = claimDialogs(page);
+  dialogs.allowConfirm(true);
+  const blocking = await blockWrites(page, { allowHosts, saveHost: host });
+  const guardEachFrame = async () => {
+    for (const f of page.frames())
+      await bounded(
+        callInPage(f, installGuard, { allowSave: true }).catch(() => null),
+        EVALUATE_MS,
+      );
+  };
+  const disarmEachFrame = () =>
+    eachFrame(page, () => {
+      window.__careerFormLiveQa?.disarm?.();
+      return true;
+    });
+  const saveRequests = () =>
+    blocking.log().filter((line) => line.includes("(test-account reset save)"));
+  // Form controls across frames: a login or list page after the save shows
+  // as a collapse, which must not pass as "nothing left to clear".
+  const controlCount = async () =>
+    (
+      await eachFrame(
+        page,
+        () => document.querySelectorAll("input, select, textarea").length,
+      )
+    ).reduce((a, n) => a + (Number(n) || 0), 0);
+  const resetOne = async (step) => {
+    const path = new URL(page.url()).pathname;
+    const controlsBefore = await controlCount();
+    await guardEachFrame();
+    // Identity fields stay: sites refuse to temp-save without them.
+    let cleared = 0;
+    for (const f of page.frames()) {
+      const c = await bounded(
+        callInPage(f, clearForm, { keepPattern: IDENTITY_FIELD.source }).catch(
+          () => null,
+        ),
+        EVALUATE_MS,
+      );
+      cleared += SAVED_COUNTS.reduce((m, k) => m + (c?.[k] ?? 0), 0);
+    }
+    await delay(1000);
+    const seen = saveRequests().length;
+    // A notice left open from an earlier save (SK keeps its popup until 확인)
+    // would swallow the next click: close it first.
+    if (site.tempSave.confirm) {
+      const stale = await bounded(
+        callInPage(page.mainFrame(), clickTempSave, site.tempSave.confirm),
+        EVALUATE_MS,
+        { clicked: false },
+      );
+      if (stale.clicked) await delay(1000);
+    }
+    const clicked = await bounded(
+      callInPage(page.mainFrame(), clickTempSave, site.tempSave),
+      EVALUATE_MS,
+      { clicked: false, code: "page-unresponsive" },
+    );
+    let saveSeen = false;
+    const confirms = [];
+    if (clicked.clicked) {
+      // The site may ask "임시저장하시겠습니까?" in an in-page dialog and then
+      // show a "saved" notice: confirm each (at most three), and wait for the
+      // save write between them.
+      const deadline = Date.now() + 20000;
+      let lastConfirm = 0;
+      let saveSeenAt = 0;
+      while (Date.now() < deadline) {
+        if (!saveSeen && saveRequests().length > seen) {
+          saveSeen = true;
+          saveSeenAt = Date.now();
+        }
+        if (site.tempSave.confirm && Date.now() - lastConfirm > 1500) {
+          const c = await bounded(
+            callInPage(page.mainFrame(), clickTempSave, site.tempSave.confirm),
+            EVALUATE_MS,
+            { clicked: false, code: "page-unresponsive" },
+          );
+          if (c.clicked) {
+            confirms.push(c.caption);
+            lastConfirm = Date.now();
+            if (confirms.length >= 3) break;
+            continue;
+          }
+        }
+        // After the save write, give the site's notice a few seconds to show
+        // so it can be closed before the form is re-opened.
+        if (
+          saveSeen &&
+          Date.now() - saveSeenAt > 4000 &&
+          Date.now() - lastConfirm > 3000
+        )
+          break;
+        await delay(500);
+      }
+      await delay(2000);
+    }
+    await disarmEachFrame();
+    const reopened = step
+      ? await gotoStep(page, step, { force: true })
+      : await discardPage(page, { dialogs });
+    const controlsAfter = reopened.ok ? await controlCount() : 0;
+    // The site may answer the save with its login or list page (expired
+    // session): then the form is gone and nothing can be reported as clean.
+    const formLost =
+      reopened.ok &&
+      (new URL(page.url()).pathname !== path ||
+        controlsAfter < controlsBefore * 0.5);
+    const remaining = reopened.ok && !formLost ? await dryClear(page) : null;
+    return {
+      cleared,
+      ...clicked,
+      confirms,
+      saveRequestSeen: saveSeen,
+      reopened: Boolean(reopened.ok) && !formLost,
+      reopenCode: !reopened.ok
+        ? reopened.code
+        : formLost
+          ? "form-lost-after-save"
+          : undefined,
+      controls: { before: controlsBefore, after: controlsAfter },
+      remainingFields: remaining?.fields ?? null,
+      accountFields: remaining?.accountFields ?? null,
+      saved: remaining ? remaining.saved : null,
+    };
+  };
+  try {
+    const st = await bounded(page.evaluate(readStep), EVALUATE_MS);
+    if (!hplaceForm(page, st)) {
+      const result = await resetOne(null);
+      return {
+        ok: result.clicked && result.reopened,
+        how: "page",
+        ...result,
+        requests: blocking.log(),
+        dialogs: dialogs.log,
+      };
+    }
+    const origin = st.step;
+    const steps = {};
+    for (const n of [1, 2, 3]) {
+      const moved = await gotoStep(page, n);
+      steps[n] = moved.ok ? await resetOne(n) : { error: moved.code };
+    }
+    const back = await gotoStep(page, origin);
+    const all = Object.values(steps);
+    return {
+      ok: all.every((s) => s.clicked && s.reopened),
+      how: "hplace-steps",
+      steps,
+      returned: back.ok,
+      saved: all.some((s) => s.saved === true),
+      requests: blocking.log(),
+      dialogs: dialogs.log,
+    };
+  } finally {
+    await disarmEachFrame();
+    await blocking.release();
+    dialogs.allowConfirm(false);
+    dialogs.release();
+  }
 }
 
 // Clicks one of the extension panel's controls. A failure becomes a coded
@@ -143,7 +345,10 @@ export async function serviceWorkerControlled(page) {
 
 // Blocks every write the page sends except read-only lookups (requests.mjs).
 // The log is counted per method, host and path.
-export async function blockWrites(page, { allowHosts = [] } = {}) {
+export async function blockWrites(
+  page,
+  { allowHosts = [], saveHost = null } = {},
+) {
   const counts = {};
   const handler = (route) => {
     const r = route.request();
@@ -154,7 +359,7 @@ export async function blockWrites(page, { allowHosts = [] } = {}) {
         headers: r.headers(),
         postData: r.postData(),
       },
-      { allowHosts },
+      { allowHosts, saveHost },
     );
     if (verdict.log) counts[verdict.log] = (counts[verdict.log] ?? 0) + 1;
     return (
@@ -241,6 +446,7 @@ export async function framesCensus(
     synthetic = [],
     salt = "",
     includeHidden = false,
+    recordValues = false,
   } = {},
 ) {
   const frames = [];
@@ -265,6 +471,8 @@ export async function framesCensus(
       includeHidden,
       synthetic,
       known: known && !ambiguous ? (known[key] ?? null) : null,
+      recordValues,
+      identityPattern: recordValues ? IDENTITY_FIELD.source : null,
     };
     const r = await bounded(
       callInPage(
@@ -606,6 +814,8 @@ export async function runPage(
     build = null,
     signal = null,
     profile = null,
+    // Test-account mode: values are recorded (identity fields masked).
+    recordValues = false,
   },
 ) {
   if (await serviceWorkerControlled(page))
@@ -646,11 +856,15 @@ export async function runPage(
     // Every value on the page before the run, hidden controls included. Kept
     // in memory: no value from this set is shown unless the run wrote the
     // same synthetic value, and the discard is checked against it.
-    initial = await framesCensus(page, { salt, includeHidden: true });
+    initial = await framesCensus(page, {
+      salt,
+      includeHidden: true,
+      recordValues,
+    });
     if (signal?.aborted) throw aborted();
     if (clear) cleared = await eachFrame(page, clearForm);
     if (clear) await delay(1500);
-    before = await framesCensus(page, { salt });
+    before = await framesCensus(page, { salt, recordValues });
     await eachFrame(page, installGuard);
     try {
       review = await driveRound(page, { timeoutMs, approveReview, signal });
@@ -668,6 +882,7 @@ export async function runPage(
       known: framesKnown(initial),
       synthetic,
       salt,
+      recordValues,
     });
   } catch (e) {
     error = error ?? safeError(e);
@@ -710,6 +925,7 @@ export async function runPage(
     url: brief(page.url()),
     build,
     session,
+    testAccount: recordValues,
     seconds: Math.round((Date.now() - started) / 1000),
     cleared,
     error,

@@ -5,6 +5,25 @@ import { clearForm } from "./clear.mjs";
 const value = (selector) => document.querySelector(selector).value;
 const checked = (selector) => document.querySelector(selector).checked;
 
+describe("clearForm with keepPattern (test-account reset)", () => {
+  it("leaves identity fields alone and counts them as protected", () => {
+    document.body.innerHTML = `
+      <form>
+        <label for="em">이메일</label><input id="em" name="prsEmail" value="login@example.test">
+        <input name="prsPhone" value="01000000000">
+        <label for="sc">학교명</label><input id="sc" name="eduEducationName" value="저장된학교">
+      </form>`;
+    const counts = clearForm({
+      ignoreLayout: true,
+      keepPattern: "email|phone|^(?!.*(?:school|edu)).*name",
+    });
+    expect(value('[name="prsEmail"]')).toBe("login@example.test");
+    expect(value('[name="prsPhone"]')).toBe("01000000000");
+    expect(value('[name="eduEducationName"]')).toBe("");
+    expect(counts).toMatchObject({ text: 1, skippedProtected: 2 });
+  });
+});
+
 describe("clearForm on an Hplace MRS2 step", () => {
   beforeEach(() => {
     document.body.innerHTML = `
