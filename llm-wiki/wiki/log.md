@@ -808,6 +808,14 @@
 - [실사이트 자동 입력 평가 워크플로우](topics/live-autofill-evaluation.md)의 Current와 History를 갱신하고 가시 칸 두 시점 측정, 단계별 지표 분리, 숨은 중복 칸 판정을 반영했다.
 - 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.
 
+## [2026-10-23] ingest | CF-330 병합된 작업 브랜치 자동 정리
+
+- Approval-Digest: 62fd194700b267b992a92148291f6cee2e7d19b3a42e71a54f2757362e620225
+- Source-Revision: a429fa8a1a4ebab19635d0dfe327a806edc425ee
+- 승인된 후보 3개 중 ADR을 [CF-330 bundle](../raw/issues/CF-330/manifest.md)에 기록하고 [작업 브랜치 정리](topics/branch-cleanup.md) topic을 신설했다.
+- [릴리스 브랜치 유지와 정리](topics/release-branch-lifecycle.md)의 수동 정리 문장을 새 topic 링크로 바꿨다. Current와 History는 CF-155를 유지했다.
+- 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.
+
 ## [2026-10-23] ingest | CF-327 배포 정책 Wiki 통합 정리
 
 - Approval-Digest: 460019c1c58c3248f460202a9b0e81f8fa783ffef0981abc96f7bccb2ae237f0

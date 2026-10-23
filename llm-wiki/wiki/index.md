@@ -97,6 +97,7 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [발표 디자인 시스템](topics/presentation-design-system.md) | 독립 레이아웃, 교체 슬롯과 정적 HTML/CSS 재현 규칙 | 2026-08-26 |
 | [랜딩,온보딩 웹 페이지](topics/landing-onboarding.md) | 단계형 선택 입력과 요약 보충, 확장 온보딩과 웹 경계 | 2026-10-13 |
 | [릴리스 브랜치 유지와 정리](topics/release-branch-lifecycle.md) | 배포,동기화 완료 후 정리와 SHA 보호, 관리자 설정 | 2026-10-03 |
+| [작업 브랜치 정리](topics/branch-cleanup.md) | 병합된 CF·hotfix·revert 브랜치 자동 삭제 대상, 건너뜀·실패 조건과 사람 정리 범위 | 2026-10-23 |
 | [확장 품질 보고의 fetch 호출 문맥](topics/extension-fetch-context.md) | 브라우저 전역 수신자, 보고 요청 계약과 검증 경계 | 2026-10-12 |
 | [Wiki 검증 기준 브랜치](topics/wiki-validation-base.md) | PR, 로컬 작업과 pre-push의 기준 ref 선택 및 raw 보호 | 2026-10-12 |
 | [품질 확인 사이트와 공개 지원서 링크](topics/quality-site-links.md) | 공고별 단일 확인, 공개 링크와 실행 분모 경계 | 2026-10-12 |
