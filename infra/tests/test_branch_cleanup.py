@@ -89,7 +89,7 @@ class WorkBranchCleanupTest(unittest.TestCase):
             ("cf-12", "develop"),
             ("hotfix/CF-", "main"),
             ("revert/abc", "main"),
-            ("revert/ABCDEF1", "main"),
+            ("revert/abcdefg", "main"),
             ("feature/x", "develop"),
         )
         for head, base in cases:
