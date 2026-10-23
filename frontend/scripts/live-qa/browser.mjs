@@ -122,12 +122,24 @@ export async function findBrowser(paths = statePaths(), timeoutMs = 5000) {
   }
 }
 
-function processAlive(pid) {
+export function processAlive(pid) {
+  if (!Number.isSafeInteger(pid) || pid <= 1) return false;
   try {
     process.kill(pid, 0);
     return true;
   } catch (error) {
     return error?.code === "EPERM";
+  }
+}
+function parentPid(pid) {
+  try {
+    const out = execFileSync("ps", ["-o", "ppid=", "-p", String(pid)], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+    return /^[0-9]+$/.test(out) ? Number(out) : null;
+  } catch {
+    return null;
   }
 }
 function commandLine(pid) {
@@ -254,6 +266,88 @@ export async function installExtension(source, target) {
   await rm(target, { recursive: true, force: true });
   await rename(staging, target);
   await chmod(target, 0o700);
+}
+
+// API hosts an extension directory's manifest asks for (host_permissions),
+// sorted so two builds can be compared. Missing manifest: [].
+export async function manifestApiHosts(directory) {
+  try {
+    const manifest = JSON.parse(
+      await readFile(join(directory, "manifest.json"), "utf8"),
+    );
+    return (manifest.host_permissions ?? [])
+      .map((p) => {
+        try {
+          return new URL(p.replace("/*", "/")).host;
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean)
+      .sort();
+  } catch {
+    return [];
+  }
+}
+
+// Install lock: the browser and the extension copy are shared by every
+// session on the machine, and a reinstall from one session invalidates a
+// round running in another. `start` records who installed the current copy.
+// A CLI process exits right away, so the lock also records its parent and
+// grandparent: the stable owner is the terminal or agent process that keeps
+// issuing commands. The lock is held as long as any of them is alive.
+export const INSTALL_LOCK_FILE = "extension.lock.json";
+const lockPath = (paths) => join(paths.root, INSTALL_LOCK_FILE);
+
+export function sessionChain(pid = process.pid, ppid = process.ppid) {
+  return { pid, ppid, sessionPid: parentPid(ppid) };
+}
+
+export async function readInstallLock(paths = statePaths()) {
+  try {
+    const lock = JSON.parse(await readFile(lockPath(paths), "utf8"));
+    return lock && typeof lock === "object" ? lock : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function writeInstallLock(
+  paths = statePaths(),
+  { revision, apiHosts = [] } = {},
+  chain = sessionChain(),
+) {
+  const lock = {
+    ...chain,
+    startedAt: new Date().toISOString(),
+    revision: revision ?? null,
+    apiHosts,
+    cwd: process.cwd(),
+  };
+  await mkdir(paths.root, { recursive: true, mode: 0o700 });
+  await writeFile(lockPath(paths), `${JSON.stringify(lock)}\n`, {
+    mode: 0o600,
+  });
+  return lock;
+}
+
+const lockPids = (lock) =>
+  [lock?.pid, lock?.ppid, lock?.sessionPid].filter((p) =>
+    Number.isSafeInteger(p),
+  );
+
+// True when the lock belongs to another live session: one of its processes
+// is still alive and none of them is in this process's own chain. A lock
+// whose processes are all gone is ignored.
+export function installLockHeldByOther(
+  lock,
+  { chain = sessionChain(), alive = processAlive } = {},
+) {
+  if (!lock) return false;
+  const pids = lockPids(lock);
+  if (!pids.some(alive)) return false;
+  const own = new Set(lockPids(chain));
+  return !pids.some((p) => own.has(p));
 }
 
 export async function readBuildInfo(directory) {
