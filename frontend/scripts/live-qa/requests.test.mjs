@@ -176,9 +176,7 @@ describe("classifyRequest with saveHost (test-account reset)", () => {
     );
     expect(
       classifyRequest(
-        post(
-          "https://gsenc.recruiter.co.kr/mrs2/applicant/resume/tempSave?draft=1",
-        ),
+        post("https://gsenc.recruiter.co.kr/mrs2/applicant/resume/tempSave?draft=1"),
         reset,
       ).action,
     ).toBe("allow");

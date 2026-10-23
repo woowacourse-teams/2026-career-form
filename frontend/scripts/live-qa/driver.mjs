@@ -105,10 +105,10 @@ async function dryClear(page) {
 const hplaceForm = (page, st) =>
   Boolean(
     st?.formPresent &&
-    st.step &&
-    /\/mrs2\/applicant\/resume\/writeResume/i.test(
-      new URL(page.url()).pathname,
-    ),
+      st.step &&
+      /\/mrs2\/applicant\/resume\/writeResume/i.test(
+        new URL(page.url()).pathname,
+      ),
   );
 
 // Dry run of clearForm on every frame: what a clear would remove, as counts
@@ -117,8 +117,7 @@ const hplaceForm = (page, st) =>
 export async function savedData(page, { allowHosts = [] } = {}) {
   return onGuardedTab(page, { allowHosts }, async () => {
     const st = await bounded(page.evaluate(readStep), EVALUATE_MS);
-    if (!hplaceForm(page, st))
-      return { how: "page", ...(await dryClear(page)) };
+    if (!hplaceForm(page, st)) return { how: "page", ...(await dryClear(page)) };
     const origin = st.step;
     const steps = {};
     for (const n of [1, 2, 3]) {

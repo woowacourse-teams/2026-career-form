@@ -262,19 +262,13 @@ describe("installGuard with allowSave (test-account reset)", () => {
     },
   );
 
-  it.each([
-    "submit",
-    "final",
-    "apply",
-    "agree",
-    "verify",
-    "oath",
-    "file",
-    "stepTab",
-  ])("still blocks %s", (id) => {
-    expect(click(id)).toBe(true);
-    expect(window.__careerFormLiveQa.passed).toBe(false);
-  });
+  it.each(["submit", "final", "apply", "agree", "verify", "oath", "file", "stepTab"])(
+    "still blocks %s",
+    (id) => {
+      expect(click(id)).toBe(true);
+      expect(window.__careerFormLiveQa.passed).toBe(false);
+    },
+  );
 
   it("still blocks form submission by script", () => {
     document.getElementById("f").submit();
