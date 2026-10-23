@@ -14,13 +14,18 @@ import {
   findBrowser,
   installedBuild,
   installExtension,
+  installLockHeldByOther,
   launchDetachedBrowser,
+  manifestApiHosts,
   readBuildInfo,
+  readInstallLock,
   reloadExtension,
   seedProfile,
   statePaths,
+  writeInstallLock,
 } from "./browser.mjs";
 import { claimDialogs, installDialogPolicy } from "./dialogs.mjs";
+import { listPageTargets, probeTargets, replaceTarget } from "./health.mjs";
 import {
   APPLICATION_PATH,
   brief,
@@ -44,6 +49,13 @@ import {
 } from "./sites.mjs";
 import { stripFingerprints } from "./page/census.mjs";
 import { readStep } from "./page/hplace-step.mjs";
+import {
+  aliasesForUrl,
+  readTabAliases,
+  recoverContentScripts,
+  resolveTabSpec,
+  writeTabAliases,
+} from "./tabs.mjs";
 import {
   HPLACE_POLICY_EXCLUSIONS,
   aggregatePage,
@@ -86,6 +98,11 @@ const print = (value) =>
   console.log(
     typeof value === "string" ? value : JSON.stringify(value, null, 1),
   );
+// A <tab> spec may be an alias stored by `alias` (tabs.mjs). Commands still
+// call pageAt directly; they switch to tabAt once tab addressing is merged.
+// eslint-disable-next-line no-unused-vars
+const tabAt = async (context, spec) =>
+  pageAt(context, resolveTabSpec(spec, await readTabAliases(outDir)));
 
 async function ensureOut() {
   await mkdir(join(outDir, "grade"), { recursive: true, mode: 0o700 });
@@ -176,17 +193,49 @@ function controlTable(frames, onlyChanged = false) {
 
 const commands = {
   // Installs the build into the tool-owned copy, launches the browser only when
-  // none is running, reloads the extension when the running revision differs,
-  // and seeds the synthetic profile.
+  // none is running, reloads the extension when the running revision or the
+  // manifest's API hosts differ, re-enters application tabs that lost the
+  // content script, and seeds the synthetic profile. The copy is shared by
+  // every session on the machine: another live session's install lock refuses
+  // the reinstall unless --force is given.
   async start() {
     const build = await readBuildInfo(buildDir);
     if (!build?.revision)
       throw new Error(
         `No build-info.json in ${buildDir}; build the extension first.`,
       );
+    const buildHosts = await manifestApiHosts(buildDir);
+    const lockAllows = async () => {
+      const lock = await readInstallLock(paths);
+      if (!installLockHeldByOther(lock)) return true;
+      const owner = lockOwner(lock);
+      if (flag("force")) {
+        console.error(
+          JSON.stringify({
+            warning: "install-locked",
+            message:
+              "Reinstalling over another live session's install lock (--force).",
+            owner,
+          }),
+        );
+        return true;
+      }
+      print({
+        ok: false,
+        code: "install-locked",
+        owner,
+        message:
+          "Another live session installed the extension copy; a reinstall would invalidate its round. Re-run with --force to reinstall anyway.",
+      });
+      process.exitCode = 2;
+      return false;
+    };
     let found = await findBrowser(paths);
+    let installed = false;
     if (!found) {
+      if (!(await lockAllows())) return;
       await installExtension(buildDir, paths.extension);
+      installed = true;
       found = await launchDetachedBrowser({ paths });
     }
     const { browser, context } = await connect();
@@ -194,10 +243,43 @@ const commands = {
       const id = await extensionIdForDirectory(paths.extension);
       await ensureDeveloperMode(context);
       let running = await installedBuild(context, id);
-      if (running?.revision !== build.revision || flag("reinstall")) {
+      const installedHosts = await manifestApiHosts(paths.extension);
+      const reinstallReason =
+        running?.revision !== build.revision
+          ? "revision"
+          : JSON.stringify(installedHosts) !== JSON.stringify(buildHosts)
+            ? "api-hosts"
+            : flag("reinstall")
+              ? "flag"
+              : null;
+      let recovery = null;
+      if (reinstallReason) {
+        if (!installed && !(await lockAllows())) return;
         await installExtension(buildDir, paths.extension);
+        installed = true;
         running = await reloadExtension(context, id, build.revision);
+        // Tabs that were open keep the old content script, or none: re-enter
+        // them at their own address (tabs.mjs).
+        recovery = await recoverContentScripts(context, {
+          allowHosts: await apiHosts(),
+        });
       }
+      let lock = await readInstallLock(paths);
+      if (installed)
+        lock = await writeInstallLock(paths, {
+          revision: build.revision,
+          apiHosts: buildHosts,
+        });
+      else if (lock && lock.revision !== running?.revision)
+        console.error(
+          JSON.stringify({
+            warning: "install-lock-revision-mismatch",
+            message:
+              "The install lock names another revision than the running extension; another session may have changed the copy.",
+            lock: lockOwner(lock),
+            running: running?.revision ?? null,
+          }),
+        );
       const profilePath = opt("profile", defaultProfile());
       await seedProfile(context, id, profilePath);
       await writeJson(profileRecord(), {
@@ -210,15 +292,36 @@ const commands = {
         extensionId: id,
         running,
         apiHosts: await apiHosts(),
+        reinstalled: reinstallReason,
+        recovery,
+        lock: lock ? lockOwner(lock) : null,
       });
     } finally {
       await browser.close();
     }
   },
+  // One line per tab; aliases (tabs.mjs) whose spec matches follow as @name.
   async tabs(context) {
-    httpPages(context).forEach((p, k) =>
-      console.log(`${k}\t${brief(p.url())}`),
-    );
+    const aliases = await readTabAliases(outDir);
+    for (const [k, p] of httpPages(context).entries()) {
+      const names = [];
+      for (const a of aliasesForUrl(p.url(), aliases)) {
+        const text = a.spec.split("|")[1];
+        const hit =
+          !a.hasText ||
+          (await bounded(
+            p
+              .evaluate((t) => document.body.innerText.includes(t), text)
+              .catch(() => false),
+            3000,
+            false,
+          ));
+        if (hit) names.push(a.name);
+      }
+      console.log(
+        `${k}\t${brief(p.url())}${names.length ? `\t@${names.join(",")}` : ""}`,
+      );
+    }
   },
   async open(context) {
     const page = await context.newPage();
@@ -482,6 +585,147 @@ const commands = {
   },
 };
 
+// What is printed about an install lock: never the cwd.
+const lockOwner = (lock) => ({
+  pid: lock?.pid ?? null,
+  sessionPid: lock?.sessionPid ?? null,
+  startedAt: lock?.startedAt ?? null,
+  revision: lock?.revision ?? null,
+});
+const coded = (code, message) => Object.assign(new Error(message), { code });
+const notRunning = () =>
+  coded(
+    "browser-not-running",
+    "No evaluation browser is running (run: start).",
+  );
+const printProbes = (probes) => {
+  for (const p of probes)
+    console.log(`${String(p.ms).padStart(6)}ms\t${p.state}\t${p.url}`);
+};
+
+// Commands that never attach through Playwright. A hung tab blocks the
+// Playwright attach itself (2026-10-22, 30s timeout), so health and replace
+// talk raw CDP (health.mjs); lock and alias only touch files.
+const standalone = {
+  // Probes every page target; exit 1 lists the tabs that did not answer.
+  async health() {
+    const found = await findBrowser(paths);
+    if (!found) throw notRunning();
+    const probes = await probeTargets(found.endpoint, {
+      timeoutMs: Number(opt("timeout", 5)) * 1000,
+    });
+    printProbes(probes);
+    const hung = probes.filter((p) => !p.ok);
+    if (hung.length) {
+      print({
+        ok: false,
+        code: "tabs-hung",
+        hung: hung.map(({ targetId, url, state, ms }) => ({
+          targetId,
+          url,
+          state,
+          ms,
+        })),
+        message:
+          "Replace a hung tab with 'replace <url-substring>' or 'replace --all-hung'.",
+      });
+      process.exitCode = 1;
+    }
+  },
+  // replace <url-substring> (exactly one target) | --all-hung: a new tab at
+  // the same address is created before the old one is closed, then every
+  // target is probed again. The browser keeps running.
+  async replace() {
+    const found = await findBrowser(paths);
+    if (!found) throw notRunning();
+    const timeoutMs = Number(opt("timeout", 5)) * 1000;
+    let chosen;
+    if (flag("all-hung")) {
+      chosen = (await probeTargets(found.endpoint, { timeoutMs })).filter(
+        (p) => !p.ok,
+      );
+      if (!chosen.length) {
+        print({ ok: true, replaced: [], message: "No tab is hung." });
+        return;
+      }
+    } else {
+      const spec = positional[0];
+      if (!spec)
+        throw coded(
+          "tab-required",
+          "replace needs <url-substring> or --all-hung.",
+        );
+      const matches = (await listPageTargets(found.endpoint)).filter((t) =>
+        t.url.includes(spec),
+      );
+      if (matches.length !== 1)
+        throw coded(
+          "tab-not-unique",
+          `tab '${spec}' matched ${matches.length}: ${matches.map((t) => brief(t.url)).join(", ")}`,
+        );
+      chosen = matches;
+    }
+    const replaced = [];
+    for (const t of chosen)
+      replaced.push(await replaceTarget(found.endpoint, t.targetId));
+    const after = await probeTargets(found.endpoint, { timeoutMs });
+    const probeOf = (id) => after.find((p) => p.targetId === id) ?? null;
+    print({
+      ok: replaced.every((r) => r.ok),
+      replaced: replaced.map((r) => ({
+        ...r,
+        after: r.newTargetId ? probeOf(r.newTargetId) : null,
+      })),
+    });
+    printProbes(after);
+    if (!replaced.every((r) => r.ok) || after.some((p) => !p.ok))
+      process.exitCode = 1;
+  },
+  // Marks the installed copy as this session's, so another session's `start`
+  // refuses to reinstall during a round. --show only prints the lock.
+  async lock() {
+    const current = await readInstallLock(paths);
+    if (flag("show")) {
+      print({
+        lock: current ? lockOwner(current) : null,
+        heldByOther: installLockHeldByOther(current),
+      });
+      return;
+    }
+    const previous = installLockHeldByOther(current)
+      ? lockOwner(current)
+      : null;
+    const build = await readBuildInfo(paths.extension);
+    const lock = await writeInstallLock(paths, {
+      revision: build?.revision ?? null,
+      apiHosts: await apiHosts(),
+    });
+    print({ ok: true, lock: lockOwner(lock), takenFrom: previous });
+  },
+  // alias <name> <url-substring|page text> | alias --list | alias <name> --remove
+  async alias() {
+    const aliases = await readTabAliases(outDir);
+    const [name, spec] = positional;
+    if (flag("list") || !name) {
+      print(aliases);
+      return;
+    }
+    if (flag("remove")) {
+      delete aliases[name];
+      await writeTabAliases(outDir, aliases);
+      print({ ok: true, removed: name });
+      return;
+    }
+    if (!spec)
+      throw coded(
+        "alias-invalid",
+        "alias <name> <url-substring|page text> stores a tab spec under the name.",
+      );
+    await writeTabAliases(outDir, { ...aliases, [name]: spec });
+    print({ ok: true, [name]: spec });
+  },
+};
+
 // Offline commands work on files in --out and need no browser.
 const offline = {
   async "grade-input"() {
@@ -599,10 +843,11 @@ const offline = {
 
 async function main() {
   if (cmd === "start") return commands.start();
+  if (standalone[cmd]) return standalone[cmd]();
   if (offline[cmd]) return offline[cmd]();
   if (!commands[cmd]) {
     print(
-      "commands: start [--build dir] [--profile file] | keepalive [<tab>] [--every min] [--threshold min] [--force] | tabs | open <url> | close <tab> | goto <tab> <url> | text <tab> | stepinfo <tab> | step <tab> <1-4> [--force] | saved [<tab>] | reset <tab> --yes | census <tab> --label L | run <tab> --label L [--no-clear] [--no-approve] [--timeout s] | discard <tab> | grade-input <labels> | join <labels> | report <labels> --verdicts a.json[,b.json] [--uncreated f] [--names f] | workflow-script <pregrade|verify>\n<tab> = url-substring or 'url-substring|page text'",
+      "commands: start [--build dir] [--profile file] [--reinstall] [--force] | health [--timeout s] | replace <url-substring>|--all-hung | lock [--show] | alias <name> <spec>|--list|<name> --remove | keepalive [<tab>] [--every min] [--threshold min] [--force] | tabs | open <url> | close <tab> | goto <tab> <url> | text <tab> | stepinfo <tab> | step <tab> <1-4> [--force] | saved [<tab>] | reset <tab> --yes | census <tab> --label L | run <tab> --label L [--no-clear] [--no-approve] [--timeout s] | discard <tab> | grade-input <labels> | join <labels> | report <labels> --verdicts a.json[,b.json] [--uncreated f] [--names f] | workflow-script <pregrade|verify>\n<tab> = url-substring, 'url-substring|page text' or an alias",
     );
     process.exitCode = cmd ? 1 : 0;
     return;
