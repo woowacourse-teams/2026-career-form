@@ -149,6 +149,7 @@ const judgePrompt = (label) => `실사이트 자동 기입 QA 판정. 자료:
 8. 패널이 written=true로 표시해도 DOM 값이 비어 있으면 MISSED이고 note에 "panel-mismatch"를 적는다. 종료사유처럼 코드 select가 비어 있고 기타 자유입력 칸에만 값이 쓰였으면 select는 MISSED, 자유입력 쓰기는 세지 않고 note에 "substitute write"를 적는다.
 9. 날짜의 일 단위 손실(YYYY-MM-DD → YYYY.MM)은 CORRECT로 보되 note에 "precision"을 적는다.
 10. joined의 testAccount=true(테스트 계정 모드)면 written은 실행 전 값이 그대로 남은 칸에도 기록되고, rows에 beforeValue(초기화 뒤 실행 전 값)와 mountedAsIs(마운트 값 그대로)가 있다. 이때 규칙 4·5의 "written=null이면 UNVERIFIABLE"은 written이 "[account]"(계정 신원 칸)일 때만 적용한다. changed=true면 written을 값으로 판정한다. preexistingValue=true이고 changed=false이고 written이 expected와 같으면 확장이 쓴 것이 아니라 이미 있던 값이므로 CORRECT가 아니라 UNVERIFIABLE로 두고 note에 "already filled"를 적는다. mountedAsIs=true이고 changed=false인 새 칸은 행 템플릿 기본값이므로 같은 규칙이다.
+11. rows와 addedOrUnmatchedAfterControls의 siteDefault=true는 실행 후 값이 사이트 기본값(select의 첫 선택지·defaultSelected, 라디오·체크박스의 defaultChecked, 텍스트의 HTML 기본값)이라는 뜻이다. changed=false이고 siteDefault=true인 칸은 확장이 쓴 것이 아니므로 CORRECT가 아니라 UNVERIFIABLE로 두고 note에 "site-default"를 적는다. companionOf가 있는 숨은 칸(어학·자격 코드 칸의 이름 칸)은 보이는 칸과 짝이며, 보이는 칸이 CORRECT면 숨은 코드 칸은 따로 세지 않고 note에만 적는다.
 backend/policies, frontend/src/autofill 코드와 *policy* 파일은 읽지 마라. StructuredOutput으로 반환.`;
 
 const challengePrompt = (

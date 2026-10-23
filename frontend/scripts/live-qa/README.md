@@ -75,7 +75,11 @@
   - `reset` 중에만 사이트의 확인창(임시저장 확인, 저장 완료 알림)을 수락한다. 사이트가 자체 레이어로 묻는 경우는 사이트 프로필의 `confirm` 버튼을 누른다(2026-10-23 확인: 에이치닷은 `#wrapDialog`의 "설정을 임시저장하시겠습니까?" → 확인 뒤 `saveStepN` POST, SK는 `POST /Application/ApplicationSave` 뒤 `#temporarySavePopup`의 확인).
   - 계정 신원 칸(이메일·전화 등)은 비우지 않는다. SK는 그 칸이 비면 임시저장을 거부하고, 어차피 로그인 정보로 다시 채워진다.
   - 이전 저장 알림이 열린 채 남아 있으면 다음 클릭을 삼키므로 `reset`은 먼저 그 알림을 닫는다. 하네스 밖에서 탐색 스크립트로 임시저장을 눌렀다면 알림까지 닫아 둔다.
-- `saved`는 계정 신원 칸을 `accountFields`로 따로 보고하고, 그 칸만 남았으면 `saved: false`다. 사이트가 로그인 정보로 매번 채우는 칸은 `reset`으로도 비워지지 않기 때문이다.
+- `saved`는 계정 신원 칸을 `accountFields`로, 사이트 기본값만 가진 칸을 `defaultFields`로 따로 보고하고, 그 두 종류만 남았으면 `saved: false`다. 사이트가 로그인 정보로 매번 채우는 칸은 `reset`으로도 비워지지 않고, 사이트 기본값은 저장값이 아니기 때문이다. `reset`의 단계별 결과에도 `defaultFields`가 있다.
+- **사이트 기본값.** 구조 수집(`page/census.mjs`)은 칸마다 `siteDefault`를 붙인다. select는 선택된 option이 `selected` 속성이거나 아무 option에도 `selected`가 없는데 첫 선택지가 선택된 경우, 라디오·체크박스는 `checked` 속성 그대로인 경우, 텍스트·textarea는 값이 HTML `value` 속성과 같은 경우다(값이 없으면 false). SK 병역 대상 라디오, 첫 선택지가 기본인 select가 여기에 든다. 사이트 기본값은 `saved`에 세지 않고, `join`이 `siteDefault`를 판정에 넘긴다. 알려진 한계: 서버가 저장값을 HTML 속성으로 렌더링하는 사이트에서는 저장값도 기본값처럼 보일 수 있으므로, `saved` 출력의 `defaultFields`를 사람이 한 번 확인한다.
+- **코드 칸의 숨은 이름 칸.** 보이는 칸의 `name`(또는 id)이 `cd`·`code`로 끝나고 같은 행(가장 가까운 `tr`·`li`·`.row`·`fieldset`, 없으면 부모 3단계 안)에 `nm`·`name`으로 끝나는 숨은 input이 있으면(반대 방향도 같다) 그 숨은 칸을 `hidden: true, companionOf: <보이는 칸의 i>`로 함께 수집한다. 한 행에 짝이 여럿이면 어간이 같은 것끼리 묶는다(`schoolCd`↔`schoolNm`). 어학·자격 코드 칸의 문구가 이렇게 판정에 들어간다. 값 표시 규칙은 다른 칸과 같다.
+- **캡처.** 테스트 계정 탭의 `run`은 실행 후 수집 직후, 원복 전에(가드와 요청 차단이 켜진 상태로) 섹션마다 화면을 `<out>/<label>.captures/NN.png`(디렉터리 0700, 파일 0600)로 남기고 `run.json`의 `captures`(`file`, `name`, `frame: "main"`, `controls`)에 적는다. 섹션은 구조 수집의 섹션 이름과 같은 컨테이너이고, 섹션을 못 찾으면 문서를 1,200px 높이 조각(`step N`)으로 나눈다. 캡처 실패는 `captureError: {code}`로 남고 실행은 실패하지 않는다. `--no-capture`로 끈다. 캡처는 개인정보가 아니다: 합성 프로필 값과 가려지지 않은 화면이며, 저장소 밖 0700 디렉터리에만 있다. 테스트 계정이 아닌 탭에서는 캡처를 남기지 않는다.
+- **임시저장 요청 본문.** 테스트 계정 탭의 `run`은 차단한 요청 중 탭 호스트로 가는 POST/PUT이고 경로·쿼리에 `save`·`temp`·`draft`·`store`가 있는 것의 본문(`application/x-www-form-urlencoded` 또는 JSON 1단계)을 `run.json`의 `savePayloads`(`path`, `fieldCount`, `fields`)에 남긴다. 계정 신원 칸(`IDENTITY_FIELD`)의 값은 `[account]`로 가린다. 사이트가 "저장하려던 값"을 DOM 판정과 대조하는 용도다. 테스트 계정이 아닌 탭에서는 이 필드를 만들지 않는다.
 - 최종 제출, 동의, 본인 인증은 테스트 계정에서도 하지 않는다. 테스트 계정이라도 회사에는 실제 지원으로 들어가기 때문이다.
 
 ## 로그인 세션 유지
@@ -86,13 +90,21 @@
   - 에이치닷: 남은 시간(`#countTime`)이 `--threshold`(기본 20분)보다 적으면 사이트 자체의 "연장" 버튼을 누른다(`/app/applicant/keepLogin` GET). 사이트가 이미 로그아웃으로 판단하면 누르지 않는다. 남은 시간을 읽지 못하면 `timer-unreadable`을 낸다. 누른 뒤 남은 시간이 늘어야 `extended`이고, 아니면 `not-extended`다. `--force`는 남은 시간과 관계없이 연장한다.
   - 그 밖: 현재 주소로 쿠키가 실린 GET 요청을 보낸다. 화면은 이동하지 않는다.
 - `run`은 시작 전에 한 번 자동으로 실행하고 결과를 `run.json`의 `session`에 남긴다.
-- 측정이 길어지면 다른 터미널에서 `cli.mjs keepalive --every 10`을 켜 둔다.
+- `run`·`census`·`saved`·`reset`은 도는 동안 다른 지원서 탭 전부(구동 중인 탭 제외)에 `--keepalive-every <분>`(기본 10, 0이면 끔)마다 keepalive를 보낸다(`driver.mjs`의 `withKeepalive`). 에이치닷 연장 기준은 `--keepalive-threshold <분>`(기본 30)이다. 결과는 `[{ at, tab, action, code }]`로 모아 결과의 `keepalive`에 붙이고(`run.json`에도 남는다), 오류는 기록만 한다.
+
+## 측정 범위 선택
+
+측정은 사람이 정한 범위에서만 돈다. 열려 있는 탭을 전부 돌리지 않는다.
+
+1. `cli.mjs scope`: 열린 http 탭을 플랫폼별(`hplace`, `greeting`, `sk`, `hyundai`, 그 밖은 `generic`)로 묶어 플랫폼, 주소(쿼리 제외), 상태를 표로 보여 준다. 상태는 `open`, `closed`(본문에 `마감되었습니다`·`접수가 종료`·`지원 기간이 아닙`·`모집이 종료`·`마감된 공고` 중 하나), `list-page`(지원서 경로가 아님, 목록으로 튕긴 경우), `unknown`이다(`scope.mjs`의 `postingStatus`, 고정 문구와 칸 수만 본다). `generic`은 범위 밖(이번 Issue 제외)으로 표시만 한다. 그다음 플랫폼별 열린 탭 수를 보여 주고, 선택이 없으면 "플랫폼별로 몇 곳을 돌릴지 `--pick`으로 정해 달라"는 메시지와 exit 2로 끝난다.
+2. `cli.mjs scope --pick hplace=2,greeting=1,sk=1,hyundai=0`: 플랫폼별 `open` 탭을 목록 순서로 그 수만큼 골라 `<out>/scope.json`(`{ at, picked: [{ platform, tab }], closed: [...] }`)에 쓴다. 열린 탭이 요청보다 적으면 `short`에 적는다. `--tabs <spec1,spec2>`(`url 일부` 또는 `url 일부|문구`)로 직접 고를 수도 있다.
+3. `census`와 `run`은 `scope.json`이 있고 대상 탭의 주소가 `picked` 어디에도 들어 있지 않으면 `tab-not-in-scope`로 거부한다. `--ignore-scope`로 우회한다. `scope.json`이 없으면 종전대로 돈다.
 
 ## 저장된 양식 점검
 
 사이트에 이미 저장된 지원서 값(에이치닷 MRS2의 임시저장 행, 이전 작성 값)은 확장이 쓴 값과 구분되지 않아 측정을 흐린다. 측정 전에 사람이 지운다.
 
-1. `cli.mjs saved [<tab>]`: 지원서 탭마다 초기화가 지울 값의 개수와 칸 이름만 보고한다(값은 보고하지 않는다). 에이치닷은 1–3단계를 무저장 이동으로 돌며 단계별로 보고하고 원래 단계로 돌아온다. 페이지를 바꾸지 않는다.
+1. `cli.mjs saved [<tab>]`: 지원서 탭마다 초기화가 지울 값의 개수와 칸 이름만 보고한다(값은 보고하지 않는다). 계정 신원 칸은 `accountFields`, 사이트 기본값만 가진 칸은 `defaultFields`로 따로 보고하고 `saved`에 세지 않는다. 에이치닷은 1–3단계를 무저장 이동으로 돌며 단계별로 보고하고 원래 단계로 돌아온다. 페이지를 바꾸지 않는다.
 2. `saved: true`인 양식은 테스트 계정이면 `cli.mjs reset <tab> --yes`로 비운다(테스트 계정 모드 참고). 아니면 사람이 사이트에서 직접 값과 행을 지우고 임시저장하거나, 지원을 취소하고 다시 들어가 빈 양식을 만든다. 하네스는 테스트 계정의 `reset` 말고는 저장·임시저장을 하지 않고, 제출은 어디서도 하지 않는다.
 3. 다시 `saved`를 실행해 비어 있는지 확인한 뒤 측정한다.
 4. 계정에서 가져오는 이름·이메일·전화는 사이트가 매번 채우므로 `saved`에 남을 수 있다. 이 칸은 `run`의 화면 초기화가 비운다.
@@ -122,7 +134,7 @@ node scripts/live-qa/cli.mjs start                                      # 설치
 
 ## 측정 순서
 
-1. 사람이 평가 브라우저에서 로그인하고 각 지원서 작성 화면을 연다.
+1. 사람이 평가 브라우저에서 로그인하고 각 지원서 작성 화면을 연다. `cli.mjs scope --pick ...`으로 플랫폼별 측정 범위를 정한다(측정 범위 선택 참고).
 2. 구조 수집: `cli.mjs census <tab> --label <label>`
    - label은 `<platform>-<site>[-s<step>]` 형식이다. 예: `hp-gsenc-s2`, `gr-kurly`, `sk-r262303`, `hy-backend`
    - `<tab>`은 URL 일부 또는 `URL 일부|화면 문구`다. 현대처럼 주소가 같은 탭을 구분할 때 쓴다.
@@ -150,6 +162,7 @@ node scripts/live-qa/cli.mjs start                                      # 설치
 | 공통 보호     | 지원분야·직무(SK `appJobRole*`, `title`·`.select-label` 문구 포함), 동의, 잠긴 신원 칸(disabled·readonly), 현대 `inExGb`(국내/해외), 에이치닷 섹션 안의 `contact`·`applySector` 숨김 칸 | 새 지원서에서 사이트가 미리 정해 두는 값이다                                                                      |
 
 - 현대 버튼형 select, Greeting 콤보박스와 토글처럼 DOM으로 안전하게 비울 수 없는 위젯은 지우지 않고 `cleared.widgetsLeft`에 개수만 남긴다.
+- 점검(`dryRun`)은 지울 칸 이름을 `fields`에, 그중 HTML이 준 값 그대로인 칸(사이트 기본값)을 `defaultFields`에 따로 담는다. 숨은 input(에이치닷 행 ID)은 기본값으로 보지 않는다.
 - 현대 페이지는 `Map`과 `Set`을 polyfill로 바꿔 둔다. 페이지에 넣는 함수(`page/*.mjs`와 `keepalive.mjs`의 페이지 함수)는 둘을 쓰지 않는다(`page/page-functions.test.mjs`로 고정). 여러 인자는 `callInPage`로 넘긴다.
 - 칸 번호 `i`는 프레임을 가로질러 이어지고, 같은 주소의 iframe은 순번으로 구분한다.
 - 에이치닷 4단계(자기소개서)처럼 입력할 칸이 없는 단계는 확장이 예외 화면을 띄울 수 있다. 결과는 `measured: false`로 남는다.

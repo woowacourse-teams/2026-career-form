@@ -29,6 +29,7 @@ import { listPageTargets, probeTargets, replaceTarget } from "./health.mjs";
 import {
   APPLICATION_PATH,
   brief,
+  callInPage,
   discardPage,
   framesCensus,
   gotoStep,
@@ -39,8 +40,19 @@ import {
   runPage,
   safeError,
   savedData,
+  withKeepalive,
 } from "./driver.mjs";
 import { keepAlivePage } from "./keepalive.mjs";
+import {
+  SCOPE_FILE,
+  describeTab,
+  inScope,
+  parsePick,
+  pickScope,
+  postingStatus,
+  renderScopeTable,
+  scopeFromSpecs,
+} from "./scope.mjs";
 import {
   TEST_ACCOUNTS_FILE,
   isTestAccount,
@@ -95,6 +107,10 @@ const VALUE_OPTIONS = [
   "every",
   "threshold",
   "reuse-from",
+  "keepalive-every",
+  "keepalive-threshold",
+  "pick",
+  "tabs",
 ];
 const positional = rest.filter(
   (a, k) =>
@@ -107,9 +123,7 @@ const print = (value) =>
   console.log(
     typeof value === "string" ? value : JSON.stringify(value, null, 1),
   );
-// A <tab> spec may be an alias stored by `alias` (tabs.mjs). Commands still
-// call pageAt directly; they switch to tabAt once tab addressing is merged.
-// eslint-disable-next-line no-unused-vars
+// A <tab> spec may be an alias stored by `alias` (tabs.mjs).
 const tabAt = async (context, spec) =>
   pageAt(context, resolveTabSpec(spec, await readTabAliases(outDir)));
 
@@ -167,6 +181,50 @@ async function connect() {
     leaveHosts: await readTestAccounts(paths.root),
   });
   return attached;
+}
+
+// Captions of visible "추가" buttons (row-adding controls), for the graders.
+const addButtonTexts = (page) =>
+  page.evaluate(() =>
+    [].slice
+      .call(document.querySelectorAll("button, a, input[type=button]"))
+      .filter((e) => {
+        const r = e.getBoundingClientRect();
+        return r.width > 0 && r.height > 0;
+      })
+      .map((e) =>
+        (e.textContent || e.value || e.getAttribute("aria-label") || "")
+          .replace(/\s+/g, " ")
+          .trim(),
+      )
+      .filter(
+        (t, k, a) => /추가/.test(t) && t.length < 40 && a.indexOf(t) === k,
+      ),
+  );
+
+// run/census/saved/reset keep the other application tabs' sessions alive
+// while they work (driver.mjs withKeepalive): --keepalive-every <minutes>
+// (default 10, 0 turns it off) and --keepalive-threshold <minutes> (default
+// 30, Hplace countdown).
+const keepaliveOptions = () => ({
+  everyMinutes: Number(opt("keepalive-every", 10)),
+  thresholdMinutes: Number(opt("keepalive-threshold", 30)),
+});
+const keptAlive = (context, page, fn) =>
+  withKeepalive(context, page, fn, keepaliveOptions());
+
+// census and run refuse tabs outside <out>/scope.json (the `scope` command's
+// choice) unless --ignore-scope is given. Without the file nothing is refused.
+async function assertInScope(page) {
+  const file = join(outDir, SCOPE_FILE);
+  if (flag("ignore-scope") || !existsSync(file)) return;
+  if (!inScope(page.url(), await readJson(file)))
+    throw Object.assign(
+      new Error(
+        "This tab is not in the measurement scope; run `scope --pick ...` again or pass --ignore-scope.",
+      ),
+      { code: "tab-not-in-scope" },
+    );
 }
 
 function controlTable(frames, onlyChanged = false) {
@@ -342,7 +400,7 @@ const commands = {
   // Closes a tab. The site's leave-page prompt, if any, is accepted: the
   // harness never leaves values worth keeping on a tab it drove.
   async close(context) {
-    const page = await pageAt(context, positional[0]);
+    const page = await tabAt(context, positional[0]);
     const url = brief(page.url());
     const claim = claimDialogs(page);
     claim.allowLeave(true);
@@ -355,7 +413,7 @@ const commands = {
     print(`closed ${url}`);
   },
   async goto(context) {
-    const page = await pageAt(context, positional[0]);
+    const page = await tabAt(context, positional[0]);
     await page
       .goto(positional[1], { waitUntil: "domcontentloaded", timeout: 45000 })
       .catch(() => {});
@@ -363,7 +421,7 @@ const commands = {
   },
   // Posting pages only: application forms show the applicant's own data.
   async text(context) {
-    const page = await pageAt(context, positional[0]);
+    const page = await tabAt(context, positional[0]);
     if (APPLICATION_PATH.test(new URL(page.url()).pathname))
       throw new Error("text is refused on application forms; use census.");
     print(
@@ -372,13 +430,51 @@ const commands = {
         .slice(0, Number(opt("max", 6000))),
     );
   },
+  // Shows every open http tab by platform with its posting status and writes
+  // the person's choice (--pick hplace=2,greeting=1,sk=1,hyundai=0 or
+  // --tabs spec1,spec2) to <out>/scope.json. Without a choice it exits 2.
+  async scope(context) {
+    const tabs = [];
+    for (const page of httpPages(context)) {
+      const status = await bounded(
+        callInPage(page.mainFrame(), postingStatus, {
+          applicationPattern: APPLICATION_PATH.source,
+        }).catch(() => null),
+        8000,
+      );
+      tabs.push(describeTab(page.url(), status));
+    }
+    print(renderScopeTable(tabs));
+    const specs = opt("tabs");
+    const pick = opt("pick");
+    if (!specs && !pick) {
+      console.error(
+        "플랫폼별로 몇 곳을 돌릴지 --pick hplace=N,greeting=N,sk=N,hyundai=N 으로 정해 달라 (또는 --tabs <spec1,spec2>). generic은 이번 범위 밖이다.",
+      );
+      process.exitCode = 2;
+      return;
+    }
+    const scope = specs
+      ? scopeFromSpecs(
+          tabs,
+          specs
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean),
+        )
+      : pickScope(tabs, parsePick(pick));
+    await ensureOut();
+    const file = { at: new Date().toISOString(), ...scope };
+    await writeJson(join(outDir, SCOPE_FILE), file);
+    print(file);
+  },
   async stepinfo(context) {
-    print(await (await pageAt(context, positional[0])).evaluate(readStep));
+    print(await (await tabAt(context, positional[0])).evaluate(readStep));
   },
   // Moves happen with writes blocked and the tab's dialogs claimed, as in a
   // round.
   async step(context) {
-    const page = await pageAt(context, positional[0]);
+    const page = await tabAt(context, positional[0]);
     print(
       await onGuardedTab(page, { allowHosts: await apiHosts() }, () =>
         gotoStep(page, Number(positional[1]), { force: flag("force") }),
@@ -390,19 +486,23 @@ const commands = {
   // Forms that hold saved values are cleared by a person before a round.
   async saved(context) {
     const pages = positional[0]
-      ? [await pageAt(context, positional[0])]
+      ? [await tabAt(context, positional[0])]
       : httpPages(context).filter((p) =>
           APPLICATION_PATH.test(new URL(p.url()).pathname),
         );
     const hosts = await apiHosts();
-    const report = [];
-    for (const page of pages) {
-      const result = await savedData(page, { allowHosts: hosts }).catch(
-        (error) => ({ ...safeError(error), saved: null }),
-      );
-      report.push({ tab: brief(page.url()), ...result });
-    }
+    const { report, keepalive } = await keptAlive(context, null, async () => {
+      const report = [];
+      for (const page of pages) {
+        const result = await savedData(page, { allowHosts: hosts }).catch(
+          (error) => ({ ...safeError(error), saved: null }),
+        );
+        report.push({ tab: brief(page.url()), ...result });
+      }
+      return { report };
+    });
     print(report);
+    if (keepalive?.length) print({ keepalive });
     const needs = report.filter((r) => r.saved === true);
     if (needs.length)
       console.error(
@@ -413,7 +513,7 @@ const commands = {
   // so the server copy no longer holds values from earlier rounds. Only for
   // hosts listed in <state dir>/test-accounts.json, and only with --yes.
   async reset(context) {
-    const page = await pageAt(context, positional[0]);
+    const page = await tabAt(context, positional[0]);
     const hosts = await readTestAccounts(paths.root);
     const allowlist = join(paths.root, TEST_ACCOUNTS_FILE);
     if (!isTestAccount(page.url(), hosts)) {
@@ -437,45 +537,38 @@ const commands = {
       process.exitCode = 2;
       return;
     }
-    const result = await resetPage(page, {
-      site: siteFor(page.url()),
-      allowHosts,
-    });
+    const result = await keptAlive(context, page, () =>
+      resetPage(page, { site: siteFor(page.url()), allowHosts }),
+    );
     print(result);
     if (!result.ok) process.exitCode = 1;
   },
   async census(context) {
-    const page = await pageAt(context, positional[0]);
+    const page = await tabAt(context, positional[0]);
+    await assertInScope(page);
     const label = opt("label", "census");
     await ensureOut();
-    // The salt is thrown away: fingerprints are not needed in the file.
-    const frames = stripFingerprints(
-      await framesCensus(page, { salt: randomBytes(16).toString("hex") }),
-    );
-    const addButtons = await page.evaluate(() =>
-      [].slice
-        .call(document.querySelectorAll("button, a, input[type=button]"))
-        .filter((e) => {
-          const r = e.getBoundingClientRect();
-          return r.width > 0 && r.height > 0;
-        })
-        .map((e) =>
-          (e.textContent || e.value || e.getAttribute("aria-label") || "")
-            .replace(/\s+/g, " ")
-            .trim(),
-        )
-        .filter(
-          (t, k, a) => /추가/.test(t) && t.length < 40 && a.indexOf(t) === k,
+    const { frames, addButtons, keepalive } = await keptAlive(
+      context,
+      page,
+      async () => ({
+        // The salt is thrown away: fingerprints are not needed in the file.
+        frames: stripFingerprints(
+          await framesCensus(page, { salt: randomBytes(16).toString("hex") }),
         ),
+        addButtons: await addButtonTexts(page),
+      }),
     );
     await writeJson(join(outDir, `${label}.census.json`), frames);
     await writeJson(join(outDir, `${label}.addbuttons.json`), addButtons);
     print(
       `url=${brief(page.url())}\n${controlTable(frames)}\naddButtons=${JSON.stringify(addButtons)}`,
     );
+    if (keepalive?.length) print({ keepalive });
   },
   async run(context) {
-    const page = await pageAt(context, positional[0]);
+    const page = await tabAt(context, positional[0]);
+    await assertInScope(page);
     const label = opt("label", "run");
     await ensureOut();
     // Ctrl-C or a kill stops the round but still lets the cleanup (discard
@@ -490,30 +583,36 @@ const commands = {
     process.on("SIGINT", stop);
     process.on("SIGTERM", stop);
     const id = await extensionIdForDirectory(paths.extension);
-    const result = await runPage(page, {
-      label,
-      clear: !flag("no-clear"),
-      approveReview: !flag("no-approve"),
-      timeoutMs: Number(opt("timeout", 300)) * 1000,
-      allowHosts: await apiHosts(),
-      build: await installedBuild(context, id),
-      signal: controller.signal,
-      // Test accounts: record values instead of hiding pre-run ones.
-      recordValues: isTestAccount(
-        page.url(),
-        await readTestAccounts(paths.root),
-      ),
-      profile: await (async () => {
-        const seeded = await seededProfile();
-        if (!seeded) {
-          console.error(
-            "warning: no seeded profile record (run start); synthetic values that the page already held stay hidden.",
-          );
-          return null;
-        }
-        return readJson(seeded.path);
-      })(),
-    }).finally(() => {
+    const result = await keptAlive(context, page, async () =>
+      runPage(page, {
+        label,
+        clear: !flag("no-clear"),
+        approveReview: !flag("no-approve"),
+        timeoutMs: Number(opt("timeout", 300)) * 1000,
+        allowHosts: await apiHosts(),
+        build: await installedBuild(context, id),
+        signal: controller.signal,
+        // Test accounts: record values instead of hiding pre-run ones.
+        recordValues: isTestAccount(
+          page.url(),
+          await readTestAccounts(paths.root),
+        ),
+        // Section captures (test-account tabs only) go next to the run file.
+        captureDir: flag("no-capture")
+          ? null
+          : join(outDir, `${label}.captures`),
+        profile: await (async () => {
+          const seeded = await seededProfile();
+          if (!seeded) {
+            console.error(
+              "warning: no seeded profile record (run start); synthetic values that the page already held stay hidden.",
+            );
+            return null;
+          }
+          return readJson(seeded.path);
+        })(),
+      }),
+    ).finally(() => {
       process.off("SIGINT", stop);
       process.off("SIGTERM", stop);
     });
@@ -539,7 +638,7 @@ const commands = {
     }
   },
   async discard(context) {
-    const page = await pageAt(context, positional[0]);
+    const page = await tabAt(context, positional[0]);
     print(
       await onGuardedTab(page, { allowHosts: await apiHosts() }, (dialogs) =>
         discardPage(page, { dialogs }),
@@ -561,7 +660,7 @@ const commands = {
       let pages = [];
       try {
         pages = positional[0]
-          ? [await pageAt(context, positional[0])]
+          ? [await tabAt(context, positional[0])]
           : httpPages(context).filter((p) =>
               APPLICATION_PATH.test(new URL(p.url()).pathname),
             );
@@ -897,7 +996,7 @@ async function main() {
   if (offline[cmd]) return offline[cmd]();
   if (!commands[cmd]) {
     print(
-      "commands: start [--build dir] [--profile file] [--reinstall] [--force] | health [--timeout s] | replace <url-substring>|--all-hung | lock [--show] | alias <name> <spec>|--list|<name> --remove | keepalive [<tab>] [--every min] [--threshold min] [--force] | tabs | open <url> | close <tab> | goto <tab> <url> | text <tab> | stepinfo <tab> | step <tab> <1-4> [--force] | saved [<tab>] | reset <tab> --yes | census <tab> --label L | run <tab> --label L [--no-clear] [--no-approve] [--timeout s] | discard <tab> | grade-input <labels> | join <labels> | report <labels> --verdicts a.json[,b.json] [--uncreated f] [--names f] | workflow-script <pregrade|verify>\n<tab> = url-substring, 'url-substring|page text' or an alias",
+      "commands: start [--build dir] [--profile file] [--reinstall] [--force] | health [--timeout s] | replace <url-substring>|--all-hung | lock [--show] | alias <name> <spec>|--list|<name> --remove | keepalive [<tab>] [--every min] [--threshold min] [--force] | tabs | scope [--pick hplace=N,greeting=N,sk=N,hyundai=N | --tabs spec1,spec2] | open <url> | close <tab> | goto <tab> <url> | text <tab> | stepinfo <tab> | step <tab> <1-4> [--force] | saved [<tab>] | reset <tab> --yes | census <tab> --label L [--ignore-scope] | run <tab> --label L [--no-clear] [--no-approve] [--no-capture] [--ignore-scope] [--timeout s] | discard <tab> | grade-input <labels> [--reuse-from d1,d2] | join <labels> | report <labels> --verdicts a.json[,b.json] [--uncreated f] [--names f] | workflow-script <pregrade|verify>\n<tab> = url-substring, 'url-substring|page text' or an alias\nrun/census/saved/reset: [--keepalive-every min (10, 0=off)] [--keepalive-threshold min (30)]",
     );
     process.exitCode = cmd ? 1 : 0;
     return;

@@ -12,7 +12,10 @@ import {
 
 describe("siteFor", () => {
   it.each([
-    ["https://gsenc.recruiter.co.kr/mrs2/applicant/resume/writeResume", "hplace"],
+    [
+      "https://gsenc.recruiter.co.kr/mrs2/applicant/resume/writeResume",
+      "hplace",
+    ],
     ["https://www.skcareers.com/Application/Index/R1", "sk"],
     ["https://talent.hyundai.com/apply/applyWrite.hc", "hyundai"],
     ["https://kurly.career.greetinghr.com/ko/o/1/apply", "greeting"],
@@ -27,7 +30,9 @@ describe("siteFor", () => {
   });
 
   it("gives Greeting no temp-save control and the others one", () => {
-    expect(siteFor("https://recruit.kakaogames.com/ko/o/1/apply").tempSave).toBeNull();
+    expect(
+      siteFor("https://recruit.kakaogames.com/ko/o/1/apply").tempSave,
+    ).toBeNull();
     for (const url of [
       "https://abl.recruiter.co.kr/mrs2/applicant/resume/writeResume",
       "https://www.skcareers.com/Application/Index/R1",
@@ -56,7 +61,10 @@ describe("isTestAccount", () => {
   it("reads the allowlist file and treats a missing or malformed one as empty", async () => {
     const dir = await mkdtemp(join(tmpdir(), "live-qa-"));
     expect(await readTestAccounts(dir)).toEqual([]);
-    await writeFile(join(dir, "test-accounts.json"), '{"hosts": ["a.test", 3]}');
+    await writeFile(
+      join(dir, "test-accounts.json"),
+      '{"hosts": ["a.test", 3]}',
+    );
     expect(await readTestAccounts(dir)).toEqual(["a.test"]);
     await writeFile(join(dir, "test-accounts.json"), "{broken");
     expect(await readTestAccounts(dir)).toEqual([]);
@@ -65,7 +73,15 @@ describe("isTestAccount", () => {
 
 describe("IDENTITY_FIELD", () => {
   it("covers the login identity fields and nothing structural", () => {
-    for (const n of ["prsEmail", "prsPhone", "koreanName", "birthday", "성명", "휴대전화", "name 이름"])
+    for (const n of [
+      "prsEmail",
+      "prsPhone",
+      "koreanName",
+      "birthday",
+      "성명",
+      "휴대전화",
+      "name 이름",
+    ])
       expect(IDENTITY_FIELD.test(n)).toBe(true);
     for (const n of [
       "eduEducationName 학교명",

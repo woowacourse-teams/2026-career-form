@@ -368,10 +368,22 @@ describe("census", () => {
       const synthetic = [];
       const after = record(prior, { known, synthetic });
       const byName = Object.fromEntries(after.controls.map((c) => [c.name, c]));
-      expect(byName.name).toMatchObject({ preexisting: true, shown: "[account]" });
-      expect(byName.email).toMatchObject({ preexisting: true, shown: "[account]" });
-      expect(byName.school).toMatchObject({ preexisting: true, shown: "저장된학교" });
-      expect(byName.gender).toMatchObject({ preexisting: true, shown: "남 [v=M]" });
+      expect(byName.name).toMatchObject({
+        preexisting: true,
+        shown: "[account]",
+      });
+      expect(byName.email).toMatchObject({
+        preexisting: true,
+        shown: "[account]",
+      });
+      expect(byName.school).toMatchObject({
+        preexisting: true,
+        shown: "저장된학교",
+      });
+      expect(byName.gender).toMatchObject({
+        preexisting: true,
+        shown: "남 [v=M]",
+      });
       expect(JSON.stringify(after)).not.toMatch(/실제이름|real@example/);
     });
 
@@ -416,6 +428,197 @@ describe("census", () => {
       const school = pass(prior, { known }).controls[0];
       expect(school.shown).toBeUndefined();
       expect(school.mountedAsIs).toBeUndefined();
+    });
+  });
+
+  describe("siteDefault", () => {
+    const byName = (extra = {}) =>
+      Object.fromEntries(
+        pass(null, { includeHidden: true, ...extra }).controls.map((c) => [
+          c.name,
+          c,
+        ]),
+      );
+
+    it("marks a select whose first option is selected without any selected attribute", () => {
+      document.body.innerHTML = `
+        <select name="first"><option value="A">첫</option><option value="B">둘</option></select>
+        <select name="empty"><option value="">선택</option><option value="B">둘</option></select>`;
+      const c = byName();
+      expect(c.first).toMatchObject({ hasValue: true, siteDefault: true });
+      expect(c.empty).toMatchObject({ hasValue: false, siteDefault: false });
+    });
+
+    it("marks a select at its defaultSelected option, but not one a script moved", () => {
+      document.body.innerHTML = `
+        <select name="kept"><option value="">선택</option><option value="B" selected>둘</option></select>
+        <select name="moved"><option value="">선택</option><option value="B" selected>둘</option><option value="C">셋</option></select>`;
+      document.querySelector('[name="moved"]').value = "C";
+      const c = byName();
+      expect(c.kept.siteDefault).toBe(true);
+      expect(c.moved).toMatchObject({ hasValue: true, siteDefault: false });
+    });
+
+    it("marks radios and checkboxes that are still at their defaultChecked state", () => {
+      document.body.innerHTML = `
+        <label><input type="radio" name="mil" value="N" checked>비대상</label>
+        <label><input type="radio" name="mil" value="Y">대상</label>
+        <label><input type="radio" name="dis" value="N">비대상</label>
+        <label><input type="radio" name="dis" value="Y">대상</label>
+        <label><input type="checkbox" name="box" checked>동의</label>
+        <label><input type="checkbox" name="unbox">알림</label>`;
+      document.querySelector('[name="dis"][value="Y"]').checked = true;
+      document.querySelector('[name="unbox"]').checked = true;
+      const c = byName();
+      expect(c.mil.siteDefault).toBe(true);
+      expect(c.dis).toMatchObject({ hasValue: true, siteDefault: false });
+      expect(c.box.siteDefault).toBe(true);
+      expect(c.unbox).toMatchObject({ hasValue: true, siteDefault: false });
+    });
+
+    it("marks text and textarea values that equal the HTML attribute value only", () => {
+      document.body.innerHTML = `
+        <input name="attr" value="대한민국">
+        <input name="typed" value="대한민국">
+        <input name="blank">
+        <textarea name="ta">기본 문구</textarea>`;
+      document.querySelector('[name="typed"]').value = "가상값";
+      const c = byName();
+      expect(c.attr.siteDefault).toBe(true);
+      expect(c.typed.siteDefault).toBe(false);
+      expect(c.blank).toMatchObject({ hasValue: false, siteDefault: false });
+      expect(c.ta.siteDefault).toBe(true);
+    });
+
+    it("never marks custom widgets", () => {
+      document.body.innerHTML = `
+        <div class="select-wrap"><input type="hidden" class="js-field" name="milCd" value="1">
+          <input type="button" class="btn-select" value="군필"></div>
+        <div role="radiogroup" aria-label="g"><button role="radio" aria-checked="true">대상</button></div>`;
+      expect(pass(null).controls.map((c) => c.siteDefault)).toEqual([
+        false,
+        false,
+      ]);
+    });
+  });
+
+  describe("companions (hidden code/name pairs)", () => {
+    const table = `
+      <table>
+        <tr><th>어학</th><td><input name="langCd" value="E01"><input type="hidden" name="langNm" value="영어"></td></tr>
+        <tr><th>자격</th><td><input name="certNm" value="정보처리"></td><td><input type="hidden" name="certCd" value="C7"></td></tr>
+        <tr><th>학교</th><td><input name="schoolCd" value="S1"></td></tr>
+        <tr><th>전공</th><td><input type="hidden" name="majorNm" value="컴퓨터"></td></tr>
+      </table>`;
+
+    it("collects the hidden partner in the same row in both directions", () => {
+      document.body.innerHTML = table;
+      const { controls } = pass(null);
+      const byName = Object.fromEntries(controls.map((c) => [c.name, c]));
+      expect(controls.map((c) => c.name)).toEqual([
+        "langCd",
+        "certNm",
+        "schoolCd",
+        "langNm",
+        "certCd",
+      ]);
+      expect(controls.map((c) => c.i)).toEqual([0, 1, 2, 3, 4]);
+      expect(byName.langNm).toMatchObject({
+        hidden: true,
+        type: "hidden",
+        companionOf: byName.langCd.i,
+      });
+      expect(byName.certCd).toMatchObject({
+        hidden: true,
+        companionOf: byName.certNm.i,
+      });
+      expect(byName.schoolCd.companionOf).toBeUndefined();
+      expect(byName.majorNm).toBeUndefined();
+    });
+
+    it("binds pairs by shared stem when a row holds several, and matches ids too", () => {
+      document.body.innerHTML = `
+        <ul><li>
+          <input name="schoolCd" value="S1"><input name="majorCd" value="M1">
+          <input type="hidden" name="majorNm" value="컴퓨터"><input type="hidden" name="schoolNm" value="가상대">
+        </li></ul>
+        <fieldset><input id="licenseCode" value="L1"><input type="hidden" id="licenseName" value="면허"></fieldset>`;
+      const { controls } = pass(null);
+      const at = (name) =>
+        controls.find((c) => c.name === name || c.id === name);
+      expect(at("schoolNm").companionOf).toBe(at("schoolCd").i);
+      expect(at("majorNm").companionOf).toBe(at("majorCd").i);
+      expect(at("licenseName").companionOf).toBe(at("licenseCode").i);
+    });
+
+    it("looks three parents up when no row container exists", () => {
+      document.body.innerHTML = `
+        <div><div><div><span><input name="jobCd" value="J"></span></div>
+          <input type="hidden" name="jobNm" value="직무"></div></div>
+        <div><div><div><div><span><input name="farCd" value="F"></span></div></div></div>
+          <input type="hidden" name="farNm" value="멀리"></div>`;
+      const { controls } = pass(null);
+      expect(controls.find((c) => c.name === "jobNm")).toMatchObject({
+        companionOf: 0,
+      });
+      expect(controls.find((c) => c.name === "farNm")).toBeUndefined();
+    });
+
+    it("flags an invisible text partner already listed in includeHidden mode instead of duplicating it", () => {
+      document.body.innerHTML = `<tr><td><input name="aCd" value="1"><input name="aNm" value="x" style="display:none"></td></tr>`;
+      const { controls } = pass(null, { includeHidden: true });
+      expect(controls.map((c) => c.name)).toEqual(["aCd", "aNm"]);
+      expect(controls[1]).toMatchObject({ hidden: true, companionOf: 0 });
+    });
+
+    it("can be switched off", () => {
+      document.body.innerHTML = table;
+      expect(
+        pass(null, { companions: false }).controls.map((c) => c.name),
+      ).toEqual(["langCd", "certNm", "schoolCd"]);
+    });
+
+    it("shows a companion's value only under the same rules as any other control", () => {
+      document.body.innerHTML = table;
+      const { known, prior } = baseline();
+      document.querySelector('[name="langNm"]').value = "가상어학";
+      const hidden = pass(prior, { known }).controls.find(
+        (c) => c.name === "langNm",
+      );
+      expect(hidden).toMatchObject({ changed: true, shown: "가상어학" });
+      const text = JSON.stringify(pass(null));
+      expect(text).not.toContain("가상어학");
+      expect(
+        pass(null, { recordValues: true }).controls.find(
+          (c) => c.name === "langNm",
+        ).shown,
+      ).toBe("가상어학");
+    });
+  });
+
+  describe("regions (capture planning)", () => {
+    it("groups controls by the same section container the section name comes from", () => {
+      document.body.innerHTML = `
+        <section><h3>학력</h3><input name="school"><input name="major"></section>
+        <section><h3>경력</h3><input name="company"></section>
+        <input name="loose">`;
+      const result = pass(null, { regions: true });
+      expect(result.regions.sections.map((s) => [s.name, s.controls])).toEqual([
+        ["학력", [0, 1]],
+        ["경력", [2]],
+      ]);
+      expect(result.regions.sections[0].rect).toEqual({
+        top: expect.any(Number),
+        left: expect.any(Number),
+        width: expect.any(Number),
+        height: expect.any(Number),
+      });
+      expect(result.regions.unsectioned.map((c) => c.i)).toEqual([3]);
+      expect(result.regions.document).toEqual({
+        width: expect.any(Number),
+        height: expect.any(Number),
+      });
+      expect(pass(null).regions).toBeUndefined();
     });
   });
 

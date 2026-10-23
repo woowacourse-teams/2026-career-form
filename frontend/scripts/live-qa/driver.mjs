@@ -4,6 +4,8 @@
 // then discard without saving while writes are still blocked and the guard is
 // still armed (sites can autosave).
 import { randomBytes } from "node:crypto";
+import { chmod, mkdir, writeFile } from "node:fs/promises";
+import { basename, join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { bounded } from "./browser.mjs";
 import {
@@ -22,7 +24,7 @@ import { panelFailureCode, panelState } from "./page/panel.mjs";
 import { clickTempSave } from "./page/temp-save.mjs";
 import { claimDialogs } from "./dialogs.mjs";
 import { keepAlivePage } from "./keepalive.mjs";
-import { classifyRequest } from "./requests.mjs";
+import { classifyRequest, maskFields, savePayload } from "./requests.mjs";
 import { IDENTITY_FIELD } from "./sites.mjs";
 
 const EVALUATE_MS = 8000;
@@ -81,10 +83,12 @@ const SAVED_COUNTS = [
 
 // What a clear would remove from every frame (counts and control names, never
 // values). `accountFields` are the identity fields the site fills from the
-// login (name, email, phone): they come back after any reset, so `saved`
-// counts only the other fields.
+// login (name, email, phone): they come back after any reset. `defaultFields`
+// still hold the value their HTML gave them (the site's defaults, e.g. a
+// 비대상 radio or a select at its first option). `saved` counts only the
+// fields that are neither.
 async function dryClear(page) {
-  const merged = { fields: [] };
+  const merged = { fields: [], defaultFields: [] };
   for (const f of page.frames()) {
     const r = await bounded(
       callInPage(f, clearForm, { dryRun: true }).catch(() => null),
@@ -94,9 +98,12 @@ async function dryClear(page) {
     for (const [k, v] of Object.entries(r))
       if (typeof v === "number") merged[k] = (merged[k] ?? 0) + v;
     merged.fields.push(...(r.fields ?? []));
+    merged.defaultFields.push(...(r.defaultFields ?? []));
   }
   merged.accountFields = merged.fields.filter((n) => IDENTITY_FIELD.test(n));
-  const others = merged.fields.filter((n) => !IDENTITY_FIELD.test(n));
+  const others = merged.fields.filter(
+    (n) => !IDENTITY_FIELD.test(n) && !merged.defaultFields.includes(n),
+  );
   merged.savedAny = SAVED_COUNTS.some((k) => (merged[k] ?? 0) > 0);
   merged.saved = others.length > 0;
   return merged;
@@ -105,10 +112,10 @@ async function dryClear(page) {
 const hplaceForm = (page, st) =>
   Boolean(
     st?.formPresent &&
-      st.step &&
-      /\/mrs2\/applicant\/resume\/writeResume/i.test(
-        new URL(page.url()).pathname,
-      ),
+    st.step &&
+    /\/mrs2\/applicant\/resume\/writeResume/i.test(
+      new URL(page.url()).pathname,
+    ),
   );
 
 // Dry run of clearForm on every frame: what a clear would remove, as counts
@@ -117,7 +124,8 @@ const hplaceForm = (page, st) =>
 export async function savedData(page, { allowHosts = [] } = {}) {
   return onGuardedTab(page, { allowHosts }, async () => {
     const st = await bounded(page.evaluate(readStep), EVALUATE_MS);
-    if (!hplaceForm(page, st)) return { how: "page", ...(await dryClear(page)) };
+    if (!hplaceForm(page, st))
+      return { how: "page", ...(await dryClear(page)) };
     const origin = st.step;
     const steps = {};
     for (const n of [1, 2, 3]) {
@@ -279,6 +287,7 @@ export async function resetPage(page, { site, allowHosts = [] } = {}) {
       controls: { before: controlsBefore, after: controlsAfter },
       remainingFields: remaining?.fields ?? null,
       accountFields: remaining?.accountFields ?? null,
+      defaultFields: remaining?.defaultFields ?? null,
       saved: remaining ? remaining.saved : null,
     };
   };
@@ -319,6 +328,61 @@ export async function resetPage(page, { site, allowHosts = [] } = {}) {
   }
 }
 
+// Runs fn while every other application tab (not the one being driven) gets
+// keepAlivePage every `everyMinutes`. Results are appended to fn's result as
+// `keepalive`; errors are recorded, never thrown. 0 minutes: just fn.
+export async function withKeepalive(
+  context,
+  page,
+  fn,
+  { everyMinutes = 10, thresholdMinutes = 30 } = {},
+) {
+  if (!everyMinutes) return fn();
+  const log = [];
+  let running = false;
+  const tick = async () => {
+    for (const p of httpPages(context)) {
+      if (p === page) continue;
+      let path;
+      try {
+        path = new URL(p.url()).pathname;
+      } catch {
+        continue;
+      }
+      if (!APPLICATION_PATH.test(path)) continue;
+      const result = await keepAlivePage(p, { thresholdMinutes }).catch(
+        (error) => ({
+          action: "error",
+          code: error?.code ?? "keepalive-error",
+        }),
+      );
+      log.push({
+        at: new Date().toISOString(),
+        tab: brief(p.url()),
+        action: result.action,
+        ...(result.code ? { code: result.code } : {}),
+      });
+    }
+  };
+  const timer = setInterval(() => {
+    if (running) return;
+    running = true;
+    tick()
+      .catch(() => {})
+      .finally(() => {
+        running = false;
+      });
+  }, everyMinutes * 60000);
+  try {
+    const result = await fn();
+    return result && typeof result === "object" && !Array.isArray(result)
+      ? { ...result, keepalive: log }
+      : result;
+  } finally {
+    clearInterval(timer);
+  }
+}
+
 // Clicks one of the extension panel's controls. A failure becomes a coded
 // error: Playwright's message would quote the page.
 async function press(locator, code, signal, review = null) {
@@ -344,24 +408,39 @@ export async function serviceWorkerControlled(page) {
 }
 
 // Blocks every write the page sends except read-only lookups (requests.mjs).
-// The log is counted per method, host and path.
+// The log is counted per method, host and path. recordSaves (test-account
+// runs): the bodies of blocked save-like writes to the tab's own host are
+// kept in memory (requests.mjs savePayload) and returned by saves().
 export async function blockWrites(
   page,
-  { allowHosts = [], saveHost = null } = {},
+  { allowHosts = [], saveHost = null, recordSaves = false } = {},
 ) {
   const counts = {};
+  const saves = [];
+  let tabHost = null;
+  try {
+    tabHost = new URL(page.url()).host;
+  } catch {
+    tabHost = null;
+  }
   const handler = (route) => {
     const r = route.request();
-    const verdict = classifyRequest(
-      {
-        method: r.method(),
-        url: r.url(),
-        headers: r.headers(),
-        postData: r.postData(),
-      },
-      { allowHosts, saveHost },
-    );
+    const request = {
+      method: r.method(),
+      url: r.url(),
+      headers: r.headers(),
+      postData: r.postData(),
+    };
+    const verdict = classifyRequest(request, { allowHosts, saveHost });
     if (verdict.log) counts[verdict.log] = (counts[verdict.log] ?? 0) + 1;
+    if (verdict.action === "block" && recordSaves && tabHost) {
+      try {
+        const payload = savePayload(request, { tabHost });
+        if (payload) saves.push(payload);
+      } catch {
+        // A malformed body is not recorded.
+      }
+    }
     return (
       verdict.action === "block" ? route.abort() : route.continue()
     ).catch(() => {});
@@ -372,6 +451,7 @@ export async function blockWrites(
       Object.entries(counts).map(([line, n]) =>
         n > 1 ? `${line} x${n}` : line,
       ),
+    saves: () => saves.slice(),
     release: () => page.unroute("**/*", handler).catch(() => {}),
   };
 }
@@ -437,7 +517,8 @@ export function callInPage(target, fn, ...args) {
 
 // Frames are keyed "main" or "<origin+path>#<n>" (n-th frame with that URL),
 // so same-URL iframes never share fingerprints. Control indexes run across
-// all frames, so `i` is unique on the page.
+// all frames, so `i` is unique on the page (companionOf follows the same
+// numbering). `regions` asks the main frame for its capture regions.
 export async function framesCensus(
   page,
   {
@@ -447,6 +528,7 @@ export async function framesCensus(
     salt = "",
     includeHidden = false,
     recordValues = false,
+    regions = false,
   } = {},
 ) {
   const frames = [];
@@ -473,6 +555,7 @@ export async function framesCensus(
       known: known && !ambiguous ? (known[key] ?? null) : null,
       recordValues,
       identityPattern: recordValues ? IDENTITY_FIELD.source : null,
+      regions: regions && main,
     };
     const r = await bounded(
       callInPage(
@@ -484,7 +567,15 @@ export async function framesCensus(
       EVALUATE_MS,
     );
     if (r && r.controls.length) {
-      for (const c of r.controls) c.i += offset;
+      for (const c of r.controls) {
+        c.i += offset;
+        if (c.companionOf !== undefined) c.companionOf += offset;
+      }
+      if (r.regions) {
+        for (const s of r.regions.sections)
+          s.controls = s.controls.map((i) => i + offset);
+        for (const c of r.regions.unsectioned) c.i += offset;
+      }
       offset += r.controls.length;
       frames.push({ frame: url, key, main, ...r });
     }
@@ -803,6 +894,97 @@ export async function discardPage(page, { dialogs = null } = {}) {
   }
 }
 
+// Capture plan from the main frame's census regions (census.mjs `regions`):
+// one clip per section container, chunks of `chunk` px for controls outside
+// any section (the whole document when no section was found), and sections
+// taller than maxHeight split into numbered pieces. Clips stay inside the
+// document. Pure, so the layout rules are testable without a browser.
+export function planCaptures(regions, { chunk = 1200, maxHeight = 4000 } = {}) {
+  if (!regions) return [];
+  const width = Math.max(1, Math.round(regions.document?.width ?? 0));
+  const height = Math.max(1, Math.round(regions.document?.height ?? 0));
+  const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
+  const out = [];
+  const push = (name, rect, controls) => {
+    const x = clamp(Math.round(rect.left), 0, width - 1);
+    const y = clamp(Math.round(rect.top), 0, height - 1);
+    const w = clamp(
+      Math.round(rect.width) - (x - Math.round(rect.left)),
+      1,
+      width - x,
+    );
+    const h = clamp(
+      Math.round(rect.height) - (y - Math.round(rect.top)),
+      1,
+      height - y,
+    );
+    out.push({ name, clip: { x, y, width: w, height: h }, controls });
+  };
+  const sections = (regions.sections ?? []).filter(
+    (s) => s.rect && s.rect.width > 0 && s.rect.height > 0,
+  );
+  sections.forEach((s, n) => {
+    const name = s.name || `section ${n + 1}`;
+    const pieces = Math.ceil(s.rect.height / maxHeight);
+    for (let k = 0; k < pieces; k++)
+      push(
+        pieces > 1 ? `${name} (${k + 1})` : name,
+        {
+          left: s.rect.left,
+          top: s.rect.top + k * maxHeight,
+          width: s.rect.width,
+          height: Math.min(maxHeight, s.rect.height - k * maxHeight),
+        },
+        s.controls ?? [],
+      );
+  });
+  const loose = regions.unsectioned ?? [];
+  if (!sections.length || loose.length) {
+    const chunks = Math.ceil(height / chunk);
+    for (let k = 0; k < chunks; k++) {
+      const top = k * chunk;
+      const controls = loose
+        .filter((c) => c.top >= top && c.top < top + chunk)
+        .map((c) => c.i);
+      if (sections.length && !controls.length) continue;
+      push(
+        `step ${k + 1}`,
+        { left: 0, top, width, height: Math.min(chunk, height - top) },
+        controls,
+      );
+    }
+  }
+  return out;
+}
+
+// Writes one PNG per planned clip into captureDir (0700, files 0600) and
+// returns the run.json `captures` contract: paths relative to the out dir.
+async function captureSections(page, frames, captureDir) {
+  const plan = planCaptures(frames.find((f) => f.main)?.regions ?? null);
+  if (!plan.length)
+    throw coded("no-capture-regions", "No region to capture was found.");
+  await mkdir(captureDir, { recursive: true, mode: 0o700 });
+  await chmod(captureDir, 0o700);
+  const dir = basename(captureDir);
+  const captures = [];
+  for (const [k, c] of plan.entries()) {
+    const file = `${String(k + 1).padStart(2, "0")}.png`;
+    const buffer = await page.screenshot({
+      clip: c.clip,
+      fullPage: true,
+      timeout: 20000,
+    });
+    await writeFile(join(captureDir, file), buffer, { mode: 0o600 });
+    captures.push({
+      file: `${dir}/${file}`,
+      name: c.name,
+      frame: "main",
+      controls: c.controls,
+    });
+  }
+  return captures;
+}
+
 export async function runPage(
   page,
   {
@@ -814,8 +996,11 @@ export async function runPage(
     build = null,
     signal = null,
     profile = null,
-    // Test-account mode: values are recorded (identity fields masked).
+    // Test-account mode: values are recorded (identity fields masked), the
+    // bodies of blocked save requests are kept, and section captures are
+    // written to captureDir (absolute; null disables captures).
     recordValues = false,
+    captureDir = null,
   },
 ) {
   if (await serviceWorkerControlled(page))
@@ -834,7 +1019,11 @@ export async function runPage(
   };
   const dialogs = claimDialogs(page);
   page.on("console", onConsole);
-  const blocking = await blockWrites(page, { allowHosts });
+  const blocking = await blockWrites(page, {
+    allowHosts,
+    recordSaves: recordValues,
+  });
+  const capturing = recordValues && Boolean(captureDir);
   const started = Date.now();
   let error = null;
   let review = null;
@@ -845,6 +1034,8 @@ export async function runPage(
   let initial = [];
   let session = null;
   let stepBefore = null;
+  let captures = null;
+  let captureError = null;
   try {
     // A long round must not run into a session timeout.
     session = await keepAlivePage(page).catch(() => null);
@@ -883,10 +1074,22 @@ export async function runPage(
       synthetic,
       salt,
       recordValues,
+      regions: capturing,
     });
+    // Captures come right after the census, before the discard, with the
+    // guard still armed and writes still blocked. A capture failure is
+    // recorded and never fails the run. An interrupted run skips them.
+    if (capturing && !signal?.aborted) {
+      try {
+        captures = await captureSections(page, after, captureDir);
+      } catch (e) {
+        captureError = { code: safeError(e, "capture-failed").code };
+      }
+    }
   } catch (e) {
     error = error ?? safeError(e);
   }
+  for (const f of after) delete f.regions;
   // Cleanup always runs: read the panel and guard, then discard while writes
   // are still blocked and the guard is still armed, then disarm and unblock.
   const panel = await bounded(page.evaluate(panelState), EVALUATE_MS);
@@ -939,5 +1142,21 @@ export async function runPage(
     before: stripFingerprints(before),
     after: stripFingerprints(after),
     console: consoleLines,
+    // Test accounts only: the values the site would have stored (identity
+    // fields masked) and the section captures.
+    ...(recordValues
+      ? {
+          savePayloads: blocking.saves().map((s) => ({
+            path: s.path,
+            fieldCount: Object.keys(s.fields).length,
+            fields: maskFields(s.fields, IDENTITY_FIELD),
+          })),
+        }
+      : {}),
+    ...(capturing
+      ? captureError
+        ? { captureError }
+        : { captures: captures ?? [] }
+      : {}),
   };
 }

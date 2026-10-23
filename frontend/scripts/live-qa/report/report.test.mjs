@@ -202,6 +202,40 @@ describe("joinResults", () => {
       written: null,
     });
   });
+
+  it("passes siteDefault and companionOf through from the post-run census", () => {
+    const final = {
+      controls: [
+        { i: 0, category: "AUTOFILLABLE", profileKey: "p", expected: "A" },
+      ],
+    };
+    const run = {
+      testAccount: true,
+      after: frames([
+        control(0, "langCd", { hasValue: true, siteDefault: true }),
+        control(1, "langNm", {
+          type: "hidden",
+          hidden: true,
+          hasValue: true,
+          companionOf: 0,
+          added: true,
+        }),
+      ]),
+    };
+    const joined = joinResults({
+      label: "x",
+      final,
+      census: frames([control(0, "langCd")]),
+      run,
+    });
+    expect(joined.rows[0]).toMatchObject({ siteDefault: true });
+    expect(joined.rows[0].companionOf).toBeUndefined();
+    expect(joined.addedOrUnmatchedAfterControls[0]).toMatchObject({
+      name: "langNm",
+      siteDefault: false,
+      companionOf: 0,
+    });
+  });
 });
 
 // Totals agree with the items: 10 AUTOFILLABLE rows, 3 of them not correct.
