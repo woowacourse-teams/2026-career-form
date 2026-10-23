@@ -807,3 +807,11 @@
 - 승인된 지식 후보 세 교훈과 실측 수치를 [CF-314 bundle](../raw/issues/CF-314/manifest.md)에 기록하고 CF-173 평가 계약 1.1 측정 절차를 이 topic의 현재 근거로 대체했다.
 - [실사이트 자동 입력 평가 워크플로우](topics/live-autofill-evaluation.md)의 Current와 History를 갱신하고 가시 칸 두 시점 측정, 단계별 지표 분리, 숨은 중복 칸 판정을 반영했다.
 - 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.
+
+## [2026-10-23] ingest | CF-327 배포 정책 Wiki 통합 정리
+
+- Approval-Digest: 460019c1c58c3248f460202a9b0e81f8fa783ffef0981abc96f7bccb2ae237f0
+- Source-Revision: 82bcb5cd7e384096ee9b6f70e7f71803ed561af6
+- 승인된 후보 6개를 [CF-327 bundle](../raw/issues/CF-327/manifest.md)에 기록하고 승인 후보 스냅샷의 SHA-256을 확인했다.
+- [배포 Runbook](topics/deployment-runbook.md), [CI/CD 설정](topics/cicd-setup.md), [Hplace 공통 어댑터](topics/adapter-hplace.md)의 Current와 History를 갱신하고 [확장 프로그램 릴리스](topics/extension-release.md), [확장·백엔드 호환 배포](topics/release-compatibility.md)를 신설했다.
+- workflow 11개와 infra 스크립트를 구현 기준으로 대조했고, 운영 host 주소·포트 값·시크릿 값·대화 전문은 저장하지 않았다.
