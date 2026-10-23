@@ -41,6 +41,11 @@
 - 허용 조합: `development:dev`, `staging:staging`, `production:prod`
 - 조정값(workflow는 설정하지 않음): `DEPLOY_STATE_DIR`, `READINESS_ATTEMPTS`, `READINESS_INTERVAL_SECONDS`, `READINESS_TIMEOUT_SECONDS`, `READINESS_REQUEST_TIMEOUT_SECONDS`, `DEPLOY_RUNNER_GROUP`
 
+## 유지하는 보관 규칙
+
+- 각 ARM64 self-hosted runner의 registration token은 일회성 값이며 저장소, 문서와 로그에 저장하지 않는다.
+- 실제 시크릿 값, MongoDB URI, 운영 host 주소는 이미지, 저장소, 문서, Issue·PR과 실행 로그에 저장하지 않는다. 이 문서도 변수와 시크릿의 이름만 기록한다.
+
 ## GitHub Environment 설정
 
 - deployment branch 제한: `development`=develop, `staging`=release/*, `production`=main
