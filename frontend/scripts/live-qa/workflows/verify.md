@@ -144,19 +144,19 @@ const judgePrompt = (label) => `실사이트 자동 기입 QA 판정. 자료:
 3. createdRowsExpected = rowExpansion의 extraRowsExpected 합, createdRowsObserved = 새로 생긴 행 수(새 칸들의 name 인덱스로 추정).
 4. preexistingValue=true이고 written이 null인 칸은 최종값이 실행 전부터 페이지에 있던 값과 같아서 개인정보 보호로 표시되지 않았다(changed 여부와 무관). 정답으로 추정하지 말고 UNVERIFIABLE로 하며 correct/wrong/missed 어디에도 세지 않는다. unverifiable = 그 칸 수. changed=false인 칸도 CORRECT가 될 수 없다: afterHasValue=true면 UNVERIFIABLE(사이트 기본값), false면 MISSED.
 5. addedOrUnmatchedAfterControls(새 행과 선택 뒤 드러난 칸)는 하나도 빠짐없이 본다. 각 칸에 대해 "프로필에 그 칸의 값이 있는가"를 행 위치와 섹션으로 판단하고, 있으면 분모에 넣는다: written이 있으면 EXTRA_CORRECT/EXTRA_WRONG, hasValue=false면 MISSED, hasValue=true인데 written=null이면 UNVERIFIABLE(마운트 기본값). 프로필에 값이 없는 칸(자기소개서, 파일, 지원경로 등)은 세지 않는다. 확장이 행을 만들었는지와 무관하게 같은 규칙을 쓴다(지난 측정에서 플랫폼마다 규칙이 달라 비교가 어긋났다).
-6. items에는 CORRECT를 제외한 모든 항목을 넣는다(ref는 "i=<번호> <name>" 또는 "new <name>"). 숫자 필드는 정확히 센다. autofillable = category가 AUTOFILLABLE인 칸 수(EXPECTATION_ERROR 포함).
+6. items에는 CORRECT를 제외한 모든 항목을 넣는다(ref는 "i=<번호> <name>" 또는 "new <name>"). EXTRA_CORRECT와 EXTRA_WRONG도 빠짐없이 items에 넣는다: 보고서는 숫자 필드가 아니라 items를 세므로 items에 없는 EXTRA_CORRECT는 0으로 집계된다. 숫자 필드는 정확히 센다. autofillable = category가 AUTOFILLABLE인 칸 수(EXPECTATION_ERROR 포함).
 7. 의도적 미지원(에이치닷 어학 응시일, 대학 계열, 복수·부전공 주야간 등)은 EXPECTATION_ERROR가 아니라 MISSED다. 정책 반영 입력률은 보고서가 따로 계산한다. 종속 select(언어를 고른 뒤 선택지가 로드되는 시험명·등급)도 AUTOFILLABLE이며 비어 있으면 MISSED다.
 8. 패널이 written=true로 표시해도 DOM 값이 비어 있으면 MISSED이고 note에 "panel-mismatch"를 적는다. 종료사유처럼 코드 select가 비어 있고 기타 자유입력 칸에만 값이 쓰였으면 select는 MISSED, 자유입력 쓰기는 세지 않고 note에 "substitute write"를 적는다.
 9. 날짜의 일 단위 손실(YYYY-MM-DD → YYYY.MM)은 CORRECT로 보되 note에 "precision"을 적는다.
 10. joined의 testAccount=true(테스트 계정 모드)면 written은 실행 전 값이 그대로 남은 칸에도 기록되고, rows에 beforeValue(초기화 뒤 실행 전 값)와 mountedAsIs(마운트 값 그대로)가 있다. 이때 규칙 4·5의 "written=null이면 UNVERIFIABLE"은 written이 "[account]"(계정 신원 칸)일 때만 적용한다. changed=true면 written을 값으로 판정한다. preexistingValue=true이고 changed=false이고 written이 expected와 같으면 확장이 쓴 것이 아니라 이미 있던 값이므로 CORRECT가 아니라 UNVERIFIABLE로 두고 note에 "already filled"를 적는다. mountedAsIs=true이고 changed=false인 새 칸은 행 템플릿 기본값이므로 같은 규칙이다.
 11. rows와 addedOrUnmatchedAfterControls의 siteDefault=true는 실행 후 값이 사이트 기본값(select의 첫 선택지·defaultSelected, 라디오·체크박스의 defaultChecked, 텍스트의 HTML 기본값)이라는 뜻이다. changed=false이고 siteDefault=true인 칸은 확장이 쓴 것이 아니므로 CORRECT가 아니라 UNVERIFIABLE로 두고 note에 "site-default"를 적는다. companionOf가 있는 숨은 칸(어학·자격 코드 칸의 이름 칸)은 보이는 칸과 짝이며, 보이는 칸이 CORRECT면 숨은 코드 칸은 따로 세지 않고 note에만 적는다.
-backend/policies, frontend/src/autofill 코드와 *policy* 파일은 읽지 마라. StructuredOutput으로 반환.`;
+backend/policies, frontend/src/autofill 코드와 *policy* 파일은 읽지 마라. 평가 브라우저나 실사이트에 붙지 마라(CDP, Playwright, curl 금지): 판정 근거는 위 파일뿐이다. StructuredOutput으로 반환.`;
 
 const challengePrompt = (
   label,
   j,
 ) => `다른 판정자가 ${label} 페이지의 자동 기입 결과를 판정했다. CORRECT가 아닌 항목들을 반박하라: 각 항목이 정말 오입력/누락/채점오류인지, 아니면 실제로는 올바른 값(형식 차이)이거나 판정자가 잘못 읽은 것인지 자료를 직접 열어 확인한다.
-자료: ${DIR}/${label}.joined.json, ${DIR}/${label}.final.json, ${DIR}/${label}.input.json, 프로필 ${PROFILE}. (backend/policies, frontend/src/autofill, *policy* 파일은 읽지 마라.)
+자료: ${DIR}/${label}.joined.json, ${DIR}/${label}.final.json, ${DIR}/${label}.input.json, 프로필 ${PROFILE}. (backend/policies, frontend/src/autofill, *policy* 파일은 읽지 마라. 평가 브라우저나 실사이트에 붙지 마라: CDP, Playwright, curl 금지. 근거는 위 파일과 캡처뿐이다.) EXTRA_CORRECT·EXTRA_WRONG 항목도 items에 그대로 남긴다.
 판정자 결과: ${JSON.stringify(j)}
 각 항목의 최종 kind를 다시 정하고 note에 근거를 남긴다. 판정자의 CORRECT 수가 틀렸다고 보이면 숫자도 고친다. 동일한 스키마로 최종 결과를 StructuredOutput으로 반환하라(숫자 필드는 최종 판정 기준으로 다시 센 값).`;
 

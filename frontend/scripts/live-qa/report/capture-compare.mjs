@@ -19,6 +19,22 @@ export function normalizeValue(value) {
   return text.replace(/[\s\-./]/g, "").toLowerCase();
 }
 
+// A select or input that still shows its prompt ("…을 선택하세요.") holds no
+// value: the capture judge may transcribe the prompt, the DOM judge sees "".
+export const PLACEHOLDER = /(선택|입력)\s*하세요\.?$|^선택$|^-+$/;
+export const isPlaceholder = (seen) =>
+  PLACEHOLDER.test(String(seen ?? "").trim());
+
+// Same value as far as the capture shows it: equal after normalization, or a
+// date the site displays with less precision (2007. 03 for 2007-03-01; rule
+// 9 of the judge already counts that as correct).
+export function sameValue(seen, expected) {
+  const a = normalizeValue(seen);
+  const b = normalizeValue(expected);
+  if (a === b) return true;
+  return /^\d{6}$/.test(a) && /^\d{8}$/.test(b) && b.startsWith(a);
+}
+
 // `grade/<label>.capture-input.json`: capture files (absolute) and the
 // expected values of AUTOFILLABLE controls. No DOM result goes in here.
 export function buildCaptureInput({ joined, captures, baseDir }) {
@@ -66,13 +82,14 @@ export function compareCaptures({ joined, verdict, captureVerdict }) {
       result.excluded++;
       continue;
     }
-    const seen = seenBy[r.i] ?? null;
-    if (seen === null) {
+    const raw = seenBy[r.i] ?? null;
+    if (raw === null) {
       result.notVisible++;
       continue;
     }
     result.compared++;
-    const same = normalizeValue(seen) === normalizeValue(r.expected);
+    const seen = isPlaceholder(raw) ? "" : raw;
+    const same = sameValue(seen, r.expected);
     const agrees =
       kind === "CORRECT"
         ? same

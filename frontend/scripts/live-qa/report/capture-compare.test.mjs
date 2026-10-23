@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   buildCaptureInput,
   compareCaptures,
+  isPlaceholder,
   normalizeValue,
+  sameValue,
 } from "./capture-compare.mjs";
 
 const row = (i, extra = {}) => ({
@@ -16,6 +18,33 @@ const row = (i, extra = {}) => ({
   written: `값${i}`,
   changed: true,
   ...extra,
+});
+
+describe("sameValue and isPlaceholder", () => {
+  it("accepts a date the site shows without the day and a select prompt as empty", () => {
+    expect(sameValue("2007. 03", "2007-03-01")).toBe(true);
+    expect(sameValue("2007. 04", "2007-03-01")).toBe(false);
+    expect(sameValue("서울 중구", "서울특별시 중구")).toBe(false);
+    expect(isPlaceholder("학과계열을 선택하세요.")).toBe(true);
+    expect(isPlaceholder("선택")).toBe(true);
+    expect(isPlaceholder("졸업")).toBe(false);
+  });
+
+  it("counts a placeholder as empty and a short date as the same value when comparing", () => {
+    const joined = {
+      rows: [row(1, { expected: "2007-03-01" }), row(2, { expected: "기타" })],
+    };
+    const verdict = { items: [{ ref: "i=2 x", kind: "MISSED" }] };
+    const result = compareCaptures({
+      joined,
+      verdict,
+      captureVerdict: [
+        { i: 1, seen: "2007. 03" },
+        { i: 2, seen: "학과계열을 선택하세요." },
+      ],
+    });
+    expect(result).toMatchObject({ compared: 2, agreed: 2, disagreements: [] });
+  });
 });
 
 describe("normalizeValue", () => {
