@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { classifyRequest } from "./requests.mjs";
+import { classifyRequest, maskFields, savePayload } from "./requests.mjs";
+import { IDENTITY_FIELD } from "./sites.mjs";
 
 const api = { allowHosts: ["43.202.185.36"] };
 const post = (url, extra = {}) => ({ method: "POST", url, ...extra });
@@ -176,7 +177,9 @@ describe("classifyRequest with saveHost (test-account reset)", () => {
     );
     expect(
       classifyRequest(
-        post("https://gsenc.recruiter.co.kr/mrs2/applicant/resume/tempSave?draft=1"),
+        post(
+          "https://gsenc.recruiter.co.kr/mrs2/applicant/resume/tempSave?draft=1",
+        ),
         reset,
       ).action,
     ).toBe("allow");
@@ -206,5 +209,119 @@ describe("classifyRequest with saveHost (test-account reset)", () => {
       classifyRequest(post("https://www.google-analytics.com/g/collect"), reset)
         .action,
     ).toBe("block");
+  });
+});
+
+describe("savePayload (test-account save body recording)", () => {
+  const tab = { tabHost: "www.skcareers.com" };
+  const save = (extra) =>
+    savePayload(
+      {
+        method: "POST",
+        url: "https://www.skcareers.com/Application/ApplicationSave?x=1",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        ...extra,
+      },
+      tab,
+    );
+
+  it("parses a form-encoded body of a save request to the tab's host", () => {
+    expect(
+      save({ postData: "name=%EC%8B%A4%EC%A0%9C&school=가상대&school=둘" }),
+    ).toEqual({
+      path: "https://www.skcareers.com/Application/ApplicationSave",
+      fields: { name: "실제", school: "가상대 | 둘" },
+    });
+  });
+
+  it("parses one level of a JSON body", () => {
+    expect(
+      save({
+        headers: { "content-type": "application/json" },
+        postData:
+          '{"email":"a@b.test","n":3,"ok":true,"nested":{"x":1},"none":null}',
+      }).fields,
+    ).toEqual({
+      email: "a@b.test",
+      n: "3",
+      ok: "true",
+      nested: "[nested]",
+      none: "",
+    });
+    expect(save({ headers: {}, postData: "[1,2]" }).fields).toEqual({});
+  });
+
+  it("records only POST/PUT save-like paths on the tab's host", () => {
+    expect(save({ method: "GET" })).toBeNull();
+    expect(
+      savePayload(
+        {
+          method: "POST",
+          url: "https://www.skcareers.com/Application/SchoolList",
+          postData: "q=x",
+        },
+        tab,
+      ),
+    ).toBeNull();
+    expect(
+      savePayload(
+        {
+          method: "PUT",
+          url: "https://www.skcareers.com/api/draft",
+          postData: "a=1",
+        },
+        tab,
+      ),
+    ).toMatchObject({ fields: { a: "1" } });
+    expect(
+      savePayload(
+        {
+          method: "POST",
+          url: "https://www.skcareers.com/api/x?mode=tempStore",
+          postData: "a=1",
+        },
+        tab,
+      ),
+    ).toMatchObject({ fields: { a: "1" } });
+    expect(
+      savePayload(
+        {
+          method: "POST",
+          url: "https://other.example/Application/ApplicationSave",
+          postData: "a=1",
+        },
+        tab,
+      ),
+    ).toBeNull();
+    expect(save({ postData: null })).toEqual({
+      path: "https://www.skcareers.com/Application/ApplicationSave",
+      fields: {},
+    });
+  });
+
+  it("truncates long values", () => {
+    const long = "a".repeat(500);
+    expect(save({ postData: `intro=${long}` }).fields.intro).toHaveLength(200);
+  });
+});
+
+describe("maskFields", () => {
+  it("replaces values of identity fields with [account]", () => {
+    expect(
+      maskFields(
+        {
+          prsEmail: "a@b.test",
+          성명: "실제",
+          schoolName: "가상대",
+          intro: "x",
+        },
+        IDENTITY_FIELD,
+      ),
+    ).toEqual({
+      prsEmail: "[account]",
+      성명: "[account]",
+      schoolName: "가상대",
+      intro: "x",
+    });
   });
 });

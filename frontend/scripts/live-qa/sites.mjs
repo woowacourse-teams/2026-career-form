@@ -37,7 +37,8 @@ export const SITES = [
       selector: "button.btnTempSave, a.btnTempSave",
       caption: "^임시\\s*저장$",
       confirm: {
-        selector: "#temporarySavePopup #btnPopClose, #systemConfirmPopup_Confirm",
+        selector:
+          "#temporarySavePopup #btnPopClose, #systemConfirmPopup_Confirm",
         caption: "^(?:확인|승인\\s*완료)$",
       },
     },
@@ -48,7 +49,10 @@ export const SITES = [
     tempSave: {
       selector: "button.tmpBtn",
       caption: "^임시\\s*저장$",
-      confirm: { selector: '[data-button="ok"], .btn.btn-primary', caption: "^확인$" },
+      confirm: {
+        selector: '[data-button="ok"], .btn.btn-primary',
+        caption: "^확인$",
+      },
     },
   },
   // Greeting keeps no server draft: nothing to reset.

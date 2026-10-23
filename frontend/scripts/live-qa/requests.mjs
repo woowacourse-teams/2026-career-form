@@ -148,3 +148,65 @@ export function classifyRequest(
   }
   return block("not-allowlisted");
 }
+
+// Test-account runs only: the body of a blocked save-like write (POST/PUT to
+// the tab's own host whose path or query mentions save/temp/draft/store),
+// as {name: value} one level deep, so the values the site would have stored
+// can be compared with what the DOM shows. Values are cut at 200 characters.
+export const SAVE_PATH = /save|temp|draft|store/i;
+const VALUE_LIMIT = 200;
+
+export function savePayload(
+  { method, url, headers = {}, postData = null },
+  { tabHost },
+) {
+  const verb = String(method).toUpperCase();
+  if (verb !== "POST" && verb !== "PUT") return null;
+  const u = new URL(url);
+  if (u.host !== tabHost) return null;
+  let query = u.search;
+  try {
+    query = decodeURIComponent(query);
+  } catch {
+    // Malformed escapes: test the raw query.
+  }
+  if (!SAVE_PATH.test(u.pathname) && !SAVE_PATH.test(query)) return null;
+  const path = u.origin + u.pathname;
+  const fields = {};
+  if (typeof postData !== "string" || postData === "") return { path, fields };
+  const type = String(
+    Object.entries(headers).find(
+      ([k]) => k.toLowerCase() === "content-type",
+    )?.[1] ?? "",
+  ).toLowerCase();
+  const cut = (v) => String(v).slice(0, VALUE_LIMIT);
+  if (type.includes("json") || /^\s*[{[]/.test(postData)) {
+    let parsed;
+    try {
+      parsed = JSON.parse(postData);
+    } catch {
+      return { path, fields };
+    }
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed))
+      for (const [k, v] of Object.entries(parsed))
+        fields[k] =
+          v === null || v === undefined
+            ? ""
+            : typeof v === "object"
+              ? "[nested]"
+              : cut(v);
+    return { path, fields };
+  }
+  for (const [k, v] of new URLSearchParams(postData))
+    fields[k] = k in fields ? cut(`${fields[k]} | ${v}`) : cut(v);
+  return { path, fields };
+}
+
+// Values of fields whose name matches `pattern` (the account identity
+// fields) are replaced with "[account]".
+export function maskFields(fields, pattern) {
+  const out = {};
+  for (const [k, v] of Object.entries(fields ?? {}))
+    out[k] = pattern.test(k) ? "[account]" : v;
+  return out;
+}
