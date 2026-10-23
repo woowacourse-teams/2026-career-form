@@ -827,7 +827,7 @@
 ## [2026-10-23] ingest | CF-323 릴리스 시작 기준 커밋 선택
 
 - Approval-Digest: 657002f335f7ca06d16eeec0d7e8b4c8e669da4b86130cf31ec5afafcf2aee92
-- Source-Revision: ff7a160f54bcee86a9e66caf46b260cc1b69caf7
-- 승인된 후보 1개를 [CF-323 bundle](../raw/issues/CF-323/manifest.md)에 기록하고 CF-41 배포 Runbook의 Start release 기준 커밋 선택을 대체했다.
-- [배포 Runbook](topics/deployment-runbook.md)의 History와 현재 상태에 Start release 기준 커밋 선택을 반영했다. Current는 CF-327을 유지했다.
+- Source-Revision: 576973c
+- 승인된 후보 1개를 [CF-323 bundle](../raw/issues/CF-323/manifest.md)에 기록하고 CF-327 운영 배포 파이프라인 근거 위에 Start release 기준 커밋 선택을 얹었다.
+- [배포 Runbook](topics/deployment-runbook.md)의 Current를 CF-323으로 바꾸고 CF-327을 History에 남겼다. 현재 상태에 Start release 기준 커밋 선택을 반영했다.
 - 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.

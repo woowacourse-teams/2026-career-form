@@ -2,13 +2,13 @@
 
 > Topic: deployment-runbook
 > Status: Current
-> Current: [CF-327 운영 배포 파이프라인 근거](../../raw/issues/CF-327/documents/deployment-pipeline.md)
+> Current: [CF-323 릴리스 시작 기준 커밋 선택](../../raw/issues/CF-323/documents/start-release-base-commit.md)
 > History: [근거 1](../../raw/issues/CF-41/documents/docs/operations/deployment-runbook.md); [CF-327 운영 배포 파이프라인 근거](../../raw/issues/CF-327/documents/deployment-pipeline.md); [CF-323 릴리스 시작 기준 커밋 선택](../../raw/issues/CF-323/documents/start-release-base-commit.md)
 > Updated: 2026-10-23
 
 ## 현재 상태
 
-운영 배포의 정본은 `.github/workflows/deploy-production.yml`과 `infra/scripts/*`의 구현이다. main push는 head ref로 분류한다. `release/<ver>`는 PR head tree와 main merge tree가 같아야 하고 staging이 push한 `<image>:<head sha>`의 digest를 재빌드 없이 재사용하며, 그 tag가 없으면 실패한다. 성공하면 annotated `v<ver>` tag를 만들고 release head가 develop 조상이 아니면 `[Release] <ver> 개발선 동기화` PR을 만든다. `hotfix/CF-*`는 main sha로 새 ARM64 이미지를 빌드해 직접 배포하고 main→develop(활성 release가 있으면 main→release) PR을 만들며 tag는 만들지 않는다. `revert/*` 병합은 image·deploy를 skip해 재배포하지 않는다. `deploy.sh`는 current-digest로 자동 rollback한 뒤에도 exit 1이라 `revert/<main-sha>` Draft PR이 생성되고, rollback 실패는 로그 문자열로만 구분된다.
+운영 배포 파이프라인은 [CF-327 근거](../../raw/issues/CF-327/documents/deployment-pipeline.md)를 따른다. 운영 배포의 정본은 `.github/workflows/deploy-production.yml`과 `infra/scripts/*`의 구현이다. main push는 head ref로 분류한다. `release/<ver>`는 PR head tree와 main merge tree가 같아야 하고 staging이 push한 `<image>:<head sha>`의 digest를 재빌드 없이 재사용하며, 그 tag가 없으면 실패한다. 성공하면 annotated `v<ver>` tag를 만들고 release head가 develop 조상이 아니면 `[Release] <ver> 개발선 동기화` PR을 만든다. `hotfix/CF-*`는 main sha로 새 ARM64 이미지를 빌드해 직접 배포하고 main→develop(활성 release가 있으면 main→release) PR을 만들며 tag는 만들지 않는다. `revert/*` 병합은 image·deploy를 skip해 재배포하지 않는다. `deploy.sh`는 current-digest로 자동 rollback한 뒤에도 exit 1이라 `revert/<main-sha>` Draft PR이 생성되고, rollback 실패는 로그 문자열로만 구분된다.
 
 Start release는 선택 입력 `ref`를 비우면 `develop` HEAD를, 채우면 `develop` 이력 안의 커밋 SHA를 release 기준으로 사용하고 기준 출처와 전체 SHA를 릴리스 Draft PR 본문에 기록한다. develop 조상이 아닌 커밋, 모호한 짧은 SHA, SHA가 아닌 값은 브랜치 생성 전에 거부한다. QA가 끝난 뒤 develop이 앞서 나가도 QA를 거친 커밋으로 release 후보를 고정할 수 있다([CF-323 근거](../../raw/issues/CF-323/documents/start-release-base-commit.md)).
 
