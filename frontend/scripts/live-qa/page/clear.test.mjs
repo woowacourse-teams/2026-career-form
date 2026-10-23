@@ -189,3 +189,39 @@ describe("clearForm protection and widgets", () => {
     expect(clearForm({ ignoreLayout: true }).widgetsLeft).toBe(3);
   });
 });
+
+describe("clearForm dry run and site defaults", () => {
+  it("lists fields that only hold the site's default apart from saved ones", () => {
+    document.body.innerHTML = `
+      <form>
+        <label><input type="radio" name="mil" value="N" checked>비대상</label>
+        <label><input type="radio" name="mil" value="Y">대상</label>
+        <select name="first"><option value="A">첫</option><option value="B">둘</option></select>
+        <select name="chosen"><option value="">선택</option><option value="B">둘</option></select>
+        <input name="nation" value="대한민국">
+        <input name="school" value="">
+      </form>`;
+    document.querySelector('[name="chosen"]').value = "B";
+    document.querySelector('[name="school"]').value = "저장된학교";
+    const counts = clearForm({ ignoreLayout: true, dryRun: true });
+    expect(counts.fields).toEqual([
+      "first",
+      "chosen",
+      "nation",
+      "school",
+      "mil",
+    ]);
+    expect(counts.defaultFields).toEqual(["first", "nation", "mil"]);
+    expect(JSON.stringify(counts)).not.toContain("저장된학교");
+  });
+
+  it("never treats a hidden row id as a default", () => {
+    document.body.innerHTML = `
+      <form id="frm"><section class="writeResume" data-code="141">
+        <input type="hidden" name="college[0].academyActivitySn" value="9">
+      </section></form>`;
+    const counts = clearForm({ ignoreLayout: true, dryRun: true });
+    expect(counts.fields).toEqual(["college[0].academyActivitySn"]);
+    expect(counts.defaultFields).toEqual([]);
+  });
+});

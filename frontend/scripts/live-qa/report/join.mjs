@@ -61,6 +61,9 @@ export function joinResults({ label, final, census, run }) {
       // The value after the run was already on the page before it. Outside
       // test-account mode it is not shown, so the judge cannot compare it.
       preexistingValue: Boolean(ac?.preexisting),
+      // The value after the run is the one the site's HTML gave the control.
+      siteDefault: Boolean(ac?.siteDefault),
+      ...(ac?.companionOf !== undefined ? { companionOf: ac.companionOf } : {}),
       ...(run.testAccount
         ? {
             beforeValue: before[k]?.shown ?? null,
@@ -78,6 +81,8 @@ export function joinResults({ label, final, census, run }) {
       label: (c.label ?? "").slice(0, 60),
       written: c.shown ?? null,
       hasValue: Boolean(c.hasValue),
+      siteDefault: Boolean(c.siteDefault),
+      ...(c.companionOf !== undefined ? { companionOf: c.companionOf } : {}),
       ...(run.testAccount ? { mountedAsIs: Boolean(c.mountedAsIs) } : {}),
     }));
   return {

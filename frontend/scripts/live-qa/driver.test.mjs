@@ -29,6 +29,30 @@ describe("framesCensus", () => {
       return { url, title: "", controls: [{ i: 0, key: "k", fp: "f" }] };
     },
   });
+  it("offsets companionOf along with the control numbers of later frames", async () => {
+    const make = (url) => ({
+      url: () => url,
+      evaluate: async () => ({
+        url,
+        title: "",
+        controls: [
+          { i: 0, key: "a", fp: "" },
+          { i: 1, key: "b", fp: "", hidden: true, companionOf: 0 },
+        ],
+      }),
+    });
+    const main = make("https://x.example/a");
+    const page = {
+      mainFrame: () => main,
+      frames: () => [main, make("https://x.example/q")],
+    };
+    const frames = await framesCensus(page, { salt: "s" });
+    expect(frames[1].controls.map((c) => [c.i, c.companionOf])).toEqual([
+      [2, undefined],
+      [3, 2],
+    ]);
+  });
+
   it("numbers controls across frames and gives same-URL frames no known values", async () => {
     const calls = [];
     const main = frame("https://x.example/a", calls);
@@ -118,6 +142,42 @@ describe("savedData", () => {
       text: 2,
       fields: ["email", "tel"],
       accountFields: ["email", "tel"],
+      defaultFields: [],
     });
+  });
+
+  it("does not count fields that only hold the site's default as saved", async () => {
+    const dry = {
+      text: 1,
+      select: 1,
+      radioGroups: 1,
+      fields: ["email", "nation", "mil"],
+      defaultFields: ["nation", "mil"],
+    };
+    const frame = {
+      url: () => "https://x.example/Application/Index/R1",
+      evaluate: async (x) =>
+        typeof x === "string"
+          ? dry
+          : x.toString().includes("serviceWorker")
+            ? false
+            : { formPresent: false },
+    };
+    const page = {
+      ...frame,
+      mainFrame: () => frame,
+      frames: () => [frame],
+      on: () => {},
+      off: () => {},
+      route: async () => {},
+      unroute: async () => {},
+    };
+    await expect(savedData(page)).resolves.toMatchObject({
+      saved: false,
+      savedAny: true,
+      defaultFields: ["nation", "mil"],
+    });
+    dry.fields.push("school");
+    await expect(savedData(page)).resolves.toMatchObject({ saved: true });
   });
 });

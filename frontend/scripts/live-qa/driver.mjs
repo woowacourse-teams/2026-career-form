@@ -81,10 +81,12 @@ const SAVED_COUNTS = [
 
 // What a clear would remove from every frame (counts and control names, never
 // values). `accountFields` are the identity fields the site fills from the
-// login (name, email, phone): they come back after any reset, so `saved`
-// counts only the other fields.
+// login (name, email, phone): they come back after any reset. `defaultFields`
+// still hold the value their HTML gave them (the site's defaults, e.g. a
+// 비대상 radio or a select at its first option). `saved` counts only the
+// fields that are neither.
 async function dryClear(page) {
-  const merged = { fields: [] };
+  const merged = { fields: [], defaultFields: [] };
   for (const f of page.frames()) {
     const r = await bounded(
       callInPage(f, clearForm, { dryRun: true }).catch(() => null),
@@ -94,9 +96,12 @@ async function dryClear(page) {
     for (const [k, v] of Object.entries(r))
       if (typeof v === "number") merged[k] = (merged[k] ?? 0) + v;
     merged.fields.push(...(r.fields ?? []));
+    merged.defaultFields.push(...(r.defaultFields ?? []));
   }
   merged.accountFields = merged.fields.filter((n) => IDENTITY_FIELD.test(n));
-  const others = merged.fields.filter((n) => !IDENTITY_FIELD.test(n));
+  const others = merged.fields.filter(
+    (n) => !IDENTITY_FIELD.test(n) && !merged.defaultFields.includes(n),
+  );
   merged.savedAny = SAVED_COUNTS.some((k) => (merged[k] ?? 0) > 0);
   merged.saved = others.length > 0;
   return merged;
@@ -105,10 +110,10 @@ async function dryClear(page) {
 const hplaceForm = (page, st) =>
   Boolean(
     st?.formPresent &&
-      st.step &&
-      /\/mrs2\/applicant\/resume\/writeResume/i.test(
-        new URL(page.url()).pathname,
-      ),
+    st.step &&
+    /\/mrs2\/applicant\/resume\/writeResume/i.test(
+      new URL(page.url()).pathname,
+    ),
   );
 
 // Dry run of clearForm on every frame: what a clear would remove, as counts
@@ -117,7 +122,8 @@ const hplaceForm = (page, st) =>
 export async function savedData(page, { allowHosts = [] } = {}) {
   return onGuardedTab(page, { allowHosts }, async () => {
     const st = await bounded(page.evaluate(readStep), EVALUATE_MS);
-    if (!hplaceForm(page, st)) return { how: "page", ...(await dryClear(page)) };
+    if (!hplaceForm(page, st))
+      return { how: "page", ...(await dryClear(page)) };
     const origin = st.step;
     const steps = {};
     for (const n of [1, 2, 3]) {
@@ -279,6 +285,7 @@ export async function resetPage(page, { site, allowHosts = [] } = {}) {
       controls: { before: controlsBefore, after: controlsAfter },
       remainingFields: remaining?.fields ?? null,
       accountFields: remaining?.accountFields ?? null,
+      defaultFields: remaining?.defaultFields ?? null,
       saved: remaining ? remaining.saved : null,
     };
   };
@@ -437,7 +444,8 @@ export function callInPage(target, fn, ...args) {
 
 // Frames are keyed "main" or "<origin+path>#<n>" (n-th frame with that URL),
 // so same-URL iframes never share fingerprints. Control indexes run across
-// all frames, so `i` is unique on the page.
+// all frames, so `i` is unique on the page (companionOf follows the same
+// numbering). `regions` asks the main frame for its capture regions.
 export async function framesCensus(
   page,
   {
@@ -447,6 +455,7 @@ export async function framesCensus(
     salt = "",
     includeHidden = false,
     recordValues = false,
+    regions = false,
   } = {},
 ) {
   const frames = [];
@@ -473,6 +482,7 @@ export async function framesCensus(
       known: known && !ambiguous ? (known[key] ?? null) : null,
       recordValues,
       identityPattern: recordValues ? IDENTITY_FIELD.source : null,
+      regions: regions && main,
     };
     const r = await bounded(
       callInPage(
@@ -484,7 +494,15 @@ export async function framesCensus(
       EVALUATE_MS,
     );
     if (r && r.controls.length) {
-      for (const c of r.controls) c.i += offset;
+      for (const c of r.controls) {
+        c.i += offset;
+        if (c.companionOf !== undefined) c.companionOf += offset;
+      }
+      if (r.regions) {
+        for (const s of r.regions.sections)
+          s.controls = s.controls.map((i) => i + offset);
+        for (const c of r.regions.unsectioned) c.i += offset;
+      }
       offset += r.controls.length;
       frames.push({ frame: url, key, main, ...r });
     }

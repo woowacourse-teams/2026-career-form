@@ -2,7 +2,10 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { clickTempSave } from "./temp-save.mjs";
 
-const spec = { selector: "button.btnTempSave, a.btnTempSave", caption: "^임시\\s*저장$" };
+const spec = {
+  selector: "button.btnTempSave, a.btnTempSave",
+  caption: "^임시\\s*저장$",
+};
 const rect = (el, w) => {
   el.getBoundingClientRect = () => ({ width: w, height: w ? 20 : 0 });
 };
@@ -20,8 +23,13 @@ describe("clickTempSave", () => {
     rect(document.getElementById("final"), 80);
     const clicks = [];
     for (const id of ["top", "bottom", "final"])
-      document.getElementById(id).addEventListener("click", () => clicks.push(id));
-    expect(clickTempSave(spec)).toEqual({ clicked: true, caption: "임시 저장" });
+      document
+        .getElementById(id)
+        .addEventListener("click", () => clicks.push(id));
+    expect(clickTempSave(spec)).toEqual({
+      clicked: true,
+      caption: "임시 저장",
+    });
     expect(clicks).toEqual(["bottom"]);
   });
 
@@ -32,12 +40,18 @@ describe("clickTempSave", () => {
     document.getElementById("x").addEventListener("click", () => {
       clicked = true;
     });
-    expect(clickTempSave(spec)).toEqual({ clicked: false, code: "temp-save-missing" });
+    expect(clickTempSave(spec)).toEqual({
+      clicked: false,
+      code: "temp-save-missing",
+    });
     expect(clicked).toBe(false);
   });
 
   it("reports a hidden temp-save control", () => {
     document.body.innerHTML = `<button type="button" class="btnTempSave" id="x" style="display:none">임시저장</button>`;
-    expect(clickTempSave(spec)).toEqual({ clicked: false, code: "temp-save-hidden" });
+    expect(clickTempSave(spec)).toEqual({
+      clicked: false,
+      code: "temp-save-hidden",
+    });
   });
 });
