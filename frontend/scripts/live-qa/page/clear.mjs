@@ -24,7 +24,9 @@ export function clearForm(options) {
   const ignoreLayout = Boolean(options && options.ignoreLayout);
   const dry = Boolean(options && options.dryRun);
   const keep =
-    options && options.keepPattern ? new RegExp(options.keepPattern, "i") : null;
+    options && options.keepPattern
+      ? new RegExp(options.keepPattern, "i")
+      : null;
   const fields = [];
   const counts = {
     hiddenRowIds: 0,

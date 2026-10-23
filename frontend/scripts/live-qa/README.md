@@ -56,7 +56,15 @@
 이 하네스는 확장을 시험하는 도구이지 지원서를 쓰는 도구가 아니다. 그래서 로그인이 테스트 계정인 탭에서는 위의 값 은닉 규칙과 저장 금지를 일부 푼다. 어떤 탭이 테스트 계정인지는 사람이 `~/.career-form-live-eval/test-accounts.json`에 적는다.
 
 ```json
-{ "hosts": ["www.skcareers.com", "*.recruiter.co.kr", "talent.hyundai.com", "*.greetinghr.com", "recruit.kakaogames.com"] }
+{
+  "hosts": [
+    "www.skcareers.com",
+    "*.recruiter.co.kr",
+    "talent.hyundai.com",
+    "*.greetinghr.com",
+    "recruit.kakaogames.com"
+  ]
+}
 ```
 
 - `*.`로 시작하면 그 도메인과 하위 도메인, 아니면 호스트가 정확히 같아야 한다. 파일이 없거나 깨져 있으면 아무 탭도 테스트 계정이 아니다.

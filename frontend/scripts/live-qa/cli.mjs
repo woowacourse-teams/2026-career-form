@@ -51,6 +51,13 @@ import {
 } from "./report/aggregate.mjs";
 import { buildGradeInput } from "./report/grade-input.mjs";
 import { joinResults } from "./report/join.mjs";
+import {
+  formatPregradeLines,
+  loadStructureIndex,
+  reusePregrade,
+  saveStructureIndex,
+} from "./report/pregrade-reuse.mjs";
+import { structureHash } from "./report/structure-hash.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const frontend = resolve(here, "../..");
@@ -74,6 +81,7 @@ const VALUE_OPTIONS = [
   "max",
   "every",
   "threshold",
+  "reuse-from",
 ];
 const positional = rest.filter(
   (a, k) =>
@@ -325,7 +333,10 @@ const commands = {
       process.exitCode = 2;
       return;
     }
-    const result = await resetPage(page, { site: siteFor(page.url()), allowHosts });
+    const result = await resetPage(page, {
+      site: siteFor(page.url()),
+      allowHosts,
+    });
     print(result);
     if (!result.ok) process.exitCode = 1;
   },
@@ -511,15 +522,36 @@ const offline = {
     await writeFile(join(outDir, "grade/profile.synthetic.json"), content, {
       mode: 0o600,
     });
+    // --reuse-from dir1,dir2: earlier result directories whose
+    // grade/structure-index.json may hold a grading of the same structure.
+    const reuseDirs = opt("reuse-from", "")
+      .split(",")
+      .filter(Boolean)
+      .map((d) => resolve(d));
+    const index = await loadStructureIndex(outDir);
+    const results = [];
     for (const label of positional) {
       const frames = await readJson(join(outDir, `${label}.census.json`));
       const add = existsSync(join(outDir, `${label}.addbuttons.json`))
         ? await readJson(join(outDir, `${label}.addbuttons.json`))
         : [];
       const input = buildGradeInput(label, frames, add);
-      await writeJson(join(outDir, `grade/${label}.input.json`), input);
-      print(`${label} controls=${input.controlCount}`);
+      const hash = structureHash(input);
+      await writeJson(join(outDir, `grade/${label}.input.json`), {
+        ...input,
+        structureHash: hash,
+      });
+      const reuse = await reusePregrade({
+        outDir,
+        label,
+        hash,
+        index,
+        reuseDirs,
+      });
+      results.push({ label, controls: input.controlCount, hash, ...reuse });
     }
+    await saveStructureIndex(outDir, index);
+    for (const line of formatPregradeLines(results)) print(line);
   },
   async join() {
     for (const label of positional) {

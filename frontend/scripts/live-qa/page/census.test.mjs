@@ -368,10 +368,22 @@ describe("census", () => {
       const synthetic = [];
       const after = record(prior, { known, synthetic });
       const byName = Object.fromEntries(after.controls.map((c) => [c.name, c]));
-      expect(byName.name).toMatchObject({ preexisting: true, shown: "[account]" });
-      expect(byName.email).toMatchObject({ preexisting: true, shown: "[account]" });
-      expect(byName.school).toMatchObject({ preexisting: true, shown: "저장된학교" });
-      expect(byName.gender).toMatchObject({ preexisting: true, shown: "남 [v=M]" });
+      expect(byName.name).toMatchObject({
+        preexisting: true,
+        shown: "[account]",
+      });
+      expect(byName.email).toMatchObject({
+        preexisting: true,
+        shown: "[account]",
+      });
+      expect(byName.school).toMatchObject({
+        preexisting: true,
+        shown: "저장된학교",
+      });
+      expect(byName.gender).toMatchObject({
+        preexisting: true,
+        shown: "남 [v=M]",
+      });
       expect(JSON.stringify(after)).not.toMatch(/실제이름|real@example/);
     });
 
