@@ -5,6 +5,9 @@ import {
   AnalysisServiceError,
   RuntimeAnalysisApiClient,
 } from "./runtime-client";
+import type { GenericFieldsRequest, SectionClassifyRequest } from "./types";
+import type { InteractionDecisionRequest } from "./interaction-types";
+import { AnalysisContractError } from "./validate-response";
 
 const request: FieldsAnalyzeRequest = {
   schemaVersion: 2,
@@ -129,12 +132,274 @@ describe("RuntimeAnalysisApiClient", () => {
     expect(sendMessage).toHaveBeenCalledTimes(1);
   });
 
+  it("marks an unusable served execution policy as incompatible", async () => {
+    const site = { host: "a.example", pathPattern: "/" };
+    for (const response of [
+      { ok: false as const, code: "INVALID_RESPONSE" as const },
+      { ok: true as const, data: { executionPolicy: { schemaVersion: 99 } } },
+    ]) {
+      const client = new RuntimeAnalysisApiClient(vi.fn(async () => response));
+      await expect(client.loadExecutionPolicy(site)).rejects.toMatchObject({
+        code: "POLICY_INCOMPATIBLE",
+      });
+    }
+    const other = new RuntimeAnalysisApiClient(
+      vi.fn(async () => ({
+        ok: false as const,
+        code: "SERVER_ERROR" as const,
+      })),
+    );
+    await expect(other.loadExecutionPolicy(site)).rejects.toMatchObject({
+      code: undefined,
+    });
+  });
+
   it("rejects malformed background envelopes without exposing their contents", async () => {
     const sendMessage = vi.fn(async () => ({ secret: "raw server response" }));
     const client = new RuntimeAnalysisApiClient(sendMessage);
 
     await expect(client.analyzeFields(request)).rejects.toThrow(
       "분석 서버 응답을 확인할 수 없습니다.",
+    );
+  });
+
+  it.each([null, 200, "404"])(
+    "rejects invalid endpoint status metadata %s",
+    async (status) => {
+      const client = new RuntimeAnalysisApiClient(async () => ({
+        ok: false,
+        code: "BAD_REQUEST",
+        status,
+      }));
+
+      await expect(client.classifySections(classifyRequest)).rejects.toThrow(
+        "분석 서버 응답을 확인할 수 없습니다.",
+      );
+    },
+  );
+});
+
+const genericSite = { host: "example.test", pathPattern: "/apply" };
+const classifyRequest: SectionClassifyRequest = {
+  schemaVersion: 1,
+  snapshotId: "classify-1",
+  site: genericSite,
+  sections: [
+    {
+      sectionId: "secA",
+      labels: ["합성 라벨"],
+      controlKinds: ["TEXT"],
+      repeated: false,
+    },
+  ],
+};
+const genericFieldsRequest: GenericFieldsRequest = {
+  schemaVersion: 2,
+  snapshotId: "generic-1",
+  site: genericSite,
+  sections: [
+    {
+      sectionId: "secA",
+      category: "contact",
+      fields: [
+        {
+          candidateId: "c1",
+          element: "input",
+          control: "text",
+          visibility: "visible",
+        },
+      ],
+    },
+  ],
+};
+const structureRequest: InteractionDecisionRequest = {
+  schemaVersion: 2,
+  snapshotId: "structure-1",
+  site: genericSite,
+  decisions: [
+    {
+      decisionId: "addRow",
+      role: "REPEAT_ADD",
+      canonicalFieldKey: "careers.career.companyName",
+      candidates: [
+        {
+          candidateId: "addButton",
+          element: "button",
+          control: "button",
+          visibility: "visible",
+          relationToTarget: "SAME_CONTAINER",
+        },
+      ],
+    },
+    {
+      decisionId: "reveal",
+      role: "SECTION_REVEAL",
+      canonicalFieldKey: "careers.career.companyName",
+      candidates: [
+        {
+          candidateId: "revealButton",
+          element: "button",
+          control: "button",
+          visibility: "visible",
+          relationToTarget: "SAME_CONTAINER",
+        },
+      ],
+    },
+    {
+      decisionId: "kindMaster",
+      role: "ROW_KIND_OPTION",
+      targetKind: "MASTER",
+      canonicalFieldKey: "education.graduateSchool.schoolName",
+      candidates: [
+        {
+          candidateId: "optMaster",
+          element: "select",
+          control: "option",
+          visibility: "visible",
+          relationToTarget: "SAME_REPEAT_ROW",
+        },
+      ],
+    },
+  ],
+};
+
+const respond = (data: unknown) =>
+  vi.fn(async (_message: unknown) => ({ ok: true as const, data }));
+
+describe("RuntimeAnalysisApiClient generic endpoints", () => {
+  it("classifies sections through the generic message and validates the response", async () => {
+    const data = {
+      schemaVersion: 1,
+      snapshotId: "classify-1",
+      status: "COMPLETE",
+      sections: [{ sectionId: "secA", category: "education", confidence: 0.7 }],
+    };
+    const sendMessage = respond(data);
+    const client = new RuntimeAnalysisApiClient(sendMessage);
+
+    await expect(client.classifySections(classifyRequest)).resolves.toEqual(
+      data,
+    );
+    expect(sendMessage).toHaveBeenCalledWith({
+      type: "AUTOFILL_GENERIC_CLASSIFY_SECTIONS",
+      payload: classifyRequest,
+      qualityRun: expect.stringMatching(/^[0-9a-f]{32}$/),
+    });
+  });
+
+  it("rejects a section classification response outside the contract", async () => {
+    const client = new RuntimeAnalysisApiClient(
+      respond({
+        schemaVersion: 1,
+        snapshotId: "classify-1",
+        status: "COMPLETE",
+        sections: [
+          { sectionId: "secOther", category: "education", confidence: 0.7 },
+        ],
+      }),
+    );
+
+    await expect(client.classifySections(classifyRequest)).rejects.toThrow(
+      AnalysisContractError,
+    );
+  });
+
+  it("analyzes generic fields through the generic message and validates the response", async () => {
+    const data = {
+      schemaVersion: 3,
+      snapshotId: "generic-1",
+      status: "COMPLETE",
+      fields: [
+        {
+          candidateId: "c1",
+          profileFieldKey: "contact.contact.email",
+          confidence: 0.9,
+          categoryConfirmed: true,
+          autofillPolicy: "ALLOWED",
+          interactionStatus: "READY",
+          writePlan: { command: "SET_TEXT" },
+        },
+      ],
+      diagnostics: { jevCalls: 1, elapsedMs: 30 },
+    };
+    const sendMessage = respond(data);
+    const client = new RuntimeAnalysisApiClient(sendMessage);
+
+    await expect(
+      client.analyzeGenericFields(genericFieldsRequest),
+    ).resolves.toEqual(data);
+    expect(sendMessage).toHaveBeenCalledWith({
+      type: "AUTOFILL_GENERIC_ANALYZE_FIELDS",
+      payload: genericFieldsRequest,
+      qualityRun: expect.stringMatching(/^[0-9a-f]{32}$/),
+    });
+  });
+
+  it("rejects a generic fields response whose candidate ids do not match", async () => {
+    const client = new RuntimeAnalysisApiClient(
+      respond({
+        schemaVersion: 3,
+        snapshotId: "generic-1",
+        status: "COMPLETE",
+        fields: [
+          {
+            candidateId: "cOther",
+            profileFieldKey: null,
+            confidence: 0,
+            categoryConfirmed: false,
+            reason: "LLM_UNAVAILABLE",
+            interactionStatus: "BLOCKED",
+          },
+        ],
+        diagnostics: { jevCalls: 0, elapsedMs: 0 },
+      }),
+    );
+
+    await expect(
+      client.analyzeGenericFields(genericFieldsRequest),
+    ).rejects.toThrow(AnalysisContractError);
+  });
+
+  it("sends structure roles with targetKind through decideInteractions", async () => {
+    const data = {
+      schemaVersion: 2,
+      snapshotId: "structure-1",
+      status: "COMPLETE",
+      mode: "GENERIC",
+      decisions: [
+        {
+          decisionId: "addRow",
+          role: "REPEAT_ADD",
+          selection: "SELECTED",
+          candidateId: "addButton",
+        },
+        {
+          decisionId: "reveal",
+          role: "SECTION_REVEAL",
+          selection: "ABSTAINED",
+          candidateId: null,
+        },
+        {
+          decisionId: "kindMaster",
+          role: "ROW_KIND_OPTION",
+          selection: "SELECTED",
+          candidateId: "optMaster",
+        },
+      ],
+    };
+    const sendMessage = respond(data);
+    const client = new RuntimeAnalysisApiClient(sendMessage);
+
+    await expect(client.decideInteractions(structureRequest)).resolves.toEqual(
+      data,
+    );
+    expect(sendMessage).toHaveBeenCalledWith({
+      type: "AUTOFILL_DECIDE_INTERACTIONS",
+      payload: structureRequest,
+      qualityRun: expect.stringMatching(/^[0-9a-f]{32}$/),
+    });
+    expect(JSON.stringify(sendMessage.mock.calls[0]?.[0])).toContain(
+      '"targetKind":"MASTER"',
     );
   });
 });

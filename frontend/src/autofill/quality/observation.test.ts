@@ -87,14 +87,18 @@ describe("품질 관측의 로컬 값 검증과 비식별 보고", () => {
       expect(reports).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            payload: expect.objectContaining({
-              fields: {
-                c1: expect.objectContaining({
-                  written: false,
-                  retained: false,
+            payload: {
+              reports: expect.arrayContaining([
+                expect.objectContaining({
+                  fields: {
+                    c1: expect.objectContaining({
+                      written: false,
+                      retained: false,
+                    }),
+                  },
                 }),
-              },
-            }),
+              ]),
+            },
           }),
         ]),
       );
@@ -187,17 +191,21 @@ describe("품질 관측의 로컬 값 검증과 비식별 보고", () => {
       expect(messages).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            payload: expect.objectContaining({
-              fields: {
-                c1: {
-                  bound: true,
-                  attempted: true,
-                  written: true,
-                  retained: !lost,
-                  reason: lost ? "RETENTION_LOST" : null,
-                },
-              },
-            }),
+            payload: {
+              reports: expect.arrayContaining([
+                expect.objectContaining({
+                  fields: {
+                    c1: {
+                      bound: true,
+                      attempted: true,
+                      written: true,
+                      retained: !lost,
+                      reason: lost ? "RETENTION_LOST" : null,
+                    },
+                  },
+                }),
+              ]),
+            },
           }),
         ]),
       );
@@ -266,11 +274,15 @@ describe("품질 관측의 로컬 값 검증과 비식별 보고", () => {
     expect(messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          payload: expect.objectContaining({
-            fields: expect.objectContaining({
-              c49: expect.objectContaining({ retained: true }),
-            }),
-          }),
+          payload: {
+            reports: expect.arrayContaining([
+              expect.objectContaining({
+                fields: expect.objectContaining({
+                  c49: expect.objectContaining({ retained: true }),
+                }),
+              }),
+            ]),
+          },
         }),
       ]),
     );
@@ -305,7 +317,11 @@ describe("품질 관측의 로컬 값 검증과 비식별 보고", () => {
     expect(send).toHaveBeenCalledTimes(1);
     expect(send).toHaveBeenCalledWith(
       expect.objectContaining({
-        payload: expect.objectContaining({ finished: "COMPLETED" }),
+        payload: {
+          reports: expect.arrayContaining([
+            expect.objectContaining({ finished: "COMPLETED" }),
+          ]),
+        },
       }),
     );
   });
@@ -327,17 +343,23 @@ describe("품질 관측의 로컬 값 검증과 비식별 보고", () => {
     expect(send).toHaveBeenCalledTimes(1);
     expect(send).toHaveBeenCalledWith(
       expect.objectContaining({
-        payload: expect.objectContaining({
-          fields: { c1: expect.objectContaining({ retained: true }) },
-          finished: "COMPLETED",
-        }),
+        payload: {
+          reports: expect.arrayContaining([
+            expect.objectContaining({
+              fields: { c1: expect.objectContaining({ retained: true }) },
+              finished: "COMPLETED",
+            }),
+          ]),
+        },
       }),
     );
   });
 
   it("종료 호출 없이 새 실행을 시작해도 이전 관측을 취소 결과로 정리한다", async () => {
     vi.useFakeTimers();
-    const send = vi.fn(async (_message: unknown) => ({ ok: true }));
+    const send = vi.fn<ConstructorParameters<typeof QualityObservation>[0]>(
+      async () => ({ ok: true }),
+    );
     const quality = new QualityObservation(send);
     const input = document.createElement("input");
     document.body.append(input);
@@ -352,14 +374,22 @@ describe("품질 관측의 로컬 값 검증과 비식별 보고", () => {
       expect.arrayContaining([
         expect.objectContaining({
           qualityRun: oldRun,
-          payload: expect.objectContaining({ finished: "CANCELLED" }),
+          payload: {
+            reports: expect.arrayContaining([
+              expect.objectContaining({ finished: "CANCELLED" }),
+            ]),
+          },
         }),
         expect.objectContaining({
           qualityRun: quality.runKey,
-          payload: expect.objectContaining({
-            finished: "COMPLETED",
-            fields: {},
-          }),
+          payload: {
+            reports: expect.arrayContaining([
+              expect.objectContaining({
+                finished: "COMPLETED",
+                fields: {},
+              }),
+            ]),
+          },
         }),
       ]),
     );
@@ -379,15 +409,19 @@ describe("품질 관측의 로컬 값 검증과 비식별 보고", () => {
     expect(send).toHaveBeenCalledTimes(1);
     expect(send).toHaveBeenCalledWith(
       expect.objectContaining({
-        payload: expect.objectContaining({
-          fields: {
-            c1: expect.objectContaining({
-              retained: false,
-              reason: "RETENTION_UNOBSERVED",
+        payload: {
+          reports: expect.arrayContaining([
+            expect.objectContaining({
+              fields: {
+                c1: expect.objectContaining({
+                  retained: false,
+                  reason: "RETENTION_UNOBSERVED",
+                }),
+              },
+              finished: "CANCELLED",
             }),
-          },
-          finished: "CANCELLED",
-        }),
+          ]),
+        },
       }),
     );
   });
@@ -396,7 +430,7 @@ describe("품질 관측의 로컬 값 검증과 비식별 보고", () => {
     vi.useFakeTimers();
     const messages: {
       qualityRun: string;
-      payload: { finished: string; fields: unknown };
+      payload: { reports: { finished: string; fields: unknown }[] };
     }[] = [];
     const quality = new QualityObservation(async (message) => {
       messages.push(message as (typeof messages)[number]);
@@ -416,13 +450,22 @@ describe("품질 관측의 로컬 값 검증과 비식별 보고", () => {
     expect(messages).toHaveLength(1);
     expect(messages[0]).toMatchObject({
       qualityRun: oldRun,
-      payload: { finished: "CANCELLED" },
+      payload: {
+        reports: [expect.objectContaining({ finished: "CANCELLED" })],
+      },
     });
     await quality.finish("COMPLETED");
     expect(messages).toHaveLength(2);
     expect(messages[1]).toMatchObject({
       qualityRun: newRun,
-      payload: { finished: "COMPLETED", fields: { c1: { written: false } } },
+      payload: {
+        reports: [
+          expect.objectContaining({
+            finished: "COMPLETED",
+            fields: { c1: expect.objectContaining({ written: false }) },
+          }),
+        ],
+      },
     });
   });
 });

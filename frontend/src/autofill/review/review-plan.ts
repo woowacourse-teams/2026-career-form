@@ -1,3 +1,17 @@
+import {
+  nativeProfileAssignment,
+  nativeUnofferedEntries,
+} from "../policy/native-form-row-assignment";
+import {
+  currentNativeOwner,
+  nativeOwnership,
+} from "../policy/native-form-collection";
+import {
+  nativeOptionPresence,
+  nativeTarget,
+} from "../policy/native-form-write";
+import type { NativeSection } from "../policy/native-form-contract";
+import { text } from "../policy/primitives";
 import { executionPolicy } from "../workflow/execution-policy";
 import { isSplitEmailTarget, SPLIT_EMAIL_REASON } from "../dom/split-email";
 import type { WriteFailureCode } from "../write/failure";
@@ -74,7 +88,7 @@ export type ProfileValueResolution =
   | { status: "unknown"; sensitive: false };
 
 export type ReviewItemStatus =
-  "available" | "needs-review" | "conflict" | "sensitive" | "unavailable";
+  "available" | "needs-review" | "conflict" | "unavailable";
 
 export interface ReviewPlanItem {
   candidateId: string;
@@ -90,6 +104,10 @@ export interface ReviewPlanItem {
   disabled: boolean;
   revealed: boolean;
   reason: string;
+  /** Generic-path only: the grade of the field. Static paths never set it. */
+  genericGrade?: "AUTO" | "REVIEW" | "BLOCKED";
+  /** Generic-path only: the grade reason or section failure code. */
+  genericReasonCode?: string;
   failureCode?: WriteFailureCode;
   analysis?: MatchedFieldAnalysis;
   dateApproval?: DateTargetApproval;
@@ -116,7 +134,10 @@ export function reviewItemsForDisplay(
 ): ReviewPlanItem[] {
   return items
     .map((item, index) => ({ item, index }))
-    .filter(({ item }) => item.status !== "unavailable")
+    .filter(
+      ({ item }) =>
+        item.status !== "unavailable" || item.genericGrade === "BLOCKED",
+    )
     .sort((left, right) => {
       const leftOrder = left.item.status === "available" ? 0 : 1;
       const rightOrder = right.item.status === "available" ? 0 : 1;
@@ -213,9 +234,69 @@ export function resolveProfileFieldValue(
     : { status: "missing", sensitive: parts.sensitive };
 }
 
+/** Native radios carry site codes (50, LEAVE) while profile values are policy
+ * labels. A single checked radio whose normalized label maps to exactly its
+ * own code reads as that label; anything else keeps the raw code so a foreign
+ * value still conflicts. The 작성안함 empty radio stays empty. */
+function nativeRadioValue(handle: FieldCandidateHandle): string | undefined {
+  const field = nativeOwnership(handle)?.field;
+  if (field?.type !== "radio" || handle.candidate.control !== "radio") return;
+  const radios = handle.elements.filter(
+    (element): element is HTMLInputElement =>
+      element instanceof HTMLInputElement,
+  );
+  const checked = radios.filter((radio) => radio.checked);
+  if (checked.length !== 1) return;
+  const labelOf = (radio: HTMLInputElement) =>
+    text(radio.labels?.[0]?.textContent);
+  const [radio] = checked;
+  const label = labelOf(radio);
+  if (radio.value === "")
+    return field.emptyRadioLabel && label === field.emptyRadioLabel
+      ? ""
+      : undefined;
+  return label &&
+    field.options?.[label] === radio.value &&
+    radios.filter((other) => labelOf(other) === label).length === 1 &&
+    radios.filter((other) => other.value === radio.value).length === 1
+    ? label
+    : radio.value;
+}
+
+const NATIVE_DECIMAL = /^\d+(?:\.\d+)?$/;
+
+/** A native number input keeps the normalized decimal the run wrote (3.65 for
+ * 3.650); the same number is not an existing value. */
+/** The page already shows the profile value in the site's own format (e.g. a dotted date). */
+function sameNativeTarget(
+  handle: FieldCandidateHandle,
+  page: string,
+  profile: string,
+): boolean {
+  return (
+    handle.owner === "native" && nativeTarget(handle, profile) === page.trim()
+  );
+}
+function sameNativeDecimal(
+  handle: FieldCandidateHandle,
+  page: string,
+  profile: string,
+): boolean {
+  const left = page.trim(),
+    right = profile.trim();
+  return (
+    nativeOwnership(handle)?.field.type === "number" &&
+    NATIVE_DECIMAL.test(left) &&
+    NATIVE_DECIMAL.test(right) &&
+    Number(left) === Number(right)
+  );
+}
+
 function currentValue(handle: FieldCandidateHandle): string {
   const customValue = customFieldValue(handle);
   if (customValue !== undefined) return customValue;
+  const nativeRadio = nativeRadioValue(handle);
+  if (nativeRadio !== undefined) return nativeRadio;
   if (
     handle.candidate.control === "radio" ||
     handle.candidate.control === "checkbox"
@@ -234,6 +315,77 @@ function currentValue(handle: FieldCandidateHandle): string {
     return selected?.value ? (selected.textContent ?? "") : "";
   }
   return handle.elements[0]?.value ?? "";
+}
+
+const NATIVE_OPTION_ABSENT_REASON =
+  "지원서 선택지에 프로필 값과 같은 항목이 없어 자동 기입하지 않았습니다.";
+const NATIVE_UNOFFERED_ROW_REASON =
+  "지원서 선택지에 없는 항목이라 행을 추가하지 않았습니다.";
+
+/**
+ * Whether a native select/radio offers the profile label (C9). Search,
+ * search-gated (options arrive with the result) and disabled controls (the
+ * row gate is still closed) are left to the write-time checks.
+ */
+function nativeChoicePresence(
+  handle: FieldCandidateHandle,
+  label: string,
+): "present" | "absent" | "structural" | undefined {
+  const owner = currentNativeOwner(handle);
+  if (
+    !owner ||
+    owner.field.search ||
+    owner.field.gate ||
+    (owner.field.type !== "select" && owner.field.type !== "radio") ||
+    handle.elements.some((element) => element.matches(":disabled"))
+  )
+    return;
+  return nativeOptionPresence(owner, handle, label);
+}
+
+/** Profile entries left without a row because the tenant does not offer
+ * their row driver label (C9, H4): reported once each, never written. */
+function nativeUnofferedItems(
+  analysis: FieldsAnalyzeResponse,
+  profile: Profile,
+  registry: CandidateRegistry,
+): ReviewPlanItem[] {
+  const sections = new Map<
+    string,
+    { document: Document; section: NativeSection }
+  >();
+  for (const field of analysis.fields) {
+    const lookup = registry.lookupField(field.candidateId);
+    if (lookup.status !== "ready" && lookup.status !== "blocked") continue;
+    const owner = nativeOwnership(lookup.handle);
+    if (owner?.section.rows && !sections.has(owner.section.id))
+      sections.set(owner.section.id, {
+        document: owner.row.ownerDocument,
+        section: owner.section,
+      });
+  }
+  return [...sections.values()].flatMap(({ document, section }) =>
+    nativeUnofferedEntries(document, section, profile).map(
+      ({ field, index, entryId, value }) => ({
+        candidateId: `native-unoffered-${section.id}-${index}`,
+        fieldLabel: field.label,
+        ...(field.binding.profileFieldKey
+          ? { profileFieldKey: field.binding.profileFieldKey }
+          : {}),
+        profileEntryId: entryId,
+        itemIndex: index,
+        currentValue: "",
+        profileValue: value,
+        previewValue: value,
+        status: "unavailable" as const,
+        selected: false,
+        disabled: true,
+        revealed: false,
+        reason: NATIVE_UNOFFERED_ROW_REASON,
+        failureCode: "OPTION_UNMATCHED" as const,
+      }),
+    ),
+  );
 }
 
 function unavailableItem(
@@ -303,11 +455,21 @@ function itemForAnalysis(
   components = false,
 ): ReviewPlanItem {
   const fieldLabel = labelFor(analysis.candidateId, registry);
+  const local = registry.lookupField(analysis.candidateId);
+  if ("handle" in local && local.handle.unsupportedReason)
+    return unavailableItem(
+      analysis.candidateId,
+      fieldLabel,
+      local.handle.unsupportedReason,
+    );
   if (analysis.matchType === "NO_MATCH") {
     return unavailableItem(
       analysis.candidateId,
       fieldLabel,
-      "연결할 프로필 항목이 없습니다.",
+      "handle" in local &&
+        local.handle.candidate.domName === "hplace.detail.englishName"
+        ? "영문 이름 순서 안내 없음"
+        : "연결할 프로필 항목이 없습니다.",
     );
   }
   if (analysis.interactionStatus !== "READY" || !analysis.writePlan) {
@@ -436,7 +598,46 @@ function itemForAnalysis(
       : binding.profileFieldKey
         ? profileFieldParts(binding.profileFieldKey)
         : undefined;
-  let itemIndex = lookup.handle.itemIndex;
+  const nativeIndex = nativeProfileAssignment(lookup.handle, profile);
+  if (typeof nativeIndex === "object") {
+    const item = unavailableItem(
+      analysis.candidateId,
+      fieldLabel,
+      nativeIndex.reason,
+      analysis,
+    );
+    // A retained row keeps its matched entry, so the result can tell a value
+    // the page already holds from one that really differs.
+    const retained =
+      nativeIndex.index !== undefined
+        ? resolveValueBinding(profile, binding, nativeIndex.index)
+        : undefined;
+    if (nativeIndex.index === undefined) return item;
+    const retainedValue =
+      retained?.status === "resolved"
+        ? binding.type === "DIRECT" && normalizeDirectValue
+          ? normalizeDirectValue(binding.profileFieldKey, retained.value)
+          : retained.value
+        : undefined;
+    return {
+      ...item,
+      itemIndex: nativeIndex.index,
+      ...(retained?.status === "resolved"
+        ? {
+            ...(binding.type === "DIRECT"
+              ? { profileFieldKey: binding.profileFieldKey }
+              : {}),
+            ...(retained.profileEntryId
+              ? { profileEntryId: retained.profileEntryId }
+              : {}),
+            currentValue: currentValue(lookup.handle),
+            profileValue: retainedValue!,
+            previewValue: retainedValue!,
+          }
+        : {}),
+    };
+  }
+  let itemIndex = nativeIndex ?? lookup.handle.itemIndex;
   // A mixed-section row is bound through its local assignment (C8).
   const mixed = lookup.handle.mixedSectionRow;
   if (mixed?.isKindSelect) {
@@ -470,7 +671,12 @@ function itemForAnalysis(
   // has a row but no index; it must not fall back to the sole profile entry.
   const unindexedRepeatRow =
     lookup.handle.itemId !== undefined && lookup.handle.itemIndex === undefined;
-  if (!mixedRow && parts?.repeatable && !parts.topLevel) {
+  if (
+    nativeIndex === undefined &&
+    !mixedRow &&
+    parts?.repeatable &&
+    !parts.topLevel
+  ) {
     const profileEntries = profile[
       parts.categoryId as RepeatedProfileCategoryId
     ].filter((entry) => entry.sectionId === parts.sectionId);
@@ -503,7 +709,17 @@ function itemForAnalysis(
       boundProfileValue.status === "ambiguous"
         ? "반복 프로필 항목을 하나로 안전하게 결정할 수 없습니다."
         : "입력할 프로필 값이 없습니다.";
-    return unavailableItem(analysis.candidateId, fieldLabel, reason, analysis);
+    const item = unavailableItem(
+      analysis.candidateId,
+      fieldLabel,
+      reason,
+      analysis,
+    );
+    // A native row bound to its own entry keeps that entry, so another
+    // entry's value is never reported as this row's saved value.
+    return typeof nativeIndex === "number"
+      ? { ...item, itemIndex: nativeIndex }
+      : item;
   }
   const catalogSource =
     binding.type !== "DERIVED"
@@ -809,7 +1025,17 @@ function itemForAnalysis(
             ? schoolRegionSearchValues(resolvedProfileValue.value)
             : [resolvedProfileValue.value]
         ).some((value) => normalized(pageValue) === normalized(value))
-      : pageValue.trim() !== resolvedProfileValue.value.trim());
+      : pageValue.trim() !== resolvedProfileValue.value.trim() &&
+        !sameNativeDecimal(
+          lookup.handle,
+          pageValue,
+          resolvedProfileValue.value,
+        ) &&
+        !sameNativeTarget(
+          lookup.handle,
+          pageValue,
+          resolvedProfileValue.value,
+        ));
   if (hasConflict) {
     return {
       candidateId: analysis.candidateId,
@@ -840,6 +1066,38 @@ function itemForAnalysis(
         : {}),
     };
   }
+  const optionPresence = nativeChoicePresence(
+    lookup.handle,
+    resolvedProfileValue.value,
+  );
+  if (optionPresence === "absent") {
+    return {
+      ...unavailableItem(
+        analysis.candidateId,
+        fieldLabel,
+        NATIVE_OPTION_ABSENT_REASON,
+        analysis,
+      ),
+      ...(binding.type === "DIRECT"
+        ? { profileFieldKey: binding.profileFieldKey }
+        : {}),
+      ...(resolvedProfileValue.profileEntryId
+        ? { profileEntryId: resolvedProfileValue.profileEntryId }
+        : {}),
+      ...(itemIndex !== undefined ? { itemIndex } : {}),
+      currentValue: pageValue,
+      profileValue: resolvedProfileValue.value,
+      previewValue: resolvedProfileValue.value,
+      failureCode: "OPTION_UNMATCHED",
+    };
+  }
+  if (optionPresence === "structural")
+    return unavailableItem(
+      analysis.candidateId,
+      fieldLabel,
+      "지원서 선택값을 하나로 확인할 수 없어 자동 기입하지 않았습니다.",
+      analysis,
+    );
   if (analysis.autofillPolicy === "CONDITIONAL") {
     return {
       candidateId: analysis.candidateId,
@@ -991,26 +1249,20 @@ export function buildReviewPlan({
       components && analysis.mode === "ADAPTER",
     ),
   );
+  const unoffered =
+    analysis.mode === "ADAPTER"
+      ? nativeUnofferedItems(analysis, profile, registry)
+      : [];
   return {
     status: analysis.analysisStatus === "PARTIAL" ? "partial" : "ready",
-    items:
-      components && analysis.mode === "ADAPTER"
+    items: [
+      ...(components && analysis.mode === "ADAPTER"
         ? approveComponentGpaPairs(
             rejectDuplicateRepeatedBindings(items),
             registry,
           )
-        : rejectDuplicateRepeatedBindings(items),
-  };
-}
-
-export function revealSensitiveReviewItem(
-  item: ReviewPlanItem,
-): ReviewPlanItem {
-  if (item.status !== "sensitive" || !item.profileValue) return item;
-  return {
-    ...item,
-    previewValue: item.profileValue,
-    disabled: false,
-    revealed: true,
+        : rejectDuplicateRepeatedBindings(items)),
+      ...unoffered,
+    ],
   };
 }

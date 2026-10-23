@@ -4,9 +4,11 @@
 > Status: Current
 > Current: [CF-201 인터럽트 처리](../../raw/issues/CF-201/documents/quality-observation-interruption.md)
 > History: [CF-201 인터럽트 처리](../../raw/issues/CF-201/documents/quality-observation-interruption.md)
-> Updated: 2026-10-13
+> Updated: 2026-10-20
 
 ## 현재 상태
+
+아래 계약은 이전 QualityObservationExecutor와 그 회귀 테스트에 적용한다. 현재 분석 요청 경로에서는 이 실행기를 사용하지 않고 [CF-288 비동기 품질 처리](async-quality-observation.md)로 분리한다.
 
 이미 인터럽트된 호출은 품질 관측 작업을 제출하지 않고 null을 반환한다. 인터럽트 상태를 보존하며 제출 후 인터럽트와 미완료 작업 취소는 기존 경로를 유지한다.
 

@@ -15,6 +15,8 @@ const endpointByType: Record<AnalysisRequestMessage["type"], string> = {
   AUTOFILL_ANALYZE_PREPARATION: "/api/v1/preparation/analyze",
   AUTOFILL_DECIDE_INTERACTIONS: "/api/v1/generic/interaction-decisions",
   AUTOFILL_ANALYZE_FIELDS: "/api/v1/fields/analyze",
+  AUTOFILL_GENERIC_CLASSIFY_SECTIONS: "/api/v1/generic/sections/classify",
+  AUTOFILL_GENERIC_ANALYZE_FIELDS: "/api/v1/generic/fields/analyze",
 };
 
 const errorCodeByStatus: Record<number, AnalysisErrorCode> = {
@@ -63,6 +65,7 @@ export function createAnalysisMessageHandler({
       "qualityRun" in message ? message.qualityRun : undefined,
       source,
     );
+    quality.start(qualityOwner);
     const publicLink =
       qualityOwner && message.type === "AUTOFILL_ANALYZE_FIELDS"
         ? publicApplicationLink(source?.url, message.payload.site?.host ?? "")
@@ -92,11 +95,11 @@ export function createAnalysisMessageHandler({
             ...(message.type === "AUTOFILL_ANALYZE_PREPARATION"
               ? {
                   "X-Career-Form-Capabilities": qualityOwner
-                    ? "address-search-v1,quality-v1"
+                    ? "address-search-v1,quality-v2"
                     : "address-search-v1",
                 }
               : qualityOwner
-                ? { "X-Career-Form-Capabilities": "quality-v1" }
+                ? { "X-Career-Form-Capabilities": "quality-v2" }
                 : {}),
           },
           body: JSON.stringify(message.payload),
@@ -109,6 +112,11 @@ export function createAnalysisMessageHandler({
           code:
             errorCodeByStatus[response.status] ??
             (response.status >= 500 ? "SERVER_ERROR" : "BAD_REQUEST"),
+          ...(response.status === 404 &&
+          (message.type === "AUTOFILL_GENERIC_CLASSIFY_SECTIONS" ||
+            message.type === "AUTOFILL_GENERIC_ANALYZE_FIELDS")
+            ? { status: 404 as const }
+            : {}),
         };
       }
       try {

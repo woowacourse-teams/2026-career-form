@@ -1,10 +1,7 @@
 import type { Profile } from "../../profile/model";
 import { localProfileValue } from "./workflow-model";
 import type { Dispatch, SetStateAction } from "react";
-import {
-  revealSensitiveReviewItem,
-  type ReviewPlanItem,
-} from "../review/review-plan";
+import type { ReviewPlanItem } from "../review/review-plan";
 
 export function createReviewActions(
   setReviewItems: Dispatch<SetStateAction<ReviewPlanItem[]>>,
@@ -18,17 +15,7 @@ export function createReviewActions(
       ),
     );
   };
-
-  const revealSensitiveItem = (candidateId: string) => {
-    setReviewItems((items) =>
-      items.map((item) =>
-        item.candidateId === candidateId
-          ? revealSensitiveReviewItem(item)
-          : item,
-      ),
-    );
-  };
-  return { toggleReviewItem, revealSensitiveItem };
+  return { toggleReviewItem };
 }
 
 export function sensitiveValueApproved(

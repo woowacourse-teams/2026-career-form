@@ -1,3 +1,4 @@
+import { PendingRegistration } from "./background-registration";
 import type { QualityReport } from "./observation";
 
 export interface QualitySource {
@@ -55,6 +56,8 @@ function validReport(value: unknown): value is QualityReport {
   const fields = Object.entries(report.fields);
   const identities = Object.entries(report.identities);
   return (
+    (report.snapshotId !== null ||
+      (fields.length === 0 && identities.length === 0)) &&
     fields.length <= 2000 &&
     identities.length <= 2000 &&
     fields.every(
@@ -82,8 +85,43 @@ function validReport(value: unknown): value is QualityReport {
   );
 }
 
+function validPayload(value: unknown): boolean {
+  if (validReport(value)) return true;
+  if (
+    !value ||
+    typeof value !== "object" ||
+    Object.keys(value).length !== 1 ||
+    !("reports" in value)
+  )
+    return false;
+  const reports = value.reports;
+  return (
+    Array.isArray(reports) &&
+    reports.length > 0 &&
+    reports.length <= 200 &&
+    reports.every(validReport) &&
+    new Set(reports.map((report) => report.eventId)).size === reports.length &&
+    reports.slice(0, -1).every((report) => report.finished === null)
+  );
+}
+
 export class BackgroundQualityReporting {
   private receipts: ReadonlyMap<string, Receipt> = new Map();
+  private registrations = new Map<string, PendingRegistration>();
+  private pendingReports = 0;
+  private pendingBytes = 0;
+
+  start(owner: string | undefined): void {
+    if (!owner || !this.baseUrl) return;
+    this.registrations = new Map(
+      [...this.registrations].filter(([, item]) => item.expiresAt > Date.now()),
+    );
+    if (this.registrations.has(owner) || this.registrations.size >= 128) return;
+    this.registrations.set(
+      owner,
+      new PendingRegistration(owner.slice(-32), this.baseUrl, this.fetcher),
+    );
+  }
 
   constructor(
     private readonly baseUrl: string,
@@ -103,6 +141,16 @@ export class BackgroundQualityReporting {
   }
 
   headers(owner: string | undefined): Record<string, string> {
+    const registration = owner ? this.registrations.get(owner) : undefined;
+    if (
+      registration &&
+      !registration.excluded &&
+      Date.now() < registration.expiresAt
+    )
+      return {
+        "X-Career-Form-Quality-Run": registration.clientRun,
+        "X-Career-Form-Quality-Key": registration.key,
+      };
     const receipt = owner ? this.receipts.get(owner) : undefined;
     return receipt && Date.now() < receipt.expiresAt
       ? {
@@ -156,17 +204,37 @@ export class BackgroundQualityReporting {
       return undefined;
     const parsed = message as { qualityRun?: unknown; payload?: unknown };
     const owner = this.owner(parsed.qualityRun, source);
-    const receipt = owner ? this.receipts.get(owner) : undefined;
-    if (
-      !receipt ||
-      Date.now() >= receipt.expiresAt ||
-      !validReport(parsed.payload) ||
-      !this.baseUrl
-    )
+    if (!owner || !validPayload(parsed.payload) || !this.baseUrl)
       return { ok: false };
     const body = JSON.stringify(parsed.payload);
-    if (new TextEncoder().encode(body).length > 128 * 1024)
+    const bytes = new TextEncoder().encode(body).length;
+    if (
+      bytes > 128 * 1024 ||
+      this.pendingReports >= 64 ||
+      this.pendingBytes + bytes > 4 * 1024 * 1024
+    )
       return { ok: false };
+    this.pendingReports++;
+    this.pendingBytes += bytes;
+    try {
+      const registration = this.registrations.get(owner);
+      const receipt = registration
+        ? await registration.ready
+        : this.receipts.get(owner);
+      if (!receipt || registration?.excluded || Date.now() >= receipt.expiresAt)
+        return { ok: false };
+      return await this.send(owner, receipt, body);
+    } finally {
+      this.pendingReports--;
+      this.pendingBytes -= bytes;
+    }
+  }
+
+  private async send(
+    owner: string,
+    receipt: Receipt,
+    body: string,
+  ): Promise<{ ok: boolean }> {
     for (let attempt = 0; attempt < 2; attempt++) {
       const controller = new AbortController();
       const timeout = globalThis.setTimeout(() => controller.abort(), 8000);
@@ -184,7 +252,14 @@ export class BackgroundQualityReporting {
             signal: controller.signal,
           },
         );
-        return { ok: response.status === 204 };
+        if (response.status === 401) {
+          const registration = this.registrations.get(owner);
+          if (registration) registration.excluded = true;
+          this.receipts = new Map(
+            [...this.receipts].filter(([existing]) => existing !== owner),
+          );
+        }
+        return { ok: response.status === 202 || response.status === 204 };
       } catch {
         if (attempt === 1) return { ok: false };
       } finally {

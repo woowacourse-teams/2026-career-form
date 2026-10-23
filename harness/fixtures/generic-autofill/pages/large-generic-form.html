@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>대형 범용 지원서 합성 페이지</title>
+<style>.section-title{font-weight:bold;margin:16px 0 4px}.field{margin:2px 0}.repeat-row{border:1px dashed #999;margin:4px 0;padding:4px}</style>
+</head>
+<body>
+<div class="notice">합성 평가용 페이지입니다. 실제 개인정보를 포함하지 않습니다.</div>
+<form action="#" method="post" onsubmit="return false">
+<div class="section-title">인적사항</div>
+<div class="field"><label for="c001">성(한글)</label><input id="c001" name="ko-family" type="text"></div>
+<div class="field"><label for="c002">이름(한글)</label><input id="c002" name="ko-given" type="text"></div>
+<div class="field"><label for="c003">성(한자)</label><input id="c003" name="hanja-family" type="text"></div>
+<div class="field"><label for="c004">이름(한자)</label><input id="c004" name="hanja-given" type="text"></div>
+<div class="field"><label for="c005">성(영문)</label><input id="c005" name="en-family" type="text"></div>
+<div class="field"><label for="c006">이름(영문)</label><input id="c006" name="en-given" type="text"></div>
+<div class="field"><label for="c007">생년월일</label><input id="c007" name="birth-date" type="text"></div>
+<div class="field"><label for="c008">국적</label><select id="c008" name="nationality"><option>선택</option><option>대한민국</option><option>미국</option><option>일본</option><option>기타</option></select></div>
+<div class="field"><label for="c009">주민등록번호</label><input id="c009" name="national-id" type="text"></div>
+<div class="section-title">연락처</div>
+<div class="field"><label for="c010">이메일</label><input id="c010" name="email" type="text"></div>
+<div class="field"><label for="c011">보조 이메일</label><input id="c011" name="email-secondary" type="text"></div>
+<div class="field"><label for="c012">휴대전화 국가번호</label><select id="c012" name="phone-country"><option>선택</option><option>+82 대한민국</option><option>+1 미국</option><option>+81 일본</option><option>+86 중국</option></select></div>
+<div class="field"><label for="c013">휴대전화</label><input id="c013" name="phone" type="text"></div>
+<div class="field"><label for="c014">비상 연락처</label><input id="c014" name="phone-emergency" type="text"></div>
+<div class="field"><label for="c015">거주 국가</label><select id="c015" name="residence-country"><option>선택</option><option>대한민국</option><option>미국</option><option>일본</option><option>기타</option></select></div>
+<div class="field"><label for="c016">우편번호</label><input id="c016" name="postal-code" type="text"></div>
+<div class="field"><label for="c017">주소</label><input id="c017" name="address-1" type="text"></div>
+<div class="field"><label for="c018">상세 주소</label><input id="c018" name="address-2" type="text"></div>
+<div class="section-title">학력</div>
+<div class="repeat-group" data-group="education">
+<div class="repeat-row" data-row="education">
+<div class="field"><label for="c019">학교 구분</label><select id="c019" name="edu-process-1"><option>선택</option><option>고등학교</option><option>대학교(학사)</option><option>대학원(석사)</option><option>대학원(박사)</option></select></div>
+<div class="field"><label for="c020">학교명</label><input id="c020" name="edu-school-1" type="text"></div>
+<div class="field"><label for="c021">주야간</label><select id="c021" name="edu-attendance-1"><option>선택</option><option>주간</option><option>야간</option></select></div>
+<div class="field"><label for="c022">졸업 상태</label><select id="c022" name="edu-status-1"><option>선택</option><option>졸업</option><option>재학</option><option>휴학</option><option>수료</option></select></div>
+<div class="field"><label for="c023">학교 소재지</label><input id="c023" name="edu-region-1" type="text"></div>
+<div class="field"><label for="c024">입학일</label><input id="c024" name="edu-start-1" type="text"></div>
+<div class="field"><label for="c025">졸업일</label><input id="c025" name="edu-end-1" type="text"></div>
+<div class="field"><label for="c026">전공</label><input id="c026" name="edu-major-1" type="text"></div>
+<div class="field"><label for="c027">학점</label><input id="c027" name="edu-gpa-1" type="text"></div>
+</div>
+<div class="repeat-row" data-row="education">
+<div class="field"><label for="c028">학교 구분</label><select id="c028" name="edu-process-2"><option>선택</option><option>고등학교</option><option>대학교(학사)</option><option>대학원(석사)</option><option>대학원(박사)</option></select></div>
+<div class="field"><label for="c029">학교명</label><input id="c029" name="edu-school-2" type="text"></div>
+<div class="field"><label for="c030">주야간</label><select id="c030" name="edu-attendance-2"><option>선택</option><option>주간</option><option>야간</option></select></div>
+<div class="field"><label for="c031">졸업 상태</label><select id="c031" name="edu-status-2"><option>선택</option><option>졸업</option><option>재학</option><option>휴학</option><option>수료</option></select></div>
+<div class="field"><label for="c032">학교 소재지</label><input id="c032" name="edu-region-2" type="text"></div>
+<div class="field"><label for="c033">입학일</label><input id="c033" name="edu-start-2" type="text"></div>
+<div class="field"><label for="c034">졸업일</label><input id="c034" name="edu-end-2" type="text"></div>
+<div class="field"><label for="c035">전공</label><input id="c035" name="edu-major-2" type="text"></div>
+<div class="field"><label for="c036">학점</label><input id="c036" name="edu-gpa-2" type="text"></div>
+</div>
+<div class="repeat-row" data-row="education">
+<div class="field"><label for="c037">학교 구분</label><select id="c037" name="edu-process-3"><option>선택</option><option>고등학교</option><option>대학교(학사)</option><option>대학원(석사)</option><option>대학원(박사)</option></select></div>
+<div class="field"><label for="c038">학교명</label><input id="c038" name="edu-school-3" type="text"></div>
+<div class="field"><label for="c039">주야간</label><select id="c039" name="edu-attendance-3"><option>선택</option><option>주간</option><option>야간</option></select></div>
+<div class="field"><label for="c040">졸업 상태</label><select id="c040" name="edu-status-3"><option>선택</option><option>졸업</option><option>재학</option><option>휴학</option><option>수료</option></select></div>
+<div class="field"><label for="c041">학교 소재지</label><input id="c041" name="edu-region-3" type="text"></div>
+<div class="field"><label for="c042">입학일</label><input id="c042" name="edu-start-3" type="text"></div>
+<div class="field"><label for="c043">졸업일</label><input id="c043" name="edu-end-3" type="text"></div>
+<div class="field"><label for="c044">전공</label><input id="c044" name="edu-major-3" type="text"></div>
+<div class="field"><label for="c045">학점</label><input id="c045" name="edu-gpa-3" type="text"></div>
+</div>
+<div class="repeat-row" data-row="education">
+<div class="field"><label for="c046">학교 구분</label><select id="c046" name="edu-process-4"><option>선택</option><option>고등학교</option><option>대학교(학사)</option><option>대학원(석사)</option><option>대학원(박사)</option></select></div>
+<div class="field"><label for="c047">학교명</label><input id="c047" name="edu-school-4" type="text"></div>
+<div class="field"><label for="c048">주야간</label><select id="c048" name="edu-attendance-4"><option>선택</option><option>주간</option><option>야간</option></select></div>
+<div class="field"><label for="c049">졸업 상태</label><select id="c049" name="edu-status-4"><option>선택</option><option>졸업</option><option>재학</option><option>휴학</option><option>수료</option></select></div>
+<div class="field"><label for="c050">학교 소재지</label><input id="c050" name="edu-region-4" type="text"></div>
+<div class="field"><label for="c051">입학일</label><input id="c051" name="edu-start-4" type="text"></div>
+<div class="field"><label for="c052">졸업일</label><input id="c052" name="edu-end-4" type="text"></div>
+<div class="field"><label for="c053">전공</label><input id="c053" name="edu-major-4" type="text"></div>
+<div class="field"><label for="c054">학점</label><input id="c054" name="edu-gpa-4" type="text"></div>
+</div>
+<button type="button" class="add" data-group="education" data-id-starts="132 141">학력 추가</button>
+</div>
+<div class="section-title">경력</div>
+<div class="repeat-group" data-group="career">
+<div class="repeat-row" data-row="career">
+<div class="field"><label for="c055">회사명</label><input id="c055" name="car-company-1" type="text"></div>
+<div class="field"><label for="c056">고용 형태</label><select id="c056" name="car-type-1"><option>선택</option><option>정규</option><option>계약</option><option>인턴</option><option>기타</option></select></div>
+<div class="field"><label for="c057">입사일</label><input id="c057" name="car-start-1" type="text"></div>
+<div class="field"><label for="c058">퇴사일</label><input id="c058" name="car-end-1" type="text"></div>
+<div class="field"><label for="c059">재직 상태</label><select id="c059" name="car-status-1"><option>선택</option><option>재직</option><option>퇴사</option></select></div>
+<div class="field"><label for="c060">부서</label><input id="c060" name="car-dept-1" type="text"></div>
+<div class="field"><label for="c061">직위</label><input id="c061" name="car-position-1" type="text"></div>
+<div class="field"><label for="c062">담당 업무</label><textarea id="c062" name="car-duty-1" rows="3"></textarea></div>
+<div class="field"><label for="c063">퇴사 사유</label><input id="c063" name="car-reason-1" type="text"></div>
+<div class="field"><label for="c064">연봉</label><input id="c064" name="car-salary-1" type="text"></div>
+</div>
+<div class="repeat-row" data-row="career">
+<div class="field"><label for="c065">회사명</label><input id="c065" name="car-company-2" type="text"></div>
+<div class="field"><label for="c066">고용 형태</label><select id="c066" name="car-type-2"><option>선택</option><option>정규</option><option>계약</option><option>인턴</option><option>기타</option></select></div>
+<div class="field"><label for="c067">입사일</label><input id="c067" name="car-start-2" type="text"></div>
+<div class="field"><label for="c068">퇴사일</label><input id="c068" name="car-end-2" type="text"></div>
+<div class="field"><label for="c069">재직 상태</label><select id="c069" name="car-status-2"><option>선택</option><option>재직</option><option>퇴사</option></select></div>
+<div class="field"><label for="c070">부서</label><input id="c070" name="car-dept-2" type="text"></div>
+<div class="field"><label for="c071">직위</label><input id="c071" name="car-position-2" type="text"></div>
+<div class="field"><label for="c072">담당 업무</label><textarea id="c072" name="car-duty-2" rows="3"></textarea></div>
+<div class="field"><label for="c073">퇴사 사유</label><input id="c073" name="car-reason-2" type="text"></div>
+<div class="field"><label for="c074">연봉</label><input id="c074" name="car-salary-2" type="text"></div>
+</div>
+<div class="repeat-row" data-row="career">
+<div class="field"><label for="c075">회사명</label><input id="c075" name="car-company-3" type="text"></div>
+<div class="field"><label for="c076">고용 형태</label><select id="c076" name="car-type-3"><option>선택</option><option>정규</option><option>계약</option><option>인턴</option><option>기타</option></select></div>
+<div class="field"><label for="c077">입사일</label><input id="c077" name="car-start-3" type="text"></div>
+<div class="field"><label for="c078">퇴사일</label><input id="c078" name="car-end-3" type="text"></div>
+<div class="field"><label for="c079">재직 상태</label><select id="c079" name="car-status-3"><option>선택</option><option>재직</option><option>퇴사</option></select></div>
+<div class="field"><label for="c080">부서</label><input id="c080" name="car-dept-3" type="text"></div>
+<div class="field"><label for="c081">직위</label><input id="c081" name="car-position-3" type="text"></div>
+<div class="field"><label for="c082">담당 업무</label><textarea id="c082" name="car-duty-3" rows="3"></textarea></div>
+<div class="field"><label for="c083">퇴사 사유</label><input id="c083" name="car-reason-3" type="text"></div>
+<div class="field"><label for="c084">연봉</label><input id="c084" name="car-salary-3" type="text"></div>
+</div>
+<button type="button" class="add" data-group="career" data-id-starts="150">경력 추가</button>
+</div>
+<div class="section-title">어학</div>
+<div class="repeat-row" data-row="language">
+<div class="field"><label for="c085">언어</label><select id="c085" name="lang-language-1"><option>선택</option><option>영어</option><option>일본어</option><option>중국어</option><option>기타</option></select></div>
+<div class="field"><label for="c086">시험명</label><input id="c086" name="lang-test-1" type="text"></div>
+<div class="field"><label for="c087">등록번호</label><input id="c087" name="lang-reg-1" type="text"></div>
+<div class="field"><label for="c088">취득일</label><input id="c088" name="lang-date-1" type="text"></div>
+<div class="field"><label for="c089">등급</label><input id="c089" name="lang-grade-1" type="text"></div>
+<div class="field"><label for="c090">증빙 파일</label><input id="c090" name="lang-file-1" type="file"></div>
+</div>
+<div class="repeat-row" data-row="language">
+<div class="field"><label for="c091">언어</label><select id="c091" name="lang-language-2"><option>선택</option><option>영어</option><option>일본어</option><option>중국어</option><option>기타</option></select></div>
+<div class="field"><label for="c092">시험명</label><input id="c092" name="lang-test-2" type="text"></div>
+<div class="field"><label for="c093">등록번호</label><input id="c093" name="lang-reg-2" type="text"></div>
+<div class="field"><label for="c094">취득일</label><input id="c094" name="lang-date-2" type="text"></div>
+<div class="field"><label for="c095">등급</label><input id="c095" name="lang-grade-2" type="text"></div>
+<div class="field"><label for="c096">증빙 파일</label><input id="c096" name="lang-file-2" type="file"></div>
+</div>
+<div class="section-title">자격증</div>
+<div class="repeat-row" data-row="certification">
+<div class="field"><label for="c097">자격증명</label><input id="c097" name="cert-name-1" type="text"></div>
+<div class="field"><label for="c098">등급</label><input id="c098" name="cert-grade-1" type="text"></div>
+<div class="field"><label for="c099">등록번호</label><input id="c099" name="cert-reg-1" type="text"></div>
+<div class="field"><label for="c100">발급기관</label><input id="c100" name="cert-issuer-1" type="text"></div>
+<div class="field"><label for="c101">취득일</label><input id="c101" name="cert-date-1" type="text"></div>
+</div>
+<div class="repeat-row" data-row="certification">
+<div class="field"><label for="c102">자격증명</label><input id="c102" name="cert-name-2" type="text"></div>
+<div class="field"><label for="c103">등급</label><input id="c103" name="cert-grade-2" type="text"></div>
+<div class="field"><label for="c104">등록번호</label><input id="c104" name="cert-reg-2" type="text"></div>
+<div class="field"><label for="c105">발급기관</label><input id="c105" name="cert-issuer-2" type="text"></div>
+<div class="field"><label for="c106">취득일</label><input id="c106" name="cert-date-2" type="text"></div>
+</div>
+<div class="repeat-row" data-row="certification">
+<div class="field"><label for="c107">자격증명</label><input id="c107" name="cert-name-3" type="text"></div>
+<div class="field"><label for="c108">등급</label><input id="c108" name="cert-grade-3" type="text"></div>
+<div class="field"><label for="c109">등록번호</label><input id="c109" name="cert-reg-3" type="text"></div>
+<div class="field"><label for="c110">발급기관</label><input id="c110" name="cert-issuer-3" type="text"></div>
+<div class="field"><label for="c111">취득일</label><input id="c111" name="cert-date-3" type="text"></div>
+</div>
+<div class="section-title">프로젝트</div>
+<div class="repeat-row" data-row="project">
+<div class="field"><label for="c112">시작일</label><input id="c112" name="prj-start-1" type="text"></div>
+<div class="field"><label for="c113">종료일</label><input id="c113" name="prj-end-1" type="text"></div>
+<div class="field"><label for="c114">프로젝트명</label><input id="c114" name="prj-name-1" type="text"></div>
+<div class="field"><label for="c115">역할</label><input id="c115" name="prj-role-1" type="text"></div>
+<div class="field"><label for="c116">활동 내용</label><textarea id="c116" name="prj-detail-1" rows="3"></textarea></div>
+</div>
+<div class="repeat-row" data-row="project">
+<div class="field"><label for="c117">시작일</label><input id="c117" name="prj-start-2" type="text"></div>
+<div class="field"><label for="c118">종료일</label><input id="c118" name="prj-end-2" type="text"></div>
+<div class="field"><label for="c119">프로젝트명</label><input id="c119" name="prj-name-2" type="text"></div>
+<div class="field"><label for="c120">역할</label><input id="c120" name="prj-role-2" type="text"></div>
+<div class="field"><label for="c121">활동 내용</label><textarea id="c121" name="prj-detail-2" rows="3"></textarea></div>
+</div>
+<div class="section-title">추천인 정보</div>
+<div class="field"><label for="c122">추천인 이름</label><input id="c122" name="referrer-name" type="text"></div>
+<div class="field"><label for="c123">추천인과의 관계</label><select id="c123" name="referrer-relation"><option>선택</option><option>지인</option><option>전 직장 동료</option><option>교수</option><option>기타</option></select></div>
+<div class="field"><label for="c124">추천인 연락처 국가번호</label><select id="c124" name="referrer-phone-country"><option>선택</option><option>+82 대한민국</option><option>+1 미국</option><option>+81 일본</option><option>+86 중국</option></select></div>
+<div class="field"><label for="c125">추천인 연락처</label><input id="c125" name="referrer-phone" type="text"></div>
+<div class="field"><label for="c126">추천인 이메일</label><input id="c126" name="referrer-email" type="text"></div>
+<div class="section-title">기타</div>
+<div class="field"><label for="c127">은행 계좌번호</label><input id="c127" name="bank-account" type="text"></div>
+<div class="field"><label for="c128">지원 동기</label><textarea id="c128" name="motivation" rows="3"></textarea></div>
+<div class="field"><label for="c129">자기소개</label><textarea id="c129" name="self-intro" rows="3"></textarea></div>
+<div class="field"><label for="c130">희망 연봉</label><input id="c130" name="desired-salary" type="text"></div>
+<div class="field"><label for="c131">포트폴리오 파일</label><input id="c131" name="portfolio-file" type="file"></div>
+<button type="button" name="save">임시 저장</button>
+<button type="submit">제출</button>
+</form>
+<script>
+(function () {
+  "use strict";
+  // Each add button appends one empty copy of its group's first row right after
+  // the group's last row. Dynamic ids are fixed per group and addition order:
+  // education c132-c140 then c141-c149, career c150-c159. The button is
+  // disabled once its fixed rows are used up.
+  var buttons = document.querySelectorAll("button.add[data-group]");
+  Array.prototype.forEach.call(buttons, function (button) {
+    var group = button.getAttribute("data-group");
+    var starts = button.getAttribute("data-id-starts").split(" ").map(Number);
+    var added = 0;
+    button.addEventListener("click", function () {
+      if (added >= starts.length) return;
+      var rows = button.parentElement.querySelectorAll(
+        '.repeat-row[data-row="' + group + '"]'
+      );
+      var row = rows[0].cloneNode(true);
+      var rowNumber = rows.length + 1;
+      var controls = row.querySelectorAll("input, select, textarea");
+      Array.prototype.forEach.call(controls, function (control, index) {
+        var id = "c" + String(starts[added] + index).padStart(3, "0");
+        var label = row.querySelector('label[for="' + control.id + '"]');
+        if (label) label.htmlFor = id;
+        control.id = id;
+        control.name = control.name.replace(/-\d+$/, "-" + rowNumber);
+        if (control.tagName === "SELECT") control.selectedIndex = 0;
+        else control.value = "";
+      });
+      rows[rows.length - 1].after(row);
+      added += 1;
+      if (added >= starts.length) button.disabled = true;
+    });
+  });
+})();
+</script>
+</body>
+</html>

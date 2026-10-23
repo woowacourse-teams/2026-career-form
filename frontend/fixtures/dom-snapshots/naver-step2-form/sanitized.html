@@ -1,0 +1,842 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><title>fixture</title></head><body>
+<form id="write_form" name="write_form">
+
+
+
+
+
+
+
+
+
+
+
+
+            <div class="recruit_form_wrap step2">
+
+                <div class="form_box">
+                    <div class="title_box">
+                        <h4 class="form_title">학력사항<span class="nec">*</span></h4>
+                    </div>
+
+                    <div class="rcform_copy_prt">
+
+
+                        <div class="rcform_copy">
+
+                            <div class="ip-field type01 schoolDiv">
+                                <div class="ip-select">
+                                    <select id="scholarType0" name="scholarType" class="select-box sch_switch">
+                                        <option value="" class="noSwitch">구분</option>
+
+											<option value="opt-1" class="noSwitch">고등학교</option>
+
+											<option value="opt-2">전문대학</option>
+
+											<option value="opt-3">대학교</option>
+
+											<option value="opt-4">대학원(석사)</option>
+
+											<option value="opt-5">대학원(박사)</option>
+
+                                    </select>
+                                </div>
+								<div class="ip-select">
+									<select id="scholarArea0" name="scholarArea" class="select-box">
+										<option value="">소재지</option>
+
+											<option value="001">서울</option>
+
+											<option value="002">경기</option>
+
+											<option value="003">인천</option>
+
+											<option value="004">강원</option>
+
+											<option value="005">충북</option>
+
+											<option value="006">충남</option>
+
+											<option value="007">대전</option>
+
+											<option value="018">세종</option>
+
+											<option value="008">부산</option>
+
+											<option value="009">울산</option>
+
+											<option value="010">대구</option>
+
+											<option value="011">경북</option>
+
+											<option value="012">경남</option>
+
+											<option value="013">전북</option>
+
+											<option value="014">전남</option>
+
+											<option value="015">광주</option>
+
+											<option value="016">제주</option>
+
+											<option value="017">해외</option>
+
+									</select>
+								</div>
+                                <div class="ip-search">
+                                    <label for="schoolNm0" class="blind">학교명</label>
+                                    <input type="text" id="schoolNm0" name="schoolNm" autocomplete="off" class="input_text search schoolNm" placeholder="학교명" maxlength="100" readonly="">
+
+                                    <button type="button" class="search_button">
+                                        <i class="ico_search"><span class="blind">검색</span></i>
+                                    </button>
+
+                                    <div class="layer_popup_area" hidden="">
+                                        <div class="layer_popup">
+                                            <div class="popup_title_box">
+                                                <h4 class="layer_title">학교명 조회</h4>
+                                            </div>
+                                            <button type="button" class="btn_close">
+                                                <span class="blind">팝업닫기</span>
+                                            </button>
+	                                        <ul class="detail_list">
+						                        <li class="item">검색되지 않는다면, 하단의 직접 입력을 눌러 입력해주세요.</li>
+						                    </ul>
+                                            <div class="layer-field">
+                                                <div class="ip-text">
+                                                    <label for="cdNm" class="blind">학교명</label>
+                                                    <input type="text" id="cdNm" autocomplete="off" class="input_text searchSchoolNm" placeholder="학교명" maxlength="100">
+                                                </div>
+                                                <button class="ip-btn search" type="button">검색</button>
+                                            </div>
+                                            <div class="search_list schoolSearchList">
+
+                                                <p class="notfound">조회된 결과가 없습니다.</p>
+                                                <ul></ul>
+                                            </div>
+
+                                            <div class="layer-field only custom">
+                                                <button class="ip-btn custom" type="button">직접입력</button>
+                                                <div class="ip-text custom">
+                                                    <label for="insertNm0" class="blind">직접입력</label>
+                                                    <input type="text" id="insertNm0" autocomplete="off" class="input_text insertSchoolNm" placeholder="직접입력" maxlength="100">
+                                                </div>
+                                            </div>
+                                            <div class="link_box_wrap">
+                                                <button type="button" class="link_btn btn_check">확인</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="ip-calendar double">
+                                    <div class="ip-calbox">
+                                        <label for="schlstaYm0" class="blind">입학년월</label>
+                                        <input type="text" id="schlstaYm0" name="schoolStaYmd" autocomplete="off" class="input_text cal monthpicker hasDatepicker" placeholder="입학년월" maxlength="7" readonly="">
+                                    </div>
+                                    <div class="ip-calbox">
+                                        <label for="schlendYm0" class="blind">졸업년월</label>
+                                        <input type="text" id="schlendYm0" name="schoolEndYmd" autocomplete="off" class="input_text cal monthpicker hasDatepicker" placeholder="졸업년월" maxlength="7" readonly="">
+                                    </div>
+                                </div>
+
+
+
+
+
+
+
+                                <button class="ip-btn rcform_copyBtn sch wmargin" type="button">내용추가</button>
+                                <button class="ip-btn resetBtn" type="button">초기화</button>
+                            </div>
+
+
+                            <div class="ip-field type02 schoolDiv" hidden="">
+                                <div class="ip-select">
+                                    <select id="scholarType0" name="scholarType" class="select-box sch_switch">
+                                        <option value="" class="noSwitch">구분</option>
+
+											<option value="opt-6" class="noSwitch">고등학교</option>
+
+											<option value="opt-7">전문대학</option>
+
+											<option value="opt-8">대학교</option>
+
+											<option value="opt-9">대학원(석사)</option>
+
+											<option value="opt-10">대학원(박사)</option>
+
+                                    </select>
+                                </div>
+                                <div class="ip-select">
+									<select id="scholarArea0" name="scholarArea" class="select-box">
+										<option value="">소재지</option>
+
+											<option value="001">서울</option>
+
+											<option value="002">경기</option>
+
+											<option value="003">인천</option>
+
+											<option value="004">강원</option>
+
+											<option value="005">충북</option>
+
+											<option value="006">충남</option>
+
+											<option value="007">대전</option>
+
+											<option value="018">세종</option>
+
+											<option value="008">부산</option>
+
+											<option value="009">울산</option>
+
+											<option value="010">대구</option>
+
+											<option value="011">경북</option>
+
+											<option value="012">경남</option>
+
+											<option value="013">전북</option>
+
+											<option value="014">전남</option>
+
+											<option value="015">광주</option>
+
+											<option value="016">제주</option>
+
+											<option value="017">해외</option>
+
+									</select>
+								</div>
+                                <div class="ip-search">
+                                    <label for="schoolNm0" class="blind">학교명</label>
+                                    <input type="text" id="schoolNm0" name="schoolNm" autocomplete="off" class="input_text search schoolNm" placeholder="학교명" maxlength="100" readonly="">
+
+                                    <button type="button" class="search_button">
+                                        <i class="ico_search"><span class="blind">검색</span></i>
+                                    </button>
+
+                                    <div class="layer_popup_area">
+                                        <div class="layer_popup">
+                                            <div class="popup_title_box">
+                                                <h4 class="layer_title">학교명 조회</h4>
+                                            </div>
+                                            <button type="button" class="btn_close">
+                                                <span class="blind">팝업닫기</span>
+                                            </button>
+	                                        <ul class="detail_list">
+						                        <li class="item">검색되지 않는다면, 하단의 직접 입력을 눌러 입력해주세요.</li>
+						                    </ul>
+                                            <div class="layer-field">
+                                                <div class="ip-text">
+                                                    <label for="cdNm" class="blind">학교명</label>
+                                                    <input type="text" id="cdNm" autocomplete="off" class="input_text searchSchoolNm" placeholder="학교명" maxlength="100">
+                                                </div>
+                                                <button class="ip-btn search" type="button">검색</button>
+                                            </div>
+                                            <div class="search_list schoolSearchList">
+
+                                                <p class="notfound">조회된 결과가 없습니다.</p>
+                                                <ul></ul>
+                                            </div>
+
+                                            <div class="layer-field only custom">
+                                                <button class="ip-btn custom" type="button">직접입력</button>
+                                                <div class="ip-text custom">
+                                                    <label for="insertNm0" class="blind">직접입력</label>
+                                                    <input type="text" id="insertNm0" autocomplete="off" class="input_text insertSchoolNm" placeholder="직접입력" maxlength="100">
+                                                </div>
+                                            </div>
+                                            <div class="link_box_wrap">
+                                                <button type="button" class="link_btn btn_check">확인</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="ip-search">
+                                    <label for="majorNm0" class="blind">전공</label>
+                                    <input type="text" id="majorNm0" name="majorNm" autocomplete="off" class="input_text search majorNm" placeholder="전공" maxlength="50" readonly="">
+
+                                    <button type="button" class="search_button">
+                                        <i class="ico_search"><span class="blind">검색</span></i>
+                                    </button>
+
+                                    <div class="layer_popup_area">
+                                        <div class="layer_popup">
+                                            <div class="popup_title_box">
+                                                <h4 class="layer_title">전공명 조회</h4>
+                                            </div>
+                                            <button type="button" class="btn_close">
+                                                <span class="blind">팝업닫기</span>
+                                            </button>
+	                                        <ul class="detail_list">
+						                        <li class="item">검색되지 않는다면, 하단의 직접 입력을 눌러 입력해주세요.</li>
+						                    </ul>
+                                            <div class="layer-field">
+                                                <div class="ip-text">
+                                                    <label for="cdNm" class="blind">전공명</label>
+                                                    <input type="text" id="cdNm" autocomplete="off" class="input_text searchMajorNm" placeholder="전공명" maxlength="50">
+                                                </div>
+                                                <button class="ip-btn search" type="button">검색</button>
+                                            </div>
+                                            <div class="search_list majorSearchList">
+
+                                                <p class="notfound">조회된 결과가 없습니다.</p>
+                                                <ul></ul>
+                                            </div>
+
+                                            <div class="layer-field only custom">
+                                                <button class="ip-btn custom" type="button">직접입력</button>
+                                                <div class="ip-text custom">
+                                                    <label for="insertNm0" class="blind">직접입력</label>
+                                                    <input type="text" id="insertNm0" autocomplete="off" class="input_text insertMajorNm" placeholder="직접입력" maxlength="50">
+                                                </div>
+                                            </div>
+                                            <div class="link_box_wrap">
+                                                <button type="button" class="link_btn btn_check">확인</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="ip-search">
+                                    <label for="minorNm0" class="blind">부전공</label>
+                                    <input type="text" id="minorNm0" name="minorNm" autocomplete="off" class="input_text search minorNm" placeholder="부전공" maxlength="100" readonly="">
+
+                                    <button type="button" class="search_button">
+                                        <i class="ico_search"><span class="blind">검색</span></i>
+                                    </button>
+
+                                    <div class="layer_popup_area">
+                                        <div class="layer_popup">
+                                            <div class="popup_title_box">
+                                                <h4 class="layer_title">부전공명 조회</h4>
+                                            </div>
+                                            <button type="button" class="btn_close">
+                                                <span class="blind">팝업닫기</span>
+                                            </button>
+	                                        <ul class="detail_list">
+						                        <li class="item">검색되지 않는다면, 하단의 직접 입력을 눌러 입력해주세요.</li>
+						                    </ul>
+                                            <div class="layer-field">
+                                                <div class="ip-text">
+                                                    <label for="cdNm" class="blind">부전공명</label>
+                                                    <input type="text" id="cdNm" autocomplete="off" class="input_text searchMinorNm" placeholder="부전공명" maxlength="100">
+                                                </div>
+                                                <button class="ip-btn search" type="button">검색</button>
+                                            </div>
+                                            <div class="search_list minorSearchList">
+
+                                                <p class="notfound">조회된 결과가 없습니다.</p>
+                                                <ul></ul>
+                                            </div>
+
+                                            <div class="layer-field only custom">
+                                                <button class="ip-btn custom" type="button">직접입력</button>
+                                                <div class="ip-text custom">
+                                                    <label for="insertNm0" class="blind">직접입력</label>
+                                                    <input type="text" id="insertNm0" autocomplete="off" class="input_text insertMinorNm" placeholder="직접입력" maxlength="100">
+                                                </div>
+                                            </div>
+                                            <div class="link_box_wrap">
+                                                <button type="button" class="link_btn btn_check">확인</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="ip-text score grade">
+                                    <label for="gradePnt0" class="blind">평점</label>
+                                    <input type="text" id="gradePnt0" name="gradePnt" autocomplete="off" class="input_text" placeholder="평점" maxlength="4">
+                                </div>
+
+								<div class="ip-select">
+                                    <select id="gradeBasis0" name="gradeBasis" class="select-box">
+	<option value="">기준학점</option>
+										<option value="4.0">4.0</option>
+										<option value="4.3">4.3</option>
+										<option value="4.5">4.5</option>
+										<option value="5.0">5.0</option>
+										<option value="7.0">7.0</option>
+										<option value="100">100</option>
+                                    </select>
+                                </div>
+                                <div class="ip-calendar double">
+                                    <div class="ip-calbox">
+                                        <label for="schoolStaYmd0" class="blind">입학년월</label>
+                                        <input type="text" id="schoolStaYmd0" name="schoolStaYmd" autocomplete="off" class="input_text cal monthpicker hasDatepicker" placeholder="입학년월" maxlength="7" readonly="">
+                                    </div>
+                                    <div class="ip-calbox">
+                                        <label for="schoolEndYmd0" class="blind">졸업년월</label>
+                                        <input type="text" id="schoolEndYmd0" name="schoolEndYmd" autocomplete="off" class="input_text cal monthpicker hasDatepicker" placeholder="졸업년월" maxlength="7" readonly="">
+                                    </div>
+                                </div>
+                                <div class="ip-select">
+                                    <select id="graduationType" name="graduationType" class="select-box">
+	<option value="">졸업구분</option>
+
+											<option value="opt-11">졸업</option>
+
+											<option value="opt-12">졸업예정</option>
+
+											<option value="opt-13">휴학</option>
+
+											<option value="opt-14">재학</option>
+
+											<option value="opt-15">수료</option>
+
+											<option value="opt-16">편입</option>
+
+											<option value="opt-17">중퇴/자퇴</option>
+
+											<option value="opt-18">기타</option>
+
+                                    </select>
+                                </div>
+                                <button class="ip-btn rcform_copyBtn sch wmargin" type="button">내용추가</button>
+                                <button class="ip-btn resetBtn" type="button">초기화</button>
+                            </div>
+                        </div>
+
+
+
+                    </div>
+                    <ul class="detail_list">
+                        <li class="item">학력은 고등학교에서부터 현 최종학력 순으로 순차적으로 기재하시기 바랍니다.</li>
+                        <li class="item">복수전공 및 이중전공을 이수하신 분들은 부전공란에 입력해주세요.</li>
+                        <li class="item">해당 항목을 모두 기입한 후, 내용추가 버튼을 누르면 다음 항목이 활성화됩니다.</li>
+                    </ul>
+                </div>
+
+
+                <div class="form_box">
+                    <div class="title_box">
+                        <h4 class="form_title">경력사항<span class="nec">*</span></h4>
+                    </div>
+
+                    <div class="rcform_copy_prt">
+
+                        <div class="ip-field type03 rcform_copy careerDiv">
+                            <div class="ip-select">
+                                <select id="empType" name="empType" class="select-box">
+                                    <option value="">고용형태</option>
+
+										<option value="opt-19">정규</option>
+
+										<option value="opt-20">계약</option>
+
+										<option value="opt-21">인턴</option>
+
+										<option value="opt-22">파견직</option>
+
+										<option value="opt-23">프리랜서</option>
+
+										<option value="opt-24">아르바이트</option>
+
+                                </select>
+                            </div>
+                            <div class="ip-search">
+                                <label for="corpNm0" class="blind">회사명</label>
+                                <input type="text" id="corpNm0" name="corpNm" autocomplete="off" class="input_text search corpNm" placeholder="회사명" maxlength="100" readonly="">
+
+                                <button type="button" class="search_button">
+                                    <i class="ico_search"><span class="blind">검색</span></i>
+                                </button>
+
+                                <div class="layer_popup_area" hidden="">
+                                    <div class="layer_popup">
+                                        <div class="popup_title_box">
+                                            <h4 class="layer_title">회사명 조회</h4>
+                                        </div>
+                                        <button type="button" class="btn_close">
+                                            <span class="blind">팝업닫기</span>
+                                        </button>
+                                        <ul class="detail_list">
+					                        <li class="item">검색되지 않는다면, 하단의 직접 입력을 눌러 입력해주세요.</li>
+					                    </ul>
+                                        <div class="layer-field">
+                                            <div class="ip-text">
+                                                <label for="cdNm" class="blind">회사명</label>
+                                                <input type="text" id="cdNm" autocomplete="off" class="input_text searchCorpNm" placeholder="회사명" maxlength="100">
+                                            </div>
+                                            <button class="ip-btn search" type="button">검색</button>
+                                        </div>
+                                        <div class="search_list corpSearchList">
+
+                                            <p class="notfound">조회된 결과가 없습니다.</p>
+                                            <ul></ul>
+                                        </div>
+
+                                        <div class="layer-field only custom">
+                                            <button class="ip-btn custom" type="button">직접입력</button>
+                                            <div class="ip-text custom">
+                                                <label for="insertNm0" class="blind">직접입력</label>
+                                                <input type="text" id="insertNm0" autocomplete="off" class="input_text insertCorpNm" placeholder="직접입력" maxlength="100">
+                                            </div>
+                                        </div>
+                                        <div class="link_box_wrap">
+                                            <button type="button" class="link_btn btn_check">확인</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="ip-text">
+                                <label for="deptNm0" class="blind">부서명</label>
+                                <input type="text" id="deptNm0" name="deptNm" autocomplete="off" class="input_text" placeholder="부서명" maxlength="100">
+                            </div>
+                            <div class="ip-calendar double">
+                                <div class="ip-calbox">
+                                    <label for="enterYmd0" class="blind">입사일</label>
+                                    <input type="text" id="enterYmd0" name="enterYmd" autocomplete="off" class="input_text cal datepicker hasDatepicker" placeholder="입사일" maxlength="10" readonly="">
+                                </div>
+                                <div class="ip-calbox">
+                                    <label for="retireYmd0" class="blind">퇴사일</label>
+                                    <input type="text" id="retireYmd0" name="retireYmd" autocomplete="off" class="input_text cal datepicker hasDatepicker" placeholder="퇴사일" maxlength="10" readonly="">
+                                </div>
+                            </div>
+                            <div class="ip-text jobs">
+                                <label for="jikwiNm0" class="blind">직책</label>
+                                <input type="text" id="jikwiNm0" name="jikwiNm" autocomplete="off" class="input_text" placeholder="직책" maxlength="100">
+                            </div>
+                            <div class="ip-text jobs">
+                                <label for="jobNm0" class="blind">업무내용(요약)</label>
+                                <input type="text" id="jobNm0" name="jobNm" autocomplete="off" class="input_text" placeholder="업무내용(요약)" maxlength="30">
+                            </div>
+                            <button class="ip-btn rcform_copyBtn wmargin" type="button">내용추가</button>
+                            <button class="ip-btn resetBtn" type="button">초기화</button>
+                        </div>
+
+
+                    </div>
+
+                    <ul class="detail_list">
+                        <li class="item">증명이 불가능한 경력 및 직무와 무관한 아르바이트 경력은 기재하지 않습니다.</li>
+                        <li class="item">최종 회사에 재직중이면, 퇴사일은 비워 두셔도 됩니다.</li>
+                        <li class="item">해당 항목을 모두 기입한 후, 내용추가 버튼을 누르면 다음 항목이 활성화됩니다.</li>
+                        <li class="item">박사 학위 취득 외 기타 경력 사항이 없으실 경우 경력사항 란에 연구실 근무 기간 등을 기입 바랍니다.</li>
+                    </ul>
+                </div>
+
+
+                <div class="form_box">
+                    <div class="title_box">
+                        <h4 class="form_title">자격사항</h4>
+                    </div>
+
+                    <div class="rcform_copy_prt">
+
+                        <div class="ip-field type05 rcform_copy licenseDiv">
+                            <div class="ip-search">
+                                <label for="licenseNm0" class="blind">자격/면허종류</label>
+                                <input type="text" id="licenseNm0" name="licenseNm" autocomplete="off" class="input_text search licenseNm" placeholder="자격/면허종류" maxlength="50" readonly="">
+
+                                <button type="button" class="search_button">
+                                    <i class="ico_search"><span class="blind">검색</span></i>
+                                </button>
+
+                                <div class="layer_popup_area" hidden="">
+                                    <div class="layer_popup">
+                                        <div class="popup_title_box">
+                                            <h4 class="layer_title">자격/면허종류명 조회</h4>
+                                        </div>
+                                        <button type="button" class="btn_close">
+                                            <span class="blind">팝업닫기</span>
+                                        </button>
+                                        <ul class="detail_list">
+					                        <li class="item">검색되지 않는다면, 하단의 직접 입력을 눌러 입력해주세요.</li>
+					                    </ul>
+                                        <div class="layer-field">
+                                            <div class="ip-text">
+                                                <label for="cdNm" class="blind">자격/면허종류명</label>
+                                                <input type="text" id="cdNm" autocomplete="off" class="input_text searchLicenseNm" placeholder="자격/면허종류명" maxlength="50">
+                                            </div>
+                                            <button class="ip-btn search" type="button">검색</button>
+                                        </div>
+                                        <div class="search_list licenseSearchList">
+
+                                            <p class="notfound">조회된 결과가 없습니다.</p>
+                                            <ul></ul>
+                                        </div>
+
+                                        <div class="layer-field only custom">
+                                            <button class="ip-btn custom" type="button">직접입력</button>
+                                            <div class="ip-text custom">
+                                                <label for="insertNm0" class="blind">직접입력</label>
+                                                <input type="text" id="insertNm0" autocomplete="off" class="input_text insertLicenseNm" placeholder="직접입력" maxlength="50">
+                                            </div>
+                                        </div>
+                                        <div class="link_box_wrap">
+                                            <button type="button" class="link_btn btn_check">확인</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="ip-select">
+	<select id="licenseGrd0" name="licenseGrd" class="select-box">
+		<option value="">등급</option>
+
+										<option value="opt-25">1급</option>
+
+										<option value="opt-26">2급</option>
+
+										<option value="opt-27">3급</option>
+
+										<option value="opt-28">2+급</option>
+
+										<option value="opt-29">2-급</option>
+
+										<option value="opt-30">3+급</option>
+
+										<option value="opt-31">3-급</option>
+
+										<option value="opt-32">4+급</option>
+
+										<option value="opt-33">A등급</option>
+
+										<option value="opt-34">B등급</option>
+
+										<option value="opt-35">기타</option>
+
+                                </select>
+                            </div>
+                            <div class="ip-calendar">
+                                <div class="ip-calbox">
+                                    <label for="takeYmd0" class="blind">취득/응시일</label>
+                                    <input type="text" id="takeYmd0" name="takeYmd" autocomplete="off" class="input_text cal datepicker hasDatepicker" placeholder="취득/응시일" maxlength="10" readonly="">
+                                </div>
+                            </div>
+                            <div class="ip-text">
+                                <label for="issueOrgNm0" class="blind">발급기관</label>
+                                <input type="text" id="issueOrgNm0" name="issueOrgNm" autocomplete="off" class="input_text" placeholder="발급기관" maxlength="100">
+                            </div>
+                            <button class="ip-btn rcform_copyBtn wmargin" type="button">내용추가</button>
+                            <button class="ip-btn resetBtn" type="button">초기화</button>
+                        </div>
+
+
+                    </div>
+                </div>
+
+
+                <div class="form_box">
+                    <div class="title_box">
+                        <h4 class="form_title">어학사항</h4>
+                    </div>
+
+                    <div class="rcform_copy_prt">
+
+                        <div class="ip-field type06 rcform_copy languageDiv">
+                            <div class="ip-select">
+	<select id="langType" name="langType" class="select-box">
+		<option value="">언어</option>
+
+
+										<option value="opt-36">영어</option>
+
+										<option value="opt-37">일어</option>
+
+										<option value="opt-38">중국어</option>
+
+										<option value="opt-39">스페인어</option>
+
+										<option value="opt-40">기타</option>
+
+										<option value="opt-41">프랑스어</option>
+
+										<option value="opt-42">독일어</option>
+
+                                </select>
+                            </div>
+
+                            <div class="ip-search">
+                                <label for="langTestNm0" class="blind">시험</label>
+                                <input type="text" id="langTestNm0" name="langTestNm" autocomplete="off" class="input_text search langTestNm" placeholder="시험" maxlength="50" readonly="">
+
+                                <button type="button" class="search_button">
+                                    <i class="ico_search"><span class="blind">검색</span></i>
+                                </button>
+
+                                <div class="layer_popup_area" hidden="">
+                                    <div class="layer_popup">
+                                        <div class="popup_title_box">
+                                            <h4 class="layer_title">어학시험명 조회</h4>
+                                        </div>
+                                        <button type="button" class="btn_close">
+                                            <span class="blind">팝업닫기</span>
+                                        </button>
+                                        <ul class="detail_list">
+					                        <li class="item">검색되지 않는다면, 하단의 직접 입력을 눌러 입력해주세요.</li>
+					                    </ul>
+                                        <div class="layer-field">
+                                            <div class="ip-text">
+                                                <label class="blind">시험</label>
+                                                <input type="text" autocomplete="off" class="input_text searchlangNm" placeholder="시험" maxlength="50">
+                                            </div>
+                                            <button class="ip-btn search" type="button">검색</button>
+                                        </div>
+                                        <div class="search_list langTestSearchList">
+
+                                            <p class="notfound">조회된 결과가 없습니다.</p>
+                                            <ul></ul>
+                                        </div>
+
+                                        <div class="layer-field only custom">
+                                            <button class="ip-btn custom" type="button">직접입력</button>
+                                            <div class="ip-text custom">
+                                                <label for="insertNm0" class="blind">직접입력</label>
+                                                <input type="text" id="insertNm0" autocomplete="off" class="input_text insertLangTestNm" placeholder="직접입력" maxlength="50">
+                                            </div>
+                                        </div>
+                                        <div class="link_box_wrap">
+                                            <button type="button" class="link_btn btn_check">확인</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="ip-select">
+	<select id="langGrd" name="langGrd" class="select-box">
+		<option value="">등급</option>
+
+										<option value="opt-43">없음</option>
+
+										<option value="001|A">A</option>
+
+										<option value="002|B">B</option>
+
+										<option value="003|C">C</option>
+
+										<option value="004|D">D</option>
+
+										<option value="005|E">E</option>
+
+										<option value="006|F">F</option>
+
+										<option value="opt-44">1급</option>
+
+										<option value="opt-45">2급</option>
+
+										<option value="opt-46">3급</option>
+
+										<option value="opt-47">4급</option>
+
+										<option value="opt-48">5급</option>
+
+										<option value="opt-49">6급</option>
+
+										<option value="opt-50">7급</option>
+
+										<option value="opt-51">8급</option>
+
+										<option value="opt-52">9급</option>
+
+										<option value="opt-53">10급</option>
+
+										<option value="opt-54">11급</option>
+
+										<option value="018|AL">AL</option>
+
+										<option value="019|IH">IH</option>
+
+										<option value="020|IM1">IM1</option>
+
+										<option value="021|IM2">IM2</option>
+
+										<option value="022|IM3">IM3</option>
+
+										<option value="040|IL">IL</option>
+
+										<option value="023|NH">NH</option>
+
+										<option value="026|IL">IL</option>
+
+										<option value="024|NM">NM</option>
+
+										<option value="025|NL">NL</option>
+
+										<option value="027|N1">N1</option>
+
+										<option value="028|N2">N2</option>
+
+										<option value="029|N3">N3</option>
+
+										<option value="030|N4">N4</option>
+
+										<option value="031|N5">N5</option>
+
+										<option value="opt-55">Level 1</option>
+
+										<option value="opt-56">Level 2</option>
+
+										<option value="opt-57">Level 3</option>
+
+										<option value="opt-58">Level 4</option>
+
+										<option value="opt-59">Level 5</option>
+
+										<option value="opt-60">Level 6</option>
+
+										<option value="opt-61">Level 7</option>
+
+										<option value="opt-62">Level 8</option>
+
+										<option value="041|A1">A1</option>
+
+										<option value="042|A2">A2</option>
+
+										<option value="043|B1">B1</option>
+
+										<option value="044|B2">B2</option>
+
+										<option value="045|C1">C1</option>
+
+										<option value="046|C2">C2</option>
+
+										<option value="opt-63">Advanced High</option>
+
+										<option value="opt-64">Advanced Mid</option>
+
+										<option value="opt-65">Advanced Low</option>
+
+										<option value="opt-66">Intermediate High</option>
+
+										<option value="opt-67">Intermediate Mid 3</option>
+
+										<option value="opt-68">Intermediate Mid 2</option>
+
+										<option value="opt-69">Intermediate Mid 1</option>
+
+										<option value="opt-70">Intermediate Low</option>
+
+										<option value="opt-71">Novice High</option>
+
+										<option value="opt-72">Novice Mid/Low</option>
+
+										<option value="opt-73">기타</option>
+
+                                </select>
+                            </div>
+                            <div class="ip-text">
+                                <label for="score" class="blind">점수</label>
+                                <input type="text" id="score" name="score" autocomplete="off" class="input_text" placeholder="점수" maxlength="5">
+                            </div>
+                            <div class="ip-calendar">
+                                <div class="ip-calbox">
+                                    <label for="testYmd" class="blind">취득/응시일</label>
+                                    <input type="text" id="testYmd" name="testYmd" autocomplete="off" class="input_text cal datepicker hasDatepicker" placeholder="취득/응시일" maxlength="10" readonly="">
+                                </div>
+                            </div>
+                            <div class="ip-text">
+                                <label for="langOrgNm" class="blind">발급기관</label>
+                                <input type="text" id="langOrgNm" name="langOrgNm" autocomplete="off" class="input_text" placeholder="발급기관" maxlength="50">
+                            </div>
+                            <button class="ip-btn rcform_copyBtn wmargin" type="button">내용추가</button>
+                            <button class="ip-btn resetBtn" type="button">초기화</button>
+                        </div>
+
+
+                    </div>
+
+                </div>
+            </div>
+			</form>
+</body></html>

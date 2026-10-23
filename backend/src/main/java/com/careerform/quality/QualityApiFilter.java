@@ -46,9 +46,10 @@ public final class QualityApiFilter extends OncePerRequestFilter {
         }
         var writing = !request.getMethod().equals("GET") && !request.getMethod().equals("HEAD");
         var reporting = path.matches(PREFIX + "/executions/[A-Za-z0-9_-]+/report") && request.getMethod().equals("POST");
+        var registering = path.equals(PREFIX + "/executions") && request.getMethod().equals("POST");
         var login = path.equals(PREFIX + "/login") && request.getMethod().equals("POST");
-        if (!reporting && !sameOrigin(request)) { reject(response, 403); return; }
-        if (!reporting && !login) {
+        if (!reporting && !registering && !sameOrigin(request)) { reject(response, 403); return; }
+        if (!reporting && !registering && !login) {
             var query = (path.equals(PREFIX + "/stats") || path.equals(PREFIX + "/stats/sites"))
                 && request.getMethod().equals("GET") && access.canQuery(bearer(request));
             if (!query) {
@@ -61,7 +62,7 @@ public final class QualityApiFilter extends OncePerRequestFilter {
             }
         }
         if (writing) {
-            var cap = login ? 4096 : 128 * 1024;
+            var cap = login || registering ? 4096 : 128 * 1024;
             var body = request.getInputStream().readNBytes(cap + 1);
             if (body.length > cap) { reject(response, 413); return; }
             chain.doFilter(new BufferedRequest(request, body), response);

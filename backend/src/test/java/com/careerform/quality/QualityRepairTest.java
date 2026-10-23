@@ -16,6 +16,29 @@ import org.junit.jupiter.api.Test;
 
 class QualityRepairTest {
     @Test
+    void limitsOneRepairPassAndResumesTheUnfinishedSourceRange() {
+        var now = Instant.parse("2030-01-02T00:00:00Z");
+        var group = new QualityRecord.Group("test", "synthetic.test", "shape", "GENERIC", "v1");
+        var originals = java.util.stream.IntStream.range(0, 17).mapToObj(index -> new QualityRecord("source_" + index,
+            QualityRecord.Kind.REQUEST, group, 0, now, now.plusSeconds(86400),
+            new QualityCollectionService.RequestEvent("FIELDS", 200, 1, null, List.of()))).toList();
+        var store = mock(QualityStore.class);
+        var maximumLoaded = new java.util.concurrent.atomic.AtomicInteger();
+        when(store.list(any(), any())).thenAnswer(call -> {
+            QualityStore.Query query = call.getArgument(0);
+            var values = query.kind() == QualityRecord.Kind.REQUEST
+                ? originals.stream().skip(query.offset()).limit(query.limit()).toList() : List.<QualityRecord>of();
+            maximumLoaded.accumulateAndGet(values.size(), Math::max);
+            return values;
+        });
+        var repair = new QualityRepair(store, mock(QualityRegistry.class), mock(QualityRollup.class),
+            Clock.fixed(now, ZoneOffset.UTC), "test");
+        assertThat(repair.repair().observed()).isEqualTo(16);
+        assertThat(repair.repair().observed()).isEqualTo(1);
+        assertThat(maximumLoaded.get()).isEqualTo(1);
+    }
+
+    @Test
     void repairsDerivedRecordsWithoutResettingOriginalWaitingTime() {
         var now = Instant.parse("2030-01-02T00:00:00Z");
         var created = now.minusSeconds(86400);

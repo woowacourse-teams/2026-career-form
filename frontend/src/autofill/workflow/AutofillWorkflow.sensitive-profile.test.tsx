@@ -172,7 +172,7 @@ it("identifies same-labelled candidates using supplied previews without obsolete
       currentValue: "",
       profileValue: "desired-salary-secret",
       previewValue: "••••••••",
-      status: "sensitive" as const,
+      status: "needs-review" as const,
       selected: false,
       disabled: false,
       revealed: false,
@@ -200,7 +200,7 @@ it("identifies same-labelled candidates using supplied previews without obsolete
       currentValue: "",
       profileValue: "previous-salary-secret",
       previewValue: "••••••••",
-      status: "sensitive" as const,
+      status: "needs-review" as const,
       selected: false,
       disabled: false,
       revealed: false,
@@ -219,7 +219,6 @@ it("identifies same-labelled candidates using supplied previews without obsolete
     reviewItems,
     partial: false,
     toggleReviewItem: () => undefined,
-    revealSensitiveItem: () => undefined,
     executeWrites: async () => undefined,
     results: [],
     adapter: getWorkflowAdapter("example.test"),
@@ -231,10 +230,10 @@ it("identifies same-labelled candidates using supplied previews without obsolete
   render(<WorkflowScreens {...screenProps()} />);
 
   expect(
-    screen.getByRole("button", { name: "처우 / 희망연봉(만원) 필드로 이동" }),
+    screen.getByRole("button", { name: "희망연봉(만원) 필드로 이동" }),
   ).toBeVisible();
   expect(
-    screen.getByRole("button", { name: "처우 / 직전연봉(만원) 필드로 이동" }),
+    screen.getByRole("button", { name: "직전연봉(만원) 필드로 이동" }),
   ).toBeVisible();
   expect(screen.queryByText("desired-salary-secret")).not.toBeInTheDocument();
   expect(screen.queryByText("previous-salary-secret")).not.toBeInTheDocument();
@@ -253,7 +252,7 @@ it("uses a binding-only profile key for result labels and keeps missing items sa
     currentValue: "",
     profileValue: "desired-salary-result-secret",
     previewValue: "••••••••",
-    status: "sensitive" as const,
+    status: "needs-review" as const,
     selected: false,
     disabled: false,
     revealed: false,
@@ -288,7 +287,6 @@ it("uses a binding-only profile key for result labels and keeps missing items sa
       reviewItems={[bindingOnlyReviewItem]}
       partial={false}
       toggleReviewItem={() => undefined}
-      revealSensitiveItem={() => undefined}
       executeWrites={async () => undefined}
       results={[
         {
@@ -312,7 +310,7 @@ it("uses a binding-only profile key for result labels and keeps missing items sa
   expect(screen.getByRole("heading", { name: "처우" })).toBeVisible();
   expect(screen.getByText("희망연봉(만원)")).toBeVisible();
   expect(
-    screen.getByRole("button", { name: "처우 / 희망연봉(만원) 필드로 이동" }),
+    screen.getByRole("button", { name: "희망연봉(만원) 필드로 이동" }),
   ).toBeDisabled();
   expect(screen.getAllByText("프로필 정보")).toHaveLength(1);
   expect(

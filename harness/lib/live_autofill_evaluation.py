@@ -24,8 +24,8 @@ EVALUATION_PHASES = frozenset(
         "BLOCKED",
     )
 )
-WRITE_STATUSES = frozenset(("available", "needs-review", "conflict"))
-DEFERRED_STATUSES = frozenset(("sensitive", "unavailable"))
+WRITE_STATUSES = frozenset(("available", "needs-review", "conflict", "sensitive"))
+DEFERRED_STATUSES = frozenset(("unavailable",))
 GROUND_TRUTH_CREATORS = frozenset(("evaluation-agent",))
 REVISION_STATUSES = frozenset(("VERIFIED", "UNVERIFIED"))
 PROFILE_MODES = frozenset(("IMPORTED_FIXTURE", "EXISTING_PROFILE"))

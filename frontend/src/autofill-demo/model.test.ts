@@ -23,7 +23,7 @@ describe("autofill demo review policy", () => {
       {
         id: "needs-human-review",
         label: "사람 확인 필요",
-        itemIds: ["nationality", "phone", "veteran"],
+        itemIds: ["nationality", "phone"],
       },
       {
         id: "unavailable",
@@ -43,9 +43,6 @@ describe("autofill demo review policy", () => {
       false,
     );
     expect(items.find((item) => item.status === "conflict")?.selected).toBe(
-      false,
-    );
-    expect(items.find((item) => item.status === "sensitive")?.selected).toBe(
       false,
     );
     expect(items.find((item) => item.status === "unavailable")?.disabled).toBe(

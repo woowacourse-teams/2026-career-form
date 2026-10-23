@@ -20,6 +20,8 @@ const guidance: Record<WriteFailureCode, string> = {
   SEARCH_ACTIVATION_UNSAFE:
     "검색 결과의 선택 동작을 안전하게 확인하지 못해 입력을 보류했어요.",
   SEARCH_FOLLOWUP_HALTED: "앞선 검색 실패로 후속 입력을 보류했어요.",
+  NESTED_MAJOR_NOT_READY: "입력 불가(학교 확정 후 다시 실행)",
+  STRUCTURE_UNVERIFIED: "입력 불가(화면 구조 확인 불가)",
   EXAM_SCORE_NOT_READY:
     "시험명 선택 뒤에도 점수 칸을 확인하지 못했어요. 시험명을 목록에서 다시 고른 뒤 점수를 입력해 주세요.",
   ROW_SEARCH_UNCONFIRMED:
@@ -42,6 +44,12 @@ const guidance: Record<WriteFailureCode, string> = {
     "보이는 값은 프로필과 같지만 이번 자동 입력 기록과 연결하지 못했어요. 값만 확인해 주세요.",
   OPTION_UNMATCHED:
     "지원서 선택지에서 프로필 값과 일치하는 항목을 찾지 못했어요. 프로필 값을 확인해 주세요.",
+  DRIVER_LIMIT_REACHED:
+    "입력 분석 한도에 도달해 자동으로 입력하지 않았어요. 지원서에서 직접 입력해 주세요.",
+  DRIVER_SELECTION_UNCONFIRMED:
+    "조건부 선택 결과를 확인하지 못했어요. 이 항목을 직접 골라 주세요.",
+  ROW_DRIVER_UNCONFIRMED:
+    "같은 행의 선택 항목을 확정하지 못해 입력을 보류했어요. 선택 항목을 먼저 고른 뒤 이 값을 입력해 주세요.",
 };
 
 // Only trusted codes and our own classification labels reach this presentation layer.

@@ -1,4 +1,5 @@
 import { loadPolicyForSender } from "../src/autofill/policy/background";
+import { createProfileWriteHandler } from "../src/storage/profile-write-handler";
 import { installPostingBackground } from "../src/job-postings/background";
 import { browser } from "wxt/browser";
 import { defineBackground } from "wxt/utils/define-background";
@@ -19,6 +20,10 @@ import { openToolbarPanel } from "../src/extension/toolbar-panel";
 
 export default defineBackground(() => {
   const handlePostings = installPostingBackground();
+  const handleProfileWrite = createProfileWriteHandler(
+    browser.storage.local,
+    browser.runtime.id,
+  );
   browser.action.onClicked.addListener((tab) => {
     void openToolbarPanel(tab, {
       openPanel: (tabId) => openInPagePanel(undefined, tabId),
@@ -44,8 +49,24 @@ export default defineBackground(() => {
     storage: browser.storage.local,
   });
   browser.runtime.onMessage.addListener((message, sender) => {
+    if (message?.type === "AUTOFILL_GET_INSTALLED_BUILD") {
+      const snapshot = (
+        globalThis as typeof globalThis & {
+          __careerFormBuildInfo?: () => unknown;
+        }
+      ).__careerFormBuildInfo;
+      return Promise.resolve(
+        snapshot?.() ?? {
+          schema_version: "1.0",
+          revision: null,
+          source_state: "UNKNOWN",
+        },
+      );
+    }
     if (message?.type === "AUTOFILL_LOAD_EXECUTION_POLICY")
       return loadPolicyForSender(message, sender);
+    const profileResponse = handleProfileWrite(message, sender);
+    if (profileResponse !== undefined) return profileResponse;
     const postingResponse = handlePostings(message, sender);
     if (postingResponse !== undefined) return postingResponse;
     if (parseAnalyticsMessage(message)) {

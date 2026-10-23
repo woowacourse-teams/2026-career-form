@@ -2,7 +2,10 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { createEmptyProfile } from "../model";
-import type { ProfileRepository } from "../profile-repository";
+import {
+  ProfileWriteConflictError,
+  type ProfileRepository,
+} from "../profile-repository";
 import { useProfileEditor } from "./use-profile-editor";
 
 function createRepository(): ProfileRepository {
@@ -180,4 +183,128 @@ describe("useProfileEditor", () => {
     expect(result.current.profile).toEqual(importedProfile);
     vi.useRealTimers();
   });
+});
+
+it("blocks stale autosave and retry after conflict until latest profile is explicitly reloaded", async () => {
+  vi.useFakeTimers();
+  try {
+    const repository = createRepository();
+    vi.mocked(repository.save).mockRejectedValueOnce(
+      new ProfileWriteConflictError(),
+    );
+    const latest = createEmptyProfile();
+    latest.contact.email = "imported@example.invalid";
+    vi.mocked(repository.load)
+      .mockResolvedValueOnce(createEmptyProfile())
+      .mockResolvedValueOnce(latest);
+    const { result } = renderHook(() => useProfileEditor(repository, 100));
+    await act(async () => Promise.resolve());
+    act(() =>
+      result.current.updateSingle("personal", "koreanFamilyName", "미저장"),
+    );
+    await act(async () => vi.advanceTimersByTimeAsync(100));
+    expect(result.current.saveStatus).toBe("conflict");
+    act(() =>
+      result.current.updateSingle(
+        "personal",
+        "koreanFamilyName",
+        "미저장 수정",
+      ),
+    );
+    await act(async () => vi.advanceTimersByTimeAsync(100));
+    await act(async () => result.current.retrySave());
+    expect(repository.save).toHaveBeenCalledTimes(1);
+    expect(result.current.profile.personal.koreanFamilyName).toBe(
+      "미저장 수정",
+    );
+    await act(async () => result.current.reloadLatest());
+    expect(result.current.profile.contact.email).toBe(
+      "imported@example.invalid",
+    );
+    expect(result.current.profile.personal).toEqual({});
+    act(() =>
+      result.current.updateSingle("personal", "koreanFamilyName", "재편집"),
+    );
+    await act(async () => vi.advanceTimersByTimeAsync(100));
+    expect(result.current.saveStatus).toBe("saved");
+    expect(repository.save).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        contact: { email: "imported@example.invalid" },
+        personal: { koreanFamilyName: "재편집" },
+      }),
+    );
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+it("keeps conflict and unsaved values when reloading latest fails", async () => {
+  vi.useFakeTimers();
+  try {
+    const repository = createRepository();
+    vi.mocked(repository.save).mockRejectedValueOnce(
+      new ProfileWriteConflictError(),
+    );
+    vi.mocked(repository.load)
+      .mockResolvedValueOnce(createEmptyProfile())
+      .mockRejectedValueOnce(new Error("synthetic read error"));
+    const { result } = renderHook(() => useProfileEditor(repository, 100));
+    await act(async () => Promise.resolve());
+    act(() =>
+      result.current.updateSingle("contact", "email", "draft@example.invalid"),
+    );
+    await act(async () => vi.advanceTimersByTimeAsync(100));
+    await act(async () => result.current.reloadLatest());
+    expect(result.current.reloadFailed).toBe(true);
+    expect(result.current.saveStatus).toBe("conflict");
+    expect(result.current.profile.contact.email).toBe("draft@example.invalid");
+    await act(async () => result.current.retrySave());
+    expect(repository.save).toHaveBeenCalledTimes(1);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+it("waits for an in-flight write before reloading and cancels queued stale edits", async () => {
+  vi.useFakeTimers();
+  try {
+    const repository = createRepository();
+    let finish!: () => void;
+    vi.mocked(repository.save).mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const latest = createEmptyProfile();
+    latest.contact.email = "stored@example.invalid";
+    vi.mocked(repository.load)
+      .mockResolvedValueOnce(createEmptyProfile())
+      .mockResolvedValueOnce(latest);
+    const { result } = renderHook(() => useProfileEditor(repository, 100));
+    await act(async () => Promise.resolve());
+    act(() =>
+      result.current.updateSingle("personal", "koreanFamilyName", "첫 편집"),
+    );
+    await act(async () => vi.advanceTimersByTimeAsync(100));
+    act(() =>
+      result.current.updateSingle("personal", "koreanFamilyName", "대기 편집"),
+    );
+    await act(async () => vi.advanceTimersByTimeAsync(100));
+    let reloaded!: Promise<boolean>;
+    act(() => {
+      reloaded = result.current.reloadLatest();
+    });
+    expect(repository.load).toHaveBeenCalledTimes(1);
+    expect(result.current.isReloading).toBe(true);
+    await act(async () => {
+      finish();
+      await reloaded;
+    });
+    expect(repository.save).toHaveBeenCalledTimes(1);
+    expect(result.current.profile).toEqual(latest);
+    expect(result.current.isReloading).toBe(false);
+  } finally {
+    vi.useRealTimers();
+  }
 });

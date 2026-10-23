@@ -387,10 +387,12 @@ function validateFieldAnalysis(
         ]) ||
           !isOneOf(value.valueBinding.recipe, [
             "KOREAN_FULL_NAME",
+            "HANJA_FULL_NAME",
             "ENGLISH_FULL_NAME_GIVEN_FIRST",
             "ENGLISH_FULL_NAME_FAMILY_FIRST",
             "BOOLEAN_YN",
             "YEAR_MONTH",
+            "UNIVERSITY_MAIN_MAJOR_CLASSIFICATION",
             "UNIVERSITY_ADDITIONAL_MAJOR_1_NAME",
             "UNIVERSITY_ADDITIONAL_MAJOR_1_CLASSIFICATION",
             "UNIVERSITY_ADDITIONAL_MAJOR_2_NAME",

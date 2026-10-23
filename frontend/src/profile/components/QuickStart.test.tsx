@@ -5,14 +5,19 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createEmptyProfile, type Profile } from "../model";
-import type { ProfileRepository } from "../profile-repository";
+import {
+  ProfileWriteConflictError,
+  type ProfileRepository,
+} from "../profile-repository";
 import {
   parseProfileImport,
   serializeProfileExport,
 } from "../profile-transfer";
 import { QuickStart } from "./QuickStart";
+
+afterEach(() => vi.restoreAllMocks());
 
 async function click(element: HTMLElement) {
   await act(async () => {
@@ -1316,4 +1321,145 @@ it("adds English name and nationality from the basic summary and returns there",
     englishGivenName: "Test",
     nationality: "대한민국",
   });
+});
+
+async function renderCareerConflict() {
+  const initial = createEmptyProfile();
+  initial.careers = [
+    {
+      id: "old-career",
+      sectionId: "career",
+      values: { companyName: "네이버" },
+    },
+  ];
+  const view = await renderForm(initial);
+  await click(screen.getByRole("button", { name: "네이버 이어서 채우기" }));
+  await click(screen.getByRole("button", { name: "직장명 수정" }));
+  view.repository.save = async () => {
+    throw new ProfileWriteConflictError();
+  };
+  fireEvent.change(screen.getByLabelText("직장명"), {
+    target: { value: "카카오" },
+  });
+  await click(screen.getByRole("button", { name: "확인하고 돌아가기" }));
+  await screen.findByRole("alert");
+  return view;
+}
+
+it("preserves a conflicting edit when latest-profile confirmation is cancelled", async () => {
+  const { repository, open } = await renderCareerConflict();
+  vi.spyOn(globalThis, "confirm").mockReturnValue(false);
+  await click(
+    screen.getByRole("button", { name: "최신 프로필 다시 불러오기" }),
+  );
+  expect(screen.getByLabelText("직장명")).toHaveValue("카카오");
+  expect((await repository.load()).careers[0].values.companyName).toBe(
+    "네이버",
+  );
+  await click(screen.getByRole("button", { name: "전체 프로필 편집" }));
+  expect(open).not.toHaveBeenCalled();
+  expect(screen.getByLabelText("직장명")).toHaveValue("카카오");
+});
+
+it("retains the conflicting edit and permits retry after latest-profile loading fails", async () => {
+  const { repository } = await renderCareerConflict();
+  vi.spyOn(globalThis, "confirm").mockReturnValue(true);
+  repository.load = async () => {
+    throw new Error("unavailable");
+  };
+  await click(
+    screen.getByRole("button", { name: "최신 프로필 다시 불러오기" }),
+  );
+  expect(screen.getByLabelText("직장명")).toHaveValue("카카오");
+  expect(screen.getByText(/최신 프로필을 불러오지 못/)).toBeVisible();
+  expect(
+    screen.getByRole("button", { name: "최신 프로필 다시 불러오기" }),
+  ).toBeEnabled();
+});
+
+it("blocks edits while reloading and discards stale repeated-entry navigation only after success", async () => {
+  const { repository, open } = await renderCareerConflict();
+  vi.spyOn(globalThis, "confirm").mockReturnValue(true);
+  const latest = createEmptyProfile();
+  latest.careers = [
+    {
+      id: "new-career",
+      sectionId: "career",
+      values: { companyName: "우아한형제들" },
+    },
+  ];
+  let resolveLoad!: (profile: Profile) => void;
+  repository.load = () =>
+    new Promise<Profile>((resolve) => {
+      resolveLoad = resolve;
+    });
+  await click(
+    screen.getByRole("button", { name: "최신 프로필 다시 불러오기" }),
+  );
+  expect(screen.getByLabelText("직장명")).toBeDisabled();
+  expect(
+    screen.getByRole("button", { name: "전체 프로필 편집" }),
+  ).toBeDisabled();
+  expect(
+    screen.getByRole("button", { name: "확인하고 돌아가기" }),
+  ).toBeDisabled();
+  expect(screen.getByRole("button", { name: "이전" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "불러오는 중…" })).toBeDisabled();
+  await act(async () => resolveLoad(latest));
+  expect(
+    screen.getByRole("heading", { name: "저장한 정보부터 이어서 준비해요" }),
+  ).toBeVisible();
+  expect(screen.queryByRole("button", { name: "이전" })).toBeNull();
+  expect(screen.queryByText("카카오")).toBeNull();
+  expect(screen.getByText("우아한형제들")).toBeVisible();
+  expect(open).not.toHaveBeenCalled();
+  repository.save = async (profile) => {
+    Object.assign(latest, structuredClone(profile));
+  };
+  await click(
+    screen.getByRole("button", { name: "우아한형제들 이어서 채우기" }),
+  );
+  await click(screen.getByRole("button", { name: "직장명 수정" }));
+  fireEvent.change(screen.getByLabelText("직장명"), {
+    target: { value: "삼성전자" },
+  });
+  await next();
+  expect(latest.careers).toEqual([
+    {
+      id: "new-career",
+      sectionId: "career",
+      values: { companyName: "삼성전자" },
+    },
+  ]);
+});
+
+it("keeps the guide open while a confirmed conflict reload is pending", async () => {
+  const { repository } = await renderForm();
+  fireEvent.change(screen.getByLabelText("국문 이름"), {
+    target: { value: "시연" },
+  });
+  await click(screen.getByRole("button", { name: "지금 자동 기입 사용하기" }));
+  repository.save = async () => {
+    throw new ProfileWriteConflictError();
+  };
+  await click(screen.getByRole("button", { name: "전체 프로필 편집" }));
+  await screen.findByRole("alert");
+  vi.spyOn(globalThis, "confirm").mockReturnValue(true);
+  let resolveLoad!: (profile: Profile) => void;
+  repository.load = () =>
+    new Promise<Profile>((resolve) => {
+      resolveLoad = resolve;
+    });
+  await click(
+    screen.getByRole("button", { name: "최신 프로필 다시 불러오기" }),
+  );
+  expect(screen.getByRole("button", { name: "입력 이어가기" })).toBeDisabled();
+  await click(screen.getByRole("button", { name: "입력 이어가기" }));
+  expect(
+    screen.getByRole("heading", { name: "지원서에서 자동 기입을 시작하세요" }),
+  ).toBeVisible();
+  await act(async () => resolveLoad(createEmptyProfile()));
+  expect(
+    screen.getByRole("heading", { name: "저장한 정보부터 이어서 준비해요" }),
+  ).toBeVisible();
 });

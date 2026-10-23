@@ -1,12 +1,26 @@
+import { browser } from "wxt/browser";
+import {
+  debugRunBuild,
+  debugStageCounts,
+} from "../debug/structural-diagnostics";
 import { runtimeRules } from "../policy/runtime-rules";
-import { installExecutionPolicy, executionPolicy } from "./execution-policy";
+import {
+  nativePolicyRequired,
+  installExecutionPolicy,
+  executionPolicy,
+} from "./execution-policy";
 import {
   createStaticFieldsSession,
   type AnalyzeFieldsSnapshot,
   type StaticFieldsSession,
 } from "./static-fields-session";
 import { componentBasicControls } from "../policy/components/fingerprint";
-import { resolveDocumentCompany } from "../adapters/company";
+import { AnalysisServiceError } from "../api/runtime-client";
+import {
+  resolveDocumentCompany,
+  isUnsupportedHplace,
+  unsupportedHplaceKind,
+} from "../adapters/company";
 import {
   createPreparationOptions,
   prepareApprovedPlans,
@@ -78,6 +92,21 @@ import {
   type WorkflowProps,
 } from "./workflow-model";
 import { prepareMixedSectionRows } from "./mixed-section-preparation";
+import {
+  runGenericStructureLoop,
+  type StructureLoopAction,
+} from "../generic/structure-loop";
+import {
+  collectGenericStructureSnapshot,
+  type GenericStructureContext,
+} from "../generic/structure-context";
+
+import {
+  createStructureDiagnostics,
+  structureConsoleLine,
+  type StructureDiagnostics,
+} from "../generic/structure-diagnostics";
+import { debugWarn } from "../debug/autofill-debug";
 
 export { localItemCount, shouldRunRevealPlan } from "./workflow-model";
 
@@ -87,6 +116,9 @@ export function AutofillWorkflow(props: WorkflowProps) {
   useEffect(() => {
     let active = true;
     const url = props.pageDocument.URL;
+    void debugRunBuild(() =>
+      browser.runtime.sendMessage({ type: "AUTOFILL_GET_INSTALLED_BUILD" }),
+    );
     setLoaded(false);
     setError(undefined);
     const siteUrl = new URL(url);
@@ -102,11 +134,20 @@ export function AutofillWorkflow(props: WorkflowProps) {
         setLoaded(true);
       })
       .catch((error: unknown) => {
-        if (active)
+        if (!active) return;
+        if (
+          error instanceof AnalysisServiceError &&
+          error.code === "POLICY_INCOMPATIBLE"
+        ) {
           setError(
-            "사이트 정책을 불러오지 못했습니다. " +
-              (error instanceof Error ? error.message : "다시 실행해 주세요."),
+            "지원서 정책이 이 확장 버전과 맞지 않아요. 확장을 최신 버전으로 업데이트한 뒤 다시 시도해 주세요.",
           );
+          return;
+        }
+        setError(
+          "사이트 정책을 불러오지 못했습니다. " +
+            (error instanceof Error ? error.message : "다시 실행해 주세요."),
+        );
       });
     return () => {
       active = false;
@@ -135,6 +176,20 @@ function PolicyReadyWorkflow({
   addressSearch = runtimeAddressSearch,
 }: WorkflowProps) {
   const companyId = resolveDocumentCompany(pageDocument);
+  // Analysis may replace the installed policy mid-run. The structure loop
+  // stays tied to the policy present when the workflow started, so a document
+  // that began with site-specific policy never falls back to it.
+  const siteSpecificPolicyAtStart = useMemo(() => {
+    const policy = executionPolicy(pageDocument);
+    return (
+      !!policy &&
+      (!!policy.browserPolicy ||
+        !!policy.componentPolicy ||
+        policy.searches.length > 0 ||
+        policy.failureScopes.length > 0 ||
+        !!policy.address)
+    );
+  }, [pageDocument]);
   const staticFieldsSession = useRef<StaticFieldsSession | undefined>(
     undefined,
   );
@@ -182,6 +237,17 @@ function PolicyReadyWorkflow({
   }>({ controller: new AbortController() });
   const [addressResult, setAddressResult] = useState<AddressResult>();
   const executionPending = useRef(false);
+  const structureActions = useRef<StructureLoopAction[]>([]);
+  const structureDiagnostics = useRef<StructureDiagnostics | undefined>(
+    undefined,
+  );
+  const genericStructure = useRef<GenericStructureContext | undefined>(
+    undefined,
+  );
+  const genericCollector =
+    useRef<Parameters<typeof createAnalyzeFields>[0]["collectFields"]>(
+      undefined,
+    );
   const writeController = useRef(new AbortController());
   const mounted = useRef(true);
   const [stage, setStage] = useState<Stage>("analyzing");
@@ -254,6 +320,8 @@ function PolicyReadyWorkflow({
       addressSearch,
       apiClient,
       analyzeFieldsSnapshot,
+      collectFields: genericCollector.current,
+      genericStructure: genericStructure.current,
       refreshFieldsAfterPass: (snapshot, eligible) =>
         staticFieldsSession.current?.refreshAfterPass(snapshot, eligible) ??
         Promise.resolve(false),
@@ -324,12 +392,72 @@ function PolicyReadyWorkflow({
     addressRun.current = run;
     const start = async () => {
       try {
+        if (isUnsupportedHplace(pageDocument)) {
+          setStage("unsupported");
+          return;
+        }
         const loadedProfile = await repository.load();
         if (!active) return;
+        if (isUnsupportedHplace(pageDocument)) {
+          setStage("unsupported");
+          return;
+        }
         setProfile(loadedProfile);
         completedComponentStateDrivers.current.clear();
+        // Generic documents prepare themselves: the loop decides each
+        // structural action locally and asks only for interaction decisions.
+        // Documents with site-specific policy and clients without these
+        // endpoints keep the approved preparation flow below. The common
+        // provider policy alone declares no structure, so it does not block
+        // the loop.
+        if (
+          companyId === "generic" &&
+          !siteSpecificPolicyAtStart &&
+          apiClient.decideInteractions &&
+          apiClient.classifySections &&
+          apiClient.analyzeGenericFields
+        ) {
+          structureActions.current = [];
+          setActivity("preparing");
+          const structure = await runGenericStructureLoop({
+            document: pageDocument,
+            profile: loadedProfile,
+            apiClient,
+            signal: run.controller.signal,
+            onAction: (action) => structureActions.current.push(action),
+          });
+          if (!active) return;
+          structureDiagnostics.current = createStructureDiagnostics(
+            true,
+            structureActions.current,
+          );
+          debugWarn(structureConsoleLine(structureDiagnostics.current));
+          genericStructure.current = structure.context;
+          genericCollector.current = (document, signal) =>
+            collectGenericStructureSnapshot(
+              document,
+              signal,
+              structure.context,
+            );
+          await analyzeFields(loadedProfile);
+          return;
+        }
+        if (companyId === "generic") {
+          structureDiagnostics.current = createStructureDiagnostics(false, []);
+          debugWarn(structureConsoleLine(structureDiagnostics.current));
+        }
         const snapshot = collectPreparationSnapshot(pageDocument);
         const analysis = await apiClient.analyzePreparation(snapshot.request);
+        debugStageCounts(
+          "preparation-plan",
+          analysis.preparationPlans.length,
+          0,
+        );
+        if (!active) return;
+        if (isUnsupportedHplace(pageDocument)) {
+          setStage("unsupported");
+          return;
+        }
         if (
           companyId === "generic" &&
           analysis.mode === "ADAPTER" &&
@@ -337,11 +465,20 @@ function PolicyReadyWorkflow({
         )
           throw new Error("Unverified Component forms page structure");
         if (
-          runtimeRules(pageDocument)?.components?.workflow
-            .requireAdapterResponse &&
+          (runtimeRules(pageDocument)?.components?.workflow
+            .requireAdapterResponse ||
+            resolveDocumentCompany(pageDocument) === "hplace" ||
+            nativePolicyRequired(pageDocument)) &&
           analysis.mode !== "ADAPTER"
         )
           throw new Error("Unexpected generic response for registered adapter");
+        if (
+          resolveDocumentCompany(pageDocument) === "hplace" &&
+          analysis.preparationPlans.length > 0
+        )
+          throw new Error(
+            "Unexpected preparation action for Hplace registration",
+          );
         const adapter = getWorkflowAdapter(pageDocument);
 
         if (!active) return;
@@ -428,7 +565,35 @@ function PolicyReadyWorkflow({
         const items = preparationPlans.map((plan) =>
           preparationItem(plan, snapshot, loadedProfile, adapter),
         );
-        setPreparationItems(items);
+        // Parent additions precede nested additions; the follow-up recollects
+        // children with guards captured against the final parent topology.
+        const addingParents = new Set(
+          items.flatMap((item) => {
+            const lookup = snapshot.registry.lookupAction(
+              item.plan.actionCandidateId,
+            );
+            return item.runnable &&
+              (item.requiredAdditions ?? 0) > 0 &&
+              "handle" in lookup &&
+              lookup.handle.owner === "native" &&
+              !lookup.handle.itemId
+              ? [lookup.handle.sectionId]
+              : [];
+          }),
+        );
+        setPreparationItems(
+          items.filter((item) => {
+            const lookup = snapshot.registry.lookupAction(
+              item.plan.actionCandidateId,
+            );
+            return !(
+              "handle" in lookup &&
+              lookup.handle.owner === "native" &&
+              lookup.handle.itemId &&
+              addingParents.has(lookup.handle.sectionId)
+            );
+          }),
+        );
         setWarnings(analysis.warningCodes ?? []);
         setPreparationExecutionPending(true);
       } catch (error) {
@@ -443,7 +608,13 @@ function PolicyReadyWorkflow({
       run.controller.abort();
       observeQuality(() => apiClient.quality?.finish("CANCELLED"));
     };
-  }, [apiClient, pageDocument, repository, companyId]);
+  }, [
+    apiClient,
+    pageDocument,
+    repository,
+    companyId,
+    siteSpecificPolicyAtStart,
+  ]);
 
   useEffect(() => {
     if (stage === "result" || stage === "exception" || stage === "unsupported")
@@ -452,6 +623,10 @@ function PolicyReadyWorkflow({
 
   const executePreparation = async () => {
     if (!profile || !preparationSnapshot || executionPending.current) return;
+    if (isUnsupportedHplace(pageDocument)) {
+      setStage("unsupported");
+      return;
+    }
     executionPending.current = true;
     try {
       const { runnablePlans, isApprovedPreparation } = prepareApprovedPlans({
@@ -483,6 +658,7 @@ function PolicyReadyWorkflow({
       const result = await executeApprovedPreparationPlans({
         approvedPlans: runnablePlans,
         ...preparationOptions(preparationSnapshot),
+        diagnosticsStage: "preparation-initial",
       });
 
       if (result.status !== "completed") {
@@ -519,8 +695,10 @@ function PolicyReadyWorkflow({
         );
         if (
           followUpAnalysis.analysisStatus === "BLOCKED" ||
-          (runtimeRules(pageDocument)?.components?.workflow
-            .requireAdapterResponse &&
+          ((runtimeRules(pageDocument)?.components?.workflow
+            .requireAdapterResponse ||
+            resolveDocumentCompany(pageDocument) === "hplace" ||
+            nativePolicyRequired(pageDocument)) &&
             followUpAnalysis.mode !== "ADAPTER")
         )
           throw new Error("Unexpected adapter response");
@@ -565,6 +743,7 @@ function PolicyReadyWorkflow({
           const followUpResult = await executeApprovedPreparationPlans({
             approvedPlans: followUpPlans,
             ...preparationOptions(followUpSnapshot),
+            diagnosticsStage: "preparation-follow-up",
           });
 
           if (followUpResult.status !== "completed") {
@@ -610,8 +789,7 @@ function PolicyReadyWorkflow({
     signal: addressRun.current.controller.signal,
   });
 
-  const { toggleReviewItem, revealSensitiveItem } =
-    createReviewActions(setReviewItems);
+  const { toggleReviewItem } = createReviewActions(setReviewItems);
 
   const executeWrites = async () => {
     if (!fieldsSnapshot || executionPending.current) return;
@@ -695,6 +873,9 @@ function PolicyReadyWorkflow({
         items: executableReviewItems,
         approvedCandidateIds,
         registry: fieldsSnapshot.registry,
+        ...(analysisSummary?.mode === "GENERIC"
+          ? { followUpHaltScope: "row" as const }
+          : {}),
         ...(analysisSummary?.mode === "GENERIC" && apiClient.decideInteractions
           ? {
               interactionDecisionProvider:
@@ -810,15 +991,20 @@ function PolicyReadyWorkflow({
       reviewItems={reviewItems}
       partial={partial}
       toggleReviewItem={toggleReviewItem}
-      revealSensitiveItem={revealSensitiveItem}
       executeWrites={executeWrites}
       results={results}
       analysisSummary={analysisSummary}
+      structureDiagnostics={structureDiagnostics.current}
       addressResult={addressResult}
       adapter={adapter}
       workflowDiagnostics={workflowDiagnostics}
       exceptionTitle={exceptionTitle}
       unsupportedImageUrl={unsupportedImageUrl}
+      unsupportedKind={
+        stage === "unsupported"
+          ? unsupportedHplaceKind(pageDocument)
+          : undefined
+      }
       onExit={onExit}
       exitInToolbar={exitInToolbar}
       currentCategory={currentCategory}

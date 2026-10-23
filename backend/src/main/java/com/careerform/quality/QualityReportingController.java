@@ -15,14 +15,24 @@ import jakarta.servlet.http.HttpServletRequest;
 @RestController
 @ConditionalOnProperty(prefix = "career-form.quality", name = "enabled", havingValue = "true")
 public final class QualityReportingController {
-    private final QualityCollectionService collector;
+    private final QualityAsyncService observations;
 
-    public QualityReportingController(QualityCollectionService collector) { this.collector = collector; }
+    public QualityReportingController(QualityAsyncService observations) { this.observations = observations; }
+
+    @PostMapping("/api/v1/quality/executions")
+    public ResponseEntity<QualityRegistration.Credentials> register(@RequestBody QualityRegistration.Input input) {
+        return ResponseEntity.status(201).body(observations.register(input));
+    }
+
+    @ExceptionHandler(QualityAdmissionException.class)
+    public ResponseEntity<Map<String, String>> unavailable(QualityAdmissionException exception) {
+        return ResponseEntity.status(exception.status()).body(Map.of("error", "QUALITY_UNAVAILABLE"));
+    }
 
     @PostMapping("/api/v1/quality/executions/{runId}/report")
-    public ResponseEntity<Void> report(@PathVariable String runId, @RequestBody QualityCollectionService.Report report, HttpServletRequest request) {
-        collector.report(runId, QualityApiFilter.bearer(request), report);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<Void> report(@PathVariable String runId, @RequestBody QualityReportRequest report, HttpServletRequest request) {
+        observations.reportBatch(runId, QualityApiFilter.bearer(request), report.entries());
+        return ResponseEntity.accepted().build();
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

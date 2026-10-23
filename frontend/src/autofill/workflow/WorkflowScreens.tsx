@@ -8,6 +8,12 @@ import {
 import type { ApprovedWriteResult } from "../write/executor";
 import styles from "../../autofill-demo/AutofillDemo.module.css";
 import { WorkflowResults, type WorkflowResultsProps } from "./WorkflowResults";
+import { genericItemReason } from "../generic/grade-reason-text";
+import {
+  structureActionLine,
+  structureStatusText,
+  type StructureDiagnostics,
+} from "../generic/structure-diagnostics";
 import { resultFieldLabel } from "./result-label";
 import resultStyles from "./WorkflowResults.module.css";
 import resultCss from "./WorkflowResults.module.css?inline";
@@ -27,6 +33,10 @@ import {
 const DEFAULT_CONDITIONAL_REVIEW_REASON =
   "지원서 조건을 확인한 뒤 선택해 주세요.";
 
+function reasonFor(item: ReviewPlanItem): string {
+  return item.genericGrade ? genericItemReason(item) : item.reason;
+}
+
 interface WorkflowScreensProps {
   exitInToolbar?: boolean;
   wasWritten?: WorkflowResultsProps["wasWritten"];
@@ -44,6 +54,8 @@ interface WorkflowScreensProps {
     fieldCount: number;
     matchedCount: number;
   };
+  /** Present only for generic documents; static paths never set it. */
+  structureDiagnostics?: StructureDiagnostics;
   stage: Stage;
   preparationItems: readonly PreparationItem[];
   warnings: readonly string[];
@@ -55,7 +67,6 @@ interface WorkflowScreensProps {
   reviewItems: readonly ReviewPlanItem[];
   partial: boolean;
   toggleReviewItem(candidateId: string): void;
-  revealSensitiveItem(candidateId: string): void;
   executeWrites(): Promise<void>;
   results: readonly ApprovedWriteResult[];
   addressResult?: AddressResult;
@@ -63,6 +74,7 @@ interface WorkflowScreensProps {
   workflowDiagnostics: readonly WorkflowDiagnostic[];
   exceptionTitle: string;
   unsupportedImageUrl?: string;
+  unsupportedKind?: "v1" | "builder";
   onLocate?(candidateId: string): boolean;
   operatedCategories?: readonly string[];
   onLocateSection?(candidateIds: readonly string[], category?: string): boolean;
@@ -89,8 +101,10 @@ export function WorkflowScreens({
   executeWrites,
   results,
   addressResult,
+  structureDiagnostics,
   exceptionTitle,
   unsupportedImageUrl,
+  unsupportedKind,
   onExit,
   onLocate,
   onLocateSection,
@@ -98,9 +112,9 @@ export function WorkflowScreens({
   currentCategory,
 }: WorkflowScreensProps) {
   const reviewTabsId = useId();
-  const [reviewTab, setReviewTab] = useState<"planned" | "needs-review">(
-    "needs-review",
-  );
+  const [reviewTab, setReviewTab] = useState<
+    "planned" | "needs-review" | "blocked"
+  >("needs-review");
   if (stage === "analyzing" || stage === "writing") {
     return (
       <WorkflowLoading
@@ -177,6 +191,15 @@ export function WorkflowScreens({
       (item) =>
         item.selected && !item.disabled && !exceptionalItems.includes(item),
     );
+    // Only generic documents carry a grade: split blocked items into their
+    // own tab so they are not counted as needing review.
+    const tiered = reviewItems.some((item) => item.genericGrade);
+    const blockedItems = tiered
+      ? exceptionalItems.filter((item) => item.genericGrade === "BLOCKED")
+      : [];
+    const needsReviewItems = tiered
+      ? exceptionalItems.filter((item) => item.genericGrade !== "BLOCKED")
+      : exceptionalItems;
     return (
       <div className={styles.screen}>
         <style>{resultCss}</style>
@@ -215,8 +238,21 @@ export function WorkflowScreens({
             aria-selected={reviewTab === "needs-review"}
             onClick={() => setReviewTab("needs-review")}
           >
-            확인 필요 <strong>{exceptionalItems.length}</strong>
+            확인 필요 <strong>{needsReviewItems.length}</strong>
           </button>
+          {tiered && (
+            <button
+              type="button"
+              role="tab"
+              data-state="pending"
+              id={`${reviewTabsId}-blocked-tab`}
+              aria-controls={`${reviewTabsId}-blocked-panel`}
+              aria-selected={reviewTab === "blocked"}
+              onClick={() => setReviewTab("blocked")}
+            >
+              입력 불가 <strong>{blockedItems.length}</strong>
+            </button>
+          )}
         </div>
         <section
           role="tabpanel"
@@ -266,12 +302,55 @@ export function WorkflowScreens({
                 : "LLM 분석 일부 미완료"}
           </aside>
         ))}
-        {reviewTab === "needs-review" && exceptionalItems.length > 0 && (
+        {reviewTab === "needs-review" && needsReviewItems.length > 0 && (
           <p className={resultStyles.guidance}>
             자동 기입에서 제외할 항목이 있는지 확인해 주세요.
           </p>
         )}
-        {reviewTab === "needs-review" && exceptionalItems.length > 0 && (
+        {reviewTab === "blocked" && tiered && (
+          <section
+            role="tabpanel"
+            id={`${reviewTabsId}-blocked-panel`}
+            aria-labelledby={`${reviewTabsId}-blocked-tab`}
+            className={resultStyles.review}
+            aria-label="입력 불가 항목"
+          >
+            {blockedItems.length === 0 && (
+              <p className={resultStyles.empty}>입력 불가 항목이 없어요.</p>
+            )}
+            {blockedItems.map((item) => (
+              <article className={resultStyles.row} key={item.candidateId}>
+                <div className={resultStyles.heading} data-has-values="true">
+                  <button
+                    type="button"
+                    className={resultStyles.locate}
+                    aria-label={`${resultFieldLabel(item)} 필드로 이동`}
+                    disabled={!onLocate}
+                    onClick={() => onLocate?.(item.candidateId)}
+                  >
+                    <span>{resultFieldLabel(item)}</span>
+                    {onLocate && <span aria-hidden="true">↗</span>}
+                  </button>
+                  <div className={resultStyles.valueGroup}>
+                    <span className={resultStyles.previewValue}>
+                      {item.previewValue}
+                    </span>
+                  </div>
+                </div>
+                {reasonFor(item) && (
+                  <p className={resultStyles.guidance}>{reasonFor(item)}</p>
+                )}
+                <small
+                  className={resultStyles.writtenTag}
+                  data-generic-grade={item.genericGrade}
+                >
+                  입력 불가
+                </small>
+              </article>
+            ))}
+          </section>
+        )}
+        {reviewTab === "needs-review" && needsReviewItems.length > 0 && (
           <section
             role="tabpanel"
             id={`${reviewTabsId}-needs-review-panel`}
@@ -279,7 +358,7 @@ export function WorkflowScreens({
             className={resultStyles.review}
             aria-label="확인 필요한 항목"
           >
-            {exceptionalItems.map((item) => {
+            {needsReviewItems.map((item) => {
               return (
                 <article className={resultStyles.row} key={item.candidateId}>
                   <div className={resultStyles.heading} data-has-values="true">
@@ -312,14 +391,26 @@ export function WorkflowScreens({
                         )}
                     </div>
                   </div>
-                  {item.reason !== DEFAULT_CONDITIONAL_REVIEW_REASON && (
-                    <p className={resultStyles.guidance}>{item.reason}</p>
-                  )}
-                  {item.status !== "needs-review" && (
-                    <small className={resultStyles.writtenTag}>
-                      {statusLabel(item)}
-                    </small>
-                  )}
+                  {reasonFor(item) &&
+                    reasonFor(item) !== DEFAULT_CONDITIONAL_REVIEW_REASON && (
+                      <p className={resultStyles.guidance}>{reasonFor(item)}</p>
+                    )}
+                  {item.genericGrade
+                    ? item.genericGrade !== "AUTO" && (
+                        <small
+                          className={resultStyles.writtenTag}
+                          data-generic-grade={item.genericGrade}
+                        >
+                          {item.genericGrade === "REVIEW"
+                            ? "확인 필요"
+                            : "입력 불가"}
+                        </small>
+                      )
+                    : item.status !== "needs-review" && (
+                        <small className={resultStyles.writtenTag}>
+                          {statusLabel(item)}
+                        </small>
+                      )}
                 </article>
               );
             })}
@@ -347,6 +438,38 @@ export function WorkflowScreens({
             <summary>주소 확인 필요</summary>
             <p>주소 직접 확인 필요: {addressResult.reason}</p>
           </details>
+        )}
+        {structureDiagnostics && (
+          <section aria-label="구조 자동 준비">
+            <h3>구조 자동 준비</h3>
+            <p className={resultStyles.guidance}>
+              {structureStatusText(structureDiagnostics.status)}
+            </p>
+            {structureDiagnostics.actions.length > 0 && (
+              <>
+                <h4>자동으로 한 일</h4>
+                <ul aria-label="자동으로 한 일">
+                  {structureDiagnostics.actions.map((action, index) => {
+                    const line = structureActionLine(action);
+                    return (
+                      <li key={index}>
+                        <span>{line.kindText}</span>{" "}
+                        {line.sectionTitle && <span>{line.sectionTitle}</span>}{" "}
+                        <small className={resultStyles.writtenTag}>
+                          {line.resultText}
+                        </small>
+                        {line.reasonText && (
+                          <p className={resultStyles.guidance}>
+                            {line.reasonText}
+                          </p>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
+            )}
+          </section>
         )}
         <WorkflowResults
           wasWritten={wasWritten}
@@ -386,6 +509,13 @@ export function WorkflowScreens({
           이 지원서 페이지는 아직 자동 기입을 지원하지 않아요. 수동 복사는 계속
           사용할 수 있어요.
         </p>
+        {unsupportedKind && (
+          <p className={styles.lead}>
+            이 채용 사이트의 지원서 방식(
+            {unsupportedKind === "v1" ? "신형 지원자 앱" : "경력 빌더형"})은
+            아직 지원하지 않아요.
+          </p>
+        )}
         {!exitInToolbar && (
           <button className={styles.primary} type="button" onClick={onExit}>
             수동 복사로 돌아가기

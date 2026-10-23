@@ -155,6 +155,7 @@ class OpenAiClientTest {
     @DisplayName("LLM 기능을 켠 경우에만 OpenAI 해석기 빈을 등록한다")
     void activatesResolversOnlyWhenEnabled() {
         ApplicationContextRunner runner = new ApplicationContextRunner()
+            .withPropertyValues("career-form.analysis.provider=openai")
             .withUserConfiguration(
                 OpenAiClient.class,
                 OpenAiActionResolver.class,

@@ -240,13 +240,17 @@ export function localItemCount(
         : snapshot.request.site.host,
     );
   const section = snapshot.request.sections.find((candidate) =>
-    candidate.actionCandidates.some(
-      (action) => action.candidateId === plan.actionCandidateId,
-    ),
+    [
+      ...candidate.actionCandidates,
+      ...(candidate.items ?? []).flatMap((i) => i.actionCandidates),
+    ].some((action) => action.candidateId === plan.actionCandidateId),
   );
-  const action = section?.actionCandidates.find(
-    (candidate) => candidate.candidateId === plan.actionCandidateId,
-  );
+  const action =
+    section &&
+    [
+      ...section.actionCandidates,
+      ...(section.items ?? []).flatMap((i) => i.actionCandidates),
+    ].find((candidate) => candidate.candidateId === plan.actionCandidateId);
   const adapterCount = selectedAdapter.repeatableProfileCount?.(
     action?.domId,
     profile,
@@ -468,7 +472,6 @@ export function statusLabel(item: ReviewPlanItem): string {
     available: "입력 가능",
     "needs-review": "확인 필요",
     conflict: "기존 값 충돌",
-    sensitive: "민감정보",
     unavailable: "입력 불가",
   } as const;
   return labels[item.status];

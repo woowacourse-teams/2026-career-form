@@ -233,3 +233,66 @@ it("계약 크기가 한도를 넘거나 endpoint가 없으면 전송하지 않�
   }
   expect(fetcher).not.toHaveBeenCalled();
 });
+
+it("배치의 스냅샷 없는 필드 결과는 네트워크에 보내기 전에 거절한다", async () => {
+  const fetcher = vi.fn<typeof fetch>(
+    async () => new Response(null, { status: 202 }),
+  );
+  const reporting = new BackgroundQualityReporting(
+    "https://api.synthetic.test",
+    fetcher,
+    "extension",
+  );
+  reporting.capture(reporting.owner(run, source), receipt());
+  expect(
+    await reporting.report(
+      {
+        type: "AUTOFILL_QUALITY_REPORT",
+        qualityRun: run,
+        payload: {
+          reports: [{ ...payload, snapshotId: null, fields: { c1: state } }],
+        },
+      },
+      source,
+    ),
+  ).toEqual({ ok: false });
+  expect(fetcher).not.toHaveBeenCalled();
+});
+
+it("스냅샷별 연결을 담은 배치는 인증 헤더와 함께 한 번 전송한다", async () => {
+  let body: unknown;
+  const fetcher = vi.fn<typeof fetch>(async (_input, init) => {
+    body = JSON.parse(String(init?.body));
+    return new Response(null, { status: 202 });
+  });
+  const reporting = new BackgroundQualityReporting(
+    "https://api.synthetic.test",
+    fetcher,
+    "extension",
+  );
+  reporting.capture(reporting.owner(run, source), receipt());
+  const batch = {
+    reports: [
+      {
+        ...payload,
+        eventId: "first",
+        fields: { c1: state },
+        identities: { c1: "e1" },
+      },
+      {
+        ...payload,
+        eventId: "last",
+        snapshotId: "next",
+        finished: "COMPLETED",
+      },
+    ],
+  };
+  expect(
+    await reporting.report(
+      { type: "AUTOFILL_QUALITY_REPORT", qualityRun: run, payload: batch },
+      source,
+    ),
+  ).toEqual({ ok: true });
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  expect(body).toEqual(batch);
+});

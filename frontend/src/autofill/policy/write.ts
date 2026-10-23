@@ -1,3 +1,4 @@
+import { nativeWriteAdapter } from "./native-form-write";
 import type { CompanyWriteAdapter } from "../adapters/write";
 import { executionPolicy } from "../workflow/execution-policy";
 import {
@@ -11,7 +12,14 @@ import {
   visible,
 } from "./primitives";
 export const policyWriteAdapter: CompanyWriteAdapter = {
+  verifyRetained: (handle, item) =>
+    handle.owner === "native"
+      ? nativeWriteAdapter.verifyRetained?.(handle, item)
+      : undefined,
   tryWrite(handle, item) {
+    if (handle.owner === "legacy") return { handled: true, written: false };
+    if (handle.owner === "native")
+      return nativeWriteAdapter.tryWrite(handle, item);
     const input = handle.elements[0];
     if (!input) return { handled: false };
     const policy = executionPolicy(input.ownerDocument)?.browserPolicy;
@@ -24,7 +32,10 @@ export const policyWriteAdapter: CompanyWriteAdapter = {
     if (
       rule.kind === "blocked" ||
       !matchesBinding(rule, item.analysis) ||
-      !visible(input, rule.kind === "radio" && rule.radioValidation === "TARGET_ONLY")
+      !visible(
+        input,
+        rule.kind === "radio" && rule.radioValidation === "TARGET_ONLY",
+      )
     )
       return fail;
     const document = input.ownerDocument;
@@ -49,7 +60,12 @@ export const policyWriteAdapter: CompanyWriteAdapter = {
           text(el.labels?.[0]?.textContent) === value &&
           el.value === rule.options?.[value],
       );
-      if (target?.checked && rule.acceptAlreadySelected && visible(target, true)) return success;
+      if (
+        target?.checked &&
+        rule.acceptAlreadySelected &&
+        visible(target, true)
+      )
+        return success;
       if (!target || !visible(target)) return fail;
       if (target.checked) return success;
       if (!rule.overwrite && group.some((el) => el.checked)) return fail;

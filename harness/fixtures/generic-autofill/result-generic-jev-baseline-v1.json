@@ -1,0 +1,2061 @@
+{
+  "contract_version": "1.1",
+  "follow_up_priorities": [],
+  "inputs": {
+    "ground_truth_sha256": "09f244274e54725df0ddd921e7a07fc48389fac64ea3096f086253b9ba05e3a5",
+    "observations_sha256": "cc980b6c79c44954dcddc8417021fa195ae98cdfe0658c3257815e4239e0a39a"
+  },
+  "profile_version": "profile-export-example-v1",
+  "sources": {
+    "FIXTURE": {
+      "inconclusive_sites": 0,
+      "measured_sites": 1,
+      "overall": {
+        "correct_input_rate": {
+          "denominator": 67,
+          "numerator": 0,
+          "rate": 0.0
+        },
+        "execution_retention_rate": {
+          "denominator": 0,
+          "numerator": 0,
+          "rate": null
+        },
+        "existing_value_damage": 0,
+        "mapping_precision": {
+          "denominator": 0,
+          "numerator": 0,
+          "rate": null
+        },
+        "mapping_recall": {
+          "denominator": 67,
+          "numerator": 0,
+          "rate": 0.0
+        },
+        "miswrite_rate": {
+          "denominator": 0,
+          "numerator": 0,
+          "rate": null
+        },
+        "reason_counts": {
+          "DEFERRED": {
+            "BINDING_UNSUPPORTED": 0,
+            "CONDITIONAL_NOT_REVEALED": 0,
+            "EXISTING_VALUE_PROTECTED": 0,
+            "MAPPING_INCORRECT": 0,
+            "MAPPING_NO_MATCH": 69,
+            "PROFILE_VALUE_MISSING": 59,
+            "RETENTION_FAILED": 0,
+            "UNSUPPORTED_CONTROL": 0,
+            "USER_NOT_APPROVED": 0,
+            "WRITE_BLOCKED": 0,
+            "WRITE_FAILED": 0
+          },
+          "FAILED": {
+            "BINDING_UNSUPPORTED": 0,
+            "CONDITIONAL_NOT_REVEALED": 0,
+            "EXISTING_VALUE_PROTECTED": 0,
+            "MAPPING_INCORRECT": 0,
+            "MAPPING_NO_MATCH": 0,
+            "PROFILE_VALUE_MISSING": 0,
+            "RETENTION_FAILED": 0,
+            "UNSUPPORTED_CONTROL": 0,
+            "USER_NOT_APPROVED": 0,
+            "WRITE_BLOCKED": 0,
+            "WRITE_FAILED": 0
+          }
+        },
+        "reason_evidence": [
+          {
+            "candidate_id": "c001",
+            "field_id": "f001",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c002",
+            "field_id": "f002",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c003",
+            "field_id": "f003",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c004",
+            "field_id": "f004",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c005",
+            "field_id": "f005",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c006",
+            "field_id": "f006",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c007",
+            "field_id": "f007",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c008",
+            "field_id": "f008",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c009",
+            "field_id": "f009",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c010",
+            "field_id": "f010",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c011",
+            "field_id": "f011",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c012",
+            "field_id": "f012",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c013",
+            "field_id": "f013",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c014",
+            "field_id": "f014",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c015",
+            "field_id": "f015",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c016",
+            "field_id": "f016",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c017",
+            "field_id": "f017",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c018",
+            "field_id": "f018",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c019",
+            "field_id": "f019",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c020",
+            "field_id": "f020",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c021",
+            "field_id": "f021",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c022",
+            "field_id": "f022",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c023",
+            "field_id": "f023",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c024",
+            "field_id": "f024",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c025",
+            "field_id": "f025",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c026",
+            "field_id": "f026",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c027",
+            "field_id": "f027",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c028",
+            "field_id": "f028",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c029",
+            "field_id": "f029",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c030",
+            "field_id": "f030",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c031",
+            "field_id": "f031",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c032",
+            "field_id": "f032",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c033",
+            "field_id": "f033",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c034",
+            "field_id": "f034",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c035",
+            "field_id": "f035",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c036",
+            "field_id": "f036",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c037",
+            "field_id": "f037",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c038",
+            "field_id": "f038",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c039",
+            "field_id": "f039",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c040",
+            "field_id": "f040",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c041",
+            "field_id": "f041",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c042",
+            "field_id": "f042",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c043",
+            "field_id": "f043",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c044",
+            "field_id": "f044",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c045",
+            "field_id": "f045",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c046",
+            "field_id": "f046",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c047",
+            "field_id": "f047",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c048",
+            "field_id": "f048",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c049",
+            "field_id": "f049",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c050",
+            "field_id": "f050",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c051",
+            "field_id": "f051",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c052",
+            "field_id": "f052",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c053",
+            "field_id": "f053",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c054",
+            "field_id": "f054",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c055",
+            "field_id": "f055",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c056",
+            "field_id": "f056",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c057",
+            "field_id": "f057",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c058",
+            "field_id": "f058",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c059",
+            "field_id": "f059",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c060",
+            "field_id": "f060",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c061",
+            "field_id": "f061",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c062",
+            "field_id": "f062",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c063",
+            "field_id": "f063",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c064",
+            "field_id": "f064",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c065",
+            "field_id": "f065",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c066",
+            "field_id": "f066",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c067",
+            "field_id": "f067",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c068",
+            "field_id": "f068",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c069",
+            "field_id": "f069",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c070",
+            "field_id": "f070",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c071",
+            "field_id": "f071",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c072",
+            "field_id": "f072",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c073",
+            "field_id": "f073",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c074",
+            "field_id": "f074",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c075",
+            "field_id": "f075",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c076",
+            "field_id": "f076",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c077",
+            "field_id": "f077",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c078",
+            "field_id": "f078",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c079",
+            "field_id": "f079",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c080",
+            "field_id": "f080",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c081",
+            "field_id": "f081",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c082",
+            "field_id": "f082",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c083",
+            "field_id": "f083",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c084",
+            "field_id": "f084",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c085",
+            "field_id": "f085",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c086",
+            "field_id": "f086",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c087",
+            "field_id": "f087",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c088",
+            "field_id": "f088",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c089",
+            "field_id": "f089",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c091",
+            "field_id": "f091",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c092",
+            "field_id": "f092",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c093",
+            "field_id": "f093",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c094",
+            "field_id": "f094",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c095",
+            "field_id": "f095",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c097",
+            "field_id": "f097",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c098",
+            "field_id": "f098",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c099",
+            "field_id": "f099",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c100",
+            "field_id": "f100",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c101",
+            "field_id": "f101",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c102",
+            "field_id": "f102",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c103",
+            "field_id": "f103",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c104",
+            "field_id": "f104",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c105",
+            "field_id": "f105",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c106",
+            "field_id": "f106",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c107",
+            "field_id": "f107",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c108",
+            "field_id": "f108",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c109",
+            "field_id": "f109",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c110",
+            "field_id": "f110",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c111",
+            "field_id": "f111",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c112",
+            "field_id": "f112",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c113",
+            "field_id": "f113",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c114",
+            "field_id": "f114",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c115",
+            "field_id": "f115",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c116",
+            "field_id": "f116",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c117",
+            "field_id": "f117",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c118",
+            "field_id": "f118",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c119",
+            "field_id": "f119",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c120",
+            "field_id": "f120",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c121",
+            "field_id": "f121",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c122",
+            "field_id": "f122",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c123",
+            "field_id": "f123",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c124",
+            "field_id": "f124",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c125",
+            "field_id": "f125",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c126",
+            "field_id": "f126",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c127",
+            "field_id": "f127",
+            "reason_code": "MAPPING_NO_MATCH",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c128",
+            "field_id": "f128",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c129",
+            "field_id": "f129",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          },
+          {
+            "candidate_id": "c130",
+            "field_id": "f130",
+            "reason_code": "PROFILE_VALUE_MISSING",
+            "site_id": "synthetic-large-generic-form",
+            "terminal_result": "DEFERRED"
+          }
+        ],
+        "stage_counts": {
+          "BOUND": 0,
+          "DEFERRED": 128,
+          "DISCOVERED": 128,
+          "FAILED": 0,
+          "MAPPED": 0,
+          "RETAINED": 0,
+          "WRITTEN": 0
+        },
+        "undiscovered_autofillable_count": 0,
+        "usage": {
+          "cost_usd": null,
+          "duration_ms": 1464,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "provider_calls": 3
+        }
+      },
+      "sites": {
+        "synthetic-large-generic-form": {
+          "correct_input_rate": {
+            "denominator": 67,
+            "numerator": 0,
+            "rate": 0.0
+          },
+          "execution_retention_rate": {
+            "denominator": 0,
+            "numerator": 0,
+            "rate": null
+          },
+          "existing_value_damage": 0,
+          "inconclusive_reason": null,
+          "initial_state": "EMPTY",
+          "mapping_precision": {
+            "denominator": 0,
+            "numerator": 0,
+            "rate": null
+          },
+          "mapping_recall": {
+            "denominator": 67,
+            "numerator": 0,
+            "rate": 0.0
+          },
+          "max_output_tokens": 8192,
+          "miswrite_rate": {
+            "denominator": 0,
+            "numerator": 0,
+            "rate": null
+          },
+          "model": "jev-latest",
+          "profile_version": "profile-export-example-v1",
+          "provider": "jev",
+          "reason_counts": {
+            "DEFERRED": {
+              "BINDING_UNSUPPORTED": 0,
+              "CONDITIONAL_NOT_REVEALED": 0,
+              "EXISTING_VALUE_PROTECTED": 0,
+              "MAPPING_INCORRECT": 0,
+              "MAPPING_NO_MATCH": 69,
+              "PROFILE_VALUE_MISSING": 59,
+              "RETENTION_FAILED": 0,
+              "UNSUPPORTED_CONTROL": 0,
+              "USER_NOT_APPROVED": 0,
+              "WRITE_BLOCKED": 0,
+              "WRITE_FAILED": 0
+            },
+            "FAILED": {
+              "BINDING_UNSUPPORTED": 0,
+              "CONDITIONAL_NOT_REVEALED": 0,
+              "EXISTING_VALUE_PROTECTED": 0,
+              "MAPPING_INCORRECT": 0,
+              "MAPPING_NO_MATCH": 0,
+              "PROFILE_VALUE_MISSING": 0,
+              "RETENTION_FAILED": 0,
+              "UNSUPPORTED_CONTROL": 0,
+              "USER_NOT_APPROVED": 0,
+              "WRITE_BLOCKED": 0,
+              "WRITE_FAILED": 0
+            }
+          },
+          "reason_evidence": [
+            {
+              "candidate_id": "c001",
+              "field_id": "f001",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c002",
+              "field_id": "f002",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c003",
+              "field_id": "f003",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c004",
+              "field_id": "f004",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c005",
+              "field_id": "f005",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c006",
+              "field_id": "f006",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c007",
+              "field_id": "f007",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c008",
+              "field_id": "f008",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c009",
+              "field_id": "f009",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c010",
+              "field_id": "f010",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c011",
+              "field_id": "f011",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c012",
+              "field_id": "f012",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c013",
+              "field_id": "f013",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c014",
+              "field_id": "f014",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c015",
+              "field_id": "f015",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c016",
+              "field_id": "f016",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c017",
+              "field_id": "f017",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c018",
+              "field_id": "f018",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c019",
+              "field_id": "f019",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c020",
+              "field_id": "f020",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c021",
+              "field_id": "f021",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c022",
+              "field_id": "f022",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c023",
+              "field_id": "f023",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c024",
+              "field_id": "f024",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c025",
+              "field_id": "f025",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c026",
+              "field_id": "f026",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c027",
+              "field_id": "f027",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c028",
+              "field_id": "f028",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c029",
+              "field_id": "f029",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c030",
+              "field_id": "f030",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c031",
+              "field_id": "f031",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c032",
+              "field_id": "f032",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c033",
+              "field_id": "f033",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c034",
+              "field_id": "f034",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c035",
+              "field_id": "f035",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c036",
+              "field_id": "f036",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c037",
+              "field_id": "f037",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c038",
+              "field_id": "f038",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c039",
+              "field_id": "f039",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c040",
+              "field_id": "f040",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c041",
+              "field_id": "f041",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c042",
+              "field_id": "f042",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c043",
+              "field_id": "f043",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c044",
+              "field_id": "f044",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c045",
+              "field_id": "f045",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c046",
+              "field_id": "f046",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c047",
+              "field_id": "f047",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c048",
+              "field_id": "f048",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c049",
+              "field_id": "f049",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c050",
+              "field_id": "f050",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c051",
+              "field_id": "f051",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c052",
+              "field_id": "f052",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c053",
+              "field_id": "f053",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c054",
+              "field_id": "f054",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c055",
+              "field_id": "f055",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c056",
+              "field_id": "f056",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c057",
+              "field_id": "f057",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c058",
+              "field_id": "f058",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c059",
+              "field_id": "f059",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c060",
+              "field_id": "f060",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c061",
+              "field_id": "f061",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c062",
+              "field_id": "f062",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c063",
+              "field_id": "f063",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c064",
+              "field_id": "f064",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c065",
+              "field_id": "f065",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c066",
+              "field_id": "f066",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c067",
+              "field_id": "f067",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c068",
+              "field_id": "f068",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c069",
+              "field_id": "f069",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c070",
+              "field_id": "f070",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c071",
+              "field_id": "f071",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c072",
+              "field_id": "f072",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c073",
+              "field_id": "f073",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c074",
+              "field_id": "f074",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c075",
+              "field_id": "f075",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c076",
+              "field_id": "f076",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c077",
+              "field_id": "f077",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c078",
+              "field_id": "f078",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c079",
+              "field_id": "f079",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c080",
+              "field_id": "f080",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c081",
+              "field_id": "f081",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c082",
+              "field_id": "f082",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c083",
+              "field_id": "f083",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c084",
+              "field_id": "f084",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c085",
+              "field_id": "f085",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c086",
+              "field_id": "f086",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c087",
+              "field_id": "f087",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c088",
+              "field_id": "f088",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c089",
+              "field_id": "f089",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c091",
+              "field_id": "f091",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c092",
+              "field_id": "f092",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c093",
+              "field_id": "f093",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c094",
+              "field_id": "f094",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c095",
+              "field_id": "f095",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c097",
+              "field_id": "f097",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c098",
+              "field_id": "f098",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c099",
+              "field_id": "f099",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c100",
+              "field_id": "f100",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c101",
+              "field_id": "f101",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c102",
+              "field_id": "f102",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c103",
+              "field_id": "f103",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c104",
+              "field_id": "f104",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c105",
+              "field_id": "f105",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c106",
+              "field_id": "f106",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c107",
+              "field_id": "f107",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c108",
+              "field_id": "f108",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c109",
+              "field_id": "f109",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c110",
+              "field_id": "f110",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c111",
+              "field_id": "f111",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c112",
+              "field_id": "f112",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c113",
+              "field_id": "f113",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c114",
+              "field_id": "f114",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c115",
+              "field_id": "f115",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c116",
+              "field_id": "f116",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c117",
+              "field_id": "f117",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c118",
+              "field_id": "f118",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c119",
+              "field_id": "f119",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c120",
+              "field_id": "f120",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c121",
+              "field_id": "f121",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c122",
+              "field_id": "f122",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c123",
+              "field_id": "f123",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c124",
+              "field_id": "f124",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c125",
+              "field_id": "f125",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c126",
+              "field_id": "f126",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c127",
+              "field_id": "f127",
+              "reason_code": "MAPPING_NO_MATCH",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c128",
+              "field_id": "f128",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c129",
+              "field_id": "f129",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            },
+            {
+              "candidate_id": "c130",
+              "field_id": "f130",
+              "reason_code": "PROFILE_VALUE_MISSING",
+              "site_id": "synthetic-large-generic-form",
+              "terminal_result": "DEFERRED"
+            }
+          ],
+          "revision": "8a85ec85d02ce5c52edd4e3fd062b31a002c0c3e",
+          "revision_evidence": {
+            "metadata": {
+              "revision": "8a85ec85d02ce5c52edd4e3fd062b31a002c0c3e",
+              "schema_version": "1.0",
+              "source_state": "CLEAN"
+            },
+            "metadata_sha256": "7b36edacb0079126497a3e52209831646550f8ef7469854297fdaa5891146d74",
+            "method": "FIXTURE_SOURCE_METADATA",
+            "unverified_reason": null
+          },
+          "revision_status": "VERIFIED",
+          "stage_counts": {
+            "BOUND": 0,
+            "DEFERRED": 128,
+            "DISCOVERED": 128,
+            "FAILED": 0,
+            "MAPPED": 0,
+            "RETAINED": 0,
+            "WRITTEN": 0
+          },
+          "status": "MEASURED",
+          "timeout_ms": 8000,
+          "undiscovered_autofillable_count": 0,
+          "usage": {
+            "cost_usd": null,
+            "duration_ms": 1464,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "provider_calls": 3
+          }
+        }
+      }
+    },
+    "LIVE_SITE": {
+      "inconclusive_sites": 1,
+      "measured_sites": 0,
+      "overall": {
+        "correct_input_rate": {
+          "denominator": 0,
+          "numerator": 0,
+          "rate": null
+        },
+        "execution_retention_rate": {
+          "denominator": 0,
+          "numerator": 0,
+          "rate": null
+        },
+        "existing_value_damage": 0,
+        "mapping_precision": {
+          "denominator": 0,
+          "numerator": 0,
+          "rate": null
+        },
+        "mapping_recall": {
+          "denominator": 0,
+          "numerator": 0,
+          "rate": null
+        },
+        "miswrite_rate": {
+          "denominator": 0,
+          "numerator": 0,
+          "rate": null
+        },
+        "reason_counts": null,
+        "reason_evidence": null,
+        "stage_counts": {
+          "BOUND": 0,
+          "DEFERRED": 0,
+          "DISCOVERED": 0,
+          "FAILED": 0,
+          "MAPPED": 0,
+          "RETAINED": 0,
+          "WRITTEN": 0
+        },
+        "undiscovered_autofillable_count": null,
+        "usage": {
+          "cost_usd": null,
+          "duration_ms": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "provider_calls": 0
+        }
+      },
+      "sites": {
+        "synthetic-large-generic-form": {
+          "inconclusive_reason": "PAGE_UNAVAILABLE",
+          "initial_state": "EMPTY",
+          "max_output_tokens": 8192,
+          "metrics": null,
+          "model": "jev-latest",
+          "profile_version": "profile-export-example-v1",
+          "provider": "jev",
+          "reason_counts": null,
+          "reason_evidence": null,
+          "revision": "UNVERIFIED",
+          "revision_evidence": {
+            "metadata": null,
+            "metadata_sha256": null,
+            "method": "UNAVAILABLE",
+            "unverified_reason": "INSTALLATION_UNAVAILABLE"
+          },
+          "revision_status": "UNVERIFIED",
+          "status": "INCONCLUSIVE",
+          "timeout_ms": 8000,
+          "undiscovered_autofillable_count": null,
+          "usage": {
+            "cost_usd": null,
+            "duration_ms": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "provider_calls": 0
+          }
+        }
+      }
+    }
+  }
+}

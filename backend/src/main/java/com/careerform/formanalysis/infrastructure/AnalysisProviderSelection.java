@@ -25,7 +25,7 @@ public record AnalysisProviderSelection(
         if (modern != null && legacy != null && !modern.equals(legacy))
             throw new IllegalStateException("Conflicting analysis enable settings");
         boolean enabled = modern != null ? modern : Boolean.TRUE.equals(legacy);
-        String provider = environment.getProperty("career-form.analysis.provider", "openai").trim().toLowerCase(Locale.ROOT);
+        String provider = environment.getProperty("career-form.analysis.provider", "jev").trim().toLowerCase(Locale.ROOT);
         if (!provider.equals("openai") && !provider.equals("jev"))
             throw new IllegalStateException("Unsupported analysis provider");
         String search = environment.getProperty("career-form.analysis.search-provider", "").trim().toLowerCase(Locale.ROOT);

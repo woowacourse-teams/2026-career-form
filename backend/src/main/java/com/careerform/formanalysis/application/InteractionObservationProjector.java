@@ -3,11 +3,9 @@ package com.careerform.formanalysis.application;
 import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 
 import org.springframework.stereotype.Component;
 
@@ -16,30 +14,6 @@ import com.careerform.formanalysis.dto.InteractionDecisionRequest;
 
 @Component
 final class InteractionObservationProjector {
-
-    private static final int MAX_TERMS = 6;
-    private static final List<Term> TERMS = List.of(
-        term("학교명", "school name"),
-        term("school name", "school name"),
-        term("대학교", "university"),
-        term("대학원", "graduate school"),
-        term("고등학교", "high school"),
-        term("university", "university"),
-        term("graduate school", "graduate school"),
-        term("high school", "high school"),
-        term("검색", "search"),
-        term("조회", "search"),
-        term("search", "search"),
-        term("lookup", "search"),
-        term("find", "search"),
-        term("입력", "input"),
-        term("input", "input"),
-        term("선택", "select"),
-        term("select", "select"),
-        term("확인", "confirm"),
-        term("confirm", "confirm"),
-        term("submit", "submit")
-    );
 
     Projection project(InteractionDecisionRequest request) {
         List<InteractionDecisionProvider.Decision> decisions = new ArrayList<>();
@@ -70,7 +44,8 @@ final class InteractionObservationProjector {
                 decisionAlias,
                 decision.role(),
                 decision.canonicalFieldKey(),
-                candidates
+                candidates,
+                decision.targetKind()
             ));
             originals.put(
                 decisionAlias,
@@ -97,12 +72,12 @@ final class InteractionObservationProjector {
             && candidate.semanticContext().labels() != null) {
             for (InteractionDecisionRequest.SemanticLabel label
                 : candidate.semanticContext().labels()) {
-                String sanitized = sanitize(label.text());
-                if (sanitized != null) {
+                String masked = maskLabel(label.text());
+                if (masked != null) {
                     labels.add(new InteractionDecisionProvider.SemanticLabel(
                         label.source().name().toLowerCase(Locale.ROOT)
                             .replace('_', '-'),
-                        sanitized
+                        masked
                     ));
                 }
             }
@@ -124,31 +99,18 @@ final class InteractionObservationProjector {
         );
     }
 
-    private static String sanitize(String raw) {
-        if (raw == null || raw.isBlank()) {
+    private static String maskLabel(String raw) {
+        if (raw == null) {
             return null;
         }
-        String normalized = Normalizer.normalize(raw, Normalizer.Form.NFKC)
-            .toLowerCase(Locale.ROOT)
-            .replaceAll("\\s+", " ")
-            .trim();
-        Set<String> canonical = new LinkedHashSet<>();
-        for (Term term : TERMS) {
-            if (normalized.contains(term.match())) {
-                canonical.add(term.canonical());
-                if (canonical.size() == MAX_TERMS) {
-                    break;
-                }
-            }
-        }
-        return canonical.isEmpty() ? null : String.join("; ", canonical);
-    }
-
-    private static Term term(String match, String canonical) {
-        return new Term(match, canonical);
-    }
-
-    private record Term(String match, String canonical) {
+        String masked = Normalizer.normalize(raw, Normalizer.Form.NFKC)
+            .replaceAll("(?U)\\s+", " ")
+            .trim()
+            .replaceAll("(?i)[\\p{L}\\p{N}._%+\\-]+@[\\p{L}\\p{N}.\\-]+\\.[\\p{L}]{2,}", "<email>")
+            .replaceAll("(?i)(?:[a-z][a-z0-9+.-]*://|www\\.)[^\\s<>]+", "<url>")
+            .replaceAll("(?U)(?<![\\p{L}\\p{N}_])\\+?\\(?\\d(?:[\\d ().-]*\\d){6,}(?!\\d)", "<number>")
+            .replaceAll("(?U)\\d{2,}", "<number>");
+        return masked.isEmpty() ? null : masked.substring(0, Math.min(masked.length(), 120));
     }
 
     record Projection(

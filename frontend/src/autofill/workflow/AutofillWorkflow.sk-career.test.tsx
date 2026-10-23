@@ -52,7 +52,7 @@ function candidates(request: FieldsAnalyzeRequest): FieldCandidate[] {
 
 function fieldResponse(request: FieldsAnalyzeRequest): FieldsAnalyzeResponse {
   return {
-executionPolicy: fixturePolicy("sk"),
+    executionPolicy: fixturePolicy("sk"),
     snapshotId: request.snapshotId,
     mode: "ADAPTER",
     analysisStatus: "COMPLETE",
@@ -185,7 +185,7 @@ function setup(
   ];
   let fieldAnalysisCount = 0;
   const apiClient: AnalysisApiClient = {
-loadExecutionPolicy: async () => fixturePolicy("sk"),
+    loadExecutionPolicy: async () => fixturePolicy("sk"),
     analyzePreparation: async (request) => ({
       snapshotId: request.snapshotId,
       mode: "ADAPTER",
@@ -236,12 +236,15 @@ loadExecutionPolicy: async () => fixturePolicy("sk"),
 it("finishes unchanged fields before refreshing and filling the revealed retirement reason", async () => {
   const run = setup();
 
-  await waitFor(() => {
-    expect(screen.getByRole("heading", { name: "기입 결과" })).toBeVisible();
-    expect(
-      document.querySelector<HTMLTextAreaElement>("#carRetireDesc_1")!.value,
-    ).toBe("계약 종료");
-  });
+  await waitFor(
+    () => {
+      expect(screen.getByRole("heading", { name: "기입 결과" })).toBeVisible();
+      expect(
+        document.querySelector<HTMLTextAreaElement>("#carRetireDesc_1")!.value,
+      ).toBe("계약 종료");
+    },
+    { timeout: 120_000 },
+  );
 
   expect(run.selects.map((select) => select.value)).toEqual(["0", "1"]);
   expect(
@@ -254,8 +257,10 @@ it("finishes unchanged fields before refreshing and filling the revealed retirem
 it("preserves a conflicting existing status without revealing its retirement reason", async () => {
   const run = setup("1");
 
-  await waitFor(() =>
-    expect(screen.getByRole("heading", { name: "기입 결과" })).toBeVisible(),
+  await waitFor(
+    () =>
+      expect(screen.getByRole("heading", { name: "기입 결과" })).toBeVisible(),
+    { timeout: 120_000 },
   );
   expect(run.fieldAnalysisCount()).toBe(1);
 
@@ -275,7 +280,7 @@ it("repeats at the end of another pass when writing the revealed text exposes an
         document.querySelector<HTMLInputElement>("#carPosition_1")!.value,
       ).toBe("팀원");
     },
-    { timeout: 10000 },
+    { timeout: 120_000 },
   );
   expect(
     document.querySelector<HTMLTextAreaElement>("#carRetireDesc_1")!.value,

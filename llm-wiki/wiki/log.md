@@ -1,5 +1,101 @@
 # Wiki Log
 
+## [2026-10-19] ingest | CF-280 분류 추적 게이트 보완
+
+- Approval-Digest: 93111e1673e3486b37ce6fe5adbd51226592b1737c7eccdfc613ec4bcda86bb6
+- Source-Revision: 8688dfd5dcaf2f958ee2a915ace52c0f92c9b755
+- 아직 병합되지 않은 [CF-280 bundle](../raw/issues/CF-280/manifest.md)에 fixture 투영 출처와 분류 서비스 응답부터 매칭까지의 오프라인 추적 후보를 추가했다.
+- [날짜 텍스트 칸 매칭 조사](topics/generic-date-text-matching-investigation.md)에 mock 공급자 경계와 실제 분류 파이프라인, FE collector·실사이트 CSS 미실행 한계를 구분했다.
+
+## [2026-10-19] ingest | CF-280 범용 전체 날짜 텍스트 칸 매칭 조사
+
+- Approval-Digest: 7f7a1af804f79e38d63b1b046937d0fd7a33a8355d3c7698d727f2f3b6fab8e3
+- Source-Revision: 8f9a02657ff1856b570e2dd98c97a15a90486190
+- 승인한 두 후보를 [CF-280 bundle](../raw/issues/CF-280/manifest.md)에 기록하고 [전체 날짜 텍스트 칸 매칭 조사](topics/generic-date-text-matching-investigation.md)를 추가했다.
+- 기존 raw는 변경하지 않았다. 모의 응답은 코드 경로만 보이며 실제 JEV 판단과 실사이트 CSS 상태는 미확인으로 남긴다.
+
+## [2026-10-18] ingest | CF-260 범용 구조 반복 실행과 학력 행 격리
+
+- Approval-Digest: 3af32cb932097163bced35189944304b518e3778188cbd73b763cfa764e1128c
+- Source-Revision: 252e9e1fb86ca7b631d9e18b26dbfeccc8aea44c
+- 승인한 후보 네 개를 [CF-260 bundle](../raw/issues/CF-260/manifest.md)에 기록하고 [구조 반복 실행](topics/generic-structure-loop.md)을 추가했다.
+- 기본 수집 보존, 단계별 행 식별과 보류 격리의 합성 검증을 기록했다. 기존 raw와 구조 행동 ADR의 제안 상태를 유지하며 실사이트 검증으로 확대하지 않는다.
+
+## [2026-10-18] ingest | CF-259 범용 검토 화면의 3단계 표시
+
+- Approval-Digest: 2ec99be9cf99938cbeb5b9489acb77830cddf0df2b1bc7355eb47d0497fe35ff
+- Source-Revision: 0ca3ef09cc9d4296f456d807aed2ba3e28cb9731
+- 승인한 후보 네 개를 [CF-259 bundle](../raw/issues/CF-259/manifest.md)에 기록하고
+  [범용 검토 화면의 3단계 표시](topics/generic-review-tiers.md)를 추가했다.
+- 브라우저 QA와 실사이트 검증은 하지 않았다.
+
+## [2026-10-18] ingest | CF-263 검색 표면 닫기 안전 판정과 사유 타입
+
+- Approval-Digest: b3cd2e7383f13f6aa4efbe5b4a9b8094dbf7cd672175f9a8c840a3b516b52ec3
+- Source-Revision: e0849a8ee250a0f8c588a85b7a0511ad7dc97a68
+- 승인한 세 후보를 [CF-263 bundle](../raw/issues/CF-263/manifest.md)에 기록하고 [검색 표면 닫기 판정](topics/generic-search-surface-close-safety.md)을 추가했다.
+- 기존 raw는 변경하지 않았다. 특성화와 변이 실패는 합성 DOM의 현재 복구 검증이며 과거 커밋 전 RED나 실사이트 검증으로 기록하지 않는다.
+
+## [2026-10-18] ingest | CF-261 범용 등급의 다른 사람 대상 칸 차단
+
+- Approval-Digest: efaf5d4ecaf8f6976e70d9aefc2c5196e03ffe049bc661bcae08f52f7a236f72
+- Source-Revision: 76ecbdac4d71b174390ff5efa5d66d07be4d8a11
+- 승인한 후보 세 개를 [CF-261 bundle](../raw/issues/CF-261/manifest.md)에 기록하고
+  [범용 등급의 다른 사람 대상 칸 차단](topics/generic-other-person-context.md)을 추가했다.
+- 화면 문구는 Task 12(#259)의 변환 표에 위임하며 실사이트 검증은 하지 않았다.
+
+## [2026-10-18] update | CF-251 범용 합성 값 binding 소비와 등급 경계
+
+- Approval-Digest: b280bc6ed4d3bd17c43b277a87b1322d47113bd2f22c96c83ea4be78fd8d9ef1
+- Source-Revision: a7eac91a98982932bb6ecd6d34ada6487ac7aa35
+- 승인한 후보 1개를 [CF-251 bundle](../raw/issues/CF-251/manifest.md)에 기록하고 [frontend 검증 경계](topics/generic-binding-frontend-validation.md)의 현재 상태를 소비 완료로 갱신했다.
+- CF-250 raw는 변경하지 않고 History에 남겼다. 실사이트 실행은 하지 않았다.
+
+## [2026-10-18] ingest | CF-252 범용 칸 문맥·형식 검사와 DOM fixture 검토 경계
+
+- Approval-Digest: c0af678e0f5e91a1f8edbf7d9446fb69b054b135db7ce4264c1ec2c0c82325cf
+- Source-Revision: e04949fb6c20943a0d0c994dc29c2455d5ffff0c
+- 승인된 수정 후보 네 개를 [CF-252 bundle](../raw/issues/CF-252/manifest.md)에 기록하고
+  [범용 칸 문맥과 형식 검사](topics/generic-field-context-safety.md),
+  [DOM fixture 검토와 재현 경계](topics/dom-snapshot-review-boundaries.md)를 추가했다.
+- 자체 title/placeholder의 범용 로컬 읽기는 2026-10-18 사용자 승인 사항이다.
+  기존 raw는 변경하지 않고 실제 JEV·실사이트 검증의 미실행 경계를 유지한다.
+
+## [2026-10-18] ingest | CF-250 범용 응답 합성 값 표현
+
+- Approval-Digest: 0ee8fe6c546245d56ad81d38d4fde2a719b830d39c8181f43ac8a8d48c5fef6b
+- Source-Revision: 01c430db48c9e2d6277a84e544f106dc6b7cc00f
+- 승인한 후보 4개를 [CF-250 bundle](../raw/issues/CF-250/manifest.md)에 기록하고 [합성 값 표현](topics/generic-synthetic-binding-response.md)과 [frontend 검증 경계](topics/generic-binding-frontend-validation.md)를 추가했다.
+- 합성 요청·응답 검증 경계를 유지한다. 기존 raw는 변경하지 않는다.
+
+## [2026-10-18] ingest | CF-253 범용 검색 실패 격리와 fixture 공백 정규화
+
+- Approval-Digest: 39539b34214157c8ade45d63698fd83be4ca20b3c668b66d2d2de77776379603
+- Source-Revision: 470686cd80f395921b6daf499fe40c13b63122ac
+- 승인한 후보 4개를 [CF-253 bundle](../raw/issues/CF-253/manifest.md)에 기록하고 [검색 실패 격리](topics/generic-search-failure-isolation.md), [fixture 공백 정규화](topics/dom-snapshot-fixture-whitespace.md)를 추가했다.
+- 합성 DOM과 검색 경계 mock의 검증 경계를 유지한다. 실사이트에서 실제로 탄 분기는 확인되지 않았다.
+
+## [2026-10-17] ingest | CF-244 범용 클릭 경계, 섹션 캐시와 endpoint 부재 전달
+
+- Approval-Digest: c03f361ba687892e12dd432b8b9607ec34af9fd86545fe697a7896e6ba510135
+- Source-Revision: 7aac227f4663c5e402d92158607adaeb3f3342db
+- 승인한 세 후보를 [CF-244 bundle](../raw/issues/CF-244/manifest.md)에 기록하고 [드롭다운 클릭 경계](topics/generic-dropdown-click-gate.md), [섹션 분석 캐시](topics/generic-section-analysis-cache.md), [endpoint 부재 전달](topics/generic-endpoint-unavailable.md)를 추가했다.
+- 합성 DOM·API mock의 검증 경계를 유지한다. 기존 raw와 ADR 초안의 상태는 변경하지 않는다.
+
+## [2026-10-16] ingest | CF-222 범용 구조 행동, JEV 단일화, 범용 API 분리 ADR 초안
+
+- Approval-Digest: 7d9a06235498d16e25310b1a8ecb773c87d2a4fa6c1e4656991a891cfdb4dbef
+- Source-Revision: fa9125d656cf4f645b7f317318a35e9dd5f2d9a5
+- 승인한 세 후보를 [CF-222 bundle](../raw/issues/CF-222/manifest.md)에 기록하고 [구조 행동 자동 실행](topics/generic-autonomous-structural-actions.md), [JEV 단일 provider](topics/jev-single-analysis-provider.md), [범용 API 분리](topics/generic-api-section-category-matching.md)를 추가했다.
+- 세 ADR은 제안됨 상태이며 구현 결과를 반영한 확정은 후속 작업에서 한다.
+
+## [2026-10-15] ingest | CF-198 범용 폼 컨텍스트 수집 경계와 전후 비교
+
+- Approval-Digest: a62db0f0fe59c1802b8232a2d513137ad07c402bcb9cd25b185461b7e9a53ba2
+- Source-Revision: adc78ef58f88c1a8070fc084c62355ba52cde08a
+- 승인한 세 후보를 [CF-198 bundle](../raw/issues/CF-198/manifest.md)에 기록하고 [범용 폼 컨텍스트 수집](topics/generic-form-context.md)을 추가했다.
+- 실사이트 전후 비교는 혼합·고분산 결과이며 개선으로 판정하지 않는다. 후보 수 동일은 악화 원인을 확정하지 않으며 원인은 미확인이다. 설치 revision은 UNVERIFIED이고 범위는 보이는 native control이다.
+
 ## [2026-10-11] ingest | CF-178 브라우저 테스트 계층과 CI 경계
 
 - Approval-Digest: a44d4319a65cb6f0fc17934d216e915b38e1c1fec8acb5c1d1839957fa6b7013
@@ -471,6 +567,22 @@
 - 승인한 세 후보를 [CF-169 bundle](../raw/issues/CF-169/manifest.md)에 기록하고 [현대 어댑터](topics/adapter-hyundai.md), [SK 어댑터](topics/adapter-sk.md), [어댑터 필드 현황](topics/adapter-field-inventory.md)의 Current를 갱신했다. 기존 raw는 보존했다.
 - 현대 `.field-group`과 SK `.form-item-group.langExam-Item`의 행 격리 조건, 국적과 우대 여부 드라이버 제외를 기록했다.
 
+## [2026-10-12] ingest | CF-192 Greeting 프로필 import 기술 검증
+
+- Approval-Digest: 09e992e80ac677ab64606c19fe1babcff1e300a589fa7a3f99b93e04eafd01c2
+- Source-Revision: 2567a6ab93014787eb155670651796ef5013567c
+- 승인한 네 후보를 [CF-192 bundle](../raw/issues/CF-192/manifest.md)과 [Greeting 프로필 import 기술 검증](topics/greeting-profile-import.md)에 기록하고 색인을 추가했다.
+- 기존 raw와 자동 기입 정책은 보존하고, 읽기 검증 결과와 제품 구현의 후속 조건을 구분했다.
+
+## [2026-10-12] ingest | CF-192 Greeting 프로필 가져오기 제품 연결
+
+- Approval-Digest: 1d53de70607a0afcdd1bf1ae1d18373d5b927860730dbb1efd1606ce09e551dc
+- Source-Revision: aa33c040f7f183a3fce454c89db4dc33f5bda415
+- 새로 승인한 네 후보로 아직 병합되지 않은 [CF-192 bundle](../raw/issues/CF-192/manifest.md)과 [가져오기 topic](topics/greeting-profile-import.md)을 제품 구현 상태에 맞춰 갱신했다. 기준 브랜치의 raw는 변경하지 않았다.
+- 선택 병합·저장, 이름·날짜·학력 확인, 공통 저장 큐의 충돌 보호와 복구, 합성 fixture 검증의 한계를 기록했다.
+
+- 2026-10-12: CF-192 승인된 전체 필드 가져오기·부분 실패 격리·Aside LF/HLB 검증 근거로 병합 전 raw와 topic을 갱신했다.
+
 ## [2026-10-12] ingest | CF-183 확장 품질 보고 fetch 호출 문맥
 
 - Approval-Digest: a0023aa706b1b4fd3c776de453075b9a7718c3ff09d069f63780963d8836fc13
@@ -538,3 +650,106 @@
 - Approval-Digest: 44786fd7c6ee3529b9ffdbe14c2f183836d556bf6b822ad4e86d2dc0019caf3d
 - Source-Revision: 05b7a90ec1a02050b8ded4adc703f5edc3e6a9d4
 - 승인한 세 후보를 [CF-184 bundle](../raw/issues/CF-184/manifest.md)에 기록하고 [사이트별 자동 입력 결과와 일별 그래프](topics/autofill-quality-dashboard.md)를 추가했다. 기존 품질 관측 주제에서 연결하고 기존 raw는 보존했다.
+
+## [2026-10-15] ingest | CF-192 한 화면 가져오기 검토
+
+- Approval-Digest: dcf2130a93c947448df405fedb580e0143e8a836eeca0e6a06be55c783062682
+- Source-Revision: f926716d0f1efc792d8129f6d2dff8df6f98cdc5
+- 승인한 후보 8개에 맞춰 아직 병합되지 않은 [CF-192 bundle](../raw/issues/CF-192/manifest.md)을 갱신했다.
+- [Greeting 지원서에서 프로필 가져오기](topics/greeting-profile-import.md)의 현재 상태를 한 화면 검토, 새 값 미리 선택, 확인 카드, 중복 행 안내, 원본 칸 강조, 화면 문구 규칙으로 갱신했다.
+
+## [2026-10-15] ingest | CF-192 실행 정책 기반 가져오기 통합
+
+- Approval-Digest: e7990fbc0dfac3e68910c58c5e8a6037f640da03eae1c85b69c822281d58ccb1
+- Source-Revision: 843c7ebb10e771ac51570dfff7efc8fbda2aded2
+- 최신 develop 병합 뒤 승인한 후보 10개에 맞춰 아직 병합되지 않은 [CF-192 bundle](../raw/issues/CF-192/manifest.md)을 갱신했다.
+- [Greeting 지원서에서 프로필 가져오기](topics/greeting-profile-import.md)에 실행 정책 기반 읽기, 가져오기 전용 민감 범주, 구분값 기준 추가 전공을 반영했다.
+
+## [2026-10-16] ingest | CF-192 실사이트 테스트와 재가져오기 보완
+
+- Approval-Digest: 9a96f691055d378fe05e9106fab5ed1b61926d2ef0fba8e9fc7a8b5d03d35c0b
+- Source-Revision: 79a3dd19f1fc99bcfb4ac0482bf9d2c3f9a944c6
+- 승인한 후보 12개에 맞춰 아직 병합되지 않은 [CF-192 bundle](../raw/issues/CF-192/manifest.md)을 갱신했다.
+- [Greeting 지원서에서 프로필 가져오기](topics/greeting-profile-import.md)에 재가져오기 생략 조건과 실사이트 테스트 범위를 반영했다.
+
+## [2026-10-19] ingest | CF-281 범용 범주 안 JEV 매칭 누락 원인과 의미 근거 보강
+
+- Approval-Digest: acf6371d55c2272e43692af2e5a7010dc364ddd8162a37b4d7811aeea30b05b8
+- Source-Revision: eac609ea083a39ef9c92217abf4cf36affbca43a
+- 승인한 후보 3개를 [CF-281 bundle](../raw/issues/CF-281/manifest.md)로 수집하고 [범용 범주 안 JEV 매칭 누락 원인과 의미 근거 보강](topics/generic-category-semantic-matching.md)을 추가했다.
+
+## [2026-10-19] ingest | CF-281 Astra 게이트 B1·B2 정정
+
+- Approval-Digest: f2f0727ce2014c09ef0ec6cf3df54c6f4b44d96e4947aa890fa069fa6f457ec8
+- Source-Revision: 25ffdcba6bea7406a704b0499e079867a9893e89
+- 사용자 사전 승인 범위에서 후보 4개로 아직 병합되지 않은 [CF-281 bundle](../raw/issues/CF-281/manifest.md)을 갱신했다.
+- 기존 등급·점수 계약을 등급 전용으로 좁힌 잘못된 설명을 정정하고, 원본에는 없는 프로젝트 상세 반례를 별도 합성 변이로 명시한 출처를 반영했다.
+
+## [2026-10-19] ingest | CF-177 Hplace 공통 실행 정책과 필드 현황
+
+- Approval-Digest: 5a54ecda82fcd8b70574c9b3b35910433c10db4823ea2ad8b15ef0bd74df4b97
+- Source-Revision: c35f229db509ad1fc7d3cc440729a026afb359db
+- 승인 후보 파일 전체 UTF-8 바이트의 SHA-256을 재확인하고 [CF-177 bundle](../raw/issues/CF-177/manifest.md)에 계약·현황·결정·관측·검증·후속 후보를 수집했다.
+- [Hplace 어댑터](topics/adapter-hplace.md)를 추가하고 [개발 경계](topics/adapter-development.md), [필드 현황](topics/adapter-field-inventory.md)의 Current와 History를 갱신했다. 다른 회사 현황과 기존 raw는 보존했다.
+- 127키/사이트 전용27행, 로컬 구현/과거 관측/PENDING-live, 호환 배포 순서를 구분하며 실제 지원값·계정·세션·대화 전문은 저장하지 않았다.
+
+## [2026-10-20] ingest | CF-288 분석 응답과 품질 관측의 비동기 분리
+
+- Approval-Digest: 541589a83e078dd8c571a98b42c1ffd6b5e7bb1e05be47336ad246322b7458a9
+- Source-Revision: 541f4c2e473b8575e00ac1d154c41bec9b96fa61
+- 승인한 정책 후보 3개와 ADR 전문을 [CF-288 bundle](../raw/issues/CF-288/manifest.md)에 기록했다.
+- [비동기 품질 처리](topics/async-quality-observation.md)를 추가하고 기존 품질 관측, report 시점과 이전 실행기의 인터럽트 계약에 현재 구조를 연결했다.
+
+## [2026-10-20] ingest | CF-296 품질 가공 경계 이동과 배치 보고
+
+- Approval-Digest: a0fe90430f2ca019308b9afcef2767a057cb22986e6ae6f486e20ef30982d2da
+- Source-Revision: e0730141498ad616f3f0325caac3fc196e998bf5
+- 승인한 후보 4개를 [CF-296 bundle](../raw/issues/CF-296/manifest.md)에 기록했다.
+- [비동기 품질 처리](topics/async-quality-observation.md)와 [보고 시점](topics/quality-report-lifecycle.md)을 현재 구조로 갱신했다.
+
+## [2026-10-20] ingest | CF-304 프론트 테스트 shard 분할과 병합 검증
+
+- Approval-Digest: 1353a9195e46ac8fd65e3b6c6fb4ce01fc241997b71801d04ea16584531abb88
+- Source-Revision: c200452ef88ebab2ecbb148a70f58d54eb229f92
+- 승인한 후보 6개(ADR, topic 갱신, Vitest 동작 사실, shard 수 결정 근거, 제품 수집 캐시 근거, 진단 근거)를 [CF-304 bundle](../raw/issues/CF-304/manifest.md)에 기록했다.
+- [프론트 브라우저 테스트](topics/frontend-browser-testing.md)의 CI 경계를 shard 실행과 병합 검증으로 갱신하고 CF-178 실행 경계를 History로 옮겼다.
+
+## [2026-10-20] ingest | CF-177 Hplace step 2·3 실화면 수정
+
+- Approval-Digest: fdbe4510fabdf1aa3e1f9a6e7373ba1558ada47bdde352eea116187bcf17ef52
+- Source-Revision: f5866191b17bb75cd5250c76f8bc2f6242ab1a54
+- 승인 후보 파일의 신규 후보 절(K41–K55) UTF-8 바이트의 SHA-256을 재확인하고, 아직 병합되지 않은 [CF-177 bundle](../raw/issues/CF-177/manifest.md)에 새 문서를 추가했다. 기존 7개 문서와 manifest 머리말은 바꾸지 않고 topic 절 세 개를 덧붙였다.
+- [Hplace 어댑터](topics/adapter-hplace.md), [개발 경계](topics/adapter-development.md), [필드 현황](topics/adapter-field-inventory.md)의 Current와 History를 갱신하고 검색 확정·driver 실행·선택지·날짜 정밀도·live-eval 하네스 경계를 반영했다. 키별 지원 분류 수는 바꾸지 않았다.
+- 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.
+
+## [2026-10-20] ingest | CF-177 Hplace C12·C13와 미검증 테넌트 시연 수정
+
+- Approval-Digest: 542da5f91de838b7628a627f71c8299e1434cc346667f7aea70ea92d50921a61
+- Source-Revision: 6a7a14174ccf6b21ae691254fbec78bb63aa22e1
+- 3차 후보 파일(K56–K65) 전체 UTF-8 바이트의 SHA-256을 재확인하고, 아직 병합되지 않은 [CF-177 bundle](../raw/issues/CF-177/manifest.md)에 새 문서를 추가했다. 기존 문서와 manifest의 앞선 절은 바꾸지 않고 topic 절 세 개를 덧붙였다.
+- [Hplace 어댑터](topics/adapter-hplace.md), [개발 경계](topics/adapter-development.md), [필드 현황](topics/adapter-field-inventory.md)의 Current와 History를 갱신하고 정제 fixture 대조, 프로젝트154 활성화, C14 종료, 지원 방식 판별, 현주소 없는 기본정보, 병역 날짜 정밀도, 영문 이름 순서 기본값을 반영했다. 키별 집계는 구현 95·의미 불일치 13·구조 미확인 16으로 바꿨다.
+- 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.
+
+## [2026-10-20] ingest | CF-177 Hplace KDI 후속 수정과 구조 미확인 칸 표시
+
+- Approval-Digest: 1f3a2c11feb57fc5644601525129931c8a94c47711ea779bde7c6e96b59ba32d
+- Source-Revision: 82bf5e6cc0a00110f3b8efaf36fad800055ad6ad
+- 4차 후보 파일(K66–K69) 전체 UTF-8 바이트의 SHA-256을 재확인하고, 아직 병합되지 않은 [CF-177 bundle](../raw/issues/CF-177/manifest.md)에 새 문서를 추가했다. 앞선 절과 문서는 바꾸지 않고 topic 절 세 개를 덧붙였다.
+- [Hplace 어댑터](topics/adapter-hplace.md), [개발 경계](topics/adapter-development.md), [필드 현황](topics/adapter-field-inventory.md)의 Current와 History를 갱신하고 생년월일 선택 앵커(K62 정정), 홍길동 예시 순서(K64 정정), 구조 미확인 칸 표시, 진단 로그 기본 꺼짐을 반영했다. 키별 집계는 바꾸지 않았다.
+- 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.
+
+## [2026-10-20] ingest | CF-177 Hplace 후속 보완 묶음과 저장 페이지 재로드 보고
+
+- Approval-Digest: 47b52e686c57595fd3b1f51c382fa6aa0bbe447631c0dab2b4b9c3c38cbc1bda
+- Source-Revision: b80992013b59475c28f3164e904c70355c3778d0
+- 5차 후보 파일(K70–K76, K75-1 포함) 전체 UTF-8 바이트의 SHA-256을 재확인하고, 아직 병합되지 않은 [CF-177 bundle](../raw/issues/CF-177/manifest.md)에 새 문서를 추가했다. 앞선 절과 문서는 바꾸지 않고 topic 절 세 개를 덧붙였다.
+- [Hplace 어댑터](topics/adapter-hplace.md), [개발 경계](topics/adapter-development.md), [필드 현황](topics/adapter-field-inventory.md)의 Current와 History를 갱신하고 칸 단위 독립 인식(K66 정정), native 실행기 효율, 안내 구분, 전 프로필 시드, 금지 동작·재실행 회귀, 저장 후 다시 연 페이지의 기존 행 보고, CI 한도를 반영했다. 키별 집계는 바꾸지 않았다.
+- 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.
+
+## [2026-10-21] ingest | CF-271 Greeting 가져오기 진입과 저장 완료 계측
+
+- Approval-Digest: dbc296eaa5b5917ca69dc5431dd4f54ef1543cbfb1c8cf8c22a0ca85da05d840
+- Source-Revision: 0de01651f6ce0d02f56038013c724d212096e987
+- 승인된 후보 4개를 [CF-271 bundle](../raw/issues/CF-271/manifest.md)에 기록하고 CF-193 계측 문서를 대체했다.
+- [선택적 이용 계측](topics/usage-analytics.md)의 Current와 History를 갱신하고 가져오기 이벤트 의미, 비교 저장 경계, 발생 화면과 계측 도구 범위를 반영했다.
+- 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.
