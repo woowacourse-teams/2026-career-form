@@ -306,6 +306,35 @@ class WorkflowContractTest(unittest.TestCase):
         self.assertEqual("${{ github.sha }}", checkout["with"]["ref"])
         self.assertEqual("write", cleanup["permissions"]["contents"])
 
+    def test_merged_work_branch_cleanup_contract(self) -> None:
+        workflow = self._workflow("cleanup-merged-branch.yml")
+
+        trigger = workflow["on"]["pull_request"]
+        self.assertEqual(["closed"], trigger["types"])
+        self.assertEqual(["develop", "main", "release/**"], trigger["branches"])
+        self.assertEqual({"contents": "read"}, workflow["permissions"])
+        cleanup = workflow["jobs"]["cleanup"]
+        self.assertIn("pull_request.merged == true", cleanup["if"])
+        self.assertIn(
+            "pull_request.head.repo.full_name == github.repository", cleanup["if"]
+        )
+        for refused in ("'main'", "'develop'", "'release/'"):
+            self.assertIn(refused, cleanup["if"])
+        self.assertEqual(
+            {"contents": "write", "pull-requests": "read"}, cleanup["permissions"]
+        )
+        checkout = next(
+            step for step in cleanup["steps"]
+            if step.get("uses", "").startswith("actions/checkout@")
+        )
+        self.assertEqual("${{ github.sha }}", checkout["with"]["ref"])
+        step = next(step for step in cleanup["steps"] if "run" in step)
+        self.assertEqual(
+            "${{ github.event.pull_request.head.ref }}", step["env"]["HEAD_REF"]
+        )
+        self.assertNotIn("${{", step["run"])
+        self.assertIn("release-sync.py cleanup-work-branch", step["run"])
+
     def test_new_workflows_pin_external_actions_to_full_commit_sha(self) -> None:
         for filename in (
             "backend-ci.yml",
@@ -314,6 +343,7 @@ class WorkflowContractTest(unittest.TestCase):
             "deploy-staging.yml",
             "deploy-production.yml",
             "complete-release-sync.yml",
+            "cleanup-merged-branch.yml",
         ):
             workflow = self._workflow(filename)
             for job in workflow["jobs"].values():
