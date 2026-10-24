@@ -29,9 +29,9 @@ class StartupPolicySeederTest {
         runInProfile(profile, mongo);
         var documents = ArgumentCaptor.forClass(Document.class);
         var order = inOrder(mongo);
-        order.verify(mongo, times(5)).insert(documents.capture(), eq(POLICIES));
+        order.verify(mongo, times(6)).insert(documents.capture(), eq(POLICIES));
         assertThat(documents.getAllValues()).extracting(d -> d.get("version", Number.class).longValue())
-            .containsExactly(37L, 38L, 24L, 17L, 18L);
+            .containsExactly(37L, 38L, 24L, 25L, 17L, 18L);
         order.verify(mongo).insert(any(Document.class), eq("execution_provider_policies"));
         order.verify(mongo, times(3)).insert(any(Document.class), eq(COMPANIES));
     }
@@ -40,7 +40,7 @@ class StartupPolicySeederTest {
     void restartWithMatchingActiveVersionsWritesNothing() throws Exception {
         var mongo = mock(MongoTemplate.class);
         when(mongo.exists(any(Query.class), anyString())).thenReturn(true);
-        existingCompanies(mongo, 38L, 24L, 18L);
+        existingCompanies(mongo, 38L, 25L, 18L);
         new StartupPolicySeeder(mongo).run(null);
         verify(mongo, never()).insert(any(Document.class), anyString());
         verify(mongo, never()).updateFirst(any(Query.class), any(Update.class), anyString());
@@ -54,9 +54,10 @@ class StartupPolicySeederTest {
         when(mongo.exists(any(Query.class), anyString())).thenReturn(true);
         existingCompanies(mongo, 37L, 24L, 17L);
         runInProfile(profile, mongo);
-        assertThat(activeVersionUpdates(mongo)).containsExactly(38L, 18L);
+        assertThat(activeVersionUpdates(mongo)).containsExactly(38L, 25L, 18L);
         verify(mongo, never()).insert(any(Document.class), eq(COMPANIES));
         assertThat(output.getOut()).contains("POLICY_ACTIVE_VERSION", "company=sk", "from=37", "to=38")
+            .contains("company=hyundai", "from=24", "to=25")
             .contains("company=greeting", "from=17", "to=18");
     }
 
@@ -65,9 +66,9 @@ class StartupPolicySeederTest {
     void lowersActiveVersionToTheSeedOnRollback() throws Exception {
         var mongo = mock(MongoTemplate.class);
         when(mongo.exists(any(Query.class), anyString())).thenReturn(true);
-        existingCompanies(mongo, 40L, 24L, 20L);
+        existingCompanies(mongo, 40L, 26L, 20L);
         new StartupPolicySeeder(mongo).run(null);
-        assertThat(activeVersionUpdates(mongo)).containsExactly(38L, 18L);
+        assertThat(activeVersionUpdates(mongo)).containsExactly(38L, 25L, 18L);
     }
 
     @Test
@@ -76,7 +77,7 @@ class StartupPolicySeederTest {
         when(mongo.exists(any(Query.class), anyString())).thenReturn(true);
         when(mongo.exists(argThat(q -> q != null && q.getQueryObject().toJson().contains("\"version\": 38")), eq(POLICIES)))
             .thenReturn(false);
-        existingCompanies(mongo, 37L, 24L, 17L);
+        existingCompanies(mongo, 37L, 25L, 17L);
         new StartupPolicySeeder(mongo).run(null);
         assertThat(activeVersionUpdates(mongo)).containsExactly(18L);
         assertThat(output.getOut()).contains("POLICY_ACTIVE_VERSION", "company=sk", "missing-policy", "to=38");
@@ -129,7 +130,7 @@ class StartupPolicySeederTest {
     @Test
     void toleratesOnlyDuplicateRacesWithAnExistingIdentity() throws Exception {
         var mongo = mock(MongoTemplate.class);
-        when(mongo.exists(any(Query.class), anyString())).thenReturn(false, true, true, true, true, true, true, true);
+        when(mongo.exists(any(Query.class), anyString())).thenReturn(false, true, true, true, true, true, true, true, true);
         when(mongo.insert(any(Document.class), eq(POLICIES)))
             .thenThrow(new org.springframework.dao.DuplicateKeyException("concurrent startup"));
         new StartupPolicySeeder(mongo).run(null);
