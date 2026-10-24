@@ -110,6 +110,11 @@ import {
 import { takeWrittenSearchFollowUp } from "./search-follow-up-state";
 import { runAddressAnalysis } from "./address-analysis";
 import { belongsToFailedGroup } from "./workflow-write-items";
+import {
+  settleVisibleFields,
+  transientlyHidden,
+  visibleFieldCount,
+} from "./visible-fields-settle";
 
 import {
   isGenericStateDriver,
@@ -230,6 +235,27 @@ export function createAnalyzeFields({
     setStage("exception");
     return true;
   };
+  // A Component forms page can hide its whole form for a moment after writes
+  // or a server action. A snapshot taken then rebinds nothing and would end the
+  // run with silent gaps, so wait for the page to show its fields again.
+  const collectSettledFields = async (run: (typeof addressRun)["current"]) => {
+    const collect = () => collectFields(pageDocument, run.controller.signal);
+    const settled = await settleVisibleFields({
+      snapshot: await collect(),
+      previousVisible: run.visibleFields,
+      collect,
+      signal: run.controller.signal,
+    });
+    if (settled.retries)
+      debugStageCounts(
+        settled.stillHidden ? "fields-still-hidden" : "fields-resettled",
+        visibleFieldCount(settled.snapshot),
+        settled.retries,
+      );
+    if (!transientlyHidden(run.visibleFields, settled.snapshot))
+      run.visibleFields = visibleFieldCount(settled.snapshot);
+    return settled.snapshot;
+  };
   const analyzeFields = async (
     loadedProfile: Profile,
     ignoreFreshRowDefaults = false,
@@ -267,7 +293,7 @@ export function createAnalyzeFields({
     setStage("analyzing");
     setResultRegistry?.(undefined);
     onActivity?.("matching");
-    const snapshot = await collectFields(pageDocument, run.controller.signal);
+    const snapshot = await collectSettledFields(run);
     if (
       run.controller.signal.aborted ||
       currentAnalysisGeneration !== analysisGeneration
@@ -540,7 +566,7 @@ export function createAnalyzeFields({
             .refreshAfterPass)
       )
         return false;
-      const next = await collectFields(pageDocument, run.controller.signal);
+      const next = await collectSettledFields(run);
       if (
         run.controller.signal.aborted ||
         currentAnalysisGeneration !== analysisGeneration
@@ -709,6 +735,22 @@ export function createAnalyzeFields({
     setFieldsSnapshot(snapshot);
     setPartial(plan.status === "partial");
     const analysisWarnings: string[] = [...(analysis.warningCodes ?? [])];
+    if (analysis.unresolvedFields?.length) {
+      // Name what the page took away so a run that ends here is not silent.
+      const labels = [
+        ...new Set(
+          analysis.unresolvedFields
+            .map((field) => field.displayName)
+            .filter((label): label is string => Boolean(label)),
+        ),
+      ];
+      const shown = labels.slice(0, 5).join(", ");
+      const more =
+        analysis.unresolvedFields.length - Math.min(labels.length, 5);
+      analysisWarnings.push(
+        `페이지가 바뀌어 다시 연결하지 못한 항목 ${analysis.unresolvedFields.length}개: ${shown || "(이름 없음)"}${more > 0 ? ` 외 ${more}개` : ""}. 지원서에서 직접 확인해 주세요.`,
+      );
+    }
     if (
       options.reviewOnly &&
       reviewFollowUps.some((followUp) =>

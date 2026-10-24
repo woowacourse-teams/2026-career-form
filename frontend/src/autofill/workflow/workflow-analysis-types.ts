@@ -39,6 +39,8 @@ type AddressRun = {
   hplaceFieldsRequests?: number;
   nativeFieldsRequests?: number;
   nativeProgress?: string;
+  /** Visible fields of the last snapshot that was not transiently hidden. */
+  visibleFields?: number;
   nativeMajors?: NativeMajorPreparationState;
   nativeDependents?: NativeDependentState;
   button?: Element;
