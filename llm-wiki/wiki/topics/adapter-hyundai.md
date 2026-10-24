@@ -2,8 +2,8 @@
 
 > Topic: adapter-hyundai
 > Status: Current
-> Current: [CF-333 작성 화면 재진입 불가·경력 칸 결함 근거](../../raw/issues/CF-333/documents/hyundai-applywrite-reentry-and-career-fields.md)
-> History: [근거 1](../../raw/issues/CF-46/documents/adapter-hyundai.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-hyundai.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-hyundai.md); [CF-169 근거](../../raw/issues/CF-169/documents/adapter-hyundai.md); [CF-310 Map·Set 재정의 근거](../../raw/issues/CF-310/documents/hyundai-map-set-override.md); [CF-310 버튼형 선택지 코드 근거](../../raw/issues/CF-310/documents/hyundai-button-select-codes.md); [CF-333 작성 화면 재진입 불가·경력 칸 결함 근거](../../raw/issues/CF-333/documents/hyundai-applywrite-reentry-and-career-fields.md)
+> Current: [CF-335 버튼형 선택지 코드 수집·trigger 식별·정책 v25 경력·자격 매핑](../../raw/issues/CF-335/documents/hyundai-v25-button-codes-and-career-fields.md)
+> History: [근거 1](../../raw/issues/CF-46/documents/adapter-hyundai.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-hyundai.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-hyundai.md); [CF-169 근거](../../raw/issues/CF-169/documents/adapter-hyundai.md); [CF-310 Map·Set 재정의 근거](../../raw/issues/CF-310/documents/hyundai-map-set-override.md); [CF-310 버튼형 선택지 코드 근거](../../raw/issues/CF-310/documents/hyundai-button-select-codes.md); [CF-333 작성 화면 재진입 불가·경력 칸 결함 근거](../../raw/issues/CF-333/documents/hyundai-applywrite-reentry-and-career-fields.md); [CF-335 버튼형 선택지 코드 수집·trigger 식별·정책 v25 경력·자격 매핑](../../raw/issues/CF-335/documents/hyundai-v25-button-codes-and-career-fields.md)
 > Updated: 2026-10-24
 
 ## 현재 상태
@@ -25,9 +25,15 @@ CF-169는 어학 언어와 시험 상태 드라이버의 실패를 `.field-group
 - **종료사유 자유입력 오배치:** 종료사유 select(`retResCd`)는 비운 채 "기타"일 때만 유효한 자유입력(`retResEtcCont`)에 사유 원문을 쓴다. 어휘 별칭("계약기간 만료" ↔ "계약만료")과 버튼형 선택지 코드 수집이 선행돼야 한다. 두 결함과 자격 등급 `단일등급` 미매핑의 수정은 #335, 학교명 검색 미확정은 #336에서 다룬다.
 - 근거는 [CF-333 작성 화면 재진입 불가·경력 칸 결함](../../raw/issues/CF-333/documents/hyundai-applywrite-reentry-and-career-fields.md)을 따른다.
 
+## 정책 v25: 경력 날짜·종료사유·자격 등급 (2026-10-24)
+
+- **버튼형 선택지 코드는 읽기 전용으로 수집할 수 있다.** `.select-wrap .select-option button[data-code]`는 레이어가 닫혀 있어도 DOM에 있어, CF-310의 "레이어를 열어야 보인다"는 관측을 정정한다. 2026-10-24 작성 화면 두 곳에서 종료사유 16개·자격 등급 82개·전과/편입 4개 코드를 읽었고 두 화면이 같았다. 하네스 census의 `selectOptions`는 40개까지만 담는다. 선행 선택에 따라 채워지는 메뉴(외국어 등급)는 그 전까지 비어 있다.
+- **버튼형 trigger에는 name이 없다.** 요청 후보의 domName은 요소 자신의 `name`에서만 오므로 현대 버튼 규칙에 `requiredDomName`을 둘 수 없고, trigger id의 구조 이름(`grade` vs `gradeForeLang`)으로만 구분한다. FE 실행기는 라벨로 선택지를 고르고 클릭 뒤 hidden 값이 선택지 `data-code`와 같은지 검증하므로 정책 코드는 교차 확인용이다.
+- **v25 변경 세 가지.** 입사·퇴사연월일은 연월 조합 바인딩이 일자를 잘라냈던 것이라 직접 바인딩으로 바꿨다(프로필 날짜는 일자까지 있어 보정 정책 불필요, CF-333의 "연월 단위" 전제 정정). 종료사유는 자유입력 직접 바인딩을 빼고 `retResCd` 버튼 규칙(별칭 `계약기간 만료`→`계약만료`)을 두어 선택지에 없는 사유는 "확인 필요"로 남긴다. 자격 등급은 `grade` 버튼 규칙(별칭 `단일등급`→`등급없음`)을 새로 둔다. 전과/편입은 코드만 수집하고 규칙은 보류한다. 실사이트 재측정은 dev 배포 뒤 #336과 같은 세션에서 한다. 근거는 [CF-335 근거](../../raw/issues/CF-335/documents/hyundai-v25-button-codes-and-career-fields.md)를 따른다.
+
 ## 변경 이유
 
-공통 회사 지식 분리 이후 확인된 취득일의 공통 이름 충돌을 보완하고, 미입력의 원인과 검증 한계를 승인된 근거에 추가했다.
+공통 회사 지식 분리 이후 확인된 취득일의 공통 이름 충돌을 보완하고, 미입력의 원인과 검증 한계를 승인된 근거에 추가했다. CF-335에서 경력 날짜·종료사유·자격 등급 결함을 정책 v25로 고치고 버튼형 선택지 코드 수집 방법과 trigger 식별 규칙을 정정했다.
 
 ## 반복 행 후속 보완
 

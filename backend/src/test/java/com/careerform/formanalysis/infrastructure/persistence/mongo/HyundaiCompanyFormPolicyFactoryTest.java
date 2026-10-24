@@ -16,8 +16,8 @@ class HyundaiCompanyFormPolicyFactoryTest {
     void seedsConstrainedHyundaiFields() {
         FormAnalysisPolicyDocument hyundaiPolicy = HyundaiCompanyFormPolicyFactory.create();
 
-        assertThat(hyundaiPolicy.id()).isEqualTo("hyundai-policy-v14");
-        assertThat(hyundaiPolicy.version()).isEqualTo(14);
+        assertThat(hyundaiPolicy.id()).isEqualTo("hyundai-policy-v15");
+        assertThat(hyundaiPolicy.version()).isEqualTo(15);
         assertThat(hyundaiPolicy.fieldRules().stream()
             .filter(rule -> java.util.Set.of(
                 "acqDtForeLang", "acqDt", "nationLicNm"
@@ -40,6 +40,112 @@ class HyundaiCompanyFormPolicyFactoryTest {
                     "certifications.certificate.name"
                 )
             );
+    }
+
+    @Test
+    @DisplayName("현대 v15 정책은 경력 입사·퇴사연월일을 일자까지 그대로 쓰는 직접 바인딩으로 저장한다")
+    void seedsFullDateCareerPeriodBindings() {
+        FormAnalysisPolicyDocument hyundaiPolicy = HyundaiCompanyFormPolicyFactory.create();
+
+        assertThat(hyundaiPolicy.fieldRules().stream()
+            .filter(rule -> java.util.Set.of("tranStartDt", "tranEndDt").contains(rule.structuralName()))
+            .map(rule -> rule.valueBinding()))
+            .containsExactly(
+                new com.careerform.formanalysis.application.port.FieldMappingResolver.DirectBinding(
+                    "careers.career.startDate"),
+                new com.careerform.formanalysis.application.port.FieldMappingResolver.DirectBinding(
+                    "careers.career.endDate")
+            );
+    }
+
+    @Test
+    @DisplayName("현대 v15 정책은 종료사유를 버튼 선택지로, 자격 등급을 trigger id로 외국어 등급과 구분해 매핑한다")
+    void seedsTerminationReasonAndCertificateGradeButtons() {
+        FormAnalysisPolicyDocument hyundai = HyundaiCompanyFormPolicyFactory.create();
+
+        assertThat(hyundai.fieldRules()).extracting("structuralName").doesNotContain("retResEtcCont");
+        var reason = buttonBinding(hyundai, "retResCd");
+        assertThat(reason.profileFieldKey()).isEqualTo("careers.career.terminationReason");
+        assertThat(reason.optionCodeMap()).hasSize(16)
+            .containsEntry("계약만료", "G3").containsEntry("개인사정", "B3").containsEntry("기타", "I4");
+        assertThat(reason.optionMap()).containsEntry("계약기간 만료", "계약만료").containsEntry("계약만료", "계약만료");
+        assertThat(reason.optionMap().values()).allSatisfy(label -> assertThat(reason.optionCodeMap()).containsKey(label));
+
+        var gradeRule = hyundai.fieldRules().stream()
+            .filter(rule -> rule.structuralName().equals("grade")).findFirst().orElseThrow();
+        // Triggers carry no name attribute, so the request has no domName to constrain on.
+        assertThat(gradeRule.requiredDomName()).isNull();
+        var grade = buttonBinding(hyundai, "grade");
+        assertThat(grade.profileFieldKey()).isEqualTo("certifications.certificate.grade");
+        assertThat(grade.optionCodeMap()).hasSize(82)
+            .containsEntry("등급없음", "01").containsEntry("기사", "05").containsEntry("PROFESSIONAL", "109");
+        assertThat(grade.optionMap()).containsEntry("단일등급", "등급없음");
+        assertThat(buttonBinding(hyundai, "gradeForeLang").profileFieldKey())
+            .isEqualTo("languages.languageTest.grade");
+
+        // Candidates as the page presents them: button triggers have an indexed id and no name
+        // (the hidden value input holds the name); text inputs have both.
+        var policy = com.careerform.formanalysis.application.policy.CompanyFormPolicy.create(
+            hyundai.companyKey(), hyundai.version(), hyundai.preparationFingerprint(),
+            hyundai.fieldsFingerprint(), hyundai.actionRules(), hyundai.fieldRules(), ignored -> true
+        );
+        var candidates = java.util.List.of(
+            candidate("reason-select", com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl.BUTTON,
+                "retResCd_1", null),
+            candidate("reason-text", com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl.TEXT,
+                "retResEtcCont_1", "retResEtcCont"),
+            candidate("start", com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl.TEXT,
+                "tranStartDt_1", "tranStartDt"),
+            candidate("licence-grade", com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl.BUTTON,
+                "grade_1", null),
+            candidate("language-grade", com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl.BUTTON,
+                "gradeForeLang_1", null)
+        );
+        var resolution = new com.careerform.formanalysis.application.policy.StoredPolicyFieldMappingResolver(policy)
+            .resolve(new com.careerform.formanalysis.dto.FieldsAnalysisRequest(
+                2, "hyundai-career-and-licence-rows",
+                new com.careerform.formanalysis.dto.FieldsAnalysisRequest.Site("talent.hyundai.com", "/apply/applyWrite.hc"),
+                java.util.List.of(new com.careerform.formanalysis.dto.FieldsAnalysisRequest.Section(
+                    "section-root", null, null, candidates, null))
+            ));
+        assertThat(resolution.results()).extracting("candidateId").containsExactly(
+            "reason-select", "reason-text", "start", "licence-grade", "language-grade");
+        assertThat(resolution.results()).extracting(result -> result instanceof
+                com.careerform.formanalysis.application.port.FieldMappingResolver.Match match
+                ? profileKeyOf(match.valueBinding()) : "NO_MATCH")
+            .containsExactly(
+                "careers.career.terminationReason",
+                "NO_MATCH",
+                "careers.career.startDate",
+                "certifications.certificate.grade",
+                "languages.languageTest.grade"
+            );
+        assertThat(((com.careerform.formanalysis.application.port.FieldMappingResolver.Match) resolution.results().get(2))
+            .valueBinding())
+            .isEqualTo(new com.careerform.formanalysis.application.port.FieldMappingResolver.DirectBinding(
+                "careers.career.startDate"));
+    }
+
+    private static com.careerform.formanalysis.dto.FieldsAnalysisRequest.FieldCandidate candidate(
+        String id, com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl control,
+        String domId, String domName
+    ) {
+        return new com.careerform.formanalysis.dto.FieldsAnalysisRequest.FieldCandidate(
+            id, com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement.INPUT, control,
+            com.careerform.formanalysis.dto.FieldsAnalysisRequest.Visibility.VISIBLE,
+            null, domId, domName, null, null, null, null, null, null
+        );
+    }
+
+    private static String profileKeyOf(
+        com.careerform.formanalysis.application.port.FieldMappingResolver.ValueBinding binding
+    ) {
+        return switch (binding) {
+            case com.careerform.formanalysis.application.port.FieldMappingResolver.DirectBinding b -> b.profileFieldKey();
+            case com.careerform.formanalysis.application.port.FieldMappingResolver.DerivedBinding b -> b.profileFieldKey();
+            case com.careerform.formanalysis.application.port.FieldMappingResolver.LookupBinding b -> b.profileFieldKey();
+            case com.careerform.formanalysis.application.port.FieldMappingResolver.ButtonOptionBinding b -> b.profileFieldKey();
+        };
     }
 
     @Test

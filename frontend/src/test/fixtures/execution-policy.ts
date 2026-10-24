@@ -2,6 +2,8 @@
 // 2026-10-22 (CF-310): SK v38 — the high-school add rule re-identifies by the status
 // select. The SK and Greeting disability aliases live in the server fieldRules only,
 // so this snapshot keeps Greeting v17.
+// 2026-10-24 (CF-335): Hyundai v25 changes server fieldRules only (career dates,
+// termination reason, certificate grade), so this snapshot keeps Hyundai v24.
 // Contains policy configuration only. Tests must run without a database connection.
 // Refresh this snapshot alongside tests when the active execution-policy contract changes.
 import { beforeEach, afterEach } from "vitest";

@@ -44,7 +44,7 @@ class PolicyVersionsApiTest {
         when(companies.findByCompanyKey("sk")).thenReturn(Optional.of(
             new FormAnalysisCompanyDocument("sk", "sk", "www.skcareers.com", List.of("/"), 37)));
         when(companies.findByCompanyKey("hyundai")).thenReturn(Optional.of(
-            new FormAnalysisCompanyDocument("hyundai", "hyundai", "talent.hyundai.com", List.of("/"), 24)));
+            new FormAnalysisCompanyDocument("hyundai", "hyundai", "talent.hyundai.com", List.of("/"), 25)));
 
         mockMvc.perform(get("/api/v1/policy-versions"))
             .andExpect(status().isOk())
