@@ -743,8 +743,11 @@ export function createAnalyzeFields({
     setFieldsSnapshot(snapshot);
     setPartial(plan.status === "partial");
     const analysisWarnings: string[] = [...(analysis.warningCodes ?? [])];
+    // Server matches this snapshot could not rebind. Mid-run that is normal
+    // (rows were just added and a refresh follows); it only matters when the
+    // run ends here with nothing left to write, so the warning waits for that.
+    let unresolvedWarning: string | undefined;
     if (analysis.unresolvedFields?.length) {
-      // Name what the page took away so a run that ends here is not silent.
       const labels = [
         ...new Set(
           analysis.unresolvedFields
@@ -755,12 +758,7 @@ export function createAnalyzeFields({
       const shown = labels.slice(0, 5).join(", ");
       const more =
         analysis.unresolvedFields.length - Math.min(labels.length, 5);
-      analysisWarnings.push(
-        `페이지가 바뀌어 다시 연결하지 못한 항목 ${analysis.unresolvedFields.length}개: ${shown || "(이름 없음)"}${more > 0 ? ` 외 ${more}개` : ""}. 지원서에서 직접 확인해 주세요.`,
-      );
-      debugWarn(
-        `unresolved fields=${analysis.unresolvedFields.length} labels=${shown}`,
-      );
+      unresolvedWarning = `페이지가 바뀌어 다시 연결하지 못한 항목 ${analysis.unresolvedFields.length}개: ${shown || "(이름 없음)"}${more > 0 ? ` 외 ${more}개` : ""}. 지원서에서 직접 확인해 주세요.`;
     }
     if (
       options.reviewOnly &&
@@ -774,6 +772,12 @@ export function createAnalyzeFields({
     if (plan.items.length === 0) {
       debugReviewDecisions(plan, snapshot.registry);
       if (await refreshAfterWrites()) return;
+      if (unresolvedWarning) {
+        setWarnings((current) => [...current, unresolvedWarning!]);
+        debugWarn(
+          `unresolved fields=${analysis.unresolvedFields?.length ?? 0} ${unresolvedWarning}`,
+        );
+      }
       setReviewItems([]);
       setResults([]);
       if (options.reviewOnly) {
