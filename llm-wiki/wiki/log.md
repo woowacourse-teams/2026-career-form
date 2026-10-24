@@ -855,3 +855,11 @@
 - 승인된 후보 3개를 [CF-335 bundle](../raw/issues/CF-335/manifest.md)에 두 payload로 기록했다. 현대 어댑터(버튼형 선택지 코드의 읽기 전용 수집과 CF-310 관측 정정, trigger에 name이 없어 id로만 구분, 정책 v25의 경력 날짜·종료사유·자격 등급 매핑), 필드 현황(v25 지원 범위와 전과/편입 보류).
 - [현대 어댑터](topics/adapter-hyundai.md)와 [어댑터 필드 현황](topics/adapter-field-inventory.md)의 Current를 CF-335로 바꾸고 앞선 근거를 History에 남겼다.
 - 실제 지원값·계정·세션·대화 전문은 저장하지 않았다. 선택지 코드 표는 공개 선택지다.
+
+## [2026-10-25] ingest | CF-336 현대 학교명 검색 미확정
+
+- Approval-Digest: 8f1781e209bbaec70946dac4806881f408aad04f7710e76f7df5de24a586fdee
+- Source-Revision: 0df5dc2
+- 승인된 후보 4개를 [CF-336 bundle](../raw/issues/CF-336/manifest.md)에 두 payload로 기록했다. 현대 어댑터(사이트 바깥 클릭 핸들러가 보이는 검색 창 전부의 표시값을 첫 창 기준으로 지움 → 확장이 창을 닫고 기다리는 수정, 결과 패널은 DOM 값 기준 "확인 필요" 판정이라는 정정, 카탈로그 신원 없는 검색의 "여러 개"), 실사이트 평가(합성 프로필 학교 검색 한계, reset의 버튼형 위젯 잔여와 학력 준비 중단, 읽기 전용 관찰).
+- [현대 어댑터](topics/adapter-hyundai.md)와 [실사이트 자동 입력 평가 워크플로우](topics/live-autofill-evaluation.md)의 Current를 CF-336으로 바꾸고 앞선 근거를 History에 남겼다.
+- 실제 지원값·계정·세션·대화 전문은 저장하지 않았다.

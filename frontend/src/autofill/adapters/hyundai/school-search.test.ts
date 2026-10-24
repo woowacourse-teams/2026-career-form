@@ -856,6 +856,119 @@ describe("Hyundai education normal search", () => {
     expect(display.dataset.searchResult).toBe("사용자 확정값");
   });
 
+  // The site's document click handler takes every visible result view as one
+  // set and, when the first holds no selection, blanks the display of all of
+  // them. A view left open or still sliding up therefore endangers other rows.
+  it("tells the site the query is gone after an ambiguous search so the stale list closes", async () => {
+    const search = SEARCH_CASES[5]!;
+    const { display, hidden, results } = renderSearch(search);
+    const view = results.closest<HTMLElement>(".field-search-view")!;
+    let open = false;
+    Object.defineProperty(view, "offsetHeight", {
+      get: () => (open ? 12 : 0),
+      configurable: true,
+    });
+    const notified: string[] = [];
+    display.addEventListener("input", () => notified.push(display.value));
+    display.addEventListener("keyup", () => {
+      if (display.value === "") {
+        // The site clears the list and closes the view for an empty query.
+        results.replaceChildren();
+        open = false;
+        return;
+      }
+      queueMicrotask(() => {
+        results.replaceChildren(
+          resultButton(search).parentElement!,
+          resultButton(search).parentElement!,
+        );
+        open = true;
+      });
+    });
+    const onFailure = vi.fn();
+
+    await expect(
+      createCodedSearchModule(
+        document,
+        executionPolicy(document)!.browserPolicy!.hiddenCodeContract!,
+      ).runCodedSearch(
+        document,
+        handleFor(search, display),
+        itemFor(search),
+        undefined,
+        onFailure,
+      ),
+    ).resolves.toBe(false);
+
+    expect(onFailure.mock.calls).toEqual([["SEARCH_AMBIGUOUS"]]);
+    expect(display.value).toBe("");
+    expect(hidden.value).toBe("");
+    expect(notified.at(-1)).toBe("");
+    expect(results.childElementCount).toBe(0);
+    expect(open).toBe(false);
+  });
+
+  it("does not notify the site when the search started from an existing selection", async () => {
+    const search = SEARCH_CASES[1]!;
+    const { display, hidden, results } = renderSearch(search);
+    display.value = "기존 값";
+    hidden.value = "EXISTING";
+    display.dataset.searchResult = "기존 값";
+    const notified: string[] = [];
+    display.addEventListener("input", () => notified.push(display.value));
+
+    await expect(
+      createCodedSearchModule(
+        document,
+        executionPolicy(document)!.browserPolicy!.hiddenCodeContract!,
+      ).runCodedSearch(document, handleFor(search, display), itemFor(search)),
+    ).resolves.toBe(false);
+    expect(notified).toEqual([]);
+    expect(hidden.value).toBe("EXISTING");
+    expect(results.childElementCount).toBe(0);
+  });
+
+  it("waits for the result view to finish closing before reporting a confirmed selection", async () => {
+    const search = SEARCH_CASES[1]!;
+    const { display, hidden, results } = renderSearch(search);
+    const view = results.closest<HTMLElement>(".field-search-view")!;
+    let open = false;
+    let closedAt = 0;
+    Object.defineProperty(view, "offsetHeight", {
+      get: () => (open ? 12 : 0),
+      configurable: true,
+    });
+    display.addEventListener("keyup", () => {
+      if (display.value === "") return;
+      queueMicrotask(() => {
+        const button = resultButton(search);
+        installSelection(button, display, hidden);
+        button.addEventListener("click", () => {
+          // The site slides the view up over a few hundred milliseconds.
+          setTimeout(() => {
+            open = false;
+            closedAt = Date.now();
+          }, 300);
+        });
+        results.replaceChildren(button.parentElement!);
+        open = true;
+      });
+    });
+
+    const startedAt = Date.now();
+    await expect(
+      createCodedSearchModule(
+        document,
+        executionPolicy(document)!.browserPolicy!.hiddenCodeContract!,
+      ).runCodedSearch(document, handleFor(search, display), itemFor(search)),
+    ).resolves.toBe(true);
+    expect(display.value).toBe(search.query);
+    expect(hidden.value).toBe(search.code);
+    expect(open).toBe(false);
+    expect(closedAt).toBeGreaterThan(0);
+    expect(Date.now() - startedAt).toBeGreaterThanOrEqual(290);
+  });
+
   it("rechecks the exact live field after the result click", async () => {
     const search = SEARCH_CASES[1]!;
     const { display, hidden, results } = renderSearch(search);

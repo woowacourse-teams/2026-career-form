@@ -2,9 +2,9 @@
 
 > Topic: live-autofill-evaluation
 > Status: Current
-> Current: [CF-333 테스트 계정 모드·설치본 잠금·채점 재사용 근거](../../raw/issues/CF-333/documents/live-harness-test-account-mode.md)
-> History: [CF-124 최초 공용 실행 계약](../../raw/issues/CF-124/documents/adr/124-ai-operated-live-autofill-evaluation.md); [CF-124 사전 판정 분모와 평가 보고서](../../raw/issues/CF-124/documents/reports/2026-09-28-live-autofill-evaluation.md); [CF-173 평가 계약 1.1](../../raw/issues/CF-173/documents/evaluation-contract-1.1.md); [CF-310 원복·대화상자 근거](../../raw/issues/CF-310/documents/live-browser-pitfalls.md); [CF-310 원복 재키·표시 규칙 근거](../../raw/issues/CF-310/documents/live-harness-residue-and-display.md); [CF-310 재설치·응답 없는 탭 근거](../../raw/issues/CF-310/documents/live-harness-reinstall-and-hung-tab.md); [CF-314 실사이트 기입 정확도 재평가와 측정 절차](../../raw/issues/CF-314/documents/live-autofill-recheck-2026-10-22.md); [CF-333 테스트 계정 모드·설치본 잠금·채점 재사용 근거](../../raw/issues/CF-333/documents/live-harness-test-account-mode.md)
-> Updated: 2026-10-24
+> Current: [CF-336 합성 프로필 학교 검색 한계와 reset의 버튼형 위젯 잔여](../../raw/issues/CF-336/documents/live-harness-synthetic-identity-and-reset-widgets.md)
+> History: [CF-124 최초 공용 실행 계약](../../raw/issues/CF-124/documents/adr/124-ai-operated-live-autofill-evaluation.md); [CF-124 사전 판정 분모와 평가 보고서](../../raw/issues/CF-124/documents/reports/2026-09-28-live-autofill-evaluation.md); [CF-173 평가 계약 1.1](../../raw/issues/CF-173/documents/evaluation-contract-1.1.md); [CF-310 원복·대화상자 근거](../../raw/issues/CF-310/documents/live-browser-pitfalls.md); [CF-310 원복 재키·표시 규칙 근거](../../raw/issues/CF-310/documents/live-harness-residue-and-display.md); [CF-310 재설치·응답 없는 탭 근거](../../raw/issues/CF-310/documents/live-harness-reinstall-and-hung-tab.md); [CF-314 실사이트 기입 정확도 재평가와 측정 절차](../../raw/issues/CF-314/documents/live-autofill-recheck-2026-10-22.md); [CF-333 테스트 계정 모드·설치본 잠금·채점 재사용 근거](../../raw/issues/CF-333/documents/live-harness-test-account-mode.md); [CF-336 합성 프로필 학교 검색 한계와 reset의 버튼형 위젯 잔여](../../raw/issues/CF-336/documents/live-harness-synthetic-identity-and-reset-widgets.md)
+> Updated: 2026-10-25
 
 ## 현재 상태
 
@@ -52,6 +52,12 @@ CF-333(#333)은 `frontend/scripts/live-qa` 하네스에 테스트 계정 모드�
 - **채점 재사용과 합계 재계산:** 2026-10-22 측정에서 사전 채점 93개 에이전트(약 710만 토큰)와 판정 57개(약 590만 토큰)가 회차마다 반복됐고 채점자가 바뀌면 분모도 바뀌었다. 값 없는 구조의 해시가 같으면 이전 `final.json`을 재사용한다. 판정 2건의 합계가 자기 항목과 어긋났으므로 보고서는 판정 파일의 숫자 필드를 믿지 않고 항목과 joined 행에서 다시 세며, 다르면 `verdict-mismatch`로 표시한다.
 - **새 정책 검증 환경:** 기동 seeder는 기존 DB의 활성 버전을 바꾸지 않으므로 새 정책 버전은 새 볼륨 로컬 스택에서 검증하거나 dev DB의 활성 버전을 사람이 바꾼 뒤 확인한다. 배포 관점은 [배포 Runbook](deployment-runbook.md)을 따른다.
 - 근거는 [CF-333 테스트 계정 모드·설치본 잠금·채점 재사용](../../raw/issues/CF-333/documents/live-harness-test-account-mode.md)을 따른다.
+
+## 합성 프로필의 학교 검색 한계와 reset의 버튼형 위젯 잔여 (2026-10-25)
+
+- 합성 프로필의 학교 항목에는 검증된 카탈로그 신원이 없어 확장의 검색이 이름만 비교한다. 동명 학교가 여러 지역에 있으면(현대 '대진고' 서울·대구·강원) "일치하는 검색 결과가 여러 개"로 남는다. 판정에서는 이 칸을 오입력이 아니라 합성 프로필의 한계로 다루고, 동명이 없는 학교는 영향이 없다.
+- 테스트 계정 `reset`은 텍스트 칸을 지우고 빈 양식을 임시저장하지만 버튼형 위젯(학력선택·졸업여부·주야간·고용형태)과 그 hidden 값은 비우지 못한다(`saved`·`reset`의 `widgetsLeft`). 그 잔여가 있으면 현대 학력 준비가 "학력 종류와 입력 행을 안전하게 준비하지 못했습니다"로 멈추고 기입 0이 된다. 재측정 전에 사람이 사이트에서 해당 행을 지운다. 확장이 추가한 행과 선택은 `discard` 뒤에도 남는다.
+- 실행 중 DOM 상태를 0.2초 간격으로 읽는 읽기 전용 관찰(CDP, 클릭·입력 없음)은 `run`과 같은 세션에서 돌릴 수 있고, 하네스 기록만으로 좁히지 못한 "확정 뒤 소실" 시점을 잡았다. 근거는 [CF-336 근거](../../raw/issues/CF-336/documents/live-harness-synthetic-identity-and-reset-widgets.md)를 따른다.
 
 ## 과거 실행 근거
 
