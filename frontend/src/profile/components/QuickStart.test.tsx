@@ -204,7 +204,7 @@ describe("QuickStart", () => {
   });
   it("focuses each new question without stealing focus while editing", async () => {
     await renderForm();
-    expect(screen.getByLabelText("국문 성")).toHaveFocus();
+    await waitFor(() => expect(screen.getByLabelText("국문 성")).toHaveFocus());
     screen.getByLabelText("국문 이름").focus();
     fireEvent.change(screen.getByLabelText("국문 이름"), {
       target: { value: "시연" },
@@ -222,11 +222,15 @@ describe("QuickStart", () => {
     await next();
     await next();
     await next();
-    expect(screen.getByRole("heading", { level: 1 })).toHaveFocus();
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { level: 1 })).toHaveFocus(),
+    );
     await click(screen.getByRole("button", { name: "학력 추가하기" }));
-    expect(screen.getByRole("button", { name: "고등학교" })).toHaveFocus();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "고등학교" })).toHaveFocus(),
+    );
     await click(screen.getByRole("button", { name: "대학교" }));
-    expect(screen.getByRole("combobox")).toHaveFocus();
+    await waitFor(() => expect(screen.getByRole("combobox")).toHaveFocus());
     await click(
       screen.getByRole("button", { name: "지금 자동 기입 사용하기" }),
     );
@@ -851,7 +855,7 @@ it("reopens saved information at an overview and returns directly after editing 
   expect(screen.queryByLabelText("국문 성")).toBeNull();
   await click(screen.getByRole("button", { name: "이메일 수정" }));
   const email = screen.getByLabelText("이메일");
-  expect(email).toHaveFocus();
+  await waitFor(() => expect(email).toHaveFocus());
   fireEvent.change(email, { target: { value: "after@example.test" } });
   memory.fail(true);
   await click(screen.getByRole("button", { name: "확인하고 돌아가기" }));
@@ -1217,11 +1221,13 @@ it("collects five common basics before showing the summary", async () => {
   await next();
   await next();
   expect(screen.getByRole("group", { name: "성별" })).toBeVisible();
-  expect(screen.getByRole("button", { name: "남성" })).toHaveFocus();
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "남성" })).toHaveFocus(),
+  );
   await click(screen.getByRole("button", { name: "남성" }));
   await next();
   const birthDate = screen.getByLabelText("생년월일", { exact: true });
-  expect(birthDate).toHaveFocus();
+  await waitFor(() => expect(birthDate).toHaveFocus());
   fireEvent.change(birthDate, { target: { value: "20000102" } });
   expect(birthDate).toHaveValue("2000-01-02");
   await next();
