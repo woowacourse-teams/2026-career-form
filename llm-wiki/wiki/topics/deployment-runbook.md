@@ -2,8 +2,8 @@
 
 > Topic: deployment-runbook
 > Status: Current
-> Current: [CF-333 정책 활성 버전과 배포 뒤 전환](../../raw/issues/CF-333/documents/policy-active-version-and-deploy.md)
-> History: [근거 1](../../raw/issues/CF-41/documents/docs/operations/deployment-runbook.md); [CF-327 운영 배포 파이프라인 근거](../../raw/issues/CF-327/documents/deployment-pipeline.md); [CF-323 릴리스 시작 기준 커밋 선택](../../raw/issues/CF-323/documents/start-release-base-commit.md); [CF-333 정책 활성 버전과 배포 뒤 전환](../../raw/issues/CF-333/documents/policy-active-version-and-deploy.md)
+> Current: [CF-337 정책 활성 버전은 배포 커밋의 seed를 따른다](../../raw/issues/CF-337/documents/policy-active-version-follows-seed.md)
+> History: [근거 1](../../raw/issues/CF-41/documents/docs/operations/deployment-runbook.md); [CF-327 운영 배포 파이프라인 근거](../../raw/issues/CF-327/documents/deployment-pipeline.md); [CF-323 릴리스 시작 기준 커밋 선택](../../raw/issues/CF-323/documents/start-release-base-commit.md); [CF-333 정책 활성 버전과 배포 뒤 전환](../../raw/issues/CF-333/documents/policy-active-version-and-deploy.md); [CF-337 정책 활성 버전은 배포 커밋의 seed를 따른다](../../raw/issues/CF-337/documents/policy-active-version-follows-seed.md)
 > Updated: 2026-10-24
 
 ## 현재 상태
@@ -16,13 +16,13 @@ Start release는 선택 입력 `ref`를 비우면 `develop` HEAD를, 채우면 `
 
 확장 프로그램 릴리스는 [확장 프로그램 릴리스](extension-release.md), 확장과 백엔드의 배포 순서는 [확장·백엔드 호환 배포](release-compatibility.md), 설정 레버는 [CI/CD 설정](cicd-setup.md)을 따른다. 배포, 확장 게시, revert 승인과 수동 복구는 사람이 수행한다.
 
-## 정책 활성 버전과 배포 뒤 전환 (2026-10-24)
+## 정책 활성 버전은 배포 커밋의 seed를 따른다 (2026-10-24)
 
-정책 활성 버전은 회사 문서의 `activePolicyVersion`에 있고, 기동 seeder(#212)는 빈 DB만 채우며 기존 DB의 활성 버전은 바꾸지 않는다. 전환 명령·API가 없어 사람이 DB에서 직접 바꾼다. 2026-10-24 dev는 사람이 SK 38·Greeting 18로 바꾼 뒤에야 dev API가 v38을 줬고, 운영의 37·24·17은 그 시점 main(v1.4.0) seed와 일치했다. 릴리스 점검은 4값(배포 커밋, 그 커밋의 seed 활성 버전, DB 활성 버전, API 응답)을 대조하고, develop이 main에 들어가 운영 seed가 바뀌면 배포 직후 운영 DB 전환을 사람이 승인·실행한다. 새 정책 검증은 새 볼륨 로컬 스택에서 한다. seeder의 환경별 자동 적용과 보호된 전환 경로는 #337에서 다룬다. 근거는 [CF-333 정책 활성 버전과 배포 뒤 전환](../../raw/issues/CF-333/documents/policy-active-version-and-deploy.md)을 따른다.
+정책 활성 버전은 회사 문서의 `activePolicyVersion`에 있고, 정본은 DB가 아니라 배포 커밋의 seed다. CF-337부터 기동 seeder는 정책 문서를 insert-only로 먼저 넣은 뒤 회사 문서의 활성 버전을 seed 값과 같게 맞춘다(올림·내림 모두, 같으면 쓰기 없음, 프로필 무관). 배포 워크플로우가 develop→dev, `release/**`→staging, main→운영으로 나뉘어 있으므로 각 환경은 자기 배포 커밋의 버전을 주고, develop이 앞서 가도 운영은 다음 릴리스까지 머물며, 롤백 재배포 시 함께 되돌아간다. 운영 배포 승인이 전환 승인이고 수동 Mongo 전환 절차는 폐기한다. 사람이 DB에서 바꾼 값은 다음 기동에서 되돌아간다. 릴리스 점검의 4값 대조(배포 커밋, seed 버전, DB 버전, API 응답) 중 seed·DB 버전은 `GET /api/v1/policy-versions`의 `inSync`로 읽고, `inSync: false`가 남으면 기동 로그의 `POLICY_ACTIVE_VERSION … missing-policy`를 찾는다. 정책 내용을 바꾸면 버전 번호를 올리고 seed에는 활성 버전의 정책 문서를 항상 포함한다. CF-333까지의 수동 전환 경위는 [CF-333 근거](../../raw/issues/CF-333/documents/policy-active-version-and-deploy.md)에 있다. 근거는 [CF-337 정책 활성 버전은 배포 커밋의 seed를 따른다](../../raw/issues/CF-337/documents/policy-active-version-follows-seed.md)를 따른다.
 
 ## 변경 이유
 
-CF-41 Runbook은 workflow가 완성되기 전 설계 기준으로 쓰여 hotfix 무태그, revert 무배포, staging digest 조회 실패 조건, tree 일치 검사의 전제(main⊆release)가 빠져 있었고 2026-08-22 이후 갱신되지 않았다. 1.4.0 릴리스 준비에서 workflow 11개와 스크립트를 대조해 구현 기준으로 정정하고 릴리스 점검표를 추가했다. CF-323에서 Start release에 기준 커밋 선택을 추가했고 기본값은 develop HEAD로 유지했다.
+CF-41 Runbook은 workflow가 완성되기 전 설계 기준으로 쓰여 hotfix 무태그, revert 무배포, staging digest 조회 실패 조건, tree 일치 검사의 전제(main⊆release)가 빠져 있었고 2026-08-22 이후 갱신되지 않았다. 1.4.0 릴리스 준비에서 workflow 11개와 스크립트를 대조해 구현 기준으로 정정하고 릴리스 점검표를 추가했다. CF-323에서 Start release에 기준 커밋 선택을 추가했고 기본값은 develop HEAD로 유지했다. CF-337에서 seeder가 활성 버전을 배포 커밋의 seed에 맞추게 되어 운영 수동 전환 절차를 폐기했다.
 
 ## 관련 지식
 
