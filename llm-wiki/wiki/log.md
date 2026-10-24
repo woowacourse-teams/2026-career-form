@@ -831,3 +831,11 @@
 - 승인된 후보 1개를 [CF-323 bundle](../raw/issues/CF-323/manifest.md)에 기록하고 CF-327 운영 배포 파이프라인 근거 위에 Start release 기준 커밋 선택을 얹었다.
 - [배포 Runbook](topics/deployment-runbook.md)의 Current를 CF-323으로 바꾸고 CF-327을 History에 남겼다. 현재 상태에 Start release 기준 커밋 선택을 반영했다.
 - 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.
+
+## [2026-10-24] ingest | CF-333 실사이트 QA 하네스 테스트 전용 모드 전환
+
+- Approval-Digest: e3220900fa34d5fd1ee3718f11713ef2c78fa8bbdb93741c0fa6e1be570f8e41
+- Source-Revision: fe78625
+- 승인된 후보 7개를 [CF-333 bundle](../raw/issues/CF-333/manifest.md)에 세 payload로 기록했다. 실사이트 평가(테스트 계정 모드, 설치본 잠금, 채점 재사용·합계 재계산, 새 정책 검증 환경), 현대 어댑터(작성 화면 재진입 불가, 입사·퇴사연월일 일자 누락, 종료사유 자유입력 오배치), 배포 Runbook(정책 활성 버전은 seeder가 바꾸지 않음, 4값 대조와 배포 뒤 전환).
+- [실사이트 자동 입력 평가 워크플로우](topics/live-autofill-evaluation.md), [현대 어댑터](topics/adapter-hyundai.md), [배포 Runbook](topics/deployment-runbook.md)의 Current를 CF-333으로 바꾸고 앞선 근거를 History에 남겼다.
+- 실제 지원값·계정·세션·URL 쿼리·대화 전문은 저장하지 않았다.

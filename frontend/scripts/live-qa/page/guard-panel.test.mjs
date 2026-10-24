@@ -226,3 +226,59 @@ describe("panelState", () => {
     );
   });
 });
+
+describe("installGuard with allowSave (test-account reset)", () => {
+  beforeEach(() => {
+    document.body.innerHTML = `
+      <form id="f"><input name="a">
+        <button type="button" id="temp">임시저장</button>
+        <button type="button" id="tempId" class="btnTempSave">저장</button>
+        <button type="button" id="next">다음</button>
+        <button type="button" id="prev">이전으로</button>
+        <button type="submit" id="submit">제출</button>
+        <button type="button" id="final">최종 제출</button>
+        <button type="button" id="apply">지원하기</button>
+        <button type="button" id="agree">전체 동의</button>
+        <button type="button" id="verify">본인 인증</button>
+        <button type="button" id="oath" onclick="saveResumeSubmitOath()">확인</button>
+        <input type="file" id="file">
+        <nav id="tab"><button type="button" id="stepTab" data-step="2">학력 경력</button></nav>
+      </form>`;
+    installGuard({ allowSave: true });
+  });
+  afterEach(() => window.__careerFormLiveQa?.disarm());
+
+  const click = (id) => {
+    const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+    document.getElementById(id).dispatchEvent(event);
+    return event.defaultPrevented;
+  };
+
+  it.each(["temp", "tempId", "next", "prev"])(
+    "lets a save or step-move click on %s through",
+    (id) => {
+      expect(click(id)).toBe(false);
+      expect(window.__careerFormLiveQa.passed).toBe(true);
+    },
+  );
+
+  it.each([
+    "submit",
+    "final",
+    "apply",
+    "agree",
+    "verify",
+    "oath",
+    "file",
+    "stepTab",
+  ])("still blocks %s", (id) => {
+    expect(click(id)).toBe(true);
+    expect(window.__careerFormLiveQa.passed).toBe(false);
+  });
+
+  it("still blocks form submission by script", () => {
+    document.getElementById("f").submit();
+    expect(window.__careerFormLiveQa.formSubmissions).toBe(1);
+    expect(window.__careerFormLiveQa.allowSave).toBe(true);
+  });
+});

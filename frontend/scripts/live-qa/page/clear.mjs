@@ -15,11 +15,24 @@
 //
 // options.dryRun: change nothing; count what a clear would remove and list the
 // names of those controls in `fields` (names only, never values). A 비대상
-// radio that is still at its default is not counted then.
+// radio that is still at its default is not counted then. `defaultFields`
+// names the subset that still holds the value its HTML gave it (a select at
+// its first or `selected` option, a `checked` radio or checkbox, a text at
+// its `value` attribute): site defaults, not saved data. Hidden inputs never
+// count as defaults (Hplace row ids are server values).
+// options.keepPattern (regex source): controls whose name or caption matches
+// are left alone and counted as skippedProtected. A test-account reset keeps
+// the login identity fields this way: sites refuse to temp-save without them,
+// and they come back from the account anyway.
 export function clearForm(options) {
   const ignoreLayout = Boolean(options && options.ignoreLayout);
   const dry = Boolean(options && options.dryRun);
+  const keep =
+    options && options.keepPattern
+      ? new RegExp(options.keepPattern, "i")
+      : null;
   const fields = [];
+  const defaultFields = [];
   const counts = {
     hiddenRowIds: 0,
     disabledCleared: 0,
@@ -50,8 +63,27 @@ export function clearForm(options) {
     e.closest(
       "career-form-profile-panel, [data-career-form-side-panel-launcher]",
     );
+  const atDefault = (el) => {
+    const type = (
+      el.getAttribute("type") ?? (el.tagName === "INPUT" ? "text" : el.tagName)
+    ).toLowerCase();
+    if (type === "hidden") return false;
+    if (type === "radio" || type === "checkbox")
+      return el.checked && el.defaultChecked;
+    if (el.tagName === "SELECT") {
+      const opt = el.selectedOptions[0];
+      if (!opt || !el.value) return false;
+      let anyDefault = false;
+      for (const o of el.options) if (o.defaultSelected) anyDefault = true;
+      return opt.defaultSelected || (!anyDefault && el.selectedIndex === 0);
+    }
+    return Boolean(el.value) && el.value === el.defaultValue;
+  };
   const note = (el) => {
-    if (dry) fields.push(el.getAttribute("name") || el.id || el.tagName);
+    if (!dry) return;
+    const name = el.getAttribute("name") || el.id || el.tagName;
+    fields.push(name);
+    if (atDefault(el)) defaultFields.push(name);
   };
   const textOf = (e) => {
     const parts = [
@@ -114,6 +146,10 @@ export function clearForm(options) {
     )
       continue;
     if (protectedName.test(name) || protectedLabel.test(textOf(el))) {
+      counts.skippedProtected++;
+      continue;
+    }
+    if (keep && (keep.test(name) || keep.test(textOf(el)))) {
       counts.skippedProtected++;
       continue;
     }
@@ -282,6 +318,9 @@ export function clearForm(options) {
       }
     }
   }
-  if (dry) counts.fields = fields;
+  if (dry) {
+    counts.fields = fields;
+    counts.defaultFields = defaultFields;
+  }
   return counts;
 }

@@ -23,13 +23,35 @@
 //   shares its text with the synthetic profile, or that the run left alone, is
 //   never shown: small value sets (남성, 있음) would give it away.
 // `prior` (key -> fp) marks controls as changed or added.
+// - recordValues (test-account mode): every value is shown, whether or not
+//   the run wrote it, and a control that still holds its mount value is
+//   flagged `mountedAsIs`. Only account identity fields (identityPattern, a
+//   regex source) that hold a pre-run value which is not a synthetic profile
+//   value are masked as "[account]".
+// Every control carries `siteDefault`: whether its value is the one the HTML
+// gave it (a select at its first or `selected` option, a radio or checkbox at
+// its `checked` attribute, a text at its `value` attribute). Such values are
+// the site's defaults, not saved data, and are told apart downstream.
+// - companions (default true): a visible code control (name or id ending in
+//   cd/code) whose row holds a hidden name control (nm/name), or the reverse,
+//   gets that hidden partner listed too, flagged `hidden` and `companionOf`
+//   (the visible control's index). Language and license code fields keep
+//   their text in such partners.
+// - regions: also returns `regions` (section containers with their page
+//   rectangles and control indexes, and the document size) for captures.
 export function census(prior, options) {
   const opts = options ?? {};
   const ignoreLayout = Boolean(opts.ignoreLayout);
   const includeHidden = Boolean(opts.includeHidden);
+  const companions = opts.companions !== false;
+  const withRegions = Boolean(opts.regions);
   const salt = String(opts.salt ?? "");
   const known = opts.known ?? null;
   const synthetic = opts.synthetic ?? [];
+  const recordValues = Boolean(opts.recordValues);
+  const identity = opts.identityPattern
+    ? new RegExp(opts.identityPattern, "i")
+    : null;
   const clean = (s, n = 80) =>
     String(s ?? "")
       .replace(/\s+/g, " ")
@@ -113,7 +135,7 @@ export function census(prior, options) {
     }
     return clean(parts.join(" | "), 100);
   };
-  const sectionOf = (e) => {
+  const sectionNodeOf = (e) => {
     let n = e;
     for (let d = 0; d < 14 && n; d++) {
       n = n.parentElement;
@@ -121,9 +143,27 @@ export function census(prior, options) {
       const h = n.querySelector(
         ":scope > h1, :scope > h2, :scope > h3, :scope > h4, :scope > legend, :scope > header h2, :scope > header h3, :scope > div > h3, :scope > div > h2",
       );
-      if (h && !h.contains(e)) return clean(h.textContent, 40);
+      if (h && !h.contains(e))
+        return { node: n, name: clean(h.textContent, 40) };
     }
-    return "";
+    return { node: null, name: "" };
+  };
+  const sectionOf = (e) => sectionNodeOf(e).name;
+  // Whether a native control still holds the value its HTML gave it.
+  const atDefault = (e, tag, type, value) => {
+    if (!value) return false;
+    if (type === "checkbox" || type === "radio")
+      return e.defaultChecked === true;
+    if (tag === "select") {
+      const opt = e.selectedOptions[0];
+      if (!opt) return false;
+      let anyDefault = false;
+      for (const o of e.options) if (o.defaultSelected) anyDefault = true;
+      return opt.defaultSelected || (!anyDefault && e.selectedIndex === 0);
+    }
+    if (tag === "input" || tag === "textarea")
+      return e.value === e.defaultValue;
+    return false;
   };
   const ours = (e) =>
     e.closest(
@@ -172,8 +212,66 @@ export function census(prior, options) {
     b.getAttribute("aria-pressed") === "true" ||
     /^(on|checked)$/.test(b.getAttribute("data-state") ?? "");
 
+  // A native input, select, textarea or ARIA widget as one entry.
+  const entryFor = (e, tag, type, isVisible) => {
+    const value =
+      type === "checkbox"
+        ? e.checked
+          ? "1"
+          : ""
+        : tag === "select"
+          ? e.selectedIndex >= 0 && e.value
+            ? e.value + "|" + clean(e.selectedOptions[0]?.textContent, 40)
+            : ""
+          : "value" in e && tag !== "button"
+            ? String(e.value ?? "")
+            : placeholderShown(e)
+              ? ""
+              : clean(e.textContent, 60);
+    const isFile = type === "file";
+    return {
+      tag,
+      type,
+      name: e.getAttribute("name") ?? "",
+      id: e.id,
+      role: e.getAttribute("role") ?? undefined,
+      label: labelOf(e),
+      section: sectionOf(e),
+      hidden: isVisible ? undefined : true,
+      siteDefault: isFile ? false : atDefault(e, tag, type, value),
+      hasValue: isFile
+        ? Boolean(e.files && e.files.length)
+        : Boolean(value.trim()),
+      fp: value && !isFile ? hash(value) : "",
+      _fpText:
+        tag === "select" && value
+          ? hash(clean(e.selectedOptions[0]?.textContent, 40))
+          : "",
+      _mounted: mountedAsIs(e),
+      _show: value && !isFile ? clean(value, 60) : "",
+      required: Boolean(
+        e.required || e.getAttribute("aria-required") === "true",
+      ),
+      disabled: Boolean(e.disabled),
+      readonly: Boolean(e.readOnly),
+      maxLength: e.maxLength > 0 ? e.maxLength : undefined,
+      optionCount: tag === "select" ? e.options.length : undefined,
+      selectOptions:
+        tag === "select"
+          ? [].slice.call(e.options, 0, 30).map((o) => clean(o.textContent, 24))
+          : undefined,
+    };
+  };
+
   const watched = Boolean(window.__careerFormLiveQaMounts);
   const out = [];
+  // The element behind each entry (the first radio of a group), for the
+  // companion and region passes.
+  const elements = [];
+  const add = (e, entry) => {
+    out.push(entry);
+    elements.push(e);
+  };
   const seenRadio = {};
   const nodes = document.querySelectorAll(
     'input, select, textarea, [role="combobox"], [role="listbox"], [role="radiogroup"], [contenteditable="true"], button[aria-haspopup]',
@@ -208,7 +306,7 @@ export function census(prior, options) {
             )
             .filter(Boolean)
         : [];
-      out.push({
+      add(e, {
         tag: "btn-select",
         type: "button-select",
         name: field ? (field.getAttribute("name") ?? "") : "",
@@ -218,6 +316,7 @@ export function census(prior, options) {
           labelOf(e),
         section: sectionOf(e),
         hidden: isVisible ? undefined : true,
+        siteDefault: false,
         hasValue: Boolean(code),
         fp: code ? hash(code + "|" + text) : "",
         _fpText: code ? hash(text) : "",
@@ -254,7 +353,7 @@ export function census(prior, options) {
       if (!isVisible && !includeHidden) continue;
       const on = items.find(ariaOn);
       const text = on ? clean(on.textContent, 20) : "";
-      out.push({
+      add(e, {
         tag: "radiogroup",
         type: "radio-group",
         name: e.getAttribute("name") ?? e.getAttribute("data-name") ?? "",
@@ -262,6 +361,7 @@ export function census(prior, options) {
         label: labelOf(e),
         section: sectionOf(e),
         hidden: isVisible ? undefined : true,
+        siteDefault: false,
         options: items.map((b) => clean(b.textContent, 20)).slice(0, 8),
         hasValue: Boolean(on),
         fp: on ? hash("aria|" + text) : "",
@@ -292,7 +392,7 @@ export function census(prior, options) {
             .filter((r) => r.name === name)
         : [e];
       const on = group.find((r) => r.checked);
-      out.push({
+      add(e, {
         tag,
         type: "radio-group",
         name,
@@ -300,6 +400,7 @@ export function census(prior, options) {
         label: labelOf(e),
         section: sectionOf(e),
         hidden: isVisible ? undefined : true,
+        siteDefault: on ? atDefault(on, "input", "radio", "1") : false,
         options: group.map(optionText).slice(0, 8),
         hasValue: Boolean(on),
         fp: on ? hash(on.value + "|" + optionText(on)) : "",
@@ -311,52 +412,60 @@ export function census(prior, options) {
       });
       continue;
     }
-    const value =
-      type === "checkbox"
-        ? e.checked
-          ? "1"
-          : ""
-        : tag === "select"
-          ? e.selectedIndex >= 0 && e.value
-            ? e.value + "|" + clean(e.selectedOptions[0]?.textContent, 40)
-            : ""
-          : "value" in e && tag !== "button"
-            ? String(e.value ?? "")
-            : placeholderShown(e)
-              ? ""
-              : clean(e.textContent, 60);
-    const isFile = type === "file";
-    out.push({
-      tag,
-      type,
-      name,
-      id: e.id,
-      role: e.getAttribute("role") ?? undefined,
-      label: labelOf(e),
-      section: sectionOf(e),
-      hidden: isVisible ? undefined : true,
-      hasValue: isFile
-        ? Boolean(e.files && e.files.length)
-        : Boolean(value.trim()),
-      fp: value && !isFile ? hash(value) : "",
-      _fpText:
-        tag === "select" && value
-          ? hash(clean(e.selectedOptions[0]?.textContent, 40))
-          : "",
-      _mounted: mountedAsIs(e),
-      _show: value && !isFile ? clean(value, 60) : "",
-      required: Boolean(
-        e.required || e.getAttribute("aria-required") === "true",
-      ),
-      disabled: Boolean(e.disabled),
-      readonly: Boolean(e.readOnly),
-      maxLength: e.maxLength > 0 ? e.maxLength : undefined,
-      optionCount: tag === "select" ? e.options.length : undefined,
-      selectOptions:
-        tag === "select"
-          ? [].slice.call(e.options, 0, 30).map((o) => clean(o.textContent, 24))
-          : undefined,
-    });
+    add(e, entryFor(e, tag, type, isVisible));
+  }
+
+  // Hidden partner of a code or name control in the same row: the nearest
+  // tr/li/.row/fieldset, else up to three ancestors. With several pairs in
+  // one row the partner must share the stem (schoolCd <-> schoolNm).
+  if (companions) {
+    const CODE = /(cd|code)$/i;
+    const NAME = /(nm|name)$/i;
+    const ident = (el) => el.getAttribute("name") || el.id || "";
+    const stem = (s) => s.replace(/(cd|code|nm|name)$/i, "").toLowerCase();
+    const count = out.length;
+    for (let k = 0; k < count; k++) {
+      const e = elements[k];
+      const o = out[k];
+      if (!e || o.hidden) continue;
+      const own = o.name || o.id || "";
+      const want = CODE.test(own) ? NAME : NAME.test(own) ? CODE : null;
+      if (!want) continue;
+      const containers = [];
+      const row = e.closest("tr, li, .row, fieldset");
+      if (row) containers.push(row);
+      else {
+        let n = e.parentElement;
+        for (let d = 0; d < 3 && n; d++, n = n.parentElement)
+          containers.push(n);
+      }
+      let found = null;
+      for (const c of containers) {
+        const hits = [].filter.call(
+          c.querySelectorAll("input"),
+          (h) =>
+            h !== e &&
+            !ours(h) &&
+            want.test(ident(h)) &&
+            ((h.getAttribute("type") ?? "").toLowerCase() === "hidden" ||
+              !visible(h)),
+        );
+        found =
+          hits.find((h) => stem(ident(h)) === stem(own)) ??
+          (hits.length === 1 ? hits[0] : null);
+        if (found) break;
+      }
+      if (!found) continue;
+      const existing = elements.indexOf(found);
+      if (existing >= 0) {
+        out[existing]._companionOf = k;
+        continue;
+      }
+      const type = (found.getAttribute("type") ?? "text").toLowerCase();
+      const entry = entryFor(found, "input", type, false);
+      entry._companionOf = k;
+      add(found, entry);
+    }
   }
 
   const occurrences = {};
@@ -368,9 +477,12 @@ export function census(prior, options) {
     const show = o._show;
     const fpText = o._fpText;
     const mounted = o._mounted;
+    const companionOf = o._companionOf;
     delete o._show;
     delete o._fpText;
     delete o._mounted;
+    delete o._companionOf;
+    if (companionOf !== undefined) o.companionOf = companionOf;
     if (o.hidden === undefined) delete o.hidden;
     const preexisting = Boolean(known && o.fp && known.indexOf(o.fp) >= 0);
     if (preexisting) o.preexisting = true;
@@ -386,13 +498,64 @@ export function census(prior, options) {
     const showable = preexisting
       ? syntheticValue && o.changed === true && !mounted
       : syntheticValue || syntheticText || !mounted;
-    if (prior && known && watched && o.fp && showable) o.shown = show;
+    if (recordValues) {
+      if (o.fp) {
+        // Without a pre-run value set every value counts as pre-run.
+        const fromBefore = known ? preexisting : true;
+        const identityField =
+          Boolean(identity) && identity.test(o.name + " " + o.label);
+        o.shown =
+          fromBefore && !syntheticValue && identityField ? "[account]" : show;
+        if (mounted) o.mountedAsIs = true;
+      }
+    } else if (prior && known && watched && o.fp && showable) o.shown = show;
   });
-  return {
+  const result = {
     url: location.origin + location.pathname,
     title: clean(document.title, 60),
     controls: out,
   };
+  if (withRegions) {
+    // Page coordinates (fullPage screenshots clip against the document).
+    const rectOf = (el) => {
+      const r = el.getBoundingClientRect();
+      return {
+        top: r.top + window.scrollY,
+        left: r.left + window.scrollX,
+        width: r.width,
+        height: r.height,
+      };
+    };
+    const sections = [];
+    const sectionNodes = [];
+    const unsectioned = [];
+    out.forEach((o, index) => {
+      const e = elements[index];
+      if (!e) return;
+      const s = sectionNodeOf(e);
+      if (!s.node) {
+        const r = rectOf(e);
+        unsectioned.push({ i: o.i, top: r.top, height: r.height });
+        return;
+      }
+      let k = sectionNodes.indexOf(s.node);
+      if (k < 0) {
+        k = sectionNodes.length;
+        sectionNodes.push(s.node);
+        sections.push({ name: s.name, rect: rectOf(s.node), controls: [] });
+      }
+      sections[k].controls.push(o.i);
+    });
+    result.regions = {
+      sections,
+      unsectioned,
+      document: {
+        width: document.documentElement.scrollWidth,
+        height: document.documentElement.scrollHeight,
+      },
+    };
+  }
+  return result;
 }
 
 // Node side: the `prior` map for a later census() pass.

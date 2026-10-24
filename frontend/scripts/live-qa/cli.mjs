@@ -8,41 +8,81 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   attachBrowser,
+  bounded,
   ensureDeveloperMode,
   extensionIdForDirectory,
   findBrowser,
   installedBuild,
   installExtension,
+  installLockHeldByOther,
   launchDetachedBrowser,
+  manifestApiHosts,
   readBuildInfo,
+  readInstallLock,
   reloadExtension,
   seedProfile,
   statePaths,
+  writeInstallLock,
 } from "./browser.mjs";
-import { installDialogPolicy } from "./dialogs.mjs";
+import { claimDialogs, installDialogPolicy } from "./dialogs.mjs";
+import { listPageTargets, probeTargets, replaceTarget } from "./health.mjs";
 import {
   APPLICATION_PATH,
   brief,
+  callInPage,
   discardPage,
   framesCensus,
   gotoStep,
   httpPages,
   onGuardedTab,
   pageAt,
+  resetPage,
   runPage,
   safeError,
   savedData,
+  withKeepalive,
 } from "./driver.mjs";
 import { keepAlivePage } from "./keepalive.mjs";
+import {
+  SCOPE_FILE,
+  describeTab,
+  inScope,
+  parsePick,
+  pickScope,
+  postingStatus,
+  renderScopeTable,
+  scopeFromSpecs,
+} from "./scope.mjs";
+import {
+  TEST_ACCOUNTS_FILE,
+  isTestAccount,
+  readTestAccounts,
+  siteFor,
+} from "./sites.mjs";
 import { stripFingerprints } from "./page/census.mjs";
 import { readStep } from "./page/hplace-step.mjs";
+import {
+  aliasesForUrl,
+  readTabAliases,
+  recoverContentScripts,
+  resolveTabSpec,
+  writeTabAliases,
+} from "./tabs.mjs";
 import {
   HPLACE_POLICY_EXCLUSIONS,
   aggregatePage,
   renderReport,
 } from "./report/aggregate.mjs";
 import { buildGradeInput } from "./report/grade-input.mjs";
+import { buildCaptureInput } from "./report/capture-compare.mjs";
 import { joinResults } from "./report/join.mjs";
+import {
+  formatPregradeLines,
+  loadStructureIndex,
+  reusePregrade,
+  saveStructureIndex,
+} from "./report/pregrade-reuse.mjs";
+import { structureHash } from "./report/structure-hash.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const frontend = resolve(here, "../..");
@@ -66,6 +106,11 @@ const VALUE_OPTIONS = [
   "max",
   "every",
   "threshold",
+  "reuse-from",
+  "keepalive-every",
+  "keepalive-threshold",
+  "pick",
+  "tabs",
 ];
 const positional = rest.filter(
   (a, k) =>
@@ -78,6 +123,9 @@ const print = (value) =>
   console.log(
     typeof value === "string" ? value : JSON.stringify(value, null, 1),
   );
+// A <tab> spec may be an alias stored by `alias` (tabs.mjs).
+const tabAt = async (context, spec) =>
+  pageAt(context, resolveTabSpec(spec, await readTabAliases(outDir)));
 
 async function ensureOut() {
   await mkdir(join(outDir, "grade"), { recursive: true, mode: 0o700 });
@@ -129,8 +177,54 @@ async function connect() {
       new Error("No evaluation browser is running (run: start)."),
       { code: "browser-not-running" },
     );
-  installDialogPolicy(attached.context);
+  installDialogPolicy(attached.context, {
+    leaveHosts: await readTestAccounts(paths.root),
+  });
   return attached;
+}
+
+// Captions of visible "추가" buttons (row-adding controls), for the graders.
+const addButtonTexts = (page) =>
+  page.evaluate(() =>
+    [].slice
+      .call(document.querySelectorAll("button, a, input[type=button]"))
+      .filter((e) => {
+        const r = e.getBoundingClientRect();
+        return r.width > 0 && r.height > 0;
+      })
+      .map((e) =>
+        (e.textContent || e.value || e.getAttribute("aria-label") || "")
+          .replace(/\s+/g, " ")
+          .trim(),
+      )
+      .filter(
+        (t, k, a) => /추가/.test(t) && t.length < 40 && a.indexOf(t) === k,
+      ),
+  );
+
+// run/census/saved/reset keep the other application tabs' sessions alive
+// while they work (driver.mjs withKeepalive): --keepalive-every <minutes>
+// (default 10, 0 turns it off) and --keepalive-threshold <minutes> (default
+// 30, Hplace countdown).
+const keepaliveOptions = () => ({
+  everyMinutes: Number(opt("keepalive-every", 10)),
+  thresholdMinutes: Number(opt("keepalive-threshold", 30)),
+});
+const keptAlive = (context, page, fn) =>
+  withKeepalive(context, page, fn, keepaliveOptions());
+
+// census and run refuse tabs outside <out>/scope.json (the `scope` command's
+// choice) unless --ignore-scope is given. Without the file nothing is refused.
+async function assertInScope(page) {
+  const file = join(outDir, SCOPE_FILE);
+  if (flag("ignore-scope") || !existsSync(file)) return;
+  if (!inScope(page.url(), await readJson(file)))
+    throw Object.assign(
+      new Error(
+        "This tab is not in the measurement scope; run `scope --pick ...` again or pass --ignore-scope.",
+      ),
+      { code: "tab-not-in-scope" },
+    );
 }
 
 function controlTable(frames, onlyChanged = false) {
@@ -166,17 +260,49 @@ function controlTable(frames, onlyChanged = false) {
 
 const commands = {
   // Installs the build into the tool-owned copy, launches the browser only when
-  // none is running, reloads the extension when the running revision differs,
-  // and seeds the synthetic profile.
+  // none is running, reloads the extension when the running revision or the
+  // manifest's API hosts differ, re-enters application tabs that lost the
+  // content script, and seeds the synthetic profile. The copy is shared by
+  // every session on the machine: another live session's install lock refuses
+  // the reinstall unless --force is given.
   async start() {
     const build = await readBuildInfo(buildDir);
     if (!build?.revision)
       throw new Error(
         `No build-info.json in ${buildDir}; build the extension first.`,
       );
+    const buildHosts = await manifestApiHosts(buildDir);
+    const lockAllows = async () => {
+      const lock = await readInstallLock(paths);
+      if (!installLockHeldByOther(lock)) return true;
+      const owner = lockOwner(lock);
+      if (flag("force")) {
+        console.error(
+          JSON.stringify({
+            warning: "install-locked",
+            message:
+              "Reinstalling over another live session's install lock (--force).",
+            owner,
+          }),
+        );
+        return true;
+      }
+      print({
+        ok: false,
+        code: "install-locked",
+        owner,
+        message:
+          "Another live session installed the extension copy; a reinstall would invalidate its round. Re-run with --force to reinstall anyway.",
+      });
+      process.exitCode = 2;
+      return false;
+    };
     let found = await findBrowser(paths);
+    let installed = false;
     if (!found) {
+      if (!(await lockAllows())) return;
       await installExtension(buildDir, paths.extension);
+      installed = true;
       found = await launchDetachedBrowser({ paths });
     }
     const { browser, context } = await connect();
@@ -184,10 +310,46 @@ const commands = {
       const id = await extensionIdForDirectory(paths.extension);
       await ensureDeveloperMode(context);
       let running = await installedBuild(context, id);
-      if (running?.revision !== build.revision || flag("reinstall")) {
+      const installedHosts = await manifestApiHosts(paths.extension);
+      const reinstallReason =
+        running?.revision !== build.revision
+          ? "revision"
+          : JSON.stringify(installedHosts) !== JSON.stringify(buildHosts)
+            ? "api-hosts"
+            : flag("reinstall")
+              ? "flag"
+              : null;
+      let recovery = null;
+      if (reinstallReason) {
+        if (!installed && !(await lockAllows())) return;
         await installExtension(buildDir, paths.extension);
+        installed = true;
         running = await reloadExtension(context, id, build.revision);
+        // Tabs that were open keep the old content script, or none: re-enter
+        // them at their own address (tabs.mjs).
+        recovery = await recoverContentScripts(context, {
+          allowHosts: await apiHosts(),
+          assumeStale: true,
+          // The launcher mounts a few seconds after re-entry.
+          checkTimeoutMs: 15000,
+        });
       }
+      let lock = await readInstallLock(paths);
+      if (installed)
+        lock = await writeInstallLock(paths, {
+          revision: build.revision,
+          apiHosts: buildHosts,
+        });
+      else if (lock && lock.revision !== running?.revision)
+        console.error(
+          JSON.stringify({
+            warning: "install-lock-revision-mismatch",
+            message:
+              "The install lock names another revision than the running extension; another session may have changed the copy.",
+            lock: lockOwner(lock),
+            running: running?.revision ?? null,
+          }),
+        );
       const profilePath = opt("profile", defaultProfile());
       await seedProfile(context, id, profilePath);
       await writeJson(profileRecord(), {
@@ -200,15 +362,36 @@ const commands = {
         extensionId: id,
         running,
         apiHosts: await apiHosts(),
+        reinstalled: reinstallReason,
+        recovery,
+        lock: lock ? lockOwner(lock) : null,
       });
     } finally {
       await browser.close();
     }
   },
+  // One line per tab; aliases (tabs.mjs) whose spec matches follow as @name.
   async tabs(context) {
-    httpPages(context).forEach((p, k) =>
-      console.log(`${k}\t${brief(p.url())}`),
-    );
+    const aliases = await readTabAliases(outDir);
+    for (const [k, p] of httpPages(context).entries()) {
+      const names = [];
+      for (const a of aliasesForUrl(p.url(), aliases)) {
+        const text = a.spec.split("|")[1];
+        const hit =
+          !a.hasText ||
+          (await bounded(
+            p
+              .evaluate((t) => document.body.innerText.includes(t), text)
+              .catch(() => false),
+            3000,
+            false,
+          ));
+        if (hit) names.push(a.name);
+      }
+      console.log(
+        `${k}\t${brief(p.url())}${names.length ? `\t@${names.join(",")}` : ""}`,
+      );
+    }
   },
   async open(context) {
     const page = await context.newPage();
@@ -217,14 +400,23 @@ const commands = {
       .catch(() => {});
     print(`opened ${brief(page.url())}`);
   },
+  // Closes a tab. The site's leave-page prompt, if any, is accepted: the
+  // harness never leaves values worth keeping on a tab it drove.
   async close(context) {
-    const page = await pageAt(context, positional[0]);
+    const page = await tabAt(context, positional[0]);
     const url = brief(page.url());
-    await page.close();
+    const claim = claimDialogs(page);
+    claim.allowLeave(true);
+    try {
+      await page.close({ runBeforeUnload: true });
+      await bounded(page.waitForEvent("close"), 10000);
+    } finally {
+      claim.release();
+    }
     print(`closed ${url}`);
   },
   async goto(context) {
-    const page = await pageAt(context, positional[0]);
+    const page = await tabAt(context, positional[0]);
     await page
       .goto(positional[1], { waitUntil: "domcontentloaded", timeout: 45000 })
       .catch(() => {});
@@ -232,7 +424,7 @@ const commands = {
   },
   // Posting pages only: application forms show the applicant's own data.
   async text(context) {
-    const page = await pageAt(context, positional[0]);
+    const page = await tabAt(context, positional[0]);
     if (APPLICATION_PATH.test(new URL(page.url()).pathname))
       throw new Error("text is refused on application forms; use census.");
     print(
@@ -241,13 +433,51 @@ const commands = {
         .slice(0, Number(opt("max", 6000))),
     );
   },
+  // Shows every open http tab by platform with its posting status and writes
+  // the person's choice (--pick hplace=2,greeting=1,sk=1,hyundai=0 or
+  // --tabs spec1,spec2) to <out>/scope.json. Without a choice it exits 2.
+  async scope(context) {
+    const tabs = [];
+    for (const page of httpPages(context)) {
+      const status = await bounded(
+        callInPage(page.mainFrame(), postingStatus, {
+          applicationPattern: APPLICATION_PATH.source,
+        }).catch(() => null),
+        8000,
+      );
+      tabs.push(describeTab(page.url(), status));
+    }
+    print(renderScopeTable(tabs));
+    const specs = opt("tabs");
+    const pick = opt("pick");
+    if (!specs && !pick) {
+      console.error(
+        "플랫폼별로 몇 곳을 돌릴지 --pick hplace=N,greeting=N,sk=N,hyundai=N 으로 정해 달라 (또는 --tabs <spec1,spec2>). generic은 이번 범위 밖이다.",
+      );
+      process.exitCode = 2;
+      return;
+    }
+    const scope = specs
+      ? scopeFromSpecs(
+          tabs,
+          specs
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean),
+        )
+      : pickScope(tabs, parsePick(pick));
+    await ensureOut();
+    const file = { at: new Date().toISOString(), ...scope };
+    await writeJson(join(outDir, SCOPE_FILE), file);
+    print(file);
+  },
   async stepinfo(context) {
-    print(await (await pageAt(context, positional[0])).evaluate(readStep));
+    print(await (await tabAt(context, positional[0])).evaluate(readStep));
   },
   // Moves happen with writes blocked and the tab's dialogs claimed, as in a
   // round.
   async step(context) {
-    const page = await pageAt(context, positional[0]);
+    const page = await tabAt(context, positional[0]);
     print(
       await onGuardedTab(page, { allowHosts: await apiHosts() }, () =>
         gotoStep(page, Number(positional[1]), { force: flag("force") }),
@@ -259,57 +489,89 @@ const commands = {
   // Forms that hold saved values are cleared by a person before a round.
   async saved(context) {
     const pages = positional[0]
-      ? [await pageAt(context, positional[0])]
+      ? [await tabAt(context, positional[0])]
       : httpPages(context).filter((p) =>
           APPLICATION_PATH.test(new URL(p.url()).pathname),
         );
     const hosts = await apiHosts();
-    const report = [];
-    for (const page of pages) {
-      const result = await savedData(page, { allowHosts: hosts }).catch(
-        (error) => ({ ...safeError(error), saved: null }),
-      );
-      report.push({ tab: brief(page.url()), ...result });
-    }
+    const { report, keepalive } = await keptAlive(context, null, async () => {
+      const report = [];
+      for (const page of pages) {
+        const result = await savedData(page, { allowHosts: hosts }).catch(
+          (error) => ({ ...safeError(error), saved: null }),
+        );
+        report.push({ tab: brief(page.url()), ...result });
+      }
+      return { report };
+    });
     print(report);
+    if (keepalive?.length) print({ keepalive });
     const needs = report.filter((r) => r.saved === true);
     if (needs.length)
       console.error(
-        `${needs.length} form(s) hold saved values; a person clears them (and temp-saves) before a round: ${needs.map((r) => r.tab).join(", ")}`,
+        `${needs.length} form(s) hold saved values; clear them with 'reset <tab> --yes' (test accounts) or by hand before a round: ${needs.map((r) => r.tab).join(", ")}`,
       );
   },
+  // Test-account reset: clears the form in the page and temp-saves it empty,
+  // so the server copy no longer holds values from earlier rounds. Only for
+  // hosts listed in <state dir>/test-accounts.json, and only with --yes.
+  async reset(context) {
+    const page = await tabAt(context, positional[0]);
+    const hosts = await readTestAccounts(paths.root);
+    const allowlist = join(paths.root, TEST_ACCOUNTS_FILE);
+    if (!isTestAccount(page.url(), hosts)) {
+      print({
+        ok: false,
+        code: "account-not-allowlisted",
+        message: `reset temp-saves an empty form on the site. List this tab's host in ${allowlist} ({"hosts": [...]}) only if the login is a test account.`,
+      });
+      process.exitCode = 2;
+      return;
+    }
+    const allowHosts = await apiHosts();
+    if (!flag("yes")) {
+      print({
+        ok: false,
+        code: "confirmation-required",
+        saved: await savedData(page, { allowHosts }),
+        message:
+          "Re-run with --yes to clear the form in the page and temp-save it empty.",
+      });
+      process.exitCode = 2;
+      return;
+    }
+    const result = await keptAlive(context, page, () =>
+      resetPage(page, { site: siteFor(page.url()), allowHosts }),
+    );
+    print(result);
+    if (!result.ok) process.exitCode = 1;
+  },
   async census(context) {
-    const page = await pageAt(context, positional[0]);
+    const page = await tabAt(context, positional[0]);
+    await assertInScope(page);
     const label = opt("label", "census");
     await ensureOut();
-    // The salt is thrown away: fingerprints are not needed in the file.
-    const frames = stripFingerprints(
-      await framesCensus(page, { salt: randomBytes(16).toString("hex") }),
-    );
-    const addButtons = await page.evaluate(() =>
-      [].slice
-        .call(document.querySelectorAll("button, a, input[type=button]"))
-        .filter((e) => {
-          const r = e.getBoundingClientRect();
-          return r.width > 0 && r.height > 0;
-        })
-        .map((e) =>
-          (e.textContent || e.value || e.getAttribute("aria-label") || "")
-            .replace(/\s+/g, " ")
-            .trim(),
-        )
-        .filter(
-          (t, k, a) => /추가/.test(t) && t.length < 40 && a.indexOf(t) === k,
+    const { frames, addButtons, keepalive } = await keptAlive(
+      context,
+      page,
+      async () => ({
+        // The salt is thrown away: fingerprints are not needed in the file.
+        frames: stripFingerprints(
+          await framesCensus(page, { salt: randomBytes(16).toString("hex") }),
         ),
+        addButtons: await addButtonTexts(page),
+      }),
     );
     await writeJson(join(outDir, `${label}.census.json`), frames);
     await writeJson(join(outDir, `${label}.addbuttons.json`), addButtons);
     print(
       `url=${brief(page.url())}\n${controlTable(frames)}\naddButtons=${JSON.stringify(addButtons)}`,
     );
+    if (keepalive?.length) print({ keepalive });
   },
   async run(context) {
-    const page = await pageAt(context, positional[0]);
+    const page = await tabAt(context, positional[0]);
+    await assertInScope(page);
     const label = opt("label", "run");
     await ensureOut();
     // Ctrl-C or a kill stops the round but still lets the cleanup (discard
@@ -324,25 +586,36 @@ const commands = {
     process.on("SIGINT", stop);
     process.on("SIGTERM", stop);
     const id = await extensionIdForDirectory(paths.extension);
-    const result = await runPage(page, {
-      label,
-      clear: !flag("no-clear"),
-      approveReview: !flag("no-approve"),
-      timeoutMs: Number(opt("timeout", 300)) * 1000,
-      allowHosts: await apiHosts(),
-      build: await installedBuild(context, id),
-      signal: controller.signal,
-      profile: await (async () => {
-        const seeded = await seededProfile();
-        if (!seeded) {
-          console.error(
-            "warning: no seeded profile record (run start); synthetic values that the page already held stay hidden.",
-          );
-          return null;
-        }
-        return readJson(seeded.path);
-      })(),
-    }).finally(() => {
+    const result = await keptAlive(context, page, async () =>
+      runPage(page, {
+        label,
+        clear: !flag("no-clear"),
+        approveReview: !flag("no-approve"),
+        timeoutMs: Number(opt("timeout", 300)) * 1000,
+        allowHosts: await apiHosts(),
+        build: await installedBuild(context, id),
+        signal: controller.signal,
+        // Test accounts: record values instead of hiding pre-run ones.
+        recordValues: isTestAccount(
+          page.url(),
+          await readTestAccounts(paths.root),
+        ),
+        // Section captures (test-account tabs only) go next to the run file.
+        captureDir: flag("no-capture")
+          ? null
+          : join(outDir, `${label}.captures`),
+        profile: await (async () => {
+          const seeded = await seededProfile();
+          if (!seeded) {
+            console.error(
+              "warning: no seeded profile record (run start); synthetic values that the page already held stay hidden.",
+            );
+            return null;
+          }
+          return readJson(seeded.path);
+        })(),
+      }),
+    ).finally(() => {
       process.off("SIGINT", stop);
       process.off("SIGTERM", stop);
     });
@@ -368,7 +641,7 @@ const commands = {
     }
   },
   async discard(context) {
-    const page = await pageAt(context, positional[0]);
+    const page = await tabAt(context, positional[0]);
     print(
       await onGuardedTab(page, { allowHosts: await apiHosts() }, (dialogs) =>
         discardPage(page, { dialogs }),
@@ -390,7 +663,7 @@ const commands = {
       let pages = [];
       try {
         pages = positional[0]
-          ? [await pageAt(context, positional[0])]
+          ? [await tabAt(context, positional[0])]
           : httpPages(context).filter((p) =>
               APPLICATION_PATH.test(new URL(p.url()).pathname),
             );
@@ -426,6 +699,147 @@ const commands = {
   },
 };
 
+// What is printed about an install lock: never the cwd.
+const lockOwner = (lock) => ({
+  pid: lock?.pid ?? null,
+  sessionPid: lock?.sessionPid ?? null,
+  startedAt: lock?.startedAt ?? null,
+  revision: lock?.revision ?? null,
+});
+const coded = (code, message) => Object.assign(new Error(message), { code });
+const notRunning = () =>
+  coded(
+    "browser-not-running",
+    "No evaluation browser is running (run: start).",
+  );
+const printProbes = (probes) => {
+  for (const p of probes)
+    console.log(`${String(p.ms).padStart(6)}ms\t${p.state}\t${p.url}`);
+};
+
+// Commands that never attach through Playwright. A hung tab blocks the
+// Playwright attach itself (2026-10-22, 30s timeout), so health and replace
+// talk raw CDP (health.mjs); lock and alias only touch files.
+const standalone = {
+  // Probes every page target; exit 1 lists the tabs that did not answer.
+  async health() {
+    const found = await findBrowser(paths);
+    if (!found) throw notRunning();
+    const probes = await probeTargets(found.endpoint, {
+      timeoutMs: Number(opt("timeout", 5)) * 1000,
+    });
+    printProbes(probes);
+    const hung = probes.filter((p) => !p.ok);
+    if (hung.length) {
+      print({
+        ok: false,
+        code: "tabs-hung",
+        hung: hung.map(({ targetId, url, state, ms }) => ({
+          targetId,
+          url,
+          state,
+          ms,
+        })),
+        message:
+          "Replace a hung tab with 'replace <url-substring>' or 'replace --all-hung'.",
+      });
+      process.exitCode = 1;
+    }
+  },
+  // replace <url-substring> (exactly one target) | --all-hung: a new tab at
+  // the same address is created before the old one is closed, then every
+  // target is probed again. The browser keeps running.
+  async replace() {
+    const found = await findBrowser(paths);
+    if (!found) throw notRunning();
+    const timeoutMs = Number(opt("timeout", 5)) * 1000;
+    let chosen;
+    if (flag("all-hung")) {
+      chosen = (await probeTargets(found.endpoint, { timeoutMs })).filter(
+        (p) => !p.ok,
+      );
+      if (!chosen.length) {
+        print({ ok: true, replaced: [], message: "No tab is hung." });
+        return;
+      }
+    } else {
+      const spec = positional[0];
+      if (!spec)
+        throw coded(
+          "tab-required",
+          "replace needs <url-substring> or --all-hung.",
+        );
+      const matches = (await listPageTargets(found.endpoint)).filter((t) =>
+        t.url.includes(spec),
+      );
+      if (matches.length !== 1)
+        throw coded(
+          "tab-not-unique",
+          `tab '${spec}' matched ${matches.length}: ${matches.map((t) => brief(t.url)).join(", ")}`,
+        );
+      chosen = matches;
+    }
+    const replaced = [];
+    for (const t of chosen)
+      replaced.push(await replaceTarget(found.endpoint, t.targetId));
+    const after = await probeTargets(found.endpoint, { timeoutMs });
+    const probeOf = (id) => after.find((p) => p.targetId === id) ?? null;
+    print({
+      ok: replaced.every((r) => r.ok),
+      replaced: replaced.map((r) => ({
+        ...r,
+        after: r.newTargetId ? probeOf(r.newTargetId) : null,
+      })),
+    });
+    printProbes(after);
+    if (!replaced.every((r) => r.ok) || after.some((p) => !p.ok))
+      process.exitCode = 1;
+  },
+  // Marks the installed copy as this session's, so another session's `start`
+  // refuses to reinstall during a round. --show only prints the lock.
+  async lock() {
+    const current = await readInstallLock(paths);
+    if (flag("show")) {
+      print({
+        lock: current ? lockOwner(current) : null,
+        heldByOther: installLockHeldByOther(current),
+      });
+      return;
+    }
+    const previous = installLockHeldByOther(current)
+      ? lockOwner(current)
+      : null;
+    const build = await readBuildInfo(paths.extension);
+    const lock = await writeInstallLock(paths, {
+      revision: build?.revision ?? null,
+      apiHosts: await apiHosts(),
+    });
+    print({ ok: true, lock: lockOwner(lock), takenFrom: previous });
+  },
+  // alias <name> <url-substring|page text> | alias --list | alias <name> --remove
+  async alias() {
+    const aliases = await readTabAliases(outDir);
+    const [name, spec] = positional;
+    if (flag("list") || !name) {
+      print(aliases);
+      return;
+    }
+    if (flag("remove")) {
+      delete aliases[name];
+      await writeTabAliases(outDir, aliases);
+      print({ ok: true, removed: name });
+      return;
+    }
+    if (!spec)
+      throw coded(
+        "alias-invalid",
+        "alias <name> <url-substring|page text> stores a tab spec under the name.",
+      );
+    await writeTabAliases(outDir, { ...aliases, [name]: spec });
+    print({ ok: true, [name]: spec });
+  },
+};
+
 // Offline commands work on files in --out and need no browser.
 const offline = {
   async "grade-input"() {
@@ -455,29 +869,63 @@ const offline = {
     await writeFile(join(outDir, "grade/profile.synthetic.json"), content, {
       mode: 0o600,
     });
+    // --reuse-from dir1,dir2: earlier result directories whose
+    // grade/structure-index.json may hold a grading of the same structure.
+    const reuseDirs = opt("reuse-from", "")
+      .split(",")
+      .filter(Boolean)
+      .map((d) => resolve(d));
+    const index = await loadStructureIndex(outDir);
+    const results = [];
     for (const label of positional) {
       const frames = await readJson(join(outDir, `${label}.census.json`));
       const add = existsSync(join(outDir, `${label}.addbuttons.json`))
         ? await readJson(join(outDir, `${label}.addbuttons.json`))
         : [];
       const input = buildGradeInput(label, frames, add);
-      await writeJson(join(outDir, `grade/${label}.input.json`), input);
-      print(`${label} controls=${input.controlCount}`);
+      const hash = structureHash(input);
+      await writeJson(join(outDir, `grade/${label}.input.json`), {
+        ...input,
+        structureHash: hash,
+      });
+      const reuse = await reusePregrade({
+        outDir,
+        label,
+        hash,
+        index,
+        reuseDirs,
+      });
+      results.push({ label, controls: input.controlCount, hash, ...reuse });
     }
+    await saveStructureIndex(outDir, index);
+    for (const line of formatPregradeLines(results)) print(line);
   },
   async join() {
+    const captureLabels = [];
     for (const label of positional) {
+      const run = await readJson(join(outDir, `${label}.run.json`));
       const joined = joinResults({
         label,
         final: await readJson(join(outDir, `grade/${label}.final.json`)),
         census: await readJson(join(outDir, `${label}.census.json`)),
-        run: await readJson(join(outDir, `${label}.run.json`)),
+        run,
       });
       await writeJson(join(outDir, `grade/${label}.joined.json`), joined);
+      // Runs with captures (test-account tabs) also get the capture judge's
+      // input: capture files and expected values only, no DOM result.
+      const captures = Array.isArray(run.captures) ? run.captures : [];
+      if (captures.length) {
+        await writeJson(
+          join(outDir, `grade/${label}.capture-input.json`),
+          buildCaptureInput({ joined, captures, baseDir: outDir }),
+        );
+        captureLabels.push(label);
+      }
       print(
-        `${label} rows=${joined.rows.length} new=${joined.addedOrUnmatchedAfterControls.length}`,
+        `${label} rows=${joined.rows.length} new=${joined.addedOrUnmatchedAfterControls.length} captures=${captures.length}`,
       );
     }
+    print(`captureLabels: ${JSON.stringify(captureLabels)}`);
   },
   // --verdicts a.json,b.json: verify-workflow results (arrays of page verdicts).
   // --uncreated file.json: {label: cells} for rows the run never created.
@@ -500,12 +948,16 @@ const offline = {
               .flatMap((f) => f.controls)
               .filter((c) => c.added),
           };
+      const capturePath = join(outDir, `grade/${label}.capture.json`);
       pages.push(
         aggregatePage({
           label,
           joined,
           verdict: verdicts[label],
           run,
+          captureVerdict: existsSync(capturePath)
+            ? await readJson(capturePath)
+            : null,
           uncreatedCells: uncreated[label] ?? 0,
           policyPattern: label.startsWith("hp-")
             ? HPLACE_POLICY_EXCLUSIONS
@@ -543,10 +995,11 @@ const offline = {
 
 async function main() {
   if (cmd === "start") return commands.start();
+  if (standalone[cmd]) return standalone[cmd]();
   if (offline[cmd]) return offline[cmd]();
   if (!commands[cmd]) {
     print(
-      "commands: start [--build dir] [--profile file] | keepalive [<tab>] [--every min] [--threshold min] [--force] | tabs | open <url> | close <tab> | goto <tab> <url> | text <tab> | stepinfo <tab> | step <tab> <1-4> [--force] | saved [<tab>] | census <tab> --label L | run <tab> --label L [--no-clear] [--no-approve] [--timeout s] | discard <tab> | grade-input <labels> | join <labels> | report <labels> --verdicts a.json[,b.json] [--uncreated f] [--names f] | workflow-script <pregrade|verify>\n<tab> = url-substring or 'url-substring|page text'",
+      "commands: start [--build dir] [--profile file] [--reinstall] [--force] | health [--timeout s] | replace <url-substring>|--all-hung | lock [--show] | alias <name> <spec>|--list|<name> --remove | keepalive [<tab>] [--every min] [--threshold min] [--force] | tabs | scope [--pick hplace=N,greeting=N,sk=N,hyundai=N | --tabs spec1,spec2] | open <url> | close <tab> | goto <tab> <url> | text <tab> | stepinfo <tab> | step <tab> <1-4> [--force] | saved [<tab>] | reset <tab> --yes | census <tab> --label L [--ignore-scope] | run <tab> --label L [--no-clear] [--no-approve] [--no-capture] [--ignore-scope] [--timeout s] | discard <tab> | grade-input <labels> [--reuse-from d1,d2] | join <labels> | report <labels> --verdicts a.json[,b.json] [--uncreated f] [--names f] | workflow-script <pregrade|verify>\n<tab> = url-substring, 'url-substring|page text' or an alias\nrun/census/saved/reset: [--keepalive-every min (10, 0=off)] [--keepalive-threshold min (30)]",
     );
     process.exitCode = cmd ? 1 : 0;
     return;

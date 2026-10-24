@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { clickKeepLogin, pingSession, sessionStatus } from "../keepalive.mjs";
+import { postingStatus } from "../scope.mjs";
 import { census } from "./census.mjs";
 import { clearForm } from "./clear.mjs";
 import { installGuard } from "./guard.mjs";
@@ -21,6 +22,7 @@ const PAGE_FUNCTIONS = {
   sessionStatus,
   clickKeepLogin,
   pingSession,
+  postingStatus,
 };
 
 describe("page functions", () => {

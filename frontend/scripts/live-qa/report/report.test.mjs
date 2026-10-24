@@ -202,14 +202,51 @@ describe("joinResults", () => {
       written: null,
     });
   });
+
+  it("passes siteDefault and companionOf through from the post-run census", () => {
+    const final = {
+      controls: [
+        { i: 0, category: "AUTOFILLABLE", profileKey: "p", expected: "A" },
+      ],
+    };
+    const run = {
+      testAccount: true,
+      after: frames([
+        control(0, "langCd", { hasValue: true, siteDefault: true }),
+        control(1, "langNm", {
+          type: "hidden",
+          hidden: true,
+          hasValue: true,
+          companionOf: 0,
+          added: true,
+        }),
+      ]),
+    };
+    const joined = joinResults({
+      label: "x",
+      final,
+      census: frames([control(0, "langCd")]),
+      run,
+    });
+    expect(joined.rows[0]).toMatchObject({ siteDefault: true });
+    expect(joined.rows[0].companionOf).toBeUndefined();
+    expect(joined.addedOrUnmatchedAfterControls[0]).toMatchObject({
+      name: "langNm",
+      siteDefault: false,
+      companionOf: 0,
+    });
+  });
 });
 
+// Totals agree with the items: 10 AUTOFILLABLE rows, 3 of them not correct.
 const verdict = {
   autofillable: 10,
   correct: 7,
   wrong: 1,
   missed: 2,
   expectationErrors: 0,
+  unverifiable: 0,
+  extraWritten: 4,
   extraCorrect: 4,
   extraWrong: 0,
   createdRowsExpected: 3,
@@ -218,11 +255,19 @@ const verdict = {
     { ref: "i=3 college[0].collegeCategoryCode", kind: "MISSED" },
     { ref: "i=4 jobNm", kind: "MISSED" },
     { ref: "i=5 x", kind: "WRONG", written: "bad" },
+    { ref: "new career[1].a", kind: "EXTRA_CORRECT" },
+    { ref: "new career[1].b", kind: "EXTRA_CORRECT" },
+    { ref: "new career[1].c", kind: "EXTRA_CORRECT" },
+    { ref: "new career[1].d", kind: "EXTRA_CORRECT" },
   ],
 };
 const joined = {
-  rows: Array.from({ length: 12 }, (_, i) => ({ i })),
+  rows: Array.from({ length: 12 }, (_, i) => ({
+    i,
+    category: i < 10 ? "AUTOFILLABLE" : "NO_PROFILE_KEY",
+  })),
   addedOrUnmatchedAfterControls: [{}, {}, {}],
+  rowExpansion: [{ section: "S", extraRowsExpected: 3, autofillablePerRow: 0 }],
 };
 const run = {
   panel: { stage: "result", counts: { completed: 9, needsReview: 1 } },
@@ -360,10 +405,24 @@ describe("aggregatePage", () => {
     const page = aggregatePage({
       label: "gr-x",
       joined,
-      verdict: { ...verdict, unverifiable: 2 },
+      verdict: {
+        ...verdict,
+        correct: 5,
+        unverifiable: 2,
+        items: [
+          ...verdict.items,
+          { ref: "i=6 y", kind: "UNVERIFIABLE" },
+          { ref: "i=7 z", kind: "UNVERIFIABLE" },
+        ],
+      },
       run,
     });
-    expect(page).toMatchObject({ denominator: 14, unverifiable: 2 });
+    expect(page).toMatchObject({
+      correct: 9,
+      denominator: 12,
+      unverifiable: 2,
+      warnings: ["rows-not-created:3>2"],
+    });
   });
 
   it("reports a page without a verdict as not measured", () => {
@@ -443,6 +502,139 @@ describe("renderReport", () => {
     expect(md).toContain("⚠ run-timeout");
   });
 
+  it("shows the unverifiable column and ratio as a measurement-quality line", () => {
+    const withUnverifiable = {
+      ...verdict,
+      correct: 5,
+      unverifiable: 2,
+      items: [
+        ...verdict.items,
+        { ref: "i=6 y", kind: "UNVERIFIABLE" },
+        { ref: "i=7 z", kind: "UNVERIFIABLE" },
+      ],
+    };
+    const md = renderReport({
+      title: "QA",
+      meta: { apiOrigin: "x", date: "d" },
+      pages: [
+        aggregatePage({
+          label: "gr-a",
+          joined,
+          verdict: withUnverifiable,
+          run,
+        }),
+        aggregatePage({ label: "sk-b", joined, verdict, run }),
+        aggregatePage({ label: "hy-c", joined, run: { error: { code: "x" } } }),
+      ],
+    });
+    // gr-a: denominator 12, unverifiable 2; sk-b: 14, 0 → 2 / 28 = 7.1%.
+    expect(md).toContain(
+      "- 확인 불가 비율: 2 / (26 + 2) = 7.1% (측정 품질 지표: 낮을수록 좋음)",
+    );
+    expect(md).toContain("| 누락 | 확인 불가 | 입력률 |");
+    expect(md).toMatch(/\| gr-a \|[^\n]*\| 2 \| 2 \| 75\.0% \|/);
+    expect(md).toMatch(/\| sk-b \|[^\n]*\| 2 \| 0 \| 78\.6% \|/);
+    expect(md).not.toContain("확인 불가 2");
+  });
+
+  it("adds a subtotal row per platform that has a measured page", () => {
+    const md = renderReport({
+      title: "QA",
+      meta: { apiOrigin: "x", date: "d" },
+      pages: [
+        aggregatePage({
+          label: "hp-a-s2",
+          joined,
+          verdict,
+          run,
+          policyPattern: /collegeCategoryCode/,
+        }),
+        aggregatePage({
+          label: "hp-b-s2",
+          joined,
+          verdict,
+          run,
+          policyPattern: /collegeCategoryCode/,
+        }),
+        aggregatePage({ label: "gr-c", joined, verdict, run }),
+        aggregatePage({ label: "zz-d", joined, verdict, run }),
+        aggregatePage({ label: "sk-e", joined, run: { error: { code: "x" } } }),
+      ],
+    });
+    const rows = md.split("\n").filter((l) => l.startsWith("| **"));
+    expect(rows.map((l) => l.split(" | ")[0])).toEqual([
+      "| **에이치닷 소계**",
+      "| **Greeting 소계**",
+      "| **기타 소계**",
+      "| **합계**",
+    ]);
+    // Two Hplace pages: 28 cells, 22 correct, policy rate 22 / 26.
+    expect(rows[0]).toBe(
+      "| **에이치닷 소계** | | 28 | 24 | 22 | 2 | 4 | 0 | 78.6% | 84.6% | | | |",
+    );
+    expect(rows[1]).toBe(
+      "| **Greeting 소계** | | 14 | 12 | 11 | 1 | 2 | 0 | 78.6% | — | | | |",
+    );
+    expect(rows[3]).toBe(
+      "| **합계** | | 56 | 48 | 44 | 4 | 8 | 0 | 78.6% | 84.6% | | | |",
+    );
+    expect(md).not.toContain("SK 소계");
+  });
+
+  it("compares capture verdicts with the DOM verdict and lists the disagreements", () => {
+    const withCapture = aggregatePage({
+      label: "sk-a",
+      joined: {
+        ...joined,
+        rows: joined.rows.map((r) => ({
+          ...r,
+          section: "기본",
+          label: `칸${r.i}`,
+          type: "text",
+          expected: `값${r.i}`,
+        })),
+      },
+      verdict,
+      run,
+      captureVerdict: [
+        { i: 0, seen: "값0" },
+        { i: 1, seen: "" },
+        { i: 3, seen: "" },
+        { i: 5, seen: "엉뚱" },
+      ],
+    });
+    expect(withCapture.capture).toMatchObject({
+      compared: 4,
+      agreed: 3,
+      notVisible: 6,
+      disagreements: [{ i: 1, dom: "CORRECT", seen: "", expected: "값1" }],
+    });
+    const md = renderReport({
+      title: "QA",
+      meta: { apiOrigin: "x", date: "d" },
+      pages: [
+        withCapture,
+        aggregatePage({ label: "gr-b", joined, verdict, run }),
+      ],
+      names: { "sk-a": "SK · A" },
+    });
+    expect(md).toContain("- 캡처·DOM 일치율: 3 / 4 = 75.0% (안 보임 6)");
+    expect(md).toMatch(/\| SK · A \|[^\n]*캡처 대조 3\/4/);
+    expect(md).toContain("## 캡처·DOM 불일치");
+    expect(md).toContain("### SK · A");
+    expect(md).toContain("| 1 | CORRECT | (비어 있음) | 값1 |");
+    expect(md).not.toContain("### gr-b");
+  });
+
+  it("adds nothing about captures when no page has one", () => {
+    const md = renderReport({
+      title: "QA",
+      meta: { apiOrigin: "x", date: "d" },
+      pages: [aggregatePage({ label: "gr-b", joined, verdict, run })],
+    });
+    expect(md).not.toContain("캡처");
+  });
+
   it("prints a dash instead of NaN when nothing could be measured", () => {
     const empty = {
       ...verdict,
@@ -455,10 +647,22 @@ describe("renderReport", () => {
       createdRowsObserved: 0,
       items: [],
     };
+    const nothing = {
+      ...joined,
+      rows: joined.rows.map((r) => ({ ...r, category: "NOT_A_FIELD" })),
+      rowExpansion: [],
+    };
     const md = renderReport({
       title: "QA",
       meta: { apiOrigin: "x", date: "d" },
-      pages: [aggregatePage({ label: "hp-x-s4", joined, verdict: empty, run })],
+      pages: [
+        aggregatePage({
+          label: "hp-x-s4",
+          joined: nothing,
+          verdict: empty,
+          run,
+        }),
+      ],
     });
     expect(md).not.toContain("NaN");
   });
