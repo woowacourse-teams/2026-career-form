@@ -300,7 +300,11 @@ it("지난 공고의 마감을 연장하면 지원 예정 목록으로 돌아온
     "aria-pressed",
     "true",
   );
-  expect(screen.getByRole("button", { name: "연장 예시 수정" })).toHaveFocus();
+  await waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: "연장 예시 수정" }),
+    ).toHaveFocus(),
+  );
 });
 
 it("삭제 버튼 한 번으로 확인창 없이 저장소에서 삭제한다", async () => {
