@@ -70,6 +70,7 @@ describe("visible fields settle", () => {
       snapshot: expect.anything(),
       retries: 0,
       stillHidden: false,
+      dismissed: 0,
     });
     expect(collect).not.toHaveBeenCalled();
   });
@@ -94,6 +95,27 @@ describe("visible fields settle", () => {
     expect(settled.retries).toBe(3);
     expect(settled.stillHidden).toBe(false);
     expect(visibleFieldCount(settled.snapshot)).toBe(81);
+  });
+
+  it("closes what hides the page before each re-collection", async () => {
+    const snapshots = [snapshot(0, 81), snapshot(81, 0)];
+    const collect = vi.fn(async () => snapshots.shift()!);
+    const dismiss = vi.fn(() => true);
+    let clock = 0;
+    const settled = await settleVisibleFields({
+      snapshot: snapshot(1, 80),
+      previousVisible: 81,
+      collect,
+      dismiss,
+      now: () => clock,
+      sleep: async (ms) => {
+        clock += ms;
+      },
+    });
+    expect(dismiss).toHaveBeenCalledTimes(2);
+    expect(settled.dismissed).toBe(2);
+    expect(settled.stillHidden).toBe(false);
+    expect(collect).toHaveBeenCalledTimes(2);
   });
 
   it("gives up at the deadline and reports the page as still hidden", async () => {

@@ -87,7 +87,11 @@ import {
   type GenericAnalysisCache,
   type GenericAnalysisResult,
 } from "../generic/generic-analysis";
-import { debugAnalysis, debugReviewPlan } from "../debug/autofill-debug";
+import {
+  debugAnalysis,
+  debugReviewPlan,
+  debugWarn,
+} from "../debug/autofill-debug";
 import {
   buildReviewPlan,
   resolveProfileFieldValue,
@@ -115,6 +119,7 @@ import {
   transientlyHidden,
   visibleFieldCount,
 } from "./visible-fields-settle";
+import { dismissLeftoverComponentPopups } from "../policy/components/workflow-popup";
 
 import {
   isGenericStateDriver,
@@ -244,6 +249,7 @@ export function createAnalyzeFields({
       snapshot: await collect(),
       previousVisible: run.visibleFields,
       collect,
+      dismiss: () => dismissLeftoverComponentPopups(pageDocument),
       signal: run.controller.signal,
     });
     if (settled.retries)
@@ -252,6 +258,8 @@ export function createAnalyzeFields({
         visibleFieldCount(settled.snapshot),
         settled.retries,
       );
+    if (settled.dismissed)
+      debugWarn(`dismissed leftover popups=${settled.dismissed}`);
     if (!transientlyHidden(run.visibleFields, settled.snapshot))
       run.visibleFields = visibleFieldCount(settled.snapshot);
     return settled.snapshot;
@@ -749,6 +757,9 @@ export function createAnalyzeFields({
         analysis.unresolvedFields.length - Math.min(labels.length, 5);
       analysisWarnings.push(
         `페이지가 바뀌어 다시 연결하지 못한 항목 ${analysis.unresolvedFields.length}개: ${shown || "(이름 없음)"}${more > 0 ? ` 외 ${more}개` : ""}. 지원서에서 직접 확인해 주세요.`,
+      );
+      debugWarn(
+        `unresolved fields=${analysis.unresolvedFields.length} labels=${shown}`,
       );
     }
     if (

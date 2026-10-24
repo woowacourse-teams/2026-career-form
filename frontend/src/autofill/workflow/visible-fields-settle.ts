@@ -33,6 +33,8 @@ export interface SettleVisibleFieldsOptions {
   snapshot: Snapshot;
   previousVisible: number | undefined;
   collect: () => Promise<Snapshot>;
+  /** Close whatever hides the page (an open popover) before re-collecting; true when something was closed. */
+  dismiss?: () => boolean;
   signal?: AbortSignal;
   maxMs?: number;
   pollMs?: number;
@@ -46,6 +48,8 @@ export interface SettledSnapshot {
   retries: number;
   /** The deadline passed with the page still hidden. */
   stillHidden: boolean;
+  /** How many times `dismiss` reported closing something. */
+  dismissed: number;
 }
 
 /**
@@ -57,6 +61,7 @@ export async function settleVisibleFields({
   snapshot,
   previousVisible,
   collect,
+  dismiss,
   signal,
   maxMs = 3000,
   pollMs = 100,
@@ -65,16 +70,18 @@ export async function settleVisibleFields({
 }: SettleVisibleFieldsOptions): Promise<SettledSnapshot> {
   let current = snapshot;
   let retries = 0;
+  let dismissed = 0;
   if (!transientlyHidden(previousVisible, current))
-    return { snapshot: current, retries, stillHidden: false };
+    return { snapshot: current, retries, stillHidden: false, dismissed };
   const deadline = now() + maxMs;
   while (!signal?.aborted && now() < deadline) {
+    if (dismiss?.()) dismissed += 1;
     await sleep(pollMs);
     if (signal?.aborted) break;
     current = await collect();
     retries += 1;
     if (!transientlyHidden(previousVisible, current))
-      return { snapshot: current, retries, stillHidden: false };
+      return { snapshot: current, retries, stillHidden: false, dismissed };
   }
-  return { snapshot: current, retries, stillHidden: true };
+  return { snapshot: current, retries, stillHidden: true, dismissed };
 }
