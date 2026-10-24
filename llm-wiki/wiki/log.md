@@ -839,3 +839,11 @@
 - 승인된 후보 7개를 [CF-333 bundle](../raw/issues/CF-333/manifest.md)에 세 payload로 기록했다. 실사이트 평가(테스트 계정 모드, 설치본 잠금, 채점 재사용·합계 재계산, 새 정책 검증 환경), 현대 어댑터(작성 화면 재진입 불가, 입사·퇴사연월일 일자 누락, 종료사유 자유입력 오배치), 배포 Runbook(정책 활성 버전은 seeder가 바꾸지 않음, 4값 대조와 배포 뒤 전환).
 - [실사이트 자동 입력 평가 워크플로우](topics/live-autofill-evaluation.md), [현대 어댑터](topics/adapter-hyundai.md), [배포 Runbook](topics/deployment-runbook.md)의 Current를 CF-333으로 바꾸고 앞선 근거를 History에 남겼다.
 - 실제 지원값·계정·세션·URL 쿼리·대화 전문은 저장하지 않았다.
+
+## [2026-10-24] ingest | CF-337 seeder 활성 정책 버전 동기화
+
+- Approval-Digest: 6c29dfc9ca6d0ca7fea721df4041a85987539e910dbf6c16e0678d96f4e27af0
+- Source-Revision: 7fd5b68
+- 승인된 후보 2개를 [CF-337 bundle](../raw/issues/CF-337/manifest.md)에 payload 하나로 기록했다. 정책 활성 버전의 정본은 배포 커밋의 seed이고 seeder가 모든 환경에서 DB를 seed에 맞추며(롤백 포함), 운영 배포 승인이 전환 승인이라 수동 Mongo 전환을 폐기한다. 4값 대조 중 seed·DB 버전은 `GET /api/v1/policy-versions`로 읽는다.
+- [배포 Runbook](topics/deployment-runbook.md)의 Current를 CF-337로 바꾸고 CF-333 근거를 History에 남겼다.
+- 실제 지원값·계정·세션·시크릿·대화 전문은 저장하지 않았다.
