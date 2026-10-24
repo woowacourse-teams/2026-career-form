@@ -74,9 +74,9 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [Greeting 공통 어댑터](topics/adapter-greeting.md) | 기업별 화면 차이와 안전한 필드 입력,검증 범위, 검색 서버 액션 요청 구조, v18 장애 정도 별칭 | 2026-10-22 |
 | [Hplace 공통 어댑터](topics/adapter-hplace.md) | MRS2 실행 정책, 127키 현황, step 1–3 실화면 검증, 칸 단위 인식·재실행 멱등성·저장 페이지 재로드 보고, 저장·조회·무저장 이동 요청 구조, 4단계 분석 예외와 패널 집계, 빈 단계 분석 생략, 배포 경계, 활성 정책 버전 설정값 | 2026-10-23 |
 | [SK,현대 실시간 옵션 선택 보완](topics/adapter-live-option-selection.md) | 현재 회사 화면의 유일 옵션만 선택하는 어학 보완 | 2026-09-09 |
-| [현대 어댑터](topics/adapter-hyundai.md) | 현대 주소,국적,학력 수집,입력과 검증 제한, 페이지의 Map·Set 재정의, 버튼형 선택지 코드 수집 한계, 작성 화면 재진입 불가와 경력 칸 결함 | 2026-10-24 |
+| [현대 어댑터](topics/adapter-hyundai.md) | 현대 주소,국적,학력 수집,입력과 검증 제한, 페이지의 Map·Set 재정의, 버튼형 선택지 코드의 읽기 전용 수집과 trigger 식별, 작성 화면 재진입 불가, 정책 v25 경력 날짜·종료사유·자격 등급 | 2026-10-24 |
 | [SK 어댑터](topics/adapter-sk.md) | SK 조건부 입력과 검증 제한, R262309형 고교 행의 추가 버튼 재식별 실패, v38 재학 상태 select 기준 재식별과 장애구분 별칭 | 2026-10-22 |
-| [어댑터 필드 현황](topics/adapter-field-inventory.md) | 회사별 구현과 자동,수동 검증 상태 | 2026-10-20 |
+| [어댑터 필드 현황](topics/adapter-field-inventory.md) | 회사별 구현과 자동,수동 검증 상태, 현대 v25 경력·종료사유·자격 등급 | 2026-10-24 |
 | [LLM Wiki 지식 모델](topics/llm-wiki-knowledge-model.md) | Issue raw, topic Wiki와 승인 digest | 2026-08-22 |
 | [지원서 분석 API](topics/application-form-analysis-api.md) | schema v2와 검색 역할, OpenAI/Jev 단일 공급자 계약 | 2026-09-23 |
 | [지원서 분석 데이터 경계](topics/application-form-analysis-data-boundary.md) | 비식별 공급자 투영과 로컬 DOM 실행 경계 | 2026-09-23 |

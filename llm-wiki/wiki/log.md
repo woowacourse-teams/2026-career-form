@@ -847,3 +847,11 @@
 - 승인된 후보 2개를 [CF-337 bundle](../raw/issues/CF-337/manifest.md)에 payload 하나로 기록했다. 정책 활성 버전의 정본은 배포 커밋의 seed이고 seeder가 모든 환경에서 DB를 seed에 맞추며(롤백 포함), 운영 배포 승인이 전환 승인이라 수동 Mongo 전환을 폐기한다. 4값 대조 중 seed·DB 버전은 `GET /api/v1/policy-versions`로 읽는다.
 - [배포 Runbook](topics/deployment-runbook.md)의 Current를 CF-337로 바꾸고 CF-333 근거를 History에 남겼다.
 - 실제 지원값·계정·세션·시크릿·대화 전문은 저장하지 않았다.
+
+## [2026-10-24] ingest | CF-335 현대 경력 날짜·종료사유·자격 등급 수정
+
+- Approval-Digest: 3de73b5b4b19338686b279ee3ded763a4466714ccbd4414c4fda84d6d885eb39
+- Source-Revision: c157a16
+- 승인된 후보 3개를 [CF-335 bundle](../raw/issues/CF-335/manifest.md)에 두 payload로 기록했다. 현대 어댑터(버튼형 선택지 코드의 읽기 전용 수집과 CF-310 관측 정정, trigger에 name이 없어 id로만 구분, 정책 v25의 경력 날짜·종료사유·자격 등급 매핑), 필드 현황(v25 지원 범위와 전과/편입 보류).
+- [현대 어댑터](topics/adapter-hyundai.md)와 [어댑터 필드 현황](topics/adapter-field-inventory.md)의 Current를 CF-335로 바꾸고 앞선 근거를 History에 남겼다.
+- 실제 지원값·계정·세션·대화 전문은 저장하지 않았다. 선택지 코드 표는 공개 선택지다.

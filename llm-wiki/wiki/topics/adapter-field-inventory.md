@@ -2,9 +2,9 @@
 
 > Topic: adapter-field-inventory
 > Status: Current
-> Current: [CF-177 후속 보완 묶음 근거](../../raw/issues/CF-177/documents/live-followup-bundle.md)
-> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-field-inventory.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-field-inventory.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-field-inventory.md); [CF-94 근거](../../raw/issues/CF-94/documents/adapter-field-inventory.md); [CF-160 근거](../../raw/issues/CF-160/documents/adapter-field-inventory.md); [CF-168 근거](../../raw/issues/CF-168/documents/adapter-field-inventory.md); [CF-169 근거](../../raw/issues/CF-169/documents/adapter-field-inventory.md); [CF-177 근거](../../raw/issues/CF-177/documents/adapter-field-inventory.md); [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md); [CF-177 C12·C13·시연 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md); [CF-177 KDI·구조 미확인 근거](../../raw/issues/CF-177/documents/live-kdi-unverified.md); [CF-177 후속 보완 묶음 근거](../../raw/issues/CF-177/documents/live-followup-bundle.md)
-> Updated: 2026-10-20
+> Current: [CF-335 현대 v25 경력 날짜·종료사유·자격 등급 지원 현황](../../raw/issues/CF-335/documents/hyundai-v25-field-inventory.md)
+> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-field-inventory.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-field-inventory.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-field-inventory.md); [CF-94 근거](../../raw/issues/CF-94/documents/adapter-field-inventory.md); [CF-160 근거](../../raw/issues/CF-160/documents/adapter-field-inventory.md); [CF-168 근거](../../raw/issues/CF-168/documents/adapter-field-inventory.md); [CF-169 근거](../../raw/issues/CF-169/documents/adapter-field-inventory.md); [CF-177 근거](../../raw/issues/CF-177/documents/adapter-field-inventory.md); [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md); [CF-177 C12·C13·시연 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md); [CF-177 KDI·구조 미확인 근거](../../raw/issues/CF-177/documents/live-kdi-unverified.md); [CF-177 후속 보완 묶음 근거](../../raw/issues/CF-177/documents/live-followup-bundle.md); [CF-335 현대 v25 경력 날짜·종료사유·자격 등급 지원 현황](../../raw/issues/CF-335/documents/hyundai-v25-field-inventory.md)
+> Updated: 2026-10-24
 
 ## 현재 상태
 
@@ -17,6 +17,17 @@ SK 검색은 입력별 widget의 새 검색 완료와 유일한 label/value를 �
 CF-82는 표준 ID 어학 값을 현재 페이지의 정확히 하나인 메뉴 후보에만 연결한다. 현대는 visible `data-code` 버튼과 선택 뒤 hidden code를, SK는 visible nonzero autocomplete ID와 명시적 별칭을 사용한다. 0개·복수 후보와 자유 텍스트는 자동 선택하지 않는다. 상세 근거는 [CF-82 보완](../../raw/issues/CF-82/documents/adapter/live-option-selection.md)을 따른다.
 
 CF-169는 현대 어학 언어·시험과 SK 어학 언어 상태 드라이버의 실패를 같은 행으로 격리하고 현대 국적과 SK 우대 여부 드라이버는 근거가 없어 제외한다([근거](../../raw/issues/CF-169/documents/adapter-field-inventory.md)).
+
+## 현대 v25 경력 날짜·종료사유·자격 등급 (2026-10-24)
+
+| 항목 | 구현 | 검증 상태 |
+|---|---|---|
+| 현대 경력 입사·퇴사연월일 | v25 직접 바인딩(YYYY-MM-DD 그대로), v24는 연월 조합 바인딩이라 일자 손실 | factory·seed 회귀 테스트; 실사이트 재측정은 dev 배포 뒤 예정 |
+| 현대 종료사유 | v25 `retResCd` 버튼 선택지 16개 + `계약기간 만료`→`계약만료` 별칭, 자유입력 자동 기입 중단 | 후보 해소 테스트; 실사이트 재측정 예정 |
+| 현대 자격 등급 | v25 `grade` 버튼 선택지 82개 + `단일등급`→`등급없음` 별칭, 외국어 등급과 trigger id로 구분 | 후보 해소 테스트; 실사이트 재측정 예정 |
+| 현대 전과/편입 | 규칙 없음(코드 수집만) | 프로필 `해당`의 대응 선택지를 정할 수 없어 보류 |
+
+선택지에 없는 값은 매핑하지 않고 "확인 필요"로 남긴다. 근거는 [CF-335 근거](../../raw/issues/CF-335/documents/hyundai-v25-field-inventory.md)를 따른다.
 
 ## 변경 이유
 
