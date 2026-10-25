@@ -1,19 +1,32 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { TrackEvent } from "../analytics/events";
+import { trackExtensionEvent } from "../analytics/extension-tracker";
 import { postingClient, type PostingClient } from "./client";
 import type { Posting, PostingInput } from "./model";
+import { NoticeBoard } from "./NoticeBoard";
+import type { ServerPosting } from "./push-api";
+import {
+  pushClient as defaultPushClient,
+  type PushClient,
+} from "./push-client";
+import { postingInput, reminderOutcome } from "./server-posting";
 import type { PostingSnapshot } from "./service";
 import { PostingForm } from "./PostingForm";
 import { PostingList } from "./PostingList";
 import styles from "./JobPostings.module.css";
 interface Props {
   client?: PostingClient;
+  pushClient?: PushClient;
   initialCreate?: boolean;
   now?: () => number;
+  track?: TrackEvent;
 }
 export function JobPostings({
   client = postingClient,
+  pushClient = defaultPushClient,
   initialCreate = false,
   now = Date.now,
+  track = trackExtensionEvent,
 }: Props) {
   const [snapshot, setSnapshot] = useState<PostingSnapshot>();
   const [error, setError] = useState("");
@@ -101,15 +114,16 @@ export function JobPostings({
   }, [client, now]);
   const mutate = async (
     action: () => Promise<PostingSnapshot>,
-    message: string,
+    message: string | ((next: PostingSnapshot) => string),
     dismissForm = false,
   ) => {
     setBusy(true);
     setError("");
     setFeedback("");
     try {
-      setSnapshot(await action());
-      setFeedback(message);
+      const next = await action();
+      setSnapshot(next);
+      setFeedback(typeof message === "string" ? message : message(next));
       if (dismissForm) closeForm();
     } catch (e) {
       setError(
@@ -140,6 +154,28 @@ export function JobPostings({
       },
       "공고가 저장되었습니다.",
       true,
+    );
+  };
+  const savedUrls = new Set((snapshot?.postings ?? []).map((p) => p.url));
+  // Server postings become ordinary local postings with the default reminders.
+  const saveFromInbox = (posting: ServerPosting) => {
+    if (savedUrls.has(posting.link)) return;
+    void mutate(
+      async () => {
+        const next = await client.save(postingInput(posting));
+        setView("planned");
+        track("posting_inbox_saved", {
+          surface: "options",
+          posting_id: posting.id,
+        });
+        return next;
+      },
+      (next) => {
+        const saved = next.postings.find((p) => p.url === posting.link);
+        return saved && reminderOutcome(saved) === "no_future_reminders"
+          ? "공고를 저장했지만 예약할 미래 알림이 없습니다. 이미 지난 알림은 보내지 않습니다."
+          : "공고를 마감 알림에 저장했습니다.";
+      },
     );
   };
   const rows = [...(snapshot?.postings ?? [])].sort(
@@ -294,6 +330,14 @@ export function JobPostings({
                 )}
               </p>
             </div>
+            <NoticeBoard
+              client={pushClient}
+              savedUrls={savedUrls}
+              busy={busy}
+              now={time}
+              onSave={saveFromInbox}
+              track={track}
+            />
             <nav className={styles.tabs} aria-label="지원 상태">
               {(["planned", "expired", "completed"] as const).map((key) => (
                 <button

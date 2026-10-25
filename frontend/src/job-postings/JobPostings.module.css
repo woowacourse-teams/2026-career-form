@@ -492,3 +492,55 @@
   border-radius: 10px;
   overflow: hidden;
 }
+
+/* Server notice board and push subscription settings share the card system. */
+.inbox,
+.subscription {
+  margin-bottom: 28px;
+}
+.inboxEmpty {
+  margin: 0;
+  padding: 18px 20px;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: 14px;
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+.subscriptionPanel {
+  padding: 18px 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-surface);
+}
+.switch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.switch input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--color-action);
+}
+.subscriptionStatus {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+.subscriptionActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.subscriptionNotes {
+  margin: 12px 0 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--color-text-muted);
+}
