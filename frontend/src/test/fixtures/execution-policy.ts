@@ -4,6 +4,8 @@
 // so this snapshot keeps Greeting v17.
 // 2026-10-24 (CF-335): Hyundai v25 changes server fieldRules only (career dates,
 // termination reason, certificate grade), so this snapshot keeps Hyundai v24.
+// 2026-10-25 (CF-346): Greeting v19 widens componentPolicy.patterns.directSearch to
+// university/graduate school names and majors, so this snapshot carries Greeting v19.
 // Contains policy configuration only. Tests must run without a database connection.
 // Refresh this snapshot alongside tests when the active execution-policy contract changes.
 import { beforeEach, afterEach } from "vitest";

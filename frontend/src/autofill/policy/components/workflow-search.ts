@@ -513,6 +513,9 @@ export async function search(
       !popup?.matches(componentSelector(popup, "openSearchPopup"))
     )
       return false;
+    // Coded options the list last rendered, matching or not: a rendered list
+    // without a choosable option is a "no exact match", not a silent failure.
+    let listed = 0;
     const option = await waitFor(
       () => {
         const livePopup = ownedPopup(input);
@@ -521,7 +524,7 @@ export async function search(
         )
           return undefined;
         popup = livePopup;
-        const options = [
+        const coded = [
           ...popup.querySelectorAll<HTMLElement>(
             componentSelector(popup, "codedSearchItem"),
           ),
@@ -530,9 +533,10 @@ export async function search(
             componentUsable(node) &&
             !!node.getAttribute(
               componentPolicy(node.ownerDocument).widget.optionCodeAttribute,
-            ) &&
-            matchesOption(node),
+            ),
         );
+        listed = coded.length;
+        const options = coded.filter((node) => matchesOption(node));
         const canonical = options.filter(
           (node) =>
             node.getAttribute(
@@ -554,6 +558,12 @@ export async function search(
       input.ownerDocument,
       componentRules(input.ownerDocument).timeouts.searchMs,
     );
+    if (!option && current() && input.value === item.profileValue) {
+      // Several exact canonical options, or a list of similar names whose
+      // create option (if any) this field may not use.
+      if (option === null) report?.("SEARCH_AMBIGUOUS");
+      else if (listed > 0) report?.("SEARCH_NO_EXACT_MATCH");
+    }
     if (
       !option ||
       !current() ||
