@@ -2,8 +2,8 @@
 
 > Topic: live-autofill-evaluation
 > Status: Current
-> Current: [CF-336 합성 프로필 학교 검색 한계와 reset의 버튼형 위젯 잔여](../../raw/issues/CF-336/documents/live-harness-synthetic-identity-and-reset-widgets.md)
-> History: [CF-124 최초 공용 실행 계약](../../raw/issues/CF-124/documents/adr/124-ai-operated-live-autofill-evaluation.md); [CF-124 사전 판정 분모와 평가 보고서](../../raw/issues/CF-124/documents/reports/2026-09-28-live-autofill-evaluation.md); [CF-173 평가 계약 1.1](../../raw/issues/CF-173/documents/evaluation-contract-1.1.md); [CF-310 원복·대화상자 근거](../../raw/issues/CF-310/documents/live-browser-pitfalls.md); [CF-310 원복 재키·표시 규칙 근거](../../raw/issues/CF-310/documents/live-harness-residue-and-display.md); [CF-310 재설치·응답 없는 탭 근거](../../raw/issues/CF-310/documents/live-harness-reinstall-and-hung-tab.md); [CF-314 실사이트 기입 정확도 재평가와 측정 절차](../../raw/issues/CF-314/documents/live-autofill-recheck-2026-10-22.md); [CF-333 테스트 계정 모드·설치본 잠금·채점 재사용 근거](../../raw/issues/CF-333/documents/live-harness-test-account-mode.md); [CF-336 합성 프로필 학교 검색 한계와 reset의 버튼형 위젯 잔여](../../raw/issues/CF-336/documents/live-harness-synthetic-identity-and-reset-widgets.md)
+> Current: [CF-334 반복 관찰 루프와 서비스 워커 API 관찰](../../raw/issues/CF-334/documents/live-harness-service-worker-observation-and-repeat-loop.md)
+> History: [CF-124 최초 공용 실행 계약](../../raw/issues/CF-124/documents/adr/124-ai-operated-live-autofill-evaluation.md); [CF-124 사전 판정 분모와 평가 보고서](../../raw/issues/CF-124/documents/reports/2026-09-28-live-autofill-evaluation.md); [CF-173 평가 계약 1.1](../../raw/issues/CF-173/documents/evaluation-contract-1.1.md); [CF-310 원복·대화상자 근거](../../raw/issues/CF-310/documents/live-browser-pitfalls.md); [CF-310 원복 재키·표시 규칙 근거](../../raw/issues/CF-310/documents/live-harness-residue-and-display.md); [CF-310 재설치·응답 없는 탭 근거](../../raw/issues/CF-310/documents/live-harness-reinstall-and-hung-tab.md); [CF-314 실사이트 기입 정확도 재평가와 측정 절차](../../raw/issues/CF-314/documents/live-autofill-recheck-2026-10-22.md); [CF-333 테스트 계정 모드·설치본 잠금·채점 재사용 근거](../../raw/issues/CF-333/documents/live-harness-test-account-mode.md); [CF-336 합성 프로필 학교 검색 한계와 reset의 버튼형 위젯 잔여](../../raw/issues/CF-336/documents/live-harness-synthetic-identity-and-reset-widgets.md); [CF-334 반복 관찰 루프와 서비스 워커 API 관찰](../../raw/issues/CF-334/documents/live-harness-service-worker-observation-and-repeat-loop.md)
 > Updated: 2026-10-25
 
 ## 현재 상태
@@ -58,6 +58,13 @@ CF-333(#333)은 `frontend/scripts/live-qa` 하네스에 테스트 계정 모드�
 - 합성 프로필의 학교 항목에는 검증된 카탈로그 신원이 없어 확장의 검색이 이름만 비교한다. 동명 학교가 여러 지역에 있으면(현대 '대진고' 서울·대구·강원) "일치하는 검색 결과가 여러 개"로 남는다. 판정에서는 이 칸을 오입력이 아니라 합성 프로필의 한계로 다루고, 동명이 없는 학교는 영향이 없다.
 - 테스트 계정 `reset`은 텍스트 칸을 지우고 빈 양식을 임시저장하지만 버튼형 위젯(학력선택·졸업여부·주야간·고용형태)과 그 hidden 값은 비우지 못한다(`saved`·`reset`의 `widgetsLeft`). 그 잔여가 있으면 현대 학력 준비가 "학력 종류와 입력 행을 안전하게 준비하지 못했습니다"로 멈추고 기입 0이 된다. 재측정 전에 사람이 사이트에서 해당 행을 지운다. 확장이 추가한 행과 선택은 `discard` 뒤에도 남는다.
 - 실행 중 DOM 상태를 0.2초 간격으로 읽는 읽기 전용 관찰(CDP, 클릭·입력 없음)은 `run`과 같은 세션에서 돌릴 수 있고, 하네스 기록만으로 좁히지 못한 "확정 뒤 소실" 시점을 잡았다. 근거는 [CF-336 근거](../../raw/issues/CF-336/documents/live-harness-synthetic-identity-and-reset-widgets.md)를 따른다.
+
+## 간헐 결함의 반복 관찰 루프와 서비스 워커 API 관찰 (2026-10-25)
+
+- **서비스 워커 API 관찰:** 확장의 `preparation/analyze`·`fields/analyze` 호출은 background service worker에서 나가므로 탭 단위 Playwright 리스너에는 잡히지 않는다. `PW_EXPERIMENTAL_SERVICE_WORKER_NETWORK_EVENTS=1`로 붙고 context 단위 `request`/`response` 리스너를 걸어야 요청·응답 본문이 보인다. 회차별 수집 후보는 디버그 빌드의 `console.log("request", …)` 객체를 `jsonValue`로 받아 회차 간 diff로 대조하고, 숨김의 정체는 감지 순간에 `aria-hidden` 조상·`[data-scope][data-state="open"]`·포커스 요소를 읽기 전용으로 덤프해 확정한다. 관찰 기록은 회차마다 즉시 쓴다.
+- **반복 관찰 루프:** 재현율이 낮은 간헐 결함(컬리 1/15 안팎)은 같은 탭에서 `run`을 자동 반복하며 회차마다 `run.json`의 마지막 분석 요약과 패널 수를 읽고 첫 재현에서 멈추는 루프로 잡는다. Greeting은 사이트 서버 임시저장이 없어 `reset` 없이 연속 실행이 가능하다. `run.json`의 콘솔 기록은 문자열 요약만 담아 디버그 로그 한 줄(`dismissed leftover popups`, `fields-resettled`)을 값 없이 수정 개입의 증거로 쓸 수 있다.
+- **컬리 0/81의 정정:** Issue #334 최초 보고(2026-10-22 CF-333 측정)의 "마지막 분석 응답이 `MATCH 0/81`"은 백엔드 응답이 아니라 프론트 재결합 요약이며, 원인은 드라이버가 열어 둔 Ark UI 팝오버의 `aria-hidden`이다. 상세는 [Greeting 공통 어댑터](adapter-greeting.md)를 따른다.
+- 근거는 [CF-334 근거](../../raw/issues/CF-334/documents/live-harness-service-worker-observation-and-repeat-loop.md)를 따른다.
 
 ## 과거 실행 근거
 
