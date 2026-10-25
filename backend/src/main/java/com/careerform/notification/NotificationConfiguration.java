@@ -14,6 +14,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
+import com.careerform.monitoring.ExternalCallMetrics;
+
+import io.micrometer.core.instrument.MeterRegistry;
+
 /** 공고 구독 알림 조립. career-form.notification.enabled=true일 때만 발송기와 API가 뜬다. */
 @Configuration(proxyBeanMethods = false)
 @EnableScheduling
@@ -46,6 +50,23 @@ public class NotificationConfiguration {
     @Bean public PushSubscriptionService pushSubscriptionService(NotificationStore store, PushSettings settings) {
         return new PushSubscriptionService(store, Clock.systemUTC(), settings.allowedEndpointHosts());
     }
+
+    @Bean public WebPushClient webPushClient(VapidKeys keys, PushSettings settings) {
+        return new ZerodepWebPushClient(keys, settings.timeout(), Clock.systemUTC());
+    }
+
+    @Bean public RetryPolicy retryPolicy(PushSettings settings) { return new RetryPolicy(settings.maxAttempts()); }
+
+    @Bean public PushDispatchMetrics pushDispatchMetrics(MeterRegistry meters, ExternalCallMetrics external) {
+        return new PushDispatchMetrics(meters, external);
+    }
+
+    @Bean public PushDispatcher pushDispatcher(NotificationStore store, WebPushClient client, RetryPolicy policy, PushSettings settings,
+                                              PushDispatchMetrics metrics) {
+        return PushDispatcher.withVirtualThreads(store, client, policy, settings, Clock.systemUTC(), metrics);
+    }
+
+    @Bean public PushDispatchSchedule pushDispatchSchedule(PushDispatcher dispatcher) { return new PushDispatchSchedule(dispatcher); }
 
     @Bean public ApplicationRunner notificationIndexes(MongoNotificationStore store) {
         return arguments -> {
