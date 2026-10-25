@@ -879,3 +879,11 @@
 - 승인된 후보 5개를 [CF-346 bundle](../raw/issues/CF-346/manifest.md)에 세 payload로 기록했다. Greeting 어댑터(정확 항목이 없을 때 사이트가 붙이는 `직접 입력하기:“값”` 선택지의 구조와 종류별 제공 여부, v19 `directSearch` 범위 확대, `SEARCH_NO_EXACT_MATCH`·`SEARCH_AMBIGUOUS`·`SEARCH_NO_RESULTS`·`SEARCH_TIMEOUT` 사유 보고, 같은 값 재기입의 범용 흐름 후보, 카카오게임즈 기존 미해결 항목), 필드 현황(v19 지원 범위 표), 실사이트 평가(합성값 프로필 전수 조사 절차, 새 볼륨 로컬 스택으로 새 정책 버전 검증, 드라이버 진단 로그).
 - [Greeting 공통 어댑터](topics/adapter-greeting.md), [어댑터 필드 현황](topics/adapter-field-inventory.md), [실사이트 자동 입력 평가 워크플로우](topics/live-autofill-evaluation.md)의 Current를 CF-346으로 바꾸고 앞선 근거를 History에 남겼다.
 - 실제 지원값·계정·세션·대화 전문은 저장하지 않았다. 전수 조사 값은 합성값이다.
+
+## [2026-10-25] ingest | CF-348 공고 구독 알림 서버
+
+- Approval-Digest: 41070bd2e6e1cd5e2c2f81feb60063cd207325b077be71f1ee0b00b3eb0ab7fd
+- Checkpoint-Candidate-Digest: f2db20a764a70d467ff37168a4b737bc7b35749f287bd0fbdf2d949cad5d2f31
+- Source-Revision: 650d289
+- 승인된 후보 2개 중 ADR을 [CF-348 bundle](../raw/issues/CF-348/manifest.md)에 기록하고 [공고 구독 알림](topics/job-posting-notifications.md) topic을 신설했다. ADR은 Issue #348 본문의 후보 전문을 상태 '승인됨', 관련 Issue #348·#349·#350으로 바꾸고 결과 끝에 단계적 도입 경로(1차 대안 B 실측 → 2차 대안 C는 장애 격리·채널 확장 이유로 같은 숫자 비교)와 숫자의 근거(구독자 1,000명, 하루 5건, 최악 5,000건, FCM 100ms 가정, 큐 필요 지점 약 8,400건)를 더했다.
+- 다른 topic 문서는 바꾸지 않았다. 실제 지원값·계정·세션·시크릿·VAPID 키·구독 endpoint·대화 전문은 저장하지 않았다.
