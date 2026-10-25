@@ -871,3 +871,11 @@
 - 승인된 후보 4개를 [CF-334 bundle](../raw/issues/CF-334/manifest.md)에 두 payload로 기록했다. Greeting 어댑터(드라이버가 열어 둔 Ark UI 팝오버의 `aria-hidden`이 양식 전체를 숨김으로 수집시켜 재결합이 전 칸 실패 → 숨김 감지 시 Escape로 닫고 재수집, 남는 칸은 결과 경고에 이름 표시, `searchFlows.cleanup`의 빈틈과 v19 보강 후보), 실사이트 평가(서비스 워커 API는 context 단위 관찰, 디버그 콘솔 객체로 회차 diff, 첫 재현에서 멈추는 반복 루프, 컬리 0/81은 백엔드 응답이 아니라는 정정).
 - [Greeting 공통 어댑터](topics/adapter-greeting.md)와 [실사이트 자동 입력 평가 워크플로우](topics/live-autofill-evaluation.md)의 Current를 CF-334로 바꾸고 앞선 근거를 History에 남겼다.
 - 실제 지원값·계정·세션·요청 본문·대화 전문은 저장하지 않았다.
+
+## [2026-10-25] ingest | CF-346 Greeting 검색 직접 입력 선택지 미사용
+
+- Approval-Digest: fe9263182f4be99fa243d40d23b9a65061d4226063cc78707b5149c59599feb3
+- Source-Revision: d5a5005
+- 승인된 후보 5개를 [CF-346 bundle](../raw/issues/CF-346/manifest.md)에 세 payload로 기록했다. Greeting 어댑터(정확 항목이 없을 때 사이트가 붙이는 `직접 입력하기:“값”` 선택지의 구조와 종류별 제공 여부, v19 `directSearch` 범위 확대, `SEARCH_NO_EXACT_MATCH`·`SEARCH_AMBIGUOUS`·`SEARCH_NO_RESULTS`·`SEARCH_TIMEOUT` 사유 보고, 같은 값 재기입의 범용 흐름 후보, 카카오게임즈 기존 미해결 항목), 필드 현황(v19 지원 범위 표), 실사이트 평가(합성값 프로필 전수 조사 절차, 새 볼륨 로컬 스택으로 새 정책 버전 검증, 드라이버 진단 로그).
+- [Greeting 공통 어댑터](topics/adapter-greeting.md), [어댑터 필드 현황](topics/adapter-field-inventory.md), [실사이트 자동 입력 평가 워크플로우](topics/live-autofill-evaluation.md)의 Current를 CF-346으로 바꾸고 앞선 근거를 History에 남겼다.
+- 실제 지원값·계정·세션·대화 전문은 저장하지 않았다. 전수 조사 값은 합성값이다.

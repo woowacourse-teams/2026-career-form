@@ -18,7 +18,7 @@ import com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement;
 
 final class GreetingCompanyFormPolicyFactory {
 
-    static final long VERSION = 8;
+    static final long VERSION = 9;
 
     private GreetingCompanyFormPolicyFactory() {
     }

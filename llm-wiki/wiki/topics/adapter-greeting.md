@@ -2,8 +2,8 @@
 
 > Topic: adapter-greeting
 > Status: Current
-> Current: [CF-334 열린 Ark UI 팝오버의 숨김 수집 근거](../../raw/issues/CF-334/documents/greeting-open-popover-hides-form.md)
-> History: [CF-94 근거](../../raw/issues/CF-94/documents/adapter-greeting.md); [CF-160 근거](../../raw/issues/CF-160/documents/adapter-greeting.md); [CF-162 근거](../../raw/issues/CF-162/documents/adapter-greeting.md); [CF-168 근거](../../raw/issues/CF-168/documents/adapter-greeting.md); [CF-310 검색 서버 액션 근거](../../raw/issues/CF-310/documents/greeting-search-server-action.md); [CF-310 v18 장애 정도 별칭 근거](../../raw/issues/CF-310/documents/greeting-v18-disability-alias.md); [CF-334 열린 Ark UI 팝오버의 숨김 수집 근거](../../raw/issues/CF-334/documents/greeting-open-popover-hides-form.md)
+> Current: [CF-346 직접 입력 선택지와 검색 실패 사유 코드 근거](../../raw/issues/CF-346/documents/greeting-direct-input-and-search-failure-codes.md)
+> History: [CF-94 근거](../../raw/issues/CF-94/documents/adapter-greeting.md); [CF-160 근거](../../raw/issues/CF-160/documents/adapter-greeting.md); [CF-162 근거](../../raw/issues/CF-162/documents/adapter-greeting.md); [CF-168 근거](../../raw/issues/CF-168/documents/adapter-greeting.md); [CF-310 검색 서버 액션 근거](../../raw/issues/CF-310/documents/greeting-search-server-action.md); [CF-310 v18 장애 정도 별칭 근거](../../raw/issues/CF-310/documents/greeting-v18-disability-alias.md); [CF-334 열린 Ark UI 팝오버의 숨김 수집 근거](../../raw/issues/CF-334/documents/greeting-open-popover-hides-form.md); [CF-346 직접 입력 선택지와 검색 실패 사유 코드 근거](../../raw/issues/CF-346/documents/greeting-direct-input-and-search-failure-codes.md)
 > Updated: 2026-10-25
 
 ## 현재 상태
@@ -36,7 +36,15 @@ FE는 SK·현대의 기존 선택 우선순위를 유지하며 유일한 최상�
 
 Greeting의 검색 콤보박스·달력·선택 메뉴는 Ark UI 팝오버이며, 열리면 바깥 루트에 `aria-hidden="true"`를 건다(hideOthers). 드라이버가 선택 없이 끝난 검색의 목록을 닫지 못하고 남기면(`searchFlows.cleanup`이 그 순간의 `aria-expanded`만 보고 trigger가 현재 요소가 아니면 건너뜀) 다음 수집에서 양식의 모든 칸이 숨김으로 잡힌다. 정적 필드 세션의 재결합 신원에 `visibility`가 들어 있어 그 스냅샷은 전 칸 `NO_MATCH`가 되고, 회차 끝 재분석은 숨은 칸을 변경으로 치지 않아 승인 0건으로 조용히 끝난다. 컬리에서 2026-10-22와 2026-10-25(60회 중 4회) 관측했고 백엔드 응답은 모두 정상이었다. 결과 요약 `MATCH 0/81`·`1/81`은 백엔드 응답이 아니라 프론트 재결합 요약이다.
 
-CF-334부터 분석 회차 시작과 기입 회차 끝의 수집은 직전 정상 스냅샷의 절반도 보이지 않으면 열린 콤보박스·달력·선택 버튼에 Escape를 보내 포커스를 뺀 뒤 최대 3초 다시 수집하고, 그래도 묶이지 않은 칸은 기입할 것 없이 끝나는 회차의 결과 경고에 이름으로 표시한다. 수정 빌드 40회 중 숨김 2회가 모두 복귀했고 무너진 회차는 없었다. 정리 단계가 Escape 뒤 닫힘을 기다리고 blur까지 하는 정책 보강(v19)은 별도 후보다. 근거는 [CF-334 근거](../../raw/issues/CF-334/documents/greeting-open-popover-hides-form.md)를 따른다.
+CF-334부터 분석 회차 시작과 기입 회차 끝의 수집은 직전 정상 스냅샷의 절반도 보이지 않으면 열린 콤보박스·달력·선택 버튼에 Escape를 보내 포커스를 뺀 뒤 최대 3초 다시 수집하고, 그래도 묶이지 않은 칸은 기입할 것 없이 끝나는 회차의 결과 경고에 이름으로 표시한다. 수정 빌드 40회 중 숨김 2회가 모두 복귀했고 무너진 회차는 없었다. 정리 단계가 Escape 뒤 닫힘을 기다리고 blur까지 하는 정책 보강은 별도 후보다(v19는 CF-346이 검색 직접 입력 범위 확대에 썼으므로 다음 버전이 된다). 근거는 [CF-334 근거](../../raw/issues/CF-334/documents/greeting-open-popover-hides-form.md)를 따른다.
+
+## 검색의 직접 입력 선택지와 v19, 검색 실패 사유 코드 (2026-10-25)
+
+Greeting 검색 목록은 정확히 같은 정식 항목이 없으면 유사 이름 20개 뒤에 21번째 항목으로 `직접 입력하기:“<값>”`(코드 `[[new]]`, 선택 뒤 `data-value`는 `[[new]]-<값>`)을 붙인다. 고교·대학·대학원 학교명, 전공명, 회사명, 자격증명이 같은 구조다. 시험명은 닫힌 목록이고 국적은 전체 250개를 먼저 그린 뒤 클라이언트 필터로 비우며, 둘 다 직접 입력 선택지가 없다. 직접 입력 허용은 정책 `componentPolicy.patterns.directSearch`가 정하고, v18까지 고교 학교명·회사명·자격증명이던 범위를 v19가 대학·대학원 학교명과 전공명으로 넓혔다(fieldRule·actionRule은 v18과 같음). 직접 입력 선택지는 라벨이 `직접 입력하기:“<프로필 값>”`과 정확히 일치하고 유일할 때만 고르며, 정확한 정식 항목이 있으면 그 항목을, 여러 개면 `SEARCH_AMBIGUOUS`로 남기고 유사 이름은 고르지 않는다. 카탈로그 신원(KESS 코드)이 확정된 학교는 계속 제외된다. 컬리 합성 프로필의 전공명 세 칸이 수정 전 50회 모두 비었고 v19 로컬 스택에서 5회 모두 채워졌다(완료 74·확인 필요 0).
+
+검색 함수가 사유 없이 실패하면 기본 코드 `SEARCH_UNCONFIRMED`가 붙는다. CF-346부터 옵션 대기 뒤 입력값이 그대로일 때 렌더된 목록에 고를 항목이 없으면 `SEARCH_NO_EXACT_MATCH`, 정확 항목이 여러 개면 `SEARCH_AMBIGUOUS`, 렌더된 목록이 필터로 비면 `SEARCH_NO_RESULTS`, 열린 목록에 항목이 끝내 없으면 `SEARCH_TIMEOUT`을 보고하고, 기본 코드는 팝업이 열리지 않은 경우에만 남는다. 결과 패널 집계는 같고 문구만 바뀐다.
+
+마지막 기입 뒤 페이지가 입력 노드를 다시 그려 재수집이 변경으로 판정되고, 재분석의 리뷰 계획이 현재값이 이미 프로필 값과 같은 칸도 다시 승인해 같은 값을 다시 쓴다(회차당 3~5회, 구조 서명이 반복되면 멈춤). 상태 드라이버는 완료 키가 있어 다시 돌지 않는다. 범용 재분석·리뷰 계획 흐름의 별도 후보다. 카카오게임즈 양식의 기존 미해결 항목(어학·자격 취득일 유지 실패 5, 등급/점수 1, 회화수준 2)은 검색 정확 일치와 무관하고, 동명 고교는 합성 프로필 한계로 "여러 개"로 표시된다. 근거는 [CF-346 직접 입력 선택지와 검색 실패 사유 코드 근거](../../raw/issues/CF-346/documents/greeting-direct-input-and-search-failure-codes.md)를 따른다.
 
 ## 검증과 제한
 
@@ -72,7 +80,7 @@ BE 정적 규칙과 FE 수집·반복행 준비·검색·날짜·선택 실행�
 
 ### 검색·조건부 제어
 
-검색은 같은 입력이 소유한 현재 후보의 정확하고 유일한 표시명·코드와 선택 후 상태를 확인한다. 고교·회사·자격 검색은 정확한 정식 결과가 없을 때만 화면이 제공하는 유일한 직접 입력 선택지를 사용한다. 중복 정식 결과는 직접 입력으로 우회하지 않는다.
+검색은 같은 입력이 소유한 현재 후보의 정확하고 유일한 표시명·코드와 선택 후 상태를 확인한다. 고교·회사·자격 검색은 정확한 정식 결과가 없을 때만 화면이 제공하는 유일한 직접 입력 선택지를 사용한다(v19부터 대학·대학원 학교명과 전공명도 포함, 위 2026-10-25 절). 중복 정식 결과는 직접 입력으로 우회하지 않는다.
 
 어학은 언어 선택 뒤 시험을, 시험 선택 뒤 숫자점수 또는 등급을 재수집한다. 경력 체크박스는 정확한 경력행·이름과 관측된 `재직중`/`재직 중` 라벨을 검증한 뒤 체크=재직중, 미체크=퇴사로 읽는다. 퇴사·미체크는 클릭하지 않고, 반대 기존 상태는 보존한다. 진행 기록과 결과 모델도 같은 의미 해석을 사용한다.
 

@@ -17,4 +17,6 @@
 
 - 현대 v25 (2026-10-24, CF-335): v24에서 세 가지만 바뀐다. 경력 입사·퇴사연월일(`tranStartDt`·`tranEndDt`, YYYY-MM-DD 칸)의 `YEAR_MONTH` 조합 바인딩을 직접 바인딩으로 바꿔 일자 손실을 없앤다. 종료사유 자유입력(`retResEtcCont`) 직접 바인딩을 빼고 종료사유 버튼 선택지(`retResCd`) 규칙을 선택지 16개의 실사이트 `data-code`와 별칭 `계약기간 만료`→`계약만료`로 추가한다. 자격 등급(`grade`; trigger id `grade_<n>`로 외국어 등급 `gradeForeLang_<n>`과 구분, trigger에 name이 없어 `requiredDomName`은 쓰지 않음) 규칙을 선택지 82개 코드와 별칭 `단일등급`→`등급없음`으로 추가한다. 선택지 코드는 2026-10-24 실사이트 작성 화면 두 곳의 `.select-option button[data-code]`를 읽기 전용으로 수집했다.
 
+- 그리팅 v19 (2026-10-25, CF-346): v18에서 `componentPolicy.patterns.directSearch`만 넓힌다. 고교 학교명·회사명·자격증명에 더해 대학·대학원 학교명(`educationalBackground.(universities|graduateSchools).<n>.schoolName`)과 전공명(`….majors.<n>`)에서도, 정확히 같은 정식 항목이 없고 사이트가 `직접 입력하기:“<값>”` 선택지를 하나 제공할 때 그 선택지로 프로필 값을 기입한다. fieldRule·actionRule은 v18과 같다. 2026-10-25 컬리 공개 공고 관찰에서 이 세 종류의 목록이 유사 이름만 있을 때 직접 입력 선택지를 제공하는 것을 확인했고, 확장은 패턴 밖이라 선택 없이 끝났다(결과 패널 확인 필요 3). 같은 패턴을 `greeting-browser-v1.json`(로컬 factory v9)에도 반영한다. 자원과 seed의 `freshDefaults`·`searchKinds`는 그 전부터 달랐고 이번에 맞추지 않는다.
+
 기존 `Local*Seeder` 클래스는 자동 실행 빈에서 제외했다. 이전 정책 팩토리를 사용하는 회귀 테스트와의 호환을 위해 남겨 두었으며, 실행 시 초기화는 `StartupPolicySeeder`만 담당한다. `backend/scripts/migrate-*.mjs`는 자동 실행하지 않는다.
