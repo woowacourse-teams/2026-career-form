@@ -326,3 +326,45 @@ it.each(["greeting_import_viewed", "greeting_import_saved"])(
     ]);
   },
 );
+
+describe("posting notification properties", () => {
+  it("keeps posting_id alongside the surface and drops posting contents", async () => {
+    const { handle, payloads } = collector();
+    await handle({
+      type: "ANALYTICS_TRACK",
+      event: "posting_notification_shown",
+      properties: {
+        surface: "notification",
+        posting_id: "0123456789abcdef0123456789abcdef",
+        company: "synthetic-company",
+        link: "https://careers.example.test/jobs/1",
+      },
+    });
+    expect(payloads).toEqual([
+      expect.objectContaining({
+        event: "posting_notification_shown",
+        properties: {
+          surface: "notification",
+          posting_id: "0123456789abcdef0123456789abcdef",
+          $process_person_profile: false,
+        },
+      }),
+    ]);
+  });
+  it.each(["has space", "x".repeat(65), 42, ""])(
+    "drops a posting_id that is not an identifier: %j",
+    async (posting_id) => {
+      const { handle, payloads } = collector();
+      await handle({
+        type: "ANALYTICS_TRACK",
+        event: "posting_inbox_saved",
+        properties: { surface: "options", posting_id },
+      });
+      expect(payloads).toEqual([
+        expect.objectContaining({
+          properties: { surface: "options", $process_person_profile: false },
+        }),
+      ]);
+    },
+  );
+});

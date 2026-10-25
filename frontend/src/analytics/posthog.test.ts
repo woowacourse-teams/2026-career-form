@@ -66,3 +66,34 @@ describe("PostHog capture", () => {
     );
   });
 });
+
+describe("PostHog posting properties", () => {
+  it("forwards posting_id without any other posting detail", async () => {
+    const bodies: unknown[] = [];
+    const capture = createPosthogCapture({
+      key: "test-project",
+      getDistinctId: async () => "anonymous",
+      fetch: async (_input, init) => {
+        bodies.push(JSON.parse(String(init?.body)));
+        return new Response("1");
+      },
+    });
+    await capture("posting_inbox_viewed", { surface: "options" });
+    await capture("posting_notification_opened", {
+      surface: "notification",
+      posting_id: "0123456789abcdef0123456789abcdef",
+    });
+    expect(bodies).toEqual([
+      expect.objectContaining({
+        properties: { surface: "options", $process_person_profile: false },
+      }),
+      expect.objectContaining({
+        properties: {
+          surface: "notification",
+          posting_id: "0123456789abcdef0123456789abcdef",
+          $process_person_profile: false,
+        },
+      }),
+    ]);
+  });
+});

@@ -38,6 +38,9 @@ export function createPosthogCapture({
             ...(properties.surface === "in_page_panel" && properties.page_host
               ? { page_host: properties.page_host }
               : {}),
+            ...(properties.posting_id
+              ? { posting_id: properties.posting_id }
+              : {}),
             $process_person_profile: false,
           },
         }),
