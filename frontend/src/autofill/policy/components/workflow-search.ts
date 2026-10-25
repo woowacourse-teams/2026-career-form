@@ -516,6 +516,8 @@ export async function search(
     // Coded options the list last rendered, matching or not: a rendered list
     // without a choosable option is a "no exact match", not a silent failure.
     let listed = 0;
+    let everListed = 0;
+    let sawOpenPopup = false;
     const option = await waitFor(
       () => {
         const livePopup = ownedPopup(input);
@@ -523,6 +525,7 @@ export async function search(
           !livePopup?.matches(componentSelector(livePopup, "openSearchPopup"))
         )
           return undefined;
+        sawOpenPopup = true;
         popup = livePopup;
         const coded = [
           ...popup.querySelectorAll<HTMLElement>(
@@ -536,6 +539,7 @@ export async function search(
             ),
         );
         listed = coded.length;
+        everListed = Math.max(everListed, listed);
         const options = coded.filter((node) => matchesOption(node));
         const canonical = options.filter(
           (node) =>
@@ -559,10 +563,13 @@ export async function search(
       componentRules(input.ownerDocument).timeouts.searchMs,
     );
     if (!option && current() && input.value === item.profileValue) {
-      // Several exact canonical options, or a list of similar names whose
-      // create option (if any) this field may not use.
+      // Several exact canonical options; a list of similar names whose create
+      // option (if any) this field may not use; a client-side filter that
+      // emptied a rendered list; or a list that never rendered in time.
       if (option === null) report?.("SEARCH_AMBIGUOUS");
       else if (listed > 0) report?.("SEARCH_NO_EXACT_MATCH");
+      else if (everListed > 0) report?.("SEARCH_NO_RESULTS");
+      else if (sawOpenPopup) report?.("SEARCH_TIMEOUT");
     }
     if (
       !option ||

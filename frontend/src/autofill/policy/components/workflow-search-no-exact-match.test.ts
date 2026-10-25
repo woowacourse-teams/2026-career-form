@@ -153,3 +153,31 @@ it("keeps majors out of direct input under the v18 pattern", async () => {
   expect(reported).toEqual(["SEARCH_NO_EXACT_MATCH"]);
   expect(clicks).not.toHaveBeenCalled();
 });
+
+it("reports no results when a client-side filter empties a rendered list", async () => {
+  const { input, clicks } = render(
+    "educationalBackground.universities.0.majors.2",
+    [option("0048239", "경영학"), option("0000549", "컴퓨터공학부")],
+  );
+  // Component forms renders the whole catalogue first, then filters it to nothing.
+  setTimeout(() => {
+    document
+      .querySelectorAll('[role="option"]')
+      .forEach((node) => node.remove());
+  }, 60);
+  const { written, reported } = await drive(input);
+  expect(written).toBe(false);
+  expect(reported).toEqual(["SEARCH_NO_RESULTS"]);
+  expect(clicks).not.toHaveBeenCalled();
+});
+
+it("reports a timeout when the open list never renders an option", async () => {
+  const { input, clicks } = render(
+    "educationalBackground.universities.0.majors.2",
+    [],
+  );
+  const { written, reported } = await drive(input);
+  expect(written).toBe(false);
+  expect(reported).toEqual(["SEARCH_TIMEOUT"]);
+  expect(clicks).not.toHaveBeenCalled();
+});
