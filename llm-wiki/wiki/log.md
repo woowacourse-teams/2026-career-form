@@ -879,3 +879,11 @@
 - 승인된 후보 5개를 [CF-346 bundle](../raw/issues/CF-346/manifest.md)에 세 payload로 기록했다. Greeting 어댑터(정확 항목이 없을 때 사이트가 붙이는 `직접 입력하기:“값”` 선택지의 구조와 종류별 제공 여부, v19 `directSearch` 범위 확대, `SEARCH_NO_EXACT_MATCH`·`SEARCH_AMBIGUOUS`·`SEARCH_NO_RESULTS`·`SEARCH_TIMEOUT` 사유 보고, 같은 값 재기입의 범용 흐름 후보, 카카오게임즈 기존 미해결 항목), 필드 현황(v19 지원 범위 표), 실사이트 평가(합성값 프로필 전수 조사 절차, 새 볼륨 로컬 스택으로 새 정책 버전 검증, 드라이버 진단 로그).
 - [Greeting 공통 어댑터](topics/adapter-greeting.md), [어댑터 필드 현황](topics/adapter-field-inventory.md), [실사이트 자동 입력 평가 워크플로우](topics/live-autofill-evaluation.md)의 Current를 CF-346으로 바꾸고 앞선 근거를 History에 남겼다.
 - 실제 지원값·계정·세션·대화 전문은 저장하지 않았다. 전수 조사 값은 합성값이다.
+
+## [2026-10-26] ingest | CF-349 확장 Web Push 구독과 공고 알림
+
+- Approval-Digest: dab518584df0f2191e1b2b11ab24a5ebda3ed6297255baad4e3e5142db471952
+- Source-Revision: 7dd0712
+- 승인된 후보 5개를 [CF-349 bundle](../raw/issues/CF-349/manifest.md)에 두 payload로 기록했다. 확장 Web Push(설치·시작·켜기·알람·구독 변경이 `sync()`로 수렴하는 구독 수명주기와 상태 6종·재시도 규칙, `userVisibleOnly: false`와 Chrome 121 하한의 조용한 푸시 수신, 중복·마감 억제, 사용자 클릭으로만 탭을 여는 알림 정책과 CF-161 저장 연결, `push-api.ts` 계약 정본과 PR #351 대조, 공지함·구독 설정 화면 결정), 계측(이벤트 7개와 surface `notification`, `posting_id`만 허용).
+- 새 topic [확장 Web Push 구독과 공고 알림](topics/extension-push-notifications.md)을 만들고 [선택적 이용 계측](topics/usage-analytics.md)의 Current를 CF-349로 바꾸고 앞선 근거를 History에 남겼다.
+- 구독 endpoint·키, 실제 공고·프로필 값, 대화 전문은 저장하지 않았다.

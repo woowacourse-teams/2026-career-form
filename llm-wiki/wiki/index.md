@@ -40,7 +40,7 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [확장 프로그램 프로필,지원서 패널 UI](topics/extension-ui.md) | 프로필,패널 탐색과 하늘색 중심 UI 계층 | 2026-09-12 |
 | [지원서 패널 안 자동 기입 흐름](topics/autofill-panel-workflow.md) | 단일 패널 실행,범용 실제 값 판정과 드롭다운 값 보존 | 2026-10-02 |
 | [미지원 지원서 페이지 안내](topics/unsupported-application-pages.md) | 미지원 준비 분석의 중단과 수동 복사 유지 | 2026-10-02 |
-| [선택적 이용 계측](topics/usage-analytics.md) | 24시간 첫 클릭률, Greeting 가져오기 계측, 최초 저장 중복 방지와 개인정보 경계 | 2026-10-21 |
+| [선택적 이용 계측](topics/usage-analytics.md) | 24시간 첫 클릭률, Greeting 가져오기 계측, 공고 알림 이벤트와 posting_id, 최초 저장 중복 방지와 개인정보 경계 | 2026-10-26 |
 | [범용 버튼 드롭다운 안전성](topics/generic-button-dropdown-safety.md) | 입력 범위,목록 소유 관계,옵션 분석 전달과 실행 직전 재검증 | 2026-10-02 |
 | [범용 드롭다운의 구조 클릭 허용 경계](topics/generic-dropdown-click-gate.md) | accessible label 금지 판정 유지와 수집기의 클릭 정책 적용 | 2026-10-17 |
 | [범용 섹션 분석 캐시의 키와 수명](topics/generic-section-analysis-cache.md) | 구조·칸 상태 키, 실행·URL 수명과 변경 섹션만 재분석 | 2026-10-17 |
@@ -61,6 +61,7 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [CI/CD 설정](topics/cicd-setup.md) | 배포 변수·시크릿 전체, deploy.sh 계약, 운영 LLM 비활성 이력, HTTP 공개 상태 | 2026-10-23 |
 | [배포 Runbook](topics/deployment-runbook.md) | 릴리스 기준 커밋 선택, main 병합 분류, digest 재사용, tag·동기화 PR, 자동 rollback, 릴리스 점검표, 정책 활성 버전은 배포 커밋의 seed를 따름, 4값 대조와 policy-versions API | 2026-10-24 |
 | [확장 프로그램 릴리스](topics/extension-release.md) | 수동 ZIP 빌드, origin 주입, 버전 상향, Web Store 게시와 보급 확인 | 2026-10-23 |
+| [확장 Web Push 구독과 공고 알림](topics/extension-push-notifications.md) | 조용한 구독 수명주기와 상태·재시도, 푸시 검증과 중복 억제, 알림 클릭·저장 연결, 공지함과 push-api.ts 계약 정본 | 2026-10-26 |
 | [확장·백엔드 호환 배포](topics/release-compatibility.md) | 호환 장치, 응답 스키마 협상 규칙, 확장 먼저 게시 순서, 1.4.0 사례 | 2026-10-23 |
 | [공용 모니터링 시스템](topics/monitoring-system.md) | 중앙 수집, 환경별 알림, 호스트 디스크 감시와 검증 경계 | 2026-10-02 |
 | [자동 입력 품질 관측과 사람 확인 요청](topics/autofill-quality-observation.md) | 실제 경로 및 버전별 지표, 사람 참고 분모와 평일 확인 요청 | 2026-10-07 |
