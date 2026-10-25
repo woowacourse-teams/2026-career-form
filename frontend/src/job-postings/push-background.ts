@@ -144,9 +144,5 @@ export function installPushBackground({
       })
       .catch(() => undefined);
   });
-  return {
-    handleMessage: createPushHandler(service, api, browser.runtime.id),
-    service,
-    receiver,
-  };
+  return { handleMessage: createPushHandler(service, api, browser.runtime.id) };
 }
