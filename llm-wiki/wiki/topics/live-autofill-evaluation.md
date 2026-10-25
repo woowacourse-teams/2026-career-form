@@ -2,8 +2,8 @@
 
 > Topic: live-autofill-evaluation
 > Status: Current
-> Current: [CF-334 반복 관찰 루프와 서비스 워커 API 관찰](../../raw/issues/CF-334/documents/live-harness-service-worker-observation-and-repeat-loop.md)
-> History: [CF-124 최초 공용 실행 계약](../../raw/issues/CF-124/documents/adr/124-ai-operated-live-autofill-evaluation.md); [CF-124 사전 판정 분모와 평가 보고서](../../raw/issues/CF-124/documents/reports/2026-09-28-live-autofill-evaluation.md); [CF-173 평가 계약 1.1](../../raw/issues/CF-173/documents/evaluation-contract-1.1.md); [CF-310 원복·대화상자 근거](../../raw/issues/CF-310/documents/live-browser-pitfalls.md); [CF-310 원복 재키·표시 규칙 근거](../../raw/issues/CF-310/documents/live-harness-residue-and-display.md); [CF-310 재설치·응답 없는 탭 근거](../../raw/issues/CF-310/documents/live-harness-reinstall-and-hung-tab.md); [CF-314 실사이트 기입 정확도 재평가와 측정 절차](../../raw/issues/CF-314/documents/live-autofill-recheck-2026-10-22.md); [CF-333 테스트 계정 모드·설치본 잠금·채점 재사용 근거](../../raw/issues/CF-333/documents/live-harness-test-account-mode.md); [CF-336 합성 프로필 학교 검색 한계와 reset의 버튼형 위젯 잔여](../../raw/issues/CF-336/documents/live-harness-synthetic-identity-and-reset-widgets.md); [CF-334 반복 관찰 루프와 서비스 워커 API 관찰](../../raw/issues/CF-334/documents/live-harness-service-worker-observation-and-repeat-loop.md)
+> Current: [CF-346 정확 일치 없음 전수 조사와 로컬 스택 정책 검증](../../raw/issues/CF-346/documents/live-harness-no-exact-match-survey-and-local-policy-stack.md)
+> History: [CF-124 최초 공용 실행 계약](../../raw/issues/CF-124/documents/adr/124-ai-operated-live-autofill-evaluation.md); [CF-124 사전 판정 분모와 평가 보고서](../../raw/issues/CF-124/documents/reports/2026-09-28-live-autofill-evaluation.md); [CF-173 평가 계약 1.1](../../raw/issues/CF-173/documents/evaluation-contract-1.1.md); [CF-310 원복·대화상자 근거](../../raw/issues/CF-310/documents/live-browser-pitfalls.md); [CF-310 원복 재키·표시 규칙 근거](../../raw/issues/CF-310/documents/live-harness-residue-and-display.md); [CF-310 재설치·응답 없는 탭 근거](../../raw/issues/CF-310/documents/live-harness-reinstall-and-hung-tab.md); [CF-314 실사이트 기입 정확도 재평가와 측정 절차](../../raw/issues/CF-314/documents/live-autofill-recheck-2026-10-22.md); [CF-333 테스트 계정 모드·설치본 잠금·채점 재사용 근거](../../raw/issues/CF-333/documents/live-harness-test-account-mode.md); [CF-336 합성 프로필 학교 검색 한계와 reset의 버튼형 위젯 잔여](../../raw/issues/CF-336/documents/live-harness-synthetic-identity-and-reset-widgets.md); [CF-334 반복 관찰 루프와 서비스 워커 API 관찰](../../raw/issues/CF-334/documents/live-harness-service-worker-observation-and-repeat-loop.md); [CF-346 정확 일치 없음 전수 조사와 로컬 스택 정책 검증](../../raw/issues/CF-346/documents/live-harness-no-exact-match-survey-and-local-policy-stack.md)
 > Updated: 2026-10-25
 
 ## 현재 상태
@@ -65,6 +65,13 @@ CF-333(#333)은 `frontend/scripts/live-qa` 하네스에 테스트 계정 모드�
 - **반복 관찰 루프:** 재현율이 낮은 간헐 결함(컬리 1/15 안팎)은 같은 탭에서 `run`을 자동 반복하며 회차마다 `run.json`의 마지막 분석 요약과 패널 수를 읽고 첫 재현에서 멈추는 루프로 잡는다. Greeting은 사이트 서버 임시저장이 없어 `reset` 없이 연속 실행이 가능하다. `run.json`의 콘솔 기록은 문자열 요약만 담아 디버그 로그 한 줄(`dismissed leftover popups`, `fields-resettled`)을 값 없이 수정 개입의 증거로 쓸 수 있다.
 - **컬리 0/81의 정정:** Issue #334 최초 보고(2026-10-22 CF-333 측정)의 "마지막 분석 응답이 `MATCH 0/81`"은 백엔드 응답이 아니라 프론트 재결합 요약이며, 원인은 드라이버가 열어 둔 Ark UI 팝오버의 `aria-hidden`이다. 상세는 [Greeting 공통 어댑터](adapter-greeting.md)를 따른다.
 - 근거는 [CF-334 근거](../../raw/issues/CF-334/documents/live-harness-service-worker-observation-and-repeat-loop.md)를 따른다.
+
+## 검색 종류별 정확 일치 없음 전수 조사와 새 정책 버전의 로컬 스택 검증 (2026-10-25)
+
+- **전수 조사 절차:** 정확히 같은 항목이 없는 합성값 프로필을 `start --profile`로 심고, 읽기 전용 관찰기(CDP, 클릭·입력 없음)로 검색 칸의 목록(항목 수, 마지막 항목, `data-value`)을 기록해 종류별 직접 입력 선택지 제공 여부를 표로 확정한 뒤 기본 프로필을 다시 심는다. 한 양식에 없는 종류는 그 칸이 있는 다른 공고에서 같은 절차로 관측한다.
+- **새 정책 버전 검증:** 올린 시드는 dev 배포 전에는 dev API에 없으므로 worktree별 compose 프로젝트의 새 볼륨 로컬 스택을 띄워 `GET /api/v1/policy-versions`로 seed·DB 활성 버전을 확인하고, `localhost:8080`을 보는 로컬 API 빌드를 `--reinstall`로 설치해 검증한다. 끝나면 dev API 빌드로 되돌리고 컨테이너만 내린다. 설치본 잠금의 `revision`·`apiHosts`로 설치된 빌드를 확인한다.
+- **드라이버 진단:** 로컬 빌드에 `VITE_LOCAL_WORKFLOW_DIAGNOSTICS=1`을 켜면 드라이버 단계 진단이 콘솔로 나오고, 디버그 빌드의 `console.table` 행은 관찰기가 JSON으로 받을 수 있어 `run.json`의 문자열 요약으로 좁히지 못한 원인(반복 기입 등)을 값 없이 재구성한다.
+- 근거는 [CF-346 정확 일치 없음 전수 조사와 로컬 스택 정책 검증](../../raw/issues/CF-346/documents/live-harness-no-exact-match-survey-and-local-policy-stack.md)를 따른다.
 
 ## 과거 실행 근거
 
