@@ -57,9 +57,12 @@ export function installPostingBackground() {
   });
   // Register listeners synchronously before restoring persisted jobs.
   recover();
-  return createPostingHandler(service, browser.runtime.id, (hash) =>
-    browser.tabs.create({
-      url: `chrome-extension://${browser.runtime.id}/options.html` + hash,
-    }),
-  );
+  return {
+    handleMessage: createPostingHandler(service, browser.runtime.id, (hash) =>
+      browser.tabs.create({
+        url: `chrome-extension://${browser.runtime.id}/options.html` + hash,
+      }),
+    ),
+    service,
+  };
 }
