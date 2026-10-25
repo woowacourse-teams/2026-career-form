@@ -87,7 +87,11 @@ import {
   type GenericAnalysisCache,
   type GenericAnalysisResult,
 } from "../generic/generic-analysis";
-import { debugAnalysis, debugReviewPlan } from "../debug/autofill-debug";
+import {
+  debugAnalysis,
+  debugReviewPlan,
+  debugWarn,
+} from "../debug/autofill-debug";
 import {
   buildReviewPlan,
   resolveProfileFieldValue,
@@ -110,6 +114,12 @@ import {
 import { takeWrittenSearchFollowUp } from "./search-follow-up-state";
 import { runAddressAnalysis } from "./address-analysis";
 import { belongsToFailedGroup } from "./workflow-write-items";
+import {
+  settleVisibleFields,
+  transientlyHidden,
+  visibleFieldCount,
+} from "./visible-fields-settle";
+import { dismissLeftoverComponentPopups } from "../policy/components/workflow-popup";
 
 import {
   isGenericStateDriver,
@@ -230,6 +240,30 @@ export function createAnalyzeFields({
     setStage("exception");
     return true;
   };
+  // A Component forms page can hide its whole form for a moment after writes
+  // or a server action. A snapshot taken then rebinds nothing and would end the
+  // run with silent gaps, so wait for the page to show its fields again.
+  const collectSettledFields = async (run: (typeof addressRun)["current"]) => {
+    const collect = () => collectFields(pageDocument, run.controller.signal);
+    const settled = await settleVisibleFields({
+      snapshot: await collect(),
+      previousVisible: run.visibleFields,
+      collect,
+      dismiss: () => dismissLeftoverComponentPopups(pageDocument),
+      signal: run.controller.signal,
+    });
+    if (settled.retries)
+      debugStageCounts(
+        settled.stillHidden ? "fields-still-hidden" : "fields-resettled",
+        visibleFieldCount(settled.snapshot),
+        settled.retries,
+      );
+    if (settled.dismissed)
+      debugWarn(`dismissed leftover popups=${settled.dismissed}`);
+    if (!transientlyHidden(run.visibleFields, settled.snapshot))
+      run.visibleFields = visibleFieldCount(settled.snapshot);
+    return settled.snapshot;
+  };
   const analyzeFields = async (
     loadedProfile: Profile,
     ignoreFreshRowDefaults = false,
@@ -267,7 +301,7 @@ export function createAnalyzeFields({
     setStage("analyzing");
     setResultRegistry?.(undefined);
     onActivity?.("matching");
-    const snapshot = await collectFields(pageDocument, run.controller.signal);
+    const snapshot = await collectSettledFields(run);
     if (
       run.controller.signal.aborted ||
       currentAnalysisGeneration !== analysisGeneration
@@ -540,7 +574,7 @@ export function createAnalyzeFields({
             .refreshAfterPass)
       )
         return false;
-      const next = await collectFields(pageDocument, run.controller.signal);
+      const next = await collectSettledFields(run);
       if (
         run.controller.signal.aborted ||
         currentAnalysisGeneration !== analysisGeneration
@@ -709,6 +743,23 @@ export function createAnalyzeFields({
     setFieldsSnapshot(snapshot);
     setPartial(plan.status === "partial");
     const analysisWarnings: string[] = [...(analysis.warningCodes ?? [])];
+    // Server matches this snapshot could not rebind. Mid-run that is normal
+    // (rows were just added and a refresh follows); it only matters when the
+    // run ends here with nothing left to write, so the warning waits for that.
+    let unresolvedWarning: string | undefined;
+    if (analysis.unresolvedFields?.length) {
+      const labels = [
+        ...new Set(
+          analysis.unresolvedFields
+            .map((field) => field.displayName)
+            .filter((label): label is string => Boolean(label)),
+        ),
+      ];
+      const shown = labels.slice(0, 5).join(", ");
+      const more =
+        analysis.unresolvedFields.length - Math.min(labels.length, 5);
+      unresolvedWarning = `페이지가 바뀌어 다시 연결하지 못한 항목 ${analysis.unresolvedFields.length}개: ${shown || "(이름 없음)"}${more > 0 ? ` 외 ${more}개` : ""}. 지원서에서 직접 확인해 주세요.`;
+    }
     if (
       options.reviewOnly &&
       reviewFollowUps.some((followUp) =>
@@ -721,6 +772,12 @@ export function createAnalyzeFields({
     if (plan.items.length === 0) {
       debugReviewDecisions(plan, snapshot.registry);
       if (await refreshAfterWrites()) return;
+      if (unresolvedWarning) {
+        setWarnings((current) => [...current, unresolvedWarning!]);
+        debugWarn(
+          `unresolved fields=${analysis.unresolvedFields?.length ?? 0} ${unresolvedWarning}`,
+        );
+      }
       setReviewItems([]);
       setResults([]);
       if (options.reviewOnly) {

@@ -2,9 +2,9 @@
 
 > Topic: adapter-greeting
 > Status: Current
-> Current: [CF-310 v18 장애 정도 별칭 근거](../../raw/issues/CF-310/documents/greeting-v18-disability-alias.md)
-> History: [CF-94 근거](../../raw/issues/CF-94/documents/adapter-greeting.md); [CF-160 근거](../../raw/issues/CF-160/documents/adapter-greeting.md); [CF-162 근거](../../raw/issues/CF-162/documents/adapter-greeting.md); [CF-168 근거](../../raw/issues/CF-168/documents/adapter-greeting.md); [CF-310 검색 서버 액션 근거](../../raw/issues/CF-310/documents/greeting-search-server-action.md); [CF-310 v18 장애 정도 별칭 근거](../../raw/issues/CF-310/documents/greeting-v18-disability-alias.md)
-> Updated: 2026-10-22
+> Current: [CF-334 열린 Ark UI 팝오버의 숨김 수집 근거](../../raw/issues/CF-334/documents/greeting-open-popover-hides-form.md)
+> History: [CF-94 근거](../../raw/issues/CF-94/documents/adapter-greeting.md); [CF-160 근거](../../raw/issues/CF-160/documents/adapter-greeting.md); [CF-162 근거](../../raw/issues/CF-162/documents/adapter-greeting.md); [CF-168 근거](../../raw/issues/CF-168/documents/adapter-greeting.md); [CF-310 검색 서버 액션 근거](../../raw/issues/CF-310/documents/greeting-search-server-action.md); [CF-310 v18 장애 정도 별칭 근거](../../raw/issues/CF-310/documents/greeting-v18-disability-alias.md); [CF-334 열린 Ark UI 팝오버의 숨김 수집 근거](../../raw/issues/CF-334/documents/greeting-open-popover-hides-form.md)
+> Updated: 2026-10-25
 
 ## 현재 상태
 
@@ -31,6 +31,12 @@ FE는 SK·현대의 기존 선택 우선순위를 유지하며 유일한 최상�
 ## v18: 장애 정도 optionMap 별칭 (2026-10-22)
 
 장애 정도(`...disability.degreeOfDisability`)는 서버 fieldRule의 LookupBinding optionMap이 프로필 값을 사이트 선택지로 바꾼다. v17에는 `중증`·`경증`과 사이트 문구 자체만 있어 프로필 문구 `심하지 않은 장애인`이 네 곳에서 비었다. v18은 `심한 장애인`→`중증(심한장애)`, `심하지 않은 장애인`→`경증(심하지 않은 장애)`를 더하고, 로컬 백엔드 재측정에서 카카오게임즈의 이 칸이 채워졌다(패널 96·12). 브라우저 정책 자원에는 이 칸의 optionMap이 없으므로 별칭은 시드 fieldRule에 둔다. 근거는 [CF-310 v18 근거](../../raw/issues/CF-310/documents/greeting-v18-disability-alias.md)를 따른다.
+
+## 열린 Ark UI 팝오버와 양식 전체 숨김 수집 (2026-10-25)
+
+Greeting의 검색 콤보박스·달력·선택 메뉴는 Ark UI 팝오버이며, 열리면 바깥 루트에 `aria-hidden="true"`를 건다(hideOthers). 드라이버가 선택 없이 끝난 검색의 목록을 닫지 못하고 남기면(`searchFlows.cleanup`이 그 순간의 `aria-expanded`만 보고 trigger가 현재 요소가 아니면 건너뜀) 다음 수집에서 양식의 모든 칸이 숨김으로 잡힌다. 정적 필드 세션의 재결합 신원에 `visibility`가 들어 있어 그 스냅샷은 전 칸 `NO_MATCH`가 되고, 회차 끝 재분석은 숨은 칸을 변경으로 치지 않아 승인 0건으로 조용히 끝난다. 컬리에서 2026-10-22와 2026-10-25(60회 중 4회) 관측했고 백엔드 응답은 모두 정상이었다. 결과 요약 `MATCH 0/81`·`1/81`은 백엔드 응답이 아니라 프론트 재결합 요약이다.
+
+CF-334부터 분석 회차 시작과 기입 회차 끝의 수집은 직전 정상 스냅샷의 절반도 보이지 않으면 열린 콤보박스·달력·선택 버튼에 Escape를 보내 포커스를 뺀 뒤 최대 3초 다시 수집하고, 그래도 묶이지 않은 칸은 기입할 것 없이 끝나는 회차의 결과 경고에 이름으로 표시한다. 수정 빌드 40회 중 숨김 2회가 모두 복귀했고 무너진 회차는 없었다. 정리 단계가 Escape 뒤 닫힘을 기다리고 blur까지 하는 정책 보강(v19)은 별도 후보다. 근거는 [CF-334 근거](../../raw/issues/CF-334/documents/greeting-open-popover-hides-form.md)를 따른다.
 
 ## 검증과 제한
 
