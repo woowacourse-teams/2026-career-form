@@ -75,7 +75,7 @@ VITE_POSTHOG_KEY=<project-key> VITE_POSTHOG_HOST=https://us.i.posthog.com npm ru
 
 SDK, 자동 페이지 수집, 세션 녹화, 사용자 프로필 생성은 사용하지 않습니다. 확장은 runtime 메시지를 통해 백그라운드에서 전송하고, 웹 사이트는 직접 전송합니다. 계측용 host permission은 추가하지 않습니다.
 
-전송 항목은 이벤트 이름, `surface`, 무작위 `distinct_id`이며 지원서 안 패널에만 `page_host`(호스트명)를 추가합니다. 프로필 값, 지원서 입력값, 전체 URL, 쿠키와 Referer는 전송하지 않습니다. 익명 식별자 `analyticsDistinctId`는 확장의 `chrome.storage.local` 또는 웹 사이트의 `localStorage`에 저장합니다. 계측 실패는 사용자 작업을 막지 않습니다.
+전송 항목은 이벤트 이름, `surface`, 무작위 `distinct_id`이며 지원서 안 패널에만 `page_host`(호스트명)를, 공고 알림 이벤트에만 서버 공고 ID `posting_id`를 추가합니다. 프로필 값, 지원서 입력값, 전체 URL, 쿠키와 Referer는 전송하지 않습니다. 익명 식별자 `analyticsDistinctId`는 확장의 `chrome.storage.local` 또는 웹 사이트의 `localStorage`에 저장합니다. 계측 실패는 사용자 작업을 막지 않습니다.
 
 허용 이벤트의 정본은 `src/analytics/events.ts`입니다.
 
@@ -89,10 +89,23 @@ SDK, 자동 페이지 수집, 세션 녹화, 사용자 프로필 생성은 사�
 | 확장 온보딩            | `onboarding_first_viewed`, `quick_profile_viewed`, `quick_profile_skipped`                                                    | 온보딩 최초 진입, 단계형 등록 진입과 값 없이 건너뛰기                                                                |
 | 공통                   | `profile_first_saved`                                                                                                         | 단계형 등록, 옵션 화면, Greeting 가져오기에서 비어 있지 않은 프로필을 처음 저장한 시점                               |
 | 웹 사이트, 확장 온보딩 | `landing_viewed`, `onboarding_viewed`, `install_link_clicked`, `onboarding_autofill_selected`, `onboarding_postings_selected` | 소개, 온보딩 진입, 설치 링크 클릭과 온보딩 시작 목적 선택. 확장 온보딩은 같은 화면을 `extension_onboarding`으로 기록 |
+| 옵션                   | `push_subscription_enabled`, `push_subscription_disabled`, `posting_inbox_viewed`, `posting_inbox_saved`                      | 공고 알림 구독 켜기·끄기, 공지함 목록 표시 성공, 공지함에서 마감 알림 저장 성공                                      |
+| OS 알림                | `posting_notification_shown`, `posting_notification_opened`, `posting_notification_saved`                                     | 공고 푸시 알림 표시, 알림 클릭으로 공고 열기, 알림 버튼으로 마감 알림 저장. `surface`는 `notification`               |
 
 `onboarding_first_viewed`와 `profile_first_saved`는 백그라운드가 익명 식별자별로 한 번만 전송하며 재전송 시 최초 발생 시각을 유지합니다. 복사와 자동 기입 시작도 클릭 수이지 완료 수가 아닙니다.
 
 `site/policies.ts`의 계측 고지는 검토용 초안입니다. 실제 운영 수집 설정, IP 등 접속 정보 처리, 보유 기간과 국외 이전 등은 사람이 검토한 뒤 확정해야 합니다.
+
+## 공고 알림 구독(Web Push)
+
+확장은 설치 하나를 구독 하나로 봅니다. 설치·시작·켜기 시 백엔드에서 VAPID 공개키를 받아 `pushManager.subscribe({ userVisibleOnly: false })`로 조용히 구독한 뒤 endpoint와 암호화 키를 구독 등록 API로 보냅니다. 기본값은 켜짐이며 관리 페이지 "지원 공고" 탭의 구독 설정에서 끌 수 있습니다. 끄면 서버 해지 API를 부른 뒤 브라우저 구독을 해제합니다.
+
+- 조용한 푸시는 Chrome 121부터 가능하므로 manifest `minimum_chrome_version`은 `121`입니다. 더 낮은 Chrome에서는 구독을 시도하지 않고 안내만 보입니다.
+- `VITE_API_BASE_URL`이 없는 빌드는 `NOT_CONFIGURED`, 알림 기능이 꺼졌거나 오래된 백엔드의 404는 `ENDPOINT_UNAVAILABLE`로 표시하고 재시도하지 않습니다. 네트워크·서버 오류는 `chrome.alarms`로 1·5·15·60분 간격으로 다시 등록합니다.
+- 푸시 payload(공고 ID, 회사, 직무, 링크, 접수 시작, 마감)는 검증한 뒤 OS 알림으로 띄웁니다. 같은 공고 ID와 마감이 지난 공고는 띄우지 않고, 알림 본문이나 "공고 열기" 버튼의 클릭으로만 탭을 엽니다. "마감 알림 저장"은 기존 로컬 공고(`PostingService.save`)에 기본 알림 시점(24시간·2시간 전)으로 저장합니다.
+- 공지함은 관리 페이지 "지원 공고" 탭에서 진행 중 공고 목록 API를 호출해 마감순으로 보여 주므로 푸시를 놓친 사용자도 같은 목록을 봅니다.
+- 서버에 저장되는 값은 브라우저의 푸시 구독 주소와 암호화 키뿐이며 프로필 값은 보내지 않습니다. 구독 endpoint와 키는 계측·로그에 넣지 않습니다. 개인정보 고지 문구는 사람이 확정합니다.
+- API 경로와 요청·응답 스키마의 정본은 `src/job-postings/push-api.ts`입니다. 백엔드 계약이 바뀌면 이 파일만 고칩니다.
 
 ## Web Store 제출 전 준비
 
