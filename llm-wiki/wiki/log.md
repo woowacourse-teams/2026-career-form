@@ -879,3 +879,11 @@
 - 승인된 후보 5개를 [CF-346 bundle](../raw/issues/CF-346/manifest.md)에 세 payload로 기록했다. Greeting 어댑터(정확 항목이 없을 때 사이트가 붙이는 `직접 입력하기:“값”` 선택지의 구조와 종류별 제공 여부, v19 `directSearch` 범위 확대, `SEARCH_NO_EXACT_MATCH`·`SEARCH_AMBIGUOUS`·`SEARCH_NO_RESULTS`·`SEARCH_TIMEOUT` 사유 보고, 같은 값 재기입의 범용 흐름 후보, 카카오게임즈 기존 미해결 항목), 필드 현황(v19 지원 범위 표), 실사이트 평가(합성값 프로필 전수 조사 절차, 새 볼륨 로컬 스택으로 새 정책 버전 검증, 드라이버 진단 로그).
 - [Greeting 공통 어댑터](topics/adapter-greeting.md), [어댑터 필드 현황](topics/adapter-field-inventory.md), [실사이트 자동 입력 평가 워크플로우](topics/live-autofill-evaluation.md)의 Current를 CF-346으로 바꾸고 앞선 근거를 History에 남겼다.
 - 실제 지원값·계정·세션·대화 전문은 저장하지 않았다. 전수 조사 값은 합성값이다.
+
+## [2026-10-26] ingest | CF-350 Web Push VAPID 시크릿과 알림 기능 배포 설정
+
+- Approval-Digest: e4434614c1e89a70afbbcc7888e48e4574efd1d8e82b811f02845fc4de049961
+- Source-Revision: cc7215e
+- 승인된 후보 2개를 [CF-350 bundle](../raw/issues/CF-350/manifest.md)에 두 payload로 기록했다. CI/CD 설정(알림 토글·선택값 2개·VAPID 시크릿 3개의 전달 경로로 변수 13개·시크릿 10개, 빈 문자열과 Spring placeholder 기본값 때문에 compose가 선택값 기본값을 채우는 이유, Environment 값은 다음 배포에서만 반영되는 점과 환경별 재배포 트리거), 배포 Runbook(병합 전 점검표의 운영 알림 토글 결정 항목, 스테이징 활성화 순서, 키 회전의 구독 무효).
+- [CI/CD 설정](topics/cicd-setup.md)과 [배포 Runbook](topics/deployment-runbook.md)의 Current를 CF-350으로 바꾸고 앞선 근거를 History에 남겼다. 절차의 Wiki 밖 정본은 `infra/WEB_PUSH_VAPID.md`다.
+- VAPID 키 값, 호스트 주소, 계정, 대화 전문은 저장하지 않았다.

@@ -2,9 +2,9 @@
 
 > Topic: deployment-runbook
 > Status: Current
-> Current: [CF-337 정책 활성 버전은 배포 커밋의 seed를 따른다](../../raw/issues/CF-337/documents/policy-active-version-follows-seed.md)
-> History: [근거 1](../../raw/issues/CF-41/documents/docs/operations/deployment-runbook.md); [CF-327 운영 배포 파이프라인 근거](../../raw/issues/CF-327/documents/deployment-pipeline.md); [CF-323 릴리스 시작 기준 커밋 선택](../../raw/issues/CF-323/documents/start-release-base-commit.md); [CF-333 정책 활성 버전과 배포 뒤 전환](../../raw/issues/CF-333/documents/policy-active-version-and-deploy.md); [CF-337 정책 활성 버전은 배포 커밋의 seed를 따른다](../../raw/issues/CF-337/documents/policy-active-version-follows-seed.md)
-> Updated: 2026-10-24
+> Current: [CF-350 릴리스 점검표의 운영 알림 토글 결정](../../raw/issues/CF-350/documents/release-checklist-notification-toggle.md)
+> History: [근거 1](../../raw/issues/CF-41/documents/docs/operations/deployment-runbook.md); [CF-327 운영 배포 파이프라인 근거](../../raw/issues/CF-327/documents/deployment-pipeline.md); [CF-323 릴리스 시작 기준 커밋 선택](../../raw/issues/CF-323/documents/start-release-base-commit.md); [CF-333 정책 활성 버전과 배포 뒤 전환](../../raw/issues/CF-333/documents/policy-active-version-and-deploy.md); [CF-337 정책 활성 버전은 배포 커밋의 seed를 따른다](../../raw/issues/CF-337/documents/policy-active-version-follows-seed.md); [CF-350 릴리스 점검표의 운영 알림 토글 결정](../../raw/issues/CF-350/documents/release-checklist-notification-toggle.md)
+> Updated: 2026-10-26
 
 ## 현재 상태
 
@@ -12,7 +12,7 @@
 
 Start release는 선택 입력 `ref`를 비우면 `develop` HEAD를, 채우면 `develop` 이력 안의 커밋 SHA를 release 기준으로 사용하고 기준 출처와 전체 SHA를 릴리스 Draft PR 본문에 기록한다. develop 조상이 아닌 커밋, 모호한 짧은 SHA, SHA가 아닌 값은 브랜치 생성 전에 거부한다. QA가 끝난 뒤 develop이 앞서 나가도 QA를 거친 커밋으로 release 후보를 고정할 수 있다([CF-323 근거](../../raw/issues/CF-323/documents/start-release-base-commit.md)).
 
-릴리스 절차는 CF-41의 Release·Hotfix 순서(릴리스 시작 workflow → Draft PR·staging 확인 → health·수동 E2E → Ready·승인·Merge Commit → digest 확인 → tag·동기화 PR)를 유지하되, 병합 전에 staging 배포 SHA가 release head와 같은지, `origin/main`의 모든 커밋이 release에 포함됐는지, 운영 설정에 새 필수값이 없는지, 확장 보급이 끝났는지 확인한다. 병합은 Merge Commit만 쓴다. 병합 후에는 digest 일치, `v<ver>` tag, 동기화 PR Merge Commit, 스토어 확장으로 운영 스모크를 확인한다. 최초 배포, 진단 명령, DB host 점검은 CF-41 근거를 따른다.
+릴리스 절차는 CF-41의 Release·Hotfix 순서(릴리스 시작 workflow → Draft PR·staging 확인 → health·수동 E2E → Ready·승인·Merge Commit → digest 확인 → tag·동기화 PR)를 유지하되, 병합 전에 staging 배포 SHA가 release head와 같은지, `origin/main`의 모든 커밋이 release에 포함됐는지, 운영 설정에 새 필수값이 없는지와 알림 토글을 켤지, 확장 보급이 끝났는지 확인한다. 병합은 Merge Commit만 쓴다. 병합 후에는 digest 일치, `v<ver>` tag, 동기화 PR Merge Commit, 스토어 확장으로 운영 스모크를 확인한다. 최초 배포, 진단 명령, DB host 점검은 CF-41 근거를 따른다.
 
 확장 프로그램 릴리스는 [확장 프로그램 릴리스](extension-release.md), 확장과 백엔드의 배포 순서는 [확장·백엔드 호환 배포](release-compatibility.md), 설정 레버는 [CI/CD 설정](cicd-setup.md)을 따른다. 배포, 확장 게시, revert 승인과 수동 복구는 사람이 수행한다.
 
@@ -20,9 +20,13 @@ Start release는 선택 입력 `ref`를 비우면 `develop` HEAD를, 채우면 `
 
 정책 활성 버전은 회사 문서의 `activePolicyVersion`에 있고, 정본은 DB가 아니라 배포 커밋의 seed다. CF-337부터 기동 seeder는 정책 문서를 insert-only로 먼저 넣은 뒤 회사 문서의 활성 버전을 seed 값과 같게 맞춘다(올림·내림 모두, 같으면 쓰기 없음, 프로필 무관). 배포 워크플로우가 develop→dev, `release/**`→staging, main→운영으로 나뉘어 있으므로 각 환경은 자기 배포 커밋의 버전을 주고, develop이 앞서 가도 운영은 다음 릴리스까지 머물며, 롤백 재배포 시 함께 되돌아간다. 운영 배포 승인이 전환 승인이고 수동 Mongo 전환 절차는 폐기한다. 사람이 DB에서 바꾼 값은 다음 기동에서 되돌아간다. 릴리스 점검의 4값 대조(배포 커밋, seed 버전, DB 버전, API 응답) 중 seed·DB 버전은 `GET /api/v1/policy-versions`의 `inSync`로 읽고, `inSync: false`가 남으면 기동 로그의 `POLICY_ACTIVE_VERSION … missing-policy`를 찾는다. 정책 내용을 바꾸면 버전 번호를 올리고 seed에는 활성 버전의 정책 문서를 항상 포함한다. CF-333까지의 수동 전환 경위는 [CF-333 근거](../../raw/issues/CF-333/documents/policy-active-version-and-deploy.md)에 있다. 근거는 [CF-337 정책 활성 버전은 배포 커밋의 seed를 따른다](../../raw/issues/CF-337/documents/policy-active-version-follows-seed.md)를 따른다.
 
+## 릴리스 점검표의 운영 알림 토글 결정 (2026-10-26)
+
+병합 전 점검의 "운영 설정에 새 필수값이 없는지"와 함께 "이번 릴리스에서 운영 알림 토글(`CAREER_FORM_NOTIFICATION_ENABLED`)을 켤지, 켠다면 production 시크릿 3개(`CAREER_FORM_PUSH_VAPID_PUBLIC_KEY`, `CAREER_FORM_PUSH_VAPID_PRIVATE_KEY`, `CAREER_FORM_PUSH_VAPID_SUBJECT`) 등록과 staging 종단 확인을 마쳤는지"를 확인한다. 스테이징 확인 순서는 시크릿 등록 → staging 배포 → health → `CAREER_FORM_NOTIFICATION_ENABLED=true` 재배포 → `[FE]` #349 스테이징 빌드 종단 확인이다. 알림 항목은 `deploy.sh` 필수값이 아니고 compose 기본값이 있어 등록하지 않아도 배포는 종전과 같다. 운영 토글은 릴리스 승인 시 사람이 결정하며, Environment 값은 배포 시점에 읽히므로 main 병합 배포가 있어야 컨테이너에 전달된다. VAPID 키 회전은 기존 구독 전부를 무효로 만들어 확장이 재구독해야 하므로 유출 의심 시에만 공지 뒤 수행한다. 절차의 Wiki 밖 정본은 [Web Push VAPID 키와 알림 기능 배포 설정](../../../infra/WEB_PUSH_VAPID.md)이고 근거는 [CF-350 릴리스 점검표의 운영 알림 토글 결정](../../raw/issues/CF-350/documents/release-checklist-notification-toggle.md)을 따른다.
+
 ## 변경 이유
 
-CF-41 Runbook은 workflow가 완성되기 전 설계 기준으로 쓰여 hotfix 무태그, revert 무배포, staging digest 조회 실패 조건, tree 일치 검사의 전제(main⊆release)가 빠져 있었고 2026-08-22 이후 갱신되지 않았다. 1.4.0 릴리스 준비에서 workflow 11개와 스크립트를 대조해 구현 기준으로 정정하고 릴리스 점검표를 추가했다. CF-323에서 Start release에 기준 커밋 선택을 추가했고 기본값은 develop HEAD로 유지했다. CF-337에서 seeder가 활성 버전을 배포 커밋의 seed에 맞추게 되어 운영 수동 전환 절차를 폐기했다.
+CF-41 Runbook은 workflow가 완성되기 전 설계 기준으로 쓰여 hotfix 무태그, revert 무배포, staging digest 조회 실패 조건, tree 일치 검사의 전제(main⊆release)가 빠져 있었고 2026-08-22 이후 갱신되지 않았다. 1.4.0 릴리스 준비에서 workflow 11개와 스크립트를 대조해 구현 기준으로 정정하고 릴리스 점검표를 추가했다. CF-323에서 Start release에 기준 커밋 선택을 추가했고 기본값은 develop HEAD로 유지했다. CF-337에서 seeder가 활성 버전을 배포 커밋의 seed에 맞추게 되어 운영 수동 전환 절차를 폐기했다. CF-350에서 Web Push 알림 토글과 VAPID 시크릿이 배포 설정에 추가되어 운영 활성화 결정을 점검표에 넣었다.
 
 ## 관련 지식
 
@@ -31,4 +35,4 @@ CF-41 Runbook은 workflow가 완성되기 전 설계 기준으로 쓰여 hotfix 
 - [CI/CD 설정](cicd-setup.md)
 - [릴리스 브랜치 유지와 정리](release-branch-lifecycle.md)
 - [시스템 PR 공유 파일 검사와 릴리스 본문 계약](release-pr-contract.md)
-- Wiki 밖 정본: [브랜치와 환경](../../../harness/policies/environments.md), [GitHub Ruleset](../../../harness/policies/github-ruleset.md), [GitHub 설정 체크리스트](../../../harness/policies/github-setup.md), [릴리스 브랜치 유지와 정리 운영 안내](../../../infra/RELEASE.md). 서술이 workflow와 다르면 workflow가 정본이며 파일 수정은 해당 보호 영역의 별도 Issue로 다룬다.
+- Wiki 밖 정본: [브랜치와 환경](../../../harness/policies/environments.md), [GitHub Ruleset](../../../harness/policies/github-ruleset.md), [GitHub 설정 체크리스트](../../../harness/policies/github-setup.md), [릴리스 브랜치 유지와 정리 운영 안내](../../../infra/RELEASE.md), [Web Push VAPID 키와 알림 기능 배포 설정](../../../infra/WEB_PUSH_VAPID.md). 서술이 workflow와 다르면 workflow가 정본이며 파일 수정은 해당 보호 영역의 별도 Issue로 다룬다.
