@@ -7,6 +7,11 @@ on:
         description: "release/<MAJOR.MINOR.PATCH>에 사용할 버전"
         required: true
         type: string
+      ref:
+        description: "release 기준 develop 커밋 SHA(비우면 develop HEAD)"
+        required: false
+        default: ""
+        type: string
 
 permissions:
   actions: write
@@ -38,15 +43,50 @@ jobs:
             echo "활성 release 브랜치는 하나만 허용됩니다" >&2
             exit 1
           fi
+      - name: 기준 커밋 확인
+        id: base
+        env:
+          REF_INPUT: ${{ inputs.ref }}
+        run: |
+          set -euo pipefail
+          develop_sha="$(git rev-parse --verify origin/develop^{commit})"
+          if [[ -z "$REF_INPUT" ]]; then
+            release_sha="$develop_sha"
+            source="develop HEAD"
+          else
+            ref="$(printf '%s' "$REF_INPUT" | tr 'A-F' 'a-f')"
+            if [[ ! "$ref" =~ ^[0-9a-f]{7,40}$ ]]; then
+              echo "ref는 7~40자리 커밋 SHA여야 합니다" >&2
+              exit 1
+            fi
+            if ! release_sha="$(git rev-parse --verify --quiet "$ref^{commit}")"; then
+              echo "ref에 해당하는 커밋이 없거나 하나로 정해지지 않습니다: $ref" >&2
+              exit 1
+            fi
+            if [[ "$release_sha" != "$ref"* ]]; then
+              echo "ref가 같은 이름의 브랜치나 tag로 해석됩니다: $ref" >&2
+              exit 1
+            fi
+            if ! git merge-base --is-ancestor "$release_sha" "$develop_sha"; then
+              echo "ref 커밋이 develop 이력에 없습니다: $release_sha" >&2
+              exit 1
+            fi
+            source="지정 커밋"
+          fi
+          {
+            echo "sha=$release_sha"
+            echo "source=$source"
+          } >> "$GITHUB_OUTPUT"
       - name: 릴리스 브랜치와 Draft PR 생성
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ inputs.version }}
+          RELEASE_SHA: ${{ steps.base.outputs.sha }}
+          BASE_SOURCE: ${{ steps.base.outputs.source }}
         run: |
           set -euo pipefail
           branch="release/$VERSION"
-          release_sha="$(git rev-parse origin/develop)"
-          git switch --create "$branch" "$release_sha"
+          git switch --create "$branch" "$RELEASE_SHA"
           git push origin "$branch"
           body="$RUNNER_TEMP/release-pr.md"
           printf '%s\n' \
@@ -55,7 +95,7 @@ jobs:
             '## 왜 바꿨나요?' \
             '다음 develop 작업과 현재 릴리스 후보 검증을 분리해야 합니다.' \
             '## 어떻게 바꿨나요?' \
-            "develop HEAD에서 release/$VERSION 브랜치와 Draft PR을 생성했습니다." \
+            "$BASE_SOURCE \`$RELEASE_SHA\`에서 release/$VERSION 브랜치와 Draft PR을 생성했습니다." \
             '## 기존 기능에 미치는 영향' \
             '검증된 release digest만 운영 배포 대상으로 승격됩니다.' \
             '## 검토한 대안과 선택 이유' \

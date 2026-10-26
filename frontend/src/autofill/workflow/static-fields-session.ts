@@ -55,6 +55,7 @@ interface OriginalField {
   identity: string;
   elements: Element[];
   candidateId: string;
+  displayName?: string;
   row?: Element;
   rowContainer?: Element | null;
 }
@@ -70,6 +71,9 @@ function captureField(handle: FieldCandidateHandle): OriginalField {
     identity: identity(handle),
     elements,
     candidateId: handle.candidateId,
+    ...(handle.candidate.displayName
+      ? { displayName: handle.candidate.displayName }
+      : {}),
     row,
     rowContainer: row?.parentElement,
   };
@@ -233,6 +237,8 @@ export function createStaticFieldsSession(
     const responseById = new Map(
       response.fields.map((field) => [field.candidateId, field]),
     );
+    // Server matches that found a home in this snapshot; the rest are reported.
+    const reboundSources = new Set<string>();
     const rebound = fields.map((field): FieldAnalysis => {
       const lookup = lookupField(field.candidateId);
       if (
@@ -265,8 +271,10 @@ export function createStaticFieldsSession(
           const matches = response.fields.filter(
             (item) => item.candidateId === previous.candidateId,
           );
-          if (matches.length === 1)
+          if (matches.length === 1) {
+            reboundSources.add(previous.candidateId);
             return { ...matches[0]!, candidateId: field.candidateId };
+          }
         }
       }
       deferred = true;
@@ -278,9 +286,27 @@ export function createStaticFieldsSession(
         reasonCodes: ["NO_MATCH"],
       };
     });
+    const labelsById = new Map(
+      [...originals.values()].map((field) => [
+        field.candidateId,
+        field.displayName,
+      ]),
+    );
+    const unresolvedFields = response.fields
+      .filter(
+        (field) =>
+          field.matchType === "MATCH" && !reboundSources.has(field.candidateId),
+      )
+      .map((field) => ({
+        candidateId: field.candidateId,
+        ...(labelsById.get(field.candidateId)
+          ? { displayName: labelsById.get(field.candidateId) }
+          : {}),
+      }));
     return {
       ...response,
       snapshotId: snapshot.request.snapshotId,
+      ...(unresolvedFields.length ? { unresolvedFields } : {}),
       fields: rebound.map((field) => {
         const lookup = lookupField(field.candidateId);
         const row =

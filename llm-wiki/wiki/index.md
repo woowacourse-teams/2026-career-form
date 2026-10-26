@@ -58,8 +58,10 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [ADR 작성 규약](topics/adr-authoring.md) | ADR 판단과 Issue raw 기록 | 2026-08-22 |
 | [기존 아키텍처 결정](topics/architecture-decisions.md) | CF-41 이전 ADR 현재본 | 2026-08-22 |
 | [확장 프로그램 설계](topics/extension-design.md) | UI 흐름과 검토 자산 | 2026-08-22 |
-| [CI/CD 설정](topics/cicd-setup.md) | 배포 환경 준비 계약 | 2026-08-22 |
-| [배포 Runbook](topics/deployment-runbook.md) | 배포, hotfix와 rollback 절차 | 2026-08-22 |
+| [CI/CD 설정](topics/cicd-setup.md) | 배포 변수·시크릿 전체, deploy.sh 계약, 운영 LLM 비활성 이력, HTTP 공개 상태 | 2026-10-23 |
+| [배포 Runbook](topics/deployment-runbook.md) | 릴리스 기준 커밋 선택, main 병합 분류, digest 재사용, tag·동기화 PR, 자동 rollback, 릴리스 점검표, 정책 활성 버전은 배포 커밋의 seed를 따름, 4값 대조와 policy-versions API | 2026-10-24 |
+| [확장 프로그램 릴리스](topics/extension-release.md) | 수동 ZIP 빌드, origin 주입, 버전 상향, Web Store 게시와 보급 확인 | 2026-10-23 |
+| [확장·백엔드 호환 배포](topics/release-compatibility.md) | 호환 장치, 응답 스키마 협상 규칙, 확장 먼저 게시 순서, 1.4.0 사례 | 2026-10-23 |
 | [공용 모니터링 시스템](topics/monitoring-system.md) | 중앙 수집, 환경별 알림, 호스트 디스크 감시와 검증 경계 | 2026-10-02 |
 | [자동 입력 품질 관측과 사람 확인 요청](topics/autofill-quality-observation.md) | 실제 경로 및 버전별 지표, 사람 참고 분모와 평일 확인 요청 | 2026-10-07 |
 | [사이트별 자동 입력 결과와 일별 그래프](topics/autofill-quality-dashboard.md) | 관측 표본 비율, 회사별 사이트와 KST 일별 공백 처리 | 2026-10-14 |
@@ -69,25 +71,25 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [저장소 스킬](topics/repository-skills.md) | 저장소 스킬 역할과 범위 | 2026-08-22 |
 | [회사 어댑터 개발](topics/adapter-development.md) | 프론트 회사 어댑터와 백엔드 정책 경계 | 2026-10-20 |
 | [Greeting 플랫폼 판정과 실행 어댑터](topics/greeting-platform-routing.md) | BE의 Greeting 판정과 FE 어댑터 지정,문맥 검증 | 2026-09-27 |
-| [Greeting 공통 어댑터](topics/adapter-greeting.md) | 기업별 화면 차이와 안전한 필드 입력,검증 범위 | 2026-10-07 |
-| [Hplace 공통 어댑터](topics/adapter-hplace.md) | MRS2 실행 정책, 127키 현황, step 1–3 실화면 검증, 칸 단위 인식·재실행 멱등성·저장 페이지 재로드 보고와 배포 경계 | 2026-10-20 |
+| [Greeting 공통 어댑터](topics/adapter-greeting.md) | 기업별 화면 차이와 안전한 필드 입력,검증 범위, 검색 서버 액션 요청 구조, v18 장애 정도 별칭, 열린 Ark UI 팝오버의 양식 전체 숨김 수집과 닫기, v19 직접 입력 선택지 범위와 검색 실패 사유 코드 | 2026-10-25 |
+| [Hplace 공통 어댑터](topics/adapter-hplace.md) | MRS2 실행 정책, 127키 현황, step 1–3 실화면 검증, 칸 단위 인식·재실행 멱등성·저장 페이지 재로드 보고, 저장·조회·무저장 이동 요청 구조, 4단계 분석 예외와 패널 집계, 빈 단계 분석 생략, 배포 경계, 활성 정책 버전 설정값 | 2026-10-23 |
 | [SK,현대 실시간 옵션 선택 보완](topics/adapter-live-option-selection.md) | 현재 회사 화면의 유일 옵션만 선택하는 어학 보완 | 2026-09-09 |
-| [현대 어댑터](topics/adapter-hyundai.md) | 현대 주소,국적,학력 수집,입력과 검증 제한 | 2026-09-08 |
-| [SK 어댑터](topics/adapter-sk.md) | SK 조건부 입력과 검증 제한 | 2026-09-08 |
-| [어댑터 필드 현황](topics/adapter-field-inventory.md) | 회사별 구현과 자동,수동 검증 상태 | 2026-10-20 |
+| [현대 어댑터](topics/adapter-hyundai.md) | 현대 주소,국적,학력 수집,입력과 검증 제한, 페이지의 Map·Set 재정의, 버튼형 선택지 코드의 읽기 전용 수집과 trigger 식별, 작성 화면 재진입 불가, 정책 v25 경력 날짜·종료사유·자격 등급, 검색 결과 창 바깥 클릭 핸들러와 학교명 소실 | 2026-10-25 |
+| [SK 어댑터](topics/adapter-sk.md) | SK 조건부 입력과 검증 제한, R262309형 고교 행의 추가 버튼 재식별 실패, v38 재학 상태 select 기준 재식별과 장애구분 별칭 | 2026-10-22 |
+| [어댑터 필드 현황](topics/adapter-field-inventory.md) | 회사별 구현과 자동,수동 검증 상태, 현대 v25 경력·종료사유·자격 등급, Greeting v19 직접 입력 지원 범위 | 2026-10-25 |
 | [LLM Wiki 지식 모델](topics/llm-wiki-knowledge-model.md) | Issue raw, topic Wiki와 승인 digest | 2026-08-22 |
 | [지원서 분석 API](topics/application-form-analysis-api.md) | schema v2와 검색 역할, OpenAI/Jev 단일 공급자 계약 | 2026-09-23 |
 | [지원서 분석 데이터 경계](topics/application-form-analysis-data-boundary.md) | 비식별 공급자 투영과 로컬 DOM 실행 경계 | 2026-09-23 |
 | [OpenAI 분석 예산과 안전 진단](topics/openai-analysis-budget-and-diagnostics.md) | 준비,필드/상호작용 시간 예산 분리와 비식별 실패 분류 | 2026-09-24 |
 | [Jev,OpenAI 호출 추적](topics/provider-call-tracing.md) | LangSmith Java SDK, 비식별 투영과 관측 실패 격리 | 2026-10-01 |
-| [범용 분할 이메일 보호](topics/generic-split-email-safety.md) | 아이디 칸의 전체 주소 입력 차단과 쓰기 직전 재검증 | 2026-10-01 |
+| [범용 분할 이메일 보호](topics/generic-split-email-safety.md) | 아이디 칸의 전체 주소 입력 차단과 쓰기 직전 재검증, 도메인 select의 값도 판정 근거 | 2026-10-22 |
 | [범용 자동 기입 평가 기준선](topics/generic-autofill-evaluation-baselines.md) | 계약 1.1 원인별 집계, 설치 revision 근거와 비교 보류 및 과거 기준선 | 2026-10-09 |
 | [범용 폼 컨텍스트 수집](topics/generic-form-context.md) | 문서 회사 기준 수집 선택, 동기 읽기 캐시 경계와 혼합 전후 비교 | 2026-10-15 |
 | [범용 칸 라벨 문맥과 형식 검사](topics/generic-field-context-safety.md) | 끊긴 라벨 복원, 문맥 없는 칸의 REVIEW와 로컬 형식 검사 | 2026-10-18 |
 | [범용 등급의 다른 사람 대상 칸 차단](topics/generic-other-person-context.md) | 추천인·보증인 등 다른 사람 대상 칸에 본인 정보 키가 매칭되면 BLOCKED | 2026-10-18 |
 | [범용 검토 화면의 3단계 표시](topics/generic-review-tiers.md) | 자동·확인 필요·입력 불가 표시, 연결 못한 칸 노출과 이유 문구 변환 | 2026-10-18 |
 | [DOM fixture 표시 텍스트 검토와 재현 경계](topics/dom-snapshot-review-boundaries.md) | v4 무변경 보존, 표시 텍스트 검토와 mock·실사이트 근거 구분 | 2026-10-18 |
-| [실사이트 자동 입력 평가 워크플로우](topics/live-autofill-evaluation.md) | 사전 분모, DOM 검증, 후보 관측 일치, 설치본 snapshot과 가시 칸 두 시점 측정 | 2026-10-22 |
+| [실사이트 자동 입력 평가 워크플로우](topics/live-autofill-evaluation.md) | 사전 분모, DOM 검증, 후보 관측 일치, 설치본 snapshot과 가시 칸 두 시점 측정, 새로고침 원복·대화상자 자동 처리 함정, 원복 재키 대조와 표시 규칙의 한계, 재설치 뒤 탭 재진입과 응답 없는 탭, 테스트 계정 모드·설치본 잠금·채점 재사용, 합성 프로필 학교 검색 한계와 reset 위젯 잔여, 간헐 결함 반복 관찰 루프와 서비스 워커 API 관찰, 검색 정확 일치 없음 전수 조사와 로컬 스택 정책 검증 | 2026-10-25 |
 | [오프라인 기입 정확도 측정](topics/offline-write-accuracy.md) | 결과 전 고정 정답, 제품 경로 판정, 보존식 집계와 스냅샷별 기준선 | 2026-10-21 |
 | [범용 자동 기입 검색 표면](topics/generic-autofill-search.md) | 범용 자격증 반복 행, 검색, 후속 재검토, 혼합 학력 행, role 없는 레이어 검색, 공급자 중립 검색 결과 구조 해석과 기존 CJ 계약 및 실사이트 검증 경계 | 2026-10-01 |
 | [범용 날짜 형식 변환과 로컬 승인](topics/generic-date-format.md) | 날짜 DIRECT 변환, 로컬 승인 재검증과 자동/실사이트 검증 구분 | 2026-09-24 |
@@ -95,6 +97,7 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [발표 디자인 시스템](topics/presentation-design-system.md) | 독립 레이아웃, 교체 슬롯과 정적 HTML/CSS 재현 규칙 | 2026-08-26 |
 | [랜딩,온보딩 웹 페이지](topics/landing-onboarding.md) | 단계형 선택 입력과 요약 보충, 확장 온보딩과 웹 경계 | 2026-10-13 |
 | [릴리스 브랜치 유지와 정리](topics/release-branch-lifecycle.md) | 배포,동기화 완료 후 정리와 SHA 보호, 관리자 설정 | 2026-10-03 |
+| [작업 브랜치 정리](topics/branch-cleanup.md) | 병합된 CF·hotfix·revert 브랜치 자동 삭제 대상, 건너뜀·실패 조건과 사람 정리 범위 | 2026-10-23 |
 | [확장 품질 보고의 fetch 호출 문맥](topics/extension-fetch-context.md) | 브라우저 전역 수신자, 보고 요청 계약과 검증 경계 | 2026-10-12 |
 | [Wiki 검증 기준 브랜치](topics/wiki-validation-base.md) | PR, 로컬 작업과 pre-push의 기준 ref 선택 및 raw 보호 | 2026-10-12 |
 | [품질 확인 사이트와 공개 지원서 링크](topics/quality-site-links.md) | 공고별 단일 확인, 공개 링크와 실행 분모 경계 | 2026-10-12 |

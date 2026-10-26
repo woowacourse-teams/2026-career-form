@@ -343,6 +343,12 @@ export interface FieldsAnalyzeResponse {
   fields: FieldAnalysis[];
   warningCodes?: ("UNRESOLVED_FIELD" | "LLM_UNAVAILABLE")[];
   blockCode?: "ADAPTER_STRUCTURE_MISMATCH" | "ADAPTER_POLICY_UNAVAILABLE";
+  /**
+   * Client-side only: fields the server matched that a later snapshot could
+   * not be rebound to (labels only, never values), so the result can name
+   * what was left out instead of ending silently.
+   */
+  unresolvedFields?: { candidateId: string; displayName?: string }[];
 }
 
 export interface AnalysisApiClient {

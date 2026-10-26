@@ -2,9 +2,9 @@
 
 > Topic: adapter-field-inventory
 > Status: Current
-> Current: [CF-177 후속 보완 묶음 근거](../../raw/issues/CF-177/documents/live-followup-bundle.md)
-> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-field-inventory.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-field-inventory.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-field-inventory.md); [CF-94 근거](../../raw/issues/CF-94/documents/adapter-field-inventory.md); [CF-160 근거](../../raw/issues/CF-160/documents/adapter-field-inventory.md); [CF-168 근거](../../raw/issues/CF-168/documents/adapter-field-inventory.md); [CF-169 근거](../../raw/issues/CF-169/documents/adapter-field-inventory.md); [CF-177 근거](../../raw/issues/CF-177/documents/adapter-field-inventory.md); [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md); [CF-177 C12·C13·시연 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md); [CF-177 KDI·구조 미확인 근거](../../raw/issues/CF-177/documents/live-kdi-unverified.md); [CF-177 후속 보완 묶음 근거](../../raw/issues/CF-177/documents/live-followup-bundle.md)
-> Updated: 2026-10-20
+> Current: [CF-346 Greeting v19 직접 입력 지원 범위](../../raw/issues/CF-346/documents/greeting-v19-field-inventory.md)
+> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-field-inventory.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-field-inventory.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-field-inventory.md); [CF-94 근거](../../raw/issues/CF-94/documents/adapter-field-inventory.md); [CF-160 근거](../../raw/issues/CF-160/documents/adapter-field-inventory.md); [CF-168 근거](../../raw/issues/CF-168/documents/adapter-field-inventory.md); [CF-169 근거](../../raw/issues/CF-169/documents/adapter-field-inventory.md); [CF-177 근거](../../raw/issues/CF-177/documents/adapter-field-inventory.md); [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md); [CF-177 C12·C13·시연 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md); [CF-177 KDI·구조 미확인 근거](../../raw/issues/CF-177/documents/live-kdi-unverified.md); [CF-177 후속 보완 묶음 근거](../../raw/issues/CF-177/documents/live-followup-bundle.md); [CF-335 현대 v25 경력 날짜·종료사유·자격 등급 지원 현황](../../raw/issues/CF-335/documents/hyundai-v25-field-inventory.md); [CF-346 Greeting v19 직접 입력 지원 범위](../../raw/issues/CF-346/documents/greeting-v19-field-inventory.md)
+> Updated: 2026-10-25
 
 ## 현재 상태
 
@@ -17,6 +17,29 @@ SK 검색은 입력별 widget의 새 검색 완료와 유일한 label/value를 �
 CF-82는 표준 ID 어학 값을 현재 페이지의 정확히 하나인 메뉴 후보에만 연결한다. 현대는 visible `data-code` 버튼과 선택 뒤 hidden code를, SK는 visible nonzero autocomplete ID와 명시적 별칭을 사용한다. 0개·복수 후보와 자유 텍스트는 자동 선택하지 않는다. 상세 근거는 [CF-82 보완](../../raw/issues/CF-82/documents/adapter/live-option-selection.md)을 따른다.
 
 CF-169는 현대 어학 언어·시험과 SK 어학 언어 상태 드라이버의 실패를 같은 행으로 격리하고 현대 국적과 SK 우대 여부 드라이버는 근거가 없어 제외한다([근거](../../raw/issues/CF-169/documents/adapter-field-inventory.md)).
+
+## 현대 v25 경력 날짜·종료사유·자격 등급 (2026-10-24)
+
+| 항목 | 구현 | 검증 상태 |
+|---|---|---|
+| 현대 경력 입사·퇴사연월일 | v25 직접 바인딩(YYYY-MM-DD 그대로), v24는 연월 조합 바인딩이라 일자 손실 | factory·seed 회귀 테스트; 실사이트 재측정은 dev 배포 뒤 예정 |
+| 현대 종료사유 | v25 `retResCd` 버튼 선택지 16개 + `계약기간 만료`→`계약만료` 별칭, 자유입력 자동 기입 중단 | 후보 해소 테스트; 실사이트 재측정 예정 |
+| 현대 자격 등급 | v25 `grade` 버튼 선택지 82개 + `단일등급`→`등급없음` 별칭, 외국어 등급과 trigger id로 구분 | 후보 해소 테스트; 실사이트 재측정 예정 |
+| 현대 전과/편입 | 규칙 없음(코드 수집만) | 프로필 `해당`의 대응 선택지를 정할 수 없어 보류 |
+
+선택지에 없는 값은 매핑하지 않고 "확인 필요"로 남긴다. 근거는 [CF-335 근거](../../raw/issues/CF-335/documents/hyundai-v25-field-inventory.md)를 따른다.
+
+## Greeting v19 직접 입력 지원 범위 (2026-10-25)
+
+| 항목 | 구현 | 검증 상태 |
+|---|---|---|
+| Greeting 대학·대학원 학교명 직접 입력 | v19 `patterns.directSearch`에 추가. 정확 항목 없음 + 유일한 `직접 입력하기:“<값>”` 선택지일 때만. 카탈로그 신원 확정 학교는 제외 | 회귀 테스트; 컬리 합성값 읽기 전용 관측 1회 |
+| Greeting 전공명 직접 입력 | v19 `….majors.<n>` 추가. 같은 조건 | 회귀 테스트; 컬리 로컬 스택 v19 5회 완료 74·확인 필요 0(수정 전 50회 71·3) |
+| Greeting 고교 학교명·회사명·자격증명 직접 입력 | v18과 같음 | 컬리·카카오게임즈 합성값 관측에서 직접 입력 선택 성공 |
+| Greeting 시험명·국적 | 직접 입력 허용 안 함(사이트가 선택지를 주지 않음). 각각 `SEARCH_NO_EXACT_MATCH`·`SEARCH_NO_RESULTS` 보고 | 카카오게임즈 합성값 관측 1회 |
+| Greeting 검색 실패 사유 | `SEARCH_NO_EXACT_MATCH`·`SEARCH_AMBIGUOUS`·`SEARCH_NO_RESULTS`·`SEARCH_TIMEOUT` 구분, 기본 코드는 팝업 미개방만 | 회귀 테스트 11개 |
+
+컬리 지원서 누락 전수 점검(50회)에서 결정적으로 비는 칸은 전공명 세 칸뿐이었고, 그 밖의 빈 칸(재직 중 미체크, 지원 경로, 파일·동의, 첫 전공 행의 전공 구분)은 의도된 결과다. 카카오게임즈 양식의 기존 미해결 항목(어학·자격 취득일 유지 실패 5, 등급/점수 1, 회화수준 2)은 검색 정확 일치와 무관하다. 다른 플랫폼의 검색 칸에서 정확 일치가 없을 때의 처리는 같은 전수 조사 방식으로 먼저 관찰한 뒤 별도 후보로 올린다. 근거는 [CF-346 Greeting v19 직접 입력 지원 범위](../../raw/issues/CF-346/documents/greeting-v19-field-inventory.md)를 따른다.
 
 ## 변경 이유
 
@@ -135,7 +158,7 @@ BE 정적 규칙과 FE 수집·반복행 준비·검색·날짜·선택 실행�
 
 ### 검색·조건부 제어
 
-검색은 같은 입력이 소유한 현재 후보의 정확하고 유일한 표시명·코드와 선택 후 상태를 확인한다. 고교·회사·자격 검색은 정확한 정식 결과가 없을 때만 화면이 제공하는 유일한 직접 입력 선택지를 사용한다. 중복 정식 결과는 직접 입력으로 우회하지 않는다.
+검색은 같은 입력이 소유한 현재 후보의 정확하고 유일한 표시명·코드와 선택 후 상태를 확인한다. 고교·회사·자격 검색은 정확한 정식 결과가 없을 때만 화면이 제공하는 유일한 직접 입력 선택지를 사용한다(v19부터 대학·대학원 학교명과 전공명도 포함, 위 2026-10-25 절). 중복 정식 결과는 직접 입력으로 우회하지 않는다.
 
 어학은 언어 선택 뒤 시험을, 시험 선택 뒤 숫자점수 또는 등급을 재수집한다. 경력 체크박스는 정확한 경력행·이름과 관측된 `재직중`/`재직 중` 라벨을 검증한 뒤 체크=재직중, 미체크=퇴사로 읽는다. 퇴사·미체크는 클릭하지 않고, 반대 기존 상태는 보존한다. 진행 기록과 결과 모델도 같은 의미 해석을 사용한다.
 

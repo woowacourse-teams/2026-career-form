@@ -513,6 +513,11 @@ export async function search(
       !popup?.matches(componentSelector(popup, "openSearchPopup"))
     )
       return false;
+    // Coded options the list last rendered, matching or not: a rendered list
+    // without a choosable option is a "no exact match", not a silent failure.
+    let listed = 0;
+    let everListed = 0;
+    let sawOpenPopup = false;
     const option = await waitFor(
       () => {
         const livePopup = ownedPopup(input);
@@ -520,8 +525,9 @@ export async function search(
           !livePopup?.matches(componentSelector(livePopup, "openSearchPopup"))
         )
           return undefined;
+        sawOpenPopup = true;
         popup = livePopup;
-        const options = [
+        const coded = [
           ...popup.querySelectorAll<HTMLElement>(
             componentSelector(popup, "codedSearchItem"),
           ),
@@ -530,9 +536,11 @@ export async function search(
             componentUsable(node) &&
             !!node.getAttribute(
               componentPolicy(node.ownerDocument).widget.optionCodeAttribute,
-            ) &&
-            matchesOption(node),
+            ),
         );
+        listed = coded.length;
+        everListed = Math.max(everListed, listed);
+        const options = coded.filter((node) => matchesOption(node));
         const canonical = options.filter(
           (node) =>
             node.getAttribute(
@@ -554,6 +562,15 @@ export async function search(
       input.ownerDocument,
       componentRules(input.ownerDocument).timeouts.searchMs,
     );
+    if (!option && current() && input.value === item.profileValue) {
+      // Several exact canonical options; a list of similar names whose create
+      // option (if any) this field may not use; a client-side filter that
+      // emptied a rendered list; or a list that never rendered in time.
+      if (option === null) report?.("SEARCH_AMBIGUOUS");
+      else if (listed > 0) report?.("SEARCH_NO_EXACT_MATCH");
+      else if (everListed > 0) report?.("SEARCH_NO_RESULTS");
+      else if (sawOpenPopup) report?.("SEARCH_TIMEOUT");
+    }
     if (
       !option ||
       !current() ||

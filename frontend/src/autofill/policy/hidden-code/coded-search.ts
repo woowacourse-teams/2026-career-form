@@ -258,6 +258,77 @@ export function createCodedSearchModule(
     );
   }
 
+  // The site closes result views with an animation, and its document-level
+  // click handler reads every view still visible as one set: when the first
+  // one holds no selection it blanks the display of all of them, hidden codes
+  // included or not. A view left open after a search that selected nothing,
+  // or a view still sliding up, can therefore wipe a row committed moments
+  // ago. Searches end only once no view is visible.
+  const SEARCH_VIEW_CLOSE_MILLISECONDS = 1500;
+  function visibleSearchViews(doc: Document): HTMLElement[] {
+    return Array.from(
+      doc.querySelectorAll<HTMLElement>(contract.targets.searchDisplay),
+    ).filter(
+      (view) =>
+        view.isConnected &&
+        (view.offsetWidth > 0 ||
+          view.offsetHeight > 0 ||
+          view.getClientRects().length > 0),
+    );
+  }
+  function waitForSearchViewsClosed(
+    doc: Document,
+    signal?: AbortSignal,
+  ): Promise<boolean> {
+    const view = doc.defaultView;
+    if (!view) return Promise.resolve(visibleSearchViews(doc).length === 0);
+    return new Promise((resolve) => {
+      const deadline = Date.now() + SEARCH_VIEW_CLOSE_MILLISECONDS;
+      const check = () => {
+        if (signal?.aborted) return resolve(false);
+        if (visibleSearchViews(doc).length === 0) return resolve(true);
+        if (Date.now() >= deadline) return resolve(false);
+        view.setTimeout(check, 50);
+      };
+      check();
+    });
+  }
+  // After a search that selected nothing, the restored query is empty but the
+  // site still shows the list. Notifying it of the empty query makes the site
+  // close the view and drop the list, as it would for a user clearing the box.
+  async function dismissStaleResults(
+    field: SearchField,
+    before: FieldState,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    if (
+      signal?.aborted ||
+      !field.display.isConnected ||
+      !field.results.isConnected ||
+      before.hiddenValue !== "" ||
+      before.searchResult ||
+      field.display.value !== "" ||
+      field.hidden.value !== ""
+    )
+      return;
+    const doc = field.display.ownerDocument;
+    if (
+      field.results.childElementCount === 0 &&
+      visibleSearchViews(doc).length === 0
+    )
+      return;
+    runDomPlan(
+      contract.behavior.actionPlans.searchNotify,
+      { input: field.display },
+      { value: "" },
+      () =>
+        !signal?.aborted &&
+        field.display.isConnected &&
+        field.display.value === "",
+    );
+    await waitForSearchViewsClosed(doc, signal);
+  }
+
   function markConfirmed(field: SearchField): void {
     const container = field.display.closest<HTMLElement>(
       contract.targets.searchField,
@@ -595,6 +666,7 @@ export function createCodedSearchModule(
       result.button.closest(contract.targets.searchResults) !== field.results
     ) {
       restoreIfUnchanged(field, query, before);
+      await dismissStaleResults(field, before, signal);
       if (result && !signal?.aborted) onFailure?.("SEARCH_UNCONFIRMED");
       return false;
     }
@@ -630,6 +702,7 @@ export function createCodedSearchModule(
             )))
     ) {
       restoreIfUnchanged(field, query, before);
+      await dismissStaleResults(field, before, signal);
       onFailure?.("SEARCH_UNCONFIRMED");
       return false;
     }
@@ -648,6 +721,7 @@ export function createCodedSearchModule(
         result.code,
         before,
       );
+      await dismissStaleResults(field, before, signal);
       onFailure?.("SEARCH_UNCONFIRMED");
       return false;
     }
@@ -695,10 +769,14 @@ export function createCodedSearchModule(
         result.code,
         before,
       );
+      await dismissStaleResults(field, before, signal);
       onFailure?.("SEARCH_UNCONFIRMED");
       return false;
     }
     markConfirmed(field);
+    // The site is still sliding this view up; a click elsewhere before it is
+    // gone would blank the display just confirmed.
+    await waitForSearchViewsClosed(document, signal);
     return true;
   }
 

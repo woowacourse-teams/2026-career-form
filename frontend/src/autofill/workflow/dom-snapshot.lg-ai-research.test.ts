@@ -8,6 +8,7 @@ import {
 } from "../dom/collect";
 import { collectSemanticContext } from "../dom/semantic-context";
 import { buildReviewPlan } from "../review/review-plan";
+import { SPLIT_EMAIL_REASON } from "../dom/split-email";
 
 const FIXTURE = join(
   process.cwd(),
@@ -34,7 +35,9 @@ describe("LG AI Research sanitized application form structure", () => {
   it("recovers the broken birth label only in the generic collection path", async () => {
     collect();
     const snapshot = await collectFieldsSnapshotWithDropdowns(document);
-    const fields = snapshot.request.sections.flatMap((section) => section.fields);
+    const fields = snapshot.request.sections.flatMap(
+      (section) => section.fields,
+    );
     expect(fields.slice(3, 6).map((field) => field.displayName)).toEqual([
       "년",
       "월",
@@ -48,8 +51,10 @@ describe("LG AI Research sanitized application form structure", () => {
     }
     const defaults = collectFieldsSnapshot(document);
     expect(
-      defaults.request.sections.flatMap((section) => section.fields)
-        .slice(3, 6).map(labelTexts),
+      defaults.request.sections
+        .flatMap((section) => section.fields)
+        .slice(3, 6)
+        .map(labelTexts),
     ).toEqual([[], [], []]);
   });
 
@@ -83,13 +88,19 @@ describe("LG AI Research sanitized application form structure", () => {
       document.querySelector(".birth-date-selects select")!.id = label.htmlFor;
     });
     expect(labelTexts(fields[3]!)).toContain("생년월일 *");
-    const year = document.querySelector<HTMLElement>(".birth-date-selects select")!;
+    const year = document.querySelector<HTMLElement>(
+      ".birth-date-selects select",
+    )!;
     expect(collectSemanticContext(year, null).labels).toContainEqual({
-      source: "label", text: "생년월일",
+      source: "label",
+      text: "생년월일",
     });
   });
 
-  it("does not treat the email id input as an unsupported split email", () => {
+  // The sanitized snapshot keeps the domain select's option values
+  // (gmail.com, …) while its labels are "[TEXT]"; the live page labels them
+  // with the same domains. Either form marks the pair as a split email.
+  it("treats the email id input with a domain-valued select as a split email", () => {
     const { snapshot, fields } = collect();
     const emailId = fields[6]!;
     const profile = createEmptyProfile();
@@ -118,7 +129,8 @@ describe("LG AI Research sanitized application form structure", () => {
       registry: snapshot.registry,
     });
     expect(emailId.displayName).toBe("이메일 아이디");
-    expect(plan.items[0]).toMatchObject({ status: "available" });
+    expect(plan.items[0]?.status).not.toBe("available");
+    expect(plan.items[0]).toMatchObject({ reason: SPLIT_EMAIL_REASON });
   });
 
   it("recovers an unassociated sibling title and description without borrowing other questions", () => {
@@ -132,7 +144,8 @@ describe("LG AI Research sanitized application form structure", () => {
     });
     expect(fields[1]?.displayName).toBe("추천인 연락 방법");
     expect(fields[1]?.semanticContext?.labels).toContainEqual({
-      source: "description", text: "본인 연락처가 아닙니다.",
+      source: "description",
+      text: "본인 연락처가 아닙니다.",
     });
     expect(labelTexts(fields[0]!)).not.toContain("추천인 연락 방법");
     expect(fields.slice(3, 6).map(labelTexts)).toEqual([[], [], []]);

@@ -754,18 +754,50 @@
 - [선택적 이용 계측](topics/usage-analytics.md)의 Current와 History를 갱신하고 가져오기 이벤트 의미, 비교 저장 경계, 발생 화면과 계측 도구 범위를 반영했다.
 - 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.
 
+## [2026-10-21] ingest | CF-310 실사이트 QA 하네스의 요청 구조와 브라우저 운영 함정
+
+- Approval-Digest: 613b4acd5fd87f8d2186b4ac401715fbed539b93eea1421f11163fb5591ee258
+- Source-Revision: 149b350a7ed85aefcb65448f816c6901d30f2b12
+- 승인된 후보 5개를 [CF-310 bundle](../raw/issues/CF-310/manifest.md)에 기록하고 승인 후보 스냅샷의 SHA-256을 재확인했다.
+- [Hplace 어댑터](topics/adapter-hplace.md), [Greeting 어댑터](topics/adapter-greeting.md), [현대 어댑터](topics/adapter-hyundai.md), [실사이트 평가](topics/live-autofill-evaluation.md)의 Current와 History를 갱신하고 MRS2 저장·조회·무저장 이동 요청, Greeting 검색 서버 액션, 현대 Map·Set 재정의, 새로고침 원복과 Playwright 대화상자 자동 처리를 반영했다. 어댑터 동작과 필드 현황은 바꾸지 않았다.
+- 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.
+
 ## [2026-10-21] ingest | CF-312 숨은 다른 단계 control의 학력 행 단계 검사 제외
 
 - Approval-Digest: a3e5bc3e0b8bda65a9fa8cb88dd5be5b92e6e6a2e3634c372b6905d203446686
 - Source-Revision: cc49b605ada7dddc16ae21ba5ffc599071daad72
 - 승인된 후보 3개를 [CF-312 bundle](../raw/issues/CF-312/manifest.md)에 기록하고 CF-307 구조 반복 실행 후속 조사 문서를 대체했다.
 - [범용 구조 반복 실행](topics/generic-structure-loop.md)의 Current와 History를 갱신하고 미확정 가설 절을 확인된 경계로 바꿨다.
+
 ## [2026-10-21] ingest | CF-313 오프라인 기입 정확도 측정과 달력 최종 확인
 
 - Approval-Digest: 7c2efdcde535f2e513f787da9c444f7014e643c42b7700b2296460049497292f
 - Source-Revision: cdd1bd0f10765a040096ce32f143cca9f552a6f2
 - 승인된 후보 C1~C3과 실측 기준선을 [CF-313 bundle](../raw/issues/CF-313/manifest.md)에 기록했다.
 - [오프라인 기입 정확도 측정](topics/offline-write-accuracy.md)을 새로 만들고 [범용 연월 달력 선택](topics/generic-calendar-selection.md)의 Current와 History를 갱신했다.
+
+## [2026-10-22] ingest | CF-310 실사이트 QA 측정에서 확인한 SK 행 구조, 에이치닷 4단계·패널, 하네스 한계
+
+- Approval-Digest: 6e367ec4018bfd976fab32c98e94b94d35cfc59d33de0747f61917e65736919f
+- Source-Revision: 733c097092f54154e8be5e91bb4b10863b75c193
+- 승인된 후보 5개를 [CF-310 bundle](../raw/issues/CF-310/manifest.md)의 두 번째 수집으로 기록하고 승인 후보 스냅샷의 SHA-256을 재확인했다.
+- [SK 어댑터](topics/adapter-sk.md), [Hplace 어댑터](topics/adapter-hplace.md), [실사이트 평가](topics/live-autofill-evaluation.md)의 Current와 History를 갱신하고 R262309형 고교 행의 재식별 실패, 4단계 분석 `BAD_REQUEST`와 패널 집계 의미, 원복 재키 대조와 표시 규칙의 한계를 반영했다.
+- 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.
+
+## [2026-10-22] ingest | CF-310 결함 수정에서 확인한 정책 별칭 위치, SK v38 재식별, 빈 단계 분석 생략, 현대 코드 수집 한계, 하네스 재진입
+
+- Approval-Digest: 9fd9bbce11f926e2cc6027742160d7265ecdcdc034a816df189c47238a86477c
+- Source-Revision: c5d703f411b7220829268ddf260a289e6cf48814
+- 승인된 후보 5개를 [CF-310 bundle](../raw/issues/CF-310/manifest.md)의 세 번째 수집으로 기록하고 승인 후보 스냅샷의 SHA-256을 재확인했다.
+- [SK 어댑터](topics/adapter-sk.md), [Greeting 어댑터](topics/adapter-greeting.md), [Hplace 어댑터](topics/adapter-hplace.md), [현대 어댑터](topics/adapter-hyundai.md), [실사이트 평가](topics/live-autofill-evaluation.md)의 Current와 History를 갱신하고 v38·v18 별칭 위치, 재학 상태 select 기준 재식별, 수락 필드 0건의 분석 생략, 버튼형 선택지 코드 한계, 재설치 뒤 재진입과 응답 없는 탭 처리를 반영했다.
+- 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.
+
+## [2026-10-22] ingest | CF-310 분할 이메일 판정의 도메인 값 근거
+
+- Approval-Digest: c3c933ce146ec66b3958185c45de2324286cfc9db5328bf598208472fae6e941
+- Source-Revision: e8e5894173856ba86ca4c3dbdc95ba1aff818dfc
+- 승인된 후보 1개를 [CF-310 bundle](../raw/issues/CF-310/manifest.md)의 네 번째 수집으로 기록하고 승인 후보 스냅샷의 SHA-256을 재확인했다.
+- [범용 분할 이메일 보호](topics/generic-split-email-safety.md)의 Current와 History를 갱신하고 선택지 값도 판정 근거로 삼는 변경을 반영했다.
 - 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.
 
 ## [2026-10-22] ingest | CF-314 실사이트 기입 정확도 재평가와 측정 절차 정정
@@ -775,3 +807,75 @@
 - 승인된 지식 후보 세 교훈과 실측 수치를 [CF-314 bundle](../raw/issues/CF-314/manifest.md)에 기록하고 CF-173 평가 계약 1.1 측정 절차를 이 topic의 현재 근거로 대체했다.
 - [실사이트 자동 입력 평가 워크플로우](topics/live-autofill-evaluation.md)의 Current와 History를 갱신하고 가시 칸 두 시점 측정, 단계별 지표 분리, 숨은 중복 칸 판정을 반영했다.
 - 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.
+
+## [2026-10-23] ingest | CF-330 병합된 작업 브랜치 자동 정리
+
+- Approval-Digest: 62fd194700b267b992a92148291f6cee2e7d19b3a42e71a54f2757362e620225
+- Source-Revision: a429fa8a1a4ebab19635d0dfe327a806edc425ee
+- 승인된 후보 3개 중 ADR을 [CF-330 bundle](../raw/issues/CF-330/manifest.md)에 기록하고 [작업 브랜치 정리](topics/branch-cleanup.md) topic을 신설했다.
+- [릴리스 브랜치 유지와 정리](topics/release-branch-lifecycle.md)의 수동 정리 문장을 새 topic 링크로 바꿨다. Current와 History는 CF-155를 유지했다.
+- 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.
+
+## [2026-10-23] ingest | CF-327 배포 정책 Wiki 통합 정리
+
+- Approval-Digest: 460019c1c58c3248f460202a9b0e81f8fa783ffef0981abc96f7bccb2ae237f0
+- Source-Revision: 82bcb5cd7e384096ee9b6f70e7f71803ed561af6
+- 승인된 후보 6개를 [CF-327 bundle](../raw/issues/CF-327/manifest.md)에 기록하고 승인 후보 스냅샷의 SHA-256을 확인했다.
+- [배포 Runbook](topics/deployment-runbook.md), [CI/CD 설정](topics/cicd-setup.md), [Hplace 공통 어댑터](topics/adapter-hplace.md)의 Current와 History를 갱신하고 [확장 프로그램 릴리스](topics/extension-release.md), [확장·백엔드 호환 배포](topics/release-compatibility.md)를 신설했다.
+- workflow 11개와 infra 스크립트를 구현 기준으로 대조했고, 운영 host 주소·포트 값·시크릿 값·대화 전문은 저장하지 않았다.
+
+## [2026-10-23] ingest | CF-323 릴리스 시작 기준 커밋 선택
+
+- Approval-Digest: 657002f335f7ca06d16eeec0d7e8b4c8e669da4b86130cf31ec5afafcf2aee92
+- Source-Revision: 576973c
+- 승인된 후보 1개를 [CF-323 bundle](../raw/issues/CF-323/manifest.md)에 기록하고 CF-327 운영 배포 파이프라인 근거 위에 Start release 기준 커밋 선택을 얹었다.
+- [배포 Runbook](topics/deployment-runbook.md)의 Current를 CF-323으로 바꾸고 CF-327을 History에 남겼다. 현재 상태에 Start release 기준 커밋 선택을 반영했다.
+- 실제 지원값·계정·세션·URL·대화 전문은 저장하지 않았다.
+
+## [2026-10-24] ingest | CF-333 실사이트 QA 하네스 테스트 전용 모드 전환
+
+- Approval-Digest: e3220900fa34d5fd1ee3718f11713ef2c78fa8bbdb93741c0fa6e1be570f8e41
+- Source-Revision: fe78625
+- 승인된 후보 7개를 [CF-333 bundle](../raw/issues/CF-333/manifest.md)에 세 payload로 기록했다. 실사이트 평가(테스트 계정 모드, 설치본 잠금, 채점 재사용·합계 재계산, 새 정책 검증 환경), 현대 어댑터(작성 화면 재진입 불가, 입사·퇴사연월일 일자 누락, 종료사유 자유입력 오배치), 배포 Runbook(정책 활성 버전은 seeder가 바꾸지 않음, 4값 대조와 배포 뒤 전환).
+- [실사이트 자동 입력 평가 워크플로우](topics/live-autofill-evaluation.md), [현대 어댑터](topics/adapter-hyundai.md), [배포 Runbook](topics/deployment-runbook.md)의 Current를 CF-333으로 바꾸고 앞선 근거를 History에 남겼다.
+- 실제 지원값·계정·세션·URL 쿼리·대화 전문은 저장하지 않았다.
+
+## [2026-10-24] ingest | CF-337 seeder 활성 정책 버전 동기화
+
+- Approval-Digest: 6c29dfc9ca6d0ca7fea721df4041a85987539e910dbf6c16e0678d96f4e27af0
+- Source-Revision: 7fd5b68
+- 승인된 후보 2개를 [CF-337 bundle](../raw/issues/CF-337/manifest.md)에 payload 하나로 기록했다. 정책 활성 버전의 정본은 배포 커밋의 seed이고 seeder가 모든 환경에서 DB를 seed에 맞추며(롤백 포함), 운영 배포 승인이 전환 승인이라 수동 Mongo 전환을 폐기한다. 4값 대조 중 seed·DB 버전은 `GET /api/v1/policy-versions`로 읽는다.
+- [배포 Runbook](topics/deployment-runbook.md)의 Current를 CF-337로 바꾸고 CF-333 근거를 History에 남겼다.
+- 실제 지원값·계정·세션·시크릿·대화 전문은 저장하지 않았다.
+
+## [2026-10-24] ingest | CF-335 현대 경력 날짜·종료사유·자격 등급 수정
+
+- Approval-Digest: 3de73b5b4b19338686b279ee3ded763a4466714ccbd4414c4fda84d6d885eb39
+- Source-Revision: c157a16
+- 승인된 후보 3개를 [CF-335 bundle](../raw/issues/CF-335/manifest.md)에 두 payload로 기록했다. 현대 어댑터(버튼형 선택지 코드의 읽기 전용 수집과 CF-310 관측 정정, trigger에 name이 없어 id로만 구분, 정책 v25의 경력 날짜·종료사유·자격 등급 매핑), 필드 현황(v25 지원 범위와 전과/편입 보류).
+- [현대 어댑터](topics/adapter-hyundai.md)와 [어댑터 필드 현황](topics/adapter-field-inventory.md)의 Current를 CF-335로 바꾸고 앞선 근거를 History에 남겼다.
+- 실제 지원값·계정·세션·대화 전문은 저장하지 않았다. 선택지 코드 표는 공개 선택지다.
+
+## [2026-10-25] ingest | CF-336 현대 학교명 검색 미확정
+
+- Approval-Digest: 8f1781e209bbaec70946dac4806881f408aad04f7710e76f7df5de24a586fdee
+- Source-Revision: 0df5dc2
+- 승인된 후보 4개를 [CF-336 bundle](../raw/issues/CF-336/manifest.md)에 두 payload로 기록했다. 현대 어댑터(사이트 바깥 클릭 핸들러가 보이는 검색 창 전부의 표시값을 첫 창 기준으로 지움 → 확장이 창을 닫고 기다리는 수정, 결과 패널은 DOM 값 기준 "확인 필요" 판정이라는 정정, 카탈로그 신원 없는 검색의 "여러 개"), 실사이트 평가(합성 프로필 학교 검색 한계, reset의 버튼형 위젯 잔여와 학력 준비 중단, 읽기 전용 관찰).
+- [현대 어댑터](topics/adapter-hyundai.md)와 [실사이트 자동 입력 평가 워크플로우](topics/live-autofill-evaluation.md)의 Current를 CF-336으로 바꾸고 앞선 근거를 History에 남겼다.
+- 실제 지원값·계정·세션·대화 전문은 저장하지 않았다.
+
+## [2026-10-25] ingest | CF-334 컬리 구조 반복 분석 0/81 간헐 결함
+
+- Approval-Digest: acc59bf96d7344d991b653eadd0a2176e178eb4f64ddbc6260622d7e2ee5adef
+- Source-Revision: a36ea0e
+- 승인된 후보 4개를 [CF-334 bundle](../raw/issues/CF-334/manifest.md)에 두 payload로 기록했다. Greeting 어댑터(드라이버가 열어 둔 Ark UI 팝오버의 `aria-hidden`이 양식 전체를 숨김으로 수집시켜 재결합이 전 칸 실패 → 숨김 감지 시 Escape로 닫고 재수집, 남는 칸은 결과 경고에 이름 표시, `searchFlows.cleanup`의 빈틈과 v19 보강 후보), 실사이트 평가(서비스 워커 API는 context 단위 관찰, 디버그 콘솔 객체로 회차 diff, 첫 재현에서 멈추는 반복 루프, 컬리 0/81은 백엔드 응답이 아니라는 정정).
+- [Greeting 공통 어댑터](topics/adapter-greeting.md)와 [실사이트 자동 입력 평가 워크플로우](topics/live-autofill-evaluation.md)의 Current를 CF-334로 바꾸고 앞선 근거를 History에 남겼다.
+- 실제 지원값·계정·세션·요청 본문·대화 전문은 저장하지 않았다.
+
+## [2026-10-25] ingest | CF-346 Greeting 검색 직접 입력 선택지 미사용
+
+- Approval-Digest: fe9263182f4be99fa243d40d23b9a65061d4226063cc78707b5149c59599feb3
+- Source-Revision: d5a5005
+- 승인된 후보 5개를 [CF-346 bundle](../raw/issues/CF-346/manifest.md)에 세 payload로 기록했다. Greeting 어댑터(정확 항목이 없을 때 사이트가 붙이는 `직접 입력하기:“값”` 선택지의 구조와 종류별 제공 여부, v19 `directSearch` 범위 확대, `SEARCH_NO_EXACT_MATCH`·`SEARCH_AMBIGUOUS`·`SEARCH_NO_RESULTS`·`SEARCH_TIMEOUT` 사유 보고, 같은 값 재기입의 범용 흐름 후보, 카카오게임즈 기존 미해결 항목), 필드 현황(v19 지원 범위 표), 실사이트 평가(합성값 프로필 전수 조사 절차, 새 볼륨 로컬 스택으로 새 정책 버전 검증, 드라이버 진단 로그).
+- [Greeting 공통 어댑터](topics/adapter-greeting.md), [어댑터 필드 현황](topics/adapter-field-inventory.md), [실사이트 자동 입력 평가 워크플로우](topics/live-autofill-evaluation.md)의 Current를 CF-346으로 바꾸고 앞선 근거를 History에 남겼다.
+- 실제 지원값·계정·세션·대화 전문은 저장하지 않았다. 전수 조사 값은 합성값이다.

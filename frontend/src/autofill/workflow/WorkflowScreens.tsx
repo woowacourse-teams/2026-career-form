@@ -302,9 +302,9 @@ export function WorkflowScreens({
             분석 경고:{" "}
             {warning === "UNRESOLVED_FIELD"
               ? "일부 필드를 연결하지 못했습니다."
-              : warning === "검색 후 드러난 급수 항목은 직접 확인해 주세요."
-                ? warning
-                : "LLM 분석 일부 미완료"}
+              : warning === "LLM_UNAVAILABLE"
+                ? "LLM 분석 일부 미완료"
+                : warning}
           </aside>
         ))}
         {reviewTab === "needs-review" && needsReviewItems.length > 0 && (

@@ -2,9 +2,9 @@
 
 > Topic: adapter-hyundai
 > Status: Current
-> Current: [현대 어학 상태 드라이버 실패의 행 단위 격리](../../raw/issues/CF-169/documents/adapter-hyundai.md)
-> History: [근거 1](../../raw/issues/CF-46/documents/adapter-hyundai.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-hyundai.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-hyundai.md); [CF-169 근거](../../raw/issues/CF-169/documents/adapter-hyundai.md)
-> Updated: 2026-10-08
+> Current: [CF-336 검색 결과 창 바깥 클릭 핸들러와 학교명 소실](../../raw/issues/CF-336/documents/hyundai-search-view-blanking.md)
+> History: [근거 1](../../raw/issues/CF-46/documents/adapter-hyundai.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-hyundai.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-hyundai.md); [CF-169 근거](../../raw/issues/CF-169/documents/adapter-hyundai.md); [CF-310 Map·Set 재정의 근거](../../raw/issues/CF-310/documents/hyundai-map-set-override.md); [CF-310 버튼형 선택지 코드 근거](../../raw/issues/CF-310/documents/hyundai-button-select-codes.md); [CF-333 작성 화면 재진입 불가·경력 칸 결함 근거](../../raw/issues/CF-333/documents/hyundai-applywrite-reentry-and-career-fields.md); [CF-335 버튼형 선택지 코드 수집·trigger 식별·정책 v25 경력·자격 매핑](../../raw/issues/CF-335/documents/hyundai-v25-button-codes-and-career-fields.md); [CF-336 검색 결과 창 바깥 클릭 핸들러와 학교명 소실](../../raw/issues/CF-336/documents/hyundai-search-view-blanking.md)
+> Updated: 2026-10-25
 
 ## 현재 상태
 
@@ -14,9 +14,33 @@ CF-82는 열린 버튼 메뉴의 현재 visible `data-code` 옵션을 수집해 
 
 CF-169는 어학 언어와 시험 상태 드라이버의 실패를 `.field-group`이 두 드라이버를 각각 하나씩 소유하는 같은 행으로 격리한다. 컨테이너가 여러 행을 포함하거나 드라이버가 밖이면 기존처럼 전체를 중단하며 국적은 근거가 없어 제외한다. 상세는 [CF-169 근거](../../raw/issues/CF-169/documents/adapter-hyundai.md)를 따른다.
 
+## 페이지 전역 재정의 (2026-10-21)
+
+현대자동차 지원서(`talent.hyundai.com/apply/applyWrite.hc`)는 `window.Map`과 `window.Set`을 native가 아닌 polyfill로 바꿔 둔다. 그래서 `page.evaluate`로 페이지 world에 넣는 함수는 둘을 쓰지 않는다. 2026-10-21 실사이트 QA의 일회성 스크립트에서 `Map`을 순회하던 입력 비우기 함수(`clearForm`)가 이 페이지에서 멈췄다. 이를 옮긴 하네스(`frontend/scripts/live-qa`)는 둘을 쓰지 않고, `page/*.mjs`와 `keepalive.mjs`의 페이지 함수 열 개를 `page/page-functions.test.mjs`로 고정한다. 근거는 [CF-310 Map·Set 재정의](../../raw/issues/CF-310/documents/hyundai-map-set-override.md)를 따른다.
+
+## 작성 화면 재진입 불가와 경력 칸 결함 (2026-10-24)
+
+- **재진입 불가:** 작성 화면(`applyWrite.hc`)은 같은 주소로 다시 접속하면 본문이 비어 하네스가 재진입할 수 없다. 확장 재설치나 탭 교체 뒤에는 사람이 사이트의 지원서 목록에서 다시 들어가야 하며, 하네스 `start`의 복구는 이 화면을 `needsPerson`으로 알린다.
+- **입사·퇴사연월일 일자 누락:** 경력 행의 `tranStartDt`·`tranEndDt`(YYYY-MM-DD, `maxLength 10`)에 연월만 들어간다. 같은 페이지의 자격 취득연월일은 온전히 들어가므로 형식 변환이 아니라 값 손실이다(2026-10-21·22 3곳 × 2행 재현). 프로필의 경력 기간이 연월 단위라 일자 보정은 정책 결정이 필요하다.
+- **종료사유 자유입력 오배치:** 종료사유 select(`retResCd`)는 비운 채 "기타"일 때만 유효한 자유입력(`retResEtcCont`)에 사유 원문을 쓴다. 어휘 별칭("계약기간 만료" ↔ "계약만료")과 버튼형 선택지 코드 수집이 선행돼야 한다. 두 결함과 자격 등급 `단일등급` 미매핑의 수정은 #335, 학교명 검색 미확정은 #336에서 다룬다.
+- 근거는 [CF-333 작성 화면 재진입 불가·경력 칸 결함](../../raw/issues/CF-333/documents/hyundai-applywrite-reentry-and-career-fields.md)을 따른다.
+
+## 정책 v25: 경력 날짜·종료사유·자격 등급 (2026-10-24)
+
+- **버튼형 선택지 코드는 읽기 전용으로 수집할 수 있다.** `.select-wrap .select-option button[data-code]`는 레이어가 닫혀 있어도 DOM에 있어, CF-310의 "레이어를 열어야 보인다"는 관측을 정정한다. 2026-10-24 작성 화면 두 곳에서 종료사유 16개·자격 등급 82개·전과/편입 4개 코드를 읽었고 두 화면이 같았다. 하네스 census의 `selectOptions`는 40개까지만 담는다. 선행 선택에 따라 채워지는 메뉴(외국어 등급)는 그 전까지 비어 있다.
+- **버튼형 trigger에는 name이 없다.** 요청 후보의 domName은 요소 자신의 `name`에서만 오므로 현대 버튼 규칙에 `requiredDomName`을 둘 수 없고, trigger id의 구조 이름(`grade` vs `gradeForeLang`)으로만 구분한다. FE 실행기는 라벨로 선택지를 고르고 클릭 뒤 hidden 값이 선택지 `data-code`와 같은지 검증하므로 정책 코드는 교차 확인용이다.
+- **v25 변경 세 가지.** 입사·퇴사연월일은 연월 조합 바인딩이 일자를 잘라냈던 것이라 직접 바인딩으로 바꿨다(프로필 날짜는 일자까지 있어 보정 정책 불필요, CF-333의 "연월 단위" 전제 정정). 종료사유는 자유입력 직접 바인딩을 빼고 `retResCd` 버튼 규칙(별칭 `계약기간 만료`→`계약만료`)을 두어 선택지에 없는 사유는 "확인 필요"로 남긴다. 자격 등급은 `grade` 버튼 규칙(별칭 `단일등급`→`등급없음`)을 새로 둔다. 전과/편입은 코드만 수집하고 규칙은 보류한다. 실사이트 재측정은 dev 배포 뒤 #336과 같은 세션에서 한다. 근거는 [CF-335 근거](../../raw/issues/CF-335/documents/hyundai-v25-button-codes-and-career-fields.md)를 따른다.
+
+## 검색 결과 창의 바깥 클릭 핸들러와 학교명 소실 (2026-10-25)
+
+- **원인.** 작성 화면의 document click 핸들러는 보이는 검색 결과 창(`.field-search-view:visible`) 전부를 한 집합으로 잡고, 첫 창의 hidden 값이 비어 있으면 집합 전체 칸의 표시값을 지운다(hidden은 유지). 결과 클릭이 창을 접는 애니메이션 동안도 `:visible`이라, 선택 없이 끝난 검색(고등학교 "여러 개")이 창을 남긴 채 0.6초 안에 선택된 학사·석사 행은 확장의 다음 클릭에서 표시값이 함께 지워졌다. 2026-10-21·22·24 세 번 모두 같은 분포(학사·석사 빈 값, 전문대학 정상)였다.
+- **수정(CF-336).** 사이트는 못 고치므로 확장이 보이는 창을 남기지 않는다. 선택 없이 끝난 검색은 검색어를 되돌린 뒤 빈 값으로 `searchNotify`를 보내 사이트가 창을 닫고 목록을 비우게 하고(검색 전부터 비어 있던 칸에서만), 선택이 확정되면 모든 결과 창이 사라질 때까지(상한 1.5초) 기다린다. 계약 JSON과 정책 버전은 그대로다.
+- **결과 패널 정정.** 패널은 검색형 칸을 실행 뒤 DOM 값으로 판정해 세 칸 모두 "확인 필요"에 올렸다. "입력 결과를 확인하지 못했어요"는 기입을 확인한 뒤 값이 사라진 경우다. CF-333의 "입력 완료로 셌다"는 관측은 틀렸다.
+- **카탈로그 신원 없는 검색.** approval이 `legacy`(신원 없음)면 이름만 비교해 동명 학교(서울·대구·강원 대진고)가 모두 일치해 "여러 개"로 남고, `selected`면 지역까지 비교해 하나로 좁힌다. 합성 프로필 측정의 고교 "여러 개"는 정상이다. 근거는 [CF-336 근거](../../raw/issues/CF-336/documents/hyundai-search-view-blanking.md)를 따른다.
+
 ## 변경 이유
 
-공통 회사 지식 분리 이후 확인된 취득일의 공통 이름 충돌을 보완하고, 미입력의 원인과 검증 한계를 승인된 근거에 추가했다.
+공통 회사 지식 분리 이후 확인된 취득일의 공통 이름 충돌을 보완하고, 미입력의 원인과 검증 한계를 승인된 근거에 추가했다. CF-335에서 경력 날짜·종료사유·자격 등급 결함을 정책 v25로 고치고 버튼형 선택지 코드 수집 방법과 trigger 식별 규칙을 정정했다. CF-336에서 학교명 소실의 원인을 사이트의 바깥 클릭 핸들러로 밝혀 검색 창 처리를 고치고 결과 패널·고교 "여러 개" 관측을 정정했다.
 
 ## 반복 행 후속 보완
 
@@ -69,3 +93,7 @@ ID 없는 현대 프로젝트·논문 구조 식별로 준비 단계 차단을 �
 ## CF-99 결과 패널 진단 (2026-09-24)
 
 학교·전공 검색은 정확 일치 없음, 복수 후보, 시간 초과, 선택 미확인을 값 없는 진단 코드로 전달한다. 시험 선택 뒤 성적란 준비 실패도 구분한다. 기존 유일 결과·코드 확인과 지원 범위는 유지한다. 상세 근거는 [CF-99 승인 결정](../../raw/issues/CF-99/documents/autofill-follow-and-install.md)을 따른다.
+
+## 버튼형 선택지의 코드 수집 한계 (2026-10-22)
+
+전과/편입(`tranGb`)과 종료사유(`retResCd`)는 `btn-select` 버튼과 같은 이름의 hidden input으로 이루어지고, 선택지는 레이어를 열 때만 DOM에 그려진다. 실사이트 QA 하네스는 선택지 문구는 담지만 hidden에 들어갈 코드는 담지 못한다. 정책 v24에는 두 칸의 규칙이 없고, 버튼형 규칙(`ButtonOptionBinding`)은 optionMap과 optionCodeMap을 모두 요구하므로 매핑은 레이어를 연 상태의 코드 수집이 선행돼야 한다. 프로필 편입유무 `해당`은 `전과 후`·`편입 전`·`편입 후` 중 하나로 정할 수 없다. 근거는 [CF-310 버튼형 선택지 코드 근거](../../raw/issues/CF-310/documents/hyundai-button-select-codes.md)를 따른다.

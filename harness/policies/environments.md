@@ -14,7 +14,9 @@ Codex는 WSL 내부 Node.js로 설치한 실행기만 사용한다. `command -v 
 | 목적 | 작업·통합 검증 | 고정된 릴리스 후보 검증 | 사용자 서비스 |
 | AI 배포 | 금지 | 금지 | 금지 |
 
-Start release는 현재 `develop` HEAD에서 활성 release 브랜치 하나를 만든다. 이후
+Start release는 활성 release 브랜치 하나를 만든다. 선택 입력 `ref`를 비우면 현재
+`develop` HEAD를, 채우면 `develop` 이력 안의 커밋 SHA를 기준으로 하며 기준 전체 SHA를
+릴리스 Draft PR 본문에 기록한다. 이후
 `develop` 개발은 계속 진행하고 스테이징은 release 브랜치만 검증한다. 검증 중 수정은
 `CF-*` → `release/*`로 반영하고, 승인된 release를 `main`과 `develop`에 Merge
 Commit으로 병합한다.

@@ -18,8 +18,11 @@ const EDUCATION_ACTIONS = [
     id: "btnAddEducationHigh",
     label: "고등학교 학력 정보 추가",
     rowClass: "educationhigh-item",
+    // The status select is what the add rule re-identifies rows by (every
+    // live high-school row has it; R262309 has no school-name input). It is
+    // disabled here so the workflow under test writes the same fields as before.
     fields:
-      '<input name="eduhgEducationName" type="text" /><select name="eduhgEducationRegion"><option value=""></option><option value="101009">서울특별시</option></select>',
+      '<select name="eduhgEducationStatus" disabled><option value=""></option></select><input name="eduhgEducationName" type="text" /><select name="eduhgEducationRegion"><option value=""></option><option value="101009">서울특별시</option></select>',
   },
   {
     id: "btnAddEducationUniv",
@@ -65,7 +68,7 @@ function candidates(request: FieldsAnalyzeRequest): FieldCandidate[] {
 
 function fieldsResponse(request: FieldsAnalyzeRequest): FieldsAnalyzeResponse {
   return {
-executionPolicy: fixturePolicy("sk"),
+    executionPolicy: fixturePolicy("sk"),
     snapshotId: request.snapshotId,
     mode: "ADAPTER",
     analysisStatus: "COMPLETE",
@@ -160,7 +163,7 @@ function setup(educationValues: Record<string, string> = {}) {
   let preparationCalls = 0;
   let fieldAnalysisCalls = 0;
   const apiClient: AnalysisApiClient = {
-loadExecutionPolicy: async () => fixturePolicy("sk"),
+    loadExecutionPolicy: async () => fixturePolicy("sk"),
     analyzePreparation: async (request) => {
       preparationCalls += 1;
       const actions = EDUCATION_ACTIONS.map((education) => {
