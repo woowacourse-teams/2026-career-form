@@ -71,6 +71,50 @@ public final class GenericFieldsService {
             resolution.mappings().forEach(mappings::putIfAbsent);
             jevCalls = resolution.jevCalls();
         }
+        for (Section section : request.sections()) {
+            List<FieldCandidate> candidates = new ArrayList<>(section.fields());
+            if (section.items() != null) {
+                section.items().forEach(item -> candidates.addAll(item.fields()));
+            }
+            for (FieldCandidate candidate : candidates) {
+                String key = GenericProfileSemantics.choiceKey(section.displayName(), candidate);
+                if (key != null && supportedProfileFields.contains(key)) {
+                    mappings.put(candidate.candidateId(), new Mapping(key, 1.0, true, null));
+                }
+            }
+            for (FieldCandidate candidate : candidates) {
+                String military = GenericProfileSemantics.militaryKey(section.category(), section.displayName(),
+                    candidate);
+                Mapping current = mappings.get(candidate.candidateId());
+                if (military != null && supportedProfileFields.contains(military) && (current == null
+                    || current.profileFieldKey() == null && current.binding() == null && current.reason() == null)) {
+                    mappings.put(candidate.candidateId(),
+                        new Mapping(military, 1.0, current == null || current.categoryConfirmed(), null));
+                }
+            }
+            for (FieldCandidate candidate : candidates) {
+                String key = GenericProfileSemantics.englishNameKey(section.category(), candidate);
+                Mapping current = mappings.get(candidate.candidateId());
+                // 명시된 단일 성·이름 라벨은 전체 영문 이름 조합 판정보다 구체적이다.
+                if (key != null && supportedProfileFields.contains(key) && (current == null
+                    || current.profileFieldKey() == null && current.reason() == null
+                        && (current.binding() == null || current.binding() instanceof GenericFieldsResponse.NameBinding name
+                            && name.recipe().name().startsWith("ENGLISH_FULL_NAME")))) {
+                    mappings.put(candidate.candidateId(),
+                        new Mapping(key, 1.0, current == null || current.categoryConfirmed(), null));
+                }
+            }
+        }
+        // 이름은 한 줄 입력칸에만 쓴다. 자기소개서 같은 여러 줄 칸에 이름을 넣지 않는다.
+        for (FieldCandidate candidate : request.fieldCandidatesInTraversalOrder()) {
+            Mapping mapping = mappings.get(candidate.candidateId());
+            if (mapping != null && candidate.element() == GenericFieldsRequest.FormElement.TEXTAREA
+                && (mapping.binding() instanceof GenericFieldsResponse.NameBinding || mapping.profileFieldKey() != null
+                    && NAME_KEYS.contains(mapping.profileFieldKey()))) {
+                mappings.put(candidate.candidateId(),
+                    new Mapping(null, mapping.confidence(), mapping.categoryConfirmed(), null));
+            }
+        }
         Set<String> inferred = new HashSet<>();
         for (Section section : request.sections()) {
             inferPairedDates(section.fields(), mappings, inferred);
@@ -141,6 +185,10 @@ public final class GenericFieldsService {
             inferred.add(start.candidateId());
         }
     }
+
+    private static final Set<String> NAME_KEYS = Set.of("personal.personal.koreanFamilyName",
+        "personal.personal.koreanGivenName", "personal.personal.englishFamilyName",
+        "personal.personal.englishGivenName");
 
     private static final java.util.regex.Pattern DATE_EVIDENCE = java.util.regex.Pattern.compile(
         "(년\\s*월|연\\s*월|년월일|일자|날짜|기간|\\bdate\\b|y{2,4}[-./ ]?mm|\\bmm\\b|\\bdd\\b)",
