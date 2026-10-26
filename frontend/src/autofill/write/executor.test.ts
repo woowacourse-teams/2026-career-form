@@ -1282,6 +1282,78 @@ describe("generic native write safety boundaries", () => {
   });
 });
 
+describe("user-approved radio replacement", () => {
+  function radioPair(checked: "대상" | "비대상") {
+    const options = ["대상", "비대상"].map((value) => {
+      const radio = document.createElement("input");
+      radio.type = "radio";
+      radio.name = "veteran";
+      radio.value = value;
+      radio.checked = value === checked;
+      document.body.append(radio);
+      return radio;
+    });
+    const registry = new CandidateRegistry();
+    registry.registerField({
+      kind: "field",
+      candidateId: "radio-field",
+      candidate: {
+        candidateId: "radio-field",
+        element: "input",
+        control: "radio",
+        visibility: "visible",
+        options: options.map((radio) => ({
+          optionId: radio.value,
+          displayName: radio.value,
+        })),
+      },
+      elements: options,
+      optionElements: new Map(options.map((radio) => [radio.value, radio])),
+      sectionId: "section-1",
+      signature: createStructuralSignature(options),
+    });
+    return { options, registry };
+  }
+  const analysis: MatchedFieldAnalysis = {
+    ...textAnalysis,
+    candidateId: "radio-field",
+    writePlan: { command: "CHECK_RADIO" },
+  };
+
+  it("replaces the reviewed existing choice when the user chose the profile value", () => {
+    const { options, registry } = radioPair("비대상");
+
+    const result = executeApprovedWrites({
+      items: [
+        reviewItem(analysis, "대상", {
+          status: "conflict",
+          currentValue: "비대상",
+        }),
+      ],
+      approvedCandidateIds: new Set(["radio-field"]),
+      registry,
+    })[0]!;
+
+    expect(result).toMatchObject({ outcome: "success" });
+    expect(options[0].checked).toBe(true);
+  });
+
+  it("still stops when the page choice changed after the review", () => {
+    const { options, registry } = radioPair("비대상");
+
+    const result = executeApprovedWrites({
+      items: [
+        reviewItem(analysis, "대상", { status: "conflict", currentValue: "" }),
+      ],
+      approvedCandidateIds: new Set(["radio-field"]),
+      registry,
+    })[0]!;
+
+    expect(result).toMatchObject({ code: "CONFLICT" });
+    expect(options[1].checked).toBe(true);
+  });
+});
+
 describe("generic writer fail-closed native boundaries", () => {
   it.each([
     "file",

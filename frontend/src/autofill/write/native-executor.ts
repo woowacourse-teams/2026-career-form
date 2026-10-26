@@ -527,13 +527,24 @@ function hasGenericConflict(
   }
   if (command === "CHECK_CHECKBOX")
     return choiceState(handle) !== item.currentValue;
+  if (command !== "CHECK_RADIO") return false;
+  const others = handle.elements.filter(
+    (element): element is HTMLInputElement =>
+      element instanceof HTMLInputElement &&
+      element.checked &&
+      element !== nativeChoiceOption(handle, value, generic),
+  );
+  // A reviewed conflict the user chose to replace may overwrite exactly the
+  // choice shown in the review (by value or label); any later change stops.
   return (
-    command === "CHECK_RADIO" &&
-    handle.elements.some(
-      (element) =>
-        element instanceof HTMLInputElement &&
-        element.checked &&
-        element !== nativeChoiceOption(handle, value, generic),
+    others.length > 0 &&
+    !(
+      item.status === "conflict" &&
+      item.currentValue !== "" &&
+      others.length === 1 &&
+      (others[0].value === item.currentValue ||
+        (others[0].labels?.[0]?.textContent ?? "").trim() ===
+          item.currentValue)
     )
   );
 }
