@@ -500,6 +500,18 @@ export async function executeApprovedSearchWrites({
           (genericItems.has(item) &&
             item.analysis?.writePlan?.command === "SELECT_DATE")
         ) {
+          // Widgets hide their popup with a short animation after applying.
+          // Give the popup a bounded moment to finish closing before judging.
+          if (document) {
+            const settleDeadline = Date.now() + 1500;
+            while (
+              Date.now() < settleDeadline &&
+              !signal?.aborted &&
+              (openCalendarPopups(document).length > 0 ||
+                displayedDayCalendarRoots(document).length > 0)
+            )
+              await new Promise((resolve) => setTimeout(resolve, 50));
+          }
           const closed =
             document &&
             !(result.status === "skipped" && result.surfaceLeftOpen) &&
@@ -533,6 +545,7 @@ export async function executeApprovedSearchWrites({
           });
           for (let later = index + 1; later < items.length; later++) {
             if (!approvedCandidateIds.has(items[later]!.candidateId)) continue;
+            heldIndexes.add(later);
             traceHold(items[later]!.candidateId, {
               kind:
                 item.analysis?.writePlan?.command === "SELECT_DATE"

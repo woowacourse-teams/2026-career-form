@@ -140,7 +140,18 @@ export async function resolveCalendarRole<T extends HTMLElement>(
   const candidateHtml = (element: HTMLElement) => {
     const clone = element.cloneNode(true);
     if (!(clone instanceof HTMLElement)) return element.outerHTML;
-    for (const property of ["position", "top", "right", "bottom", "left"])
+    // Root paint (background, border) is cosmetic too: widgets restyle their
+    // buttons after a month/year change without changing what they do.
+    // Visibility, display, size and markup still invalidate the snapshot.
+    for (const property of [
+      "position",
+      "top",
+      "right",
+      "bottom",
+      "left",
+      "background",
+      "border",
+    ])
       clone.style.removeProperty(property);
     if (clone.getAttribute("style") === "") clone.removeAttribute("style");
     return clone.outerHTML;
