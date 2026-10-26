@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Posting } from "./model";
 import {
   postingNotificationId,
+  PUSH_AUTOSAVED_NOTIFICATION_PREFIX,
   PUSH_NOTIFIED_KEY,
   PUSH_SAVED_NOTIFICATION_PREFIX,
   PushReceiver,
@@ -28,6 +29,9 @@ function harness() {
   const cleared: string[] = [];
   const opened: string[] = [];
   const tracked: [string, unknown][] = [];
+  const unreadLog: string[] = [];
+  const visibilityLog: string[] = [];
+  let autoSave = true;
   const postings = new PostingService(
     {
       load: async () => rows,
@@ -63,6 +67,23 @@ function harness() {
     },
     postings,
     track: (event, properties) => tracked.push([event, properties]),
+    unread: {
+      add: async (id, closesAt) => {
+        unreadLog.push(`add:${id}:${closesAt}`);
+      },
+      remove: async (id) => {
+        unreadLog.push(`remove:${id}`);
+      },
+    },
+    visibility: {
+      markShown: async () => {
+        visibilityLog.push("shown");
+      },
+      markSeenByClick: async () => {
+        visibilityLog.push("seen");
+      },
+    },
+    autoSaveEnabled: async () => autoSave,
   });
   return {
     receiver,
@@ -71,7 +92,12 @@ function harness() {
     cleared,
     opened,
     tracked,
+    unreadLog,
+    visibilityLog,
     rows: () => rows,
+    setAutoSave: (value: boolean) => {
+      autoSave = value;
+    },
     advance: (ms: number) => {
       now += ms;
     },
@@ -181,7 +207,7 @@ describe("PushReceiver", () => {
     });
     expect(h.tracked[1]).toEqual([
       "posting_notification_saved",
-      { surface: "notification", posting_id: ID },
+      { surface: "notification", posting_id: ID, trigger: "button" },
     ]);
   });
   it("이미 저장한 공고는 다시 저장하지 않는다", async () => {
@@ -224,5 +250,95 @@ describe("PushReceiver", () => {
     expect(await h.receiver.save(postingNotificationId("missing"))).toBe(
       undefined,
     );
+  });
+});
+
+describe("PushReceiver badge, visibility and auto-save", () => {
+  it("알림 표시는 미확인 목록과 표시 시각을 기록하고 클릭은 보임과 개별 제거로 이어진다", async () => {
+    const h = harness();
+    await h.receiver.receive(payload);
+    expect(h.unreadLog).toEqual([`add:${ID}:${Date.parse(payload.closesAt)}`]);
+    expect(h.visibilityLog).toEqual(["shown"]);
+    await h.receiver.receive({
+      ...payload,
+      id: "f".repeat(32),
+      link: "ftp://x",
+    });
+    expect(h.unreadLog).toHaveLength(1);
+    await h.receiver.open(postingNotificationId(ID));
+    expect(h.visibilityLog).toEqual(["shown", "seen"]);
+    expect(h.unreadLog).toEqual([
+      `add:${ID}:${Date.parse(payload.closesAt)}`,
+      `remove:${ID}`,
+    ]);
+  });
+  it("자동 저장이 켜져 있으면 알림에서 공고를 열 때 저장하고 취소 버튼이 있는 후속 알림을 띄운다", async () => {
+    const h = harness();
+    await h.receiver.receive(payload);
+    expect(h.rows()).toHaveLength(0);
+    expect(await h.receiver.open(postingNotificationId(ID))).toBe(true);
+    expect(h.rows()).toHaveLength(1);
+    expect(h.rows()[0].reminders.map((r) => r.minutes)).toEqual([1440, 120]);
+    expect(h.shown[1]).toMatchObject({
+      id: PUSH_AUTOSAVED_NOTIFICATION_PREFIX + ID,
+      title: expect.stringContaining("저장했어요"),
+      buttons: ["저장 취소"],
+    });
+    expect(h.tracked).toEqual([
+      [
+        "posting_notification_shown",
+        { surface: "notification", posting_id: ID },
+      ],
+      [
+        "posting_notification_opened",
+        { surface: "notification", posting_id: ID },
+      ],
+      [
+        "posting_notification_saved",
+        { surface: "notification", posting_id: ID, trigger: "open" },
+      ],
+    ]);
+  });
+  it("자동 저장이 꺼져 있으면 열어도 저장하지 않는다", async () => {
+    const h = harness();
+    h.setAutoSave(false);
+    await h.receiver.receive(payload);
+    await h.receiver.open(postingNotificationId(ID));
+    expect(h.rows()).toHaveLength(0);
+    expect(h.shown).toHaveLength(1);
+    expect(h.tracked.map(([event]) => event)).toEqual([
+      "posting_notification_shown",
+      "posting_notification_opened",
+    ]);
+  });
+  it("이미 저장한 공고를 열면 다시 저장하거나 후속 알림을 띄우지 않는다", async () => {
+    const h = harness();
+    await h.receiver.receive(payload);
+    await h.receiver.save(postingNotificationId(ID));
+    await h.receiver.open(postingNotificationId(ID));
+    expect(h.rows()).toHaveLength(1);
+    expect(h.shown.map((n) => n.id)).toEqual([
+      postingNotificationId(ID),
+      PUSH_SAVED_NOTIFICATION_PREFIX + ID,
+    ]);
+  });
+  it("저장 취소 버튼은 저장 공고와 예약을 함께 지운다", async () => {
+    const h = harness();
+    await h.receiver.receive(payload);
+    await h.receiver.open(postingNotificationId(ID));
+    expect(h.rows()).toHaveLength(1);
+    expect(
+      await h.receiver.undoAutoSave(PUSH_AUTOSAVED_NOTIFICATION_PREFIX + ID),
+    ).toBe(true);
+    expect(h.rows()).toHaveLength(0);
+    expect(h.cleared).toContain(PUSH_AUTOSAVED_NOTIFICATION_PREFIX + ID);
+    expect(h.tracked.at(-1)).toEqual([
+      "posting_auto_save_cancelled",
+      { surface: "notification", posting_id: ID },
+    ]);
+    expect(
+      await h.receiver.undoAutoSave(PUSH_AUTOSAVED_NOTIFICATION_PREFIX + "x"),
+    ).toBe(false);
+    expect(await h.receiver.undoAutoSave("careerForm.job.other.1")).toBe(false);
   });
 });

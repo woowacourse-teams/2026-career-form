@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => {
     cleared: [] as string[],
     tabs: [] as unknown[],
     alarms: [] as unknown[],
+    badges: [] as string[],
     statusWrites: 0,
     on: (name: string) => ({
       addListener: (listener: Listener) => {
@@ -45,7 +46,15 @@ vi.mock("wxt/browser", () => ({
       },
       onAlarm: mocks.on("alarm"),
     },
+    action: {
+      setBadgeText: async ({ text }: { text: string }) => {
+        mocks.badges.push(text);
+      },
+      setBadgeBackgroundColor: async () => {},
+      setTitle: async () => {},
+    },
     notifications: {
+      getPermissionLevel: async () => "granted",
       create: async (id: string, options: Record<string, unknown>) => {
         mocks.notifications.push({ id, ...options });
       },
@@ -104,6 +113,7 @@ function install() {
     },
   };
   const saved: unknown[] = [];
+  const removed: unknown[] = [];
   const tracked: [string, unknown][] = [];
   let rows: Posting[] = [];
   const installed = installPushBackground({
@@ -125,12 +135,17 @@ function install() {
         ];
         return { postings: rows, problems: [] };
       },
+      remove: async (id, version) => {
+        removed.push([id, version]);
+        rows = rows.filter((row) => row.id !== id);
+        return { postings: rows, problems: [] };
+      },
     },
     track: (event, properties) => tracked.push([event, properties]),
     scope,
     userAgent: "Mozilla/5.0 Chrome/130.0.0.0 Safari/537.36",
   });
-  return { ...installed, scopeListeners, saved, tracked };
+  return { ...installed, scopeListeners, saved, removed, tracked };
 }
 const dispatch = async (listener: Listener | undefined, event: unknown) => {
   const waits: Promise<unknown>[] = [];
@@ -154,7 +169,7 @@ it("서비스워커 push 이벤트를 알림으로 바꾸고 클릭과 버튼을
     expect.objectContaining({
       id: `careerForm.push.posting.${ID}`,
       type: "basic",
-      iconUrl: "chrome-extension://own/side-panel-launcher-logo.png",
+      iconUrl: "chrome-extension://own/notification-icon.png",
       title: "합성 회사 · 합성 직무",
       buttons: [{ title: "공고 열기" }, { title: "마감 알림 저장" }],
     }),
@@ -244,4 +259,70 @@ it("Chrome 메이저 버전을 UA에서 읽는다", () => {
     121,
   );
   expect(chromeVersion("Mozilla/5.0 Firefox/130.0")).toBeUndefined();
+});
+
+it("시작 시 저장된 미확인 목록으로 배지를 다시 그리고 알림마다 늘린다", async () => {
+  mocks.store["careerForm.push.unread"] = {
+    ["c".repeat(32)]: Date.now() + 86400000,
+  };
+  mocks.badges.length = 0;
+  const { scopeListeners } = install();
+  await vi.waitFor(() => expect(mocks.badges).toContain("1"));
+  await dispatch(scopeListeners.push[0], {
+    data: { json: () => ({ ...payload, id: "d".repeat(32) }) },
+  });
+  expect(mocks.badges.at(-1)).toBe("2");
+  delete mocks.store["careerForm.push.unread"];
+});
+
+it("온보딩 페이지는 알림 테스트만 보낼 수 있고 공지함은 열 수 없다", async () => {
+  const { handleMessage } = install();
+  const onboarding = {
+    id: "own",
+    url: "chrome-extension://own/onboarding.html",
+  };
+  expect(
+    await handleMessage(
+      { type: "careerForm.push", action: "test" },
+      onboarding,
+    ),
+  ).toMatchObject({ ok: true });
+  expect(mocks.notifications.at(-1)).toMatchObject({
+    id: "careerForm.push.test",
+    iconUrl: "chrome-extension://own/notification-icon.png",
+  });
+  expect(
+    await handleMessage(
+      { type: "careerForm.push", action: "inbox" },
+      onboarding,
+    ),
+  ).toEqual({ ok: false, code: "UNAVAILABLE" });
+});
+
+it("자동 저장 후속 알림의 저장 취소 버튼은 저장을 되돌린다", async () => {
+  const { scopeListeners, saved, removed } = install();
+  const id = "e".repeat(32);
+  await dispatch(scopeListeners.push[0], {
+    data: { json: () => ({ ...payload, id }) },
+  });
+  const clicked = mocks.listeners.clicked.at(-1) as (id: string) => void;
+  const button = mocks.listeners.button.at(-1) as (
+    id: string,
+    index: number,
+  ) => void;
+  clicked(`careerForm.push.posting.${id}`);
+  await vi.waitFor(() =>
+    expect(mocks.notifications.at(-1)).toMatchObject({
+      id: `careerForm.push.autosaved.${id}`,
+      buttons: [{ title: "저장 취소" }],
+    }),
+  );
+  expect(saved).toHaveLength(1);
+  button(`careerForm.push.autosaved.${id}`, 0);
+  await vi.waitFor(() => expect(removed).toHaveLength(1));
+  expect(mocks.cleared).toContain(`careerForm.push.autosaved.${id}`);
+  clicked("careerForm.push.test");
+  await vi.waitFor(() =>
+    expect(mocks.cleared).toContain("careerForm.push.test"),
+  );
 });

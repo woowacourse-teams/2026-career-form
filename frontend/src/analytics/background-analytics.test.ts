@@ -368,3 +368,68 @@ describe("posting notification properties", () => {
     },
   );
 });
+
+describe("notification check and auto-save properties", () => {
+  it.each([
+    [
+      "notification_visibility_answered",
+      { surface: "options", answer: "seen" },
+      { surface: "options", answer: "seen" },
+    ],
+    [
+      "notification_visibility_answered",
+      { surface: "extension_onboarding", answer: "not_seen", company: "x" },
+      { surface: "extension_onboarding", answer: "not_seen" },
+    ],
+    [
+      "notification_visibility_answered",
+      { surface: "options", answer: "maybe" },
+      { surface: "options" },
+    ],
+    [
+      "posting_inbox_saved",
+      { surface: "options", posting_id: "a".repeat(32), trigger: "open" },
+      { surface: "options", posting_id: "a".repeat(32), trigger: "open" },
+    ],
+    [
+      "posting_notification_saved",
+      {
+        surface: "notification",
+        posting_id: "a".repeat(32),
+        trigger: "button",
+      },
+      {
+        surface: "notification",
+        posting_id: "a".repeat(32),
+        trigger: "button",
+      },
+    ],
+    [
+      "posting_notification_saved",
+      { surface: "notification", posting_id: "a".repeat(32), trigger: "auto" },
+      { surface: "notification", posting_id: "a".repeat(32) },
+    ],
+    [
+      "posting_auto_save_cancelled",
+      { surface: "notification", posting_id: "a".repeat(32) },
+      { surface: "notification", posting_id: "a".repeat(32) },
+    ],
+    [
+      "notification_test_sent",
+      { surface: "extension_onboarding" },
+      { surface: "extension_onboarding" },
+    ],
+  ] as const)(
+    "keeps only allowlisted values for %s %j",
+    async (event, input, expected) => {
+      const { handle, payloads } = collector();
+      await handle({ type: "ANALYTICS_TRACK", event, properties: input });
+      expect(payloads).toEqual([
+        expect.objectContaining({
+          event,
+          properties: { ...expected, $process_person_profile: false },
+        }),
+      ]);
+    },
+  );
+});

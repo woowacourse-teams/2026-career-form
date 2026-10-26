@@ -21,7 +21,7 @@ export function installPostingBackground() {
       notify: async (delivery) => {
         await browser.notifications.create(delivery.id, {
           type: "basic",
-          iconUrl: `chrome-extension://${browser.runtime.id}/side-panel-launcher-logo.png`,
+          iconUrl: `chrome-extension://${browser.runtime.id}/notification-icon.png`,
           title: delivery.title,
           message: delivery.message,
           buttons: [{ title: "지원하기" }],

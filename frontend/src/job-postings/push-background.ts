@@ -1,19 +1,27 @@
 import { browser } from "wxt/browser";
 import type { TrackEvent } from "../analytics/events";
+import { NotificationCheck, TEST_NOTIFICATION_ID } from "./notification-check";
 import { createPushApi } from "./push-api";
 import { createPushHandler } from "./push-background-handler";
 import {
+  PUSH_AUTOSAVED_NOTIFICATION_PREFIX,
   PUSH_NOTIFICATION_PREFIX,
   PUSH_SAVED_NOTIFICATION_PREFIX,
   PushReceiver,
+  type PushNotification,
 } from "./push-receiver";
+import { createAutoSaveSetting } from "./push-settings";
 import {
   PushSubscriptionService,
   type PushManagerLike,
 } from "./push-subscription";
 import type { PostingService } from "./service";
+import { UnreadPostings } from "./unread-postings";
 
 export const PUSH_RETRY_ALARM = "careerForm.push.retry";
+// Dedicated small asset; the launcher logo is 1254px and too large for toasts.
+export const NOTIFICATION_ICON = "notification-icon.png";
+const BADGE_COLOR = "#d9480f";
 
 interface PushEventLike {
   data?: { json(): unknown } | null;
@@ -42,7 +50,7 @@ export function chromeVersion(userAgent: string): number | undefined {
 interface PushBackgroundOptions {
   baseUrl: string | undefined;
   extensionVersion: string;
-  postings: Pick<PostingService, "list" | "save">;
+  postings: Pick<PostingService, "list" | "save" | "remove">;
   track: TrackEvent;
   scope?: ServiceWorkerScopeLike;
   userAgent?: string;
@@ -73,20 +81,43 @@ export function installPushBackground({
       });
     },
   });
+  const notify = async (id: string, notification: PushNotification) => {
+    await browser.notifications.create(id, {
+      type: "basic",
+      iconUrl: `chrome-extension://${browser.runtime.id}/${NOTIFICATION_ICON}`,
+      title: notification.title,
+      message: notification.message,
+      ...(notification.buttons.length
+        ? { buttons: notification.buttons.map((title) => ({ title })) }
+        : {}),
+    });
+  };
+  const check = new NotificationCheck({
+    storage: browser.storage.local,
+    now: Date.now,
+    notify,
+    permission: async () => {
+      const level = await browser.notifications.getPermissionLevel();
+      return level === "granted" || level === "denied" ? level : "unknown";
+    },
+  });
+  const unread = new UnreadPostings({
+    storage: browser.storage.local,
+    now: Date.now,
+    setBadge: async (count) => {
+      await browser.action.setBadgeText({ text: count ? String(count) : "" });
+      if (count)
+        await browser.action.setBadgeBackgroundColor({ color: BADGE_COLOR });
+      await browser.action.setTitle({
+        title: count ? `Career Form · 새 공고 ${count}건` : "Career Form",
+      });
+    },
+  });
+  const autoSave = createAutoSaveSetting(browser.storage.local);
   const receiver = new PushReceiver({
     storage: browser.storage.local,
     now: Date.now,
-    notify: async (id, notification) => {
-      await browser.notifications.create(id, {
-        type: "basic",
-        iconUrl: `chrome-extension://${browser.runtime.id}/side-panel-launcher-logo.png`,
-        title: notification.title,
-        message: notification.message,
-        ...(notification.buttons.length
-          ? { buttons: notification.buttons.map((title) => ({ title })) }
-          : {}),
-      });
-    },
+    notify,
     clearNotification: async (id) => {
       await browser.notifications.clear(id);
     },
@@ -95,7 +126,12 @@ export function installPushBackground({
     },
     postings,
     track,
+    unread,
+    visibility: check,
+    autoSaveEnabled: autoSave.read,
   });
+  // Redraw the saved count after every service worker start.
+  void unread.redraw().catch(() => undefined);
   const sync = () => {
     void service.sync().catch(() => undefined);
   };
@@ -123,7 +159,12 @@ export function installPushBackground({
   };
   // Tabs open only from an explicit click on the body or the first button.
   const open = (id: string) => {
-    if (id.startsWith(PUSH_SAVED_NOTIFICATION_PREFIX)) return clear(id);
+    if (
+      id === TEST_NOTIFICATION_ID ||
+      id.startsWith(PUSH_SAVED_NOTIFICATION_PREFIX) ||
+      id.startsWith(PUSH_AUTOSAVED_NOTIFICATION_PREFIX)
+    )
+      return clear(id);
     if (!id.startsWith(PUSH_NOTIFICATION_PREFIX)) return;
     void receiver
       .open(id)
@@ -134,6 +175,16 @@ export function installPushBackground({
   };
   browser.notifications.onClicked.addListener(open);
   browser.notifications.onButtonClicked.addListener((id, index) => {
+    if (id.startsWith(PUSH_AUTOSAVED_NOTIFICATION_PREFIX)) {
+      if (index !== 0) return;
+      void receiver
+        .undoAutoSave(id)
+        .then((undone) => {
+          if (!undone) clear(id);
+        })
+        .catch(() => undefined);
+      return;
+    }
     if (!id.startsWith(PUSH_NOTIFICATION_PREFIX)) return;
     if (index === 0) return open(id);
     if (index !== 1) return;
@@ -144,5 +195,14 @@ export function installPushBackground({
       })
       .catch(() => undefined);
   });
-  return { handleMessage: createPushHandler(service, api, browser.runtime.id) };
+  return {
+    handleMessage: createPushHandler({
+      service,
+      api,
+      check,
+      unread,
+      autoSave,
+      extensionId: browser.runtime.id,
+    }),
+  };
 }

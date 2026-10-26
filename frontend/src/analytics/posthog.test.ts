@@ -97,3 +97,39 @@ describe("PostHog posting properties", () => {
     ]);
   });
 });
+
+describe("PostHog answer and trigger properties", () => {
+  it("forwards answer and trigger values", async () => {
+    const bodies: { properties: Record<string, unknown> }[] = [];
+    const capture = createPosthogCapture({
+      key: "test-project",
+      getDistinctId: async () => "anonymous",
+      fetch: async (_input, init) => {
+        bodies.push(JSON.parse(String(init?.body)));
+        return new Response("1");
+      },
+    });
+    await capture("notification_visibility_answered", {
+      surface: "options",
+      answer: "not_seen",
+    });
+    await capture("posting_inbox_saved", {
+      surface: "options",
+      posting_id: "0123456789abcdef0123456789abcdef",
+      trigger: "open",
+    });
+    expect(bodies.map((b) => b.properties)).toEqual([
+      {
+        surface: "options",
+        answer: "not_seen",
+        $process_person_profile: false,
+      },
+      {
+        surface: "options",
+        posting_id: "0123456789abcdef0123456789abcdef",
+        trigger: "open",
+        $process_person_profile: false,
+      },
+    ]);
+  });
+});

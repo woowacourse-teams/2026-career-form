@@ -1,5 +1,11 @@
 import { browser } from "wxt/browser";
 import {
+  parseVisibilityState,
+  PUSH_VISIBILITY_KEY,
+  type NotificationPermission,
+  type VisibilityAnswer,
+} from "./notification-check";
+import {
   isPushApiErrorCode,
   isServerPosting,
   PushApiError,
@@ -9,17 +15,27 @@ import {
   PUSH_MESSAGE,
   type PushAction,
   type PushStateView,
+  type RecordSource,
 } from "./push-messages";
+import { PUSH_AUTO_SAVE_KEY } from "./push-settings";
 import {
   parsePushStatus,
   PUSH_ENABLED_KEY,
   PUSH_STATUS_KEY,
 } from "./push-subscription";
 import { isRecord } from "./repository";
+import { PUSH_UNREAD_KEY } from "./unread-postings";
 
 export interface PushClient {
   state(): Promise<PushStateView>;
   setEnabled(enabled: boolean): Promise<PushStateView>;
+  setAutoSave(enabled: boolean): Promise<PushStateView>;
+  test(): Promise<PushStateView>;
+  record(
+    answer: VisibilityAnswer,
+    source: RecordSource,
+  ): Promise<PushStateView>;
+  later(): Promise<PushStateView>;
   inbox(): Promise<ServerPosting[]>;
   subscribe(listener: () => void): () => void;
 }
@@ -31,26 +47,59 @@ interface PushClientPorts {
     removeListener(listener: ChangeListener): void;
   };
 }
+const permissions: readonly NotificationPermission[] = [
+  "granted",
+  "denied",
+  "unknown",
+];
+const WATCHED_KEYS = [
+  PUSH_STATUS_KEY,
+  PUSH_ENABLED_KEY,
+  PUSH_VISIBILITY_KEY,
+  PUSH_AUTO_SAVE_KEY,
+  PUSH_UNREAD_KEY,
+];
 
 function parseState(value: unknown): PushStateView | undefined {
   if (
     !isRecord(value) ||
     typeof value.enabled !== "boolean" ||
-    typeof value.supported !== "boolean"
+    typeof value.supported !== "boolean" ||
+    !permissions.some((p) => p === value.permission) ||
+    !isRecord(value.visibility) ||
+    typeof value.autoSave !== "boolean" ||
+    typeof value.unread !== "number" ||
+    !Number.isFinite(value.unread)
   )
     return undefined;
-  const base = { enabled: value.enabled, supported: value.supported };
-  if (value.status === null || value.status === undefined)
-    return { ...base, status: null };
-  const status = parsePushStatus(value.status);
-  return status ? { ...base, status } : undefined;
+  const status =
+    value.status === null || value.status === undefined
+      ? null
+      : parsePushStatus(value.status);
+  if (status === undefined) return undefined;
+  return {
+    enabled: value.enabled,
+    supported: value.supported,
+    status,
+    permission: value.permission as NotificationPermission,
+    visibility: parseVisibilityState(value.visibility),
+    autoSave: value.autoSave,
+    unread: Math.max(0, Math.floor(value.unread)),
+  };
 }
 
 export function createPushClient(ports: PushClientPorts): PushClient {
-  const send = async (action: PushAction): Promise<Record<string, unknown>> => {
+  const send = async (
+    action: PushAction,
+    extra: Record<string, unknown> = {},
+  ): Promise<Record<string, unknown>> => {
     let response: unknown;
     try {
-      response = await ports.sendMessage({ type: PUSH_MESSAGE, action });
+      response = await ports.sendMessage({
+        type: PUSH_MESSAGE,
+        action,
+        ...extra,
+      });
     } catch {
       // The background is unreachable; the UI treats it like a connection issue.
       throw new PushApiError("NETWORK");
@@ -71,6 +120,12 @@ export function createPushClient(ports: PushClientPorts): PushClient {
     state: async () => stateOf(await send("status")),
     setEnabled: async (enabled) =>
       stateOf(await send(enabled ? "enable" : "disable")),
+    setAutoSave: async (enabled) =>
+      stateOf(await send("autosave", { enabled })),
+    test: async () => stateOf(await send("test")),
+    record: async (answer, source) =>
+      stateOf(await send("record", { answer, source })),
+    later: async () => stateOf(await send("later")),
     inbox: async () => {
       const response = await send("inbox");
       if (!Array.isArray(response.postings))
@@ -79,10 +134,7 @@ export function createPushClient(ports: PushClientPorts): PushClient {
     },
     subscribe: (listener) => {
       const changed: ChangeListener = (changes, area) => {
-        if (
-          area === "local" &&
-          (PUSH_STATUS_KEY in changes || PUSH_ENABLED_KEY in changes)
-        )
+        if (area === "local" && WATCHED_KEYS.some((key) => key in changes))
           listener();
       };
       ports.onChanged.addListener(changed);
@@ -91,11 +143,24 @@ export function createPushClient(ports: PushClientPorts): PushClient {
   };
 }
 
+// Storage listeners are best-effort: without the extension runtime the UI
+// simply stops refreshing instead of crashing.
 export const pushClient: PushClient = createPushClient({
   sendMessage: (message) => browser.runtime.sendMessage(message),
   onChanged: {
-    addListener: (listener) => browser.storage.onChanged.addListener(listener),
-    removeListener: (listener) =>
-      browser.storage.onChanged.removeListener(listener),
+    addListener: (listener) => {
+      try {
+        browser.storage.onChanged.addListener(listener);
+      } catch {
+        /* Extension storage is unavailable here. */
+      }
+    },
+    removeListener: (listener) => {
+      try {
+        browser.storage.onChanged.removeListener(listener);
+      } catch {
+        /* Extension storage is unavailable here. */
+      }
+    },
   },
 });

@@ -41,6 +41,8 @@ export function createPosthogCapture({
             ...(properties.posting_id
               ? { posting_id: properties.posting_id }
               : {}),
+            ...(properties.answer ? { answer: properties.answer } : {}),
+            ...(properties.trigger ? { trigger: properties.trigger } : {}),
             $process_person_profile: false,
           },
         }),

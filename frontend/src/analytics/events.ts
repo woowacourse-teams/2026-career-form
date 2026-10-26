@@ -24,6 +24,9 @@ const analyticsEvents = [
   "posting_notification_saved",
   "posting_inbox_viewed",
   "posting_inbox_saved",
+  "notification_test_sent",
+  "notification_visibility_answered",
+  "posting_auto_save_cancelled",
 ] as const;
 
 const analyticsSurfaces = [
@@ -37,12 +40,16 @@ const analyticsSurfaces = [
 
 // Server posting identifiers only; never company names, links or profile values.
 const POSTING_ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
+const visibilityAnswers = ["seen", "not_seen"] as const;
+const saveTriggers = ["button", "open"] as const;
 
 export type AnalyticsEvent = (typeof analyticsEvents)[number];
 export interface AnalyticsProperties {
   readonly surface: (typeof analyticsSurfaces)[number];
   readonly page_host?: string;
   readonly posting_id?: string;
+  readonly answer?: (typeof visibilityAnswers)[number];
+  readonly trigger?: (typeof saveTriggers)[number];
 }
 export type TrackEvent = (
   event: AnalyticsEvent,
@@ -87,6 +94,12 @@ export function parseAnalyticsMessage(message: unknown) {
     typeof input.posting_id === "string" &&
     POSTING_ID_PATTERN.test(input.posting_id)
       ? { posting_id: input.posting_id }
+      : {}),
+    ...("answer" in input && visibilityAnswers.some((v) => v === input.answer)
+      ? { answer: input.answer as (typeof visibilityAnswers)[number] }
+      : {}),
+    ...("trigger" in input && saveTriggers.some((v) => v === input.trigger)
+      ? { trigger: input.trigger as (typeof saveTriggers)[number] }
       : {}),
   };
   return { event, properties };
