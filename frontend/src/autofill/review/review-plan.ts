@@ -59,6 +59,7 @@ import {
   type ApprovedCatalogMatch,
 } from "../profile/catalog-match";
 import { catalogEvidenceForElement } from "../profile/catalog-evidence";
+import { resolveChoiceOption } from "../profile/choice-option";
 import { matchStandardOption } from "../profile/standard-option-match";
 import { schoolRegionSearchValues } from "../../profile/standard-values";
 import { formatProfileDate } from "../profile/date-format";
@@ -80,6 +81,7 @@ import {
   type DayCalendarApproval,
 } from "./day-calendar-approval";
 import { assignMixedRows } from "../dom/mixed-section-rows";
+import { genericReasonText } from "../generic/grade-reason-text";
 
 export type ProfileValueResolution =
   | {
@@ -988,7 +990,9 @@ function itemForResolvedAnalysis(
         }
       : finalizedProfileValue;
 
-  const liveOptionMatch =
+  // Static adapters keep their verified standard-ID matching unchanged.
+  const adapterOptionMatch =
+    !generic &&
     analysis.writePlan.command === "SELECT_OPTION" &&
     profileValue.standardValueId
       ? matchStandardOption(
@@ -996,7 +1000,25 @@ function itemForResolvedAnalysis(
           lookup.handle.candidate.options ?? [],
         )
       : undefined;
+  const genericOptionMatch =
+    generic &&
+    binding.type === "DIRECT" &&
+    (analysis.writePlan.command === "SELECT_OPTION" ||
+      analysis.writePlan.command === "CHECK_RADIO")
+      ? resolveChoiceOption(
+          binding.profileFieldKey,
+          profileValue.standardValueId ?? profileValue.value,
+          lookup.handle.candidate.options,
+          {
+            militaryStatus: profile.military.militaryStatus,
+            militaryType: profile.military.militaryType,
+            militaryRank: profile.military.militaryRank,
+          },
+        )
+      : undefined;
+  const liveOptionMatch = adapterOptionMatch ?? genericOptionMatch;
   if (
+    profileValue.standardValueId &&
     liveOptionMatch &&
     (liveOptionMatch.status === "none" ||
       liveOptionMatch.status === "ambiguous")
@@ -1012,6 +1034,10 @@ function itemForResolvedAnalysis(
     liveOptionMatch?.status === "unique"
       ? { ...profileValue, value: liveOptionMatch.option.displayName }
       : profileValue;
+  const choiceReview = genericOptionMatch?.status === "unique" &&
+    (genericOptionMatch.reason === "GRADE_OTHER_OPTION" ||
+      (binding.type === "DIRECT" && binding.profileFieldKey.startsWith("military.military.") &&
+        normalizeDisplayName(profileValue.value) !== normalizeDisplayName(genericOptionMatch.option.displayName)));
   const catalogChoices =
     catalogMatch &&
     !(lookup.handle.buttonDropdown && catalogMatch.requiredDetail) &&
@@ -1242,18 +1268,24 @@ function itemForResolvedAnalysis(
     currentValue: pageValue,
     profileValue: resolvedProfileValue.value,
     previewValue: resolvedProfileValue.value,
-    status: "available",
+    status: choiceReview ? "needs-review" : "available",
     // A calendar target whose approval was built from a complete profile date
     // (format resolved by the calendar surface) is a format difference, not an
     // ambiguity, so it is auto-selected. Conflicts returned earlier.
     selected:
-      analysis.writePlan.command === "SELECT_DATE"
-        ? generic && !!(calendarApproval || dayCalendarApproval)
-        : true,
+      choiceReview
+        ? false
+        : analysis.writePlan.command === "SELECT_DATE"
+          ? generic && !!(calendarApproval || dayCalendarApproval)
+          : true,
     disabled: false,
     revealed: true,
     reason:
-      analysis.writePlan.command === "SELECT_DATE"
+      choiceReview
+        ? genericOptionMatch?.status === "unique" && genericOptionMatch.reason === "GRADE_OTHER_OPTION"
+          ? genericReasonText("GRADE_OTHER_OPTION")
+          : "프로필 병역 정보에 맞는 지원서 선택지예요. 맞는지 확인한 뒤 포함해 주세요."
+        : analysis.writePlan.command === "SELECT_DATE"
         ? currentValue(lookup.handle).trim() === finalizedProfileValue.value
           ? dayCalendarApproval
             ? "지원서에 같은 날짜가 이미 입력되어 있습니다."

@@ -1,4 +1,5 @@
 import { traceWrite } from "../debug/write-trace";
+import { resolveChoiceOption } from "../profile/choice-option";
 import { isSplitEmailTarget, SPLIT_EMAIL_REASON } from "../dom/split-email";
 import {
   isVisibleWriteElement,
@@ -109,14 +110,29 @@ function setNativeChecked(element: HTMLInputElement): boolean {
   return element.checked;
 }
 
+/**
+ * Option names match when their normalized display names are equal, or when
+ * both are plain decimal numbers of the same value (a stored "4.50" selects the
+ * site's "4.5"). Anything with units or text still needs an exact name.
+ */
+/** Numeric equivalence ("4.0" = "4") is a generic-only relaxation; adapters keep exact labels. */
+function sameOptionName(left: string, right: string, numeric = false): boolean {
+  const a = normalizeDisplayName(left),
+    b = normalizeDisplayName(right);
+  if (a === b) return true;
+  if (!numeric) return false;
+  const plain = /^\d+(\.\d+)?$/;
+  return plain.test(a) && plain.test(b) && Number(a) === Number(b);
+}
+
 function profileOptions(
   handle: FieldCandidateHandle,
   profileValue: string,
   match?: ApprovedCatalogMatch,
+  numeric = false,
 ): HTMLElement[] {
-  const desired = normalizeDisplayName(profileValue);
   const matches = (handle.candidate.options ?? [])
-    .filter((option) => normalizeDisplayName(option.displayName) === desired)
+    .filter((option) => sameOptionName(option.displayName, profileValue, numeric))
     .map((option) => handle.optionElements.get(option.optionId))
     .filter((option): option is HTMLElement => Boolean(option))
     .filter(isVisibleWriteElement)
@@ -142,8 +158,9 @@ function profileOption(
   handle: FieldCandidateHandle,
   profileValue: string,
   match?: ApprovedCatalogMatch,
+  numeric = false,
 ): HTMLElement | undefined {
-  const matches = profileOptions(handle, profileValue, match);
+  const matches = profileOptions(handle, profileValue, match, numeric);
   return matches.length === 1 && matches[0]!.isConnected
     ? matches[0]
     : undefined;
@@ -349,13 +366,13 @@ function visibleExactComboboxOption(
   option: HTMLElement,
   listbox: HTMLElement,
   value: string,
+  numeric = false,
 ): boolean {
   const matches = Array.from(
     listbox.querySelectorAll<HTMLElement>("[role='option']"),
   ).filter(
     (entry) =>
-      normalizeDisplayName(entry.textContent ?? "") ===
-      normalizeDisplayName(value),
+      sameOptionName(entry.textContent ?? "", value, numeric),
   );
   return (
     snapshottedComboboxOption(option, listbox) &&
@@ -368,11 +385,12 @@ function visibleExactComboboxOption(
 function writeCombobox(
   handle: FieldCandidateHandle,
   value: string,
+  numeric = false,
 ): WriteOutcome {
   const input = primaryWriteElement(handle);
   const listbox =
     input instanceof HTMLInputElement ? comboboxParts(input) : undefined;
-  const option = profileOption(handle, value);
+  const option = profileOption(handle, value, undefined, numeric);
   if (
     !input ||
     !(input instanceof HTMLInputElement) ||
@@ -385,7 +403,7 @@ function writeCombobox(
   if (input.getAttribute("aria-expanded") !== "true") input.click();
   if (
     input.getAttribute("aria-expanded") !== "true" ||
-    !visibleExactComboboxOption(option, listbox, value)
+    !visibleExactComboboxOption(option, listbox, value, numeric)
   )
     return { written: false, reason: UNSAFE, code: "UNSUPPORTED_CONTROL" };
   option.click();
@@ -415,9 +433,10 @@ function nativeSelectOption(
   handle: FieldCandidateHandle,
   value: string,
   match?: ApprovedCatalogMatch,
+  numeric = false,
 ): HTMLOptionElement | undefined {
   const select = readbackWriteElement(handle),
-    option = profileOption(handle, value, match);
+    option = profileOption(handle, value, match, numeric);
   if (
     !(select instanceof HTMLSelectElement) ||
     !(option instanceof HTMLOptionElement)
@@ -431,8 +450,7 @@ function nativeSelectOption(
           match,
           catalogEvidenceForElement(entry, select.parentElement ?? select),
         )
-      : normalizeDisplayName(entry.textContent ?? "") ===
-        normalizeDisplayName(value),
+      : sameOptionName(entry.textContent ?? "", value, numeric),
   );
   return matches.length === 1 && matches[0] === option && !option.disabled
     ? option
@@ -442,8 +460,9 @@ function nativeSelectOption(
 function nativeChoiceOption(
   handle: FieldCandidateHandle,
   value: string,
+  numeric = false,
 ): HTMLInputElement | undefined {
-  const option = profileOption(handle, value);
+  const option = profileOption(handle, value, undefined, numeric);
   const label =
     option instanceof HTMLInputElement
       ? option.labels?.length === 1
@@ -453,7 +472,7 @@ function nativeChoiceOption(
   return option instanceof HTMLInputElement &&
     !option.disabled &&
     handle.elements.includes(option) &&
-    (!label || normalizeDisplayName(label) === normalizeDisplayName(value))
+    (!label || sameOptionName(label, value, numeric))
     ? option
     : undefined;
 }
@@ -485,8 +504,9 @@ function hasGenericConflict(
   item: ReviewPlanItem,
   handle: FieldCandidateHandle,
 ): boolean {
-  const value = item.profileValue!,
-    command = item.analysis!.writePlan!.command;
+  const value = nativeChoiceValue(item, handle),
+    command = item.analysis!.writePlan!.command,
+    generic = item.analysis?.mappingStatus === "LLM_SUGGESTED";
   if (command === "SET_TEXT") {
     const current = readbackWriteElement(handle)?.value ?? "";
     return current !== "" && current !== value && current !== item.currentValue;
@@ -501,8 +521,8 @@ function hasGenericConflict(
         : "";
     return (
       current !== "" &&
-      normalizeDisplayName(current) !== normalizeDisplayName(value) &&
-      normalizeDisplayName(current) !== normalizeDisplayName(item.currentValue)
+      !sameOptionName(current, value, generic) &&
+      !sameOptionName(current, item.currentValue, generic)
     );
   }
   if (command === "CHECK_CHECKBOX")
@@ -513,9 +533,27 @@ function hasGenericConflict(
       (element) =>
         element instanceof HTMLInputElement &&
         element.checked &&
-        element !== nativeChoiceOption(handle, value),
+        element !== nativeChoiceOption(handle, value, generic),
     )
   );
+}
+
+function nativeChoiceValue(item: ReviewPlanItem, handle: FieldCandidateHandle): string {
+  const value = item.profileValue ?? "";
+  if (
+    item.analysis?.mappingStatus !== "LLM_SUGGESTED" ||
+    (handle.candidate.control !== "select" && handle.candidate.control !== "radio")
+  )
+    return value;
+  // Catalog identity can distinguish equal labels; its approved evidence is
+  // checked by nativeSelectOption rather than the label-only choice resolver.
+  if (catalogApprovalForItem(item).status === "selected") return value;
+  const match = resolveChoiceOption(
+    item.analysis?.valueBinding?.profileFieldKey ?? item.profileFieldKey,
+    value,
+    handle.candidate.options,
+  );
+  return match.status === "unique" ? match.option.displayName : "";
 }
 
 /** The control this run wrote, so the settle readback reads the same one. */
@@ -531,8 +569,14 @@ function writeGeneric(
   strict: boolean,
 ): WriteOutcome {
   const command = item.analysis!.writePlan!.command,
-    value = item.profileValue!;
+    value = nativeChoiceValue(item, handle),
+    generic = item.analysis?.mappingStatus === "LLM_SUGGESTED";
   writtenTargets.delete(handle);
+  if (!value && (command === "SELECT_OPTION" || command === "CHECK_RADIO"))
+    return {
+      written: false, reason: UNSAFE, code: "UNSUPPORTED_CONTROL",
+      ...(command === "SELECT_OPTION" ? { failureCode: "OPTION_UNMATCHED" as const } : {}),
+    };
   if (strict && hasGenericConflict(item, handle))
     return { written: false, reason: CONFLICT, code: "CONFLICT" };
   traceWrite(item.candidateId, {
@@ -547,7 +591,7 @@ function writeGeneric(
       element instanceof HTMLInputElement &&
       element.getAttribute("role") === "combobox"
     )
-      return writeCombobox(handle, value);
+      return writeCombobox(handle, value, generic);
     if (
       !(
         element instanceof HTMLInputElement ||
@@ -583,6 +627,7 @@ function writeGeneric(
         handle,
         value,
         approval.status === "selected" ? approval.match : undefined,
+        generic,
       );
     if (!(select instanceof HTMLSelectElement) || !option)
       return {
@@ -594,6 +639,7 @@ function writeGeneric(
           handle,
           value,
           approval.status === "selected" ? approval.match : undefined,
+          generic,
         ).length === 0
           ? { failureCode: "OPTION_UNMATCHED" as const }
           : {}),
@@ -612,7 +658,7 @@ function writeGeneric(
     });
     return { written: true };
   }
-  const option = nativeChoiceOption(handle, value);
+  const option = nativeChoiceOption(handle, value, generic);
   const expected =
     command === "CHECK_RADIO"
       ? "radio"
@@ -663,8 +709,11 @@ function catalogChoiceIsCurrent(
     );
     return (
       matches.length === 1 &&
-      normalizeDisplayName(matches[0].textContent ?? "") ===
-        normalizeDisplayName(item.profileValue ?? "")
+      sameOptionName(
+        matches[0].textContent ?? "",
+        item.profileValue ?? "",
+        item.analysis?.mappingStatus === "LLM_SUGGESTED",
+      )
     );
   }
   if (
@@ -681,8 +730,11 @@ function catalogChoiceIsCurrent(
     );
     return (
       matches.length === 1 &&
-      normalizeDisplayName(matches[0].textContent ?? "") ===
-        normalizeDisplayName(item.profileValue ?? "")
+      sameOptionName(
+        matches[0].textContent ?? "",
+        item.profileValue ?? "",
+        item.analysis?.mappingStatus === "LLM_SUGGESTED",
+      )
     );
   }
   return (
@@ -924,7 +976,8 @@ function retainedGenericValue(
 ): boolean {
   if (!catalogChoiceIsCurrent(item, handle)) return false;
   const command = item.analysis?.writePlan?.command,
-    value = item.profileValue;
+    value = nativeChoiceValue(item, handle),
+    generic = item.analysis?.mappingStatus === "LLM_SUGGESTED";
   if (!command || !value) return false;
   const approval = catalogApprovalForItem(item);
   const element = handle.buttonDropdown?.trigger ?? settleElement(handle);
@@ -961,10 +1014,11 @@ function retainedGenericValue(
     return (
       select instanceof HTMLSelectElement &&
       select.isConnected &&
-      nativeSelectOption(handle, value) === select.selectedOptions[0]
+      nativeSelectOption(handle, value, undefined, generic) ===
+        select.selectedOptions[0]
     );
   }
-  const option = nativeChoiceOption(handle, value);
+  const option = nativeChoiceOption(handle, value, generic);
   return Boolean(
     option?.isConnected &&
     option.checked &&

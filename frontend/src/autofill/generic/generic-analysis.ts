@@ -357,10 +357,16 @@ function convertSection(
     // Local only: the stored value is compared with the options, never sent.
     const choiceValue =
       choiceControl && direct?.status === "resolved" ? direct.value : undefined;
+    const choiceContext = {
+      militaryStatus: profile.military.militaryStatus,
+      militaryType: profile.military.militaryType,
+      militaryRank: profile.military.militaryRank,
+    };
     const choiceOption = matchProfileValueOption(
       profileFieldKey,
       choiceValue,
       candidate.options,
+      choiceContext,
     );
     const grade = gradeGenericField({
       profileFieldKey,
@@ -379,7 +385,7 @@ function convertSection(
       placeholder: element.getAttribute("placeholder") ?? undefined,
       options: candidate.options,
       ...(choiceControl && !composite
-        ? { optionValueCheck: { profileValue: choiceValue } }
+        ? { optionValueCheck: { profileValue: choiceValue, context: choiceContext } }
         : {}),
       rowSiblings,
       sectionSiblingKeys: matched.flatMap((sibling) =>
@@ -413,7 +419,12 @@ function convertSection(
               ? {
                   type: "LOOKUP",
                   profileFieldKey: profileFieldKey!,
-                  optionMap: { [choiceValue]: choiceOption },
+                  // The binding reads the stored value through its own
+                  // normalization; key the same option under both forms.
+                  optionMap: {
+                    [choiceValue]: choiceOption,
+                    ...boundChoiceKey(profile, profileFieldKey!, itemIndex, choiceOption),
+                  },
                 }
               : { type: "DIRECT", profileFieldKey: profileFieldKey! },
       autofillPolicy: response.autofillPolicy!,
@@ -423,6 +434,20 @@ function convertSection(
     });
   });
   return { fields, grades };
+}
+
+function boundChoiceKey(
+  profile: Profile,
+  profileFieldKey: string,
+  itemIndex: number | undefined,
+  option: string,
+): Record<string, string> {
+  const bound = resolveValueBinding(
+    profile,
+    { type: "DIRECT", profileFieldKey },
+    itemIndex,
+  );
+  return bound.status === "resolved" ? { [bound.value]: option } : {};
 }
 
 /**

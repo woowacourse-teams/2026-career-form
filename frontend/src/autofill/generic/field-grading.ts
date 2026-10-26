@@ -1,6 +1,6 @@
 import { PROFILE_CATEGORIES } from "../../profile/field-definitions";
 import { matchDatePartOption, type DatePart } from "./date-part-options";
-import { matchOptionIndexAny, normalizeOptionText } from "./option-match";
+import { resolveChoiceOption, type ChoiceContext } from "../profile/choice-option";
 import type {
   DerivedRecipe,
   FieldCandidate,
@@ -33,7 +33,8 @@ export type GradeReason =
   | "FORMAT_KEY_MISMATCH"
   | "OTHER_PERSON_CONTEXT"
   | "UNPAIRED_NAME_PART"
-  | "OPTION_VALUE_UNMATCHED";
+  | "OPTION_VALUE_UNMATCHED"
+  | "GRADE_OTHER_OPTION";
 
 /** A match whose value is composed: a name recipe or one part of a date. */
 export type GradeComposite =
@@ -73,7 +74,7 @@ export interface GradeFieldInput extends Pick<
    * Present for a field whose written value must be one of its options.
    * Evaluated locally and never sent; the value is read only to compare it.
    */
-  optionValueCheck?: { profileValue?: string };
+  optionValueCheck?: { profileValue?: string; context?: ChoiceContext };
   /** Other matched fields in the same repeat row, excluding this field. */
   rowSiblings?: readonly GradeSibling[];
   /**
@@ -98,28 +99,6 @@ const EDUCATION_RECORDS = new Set([
 const POSTAL_TEXT =
   /우편\s*번호|\bpostal(?:[\s_-]*code)?\b|\bzip(?:[\s_-]*code)?\b/i;
 
-/** Labels of the fixed option set a profile field defines, empty when it has none. */
-function fixedOptionLabels(
-  profileFieldKey: string | undefined,
-  profileValue: string,
-): string[] {
-  const [categoryId, sectionId, fieldId] = (profileFieldKey ?? "").split(".");
-  const options = PROFILE_CATEGORIES.find(
-    (category) => category.id === categoryId,
-  )
-    ?.sections.find((section) => section.id === sectionId)
-    ?.fields.find((field) => field.id === fieldId)?.options;
-  const wanted = normalizeOptionText(profileValue);
-  return (options ?? []).flatMap((option) => {
-    const [value, label] =
-      typeof option === "string" ? [option, option] : [option.value, option.label];
-    return normalizeOptionText(value) === wanted ||
-      normalizeOptionText(label) === wanted
-      ? [label]
-      : [];
-  });
-}
-
 /**
  * The page option a stored value maps to, or undefined unless exactly one
  * option matches under the generic rules of option-match.ts. Evidence is the
@@ -129,14 +108,10 @@ export function matchProfileValueOption(
   profileFieldKey: string | undefined,
   profileValue: string | undefined,
   options: readonly { displayName: string }[] | undefined,
+  context?: ChoiceContext,
 ): string | undefined {
-  if (!profileValue?.trim()) return undefined;
-  const list = options ?? [];
-  const index = matchOptionIndexAny(
-    [profileValue, ...fixedOptionLabels(profileFieldKey, profileValue)],
-    list.map((option) => option.displayName),
-  );
-  return index === null ? undefined : list[index]!.displayName;
+  const result = resolveChoiceOption(profileFieldKey, profileValue, options, context);
+  return result.status === "unique" ? result.option.displayName : undefined;
 }
 
 /** Whether a profile value exists but no page option matches it. */
@@ -149,6 +124,7 @@ function hasUnmatchedOptionValue(input: GradeFieldInput): boolean {
       input.profileFieldKey,
       input.optionValueCheck.profileValue,
       input.options,
+      input.optionValueCheck.context,
     ) === undefined
   );
 }
@@ -382,6 +358,14 @@ export function gradeGenericField(input: GradeFieldInput): FieldGradeResult {
     return canChoose
       ? { grade: "REVIEW", reason: "OPTION_VALUE_UNMATCHED" }
       : { grade: "BLOCKED", reason: "OPTION_VALUE_UNMATCHED" };
+  }
+  if (input.optionValueCheck && (input.control === "select" || input.control === "radio") && !input.composite) {
+    const choice = resolveChoiceOption(
+      input.profileFieldKey, input.optionValueCheck.profileValue,
+      input.options, input.optionValueCheck.context,
+    );
+    if (choice.status === "unique" && choice.reason === "GRADE_OTHER_OPTION")
+      return { grade: input.confidence >= PROMOTE_CONFIDENCE_MIN ? "REVIEW" : "BLOCKED", reason: choice.reason };
   }
   if (input.confidence >= AUTO_CONFIDENCE_MIN && hasUnpairedNamePart(input)) {
     return { grade: "REVIEW", reason: "UNPAIRED_NAME_PART" };

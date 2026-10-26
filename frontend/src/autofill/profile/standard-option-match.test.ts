@@ -1,6 +1,81 @@
 import { describe, expect, it } from "vitest";
 
-import { matchStandardOption } from "./standard-option-match";
+import {
+  matchCompositeMilitaryOption,
+  matchStandardOption,
+} from "./standard-option-match";
+
+const militaryOptions = [
+  "병역구분",
+  "병역필_현역(병)",
+  "병역필_현역(장교)",
+  "병역필_현역(부사관)",
+  "병역필_사회복무요원",
+  "병역필_전문연구요원",
+  "병역필_산업기능요원",
+  "병역면제",
+  "미필",
+  "해당없음",
+].map((displayName, index) => ({ optionId: `m-${index}`, displayName }));
+
+describe("matchCompositeMilitaryOption", () => {
+  it("maps a served enlisted profile to the single active-duty enlisted option", () => {
+    expect(
+      matchCompositeMilitaryOption(
+        "military-status:served",
+        "military-rank:byeongjang",
+        militaryOptions,
+      ),
+    ).toEqual({ status: "unique", option: militaryOptions[1] });
+  });
+
+  it("stays ambiguous for a served profile without a rank", () => {
+    expect(
+      matchCompositeMilitaryOption(
+        "military-status:served",
+        undefined,
+        militaryOptions,
+      ).status,
+    ).toBe("ambiguous");
+  });
+
+  it.each([
+    ["military-status:exempt", "병역면제"],
+    ["military-status:not-served", "미필"],
+    ["military-status:not-applicable", "해당없음"],
+  ])("maps %s to its composite label", (status, label) => {
+    expect(
+      matchCompositeMilitaryOption(status, undefined, militaryOptions),
+    ).toEqual({
+      status: "unique",
+      option: militaryOptions.find((option) => option.displayName === label),
+    });
+  });
+
+  it.each([
+    ["현역병", "병역필_현역(병)"],
+    ["전문연구요원", "병역필_전문연구요원"],
+    ["공익근무요원", "병역필_사회복무요원"],
+  ])("narrows a served profile by service type %s", (type, label) => {
+    expect(
+      matchCompositeMilitaryOption(
+        "military-status:served",
+        undefined,
+        militaryOptions,
+        type,
+      ),
+    ).toEqual({
+      status: "unique",
+      option: militaryOptions.find((option) => option.displayName === label),
+    });
+  });
+
+  it("ignores values that are not military statuses", () => {
+    expect(
+      matchCompositeMilitaryOption("region:seoul", undefined, militaryOptions),
+    ).toEqual({ status: "not-standard" });
+  });
+});
 
 describe("matchStandardOption", () => {
   it("matches one current option through a standard-value alias", () => {
