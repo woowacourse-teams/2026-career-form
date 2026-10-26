@@ -14,7 +14,7 @@ import {
 import type { NativeSection } from "../policy/native-form-contract";
 import { text } from "../policy/primitives";
 import { executionPolicy } from "../workflow/execution-policy";
-import { isSplitEmailTarget, SPLIT_EMAIL_REASON } from "../dom/split-email";
+import { canWriteSplitEmail, isSplitEmailTarget, SPLIT_EMAIL_REASON } from "../dom/split-email";
 import type { WriteFailureCode } from "../write/failure";
 import { resolveDocumentCompany } from "../adapters/company";
 import {
@@ -706,7 +706,10 @@ function itemForResolvedAnalysis(
     generic &&
     analysis.mappingStatus === "LLM_SUGGESTED" &&
     binding.profileFieldKey === "contact.contact.email" &&
-    isSplitEmailTarget(lookup.handle)
+    isSplitEmailTarget(lookup.handle) &&
+    // A split pair is written as local part + domain option only when the
+    // profile domain is exactly one option; otherwise it stays manual.
+    !canWriteSplitEmail(lookup.handle, profile.contact.email ?? "")
   ) {
     return {
       ...unavailableItem(

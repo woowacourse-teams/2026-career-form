@@ -131,6 +131,28 @@ describe("LG AI Research sanitized application form structure", () => {
     expect(emailId.displayName).toBe("이메일 아이디");
     expect(plan.items[0]?.status).not.toBe("available");
     expect(plan.items[0]).toMatchObject({ reason: SPLIT_EMAIL_REASON });
+    profile.contact.email = "qa@gmail.com";
+    const fillable = buildReviewPlan({
+      analysis: {
+        snapshotId: snapshot.request.snapshotId,
+        mode: "GENERIC",
+        analysisStatus: "COMPLETE",
+        fields: [
+          {
+            candidateId: emailId.candidateId,
+            matchType: "MATCH",
+            valueBinding: { type: "DIRECT", profileFieldKey: "contact.contact.email" },
+            autofillPolicy: "ALLOWED",
+            mappingStatus: "LLM_SUGGESTED",
+            interactionStatus: "READY",
+            writePlan: { command: "SET_TEXT" },
+          },
+        ],
+      },
+      profile,
+      registry: snapshot.registry,
+    });
+    expect(fillable.items[0]?.status).toBe("available");
   });
 
   it("recovers an unassociated sibling title and description without borrowing other questions", () => {

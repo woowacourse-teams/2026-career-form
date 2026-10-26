@@ -19,13 +19,13 @@ function fixture(current = "", split = true) {
   return document.querySelector<HTMLInputElement>("#local")!;
 }
 
-function setup(mode: FieldsAnalyzeResponse["mode"] = "GENERIC") {
+function setup(mode: FieldsAnalyzeResponse["mode"] = "GENERIC", email = "qa@example.test") {
   const snapshot = collectFieldsSnapshot(document);
   const field = snapshot.request.sections
     .flatMap((section) => section.fields)
     .find((entry) => entry.domId === "local")!;
   const profile = createEmptyProfile();
-  profile.contact.email = "qa@example.test";
+  profile.contact.email = email;
   const analysis: FieldsAnalyzeResponse = {
     snapshotId: snapshot.request.snapshotId,
     mode,
@@ -49,44 +49,59 @@ function setup(mode: FieldsAnalyzeResponse["mode"] = "GENERIC") {
   return { snapshot, profile, analysis };
 }
 
-describe("generic split-email safety", () => {
-  it.each(["", "existing-local"])(
-    "blocks the split input preserving %j",
-    (current) => {
-      const input = fixture(current);
-      const { snapshot, profile, analysis } = setup();
-      const plan = buildReviewPlan({
-        analysis,
-        profile,
-        registry: snapshot.registry,
-      });
-      expect(plan.items[0]).toMatchObject({
-        status: "unavailable",
-        selected: false,
-        disabled: true,
-        failureCode: "SPLIT_EMAIL_UNSUPPORTED",
-      });
-      expect(
-        buildResultModel({ reviewItems: plan.items, results: [], profile })
-          .pending[0]?.failureCode,
-      ).toBe("SPLIT_EMAIL_UNSUPPORTED");
-      const events: string[] = [];
-      input.addEventListener("input", () => events.push("input"));
-      input.addEventListener("change", () => events.push("change"));
-      executeApprovedWrites({
-        items: plan.items,
-        approvedCandidateIds: new Set([plan.items[0]!.candidateId]),
-        registry: snapshot.registry,
-      });
-      expect(input.value).toBe(current);
-      expect(document.querySelector<HTMLSelectElement>("#domain")!.value).toBe(
-        "",
-      );
-      expect(events).toEqual([]);
-    },
-  );
+describe("generic split-email writing", () => {
+  it("fills the local part and selects the matching domain", () => {
+    const input = fixture("");
+    const { snapshot, profile, analysis } = setup();
+    const plan = buildReviewPlan({ analysis, profile, registry: snapshot.registry });
+    expect(plan.items[0]?.status).toBe("available");
+    const results = executeApprovedWrites({
+      items: plan.items,
+      approvedCandidateIds: new Set([plan.items[0]!.candidateId]),
+      registry: snapshot.registry,
+    });
+    expect(input.value).toBe("qa");
+    expect(document.querySelector<HTMLSelectElement>("#domain")!.value).toBe("example.test");
+    expect(results[0]?.status).toBe("written");
+  });
 
-  it("blocks a split group introduced after review even with explicit approval", () => {
+  it("keeps a different existing local part as a conflict", () => {
+    const input = fixture("existing-local");
+    const { snapshot, profile, analysis } = setup();
+    const plan = buildReviewPlan({ analysis, profile, registry: snapshot.registry });
+    const results = executeApprovedWrites({
+      items: plan.items,
+      approvedCandidateIds: new Set([plan.items[0]!.candidateId]),
+      registry: snapshot.registry,
+    });
+    expect(input.value).toBe("existing-local");
+    expect(document.querySelector<HTMLSelectElement>("#domain")!.value).toBe("");
+    expect(results[0]?.status).toBe("skipped");
+  });
+
+  it("blocks the split input when no domain option matches the profile", () => {
+    const input = fixture("");
+    const { snapshot, profile, analysis } = setup("GENERIC", "qa@other.test");
+    const plan = buildReviewPlan({ analysis, profile, registry: snapshot.registry });
+    expect(plan.items[0]).toMatchObject({
+      status: "unavailable",
+      selected: false,
+      disabled: true,
+      failureCode: "SPLIT_EMAIL_UNSUPPORTED",
+    });
+    expect(
+      buildResultModel({ reviewItems: plan.items, results: [], profile }).pending[0]?.failureCode,
+    ).toBe("SPLIT_EMAIL_UNSUPPORTED");
+    executeApprovedWrites({
+      items: plan.items,
+      approvedCandidateIds: new Set([plan.items[0]!.candidateId]),
+      registry: snapshot.registry,
+    });
+    expect(input.value).toBe("");
+    expect(document.querySelector<HTMLSelectElement>("#domain")!.value).toBe("");
+  });
+
+  it("splits a group introduced after review into its local part and domain", () => {
     const input = fixture("", false);
     const { snapshot, profile, analysis } = setup();
     const plan = buildReviewPlan({
@@ -103,12 +118,9 @@ describe("generic split-email safety", () => {
       approvedCandidateIds: new Set([plan.items[0]!.candidateId]),
       registry: snapshot.registry,
     });
-    expect(input.value).toBe("");
-    expect(results[0]).toMatchObject({
-      status: "skipped",
-      code: "UNSUPPORTED_CONTROL",
-      failureCode: "SPLIT_EMAIL_UNSUPPORTED",
-    });
+    expect(input.value).toBe("qa");
+    expect(input.parentElement!.querySelector("select")!.value).toBe("example.test");
+    expect(results[0]?.status).toBe("written");
   });
 
   it.each([
@@ -119,8 +131,8 @@ describe("generic split-email safety", () => {
     const { snapshot, profile, analysis } = setup();
     expect(
       buildReviewPlan({ analysis, profile, registry: snapshot.registry })
-        .items[0]?.failureCode,
-    ).toBe("SPLIT_EMAIL_UNSUPPORTED");
+        .items[0]?.status,
+    ).toBe("available");
   });
 
   it.each([
@@ -191,10 +203,10 @@ describe("generic split-email safety", () => {
     expect(input.value).toBe("qa@example.test");
   });
 
-  it("shows a blocked split field in production workflow results", async () => {
+  it("shows a split field without a matching domain in production workflow results", async () => {
     const input = fixture();
     const profile = createEmptyProfile();
-    profile.contact.email = "qa@example.test";
+    profile.contact.email = "qa@other.test";
     const apiClient: AnalysisApiClient = {
       analyzePreparation: async (request) => ({
         snapshotId: request.snapshotId,
@@ -261,7 +273,7 @@ describe("generic split-email safety", () => {
       SPLIT_EMAIL_REASON,
     );
     expect(pending.querySelector("article")?.textContent).toContain(
-      "qa@example.test",
+      "qa@other.test",
     );
     fireEvent.click(screen.getByRole("tab", { name: /입력 완료/ }));
     expect(

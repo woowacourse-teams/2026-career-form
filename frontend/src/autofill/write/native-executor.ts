@@ -1,7 +1,12 @@
 import { traceWrite } from "../debug/write-trace";
 import { resolveChoiceOption } from "../profile/choice-option";
 import { localWorkflowLog } from "../debug/local-workflow";
-import { isSplitEmailTarget, SPLIT_EMAIL_REASON } from "../dom/split-email";
+import {
+  isSplitEmailTarget,
+  SPLIT_EMAIL_REASON,
+  splitEmailRetained,
+  writeSplitEmail,
+} from "../dom/split-email";
 import {
   isVisibleWriteElement,
   primaryWriteElement,
@@ -908,11 +913,15 @@ function resultForItem(
         item.profileFieldKey) === "contact.contact.email" &&
       isSplitEmailTarget(handle)
     ) {
+      const split = writeSplitEmail(handle, item.profileValue ?? "");
+      if (split === "written") return written(item.candidateId);
+      if (split === "conflict")
+        return skipped(item.candidateId, "needs-verification", "CONFLICT", CONFLICT);
       return {
         candidateId: item.candidateId,
         status: "skipped",
         outcome: "unsupported",
-        code: "UNSUPPORTED_CONTROL",
+        code: split === "failed" ? "EXECUTION_FAILED" : "UNSUPPORTED_CONTROL",
         reason: SPLIT_EMAIL_REASON,
         failureCode: "SPLIT_EMAIL_UNSUPPORTED",
       };
@@ -1022,6 +1031,12 @@ function retainedGenericValue(
   handle: FieldCandidateHandle,
 ): boolean {
   if (!catalogChoiceIsCurrent(item, handle)) return false;
+  if (
+    (item.analysis?.valueBinding?.profileFieldKey ?? item.analysis?.profileFieldKey) ===
+      "contact.contact.email" &&
+    isSplitEmailTarget(handle)
+  )
+    return splitEmailRetained(handle, item.profileValue ?? "");
   const command = item.analysis?.writePlan?.command,
     value = nativeChoiceValue(item, handle),
     generic = item.analysis?.mappingStatus === "LLM_SUGGESTED";
