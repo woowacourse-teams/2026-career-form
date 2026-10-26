@@ -880,6 +880,14 @@
 - [Greeting 공통 어댑터](topics/adapter-greeting.md), [어댑터 필드 현황](topics/adapter-field-inventory.md), [실사이트 자동 입력 평가 워크플로우](topics/live-autofill-evaluation.md)의 Current를 CF-346으로 바꾸고 앞선 근거를 History에 남겼다.
 - 실제 지원값·계정·세션·대화 전문은 저장하지 않았다. 전수 조사 값은 합성값이다.
 
+## [2026-10-25] ingest | CF-348 공고 구독 알림 서버
+
+- Approval-Digest: 41070bd2e6e1cd5e2c2f81feb60063cd207325b077be71f1ee0b00b3eb0ab7fd
+- Checkpoint-Candidate-Digest: f2db20a764a70d467ff37168a4b737bc7b35749f287bd0fbdf2d949cad5d2f31
+- Source-Revision: 650d289
+- 승인된 후보 2개 중 ADR을 [CF-348 bundle](../raw/issues/CF-348/manifest.md)에 기록하고 [공고 구독 알림](topics/job-posting-notifications.md) topic을 신설했다. ADR은 Issue #348 본문의 후보 전문을 상태 '승인됨', 관련 Issue #348·#349·#350으로 바꾸고 결과 끝에 단계적 도입 경로(1차 대안 B 실측 → 2차 대안 C는 장애 격리·채널 확장 이유로 같은 숫자 비교)와 숫자의 근거(구독자 1,000명, 하루 5건, 최악 5,000건, FCM 100ms 가정, 큐 필요 지점 약 8,400건)를 더했다.
+- 다른 topic 문서는 바꾸지 않았다. 실제 지원값·계정·세션·시크릿·VAPID 키·구독 endpoint·대화 전문은 저장하지 않았다.
+
 ## [2026-10-26] ingest | CF-349 확장 Web Push 구독과 공고 알림
 
 - Approval-Digest: dab518584df0f2191e1b2b11ab24a5ebda3ed6297255baad4e3e5142db471952
