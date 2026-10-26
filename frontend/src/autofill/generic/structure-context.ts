@@ -34,6 +34,16 @@ export function createGenericStructureContext(): GenericStructureContext {
 
 type Snapshot = CollectedSnapshot<FieldsAnalyzeRequest>;
 
+function structureRowFor(
+  element: Element,
+  context: GenericStructureContext,
+): Element | undefined {
+  return (
+    genericRowFor(element) ??
+    [...context.educationRows.keys()].find((row) => row.contains(element))
+  );
+}
+
 /** Give each confirmed stage its own repeat count and index before matching. */
 export function bindGenericStructureRows(
   snapshot: Snapshot,
@@ -59,7 +69,7 @@ export function bindGenericStructureRows(
     if (!("handle" in lookup)) continue;
     const handle = lookup.handle;
     const element = handle.elements[0] ?? handle.customElements?.[0];
-    const row = element && genericRowFor(element);
+    const row = element && structureRowFor(element, context);
     const binding = row && context.educationRows.get(row);
     if (!row || !binding || !row.parentElement) continue;
     handle.itemIndex = binding.sectionIndex;
@@ -114,7 +124,7 @@ function structuralBlockReason(
   let reason = [...context.blockedScopes].find(([scope]) =>
     scope.contains(element),
   )?.[1];
-  const row = genericRowFor(element);
+  const row = structureRowFor(element, context);
   if (
     !reason &&
     row &&

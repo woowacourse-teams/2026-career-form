@@ -36,7 +36,8 @@ export type GradeReason =
   | "OTHER_PERSON_CONTEXT"
   | "UNPAIRED_NAME_PART"
   | "OPTION_VALUE_UNMATCHED"
-  | "GRADE_OTHER_OPTION";
+  | "GRADE_OTHER_OPTION"
+  | "FIRST_ENTRY_SINGLE_ROW";
 
 /** A match whose value is composed: a name recipe or one part of a date. */
 export type GradeComposite =

@@ -81,6 +81,7 @@ import {
   type DayCalendarApproval,
 } from "./day-calendar-approval";
 import { assignMixedRows } from "../dom/mixed-section-rows";
+import { genericFormGroupFor } from "../dom/generic-form-groups";
 import { genericReasonText } from "../generic/grade-reason-text";
 
 export type ProfileValueResolution =
@@ -516,6 +517,7 @@ function itemForAnalysis(
   normalizeDirectValue?: (profileFieldKey: string, value: string) => string,
   generic = true,
   components = false,
+  ungroupedRows: ReadonlySet<string> = new Set(),
 ): ReviewPlanItem {
   return itemForResolvedAnalysis(
     withYearMonthWritePlan(analysis, registry, generic),
@@ -526,6 +528,40 @@ function itemForAnalysis(
     normalizeDirectValue,
     generic,
     components,
+    ungroupedRows,
+  );
+}
+
+function ungroupedRowKey(sectionId: string | undefined, categoryId: string) {
+  return `${sectionId ?? ""}\u0000${categoryId}`;
+}
+
+/** Section direct fields covering two or more fields of one repeated category form one implicit row. */
+function ungroupedRepeatRows(
+  analysis: FieldsAnalyzeResponse,
+  registry: CandidateRegistry,
+): ReadonlySet<string> {
+  const fieldIds = new Map<string, Set<string>>();
+  for (const field of analysis.fields) {
+    if (field.matchType === "NO_MATCH") continue;
+    const key =
+      field.valueBinding?.type === "DIRECT"
+        ? field.valueBinding.profileFieldKey
+        : field.profileFieldKey;
+    const parts = key ? profileFieldParts(key) : undefined;
+    const lookup = registry.lookupField(field.candidateId);
+    if (
+      !parts?.repeatable ||
+      parts.topLevel ||
+      !("handle" in lookup) ||
+      lookup.handle.itemId !== undefined
+    )
+      continue;
+    const row = ungroupedRowKey(lookup.handle.sectionId, parts.categoryId);
+    fieldIds.set(row, (fieldIds.get(row) ?? new Set()).add(parts.fieldId));
+  }
+  return new Set(
+    [...fieldIds].filter(([, ids]) => ids.size > 1).map(([row]) => row),
   );
 }
 
@@ -538,6 +574,7 @@ function itemForResolvedAnalysis(
   normalizeDirectValue?: (profileFieldKey: string, value: string) => string,
   generic = true,
   components = false,
+  ungroupedRows: ReadonlySet<string> = new Set(),
 ): ReviewPlanItem {
   const fieldLabel = labelFor(analysis.candidateId, registry);
   const local = registry.lookupField(analysis.candidateId);
@@ -723,6 +760,7 @@ function itemForResolvedAnalysis(
     };
   }
   let itemIndex = nativeIndex ?? lookup.handle.itemIndex;
+  let firstEntrySingleRow = false;
   // A mixed-section row is bound through its local assignment (C8).
   const mixed = lookup.handle.mixedSectionRow;
   if (mixed?.isKindSelect) {
@@ -766,7 +804,45 @@ function itemForResolvedAnalysis(
       parts.categoryId as RepeatedProfileCategoryId
     ].filter((entry) => entry.sectionId === parts.sectionId);
     const formItemCount = registry.fieldItemCount(analysis.candidateId);
-    if (profileEntries.length === 1 && !unindexedRepeatRow) {
+    // Structure preparation has finished. A remaining single row without an
+    // available add control can offer entry zero, but only with user approval.
+    // Section direct fields that form one implicit row are that single row too.
+    firstEntrySingleRow =
+      generic &&
+      analysis.mappingStatus === "LLM_SUGGESTED" &&
+      lookup.handle.owner !== "legacy" &&
+      (formItemCount === 1 ||
+        (!formItemCount &&
+          lookup.handle.itemId === undefined &&
+          ungroupedRows.has(
+            ungroupedRowKey(lookup.handle.sectionId, parts.categoryId),
+          ))) &&
+      profileEntries.length > 1 &&
+      (itemIndex === undefined || itemIndex === 0);
+    if (firstEntrySingleRow) {
+      const element = lookup.handle.elements[0];
+      const addControl = element && genericFormGroupFor(element)?.action;
+      firstEntrySingleRow =
+        !addControl ||
+        !isVisibleWriteElement(addControl) ||
+        addControl.matches(":disabled, [inert], [inert] *");
+    }
+    // The page may already offer more rows than there are stored entries. A
+    // row with a proven index then binds to the entry at the same position;
+    // rows past the last entry have no value and stay empty.
+    const spareRows =
+      analysis.mappingStatus === "LLM_SUGGESTED" &&
+      lookup.handle.owner !== "legacy" &&
+      lookup.handle.itemIndex !== undefined &&
+      !unindexedRepeatRow &&
+      formItemCount !== undefined &&
+      formItemCount > profileEntries.length &&
+      profileEntries.length > 0;
+    if (firstEntrySingleRow) {
+      itemIndex = 0;
+    } else if (spareRows) {
+      itemIndex = lookup.handle.itemIndex;
+    } else if (profileEntries.length === 1 && !unindexedRepeatRow) {
       itemIndex = 0;
     }
     const soleUngroupedProfileEntry =
@@ -776,6 +852,8 @@ function itemForResolvedAnalysis(
     if (
       itemIndex === undefined ||
       (!soleUngroupedProfileEntry &&
+        !firstEntrySingleRow &&
+        !spareRows &&
         (formItemCount === undefined ||
           formItemCount !== profileEntries.length))
     ) {
@@ -788,6 +866,15 @@ function itemForResolvedAnalysis(
     }
   }
 
+  const singleRowReview: Partial<ReviewPlanItem> = firstEntrySingleRow
+    ? {
+        genericGrade: "REVIEW",
+        genericReasonCode: "FIRST_ENTRY_SINGLE_ROW",
+        status: "needs-review",
+        selected: false,
+        reason: genericReasonText("FIRST_ENTRY_SINGLE_ROW"),
+      }
+    : {};
   const boundProfileValue = resolveValueBinding(profile, binding, itemIndex);
   if (boundProfileValue.status !== "resolved") {
     const reason =
@@ -1165,6 +1252,8 @@ function itemForResolvedAnalysis(
       disabled: false,
       revealed: true,
       reason: "지원서에 기존 값이 있습니다.",
+      ...singleRowReview,
+      ...(firstEntrySingleRow ? { status: "conflict" as const } : {}),
       analysis,
       ...(dateApproval ? { dateApproval } : {}),
       ...(calendarApproval ? { calendarApproval } : {}),
@@ -1241,6 +1330,7 @@ function itemForResolvedAnalysis(
       reason: selectsOriginalSearchName
         ? "검색 결과에서 저장된 값과 정확히 일치하는 항목만 선택해 입력합니다."
         : "지원서 조건을 확인한 뒤 선택해 주세요.",
+      ...singleRowReview,
       analysis,
       ...(verifiedFreshDefault
         ? { verifiedFreshDefaultValue: component!.labels.defaultMajor }
@@ -1296,6 +1386,7 @@ function itemForResolvedAnalysis(
               ? "달력을 열어 저장된 연월을 선택해 입력합니다."
               : "달력 연월을 확인한 뒤 선택해 주세요."
         : "저장된 값과 지원서 필드가 명확히 연결되었습니다.",
+    ...singleRowReview,
     analysis,
     ...(verifiedFreshDefault
       ? { verifiedFreshDefaultValue: component!.labels.defaultMajor }
@@ -1374,6 +1465,10 @@ export function buildReviewPlan({
       resolveDocumentCompany(document) === "components"
     );
   });
+  const ungroupedRows =
+    analysis.mode === "GENERIC"
+      ? ungroupedRepeatRows(analysis, registry)
+      : new Set<string>();
   const items = analysis.fields.map((field) => {
     const item = itemForAnalysis(
       field,
@@ -1384,6 +1479,7 @@ export function buildReviewPlan({
       normalizeDirectValue,
       analysis.mode === "GENERIC",
       components && analysis.mode === "ADAPTER",
+      ungroupedRows,
     );
     if (analysis.mode !== "GENERIC") return item;
     const lookup = registry.lookupField(field.candidateId);

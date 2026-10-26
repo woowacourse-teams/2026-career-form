@@ -144,6 +144,12 @@ export function applyGenericGrade(
   grade: GenericFieldGrade | undefined,
 ): ReviewPlanItem {
   if (!grade) return item;
+  if (
+    item.genericGrade === "REVIEW" &&
+    item.genericReasonCode === "FIRST_ENTRY_SINGLE_ROW" &&
+    grade.grade !== "BLOCKED"
+  )
+    return { ...item, selected: false };
   const graded: ReviewPlanItem = {
     ...item,
     genericGrade: grade.grade,

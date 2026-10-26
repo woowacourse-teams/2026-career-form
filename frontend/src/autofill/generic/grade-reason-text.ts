@@ -18,6 +18,8 @@ type KnownReasonCode =
 // A new reason code fails type checking here until it gets a sentence.
 const REASON_TEXT: Readonly<Record<KnownReasonCode, string>> = {
   NO_PROFILE_VALUE: "저장된 프로필에 입력할 값이 없습니다.",
+  FIRST_ENTRY_SINGLE_ROW:
+    "페이지에 행이 하나뿐이라 프로필의 첫 번째 항목을 연결했습니다. 값을 확인한 뒤 선택해 주세요.",
   PAIRED_DATE_INFERRED:
     "같은 칸 묶음의 종료일과 짝을 이루는 시작일로 추정했습니다. 값을 확인한 뒤 선택해 주세요.",
   LANGUAGE_RESULT_INFERRED:
