@@ -919,3 +919,11 @@
 - 승인된 후보 11개(앞선 10개 유지, 11 신규)를 [CF-349 bundle](../raw/issues/CF-349/manifest.md)에 반영했다. 계측 payload에 알림 표시 이벤트의 `delay_ms`(payload `sentAt` 기준, 0~24시간 클램프)와 허용 목록, 키 없는 빌드의 `console.debug` 기록을, 확장 Web Push payload에 `sentAt` 선택 수용과 기준 수치 목적을 더했다.
 - [선택적 이용 계측](topics/usage-analytics.md)과 [확장 Web Push 구독과 공고 알림](topics/extension-push-notifications.md)의 현재 상태와 색인 요약을 갱신했다.
 - 구독 endpoint·키, 실제 공고·프로필 값, 대화 전문은 저장하지 않았다.
+
+## [2026-10-26] ingest | CF-350 Web Push VAPID 시크릿과 알림 기능 배포 설정
+
+- Approval-Digest: e4434614c1e89a70afbbcc7888e48e4574efd1d8e82b811f02845fc4de049961
+- Source-Revision: cc7215e
+- 승인된 후보 2개를 [CF-350 bundle](../raw/issues/CF-350/manifest.md)에 두 payload로 기록했다. CI/CD 설정(알림 토글·선택값 2개·VAPID 시크릿 3개의 전달 경로로 변수 13개·시크릿 10개, 빈 문자열과 Spring placeholder 기본값 때문에 compose가 선택값 기본값을 채우는 이유, Environment 값은 다음 배포에서만 반영되는 점과 환경별 재배포 트리거), 배포 Runbook(병합 전 점검표의 운영 알림 토글 결정 항목, 스테이징 활성화 순서, 키 회전의 구독 무효).
+- [CI/CD 설정](topics/cicd-setup.md)과 [배포 Runbook](topics/deployment-runbook.md)의 Current를 CF-350으로 바꾸고 앞선 근거를 History에 남겼다. 절차의 Wiki 밖 정본은 `infra/WEB_PUSH_VAPID.md`다.
+- VAPID 키 값, 호스트 주소, 계정, 대화 전문은 저장하지 않았다.

@@ -58,8 +58,8 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [ADR 작성 규약](topics/adr-authoring.md) | ADR 판단과 Issue raw 기록 | 2026-08-22 |
 | [기존 아키텍처 결정](topics/architecture-decisions.md) | CF-41 이전 ADR 현재본 | 2026-08-22 |
 | [확장 프로그램 설계](topics/extension-design.md) | UI 흐름과 검토 자산 | 2026-08-22 |
-| [CI/CD 설정](topics/cicd-setup.md) | 배포 변수·시크릿 전체, deploy.sh 계약, 운영 LLM 비활성 이력, HTTP 공개 상태 | 2026-10-23 |
-| [배포 Runbook](topics/deployment-runbook.md) | 릴리스 기준 커밋 선택, main 병합 분류, digest 재사용, tag·동기화 PR, 자동 rollback, 릴리스 점검표, 정책 활성 버전은 배포 커밋의 seed를 따름, 4값 대조와 policy-versions API | 2026-10-24 |
+| [CI/CD 설정](topics/cicd-setup.md) | 배포 변수 13개·시크릿 10개 전체, deploy.sh 계약, 알림 토글과 VAPID 시크릿 전달·compose 기본값, 운영 LLM 비활성 이력, HTTP 공개 상태 | 2026-10-26 |
+| [배포 Runbook](topics/deployment-runbook.md) | 릴리스 기준 커밋 선택, main 병합 분류, digest 재사용, tag·동기화 PR, 자동 rollback, 릴리스 점검표, 정책 활성 버전은 배포 커밋의 seed를 따름, 4값 대조와 policy-versions API, 운영 알림 토글 결정 점검 항목 | 2026-10-26 |
 | [확장 프로그램 릴리스](topics/extension-release.md) | 수동 ZIP 빌드, origin 주입, 버전 상향, Web Store 게시와 보급 확인 | 2026-10-23 |
 | [확장 Web Push 구독과 공고 알림](topics/extension-push-notifications.md) | 조용한 구독 수명주기와 상태·재시도, 푸시 검증과 중복 억제, 알림 클릭·저장 연결, 공지함과 push-api.ts 계약 정본, 알림 표시 자가 진단, 미확인 배지, 열기 자동 저장, 직무 선택 입력, 표시 지연 계측 | 2026-10-26 |
 | [확장·백엔드 호환 배포](topics/release-compatibility.md) | 호환 장치, 응답 스키마 협상 규칙, 확장 먼저 게시 순서, 1.4.0 사례 | 2026-10-23 |
