@@ -79,26 +79,70 @@ describe("generic split-email writing", () => {
     expect(results[0]?.status).toBe("skipped");
   });
 
-  it("blocks the split input when no domain option matches the profile", () => {
+  it("writes only the local part when no domain option matches the profile", () => {
     const input = fixture("");
     const { snapshot, profile, analysis } = setup("GENERIC", "qa@other.test");
     const plan = buildReviewPlan({ analysis, profile, registry: snapshot.registry });
-    expect(plan.items[0]).toMatchObject({
-      status: "unavailable",
-      selected: false,
-      disabled: true,
-      failureCode: "SPLIT_EMAIL_UNSUPPORTED",
-    });
-    expect(
-      buildResultModel({ reviewItems: plan.items, results: [], profile }).pending[0]?.failureCode,
-    ).toBe("SPLIT_EMAIL_UNSUPPORTED");
-    executeApprovedWrites({
+    expect(plan.items[0]).toMatchObject({ status: "available", disabled: false });
+    const results = executeApprovedWrites({
       items: plan.items,
       approvedCandidateIds: new Set([plan.items[0]!.candidateId]),
       registry: snapshot.registry,
     });
-    expect(input.value).toBe("");
+    expect(input.value).toBe("qa");
     expect(document.querySelector<HTMLSelectElement>("#domain")!.value).toBe("");
+    expect(results[0]).toMatchObject({
+      status: "skipped",
+      failureCode: "SPLIT_EMAIL_UNSUPPORTED",
+      reason: SPLIT_EMAIL_REASON,
+    });
+    expect(
+      buildResultModel({ reviewItems: plan.items, results, profile }).pending[0]
+        ?.failureCode,
+    ).toBe("SPLIT_EMAIL_UNSUPPORTED");
+  });
+
+  it("fills an unlisted domain through the single custom entry option", () => {
+    document.body.innerHTML = `<section><label for="local">Email</label><div>
+      <input id="local"><span>@</span><select id="domain"><option value="">선택</option><option value="example.test">example.test</option><option value="custom">직접입력</option></select><input id="domain_text" style="display:none">
+    </div></section>`;
+    const select = document.querySelector<HTMLSelectElement>("#domain")!;
+    const domainText = document.querySelector<HTMLInputElement>("#domain_text")!;
+    select.addEventListener("change", () => {
+      domainText.style.display = select.value === "custom" ? "" : "none";
+    });
+    const { snapshot, profile, analysis } = setup("GENERIC", "qa@other.test");
+    const plan = buildReviewPlan({ analysis, profile, registry: snapshot.registry });
+    const results = executeApprovedWrites({
+      items: plan.items,
+      approvedCandidateIds: new Set([plan.items[0]!.candidateId]),
+      registry: snapshot.registry,
+    });
+    expect(document.querySelector<HTMLInputElement>("#local")!.value).toBe("qa");
+    expect(select.value).toBe("custom");
+    expect(domainText.value).toBe("other.test");
+    expect(results[0]?.status).toBe("written");
+  });
+
+  it("leaves the domain select of a split pair to the pair instead of a separate item", () => {
+    fixture("");
+    const { snapshot, profile, analysis } = setup("GENERIC", "qa@other.test");
+    const select = snapshot.request.sections
+      .flatMap((section) => section.fields)
+      .find((entry) => entry.domId === "domain")!;
+    analysis.fields.push({
+      candidateId: select.candidateId,
+      matchType: "MATCH",
+      valueBinding: { type: "DIRECT", profileFieldKey: "contact.contact.email" },
+      autofillPolicy: "ALLOWED",
+      mappingStatus: "LLM_SUGGESTED",
+      interactionStatus: "READY",
+      writePlan: { command: "SELECT_OPTION" },
+    });
+    const plan = buildReviewPlan({ analysis, profile, registry: snapshot.registry });
+    expect(plan.items.map((item) => item.candidateId)).toEqual([
+      analysis.fields[0]!.candidateId,
+    ]);
   });
 
   it("splits a group introduced after review into its local part and domain", () => {
@@ -203,7 +247,7 @@ describe("generic split-email writing", () => {
     expect(input.value).toBe("qa@example.test");
   });
 
-  it("shows a split field without a matching domain in production workflow results", async () => {
+  it("shows the domain of a split field without a matching option in production workflow results", async () => {
     const input = fixture();
     const profile = createEmptyProfile();
     profile.contact.email = "qa@other.test";
@@ -266,7 +310,7 @@ describe("generic split-email writing", () => {
       />,
     );
     await completed;
-    expect(input.value).toBe("");
+    expect(input.value).toBe("qa");
     const pending = screen.getByRole("tabpanel", { name: /확인 필요/ });
     expect(pending.querySelector("article")).not.toBeNull();
     expect(pending.querySelector("article p")?.textContent).toBe(

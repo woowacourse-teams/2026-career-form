@@ -915,6 +915,16 @@ function resultForItem(
     ) {
       const split = writeSplitEmail(handle, item.profileValue ?? "");
       if (split === "written") return written(item.candidateId);
+      // Only the local part went in; the domain is left to the applicant.
+      if (split === "partial")
+        return {
+          candidateId: item.candidateId,
+          status: "skipped",
+          outcome: "needs-verification",
+          code: "UNSUPPORTED_CONTROL",
+          reason: SPLIT_EMAIL_REASON,
+          failureCode: "SPLIT_EMAIL_UNSUPPORTED",
+        };
       if (split === "conflict")
         return skipped(item.candidateId, "needs-verification", "CONFLICT", CONFLICT);
       return {

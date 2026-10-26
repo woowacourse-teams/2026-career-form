@@ -14,7 +14,7 @@ import {
 import type { NativeSection } from "../policy/native-form-contract";
 import { text } from "../policy/primitives";
 import { executionPolicy } from "../workflow/execution-policy";
-import { canWriteSplitEmail, isSplitEmailTarget, SPLIT_EMAIL_REASON } from "../dom/split-email";
+import { isSplitEmailMember } from "../dom/split-email";
 import type { WriteFailureCode } from "../write/failure";
 import { resolveDocumentCompany } from "../adapters/company";
 import {
@@ -701,25 +701,6 @@ function itemForResolvedAnalysis(
       "프로필 값 연결 방식이 없습니다.",
       analysis,
     );
-  }
-  if (
-    generic &&
-    analysis.mappingStatus === "LLM_SUGGESTED" &&
-    binding.profileFieldKey === "contact.contact.email" &&
-    isSplitEmailTarget(lookup.handle) &&
-    // A split pair is written as local part + domain option only when the
-    // profile domain is exactly one option; otherwise it stays manual.
-    !canWriteSplitEmail(lookup.handle, profile.contact.email ?? "")
-  ) {
-    return {
-      ...unavailableItem(
-        analysis.candidateId,
-        fieldLabel,
-        SPLIT_EMAIL_REASON,
-        analysis,
-      ),
-      failureCode: "SPLIT_EMAIL_UNSUPPORTED",
-    };
   }
   const parts =
     binding.type === "DERIVED" &&
@@ -1444,6 +1425,20 @@ function itemForResolvedAnalysis(
   };
 }
 
+function splitEmailMember(
+  field: FieldAnalysis,
+  registry: CandidateRegistry,
+): boolean {
+  if (field.matchType !== "MATCH" || field.mappingStatus !== "LLM_SUGGESTED")
+    return false;
+  const key = field.valueBinding?.profileFieldKey ?? field.profileFieldKey;
+  if (key !== "contact.contact.email") return false;
+  const lookup = registry.lookupField(field.candidateId);
+  if (lookup.status !== "ready" && lookup.status !== "blocked") return false;
+  const [element, ...rest] = lookup.handle.elements;
+  return !!element && rest.length === 0 && isSplitEmailMember(element);
+}
+
 function repeatedBindingKey(item: ReviewPlanItem): string | undefined {
   if (item.analysis?.mappingStatus !== "LLM_SUGGESTED") return undefined;
   const profileFieldKey =
@@ -1512,7 +1507,12 @@ export function buildReviewPlan({
     analysis.mode === "GENERIC"
       ? ungroupedRepeatRows(analysis, registry)
       : new Set<string>();
-  const items = analysis.fields.map((field) => {
+  // The domain select or input of a split email pair is written by the pair.
+  const fields =
+    analysis.mode === "GENERIC"
+      ? analysis.fields.filter((field) => !splitEmailMember(field, registry))
+      : analysis.fields;
+  const items = fields.map((field) => {
     const item = itemForAnalysis(
       field,
       profile,
