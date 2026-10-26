@@ -7,6 +7,8 @@ import {
 } from "../dom/candidate-registry";
 import type { ReviewPlanItem } from "../review/review-plan";
 import { executeApprovedWritesAfterPageSettles } from "./executor";
+import { executeApprovedWrites, settledGenericResult } from "./native-executor";
+import { resolveDateTargetFormat } from "../review/date-target-format";
 
 afterEach(() => {
   document.body.replaceChildren();
@@ -66,6 +68,35 @@ async function run(registry: CandidateRegistry) {
 }
 
 describe("settle readback target", () => {
+  it.each(["2024-02-29", "2024/02/29", "2024.02.29", "2024-03-01"])(
+    "checks date digits after site reformatting to %s",
+    (readback) => {
+      const input = document.createElement("input");
+      input.placeholder = "Start date YYYYMMDD";
+      const registry = registerGroup([input]);
+      const lookup = registry.lookupField("field-1");
+      if (lookup.status !== "ready") throw Error("missing target");
+      const resolved = resolveDateTargetFormat(lookup.handle);
+      if (resolved.status !== "resolved") throw Error(resolved.reason);
+      const dateItem = {
+        ...item,
+        profileValue: "20240229",
+        dateApproval: resolved.approval,
+      };
+      input.addEventListener("input", () => {
+        input.value = readback;
+      });
+      const [result] = executeApprovedWrites({
+        items: [dateItem],
+        registry,
+        approvedCandidateIds: new Set(["field-1"]),
+      });
+      expect(result.status).toBe(readback === "2024-03-01" ? "skipped" : "written");
+      expect(settledGenericResult(dateItem, registry).status).toBe(
+        readback === "2024-03-01" ? "skipped" : "written",
+      );
+    },
+  );
   it("reads the writable control that was written, not an earlier visible readonly one", async () => {
     const readonlyFirst = document.createElement("input");
     readonlyFirst.readOnly = true;

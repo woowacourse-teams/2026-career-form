@@ -577,6 +577,16 @@ function settleElement(handle: FieldCandidateHandle) {
   return readbackWriteElement(handle, writtenTargets.get(handle));
 }
 
+function sameTextValue(
+  item: ReviewPlanItem,
+  actual: string,
+  expected: string,
+): boolean {
+  return item.dateApproval
+    ? actual.replace(/\D/g, "") === expected.replace(/\D/g, "")
+    : actual === expected;
+}
+
 function writeGeneric(
   item: ReviewPlanItem,
   handle: FieldCandidateHandle,
@@ -619,19 +629,22 @@ function writeGeneric(
         code: "UNSUPPORTED_FORMAT",
       };
     writtenTargets.set(handle, element);
-    if (item.dateApproval && element.value === value) return { written: true };
+    if (item.dateApproval && sameTextValue(item, element.value, value))
+      return { written: true };
     resetValueTracker(element);
     traceWrite(item.candidateId, { setterCalled: true });
     if (!setNativeValue(element, value)) {
       return { written: false, reason: UNSAFE, code: "EXECUTION_FAILED" };
     }
     element.dispatchEvent(inputEvent(value));
-    if (item.dateApproval && element.value !== value)
+    if (item.dateApproval && !sameTextValue(item, element.value, value))
       return { written: false, reason: RETENTION, code: "EXECUTION_FAILED" };
     element.dispatchEvent(new Event("change", { bubbles: true }));
-    if (item.dateApproval && element.value !== value)
+    if (item.dateApproval && !sameTextValue(item, element.value, value))
       return { written: false, reason: RETENTION, code: "EXECUTION_FAILED" };
-    traceWrite(item.candidateId, { valueAfterWrite: element.value === value });
+    traceWrite(item.candidateId, {
+      valueAfterWrite: sameTextValue(item, element.value, value),
+    });
     return { written: true };
   }
   if (command === "SELECT_OPTION") {
@@ -1021,7 +1034,7 @@ function retainedGenericValue(
     return input instanceof HTMLInputElement &&
       input.getAttribute("role") === "combobox"
       ? retainedComboboxValue(handle, value)
-      : input.value === value;
+      : sameTextValue(item, input.value, value);
   }
   if (command === "SELECT_OPTION") {
     const select = settleElement(handle);
