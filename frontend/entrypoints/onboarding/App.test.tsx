@@ -1,8 +1,10 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { App } from "./App";
 import { createEmptyProfile } from "../../src/profile/model";
 import type { ProfileRepository } from "../../src/profile/profile-repository";
+import type { PushClient } from "../../src/job-postings/push-client";
+import type { PushStateView } from "../../src/job-postings/push-messages";
 function createRepository(): ProfileRepository {
   let profile = createEmptyProfile();
   return {
@@ -123,4 +125,51 @@ it("저장한 프로필이 있으면 다시 질문하지 않고 보충할 정보
   expect(screen.getByText("saved@example.test")).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: "이메일 수정" }));
   expect(screen.getByLabelText("이메일")).toHaveValue("saved@example.test");
+});
+
+it("설치 선택 화면에 새 공고 알림 카드를 보여 주고 알림 끄기는 구독을 끈다", async () => {
+  let state: PushStateView = {
+    enabled: true,
+    supported: true,
+    status: { code: "registered", updatedAt: 1, attempts: 0 },
+    permission: "granted",
+    visibility: { result: "unknown" },
+    autoSave: true,
+    unread: 0,
+  };
+  const setEnabled = vi.fn(async (enabled: boolean) => {
+    state = { ...state, enabled };
+    return state;
+  });
+  const pushClient: PushClient = {
+    state: async () => state,
+    setEnabled,
+    setAutoSave: async () => state,
+    test: async () => state,
+    record: async () => state,
+    later: async () => state,
+    inbox: async () => [],
+    subscribe: () => () => {},
+  };
+  const track = vi.fn();
+  render(
+    <App
+      repository={createRepository()}
+      track={track}
+      pushClient={pushClient}
+    />,
+  );
+  await screen.findByText("새 공고 알림이 켜져 있어요");
+  expect(
+    screen.getByText(/아이콘의 숫자와 관리 페이지의 공지함/),
+  ).toBeVisible();
+  expect(
+    screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
+  ).toEqual(["내 정보는 한 번만", "관심 공고, 놓치지 않게"]);
+  fireEvent.click(screen.getByRole("button", { name: "알림 끄기" }));
+  await waitFor(() => expect(setEnabled).toHaveBeenCalledWith(false));
+  await screen.findByText(/알림을 껐어요/);
+  expect(track).toHaveBeenCalledWith("push_subscription_disabled", {
+    surface: "extension_onboarding",
+  });
 });

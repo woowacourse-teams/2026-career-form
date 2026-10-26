@@ -38,7 +38,6 @@ describe("공고와 알림 시각", () => {
   });
   it.each([
     { company: " " },
-    { role: "" },
     { deadline: now },
     { deadline: NaN },
     { minutes: [0] },
@@ -47,6 +46,13 @@ describe("공고와 알림 시각", () => {
     { timeZone: "unknown" },
   ])("유효하지 않은 입력을 거부한다: %j", (invalid) => {
     expect(() => createPosting({ ...input, ...invalid }, now, "job")).toThrow();
+  });
+  it("직무 없이 회사명만으로 저장하고 회사명이 비면 회사명만 요구한다", () => {
+    expect(createPosting({ ...input, role: "" }, now, "job").role).toBe("");
+    expect(createPosting({ ...input, role: "  " }, now, "job").role).toBe("");
+    expect(() => createPosting({ ...input, company: " " }, now, "job")).toThrow(
+      "회사명을 입력해 주세요.",
+    );
   });
   it("수정은 버전을 올리고 새 마감으로 예약을 다시 계산한다", () => {
     const p = createPosting(input, now, "job");

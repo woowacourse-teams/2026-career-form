@@ -66,3 +66,95 @@ describe("PostHog capture", () => {
     );
   });
 });
+
+describe("PostHog posting properties", () => {
+  it("forwards posting_id without any other posting detail", async () => {
+    const bodies: unknown[] = [];
+    const capture = createPosthogCapture({
+      key: "test-project",
+      getDistinctId: async () => "anonymous",
+      fetch: async (_input, init) => {
+        bodies.push(JSON.parse(String(init?.body)));
+        return new Response("1");
+      },
+    });
+    await capture("posting_inbox_viewed", { surface: "options" });
+    await capture("posting_notification_opened", {
+      surface: "notification",
+      posting_id: "0123456789abcdef0123456789abcdef",
+    });
+    expect(bodies).toEqual([
+      expect.objectContaining({
+        properties: { surface: "options", $process_person_profile: false },
+      }),
+      expect.objectContaining({
+        properties: {
+          surface: "notification",
+          posting_id: "0123456789abcdef0123456789abcdef",
+          $process_person_profile: false,
+        },
+      }),
+    ]);
+  });
+});
+
+describe("PostHog answer and trigger properties", () => {
+  it("forwards answer and trigger values", async () => {
+    const bodies: { properties: Record<string, unknown> }[] = [];
+    const capture = createPosthogCapture({
+      key: "test-project",
+      getDistinctId: async () => "anonymous",
+      fetch: async (_input, init) => {
+        bodies.push(JSON.parse(String(init?.body)));
+        return new Response("1");
+      },
+    });
+    await capture("notification_visibility_answered", {
+      surface: "options",
+      answer: "not_seen",
+    });
+    await capture("posting_inbox_saved", {
+      surface: "options",
+      posting_id: "0123456789abcdef0123456789abcdef",
+      trigger: "open",
+    });
+    expect(bodies.map((b) => b.properties)).toEqual([
+      {
+        surface: "options",
+        answer: "not_seen",
+        $process_person_profile: false,
+      },
+      {
+        surface: "options",
+        posting_id: "0123456789abcdef0123456789abcdef",
+        trigger: "open",
+        $process_person_profile: false,
+      },
+    ]);
+  });
+});
+
+describe("PostHog delay_ms property", () => {
+  it("forwards delay_ms including zero", async () => {
+    const bodies: { properties: Record<string, unknown> }[] = [];
+    const capture = createPosthogCapture({
+      key: "test-project",
+      getDistinctId: async () => "anonymous",
+      fetch: async (_input, init) => {
+        bodies.push(JSON.parse(String(init?.body)));
+        return new Response("1");
+      },
+    });
+    await capture("posting_notification_shown", {
+      surface: "notification",
+      posting_id: "0123456789abcdef0123456789abcdef",
+      delay_ms: 0,
+    });
+    expect(bodies[0].properties).toEqual({
+      surface: "notification",
+      posting_id: "0123456789abcdef0123456789abcdef",
+      delay_ms: 0,
+      $process_person_profile: false,
+    });
+  });
+});

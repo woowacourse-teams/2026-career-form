@@ -326,3 +326,176 @@ it.each(["greeting_import_viewed", "greeting_import_saved"])(
     ]);
   },
 );
+
+describe("posting notification properties", () => {
+  it("keeps posting_id alongside the surface and drops posting contents", async () => {
+    const { handle, payloads } = collector();
+    await handle({
+      type: "ANALYTICS_TRACK",
+      event: "posting_notification_shown",
+      properties: {
+        surface: "notification",
+        posting_id: "0123456789abcdef0123456789abcdef",
+        company: "synthetic-company",
+        link: "https://careers.example.test/jobs/1",
+      },
+    });
+    expect(payloads).toEqual([
+      expect.objectContaining({
+        event: "posting_notification_shown",
+        properties: {
+          surface: "notification",
+          posting_id: "0123456789abcdef0123456789abcdef",
+          $process_person_profile: false,
+        },
+      }),
+    ]);
+  });
+  it.each(["has space", "x".repeat(65), 42, ""])(
+    "drops a posting_id that is not an identifier: %j",
+    async (posting_id) => {
+      const { handle, payloads } = collector();
+      await handle({
+        type: "ANALYTICS_TRACK",
+        event: "posting_inbox_saved",
+        properties: { surface: "options", posting_id },
+      });
+      expect(payloads).toEqual([
+        expect.objectContaining({
+          properties: { surface: "options", $process_person_profile: false },
+        }),
+      ]);
+    },
+  );
+});
+
+describe("notification check and auto-save properties", () => {
+  it.each([
+    [
+      "notification_visibility_answered",
+      { surface: "options", answer: "seen" },
+      { surface: "options", answer: "seen" },
+    ],
+    [
+      "notification_visibility_answered",
+      { surface: "extension_onboarding", answer: "not_seen", company: "x" },
+      { surface: "extension_onboarding", answer: "not_seen" },
+    ],
+    [
+      "notification_visibility_answered",
+      { surface: "options", answer: "maybe" },
+      { surface: "options" },
+    ],
+    [
+      "posting_inbox_saved",
+      { surface: "options", posting_id: "a".repeat(32), trigger: "open" },
+      { surface: "options", posting_id: "a".repeat(32), trigger: "open" },
+    ],
+    [
+      "posting_notification_saved",
+      {
+        surface: "notification",
+        posting_id: "a".repeat(32),
+        trigger: "button",
+      },
+      {
+        surface: "notification",
+        posting_id: "a".repeat(32),
+        trigger: "button",
+      },
+    ],
+    [
+      "posting_notification_saved",
+      { surface: "notification", posting_id: "a".repeat(32), trigger: "auto" },
+      { surface: "notification", posting_id: "a".repeat(32) },
+    ],
+    [
+      "posting_auto_save_cancelled",
+      { surface: "notification", posting_id: "a".repeat(32) },
+      { surface: "notification", posting_id: "a".repeat(32) },
+    ],
+    [
+      "notification_test_sent",
+      { surface: "extension_onboarding" },
+      { surface: "extension_onboarding" },
+    ],
+  ] as const)(
+    "keeps only allowlisted values for %s %j",
+    async (event, input, expected) => {
+      const { handle, payloads } = collector();
+      await handle({ type: "ANALYTICS_TRACK", event, properties: input });
+      expect(payloads).toEqual([
+        expect.objectContaining({
+          event,
+          properties: { ...expected, $process_person_profile: false },
+        }),
+      ]);
+    },
+  );
+});
+
+describe("display delay property and key-less console record", () => {
+  it.each([
+    [{ delay_ms: 0 }, { delay_ms: 0 }],
+    [{ delay_ms: 1234 }, { delay_ms: 1234 }],
+    [{ delay_ms: -1 }, {}],
+    [{ delay_ms: 12.5 }, {}],
+    [{ delay_ms: "12" }, {}],
+  ])(
+    "keeps only non-negative integer delay_ms: %j",
+    async (input, expected) => {
+      const { handle, payloads } = collector();
+      await handle({
+        type: "ANALYTICS_TRACK",
+        event: "posting_notification_shown",
+        properties: {
+          surface: "notification",
+          posting_id: "0123456789abcdef0123456789abcdef",
+          ...input,
+        },
+      });
+      expect(payloads).toEqual([
+        expect.objectContaining({
+          properties: {
+            surface: "notification",
+            posting_id: "0123456789abcdef0123456789abcdef",
+            ...expected,
+            $process_person_profile: false,
+          },
+        }),
+      ]);
+    },
+  );
+  it("records allowlisted events on the console without sending when no key is configured", async () => {
+    const debug = vi.spyOn(console, "debug").mockImplementation(() => {});
+    try {
+      const { handle, payloads, values } = collector(" ");
+      await handle({
+        type: "ANALYTICS_TRACK",
+        event: "posting_notification_shown",
+        properties: {
+          surface: "notification",
+          posting_id: "0123456789abcdef0123456789abcdef",
+          delay_ms: 250,
+          company: "synthetic-company",
+        },
+      });
+      expect(payloads).toEqual([]);
+      expect(values).toEqual({});
+      expect(debug).toHaveBeenCalledTimes(1);
+      expect(debug.mock.calls[0]).toEqual([
+        "[career-form analytics]",
+        "posting_notification_shown",
+        {
+          surface: "notification",
+          posting_id: "0123456789abcdef0123456789abcdef",
+          delay_ms: 250,
+        },
+      ]);
+      await handle({ type: "ANALYTICS_TRACK", event: "nope", properties: {} });
+      expect(debug).toHaveBeenCalledTimes(1);
+    } finally {
+      debug.mockRestore();
+    }
+  });
+});

@@ -4,6 +4,10 @@ import type { ProfileRepository } from "../../src/profile/profile-repository";
 import { ChromeProfileStorage } from "../../src/storage/chrome-profile-storage";
 import { QuickStart } from "../../src/profile/components/QuickStart";
 import { trackExtensionEvent } from "../../src/analytics/extension-tracker";
+import {
+  pushClient as defaultPushClient,
+  type PushClient,
+} from "../../src/job-postings/push-client";
 import { SiteApp } from "../../site/SiteApp";
 import { SiteUrlContext } from "../../site/site-navigation";
 
@@ -18,7 +22,12 @@ export function extensionSiteUrl(path: string): string {
 export function App({
   repository: injectedRepository,
   track = trackExtensionEvent,
-}: { repository?: ProfileRepository; track?: TrackEvent } = {}) {
+  pushClient = defaultPushClient,
+}: {
+  repository?: ProfileRepository;
+  track?: TrackEvent;
+  pushClient?: PushClient;
+} = {}) {
   const repository = useMemo(
     () => injectedRepository ?? new ChromeProfileStorage(),
     [injectedRepository],
@@ -49,6 +58,7 @@ export function App({
           installed
           profileHref="/options.html"
           postingsHref="/options.html#postings/new"
+          pushClient={pushClient}
           track={track}
           onStartAutofill={() => setQuickStart(true)}
           surface="extension_onboarding"
