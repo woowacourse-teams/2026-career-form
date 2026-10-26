@@ -341,8 +341,9 @@ function convertSection(
 ): { fields: FieldAnalysis[]; grades: [string, GenericFieldGrade][] } {
   const { section } = entry;
   const categoryOpen = !UNCONFIRMED_CATEGORIES.has(outcome.category);
+  const responses = outcome.fields;
   const matched = section.fields.flatMap((_, index) => {
-    const response = outcome.fields[index];
+    const response = responses[index];
     if (!response) throw new Error("Section result does not match its fields");
     return (response.profileFieldKey || compositeOf(response)) &&
       response.reason === undefined
@@ -358,7 +359,7 @@ function convertSection(
   const fields: FieldAnalysis[] = [];
   const grades: [string, GenericFieldGrade][] = [];
   section.fields.forEach(({ candidate, itemIndex, element }, index) => {
-    const response = outcome.fields[index]!;
+    const response = responses[index]!;
     const { candidateId } = candidate;
     if (response.reason === "LLM_UNAVAILABLE") {
       fields.push(noMatch(candidateId));
@@ -383,6 +384,20 @@ function convertSection(
     if (!profileFieldKey && !composite) {
       fields.push(noMatch(candidateId));
       return;
+    }
+    // The backend marks both a score input and a grade select of one language
+    // record; only the stored value's shape (local, never sent) picks one.
+    if (
+      response.inference === "LANGUAGE_SCORE" ||
+      response.inference === "LANGUAGE_GRADE"
+    ) {
+      const stored = resolveProfileFieldValue(profile, profileFieldKey!, itemIndex);
+      const numeric =
+        stored.status === "resolved" && /^\d+(?:\.\d+)?$/.test(stored.value.trim());
+      if (stored.status !== "resolved" || numeric !== (response.inference === "LANGUAGE_SCORE")) {
+        fields.push(noMatch(candidateId));
+        return;
+      }
     }
     const rowSiblings: GradeSibling[] | undefined = visibleRowMatches
       ?.filter((sibling) => sibling.index !== index)
@@ -448,6 +463,14 @@ function convertSection(
     if (response.inference === "PAIRED_DATE" && grade.grade === "AUTO") {
       grade.grade = "REVIEW";
       grade.reason = "PAIRED_DATE_INFERRED";
+    }
+    if (
+      (response.inference === "LANGUAGE_SCORE" ||
+        response.inference === "LANGUAGE_GRADE") &&
+      grade.grade === "AUTO"
+    ) {
+      grade.grade = "REVIEW";
+      grade.reason = "LANGUAGE_RESULT_INFERRED";
     }
     grades.push([
       candidateId,

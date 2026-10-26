@@ -105,6 +105,24 @@ public final class GenericFieldsService {
                 }
             }
         }
+        for (Section section : request.sections()) {
+            List<FieldCandidate> candidates = new ArrayList<>(section.fields());
+            if (section.items() != null) {
+                section.items().forEach(item -> candidates.addAll(item.fields()));
+            }
+            for (FieldCandidate candidate : candidates) {
+                Mapping current = mappings.get(candidate.candidateId());
+                if (current != null && (current.binding() != null || current.reason() != null)) {
+                    continue;
+                }
+                String key = GenericProfileSemantics.certificateNumberKey(section.category(), candidate,
+                    current == null ? null : current.profileFieldKey());
+                if (key != null && supportedProfileFields.contains(key)) {
+                    mappings.put(candidate.candidateId(),
+                        new Mapping(key, 1.0, current == null || current.categoryConfirmed(), null));
+                }
+            }
+        }
         // 이름은 한 줄 입력칸에만 쓴다. 자기소개서 같은 여러 줄 칸에 이름을 넣지 않는다.
         for (FieldCandidate candidate : request.fieldCandidatesInTraversalOrder()) {
             Mapping mapping = mappings.get(candidate.candidateId());
@@ -116,11 +134,14 @@ public final class GenericFieldsService {
             }
         }
         Set<String> inferred = new HashSet<>();
+        Map<String, GenericFieldsResponse.Inference> resultTargets = new HashMap<>();
         for (Section section : request.sections()) {
             inferPairedDates(section.fields(), mappings, inferred);
+            markLanguageResultTargets(section.fields(), mappings, resultTargets);
             if (section.items() != null) {
                 section.items().forEach(item -> {
                     inferPairedDates(item.fields(), mappings, inferred);
+                    markLanguageResultTargets(item.fields(), mappings, resultTargets);
                 });
             }
         }
@@ -137,10 +158,74 @@ public final class GenericFieldsService {
                 mapping.categoryConfirmed(), mapping.reason(), assessment.autofillPolicy(),
                 assessment.interactionStatus(), assessment.writePlan(), mapping.binding(),
                 inferred.contains(candidate.candidateId()) ? GenericFieldsResponse.Inference.PAIRED_DATE
-                    : null));
+                    : resultTargets.get(candidate.candidateId())));
         }
         long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt);
         return GenericFieldsResponse.complete(request.snapshotId(), fields, new Diagnostics(jevCalls, elapsedMs));
+    }
+
+    private static final String LANGUAGE_RESULT = "languages.languageTest.grade";
+    private static final java.util.regex.Pattern SCORE_LABEL =
+        java.util.regex.Pattern.compile("(?:시험|취득)?점수|score", java.util.regex.Pattern.CASE_INSENSITIVE);
+    private static final java.util.regex.Pattern GRADE_LABEL =
+        java.util.regex.Pattern.compile("등급|급수|레벨|grade|level", java.util.regex.Pattern.CASE_INSENSITIVE);
+
+    /**
+     * 한 어학 기록 안에 기권한 점수 입력칸과 등급 선택칸이 하나씩 있으면 둘 다 후보로 표시한다.
+     * 어느 칸이 맞는지는 값 모양에 달려 있어 서버는 고르지 않는다(LANGUAGE_RESULT_CRITERION).
+     */
+    private void markLanguageResultTargets(List<FieldCandidate> fields, Map<String, Mapping> mappings,
+        Map<String, GenericFieldsResponse.Inference> targets) {
+        boolean languageRecord = false;
+        List<String> resultMapped = new ArrayList<>();
+        for (FieldCandidate field : fields) {
+            Mapping mapping = mappings.get(field.candidateId());
+            String key = mapping == null ? null : mapping.profileFieldKey();
+            if (LANGUAGE_RESULT.equals(key)) {
+                resultMapped.add(field.candidateId());
+            }
+            languageRecord |= key != null && key.startsWith("languages.languageTest.");
+        }
+        if (!languageRecord) {
+            return;
+        }
+        List<FieldCandidate> scores = resultCandidates(fields, mappings, GenericFieldsRequest.FormElement.INPUT,
+            SCORE_LABEL);
+        List<FieldCandidate> grades = resultCandidates(fields, mappings, GenericFieldsRequest.FormElement.SELECT,
+            GRADE_LABEL);
+        if (scores.size() != 1 || grades.size() != 1) {
+            return;
+        }
+        FieldCandidate score = scores.getFirst();
+        FieldCandidate grade = grades.getFirst();
+        // 모델이 한 칸만 골랐으면 그 판정을 따른다. 둘 다 기권했거나 둘 다 같은 키를 받은 경우만 후보로 남긴다.
+        boolean bothAbstained = resultMapped.isEmpty();
+        boolean bothDuplicated = resultMapped.size() == 2 && resultMapped.contains(score.candidateId())
+            && resultMapped.contains(grade.candidateId());
+        if (!bothAbstained && !bothDuplicated) {
+            return;
+        }
+        for (FieldCandidate field : List.of(score, grade)) {
+            Mapping current = mappings.get(field.candidateId());
+            mappings.put(field.candidateId(), new Mapping(LANGUAGE_RESULT,
+                current == null || current.profileFieldKey() == null ? 0.9 : current.confidence(),
+                current == null || current.categoryConfirmed(), null));
+        }
+        targets.put(score.candidateId(), GenericFieldsResponse.Inference.LANGUAGE_SCORE);
+        targets.put(grade.candidateId(), GenericFieldsResponse.Inference.LANGUAGE_GRADE);
+    }
+
+    private static List<FieldCandidate> resultCandidates(List<FieldCandidate> fields, Map<String, Mapping> mappings,
+        GenericFieldsRequest.FormElement element, java.util.regex.Pattern label) {
+        return fields.stream().filter(field -> {
+            Mapping mapping = mappings.get(field.candidateId());
+            String name = field.displayName() == null ? "" : java.text.Normalizer.normalize(field.displayName(),
+                java.text.Normalizer.Form.NFKC).replaceAll("[\\s()\\[\\]*:]+", "");
+            boolean open = mapping == null || mapping.binding() == null && mapping.reason() == null
+                && (mapping.profileFieldKey() == null || LANGUAGE_RESULT.equals(mapping.profileFieldKey()));
+            return field.visibility() == GenericFieldsRequest.Visibility.VISIBLE && field.element() == element
+                && open && label.matcher(name).matches();
+        }).toList();
     }
 
     private void inferPairedDates(List<FieldCandidate> fields, Map<String, Mapping> mappings, Set<String> inferred) {

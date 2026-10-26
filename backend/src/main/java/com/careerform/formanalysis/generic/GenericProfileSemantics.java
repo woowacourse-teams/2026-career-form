@@ -206,6 +206,23 @@ final class GenericProfileSemantics {
         return acquiredDate ? "certifications.certificate.acquisitionDate" : null;
     }
 
+    private static final java.util.regex.Pattern CERTIFICATE_NUMBER =
+        java.util.regex.Pattern.compile("(?:자격증?|인증|등록|발급|면허)+번호");
+
+    /**
+     * 자격증 기록 안에서 라벨이 자격·인증·등록·발급·면허와 '번호'로만 된 입력칸은 등록번호다.
+     * 모델이 기권했거나 다른 자격증 항목(이름·등급·기관 등)을 준 경우에만 바로잡고, 자격증 밖의 키는 덮어쓰지 않는다.
+     */
+    static String certificateNumberKey(String category, FieldCandidate candidate, String currentKey) {
+        if (!"CERTIFICATE".equals(category) || candidate.element() != GenericFieldsRequest.FormElement.INPUT
+            || candidate.control() != GenericFieldsRequest.FormControl.TEXT || candidate.displayName() == null
+            || currentKey != null && !currentKey.startsWith("certifications.certificate.")) {
+            return null;
+        }
+        String compact = Normalizer.normalize(candidate.displayName(), Normalizer.Form.NFKC).replaceAll("\\s+", "");
+        return CERTIFICATE_NUMBER.matcher(compact).matches() ? "certifications.certificate.registrationNo" : null;
+    }
+
     static boolean extendsVocabulary(String category) {
         return category != null && VOCABULARY_CATEGORIES.contains(category);
     }

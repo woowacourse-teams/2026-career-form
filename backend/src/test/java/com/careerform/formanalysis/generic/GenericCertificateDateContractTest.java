@@ -57,7 +57,7 @@ class GenericCertificateDateContractTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"응시일", "등록번호", "발급기관"})
+    @ValueSource(strings = {"응시일", "발급기관"})
     @DisplayName("취득일 의미가 없는 대상은 추정하지 않는다")
     void requiresAcquisitionDateWording(String label) {
         assertThat(analyze("CERTIFICATE", label, FormControl.TEXT, "ABSTAIN", true).fields())
