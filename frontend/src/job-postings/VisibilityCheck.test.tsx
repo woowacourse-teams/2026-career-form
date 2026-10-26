@@ -89,13 +89,18 @@ describe("VisibilityCheck", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText(/설정 › 시스템 › 알림/)).not.toBeInTheDocument();
     expect(screen.getByText(/Chrome에서 이 확장의 알림/)).toBeInTheDocument();
-    expect(screen.getByText(/아이콘의 숫자와 공지함/)).toBeInTheDocument();
+    // The settings panel's own notes already say this once.
+    expect(screen.queryByText(/아이콘의 숫자와 공지함/)).toBeNull();
     expect(
       screen.getByRole("button", { name: "다시 테스트" }),
     ).toBeInTheDocument();
     expect(
       screen.getByText("보이지 않는다고 응답 · 설정 안내"),
     ).toBeInTheDocument();
+  });
+  it("카드와 온보딩 안내에는 배지·공지함으로 대신 확인할 수 있다는 문장을 둔다", () => {
+    renderCheck("onboarding", { ...base, permission: "denied" });
+    expect(screen.getByText(/아이콘의 숫자와 공지함/)).toBeInTheDocument();
   });
   it("Windows에서는 Windows 경로를, 알 수 없는 OS에서는 둘 다 안내한다", () => {
     const denied = { ...base, permission: "denied" as const };

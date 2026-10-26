@@ -96,6 +96,9 @@ export function installPushBackground({
     storage: browser.storage.local,
     now: Date.now,
     notify,
+    clearNotification: async (id) => {
+      await browser.notifications.clear(id);
+    },
     permission: async () => {
       const level = await browser.notifications.getPermissionLevel();
       return level === "granted" || level === "denied" ? level : "unknown";

@@ -31,21 +31,37 @@
   flex-wrap: wrap;
   gap: 8px;
 }
-.actions button {
+/* Scoped twice so the public-site button reset cannot flatten these. */
+.card .actions button,
+.ask .actions button,
+.guidance .actions button,
+.row .actions button {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
   padding: 10px 14px;
   border-radius: 8px;
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   color: var(--color-text);
   font: inherit;
+  font-size: 14px;
   font-weight: 600;
+  text-decoration: none;
   cursor: pointer;
 }
-.actions button:disabled {
+.card .actions button:disabled,
+.ask .actions button:disabled,
+.guidance .actions button:disabled,
+.row .actions button:disabled {
   opacity: 0.55;
   cursor: default;
 }
-.actions .primary {
+.card .actions .primary,
+.ask .actions .primary,
+.guidance .actions .primary,
+.row .actions .primary {
   background: var(--color-action);
   border-color: var(--color-action);
   color: var(--color-on-action);

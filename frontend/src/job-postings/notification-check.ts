@@ -29,6 +29,7 @@ export interface NotificationCheckPorts {
     id: string,
     notification: { title: string; message: string; buttons: string[] },
   ): Promise<void>;
+  clearNotification(id: string): Promise<void>;
   permission(): Promise<NotificationPermission>;
 }
 
@@ -66,16 +67,23 @@ export class NotificationCheck {
       buttons: [],
     });
   }
-  record(
+  async record(
     answer: VisibilityAnswer,
     source: Exclude<VisibilitySource, "notification_click">,
   ): Promise<VisibilityState> {
-    return this.update((previous) => ({
+    const next = await this.update((previous) => ({
       ...this.carry(previous),
       result: answer,
       checkedAt: this.ports.now(),
       source,
     }));
+    // The answered test toast has done its job; do not leave it behind.
+    try {
+      await this.ports.clearNotification(TEST_NOTIFICATION_ID);
+    } catch {
+      /* Clearing is best-effort. */
+    }
+    return next;
   }
   markShown(): Promise<VisibilityState> {
     return this.update((previous) =>

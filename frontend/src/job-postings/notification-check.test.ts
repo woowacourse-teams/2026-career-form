@@ -16,6 +16,7 @@ function harness(permission: NotificationPermission = "granted") {
     message: string;
     buttons: string[];
   }[] = [];
+  const cleared: string[] = [];
   let now = NOW;
   const check = new NotificationCheck({
     storage: {
@@ -28,12 +29,16 @@ function harness(permission: NotificationPermission = "granted") {
     notify: async (id, notification) => {
       shown.push({ id, ...notification });
     },
+    clearNotification: async (id) => {
+      cleared.push(id);
+    },
     permission: async () => permission,
   });
   return {
     check,
     store,
     shown,
+    cleared,
     advance: (ms: number) => {
       now += ms;
     },
@@ -95,6 +100,7 @@ describe("NotificationCheck", () => {
       checkedAt: NOW + 1000,
       source: "card",
     });
+    expect(h.cleared).toEqual([TEST_NOTIFICATION_ID, TEST_NOTIFICATION_ID]);
   });
   it("첫 알림 표시 시각은 미확인 상태에서 한 번만 기록한다", async () => {
     const h = harness();

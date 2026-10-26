@@ -135,10 +135,12 @@ export function VisibilityCheck({
           <li key={line}>{line}</li>
         ))}
       </ul>
-      <p>
-        OS 알림이 꺼져 있어도 확장 아이콘의 숫자와 공지함으로 새 공고를 확인할
-        수 있어요.
-      </p>
+      {variant !== "settings" && (
+        <p>
+          OS 알림이 꺼져 있어도 확장 아이콘의 숫자와 공지함으로 새 공고를 확인할
+          수 있어요.
+        </p>
+      )}
       <div className={styles.actions}>
         <button disabled={busy} onClick={() => void test()}>
           다시 테스트
