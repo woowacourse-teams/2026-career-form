@@ -7,6 +7,7 @@ import {
 } from "./calendar-structure";
 import { isDisplayed } from "./day-calendar-surface";
 import { createCalendarRoleResolver } from "./calendar-role-resolver";
+import { localWorkflowLog } from "../debug/local-workflow";
 
 /** Widget selectors describe mechanics, never the input's date unit. */
 function monthHeader(popup: HTMLElement) {
@@ -132,7 +133,14 @@ export async function selectDeferredCalendarMonth(args: {
     signal: args.signal,
     revalidate: ready,
   });
-  return apply && ready() && args.activate(apply.element)
-    ? undefined
-    : "calendar_apply_unavailable";
+  const isReady = ready();
+  const activated = Boolean(apply) && isReady && args.activate(apply!.element);
+  if (!activated)
+    localWorkflowLog("calendar-apply", {
+      site: "month-widget",
+      resolved: Boolean(apply),
+      ready: isReady,
+      aborted: args.signal?.aborted === true,
+    });
+  return activated ? undefined : "calendar_apply_unavailable";
 }

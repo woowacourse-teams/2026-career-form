@@ -9,6 +9,7 @@ import { createCalendarRoleResolver } from "./calendar-role-resolver";
 import { calendarUnitEvidence } from "./calendar-unit";
 import type { CalendarRoleEvidence } from "./calendar-structure";
 import { selectDeferredCalendarMonth } from "./calendar-month-widget";
+import { localWorkflowLog } from "../debug/local-workflow";
 import { displayedDayCalendarRoots, isDisplayed } from "./day-calendar-surface";
 export { CALENDAR_MAX_ROLE_REQUESTS } from "../api/calendar-role-contract";
 import type { InteractionDecisionProvider } from "../api/interaction-types";
@@ -356,11 +357,16 @@ export async function executeCalendarSelection(
     };
   const apply = calendarApplyControls(surface.popup);
   if (apply.length) {
-    if (!reserveApplyRole)
+    if (!reserveApplyRole) {
+      localWorkflowLog("calendar-apply", {
+        site: "executor-reserve",
+        applyCount: apply.length,
+      });
       return {
         status: "needs-verification",
         reason: "calendar_apply_unavailable",
       };
+    }
     const selectedApply = await resolveCalendarRole({
       role: "CALENDAR_APPLY",
       evidence,
@@ -379,7 +385,12 @@ export async function executeCalendarSelection(
       now: args.now,
       signal: args.signal,
     });
-    if (!selectedApply || !activate(selectedApply.element))
+    if (!selectedApply || !activate(selectedApply.element)) {
+      localWorkflowLog("calendar-apply", {
+        site: "executor-resolve",
+        resolved: Boolean(selectedApply),
+        aborted: args.signal?.aborted === true,
+      });
       return {
         status: "needs-verification",
         reason: args.signal?.aborted
@@ -388,6 +399,7 @@ export async function executeCalendarSelection(
             ? "calendar_apply_unavailable"
             : "stale_target",
       };
+    }
   }
   return verifyOutcome();
 }

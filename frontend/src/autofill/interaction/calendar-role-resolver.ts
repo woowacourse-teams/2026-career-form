@@ -1,4 +1,5 @@
 import { AnalysisContractError } from "../api/validate-response";
+import { localWorkflowLog } from "../debug/local-workflow";
 import {
   calendarDiagnostic,
   type CalendarDecisionReason,
@@ -57,6 +58,7 @@ export async function resolveCalendarRole<T extends HTMLElement>(
   const { candidates, provider } = args;
   const now = args.now ?? Date.now;
   const stop = (reason: CalendarDecisionReason) => {
+    localWorkflowLog("calendar-role", { role: args.role, reason });
     calendarDiagnostic({
       reason,
       role: args.role,
@@ -178,6 +180,24 @@ export async function resolveCalendarRole<T extends HTMLElement>(
     const raw = await Promise.race([provider(request), interrupted]);
     if (args.signal?.aborted) return stop("aborted");
     if (!raw || now() >= args.deadline) return stop("timeout");
+    localWorkflowLog("calendar-role-stale-check", {
+      role: args.role,
+      revalidate: args.revalidate?.() !== false,
+      checks: JSON.stringify(snapshots.map(({ element, parent, html, value }) => ({
+        connected: element.isConnected,
+        sameParent: element.parentElement === parent,
+        sameHtml: candidateHtml(element) === html,
+        classBefore: /class="([^"]*)"/.exec(html)?.[1] ?? "",
+        classAfter: element.getAttribute("class") ?? "",
+        lengthDelta: candidateHtml(element).length - html.length,
+        sameValue:
+          !(
+            element instanceof HTMLSelectElement ||
+            element instanceof HTMLInputElement
+          ) || element.value === value,
+        structure: Boolean(calendarCandidateStructure(element, evidence)),
+      }))),
+    });
     if (
       args.revalidate?.() === false ||
       snapshots.some(
@@ -213,7 +233,13 @@ export async function resolveCalendarRole<T extends HTMLElement>(
     );
     if (!decision) return stop("invalid-response");
     // Only this role authorizes the step; navigation is observed, never activated.
-    if (decision.selection !== "SELECTED") return;
+    if (decision.selection !== "SELECTED") {
+      localWorkflowLog("calendar-role", {
+        role: args.role,
+        selection: decision.selection,
+      });
+      return;
+    }
     return candidates.find(
       ({ candidateId }) => candidateId === decision.candidateId,
     );

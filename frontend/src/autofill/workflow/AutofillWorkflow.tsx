@@ -109,6 +109,7 @@ import {
   type StructureDiagnostics,
 } from "../generic/structure-diagnostics";
 import { debugWarn } from "../debug/autofill-debug";
+import { localWorkflowLog } from "../debug/local-workflow";
 
 export { localItemCount, shouldRunRevealPlan } from "./workflow-model";
 
@@ -871,6 +872,10 @@ function PolicyReadyWorkflow({
         return;
       }
       setStage("writing");
+      localWorkflowLog("writes-start", {
+        passes: revealPasses.current,
+        approved: approvedCandidateIds.size,
+      });
       writeController.current.abort();
       writeController.current = new AbortController();
       const approvedProfile = JSON.stringify(profile);
@@ -970,6 +975,13 @@ function PolicyReadyWorkflow({
       const revealed = controlsBefore
         ? newlyRevealedControls(pageDocument, controlsBefore)
         : [];
+      localWorkflowLog("reveal-check", {
+        revealed: revealed.length,
+        passes: revealPasses.current,
+        written: nextResults.filter((result) => result.status === "written")
+          .length,
+        aborted: writeController.current.signal.aborted,
+      });
       if (
         revealed.length > 0 &&
         revealPasses.current < 2 &&

@@ -1,3 +1,4 @@
+import { localWorkflowLog } from "../debug/local-workflow";
 import { createInteractionDecisionSession } from "../api/interaction-decision-session";
 import type { InteractionDecisionProvider } from "../api/interaction-types";
 import { traceHold, traceTrigger } from "../debug/write-trace";
@@ -463,10 +464,15 @@ export async function executeApprovedSearchWrites({
         !item.calendarApproval &&
         !item.dayCalendarApproval &&
         item.analysis?.valueBinding?.type === "DIRECT";
+      const bindingSame = approvedBindings.get(item) === approvedBinding(item);
       if (
-        approvedBindings.get(item) !== approvedBinding(item) ||
+        !bindingSame ||
         !registry.revalidateField(item.candidateId, allowReplacement)
       ) {
+        localWorkflowLog("structure-unverified", {
+          bindingSame,
+          lookup: registry.lookupField(item.candidateId).status,
+        });
         results[index] = skipped(
           item.candidateId,
           "needs-verification",
@@ -525,6 +531,24 @@ export async function executeApprovedSearchWrites({
                 "dialog[open], [role='dialog'], [aria-modal='true'], [role='listbox'], iframe",
               ),
             ).some(isVisibleWriteElement);
+          localWorkflowLog("ordinary-stop", {
+            effect,
+            hasDocument: Boolean(document),
+            surfaceLeftOpen:
+              result.status === "skipped" && result.surfaceLeftOpen === true,
+            openCalendars: document ? openCalendarPopups(document).length : -1,
+            dayRoots: document
+              ? displayedDayCalendarRoots(document).length
+              : -1,
+            overlays: document
+              ? Array.from(
+                  document.querySelectorAll<HTMLElement>(
+                    "dialog[open], [role='dialog'], [aria-modal='true'], [role='listbox'], iframe",
+                  ),
+                ).filter(isVisibleWriteElement).length
+              : -1,
+            code: result.code ?? "",
+          });
           if (effect !== "stop" && closed) continue;
           const correspondence = correspondingControls(before, controls(), target);
           // Only a proven identity-preserving render can relax this stop.
@@ -874,6 +898,13 @@ export async function executeApprovedSearchWrites({
         structuralGroups !== undefined &&
         [...structuralGroups.values()].every((group) => group?.isCurrent());
       const triggerGroup = structuralGroups?.get(item.candidateId);
+      localWorkflowLog("search-halt", {
+        reason: failedResult?.reason ?? "",
+        effect: failedResult?.effect ?? "",
+        structuralOnly,
+        rowOnly,
+        groups: structuralGroups !== undefined,
+      });
       traceTrigger(item.candidateId, {
         interactionReason: failedResult?.reason ?? "",
         surfaceLeftOpen: failedResult?.surfaceLeftOpen === true,

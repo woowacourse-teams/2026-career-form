@@ -1,3 +1,4 @@
+import { localWorkflowLog } from "../debug/local-workflow";
 import { genericRowFor } from "../dom/repeatable-rows";
 import { isTrustedId, trustedLabels } from "../dom/trusted-id";
 import type { TargetIdentity } from "./readonly-search";
@@ -201,8 +202,22 @@ export function observeSearchSurfaces(
       );
       if (outer.length !== 1) throw new SearchFailure("surface_ambiguous");
       const container = outer[0]!;
-      if (!attributed(container, opener))
+      if (!attributed(container, opener)) {
+        // Local QA: site UI labels only, never profile values.
+        localWorkflowLog("surface-unattributed", {
+          matchesSurface: container.matches(SURFACE_SELECTOR),
+          hasRow: Boolean(genericRowFor(container)),
+          targetRow: Boolean(identity.repeatRow),
+          inFieldGroup: identity.fieldGroup.contains(container),
+          fieldName: fieldName().replace(/\s+/g, " ").trim().slice(0, 40),
+          surfaceName: (
+            container.getAttribute("aria-label") ??
+            container.getAttribute("title") ??
+            layerHeading(container)
+          ).slice(0, 40),
+        });
         throw new SearchFailure("surface_unobservable");
+      }
       const frames =
         container.tagName === "IFRAME"
           ? [container as HTMLIFrameElement]

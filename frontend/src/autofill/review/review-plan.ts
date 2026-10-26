@@ -1,3 +1,4 @@
+import { localWorkflowLog } from "../debug/local-workflow";
 import {
   nativeProfileAssignment,
   nativeUnofferedEntries,
@@ -408,6 +409,14 @@ function unavailableItem(
   reason: string,
   analysis?: MatchedFieldAnalysis,
 ): ReviewPlanItem {
+  localWorkflowLog("review-unavailable", {
+    key:
+      analysis?.valueBinding?.type === "DIRECT" ||
+      analysis?.valueBinding?.type === "LOOKUP"
+        ? analysis.valueBinding.profileFieldKey
+        : undefined,
+    reason,
+  });
   return {
     candidateId,
     fieldLabel,
@@ -857,6 +866,13 @@ function itemForResolvedAnalysis(
         (formItemCount === undefined ||
           formItemCount !== profileEntries.length))
     ) {
+      localWorkflowLog("repeat-count-mismatch", {
+        category: parts.categoryId,
+        formItemCount: formItemCount ?? -1,
+        profileEntries: profileEntries.length,
+        itemIndex: itemIndex ?? -1,
+        unindexedRepeatRow,
+      });
       return unavailableItem(
         analysis.candidateId,
         fieldLabel,
@@ -918,6 +934,30 @@ function itemForResolvedAnalysis(
           catalogSource.value,
         )
       : undefined;
+  if (
+    binding.type !== "DERIVED" &&
+    /\.(name|schoolName|testName)$/.test(binding.profileFieldKey)
+  ) {
+    const category = binding.profileFieldKey.split(".")[0];
+    const pool =
+      category === "education"
+        ? profile.education
+        : category === "languages"
+          ? profile.languages
+          : category === "certifications"
+            ? profile.certifications
+            : [];
+    localWorkflowLog("catalog-identity", {
+      key: binding.profileFieldKey,
+      itemIndex: itemIndex ?? -1,
+      source: catalogSource?.status ?? "none",
+      hasEntryId: catalogSource?.status === "resolved" && !!catalogSource.profileEntryId,
+      entriesWithIdentity: pool.filter((entry) => !!entry.identity).length,
+      entries: pool.length,
+      identity: searchIdentity?.status ?? "none",
+      approval: catalogApproval?.status ?? "none",
+    });
+  }
   if (catalogApproval?.status === "invalid")
     return unavailableItem(
       analysis.candidateId,

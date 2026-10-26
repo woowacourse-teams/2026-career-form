@@ -1,5 +1,6 @@
 import { traceWrite } from "../debug/write-trace";
 import { resolveChoiceOption } from "../profile/choice-option";
+import { localWorkflowLog } from "../debug/local-workflow";
 import { isSplitEmailTarget, SPLIT_EMAIL_REASON } from "../dom/split-email";
 import {
   isVisibleWriteElement,
@@ -656,7 +657,19 @@ function writeGeneric(
         approval.status === "selected" ? approval.match : undefined,
         generic,
       );
-    if (!(select instanceof HTMLSelectElement) || !option)
+    if (!(select instanceof HTMLSelectElement) || !option) {
+      // Local QA: option labels are site UI text; the profile value is
+      // reduced to its shape (digits → 9, letters → a) so no value leaks.
+      localWorkflowLog("option-unmatched", {
+        key: item.analysis?.valueBinding?.profileFieldKey ?? "",
+        valueShape: value
+          .replace(/[0-9]/g, "9")
+          .replace(/[A-Za-z가-힣]/g, "a"),
+        options: (handle.candidate.options ?? [])
+          .map((option) => option.displayName)
+          .join(" | ")
+          .slice(0, 200),
+      });
       return {
         written: false,
         reason: UNSAFE,
@@ -671,6 +684,7 @@ function writeGeneric(
           ? { failureCode: "OPTION_UNMATCHED" as const }
           : {}),
       };
+    }
     writtenTargets.set(handle, select);
     resetValueTracker(select);
     traceWrite(item.candidateId, { targetFound: true, setterCalled: true });
@@ -861,6 +875,12 @@ function resultForItem(
     const lookup = registry.lookupField(item.candidateId);
     const handle = writableHandle(item, lookup);
     if (!handle) {
+      localWorkflowLog("lookup-miss", {
+        status: lookup.status,
+        reason: "reason" in lookup ? lookup.reason : undefined,
+        command: item.analysis?.writePlan?.command,
+        mapping: item.analysis?.mappingStatus,
+      });
       const failureCode =
         lookup.status === "blocked" && lookup.reason === "disabled"
           ? ("FIELD_DISABLED" as const)

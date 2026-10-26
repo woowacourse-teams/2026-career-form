@@ -1,4 +1,5 @@
 import { displayState, withDomReadPass } from "./read-pass";
+import { localWorkflowLog } from "../debug/local-workflow";
 import {
   captureControlState,
   controlIdentity,
@@ -156,27 +157,33 @@ export class CandidateRegistry {
    * controls and approvals containing popup/opener/option objects are not moved.
    */
   revalidateField(candidateId: string, allowReplacement: boolean): boolean {
+    // Local QA diagnostics: record which guard refused the rebind so the
+    // failure class can be fixed from evidence instead of guesswork.
+    const deny = (reason: string): false => {
+      localWorkflowLog("rebind-deny", { reason });
+      return false;
+    };
     const entry = this.fields.get(candidateId);
     const snapshot = this.replacementState.get(candidateId);
-    if (!entry || !snapshot) return false;
+    if (!entry || !snapshot) return deny("no-snapshot");
     const { handle } = entry;
     const lookup = this.lookupField(candidateId);
-    if (lookup.status !== "stale")
-      return handle.elements.every(
+    if (lookup.status !== "stale") {
+      const same = handle.elements.every(
         (element, index) =>
           controlIdentity(element) === snapshot.before[index]?.identity,
       );
-    if (
-      !allowReplacement ||
-      handle.owner === "legacy" ||
-      handle.elements.length !== 1 ||
-      handle.elements[0].isConnected ||
-      handle.customElements?.length ||
-      handle.buttonDropdown ||
-      handle.optionElements.size ||
-      !snapshot.contextCurrent()
-    )
-      return false;
+      if (!same) localWorkflowLog("rebind-deny", { reason: "identity-changed" });
+      return same;
+    }
+    if (!allowReplacement) return deny("not-allowed");
+    if (handle.owner === "legacy") return deny("legacy-owned");
+    if (handle.elements.length !== 1) return deny("multi-element");
+    if (handle.elements[0].isConnected) return deny("still-connected");
+    if (handle.customElements?.length) return deny("custom-widget");
+    if (handle.buttonDropdown) return deny("button-dropdown");
+    if (handle.optionElements.size) return deny("captured-options");
+    if (!snapshot.contextCurrent()) return deny("context-changed");
     const correspondence = correspondingControls(
       snapshot.before,
       Array.from(
@@ -186,11 +193,10 @@ export class CandidateRegistry {
       ),
     );
     const replacement = correspondence?.get(handle.elements[0]);
-    if (
-      !replacement ||
-      (snapshot.row && !snapshot.row.contains(replacement))
-    )
-      return false;
+    if (!correspondence) return deny("no-correspondence");
+    if (!replacement) return deny("ambiguous-or-missing");
+    if (snapshot.row && !snapshot.row.contains(replacement))
+      return deny("other-row");
     const rebound: FieldCandidateHandle = {
       ...handle,
       elements: [replacement],
@@ -204,7 +210,9 @@ export class CandidateRegistry {
         : {}),
     };
     this.fields.set(candidateId, { ...entry, handle: rebound });
-    return this.lookupField(candidateId).status === "ready";
+    if (this.lookupField(candidateId).status !== "ready")
+      return deny("rebound-not-ready");
+    return true;
   }
 
   private fieldItemKey(sectionId: string, itemGroupId?: string): string {
@@ -328,6 +336,7 @@ export class CandidateRegistry {
       return { status: "unknown" };
     }
     if (registered.handle.isCurrentContext?.() === false) {
+      localWorkflowLog("stale-why", { reason: "context" });
       return { status: "stale" };
     }
     const elements =
@@ -341,6 +350,11 @@ export class CandidateRegistry {
       elements.some((element) => !element.isConnected) ||
       createStructuralSignature(elements) !== registered.handle.signature
     ) {
+      localWorkflowLog("stale-why", {
+        reason: elements.some((element) => !element.isConnected)
+          ? "disconnected"
+          : "signature",
+      });
       return { status: "stale" };
     }
     if (
@@ -354,6 +368,7 @@ export class CandidateRegistry {
         )
         ?.some((element) => !element.isConnected)
     ) {
+      localWorkflowLog("stale-why", { reason: "item-elements" });
       return { status: "stale" };
     }
     // A disabled placeholder option, or an initially hidden combobox menu,

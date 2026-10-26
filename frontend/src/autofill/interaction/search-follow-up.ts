@@ -1,4 +1,5 @@
 import { SearchFailure } from "./search-session";
+import { localWorkflowLog } from "../debug/local-workflow";
 
 export interface SearchFollowUpObservation {
   wait(args: {
@@ -173,6 +174,14 @@ export function captureSearchFollowUp(
           (control) => !baseline.has(control) && !visible(control),
         );
         if (expected.length || changedNow.length || hiddenPending) {
+          // Local QA: control shapes only, never values.
+          const shape = (control: SearchFollowUpControl) =>
+            `${control.tagName.toLowerCase()}${control.disabled ? ":disabled" : ""}${visible(control) ? "" : ":hidden"}${control instanceof HTMLSelectElement ? `:${control.options.length}opt` : ""}${ready(control) ? ":ready" : ""}`;
+          localWorkflowLog("followup-pending", {
+            expected: expected.map(shape).join(","),
+            expectedChanged: expected.filter((control) => changedNow.includes(control)).length,
+            changed: changedNow.map(shape).join(","),
+          });
           throw new SearchFailure("result_pending");
         }
         return [];

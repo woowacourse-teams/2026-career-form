@@ -17,6 +17,7 @@ import {
   type ReviewPlanItem,
 } from "../review/review-plan";
 import { resolveValueBinding } from "../profile/value-binding";
+import { localWorkflowLog } from "../debug/local-workflow";
 import { datePartOf, matchDatePartOption } from "./date-part-options";
 import {
   gradeGenericField,
@@ -367,6 +368,22 @@ function convertSection(
   section.fields.forEach(({ candidate, itemIndex, element }, index) => {
     const response = responses[index]!;
     const { candidateId } = candidate;
+    localWorkflowLog("field-analysis", {
+      section: entry.sectionId,
+      index,
+      docIndex: Array.prototype.indexOf.call(
+        element.ownerDocument.querySelectorAll("input, select, textarea"),
+        element,
+      ),
+      control: candidate.control,
+      category: outcome.category,
+      key: response.profileFieldKey ?? "none",
+      confidence: response.confidence,
+      reason: response.reason,
+      binding: response.binding?.type,
+      categoryConfirmed: response.categoryConfirmed,
+      hidden: isFieldCandidateHidden(section.fields[index]!.handle),
+    });
     if (response.reason === "LLM_UNAVAILABLE") {
       fields.push(noMatch(candidateId));
       grades.push([
@@ -477,6 +494,25 @@ function convertSection(
     ) {
       grade.grade = "REVIEW";
       grade.reason = "LANGUAGE_RESULT_INFERRED";
+    }
+    localWorkflowLog("field-grade", {
+      section: entry.sectionId,
+      index,
+      key: profileFieldKey,
+      grade: grade.grade,
+      reason: grade.reason,
+      profileValue: resolution,
+    });
+    if (grade.reason === "OPTION_VALUE_UNMATCHED") {
+      const names = (candidate.options ?? []).map((option) => option.displayName);
+      localWorkflowLog("option-grade-unmatched", {
+        key: profileFieldKey,
+        control: candidate.control,
+        options: names.length,
+        repeatedNames: names.length - new Set(names).size,
+        confidence: response.confidence,
+        grade: grade.grade,
+      });
     }
     grades.push([
       candidateId,

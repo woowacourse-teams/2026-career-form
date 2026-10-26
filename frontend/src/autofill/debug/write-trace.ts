@@ -165,6 +165,34 @@ export function emitWriteTrace(
     );
     console.groupCollapsed(`[CareerForm] 4. 기입 실행 추적 (${rows.length})`);
     console.table(rows);
+    // Local QA bridge: the isolated-world table is not observable from
+    // tooling, so mirror a value-free summary to the page.
+    try {
+      window.postMessage(
+        {
+          careerFormWriteTrace: rows.map((row, index) => ({
+            // Schema key only (e.g. education.school.name), never a value.
+            key:
+              items[index]?.analysis?.valueBinding?.profileFieldKey ??
+              items[index]?.profileFieldKey ??
+              "",
+            ordinal: row.writeOrdinal,
+            valueAfterWrite: row.valueAfterWrite,
+            valueAtSettle: row.valueAtSettle,
+            finalState: row.finalState,
+            executor: row.executor,
+            code: row.code,
+            failureCode: row.failureCode,
+            haltKind: row.haltKind,
+            interactionReason: row.interactionReason,
+            surfaceLeftOpen: row.surfaceLeftOpen,
+          })),
+        },
+        "*",
+      );
+    } catch {
+      // Messaging support is optional; the console table still exists.
+    }
   } catch (error) {
     console.warn("[CareerForm] 기입 실행 추적 출력 실패", error);
   } finally {

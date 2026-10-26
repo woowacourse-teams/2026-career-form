@@ -1,3 +1,4 @@
+import { localWorkflowLog } from "../debug/local-workflow";
 import {
   schoolRegionOption,
   schoolRegionSearchValues,
@@ -580,6 +581,12 @@ export async function executeReadonlySearch(
         trace("일치 결과 발견", candidate?.element);
         break;
       } catch (error) {
+        if (error instanceof SearchFailure)
+          localWorkflowLog("search-result-wait", {
+            reason: error.reason,
+            pending: results.pendingReason(),
+            roots: currentSurface.resultRoots().length,
+          });
         if (
           error instanceof SearchFailure &&
           ["search_results_not_found", "result_set_incomplete"].includes(
