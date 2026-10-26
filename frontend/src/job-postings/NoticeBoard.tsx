@@ -147,7 +147,7 @@ export function NoticeBoard({
                     <div className={styles.company}>
                       <div className={styles.companyText}>
                         <h3>{posting.company}</h3>
-                        <p>{posting.role}</p>
+                        {posting.role && <p>{posting.role}</p>}
                       </div>
                     </div>
                     <span

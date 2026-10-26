@@ -1,12 +1,17 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 import { PostingForm } from "./PostingForm";
-import { createPosting, formatDeadline, POSTING_TIME_ZONE } from "./model";
+import {
+  createPosting,
+  formatDeadline,
+  POSTING_TIME_ZONE,
+  type PostingInput,
+} from "./model";
 
 const now = Date.parse("2026-10-06T06:00Z");
 
 function setup() {
-  const onSave = vi.fn(async () => {});
+  const onSave = vi.fn<(input: PostingInput) => Promise<void>>(async () => {});
   render(
     <PostingForm busy={false} now={now} onSave={onSave} onCancel={() => {}} />,
   );
@@ -103,5 +108,23 @@ it("새 공고의 첫 입력에 초점을 두고 기존 기본 알림으로 저�
     deadline: Date.parse("2026-10-08T09:00Z"),
     timeZone: POSTING_TIME_ZONE,
     minutes: [1440, 120],
+  });
+});
+
+it("직무를 비워 두고도 저장할 수 있다", async () => {
+  const { onSave } = setup();
+  fireEvent.change(screen.getByLabelText("회사명"), {
+    target: { value: "직무 미정 회사" },
+  });
+  fireEvent.change(screen.getByLabelText("공고 링크"), {
+    target: { value: "https://example.com/jobs" },
+  });
+  setDeadline();
+  expect(screen.getByLabelText("직무")).not.toBeRequired();
+  fireEvent.click(screen.getByRole("button", { name: "저장" }));
+  await vi.waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+  expect(onSave.mock.calls[0][0]).toMatchObject({
+    company: "직무 미정 회사",
+    role: "",
   });
 });

@@ -82,7 +82,9 @@ function postingNotification(
   now: number,
 ): PushNotification {
   return {
-    title: `${posting.company} · ${posting.role}`,
+    title: posting.role
+      ? `${posting.company} · ${posting.role}`
+      : posting.company,
     message: `접수 ${formatPostingPeriod(posting.opensAt, posting.closesAt)} (한국 시간)\n${remainingTime(posting.closesAt, now)}`,
     buttons: [...PUSH_NOTIFICATION_BUTTONS],
   };

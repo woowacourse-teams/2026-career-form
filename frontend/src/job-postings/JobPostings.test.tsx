@@ -537,3 +537,26 @@ it("구독 설정 패널은 저장 공고 목록 아래, 알림과 로컬 저장
     panel.compareDocumentPosition(notice) & Node.DOCUMENT_POSITION_FOLLOWING,
   ).toBeTruthy();
 });
+
+it("직무 없이 저장한 공고는 목록에서 직무 줄을 숨긴다", async () => {
+  const { client, pushClient } = setup();
+  await client.save({
+    company: "직무 없는 회사",
+    role: "",
+    url: "https://example.com/jobs/no-role",
+    deadline: Date.parse("2026-10-08T18:00Z"),
+    timeZone: "Asia/Seoul",
+    minutes: [],
+  });
+  render(
+    <JobPostings
+      client={client}
+      pushClient={pushClient}
+      now={() => Date.parse("2026-10-06T06:00Z")}
+    />,
+  );
+  const heading = await screen.findByRole("heading", {
+    name: "직무 없는 회사",
+  });
+  expect(heading.parentElement?.querySelector("p")).toBeNull();
+});

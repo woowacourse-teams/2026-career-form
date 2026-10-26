@@ -134,6 +134,18 @@ describe("NoticeBoard", () => {
     expect(screen.getAllByRole("heading", { level: 3 })).toHaveLength(5);
     expect(screen.queryByRole("button", { name: /더 보기/ })).toBeNull();
   });
+  it("직무가 없는 공고는 직무 줄 없이 보여 준다", async () => {
+    renderBoard(fakeClient(async () => [{ ...early, role: "" }, late]));
+    const heading = await screen.findByRole("heading", {
+      name: "먼저 마감 회사",
+    });
+    expect(heading.parentElement?.querySelector("p")).toBeNull();
+    expect(
+      screen
+        .getByRole("heading", { name: "나중 마감 회사" })
+        .parentElement?.querySelector("p")?.textContent,
+    ).toBe("직무");
+  });
   it("진행 중 공고가 없으면 빈 상태를 안내한다", async () => {
     renderBoard(fakeClient(async () => []));
     await screen.findByText("지금 진행 중인 공고가 없습니다.");

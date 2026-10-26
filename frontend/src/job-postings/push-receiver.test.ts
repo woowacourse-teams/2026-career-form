@@ -134,6 +134,14 @@ describe("PushReceiver", () => {
       },
     });
   });
+  it("직무 없는 공고는 회사명만 제목으로 쓴다", async () => {
+    const h = harness();
+    const { role: _role, ...withoutRole } = payload;
+    expect(await h.receiver.receive(withoutRole)).toBe("notified");
+    expect(h.shown[0].title).toBe("합성 회사");
+    expect(await h.receiver.save(postingNotificationId(ID))).toBe("saved");
+    expect(h.rows()[0]).toMatchObject({ company: "합성 회사", role: "" });
+  });
   it("같은 공고 ID의 두 번째 푸시는 알림을 띄우지 않는다", async () => {
     const h = harness();
     await h.receiver.receive(payload);

@@ -64,6 +64,11 @@ function text(value: unknown): string | undefined {
     return undefined;
   return trimmed;
 }
+function optionalText(value: unknown): string | undefined {
+  if (value === undefined || value === null) return "";
+  if (typeof value !== "string") return undefined;
+  return value.trim() === "" ? "" : text(value);
+}
 function instant(value: unknown): number | undefined {
   if (typeof value !== "string") return undefined;
   const at = Date.parse(value);
@@ -76,7 +81,8 @@ export function parseServerPosting(value: unknown): ServerPosting | undefined {
       ? value.id
       : undefined;
   const company = text(value.company);
-  const role = text(value.role);
+  // The backend omits role for postings without one; blank means no role.
+  const role = optionalText(value.role);
   const link =
     typeof value.link === "string" &&
     value.link.length <= MAX_LINK_LENGTH &&
@@ -88,7 +94,7 @@ export function parseServerPosting(value: unknown): ServerPosting | undefined {
   if (
     !id ||
     !company ||
-    !role ||
+    role === undefined ||
     !link ||
     opensAt === undefined ||
     closesAt === undefined ||
@@ -105,7 +111,8 @@ export function isServerPosting(value: unknown): value is ServerPosting {
     typeof value.id === "string" &&
     ID_PATTERN.test(value.id) &&
     text(value.company) === value.company &&
-    text(value.role) === value.role &&
+    typeof value.role === "string" &&
+    (value.role === "" || text(value.role) === value.role) &&
     typeof value.link === "string" &&
     value.link.length <= MAX_LINK_LENGTH &&
     isHttpUrl(value.link) &&

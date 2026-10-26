@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   base64UrlToBytes,
   createPushApi,
+  isServerPosting,
   parseServerPosting,
   PushApiError,
 } from "./push-api";
@@ -252,6 +253,48 @@ describe("parseServerPosting", () => {
     "문자열",
   ])("형식이 맞지 않으면 버린다: %j", (value) => {
     expect(parseServerPosting(value)).toBeUndefined();
+  });
+});
+
+describe("직무 없는 공고", () => {
+  const valid = {
+    id: "0123456789abcdef0123456789abcdef",
+    company: "합성 회사",
+    link: "https://careers.example.test/jobs/1",
+    opensAt: "2030-01-01T00:00:00Z",
+    closesAt: "2030-01-01T01:00:00Z",
+  };
+  it.each([{}, { role: "" }, { role: "   " }, { role: null }])(
+    "role이 없거나 비어 있으면 직무 없음으로 받는다: %j",
+    (role) => {
+      expect(parseServerPosting({ ...valid, ...role })).toMatchObject({
+        id: valid.id,
+        company: "합성 회사",
+        role: "",
+      });
+    },
+  );
+  it.each([{ role: 12 }, { role: "a".repeat(201) }, { role: "줄\n바꿈" }])(
+    "role이 문자열이 아니거나 형식에 어긋나면 버린다: %j",
+    (role) => {
+      expect(parseServerPosting({ ...valid, ...role })).toBeUndefined();
+    },
+  );
+  it("저장·전달된 공고 형태도 빈 직무를 허용한다", () => {
+    expect(
+      isServerPosting({ ...valid, role: "", opensAt: 1, closesAt: 2 }),
+    ).toBe(true);
+    expect(
+      isServerPosting({ ...valid, role: 3, opensAt: 1, closesAt: 2 }),
+    ).toBe(false);
+  });
+  it("진행 중 공고 목록의 직무 없는 항목을 버리지 않는다", async () => {
+    const { client } = setup(() =>
+      json({ postings: [{ ...valid, id: "e".repeat(32) }] }),
+    );
+    expect(await client.openPostings()).toEqual([
+      expect.objectContaining({ id: "e".repeat(32), role: "" }),
+    ]);
   });
 });
 

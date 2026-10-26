@@ -26,6 +26,9 @@ describe("server posting helpers", () => {
       minutes: [1440, 120],
     });
   });
+  it("직무가 없으면 빈 직무로 넘긴다", () => {
+    expect(postingInput({ ...posting, role: "" }).role).toBe("");
+  });
   it("접수 기간을 한국 시간으로 표시하고 해가 다르면 연도를 붙인다", () => {
     expect(formatPostingPeriod(posting.opensAt, posting.closesAt)).toBe(
       "10/27 09:00 ~ 11/3 18:00",

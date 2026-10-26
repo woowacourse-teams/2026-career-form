@@ -44,7 +44,7 @@ export function PostingList({
                 <PostingIcon key={p.url} company={p.company} url={p.url} />
                 <div className={styles.companyText}>
                   <h3>{p.company}</h3>
-                  <p>{p.role}</p>
+                  {p.role && <p>{p.role}</p>}
                 </div>
               </div>
               <span
