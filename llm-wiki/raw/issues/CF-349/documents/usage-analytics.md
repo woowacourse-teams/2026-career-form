@@ -2,8 +2,8 @@
 
 > Issue: CF-349
 > Collected: 2026-10-26
-> Approval-Digest: a13a98b7258ec33fcc5fa174e18f6134f21ade908376db2df0d821e4042b7010
-> Source-Revision: 33c6c4590afa16e7f241871ec84147e09ef28457
+> Approval-Digest: a614605e0a14261d727cde1371ebc8ba7c290d69bd5f59da72f0fbc7f2a8d8dc
+> Source-Revision: 5b0a3f63c3417c32ecae1ffb7256db3965a097ab
 
 이 문서는 2026-10-26에 승인된 CF-349 후보 4와 같은 날 범위 수정 뒤 승인된 후보 9의 계측 부분을 수집한 기록이다. Approval-Digest는 [승인 후보 스냅샷](approved-candidates.md) 전체 UTF-8 바이트의 SHA-256이다.
 

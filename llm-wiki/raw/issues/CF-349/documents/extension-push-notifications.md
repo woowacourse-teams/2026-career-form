@@ -2,10 +2,10 @@
 
 > Issue: CF-349
 > Collected: 2026-10-26
-> Approval-Digest: a13a98b7258ec33fcc5fa174e18f6134f21ade908376db2df0d821e4042b7010
-> Source-Revision: 33c6c4590afa16e7f241871ec84147e09ef28457
+> Approval-Digest: a614605e0a14261d727cde1371ebc8ba7c290d69bd5f59da72f0fbc7f2a8d8dc
+> Source-Revision: 5b0a3f63c3417c32ecae1ffb7256db3965a097ab
 
-이 문서는 2026-10-26에 승인된 CF-349 후보 1·2·3·5와 같은 날 범위 수정 뒤 승인된 후보 6·7·8·9를 수집한 기록이다. Approval-Digest는 [승인 후보 스냅샷](approved-candidates.md) 전체 UTF-8 바이트의 SHA-256이다. 확장의 Web Push 구독과 공고 알림은 이전 topic Wiki에 없던 주제라 Supersedes가 없다. 구독 endpoint와 키, 실제 공고·프로필 값, 대화 전문은 기록하지 않는다.
+이 문서는 2026-10-26에 승인된 CF-349 후보 1·2·3·5, 같은 날 범위 수정 뒤 승인된 후보 6·7·8·9, 직무 선택 입력 결정 뒤 승인된 후보 10을 수집한 기록이다. Approval-Digest는 [승인 후보 스냅샷](approved-candidates.md) 전체 UTF-8 바이트의 SHA-256이다. 확장의 Web Push 구독과 공고 알림은 이전 topic Wiki에 없던 주제라 Supersedes가 없다. 구독 endpoint와 키, 실제 공고·프로필 값, 대화 전문은 기록하지 않는다.
 
 ## 구독 수명주기 (후보 1)
 
@@ -53,10 +53,15 @@ Chrome 확장 API로는 OS 알림 허용 여부를 감지할 수 없다. `chrome
 
 공지함은 3건까지 펼치고 "n건 더 보기"로 나머지를 열며, 구독 설정 패널은 저장 공고 목록 아래·알림과 로컬 저장 안내 위에 둬 저장 공고가 첫 화면에 보이게 한다. 알림 아이콘은 1254px 로고 대신 128px 전용 자산 `notification-icon.png`를 쓰고 CF-161 마감 알림도 같은 자산을 쓴다. 온보딩 하단 안내와 설정 패널에 "OS 알림이 꺼져 있어도 아이콘 숫자와 공지함으로 새 공고를 알 수 있다"를 적는다. 추가분은 모두 설정으로 되돌릴 수 있는 화면 동작이라 ADR 없이 이 topic에 근거를 남긴다. 계측 확장은 [공고 알림 계측 payload](usage-analytics.md)에 있다.
 
+## 직무 선택 입력 (후보 10)
+
+팀이 등록하는 공채 공고는 직무가 하나로 정해지지 않는 경우가 많아 직무를 선택 항목으로 바꿨다(#348과 함께). 확장은 푸시 payload와 진행 중 공고 목록에서 `role`이 없거나(백엔드는 직무가 없으면 필드를 생략) 빈 문자열이면 직무 없음(`""`)으로 받아 공고를 버리지 않고 공고 ID·회사·링크·기간 검증은 그대로 둔다. 문자열이 아니거나 길이·제어문자 규칙에 어긋난 `role`은 기존처럼 버린다. 알림 제목은 직무가 있으면 "회사 · 직무", 없으면 회사명만이고 공지함 카드와 저장 공고 카드는 직무 줄을 숨긴다. CF-161 로컬 공고 모델은 `validateInput`이 회사명만 필수("회사명을 입력해 주세요.")이고 공고 저장 폼의 직무 `required`를 없앴으며 기존 저장 데이터는 그대로 읽힌다. 계측 속성 변화는 없다. 직무 없는 공고는 이 변경이 포함된 확장 버전에서만 보이므로 스토어 보급이 끝나기 전에는 팀이 직무를 비워 등록하지 않는다.
+
 ## 근거
 
 - `frontend/src/job-postings/push-api.ts`, `push-subscription.ts`, `push-receiver.ts`, `push-background.ts`, `push-background-handler.ts`, `push-client.ts`, `push-messages.ts`, `push-settings.ts`, `server-posting.ts`, `notification-check.ts`, `unread-postings.ts`, `use-push-state.ts`, `VisibilityCheck.tsx`, `SubscriptionSettings.tsx`, `OnboardingNotificationCard.tsx`, `NoticeBoard.tsx`, `JobPostings.tsx`
 - `frontend/site/SiteApp.tsx`(온보딩 카드), `frontend/entrypoints/onboarding/App.tsx`, `frontend/entrypoints/sidepanel/App.tsx`(미확인 개수), `frontend/public/notification-icon.png`
+- `frontend/src/job-postings/model.ts`(`validateInput`), `PostingForm.tsx`, `PostingList.tsx`, `background-handler.ts`(직무 선택 입력)
 - `frontend/entrypoints/background.ts`, `frontend/wxt.config.ts`(`minimum_chrome_version`)
 - `frontend/README.md`의 "공고 알림 구독(Web Push)"
 - `backend/src/main/java/com/careerform/notification/NotificationController.java`(PR #351, CF-348)

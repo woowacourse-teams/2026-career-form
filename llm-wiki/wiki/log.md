@@ -895,3 +895,11 @@
 - 승인된 후보 9개(앞선 5개 유지, 6~9 신규)를 [CF-349 bundle](../raw/issues/CF-349/manifest.md)에 반영했다. 확장 Web Push payload에 OS 알림 허용을 감지할 수 없어 사용자 응답으로 확인하는 자가 진단(테스트 알림은 버튼 클릭으로만, 카드 노출 조건, OS별 안내, 온보딩 발신자 허용 범위), 미확인 배지(`careerForm.push.unread`, 숫자만, 공지함 열람 시 0, 재시작 복원, 사이드 패널 개수), 열기 자동 저장(기본 켜짐, 세 경로, 후속 알림·카드의 취소), 화면 정리(공지함 3건 접기, 설정 패널 위치, 128px 알림 아이콘)와 2026-10-26 실기동 확인 범위·한계를 더했다. 계측 payload에 이벤트 3종과 `answer`·`trigger` 속성을 더했다.
 - [확장 Web Push 구독과 공고 알림](topics/extension-push-notifications.md)과 [선택적 이용 계측](topics/usage-analytics.md)의 현재 상태와 색인 요약을 갱신했다.
 - 구독 endpoint·키, 실제 공고·프로필 값, 대화 전문은 저장하지 않았다.
+
+## [2026-10-26] ingest | CF-349 직무 선택 입력
+
+- Approval-Digest: a614605e0a14261d727cde1371ebc8ba7c290d69bd5f59da72f0fbc7f2a8d8dc
+- Source-Revision: 5b0a3f6
+- 승인된 후보 10개(앞선 9개 유지, 10 신규)를 [CF-349 bundle](../raw/issues/CF-349/manifest.md)에 반영했다. 확장 Web Push payload에 직무 선택 입력(payload·목록의 `role` 누락·빈 문자열 수용, 알림 제목과 카드 분기, CF-161 모델 회사명만 필수, 폼 `required` 제거, 보급 전 운영 규칙) 절을 더했다.
+- [확장 Web Push 구독과 공고 알림](topics/extension-push-notifications.md)의 현재 상태와 색인 요약을 갱신했다.
+- 구독 endpoint·키, 실제 공고·프로필 값, 대화 전문은 저장하지 않았다.
