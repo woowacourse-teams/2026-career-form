@@ -1242,14 +1242,13 @@ it("collects five common basics before showing the summary", async () => {
   });
 });
 
-it("accepts a custom gender and protects an incomplete birth date", async () => {
+it("offers gender only as a catalog choice and protects an incomplete birth date", async () => {
   const { repository } = await renderForm();
   await next();
   await next();
   await next();
-  fireEvent.change(screen.getByLabelText("성별 직접 입력"), {
-    target: { value: "직접 선택한 표현" },
-  });
+  expect(screen.queryByLabelText("성별 직접 입력")).toBeNull();
+  await click(screen.getByRole("button", { name: "논바이너리" }));
   await next();
   const birthDate = screen.getByLabelText("생년월일", { exact: true });
   fireEvent.change(birthDate, { target: { value: "2000-02" } });
@@ -1263,7 +1262,7 @@ it("accepts a custom gender and protects an incomplete birth date", async () => 
     screen.getByRole("heading", { name: "기본 정보가 준비됐어요" }),
   ).toBeVisible();
   expect((await repository.load()).personal).toMatchObject({
-    gender: "직접 선택한 표현",
+    gender: "논바이너리",
   });
   expect((await repository.load()).personal.birthDate).toBeUndefined();
 });
@@ -1285,13 +1284,11 @@ it("edits saved gender and birth date from the overview without discarding other
   await click(screen.getByRole("button", { name: "이 질문 건너뛰기" }));
   expect(screen.getByText("1999-03-02")).toBeVisible();
   await click(screen.getByRole("button", { name: "성별 수정" }));
-  fireEvent.change(screen.getByLabelText("성별 직접 입력"), {
-    target: { value: "다른 표기" },
-  });
+  await click(screen.getByRole("button", { name: "여성" }));
   await next();
-  expect(screen.getByText("다른 표기")).toBeVisible();
+  expect(screen.getByText("여성")).toBeVisible();
   expect((await repository.load()).personal).toMatchObject({
-    gender: "다른 표기",
+    gender: "여성",
     birthDate: "1999-03-02",
     nationality: "대한민국",
   });

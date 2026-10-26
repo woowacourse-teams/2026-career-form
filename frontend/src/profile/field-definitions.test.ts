@@ -281,3 +281,13 @@ describe("military, veteran, and disability profile selects", () => {
     ).toBe("text");
   });
 });
+
+describe("personal profile fields", () => {
+  it("stores gender as one of the catalog choices", () => {
+    const gender = PROFILE_CATEGORIES.find((c) => c.id === "personal")
+      ?.sections.flatMap((section) => section.fields)
+      .find((field) => field.id === "gender");
+    expect(gender?.inputType).toBe("select");
+    expect(gender?.options).toEqual(["남성", "여성", "논바이너리"]);
+  });
+});

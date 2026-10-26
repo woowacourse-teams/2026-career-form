@@ -63,7 +63,7 @@ export const descriptions: Record<Step, string> = {
     "아이디를 입력한 뒤 이메일 주소를 골라 완성할 수 있어요. 직접 입력해도 좋아요.",
   phone: "평소 연락받는 번호를 입력해 주세요. 하이픈 없이 입력해도 괜찮아요.",
   gender:
-    "지원서마다 선택지가 달라요. 자주 쓰는 표기를 고르거나 직접 적어 주세요.",
+    "지원서 선택지와 맞출 수 있도록 아래 표기 중에서 골라 주세요.",
   birthDate:
     "숫자 8자리로 입력하거나 달력에서 고를 수 있어요. 모르면 건너뛰세요.",
   englishName: "영문 성과 이름은 지원서에 사용할 표기 그대로 입력해 주세요.",
@@ -303,17 +303,9 @@ export function QuickStartFields({
         <>
           <Choices
             label="성별"
-            values={["남성", "여성"]}
+            values={["남성", "여성", "논바이너리"]}
             value={profile.personal.gender ?? ""}
             onChange={(value) => updateSingle("personal", "gender", value)}
-          />
-          <Input
-            label="성별 직접 입력"
-            placeholder="지원서에 사용할 표기"
-            value={profile.personal.gender ?? ""}
-            onChange={(event) =>
-              updateSingle("personal", "gender", event.target.value)
-            }
           />
         </>
       );

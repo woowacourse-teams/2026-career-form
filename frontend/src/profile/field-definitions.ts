@@ -61,6 +61,9 @@ const select = (
   options,
 });
 
+/** 성별은 지원서 선택지와 맞출 수 있도록 정해진 표기 중에서만 고른다. */
+const GENDER_OPTIONS = ["남성", "여성", "논바이너리"];
+
 const MAJOR_FIELD_OPTIONS = [
   "인문계열", "사회계열", "교육계열", "공학계열", "자연과학계열",
   "의약학계열", "예체능계열", "농수해양/생명자원계열", "기타",
@@ -92,7 +95,7 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
           text("hanjaGivenName", "한자 이름"),
           text("englishFamilyName", "영문 성"),
           text("englishGivenName", "영문 이름"),
-          text("gender", "성별"),
+          select("gender", "성별", GENDER_OPTIONS),
           date("birthDate", "생년월일"),
           text("nationality", "국적"),
         ],

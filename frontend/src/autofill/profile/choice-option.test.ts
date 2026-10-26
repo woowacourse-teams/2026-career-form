@@ -83,3 +83,19 @@ describe("national technical grade fallback", () => {
       .toMatchObject({ status: "unique", option: { displayName: "기타" }, reason: "GRADE_OTHER_OPTION" });
   });
 });
+
+describe("gender aliases", () => {
+  const genders = options("선택하세요.", "논바이너리", "여성", "남성");
+  it.each([["논바이너리", "논바이너리"], ["Non-binary", "논바이너리"], ["nonbinary", "논바이너리"], ["남자", "남성"], ["Female", "여성"]])(
+    "maps %s to %s",
+    (value, expected) => {
+      expect(resolveChoiceOption("personal.personal.gender", value, genders)).toMatchObject({
+        status: "unique",
+        option: { displayName: expected },
+      });
+    },
+  );
+  it("does not guess an unrelated value", () => {
+    expect(resolveChoiceOption("personal.personal.gender", "가나다", genders).status).not.toBe("unique");
+  });
+});

@@ -23,6 +23,7 @@ const TARGET = ["대상", "해당", "예", "있음", "y", "yes", "true"];
 const NOT_TARGET = ["비대상", "비해당", "해당없음", "해당사항없음", "아니오", "없음", "n", "no", "false"];
 const MALE = ["남", "남자", "남성", "m", "male"];
 const FEMALE = ["여", "여자", "여성", "f", "female"];
+const NONBINARY = ["논바이너리", "nonbinary", "non-binary", "논바이너리(nonbinary)"];
 const DOMESTIC = /^(내국인|국내|국내\(한국국적\)|내국인\(대한민국\))$/;
 const FOREIGN = /^(외국인|외국|국외)$/;
 /** Stored short employment forms and their common long site labels. */
@@ -59,7 +60,7 @@ export function resolveChoiceOption<T extends { displayName: string }>(
     matches.length === 1
       ? { status: "unique", option: matches[0]!, ...(reason ? { reason } : {}) }
       : { status: matches.length ? "ambiguous" : "none" };
-  const groups = key === "personal.personal.gender" ? [MALE, FEMALE]
+  const groups = key === "personal.personal.gender" ? [MALE, FEMALE, NONBINARY]
     : key === "veteran.veteran.veteranStatus" || key === "disability.disability.disabilityStatus"
       ? [TARGET, NOT_TARGET] : [];
   const meanings = groups.filter((group) => group.some((word) => aliases.has(word)));
