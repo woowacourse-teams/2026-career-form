@@ -238,6 +238,36 @@ export async function runAddressAnalysis({
     ) &&
     (genericAddressFields[0] === undefined ||
       genericFieldIsUsable(genericAddressFields[0], 0));
+  // Without an address runner, a generic search cannot drive a postcode
+  // widget (it lives in nested cross-origin frames) and only leaves its layer
+  // open over the form. Keep those address searches manual instead.
+  if (
+    !genericAddressPermitted &&
+    analysis.mode !== "ADAPTER" &&
+    !policy &&
+    !adapter.runAddress
+  ) {
+    const manual = new Set(
+      analysis.fields
+        .filter(
+          (field) =>
+            "valueBinding" in field &&
+            field.valueBinding?.type === "DIRECT" &&
+            (keys as readonly string[]).includes(
+              field.valueBinding.profileFieldKey,
+            ) &&
+            field.writePlan?.command === "SEARCH_SELECTION",
+        )
+        .map((field) => field.candidateId),
+    );
+    if (manual.size)
+      return {
+        ...analysis,
+        fields: analysis.fields.filter(
+          (field) => !manual.has(field.candidateId),
+        ),
+      };
+  }
   const permitted =
     (analysis.mode === "ADAPTER" &&
       addressNames.length === 3 &&
@@ -277,25 +307,73 @@ export async function runAddressAnalysis({
   if (genericAddressPermitted && !run.button) {
     // Generic pages have no trigger selector: accept exactly one search-style
     // trigger inside the first address control's own row.
-    const first = genericAddressFields[0]
-      ? snapshot.registry.lookupField(genericAddressFields[0].candidateId)
-      : undefined;
+    const resolveElement = (
+      field: (typeof genericAddressFields)[number],
+    ): Element | null => {
+      if (!field) return null;
+      const lookup = snapshot.registry.lookupField(field.candidateId);
+      const fromRegistry =
+        "handle" in lookup ? lookup.handle.elements[0] : undefined;
+      if (fromRegistry) return fromRegistry;
+      // Readonly address inputs are registered as blocked, so fall back to the
+      // collected name/id, which the analysis already validated as unique.
+      const selector = field.domId
+        ? `#${CSS.escape(field.domId)}`
+        : field.domName
+          ? `[name="${CSS.escape(field.domName)}"]`
+          : undefined;
+      return selector ? pageDocument.querySelector(selector) : null;
+    };
+    // The road-address control (index 1) is the one the search fills; the
+    // postcode is optional and often absent.
     const element =
-      first && "handle" in first ? first.handle.elements[0] : undefined;
-    const scope = element?.closest("tr, li, dd, section, div") ?? null;
-    const triggers = scope
-      ? Array.from(
-          scope.querySelectorAll<HTMLElement>("button, [role='button']"),
-        ).filter((button) => {
-          const name =
-            button.getAttribute("aria-label") ??
-            button.getAttribute("title") ??
-            button.textContent ??
-            "";
-          return /검색|우편번호|주소/.test(name);
-        })
-      : [];
-    if (triggers.length === 1) run.button = triggers[0];
+      resolveElement(genericAddressFields[1]) ??
+      resolveElement(genericAddressFields[0]) ??
+      resolveElement(genericAddressFields[2]);
+    // Walk up a few ancestors and take the first level that exposes exactly one
+    // address trigger. Search buttons often sit in a wrapper that overlays the
+    // readonly input, so a single fixed selector is not enough.
+    // Only address controls may share the trigger's scope, so a school or
+    // certificate search elsewhere in the section is never taken for it.
+    const addressElements = new Set(
+      genericAddressFields.map((field) => resolveElement(field)).filter(Boolean),
+    );
+    const ownsOnlyAddress = (scope: Element) =>
+      Array.from(
+        scope.querySelectorAll<HTMLElement>("input, select, textarea"),
+      ).every(
+        (control) =>
+          addressElements.has(control) ||
+          (control instanceof HTMLInputElement &&
+            ["hidden", "checkbox", "button", "submit"].includes(control.type)),
+      );
+    const matching = (scope: Element): HTMLElement[] =>
+      ownsOnlyAddress(scope)
+        ? Array.from(
+            scope.querySelectorAll<HTMLElement>("button, [role='button']"),
+          ).filter((button) => {
+            const name = `${button.getAttribute("aria-label") ?? ""} ${button.getAttribute("title") ?? ""} ${button.textContent ?? ""}`;
+            return (
+              /검색|우편번호|주소\s*찾기/.test(name) &&
+              !/동일|복사|같음|삭제|초기화/.test(name)
+            );
+          })
+        : [];
+    let scope: Element | null = element ?? null;
+    for (let depth = 0; scope && depth < 5; depth += 1) {
+      const triggers = matching(scope);
+      if (triggers.length === 1) {
+        run.button = triggers[0];
+        break;
+      }
+      if (triggers.length > 1) break;
+      scope = scope.parentElement;
+    }
+    localWorkflowLog("address-trigger", {
+      snapshotId: snapshot.request.snapshotId,
+      found: !!run.button,
+      addressElement: !!element,
+    });
   }
   localWorkflowLog("address-enter", {
     snapshotId: snapshot.request.snapshotId,
@@ -320,8 +398,16 @@ export async function runAddressAnalysis({
   const addressTargets = permitted
     ? candidateSlots.flatMap(({ field: candidate, index }) => {
         const lookup = snapshot.registry.lookupField(candidate.candidateId);
-        if (lookup.status !== "ready" && lookup.status !== "blocked") return [];
-        const element = lookup.handle.elements[0];
+        const registryElement =
+          "handle" in lookup ? lookup.handle.elements[0] : undefined;
+        const blockedButNamed =
+          lookup.status === "ready" || lookup.status === "blocked";
+        const element =
+          registryElement ??
+          (genericAddressPermitted && blockedButNamed
+            ? elementByCollectedName(pageDocument, candidate)
+            : undefined);
+        if (!element) return [];
         return element instanceof HTMLInputElement
           ? [
               {
@@ -347,6 +433,11 @@ export async function runAddressAnalysis({
       if (button) onAddressOperation?.(button);
     };
     button?.addEventListener("click", onClick, { once: true });
+    const targetFor = (key: string) =>
+      addressTargets.find((target) => target.profileFieldKey === key)?.element;
+    const genericAddress = targetFor(keys[1]);
+    const genericDetail = targetFor(keys[2]);
+    const genericPostalCode = targetFor(keys[0]);
     run.task = effectiveRunner({
       document: pageDocument,
       button,
@@ -354,6 +445,15 @@ export async function runAddressAnalysis({
       loadCurrent: async () => addressValue(await repository.load()),
       signal: run.controller.signal,
       search: addressSearch,
+      ...(genericAddressPermitted && genericAddress && genericDetail
+        ? {
+            targets: {
+              address: genericAddress,
+              detail: genericDetail,
+              ...(genericPostalCode ? { postalCode: genericPostalCode } : {}),
+            },
+          }
+        : {}),
     }).finally(() => button?.removeEventListener("click", onClick));
   }
   run.task ??= Promise.resolve({
@@ -400,6 +500,18 @@ export async function runAddressAnalysis({
   }
   onActivity?.("matching");
   return withoutAddressFields(analysis, snapshot, effectiveAddressNames);
+}
+
+function elementByCollectedName(
+  pageDocument: Document,
+  field: { domId?: string; domName?: string },
+): Element | null {
+  const selector = field.domId
+    ? `#${CSS.escape(field.domId)}`
+    : field.domName
+      ? `[name="${CSS.escape(field.domName)}"]`
+      : undefined;
+  return selector ? pageDocument.querySelector(selector) : null;
 }
 
 function withoutAddressFields(

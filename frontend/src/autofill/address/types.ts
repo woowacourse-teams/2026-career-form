@@ -9,6 +9,12 @@ export type AddressSearch = (
   signal: AbortSignal,
   onSelected?: (selected: AddressIdentity) => void,
 ) => Promise<boolean>;
+/** Generic pages without an address policy pass the resolved controls themselves. */
+export interface GenericAddressTargets {
+  postalCode?: HTMLInputElement;
+  address: HTMLInputElement;
+  detail: HTMLInputElement;
+}
 export interface AddressExecutionOptions {
   document: Document;
   button: Element;
@@ -16,6 +22,7 @@ export interface AddressExecutionOptions {
   loadCurrent: () => Promise<AddressValue>;
   signal: AbortSignal;
   search: AddressSearch;
+  targets?: GenericAddressTargets;
 }
 export interface AddressResult {
   status: "written" | "manual";

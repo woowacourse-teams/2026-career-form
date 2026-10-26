@@ -156,6 +156,10 @@ it("runs the vendor address executor for a generic page with two visible fields"
   });
 
   expect(runKakaoAddress).toHaveBeenCalledOnce();
+  expect(vi.mocked(runKakaoAddress).mock.calls[0]![0].targets).toEqual({
+    address: inputs[0],
+    detail: inputs[1],
+  });
   expect(result?.fields.map((field) => field.candidateId)).toEqual([]);
 });
 
