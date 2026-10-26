@@ -31,7 +31,7 @@ public class NotificationConfiguration {
         @Value("${career-form.notification.push.timeout:10s}") Duration timeout,
         @Value("${career-form.notification.push.batch-size:500}") int batchSize,
         @Value("${career-form.notification.push.max-per-cycle:20000}") int maxPerCycle,
-        @Value("${career-form.notification.push.allowed-endpoint-hosts:fcm.googleapis.com}") String allowedEndpointHosts) {
+        @Value("${career-form.notification.push.allowed-endpoint-hosts:fcm.googleapis.com,jmt17.google.com}") String allowedEndpointHosts) {
         return new PushSettings(dispatchInterval, concurrency, maxAttempts, lease, timeout, batchSize, maxPerCycle,
             Arrays.stream(allowedEndpointHosts.split(",")).collect(Collectors.toUnmodifiableSet()));
     }

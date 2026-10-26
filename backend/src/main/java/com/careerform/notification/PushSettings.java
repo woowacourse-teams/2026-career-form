@@ -6,7 +6,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-/** 발송기 설정. 주기는 시연용 10초부터 1시간까지, 리스는 호출 시간 초과보다 길어야 한다. */
+/** 발송기 설정. 주기는 시연용 10초부터 1시간까지, 리스는 호출 시간 초과보다 길어야 한다. 허용 호스트 기본값은 Chrome이 돌려주는 두 FCM 호스트다. */
 public record PushSettings(
     Duration dispatchInterval,
     int concurrency,
@@ -37,7 +37,7 @@ public record PushSettings(
     }
 
     public static PushSettings defaults() {
-        return new PushSettings(Duration.ofSeconds(60), 20, 8, Duration.ofSeconds(120), Duration.ofSeconds(10), 500, 20000, Set.of("fcm.googleapis.com"));
+        return new PushSettings(Duration.ofSeconds(60), 20, 8, Duration.ofSeconds(120), Duration.ofSeconds(10), 500, 20000, Set.of("fcm.googleapis.com", "jmt17.google.com"));
     }
 
     public PushSettings withDispatchInterval(Duration value) {

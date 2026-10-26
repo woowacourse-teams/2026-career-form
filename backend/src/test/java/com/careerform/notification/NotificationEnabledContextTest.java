@@ -76,6 +76,9 @@ class NotificationEnabledContextTest {
         mockMvc.perform(post("/api/v1/notifications/subscriptions").contentType(MediaType.APPLICATION_JSON)
                 .content(NotificationApiTest.subscriptionJson("https://fcm.googleapis.com/fcm/send/synthetic-context", VapidTestKeys.generate().publicKey, VapidTestKeys.base64Url(auth))))
             .andExpect(status().isCreated());
+        mockMvc.perform(post("/api/v1/notifications/subscriptions").contentType(MediaType.APPLICATION_JSON)
+                .content(NotificationApiTest.subscriptionJson("https://jmt17.google.com/fcm/send/synthetic-context-2", VapidTestKeys.generate().publicKey, VapidTestKeys.base64Url(auth))))
+            .andExpect(status().isCreated());
         mockMvc.perform(get("/api/v1/notifications/postings")).andExpect(status().isOk()).andExpect(jsonPath("$.postings").isEmpty());
     }
 

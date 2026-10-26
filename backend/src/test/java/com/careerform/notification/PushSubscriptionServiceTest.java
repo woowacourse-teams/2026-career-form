@@ -75,6 +75,17 @@ class PushSubscriptionServiceTest {
         assertThat(store.subscriptionIds()).isEmpty();
     }
 
+    @Test
+    @DisplayName("기본 허용 호스트는 Chrome이 돌려주는 fcm.googleapis.com과 jmt17.google.com 둘 다 받는다")
+    void acceptsBothChromeFcmHostsByDefault() {
+        var defaults = new PushSubscriptionService(store, Clock.fixed(NOW, ZoneOffset.UTC), PushSettings.defaults().allowedEndpointHosts());
+        assertThat(defaults.register("https://jmt17.google.com/fcm/send/synthetic-token-2", p256dh, auth).created()).isTrue();
+        assertThat(defaults.register("https://fcm.googleapis.com/fcm/send/synthetic-token-3", VapidTestKeys.generate().publicKey, randomAuth()).created()).isTrue();
+        assertThatThrownBy(() -> defaults.register("https://push.example.test/send/synthetic", VapidTestKeys.generate().publicKey, randomAuth()))
+            .isInstanceOf(PushSubscriptionService.InvalidSubscription.class);
+        assertThat(store.subscriptionIds()).hasSize(2);
+    }
+
     private void assertRejected(String endpoint, String key, String secret, String reason) {
         assertThatThrownBy(() -> service.register(endpoint, key, secret)).isInstanceOf(PushSubscriptionService.InvalidSubscription.class)
             .extracting(exception -> ((PushSubscriptionService.InvalidSubscription) exception).reason()).isEqualTo(reason);

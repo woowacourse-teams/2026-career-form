@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 @DisplayName("발송기 설정 범위")
 class PushSettingsTest {
     @Test
-    @DisplayName("기본값은 60초 주기, 동시성 20, 8회, 리스 120초, 시간 초과 10초, FCM 호스트다")
+    @DisplayName("기본값은 60초 주기, 동시성 20, 8회, 리스 120초, 시간 초과 10초, FCM 호스트 두 개다")
     void defaultsMatchContract() {
         var settings = PushSettings.defaults();
         assertThat(settings.dispatchInterval()).isEqualTo(Duration.ofSeconds(60));
@@ -20,7 +20,7 @@ class PushSettingsTest {
         assertThat(settings.maxAttempts()).isEqualTo(8);
         assertThat(settings.lease()).isEqualTo(Duration.ofSeconds(120));
         assertThat(settings.timeout()).isEqualTo(Duration.ofSeconds(10));
-        assertThat(settings.allowedEndpointHosts()).containsExactly("fcm.googleapis.com");
+        assertThat(settings.allowedEndpointHosts()).as("Chrome 계열이 돌려주는 두 FCM 호스트").containsExactlyInAnyOrder("fcm.googleapis.com", "jmt17.google.com");
     }
 
     @Test

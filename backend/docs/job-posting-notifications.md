@@ -15,7 +15,7 @@ CF-348은 팀이 등록한 채용 공고를 접수 가능 시점(등록 시각�
 | `push.max-attempts` | `CAREER_FORM_PUSH_MAX_ATTEMPTS` | `8` | 발송 한 건의 최대 FCM 호출 횟수(1~20) |
 | `push.lease` | `CAREER_FORM_PUSH_LEASE` | `120s` | 선점 리스. 호출 시간 초과보다 길어야 하며 만료되면 다른 주기가 이어 보낸다 |
 | `push.timeout` | `CAREER_FORM_PUSH_TIMEOUT` | `10s` | FCM 요청 시간 초과(1~60초) |
-| `push.allowed-endpoint-hosts` | `CAREER_FORM_PUSH_ALLOWED_ENDPOINT_HOSTS` | `fcm.googleapis.com` | 구독 endpoint로 허용하는 푸시 서비스 호스트(쉼표 구분) |
+| `push.allowed-endpoint-hosts` | `CAREER_FORM_PUSH_ALLOWED_ENDPOINT_HOSTS` | `fcm.googleapis.com,jmt17.google.com` | 구독 endpoint로 허용하는 푸시 서비스 호스트(쉼표 구분). Chrome 계열은 구독마다 두 FCM 호스트 중 하나를 돌려주므로 둘 다 기본값이다. 다른 호스트의 endpoint는 400으로 거절한다 |
 | `push.batch-size`, `push.max-per-cycle` | 없음 | `500`, `20000` | 한 조회의 대기 건 수와 한 주기의 처리 상한 |
 
 토글이 켜졌는데 VAPID 값이 비어 있거나 쌍이 맞지 않으면 기동에 실패한다. 미설정 환경은 토글 기본값으로 안전하게 뜬다. 관리 API와 화면은 품질 관리(`career-form.quality.*`)의 공용 비밀번호 로그인이 설정돼 있어야 열린다.
@@ -37,7 +37,7 @@ CF-348은 팀이 등록한 채용 공고를 접수 가능 시점(등록 시각�
 | 요청 | 응답 |
 |---|---|
 | `GET /api/v1/notifications/vapid-public-key` | 200 `{"publicKey"}` |
-| `POST /api/v1/notifications/subscriptions` `{"endpoint","expirationTime"?,"keys":{"p256dh","auth"}}` | 201 신규 / 200 기존 `{"subscriptionId","created"}`. 같은 endpoint는 새로 만들지 않는다. 400 `INVALID_SUBSCRIPTION`(허용 호스트의 HTTPS가 아니거나 키 길이가 다름), 400 `INVALID_INPUT`(본문 해석 실패) |
+| `POST /api/v1/notifications/subscriptions` `{"endpoint","expirationTime"?,"keys":{"p256dh","auth"}}` | 201 신규 / 200 기존 `{"subscriptionId","created"}`. 같은 endpoint는 새로 만들지 않는다. 400 `INVALID_SUBSCRIPTION`(허용 호스트 `fcm.googleapis.com`·`jmt17.google.com`의 HTTPS가 아니거나 키 길이가 다름), 400 `INVALID_INPUT`(본문 해석 실패) |
 | `POST /api/v1/notifications/subscriptions/unsubscribe` `{"endpoint"}` | 204. 없는 endpoint도 204 |
 | `GET /api/v1/notifications/postings` | 200 `{"postings":[{"id","company","role","link","opensAt","closesAt"}]}`. 접수 시작 ≤ 현재 < 마감인 공고를 마감순으로 |
 

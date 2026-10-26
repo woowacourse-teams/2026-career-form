@@ -53,7 +53,7 @@ career-form:
       max-attempts: ${CAREER_FORM_PUSH_MAX_ATTEMPTS:8}
       lease: ${CAREER_FORM_PUSH_LEASE:120s}
       timeout: ${CAREER_FORM_PUSH_TIMEOUT:10s}
-      allowed-endpoint-hosts: ${CAREER_FORM_PUSH_ALLOWED_ENDPOINT_HOSTS:fcm.googleapis.com}
+      allowed-endpoint-hosts: ${CAREER_FORM_PUSH_ALLOWED_ENDPOINT_HOSTS:fcm.googleapis.com,jmt17.google.com}
       vapid:
         public-key: ${CAREER_FORM_PUSH_VAPID_PUBLIC_KEY:}
         private-key: ${CAREER_FORM_PUSH_VAPID_PRIVATE_KEY:}
