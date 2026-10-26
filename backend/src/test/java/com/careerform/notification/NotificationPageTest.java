@@ -20,8 +20,9 @@ class NotificationPageTest {
         assertThat(roleInput).doesNotContain("required");
         assertThat(index).contains("비우면 직무 없이");
         var postings = read("static/notifications/postings.js");
-        assertThat(postings).contains("직무 없음");
-        assertThat(postings).contains("/quality/access.js", "/api/v1/notifications/admin/postings", "showModal");
+        assertThat(postings).contains("직무 없음", "/api/v1/notifications/admin", "/summary?from=");
+        assertThat(index).contains("id=\"summary\"", "최근 7일", "최근 30일");
+        assertThat(postings).contains("/quality/access.js", "\"/api/v1/notifications/admin\"", "api(\"/postings\"", "showModal");
         assertThat(postings).doesNotContain("localStorage", "sessionStorage");
         var login = read("static/quality/login.js");
         assertThat(login).contains("dataset.app");

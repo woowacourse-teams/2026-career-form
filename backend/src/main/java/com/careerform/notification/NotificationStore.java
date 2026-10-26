@@ -47,4 +47,13 @@ public interface NotificationStore {
     long deletePendingDeliveries(String postingId);
 
     DeliveryProgress deliveryProgress(String postingId);
+
+    /** 예정 시각이 [from, to)인 발송의 요약. 수락 지연은 lastAttemptAt - scheduledAt이다. */
+    DeliverySummary summarizeDeliveries(Instant from, Instant to);
+
+    long countPostingsRegisteredBetween(Instant from, Instant to);
+
+    long countSubscriptions();
+
+    long countDeliveries(PushDelivery.Status status);
 }

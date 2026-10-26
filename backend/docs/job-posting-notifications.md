@@ -26,7 +26,7 @@ CF-348은 팀이 등록한 채용 공고를 접수 가능 시점(등록 시각�
 |---|---|---|
 | `job_postings` | 회사, 직무(선택, 없으면 필드 없음), 링크, 접수 시작, 마감, 등록 시각 | `link` 유일, `(opensAt, closesAt)` |
 | `push_subscriptions` | endpoint, p256dh, auth, 등록 시각 | `endpoint` 유일 |
-| `push_deliveries` | 공고 ID × 구독 ID, 상태(PENDING·SENDING·ACCEPTED·ABANDONED), 예정 시각, 시도 횟수, 다음 시도 시각, 리스 만료 시각, 마지막 시도 시각·응답 코드·이유 | `(postingId, subscriptionId)` 유일, `(status, nextAttemptAt)`, `(status, leaseUntil)`, `(postingId, status)` |
+| `push_deliveries` | 공고 ID × 구독 ID, 상태(PENDING·SENDING·ACCEPTED·ABANDONED), 예정 시각, 시도 횟수, 다음 시도 시각, 리스 만료 시각, 마지막 시도 시각·응답 코드·이유 | `(postingId, subscriptionId)` 유일, `(status, nextAttemptAt)`, `(status, leaseUntil)`, `(postingId, status)`, `scheduledAt` |
 
 인덱스는 기동 시 `createIndex`로 보장하며 기존 컬렉션은 건드리지 않는다. 발송 문서 보존 정리는 후속 범위다.
 
@@ -41,17 +41,18 @@ CF-348은 팀이 등록한 채용 공고를 접수 가능 시점(등록 시각�
 | `POST /api/v1/notifications/subscriptions/unsubscribe` `{"endpoint"}` | 204. 없는 endpoint도 204 |
 | `GET /api/v1/notifications/postings` | 200 `{"postings":[{"id","company","role"?,"link","opensAt","closesAt"}]}`. 접수 시작 ≤ 현재 < 마감인 공고를 마감순으로. 직무가 없는 공고는 `role` 필드를 생략한다 |
 
-푸시 payload는 목록 항목과 같은 모양의 UTF-8 JSON이며 직무가 없으면 `role` 필드를 생략한다(확장은 없음과 빈 문자열을 모두 직무 없음으로 다룬다). 회사 80자, 직무 120자, 링크 1024자 상한에서 평문 3,900바이트 이하이며 aes128gcm 암호화 뒤에도 4,096바이트 한도 안에 든다(테스트로 보장).
+푸시 payload는 목록 항목에 `sentAt`(FCM 요청 시각, ISO-8601)을 더한 UTF-8 JSON `{"id","company","role"?,"link","opensAt","closesAt","sentAt"}`이며 직무가 없으면 `role` 필드를 생략한다(확장은 없음과 빈 문자열을 모두 직무 없음으로 다루고 `sentAt`으로 표시 지연을 계측한다). 회사 80자, 직무 120자, 링크 1024자 상한에서 평문 3,900바이트 이하이며 aes128gcm 암호화 뒤에도 4,096바이트 한도 안에 든다(테스트로 보장).
 
 ## 관리 API와 화면
 
-경로 `/api/v1/notifications/admin/**`과 화면 `/notifications/`는 기존 `QualityApiFilter`가 보호한다. 요청마다 `Authorization: Basic quality:<공용 비밀번호>`를 확인하고 다른 Origin을 거부하며 본문 128KiB를 넘지 않게 한다. 품질 기능이 꺼져 있으면 404, 비밀번호 설정이 없으면 503이다. 화면은 `/quality`의 로그인 틀, 스타일, 접근 모듈을 재사용하고 삭제는 확인 대화상자를 거친다. 직무 입력은 선택이며 비우면 직무 없이 알림이 나간다고 안내하고 목록에는 "직무 없음"을 표시한다. 직무 없는 공고는 #349가 반영된 확장 버전에서만 표시되므로 스토어 보급 전에는 팀이 직무를 비워 등록하지 않는다.
+경로 `/api/v1/notifications/admin/**`과 화면 `/notifications/`는 기존 `QualityApiFilter`가 보호한다. 요청마다 `Authorization: Basic quality:<공용 비밀번호>`를 확인하고 다른 Origin을 거부하며 본문 128KiB를 넘지 않게 한다. 품질 기능이 꺼져 있으면 404, 비밀번호 설정이 없으면 503이다. 화면은 `/quality`의 로그인 틀, 스타일, 접근 모듈을 재사용하고 삭제는 확인 대화상자를 거친다. 직무 입력은 선택이며 비우면 직무 없이 알림이 나간다고 안내하고 목록에는 "직무 없음"을 표시한다. 직무 없는 공고는 #349가 반영된 확장 버전에서만 표시되므로 스토어 보급 전에는 팀이 직무를 비워 등록하지 않는다. 화면 위쪽의 발송 요약 표는 요약 API로 최근 7일·30일을 보여 준다.
 
 | 요청 | 응답 |
 |---|---|
 | `GET /api/v1/notifications/admin/postings` | 200 `{"postings":[{id, company, role?, link, opensAt, closesAt, registeredAt, scheduledAt, progress:{pending, sending, accepted, abandoned, lastAttemptAt}}]}` 최근 등록 순. 직무가 없으면 `role` 생략 |
 | `POST /api/v1/notifications/admin/postings` `{company, role?, link, opensAt, closesAt}` | 201 `{"id","scheduledAt","deliveries"}`. 직무는 생략하거나 비울 수 있고 값이 있으면 120자 이하다. 저장과 구독자 전원의 대기 발송 생성이 끝났다는 뜻이며 FCM 수락을 기다리지 않는다. 409 `{"error":"DUPLICATE_LINK","postingId"}`, 400 `{"error":"INVALID_POSTING","reason": COMPANY·ROLE·LINK·PERIOD·CLOSED}` |
 | `DELETE /api/v1/notifications/admin/postings/{id}` | 204. 대기 발송만 삭제하고 수락·포기·발송 중 기록은 남긴다. 404 `POSTING_NOT_FOUND` |
+| `GET /api/v1/notifications/admin/summary?from=<ISO>&to=<ISO>` | 200 `{from, to, postings, deliveries:{pending, sending, accepted, abandoned, total, averageAttempts}, acceptanceRate, abandonRate, latencyMillis:{p50, p95}, subscriptions}`. 예정 시각이 `[from, to)`인 발송 문서를 집계한다. `postings`는 기간 안 등록 공고 수, 수락률·포기율은 끝난 발송(수락+포기) 기준, 평균 시도는 기간 안 전체 발송 기준, 지연은 `lastAttemptAt - scheduledAt`(MongoDB `$percentile`, 7.0 이상)이며 분모가 없으면 null이다. `subscriptions`는 현재 구독 수. 400 `INVALID_RANGE`(시작 ≥ 끝, 400일 초과), 400 `INVALID_INPUT`(매개변수 누락). 집계값만 돌려주고 endpoint·키·링크는 내지 않는다 |
 
 수정 API는 없다. 삭제 후 재등록하면 전원에게 한 번 더 간다.
 
@@ -94,9 +95,39 @@ CF-348은 팀이 등록한 채용 공고를 접수 가능 시점(등록 시각�
 | `career.form.push.send` (timer, p50·p99·히스토그램) | `outcome`=accepted·gone·retry_after·invalid·failure·timeout·error | FCM 호출 소요 시간 |
 | `career.form.push.delivery` (counter) | `outcome`=accepted·retry·abandoned, `reason` | 전이 결과별 건수(수락률·포기율) |
 | `career.form.push.dispatch.cycle` (timer), `career.form.push.dispatch.claimed` (summary) | 없음 | 한 주기 소요와 처리 건수 |
+| `career.form.push.delivery.latency` (timer, p50·p95·p99·히스토그램) | 없음 | 수락된 발송의 예정 시각→FCM 수락 지연 |
+| `career.form.push.backlog` (gauge) | `status`=pending·sending | 주기 끝마다 갱신하는 대기·발송 중 건수 |
+| `career.form.push.subscriptions` (gauge) | 없음 | 주기 끝마다 갱신하는 현재 구독 수 |
 | `career.form.external.call`, `career.form.external.timeouts` | `provider=fcm`, `operation=push` | 기존 외부 호출 대시보드에 함께 표시 |
 
-이 숫자가 2차(큐·별도 워커) 검토의 비교 기준이다. 재검토 조건은 ADR을 따른다.
+메트릭 라벨에는 공고 ID·링크·endpoint를 넣지 않는다. 이 숫자가 2차(큐·별도 워커) 검토의 비교 기준이다. 재검토 조건은 ADR을 따른다.
+
+## 기준 수치 측정 절차
+
+전달 경로나 큐(FCM 토픽, SQS 등)를 바꾸기 전에 지금 버전의 수치를 남기고, 바꾼 뒤 같은 지표를 같은 기간으로 다시 재서 비교한다.
+
+| 지표 | 출처 | 뜻 |
+|---|---|---|
+| 예정→수락 지연 p50·p95·p99 | `career.form.push.delivery.latency`(Prometheus), 요약 API `latencyMillis` | 접수 가능 시점부터 FCM 수락까지. 목표는 등록 후 10분 안에 99% |
+| FCM 호출 소요 p50·p99 | `career.form.push.send` | 한 호출의 왕복. 동시성·큐 전환 전후 비교 |
+| 한 주기 처리 건수·소요 | `career.form.push.dispatch.claimed`, `career.form.push.dispatch.cycle`, `PUSH_DISPATCH_CYCLE` 로그 | 이용률(소요 ÷ 주기)이 70%를 넘으면 큐 검토 |
+| 백로그 | `career.form.push.backlog{status}` | 주기 끝에 남은 대기·발송 중 건수. 계속 늘면 처리량 부족 |
+| 결과별 건수, 수락률, 포기율, 평균 시도 | `career.form.push.delivery{outcome,reason}`, 요약 API | 포기 이유 분포는 메트릭, 기간 비율은 요약 API |
+| 구독 수 | `career.form.push.subscriptions`, 요약 API `subscriptions` | 규모 가정(1,000명) 대비 실제 |
+| 기기 표시 지연 | 확장 #349가 payload `sentAt`으로 계측(PostHog) | 서버가 관측할 수 없는 구간 |
+
+조회 위치: 앱 컨테이너의 관리 포트 9091 `/actuator/prometheus`(외부 비공개, 호스트 안에서만), 중앙 Prometheus(보존 14일)·Loki(7일)·Grafana(`monitoring-system` topic), 그리고 보존 기간과 무관한 요약 API(MongoDB 발송 문서, 관리 로그인 필요).
+
+주간 스냅샷: 매주 같은 요일에 요약 API를 `from`=7일 전, `to`=지금으로 호출해 응답을 그대로 표(주차, 등록 공고, 결과별 건수, 수락률, 포기율, 평균 시도, 지연 p50·p95, 구독 수)에 적고, Prometheus에서 다음을 같은 구간으로 기록한다. 자동화는 후속 범위다.
+
+```promql
+histogram_quantile(0.99, sum(rate(career_form_push_delivery_latency_seconds_bucket[7d])) by (le))
+histogram_quantile(0.99, sum(rate(career_form_push_send_seconds_bucket[7d])) by (le))
+sum(increase(career_form_push_delivery_total[7d])) by (outcome, reason)
+max_over_time(career_form_push_backlog{status="pending"}[7d])
+```
+
+비교 규칙: 전환 전 최소 2주를 기준 구간으로 두고, 전환 뒤 같은 길이의 구간을 같은 지표로 잰다. 전환 사유(장애 격리, 채널 확장)와 대가는 ADR 재검토 조건과 함께 적는다.
 
 ## Web Push 라이브러리
 

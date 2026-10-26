@@ -93,7 +93,7 @@ class NotificationEnabledContextTest {
         mockMvc.perform(get("/notifications/index.html")).andExpect(status().isOk())
             .andExpect(result -> assertThat(new String(result.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8)).contains("공고 알림 관리"));
         mockMvc.perform(get("/notifications/postings.js")).andExpect(status().isOk())
-            .andExpect(result -> assertThat(new String(result.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8)).contains("/api/v1/notifications/admin/postings"));
+            .andExpect(result -> assertThat(new String(result.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8)).contains("/api/v1/notifications/admin", "/summary?from="));
     }
 
     @Test

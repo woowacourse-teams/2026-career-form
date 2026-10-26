@@ -48,7 +48,7 @@ class PushDispatcherTest {
         assertThat(cycle.accepted()).isEqualTo(2);
         assertThat(client.calls()).hasSize(2).allSatisfy(call -> {
             assertThat(call.ttl()).isEqualTo(Duration.ofSeconds(7200));
-            assertThat(new String(call.payload(), StandardCharsets.UTF_8)).contains("\"id\":\"" + postingId + "\"", "\"company\":\"합성 회사\"");
+            assertThat(new String(call.payload(), StandardCharsets.UTF_8)).contains("\"id\":\"" + postingId + "\"", "\"company\":\"합성 회사\"", "\"sentAt\":\"2030-01-01T00:00:00Z\"");
         });
         assertThat(store.deliveries()).hasSize(2).allSatisfy(delivery -> {
             assertThat(delivery.status()).isEqualTo(PushDelivery.Status.ACCEPTED);
@@ -316,6 +316,30 @@ class PushDispatcherTest {
         assertThat(meters.find("career.form.push.send").meters()).noneMatch(meter -> meter.getId().getTags().stream()
             .anyMatch(tag -> tag.getValue().contains("fcm.googleapis.com")));
         assertThat(cycle.duration()).isGreaterThanOrEqualTo(Duration.ZERO);
+    }
+
+    @Test
+    @DisplayName("수락마다 예정→수락 지연을 타이머에 기록하고 주기마다 백로그·구독 수 게이지를 갱신한다")
+    void recordsLatencyAndRefreshesGauges() {
+        subscribe("s1"); subscribe("s2");
+        register("https://careers.example.test/jobs/15", NOW.plusSeconds(3600), NOW.plusSeconds(86400));
+        register("https://careers.example.test/jobs/16", NOW.plusSeconds(7200), NOW.plusSeconds(86400));
+        clock.set(NOW.plusSeconds(3630));
+        assertThat(dispatcher.dispatch().accepted()).isEqualTo(2);
+        var latency = meters.get("career.form.push.delivery.latency").timer();
+        assertThat(latency.count()).isEqualTo(2);
+        assertThat(latency.totalTime(java.util.concurrent.TimeUnit.SECONDS)).isEqualTo(60.0);
+        assertThat(latency.max(java.util.concurrent.TimeUnit.SECONDS)).isEqualTo(30.0);
+        assertThat(meters.get("career.form.push.backlog").tag("status", "pending").gauge().value()).isEqualTo(2.0);
+        assertThat(meters.get("career.form.push.backlog").tag("status", "sending").gauge().value()).isEqualTo(0.0);
+        assertThat(meters.get("career.form.push.subscriptions").gauge().value()).isEqualTo(2.0);
+        assertThat(meters.find("career.form.push.delivery.latency").meters()).allSatisfy(meter ->
+            assertThat(meter.getId().getTags()).noneMatch(tag -> tag.getValue().contains("careers.example.test") || tag.getValue().matches("[0-9a-f]{32}")));
+        store.deleteSubscription("s2");
+        clock.set(NOW.plusSeconds(7200));
+        dispatcher.dispatch();
+        assertThat(meters.get("career.form.push.backlog").tag("status", "pending").gauge().value()).isEqualTo(0.0);
+        assertThat(meters.get("career.form.push.subscriptions").gauge().value()).isEqualTo(1.0);
     }
 
     private void subscribe(String id) {

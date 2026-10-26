@@ -15,19 +15,20 @@ class PushPayloadTest {
     private static final Instant NOW = Instant.parse("2030-01-01T00:00:00Z");
 
     @Test
-    @DisplayName("공고 ID, 회사, 직무, 링크, 접수 시작, 마감만 ISO-8601 문자열로 싣는다")
+    @DisplayName("공고 ID, 회사, 직무, 링크, 접수 시작, 마감, FCM 요청 시각만 ISO-8601 문자열로 싣는다")
     void serializesPostingFieldsAsJson() {
         var posting = new JobPosting("0123456789abcdef0123456789abcdef", "합성 회사", "합성 직무", "https://careers.example.test/jobs/1",
             NOW.minusSeconds(60), NOW.plusSeconds(3600), NOW.minusSeconds(120));
-        var json = JsonMapper.builder().build().readTree(new String(PushPayload.of(posting), StandardCharsets.UTF_8));
+        var json = JsonMapper.builder().build().readTree(new String(PushPayload.of(posting, NOW), StandardCharsets.UTF_8));
         assertThat(json.path("id").asString()).isEqualTo("0123456789abcdef0123456789abcdef");
         assertThat(json.path("company").asString()).isEqualTo("합성 회사");
         assertThat(json.path("role").asString()).isEqualTo("합성 직무");
         assertThat(json.path("link").asString()).isEqualTo("https://careers.example.test/jobs/1");
         assertThat(json.path("opensAt").asString()).isEqualTo("2029-12-31T23:59:00Z");
         assertThat(json.path("closesAt").asString()).isEqualTo("2030-01-01T01:00:00Z");
+        assertThat(json.path("sentAt").asString()).isEqualTo("2030-01-01T00:00:00Z");
         assertThat(json.has("registeredAt")).isFalse();
-        assertThat(json.size()).isEqualTo(6);
+        assertThat(json.size()).isEqualTo(7);
     }
 
     @Test
@@ -35,9 +36,10 @@ class PushPayloadTest {
     void omitsRoleWhenAbsent() {
         var posting = new JobPosting("0123456789abcdef0123456789abcdef", "합성 회사", null, "https://careers.example.test/jobs/2",
             NOW.minusSeconds(60), NOW.plusSeconds(3600), NOW.minusSeconds(120));
-        var json = JsonMapper.builder().build().readTree(new String(PushPayload.of(posting), StandardCharsets.UTF_8));
+        var json = JsonMapper.builder().build().readTree(new String(PushPayload.of(posting, NOW), StandardCharsets.UTF_8));
         assertThat(json.has("role")).isFalse();
-        assertThat(json.size()).isEqualTo(5);
+        assertThat(json.size()).isEqualTo(6);
+        assertThat(json.path("sentAt").asString()).isEqualTo("2030-01-01T00:00:00Z");
         assertThat(json.path("company").asString()).isEqualTo("합성 회사");
     }
 
@@ -47,7 +49,7 @@ class PushPayloadTest {
         var link = "https://careers.example.test/" + "a".repeat(1024 - "https://careers.example.test/".length());
         var posting = new JobPosting("0123456789abcdef0123456789abcdef", "회".repeat(80), "직".repeat(120), link,
             NOW.minusSeconds(60), NOW.plusSeconds(3600), NOW.minusSeconds(120));
-        var payload = PushPayload.of(posting);
+        var payload = PushPayload.of(posting, NOW);
         assertThat(payload.length).isLessThanOrEqualTo(PushPayload.MAX_PLAINTEXT_BYTES);
         assertThat(PushPayload.MAX_PLAINTEXT_BYTES + PushPayload.AES128GCM_OVERHEAD_BYTES).isLessThanOrEqualTo(4096);
     }

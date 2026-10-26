@@ -147,6 +147,45 @@ abstract class NotificationStoreContract {
         assertThat(store.listPostings()).extracting(JobPosting::id).doesNotContain("future");
     }
 
+    @Test
+    @DisplayName("기간 요약은 예정 시각이 기간 안인 발송의 상태별 건수·시도 합·수락 지연 백분위와 기간 안 등록 공고 수, 구독 수를 준다")
+    void summarizesDeliveriesAndCounts() {
+        var store = store();
+        var from = NOW.minusSeconds(3600);
+        var to = NOW.plusSeconds(3600);
+        store.insertPosting(posting("in-1", "https://careers.example.test/jobs/a", NOW.minusSeconds(60), NOW.plusSeconds(7200)));
+        store.insertPosting(posting("in-2", "https://careers.example.test/jobs/b", NOW.minusSeconds(60), NOW.plusSeconds(7200)));
+        store.insertPosting(new JobPosting("out", "합성 회사", null, "https://careers.example.test/jobs/c", NOW.minusSeconds(60), NOW.plusSeconds(7200), NOW.minusSeconds(7200)));
+        store.insertSubscription(subscription("s1", "https://fcm.googleapis.com/fcm/send/synthetic-1"));
+        store.insertSubscription(subscription("s2", "https://fcm.googleapis.com/fcm/send/synthetic-2"));
+        var lease = NOW.plusSeconds(120);
+        var acceptedOnce = PushDelivery.pending("a1", "p1", "s1", NOW.minusSeconds(600)).claimed(NOW.minusSeconds(590), lease).accepted(201);
+        var acceptedTwice = PushDelivery.pending("a2", "p1", "s2", NOW.minusSeconds(600)).claimed(NOW.minusSeconds(590), lease)
+            .retry(NOW.minusSeconds(560), 503, "SERVER_ERROR").claimed(NOW.minusSeconds(560), lease).accepted(201);
+        store.insertDeliveries(List.of(acceptedOnce, acceptedTwice,
+            PushDelivery.pending("ab", "p2", "s1", NOW.minusSeconds(300)).claimed(NOW.minusSeconds(290), lease).abandoned(410, "GONE"),
+            PushDelivery.pending("pe", "p2", "s2", NOW.plusSeconds(60)),
+            PushDelivery.pending("se", "p3", "s1", NOW.minusSeconds(100)).claimed(NOW.minusSeconds(90), lease),
+            PushDelivery.pending("ou", "p4", "s1", NOW.plusSeconds(7200))));
+
+        var summary = store.summarizeDeliveries(from, to);
+        assertThat(summary.pending()).isEqualTo(1);
+        assertThat(summary.sending()).isEqualTo(1);
+        assertThat(summary.accepted()).isEqualTo(2);
+        assertThat(summary.abandoned()).isEqualTo(1);
+        assertThat(summary.attempts()).isEqualTo(5);
+        assertThat(summary.latencyP50Millis()).isBetween(10_000L, 40_000L);
+        assertThat(summary.latencyP95Millis()).isBetween(summary.latencyP50Millis(), 40_000L);
+        assertThat(store.summarizeDeliveries(NOW.plusSeconds(10_000), NOW.plusSeconds(20_000)))
+            .isEqualTo(new DeliverySummary(0, 0, 0, 0, 0, null, null));
+        assertThat(store.countPostingsRegisteredBetween(from, to)).isEqualTo(2);
+        assertThat(store.countPostingsRegisteredBetween(NOW.minusSeconds(7200), NOW.minusSeconds(3600))).isEqualTo(1);
+        assertThat(store.countSubscriptions()).isEqualTo(2);
+        assertThat(store.countDeliveries(PushDelivery.Status.PENDING)).isEqualTo(2);
+        assertThat(store.countDeliveries(PushDelivery.Status.SENDING)).isEqualTo(1);
+        assertThat(store.countDeliveries(PushDelivery.Status.ACCEPTED)).isEqualTo(2);
+    }
+
     static JobPosting posting(String id, String link, Instant opensAt, Instant closesAt) {
         return new JobPosting(id, "합성 회사", "합성 직무", link, opensAt, closesAt, NOW.minusSeconds(120));
     }

@@ -1,6 +1,7 @@
 package com.careerform.notification;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -33,6 +34,7 @@ public final class MongoNotificationStore implements NotificationStore {
         mongo.indexOps(PushDelivery.class).createIndex(new Index().on("status", Sort.Direction.ASC).on("nextAttemptAt", Sort.Direction.ASC));
         mongo.indexOps(PushDelivery.class).createIndex(new Index().on("status", Sort.Direction.ASC).on("leaseUntil", Sort.Direction.ASC));
         mongo.indexOps(PushDelivery.class).createIndex(new Index().on("postingId", Sort.Direction.ASC).on("status", Sort.Direction.ASC));
+        mongo.indexOps(PushDelivery.class).createIndex(new Index().on("scheduledAt", Sort.Direction.ASC));
     }
 
     @Override public boolean insertPosting(JobPosting posting) { return insert(posting); }
@@ -144,6 +146,54 @@ public final class MongoNotificationStore implements NotificationStore {
             if (attempt != null && (lastAttemptAt == null || attempt.toInstant().isAfter(lastAttemptAt))) { lastAttemptAt = attempt.toInstant(); }
         }
         return new DeliveryProgress(pending, sending, accepted, abandoned, lastAttemptAt);
+    }
+
+    @Override public DeliverySummary summarizeDeliveries(Instant from, Instant to) {
+        var collection = mongo.getCollection(mongo.getCollectionName(PushDelivery.class));
+        var window = new Document("scheduledAt", new Document("$gte", from).append("$lt", to));
+        long pending = 0;
+        long sending = 0;
+        long accepted = 0;
+        long abandoned = 0;
+        long attempts = 0;
+        var byStatus = collection.aggregate(List.of(new Document("$match", window),
+            new Document("$group", new Document("_id", "$status").append("count", new Document("$sum", 1)).append("attempts", new Document("$sum", "$attempts")))))
+            .into(new ArrayList<>());
+        for (var row : byStatus) {
+            var count = ((Number) row.get("count")).longValue();
+            attempts += ((Number) row.get("attempts")).longValue();
+            switch (PushDelivery.Status.valueOf(row.getString("_id"))) {
+                case PENDING -> pending = count;
+                case SENDING -> sending = count;
+                case ACCEPTED -> accepted = count;
+                case ABANDONED -> abandoned = count;
+            }
+        }
+        Long p50 = null;
+        Long p95 = null;
+        if (accepted > 0) {
+            var acceptedWindow = new Document(window).append("status", PushDelivery.Status.ACCEPTED.name()).append("lastAttemptAt", new Document("$type", "date"));
+            var percentiles = collection.aggregate(List.of(new Document("$match", acceptedWindow),
+                new Document("$project", new Document("latency", new Document("$subtract", List.of("$lastAttemptAt", "$scheduledAt")))),
+                new Document("$group", new Document("_id", null).append("p", new Document("$percentile",
+                    new Document("input", "$latency").append("p", List.of(0.5, 0.95)).append("method", "approximate"))))))
+                .first();
+            if (percentiles != null && percentiles.get("p") instanceof List<?> values && values.size() == 2) {
+                p50 = Math.max(0, Math.round(((Number) values.get(0)).doubleValue()));
+                p95 = Math.max(0, Math.round(((Number) values.get(1)).doubleValue()));
+            }
+        }
+        return new DeliverySummary(pending, sending, accepted, abandoned, attempts, p50, p95);
+    }
+
+    @Override public long countPostingsRegisteredBetween(Instant from, Instant to) {
+        return mongo.count(Query.query(Criteria.where("registeredAt").gte(from).lt(to)), JobPosting.class);
+    }
+
+    @Override public long countSubscriptions() { return mongo.count(new Query(), PushSubscription.class); }
+
+    @Override public long countDeliveries(PushDelivery.Status status) {
+        return mongo.count(Query.query(Criteria.where("status").is(status)), PushDelivery.class);
     }
 
     private boolean insert(Object document) {

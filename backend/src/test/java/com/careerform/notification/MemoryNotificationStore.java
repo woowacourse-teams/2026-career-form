@@ -105,6 +105,36 @@ public final class MemoryNotificationStore implements NotificationStore {
             rows.stream().map(PushDelivery::lastAttemptAt).filter(Objects::nonNull).max(Comparator.naturalOrder()).orElse(null));
     }
 
+    @Override public synchronized DeliverySummary summarizeDeliveries(Instant from, Instant to) {
+        var rows = deliveries.values().stream().filter(d -> !d.scheduledAt().isBefore(from) && d.scheduledAt().isBefore(to)).toList();
+        var latencies = rows.stream().filter(d -> d.status() == PushDelivery.Status.ACCEPTED && d.lastAttemptAt() != null)
+            .map(d -> Math.max(0, d.lastAttemptAt().toEpochMilli() - d.scheduledAt().toEpochMilli())).sorted().toList();
+        return new DeliverySummary(
+            rows.stream().filter(d -> d.status() == PushDelivery.Status.PENDING).count(),
+            rows.stream().filter(d -> d.status() == PushDelivery.Status.SENDING).count(),
+            rows.stream().filter(d -> d.status() == PushDelivery.Status.ACCEPTED).count(),
+            rows.stream().filter(d -> d.status() == PushDelivery.Status.ABANDONED).count(),
+            rows.stream().mapToLong(PushDelivery::attempts).sum(),
+            percentile(latencies, 0.5), percentile(latencies, 0.95));
+    }
+
+    /** 최근접 순위 백분위: 정렬한 값에서 ceil(p × n)번째. */
+    private static Long percentile(List<Long> sorted, double p) {
+        if (sorted.isEmpty()) { return null; }
+        var rank = (int) Math.ceil(p * sorted.size());
+        return sorted.get(Math.min(sorted.size(), Math.max(rank, 1)) - 1);
+    }
+
+    @Override public synchronized long countPostingsRegisteredBetween(Instant from, Instant to) {
+        return postings.values().stream().filter(p -> !p.registeredAt().isBefore(from) && p.registeredAt().isBefore(to)).count();
+    }
+
+    @Override public synchronized long countSubscriptions() { return subscriptions.size(); }
+
+    @Override public synchronized long countDeliveries(PushDelivery.Status status) {
+        return deliveries.values().stream().filter(d -> d.status() == status).count();
+    }
+
     public synchronized List<PushDelivery> deliveries() { return List.copyOf(deliveries.values()); }
 
     private static boolean due(PushDelivery delivery, Instant now) {

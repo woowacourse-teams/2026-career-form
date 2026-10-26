@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /** 팀용 공고 관리 API. 경로는 QualityApiFilter가 품질 관리 비밀번호로 보호한다. */
@@ -41,6 +42,24 @@ public final class JobPostingAdminController {
         public Rows { postings = List.copyOf(postings); }
     }
 
+    public record SummaryResponse(Instant from, Instant to, long postings, Deliveries deliveries, Double acceptanceRate, Double abandonRate,
+                                  Latency latencyMillis, long subscriptions) {
+        public record Deliveries(long pending, long sending, long accepted, long abandoned, long total, Double averageAttempts) { }
+
+        public record Latency(Long p50, Long p95) { }
+
+        static SummaryResponse of(JobPostingService.Summary summary) {
+            var deliveries = summary.deliveries();
+            return new SummaryResponse(summary.from(), summary.to(), summary.postings(),
+                new Deliveries(deliveries.pending(), deliveries.sending(), deliveries.accepted(), deliveries.abandoned(), deliveries.total(), summary.averageAttempts()),
+                summary.acceptanceRate(), summary.abandonRate(), new Latency(deliveries.latencyP50Millis(), deliveries.latencyP95Millis()), summary.subscriptions());
+        }
+    }
+
+    /** 기간별 요약. 집계값만 돌려주고 endpoint·키·링크는 내지 않는다. */
+    @GetMapping("/api/v1/notifications/admin/summary")
+    public SummaryResponse summary(@RequestParam Instant from, @RequestParam Instant to) { return SummaryResponse.of(postings.summary(from, to)); }
+
     @GetMapping("/api/v1/notifications/admin/postings")
     public Rows list() { return new Rows(postings.list().stream().map(Row::of).toList()); }
 
@@ -61,6 +80,9 @@ public final class JobPostingAdminController {
         if (!id.matches("[0-9a-f]{32}") || !postings.delete(id)) { return ResponseEntity.status(404).body(Map.of("error", "POSTING_NOT_FOUND")); }
         return ResponseEntity.noContent().build();
     }
+
+    @ExceptionHandler(JobPostingService.InvalidRange.class)
+    public ResponseEntity<Map<String, String>> invalidRange() { return ResponseEntity.badRequest().body(Map.of("error", "INVALID_RANGE")); }
 
     @ExceptionHandler(JobPostingService.InvalidPosting.class)
     public ResponseEntity<Map<String, String>> invalid(JobPostingService.InvalidPosting exception) {

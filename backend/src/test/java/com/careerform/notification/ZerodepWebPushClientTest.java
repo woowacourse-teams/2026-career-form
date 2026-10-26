@@ -41,7 +41,7 @@ class ZerodepWebPushClientTest {
         var client = new ZerodepWebPushClient(keys, Duration.ofSeconds(10), clock, request -> new ZerodepWebPushClient.Reply(201, headers(Map.of())));
         var link = "https://careers.example.test/" + "a".repeat(1024 - "https://careers.example.test/".length());
         var payload = PushPayload.of(new JobPosting("0123456789abcdef0123456789abcdef", "회".repeat(80), "직".repeat(120), link,
-            NOW.minusSeconds(60), NOW.plusSeconds(3600), NOW.minusSeconds(120)));
+            NOW.minusSeconds(60), NOW.plusSeconds(3600), NOW.minusSeconds(120)), NOW);
 
         var request = client.prepare(subscription, payload, Duration.ofSeconds(3600));
         assertThat(request.uri()).isEqualTo(URI.create(ENDPOINT));

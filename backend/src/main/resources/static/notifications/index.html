@@ -42,6 +42,17 @@
       </form>
     </section>
     <p id="message" role="status" aria-live="polite"></p>
+    <section id="summary" class="candidate" aria-label="기간 요약">
+      <h2>발송 요약</h2>
+      <p class="hint">예정 시각이 기간 안인 발송을 발송 문서에서 집계합니다. 수락률·포기율은 끝난 발송 기준, 평균 시도는 전체 발송 기준이며 지연은 예정 시각에서 FCM 수락까지입니다. 전달 경로나 큐를 바꿀 때 전후 비교의 기준 수치입니다.</p>
+      <table id="summary-table">
+        <thead><tr><th scope="col">기간</th><th scope="col">등록 공고</th><th scope="col">대기</th><th scope="col">발송 중</th><th scope="col">수락</th><th scope="col">포기</th><th scope="col">수락률</th><th scope="col">포기율</th><th scope="col">평균 시도</th><th scope="col">지연 p50</th><th scope="col">지연 p95</th><th scope="col">구독 수</th></tr></thead>
+        <tbody>
+          <tr data-days="7"><th scope="row">최근 7일</th><td colspan="11">불러오는 중입니다.</td></tr>
+          <tr data-days="30"><th scope="row">최근 30일</th><td colspan="11">불러오는 중입니다.</td></tr>
+        </tbody>
+      </table>
+    </section>
     <section id="postings" aria-label="등록된 공고"></section>
   </main>
   <dialog id="delete-dialog" aria-labelledby="delete-title">

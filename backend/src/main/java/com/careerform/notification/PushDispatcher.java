@@ -97,11 +97,21 @@ public final class PushDispatcher implements AutoCloseable {
             }
         }
         for (var future : futures) { future.join(); }
+        refreshGauges();
         var cycle = counters.cycle(Duration.ofNanos(System.nanoTime() - started));
         metrics.cycle(cycle);
         log.info("PUSH_DISPATCH_CYCLE due={} claimed={} accepted={} retried={} abandoned={} skipped={} stale={} durationMs={}",
             cycle.due(), cycle.claimed(), cycle.accepted(), cycle.retried(), cycle.abandoned(), cycle.skipped(), cycle.stale(), cycle.duration().toMillis());
         return cycle;
+    }
+
+    private void refreshGauges() {
+        try {
+            metrics.backlog(store.countDeliveries(PushDelivery.Status.PENDING), store.countDeliveries(PushDelivery.Status.SENDING));
+            metrics.subscriptions(store.countSubscriptions());
+        } catch (RuntimeException exception) {
+            log.warn("PUSH_GAUGE_REFRESH_FAILED failure={}", exception.getClass().getSimpleName());
+        }
     }
 
     @Override
@@ -116,8 +126,8 @@ public final class PushDispatcher implements AutoCloseable {
             if (!now.isBefore(posting.get().closesAt())) { finish(claimed, claimed.abandoned(claimed.lastResponseCode(), "DEADLINE_PASSED"), counters, 0); return; }
             var subscription = store.findSubscription(claimed.subscriptionId());
             if (subscription.isEmpty()) { finish(claimed, claimed.abandoned(claimed.lastResponseCode(), "SUBSCRIPTION_MISSING"), counters, 0); return; }
-            var payload = PushPayload.of(posting.get());
             var ttl = Duration.between(now, posting.get().closesAt());
+            var payload = PushPayload.of(posting.get(), clock.instant());
             var callStarted = System.nanoTime();
             RetryPolicy.Decision decision;
             try {
@@ -164,7 +174,11 @@ public final class PushDispatcher implements AutoCloseable {
             return;
         }
         var outcome = switch (next.status()) {
-            case ACCEPTED -> { counters.accepted.incrementAndGet(); yield "accepted"; }
+            case ACCEPTED -> {
+                counters.accepted.incrementAndGet();
+                metrics.latency(Duration.between(next.scheduledAt(), clock.instant()));
+                yield "accepted";
+            }
             case PENDING -> { counters.retried.incrementAndGet(); yield "retry"; }
             case ABANDONED -> { counters.abandoned.incrementAndGet(); yield "abandoned"; }
             case SENDING -> throw new IllegalStateException("Delivery cannot finish as SENDING");

@@ -183,6 +183,45 @@ class JobPostingAdminApiTest {
         assertThat(store.deliveries()).hasSize(2);
     }
 
+    @Test
+    @DisplayName("기간 요약은 로그인 뒤에서 집계값만 돌려주고 잘못된 기간은 400이다")
+    void summarizesPeriodBehindLogin() throws Exception {
+        store.insertSubscription(new PushSubscription("s1", "https://fcm.googleapis.com/fcm/send/s1", "p", "a", NOW));
+        store.insertSubscription(new PushSubscription("s2", "https://fcm.googleapis.com/fcm/send/s2", "p", "a", NOW));
+        postings.register(new JobPostingService.Draft("합성 회사", "백엔드", "https://careers.example.test/jobs/summary", NOW.minusSeconds(60), NOW.plusSeconds(86400)));
+        var claimed = store.claimDelivery(store.findDueDeliveries(NOW, 1).getFirst(), NOW.plusSeconds(30), NOW.plusSeconds(150)).orElseThrow();
+        store.completeDelivery(claimed, claimed.accepted(201));
+
+        mvc.perform(get("/api/v1/notifications/admin/summary").param("from", "2029-12-31T00:00:00Z").param("to", "2030-01-02T00:00:00Z"))
+            .andExpect(status().isUnauthorized());
+        var body = mvc.perform(get("/api/v1/notifications/admin/summary").header("Authorization", PASSWORD)
+                .param("from", "2029-12-31T00:00:00Z").param("to", "2030-01-02T00:00:00Z"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.from").value("2029-12-31T00:00:00Z"))
+            .andExpect(jsonPath("$.to").value("2030-01-02T00:00:00Z"))
+            .andExpect(jsonPath("$.postings").value(1))
+            .andExpect(jsonPath("$.deliveries.total").value(2))
+            .andExpect(jsonPath("$.deliveries.pending").value(1))
+            .andExpect(jsonPath("$.deliveries.accepted").value(1))
+            .andExpect(jsonPath("$.deliveries.abandoned").value(0))
+            .andExpect(jsonPath("$.deliveries.averageAttempts").value(0.5))
+            .andExpect(jsonPath("$.acceptanceRate").value(1.0))
+            .andExpect(jsonPath("$.abandonRate").value(0.0))
+            .andExpect(jsonPath("$.latencyMillis.p50").value(30000))
+            .andExpect(jsonPath("$.latencyMillis.p95").value(30000))
+            .andExpect(jsonPath("$.subscriptions").value(2))
+            .andReturn().getResponse().getContentAsString();
+        assertThat(body).doesNotContain("fcm.googleapis.com", "careers.example.test", "\"endpoint\"", "p256dh");
+        mvc.perform(get("/api/v1/notifications/admin/summary").header("Authorization", PASSWORD)
+                .param("from", "2030-01-02T00:00:00Z").param("to", "2029-12-31T00:00:00Z"))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("INVALID_RANGE"));
+        mvc.perform(get("/api/v1/notifications/admin/summary").header("Authorization", PASSWORD).param("from", "2029-12-31T00:00:00Z"))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("INVALID_INPUT"));
+        mvc.perform(get("/api/v1/notifications/admin/summary").header("Authorization", PASSWORD)
+                .param("from", "2027-01-01T00:00:00Z").param("to", "2030-01-02T00:00:00Z"))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("INVALID_RANGE"));
+    }
+
     private static String registration(String link) {
         return "{\"company\":\"합성 회사\",\"role\":\"백엔드\",\"link\":\"" + link + "\",\"opensAt\":\"2030-01-01T06:00:00Z\",\"closesAt\":\"2030-01-31T15:00:00Z\"}";
     }

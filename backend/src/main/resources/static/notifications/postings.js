@@ -25,7 +25,7 @@ function date(value) {
 }
 
 async function api(path, method = "GET", payload) {
-  const response = await fetch("/api/v1/notifications/admin/postings" + path, {
+  const response = await fetch("/api/v1/notifications/admin" + path, {
     method, credentials: "omit",
     headers: { ...accessHeaders(), ...(payload === undefined ? {} : { "Content-Type": "application/json" }) },
     body: payload === undefined ? undefined : JSON.stringify(payload),
@@ -78,9 +78,39 @@ function card(row) {
   return card;
 }
 
+function percent(value) {
+  return value === null || value === undefined ? "—" : `${(value * 100).toFixed(1)}%`;
+}
+
+function seconds(millis) {
+  return millis === null || millis === undefined ? "—" : `${(millis / 1000).toFixed(1)}초`;
+}
+
+async function loadSummary() {
+  const now = new Date();
+  for (const row of document.querySelectorAll("#summary-table tbody tr[data-days]")) {
+    const days = Number(row.dataset.days);
+    const from = new Date(now.getTime() - days * 86400000).toISOString();
+    try {
+      const summary = await api(`/summary?from=${encodeURIComponent(from)}&to=${encodeURIComponent(now.toISOString())}`);
+      const cells = [summary.postings, summary.deliveries.pending, summary.deliveries.sending, summary.deliveries.accepted, summary.deliveries.abandoned,
+        percent(summary.acceptanceRate), percent(summary.abandonRate),
+        summary.deliveries.averageAttempts === null ? "—" : summary.deliveries.averageAttempts.toFixed(2),
+        seconds(summary.latencyMillis.p50), seconds(summary.latencyMillis.p95), summary.subscriptions];
+      row.replaceChildren(element("th", `최근 ${days}일`), ...cells.map(value => element("td", String(value))));
+      row.firstChild.setAttribute("scope", "row");
+    } catch (error) {
+      const failed = element("td", error.message);
+      failed.colSpan = 11;
+      row.replaceChildren(element("th", `최근 ${days}일`), failed);
+      row.firstChild.setAttribute("scope", "row");
+    }
+  }
+}
+
 async function load() {
   try {
-    const result = await api("");
+    const result = await api("/postings");
     list.replaceChildren(...result.postings.map(card));
     if (!result.postings.length) list.append(element("p", "등록된 공고가 없습니다.", "hint"));
   } catch (error) {
@@ -94,13 +124,14 @@ form.addEventListener("submit", async (event) => {
   button.disabled = true;
   try {
     const data = new FormData(form);
-    const result = await api("", "POST", {
+    const result = await api("/postings", "POST", {
       company: String(data.get("company")).trim(), role: String(data.get("role")).trim() || undefined, link: String(data.get("link")).trim(),
       opensAt: new Date(String(data.get("opensAt"))).toISOString(), closesAt: new Date(String(data.get("closesAt"))).toISOString(),
     });
     message.textContent = `등록했습니다. 구독자 ${result.deliveries}명에게 ${date(result.scheduledAt)} 발송을 예약했습니다.`;
     form.reset();
     await load();
+    await loadSummary();
   } catch (error) {
     message.textContent = error instanceof RangeError ? "접수 시작과 마감 시각을 모두 입력해 주세요." : error.message;
   } finally {
@@ -112,11 +143,12 @@ document.getElementById("delete-form").addEventListener("submit", async (event) 
   event.preventDefault();
   if (!selected) return;
   try {
-    await api(`/${selected.id}`, "DELETE");
+    await api(`/postings/${selected.id}`, "DELETE");
     dialog.close();
     message.textContent = "삭제했습니다. 대기 중이던 발송은 취소되고 수락된 기록은 남습니다.";
     selected = null;
     await load();
+    await loadSummary();
   } catch (error) {
     message.textContent = error.message;
     dialog.close();
@@ -128,3 +160,4 @@ document.getElementById("logout").addEventListener("click", () => {
   location.reload();
 });
 void load();
+void loadSummary();

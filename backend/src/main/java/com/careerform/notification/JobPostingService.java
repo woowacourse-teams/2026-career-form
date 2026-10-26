@@ -3,6 +3,7 @@ package com.careerform.notification;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
@@ -13,6 +14,7 @@ public final class JobPostingService {
     static final int MAX_COMPANY_LENGTH = 80;
     static final int MAX_ROLE_LENGTH = 120;
     static final int MAX_LINK_LENGTH = 1024;
+    static final Duration MAX_SUMMARY_RANGE = Duration.ofDays(400);
     private final NotificationStore store;
     private final Clock clock;
 
@@ -30,6 +32,14 @@ public final class JobPostingService {
     public record Duplicate(String existingId) implements Outcome { }
 
     public record Row(JobPosting posting, DeliveryProgress progress) { }
+
+    /** 기간별 요약. 수락률·포기율은 끝난 발송(수락+포기) 기준, 평균 시도는 기간 안 전체 발송 기준이며 분모가 0이면 null이다. */
+    public record Summary(Instant from, Instant to, long postings, DeliverySummary deliveries, Double acceptanceRate, Double abandonRate,
+                          Double averageAttempts, long subscriptions) { }
+
+    public static final class InvalidRange extends IllegalArgumentException {
+        public InvalidRange() { super("Invalid summary range"); }
+    }
 
     public static final class InvalidPosting extends IllegalArgumentException {
         private final String reason;
@@ -68,6 +78,18 @@ public final class JobPostingService {
     }
 
     public List<JobPosting> open() { return store.listOpenPostings(clock.instant()); }
+
+    public Summary summary(Instant from, Instant to) {
+        if (from == null || to == null || !from.isBefore(to) || Duration.between(from, to).compareTo(MAX_SUMMARY_RANGE) > 0) { throw new InvalidRange(); }
+        var deliveries = store.summarizeDeliveries(from, to);
+        var finished = deliveries.accepted() + deliveries.abandoned();
+        var total = deliveries.total();
+        return new Summary(from, to, store.countPostingsRegisteredBetween(from, to), deliveries,
+            finished == 0 ? null : (double) deliveries.accepted() / finished,
+            finished == 0 ? null : (double) deliveries.abandoned() / finished,
+            total == 0 ? null : (double) deliveries.attempts() / total,
+            store.countSubscriptions());
+    }
 
     private JobPosting validate(Draft draft, Instant now) {
         Objects.requireNonNull(draft);
