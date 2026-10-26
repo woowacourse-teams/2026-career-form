@@ -137,7 +137,11 @@ export function observeSearchSurfaces(
       }
     }
     return (
-      sharesSearchSubject(fieldName(), surfaceName) &&
+      sharesSearchSubject(
+        fieldName(),
+        surfaceName,
+        session.args.genericPopupRecovery === true,
+      ) &&
       /검색|조회|search|lookup/i.test(surfaceName)
     );
   }
@@ -166,7 +170,11 @@ export function observeSearchSurfaces(
     const surfaceName =
       element.getAttribute("aria-label") ?? element.getAttribute("title") ?? "";
     return (
-      sharesSearchSubject(fieldName(), surfaceName) &&
+      sharesSearchSubject(
+        fieldName(),
+        surfaceName,
+        session.args.genericPopupRecovery === true,
+      ) &&
       /검색|search|lookup/i.test(surfaceName)
     );
   }

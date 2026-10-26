@@ -29,8 +29,7 @@ import {
   queryOnly,
   resolveRoles,
   searchDestination,
-  submitControls,
-} from "./search-controls";
+  submitControls, lockedSubmitControls } from "./search-controls";
 import { observeResults, resultBaseline } from "./search-results";
 import { observeQueryCommit } from "./search-query-commit";
 import {
@@ -370,7 +369,7 @@ export async function executeReadonlySearch(
     surfaceGuard();
     const controls = await session.wait(() => {
       surfaceGuard();
-      const queries = queryControls(currentSurface);
+      const queries = queryControls(currentSurface, args.genericPopupRecovery === true);
       const submits = submitControls(currentSurface);
       if (args.genericPopupRecovery) {
         if (queries.length > 1)
@@ -398,11 +397,12 @@ export async function executeReadonlySearch(
     let submit: HTMLButtonElement | HTMLInputElement | undefined;
     let queryRole;
     let submitRole;
+    let lockedSubmit: HTMLButtonElement | HTMLInputElement | undefined;
     if (queries.length) {
       const roleRequests = [
         {
           role: "SEARCH_QUERY_INPUT" as const,
-          collect: () => queryControls(currentSurface),
+          collect: () => queryControls(currentSurface, args.genericPopupRecovery === true),
           scope: currentSurface.container,
         },
         ...(submits.length
@@ -418,8 +418,15 @@ export async function executeReadonlySearch(
       [queryRole, submitRole] = await resolveRoles(session, roleRequests);
       query = queryRole!.binding.element as HTMLInputElement;
       submit = submitRole?.binding.element as typeof submit;
-      if (!submit && !queryOnly(currentSurface, query))
-        throw new SearchFailure("search_submit_not_found");
+      if (!submit && !queryOnly(currentSurface, query)) {
+        const locked =
+          args.genericPopupRecovery === true && !submits.length
+            ? lockedSubmitControls(currentSurface)
+            : [];
+        if (locked.length !== 1)
+          throw new SearchFailure("search_submit_not_found");
+        lockedSubmit = locked[0];
+      }
     } else if (
       submits.length ||
       (!currentSurface.resultRoots().length && !regionList())
@@ -428,7 +435,7 @@ export async function executeReadonlySearch(
     }
     const querylessRegion = !query && Boolean(regionList());
     currentSurface.mode = query
-      ? submit
+      ? submit || lockedSubmit
         ? "query-and-submit"
         : "query-only"
       : "existing-options";
@@ -495,11 +502,21 @@ export async function executeReadonlySearch(
           nativeQueryValue(queryElement, searchText, surfaceGuard);
         if (normalized(queryElement.value) !== normalized(searchText))
           throw new SearchFailure("search_query_conflict");
+        if (!submit && lockedSubmit) {
+          const expected = lockedSubmit;
+          // Only the same button, now unlocked by the typed query, may run it.
+          submit = await session.wait(() => {
+            surfaceGuard();
+            const live = submitControls(currentSurface);
+            return live.length === 1 && live[0] === expected ? expected : undefined;
+          }, "search_submit_not_found");
+          nativeFormBinding = searchDestination(currentSurface, queryElement, submit);
+        }
         if (submit) {
           await session.prepareMutation();
           surfaceGuard();
           if (
-            !submitRole!.current() ||
+            (submitRole ? !submitRole.current() : !submit.isConnected) ||
             !queryRole!.current() ||
             normalized(queryElement.value) !== normalized(searchText)
           )
@@ -600,7 +617,7 @@ export async function executeReadonlySearch(
         ) {
           if (nativeFormBinding) {
             surfaceGuard();
-            const refreshedQueries = queryControls(currentSurface);
+            const refreshedQueries = queryControls(currentSurface, args.genericPopupRecovery === true);
             const refreshedSubmits = submitControls(currentSurface);
             if (refreshedQueries.length !== 1 || refreshedSubmits.length !== 1)
               throw error;
@@ -609,7 +626,7 @@ export async function executeReadonlySearch(
               [
                 {
                   role: "SEARCH_QUERY_INPUT",
-                  collect: () => queryControls(currentSurface),
+                  collect: () => queryControls(currentSurface, args.genericPopupRecovery === true),
                   scope: currentSurface.container,
                 },
                 {

@@ -72,10 +72,21 @@ export const SEARCH_SUBJECTS = [
   ["회사", "직장", "기업", "company", "employer"],
 ] as const;
 
-export function sharesSearchSubject(fieldName: string, surfaceName: string) {
+/** Generic recovery also recognizes license and language-exam subjects. */
+const GENERIC_SEARCH_SUBJECTS = [
+  ...SEARCH_SUBJECTS.filter((words) => words[0] !== "자격증"),
+  ["자격증", "자격/면허", "면허", "certificate", "license"],
+  ["시험", "어학", "exam", "language test"],
+] as const;
+
+export function sharesSearchSubject(
+  fieldName: string,
+  surfaceName: string,
+  generic = false,
+) {
   const field = fieldName.toLowerCase();
   const surface = surfaceName.toLowerCase();
-  return SEARCH_SUBJECTS.some(
+  return (generic ? GENERIC_SEARCH_SUBJECTS : SEARCH_SUBJECTS).some(
     (words) =>
       words.some((word) => field.includes(word)) &&
       words.some((word) => surface.includes(word)),
