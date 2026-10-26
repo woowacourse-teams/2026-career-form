@@ -76,6 +76,9 @@ class GenericChoiceSemanticsTest {
     static Stream<Arguments> statusContexts() {
         return Stream.of(
             Arguments.of(null, "장애 여부", List.of(), "disability.disability.disabilityStatus"),
+            Arguments.of("보훈/장애", "장애여부 필수", List.of(), "disability.disability.disabilityStatus"),
+            Arguments.of("보훈/장애", "보훈여부 *", List.of(), "veteran.veteran.veteranStatus"),
+            Arguments.of("보훈", "장애여부 필수", List.of(), null),
             Arguments.of("기본 정보", "보훈 대상 여부", List.of(), "veteran.veteran.veteranStatus"),
             Arguments.of(null, null, List.of(new SemanticLabel(SemanticSource.ARIA_LABEL, "장애 여부")),
                 "disability.disability.disabilityStatus"),

@@ -86,8 +86,10 @@ public final class GenericFieldsService {
                 String military = GenericProfileSemantics.militaryKey(section.category(), section.displayName(),
                     candidate);
                 Mapping current = mappings.get(candidate.candidateId());
+                // 합성 선택지는 병역 상태를 직접 밝힌다. 모델이 다른 병역 키를 준 경우도 바로잡는다.
                 if (military != null && supportedProfileFields.contains(military) && (current == null
-                    || current.profileFieldKey() == null && current.binding() == null && current.reason() == null)) {
+                    || current.binding() == null && current.reason() == null && (current.profileFieldKey() == null
+                        || current.profileFieldKey().startsWith("military.")))) {
                     mappings.put(candidate.candidateId(),
                         new Mapping(military, 1.0, current == null || current.categoryConfirmed(), null));
                 }
@@ -122,6 +124,13 @@ public final class GenericFieldsService {
                         new Mapping(key, 1.0, current == null || current.categoryConfirmed(), null));
                 }
             }
+        }
+        for (Section section : request.sections()) {
+            List<FieldCandidate> candidates = new ArrayList<>(section.fields());
+            if (section.items() != null) {
+                section.items().forEach(item -> candidates.addAll(item.fields()));
+            }
+            applyPersonalAndSensitiveRules(section, candidates, mappings);
         }
         // 이름은 한 줄 입력칸에만 쓴다. 자기소개서 같은 여러 줄 칸에 이름을 넣지 않는다.
         for (FieldCandidate candidate : request.fieldCandidatesInTraversalOrder()) {
@@ -163,6 +172,67 @@ public final class GenericFieldsService {
         long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt);
         return GenericFieldsResponse.complete(request.snapshotId(), fields, new Diagnostics(jevCalls, elapsedMs));
     }
+
+    /** 이름 한 칸·생년월일 선택칸·보훈장애 상세칸을 칸 자신의 라벨과 구조로 정한다. 모델이 정한 다른 범주 키는 덮어쓰지 않는다. */
+    private void applyPersonalAndSensitiveRules(Section section, List<FieldCandidate> candidates,
+        Map<String, Mapping> mappings) {
+        if ("PERSONAL".equals(section.category())) {
+            List<FieldCandidate> names = candidates.stream()
+                .filter(GenericProfileSemantics::isSingleKoreanNameLabel).toList();
+            boolean separateParts = candidates.stream().anyMatch(GenericProfileSemantics::isFamilyNameLabel)
+                || candidates.stream().map(field -> mappings.get(field.candidateId())).filter(Objects::nonNull)
+                    .map(Mapping::profileFieldKey).anyMatch(key -> "personal.personal.koreanFamilyName".equals(key)
+                        || "personal.personal.koreanGivenName".equals(key));
+            if (names.size() == 1 && !separateParts && abstained(mappings.get(names.getFirst().candidateId()))) {
+                Mapping current = mappings.get(names.getFirst().candidateId());
+                mappings.put(names.getFirst().candidateId(), new Mapping(null, 1.0,
+                    current == null || current.categoryConfirmed(), null,
+                    new GenericFieldsResponse.NameBinding(
+                        com.careerform.formanalysis.application.port.FieldMappingResolver.DerivedRecipe.KOREAN_FULL_NAME)));
+            }
+            Map<GenericFieldsResponse.DatePart, FieldCandidate> parts = new LinkedHashMap<>();
+            boolean ambiguous = false;
+            for (FieldCandidate field : candidates) {
+                if (!GenericProfileSemantics.isBirthDateLabel(field) || !abstained(mappings.get(field.candidateId()))) {
+                    continue;
+                }
+                GenericFieldsResponse.DatePart part = GenericProfileSemantics.datePartOf(field);
+                if (part == null) {
+                    continue;
+                }
+                ambiguous |= parts.putIfAbsent(part, field) != null;
+            }
+            if (!ambiguous && parts.size() >= 2 && supportedProfileFields.contains(BIRTH_DATE)) {
+                parts.forEach((part, field) -> {
+                    Mapping current = mappings.get(field.candidateId());
+                    mappings.put(field.candidateId(), new Mapping(BIRTH_DATE, 1.0,
+                        current == null || current.categoryConfirmed(), null,
+                        new GenericFieldsResponse.DatePartBinding(part)));
+                });
+            }
+        }
+        boolean veteranSection = candidates.stream().map(field -> mappings.get(field.candidateId()))
+            .filter(Objects::nonNull).map(Mapping::profileFieldKey)
+            .anyMatch(key -> key != null && key.startsWith("veteran."));
+        for (FieldCandidate field : candidates) {
+            Mapping current = mappings.get(field.candidateId());
+            String currentKey = current == null ? null : current.profileFieldKey();
+            String detail = GenericProfileSemantics.disabilityDetailKey(field);
+            String family = "disability.";
+            if (detail == null && veteranSection && GenericProfileSemantics.isRelationLabel(field)) {
+                detail = "veteran.veteran.veteranRelation";
+                family = "veteran.";
+            }
+            if (detail == null || !supportedProfileFields.contains(detail)
+                || !(abstained(current) || currentKey != null && currentKey.startsWith(family)
+                    && (current.binding() == null && current.reason() == null))) {
+                continue;
+            }
+            mappings.put(field.candidateId(), new Mapping(detail, 1.0, current == null || current.categoryConfirmed(), null));
+        }
+    }
+
+    private static final String BIRTH_DATE = "personal.personal.birthDate";
 
     private static final String LANGUAGE_RESULT = "languages.languageTest.grade";
     private static final java.util.regex.Pattern SCORE_LABEL =

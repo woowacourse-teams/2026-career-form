@@ -93,19 +93,20 @@ final class GenericProfileSemantics {
         }
         // 섹션 제목만으로는 같은 섹션의 동의·증빙 같은 다른 예/아니오 질문과 구분되지 않는다.
         List<String> labels = new ArrayList<>();
-        labels.add(compactChoiceText(candidate.displayName()));
+        labels.add(labelText(candidate.displayName()));
         var context = candidate.semanticContext();
         if (context != null && context.labels() != null) {
             context.labels().stream()
                 .filter(label -> label.source() == SemanticSource.LABEL
                     || label.source() == SemanticSource.ARIA_LABEL
                     || label.source() == SemanticSource.ARIA_LABELLEDBY)
-                .forEach(label -> labels.add(compactChoiceText(label.text())));
+                .forEach(label -> labels.add(labelText(label.text())));
         }
         // 묶음 legend·제목은 근거가 아니지만, 라벨과 다른 항목을 가리키면 충돌로 보고 기권한다.
         String heading = compactChoiceText(sectionHeading);
-        if (labels.stream().anyMatch(label -> label.contains("장애")) && heading.contains("보훈")
-            || labels.stream().anyMatch(label -> label.contains("보훈")) && heading.contains("장애")
+        // "보훈/장애"처럼 두 항목을 함께 적은 제목은 어느 쪽과도 충돌하지 않는다.
+        if (labels.stream().anyMatch(label -> label.contains("장애")) && heading.contains("보훈") && !heading.contains("장애")
+            || labels.stream().anyMatch(label -> label.contains("보훈")) && heading.contains("장애") && !heading.contains("보훈")
             || labels.stream().anyMatch(label -> label.contains("장애"))
                 && labels.stream().anyMatch(label -> label.contains("보훈"))) {
             return null;
@@ -173,6 +174,95 @@ final class GenericProfileSemantics {
         boolean notServed = options.stream().anyMatch(option -> option.contains("미필"));
         boolean exempt = options.stream().anyMatch(option -> option.contains("면제"));
         return context && served && notServed && exempt ? "military.military.militaryStatus" : null;
+    }
+
+    /** 칸 라벨의 공백·괄호와 끝의 필수 표시(필수, *)를 지운다. */
+    static String labelText(String text) {
+        return compactChoiceText(text).replaceAll("(?i)(?:\\*|필수|required)+$", "");
+    }
+
+    /** 칸 자신의 라벨(표시 이름, label, aria)만 모은다. 섹션 제목은 넣지 않는다. */
+    static List<String> ownLabels(FieldCandidate candidate) {
+        List<String> labels = new ArrayList<>();
+        labels.add(labelText(candidate.displayName()));
+        var context = candidate.semanticContext();
+        if (context != null && context.labels() != null) {
+            context.labels().stream()
+                .filter(label -> label.source() == SemanticSource.LABEL
+                    || label.source() == SemanticSource.ARIA_LABEL
+                    || label.source() == SemanticSource.ARIA_LABELLEDBY)
+                .forEach(label -> labels.add(labelText(label.text())));
+        }
+        return labels;
+    }
+
+    static boolean isSingleKoreanNameLabel(FieldCandidate candidate) {
+        return candidate.element() == FormElement.INPUT && candidate.control() == FormControl.TEXT
+            && ownLabels(candidate).stream().anyMatch(label -> label.matches("이름|성명|성함"));
+    }
+
+    static boolean isFamilyNameLabel(FieldCandidate candidate) {
+        return ownLabels(candidate).stream().anyMatch(label -> label.matches("성|성씨"));
+    }
+
+    static boolean isBirthDateLabel(FieldCandidate candidate) {
+        return ownLabels(candidate).stream()
+            .anyMatch(label -> label.contains("생년월일") || label.contains("생일") || label.toLowerCase(Locale.ROOT).contains("birth"));
+    }
+
+    /** 안내 선택지(년·월·일·선택)를 빼고 숫자 선택지 모양만으로 년·월·일을 정한다. 정할 수 없으면 null. */
+    static GenericFieldsResponse.DatePart datePartOf(FieldCandidate candidate) {
+        if (candidate.element() != FormElement.SELECT || candidate.control() != FormControl.SELECT
+            || candidate.options() == null) {
+            return null;
+        }
+        List<Integer> numbers = new ArrayList<>();
+        int other = 0;
+        for (var option : candidate.options()) {
+            String label = option.displayName() == null ? "" : option.displayName().trim().replaceAll("[년월일]$", "");
+            if (label.matches("[0-9]{1,4}")) {
+                numbers.add(Integer.parseInt(label));
+            }
+            else {
+                other++;
+            }
+        }
+        if (numbers.size() < 5 || other > 2) {
+            return null;
+        }
+        int min = numbers.stream().min(Integer::compare).orElseThrow();
+        int max = numbers.stream().max(Integer::compare).orElseThrow();
+        if (min >= 1900 && max <= 2100) {
+            return GenericFieldsResponse.DatePart.YEAR;
+        }
+        if (min == 1 && max == 12 && numbers.size() == 12) {
+            return GenericFieldsResponse.DatePart.MONTH;
+        }
+        if (min == 1 && max >= 28 && max <= 31 && numbers.size() == max) {
+            return GenericFieldsResponse.DatePart.DAY;
+        }
+        return null;
+    }
+
+    /** 장애 상세 선택칸은 칸 라벨 자체가 항목을 밝힌다. */
+    static String disabilityDetailKey(FieldCandidate candidate) {
+        if (candidate.element() != FormElement.SELECT) {
+            return null;
+        }
+        List<String> labels = ownLabels(candidate);
+        if (labels.stream().anyMatch(label -> label.matches("장애(?:내용|유형|종류|구분|명)"))) {
+            return "disability.disability.disabilityType";
+        }
+        if (labels.stream().anyMatch(label -> label.matches("장애(?:정도|등급|급수|의정도)"))) {
+            return "disability.disability.disabilityGrade";
+        }
+        return null;
+    }
+
+    /** '관계' 선택칸은 같은 섹션에 보훈 칸이 있을 때만 보훈 관계로 본다(호출자가 확인). */
+    static boolean isRelationLabel(FieldCandidate candidate) {
+        return candidate.element() == FormElement.SELECT && ownLabels(candidate).stream()
+            .anyMatch(label -> label.matches("(?:보훈|대상자와의|유공자와의|본인과의)?관계"));
     }
 
     private static String compactChoiceText(String text) {

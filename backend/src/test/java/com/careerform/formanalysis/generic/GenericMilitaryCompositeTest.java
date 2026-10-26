@@ -47,6 +47,26 @@ class GenericMilitaryCompositeTest {
     }
 
     @Test
+    void serviceCorrectsAnotherMilitaryKeyOnCompositeOptions() {
+        var resolver = org.mockito.Mockito.mock(JevCategoryFieldResolver.class);
+        var request = new GenericFieldsRequest(2, "military-correct",
+            new GenericFieldsRequest.Site("example.test", "/apply"),
+            List.of(new GenericFieldsRequest.Section("mil", null, "병역", List.of(select("병역구분", COMPOSITE)), null,
+                "SENSITIVE")),
+            List.of(GenericFieldsRequest.WriteCommand.SELECT_OPTION));
+        org.mockito.Mockito.when(resolver.resolve(request)).thenReturn(new JevCategoryFieldResolver.Resolution(
+            java.util.Map.of("m", new JevCategoryFieldResolver.Mapping("military.military.militaryType", 0.32, true,
+                null)), 1));
+        var response = new GenericFieldsService(java.util.Optional.of(resolver),
+            new com.careerform.formanalysis.application.FormAnalysisRouter(
+                (host, path) -> new com.careerform.formanalysis.application.port.CompanyFormPolicyProvider.NotRegistered()),
+            new com.careerform.formanalysis.application.FieldInteractionPolicy(),
+            new com.careerform.formanalysis.application.SupportedProfileFields()).analyze(request);
+
+        assertThat(response.fields().getFirst().profileFieldKey()).isEqualTo("military.military.militaryStatus");
+    }
+
+    @Test
     void textControlsAbstain() {
         var text = new FieldCandidate("m", FormElement.INPUT, FormControl.TEXT, Visibility.VISIBLE, "병역구분",
             null, null, null, null, null, null, options(COMPOSITE));
