@@ -186,6 +186,42 @@ const NO_CLICK_ADD_REASONS = new Set([
   "INTERACTION_UNAVAILABLE",
   "NO_ADD_CONTROL",
 ]);
+// A failed or repeated add that did not change the existing rows leaves them
+// mappable too; only the profile entries that needed a new row are given up.
+const ROW_PRESERVING_ADD_REASONS = new Set([
+  "ADD_CONTROL_GONE",
+  "ADD_FAILED",
+  "SECTION_ACTION_LIMIT",
+  "NO_PROGRESS",
+]);
+const ROW_CHANGING_EXECUTOR_REASONS = new Set([
+  "existing-group-value-changed",
+  "invalid-group-count",
+  "refresh-failed",
+]);
+/** In-memory state of the existing rows; a detached control counts as changed. */
+const rowsState = (group: RowGroup) =>
+  group.rows
+    .flatMap((row) => row.fields)
+    .map(({ element }) => {
+      if (!element.isConnected) return "\u0002";
+      if (
+        element instanceof HTMLInputElement &&
+        (element.type === "checkbox" || element.type === "radio")
+      )
+        return String(element.checked);
+      return element instanceof HTMLInputElement ||
+        element instanceof HTMLSelectElement ||
+        element instanceof HTMLTextAreaElement
+        ? element.value
+        : "";
+    })
+    .join("\u0000");
+const keepsExistingRows = (reason: string) =>
+  NO_CLICK_ADD_REASONS.has(reason) ||
+  ROW_PRESERVING_ADD_REASONS.has(reason) ||
+  (reason.startsWith("executor:") &&
+    !ROW_CHANGING_EXECUTOR_REASONS.has(reason.slice("executor:".length)));
 
 const TARGET_OF_ROW_KIND: Record<EducationRowKind, TargetKind> = {
   HIGH_SCHOOL: "HIGH_SCHOOL",
@@ -359,7 +395,7 @@ export async function runGenericStructureLoop(
     section.reason = reason;
     blocked.set(key, section);
     const scope = groupScopes.get(key);
-    if (scope && !NO_CLICK_ADD_REASONS.has(reason))
+    if (scope && !keepsExistingRows(reason))
       context.blockedScopes.set(scope, reason);
     record({
       kind: "ADD_ROW",
@@ -843,6 +879,7 @@ export async function runGenericStructureLoop(
       return false;
     }
     const rowsBefore = action.rows ?? group.rows.length;
+    const stateBefore = rowsState(group);
     const result = await executeApprovedPreparationPlans({
       approvedPlans: [
         {
@@ -883,6 +920,11 @@ export async function runGenericStructureLoop(
         rowsAfter: rowsBefore + 1,
       });
       return true;
+    }
+    // The executor checks existing values only after a verified addition.
+    if (rowsState(group) !== stateBefore) {
+      blockGroup(group, "executor:existing-group-value-changed");
+      return false;
     }
     const reason =
       result.status === "failed" ? result.reason : "approval-required";

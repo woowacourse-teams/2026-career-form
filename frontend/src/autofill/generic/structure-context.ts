@@ -5,6 +5,7 @@ import {
 import type { FieldsAnalyzeRequest, FieldsAnalyzeResponse } from "../api/types";
 import type { ReviewPlanItem } from "../review/review-plan";
 import { genericRowFor } from "../dom/repeatable-rows";
+import { localWorkflowLog } from "../debug/local-workflow";
 
 /** Stable UI reason; detailed structural reasons stay in the local receipt. */
 export const GENERIC_STRUCTURE_BLOCKED_REASON = "STRUCTURE_BLOCKED";
@@ -158,7 +159,14 @@ export function applyGenericStructureAnalysis(
         field.matchType === "MATCH"
           ? (field.valueBinding?.profileFieldKey ?? field.profileFieldKey)
           : undefined;
-      return element && structuralBlockReason(element, key, context)
+      const blockReason = element && structuralBlockReason(element, key, context);
+      if (blockReason)
+        localWorkflowLog("structure-blocked", {
+          candidateId: field.candidateId,
+          key: key ?? "none",
+          reason: blockReason,
+        });
+      return blockReason
         ? {
             candidateId: field.candidateId,
             matchType: "NO_MATCH" as const,

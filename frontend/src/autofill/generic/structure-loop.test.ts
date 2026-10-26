@@ -405,6 +405,49 @@ describe("runGenericStructureLoop", () => {
     },
   );
 
+  it("keeps the existing row mappable when a clicked add control adds no row", async () => {
+    document.body.innerHTML = `<section>
+      <h3>경력</h3>
+      <div id="rows">${careerRow(0)}</div>
+      <button type="button" id="add">경력 추가</button>
+    </section>`;
+    const result = await runGenericStructureLoop({
+      document,
+      profile: { ...createEmptyProfile(), careers: entries(3, "career") },
+      apiClient: mockApi().client,
+    });
+    const row = document.querySelector("[ismultirow]")!;
+    expect(document.querySelectorAll("[ismultirow]")).toHaveLength(1);
+    expect(result.sections[0]?.status).toBe("BLOCKED");
+    expect(
+      [...result.context.blockedScopes.keys()].some((scope) =>
+        scope.contains(row),
+      ),
+    ).toBe(false);
+  });
+
+  it("blocks the existing rows when a clicked add control changes them", async () => {
+    document.body.innerHTML = `<section>
+      <h3>경력</h3>
+      <div id="rows">${careerRow(0)}</div>
+      <button type="button" id="add">경력 추가</button>
+    </section>`;
+    document.querySelector("#add")!.addEventListener("click", () => {
+      document.querySelector<HTMLInputElement>("[name=company0]")!.value = "changed";
+    });
+    const result = await runGenericStructureLoop({
+      document,
+      profile: { ...createEmptyProfile(), careers: entries(3, "career") },
+      apiClient: mockApi().client,
+    });
+    const row = document.querySelector("[ismultirow]")!;
+    expect(
+      [...result.context.blockedScopes.keys()].some((scope) =>
+        scope.contains(row),
+      ),
+    ).toBe(true);
+  });
+
   it("offers a repeat group only the add controls its own section holds", async () => {
     document.body.innerHTML = `<form><div><section>
       <h3>학력</h3>
