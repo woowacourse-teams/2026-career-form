@@ -53,7 +53,8 @@ function card(row) {
   const card = element("article", undefined, "candidate");
   card.dataset.postingId = row.id;
   const header = element("div", undefined, "candidate-header");
-  header.append(element("h2", `${row.company} · ${row.role}`), element("span", state(row, new Date()), "badge"));
+  header.append(element("h2", row.role ? `${row.company} · ${row.role}` : row.company), element("span", state(row, new Date()), "badge"));
+  if (!row.role) header.append(element("span", "직무 없음", "badge"));
   const period = element("div", undefined, "meta");
   period.append(element("span", `접수 시작 ${date(row.opensAt)}`), element("span", `마감 ${date(row.closesAt)}`),
     element("span", `등록 ${date(row.registeredAt)}`), element("span", `발송 예정 ${date(row.scheduledAt)}`));
@@ -69,7 +70,7 @@ function card(row) {
   const remove = element("button", "삭제", "secondary");
   remove.addEventListener("click", () => {
     selected = row;
-    document.getElementById("delete-context").textContent = `${row.company} · ${row.role} 공고를 삭제합니다.`;
+    document.getElementById("delete-context").textContent = `${row.role ? `${row.company} · ${row.role}` : row.company} 공고를 삭제합니다.`;
     dialog.showModal();
   });
   actions.append(remove);
@@ -94,7 +95,7 @@ form.addEventListener("submit", async (event) => {
   try {
     const data = new FormData(form);
     const result = await api("", "POST", {
-      company: String(data.get("company")).trim(), role: String(data.get("role")).trim(), link: String(data.get("link")).trim(),
+      company: String(data.get("company")).trim(), role: String(data.get("role")).trim() || undefined, link: String(data.get("link")).trim(),
       opensAt: new Date(String(data.get("opensAt"))).toISOString(), closesAt: new Date(String(data.get("closesAt"))).toISOString(),
     });
     message.textContent = `등록했습니다. 구독자 ${result.deliveries}명에게 ${date(result.scheduledAt)} 발송을 예약했습니다.`;

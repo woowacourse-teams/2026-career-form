@@ -16,7 +16,11 @@ class NotificationPageTest {
         var index = read("static/notifications/index.html");
         assertThat(index).contains("/quality/quality.css", "/quality/login.js", "data-app=\"/notifications/postings.js\"", "id=\"login-form\"",
             "id=\"management-panel\"", "id=\"posting-form\"", "id=\"delete-dialog\"");
+        var roleInput = index.lines().filter(line -> line.contains("name=\"role\"")).findFirst().orElseThrow();
+        assertThat(roleInput).doesNotContain("required");
+        assertThat(index).contains("비우면 직무 없이");
         var postings = read("static/notifications/postings.js");
+        assertThat(postings).contains("직무 없음");
         assertThat(postings).contains("/quality/access.js", "/api/v1/notifications/admin/postings", "showModal");
         assertThat(postings).doesNotContain("localStorage", "sessionStorage");
         var login = read("static/quality/login.js");

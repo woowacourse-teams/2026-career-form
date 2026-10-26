@@ -31,6 +31,17 @@ class PushPayloadTest {
     }
 
     @Test
+    @DisplayName("직무가 없는 공고는 role 필드를 생략한다")
+    void omitsRoleWhenAbsent() {
+        var posting = new JobPosting("0123456789abcdef0123456789abcdef", "합성 회사", null, "https://careers.example.test/jobs/2",
+            NOW.minusSeconds(60), NOW.plusSeconds(3600), NOW.minusSeconds(120));
+        var json = JsonMapper.builder().build().readTree(new String(PushPayload.of(posting), StandardCharsets.UTF_8));
+        assertThat(json.has("role")).isFalse();
+        assertThat(json.size()).isEqualTo(5);
+        assertThat(json.path("company").asString()).isEqualTo("합성 회사");
+    }
+
+    @Test
     @DisplayName("회사 80자, 직무 120자, 링크 1024자 상한에서도 암호화 여유를 둔 4KB 한도 안에 든다")
     void staysUnderWebPushLimitForMaximalInputs() {
         var link = "https://careers.example.test/" + "a".repeat(1024 - "https://careers.example.test/".length());

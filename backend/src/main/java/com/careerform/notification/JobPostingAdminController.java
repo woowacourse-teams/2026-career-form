@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -26,6 +27,7 @@ public final class JobPostingAdminController {
 
     public record Registered(String id, Instant scheduledAt, long deliveries) { }
 
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public record Row(String id, String company, String role, String link, Instant opensAt, Instant closesAt, Instant registeredAt,
                       Instant scheduledAt, DeliveryProgress progress) {
         static Row of(JobPostingService.Row row) {

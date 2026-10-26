@@ -24,7 +24,7 @@ CF-348은 팀이 등록한 채용 공고를 접수 가능 시점(등록 시각�
 
 | 컬렉션 | 내용 | 인덱스 |
 |---|---|---|
-| `job_postings` | 회사, 직무, 링크, 접수 시작, 마감, 등록 시각 | `link` 유일, `(opensAt, closesAt)` |
+| `job_postings` | 회사, 직무(선택, 없으면 필드 없음), 링크, 접수 시작, 마감, 등록 시각 | `link` 유일, `(opensAt, closesAt)` |
 | `push_subscriptions` | endpoint, p256dh, auth, 등록 시각 | `endpoint` 유일 |
 | `push_deliveries` | 공고 ID × 구독 ID, 상태(PENDING·SENDING·ACCEPTED·ABANDONED), 예정 시각, 시도 횟수, 다음 시도 시각, 리스 만료 시각, 마지막 시도 시각·응답 코드·이유 | `(postingId, subscriptionId)` 유일, `(status, nextAttemptAt)`, `(status, leaseUntil)`, `(postingId, status)` |
 
@@ -39,18 +39,18 @@ CF-348은 팀이 등록한 채용 공고를 접수 가능 시점(등록 시각�
 | `GET /api/v1/notifications/vapid-public-key` | 200 `{"publicKey"}` |
 | `POST /api/v1/notifications/subscriptions` `{"endpoint","expirationTime"?,"keys":{"p256dh","auth"}}` | 201 신규 / 200 기존 `{"subscriptionId","created"}`. 같은 endpoint는 새로 만들지 않는다. 400 `INVALID_SUBSCRIPTION`(허용 호스트 `fcm.googleapis.com`·`jmt17.google.com`의 HTTPS가 아니거나 키 길이가 다름), 400 `INVALID_INPUT`(본문 해석 실패) |
 | `POST /api/v1/notifications/subscriptions/unsubscribe` `{"endpoint"}` | 204. 없는 endpoint도 204 |
-| `GET /api/v1/notifications/postings` | 200 `{"postings":[{"id","company","role","link","opensAt","closesAt"}]}`. 접수 시작 ≤ 현재 < 마감인 공고를 마감순으로 |
+| `GET /api/v1/notifications/postings` | 200 `{"postings":[{"id","company","role"?,"link","opensAt","closesAt"}]}`. 접수 시작 ≤ 현재 < 마감인 공고를 마감순으로. 직무가 없는 공고는 `role` 필드를 생략한다 |
 
-푸시 payload는 목록 항목과 같은 모양의 UTF-8 JSON이다. 회사 80자, 직무 120자, 링크 1024자 상한에서 평문 3,900바이트 이하이며 aes128gcm 암호화 뒤에도 4,096바이트 한도 안에 든다(테스트로 보장).
+푸시 payload는 목록 항목과 같은 모양의 UTF-8 JSON이며 직무가 없으면 `role` 필드를 생략한다(확장은 없음과 빈 문자열을 모두 직무 없음으로 다룬다). 회사 80자, 직무 120자, 링크 1024자 상한에서 평문 3,900바이트 이하이며 aes128gcm 암호화 뒤에도 4,096바이트 한도 안에 든다(테스트로 보장).
 
 ## 관리 API와 화면
 
-경로 `/api/v1/notifications/admin/**`과 화면 `/notifications/`는 기존 `QualityApiFilter`가 보호한다. 요청마다 `Authorization: Basic quality:<공용 비밀번호>`를 확인하고 다른 Origin을 거부하며 본문 128KiB를 넘지 않게 한다. 품질 기능이 꺼져 있으면 404, 비밀번호 설정이 없으면 503이다. 화면은 `/quality`의 로그인 틀, 스타일, 접근 모듈을 재사용하고 삭제는 확인 대화상자를 거친다.
+경로 `/api/v1/notifications/admin/**`과 화면 `/notifications/`는 기존 `QualityApiFilter`가 보호한다. 요청마다 `Authorization: Basic quality:<공용 비밀번호>`를 확인하고 다른 Origin을 거부하며 본문 128KiB를 넘지 않게 한다. 품질 기능이 꺼져 있으면 404, 비밀번호 설정이 없으면 503이다. 화면은 `/quality`의 로그인 틀, 스타일, 접근 모듈을 재사용하고 삭제는 확인 대화상자를 거친다. 직무 입력은 선택이며 비우면 직무 없이 알림이 나간다고 안내하고 목록에는 "직무 없음"을 표시한다. 직무 없는 공고는 #349가 반영된 확장 버전에서만 표시되므로 스토어 보급 전에는 팀이 직무를 비워 등록하지 않는다.
 
 | 요청 | 응답 |
 |---|---|
-| `GET /api/v1/notifications/admin/postings` | 200 `{"postings":[{id, company, role, link, opensAt, closesAt, registeredAt, scheduledAt, progress:{pending, sending, accepted, abandoned, lastAttemptAt}}]}` 최근 등록 순 |
-| `POST /api/v1/notifications/admin/postings` `{company, role, link, opensAt, closesAt}` | 201 `{"id","scheduledAt","deliveries"}`. 저장과 구독자 전원의 대기 발송 생성이 끝났다는 뜻이며 FCM 수락을 기다리지 않는다. 409 `{"error":"DUPLICATE_LINK","postingId"}`, 400 `{"error":"INVALID_POSTING","reason": COMPANY·ROLE·LINK·PERIOD·CLOSED}` |
+| `GET /api/v1/notifications/admin/postings` | 200 `{"postings":[{id, company, role?, link, opensAt, closesAt, registeredAt, scheduledAt, progress:{pending, sending, accepted, abandoned, lastAttemptAt}}]}` 최근 등록 순. 직무가 없으면 `role` 생략 |
+| `POST /api/v1/notifications/admin/postings` `{company, role?, link, opensAt, closesAt}` | 201 `{"id","scheduledAt","deliveries"}`. 직무는 생략하거나 비울 수 있고 값이 있으면 120자 이하다. 저장과 구독자 전원의 대기 발송 생성이 끝났다는 뜻이며 FCM 수락을 기다리지 않는다. 409 `{"error":"DUPLICATE_LINK","postingId"}`, 400 `{"error":"INVALID_POSTING","reason": COMPANY·ROLE·LINK·PERIOD·CLOSED}` |
 | `DELETE /api/v1/notifications/admin/postings/{id}` | 204. 대기 발송만 삭제하고 수락·포기·발송 중 기록은 남긴다. 404 `POSTING_NOT_FOUND` |
 
 수정 API는 없다. 삭제 후 재등록하면 전원에게 한 번 더 간다.

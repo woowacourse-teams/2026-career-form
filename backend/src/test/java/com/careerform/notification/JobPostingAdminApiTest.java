@@ -161,6 +161,28 @@ class JobPostingAdminApiTest {
         mvc.perform(get("/api/v1/notifications/admin/postings").header("Authorization", PASSWORD)).andExpect(jsonPath("$.postings.length()").value(0));
     }
 
+    @Test
+    @DisplayName("직무를 생략하거나 비워도 등록되고 목록은 직무 필드를 생략한다")
+    void registersWithoutRole() throws Exception {
+        store.insertSubscription(new PushSubscription("s1", "https://fcm.googleapis.com/fcm/send/s1", "p", "a", NOW));
+        mvc.perform(post("/api/v1/notifications/admin/postings").header("Authorization", PASSWORD).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"company\":\"합성 회사\",\"link\":\"https://careers.example.test/jobs/omitted\",\"opensAt\":\"2030-01-01T06:00:00Z\",\"closesAt\":\"2030-01-31T15:00:00Z\"}"))
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.deliveries").value(1));
+        mvc.perform(post("/api/v1/notifications/admin/postings").header("Authorization", PASSWORD).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"company\":\"합성 회사\",\"role\":\"\",\"link\":\"https://careers.example.test/jobs/blank\",\"opensAt\":\"2030-01-01T06:00:00Z\",\"closesAt\":\"2030-01-31T15:00:00Z\"}"))
+            .andExpect(status().isCreated());
+        mvc.perform(post("/api/v1/notifications/admin/postings").header("Authorization", PASSWORD).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"company\":\"합성 회사\",\"role\":\"" + "직".repeat(121) + "\",\"link\":\"https://careers.example.test/jobs/long\",\"opensAt\":\"2030-01-01T06:00:00Z\",\"closesAt\":\"2030-01-31T15:00:00Z\"}"))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.reason").value("ROLE"));
+        mvc.perform(get("/api/v1/notifications/admin/postings").header("Authorization", PASSWORD))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.postings.length()").value(2))
+            .andExpect(jsonPath("$.postings[0].role").doesNotExist())
+            .andExpect(jsonPath("$.postings[1].role").doesNotExist())
+            .andExpect(jsonPath("$.postings[0].company").value("합성 회사"));
+        assertThat(store.deliveries()).hasSize(2);
+    }
+
     private static String registration(String link) {
         return "{\"company\":\"합성 회사\",\"role\":\"백엔드\",\"link\":\"" + link + "\",\"opensAt\":\"2030-01-01T06:00:00Z\",\"closesAt\":\"2030-01-31T15:00:00Z\"}";
     }

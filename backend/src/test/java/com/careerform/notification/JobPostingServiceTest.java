@@ -74,7 +74,6 @@ class JobPostingServiceTest {
         var closes = NOW.plusSeconds(86400);
         assertReason(new JobPostingService.Draft(" ", "직무", "https://careers.example.test/jobs/4", opens, closes), "COMPANY");
         assertReason(new JobPostingService.Draft("회".repeat(81), "직무", "https://careers.example.test/jobs/4", opens, closes), "COMPANY");
-        assertReason(new JobPostingService.Draft("회사", "", "https://careers.example.test/jobs/4", opens, closes), "ROLE");
         assertReason(new JobPostingService.Draft("회사", "직".repeat(121), "https://careers.example.test/jobs/4", opens, closes), "ROLE");
         assertReason(new JobPostingService.Draft("회사", "직무", null, opens, closes), "LINK");
         assertReason(new JobPostingService.Draft("회사", "직무", "ftp://careers.example.test/jobs/4", opens, closes), "LINK");
@@ -87,6 +86,25 @@ class JobPostingServiceTest {
         assertReason(new JobPostingService.Draft("회사", "직무", "https://careers.example.test/jobs/4", NOW.minusSeconds(7200), NOW), "CLOSED");
         assertThat(store.listPostings()).isEmpty();
         assertThat(store.deliveries()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("직무를 비우거나 생략한 공고도 저장·발송 예약되고 직무는 null로 남는다")
+    void registersPostingWithoutRole() {
+        subscribe("s1");
+        var omitted = assertInstanceOf(JobPostingService.Registered.class, service.register(new JobPostingService.Draft("합성 회사", null,
+            "https://careers.example.test/jobs/no-role", NOW.minusSeconds(60), NOW.plusSeconds(86400))));
+        var blank = assertInstanceOf(JobPostingService.Registered.class, service.register(new JobPostingService.Draft("합성 회사", "   ",
+            "https://careers.example.test/jobs/blank-role", NOW.minusSeconds(60), NOW.plusSeconds(86400))));
+        assertThat(omitted.posting().role()).isNull();
+        assertThat(blank.posting().role()).isNull();
+        assertThat(omitted.deliveries()).isEqualTo(1);
+        assertThat(store.findPosting(omitted.posting().id()).orElseThrow().role()).isNull();
+        assertThat(service.open()).extracting(JobPosting::link).contains("https://careers.example.test/jobs/no-role", "https://careers.example.test/jobs/blank-role");
+        assertThat(service.list()).hasSize(2);
+        var withRole = assertInstanceOf(JobPostingService.Registered.class, service.register(new JobPostingService.Draft("합성 회사", " 백엔드 ",
+            "https://careers.example.test/jobs/with-role", NOW.minusSeconds(60), NOW.plusSeconds(86400))));
+        assertThat(withRole.posting().role()).isEqualTo("백엔드");
     }
 
     @Test

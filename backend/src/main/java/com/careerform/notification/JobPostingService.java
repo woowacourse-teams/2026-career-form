@@ -72,11 +72,16 @@ public final class JobPostingService {
     private JobPosting validate(Draft draft, Instant now) {
         Objects.requireNonNull(draft);
         var company = text(draft.company(), MAX_COMPANY_LENGTH, "COMPANY");
-        var role = text(draft.role(), MAX_ROLE_LENGTH, "ROLE");
+        var role = optionalText(draft.role(), MAX_ROLE_LENGTH, "ROLE");
         var link = link(draft.link());
         if (draft.opensAt() == null || draft.closesAt() == null || !draft.opensAt().isBefore(draft.closesAt())) { throw new InvalidPosting("PERIOD"); }
         if (!draft.closesAt().isAfter(now)) { throw new InvalidPosting("CLOSED"); }
         return new JobPosting(Identifiers.random(), company, role, link, draft.opensAt(), draft.closesAt(), now);
+    }
+
+    /** 직무처럼 비우거나 생략할 수 있는 값. 값이 있을 때만 길이와 제어 문자를 검사한다. */
+    private static String optionalText(String value, int maxLength, String reason) {
+        return value == null || value.isBlank() ? null : text(value, maxLength, reason);
     }
 
     private static String text(String value, int maxLength, String reason) {

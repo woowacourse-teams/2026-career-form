@@ -32,7 +32,8 @@
       <h2>공고 등록</h2>
       <form id="posting-form">
         <label>회사<input name="company" maxlength="80" autocomplete="off" required></label>
-        <label>직무<input name="role" maxlength="120" autocomplete="off" required></label>
+        <label>직무 (선택)<input name="role" maxlength="120" autocomplete="off" placeholder="비우면 직무 없이 알립니다"></label>
+        <p class="hint">직무가 하나로 정해지지 않은 공채는 비워 둡니다. 비우면 직무 없이 알림이 나가며, 직무 없는 공고는 새 확장 버전에서만 표시됩니다.</p>
         <label>공고 링크<input name="link" type="url" maxlength="1024" placeholder="https://" autocomplete="off" required></label>
         <label>접수 시작<input name="opensAt" type="datetime-local" required></label>
         <label>마감<input name="closesAt" type="datetime-local" required></label>
