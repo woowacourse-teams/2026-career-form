@@ -903,3 +903,11 @@
 - 승인된 후보 10개(앞선 9개 유지, 10 신규)를 [CF-349 bundle](../raw/issues/CF-349/manifest.md)에 반영했다. 확장 Web Push payload에 직무 선택 입력(payload·목록의 `role` 누락·빈 문자열 수용, 알림 제목과 카드 분기, CF-161 모델 회사명만 필수, 폼 `required` 제거, 보급 전 운영 규칙) 절을 더했다.
 - [확장 Web Push 구독과 공고 알림](topics/extension-push-notifications.md)의 현재 상태와 색인 요약을 갱신했다.
 - 구독 endpoint·키, 실제 공고·프로필 값, 대화 전문은 저장하지 않았다.
+
+## [2026-10-26] ingest | CF-349 표시 지연 계측
+
+- Approval-Digest: 58fbaa1907e00e8d62c1b4f88adb4413722dae936a4a5931773699a306f41f97
+- Source-Revision: 480e75f
+- 승인된 후보 11개(앞선 10개 유지, 11 신규)를 [CF-349 bundle](../raw/issues/CF-349/manifest.md)에 반영했다. 계측 payload에 알림 표시 이벤트의 `delay_ms`(payload `sentAt` 기준, 0~24시간 클램프)와 허용 목록, 키 없는 빌드의 `console.debug` 기록을, 확장 Web Push payload에 `sentAt` 선택 수용과 기준 수치 목적을 더했다.
+- [선택적 이용 계측](topics/usage-analytics.md)과 [확장 Web Push 구독과 공고 알림](topics/extension-push-notifications.md)의 현재 상태와 색인 요약을 갱신했다.
+- 구독 endpoint·키, 실제 공고·프로필 값, 대화 전문은 저장하지 않았다.

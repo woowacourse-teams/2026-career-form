@@ -2,18 +2,18 @@
 
 > Issue: CF-349
 > Collected: 2026-10-26
-> Approval-Digest: a614605e0a14261d727cde1371ebc8ba7c290d69bd5f59da72f0fbc7f2a8d8dc
-> Source-Revision: 5b0a3f63c3417c32ecae1ffb7256db3965a097ab
+> Approval-Digest: 58fbaa1907e00e8d62c1b4f88adb4413722dae936a4a5931773699a306f41f97
+> Source-Revision: 480e75ff5e9e75c5ab8b8ecbdbec321c0ced30c1
 
-이 문서는 2026-10-26에 승인된 CF-349 후보 4와 같은 날 범위 수정 뒤 승인된 후보 9의 계측 부분을 수집한 기록이다. Approval-Digest는 [승인 후보 스냅샷](approved-candidates.md) 전체 UTF-8 바이트의 SHA-256이다.
+이 문서는 2026-10-26에 승인된 CF-349 후보 4, 같은 날 범위 수정 뒤 승인된 후보 9의 계측 부분, 표시 지연 계측 결정 뒤 승인된 후보 11을 수집한 기록이다. Approval-Digest는 [승인 후보 스냅샷](approved-candidates.md) 전체 UTF-8 바이트의 SHA-256이다.
 
 ## 결정
 
-공고 알림에 PostHog 이벤트 7개를 추가한다. 옵션 화면(`surface` `options`)의 `push_subscription_enabled`, `push_subscription_disabled`, `posting_inbox_viewed`, `posting_inbox_saved`와 OS 알림(새 `surface` `notification`)의 `posting_notification_shown`, `posting_notification_opened`, `posting_notification_saved`다. 범위 수정으로 `notification_test_sent`, `notification_visibility_answered`(속성 `answer`: `seen`·`not_seen`), `posting_auto_save_cancelled`를 더하고 저장 이벤트(`posting_notification_saved`, `posting_inbox_saved`)에 계기 `trigger`(`button`·`open`)를 붙인다. 속성은 `surface`, 서버 공고 ID `posting_id`, `answer`, `trigger`뿐이며 회사명, 링크, 프로필 값은 보내지 않는다.
+공고 알림에 PostHog 이벤트 7개를 추가한다. 옵션 화면(`surface` `options`)의 `push_subscription_enabled`, `push_subscription_disabled`, `posting_inbox_viewed`, `posting_inbox_saved`와 OS 알림(새 `surface` `notification`)의 `posting_notification_shown`, `posting_notification_opened`, `posting_notification_saved`다. 범위 수정으로 `notification_test_sent`, `notification_visibility_answered`(속성 `answer`: `seen`·`not_seen`), `posting_auto_save_cancelled`를 더하고 저장 이벤트(`posting_notification_saved`, `posting_inbox_saved`)에 계기 `trigger`(`button`·`open`)를 붙인다. 표시 지연 계측으로 알림 표시 이벤트에만 `delay_ms`(표시 시각 − payload `sentAt`, 음수는 0, 24시간 초과는 86,400,000으로 자름)를 더하고 `sentAt`이 없으면 생략한다. 속성은 `surface`, 서버 공고 ID `posting_id`, `answer`, `trigger`, `delay_ms`뿐이며 회사명, 링크, 프로필 값은 보내지 않는다.
 
 ## 속성 경계
 
-`posting_id`는 `[A-Za-z0-9_-]{1,64}`에 맞는 값만, `answer`와 `trigger`는 허용 값만 `parseAnalyticsMessage`가 통과시키고 그 밖의 속성과 값은 버린다. `posthog.ts`는 `posting_id`가 있을 때만 전송 속성에 넣는다. 백그라운드가 직접 만드는 알림 이벤트도 같은 PostHog 핸들러를 거치므로 키 없는 빌드는 전송하지 않는다.
+`posting_id`는 `[A-Za-z0-9_-]{1,64}`에 맞는 값만, `answer`와 `trigger`는 허용 값만, `delay_ms`는 0 이상 정수만 `parseAnalyticsMessage`가 통과시키고 그 밖의 속성과 값은 버린다. `posthog.ts`는 `posting_id`가 있을 때만 전송 속성에 넣는다. 백그라운드가 직접 만드는 알림 이벤트도 같은 PostHog 핸들러를 거치므로 키 없는 빌드는 전송하지 않는다.
 
 ## 발생 시점
 
@@ -23,7 +23,7 @@
 
 ## 계측 도구
 
-제품 이용 계측은 PostHog 명시 이벤트만 사용하며 GA 등 다른 분석 도구나 SDK는 사용하지 않는다. CF-147, CF-193, CF-271의 허용 속성, 로컬 익명 식별자, 키 없는 빌드 차단과 계측 실패 격리 경계는 그대로 유지한다.
+제품 이용 계측은 PostHog 명시 이벤트만 사용하며 GA 등 다른 분석 도구나 SDK는 사용하지 않는다. CF-147, CF-193, CF-271의 허용 속성, 로컬 익명 식별자, 키 없는 빌드 차단과 계측 실패 격리 경계는 그대로 유지한다. 키 없는 빌드는 전송하지 않되 허용 속성만 담은 `console.debug` 기록을 남겨 수동 검증 경로(예: `delay_ms` 확인)로 쓴다(2026-10-26 사람 결정).
 
 ## 근거와 검증 경계
 
