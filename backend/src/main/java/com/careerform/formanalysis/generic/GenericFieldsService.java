@@ -219,6 +219,10 @@ public final class GenericFieldsService {
             String currentKey = current == null ? null : current.profileFieldKey();
             String detail = GenericProfileSemantics.disabilityDetailKey(field);
             String family = "disability.";
+            if (detail == null) {
+                detail = GenericProfileSemantics.veteranDetailKey(field);
+                family = "veteran.";
+            }
             if (detail == null && veteranSection && GenericProfileSemantics.isRelationLabel(field)) {
                 detail = "veteran.veteran.veteranRelation";
                 family = "veteran.";

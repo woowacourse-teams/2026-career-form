@@ -259,6 +259,20 @@ final class GenericProfileSemantics {
         return null;
     }
 
+    /** 보훈 상세칸도 칸 라벨 자체가 항목을 밝힌다. */
+    static String veteranDetailKey(FieldCandidate candidate) {
+        List<String> labels = ownLabels(candidate);
+        if (candidate.element() == FormElement.SELECT
+            && labels.stream().anyMatch(label -> label.matches("보훈(?:대상)?(?:구분|유형|종류)"))) {
+            return "veteran.veteran.veteranType";
+        }
+        if (candidate.element() == FormElement.INPUT && candidate.control() == FormControl.TEXT
+            && labels.stream().anyMatch(label -> label.matches("보훈(?:대상)?번호(?:입력)?"))) {
+            return "veteran.veteran.veteranNumber";
+        }
+        return null;
+    }
+
     /** '관계' 선택칸은 같은 섹션에 보훈 칸이 있을 때만 보훈 관계로 본다(호출자가 확인). */
     static boolean isRelationLabel(FieldCandidate candidate) {
         return candidate.element() == FormElement.SELECT && ownLabels(candidate).stream()

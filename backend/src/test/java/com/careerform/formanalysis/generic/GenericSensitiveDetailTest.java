@@ -39,6 +39,21 @@ class GenericSensitiveDetailTest {
         assertThat(field(response, "d").profileFieldKey()).isEqualTo(key);
     }
 
+    @ParameterizedTest
+    @CsvSource({"보훈구분,veteran.veteran.veteranType", "보훈 유형,veteran.veteran.veteranType"})
+    void mapsVeteranTypeSelects(String label, String key) {
+        var response = analyze(List.of(select("v", label)), Map.of("v", ABSTAIN));
+
+        assertThat(field(response, "v").profileFieldKey()).isEqualTo(key);
+    }
+
+    @Test
+    void mapsAVeteranNumberText() {
+        var response = analyze(List.of(text("n", "보훈번호 입력")), Map.of("n", ABSTAIN));
+
+        assertThat(field(response, "n").profileFieldKey()).isEqualTo("veteran.veteran.veteranNumber");
+    }
+
     @Test
     void correctsADisabilityDetailTheModelGaveAnotherDisabilityKey() {
         var response = analyze(List.of(select("d", "장애정도")),
