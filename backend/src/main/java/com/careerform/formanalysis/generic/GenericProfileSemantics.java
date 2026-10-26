@@ -8,12 +8,12 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
+import com.careerform.formanalysis.application.RawLabelMask;
 import com.careerform.formanalysis.generic.GenericFieldsRequest.FieldCandidate;
 import com.careerform.formanalysis.generic.GenericFieldsRequest.FormControl;
 import com.careerform.formanalysis.generic.GenericFieldsRequest.FormElement;
 import com.careerform.formanalysis.generic.GenericFieldsRequest.InputType;
 import com.careerform.formanalysis.generic.GenericFieldsRequest.SemanticSource;
-import com.careerform.formanalysis.infrastructure.adapter.ProviderSemanticSanitizer;
 
 /**
  * 범용 경력·자격·어학 섹션 안에서만 쓰는 의미 근거.
@@ -324,9 +324,9 @@ final class GenericProfileSemantics {
         return PLAIN + key + MEANINGS.getOrDefault(key, "");
     }
 
-    /** 공유 정제 결과에 확정된 범주 안의 구조 어휘를 더한다. extended가 아니면 정제 결과 그대로다. */
+    /** 마스킹한 원문 라벨에 확정된 범주 안의 구조 어휘를 더한다. extended가 아니면 마스킹한 원문 그대로다. */
     static String project(String raw, boolean extended) {
-        String safe = ProviderSemanticSanitizer.sanitize(raw);
+        String safe = RawLabelMask.mask(raw);
         if (!extended || raw == null || raw.isBlank()) {
             return safe;
         }

@@ -27,6 +27,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.stereotype.Component;
 
+import com.careerform.formanalysis.application.RawLabelMask;
 import com.careerform.formanalysis.application.SupportedProfileFields;
 import com.careerform.formanalysis.application.port.FieldMappingResolver.DerivedRecipe;
 import com.careerform.formanalysis.exception.ResolverException;
@@ -41,7 +42,6 @@ import com.careerform.formanalysis.generic.GenericFieldsResponse.DatePart;
 import com.careerform.formanalysis.generic.GenericFieldsResponse.DatePartBinding;
 import com.careerform.formanalysis.generic.GenericFieldsResponse.NameBinding;
 import com.careerform.formanalysis.infrastructure.InteractionProviderConditions;
-import com.careerform.formanalysis.infrastructure.adapter.ProviderSemanticSanitizer;
 import com.careerform.formanalysis.infrastructure.adapter.jev.JevClient;
 
 /**
@@ -451,7 +451,7 @@ public final class JevCategoryFieldResolver {
         }
         if (field.options() != null) {
             result.put("options", field.options().stream()
-                .map(option -> ProviderSemanticSanitizer.sanitize(option.displayName()))
+                .map(option -> RawLabelMask.mask(option.displayName()))
                 .filter(Objects::nonNull).distinct().toList());
         }
         return result;
@@ -495,7 +495,7 @@ public final class JevCategoryFieldResolver {
     }
 
     private static void text(Map<String, Object> target, String key, String raw) {
-        String safe = ProviderSemanticSanitizer.sanitize(raw);
+        String safe = RawLabelMask.mask(raw);
         if (safe != null) {
             target.put(key, safe);
         }
