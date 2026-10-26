@@ -207,7 +207,10 @@ function forbiddenGenericReason(
     handle.candidate.placeholder,
     ...(handle.candidate.semanticContext?.labels?.map(({ text }) => text) ??
       []),
-  ].join(" ");
+  ]
+    .join(" ")
+    // "자격인증" names a qualification certificate, not identity verification.
+    .replace(/자격\s*인증/g, "자격");
   if (element instanceof HTMLInputElement && element.type === "search")
     return "검색 제어는 자동 입력하지 않습니다.";
   return handle.candidate.semanticContext?.inputType === "search" ||
