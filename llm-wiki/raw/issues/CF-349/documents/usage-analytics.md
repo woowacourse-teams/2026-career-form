@@ -2,23 +2,24 @@
 
 > Issue: CF-349
 > Collected: 2026-10-26
-> Approval-Digest: dab518584df0f2191e1b2b11ab24a5ebda3ed6297255baad4e3e5142db471952
-> Source-Revision: 7dd07128ad3ccd0edf2834f4084d5b8e0e76cfed
+> Approval-Digest: a13a98b7258ec33fcc5fa174e18f6134f21ade908376db2df0d821e4042b7010
+> Source-Revision: 33c6c4590afa16e7f241871ec84147e09ef28457
 
-이 문서는 2026-10-26에 승인된 CF-349 후보 4를 수집한 기록이다. Approval-Digest는 [승인 후보 스냅샷](approved-candidates.md) 전체 UTF-8 바이트의 SHA-256이다.
+이 문서는 2026-10-26에 승인된 CF-349 후보 4와 같은 날 범위 수정 뒤 승인된 후보 9의 계측 부분을 수집한 기록이다. Approval-Digest는 [승인 후보 스냅샷](approved-candidates.md) 전체 UTF-8 바이트의 SHA-256이다.
 
 ## 결정
 
-공고 알림에 PostHog 이벤트 7개를 추가한다. 옵션 화면(`surface` `options`)의 `push_subscription_enabled`, `push_subscription_disabled`, `posting_inbox_viewed`, `posting_inbox_saved`와 OS 알림(새 `surface` `notification`)의 `posting_notification_shown`, `posting_notification_opened`, `posting_notification_saved`다. 속성은 `surface`와 서버 공고 ID `posting_id`뿐이며 회사명, 링크, 프로필 값은 보내지 않는다.
+공고 알림에 PostHog 이벤트 7개를 추가한다. 옵션 화면(`surface` `options`)의 `push_subscription_enabled`, `push_subscription_disabled`, `posting_inbox_viewed`, `posting_inbox_saved`와 OS 알림(새 `surface` `notification`)의 `posting_notification_shown`, `posting_notification_opened`, `posting_notification_saved`다. 범위 수정으로 `notification_test_sent`, `notification_visibility_answered`(속성 `answer`: `seen`·`not_seen`), `posting_auto_save_cancelled`를 더하고 저장 이벤트(`posting_notification_saved`, `posting_inbox_saved`)에 계기 `trigger`(`button`·`open`)를 붙인다. 속성은 `surface`, 서버 공고 ID `posting_id`, `answer`, `trigger`뿐이며 회사명, 링크, 프로필 값은 보내지 않는다.
 
 ## 속성 경계
 
-`posting_id`는 `[A-Za-z0-9_-]{1,64}`에 맞는 값만 `parseAnalyticsMessage`가 통과시키고 그 밖의 속성은 버린다. `posthog.ts`는 `posting_id`가 있을 때만 전송 속성에 넣는다. 백그라운드가 직접 만드는 알림 이벤트도 같은 PostHog 핸들러를 거치므로 키 없는 빌드는 전송하지 않는다.
+`posting_id`는 `[A-Za-z0-9_-]{1,64}`에 맞는 값만, `answer`와 `trigger`는 허용 값만 `parseAnalyticsMessage`가 통과시키고 그 밖의 속성과 값은 버린다. `posthog.ts`는 `posting_id`가 있을 때만 전송 속성에 넣는다. 백그라운드가 직접 만드는 알림 이벤트도 같은 PostHog 핸들러를 거치므로 키 없는 빌드는 전송하지 않는다.
 
 ## 발생 시점
 
 - 공지함 열람은 목록 로드 성공 시 마운트당 한 번, 공지함 저장은 `PostingService.save` 성공 뒤, 구독 켬·끔은 `setEnabled` 성공 뒤 기록한다.
 - 알림 표시는 `chrome.notifications.create` 성공 뒤, 열기는 사용자 클릭으로 탭을 연 뒤, 저장은 로컬 저장 성공(남은 알림 없음 포함) 뒤에만 기록한다. 이미 저장한 공고와 마감 지난 공고는 저장 이벤트를 기록하지 않는다.
+- 알림 테스트 실행과 표시 확인 응답은 버튼을 누른 화면(`options` 또는 `extension_onboarding`)이 기록하고, 자동 저장 취소는 후속 알림(`notification`)과 공지함(`options`)에서 취소가 끝난 뒤 기록한다. 자동 저장 설정 켜기·끄기 자체는 기록하지 않는다.
 
 ## 계측 도구
 

@@ -887,3 +887,11 @@
 - 승인된 후보 5개를 [CF-349 bundle](../raw/issues/CF-349/manifest.md)에 두 payload로 기록했다. 확장 Web Push(설치·시작·켜기·알람·구독 변경이 `sync()`로 수렴하는 구독 수명주기와 상태 6종·재시도 규칙, `userVisibleOnly: false`와 Chrome 121 하한의 조용한 푸시 수신, 중복·마감 억제, 사용자 클릭으로만 탭을 여는 알림 정책과 CF-161 저장 연결, `push-api.ts` 계약 정본과 PR #351 대조, 공지함·구독 설정 화면 결정), 계측(이벤트 7개와 surface `notification`, `posting_id`만 허용).
 - 새 topic [확장 Web Push 구독과 공고 알림](topics/extension-push-notifications.md)을 만들고 [선택적 이용 계측](topics/usage-analytics.md)의 Current를 CF-349로 바꾸고 앞선 근거를 History에 남겼다.
 - 구독 endpoint·키, 실제 공고·프로필 값, 대화 전문은 저장하지 않았다.
+
+## [2026-10-26] ingest | CF-349 범위 수정: 알림 표시 자가 진단·미확인 배지·열기 자동 저장
+
+- Approval-Digest: a13a98b7258ec33fcc5fa174e18f6134f21ade908376db2df0d821e4042b7010
+- Source-Revision: 33c6c45
+- 승인된 후보 9개(앞선 5개 유지, 6~9 신규)를 [CF-349 bundle](../raw/issues/CF-349/manifest.md)에 반영했다. 확장 Web Push payload에 OS 알림 허용을 감지할 수 없어 사용자 응답으로 확인하는 자가 진단(테스트 알림은 버튼 클릭으로만, 카드 노출 조건, OS별 안내, 온보딩 발신자 허용 범위), 미확인 배지(`careerForm.push.unread`, 숫자만, 공지함 열람 시 0, 재시작 복원, 사이드 패널 개수), 열기 자동 저장(기본 켜짐, 세 경로, 후속 알림·카드의 취소), 화면 정리(공지함 3건 접기, 설정 패널 위치, 128px 알림 아이콘)와 2026-10-26 실기동 확인 범위·한계를 더했다. 계측 payload에 이벤트 3종과 `answer`·`trigger` 속성을 더했다.
+- [확장 Web Push 구독과 공고 알림](topics/extension-push-notifications.md)과 [선택적 이용 계측](topics/usage-analytics.md)의 현재 상태와 색인 요약을 갱신했다.
+- 구독 endpoint·키, 실제 공고·프로필 값, 대화 전문은 저장하지 않았다.
