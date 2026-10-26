@@ -3,22 +3,31 @@ import type { TrackEvent } from "../analytics/events";
 import { trackExtensionEvent } from "../analytics/extension-tracker";
 import styles from "./JobPostings.module.css";
 import { remainingTime } from "./model";
+import type { VisibilityAnswer } from "./notification-check";
 import {
   PushApiError,
   type PushApiErrorCode,
   type ServerPosting,
 } from "./push-api";
 import { pushClient, type PushClient } from "./push-client";
-import type { PushStateView } from "./push-messages";
-import { MINIMUM_CHROME_VERSION } from "./push-subscription";
+import type { PushStateView, RecordSource } from "./push-messages";
 import { formatPostingPeriod } from "./server-posting";
+import { VisibilityCheck, type VisibilityVariant } from "./VisibilityCheck";
 
+const COLLAPSED_COUNT = 3;
 interface Props {
   client?: PushClient;
+  state: PushStateView | undefined;
   savedUrls: ReadonlySet<string>;
+  autoSavedUrls: ReadonlySet<string>;
   busy: boolean;
   now: number;
   onSave(posting: ServerPosting): void;
+  onOpen(posting: ServerPosting): void;
+  onUndo(posting: ServerPosting): void;
+  onTest(): Promise<void>;
+  onAnswer(answer: VisibilityAnswer, source: RecordSource): Promise<void>;
+  onLater(): Promise<void>;
   track?: TrackEvent;
 }
 
@@ -30,43 +39,38 @@ const inboxMessages: Partial<Record<PushApiErrorCode, string>> = {
 };
 const defaultInboxMessage =
   "공지함을 불러오지 못했습니다. 네트워크 상태를 확인하고 다시 시도해 주세요.";
-const unsupportedText = `Chrome ${MINIMUM_CHROME_VERSION} 이상에서만 새 공고 알림을 받을 수 있습니다. 현재 Chrome에서는 구독하지 않습니다.`;
 
-export function subscriptionStatusText(state: PushStateView | undefined) {
-  if (!state) return "구독 상태를 확인하는 중입니다.";
-  if (!state.supported) return unsupportedText;
-  if (!state.enabled) return "꺼짐 · 새 공고 알림을 받지 않습니다.";
-  switch (state.status?.code) {
-    case "registered":
-      return "등록됨 · 새 공고가 등록되면 알림이 옵니다.";
-    case "failed":
-      return "등록 실패 · 잠시 후 자동으로 다시 시도합니다.";
-    case "not_configured":
-      return "백엔드 없음 · 이 빌드에는 알림 서버가 설정되지 않았습니다.";
-    case "endpoint_unavailable":
-      return "서버 미지원 · 서버가 아직 공고 알림을 지원하지 않습니다.";
-    case "unsupported":
-      return unsupportedText;
-    default:
-      return "등록 확인 중 · 구독을 서버에 등록하고 있습니다.";
-  }
+// Which visibility card to ask with, decided once per page visit.
+function cardFor(state: PushStateView): VisibilityVariant | undefined {
+  const { visibility } = state;
+  if (visibility.result !== "unknown") return undefined;
+  if (visibility.shownAt !== undefined) return "confirm";
+  if (state.enabled && state.supported && visibility.askLaterAt === undefined)
+    return "question";
+  return undefined;
 }
 
 export function NoticeBoard({
   client = pushClient,
+  state,
   savedUrls,
+  autoSavedUrls,
   busy,
   now,
   onSave,
+  onOpen,
+  onUndo,
+  onTest,
+  onAnswer,
+  onLater,
   track = trackExtensionEvent,
 }: Props) {
   const id = useId();
-  const [state, setState] = useState<PushStateView>();
-  const [stateFailed, setStateFailed] = useState(false);
   const [postings, setPostings] = useState<ServerPosting[]>();
   const [inboxError, setInboxError] = useState<PushApiErrorCode>();
   const [loading, setLoading] = useState(true);
-  const [toggling, setToggling] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [card, setCard] = useState<VisibilityVariant>();
   const viewed = useRef(false);
   const trackRef = useRef(track);
   trackRef.current = track;
@@ -86,38 +90,29 @@ export function NoticeBoard({
       setLoading(false);
     }
   }, [client]);
-  const loadState = useCallback(async () => {
-    try {
-      setState(await client.state());
-      setStateFailed(false);
-    } catch {
-      setStateFailed(true);
-    }
-  }, [client]);
   useEffect(() => {
     void loadInbox();
   }, [loadInbox]);
   useEffect(() => {
-    void loadState();
-    return client.subscribe(() => void loadState());
-  }, [client, loadState]);
-  const changeEnabled = async (
-    enabled: boolean,
-    event?: "push_subscription_enabled" | "push_subscription_disabled",
-  ) => {
-    setToggling(true);
-    try {
-      setState(await client.setEnabled(enabled));
-      setStateFailed(false);
-      if (event) track(event, { surface: "options" });
-    } catch {
-      setStateFailed(true);
-    } finally {
-      setToggling(false);
-    }
-  };
+    if (state && card === undefined) setCard(cardFor(state));
+  }, [state, card]);
+  const autoSave = state?.autoSave ?? true;
+  const visible = expanded ? postings : postings?.slice(0, COLLAPSED_COUNT);
+  const hidden = (postings?.length ?? 0) - (visible?.length ?? 0);
   return (
     <>
+      {card && (
+        <VisibilityCheck
+          variant={card}
+          state={state}
+          busy={busy}
+          onTest={onTest}
+          onAnswer={onAnswer}
+          onLater={onLater}
+          track={track}
+          surface="options"
+        />
+      )}
       <section className={styles.inbox} aria-labelledby={`${id}-inbox`}>
         <div className={styles.sectionHeading}>
           <h2 id={`${id}-inbox`}>공지함</h2>
@@ -137,10 +132,11 @@ export function NoticeBoard({
         {postings && !inboxError && postings.length === 0 && (
           <p className={styles.inboxEmpty}>지금 진행 중인 공고가 없습니다.</p>
         )}
-        {postings && !inboxError && postings.length > 0 && (
+        {visible && !inboxError && visible.length > 0 && (
           <ul className={styles.list}>
-            {postings.map((posting) => {
+            {visible.map((posting) => {
               const saved = savedUrls.has(posting.link);
+              const undoable = saved && autoSavedUrls.has(posting.link);
               const urgent = posting.closesAt - now <= 86400000;
               return (
                 <li
@@ -175,7 +171,9 @@ export function NoticeBoard({
                     <p className={styles.reminderStatus}>
                       {saved
                         ? "마감 알림에 저장한 공고"
-                        : "저장하면 마감 24시간·2시간 전에 알려드려요"}
+                        : autoSave
+                          ? "공고를 열면 마감 알림에 저장돼요 (24시간·2시간 전)"
+                          : "저장하면 마감 24시간·2시간 전에 알려드려요"}
                     </p>
                   </div>
                   <div className={styles.cardFooter}>
@@ -186,16 +184,27 @@ export function NoticeBoard({
                         target="_blank"
                         rel="noopener noreferrer"
                         aria-label={`${posting.company} 공고 열기`}
+                        onClick={() => onOpen(posting)}
                       >
                         공고 열기 <span aria-hidden="true">↗</span>
                       </a>
-                      <button
-                        disabled={busy || saved}
-                        aria-label={`${posting.company} 마감 알림 저장`}
-                        onClick={() => onSave(posting)}
-                      >
-                        {saved ? "저장됨" : "마감 알림 저장"}
-                      </button>
+                      {undoable ? (
+                        <button
+                          disabled={busy}
+                          aria-label={`${posting.company} 저장 취소`}
+                          onClick={() => onUndo(posting)}
+                        >
+                          취소
+                        </button>
+                      ) : (
+                        <button
+                          disabled={busy || saved}
+                          aria-label={`${posting.company} 마감 알림 저장`}
+                          onClick={() => onSave(posting)}
+                        >
+                          {saved ? "저장됨" : "마감 알림 저장"}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </li>
@@ -203,63 +212,13 @@ export function NoticeBoard({
             })}
           </ul>
         )}
-      </section>
-      <section
-        className={styles.subscription}
-        aria-labelledby={`${id}-subscription`}
-      >
-        <div className={styles.sectionHeading}>
-          <h2 id={`${id}-subscription`}>공고 알림 구독</h2>
-        </div>
-        <div className={styles.subscriptionPanel}>
-          <label className={styles.switch}>
-            <input
-              type="checkbox"
-              role="switch"
-              checked={state?.enabled ?? true}
-              disabled={!state || toggling || !state.supported}
-              onChange={(event) =>
-                void changeEnabled(
-                  event.target.checked,
-                  event.target.checked
-                    ? "push_subscription_enabled"
-                    : "push_subscription_disabled",
-                )
-              }
-            />
-            새 공고를 Chrome 알림으로 받기
-          </label>
-          <p className={styles.subscriptionStatus} role="status">
-            {subscriptionStatusText(state)}
-          </p>
-          {stateFailed && (
-            <p className={styles.subscriptionStatus}>
-              구독 상태를 불러오지 못했습니다.
-            </p>
-          )}
-          {state?.enabled && state.status?.code === "failed" && (
-            <div className={styles.subscriptionActions}>
-              <button
-                disabled={toggling}
-                onClick={() => void changeEnabled(true)}
-              >
-                다시 등록
-              </button>
-            </div>
-          )}
-          <ul className={styles.subscriptionNotes}>
-            <li>
-              Chrome이 완전히 종료된 동안에는 알림이 도착하지 않으며, OS 알림
-              설정에 따라 차단되거나 늦게 표시될 수 있습니다. 놓친 공고는
-              공지함에서 다시 볼 수 있습니다.
-            </li>
-            <li>
-              구독을 켜면 이 브라우저의 푸시 구독 주소가 서버에 저장되고, 끄면
-              서버에 삭제를 요청합니다. 프로필 값과 지원서 내용은 보내지
-              않습니다.
-            </li>
-          </ul>
-        </div>
+        {hidden > 0 && !inboxError && (
+          <div className={styles.inboxMore}>
+            <button onClick={() => setExpanded(true)}>
+              {hidden}건 더 보기
+            </button>
+          </div>
+        )}
       </section>
     </>
   );

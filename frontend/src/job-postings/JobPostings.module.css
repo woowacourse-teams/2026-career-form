@@ -537,6 +537,14 @@
   flex-wrap: wrap;
   margin-top: 10px;
 }
+.switchSpaced {
+  margin-top: 16px;
+}
+.inboxMore {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+}
 .subscriptionNotes {
   margin: 12px 0 0;
   padding-left: 18px;

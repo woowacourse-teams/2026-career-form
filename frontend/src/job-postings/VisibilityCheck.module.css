@@ -1,0 +1,80 @@
+.card {
+  padding: 18px 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-surface);
+  margin-bottom: 20px;
+}
+.card h3 {
+  margin: 0 0 6px;
+  font-size: 16px;
+  color: var(--color-text-strong);
+}
+.card p,
+.guidance p,
+.ask p {
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: var(--color-text-muted);
+  line-height: 1.6;
+}
+.eyebrow {
+  display: inline-block;
+  margin-bottom: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--color-action);
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.actions button {
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.actions button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.actions .primary {
+  background: var(--color-action);
+  border-color: var(--color-action);
+  color: var(--color-on-action);
+}
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+.ask,
+.guidance {
+  margin-top: 12px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+}
+.guidance ul {
+  margin: 0 0 12px;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--color-text);
+}
+.guidance strong {
+  color: var(--color-text-strong);
+}

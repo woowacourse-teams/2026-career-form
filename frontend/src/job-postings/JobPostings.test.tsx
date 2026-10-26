@@ -5,6 +5,7 @@ import { PostingService } from "./service";
 import type { Posting } from "./model";
 import type { ServerPosting } from "./push-api";
 import type { PushClient } from "./push-client";
+import type { PushStateView } from "./push-messages";
 function setup(fail = false) {
   let rows: Posting[] = [];
   const service = new PostingService(
@@ -33,13 +34,33 @@ function setup(fail = false) {
     subscribe: () => () => {},
   };
   const inbox: ServerPosting[] = [];
+  let pushState: PushStateView = {
+    enabled: true,
+    supported: true,
+    status: null,
+    permission: "granted",
+    visibility: { result: "seen", checkedAt: 0, source: "test" },
+    autoSave: true,
+    unread: 0,
+  };
   const pushClient: PushClient = {
-    state: async () => ({ enabled: true, supported: true, status: null }),
-    setEnabled: async (enabled) => ({ enabled, supported: true, status: null }),
+    state: async () => pushState,
+    setEnabled: async (enabled) => (pushState = { ...pushState, enabled }),
+    setAutoSave: async (autoSave) => (pushState = { ...pushState, autoSave }),
+    test: async () => pushState,
+    record: async () => pushState,
+    later: async () => pushState,
     inbox: async () => inbox,
     subscribe: () => () => {},
   };
-  return { client, pushClient, inbox };
+  return {
+    client,
+    pushClient,
+    inbox,
+    setAutoSave: (value: boolean) => {
+      pushState = { ...pushState, autoSave: value };
+    },
+  };
 }
 function fill() {
   fireEvent.change(screen.getByLabelText("회사명"), {
@@ -397,6 +418,7 @@ it("공지함의 공고를 마감 알림으로 저장하고 저장됨으로 구�
   expect(track).toHaveBeenCalledWith("posting_inbox_saved", {
     surface: "options",
     posting_id: "a".repeat(32),
+    trigger: "button",
   });
   expect(JSON.stringify(track.mock.calls)).not.toContain("공지 회사");
   expect(JSON.stringify(track.mock.calls)).not.toContain("careers.example");
@@ -421,4 +443,97 @@ it("남은 알림이 없는 공지함 공고를 저장하면 기존 안내를 �
   );
   await screen.findByText(/예약할 미래 알림이 없습니다/);
   expect((await client.list()).postings).toHaveLength(1);
+});
+
+it("공지함에서 공고를 열면 자동 저장하고 취소하면 저장과 예약을 함께 지운다", async () => {
+  const now = Date.parse("2026-10-06T06:00Z");
+  const { client, pushClient, inbox } = setup();
+  inbox.push({
+    id: "c".repeat(32),
+    company: "열기 회사",
+    role: "데이터",
+    link: "https://careers.example.test/jobs/open",
+    opensAt: now - 3600000,
+    closesAt: now + 3 * 86400000,
+  });
+  const track = vi.fn();
+  render(
+    <JobPostings
+      client={client}
+      pushClient={pushClient}
+      now={() => now}
+      track={track}
+    />,
+  );
+  fireEvent.click(
+    await screen.findByRole("link", { name: "열기 회사 공고 열기" }),
+  );
+  await screen.findByText("공고를 마감 알림에 저장했습니다.");
+  expect((await client.list()).postings).toHaveLength(1);
+  expect(track).toHaveBeenCalledWith("posting_inbox_saved", {
+    surface: "options",
+    posting_id: "c".repeat(32),
+    trigger: "open",
+  });
+  fireEvent.click(screen.getByRole("button", { name: "열기 회사 저장 취소" }));
+  await screen.findByText("마감 알림 저장을 취소했습니다.");
+  expect((await client.list()).postings).toHaveLength(0);
+  expect(track).toHaveBeenCalledWith("posting_auto_save_cancelled", {
+    surface: "options",
+    posting_id: "c".repeat(32),
+  });
+  expect(
+    screen.queryByRole("button", { name: "열기 회사 저장 취소" }),
+  ).toBeNull();
+});
+
+it("자동 저장을 끄면 공지함에서 열어도 저장하지 않는다", async () => {
+  const now = Date.parse("2026-10-06T06:00Z");
+  const { client, pushClient, inbox, setAutoSave } = setup();
+  setAutoSave(false);
+  inbox.push({
+    id: "d".repeat(32),
+    company: "열기만 회사",
+    role: "데이터",
+    link: "https://careers.example.test/jobs/open-only",
+    opensAt: now - 3600000,
+    closesAt: now + 3 * 86400000,
+  });
+  render(
+    <JobPostings client={client} pushClient={pushClient} now={() => now} />,
+  );
+  fireEvent.click(
+    await screen.findByRole("link", { name: "열기만 회사 공고 열기" }),
+  );
+  await screen.findByRole("switch", {
+    name: "공고를 열면 마감 알림에 자동 저장",
+  });
+  expect((await client.list()).postings).toHaveLength(0);
+  expect(screen.queryByText("공고를 마감 알림에 저장했습니다.")).toBeNull();
+});
+
+it("구독 설정 패널은 저장 공고 목록 아래, 알림과 로컬 저장 안내 위에 있다", async () => {
+  const { client, pushClient } = setup();
+  render(
+    <JobPostings
+      client={client}
+      pushClient={pushClient}
+      now={() => Date.parse("2026-10-06T06:00Z")}
+    />,
+  );
+  await screen.findByText("지원할 공고를 저장해보세요.");
+  const headings = screen
+    .getAllByRole("heading", { level: 2 })
+    .map((h) => h.textContent);
+  expect(headings.indexOf("공지함")).toBeLessThan(
+    headings.indexOf("다가오는 마감"),
+  );
+  expect(headings.indexOf("다가오는 마감")).toBeLessThan(
+    headings.indexOf("공고 알림 구독"),
+  );
+  const panel = screen.getByRole("heading", { name: "공고 알림 구독" });
+  const notice = screen.getByText("알림과 로컬 저장 안내");
+  expect(
+    panel.compareDocumentPosition(notice) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
 });

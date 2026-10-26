@@ -1,4 +1,10 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createEmptyProfile } from "../../src/profile/model";
@@ -323,4 +329,26 @@ it("공고 관리 진입을 하나로 합치고 자동 기입 앞에 배치한�
   ).toBeTruthy();
   fireEvent.click(manage);
   expect(openPostings).toHaveBeenCalledWith(false);
+});
+
+it("지원 공고 관리 버튼에 미확인 공고 개수를 보여 주고 저장소 변경에 따라 갱신한다", async () => {
+  let notify: ((count: number) => void) | undefined;
+  render(
+    <App
+      repository={createRepository()}
+      unreadPostings={{
+        count: async () => 3,
+        subscribe: (listener) => {
+          notify = listener;
+          return () => {};
+        },
+      }}
+    />,
+  );
+  const manage = await screen.findByRole("button", { name: /지원 공고 관리/ });
+  await waitFor(() =>
+    expect(manage).toHaveAccessibleName("지원 공고 관리 새 공고 3건"),
+  );
+  act(() => notify?.(0));
+  await waitFor(() => expect(manage).toHaveAccessibleName("지원 공고 관리"));
 });
