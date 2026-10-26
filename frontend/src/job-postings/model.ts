@@ -38,8 +38,8 @@ export function isHttpUrl(value: string): boolean {
   }
 }
 export function validateInput(input: PostingInput, now: number): void {
-  if (!input.company.trim() || !input.role.trim())
-    throw new Error("회사명과 직무를 입력해 주세요.");
+  // Role is optional: team postings often span several roles.
+  if (!input.company.trim()) throw new Error("회사명을 입력해 주세요.");
   if (!isHttpUrl(input.url))
     throw new Error(
       "HTTP(S) 공고 링크를 입력해 주세요. 계정 정보가 포함된 링크는 사용할 수 없습니다.",

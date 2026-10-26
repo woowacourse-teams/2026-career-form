@@ -1,19 +1,34 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { TrackEvent } from "../analytics/events";
+import { trackExtensionEvent } from "../analytics/extension-tracker";
 import { postingClient, type PostingClient } from "./client";
 import type { Posting, PostingInput } from "./model";
+import { NoticeBoard } from "./NoticeBoard";
+import type { ServerPosting } from "./push-api";
+import {
+  pushClient as defaultPushClient,
+  type PushClient,
+} from "./push-client";
+import { postingInput, reminderOutcome } from "./server-posting";
 import type { PostingSnapshot } from "./service";
+import { SubscriptionSettings } from "./SubscriptionSettings";
+import { usePushState } from "./use-push-state";
 import { PostingForm } from "./PostingForm";
 import { PostingList } from "./PostingList";
 import styles from "./JobPostings.module.css";
 interface Props {
   client?: PostingClient;
+  pushClient?: PushClient;
   initialCreate?: boolean;
   now?: () => number;
+  track?: TrackEvent;
 }
 export function JobPostings({
   client = postingClient,
+  pushClient = defaultPushClient,
   initialCreate = false,
   now = Date.now,
+  track = trackExtensionEvent,
 }: Props) {
   const [snapshot, setSnapshot] = useState<PostingSnapshot>();
   const [error, setError] = useState("");
@@ -101,15 +116,16 @@ export function JobPostings({
   }, [client, now]);
   const mutate = async (
     action: () => Promise<PostingSnapshot>,
-    message: string,
+    message: string | ((next: PostingSnapshot) => string),
     dismissForm = false,
   ) => {
     setBusy(true);
     setError("");
     setFeedback("");
     try {
-      setSnapshot(await action());
-      setFeedback(message);
+      const next = await action();
+      setSnapshot(next);
+      setFeedback(typeof message === "string" ? message : message(next));
       if (dismissForm) closeForm();
     } catch (e) {
       setError(
@@ -141,6 +157,61 @@ export function JobPostings({
       "공고가 저장되었습니다.",
       true,
     );
+  };
+  const push = usePushState(pushClient);
+  const [autoSavedUrls, setAutoSavedUrls] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  const savedUrls = new Set((snapshot?.postings ?? []).map((p) => p.url));
+  const savedMessage = (posting: ServerPosting) => (next: PostingSnapshot) => {
+    const saved = next.postings.find((p) => p.url === posting.link);
+    return saved && reminderOutcome(saved) === "no_future_reminders"
+      ? "공고를 저장했지만 예약할 미래 알림이 없습니다. 이미 지난 알림은 보내지 않습니다."
+      : "공고를 마감 알림에 저장했습니다.";
+  };
+  // Server postings become ordinary local postings with the default reminders.
+  const saveServerPosting = (
+    posting: ServerPosting,
+    trigger: "button" | "open",
+  ) =>
+    mutate(async () => {
+      const next = await client.save(postingInput(posting));
+      if (trigger === "open")
+        setAutoSavedUrls((previous) => new Set(previous).add(posting.link));
+      setView("planned");
+      track("posting_inbox_saved", {
+        surface: "options",
+        posting_id: posting.id,
+        trigger,
+      });
+      return next;
+    }, savedMessage(posting));
+  const saveFromInbox = (posting: ServerPosting) => {
+    if (savedUrls.has(posting.link)) return;
+    void saveServerPosting(posting, "button");
+  };
+  // Opening a posting saves its reminder only while the setting is on.
+  const openFromInbox = (posting: ServerPosting) => {
+    if (!(push.state?.autoSave ?? true)) return;
+    if (savedUrls.has(posting.link) || posting.closesAt <= time) return;
+    void saveServerPosting(posting, "open");
+  };
+  const undoFromInbox = (posting: ServerPosting) => {
+    const saved = snapshot?.postings.find((p) => p.url === posting.link);
+    if (!saved) return;
+    void mutate(async () => {
+      const next = await client.remove(saved.id, saved.version);
+      setAutoSavedUrls((previous) => {
+        const remaining = new Set(previous);
+        remaining.delete(posting.link);
+        return remaining;
+      });
+      track("posting_auto_save_cancelled", {
+        surface: "options",
+        posting_id: posting.id,
+      });
+      return next;
+    }, "마감 알림 저장을 취소했습니다.");
   };
   const rows = [...(snapshot?.postings ?? [])].sort(
     (a, b) => a.deadline - b.deadline,
@@ -294,6 +365,21 @@ export function JobPostings({
                 )}
               </p>
             </div>
+            <NoticeBoard
+              client={pushClient}
+              state={push.state}
+              savedUrls={savedUrls}
+              autoSavedUrls={autoSavedUrls}
+              busy={busy || push.busy}
+              now={time}
+              onSave={saveFromInbox}
+              onOpen={openFromInbox}
+              onUndo={undoFromInbox}
+              onTest={push.test}
+              onAnswer={push.record}
+              onLater={push.later}
+              track={track}
+            />
             <nav className={styles.tabs} aria-label="지원 상태">
               {(["planned", "expired", "completed"] as const).map((key) => (
                 <button
@@ -347,6 +433,16 @@ export function JobPostings({
                 </div>
               )}
             </section>
+            <SubscriptionSettings
+              state={push.state}
+              failed={push.failed}
+              busy={push.busy}
+              onEnabledChange={push.setEnabled}
+              onAutoSaveChange={push.setAutoSave}
+              onTest={push.test}
+              onAnswer={push.record}
+              track={track}
+            />
           </>
         ))}
       <details className={styles.notice}>

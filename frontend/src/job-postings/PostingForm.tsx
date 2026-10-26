@@ -152,9 +152,8 @@ export function PostingForm({ posting, busy, now, onSave, onCancel }: Props) {
                 <input
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
-                  required
                   maxLength={200}
-                  placeholder="예: 백엔드 개발"
+                  placeholder="예: 백엔드 개발 (선택)"
                 />
               </label>
               <label className={styles.full}>

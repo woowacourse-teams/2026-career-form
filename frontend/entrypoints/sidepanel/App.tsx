@@ -17,6 +17,10 @@ import {
 import { ChromeProfileStorage } from "../../src/storage/chrome-profile-storage";
 import { PageImport } from "../../src/profile/page-import/PageImport";
 import type { ImportCandidate } from "../../src/profile/page-import/reader";
+import {
+  unreadPostingsReader,
+  type UnreadReader,
+} from "../../src/job-postings/unread-postings";
 import styles from "./App.module.css";
 import panelCss from "./App.module.css?inline";
 
@@ -34,6 +38,7 @@ interface AppProps {
   returnToProfile?: () => void;
   actionPosition?: "top" | "bottom";
   showPostings?: boolean;
+  unreadPostings?: UnreadReader;
   readImportCandidates?: () => Promise<readonly ImportCandidate[]>;
 }
 
@@ -111,6 +116,7 @@ export function App({
   returnToProfile,
   actionPosition = "top",
   showPostings = true,
+  unreadPostings = unreadPostingsReader,
   readImportCandidates,
 }: AppProps) {
   const repository = useMemo(
@@ -128,6 +134,20 @@ export function App({
   const [copyFailed, setCopyFailed] = useState(false);
   const [navigationFailed, setNavigationFailed] = useState(false);
   const [postingsFailed, setPostingsFailed] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  useEffect(() => {
+    let active = true;
+    void unreadPostings.count().then((count) => {
+      if (active) setUnreadCount(count);
+    });
+    const unsubscribe = unreadPostings.subscribe((count) => {
+      if (active) setUnreadCount(count);
+    });
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [unreadPostings]);
   const [autofillFailed, setAutofillFailed] = useState(false);
   const [autofillPending, setAutofillPending] = useState(false);
   const startPending = useRef(false);
@@ -299,6 +319,14 @@ export function App({
               }}
             >
               지원 공고 관리 <span aria-hidden="true">↗</span>
+              {unreadCount > 0 && (
+                <span
+                  className={styles.unreadBadge}
+                  aria-label={`새 공고 ${unreadCount}건`}
+                >
+                  {unreadCount}
+                </span>
+              )}
             </button>
           </nav>
         )}

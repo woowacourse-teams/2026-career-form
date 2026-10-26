@@ -102,3 +102,19 @@ it("랜딩에서 공고 저장과 마감 알림 흐름을 소개한다", () => {
   expect(screen.getByText(/프로필 등록 없이/)).toBeVisible();
   expect(screen.getByText(/지원 완료로 표시하면 남은 알림/)).toBeVisible();
 });
+
+it("does not show the notification check card on the public site or without a push client", () => {
+  render(
+    <SiteApp
+      path="/onboarding/"
+      installed
+      profileHref="/options.html"
+      postingsHref="/options.html#postings/new"
+    />,
+  );
+  expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+    "무엇부터 시작할까요?",
+  );
+  expect(screen.queryByText("새 공고 알림이 켜져 있어요")).toBeNull();
+  expect(screen.queryByRole("button", { name: "알림 테스트" })).toBeNull();
+});

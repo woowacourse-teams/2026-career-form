@@ -17,6 +17,16 @@ const analyticsEvents = [
   "landing_viewed",
   "onboarding_viewed",
   "install_link_clicked",
+  "push_subscription_enabled",
+  "push_subscription_disabled",
+  "posting_notification_shown",
+  "posting_notification_opened",
+  "posting_notification_saved",
+  "posting_inbox_viewed",
+  "posting_inbox_saved",
+  "notification_test_sent",
+  "notification_visibility_answered",
+  "posting_auto_save_cancelled",
 ] as const;
 
 const analyticsSurfaces = [
@@ -25,12 +35,23 @@ const analyticsSurfaces = [
   "options",
   "site",
   "extension_onboarding",
+  "notification",
 ] as const;
+
+// Server posting identifiers only; never company names, links or profile values.
+const POSTING_ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
+const visibilityAnswers = ["seen", "not_seen"] as const;
+const saveTriggers = ["button", "open"] as const;
 
 export type AnalyticsEvent = (typeof analyticsEvents)[number];
 export interface AnalyticsProperties {
   readonly surface: (typeof analyticsSurfaces)[number];
   readonly page_host?: string;
+  readonly posting_id?: string;
+  readonly answer?: (typeof visibilityAnswers)[number];
+  readonly trigger?: (typeof saveTriggers)[number];
+  // Notification display delay in milliseconds; a non-negative integer only.
+  readonly delay_ms?: number;
 }
 export type TrackEvent = (
   event: AnalyticsEvent,
@@ -60,15 +81,34 @@ export function parseAnalyticsMessage(message: unknown) {
   }
   const surface = analyticsSurfaces.find((value) => value === input.surface);
   if (!surface) return undefined;
-  const properties: AnalyticsProperties =
-    surface === "in_page_panel" &&
+  const properties: AnalyticsProperties = {
+    surface,
+    ...(surface === "in_page_panel" &&
     "page_host" in input &&
     typeof input.page_host === "string" &&
     input.page_host.length <= 253 &&
     /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$/i.test(
       input.page_host,
     )
-      ? { surface, page_host: input.page_host }
-      : { surface };
+      ? { page_host: input.page_host }
+      : {}),
+    ...("posting_id" in input &&
+    typeof input.posting_id === "string" &&
+    POSTING_ID_PATTERN.test(input.posting_id)
+      ? { posting_id: input.posting_id }
+      : {}),
+    ...("answer" in input && visibilityAnswers.some((v) => v === input.answer)
+      ? { answer: input.answer as (typeof visibilityAnswers)[number] }
+      : {}),
+    ...("trigger" in input && saveTriggers.some((v) => v === input.trigger)
+      ? { trigger: input.trigger as (typeof saveTriggers)[number] }
+      : {}),
+    ...("delay_ms" in input &&
+    typeof input.delay_ms === "number" &&
+    Number.isSafeInteger(input.delay_ms) &&
+    input.delay_ms >= 0
+      ? { delay_ms: input.delay_ms }
+      : {}),
+  };
   return { event, properties };
 }

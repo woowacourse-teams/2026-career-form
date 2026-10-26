@@ -89,3 +89,35 @@ it("완료 또는 수정된 알림 클릭으로 오래된 공고를 열지 않�
   await service.setCompleted("job", 1, true);
   expect(await service.notificationUrl("careerForm.job.job.1")).toBeUndefined();
 });
+
+it("회사명이 비면 관리 페이지에 회사명 오류를 그대로 전달한다", async () => {
+  const service = new PostingService(
+    { load: async () => [], save: async () => {} },
+    {
+      now: () => 0,
+      id: () => "job",
+      permission: async () => true,
+      schedule: async () => {},
+      notify: async () => {},
+      clearNotification: async () => {},
+    },
+  );
+  const handler = createPostingHandler(service, "own", async () => {});
+  expect(
+    await handler(
+      {
+        type: "careerForm.postings",
+        action: "save",
+        input: {
+          company: " ",
+          role: "",
+          url: "https://example.com",
+          deadline: 20000000,
+          timeZone: "Asia/Seoul",
+          minutes: [],
+        },
+      },
+      { id: "own", url: "chrome-extension://own/options.html" },
+    ),
+  ).toEqual({ ok: false, error: "회사명을 입력해 주세요." });
+});

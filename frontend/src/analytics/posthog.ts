@@ -38,6 +38,14 @@ export function createPosthogCapture({
             ...(properties.surface === "in_page_panel" && properties.page_host
               ? { page_host: properties.page_host }
               : {}),
+            ...(properties.posting_id
+              ? { posting_id: properties.posting_id }
+              : {}),
+            ...(properties.answer ? { answer: properties.answer } : {}),
+            ...(properties.trigger ? { trigger: properties.trigger } : {}),
+            ...(properties.delay_ms === undefined
+              ? {}
+              : { delay_ms: properties.delay_ms }),
             $process_person_profile: false,
           },
         }),

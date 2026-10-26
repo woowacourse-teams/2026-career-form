@@ -888,6 +888,38 @@
 - 승인된 후보 2개 중 ADR을 [CF-348 bundle](../raw/issues/CF-348/manifest.md)에 기록하고 [공고 구독 알림](topics/job-posting-notifications.md) topic을 신설했다. ADR은 Issue #348 본문의 후보 전문을 상태 '승인됨', 관련 Issue #348·#349·#350으로 바꾸고 결과 끝에 단계적 도입 경로(1차 대안 B 실측 → 2차 대안 C는 장애 격리·채널 확장 이유로 같은 숫자 비교)와 숫자의 근거(구독자 1,000명, 하루 5건, 최악 5,000건, FCM 100ms 가정, 큐 필요 지점 약 8,400건)를 더했다.
 - 다른 topic 문서는 바꾸지 않았다. 실제 지원값·계정·세션·시크릿·VAPID 키·구독 endpoint·대화 전문은 저장하지 않았다.
 
+## [2026-10-26] ingest | CF-349 확장 Web Push 구독과 공고 알림
+
+- Approval-Digest: dab518584df0f2191e1b2b11ab24a5ebda3ed6297255baad4e3e5142db471952
+- Source-Revision: 7dd0712
+- 승인된 후보 5개를 [CF-349 bundle](../raw/issues/CF-349/manifest.md)에 두 payload로 기록했다. 확장 Web Push(설치·시작·켜기·알람·구독 변경이 `sync()`로 수렴하는 구독 수명주기와 상태 6종·재시도 규칙, `userVisibleOnly: false`와 Chrome 121 하한의 조용한 푸시 수신, 중복·마감 억제, 사용자 클릭으로만 탭을 여는 알림 정책과 CF-161 저장 연결, `push-api.ts` 계약 정본과 PR #351 대조, 공지함·구독 설정 화면 결정), 계측(이벤트 7개와 surface `notification`, `posting_id`만 허용).
+- 새 topic [확장 Web Push 구독과 공고 알림](topics/extension-push-notifications.md)을 만들고 [선택적 이용 계측](topics/usage-analytics.md)의 Current를 CF-349로 바꾸고 앞선 근거를 History에 남겼다.
+- 구독 endpoint·키, 실제 공고·프로필 값, 대화 전문은 저장하지 않았다.
+
+## [2026-10-26] ingest | CF-349 범위 수정: 알림 표시 자가 진단·미확인 배지·열기 자동 저장
+
+- Approval-Digest: a13a98b7258ec33fcc5fa174e18f6134f21ade908376db2df0d821e4042b7010
+- Source-Revision: 33c6c45
+- 승인된 후보 9개(앞선 5개 유지, 6~9 신규)를 [CF-349 bundle](../raw/issues/CF-349/manifest.md)에 반영했다. 확장 Web Push payload에 OS 알림 허용을 감지할 수 없어 사용자 응답으로 확인하는 자가 진단(테스트 알림은 버튼 클릭으로만, 카드 노출 조건, OS별 안내, 온보딩 발신자 허용 범위), 미확인 배지(`careerForm.push.unread`, 숫자만, 공지함 열람 시 0, 재시작 복원, 사이드 패널 개수), 열기 자동 저장(기본 켜짐, 세 경로, 후속 알림·카드의 취소), 화면 정리(공지함 3건 접기, 설정 패널 위치, 128px 알림 아이콘)와 2026-10-26 실기동 확인 범위·한계를 더했다. 계측 payload에 이벤트 3종과 `answer`·`trigger` 속성을 더했다.
+- [확장 Web Push 구독과 공고 알림](topics/extension-push-notifications.md)과 [선택적 이용 계측](topics/usage-analytics.md)의 현재 상태와 색인 요약을 갱신했다.
+- 구독 endpoint·키, 실제 공고·프로필 값, 대화 전문은 저장하지 않았다.
+
+## [2026-10-26] ingest | CF-349 직무 선택 입력
+
+- Approval-Digest: a614605e0a14261d727cde1371ebc8ba7c290d69bd5f59da72f0fbc7f2a8d8dc
+- Source-Revision: 5b0a3f6
+- 승인된 후보 10개(앞선 9개 유지, 10 신규)를 [CF-349 bundle](../raw/issues/CF-349/manifest.md)에 반영했다. 확장 Web Push payload에 직무 선택 입력(payload·목록의 `role` 누락·빈 문자열 수용, 알림 제목과 카드 분기, CF-161 모델 회사명만 필수, 폼 `required` 제거, 보급 전 운영 규칙) 절을 더했다.
+- [확장 Web Push 구독과 공고 알림](topics/extension-push-notifications.md)의 현재 상태와 색인 요약을 갱신했다.
+- 구독 endpoint·키, 실제 공고·프로필 값, 대화 전문은 저장하지 않았다.
+
+## [2026-10-26] ingest | CF-349 표시 지연 계측
+
+- Approval-Digest: 58fbaa1907e00e8d62c1b4f88adb4413722dae936a4a5931773699a306f41f97
+- Source-Revision: 480e75f
+- 승인된 후보 11개(앞선 10개 유지, 11 신규)를 [CF-349 bundle](../raw/issues/CF-349/manifest.md)에 반영했다. 계측 payload에 알림 표시 이벤트의 `delay_ms`(payload `sentAt` 기준, 0~24시간 클램프)와 허용 목록, 키 없는 빌드의 `console.debug` 기록을, 확장 Web Push payload에 `sentAt` 선택 수용과 기준 수치 목적을 더했다.
+- [선택적 이용 계측](topics/usage-analytics.md)과 [확장 Web Push 구독과 공고 알림](topics/extension-push-notifications.md)의 현재 상태와 색인 요약을 갱신했다.
+- 구독 endpoint·키, 실제 공고·프로필 값, 대화 전문은 저장하지 않았다.
+
 ## [2026-10-26] ingest | CF-350 Web Push VAPID 시크릿과 알림 기능 배포 설정
 
 - Approval-Digest: e4434614c1e89a70afbbcc7888e48e4574efd1d8e82b811f02845fc4de049961
