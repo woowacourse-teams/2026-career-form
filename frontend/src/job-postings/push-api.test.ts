@@ -298,6 +298,36 @@ describe("직무 없는 공고", () => {
   });
 });
 
+describe("표시 지연 계측용 sentAt", () => {
+  const valid = {
+    id: "0123456789abcdef0123456789abcdef",
+    company: "합성 회사",
+    role: "합성 직무",
+    link: "https://careers.example.test/jobs/1",
+    opensAt: "2030-01-01T00:00:00Z",
+    closesAt: "2030-01-01T01:00:00Z",
+  };
+  it("sentAt이 ISO 문자열이면 밀리초로 받는다", () => {
+    expect(
+      parseServerPosting({ ...valid, sentAt: "2030-01-01T00:00:30+09:00" }),
+    ).toMatchObject({ sentAt: Date.parse("2029-12-31T15:00:30Z") });
+  });
+  it.each([{}, { sentAt: "방금" }, { sentAt: 12 }, { sentAt: null }])(
+    "sentAt이 없거나 형식이 틀리면 무시하고 공고는 버리지 않는다: %j",
+    (sentAt) => {
+      const parsed = parseServerPosting({ ...valid, ...sentAt });
+      expect(parsed).toMatchObject({ id: valid.id });
+      expect(parsed && "sentAt" in parsed).toBe(false);
+    },
+  );
+  it("저장·전달된 공고 형태는 숫자 sentAt만 허용한다", () => {
+    const stored = { ...valid, opensAt: 1, closesAt: 2 };
+    expect(isServerPosting({ ...stored, sentAt: 1 })).toBe(true);
+    expect(isServerPosting(stored)).toBe(true);
+    expect(isServerPosting({ ...stored, sentAt: "1" })).toBe(false);
+  });
+});
+
 describe("base64UrlToBytes", () => {
   it("패딩 없는 base64url을 복원한다", () => {
     expect([...base64UrlToBytes(PUBLIC_KEY)]).toEqual([...POINT]);

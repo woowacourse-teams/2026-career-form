@@ -50,6 +50,8 @@ export interface AnalyticsProperties {
   readonly posting_id?: string;
   readonly answer?: (typeof visibilityAnswers)[number];
   readonly trigger?: (typeof saveTriggers)[number];
+  // Notification display delay in milliseconds; a non-negative integer only.
+  readonly delay_ms?: number;
 }
 export type TrackEvent = (
   event: AnalyticsEvent,
@@ -100,6 +102,12 @@ export function parseAnalyticsMessage(message: unknown) {
       : {}),
     ...("trigger" in input && saveTriggers.some((v) => v === input.trigger)
       ? { trigger: input.trigger as (typeof saveTriggers)[number] }
+      : {}),
+    ...("delay_ms" in input &&
+    typeof input.delay_ms === "number" &&
+    Number.isSafeInteger(input.delay_ms) &&
+    input.delay_ms >= 0
+      ? { delay_ms: input.delay_ms }
       : {}),
   };
   return { event, properties };

@@ -60,6 +60,16 @@ export type ReceiveOutcome = "notified" | "duplicate" | "expired" | "invalid";
 export type SaveOutcome =
   "saved" | "no_future_reminders" | "already_saved" | "expired";
 
+// Display delay from the backend's FCM request time, clamped to [0, 24h].
+export const MAX_DISPLAY_DELAY_MS = 86_400_000;
+export function displayDelay(
+  sentAt: number | undefined,
+  now: number,
+): number | undefined {
+  if (sentAt === undefined) return undefined;
+  return Math.min(Math.max(Math.round(now - sentAt), 0), MAX_DISPLAY_DELAY_MS);
+}
+
 export function postingNotificationId(postingId: string): string {
   return PUSH_NOTIFICATION_PREFIX + postingId;
 }
@@ -137,12 +147,13 @@ export class PushReceiver {
   private track(
     event: AnalyticsEvent,
     postingId: string,
-    trigger?: "button" | "open",
+    extra: { trigger?: "button" | "open"; delay_ms?: number } = {},
   ): void {
     this.ports.track(event, {
       surface: "notification",
       posting_id: postingId,
-      ...(trigger ? { trigger } : {}),
+      ...(extra.trigger ? { trigger: extra.trigger } : {}),
+      ...(extra.delay_ms === undefined ? {} : { delay_ms: extra.delay_ms }),
     });
   }
   private async quietly(task: () => Promise<unknown>): Promise<void> {
@@ -177,7 +188,9 @@ export class PushReceiver {
           this.ports.unread.add(posting.id, posting.closesAt),
         );
         await this.quietly(() => this.ports.visibility.markShown());
-        this.track("posting_notification_shown", posting.id);
+        this.track("posting_notification_shown", posting.id, {
+          delay_ms: displayDelay(posting.sentAt, now),
+        });
       }
       return outcome;
     });
@@ -212,7 +225,7 @@ export class PushReceiver {
       PUSH_AUTOSAVED_NOTIFICATION_PREFIX + posting.id,
       savedNotification(posting, outcome, pendingMinutes, true),
     );
-    this.track("posting_notification_saved", posting.id, "open");
+    this.track("posting_notification_saved", posting.id, { trigger: "open" });
   }
   undoAutoSave(notificationId: string): Promise<boolean> {
     return this.serial(async () => {
@@ -245,7 +258,9 @@ export class PushReceiver {
         savedNotification(posting, outcome, pendingMinutes),
       );
       if (outcome === "saved" || outcome === "no_future_reminders")
-        this.track("posting_notification_saved", posting.id, "button");
+        this.track("posting_notification_saved", posting.id, {
+          trigger: "button",
+        });
       return outcome;
     });
   }

@@ -433,3 +433,69 @@ describe("notification check and auto-save properties", () => {
     },
   );
 });
+
+describe("display delay property and key-less console record", () => {
+  it.each([
+    [{ delay_ms: 0 }, { delay_ms: 0 }],
+    [{ delay_ms: 1234 }, { delay_ms: 1234 }],
+    [{ delay_ms: -1 }, {}],
+    [{ delay_ms: 12.5 }, {}],
+    [{ delay_ms: "12" }, {}],
+  ])(
+    "keeps only non-negative integer delay_ms: %j",
+    async (input, expected) => {
+      const { handle, payloads } = collector();
+      await handle({
+        type: "ANALYTICS_TRACK",
+        event: "posting_notification_shown",
+        properties: {
+          surface: "notification",
+          posting_id: "0123456789abcdef0123456789abcdef",
+          ...input,
+        },
+      });
+      expect(payloads).toEqual([
+        expect.objectContaining({
+          properties: {
+            surface: "notification",
+            posting_id: "0123456789abcdef0123456789abcdef",
+            ...expected,
+            $process_person_profile: false,
+          },
+        }),
+      ]);
+    },
+  );
+  it("records allowlisted events on the console without sending when no key is configured", async () => {
+    const debug = vi.spyOn(console, "debug").mockImplementation(() => {});
+    try {
+      const { handle, payloads, values } = collector(" ");
+      await handle({
+        type: "ANALYTICS_TRACK",
+        event: "posting_notification_shown",
+        properties: {
+          surface: "notification",
+          posting_id: "0123456789abcdef0123456789abcdef",
+          delay_ms: 250,
+          company: "synthetic-company",
+        },
+      });
+      expect(payloads).toEqual([]);
+      expect(values).toEqual({});
+      expect(debug).toHaveBeenCalledTimes(1);
+      expect(debug.mock.calls[0]).toEqual([
+        "[career-form analytics]",
+        "posting_notification_shown",
+        {
+          surface: "notification",
+          posting_id: "0123456789abcdef0123456789abcdef",
+          delay_ms: 250,
+        },
+      ]);
+      await handle({ type: "ANALYTICS_TRACK", event: "nope", properties: {} });
+      expect(debug).toHaveBeenCalledTimes(1);
+    } finally {
+      debug.mockRestore();
+    }
+  });
+});

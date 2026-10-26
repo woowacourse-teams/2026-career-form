@@ -38,6 +38,8 @@ export interface ServerPosting {
   link: string;
   opensAt: number;
   closesAt: number;
+  // FCM request time from the backend; only used for display-delay metrics.
+  sentAt?: number;
 }
 
 export interface SubscriptionJson {
@@ -101,7 +103,16 @@ export function parseServerPosting(value: unknown): ServerPosting | undefined {
     opensAt >= closesAt
   )
     return undefined;
-  return { id, company, role, link, opensAt, closesAt };
+  const sentAt = instant(value.sentAt);
+  return {
+    id,
+    company,
+    role,
+    link,
+    opensAt,
+    closesAt,
+    ...(sentAt === undefined ? {} : { sentAt }),
+  };
 }
 
 // Already-normalized shape (numeric instants) as stored or relayed in the extension.
@@ -120,7 +131,9 @@ export function isServerPosting(value: unknown): value is ServerPosting {
     typeof value.closesAt === "number" &&
     Number.isFinite(value.opensAt) &&
     Number.isFinite(value.closesAt) &&
-    value.opensAt < value.closesAt
+    value.opensAt < value.closesAt &&
+    (value.sentAt === undefined ||
+      (typeof value.sentAt === "number" && Number.isFinite(value.sentAt)))
   );
 }
 

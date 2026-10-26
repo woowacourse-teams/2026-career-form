@@ -261,6 +261,36 @@ describe("PushReceiver", () => {
   });
 });
 
+describe("PushReceiver display delay", () => {
+  it.each([
+    ["30초 전 발송", -30_000, 30_000],
+    ["시계가 앞선 발송", 5_000, 0],
+    ["25시간 전 발송", -25 * 3_600_000, 86_400_000],
+  ])(
+    "%s이면 delay_ms를 %s 기준으로 계산한다",
+    async (_label, offset, expected) => {
+      const h = harness();
+      await h.receiver.receive({
+        ...payload,
+        sentAt: new Date(NOW + offset).toISOString(),
+      });
+      expect(h.tracked[0]).toEqual([
+        "posting_notification_shown",
+        { surface: "notification", posting_id: ID, delay_ms: expected },
+      ]);
+    },
+  );
+  it("sentAt이 없으면 delay_ms를 싣지 않는다", async () => {
+    const h = harness();
+    await h.receiver.receive(payload);
+    expect(h.tracked[0]).toEqual([
+      "posting_notification_shown",
+      { surface: "notification", posting_id: ID },
+    ]);
+    expect(JSON.stringify(h.tracked)).not.toContain("example.test");
+  });
+});
+
 describe("PushReceiver badge, visibility and auto-save", () => {
   it("알림 표시는 미확인 목록과 표시 시각을 기록하고 클릭은 보임과 개별 제거로 이어진다", async () => {
     const h = harness();

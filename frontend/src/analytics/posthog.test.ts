@@ -133,3 +133,28 @@ describe("PostHog answer and trigger properties", () => {
     ]);
   });
 });
+
+describe("PostHog delay_ms property", () => {
+  it("forwards delay_ms including zero", async () => {
+    const bodies: { properties: Record<string, unknown> }[] = [];
+    const capture = createPosthogCapture({
+      key: "test-project",
+      getDistinctId: async () => "anonymous",
+      fetch: async (_input, init) => {
+        bodies.push(JSON.parse(String(init?.body)));
+        return new Response("1");
+      },
+    });
+    await capture("posting_notification_shown", {
+      surface: "notification",
+      posting_id: "0123456789abcdef0123456789abcdef",
+      delay_ms: 0,
+    });
+    expect(bodies[0].properties).toEqual({
+      surface: "notification",
+      posting_id: "0123456789abcdef0123456789abcdef",
+      delay_ms: 0,
+      $process_person_profile: false,
+    });
+  });
+});

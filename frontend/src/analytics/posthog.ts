@@ -43,6 +43,9 @@ export function createPosthogCapture({
               : {}),
             ...(properties.answer ? { answer: properties.answer } : {}),
             ...(properties.trigger ? { trigger: properties.trigger } : {}),
+            ...(properties.delay_ms === undefined
+              ? {}
+              : { delay_ms: properties.delay_ms }),
             $process_person_profile: false,
           },
         }),

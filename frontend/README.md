@@ -75,7 +75,7 @@ VITE_POSTHOG_KEY=<project-key> VITE_POSTHOG_HOST=https://us.i.posthog.com npm ru
 
 SDK, 자동 페이지 수집, 세션 녹화, 사용자 프로필 생성은 사용하지 않습니다. 확장은 runtime 메시지를 통해 백그라운드에서 전송하고, 웹 사이트는 직접 전송합니다. 계측용 host permission은 추가하지 않습니다.
 
-전송 항목은 이벤트 이름, `surface`, 무작위 `distinct_id`이며 지원서 안 패널에만 `page_host`(호스트명)를, 공고 알림 이벤트에만 서버 공고 ID `posting_id`, 표시 확인 응답 `answer`(`seen`·`not_seen`), 저장 계기 `trigger`(`button`·`open`)를 추가합니다. 프로필 값, 지원서 입력값, 전체 URL, 쿠키와 Referer는 전송하지 않습니다. 익명 식별자 `analyticsDistinctId`는 확장의 `chrome.storage.local` 또는 웹 사이트의 `localStorage`에 저장합니다. 계측 실패는 사용자 작업을 막지 않습니다.
+전송 항목은 이벤트 이름, `surface`, 무작위 `distinct_id`이며 지원서 안 패널에만 `page_host`(호스트명)를, 공고 알림 이벤트에만 서버 공고 ID `posting_id`, 표시 확인 응답 `answer`(`seen`·`not_seen`), 저장 계기 `trigger`(`button`·`open`), 알림 표시 이벤트에만 표시 지연 `delay_ms`(0 이상 정수)를 추가합니다. 키가 없는 빌드는 전송 대신 허용 속성만 `console.debug`로 기록합니다. 프로필 값, 지원서 입력값, 전체 URL, 쿠키와 Referer는 전송하지 않습니다. 익명 식별자 `analyticsDistinctId`는 확장의 `chrome.storage.local` 또는 웹 사이트의 `localStorage`에 저장합니다. 계측 실패는 사용자 작업을 막지 않습니다.
 
 허용 이벤트의 정본은 `src/analytics/events.ts`입니다.
 
@@ -110,6 +110,7 @@ SDK, 자동 페이지 수집, 세션 녹화, 사용자 프로필 생성은 사�
 - 미확인 공고 배지: 새 공고 알림마다 확장 아이콘 배지 숫자가 늘고(`chrome.action.setBadgeText`, 숫자만) 공지함을 열면 0이 됩니다. 알림 클릭으로 연 공고는 개별로 지우고 마감이 지난 공고는 정리하며, 서비스워커가 다시 시작되면 저장된 목록(`careerForm.push.unread`)으로 다시 그립니다. 사이드 패널의 "지원 공고 관리" 버튼에 같은 숫자를 표시합니다.
 - 공고 열기 시 자동 저장: 설정 "공고를 열면 마감 알림에 자동 저장"(기본 켜짐, 구독 켜짐·꺼짐과 독립)이 켜져 있으면 알림 본문 클릭, 알림의 "공고 열기" 버튼, 공지함의 "공고 열기"에서 CF-161 공고로 저장합니다. 알림에서 열었으면 후속 알림의 "저장 취소", 공지함에서는 카드의 "취소"로 저장 공고와 예약을 함께 지웁니다(`PostingService.remove`). 이미 저장한 공고와 마감 지난 공고는 건너뛰고 알림 표시만으로는 저장하지 않습니다.
 - 공지함은 3건까지 펼치고 "n건 더 보기"로 나머지를 열며, 구독 설정 패널은 저장 공고 목록 아래에 있습니다. 알림 아이콘은 `public/notification-icon.png`(128px)입니다.
+- 표시 지연 계측: payload의 `sentAt`(선택, 백엔드의 FCM 요청 시각)을 받으면 알림 표시 이벤트 `posting_notification_shown`에 `delay_ms`(표시 시각 − `sentAt`, 음수는 0, 24시간 초과는 86,400,000으로 자름)를 더합니다. `sentAt`이 없거나 형식이 틀리면 속성을 생략할 뿐 공고는 버리지 않습니다. 키 없는 빌드는 전송하지 않고 허용 속성만 `console.debug`로 남깁니다.
 - 직무는 선택 항목입니다. 푸시 payload와 진행 중 공고 목록에서 `role`이 없거나 비어 있으면 직무 없는 공고로 받아들이며, 알림 제목은 회사명만 쓰고 공지함·저장 공고 카드는 직무 줄을 숨깁니다. 로컬 공고 저장도 회사명만 필수이고 공고 저장 폼의 직무 칸은 비워 둘 수 있습니다. 직무 없는 공고는 이 버전의 확장에서만 보이므로 스토어 보급 전에는 팀이 직무를 비워 등록하지 않습니다.
 - 온보딩 페이지(`onboarding.html`)는 백그라운드에 상태 조회, 끄기, 알림 테스트, 결과 기록만 보낼 수 있습니다. 그 밖의 페이지와 콘텐츠 스크립트의 구독 메시지는 차단합니다.
 
