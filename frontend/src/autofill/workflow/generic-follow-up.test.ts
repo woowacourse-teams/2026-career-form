@@ -3,8 +3,10 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { FieldCandidateHandle } from "../dom/types";
 import type { ReviewPlanItem } from "../review/review-plan";
 import {
+  fillableControls,
   genericControlledRegions,
   isGenericStateDriver,
+  newlyRevealedControls,
   waitForGenericEffect,
 } from "./generic-follow-up";
 
@@ -23,6 +25,35 @@ function handle(element: HTMLElement): FieldCandidateHandle {
 
 afterEach(() => {
   document.body.replaceChildren();
+});
+
+describe("observed reveal after writes", () => {
+  it("reports only empty, visible, enabled controls that were not there before", () => {
+    document.body.innerHTML = `
+      <select id="status"><option value="">구분</option><option>면제</option></select>
+      <div id="reason" hidden><input id="why" type="text"></div>`;
+    const before = fillableControls(document);
+    (document.getElementById("status") as HTMLSelectElement).selectedIndex = 1;
+    document.getElementById("reason")!.hidden = false;
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      `<input id="filled" value="x"><input id="off" disabled>
+       <input id="code" type="hidden">
+       <div role="dialog"><input id="popup"></div>`,
+    );
+
+    expect(newlyRevealedControls(document, before).map((e) => e.id)).toEqual([
+      "why",
+    ]);
+  });
+
+  it("reports nothing when the writes revealed no control", () => {
+    document.body.innerHTML = `<input id="name">`;
+    const before = fillableControls(document);
+    (document.getElementById("name") as HTMLInputElement).value = "값";
+
+    expect(newlyRevealedControls(document, before)).toEqual([]);
+  });
 });
 
 describe("generic conditional follow-up safety", () => {
