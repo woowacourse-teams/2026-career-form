@@ -9,6 +9,12 @@ import { elements, shown } from "./search-surface-dom";
  */
 export const LOCAL_RESULT_STABLE_MS = 300;
 
+/**
+ * How long an unchanged, empty result list must stay empty after a search
+ * before its visible zero-result notice is trusted as the answer.
+ */
+export const LOCAL_ZERO_RESULT_SETTLE_MS = 2000;
+
 const LIST_SELECTOR = "ul, ol, table, [role='list']";
 
 /** The list element a mutation or an item belongs to (tbody folds into table). */
@@ -29,6 +35,7 @@ export function listItems(root: Element): Element[] {
 /** Current-generation list mutations, recorded by the result observer. */
 export class LocalMutationRecord {
   private readonly added = new Map<Element, Set<Element>>();
+  private readonly removed = new Map<Element, Set<Element>>();
   private readonly lastAt = new Map<Element, number>();
 
   record(record: MutationRecord, now: number): void {
@@ -42,6 +49,12 @@ export class LocalMutationRecord {
         (record.target as Element).tagName === "TBODY" &&
         record.target.parentNode === list);
     if (!direct) return;
+    for (const node of Array.from(record.removedNodes)) {
+      if (node.nodeType !== 1) continue;
+      const items = this.removed.get(list) ?? new Set<Element>();
+      items.add(node as Element);
+      this.removed.set(list, items);
+    }
     for (const node of Array.from(record.addedNodes)) {
       if (node.nodeType !== 1) continue;
       const items = this.added.get(list) ?? new Set<Element>();
@@ -52,6 +65,10 @@ export class LocalMutationRecord {
 
   addedItems(root: Element): ReadonlySet<Element> {
     return this.added.get(root) ?? new Set();
+  }
+
+  removedItems(root: Element): ReadonlySet<Element> {
+    return this.removed.get(root) ?? new Set();
   }
 
   lastMutationAt(root: Element): number | undefined {
@@ -99,18 +116,30 @@ export function localReadiness(
   baselineEntry: { readonly items: readonly Element[] } | undefined,
   record: LocalMutationRecord,
   now: number,
+  queryCommitted = false,
 ): LocalReadiness {
   // A root that did not exist before the search cannot be told apart from stale markup.
   if (!baselineEntry) return "pending";
   const added = record.addedItems(root);
-  if (!added.size) return "pending";
   const current = listItems(root);
-  if (baselineEntry.items.some((item) => current.includes(item)))
-    return "pending";
-  if (current.some((item) => !added.has(item))) return "pending";
   const last = record.lastMutationAt(root);
   if (last === undefined || now - last < LOCAL_RESULT_STABLE_MS)
     return "pending";
+  if (
+    queryCommitted &&
+    !added.size &&
+    current.length > 0 &&
+    current.length < baselineEntry.items.length &&
+    current.every((item) => baselineEntry.items.includes(item)) &&
+    baselineEntry.items
+      .filter((item) => !current.includes(item))
+      .every((item) => record.removedItems(root).has(item))
+  )
+    return "ready";
+  if (!added.size) return "pending";
+  if (baselineEntry.items.some((item) => current.includes(item)))
+    return "pending";
+  if (current.some((item) => !added.has(item))) return "pending";
   return "ready";
 }
 

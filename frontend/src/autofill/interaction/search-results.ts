@@ -9,7 +9,9 @@ import { elements, safeActivation, shown } from "./search-surface-dom";
 import {
   hasExplicitResultSignal,
   listItems,
+  LOCAL_ZERO_RESULT_SETTLE_MS,
   LocalMutationRecord,
+  zeroNotices,
   localReadiness,
   zeroNoticeConsistency,
 } from "./local-result-readiness";
@@ -41,11 +43,13 @@ export function observeResults(
   session: SearchSession,
   baseline: RootState[],
   query: string | undefined,
+  queryCommitted: () => boolean = () => false,
 ) {
   const generation = surface.queryGeneration;
   let busySeen = false;
   const mutations = new LocalMutationRecord();
   const now = () => surface.document.defaultView?.performance.now() ?? 0;
+  const startedAt = now();
   const observe = () => {
     for (const root of surface.resultRoots()) {
       if (
@@ -111,9 +115,25 @@ export function observeResults(
         baseline.find((item) => item.root === root),
         mutations,
         now(),
+        session.args.genericPopupRecovery === true && queryCommitted(),
       ) === "pending"
-    )
-      return undefined;
+    ) {
+      const current = listItems(root);
+      const added = mutations.addedItems(root);
+      // An empty list that never changed is either still loading or a real
+      // zero-result answer. After a bounded settle time a visible zero-result
+      // notice decides it, so the search can fail as "not found" and try its
+      // next query instead of waiting out the whole deadline.
+      const settledEmpty =
+        session.args.genericPopupRecovery === true &&
+        current.length === 0 &&
+        added.size === 0 &&
+        now() - startedAt >= LOCAL_ZERO_RESULT_SETTLE_MS &&
+        zeroNotices(surface, root).some(shown);
+      if (!settledEmpty) {
+        return undefined;
+      }
+    }
     const previous = baseline.find((item) => item.root === root);
     const changed =
       !previous || previous.signature !== (root.textContent ?? "");
@@ -153,6 +173,16 @@ export function observeResults(
     return { root, localMode, actions };
   };
   return {
+    empty() {
+      const ready = readyRoot();
+      return Boolean(
+        ready &&
+        ready.actions.length === 0 &&
+        listItems(ready.root).length === 0 &&
+        (ready.root.getAttribute("data-result-count") === "0" ||
+          zeroNotices(surface, ready.root).some(shown)),
+      );
+    },
     async interpret() {
       const root = readyRoot()?.root;
       if (!root) throw new SearchFailure("result_pending");
@@ -234,6 +264,7 @@ export function observeResults(
         !safeActivation(element, catalogMatch ? [evidence.label] : expected, {
           resultRoot: root,
           surfaceKind: surface.kind,
+          allowEmptyJavascriptLink: session.args.genericPopupRecovery === true,
         })
       )
         throw new SearchFailure("result_activation_unsafe");

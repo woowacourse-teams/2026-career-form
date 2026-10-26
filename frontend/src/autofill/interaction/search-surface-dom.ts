@@ -164,6 +164,7 @@ function simpleSelectionHref(href: string, labelText: string): boolean {
 export interface ActivationScope {
   readonly resultRoot: Element;
   readonly surfaceKind: SearchSurfaceKind;
+  readonly allowEmptyJavascriptLink?: boolean;
 }
 
 /**
@@ -225,6 +226,21 @@ export function safeActivation(
   if (element.tagName === "A") {
     const href = element.getAttribute("href")?.trim() ?? "";
     if (href === "" || href === "#") return true;
+    if (
+      scope?.allowEmptyJavascriptLink === true &&
+      ["same-document-dialog", "same-document-layer"].includes(
+        scope.surfaceKind,
+      ) &&
+      scope.resultRoot.contains(element) &&
+      /^javascript:\s*;?$/i.test(href) &&
+      !Array.from(element.attributes).some((attribute) =>
+        /^on/i.test(attribute.name),
+      ) &&
+      acceptedValues?.some(
+        (value) => normalized(value) === normalized(element.textContent ?? ""),
+      )
+    )
+      return true;
     if (fragmentResultLink(element, acceptedValues, scope)) return true;
     if (
       !acceptedValues ||

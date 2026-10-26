@@ -31,6 +31,9 @@ import {
   retainedCatalogSelection,
 } from "../profile/catalog-receipt";
 
+// One application can hold schools, companies, several certificates and
+// language tests; each search is still bounded and revalidated on its own.
+const MAX_GENERIC_SEARCHES = 8;
 const MAX_SEARCHES = 4;
 const STALE = "지원서 필드 상태가 변경되었거나 입력할 수 없습니다.";
 const CONFLICT = "입력 직전 지원서에 다른 값이 있어 기존 값을 보존했습니다.";
@@ -598,7 +601,10 @@ export async function executeApprovedSearchWrites({
     }
     const catalogMatch =
       catalogApproval.status === "selected" ? catalogApproval.match : undefined;
-    if (searchCount >= MAX_SEARCHES && !normalized(item.currentValue)) {
+    if (
+      searchCount >= (followUpHaltScope === "row" ? MAX_GENERIC_SEARCHES : MAX_SEARCHES) &&
+      !normalized(item.currentValue)
+    ) {
       results[index] = skipped(
         item.candidateId,
         "unsupported",
@@ -845,6 +851,9 @@ export async function executeApprovedSearchWrites({
           "search_results_not_found",
           "multiple_matching_results",
           "result_set_incomplete",
+          "surface_unobservable",
+          "surface_ambiguous",
+          "inaccessible_popup_frame",
         ].includes(failedResult.reason))) &&
         failedResult.surfaceLeftOpen !== true &&
         [
@@ -856,6 +865,11 @@ export async function executeApprovedSearchWrites({
           "search_results_not_found",
           "multiple_matching_results",
           "result_set_incomplete",
+          // The surface was only opened and closed again; nothing was typed
+          // or selected, so only the trigger's own group stays held.
+          "surface_unobservable",
+          "surface_ambiguous",
+          "inaccessible_popup_frame",
         ].includes(failedResult.reason) &&
         structuralGroups !== undefined &&
         [...structuralGroups.values()].every((group) => group?.isCurrent());
