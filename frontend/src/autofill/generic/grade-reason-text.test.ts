@@ -14,6 +14,7 @@ const KNOWN_CODES: Record<
   true
 > = {
   NO_PROFILE_VALUE: true,
+  PAIRED_DATE_INFERRED: true,
   COUNTRY_CODE_OPTIONS: true,
   NON_DATE_FIELD: true,
   MIXED_EDUCATION_RECORD: true,

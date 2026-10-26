@@ -85,6 +85,8 @@ export interface ActionCandidate extends CandidateBase {
 }
 
 export interface FieldCandidate extends CandidateBase {
+  /** Generic-only structural identity of a container holding exactly two inputs. */
+  containerId?: string;
   element: "input" | "select" | "textarea" | "custom";
   control:
     "text" | "select" | "radio" | "checkbox" | "textarea" | "button" | "custom";
@@ -198,6 +200,7 @@ export interface GenericFieldsResponse {
     confidence: number;
     categoryConfirmed: boolean;
     reason?: "LLM_UNAVAILABLE";
+    inference?: "PAIRED_DATE" | "LANGUAGE_SCORE" | "LANGUAGE_GRADE";
     binding?:
       | {
           type: "DERIVED";

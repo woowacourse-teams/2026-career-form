@@ -21,6 +21,7 @@ export type FieldGrade = "AUTO" | "REVIEW" | "BLOCKED";
 
 export type GradeReason =
   | "NO_PROFILE_VALUE"
+  | "PAIRED_DATE_INFERRED"
   | "COUNTRY_CODE_OPTIONS"
   | "NON_DATE_FIELD"
   | "MIXED_EDUCATION_RECORD"

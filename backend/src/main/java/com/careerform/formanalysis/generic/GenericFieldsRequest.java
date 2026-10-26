@@ -127,8 +127,19 @@ public record GenericFieldsRequest(
         @AssertTrue Boolean readonly,
         @AssertTrue Boolean inert,
         @Size(min = 1) List<@NotNull @Valid Option> options,
-        @Valid SemanticContext semanticContext
+        @Valid SemanticContext semanticContext,
+        @Size(min = 1, max = 128) String containerId
     ) {
+
+        public FieldCandidate(
+            String candidateId, FormElement element, FormControl control, Visibility visibility,
+            String displayName, String domId, String domName, String placeholder,
+            Boolean disabled, Boolean readonly, Boolean inert, List<Option> options,
+            SemanticContext semanticContext
+        ) {
+            this(candidateId, element, control, visibility, displayName, domId, domName, placeholder,
+                disabled, readonly, inert, options, semanticContext, null);
+        }
 
         public FieldCandidate(
             String candidateId,

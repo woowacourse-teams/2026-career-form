@@ -116,6 +116,7 @@ interface SegmentField {
   candidate: FieldCandidate;
   itemIndex?: number;
   structureStage?: string;
+  containerId?: string;
 }
 
 interface SectionEntry {
@@ -194,6 +195,55 @@ function controlKind(candidate: FieldCandidate): SectionControlKind {
   }
 }
 
+/** Send container evidence, not a local mapping or a borrowed write plan. */
+function withPairedContainers(
+  section: GenericSection<SegmentField>,
+): GenericSection<SegmentField> {
+  const containerIds = new Map<Element, string>();
+  const controlsByContainer = new Map<Element, NodeListOf<Element>>();
+  for (const [index, field] of section.fields.entries()) {
+    if (field.candidate.element !== "input" || field.candidate.control !== "text")
+      continue;
+    let container = field.element.parentElement;
+    while (container) {
+      let controls = controlsByContainer.get(container);
+      if (!controls) {
+        controls = container.querySelectorAll("input, select, textarea");
+        controlsByContainer.set(container, controls);
+      }
+      if (controls.length > 1) {
+        const partnerIndex = section.fields.findIndex(
+          (other) => other.element === controls[1],
+        );
+        const partner = section.fields[partnerIndex];
+        if (
+          controls.length === 2 &&
+          controls[0] === field.element &&
+          partnerIndex > index &&
+          partner?.candidate.element === "input" &&
+          partner.candidate.control === "text" &&
+          partner.itemIndex === field.itemIndex
+        ) {
+          const id = `pair-${index}`;
+          containerIds.set(field.element, id);
+          containerIds.set(partner.element, id);
+        }
+        break;
+      }
+      container = container.parentElement;
+    }
+  }
+  return {
+    ...section,
+    fields: section.fields.map((field) => ({
+      ...field,
+      ...(containerIds.has(field.element)
+        ? { containerId: containerIds.get(field.element)! }
+        : {}),
+    })),
+  };
+}
+
 /** Structure and field state only; equal keys share one analysis result. */
 function cacheKey(section: GenericSection<SegmentField>): string {
   return JSON.stringify([
@@ -201,11 +251,12 @@ function cacheKey(section: GenericSection<SegmentField>): string {
     section.title ?? "",
     section.parentTitle ?? "",
     section.boundary === "repeat-row",
-    section.fields.map(({ candidate }) => [
+    section.fields.map(({ candidate, containerId }) => [
       candidate.visibility,
       candidate.disabled === true,
       candidate.readonly === true,
       candidate.inert === true,
+      containerId,
     ]),
     section.fields.map(({ structureStage }) => structureStage),
   ]);
@@ -394,6 +445,10 @@ function convertSection(
           : [],
       ),
     });
+    if (response.inference === "PAIRED_DATE" && grade.grade === "AUTO") {
+      grade.grade = "REVIEW";
+      grade.reason = "PAIRED_DATE_INFERRED";
+    }
     grades.push([
       candidateId,
       !response.writePlan && grade.grade !== "BLOCKED"
@@ -497,11 +552,13 @@ export async function analyzeGenericFields(
   const entries: SectionEntry[] = segmentGenericSections(
     document,
     segmentFields,
-  ).map((section, index) => ({
-    section,
-    sectionId: `gs${index + 1}`,
-    key: cacheKey(section),
-  }));
+  )
+    .map(withPairedContainers)
+    .map((section, index) => ({
+      section,
+      sectionId: `gs${index + 1}`,
+      key: cacheKey(section),
+    }));
 
   const outcomes = new Map<string, SectionOutcome>();
   const failures = new Map<string, GenericSectionFailure>();
@@ -577,7 +634,9 @@ export async function analyzeGenericFields(
                 ),
               }
             : {}),
-          fields: entry.section.fields.map(({ candidate }) => candidate),
+          fields: entry.section.fields.map(({ candidate, containerId }) =>
+            containerId ? { ...candidate, containerId } : candidate,
+          ),
           category: categories.get(entry.key)!,
         })),
       });

@@ -125,7 +125,7 @@ class GenericFieldsServiceTest {
             || name.toLowerCase().contains("profile") || name.toLowerCase().contains("itemcount"));
         assertThat(components(GenericFieldsResponse.Field.class))
             .containsExactly("candidateId", "profileFieldKey", "confidence", "categoryConfirmed", "reason",
-                "autofillPolicy", "interactionStatus", "writePlan", "binding");
+                "autofillPolicy", "interactionStatus", "writePlan", "binding", "inference");
         assertThat(components(GenericFieldsResponse.WritePlan.class)).containsExactly("command");
         assertThat(components(GenericFieldsResponse.Diagnostics.class)).containsExactly("jevCalls", "elapsedMs");
     }
