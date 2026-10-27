@@ -152,6 +152,30 @@ function settledComponentResult(
       );
 }
 
+/**
+ * A same-document in-page fragment move (e.g. an opener that is an `#x`
+ * link) does not end a run. Origin, path or query changes still do, and so
+ * does any hash route (`#/...`, `#!...`), where the fragment is a screen.
+ */
+function sameRunUrl(started: string | undefined, current: string | undefined) {
+  if (started === current) return true;
+  if (started === undefined || current === undefined) return false;
+  const split = (url: string) => {
+    const index = url.indexOf("#");
+    return index < 0
+      ? ([url, ""] as const)
+      : ([url.slice(0, index), url.slice(index + 1)] as const);
+  };
+  const [startedBase, startedFragment] = split(started);
+  const [currentBase, currentFragment] = split(current);
+  const route = (fragment: string) => /^[/!]/.test(fragment);
+  return (
+    startedBase === currentBase &&
+    !route(startedFragment) &&
+    !route(currentFragment)
+  );
+}
+
 export async function executeApprovedWritesAfterPageSettles({
   items,
   approvedCandidateIds,
@@ -241,7 +265,7 @@ export async function executeApprovedWritesAfterPageSettles({
   const runCurrent = () =>
     !signal?.aborted &&
     assertCurrent?.() !== false &&
-    document?.URL === url &&
+    sameRunUrl(url, document?.URL) &&
     (nativeDigest === undefined ||
       JSON.stringify(executionPolicy(document!)?.browserPolicy) ===
         nativeDigest) &&
@@ -254,7 +278,7 @@ export async function executeApprovedWritesAfterPageSettles({
       const current = () =>
         !signal?.aborted &&
         assertCurrent?.() !== false &&
-        document?.URL === url &&
+        sameRunUrl(url, document?.URL) &&
         resolveDocumentCompany(document!) === "hplace";
       for (const item of items) {
         if (beforeWrite) await beforeWrite(item);
