@@ -6,6 +6,7 @@ import type { FieldsAnalyzeRequest, FieldsAnalyzeResponse } from "../api/types";
 import type { ReviewPlanItem } from "../review/review-plan";
 import { genericRowFor } from "../dom/repeatable-rows";
 import { localWorkflowLog } from "../debug/local-workflow";
+import { PROFILE_CATEGORIES } from "../../profile/field-definitions";
 
 /** Stable UI reason; detailed structural reasons stay in the local receipt. */
 export const GENERIC_STRUCTURE_BLOCKED_REASON = "STRUCTURE_BLOCKED";
@@ -19,8 +20,11 @@ export interface GenericStructureContext {
     {
       sectionId: string;
       sectionIndex: number;
-      select: HTMLSelectElement;
-      selectedValue: string;
+      /** The stage select of the row; absent for a row with a fixed stage text. */
+      select?: HTMLSelectElement;
+      selectedValue?: string;
+      /** The fixed stage text a select-less row shows. */
+      label?: string;
     }
   >;
 }
@@ -75,7 +79,11 @@ export function bindGenericStructureRows(
     if (!row || !binding || !row.parentElement) continue;
     handle.itemIndex = binding.sectionIndex;
     handle.itemGroupId = `${handle.itemGroupId ?? ""}:stage:${binding.sectionId}`;
-    const selectedLabel = binding.select.selectedOptions[0]?.textContent
+    const selectedLabel = (
+      binding.select
+        ? binding.select.selectedOptions[0]?.textContent
+        : binding.label
+    )
       ?.normalize("NFKC")
       .replace(/\s+/g, " ")
       .trim()
@@ -99,7 +107,7 @@ export function bindGenericStructureRows(
       wasCurrent?.() !== false &&
       row.isConnected &&
       row.contains(element!) &&
-      binding.select.value === binding.selectedValue;
+      (!binding.select || binding.select.value === binding.selectedValue);
   }
   return snapshot;
 }
@@ -136,10 +144,35 @@ function structuralBlockReason(
     else if (element === binding.select) reason = "ROW_KIND_ALREADY_PREPARED";
     else if (key && !key.startsWith(`education.${binding.sectionId}.`))
       reason = "STAGE_KEY_MISMATCH";
-    else if (binding.select.value !== binding.selectedValue)
+    else if (binding.select && binding.select.value !== binding.selectedValue)
       reason = "ROW_KIND_CHANGED";
   }
   return reason;
+}
+
+function bindingFor(element: Element, context: GenericStructureContext) {
+  const row = structureRowFor(element, context);
+  return row ? context.educationRows.get(row) : undefined;
+}
+
+/**
+ * A row that names its stage as fixed text takes that stage: an education key
+ * of another stage for a field the stage also has is read as this stage's key.
+ */
+export function fixedStageKey(
+  key: string,
+  binding: { sectionId: string; select?: HTMLSelectElement } | undefined,
+): string {
+  if (!binding || binding.select) return key;
+  const [category, section, field] = key.split(".");
+  if (category !== "education" || !field || section === binding.sectionId)
+    return key;
+  const stageFields = PROFILE_CATEGORIES.find(({ id }) => id === "education")
+    ?.sections.find(({ id }) => id === binding.sectionId)
+    ?.fields.map(({ id }) => id);
+  return stageFields?.includes(field)
+    ? `education.${binding.sectionId}.${field}`
+    : key;
 }
 
 /** Isolate blocked mappings before the shared planner checks duplicate targets. */
@@ -155,10 +188,29 @@ export function applyGenericStructureAnalysis(
       if (!("handle" in lookup)) return field;
       const element =
         lookup.handle.elements[0] ?? lookup.handle.customElements?.[0];
-      const key =
+      const mapped =
         field.matchType === "MATCH"
           ? (field.valueBinding?.profileFieldKey ?? field.profileFieldKey)
           : undefined;
+      const key =
+        mapped && element
+          ? fixedStageKey(mapped, bindingFor(element, context))
+          : mapped;
+      const staged =
+        key && key !== mapped && field.matchType === "MATCH"
+          ? {
+              ...field,
+              ...(field.profileFieldKey ? { profileFieldKey: key } : {}),
+              ...(field.valueBinding && "profileFieldKey" in field.valueBinding
+                ? {
+                    valueBinding: {
+                      ...field.valueBinding,
+                      profileFieldKey: key,
+                    },
+                  }
+                : {}),
+            }
+          : field;
       const blockReason = element && structuralBlockReason(element, key, context);
       if (blockReason)
         localWorkflowLog("structure-blocked", {
@@ -174,7 +226,7 @@ export function applyGenericStructureAnalysis(
             interactionStatus: "BLOCKED" as const,
             reasonCodes: ["NO_MATCH" as const],
           }
-        : field;
+        : staged;
     }),
   };
 }

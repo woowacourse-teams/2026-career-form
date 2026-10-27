@@ -29,6 +29,7 @@ import {
   type EducationRowKind,
 } from "../profile/education-row-kind";
 import { genericRowFor } from "../dom/repeatable-rows";
+import { stageRowsAround } from "./education-stage-rows";
 import { acquireDocumentRun } from "../interaction/document-run";
 import {
   bindGenericStructureRows,
@@ -1157,8 +1158,34 @@ export async function runGenericStructureLoop(
         await settle();
       }
       if (document.URL !== initialUrl) return blockRow("URL_CHANGED");
-      if (rowElement) {
-        context.educationRows.set(rowElement, {
+      // An area the page renders as uneven rows: bind the stage-select row
+      // alone and each sibling row that shows a fixed stage of the same list.
+      const split =
+        group.singleRow && rowElement
+          ? stageRowsAround(select, rowElement)
+          : undefined;
+      const boundRow = split?.selectRow ?? rowElement;
+      for (const fixed of split?.fixedRows ?? []) {
+        const fixedKind = kindOfOptionText(fixed.label);
+        const fixedIndex = fixedKind
+          ? profile.education.findIndex(
+              (candidate) => kindOfEntry(candidate) === fixedKind,
+            )
+          : -1;
+        if (!fixedKind || fixedIndex < 0) continue;
+        const fixedEntry = profile.education[fixedIndex]!;
+        context.educationRows.set(fixed.row, {
+          sectionId: sectionOfKind(fixedKind),
+          sectionIndex: profile.education
+            .slice(0, fixedIndex)
+            .filter(
+              (previous) => previous.sectionId === fixedEntry.sectionId,
+            ).length,
+          label: fixed.label,
+        });
+      }
+      if (boundRow) {
+        context.educationRows.set(boundRow, {
           sectionId: sectionOfKind(kind),
           sectionIndex: profile.education
             .slice(0, profileIndex)
@@ -1188,7 +1215,9 @@ export async function runGenericStructureLoop(
         // Only the changed row is rematched. A previous row's result must not
         // be reused for another education stage with the same visible labels.
         const ids = new Set(
-          row.fields.map(({ candidate }) => candidate.candidateId),
+          row.fields
+            .filter(({ element }) => !boundRow || boundRow.contains(element))
+            .map(({ candidate }) => candidate.candidateId),
         );
         const rowSnapshot = bindGenericStructureRows(
           {
