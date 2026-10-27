@@ -245,6 +245,15 @@ describe("observeReadonlySearch", () => {
     });
   });
 
+  it("does not take a dropdown trigger that wraps the readonly field as an opener", () => {
+    document.body.innerHTML = `<div data-repeater-item><div class="row"><div class="field"><div class="wrap"><button class="trigger"><input id="target" type="text" readonly placeholder="구분" /><svg viewBox="0 0 20 20"><path d="M1 1"></path></svg></button></div></div><div class="field"><input id="other" type="text" /></div></div></div>`;
+    const input = document.querySelector<HTMLInputElement>("#target")!;
+    expect(observeReadonlySearch(handleFor(input))).toEqual({
+      status: "unsupported",
+      reason: "search_opener_not_found",
+    });
+  });
+
   it("rejects an icon-only default button that would submit a form", () => {
     const input = renderIconOpener(true);
     expect(observeReadonlySearch(handleFor(input))).toEqual({

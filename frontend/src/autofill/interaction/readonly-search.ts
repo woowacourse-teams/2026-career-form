@@ -295,11 +295,13 @@ function isPlausibleSearchOpener(
   if (SEARCH_ACTION.test(label)) return true;
   // An icon-only button names no action at all. It stays a candidate so the
   // field group can count it; the execution-time role decision must still
-  // confirm it before any click.
+  // confirm it before any click. A button that wraps a form control is that
+  // control's own trigger (for example a custom dropdown), not a search.
   return (
     label === "" &&
     isButtonElement(element) &&
-    element.querySelector("svg, img") !== null
+    element.querySelector("svg, img") !== null &&
+    element.querySelector("input, select, textarea") === null
   );
 }
 
