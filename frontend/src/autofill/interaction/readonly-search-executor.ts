@@ -181,7 +181,9 @@ function validateRegionContext(
 /** Prefer bare close; generic failures before result activation may confirm. */
 const ESCAPE_CLOSE_TIMEOUT_MS = 2000;
 
-async function closedAfterEscape(modal: Element, surface: SearchSurface) {
+const MODAL_SELECTOR = "dialog[open], [role='dialog'][aria-modal='true']";
+
+async function closedAfterEscape(modal: Element, isOpen: () => boolean) {
   const document = modal.ownerDocument;
   const view = document.defaultView;
   if (!view) return false;
@@ -196,9 +198,35 @@ async function closedAfterEscape(modal: Element, surface: SearchSurface) {
     }),
   );
   const deadline = Date.now() + ESCAPE_CLOSE_TIMEOUT_MS;
-  while (surface.closure() === "open" && Date.now() < deadline)
+  while (isOpen() && Date.now() < deadline)
     await new Promise((resolve) => view.setTimeout(resolve, 50));
-  return surface.closure() === "closed";
+  return !isOpen();
+}
+
+function openModals(document: Document): Element[] {
+  return Array.from(document.querySelectorAll(MODAL_SELECTOR)).filter(
+    (modal) => modal instanceof HTMLElement && shown(modal),
+  );
+}
+
+/**
+ * The opener click can open a modal the surface detector never accepted.
+ * Only a single modal that was not open before that click is closed.
+ */
+export async function closeModalOpenedBy(
+  before: ReadonlySet<Element>,
+  document: Document,
+): Promise<SurfaceLeftOpenReason | undefined> {
+  const opened = openModals(document).filter((modal) => !before.has(modal));
+  if (opened.length === 0) return undefined;
+  if (opened.length > 1) return "no_safe_close_control";
+  const modal = opened[0]!;
+  return (await closedAfterEscape(
+    modal,
+    () => modal.isConnected && shown(modal as HTMLElement),
+  ))
+    ? undefined
+    : "close_not_confirmed";
 }
 
 export async function closeOwnedSurface(
@@ -228,7 +256,7 @@ export async function closeOwnedSurface(
     // A modal without a close control is dismissed the standard way.
     const modal = surface.modal;
     if (!modal) return "no_safe_close_control";
-    return (await closedAfterEscape(modal, surface))
+    return (await closedAfterEscape(modal, () => surface.closure() === "open"))
       ? undefined
       : "close_not_confirmed";
   }
@@ -276,6 +304,7 @@ export async function executeReadonlySearch(
   let effect: SearchEffect = "none";
   let identity: TargetIdentity | undefined;
   let surface: SearchSurface | undefined;
+  let modalsBeforeOpener: ReadonlySet<Element> | undefined;
   let selectionStarted = false;
   let followUpObservation: ReturnType<typeof captureSearchFollowUp>;
   try {
@@ -382,6 +411,7 @@ export async function executeReadonlySearch(
       opener,
       flow: "generic",
     });
+    modalsBeforeOpener = new Set(openModals(document));
     opener.click();
     surface = await session.wait(
       () => observation.discover(opener),
@@ -1055,7 +1085,9 @@ export async function executeReadonlySearch(
           surface,
           args.genericPopupRecovery === true && !selectionStarted,
         )
-      : undefined;
+      : modalsBeforeOpener
+        ? await closeModalOpenedBy(modalsBeforeOpener, document)
+        : undefined;
     return {
       status: effect === "none" ? "unsupported" : "failed",
       targetCandidateId,
