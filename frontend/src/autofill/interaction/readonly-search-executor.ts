@@ -30,7 +30,10 @@ import {
   queryOnly,
   resolveRoles,
   searchDestination,
-  submitControls, lockedSubmitControls, isIconSearchSubmit } from "./search-controls";
+  submitControls,
+  lockedSubmitControls,
+  isIconSearchSubmit,
+} from "./search-controls";
 import { observeResults, resultBaseline } from "./search-results";
 import { observeQueryCommit } from "./search-query-commit";
 import {
@@ -472,7 +475,10 @@ export async function executeReadonlySearch(
     surfaceGuard();
     const controls = await session.wait(() => {
       surfaceGuard();
-      const queries = queryControls(currentSurface, args.genericPopupRecovery === true);
+      const queries = queryControls(
+        currentSurface,
+        args.genericPopupRecovery === true,
+      );
       const submits = submitControls(currentSurface);
       if (args.genericPopupRecovery) {
         if (queries.length > 1)
@@ -505,7 +511,8 @@ export async function executeReadonlySearch(
       const roleRequests = [
         {
           role: "SEARCH_QUERY_INPUT" as const,
-          collect: () => queryControls(currentSurface, args.genericPopupRecovery === true),
+          collect: () =>
+            queryControls(currentSurface, args.genericPopupRecovery === true),
           scope: currentSurface.container,
         },
         ...(submits.length
@@ -621,9 +628,15 @@ export async function executeReadonlySearch(
           submit = await session.wait(() => {
             surfaceGuard();
             const live = submitControls(currentSurface);
-            return live.length === 1 && live[0] === expected ? expected : undefined;
+            return live.length === 1 && live[0] === expected
+              ? expected
+              : undefined;
           }, "search_submit_not_found");
-          nativeFormBinding = searchDestination(currentSurface, queryElement, submit);
+          nativeFormBinding = searchDestination(
+            currentSurface,
+            queryElement,
+            submit,
+          );
         }
         if (submit) {
           await session.prepareMutation();
@@ -666,8 +679,7 @@ export async function executeReadonlySearch(
           if (!nativeFormBinding) {
             if (isIconSearchSubmit(submit)) clickSubmitHandledByPage(submit);
             else clickWithoutFormSubmit(submit);
-          }
-          else submit.click();
+          } else submit.click();
           if (nativeFormBinding) {
             await session.wait(
               () => currentSurface.settleNavigation() || undefined,
@@ -696,7 +708,15 @@ export async function executeReadonlySearch(
         trace("일치 결과 발견", candidate?.element);
         break;
       } catch (error) {
-        if (error instanceof SearchFailure && reflectedByQuery()) {
+        // Only an empty or still-pending result list defers to the query the
+        // page mirrored into the target; an ambiguous result set stays held.
+        if (
+          error instanceof SearchFailure &&
+          ["search_results_not_found", "result_pending"].includes(
+            error.reason,
+          ) &&
+          reflectedByQuery()
+        ) {
           candidate = undefined;
           break;
         }
@@ -743,7 +763,10 @@ export async function executeReadonlySearch(
         ) {
           if (nativeFormBinding) {
             surfaceGuard();
-            const refreshedQueries = queryControls(currentSurface, args.genericPopupRecovery === true);
+            const refreshedQueries = queryControls(
+              currentSurface,
+              args.genericPopupRecovery === true,
+            );
             const refreshedSubmits = submitControls(currentSurface);
             if (refreshedQueries.length !== 1 || refreshedSubmits.length !== 1)
               throw error;
@@ -752,7 +775,11 @@ export async function executeReadonlySearch(
               [
                 {
                   role: "SEARCH_QUERY_INPUT",
-                  collect: () => queryControls(currentSurface, args.genericPopupRecovery === true),
+                  collect: () =>
+                    queryControls(
+                      currentSurface,
+                      args.genericPopupRecovery === true,
+                    ),
                   scope: currentSurface.container,
                 },
                 {
@@ -862,8 +889,9 @@ export async function executeReadonlySearch(
         throw error;
       }
     }
-    // Accept a query-bound value only when it survives closing the surface.
-    if (reflectedByQuery()) {
+    // Accept a query-bound value only when no result row matched and the value
+    // survives closing the surface.
+    if (!candidate && reflectedByQuery()) {
       selectionStarted = true;
       effect = "value-observed";
       if (await closeOwnedSurface(currentSurface, false))
@@ -874,7 +902,9 @@ export async function executeReadonlySearch(
         retainedSince ??= performance.now();
         return performance.now() - retainedSince >= 500 ? true : undefined;
       }, "result_not_reflected");
-      trace("검색어 반영으로 선택 완료", { targetValue: identity.target.value });
+      trace("검색어 반영으로 선택 완료", {
+        targetValue: identity.target.value,
+      });
       const reflectedIdentity = identity;
       return {
         status: "selected",

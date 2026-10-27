@@ -213,6 +213,8 @@ type CertificateScenario = {
   firstResultState?: "incomplete" | "duplicate";
   selectedValue?: string;
   mutation?: "other-row" | "peer";
+  /** The page mirrors the typed query into the target. */
+  reflectQuery?: boolean;
 };
 
 function certificateFixture(options: CertificateScenario = {}) {
@@ -280,6 +282,10 @@ function certificateFixture(options: CertificateScenario = {}) {
       </form>
       <ul aria-label="검색 결과" data-search-complete="true"></ul>`;
     const query = popup.querySelector<HTMLInputElement>("#query")!;
+    if (options.reflectQuery)
+      query.addEventListener("input", () => {
+        target.value = query.value;
+      });
     popup
       .querySelector<HTMLButtonElement>("#submit")!
       .addEventListener("click", () => {
@@ -806,6 +812,31 @@ describe("readonly search transaction", () => {
       expect(test.actions).toEqual({ opener: 1, search: 1, result: 0 });
     },
   );
+
+  it("keeps duplicate results ambiguous when the page mirrors the query into the target", async () => {
+    const test = certificateFixture({
+      candidateCode: "code-1",
+      firstResultState: "duplicate",
+      reflectQuery: true,
+    });
+
+    expect(await test.run()).toMatchObject({
+      status: "failed",
+      reason: "multiple_matching_results",
+    });
+    expect(test.actions.result).toBe(0);
+  });
+
+  it("clicks the single exact result when the page also mirrors the query", async () => {
+    const test = certificateFixture({
+      candidateCode: "code-1",
+      reflectQuery: true,
+    });
+
+    expect(await test.run()).toMatchObject({ status: "selected" });
+    expect(test.actions.result).toBe(1);
+    expect(test.code?.value).toBe("code-1");
+  });
 
   it("does not retry a split search after its selected first result becomes stale", async () => {
     const test = certificateFixture({ candidateCode: "code-1" });
