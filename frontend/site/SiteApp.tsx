@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { TrackEvent } from "../src/analytics/events";
+import { OnboardingNotificationCard } from "../src/job-postings/OnboardingNotificationCard";
+import type { PushClient } from "../src/job-postings/push-client";
 import logo from "../public/side-panel-launcher-logo.png";
 import { benefits, faqs, steps, STORE_URL } from "./content";
 import { policies } from "./policies";
@@ -238,6 +240,7 @@ function Onboarding({
   installed: extensionInstalled,
   profileHref: extensionProfileHref,
   postingsHref,
+  pushClient,
   onStartAutofill,
   track,
   surface,
@@ -246,6 +249,7 @@ function Onboarding({
   installed: boolean;
   profileHref?: string;
   postingsHref?: string;
+  pushClient?: PushClient;
   onStartAutofill?: () => void;
   track: TrackEvent;
   surface: "site" | "extension_onboarding";
@@ -332,10 +336,14 @@ function Onboarding({
             <small>패널에서 시작 → 정보 입력 → 지원 완료</small>
           </section>
         </div>
+        {pushClient && (
+          <OnboardingNotificationCard client={pushClient} track={track} />
+        )}
         <p className={styles.choiceNote}>
           Chrome이 완전히 종료된 동안에는 알림이 뜨지 않으며, 절전·방해금지
-          설정에 따라 늦거나 차단될 수 있어요. 공고와 프로필은 현재 브라우저에
-          저장됩니다.
+          설정에 따라 늦거나 차단될 수 있어요. OS 알림이 꺼져 있어도 확장
+          아이콘의 숫자와 관리 페이지의 공지함에서 새 공고를 확인할 수 있어요.
+          공고와 프로필은 현재 브라우저에 저장됩니다.
         </p>
       </main>
     );
@@ -521,6 +529,7 @@ export function SiteApp({
   installed = false,
   profileHref,
   postingsHref,
+  pushClient,
   onStartAutofill,
 }: {
   track?: TrackEvent;
@@ -529,6 +538,7 @@ export function SiteApp({
   installed?: boolean;
   profileHref?: string;
   postingsHref?: string;
+  pushClient?: PushClient;
   onStartAutofill?: () => void;
 }) {
   const normalized = path.replace(/\/$/, "") || "/";
@@ -555,6 +565,7 @@ export function SiteApp({
           installed={installed}
           profileHref={profileHref}
           postingsHref={postingsHref}
+          pushClient={pushClient}
           onInstall={onInstall}
           onStartAutofill={onStartAutofill}
           track={track}

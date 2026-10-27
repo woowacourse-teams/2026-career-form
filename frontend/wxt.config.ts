@@ -75,6 +75,8 @@ export default defineConfig({
       // the user for the generic address autofill prototype (2026-10-23).
       "https://postcode.map.kakao.com/*",
     ],
+    // Silent extension push (userVisibleOnly: false) needs Chrome 121+.
+    minimum_chrome_version: "121",
     optional_host_permissions: ["http://*/*", "https://*/*"],
     permissions: [
       "activeTab",

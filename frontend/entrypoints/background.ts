@@ -1,6 +1,7 @@
 import { loadPolicyForSender } from "../src/autofill/policy/background";
 import { createProfileWriteHandler } from "../src/storage/profile-write-handler";
 import { installPostingBackground } from "../src/job-postings/background";
+import { installPushBackground } from "../src/job-postings/push-background";
 import { browser } from "wxt/browser";
 import { defineBackground } from "wxt/utils/define-background";
 
@@ -19,7 +20,24 @@ import { openInstalledOnboarding } from "../src/extension/install-onboarding";
 import { openToolbarPanel } from "../src/extension/toolbar-panel";
 
 export default defineBackground(() => {
-  const handlePostings = installPostingBackground();
+  const postings = installPostingBackground();
+  const handleAnalytics = createAnalyticsMessageHandler({
+    key: import.meta.env.VITE_POSTHOG_KEY,
+    host: import.meta.env.VITE_POSTHOG_HOST,
+    storage: browser.storage.local,
+  });
+  const push = installPushBackground({
+    baseUrl: import.meta.env.VITE_API_BASE_URL,
+    extensionVersion: browser.runtime.getManifest().version,
+    postings: postings.service,
+    track: (event, properties) => {
+      void handleAnalytics({
+        type: "ANALYTICS_TRACK",
+        event,
+        properties,
+      }).catch(() => undefined);
+    },
+  });
   const handleProfileWrite = createProfileWriteHandler(
     browser.storage.local,
     browser.runtime.id,
@@ -43,11 +61,6 @@ export default defineBackground(() => {
     extensionId: browser.runtime.id,
     extensionVersion: browser.runtime.getManifest().version,
   });
-  const handleAnalytics = createAnalyticsMessageHandler({
-    key: import.meta.env.VITE_POSTHOG_KEY,
-    host: import.meta.env.VITE_POSTHOG_HOST,
-    storage: browser.storage.local,
-  });
   browser.runtime.onMessage.addListener((message, sender) => {
     if (message?.type === "AUTOFILL_GET_INSTALLED_BUILD") {
       const snapshot = (
@@ -67,8 +80,10 @@ export default defineBackground(() => {
       return loadPolicyForSender(message, sender);
     const profileResponse = handleProfileWrite(message, sender);
     if (profileResponse !== undefined) return profileResponse;
-    const postingResponse = handlePostings(message, sender);
+    const postingResponse = postings.handleMessage(message, sender);
     if (postingResponse !== undefined) return postingResponse;
+    const pushResponse = push.handleMessage(message, sender);
+    if (pushResponse !== undefined) return pushResponse;
     if (parseAnalyticsMessage(message)) {
       return handleAnalytics(message);
     }

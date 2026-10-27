@@ -22,7 +22,7 @@ if (location.pathname.endsWith("/login.html")) {
         password.value = "";
         document.getElementById("login-panel").hidden = true;
         document.getElementById("management-panel").hidden = false;
-        await import("./app.js");
+        await import(document.body.dataset.app ?? "./app.js");
         return;
       }
       message.textContent = response.status === 429

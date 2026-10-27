@@ -35,7 +35,13 @@ export function createAnalyticsMessageHandler({
   let firstEventQueue = Promise.resolve();
   return async (message: unknown) => {
     const parsed = parseAnalyticsMessage(message);
-    if (!parsed || !options.key?.trim()) return;
+    if (!parsed) return;
+    if (!options.key?.trim()) {
+      // No collector in this build: leave only the allowlisted record locally
+      // so a manual check can read it. Nothing is sent or stored.
+      console.debug("[career-form analytics]", parsed.event, parsed.properties);
+      return;
+    }
     const timestamp = new Date(Date.now()).toISOString();
     if (
       parsed.event !== "onboarding_first_viewed" &&
