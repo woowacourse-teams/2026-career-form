@@ -1,3 +1,4 @@
+import { careerKeyForProjectRole } from "./record-kind-key";
 import { gpaScaleKeyForCredits } from "./scale-key";
 import { majorNameKeyForText } from "./major-key";
 import type { Profile } from "../../profile/model";
@@ -430,8 +431,15 @@ function convertSection(
       element.getAttribute("title") ?? undefined,
       ...(candidate.semanticContext?.labels ?? []).map((label) => label.text),
     ];
+    const neighborKeys = visibleRowMatches
+      ? [
+          visibleRowMatches.filter((sibling) => sibling.index < index).at(-1),
+          visibleRowMatches.find((sibling) => sibling.index > index),
+        ].map((sibling) => sibling?.response.profileFieldKey ?? undefined)
+      : undefined;
     const profileFieldKey = response.profileFieldKey
-      ? gpaScaleKeyForCredits(
+      ? careerKeyForProjectRole(
+          gpaScaleKeyForCredits(
           majorNameKeyForText(
             response.profileFieldKey,
             candidate.control,
@@ -443,6 +451,8 @@ function convertSection(
               ? [sibling.response.profileFieldKey]
               : [],
           ),
+          ),
+          neighborKeys ?? [],
         )
       : undefined;
     const dateSource =
@@ -529,14 +539,7 @@ function convertSection(
         ? { optionValueCheck: { profileValue: choiceValue, context: choiceContext } }
         : {}),
       rowSiblings,
-      ...(visibleRowMatches
-        ? {
-            rowNeighborKeys: [
-              visibleRowMatches.filter((sibling) => sibling.index < index).at(-1),
-              visibleRowMatches.find((sibling) => sibling.index > index),
-            ].map((sibling) => sibling?.response.profileFieldKey ?? undefined),
-          }
-        : {}),
+      ...(neighborKeys ? { rowNeighborKeys: neighborKeys } : {}),
       sectionSiblingKeys: matched.flatMap((sibling) =>
         sibling.index !== index && sibling.response.profileFieldKey
           ? [sibling.response.profileFieldKey]
