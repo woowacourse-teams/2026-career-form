@@ -91,6 +91,30 @@ function labelledQueryControls(surface: SearchSurface): HTMLInputElement[] {
       ),
   );
 }
+/**
+ * An unnamed icon submit that shares its wrapper with exactly one query input
+ * of the same form. The page must handle its submit; see the executor.
+ */
+export function isIconSearchSubmit(
+  control: Element,
+): control is HTMLButtonElement {
+  if (
+    control.tagName !== "BUTTON" ||
+    (control as HTMLButtonElement).type !== "submit" ||
+    label(control as HTMLButtonElement) !== "" ||
+    !control.querySelector("svg, img") ||
+    control.querySelector("input, select, textarea")
+  )
+    return false;
+  const form = (control as HTMLButtonElement).form;
+  const wrapper = control.parentElement;
+  if (!form || !wrapper) return false;
+  const queries = elements<HTMLInputElement>(wrapper, "input").filter((input) =>
+    ["text", "search"].includes(input.type),
+  );
+  return queries.length === 1 && queries[0]!.form === form;
+}
+
 export function submitControls(
   surface: SearchSurface,
 ): (HTMLButtonElement | HTMLInputElement)[] {
@@ -100,10 +124,11 @@ export function submitControls(
   ).filter(
     (control) =>
       interactive(control) &&
-      !HIGH_RISK_ACTION.test(label(control)) &&
-      /검색|조회|찾기|search|find|lookup/i.test(label(control)) &&
-      (safeActivation(control) ||
-        (control.type === "submit" && !!surface.frame)),
+      ((!surface.frame && isIconSearchSubmit(control)) ||
+        (!HIGH_RISK_ACTION.test(label(control)) &&
+          /검색|조회|찾기|search|find|lookup/i.test(label(control)) &&
+          (safeActivation(control) ||
+            (control.type === "submit" && !!surface.frame)))),
   );
 }
 
@@ -172,6 +197,15 @@ export function searchDestination(
       throw new SearchFailure("unverified_search_form");
     return undefined;
   }
+  // The page's own submit handler runs this search; the executor cancels any
+  // submit the page leaves unhandled.
+  if (
+    !surface.frame &&
+    isIconSearchSubmit(submit) &&
+    submit.parentElement?.contains(query) &&
+    surface.contains(form)
+  )
+    return undefined;
   // A same-document search layer may sit inside the application's own form.
   // Its query and type=button search stay inside the owned layer; the button
   // is only clicked (never Enter or submit), and the executor cancels and

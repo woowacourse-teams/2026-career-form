@@ -30,7 +30,7 @@ import {
   queryOnly,
   resolveRoles,
   searchDestination,
-  submitControls, lockedSubmitControls } from "./search-controls";
+  submitControls, lockedSubmitControls, isIconSearchSubmit } from "./search-controls";
 import { observeResults, resultBaseline } from "./search-results";
 import { observeQueryCommit } from "./search-query-commit";
 import {
@@ -127,6 +127,27 @@ function clickWithoutFormSubmit(element: HTMLElement): void {
     view.removeEventListener("submit", block, true);
   }
   if (submitted) throw new SearchFailure("surface_navigation_unsafe");
+}
+/**
+ * Clicks a submit the page itself handles. A submit no page handler cancels
+ * would navigate, so it is cancelled here and the search fails closed.
+ */
+export function clickSubmitHandledByPage(element: HTMLButtonElement): void {
+  const view = element.ownerDocument.defaultView;
+  if (!view || !element.form) throw new SearchFailure("unverified_search_form");
+  let unhandled = false;
+  const guard = (event: Event) => {
+    if (event.defaultPrevented) return;
+    unhandled = true;
+    event.preventDefault();
+  };
+  view.addEventListener("submit", guard);
+  try {
+    element.click();
+  } finally {
+    view.removeEventListener("submit", guard);
+  }
+  if (unhandled) throw new SearchFailure("surface_navigation_unsafe");
 }
 function nativeQueryValue(
   input: HTMLInputElement,
@@ -614,7 +635,10 @@ export async function executeReadonlySearch(
                 }
               : submit,
           );
-          if (!nativeFormBinding) clickWithoutFormSubmit(submit);
+          if (!nativeFormBinding) {
+            if (isIconSearchSubmit(submit)) clickSubmitHandledByPage(submit);
+            else clickWithoutFormSubmit(submit);
+          }
           else submit.click();
           if (nativeFormBinding) {
             await session.wait(
