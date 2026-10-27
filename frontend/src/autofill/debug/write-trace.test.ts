@@ -254,10 +254,14 @@ describe("write trace rows", () => {
       }
       const approved = new Set(items.map((entry) => entry.candidateId));
       const writeOrdinary = vi.fn((entry: ReviewPlanItem) => {
-        if (command === "SELECT_DATE")
+        if (command === "SELECT_DATE") {
+          // The calendar changed another page input, so the hold is real.
+          document.querySelector<HTMLInputElement>("#field-2")!.value =
+            "changed";
           traceTrigger(entry.candidateId, {
             interactionReason: "other_input_changed",
           });
+        }
         return {
           result: skipped(
             entry.candidateId,

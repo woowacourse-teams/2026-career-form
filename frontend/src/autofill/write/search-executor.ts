@@ -551,7 +551,10 @@ export async function executeApprovedSearchWrites({
           });
           if (effect !== "stop" && closed) continue;
           const correspondence = correspondingControls(before, controls(), target);
-          // Only a proven identity-preserving render can relax this stop.
+          // Relax only when every pre-existing control kept its identity and
+          // state. An ordinary stop also needs a proven re-render, since its
+          // cause is otherwise unknown; a calendar acts only on its own target
+          // and popup, so an unchanged page keeps the failure in that field.
           // Changed values, unknown effects and open surfaces keep the hold.
           if (
             genericItems.has(item) &&
@@ -564,7 +567,8 @@ export async function executeApprovedSearchWrites({
               target.value === before.find((old) => old.control === target)?.value) &&
             closed &&
             correspondence &&
-            [...correspondence].some(([old, current]) => old !== current)
+            (item.analysis?.writePlan?.command === "SELECT_DATE" ||
+              [...correspondence].some(([old, current]) => old !== current))
           )
             continue;
           traceTrigger(item.candidateId, {
