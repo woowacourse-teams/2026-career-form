@@ -200,7 +200,7 @@ function validateRegionContext(
 }
 
 /** Prefer bare close; generic failures before result activation may confirm. */
-const ESCAPE_CLOSE_TIMEOUT_MS = 2000;
+const ESCAPE_CLOSE_TIMEOUT_MS = 5000;
 
 const MODAL_SELECTOR = "dialog[open], [role='dialog'][aria-modal='true']";
 
