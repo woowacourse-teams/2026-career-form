@@ -179,10 +179,32 @@ function validateRegionContext(
 }
 
 /** Prefer bare close; generic failures before result activation may confirm. */
-function closeOwnedSurface(
+const ESCAPE_CLOSE_TIMEOUT_MS = 2000;
+
+async function closedAfterEscape(modal: Element, surface: SearchSurface) {
+  const document = modal.ownerDocument;
+  const view = document.defaultView;
+  if (!view) return false;
+  const focused = document.activeElement;
+  const origin = focused && modal.contains(focused) ? focused : modal;
+  origin.dispatchEvent(
+    new view.KeyboardEvent("keydown", {
+      key: "Escape",
+      code: "Escape",
+      bubbles: true,
+      cancelable: true,
+    }),
+  );
+  const deadline = Date.now() + ESCAPE_CLOSE_TIMEOUT_MS;
+  while (surface.closure() === "open" && Date.now() < deadline)
+    await new Promise((resolve) => view.setTimeout(resolve, 50));
+  return surface.closure() === "closed";
+}
+
+export async function closeOwnedSurface(
   surface: SearchSurface,
   allowConfirmation: boolean,
-): SurfaceLeftOpenReason | undefined {
+): Promise<SurfaceLeftOpenReason | undefined> {
   if (surface.kind === "inline-listbox") return undefined;
   if (surface.closure() !== "open") return undefined;
   const controls = Array.from(
@@ -202,7 +224,14 @@ function closeOwnedSurface(
             }).allowed,
         )
       : undefined);
-  if (!control) return "no_safe_close_control";
+  if (!control) {
+    // A modal without a close control is dismissed the standard way.
+    const modal = surface.modal;
+    if (!modal) return "no_safe_close_control";
+    return (await closedAfterEscape(modal, surface))
+      ? undefined
+      : "close_not_confirmed";
+  }
   try {
     control.click();
   } catch {
@@ -1022,7 +1051,7 @@ export async function executeReadonlySearch(
       error instanceof SearchFailure ? error.reason : "execution_failed";
     debugSearchFailure(targetCandidateId, step, reason, effect, error);
     const leftOpenReason = surface
-      ? closeOwnedSurface(
+      ? await closeOwnedSurface(
           surface,
           args.genericPopupRecovery === true && !selectionStarted,
         )
