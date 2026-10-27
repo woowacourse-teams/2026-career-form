@@ -103,7 +103,7 @@ async function runGenericKakaoAddress(
     ) &&
     address.readOnly &&
     (!zip || zip.readOnly) &&
-    !detail.readOnly;
+    (!detail || !detail.readOnly);
   if (!valid()) return manual();
   if (
     !/^\d{5}$/.test(expected.postalCode) ||
@@ -120,7 +120,7 @@ async function runGenericKakaoAddress(
     (address.value &&
       !sameAddress(address.value, expected.address) &&
       !(reference && normalizeAddress(address.value) === reference.road)) ||
-    (detail.value &&
+    (detail?.value &&
       normalizeAddress(detail.value) !== normalizeAddress(expected.detail));
   if (conflicts)
     return manual("지원서에 다른 주소가 입력되어 있어 덮어쓰지 않았습니다.");
@@ -172,7 +172,7 @@ async function runGenericKakaoAddress(
       sameProfile: await sameProfile(),
       targetsValid: valid(),
       selectionMatches: matchesSelection(),
-      detailUnchanged: detail.value === originals[originals.length - 1],
+      detailUnchanged: !detail || detail.value === originals[originals.length - 1],
     };
     const failed = Object.entries(checks)
       .filter(([, passed]) => !passed)
@@ -201,9 +201,17 @@ async function runGenericKakaoAddress(
     if (
       !valid() ||
       !matchesSelection() ||
-      (detail.value !== "" && detail.value !== expected.detail)
+      (detail && detail.value !== "" && detail.value !== expected.detail)
     )
       return manual("주소 반영 확인 실패: settle");
+    if (!detail) {
+      localWorkflowLog("address-detail-absent", { generic: true });
+      return {
+        status: "written",
+        reason:
+          "주소 검색 선택과 지원서 반영을 확인했습니다. 지원서에 상세주소 칸이 없어 상세주소는 입력하지 않았습니다.",
+      };
+    }
     stage = "write-detail";
     if (detail.value !== expected.detail) {
       Object.getOwnPropertyDescriptor(

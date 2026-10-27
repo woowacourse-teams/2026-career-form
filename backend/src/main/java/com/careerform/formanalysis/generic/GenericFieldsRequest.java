@@ -196,10 +196,20 @@ public record GenericFieldsRequest(
     ) {
     }
 
+    /** placeholder는 값이 빈 안내 선택지(예: select의 첫 "선택" 항목)일 때만 true로 온다. */
     public record Option(
         @NotBlank @Size(max = 128) String optionId,
-        @NotBlank @Size(max = 120) String displayName
+        @NotBlank @Size(max = 120) String displayName,
+        @AssertTrue Boolean placeholder
     ) {
+
+        public Option(String optionId, String displayName) {
+            this(optionId, displayName, null);
+        }
+
+        boolean isPlaceholder() {
+            return Boolean.TRUE.equals(placeholder);
+        }
     }
 
     public enum FormElement {

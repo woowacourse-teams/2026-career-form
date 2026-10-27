@@ -131,6 +131,17 @@ public final class GenericFieldsService {
                 section.items().forEach(item -> candidates.addAll(item.fields()));
             }
             applyPersonalAndSensitiveRules(section, candidates, mappings);
+            // 예/아니오 상태 키는 긍정·부정 두 의미만 가진 선택칸에만 둔다. 종류를 고르는 칸에 붙은 상태 키는 기권한다.
+            for (FieldCandidate candidate : candidates) {
+                Mapping current = mappings.get(candidate.candidateId());
+                if (current != null && current.binding() == null
+                    && GenericProfileSemantics.isYesNoStatusKey(current.profileFieldKey())
+                    && GenericProfileSemantics.meaningfulChoiceOptions(candidate) != null
+                    && !GenericProfileSemantics.isPositiveNegativeChoice(candidate)) {
+                    mappings.put(candidate.candidateId(),
+                        new Mapping(null, current.confidence(), current.categoryConfirmed(), null));
+                }
+            }
         }
         // 이름은 한 줄 입력칸에만 쓴다. 자기소개서 같은 여러 줄 칸에 이름을 넣지 않는다.
         for (FieldCandidate candidate : request.fieldCandidatesInTraversalOrder()) {
@@ -234,6 +245,43 @@ public final class GenericFieldsService {
             }
             mappings.put(field.candidateId(), new Mapping(detail, 1.0, current == null || current.categoryConfirmed(), null));
         }
+        applyStructuralStatus(candidates, mappings, "veteran.", "veteran.veteran.veteranStatus", "장애");
+        applyStructuralStatus(candidates, mappings, "disability.", "disability.disability.disabilityStatus", "보훈");
+    }
+
+    /**
+     * 같은 섹션에 보훈·장애 상세 키가 신뢰도 1.0으로 정해졌고 상태 키는 없을 때, 기권한 긍정·부정 두 의미 선택칸이
+     * 정확히 하나면 그 칸을 상태 칸으로 본다. 다른 항목을 가리키는 라벨과 동의·증빙 질문은 제외한다.
+     */
+    private void applyStructuralStatus(List<FieldCandidate> candidates, Map<String, Mapping> mappings,
+        String family, String statusKey, String otherTopic) {
+        if (!supportedProfileFields.contains(statusKey)) {
+            return;
+        }
+        boolean confirmedDetail = false;
+        for (FieldCandidate field : candidates) {
+            Mapping mapping = mappings.get(field.candidateId());
+            String key = mapping == null ? null : mapping.profileFieldKey();
+            if (statusKey.equals(key)) {
+                return;
+            }
+            confirmedDetail |= key != null && key.startsWith(family) && mapping.confidence() >= 1.0;
+        }
+        if (!confirmedDetail) {
+            return;
+        }
+        List<FieldCandidate> statuses = candidates.stream()
+            .filter(field -> abstained(mappings.get(field.candidateId())))
+            .filter(GenericProfileSemantics::isPositiveNegativeChoice)
+            .filter(field -> !GenericProfileSemantics.isConsentLabel(field))
+            .filter(field -> GenericProfileSemantics.ownLabels(field).stream().noneMatch(label -> label.contains(otherTopic)))
+            .toList();
+        if (statuses.size() != 1) {
+            return;
+        }
+        Mapping current = mappings.get(statuses.getFirst().candidateId());
+        mappings.put(statuses.getFirst().candidateId(),
+            new Mapping(statusKey, 1.0, current == null || current.categoryConfirmed(), null));
     }
 
     private static final String BIRTH_DATE = "personal.personal.birthDate";

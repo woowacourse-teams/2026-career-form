@@ -111,6 +111,25 @@ describe("generic Kakao address targets without a site policy", () => {
     },
   );
 
+  it("writes postcode and road address and reports the missing detail field", async () => {
+    const { button, targets } = setup(true);
+    const { detail, ...withoutDetail } = targets;
+    detail.remove();
+    const result = await runKakaoAddress({
+      document,
+      button,
+      expected,
+      loadCurrent: async () => expected,
+      signal: new AbortController().signal,
+      search: siteCallback(true),
+      targets: withoutDetail,
+    });
+    expect(result.status).toBe("written");
+    expect(result.reason).toContain("상세주소 칸이 없어");
+    expect(withoutDetail.address.value).toBe(expected.address);
+    expect(detail.value).toBe("");
+  });
+
   it("accepts a callback that appends the road reference", async () => {
     const { button, targets } = setup(false);
     const result = await runKakaoAddress({

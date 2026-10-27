@@ -211,10 +211,10 @@ export async function runAddressAnalysis({
     });
     return matches.length === 1 ? matches[0] : undefined;
   });
-  // Sites that already publish the postcode separately (or not at all) only
-  // expose the road address plus its detail line, so require those two and
-  // treat the postcode as optional.
-  const genericRequired: readonly number[] = [1, 2];
+  // Only the road address is required. The postcode is optional, and the detail
+  // line may be absent only when the form offers no editable text field that
+  // could hold it (checked below together with the single trigger scope).
+  const genericRequired: readonly number[] = [1];
   const genericFieldIsUsable = (field: (typeof genericAddressFields)[number], index: number) => {
     if (!field) return false;
     const mapping = mappingFor(field.candidateId);
@@ -237,7 +237,12 @@ export async function runAddressAnalysis({
       genericFieldIsUsable(genericAddressFields[index], index),
     ) &&
     (genericAddressFields[0] === undefined ||
-      genericFieldIsUsable(genericAddressFields[0], 0));
+      genericFieldIsUsable(genericAddressFields[0], 0)) &&
+    (genericAddressFields[2] === undefined
+      ? !hasEditableDetailCandidate(snapshot, genericAddressFields)
+      : genericFieldIsUsable(genericAddressFields[2], 2));
+  const genericDetailAbsent =
+    genericAddressPermitted && genericAddressFields[2] === undefined;
   // Without an address runner, a generic search cannot drive a postcode
   // widget (it lives in nested cross-origin frames) and only leaves its layer
   // open over the form. Keep those address searches manual instead.
@@ -260,13 +265,24 @@ export async function runAddressAnalysis({
         )
         .map((field) => field.candidateId),
     );
-    if (manual.size)
+    if (manual.size) {
+      localWorkflowLog("address-manual", {
+        snapshotId: snapshot.request.snapshotId,
+        removed: manual.size,
+        addressLine1: genericFieldIsUsable(genericAddressFields[1], 1),
+        addressLine2: genericAddressFields[2]
+          ? genericFieldIsUsable(genericAddressFields[2], 2)
+          : hasEditableDetailCandidate(snapshot, genericAddressFields)
+            ? "unmapped-editable"
+            : "absent",
+      });
       return {
         ...analysis,
         fields: analysis.fields.filter(
           (field) => !manual.has(field.candidateId),
         ),
       };
+    }
   }
   const permitted =
     (analysis.mode === "ADAPTER" &&
@@ -373,6 +389,7 @@ export async function runAddressAnalysis({
       snapshotId: snapshot.request.snapshotId,
       found: !!run.button,
       addressElement: !!element,
+      detailField: !genericDetailAbsent,
     });
   }
   localWorkflowLog("address-enter", {
@@ -445,11 +462,13 @@ export async function runAddressAnalysis({
       loadCurrent: async () => addressValue(await repository.load()),
       signal: run.controller.signal,
       search: addressSearch,
-      ...(genericAddressPermitted && genericAddress && genericDetail
+      ...(genericAddressPermitted &&
+      genericAddress &&
+      (genericDetail || genericDetailAbsent)
         ? {
             targets: {
               address: genericAddress,
-              detail: genericDetail,
+              ...(genericDetail ? { detail: genericDetail } : {}),
               ...(genericPostalCode ? { postalCode: genericPostalCode } : {}),
             },
           }
@@ -500,6 +519,42 @@ export async function runAddressAnalysis({
   }
   onActivity?.("matching");
   return withoutAddressFields(analysis, snapshot, effectiveAddressNames);
+}
+
+/**
+ * A detail line may be omitted only when no other editable single-line text
+ * field shares a section with the road address: such a field could be the
+ * unmapped detail line, and the search would then leave it empty.
+ */
+function hasEditableDetailCandidate(
+  snapshot: ReturnType<typeof collectFieldsSnapshot>,
+  addressFields: readonly ({ candidateId: string } | undefined)[],
+): boolean {
+  const road = addressFields[1];
+  if (!road) return true;
+  const own = new Set(
+    addressFields.flatMap((field) => (field ? [field.candidateId] : [])),
+  );
+  return snapshot.request.sections
+    .map((section) => [
+      ...section.fields,
+      ...(section.items ?? []).flatMap((item) => item.fields),
+    ])
+    .filter((fields) =>
+      fields.some((field) => field.candidateId === road.candidateId),
+    )
+    .some((fields) =>
+      fields.some(
+        (field) =>
+          !own.has(field.candidateId) &&
+          field.element === "input" &&
+          field.control === "text" &&
+          field.visibility === "visible" &&
+          !field.readonly &&
+          !field.disabled &&
+          !field.inert,
+      ),
+    );
 }
 
 function elementByCollectedName(

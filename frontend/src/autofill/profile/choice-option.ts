@@ -1,5 +1,6 @@
 import { PROFILE_CATEGORIES } from "../../profile/field-definitions";
 import {
+  EMPLOYMENT_STATUS_SYNONYMS,
   MILITARY_STATUS_OPTIONS,
   standardValueAliases,
 } from "../../profile/standard-values";
@@ -62,7 +63,8 @@ export function resolveChoiceOption<T extends { displayName: string }>(
       : { status: matches.length ? "ambiguous" : "none" };
   const groups = key === "personal.personal.gender" ? [MALE, FEMALE, NONBINARY]
     : key === "veteran.veteran.veteranStatus" || key === "disability.disability.disabilityStatus"
-      ? [TARGET, NOT_TARGET] : [];
+      ? [TARGET, NOT_TARGET]
+      : key === "careers.career.employmentStatus" ? Object.values(EMPLOYMENT_STATUS_SYNONYMS) : [];
   const meanings = groups.filter((group) => group.some((word) => aliases.has(word)));
   if (meanings.length > 1) return { status: "ambiguous" };
   if (meanings.length === 1) {

@@ -13,7 +13,8 @@ export type AddressSearch = (
 export interface GenericAddressTargets {
   postalCode?: HTMLInputElement;
   address: HTMLInputElement;
-  detail: HTMLInputElement;
+  /** Absent when the form has no detail-address field at all. */
+  detail?: HTMLInputElement;
 }
 export interface AddressExecutionOptions {
   document: Document;

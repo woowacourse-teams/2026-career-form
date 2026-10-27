@@ -72,8 +72,30 @@ describe("employment type aliases", () => {
   it("stays ambiguous when two contract labels are offered", () => {
     expect(resolveChoiceOption(key, "계약", options("계약직", "기간제")).status).toBe("ambiguous");
   });
+  it("does not apply employment status synonyms to the employment type", () => {
+    expect(resolveChoiceOption(key, "재직중", options("재직", "퇴직")).status).toBe("none");
+  });
   it("does not apply employment aliases to other keys", () => {
     expect(resolveChoiceOption("careers.career.position", "정규", options("정규직")).status).toBe("none");
+  });
+});
+
+describe("employment status synonyms", () => {
+  const key = "careers.career.employmentStatus";
+  it.each([
+    ["재직중", ["재직", "퇴직"], "재직"],
+    ["퇴사", ["재직", "퇴직"], "퇴직"],
+    ["재직중", ["재직 중", "퇴사함"], "재직 중"],
+    ["퇴사", ["근무중", "퇴사함"], "퇴사함"],
+    ["재직중", ["선택", "현직", "퇴직"], "현직"],
+  ])("maps %s among %j to %s", (value, names, displayName) => {
+    expect(resolveChoiceOption(key, value, options(...names))).toMatchObject({ status: "unique", option: { displayName } });
+  });
+  it("stays ambiguous when one meaning has two labels", () => {
+    expect(resolveChoiceOption(key, "퇴사", options("퇴사", "퇴직")).status).toBe("ambiguous");
+  });
+  it("does not match an unrelated label", () => {
+    expect(resolveChoiceOption(key, "재직중", options("휴직", "퇴직")).status).toBe("none");
   });
 });
 

@@ -95,14 +95,10 @@ final class GenericProfileSemantics {
 
     /** 정확히 두 선택지의 의미와 구조 라벨만 사용한다. DOM 식별자나 현재 값은 근거가 아니다. */
     static String choiceKey(String sectionHeading, FieldCandidate candidate) {
-        if (candidate.options() == null || candidate.options().size() != 2
-            || !(candidate.control() == FormControl.SELECT || candidate.control() == FormControl.RADIO
-                || candidate.control() == FormControl.CUSTOM || candidate.control() == FormControl.BUTTON)
-            || candidate.semanticContext() != null && Boolean.TRUE.equals(candidate.semanticContext().multiple())) {
+        List<String> options = meaningfulChoiceOptions(candidate);
+        if (options == null || options.size() != 2) {
             return null;
         }
-        List<String> options = candidate.options().stream()
-            .map(option -> compactChoiceText(option.displayName())).toList();
         if (options.contains("외국인")
             && options.stream().anyMatch(option -> Set.of("내국인", "국내한국국적").contains(option))) {
             return "personal.personal.nationality";
@@ -174,6 +170,46 @@ final class GenericProfileSemantics {
             return null;
         }
         return family ? "personal.personal.englishFamilyName" : "personal.personal.englishGivenName";
+    }
+
+    private static final Set<String> POSITIVE_STATUS = Set.of("대상", "해당", "예", "네", "있음", "유", "Y", "y", "yes", "Yes", "YES");
+    private static final Set<String> NEGATIVE_STATUS = Set.of("비대상", "비해당", "해당없음", "아니오", "아니요", "없음", "무",
+        "N", "n", "no", "No", "NO");
+
+    /**
+     * 선택형 칸의 의미 있는 선택지 문구(공백·괄호 제거)를 돌려준다. 값이 빈 안내 선택지(placeholder)는 뺀다.
+     * 선택형 칸이 아니거나 여러 개를 고르는 칸이면 null이다.
+     */
+    static List<String> meaningfulChoiceOptions(FieldCandidate candidate) {
+        if (candidate.options() == null
+            || !(candidate.control() == FormControl.SELECT || candidate.control() == FormControl.RADIO
+                || candidate.control() == FormControl.CUSTOM || candidate.control() == FormControl.BUTTON)
+            || candidate.semanticContext() != null && Boolean.TRUE.equals(candidate.semanticContext().multiple())) {
+            return null;
+        }
+        return candidate.options().stream().filter(option -> !option.isPlaceholder())
+            .map(option -> compactChoiceText(option.displayName())).toList();
+    }
+
+    /** 의미 있는 선택지가 정확히 두 개이고 긍정·부정 상태 어휘가 하나씩이면 예/아니오 상태 선택칸이다. */
+    static boolean isPositiveNegativeChoice(FieldCandidate candidate) {
+        List<String> options = meaningfulChoiceOptions(candidate);
+        return options != null && options.size() == 2
+            && options.stream().filter(POSITIVE_STATUS::contains).count() == 1
+            && options.stream().filter(NEGATIVE_STATUS::contains).count() == 1;
+    }
+
+    /** 항목의 있고 없음만 담는 예/아니오 상태 키. 종류를 고르는 칸에 붙으면 어느 선택지와도 뜻이 맞지 않는다. */
+    static boolean isYesNoStatusKey(String key) {
+        return key != null && key.startsWith("education.")
+            && (key.endsWith(".transferStatus") || key.endsWith(".doubleMajorStatus")
+                || key.endsWith(".minorStatus") || key.endsWith(".combinedDegreeStatus"));
+    }
+
+    /** 동의·증빙 질문은 상태 칸이 아니다. 동의는 사용자가 직접 한다. */
+    static boolean isConsentLabel(FieldCandidate candidate) {
+        return ownLabels(candidate).stream().anyMatch(label -> label.contains("동의") || label.contains("증빙")
+            || label.toLowerCase(Locale.ROOT).contains("consent") || label.toLowerCase(Locale.ROOT).contains("agree"));
     }
 
     /** 이행·미필·면제 세 상태를 모두 담은 병역 선택지는 유형이 섞여 있어도 병역 상태 칸이다. */

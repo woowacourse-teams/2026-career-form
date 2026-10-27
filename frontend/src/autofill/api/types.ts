@@ -15,6 +15,8 @@ export interface SiteDescriptor {
 export interface OptionCandidate {
   optionId: string;
   displayName: string;
+  /** Generic path only: the option is an empty-value guidance entry. */
+  placeholder?: true;
 }
 
 export interface SemanticContext {

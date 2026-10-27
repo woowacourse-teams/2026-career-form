@@ -25,6 +25,7 @@ import type {
   FieldsAnalyzeRequest,
   FieldsItem,
   FieldsSection,
+  OptionCandidate,
   PreparationAnalyzeRequest,
   PreparationSection,
 } from "../api/types";
@@ -622,13 +623,14 @@ function collectFieldsSnapshotInternal(
                     optionIndex,
                   );
                   optionElements.set(optionId, option);
-                  return { optionId, displayName };
+                  // An empty-value option is the select's guidance entry, not a
+                  // meaning. Only the flag is sent, never the option value.
+                  return generic && option.value === ""
+                    ? { optionId, displayName, placeholder: true as const }
+                    : { optionId, displayName };
                 })
                 .filter(
-                  (
-                    option,
-                  ): option is { optionId: string; displayName: string } =>
-                    Boolean(option),
+                  (option): option is OptionCandidate => Boolean(option),
                 );
               candidate = {
                 ...baseCandidate(
