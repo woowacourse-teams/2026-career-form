@@ -141,7 +141,8 @@ function profileOptions(
     .filter((option) => sameOptionName(option.displayName, profileValue, numeric))
     .map((option) => handle.optionElements.get(option.optionId))
     .filter((option): option is HTMLElement => Boolean(option))
-    .filter(isVisibleWriteElement)
+    // Generic only: adapters may target native options hidden behind styling.
+    .filter((option) => !numeric || isVisibleWriteElement(option))
     .filter(
       (option) =>
         !match ||
@@ -728,7 +729,7 @@ function writeGeneric(
   traceWrite(item.candidateId, { valueAfterWrite: option.checked });
   // Radio change handlers are derived from click by frameworks such as React.
   // Notify through the same activation event a user produces.
-  if (expected === "radio")
+  if (expected === "radio" && generic)
     option.dispatchEvent(
       new MouseEvent("click", { bubbles: true, composed: true }),
     );
