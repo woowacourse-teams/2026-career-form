@@ -309,6 +309,19 @@ export async function closeOwnedSurface(
     : "close_not_confirmed";
 }
 
+/**
+ * Result failures that may defer to a query the page mirrored into the
+ * target: no result, a list still pending, or a single matching row with
+ * nothing safe to activate. An ambiguous or incomplete result set stays held.
+ */
+export function defersToReflectedQuery(reason: string): boolean {
+  return [
+    "search_results_not_found",
+    "result_pending",
+    "result_activation_unsafe",
+  ].includes(reason);
+}
+
 export async function executeReadonlySearch(
   args: ExecuteReadonlySearchArgs,
 ): Promise<ReadonlySearchExecutionResult> {
@@ -708,13 +721,9 @@ export async function executeReadonlySearch(
         trace("일치 결과 발견", candidate?.element);
         break;
       } catch (error) {
-        // Only an empty or still-pending result list defers to the query the
-        // page mirrored into the target; an ambiguous result set stays held.
         if (
           error instanceof SearchFailure &&
-          ["search_results_not_found", "result_pending"].includes(
-            error.reason,
-          ) &&
+          defersToReflectedQuery(error.reason) &&
           reflectedByQuery()
         ) {
           candidate = undefined;

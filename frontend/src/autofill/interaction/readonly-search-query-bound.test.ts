@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import { collectFieldsSnapshot } from "../dom/collect";
-import { executeReadonlySearch } from "./readonly-search-executor";
+import {
+  defersToReflectedQuery,
+  executeReadonlySearch,
+} from "./readonly-search-executor";
 
 let listeners = new AbortController();
 
@@ -87,5 +90,18 @@ describe("a search whose query the page binds to the target", () => {
     const test = queryBoundSearch({ revertOnClose: true });
     expect(await test.run()).toMatchObject({ status: "failed" });
     expect(test.target.value).toBe("");
+  });
+});
+
+describe("which result failures defer to a mirrored query", () => {
+  it.each([
+    ["search_results_not_found", true],
+    ["result_pending", true],
+    ["result_activation_unsafe", true],
+    ["multiple_matching_results", false],
+    ["result_set_incomplete", false],
+    ["search_query_conflict", false],
+  ])("%s → %s", (reason, defers) => {
+    expect(defersToReflectedQuery(reason)).toBe(defers);
   });
 });
