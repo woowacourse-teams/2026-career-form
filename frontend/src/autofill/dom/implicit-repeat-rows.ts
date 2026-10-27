@@ -23,6 +23,21 @@ const RESET_LABEL = /초기화|reset|clear/i;
 const ADD_ACTION_SELECTOR = "button, input[type='button']";
 const MAX_ANCESTOR_DEPTH = 6;
 
+/**
+ * An open modal makes the page behind it inert or aria-hidden. That page keeps
+ * its structure; only a hidden subtree no open modal explains is gone.
+ */
+function hiddenFromPage(element: Element): boolean {
+  if (element.closest("[hidden]")) return true;
+  const hider = element.closest("[aria-hidden='true'], [inert]");
+  if (!hider) return false;
+  return !Array.from(
+    element.ownerDocument.querySelectorAll(
+      "dialog[open], [role='dialog'][aria-modal='true']",
+    ),
+  ).some((modal) => !hider.contains(modal));
+}
+
 export function isAddAction(element: Element): element is HTMLElement {
   if (
     !(element instanceof HTMLElement) ||
@@ -34,7 +49,7 @@ export function isAddAction(element: Element): element is HTMLElement {
     ADD_LABEL.test(label) &&
     !FORBIDDEN_LABEL.test(label) &&
     !RESET_LABEL.test(label) &&
-    !element.closest("[hidden], [aria-hidden='true'], [inert]") &&
+    !hiddenFromPage(element) &&
     !element.closest("template, [data-template]")
   );
 }
