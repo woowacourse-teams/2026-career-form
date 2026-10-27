@@ -1,6 +1,9 @@
 import { calendarUnitEvidence } from "./calendar-unit";
 import { hasCalendarOwnershipConflict } from "./calendar-ownership";
-import { deferredCalendarOpening } from "./calendar-deferred";
+import {
+  dayCalendarGridRoots,
+  deferredCalendarOpening,
+} from "./calendar-deferred";
 
 /**
  * Detects readonly inputs bound to a ui-datepicker family day calendar.
@@ -90,15 +93,27 @@ export function dayCalendarSurfaceFor(
     target.disabled ||
     !target.isConnected ||
     target.closest(HIDDEN) ||
-    unit?.unit !== "day" ||
-    unit.unitEvidence === "unconfirmed"
+    unit?.unit !== "day"
   )
     return undefined;
+  // A deferred calendar proves its day grid at execution time, so one label
+  // clue suffices here; a ui-datepicker needs the confirmed unit.
   if (!target.classList.contains("hasDatepicker")) {
     const opening = deferredCalendarOpening(target);
+    // While open, the opener may name the day grid it mounted; that is ownership.
+    const openedGrid = (element: HTMLElement | null) =>
+      !!element &&
+      dayCalendarGridRoots(target.ownerDocument).some(
+        (root) => element.contains(root) || root.contains(element),
+      );
     if (
       !opening ||
-      hasCalendarOwnershipConflict(target, opening.opener, opening.group)
+      hasCalendarOwnershipConflict(
+        target,
+        opening.opener,
+        opening.group,
+        openedGrid,
+      )
     )
       return undefined;
     return {
@@ -109,6 +124,7 @@ export function dayCalendarSurfaceFor(
       rendering: "deferred-generic",
     };
   }
+  if (unit.unitEvidence === "unconfirmed") return undefined;
   const roots = dayCalendarRoots(target.ownerDocument);
   if (roots.length !== 1 || roots[0]!.contains(target)) return undefined;
   const triggers = adjacentTriggers(target);

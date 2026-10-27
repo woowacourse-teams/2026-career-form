@@ -75,8 +75,12 @@ export function elementSignature(
     "value",
     ...extraIgnored,
   ]);
+  // Open/closed markers (an opener's aria-controls while open, data-*-state,
+  // data-open) describe the moment, not the element's identity.
+  const transient = (name: string) =>
+    name === "aria-controls" || /^data-(?:[\w-]*-)?(?:state|open)$/.test(name);
   const attrs = Array.from(element.attributes)
-    .filter(({ name }) => !ignored.has(name))
+    .filter(({ name }) => !ignored.has(name) && !transient(name))
     .sort((a, b) => a.name.localeCompare(b.name))
     .map(({ name, value }) => `${name}=${value}`)
     .join(";");

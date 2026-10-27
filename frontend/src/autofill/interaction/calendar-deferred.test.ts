@@ -249,6 +249,97 @@ function installDayPortal(target: HTMLInputElement, opener: HTMLElement) {
 }
 
 describe("deferred generic day calendar", () => {
+  it("fills a popover day picker whose month select precedes the year and whose grid nests gridcells, leaving it closed", async () => {
+    document.body.innerHTML = `<form><div class="row"><div class="cell"><div class="wrap"><button type="button" aria-expanded="false"><input id="in" class="w-full" type="text" readonly placeholder="입학일"><svg></svg></button></div></div><div class="cell"><input id="memo" type="text" placeholder="전공"></div></div></form>`;
+    const target = document.querySelector<HTMLInputElement>("#in")!;
+    const opener = target.closest("button")!;
+    let panel: HTMLElement | undefined;
+    let year = 2026;
+    let month = 0;
+    const close = () => {
+      panel?.remove();
+      panel = undefined;
+      opener.setAttribute("aria-expanded", "false");
+      opener.removeAttribute("aria-controls");
+      opener.removeAttribute("data-headlessui-state");
+      target.className = "w-full";
+    };
+    const render = () => {
+      if (!panel) return;
+      const days = new Date(year, month + 1, 0).getDate();
+      panel.innerHTML = `<div><select class="m">${Array.from({ length: 12 }, (_, m) => `<option value="${m}"${m === month ? " selected" : ""}>${m + 1}월</option>`).join("")}</select><select class="y">${[2018, 2019, 2026].map((value) => `<option value="${value}"${value === year ? " selected" : ""}>${value}</option>`).join("")}</select><button type="button" aria-label="Go to previous month"></button><button type="button" aria-label="Go to next month"></button></div><div role="grid">${Array.from({ length: days }, (_, d) => `<div role="gridcell"><button type="button" role="gridcell">${d + 1}</button></div>`).join("")}</div>`;
+      panel.querySelector<HTMLSelectElement>(".y")!.addEventListener("change", (event) => {
+        year = Number((event.target as HTMLSelectElement).value);
+        render();
+      });
+      panel.querySelector<HTMLSelectElement>(".m")!.addEventListener("change", (event) => {
+        month = Number((event.target as HTMLSelectElement).value);
+        render();
+      });
+      panel.querySelectorAll<HTMLButtonElement>("[role=grid] button").forEach((button) =>
+        button.addEventListener("click", () => {
+          target.value = `${year}.${String(month + 1).padStart(2, "0")}.${button.textContent!.padStart(2, "0")}`;
+          close();
+        }),
+      );
+    };
+    // Escape is ignored; only the opener toggles the popover.
+    opener.addEventListener("click", () => {
+      if (panel) return close();
+      panel = document.createElement("div");
+      panel.id = "popover-panel";
+      document.body.append(panel);
+      opener.setAttribute("aria-expanded", "true");
+      opener.setAttribute("aria-controls", "popover-panel");
+      opener.setAttribute("data-headlessui-state", "open");
+      target.className = "";
+      render();
+    });
+
+    const approval = createDayCalendarApproval({
+      target,
+      originalDate: "2019-03-02",
+    });
+    const result = await executeDayCalendarSelection({
+      target,
+      targetDate: "2019-03-02",
+      timings: FAST,
+      assertCurrent: () =>
+        revalidateDayCalendarApproval(approval).status === "valid",
+    });
+
+    expect(result).toEqual({ status: "completed", targetDate: "2019-03-02" });
+    expect(panel).toBeUndefined();
+    expect(target.value).toBe("2019.03.02");
+  });
+
+  it("approves an unlabeled readonly field whose placeholder names a day and whose wrapping button opens the grid", async () => {
+    // The placeholder is the only name; the button wraps the input and an icon.
+    document.body.innerHTML = `<form><div class="row"><div class="cell"><div class="wrap"><button type="button"><input id="in" type="text" readonly placeholder="입학일"><svg></svg></button></div></div><div class="cell"><input id="memo" type="text" placeholder="전공"></div></div></form>`;
+    const target = document.querySelector<HTMLInputElement>("#in")!;
+    const opener = target.closest("button")!;
+    installDayPortal(target, opener);
+
+    expect(dayCalendarSurfaceFor(target)).toMatchObject({
+      opener,
+      rendering: "deferred-generic",
+    });
+    const approval = createDayCalendarApproval({
+      target,
+      originalDate: "2024-02-29",
+    });
+    await expect(
+      executeDayCalendarSelection({
+        target,
+        targetDate: "2024-02-29",
+        timings: FAST,
+        assertCurrent: () =>
+          revalidateDayCalendarApproval(approval).status === "valid",
+      }),
+    ).resolves.toEqual({ status: "completed", targetDate: "2024-02-29" });
+    expect(target.value).toBe("2024-02-29");
+  });
+
   it("approves and selects the exact day through a portal grid mounted on click", async () => {
     const target = dayField(`<button type="button" aria-label="날짜 선택"></button>`);
     const opener = document.querySelector<HTMLButtonElement>(".field button")!;

@@ -273,9 +273,22 @@ export async function executeDayCalendarSelection(
     deferred
       ? isDisplayed(popup) && openCalendarPopups(document).length === 0
       : displayedDayCalendarRoots(document).length === 1;
-  const unit = calendarUnitEvidence(target);
-  if (!unit || unit.unit !== "day" || unit.unitEvidence === "unconfirmed")
+  const observed = calendarUnitEvidence(target);
+  if (
+    !observed ||
+    observed.unit !== "day" ||
+    (observed.unitEvidence === "unconfirmed" && !deferred)
+  )
     return fail("calendar_unit_unconfirmed");
+  // A deferred calendar's label clue is confirmed by the single day-grid root
+  // the gesture must mount below; without that root nothing is written.
+  const unit = {
+    unit: observed.unit,
+    unitEvidence:
+      observed.unitEvidence === "unconfirmed"
+        ? ("target-label" as const)
+        : observed.unitEvidence,
+  };
   const evidence: CalendarRoleEvidence = {
     ...unit,
     ownership:
