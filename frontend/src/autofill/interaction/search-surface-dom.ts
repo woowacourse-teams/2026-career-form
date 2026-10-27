@@ -75,7 +75,7 @@ export const SEARCH_SUBJECTS = [
 /** Generic recovery also recognizes license and language-exam subjects. */
 const GENERIC_SEARCH_SUBJECTS = [
   ...SEARCH_SUBJECTS.filter((words) => words[0] !== "자격증"),
-  ["자격증", "자격/면허", "면허", "certificate", "license"],
+  ["자격", "면허", "certificate", "license"],
   ["시험", "어학", "exam", "language test"],
 ] as const;
 
