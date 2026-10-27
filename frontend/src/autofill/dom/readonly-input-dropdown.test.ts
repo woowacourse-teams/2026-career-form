@@ -187,6 +187,29 @@ it("collects and writes a readonly input whose plain list is mounted on click", 
   expect(mounted.every((list) => !list.isConnected)).toBe(true);
 });
 
+it("closes a probed list that only a second click on its own input closes", async () => {
+  // Like some UI kits: the input toggles its list, Escape and outside
+  // mousedown are ignored, and an open list marks the rest of the page inert.
+  const { input } = mountField("");
+  const list = document.createElement("ul");
+  list.innerHTML = OPTIONS.map((text) => `<li>${text}</li>`).join("");
+  list.hidden = true;
+  document.getElementById("portal")!.append(list);
+  const form = document.getElementById("application")!;
+  input.addEventListener("click", () => {
+    list.hidden = !list.hidden;
+    form.inert = !list.hidden;
+  });
+
+  const snapshot = await collectFieldsSnapshotWithDropdowns(document);
+
+  expect(list.hidden).toBe(true);
+  expect(form.inert).toBe(false);
+  expect(
+    fields(snapshot).find((candidate) => candidate.domId === "target"),
+  ).toMatchObject({ element: "custom", control: "select" });
+});
+
 it("keeps a readonly input as text when one click opens two new lists", async () => {
   const { input, mounted } = mountDeferredList(2);
 

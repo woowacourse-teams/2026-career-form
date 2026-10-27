@@ -241,6 +241,8 @@ export async function closeInputSurface(
         new MouseEvent("mousedown", { bubbles: true }),
       ),
     () => input.blur(),
+    // A list that its input toggles closes on a second click of that input.
+    () => input.click(),
     () => {
       const closers = surfaces.flatMap((surface) =>
         Array.from(

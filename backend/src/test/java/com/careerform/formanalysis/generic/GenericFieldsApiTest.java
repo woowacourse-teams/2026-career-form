@@ -155,6 +155,24 @@ class GenericFieldsApiTest {
     }
 
     @Test
+    @DisplayName("확장이 보내는 안내 선택지 표시와 학력 기록 힌트는 API 경계에서 읽힌다")
+    @SuppressWarnings("unchecked")
+    void acceptsPlaceholderOptionAndRecordHint() throws Exception {
+        var request = GenericFieldsJevHttp.JSON.readValue(requestJson(STATIC_HOST, false), Map.class);
+        var section = ((List<Map<String, Object>>) request.get("sections")).getFirst();
+        section.put("recordSectionId", "university");
+        var grade = ((List<Map<String, Object>>) section.get("fields")).get(1);
+        grade.put("options", List.of(
+            Map.of("optionId", "opt-0", "displayName", "선택", "placeholder", true),
+            Map.of("optionId", "opt-1", "displayName", SYNTHETIC_OPTION)));
+
+        mockMvc.perform(post("/api/v1/generic/fields/analyze")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(GenericFieldsJevHttp.JSON.writeValueAsString(request)))
+            .andExpect(status().isOk());
+    }
+
+    @Test
     @DisplayName("프로필 값, 현재 입력값, 항목 개수 필드를 담은 요청은 400으로 거부하고 JEV를 호출하지 않는다")
     void rejectsValueFieldsAtTheBoundary() throws Exception {
         mockMvc.perform(post("/api/v1/generic/fields/analyze")
