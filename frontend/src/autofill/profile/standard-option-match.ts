@@ -35,7 +35,7 @@ export function matchStandardOption(
  * Only a single remaining option is returned as unique.
  */
 const MILITARY_FAMILIES: Readonly<Record<string, RegExp>> = {
-  "military-status:served": /병역필|군필|만기전역/,
+  "military-status:served": /병역필|군필|만기전역|만기제대/,
   "military-status:serving": /복무중|현역복무|재복무/,
   "military-status:not-served": /미필/,
   "military-status:exempt": /면제/,
