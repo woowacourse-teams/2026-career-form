@@ -479,6 +479,10 @@ function targetSemanticSignature(target: HTMLInputElement): string {
 }
 
 export function controlSignature(element: Element): string {
+  // A page can mirror typed text into the value attribute of a text input.
+  const typedText =
+    element.tagName === "INPUT" &&
+    ["text", "search"].includes((element as HTMLInputElement).type);
   return JSON.stringify([
     elementSignature(element),
     ...[
@@ -504,7 +508,9 @@ export function controlSignature(element: Element): string {
       "data-value",
       "data-code",
       "value",
-    ].map((name) => element.getAttribute(name)),
+    ].map((name) =>
+      typedText && name === "value" ? null : element.getAttribute(name),
+    ),
     element.textContent,
   ]);
 }
