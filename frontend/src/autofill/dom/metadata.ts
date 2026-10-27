@@ -167,6 +167,21 @@ function choiceLabelOf(input: HTMLInputElement): string | undefined {
 }
 
 function genericLabelOf(element: HTMLElement): string | undefined {
+  const label = uncheckedGenericLabelOf(element);
+  // A control's own current value never names the control (it shows the choice).
+  if (
+    label &&
+    element instanceof HTMLInputElement &&
+    element.readOnly &&
+    formText(element.value) === label
+  ) {
+    const placeholder = formText(element.getAttribute("placeholder"));
+    return placeholder && placeholder !== label ? placeholder : undefined;
+  }
+  return label;
+}
+
+function uncheckedGenericLabelOf(element: HTMLElement): string | undefined {
   const root = element.getRootNode() as Document | ShadowRoot;
   const labelled = formText((element.getAttribute("aria-labelledby")?.trim().split(/\s+/) ?? [])
     .filter((id) => isTrustedId(root, id))

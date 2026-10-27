@@ -329,7 +329,9 @@ export async function executeReadonlySearch(
         role: "SEARCH_POPUP_OPENER",
         scope: identity.fieldGroup,
         collect: () =>
-          searchOpeners(identity!.fieldGroup).filter(safeSearchOpener),
+          identity!.selfOpener
+            ? [identity!.target]
+            : searchOpeners(identity!.fieldGroup).filter(safeSearchOpener),
       },
     ]);
     const opener = openerRole!.binding.element;
@@ -340,7 +342,9 @@ export async function executeReadonlySearch(
     guard(initialValue);
     if (
       !openerRole!.current() ||
-      !safeSearchOpener(opener) ||
+      !(identity.selfOpener
+        ? opener === identity.target
+        : safeSearchOpener(opener)) ||
       !interactive(opener)
     )
       throw new SearchFailure("stale_field_group");

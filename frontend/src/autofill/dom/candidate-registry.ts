@@ -377,7 +377,18 @@ export class CandidateRegistry {
     const targetOnly =
       registered.handle.kind === "field" && targetOnlyRadio(elements);
     const targetVisible = elements.some(isWritableWriteElement);
-    const reasons = elements.map(liveBlockReason);
+    // A readonly input that opens its own option list is selected, not typed.
+    const inputDropdown =
+      registered.handle.kind === "field" &&
+      registered.handle.buttonDropdown?.surface === "input"
+        ? registered.handle.buttonDropdown.trigger
+        : undefined;
+    const reasons = elements.map((element) => {
+      const reason = liveBlockReason(element);
+      return element === inputDropdown && reason === "readonly"
+        ? undefined
+        : reason;
+    });
     // A hidden duplicate must not block a handle that still owns a visible,
     // enabled control. Prefer the visible control's reason when none is usable.
     const currentBlockReason = targetVisible
