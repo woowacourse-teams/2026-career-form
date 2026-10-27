@@ -15,6 +15,7 @@ import type { FieldCandidateHandle } from "../dom/types";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import type { SearchFollowUpControl } from "./search-follow-up";
 import { genericRowFor } from "../dom/repeatable-rows";
+import { hiddenFromPage } from "../dom/generic-form-groups";
 import {
   elementSignature,
   isAnchorElement,
@@ -559,7 +560,8 @@ export function targetIsCurrent(
     isInputElement(candidate) &&
     candidate.type === "text" &&
     candidate.readOnly &&
-    isVisible(candidate, true)
+    // The open modal may also mark the page behind it aria-hidden.
+    isVisible(candidate, true, !hiddenFromPage(candidate))
       ? candidate
       : targetInput(lookup.handle);
   if (
