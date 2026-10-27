@@ -183,6 +183,35 @@ describe("gradeGenericField checks", () => {
     ).toEqual({ grade: "BLOCKED", reason: "MIXED_EDUCATION_RECORD" });
   });
 
+  it("blocks a key of another repeated record kind inside a career row", () => {
+    expect(
+      gradeGenericField(
+        input({
+          profileFieldKey: "projects.project.role",
+          rowSiblings: [
+            { profileFieldKey: "careers.career.companyName", confidence: 0.9 },
+            { profileFieldKey: "careers.career.startDate", confidence: 0.9 },
+          ],
+        }),
+      ),
+    ).toEqual({ grade: "BLOCKED", reason: "MIXED_RECORD_KIND" });
+  });
+
+  it("keeps a row whose own record kind is also present", () => {
+    expect(
+      gradeGenericField(
+        input({
+          profileFieldKey: "careers.career.position",
+          rowSiblings: [
+            { profileFieldKey: "careers.career.companyName", confidence: 0.9 },
+            { profileFieldKey: "projects.project.role", confidence: 0.9 },
+            { profileFieldKey: "projects.project.projectName", confidence: 0.9 },
+          ],
+        }),
+      ).reason,
+    ).not.toBe("MIXED_RECORD_KIND");
+  });
+
   it("keeps a row with one education record kind and unrelated keys", () => {
     expect(
       gradeGenericField(

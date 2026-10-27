@@ -26,6 +26,7 @@ export type GradeReason =
   | "COUNTRY_CODE_OPTIONS"
   | "NON_DATE_FIELD"
   | "MIXED_EDUCATION_RECORD"
+  | "MIXED_RECORD_KIND"
   | "LOW_CONFIDENCE"
   | "MODERATE_CONFIDENCE"
   | "CATEGORY_UNCONFIRMED"
@@ -215,6 +216,36 @@ function hasMixedEducationRecords(input: GradeFieldInput): boolean {
   });
 }
 
+/** Repeated record kinds a single row describes one of. */
+const REPEATED_RECORD_KINDS = new Set([
+  "careers",
+  "projects",
+  "certifications",
+  "languages",
+]);
+
+function repeatedRecordKind(key: string | undefined): string | undefined {
+  const kind = key?.split(".")[0];
+  return kind && REPEATED_RECORD_KINDS.has(kind) ? kind : undefined;
+}
+
+/**
+ * A row whose other keys all name one other repeated record kind describes
+ * that record; a key of a different kind inside it was mismapped.
+ */
+function hasMixedRecordKind(input: GradeFieldInput): boolean {
+  const own = repeatedRecordKind(input.profileFieldKey);
+  if (!own) return false;
+  const kinds = (input.rowSiblings ?? [])
+    .map((sibling) => repeatedRecordKind(sibling.profileFieldKey))
+    .filter((kind): kind is string => kind !== undefined);
+  return (
+    kinds.length >= 2 &&
+    !kinds.includes(own) &&
+    new Set(kinds).size === 1
+  );
+}
+
 function compositeSlot(composite: GradeComposite | undefined): string {
   if (!composite) return "";
   return composite.type === "DERIVED"
@@ -343,6 +374,9 @@ export function gradeGenericField(input: GradeFieldInput): FieldGradeResult {
   }
   if (hasMixedEducationRecords(input)) {
     return { grade: "BLOCKED", reason: "MIXED_EDUCATION_RECORD" };
+  }
+  if (hasMixedRecordKind(input)) {
+    return { grade: "BLOCKED", reason: "MIXED_RECORD_KIND" };
   }
   if (hasOtherPersonContext(input)) {
     return { grade: "BLOCKED", reason: "OTHER_PERSON_CONTEXT" };
