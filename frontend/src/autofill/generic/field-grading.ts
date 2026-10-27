@@ -82,6 +82,8 @@ export interface GradeFieldInput extends Pick<
   optionValueCheck?: { profileValue?: string; context?: ChoiceContext };
   /** Other matched fields in the same repeat row, excluding this field. */
   rowSiblings?: readonly GradeSibling[];
+  /** Keys of the nearest matched fields before and after this one in its row. */
+  rowNeighborKeys?: readonly (string | undefined)[];
   /**
    * Profile keys matched on the other fields of the same section (the same
    * row for a repeat section), whatever their kind.
@@ -240,10 +242,16 @@ function hasMixedRecordKind(input: GradeFieldInput): boolean {
   const kinds = (input.rowSiblings ?? [])
     .map((sibling) => repeatedRecordKind(sibling.profileFieldKey))
     .filter((kind): kind is string => kind !== undefined);
+  if (kinds.length >= 2 && !kinds.includes(own) && new Set(kinds).size === 1)
+    return true;
+  // Inside a row that mixes record kinds, a key whose nearest fields on both
+  // sides are one other kind sits in that record's run of fields.
+  const neighbors = (input.rowNeighborKeys ?? []).map(repeatedRecordKind);
   return (
-    kinds.length >= 2 &&
-    !kinds.includes(own) &&
-    new Set(kinds).size === 1
+    neighbors.length === 2 &&
+    neighbors[0] !== undefined &&
+    neighbors[0] === neighbors[1] &&
+    neighbors[0] !== own
   );
 }
 

@@ -197,6 +197,43 @@ describe("gradeGenericField checks", () => {
     ).toEqual({ grade: "BLOCKED", reason: "MIXED_RECORD_KIND" });
   });
 
+  it("blocks a key whose neighbors in the row are both another record kind", () => {
+    expect(
+      gradeGenericField(
+        input({
+          profileFieldKey: "projects.project.role",
+          rowSiblings: [
+            { profileFieldKey: "careers.career.companyName", confidence: 0.9 },
+            { profileFieldKey: "careers.career.employmentType", confidence: 0.9 },
+            { profileFieldKey: "projects.project.projectName", confidence: 0.9 },
+          ],
+          rowNeighborKeys: [
+            "careers.career.companyName",
+            "careers.career.employmentType",
+          ],
+        }),
+      ),
+    ).toEqual({ grade: "BLOCKED", reason: "MIXED_RECORD_KIND" });
+  });
+
+  it("keeps the first key of a nested record after another record kind", () => {
+    expect(
+      gradeGenericField(
+        input({
+          profileFieldKey: "projects.project.projectName",
+          rowSiblings: [
+            { profileFieldKey: "careers.career.endDate", confidence: 0.9 },
+            { profileFieldKey: "projects.project.startDate", confidence: 0.9 },
+          ],
+          rowNeighborKeys: [
+            "careers.career.endDate",
+            "projects.project.startDate",
+          ],
+        }),
+      ).reason,
+    ).not.toBe("MIXED_RECORD_KIND");
+  });
+
   it("keeps a row whose own record kind is also present", () => {
     expect(
       gradeGenericField(

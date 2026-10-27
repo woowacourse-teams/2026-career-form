@@ -513,6 +513,14 @@ function convertSection(
         ? { optionValueCheck: { profileValue: choiceValue, context: choiceContext } }
         : {}),
       rowSiblings,
+      ...(visibleRowMatches
+        ? {
+            rowNeighborKeys: [
+              visibleRowMatches.filter((sibling) => sibling.index < index).at(-1),
+              visibleRowMatches.find((sibling) => sibling.index > index),
+            ].map((sibling) => sibling?.response.profileFieldKey ?? undefined),
+          }
+        : {}),
       sectionSiblingKeys: matched.flatMap((sibling) =>
         sibling.index !== index && sibling.response.profileFieldKey
           ? [sibling.response.profileFieldKey]
