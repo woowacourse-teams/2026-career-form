@@ -36,6 +36,30 @@ describe("generic form groups", () => {
     expect(genericFormGroupFor(action)?.rows).toHaveLength(1);
   });
 
+  it("keeps a group while an open modal makes the page behind it inert", () => {
+    document.body.innerHTML = `
+      <div id="root" inert aria-hidden="true">
+        <div class="panel-random">
+          <div class="heading-random"><h3>자격 및 면허</h3></div>
+          <div class="body-random">
+            <div class="row-random" ismultirow="true">
+              <input name="credentialName0" />
+              <input name="credentialDate0" />
+            </div>
+            <div class="controls-random"><button type="button">항목 추가</button></div>
+          </div>
+        </div>
+      </div>
+      <div role="dialog" aria-modal="true"><input name="query" /></div>
+    `;
+    const input = document.querySelector<HTMLInputElement>(
+      "[name='credentialName0']",
+    )!;
+    expect(genericFormGroupFor(input)?.rows).toHaveLength(1);
+    document.querySelector("[role='dialog']")!.remove();
+    expect(genericFormGroupFor(input)).toBeUndefined();
+  });
+
   it("does not accept a marker without a title, multiple fields, or unique add action", () => {
     document.body.innerHTML = `
       <div>

@@ -5,6 +5,7 @@ import {
   actionLabel,
   genericFormGroupFor,
   genericFormGroups,
+  hiddenFromPage,
 } from "./generic-form-groups";
 import { isGenericRepeatableRow } from "./repeatable-rows";
 
@@ -22,21 +23,6 @@ export interface ImplicitRepeatGroup {
 const RESET_LABEL = /초기화|reset|clear/i;
 const ADD_ACTION_SELECTOR = "button, input[type='button']";
 const MAX_ANCESTOR_DEPTH = 6;
-
-/**
- * An open modal makes the page behind it inert or aria-hidden. That page keeps
- * its structure; only a hidden subtree no open modal explains is gone.
- */
-function hiddenFromPage(element: Element): boolean {
-  if (element.closest("[hidden]")) return true;
-  const hider = element.closest("[aria-hidden='true'], [inert]");
-  if (!hider) return false;
-  return !Array.from(
-    element.ownerDocument.querySelectorAll(
-      "dialog[open], [role='dialog'][aria-modal='true']",
-    ),
-  ).some((modal) => !hider.contains(modal));
-}
 
 export function isAddAction(element: Element): element is HTMLElement {
   if (
