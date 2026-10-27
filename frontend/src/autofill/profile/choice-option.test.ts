@@ -240,6 +240,21 @@ describe("site wording for stored education and military values", () => {
     ).toMatchObject({ status: "unique", option: { displayName: "만기제대" } });
   });
 
+  it("keeps the discharge option when rank and service type name no option", () => {
+    expect(
+      resolveChoiceOption(
+        "military.military.militaryStatus",
+        "만기전역",
+        military,
+        {
+          militaryStatus: "만기전역",
+          militaryType: "현역",
+          militaryRank: "병장",
+        },
+      ),
+    ).toMatchObject({ status: "unique", option: { displayName: "만기제대" } });
+  });
+
   const schools = options(
     "고등학교",
     "전문대학",

@@ -109,7 +109,12 @@ export function matchCompositeMilitaryOption(
     option.displayName.normalize("NFKC").replace(/\s+/g, "");
   let matches = options.filter((option) => family.test(compact(option)));
   const typeWord = serviceType ? SERVICE_TYPES[serviceType] : undefined;
-  if (status === "military-status:served" && typeWord)
+  // Service type and rank narrow only options that name them; a plain
+  // discharge option carries neither and cannot contradict them.
+  const namesServiceType = matches.some((option) =>
+    Object.values(SERVICE_TYPES).some((word) => word.test(compact(option))),
+  );
+  if (status === "military-status:served" && typeWord && namesServiceType)
     matches = matches.filter((option) => typeWord.test(compact(option)));
   const rankWord = rank && (ENLISTED_RANKS.has(rank) || /^(병장|상병|일병|이병)$/.test(rank))
     ? /현역.*\(병\)|현역병/
@@ -117,7 +122,7 @@ export function matchCompositeMilitaryOption(
       ? /현역.*\(부사관\)/
       : rank && /^(소위|중위|대위|소령|중령|대령|준장|소장|중장|대장|장교)$/.test(rank)
         ? /현역.*\(장교\)/ : undefined;
-  if (status === "military-status:served" && rankWord &&
+  if (status === "military-status:served" && rankWord && namesServiceType &&
       (!serviceType || serviceType === "현역" || serviceType === "현역병"))
     matches = matches.filter((option) => rankWord.test(compact(option)));
   if (matches.length === 1) return { status: "unique", option: matches[0] };
