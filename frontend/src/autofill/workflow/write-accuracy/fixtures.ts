@@ -38,6 +38,14 @@ export function loadSnapshot(entry: SnapshotManifestEntry): void {
     ),
     "utf8",
   );
+  // jsdom never executes inline scripts assigned through innerHTML, so the
+  // fixture's own state model runs explicitly after the structure is loaded.
+  document
+    .querySelectorAll<HTMLScriptElement>("script[data-fixture-runtime]")
+    .forEach((script) => {
+      new Function(script.textContent ?? "")();
+      script.remove();
+    });
   if (entry.policyFixture)
     installExecutionPolicy(document, fixturePolicy(entry.policyFixture));
 }

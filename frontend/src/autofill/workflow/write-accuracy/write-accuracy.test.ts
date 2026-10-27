@@ -71,6 +71,47 @@ for (const entry of measurementEntries) {
   });
 }
 
+it("writes only the visible controls in the visible-control-row fixture", () => {
+  const report = reports.get("visible-control-row");
+  expect(report, "MISSING_SNAPSHOT_RESULTS").toBeDefined();
+  expect(report!.metrics).toMatchObject({
+    registered: 3,
+    exercisable: 2,
+    approved: 2,
+    attempted: 2,
+    reportedWritten: 2,
+    correct: 2,
+    wrong: 0,
+    held: 0,
+    preservedViolated: 0,
+  });
+});
+
+it("keeps written values through the framework re-render", async () => {
+  const entry = measurementEntries.find(
+    ({ snapshot }) => snapshot === "framework-rerender",
+  )!;
+  loadSnapshot(entry);
+  const report = await runWriteAccuracy({
+    document,
+    entry,
+    profile: syntheticProfile(),
+    truth: loadTruth(entry.snapshot),
+  });
+  reports.set(entry.snapshot, report);
+  expect(report.metrics).toMatchObject({
+    registered: 3,
+    exercisable: 3,
+    approved: 3,
+    attempted: 3,
+    reportedWritten: 3,
+    correct: 3,
+    wrong: 0,
+    held: 0,
+    preservedViolated: 0,
+  });
+});
+
 it("aggregate", () => {
   const aggregate = aggregateAccuracy(manifest, reports);
   writeFileSync(

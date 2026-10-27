@@ -16,6 +16,7 @@ import { runtimeRules } from "../policy/runtime-rules";
 import { startLocalTiming } from "../debug/local-timing";
 import { executionPolicy } from "../workflow/execution-policy";
 import { getWriteAdapter } from "../adapters/write";
+import { readbackWriteElement } from "../dom/write-target";
 import { resultFieldState } from "../workflow/result-field-state";
 import { acquireDocumentRun } from "../interaction/document-run";
 import type { InteractionDecisionProvider } from "../api/interaction-types";
@@ -32,6 +33,7 @@ import {
 import { executeButtonDropdownWrite } from "./button-dropdown-executor";
 import { skipped, written, type ApprovedWriteResult } from "./write-result";
 import { debugWriteRun } from "../debug/autofill-debug";
+import { beginWriteTrace, traceWrite } from "../debug/write-trace";
 import {
   executeApprovedSearchWrites,
   settledSearchSelectionResult,
@@ -87,7 +89,10 @@ function settledAdapterResult(
     lookup.status === "ready" || lookup.status === "blocked"
       ? lookup.handle
       : undefined;
-  const element = handle?.elements[0] ?? handle?.customElements?.[0];
+  const element =
+    (handle && readbackWriteElement(handle)) ??
+    handle?.elements[0] ??
+    handle?.customElements?.[0];
   if (!handle || !element?.isConnected || handle.isCurrentContext?.() === false)
     return skipped(
       item.candidateId,
@@ -145,6 +150,30 @@ function settledComponentResult(
         "RETAINED_VALUE_UNCONFIRMED",
         "입력한 값이 유지되는지 확인하지 못했습니다.",
       );
+}
+
+/**
+ * A same-document in-page fragment move (e.g. an opener that is an `#x`
+ * link) does not end a run. Origin, path or query changes still do, and so
+ * does any hash route (`#/...`, `#!...`), where the fragment is a screen.
+ */
+function sameRunUrl(started: string | undefined, current: string | undefined) {
+  if (started === current) return true;
+  if (started === undefined || current === undefined) return false;
+  const split = (url: string) => {
+    const index = url.indexOf("#");
+    return index < 0
+      ? ([url, ""] as const)
+      : ([url.slice(0, index), url.slice(index + 1)] as const);
+  };
+  const [startedBase, startedFragment] = split(started);
+  const [currentBase, currentFragment] = split(current);
+  const route = (fragment: string) => /^[/!]/.test(fragment);
+  return (
+    startedBase === currentBase &&
+    !route(startedFragment) &&
+    !route(currentFragment)
+  );
 }
 
 export async function executeApprovedWritesAfterPageSettles({
@@ -236,19 +265,20 @@ export async function executeApprovedWritesAfterPageSettles({
   const runCurrent = () =>
     !signal?.aborted &&
     assertCurrent?.() !== false &&
-    document?.URL === url &&
+    sameRunUrl(url, document?.URL) &&
     (nativeDigest === undefined ||
       JSON.stringify(executionPolicy(document!)?.browserPolicy) ===
         nativeDigest) &&
     (!document || resolveDocumentCompany(document) !== "hplace");
   try {
+    beginWriteTrace();
     if (companyId === "hplace" && !calendarOnly) {
       const results: ApprovedWriteResult[] = [];
       const seen = new Set<string>();
       const current = () =>
         !signal?.aborted &&
         assertCurrent?.() !== false &&
-        document?.URL === url &&
+        sameRunUrl(url, document?.URL) &&
         resolveDocumentCompany(document!) === "hplace";
       for (const item of items) {
         if (beforeWrite) await beforeWrite(item);
@@ -543,10 +573,17 @@ export async function executeApprovedWritesAfterPageSettles({
               "입력한 값이 유지되는지 확인하지 못했습니다.",
             );
       }
-      if (item.analysis?.writePlan?.command === "SEARCH_SELECTION")
-        return settledSearchSelectionResult(item, registry, result);
-      if (item.analysis?.writePlan?.command === "SELECT_DATE")
-        return calendarValueSettled(item, registry)
+      if (item.analysis?.writePlan?.command === "SEARCH_SELECTION") {
+        const settled = settledSearchSelectionResult(item, registry, result);
+        traceWrite(item.candidateId, {
+          valueAtSettle: settled.status === "written",
+        });
+        return settled;
+      }
+      if (item.analysis?.writePlan?.command === "SELECT_DATE") {
+        const retained = calendarValueSettled(item, registry);
+        traceWrite(item.candidateId, { valueAtSettle: retained });
+        return retained
           ? result
           : skipped(
               item.candidateId,
@@ -554,6 +591,7 @@ export async function executeApprovedWritesAfterPageSettles({
               "RETAINED_VALUE_UNCONFIRMED",
               "입력한 값이 유지되는지 확인하지 못했습니다.",
             );
+      }
       if (item.catalogMatch) {
         const verified = settledGenericResult(
           item,

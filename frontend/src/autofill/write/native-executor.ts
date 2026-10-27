@@ -1,4 +1,17 @@
-import { isSplitEmailTarget, SPLIT_EMAIL_REASON } from "../dom/split-email";
+import { traceWrite } from "../debug/write-trace";
+import { resolveChoiceOption } from "../profile/choice-option";
+import { localWorkflowLog } from "../debug/local-workflow";
+import {
+  isSplitEmailTarget,
+  SPLIT_EMAIL_REASON,
+  splitEmailRetained,
+  writeSplitEmail,
+} from "../dom/split-email";
+import {
+  isVisibleWriteElement,
+  primaryWriteElement,
+  readbackWriteElement,
+} from "../dom/write-target";
 import {
   skipped,
   written,
@@ -53,6 +66,30 @@ function dispatchValueEvents(element: Element): void {
   element.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
+/**
+ * React records the last value it observed through the element instance
+ * setter. A native-setter write must invalidate that record so the following
+ * input event is treated as a user change and reaches framework state.
+ */
+function resetValueTracker(element: Element): void {
+  const tracker = (
+    element as Element & {
+      _valueTracker?: { setValue(value: string): void };
+    }
+  )._valueTracker;
+  tracker?.setValue("");
+}
+
+/** Mirror the browser's text-editing event, not an untyped Event. */
+function inputEvent(value: string): InputEvent {
+  return new InputEvent("input", {
+    bubbles: true,
+    composed: true,
+    inputType: "insertText",
+    data: value,
+  });
+}
+
 function setNativeValue(
   element: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
   value: string,
@@ -79,16 +116,33 @@ function setNativeChecked(element: HTMLInputElement): boolean {
   return element.checked;
 }
 
+/**
+ * Option names match when their normalized display names are equal, or when
+ * both are plain decimal numbers of the same value (a stored "4.50" selects the
+ * site's "4.5"). Anything with units or text still needs an exact name.
+ */
+/** Numeric equivalence ("4.0" = "4") is a generic-only relaxation; adapters keep exact labels. */
+function sameOptionName(left: string, right: string, numeric = false): boolean {
+  const a = normalizeDisplayName(left),
+    b = normalizeDisplayName(right);
+  if (a === b) return true;
+  if (!numeric) return false;
+  const plain = /^\d+(\.\d+)?$/;
+  return plain.test(a) && plain.test(b) && Number(a) === Number(b);
+}
+
 function profileOptions(
   handle: FieldCandidateHandle,
   profileValue: string,
   match?: ApprovedCatalogMatch,
+  numeric = false,
 ): HTMLElement[] {
-  const desired = normalizeDisplayName(profileValue);
   const matches = (handle.candidate.options ?? [])
-    .filter((option) => normalizeDisplayName(option.displayName) === desired)
+    .filter((option) => sameOptionName(option.displayName, profileValue, numeric))
     .map((option) => handle.optionElements.get(option.optionId))
     .filter((option): option is HTMLElement => Boolean(option))
+    // Generic only: adapters may target native options hidden behind styling.
+    .filter((option) => !numeric || isVisibleWriteElement(option))
     .filter(
       (option) =>
         !match ||
@@ -111,8 +165,9 @@ function profileOption(
   handle: FieldCandidateHandle,
   profileValue: string,
   match?: ApprovedCatalogMatch,
+  numeric = false,
 ): HTMLElement | undefined {
-  const matches = profileOptions(handle, profileValue, match);
+  const matches = profileOptions(handle, profileValue, match, numeric);
   return matches.length === 1 && matches[0]!.isConnected
     ? matches[0]
     : undefined;
@@ -138,7 +193,7 @@ function writableHandle(
 function forbiddenGenericReason(
   handle: FieldCandidateHandle,
 ): string | undefined {
-  const element = handle.elements[0];
+  const element = primaryWriteElement(handle) ?? handle.elements[0];
   if (
     !element ||
     handle.candidate.element === "custom" ||
@@ -159,7 +214,10 @@ function forbiddenGenericReason(
     handle.candidate.placeholder,
     ...(handle.candidate.semanticContext?.labels?.map(({ text }) => text) ??
       []),
-  ].join(" ");
+  ]
+    .join(" ")
+    // "자격인증" names a qualification certificate, not identity verification.
+    .replace(/자격\s*인증/g, "자격");
   if (element instanceof HTMLInputElement && element.type === "search")
     return "검색 제어는 자동 입력하지 않습니다.";
   return handle.candidate.semanticContext?.inputType === "search" ||
@@ -318,13 +376,13 @@ function visibleExactComboboxOption(
   option: HTMLElement,
   listbox: HTMLElement,
   value: string,
+  numeric = false,
 ): boolean {
   const matches = Array.from(
     listbox.querySelectorAll<HTMLElement>("[role='option']"),
   ).filter(
     (entry) =>
-      normalizeDisplayName(entry.textContent ?? "") ===
-      normalizeDisplayName(value),
+      sameOptionName(entry.textContent ?? "", value, numeric),
   );
   return (
     snapshottedComboboxOption(option, listbox) &&
@@ -337,11 +395,12 @@ function visibleExactComboboxOption(
 function writeCombobox(
   handle: FieldCandidateHandle,
   value: string,
+  numeric = false,
 ): WriteOutcome {
-  const input = handle.elements[0];
+  const input = primaryWriteElement(handle);
   const listbox =
     input instanceof HTMLInputElement ? comboboxParts(input) : undefined;
-  const option = profileOption(handle, value);
+  const option = profileOption(handle, value, undefined, numeric);
   if (
     !input ||
     !(input instanceof HTMLInputElement) ||
@@ -354,7 +413,7 @@ function writeCombobox(
   if (input.getAttribute("aria-expanded") !== "true") input.click();
   if (
     input.getAttribute("aria-expanded") !== "true" ||
-    !visibleExactComboboxOption(option, listbox, value)
+    !visibleExactComboboxOption(option, listbox, value, numeric)
   )
     return { written: false, reason: UNSAFE, code: "UNSUPPORTED_CONTROL" };
   option.click();
@@ -368,7 +427,7 @@ function retainedComboboxValue(
   handle: FieldCandidateHandle,
   value: string,
 ): boolean {
-  const input = handle.elements[0];
+  const input = readbackWriteElement(handle);
   if (!(input instanceof HTMLInputElement) || input.value !== value)
     return false;
   const listbox = comboboxParts(input);
@@ -384,9 +443,10 @@ function nativeSelectOption(
   handle: FieldCandidateHandle,
   value: string,
   match?: ApprovedCatalogMatch,
+  numeric = false,
 ): HTMLOptionElement | undefined {
-  const select = handle.elements[0],
-    option = profileOption(handle, value, match);
+  const select = readbackWriteElement(handle),
+    option = profileOption(handle, value, match, numeric);
   if (
     !(select instanceof HTMLSelectElement) ||
     !(option instanceof HTMLOptionElement)
@@ -400,8 +460,7 @@ function nativeSelectOption(
           match,
           catalogEvidenceForElement(entry, select.parentElement ?? select),
         )
-      : normalizeDisplayName(entry.textContent ?? "") ===
-        normalizeDisplayName(value),
+      : sameOptionName(entry.textContent ?? "", value, numeric),
   );
   return matches.length === 1 && matches[0] === option && !option.disabled
     ? option
@@ -411,8 +470,9 @@ function nativeSelectOption(
 function nativeChoiceOption(
   handle: FieldCandidateHandle,
   value: string,
+  numeric = false,
 ): HTMLInputElement | undefined {
-  const option = profileOption(handle, value);
+  const option = profileOption(handle, value, undefined, numeric);
   const label =
     option instanceof HTMLInputElement
       ? option.labels?.length === 1
@@ -422,7 +482,7 @@ function nativeChoiceOption(
   return option instanceof HTMLInputElement &&
     !option.disabled &&
     handle.elements.includes(option) &&
-    (!label || normalizeDisplayName(label) === normalizeDisplayName(value))
+    (!label || sameOptionName(label, value, numeric))
     ? option
     : undefined;
 }
@@ -454,14 +514,15 @@ function hasGenericConflict(
   item: ReviewPlanItem,
   handle: FieldCandidateHandle,
 ): boolean {
-  const value = item.profileValue!,
-    command = item.analysis!.writePlan!.command;
+  const value = nativeChoiceValue(item, handle),
+    command = item.analysis!.writePlan!.command,
+    generic = item.analysis?.mappingStatus === "LLM_SUGGESTED";
   if (command === "SET_TEXT") {
-    const current = handle.elements[0]?.value ?? "";
+    const current = readbackWriteElement(handle)?.value ?? "";
     return current !== "" && current !== value && current !== item.currentValue;
   }
   if (command === "SELECT_OPTION") {
-    const select = handle.elements[0];
+    const select = readbackWriteElement(handle);
     const current =
       select instanceof HTMLSelectElement
         ? select.selectedOptions[0]?.value
@@ -470,21 +531,67 @@ function hasGenericConflict(
         : "";
     return (
       current !== "" &&
-      normalizeDisplayName(current) !== normalizeDisplayName(value) &&
-      normalizeDisplayName(current) !== normalizeDisplayName(item.currentValue)
+      !sameOptionName(current, value, generic) &&
+      !sameOptionName(current, item.currentValue, generic)
     );
   }
   if (command === "CHECK_CHECKBOX")
     return choiceState(handle) !== item.currentValue;
+  if (command !== "CHECK_RADIO") return false;
+  const others = handle.elements.filter(
+    (element): element is HTMLInputElement =>
+      element instanceof HTMLInputElement &&
+      element.checked &&
+      element !== nativeChoiceOption(handle, value, generic),
+  );
+  // A reviewed conflict the user chose to replace may overwrite exactly the
+  // choice shown in the review (by value or label); any later change stops.
   return (
-    command === "CHECK_RADIO" &&
-    handle.elements.some(
-      (element) =>
-        element instanceof HTMLInputElement &&
-        element.checked &&
-        element !== nativeChoiceOption(handle, value),
+    others.length > 0 &&
+    !(
+      item.status === "conflict" &&
+      item.currentValue !== "" &&
+      others.length === 1 &&
+      (others[0].value === item.currentValue ||
+        (others[0].labels?.[0]?.textContent ?? "").trim() ===
+          item.currentValue)
     )
   );
+}
+
+function nativeChoiceValue(item: ReviewPlanItem, handle: FieldCandidateHandle): string {
+  const value = item.profileValue ?? "";
+  if (
+    item.analysis?.mappingStatus !== "LLM_SUGGESTED" ||
+    (handle.candidate.control !== "select" && handle.candidate.control !== "radio")
+  )
+    return value;
+  // Catalog identity can distinguish equal labels; its approved evidence is
+  // checked by nativeSelectOption rather than the label-only choice resolver.
+  if (catalogApprovalForItem(item).status === "selected") return value;
+  const match = resolveChoiceOption(
+    item.analysis?.valueBinding?.profileFieldKey ?? item.profileFieldKey,
+    value,
+    handle.candidate.options,
+  );
+  return match.status === "unique" ? match.option.displayName : "";
+}
+
+/** The control this run wrote, so the settle readback reads the same one. */
+const writtenTargets = new WeakMap<FieldCandidateHandle, Element>();
+
+function settleElement(handle: FieldCandidateHandle) {
+  return readbackWriteElement(handle, writtenTargets.get(handle));
+}
+
+function sameTextValue(
+  item: ReviewPlanItem,
+  actual: string,
+  expected: string,
+): boolean {
+  return item.dateApproval
+    ? actual.replace(/\D/g, "") === expected.replace(/\D/g, "")
+    : actual === expected;
 }
 
 function writeGeneric(
@@ -493,16 +600,29 @@ function writeGeneric(
   strict: boolean,
 ): WriteOutcome {
   const command = item.analysis!.writePlan!.command,
-    value = item.profileValue!;
+    value = nativeChoiceValue(item, handle),
+    generic = item.analysis?.mappingStatus === "LLM_SUGGESTED";
+  writtenTargets.delete(handle);
+  if (!value && (command === "SELECT_OPTION" || command === "CHECK_RADIO"))
+    return {
+      written: false, reason: UNSAFE, code: "UNSUPPORTED_CONTROL",
+      ...(command === "SELECT_OPTION" ? { failureCode: "OPTION_UNMATCHED" as const } : {}),
+    };
   if (strict && hasGenericConflict(item, handle))
     return { written: false, reason: CONFLICT, code: "CONFLICT" };
+  traceWrite(item.candidateId, {
+    targetFound: false,
+    setterCalled: false,
+    valueAfterWrite: false,
+  });
   if (command === "SET_TEXT") {
-    const element = handle.elements[0];
+    const element = primaryWriteElement(handle);
+    traceWrite(item.candidateId, { targetFound: element !== undefined });
     if (
       element instanceof HTMLInputElement &&
       element.getAttribute("role") === "combobox"
     )
-      return writeCombobox(handle, value);
+      return writeCombobox(handle, value, generic);
     if (
       !(
         element instanceof HTMLInputElement ||
@@ -515,27 +635,47 @@ function writeGeneric(
         reason: "날짜·숫자·길이 형식을 손실 없이 확인할 수 없습니다.",
         code: "UNSUPPORTED_FORMAT",
       };
-    if (item.dateApproval && element.value === value) return { written: true };
+    writtenTargets.set(handle, element);
+    if (item.dateApproval && sameTextValue(item, element.value, value))
+      return { written: true };
+    resetValueTracker(element);
+    traceWrite(item.candidateId, { setterCalled: true });
     if (!setNativeValue(element, value)) {
       return { written: false, reason: UNSAFE, code: "EXECUTION_FAILED" };
     }
-    element.dispatchEvent(new Event("input", { bubbles: true }));
-    if (item.dateApproval && element.value !== value)
+    element.dispatchEvent(inputEvent(value));
+    if (item.dateApproval && !sameTextValue(item, element.value, value))
       return { written: false, reason: RETENTION, code: "EXECUTION_FAILED" };
     element.dispatchEvent(new Event("change", { bubbles: true }));
-    if (item.dateApproval && element.value !== value)
+    if (item.dateApproval && !sameTextValue(item, element.value, value))
       return { written: false, reason: RETENTION, code: "EXECUTION_FAILED" };
+    traceWrite(item.candidateId, {
+      valueAfterWrite: sameTextValue(item, element.value, value),
+    });
     return { written: true };
   }
   if (command === "SELECT_OPTION") {
     const approval = catalogApprovalForItem(item);
-    const select = handle.elements[0],
+    const select = primaryWriteElement(handle),
       option = nativeSelectOption(
         handle,
         value,
         approval.status === "selected" ? approval.match : undefined,
+        generic,
       );
-    if (!(select instanceof HTMLSelectElement) || !option)
+    if (!(select instanceof HTMLSelectElement) || !option) {
+      // Local QA: option labels are site UI text; the profile value is
+      // reduced to its shape (digits → 9, letters → a) so no value leaks.
+      localWorkflowLog("option-unmatched", {
+        key: item.analysis?.valueBinding?.profileFieldKey ?? "",
+        valueShape: value
+          .replace(/[0-9]/g, "9")
+          .replace(/[A-Za-z가-힣]/g, "a"),
+        options: (handle.candidate.options ?? [])
+          .map((option) => option.displayName)
+          .join(" | ")
+          .slice(0, 200),
+      });
       return {
         written: false,
         reason: UNSAFE,
@@ -545,19 +685,27 @@ function writeGeneric(
           handle,
           value,
           approval.status === "selected" ? approval.match : undefined,
+          generic,
         ).length === 0
           ? { failureCode: "OPTION_UNMATCHED" as const }
           : {}),
       };
+    }
+    writtenTargets.set(handle, select);
+    resetValueTracker(select);
+    traceWrite(item.candidateId, { targetFound: true, setterCalled: true });
     if (
       !setNativeValue(select, option.value) ||
       select.selectedOptions[0] !== option
     )
       return { written: false, reason: UNSAFE, code: "EXECUTION_FAILED" };
     dispatchValueEvents(select);
+    traceWrite(item.candidateId, {
+      valueAfterWrite: select.selectedOptions[0] === option,
+    });
     return { written: true };
   }
-  const option = nativeChoiceOption(handle, value);
+  const option = nativeChoiceOption(handle, value, generic);
   const expected =
     command === "CHECK_RADIO"
       ? "radio"
@@ -572,9 +720,19 @@ function writeGeneric(
     (strict && expected === "radio" && radioEscapesCapturedRow(handle, option))
   )
     return { written: false, reason: UNSAFE, code: "UNSUPPORTED_CONTROL" };
+  writtenTargets.set(handle, option);
+  resetValueTracker(option);
+  traceWrite(item.candidateId, { targetFound: true, setterCalled: true });
   if (!setNativeChecked(option))
     return { written: false, reason: UNSAFE, code: "EXECUTION_FAILED" };
   dispatchValueEvents(option);
+  traceWrite(item.candidateId, { valueAfterWrite: option.checked });
+  // Radio change handlers are derived from click by frameworks such as React.
+  // Notify through the same activation event a user produces.
+  if (expected === "radio" && generic)
+    option.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, composed: true }),
+    );
   return { written: true };
 }
 
@@ -585,7 +743,7 @@ function catalogChoiceIsCurrent(
   const approval = catalogApprovalForItem(item);
   if (approval.status === "invalid") return false;
   if (approval.status === "legacy") return true;
-  const select = handle.elements[0];
+  const select = settleElement(handle);
   if (select instanceof HTMLSelectElement) {
     const matches = [...select.options].filter(
       (option) =>
@@ -598,8 +756,11 @@ function catalogChoiceIsCurrent(
     );
     return (
       matches.length === 1 &&
-      normalizeDisplayName(matches[0].textContent ?? "") ===
-        normalizeDisplayName(item.profileValue ?? "")
+      sameOptionName(
+        matches[0].textContent ?? "",
+        item.profileValue ?? "",
+        item.analysis?.mappingStatus === "LLM_SUGGESTED",
+      )
     );
   }
   if (
@@ -616,8 +777,11 @@ function catalogChoiceIsCurrent(
     );
     return (
       matches.length === 1 &&
-      normalizeDisplayName(matches[0].textContent ?? "") ===
-        normalizeDisplayName(item.profileValue ?? "")
+      sameOptionName(
+        matches[0].textContent ?? "",
+        item.profileValue ?? "",
+        item.analysis?.mappingStatus === "LLM_SUGGESTED",
+      )
     );
   }
   return (
@@ -632,7 +796,7 @@ function rememberNativeCatalogChoice(
 ): boolean {
   const approval = catalogApprovalForItem(item);
   if (approval.status !== "selected") return approval.status !== "invalid";
-  const element = handle.elements[0];
+  const element = readbackWriteElement(handle);
   const option =
     element instanceof HTMLSelectElement
       ? element.selectedOptions[0]
@@ -681,7 +845,11 @@ function writeItem(
       return { written: false, reason: STALE, code: "STALE_TARGET" };
   }
   const adapter = getWriteAdapter(
-    (handle.elements[0] ?? handle.customElements?.[0])?.ownerDocument ?? "",
+    (
+      primaryWriteElement(handle) ??
+      handle.elements[0] ??
+      handle.customElements?.[0]
+    )?.ownerDocument ?? "",
   );
   const attempt = adapter.tryWrite(handle, item);
   if (attempt.handled)
@@ -713,6 +881,12 @@ function resultForItem(
     const lookup = registry.lookupField(item.candidateId);
     const handle = writableHandle(item, lookup);
     if (!handle) {
+      localWorkflowLog("lookup-miss", {
+        status: lookup.status,
+        reason: "reason" in lookup ? lookup.reason : undefined,
+        command: item.analysis?.writePlan?.command,
+        mapping: item.analysis?.mappingStatus,
+      });
       const failureCode =
         lookup.status === "blocked" && lookup.reason === "disabled"
           ? ("FIELD_DISABLED" as const)
@@ -740,11 +914,25 @@ function resultForItem(
         item.profileFieldKey) === "contact.contact.email" &&
       isSplitEmailTarget(handle)
     ) {
+      const split = writeSplitEmail(handle, item.profileValue ?? "");
+      if (split === "written") return written(item.candidateId);
+      // Only the local part went in; the domain is left to the applicant.
+      if (split === "partial")
+        return {
+          candidateId: item.candidateId,
+          status: "skipped",
+          outcome: "needs-verification",
+          code: "UNSUPPORTED_CONTROL",
+          reason: SPLIT_EMAIL_REASON,
+          failureCode: "SPLIT_EMAIL_UNSUPPORTED",
+        };
+      if (split === "conflict")
+        return skipped(item.candidateId, "needs-verification", "CONFLICT", CONFLICT);
       return {
         candidateId: item.candidateId,
         status: "skipped",
         outcome: "unsupported",
-        code: "UNSUPPORTED_CONTROL",
+        code: split === "failed" ? "EXECUTION_FAILED" : "UNSUPPORTED_CONTROL",
         reason: SPLIT_EMAIL_REASON,
         failureCode: "SPLIT_EMAIL_UNSUPPORTED",
       };
@@ -839,8 +1027,11 @@ export function executeApprovedWrites({
       lookup = item && registry.lookupField(item.candidateId);
     if (item && lookup?.status === "ready")
       getWriteAdapter(
-        (lookup.handle.elements[0] ?? lookup.handle.customElements?.[0])
-          ?.ownerDocument ?? "",
+        (
+          primaryWriteElement(lookup.handle) ??
+          lookup.handle.elements[0] ??
+          lookup.handle.customElements?.[0]
+        )?.ownerDocument ?? "",
       ).afterWrite?.(lookup.handle, item);
   });
   return results;
@@ -851,11 +1042,18 @@ function retainedGenericValue(
   handle: FieldCandidateHandle,
 ): boolean {
   if (!catalogChoiceIsCurrent(item, handle)) return false;
+  if (
+    (item.analysis?.valueBinding?.profileFieldKey ?? item.analysis?.profileFieldKey) ===
+      "contact.contact.email" &&
+    isSplitEmailTarget(handle)
+  )
+    return splitEmailRetained(handle, item.profileValue ?? "");
   const command = item.analysis?.writePlan?.command,
-    value = item.profileValue;
+    value = nativeChoiceValue(item, handle),
+    generic = item.analysis?.mappingStatus === "LLM_SUGGESTED";
   if (!command || !value) return false;
   const approval = catalogApprovalForItem(item);
-  const element = handle.buttonDropdown?.trigger ?? handle.elements[0];
+  const element = handle.buttonDropdown?.trigger ?? settleElement(handle);
   if (
     approval.status === "selected" &&
     element &&
@@ -877,21 +1075,26 @@ function retainedGenericValue(
       dropdownValue(handle.buttonDropdown) === value
     );
   if (command === "SET_TEXT") {
-    const input = handle.elements[0];
+    const input = settleElement(handle);
+    if (!input?.isConnected) return false;
     return input instanceof HTMLInputElement &&
       input.getAttribute("role") === "combobox"
       ? retainedComboboxValue(handle, value)
-      : input?.value === value;
+      : sameTextValue(item, input.value, value);
   }
-  if (command === "SELECT_OPTION")
+  if (command === "SELECT_OPTION") {
+    const select = settleElement(handle);
     return (
-      handle.elements[0] instanceof HTMLSelectElement &&
-      nativeSelectOption(handle, value) ===
-        handle.elements[0].selectedOptions[0]
+      select instanceof HTMLSelectElement &&
+      select.isConnected &&
+      nativeSelectOption(handle, value, undefined, generic) ===
+        select.selectedOptions[0]
     );
-  const option = nativeChoiceOption(handle, value);
+  }
+  const option = nativeChoiceOption(handle, value, generic);
   return Boolean(
-    option?.checked &&
+    option?.isConnected &&
+    option.checked &&
     (command === "CHECK_RADIO" || command === "CHECK_CHECKBOX"),
   );
 }
@@ -908,7 +1111,9 @@ export function settledGenericResult(
       "STALE_TARGET",
       "페이지가 변경되어 입력 결과를 확인할 수 없습니다.",
     );
-  return retainedGenericValue(item, lookup.handle)
+  const retained = retainedGenericValue(item, lookup.handle);
+  traceWrite(item.candidateId, { valueAtSettle: retained });
+  return retained
     ? written(item.candidateId)
     : skipped(
         item.candidateId,

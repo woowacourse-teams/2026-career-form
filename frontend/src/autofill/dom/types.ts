@@ -38,6 +38,8 @@ export interface MixedSectionRowContext {
 export interface FieldCandidateHandle extends CandidateHandleBase {
   kind: "field";
   buttonDropdown?: ButtonDropdown;
+  /** Collection saw this readonly input open one search dialog by itself. */
+  selfOpensSearchDialog?: true;
   mixedSectionRow?: MixedSectionRowContext;
   isCurrentContext?: () => boolean;
   candidate: FieldCandidate;

@@ -546,9 +546,10 @@ export function createAnalyzeFields({
     );
 
     // The section flow writes nothing before the user approves the review.
-    const addressAnalysis = genericResult
-      ? analysis
-      : await runAddressAnalysis({
+    // Generic pages run the same address step: the vendor postcode widget is
+    // site-independent, and runAddressAnalysis already fails closed when the
+    // generic preconditions do not hold.
+    const addressAnalysis = await runAddressAnalysis({
           analysis,
           snapshot,
           adapter,

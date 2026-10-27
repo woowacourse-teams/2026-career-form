@@ -102,6 +102,15 @@ export const DISABILITY_STATUS_OPTIONS: readonly StandardValueOption[] = [
     aliases: ["아니오", "비해당", "없음", "비장애", "N", "no", "false"],
   },
 ];
+/**
+ * Synonym groups for the two fixed employmentStatus choices ("재직중", "퇴사").
+ * These are profile-field vocabulary, compared without spaces.
+ */
+export const EMPLOYMENT_STATUS_SYNONYMS: Readonly<Record<string, readonly string[]>> = {
+  재직중: ["재직중", "재직", "현재재직중", "현재재직", "근무중", "현재근무중", "현직", "재직자"],
+  퇴사: ["퇴사", "퇴직", "퇴사함", "퇴직함", "퇴사자", "퇴직자", "퇴사완료"],
+};
+
 const SCHOOL_REGION_ALIASES: Readonly<Record<string, readonly string[]>> = {
   "region:seoul": ["서울특별시"],
   "region:busan": ["부산광역시"],

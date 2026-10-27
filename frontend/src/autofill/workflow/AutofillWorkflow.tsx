@@ -76,6 +76,7 @@ import {
   type GenericSearchFollowUp,
 } from "./workflow-analysis";
 import { createWriteRevealedFields } from "./revealed-fields";
+import { fillableControls, newlyRevealedControls } from "./generic-follow-up";
 import { createReviewActions, sensitiveValueApproved } from "./review-actions";
 import {
   createSearchFollowUpRecorder,
@@ -108,6 +109,7 @@ import {
   type StructureDiagnostics,
 } from "../generic/structure-diagnostics";
 import { debugWarn } from "../debug/autofill-debug";
+import { localWorkflowLog } from "../debug/local-workflow";
 
 export { localItemCount, shouldRunRevealPlan } from "./workflow-model";
 
@@ -264,6 +266,9 @@ function PolicyReadyWorkflow({
   const approvedSensitiveValues = useRef(new Map<string, string>());
   const consideredSensitiveValues = useRef(new Map<string, string>());
   const freshDefaultControls = useRef(new WeakSet<Element>());
+  // Generic pages that reveal new fields after a write get a bounded number
+  // of extra review passes (observed reveal, no aria-controls needed).
+  const revealPasses = useRef(0);
   const completedDriverKeys = useRef<ReadonlySet<string>>(new Set());
   const completedGenericStateDrivers = useRef<
     ReadonlyMap<string, CompletedGenericStateDriver>
@@ -400,6 +405,7 @@ function PolicyReadyWorkflow({
       task?: Promise<AddressResult>;
     } = { controller: new AbortController() };
     addressRun.current = run;
+    revealPasses.current = 0;
     const start = async () => {
       try {
         if (isUnsupportedHplace(pageDocument)) {
@@ -828,9 +834,20 @@ function PolicyReadyWorkflow({
         setStage("result");
         return;
       }
-      const retainedCandidateIds = new Set(
-        retainedDrivers.results.map((result) => result.candidateId),
-      );
+      const retainedCandidateIds = new Set([
+        ...retainedDrivers.results.map((result) => result.candidateId),
+        // A later reveal pass never re-executes a field an earlier pass wrote.
+        ...(revealPasses.current > 0
+          ? reviewItems
+              .filter((item) =>
+                progressTracker.wasWritten(
+                  item.candidateId,
+                  fieldsSnapshot.registry,
+                ),
+              )
+              .map((item) => item.candidateId)
+          : []),
+      ]);
       const { executableReviewItems, approvedCandidateIds } =
         approvedReviewExecution(reviewItems, retainedCandidateIds);
       if (
@@ -855,9 +872,17 @@ function PolicyReadyWorkflow({
         return;
       }
       setStage("writing");
+      localWorkflowLog("writes-start", {
+        passes: revealPasses.current,
+        approved: approvedCandidateIds.size,
+      });
       writeController.current.abort();
       writeController.current = new AbortController();
       const approvedProfile = JSON.stringify(profile);
+      const controlsBefore =
+        analysisSummary?.mode === "GENERIC"
+          ? fillableControls(pageDocument)
+          : undefined;
       const componentTargets = executionPolicy(pageDocument)?.componentPolicy
         ?.workflow.captureDriverResults
         ? captureComponentResultTargets(fieldsSnapshot.registry, reviewItems)
@@ -947,6 +972,45 @@ function PolicyReadyWorkflow({
           );
         return;
       }
+      const revealed = controlsBefore
+        ? newlyRevealedControls(pageDocument, controlsBefore)
+        : [];
+      localWorkflowLog("reveal-check", {
+        revealed: revealed.length,
+        passes: revealPasses.current,
+        written: nextResults.filter((result) => result.status === "written")
+          .length,
+        aborted: writeController.current.signal.aborted,
+      });
+      if (
+        revealed.length > 0 &&
+        revealPasses.current < 2 &&
+        nextResults.some((result) => result.status === "written") &&
+        !writeController.current.signal.aborted
+      ) {
+        if (
+          profile &&
+          JSON.stringify(await repository.load()) !== JSON.stringify(profile)
+        ) {
+          setExceptionTitle(
+            "입력 중 프로필이 변경되었습니다. 다시 시작해 주세요",
+          );
+          setStage("exception");
+          return;
+        }
+        revealPasses.current += 1;
+        await analyzeFields(
+          profile!,
+          false,
+          completedDriverKeys.current,
+          deferredDriverGroups.current,
+        );
+        setWarnings((current) => [
+          ...current,
+          `값을 넣은 뒤 새 입력칸 ${revealed.length}개가 나타나 다시 확인했어요. 이어서 기입해 주세요.`,
+        ]);
+        return;
+      }
       setResults([...retainedDrivers.results, ...nextResults]);
       setStage("result");
     } catch (error) {
@@ -958,6 +1022,31 @@ function PolicyReadyWorkflow({
       executionPending.current = false;
     }
   };
+
+  // In a reveal pass, fields an earlier pass already wrote stay visible as
+  // done instead of being offered (and counted) again.
+  useEffect(() => {
+    if (stage !== "review" || revealPasses.current === 0 || !fieldsSnapshot)
+      return;
+    setReviewItems((items) => {
+      let changed = false;
+      const next = items.map((item) => {
+        if (
+          item.disabled ||
+          !progressTracker.wasWritten(item.candidateId, fieldsSnapshot.registry)
+        )
+          return item;
+        changed = true;
+        return {
+          ...item,
+          selected: false,
+          disabled: true,
+          reason: "앞 단계에서 이미 기입했어요.",
+        };
+      });
+      return changed ? next : items;
+    });
+  }, [stage, fieldsSnapshot]);
 
   useEffect(() => {
     if (!preparationExecutionPending) return;

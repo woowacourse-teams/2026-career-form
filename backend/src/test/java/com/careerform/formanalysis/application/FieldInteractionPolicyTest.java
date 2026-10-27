@@ -29,6 +29,25 @@ class FieldInteractionPolicyTest {
 
     private final FieldInteractionPolicy policy = new FieldInteractionPolicy();
 
+    private static FieldCandidate customSelect(List<com.careerform.formanalysis.dto.FieldsAnalysisRequest.Option> options) {
+        return new FieldCandidate("field-1", FormElement.CUSTOM, FormControl.SELECT, Visibility.VISIBLE, "구분",
+            null, null, null, null, null, null, options, null);
+    }
+
+    @Test
+    @DisplayName("범용 커스텀 선택 칸은 선택지가 있을 때만 SELECT_OPTION을 받는다")
+    void genericCustomSelectWithOptionsUsesSelectOption() {
+        var options = List.of(
+            new com.careerform.formanalysis.dto.FieldsAnalysisRequest.Option("option-1", "가 항목"),
+            new com.careerform.formanalysis.dto.FieldsAnalysisRequest.Option("option-2", "나 항목"));
+        var match = new FieldMappingResolver.Match("field-1", "careers.career.employmentType");
+
+        assertThat(policy.evaluate(customSelect(options), match, true).writePlan())
+            .isEqualTo(new WritePlan(WriteCommand.SELECT_OPTION));
+        assertThat(policy.evaluate(customSelect(List.of()), match, true).writePlan()).isNull();
+        assertThat(policy.evaluate(customSelect(options), match, false).writePlan()).isNull();
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {
         "education.university.schoolName", "education.university.schoolRegion",

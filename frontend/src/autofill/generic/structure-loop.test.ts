@@ -22,6 +22,10 @@ import { detectMixedSectionGroup } from "../dom/mixed-section-rows";
 import { assignMixedRows } from "../dom/mixed-section-rows";
 import { prepareMixedSectionRows } from "../workflow/mixed-section-preparation";
 import { runGenericStructureLoop } from "./structure-loop";
+import {
+  applyGenericStructureAnalysis,
+  collectGenericStructureSnapshot,
+} from "./structure-context";
 
 vi.mock("../dom/mixed-section-rows", async (importOriginal) => {
   const original =
@@ -401,6 +405,49 @@ describe("runGenericStructureLoop", () => {
     },
   );
 
+  it("keeps the existing row mappable when a clicked add control adds no row", async () => {
+    document.body.innerHTML = `<section>
+      <h3>경력</h3>
+      <div id="rows">${careerRow(0)}</div>
+      <button type="button" id="add">경력 추가</button>
+    </section>`;
+    const result = await runGenericStructureLoop({
+      document,
+      profile: { ...createEmptyProfile(), careers: entries(3, "career") },
+      apiClient: mockApi().client,
+    });
+    const row = document.querySelector("[ismultirow]")!;
+    expect(document.querySelectorAll("[ismultirow]")).toHaveLength(1);
+    expect(result.sections[0]?.status).toBe("BLOCKED");
+    expect(
+      [...result.context.blockedScopes.keys()].some((scope) =>
+        scope.contains(row),
+      ),
+    ).toBe(false);
+  });
+
+  it("blocks the existing rows when a clicked add control changes them", async () => {
+    document.body.innerHTML = `<section>
+      <h3>경력</h3>
+      <div id="rows">${careerRow(0)}</div>
+      <button type="button" id="add">경력 추가</button>
+    </section>`;
+    document.querySelector("#add")!.addEventListener("click", () => {
+      document.querySelector<HTMLInputElement>("[name=company0]")!.value = "changed";
+    });
+    const result = await runGenericStructureLoop({
+      document,
+      profile: { ...createEmptyProfile(), careers: entries(3, "career") },
+      apiClient: mockApi().client,
+    });
+    const row = document.querySelector("[ismultirow]")!;
+    expect(
+      [...result.context.blockedScopes.keys()].some((scope) =>
+        scope.contains(row),
+      ),
+    ).toBe(true);
+  });
+
   it("offers a repeat group only the add controls its own section holds", async () => {
     document.body.innerHTML = `<form><div><section>
       <h3>학력</h3>
@@ -510,6 +557,98 @@ describe("runGenericStructureLoop", () => {
   });
 
   describe("education row kinds", () => {
+    const singleEducationDocument = (withSelect = true) => {
+      document.body.innerHTML = `<form><section><h3>학력</h3>
+        ${withSelect ? `<select aria-label="학교 구분">
+          <option value="">선택</option><option value="G">검정고시</option>
+          <option value="H">고등학교</option><option value="A">전문대학</option>
+          <option value="B">대학(학사)</option><option value="M">대학원(석사)</option>
+          <option value="D">대학원(박사)</option>
+        </select>` : ""}
+        <div id="details" ${withSelect ? "hidden" : ""}><label><span id="school-label">학교명</span><input name="school" /></label></div>
+        <button type="button" id="save">저장</button>
+      </section></form>`;
+      document.querySelector("select")?.addEventListener("change", () => {
+        document.querySelector("#details")!.removeAttribute("hidden");
+        document.querySelector("#school-label")!.textContent =
+          document.querySelector("select")!.value === "M"
+            ? "대학원 학교명"
+            : "대학교 학교명";
+      });
+    };
+
+    it.each([
+      { latest: undefined, graduate: false, value: "B", stage: "university" },
+      { latest: undefined, graduate: true, value: "M", stage: "graduateSchool" },
+      { latest: "대학(학사)", graduate: true, value: "B", stage: "university" },
+    ])("prepares a single non-repeating education row ($value, latest=$latest)", async ({ latest, graduate, value, stage }) => {
+      singleEducationDocument();
+      const save = vi.fn();
+      document.querySelector("#save")!.addEventListener("click", save);
+      const singleProfile: Profile = {
+        ...createEmptyProfile(),
+        education: [
+          { id: "high", sectionId: "highSchool", values: {} },
+          { id: "university", sectionId: "university", values: {
+            schoolType: "대학교",
+            ...(latest ? { latestEducationType: latest } : {}),
+          } },
+          ...(graduate ? [{ id: "graduate", sectionId: "graduateSchool", values: { degreeLevel: "석사" } }] : []),
+        ],
+      };
+      const api = mockApi({ category: "EDUCATION" });
+      const result = await runGenericStructureLoop({
+        document, profile: singleProfile, apiClient: api.client,
+      });
+      expect(result.initialRemaining.map(({ kind }) => kind)).toEqual(["SELECT_ROW_KIND"]);
+      expect(result.actions).toEqual([{
+        kind: "SELECT_ROW_KIND", sectionTitle: "학력", result: "done", rowIndex: 0,
+      }]);
+      expect(document.querySelector("select")!.value).toBe(value);
+      expect(save).not.toHaveBeenCalled();
+      expect([...result.context.educationRows.values()]).toMatchObject([
+        { sectionId: stage, sectionIndex: 0, selectedValue: value },
+      ]);
+      const snapshot = await collectGenericStructureSnapshot(document, undefined, result.context);
+      const school = snapshot.request.sections.flatMap((section) => [
+        ...section.fields, ...(section.items ?? []).flatMap((item) => item.fields),
+      ]).find((field) => field.displayName?.endsWith("학교명"))!;
+      const mapped = (key: string) => applyGenericStructureAnalysis({
+        snapshotId: snapshot.request.snapshotId, mode: "GENERIC", analysisStatus: "COMPLETE",
+        fields: [{
+          candidateId: school.candidateId, matchType: "MATCH", profileFieldKey: key,
+          autofillPolicy: "ALLOWED", mappingStatus: "LLM_SUGGESTED", interactionStatus: "READY",
+        }],
+      }, snapshot, result.context);
+      expect(mapped(`education.${stage}.schoolName`).fields[0].matchType).toBe("MATCH");
+      expect(mapped("education.highSchool.schoolName").fields[0].matchType).toBe("NO_MATCH");
+      const lookup = snapshot.registry.lookupField(school.candidateId);
+      expect("handle" in lookup && lookup.handle.itemIndex).toBe(0);
+      expect("handle" in lookup && lookup.handle.itemGroupId).toContain(`:stage:${stage}`);
+      expect(api.generic.flatMap((request) => request.sections).flatMap((section) => section.fields))
+        .toEqual(expect.arrayContaining([expect.objectContaining({ candidateId: expect.any(String), displayName: stage === "university" ? "대학교 학교명" : "대학원 학교명" })]));
+    });
+
+    it("leaves a single education row without a stage select unchanged", async () => {
+      singleEducationDocument(false);
+      const api = mockApi({ category: "EDUCATION" });
+      const result = await runGenericStructureLoop({
+        document, profile, apiClient: api.client,
+      });
+      expect(result.actions).toEqual([]);
+      expect(api.decisions).toEqual([]);
+    });
+
+    it("does not select an unclassified single row", async () => {
+      singleEducationDocument();
+      const api = mockApi({ category: "NONE" });
+      const result = await runGenericStructureLoop({
+        document, profile, apiClient: api.client,
+      });
+      expect(result.actions).toEqual([]);
+      expect(api.decisions).toEqual([]);
+    });
+
     const educationDocument = (withSelect = true) => {
       document.body.innerHTML = `<section><h3>학력</h3><div id="list">${[0, 1]
         .map(

@@ -349,6 +349,33 @@ describe("approved search batch boundaries", () => {
       code: "UNSUPPORTED_CONTROL",
     });
   });
+  it("allows eight generic row-scoped searches and holds the ninth", async () => {
+    const test = setup(9);
+    test.items.forEach((item) => {
+      item.currentValue = "";
+    });
+    document.querySelectorAll<HTMLInputElement>("input").forEach((input) => {
+      input.value = "";
+    });
+    vi.mocked(executeReadonlySearch).mockResolvedValue({
+      status: "failed",
+      targetCandidateId: "field-0",
+      reason: "execution_failed",
+      effect: "none",
+    });
+
+    await executeApprovedSearchWrites({ ...test, followUpHaltScope: "row" });
+
+    expect(test.results.slice(0, 8)).toEqual(
+      Array.from({ length: 8 }, () =>
+        expect.objectContaining({ code: "EXECUTION_FAILED" }),
+      ),
+    );
+    expect(test.results[8]).toMatchObject({
+      outcome: "unsupported",
+      code: "UNSUPPORTED_CONTROL",
+    });
+  });
 
   it("does not retain a selected result without a captured current target identity", () => {
     const test = setup();

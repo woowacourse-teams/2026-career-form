@@ -24,6 +24,7 @@ import {
 } from "../preparation/executor";
 import {
   kindOfEntry,
+  kindOfOptionText,
   sectionOfKind,
   type EducationRowKind,
 } from "../profile/education-row-kind";
@@ -124,6 +125,8 @@ interface RowGroup {
   title?: string;
   category?: string;
   rows: GenericSection<LoopField>[];
+  /** A classified education section without repeat-row or add-row semantics. */
+  singleRow?: Element;
 }
 
 interface Observation {
@@ -183,6 +186,42 @@ const NO_CLICK_ADD_REASONS = new Set([
   "INTERACTION_UNAVAILABLE",
   "NO_ADD_CONTROL",
 ]);
+// A failed or repeated add that did not change the existing rows leaves them
+// mappable too; only the profile entries that needed a new row are given up.
+const ROW_PRESERVING_ADD_REASONS = new Set([
+  "ADD_CONTROL_GONE",
+  "ADD_FAILED",
+  "SECTION_ACTION_LIMIT",
+  "NO_PROGRESS",
+]);
+const ROW_CHANGING_EXECUTOR_REASONS = new Set([
+  "existing-group-value-changed",
+  "invalid-group-count",
+  "refresh-failed",
+]);
+/** In-memory state of the existing rows; a detached control counts as changed. */
+const rowsState = (group: RowGroup) =>
+  group.rows
+    .flatMap((row) => row.fields)
+    .map(({ element }) => {
+      if (!element.isConnected) return "\u0002";
+      if (
+        element instanceof HTMLInputElement &&
+        (element.type === "checkbox" || element.type === "radio")
+      )
+        return String(element.checked);
+      return element instanceof HTMLInputElement ||
+        element instanceof HTMLSelectElement ||
+        element instanceof HTMLTextAreaElement
+        ? element.value
+        : "";
+    })
+    .join("\u0000");
+const keepsExistingRows = (reason: string) =>
+  NO_CLICK_ADD_REASONS.has(reason) ||
+  ROW_PRESERVING_ADD_REASONS.has(reason) ||
+  (reason.startsWith("executor:") &&
+    !ROW_CHANGING_EXECUTOR_REASONS.has(reason.slice("executor:".length)));
 
 const TARGET_OF_ROW_KIND: Record<EducationRowKind, TargetKind> = {
   HIGH_SCHOOL: "HIGH_SCHOOL",
@@ -356,7 +395,7 @@ export async function runGenericStructureLoop(
     section.reason = reason;
     blocked.set(key, section);
     const scope = groupScopes.get(key);
-    if (scope && !NO_CLICK_ADD_REASONS.has(reason))
+    if (scope && !keepsExistingRows(reason))
       context.blockedScopes.set(scope, reason);
     record({
       kind: "ADD_ROW",
@@ -453,16 +492,54 @@ export async function runGenericStructureLoop(
           });
       }
     const sections = segmentGenericSections(document, [...fields.values()]);
-    const repeated = sections.filter(
-      (section) => section.boundary === "repeat-row",
+    const candidates = sections.filter(
+      (section) =>
+        section.boundary === "repeat-row" ||
+        section.fields[0]?.element instanceof HTMLSelectElement,
     );
     await classify(
-      repeated,
+      candidates,
       fieldsSnapshot.request.snapshotId,
       fieldsSnapshot.request.site,
     );
     const groups = new Map<string, RowGroup>();
-    for (const section of repeated) {
+    for (const section of candidates) {
+      const category = classified.get(sectionCacheKey(section));
+      if (section.boundary !== "repeat-row") {
+        if (category !== "education") continue;
+        // A summary select beside existing education rows is not another row.
+        if (
+          candidates.some(
+            (other) =>
+              other.boundary === "repeat-row" &&
+              other.title === section.title &&
+              classified.get(sectionCacheKey(other)) === "education",
+          )
+        )
+          continue;
+        const first = section.fields[0]!.element;
+        const scope = actionScope(first);
+        // Keep the receipt local to this section, not unrelated form fields.
+        if (
+          !section.fields.every(({ element }) => scope.contains(element)) ||
+          sections.some(
+            (other) =>
+              other !== section &&
+              other.fields.some(({ element }) => scope.contains(element)),
+          )
+        )
+          continue;
+        const key = `${containerId(scope)}|single`;
+        groupScopes.set(key, scope);
+        groups.set(key, {
+          key,
+          title: section.title,
+          category,
+          rows: [section],
+          singleRow: scope,
+        });
+        continue;
+      }
       // Rows of one group share a parent. Their labels can change (a chosen
       // row kind shows different fields), so a fingerprint cannot name them.
       const rowElement = section.fields[0]
@@ -478,7 +555,6 @@ export async function runGenericStructureLoop(
         ...(section.title ? { title: section.title } : {}),
         rows: [],
       };
-      const category = classified.get(sectionCacheKey(section));
       if (category && !group.category) group.category = category;
       group.rows.push(section);
       groups.set(key, group);
@@ -583,6 +659,7 @@ export async function runGenericStructureLoop(
       if (!observation.groups.some((group) => group.key === key))
         blockKey(key, reason);
     for (const group of observation.groups) {
+      if (group.singleRow) continue;
       const section = sectionOf(group);
       if (!group.category) {
         if (apiClient.classifySections && section.status === "OPEN")
@@ -611,7 +688,8 @@ export async function runGenericStructureLoop(
       if (sectionOf(group).status === "BLOCKED") continue;
       group.rows.forEach((row, rowIndex) => {
         const first = row.fields[0]?.element;
-        const scope = first && genericRowFor(first)?.parentElement;
+        const scope =
+          group.singleRow ?? (first && genericRowFor(first)?.parentElement);
         if (first instanceof HTMLSelectElement && scope)
           context.educationGroups.add(scope);
         if (
@@ -801,6 +879,7 @@ export async function runGenericStructureLoop(
       return false;
     }
     const rowsBefore = action.rows ?? group.rows.length;
+    const stateBefore = rowsState(group);
     const result = await executeApprovedPreparationPlans({
       approvedPlans: [
         {
@@ -841,6 +920,11 @@ export async function runGenericStructureLoop(
         rowsAfter: rowsBefore + 1,
       });
       return true;
+    }
+    // The executor checks existing values only after a verified addition.
+    if (rowsState(group) !== stateBefore) {
+      blockGroup(group, "executor:existing-group-value-changed");
+      return false;
     }
     const reason =
       result.status === "failed" ? result.reason : "approval-required";
@@ -953,7 +1037,7 @@ export async function runGenericStructureLoop(
     observation: Observation,
   ): Promise<boolean> {
     const { group, rowIndex, select } = point;
-    const rowElement = genericRowFor(select);
+    const rowElement = group.singleRow ?? genericRowFor(select);
     handledSelects.add(select);
     const section = sectionOf(group);
     const blockRow = (reason: string) => {
@@ -999,7 +1083,9 @@ export async function runGenericStructureLoop(
                 snapshotId: observation.fieldsSnapshot.request.snapshotId,
                 site: observation.prep.request.site,
                 canonicalFieldKey: REPEAT_KEYS.education!,
-                relationToTarget: "SAME_REPEAT_ROW",
+                relationToTarget: group.singleRow
+                  ? "SAME_CONTAINER"
+                  : "SAME_REPEAT_ROW",
                 options: optionList.map((option) => ({
                   optionId: String(option.index),
                   visibility: "visible" as const,
@@ -1020,7 +1106,34 @@ export async function runGenericStructureLoop(
       }
       rowKindOptions.set(signature, byTarget);
     }
-    const kind = kindOfEntry(profile.education[rowIndex]!);
+    let profileIndex = rowIndex;
+    if (group.singleRow) {
+      const latest = profile.education
+        .map((entry) => entry.values.latestEducationType)
+        .find(Boolean);
+      const latestKind = latest && kindOfOptionText(latest);
+      const rank: EducationRowKind[] = [
+        "HIGH_SCHOOL",
+        "JUNIOR_COLLEGE",
+        "UNIVERSITY",
+        "MASTER",
+        "DOCTOR",
+      ];
+      profileIndex = profile.education.findIndex(
+        (entry) => latestKind && kindOfEntry(entry) === latestKind,
+      );
+      if (profileIndex < 0)
+        profileIndex = profile.education.reduce((best, entry, index) => {
+          const kind = kindOfEntry(entry);
+          const previous =
+            best < 0 ? undefined : kindOfEntry(profile.education[best]!);
+          return kind && (!previous || rank.indexOf(kind) > rank.indexOf(previous))
+            ? index
+            : best;
+        }, -1);
+    }
+    const entry = profile.education[profileIndex];
+    const kind = entry && kindOfEntry(entry);
     if (!kind) return blockRow("NO_PROFILE_STAGE");
     const optionId = byTarget.get(TARGET_OF_ROW_KIND[kind]);
     if (!optionId) return blockRow("ROW_KIND_OPTION_UNDECIDED");
@@ -1045,12 +1158,11 @@ export async function runGenericStructureLoop(
       }
       if (document.URL !== initialUrl) return blockRow("URL_CHANGED");
       if (rowElement) {
-        const entry = profile.education[rowIndex]!;
         context.educationRows.set(rowElement, {
           sectionId: sectionOfKind(kind),
           sectionIndex: profile.education
-            .slice(0, rowIndex)
-            .filter((previous) => previous.sectionId === entry.sectionId)
+            .slice(0, profileIndex)
+            .filter((previous) => previous.sectionId === entry!.sectionId)
             .length,
           select,
           selectedValue: select.value,

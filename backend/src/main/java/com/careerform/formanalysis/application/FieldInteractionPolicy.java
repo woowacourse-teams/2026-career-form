@@ -71,6 +71,7 @@ public final class FieldInteractionPolicy {
         WriteCommand command = dateSelection
             ? WriteCommand.SELECT_DATE
             : searchSelection ? WriteCommand.SEARCH_SELECTION
+            : generic && isCustomSelect(candidate) ? WriteCommand.SELECT_OPTION
             : writeCommand(candidate, mapping);
         if (command == null) {
             return withoutWrite(InteractionStatus.UNVERIFIED);
@@ -167,6 +168,14 @@ public final class FieldInteractionPolicy {
             return false;
         }
         return CANONICAL_FIELDS.contains(direct.profileFieldKey());
+    }
+
+    // 범용 수집기가 열어서 선택지를 읽은 커스텀 드롭다운만 선택 명령을 받는다.
+    private static boolean isCustomSelect(FieldCandidate candidate) {
+        return candidate.element() == FormElement.CUSTOM
+            && candidate.control() == FormControl.SELECT
+            && candidate.options() != null
+            && !candidate.options().isEmpty();
     }
 
     private static Decision withoutWrite(InteractionStatus status) {

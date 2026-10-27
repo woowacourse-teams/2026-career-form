@@ -184,16 +184,6 @@ export async function runAddressAnalysis({
     const buttons = pageDocument.querySelectorAll(policy.triggerSelector);
     if (buttons.length === 1) run.button = buttons[0];
   }
-  localWorkflowLog("address-enter", {
-    snapshotId: snapshot.request.snapshotId,
-    hasButton: !!run.button,
-    hasRunner: !!runner,
-    hasTask: !!run.task,
-  });
-  if (!run.button || !runner)
-    return adapter.addressRequiresSearch
-      ? withoutAddressFields(analysis, snapshot, addressNames)
-      : analysis;
   const keys = [
     "contact.contact.postalCode",
     "contact.contact.addressLine1",
@@ -203,9 +193,100 @@ export async function runAddressAnalysis({
     ...section.fields,
     ...(section.items ?? []).flatMap((item) => item.fields),
   ]);
+  // Generic (non-adapter) pages have no policy provider and no adapter runner.
+  // The Kakao postcode widget is vendor-generic, so the same executor can run
+  // there when the three address keys map one-to-one onto visible native text
+  // controls with the expected readonly split.
+  const mappingFor = (candidateId: string) =>
+    analysis.fields.find((field) => field.candidateId === candidateId);
+  const genericAddressFields = keys.map((key) => {
+    const matches = fields.filter((field) => {
+      const mapping = mappingFor(field.candidateId);
+      return (
+        mapping !== undefined &&
+        "valueBinding" in mapping &&
+        mapping.valueBinding?.type === "DIRECT" &&
+        mapping.valueBinding.profileFieldKey === key
+      );
+    });
+    return matches.length === 1 ? matches[0] : undefined;
+  });
+  // Only the road address is required. The postcode is optional, and the detail
+  // line may be absent only when the form offers no editable text field that
+  // could hold it (checked below together with the single trigger scope).
+  const genericRequired: readonly number[] = [1];
+  const genericFieldIsUsable = (field: (typeof genericAddressFields)[number], index: number) => {
+    if (!field) return false;
+    const mapping = mappingFor(field.candidateId);
+    return (
+      field.element === "input" &&
+      field.control === "text" &&
+      field.visibility === "visible" &&
+      !field.disabled &&
+      !field.inert &&
+      !!field.readonly === index < 2 &&
+      mapping?.matchType === "MATCH" &&
+      mapping.mappingStatus === "LLM_SUGGESTED"
+    );
+  };
+  const genericAddressPermitted =
+    analysis.mode !== "ADAPTER" &&
+    !policy &&
+    !adapter.runAddress &&
+    genericRequired.every((index) =>
+      genericFieldIsUsable(genericAddressFields[index], index),
+    ) &&
+    (genericAddressFields[0] === undefined ||
+      genericFieldIsUsable(genericAddressFields[0], 0)) &&
+    (genericAddressFields[2] === undefined
+      ? !hasEditableDetailCandidate(snapshot, genericAddressFields)
+      : genericFieldIsUsable(genericAddressFields[2], 2));
+  const genericDetailAbsent =
+    genericAddressPermitted && genericAddressFields[2] === undefined;
+  // Without an address runner, a generic search cannot drive a postcode
+  // widget (it lives in nested cross-origin frames) and only leaves its layer
+  // open over the form. Keep those address searches manual instead.
+  if (
+    !genericAddressPermitted &&
+    analysis.mode !== "ADAPTER" &&
+    !policy &&
+    !adapter.runAddress
+  ) {
+    const manual = new Set(
+      analysis.fields
+        .filter(
+          (field) =>
+            "valueBinding" in field &&
+            field.valueBinding?.type === "DIRECT" &&
+            (keys as readonly string[]).includes(
+              field.valueBinding.profileFieldKey,
+            ) &&
+            field.writePlan?.command === "SEARCH_SELECTION",
+        )
+        .map((field) => field.candidateId),
+    );
+    if (manual.size) {
+      localWorkflowLog("address-manual", {
+        snapshotId: snapshot.request.snapshotId,
+        removed: manual.size,
+        addressLine1: genericFieldIsUsable(genericAddressFields[1], 1),
+        addressLine2: genericAddressFields[2]
+          ? genericFieldIsUsable(genericAddressFields[2], 2)
+          : hasEditableDetailCandidate(snapshot, genericAddressFields)
+            ? "unmapped-editable"
+            : "absent",
+      });
+      return {
+        ...analysis,
+        fields: analysis.fields.filter(
+          (field) => !manual.has(field.candidateId),
+        ),
+      };
+    }
+  }
   const permitted =
-    analysis.mode === "ADAPTER" &&
-    addressNames.length === 3 &&
+    (analysis.mode === "ADAPTER" &&
+      addressNames.length === 3 &&
     addressNames.every((name, index) => {
       const candidates = fields.filter(
         (field) => field.domId === name || field.domName === name,
@@ -229,15 +310,121 @@ export async function runAddressAnalysis({
         mapping.valueBinding?.type === "DIRECT" &&
         mapping.valueBinding.profileFieldKey === keys[index]
       );
+    })) ||
+    genericAddressPermitted;
+  const effectiveAddressNames = genericAddressPermitted
+    ? genericAddressFields.flatMap((field) =>
+        field ? [field.domName ?? field.domId ?? ""] : [],
+      )
+    : addressNames;
+  const effectiveRunner = genericAddressPermitted
+    ? runKakaoAddress
+    : runner;
+  if (genericAddressPermitted && !run.button) {
+    // Generic pages have no trigger selector: accept exactly one search-style
+    // trigger inside the first address control's own row.
+    const resolveElement = (
+      field: (typeof genericAddressFields)[number],
+    ): Element | null => {
+      if (!field) return null;
+      const lookup = snapshot.registry.lookupField(field.candidateId);
+      const fromRegistry =
+        "handle" in lookup ? lookup.handle.elements[0] : undefined;
+      if (fromRegistry) return fromRegistry;
+      // Readonly address inputs are registered as blocked, so fall back to the
+      // collected name/id, which the analysis already validated as unique.
+      const selector = field.domId
+        ? `#${CSS.escape(field.domId)}`
+        : field.domName
+          ? `[name="${CSS.escape(field.domName)}"]`
+          : undefined;
+      return selector ? pageDocument.querySelector(selector) : null;
+    };
+    // The road-address control (index 1) is the one the search fills; the
+    // postcode is optional and often absent.
+    const element =
+      resolveElement(genericAddressFields[1]) ??
+      resolveElement(genericAddressFields[0]) ??
+      resolveElement(genericAddressFields[2]);
+    // Walk up a few ancestors and take the first level that exposes exactly one
+    // address trigger. Search buttons often sit in a wrapper that overlays the
+    // readonly input, so a single fixed selector is not enough.
+    // Only address controls may share the trigger's scope, so a school or
+    // certificate search elsewhere in the section is never taken for it.
+    const addressElements = new Set(
+      genericAddressFields.map((field) => resolveElement(field)).filter(Boolean),
+    );
+    const ownsOnlyAddress = (scope: Element) =>
+      Array.from(
+        scope.querySelectorAll<HTMLElement>("input, select, textarea"),
+      ).every(
+        (control) =>
+          addressElements.has(control) ||
+          (control instanceof HTMLInputElement &&
+            ["hidden", "checkbox", "button", "submit"].includes(control.type)),
+      );
+    const matching = (scope: Element): HTMLElement[] =>
+      ownsOnlyAddress(scope)
+        ? Array.from(
+            scope.querySelectorAll<HTMLElement>("button, [role='button']"),
+          ).filter((button) => {
+            const name = `${button.getAttribute("aria-label") ?? ""} ${button.getAttribute("title") ?? ""} ${button.textContent ?? ""}`;
+            return (
+              /검색|우편번호|주소\s*찾기/.test(name) &&
+              !/동일|복사|같음|삭제|초기화/.test(name)
+            );
+          })
+        : [];
+    let scope: Element | null = element ?? null;
+    for (let depth = 0; scope && depth < 5; depth += 1) {
+      const triggers = matching(scope);
+      if (triggers.length === 1) {
+        run.button = triggers[0];
+        break;
+      }
+      if (triggers.length > 1) break;
+      scope = scope.parentElement;
+    }
+    localWorkflowLog("address-trigger", {
+      snapshotId: snapshot.request.snapshotId,
+      found: !!run.button,
+      addressElement: !!element,
+      detailField: !genericDetailAbsent,
     });
-  const addressTargets = permitted
-    ? addressNames.flatMap((name, index) => {
-        const candidate = fields.find(
+  }
+  localWorkflowLog("address-enter", {
+    snapshotId: snapshot.request.snapshotId,
+    hasButton: !!run.button,
+    hasRunner: !!effectiveRunner,
+    hasTask: !!run.task,
+  });
+  if (!run.button || !effectiveRunner)
+    return adapter.addressRequiresSearch || genericAddressPermitted
+      ? withoutAddressFields(analysis, snapshot, effectiveAddressNames)
+      : analysis;
+  const candidateSlots = genericAddressPermitted
+    ? genericAddressFields.flatMap((field, index) =>
+        field ? [{ field, index }] : [],
+      )
+    : addressNames.map((name, index) => ({
+        field: fields.find(
           (field) => (field.domId ?? field.domName) === name,
-        )!;
+        )!,
+        index,
+      }));
+  const addressTargets = permitted
+    ? candidateSlots.flatMap(({ field: candidate, index }) => {
         const lookup = snapshot.registry.lookupField(candidate.candidateId);
-        if (lookup.status !== "ready" && lookup.status !== "blocked") return [];
-        const element = lookup.handle.elements[0];
+        const registryElement =
+          "handle" in lookup ? lookup.handle.elements[0] : undefined;
+        const blockedButNamed =
+          lookup.status === "ready" || lookup.status === "blocked";
+        const element =
+          registryElement ??
+          (genericAddressPermitted && blockedButNamed
+            ? elementByCollectedName(pageDocument, candidate)
+            : undefined);
+        if (!element) return [];
         return element instanceof HTMLInputElement
           ? [
               {
@@ -263,13 +450,29 @@ export async function runAddressAnalysis({
       if (button) onAddressOperation?.(button);
     };
     button?.addEventListener("click", onClick, { once: true });
-    run.task = runner({
+    const targetFor = (key: string) =>
+      addressTargets.find((target) => target.profileFieldKey === key)?.element;
+    const genericAddress = targetFor(keys[1]);
+    const genericDetail = targetFor(keys[2]);
+    const genericPostalCode = targetFor(keys[0]);
+    run.task = effectiveRunner({
       document: pageDocument,
       button,
       expected: addressValue(profile),
       loadCurrent: async () => addressValue(await repository.load()),
       signal: run.controller.signal,
       search: addressSearch,
+      ...(genericAddressPermitted &&
+      genericAddress &&
+      (genericDetail || genericDetailAbsent)
+        ? {
+            targets: {
+              address: genericAddress,
+              ...(genericDetail ? { detail: genericDetail } : {}),
+              ...(genericPostalCode ? { postalCode: genericPostalCode } : {}),
+            },
+          }
+        : {}),
     }).finally(() => button?.removeEventListener("click", onClick));
   }
   run.task ??= Promise.resolve({
@@ -315,7 +518,55 @@ export async function runAddressAnalysis({
     }
   }
   onActivity?.("matching");
-  return withoutAddressFields(analysis, snapshot, addressNames);
+  return withoutAddressFields(analysis, snapshot, effectiveAddressNames);
+}
+
+/**
+ * A detail line may be omitted only when no other editable single-line text
+ * field shares a section with the road address: such a field could be the
+ * unmapped detail line, and the search would then leave it empty.
+ */
+function hasEditableDetailCandidate(
+  snapshot: ReturnType<typeof collectFieldsSnapshot>,
+  addressFields: readonly ({ candidateId: string } | undefined)[],
+): boolean {
+  const road = addressFields[1];
+  if (!road) return true;
+  const own = new Set(
+    addressFields.flatMap((field) => (field ? [field.candidateId] : [])),
+  );
+  return snapshot.request.sections
+    .map((section) => [
+      ...section.fields,
+      ...(section.items ?? []).flatMap((item) => item.fields),
+    ])
+    .filter((fields) =>
+      fields.some((field) => field.candidateId === road.candidateId),
+    )
+    .some((fields) =>
+      fields.some(
+        (field) =>
+          !own.has(field.candidateId) &&
+          field.element === "input" &&
+          field.control === "text" &&
+          field.visibility === "visible" &&
+          !field.readonly &&
+          !field.disabled &&
+          !field.inert,
+      ),
+    );
+}
+
+function elementByCollectedName(
+  pageDocument: Document,
+  field: { domId?: string; domName?: string },
+): Element | null {
+  const selector = field.domId
+    ? `#${CSS.escape(field.domId)}`
+    : field.domName
+      ? `[name="${CSS.escape(field.domName)}"]`
+      : undefined;
+  return selector ? pageDocument.querySelector(selector) : null;
 }
 
 function withoutAddressFields(

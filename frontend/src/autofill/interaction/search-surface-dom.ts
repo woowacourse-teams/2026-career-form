@@ -72,10 +72,21 @@ export const SEARCH_SUBJECTS = [
   ["회사", "직장", "기업", "company", "employer"],
 ] as const;
 
-export function sharesSearchSubject(fieldName: string, surfaceName: string) {
+/** Generic recovery also recognizes license and language-exam subjects. */
+const GENERIC_SEARCH_SUBJECTS = [
+  ...SEARCH_SUBJECTS.filter((words) => words[0] !== "자격증"),
+  ["자격증", "자격/면허", "면허", "certificate", "license"],
+  ["시험", "어학", "exam", "language test"],
+] as const;
+
+export function sharesSearchSubject(
+  fieldName: string,
+  surfaceName: string,
+  generic = false,
+) {
   const field = fieldName.toLowerCase();
   const surface = surfaceName.toLowerCase();
-  return SEARCH_SUBJECTS.some(
+  return (generic ? GENERIC_SEARCH_SUBJECTS : SEARCH_SUBJECTS).some(
     (words) =>
       words.some((word) => field.includes(word)) &&
       words.some((word) => surface.includes(word)),
@@ -164,6 +175,7 @@ function simpleSelectionHref(href: string, labelText: string): boolean {
 export interface ActivationScope {
   readonly resultRoot: Element;
   readonly surfaceKind: SearchSurfaceKind;
+  readonly allowEmptyJavascriptLink?: boolean;
 }
 
 /**
@@ -225,6 +237,21 @@ export function safeActivation(
   if (element.tagName === "A") {
     const href = element.getAttribute("href")?.trim() ?? "";
     if (href === "" || href === "#") return true;
+    if (
+      scope?.allowEmptyJavascriptLink === true &&
+      ["same-document-dialog", "same-document-layer"].includes(
+        scope.surfaceKind,
+      ) &&
+      scope.resultRoot.contains(element) &&
+      /^javascript:\s*;?$/i.test(href) &&
+      !Array.from(element.attributes).some((attribute) =>
+        /^on/i.test(attribute.name),
+      ) &&
+      acceptedValues?.some(
+        (value) => normalized(value) === normalized(element.textContent ?? ""),
+      )
+    )
+      return true;
     if (fragmentResultLink(element, acceptedValues, scope)) return true;
     if (
       !acceptedValues ||

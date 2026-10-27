@@ -68,7 +68,13 @@ export default defineConfig({
   manifest: {
     description: "채용 지원 정보를 안전하게 재사용하는 Chrome 확장 프로그램",
     name: "Career Form",
-    host_permissions: apiHostPermissions(configuredApiBaseUrl),
+    host_permissions: [
+      ...apiHostPermissions(configuredApiBaseUrl),
+      // The Kakao postcode widget renders inside a cross-origin frame; the
+      // frame content script can only run there with host access. Approved by
+      // the user for the generic address autofill prototype (2026-10-23).
+      "https://postcode.map.kakao.com/*",
+    ],
     // Silent extension push (userVisibleOnly: false) needs Chrome 121+.
     minimum_chrome_version: "121",
     optional_host_permissions: ["http://*/*", "https://*/*"],

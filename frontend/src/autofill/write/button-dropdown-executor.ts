@@ -1,13 +1,16 @@
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import {
-  closeDropdown,
   captureDropdownProbe,
   confirmDropdownSelection,
   dropdownIsCurrent,
   dropdownValue,
-  openDropdown,
-  revalidateDropdown,
 } from "../dom/button-dropdown";
+import {
+  closeDropdownFor,
+  liveDropdownMenu,
+  openDropdownFor,
+  revalidateDropdownFor,
+} from "../dom/readonly-input-dropdown";
 import type { ReviewPlanItem } from "../review/review-plan";
 import { isSelectableApproved } from "./search-executor";
 import { normalizeDisplayName } from "./display-name";
@@ -96,22 +99,19 @@ export async function executeButtonDropdownWrite({
       reason: "지원서에 같은 값이 이미 입력되어 있습니다.",
     };
   const opening = captureDropdownProbe(dropdown.trigger.ownerDocument);
-  const menus = await openDropdown(dropdown.trigger, signal);
+  const menus = await openDropdownFor(dropdown, signal);
   const openedWithoutChanges = opening.unchanged();
   if (openedWithoutChanges) opening.release();
   let result: ApprovedWriteResult = unsupported();
   try {
     if (!openedWithoutChanges) return stale();
-    const options = revalidateDropdown(dropdown, menus);
+    const options = revalidateDropdownFor(dropdown, menus);
+    const menu = liveDropdownMenu(dropdown, menus) ?? dropdown.menu;
     const matches = options?.filter((option) =>
       approval.status === "selected"
         ? matchesApprovedCatalog(
             approval.match,
-            catalogEvidenceForElement(
-              option.element,
-              dropdown.menu,
-              option.text,
-            ),
+            catalogEvidenceForElement(option.element, menu, option.text),
           )
         : normalizeDisplayName(option.text) === normalizeDisplayName(value),
     );
@@ -129,7 +129,7 @@ export async function executeButtonDropdownWrite({
       return unsupported();
     const evidence = catalogEvidenceForElement(
       option.element,
-      dropdown.menu,
+      menu,
       option.text,
     );
     const chosenCode = option.element.getAttribute("data-value");
@@ -140,7 +140,7 @@ export async function executeButtonDropdownWrite({
       (beforeMutation && !(await beforeMutation())) ||
       !current() ||
       dropdownValue(dropdown) !== live ||
-      !revalidateDropdown(dropdown, menus)?.some(
+      !revalidateDropdownFor(dropdown, menus)?.some(
         (entry) =>
           entry.element === option.element && entry.text === option.text,
       )
@@ -188,7 +188,7 @@ export async function executeButtonDropdownWrite({
       ? captureDropdownProbe(dropdown.trigger.ownerDocument)
       : opening;
     try {
-      const closed = await closeDropdown(dropdown.trigger, menus);
+      const closed = await closeDropdownFor(dropdown, menus);
       if (!closing.unchanged()) {
         if (!closing.interrupted() && !closing.restore())
           throw new Error(

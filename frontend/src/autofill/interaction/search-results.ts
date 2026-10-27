@@ -1,3 +1,4 @@
+import { localWorkflowLog } from "../debug/local-workflow";
 import {
   controlSignature,
   normalized,
@@ -9,7 +10,9 @@ import { elements, safeActivation, shown } from "./search-surface-dom";
 import {
   hasExplicitResultSignal,
   listItems,
+  LOCAL_ZERO_RESULT_SETTLE_MS,
   LocalMutationRecord,
+  zeroNotices,
   localReadiness,
   zeroNoticeConsistency,
 } from "./local-result-readiness";
@@ -41,11 +44,13 @@ export function observeResults(
   session: SearchSession,
   baseline: RootState[],
   query: string | undefined,
+  queryCommitted: () => boolean = () => false,
 ) {
   const generation = surface.queryGeneration;
   let busySeen = false;
   const mutations = new LocalMutationRecord();
   const now = () => surface.document.defaultView?.performance.now() ?? 0;
+  const startedAt = now();
   const observe = () => {
     for (const root of surface.resultRoots()) {
       if (
@@ -77,21 +82,26 @@ export function observeResults(
   });
   session.addCleanup(() => observer?.disconnect());
 
+  let pendingReason = "";
+  const pend = (reason: string): undefined => {
+    pendingReason = reason;
+    return undefined;
+  };
   const readyRoot = () => {
     if (surface.queryGeneration !== generation)
       throw new SearchFailure("result_stale");
-    if (surface.navigationPending()) return undefined;
+    if (surface.navigationPending()) return pend("navigation");
     surface.revalidate();
     observe();
     const roots = surface.resultRoots();
-    if (!roots.length) return undefined;
+    if (!roots.length) return pend("no-root");
     if (roots.length !== 1) throw new SearchFailure("surface_ambiguous");
     const root = roots[0]!;
     if (
       root.getAttribute("aria-busy") === "true" ||
       root.closest("[aria-busy='true']")
     )
-      return undefined;
+      return pend("busy");
     const resultActions = () =>
       elements<HTMLElement>(root, "[role='option'], a, button").filter(
         (element) =>
@@ -111,9 +121,39 @@ export function observeResults(
         baseline.find((item) => item.root === root),
         mutations,
         now(),
+        session.args.genericPopupRecovery === true && queryCommitted(),
       ) === "pending"
-    )
-      return undefined;
+    ) {
+      const entry = baseline.find((item) => item.root === root);
+      const current = listItems(root);
+      const added = mutations.addedItems(root);
+      const last = mutations.lastMutationAt(root);
+      // An empty list that never changed is either still loading or a real
+      // zero-result answer. After a bounded settle time a visible zero-result
+      // notice decides it, so the search can fail as "not found" and try its
+      // next query instead of waiting out the whole deadline.
+      const settledEmpty =
+        session.args.genericPopupRecovery === true &&
+        current.length === 0 &&
+        added.size === 0 &&
+        now() - startedAt >= LOCAL_ZERO_RESULT_SETTLE_MS &&
+        zeroNotices(surface, root).some(shown);
+      if (!settledEmpty) {
+        pendingReason = JSON.stringify({
+          local: true,
+          hasBaseline: Boolean(entry),
+          baselineItems: entry?.items.length ?? -1,
+          current: current.length,
+          added: added.size,
+          overlap: entry
+            ? entry.items.filter((item) => current.includes(item)).length
+            : -1,
+          unadded: current.filter((item) => !added.has(item)).length,
+          sinceLast: last === undefined ? -1 : now() - last,
+        });
+        return undefined;
+      }
+    }
     const previous = baseline.find((item) => item.root === root);
     const changed =
       !previous || previous.signature !== (root.textContent ?? "");
@@ -127,7 +167,7 @@ export function observeResults(
       surface.hasCompletedNavigation(query) ||
       (queryTagged && completeMarker) ||
       (busySeen && changed && root.getAttribute("aria-busy") === "false");
-    if (!ready && !localMode) return undefined;
+    if (!ready && !localMode) return pend("not-ready");
     const paging = elements<HTMLElement>(
       surface.root,
       "[rel='next'], [aria-label*='pagination' i], [aria-label*='페이지'], [data-has-more='true'], [data-virtualized='true'], [data-search-complete='false']",
@@ -148,11 +188,22 @@ export function observeResults(
       const notice = zeroNoticeConsistency(surface, root, actions);
       if (notice === "incomplete")
         throw new SearchFailure("result_set_incomplete");
-      if (notice === "pending") return undefined;
+      if (notice === "pending") return pend("zero-notice-pending");
     }
     return { root, localMode, actions };
   };
   return {
+    pendingReason: () => pendingReason,
+    empty() {
+      const ready = readyRoot();
+      return Boolean(
+        ready &&
+        ready.actions.length === 0 &&
+        listItems(ready.root).length === 0 &&
+        (ready.root.getAttribute("data-result-count") === "0" ||
+          zeroNotices(surface, ready.root).some(shown)),
+      );
+    },
     async interpret() {
       const root = readyRoot()?.root;
       if (!root) throw new SearchFailure("result_pending");
@@ -227,13 +278,37 @@ export function observeResults(
       );
       if (matches.length > 1)
         throw new SearchFailure("multiple_matching_results");
-      if (!matches.length) throw new SearchFailure("search_results_not_found");
+      if (!matches.length) {
+        // Local QA: booleans and counts only, never labels or profile values.
+        const wanted = (catalogMatch ? catalogMatch.labels : expected).map(
+          normalized,
+        );
+        const found = actions.map((element) =>
+          normalized(
+            catalogMatch
+              ? evidenceFor(element).label
+              : (element.textContent ?? ""),
+          ),
+        );
+        localWorkflowLog("search-no-match", {
+          results: actions.length,
+          catalog: Boolean(catalogMatch),
+          resultContainsWanted: found.some((label) =>
+            wanted.some((value) => label.includes(value)),
+          ),
+          wantedContainsResult: found.some((label) =>
+            wanted.some((value) => value.includes(label)),
+          ),
+        });
+        throw new SearchFailure("search_results_not_found");
+      }
       const element = matches[0]!;
       const evidence = evidenceFor(element);
       if (
         !safeActivation(element, catalogMatch ? [evidence.label] : expected, {
           resultRoot: root,
           surfaceKind: surface.kind,
+          allowEmptyJavascriptLink: session.args.genericPopupRecovery === true,
         })
       )
         throw new SearchFailure("result_activation_unsafe");

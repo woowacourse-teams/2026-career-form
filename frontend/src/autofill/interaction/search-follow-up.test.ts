@@ -89,6 +89,45 @@ describe("search follow-up observation", () => {
     expect(await outcome).toEqual({ controls: [textarea] });
     observation.dispose();
   });
+  it("does not finish while a newly inserted hidden input is still waiting to appear", async () => {
+    vi.useFakeTimers();
+    const { scope, target } = fixture();
+    scope.querySelector("select")!.remove();
+    const observation = captureSearchFollowUp(scope, target)!;
+    const pending = observation.wait({});
+    let settled = false;
+    const outcome = pending.then((controls) => {
+      settled = true;
+      return controls;
+    });
+    const input = document.createElement("input");
+    input.hidden = true;
+    scope.append(input);
+
+    await vi.advanceTimersByTimeAsync(600);
+    expect(settled).toBe(false);
+    input.hidden = false;
+    await vi.advanceTimersByTimeAsync(800);
+
+    expect(await outcome).toEqual([input]);
+    observation.dispose();
+  });
+  it("settles when selection hides an existing alternate text input", async () => {
+    vi.useFakeTimers();
+    const { scope, target } = fixture();
+    scope.querySelector("select")!.remove();
+    const alternate = document.createElement("input");
+    scope.append(alternate);
+    // Generic recovery only: the legacy path keeps waiting on any changed control.
+    const observation = captureSearchFollowUp(scope, target, true)!;
+    const pending = observation.wait({});
+
+    alternate.hidden = true;
+    await vi.advanceTimersByTimeAsync(600);
+
+    expect(await pending).toEqual([]);
+    observation.dispose();
+  });
 
   it("returns an existing same-row input when it becomes enabled without value changes", async () => {
     vi.useFakeTimers();

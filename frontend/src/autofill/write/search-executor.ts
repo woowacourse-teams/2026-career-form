@@ -1,6 +1,15 @@
+import { localWorkflowLog } from "../debug/local-workflow";
 import { createInteractionDecisionSession } from "../api/interaction-decision-session";
 import type { InteractionDecisionProvider } from "../api/interaction-types";
+import { traceHold, traceTrigger } from "../debug/write-trace";
 import type { CandidateRegistry } from "../dom/candidate-registry";
+import {
+  captureControlState,
+  correspondingControls,
+  isVisibleWriteElement,
+} from "../dom/write-target";
+import { openCalendarPopups } from "../interaction/calendar-surface";
+import { displayedDayCalendarRoots } from "../interaction/day-calendar-surface";
 import {
   executeReadonlySearch,
   type ReadonlySearchExecutionResult,
@@ -23,6 +32,9 @@ import {
   retainedCatalogSelection,
 } from "../profile/catalog-receipt";
 
+// One application can hold schools, companies, several certificates and
+// language tests; each search is still bounded and revalidated on its own.
+const MAX_GENERIC_SEARCHES = 8;
 const MAX_SEARCHES = 4;
 const STALE = "지원서 필드 상태가 변경되었거나 입력할 수 없습니다.";
 const CONFLICT = "입력 직전 지원서에 다른 값이 있어 기존 값을 보존했습니다.";
@@ -62,7 +74,9 @@ type ExecuteApprovedSearchWritesArgs = {
   /**
    * How far an unconfirmed search failure holds later approved items. The
    * default "all" holds the rest of the list; "row" holds only items of the same
-   * profile entry (and items whose entry is unknown), then continues.
+   * profile entry (and items whose entry is unknown), then continues. A trigger
+   * without an entry can instead use unchanged, collected structural groups after
+   * a closed, pre-selection failure.
    */
   followUpHaltScope?: "all" | "row";
   writeOrdinary?: (
@@ -96,6 +110,59 @@ export function bindingKey(item: ReviewPlanItem): string | undefined {
   return item.profileEntryId && key
     ? `${item.profileEntryId}:${key}`
     : undefined;
+}
+
+function approvedBinding(item: ReviewPlanItem): string {
+  return JSON.stringify([
+    item.candidateId,
+    item.profileFieldKey,
+    item.profileEntryId,
+    item.itemIndex,
+    item.profileValue,
+    item.analysis?.candidateId,
+    item.analysis?.mappingStatus,
+    item.analysis?.valueBinding,
+    item.analysis?.writePlan,
+    item.selected,
+    item.disabled,
+  ]);
+}
+
+function captureFieldGroup(registry: CandidateRegistry, candidateId: string) {
+  const lookup = registry.lookupField(candidateId);
+  if (!("handle" in lookup)) return undefined;
+  const handle = lookup.handle;
+  if (
+    !handle.sectionId ||
+    handle.sectionId === "section-root" ||
+    (handle.itemId !== undefined && handle.itemIndex === undefined)
+  )
+    return undefined;
+  const elements = [...handle.elements, ...(handle.customElements ?? [])];
+  if (!elements.length) return undefined;
+  // Singleton handles have no row-context callback. Remember their whole parent
+  // chain too, so a moved control cannot retain its old collected group identity.
+  const parents = elements.flatMap((element) => {
+    const chain: { element: Element; parent: Element | null }[] = [];
+    for (let node: Element | null = element; node; node = node.parentElement)
+      chain.push({ element: node, parent: node.parentElement });
+    return chain;
+  });
+  return {
+    sectionId: handle.sectionId,
+    itemId: handle.itemId,
+    isCurrent: () => {
+      const current = registry.lookupField(candidateId);
+      return (
+        "handle" in current &&
+        current.handle === handle &&
+        parents.every(
+          ({ element, parent }) =>
+            element.isConnected && element.parentElement === parent,
+        )
+      );
+    },
+  };
 }
 
 function skipped(
@@ -327,6 +394,22 @@ export async function executeApprovedSearchWrites({
     ? createInteractionDecisionSession(interactionDecisionProvider)
     : undefined;
   let searchCount = 0;
+  const approvedBindings = new Map(
+    items.map((item) => [item, approvedBinding(item)]),
+  );
+  const genericItems = new Set(
+    items.filter(
+      (item) =>
+        item.analysis?.mappingStatus === "LLM_SUGGESTED" &&
+        !registry.isLegacyField(item.candidateId),
+    ),
+  );
+  if (
+    items.some((item) =>
+      approvedCandidateIds.has(item.candidateId) && genericItems.has(item),
+    )
+  )
+    registry.captureReplacementState();
 
   for (const [index, item] of items.entries()) {
     if (heldIndexes.has(index)) continue;
@@ -373,21 +456,137 @@ export async function executeApprovedSearchWrites({
         );
       return true;
     }
+    if (genericItems.has(item)) {
+      const command = item.analysis?.writePlan?.command;
+      const allowReplacement =
+        command !== "SELECT_DATE" &&
+        command !== "SEARCH_SELECTION" &&
+        !item.calendarApproval &&
+        !item.dayCalendarApproval &&
+        item.analysis?.valueBinding?.type === "DIRECT";
+      const bindingSame = approvedBindings.get(item) === approvedBinding(item);
+      if (
+        !bindingSame ||
+        !registry.revalidateField(item.candidateId, allowReplacement)
+      ) {
+        localWorkflowLog("structure-unverified", {
+          bindingSame,
+          lookup: registry.lookupField(item.candidateId).status,
+        });
+        results[index] = skipped(
+          item.candidateId,
+          "needs-verification",
+          "STALE_TARGET",
+          STALE,
+          "STRUCTURE_UNVERIFIED",
+        );
+        onResult?.(item, results[index]!);
+        continue;
+      }
+    }
     if (item.analysis?.writePlan?.command !== "SEARCH_SELECTION") {
       if (writeOrdinary) {
+        const lookup = registry.lookupField(item.candidateId);
+        const target = "handle" in lookup ? lookup.handle.elements[0] : undefined;
+        const document = target?.ownerDocument;
+        const popup = item.calendarApproval?.popup ?? item.dayCalendarApproval?.popup;
+        const controls = () =>
+          document
+            ? Array.from(
+                document.querySelectorAll<
+                  HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+                >("input, select, textarea"),
+              ).filter((control) => !popup?.contains(control))
+            : [];
+        const before = captureControlState(controls());
         const execution = await writeOrdinary(item);
         const result = "result" in execution ? execution.result : execution;
         const effect = "result" in execution ? execution.effect : "continue";
         results[index] = result;
         onResult?.(item, result);
-        if (effect === "stop") {
+        if (
+          effect === "stop" ||
+          (genericItems.has(item) &&
+            item.analysis?.writePlan?.command === "SELECT_DATE")
+        ) {
+          // Widgets hide their popup with a short animation after applying.
+          // Give the popup a bounded moment to finish closing before judging.
+          if (document) {
+            const settleDeadline = Date.now() + 1500;
+            while (
+              Date.now() < settleDeadline &&
+              !signal?.aborted &&
+              (openCalendarPopups(document).length > 0 ||
+                displayedDayCalendarRoots(document).length > 0)
+            )
+              await new Promise((resolve) => setTimeout(resolve, 50));
+          }
+          const closed =
+            document &&
+            !(result.status === "skipped" && result.surfaceLeftOpen) &&
+            openCalendarPopups(document).length === 0 &&
+            displayedDayCalendarRoots(document).length === 0 &&
+            !Array.from(
+              document.querySelectorAll<HTMLElement>(
+                "dialog[open], [role='dialog'], [aria-modal='true'], [role='listbox'], iframe",
+              ),
+            ).some(isVisibleWriteElement);
+          localWorkflowLog("ordinary-stop", {
+            effect,
+            hasDocument: Boolean(document),
+            surfaceLeftOpen:
+              result.status === "skipped" && result.surfaceLeftOpen === true,
+            openCalendars: document ? openCalendarPopups(document).length : -1,
+            dayRoots: document
+              ? displayedDayCalendarRoots(document).length
+              : -1,
+            overlays: document
+              ? Array.from(
+                  document.querySelectorAll<HTMLElement>(
+                    "dialog[open], [role='dialog'], [aria-modal='true'], [role='listbox'], iframe",
+                  ),
+                ).filter(isVisibleWriteElement).length
+              : -1,
+            code: result.code ?? "",
+          });
+          if (effect !== "stop" && closed) continue;
+          const correspondence = correspondingControls(before, controls(), target);
+          // Only a proven identity-preserving render can relax this stop.
+          // Changed values, unknown effects and open surfaces keep the hold.
+          if (
+            genericItems.has(item) &&
+            approvedBindings.get(item) === approvedBinding(item) &&
+            result.status === "skipped" &&
+            (result.code === "STALE_TARGET" ||
+              result.code === "RETAINED_VALUE_UNCONFIRMED") &&
+            target &&
+            (target.value === item.profileValue ||
+              target.value === before.find((old) => old.control === target)?.value) &&
+            closed &&
+            correspondence &&
+            [...correspondence].some(([old, current]) => old !== current)
+          )
+            continue;
+          traceTrigger(item.candidateId, {
+            triggerHasProfileEntryId: item.profileEntryId !== undefined,
+          });
           for (let later = index + 1; later < items.length; later++) {
             if (!approvedCandidateIds.has(items[later]!.candidateId)) continue;
+            heldIndexes.add(later);
+            traceHold(items[later]!.candidateId, {
+              kind:
+                item.analysis?.writePlan?.command === "SELECT_DATE"
+                  ? "calendar-stop"
+                  : "ordinary-stop",
+              triggerCandidateId: item.candidateId,
+              batch: true,
+            });
             results[later] = skipped(
               items[later]!.candidateId,
               "needs-verification",
               "STALE_TARGET",
               "이전 입력 결과를 확인할 수 없어 후속 입력을 중단했습니다.",
+              "FIELD_CHANGED",
             );
           }
           return true;
@@ -426,7 +625,10 @@ export async function executeApprovedSearchWrites({
     }
     const catalogMatch =
       catalogApproval.status === "selected" ? catalogApproval.match : undefined;
-    if (searchCount >= MAX_SEARCHES && !normalized(item.currentValue)) {
+    if (
+      searchCount >= (followUpHaltScope === "row" ? MAX_GENERIC_SEARCHES : MAX_SEARCHES) &&
+      !normalized(item.currentValue)
+    ) {
       results[index] = skipped(
         item.candidateId,
         "unsupported",
@@ -507,6 +709,22 @@ export async function executeApprovedSearchWrites({
       item.analysis.writePlan?.command === "SEARCH_SELECTION" &&
       item.analysis.valueBinding?.type === "DIRECT" &&
       item.analysis.valueBinding.profileFieldKey === expectedKey;
+    const structuralGroups =
+      followUpHaltScope === "row" && item.profileEntryId === undefined
+        ? new Map(
+            items
+              .slice(index)
+              .filter(
+                (candidate) =>
+                  approvedCandidateIds.has(candidate.candidateId) &&
+                  isSelectableApproved(candidate),
+              )
+              .map((candidate) => [
+                candidate.candidateId,
+                captureFieldGroup(registry, candidate.candidateId),
+              ]),
+          )
+        : undefined;
     if (!normalized(input.value)) searchCount++;
     const result = await executeReadonlySearch({
       document: input.ownerDocument,
@@ -607,8 +825,16 @@ export async function executeApprovedSearchWrites({
     onResult?.(item, results[index]!);
     if (result.status === "selected" && result.followUp?.controls.length) {
       onSearchFollowUp?.(item, result.followUp.controls);
+      traceTrigger(item.candidateId, {
+        triggerHasProfileEntryId: item.profileEntryId !== undefined,
+      });
       for (let later = index + 1; later < items.length; later++) {
         if (!approvedCandidateIds.has(items[later]!.candidateId)) continue;
+        traceHold(items[later]!.candidateId, {
+          kind: "search-followup-selected",
+          triggerCandidateId: item.candidateId,
+          batch: true,
+        });
         results[later] = skipped(
           items[later]!.candidateId,
           "needs-verification",
@@ -629,6 +855,61 @@ export async function executeApprovedSearchWrites({
         followUpHaltScope === "row" &&
         item.profileEntryId !== undefined &&
         failedResult?.surfaceLeftOpen !== true;
+      // These failures occur before result activation. Absence of the open flag
+      // is the search transaction's closure contract for these known failures;
+      // unknown effects and selection/retention failures cannot use this path.
+      // A trigger whose search never touched the page ("none") cannot have
+      // changed any other field, so its failure is no reason to hold unrelated
+      // approved items. Same-section items stay held below.
+      const untouchedPage = failedResult?.effect === "none";
+      const structuralOnly =
+        failedResult !== undefined &&
+        (untouchedPage ||
+          (failedResult.effect === "interaction-started" &&
+            [
+          "search_query_not_found",
+          "multiple_search_query_inputs",
+          "search_submit_not_found",
+          "multiple_search_submits",
+          "unverified_search_form",
+          "search_results_not_found",
+          "multiple_matching_results",
+          "result_set_incomplete",
+          "surface_unobservable",
+          "surface_ambiguous",
+          "inaccessible_popup_frame",
+        ].includes(failedResult.reason))) &&
+        failedResult.surfaceLeftOpen !== true &&
+        [
+          "search_query_not_found",
+          "multiple_search_query_inputs",
+          "search_submit_not_found",
+          "multiple_search_submits",
+          "unverified_search_form",
+          "search_results_not_found",
+          "multiple_matching_results",
+          "result_set_incomplete",
+          // The surface was only opened and closed again; nothing was typed
+          // or selected, so only the trigger's own group stays held.
+          "surface_unobservable",
+          "surface_ambiguous",
+          "inaccessible_popup_frame",
+        ].includes(failedResult.reason) &&
+        structuralGroups !== undefined &&
+        [...structuralGroups.values()].every((group) => group?.isCurrent());
+      const triggerGroup = structuralGroups?.get(item.candidateId);
+      localWorkflowLog("search-halt", {
+        reason: failedResult?.reason ?? "",
+        effect: failedResult?.effect ?? "",
+        structuralOnly,
+        rowOnly,
+        groups: structuralGroups !== undefined,
+      });
+      traceTrigger(item.candidateId, {
+        interactionReason: failedResult?.reason ?? "",
+        surfaceLeftOpen: failedResult?.surfaceLeftOpen === true,
+        triggerHasProfileEntryId: item.profileEntryId !== undefined,
+      });
       for (let later = index + 1; later < items.length; later++) {
         if (
           !approvedCandidateIds.has(items[later]!.candidateId) ||
@@ -642,7 +923,23 @@ export async function executeApprovedSearchWrites({
           laterEntry !== item.profileEntryId
         )
           continue;
+        const laterGroup = structuralGroups?.get(items[later]!.candidateId);
+        if (
+          structuralOnly &&
+          triggerGroup &&
+          laterGroup &&
+          (laterGroup.sectionId !== triggerGroup.sectionId ||
+            (triggerGroup.itemId !== undefined &&
+              laterGroup.itemId !== undefined &&
+              laterGroup.itemId !== triggerGroup.itemId))
+        )
+          continue;
         heldIndexes.add(later);
+        traceHold(items[later]!.candidateId, {
+          kind: "search-unconfirmed",
+          triggerCandidateId: item.candidateId,
+          batch: !rowOnly && !structuralOnly,
+        });
         results[later] = skipped(
           items[later]!.candidateId,
           "needs-verification",
@@ -651,7 +948,7 @@ export async function executeApprovedSearchWrites({
           "SEARCH_FOLLOWUP_HALTED",
         );
       }
-      if (!rowOnly) return true;
+      if (!rowOnly && !structuralOnly) return true;
     }
   }
   return false;

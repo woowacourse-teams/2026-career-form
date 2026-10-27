@@ -1,3 +1,4 @@
+import { localWorkflowLog } from "../debug/local-workflow";
 import {
   schoolRegionOption,
   schoolRegionSearchValues,
@@ -29,15 +30,22 @@ import {
   queryOnly,
   resolveRoles,
   searchDestination,
-  submitControls,
-} from "./search-controls";
+  submitControls, lockedSubmitControls } from "./search-controls";
 import { observeResults, resultBaseline } from "./search-results";
+import { observeQueryCommit } from "./search-query-commit";
 import {
   bindSelectionEffects,
+  verifyRetainedSelectionEffects,
   verifySelectionEffects,
 } from "./search-selection-effects";
 import { captureSearchFollowUp } from "./search-follow-up";
-import { interactive, elements, safeActivation } from "./search-surface-dom";
+import {
+  interactive,
+  elements,
+  safeActivation,
+  shown,
+  label,
+} from "./search-surface-dom";
 import type { SearchSurface } from "./search-surface";
 import { isSafeSurfaceCloseClick } from "../generic/click-policy";
 import { queryCandidates } from "./readonly-search-popup";
@@ -63,7 +71,26 @@ function searchAttempts(
   args: ExecuteReadonlySearchArgs,
   fallback: string,
 ): readonly string[] {
-  if (args.catalogMatch) return [args.catalogMatch.query];
+  if (args.catalogMatch && args.genericPopupRecovery !== true)
+    return [args.catalogMatch.query];
+  if (args.catalogMatch) {
+    // Sites index a certificate under its official name or a short alias
+    // ("SQL 개발자" vs "SQLD"). Try the approved query first, then its plain
+    // catalog aliases; results are still matched only against approved labels.
+    const query = args.catalogMatch.query;
+    const aliases = args.catalogMatch.labels.filter(
+      (label) => !/[()]/.test(label) && normalized(label) !== normalized(query),
+    );
+    return [
+      query,
+      ...aliases.filter(
+        (label, index) =>
+          aliases.findIndex(
+            (other) => normalized(other) === normalized(label),
+          ) === index,
+      ),
+    ].slice(0, 3);
+  }
   if (!args.searchValues) return [fallback];
   if (
     args.searchValues.length < 1 ||
@@ -302,7 +329,9 @@ export async function executeReadonlySearch(
         role: "SEARCH_POPUP_OPENER",
         scope: identity.fieldGroup,
         collect: () =>
-          searchOpeners(identity!.fieldGroup).filter(safeSearchOpener),
+          identity!.selfOpener
+            ? [identity!.target]
+            : searchOpeners(identity!.fieldGroup).filter(safeSearchOpener),
       },
     ]);
     const opener = openerRole!.binding.element;
@@ -313,7 +342,9 @@ export async function executeReadonlySearch(
     guard(initialValue);
     if (
       !openerRole!.current() ||
-      !safeSearchOpener(opener) ||
+      !(identity.selfOpener
+        ? opener === identity.target
+        : safeSearchOpener(opener)) ||
       !interactive(opener)
     )
       throw new SearchFailure("stale_field_group");
@@ -343,7 +374,7 @@ export async function executeReadonlySearch(
     surfaceGuard();
     const controls = await session.wait(() => {
       surfaceGuard();
-      const queries = queryControls(currentSurface);
+      const queries = queryControls(currentSurface, args.genericPopupRecovery === true);
       const submits = submitControls(currentSurface);
       if (args.genericPopupRecovery) {
         if (queries.length > 1)
@@ -371,11 +402,12 @@ export async function executeReadonlySearch(
     let submit: HTMLButtonElement | HTMLInputElement | undefined;
     let queryRole;
     let submitRole;
+    let lockedSubmit: HTMLButtonElement | HTMLInputElement | undefined;
     if (queries.length) {
       const roleRequests = [
         {
           role: "SEARCH_QUERY_INPUT" as const,
-          collect: () => queryControls(currentSurface),
+          collect: () => queryControls(currentSurface, args.genericPopupRecovery === true),
           scope: currentSurface.container,
         },
         ...(submits.length
@@ -391,8 +423,15 @@ export async function executeReadonlySearch(
       [queryRole, submitRole] = await resolveRoles(session, roleRequests);
       query = queryRole!.binding.element as HTMLInputElement;
       submit = submitRole?.binding.element as typeof submit;
-      if (!submit && !queryOnly(currentSurface, query))
-        throw new SearchFailure("search_submit_not_found");
+      if (!submit && !queryOnly(currentSurface, query)) {
+        const locked =
+          args.genericPopupRecovery === true && !submits.length
+            ? lockedSubmitControls(currentSurface)
+            : [];
+        if (locked.length !== 1)
+          throw new SearchFailure("search_submit_not_found");
+        lockedSubmit = locked[0];
+      }
     } else if (
       submits.length ||
       (!currentSurface.resultRoots().length && !regionList())
@@ -401,7 +440,7 @@ export async function executeReadonlySearch(
     }
     const querylessRegion = !query && Boolean(regionList());
     currentSurface.mode = query
-      ? submit
+      ? submit || lockedSubmit
         ? "query-and-submit"
         : "query-only"
       : "existing-options";
@@ -431,6 +470,12 @@ export async function executeReadonlySearch(
       | Awaited<ReturnType<ReturnType<typeof observeResults>["interpret"]>>
       | undefined;
     let selectedSearchText = initialSearchText;
+    let directEntry:
+      | {
+          input: HTMLInputElement;
+          binding: ReturnType<typeof bindSelectionEffects>;
+        }
+      | undefined;
     for (const [attemptIndex, searchText] of attempts.entries()) {
       const attemptValues = args.searchValues ? [searchText] : values;
       trace(`검색 시도 ${attemptIndex + 1}/${attempts.length}`, searchText);
@@ -443,6 +488,9 @@ export async function executeReadonlySearch(
         session,
         baseline,
         query ? searchText : undefined,
+        args.genericPopupRecovery === true && query
+          ? observeQueryCommit(currentSurface, query, searchText)
+          : undefined,
       );
       selectedResults = results;
       if (query) {
@@ -459,11 +507,21 @@ export async function executeReadonlySearch(
           nativeQueryValue(queryElement, searchText, surfaceGuard);
         if (normalized(queryElement.value) !== normalized(searchText))
           throw new SearchFailure("search_query_conflict");
+        if (!submit && lockedSubmit) {
+          const expected = lockedSubmit;
+          // Only the same button, now unlocked by the typed query, may run it.
+          submit = await session.wait(() => {
+            surfaceGuard();
+            const live = submitControls(currentSurface);
+            return live.length === 1 && live[0] === expected ? expected : undefined;
+          }, "search_submit_not_found");
+          nativeFormBinding = searchDestination(currentSurface, queryElement, submit);
+        }
         if (submit) {
           await session.prepareMutation();
           surfaceGuard();
           if (
-            !submitRole!.current() ||
+            (submitRole ? !submitRole.current() : !submit.isConnected) ||
             !queryRole!.current() ||
             normalized(queryElement.value) !== normalized(searchText)
           )
@@ -527,6 +585,12 @@ export async function executeReadonlySearch(
         trace("일치 결과 발견", candidate?.element);
         break;
       } catch (error) {
+        if (error instanceof SearchFailure)
+          localWorkflowLog("search-result-wait", {
+            reason: error.reason,
+            pending: results.pendingReason(),
+            roots: currentSurface.resultRoots().length,
+          });
         if (
           error instanceof SearchFailure &&
           ["search_results_not_found", "result_set_incomplete"].includes(
@@ -564,7 +628,7 @@ export async function executeReadonlySearch(
         ) {
           if (nativeFormBinding) {
             surfaceGuard();
-            const refreshedQueries = queryControls(currentSurface);
+            const refreshedQueries = queryControls(currentSurface, args.genericPopupRecovery === true);
             const refreshedSubmits = submitControls(currentSurface);
             if (refreshedQueries.length !== 1 || refreshedSubmits.length !== 1)
               throw error;
@@ -573,7 +637,7 @@ export async function executeReadonlySearch(
               [
                 {
                   role: "SEARCH_QUERY_INPUT",
-                  collect: () => queryControls(currentSurface),
+                  collect: () => queryControls(currentSurface, args.genericPopupRecovery === true),
                   scope: currentSurface.container,
                 },
                 {
@@ -597,6 +661,89 @@ export async function executeReadonlySearch(
           }
           continue;
         }
+        if (
+          args.genericPopupRecovery &&
+          catalogMatch &&
+          error instanceof SearchFailure &&
+          error.reason === "search_results_not_found" &&
+          attemptIndex + 1 === attempts.length &&
+          results.empty()
+        ) {
+          const buttons = () =>
+            elements<HTMLButtonElement | HTMLInputElement>(
+              currentSurface.root,
+              "button, input[type=button]",
+            ).filter(
+              (control) => control.type === "button" && interactive(control),
+            );
+          const label = (control: HTMLButtonElement | HTMLInputElement) =>
+            normalized(
+              control instanceof HTMLInputElement
+                ? control.value
+                : (control.textContent ?? ""),
+            );
+          const directButtons = buttons().filter((control) =>
+            /^(직접\s*입력|manual entry|enter manually)$/i.test(label(control)),
+          );
+          if (directButtons.length !== 1) throw error;
+          const directButton = directButtons[0]!;
+          const priorInputs = new Set(
+            elements<HTMLInputElement>(currentSurface.root, "input").filter(
+              interactive,
+            ),
+          );
+          const priorButtons = new Set(buttons());
+          const binding = bindSelectionEffects(
+            identity,
+            directButton,
+            [expectedValue],
+            currentSurface,
+            true,
+          );
+          followUpObservation = captureSearchFollowUp(
+            binding.scope,
+            identity.target,
+            true,
+          );
+          await session.prepareMutation();
+          surfaceGuard();
+          selectionStarted = true;
+          clickWithoutFormSubmit(directButton);
+          const manual = await session.wait(() => {
+            surfaceGuard();
+            const inputs = elements<HTMLInputElement>(
+              currentSurface.root,
+              "input:not([type]), input[type=text], input[type=search]",
+            ).filter(
+              (input) =>
+                !priorInputs.has(input) &&
+                interactive(input) &&
+                !input.readOnly,
+            );
+            if (inputs.length > 1)
+              throw new SearchFailure("multiple_search_query_inputs");
+            return inputs[0];
+          }, "unverified_search_form");
+          await session.prepareMutation();
+          surfaceGuard();
+          nativeQueryValue(manual, expectedValue, surfaceGuard);
+          const confirmations = buttons().filter(
+            (control) =>
+              !priorButtons.has(control) &&
+              /^(확인|적용|confirm|apply)$/i.test(label(control)),
+          );
+          if (confirmations.length !== 1)
+            throw new SearchFailure("unverified_search_form");
+          const confirmation = confirmations[0]!;
+          candidate = {
+            element: confirmation,
+            signature: controlSignature(confirmation),
+            evidence: { label: expectedValue },
+          };
+          directEntry = { input: manual, binding };
+          selectedSearchText = expectedValue;
+          break;
+        }
         throw error;
       }
     }
@@ -611,23 +758,41 @@ export async function executeReadonlySearch(
         .resultRoots()
         .find((root) => root.contains(candidate.element));
       return resultRoot
-        ? { resultRoot, surfaceKind: currentSurface.kind }
+        ? {
+            resultRoot,
+            surfaceKind: currentSurface.kind,
+            allowEmptyJavascriptLink: args.genericPopupRecovery === true,
+          }
         : undefined;
     };
     await session.prepareMutation();
     surfaceGuard();
-    const latest = querylessRegion
-      ? regionListSelection(currentSurface, canonicalFieldKey, selectedValues)
-      : structuredResults
-        ? structuredResults.exact(selectedValues, catalogMatch)
-        : selectedResults?.exact(selectedValues, catalogMatch);
+    const latest = directEntry
+      ? candidate
+      : querylessRegion
+        ? regionListSelection(currentSurface, canonicalFieldKey, selectedValues)
+        : structuredResults
+          ? structuredResults.exact(selectedValues, catalogMatch)
+          : selectedResults?.exact(selectedValues, catalogMatch);
     if (
       !latest ||
       latest.element !== candidate.element ||
       latest.signature !== candidate.signature ||
-      !(structuredResults
-        ? resultActivation(candidate.element) !== "none"
-        : safeActivation(candidate.element, selectedValues, activationScope()))
+      !(directEntry
+        ? directEntry.input.isConnected &&
+          currentSurface.contains(directEntry.input) &&
+          interactive(directEntry.input) &&
+          !directEntry.input.readOnly &&
+          directEntry.input.value === expectedValue &&
+          interactive(candidate.element) &&
+          controlSignature(candidate.element) === candidate.signature
+        : structuredResults
+          ? resultActivation(candidate.element) !== "none"
+          : safeActivation(
+              candidate.element,
+              selectedValues,
+              activationScope(),
+            ))
     )
       throw new SearchFailure("result_stale");
     const structuredMatch = structuredResults?.exact(
@@ -644,17 +809,61 @@ export async function executeReadonlySearch(
         )
       : undefined;
     const selectionBinding =
-      !structuredResults &&
+      directEntry?.binding ??
+      (!structuredResults &&
       (catalogMatch || canonicalFieldKey.startsWith("certifications."))
         ? bindSelectionEffects(
             identity,
             candidate.element,
             selectedValues,
             currentSurface,
+            args.genericPopupRecovery === true,
           )
+        : undefined);
+    followUpObservation ??= selectionBinding
+      ? captureSearchFollowUp(
+          selectionBinding.scope,
+          identity.target,
+          args.genericPopupRecovery === true,
+        )
+      : undefined;
+    // Only a local confirmation observed disabled before the verified result
+    // click can become eligible. Never interpret an application save/submit
+    // control as part of this optional generic selection step.
+    const confirmations = () =>
+      elements<HTMLButtonElement>(currentSurface.root, "button").filter(
+        (button) => {
+          // shown() also rejects disabled controls; inspect visibility separately
+          // so the pre-selection disabled state can be bound without changing it.
+          const style =
+            button.ownerDocument.defaultView?.getComputedStyle(button);
+          return (
+            button.isConnected &&
+            !button.hidden &&
+            button.parentElement &&
+            shown(button.parentElement) &&
+            style?.display !== "none" &&
+            style?.visibility !== "hidden" &&
+            /^(등록|확인|적용|confirm|apply)$/i.test(label(button)) &&
+            !currentSurface.resultRoots().some((root) => root.contains(button))
+          );
+        },
+      );
+    const beforeConfirmations =
+      args.genericPopupRecovery === true &&
+      !directEntry &&
+      !structuredResults &&
+      currentSurface.kind.startsWith("same-document-")
+        ? confirmations()
+        : [];
+    const confirmation =
+      beforeConfirmations.length === 1 &&
+      beforeConfirmations[0]!.disabled &&
+      beforeConfirmations[0]!.type === "button"
+        ? beforeConfirmations[0]
         : undefined;
-    followUpObservation = selectionBinding
-      ? captureSearchFollowUp(selectionBinding.scope, identity.target)
+    const confirmationSignature = confirmation
+      ? controlSignature(confirmation)
       : undefined;
     trace("결과 선택 클릭", candidate.element);
     selectionStarted = true;
@@ -664,7 +873,13 @@ export async function executeReadonlySearch(
         : candidate.element.querySelector<HTMLAnchorElement>("a[href]");
     if (
       resultLink &&
-      /^javascript:/i.test(resultLink.getAttribute("href") ?? "")
+      /^javascript:/i.test(resultLink.getAttribute("href") ?? "") &&
+      !(
+        args.genericPopupRecovery === true &&
+        /^javascript:\s*;?$/i.test(
+          resultLink.getAttribute("href")?.trim() ?? "",
+        )
+      )
     ) {
       if (!(await clickVerifiedJsResult(resultLink, session)))
         throw new SearchFailure("result_activation_unsafe");
@@ -673,6 +888,31 @@ export async function executeReadonlySearch(
       if (resultLink && href.length > 1 && href.startsWith("#"))
         allowedFragmentUrl = new URL(href, document.URL).href;
       clickWithoutFormSubmit(candidate.element);
+    }
+    if (confirmation && currentSurface.closure() === "open") {
+      await session.wait(() => {
+        surfaceGuard();
+        const current = confirmations();
+        if (
+          current.length !== 1 ||
+          current[0] !== confirmation ||
+          confirmation.type !== "button" ||
+          controlSignature(confirmation) !== confirmationSignature
+        )
+          throw new SearchFailure("result_stale");
+        return interactive(confirmation) ? true : undefined;
+      }, "popup_unresolved");
+      await session.prepareMutation();
+      surfaceGuard();
+      if (
+        confirmations().length !== 1 ||
+        confirmations()[0] !== confirmation ||
+        confirmation.type !== "button" ||
+        !interactive(confirmation) ||
+        controlSignature(confirmation) !== confirmationSignature
+      )
+        throw new SearchFailure("result_stale");
+      clickWithoutFormSubmit(confirmation);
     }
     let retainedSince: number | undefined;
     await session.wait(() => {
@@ -723,6 +963,7 @@ export async function executeReadonlySearch(
       targetValue: identity.target.value,
       followUpControls: followUpControls.length,
     });
+    const retainedRelationValue = selectionBinding?.relation?.element.value;
     return {
       status: "selected",
       targetCandidateId,
@@ -749,8 +990,16 @@ export async function executeReadonlySearch(
                     selectedValues,
                   );
                   if (typeof current === "string") return false;
-                  if (selectionBinding)
+                  if (selectionBinding && args.genericPopupRecovery !== true)
                     verifySelectionEffects(selectionBinding);
+                  else if (selectionBinding) {
+                    if (
+                      selectionBinding.relation?.element.value !==
+                      retainedRelationValue
+                    )
+                      return false;
+                    verifyRetainedSelectionEffects(selectionBinding);
+                  }
                   return structuredEffects
                     ? structuredEffects.verify()
                     : currentSurface.closure() === "closed";

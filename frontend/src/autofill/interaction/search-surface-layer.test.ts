@@ -11,7 +11,7 @@ const layer = (id: string, heading = "학교명 조회") =>
 const fieldGroup = (index: number, inner = "") =>
   `<div class="search" id="group${index}"><label for="target${index}">학교명</label><input id="target${index}" readonly><button id="opener${index}" type="button">검색</button>${inner}</div>`;
 
-function start(index = 0, repeatRow?: Element) {
+function start(index = 0, repeatRow?: Element, genericPopupRecovery = false) {
   const target = document.querySelector<HTMLInputElement>(`#target${index}`)!;
   const opener = document.querySelector<HTMLButtonElement>(`#opener${index}`)!;
   const identity: TargetIdentity = {
@@ -28,6 +28,7 @@ function start(index = 0, repeatRow?: Element) {
     targetCandidateId: "field-1",
     canonicalFieldKey: "education.university.schoolName",
     expectedValue: "<학교명>",
+    genericPopupRecovery,
   });
   sessions.push(session);
   return {
@@ -87,6 +88,64 @@ describe("role-less same-document layer (C9)", () => {
     const { opener, observation } = start(0);
     show("layer");
     expect(observation.discover(opener)?.kind).toBe("same-document-layer");
+  });
+  it("attributes a generic headingless layer by its unique subject-labelled query", () => {
+    document.body.innerHTML =
+      fieldGroup(0) +
+      `<section id="layer" hidden><div><label for="query">학교명 검색</label><input id="query" type="text"><button type="button" aria-label="검색"></button></div><ul></ul></section>`;
+    const { opener, observation } = start(0, undefined, true);
+
+    show("layer");
+
+    expect(observation.discover(opener)?.container).toBe(
+      document.getElementById("layer"),
+    );
+  });
+  it.each([true, false])(
+    "keeps a newly appended headingless layer distinct from its existing section ancestor, generic=%s",
+    (generic) => {
+      document.body.innerHTML = `<section id="outer"><h3>외국어</h3><div class="search" id="group0"><label for="target0">시험종류</label><input id="target0" readonly><button id="opener0" type="button">검색</button></div></section>`;
+      const { opener, observation } = start(0, undefined, generic);
+      const outer = document.getElementById("outer")!;
+      outer.insertAdjacentHTML(
+        "beforeend",
+        `<div id="new-layer"><label for="query">시험종류검색</label><input id="query" type="text"><button type="button">검색</button><ul aria-label="검색 결과"></ul></div>`,
+      );
+
+      if (generic) {
+        const surface = observation.discover(opener);
+        expect(surface?.container).toBe(document.getElementById("new-layer"));
+      } else {
+        expect(() => observation.discover(opener)).toThrow(
+          "surface_unobservable",
+        );
+      }
+    },
+  );
+  it.each([false, true])(
+    "rejects an unrelated labelled query, generic=%s",
+    (generic) => {
+      document.body.innerHTML =
+        fieldGroup(0) +
+        `<section id="layer" hidden><label for="query">회사명 검색</label><input id="query" type="text"><button type="button">검색</button><ul></ul></section>`;
+      const { opener, observation } = start(0, undefined, generic);
+
+      show("layer");
+
+      expect(() => observation.discover(opener)).toThrow(
+        "surface_unobservable",
+      );
+    },
+  );
+  it("preserves the default rejection of a headingless external layer", () => {
+    document.body.innerHTML =
+      fieldGroup(0) +
+      `<section id="layer" hidden><label for="query">학교명 검색</label><input id="query" type="text"><button type="button">검색</button><ul></ul></section>`;
+    const { opener, observation } = start();
+
+    show("layer");
+
+    expect(() => observation.discover(opener)).toThrow("surface_unobservable");
   });
 
   it("reports two newly shown layers as ambiguous", () => {

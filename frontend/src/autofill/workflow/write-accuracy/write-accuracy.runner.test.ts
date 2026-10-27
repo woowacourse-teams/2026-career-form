@@ -202,7 +202,12 @@ it("covers every snapshot directory with the initial route and review classifica
     manifest
       .filter(({ status }) => status === "RUNNABLE")
       .map(({ snapshot }) => snapshot),
-  ).toEqual(["ahnlab-write-resume-form", "naver-step2-form"]);
+  ).toEqual([
+      "ahnlab-write-resume-form",
+      "naver-step2-form",
+      "visible-control-row",
+      "framework-rerender",
+    ]);
   expect(
     manifest
       .filter(({ status }) => status === "UNREVIEWED")

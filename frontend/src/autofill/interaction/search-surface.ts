@@ -42,6 +42,7 @@ export class SearchSurface {
     readonly opener: HTMLElement,
     readonly target: HTMLInputElement,
     readonly frame?: HTMLIFrameElement,
+    private readonly options: { allowUnlabelledResultRoot?: boolean } = {},
   ) {
     this.rootIdentity = root;
     this.frameSignature = frame
@@ -162,7 +163,7 @@ export class SearchSurface {
   }
   resultRoots(): HTMLElement[] {
     const root = this.root;
-    const found = [
+    const visibleLists = [
       ...("matches" in root &&
       root.matches("[role='listbox'], [data-search-results]")
         ? [root as HTMLElement]
@@ -171,7 +172,8 @@ export class SearchSurface {
         root,
         "[role='listbox'], [data-search-results], [role='list'], ul, ol, table",
       ),
-    ].filter(
+    ].filter(shown);
+    const found = visibleLists.filter(
       (item) =>
         shown(item) &&
         (item.matches("[role='listbox'], [data-search-results]") ||
@@ -185,6 +187,19 @@ export class SearchSurface {
               .join(" "),
           )),
     );
+    // Scope identification alone does not prove readiness or a safe match.
+    // Those checks remain in the result observer and selection transaction.
+    if (
+      found.length === 0 &&
+      this.kind === "same-document-layer" &&
+      this.options.allowUnlabelledResultRoot === true
+    ) {
+      const outer = visibleLists.filter(
+        (item) =>
+          !visibleLists.some((other) => other !== item && other.contains(item)),
+      );
+      return outer.length === 1 ? outer : [];
+    }
     // Keep the outer result scope; nested markup is not a second result set.
     return found.filter(
       (item) => !found.some((other) => other !== item && other.contains(item)),

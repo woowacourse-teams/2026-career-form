@@ -140,6 +140,8 @@ export type TargetIdentity = {
   fieldSignature: string;
   semanticSignature?: string;
   noOp?: true;
+  /** The target opens its own search dialog; no other opener exists. */
+  selfOpener?: true;
   opener?: HTMLButtonElement | HTMLInputElement | HTMLAnchorElement;
   openerSignature?: string;
   openers: readonly (
@@ -406,6 +408,22 @@ export function observeReadonlySearch(
   // A populated field can be a no-op even if its opener is absent.
   if (openers.length > 1)
     return { status: "ambiguous", reason: "multiple_search_openers" };
+  // Collection observed this exact input open one dialog with one search box.
+  if (!openers.length && !target.value && handle.selfOpensSearchDialog)
+    return {
+      status: "eligible",
+      targetCandidateId: handle.candidateId,
+      identity: {
+        target,
+        fieldGroup,
+        repeatRow: genericRowFor(target),
+        fieldSignature: elementSignature(target),
+        semanticSignature: targetSemanticSignature(target),
+        selfOpener: true,
+        openers: [],
+        openerSignatures: [],
+      },
+    };
   if (
     !target.value &&
     (!openers.length || openers.some((item) => !safeSearchOpener(item)))

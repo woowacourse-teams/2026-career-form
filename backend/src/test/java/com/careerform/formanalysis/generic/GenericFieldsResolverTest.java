@@ -491,8 +491,9 @@ class GenericFieldsResolverTest {
             section("mixed", "MIXED", List.of(field("c-mixed", "업무내용"))))));
 
         for (var call : http.calls()) {
-            var observation = call.state().path("fields").path("field_0");
-            assertThat(observation.has("label")).as(call.category()).isEqualTo("CAREER".equals(call.category()));
+            var label = call.state().path("fields").path("field_0").path("label").asString();
+            assertThat(label).as(call.category()).startsWith("업무내용");
+            assertThat(label.contains("job duties")).as(call.category()).isEqualTo("CAREER".equals(call.category()));
         }
     }
 
@@ -553,7 +554,7 @@ class GenericFieldsResolverTest {
                 candidates, null, "LANGUAGE")));
     }
 
-    /** 원본 라벨이나 후보 ID가 아니라 실제 공급자 payload의 구조 계약과 정제 관측만 읽는 모의 판단. */
+    /** 후보 ID가 아니라 실제 공급자 payload의 구조 계약과 마스킹한 원문 관측만 읽는 모의 판단. */
     private static GenericFieldsJevHttp.Reply languageResultReply(GenericFieldsJevHttp.Call call) {
         String description = call.request().path("questions").path(call.questionIds().getFirst())
             .path("criteria").path(TEST_GRADE).asString();
@@ -566,11 +567,11 @@ class GenericFieldsResolverTest {
         Map<String, String> kinds = new java.util.LinkedHashMap<>();
         for (String id : call.questionIds()) {
             var observation = call.state().path("fields").path(id);
-            Set<String> terms = new HashSet<>(List.of(observation.path("label").asString().split("; ")));
-            if (terms.stream().anyMatch(Set.of("점수", "성적", "score", "test score")::contains)) {
+            String label = observation.path("label").asString().toLowerCase(java.util.Locale.ROOT);
+            if (List.of("점수", "성적", "score").stream().anyMatch(label::contains)) {
                 kinds.put(id, "NUMERIC_SCORE");
             }
-            else if (terms.contains("grade") || terms.contains("grade or level")) {
+            else if (List.of("등급", "급수", "grade", "level").stream().anyMatch(label::contains)) {
                 kinds.put(id, "GRADE");
             }
         }
@@ -598,10 +599,9 @@ class GenericFieldsResolverTest {
             local.respond(call -> {
                 Map<String, String> choices = new java.util.LinkedHashMap<>();
                 for (String id : call.questionIds()) {
-                    Set<String> terms = new HashSet<>(List.of(call.state().path("fields").path(id)
-                        .path("label").asString().split("; ")));
-                    choices.put(id, terms.contains("job duties") && !terms.contains("project")
-                        ? RESPONSIBILITIES : null);
+                    String label = call.state().path("fields").path(id).path("label").asString();
+                    choices.put(id, label.contains("job duties") && !label.contains("project")
+                        && !label.contains("프로젝트") ? RESPONSIBILITIES : null);
                 }
                 return answers(call, choices, 0.9);
             });
@@ -619,7 +619,7 @@ class GenericFieldsResolverTest {
                 List<String> observedLabels = new ArrayList<>();
                 call.state().path("fields").forEach(node -> observedLabels.add(node.path("label").asString()));
                 assertThat(observedLabels)
-                    .anyMatch(label -> List.of(label.split("; ")).contains("project"));
+                    .anyMatch(label -> label.contains("project") || label.contains("프로젝트"));
                 assertThat(call.criteria(call.questionIds().getFirst()))
                     .noneMatch(key -> key.startsWith("projects."));
             });

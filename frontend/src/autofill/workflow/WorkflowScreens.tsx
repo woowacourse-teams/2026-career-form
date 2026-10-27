@@ -388,10 +388,24 @@ export function WorkflowScreens({
                           <button
                             className={resultStyles.copyButton}
                             type="button"
-                            aria-label={`${item.fieldLabel} ${item.selected ? "제외하기" : "포함하기"}`}
+                            aria-label={`${item.fieldLabel} ${
+                              item.status === "conflict"
+                                ? item.selected
+                                  ? "기존 값 유지하기"
+                                  : "프로필 값으로 바꾸기"
+                                : item.selected
+                                  ? "제외하기"
+                                  : "포함하기"
+                            }`}
                             onClick={() => toggleReviewItem(item.candidateId)}
                           >
-                            {item.selected ? "제외" : "포함"}
+                            {item.status === "conflict"
+                              ? item.selected
+                                ? "기존 값 유지"
+                                : "프로필 값으로 바꾸기"
+                              : item.selected
+                                ? "제외"
+                                : "포함"}
                           </button>
                         )}
                     </div>

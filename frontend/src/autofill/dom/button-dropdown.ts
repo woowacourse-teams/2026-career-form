@@ -13,6 +13,8 @@ export interface ButtonDropdown {
   readonly initialText: string;
   readonly controls: string | null;
   readonly options: readonly { element: HTMLElement; text: string }[];
+  /** A readonly text input that opens its own option list (no separate opener). */
+  readonly surface?: "input";
 }
 
 function fieldScope(trigger: HTMLElement): HTMLElement | undefined {
@@ -43,7 +45,7 @@ function isFieldTrigger(trigger: HTMLElement): boolean {
   );
 }
 
-function visible(element: HTMLElement): boolean {
+export function visible(element: HTMLElement): boolean {
   if (
     !element.isConnected ||
     element.closest("[hidden], [aria-hidden='true'], [inert]")
@@ -65,6 +67,8 @@ function visibleMenus(document: Document): HTMLElement[] {
 }
 
 export function dropdownText(trigger: HTMLElement): string {
+  if (trigger instanceof HTMLInputElement)
+    return trigger.value.replace(/\s+/g, " ").trim();
   return trigger.textContent?.replace(/\s+/g, " ").trim() ?? "";
 }
 
@@ -205,11 +209,12 @@ export function captureDropdownProbe(document: Document) {
 }
 
 /** Subscribe before the action, including synchronous and deferred DOM updates. */
-function observeEffect<T>(
+export function observeEffect<T>(
   document: Document,
   action: () => void,
   read: () => T | undefined,
   signal?: AbortSignal,
+  timeoutMs = 1000,
 ): Promise<T | undefined> {
   return new Promise((resolve) => {
     let settled = false;
@@ -227,7 +232,7 @@ function observeEffect<T>(
     };
     const observer = new MutationObserver(check);
     const abort = () => finish(undefined);
-    const timeout = setTimeout(() => finish(undefined), 1000);
+    const timeout = setTimeout(() => finish(undefined), timeoutMs);
     observer.observe(document.documentElement, {
       subtree: true,
       childList: true,
@@ -358,7 +363,14 @@ export function dropdownIsCurrent(dropdown: ButtonDropdown): boolean {
     dropdown.scope.id === dropdown.scopeId &&
     dropdown.trigger.getAttribute("aria-controls") === dropdown.controls &&
     (dropdown.controls === null ||
+      dropdown.surface === "input" ||
       explicitMenu(dropdown.trigger) === dropdown.menu) &&
+    !(
+      dropdown.surface === "input" &&
+      (!(dropdown.trigger instanceof HTMLInputElement) ||
+        dropdown.trigger.disabled ||
+        !dropdown.trigger.readOnly)
+    ) &&
     visible(dropdown.trigger) &&
     dropdown.trigger.getAttribute("aria-disabled") !== "true" &&
     !(

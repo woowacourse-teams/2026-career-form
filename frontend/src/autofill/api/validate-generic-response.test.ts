@@ -247,6 +247,25 @@ const allFields = () => [
 ];
 
 describe("generic fields response validation", () => {
+  it("preserves the paired-date inference marker on a direct start-date mapping", () => {
+    const inferred = field("c1", {
+      profileFieldKey: "education.university.startDate",
+      inference: "PAIRED_DATE",
+      writePlan: { command: "SELECT_DATE" },
+    });
+    expect(validateGenericFieldsResponse(
+      fieldsRequest,
+      fieldsComplete([inferred, ...allFields().slice(1)]),
+    ).fields[0]).toEqual(inferred);
+  });
+
+  it("rejects an unknown inference marker", () => {
+    expect(() => validateGenericFieldsResponse(
+      fieldsRequest,
+      fieldsComplete([field("c1", { inference: "UNKNOWN" }), ...allFields().slice(1)]),
+    )).toThrow(AnalysisContractError);
+  });
+
   it.each([
     "KOREAN_FULL_NAME",
     "ENGLISH_FULL_NAME_GIVEN_FIRST",

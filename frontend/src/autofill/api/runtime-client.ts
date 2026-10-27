@@ -56,10 +56,19 @@ export class AnalysisServiceError extends Error {
     message: string,
     readonly status?: 404,
     readonly code?: "POLICY_INCOMPATIBLE",
+    /** Set only when the request never got a server answer in time. */
+    readonly transport?: "TIMEOUT" | "NETWORK",
   ) {
     super(message);
     this.name = "AnalysisServiceError";
   }
+}
+
+/** A timeout or unreachable server, as opposed to a server or contract answer. */
+export function isTransientAnalysisError(error: unknown): boolean {
+  return (
+    error instanceof AnalysisServiceError && error.transport !== undefined
+  );
 }
 
 export class RuntimeAnalysisApiClient implements AnalysisApiClient {
@@ -178,7 +187,12 @@ export class RuntimeAnalysisApiClient implements AnalysisApiClient {
       });
     } catch (error) {
       debugApiMessage(message, { error });
-      throw new AnalysisServiceError(errorMessages.NETWORK);
+      throw new AnalysisServiceError(
+        errorMessages.NETWORK,
+        undefined,
+        undefined,
+        "NETWORK",
+      );
     } finally {
       finishTiming();
     }
@@ -195,6 +209,10 @@ export class RuntimeAnalysisApiClient implements AnalysisApiClient {
       throw new AnalysisServiceError(
         errorMessages[envelope.code],
         envelope.status,
+        undefined,
+        envelope.code === "TIMEOUT" || envelope.code === "NETWORK"
+          ? envelope.code
+          : undefined,
       );
     }
     return envelope.data;

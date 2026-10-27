@@ -2,12 +2,17 @@ import { calendarMonths, calendarYears } from "./calendar-controls";
 import { calendarUnitEvidence } from "./calendar-unit";
 import { hasCalendarOwnershipConflict } from "./calendar-ownership";
 import { isDisplayed } from "./day-calendar-surface";
+import { deferredCalendarOpening } from "./calendar-deferred";
 
 export interface CalendarSurface {
   target: HTMLInputElement;
   opener: HTMLElement;
+  /**
+   * The calendar root. For `deferred-generic` no root exists before opening,
+   * so this is the owning field group; execution adopts the new root.
+   */
   popup: HTMLElement;
-  rendering: "rendered" | "deferred-jquery";
+  rendering: "rendered" | "deferred-jquery" | "deferred-generic";
 }
 
 function accessibleName(element: HTMLElement): string {
@@ -166,6 +171,29 @@ function jqueryMonthpickerSurface(
     : undefined;
 }
 
+/**
+ * A readonly month field whose calendar mounts only after opening. The field's
+ * own evidence must be month-level; the popup structure is confirmed later.
+ */
+function deferredGenericSurface(
+  target: HTMLInputElement,
+): CalendarSurface | undefined {
+  if (
+    calendarUnitEvidence(target)?.unit !== "month" ||
+    target.classList.contains("hasDatepicker")
+  )
+    return undefined;
+  const opening = deferredCalendarOpening(target);
+  return opening
+    ? {
+        target,
+        opener: opening.opener,
+        popup: opening.group,
+        rendering: "deferred-generic",
+      }
+    : undefined;
+}
+
 export function openCalendarPopups(document: Document): HTMLElement[] {
   return Array.from(
     document.querySelectorAll<HTMLElement>(
@@ -209,7 +237,8 @@ export function calendarSurfaceFor(
   const surface =
     explicitSurface(target) ??
     containedSurface(target) ??
-    jqueryMonthpickerSurface(target);
+    jqueryMonthpickerSurface(target) ??
+    deferredGenericSurface(target);
   return surface &&
     !hasCalendarOwnershipConflict(target, surface.opener, surface.popup)
     ? surface

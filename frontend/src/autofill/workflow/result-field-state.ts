@@ -1,6 +1,11 @@
 import { stagedAddressReceipt } from "../policy/staged-address-receipt";
 import { componentEmploymentStatusValue } from "../policy/components/write";
 import { customFieldValue } from "../dom/custom-field-value";
+import {
+  hasVisibleWriteElement,
+  isVisibleWriteElement,
+  readbackWriteElement,
+} from "../dom/write-target";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 
 export function resultFieldState(
@@ -12,26 +17,40 @@ export function resultFieldState(
   if (!lookup || (lookup.status !== "ready" && lookup.status !== "blocked"))
     return undefined;
   const handle = lookup.handle;
-  const element = handle.elements[0] ?? handle.customElements?.[0];
-  const style = element && pageDocument.defaultView?.getComputedStyle(element);
+  const visible = hasVisibleWriteElement(handle);
+  const target = readbackWriteElement(handle);
+  const element = target ?? handle.customElements?.[0];
+  if (!element) return { visible: false, value: "", handle };
+  const style = visible
+    ? undefined
+    : pageDocument.defaultView?.getComputedStyle(element);
   const address = stagedAddressReceipt(handle);
   const hidden =
     !address?.visible &&
-    (handle.candidate.visibility === "hidden" ||
-      (lookup.status === "blocked" && lookup.reason === "hidden") ||
-      style?.display === "none" ||
-      style?.visibility === "hidden");
+    (visible
+      ? false
+      : handle.candidate.visibility === "hidden" ||
+        (lookup.status === "blocked" && lookup.reason === "hidden") ||
+        style?.display === "none" ||
+        style?.visibility === "hidden");
   let value =
     element instanceof HTMLSelectElement
       ? (element.selectedOptions[0]?.textContent ?? "")
-      : (handle.elements[0]?.value ?? "");
+      : element instanceof HTMLInputElement ||
+          element instanceof HTMLTextAreaElement
+        ? element.value
+        : "";
   if (
     handle.candidate.control === "radio" ||
     handle.candidate.control === "checkbox"
   ) {
     const selected = handle.candidate.options?.filter((option) => {
       const control = handle.optionElements.get(option.optionId);
-      return control instanceof HTMLInputElement && control.checked;
+      return (
+        control instanceof HTMLInputElement &&
+        control.checked &&
+        (!visible || isVisibleWriteElement(control))
+      );
     });
     value = selected?.map((option) => option.displayName).join(", ") ?? "";
   }

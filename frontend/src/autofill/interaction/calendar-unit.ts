@@ -97,6 +97,23 @@ function sharedColumnLabels(target: HTMLInputElement): string[] {
   });
 }
 
+/**
+ * Canonical YYYY-MM of a month calendar's written value. Besides YYYY-MM the
+ * only notation accepted is the one the target's own placeholder declares.
+ */
+export function canonicalCalendarMonthValue(
+  target: HTMLInputElement,
+  value: string,
+): string | undefined {
+  const declared = /^YYYY([-./])MM$/.exec(
+    target.placeholder.toUpperCase().trim(),
+  )?.[1];
+  const match = /^(\d{4})([-./])(0[1-9]|1[0-2])$/.exec(value);
+  return match && (match[2] === "-" || match[2] === declared)
+    ? `${match[1]}-${match[3]}`
+    : undefined;
+}
+
 /** Two independent DOM clues; never infer a unit from site/input classes. */
 export function calendarUnitEvidence(
   target: HTMLInputElement,

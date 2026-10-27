@@ -25,6 +25,13 @@ function question(title: string) {
 }
 
 describe("generic structural collection boundaries", () => {
+  it("reads an explicit label styled as clickable instead of the placeholder", () => {
+    document.body.innerHTML = `<div><label for="family" style="cursor: pointer">영문 성 (Last Name)</label>
+      <input id="family" type="text" placeholder="예: Kim"></div>`;
+    const input = document.querySelector<HTMLInputElement>("#family")!;
+    expect(labelOf(input, true)).toBe("영문 성 (Last Name)");
+  });
+
   it("reads a preceding question and description ahead of placeholder hints", () => {
     document.body.innerHTML = `<form><div><div><p>추천인 연락 방법</p>
       <p contenteditable="false">본인 연락처가 아닙니다.</p></div>

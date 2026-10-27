@@ -1,7 +1,9 @@
+import { traceTrigger } from "../debug/write-trace";
 import type { InteractionDecisionProvider } from "../api/interaction-types";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import { executeCalendarSelection } from "../interaction/calendar-executor";
 import { executeDayCalendarSelection } from "../interaction/day-calendar-executor";
+import { canonicalCalendarMonthValue } from "../interaction/calendar-unit";
 import { canonicalDayCalendarValue } from "../interaction/day-calendar-value";
 import { revalidateCalendarApproval } from "../review/calendar-approval";
 import { revalidateDayCalendarApproval } from "../review/day-calendar-approval";
@@ -156,7 +158,8 @@ export function calendarValueSettled(
     !!target &&
     target.isConnected &&
     revalidateCalendarApproval(item.calendarApproval!).status === "valid" &&
-    target.value === item.calendarApproval!.targetYearMonth
+    canonicalCalendarMonthValue(target, target.value) ===
+      item.calendarApproval!.targetYearMonth
   );
 }
 
@@ -209,12 +212,14 @@ async function executeApprovedDayCalendarWrite(
       interactionDecisionProvider: args.interactionDecisionProvider,
       canonicalFieldKey: approval.profileFieldKey ?? "calendar-day",
     });
-    if (execution.status !== "completed")
+    if (execution.status !== "completed") {
+      traceTrigger(item.candidateId, { interactionReason: execution.reason });
       return stop(
         item.candidateId,
         "RETAINED_VALUE_UNCONFIRMED",
         `달력 선택 결과를 확인할 수 없어 후속 자동 기입을 중단했습니다. (${execution.reason})`,
       );
+    }
   } catch {
     return stop(
       item.candidateId,
@@ -259,7 +264,10 @@ export async function executeApprovedCalendarWrite(
   if (!current(args)) return stop(item.candidateId, "STALE_TARGET", STALE);
 
   if (target.value) {
-    if (target.value === approval.targetYearMonth) {
+    if (
+      canonicalCalendarMonthValue(target, target.value) ===
+      approval.targetYearMonth
+    ) {
       return {
         candidateId: item.candidateId,
         status: "skipped",
@@ -300,9 +308,14 @@ export async function executeApprovedCalendarWrite(
     : undefined;
 
   try {
+    const lookup = args.registry.lookupField(item.candidateId);
     const execution = await executeCalendarSelection({
       target,
       targetYearMonth: approval.targetYearMonth,
+      allowControlReplacement:
+        item.analysis?.mappingStatus === "LLM_SUGGESTED" &&
+        "handle" in lookup &&
+        lookup.handle.owner !== "legacy",
       interactionDecisionProvider: decisionProvider,
       canonicalFieldKey: approval.profileFieldKey ?? "calendar-month",
       assertCurrent: () =>
@@ -313,12 +326,14 @@ export async function executeApprovedCalendarWrite(
         revalidateCalendarApproval(approval).status === "valid",
       signal: args.signal,
     });
-    if (execution.status !== "completed")
+    if (execution.status !== "completed") {
+      traceTrigger(item.candidateId, { interactionReason: execution.reason });
       return stop(
         item.candidateId,
         "RETAINED_VALUE_UNCONFIRMED",
         `달력 선택 결과를 확인할 수 없어 후속 자동 기입을 중단했습니다. (${execution.reason})`,
       );
+    }
   } catch {
     return stop(
       item.candidateId,
@@ -330,7 +345,8 @@ export async function executeApprovedCalendarWrite(
   if (
     !current(args) ||
     revalidateCalendarApproval(approval).status !== "valid" ||
-    target.value !== approval.targetYearMonth
+    canonicalCalendarMonthValue(target, target.value) !==
+      approval.targetYearMonth
   )
     return stop(
       item.candidateId,

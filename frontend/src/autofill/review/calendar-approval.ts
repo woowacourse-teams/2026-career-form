@@ -133,7 +133,7 @@ function currentMonthClue(
   surface: NonNullable<ReturnType<typeof calendarSurfaceFor>>,
   targetYearMonth: string,
 ): string | undefined {
-  if (surface.rendering === "deferred-jquery") return "pending-month-structure";
+  if (surface.rendering !== "rendered") return "pending-month-structure";
   const popup = surface.popup;
   const year = Number(targetYearMonth.slice(0, 4));
   const month = Number(targetYearMonth.slice(5, 7));
@@ -185,9 +185,9 @@ export function createCalendarApproval({
     targetYearMonth,
     monthClue,
     confirmation:
-      surface.rendering === "deferred-jquery"
-        ? "pending-structure"
-        : "rendered-month-options",
+      surface.rendering === "rendered"
+        ? "rendered-month-options"
+        : "pending-structure",
     ...(profileFieldKey ? { profileFieldKey } : {}),
     ...(profileEntryId ? { profileEntryId } : {}),
     ...(itemIndex !== undefined ? { itemIndex } : {}),
@@ -262,9 +262,9 @@ export function revalidateCalendarApproval(
     currentMonthClue(surface, approval.targetYearMonth) !==
       approval.monthClue ||
     approval.confirmation !==
-      (surface.rendering === "deferred-jquery"
-        ? "pending-structure"
-        : "rendered-month-options")
+      (surface.rendering === "rendered"
+        ? "rendered-month-options"
+        : "pending-structure")
   ) {
     return { status: "invalid", reason: "month_clue_changed" };
   }

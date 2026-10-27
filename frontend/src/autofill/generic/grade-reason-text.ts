@@ -18,6 +18,12 @@ type KnownReasonCode =
 // A new reason code fails type checking here until it gets a sentence.
 const REASON_TEXT: Readonly<Record<KnownReasonCode, string>> = {
   NO_PROFILE_VALUE: "저장된 프로필에 입력할 값이 없습니다.",
+  FIRST_ENTRY_SINGLE_ROW:
+    "페이지에 행이 하나뿐이라 프로필의 첫 번째 항목을 연결했습니다. 값을 확인한 뒤 선택해 주세요.",
+  PAIRED_DATE_INFERRED:
+    "같은 칸 묶음의 종료일과 짝을 이루는 시작일로 추정했습니다. 값을 확인한 뒤 선택해 주세요.",
+  LANGUAGE_RESULT_INFERRED:
+    "어학 기록의 등급·점수 칸 중 저장된 값 형태에 맞는 칸으로 추정했습니다. 값을 확인한 뒤 선택해 주세요.",
   WRITE_PLAN_BLOCKED:
     "현재 페이지 상태에서 이 칸은 입력이 막혀 있어 직접 입력해야 합니다.",
   WRITE_PLAN_MANUAL_REVEAL: "칸을 직접 펼쳐야 해서 자동으로 입력하지 않습니다.",
@@ -47,6 +53,8 @@ const REASON_TEXT: Readonly<Record<KnownReasonCode, string>> = {
     "성과 이름이 나뉘지 않은 칸에 이름 한쪽만 연결됐습니다. 값을 확인한 뒤 선택해 주세요.",
   OPTION_VALUE_UNMATCHED:
     "저장된 값과 정확히 맞는 선택지가 없어 입력할 수 없습니다. 직접 선택해 주세요.",
+  GRADE_OTHER_OPTION:
+    "저장된 등급에 맞는 선택지가 없어 '기타'를 골랐습니다. 값을 확인한 뒤 선택해 주세요.",
   CLASSIFY_UNAVAILABLE: "섹션 분류를 하지 못해 이 영역은 입력할 수 없습니다.",
   ANALYZE_UNAVAILABLE: "칸 분석을 하지 못해 이 영역은 입력할 수 없습니다.",
   ENDPOINT_UNAVAILABLE:

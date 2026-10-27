@@ -16,7 +16,15 @@ export interface SelectionEffectBinding {
   scope: Element;
   target: HTMLInputElement;
   expectedNames: readonly string[];
-  relation: { element: HTMLInputElement; expectedValue: string };
+  /**
+   * The row's single hidden code control. When the result does not declare its
+   * code, the click must still set it to a non-empty, changed value.
+   */
+  relation?: {
+    element: HTMLInputElement;
+    expectedValue?: string;
+    priorValue: string;
+  };
   peers: readonly ControlSnapshot[];
   externalPeers: readonly ControlSnapshot[];
 }
@@ -84,6 +92,9 @@ function explicitRelationValue(candidate: HTMLElement): string | undefined {
     .map((value) => value?.trim())
     .filter((value): value is string => Boolean(value));
   const unique = [...new Set(values)];
+  if (unique.length > 1) {
+    throw new SearchFailure("selection_effect_unverified");
+  }
   return unique.length === 1 ? unique[0] : undefined;
 }
 
@@ -119,14 +130,22 @@ export function bindSelectionEffects(
   candidate: HTMLElement,
   expectedNames: readonly string[],
   surface?: SearchSurface,
+  allowObservedCode = false,
 ): SelectionEffectBinding {
   const scope = identity.repeatRow ?? identity.fieldGroup;
   if (!scope.isConnected || !scope.contains(identity.target)) {
     throw new SearchFailure("selection_effect_unverified");
   }
   const relation = relationControl(scope, identity.target, candidate);
-  const relationValue = relation ? explicitRelationValue(candidate) : undefined;
-  if (!relation || relationValue === undefined) {
+  const relationValue = explicitRelationValue(candidate);
+  if (
+    (!relation &&
+      (!allowObservedCode ||
+        relationValue !== undefined ||
+        candidate.hasAttribute("data-code-target") ||
+        candidate.hasAttribute("data-result-target"))) ||
+    (relationValue === undefined && !allowObservedCode)
+  ) {
     throw new SearchFailure("selection_effect_unverified");
   }
   const peers = controls(scope)
@@ -151,13 +170,26 @@ export function bindSelectionEffects(
     scope,
     target: identity.target,
     expectedNames,
-    relation: { element: relation, expectedValue: relationValue },
+    ...(relation
+      ? {
+          relation: {
+            element: relation,
+            ...(relationValue !== undefined
+              ? { expectedValue: relationValue }
+              : {}),
+            priorValue: relation.value,
+          },
+        }
+      : {}),
     peers,
     externalPeers,
   };
 }
 
-export function verifySelectionEffects(binding: SelectionEffectBinding): void {
+/** Retention checks the selected name/code, not peers filled by later approvals. */
+export function verifyRetainedSelectionEffects(
+  binding: SelectionEffectBinding,
+): void {
   if (
     !binding.scope.isConnected ||
     !binding.target.isConnected ||
@@ -165,9 +197,22 @@ export function verifySelectionEffects(binding: SelectionEffectBinding): void {
     !binding.expectedNames.some(
       (value) => normalized(value) === normalized(binding.target.value),
     ) ||
-    !binding.relation.element.isConnected ||
-    !binding.scope.contains(binding.relation.element) ||
-    binding.relation.element.value !== binding.relation.expectedValue ||
+    (binding.relation &&
+      (!binding.relation.element.isConnected ||
+        !binding.scope.contains(binding.relation.element) ||
+        (binding.relation.expectedValue !== undefined
+          ? binding.relation.element.value !== binding.relation.expectedValue
+          : !binding.relation.element.value.trim() ||
+            (binding.relation.priorValue.trim() !== "" &&
+              binding.relation.element.value === binding.relation.priorValue))))
+  ) {
+    throw new SearchFailure("selection_postcondition_failed");
+  }
+}
+
+export function verifySelectionEffects(binding: SelectionEffectBinding): void {
+  verifyRetainedSelectionEffects(binding);
+  if (
     binding.peers.some(
       ({ element, state, availabilityState }) =>
         !element.isConnected ||

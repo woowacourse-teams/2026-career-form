@@ -27,6 +27,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.stereotype.Component;
 
+import com.careerform.formanalysis.application.RawLabelMask;
 import com.careerform.formanalysis.application.SupportedProfileFields;
 import com.careerform.formanalysis.application.port.FieldMappingResolver.DerivedRecipe;
 import com.careerform.formanalysis.exception.ResolverException;
@@ -41,7 +42,6 @@ import com.careerform.formanalysis.generic.GenericFieldsResponse.DatePart;
 import com.careerform.formanalysis.generic.GenericFieldsResponse.DatePartBinding;
 import com.careerform.formanalysis.generic.GenericFieldsResponse.NameBinding;
 import com.careerform.formanalysis.infrastructure.InteractionProviderConditions;
-import com.careerform.formanalysis.infrastructure.adapter.ProviderSemanticSanitizer;
 import com.careerform.formanalysis.infrastructure.adapter.jev.JevClient;
 
 /**
@@ -271,7 +271,7 @@ public final class JevCategoryFieldResolver {
             && !SectionCategories.MIXED.equals(category)
             && !SectionCategories.ABSTAIN.equals(category);
         List<String> keys = confirmed
-            ? categories.keysOf(category)
+            ? recordKeys(categories.keysOf(category), section.recordSectionId())
             : fields.keys().stream()
                 .filter(key -> !SectionCategories.NONE.equals(SectionCategories.categoryOf(key)))
                 .toList();
@@ -355,6 +355,23 @@ public final class JevCategoryFieldResolver {
         }
         return new SectionWork(confirmed, Map.copyOf(criteria), context, List.copyOf(questions), assignment,
             Map.copyOf(bindings), candidates, nameGuidance);
+    }
+
+    /**
+     * 확정 범주 안에서 프로필 구조로 정해진 단일 기록(키의 두 번째 마디)만 후보로 남긴다.
+     * 힌트가 없거나 어떤 키와도 맞지 않으면 범주 키를 그대로 둔다.
+     */
+    private static List<String> recordKeys(List<String> keys, String recordSectionId) {
+        if (recordSectionId == null) {
+            return keys;
+        }
+        List<String> narrowed = keys.stream()
+            .filter(key -> {
+                String[] parts = key.split("\\.");
+                return parts.length > 2 && parts[1].equals(recordSectionId);
+            })
+            .toList();
+        return narrowed.isEmpty() ? keys : narrowed;
     }
 
     private static boolean matchesDatePart(FieldCandidate candidate, DatePart part) {
@@ -451,7 +468,7 @@ public final class JevCategoryFieldResolver {
         }
         if (field.options() != null) {
             result.put("options", field.options().stream()
-                .map(option -> ProviderSemanticSanitizer.sanitize(option.displayName()))
+                .map(option -> RawLabelMask.mask(option.displayName()))
                 .filter(Objects::nonNull).distinct().toList());
         }
         return result;
@@ -495,7 +512,7 @@ public final class JevCategoryFieldResolver {
     }
 
     private static void text(Map<String, Object> target, String key, String raw) {
-        String safe = ProviderSemanticSanitizer.sanitize(raw);
+        String safe = RawLabelMask.mask(raw);
         if (safe != null) {
             target.put(key, safe);
         }

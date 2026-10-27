@@ -190,6 +190,28 @@ describe("application form DOM collection", () => {
     expect(JSON.stringify(collected.request)).not.toContain("checked");
   });
 
+  it("marks only an empty-value select option as a placeholder on the generic path", () => {
+    setPageUrl("https://careers.example.test/apply");
+    document.body.innerHTML = `
+      <label for="status">여부</label>
+      <select id="status">
+        <option value="">선택</option>
+        <option value="internal-y">해당</option>
+        <option value="internal-n">비해당</option>
+      </select>
+    `;
+
+    const collected = collectFieldsSnapshot(document);
+    const candidate = collected.request.sections[0]?.fields[0];
+
+    expect(candidate?.options).toEqual([
+      { optionId: expect.any(String), displayName: "선택", placeholder: true },
+      { optionId: expect.any(String), displayName: "해당" },
+      { optionId: expect.any(String), displayName: "비해당" },
+    ]);
+    expect(JSON.stringify(collected.request)).not.toContain("internal-y");
+  });
+
   it("preserves repeated certification row boundaries and local indexes", () => {
     document.body.innerHTML = `
       <div role="group" class="apply-form-box">

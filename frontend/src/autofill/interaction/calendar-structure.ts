@@ -65,6 +65,14 @@ export function calendarSelectShape(
     return "month-options";
 }
 
+/** A day-number cell inside a grid; deferred generic day calendars use these. */
+function dayGridCell(element: HTMLElement): boolean {
+  return (
+    /^\d{1,2}$/.test((element.textContent ?? "").replace(/\s+/g, "")) &&
+    element.closest("table, [role=grid]") !== null
+  );
+}
+
 export function calendarCandidateStructure(
   element: HTMLElement,
   evidence: CalendarRoleEvidence,
@@ -94,7 +102,9 @@ export function calendarCandidateStructure(
         element.hasAttribute("data-calendar-apply") ||
         element.matches(".ui-datepicker-close[data-handler=hide]")
           ? "apply"
-          : "none",
+          : evidence.unit === "day" && dayGridCell(element)
+            ? "day-grid"
+            : "none",
     };
   }
   if (element instanceof HTMLAnchorElement) {
@@ -118,8 +128,14 @@ export function calendarCandidateStructure(
               : "none",
     };
   }
-  if (element.matches("div[role=button], div[role=option]"))
-    return { ...common, tag: "div", activation: "click" };
+  if (element.matches("div[role=button], div[role=option], div[role=gridcell]"))
+    return {
+      ...common,
+      tag: "div",
+      activation: "click",
+      valueShape:
+        evidence.unit === "day" && dayGridCell(element) ? "day-grid" : "none",
+    };
 }
 
 /** Observed movement controls are classified, never activated by this executor. */

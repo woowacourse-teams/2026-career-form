@@ -759,6 +759,20 @@ describe("gradeGenericField select and radio option values", () => {
     });
   });
 
+  it("lets a service type folded into a composite option reach the review", () => {
+    const grade = gradeGenericField(
+      input({
+        profileFieldKey: "military.military.militaryType",
+        control: "select",
+        displayName: "병역구분",
+        options: options("병역필_현역(병)", "병역필_현역(장교)", "병역면제", "미필"),
+        optionValueCheck: { profileValue: "현역병" },
+      }),
+    );
+
+    expect(grade.reason).not.toBe("OPTION_VALUE_UNMATCHED");
+  });
+
   it("keeps an unmatched option blocked below the promote boundary", () => {
     expect(
       gradeGenericField({ ...radio("군필", "비대상", "미필"), confidence: 0.34 }),

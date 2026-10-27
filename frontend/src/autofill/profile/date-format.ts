@@ -1,5 +1,12 @@
 export type DateTargetFormat =
-  "YYYY-MM-DD" | "YYYY-MM" | "YYYY.MM" | "YYYY.MM.DD";
+  | "YYYY-MM-DD"
+  | "YYYY-MM"
+  | "YYYY.MM"
+  | "YYYY.MM.DD"
+  | "YYYYMMDD"
+  | "YYYYMM"
+  | "YYYY/MM/DD"
+  | "YYYY/MM";
 
 export type DateFormatResult =
   { status: "resolved"; value: string } | { status: "invalid"; reason: string };
@@ -9,6 +16,10 @@ const FORMATS: readonly DateTargetFormat[] = [
   "YYYY-MM",
   "YYYY.MM",
   "YYYY.MM.DD",
+  "YYYYMMDD",
+  "YYYYMM",
+  "YYYY/MM/DD",
+  "YYYY/MM",
 ];
 
 export function formatProfileDate(
@@ -64,6 +75,14 @@ export function formatProfileDate(
   const monthText = match[2];
   const dayText = match[3];
   switch (format) {
+    case "YYYYMMDD":
+      return { status: "resolved", value: `${yearText}${monthText}${dayText}` };
+    case "YYYYMM":
+      return { status: "resolved", value: `${yearText}${monthText}` };
+    case "YYYY/MM/DD":
+      return { status: "resolved", value: `${yearText}/${monthText}/${dayText}` };
+    case "YYYY/MM":
+      return { status: "resolved", value: `${yearText}/${monthText}` };
     case "YYYY-MM-DD":
       return {
         status: "resolved",

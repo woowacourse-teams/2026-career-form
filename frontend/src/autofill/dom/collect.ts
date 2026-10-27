@@ -25,6 +25,7 @@ import type {
   FieldsAnalyzeRequest,
   FieldsItem,
   FieldsSection,
+  OptionCandidate,
   PreparationAnalyzeRequest,
   PreparationSection,
 } from "../api/types";
@@ -60,6 +61,7 @@ import {
   unnamedRadioGroupOf,
 } from "./metadata";
 import { collectButtonDropdowns, type ButtonDropdown } from "./button-dropdown";
+import { collectReadonlyInputDropdowns } from "./readonly-input-dropdown";
 import { isSafeStructuralClick } from "../generic/click-policy";
 import { acquireDocumentRun } from "../interaction/document-run";
 import { genericFormGroupFor, genericFormGroups } from "./generic-form-groups";
@@ -169,7 +171,9 @@ function repeatableItemGroupId(element: Element): string | undefined {
 /** A grouped candidate remains visible while any owned native control is visible. */
 export function isFieldCandidateHidden(handle: FieldCandidateHandle): boolean {
   const elements =
-    handle.elements.length > 0 ? handle.elements : (handle.customElements ?? []);
+    handle.elements.length > 0
+      ? handle.elements
+      : (handle.customElements ?? []);
   return elements.every(isHidden);
 }
 
@@ -225,6 +229,19 @@ function blockReason(element: HTMLElement): CandidateBlockReason | undefined {
     return "readonly";
   }
   return undefined;
+}
+
+function handleBlockReason(
+  elements: Array<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
+  first: HTMLElement,
+): CandidateBlockReason | undefined {
+  if (elements.length === 0) return blockReason(first);
+  const reasons = elements.map(blockReason);
+  if (reasons.some((reason) => reason === undefined)) return undefined;
+  return (
+    reasons.find((reason) => reason !== "hidden") ??
+    reasons.find((reason) => reason !== undefined)
+  );
 }
 
 function visibility(element: HTMLElement): "visible" | "hidden" {
@@ -372,6 +389,8 @@ function collectFieldsSnapshotInternal(
     titleNameCues?: boolean;
     /** Opt out of mixed section detection; omitted keeps it on. */
     mixedSectionDetection?: boolean;
+    /** Readonly inputs whose own click opened one search dialog. */
+    searchDialogs?: ReadonlySet<HTMLElement>;
   } = {},
 ): CollectedSnapshot<FieldsAnalyzeRequest> {
   const finishTiming = startLocalTiming("collect", { version: 2 });
@@ -539,8 +558,17 @@ function collectFieldsSnapshotInternal(
                 optionElements.set(optionId, option.element);
                 return { optionId, displayName: option.text };
               });
+              // A readonly input that opens its own list is a select, not a
+              // blocked text box; readonly only forbids typing into it.
+              const base = baseCandidate(
+                first,
+                candidateId,
+                undefined,
+                generic,
+              );
+              if (buttonDropdown.surface === "input") delete base.readonly;
               candidate = {
-                ...baseCandidate(first, candidateId, undefined, generic),
+                ...base,
                 element: "custom",
                 control: "select",
                 options,
@@ -595,13 +623,14 @@ function collectFieldsSnapshotInternal(
                     optionIndex,
                   );
                   optionElements.set(optionId, option);
-                  return { optionId, displayName };
+                  // An empty-value option is the select's guidance entry, not a
+                  // meaning. Only the flag is sent, never the option value.
+                  return generic && option.value === ""
+                    ? { optionId, displayName, placeholder: true as const }
+                    : { optionId, displayName };
                 })
                 .filter(
-                  (
-                    option,
-                  ): option is { optionId: string; displayName: string } =>
-                    Boolean(option),
+                  (option): option is OptionCandidate => Boolean(option),
                 );
               candidate = {
                 ...baseCandidate(
@@ -645,6 +674,7 @@ function collectFieldsSnapshotInternal(
             if (
               runtimeRules(document)?.components?.collection
                 .includeSearchOptions !== false &&
+              !buttonDropdown &&
               first.getAttribute("role") === "combobox"
             ) {
               const ids =
@@ -703,6 +733,25 @@ function collectFieldsSnapshotInternal(
                 rowCount: item.rowCount,
               };
             }
+            if (buttonDropdown?.surface === "input") {
+              // The input shows its current choice; that text never names it.
+              const shown = new Set(
+                [
+                  buttonDropdown.initialText,
+                  ...buttonDropdown.options.map((option) => option.text),
+                ].map((text) => text.replace(/\s+/g, " ").trim()),
+              );
+              const own = (text?: string) =>
+                !text || !shown.has(text.replace(/\s+/g, " ").trim());
+              if (!own(candidate.displayName)) delete candidate.displayName;
+              if (semanticContext.labels) {
+                semanticContext.labels = semanticContext.labels.filter((item) =>
+                  own(item.text),
+                );
+                if (!semanticContext.labels.length)
+                  delete semanticContext.labels;
+              }
+            }
             candidate = { ...candidate, semanticContext };
             if (candidate.control === "radio" && targetOnlyRadio(grouped)) {
               delete candidate.disabled;
@@ -729,10 +778,17 @@ function collectFieldsSnapshotInternal(
             const selectedKind = kindSelect?.selectedOptions[0]?.value
               ? metadata(kindSelect.selectedOptions[0].textContent)
               : undefined;
+            const blockReason = handleBlockReason(
+              elementsForHandle,
+              first as HTMLElement,
+            );
             registry.registerField(
               {
                 kind: "field",
                 ...(buttonDropdown ? { buttonDropdown } : {}),
+                ...(options.searchDialogs?.has(first)
+                  ? { selfOpensSearchDialog: true as const }
+                  : {}),
                 ...(mixed
                   ? {
                       mixedSectionRow: {
@@ -788,7 +844,9 @@ function collectFieldsSnapshotInternal(
                   ...customElements,
                 ]),
               },
-              blockReason(first),
+              blockReason === "readonly" && buttonDropdown?.surface === "input"
+                ? undefined
+                : blockReason,
             );
           }
           // Ambiguous rows carry no group id and no count; review keeps them
@@ -869,11 +927,23 @@ export async function collectFieldsSnapshotWithDropdowns(
         isSafeStructuralClick(trigger, trigger.closest("form") ?? document.body)
           .allowed,
     );
-    return collectFieldsSnapshot(document, dropdowns, {
-      recoverBrokenLabels: true,
-      titleNameCues: true,
-      ...options,
-    });
+    const readonlyInputs = await collectReadonlyInputDropdowns(
+      document,
+      signal,
+      (input) =>
+        isSafeStructuralClick(input, input.closest("form") ?? document.body)
+          .allowed,
+    );
+    return collectFieldsSnapshot(
+      document,
+      new Map([...dropdowns, ...readonlyInputs.dropdowns]),
+      {
+        searchDialogs: readonlyInputs.searchDialogs,
+        recoverBrokenLabels: true,
+        titleNameCues: true,
+        ...options,
+      },
+    );
   } finally {
     release();
   }
