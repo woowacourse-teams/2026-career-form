@@ -64,7 +64,11 @@ import { collectButtonDropdowns, type ButtonDropdown } from "./button-dropdown";
 import { collectReadonlyInputDropdowns } from "./readonly-input-dropdown";
 import { isSafeStructuralClick } from "../generic/click-policy";
 import { acquireDocumentRun } from "../interaction/document-run";
-import { genericFormGroupFor, genericFormGroups } from "./generic-form-groups";
+import {
+  genericFormGroupFor,
+  genericFormGroups,
+  hiddenFromPage,
+} from "./generic-form-groups";
 import { genericRowFor, genericRows } from "./repeatable-rows";
 import {
   documentImplicitRepeatGroups,
@@ -121,6 +125,21 @@ export function hasVisibleFormControl(item: Element): boolean {
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
     >("input, select, textarea"),
   ).some((control) => !isHidden(control));
+}
+
+/**
+ * An open modal makes the page behind it inert or aria-hidden. A generic row
+ * there is still a row; only its own hiding (display, hidden) removes it.
+ */
+function hasPageFormControl(row: Element): boolean {
+  if (hasVisibleFormControl(row)) return true;
+  return Array.from(
+    row.querySelectorAll<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >("input, select, textarea"),
+  ).some(
+    (control) => !hiddenFromPage(control) && !hiddenUncached(control, true),
+  );
 }
 
 function isTemplateLike(element: Element): boolean {
@@ -183,10 +202,15 @@ function isHidden(element: HTMLElement): boolean {
   );
 }
 
-function hiddenUncached(element: HTMLElement): boolean {
+function hiddenUncached(
+  element: HTMLElement,
+  ignoreAriaHidden = false,
+): boolean {
   if (
     element.hidden ||
-    element.closest("[hidden], [aria-hidden='true']") ||
+    element.closest(
+      ignoreAriaHidden ? "[hidden]" : "[hidden], [aria-hidden='true']",
+    ) ||
     element.closest("[style*='display: none'], [style*='display:none']")
   ) {
     return true;
@@ -986,7 +1010,7 @@ function repeatableItemElements(
   if (!container) return [];
   if (adapter === collectionAdapterForHost("")) {
     return genericRows(container).filter(
-      (row) => !isTemplateLike(row) && hasVisibleFormControl(row),
+      (row) => !isTemplateLike(row) && hasPageFormControl(row),
     );
   }
 
