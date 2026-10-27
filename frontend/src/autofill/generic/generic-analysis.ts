@@ -1,3 +1,4 @@
+import { gpaScaleKeyForCredits } from "./scale-key";
 import { majorNameKeyForText } from "./major-key";
 import type { Profile } from "../../profile/model";
 import type {
@@ -423,11 +424,26 @@ function convertSection(
       ]);
       return;
     }
+    const fieldLabels = [
+      candidate.displayName,
+      element.getAttribute("placeholder") ?? undefined,
+      element.getAttribute("title") ?? undefined,
+      ...(candidate.semanticContext?.labels ?? []).map((label) => label.text),
+    ];
     const profileFieldKey = response.profileFieldKey
-      ? majorNameKeyForText(response.profileFieldKey, candidate.control, [
-          candidate.displayName,
-          ...(candidate.semanticContext?.labels ?? []).map((label) => label.text),
-        ])
+      ? gpaScaleKeyForCredits(
+          majorNameKeyForText(
+            response.profileFieldKey,
+            candidate.control,
+            fieldLabels,
+          ),
+          fieldLabels,
+          matched.flatMap((sibling) =>
+            sibling.index !== index && sibling.response.profileFieldKey
+              ? [sibling.response.profileFieldKey]
+              : [],
+          ),
+        )
       : undefined;
     const dateSource =
       response.binding?.type === "DATE_PART" && profileFieldKey
