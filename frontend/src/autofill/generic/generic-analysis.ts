@@ -453,6 +453,12 @@ function convertSection(
           ),
           ),
           neighborKeys ?? [],
+          fieldLabels,
+          matched.flatMap((sibling) =>
+            sibling.index !== index && sibling.response.profileFieldKey
+              ? [sibling.response.profileFieldKey]
+              : [],
+          ),
         )
       : undefined;
     const dateSource =
