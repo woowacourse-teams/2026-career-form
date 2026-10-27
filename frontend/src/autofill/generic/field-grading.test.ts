@@ -212,6 +212,32 @@ describe("gradeGenericField checks", () => {
     ).not.toBe("MIXED_RECORD_KIND");
   });
 
+  it.each(["총점", "만점", "Scale"])(
+    "blocks credits mapped to a %s field",
+    (placeholder) => {
+      expect(
+        gradeGenericField(
+          input({
+            profileFieldKey: "education.university.totalCredits",
+            displayName: placeholder,
+            placeholder,
+          }),
+        ),
+      ).toEqual({ grade: "BLOCKED", reason: "SCALE_KEY_MISMATCH" });
+    },
+  );
+
+  it("keeps credits in a total credits field", () => {
+    expect(
+      gradeGenericField(
+        input({
+          profileFieldKey: "education.university.totalCredits",
+          displayName: "총 이수학점",
+        }),
+      ).reason,
+    ).not.toBe("SCALE_KEY_MISMATCH");
+  });
+
   it("keeps a row with one education record kind and unrelated keys", () => {
     expect(
       gradeGenericField(

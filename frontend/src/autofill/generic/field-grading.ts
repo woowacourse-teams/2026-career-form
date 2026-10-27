@@ -27,6 +27,7 @@ export type GradeReason =
   | "NON_DATE_FIELD"
   | "MIXED_EDUCATION_RECORD"
   | "MIXED_RECORD_KIND"
+  | "SCALE_KEY_MISMATCH"
   | "LOW_CONFIDENCE"
   | "MODERATE_CONFIDENCE"
   | "CATEGORY_UNCONFIRMED"
@@ -312,6 +313,24 @@ function hasUnpairedNamePart(input: GradeFieldInput): boolean {
   );
 }
 
+const SCALE_TEXT = /총점|만점|기준\s*점수|\bscale\b|out\s+of|\bmax(?:imum)?\b/i;
+const CREDIT_TEXT = /학점|이수|credit/i;
+
+/** A score scale field ("총점", "만점") is not a credit count. */
+function hasScaleKeyMismatch(input: GradeFieldInput): boolean {
+  if (fieldIdOf(input.profileFieldKey ?? "") !== "totalCredits") return false;
+  const texts = [
+    input.displayName,
+    input.title,
+    input.placeholder,
+    ...(input.labels ?? []).map((label) => label.text),
+  ];
+  return (
+    texts.some((text) => SCALE_TEXT.test(text ?? "")) &&
+    !texts.some((text) => CREDIT_TEXT.test(text ?? ""))
+  );
+}
+
 function hasFormatKeyMismatch(input: GradeFieldInput): boolean {
   if (input.inputType === "email" || input.inputType === "tel") {
     return !isProfileFieldType(input.profileFieldKey, input.inputType);
@@ -380,6 +399,9 @@ export function gradeGenericField(input: GradeFieldInput): FieldGradeResult {
   }
   if (hasOtherPersonContext(input)) {
     return { grade: "BLOCKED", reason: "OTHER_PERSON_CONTEXT" };
+  }
+  if (hasScaleKeyMismatch(input)) {
+    return { grade: "BLOCKED", reason: "SCALE_KEY_MISMATCH" };
   }
   if (hasFormatKeyMismatch(input)) {
     return { grade: "BLOCKED", reason: "FORMAT_KEY_MISMATCH" };
