@@ -180,6 +180,8 @@ export interface GenericFieldsSection {
   fields: FieldCandidate[];
   items?: FieldsItem[];
   category?: string;
+  /** Profile education record (sectionId) a single-row education section resolves to. */
+  recordSectionId?: string;
 }
 
 export interface GenericFieldsRequest {

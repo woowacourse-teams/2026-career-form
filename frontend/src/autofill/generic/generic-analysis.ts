@@ -17,6 +17,7 @@ import {
   type ReviewPlanItem,
 } from "../review/review-plan";
 import { resolveValueBinding } from "../profile/value-binding";
+import { kindOfOptionText, sectionOfKind } from "../profile/education-row-kind";
 import { localWorkflowLog } from "../debug/local-workflow";
 import { datePartOf, matchDatePartOption } from "./date-part-options";
 import {
@@ -249,6 +250,35 @@ function withPairedContainers(
         : {}),
     })),
   };
+}
+
+/**
+ * The one education record (its sectionId) the profile resolves to: the only
+ * record, or the single record of the latest education type. Undefined when
+ * several records remain, so ambiguous rows keep abstaining.
+ */
+function singleEducationRecord(profile: Profile): string | undefined {
+  const records = profile.education;
+  if (records.length === 1) return records[0]!.sectionId;
+  const latest = records
+    .map((entry) => entry.values.latestEducationType)
+    .find(Boolean);
+  const kind = latest && kindOfOptionText(latest);
+  if (!kind) return undefined;
+  const sectionId = sectionOfKind(kind);
+  return records.filter((entry) => entry.sectionId === sectionId).length === 1
+    ? sectionId
+    : undefined;
+}
+
+/** One unbound row: no structure stage, no second row, no repeat beyond one. */
+function isSingleRow(section: GenericSection<SegmentField>): boolean {
+  return section.fields.every(
+    ({ itemIndex, structureStage, candidate }) =>
+      !structureStage &&
+      (itemIndex ?? 0) === 0 &&
+      (candidate.semanticContext?.repeat?.rowCount ?? 1) <= 1,
+  );
 }
 
 /** Structure and field state only; equal keys share one analysis result. */
@@ -575,7 +605,8 @@ function boundChoiceKey(
  * once, match their fields by category once, grade each match locally, and
  * convert the result to the shared analysis shape. A failure blocks only the
  * sections it touches. Requests carry collected structure only: never profile
- * values, current input values or profile item counts.
+ * values, current input values or profile item counts. The only profile-derived
+ * field is the record kind (sectionId) of a single-row education section.
  */
 export async function analyzeGenericFields(
   snapshot: CollectedSnapshot<FieldsAnalyzeRequest>,
@@ -614,6 +645,9 @@ export async function analyzeGenericFields(
         structureStage: handle.itemGroupId?.split(":stage:")[1],
       });
   }
+  const educationRecord = singleEducationRecord(profile);
+  const recordOf = (section: GenericSection<SegmentField>) =>
+    educationRecord && isSingleRow(section) ? educationRecord : undefined;
   const entries: SectionEntry[] = segmentGenericSections(
     document,
     segmentFields,
@@ -622,7 +656,7 @@ export async function analyzeGenericFields(
     .map((section, index) => ({
       section,
       sectionId: `gs${index + 1}`,
-      key: cacheKey(section),
+      key: `${cacheKey(section)}${recordOf(section) ?? ""}`,
     }));
 
   const outcomes = new Map<string, SectionOutcome>();
@@ -680,6 +714,17 @@ export async function analyzeGenericFields(
   }
 
   const toAnalyze = toClassify.filter((entry) => categories.has(entry.key));
+  // The record hint is safe only when the page has one education section:
+  // with several, each may belong to a different record the profile lacks.
+  const educationSections = entries.filter(
+    (entry) =>
+      (categories.get(entry.key) ?? outcomes.get(entry.key)?.category) ===
+      "EDUCATION",
+  ).length;
+  const hintOf = (entry: SectionEntry) =>
+    educationSections === 1 && categories.get(entry.key) === "EDUCATION"
+      ? recordOf(entry.section)
+      : undefined;
   if (!blocked && toAnalyze.length > 0) {
     try {
       const response = await api.analyzeGenericFields({
@@ -703,6 +748,7 @@ export async function analyzeGenericFields(
             containerId ? { ...candidate, containerId } : candidate,
           ),
           category: categories.get(entry.key)!,
+          ...(hintOf(entry) ? { recordSectionId: hintOf(entry) } : {}),
         })),
       });
       if (response.status !== "COMPLETE") blocked = true;
@@ -729,7 +775,11 @@ export async function analyzeGenericFields(
           fields: fields as ResponseField[],
         };
         outcomes.set(entry.key, outcome);
-        if (!outcome.fields.some((field) => field.reason))
+        // A hinted key analysed without its hint must not be reused as hinted.
+        if (
+          !outcome.fields.some((field) => field.reason) &&
+          hintOf(entry) === recordOf(entry.section)
+        )
           cache.sections.set(entry.key, outcome);
       }
     } catch (error) {

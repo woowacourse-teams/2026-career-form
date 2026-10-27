@@ -55,19 +55,39 @@ final class GenericProfileSemantics {
         }""";
 
     /** 값 없이 읽을 수 있는 의미 설명. 목록에 없는 키는 기존 한 줄 설명을 그대로 쓴다. */
-    private static final Map<String, String> MEANINGS = Map.of(
-        "careers.career.responsibilities",
-        ": the job duties or work content summary of one employment record (업무내용, 담당 업무). "
-            + "Not the company name, department, position, or the details of a separate project.",
-        "certifications.certificate.name",
-        ": the type or name of a license or certificate held (자격/면허 종류, 자격증명). "
-            + "Not its grade, registration number, or issuing organization.",
-        "certifications.certificate.issuer",
-        ": the organization that issued a certificate or license (발급기관, 수여 기관) in a certificate "
-            + "or license record. An issuing organization of a language test is not this field.",
-        "languages.languageTest.testName",
-        ": the name of the language proficiency exam taken (시험, 시험명). "
-            + "Not the language itself, its score, or its grade."
+    private static final String GPA_SCORE =
+        ": the grade point average actually obtained in one school record (취득 평점, 학점 평균). "
+            + "Not the maximum of the grading scale and not a number of credits.";
+    private static final String GPA_SCALE =
+        ": the maximum value of the grading scale the grade point average is measured on (만점, 기준 평점, "
+            + "e.g. a 4.5 or 4.3 scale). Not the obtained grade point average and not a number of credits.";
+
+    private static final Map<String, String> MEANINGS = Map.ofEntries(
+        Map.entry("education.university.gpaScore", GPA_SCORE),
+        Map.entry("education.graduateSchool.gpaScore", GPA_SCORE),
+        Map.entry("education.university.gpaScale", GPA_SCALE),
+        Map.entry("education.graduateSchool.gpaScale", GPA_SCALE),
+        Map.entry("education.university.totalCredits",
+            ": the number of course credits earned or completed in a university record (이수 학점, 취득 학점), "
+                + "an integer count of credit units. Not a grade point average and not the maximum of a grading scale."),
+        Map.entry("military.military.militaryStatus",
+            ": whether military service is completed, exempted, not yet done, or in progress (병역 사항, "
+                + "복무 여부, 군필·면제·미필). Not the branch or kind of service."),
+        Map.entry("military.military.militaryType",
+            ": the kind or branch of military service performed (군별, 복무 형태, e.g. army or alternative service). "
+                + "Not whether service is completed, exempted, or not yet done."),
+        Map.entry("careers.career.responsibilities",
+            ": the job duties or work content summary of one employment record (업무내용, 담당 업무). "
+            + "Not the company name, department, position, or the details of a separate project."),
+        Map.entry("certifications.certificate.name",
+            ": the type or name of a license or certificate held (자격/면허 종류, 자격증명). "
+                + "Not its grade, registration number, or issuing organization."),
+        Map.entry("certifications.certificate.issuer",
+            ": the organization that issued a certificate or license (발급기관, 수여 기관) in a certificate "
+                + "or license record. An issuing organization of a language test is not this field."),
+        Map.entry("languages.languageTest.testName",
+            ": the name of the language proficiency exam taken (시험, 시험명). "
+                + "Not the language itself, its score, or its grade.")
     );
 
     private GenericProfileSemantics() {

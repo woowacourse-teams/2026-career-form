@@ -99,8 +99,17 @@ public record GenericFieldsRequest(
         @Size(min = 1, max = 120) String displayName,
         @NotNull List<@NotNull @Valid FieldCandidate> fields,
         @Size(min = 1) List<@NotNull @Valid Item> items,
-        @Size(max = 32) String category
+        @Size(max = 32) String category,
+        /** 프로필 구조로 정해진 단일 기록의 sectionId(예: university). 값이 아니라 기록 종류만 담는다. */
+        @Size(min = 1, max = 64) @Pattern(regexp = "^[A-Za-z][A-Za-z0-9]*$") String recordSectionId
     ) {
+
+        public Section(
+            String sectionId, String parentSectionId, String displayName,
+            List<FieldCandidate> fields, List<Item> items, String category
+        ) {
+            this(sectionId, parentSectionId, displayName, fields, items, category, null);
+        }
     }
 
     public record Item(
