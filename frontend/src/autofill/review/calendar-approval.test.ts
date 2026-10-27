@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   createCalendarApproval,
+  elementSignature,
   revalidateCalendarApproval,
 } from "./calendar-approval";
 
@@ -161,5 +162,17 @@ describe("calendar approval", () => {
     expect(revalidateCalendarApproval(approval)).toMatchObject({
       status: "invalid",
     });
+  });
+});
+
+describe("calendar element signature", () => {
+  it("ignores the extension's own data-careerform marker", () => {
+    document.body.innerHTML = '<input id="target" type="text" readonly>';
+    const target = document.querySelector<HTMLInputElement>("#target")!;
+    const before = elementSignature(target);
+    target.setAttribute("data-careerform-diagnostic-field", "3");
+    expect(elementSignature(target)).toBe(before);
+    target.setAttribute("data-page-marker", "3");
+    expect(elementSignature(target)).not.toBe(before);
   });
 });

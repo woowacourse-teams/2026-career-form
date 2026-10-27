@@ -76,10 +76,11 @@ export function elementSignature(
     ...extraIgnored,
   ]);
   // Open/closed and interaction markers (an opener's aria-controls while
-  // open, data-*-state, data-open/active/focus/hover) describe the moment,
-  // not the element's identity.
+  // open, data-*-state, data-open/active/focus/hover) and this extension's own
+  // data-careerform-* markers describe the moment, not the element's identity.
   const transient = (name: string) =>
     name === "aria-controls" ||
+    name.startsWith("data-careerform-") ||
     /^data-(?:[\w-]*-)?state$/.test(name) ||
     /^data-(?:open|active|focus|focus-visible|hover|pressed)$/.test(name);
   const attrs = Array.from(element.attributes)
