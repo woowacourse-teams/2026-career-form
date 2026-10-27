@@ -30,8 +30,9 @@ function groupTitle(area: Element): string {
 }
 
 /**
- * An open modal makes the page behind it inert or aria-hidden. That page keeps
- * its structure; only a hidden subtree no open modal explains is gone.
+ * An open modal or popup layer (dialog, listbox, menu, grid) makes the page
+ * behind it inert or aria-hidden. That page keeps its structure; only a hidden
+ * subtree no open layer explains is gone.
  */
 export function hiddenFromPage(element: Element): boolean {
   if (element.closest("[hidden]")) return true;
@@ -39,7 +40,7 @@ export function hiddenFromPage(element: Element): boolean {
   if (!hider) return false;
   return !Array.from(
     element.ownerDocument.querySelectorAll(
-      "dialog[open], [role='dialog'][aria-modal='true']",
+      "dialog[open], [role='dialog'][aria-modal='true'], [role='listbox'], [role='menu'], [role='grid']",
     ),
   ).some((modal) => !hider.contains(modal));
 }
