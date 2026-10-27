@@ -262,6 +262,9 @@ describe("deferred generic day calendar", () => {
       opener.setAttribute("aria-expanded", "false");
       opener.removeAttribute("aria-controls");
       opener.removeAttribute("data-headlessui-state");
+      ["data-open", "data-active", "data-focus"].forEach((name) =>
+        opener.removeAttribute(name),
+      );
       target.className = "w-full";
     };
     const render = () => {
@@ -291,7 +294,10 @@ describe("deferred generic day calendar", () => {
       document.body.append(panel);
       opener.setAttribute("aria-expanded", "true");
       opener.setAttribute("aria-controls", "popover-panel");
-      opener.setAttribute("data-headlessui-state", "open");
+      opener.setAttribute("data-headlessui-state", "open active focus");
+      opener.setAttribute("data-open", "");
+      opener.setAttribute("data-active", "");
+      opener.setAttribute("data-focus", "");
       target.className = "";
       render();
     });
