@@ -3,6 +3,7 @@ import type { InteractionDecisionProvider } from "../api/interaction-types";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import { executeCalendarSelection } from "../interaction/calendar-executor";
 import { executeDayCalendarSelection } from "../interaction/day-calendar-executor";
+import { canonicalCalendarMonthValue } from "../interaction/calendar-unit";
 import { canonicalDayCalendarValue } from "../interaction/day-calendar-value";
 import { revalidateCalendarApproval } from "../review/calendar-approval";
 import { revalidateDayCalendarApproval } from "../review/day-calendar-approval";
@@ -157,7 +158,8 @@ export function calendarValueSettled(
     !!target &&
     target.isConnected &&
     revalidateCalendarApproval(item.calendarApproval!).status === "valid" &&
-    target.value === item.calendarApproval!.targetYearMonth
+    canonicalCalendarMonthValue(target, target.value) ===
+      item.calendarApproval!.targetYearMonth
   );
 }
 
@@ -262,7 +264,10 @@ export async function executeApprovedCalendarWrite(
   if (!current(args)) return stop(item.candidateId, "STALE_TARGET", STALE);
 
   if (target.value) {
-    if (target.value === approval.targetYearMonth) {
+    if (
+      canonicalCalendarMonthValue(target, target.value) ===
+      approval.targetYearMonth
+    ) {
       return {
         candidateId: item.candidateId,
         status: "skipped",
@@ -340,7 +345,8 @@ export async function executeApprovedCalendarWrite(
   if (
     !current(args) ||
     revalidateCalendarApproval(approval).status !== "valid" ||
-    target.value !== approval.targetYearMonth
+    canonicalCalendarMonthValue(target, target.value) !==
+      approval.targetYearMonth
   )
     return stop(
       item.candidateId,

@@ -13,6 +13,15 @@ import {
   isDisplayed,
 } from "./day-calendar-surface";
 import {
+  awaitDeferredCalendarRoot,
+  closeDeferredCalendar,
+  dayCalendarHeader,
+  dayGridCells,
+  knownDeferredRoots,
+  newDeferredRoots,
+  openedOnFocus,
+} from "./calendar-deferred";
+import {
   canonicalDayCalendarValue,
   dayCalendarDateParts,
   type DayCalendarValueFormat,
@@ -102,13 +111,28 @@ interface CalendarHeader {
 
 type Step<T> = { ok: true; value: T } | { ok: false; reason: string };
 
-function readHeader(popup: HTMLElement): Step<CalendarHeader> {
-  const years = popup.querySelectorAll<HTMLSelectElement>(
-    "select.ui-datepicker-year",
-  );
-  const months = popup.querySelectorAll<HTMLSelectElement>(
-    "select.ui-datepicker-month",
-  );
+function readHeader(
+  popup: HTMLElement,
+  generic = false,
+): Step<CalendarHeader> {
+  // A deferred generic root is recognized by select shape, not widget class.
+  const found = generic ? dayCalendarHeader(popup) : undefined;
+  const years = generic
+    ? found
+      ? [found.year]
+      : []
+    : Array.from(
+        popup.querySelectorAll<HTMLSelectElement>("select.ui-datepicker-year"),
+      );
+  const months = generic
+    ? found
+      ? [found.month]
+      : []
+    : Array.from(
+        popup.querySelectorAll<HTMLSelectElement>(
+          "select.ui-datepicker-month",
+        ),
+      );
   if (
     years.length !== 1 ||
     months.length !== 1 ||
@@ -186,6 +210,20 @@ function dayLinks(
     });
 }
 
+/**
+ * A generic grid has no month marks per cell, so the day number must be
+ * unique among enabled cells; an outside-month duplicate is ambiguity.
+ */
+function genericDayCells(popup: HTMLElement, day: number): HTMLElement[] {
+  return dayGridCells(popup).filter(
+    (cell) =>
+      (cell.textContent ?? "").replace(/\s+/g, "") === String(day) &&
+      !cell.matches(":disabled") &&
+      !cell.closest("[aria-disabled='true']") &&
+      (!(cell instanceof HTMLAnchorElement) || safeLink(cell)),
+  );
+}
+
 function disabledDay(popup: HTMLElement, day: number): boolean {
   return Array.from(
     popup.querySelectorAll<HTMLTableCellElement>(".ui-datepicker-calendar td"),
@@ -221,7 +259,20 @@ export async function executeDayCalendarSelection(
   const surface = dayCalendarSurfaceFor(args.target);
   if (!surface) return fail("unverified_calendar_surface");
   const document = args.target.ownerDocument;
-  const { target, popup } = surface;
+  const { target } = surface;
+  const deferred = surface.rendering === "deferred-generic";
+  // A deferred surface has no root until opened; then the new root is adopted.
+  let popup = surface.popup;
+  let scope: HTMLElement | undefined = deferred ? undefined : surface.popup;
+  const headerOf = (root: HTMLElement) => readHeader(root, deferred);
+  const dayTargets = (root: HTMLElement): HTMLElement[] =>
+    deferred
+      ? genericDayCells(root, parts.day)
+      : dayLinks(root, parts.year, parts.month, parts.day);
+  const shownRoots = () =>
+    deferred
+      ? isDisplayed(popup) && openCalendarPopups(document).length === 0
+      : displayedDayCalendarRoots(document).length === 1;
   const unit = calendarUnitEvidence(target);
   if (!unit || unit.unit !== "day" || unit.unitEvidence === "unconfirmed")
     return fail("calendar_unit_unconfirmed");
@@ -280,7 +331,7 @@ export async function executeDayCalendarSelection(
   const controls = () =>
     Array.from(
       document.querySelectorAll<Control>("input, select, textarea"),
-    ).filter((control) => !popup.contains(control));
+    ).filter((control) => !scope?.contains(control));
   const stateOf = (control: Control) => ({
     value: control.value,
     checked:
@@ -296,8 +347,11 @@ export async function executeDayCalendarSelection(
   );
   const othersUnchanged = () => {
     const current = controls().filter((control) => control !== target);
+    const expected = Array.from(before.keys()).filter(
+      (control) => !scope?.contains(control),
+    );
     return (
-      current.length === before.size &&
+      current.length === expected.length &&
       current.every((control) => {
         const state = before.get(control);
         return (
@@ -316,7 +370,7 @@ export async function executeDayCalendarSelection(
       target.value === "" &&
       othersUnchanged() &&
       current?.opener === surface.opener &&
-      current.popup === popup
+      current.popup === surface.popup
     );
   };
   const decisionContext = {
@@ -354,36 +408,68 @@ export async function executeDayCalendarSelection(
   });
   if (!opener || !stable()) return interrupted("calendar_opener_unavailable");
   if (!spend()) return interrupted("calendar_budget_exhausted");
+  const known = deferred ? knownDeferredRoots(document) : undefined;
   if (surface.openBy === "target") {
     target.focus();
+    // A deferred widget may open on click rather than focus.
+    if (known && !(await openedOnFocus(document, known))) target.click();
   } else {
     surface.opener.click();
   }
   if (!running()) return interrupted("owned_calendar_not_opened");
-  const opened = await waitUntil(
-    () =>
-      isDisplayed(popup) &&
-      popup.querySelector(
-        "select.ui-datepicker-year, .ui-datepicker-calendar",
-      ) !== null,
-    timings.openWaitMs,
-  );
-  if (!running()) return interrupted("owned_calendar_not_opened");
-  if (!opened) return fail("owned_calendar_not_opened");
-  const shown = displayedDayCalendarRoots(document);
-  if (
-    shown.length !== 1 ||
-    shown[0] !== popup ||
-    openCalendarPopups(document).length
-  )
-    return fail("multiple_calendar_popups_open");
+  if (known) {
+    // Exactly one newly shown day-grid root is adopted; anything else is closed.
+    const root = await awaitDeferredCalendarRoot({
+      target,
+      known,
+      kind: "day",
+      timeoutMs: timings.openWaitMs,
+      now,
+      running,
+    });
+    if (!running()) return interrupted("owned_calendar_not_opened");
+    if (
+      !root ||
+      displayedDayCalendarRoots(document).some(
+        (shown) => !shown.contains(root) && !root.contains(shown),
+      ) ||
+      openCalendarPopups(document).length
+    ) {
+      closeDeferredCalendar(
+        target,
+        surface.opener,
+        newDeferredRoots(document, known),
+      );
+      return fail("calendar_day_structure_unconfirmed");
+    }
+    popup = root;
+    scope = root;
+  } else {
+    const opened = await waitUntil(
+      () =>
+        isDisplayed(popup) &&
+        popup.querySelector(
+          "select.ui-datepicker-year, .ui-datepicker-calendar",
+        ) !== null,
+      timings.openWaitMs,
+    );
+    if (!running()) return interrupted("owned_calendar_not_opened");
+    if (!opened) return fail("owned_calendar_not_opened");
+    const shown = displayedDayCalendarRoots(document);
+    if (
+      shown.length !== 1 ||
+      shown[0] !== popup ||
+      openCalendarPopups(document).length
+    )
+      return fail("multiple_calendar_popups_open");
+  }
 
   const choose = async (
     pick: (header: CalendarHeader) => HTMLSelectElement,
     value: string,
     unavailable: string,
   ): Promise<string | undefined> => {
-    const header = readHeader(popup);
+    const header = headerOf(popup);
     if (!header.ok) return header.reason;
     const select = pick(header.value);
     const role =
@@ -407,10 +493,10 @@ export async function executeDayCalendarSelection(
         },
       ],
       revalidate: () => {
-        const current = readHeader(popup);
+        const current = headerOf(popup);
         return (
           stable() &&
-          displayedDayCalendarRoots(document).length === 1 &&
+          shownRoots() &&
           isDisplayed(popup) &&
           current.ok &&
           pick(current.value) === select
@@ -429,7 +515,7 @@ export async function executeDayCalendarSelection(
     select.dispatchEvent(new Event("change", { bubbles: true }));
     // The family re-renders the whole root; re-read fresh controls.
     const settled = await waitUntil(() => {
-      const next = readHeader(popup);
+      const next = headerOf(popup);
       return next.ok && pick(next.value).value === value;
     }, timings.openWaitMs);
     return settled ? undefined : "calendar_view_not_changed";
@@ -448,7 +534,7 @@ export async function executeDayCalendarSelection(
   );
   if (monthIssue) return interrupted(monthIssue);
 
-  const header = readHeader(popup);
+  const header = headerOf(popup);
   if (!header.ok) return interrupted(header.reason);
   if (
     header.value.year.value !== String(parts.year) ||
@@ -456,31 +542,32 @@ export async function executeDayCalendarSelection(
   )
     return interrupted("calendar_view_not_changed");
 
-  const links = dayLinks(popup, parts.year, parts.month, parts.day);
+  const links = dayTargets(popup);
   if (links.length !== 1)
     return interrupted(
-      links.length === 0 && disabledDay(popup, parts.day)
+      links.length === 0 && !deferred && disabledDay(popup, parts.day)
         ? "target_day_disabled"
         : "target_day_unavailable",
     );
   const link = links[0]!;
-  if (!safeLink(link)) return fail("unsafe_day_link");
+  if (link instanceof HTMLAnchorElement && !safeLink(link))
+    return fail("unsafe_day_link");
   const day = await resolveRole({
     ...decisionContext,
     role: "CALENDAR_DAY_CONTROL",
     candidates: [{ candidateId: "calendar-control-day", element: link }],
     revalidate: () => {
-      const current = readHeader(popup);
-      const fresh = dayLinks(popup, parts.year, parts.month, parts.day);
+      const current = headerOf(popup);
+      const fresh = dayTargets(popup);
       return (
         stable() &&
-        displayedDayCalendarRoots(document).length === 1 &&
+        shownRoots() &&
         current.ok &&
         current.value.year.value === String(parts.year) &&
         current.value.month.value === String(parts.month - 1) &&
         fresh.length === 1 &&
         fresh[0] === link &&
-        safeLink(link)
+        (!(link instanceof HTMLAnchorElement) || safeLink(link))
       );
     },
   });

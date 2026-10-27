@@ -6,7 +6,17 @@ import {
 } from "./calendar-controls";
 import { calendarSurfaceFor, openCalendarPopups } from "./calendar-surface";
 import { createCalendarRoleResolver } from "./calendar-role-resolver";
-import { calendarUnitEvidence } from "./calendar-unit";
+import {
+  calendarUnitEvidence,
+  canonicalCalendarMonthValue,
+} from "./calendar-unit";
+import {
+  awaitDeferredCalendarRoot,
+  closeDeferredCalendar,
+  knownDeferredRoots,
+  newDeferredRoots,
+  openedOnFocus,
+} from "./calendar-deferred";
 import type { CalendarRoleEvidence } from "./calendar-structure";
 import { selectDeferredCalendarMonth } from "./calendar-month-widget";
 import { localWorkflowLog } from "../debug/local-workflow";
@@ -17,6 +27,8 @@ import { captureControlState, correspondingControls } from "../dom/write-target"
 
 export const CALENDAR_FIELD_TIMEOUT_MS = 15_000;
 export const CALENDAR_MAX_ACTIVATIONS = 8;
+/** How long a deferred-render calendar may take to mount after opening. */
+export const DEFERRED_CALENDAR_OPEN_WAIT_MS = 1_000;
 
 export type CalendarExecutionResult =
   | { status: "completed"; targetYearMonth: string }
@@ -81,10 +93,18 @@ export async function executeCalendarSelection(
     ownership:
       surface.rendering === "deferred-jquery"
         ? "adjacent-trigger"
-        : surface.opener.hasAttribute("aria-controls")
-          ? "linked-popup"
-          : "single-field",
+        : surface.rendering === "deferred-generic"
+          ? surface.opener === args.target
+            ? "bound-target"
+            : "single-field"
+          : surface.opener.hasAttribute("aria-controls")
+            ? "linked-popup"
+            : "single-field",
   };
+  const deferred = surface.rendering === "deferred-generic";
+  // A deferred surface has no root until opened; then the new root is adopted.
+  let popup = surface.popup;
+  let scope: HTMLElement | undefined = deferred ? undefined : surface.popup;
   const read = args.readTargetValue ?? ((target) => target.value);
   const targetIsStable = () =>
     args.target.isConnected &&
@@ -112,7 +132,7 @@ export async function executeCalendarSelection(
       args.target.ownerDocument.querySelectorAll<
         HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
       >("input, select, textarea"),
-    ).filter((control) => !surface.popup.contains(control));
+    ).filter((control) => !scope?.contains(control));
   const stateOf = (
     control: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
   ) => ({
@@ -129,8 +149,10 @@ export async function executeCalendarSelection(
   const structuralBefore = args.allowControlReplacement
     ? captureControlState(controls())
     : undefined;
+  const expectedControls = () =>
+    Array.from(before.keys()).filter((control) => !scope?.contains(control));
   const othersUnchanged = () =>
-    controls().length === before.size &&
+    controls().length === expectedControls().length &&
     controls().every((control) => {
       const state = before.get(control);
       return (
@@ -176,24 +198,29 @@ export async function executeCalendarSelection(
     if (
       structuralBefore
         ? !correspondingControls(structuralBefore, controls(), args.target)
-        : controls().length !== before.size ||
-          Array.from(before).some(
-            ([control, state]) =>
+        : controls().length !== expectedControls().length ||
+          expectedControls().some(
+            (control) =>
               control !== args.target &&
               (!control.isConnected ||
-                stateOf(control).value !== state.value ||
-                stateOf(control).checked !== state.checked),
+                stateOf(control).value !== before.get(control)!.value ||
+                stateOf(control).checked !== before.get(control)!.checked),
           )
     )
       return { status: "needs-verification", reason: "other_input_changed" };
-    if (read(args.target) !== args.targetYearMonth)
+    if (
+      canonicalCalendarMonthValue(args.target, read(args.target)) !==
+      args.targetYearMonth
+    )
       return {
         status: "needs-verification",
         reason: "target_value_not_retained",
       };
     if (
-      surface.popup.isConnected &&
-      openCalendarPopups(args.target.ownerDocument).includes(surface.popup)
+      popup.isConnected &&
+      (deferred
+        ? isDisplayed(popup)
+        : openCalendarPopups(args.target.ownerDocument).includes(popup))
     )
       return { status: "needs-verification", reason: "popup_not_closed" };
     return { status: "completed", targetYearMonth: args.targetYearMonth };
@@ -221,7 +248,15 @@ export async function executeCalendarSelection(
       status: "needs-verification",
       reason: "calendar_opener_unavailable",
     };
-  if (!activate(opener.element))
+  const known = deferred
+    ? knownDeferredRoots(args.target.ownerDocument)
+    : undefined;
+  let focusOpened = false;
+  if (known && opener.element === args.target) {
+    args.target.focus();
+    focusOpened = await openedOnFocus(args.target.ownerDocument, known);
+  }
+  if (!focusOpened && !activate(opener.element))
     return {
       status: "needs-verification",
       reason: args.signal?.aborted
@@ -230,13 +265,47 @@ export async function executeCalendarSelection(
           ? "calendar_budget_exhausted"
           : "stale_target",
     };
+  if (known) {
+    // Exactly one newly shown month root is adopted; anything else is closed.
+    const root = await awaitDeferredCalendarRoot({
+      target: args.target,
+      known,
+      kind: "month",
+      timeoutMs: Math.min(
+        DEFERRED_CALENDAR_OPEN_WAIT_MS,
+        Math.max(0, deadline - (args.now ?? Date.now)()),
+      ),
+      now: args.now ?? Date.now,
+      running: () => !args.signal?.aborted && targetIsStable(),
+    });
+    if (args.signal?.aborted)
+      return { status: "needs-verification", reason: "calendar_aborted" };
+    if (
+      !root ||
+      openCalendarPopups(args.target.ownerDocument).some(
+        (shown) => !shown.contains(root) && !root.contains(shown),
+      )
+    ) {
+      closeDeferredCalendar(
+        args.target,
+        surface.opener,
+        newDeferredRoots(args.target.ownerDocument, known),
+      );
+      return {
+        status: "needs-verification",
+        reason: "calendar_month_structure_unconfirmed",
+      };
+    }
+    popup = root;
+    scope = root;
+  }
   const openPopups = openCalendarPopups(args.target.ownerDocument);
-  if (!openPopups.includes(surface.popup))
+  if (!deferred && !openPopups.includes(surface.popup))
     return {
       status: "needs-verification",
       reason: "owned_calendar_not_opened",
     };
-  if (openPopups.length !== 1)
+  if (!deferred && openPopups.length !== 1)
     return {
       status: "needs-verification",
       reason: "multiple_calendar_popups_open",
@@ -280,8 +349,8 @@ export async function executeCalendarSelection(
       : verifyOutcome();
   }
   // Reserve the second role request for Apply if this picker needs it.
-  const reserveApplyRole = calendarApplyControls(surface.popup).length === 1;
-  const triggerCandidates = calendarYearTriggers(surface.popup).map(
+  const reserveApplyRole = calendarApplyControls(popup).length === 1;
+  const triggerCandidates = calendarYearTriggers(popup).map(
     (candidate, index) => ({
       ...candidate,
       candidateId: `calendar-year-trigger-${index + 1}`,
@@ -295,9 +364,7 @@ export async function executeCalendarSelection(
         role: "CALENDAR_YEAR_TRIGGER",
         evidence,
         revalidate: () =>
-          stableSurface() &&
-          read(args.target) === "" &&
-          isDisplayed(surface.popup),
+          stableSurface() && read(args.target) === "" && isDisplayed(popup),
         candidates: triggerCandidates,
         provider: args.interactionDecisionProvider,
         canonicalFieldKey: args.canonicalFieldKey ?? "calendar-month",
@@ -307,7 +374,7 @@ export async function executeCalendarSelection(
       });
   if (args.signal?.aborted)
     return { status: "needs-verification", reason: "calendar_aborted" };
-  if (calendarYearTriggers(surface.popup).length && !yearTrigger)
+  if (calendarYearTriggers(popup).length && !yearTrigger)
     return {
       status: "needs-verification",
       reason: "year_list_trigger_unavailable",
@@ -321,7 +388,7 @@ export async function executeCalendarSelection(
           ? "year_list_trigger_unavailable"
           : "stale_target",
     };
-  const yearCandidates = calendarYears(surface.popup)
+  const yearCandidates = calendarYears(popup)
     .filter((candidate) => candidate.year === parts.year)
     .map((candidate, index) => ({
       ...candidate,
@@ -338,7 +405,7 @@ export async function executeCalendarSelection(
           ? "target_year_unavailable"
           : "stale_target",
     };
-  const monthCandidates = calendarMonths(surface.popup)
+  const monthCandidates = calendarMonths(popup)
     .filter((candidate) => candidate.month === parts.month)
     .map((candidate, index) => ({
       ...candidate,
@@ -355,7 +422,7 @@ export async function executeCalendarSelection(
           ? "target_month_unavailable"
           : "stale_target",
     };
-  const apply = calendarApplyControls(surface.popup);
+  const apply = calendarApplyControls(popup);
   if (apply.length) {
     if (!reserveApplyRole) {
       localWorkflowLog("calendar-apply", {
@@ -373,8 +440,9 @@ export async function executeCalendarSelection(
       revalidate: () =>
         stableSurface() &&
         (read(args.target) === "" ||
-          read(args.target) === args.targetYearMonth) &&
-        isDisplayed(surface.popup),
+          canonicalCalendarMonthValue(args.target, read(args.target)) ===
+            args.targetYearMonth) &&
+        isDisplayed(popup),
       candidates: apply.map((candidate, index) => ({
         ...candidate,
         candidateId: `calendar-apply-${index + 1}`,

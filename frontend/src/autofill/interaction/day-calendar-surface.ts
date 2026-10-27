@@ -1,5 +1,6 @@
 import { calendarUnitEvidence } from "./calendar-unit";
 import { hasCalendarOwnershipConflict } from "./calendar-ownership";
+import { deferredCalendarOpening } from "./calendar-deferred";
 
 /**
  * Detects readonly inputs bound to a ui-datepicker family day calendar.
@@ -16,6 +17,11 @@ export interface DayCalendarSurface {
   opener: HTMLElement;
   popup: HTMLElement;
   openBy: "trigger" | "target";
+  /**
+   * A calendar mounted only after opening. `popup` is then the owning field
+   * group; execution adopts the single new day-grid root.
+   */
+  rendering?: "deferred-generic";
 }
 
 const HIDDEN = "[hidden], [inert], [aria-hidden='true']";
@@ -85,10 +91,24 @@ export function dayCalendarSurfaceFor(
     !target.isConnected ||
     target.closest(HIDDEN) ||
     unit?.unit !== "day" ||
-    unit.unitEvidence === "unconfirmed" ||
-    !target.classList.contains("hasDatepicker")
+    unit.unitEvidence === "unconfirmed"
   )
     return undefined;
+  if (!target.classList.contains("hasDatepicker")) {
+    const opening = deferredCalendarOpening(target);
+    if (
+      !opening ||
+      hasCalendarOwnershipConflict(target, opening.opener, opening.group)
+    )
+      return undefined;
+    return {
+      target,
+      opener: opening.opener,
+      popup: opening.group,
+      openBy: opening.opener === target ? "target" : "trigger",
+      rendering: "deferred-generic",
+    };
+  }
   const roots = dayCalendarRoots(target.ownerDocument);
   if (roots.length !== 1 || roots[0]!.contains(target)) return undefined;
   const triggers = adjacentTriggers(target);

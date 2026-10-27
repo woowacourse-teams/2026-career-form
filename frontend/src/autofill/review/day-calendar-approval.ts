@@ -129,7 +129,8 @@ export function createDayCalendarApproval({
     throw new Error("Day calendar approval requires a valid full date.");
   const surface = dayCalendarSurfaceFor(target);
   if (!surface) throw new Error("Day calendar surface is not approved.");
-  if (isDisplayed(surface.popup))
+  // A deferred surface names its field group; its root does not exist yet.
+  if (surface.rendering !== "deferred-generic" && isDisplayed(surface.popup))
     throw new Error("Day calendar must be closed before approval.");
   const format = resolveDayCalendarFormat(target);
   if (format.status !== "resolved")
