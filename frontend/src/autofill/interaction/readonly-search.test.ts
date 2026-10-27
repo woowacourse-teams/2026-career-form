@@ -223,6 +223,48 @@ describe("observeReadonlySearch", () => {
     });
   });
 
+  // An icon-only button (no text, no name) beside a readonly field is still a
+  // candidate opener; the execution-time role decision confirms it.
+  function renderIconOpener(wrapInForm: boolean): HTMLInputElement {
+    const field = `<div class="field"><input id="target" type="text" readonly placeholder="학교명" /><button class="icon"><svg viewBox="0 0 20 20"><path d="M1 1"></path></svg></button></div>`;
+    document.body.innerHTML = `<div data-repeater-item><div class="row">${wrapInForm ? `<form>${field}</form>` : field}<div class="field"><input id="other" type="text" /></div></div></div>`;
+    return document.querySelector<HTMLInputElement>("#target")!;
+  }
+
+  it("accepts a form-less icon-only default button as the single opener", () => {
+    const input = renderIconOpener(false);
+    const opener = document.querySelector<HTMLButtonElement>("button.icon")!;
+    expect(opener.type).toBe("submit");
+    expect(observeReadonlySearch(handleFor(input))).toEqual({
+      status: "eligible",
+      targetCandidateId: "field-1",
+      identity: expect.objectContaining({
+        fieldGroup: input.parentElement,
+        openers: [opener],
+      }),
+    });
+  });
+
+  it("rejects an icon-only default button that would submit a form", () => {
+    const input = renderIconOpener(true);
+    expect(observeReadonlySearch(handleFor(input))).toEqual({
+      status: "unsupported",
+      reason: "search_opener_not_found",
+    });
+  });
+
+  it("treats an icon-only button beside a labelled search button as ambiguous", () => {
+    const input = renderIconOpener(false);
+    input.parentElement!.insertAdjacentHTML(
+      "beforeend",
+      '<button type="button" aria-label="학교명 검색">검색</button>',
+    );
+    expect(observeReadonlySearch(handleFor(input))).toEqual({
+      status: "ambiguous",
+      reason: "multiple_search_openers",
+    });
+  });
+
   it("rejects an anchor opener inheriting a new-window base target", () => {
     const input = renderReadonlyField({ label: "전공" });
     document.querySelector("button")!.outerHTML = '<a href="#">전공 검색</a>';

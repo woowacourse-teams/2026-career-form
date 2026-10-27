@@ -291,7 +291,16 @@ function isPlausibleSearchOpener(
     !["button", "submit", "reset", "image"].includes(element.type)
   )
     return false;
-  return SEARCH_ACTION.test(openerLabel(element));
+  const label = openerLabel(element);
+  if (SEARCH_ACTION.test(label)) return true;
+  // An icon-only button names no action at all. It stays a candidate so the
+  // field group can count it; the execution-time role decision must still
+  // confirm it before any click.
+  return (
+    label === "" &&
+    isButtonElement(element) &&
+    element.querySelector("svg, img") !== null
+  );
 }
 
 /**
@@ -320,7 +329,13 @@ export function safeSearchOpener(
   if (!isPlausibleSearchOpener(element)) return false;
   if (!isVisible(element) || element.matches(":disabled")) return false;
   if (element.closest("[aria-disabled='true']")) return false;
-  if (isButtonElement(element) && element.type !== "button") return false;
+  // A default submit button with no form owner has nothing to submit.
+  if (
+    isButtonElement(element) &&
+    element.type !== "button" &&
+    !(element.type === "submit" && element.form === null)
+  )
+    return false;
   if (isInputElement(element) && element.type !== "button") return false;
   if (isAnchorElement(element)) {
     const href = element.getAttribute("href")?.trim() ?? "";
