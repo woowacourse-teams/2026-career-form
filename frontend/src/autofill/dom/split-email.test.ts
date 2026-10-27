@@ -5,6 +5,7 @@ import {
   splitEmailRetained,
   writeSplitEmail,
   writeSplitEmailSettled,
+  isSplitEmailPair,
 } from "./split-email";
 import type { FieldCandidateHandle } from "./types";
 
@@ -192,6 +193,9 @@ describe("split email domain select replaced after the custom choice", () => {
     expect(value("#email_id")).toBe("qa");
     expect(value("#domain_text")).toBe("other.test");
     expect(splitEmailRetained(handle, "qa@other.test")).toBe(true);
+    // The replaced pair is still the split email pair when the write is re-checked.
+    expect(isSplitEmailTarget(handle)).toBe(false);
+    expect(isSplitEmailPair(handle)).toBe(true);
   });
 
   it("keeps the exact domain option path synchronous", async () => {

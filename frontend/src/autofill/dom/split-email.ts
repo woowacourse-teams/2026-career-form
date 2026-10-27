@@ -251,6 +251,17 @@ function replacedSplitEmailDomain(
   return undefined;
 }
 
+/** The split email pair, before or after the page replaced its domain select. */
+export function isSplitEmailPair(handle: FieldCandidateHandle): boolean {
+  const local = handle.elements[0];
+  return (
+    isSplitEmailTarget(handle) ||
+    (handle.elements.length === 1 &&
+      local instanceof HTMLInputElement &&
+      replacedSplitEmailDomain(local) !== undefined)
+  );
+}
+
 const SETTLE_TIMEOUT_MS = 1000;
 
 /**

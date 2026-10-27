@@ -2,6 +2,7 @@ import { traceWrite } from "../debug/write-trace";
 import { resolveChoiceOption } from "../profile/choice-option";
 import { localWorkflowLog } from "../debug/local-workflow";
 import {
+  isSplitEmailPair,
   isSplitEmailTarget,
   SPLIT_EMAIL_REASON,
   splitEmailRetained,
@@ -1085,7 +1086,7 @@ function retainedGenericValue(
   if (
     (item.analysis?.valueBinding?.profileFieldKey ?? item.analysis?.profileFieldKey) ===
       "contact.contact.email" &&
-    isSplitEmailTarget(handle)
+    isSplitEmailPair(handle)
   )
     return splitEmailRetained(handle, item.profileValue ?? "");
   const command = item.analysis?.writePlan?.command,
