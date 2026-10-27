@@ -1,3 +1,4 @@
+import { majorNameKeyForText } from "./major-key";
 import type { Profile } from "../../profile/model";
 import type {
   AnalysisApiClient,
@@ -422,7 +423,12 @@ function convertSection(
       ]);
       return;
     }
-    const profileFieldKey = response.profileFieldKey ?? undefined;
+    const profileFieldKey = response.profileFieldKey
+      ? majorNameKeyForText(response.profileFieldKey, candidate.control, [
+          candidate.displayName,
+          ...(candidate.semanticContext?.labels ?? []).map((label) => label.text),
+        ])
+      : undefined;
     const dateSource =
       response.binding?.type === "DATE_PART" && profileFieldKey
         ? resolveValueBinding(
