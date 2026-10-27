@@ -381,6 +381,25 @@ describe("deferred generic day calendar", () => {
     );
   });
 
+  it("closes the day calendar it opened when the target year is not offered", async () => {
+    const target = dayField(`<button type="button" aria-label="날짜 선택"></button>`);
+    const opener = document.querySelector<HTMLButtonElement>(".field button")!;
+    const picker = installDayPortal(target, opener);
+
+    await expect(
+      executeDayCalendarSelection({
+        target,
+        targetDate: "2010-05-05",
+        timings: FAST,
+      }),
+    ).resolves.toEqual({
+      status: "needs-verification",
+      reason: "target_year_unavailable",
+    });
+    expect(picker.open()).toBe(false);
+    expect(target.value).toBe("");
+  });
+
   it("closes and fails when a day field opens a month-only calendar", async () => {
     const target = dayField();
     const { portals } = installMonthPortal(target, target);
