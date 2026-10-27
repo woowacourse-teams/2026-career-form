@@ -226,6 +226,95 @@ export function writeSplitEmail(
   return splitEmailRetained(handle, email) ? "written" : "failed";
 }
 
+/**
+ * The pair after a page replaced its domain select with a text input: the
+ * local input, a literal "@" and exactly one more text input in the group.
+ */
+function replacedSplitEmailDomain(
+  input: HTMLInputElement,
+): HTMLInputElement | undefined {
+  for (
+    let group = input.parentElement;
+    group && !group.matches("body, form");
+    group = group.parentElement
+  ) {
+    const controls = [...group.querySelectorAll(CONTROLS)];
+    if (controls.length < 2) continue;
+    if (controls.length !== 2 || controls[0] !== input) return undefined;
+    const domain = controls[1];
+    if (!textInput(domain)) return undefined;
+    const between = input.ownerDocument.createRange();
+    between.setStartAfter(input);
+    between.setEndBefore(domain);
+    return between.toString().trim() === "@" ? domain : undefined;
+  }
+  return undefined;
+}
+
+const SETTLE_TIMEOUT_MS = 1000;
+
+/**
+ * writeSplitEmail, plus the direct-entry choice a page answers on a later
+ * tick by replacing its domain select with a text input. The domain goes only
+ * into that single replacing input; otherwise only the local part stays.
+ */
+export async function writeSplitEmailSettled(
+  handle: FieldCandidateHandle,
+  email: string,
+): Promise<SplitEmailWrite> {
+  const controls = splitEmailControls(handle);
+  const address = splitEmailAddress(email);
+  if (
+    !controls ||
+    !address ||
+    controls.domainInput ||
+    splitEmailDomainOption(controls.select, address.domain)
+  )
+    return writeSplitEmail(handle, email);
+  const { input, select } = controls;
+  const custom = splitEmailCustomOption(select);
+  const selected = select.selectedOptions[0];
+  const view = input.ownerDocument.defaultView;
+  if (
+    !custom ||
+    !view ||
+    select.disabled ||
+    input.readOnly ||
+    input.disabled ||
+    (input.value !== "" && input.value !== address.local) ||
+    (selected && selected.value !== "" && selected !== custom)
+  )
+    return writeSplitEmail(handle, email);
+  const set = (
+    element: HTMLInputElement | HTMLSelectElement,
+    value: string,
+  ) => {
+    const proto =
+      element instanceof view.HTMLSelectElement
+        ? view.HTMLSelectElement.prototype
+        : view.HTMLInputElement.prototype;
+    Object.getOwnPropertyDescriptor(proto, "value")?.set?.call(element, value);
+    element.dispatchEvent(new view.Event("input", { bubbles: true }));
+    element.dispatchEvent(new view.Event("change", { bubbles: true }));
+  };
+  set(input, address.local);
+  if (selected !== custom) set(select, custom.value);
+  const deadline = Date.now() + SETTLE_TIMEOUT_MS;
+  let domain = replacedSplitEmailDomain(input);
+  while (!domain && Date.now() < deadline) {
+    await new Promise((resolve) => view.setTimeout(resolve, 50));
+    domain = replacedSplitEmailDomain(input);
+  }
+  if (!domain || !isWritableWriteElement(domain)) {
+    if (select.isConnected && select.value === custom.value)
+      set(select, selected?.value ?? "");
+    return input.value === address.local ? "partial" : "failed";
+  }
+  if (domain.value !== "" && domain.value !== address.domain) return "conflict";
+  set(domain, address.domain);
+  return splitEmailRetained(handle, email) ? "written" : "failed";
+}
+
 /** Read back the local part and the domain from the option or direct-entry input. */
 export function splitEmailRetained(
   handle: FieldCandidateHandle,
@@ -233,6 +322,16 @@ export function splitEmailRetained(
 ): boolean {
   const controls = splitEmailControls(handle);
   const address = splitEmailAddress(email);
+  const local = handle.elements[0];
+  if (!controls && address && local instanceof HTMLInputElement) {
+    const domain = replacedSplitEmailDomain(local);
+    return (
+      local.value === address.local &&
+      domain !== undefined &&
+      isWritableWriteElement(domain) &&
+      domain.value === address.domain
+    );
+  }
   if (!controls || !address || controls.input.value !== address.local)
     return false;
   const chosen = controls.select.selectedOptions[0];
