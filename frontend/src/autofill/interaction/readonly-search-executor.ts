@@ -204,6 +204,17 @@ const ESCAPE_CLOSE_TIMEOUT_MS = 2000;
 
 const MODAL_SELECTOR = "dialog[open], [role='dialog'][aria-modal='true']";
 
+async function closedWithin(
+  surface: SearchSurface,
+  isOpen: () => boolean,
+): Promise<boolean> {
+  const view = surface.container.ownerDocument.defaultView;
+  const deadline = Date.now() + ESCAPE_CLOSE_TIMEOUT_MS;
+  while (view && isOpen() && Date.now() < deadline)
+    await new Promise((resolve) => view.setTimeout(resolve, 50));
+  return !isOpen();
+}
+
 async function closedAfterEscape(modal: Element, isOpen: () => boolean) {
   const document = modal.ownerDocument;
   const view = document.defaultView;
@@ -286,7 +297,13 @@ export async function closeOwnedSurface(
   } catch {
     return "close_not_confirmed";
   }
-  return surface.closure() === "closed" ? undefined : "close_not_confirmed";
+  if (await closedWithin(surface, () => surface.closure() === "open"))
+    return undefined;
+  const modal = surface.modal;
+  return modal &&
+    (await closedAfterEscape(modal, () => surface.closure() === "open"))
+    ? undefined
+    : "close_not_confirmed";
 }
 
 export async function executeReadonlySearch(
@@ -446,7 +463,8 @@ export async function executeReadonlySearch(
     const regionList = () =>
       completeRegionList(currentSurface, canonicalFieldKey);
     const surfaceGuard = () => {
-      guard(initialValue);
+      // The page may reflect an accepted value while its own surface is open.
+      guard([initialValue, ...matchingValues]);
       observation.assertOwned(currentSurface);
       currentSurface.revalidate();
       validateRegionContext(args, currentSurface);
@@ -556,6 +574,16 @@ export async function executeReadonlySearch(
           binding: ReturnType<typeof bindSelectionEffects>;
         }
       | undefined;
+    // The page bound the query to the target: the typed text already is the
+    // accepted value.
+    const reflectedByQuery = () =>
+      !directEntry &&
+      normalized(identity!.target.value) !== normalized(initialValue) &&
+      (catalogMatch
+        ? identity!.target.value === expectedValue
+        : matchingValues.some(
+            (value) => normalized(value) === normalized(identity!.target.value),
+          ));
     for (const [attemptIndex, searchText] of attempts.entries()) {
       const attemptValues = args.searchValues ? [searchText] : values;
       trace(`검색 시도 ${attemptIndex + 1}/${attempts.length}`, searchText);
@@ -668,6 +696,10 @@ export async function executeReadonlySearch(
         trace("일치 결과 발견", candidate?.element);
         break;
       } catch (error) {
+        if (error instanceof SearchFailure && reflectedByQuery()) {
+          candidate = undefined;
+          break;
+        }
         if (error instanceof SearchFailure)
           localWorkflowLog("search-result-wait", {
             reason: error.reason,
@@ -829,6 +861,47 @@ export async function executeReadonlySearch(
         }
         throw error;
       }
+    }
+    // Accept a query-bound value only when it survives closing the surface.
+    if (reflectedByQuery()) {
+      selectionStarted = true;
+      effect = "value-observed";
+      if (await closeOwnedSurface(currentSurface, false))
+        throw new SearchFailure("popup_unresolved");
+      let retainedSince: number | undefined;
+      await session.wait(() => {
+        guard(matchingValues);
+        retainedSince ??= performance.now();
+        return performance.now() - retainedSince >= 500 ? true : undefined;
+      }, "result_not_reflected");
+      trace("검색어 반영으로 선택 완료", { targetValue: identity.target.value });
+      const reflectedIdentity = identity;
+      return {
+        status: "selected",
+        targetCandidateId,
+        identity,
+        effect,
+        ...(catalogMatch
+          ? {
+              selectedValue: expectedValue,
+              catalogSelection: {
+                evidence: { label: expectedValue },
+                verify: () =>
+                  reflectedIdentity.target.value === expectedValue &&
+                  JSON.stringify(args.catalogMatch) === approvedCatalog &&
+                  typeof targetIsCurrent(
+                    document,
+                    registry,
+                    targetCandidateId,
+                    reflectedIdentity,
+                    args.assertCurrent,
+                    [expectedValue],
+                  ) !== "string" &&
+                  currentSurface.closure() === "closed",
+              },
+            }
+          : {}),
+      };
     }
     if (!candidate) throw new SearchFailure("search_results_not_found");
     const selectedValues = catalogMatch
