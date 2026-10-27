@@ -646,8 +646,16 @@ export async function analyzeGenericFields(
       });
   }
   const educationRecord = singleEducationRecord(profile);
-  const recordOf = (section: GenericSection<SegmentField>) =>
-    educationRecord && isSingleRow(section) ? educationRecord : undefined;
+  const recordOf = (section: GenericSection<SegmentField>) => {
+    if (!educationRecord) return undefined;
+    // Unreadable fields get no hint here; the section's own local processing
+    // reads them again inside its failure isolation and blocks only it.
+    try {
+      return isSingleRow(section) ? educationRecord : undefined;
+    } catch {
+      return undefined;
+    }
+  };
   const entries: SectionEntry[] = segmentGenericSections(
     document,
     segmentFields,
@@ -778,7 +786,10 @@ export async function analyzeGenericFields(
         // A hinted key analysed without its hint must not be reused as hinted.
         if (
           !outcome.fields.some((field) => field.reason) &&
-          hintOf(entry) === recordOf(entry.section)
+          hintOf(entry) ===
+            (categories.get(entry.key) === "EDUCATION"
+              ? recordOf(entry.section)
+              : undefined)
         )
           cache.sections.set(entry.key, outcome);
       }
