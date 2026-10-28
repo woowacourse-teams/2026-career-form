@@ -723,7 +723,10 @@ export async function executeReadonlySearch(
       } catch (error) {
         if (
           error instanceof SearchFailure &&
-          defersToReflectedQuery(error.reason) &&
+          (defersToReflectedQuery(error.reason) ||
+            // The page closed its own search layer after applying the query.
+            (error.reason === "surface_stale" &&
+              currentSurface.closure() === "closed")) &&
           reflectedByQuery()
         ) {
           candidate = undefined;
