@@ -204,6 +204,11 @@ export function installUiDatepicker(document: Document): UiDatepickerHarness {
     root,
     attach(input, options) {
       input.classList.add("hasDatepicker");
+      // jQuery UI hides the open datepicker on Escape in its input.
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && active?.input === input)
+          root.style.display = "none";
+      });
       if (options.trigger) {
         const trigger = document.createElement("button");
         trigger.type = "button";

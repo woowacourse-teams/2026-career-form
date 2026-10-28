@@ -422,12 +422,12 @@ export async function executeDayCalendarSelection(
   if (!opener || !stable()) return interrupted("calendar_opener_unavailable");
   if (!spend()) return interrupted("calendar_budget_exhausted");
   const known = deferred ? knownDeferredRoots(document) : undefined;
-  // A deferred calendar this run opened is closed again before any failure
-  // after it, so a failed field leaves no surface open for later writes.
-  let openedDeferred: HTMLElement | undefined;
+  // A calendar this run opened is closed again before any failure after it,
+  // so a failed field leaves no surface open for later writes.
+  let openedRoot: HTMLElement | undefined;
   const abandon = (fallback: string): DayCalendarExecutionResult => {
-    if (openedDeferred)
-      closeDeferredCalendar(target, surface.opener, [openedDeferred]);
+    if (openedRoot)
+      closeDeferredCalendar(target, surface.opener, [openedRoot]);
     return interrupted(fallback);
   };
   if (surface.openBy === "target") {
@@ -465,7 +465,7 @@ export async function executeDayCalendarSelection(
     }
     popup = root;
     scope = root;
-    openedDeferred = root;
+    openedRoot = root;
   } else {
     const opened = await waitUntil(
       () =>
@@ -484,6 +484,7 @@ export async function executeDayCalendarSelection(
       openCalendarPopups(document).length
     )
       return fail("multiple_calendar_popups_open");
+    openedRoot = popup;
   }
 
   const choose = async (
