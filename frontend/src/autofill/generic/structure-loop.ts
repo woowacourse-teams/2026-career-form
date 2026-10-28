@@ -347,6 +347,9 @@ export async function runGenericStructureLoop(
   const context = createGenericStructureContext();
   const groupScopes = new Map<string, Element>();
   const addDecision = new Map<string, Element | null>();
+  const addDecisionLook = new Map<string, string>();
+  const lookOf = (element: Element) =>
+    `${element.tagName}\u0000${normalizedLabel(element.textContent)}\u0000${element.getAttribute("aria-label") ?? ""}`;
   const revealAsked = new WeakSet<Element>();
   const revealChosen = new WeakSet<Element>();
   const rowKindOptions = new Map<string, Map<TargetKind, string | null>>();
@@ -863,13 +866,28 @@ export async function runGenericStructureLoop(
       }
       const chosen = point.actions.find((ref) => ref.candidateId === chosenId);
       addDecision.set(group.key, chosen?.element ?? null);
+      if (chosen) addDecisionLook.set(group.key, lookOf(chosen.element));
       if (!chosen) {
         blockGroup(group, "REPEAT_ADD_ABSTAINED");
         return false;
       }
     }
-    const element = addDecision.get(group.key);
+    let element = addDecision.get(group.key);
     if (!element) return false;
+    // A page may re-render the chosen add control after each added row, or
+    // turn it into the new row's own control (for example a delete button).
+    // The choice carries over only to the one offered control that looks as
+    // the chosen one looked when it was chosen.
+    if (!point.actions.some((ref) => ref.element === element)) {
+      const look = addDecisionLook.get(group.key);
+      const same = point.actions.filter(
+        (ref) => look !== undefined && lookOf(ref.element) === look,
+      );
+      if (same.length === 1) {
+        element = same[0]!.element;
+        addDecision.set(group.key, element);
+      }
+    }
     const action = point.actions.find((ref) => ref.element === element);
     if (!action) {
       blockGroup(group, lastFailure.get(group.key) ?? "ADD_CONTROL_GONE");
