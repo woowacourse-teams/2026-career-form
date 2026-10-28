@@ -927,3 +927,11 @@
 - 승인된 후보 2개를 [CF-350 bundle](../raw/issues/CF-350/manifest.md)에 두 payload로 기록했다. CI/CD 설정(알림 토글·선택값 2개·VAPID 시크릿 3개의 전달 경로로 변수 13개·시크릿 10개, 빈 문자열과 Spring placeholder 기본값 때문에 compose가 선택값 기본값을 채우는 이유, Environment 값은 다음 배포에서만 반영되는 점과 환경별 재배포 트리거), 배포 Runbook(병합 전 점검표의 운영 알림 토글 결정 항목, 스테이징 활성화 순서, 키 회전의 구독 무효).
 - [CI/CD 설정](topics/cicd-setup.md)과 [배포 Runbook](topics/deployment-runbook.md)의 Current를 CF-350으로 바꾸고 앞선 근거를 History에 남겼다. 절차의 Wiki 밖 정본은 `infra/WEB_PUSH_VAPID.md`다.
 - VAPID 키 값, 호스트 주소, 계정, 대화 전문은 저장하지 않았다.
+
+## [2026-10-29] ingest | CF-359 비회원 설치 식별과 AI 호출 제어
+
+- Approval-Digest: bc7b00b7ec787f72dc24dc050a77e1e0377227aff984376b29bee54847d3adc7
+- Source-Revision: ec983c749ee312b182eea0e06ab716858123f6f2
+- 승인된 후보 세 개를 [CF-359 bundle](../raw/issues/CF-359/manifest.md)에 기록했다. 승인된 ADR, 등록 결과와 자격의 수명 구분, 성공 정산의 검증 경계 및 합성 비교의 해석을 보존했다.
+- [비회원 설치 식별과 AI 호출 제어](topics/anonymous-analysis-admission.md)를 신규 색인에 연결했다. 운영 활성화와 실제 사용자 효과는 미확인으로 남겼다.
+- 대화 전문, 실제 자격과 키, IP, 지원 정보는 저장하지 않았다.
