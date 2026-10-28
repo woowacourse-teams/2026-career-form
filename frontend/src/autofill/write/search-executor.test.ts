@@ -297,6 +297,38 @@ describe("approved search batch boundaries", () => {
     ]);
   });
 
+  it("continues after a generic day calendar failure whose popup wraps its unchanged empty target", async () => {
+    const test = setup(2);
+    const target = document.querySelector<HTMLInputElement>("input")!;
+    target.value = "";
+    test.items[0]!.currentValue = "";
+    test.items[0]!.analysis!.writePlan = { command: "SELECT_DATE" };
+    // The widget's popup root is the field box that also holds the input.
+    test.items[0]!.dayCalendarApproval = {
+      popup: target.closest("dl")!,
+    } as unknown as ReviewPlanItem["dayCalendarApproval"];
+    test.items[1]!.analysis!.writePlan = { command: "SET_TEXT" };
+
+    const stopped = await executeApprovedSearchWrites({
+      ...test,
+      writeOrdinary: (item) =>
+        item.candidateId === "field-0"
+          ? {
+              result: {
+                candidateId: item.candidateId,
+                status: "skipped",
+                reason: "needs-verification",
+                code: "RETAINED_VALUE_UNCONFIRMED",
+              },
+              effect: "stop",
+            }
+          : { candidateId: item.candidateId, status: "written" },
+    });
+
+    expect(stopped).toBe(false);
+    expect(test.results[1]).toMatchObject({ candidateId: "field-1", status: "written" });
+  });
+
   it("stops later ordinary writes after a search changes the page without a confirmed result", async () => {
     const test = setup(2);
     test.items[0]!.currentValue = "";

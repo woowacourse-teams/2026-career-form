@@ -500,6 +500,9 @@ export async function executeApprovedSearchWrites({
               ).filter((control) => !popup?.contains(control))
             : [];
         const before = captureControlState(controls());
+        // A widget's popup root may wrap its own target, which then is not
+        // among the compared controls; keep the target's own prior value.
+        const targetBefore = target?.value;
         // A surface that was already open belongs to an earlier field, not to
         // this write; only surfaces this write left open keep the hold.
         const overlays = () =>
@@ -573,8 +576,7 @@ export async function executeApprovedSearchWrites({
             (result.code === "STALE_TARGET" ||
               result.code === "RETAINED_VALUE_UNCONFIRMED") &&
             target &&
-            (target.value === item.profileValue ||
-              target.value === before.find((old) => old.control === target)?.value) &&
+            (target.value === item.profileValue || target.value === targetBefore) &&
             closed &&
             correspondence &&
             (item.analysis?.writePlan?.command === "SELECT_DATE" ||
