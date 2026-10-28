@@ -163,11 +163,15 @@ it("runs the vendor address executor for a generic page with two visible fields"
   expect(result?.fields.map((field) => field.candidateId)).toEqual([]);
 });
 
-function detailLessGeneric(extraEditable: boolean) {
+function detailLessGeneric(
+  extraEditable: boolean,
+  { iconOnly = false, extraBefore = false } = {},
+) {
   const scope = document.createElement("div");
   document.body.append(scope);
   const button = document.createElement("button");
-  button.textContent = "우편번호 찾기";
+  if (iconOnly) button.innerHTML = "<svg></svg>";
+  else button.textContent = "우편번호 찾기";
   const rows = [
     { candidateId: "f0", domName: "zip", element: "input", control: "text", visibility: "visible", readonly: true, disabled: false, inert: false },
     { candidateId: "f1", domName: "road", element: "input", control: "text", visibility: "visible", readonly: true, disabled: false, inert: false },
@@ -182,7 +186,9 @@ function detailLessGeneric(extraEditable: boolean) {
     return input;
   });
   scope.append(inputs[0]!, inputs[1]!, button);
-  if (inputs[2]) document.body.append(inputs[2]);
+  if (inputs[2])
+    if (extraBefore) scope.before(inputs[2]);
+    else document.body.append(inputs[2]);
   const snapshot = {
     request: { snapshotId: "s", sections: [{ fields: rows }] },
     registry: {
@@ -251,6 +257,95 @@ it("keeps a detail-less generic address manual when an editable text field could
 
   expect(runKakaoAddress).not.toHaveBeenCalled();
   expect(result?.fields.map((field) => field.candidateId)).toEqual([]);
+});
+
+it("runs a detail-less generic address when the editable field sits before the address, not after it", async () => {
+  document.body.replaceChildren();
+  const { runKakaoAddress } = await import("../address/kakao-executor");
+  vi.mocked(runKakaoAddress).mockClear();
+  const { inputs, snapshot, analysis } = detailLessGeneric(true, {
+    extraBefore: true,
+  });
+
+  await runAddressAnalysis({
+    analysis,
+    snapshot,
+    adapter: {} as unknown as WorkflowAdapter,
+    run: { controller: new AbortController() },
+    pageDocument: document,
+    profile: createEmptyProfile(),
+    repository: { load: async () => createEmptyProfile() },
+    addressSearch: vi.fn(),
+    onWriteResult: vi.fn(),
+    setAddressResult: vi.fn(),
+  });
+
+  expect(runKakaoAddress).toHaveBeenCalledOnce();
+  expect(vi.mocked(runKakaoAddress).mock.calls[0]![0].targets).toEqual({
+    postalCode: inputs[0],
+    address: inputs[1],
+  });
+});
+
+it("takes the single icon-only button in the address row as its search trigger", async () => {
+  document.body.replaceChildren();
+  const { runKakaoAddress } = await import("../address/kakao-executor");
+  vi.mocked(runKakaoAddress).mockClear();
+  const { snapshot, analysis } = detailLessGeneric(false, { iconOnly: true });
+
+  await runAddressAnalysis({
+    analysis,
+    snapshot,
+    adapter: {} as unknown as WorkflowAdapter,
+    run: { controller: new AbortController() },
+    pageDocument: document,
+    profile: createEmptyProfile(),
+    repository: { load: async () => createEmptyProfile() },
+    addressSearch: vi.fn(),
+    onWriteResult: vi.fn(),
+    setAddressResult: vi.fn(),
+  });
+
+  expect(runKakaoAddress).toHaveBeenCalledOnce();
+  expect(vi.mocked(runKakaoAddress).mock.calls[0]![0].button).toBe(
+    document.querySelector("button:has(svg)"),
+  );
+});
+
+it("removes only the address fields when the page controls carry no name or id", async () => {
+  document.body.replaceChildren();
+  const { runKakaoAddress } = await import("../address/kakao-executor");
+  vi.mocked(runKakaoAddress).mockClear();
+  const { snapshot, analysis } = detailLessGeneric(false);
+  for (const field of snapshot.request.sections[0]!.fields) delete field.domName;
+  snapshot.request.sections[0]!.fields.push({
+    candidateId: "phone",
+    element: "input",
+    control: "text",
+    visibility: "visible",
+  });
+  analysis.fields.push({
+    candidateId: "phone",
+    matchType: "MATCH",
+    mappingStatus: "LLM_SUGGESTED",
+    valueBinding: { type: "DIRECT", profileFieldKey: "contact.contact.phoneNumber" },
+  } as unknown as (typeof analysis.fields)[number]);
+
+  const result = await runAddressAnalysis({
+    analysis,
+    snapshot,
+    adapter: {} as unknown as WorkflowAdapter,
+    run: { controller: new AbortController() },
+    pageDocument: document,
+    profile: createEmptyProfile(),
+    repository: { load: async () => createEmptyProfile() },
+    addressSearch: vi.fn(),
+    onWriteResult: vi.fn(),
+    setAddressResult: vi.fn(),
+  });
+
+  expect(runKakaoAddress).toHaveBeenCalledOnce();
+  expect(result?.fields.map((field) => field.candidateId)).toEqual(["phone"]);
 });
 
 it("never leaves a search-only detail address writable without its search", async () => {
