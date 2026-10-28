@@ -425,9 +425,20 @@ export async function executeDayCalendarSelection(
   // A calendar this run opened is closed again before any failure after it,
   // so a failed field leaves no surface open for later writes.
   let openedRoot: HTMLElement | undefined;
-  const abandon = (fallback: string): DayCalendarExecutionResult => {
-    if (openedRoot)
+  const abandon = async (
+    fallback: string,
+  ): Promise<DayCalendarExecutionResult> => {
+    if (openedRoot) {
       closeDeferredCalendar(target, surface.opener, [openedRoot]);
+      // The page may hide the calendar after a short animation; a later
+      // write must not see it close during its own check.
+      await waitUntil(
+        () =>
+          displayedDayCalendarRoots(document).length === 0 &&
+          openCalendarPopups(document).length === 0,
+        timings.openWaitMs,
+      );
+    }
     return interrupted(fallback);
   };
   if (surface.openBy === "target") {

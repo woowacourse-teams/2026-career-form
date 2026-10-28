@@ -49,6 +49,47 @@ it.each(["CALENDAR_YEAR_CONTROL", "CALENDAR_MONTH_CONTROL"])(
   },
 );
 
+it("waits until a calendar that closes late is hidden before it reports the abstained role", async () => {
+  vi.useFakeTimers();
+  document.body.innerHTML = `<label>입사일<input readonly type="text" placeholder="YYYY-MM-DD"></label>`;
+  const target = document.querySelector("input");
+  if (!target) throw new Error("Missing target");
+  installUiDatepicker(document).attach(target, {
+    trigger: true,
+    yearRange: [2020, 2026],
+    defaultDate: "2020-01-01",
+    closeDelayMs: 200,
+  });
+  const provider: InteractionDecisionProvider = async (request) => ({
+    schemaVersion: 2,
+    snapshotId: request.snapshotId,
+    status: "COMPLETE",
+    mode: "GENERIC",
+    decisions: request.decisions.map((decision) => ({
+      decisionId: decision.decisionId,
+      role: decision.role,
+      selection:
+        decision.role === "CALENDAR_YEAR_CONTROL" ? "ABSTAINED" : "SELECTED",
+      candidateId:
+        decision.role === "CALENDAR_YEAR_CONTROL"
+          ? null
+          : decision.candidates[0]?.candidateId,
+    })),
+  });
+  let shownAtResult: number | undefined;
+  const pending = executeDayCalendarSelection({
+    target,
+    targetDate: "2024-02-29",
+    interactionDecisionProvider: provider,
+  }).then((result) => {
+    shownAtResult = displayedDayCalendarRoots(document).length;
+    return result;
+  });
+  await vi.runAllTimersAsync();
+  expect((await pending).status).toBe("needs-verification");
+  expect(shownAtResult).toBe(0);
+});
+
 it.each([false, true])(
   "requires opaque day-role classification before committing (abstain=%s)",
   async (abstain) => {
