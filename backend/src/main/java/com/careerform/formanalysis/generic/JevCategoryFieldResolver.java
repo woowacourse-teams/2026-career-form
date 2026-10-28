@@ -66,6 +66,9 @@ public final class JevCategoryFieldResolver {
             + "across rows or sections. Field count alone does not distinguish a whole name from a partial name.";
     private static final Logger log = LoggerFactory.getLogger(JevCategoryFieldResolver.class);
 
+    @Autowired(required = false)
+    private com.careerform.admission.AiAdmission admission;
+
     private final JevClient client;
     private final SupportedProfileFields fields;
     private final SectionCategories categories;
@@ -224,6 +227,10 @@ public final class JevCategoryFieldResolver {
         Map<String, JevClient.Choice> questions = new LinkedHashMap<>();
         batch.forEach(question -> questions.put(question.id(),
             new JevClient.Choice(instructions(question.id()), work.criteria())));
+        if (admission != null) {
+            jevCalls.incrementAndGet();
+            return client.answer(state, questions);
+        }
         try {
             if (!permits.tryAcquire(permitTimeoutMs, TimeUnit.MILLISECONDS)) {
                 throw new PermitUnavailable();

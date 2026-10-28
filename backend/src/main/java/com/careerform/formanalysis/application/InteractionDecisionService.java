@@ -41,6 +41,9 @@ public final class InteractionDecisionService {
     private static final String INVALID_RESOLUTION_MESSAGE =
         "동적 판단 출력 계약을 확인할 수 없습니다";
 
+    @Autowired(required = false)
+    private com.careerform.admission.AiAdmission admission;
+
     private final Optional<InteractionDecisionProvider> provider;
     private final FormAnalysisRouter router;
     private final InteractionObservationProjector projector;
@@ -90,21 +93,24 @@ public final class InteractionDecisionService {
         }
 
         try {
-            Projection projection = projector.project(request);
-            InteractionDecisionProvider.Resolution providerResolution = provider
-                .orElseThrow()
-                .decide(projection.batch());
-            validateProjectedResolution(
-                projection.batch(),
-                providerResolution
-            );
-            InteractionDecisionProvider.Resolution resolution = projection
-                .restore(providerResolution);
-            validateResolution(request, resolution);
-            return InteractionDecisionResponse.complete(
-                request.snapshotId(),
-                responseDecisions(request, resolution)
-            );
+            java.util.function.Supplier<InteractionDecisionResponse> analysis = () -> {
+                Projection projection = projector.project(request);
+                InteractionDecisionProvider.Resolution providerResolution = provider
+                    .orElseThrow()
+                    .decide(projection.batch());
+                validateProjectedResolution(
+                    projection.batch(),
+                    providerResolution
+                );
+                InteractionDecisionProvider.Resolution resolution = projection
+                    .restore(providerResolution);
+                validateResolution(request, resolution);
+                return InteractionDecisionResponse.complete(
+                    request.snapshotId(),
+                    responseDecisions(request, resolution)
+                );
+            };
+            return admission == null ? analysis.get() : admission.validatedResults(analysis);
         }
         catch (ResolverException exception) {
             return InteractionDecisionResponse.llmUnavailable(

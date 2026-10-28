@@ -59,6 +59,9 @@ import tools.jackson.databind.type.LogicalType;
 @Component
 @Conditional(InteractionProviderConditions.OpenAiClient.class)
 public final class OpenAiClient {
+    @Autowired(required = false)
+    private com.careerform.admission.AiAdmission admission;
+
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.careerform.formanalysis.infrastructure.LocalLlmDiagnostics localDiagnostics;
 
@@ -151,6 +154,12 @@ public final class OpenAiClient {
         UnaryOperator<String> jsonSchemaCustomizer,
         boolean interaction
     ) {
+        return admission == null ? generateResult(systemPrompt, input, outputType, jsonSchemaCustomizer, interaction)
+            : admission.logical(() -> generateResult(systemPrompt, input, outputType, jsonSchemaCustomizer, interaction));
+    }
+
+    private <O> O generateResult(String systemPrompt, Object input, Class<O> outputType,
+                                UnaryOperator<String> jsonSchemaCustomizer, boolean interaction) {
         String sanitizedJson = objectMapper.writeValueAsString(input);
         String stage = stage(outputType, interaction);
         long startedAt = System.nanoTime();
@@ -179,21 +188,19 @@ public final class OpenAiClient {
             ChatClient selectedChatClient = interaction
                 ? interactionChatClient
                 : chatClient;
-            var request = selectedChatClient.prompt()
-                .system(systemPrompt)
-                .user(sanitizedJson)
-                .options(interaction
-                    ? OpenAiChatOptions.builder()
-                        .store(true)
-                        .responseFormat(responseFormat(converter))
-                        .timeout(Duration.ofSeconds(8))
-                        .maxRetries(0)
-                    : OpenAiChatOptions.builder()
-                        .store(true)
-                        .responseFormat(responseFormat(converter)));
+            var options = interaction
+                ? OpenAiChatOptions.builder().store(true).responseFormat(responseFormat(converter))
+                    .timeout(Duration.ofSeconds(8)).maxRetries(0)
+                : OpenAiChatOptions.builder().store(true).responseFormat(responseFormat(converter));
+            if (admission != null) options.timeout(Duration.ofMillis(admission.timeoutMillis(8000))).maxRetries(0);
+            var request = selectedChatClient.prompt().system(systemPrompt).user(sanitizedJson).options(options);
             if (localDiagnostics != null) localDiagnostics.start("openai", stage);
             called = true;
-            response = request.call().chatResponse();
+            response = admission == null ? request.call().chatResponse() : admission.transmit(() -> {
+                options.timeout(Duration.ofMillis(admission.timeoutMillis(8000)));
+                admission.sent();
+                return request.options(options).call().chatResponse();
+            });
             logResponseMetadata(stage, outputType, response);
             if (response != null && response.hasFinishReasons(Set.of("length"))) {
                 throw outputLengthLimit();
@@ -219,6 +226,7 @@ public final class OpenAiClient {
             throw exception;
         }
         catch (RuntimeException exception) {
+            if (exception instanceof com.careerform.admission.AdmissionFailure failure) throw failure;
             completeTrace(trace, projection, response, exception);
             recordMetrics(interaction, startedAt, exception, called, response);
             logFailure(stage, outputType, startedAt, exception);
