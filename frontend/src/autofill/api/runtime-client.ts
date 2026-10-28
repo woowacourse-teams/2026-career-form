@@ -46,6 +46,22 @@ const errorMessages: Record<
   NETWORK: "분석 서버에 연결할 수 없습니다.",
   BAD_REQUEST: "현재 지원서 구조를 분석할 수 없습니다.",
   PAYLOAD_TOO_LARGE: "현재 지원서의 분석 범위가 너무 큽니다.",
+  USER_LIMIT: "이번 시간의 분석 이용량을 모두 사용했습니다.",
+  INSTALL_LIMIT:
+    "짧은 시간에 분석 요청이 많습니다. 잠시 후 다시 시도해 주세요.",
+  GLOBAL_LIMIT:
+    "서비스의 분석 이용량이 소진되었습니다. 안내된 시간 이후 다시 시도해 주세요.",
+  REGISTRATION_LIMIT:
+    "새 설치 등록 요청이 많습니다. 잠시 후 다시 시도해 주세요.",
+  AI_BUSY:
+    "분석 요청이 몰려 대기 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.",
+  INSTALL_BUSY: "이미 진행 중인 분석이 많습니다. 완료 후 다시 시도해 주세요.",
+  ADMISSION_UNAVAILABLE:
+    "분석 이용 확인에 실패했습니다. 잠시 후 다시 시도해 주세요.",
+  INVALID_INSTALLATION: "설치 자격을 확인할 수 없습니다.",
+  INSECURE_TRANSPORT: "보안 연결을 확인할 수 없어 분석을 중단했습니다.",
+  ANALYSIS_DEADLINE: "분석 제한 시간이 초과되었습니다. 다시 시도해 주세요.",
+  ANALYSIS_CANCELLED: "분석이 중단되었습니다.",
   RATE_LIMITED: "분석 요청이 많습니다. 잠시 후 다시 시도해 주세요.",
   SERVER_ERROR: "분석 서버에서 오류가 발생했습니다.",
   INVALID_RESPONSE: "분석 서버 응답을 확인할 수 없습니다.",
@@ -66,9 +82,7 @@ export class AnalysisServiceError extends Error {
 
 /** A timeout or unreachable server, as opposed to a server or contract answer. */
 export function isTransientAnalysisError(error: unknown): boolean {
-  return (
-    error instanceof AnalysisServiceError && error.transport !== undefined
-  );
+  return error instanceof AnalysisServiceError && error.transport !== undefined;
 }
 
 export class RuntimeAnalysisApiClient implements AnalysisApiClient {
@@ -207,7 +221,10 @@ export class RuntimeAnalysisApiClient implements AnalysisApiClient {
     }
     if (!envelope.ok) {
       throw new AnalysisServiceError(
-        errorMessages[envelope.code],
+        errorMessages[envelope.code] +
+          (envelope.retryAt
+            ? ` 재시도 가능 시간: ${new Date(envelope.retryAt).toLocaleTimeString("ko-KR")}`
+            : ""),
         envelope.status,
         undefined,
         envelope.code === "TIMEOUT" || envelope.code === "NETWORK"

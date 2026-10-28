@@ -1,3 +1,4 @@
+import { createInstallationClient } from "../src/autofill/api/installation-client";
 import { loadPolicyForSender } from "../src/autofill/policy/background";
 import { createProfileWriteHandler } from "../src/storage/profile-write-handler";
 import { installPostingBackground } from "../src/job-postings/background";
@@ -56,7 +57,20 @@ export default defineBackground(() => {
     ).catch(() => undefined);
   });
   browser.runtime.onConnect.addListener(createAddressRelay(browser.runtime.id));
+  const installation =
+    import.meta.env.VITE_AI_ADMISSION_ENABLED === "true"
+      ? createInstallationClient({
+          baseUrl: import.meta.env.VITE_API_BASE_URL ?? "",
+          storage: browser.storage.local,
+          lock: (operation) =>
+            navigator.locks.request(
+              "career-form-analysis-installation",
+              operation,
+            ),
+        })
+      : undefined;
   const handleMessage = createAnalysisMessageHandler({
+    installation,
     baseUrl: import.meta.env.VITE_API_BASE_URL,
     extensionId: browser.runtime.id,
     extensionVersion: browser.runtime.getManifest().version,
