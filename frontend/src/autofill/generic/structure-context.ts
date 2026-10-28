@@ -25,6 +25,8 @@ export interface GenericStructureContext {
       selectedValue?: string;
       /** The fixed stage text a select-less row shows. */
       label?: string;
+      /** A non-select control the structure step used to choose the stage. */
+      kindControl?: HTMLElement;
     }
   >;
 }
@@ -141,7 +143,8 @@ function structuralBlockReason(
   ) {
     const binding = context.educationRows.get(row);
     if (!binding) reason = "ROW_KIND_UNCONFIRMED";
-    else if (element === binding.select) reason = "ROW_KIND_ALREADY_PREPARED";
+    else if (element === binding.select || element === binding.kindControl)
+      reason = "ROW_KIND_ALREADY_PREPARED";
     else if (key && !key.startsWith(`education.${binding.sectionId}.`))
       reason = "STAGE_KEY_MISMATCH";
     else if (binding.select && binding.select.value !== binding.selectedValue)

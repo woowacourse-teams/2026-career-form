@@ -1,4 +1,5 @@
 import { withStructuralCollection } from "../debug/structural-diagnostics";
+import { iconGlyphLabel } from "./icon-glyph";
 import {
   collectNativeFields,
   collectNativePreparation,
@@ -1012,9 +1013,21 @@ function collectActionElements(document: Document) {
       HTMLButtonElement | HTMLInputElement | HTMLSelectElement
     >("button, input[type='button'], input[type='radio'], select"),
   ).filter((element) => {
-    if (element instanceof HTMLButtonElement && element.type !== "button")
+    // A typeless button outside any form submits nothing; only its drawn
+    // plus or minus names it.
+    const glyph =
+      element instanceof HTMLButtonElement &&
+      !element.hasAttribute("type") &&
+      !element.form
+        ? iconGlyphLabel(element)
+        : undefined;
+    if (
+      element instanceof HTMLButtonElement &&
+      element.type !== "button" &&
+      !glyph
+    )
       return false;
-    const label = labelOf(element);
+    const label = labelOf(element) || glyph;
     if (element instanceof HTMLSelectElement) {
       return !isHidden(element) && Boolean(element.id || element.name);
     }
@@ -1355,7 +1368,9 @@ function collectPreparationSnapshotInternal(
         semanticContext: collectActionSemanticContext(element, container, {
           generic: companyId === "generic",
         }),
-        ...(labelOf(element) ? { displayName: labelOf(element) } : {}),
+        ...((labelOf(element) || iconGlyphLabel(element))
+          ? { displayName: labelOf(element) || iconGlyphLabel(element) }
+          : {}),
         ...(domId ? { domId } : {}),
         ...(metadata(element.name) ? { domName: metadata(element.name) } : {}),
         ...(element.disabled ? { disabled: true } : {}),

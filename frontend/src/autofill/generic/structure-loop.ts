@@ -29,6 +29,7 @@ import {
   type EducationRowKind,
 } from "../profile/education-row-kind";
 import { genericRowFor } from "../dom/repeatable-rows";
+import { iconGlyphLabel } from "../dom/icon-glyph";
 import { stageRowsAround } from "./education-stage-rows";
 import { acquireDocumentRun } from "../interaction/document-run";
 import {
@@ -304,7 +305,51 @@ function controlLabel(
   const text = normalizedLabel(element.textContent);
   if (text) return { source: "label", text };
   const title = normalizedLabel(element.getAttribute("title"));
-  return title ? { source: "title", text: title } : undefined;
+  if (title) return { source: "title", text: title };
+  const glyph = iconGlyphLabel(element);
+  return glyph ? { source: "label", text: glyph } : undefined;
+}
+
+function isHiddenElement(element: Element): boolean {
+  if (element.closest("[hidden], [aria-hidden='true'], [inert]")) return true;
+  const view = element.ownerDocument.defaultView;
+  for (let node: Element | null = element; node; node = node.parentElement) {
+    const style = view?.getComputedStyle(node);
+    if (style && (style.display === "none" || style.visibility === "hidden"))
+      return true;
+  }
+  return false;
+}
+
+/** What a listbox control shows: its text, or the value its input shows. */
+function displayedValue(control: HTMLElement): string {
+  const inputs =
+    control instanceof HTMLInputElement
+      ? [control]
+      : Array.from(control.querySelectorAll("input"));
+  const shown =
+    inputs.length === 1 && inputs[0]!.value.trim()
+      ? inputs[0]!.value
+      : control.textContent;
+  return normalizedLabel(
+    shown?.trim() ? shown : control.getAttribute("aria-valuetext"),
+  );
+}
+
+/** The order and kind of the controls a box holds, without their values. */
+function controlLayout(box: Element): string {
+  return Array.from(
+    box.querySelectorAll("input, textarea, select, [aria-haspopup='listbox']"),
+  )
+    .map((control) =>
+      [
+        control.tagName,
+        control.getAttribute("type") ?? "",
+        control.getAttribute("placeholder") ?? "",
+        control.getAttribute("aria-haspopup") ?? "",
+      ].join("/"),
+    )
+    .join("|");
 }
 
 /** The server rejects a structure question holding any other candidate. */
@@ -499,7 +544,8 @@ export async function runGenericStructureLoop(
     const candidates = sections.filter(
       (section) =>
         section.boundary === "repeat-row" ||
-        section.fields[0]?.element instanceof HTMLSelectElement,
+        section.fields[0]?.element instanceof HTMLSelectElement ||
+        listboxKindRow(section, sections) !== undefined,
     );
     await classify(
       candidates,
@@ -1312,8 +1358,299 @@ export async function runGenericStructureLoop(
     }
   }
 
+  /**
+   * An education section whose single row starts with a listbox button that
+   * names the row's stage. The row is the smallest box holding that button
+   * and the section's last field.
+   */
+  function listboxKindRow(
+    section: GenericSection<LoopField>,
+    sections: readonly GenericSection<LoopField>[] = [],
+  ): { row: Element; kind: HTMLElement } | undefined {
+    if (section.boundary === "repeat-row") return undefined;
+    const first = section.fields[0]?.element;
+    const last = section.fields.at(-1)?.element;
+    if (!first || !last) return undefined;
+    const foreign = sections
+      .filter((other) => other !== section)
+      .flatMap((other) => other.fields.map(({ element }) => element));
+    const precedingKind = (box: Element) =>
+      Array.from(box.querySelectorAll<HTMLElement>("[aria-haspopup='listbox']"))
+        .filter((element) => !isHiddenElement(element))
+        .filter(
+          (element) =>
+            (element.compareDocumentPosition(first) &
+              Node.DOCUMENT_POSITION_FOLLOWING) !==
+            0,
+        )
+        .at(-1);
+    for (
+      let row: Element | null = first.parentElement;
+      row && row !== document.body;
+      row = row.parentElement
+    ) {
+      if (foreign.some((element) => row!.contains(element))) return undefined;
+      if (!row.contains(last)) continue;
+      const kind = precedingKind(row);
+      if (kind) return { row, kind };
+    }
+    return undefined;
+  }
+
+  /** Rows with the same control layout as the first row, outermost first. */
+  function sameLayoutRows(row: Element, scope: Element): Element[] {
+    const layout = controlLayout(row);
+    // A box around the first row matches while it holds that row alone.
+    const found = Array.from(scope.querySelectorAll(row.tagName)).filter(
+      (candidate) =>
+        (candidate === row || !candidate.contains(row)) &&
+        controlLayout(candidate) === layout,
+    );
+    return found.filter(
+      (candidate) =>
+        !found.some((other) => other !== candidate && other.contains(candidate)),
+    );
+  }
+
+  async function waitFor<T>(
+    read: () => T | undefined,
+    timeoutMs = 2000,
+  ): Promise<T | undefined> {
+    const until = Date.now() + timeoutMs;
+    for (;;) {
+      const value = read();
+      if (value !== undefined || Date.now() >= until || aborted()) return value;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+  }
+
+  /**
+   * Adds rows through the section's add control and chooses each row's stage
+   * in its listbox, so every profile education entry gets its own row.
+   */
+  /** Returns its observation when it changed nothing, so the loop can reuse it. */
+  async function prepareListboxEducationRows(): Promise<Observation | undefined> {
+    const wanted = profile.education
+      .map((entry, index) => ({ entry, index, kind: kindOfEntry(entry) }))
+      .filter(
+        (item): item is { entry: (typeof profile.education)[number]; index: number; kind: EducationRowKind } =>
+          item.kind !== undefined,
+      );
+    if (
+      wanted.length < 2 ||
+      !Array.from(
+        document.querySelectorAll<HTMLElement>("[aria-haspopup='listbox']"),
+      ).some((element) => !isHiddenElement(element))
+    )
+      return undefined;
+    const rank: EducationRowKind[] = [
+      "HIGH_SCHOOL",
+      "JUNIOR_COLLEGE",
+      "UNIVERSITY",
+      "MASTER",
+      "DOCTOR",
+    ];
+    wanted.sort((a, b) => rank.indexOf(b.kind) - rank.indexOf(a.kind));
+    let observation = await observe();
+    const section = observation.sections.find(
+      (candidate) =>
+        classified.get(sectionCacheKey(candidate)) === "education" &&
+        listboxKindRow(candidate, observation.sections) !== undefined,
+    );
+    if (!section) return observation;
+    const { row: firstRow, kind: firstKind } = listboxKindRow(
+      section,
+      observation.sections,
+    )!;
+    const scope = document.body;
+    const title = section.title;
+    const listboxesOf = (row: Element) =>
+      Array.from(row.querySelectorAll<HTMLElement>("[aria-haspopup='listbox']"))
+        .filter((element) => !isHiddenElement(element));
+    // Every row holds the stage control at the same place as the first row.
+    const kindIndex = listboxesOf(firstRow).indexOf(firstKind);
+    const kindOf = (row: Element) => listboxesOf(row)[kindIndex];
+    const valuesOf = (rows: Element[]) =>
+      rows
+        .flatMap((row) =>
+          Array.from(
+            row.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
+              "input, textarea, select",
+            ),
+          ),
+        )
+        .map((control) => `${control.isConnected}\u0000${control.value}`)
+        .join("\u0001");
+    for (let added = 0; added < MAX_ACTIONS_PER_SECTION; added += 1) {
+      const rows = sameLayoutRows(firstRow, scope);
+      if (rows.length >= wanted.length || aborted()) break;
+      const last = rows.at(-1)!;
+      const refs = actionRefs(observation).filter(
+        (ref) => isOfferableAddControl(ref) && last.contains(ref.element),
+      );
+      if (refs.length === 0) {
+        record({ kind: "ADD_ROW", ...(title ? { sectionTitle: title } : {}), result: "blocked", reason: "NO_ADD_CONTROL" });
+        return;
+      }
+      const chosenId = await askButtons(
+        "REPEAT_ADD",
+        REPEAT_KEYS.education!,
+        refs,
+        observation,
+        (ref) => {
+          const own = controlLabel(ref.element);
+          const heading = normalizedLabel(title);
+          const labels = [
+            ...(own ? [own] : []),
+            ...(heading ? [{ source: "section-heading" as const, text: heading }] : []),
+          ];
+          return {
+            candidateId: ref.candidateId,
+            element: ref.observed.element as InteractionCandidate["element"],
+            control: "button",
+            visibility: ref.observed.visibility,
+            relationToTarget: "SAME_REPEAT_ROW",
+            ...(labels.length > 0 ? { semanticContext: { labels } } : {}),
+          };
+        },
+      );
+      const chosen = refs.find((ref) => ref.candidateId === chosenId);
+      if (!chosen || !isSafeStructuralClick(chosen.element, document.body).allowed) {
+        record({ kind: "ADD_ROW", ...(title ? { sectionTitle: title } : {}), result: "blocked", reason: chosenId === undefined ? "INTERACTION_UNAVAILABLE" : "REPEAT_ADD_ABSTAINED" });
+        return;
+      }
+      const before = valuesOf(rows);
+      chosen.element.click();
+      const grown = await waitFor(() =>
+        sameLayoutRows(firstRow, scope).length === rows.length + 1 ? true : undefined,
+      );
+      await settle();
+      if (document.URL !== initialUrl) return;
+      if (!grown || valuesOf(rows) !== before) {
+        record({ kind: "ADD_ROW", ...(title ? { sectionTitle: title } : {}), result: "blocked", reason: grown ? "executor:existing-group-value-changed" : "ADD_FAILED" });
+        return;
+      }
+      record({ kind: "ADD_ROW", ...(title ? { sectionTitle: title } : {}), result: "done", rowsBefore: rows.length, rowsAfter: rows.length + 1 });
+      observation = await observe();
+    }
+    const rows = sameLayoutRows(firstRow, scope).slice(0, wanted.length);
+    const parent = rows.length > 1
+      ? (() => {
+          let common: Element | null = rows[0]!.parentElement;
+          while (common && !rows.every((row) => common!.contains(row)))
+            common = common.parentElement;
+          return common;
+        })()
+      : rows[0]?.parentElement;
+    if (parent) context.educationGroups.add(parent);
+    const sectionCounts = new Map<string, number>();
+    for (const [rowIndex, row] of rows.entries()) {
+      const item = wanted[rowIndex]!;
+      const kindButton = kindOf(row);
+      const blockRow = (reason: string) => {
+        context.blockedScopes.set(row, reason);
+        record({ kind: "SELECT_ROW_KIND", ...(title ? { sectionTitle: title } : {}), result: "blocked", reason, rowIndex });
+      };
+      if (!kindButton || !isSafeStructuralClick(kindButton, document.body).allowed) {
+        blockRow("ROW_KIND_CONTROL_UNAVAILABLE");
+        continue;
+      }
+      const listboxesBefore = new Set(
+        Array.from(document.querySelectorAll("[role='listbox']")).filter(
+          (element) => !isHiddenElement(element as HTMLElement),
+        ),
+      );
+      kindButton.click();
+      const listbox = await waitFor(() => {
+        const controlled = kindButton.getAttribute("aria-controls");
+        const linked = controlled ? document.getElementById(controlled) : null;
+        if (linked && !isHiddenElement(linked as HTMLElement)) return linked;
+        const fresh = Array.from(document.querySelectorAll("[role='listbox']")).filter(
+          (element) => !listboxesBefore.has(element) && !isHiddenElement(element as HTMLElement),
+        );
+        return fresh.length === 1 ? fresh[0] : undefined;
+      });
+      const close = () =>
+        kindButton.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      if (!listbox) {
+        blockRow("ROW_KIND_OPTIONS_NOT_SHOWN");
+        continue;
+      }
+      const options = Array.from(listbox.querySelectorAll<HTMLElement>("[role='option']")).filter(
+        (option) => !isHiddenElement(option) && normalizedLabel(option.textContent),
+      );
+      const texts = options.map((option) => normalizedLabel(option.textContent));
+      const signature = texts.join("\u0000");
+      let byTarget = rowKindOptions.get(signature);
+      if (!byTarget) {
+        questions.push({ role: "ROW_KIND_OPTION", candidates: texts.map(truncated) });
+        try {
+          byTarget = apiClient.decideInteractions
+            ? await decideRowKindOptions(
+                { decideInteractions: apiClient.decideInteractions.bind(apiClient) },
+                {
+                  snapshotId: observation.fieldsSnapshot.request.snapshotId,
+                  site: observation.prep.request.site,
+                  canonicalFieldKey: REPEAT_KEYS.education!,
+                  relationToTarget: "SAME_REPEAT_ROW",
+                  options: texts.map((text, index) => ({
+                    optionId: String(index),
+                    visibility: "visible" as const,
+                    semanticContext: { labels: [{ source: "label" as const, text: truncated(text) }] },
+                  })),
+                },
+              )
+            : new Map();
+        } catch {
+          byTarget = new Map();
+        }
+        rowKindOptions.set(signature, byTarget);
+      }
+      const optionId = byTarget.get(TARGET_OF_ROW_KIND[item.kind]);
+      const option = optionId === null || optionId === undefined ? undefined : options[Number(optionId)];
+      if (!option) {
+        close();
+        blockRow("ROW_KIND_OPTION_UNDECIDED");
+        continue;
+      }
+      const optionText = normalizedLabel(option.textContent);
+      const shownBefore = displayedValue(kindButton);
+      option.click();
+      // A listbox button may show a shorter form of the chosen option.
+      // The page may render a new button in the row for the chosen stage.
+      const chosenButton = await waitFor(() => {
+        const current = kindOf(row);
+        const shown = current ? displayedValue(current) : "";
+        return current &&
+          shown &&
+          (shown === optionText ||
+            (shown !== shownBefore && optionText.startsWith(shown)))
+          ? current
+          : undefined;
+      });
+      const chosenShown = chosenButton !== undefined;
+      await settle();
+      if (!chosenShown) {
+        close();
+        blockRow("ROW_KIND_NOT_RETAINED");
+        continue;
+      }
+      const sectionId = sectionOfKind(item.kind);
+      const sectionIndex = sectionCounts.get(sectionId) ?? 0;
+      sectionCounts.set(sectionId, sectionIndex + 1);
+      context.educationRows.set(genericRowFor(chosenButton!) ?? row, {
+        sectionId,
+        sectionIndex,
+        label: optionText,
+        kindControl: chosenButton!,
+      });
+      record({ kind: "SELECT_ROW_KIND", ...(title ? { sectionTitle: title } : {}), result: "done", rowIndex });
+    }
+  }
+
   let previousSignature: string | undefined;
   try {
+    let prepared = aborted() ? undefined : await prepareListboxEducationRows();
     for (let iteration = 0; ; iteration += 1) {
       if (aborted()) {
         stopReason = "ABORTED";
@@ -1323,7 +1660,8 @@ export async function runGenericStructureLoop(
         stopReason = "ITERATION_LIMIT";
         break;
       }
-      const observation = await observe();
+      const observation = prepared ?? (await observe());
+      prepared = undefined;
       const points = computePoints(observation);
       initialRemaining ??= points.map(describe);
       if (points.length === 0) break;
