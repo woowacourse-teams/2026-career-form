@@ -9,7 +9,11 @@ import {
   isVisibleWriteElement,
 } from "../dom/write-target";
 import { openCalendarPopups } from "../interaction/calendar-surface";
-import { displayedDayCalendarRoots } from "../interaction/day-calendar-surface";
+import {
+  dayCalendarRoots,
+  displayedDayCalendarRoots,
+} from "../interaction/day-calendar-surface";
+import { knownDeferredRoots } from "../interaction/calendar-deferred";
 import {
   executeReadonlySearch,
   type ReadonlySearchExecutionResult,
@@ -491,14 +495,27 @@ export async function executeApprovedSearchWrites({
         const document = (target ?? item.dialogDateApproval?.target)
           ?.ownerDocument;
         const popup = item.calendarApproval?.popup ?? item.dayCalendarApproval?.popup;
-        const controls = () =>
-          document
-            ? Array.from(
-                document.querySelectorAll<
-                  HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-                >("input, select, textarea"),
-              ).filter((control) => !popup?.contains(control))
-            : [];
+        // Calendar widgets' own year/month selects are not form fields; an
+        // earlier field's calendar may unmount while this one runs.
+        const controls = () => {
+          if (!document) return [];
+          const widgets = [
+            ...(popup ? [popup] : []),
+            ...(genericItems.has(item) &&
+            item.analysis?.writePlan?.command === "SELECT_DATE"
+              ? [...knownDeferredRoots(document), ...dayCalendarRoots(document)]
+              : []),
+          ];
+          return Array.from(
+            document.querySelectorAll<
+              HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+            >("input, select, textarea"),
+          ).filter(
+            (control) =>
+              control === target ||
+              !widgets.some((widget) => widget.contains(control)),
+          );
+        };
         const before = captureControlState(controls());
         // A widget's popup root may wrap its own target, which then is not
         // among the compared controls; keep the target's own prior value.
