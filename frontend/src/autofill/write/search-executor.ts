@@ -488,10 +488,8 @@ export async function executeApprovedSearchWrites({
       if (writeOrdinary) {
         const lookup = registry.lookupField(item.candidateId);
         const target = "handle" in lookup ? lookup.handle.elements[0] : undefined;
-        const document = (
-          target ??
-          ("handle" in lookup ? lookup.handle.customElements?.[0] : undefined)
-        )?.ownerDocument;
+        const document = (target ?? item.dialogDateApproval?.target)
+          ?.ownerDocument;
         const popup = item.calendarApproval?.popup ?? item.dayCalendarApproval?.popup;
         const controls = () =>
           document
@@ -502,6 +500,24 @@ export async function executeApprovedSearchWrites({
               ).filter((control) => !popup?.contains(control))
             : [];
         const before = captureControlState(controls());
+        // A surface that was already open belongs to an earlier field, not to
+        // this write; only surfaces this write left open keep the hold.
+        const overlays = () =>
+          document
+            ? Array.from(
+                document.querySelectorAll<HTMLElement>(
+                  "dialog[open], [role='dialog'], [aria-modal='true'], [role='listbox'], iframe",
+                ),
+              ).filter(isVisibleWriteElement)
+            : [];
+        const overlaysBefore = new Set(
+          genericItems.has(item) &&
+          item.analysis?.writePlan?.command === "SELECT_DATE"
+            ? overlays()
+            : [],
+        );
+        const newOverlays = () =>
+          overlays().filter((overlay) => !overlaysBefore.has(overlay));
         const execution = await writeOrdinary(item);
         const result = "result" in execution ? execution.result : execution;
         const effect = "result" in execution ? execution.effect : "continue";
@@ -529,11 +545,7 @@ export async function executeApprovedSearchWrites({
             !(result.status === "skipped" && result.surfaceLeftOpen) &&
             openCalendarPopups(document).length === 0 &&
             displayedDayCalendarRoots(document).length === 0 &&
-            !Array.from(
-              document.querySelectorAll<HTMLElement>(
-                "dialog[open], [role='dialog'], [aria-modal='true'], [role='listbox'], iframe",
-              ),
-            ).some(isVisibleWriteElement);
+            newOverlays().length === 0;
           localWorkflowLog("ordinary-stop", {
             effect,
             hasDocument: Boolean(document),
@@ -543,13 +555,8 @@ export async function executeApprovedSearchWrites({
             dayRoots: document
               ? displayedDayCalendarRoots(document).length
               : -1,
-            overlays: document
-              ? Array.from(
-                  document.querySelectorAll<HTMLElement>(
-                    "dialog[open], [role='dialog'], [aria-modal='true'], [role='listbox'], iframe",
-                  ),
-                ).filter(isVisibleWriteElement).length
-              : -1,
+            overlays: document ? newOverlays().length : -1,
+            overlaysBefore: overlaysBefore.size,
             code: result.code ?? "",
           });
           if (effect !== "stop" && closed) continue;

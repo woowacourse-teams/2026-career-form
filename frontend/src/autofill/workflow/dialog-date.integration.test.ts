@@ -112,6 +112,29 @@ describe("dialog date button review-to-write route", () => {
     expect(results.map((result) => result.status)).toEqual(["written", "written"]);
   });
 
+  it("ignores a list that was already open before the date was written", async () => {
+    install();
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      `<div role="listbox" style="width:10px;height:10px"><div role="option">합성 항목</div></div>`,
+    );
+    const snapshot = collectFieldsSnapshot(document);
+    const items = buildReviewPlan({
+      analysis: analysis(snapshot),
+      profile: profile(),
+      registry: snapshot.registry,
+    }).items.filter((item) => item.dialogDateApproval);
+
+    const results = await executeApprovedWritesAfterPageSettles({
+      items,
+      approvedCandidateIds: new Set(items.map((item) => item.candidateId)),
+      registry: snapshot.registry,
+      document,
+    });
+
+    expect(results.map((result) => result.status)).toEqual(["written", "written"]);
+  });
+
   it("keeps a button that already shows another date as a conflict", () => {
     install("2018-01-01");
     const snapshot = collectFieldsSnapshot(document);
