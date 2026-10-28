@@ -488,7 +488,10 @@ export async function executeApprovedSearchWrites({
       if (writeOrdinary) {
         const lookup = registry.lookupField(item.candidateId);
         const target = "handle" in lookup ? lookup.handle.elements[0] : undefined;
-        const document = target?.ownerDocument;
+        const document = (
+          target ??
+          ("handle" in lookup ? lookup.handle.customElements?.[0] : undefined)
+        )?.ownerDocument;
         const popup = item.calendarApproval?.popup ?? item.dayCalendarApproval?.popup;
         const controls = () =>
           document

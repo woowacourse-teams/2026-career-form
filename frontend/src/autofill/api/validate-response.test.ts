@@ -1149,6 +1149,42 @@ describe("SELECT_DATE capability", () => {
     ).toThrow(AnalysisContractError);
   });
 
+  it("accepts SELECT_DATE for a dialog date button with a date key only", () => {
+    const buttonRequest: FieldsAnalyzeRequest = {
+      ...calendarRequest,
+      sections: [
+        {
+          ...calendarRequest.sections[0]!,
+          fields: [
+            {
+              candidateId: "field-1",
+              element: "custom",
+              control: "button",
+              visibility: "visible",
+            },
+          ],
+        },
+      ],
+    };
+    expect(
+      validateFieldsResponse(buttonRequest, calendarResponse).fields[0],
+    ).toMatchObject({ writePlan: { command: "SELECT_DATE" } });
+    expect(() =>
+      validateFieldsResponse(buttonRequest, {
+        ...calendarResponse,
+        fields: [
+          {
+            ...calendarResponse.fields[0],
+            valueBinding: {
+              type: "DIRECT",
+              profileFieldKey: "education.university.schoolName",
+            },
+          },
+        ],
+      }),
+    ).toThrow(AnalysisContractError);
+  });
+
   it("rejects SELECT_DATE when the client does not support it", () => {
     expect(() =>
       validateFieldsResponse(

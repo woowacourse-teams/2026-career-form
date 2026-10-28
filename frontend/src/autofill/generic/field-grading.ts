@@ -70,6 +70,7 @@ export interface GradeFieldInput extends Pick<
   /** Whether a profile value exists. Evaluated locally; the value is never passed. */
   hasProfileValue: boolean;
   control: FieldCandidate["control"];
+  element?: FieldCandidate["element"];
   displayName?: string;
   /** Own DOM attributes, supplied locally by generic analysis, not sent to APIs. */
   title?: string;
@@ -202,6 +203,7 @@ function hasCountryCodeOptions(input: GradeFieldInput): boolean {
 
 function isNonDateField(input: GradeFieldInput): boolean {
   if (!isProfileFieldType(input.profileFieldKey, "date")) return false;
+  if (input.control === "button" && input.element === "custom") return false;
   if (input.control !== "text" && input.control !== "textarea") return true;
   return (
     input.inputType !== undefined &&

@@ -141,12 +141,26 @@ describe("gradeGenericField checks", () => {
     ["a radio group", { control: "radio" }],
     ["a checkbox", { control: "checkbox" }],
     ["an email-typed input", { control: "text", inputType: "email" }],
+    ["a plain input button", { control: "button", element: "input" }],
   ])("blocks a date key matched to %s", (_name, override) => {
     expect(
       gradeGenericField(
         input({ profileFieldKey: "personal.personal.birthDate", ...override }),
       ),
     ).toEqual({ grade: "BLOCKED", reason: "NON_DATE_FIELD" });
+  });
+
+  it("keeps a date key on a dialog date button (custom button)", () => {
+    expect(
+      gradeGenericField(
+        input({
+          profileFieldKey: "personal.personal.birthDate",
+          control: "button",
+          element: "custom",
+          displayName: "생년월일",
+        }),
+      ),
+    ).toEqual({ grade: "AUTO" });
   });
 
   it.each<[string, Partial<GradeFieldInput>]>([

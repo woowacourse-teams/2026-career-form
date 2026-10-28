@@ -510,6 +510,18 @@ function validateFieldAnalysis(
       !candidate.inert &&
       typeof directKey === "string" &&
       isDateProfileFieldKey(directKey);
+    const dialogDateSelection =
+      request.supportedWriteCommands?.includes("SELECT_DATE") === true &&
+      isRecord(value.writePlan) &&
+      value.writePlan.command === "SELECT_DATE" &&
+      candidate.element === "custom" &&
+      candidate.control === "button" &&
+      !candidate.readonly &&
+      candidate.visibility === "visible" &&
+      !candidate.disabled &&
+      !candidate.inert &&
+      typeof directKey === "string" &&
+      isDateProfileFieldKey(directKey);
     if (
       candidate.readonly &&
       value.mappingStatus === "LLM_SUGGESTED" &&
@@ -519,7 +531,7 @@ function validateFieldAnalysis(
       throw new AnalysisContractError();
     }
     const expectedCommand =
-      calendarSelection || componentDate
+      calendarSelection || componentDate || dialogDateSelection
         ? "SELECT_DATE"
         : searchSelection || componentSearch
           ? "SEARCH_SELECTION"

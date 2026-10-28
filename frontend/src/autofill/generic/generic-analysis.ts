@@ -532,6 +532,7 @@ function convertSection(
       categoryConfirmed: response.categoryConfirmed && categoryOpen,
       hasProfileValue: resolution === "resolved" || resolution === "ambiguous",
       control: candidate.control,
+      element: candidate.element,
       inputType: candidate.semanticContext?.inputType,
       inputMode: candidate.semanticContext?.inputMode,
       autocomplete: candidate.semanticContext?.autocomplete,

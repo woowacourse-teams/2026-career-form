@@ -13,6 +13,10 @@ import {
   executionPolicy,
 } from "../workflow/execution-policy";
 import { targetOnlyRadio } from "../policy/radio-validation";
+import {
+  dialogDateButtonValue,
+  isDialogDateButton,
+} from "../interaction/dialog-date-picker";
 import { resolveDocumentCompany } from "../adapters/company";
 import {
   collectHplaceFields,
@@ -399,9 +403,22 @@ function collectFieldElements(
       element.type,
     );
   });
-  return companyId === "components"
-    ? [...native, ...componentFieldElements(document)]
-    : native;
+  if (companyId === "components")
+    return [...native, ...componentFieldElements(document)];
+  if (companyId !== "generic") return native;
+  const dateButtons = Array.from(
+    document.querySelectorAll("button[aria-haspopup='dialog']"),
+  ).filter(
+    (button): button is HTMLButtonElement =>
+      isDialogDateButton(button) && !isTemplateLike(button),
+  );
+  return dateButtons.length === 0
+    ? native
+    : [...native, ...dateButtons].sort((left, right) =>
+        left.compareDocumentPosition(right) & Node.DOCUMENT_POSITION_FOLLOWING
+          ? -1
+          : 1,
+      );
 }
 
 function collectFieldsSnapshotInternal(
@@ -683,7 +700,11 @@ function collectFieldsSnapshotInternal(
                   generic,
                 ),
                 element:
-                  first instanceof HTMLTextAreaElement ? "textarea" : "input",
+                  first instanceof HTMLTextAreaElement
+                    ? "textarea"
+                    : generic && isDialogDateButton(first)
+                      ? "custom"
+                      : "input",
                 control:
                   first instanceof HTMLTextAreaElement
                     ? "textarea"
@@ -691,6 +712,18 @@ function collectFieldsSnapshotInternal(
                       ? "button"
                       : "text",
               };
+              // A dialog date button shows its own placeholder until a date is
+              // chosen; only that digit-free text may name it.
+              const placeholder =
+                generic && isDialogDateButton(first)
+                  ? metadata(first.textContent)
+                  : undefined;
+              if (
+                placeholder &&
+                !candidate.displayName &&
+                !dialogDateButtonValue(first as HTMLButtonElement)
+              )
+                candidate.displayName = placeholder;
             }
 
             // Component forms search suggestions can echo the user's typed answer.
