@@ -935,3 +935,11 @@
 - 승인된 후보 세 개를 [CF-359 bundle](../raw/issues/CF-359/manifest.md)에 기록했다. 승인된 ADR, 등록 결과와 자격의 수명 구분, 성공 정산의 검증 경계 및 합성 비교의 해석을 보존했다.
 - [비회원 설치 식별과 AI 호출 제어](topics/anonymous-analysis-admission.md)를 신규 색인에 연결했다. 운영 활성화와 실제 사용자 효과는 미확인으로 남겼다.
 - 대화 전문, 실제 자격과 키, IP, 지원 정보는 저장하지 않았다.
+
+## [2026-10-29] ingest | CF-359 환경별 활성화와 API 이용 절차 추가
+
+- Approval-Digest: 3804dd648ff58d670588121aa7a4f0b928cfc8b2bd8c0ea08fd81c59e45513e5
+- Source-Revision: 0861dd18725b44ffcbc4e626cd16fbef9955b31f
+- 기존 후보 세 개를 유지하고 승인된 환경별 운영 절차 한 개를 같은 미병합 CF-359 bundle에 추가했다.
+- [환경별 활성화와 API 이용](topics/anonymous-admission-activation.md)에 dev 비활성, staging과 prod 활성 목표 및 전환 순서, 설정 연결의 미구현 상태, UUID와 토큰 필수 API를 기록했다.
+- 실제 운영 자격, 키와 IP는 저장하지 않았다. 운영 활성화와 배포 및 배포 연결 코드를 변경하지 않았다.
