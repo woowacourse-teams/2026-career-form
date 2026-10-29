@@ -57,6 +57,88 @@ describe("website navigation", () => {
       ).toHaveAttribute("href", "mailto:careerform@gmail.com");
     },
   );
+  it("links the landing to the tech page and shows measured results there", () => {
+    render(<SiteApp path="/" />);
+    expect(
+      within(screen.getByRole("navigation", { name: "주 메뉴" })).getByRole(
+        "link",
+        { name: "기술 소개" },
+      ),
+    ).toHaveAttribute("href", "/tech/");
+  });
+  it("explains the field matching change with its measurement conditions", () => {
+    render(<SiteApp path="/tech/" />);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "기술 소개",
+    );
+    const [results, defaults] = screen.getAllByRole("table");
+    expect(
+      within(results).getByText("4.2초 (약 5배 빠름)"),
+    ).toBeInTheDocument();
+    expect(within(results).getByText("0%")).toBeInTheDocument();
+    expect(
+      within(defaults).getByText(/Web Push, VAPID, aes128gcm/),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("img", { name: /흐름|눈금/ })).toHaveLength(3);
+    expect(
+      screen.getByRole("region", { name: "마감 알림 동작 미리보기" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/측정 조건: 칸 67개/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /마감 알림이 브라우저에/ }),
+    ).toBeInTheDocument();
+  });
+  it("offers the hands-on trial from the hero and the menu", () => {
+    render(<SiteApp path="/" />);
+    expect(
+      screen.getByRole("link", { name: /커리어폼 체험하기/ }),
+    ).toHaveAttribute("href", "/try/");
+    for (const link of screen.getAllByRole("link", { name: /체험하기/ }))
+      expect(link).toHaveAttribute("href", "/try/");
+    expect(
+      within(screen.getByRole("navigation", { name: "주 메뉴" })).getByRole(
+        "link",
+        { name: "체험" },
+      ),
+    ).toHaveAttribute("href", "/try/");
+  });
+  it("runs the trial on a virtual application without storing anything", () => {
+    const track = vi.fn();
+    render(<SiteApp path="/try/" track={track} />);
+    expect(track).toHaveBeenCalledWith("trial_viewed", { surface: "site" });
+    expect(
+      screen.getByRole("heading", { level: 1, name: /자동 기입을 눌러보세요/ }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "지원서 작성" })).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: /자동 기입/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("link", { name: /Chrome에 추가/ }),
+    ).not.toHaveLength(0);
+  });
+  it("explains the two management buttons inside the trial panel instead of opening extension pages", () => {
+    render(<SiteApp path="/try/" />);
+    fireEvent.click(screen.getByRole("button", { name: /프로필 관리/ }));
+    const profile = screen.getByRole("dialog", {
+      name: /프로필 관리는 설치 후에 열려요/,
+    });
+    expect(within(profile).getByText(/내 브라우저에만 저장/)).toBeVisible();
+    expect(
+      within(profile).getByRole("link", { name: /Chrome에 추가/ }),
+    ).toHaveAttribute("target", "_blank");
+    fireEvent.click(
+      within(profile).getByRole("button", { name: "체험으로 돌아가기" }),
+    );
+    expect(screen.queryByRole("dialog")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /지원 공고 관리/ }));
+    expect(
+      screen.getByRole("dialog", { name: /지원 공고 관리는 설치 후에 열려요/ }),
+    ).toBeVisible();
+    expect(screen.queryByText(/열지 못했습니다/)).toBeNull();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
   it("does not present an unknown route as a valid policy", () => {
     render(<SiteApp path="/missing/" />);
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(

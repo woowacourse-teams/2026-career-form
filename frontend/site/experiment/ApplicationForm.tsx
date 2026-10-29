@@ -36,7 +36,14 @@ const sections = [
     ),
   },
 ];
-export function ApplicationForm() {
+export function ApplicationForm({
+  headingLevel = 1,
+}: {
+  headingLevel?: 1 | 2;
+}) {
+  // The landing's trial page keeps its own h1, so the virtual application
+  // steps down one level there.
+  const Heading = headingLevel === 1 ? "h1" : "h2";
   return (
     <div className={styles.application} data-form-scroll>
       <header className={styles.header}>
@@ -55,7 +62,7 @@ export function ApplicationForm() {
         <div className={styles.title}>
           <div>
             <p>커리어폼 · 신입 채용</p>
-            <h1>지원서 작성</h1>
+            <Heading>지원서 작성</Heading>
           </div>
           <span className={styles.badge}>예시 공고</span>
         </div>

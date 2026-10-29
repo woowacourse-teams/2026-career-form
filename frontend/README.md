@@ -88,7 +88,7 @@ SDK, 자동 페이지 수집, 세션 녹화, 사용자 프로필 생성은 사�
 | 옵션                   | `profile_export_clicked`, `profile_import_clicked`                                                                                                                                                    | JSON 파일 내보내기, 가져오기 버튼 클릭. 가져오기는 파일 선택 버튼을 누른 시점이며 실제 가져오기 성공을 뜻하지 않음                                                             |
 | 확장 온보딩            | `onboarding_first_viewed`, `quick_profile_viewed`, `quick_profile_skipped`, `notification_test_sent`, `notification_visibility_answered`, `push_subscription_disabled`                                | 온보딩 최초 진입, 단계형 등록 진입과 값 없이 건너뛰기, 온보딩 카드의 알림 테스트·응답·알림 끄기                                                                                |
 | 공통                   | `profile_first_saved`                                                                                                                                                                                 | 단계형 등록, 옵션 화면, Greeting 가져오기에서 비어 있지 않은 프로필을 처음 저장한 시점                                                                                         |
-| 웹 사이트, 확장 온보딩 | `landing_viewed`, `onboarding_viewed`, `install_link_clicked`, `onboarding_autofill_selected`, `onboarding_postings_selected`                                                                         | 소개, 온보딩 진입, 설치 링크 클릭과 온보딩 시작 목적 선택. 확장 온보딩은 같은 화면을 `extension_onboarding`으로 기록                                                           |
+| 웹 사이트, 확장 온보딩 | `landing_viewed`, `onboarding_viewed`, `install_link_clicked`, `trial_viewed`, `trial_started`, `trial_completed`, `onboarding_autofill_selected`, `onboarding_postings_selected`                     | 소개, 온보딩 진입, 설치 링크 클릭, 체험 진입·시작·완료와 온보딩 시작 목적 선택. 확장 온보딩은 같은 화면을 `extension_onboarding`으로 기록                                      |
 | 옵션                   | `push_subscription_enabled`, `push_subscription_disabled`, `posting_inbox_viewed`, `posting_inbox_saved`, `notification_test_sent`, `notification_visibility_answered`, `posting_auto_save_cancelled` | 공고 알림 구독 켜기·끄기, 공지함 목록 표시 성공, 공지함에서 마감 알림 저장 성공(`trigger`로 버튼·열기 구분), 알림 테스트 실행, 표시 확인 응답(`answer`), 공지함 자동 저장 취소 |
 | OS 알림                | `posting_notification_shown`, `posting_notification_opened`, `posting_notification_saved`, `posting_auto_save_cancelled`                                                                              | 공고 푸시 알림 표시, 알림 클릭으로 공고 열기, 마감 알림 저장(`trigger`로 버튼·열기 자동 저장 구분), 후속 알림의 저장 취소. `surface`는 `notification`                          |
 
@@ -132,7 +132,7 @@ npm run build:site
 npm run preview:site
 ```
 
-개발 서버와 빌드 미리보기는 `http://127.0.0.1:4175`에서 실행됩니다. 두 서버를 동시에 실행하지 않습니다. `/`는 서비스 소개, `/onboarding/`은 설치·프로필 등록·첫 실행 안내, `/privacy/`와 `/terms/`는 검토용 정책 초안입니다. 온보딩은 실제 설치 여부를 판별하거나 프로필을 저장하지 않습니다.
+개발 서버와 빌드 미리보기는 `http://127.0.0.1:4175`에서 실행됩니다. 두 서버를 동시에 실행하지 않습니다. `/`는 서비스 소개, `/onboarding/`은 설치·프로필 등록·첫 실행 안내, `/try/`는 설치 없이 가상 지원서에서 패널의 자동 기입을 직접 눌러보는 체험, `/tech/`는 자동 기입 칸 연결과 공고 알림의 기술 소개, `/privacy/`와 `/terms/`는 검토용 정책 초안입니다. 기술 소개 문구는 `site/tech.tsx`에 있습니다. 체험은 `site/experiment/`의 가상 지원서·예시 프로필·입력 시나리오를 설문 없이 재사용합니다. 히어로의 버튼은 체험 하나이며(설치 버튼은 헤더에 있음), 좁은 화면에서는 체험 대신 설치 버튼과 안내만 보여줍니다. 온보딩은 실제 설치 여부를 판별하거나 프로필을 저장하지 않습니다.
 
 `build:site`는 다섯 HTML 진입점, 로컬 자산 참조와 개인 파일 경로의 미포함을 검사합니다. 웹 산출물은 `dist-site/`이며 확장 프로그램의 `.output/` 및 ZIP과 분리됩니다. 각 경로의 `index.html`을 제공하는 정적 서버에서 확인할 수 있습니다. 배포와 정책 시행은 이 작업에 포함하지 않습니다.
 

@@ -16,6 +16,8 @@ export default defineConfig({
         onboarding: sitePath("onboarding/index.html"),
         privacy: sitePath("privacy/index.html"),
         terms: sitePath("terms/index.html"),
+        tech: sitePath("tech/index.html"),
+        try: sitePath("try/index.html"),
         demo: sitePath("demo/index.html"),
         experiment: sitePath("experiment/index.html"),
       },
