@@ -297,6 +297,78 @@ describe("approved search batch boundaries", () => {
     ]);
   });
 
+  it("continues after a generic day calendar failure whose popup wraps its unchanged empty target", async () => {
+    const test = setup(2);
+    const target = document.querySelector<HTMLInputElement>("input")!;
+    target.value = "";
+    test.items[0]!.currentValue = "";
+    test.items[0]!.analysis!.writePlan = { command: "SELECT_DATE" };
+    // The widget's popup root is the field box that also holds the input.
+    test.items[0]!.dayCalendarApproval = {
+      popup: target.closest("dl")!,
+    } as unknown as ReviewPlanItem["dayCalendarApproval"];
+    test.items[1]!.analysis!.writePlan = { command: "SET_TEXT" };
+
+    const stopped = await executeApprovedSearchWrites({
+      ...test,
+      writeOrdinary: (item) =>
+        item.candidateId === "field-0"
+          ? {
+              result: {
+                candidateId: item.candidateId,
+                status: "skipped",
+                reason: "needs-verification",
+                code: "RETAINED_VALUE_UNCONFIRMED",
+              },
+              effect: "stop",
+            }
+          : { candidateId: item.candidateId, status: "written" },
+    });
+
+    expect(stopped).toBe(false);
+    expect(test.results[1]).toMatchObject({ candidateId: "field-1", status: "written" });
+  });
+
+  it("continues after a generic date failure when only an earlier calendar widget unmounted", async () => {
+    const test = setup(2);
+    const target = document.querySelector<HTMLInputElement>("input")!;
+    target.value = "";
+    test.items[0]!.currentValue = "";
+    test.items[0]!.analysis!.writePlan = { command: "SELECT_DATE" };
+    test.items[1]!.analysis!.writePlan = { command: "SET_TEXT" };
+    // An earlier field's day calendar is still mounted while it fades out.
+    const years = Array.from({ length: 10 }, (_, i) => 2016 + i)
+      .map((year) => `<option value="${year}">${year}</option>`)
+      .join("");
+    const months = Array.from({ length: 12 }, (_, i) => `<option value="${i}">${i + 1}월</option>`).join("");
+    const days = Array.from({ length: 30 }, (_, i) => `<button type="button">${i + 1}</button>`).join("");
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      `<div id="old-calendar"><select>${years}</select><select>${months}</select><div>${days}</div></div>`,
+    );
+
+    const stopped = await executeApprovedSearchWrites({
+      ...test,
+      writeOrdinary: (item) => {
+        if (item.candidateId !== "field-0")
+          return { candidateId: item.candidateId, status: "written" };
+        document.querySelector("#old-calendar")!.remove();
+        return {
+          result: {
+            candidateId: item.candidateId,
+            status: "skipped",
+            reason: "needs-verification",
+            code: "RETAINED_VALUE_UNCONFIRMED",
+          },
+          effect: "stop",
+        };
+      },
+    });
+
+    expect(stopped).toBe(false);
+    expect(test.results[1]).toMatchObject({ candidateId: "field-1", status: "written" });
+  });
+
   it("stops later ordinary writes after a search changes the page without a confirmed result", async () => {
     const test = setup(2);
     test.items[0]!.currentValue = "";

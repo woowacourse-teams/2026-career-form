@@ -35,6 +35,8 @@ const REASON_TEXT: Readonly<Record<KnownReasonCode, string>> = {
   COUNTRY_CODE_OPTIONS: "국가 번호 선택지라서 직접 확인해 주세요.",
   NON_DATE_FIELD: "날짜 입력 칸이 아니라서 직접 확인해 주세요.",
   MIXED_EDUCATION_RECORD: "여러 학력 기록이 섞여 있어 직접 확인해 주세요.",
+  MIXED_RECORD_KIND: "다른 종류의 기록 칸과 함께 있어 직접 확인해 주세요.",
+  SCALE_KEY_MISMATCH: "점수 기준 칸에 이수 학점을 넣지 않았어요. 직접 확인해 주세요.",
   LOW_CONFIDENCE: "연결 확신이 낮아 자동으로 입력하지 않습니다.",
   MODERATE_CONFIDENCE: "연결 확신이 보통입니다. 값을 확인한 뒤 선택해 주세요.",
   CATEGORY_UNCONFIRMED:

@@ -46,18 +46,53 @@ describe("applyGenericGrade carries the grade and reason", () => {
     });
   });
 
-  it("unselects a REVIEW item and records grade and reason code", () => {
+  it("keeps a REVIEW item selected and records grade and reason code", () => {
     expect(
       applyGenericGrade(item(), {
         grade: "REVIEW",
         reason: "NO_FIELD_CONTEXT",
       }),
     ).toMatchObject({
-      selected: false,
+      selected: true,
       disabled: false,
       genericGrade: "REVIEW",
       genericReasonCode: "NO_FIELD_CONTEXT",
     });
+  });
+
+  it.each(["MODERATE_CONFIDENCE", "OPTION_VALUE_UNMATCHED"] as const)(
+    "unselects a REVIEW item the applicant must decide (%s)",
+    (reason) => {
+      expect(applyGenericGrade(item(), { grade: "REVIEW", reason })).toMatchObject({
+        selected: false,
+        disabled: false,
+        genericGrade: "REVIEW",
+        genericReasonCode: reason,
+      });
+    },
+  );
+
+  it.each([
+    [{ grade: "AUTO" } as const],
+    [{ grade: "REVIEW", reason: "CATEGORY_UNCONFIRMED" } as const],
+  ])("includes a conditional field the applicant need not decide (%o)", (grade) => {
+    const conditional = item({
+      status: "needs-review",
+      selected: false,
+      reason: "지원서 조건을 확인한 뒤 선택해 주세요.",
+    });
+    expect(applyGenericGrade(conditional, grade)).toMatchObject({
+      status: "available",
+      selected: true,
+      disabled: false,
+    });
+  });
+
+  it("keeps a conditional field the applicant must decide in review", () => {
+    const conditional = item({ status: "needs-review", selected: false });
+    expect(
+      applyGenericGrade(conditional, { grade: "REVIEW", reason: "MODERATE_CONFIDENCE" }),
+    ).toMatchObject({ status: "needs-review", selected: false });
   });
 
   it("disables a BLOCKED item and records grade and reason code", () => {

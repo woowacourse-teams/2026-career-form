@@ -1,3 +1,6 @@
+import { careerKeyForProjectRole } from "./record-kind-key";
+import { gpaScaleKeyForCredits } from "./scale-key";
+import { majorNameKeyForText } from "./major-key";
 import type { Profile } from "../../profile/model";
 import type {
   AnalysisApiClient,
@@ -137,28 +140,47 @@ const UNCONFIRMED_CATEGORIES = new Set(["MIXED", "ABSTAIN"]);
 export const GENERIC_BLOCKED_REASON =
   "자동으로 입력할 수 없는 항목입니다. 직접 확인해 주세요.";
 
+// The applicant still decides these in the review; every other REVIEW field
+// starts included and goes to the planned list.
+const APPLICANT_DECIDES: ReadonlySet<string> = new Set([
+  "MODERATE_CONFIDENCE",
+  "OPTION_VALUE_UNMATCHED",
+]);
+
 /**
- * AUTO keeps the plan's selection, REVIEW is never preselected, and BLOCKED
- * can be neither selected nor written.
+ * AUTO and most REVIEW grades keep the plan's selection, a REVIEW grade the
+ * applicant must decide is never preselected, and BLOCKED can be neither
+ * selected nor written.
  */
 export function applyGenericGrade(
   item: ReviewPlanItem,
   grade: GenericFieldGrade | undefined,
 ): ReviewPlanItem {
   if (!grade) return item;
+  const applicantDecides =
+    grade.grade === "REVIEW" && APPLICANT_DECIDES.has(grade.reason ?? "");
   if (
     item.genericGrade === "REVIEW" &&
     item.genericReasonCode === "FIRST_ENTRY_SINGLE_ROW" &&
     grade.grade !== "BLOCKED"
   )
-    return { ...item, selected: false };
+    return applicantDecides || item.status !== "needs-review"
+      ? { ...item, selected: false }
+      : { ...item, status: "available", selected: true };
   const graded: ReviewPlanItem = {
     ...item,
     genericGrade: grade.grade,
     ...(grade.reason ? { genericReasonCode: grade.reason } : {}),
   };
-  if (grade.grade === "AUTO") return graded;
-  if (grade.grade === "REVIEW") return { ...graded, selected: false };
+  // A field held only for the page's condition (or a rule-matched choice) is
+  // included like any other field the applicant need not decide.
+  const included: ReviewPlanItem =
+    graded.status === "needs-review" && !graded.disabled
+      ? { ...graded, status: "available", selected: true }
+      : graded;
+  if (grade.grade === "AUTO") return included;
+  if (grade.grade === "REVIEW")
+    return applicantDecides ? { ...graded, selected: false } : included;
   return {
     ...graded,
     selected: false,
@@ -422,7 +444,42 @@ function convertSection(
       ]);
       return;
     }
-    const profileFieldKey = response.profileFieldKey ?? undefined;
+    const fieldLabels = [
+      candidate.displayName,
+      element.getAttribute("placeholder") ?? undefined,
+      element.getAttribute("title") ?? undefined,
+      ...(candidate.semanticContext?.labels ?? []).map((label) => label.text),
+    ];
+    const neighborKeys = visibleRowMatches
+      ? [
+          visibleRowMatches.filter((sibling) => sibling.index < index).at(-1),
+          visibleRowMatches.find((sibling) => sibling.index > index),
+        ].map((sibling) => sibling?.response.profileFieldKey ?? undefined)
+      : undefined;
+    const profileFieldKey = response.profileFieldKey
+      ? careerKeyForProjectRole(
+          gpaScaleKeyForCredits(
+          majorNameKeyForText(
+            response.profileFieldKey,
+            candidate.control,
+            fieldLabels,
+          ),
+          fieldLabels,
+          matched.flatMap((sibling) =>
+            sibling.index !== index && sibling.response.profileFieldKey
+              ? [sibling.response.profileFieldKey]
+              : [],
+          ),
+          ),
+          neighborKeys ?? [],
+          fieldLabels,
+          matched.flatMap((sibling) =>
+            sibling.index !== index && sibling.response.profileFieldKey
+              ? [sibling.response.profileFieldKey]
+              : [],
+          ),
+        )
+      : undefined;
     const dateSource =
       response.binding?.type === "DATE_PART" && profileFieldKey
         ? resolveValueBinding(
@@ -494,6 +551,7 @@ function convertSection(
       categoryConfirmed: response.categoryConfirmed && categoryOpen,
       hasProfileValue: resolution === "resolved" || resolution === "ambiguous",
       control: candidate.control,
+      element: candidate.element,
       inputType: candidate.semanticContext?.inputType,
       inputMode: candidate.semanticContext?.inputMode,
       autocomplete: candidate.semanticContext?.autocomplete,
@@ -507,6 +565,7 @@ function convertSection(
         ? { optionValueCheck: { profileValue: choiceValue, context: choiceContext } }
         : {}),
       rowSiblings,
+      ...(neighborKeys ? { rowNeighborKeys: neighborKeys } : {}),
       sectionSiblingKeys: matched.flatMap((sibling) =>
         sibling.index !== index && sibling.response.profileFieldKey
           ? [sibling.response.profileFieldKey]

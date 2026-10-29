@@ -29,6 +29,13 @@ import {
   type EducationRowKind,
 } from "../profile/education-row-kind";
 import { genericRowFor } from "../dom/repeatable-rows";
+import { iconGlyphLabel } from "../dom/icon-glyph";
+import {
+  ADD_LABEL,
+  FORBIDDEN_LABEL,
+  actionLabel,
+} from "../dom/generic-form-groups";
+import { stageRowsAround } from "./education-stage-rows";
 import { acquireDocumentRun } from "../interaction/document-run";
 import {
   bindGenericStructureRows,
@@ -303,7 +310,51 @@ function controlLabel(
   const text = normalizedLabel(element.textContent);
   if (text) return { source: "label", text };
   const title = normalizedLabel(element.getAttribute("title"));
-  return title ? { source: "title", text: title } : undefined;
+  if (title) return { source: "title", text: title };
+  const glyph = iconGlyphLabel(element);
+  return glyph ? { source: "label", text: glyph } : undefined;
+}
+
+function isHiddenElement(element: Element): boolean {
+  if (element.closest("[hidden], [aria-hidden='true'], [inert]")) return true;
+  const view = element.ownerDocument.defaultView;
+  for (let node: Element | null = element; node; node = node.parentElement) {
+    const style = view?.getComputedStyle(node);
+    if (style && (style.display === "none" || style.visibility === "hidden"))
+      return true;
+  }
+  return false;
+}
+
+/** What a listbox control shows: its text, or the value its input shows. */
+function displayedValue(control: HTMLElement): string {
+  const inputs =
+    control instanceof HTMLInputElement
+      ? [control]
+      : Array.from(control.querySelectorAll("input"));
+  const shown =
+    inputs.length === 1 && inputs[0]!.value.trim()
+      ? inputs[0]!.value
+      : control.textContent;
+  return normalizedLabel(
+    shown?.trim() ? shown : control.getAttribute("aria-valuetext"),
+  );
+}
+
+/** The order and kind of the controls a box holds, without their values. */
+function controlLayout(box: Element): string {
+  return Array.from(
+    box.querySelectorAll("input, textarea, select, [aria-haspopup='listbox']"),
+  )
+    .map((control) =>
+      [
+        control.tagName,
+        control.getAttribute("type") ?? "",
+        control.getAttribute("placeholder") ?? "",
+        control.getAttribute("aria-haspopup") ?? "",
+      ].join("/"),
+    )
+    .join("|");
 }
 
 /** The server rejects a structure question holding any other candidate. */
@@ -316,6 +367,14 @@ function isOfferableAddControl({ observed }: ActionRef): boolean {
     !observed.readonly &&
     !observed.inert
   );
+}
+
+/** A control named for adding: "add" text or a drawn plus, never a removal. */
+function isAddLike(element: HTMLElement): boolean {
+  const label = actionLabel(element);
+  return label
+    ? ADD_LABEL.test(label) && !FORBIDDEN_LABEL.test(label)
+    : iconGlyphLabel(element) === "+";
 }
 
 function sectionCacheKey(section: GenericSection<LoopField>): string {
@@ -346,6 +405,9 @@ export async function runGenericStructureLoop(
   const context = createGenericStructureContext();
   const groupScopes = new Map<string, Element>();
   const addDecision = new Map<string, Element | null>();
+  const addDecisionLook = new Map<string, string>();
+  const lookOf = (element: Element) =>
+    `${element.tagName}\u0000${normalizedLabel(element.textContent)}\u0000${element.getAttribute("aria-label") ?? ""}`;
   const revealAsked = new WeakSet<Element>();
   const revealChosen = new WeakSet<Element>();
   const rowKindOptions = new Map<string, Map<TargetKind, string | null>>();
@@ -495,7 +557,9 @@ export async function runGenericStructureLoop(
     const candidates = sections.filter(
       (section) =>
         section.boundary === "repeat-row" ||
-        section.fields[0]?.element instanceof HTMLSelectElement,
+        section.fields[0]?.element instanceof HTMLSelectElement ||
+        listboxKindRow(section, sections) !== undefined ||
+        rowBoxOf(section, sections) !== undefined,
     );
     await classify(
       candidates,
@@ -862,13 +926,28 @@ export async function runGenericStructureLoop(
       }
       const chosen = point.actions.find((ref) => ref.candidateId === chosenId);
       addDecision.set(group.key, chosen?.element ?? null);
+      if (chosen) addDecisionLook.set(group.key, lookOf(chosen.element));
       if (!chosen) {
         blockGroup(group, "REPEAT_ADD_ABSTAINED");
         return false;
       }
     }
-    const element = addDecision.get(group.key);
+    let element = addDecision.get(group.key);
     if (!element) return false;
+    // A page may re-render the chosen add control after each added row, or
+    // turn it into the new row's own control (for example a delete button).
+    // The choice carries over only to the one offered control that looks as
+    // the chosen one looked when it was chosen.
+    if (!point.actions.some((ref) => ref.element === element)) {
+      const look = addDecisionLook.get(group.key);
+      const same = point.actions.filter(
+        (ref) => look !== undefined && lookOf(ref.element) === look,
+      );
+      if (same.length === 1) {
+        element = same[0]!.element;
+        addDecision.set(group.key, element);
+      }
+    }
     const action = point.actions.find((ref) => ref.element === element);
     if (!action) {
       blockGroup(group, lastFailure.get(group.key) ?? "ADD_CONTROL_GONE");
@@ -1157,8 +1236,34 @@ export async function runGenericStructureLoop(
         await settle();
       }
       if (document.URL !== initialUrl) return blockRow("URL_CHANGED");
-      if (rowElement) {
-        context.educationRows.set(rowElement, {
+      // An area the page renders as uneven rows: bind the stage-select row
+      // alone and each sibling row that shows a fixed stage of the same list.
+      const split =
+        group.singleRow && rowElement
+          ? stageRowsAround(select, rowElement)
+          : undefined;
+      const boundRow = split?.selectRow ?? rowElement;
+      for (const fixed of split?.fixedRows ?? []) {
+        const fixedKind = kindOfOptionText(fixed.label);
+        const fixedIndex = fixedKind
+          ? profile.education.findIndex(
+              (candidate) => kindOfEntry(candidate) === fixedKind,
+            )
+          : -1;
+        if (!fixedKind || fixedIndex < 0) continue;
+        const fixedEntry = profile.education[fixedIndex]!;
+        context.educationRows.set(fixed.row, {
+          sectionId: sectionOfKind(fixedKind),
+          sectionIndex: profile.education
+            .slice(0, fixedIndex)
+            .filter(
+              (previous) => previous.sectionId === fixedEntry.sectionId,
+            ).length,
+          label: fixed.label,
+        });
+      }
+      if (boundRow) {
+        context.educationRows.set(boundRow, {
           sectionId: sectionOfKind(kind),
           sectionIndex: profile.education
             .slice(0, profileIndex)
@@ -1188,7 +1293,9 @@ export async function runGenericStructureLoop(
         // Only the changed row is rematched. A previous row's result must not
         // be reused for another education stage with the same visible labels.
         const ids = new Set(
-          row.fields.map(({ candidate }) => candidate.candidateId),
+          row.fields
+            .filter(({ element }) => !boundRow || boundRow.contains(element))
+            .map(({ candidate }) => candidate.candidateId),
         );
         const rowSnapshot = bindGenericStructureRows(
           {
@@ -1265,8 +1372,428 @@ export async function runGenericStructureLoop(
     }
   }
 
+  /**
+   * A section the page shows as one row: the smallest box holding its first
+   * and last fields and no field of another section, when that box offers an
+   * add-like control (an "add" name or a drawn plus). Rows the page already
+   * repeats are read by the repeat-row boundary instead.
+   */
+  function rowBoxOf(
+    section: GenericSection<LoopField>,
+    sections: readonly GenericSection<LoopField>[],
+  ): Element | undefined {
+    if (section.boundary === "repeat-row") return undefined;
+    const first = section.fields[0]?.element;
+    const last = section.fields.at(-1)?.element;
+    if (!first || !last) return undefined;
+    const foreign = sections
+      .filter((other) => other !== section)
+      .flatMap((other) => other.fields.map(({ element }) => element));
+    for (
+      let box: Element | null = first.parentElement;
+      box && box !== document.body;
+      box = box.parentElement
+    ) {
+      if (foreign.some((element) => box!.contains(element))) return undefined;
+      if (!box.contains(last)) continue;
+      return Array.from(box.querySelectorAll<HTMLElement>("button")).some(
+        (button) => !isHiddenElement(button) && isAddLike(button),
+      )
+        ? box
+        : undefined;
+    }
+    return undefined;
+  }
+
+  /**
+   * An education section whose single row starts with a listbox button that
+   * names the row's stage. The row is the smallest box holding that button
+   * and the section's last field.
+   */
+  function listboxKindRow(
+    section: GenericSection<LoopField>,
+    sections: readonly GenericSection<LoopField>[] = [],
+  ): { row: Element; kind: HTMLElement } | undefined {
+    if (section.boundary === "repeat-row") return undefined;
+    const first = section.fields[0]?.element;
+    const last = section.fields.at(-1)?.element;
+    if (!first || !last) return undefined;
+    const foreign = sections
+      .filter((other) => other !== section)
+      .flatMap((other) => other.fields.map(({ element }) => element));
+    const precedingKind = (box: Element) =>
+      Array.from(box.querySelectorAll<HTMLElement>("[aria-haspopup='listbox']"))
+        .filter((element) => !isHiddenElement(element))
+        .filter(
+          (element) =>
+            (element.compareDocumentPosition(first) &
+              Node.DOCUMENT_POSITION_FOLLOWING) !==
+            0,
+        )
+        .at(-1);
+    for (
+      let row: Element | null = first.parentElement;
+      row && row !== document.body;
+      row = row.parentElement
+    ) {
+      if (foreign.some((element) => row!.contains(element))) return undefined;
+      if (!row.contains(last)) continue;
+      const kind = precedingKind(row);
+      if (kind) return { row, kind };
+    }
+    return undefined;
+  }
+
+  /** Rows with the same control layout as the first row, outermost first. */
+  function sameLayoutRows(row: Element, scope: Element): Element[] {
+    const layout = controlLayout(row);
+    // A box around the first row matches while it holds that row alone.
+    const found = Array.from(scope.querySelectorAll(row.tagName)).filter(
+      (candidate) =>
+        (candidate === row || !candidate.contains(row)) &&
+        controlLayout(candidate) === layout,
+    );
+    return found.filter(
+      (candidate) =>
+        !found.some((other) => other !== candidate && other.contains(candidate)),
+    );
+  }
+
+  async function waitFor<T>(
+    read: () => T | undefined,
+    timeoutMs = 2000,
+  ): Promise<T | undefined> {
+    const until = Date.now() + timeoutMs;
+    for (;;) {
+      const value = read();
+      if (value !== undefined || Date.now() >= until || aborted()) return value;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+  }
+
+  /**
+   * Presses the add control the server picks in the last row until `needed`
+   * rows with the first row's layout exist. Each press must add exactly one
+   * row and leave the existing rows' values as they were. Returns the fresh
+   * observation, or undefined after recording why it stopped.
+   */
+  async function addRowsUntil(
+    firstRow: Element,
+    needed: number,
+    title: string | undefined,
+    canonicalFieldKey: string,
+    start: Observation,
+  ): Promise<Observation | undefined> {
+    const scope = document.body;
+    let observation = start;
+    const valuesOf = (rows: Element[]) =>
+      rows
+        .flatMap((row) =>
+          Array.from(
+            row.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
+              "input, textarea, select",
+            ),
+          ),
+        )
+        .map((control) => `${control.isConnected}\u0000${control.value}`)
+        .join("\u0001");
+    const blocked = (reason: string) => {
+      record({ kind: "ADD_ROW", ...(title ? { sectionTitle: title } : {}), result: "blocked", reason });
+      return undefined;
+    };
+    for (let added = 0; ; added += 1) {
+      const rows = sameLayoutRows(firstRow, scope);
+      if (rows.length >= needed) return observation;
+      if (aborted()) return undefined;
+      if (added >= MAX_ACTIONS_PER_SECTION) return blocked("SECTION_ACTION_LIMIT");
+      const last = rows.at(-1)!;
+      // A drawn minus removes a row; it is never offered as an add control.
+      const refs = actionRefs(observation).filter(
+        (ref) =>
+          isOfferableAddControl(ref) &&
+          last.contains(ref.element) &&
+          iconGlyphLabel(ref.element) !== "-",
+      );
+      if (refs.length === 0) return blocked("NO_ADD_CONTROL");
+      const chosenId = await askButtons(
+        "REPEAT_ADD",
+        canonicalFieldKey,
+        refs,
+        observation,
+        (ref) => {
+          const own = controlLabel(ref.element);
+          const heading = normalizedLabel(title);
+          const labels = [
+            ...(own ? [own] : []),
+            ...(heading ? [{ source: "section-heading" as const, text: heading }] : []),
+          ];
+          return {
+            candidateId: ref.candidateId,
+            element: ref.observed.element as InteractionCandidate["element"],
+            control: "button",
+            visibility: ref.observed.visibility,
+            relationToTarget: "SAME_REPEAT_ROW",
+            ...(labels.length > 0 ? { semanticContext: { labels } } : {}),
+          };
+        },
+      );
+      const chosen = refs.find((ref) => ref.candidateId === chosenId);
+      if (!chosen || !isSafeStructuralClick(chosen.element, document.body).allowed)
+        return blocked(chosenId === undefined ? "INTERACTION_UNAVAILABLE" : "REPEAT_ADD_ABSTAINED");
+      const before = valuesOf(rows);
+      chosen.element.click();
+      const grown = await waitFor(() =>
+        sameLayoutRows(firstRow, scope).length === rows.length + 1 ? true : undefined,
+      );
+      await settle();
+      if (document.URL !== initialUrl) return undefined;
+      if (!grown || valuesOf(rows) !== before)
+        return blocked(grown ? "executor:existing-group-value-changed" : "ADD_FAILED");
+      record({ kind: "ADD_ROW", ...(title ? { sectionTitle: title } : {}), result: "done", rowsBefore: rows.length, rowsAfter: rows.length + 1 });
+      observation = await observe();
+    }
+  }
+
+  /**
+   * Grows each non-education area the page shows as one row with an add-like
+   * control to the profile's entry count, and binds row i to entry i.
+   * Returns its observation when it changed nothing, so the loop can reuse it.
+   */
+  async function prepareSingleRowRepeats(
+    start: Observation | undefined,
+  ): Promise<Observation | undefined> {
+    const many = PROFILE_CATEGORIES.some(
+      ({ id }) => id !== "education" && (repeatedEntries(profile, id) ?? 0) >= 2,
+    );
+    if (!many) return start;
+    let observation = start ?? (await observe());
+    let changed = false;
+    const handled: Element[] = [];
+    for (;;) {
+      if (aborted()) return undefined;
+      const sections = observation.sections;
+      const next = sections
+        .map((section) => ({
+          section,
+          category: classified.get(sectionCacheKey(section)),
+          box: rowBoxOf(section, sections),
+        }))
+        .find(
+          ({ category, box }) =>
+            box !== undefined &&
+            category !== undefined &&
+            category !== "education" &&
+            (repeatedEntries(profile, category) ?? 0) >= 2 &&
+            !handled.some((row) => row === box || row.contains(box) || box.contains(row)),
+        );
+      if (!next) return changed ? undefined : observation;
+      const { section, category, box } = next as {
+        section: GenericSection<LoopField>;
+        category: string;
+        box: Element;
+      };
+      const needed = repeatedEntries(profile, category)!;
+      const key = profileKeyOf(category as ProfileCategoryId);
+      const rowsBefore = sameLayoutRows(box, document.body).length;
+      const grown = key
+        ? await addRowsUntil(box, needed, section.title, key, observation)
+        : undefined;
+      const rows = sameLayoutRows(box, document.body);
+      handled.push(...rows);
+      if (rows.length !== rowsBefore) changed = true;
+      if (grown && rows.length >= needed)
+        rows
+          .slice(0, needed)
+          .forEach((row, index) => context.repeatRows.set(row, { category, index }));
+      observation = grown ?? (await observe());
+    }
+  }
+
+  /**
+   * Adds rows through the section's add control and chooses each row's stage
+   * in its listbox, so every profile education entry gets its own row.
+   */
+  /** Returns its observation when it changed nothing, so the loop can reuse it. */
+  async function prepareListboxEducationRows(): Promise<Observation | undefined> {
+    const wanted = profile.education
+      .map((entry, index) => ({ entry, index, kind: kindOfEntry(entry) }))
+      .filter(
+        (item): item is { entry: (typeof profile.education)[number]; index: number; kind: EducationRowKind } =>
+          item.kind !== undefined,
+      );
+    if (
+      wanted.length < 2 ||
+      !Array.from(
+        document.querySelectorAll<HTMLElement>("[aria-haspopup='listbox']"),
+      ).some((element) => !isHiddenElement(element))
+    )
+      return undefined;
+    const rank: EducationRowKind[] = [
+      "HIGH_SCHOOL",
+      "JUNIOR_COLLEGE",
+      "UNIVERSITY",
+      "MASTER",
+      "DOCTOR",
+    ];
+    wanted.sort((a, b) => rank.indexOf(b.kind) - rank.indexOf(a.kind));
+    let observation = await observe();
+    const section = observation.sections.find(
+      (candidate) =>
+        classified.get(sectionCacheKey(candidate)) === "education" &&
+        listboxKindRow(candidate, observation.sections) !== undefined,
+    );
+    if (!section) return observation;
+    const { row: firstRow, kind: firstKind } = listboxKindRow(
+      section,
+      observation.sections,
+    )!;
+    const scope = document.body;
+    const title = section.title;
+    const listboxesOf = (row: Element) =>
+      Array.from(row.querySelectorAll<HTMLElement>("[aria-haspopup='listbox']"))
+        .filter((element) => !isHiddenElement(element));
+    // Every row holds the stage control at the same place as the first row.
+    const kindIndex = listboxesOf(firstRow).indexOf(firstKind);
+    const kindOf = (row: Element) => listboxesOf(row)[kindIndex];
+    const valuesOf = (rows: Element[]) =>
+      rows
+        .flatMap((row) =>
+          Array.from(
+            row.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
+              "input, textarea, select",
+            ),
+          ),
+        )
+        .map((control) => `${control.isConnected}\u0000${control.value}`)
+        .join("\u0001");
+    const grown = await addRowsUntil(
+      firstRow,
+      wanted.length,
+      title,
+      REPEAT_KEYS.education!,
+      observation,
+    );
+    if (!grown) return;
+    observation = grown;
+    const rows = sameLayoutRows(firstRow, scope).slice(0, wanted.length);
+    const parent = rows.length > 1
+      ? (() => {
+          let common: Element | null = rows[0]!.parentElement;
+          while (common && !rows.every((row) => common!.contains(row)))
+            common = common.parentElement;
+          return common;
+        })()
+      : rows[0]?.parentElement;
+    if (parent) context.educationGroups.add(parent);
+    const sectionCounts = new Map<string, number>();
+    for (const [rowIndex, row] of rows.entries()) {
+      const item = wanted[rowIndex]!;
+      const kindButton = kindOf(row);
+      const blockRow = (reason: string) => {
+        context.blockedScopes.set(row, reason);
+        record({ kind: "SELECT_ROW_KIND", ...(title ? { sectionTitle: title } : {}), result: "blocked", reason, rowIndex });
+      };
+      if (!kindButton || !isSafeStructuralClick(kindButton, document.body).allowed) {
+        blockRow("ROW_KIND_CONTROL_UNAVAILABLE");
+        continue;
+      }
+      const listboxesBefore = new Set(
+        Array.from(document.querySelectorAll("[role='listbox']")).filter(
+          (element) => !isHiddenElement(element as HTMLElement),
+        ),
+      );
+      kindButton.click();
+      const listbox = await waitFor(() => {
+        const controlled = kindButton.getAttribute("aria-controls");
+        const linked = controlled ? document.getElementById(controlled) : null;
+        if (linked && !isHiddenElement(linked as HTMLElement)) return linked;
+        const fresh = Array.from(document.querySelectorAll("[role='listbox']")).filter(
+          (element) => !listboxesBefore.has(element) && !isHiddenElement(element as HTMLElement),
+        );
+        return fresh.length === 1 ? fresh[0] : undefined;
+      });
+      const close = () =>
+        kindButton.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      if (!listbox) {
+        blockRow("ROW_KIND_OPTIONS_NOT_SHOWN");
+        continue;
+      }
+      const options = Array.from(listbox.querySelectorAll<HTMLElement>("[role='option']")).filter(
+        (option) => !isHiddenElement(option) && normalizedLabel(option.textContent),
+      );
+      const texts = options.map((option) => normalizedLabel(option.textContent));
+      const signature = texts.join("\u0000");
+      let byTarget = rowKindOptions.get(signature);
+      if (!byTarget) {
+        questions.push({ role: "ROW_KIND_OPTION", candidates: texts.map(truncated) });
+        try {
+          byTarget = apiClient.decideInteractions
+            ? await decideRowKindOptions(
+                { decideInteractions: apiClient.decideInteractions.bind(apiClient) },
+                {
+                  snapshotId: observation.fieldsSnapshot.request.snapshotId,
+                  site: observation.prep.request.site,
+                  canonicalFieldKey: REPEAT_KEYS.education!,
+                  relationToTarget: "SAME_REPEAT_ROW",
+                  options: texts.map((text, index) => ({
+                    optionId: String(index),
+                    visibility: "visible" as const,
+                    semanticContext: { labels: [{ source: "label" as const, text: truncated(text) }] },
+                  })),
+                },
+              )
+            : new Map();
+        } catch {
+          byTarget = new Map();
+        }
+        rowKindOptions.set(signature, byTarget);
+      }
+      const optionId = byTarget.get(TARGET_OF_ROW_KIND[item.kind]);
+      const option = optionId === null || optionId === undefined ? undefined : options[Number(optionId)];
+      if (!option) {
+        close();
+        blockRow("ROW_KIND_OPTION_UNDECIDED");
+        continue;
+      }
+      const optionText = normalizedLabel(option.textContent);
+      const shownBefore = displayedValue(kindButton);
+      option.click();
+      // A listbox button may show a shorter form of the chosen option.
+      // The page may render a new button in the row for the chosen stage.
+      const chosenButton = await waitFor(() => {
+        const current = kindOf(row);
+        const shown = current ? displayedValue(current) : "";
+        return current &&
+          shown &&
+          (shown === optionText ||
+            (shown !== shownBefore && optionText.startsWith(shown)))
+          ? current
+          : undefined;
+      });
+      const chosenShown = chosenButton !== undefined;
+      await settle();
+      if (!chosenShown) {
+        close();
+        blockRow("ROW_KIND_NOT_RETAINED");
+        continue;
+      }
+      const sectionId = sectionOfKind(item.kind);
+      const sectionIndex = sectionCounts.get(sectionId) ?? 0;
+      sectionCounts.set(sectionId, sectionIndex + 1);
+      context.educationRows.set(genericRowFor(chosenButton!) ?? row, {
+        sectionId,
+        sectionIndex,
+        label: optionText,
+        kindControl: chosenButton!,
+      });
+      record({ kind: "SELECT_ROW_KIND", ...(title ? { sectionTitle: title } : {}), result: "done", rowIndex });
+    }
+  }
+
   let previousSignature: string | undefined;
   try {
+    let prepared = aborted() ? undefined : await prepareListboxEducationRows();
+    prepared = aborted() ? undefined : await prepareSingleRowRepeats(prepared);
     for (let iteration = 0; ; iteration += 1) {
       if (aborted()) {
         stopReason = "ABORTED";
@@ -1276,7 +1803,8 @@ export async function runGenericStructureLoop(
         stopReason = "ITERATION_LIMIT";
         break;
       }
-      const observation = await observe();
+      const observation = prepared ?? (await observe());
+      prepared = undefined;
       const points = computePoints(observation);
       initialRemaining ??= points.map(describe);
       if (points.length === 0) break;

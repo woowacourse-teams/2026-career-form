@@ -2,10 +2,13 @@ import { traceWrite } from "../debug/write-trace";
 import { resolveChoiceOption } from "../profile/choice-option";
 import { localWorkflowLog } from "../debug/local-workflow";
 import {
+  isSplitEmailPair,
   isSplitEmailTarget,
   SPLIT_EMAIL_REASON,
   splitEmailRetained,
   writeSplitEmail,
+  writeSplitEmailSettled,
+  type SplitEmailWrite,
 } from "../dom/split-email";
 import {
   isVisibleWriteElement,
@@ -865,6 +868,62 @@ function writeItem(
   return writeGeneric(item, handle, false);
 }
 
+function splitEmailWriteResult(
+  candidateId: string,
+  split: SplitEmailWrite,
+): ApprovedWriteResult {
+  if (split === "written") return written(candidateId);
+  // Only the local part went in; the domain is left to the applicant.
+  if (split === "partial")
+    return {
+      candidateId,
+      status: "skipped",
+      outcome: "needs-verification",
+      code: "UNSUPPORTED_CONTROL",
+      reason: SPLIT_EMAIL_REASON,
+      failureCode: "SPLIT_EMAIL_UNSUPPORTED",
+    };
+  if (split === "conflict")
+    return skipped(candidateId, "needs-verification", "CONFLICT", CONFLICT);
+  return {
+    candidateId,
+    status: "skipped",
+    outcome: "unsupported",
+    code: split === "failed" ? "EXECUTION_FAILED" : "UNSUPPORTED_CONTROL",
+    reason: SPLIT_EMAIL_REASON,
+    failureCode: "SPLIT_EMAIL_UNSUPPORTED",
+  };
+}
+
+/**
+ * The generic split email write that may wait for the page to replace its
+ * domain select after the direct-entry choice. Undefined leaves the item to
+ * the ordinary synchronous path.
+ */
+export async function executeSettledSplitEmailWrite(
+  item: ReviewPlanItem,
+  approvedCandidateIds: ReadonlySet<string>,
+  registry: CandidateRegistry,
+): Promise<ApprovedWriteResult | undefined> {
+  if (
+    item.analysis?.mappingStatus !== "LLM_SUGGESTED" ||
+    item.analysis.writePlan?.command !== "SET_TEXT" ||
+    (item.analysis.valueBinding?.profileFieldKey ??
+      item.analysis.profileFieldKey ??
+      item.profileFieldKey) !== "contact.contact.email" ||
+    !approvedCandidateIds.has(item.candidateId) ||
+    !isSelectableApproved(item)
+  )
+    return undefined;
+  const lookup = registry.lookupField(item.candidateId);
+  if (lookup.status !== "ready" || !isSplitEmailTarget(lookup.handle))
+    return undefined;
+  return splitEmailWriteResult(
+    item.candidateId,
+    await writeSplitEmailSettled(lookup.handle, item.profileValue ?? ""),
+  );
+}
+
 function resultForItem(
   item: ReviewPlanItem,
   registry: CandidateRegistry,
@@ -914,28 +973,10 @@ function resultForItem(
         item.profileFieldKey) === "contact.contact.email" &&
       isSplitEmailTarget(handle)
     ) {
-      const split = writeSplitEmail(handle, item.profileValue ?? "");
-      if (split === "written") return written(item.candidateId);
-      // Only the local part went in; the domain is left to the applicant.
-      if (split === "partial")
-        return {
-          candidateId: item.candidateId,
-          status: "skipped",
-          outcome: "needs-verification",
-          code: "UNSUPPORTED_CONTROL",
-          reason: SPLIT_EMAIL_REASON,
-          failureCode: "SPLIT_EMAIL_UNSUPPORTED",
-        };
-      if (split === "conflict")
-        return skipped(item.candidateId, "needs-verification", "CONFLICT", CONFLICT);
-      return {
-        candidateId: item.candidateId,
-        status: "skipped",
-        outcome: "unsupported",
-        code: split === "failed" ? "EXECUTION_FAILED" : "UNSUPPORTED_CONTROL",
-        reason: SPLIT_EMAIL_REASON,
-        failureCode: "SPLIT_EMAIL_UNSUPPORTED",
-      };
+      return splitEmailWriteResult(
+        item.candidateId,
+        writeSplitEmail(handle, item.profileValue ?? ""),
+      );
     }
     const outcome = writeItem(item, handle);
     if (outcome.written && !rememberNativeCatalogChoice(item, handle))
@@ -1045,7 +1086,7 @@ function retainedGenericValue(
   if (
     (item.analysis?.valueBinding?.profileFieldKey ?? item.analysis?.profileFieldKey) ===
       "contact.contact.email" &&
-    isSplitEmailTarget(handle)
+    isSplitEmailPair(handle)
   )
     return splitEmailRetained(handle, item.profileValue ?? "");
   const command = item.analysis?.writePlan?.command,

@@ -4,6 +4,8 @@ import {
   isSplitEmailTarget,
   splitEmailRetained,
   writeSplitEmail,
+  writeSplitEmailSettled,
+  isSplitEmailPair,
 } from "./split-email";
 import type { FieldCandidateHandle } from "./types";
 
@@ -163,5 +165,54 @@ describe("split email custom domain entry", () => {
     expect(isSplitEmailMember(document.querySelector("#email_id")!)).toBe(
       false,
     );
+  });
+});
+
+describe("split email domain select replaced after the custom choice", () => {
+  function replacingPair(): FieldCandidateHandle {
+    const handle = mount(
+      `<form><div id="group"><input id="email_id"><span>@</span>${SELECT}</div></form>`,
+    );
+    const select = document.querySelector<HTMLSelectElement>("#domain")!;
+    select.addEventListener("change", () => {
+      if (select.value !== "self") return;
+      // A rendering library swaps the select for a text input on its next tick.
+      setTimeout(() => {
+        select.insertAdjacentHTML("afterend", '<input id="domain_text">');
+        select.remove();
+      }, 0);
+    });
+    return handle;
+  }
+
+  it("writes the domain into the input that replaces the select", async () => {
+    const handle = replacingPair();
+    expect(await writeSplitEmailSettled(handle, "qa@other.test")).toBe(
+      "written",
+    );
+    expect(value("#email_id")).toBe("qa");
+    expect(value("#domain_text")).toBe("other.test");
+    expect(splitEmailRetained(handle, "qa@other.test")).toBe(true);
+    // The replaced pair is still the split email pair when the write is re-checked.
+    expect(isSplitEmailTarget(handle)).toBe(false);
+    expect(isSplitEmailPair(handle)).toBe(true);
+  });
+
+  it("keeps the exact domain option path synchronous", async () => {
+    const handle = replacingPair();
+    expect(await writeSplitEmailSettled(handle, "qa@gmail.com")).toBe(
+      "written",
+    );
+    expect(value("#domain")).toBe("gmail.com");
+  });
+
+  it("writes only the local part when nothing replaces the select", async () => {
+    const handle = mount(
+      `<form><div id="group"><input id="email_id"><span>@</span>${SELECT}</div></form>`,
+    );
+    expect(await writeSplitEmailSettled(handle, "qa@other.test")).toBe(
+      "partial",
+    );
+    expect(value("#domain")).toBe("");
   });
 });

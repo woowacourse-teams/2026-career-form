@@ -40,6 +40,7 @@ import {
 } from "./search-executor";
 import {
   executeApprovedWrites,
+  executeSettledSplitEmailWrite,
   settledGenericResult,
   type WriteResultListener,
 } from "./native-executor";
@@ -496,11 +497,17 @@ export async function executeApprovedWritesAfterPageSettles({
           });
           return { result, effect };
         }
-        const result = executeApprovedWrites({
-          items: [item],
-          approvedCandidateIds,
-          registry,
-        })[0]!;
+        const result =
+          (await executeSettledSplitEmailWrite(
+            item,
+            approvedCandidateIds,
+            registry,
+          )) ??
+          executeApprovedWrites({
+            items: [item],
+            approvedCandidateIds,
+            registry,
+          })[0]!;
         const completionLookup = registry.lookupField(item.candidateId);
         if (
           document &&

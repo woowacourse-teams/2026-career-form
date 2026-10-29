@@ -15,6 +15,7 @@ import type { FieldCandidateHandle } from "../dom/types";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import type { SearchFollowUpControl } from "./search-follow-up";
 import { genericRowFor } from "../dom/repeatable-rows";
+import { hiddenFromPage } from "../dom/generic-form-groups";
 import {
   elementSignature,
   isAnchorElement,
@@ -291,7 +292,18 @@ function isPlausibleSearchOpener(
     !["button", "submit", "reset", "image"].includes(element.type)
   )
     return false;
-  return SEARCH_ACTION.test(openerLabel(element));
+  const label = openerLabel(element);
+  if (SEARCH_ACTION.test(label)) return true;
+  // An icon-only button names no action at all. It stays a candidate so the
+  // field group can count it; the execution-time role decision must still
+  // confirm it before any click. A button that wraps a form control is that
+  // control's own trigger (for example a custom dropdown), not a search.
+  return (
+    label === "" &&
+    isButtonElement(element) &&
+    element.querySelector("svg, img") !== null &&
+    element.querySelector("input, select, textarea") === null
+  );
 }
 
 /**
@@ -320,7 +332,13 @@ export function safeSearchOpener(
   if (!isPlausibleSearchOpener(element)) return false;
   if (!isVisible(element) || element.matches(":disabled")) return false;
   if (element.closest("[aria-disabled='true']")) return false;
-  if (isButtonElement(element) && element.type !== "button") return false;
+  // A default submit button with no form owner has nothing to submit.
+  if (
+    isButtonElement(element) &&
+    element.type !== "button" &&
+    !(element.type === "submit" && element.form === null)
+  )
+    return false;
   if (isInputElement(element) && element.type !== "button") return false;
   if (isAnchorElement(element)) {
     const href = element.getAttribute("href")?.trim() ?? "";
@@ -461,6 +479,10 @@ function targetSemanticSignature(target: HTMLInputElement): string {
 }
 
 export function controlSignature(element: Element): string {
+  // A page can mirror typed text into the value attribute of a text input.
+  const typedText =
+    element.tagName === "INPUT" &&
+    ["text", "search"].includes((element as HTMLInputElement).type);
   return JSON.stringify([
     elementSignature(element),
     ...[
@@ -486,7 +508,9 @@ export function controlSignature(element: Element): string {
       "data-value",
       "data-code",
       "value",
-    ].map((name) => element.getAttribute(name)),
+    ].map((name) =>
+      typedText && name === "value" ? null : element.getAttribute(name),
+    ),
     element.textContent,
   ]);
 }
@@ -542,7 +566,8 @@ export function targetIsCurrent(
     isInputElement(candidate) &&
     candidate.type === "text" &&
     candidate.readOnly &&
-    isVisible(candidate, true)
+    // The open modal may also mark the page behind it aria-hidden.
+    isVisible(candidate, true, !hiddenFromPage(candidate))
       ? candidate
       : targetInput(lookup.handle);
   if (

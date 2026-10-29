@@ -38,14 +38,21 @@ export function isAnchorElement(
   return element.tagName === "A";
 }
 
-export function isVisible(element: HTMLElement, allowInert = false): boolean {
+export function isVisible(
+  element: HTMLElement,
+  allowInert = false,
+  allowAriaHidden = false,
+): boolean {
   if (
     element.hidden ||
     element.matches(":disabled") ||
     element.closest(
-      allowInert
-        ? "[hidden], [aria-hidden='true'], [aria-disabled='true']"
-        : "[hidden], [aria-hidden='true'], [aria-disabled='true'], [inert]",
+      [
+        "[hidden]",
+        "[aria-disabled='true']",
+        ...(allowAriaHidden ? [] : ["[aria-hidden='true']"]),
+        ...(allowInert ? [] : ["[inert]"]),
+      ].join(", "),
     )
   )
     return false;

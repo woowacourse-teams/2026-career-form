@@ -29,9 +29,25 @@ function groupTitle(area: Element): string {
   );
 }
 
+/**
+ * An open modal or popup layer (dialog, listbox, menu, grid) makes the page
+ * behind it inert or aria-hidden. That page keeps its structure; only a hidden
+ * subtree no open layer explains is gone.
+ */
+export function hiddenFromPage(element: Element): boolean {
+  if (element.closest("[hidden]")) return true;
+  const hider = element.closest("[aria-hidden='true'], [inert]");
+  if (!hider) return false;
+  return !Array.from(
+    element.ownerDocument.querySelectorAll(
+      "dialog[open], [role='dialog'][aria-modal='true'], [role='listbox'], [role='menu'], [role='grid']",
+    ),
+  ).some((modal) => !hider.contains(modal));
+}
+
 function controls(row: Element): Element[] {
   return Array.from(row.querySelectorAll(CONTROL_SELECTOR)).filter(
-    (control) => !control.closest("[hidden], [aria-hidden='true'], [inert]"),
+    (control) => !hiddenFromPage(control),
   );
 }
 
@@ -103,7 +119,7 @@ function addActions(area: Element, rows: readonly Element[]): HTMLElement[] {
         !rows.some((row) => row.contains(action)) &&
         ADD_LABEL.test(label) &&
         !FORBIDDEN_LABEL.test(label) &&
-        !action.closest("[hidden], [aria-hidden='true'], [inert]")
+        !hiddenFromPage(action)
       );
     },
   );

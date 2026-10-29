@@ -928,6 +928,13 @@
 - [CI/CD 설정](topics/cicd-setup.md)과 [배포 Runbook](topics/deployment-runbook.md)의 Current를 CF-350으로 바꾸고 앞선 근거를 History에 남겼다. 절차의 Wiki 밖 정본은 `infra/WEB_PUSH_VAPID.md`다.
 - VAPID 키 값, 호스트 주소, 계정, 대화 전문은 저장하지 않았다.
 
+## [2026-10-29] ingest | CF-355 줄 하나 반복 영역과 달력 뒤 드롭다운 확인
+
+- Approval-Digest: 8a784b1b386ac3a3142c61d713ef9c8b6d3741cebc93ca8fb80e228f58c890b3
+- Source-Revision: fb77e1f
+- 승인된 후보 4개 중 CF-355 범위 3개를 [CF-355 bundle](../raw/issues/CF-355/manifest.md)에 두 payload로 기록했다. 줄 하나만 보이는 반복 영역의 행 상자 판정·+ 그림 버튼 행 추가·줄 i와 항목 i 연결, 글자 없는 아이콘 버튼의 범용 전용 수집, 실행이 연 달력 루트·열기 버튼의 드롭다운 확인 제외.
+- [범용 구조 반복 실행](topics/generic-structure-loop.md)과 [범용 연월 달력 선택](topics/generic-calendar-selection.md)의 Current를 CF-355로 바꾸고 앞선 근거를 History에 남겼다. 후보 1은 CF-358 bundle에 기록한다.
+- 실제 지원값, 계정, 세션, 페이지 주소, 대화 전문은 저장하지 않았다.
 ## [2026-10-29] ingest | CF-363 랜딩 설치 없이 체험하기와 기술 소개
 
 - Approval-Digest: 6009211edc896a7a300a3b2ddd11c9a5c9a19b8db58fb685f8719408b146d89a
@@ -935,6 +942,22 @@
 - 승인된 후보 1개를 [CF-363 bundle](../raw/issues/CF-363/manifest.md)에 기록했다. 히어로 버튼 하나와 `/try/` 체험(조사 자산 재사용, 자동 기입 강조, 관리 버튼 안내 카드, 좁은 화면 대체), `/tech/` 기술 소개(두 주제, 흐름도 3개, 수치 출처 상태), `trial_*` 이벤트, 검토한 배치 네 가지와 근거 자료, 유지되는 CF-96·CF-193 경계를 담았다.
 - [랜딩,온보딩 웹 페이지](topics/landing-onboarding.md)의 Current를 CF-363으로 바꾸고 CF-193을 History에 남겼다.
 - 실제 지원 정보, 계정, 대화 전문은 저장하지 않았다.
+
+## [2026-10-29] ingest | CF-358 미리 승인한 새 칸의 자동 기입
+
+- Approval-Digest: 3bc4195c391a49504b3b613d44f889b4a6a9e4eae7fbe459f44b367dc3df589c
+- Source-Revision: f9c49b4
+- 승인된 후보 4개 중 CF-358 범위 1개를 [CF-358 bundle](../raw/issues/CF-358/manifest.md)에 기록했다. 1차 검토의 나타날 수 있는 칸, 실행 중·사용자 저장 뒤 나타난 승인 범위 안 빈 AUTO 칸의 2차 검토 없는 기입, 체크 해제, 확장이 저장을 누르지 않는 감시 경계.
+- [범용 검토 화면의 3단계 표시](topics/generic-review-tiers.md)의 Current를 CF-358로 바꾸고 앞선 근거를 History에 남겼다.
+- 실제 지원값, 계정, 세션, 페이지 주소, 대화 전문은 저장하지 않았다.
+
+## [2026-10-29] ingest | CF-358 확인 필요 기본 포함과 새 칸 2차 버튼 제거
+
+- Approval-Digest: 3e46c14f3aff69c0a59818c11abde463e0e954fb4df8ca23d6ef3e132399c575
+- Source-Revision: c8d8c5d
+- 추가 승인한 후보 4개를 [CF-358 bundle](../raw/issues/CF-358/manifest.md)에 기록했다. 새 칸 2차 검토 버튼 제거와 직접 확인할 새 칸 표시, 확인 필요 기본 포함 규칙, 모든 범주·숨은 칸·입력 불가 칸까지 넓힌 승인 범위, 날짜 기입 뒤 다른 컨트롤이 연 층의 보류 판정 제외.
+- [범용 검토 화면의 3단계 표시](topics/generic-review-tiers.md)와 [범용 연월 달력 선택](topics/generic-calendar-selection.md)의 Current를 CF-358 근거로 바꿨다.
+- 실제 지원값, 계정, 세션, 페이지 주소, 대화 전문은 저장하지 않았다.
 
 ## [2026-10-29] ingest | CF-368 Greeting 학교명 검색, 사이드 패널, 프로필 입력 보강
 

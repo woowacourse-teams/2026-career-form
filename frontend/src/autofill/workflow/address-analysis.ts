@@ -239,7 +239,7 @@ export async function runAddressAnalysis({
     (genericAddressFields[0] === undefined ||
       genericFieldIsUsable(genericAddressFields[0], 0)) &&
     (genericAddressFields[2] === undefined
-      ? !hasEditableDetailCandidate(snapshot, genericAddressFields)
+      ? !hasEditableDetailCandidate(snapshot, genericAddressFields, pageDocument)
       : genericFieldIsUsable(genericAddressFields[2], 2));
   const genericDetailAbsent =
     genericAddressPermitted && genericAddressFields[2] === undefined;
@@ -272,7 +272,11 @@ export async function runAddressAnalysis({
         addressLine1: genericFieldIsUsable(genericAddressFields[1], 1),
         addressLine2: genericAddressFields[2]
           ? genericFieldIsUsable(genericAddressFields[2], 2)
-          : hasEditableDetailCandidate(snapshot, genericAddressFields)
+          : hasEditableDetailCandidate(
+                snapshot,
+                genericAddressFields,
+                pageDocument,
+              )
             ? "unmapped-editable"
             : "absent",
       });
@@ -363,18 +367,29 @@ export async function runAddressAnalysis({
           (control instanceof HTMLInputElement &&
             ["hidden", "checkbox", "button", "submit"].includes(control.type)),
       );
-    const matching = (scope: Element): HTMLElement[] =>
-      ownsOnlyAddress(scope)
-        ? Array.from(
-            scope.querySelectorAll<HTMLElement>("button, [role='button']"),
-          ).filter((button) => {
-            const name = `${button.getAttribute("aria-label") ?? ""} ${button.getAttribute("title") ?? ""} ${button.textContent ?? ""}`;
-            return (
-              /검색|우편번호|주소\s*찾기/.test(name) &&
-              !/동일|복사|같음|삭제|초기화/.test(name)
-            );
-          })
+    const nameOf = (button: Element) =>
+      `${button.getAttribute("aria-label") ?? ""} ${button.getAttribute("title") ?? ""} ${button.textContent ?? ""}`.trim();
+    const matching = (scope: Element): HTMLElement[] => {
+      if (!ownsOnlyAddress(scope)) return [];
+      const buttons = Array.from(
+        scope.querySelectorAll<HTMLElement>("button, [role='button']"),
+      );
+      const named = buttons.filter((button) => {
+        const name = nameOf(button);
+        return (
+          /검색|우편번호|주소\s*찾기/.test(name) &&
+          !/동일|복사|같음|삭제|초기화/.test(name)
+        );
+      });
+      if (named.length > 0) return named;
+      // An unnamed icon button is the trigger only when it is the one button
+      // of a scope that holds nothing but the address controls.
+      return buttons.length === 1 &&
+        !nameOf(buttons[0]!) &&
+        buttons[0]!.querySelector("svg, img") !== null
+        ? buttons
         : [];
+    };
     let scope: Element | null = element ?? null;
     for (let depth = 0; scope && depth < 5; depth += 1) {
       const triggers = matching(scope);
@@ -398,9 +413,17 @@ export async function runAddressAnalysis({
     hasRunner: !!effectiveRunner,
     hasTask: !!run.task,
   });
+  const genericAddressIds = genericAddressPermitted
+    ? genericAddressFields.flatMap((field) => (field ? [field.candidateId] : []))
+    : [];
   if (!run.button || !effectiveRunner)
     return adapter.addressRequiresSearch || genericAddressPermitted
-      ? withoutAddressFields(analysis, snapshot, effectiveAddressNames)
+      ? withoutAddressFields(
+          analysis,
+          snapshot,
+          effectiveAddressNames,
+          genericAddressIds,
+        )
       : analysis;
   const candidateSlots = genericAddressPermitted
     ? genericAddressFields.flatMap((field, index) =>
@@ -518,20 +541,67 @@ export async function runAddressAnalysis({
     }
   }
   onActivity?.("matching");
-  return withoutAddressFields(analysis, snapshot, effectiveAddressNames);
+  return withoutAddressFields(
+    analysis,
+    snapshot,
+    effectiveAddressNames,
+    genericAddressIds,
+  );
 }
 
 /**
- * A detail line may be omitted only when no other editable single-line text
- * field shares a section with the road address: such a field could be the
- * unmapped detail line, and the search would then leave it empty.
+ * A detail line may be omitted only when the control right after the address
+ * controls is not an editable single-line text field: such a field could be
+ * the unmapped detail line, and the search would then leave it empty.
  */
 function hasEditableDetailCandidate(
   snapshot: ReturnType<typeof collectFieldsSnapshot>,
-  addressFields: readonly ({ candidateId: string } | undefined)[],
+  addressFields: readonly ({ candidateId: string; domId?: string; domName?: string } | undefined)[],
+  pageDocument?: Document,
 ): boolean {
   const road = addressFields[1];
   if (!road) return true;
+  const elementOf = (field: (typeof addressFields)[number]) => {
+    if (!field) return null;
+    const lookup = snapshot.registry.lookupField(field.candidateId);
+    return (
+      ("handle" in lookup ? lookup.handle.elements[0] : undefined) ??
+      (pageDocument ? elementByCollectedName(pageDocument, field) : null)
+    );
+  };
+  const roadElement = elementOf(road);
+  if (pageDocument && roadElement) {
+    // A detail line follows its road address: only the next form control
+    // after the address controls can be that line.
+    const own = new Set(addressFields.map(elementOf).filter(Boolean));
+    const shown = (control: Element) =>
+      !control.closest("[hidden]") &&
+      pageDocument.defaultView?.getComputedStyle(control).display !== "none";
+    const controls = Array.from(
+      pageDocument.querySelectorAll<
+        HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+      >("input, select, textarea"),
+    );
+    const next = controls
+      .slice(controls.indexOf(roadElement as HTMLInputElement) + 1)
+      .find(
+        (control) =>
+          !own.has(control) &&
+          !(
+            control instanceof HTMLInputElement &&
+            ["hidden", "button", "submit", "image", "reset", "file"].includes(
+              control.type,
+            )
+          ) &&
+          shown(control),
+      );
+    return (
+      next instanceof HTMLInputElement &&
+      ["text", "search", ""].includes(next.type) &&
+      !next.readOnly &&
+      !next.disabled
+    );
+  }
   const own = new Set(
     addressFields.flatMap((field) => (field ? [field.candidateId] : [])),
   );
@@ -573,20 +643,24 @@ function withoutAddressFields(
   analysis: FieldsAnalyzeResponse,
   snapshot: ReturnType<typeof collectFieldsSnapshot>,
   addressNames: readonly string[],
+  candidateIds: readonly string[] = [],
 ): FieldsAnalyzeResponse {
-  const ids = new Set(
-    snapshot.request.sections
+  // A control without a name or id must never match every other unnamed one.
+  const names = addressNames.filter(Boolean);
+  const ids = new Set([
+    ...candidateIds,
+    ...snapshot.request.sections
       .flatMap((section) => [
         ...section.fields,
         ...(section.items ?? []).flatMap((item) => item.fields),
       ])
       .filter(
         (field) =>
-          addressNames.includes(field.domId ?? "") ||
-          addressNames.includes(field.domName ?? ""),
+          (!!field.domId && names.includes(field.domId)) ||
+          (!!field.domName && names.includes(field.domName)),
       )
       .map((field) => field.candidateId),
-  );
+  ]);
   return {
     ...analysis,
     fields: analysis.fields.filter((field) => !ids.has(field.candidateId)),

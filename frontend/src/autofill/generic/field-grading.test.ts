@@ -141,12 +141,26 @@ describe("gradeGenericField checks", () => {
     ["a radio group", { control: "radio" }],
     ["a checkbox", { control: "checkbox" }],
     ["an email-typed input", { control: "text", inputType: "email" }],
+    ["a plain input button", { control: "button", element: "input" }],
   ])("blocks a date key matched to %s", (_name, override) => {
     expect(
       gradeGenericField(
         input({ profileFieldKey: "personal.personal.birthDate", ...override }),
       ),
     ).toEqual({ grade: "BLOCKED", reason: "NON_DATE_FIELD" });
+  });
+
+  it("keeps a date key on a dialog date button (custom button)", () => {
+    expect(
+      gradeGenericField(
+        input({
+          profileFieldKey: "personal.personal.birthDate",
+          control: "button",
+          element: "custom",
+          displayName: "생년월일",
+        }),
+      ),
+    ).toEqual({ grade: "AUTO" });
   });
 
   it.each<[string, Partial<GradeFieldInput>]>([
@@ -181,6 +195,98 @@ describe("gradeGenericField checks", () => {
         }),
       ),
     ).toEqual({ grade: "BLOCKED", reason: "MIXED_EDUCATION_RECORD" });
+  });
+
+  it("blocks a key of another repeated record kind inside a career row", () => {
+    expect(
+      gradeGenericField(
+        input({
+          profileFieldKey: "projects.project.role",
+          rowSiblings: [
+            { profileFieldKey: "careers.career.companyName", confidence: 0.9 },
+            { profileFieldKey: "careers.career.startDate", confidence: 0.9 },
+          ],
+        }),
+      ),
+    ).toEqual({ grade: "BLOCKED", reason: "MIXED_RECORD_KIND" });
+  });
+
+  it("blocks a key whose neighbors in the row are both another record kind", () => {
+    expect(
+      gradeGenericField(
+        input({
+          profileFieldKey: "projects.project.role",
+          rowSiblings: [
+            { profileFieldKey: "careers.career.companyName", confidence: 0.9 },
+            { profileFieldKey: "careers.career.employmentType", confidence: 0.9 },
+            { profileFieldKey: "projects.project.projectName", confidence: 0.9 },
+          ],
+          rowNeighborKeys: [
+            "careers.career.companyName",
+            "careers.career.employmentType",
+          ],
+        }),
+      ),
+    ).toEqual({ grade: "BLOCKED", reason: "MIXED_RECORD_KIND" });
+  });
+
+  it("keeps the first key of a nested record after another record kind", () => {
+    expect(
+      gradeGenericField(
+        input({
+          profileFieldKey: "projects.project.projectName",
+          rowSiblings: [
+            { profileFieldKey: "careers.career.endDate", confidence: 0.9 },
+            { profileFieldKey: "projects.project.startDate", confidence: 0.9 },
+          ],
+          rowNeighborKeys: [
+            "careers.career.endDate",
+            "projects.project.startDate",
+          ],
+        }),
+      ).reason,
+    ).not.toBe("MIXED_RECORD_KIND");
+  });
+
+  it("keeps a row whose own record kind is also present", () => {
+    expect(
+      gradeGenericField(
+        input({
+          profileFieldKey: "careers.career.position",
+          rowSiblings: [
+            { profileFieldKey: "careers.career.companyName", confidence: 0.9 },
+            { profileFieldKey: "projects.project.role", confidence: 0.9 },
+            { profileFieldKey: "projects.project.projectName", confidence: 0.9 },
+          ],
+        }),
+      ).reason,
+    ).not.toBe("MIXED_RECORD_KIND");
+  });
+
+  it.each(["총점", "만점", "Scale"])(
+    "blocks credits mapped to a %s field",
+    (placeholder) => {
+      expect(
+        gradeGenericField(
+          input({
+            profileFieldKey: "education.university.totalCredits",
+            displayName: placeholder,
+            placeholder,
+          }),
+        ),
+      ).toEqual({ grade: "BLOCKED", reason: "SCALE_KEY_MISMATCH" });
+    },
+  );
+
+  it("keeps credits in a total credits field", () => {
+    expect(
+      gradeGenericField(
+        input({
+          profileFieldKey: "education.university.totalCredits",
+          displayName: "총 이수학점",
+        }),
+      ).reason,
+    ).not.toBe("SCALE_KEY_MISMATCH");
   });
 
   it("keeps a row with one education record kind and unrelated keys", () => {

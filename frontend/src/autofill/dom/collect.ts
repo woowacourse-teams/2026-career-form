@@ -1,4 +1,5 @@
 import { withStructuralCollection } from "../debug/structural-diagnostics";
+import { iconGlyphLabel } from "./icon-glyph";
 import {
   collectNativeFields,
   collectNativePreparation,
@@ -13,6 +14,10 @@ import {
   executionPolicy,
 } from "../workflow/execution-policy";
 import { targetOnlyRadio } from "../policy/radio-validation";
+import {
+  dialogDateButtonValue,
+  isDialogDateButton,
+} from "../interaction/dialog-date-picker";
 import { resolveDocumentCompany } from "../adapters/company";
 import {
   collectHplaceFields,
@@ -64,7 +69,11 @@ import { collectButtonDropdowns, type ButtonDropdown } from "./button-dropdown";
 import { collectReadonlyInputDropdowns } from "./readonly-input-dropdown";
 import { isSafeStructuralClick } from "../generic/click-policy";
 import { acquireDocumentRun } from "../interaction/document-run";
-import { genericFormGroupFor, genericFormGroups } from "./generic-form-groups";
+import {
+  genericFormGroupFor,
+  genericFormGroups,
+  hiddenFromPage,
+} from "./generic-form-groups";
 import { genericRowFor, genericRows } from "./repeatable-rows";
 import {
   documentImplicitRepeatGroups,
@@ -121,6 +130,21 @@ export function hasVisibleFormControl(item: Element): boolean {
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
     >("input, select, textarea"),
   ).some((control) => !isHidden(control));
+}
+
+/**
+ * An open modal makes the page behind it inert or aria-hidden. A generic row
+ * there is still a row; only its own hiding (display, hidden) removes it.
+ */
+function hasPageFormControl(row: Element): boolean {
+  if (hasVisibleFormControl(row)) return true;
+  return Array.from(
+    row.querySelectorAll<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >("input, select, textarea"),
+  ).some(
+    (control) => !hiddenFromPage(control) && !hiddenUncached(control, true),
+  );
 }
 
 function isTemplateLike(element: Element): boolean {
@@ -183,10 +207,15 @@ function isHidden(element: HTMLElement): boolean {
   );
 }
 
-function hiddenUncached(element: HTMLElement): boolean {
+function hiddenUncached(
+  element: HTMLElement,
+  ignoreAriaHidden = false,
+): boolean {
   if (
     element.hidden ||
-    element.closest("[hidden], [aria-hidden='true']") ||
+    element.closest(
+      ignoreAriaHidden ? "[hidden]" : "[hidden], [aria-hidden='true']",
+    ) ||
     element.closest("[style*='display: none'], [style*='display:none']")
   ) {
     return true;
@@ -375,9 +404,22 @@ function collectFieldElements(
       element.type,
     );
   });
-  return companyId === "components"
-    ? [...native, ...componentFieldElements(document)]
-    : native;
+  if (companyId === "components")
+    return [...native, ...componentFieldElements(document)];
+  if (companyId !== "generic") return native;
+  const dateButtons = Array.from(
+    document.querySelectorAll("button[aria-haspopup='dialog']"),
+  ).filter(
+    (button): button is HTMLButtonElement =>
+      isDialogDateButton(button) && !isTemplateLike(button),
+  );
+  return dateButtons.length === 0
+    ? native
+    : [...native, ...dateButtons].sort((left, right) =>
+        left.compareDocumentPosition(right) & Node.DOCUMENT_POSITION_FOLLOWING
+          ? -1
+          : 1,
+      );
 }
 
 function collectFieldsSnapshotInternal(
@@ -659,7 +701,11 @@ function collectFieldsSnapshotInternal(
                   generic,
                 ),
                 element:
-                  first instanceof HTMLTextAreaElement ? "textarea" : "input",
+                  first instanceof HTMLTextAreaElement
+                    ? "textarea"
+                    : generic && isDialogDateButton(first)
+                      ? "custom"
+                      : "input",
                 control:
                   first instanceof HTMLTextAreaElement
                     ? "textarea"
@@ -667,6 +713,18 @@ function collectFieldsSnapshotInternal(
                       ? "button"
                       : "text",
               };
+              // A dialog date button shows its own placeholder until a date is
+              // chosen; only that digit-free text may name it.
+              const placeholder =
+                generic && isDialogDateButton(first)
+                  ? metadata(first.textContent)
+                  : undefined;
+              if (
+                placeholder &&
+                !candidate.displayName &&
+                !dialogDateButtonValue(first as HTMLButtonElement)
+              )
+                candidate.displayName = placeholder;
             }
 
             // Component forms search suggestions can echo the user's typed answer.
@@ -949,15 +1007,29 @@ export async function collectFieldsSnapshotWithDropdowns(
   }
 }
 
-function collectActionElements(document: Document) {
+/** `generic` also admits typeless icon-only buttons; static adapters never see them. */
+function collectActionElements(document: Document, generic = false) {
   return Array.from(
     document.querySelectorAll<
       HTMLButtonElement | HTMLInputElement | HTMLSelectElement
     >("button, input[type='button'], input[type='radio'], select"),
   ).filter((element) => {
-    if (element instanceof HTMLButtonElement && element.type !== "button")
+    // A typeless button outside any form submits nothing; only its drawn
+    // plus or minus names it.
+    const glyph =
+      generic &&
+      element instanceof HTMLButtonElement &&
+      !element.hasAttribute("type") &&
+      !element.form
+        ? iconGlyphLabel(element)
+        : undefined;
+    if (
+      element instanceof HTMLButtonElement &&
+      element.type !== "button" &&
+      !glyph
+    )
       return false;
-    const label = labelOf(element);
+    const label = labelOf(element) || glyph;
     if (element instanceof HTMLSelectElement) {
       return !isHidden(element) && Boolean(element.id || element.name);
     }
@@ -986,7 +1058,7 @@ function repeatableItemElements(
   if (!container) return [];
   if (adapter === collectionAdapterForHost("")) {
     return genericRows(container).filter(
-      (row) => !isTemplateLike(row) && hasVisibleFormControl(row),
+      (row) => !isTemplateLike(row) && hasPageFormControl(row),
     );
   }
 
@@ -1233,7 +1305,7 @@ function collectPreparationSnapshotInternal(
   const sections: PreparationSection[] = [];
   const generic = adapter === collectionAdapterForHost("");
   const actions = [
-    ...collectActionElements(document).filter((element) =>
+    ...collectActionElements(document, generic).filter((element) =>
       companyId === "components"
         ? Boolean(adapter.actionDomId(element))
         : !generic ||
@@ -1298,7 +1370,12 @@ function collectPreparationSnapshotInternal(
         semanticContext: collectActionSemanticContext(element, container, {
           generic: companyId === "generic",
         }),
-        ...(labelOf(element) ? { displayName: labelOf(element) } : {}),
+        ...((labelOf(element) || (generic && iconGlyphLabel(element)))
+          ? {
+              displayName:
+                labelOf(element) || (generic ? iconGlyphLabel(element) : ""),
+            }
+          : {}),
         ...(domId ? { domId } : {}),
         ...(metadata(element.name) ? { domName: metadata(element.name) } : {}),
         ...(element.disabled ? { disabled: true } : {}),
