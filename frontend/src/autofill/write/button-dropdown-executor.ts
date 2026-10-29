@@ -23,7 +23,10 @@ import {
   rememberCatalogSelection,
   retainedCatalogSelection,
 } from "../profile/catalog-receipt";
-import { rememberedCalendarRoots } from "../interaction/day-calendar-surface";
+import {
+  rememberedCalendarOpeners,
+  rememberedCalendarRoots,
+} from "../interaction/day-calendar-surface";
 
 export async function executeButtonDropdownWrite({
   item,
@@ -102,6 +105,7 @@ export async function executeButtonDropdownWrite({
   const opening = captureDropdownProbe(
     dropdown.trigger.ownerDocument,
     rememberedCalendarRoots(dropdown.trigger.ownerDocument),
+    rememberedCalendarOpeners(dropdown.trigger.ownerDocument),
   );
   const menus = await openDropdownFor(dropdown, signal);
   const openedWithoutChanges = opening.unchanged();
@@ -192,6 +196,7 @@ export async function executeButtonDropdownWrite({
       ? captureDropdownProbe(
           dropdown.trigger.ownerDocument,
           rememberedCalendarRoots(dropdown.trigger.ownerDocument),
+    rememberedCalendarOpeners(dropdown.trigger.ownerDocument),
         )
       : opening;
     try {

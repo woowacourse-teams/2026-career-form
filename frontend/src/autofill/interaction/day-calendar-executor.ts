@@ -478,7 +478,7 @@ export async function executeDayCalendarSelection(
     popup = root;
     scope = root;
     openedRoot = root;
-    rememberCalendarRoot(openedRoot);
+    rememberCalendarRoot(openedRoot, surface.opener);
   } else {
     const opened = await waitUntil(
       () =>
@@ -498,7 +498,7 @@ export async function executeDayCalendarSelection(
     )
       return fail("multiple_calendar_popups_open");
     openedRoot = popup;
-    rememberCalendarRoot(openedRoot);
+    rememberCalendarRoot(openedRoot, surface.opener);
   }
 
   const choose = async (

@@ -4,6 +4,7 @@ import { installUiDatepicker } from "./ui-datepicker.test-fixtures";
 import type { InteractionDecisionProvider } from "../api/interaction-types";
 import {
   displayedDayCalendarRoots,
+  rememberedCalendarOpeners,
   rememberedCalendarRoots,
 } from "./day-calendar-surface";
 
@@ -129,8 +130,13 @@ it("remembers the calendar it opened as a widget root after it gives up", async 
   expect((await pending).status).toBe("needs-verification");
   // Hidden now, its year/month selects still belong to the widget.
   expect(rememberedCalendarRoots(document)).toEqual([picker.root]);
+  // Its opener is part of the widget too.
+  expect(rememberedCalendarOpeners(document)).toEqual([
+    document.querySelector("button.ui-datepicker-trigger"),
+  ]);
   picker.root.remove();
   expect(rememberedCalendarRoots(document)).toEqual([]);
+  expect(rememberedCalendarOpeners(document)).toEqual([]);
 });
 
 it.each([false, true])(

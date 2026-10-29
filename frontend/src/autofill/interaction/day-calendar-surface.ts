@@ -56,20 +56,31 @@ export function dayCalendarRoots(document: Document): HTMLElement[] {
   );
 }
 
-// Roots a calendar run opened. A page may keep one hidden after it closes and
-// tear it down later; its year/month selects are never applicant values.
-const openedCalendarRoots = new Set<HTMLElement>();
+// Roots a calendar run opened, with their openers. A page may keep a root
+// hidden after it closes and tear it down later; its year/month selects and
+// its opener's open/closed display are never applicant values.
+const openedCalendarRoots = new Map<HTMLElement, HTMLElement | undefined>();
 
-export function rememberCalendarRoot(root: HTMLElement): void {
-  openedCalendarRoots.add(root);
+export function rememberCalendarRoot(
+  root: HTMLElement,
+  opener?: HTMLElement,
+): void {
+  openedCalendarRoots.set(root, opener);
 }
 
 export function rememberedCalendarRoots(document: Document): HTMLElement[] {
-  for (const root of openedCalendarRoots)
+  for (const root of openedCalendarRoots.keys())
     if (!root.isConnected) openedCalendarRoots.delete(root);
-  return [...openedCalendarRoots].filter(
+  return [...openedCalendarRoots.keys()].filter(
     (root) => root.ownerDocument === document,
   );
+}
+
+export function rememberedCalendarOpeners(document: Document): HTMLElement[] {
+  return rememberedCalendarRoots(document).flatMap((root) => {
+    const opener = openedCalendarRoots.get(root);
+    return opener ? [opener] : [];
+  });
 }
 
 export function displayedDayCalendarRoots(document: Document): HTMLElement[] {

@@ -115,15 +115,25 @@ function valuesUnchanged(
 /**
  * Only rolls back effects of our own probe, never trusted user edits.
  * Controls inside `widgetRoots` (a calendar's own year/month selects) are
- * not applicant values; the page may tear them down at any time.
+ * not applicant values; the page may tear them down at any time. A widget
+ * opener's own open/closed display is skipped too, never a control inside it.
  */
 export function captureDropdownProbe(
   document: Document,
   widgetRoots: readonly Element[] = [],
+  widgetOpeners: readonly Element[] = [],
 ) {
   const before = new Map(
     [...fieldValues(document)].filter(
-      ([element]) => !widgetRoots.some((root) => root.contains(element)),
+      ([element]) =>
+        !widgetRoots.some((root) => root.contains(element)) &&
+        !(
+          !(
+            element instanceof HTMLInputElement ||
+            element instanceof HTMLSelectElement ||
+            element instanceof HTMLTextAreaElement
+          ) && widgetOpeners.some((opener) => opener.contains(element))
+        ),
     ),
   );
   let userEdited = false;

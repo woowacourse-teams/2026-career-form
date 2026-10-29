@@ -327,3 +327,17 @@ it("does not count controls inside the given widget roots as applicant values", 
   widgetAware.release();
   plain.release();
 });
+
+it("does not count a widget opener's own text, but still compares controls inside it", () => {
+  document.body.innerHTML = `<button type="button" aria-controls="panel"><span>열림</span><input id="inside" value="kept"></button>`;
+  const opener = document.querySelector<HTMLElement>("button")!;
+  const input = document.querySelector<HTMLInputElement>("#inside")!;
+  const probe = captureDropdownProbe(document, [], [opener]);
+  // The page closes the calendar: the opener loses its panel link and text.
+  opener.removeAttribute("aria-controls");
+  opener.querySelector("span")!.textContent = "";
+  expect(probe.unchanged()).toBe(true);
+  input.value = "changed";
+  expect(probe.unchanged()).toBe(false);
+  probe.release();
+});
