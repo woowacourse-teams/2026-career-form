@@ -1007,7 +1007,8 @@ export async function collectFieldsSnapshotWithDropdowns(
   }
 }
 
-function collectActionElements(document: Document) {
+/** `generic` also admits typeless icon-only buttons; static adapters never see them. */
+function collectActionElements(document: Document, generic = false) {
   return Array.from(
     document.querySelectorAll<
       HTMLButtonElement | HTMLInputElement | HTMLSelectElement
@@ -1016,6 +1017,7 @@ function collectActionElements(document: Document) {
     // A typeless button outside any form submits nothing; only its drawn
     // plus or minus names it.
     const glyph =
+      generic &&
       element instanceof HTMLButtonElement &&
       !element.hasAttribute("type") &&
       !element.form
@@ -1303,7 +1305,7 @@ function collectPreparationSnapshotInternal(
   const sections: PreparationSection[] = [];
   const generic = adapter === collectionAdapterForHost("");
   const actions = [
-    ...collectActionElements(document).filter((element) =>
+    ...collectActionElements(document, generic).filter((element) =>
       companyId === "components"
         ? Boolean(adapter.actionDomId(element))
         : !generic ||
@@ -1368,8 +1370,11 @@ function collectPreparationSnapshotInternal(
         semanticContext: collectActionSemanticContext(element, container, {
           generic: companyId === "generic",
         }),
-        ...((labelOf(element) || iconGlyphLabel(element))
-          ? { displayName: labelOf(element) || iconGlyphLabel(element) }
+        ...((labelOf(element) || (generic && iconGlyphLabel(element)))
+          ? {
+              displayName:
+                labelOf(element) || (generic ? iconGlyphLabel(element) : ""),
+            }
           : {}),
         ...(domId ? { domId } : {}),
         ...(metadata(element.name) ? { domName: metadata(element.name) } : {}),
