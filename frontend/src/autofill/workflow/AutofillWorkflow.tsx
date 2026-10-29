@@ -850,7 +850,10 @@ function PolicyReadyWorkflow({
         : new Set();
       firstReviewKeys.current = new Set(
         reviewItems.flatMap((item) => {
-          const key = item.hiddenFromReview ? undefined : preApprovalKeyOf(item);
+          const key =
+            item.hiddenFromReview || item.disabled
+              ? undefined
+              : preApprovalKeyOf(item);
           return key ? [key] : [];
         }),
       );

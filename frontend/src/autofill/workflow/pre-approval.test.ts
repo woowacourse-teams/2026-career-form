@@ -69,6 +69,21 @@ describe("fields a reviewed area may reveal", () => {
     );
   });
 
+  it("lists a stored value whose field the first review could not write yet", () => {
+    const items = appearableProfileItems(profile(), [
+      item({ profileFieldKey: "military.military.militaryStatus" }),
+      item({
+        profileFieldKey: "military.military.serviceStartDate",
+        status: "unavailable",
+        selected: false,
+        disabled: true,
+      }),
+    ]);
+    expect(items.map(({ key }) => key)).toContain(
+      "military.military.serviceStartDate",
+    );
+  });
+
   it("also lists categories the page had no field for in the first review", () => {
     const keys = appearableProfileItems(profile(), [
       item({ profileFieldKey: "military.military.militaryStatus" }),

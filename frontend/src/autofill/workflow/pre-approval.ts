@@ -36,8 +36,9 @@ export function appearableProfileItems(
   const covered = new Set(
     reviewItems.flatMap((item) => {
       const key = profileKeyOf(item);
-      // A field the review only held hidden is still to appear on the page.
-      return key && !item.hiddenFromReview
+      // A field the review only held hidden, or could not write in the
+      // page's current state, is still to appear on the page.
+      return key && !item.hiddenFromReview && !item.disabled
         ? [scopeKey(key, item.itemIndex ?? 0)]
         : [];
     }),
