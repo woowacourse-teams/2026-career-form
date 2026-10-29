@@ -943,3 +943,11 @@
 - 승인된 후보 4개 중 CF-358 범위 1개를 [CF-358 bundle](../raw/issues/CF-358/manifest.md)에 기록했다. 1차 검토의 나타날 수 있는 칸, 실행 중·사용자 저장 뒤 나타난 승인 범위 안 빈 AUTO 칸의 2차 검토 없는 기입, 체크 해제, 확장이 저장을 누르지 않는 감시 경계.
 - [범용 검토 화면의 3단계 표시](topics/generic-review-tiers.md)의 Current를 CF-358로 바꾸고 앞선 근거를 History에 남겼다.
 - 실제 지원값, 계정, 세션, 페이지 주소, 대화 전문은 저장하지 않았다.
+
+## [2026-10-29] ingest | CF-358 확인 필요 기본 포함과 새 칸 2차 버튼 제거
+
+- Approval-Digest: 3e46c14f3aff69c0a59818c11abde463e0e954fb4df8ca23d6ef3e132399c575
+- Source-Revision: c8d8c5d
+- 추가 승인한 후보 4개를 [CF-358 bundle](../raw/issues/CF-358/manifest.md)에 기록했다. 새 칸 2차 검토 버튼 제거와 직접 확인할 새 칸 표시, 확인 필요 기본 포함 규칙, 모든 범주·숨은 칸·입력 불가 칸까지 넓힌 승인 범위, 날짜 기입 뒤 다른 컨트롤이 연 층의 보류 판정 제외.
+- [범용 검토 화면의 3단계 표시](topics/generic-review-tiers.md)와 [범용 연월 달력 선택](topics/generic-calendar-selection.md)의 Current를 CF-358 근거로 바꿨다.
+- 실제 지원값, 계정, 세션, 페이지 주소, 대화 전문은 저장하지 않았다.

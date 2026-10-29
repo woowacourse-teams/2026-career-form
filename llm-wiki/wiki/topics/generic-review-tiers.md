@@ -2,13 +2,13 @@
 
 > Topic: generic-review-tiers
 > Status: Current
-> Current: [CF-358 미리 승인한 새 칸의 2차 검토 없는 기입](../../raw/issues/CF-358/documents/generic-review-tiers.md)
-> History: [CF-259 범용 검토 화면의 3단계 표시](../../raw/issues/CF-259/documents/generic-review-tiers.md); [CF-307 선택 기반 검토 패널 소속과 개수](../../raw/issues/CF-307/documents/generic-review-tiers.md); [CF-358 미리 승인한 새 칸의 2차 검토 없는 기입](../../raw/issues/CF-358/documents/generic-review-tiers.md)
+> Current: [CF-358 미리 승인한 새 칸 자동 기입과 확인 필요 기본 포함](../../raw/issues/CF-358/documents/generic-review-tiers.md)
+> History: [CF-259 범용 검토 화면의 3단계 표시](../../raw/issues/CF-259/documents/generic-review-tiers.md); [CF-307 선택 기반 검토 패널 소속과 개수](../../raw/issues/CF-307/documents/generic-review-tiers.md); [CF-358 미리 승인한 새 칸 자동 기입과 확인 필요 기본 포함](../../raw/issues/CF-358/documents/generic-review-tiers.md)
 > Updated: 2026-10-29
 
 ## 현재 상태
 
-범용 검토 화면은 수집 후보로 올라온 칸만 AUTO(기본 선택), REVIEW(기본 체크 해제와 확인 필요),
+범용 검토 화면은 수집 후보로 올라온 칸만 AUTO(기본 선택), REVIEW(확인 필요. CF-358부터 사용자가 결정할 필요가 없는 칸은 기본 포함),
 BLOCKED(선택 불가와 입력 불가)로 구분한다. CF-307부터 패널 소속은 실제 선택 상태를 따른다.
 선택된 available·비활성 아님·non-BLOCKED 항목은 달력·검색 항목이어도 자동 기입 예정에
 들어가고, 배지는 그 목록 길이와 같다. 선택 해제·사용 불가 항목은 예외 목록에 들어가며
@@ -40,6 +40,8 @@ BLOCKED는 입력 불가, 나머지는 확인 필요다. 상세는 [현재 근�
 - [범용 등급의 다른 사람 대상 칸 차단](generic-other-person-context.md)
 - [지원서 패널 안 자동 기입 흐름](autofill-panel-workflow.md)
 
-## 미리 승인한 새 칸
+## 미리 승인한 새 칸과 확인 필요 기본 포함
 
-1차 검토는 "나타날 수 있는 칸"을 보여 준다. 대상은 검토에 나온 범주의 저장된 프로필 값 중 아직 보이는 칸이 없는 것이다. 사용자가 체크를 켜 둔 채 실행하면, 실행 중 나타난 칸과 사용자가 직접 저장한 뒤 나타난 칸 중 승인 범위 안의 빈 AUTO 칸을 2차 버튼 없이 기입한다. 범위 밖, 확인 필요 등급, 기존 값이 있는 칸은 2차 검토로 보낸다. 저장 뒤 감시는 아무것도 누르지 않고, 사용자가 입력 중이거나 새 칸에 포커스가 있으면 기다리며, 주소 변경·프로필 변경·승인 항목 모두 처리·5회에서 끝난다. 결과 화면은 다시 묻지 않고 기입한 새 칸을 표시한다. 근거는 [CF-358](../../raw/issues/CF-358/documents/generic-review-tiers.md)을 따른다.
+1차 검토는 "나타날 수 있는 칸"을 보여 준다. 대상은 1차 검토에서 쓸 수 있게 보인 칸이 덮지 않은 모든 범주의 저장된 프로필 값이다. 숨은 칸, 입력 불가로 보이던 조건부 칸, 영역 자체가 없던 범주를 포함한다. 사용자가 체크를 켜 둔 채 실행하면, 실행 중 나타난 칸과 사용자가 직접 저장한 뒤 나타난 칸 중 승인 범위 안의 빈 포함 칸을 바로 기입한다. 새 칸에는 2차 검토 버튼을 띄우지 않는다. 나머지 새 칸은 기입하지 않고 결과 화면의 "직접 확인할 새 칸"에 표시한다.
+
+1차 검토의 확인 필요에는 기존 값이 있는 칸, 연결 확신 보통, 같은 선택지 없음만 남긴다. 실행 중 검색 결과가 여러 개인 칸도 확인 필요로 남는다. 나머지 확인 필요 등급과 조건 확인(CONDITIONAL) 칸은 처음부터 포함해 자동 기입 예정에 보인다. 저장 뒤 감시는 아무것도 누르지 않고, 사용자가 입력 중이거나 새 칸에 포커스가 있으면 기다리며, 주소 변경·프로필 변경·승인 항목 모두 처리·5회에서 끝난다. 근거는 [CF-358](../../raw/issues/CF-358/documents/generic-review-tiers.md)을 따른다.
