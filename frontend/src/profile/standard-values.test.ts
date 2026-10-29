@@ -70,3 +70,17 @@ it("recognizes the five profile select IDs and their approved labels", () => {
     ]),
   );
 });
+
+it("adds TOEIC Speaking as a separate language test option", () => {
+  expect(LANGUAGE_TEST_OPTIONS).toContainEqual({
+    value: "toeic-speaking",
+    label: "TOEIC Speaking",
+    aliases: ["토익스피킹"],
+  });
+  expect(LANGUAGE_TEST_OPTIONS).toContainEqual({
+    value: "toeic",
+    label: "TOEIC",
+    aliases: ["토익"],
+  });
+  expect(standardValueLabel("toeic-speaking")).toBe("TOEIC Speaking");
+});

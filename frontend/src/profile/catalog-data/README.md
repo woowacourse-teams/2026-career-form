@@ -107,13 +107,16 @@ fill it.
 ## Language-test search
 
 `catalog.ts` also projects the repository's existing `LANGUAGE_TEST_OPTIONS`
-from `standard-values.ts`: TOEIC, TOEFL, TEPS, OPIc, IELTS, JLPT and HSK.
-These seven curated entries are separate from the official school/certificate
-JSON and retain the existing labels and aliases without broadening them.
-IDs use `languageTest:<existing option value>` and never depend on ordering.
-The complete runtime catalog contains 5,155 entries.
+from `standard-values.ts`: TOEIC, TOEIC Speaking, TOEFL, TEPS, OPIc, IELTS,
+JLPT and HSK. These eight curated entries are separate from the official
+school/certificate JSON and retain the existing labels and aliases without
+broadening them. IDs use `languageTest:<existing option value>` and never
+depend on ordering. The complete runtime catalog contains 5,156 entries.
+Adding a curated exam adds a new ID and keeps `CATALOG_VERSION`; changing the
+version invalidates every stored selection.
 
 Exam selection stores its name and identity only. It does not infer or
 overwrite the language, grade, registration number or acquisition date.
-Exam variants outside this list remain manual input; TOEIC does not imply
-TOEIC Speaking, and TOEFL does not imply a specific test format.
+Exam variants outside this list, such as TOEIC Writing or TEPS Speaking,
+remain manual input. TOEIC and TOEIC Speaking are separate entries; neither
+implies the other, and TOEFL does not imply a specific test format.

@@ -6,6 +6,7 @@ import {
   getCatalogEntry,
 } from "./catalog";
 import { searchCatalog } from "./catalog-search";
+import { LANGUAGE_TEST_OPTIONS } from "./standard-values";
 
 it("finds a displayed name plus abbreviation using the shipped catalog", () => {
   const matches = searchCatalog(CATALOG, "certificate", "SQL 개발자 (SQLD)");
@@ -82,4 +83,28 @@ it("yields a non-empty issuer for every shipped certificate", () => {
         !catalogCertificateIssuer(selected(entry.id, entry.name), entry.name),
     ),
   ).toEqual([]);
+});
+
+it("projects TOEIC Speaking as its own searchable language-test entry", () => {
+  expect(getCatalogEntry("languageTest:toeic-speaking")).toMatchObject({
+    kind: "languageTest",
+    name: "TOEIC Speaking",
+    detail: "어학 시험",
+  });
+  const ids = (query: string) =>
+    searchCatalog(CATALOG, "languageTest", query).map((entry) => entry.id);
+  expect(ids("토익스피킹")).toEqual(["languageTest:toeic-speaking"]);
+  expect(ids("TOEIC")).toEqual([
+    "languageTest:toeic",
+    "languageTest:toeic-speaking",
+  ]);
+  expect(
+    CATALOG.filter((entry) => entry.kind === "languageTest").map(
+      (entry) => entry.id,
+    ),
+  ).toEqual(
+    LANGUAGE_TEST_OPTIONS.map((option) => `languageTest:${option.value}`),
+  );
+  expect(LANGUAGE_TEST_OPTIONS).toHaveLength(8);
+  expect(CATALOG).toHaveLength(5156);
 });
