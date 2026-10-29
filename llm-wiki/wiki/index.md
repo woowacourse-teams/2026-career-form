@@ -32,12 +32,12 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | --- | --- | --- |
 | [기존 docs baseline](topics/docs-baseline.md) | 기존 docs 65개와 자산의 CF-41 현재본 | 2026-08-22 |
 | [제품 기준](topics/product-concept.md) | 사용자 통제, 제출 금지와 로컬 우선 | 2026-08-22 |
-| [프로필 필드](topics/profile-fields.md) | 지원 정보 구조와 필드 계약 | 2026-08-22 |
-| [프로필 카탈로그 선택과 식별 연결](topics/profile-catalog-identity.md) | 학교, 자격, 시험명의 오프라인 카탈로그 선택과 식별자 저장 | 2026-10-07 |
+| [프로필 필드](topics/profile-fields.md) | 지원 정보 구조와 필드 계약, 자격증 등록번호 라벨 | 2026-10-29 |
+| [프로필 카탈로그 선택과 식별 연결](topics/profile-catalog-identity.md) | 학교, 자격, 시험명의 오프라인 카탈로그 선택과 식별자 저장, 빈 자격증 발급기관 채움, TOEIC Speaking, 한국폴리텍 번호 표기 대조 | 2026-10-29 |
 | [프로필 JSON 전송](topics/profile-json-transfer.md) | 로컬 프로필의 versioned JSON 백업,전체 복원 계약 | 2026-09-07 |
 | [Greeting 지원서에서 프로필 가져오기](topics/greeting-profile-import.md) | 합성 fixture의 읽기 전용 후보 생성, 한 화면 검토와 확인 카드, 병합과 실사이트 검증 경계 | 2026-10-16 |
 | [프로필 입력과 안전한 어학 선택](topics/profile-input-and-language-matching.md) | 자유 텍스트 어학과 유일 후보만 허용하는 회사 옵션 선택 | 2026-09-09 |
-| [확장 프로그램 프로필,지원서 패널 UI](topics/extension-ui.md) | 프로필,패널 탐색과 하늘색 중심 UI 계층 | 2026-09-12 |
+| [확장 프로그램 프로필,지원서 패널 UI](topics/extension-ui.md) | 프로필,패널 탐색과 하늘색 중심 UI 계층, 선택형 값 라벨 표시·복사, 반복 항목 소제목, 패널 열기 단축키 | 2026-10-29 |
 | [지원서 패널 안 자동 기입 흐름](topics/autofill-panel-workflow.md) | 단일 패널 실행,범용 실제 값 판정과 드롭다운 값 보존 | 2026-10-02 |
 | [미지원 지원서 페이지 안내](topics/unsupported-application-pages.md) | 미지원 준비 분석의 중단과 수동 복사 유지 | 2026-10-02 |
 | [선택적 이용 계측](topics/usage-analytics.md) | 24시간 첫 클릭률, Greeting 가져오기 계측, 공고 알림 이벤트와 posting_id·answer·trigger·delay_ms, 최초 저장 중복 방지와 개인정보 경계 | 2026-10-26 |
@@ -54,6 +54,7 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [입력 위치 표시와 설치 안내](topics/autofill-follow-and-install.md) | 기본 필드 추적, 확인 필요 결과와 첫 설치 안내 | 2026-09-22 |
 | [프로젝트 컨벤션](topics/project-conventions.md) | 공통, Git과 스택별 규약 | 2026-08-22 |
 | [프론트 브라우저 테스트](topics/frontend-browser-testing.md) | jsdom/Chromium 계층, 합성 상호작용 검증과 CI shard 병합 검증 경계 | 2026-10-20 |
+| [프론트 정적 검사 범위](topics/frontend-static-checks.md) | lint의 TS 소스 제외, 기존 typecheck 실패와 CI·verify.py 미실행 관찰 | 2026-10-29 |
 | [Issue 개발 흐름](topics/issue-development-workflow.md) | Issue, 체크포인트와 사람 승인 경계 | 2026-08-22 |
 | [ADR 작성 규약](topics/adr-authoring.md) | ADR 판단과 Issue raw 기록 | 2026-08-22 |
 | [기존 아키텍처 결정](topics/architecture-decisions.md) | CF-41 이전 ADR 현재본 | 2026-08-22 |
@@ -72,12 +73,12 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [저장소 스킬](topics/repository-skills.md) | 저장소 스킬 역할과 범위 | 2026-08-22 |
 | [회사 어댑터 개발](topics/adapter-development.md) | 프론트 회사 어댑터와 백엔드 정책 경계 | 2026-10-20 |
 | [Greeting 플랫폼 판정과 실행 어댑터](topics/greeting-platform-routing.md) | BE의 Greeting 판정과 FE 어댑터 지정,문맥 검증 | 2026-09-27 |
-| [Greeting 공통 어댑터](topics/adapter-greeting.md) | 기업별 화면 차이와 안전한 필드 입력,검증 범위, 검색 서버 액션 요청 구조, v18 장애 정도 별칭, 열린 Ark UI 팝오버의 양식 전체 숨김 수집과 닫기, v19 직접 입력 선택지 범위와 검색 실패 사유 코드 | 2026-10-25 |
+| [Greeting 공통 어댑터](topics/adapter-greeting.md) | 기업별 화면 차이와 안전한 필드 입력,검증 범위, 검색 서버 액션 요청 구조, v18 장애 정도 별칭, 열린 Ark UI 팝오버의 양식 전체 숨김 수집과 닫기, v19 직접 입력 선택지 범위와 검색 실패 사유 코드, 동명 고교 지역 동점 해소와 한국폴리텍 번호 표기 대조 | 2026-10-29 |
 | [Hplace 공통 어댑터](topics/adapter-hplace.md) | MRS2 실행 정책, 127키 현황, step 1–3 실화면 검증, 칸 단위 인식·재실행 멱등성·저장 페이지 재로드 보고, 저장·조회·무저장 이동 요청 구조, 4단계 분석 예외와 패널 집계, 빈 단계 분석 생략, 배포 경계, 활성 정책 버전 설정값 | 2026-10-23 |
 | [SK,현대 실시간 옵션 선택 보완](topics/adapter-live-option-selection.md) | 현재 회사 화면의 유일 옵션만 선택하는 어학 보완 | 2026-09-09 |
 | [현대 어댑터](topics/adapter-hyundai.md) | 현대 주소,국적,학력 수집,입력과 검증 제한, 페이지의 Map·Set 재정의, 버튼형 선택지 코드의 읽기 전용 수집과 trigger 식별, 작성 화면 재진입 불가, 정책 v25 경력 날짜·종료사유·자격 등급, 검색 결과 창 바깥 클릭 핸들러와 학교명 소실 | 2026-10-25 |
 | [SK 어댑터](topics/adapter-sk.md) | SK 조건부 입력과 검증 제한, R262309형 고교 행의 추가 버튼 재식별 실패, v38 재학 상태 select 기준 재식별과 장애구분 별칭 | 2026-10-22 |
-| [어댑터 필드 현황](topics/adapter-field-inventory.md) | 회사별 구현과 자동,수동 검증 상태, 현대 v25 경력·종료사유·자격 등급, Greeting v19 직접 입력 지원 범위 | 2026-10-25 |
+| [어댑터 필드 현황](topics/adapter-field-inventory.md) | 회사별 구현과 자동,수동 검증 상태, 현대 v25 경력·종료사유·자격 등급, Greeting v19 직접 입력 지원 범위, Greeting 동명 고교·폴리텍 학교명 확정 | 2026-10-29 |
 | [LLM Wiki 지식 모델](topics/llm-wiki-knowledge-model.md) | Issue raw, topic Wiki와 승인 digest | 2026-08-22 |
 | [지원서 분석 API](topics/application-form-analysis-api.md) | schema v2와 검색 역할, OpenAI/Jev 단일 공급자 계약 | 2026-09-23 |
 | [지원서 분석 데이터 경계](topics/application-form-analysis-data-boundary.md) | 비식별 공급자 투영과 로컬 DOM 실행 경계 | 2026-09-23 |
