@@ -9,6 +9,7 @@ import type { ApprovedWriteResult } from "../write/executor";
 import styles from "../../autofill-demo/AutofillDemo.module.css";
 import { WorkflowResults, type WorkflowResultsProps } from "./WorkflowResults";
 import type { AppearableProfileItem } from "./pre-approval";
+import type { RowSaveManual, RowSaveManualReason } from "../generic/row-save";
 import { genericItemReason } from "../generic/grade-reason-text";
 import {
   structureActionLine,
@@ -87,7 +88,20 @@ interface WorkflowScreensProps {
   /** Revealed fields written without a second review. */
   autoWrittenLabels?: readonly string[];
   manualRevealedLabels?: readonly string[];
+  /** Generic path only: rows the extension saved with their own save button. */
+  rowSave?: {
+    saved: number;
+    manual: readonly RowSaveManual[];
+    stopped: boolean;
+  };
 }
+
+const ROW_SAVE_REASON: Record<RowSaveManualReason, string> = {
+  "row-incomplete": "기입하지 못한 칸이 있어 저장하지 않았어요.",
+  "button-disabled": "저장 버튼이 비활성이라 누르지 않았어요.",
+  unconfirmed: "저장 버튼을 눌렀지만 등록을 확인하지 못했어요.",
+  stopped: "앞 줄의 등록을 확인하지 못해 누르지 않았어요.",
+};
 
 export function WorkflowScreens({
   exitInToolbar = false,
@@ -123,6 +137,7 @@ export function WorkflowScreens({
   setPreApprovalOn,
   autoWrittenLabels = [],
   manualRevealedLabels = [],
+  rowSave,
 }: WorkflowScreensProps) {
   const reviewTabsId = useId();
   const [reviewTab, setReviewTab] = useState<
@@ -547,6 +562,27 @@ export function WorkflowScreens({
             <ul>
               {manualRevealedLabels.map((label, index) => (
                 <li key={index}>{label}</li>
+              ))}
+            </ul>
+          </section>
+        )}
+        {rowSave && rowSave.saved > 0 && (
+          <section aria-label="확장이 저장한 줄">
+            <h3>확장이 저장한 줄</h3>
+            <p>줄 저장 버튼을 눌러 {rowSave.saved}개 줄을 등록했어요.</p>
+          </section>
+        )}
+        {rowSave && rowSave.manual.length > 0 && (
+          <section aria-label="직접 저장할 줄">
+            <h3>직접 저장할 줄</h3>
+            {rowSave.stopped && (
+              <p>등록을 확인하지 못해 이후 줄 저장을 멈췄어요.</p>
+            )}
+            <ul>
+              {rowSave.manual.map((row) => (
+                <li key={row.recordKey}>
+                  {row.recordLabel}: {ROW_SAVE_REASON[row.reason]}
+                </li>
               ))}
             </ul>
           </section>

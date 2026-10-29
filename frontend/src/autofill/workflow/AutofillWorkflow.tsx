@@ -84,6 +84,8 @@ import {
   preApprovalScope,
 } from "./pre-approval";
 import { watchRevealedFields } from "./reveal-watch";
+import { saveWrittenRows, type RowSaveManual } from "../generic/row-save";
+import { recordOf, rowSaveFields } from "./row-save-fields";
 import { createReviewActions, sensitiveValueApproved } from "./review-actions";
 import {
   createSearchFollowUpRecorder,
@@ -293,6 +295,15 @@ function PolicyReadyWorkflow({
   );
   const autoWrittenKeys = useRef(new Set<string>());
   const revealWatchRounds = useRef(0);
+  // Row saves (#370): the rows the extension saved, and whether a save it
+  // could not confirm stopped every later one.
+  const savedRowKeys = useRef(new Set<string>());
+  const rowSaveStopped = useRef(false);
+  const [rowSave, setRowSave] = useState<{
+    saved: number;
+    manual: RowSaveManual[];
+    stopped: boolean;
+  }>({ saved: 0, manual: [], stopped: false });
   const completedDriverKeys = useRef<ReadonlySet<string>>(new Set());
   const completedGenericStateDrivers = useRef<
     ReadonlyMap<string, CompletedGenericStateDriver>
@@ -1020,6 +1031,46 @@ function PolicyReadyWorkflow({
           );
         return;
       }
+      if (
+        analysisSummary?.mode === "GENERIC" &&
+        !writeController.current.signal.aborted
+      ) {
+        const rows = await saveWrittenRows({
+          document: pageDocument,
+          fields: rowSaveFields({
+            items: reviewItems,
+            approvedIds: approvedCandidateIds,
+            passResults: nextResults,
+            registry: fieldsSnapshot.registry,
+            wasWritten: (id) =>
+              progressTracker.wasWritten(id, fieldsSnapshot.registry),
+          }),
+          savedKeys: savedRowKeys.current,
+          stopped: rowSaveStopped.current,
+          signal: writeController.current.signal,
+        });
+        if (!mounted.current) return;
+        rows.saved.forEach((key) => savedRowKeys.current.add(key));
+        rowSaveStopped.current = rows.stopped;
+        localWorkflowLog("row-save", {
+          saved: rows.saved.length,
+          manual: rows.manual.length,
+          stopped: rows.stopped,
+        });
+        if (rows.saved.length > 0 || rows.manual.length > 0)
+          setRowSave((current) => ({
+            saved: current.saved + rows.saved.length,
+            manual: [
+              ...current.manual.filter(
+                (row) =>
+                  !rows.saved.includes(row.recordKey) &&
+                  !rows.manual.some((next) => next.recordKey === row.recordKey),
+              ),
+              ...rows.manual,
+            ],
+            stopped: rows.stopped,
+          }));
+      }
       const revealed = controlsBefore
         ? newlyRevealedControls(pageDocument, controlsBefore)
         : [];
@@ -1108,8 +1159,12 @@ function PolicyReadyWorkflow({
         !item.disabled &&
         !progressTracker.wasWritten(item.candidateId, fieldsSnapshot.registry),
     );
-    const approved = unwritten.filter((item) =>
-      isPreApprovedItem(item, preApprovedScope.current),
+    // A saved row is registered; its entry is never written again into the
+    // emptied entry area.
+    const approved = unwritten.filter(
+      (item) =>
+        isPreApprovedItem(item, preApprovedScope.current) &&
+        !savedRowKeys.current.has(recordOf(item)?.key ?? ""),
     );
     const approvedIds = new Set(approved.map((item) => item.candidateId));
     const manual = unwritten.filter((item) => {
@@ -1147,7 +1202,7 @@ function PolicyReadyWorkflow({
   }, [stage, revealReview, reviewItems, fieldsSnapshot]);
 
   // After the run, the page may reveal approved fields once the user saves a
-  // section. The extension never presses save; it only watches for the result.
+  // section. The watch presses nothing; only row saves (#370) press a save.
   useEffect(() => {
     const scope = preApprovedScope.current;
     if (
@@ -1269,6 +1324,7 @@ function PolicyReadyWorkflow({
       setPreApprovalOn={setPreApprovalOn}
       autoWrittenLabels={autoWrittenLabels}
       manualRevealedLabels={manualRevealedLabels}
+      rowSave={rowSave}
     />
   );
 }
