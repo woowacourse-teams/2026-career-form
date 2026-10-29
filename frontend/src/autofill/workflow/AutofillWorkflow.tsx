@@ -279,13 +279,18 @@ function PolicyReadyWorkflow({
   // of extra review passes (observed reveal, no aria-controls needed).
   const revealPasses = useRef(0);
   // Revealed fields the first review approved in advance (#358): written in
-  // their reveal pass without a second review; anything else is reviewed.
+  // their reveal pass without a second review. A reveal pass never asks
+  // again; the fields it does not write are listed in the result.
   const [preApprovalOn, setPreApprovalOn] = useState(true);
   const preApprovedScope = useRef<ReadonlySet<string>>(new Set());
-  const autoRevealPass = useRef(0);
-  const autoHeldIds = useRef<ReadonlySet<string>>(new Set());
+  const firstReviewKeys = useRef<ReadonlySet<string>>(new Set());
+  const [revealReview, setRevealReview] = useState(false);
+  const lastPassResults = useRef<ApprovedWriteResult[]>([]);
   const [autoExecutePending, setAutoExecutePending] = useState(false);
   const [autoWrittenLabels, setAutoWrittenLabels] = useState<string[]>([]);
+  const [manualRevealedLabels, setManualRevealedLabels] = useState<string[]>(
+    [],
+  );
   const autoWrittenKeys = useRef(new Set<string>());
   const revealWatchRounds = useRef(0);
   const completedDriverKeys = useRef<ReadonlySet<string>>(new Set());
@@ -839,10 +844,17 @@ function PolicyReadyWorkflow({
   const executeWrites = async () => {
     if (!fieldsSnapshot || executionPending.current) return;
     executionPending.current = true;
-    if (revealPasses.current === 0)
+    if (revealPasses.current === 0) {
       preApprovedScope.current = preApprovalOn
         ? preApprovalScope(appearableItems)
         : new Set();
+      firstReviewKeys.current = new Set(
+        reviewItems.flatMap((item) => {
+          const key = item.hiddenFromReview ? undefined : preApprovalKeyOf(item);
+          return key ? [key] : [];
+        }),
+      );
+    }
     setResultRegistry(undefined);
     try {
       const retainedDrivers = retainedDriverReviewResults(
@@ -1032,6 +1044,8 @@ function PolicyReadyWorkflow({
           return;
         }
         revealPasses.current += 1;
+        lastPassResults.current = [...retainedDrivers.results, ...nextResults];
+        setRevealReview(true);
         await analyzeFields(
           profile!,
           false,
@@ -1040,22 +1054,8 @@ function PolicyReadyWorkflow({
         );
         setWarnings((current) => [
           ...current,
-          `값을 넣은 뒤 새 입력칸 ${revealed.length}개가 나타나 다시 확인했어요. 이어서 기입해 주세요.`,
+          `값을 넣은 뒤 새 입력칸 ${revealed.length}개가 나타나 다시 확인했어요.`,
         ]);
-        return;
-      }
-      const held = autoHeldIds.current;
-      if (held.size > 0) {
-        autoHeldIds.current = new Set();
-        setReviewItems((items) =>
-          items.map((item) =>
-            held.has(item.candidateId) &&
-            !progressTracker.wasWritten(item.candidateId, fieldsSnapshot.registry)
-              ? { ...item, selected: true }
-              : item,
-          ),
-        );
-        setStage("review");
         return;
       }
       setResults([...retainedDrivers.results, ...nextResults]);
@@ -1095,34 +1095,38 @@ function PolicyReadyWorkflow({
     });
   }, [stage, fieldsSnapshot]);
 
-  // A reveal pass writes the approved revealed fields at once and holds the
-  // rest for the review that follows.
+  // A reveal pass writes the approved revealed fields at once and lists the
+  // other new fields in the result; it never shows a second review.
   useEffect(() => {
-    if (
-      stage !== "review" ||
-      revealPasses.current === 0 ||
-      autoRevealPass.current === revealPasses.current ||
-      preApprovedScope.current.size === 0 ||
-      !fieldsSnapshot
-    )
-      return;
-    autoRevealPass.current = revealPasses.current;
+    if (stage !== "review" || !revealReview || !fieldsSnapshot) return;
+    setRevealReview(false);
     const unwritten = reviewItems.filter(
       (item) =>
-        item.selected &&
         !item.disabled &&
         !progressTracker.wasWritten(item.candidateId, fieldsSnapshot.registry),
     );
     const approved = unwritten.filter((item) =>
       isPreApprovedItem(item, preApprovedScope.current),
     );
-    if (approved.length === 0) return;
     const approvedIds = new Set(approved.map((item) => item.candidateId));
-    autoHeldIds.current = new Set(
-      unwritten
-        .filter((item) => !approvedIds.has(item.candidateId))
-        .map((item) => item.candidateId),
-    );
+    const manual = unwritten.filter((item) => {
+      const key = preApprovalKeyOf(item);
+      return (
+        !approvedIds.has(item.candidateId) &&
+        !item.hiddenFromReview &&
+        key !== undefined &&
+        !firstReviewKeys.current.has(key) &&
+        !autoWrittenKeys.current.has(key)
+      );
+    });
+    setManualRevealedLabels((labels) => [
+      ...new Set([...labels, ...manual.map((item) => item.fieldLabel)]),
+    ]);
+    if (approved.length === 0) {
+      setResults(lastPassResults.current);
+      setStage("result");
+      return;
+    }
     setAutoWrittenLabels((labels) => [
       ...labels,
       ...approved.map((item) => item.fieldLabel),
@@ -1137,7 +1141,7 @@ function PolicyReadyWorkflow({
       ),
     );
     setAutoExecutePending(true);
-  }, [stage, reviewItems, fieldsSnapshot]);
+  }, [stage, revealReview, reviewItems, fieldsSnapshot]);
 
   // After the run, the page may reveal approved fields once the user saves a
   // section. The extension never presses save; it only watches for the result.
@@ -1164,6 +1168,8 @@ function PolicyReadyWorkflow({
             return;
           revealWatchRounds.current += 1;
           revealPasses.current += 1;
+          lastPassResults.current = results;
+          setRevealReview(true);
           await analyzeFields(
             profile,
             false,
@@ -1215,7 +1221,7 @@ function PolicyReadyWorkflow({
       }
       profile={profile}
       optionsFor={(id) => resultFieldOptions(visibleRegistry, id)}
-      stage={stage}
+      stage={stage === "review" && revealReview ? "writing" : stage}
       preparationItems={preparationItems}
       warnings={warnings}
       revealedPreparationKeys={revealedPreparationKeys}
@@ -1259,6 +1265,7 @@ function PolicyReadyWorkflow({
       preApprovalOn={preApprovalOn}
       setPreApprovalOn={setPreApprovalOn}
       autoWrittenLabels={autoWrittenLabels}
+      manualRevealedLabels={manualRevealedLabels}
     />
   );
 }

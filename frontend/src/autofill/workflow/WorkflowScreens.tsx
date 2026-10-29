@@ -86,6 +86,7 @@ interface WorkflowScreensProps {
   setPreApprovalOn?(on: boolean): void;
   /** Revealed fields written without a second review. */
   autoWrittenLabels?: readonly string[];
+  manualRevealedLabels?: readonly string[];
 }
 
 export function WorkflowScreens({
@@ -121,6 +122,7 @@ export function WorkflowScreens({
   preApprovalOn = false,
   setPreApprovalOn,
   autoWrittenLabels = [],
+  manualRevealedLabels = [],
 }: WorkflowScreensProps) {
   const reviewTabsId = useId();
   const [reviewTab, setReviewTab] = useState<
@@ -534,6 +536,16 @@ export function WorkflowScreens({
             <h3>다시 묻지 않고 기입한 새 칸</h3>
             <ul>
               {autoWrittenLabels.map((label, index) => (
+                <li key={index}>{label}</li>
+              ))}
+            </ul>
+          </section>
+        )}
+        {manualRevealedLabels.length > 0 && (
+          <section aria-label="직접 확인할 새 칸">
+            <h3>직접 확인할 새 칸</h3>
+            <ul>
+              {manualRevealedLabels.map((label, index) => (
                 <li key={index}>{label}</li>
               ))}
             </ul>

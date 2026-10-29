@@ -140,28 +140,41 @@ const UNCONFIRMED_CATEGORIES = new Set(["MIXED", "ABSTAIN"]);
 export const GENERIC_BLOCKED_REASON =
   "자동으로 입력할 수 없는 항목입니다. 직접 확인해 주세요.";
 
+// The applicant still decides these in the review; every other REVIEW field
+// starts included and goes to the planned list.
+const APPLICANT_DECIDES: ReadonlySet<string> = new Set([
+  "MODERATE_CONFIDENCE",
+  "OPTION_VALUE_UNMATCHED",
+]);
+
 /**
- * AUTO keeps the plan's selection, REVIEW is never preselected, and BLOCKED
- * can be neither selected nor written.
+ * AUTO and most REVIEW grades keep the plan's selection, a REVIEW grade the
+ * applicant must decide is never preselected, and BLOCKED can be neither
+ * selected nor written.
  */
 export function applyGenericGrade(
   item: ReviewPlanItem,
   grade: GenericFieldGrade | undefined,
 ): ReviewPlanItem {
   if (!grade) return item;
+  const applicantDecides =
+    grade.grade === "REVIEW" && APPLICANT_DECIDES.has(grade.reason ?? "");
   if (
     item.genericGrade === "REVIEW" &&
     item.genericReasonCode === "FIRST_ENTRY_SINGLE_ROW" &&
     grade.grade !== "BLOCKED"
   )
-    return { ...item, selected: false };
+    return applicantDecides || item.status !== "needs-review"
+      ? { ...item, selected: false }
+      : { ...item, status: "available", selected: true };
   const graded: ReviewPlanItem = {
     ...item,
     genericGrade: grade.grade,
     ...(grade.reason ? { genericReasonCode: grade.reason } : {}),
   };
   if (grade.grade === "AUTO") return graded;
-  if (grade.grade === "REVIEW") return { ...graded, selected: false };
+  if (grade.grade === "REVIEW")
+    return applicantDecides ? { ...graded, selected: false } : graded;
   return {
     ...graded,
     selected: false,

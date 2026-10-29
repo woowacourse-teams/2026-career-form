@@ -49,18 +49,32 @@ describe("fields a reviewed area may reveal", () => {
       "certifications.certificate.grade#0",
       "certifications.certificate.name#1",
       "military.military.serviceStartDate#0",
+      "veteran.veteran.veteranStatus#0",
     ]);
     expect(items.find(({ key }) => key.endsWith("serviceStartDate"))).toMatchObject({
       value: "2019-01-01",
     });
   });
 
-  it("leaves out categories the review never showed", () => {
+  it("lists a stored value whose field the first review only held hidden", () => {
+    const items = appearableProfileItems(profile(), [
+      item({ profileFieldKey: "military.military.militaryStatus" }),
+      item({
+        profileFieldKey: "military.military.serviceStartDate",
+        hiddenFromReview: true,
+      }),
+    ]);
+    expect(items.map(({ key }) => key)).toContain(
+      "military.military.serviceStartDate",
+    );
+  });
+
+  it("also lists categories the page had no field for in the first review", () => {
     const keys = appearableProfileItems(profile(), [
       item({ profileFieldKey: "military.military.militaryStatus" }),
     ]).map(({ key }) => key);
-    expect(keys.some((key) => key.startsWith("veteran."))).toBe(false);
-    expect(keys.some((key) => key.startsWith("certifications."))).toBe(false);
+    expect(keys).toContain("veteran.veteran.veteranStatus");
+    expect(keys).toContain("certifications.certificate.name");
   });
 });
 
@@ -80,11 +94,28 @@ describe("a revealed field written without a second review", () => {
     expect(isPreApprovedItem(revealed({}), scope)).toBe(true);
   });
 
+  it("is a REVIEW-graded field the review included on its own", () => {
+    expect(
+      isPreApprovedItem(
+        revealed({ genericGrade: "REVIEW", genericReasonCode: "NO_FIELD_CONTEXT" }),
+        scope,
+      ),
+    ).toBe(true);
+  });
+
   it.each([
-    ["a field the review must confirm", { genericGrade: "REVIEW" as const }],
+    [
+      "a field the applicant must decide",
+      {
+        genericGrade: "REVIEW" as const,
+        genericReasonCode: "MODERATE_CONFIDENCE" as const,
+        selected: false,
+      },
+    ],
+    ["a blocked field", { genericGrade: "BLOCKED" as const, selected: false }],
     ["a field that already holds a value", { currentValue: "2018-01-01" }],
     ["a disabled field", { disabled: true }],
-    ["a field outside the scope", { profileFieldKey: "veteran.veteran.veteranStatus" }],
+    ["a field with no stored value", { profileFieldKey: "personal.personal.nationality" }],
     ["another entry of the same key", { itemIndex: 1 }],
   ])("is never %s", (_, overrides) => {
     expect(isPreApprovedItem(revealed(overrides), scope)).toBe(false);

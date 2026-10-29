@@ -27,7 +27,7 @@ function militaryForm() {
     if ((event.target as HTMLSelectElement).value !== "군필") return;
     document.querySelector("#more")!.innerHTML = `
       <label>병과<input name="specialty"></label>
-      <label>국적<input name="nationality"></label>`;
+      <label>국적<input name="nationality" value="다른국적"></label>`;
   });
 }
 
@@ -96,6 +96,21 @@ function client(): AnalysisApiClient {
   };
 }
 
+function hiddenSpecialtyForm() {
+  document.body.innerHTML = `<section><h3>병역</h3>
+    <label>병역 상태<select name="militaryStatus">
+      <option value="">선택</option><option value="군필">군필</option>
+    </select></label>
+    <div id="more" style="display:none"><label>병과<input name="specialty"></label></div></section>`;
+  // The field exists from the start and the page only shows it after the choice.
+  document.querySelector("select")!.addEventListener("change", () => {
+    document.querySelector<HTMLElement>("#more")!.style.display = "";
+  });
+}
+
+const noFillButton = () =>
+  expect(screen.queryByRole("button", { name: /항목 기입하기/ })).toBeNull();
+
 function savedSectionForm() {
   document.body.innerHTML = `<section><h3>병역</h3>
     <label>병역 상태<select name="militaryStatus">
@@ -132,43 +147,60 @@ describe("fields a reviewed area reveals after a write", () => {
     });
     expect(group).toHaveTextContent("병과");
     expect(group).toHaveTextContent("합성병과");
-    // Only categories the first review showed are offered.
-    expect(group).not.toHaveTextContent("합성국적");
+    // A category the page has no field for yet is offered too.
+    expect(group).toHaveTextContent("합성국적");
     expect(
       screen.getByRole("checkbox", { name: /다시 묻지 않고 기입/ }),
     ).toBeChecked();
   });
 
-  it("writes an approved revealed field at once and reviews only the rest", async () => {
+  it("writes an approved revealed field at once and only lists the rest", async () => {
     militaryForm();
     start();
     fireEvent.click(await screen.findByRole("button", { name: "1개 항목 기입하기" }));
-    await waitFor(() => expect(input("specialty")?.value).toBe("합성병과"));
-    expect(input("nationality")?.value).toBe("");
-    // The field outside the approval still waits for a second review.
-    fireEvent.click(
-      await screen.findByRole("button", { name: "1개 항목 기입하기" }),
-    );
-    await waitFor(() => expect(input("nationality")?.value).toBe("합성국적"));
-    const shown = await screen.findByRole("region", {
+    await screen.findByRole("heading", { name: "기입 결과" });
+    expect(input("specialty")?.value).toBe("합성병과");
+    // A revealed field that already holds a value is never overwritten and
+    // never asked again.
+    expect(input("nationality")?.value).toBe("다른국적");
+    noFillButton();
+    const shown = screen.getByRole("region", {
       name: "다시 묻지 않고 기입한 새 칸",
     });
     expect(shown).toHaveTextContent("병과");
     expect(shown).not.toHaveTextContent("국적");
+    const manual = screen.getByRole("region", { name: "직접 확인할 새 칸" });
+    expect(manual).toHaveTextContent("국적");
+    expect(manual).not.toHaveTextContent("병과");
   });
 
-  it("sends every revealed field to a second review when the approval is off", async () => {
+  it("writes no revealed field and asks nothing again when the approval is off", async () => {
     militaryForm();
     start();
     fireEvent.click(
       await screen.findByRole("checkbox", { name: /다시 묻지 않고 기입/ }),
     );
     fireEvent.click(screen.getByRole("button", { name: "1개 항목 기입하기" }));
-    expect(
-      await screen.findByRole("button", { name: "2개 항목 기입하기" }),
-    ).toBeInTheDocument();
+    await screen.findByRole("heading", { name: "기입 결과" });
+    noFillButton();
     expect(input("specialty")?.value).toBe("");
-    expect(input("nationality")?.value).toBe("");
+    expect(input("nationality")?.value).toBe("다른국적");
+    const manual = screen.getByRole("region", { name: "직접 확인할 새 칸" });
+    expect(manual).toHaveTextContent("병과");
+    expect(manual).toHaveTextContent("국적");
+  });
+
+  it("writes a field the first review held hidden once the page shows it", async () => {
+    hiddenSpecialtyForm();
+    start();
+    const group = await screen.findByRole("group", {
+      name: /나타날 수 있는 칸/,
+    });
+    expect(group).toHaveTextContent("합성병과");
+    fireEvent.click(screen.getByRole("button", { name: "1개 항목 기입하기" }));
+    await screen.findByRole("heading", { name: "기입 결과" });
+    expect(input("specialty")?.value).toBe("합성병과");
+    noFillButton();
   });
 
   it("writes an approved field the page reveals after the user saves", async () => {

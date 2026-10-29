@@ -46,19 +46,31 @@ describe("applyGenericGrade carries the grade and reason", () => {
     });
   });
 
-  it("unselects a REVIEW item and records grade and reason code", () => {
+  it("keeps a REVIEW item selected and records grade and reason code", () => {
     expect(
       applyGenericGrade(item(), {
         grade: "REVIEW",
         reason: "NO_FIELD_CONTEXT",
       }),
     ).toMatchObject({
-      selected: false,
+      selected: true,
       disabled: false,
       genericGrade: "REVIEW",
       genericReasonCode: "NO_FIELD_CONTEXT",
     });
   });
+
+  it.each(["MODERATE_CONFIDENCE", "OPTION_VALUE_UNMATCHED"] as const)(
+    "unselects a REVIEW item the applicant must decide (%s)",
+    (reason) => {
+      expect(applyGenericGrade(item(), { grade: "REVIEW", reason })).toMatchObject({
+        selected: false,
+        disabled: false,
+        genericGrade: "REVIEW",
+        genericReasonCode: reason,
+      });
+    },
+  );
 
   it("disables a BLOCKED item and records grade and reason code", () => {
     expect(

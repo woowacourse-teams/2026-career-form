@@ -89,7 +89,7 @@ describe("single remaining generic repeat row", () => {
   });
 
   it.each([true, false])(
-    "binds every field to entry zero for review (indexed: %s)",
+    "binds every field to entry zero and includes it (indexed: %s)",
     (indexed) => {
       const items = plan(3, 1, indexed);
       expect(items).toHaveLength(3);
@@ -99,9 +99,9 @@ describe("single remaining generic repeat row", () => {
           profileEntryId: "certificate-0",
           genericGrade: "REVIEW",
           genericReasonCode: "FIRST_ENTRY_SINGLE_ROW",
-          status: "needs-review",
+          status: "available",
           disabled: false,
-          selected: false,
+          selected: true,
         });
       }
       expect(items.map((item) => item.profileValue)).toEqual([
@@ -112,7 +112,7 @@ describe("single remaining generic repeat row", () => {
     },
   );
 
-  it("binds section direct fields without repeat rows to entry zero for review", () => {
+  it("binds section direct fields without repeat rows to entry zero and includes them", () => {
     const items = plan(3, 1, true, { grade: "AUTO" }, false);
     expect(items).toHaveLength(3);
     for (const item of items) {
@@ -121,9 +121,9 @@ describe("single remaining generic repeat row", () => {
         profileEntryId: "certificate-0",
         genericGrade: "REVIEW",
         genericReasonCode: "FIRST_ENTRY_SINGLE_ROW",
-        status: "needs-review",
+        status: "available",
         disabled: false,
-        selected: false,
+        selected: true,
       });
     }
   });
@@ -174,6 +174,7 @@ describe("single remaining generic repeat row", () => {
       expect(item).toMatchObject({
         genericGrade: "REVIEW",
         genericReasonCode: "FIRST_ENTRY_SINGLE_ROW",
+        status: "needs-review",
         selected: false,
       });
     }
