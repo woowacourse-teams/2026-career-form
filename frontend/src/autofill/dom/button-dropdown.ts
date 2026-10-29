@@ -112,9 +112,20 @@ function valuesUnchanged(
   return [...before].every(([element, value]) => after.get(element) === value);
 }
 
-/** Only rolls back effects of our own probe, never trusted user edits. */
-export function captureDropdownProbe(document: Document) {
-  const before = fieldValues(document);
+/**
+ * Only rolls back effects of our own probe, never trusted user edits.
+ * Controls inside `widgetRoots` (a calendar's own year/month selects) are
+ * not applicant values; the page may tear them down at any time.
+ */
+export function captureDropdownProbe(
+  document: Document,
+  widgetRoots: readonly Element[] = [],
+) {
+  const before = new Map(
+    [...fieldValues(document)].filter(
+      ([element]) => !widgetRoots.some((root) => root.contains(element)),
+    ),
+  );
   let userEdited = false;
   let programmaticClicks = 0;
   const input = (event: Event) => {

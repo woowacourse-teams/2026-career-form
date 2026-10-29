@@ -4,7 +4,10 @@ import {
   collectFieldsSnapshotWithDropdowns as collectFieldsSnapshot,
 } from "./collect";
 import { mountButtonDropdowns } from "./button-dropdown.fixture";
-import { collectButtonDropdowns } from "./button-dropdown";
+import {
+  captureDropdownProbe,
+  collectButtonDropdowns,
+} from "./button-dropdown";
 import { isSafeStructuralClick } from "../generic/click-policy";
 
 afterEach(() => {
@@ -309,4 +312,18 @@ it("never clicks forbidden form menu triggers while collecting a generic documen
   expect(
     menus.map((field) => field.options?.map((o) => o.displayName)),
   ).toEqual([["가 항목", "나 항목"]]);
+});
+
+it("does not count controls inside the given widget roots as applicant values", () => {
+  document.body.innerHTML = `<input id="name" value="kept"><div class="ui-datepicker" style="display:none"><select class="year"><option>2020</option></select><select class="month"><option>1</option></select></div>`;
+  const root = document.querySelector<HTMLElement>(".ui-datepicker")!;
+  const widgetAware = captureDropdownProbe(document, [root]);
+  const plain = captureDropdownProbe(document);
+  // The page tears down the hidden calendar while a dropdown opens.
+  root.replaceChildren();
+  expect(widgetAware.unchanged()).toBe(true);
+  expect(plain.unchanged()).toBe(false);
+  expect(plain.restore()).toBe(false);
+  widgetAware.release();
+  plain.release();
 });

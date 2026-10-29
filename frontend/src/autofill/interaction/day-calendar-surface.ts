@@ -56,6 +56,22 @@ export function dayCalendarRoots(document: Document): HTMLElement[] {
   );
 }
 
+// Roots a calendar run opened. A page may keep one hidden after it closes and
+// tear it down later; its year/month selects are never applicant values.
+const openedCalendarRoots = new Set<HTMLElement>();
+
+export function rememberCalendarRoot(root: HTMLElement): void {
+  openedCalendarRoots.add(root);
+}
+
+export function rememberedCalendarRoots(document: Document): HTMLElement[] {
+  for (const root of openedCalendarRoots)
+    if (!root.isConnected) openedCalendarRoots.delete(root);
+  return [...openedCalendarRoots].filter(
+    (root) => root.ownerDocument === document,
+  );
+}
+
 export function displayedDayCalendarRoots(document: Document): HTMLElement[] {
   return dayCalendarRoots(document).filter(isDisplayed);
 }

@@ -23,6 +23,7 @@ import {
   rememberCatalogSelection,
   retainedCatalogSelection,
 } from "../profile/catalog-receipt";
+import { rememberedCalendarRoots } from "../interaction/day-calendar-surface";
 
 export async function executeButtonDropdownWrite({
   item,
@@ -98,7 +99,10 @@ export async function executeButtonDropdownWrite({
       code: "ALREADY_MATCHED",
       reason: "지원서에 같은 값이 이미 입력되어 있습니다.",
     };
-  const opening = captureDropdownProbe(dropdown.trigger.ownerDocument);
+  const opening = captureDropdownProbe(
+    dropdown.trigger.ownerDocument,
+    rememberedCalendarRoots(dropdown.trigger.ownerDocument),
+  );
   const menus = await openDropdownFor(dropdown, signal);
   const openedWithoutChanges = opening.unchanged();
   if (openedWithoutChanges) opening.release();
@@ -185,7 +189,10 @@ export async function executeButtonDropdownWrite({
           );
   } finally {
     const closing = openedWithoutChanges
-      ? captureDropdownProbe(dropdown.trigger.ownerDocument)
+      ? captureDropdownProbe(
+          dropdown.trigger.ownerDocument,
+          rememberedCalendarRoots(dropdown.trigger.ownerDocument),
+        )
       : opening;
     try {
       const closed = await closeDropdownFor(dropdown, menus);

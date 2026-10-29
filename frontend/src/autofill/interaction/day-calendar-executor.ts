@@ -11,6 +11,7 @@ import {
   dayCalendarSurfaceFor,
   displayedDayCalendarRoots,
   isDisplayed,
+  rememberCalendarRoot,
 } from "./day-calendar-surface";
 import {
   awaitDeferredCalendarRoot,
@@ -477,6 +478,7 @@ export async function executeDayCalendarSelection(
     popup = root;
     scope = root;
     openedRoot = root;
+    rememberCalendarRoot(openedRoot);
   } else {
     const opened = await waitUntil(
       () =>
@@ -496,6 +498,7 @@ export async function executeDayCalendarSelection(
     )
       return fail("multiple_calendar_popups_open");
     openedRoot = popup;
+    rememberCalendarRoot(openedRoot);
   }
 
   const choose = async (
