@@ -472,7 +472,7 @@ describe("generic section flow", () => {
     );
   });
 
-  it("leaves REVIEW unselected and BLOCKED unselected and disabled with a reason", async () => {
+  it("includes REVIEW on its own and leaves BLOCKED unselected and disabled with a reason", async () => {
     mountSyntheticForm();
     const api = createClient({
       field: (candidate) =>
@@ -497,7 +497,7 @@ describe("generic section flow", () => {
     await run.analyze();
 
     expect(run.stages.at(-1)).toBe("review");
-    expect(run.item("major")).toMatchObject({ selected: false });
+    expect(run.item("major")).toMatchObject({ selected: true });
     expect(run.state.grades?.get(run.item("major").candidateId)).toEqual({
       grade: "REVIEW",
       reason: "UNPAIRED_NAME_PART",

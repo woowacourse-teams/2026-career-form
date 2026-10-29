@@ -88,13 +88,13 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [범용 폼 컨텍스트 수집](topics/generic-form-context.md) | 문서 회사 기준 수집 선택, 동기 읽기 캐시 경계와 혼합 전후 비교 | 2026-10-15 |
 | [범용 칸 라벨 문맥과 형식 검사](topics/generic-field-context-safety.md) | 끊긴 라벨 복원, 문맥 없는 칸의 REVIEW와 로컬 형식 검사 | 2026-10-18 |
 | [범용 등급의 다른 사람 대상 칸 차단](topics/generic-other-person-context.md) | 추천인·보증인 등 다른 사람 대상 칸에 본인 정보 키가 매칭되면 BLOCKED | 2026-10-18 |
-| [범용 검토 화면의 3단계 표시](topics/generic-review-tiers.md) | 자동·확인 필요·입력 불가 표시, 연결 못한 칸 노출과 이유 문구 변환 | 2026-10-18 |
+| [범용 검토 화면의 3단계 표시](topics/generic-review-tiers.md) | 자동·확인 필요·입력 불가 표시, 연결 못한 칸 노출과 이유 문구 변환, 미리 승인한 새 칸의 2차 검토 없는 기입, 확인 필요 기본 포함과 넓힌 승인 범위 | 2026-10-29 |
 | [DOM fixture 표시 텍스트 검토와 재현 경계](topics/dom-snapshot-review-boundaries.md) | v4 무변경 보존, 표시 텍스트 검토와 mock·실사이트 근거 구분 | 2026-10-18 |
 | [실사이트 자동 입력 평가 워크플로우](topics/live-autofill-evaluation.md) | 사전 분모, DOM 검증, 후보 관측 일치, 설치본 snapshot과 가시 칸 두 시점 측정, 새로고침 원복·대화상자 자동 처리 함정, 원복 재키 대조와 표시 규칙의 한계, 재설치 뒤 탭 재진입과 응답 없는 탭, 테스트 계정 모드·설치본 잠금·채점 재사용, 합성 프로필 학교 검색 한계와 reset 위젯 잔여, 간헐 결함 반복 관찰 루프와 서비스 워커 API 관찰, 검색 정확 일치 없음 전수 조사와 로컬 스택 정책 검증 | 2026-10-25 |
 | [오프라인 기입 정확도 측정](topics/offline-write-accuracy.md) | 결과 전 고정 정답, 제품 경로 판정, 보존식 집계와 스냅샷별 기준선 | 2026-10-21 |
 | [범용 자동 기입 검색 표면](topics/generic-autofill-search.md) | 범용 자격증 반복 행, 검색, 후속 재검토, 혼합 학력 행, role 없는 레이어 검색, 공급자 중립 검색 결과 구조 해석과 기존 CJ 계약 및 실사이트 검증 경계 | 2026-10-01 |
 | [범용 날짜 형식 변환과 로컬 승인](topics/generic-date-format.md) | 날짜 DIRECT 변환, 로컬 승인 재검증과 자동/실사이트 검증 구분 | 2026-09-24 |
-| [범용 연월 달력 선택과 로컬 실행 경계](topics/generic-calendar-selection.md) | DOM 소유권, 개별 승인, 역할 판별과 연월, 연월일 달력 실행의 안전 경계, 달력 기입의 최종 값 확인, 실행이 연 달력의 드롭다운 확인 제외 | 2026-10-29 |
+| [범용 연월 달력 선택과 로컬 실행 경계](topics/generic-calendar-selection.md) | DOM 소유권, 개별 승인, 역할 판별과 연월, 연월일 달력 실행의 안전 경계, 달력 기입의 최종 값 확인, 실행이 연 달력의 드롭다운 확인 제외, 다른 컨트롤이 연 층의 보류 판정 제외 | 2026-10-29 |
 | [발표 디자인 시스템](topics/presentation-design-system.md) | 독립 레이아웃, 교체 슬롯과 정적 HTML/CSS 재현 규칙 | 2026-08-26 |
 | [랜딩,온보딩 웹 페이지](topics/landing-onboarding.md) | 설치 없이 체험하기와 기술 소개, 단계형 온보딩과 웹 경계 | 2026-10-29 |
 | [릴리스 브랜치 유지와 정리](topics/release-branch-lifecycle.md) | 배포,동기화 완료 후 정리와 SHA 보호, 관리자 설정 | 2026-10-03 |

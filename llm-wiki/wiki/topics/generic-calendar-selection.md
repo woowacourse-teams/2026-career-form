@@ -2,8 +2,8 @@
 
 > Topic: generic-calendar-selection
 > Status: Current
-> Current: [CF-355 실행이 연 달력의 드롭다운 확인 제외](../../raw/issues/CF-355/documents/generic-calendar-selection.md)
-> History: [근거 1](../../raw/issues/CF-104/documents/adr/104-generic-calendar-selection.md); [근거 2](../../raw/issues/CF-118/documents/generic-calendar-selection.md); [CF-307 날짜 기본 선택과 반복 열 근거](../../raw/issues/CF-307/documents/generic-calendar-selection.md); [CF-313 달력 기입의 공통 최종 값 확인](../../raw/issues/CF-313/documents/generic-calendar-selection.md); [CF-355 실행이 연 달력의 드롭다운 확인 제외](../../raw/issues/CF-355/documents/generic-calendar-selection.md)
+> Current: [CF-358 다른 컨트롤이 연 층은 날짜 기입의 변화로 세지 않음](../../raw/issues/CF-358/documents/generic-calendar-selection.md)
+> History: [근거 1](../../raw/issues/CF-104/documents/adr/104-generic-calendar-selection.md); [근거 2](../../raw/issues/CF-118/documents/generic-calendar-selection.md); [CF-307 날짜 기본 선택과 반복 열 근거](../../raw/issues/CF-307/documents/generic-calendar-selection.md); [CF-313 달력 기입의 공통 최종 값 확인](../../raw/issues/CF-313/documents/generic-calendar-selection.md); [CF-355 실행이 연 달력의 드롭다운 확인 제외](../../raw/issues/CF-355/documents/generic-calendar-selection.md); [CF-358 다른 컨트롤이 연 층은 날짜 기입의 변화로 세지 않음](../../raw/issues/CF-358/documents/generic-calendar-selection.md)
 > Updated: 2026-10-29
 
 ## 현재 상태
@@ -25,3 +25,7 @@ CF-313부터 `SELECT_DATE` 기입도 다른 기입 명령과 같은 공통 최�
 ## 실행이 연 달력과 드롭다운 확인
 
 일 달력 역할 판정을 포기한 뒤 일부 팝오버는 숨긴 채 연·월 select와 열기 버튼의 `aria-controls`를 남긴다. 다음 드롭다운을 열 때 이것이 닫히면 범용 드롭다운 확인이 되돌릴 수 없는 값 변경으로 보고 실행 전체를 멈췄다. 일 달력 실행기는 연 루트와 열기 버튼을 기억하고, 범용 드롭다운 실행기는 기억된 루트 안의 칸과 열기 버튼 자체의 표시만 값 비교에서 뺀다. 다른 호출부는 제외 없이 비교한다. 포기할 때는 보이는 달력과 팝업이 사라질 때까지 기다린다. 근거는 [CF-355](../../raw/issues/CF-355/documents/generic-calendar-selection.md)를 따른다.
+
+## 날짜 기입 뒤 다른 컨트롤이 연 층
+
+날짜 기입 뒤 새로 보이는 층이 남으면 실행기는 뒤의 승인 칸을 보류한다. 새 층의 열기 컨트롤(aria-controls)이 대상이 아닌 다른 컨트롤이고 층과 열기 컨트롤이 대상을 감싸지 않으면, 그 층은 그 컨트롤의 것으로 보고 보류 판정에서 뺀다(다른 칸 검색 제안 목록이 늦게 보인 사례). 멈춤 판정 로그는 남은 층의 값 없는 구조를 남긴다. 근거는 [CF-358](../../raw/issues/CF-358/documents/generic-calendar-selection.md)을 따른다.

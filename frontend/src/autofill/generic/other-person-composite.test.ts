@@ -179,7 +179,7 @@ describe("single English name part", () => {
   const REVIEW = { grade: "REVIEW", reason: "UNPAIRED_NAME_PART" };
 
   it.each(["englishGivenName", "englishFamilyName"])(
-    "leaves a lone %s match unselected for review",
+    "includes a lone %s match on its own while keeping the review grade",
     async (field) => {
       document.body.innerHTML =
         '<form><h2>인적사항</h2><label>영문 이름<input name="en"></label><label>이메일<input name="mail"></label></form>';
@@ -188,7 +188,7 @@ describe("single English name part", () => {
         mail: direct("contact.contact.email"),
       });
       expect(run.grade("en")).toEqual(REVIEW);
-      expect(run.item("en")).toMatchObject({ selected: false });
+      expect(run.item("en")).toMatchObject({ selected: true });
     },
   );
 
@@ -262,7 +262,7 @@ describe.each([
   });
 
   it.each(["englishGivenName", "englishFamilyName"])(
-    "does not automatically select the unpaired %s mapping",
+    "includes the unpaired %s mapping on its own",
     async (part) => {
       mount("영문 이름");
       const run = await approveAll({
@@ -272,7 +272,7 @@ describe.each([
         grade: "REVIEW",
         reason: "UNPAIRED_NAME_PART",
       });
-      expect(run.item("subject")).toMatchObject({ selected: false });
+      expect(run.item("subject")).toMatchObject({ selected: true });
     },
   );
 });
