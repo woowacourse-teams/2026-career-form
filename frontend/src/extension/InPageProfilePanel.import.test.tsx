@@ -170,3 +170,108 @@ it("offers another read when the policy cannot be loaded", async () => {
   expect(screen.queryByText(/private network detail/)).toBeNull();
   expect(screen.getByRole("button", { name: "다시 읽기" })).toBeEnabled();
 });
+
+it("records one import offer when the panel opens on a recognized Greeting form", async () => {
+  document.body.innerHTML = greetingImportFixture();
+  const track = vi.fn();
+  render(
+    <InPageProfilePanel
+      pageDocument={document}
+      repository={{
+        load: async () => createEmptyProfile(),
+        save: async () => {},
+        loadLayout: async () => "a",
+        saveLayout: async () => {},
+      }}
+      apiClient={createApiClient()}
+      controller={createProfilePanelController()}
+      closePanel={() => {}}
+      openOptions={() => {}}
+      logoUrl="/logo.png"
+      track={track}
+    />,
+  );
+  await waitFor(() =>
+    expect(track).toHaveBeenCalledWith("greeting_import_offered", {
+      surface: "in_page_panel",
+      page_host: "fixture.career.greetinghr.com",
+    }),
+  );
+  expect(
+    track.mock.calls.filter(([event]) => event === "greeting_import_offered"),
+  ).toHaveLength(1);
+  fireEvent.click(screen.getByRole("button", { name: "지원서에서 가져오기" }));
+  await screen.findByText("프로필에 가져올 정보");
+  expect(track).toHaveBeenCalledWith("greeting_import_viewed", {
+    surface: "in_page_panel",
+    page_host: "fixture.career.greetinghr.com",
+  });
+});
+
+it("records no import offer when the page is not a recognized Greeting form", async () => {
+  document.body.innerHTML = "<form><input name='unrelated' /></form>";
+  const track = vi.fn();
+  render(
+    <InPageProfilePanel
+      pageDocument={document}
+      repository={{
+        load: async () => createEmptyProfile(),
+        save: async () => {},
+        loadLayout: async () => "a",
+        saveLayout: async () => {},
+      }}
+      apiClient={createApiClient()}
+      controller={createProfilePanelController()}
+      closePanel={() => {}}
+      openOptions={() => {}}
+      logoUrl="/logo.png"
+      track={track}
+    />,
+  );
+  expect(
+    await screen.findByRole("button", { name: "지원서에서 가져오기" }),
+  ).toBeVisible();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(track).not.toHaveBeenCalledWith(
+    "greeting_import_offered",
+    expect.anything(),
+  );
+});
+
+it("keeps the panel usable and records no offer when the policy cannot be loaded", async () => {
+  document.body.innerHTML = greetingImportFixture();
+  const { installExecutionPolicy } =
+    await import("../autofill/workflow/execution-policy");
+  installExecutionPolicy(document);
+  const api = createApiClient();
+  api.loadExecutionPolicy = vi.fn(async () => {
+    throw new Error("private network detail");
+  });
+  const track = vi.fn();
+  render(
+    <InPageProfilePanel
+      pageDocument={document}
+      repository={{
+        load: async () => createEmptyProfile(),
+        save: async () => {},
+        loadLayout: async () => "a",
+        saveLayout: async () => {},
+      }}
+      apiClient={api}
+      controller={createProfilePanelController()}
+      closePanel={() => {}}
+      openOptions={() => {}}
+      logoUrl="/logo.png"
+      track={track}
+    />,
+  );
+  expect(
+    await screen.findByRole("button", { name: "지원서에서 가져오기" }),
+  ).toBeVisible();
+  await waitFor(() => expect(api.loadExecutionPolicy).toHaveBeenCalled());
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(track).not.toHaveBeenCalledWith(
+    "greeting_import_offered",
+    expect.anything(),
+  );
+});
