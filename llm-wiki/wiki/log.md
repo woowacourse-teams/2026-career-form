@@ -927,3 +927,11 @@
 - 승인된 후보 2개를 [CF-350 bundle](../raw/issues/CF-350/manifest.md)에 두 payload로 기록했다. CI/CD 설정(알림 토글·선택값 2개·VAPID 시크릿 3개의 전달 경로로 변수 13개·시크릿 10개, 빈 문자열과 Spring placeholder 기본값 때문에 compose가 선택값 기본값을 채우는 이유, Environment 값은 다음 배포에서만 반영되는 점과 환경별 재배포 트리거), 배포 Runbook(병합 전 점검표의 운영 알림 토글 결정 항목, 스테이징 활성화 순서, 키 회전의 구독 무효).
 - [CI/CD 설정](topics/cicd-setup.md)과 [배포 Runbook](topics/deployment-runbook.md)의 Current를 CF-350으로 바꾸고 앞선 근거를 History에 남겼다. 절차의 Wiki 밖 정본은 `infra/WEB_PUSH_VAPID.md`다.
 - VAPID 키 값, 호스트 주소, 계정, 대화 전문은 저장하지 않았다.
+
+## [2026-10-29] ingest | CF-363 랜딩 설치 없이 체험하기와 기술 소개
+
+- Approval-Digest: 6009211edc896a7a300a3b2ddd11c9a5c9a19b8db58fb685f8719408b146d89a
+- Source-Revision: e074af94
+- 승인된 후보 1개를 [CF-363 bundle](../raw/issues/CF-363/manifest.md)에 기록했다. 히어로 버튼 하나와 `/try/` 체험(조사 자산 재사용, 자동 기입 강조, 관리 버튼 안내 카드, 좁은 화면 대체), `/tech/` 기술 소개(두 주제, 흐름도 3개, 수치 출처 상태), `trial_*` 이벤트, 검토한 배치 네 가지와 근거 자료, 유지되는 CF-96·CF-193 경계를 담았다.
+- [랜딩,온보딩 웹 페이지](topics/landing-onboarding.md)의 Current를 CF-363으로 바꾸고 CF-193을 History에 남겼다.
+- 실제 지원 정보, 계정, 대화 전문은 저장하지 않았다.
