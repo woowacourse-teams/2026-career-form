@@ -308,3 +308,143 @@ it("waits for an in-flight write before reloading and cancels queued stale edits
     vi.useRealTimers();
   }
 });
+
+describe("useProfileEditor certificate issuer", () => {
+  const sqld = {
+    status: "selected",
+    catalogId: "certificate:kdata:sqld",
+    displayName: "SQL 개발자",
+    originalText: "SQLD",
+    catalogVersion: "2026-10-07",
+  } as const;
+
+  async function editorWith(values: Record<string, string>) {
+    const profile = createEmptyProfile();
+    profile.certifications = [
+      { id: "certificate-1", sectionId: "certificate", values },
+    ];
+    const repository = createRepository();
+    vi.mocked(repository.load).mockResolvedValue(profile);
+    const { result } = renderHook(() => useProfileEditor(repository));
+    await act(async () => Promise.resolve());
+    return result;
+  }
+
+  it("fills a blank issuer from the selected catalog certificate", async () => {
+    const result = await editorWith({ registrationNo: "DEMO-1" });
+
+    act(() =>
+      result.current.updateEntry(
+        "certifications",
+        "certificate-1",
+        "name",
+        "SQL 개발자",
+        sqld,
+      ),
+    );
+
+    expect(result.current.profile.certifications[0]).toEqual({
+      id: "certificate-1",
+      sectionId: "certificate",
+      values: {
+        name: "SQL 개발자",
+        registrationNo: "DEMO-1",
+        issuer: "한국데이터산업진흥원",
+      },
+      identity: sqld,
+    });
+  });
+
+  it("keeps a user-entered issuer when a catalog certificate is selected", async () => {
+    const result = await editorWith({ issuer: "사용자 기관" });
+
+    act(() =>
+      result.current.updateEntry(
+        "certifications",
+        "certificate-1",
+        "name",
+        "SQL 개발자",
+        sqld,
+      ),
+    );
+
+    expect(result.current.profile.certifications[0].values).toEqual({
+      name: "SQL 개발자",
+      issuer: "사용자 기관",
+    });
+  });
+
+  it("treats a whitespace-only issuer as blank", async () => {
+    const result = await editorWith({ issuer: "  " });
+
+    act(() =>
+      result.current.updateEntry(
+        "certifications",
+        "certificate-1",
+        "name",
+        "SQL 개발자",
+        sqld,
+      ),
+    );
+
+    expect(result.current.profile.certifications[0].values.issuer).toBe(
+      "한국데이터산업진흥원",
+    );
+  });
+
+  it("does not fill an issuer for direct input or typing", async () => {
+    const result = await editorWith({});
+
+    act(() =>
+      result.current.updateEntry(
+        "certifications",
+        "certificate-1",
+        "name",
+        "SQL 개발자",
+        { status: "manual", originalText: "SQL 개발자" },
+      ),
+    );
+    expect(result.current.profile.certifications[0].values).not.toHaveProperty(
+      "issuer",
+    );
+
+    act(() =>
+      result.current.updateEntry(
+        "certifications",
+        "certificate-1",
+        "name",
+        "SQL 개발자",
+      ),
+    );
+    expect(result.current.profile.certifications[0].values).not.toHaveProperty(
+      "issuer",
+    );
+  });
+
+  it("keeps the filled issuer when the name edit releases the catalog link", async () => {
+    const result = await editorWith({});
+    act(() =>
+      result.current.updateEntry(
+        "certifications",
+        "certificate-1",
+        "name",
+        "SQL 개발자",
+        sqld,
+      ),
+    );
+
+    act(() =>
+      result.current.updateEntry(
+        "certifications",
+        "certificate-1",
+        "name",
+        "SQL",
+      ),
+    );
+
+    expect(result.current.profile.certifications[0]).toMatchObject({
+      values: { name: "SQL", issuer: "한국데이터산업진흥원" },
+      identity: { status: "manual", originalText: "SQL" },
+    });
+  });
+});

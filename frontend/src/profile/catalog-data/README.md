@@ -96,6 +96,14 @@ hostname mismatch; the www host returned no CSV download on that linked page.
 This is broad domestic school coverage plus HRDK/KDATA qualifications, not all
 possible credentials. Missing entries must remain usable as manual input.
 
+## Certificate selection
+
+Choosing a certificate fills `issuer` with the first segment of its detail
+(the text before the first `·`) only when issuer is blank; whitespace counts as
+blank. It never overwrites a non-blank issuer, and editing the name keeps the
+issuer while releasing the link. Typing a name, direct input and imports never
+fill it.
+
 ## Language-test search
 
 `catalog.ts` also projects the repository's existing `LANGUAGE_TEST_OPTIONS`
