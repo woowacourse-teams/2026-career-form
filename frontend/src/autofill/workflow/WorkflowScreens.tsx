@@ -8,6 +8,7 @@ import {
 import type { ApprovedWriteResult } from "../write/executor";
 import styles from "../../autofill-demo/AutofillDemo.module.css";
 import { WorkflowResults, type WorkflowResultsProps } from "./WorkflowResults";
+import type { AppearableProfileItem } from "./pre-approval";
 import { genericItemReason } from "../generic/grade-reason-text";
 import {
   structureActionLine,
@@ -79,6 +80,12 @@ interface WorkflowScreensProps {
   operatedCategories?: readonly string[];
   onLocateSection?(candidateIds: readonly string[], category?: string): boolean;
   onExit(): void;
+  /** Generic first review only: stored values a reviewed area may reveal. */
+  appearableItems?: readonly AppearableProfileItem[];
+  preApprovalOn?: boolean;
+  setPreApprovalOn?(on: boolean): void;
+  /** Revealed fields written without a second review. */
+  autoWrittenLabels?: readonly string[];
 }
 
 export function WorkflowScreens({
@@ -110,6 +117,10 @@ export function WorkflowScreens({
   onLocateSection,
   operatedCategories,
   currentCategory,
+  appearableItems = [],
+  preApprovalOn = false,
+  setPreApprovalOn,
+  autoWrittenLabels = [],
 }: WorkflowScreensProps) {
   const reviewTabsId = useId();
   const [reviewTab, setReviewTab] = useState<
@@ -435,6 +446,34 @@ export function WorkflowScreens({
             })}
           </section>
         )}
+        {appearableItems.length > 0 && setPreApprovalOn && (
+          <fieldset className={resultStyles.review}>
+            <legend>나타날 수 있는 칸 {appearableItems.length}</legend>
+            <p className={resultStyles.guidance}>
+              값을 넣은 뒤 지원서가 새로 보여 줄 수 있는 칸이에요. 빈 칸으로
+              나타나면 이 값을 넣어요.
+            </p>
+            <ul>
+              {appearableItems.map((item) => (
+                <li key={`${item.key}#${item.itemIndex}`}>
+                  <span>
+                    {item.categoryLabel} {item.label}
+                    {item.itemIndex > 0 ? ` (${item.itemIndex + 1}번째)` : ""}
+                  </span>{" "}
+                  <span className={resultStyles.previewValue}>{item.value}</span>
+                </li>
+              ))}
+            </ul>
+            <label>
+              <input
+                type="checkbox"
+                checked={preApprovalOn}
+                onChange={(event) => setPreApprovalOn(event.target.checked)}
+              />{" "}
+              이 칸이 나타나면 다시 묻지 않고 기입
+            </label>
+          </fieldset>
+        )}
         <button
           className={styles.primary}
           type="button"
@@ -488,6 +527,16 @@ export function WorkflowScreens({
                 </ul>
               </>
             )}
+          </section>
+        )}
+        {autoWrittenLabels.length > 0 && (
+          <section aria-label="다시 묻지 않고 기입한 새 칸">
+            <h3>다시 묻지 않고 기입한 새 칸</h3>
+            <ul>
+              {autoWrittenLabels.map((label, index) => (
+                <li key={index}>{label}</li>
+              ))}
+            </ul>
           </section>
         )}
         <WorkflowResults

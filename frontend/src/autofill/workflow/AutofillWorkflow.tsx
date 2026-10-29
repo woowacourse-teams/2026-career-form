@@ -77,6 +77,13 @@ import {
 } from "./workflow-analysis";
 import { createWriteRevealedFields } from "./revealed-fields";
 import { fillableControls, newlyRevealedControls } from "./generic-follow-up";
+import {
+  appearableProfileItems,
+  isPreApprovedItem,
+  preApprovalKeyOf,
+  preApprovalScope,
+} from "./pre-approval";
+import { watchRevealedFields } from "./reveal-watch";
 import { createReviewActions, sensitiveValueApproved } from "./review-actions";
 import {
   createSearchFollowUpRecorder,
@@ -112,6 +119,8 @@ import { debugWarn } from "../debug/autofill-debug";
 import { localWorkflowLog } from "../debug/local-workflow";
 
 export { localItemCount, shouldRunRevealPlan } from "./workflow-model";
+
+const MAX_REVEAL_WATCH_ROUNDS = 5;
 
 export function AutofillWorkflow(props: WorkflowProps) {
   const [loaded, setLoaded] = useState(false);
@@ -269,6 +278,16 @@ function PolicyReadyWorkflow({
   // Generic pages that reveal new fields after a write get a bounded number
   // of extra review passes (observed reveal, no aria-controls needed).
   const revealPasses = useRef(0);
+  // Revealed fields the first review approved in advance (#358): written in
+  // their reveal pass without a second review; anything else is reviewed.
+  const [preApprovalOn, setPreApprovalOn] = useState(true);
+  const preApprovedScope = useRef<ReadonlySet<string>>(new Set());
+  const autoRevealPass = useRef(0);
+  const autoHeldIds = useRef<ReadonlySet<string>>(new Set());
+  const [autoExecutePending, setAutoExecutePending] = useState(false);
+  const [autoWrittenLabels, setAutoWrittenLabels] = useState<string[]>([]);
+  const autoWrittenKeys = useRef(new Set<string>());
+  const revealWatchRounds = useRef(0);
   const completedDriverKeys = useRef<ReadonlySet<string>>(new Set());
   const completedGenericStateDrivers = useRef<
     ReadonlyMap<string, CompletedGenericStateDriver>
@@ -310,6 +329,16 @@ function PolicyReadyWorkflow({
     fieldCount: number;
     matchedCount: number;
   }>();
+  const appearableItems = useMemo(
+    () =>
+      stage === "review" &&
+      revealPasses.current === 0 &&
+      analysisSummary?.mode === "GENERIC" &&
+      profile
+        ? appearableProfileItems(profile, reviewItems)
+        : [],
+    [stage, reviewItems, profile, analysisSummary],
+  );
   const [workflowDiagnostics, setWorkflowDiagnostics] = useState<
     WorkflowDiagnostic[]
   >([]);
@@ -810,6 +839,10 @@ function PolicyReadyWorkflow({
   const executeWrites = async () => {
     if (!fieldsSnapshot || executionPending.current) return;
     executionPending.current = true;
+    if (revealPasses.current === 0)
+      preApprovedScope.current = preApprovalOn
+        ? preApprovalScope(appearableItems)
+        : new Set();
     setResultRegistry(undefined);
     try {
       const retainedDrivers = retainedDriverReviewResults(
@@ -984,7 +1017,7 @@ function PolicyReadyWorkflow({
       });
       if (
         revealed.length > 0 &&
-        revealPasses.current < 2 &&
+        revealPasses.current < (preApprovedScope.current.size > 0 ? 4 : 2) &&
         nextResults.some((result) => result.status === "written") &&
         !writeController.current.signal.aborted
       ) {
@@ -1009,6 +1042,20 @@ function PolicyReadyWorkflow({
           ...current,
           `값을 넣은 뒤 새 입력칸 ${revealed.length}개가 나타나 다시 확인했어요. 이어서 기입해 주세요.`,
         ]);
+        return;
+      }
+      const held = autoHeldIds.current;
+      if (held.size > 0) {
+        autoHeldIds.current = new Set();
+        setReviewItems((items) =>
+          items.map((item) =>
+            held.has(item.candidateId) &&
+            !progressTracker.wasWritten(item.candidateId, fieldsSnapshot.registry)
+              ? { ...item, selected: true }
+              : item,
+          ),
+        );
+        setStage("review");
         return;
       }
       setResults([...retainedDrivers.results, ...nextResults]);
@@ -1047,6 +1094,95 @@ function PolicyReadyWorkflow({
       return changed ? next : items;
     });
   }, [stage, fieldsSnapshot]);
+
+  // A reveal pass writes the approved revealed fields at once and holds the
+  // rest for the review that follows.
+  useEffect(() => {
+    if (
+      stage !== "review" ||
+      revealPasses.current === 0 ||
+      autoRevealPass.current === revealPasses.current ||
+      preApprovedScope.current.size === 0 ||
+      !fieldsSnapshot
+    )
+      return;
+    autoRevealPass.current = revealPasses.current;
+    const unwritten = reviewItems.filter(
+      (item) =>
+        item.selected &&
+        !item.disabled &&
+        !progressTracker.wasWritten(item.candidateId, fieldsSnapshot.registry),
+    );
+    const approved = unwritten.filter((item) =>
+      isPreApprovedItem(item, preApprovedScope.current),
+    );
+    if (approved.length === 0) return;
+    const approvedIds = new Set(approved.map((item) => item.candidateId));
+    autoHeldIds.current = new Set(
+      unwritten
+        .filter((item) => !approvedIds.has(item.candidateId))
+        .map((item) => item.candidateId),
+    );
+    setAutoWrittenLabels((labels) => [
+      ...labels,
+      ...approved.map((item) => item.fieldLabel),
+    ]);
+    approved.forEach((item) => {
+      const key = preApprovalKeyOf(item);
+      if (key) autoWrittenKeys.current.add(key);
+    });
+    setReviewItems((items) =>
+      items.map((item) =>
+        approvedIds.has(item.candidateId) ? item : { ...item, selected: false },
+      ),
+    );
+    setAutoExecutePending(true);
+  }, [stage, reviewItems, fieldsSnapshot]);
+
+  // After the run, the page may reveal approved fields once the user saves a
+  // section. The extension never presses save; it only watches for the result.
+  useEffect(() => {
+    const scope = preApprovedScope.current;
+    if (
+      stage !== "result" ||
+      !profile ||
+      scope.size === 0 ||
+      revealWatchRounds.current >= MAX_REVEAL_WATCH_ROUNDS ||
+      [...scope].every((key) => autoWrittenKeys.current.has(key))
+    )
+      return;
+    const approvedProfile = JSON.stringify(profile);
+    return watchRevealedFields({
+      document: pageDocument,
+      baseline: fillableControls(pageDocument),
+      onReveal: () =>
+        void (async () => {
+          if (
+            !mounted.current ||
+            JSON.stringify(await repository.load()) !== approvedProfile
+          )
+            return;
+          revealWatchRounds.current += 1;
+          revealPasses.current += 1;
+          await analyzeFields(
+            profile,
+            false,
+            completedDriverKeys.current,
+            deferredDriverGroups.current,
+          );
+          setWarnings((current) => [
+            ...current,
+            "저장 뒤 새 입력칸이 나타나 다시 확인했어요.",
+          ]);
+        })(),
+    });
+  }, [stage]);
+
+  useEffect(() => {
+    if (!autoExecutePending) return;
+    setAutoExecutePending(false);
+    void executeWrites();
+  }, [autoExecutePending]);
 
   useEffect(() => {
     if (!preparationExecutionPending) return;
@@ -1119,6 +1255,10 @@ function PolicyReadyWorkflow({
       onLocate={(candidateId) =>
         !!visibleRegistry && presentation.show(visibleRegistry, candidateId)
       }
+      appearableItems={appearableItems}
+      preApprovalOn={preApprovalOn}
+      setPreApprovalOn={setPreApprovalOn}
+      autoWrittenLabels={autoWrittenLabels}
     />
   );
 }
