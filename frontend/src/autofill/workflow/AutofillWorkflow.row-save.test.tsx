@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createEmptyProfile, type Profile } from "../../profile/model";
@@ -20,7 +26,8 @@ const KEYS: Record<string, string> = {
 const CATEGORY: Record<string, string> = { 경력: "careers", 어학: "languages" };
 
 /**
- * One career entry row with its own save button. Saving a filled row turns it
+ * One career entry row with its own save button and one field the analysis
+ * leaves unmapped. Saving a filled row turns it
  * into a list item, and the language area appears only after that.
  */
 function rowSaveForm({ register = true } = {}) {
@@ -30,6 +37,7 @@ function rowSaveForm({ register = true } = {}) {
       <div id="careerRow">
         <label>회사명<input name="companyName"></label>
         <label>부서<input name="department"></label>
+        <label>비고<input name="note"></label>
         <button type="button" id="rowSave">저장</button>
       </div></section>
     <div id="language"></div>
@@ -54,7 +62,11 @@ function profile(): Profile {
     },
   ];
   value.languages = [
-    { id: "language-1", sectionId: "languageTest", values: { testName: "합성시험" } },
+    {
+      id: "language-1",
+      sectionId: "languageTest",
+      values: { testName: "합성시험" },
+    },
   ];
   return value;
 }
@@ -137,8 +149,14 @@ describe("row save on the generic path", () => {
     const tempSave = clicks("#tempSave");
     const submit = clicks("#submit");
     start();
-    fireEvent.click(await screen.findByRole("button", { name: "2개 항목 기입하기" }));
-    await screen.findByRole("heading", { name: "기입 결과" }, { timeout: 8_000 });
+    fireEvent.click(
+      await screen.findByRole("button", { name: "2개 항목 기입하기" }),
+    );
+    await screen.findByRole(
+      "heading",
+      { name: "기입 결과" },
+      { timeout: 8_000 },
+    );
     expect(rowSave()).toBe(1);
     expect(tempSave()).toBe(0);
     expect(submit()).toBe(0);
@@ -152,8 +170,14 @@ describe("row save on the generic path", () => {
     rowSaveForm({ register: false });
     const rowSave = clicks("#rowSave");
     start();
-    fireEvent.click(await screen.findByRole("button", { name: "2개 항목 기입하기" }));
-    await screen.findByRole("heading", { name: "기입 결과" }, { timeout: 8_000 });
+    fireEvent.click(
+      await screen.findByRole("button", { name: "2개 항목 기입하기" }),
+    );
+    await screen.findByRole(
+      "heading",
+      { name: "기입 결과" },
+      { timeout: 8_000 },
+    );
     expect(rowSave()).toBe(1);
     const manual = screen.getByRole("region", { name: "직접 저장할 줄" });
     expect(within(manual).getByText(/이후 줄 저장을 멈췄어요/)).toBeTruthy();

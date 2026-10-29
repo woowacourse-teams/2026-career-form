@@ -98,6 +98,7 @@ interface WorkflowScreensProps {
 
 const ROW_SAVE_REASON: Record<RowSaveManualReason, string> = {
   "row-incomplete": "기입하지 못한 칸이 있어 저장하지 않았어요.",
+  "already-registered": "이미 등록된 항목으로 보여 다시 저장하지 않았어요.",
   "button-disabled": "저장 버튼이 비활성이라 누르지 않았어요.",
   unconfirmed: "저장 버튼을 눌렀지만 등록을 확인하지 못했어요.",
   stopped: "앞 줄의 등록을 확인하지 못해 누르지 않았어요.",

@@ -23,6 +23,7 @@ export interface RowSaveField {
 
 export type RowSaveManualReason =
   | "row-incomplete"
+  | "already-registered"
   | "button-disabled"
   | "unconfirmed"
   | "stopped";
@@ -72,7 +73,11 @@ export async function saveWrittenRows({
   enableWaitMs = 1_000,
   confirmTimeoutMs = 3_000,
 }: RowSaveOptions): Promise<RowSaveOutcome> {
-  const outcome: RowSaveOutcome = { saved: [], manual: [], stopped: stoppedBefore };
+  const outcome: RowSaveOutcome = {
+    saved: [],
+    manual: [],
+    stopped: stoppedBefore,
+  };
   const rows = new Map<string, Row>();
   for (const field of fields) {
     if (!field.recordKey || field.approved === false) continue;
@@ -101,13 +106,21 @@ export async function saveWrittenRows({
     );
   for (const { row, button } of candidates) {
     const manual = (reason: RowSaveManualReason) =>
-      outcome.manual.push({ recordKey: row.key, recordLabel: row.label, reason });
+      outcome.manual.push({
+        recordKey: row.key,
+        recordLabel: row.label,
+        reason,
+      });
     if (outcome.stopped || signal?.aborted) {
       manual("stopped");
       continue;
     }
     if (!row.fields.every((field) => field.settled)) {
       manual("row-incomplete");
+      continue;
+    }
+    if (alreadyListed(document, row, button)) {
+      manual("already-registered");
       continue;
     }
     if (!(await becomesEnabled(button, enableWaitMs))) {
@@ -183,6 +196,53 @@ function isRowSaveControl(button: HTMLElement): boolean {
   )
     return false;
   return isVisibleWriteElement(button);
+}
+
+const TEXT_SKIP = "input, textarea, select, option, script, style, template";
+
+/**
+ * Whether the page already shows this entry outside its entry area, for
+ * example in the list of registered rows. A re-run must not register the same
+ * entry twice. Values are compared on the page only and never leave it.
+ */
+function alreadyListed(
+  document: Document,
+  row: Row,
+  button: HTMLElement,
+): boolean {
+  const area = fieldArea(button);
+  const values = [
+    ...new Set(
+      row.fields
+        .filter((field) => field.written)
+        .flatMap((field) => field.elements)
+        .filter(
+          (element): element is HTMLInputElement | HTMLTextAreaElement =>
+            element instanceof HTMLTextAreaElement ||
+            (element instanceof HTMLInputElement &&
+              ["text", "search", ""].includes(element.type)),
+        )
+        .map((element) => element.value.replace(/\s+/g, " ").trim())
+        // Dates and numbers repeat across entries; names identify one.
+        .filter((value) => value.length >= 2 && !/^[\d\s.\-/:~]+$/.test(value)),
+    ),
+  ].slice(0, 2);
+  if (!values.length) return false;
+  const texts: string[] = [];
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const parent = node.parentElement;
+    if (
+      !parent ||
+      area?.contains(parent) ||
+      parent.closest(TEXT_SKIP) ||
+      !isVisibleWriteElement(parent)
+    )
+      continue;
+    texts.push(node.textContent ?? "");
+  }
+  const page = texts.join(" ").replace(/\s+/g, " ");
+  return values.every((value) => page.includes(value));
 }
 
 function fieldArea(button: HTMLElement): Element | undefined {

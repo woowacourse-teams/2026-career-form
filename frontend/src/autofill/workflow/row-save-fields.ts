@@ -49,17 +49,21 @@ export function rowSaveFields({
       )
       .map((result) => result.candidateId),
   );
-  return items.map((item) => {
-    const lookup = registry.lookupField(item.candidateId);
-    const record = recordOf(item);
-    const id = item.candidateId;
-    return {
-      recordKey: record?.key,
-      recordLabel: record?.label ?? "",
-      elements: "handle" in lookup ? lookup.handle.elements : [],
-      approved: approvedIds.has(id) || wasWritten(id),
-      written: written.has(id),
-      settled: written.has(id) || matched.has(id) || wasWritten(id),
-    };
-  });
+  // A field the analysis left unmapped belongs to no entry: it neither
+  // decides a row nor marks an area as another entry's.
+  return items
+    .filter((item) => profileKeyOf(item) !== undefined)
+    .map((item) => {
+      const lookup = registry.lookupField(item.candidateId);
+      const record = recordOf(item);
+      const id = item.candidateId;
+      return {
+        recordKey: record?.key,
+        recordLabel: record?.label ?? "",
+        elements: "handle" in lookup ? lookup.handle.elements : [],
+        approved: approvedIds.has(id) || wasWritten(id),
+        written: written.has(id),
+        settled: written.has(id) || matched.has(id) || wasWritten(id),
+      };
+    });
 }

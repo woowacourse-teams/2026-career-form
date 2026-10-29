@@ -27,7 +27,9 @@ function clicks(selector: string): () => number {
   let count = 0;
   document
     .querySelectorAll(selector)
-    .forEach((element) => element.addEventListener("click", () => (count += 1)));
+    .forEach((element) =>
+      element.addEventListener("click", () => (count += 1)),
+    );
   return () => count;
 }
 
@@ -226,6 +228,29 @@ describe("rows left for the user", () => {
     ]);
   });
 
+  it("does not save a row again when the page already lists the same entry", async () => {
+    careerRows();
+    // An earlier run (or the user) already registered this entry.
+    document.querySelector("#saved")!.innerHTML =
+      "<li><strong>합성회사</strong> <span>합성부서</span></li>";
+    const save0 = clicks("#save0");
+    const outcome = await saveWrittenRows({
+      document,
+      fields: rowFields().slice(0, 3),
+      savedKeys: new Set(),
+      ...FAST,
+    });
+    expect(save0()).toBe(0);
+    expect(outcome.manual).toEqual([
+      {
+        recordKey: "careers.career#0",
+        recordLabel: "줄 careers.career#0",
+        reason: "already-registered",
+      },
+    ]);
+    expect(outcome.stopped).toBe(false);
+  });
+
   it("leaves a row whose save button stays disabled", async () => {
     careerRows();
     document.querySelector<HTMLButtonElement>("#save0")!.disabled = true;
@@ -235,7 +260,9 @@ describe("rows left for the user", () => {
       savedKeys: new Set(),
       ...FAST,
     });
-    expect(outcome.manual.map((row) => row.reason)).toEqual(["button-disabled"]);
+    expect(outcome.manual.map((row) => row.reason)).toEqual([
+      "button-disabled",
+    ]);
     expect(outcome.saved).toEqual([]);
   });
 
