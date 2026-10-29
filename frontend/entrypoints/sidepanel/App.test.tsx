@@ -297,6 +297,36 @@ describe("side panel App", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("선택형 코드값을 라벨로 보여 주고 라벨로 복사한다", async () => {
+    const repository = createRepository();
+    const profile = await repository.load();
+    profile.education[0].values = {
+      ...profile.education[0].values,
+      attendanceType: "attendance:day",
+      schoolRegion: "region:seoul",
+    };
+    profile.military.militaryStatus = "military-status:served";
+    const copyText = vi.fn(async () => undefined);
+    render(<App repository={repository} copyText={copyText} />);
+    await screen.findByText("copy@example.com");
+
+    fireEvent.click(screen.getByRole("button", { name: "학력 1건 펼치기" }));
+    expect(screen.getByText("주간")).toBeInTheDocument();
+    expect(screen.getByText("서울")).toBeInTheDocument();
+    expect(screen.queryByText(/attendance:|region:/)).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /주·야간 복사$/ }));
+    expect(copyText).toHaveBeenLastCalledWith("주간");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "병역, 보훈, 장애와 건강 펼치기" }),
+    );
+    expect(screen.getByText("군필")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "병역 상태 복사" }));
+    expect(copyText).toHaveBeenLastCalledWith("군필");
+    expect(repository.save).not.toHaveBeenCalled();
+    expect(profile.military.militaryStatus).toBe("military-status:served");
+  });
+
   it("reports clipboard failure without exposing the copied value", async () => {
     const copyText = vi.fn(async () => {
       throw new Error("clipboard unavailable");

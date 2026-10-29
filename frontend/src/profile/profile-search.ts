@@ -1,4 +1,8 @@
-import { PROFILE_CATEGORIES } from "./field-definitions";
+import {
+  PROFILE_CATEGORIES,
+  type ProfileFieldDefinition,
+} from "./field-definitions";
+import { fieldDisplayValue } from "./field-display";
 import type {
   FieldValues,
   Profile,
@@ -11,6 +15,7 @@ export interface ProfileSearchItem {
   categoryId: ProfileCategoryId;
   categoryLabel: string;
   fieldLabel: string;
+  /** Shown and copied text: a coded choice reads as its option label. */
   value: string;
   sensitive: boolean;
 }
@@ -21,7 +26,7 @@ function itemsFromValues(
   categoryId: ProfileCategoryId,
   categoryLabel: string,
   sensitive: boolean,
-  fields: readonly { id: string; label: string }[],
+  fields: readonly ProfileFieldDefinition[],
 ): ProfileSearchItem[] {
   return fields.flatMap((field) => {
     const value = values[field.id]?.trim();
@@ -32,7 +37,7 @@ function itemsFromValues(
             categoryId,
             categoryLabel,
             fieldLabel: field.label,
-            value,
+            value: fieldDisplayValue(field, value, values),
             sensitive,
           },
         ]
