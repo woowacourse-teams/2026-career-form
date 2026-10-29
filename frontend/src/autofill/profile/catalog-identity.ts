@@ -97,7 +97,9 @@ export function matchesCatalogLabel(
 }
 
 /** First detail segment of a KESS high school record: its sido abbreviation. */
-function highSchoolRegion(entry: CatalogEntry): string | undefined {
+export function catalogHighSchoolRegion(
+  entry: CatalogEntry,
+): string | undefined {
   if (entry.kind !== "highSchool") return undefined;
   const region = entry.detail.split(" · ")[0]?.trim();
   return region || undefined;
@@ -112,13 +114,13 @@ export function matchesCatalogHighSchoolRegion(
   label: string,
   region: string,
 ): boolean {
-  const own = highSchoolRegion(entry);
+  const own = catalogHighSchoolRegion(entry);
   if (!own || normalizedCatalogLabel(region) !== normalizedCatalogLabel(own))
     return false;
   const candidates = [
     ...(labelEntries.get(`${entry.kind}:${normalizedCatalogLabel(label)}`) ??
       []),
-  ].filter((candidate) => highSchoolRegion(candidate) === own);
+  ].filter((candidate) => catalogHighSchoolRegion(candidate) === own);
   return candidates.length === 1 && candidates[0].id === entry.id;
 }
 

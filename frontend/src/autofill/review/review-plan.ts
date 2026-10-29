@@ -60,6 +60,7 @@ import {
   type ApprovedCatalogMatch,
 } from "../profile/catalog-match";
 import { catalogEvidenceForElement } from "../profile/catalog-evidence";
+import { highSchoolSearchRegion } from "../profile/search-region";
 import { resolveChoiceOption } from "../profile/choice-option";
 import { matchStandardOption } from "../profile/standard-option-match";
 import { schoolRegionSearchValues } from "../../profile/standard-values";
@@ -129,6 +130,8 @@ export interface ReviewPlanItem {
   verifiedFreshDefaultValue?: string;
   /** Local-only approved search forms; never include these values in API requests. */
   searchValuePlan?: LocalSearchValuePlan;
+  /** Local-only same-entry high-school region label; never include in API requests. */
+  searchRegion?: string;
   /** Explicit local profile selection; never serialize to the backend. */
   searchIdentity?: ProfileIdentity;
   /** Approved local evidence for one catalog entry; never part of API requests. */
@@ -1217,6 +1220,14 @@ function itemForResolvedAnalysis(
           resolvedProfileValue.value,
         )
       : undefined;
+  const searchRegion =
+    binding.type === "DIRECT"
+      ? highSchoolSearchRegion(
+          profile,
+          binding.profileFieldKey,
+          resolvedProfileValue.profileEntryId,
+        )
+      : undefined;
 
   const pageValue = currentValue(lookup.handle);
   const verifiedFreshDefault =
@@ -1283,6 +1294,7 @@ function itemForResolvedAnalysis(
       ...(calendarApproval ? { calendarApproval } : {}),
       ...(dayCalendarApproval ? { dayCalendarApproval } : {}),
       ...(searchValuePlan ? { searchValuePlan } : {}),
+      ...(searchRegion ? { searchRegion } : {}),
       ...(searchIdentity
         ? { searchIdentity, ...(catalogMatch ? { catalogMatch } : {}) }
         : {}),
@@ -1363,6 +1375,7 @@ function itemForResolvedAnalysis(
       ...(calendarApproval ? { calendarApproval } : {}),
       ...(dayCalendarApproval ? { dayCalendarApproval } : {}),
       ...(searchValuePlan ? { searchValuePlan } : {}),
+      ...(searchRegion ? { searchRegion } : {}),
       ...(searchIdentity
         ? { searchIdentity, ...(catalogMatch ? { catalogMatch } : {}) }
         : {}),
@@ -1419,6 +1432,7 @@ function itemForResolvedAnalysis(
     ...(calendarApproval ? { calendarApproval } : {}),
     ...(dayCalendarApproval ? { dayCalendarApproval } : {}),
     ...(searchValuePlan ? { searchValuePlan } : {}),
+    ...(searchRegion ? { searchRegion } : {}),
     ...(searchIdentity
       ? { searchIdentity, ...(catalogMatch ? { catalogMatch } : {}) }
       : {}),
