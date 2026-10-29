@@ -119,7 +119,14 @@ export function calendarUnitEvidence(
   target: HTMLInputElement,
 ): CalendarUnitObservation | undefined {
   const ownLabels = labelsOf(target);
-  const labels = ownLabels.length ? ownLabels : sharedColumnLabels(target);
+  const columnLabels = ownLabels.length ? ownLabels : sharedColumnLabels(target);
+  // A field named only by its placeholder words (not a YYYY/MM/DD notation)
+  // carries that name as its label.
+  const namingPlaceholder =
+    !columnLabels.length && !/YY|MM|DD/i.test(target.placeholder)
+      ? target.placeholder.trim()
+      : "";
+  const labels = namingPlaceholder ? [namingPlaceholder] : columnLabels;
   if (labels.join("").length > 512 || target.placeholder.length > 128)
     return { unit: "conflict" };
   const units = new Set(

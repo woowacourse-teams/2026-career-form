@@ -5,6 +5,7 @@ import {
   CandidateRegistry,
   createStructuralSignature,
 } from "../dom/candidate-registry";
+import type { FieldCandidateHandle } from "../dom/types";
 import type { ReviewPlanItem } from "../review/review-plan";
 import { executeApprovedWrites } from "./native-executor";
 
@@ -14,7 +15,7 @@ afterEach(() => {
 
 function register(
   candidate: FieldCandidate,
-  elements: HTMLElement[],
+  elements: FieldCandidateHandle["elements"],
   options: [string, HTMLElement][],
 ) {
   const registry = new CandidateRegistry();

@@ -12,6 +12,11 @@ import {
   type AddressIdentity,
 } from "./match";
 import { splitRoadReference } from "./road-reference";
+import {
+  openedSearchDialog,
+  selectInPageAddress,
+  visibleDialogs,
+} from "./in-page-search";
 
 function visible(element: Element): boolean {
   for (let p: Element | null = element; p; p = p.parentElement) {
@@ -137,10 +142,22 @@ async function runGenericKakaoAddress(
   try {
     if (!unchanged() || !(await sameProfile()) || !unchanged()) return manual();
     stage = "open-search";
+    const dialogsBefore = visibleDialogs(document);
     (button as HTMLElement).click();
+    // The opener shows either the vendor frame or the site's own search dialog.
+    let inPage: Element | undefined;
+    const openDeadline = Date.now() + GENERIC_CALLBACK_MS;
+    while (
+      !signal.aborted &&
+      Date.now() < openDeadline &&
+      kakaoSearchFrameCount(document) === 0 &&
+      !(inPage = openedSearchDialog(document, dialogsBefore))
+    )
+      await new Promise((resolve) => setTimeout(resolve, GENERIC_POLL_MS));
     const maySelect = async () => {
       const same = await sameProfile();
       const stable = unchanged();
+      if (inPage) return same && stable;
       const frames = kakaoSearchFrameCount(document);
       localWorkflowLog("address-before-select", {
         sameProfile: same,
@@ -152,14 +169,25 @@ async function runGenericKakaoAddress(
     };
     let selection: AddressIdentity | undefined;
     stage = "search-and-select";
-    const selected = await search(
-      { address: expected.address, postalCode: expected.postalCode },
-      maySelect,
-      signal,
-      (result) => {
-        selection = result;
-      },
-    );
+    const selected = inPage
+      ? !!(selection = await selectInPageAddress(
+          inPage,
+          {
+            address: expected.address,
+            postalCode: expected.postalCode,
+            detail: expected.detail,
+          },
+          maySelect,
+          signal,
+        ))
+      : await search(
+          { address: expected.address, postalCode: expected.postalCode },
+          maySelect,
+          signal,
+          (result) => {
+            selection = result;
+          },
+        );
     if (!selected || !selection) return manual();
     stage = "verify-site-callback";
     const matchesSelection = () =>

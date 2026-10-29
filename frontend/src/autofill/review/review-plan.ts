@@ -81,6 +81,12 @@ import {
   createDayCalendarApproval,
   type DayCalendarApproval,
 } from "./day-calendar-approval";
+import {
+  createDialogDateApproval,
+  dialogDateButtonValue,
+  isDialogDateButton,
+  type DialogDateApproval,
+} from "../interaction/dialog-date-picker";
 import { assignMixedRows } from "../dom/mixed-section-rows";
 import { genericFormGroupFor } from "../dom/generic-form-groups";
 import { genericReasonText } from "../generic/grade-reason-text";
@@ -125,6 +131,8 @@ export interface ReviewPlanItem {
   calendarApproval?: CalendarApproval;
   /** Separate approval for readonly year-month-day calendars. */
   dayCalendarApproval?: DayCalendarApproval;
+  /** Separate approval for date buttons that open their own dialog. */
+  dialogDateApproval?: DialogDateApproval;
   componentGpaApproval?: ComponentGpaApproval;
   verifiedFreshDefaultValue?: string;
   /** Local-only approved search forms; never include these values in API requests. */
@@ -304,7 +312,22 @@ function sameNativeDecimal(
   );
 }
 
+function dialogDateButtonOf(
+  handle: FieldCandidateHandle,
+): HTMLButtonElement | undefined {
+  const button =
+    handle.candidate.element === "custom" &&
+    handle.candidate.control === "button" &&
+    handle.elements.length === 0 &&
+    handle.customElements?.length === 1
+      ? handle.customElements[0]
+      : undefined;
+  return button && isDialogDateButton(button) ? button : undefined;
+}
+
 function currentValue(handle: FieldCandidateHandle): string {
+  const dialogButton = dialogDateButtonOf(handle);
+  if (dialogButton) return dialogDateButtonValue(dialogButton);
   const customValue = customFieldValue(handle);
   if (customValue !== undefined) return customValue;
   const nativeRadio = nativeRadioValue(handle);
@@ -954,8 +977,44 @@ function itemForResolvedAnalysis(
   let dateApproval: DateTargetApproval | undefined;
   let calendarApproval: CalendarApproval | undefined;
   let dayCalendarApproval: DayCalendarApproval | undefined;
+  let dialogDateApproval: DialogDateApproval | undefined;
   let finalizedProfileValue = boundProfileValue;
-  if (generic && analysis.writePlan.command === "SELECT_DATE") {
+  const dialogButton =
+    generic && analysis.writePlan.command === "SELECT_DATE"
+      ? dialogDateButtonOf(lookup.handle)
+      : undefined;
+  if (dialogButton) {
+    if (binding.type !== "DIRECT" || parts?.inputType !== "date")
+      return unavailableItem(
+        analysis.candidateId,
+        fieldLabel,
+        "달력 버튼과 프로필 날짜 연결을 확인할 수 없습니다.",
+        analysis,
+      );
+    try {
+      dialogDateApproval = createDialogDateApproval({
+        target: dialogButton,
+        originalDate: boundProfileValue.value,
+        profileFieldKey: binding.profileFieldKey,
+        ...(boundProfileValue.profileEntryId
+          ? { profileEntryId: boundProfileValue.profileEntryId }
+          : {}),
+        ...(itemIndex !== undefined ? { itemIndex } : {}),
+      });
+    } catch {
+      return unavailableItem(
+        analysis.candidateId,
+        fieldLabel,
+        "달력 버튼의 대상이나 저장된 날짜를 확인할 수 없습니다.",
+        analysis,
+      );
+    }
+  }
+  if (
+    generic &&
+    analysis.writePlan.command === "SELECT_DATE" &&
+    !dialogButton
+  ) {
     if (
       binding.type !== "DIRECT" ||
       parts?.inputType !== "date" ||
@@ -1091,7 +1150,8 @@ function itemForResolvedAnalysis(
     binding.type === "DIRECT" &&
     normalizeDirectValue &&
     !dateApproval &&
-    !dayCalendarApproval
+    !dayCalendarApproval &&
+    !dialogDateApproval
       ? {
           ...finalizedProfileValue,
           value: normalizeDirectValue(
@@ -1282,6 +1342,7 @@ function itemForResolvedAnalysis(
       ...(dateApproval ? { dateApproval } : {}),
       ...(calendarApproval ? { calendarApproval } : {}),
       ...(dayCalendarApproval ? { dayCalendarApproval } : {}),
+      ...(dialogDateApproval ? { dialogDateApproval } : {}),
       ...(searchValuePlan ? { searchValuePlan } : {}),
       ...(searchIdentity
         ? { searchIdentity, ...(catalogMatch ? { catalogMatch } : {}) }
@@ -1362,6 +1423,7 @@ function itemForResolvedAnalysis(
       ...(dateApproval ? { dateApproval } : {}),
       ...(calendarApproval ? { calendarApproval } : {}),
       ...(dayCalendarApproval ? { dayCalendarApproval } : {}),
+      ...(dialogDateApproval ? { dialogDateApproval } : {}),
       ...(searchValuePlan ? { searchValuePlan } : {}),
       ...(searchIdentity
         ? { searchIdentity, ...(catalogMatch ? { catalogMatch } : {}) }
@@ -1390,7 +1452,8 @@ function itemForResolvedAnalysis(
       choiceReview
         ? false
         : analysis.writePlan.command === "SELECT_DATE"
-          ? generic && !!(calendarApproval || dayCalendarApproval)
+          ? generic &&
+            !!(calendarApproval || dayCalendarApproval || dialogDateApproval)
           : true,
     disabled: false,
     revealed: true,
@@ -1404,7 +1467,7 @@ function itemForResolvedAnalysis(
           ? dayCalendarApproval
             ? "지원서에 같은 날짜가 이미 입력되어 있습니다."
             : "지원서에 같은 연월이 이미 입력되어 있습니다."
-          : dayCalendarApproval
+          : dayCalendarApproval || dialogDateApproval
             ? "달력을 열어 저장된 날짜를 선택해 입력합니다."
             : calendarApproval
               ? "달력을 열어 저장된 연월을 선택해 입력합니다."
@@ -1418,6 +1481,7 @@ function itemForResolvedAnalysis(
     ...(dateApproval ? { dateApproval } : {}),
     ...(calendarApproval ? { calendarApproval } : {}),
     ...(dayCalendarApproval ? { dayCalendarApproval } : {}),
+    ...(dialogDateApproval ? { dialogDateApproval } : {}),
     ...(searchValuePlan ? { searchValuePlan } : {}),
     ...(searchIdentity
       ? { searchIdentity, ...(catalogMatch ? { catalogMatch } : {}) }

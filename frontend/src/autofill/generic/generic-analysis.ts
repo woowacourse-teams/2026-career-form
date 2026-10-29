@@ -1,3 +1,6 @@
+import { careerKeyForProjectRole } from "./record-kind-key";
+import { gpaScaleKeyForCredits } from "./scale-key";
+import { majorNameKeyForText } from "./major-key";
 import type { Profile } from "../../profile/model";
 import type {
   AnalysisApiClient,
@@ -422,7 +425,42 @@ function convertSection(
       ]);
       return;
     }
-    const profileFieldKey = response.profileFieldKey ?? undefined;
+    const fieldLabels = [
+      candidate.displayName,
+      element.getAttribute("placeholder") ?? undefined,
+      element.getAttribute("title") ?? undefined,
+      ...(candidate.semanticContext?.labels ?? []).map((label) => label.text),
+    ];
+    const neighborKeys = visibleRowMatches
+      ? [
+          visibleRowMatches.filter((sibling) => sibling.index < index).at(-1),
+          visibleRowMatches.find((sibling) => sibling.index > index),
+        ].map((sibling) => sibling?.response.profileFieldKey ?? undefined)
+      : undefined;
+    const profileFieldKey = response.profileFieldKey
+      ? careerKeyForProjectRole(
+          gpaScaleKeyForCredits(
+          majorNameKeyForText(
+            response.profileFieldKey,
+            candidate.control,
+            fieldLabels,
+          ),
+          fieldLabels,
+          matched.flatMap((sibling) =>
+            sibling.index !== index && sibling.response.profileFieldKey
+              ? [sibling.response.profileFieldKey]
+              : [],
+          ),
+          ),
+          neighborKeys ?? [],
+          fieldLabels,
+          matched.flatMap((sibling) =>
+            sibling.index !== index && sibling.response.profileFieldKey
+              ? [sibling.response.profileFieldKey]
+              : [],
+          ),
+        )
+      : undefined;
     const dateSource =
       response.binding?.type === "DATE_PART" && profileFieldKey
         ? resolveValueBinding(
@@ -494,6 +532,7 @@ function convertSection(
       categoryConfirmed: response.categoryConfirmed && categoryOpen,
       hasProfileValue: resolution === "resolved" || resolution === "ambiguous",
       control: candidate.control,
+      element: candidate.element,
       inputType: candidate.semanticContext?.inputType,
       inputMode: candidate.semanticContext?.inputMode,
       autocomplete: candidate.semanticContext?.autocomplete,
@@ -507,6 +546,7 @@ function convertSection(
         ? { optionValueCheck: { profileValue: choiceValue, context: choiceContext } }
         : {}),
       rowSiblings,
+      ...(neighborKeys ? { rowNeighborKeys: neighborKeys } : {}),
       sectionSiblingKeys: matched.flatMap((sibling) =>
         sibling.index !== index && sibling.response.profileFieldKey
           ? [sibling.response.profileFieldKey]

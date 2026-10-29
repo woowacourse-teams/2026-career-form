@@ -48,14 +48,21 @@ type NativeFormScenario = {
   method: "get" | "post";
   mutateBeforeSubmit?: "action" | "hidden" | "method" | "query-name";
   firstQueryMiss?: boolean;
+  // The modal makes the page behind it inert and aria-hidden while open.
+  hideBackground?: boolean;
 };
 
 function nativeFormFixture(options: NativeFormScenario) {
   document.body.innerHTML = `
-    <div data-repeater-item><label>전공
+    <div id="page"><div data-repeater-item><label>전공
       <input id="target" type="text" readonly aria-label="전공"></label>
       <button id="opener" type="button">전공 검색</button>
-    </div>`;
+    </div></div>`;
+  const page = document.querySelector<HTMLElement>("#page")!;
+  const showBackground = () => {
+    page.removeAttribute("inert");
+    page.removeAttribute("aria-hidden");
+  };
   const target = document.querySelector<HTMLInputElement>("#target")!;
   const opener = document.querySelector<HTMLButtonElement>("#opener")!;
   const snapshot = collectFieldsSnapshot(document);
@@ -84,6 +91,10 @@ function nativeFormFixture(options: NativeFormScenario) {
       (surface.id = "native-search-surface"),
     );
     document.body.append(surface);
+    if (options.hideBackground) {
+      page.setAttribute("inert", "");
+      page.setAttribute("aria-hidden", "true");
+    }
     let live = frame.contentDocument!;
     Object.defineProperty(live, "readyState", {
       configurable: true,
@@ -133,6 +144,7 @@ function nativeFormFixture(options: NativeFormScenario) {
         actions.result++;
         target.value = "가상값";
         surface.remove();
+        showBackground();
       });
       live = response;
       if (firstMiss) bindForm(response, false);
@@ -201,6 +213,8 @@ type CertificateScenario = {
   firstResultState?: "incomplete" | "duplicate";
   selectedValue?: string;
   mutation?: "other-row" | "peer";
+  /** The page mirrors the typed query into the target. */
+  reflectQuery?: boolean;
 };
 
 function certificateFixture(options: CertificateScenario = {}) {
@@ -268,6 +282,10 @@ function certificateFixture(options: CertificateScenario = {}) {
       </form>
       <ul aria-label="검색 결과" data-search-complete="true"></ul>`;
     const query = popup.querySelector<HTMLInputElement>("#query")!;
+    if (options.reflectQuery)
+      query.addEventListener("input", () => {
+        target.value = query.value;
+      });
     popup
       .querySelector<HTMLButtonElement>("#submit")!
       .addEventListener("click", () => {
@@ -650,6 +668,17 @@ describe("readonly search transaction", () => {
     },
   );
 
+  it("keeps the target current while the open modal hides the page behind it", async () => {
+    const test = nativeFormFixture({ method: "get", hideBackground: true });
+
+    expect(await test.run()).toMatchObject({
+      status: "selected",
+      effect: "value-observed",
+    });
+    expect(test.target.value).toBe("가상값");
+    expect(test.actions).toEqual({ opener: 1, search: 1, result: 1 });
+  });
+
   it.each(["get", "post"] as const)(
     "rebinds a same-iframe %s form only after its complete original query has no exact result",
     async (method) => {
@@ -783,6 +812,31 @@ describe("readonly search transaction", () => {
       expect(test.actions).toEqual({ opener: 1, search: 1, result: 0 });
     },
   );
+
+  it("keeps duplicate results ambiguous when the page mirrors the query into the target", async () => {
+    const test = certificateFixture({
+      candidateCode: "code-1",
+      firstResultState: "duplicate",
+      reflectQuery: true,
+    });
+
+    expect(await test.run()).toMatchObject({
+      status: "failed",
+      reason: "multiple_matching_results",
+    });
+    expect(test.actions.result).toBe(0);
+  });
+
+  it("clicks the single exact result when the page also mirrors the query", async () => {
+    const test = certificateFixture({
+      candidateCode: "code-1",
+      reflectQuery: true,
+    });
+
+    expect(await test.run()).toMatchObject({ status: "selected" });
+    expect(test.actions.result).toBe(1);
+    expect(test.code?.value).toBe("code-1");
+  });
 
   it("does not retry a split search after its selected first result becomes stale", async () => {
     const test = certificateFixture({ candidateCode: "code-1" });

@@ -30,7 +30,10 @@ import {
   queryOnly,
   resolveRoles,
   searchDestination,
-  submitControls, lockedSubmitControls } from "./search-controls";
+  submitControls,
+  lockedSubmitControls,
+  isIconSearchSubmit,
+} from "./search-controls";
 import { observeResults, resultBaseline } from "./search-results";
 import { observeQueryCommit } from "./search-query-commit";
 import {
@@ -128,6 +131,27 @@ function clickWithoutFormSubmit(element: HTMLElement): void {
   }
   if (submitted) throw new SearchFailure("surface_navigation_unsafe");
 }
+/**
+ * Clicks a submit the page itself handles. A submit no page handler cancels
+ * would navigate, so it is cancelled here and the search fails closed.
+ */
+export function clickSubmitHandledByPage(element: HTMLButtonElement): void {
+  const view = element.ownerDocument.defaultView;
+  if (!view || !element.form) throw new SearchFailure("unverified_search_form");
+  let unhandled = false;
+  const guard = (event: Event) => {
+    if (event.defaultPrevented) return;
+    unhandled = true;
+    event.preventDefault();
+  };
+  view.addEventListener("submit", guard);
+  try {
+    element.click();
+  } finally {
+    view.removeEventListener("submit", guard);
+  }
+  if (unhandled) throw new SearchFailure("surface_navigation_unsafe");
+}
 function nativeQueryValue(
   input: HTMLInputElement,
   value: string,
@@ -179,10 +203,71 @@ function validateRegionContext(
 }
 
 /** Prefer bare close; generic failures before result activation may confirm. */
-function closeOwnedSurface(
+const ESCAPE_CLOSE_TIMEOUT_MS = 5000;
+
+const MODAL_SELECTOR = "dialog[open], [role='dialog'][aria-modal='true']";
+
+async function closedWithin(
+  surface: SearchSurface,
+  isOpen: () => boolean,
+): Promise<boolean> {
+  const view = surface.container.ownerDocument.defaultView;
+  const deadline = Date.now() + ESCAPE_CLOSE_TIMEOUT_MS;
+  while (view && isOpen() && Date.now() < deadline)
+    await new Promise((resolve) => view.setTimeout(resolve, 50));
+  return !isOpen();
+}
+
+async function closedAfterEscape(modal: Element, isOpen: () => boolean) {
+  const document = modal.ownerDocument;
+  const view = document.defaultView;
+  if (!view) return false;
+  const focused = document.activeElement;
+  const origin = focused && modal.contains(focused) ? focused : modal;
+  origin.dispatchEvent(
+    new view.KeyboardEvent("keydown", {
+      key: "Escape",
+      code: "Escape",
+      bubbles: true,
+      cancelable: true,
+    }),
+  );
+  const deadline = Date.now() + ESCAPE_CLOSE_TIMEOUT_MS;
+  while (isOpen() && Date.now() < deadline)
+    await new Promise((resolve) => view.setTimeout(resolve, 50));
+  return !isOpen();
+}
+
+function openModals(document: Document): Element[] {
+  return Array.from(document.querySelectorAll(MODAL_SELECTOR)).filter(
+    (modal) => modal instanceof HTMLElement && shown(modal),
+  );
+}
+
+/**
+ * The opener click can open a modal the surface detector never accepted.
+ * Only a single modal that was not open before that click is closed.
+ */
+export async function closeModalOpenedBy(
+  before: ReadonlySet<Element>,
+  document: Document,
+): Promise<SurfaceLeftOpenReason | undefined> {
+  const opened = openModals(document).filter((modal) => !before.has(modal));
+  if (opened.length === 0) return undefined;
+  if (opened.length > 1) return "no_safe_close_control";
+  const modal = opened[0]!;
+  return (await closedAfterEscape(
+    modal,
+    () => modal.isConnected && shown(modal as HTMLElement),
+  ))
+    ? undefined
+    : "close_not_confirmed";
+}
+
+export async function closeOwnedSurface(
   surface: SearchSurface,
   allowConfirmation: boolean,
-): SurfaceLeftOpenReason | undefined {
+): Promise<SurfaceLeftOpenReason | undefined> {
   if (surface.kind === "inline-listbox") return undefined;
   if (surface.closure() !== "open") return undefined;
   const controls = Array.from(
@@ -202,13 +287,39 @@ function closeOwnedSurface(
             }).allowed,
         )
       : undefined);
-  if (!control) return "no_safe_close_control";
+  if (!control) {
+    // A modal without a close control is dismissed the standard way.
+    const modal = surface.modal;
+    if (!modal) return "no_safe_close_control";
+    return (await closedAfterEscape(modal, () => surface.closure() === "open"))
+      ? undefined
+      : "close_not_confirmed";
+  }
   try {
     control.click();
   } catch {
     return "close_not_confirmed";
   }
-  return surface.closure() === "closed" ? undefined : "close_not_confirmed";
+  if (await closedWithin(surface, () => surface.closure() === "open"))
+    return undefined;
+  const modal = surface.modal;
+  return modal &&
+    (await closedAfterEscape(modal, () => surface.closure() === "open"))
+    ? undefined
+    : "close_not_confirmed";
+}
+
+/**
+ * Result failures that may defer to a query the page mirrored into the
+ * target: no result, a list still pending, or a single matching row with
+ * nothing safe to activate. An ambiguous or incomplete result set stays held.
+ */
+export function defersToReflectedQuery(reason: string): boolean {
+  return [
+    "search_results_not_found",
+    "result_pending",
+    "result_activation_unsafe",
+  ].includes(reason);
 }
 
 export async function executeReadonlySearch(
@@ -247,6 +358,7 @@ export async function executeReadonlySearch(
   let effect: SearchEffect = "none";
   let identity: TargetIdentity | undefined;
   let surface: SearchSurface | undefined;
+  let modalsBeforeOpener: ReadonlySet<Element> | undefined;
   let selectionStarted = false;
   let followUpObservation: ReturnType<typeof captureSearchFollowUp>;
   try {
@@ -353,6 +465,7 @@ export async function executeReadonlySearch(
       opener,
       flow: "generic",
     });
+    modalsBeforeOpener = new Set(openModals(document));
     opener.click();
     surface = await session.wait(
       () => observation.discover(opener),
@@ -366,7 +479,8 @@ export async function executeReadonlySearch(
     const regionList = () =>
       completeRegionList(currentSurface, canonicalFieldKey);
     const surfaceGuard = () => {
-      guard(initialValue);
+      // The page may reflect an accepted value while its own surface is open.
+      guard([initialValue, ...matchingValues]);
       observation.assertOwned(currentSurface);
       currentSurface.revalidate();
       validateRegionContext(args, currentSurface);
@@ -374,7 +488,10 @@ export async function executeReadonlySearch(
     surfaceGuard();
     const controls = await session.wait(() => {
       surfaceGuard();
-      const queries = queryControls(currentSurface, args.genericPopupRecovery === true);
+      const queries = queryControls(
+        currentSurface,
+        args.genericPopupRecovery === true,
+      );
       const submits = submitControls(currentSurface);
       if (args.genericPopupRecovery) {
         if (queries.length > 1)
@@ -407,7 +524,8 @@ export async function executeReadonlySearch(
       const roleRequests = [
         {
           role: "SEARCH_QUERY_INPUT" as const,
-          collect: () => queryControls(currentSurface, args.genericPopupRecovery === true),
+          collect: () =>
+            queryControls(currentSurface, args.genericPopupRecovery === true),
           scope: currentSurface.container,
         },
         ...(submits.length
@@ -476,6 +594,16 @@ export async function executeReadonlySearch(
           binding: ReturnType<typeof bindSelectionEffects>;
         }
       | undefined;
+    // The page bound the query to the target: the typed text already is the
+    // accepted value.
+    const reflectedByQuery = () =>
+      !directEntry &&
+      normalized(identity!.target.value) !== normalized(initialValue) &&
+      (catalogMatch
+        ? identity!.target.value === expectedValue
+        : matchingValues.some(
+            (value) => normalized(value) === normalized(identity!.target.value),
+          ));
     for (const [attemptIndex, searchText] of attempts.entries()) {
       const attemptValues = args.searchValues ? [searchText] : values;
       trace(`검색 시도 ${attemptIndex + 1}/${attempts.length}`, searchText);
@@ -513,9 +641,15 @@ export async function executeReadonlySearch(
           submit = await session.wait(() => {
             surfaceGuard();
             const live = submitControls(currentSurface);
-            return live.length === 1 && live[0] === expected ? expected : undefined;
+            return live.length === 1 && live[0] === expected
+              ? expected
+              : undefined;
           }, "search_submit_not_found");
-          nativeFormBinding = searchDestination(currentSurface, queryElement, submit);
+          nativeFormBinding = searchDestination(
+            currentSurface,
+            queryElement,
+            submit,
+          );
         }
         if (submit) {
           await session.prepareMutation();
@@ -555,8 +689,10 @@ export async function executeReadonlySearch(
                 }
               : submit,
           );
-          if (!nativeFormBinding) clickWithoutFormSubmit(submit);
-          else submit.click();
+          if (!nativeFormBinding) {
+            if (isIconSearchSubmit(submit)) clickSubmitHandledByPage(submit);
+            else clickWithoutFormSubmit(submit);
+          } else submit.click();
           if (nativeFormBinding) {
             await session.wait(
               () => currentSurface.settleNavigation() || undefined,
@@ -585,6 +721,17 @@ export async function executeReadonlySearch(
         trace("일치 결과 발견", candidate?.element);
         break;
       } catch (error) {
+        if (
+          error instanceof SearchFailure &&
+          (defersToReflectedQuery(error.reason) ||
+            // The page closed its own search layer after applying the query.
+            (error.reason === "surface_stale" &&
+              currentSurface.closure() === "closed")) &&
+          reflectedByQuery()
+        ) {
+          candidate = undefined;
+          break;
+        }
         if (error instanceof SearchFailure)
           localWorkflowLog("search-result-wait", {
             reason: error.reason,
@@ -628,7 +775,10 @@ export async function executeReadonlySearch(
         ) {
           if (nativeFormBinding) {
             surfaceGuard();
-            const refreshedQueries = queryControls(currentSurface, args.genericPopupRecovery === true);
+            const refreshedQueries = queryControls(
+              currentSurface,
+              args.genericPopupRecovery === true,
+            );
             const refreshedSubmits = submitControls(currentSurface);
             if (refreshedQueries.length !== 1 || refreshedSubmits.length !== 1)
               throw error;
@@ -637,7 +787,11 @@ export async function executeReadonlySearch(
               [
                 {
                   role: "SEARCH_QUERY_INPUT",
-                  collect: () => queryControls(currentSurface, args.genericPopupRecovery === true),
+                  collect: () =>
+                    queryControls(
+                      currentSurface,
+                      args.genericPopupRecovery === true,
+                    ),
                   scope: currentSurface.container,
                 },
                 {
@@ -746,6 +900,50 @@ export async function executeReadonlySearch(
         }
         throw error;
       }
+    }
+    // Accept a query-bound value only when no result row matched and the value
+    // survives closing the surface.
+    if (!candidate && reflectedByQuery()) {
+      selectionStarted = true;
+      effect = "value-observed";
+      if (await closeOwnedSurface(currentSurface, false))
+        throw new SearchFailure("popup_unresolved");
+      let retainedSince: number | undefined;
+      await session.wait(() => {
+        guard(matchingValues);
+        retainedSince ??= performance.now();
+        return performance.now() - retainedSince >= 500 ? true : undefined;
+      }, "result_not_reflected");
+      trace("검색어 반영으로 선택 완료", {
+        targetValue: identity.target.value,
+      });
+      const reflectedIdentity = identity;
+      return {
+        status: "selected",
+        targetCandidateId,
+        identity,
+        effect,
+        ...(catalogMatch
+          ? {
+              selectedValue: expectedValue,
+              catalogSelection: {
+                evidence: { label: expectedValue },
+                verify: () =>
+                  reflectedIdentity.target.value === expectedValue &&
+                  JSON.stringify(args.catalogMatch) === approvedCatalog &&
+                  typeof targetIsCurrent(
+                    document,
+                    registry,
+                    targetCandidateId,
+                    reflectedIdentity,
+                    args.assertCurrent,
+                    [expectedValue],
+                  ) !== "string" &&
+                  currentSurface.closure() === "closed",
+              },
+            }
+          : {}),
+      };
     }
     if (!candidate) throw new SearchFailure("search_results_not_found");
     const selectedValues = catalogMatch
@@ -1022,11 +1220,13 @@ export async function executeReadonlySearch(
       error instanceof SearchFailure ? error.reason : "execution_failed";
     debugSearchFailure(targetCandidateId, step, reason, effect, error);
     const leftOpenReason = surface
-      ? closeOwnedSurface(
+      ? await closeOwnedSurface(
           surface,
           args.genericPopupRecovery === true && !selectionStarted,
         )
-      : undefined;
+      : modalsBeforeOpener
+        ? await closeModalOpenedBy(modalsBeforeOpener, document)
+        : undefined;
     return {
       status: effect === "none" ? "unsupported" : "failed",
       targetCandidateId,

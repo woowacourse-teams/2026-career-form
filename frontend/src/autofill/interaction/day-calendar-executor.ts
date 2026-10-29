@@ -11,6 +11,7 @@ import {
   dayCalendarSurfaceFor,
   displayedDayCalendarRoots,
   isDisplayed,
+  rememberCalendarRoot,
 } from "./day-calendar-surface";
 import {
   awaitDeferredCalendarRoot,
@@ -273,9 +274,22 @@ export async function executeDayCalendarSelection(
     deferred
       ? isDisplayed(popup) && openCalendarPopups(document).length === 0
       : displayedDayCalendarRoots(document).length === 1;
-  const unit = calendarUnitEvidence(target);
-  if (!unit || unit.unit !== "day" || unit.unitEvidence === "unconfirmed")
+  const observed = calendarUnitEvidence(target);
+  if (
+    !observed ||
+    observed.unit !== "day" ||
+    (observed.unitEvidence === "unconfirmed" && !deferred)
+  )
     return fail("calendar_unit_unconfirmed");
+  // A deferred calendar's label clue is confirmed by the single day-grid root
+  // the gesture must mount below; without that root nothing is written.
+  const unit = {
+    unit: observed.unit,
+    unitEvidence:
+      observed.unitEvidence === "unconfirmed"
+        ? ("target-label" as const)
+        : observed.unitEvidence,
+  };
   const evidence: CalendarRoleEvidence = {
     ...unit,
     ownership:
@@ -409,6 +423,25 @@ export async function executeDayCalendarSelection(
   if (!opener || !stable()) return interrupted("calendar_opener_unavailable");
   if (!spend()) return interrupted("calendar_budget_exhausted");
   const known = deferred ? knownDeferredRoots(document) : undefined;
+  // A calendar this run opened is closed again before any failure after it,
+  // so a failed field leaves no surface open for later writes.
+  let openedRoot: HTMLElement | undefined;
+  const abandon = async (
+    fallback: string,
+  ): Promise<DayCalendarExecutionResult> => {
+    if (openedRoot) {
+      closeDeferredCalendar(target, surface.opener, [openedRoot]);
+      // The page may hide the calendar after a short animation; a later
+      // write must not see it close during its own check.
+      await waitUntil(
+        () =>
+          displayedDayCalendarRoots(document).length === 0 &&
+          openCalendarPopups(document).length === 0,
+        timings.openWaitMs,
+      );
+    }
+    return interrupted(fallback);
+  };
   if (surface.openBy === "target") {
     target.focus();
     // A deferred widget may open on click rather than focus.
@@ -444,6 +477,8 @@ export async function executeDayCalendarSelection(
     }
     popup = root;
     scope = root;
+    openedRoot = root;
+    rememberCalendarRoot(openedRoot, surface.opener);
   } else {
     const opened = await waitUntil(
       () =>
@@ -462,6 +497,8 @@ export async function executeDayCalendarSelection(
       openCalendarPopups(document).length
     )
       return fail("multiple_calendar_popups_open");
+    openedRoot = popup;
+    rememberCalendarRoot(openedRoot, surface.opener);
   }
 
   const choose = async (
@@ -526,32 +563,32 @@ export async function executeDayCalendarSelection(
     String(parts.year),
     "target_year_unavailable",
   );
-  if (yearIssue) return interrupted(yearIssue);
+  if (yearIssue) return abandon(yearIssue);
   const monthIssue = await choose(
     (header) => header.month,
     String(parts.month - 1),
     "target_month_unavailable",
   );
-  if (monthIssue) return interrupted(monthIssue);
+  if (monthIssue) return abandon(monthIssue);
 
   const header = headerOf(popup);
-  if (!header.ok) return interrupted(header.reason);
+  if (!header.ok) return abandon(header.reason);
   if (
     header.value.year.value !== String(parts.year) ||
     header.value.month.value !== String(parts.month - 1)
   )
-    return interrupted("calendar_view_not_changed");
+    return abandon("calendar_view_not_changed");
 
   const links = dayTargets(popup);
   if (links.length !== 1)
-    return interrupted(
+    return abandon(
       links.length === 0 && !deferred && disabledDay(popup, parts.day)
         ? "target_day_disabled"
         : "target_day_unavailable",
     );
   const link = links[0]!;
   if (link instanceof HTMLAnchorElement && !safeLink(link))
-    return fail("unsafe_day_link");
+    return abandon("unsafe_day_link");
   const day = await resolveRole({
     ...decisionContext,
     role: "CALENDAR_DAY_CONTROL",
@@ -571,8 +608,8 @@ export async function executeDayCalendarSelection(
       );
     },
   });
-  if (!day || !stable()) return interrupted("calendar_day_unavailable");
-  if (!spend()) return interrupted("calendar_budget_exhausted");
+  if (!day || !stable()) return abandon("calendar_day_unavailable");
+  if (!spend()) return abandon("calendar_budget_exhausted");
   // `href="#"` must never move the page, even if the widget forgets to cancel it.
   const preventNavigation = (event: Event) => event.preventDefault();
   link.addEventListener("click", preventNavigation);

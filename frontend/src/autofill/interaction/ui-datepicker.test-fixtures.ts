@@ -9,6 +9,8 @@
 export interface UiDatepickerOptions {
   dateFormat?: "yy-mm-dd" | "yy.mm.dd";
   yearRange: readonly [number, number];
+  /** Escape hides the open picker after this delay instead of at once. */
+  closeDelayMs?: number;
   defaultDate?: string;
   minDate?: string;
   maxDate?: string;
@@ -204,6 +206,14 @@ export function installUiDatepicker(document: Document): UiDatepickerHarness {
     root,
     attach(input, options) {
       input.classList.add("hasDatepicker");
+      // jQuery UI hides the open datepicker on Escape in its input.
+      input.addEventListener("keydown", (event) => {
+        if (event.key !== "Escape" || active?.input !== input) return;
+        // jQuery UI may hide it after a short animation.
+        if (options.closeDelayMs)
+          setTimeout(() => (root.style.display = "none"), options.closeDelayMs);
+        else root.style.display = "none";
+      });
       if (options.trigger) {
         const trigger = document.createElement("button");
         trigger.type = "button";

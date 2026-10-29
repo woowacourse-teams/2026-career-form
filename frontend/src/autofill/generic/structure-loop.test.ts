@@ -300,6 +300,51 @@ describe("runGenericStructureLoop", () => {
     });
   });
 
+  it.each(["replaces", "relabels"])("keeps adding rows when the page %s the chosen add button", async (mode) => {
+    document.body.innerHTML = `<section>
+      <h3>경력</h3>
+      <div id="rows">${careerRow(0)}</div>
+      <button type="button" id="add">경력 추가</button>
+    </section>`;
+    const rows = document.querySelector("#rows")!;
+    const deletes: string[] = [];
+    const bind = (button: Element) =>
+      button.addEventListener("click", () => {
+        if (button.textContent === "삭제") {
+          deletes.push("삭제");
+          return;
+        }
+        rows.insertAdjacentHTML(
+          "beforeend",
+          careerRow(rows.querySelectorAll("[ismultirow]").length),
+        );
+        const fresh = button.cloneNode(true) as Element;
+        // An entry-form page turns the used add button into the row's delete.
+        if (mode === "relabels") {
+          button.textContent = "삭제";
+          button.after(fresh);
+        } else button.replaceWith(fresh);
+        bind(fresh);
+      });
+    bind(document.querySelector("#add")!);
+    const profile: Profile = {
+      ...createEmptyProfile(),
+      careers: entries(3, "career"),
+    };
+    const api = mockApi();
+
+    const result = await runGenericStructureLoop({
+      document,
+      profile,
+      apiClient: api.client,
+    });
+
+    expect(rows.querySelectorAll("[ismultirow]")).toHaveLength(3);
+    expect(deletes).toEqual([]);
+    expect(result.stopReason).toBe("NONE_REMAINING");
+    expect(result.questions).toHaveLength(1);
+  });
+
   it("stops at two rows and records why when the add button disappears", async () => {
     document.body.innerHTML = `<section>
       <h3>경력</h3>
