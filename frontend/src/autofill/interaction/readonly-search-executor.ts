@@ -25,6 +25,7 @@ import {
   regionListSelection,
 } from "./queryless-region-list";
 import { observeSearchSurfaces } from "./search-surface-detector";
+import { chooseQueryGate, queryGate } from "./search-gate";
 import {
   queryControls,
   queryOnly,
@@ -486,34 +487,52 @@ export async function executeReadonlySearch(
       validateRegionContext(args, currentSurface);
     };
     surfaceGuard();
-    const controls = await session.wait(() => {
+    let gateUsed = false;
+    const collectControls = () =>
+      session.wait(() => {
+        surfaceGuard();
+        const queries = queryControls(
+          currentSurface,
+          args.genericPopupRecovery === true,
+        );
+        const submits = submitControls(currentSurface);
+        if (args.genericPopupRecovery) {
+          if (queries.length > 1)
+            throw new SearchFailure("multiple_search_query_inputs");
+          // The layer keeps its query locked until one select is chosen.
+          const gate =
+            !queries.length && !gateUsed
+              ? queryGate(currentSurface, args.contextValues)
+              : undefined;
+          if (gate) return { queries, submits, gate };
+          // A visible search button/result shell can precede its query input.
+          // Recollect within this wait's existing budget instead of accepting it.
+          if (
+            !queries.length &&
+            (submits.length ||
+              queryCandidates(currentSurface.document).some((input) =>
+                currentSurface.contains(input),
+              ))
+          )
+            return undefined;
+        }
+        return queries.length ||
+          submits.length ||
+          currentSurface.resultRoots().length ||
+          regionList()
+          ? { queries, submits }
+          : undefined;
+      }, "search_query_not_found");
+    let controls = await collectControls();
+    if ("gate" in controls && controls.gate) {
+      gateUsed = true;
+      await session.prepareMutation();
       surfaceGuard();
-      const queries = queryControls(
-        currentSurface,
-        args.genericPopupRecovery === true,
-      );
-      const submits = submitControls(currentSurface);
-      if (args.genericPopupRecovery) {
-        if (queries.length > 1)
-          throw new SearchFailure("multiple_search_query_inputs");
-        // A visible search button/result shell can precede its query input.
-        // Recollect within this wait's existing budget instead of accepting it.
-        if (
-          !queries.length &&
-          (submits.length ||
-            queryCandidates(currentSurface.document).some((input) =>
-              currentSurface.contains(input),
-            ))
-        )
-          return undefined;
-      }
-      return queries.length ||
-        submits.length ||
-        currentSurface.resultRoots().length ||
-        regionList()
-        ? { queries, submits }
-        : undefined;
-    }, "search_query_not_found");
+      if (!chooseQueryGate(controls.gate))
+        throw new SearchFailure("unverified_search_form");
+      trace("검색어 칸을 여는 선택", controls.gate.select);
+      controls = await collectControls();
+    }
     const { queries, submits } = controls;
     let query: HTMLInputElement | undefined;
     let submit: HTMLButtonElement | HTMLInputElement | undefined;

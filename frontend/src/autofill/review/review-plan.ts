@@ -45,6 +45,7 @@ import { PROFILE_CATEGORIES } from "../../profile/field-definitions";
 import type {
   FieldValues,
   Profile,
+  ProfileEntry,
   ProfileIdentity,
   ProfileCategoryId,
   RepeatedProfileCategoryId,
@@ -63,6 +64,7 @@ import { catalogEvidenceForElement } from "../profile/catalog-evidence";
 import { resolveChoiceOption } from "../profile/choice-option";
 import { matchStandardOption } from "../profile/standard-option-match";
 import { schoolRegionSearchValues } from "../../profile/standard-values";
+import type { SearchContextValue } from "../interaction/search-gate";
 import { formatProfileDate } from "../profile/date-format";
 import {
   buildLocalSearchValuePlan,
@@ -141,6 +143,8 @@ export interface ReviewPlanItem {
   searchIdentity?: ProfileIdentity;
   /** Approved local evidence for one catalog entry; never part of API requests. */
   catalogMatch?: ApprovedCatalogMatch;
+  /** Generic search only: other stored values of the same entry; local only. */
+  searchContextValues?: readonly SearchContextValue[];
 }
 
 export interface ReviewPlan {
@@ -206,6 +210,23 @@ function profileFieldParts(value: string): ProfileFieldParts | undefined {
       ) === true,
     inputType: field.inputType,
   };
+}
+
+/** The other stored values of the repeatable entry a search field belongs to. */
+function entryContextValues(
+  profile: Profile,
+  profileFieldKey: string,
+  profileEntryId: string | undefined,
+): SearchContextValue[] {
+  const [categoryId, , fieldId] = profileFieldKey.split(".");
+  const entries = (profile as unknown as Record<string, unknown>)[categoryId ?? ""];
+  if (!profileEntryId || !Array.isArray(entries)) return [];
+  const entry = (entries as ProfileEntry[]).find(({ id }) => id === profileEntryId);
+  return Object.entries(entry?.values ?? {}).flatMap(([id, value]) =>
+    id !== fieldId && value?.trim()
+      ? [{ key: `${categoryId}.${entry!.sectionId}.${id}`, value }]
+      : [],
+  );
 }
 
 function valueAt(values: FieldValues, fieldId: string): string | undefined {
@@ -1268,6 +1289,14 @@ function itemForResolvedAnalysis(
         value: option.displayName,
       };
   }
+  const searchContextValues =
+    searchCommand && binding.type === "DIRECT"
+      ? entryContextValues(
+          profile,
+          binding.profileFieldKey,
+          resolvedProfileValue.profileEntryId,
+        )
+      : [];
   const searchValuePlan =
     searchCommand && binding.type === "DIRECT"
       ? certificateSearchValuePlan(
@@ -1344,6 +1373,7 @@ function itemForResolvedAnalysis(
       ...(dayCalendarApproval ? { dayCalendarApproval } : {}),
       ...(dialogDateApproval ? { dialogDateApproval } : {}),
       ...(searchValuePlan ? { searchValuePlan } : {}),
+      ...(searchContextValues.length ? { searchContextValues } : {}),
       ...(searchIdentity
         ? { searchIdentity, ...(catalogMatch ? { catalogMatch } : {}) }
         : {}),
@@ -1425,6 +1455,7 @@ function itemForResolvedAnalysis(
       ...(dayCalendarApproval ? { dayCalendarApproval } : {}),
       ...(dialogDateApproval ? { dialogDateApproval } : {}),
       ...(searchValuePlan ? { searchValuePlan } : {}),
+      ...(searchContextValues.length ? { searchContextValues } : {}),
       ...(searchIdentity
         ? { searchIdentity, ...(catalogMatch ? { catalogMatch } : {}) }
         : {}),
@@ -1483,6 +1514,7 @@ function itemForResolvedAnalysis(
     ...(dayCalendarApproval ? { dayCalendarApproval } : {}),
     ...(dialogDateApproval ? { dialogDateApproval } : {}),
     ...(searchValuePlan ? { searchValuePlan } : {}),
+      ...(searchContextValues.length ? { searchContextValues } : {}),
     ...(searchIdentity
       ? { searchIdentity, ...(catalogMatch ? { catalogMatch } : {}) }
       : {}),

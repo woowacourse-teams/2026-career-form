@@ -79,6 +79,27 @@ const GENERIC_SEARCH_SUBJECTS = [
   ["시험", "어학", "exam", "language test"],
 ] as const;
 
+/** Displayed on the page, whether or not the control is disabled right now. */
+export function displayedControl(element: HTMLElement): boolean {
+  if (
+    !element.isConnected ||
+    element.hidden ||
+    element.closest("[hidden], [aria-hidden='true'], [inert]")
+  )
+    return false;
+  const view = element.ownerDocument.defaultView;
+  for (
+    let current: Element | null = element;
+    current;
+    current = current.parentElement
+  ) {
+    const style = view?.getComputedStyle(current);
+    if (style?.display === "none" || style?.visibility === "hidden")
+      return false;
+  }
+  return true;
+}
+
 export function sharesSearchSubject(
   fieldName: string,
   surfaceName: string,
