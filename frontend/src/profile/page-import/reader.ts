@@ -177,6 +177,10 @@ function policySections(document: Document): Sections | undefined {
   if (!componentBasicControls(document)) return undefined;
   return componentSections(document);
 }
+/** True when the installed policy recognizes this page as a Greeting form. */
+export function recognizesGreetingForm(document: Document): boolean {
+  return policySections(document) !== undefined;
+}
 /** Reads local controls independently; a malformed field never aborts its siblings. */
 export function readGreetingImport(
   document: Document,
