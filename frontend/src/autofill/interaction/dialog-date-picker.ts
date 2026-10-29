@@ -1,5 +1,4 @@
 import { parseCalendarMonth } from "./calendar-controls";
-import { localWorkflowLog } from "../debug/local-workflow";
 import { isDisplayed } from "./day-calendar-surface";
 
 /**
@@ -273,65 +272,6 @@ async function waitUntil(
   return true;
 }
 
-/** How long a page may take to open the next date field after a choice. */
-const FOLLOWER_WAIT_MS = 400;
-
-function openCalendarDialogs(
-  document: Document,
-  except: ReadonlySet<HTMLButtonElement>,
-): HTMLButtonElement[] {
-  return Array.from(
-    document.querySelectorAll<HTMLButtonElement>(
-      "button[aria-haspopup='dialog'][aria-expanded='true']",
-    ),
-  ).filter((button) => {
-    if (except.has(button)) return false;
-    const popup = openPopup(button);
-    return !!popup && readLevel(popup) !== undefined;
-  });
-}
-
-/**
- * Some pages open the next date field's calendar once a date is chosen. That
- * calendar is not part of this write; close it without choosing anything so
- * the caller does not mistake it for a change this write left behind.
- */
-async function closeFollowerDialogs(
-  target: HTMLButtonElement,
-  openBefore: ReadonlySet<HTMLButtonElement>,
-  timings: DialogDateTimings,
-  signal?: AbortSignal,
-): Promise<void> {
-  const document = target.ownerDocument;
-  const except = new Set([target, ...openBefore]);
-  if (
-    !(await waitUntil(
-      () => openCalendarDialogs(document, except).length > 0,
-      FOLLOWER_WAIT_MS,
-      signal,
-    ))
-  )
-    return;
-  const followers = openCalendarDialogs(document, except).map((button) => ({
-    button,
-    popup: openPopup(button)!,
-  }));
-  followers.forEach(({ button, popup }) => closeDialog(button, popup));
-  const closedAll = await waitUntil(
-    () =>
-      followers.every(
-        ({ button, popup }) =>
-          closed(button) && (!popup.isConnected || !isDisplayed(popup)),
-      ),
-    timings.closeWaitMs,
-    signal,
-  );
-  localWorkflowLog("dialog-date-follower", {
-    opened: followers.length,
-    closed: closedAll,
-  });
-}
-
 function closeDialog(button: HTMLButtonElement, popup?: HTMLElement): void {
   if (closed(button)) return;
   (popup ?? button).dispatchEvent(
@@ -357,7 +297,6 @@ export async function executeDialogDateSelection({
     return { status: "needs-verification", reason: "target_not_empty" };
   const live = () => !signal?.aborted && target.isConnected && assertCurrent();
   if (!live()) return { status: "needs-verification", reason: "stale" };
-  const openBefore = new Set(openCalendarDialogs(target.ownerDocument, new Set()));
   // Positioned dialogs hide themselves while their button is off-screen.
   const view = target.ownerDocument.defaultView;
   const rect = target.getBoundingClientRect();
@@ -403,16 +342,13 @@ export async function executeDialogDateSelection({
           ))
         )
           return { status: "needs-verification", reason: "value_unconfirmed" };
-        if (
-          !(await waitUntil(
-            () => !popup!.isConnected || !isDisplayed(popup!),
-            timings.closeWaitMs,
-            signal,
-          ))
-        )
-          return { status: "needs-verification", reason: "dialog_left_open" };
-        await closeFollowerDialogs(target, openBefore, timings, signal);
-        return { status: "completed" };
+        return (await waitUntil(
+          () => !popup!.isConnected || !isDisplayed(popup!),
+          timings.closeWaitMs,
+          signal,
+        ))
+          ? { status: "completed" }
+          : { status: "needs-verification", reason: "dialog_left_open" };
       }
       if (choice.final) return fail("dialog_stayed_open");
       continue;

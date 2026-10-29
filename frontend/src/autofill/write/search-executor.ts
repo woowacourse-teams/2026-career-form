@@ -536,8 +536,31 @@ export async function executeApprovedSearchWrites({
             ? overlays()
             : [],
         );
+        // A surface whose own opener is another control belongs to that
+        // control (a late suggestion list, a neighbouring calendar), not to
+        // this date write, which only acts on its target and its popup.
+        const openerOf = (overlay: HTMLElement) =>
+          overlay.id && document
+            ? Array.from(document.querySelectorAll("[aria-controls]")).find(
+                (element) =>
+                  element
+                    .getAttribute("aria-controls")!
+                    .split(/\s+/)
+                    .includes(overlay.id),
+              )
+            : undefined;
+        const ownedElsewhere = (overlay: HTMLElement) => {
+          const opener = openerOf(overlay);
+          return (
+            !!opener &&
+            opener !== target &&
+            !(target && (overlay.contains(target) || opener.contains(target)))
+          );
+        };
         const newOverlays = () =>
-          overlays().filter((overlay) => !overlaysBefore.has(overlay));
+          overlays().filter(
+            (overlay) => !overlaysBefore.has(overlay) && !ownedElsewhere(overlay),
+          );
         const execution = await writeOrdinary(item);
         const result = "result" in execution ? execution.result : execution;
         const effect = "result" in execution ? execution.effect : "continue";
@@ -577,6 +600,24 @@ export async function executeApprovedSearchWrites({
               : -1,
             overlays: document ? newOverlays().length : -1,
             overlaysBefore: overlaysBefore.size,
+            // Value-free shape of each surface this write left open.
+            overlayShapes: JSON.stringify(document
+              ? newOverlays().map((overlay) => {
+                  const opener = openerOf(overlay) ?? null;
+                  const style = overlay.ownerDocument.defaultView?.getComputedStyle(overlay);
+                  return {
+                    tag: overlay.tagName,
+                    role: overlay.getAttribute("role"),
+                    attrs: overlay.getAttributeNames().filter((name) => name !== "style" && name !== "id" && name !== "class"),
+                    buttons: overlay.querySelectorAll("button").length,
+                    opacity: style?.opacity,
+                    openerIsTarget: !!opener && opener === target,
+                    openerExpanded: opener?.getAttribute("aria-expanded") ?? null,
+                    openerEmpty: opener ? !/\d/.test(opener.textContent ?? "") : null,
+                    containsTarget: !!target && overlay.contains(target),
+                  };
+                })
+              : []),
             code: result.code ?? "",
           });
           if (effect !== "stop" && closed) continue;

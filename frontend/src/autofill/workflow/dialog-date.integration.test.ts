@@ -135,6 +135,35 @@ describe("dialog date button review-to-write route", () => {
     expect(results.map((result) => result.status)).toEqual(["written", "written"]);
   });
 
+  it("ignores a list another field's control opens while the date is written", async () => {
+    const buttons = install();
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      `<label>합성 검색 <input aria-controls="synthetic-suggestions" value=""></label>
+        <div id="synthetic-suggestions" role="listbox" hidden style="width:10px;height:10px"><div role="option">합성 항목</div></div>`,
+    );
+    // The page shows another field's suggestions late, while the date is written.
+    new MutationObserver(() => {
+      if (/\d/.test(buttons[0]!.textContent ?? ""))
+        document.querySelector<HTMLElement>("#synthetic-suggestions")!.hidden = false;
+    }).observe(buttons[0]!, { childList: true, characterData: true, subtree: true });
+    const snapshot = collectFieldsSnapshot(document);
+    const items = buildReviewPlan({
+      analysis: analysis(snapshot),
+      profile: profile(),
+      registry: snapshot.registry,
+    }).items.filter((item) => item.dialogDateApproval);
+
+    const results = await executeApprovedWritesAfterPageSettles({
+      items,
+      approvedCandidateIds: new Set(items.map((item) => item.candidateId)),
+      registry: snapshot.registry,
+      document,
+    });
+
+    expect(results.map((result) => result.status)).toEqual(["written", "written"]);
+  });
+
   it("keeps a button that already shows another date as a conflict", () => {
     install("2018-01-01");
     const snapshot = collectFieldsSnapshot(document);

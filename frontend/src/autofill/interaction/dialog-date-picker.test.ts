@@ -56,36 +56,6 @@ describe("executeDialogDateSelection", () => {
     expect(memo.value).toBe("유지");
   });
 
-  it("closes a neighbouring date dialog the page opens after the choice", async () => {
-    document.body.innerHTML = `<section><h3>합성 자격</h3>
-      <button id="a" type="button" aria-haspopup="dialog">취득일 선택</button>
-      <button id="b" type="button" aria-haspopup="dialog">만료일 선택</button></section>`;
-    const a = document.querySelector<HTMLButtonElement>("#a")!;
-    const b = document.querySelector<HTMLButtonElement>("#b")!;
-    attachSteppedPicker(a, { start: "days", precision: "day", today: { year: 2023, month: 3 } });
-    const followerDialog = attachSteppedPicker(b, { start: "days", precision: "day" });
-    // The page moves on to the next date field once the first one is chosen.
-    new MutationObserver(() => {
-      if (/\d/.test(a.textContent ?? "") && b.getAttribute("aria-expanded") !== "true")
-        setTimeout(() => b.click(), 20);
-    }).observe(a, { childList: true, characterData: true, subtree: true });
-
-    const result = await executeDialogDateSelection({
-      target: a,
-      targetDate: "2023-03-01",
-      timings: FAST,
-    });
-
-    expect(result).toEqual({ status: "completed" });
-    expect(a.textContent).toBe("2023-03-01");
-    // The caller judges the page right after the write; the page's own
-    // follow-up must already be settled by then.
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    expect(b.getAttribute("aria-expanded")).toBe("false");
-    expect(followerDialog.hidden).toBe(true);
-    expect(b.textContent).toBe("만료일 선택");
-  });
-
   it("reports completion only after the closing dialog is hidden", async () => {
     const { button, dialog } = installPicker({
       text: "생년월일 선택",
