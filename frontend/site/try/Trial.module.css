@@ -1,0 +1,113 @@
+.trial {
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--color-surface);
+}
+.sidebar {
+  position: relative;
+}
+/* Until the visitor presses it, the panel's own 자동 기입 button breathes so
+   the one thing to click is unmistakable. The pulse stops once pressed. */
+.sidebar[data-trial-stage="ready"] :global([data-autofill-start]) {
+  position: relative;
+  animation: trial-pulse 1.6s ease-in-out infinite;
+  box-shadow: 0 0 0 0 rgb(166 95 45 / 55%);
+}
+.sidebar[data-trial-stage="ready"] :global([data-autofill-start])::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  border: 2px solid var(--color-action);
+  animation: trial-ring 1.6s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes trial-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(166 95 45 / 55%);
+    filter: brightness(1);
+  }
+  50% {
+    box-shadow: 0 0 18px 4px rgb(166 95 45 / 35%);
+    filter: brightness(1.08);
+  }
+}
+@keyframes trial-ring {
+  0% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sidebar[data-trial-stage="ready"] :global([data-autofill-start]) {
+    animation: none;
+    box-shadow: 0 0 0 3px rgb(166 95 45 / 35%);
+  }
+  .sidebar[data-trial-stage="ready"] :global([data-autofill-start])::after {
+    animation: none;
+    opacity: 0.9;
+  }
+}
+.guide {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  padding: 24px 18px;
+  background: rgb(255 255 255 / 92%);
+  backdrop-filter: blur(2px);
+}
+.guideCard {
+  width: 100%;
+  padding: 26px 22px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-surface);
+  box-shadow: 0 14px 40px rgb(89 70 55 / 12%);
+  text-align: center;
+  color: var(--color-text);
+  line-height: 1.6;
+}
+.guideEyebrow {
+  margin: 0 0 8px;
+  color: var(--color-action-strong);
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+}
+.guideCard h2 {
+  margin: 0 0 10px;
+  font-size: 18px;
+  line-height: 1.4;
+  color: var(--color-text-strong);
+}
+.guideCard > p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+.completionActions {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  margin-top: 20px;
+}
+.completionActions > a {
+  justify-content: center;
+}
+.completionActions > button {
+  background: none;
+  border: 0;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  text-decoration: underline;
+}

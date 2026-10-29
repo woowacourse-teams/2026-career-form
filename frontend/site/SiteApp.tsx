@@ -5,6 +5,9 @@ import type { PushClient } from "../src/job-postings/push-client";
 import logo from "../public/side-panel-launcher-logo.png";
 import { benefits, faqs, steps, STORE_URL } from "./content";
 import { policies } from "./policies";
+import { techTopics } from "./tech";
+import { TechFigure } from "./TechFigures";
+import { Trial } from "./try/Trial";
 import { Icon } from "./Icons";
 import { ChromeGuide, OpeningGuide, ServiceGuide } from "./Guide";
 import styles from "./Site.module.css";
@@ -17,10 +20,16 @@ import { SiteLink, useSiteUrl } from "./site-navigation";
 
 const noopTrack: TrackEvent = () => {};
 
-function InstallLink({ onInstall }: { onInstall: () => void }) {
+function InstallLink({
+  onInstall,
+  className,
+}: {
+  onInstall: () => void;
+  className?: string;
+}) {
   return (
     <SiteLink
-      className={styles.primary}
+      className={className ? `${styles.primary} ${className}` : styles.primary}
       href={STORE_URL}
       onClick={onInstall}
       target="_blank"
@@ -49,6 +58,8 @@ function Header({
           <nav aria-label="주 메뉴">
             <SiteLink href="#features">주요 기능</SiteLink>
             <SiteLink href="/onboarding/">사용 방법</SiteLink>
+            <SiteLink href="/try/">체험</SiteLink>
+            <SiteLink href="/tech/">기술 소개</SiteLink>
             <SiteLink href="#faq">궁금한 점</SiteLink>
           </nav>
           <InstallLink onInstall={onInstall} />
@@ -65,12 +76,30 @@ function Footer() {
   return (
     <footer className={styles.footer}>
       <span>careerform. · 공고 저장부터 지원서 자동 입력까지</span>
+      <nav aria-label="안내 페이지">
+        <SiteLink href="/onboarding/">사용 방법</SiteLink>
+        <SiteLink href="/try/">체험</SiteLink>
+        <SiteLink href="/tech/">기술 소개</SiteLink>
+      </nav>
       <nav aria-label="정책 안내">
         <SiteLink href="/privacy/">개인정보처리방침</SiteLink>
         <SiteLink href="/terms/">이용약관</SiteLink>
       </nav>
       <small>© 2026 Career Form</small>
     </footer>
+  );
+}
+function TryLink({
+  className,
+  label = "설치 없이 체험하기",
+}: {
+  className?: string;
+  label?: string;
+}) {
+  return (
+    <SiteLink className={className ?? styles.secondary} href="/try/">
+      {label} <Icon name="arrow" />
+    </SiteLink>
   );
 }
 function Landing({ onInstall }: { onInstall: () => void }) {
@@ -94,8 +123,16 @@ function Landing({ onInstall }: { onInstall: () => void }) {
               반복되는 지원서 입력을 줄이세요.
             </p>
             <div className={styles.actions}>
-              <InstallLink onInstall={onInstall} />
-              <SiteLink href="/onboarding/">사용 방법 보기 ↗</SiteLink>
+              {/* The header already carries Chrome에 추가; the hero asks for the
+                  hands-on trial. Phones cannot run it, so they get install. */}
+              <TryLink
+                className={`${styles.primary} ${styles.heroTry}`}
+                label="커리어폼 체험하기"
+              />
+              <InstallLink
+                onInstall={onInstall}
+                className={styles.heroInstallMobile}
+              />
             </div>
             <small>Chrome 확장 프로그램 · 프로필은 내 브라우저에</small>
           </div>
@@ -112,7 +149,7 @@ function Landing({ onInstall }: { onInstall: () => void }) {
             inert
           />
           <figcaption>
-            마우스를 올리거나 눌러보세요. · 가상 정보로 만든 예시
+            {"마우스를 올리거나 눌러보세요. · 가상 정보로 만든 예시"}
           </figcaption>
         </figure>
       </section>
@@ -208,7 +245,10 @@ function Landing({ onInstall }: { onInstall: () => void }) {
           <br />
           다음 기회에 집중하세요.
         </h2>
-        <InstallLink onInstall={onInstall} />
+        <div className={styles.actions}>
+          <InstallLink onInstall={onInstall} />
+          <TryLink />
+        </div>
         <p>Chrome에 추가하고, 공고 저장 또는 자동 기입부터 시작하세요.</p>
       </section>
       <section className={styles.faq} id="faq">
@@ -522,6 +562,154 @@ function Policy({ kind }: { kind: "privacy" | "terms" }) {
     </main>
   );
 }
+function TryPage({
+  track,
+  surface,
+  onInstall,
+}: {
+  track: TrackEvent;
+  surface: "site" | "extension_onboarding";
+  onInstall: () => void;
+}) {
+  const [narrow, setNarrow] = useState(
+    () => window.matchMedia?.("(max-width: 700px)").matches ?? false,
+  );
+  useEffect(() => {
+    const media = window.matchMedia?.("(max-width: 700px)");
+    if (!media) return;
+    const update = () => setNarrow(media.matches);
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+  return (
+    <div id="main" className={styles.tryPage}>
+      <div className={styles.tryHead}>
+        <div>
+          <p className={styles.eyebrow}>설치 없이 체험하기</p>
+          <h1>가상 지원서에서 자동 기입을 눌러보세요.</h1>
+          <p>
+            예시 프로필과 가상 지원서로 체험해요. 실제 지원서나 제출은 없어요.
+          </p>
+        </div>
+        <InstallLink onInstall={onInstall} />
+      </div>
+      {narrow ? (
+        <div className={styles.tryFallback}>
+          <strong>체험은 데스크톱 Chrome에서 할 수 있어요.</strong>
+          <p>
+            지원서와 패널을 나란히 놓고 눌러보는 화면이라 넓은 화면이 필요해요.
+            소개 페이지의 시뮬레이션으로 흐름을 먼저 볼 수 있어요.
+          </p>
+          <SiteLink href="/">소개 페이지로 ↗</SiteLink>
+        </div>
+      ) : (
+        <>
+          <ol className={styles.trySteps} aria-label="체험 순서">
+            <li>패널의 ‘자동 기입’ 누르기</li>
+            <li>지원서가 채워지는 걸 보기</li>
+            <li>마음에 들면 Chrome에 추가</li>
+          </ol>
+          <Trial
+            track={track}
+            surface={surface}
+            install={<InstallLink onInstall={onInstall} />}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+function Tech() {
+  return (
+    <main id="main" className={`${styles.policy} ${styles.tech}`}>
+      <p className={styles.eyebrow}>CAREER FORM / TECH</p>
+      <h1>기술 소개</h1>
+      <p className={styles.techLead}>
+        커리어폼이 지원서 칸을 연결하고 공고 알림을 보내는 방법입니다. 어떤
+        기술을 어디에 어떻게 넣었는지 적었습니다.
+      </p>
+      <nav aria-label="주제 목차">
+        {techTopics.map((topic) => (
+          <SiteLink key={topic.id} href={`#${topic.id}`}>
+            {topic.label} · {topic.title}
+          </SiteLink>
+        ))}
+      </nav>
+      {techTopics.map((topic) => (
+        <article key={topic.id} id={topic.id} className={styles.techTopic}>
+          <p className={styles.eyebrow}>{topic.label}</p>
+          <h2>{topic.title}</h2>
+          <p className={styles.techLead}>{topic.lead}</p>
+          {topic.sections.map((section) => (
+            <section key={section.heading}>
+              <h3>{section.heading}</h3>
+              {section.paragraphs?.map((text) => (
+                <p key={text}>{text}</p>
+              ))}
+              {section.bullets && (
+                <ul>
+                  {section.bullets.map((text) => (
+                    <li key={text}>{text}</li>
+                  ))}
+                </ul>
+              )}
+              {section.steps && (
+                <ol>
+                  {section.steps.map(([title, detail]) => (
+                    <li key={title}>
+                      <strong>{title}</strong> {detail}
+                    </li>
+                  ))}
+                </ol>
+              )}
+              {section.figure && <TechFigure kind={section.figure} />}
+              {section.table && (
+                <div className={styles.techTable}>
+                  <table>
+                    <thead>
+                      <tr>
+                        {section.table.head.map((cell) => (
+                          <th key={cell} scope="col">
+                            {cell}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {section.table.rows.map((row, rowIndex) => (
+                        <tr key={row[0]}>
+                          {row.map((cell, i) => (
+                            <td key={cell}>
+                              {i === 1 && section.table?.icons?.[rowIndex] && (
+                                <Icon
+                                  name={section.table.icons[rowIndex]}
+                                  style={{ width: 18, height: 18 }}
+                                />
+                              )}
+                              {section.table?.emphasizeLast &&
+                              i === row.length - 1 ? (
+                                <strong>{cell}</strong>
+                              ) : (
+                                cell
+                              )}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {section.note && (
+                <p className={styles.techNote}>{section.note}</p>
+              )}
+            </section>
+          ))}
+        </article>
+      ))}
+    </main>
+  );
+}
 export function SiteApp({
   track = noopTrack,
   surface = "site",
@@ -550,6 +738,7 @@ export function SiteApp({
     if (normalized === "/") track("landing_viewed", { surface });
     else if (normalized === "/onboarding")
       track("onboarding_viewed", { surface });
+    else if (normalized === "/try") track("trial_viewed", { surface });
   }, [normalized, surface, track]);
   const onInstall = () => track("install_link_clicked", { surface });
   return (
@@ -573,6 +762,10 @@ export function SiteApp({
         />
       ) : normalized === "/privacy" || normalized === "/terms" ? (
         <Policy kind={normalized === "/privacy" ? "privacy" : "terms"} />
+      ) : normalized === "/tech" ? (
+        <Tech />
+      ) : normalized === "/try" ? (
+        <TryPage track={track} surface={surface} onInstall={onInstall} />
       ) : (
         <main id="main" className={styles.policy}>
           <h1>페이지를 찾을 수 없어요.</h1>

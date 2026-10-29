@@ -935,3 +935,10 @@
 - 승인된 후보 4개 중 CF-355 범위 3개를 [CF-355 bundle](../raw/issues/CF-355/manifest.md)에 두 payload로 기록했다. 줄 하나만 보이는 반복 영역의 행 상자 판정·+ 그림 버튼 행 추가·줄 i와 항목 i 연결, 글자 없는 아이콘 버튼의 범용 전용 수집, 실행이 연 달력 루트·열기 버튼의 드롭다운 확인 제외.
 - [범용 구조 반복 실행](topics/generic-structure-loop.md)과 [범용 연월 달력 선택](topics/generic-calendar-selection.md)의 Current를 CF-355로 바꾸고 앞선 근거를 History에 남겼다. 후보 1은 CF-358 bundle에 기록한다.
 - 실제 지원값, 계정, 세션, 페이지 주소, 대화 전문은 저장하지 않았다.
+## [2026-10-29] ingest | CF-363 랜딩 설치 없이 체험하기와 기술 소개
+
+- Approval-Digest: 6009211edc896a7a300a3b2ddd11c9a5c9a19b8db58fb685f8719408b146d89a
+- Source-Revision: e074af94
+- 승인된 후보 1개를 [CF-363 bundle](../raw/issues/CF-363/manifest.md)에 기록했다. 히어로 버튼 하나와 `/try/` 체험(조사 자산 재사용, 자동 기입 강조, 관리 버튼 안내 카드, 좁은 화면 대체), `/tech/` 기술 소개(두 주제, 흐름도 3개, 수치 출처 상태), `trial_*` 이벤트, 검토한 배치 네 가지와 근거 자료, 유지되는 CF-96·CF-193 경계를 담았다.
+- [랜딩,온보딩 웹 페이지](topics/landing-onboarding.md)의 Current를 CF-363으로 바꾸고 CF-193을 History에 남겼다.
+- 실제 지원 정보, 계정, 대화 전문은 저장하지 않았다.
