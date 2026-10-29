@@ -14,7 +14,7 @@ afterEach(() => {
 
 function register(
   candidate: FieldCandidate,
-  elements: HTMLElement[],
+  elements: (HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement)[],
   options: [string, HTMLElement][],
 ) {
   const registry = new CandidateRegistry();
@@ -30,9 +30,7 @@ function register(
   return registry;
 }
 
-function adapterItem(
-  command: "CHECK_RADIO" | "SELECT_OPTION",
-): ReviewPlanItem {
+function adapterItem(command: "CHECK_RADIO" | "SELECT_OPTION"): ReviewPlanItem {
   const analysis: MatchedFieldAnalysis = {
     candidateId: "field-1",
     matchType: "MATCH",

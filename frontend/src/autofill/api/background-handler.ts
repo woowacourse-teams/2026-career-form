@@ -1,3 +1,8 @@
+import {
+  InstallationError,
+  type InstallationCredentials,
+} from "./installation-client";
+import { admissionErrorCodes } from "./messages";
 import type {
   AnalysisErrorCode,
   AnalysisRequestMessage,
@@ -31,6 +36,7 @@ interface AnalysisHandlerOptions {
   timeoutMs?: number;
   extensionId?: string;
   extensionVersion?: string;
+  installation?: { credentials(): Promise<InstallationCredentials> };
 }
 
 export function createAnalysisMessageHandler({
@@ -39,6 +45,7 @@ export function createAnalysisMessageHandler({
   timeoutMs = 60_000,
   extensionId,
   extensionVersion,
+  installation,
 }: AnalysisHandlerOptions) {
   const normalizedBaseUrl = baseUrl?.trim().replace(/\/$/, "") ?? "";
   const quality = new BackgroundQualityReporting(
@@ -70,21 +77,27 @@ export function createAnalysisMessageHandler({
       qualityOwner && message.type === "AUTOFILL_ANALYZE_FIELDS"
         ? publicApplicationLink(source?.url, message.payload.site?.host ?? "")
         : undefined;
-    const requestTimeout =
-      message.type === "AUTOFILL_DECIDE_INTERACTIONS"
-        ? Math.min(timeoutMs, 8_000)
-        : timeoutMs;
+    const requestTimeout = timeoutMs;
     const timeout = globalThis.setTimeout(
       () => controller.abort(),
       requestTimeout,
     );
     try {
+      const credentials = await installation?.credentials();
+      if (controller.signal.aborted)
+        throw new DOMException("Aborted", "AbortError");
       const response = await fetcher(
         `${normalizedBaseUrl}${endpointByType[message.type]}`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            ...(credentials
+              ? {
+                  "X-Career-Form-Installation": credentials.installationId,
+                  Authorization: `Bearer ${credentials.token}`,
+                }
+              : {}),
             ...quality.headers(qualityOwner),
             ...(publicLink
               ? { "X-Career-Form-Public-Application": publicLink }
@@ -104,9 +117,28 @@ export function createAnalysisMessageHandler({
           },
           body: JSON.stringify(message.payload),
           signal: controller.signal,
+          credentials: "omit",
+          redirect: "error",
         },
       );
       if (!response.ok) {
+        const admissionCode = response.headers?.get("X-Career-Form-Admission");
+        if (
+          admissionErrorCodes.includes(
+            admissionCode as (typeof admissionErrorCodes)[number],
+          )
+        ) {
+          const value = response.headers.get("X-Career-Form-Retry-At");
+          const retryAt =
+            value && value.length <= 64 && Number.isFinite(Date.parse(value))
+              ? value
+              : undefined;
+          return {
+            ok: false,
+            code: admissionCode as AnalysisErrorCode,
+            ...(retryAt ? { retryAt } : {}),
+          };
+        }
         return {
           ok: false,
           code:
@@ -130,6 +162,18 @@ export function createAnalysisMessageHandler({
         return { ok: false, code: "INVALID_RESPONSE" };
       }
     } catch (error) {
+      if (error instanceof InstallationError) {
+        const code: AnalysisErrorCode = admissionErrorCodes.includes(
+          error.code as (typeof admissionErrorCodes)[number],
+        )
+          ? (error.code as AnalysisErrorCode)
+          : "ADMISSION_UNAVAILABLE";
+        return {
+          ok: false,
+          code,
+          ...(error.retryAt ? { retryAt: error.retryAt } : {}),
+        };
+      }
       return {
         ok: false,
         code:

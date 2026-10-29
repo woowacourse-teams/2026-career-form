@@ -34,6 +34,9 @@ import com.careerform.monitoring.tracing.LangSmithTraceRecorder;
 @Component
 @Conditional(InteractionProviderConditions.JevClient.class)
 public final class JevClient {
+    @Autowired(required = false)
+    private com.careerform.admission.AiAdmission admission;
+
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.careerform.formanalysis.infrastructure.LocalLlmDiagnostics localDiagnostics;
 
@@ -129,6 +132,11 @@ public final class JevClient {
 
     public Map<String, String> choose(Object state, Map<String, Choice> questions) {
         if (questions.isEmpty()) return Map.of();
+        return admission == null ? chooseResult(state, questions) : admission.logical(() -> chooseResult(state, questions));
+    }
+
+    private Map<String, String> chooseResult(Object state, Map<String, Choice> questions) {
+        if (questions.isEmpty()) return Map.of();
         if (!dataPolicyReviewed || questions.size() > 128 ||
             questions.values().stream().anyMatch(q -> q.criteria().size() > 255 || !q.criteria().containsKey(ABSTAIN)))
             throw unavailable();
@@ -155,13 +163,7 @@ public final class JevClient {
                 .POST(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8)).build();
             if (localDiagnostics != null) localDiagnostics.start("jev", state.getClass().getSimpleName());
             called = true;
-            var pending = http.sendAsync(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-            HttpResponse<String> response;
-            try {
-                response = pending.copy().orTimeout(timeoutMs, TimeUnit.MILLISECONDS).join();
-            } finally {
-                if (!pending.isDone()) pending.cancel(true);
-            }
+            HttpResponse<String> response = sendOnce(request);
             httpStatus = response.statusCode();
             if (response.statusCode() != 200 || response.body().length() > 2_000_000) throw unavailable();
             Response output = mapper.readValue(response.body(), Response.class);
@@ -194,6 +196,7 @@ public final class JevClient {
             recordMetrics(startedAt, null, called, observedModel);
             return Map.copyOf(selected);
         } catch (RuntimeException exception) {
+            if (exception instanceof com.careerform.admission.AdmissionFailure failure) throw failure;
             completeTrace(trace, projection, null, Map.of(), httpStatus, exception);
             recordMetrics(startedAt, exception, called, observedModel);
             throw unavailable();
@@ -205,6 +208,11 @@ public final class JevClient {
      * 확률 합 허용 오차 0.05, 429 지수 백오프 재시도, 토큰 한도 예외는 이 경로에만 적용한다.
      */
     public Map<String, Judgement> answer(Object state, Map<String, Choice> questions) {
+        if (questions.isEmpty()) return Map.of();
+        return admission == null ? answerResult(state, questions) : admission.logical(() -> answerResult(state, questions));
+    }
+
+    private Map<String, Judgement> answerResult(Object state, Map<String, Choice> questions) {
         if (questions.isEmpty()) return Map.of();
         if (!dataPolicyReviewed || questions.size() > 128 ||
             questions.values().stream().anyMatch(q -> q.criteria().size() > 255 || !q.criteria().containsKey(ABSTAIN)))
@@ -248,28 +256,36 @@ public final class JevClient {
             recordMetrics(startedAt, null, called, observedModel);
             return Map.copyOf(judgements);
         } catch (RuntimeException exception) {
+            if (exception instanceof com.careerform.admission.AdmissionFailure failure) throw failure;
             recordMetrics(startedAt, exception, called, observedModel);
             if (exception instanceof TokenLimitExceeded tokenLimit) throw tokenLimit;
             throw unavailable();
         }
     }
 
+    private HttpResponse<String> sendOnce(HttpRequest request) {
+        return admission == null ? sendHttp(request) : admission.transmit(() -> sendHttp(request));
+    }
+
+    private HttpResponse<String> sendHttp(HttpRequest request) {
+        var timeout = admission == null ? timeoutMs : admission.timeoutMillis(timeoutMs);
+        if (admission != null) admission.sent();
+        var pending = http.sendAsync(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        try { return pending.copy().orTimeout(timeout, TimeUnit.MILLISECONDS).join(); }
+        finally { if (!pending.isDone()) pending.cancel(true); }
+    }
+
     private HttpResponse<String> sendWithRateLimitRetries(HttpRequest request) {
         for (int attempt = 0; ; attempt++) {
-            var pending = http.sendAsync(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-            HttpResponse<String> response;
-            try {
-                response = pending.copy().orTimeout(timeoutMs, TimeUnit.MILLISECONDS).join();
-            } finally {
-                if (!pending.isDone()) pending.cancel(true);
-            }
+            HttpResponse<String> response = sendOnce(request);
             if (response.statusCode() == 200) return response;
             String errorType = errorType(response.body());
             log.warn("JEV_UNAVAILABLE status={} errorType={} attempt={}", response.statusCode(), errorType, attempt + 1);
             if (response.statusCode() == 400 && "max_tokens_exceeded".equals(errorType)) throw new TokenLimitExceeded();
             if (response.statusCode() != 429 || attempt >= rateLimitRetries) throw unavailable();
             try {
-                sleeper.sleep(RATE_LIMIT_BACKOFF.multipliedBy(1L << attempt));
+                var delay = RATE_LIMIT_BACKOFF.multipliedBy(1L << attempt);
+                sleeper.sleep(admission == null ? delay : Duration.ofMillis(admission.timeoutMillis(delay.toMillis())));
             } catch (InterruptedException exception) {
                 Thread.currentThread().interrupt();
                 throw unavailable();

@@ -1,3 +1,17 @@
+export const admissionErrorCodes = [
+  "USER_LIMIT",
+  "INSTALL_LIMIT",
+  "GLOBAL_LIMIT",
+  "REGISTRATION_LIMIT",
+  "AI_BUSY",
+  "INSTALL_BUSY",
+  "ADMISSION_UNAVAILABLE",
+  "INVALID_INSTALLATION",
+  "INSECURE_TRANSPORT",
+  "ANALYSIS_DEADLINE",
+  "ANALYSIS_CANCELLED",
+] as const;
+
 import type { InteractionDecisionRequest } from "./interaction-types";
 import type {
   FieldsAnalyzeRequest,
@@ -34,6 +48,7 @@ const schemaVersionByType: Record<AnalysisRequestMessage["type"], number> = {
 };
 
 export type AnalysisErrorCode =
+  | (typeof admissionErrorCodes)[number]
   | "NOT_CONFIGURED"
   | "TIMEOUT"
   | "NETWORK"
@@ -45,7 +60,7 @@ export type AnalysisErrorCode =
 
 export type AnalysisResponseEnvelope =
   | { ok: true; data: unknown; quality?: boolean }
-  | { ok: false; code: AnalysisErrorCode; status?: 404 };
+  | { ok: false; code: AnalysisErrorCode; status?: 404; retryAt?: string };
 
 export function isAnalysisRequestMessage(
   value: unknown,
@@ -79,6 +94,10 @@ export function isAnalysisResponseEnvelope(
   }
   return (
     value.ok === false &&
+    (!("retryAt" in value) ||
+      (typeof value.retryAt === "string" &&
+        value.retryAt.length <= 64 &&
+        Number.isFinite(Date.parse(value.retryAt)))) &&
     (!("status" in value) || value.status === 404) &&
     "code" in value &&
     [
@@ -88,6 +107,7 @@ export function isAnalysisResponseEnvelope(
       "BAD_REQUEST",
       "PAYLOAD_TOO_LARGE",
       "RATE_LIMITED",
+      ...admissionErrorCodes,
       "SERVER_ERROR",
       "INVALID_RESPONSE",
     ].includes(String(value.code))

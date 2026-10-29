@@ -928,6 +928,22 @@
 - [CI/CD 설정](topics/cicd-setup.md)과 [배포 Runbook](topics/deployment-runbook.md)의 Current를 CF-350으로 바꾸고 앞선 근거를 History에 남겼다. 절차의 Wiki 밖 정본은 `infra/WEB_PUSH_VAPID.md`다.
 - VAPID 키 값, 호스트 주소, 계정, 대화 전문은 저장하지 않았다.
 
+## [2026-10-29] ingest | CF-359 비회원 설치 식별과 AI 호출 제어
+
+- Approval-Digest: bc7b00b7ec787f72dc24dc050a77e1e0377227aff984376b29bee54847d3adc7
+- Source-Revision: ec983c749ee312b182eea0e06ab716858123f6f2
+- 승인된 후보 세 개를 [CF-359 bundle](../raw/issues/CF-359/manifest.md)에 기록했다. 승인된 ADR, 등록 결과와 자격의 수명 구분, 성공 정산의 검증 경계 및 합성 비교의 해석을 보존했다.
+- [비회원 설치 식별과 AI 호출 제어](topics/anonymous-analysis-admission.md)를 신규 색인에 연결했다. 운영 활성화와 실제 사용자 효과는 미확인으로 남겼다.
+- 대화 전문, 실제 자격과 키, IP, 지원 정보는 저장하지 않았다.
+
+## [2026-10-29] ingest | CF-359 환경별 활성화와 API 이용 절차 추가
+
+- Approval-Digest: 3804dd648ff58d670588121aa7a4f0b928cfc8b2bd8c0ea08fd81c59e45513e5
+- Source-Revision: 0861dd18725b44ffcbc4e626cd16fbef9955b31f
+- 기존 후보 세 개를 유지하고 승인된 환경별 운영 절차 한 개를 같은 미병합 CF-359 bundle에 추가했다.
+- [환경별 활성화와 API 이용](topics/anonymous-admission-activation.md)에 dev 비활성, staging과 prod 활성 목표 및 전환 순서, 설정 연결의 미구현 상태, UUID와 토큰 필수 API를 기록했다.
+- 실제 운영 자격, 키와 IP는 저장하지 않았다. 운영 활성화와 배포 및 배포 연결 코드를 변경하지 않았다.
+
 ## [2026-10-29] ingest | CF-363 랜딩 설치 없이 체험하기와 기술 소개
 
 - Approval-Digest: 6009211edc896a7a300a3b2ddd11c9a5c9a19b8db58fb685f8719408b146d89a
@@ -935,3 +951,11 @@
 - 승인된 후보 1개를 [CF-363 bundle](../raw/issues/CF-363/manifest.md)에 기록했다. 히어로 버튼 하나와 `/try/` 체험(조사 자산 재사용, 자동 기입 강조, 관리 버튼 안내 카드, 좁은 화면 대체), `/tech/` 기술 소개(두 주제, 흐름도 3개, 수치 출처 상태), `trial_*` 이벤트, 검토한 배치 네 가지와 근거 자료, 유지되는 CF-96·CF-193 경계를 담았다.
 - [랜딩,온보딩 웹 페이지](topics/landing-onboarding.md)의 Current를 CF-363으로 바꾸고 CF-193을 History에 남겼다.
 - 실제 지원 정보, 계정, 대화 전문은 저장하지 않았다.
+
+## [2026-10-29] ingest | CF-359 staging 비활성 정책 정정
+
+- Approval-Digest: b9291100ae2965ecbe63a6a382411e33abd8f3c8c8a61bdd7bb0f2ff07f313ea
+- Source-Revision: b1963ab8e883c4406a4022c853a2213e56d0a4ea
+- 사용자가 확정한 dev와 staging 비활성, prod만 전환 후 활성 정책으로 기존 미병합 운영 절차 후보를 정정했다. 기존 세 구현 후보는 유지했다.
+- [환경별 활성화와 API 이용](topics/anonymous-admission-activation.md)의 목표 표, 수동 설정 대상과 검증 및 전환 순서를 같은 정책으로 맞췄다.
+- GitHub staging의 두 활성화 값 false를 조회해 확인했다. 이번 작업에서는 환경 변수 변경, 시크릿 접근이나 배포를 수행하지 않았다. 로컬 실험 결과를 운영 적용 결과로 기록하지 않았다.
