@@ -1,4 +1,5 @@
 import { traceWrite } from "../debug/write-trace";
+import { PROFILE_CATEGORIES } from "../../profile/field-definitions";
 import { resolveChoiceOption } from "../profile/choice-option";
 import { localWorkflowLog } from "../debug/local-workflow";
 import {
@@ -55,6 +56,7 @@ const UNSAFE = "네이티브 컨트롤에 안전하게 입력할 수 없습니�
 const STALE = "지원서 필드 상태가 변경되었거나 입력할 수 없습니다.";
 const CONFLICT = "입력 직전 지원서에 다른 값이 있어 기존 값을 보존했습니다.";
 const RETENTION = "입력 후 값이 유지되지 않아 확인이 필요합니다.";
+const ALREADY = "지원서에 같은 값이 이미 입력되어 있습니다.";
 const FORBIDDEN =
   /약관|동의|agreement|consent|인증|verification|verify|auth|login|password|비밀번호|upload|첨부|file|검색|search|lookup/i;
 
@@ -562,6 +564,47 @@ function hasGenericConflict(
   );
 }
 
+/** Labels of the stored choices of a select-type profile field. */
+function profileFieldChoices(key: string | undefined): string[] {
+  const [categoryId, sectionId, fieldId] = key?.split(".") ?? [];
+  const field = PROFILE_CATEGORIES.find(({ id }) => id === categoryId)
+    ?.sections.find(({ id }) => id === sectionId)
+    ?.fields.find(({ id }) => id === fieldId);
+  return (field?.options ?? []).map((choice) =>
+    typeof choice === "string" ? choice : choice.label,
+  );
+}
+
+/**
+ * A lone checkbox named after one choice of the profile field, while the
+ * stored value is another choice of that field: the box should stay unchecked.
+ */
+function loneCheckboxOfOtherChoice(
+  item: ReviewPlanItem,
+  handle: FieldCandidateHandle,
+  value: string,
+): HTMLInputElement | undefined {
+  const [box] = handle.elements;
+  if (
+    handle.elements.length !== 1 ||
+    !(box instanceof HTMLInputElement) ||
+    box.type !== "checkbox"
+  )
+    return undefined;
+  const label =
+    box.labels?.length === 1
+      ? box.labels[0]?.textContent
+      : box.getAttribute("aria-label");
+  const choices = profileFieldChoices(
+    item.analysis?.valueBinding?.profileFieldKey ?? item.profileFieldKey,
+  );
+  const named = choices.filter((choice) => sameOptionName(label ?? "", choice));
+  const stored = choices.filter((choice) => sameOptionName(value, choice));
+  return label && named.length === 1 && stored.length === 1 && named[0] !== stored[0]
+    ? box
+    : undefined;
+}
+
 function nativeChoiceValue(item: ReviewPlanItem, handle: FieldCandidateHandle): string {
   const value = item.profileValue ?? "";
   if (
@@ -707,6 +750,13 @@ function writeGeneric(
       valueAfterWrite: select.selectedOptions[0] === option,
     });
     return { written: true };
+  }
+  if (command === "CHECK_CHECKBOX" && generic) {
+    const box = loneCheckboxOfOtherChoice(item, handle, value);
+    if (box)
+      return box.checked
+        ? { written: false, reason: CONFLICT, code: "CONFLICT" }
+        : { written: false, reason: ALREADY, code: "ALREADY_MATCHED" };
   }
   const option = nativeChoiceOption(handle, value, generic);
   const expected =
@@ -991,7 +1041,15 @@ function resultForItem(
         ? written(item.candidateId)
         : { candidateId: item.candidateId, status: "written" }
       : generic
-        ? {
+        ? outcome.code === "ALREADY_MATCHED"
+          ? {
+              candidateId: item.candidateId,
+              status: "skipped",
+              outcome: "unchanged",
+              code: "ALREADY_MATCHED",
+              reason: outcome.reason,
+            }
+          : {
             ...skipped(
               item.candidateId,
               outcomeForWriteCode(outcome.code ?? "UNSUPPORTED_CONTROL"),
@@ -1115,6 +1173,10 @@ function retainedGenericValue(
       command === "SELECT_OPTION" &&
       dropdownValue(handle.buttonDropdown) === value
     );
+  if (command === "CHECK_CHECKBOX" && generic) {
+    const box = loneCheckboxOfOtherChoice(item, handle, value);
+    if (box) return box.isConnected && !box.checked;
+  }
   if (command === "SET_TEXT") {
     const input = settleElement(handle);
     if (!input?.isConnected) return false;
