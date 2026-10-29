@@ -30,6 +30,10 @@ class WorkBranchCleanupTest(unittest.TestCase):
         self.repo = self.root / "checkout"
         self.repo.mkdir()
         self._git("init", "--bare", str(self.remote))
+        # Pin the bare remote to its own hooks so a global core.hooksPath on the
+        # developer machine cannot shadow the pre-receive hook tests install.
+        self._git("--git-dir", str(self.remote), "config", "core.hooksPath",
+                  str(self.remote / "hooks"))
         self._git("init", "--initial-branch=develop")
         self._git("config", "user.name", "Test")
         self._git("config", "user.email", "test@example.invalid")
