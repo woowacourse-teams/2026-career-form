@@ -172,9 +172,15 @@ export function applyGenericGrade(
     genericGrade: grade.grade,
     ...(grade.reason ? { genericReasonCode: grade.reason } : {}),
   };
-  if (grade.grade === "AUTO") return graded;
+  // A field held only for the page's condition (or a rule-matched choice) is
+  // included like any other field the applicant need not decide.
+  const included: ReviewPlanItem =
+    graded.status === "needs-review" && !graded.disabled
+      ? { ...graded, status: "available", selected: true }
+      : graded;
+  if (grade.grade === "AUTO") return included;
   if (grade.grade === "REVIEW")
-    return applicantDecides ? { ...graded, selected: false } : graded;
+    return applicantDecides ? { ...graded, selected: false } : included;
   return {
     ...graded,
     selected: false,
