@@ -5,7 +5,8 @@ import java.time.Clock;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
@@ -21,8 +22,9 @@ import tools.jackson.databind.ObjectMapper;
 
 @EnabledIfEnvironmentVariable(named = "ANALYSIS_TEST_MONGO_URI", matches = "mongodb://127\\.0\\.0\\.1:[0-9]+")
 class OpenAiAdmissionTest {
-    @Test
-    void openAiUsesCommonExecutionAndDisablesUncountedSdkRetries() throws Exception {
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void openAiUsesCommonExecutionAndDisablesUncountedSdkRetries(boolean interaction) throws Exception {
         try (var client = MongoClients.create(System.getenv("ANALYSIS_TEST_MONGO_URI"))) {
             var mongo = new MongoTemplate(client, "cf359_test_" + UUID.randomUUID().toString().replace("-", ""));
             var settings = AdmissionSettings.defaults();
@@ -37,7 +39,7 @@ class OpenAiAdmissionTest {
                     assertThat(gate.active()).isEqualTo(1);
                     var options = (OpenAiChatOptions) prompt.getOptions();
                     assertThat(options.getMaxRetries()).isZero();
-                    assertThat(options.getTimeout().toMillis()).isBetween(1L, 8000L);
+                    assertThat(options.getTimeout().toMillis()).isBetween(interaction ? 1L : 8001L, interaction ? 8000L : 17000L);
                     return new ChatResponse(List.of(new Generation(new AssistantMessage("{\"value\":1}"))));
                 }
             };
@@ -45,9 +47,14 @@ class OpenAiAdmissionTest {
             var field = OpenAiClient.class.getDeclaredField("admission");
             field.setAccessible(true);
             field.set(openai, admission);
+            var timeout = OpenAiClient.class.getDeclaredField("analysisTimeout");
+            timeout.setAccessible(true);
+            timeout.set(openai, java.time.Duration.ofSeconds(17));
             AnalysisContext.begin("synthetic-install", settings.requestTimeout());
             try {
-                assertThat(openai.generate("synthetic", Map.of(), Output.class).value()).isEqualTo(1);
+                var output = interaction ? openai.generateInteraction("synthetic", Map.of(), Output.class)
+                    : openai.generate("synthetic", Map.of(), Output.class);
+                assertThat(output.value()).isEqualTo(1);
                 assertThat(meters.counter("analysis.admission.transport.attempts").count()).isEqualTo(1);
                 assertThat(mongo.findAll(UsageBucket.class).stream().filter(row -> row.id().startsWith("user:")).mapToInt(UsageBucket::used).sum()).isEqualTo(1);
             } finally { AnalysisContext.clear(); }
