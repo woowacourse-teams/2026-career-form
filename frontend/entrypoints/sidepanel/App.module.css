@@ -248,10 +248,8 @@
 }
 .entryHead span {
   min-width: 0;
-  overflow: hidden;
   color: var(--color-text-muted);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 .valueMeta {
   display: grid;
