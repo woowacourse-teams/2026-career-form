@@ -1,7 +1,18 @@
-import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useSyncExternalStore,
+} from "react";
 
+import { trackExtensionEvent } from "../analytics/extension-tracker";
+import type { TrackEvent } from "../analytics/events";
 import { prepareImportPolicy } from "../profile/page-import/load-import-policy";
-import { readGreetingImport } from "../profile/page-import/reader";
+import {
+  readGreetingImport,
+  recognizesGreetingForm,
+} from "../profile/page-import/reader";
 import { App } from "../../entrypoints/sidepanel/App";
 import { RuntimeAnalysisApiClient } from "../autofill/api/runtime-client";
 import type { AnalysisApiClient } from "../autofill/api/types";
@@ -19,6 +30,7 @@ interface InPageProfilePanelProps {
   pageDocument: Document;
   apiClient?: AnalysisApiClient;
   repository?: ProfileRepository;
+  track?: TrackEvent;
 }
 
 export function InPageProfilePanel({
@@ -30,6 +42,7 @@ export function InPageProfilePanel({
   pageDocument,
   apiClient: injectedApiClient,
   repository: injectedRepository,
+  track = trackExtensionEvent,
 }: InPageProfilePanelProps) {
   const mode = useSyncExternalStore(
     controller.subscribe,
@@ -45,17 +58,44 @@ export function InPageProfilePanel({
   );
 
   useEffect(() => () => controller.showProfile(), [controller]);
-  const readImportCandidates = useCallback(async () => {
-    await prepareImportPolicy(
+  // One policy request serves the mount-time offer check and a click that
+  // arrives while it is still pending.
+  const pendingPolicy = useRef<Promise<void> | undefined>(undefined);
+  const preparePolicy = useCallback(() => {
+    pendingPolicy.current ??= prepareImportPolicy(
       pageDocument,
       apiClient.loadExecutionPolicy?.bind(apiClient),
-    );
-    return readGreetingImport(pageDocument);
+    ).finally(() => {
+      pendingPolicy.current = undefined;
+    });
+    return pendingPolicy.current;
   }, [pageDocument, apiClient]);
+  // Exposure for the import offer: once per panel open, only on a form the
+  // installed policy recognizes as Greeting. Only the host is recorded.
+  useEffect(() => {
+    let active = true;
+    void preparePolicy()
+      .then(() => {
+        if (!active || !recognizesGreetingForm(pageDocument)) return;
+        track("greeting_import_offered", {
+          surface: "in_page_panel",
+          page_host: new URL(pageDocument.URL).hostname,
+        });
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [preparePolicy, pageDocument, track]);
+  const readImportCandidates = useCallback(async () => {
+    await preparePolicy();
+    return readGreetingImport(pageDocument);
+  }, [preparePolicy, pageDocument]);
 
   return (
     <App
       inPage
+      track={track}
       readImportCandidates={readImportCandidates}
       repository={repository}
       logoUrl={logoUrl}

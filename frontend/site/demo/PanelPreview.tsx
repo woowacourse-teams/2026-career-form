@@ -14,6 +14,8 @@ export function PanelPreview({
   onClose = noop,
   repository = demoRepository,
   showPostings = true,
+  openOptions = noop,
+  openPostings = async () => {},
 }: {
   onAutofill?: () => Promise<void>;
   autofillView?: ReactNode;
@@ -21,6 +23,10 @@ export function PanelPreview({
   onClose?: () => void;
   repository?: ProfileRepository;
   showPostings?: boolean;
+  // The web has no extension pages to open; callers decide what the two
+  // management buttons do instead of falling through to chrome APIs.
+  openOptions?: () => void | Promise<void>;
+  openPostings?: (create: boolean) => Promise<void>;
 }) {
   return (
     <div className={styles.nativePanel} data-demo-panel>
@@ -34,7 +40,8 @@ export function PanelPreview({
         logoUrl={logo}
         copyText={async () => {}}
         closePanel={onClose}
-        openOptions={noop}
+        openOptions={openOptions}
+        openPostings={openPostings}
         openAutofill={onAutofill}
       />
     </div>

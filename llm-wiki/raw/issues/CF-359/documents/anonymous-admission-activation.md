@@ -7,10 +7,10 @@
 | 서비스 환경 | GitHub Environment | 서버 enabled | registration-enabled | 확장 VITE_AI_ADMISSION_ENABLED |
 |---|---|---|---|---|
 | dev | development | false | false | false |
-| staging | staging | true | true | true |
+| staging | staging | false | false | false |
 | prod | production | true | true | true |
 
-dev는 이번 설치 자격 검사와 AI 호출 제한을 적용하지 않는다. 기존의 다른 제한이나 검증까지 제거하지 않는다. staging과 prod는 전환 검증 후 활성화하는 최종 목표다. 등록 API만 선행 제공하는 동안은 registration-enabled=true, enabled=false다.
+dev와 staging은 이번 설치 자격 검사와 AI 호출 제한 및 등록 API를 비활성으로 유지한다. 기존의 다른 제한이나 검증까지 제거하지 않는다. prod만 전환 검증 후 활성화하는 최종 목표다. prod에서 등록 API만 선행 제공하는 동안은 registration-enabled=true, enabled=false다.
 
 ## 현재 구현과 남은 저장소 작업
 
@@ -19,7 +19,7 @@ dev는 이번 설치 자격 검사와 AI 호출 제한을 적용하지 않는다
 다음 연결은 아직 구현하지 않았다.
 
 1. backend/src/main/resources/application.yml의 기존 career-form 아래에 admission 설정을 추가하고 환경 변수와 명시적으로 연결한다.
-2. 개발, 스테이징, 운영 배포 워크플로우에서 환경별 변수를 전달한다. dev의 두 활성화 값은 false로 유지한다.
+2. 개발, 스테이징, 운영 배포 워크플로우에서 환경별 변수를 전달한다. dev와 staging의 두 활성화 값은 false로 유지한다.
 3. infra/compose.deploy.yaml에서 해당 값을 백엔드 컨테이너로 전달한다.
 4. 확장 빌드에 환경별 API 주소와 활성화 플래그를 전달한다. 서버 설정이 확장 빌드 플래그를 자동으로 바꾸지는 않는다.
 
@@ -38,16 +38,16 @@ dev는 이번 설치 자격 검사와 AI 호출 제한을 적용하지 않는다
 
 GitHub 저장소 Settings > Environments에서 development, staging, production을 구분한다.
 
-- development: enabled와 registration-enabled를 false로 유지한다. 활성화를 위한 암호화 키는 필요하지 않다.
-- staging과 production Variables: 위 활성화 값과 신뢰 프록시의 실제 원격 IP 목록을 등록한다. 최초 전환에서는 enabled를 false로 둔다.
-- staging과 production Secrets: CAREER_FORM_ADMISSION_ENCRYPTION_KEY를 등록한다. 32바이트 무작위 값을 Base64로 표현한 값이다. 사람이 로컬에서 openssl rand -base64 32로 생성할 수 있다. 실제 값은 문서, 대화나 로그에 넣지 않는다.
-- staging과 production은 별도 키와 분리된 데이터 저장 환경을 사용한다. 실제 DB 분리는 배포 담당자가 확인한다. 같은 환경의 여러 서버는 같은 키를 사용하고 배포마다 새로 생성하지 않는다. 키 교체는 등록 결과 재전달과 IP 및 등록 키의 HMAC에 영향을 주므로 별도 절차 없이 바꾸지 않는다.
+- development와 staging: enabled와 registration-enabled를 false로 유지한다. 이번 비활성화 정책을 적용하기 위해 암호화 키를 새로 등록할 필요는 없다. 이미 등록된 키를 이번 정책 변경을 이유로 삭제하거나 교체하지 않는다.
+- production Variables: 위 활성화 값과 신뢰 프록시의 실제 원격 IP 목록을 등록한다. 최초 전환에서는 enabled를 false로 둔다.
+- production Secrets: CAREER_FORM_ADMISSION_ENCRYPTION_KEY를 등록한다. 32바이트 무작위 값을 Base64로 표현한 값이다. 사람이 로컬에서 openssl rand -base64 32로 생성할 수 있다. 실제 값은 문서, 대화나 로그에 넣지 않는다.
+- 검증 환경과 production의 자격 및 데이터 저장 환경을 분리한다. 실제 DB 분리는 배포 담당자가 확인한다. 같은 환경의 여러 서버는 같은 키를 사용하고 배포마다 새로 생성하지 않는다. 키 교체는 등록 결과 재전달과 IP 및 등록 키의 HMAC에 영향을 주므로 별도 절차 없이 바꾸지 않는다.
 - HTTPS 종단 프록시가 X-Real-IP와 X-Forwarded-Proto를 덮어쓰는지, 백엔드가 직접 외부에 노출되지 않는지 확인한다. trusted-proxies는 도메인이나 사용자 IP가 아니라 앱이 보는 실제 프록시 원격 주소다. 현재 서버에서 충족한 것으로 확인하지 않았다.
-- 환경별 확장을 빌드하고 배포 또는 테스트용으로 설치한다. staging과 prod 자격은 환경을 넘어 재사용하지 않는다.
+- 환경별 확장을 빌드하고 배포 또는 테스트용으로 설치한다. 로컬 검증과 prod 자격은 환경을 넘어 재사용하지 않는다.
 
 ## 활성화 순서
 
-staging에서 먼저 검증하고 같은 절차를 prod에 적용한다. dev는 비활성을 유지한다.
+인증 활성화 검증은 별도의 로컬 검증 환경에서 수행하고, 아래 전환 절차는 prod에 적용한다. dev와 staging은 서버의 두 활성화 값과 확장 플래그를 false로 유지한다.
 
 1. 위 저장소 설정 전달 경로를 구현하고 검증한다.
 2. 사람이 해당 환경의 키와 프록시 값을 제공한다. registration-enabled=true, enabled=false로 서버를 배포한다.
@@ -56,7 +56,7 @@ staging에서 먼저 검증하고 같은 절차를 prod에 적용한다. dev는 
 5. 정상 사용자 전환을 확인한 뒤 enabled=true로 서버를 다시 배포한다. 값 수정만으로 이미 실행 중인 컨테이너 설정이 갱신되지는 않는다.
 6. 아래 인증 거절 요청과 정상 분석, 한도 안내를 확인해 시각과 코드 버전 및 비식별 응답을 기록한다.
 
-확장의 자격 저장 키는 현재 analysisInstallation 하나이며 서버 주소별로 나뉘어 있지 않다. 같은 확장 설치의 API 주소를 staging에서 prod로 바꿔도 자격이 자동 교체되지 않는다. 환경별 테스트는 별도 브라우저 프로필을 사용한다. 기존 프로필 전체 초기화는 민감한 로컬 지원 정보를 잃을 수 있으므로 전환 방법으로 사용하지 않는다.
+확장의 자격 저장 키는 현재 analysisInstallation 하나이며 서버 주소별로 나뉘어 있지 않다. 같은 확장 설치의 API 주소를 로컬 검증 환경에서 prod로 바꿔도 자격이 자동 교체되지 않는다. 환경별 테스트는 별도 브라우저 프로필을 사용한다. 기존 프로필 전체 초기화는 민감한 로컬 지원 정보를 잃을 수 있으므로 전환 방법으로 사용하지 않는다.
 
 ## 토큰 발급과 분석 요청
 
@@ -86,10 +86,10 @@ staging에서 먼저 검증하고 같은 절차를 prod에 적용한다. dev는 
 
 | 대상 | 확인 내용 |
 |---|---|
-| dev | 유효한 분석 본문을 자격 없이 전송해 기존 처리 유지 확인 |
-| staging과 prod | A UUID + A 토큰으로 정상 분석 확인 |
-| staging과 prod | 자격 누락, UUID만 전달, A UUID + B 토큰 및 B UUID + A 토큰의 401 확인 |
-| staging과 prod | 등록 실패와 자격 저장 실패가 분석 요청으로 이어지지 않는지 확인 |
+| dev와 staging | 유효한 분석 본문을 자격 없이 전송해 기존 처리 유지 확인 |
+| 로컬 검증 환경 및 전환 후 prod | A UUID + A 토큰으로 정상 분석 확인 |
+| 로컬 검증 환경 및 전환 후 prod | 자격 누락, UUID만 전달, A UUID + B 토큰 및 B UUID + A 토큰의 401 확인 |
+| 로컬 검증 환경 및 전환 후 prod | 등록 실패와 자격 저장 실패가 분석 요청으로 이어지지 않는지 확인 |
 | 확장 | 브라우저 재시작 후 자격 재사용, 다중 탭 초기 등록 경합 확인 |
 | 전환 | 구버전 확장의 자격 없는 분석이 활성화 뒤 거절됨을 확인 |
 
