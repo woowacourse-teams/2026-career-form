@@ -1,4 +1,5 @@
 import { browser } from "wxt/browser";
+import { localWorkflowLog } from "../debug/local-workflow";
 import { createAddressSearch } from "../address/runtime";
 import type {
   AddressSearch,
@@ -502,6 +503,19 @@ export function userFacingReason(reason?: string): string | undefined {
 }
 
 export function safeErrorTitle(error: unknown): string {
+  // Diagnostic: which error ended the run, without any page or profile value.
+  localWorkflowLog("workflow-exception", {
+    name: error instanceof Error ? error.name : typeof error,
+    message: error instanceof Error ? error.message.slice(0, 160) : "",
+    at:
+      error instanceof Error
+        ? (error.stack ?? "")
+            .split("\n")
+            .slice(1, 6)
+            .map((line) => line.trim().replace(/\(?chrome-extension:\/\/[^)]*\)?/g, "").slice(0, 60))
+            .join(" | ")
+        : "",
+  });
   return error instanceof AnalysisServiceError ||
     error instanceof AnalysisContractError
     ? error.message
