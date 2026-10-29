@@ -14,6 +14,7 @@ import {
   matchesCatalogHighSchoolRegion,
   matchesCatalogInstitution,
   matchesCatalogLabel,
+  matchesCatalogNumberedCollege,
   normalizedCatalogLabel,
   verifiedSearchCatalogEntry,
 } from "../../profile/catalog-identity";
@@ -317,6 +318,8 @@ export async function search(
   const catalogLabelOf = (label: string): string | undefined => {
     if (!catalog) return undefined;
     if (matchesCatalogLabel(catalog, label)) return label;
+    // A college number only the site shows, e.g. "한국폴리텍 I 대학 …".
+    if (matchesCatalogNumberedCollege(catalog, label)) return catalog.name;
     const suffix = language
       ? componentRules(
           input.ownerDocument,
@@ -338,7 +341,10 @@ export async function search(
     if (nameOnlySearch(input) || !catalog.detail) return true;
     if (
       !option.querySelector(componentSelector(option, "optionDetail")) &&
-      matchesCatalogInstitution(catalog, searchOptionLabel(option))
+      matchesCatalogInstitution(
+        catalog,
+        catalogLabelOf(searchOptionLabel(option))!,
+      )
     )
       return true;
     const description = optionDescription(option);
