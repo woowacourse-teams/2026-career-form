@@ -63,7 +63,7 @@ public final class OpenAiClient {
     private com.careerform.admission.AiAdmission admission;
 
     @Value("${spring.ai.openai.timeout:30s}")
-    private Duration analysisTimeout = Duration.ofSeconds(30);
+    private String analysisTimeout = "30s";
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.careerform.formanalysis.infrastructure.LocalLlmDiagnostics localDiagnostics;
@@ -195,7 +195,8 @@ public final class OpenAiClient {
                 ? OpenAiChatOptions.builder().store(true).responseFormat(responseFormat(converter))
                     .timeout(Duration.ofSeconds(8)).maxRetries(0)
                 : OpenAiChatOptions.builder().store(true).responseFormat(responseFormat(converter));
-            long providerTimeoutMillis = interaction ? 8000 : analysisTimeout.toMillis();
+            long providerTimeoutMillis = interaction ? 8000
+                : org.springframework.boot.convert.DurationStyle.detectAndParse(analysisTimeout).toMillis();
             if (admission != null) options.timeout(Duration.ofMillis(admission.timeoutMillis(providerTimeoutMillis))).maxRetries(0);
             var request = selectedChatClient.prompt().system(systemPrompt).user(sanitizedJson).options(options);
             if (localDiagnostics != null) localDiagnostics.start("openai", stage);

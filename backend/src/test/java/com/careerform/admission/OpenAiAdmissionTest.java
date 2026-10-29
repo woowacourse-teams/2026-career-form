@@ -49,7 +49,7 @@ class OpenAiAdmissionTest {
             field.set(openai, admission);
             var timeout = OpenAiClient.class.getDeclaredField("analysisTimeout");
             timeout.setAccessible(true);
-            timeout.set(openai, java.time.Duration.ofSeconds(17));
+            timeout.set(openai, "17s");
             AnalysisContext.begin("synthetic-install", settings.requestTimeout());
             try {
                 var output = interaction ? openai.generateInteraction("synthetic", Map.of(), Output.class)
