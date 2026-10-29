@@ -4,6 +4,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -31,6 +32,24 @@ function createRepository(): ProfileRepository {
     loadLayout: vi.fn(async () => "a" as const),
     saveLayout: vi.fn(async () => undefined),
   };
+}
+
+function schoolsRepository(): ProfileRepository {
+  const repository = createRepository();
+  const load = repository.load;
+  repository.load = vi.fn(async () => {
+    const profile = await load();
+    profile.education = [
+      {
+        id: "education-0",
+        sectionId: "highSchool",
+        values: { schoolName: "비식별고등학교" },
+      },
+      ...profile.education,
+    ];
+    return profile;
+  });
+  return repository;
 }
 
 describe("side panel App", () => {
@@ -165,7 +184,9 @@ describe("side panel App", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "학력 1건 펼치기" }));
 
-    expect(screen.getByText("비식별 대학교")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "대학교 1" })).toHaveTextContent(
+      "비식별 대학교",
+    );
     expect(
       screen.getByRole("button", { name: "학력 1건 접기" }),
     ).toBeInTheDocument();
@@ -325,6 +346,53 @@ describe("side panel App", () => {
     expect(copyText).toHaveBeenLastCalledWith("군필");
     expect(repository.save).not.toHaveBeenCalled();
     expect(profile.military.militaryStatus).toBe("military-status:served");
+  });
+
+  it("고등학교와 대학교를 항목별 소제목으로 나눠 보여 준다", async () => {
+    const copyText = vi.fn(async () => undefined);
+    render(<App repository={schoolsRepository()} copyText={copyText} />);
+    await screen.findByText("copy@example.com");
+
+    fireEvent.click(screen.getByRole("button", { name: "학력 2건 펼치기" }));
+
+    const highSchool = screen.getByRole("group", { name: "고등학교 1" });
+    const university = screen.getByRole("group", { name: "대학교 2" });
+    expect(highSchool).toHaveTextContent("비식별고등학교");
+    expect(highSchool).not.toHaveTextContent("비식별 대학교");
+    expect(university).toHaveTextContent("비식별 대학교");
+    expect(university).not.toHaveTextContent("비식별고등학교");
+    fireEvent.click(
+      within(highSchool).getByRole("button", {
+        name: "고등학교 1 학교명 복사",
+      }),
+    );
+    expect(copyText).toHaveBeenLastCalledWith("비식별고등학교");
+    fireEvent.click(
+      within(university).getByRole("button", { name: "대학교 2 학교명 복사" }),
+    );
+    expect(copyText).toHaveBeenLastCalledWith("비식별 대학교");
+  });
+
+  it("검색 결과에서도 학교별 구분을 유지한다", async () => {
+    render(<App repository={schoolsRepository()} copyText={vi.fn()} />);
+    await screen.findByText("copy@example.com");
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "프로필 검색" }), {
+      target: { value: "학교명" },
+    });
+
+    for (const name of ["고등학교 1", "대학교 2"]) {
+      const group = screen.getByRole("group", { name });
+      expect(within(group).getAllByRole("article")).toHaveLength(1);
+    }
+  });
+
+  it("반복 항목이 아닌 값은 소제목 없이 기존 버튼 이름을 유지한다", async () => {
+    render(<App repository={schoolsRepository()} copyText={vi.fn()} />);
+    await screen.findByText("copy@example.com");
+
+    const copy = screen.getByRole("button", { name: "이메일주소 복사" });
+    expect(copy.closest('[role="group"]')).toBeNull();
   });
 
   it("reports clipboard failure without exposing the copied value", async () => {

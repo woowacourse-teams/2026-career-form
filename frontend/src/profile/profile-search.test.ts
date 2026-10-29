@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { createEmptyProfile } from "./model";
-import { buildSearchItems, searchProfileItems } from "./profile-search";
+import {
+  buildSearchItems,
+  groupItemsByEntry,
+  searchProfileItems,
+} from "./profile-search";
 
 describe("profile search", () => {
   it("builds searchable items only from non-empty profile values", () => {
@@ -110,5 +114,108 @@ describe("profile search", () => {
     ];
 
     expect(searchProfileItems(buildSearchItems(profile), "서울")).toEqual([]);
+  });
+});
+
+function schoolsProfile() {
+  const profile = createEmptyProfile();
+  profile.personal.koreanGivenName = "비식별 이름";
+  profile.education = [
+    {
+      id: "h1",
+      sectionId: "highSchool",
+      values: { schoolName: "비식별고등학교", startDate: "2015-03-01" },
+    },
+    {
+      id: "u1",
+      sectionId: "university",
+      values: { schoolName: "비식별 대학교", majorName: "비식별 전공" },
+    },
+  ];
+  return profile;
+}
+
+describe("profile search entries", () => {
+  it("tags repeated entries with entry label and section", () => {
+    const items = buildSearchItems(schoolsProfile());
+    const schoolNames = items.filter((item) => item.fieldLabel === "학교명");
+
+    expect(schoolNames.map((item) => item.entry)).toEqual([
+      {
+        id: "h1",
+        label: "고등학교 1",
+        sectionLabel: "고등학교",
+        name: "비식별고등학교",
+      },
+      {
+        id: "u1",
+        label: "대학교 2",
+        sectionLabel: "대학교",
+        name: "비식별 대학교",
+      },
+    ]);
+    expect(
+      items.find((item) => item.categoryId === "personal")?.entry,
+    ).toBeUndefined();
+  });
+
+  it("numbers entries within the category like profile management", () => {
+    const profile = createEmptyProfile();
+    profile.education = [
+      { id: "a", sectionId: "university", values: { majorName: "전공 A" } },
+      { id: "b", sectionId: "university", values: { majorName: "전공 B" } },
+    ];
+
+    expect(buildSearchItems(profile).map((item) => item.entry)).toEqual([
+      { id: "a", label: "대학교 1", sectionLabel: "대학교" },
+      { id: "b", label: "대학교 2", sectionLabel: "대학교" },
+    ]);
+  });
+
+  it("keeps entry identity in search results", () => {
+    const results = searchProfileItems(
+      buildSearchItems(schoolsProfile()),
+      "학교명",
+    );
+
+    expect(results.map((item) => item.entry?.id)).toEqual(["h1", "u1"]);
+  });
+
+  it("does not match entry headings in search", () => {
+    expect(
+      searchProfileItems(buildSearchItems(schoolsProfile()), "고등학교 1"),
+    ).toEqual([]);
+  });
+
+  it("groups consecutive items by entry", () => {
+    const items = buildSearchItems(schoolsProfile());
+    const blocks = groupItemsByEntry(items);
+
+    expect(
+      blocks.map((block) => [
+        block.entry?.id,
+        block.items.map((item) => item.fieldLabel),
+      ]),
+    ).toEqual([
+      [undefined, ["국문 이름"]],
+      ["h1", ["학교명", "입학일"]],
+      ["u1", ["학교명", "주전공명"]],
+    ]);
+  });
+
+  it("does not merge entries that share an id across categories", () => {
+    const profile = createEmptyProfile();
+    profile.languages = [
+      { id: "same", sectionId: "languageTest", values: { testName: "TOEIC" } },
+    ];
+    profile.certifications = [
+      { id: "same", sectionId: "certificate", values: { name: "자격 A" } },
+    ];
+
+    expect(
+      groupItemsByEntry(buildSearchItems(profile)).map(
+        (block) => block.entry?.label,
+      ),
+    ).toEqual(["공인외국어시험 1", "자격증·면허증 1"]);
   });
 });
