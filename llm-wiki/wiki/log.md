@@ -935,3 +935,11 @@
 - 승인된 후보 4개 중 CF-355 범위 3개를 [CF-355 bundle](../raw/issues/CF-355/manifest.md)에 두 payload로 기록했다. 줄 하나만 보이는 반복 영역의 행 상자 판정·+ 그림 버튼 행 추가·줄 i와 항목 i 연결, 글자 없는 아이콘 버튼의 범용 전용 수집, 실행이 연 달력 루트·열기 버튼의 드롭다운 확인 제외.
 - [범용 구조 반복 실행](topics/generic-structure-loop.md)과 [범용 연월 달력 선택](topics/generic-calendar-selection.md)의 Current를 CF-355로 바꾸고 앞선 근거를 History에 남겼다. 후보 1은 CF-358 bundle에 기록한다.
 - 실제 지원값, 계정, 세션, 페이지 주소, 대화 전문은 저장하지 않았다.
+
+## [2026-10-29] ingest | CF-358 미리 승인한 새 칸의 자동 기입
+
+- Approval-Digest: 3bc4195c391a49504b3b613d44f889b4a6a9e4eae7fbe459f44b367dc3df589c
+- Source-Revision: f9c49b4
+- 승인된 후보 4개 중 CF-358 범위 1개를 [CF-358 bundle](../raw/issues/CF-358/manifest.md)에 기록했다. 1차 검토의 나타날 수 있는 칸, 실행 중·사용자 저장 뒤 나타난 승인 범위 안 빈 AUTO 칸의 2차 검토 없는 기입, 체크 해제, 확장이 저장을 누르지 않는 감시 경계.
+- [범용 검토 화면의 3단계 표시](topics/generic-review-tiers.md)의 Current를 CF-358로 바꾸고 앞선 근거를 History에 남겼다.
+- 실제 지원값, 계정, 세션, 페이지 주소, 대화 전문은 저장하지 않았다.

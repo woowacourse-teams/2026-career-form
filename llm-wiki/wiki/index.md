@@ -88,7 +88,7 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [범용 폼 컨텍스트 수집](topics/generic-form-context.md) | 문서 회사 기준 수집 선택, 동기 읽기 캐시 경계와 혼합 전후 비교 | 2026-10-15 |
 | [범용 칸 라벨 문맥과 형식 검사](topics/generic-field-context-safety.md) | 끊긴 라벨 복원, 문맥 없는 칸의 REVIEW와 로컬 형식 검사 | 2026-10-18 |
 | [범용 등급의 다른 사람 대상 칸 차단](topics/generic-other-person-context.md) | 추천인·보증인 등 다른 사람 대상 칸에 본인 정보 키가 매칭되면 BLOCKED | 2026-10-18 |
-| [범용 검토 화면의 3단계 표시](topics/generic-review-tiers.md) | 자동·확인 필요·입력 불가 표시, 연결 못한 칸 노출과 이유 문구 변환 | 2026-10-18 |
+| [범용 검토 화면의 3단계 표시](topics/generic-review-tiers.md) | 자동·확인 필요·입력 불가 표시, 연결 못한 칸 노출과 이유 문구 변환, 미리 승인한 새 칸의 2차 검토 없는 기입 | 2026-10-29 |
 | [DOM fixture 표시 텍스트 검토와 재현 경계](topics/dom-snapshot-review-boundaries.md) | v4 무변경 보존, 표시 텍스트 검토와 mock·실사이트 근거 구분 | 2026-10-18 |
 | [실사이트 자동 입력 평가 워크플로우](topics/live-autofill-evaluation.md) | 사전 분모, DOM 검증, 후보 관측 일치, 설치본 snapshot과 가시 칸 두 시점 측정, 새로고침 원복·대화상자 자동 처리 함정, 원복 재키 대조와 표시 규칙의 한계, 재설치 뒤 탭 재진입과 응답 없는 탭, 테스트 계정 모드·설치본 잠금·채점 재사용, 합성 프로필 학교 검색 한계와 reset 위젯 잔여, 간헐 결함 반복 관찰 루프와 서비스 워커 API 관찰, 검색 정확 일치 없음 전수 조사와 로컬 스택 정책 검증 | 2026-10-25 |
 | [오프라인 기입 정확도 측정](topics/offline-write-accuracy.md) | 결과 전 고정 정답, 제품 경로 판정, 보존식 집계와 스냅샷별 기준선 | 2026-10-21 |
