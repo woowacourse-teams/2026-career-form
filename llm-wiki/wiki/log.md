@@ -958,3 +958,11 @@
 - 추가 승인한 후보 4개를 [CF-358 bundle](../raw/issues/CF-358/manifest.md)에 기록했다. 새 칸 2차 검토 버튼 제거와 직접 확인할 새 칸 표시, 확인 필요 기본 포함 규칙, 모든 범주·숨은 칸·입력 불가 칸까지 넓힌 승인 범위, 날짜 기입 뒤 다른 컨트롤이 연 층의 보류 판정 제외.
 - [범용 검토 화면의 3단계 표시](topics/generic-review-tiers.md)와 [범용 연월 달력 선택](topics/generic-calendar-selection.md)의 Current를 CF-358 근거로 바꿨다.
 - 실제 지원값, 계정, 세션, 페이지 주소, 대화 전문은 저장하지 않았다.
+
+## [2026-10-30] ingest | CF-370 확장이 값을 넣은 반복 줄의 줄 저장
+
+- Approval-Digest: d7d227586aad4a40ebfba5e3c9012caca9639ef9ecf05ab00264754472c830be
+- Source-Revision: 321c5bf
+- 승인한 후보 2개를 [CF-370 bundle](../raw/issues/CF-370/manifest.md)에 기록했다. 줄 저장 예외를 반영한 제품 기준 현재본과 범용 줄 저장 판정·누름 조건·등록 확인 규칙이다.
+- [제품 기준](topics/product-concept.md)과 [범용 검토 화면의 3단계 표시](topics/generic-review-tiers.md)의 Current를 CF-370 근거로 바꿨다.
+- 실제 지원값, 계정, 세션, 페이지 주소, 대화 전문은 저장하지 않았다.
