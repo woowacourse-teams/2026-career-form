@@ -30,6 +30,11 @@ import {
 } from "../profile/education-row-kind";
 import { genericRowFor } from "../dom/repeatable-rows";
 import { iconGlyphLabel } from "../dom/icon-glyph";
+import {
+  ADD_LABEL,
+  FORBIDDEN_LABEL,
+  actionLabel,
+} from "../dom/generic-form-groups";
 import { stageRowsAround } from "./education-stage-rows";
 import { acquireDocumentRun } from "../interaction/document-run";
 import {
@@ -364,6 +369,14 @@ function isOfferableAddControl({ observed }: ActionRef): boolean {
   );
 }
 
+/** A control named for adding: "add" text or a drawn plus, never a removal. */
+function isAddLike(element: HTMLElement): boolean {
+  const label = actionLabel(element);
+  return label
+    ? ADD_LABEL.test(label) && !FORBIDDEN_LABEL.test(label)
+    : iconGlyphLabel(element) === "+";
+}
+
 function sectionCacheKey(section: GenericSection<LoopField>): string {
   return JSON.stringify([
     section.fingerprint,
@@ -545,7 +558,8 @@ export async function runGenericStructureLoop(
       (section) =>
         section.boundary === "repeat-row" ||
         section.fields[0]?.element instanceof HTMLSelectElement ||
-        listboxKindRow(section, sections) !== undefined,
+        listboxKindRow(section, sections) !== undefined ||
+        rowBoxOf(section, sections) !== undefined,
     );
     await classify(
       candidates,
@@ -1359,6 +1373,39 @@ export async function runGenericStructureLoop(
   }
 
   /**
+   * A section the page shows as one row: the smallest box holding its first
+   * and last fields and no field of another section, when that box offers an
+   * add-like control (an "add" name or a drawn plus). Rows the page already
+   * repeats are read by the repeat-row boundary instead.
+   */
+  function rowBoxOf(
+    section: GenericSection<LoopField>,
+    sections: readonly GenericSection<LoopField>[],
+  ): Element | undefined {
+    if (section.boundary === "repeat-row") return undefined;
+    const first = section.fields[0]?.element;
+    const last = section.fields.at(-1)?.element;
+    if (!first || !last) return undefined;
+    const foreign = sections
+      .filter((other) => other !== section)
+      .flatMap((other) => other.fields.map(({ element }) => element));
+    for (
+      let box: Element | null = first.parentElement;
+      box && box !== document.body;
+      box = box.parentElement
+    ) {
+      if (foreign.some((element) => box!.contains(element))) return undefined;
+      if (!box.contains(last)) continue;
+      return Array.from(box.querySelectorAll<HTMLElement>("button")).some(
+        (button) => !isHiddenElement(button) && isAddLike(button),
+      )
+        ? box
+        : undefined;
+    }
+    return undefined;
+  }
+
+  /**
    * An education section whose single row starts with a listbox button that
    * names the row's stage. The row is the smallest box holding that button
    * and the section's last field.
@@ -1425,6 +1472,144 @@ export async function runGenericStructureLoop(
   }
 
   /**
+   * Presses the add control the server picks in the last row until `needed`
+   * rows with the first row's layout exist. Each press must add exactly one
+   * row and leave the existing rows' values as they were. Returns the fresh
+   * observation, or undefined after recording why it stopped.
+   */
+  async function addRowsUntil(
+    firstRow: Element,
+    needed: number,
+    title: string | undefined,
+    canonicalFieldKey: string,
+    start: Observation,
+  ): Promise<Observation | undefined> {
+    const scope = document.body;
+    let observation = start;
+    const valuesOf = (rows: Element[]) =>
+      rows
+        .flatMap((row) =>
+          Array.from(
+            row.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
+              "input, textarea, select",
+            ),
+          ),
+        )
+        .map((control) => `${control.isConnected}\u0000${control.value}`)
+        .join("\u0001");
+    const blocked = (reason: string) => {
+      record({ kind: "ADD_ROW", ...(title ? { sectionTitle: title } : {}), result: "blocked", reason });
+      return undefined;
+    };
+    for (let added = 0; ; added += 1) {
+      const rows = sameLayoutRows(firstRow, scope);
+      if (rows.length >= needed) return observation;
+      if (aborted()) return undefined;
+      if (added >= MAX_ACTIONS_PER_SECTION) return blocked("SECTION_ACTION_LIMIT");
+      const last = rows.at(-1)!;
+      // A drawn minus removes a row; it is never offered as an add control.
+      const refs = actionRefs(observation).filter(
+        (ref) =>
+          isOfferableAddControl(ref) &&
+          last.contains(ref.element) &&
+          iconGlyphLabel(ref.element) !== "-",
+      );
+      if (refs.length === 0) return blocked("NO_ADD_CONTROL");
+      const chosenId = await askButtons(
+        "REPEAT_ADD",
+        canonicalFieldKey,
+        refs,
+        observation,
+        (ref) => {
+          const own = controlLabel(ref.element);
+          const heading = normalizedLabel(title);
+          const labels = [
+            ...(own ? [own] : []),
+            ...(heading ? [{ source: "section-heading" as const, text: heading }] : []),
+          ];
+          return {
+            candidateId: ref.candidateId,
+            element: ref.observed.element as InteractionCandidate["element"],
+            control: "button",
+            visibility: ref.observed.visibility,
+            relationToTarget: "SAME_REPEAT_ROW",
+            ...(labels.length > 0 ? { semanticContext: { labels } } : {}),
+          };
+        },
+      );
+      const chosen = refs.find((ref) => ref.candidateId === chosenId);
+      if (!chosen || !isSafeStructuralClick(chosen.element, document.body).allowed)
+        return blocked(chosenId === undefined ? "INTERACTION_UNAVAILABLE" : "REPEAT_ADD_ABSTAINED");
+      const before = valuesOf(rows);
+      chosen.element.click();
+      const grown = await waitFor(() =>
+        sameLayoutRows(firstRow, scope).length === rows.length + 1 ? true : undefined,
+      );
+      await settle();
+      if (document.URL !== initialUrl) return undefined;
+      if (!grown || valuesOf(rows) !== before)
+        return blocked(grown ? "executor:existing-group-value-changed" : "ADD_FAILED");
+      record({ kind: "ADD_ROW", ...(title ? { sectionTitle: title } : {}), result: "done", rowsBefore: rows.length, rowsAfter: rows.length + 1 });
+      observation = await observe();
+    }
+  }
+
+  /**
+   * Grows each non-education area the page shows as one row with an add-like
+   * control to the profile's entry count, and binds row i to entry i.
+   * Returns its observation when it changed nothing, so the loop can reuse it.
+   */
+  async function prepareSingleRowRepeats(
+    start: Observation | undefined,
+  ): Promise<Observation | undefined> {
+    const many = PROFILE_CATEGORIES.some(
+      ({ id }) => id !== "education" && (repeatedEntries(profile, id) ?? 0) >= 2,
+    );
+    if (!many) return start;
+    let observation = start ?? (await observe());
+    let changed = false;
+    const handled: Element[] = [];
+    for (;;) {
+      if (aborted()) return undefined;
+      const sections = observation.sections;
+      const next = sections
+        .map((section) => ({
+          section,
+          category: classified.get(sectionCacheKey(section)),
+          box: rowBoxOf(section, sections),
+        }))
+        .find(
+          ({ category, box }) =>
+            box !== undefined &&
+            category !== undefined &&
+            category !== "education" &&
+            (repeatedEntries(profile, category) ?? 0) >= 2 &&
+            !handled.some((row) => row === box || row.contains(box) || box.contains(row)),
+        );
+      if (!next) return changed ? undefined : observation;
+      const { section, category, box } = next as {
+        section: GenericSection<LoopField>;
+        category: string;
+        box: Element;
+      };
+      const needed = repeatedEntries(profile, category)!;
+      const key = profileKeyOf(category as ProfileCategoryId);
+      const rowsBefore = sameLayoutRows(box, document.body).length;
+      const grown = key
+        ? await addRowsUntil(box, needed, section.title, key, observation)
+        : undefined;
+      const rows = sameLayoutRows(box, document.body);
+      handled.push(...rows);
+      if (rows.length !== rowsBefore) changed = true;
+      if (grown && rows.length >= needed)
+        rows
+          .slice(0, needed)
+          .forEach((row, index) => context.repeatRows.set(row, { category, index }));
+      observation = grown ?? (await observe());
+    }
+  }
+
+  /**
    * Adds rows through the section's add control and chooses each row's stage
    * in its listbox, so every profile education entry gets its own row.
    */
@@ -1481,58 +1666,15 @@ export async function runGenericStructureLoop(
         )
         .map((control) => `${control.isConnected}\u0000${control.value}`)
         .join("\u0001");
-    for (let added = 0; added < MAX_ACTIONS_PER_SECTION; added += 1) {
-      const rows = sameLayoutRows(firstRow, scope);
-      if (rows.length >= wanted.length || aborted()) break;
-      const last = rows.at(-1)!;
-      const refs = actionRefs(observation).filter(
-        (ref) => isOfferableAddControl(ref) && last.contains(ref.element),
-      );
-      if (refs.length === 0) {
-        record({ kind: "ADD_ROW", ...(title ? { sectionTitle: title } : {}), result: "blocked", reason: "NO_ADD_CONTROL" });
-        return;
-      }
-      const chosenId = await askButtons(
-        "REPEAT_ADD",
-        REPEAT_KEYS.education!,
-        refs,
-        observation,
-        (ref) => {
-          const own = controlLabel(ref.element);
-          const heading = normalizedLabel(title);
-          const labels = [
-            ...(own ? [own] : []),
-            ...(heading ? [{ source: "section-heading" as const, text: heading }] : []),
-          ];
-          return {
-            candidateId: ref.candidateId,
-            element: ref.observed.element as InteractionCandidate["element"],
-            control: "button",
-            visibility: ref.observed.visibility,
-            relationToTarget: "SAME_REPEAT_ROW",
-            ...(labels.length > 0 ? { semanticContext: { labels } } : {}),
-          };
-        },
-      );
-      const chosen = refs.find((ref) => ref.candidateId === chosenId);
-      if (!chosen || !isSafeStructuralClick(chosen.element, document.body).allowed) {
-        record({ kind: "ADD_ROW", ...(title ? { sectionTitle: title } : {}), result: "blocked", reason: chosenId === undefined ? "INTERACTION_UNAVAILABLE" : "REPEAT_ADD_ABSTAINED" });
-        return;
-      }
-      const before = valuesOf(rows);
-      chosen.element.click();
-      const grown = await waitFor(() =>
-        sameLayoutRows(firstRow, scope).length === rows.length + 1 ? true : undefined,
-      );
-      await settle();
-      if (document.URL !== initialUrl) return;
-      if (!grown || valuesOf(rows) !== before) {
-        record({ kind: "ADD_ROW", ...(title ? { sectionTitle: title } : {}), result: "blocked", reason: grown ? "executor:existing-group-value-changed" : "ADD_FAILED" });
-        return;
-      }
-      record({ kind: "ADD_ROW", ...(title ? { sectionTitle: title } : {}), result: "done", rowsBefore: rows.length, rowsAfter: rows.length + 1 });
-      observation = await observe();
-    }
+    const grown = await addRowsUntil(
+      firstRow,
+      wanted.length,
+      title,
+      REPEAT_KEYS.education!,
+      observation,
+    );
+    if (!grown) return;
+    observation = grown;
     const rows = sameLayoutRows(firstRow, scope).slice(0, wanted.length);
     const parent = rows.length > 1
       ? (() => {
@@ -1651,6 +1793,7 @@ export async function runGenericStructureLoop(
   let previousSignature: string | undefined;
   try {
     let prepared = aborted() ? undefined : await prepareListboxEducationRows();
+    prepared = aborted() ? undefined : await prepareSingleRowRepeats(prepared);
     for (let iteration = 0; ; iteration += 1) {
       if (aborted()) {
         stopReason = "ABORTED";

@@ -29,6 +29,8 @@ export interface GenericStructureContext {
       kindControl?: HTMLElement;
     }
   >;
+  /** Rows the structure step grew for a repeatable category, by entry order. */
+  repeatRows: Map<Element, { category: string; index: number }>;
 }
 
 export function createGenericStructureContext(): GenericStructureContext {
@@ -36,6 +38,7 @@ export function createGenericStructureContext(): GenericStructureContext {
     blockedScopes: new Map(),
     educationGroups: new Set(),
     educationRows: new Map(),
+    repeatRows: new Map(),
   };
 }
 
@@ -47,7 +50,9 @@ function structureRowFor(
 ): Element | undefined {
   return (
     genericRowFor(element) ??
-    [...context.educationRows.keys()].find((row) => row.contains(element))
+    [...context.educationRows.keys(), ...context.repeatRows.keys()].find(
+      (row) => row.contains(element),
+    )
   );
 }
 
@@ -71,12 +76,29 @@ export function bindGenericStructureRows(
       ),
     ]),
   );
+  const repeatCounts = new Map<string, number>();
+  for (const { category } of context.repeatRows.values())
+    repeatCounts.set(category, (repeatCounts.get(category) ?? 0) + 1);
   for (const candidateId of ids) {
     const lookup = snapshot.registry.lookupField(candidateId);
     if (!("handle" in lookup)) continue;
     const handle = lookup.handle;
     const element = handle.elements[0] ?? handle.customElements?.[0];
     const row = element && structureRowFor(element, context);
+    const repeat = row && context.repeatRows.get(row);
+    if (row && repeat && row.isConnected) {
+      handle.itemIndex = repeat.index;
+      handle.itemGroupId = `${handle.itemGroupId ?? ""}:repeat:${repeat.category}`;
+      snapshot.registry.setFieldItemCount(
+        handle.sectionId,
+        repeatCounts.get(repeat.category) ?? 0,
+        handle.itemGroupId,
+      );
+      const wasCurrent = handle.isCurrentContext;
+      handle.isCurrentContext = () =>
+        wasCurrent?.() !== false && row.isConnected && row.contains(element!);
+      continue;
+    }
     const binding = row && context.educationRows.get(row);
     if (!row || !binding || !row.parentElement) continue;
     handle.itemIndex = binding.sectionIndex;
