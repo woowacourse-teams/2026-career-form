@@ -17,6 +17,7 @@ import {
 } from "../src/autofill-demo/messages";
 import { openInPagePanel } from "../src/extension/open-in-page-panel";
 import { openInstalledOnboarding } from "../src/extension/install-onboarding";
+import { createPanelShortcutHandler } from "../src/extension/panel-shortcut";
 import { openToolbarPanel } from "../src/extension/toolbar-panel";
 
 export default defineBackground(() => {
@@ -42,6 +43,11 @@ export default defineBackground(() => {
     browser.storage.local,
     browser.runtime.id,
   );
+  const handlePanelShortcut = createPanelShortcutHandler(
+    browser.commands,
+    browser.runtime.id,
+  );
+  // The panel shortcut (_execute_action) also lands here, like a toolbar click.
   browser.action.onClicked.addListener((tab) => {
     void openToolbarPanel(tab, {
       openPanel: (tabId) => openInPagePanel(undefined, tabId),
@@ -84,6 +90,8 @@ export default defineBackground(() => {
     if (postingResponse !== undefined) return postingResponse;
     const pushResponse = push.handleMessage(message, sender);
     if (pushResponse !== undefined) return pushResponse;
+    const shortcutResponse = handlePanelShortcut(message, sender);
+    if (shortcutResponse !== undefined) return shortcutResponse;
     if (parseAnalyticsMessage(message)) {
       return handleAnalytics(message);
     }

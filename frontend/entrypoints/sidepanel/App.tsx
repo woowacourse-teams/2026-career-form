@@ -23,6 +23,7 @@ import {
 } from "../../src/job-postings/unread-postings";
 import styles from "./App.module.css";
 import panelCss from "./App.module.css?inline";
+import { PanelShortcutHint } from "./PanelShortcutHint";
 import { ProfileValueList } from "./ProfileValueList";
 
 interface AppProps {
@@ -41,6 +42,8 @@ interface AppProps {
   showPostings?: boolean;
   unreadPostings?: UnreadReader;
   readImportCandidates?: () => Promise<readonly ImportCandidate[]>;
+  /** Only the in-page panel, which the shortcut opens, passes this. */
+  readPanelShortcut?: () => Promise<string | undefined>;
 }
 
 type LoadStatus = "loading" | "ready" | "error";
@@ -119,6 +122,7 @@ export function App({
   showPostings = true,
   unreadPostings = unreadPostingsReader,
   readImportCandidates,
+  readPanelShortcut,
 }: AppProps) {
   const repository = useMemo(
     () => injectedRepository ?? new ChromeProfileStorage(),
@@ -275,6 +279,9 @@ export function App({
             <span aria-hidden="true">×</span>
           </button>
         </div>
+        {readPanelShortcut && !autofillActive && !importActive && (
+          <PanelShortcutHint read={readPanelShortcut} />
+        )}
         <div className={styles.titleRow}>
           {autofillActive && returnToProfile && (
             <button

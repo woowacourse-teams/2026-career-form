@@ -6,6 +6,7 @@ import {
   serializeBuildInfo,
 } from "./scripts/build-info";
 import type { BuildInfo } from "./scripts/build-info";
+import { PANEL_COMMANDS } from "./src/extension/panel-shortcut";
 
 let buildInfo: BuildInfo;
 
@@ -66,6 +67,8 @@ export default defineConfig({
     },
   },
   manifest: {
+    // Opens the in-page panel exactly like a toolbar click.
+    commands: PANEL_COMMANDS,
     description: "채용 지원 정보를 안전하게 재사용하는 Chrome 확장 프로그램",
     name: "Career Form",
     host_permissions: [
