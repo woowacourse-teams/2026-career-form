@@ -94,7 +94,7 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [오프라인 기입 정확도 측정](topics/offline-write-accuracy.md) | 결과 전 고정 정답, 제품 경로 판정, 보존식 집계와 스냅샷별 기준선 | 2026-10-21 |
 | [범용 자동 기입 검색 표면](topics/generic-autofill-search.md) | 범용 자격증 반복 행, 검색, 후속 재검토, 혼합 학력 행, role 없는 레이어 검색, 공급자 중립 검색 결과 구조 해석과 기존 CJ 계약 및 실사이트 검증 경계 | 2026-10-01 |
 | [범용 날짜 형식 변환과 로컬 승인](topics/generic-date-format.md) | 날짜 DIRECT 변환, 로컬 승인 재검증과 자동/실사이트 검증 구분 | 2026-09-24 |
-| [범용 연월 달력 선택과 로컬 실행 경계](topics/generic-calendar-selection.md) | DOM 소유권, 개별 승인, 역할 판별과 연월, 연월일 달력 실행의 안전 경계, 달력 기입의 최종 값 확인 | 2026-10-21 |
+| [범용 연월 달력 선택과 로컬 실행 경계](topics/generic-calendar-selection.md) | DOM 소유권, 개별 승인, 역할 판별과 연월, 연월일 달력 실행의 안전 경계, 달력 기입의 최종 값 확인, 실행이 연 달력의 드롭다운 확인 제외 | 2026-10-29 |
 | [발표 디자인 시스템](topics/presentation-design-system.md) | 독립 레이아웃, 교체 슬롯과 정적 HTML/CSS 재현 규칙 | 2026-08-26 |
 | [랜딩,온보딩 웹 페이지](topics/landing-onboarding.md) | 단계형 선택 입력과 요약 보충, 확장 온보딩과 웹 경계 | 2026-10-13 |
 | [릴리스 브랜치 유지와 정리](topics/release-branch-lifecycle.md) | 배포,동기화 완료 후 정리와 SHA 보호, 관리자 설정 | 2026-10-03 |
@@ -105,7 +105,7 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [시스템 PR 공유 파일 검사와 릴리스 본문 계약](topics/release-pr-contract.md) | 중앙 시스템 PR 분류, 일반 및 hotfix 보호와 릴리스 생성 본문 검증 | 2026-10-12 |
 | [품질 관측 호출의 인터럽트 처리](topics/quality-observation-interruption.md) | 제출 전 인터럽트 검사, 상태 보존과 실행 중 취소 회귀 | 2026-10-13 |
 | [범용 지원서의 구조 행동 자동 실행](topics/generic-autonomous-structural-actions.md) | 구조 행동 자동 실행과 값 쓰기 승인 유지, 제안됨 ADR | 2026-10-16 |
-| [범용 구조 반복 실행과 학력 행 격리](topics/generic-structure-loop.md) | 기본 수집 보존, 구조 반복 실행, 단계별 행 식별, 숨은 다른 단계 control 제외와 국소 보류 | 2026-10-21 |
+| [범용 구조 반복 실행과 학력 행 격리](topics/generic-structure-loop.md) | 기본 수집 보존, 구조 반복 실행, 단계별 행 식별, 숨은 다른 단계 control 제외와 국소 보류, 줄 하나만 보이는 반복 영역의 행 추가 | 2026-10-29 |
 | [범용 분석 provider의 JEV 단일화](topics/jev-single-analysis-provider.md) | JEV 단일 provider 결정과 데이터 정책 미검증 위험, 제안됨 ADR | 2026-10-16 |
 | [범용 전용 API 분리와 섹션 범주별 칸 매칭](topics/generic-api-section-category-matching.md) | 범용 API 분리와 섹션 분류 기반 범주별 매칭, 제안됨 ADR | 2026-10-16 |
 | [범용 범주 안 JEV 매칭 누락 원인과 의미 근거 보강](topics/generic-category-semantic-matching.md) | 라벨 손실 보강, 등급·점수 계약 보존과 합성 반례 출처 | 2026-10-19 |

@@ -927,3 +927,11 @@
 - 승인된 후보 2개를 [CF-350 bundle](../raw/issues/CF-350/manifest.md)에 두 payload로 기록했다. CI/CD 설정(알림 토글·선택값 2개·VAPID 시크릿 3개의 전달 경로로 변수 13개·시크릿 10개, 빈 문자열과 Spring placeholder 기본값 때문에 compose가 선택값 기본값을 채우는 이유, Environment 값은 다음 배포에서만 반영되는 점과 환경별 재배포 트리거), 배포 Runbook(병합 전 점검표의 운영 알림 토글 결정 항목, 스테이징 활성화 순서, 키 회전의 구독 무효).
 - [CI/CD 설정](topics/cicd-setup.md)과 [배포 Runbook](topics/deployment-runbook.md)의 Current를 CF-350으로 바꾸고 앞선 근거를 History에 남겼다. 절차의 Wiki 밖 정본은 `infra/WEB_PUSH_VAPID.md`다.
 - VAPID 키 값, 호스트 주소, 계정, 대화 전문은 저장하지 않았다.
+
+## [2026-10-29] ingest | CF-355 줄 하나 반복 영역과 달력 뒤 드롭다운 확인
+
+- Approval-Digest: 8a784b1b386ac3a3142c61d713ef9c8b6d3741cebc93ca8fb80e228f58c890b3
+- Source-Revision: fb77e1f
+- 승인된 후보 4개 중 CF-355 범위 3개를 [CF-355 bundle](../raw/issues/CF-355/manifest.md)에 두 payload로 기록했다. 줄 하나만 보이는 반복 영역의 행 상자 판정·+ 그림 버튼 행 추가·줄 i와 항목 i 연결, 글자 없는 아이콘 버튼의 범용 전용 수집, 실행이 연 달력 루트·열기 버튼의 드롭다운 확인 제외.
+- [범용 구조 반복 실행](topics/generic-structure-loop.md)과 [범용 연월 달력 선택](topics/generic-calendar-selection.md)의 Current를 CF-355로 바꾸고 앞선 근거를 History에 남겼다. 후보 1은 CF-358 bundle에 기록한다.
+- 실제 지원값, 계정, 세션, 페이지 주소, 대화 전문은 저장하지 않았다.

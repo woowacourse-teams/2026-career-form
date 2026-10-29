@@ -2,9 +2,9 @@
 
 > Topic: generic-calendar-selection
 > Status: Current
-> Current: [CF-313 달력 기입의 공통 최종 값 확인](../../raw/issues/CF-313/documents/generic-calendar-selection.md)
-> History: [근거 1](../../raw/issues/CF-104/documents/adr/104-generic-calendar-selection.md); [근거 2](../../raw/issues/CF-118/documents/generic-calendar-selection.md); [CF-307 날짜 기본 선택과 반복 열 근거](../../raw/issues/CF-307/documents/generic-calendar-selection.md); [CF-313 달력 기입의 공통 최종 값 확인](../../raw/issues/CF-313/documents/generic-calendar-selection.md)
-> Updated: 2026-10-21
+> Current: [CF-355 실행이 연 달력의 드롭다운 확인 제외](../../raw/issues/CF-355/documents/generic-calendar-selection.md)
+> History: [근거 1](../../raw/issues/CF-104/documents/adr/104-generic-calendar-selection.md); [근거 2](../../raw/issues/CF-118/documents/generic-calendar-selection.md); [CF-307 날짜 기본 선택과 반복 열 근거](../../raw/issues/CF-307/documents/generic-calendar-selection.md); [CF-313 달력 기입의 공통 최종 값 확인](../../raw/issues/CF-313/documents/generic-calendar-selection.md); [CF-355 실행이 연 달력의 드롭다운 확인 제외](../../raw/issues/CF-355/documents/generic-calendar-selection.md)
+> Updated: 2026-10-29
 
 ## 현재 상태
 
@@ -21,3 +21,7 @@ CF-313부터 `SELECT_DATE` 기입도 다른 기입 명령과 같은 공통 최�
 ## 변경 이유
 
 읽기 전용 달력은 단순 텍스트 형식 변환과 다른 UI 상태 전이가 필요하다. 회사별 고정 DOM과 무제한 클릭 실행을 피하면서 개인정보와 사용자의 개별 승인을 보존하기 위해 로컬 상태 머신 경계를 선택했다. CF-118은 의미 매핑이 입사일·종료일을 `SELECT_DATE`로 판단해도 월 달력만 조작할 수 있던 한계를, 공유 루트 연월일 달력의 소유권 증명과 정확한 일자 확인으로 보완했다. CF-307은 이 승인 경계를 유지하면서 기본 선택과 라벨 없는 동일 반복 열의 날짜 단위 근거를 보완한다. CF-313은 달력 실행기 성공만으로 입력 완료를 보고해 페이지가 값을 되돌린 경우를 놓치던 결함을 공통 최종 값 확인으로 보완한다.
+
+## 실행이 연 달력과 드롭다운 확인
+
+일 달력 역할 판정을 포기한 뒤 일부 팝오버는 숨긴 채 연·월 select와 열기 버튼의 `aria-controls`를 남긴다. 다음 드롭다운을 열 때 이것이 닫히면 범용 드롭다운 확인이 되돌릴 수 없는 값 변경으로 보고 실행 전체를 멈췄다. 일 달력 실행기는 연 루트와 열기 버튼을 기억하고, 범용 드롭다운 실행기는 기억된 루트 안의 칸과 열기 버튼 자체의 표시만 값 비교에서 뺀다. 다른 호출부는 제외 없이 비교한다. 포기할 때는 보이는 달력과 팝업이 사라질 때까지 기다린다. 근거는 [CF-355](../../raw/issues/CF-355/documents/generic-calendar-selection.md)를 따른다.
