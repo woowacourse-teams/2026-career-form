@@ -37,6 +37,11 @@ in detail: closed and renamed institutions can still be relevant to alumni.
   <https://www.dataq.or.kr/www/sub/a_04.do?menuid=1004> (SQL 개발자 / SQLD),
   <https://www.dataq.or.kr/www/sub/a_03.do?menuid=1003> (SQL 전문가 / SQLP).
   No other abbreviations or school aliases were invented.
+- Autofill matching (not catalog data) accepts one site spelling difference:
+  a 한국폴리텍 university or graduate school whose site label carries a
+  campus-group number (`한국폴리텍 I 대학 …`) matches the unnumbered KESS name
+  only when the number appears on one side, and removing it points to exactly
+  one catalog entry (`matchesCatalogNumberedCollege`).
 
 ### Download artifacts (not bundled)
 
