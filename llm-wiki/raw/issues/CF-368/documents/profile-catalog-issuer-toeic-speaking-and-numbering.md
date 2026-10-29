@@ -2,7 +2,7 @@
 
 > Issue: CF-368
 > Collected: 2026-10-29
-> Approval-Digest: 0ca1b67136be3ae037b664c3398b75b7d43ff56854e386b64df2836d2e9144a5
+> Approval-Digest: b248c7c1b42ba910bc8cbbe50815c2a1adef692dbf08c12363336f19941025e5
 > Source-Revision: bd1f21a776d4de1461717ac108125248f994711c
 
 이 문서는 2026-10-29 CF-368에서 승인된 후보 3·8·10을 프로필 카탈로그 관점에서 수집한 기록이다. Approval-Digest의 계산 방식과 원문은 [manifest](../manifest.md)와 [승인 후보 스냅샷](approved-candidates.md)을 따른다. 바꾸지 않은 결정(`selected`·`manual` 신원 형식, 이름 수정 시 연결 해제, 카탈로그 출처와 목록 밖 항목의 직접 입력, 어학 시험 선택의 비추론)은 Supersedes가 가리키는 CF-162 근거를 따른다. 카탈로그 출처, 해시, 건수의 정본은 계속 `frontend/src/profile/catalog-data/README.md`다.

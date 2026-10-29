@@ -2,7 +2,7 @@
 
 > Issue: CF-368
 > Collected: 2026-10-29
-> Approval-Digest: 0ca1b67136be3ae037b664c3398b75b7d43ff56854e386b64df2836d2e9144a5
+> Approval-Digest: b248c7c1b42ba910bc8cbbe50815c2a1adef692dbf08c12363336f19941025e5
 > Source-Revision: bd1f21a776d4de1461717ac108125248f994711c
 
 이 문서는 2026-10-29 CF-368에서 승인된 후보 5·6·7을 확장 패널 UI 관점에서 수집한 기록이다. Approval-Digest의 계산 방식과 원문은 [manifest](../manifest.md)와 [승인 후보 스냅샷](approved-candidates.md)을 따른다. 바꾸지 않은 색·텍스트 계층과 저장·승인·쓰기 동작 분리는 Supersedes가 가리키는 CF-82 근거를 따른다.
@@ -26,16 +26,18 @@
 - 반복 항목의 복사 버튼 접근 이름은 '<소제목> <필드> 복사'다.
 - 소제목은 검색 대상이 아니다. 긴 기관명은 줄바꿈한다.
 
-### 패널 열기 단축키 (후보 7)
+### 패널 열기·닫기 단축키 (후보 7)
 
-- manifest `commands._execute_action`으로 등록하고 제안 키는 `Alt+Shift+C`다(DevTools의 Ctrl/Cmd+Shift+C와 Chrome의 Alt+Shift 기본 키를 피함). 확장에 팝업이 없어 단축키는 툴바 클릭과 같은 `action.onClicked` → 페이지 안 패널 경로를 탄다.
+- manifest `commands._execute_action`으로 등록하고 제안 키는 `Alt+Shift+C`다(DevTools의 Ctrl/Cmd+Shift+C와 Chrome의 Alt+Shift 기본 키를 피함). 확장에 팝업이 없어 단축키는 툴바 클릭과 같은 `action.onClicked` 경로를 탄다.
+- 이 경로에서만 background가 토글 메시지(`career-form:toggle-in-page-profile-panel`)를 보낸다. 페이지 안 패널이 열려 있으면 닫기 버튼과 같이 닫고, 닫혀 있으면 연다. 런처 버튼 등 다른 경로의 열기 메시지는 계속 열기만 한다. 토글 응답은 열기 메시지처럼 끝난 Promise로 돌려주고, background는 콘텐츠 스크립트가 없을 때만 다시 주입하고 다시 보낸다.
+- 2026-10-29 사용자 요청으로 단축키와 툴바 아이콘을 같이 토글로 바꿨다. 같은 날 새 Chromium 프로필에서 제안 키 배정을 확인했을 때 `Command+Shift+F`는 Chrome이 배정하지 않았고(빈 값) `Alt+Shift+C`는 배정됐다.
 - 콘텐츠 스크립트에서는 `chrome.commands`를 쓸 수 없어, 페이지 안 패널이 background에 메시지로 `commands.getAll()`을 요청한다. background는 `sender.id`가 이 확장일 때만 답한다.
 - 할당된 키가 있으면 패널 헤더에 그 키를, 없으면 `chrome://extensions/shortcuts`에서 지정하라는 안내를 보인다. 읽기에 실패하면 안내를 숨긴다.
 - 빌드 검사 `assert-build`와 ZIP 검사 `assert-zip`이 manifest `commands`를 확인한다.
 
 ## 검증 경계
 
-자동 테스트(`App.test.tsx`, `App.shortcut.test.tsx`, `profile-search.test.ts`, `field-display.test.ts`, `panel-shortcut.test.ts`, `InPageProfilePanel.shortcut.test.tsx`)로 고정했다. Chrome이 사용자 환경에서 제안 키를 실제로 할당하는지는 다른 확장과의 충돌에 따라 달라질 수 있어, 키가 없을 때의 안내를 함께 둔다.
+자동 테스트(`App.test.tsx`, `App.shortcut.test.tsx`, `autofill.content/index.test.tsx`, `open-in-page-panel.test.ts`, `profile-search.test.ts`, `field-display.test.ts`, `panel-shortcut.test.ts`, `InPageProfilePanel.shortcut.test.tsx`)로 고정했다. Chrome이 사용자 환경에서 제안 키를 실제로 할당하는지는 다른 확장과의 충돌에 따라 달라질 수 있어, 키가 없을 때의 안내를 함께 둔다.
 
 ## 참고 코드
 

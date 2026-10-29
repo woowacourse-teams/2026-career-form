@@ -2,7 +2,7 @@
 
 > Issue: CF-368
 > Collected: 2026-10-29
-> Approval-Digest: 0ca1b67136be3ae037b664c3398b75b7d43ff56854e386b64df2836d2e9144a5
+> Approval-Digest: b248c7c1b42ba910bc8cbbe50815c2a1adef692dbf08c12363336f19941025e5
 > Source-Revision: bd1f21a776d4de1461717ac108125248f994711c
 
 이 문서는 2026-10-29 CF-368([FE] 1.4.0 QA의 Greeting 학교명 미확정과 사이드 패널 표시 문제 수정 및 프로필 입력 보강)에서 승인된 후보 1·2·3·4를 Greeting 어댑터 관점에서 수집한 기록이다. Approval-Digest의 계산 방식과 원문은 [manifest](../manifest.md)와 [승인 후보 스냅샷](approved-candidates.md)을 따른다. 바꾸지 않은 내용(직접 입력 선택지 구조와 v19 허용 범위, 검색 실패 사유 코드, 그 앞의 팝오버·서버 액션·별칭 근거)은 Supersedes가 가리키는 CF-346 근거와 그 앞의 근거를 따른다. 실측은 테스트 계정과 합성 프로필로 했고 실제 지원값·계정·세션은 포함하지 않는다.

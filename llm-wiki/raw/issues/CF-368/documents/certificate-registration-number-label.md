@@ -2,7 +2,7 @@
 
 > Issue: CF-368
 > Collected: 2026-10-29
-> Approval-Digest: 0ca1b67136be3ae037b664c3398b75b7d43ff56854e386b64df2836d2e9144a5
+> Approval-Digest: b248c7c1b42ba910bc8cbbe50815c2a1adef692dbf08c12363336f19941025e5
 > Source-Revision: bd1f21a776d4de1461717ac108125248f994711c
 
 이 문서는 2026-10-29 CF-368에서 승인된 후보 9를 프로필 필드 관점에서 수집한 기록이다. Approval-Digest의 계산 방식과 원문은 [manifest](../manifest.md)와 [승인 후보 스냅샷](approved-candidates.md)을 따른다. 그 밖의 프로필 구조와 필드 계약은 Supersedes가 가리키는 CF-41 근거를 따른다.

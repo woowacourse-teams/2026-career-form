@@ -2,8 +2,8 @@
 
 > Issue: CF-368
 > Collected: 2026-10-29
-> Approval-Digest: 0ca1b67136be3ae037b664c3398b75b7d43ff56854e386b64df2836d2e9144a5
-> Approval-Response: 승인할게 (워크플로 하네스가 사용자 원문을 그대로 전달)
+> Approval-Digest: b248c7c1b42ba910bc8cbbe50815c2a1adef692dbf08c12363336f19941025e5
+> Approval-Response: 승인할게 (후보 1~11 최초 승인), 위키 후보 승인. (후보 7을 열기·닫기 토글로 고친 뒤 재승인)
 > Approval-Date: 2026-10-29
 > Source-Revision: bd1f21a776d4de1461717ac108125248f994711c
 
