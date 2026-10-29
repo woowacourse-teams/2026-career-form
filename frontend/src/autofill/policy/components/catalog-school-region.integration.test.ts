@@ -300,9 +300,35 @@ it.each([
     );
     expect(result.success).toBe(false);
     expect(result.clicked).not.toHaveBeenCalled();
+    expect(result.reported).toEqual(["SEARCH_AMBIGUOUS"]);
     expect(result.input.value).toBe(HIGH_SCHOOL.school);
   },
 );
+
+it.each([
+  {
+    name: "a selected catalog school contradicted by the profile region",
+    options: { identity: "selected" as const, region: "region:daegu" },
+  },
+  {
+    name: "a manual school without a profile region",
+    options: { identity: "manual" as const },
+  },
+  {
+    name: "no identity and no profile region",
+    options: { identity: "none" as const },
+  },
+])("rejects a retained same-name selection for $name", async ({ options }) => {
+  const result = await run(
+    HIGH_SCHOOL,
+    [{ description: "대구", checked: true }, ...SAME_NAME.slice(1)],
+    { ...options, existing: true },
+  );
+  expect(result.success).toBe(false);
+  expect(result.clicked).not.toHaveBeenCalled();
+  expect(result.reported).toEqual(["SEARCH_AMBIGUOUS"]);
+  expect(result.input.value).toBe(HIGH_SCHOOL.school);
+});
 
 it.each([
   { name: "selected catalog", identity: "selected" as const },

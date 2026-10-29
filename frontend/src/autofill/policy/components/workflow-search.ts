@@ -424,6 +424,7 @@ export async function search(
       let emptyList = false;
       let retainedCode: string | undefined;
       let retainedDescription: string | undefined;
+      let retainedAmbiguous = false;
       const retained = await waitFor(
         () => {
           if (!current() || input.value !== original) return false;
@@ -447,18 +448,21 @@ export async function search(
             retainedPopup.usable(checked[0]) &&
             searchOptionLabel(checked[0]) === original &&
             matchesOption(checked[0]);
-          // A reopened list with same-name rivals must agree with the tie-break.
-          const rivals = region
-            ? preferredOptions(
-                input,
-                retainedPopup.popup,
-                matchesOption,
-                retainedPopup.usable,
-              ).preferred
-            : [];
+          // A reopened high-school list with same-name rivals must agree with
+          // the tie-break; without a usable region it stays ambiguous.
+          const rivals =
+            inputKind === "highSchool"
+              ? preferredOptions(
+                  input,
+                  retainedPopup.popup,
+                  matchesOption,
+                  retainedPopup.usable,
+                ).preferred
+              : [];
           tieBroken = rivals.length > 1;
-          if (verified && tieBroken && tieBreak(rivals) !== checked[0])
-            return false;
+          retainedAmbiguous =
+            verified && tieBroken && tieBreak(rivals) !== checked[0];
+          if (retainedAmbiguous) return false;
           if (verified) {
             retainedCode =
               checked[0].getAttribute(
@@ -480,6 +484,7 @@ export async function search(
       // Some Component forms forms reopen an exact value without rendering options.
       if (retained === undefined && emptyList && original === item.profileValue)
         report?.("SEARCH_SELECTION_UNVERIFIED");
+      if (retainedAmbiguous) report?.("SEARCH_AMBIGUOUS");
       if (
         retained !== true ||
         !(await mayMutate(signal, beforeMutation)) ||
