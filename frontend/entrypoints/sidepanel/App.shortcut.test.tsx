@@ -5,7 +5,7 @@ import { createEmptyProfile } from "../../src/profile/model";
 import type { ProfileRepository } from "../../src/profile/profile-repository";
 import { App } from "./App";
 
-const SHORTCUT_TEXT = /이 패널을 열 수 있어요|단축키가 없어요/;
+const SHORTCUT_TEXT = /이 패널을 열고 닫을 수 있어요|단축키가 없어요/;
 
 function repository(): ProfileRepository {
   const profile = createEmptyProfile();
@@ -27,7 +27,7 @@ describe("panel shortcut hint", () => {
       />,
     );
 
-    const hint = await screen.findByText(/로 이 패널을 열 수 있어요/);
+    const hint = await screen.findByText(/로 이 패널을 열고 닫을 수 있어요/);
     expect(hint.querySelector("kbd")).toHaveTextContent("Alt+Shift+C");
     expect(hint.closest("header")).not.toBeNull();
   });
@@ -42,7 +42,7 @@ describe("panel shortcut hint", () => {
         "패널을 여는 단축키가 없어요. chrome://extensions/shortcuts에서 지정할 수 있어요",
       ),
     ).toBeInTheDocument();
-    expect(screen.queryByText(/이 패널을 열 수 있어요/)).toBeNull();
+    expect(screen.queryByText(/이 패널을 열고 닫을 수 있어요/)).toBeNull();
   });
 
   it("단축키를 읽지 못하면 처리되지 않은 거부 없이 안내를 숨긴다", async () => {

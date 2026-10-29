@@ -7,7 +7,7 @@ interface PanelShortcutHintProps {
   read: () => Promise<string | undefined>;
 }
 
-/** One line under the brand telling how to reopen this panel from the keyboard. */
+/** One line under the brand telling how to open and close this panel from the keyboard. */
 export function PanelShortcutHint({ read }: PanelShortcutHintProps) {
   const [shortcut, setShortcut] = useState<string>();
 
@@ -30,7 +30,7 @@ export function PanelShortcutHint({ read }: PanelShortcutHintProps) {
     <p className={styles.shortcutHint}>
       {shortcut ? (
         <>
-          <kbd>{shortcut}</kbd>로 이 패널을 열 수 있어요
+          <kbd>{shortcut}</kbd>로 이 패널을 열고 닫을 수 있어요
         </>
       ) : (
         // Content scripts cannot open chrome:// pages, so the address is text.

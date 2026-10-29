@@ -14,6 +14,7 @@ import {
   isOpenInPageProfilePanelMessage,
   isOpenOptionsPageMessage,
   isOpenSidePanelMessage,
+  TOGGLE_IN_PAGE_PROFILE_PANEL_MESSAGE,
 } from "../src/autofill-demo/messages";
 import { openInPagePanel } from "../src/extension/open-in-page-panel";
 import { openInstalledOnboarding } from "../src/extension/install-onboarding";
@@ -47,10 +48,12 @@ export default defineBackground(() => {
     browser.commands,
     browser.runtime.id,
   );
-  // The panel shortcut (_execute_action) also lands here, like a toolbar click.
+  // The panel shortcut (_execute_action) also lands here, like a toolbar click;
+  // both open the in-page panel or close it when it is already open.
   browser.action.onClicked.addListener((tab) => {
     void openToolbarPanel(tab, {
-      openPanel: (tabId) => openInPagePanel(undefined, tabId),
+      openPanel: (tabId) =>
+        openInPagePanel(undefined, tabId, TOGGLE_IN_PAGE_PROFILE_PANEL_MESSAGE),
       openProfile: () => browser.runtime.openOptionsPage(),
     }).catch(() => undefined);
   });

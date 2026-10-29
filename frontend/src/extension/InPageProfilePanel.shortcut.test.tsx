@@ -28,7 +28,7 @@ it("페이지 안 패널은 주입한 단축키 읽기로 안내한다", async (
     />,
   );
 
-  const hint = await screen.findByText(/로 이 패널을 열 수 있어요/);
+  const hint = await screen.findByText(/로 이 패널을 열고 닫을 수 있어요/);
   expect(hint.querySelector("kbd")).toHaveTextContent("Alt+Shift+C");
   expect(readPanelShortcut).toHaveBeenCalled();
 });
