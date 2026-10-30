@@ -122,6 +122,8 @@ export interface WorkflowAnalysisContext {
   approvedSensitiveValues: MutableRefObject<Map<string, string>>;
   consideredSensitiveValues: MutableRefObject<Map<string, string>>;
   freshDefaultControls: MutableRefObject<WeakSet<Element>>;
+  /** Next stored entry per "category.section" for a refilled single entry box. */
+  singleRowEntryOffsets?: MutableRefObject<ReadonlyMap<string, number>>;
   completedDriverKeys: MutableRefObject<ReadonlySet<string>>;
   completedGenericStateDrivers: MutableRefObject<
     ReadonlyMap<string, CompletedGenericStateDriver>

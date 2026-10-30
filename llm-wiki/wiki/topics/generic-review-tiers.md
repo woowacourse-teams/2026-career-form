@@ -2,9 +2,9 @@
 
 > Topic: generic-review-tiers
 > Status: Current
-> Current: [CF-358 미리 승인한 새 칸 자동 기입과 확인 필요 기본 포함](../../raw/issues/CF-358/documents/generic-review-tiers.md)
-> History: [CF-259 범용 검토 화면의 3단계 표시](../../raw/issues/CF-259/documents/generic-review-tiers.md); [CF-307 선택 기반 검토 패널 소속과 개수](../../raw/issues/CF-307/documents/generic-review-tiers.md); [CF-358 미리 승인한 새 칸 자동 기입과 확인 필요 기본 포함](../../raw/issues/CF-358/documents/generic-review-tiers.md)
-> Updated: 2026-10-29
+> Current: [CF-370 확장이 값을 넣은 반복 줄의 줄 저장](../../raw/issues/CF-370/documents/generic-review-tiers.md)
+> History: [CF-259 범용 검토 화면의 3단계 표시](../../raw/issues/CF-259/documents/generic-review-tiers.md); [CF-307 선택 기반 검토 패널 소속과 개수](../../raw/issues/CF-307/documents/generic-review-tiers.md); [CF-358 미리 승인한 새 칸 자동 기입과 확인 필요 기본 포함](../../raw/issues/CF-358/documents/generic-review-tiers.md); [CF-370 확장이 값을 넣은 반복 줄의 줄 저장](../../raw/issues/CF-370/documents/generic-review-tiers.md)
+> Updated: 2026-10-30
 
 ## 현재 상태
 
@@ -45,3 +45,7 @@ BLOCKED는 입력 불가, 나머지는 확인 필요다. 상세는 [현재 근�
 1차 검토는 "나타날 수 있는 칸"을 보여 준다. 대상은 1차 검토에서 쓸 수 있게 보인 칸이 덮지 않은 모든 범주의 저장된 프로필 값이다. 숨은 칸, 입력 불가로 보이던 조건부 칸, 영역 자체가 없던 범주를 포함한다. 사용자가 체크를 켜 둔 채 실행하면, 실행 중 나타난 칸과 사용자가 직접 저장한 뒤 나타난 칸 중 승인 범위 안의 빈 포함 칸을 바로 기입한다. 새 칸에는 2차 검토 버튼을 띄우지 않는다. 나머지 새 칸은 기입하지 않고 결과 화면의 "직접 확인할 새 칸"에 표시한다.
 
 1차 검토의 확인 필요에는 기존 값이 있는 칸, 연결 확신 보통, 같은 선택지 없음만 남긴다. 실행 중 검색 결과가 여러 개인 칸도 확인 필요로 남는다. 나머지 확인 필요 등급과 조건 확인(CONDITIONAL) 칸은 처음부터 포함해 자동 기입 예정에 보인다. 저장 뒤 감시는 아무것도 누르지 않고, 사용자가 입력 중이거나 새 칸에 포커스가 있으면 기다리며, 주소 변경·프로필 변경·승인 항목 모두 처리·5회에서 끝난다. 근거는 [CF-358](../../raw/issues/CF-358/documents/generic-review-tiers.md)을 따른다.
+
+## 확장이 값을 넣은 반복 줄의 줄 저장
+
+CF-370부터 범용 경로는 이번 회차에 확장이 값을 넣은 반복 줄에 그 줄 전용 저장 버튼이 정확히 하나 있으면 누른다. 버튼 이름은 저장 또는 save뿐이어야 한다. 버튼의 가장 가까운 칸 조상은 그 줄 칸만 담아야 하고, form 제출 버튼과 링크는 제외한다. 줄의 승인 칸이 모두 기입되고 버튼이 활성일 때만 누른다. 3초 안에 쓴 칸이 사라지거나 숨거나 비워지지 않으면 이후 줄 저장을 멈춘다. 저장한 줄의 항목은 새 칸 회차에서 다시 쓰지 않는다. 결과 화면은 저장한 줄 수와 직접 저장할 줄을 보여 준다. 임시저장, 전체 저장, 제출, 이동, 미리보기, 동의는 누르지 않는다. 근거는 [CF-370](../../raw/issues/CF-370/documents/generic-review-tiers.md)을 따른다.

@@ -16,7 +16,7 @@ export interface AppearableProfileItem {
 
 const scopeKey = (key: string, itemIndex: number) => `${key}#${itemIndex}`;
 
-function profileKeyOf(item: ReviewPlanItem): string | undefined {
+export function profileKeyOf(item: ReviewPlanItem): string | undefined {
   const binding = item.analysis?.valueBinding;
   return (
     item.profileFieldKey ??

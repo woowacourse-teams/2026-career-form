@@ -84,6 +84,13 @@ import {
   preApprovalScope,
 } from "./pre-approval";
 import { watchRevealedFields } from "./reveal-watch";
+import { saveWrittenRows, type RowSaveManual } from "../generic/row-save";
+import {
+  hasUnsavedEntries,
+  isNextBoxEntry,
+  savedEntryOffsets,
+} from "./single-box-entries";
+import { recordOf, rowSaveFields } from "./row-save-fields";
 import { createReviewActions, sensitiveValueApproved } from "./review-actions";
 import {
   createSearchFollowUpRecorder,
@@ -121,6 +128,7 @@ import { localWorkflowLog } from "../debug/local-workflow";
 export { localItemCount, shouldRunRevealPlan } from "./workflow-model";
 
 const MAX_REVEAL_WATCH_ROUNDS = 5;
+const MAX_ENTRY_PASSES = 10;
 
 export function AutofillWorkflow(props: WorkflowProps) {
   const [loaded, setLoaded] = useState(false);
@@ -293,6 +301,29 @@ function PolicyReadyWorkflow({
   );
   const autoWrittenKeys = useRef(new Set<string>());
   const revealWatchRounds = useRef(0);
+  // Row saves (#370): the rows the extension saved, and whether a save it
+  // could not confirm stopped the later rows of its category.
+  const savedRowKeys = useRef(new Set<string>());
+  const rowSaveStopped = useRef(new Set<string>());
+  // A single entry box is refilled with the next stored entry after each
+  // confirmed save; entry passes are capped apart from reveal passes.
+  const singleRowEntryOffsets = useRef<ReadonlyMap<string, number>>(new Map());
+  const entryPasses = useRef(0);
+  const writtenBefore = (
+    item: Parameters<typeof isNextBoxEntry>[0],
+    registry: Parameters<typeof progressTracker.wasWritten>[1],
+  ) =>
+    progressTracker.wasWritten(item.candidateId, registry) &&
+    !isNextBoxEntry(
+      item,
+      singleRowEntryOffsets.current,
+      savedRowKeys.current,
+    );
+  const [rowSave, setRowSave] = useState<{
+    saved: number;
+    manual: RowSaveManual[];
+    stopped: string[];
+  }>({ saved: 0, manual: [], stopped: [] });
   const completedDriverKeys = useRef<ReadonlySet<string>>(new Set());
   const completedGenericStateDrivers = useRef<
     ReadonlyMap<string, CompletedGenericStateDriver>
@@ -379,6 +410,7 @@ function PolicyReadyWorkflow({
       approvedSensitiveValues,
       consideredSensitiveValues,
       freshDefaultControls,
+      singleRowEntryOffsets,
       completedDriverKeys,
       completedGenericStateDrivers,
       completedComponentStateDrivers,
@@ -440,6 +472,7 @@ function PolicyReadyWorkflow({
     } = { controller: new AbortController() };
     addressRun.current = run;
     revealPasses.current = 0;
+    entryPasses.current = 0;
     const start = async () => {
       try {
         if (isUnsupportedHplace(pageDocument)) {
@@ -887,12 +920,7 @@ function PolicyReadyWorkflow({
         // A later reveal pass never re-executes a field an earlier pass wrote.
         ...(revealPasses.current > 0
           ? reviewItems
-              .filter((item) =>
-                progressTracker.wasWritten(
-                  item.candidateId,
-                  fieldsSnapshot.registry,
-                ),
-              )
+              .filter((item) => writtenBefore(item, fieldsSnapshot.registry))
               .map((item) => item.candidateId)
           : []),
       ]);
@@ -1020,6 +1048,56 @@ function PolicyReadyWorkflow({
           );
         return;
       }
+      let nextEntryPass = false;
+      if (
+        analysisSummary?.mode === "GENERIC" &&
+        !writeController.current.signal.aborted
+      ) {
+        const rows = await saveWrittenRows({
+          document: pageDocument,
+          fields: rowSaveFields({
+            items: reviewItems,
+            approvedIds: approvedCandidateIds,
+            passResults: nextResults,
+            registry: fieldsSnapshot.registry,
+            wasWritten: (id) =>
+              progressTracker.wasWritten(id, fieldsSnapshot.registry),
+          }),
+          savedKeys: savedRowKeys.current,
+          stopped: rowSaveStopped.current,
+          signal: writeController.current.signal,
+        });
+        if (!mounted.current) return;
+        rows.saved.forEach((key) => savedRowKeys.current.add(key));
+        singleRowEntryOffsets.current = savedEntryOffsets(savedRowKeys.current);
+        nextEntryPass =
+          rows.saved.length > 0 &&
+          preApprovedScope.current.size > 0 &&
+          entryPasses.current < MAX_ENTRY_PASSES &&
+          profile !== undefined &&
+          hasUnsavedEntries(profile, singleRowEntryOffsets.current);
+        rows.stopped.forEach((category) =>
+          rowSaveStopped.current.add(category),
+        );
+        localWorkflowLog("row-save", {
+          saved: rows.saved.length,
+          manual: rows.manual.length,
+          stopped: rows.stopped.length,
+        });
+        if (rows.saved.length > 0 || rows.manual.length > 0)
+          setRowSave((current) => ({
+            saved: current.saved + rows.saved.length,
+            manual: [
+              ...current.manual.filter(
+                (row) =>
+                  !rows.saved.includes(row.recordKey) &&
+                  !rows.manual.some((next) => next.recordKey === row.recordKey),
+              ),
+              ...rows.manual,
+            ],
+            stopped: rows.stopped,
+          }));
+      }
       const revealed = controlsBefore
         ? newlyRevealedControls(pageDocument, controlsBefore)
         : [];
@@ -1031,9 +1109,11 @@ function PolicyReadyWorkflow({
         aborted: writeController.current.signal.aborted,
       });
       if (
-        revealed.length > 0 &&
-        revealPasses.current < (preApprovedScope.current.size > 0 ? 4 : 2) &&
-        nextResults.some((result) => result.status === "written") &&
+        ((revealed.length > 0 &&
+          revealPasses.current - entryPasses.current <
+            (preApprovedScope.current.size > 0 ? 4 : 2) &&
+          nextResults.some((result) => result.status === "written")) ||
+          nextEntryPass) &&
         !writeController.current.signal.aborted
       ) {
         if (
@@ -1047,6 +1127,7 @@ function PolicyReadyWorkflow({
           return;
         }
         revealPasses.current += 1;
+        if (nextEntryPass) entryPasses.current += 1;
         lastPassResults.current = [...retainedDrivers.results, ...nextResults];
         setRevealReview(true);
         await analyzeFields(
@@ -1055,10 +1136,11 @@ function PolicyReadyWorkflow({
           completedDriverKeys.current,
           deferredDriverGroups.current,
         );
-        setWarnings((current) => [
-          ...current,
-          `값을 넣은 뒤 새 입력칸 ${revealed.length}개가 나타나 다시 확인했어요.`,
-        ]);
+        if (revealed.length > 0)
+          setWarnings((current) => [
+            ...current,
+            `값을 넣은 뒤 새 입력칸 ${revealed.length}개가 나타나 다시 확인했어요.`,
+          ]);
         return;
       }
       setResults([...retainedDrivers.results, ...nextResults]);
@@ -1083,7 +1165,7 @@ function PolicyReadyWorkflow({
       const next = items.map((item) => {
         if (
           item.disabled ||
-          !progressTracker.wasWritten(item.candidateId, fieldsSnapshot.registry)
+          !writtenBefore(item, fieldsSnapshot.registry)
         )
           return item;
         changed = true;
@@ -1105,11 +1187,14 @@ function PolicyReadyWorkflow({
     setRevealReview(false);
     const unwritten = reviewItems.filter(
       (item) =>
-        !item.disabled &&
-        !progressTracker.wasWritten(item.candidateId, fieldsSnapshot.registry),
+        !item.disabled && !writtenBefore(item, fieldsSnapshot.registry),
     );
-    const approved = unwritten.filter((item) =>
-      isPreApprovedItem(item, preApprovedScope.current),
+    // A saved row is registered; its entry is never written again into the
+    // emptied entry area.
+    const approved = unwritten.filter(
+      (item) =>
+        isPreApprovedItem(item, preApprovedScope.current) &&
+        !savedRowKeys.current.has(recordOf(item)?.key ?? ""),
     );
     const approvedIds = new Set(approved.map((item) => item.candidateId));
     const manual = unwritten.filter((item) => {
@@ -1147,7 +1232,7 @@ function PolicyReadyWorkflow({
   }, [stage, revealReview, reviewItems, fieldsSnapshot]);
 
   // After the run, the page may reveal approved fields once the user saves a
-  // section. The extension never presses save; it only watches for the result.
+  // section. The watch presses nothing; only row saves (#370) press a save.
   useEffect(() => {
     const scope = preApprovedScope.current;
     if (
@@ -1269,6 +1354,7 @@ function PolicyReadyWorkflow({
       setPreApprovalOn={setPreApprovalOn}
       autoWrittenLabels={autoWrittenLabels}
       manualRevealedLabels={manualRevealedLabels}
+      rowSave={rowSave}
     />
   );
 }

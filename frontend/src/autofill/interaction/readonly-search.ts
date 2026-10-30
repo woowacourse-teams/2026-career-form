@@ -176,6 +176,12 @@ export interface ExecuteReadonlySearchArgs {
   genericPopupRecovery?: boolean;
   /** A known pre-review value, also retained locally for the conflict guard. */
   expectedCurrentValue?: string;
+  /**
+   * Generic search only: other stored values of the same profile entry. A
+   * layer whose query waits for one select may use them to choose it. Local
+   * only; never included in an interaction decision request.
+   */
+  contextValues?: readonly import("./search-gate").SearchContextValue[];
   /** Local-only exact search forms. The original expected value is always first. */
   searchValues?: readonly string[];
   /** Local approval only; never serialized in role requests. */
