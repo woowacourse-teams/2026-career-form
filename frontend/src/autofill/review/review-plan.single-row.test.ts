@@ -17,6 +17,7 @@ function plan(
   indexed = true,
   grade: GenericFieldGrade = { grade: "AUTO" },
   grouped = true,
+  singleRowEntryOffsets?: ReadonlyMap<string, number>,
 ) {
   const profile = createEmptyProfile();
   profile.certifications = Array.from({ length: entryCount }, (_, index) => ({
@@ -74,6 +75,7 @@ function plan(
   return buildReviewPlan({
     profile,
     registry,
+    ...(singleRowEntryOffsets ? { singleRowEntryOffsets } : {}),
     analysis: {
       snapshotId: "single-row",
       mode: "GENERIC",
@@ -124,6 +126,70 @@ describe("single remaining generic repeat row", () => {
         status: "available",
         disabled: false,
         selected: true,
+      });
+    }
+  });
+
+  it.each([true, false])(
+    "binds the single box to the entry at its offset (indexed: %s)",
+    (indexed) => {
+      const items = plan(
+        3,
+        1,
+        indexed,
+        { grade: "AUTO" },
+        true,
+        new Map([["certifications.certificate", 1]]),
+      );
+      for (const item of items) {
+        expect(item).toMatchObject({
+          itemIndex: 1,
+          profileEntryId: "certificate-1",
+          status: "available",
+          selected: true,
+        });
+      }
+      expect(items.map((item) => item.profileValue)).toEqual([
+        "Certificate 1",
+        "Issuer 1",
+        "2021-01-02",
+      ]);
+    },
+  );
+
+  it("leaves the single box without a value when the offset passes the entries", () => {
+    for (const item of plan(
+      3,
+      1,
+      true,
+      { grade: "AUTO" },
+      true,
+      new Map([["certifications.certificate", 3]]),
+    )) {
+      expect(item).toMatchObject({ status: "unavailable", disabled: true });
+      expect(item.profileEntryId).toBeUndefined();
+    }
+  });
+
+  it("binds a sole stored entry to the box only at offset zero", () => {
+    const offsets = new Map([["certifications.certificate", 1]]);
+    for (const item of plan(1, 1, true, { grade: "AUTO" }, true, offsets)) {
+      expect(item).toMatchObject({ status: "unavailable", disabled: true });
+    }
+  });
+
+  it("ignores offsets of other sections", () => {
+    for (const item of plan(
+      3,
+      1,
+      true,
+      { grade: "AUTO" },
+      true,
+      new Map([["careers.career", 2]]),
+    )) {
+      expect(item).toMatchObject({
+        itemIndex: 0,
+        genericReasonCode: "FIRST_ENTRY_SINGLE_ROW",
       });
     }
   });

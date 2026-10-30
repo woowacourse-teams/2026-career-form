@@ -176,6 +176,7 @@ export function createAnalyzeFields({
   pageDocument,
   repository,
   freshDefaultControls,
+  singleRowEntryOffsets,
   completedDriverKeys,
   completedGenericStateDrivers,
   completedComponentStateDrivers = { current: new Map() },
@@ -686,6 +687,9 @@ export function createAnalyzeFields({
         freshDefaultCandidateIds,
         normalizeDirectValue: (key, value) =>
           adapterProfileValue(adapter, key, value),
+        ...(singleRowEntryOffsets
+          ? { singleRowEntryOffsets: singleRowEntryOffsets.current }
+          : {}),
       });
       finishPlan();
       return preparedPlan;

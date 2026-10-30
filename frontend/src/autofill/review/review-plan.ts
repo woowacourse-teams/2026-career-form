@@ -574,6 +574,7 @@ function itemForAnalysis(
   generic = true,
   components = false,
   ungroupedRows: ReadonlySet<string> = new Set(),
+  singleRowEntryOffsets?: ReadonlyMap<string, number>,
 ): ReviewPlanItem {
   return itemForResolvedAnalysis(
     withYearMonthWritePlan(analysis, registry, generic),
@@ -585,6 +586,7 @@ function itemForAnalysis(
     generic,
     components,
     ungroupedRows,
+    singleRowEntryOffsets,
   );
 }
 
@@ -631,6 +633,7 @@ function itemForResolvedAnalysis(
   generic = true,
   components = false,
   ungroupedRows: ReadonlySet<string> = new Set(),
+  singleRowEntryOffsets?: ReadonlyMap<string, number>,
 ): ReviewPlanItem {
   const fieldLabel = labelFor(analysis.candidateId, registry);
   const local = registry.lookupField(analysis.candidateId);
@@ -844,6 +847,10 @@ function itemForResolvedAnalysis(
       parts.categoryId as RepeatedProfileCategoryId
     ].filter((entry) => entry.sectionId === parts.sectionId);
     const formItemCount = registry.fieldItemCount(analysis.candidateId);
+    // A single box refilled after each saved entry binds the next entry.
+    const entryOffset = generic
+      ? singleRowEntryOffsets?.get(`${parts.categoryId}.${parts.sectionId}`)
+      : undefined;
     // Structure preparation has finished. A remaining single row without an
     // available add control can offer entry zero, but only with user approval.
     // Section direct fields that form one implicit row are that single row too.
@@ -878,12 +885,25 @@ function itemForResolvedAnalysis(
       formItemCount !== undefined &&
       formItemCount > profileEntries.length &&
       profileEntries.length > 0;
+    if (
+      entryOffset !== undefined &&
+      (firstEntrySingleRow ||
+        (profileEntries.length === 1 && !unindexedRepeatRow)) &&
+      entryOffset >= profileEntries.length
+    ) {
+      return unavailableItem(
+        analysis.candidateId,
+        fieldLabel,
+        "입력할 프로필 값이 없습니다.",
+        analysis,
+      );
+    }
     if (firstEntrySingleRow) {
-      itemIndex = 0;
+      itemIndex = entryOffset ?? 0;
     } else if (spareRows) {
       itemIndex = lookup.handle.itemIndex;
     } else if (profileEntries.length === 1 && !unindexedRepeatRow) {
-      itemIndex = 0;
+      itemIndex = entryOffset ?? 0;
     }
     const soleUngroupedProfileEntry =
       itemIndex === 0 &&
@@ -1594,6 +1614,7 @@ export function buildReviewPlan({
   ignoreCurrentValueCandidateIds = new Set<string>(),
   freshDefaultCandidateIds = new Set<string>(),
   normalizeDirectValue,
+  singleRowEntryOffsets,
 }: {
   analysis: FieldsAnalyzeResponse;
   profile: Profile;
@@ -1601,6 +1622,8 @@ export function buildReviewPlan({
   ignoreCurrentValueCandidateIds?: ReadonlySet<string>;
   freshDefaultCandidateIds?: ReadonlySet<string>;
   normalizeDirectValue?: (profileFieldKey: string, value: string) => string;
+  /** Generic single entry boxes: next stored entry per "category.section". */
+  singleRowEntryOffsets?: ReadonlyMap<string, number>;
 }): ReviewPlan {
   if (analysis.analysisStatus === "BLOCKED") {
     return { status: "blocked", items: [] };
@@ -1636,6 +1659,7 @@ export function buildReviewPlan({
       analysis.mode === "GENERIC",
       components && analysis.mode === "ADAPTER",
       ungroupedRows,
+      singleRowEntryOffsets,
     );
     if (analysis.mode !== "GENERIC") return item;
     const lookup = registry.lookupField(field.candidateId);
