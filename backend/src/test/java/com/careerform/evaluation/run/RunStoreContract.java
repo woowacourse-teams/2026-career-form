@@ -62,6 +62,52 @@ abstract class RunStoreContract {
     }
 
     @Test
+    @DisplayName("작업자는 대기 중 실행을 임대로 가져가고, 임대가 살아 있으면 다른 작업자는 가져가지 못한다")
+    void claimLeasesQueuedRun() {
+        RunStore store = store();
+        store.register(run("run-1", "fp"));
+
+        EvaluationRun claimed = store.claim("worker-a", AT, java.time.Duration.ofMinutes(1)).orElseThrow();
+        assertThat(claimed.status()).isEqualTo(RunStatus.RUNNING);
+        assertThat(claimed.leaseOwner()).isEqualTo("worker-a");
+        assertThat(claimed.startedAt()).isEqualTo(AT);
+        assertThat(store.claim("worker-b", AT.plusSeconds(30), java.time.Duration.ofMinutes(1))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("임대가 끝난 실행 중 실행은 다른 작업자가 이어받고 시작 시각은 유지된다")
+    void expiredLeaseIsTakenOver() {
+        RunStore store = store();
+        store.register(run("run-1", "fp"));
+        store.claim("worker-a", AT, java.time.Duration.ofMinutes(1));
+
+        EvaluationRun taken = store.claim("worker-b", AT.plusSeconds(61), java.time.Duration.ofMinutes(1)).orElseThrow();
+
+        assertThat(taken.leaseOwner()).isEqualTo("worker-b");
+        assertThat(taken.startedAt()).isEqualTo(AT);
+        assertThat(store.renew("run-1", "worker-a", AT.plusSeconds(120), 3)).isFalse();
+        assertThat(store.renew("run-1", "worker-b", AT.plusSeconds(120), 3)).isTrue();
+        assertThat(store.find("run-1").orElseThrow().processedCalls()).isEqualTo(3);
+    }
+
+    @Test
+    @DisplayName("종료는 임대를 가진 작업자만 할 수 있고 끝난 뒤에는 새 실행을 받는다")
+    void finishRequiresLeaseOwner() {
+        RunStore store = store();
+        store.register(run("run-1", "fp"));
+        store.claim("worker-a", AT, java.time.Duration.ofMinutes(1));
+
+        assertThat(store.finish("run-1", "worker-b", RunStatus.COMPLETED, AT.plusSeconds(5))).isFalse();
+        assertThat(store.finish("run-1", "worker-a", RunStatus.QUEUED, AT.plusSeconds(5))).isFalse();
+        assertThat(store.finish("run-1", "worker-a", RunStatus.PARTIAL, AT.plusSeconds(5))).isTrue();
+        EvaluationRun done = store.find("run-1").orElseThrow();
+        assertThat(done.status()).isEqualTo(RunStatus.PARTIAL);
+        assertThat(done.finishedAt()).isEqualTo(AT.plusSeconds(5));
+        assertThat(done.leaseOwner()).isNull();
+        assertThat(store.register(run("run-2", "fp")).registered()).isNotNull();
+    }
+
+    @Test
     @DisplayName("프롬프트 스냅샷은 처음 본 해시만 저장하고 이후 같은 해시는 덮어쓰지 않는다")
     void promptSnapshotIsWriteOnce() {
         RunStore store = store();

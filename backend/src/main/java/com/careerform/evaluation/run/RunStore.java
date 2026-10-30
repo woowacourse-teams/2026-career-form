@@ -21,6 +21,15 @@ public interface RunStore {
     /** 같은 해시의 스냅샷이 이미 있으면 덮어쓰지 않는다. */
     void savePromptSnapshotIfAbsent(PromptSnapshot snapshot);
 
+    /** 대기 중 실행이나 임대가 끝난 실행 중 실행을 {@code owner}의 임대로 가져간다. */
+    Optional<EvaluationRun> claim(String owner, Instant now, java.time.Duration lease);
+
+    /** 임대를 가진 작업자만 임대를 늘리고 처리 건수를 갱신한다. */
+    boolean renew(String runId, String owner, Instant until, int processedCalls);
+
+    /** 임대를 가진 작업자만 실행 중 실행을 끝난 상태로 바꾼다. */
+    boolean finish(String runId, String owner, RunStatus to, Instant at);
+
     Optional<PromptSnapshot> findPromptSnapshot(String digest);
 
     record Registration(EvaluationRun registered, EvaluationRun activeRun) {

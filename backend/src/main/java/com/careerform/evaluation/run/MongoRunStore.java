@@ -78,6 +78,8 @@ public final class MongoRunStore implements RunStore {
         if (!to.active()) {
             updates.add(Updates.set("finishedAt", Date.from(at)));
             updates.add(Updates.unset("activeSlot"));
+            updates.add(Updates.unset("leaseOwner"));
+            updates.add(Updates.unset("leaseUntil"));
         }
         return runs().updateOne(Filters.and(Filters.eq("_id", runId), Filters.eq("status", from.name())),
             Updates.combine(updates)).getModifiedCount() == 1;
@@ -87,6 +89,49 @@ public final class MongoRunStore implements RunStore {
     public boolean requestCancel(String runId) {
         return runs().updateOne(Filters.and(Filters.eq("_id", runId), Filters.eq("status", RunStatus.RUNNING.name())),
             Updates.set("cancelRequested", true)).getMatchedCount() == 1;
+    }
+
+    @Override
+    public Optional<EvaluationRun> claim(String owner, Instant now, java.time.Duration lease) {
+        Bson claimable = Filters.and(Filters.exists("activeSlot"), Filters.or(
+            Filters.eq("status", RunStatus.QUEUED.name()),
+            Filters.and(Filters.eq("status", RunStatus.RUNNING.name()),
+                Filters.or(Filters.eq("leaseUntil", null), Filters.lte("leaseUntil", Date.from(now))))));
+        Document current = runs().find(claimable).first();
+        if (current == null) {
+            return Optional.empty();
+        }
+        List<Bson> updates = new ArrayList<>(List.of(Updates.set("status", RunStatus.RUNNING.name()),
+            Updates.set("leaseOwner", owner), Updates.set("leaseUntil", Date.from(now.plus(lease)))));
+        if (current.getDate("startedAt") == null) {
+            updates.add(Updates.set("startedAt", Date.from(now)));
+        }
+        Bson sameState = Filters.and(Filters.eq("_id", current.getString("_id")),
+            Filters.eq("status", current.getString("status")), Filters.eq("leaseUntil", current.getDate("leaseUntil")));
+        if (runs().updateOne(sameState, Updates.combine(updates)).getModifiedCount() != 1) {
+            return Optional.empty();
+        }
+        return find(current.getString("_id"));
+    }
+
+    @Override
+    public boolean renew(String runId, String owner, Instant until, int processedCalls) {
+        return runs().updateOne(Filters.and(Filters.eq("_id", runId), Filters.eq("status", RunStatus.RUNNING.name()),
+                Filters.eq("leaseOwner", owner)),
+            Updates.combine(Updates.set("leaseUntil", Date.from(until)), Updates.set("processedCalls", processedCalls)))
+            .getMatchedCount() == 1;
+    }
+
+    @Override
+    public boolean finish(String runId, String owner, RunStatus to, Instant at) {
+        if (!RunStatus.RUNNING.canMoveTo(to)) {
+            return false;
+        }
+        return runs().updateOne(Filters.and(Filters.eq("_id", runId), Filters.eq("status", RunStatus.RUNNING.name()),
+                Filters.eq("leaseOwner", owner)),
+            Updates.combine(Updates.set("status", to.name()), Updates.set("finishedAt", Date.from(at)),
+                Updates.unset("activeSlot"), Updates.unset("leaseOwner"), Updates.unset("leaseUntil")))
+            .getModifiedCount() == 1;
     }
 
     @Override
@@ -152,7 +197,9 @@ public final class MongoRunStore implements RunStore {
             .append("startedAt", date(run.startedAt()))
             .append("finishedAt", date(run.finishedAt()))
             .append("processedCalls", run.processedCalls())
-            .append("cancelRequested", run.cancelRequested());
+            .append("cancelRequested", run.cancelRequested())
+            .append("leaseOwner", run.leaseOwner())
+            .append("leaseUntil", date(run.leaseUntil()));
         if (run.status().active()) {
             document.append("activeSlot", ACTIVE);
         }
@@ -172,7 +219,8 @@ public final class MongoRunStore implements RunStore {
             document.getInteger("estimatedModelCalls"), document.getString("requestedBy"),
             instant(document.getDate("requestedAt")), RunStatus.valueOf(document.getString("status")),
             instant(document.getDate("startedAt")), instant(document.getDate("finishedAt")),
-            document.getInteger("processedCalls"), document.getBoolean("cancelRequested"));
+            document.getInteger("processedCalls"), document.getBoolean("cancelRequested"),
+            document.getString("leaseOwner"), instant(document.getDate("leaseUntil")));
     }
 
     private static Date date(Instant instant) {

@@ -58,6 +58,37 @@ public final class InMemoryRunStore implements RunStore {
         return Optional.ofNullable(snapshots.get(digest));
     }
 
+    @Override
+    public synchronized Optional<EvaluationRun> claim(String owner, Instant now, java.time.Duration lease) {
+        Optional<EvaluationRun> claimable = runs.values().stream()
+            .filter(run -> run.status() == RunStatus.QUEUED
+                || run.status() == RunStatus.RUNNING && run.leaseExpired(now))
+            .findFirst();
+        claimable.ifPresent(run -> runs.put(run.id(), run.leased(owner, now, now.plus(lease))));
+        return claimable.map(run -> runs.get(run.id()));
+    }
+
+    @Override
+    public synchronized boolean renew(String runId, String owner, Instant until, int processedCalls) {
+        EvaluationRun run = runs.get(runId);
+        if (run == null || run.status() != RunStatus.RUNNING || !owner.equals(run.leaseOwner())) {
+            return false;
+        }
+        runs.put(runId, run.progressed(until, processedCalls));
+        return true;
+    }
+
+    @Override
+    public synchronized boolean finish(String runId, String owner, RunStatus to, Instant at) {
+        EvaluationRun run = runs.get(runId);
+        if (run == null || run.status() != RunStatus.RUNNING || !owner.equals(run.leaseOwner())
+            || !RunStatus.RUNNING.canMoveTo(to)) {
+            return false;
+        }
+        runs.put(runId, run.moved(to, at));
+        return true;
+    }
+
     synchronized List<EvaluationRun> all() {
         return List.copyOf(runs.values());
     }

@@ -19,24 +19,42 @@ public record EvaluationRun(
     Instant startedAt,
     Instant finishedAt,
     int processedCalls,
-    boolean cancelRequested
+    boolean cancelRequested,
+    String leaseOwner,
+    Instant leaseUntil
 ) {
 
     public static EvaluationRun queued(String id, String fingerprint, RunVersions versions, int repetitions,
         int plannedCalls, int estimatedModelCalls, String requestedBy, Instant requestedAt) {
         return new EvaluationRun(id, fingerprint, versions, repetitions, plannedCalls, estimatedModelCalls,
-            requestedBy, requestedAt, RunStatus.QUEUED, null, null, 0, false);
+            requestedBy, requestedAt, RunStatus.QUEUED, null, null, 0, false, null, null);
     }
 
     EvaluationRun moved(RunStatus next, Instant at) {
         Instant started = next == RunStatus.RUNNING ? at : startedAt;
         Instant finished = next.active() ? finishedAt : at;
         return new EvaluationRun(id, fingerprint, versions, repetitions, plannedCalls, estimatedModelCalls,
-            requestedBy, requestedAt, next, started, finished, processedCalls, cancelRequested);
+            requestedBy, requestedAt, next, started, finished, processedCalls, cancelRequested,
+            next == RunStatus.RUNNING ? leaseOwner : null, next == RunStatus.RUNNING ? leaseUntil : null);
     }
 
     EvaluationRun cancellationRequested() {
         return new EvaluationRun(id, fingerprint, versions, repetitions, plannedCalls, estimatedModelCalls,
-            requestedBy, requestedAt, status, startedAt, finishedAt, processedCalls, true);
+            requestedBy, requestedAt, status, startedAt, finishedAt, processedCalls, true, leaseOwner, leaseUntil);
+    }
+
+    EvaluationRun leased(String owner, Instant now, Instant until) {
+        return new EvaluationRun(id, fingerprint, versions, repetitions, plannedCalls, estimatedModelCalls,
+            requestedBy, requestedAt, RunStatus.RUNNING, startedAt == null ? now : startedAt, finishedAt,
+            processedCalls, cancelRequested, owner, until);
+    }
+
+    EvaluationRun progressed(Instant until, int processed) {
+        return new EvaluationRun(id, fingerprint, versions, repetitions, plannedCalls, estimatedModelCalls,
+            requestedBy, requestedAt, status, startedAt, finishedAt, processed, cancelRequested, leaseOwner, until);
+    }
+
+    boolean leaseExpired(Instant now) {
+        return leaseUntil == null || !leaseUntil.isAfter(now);
     }
 }
