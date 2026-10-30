@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import com.careerform.evaluation.scoring.CallKind.Stage;
 
 @DisplayName("평가 실행의 호출 단위 집계")
 class RunAggregatorTest {
@@ -30,6 +31,17 @@ class RunAggregatorTest {
         assertThat(result.preparationAccuracy()).isCloseTo(0.5, within(1e-9));
         assertThat(result.mappingAccuracy()).isCloseTo(0.5, within(1e-9));
         assertThat(result.scorableCalls()).isEqualTo(10);
+    }
+
+    @Test
+    @DisplayName("단계는 호출 종류가 아니라 호출이 일어난 단계로 센다: 준비 루프의 섹션 분류는 준비 정확도에 들어간다")
+    void stageFollowsCallPhase() {
+        RunAggregate result = aggregator.aggregate(List.of(
+            CallResult.completed(CallKind.SECTION_CLASSIFY, Stage.PREPARATION, new CallScore(1, 0, 0, 0, 0), 1),
+            CallResult.completed(CallKind.SECTION_CLASSIFY, Stage.MAPPING, new CallScore(0, 1, 0, 0, 0), 1)));
+
+        assertThat(result.preparationAccuracy()).isEqualTo(1.0);
+        assertThat(result.mappingAccuracy()).isEqualTo(0.0);
     }
 
     @Test

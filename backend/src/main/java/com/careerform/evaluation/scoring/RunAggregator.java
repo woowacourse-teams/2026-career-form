@@ -29,8 +29,8 @@ public final class RunAggregator {
         Double failureRate = calls.isEmpty() ? null : (double) (calls.size() - scorable) / calls.size();
         return new RunAggregate(
             mean(calls, call -> true),
-            mean(calls, call -> call.kind().stage() == CallKind.Stage.PREPARATION),
-            mean(calls, call -> call.kind().stage() == CallKind.Stage.MAPPING),
+            mean(calls, call -> call.stage() == CallKind.Stage.PREPARATION),
+            mean(calls, call -> call.stage() == CallKind.Stage.MAPPING),
             failureRate, calls.size(), scorable, modelCalls, failures, items);
     }
 
