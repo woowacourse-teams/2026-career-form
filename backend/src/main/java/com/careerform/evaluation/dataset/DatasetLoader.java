@@ -75,6 +75,31 @@ public final class DatasetLoader implements DatasetCatalog {
     }
 
     public LoadedDataset load(String datasetId, int version) {
+        return read(datasetId, version, true, new LinkedHashMap<>()).dataset();
+    }
+
+    /** 사람 검토와 입력 동일성을 막지 않고 상태만 알려 준다. 해시·형식·분할 검사는 그대로 한다. */
+    public DatasetInspection inspect(String datasetId, int version) {
+        Map<String, Map<String, String>> reviews = new LinkedHashMap<>();
+        Inspected inspected = read(datasetId, version, false, reviews);
+        String rejection = null;
+        for (var entry : reviews.entrySet()) {
+            try {
+                checkReview(entry.getKey(), JSON.valueToTree(entry.getValue()));
+            }
+            catch (DatasetRejected rejected) {
+                rejection = rejected.getMessage();
+                break;
+            }
+        }
+        return new DatasetInspection(inspected.dataset(), rejection == null, rejection, reviews);
+    }
+
+    private record Inspected(LoadedDataset dataset) {
+    }
+
+    private Inspected read(String datasetId, int version, boolean enforceReview,
+        Map<String, Map<String, String>> reviews) {
         if (datasetId == null || !DATASET_ID.matcher(datasetId).matches() || version < 1) {
             throw new DatasetRejected(Code.SCHEMA_INVALID, "datasetId/version");
         }
@@ -94,15 +119,19 @@ public final class DatasetLoader implements DatasetCatalog {
         Map<String, String> fixtureSplits = new HashMap<>();
         List<EvaluationCase> cases = new ArrayList<>();
         for (JsonNode entry : manifest.path("cases")) {
-            cases.add(loadCase(entry, profiles, fixtureSplits));
+            cases.add(loadCase(entry, profiles, fixtureSplits, enforceReview));
+            Map<String, String> review = new LinkedHashMap<>();
+            entry.path("review").properties().forEach(item -> review.put(item.getKey(), item.getValue().asString()));
+            reviews.put(text(entry, "caseId"), review);
         }
         if (cases.isEmpty()) {
             throw new DatasetRejected(Code.SCHEMA_INVALID, "cases");
         }
-        return new LoadedDataset(datasetId, version, sha256(manifestBytes), cases);
+        return new Inspected(new LoadedDataset(datasetId, version, sha256(manifestBytes), cases));
     }
 
-    private EvaluationCase loadCase(JsonNode entry, Set<String> profiles, Map<String, String> fixtureSplits) {
+    private EvaluationCase loadCase(JsonNode entry, Set<String> profiles, Map<String, String> fixtureSplits,
+        boolean enforceReview) {
         String caseId = text(entry, "caseId");
         String split = text(entry, "split");
         if (!SPLITS.contains(split) || !profiles.contains(text(entry, "profileId"))) {
@@ -115,7 +144,9 @@ public final class DatasetLoader implements DatasetCatalog {
         }
         JsonNode file = tree(verified(text(entry, "file"), text(entry, "sha256")), caseId);
         verified(text(entry.path("groundTruth"), "file"), text(entry.path("groundTruth"), "sha256"));
-        checkReview(caseId, entry.path("review"));
+        if (enforceReview) {
+            checkReview(caseId, entry.path("review"));
+        }
         if (file.path("schemaVersion").asInt() != 1 || !caseId.equals(file.path("caseId").asString())) {
             throw new DatasetRejected(Code.SCHEMA_INVALID, caseId);
         }

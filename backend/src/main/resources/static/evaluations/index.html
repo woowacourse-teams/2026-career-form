@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>AI 평가 — Career Form</title>
+  <link rel="stylesheet" href="/quality/quality.css">
+  <link rel="stylesheet" href="/evaluations/styles.css">
+  <script type="module" src="/quality/login.js"></script>
+</head>
+<body data-app="/evaluations/app.js">
+  <main id="login-panel" class="login-card">
+    <p class="eyebrow">CAREER FORM</p>
+    <h1>AI 평가</h1>
+    <p>팀 공용 비밀번호로 모델 평가 실행과 결과 화면에 접근합니다.</p>
+    <form id="login-form">
+      <label for="password">공용 비밀번호</label>
+      <input id="password" type="password" autocomplete="off" maxlength="1024" required>
+      <button type="submit">로그인</button>
+    </form>
+    <p id="login-message" role="status" aria-live="polite"></p>
+  </main>
+  <div id="management-panel" hidden>
+    <div id="cf-eval-preview">
+      <header><span class="brand">Career Form</span><span class="muted">/</span><span class="muted">AI Evaluation</span></header>
+      <main>
+        <div class="heading"><h1>AI 평가</h1><button type="button" class="run-action" id="run-open">평가 실행</button></div>
+        <div class="filters">
+          <div class="models" id="models" aria-label="비교할 모델"></div>
+          <label><span class="muted">프롬프트</span><select id="prompt-version" aria-label="프롬프트 버전"></select></label>
+        </div>
+        <div class="context">
+          <a href="#cf-source" data-source="데이터셋">데이터셋</a>
+          <a href="#cf-source" data-source="정답 기준">정답 기준</a>
+          <a href="#cf-source" data-source="프롬프트">프롬프트</a>
+          <a href="/evaluations/collection-skill.md" download="career-form-collection-skill.md">수집 지침 내려받기</a>
+          <span id="profile-count">프로필 0개</span><span id="site-count">사이트 0개</span>
+        </div>
+        <nav class="page-nav" aria-label="평가 화면"><button type="button" data-page="overview" aria-pressed="true">품질 · 성능</button><button type="button" data-page="tokens" aria-pressed="false">토큰 사용량</button></nav>
+        <div id="cf-overview" class="columns">
+          <section><div class="section-head"><h2>품질</h2><span class="muted">정확도 ↑</span></div><div id="cf-quality"></div></section>
+          <section><div class="section-head"><h2>성능</h2><div class="stage" aria-label="성능 측정 단계"><button type="button" data-stage="total" aria-pressed="true">전체 흐름</button><button type="button" data-stage="prepare" aria-pressed="false">준비</button><button type="button" data-stage="mapping" aria-pressed="false">매핑</button></div></div><div id="cf-performance"></div></section>
+        </div>
+        <section class="detail" id="cf-tokens" hidden>
+          <div class="section-head"><h3>토큰 사용량</h3><div class="stage" aria-label="토큰 측정 단계"><button type="button" data-stage="total" aria-pressed="true">전체 흐름</button><button type="button" data-stage="prepare" aria-pressed="false">준비</button><button type="button" data-stage="mapping" aria-pressed="false">매핑</button></div></div>
+          <span class="muted" id="cf-token-caption"></span>
+          <div id="cf-token-chart"></div>
+          <details class="token-table"><summary>표로 보기</summary><div class="table-wrap"><table><thead><tr><th>모델</th><th>평균 입력 토큰</th><th>평균 출력 토큰</th><th>평균 합계 토큰</th><th>전체 사용 토큰</th><th>토큰 미관측 시도</th><th>평균 예상 비용 (USD)</th><th>전체 예상 비용 (USD)</th></tr></thead><tbody id="cf-token-body"></tbody></table></div></details>
+        </section>
+        <dialog id="cf-source" class="detail" aria-labelledby="cf-source-title"><div class="section-head"><h3 id="cf-source-title"></h3><button type="button" id="cf-source-close">닫기</button></div><div id="source-content"></div></dialog>
+        <footer class="bottom"><span aria-live="polite" id="cf-status"></span><button type="button" id="refresh">새로 고침</button><button type="button" id="logout" class="secondary">로그아웃</button></footer>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

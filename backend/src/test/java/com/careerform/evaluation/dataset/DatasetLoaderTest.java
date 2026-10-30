@@ -92,6 +92,25 @@ class DatasetLoaderTest {
     }
 
     @Test
+    @DisplayName("검토 전 데이터셋도 화면 표시용으로 살펴볼 수 있고, 해시가 틀리면 살펴보기도 거부한다")
+    void inspectsUnreviewedDatasetButStillChecksDigests() {
+        Map<String, String> draft = withManifest(m -> m.replace("\"preparationTruth\": \"HUMAN_REVIEWED\"",
+            "\"preparationTruth\": \"AGENT_DRAFT\""));
+
+        DatasetInspection inspection = loader(draft).inspect("synthetic", 1);
+
+        assertThat(inspection.dataset().cases()).hasSize(2);
+        assertThat(inspection.usable()).isFalse();
+        assertThat(inspection.rejection()).contains("preparationTruth");
+        assertThat(inspection.reviews().get("a")).containsEntry("preparationTruth", "AGENT_DRAFT");
+        assertThat(loader(valid()).inspect("synthetic", 1).usable()).isTrue();
+        Map<String, String> tampered = valid();
+        tampered.put(DS + "cases/a.json", tampered.get(DS + "cases/a.json").replace("PERSONAL", "X"));
+        assertThatThrownBy(() -> loader(tampered).inspect("synthetic", 1))
+            .isInstanceOfSatisfying(DatasetRejected.class, r -> assertThat(r.code()).isEqualTo(Code.DIGEST_MISMATCH));
+    }
+
+    @Test
     @DisplayName("없는 데이터셋은 찾지 못한다")
     void missingDatasetIsNotFound() {
         assertThat(loader(valid()).find("other", 1)).isEmpty();

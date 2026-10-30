@@ -83,8 +83,13 @@ public class EvaluationConfiguration {
     }
 
     @Bean
-    DatasetLoader evaluationDatasets() {
-        return new DatasetLoader(DatasetLoader.classpath(EvaluationConfiguration.class.getClassLoader()));
+    DatasetLoader.ResourceSource evaluationResources() {
+        return DatasetLoader.classpath(EvaluationConfiguration.class.getClassLoader());
+    }
+
+    @Bean
+    DatasetLoader evaluationDatasets(DatasetLoader.ResourceSource resources) {
+        return new DatasetLoader(resources);
     }
 
     @Bean

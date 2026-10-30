@@ -16,7 +16,13 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import com.careerform.evaluation.dataset.DatasetInspection;
+import com.careerform.evaluation.dataset.DatasetLoader;
+import com.careerform.evaluation.dataset.DatasetRejected;
+import com.careerform.evaluation.dataset.EvaluationCase;
 import com.careerform.evaluation.prompt.PromptSnapshot;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 import com.careerform.evaluation.run.CallResultRecord;
 import com.careerform.evaluation.run.EvaluationRun;
 import com.careerform.evaluation.run.RescoringService;
@@ -45,13 +51,19 @@ public final class EvaluationRunController {
     private final RunStore store;
     private final ResultStore results;
     private final RescoringService scorings;
+    private final DatasetLoader datasets;
+    private final DatasetLoader.ResourceSource resources;
     private final RunReporter reporter = new RunReporter();
+    private final JsonMapper json = JsonMapper.builder().build();
 
-    public EvaluationRunController(RunService runs, RunStore store, ResultStore results, RescoringService scorings) {
+    public EvaluationRunController(RunService runs, RunStore store, ResultStore results, RescoringService scorings,
+        DatasetLoader datasets, DatasetLoader.ResourceSource resources) {
         this.runs = runs;
         this.store = store;
         this.results = results;
         this.scorings = scorings;
+        this.datasets = datasets;
+        this.resources = resources;
     }
 
     public record RunView(EvaluationRun run, RunReport report) {
@@ -95,6 +107,23 @@ public final class EvaluationRunController {
     public List<Scoring> scorings(@PathVariable String runId) {
         runs.find(runId);
         return scorings.history(runId);
+    }
+
+    @GetMapping("/datasets/{datasetId}/v{version}")
+    public ResponseEntity<DatasetView> dataset(@PathVariable String datasetId, @PathVariable int version) {
+        DatasetInspection inspection;
+        try {
+            inspection = datasets.inspect(datasetId, version);
+        }
+        catch (DatasetRejected rejected) {
+            return rejected.code() == DatasetRejected.Code.NOT_FOUND ? ResponseEntity.notFound().build()
+                : ResponseEntity.unprocessableContent().build();
+        }
+        Map<String, JsonNode> profiles = new LinkedHashMap<>();
+        inspection.dataset().cases().stream().map(EvaluationCase::profileId).distinct().forEach(profileId ->
+            resources.read("evaluation/profiles/v1/" + profileId + ".json")
+                .ifPresent(bytes -> profiles.put(profileId, json.readTree(bytes).path("profile"))));
+        return ResponseEntity.ok(DatasetView.of(inspection, profiles));
     }
 
     @GetMapping("/prompts/{digest}")

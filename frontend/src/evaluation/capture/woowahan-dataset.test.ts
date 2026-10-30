@@ -5,6 +5,7 @@ import { parseProfileImport } from "../../profile/profile-transfer";
 import {
   buildCase,
   type CaseFile,
+  refreshManifestDigests,
   type StateTruth,
   sha256,
 } from "./dataset-case";
@@ -25,6 +26,7 @@ const STATES = [
   { state: "university", split: "final" },
 ] as const;
 const write = process.env.CF356_WRITE_DATASET === "1";
+const RESOURCES = join(process.cwd(), "../backend/src/main/resources");
 
 beforeEach(() => {
   (
@@ -73,6 +75,28 @@ describe("평가 데이터셋 generic-matching v1 우아한형제들 사례", ()
       );
     },
   );
+
+  it("manifest의 파일 해시가 저장본과 같다(쓰기 모드에서는 다시 계산한다)", () => {
+    const path = "evaluation/datasets/generic-matching/v1/manifest.json";
+    if (write) refreshManifestDigests(RESOURCES, path);
+    const manifest = JSON.parse(
+      readFileSync(join(RESOURCES, path), "utf8"),
+    ) as {
+      cases: {
+        file: string;
+        sha256: string;
+        groundTruth: { file: string; sha256: string };
+      }[];
+    };
+    for (const entry of manifest.cases) {
+      expect(sha256(readFileSync(join(RESOURCES, entry.file), "utf8"))).toBe(
+        entry.sha256,
+      );
+      expect(
+        sha256(readFileSync(join(RESOURCES, entry.groundTruth.file), "utf8")),
+      ).toBe(entry.groundTruth.sha256);
+    }
+  });
 
   it("호출 순서는 준비 → 매핑이고 매핑은 섹션 분류 → 필드 매핑 한 번씩이다", async () => {
     const initial = await build("initial", "tuning");

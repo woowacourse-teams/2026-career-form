@@ -1,5 +1,7 @@
 // 평가 데이터셋 수집 전용. 확장 번들에서 import하지 않는다.
 import { createHash } from "node:crypto";
+import { readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import type { Profile } from "../../profile/model";
 import { type RecordedCall, recordGenericCalls } from "./record-calls";
 
@@ -170,4 +172,34 @@ function required<T>(value: T | undefined, what: string): T {
 
 export function sha256(text: string): string {
   return createHash("sha256").update(text).digest("hex");
+}
+
+/**
+ * manifest.json의 파일 해시(cases, groundTruth, profiles)를 현재 파일로 다시 계산한다. 검토 상태는 바꾸지 않는다.
+ * {@code resourceRoot}는 backend/src/main/resources다.
+ */
+export function refreshManifestDigests(
+  resourceRoot: string,
+  manifestPath: string,
+): void {
+  const file = join(resourceRoot, manifestPath);
+  const manifest = JSON.parse(readFileSync(file, "utf8")) as {
+    profiles: { file: string; sha256: string }[];
+    cases: {
+      file: string;
+      sha256: string;
+      groundTruth: { file: string; sha256: string };
+    }[];
+  };
+  const digest = (path: string) =>
+    createHash("sha256")
+      .update(readFileSync(join(resourceRoot, path)))
+      .digest("hex");
+  for (const profile of manifest.profiles)
+    profile.sha256 = digest(profile.file);
+  for (const entry of manifest.cases) {
+    entry.sha256 = digest(entry.file);
+    entry.groundTruth.sha256 = digest(entry.groundTruth.file);
+  }
+  writeFileSync(file, `${JSON.stringify(manifest, null, 2)}\n`);
 }
