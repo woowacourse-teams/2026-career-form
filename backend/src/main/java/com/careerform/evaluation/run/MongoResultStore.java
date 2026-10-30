@@ -31,10 +31,14 @@ public final class MongoResultStore implements ResultStore {
         this.mongo = mongo;
     }
 
+    private final java.util.concurrent.atomic.AtomicBoolean indexed = new java.util.concurrent.atomic.AtomicBoolean();
+
+    /** 색인을 만든다. 저장소를 처음 쓸 때 한 번 자동으로 부르며, 실패하면 그 연산도 실패한다. */
     public void ensureIndexes() {
-        results().createIndex(Indexes.ascending("runId", "repetition", "caseId", "order"),
+        mongo.getCollection(RESULTS).createIndex(Indexes.ascending("runId", "repetition", "caseId", "order"),
             new IndexOptions().unique(true));
-        results().createIndex(Indexes.ascending("runId", "sequence"));
+        mongo.getCollection(RESULTS).createIndex(Indexes.ascending("runId", "sequence"));
+        indexed.set(true);
     }
 
     @Override
@@ -61,6 +65,9 @@ public final class MongoResultStore implements ResultStore {
     }
 
     private MongoCollection<Document> results() {
+        if (!indexed.get()) {
+            ensureIndexes();
+        }
         return mongo.getCollection(RESULTS);
     }
 

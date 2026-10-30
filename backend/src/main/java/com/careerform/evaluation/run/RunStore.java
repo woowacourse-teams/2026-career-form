@@ -21,6 +21,9 @@ public interface RunStore {
     /** 같은 해시의 스냅샷이 이미 있으면 덮어쓰지 않는다. */
     void savePromptSnapshotIfAbsent(PromptSnapshot snapshot);
 
+    /** 최근 등록 순으로 최대 {@code limit}건. */
+    java.util.List<EvaluationRun> recent(int limit);
+
     /** 대기 중 실행이나 임대가 끝난 실행 중 실행을 {@code owner}의 임대로 가져간다. */
     Optional<EvaluationRun> claim(String owner, Instant now, java.time.Duration lease);
 

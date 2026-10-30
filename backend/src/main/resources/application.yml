@@ -83,6 +83,13 @@ career-form:
       max-concurrent: ${CAREER_FORM_JEV_MAX_CONCURRENT:10}
   llm:
     enabled: ${CAREER_FORM_LLM_ENABLED:}
+  evaluation:
+    # development 서버에서만 켠다. 사용자 요청과 서버 동시 호출 상한을 나눠 쓴다.
+    enabled: ${CAREER_FORM_EVALUATION_ENABLED:false}
+    max-model-calls-per-run: ${CAREER_FORM_EVALUATION_MAX_MODEL_CALLS:500}
+    max-repetitions: ${CAREER_FORM_EVALUATION_MAX_REPETITIONS:20}
+    poll-interval: ${CAREER_FORM_EVALUATION_POLL_INTERVAL:10s}
+    lease: ${CAREER_FORM_EVALUATION_LEASE:5m}
 
 logging:
   pattern:

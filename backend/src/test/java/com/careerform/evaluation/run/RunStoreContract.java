@@ -62,6 +62,20 @@ abstract class RunStoreContract {
     }
 
     @Test
+    @DisplayName("최근 실행을 등록 시각 역순으로 돌려준다")
+    void recentRunsNewestFirst() {
+        RunStore store = store();
+        store.register(run("run-1", "fp"));
+        store.transition("run-1", RunStatus.QUEUED, RunStatus.CANCELLED, AT);
+        EvaluationRun later = run("run-2", "fp");
+        store.register(new EvaluationRun(later.id(), later.fingerprint(), later.versions(), 2, 6, 20, "tester",
+            AT.plusSeconds(60), RunStatus.QUEUED, null, null, 0, false, null, null));
+
+        assertThat(store.recent(10)).extracting(EvaluationRun::id).containsExactly("run-2", "run-1");
+        assertThat(store.recent(1)).hasSize(1);
+    }
+
+    @Test
     @DisplayName("작업자는 대기 중 실행을 임대로 가져가고, 임대가 살아 있으면 다른 작업자는 가져가지 못한다")
     void claimLeasesQueuedRun() {
         RunStore store = store();

@@ -59,6 +59,13 @@ public final class InMemoryRunStore implements RunStore {
     }
 
     @Override
+    public synchronized List<EvaluationRun> recent(int limit) {
+        List<EvaluationRun> all = new java.util.ArrayList<>(runs.values());
+        java.util.Collections.reverse(all);
+        return all.stream().limit(Math.max(0, limit)).toList();
+    }
+
+    @Override
     public synchronized Optional<EvaluationRun> claim(String owner, Instant now, java.time.Duration lease) {
         Optional<EvaluationRun> claimable = runs.values().stream()
             .filter(run -> run.status() == RunStatus.QUEUED

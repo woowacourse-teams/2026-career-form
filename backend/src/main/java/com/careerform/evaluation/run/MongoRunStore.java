@@ -34,10 +34,14 @@ public final class MongoRunStore implements RunStore {
         this.mongo = mongo;
     }
 
+    private final java.util.concurrent.atomic.AtomicBoolean indexed = new java.util.concurrent.atomic.AtomicBoolean();
+
+    /** 색인을 만든다. 저장소를 처음 쓸 때 한 번 자동으로 부르며, 실패하면 그 연산도 실패한다. */
     public void ensureIndexes() {
-        runs().createIndex(Indexes.ascending("activeSlot"),
+        mongo.getCollection(RUNS).createIndex(Indexes.ascending("activeSlot"),
             new IndexOptions().unique(true).partialFilterExpression(Filters.exists("activeSlot")));
-        runs().createIndex(Indexes.descending("requestedAt"));
+        mongo.getCollection(RUNS).createIndex(Indexes.descending("requestedAt"));
+        indexed.set(true);
     }
 
     @Override
@@ -89,6 +93,14 @@ public final class MongoRunStore implements RunStore {
     public boolean requestCancel(String runId) {
         return runs().updateOne(Filters.and(Filters.eq("_id", runId), Filters.eq("status", RunStatus.RUNNING.name())),
             Updates.set("cancelRequested", true)).getMatchedCount() == 1;
+    }
+
+    @Override
+    public List<EvaluationRun> recent(int limit) {
+        List<EvaluationRun> recent = new ArrayList<>();
+        runs().find().sort(com.mongodb.client.model.Sorts.descending("requestedAt")).limit(Math.max(0, limit))
+            .forEach(document -> recent.add(fromDocument(document)));
+        return recent;
     }
 
     @Override
@@ -160,10 +172,16 @@ public final class MongoRunStore implements RunStore {
     }
 
     private MongoCollection<Document> runs() {
+        if (!indexed.get()) {
+            ensureIndexes();
+        }
         return mongo.getCollection(RUNS);
     }
 
     private MongoCollection<Document> prompts() {
+        if (!indexed.get()) {
+            ensureIndexes();
+        }
         return mongo.getCollection(PROMPTS);
     }
 
