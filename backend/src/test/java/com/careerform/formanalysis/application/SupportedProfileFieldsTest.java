@@ -13,10 +13,10 @@ class SupportedProfileFieldsTest {
     private final SupportedProfileFields supportedFields = new SupportedProfileFields();
 
     @Test
-    @DisplayName("canonical profile key 125개를 제공한다")
+    @DisplayName("canonical profile key 126개를 제공한다")
     void exposesCanonicalKeysIncludingGraduateMajors() {
         assertThat(supportedFields.keys())
-            .hasSize(125)
+            .hasSize(126)
             .contains(
                 "personal.personal.koreanFamilyName",
                 "contact.contact.phoneNumber",
@@ -41,7 +41,8 @@ class SupportedProfileFieldsTest {
                 "education.university.totalCredits",
                 "military.military.militaryType",
                 "disability.disability.disabilityRegistrationNumber",
-                "health.health.healthDetails"
+                "health.health.healthDetails",
+                "projects.project.organization"
             )
             .doesNotContain(
                 "startDate",
