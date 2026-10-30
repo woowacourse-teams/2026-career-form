@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.stereotype.Component;
+import com.careerform.formanalysis.application.PromptSource;
 import com.careerform.formanalysis.application.port.InteractionDecisionProvider;
 import com.careerform.formanalysis.dto.InteractionDecisionRequest.Role;
 import com.careerform.formanalysis.dto.InteractionDecisionRequest.TargetKind;
@@ -13,7 +14,7 @@ import com.careerform.formanalysis.infrastructure.InteractionProviderConditions;
 
 @Component
 @Conditional(InteractionProviderConditions.JevOnly.class)
-public final class JevInteractionDecisionProvider implements InteractionDecisionProvider {
+public final class JevInteractionDecisionProvider implements InteractionDecisionProvider, PromptSource {
     static final String ABSTAIN_CRITERION = "Cannot identify one safe, supported, unambiguous role.";
     static final String CANDIDATE_CRITERION = "This observed candidate only; do not choose hidden, disabled, readonly, inert or unrelated controls.";
     static final String REPEAT_ADD_CRITERION = "ADD: activating this observed control adds exactly one new empty row "
@@ -59,6 +60,33 @@ public final class JevInteractionDecisionProvider implements InteractionDecision
     }
     private final JevClient client;
     public JevInteractionDecisionProvider(JevClient client) { this.client = client; }
+    @Override
+    public String promptSourceId() { return "jev-interaction-decisions"; }
+    @Override
+    public Map<String, String> promptParts() {
+        Map<String, String> parts = new java.util.TreeMap<>();
+        parts.put("criterion.ABSTAIN", ABSTAIN_CRITERION);
+        parts.put("criterion.candidate", CANDIDATE_CRITERION);
+        parts.put("criterion.REPEAT_ADD", REPEAT_ADD_CRITERION);
+        parts.put("criterion.REPEAT_ADD.ABSTAIN", REPEAT_ADD_ABSTAIN_CRITERION);
+        parts.put("criterion.SECTION_REVEAL", SECTION_REVEAL_CRITERION);
+        parts.put("criterion.SECTION_REVEAL.ABSTAIN", SECTION_REVEAL_ABSTAIN_CRITERION);
+        for (Role role : Role.values()) {
+            if (!isStructureRole(role)) {
+                parts.put("instructions." + role, instructions(role.name(), QUESTION_ID_PLACEHOLDER));
+            }
+            else if (role != Role.ROW_KIND_OPTION) {
+                parts.put("instructions." + role, structureInstructions(role, null, QUESTION_ID_PLACEHOLDER));
+            }
+        }
+        for (TargetKind kind : TargetKind.values()) {
+            parts.put("instructions.ROW_KIND_OPTION." + kind,
+                structureInstructions(Role.ROW_KIND_OPTION, kind, QUESTION_ID_PLACEHOLDER));
+            parts.put("criterion.ROW_KIND_OPTION." + kind, rowKindCriterion(kind));
+            parts.put("criterion.ROW_KIND_OPTION." + kind + ".ABSTAIN", rowKindAbstainCriterion(kind));
+        }
+        return parts;
+    }
     @Override
     public Resolution decide(Batch batch) {
         Map<String, ChoiceContext> state = new LinkedHashMap<>();

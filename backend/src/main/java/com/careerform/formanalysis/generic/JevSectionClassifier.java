@@ -9,13 +9,14 @@ import java.util.stream.Collectors;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.stereotype.Component;
 
+import com.careerform.formanalysis.application.PromptSource;
 import com.careerform.formanalysis.infrastructure.InteractionProviderConditions;
 import com.careerform.formanalysis.infrastructure.adapter.jev.JevClient;
 
 /** 섹션마다 JEV answer() 질문 하나를 만든다. 질문 분할과 토큰 초과 재시도는 하지 않는다. */
 @Component
 @Conditional(InteractionProviderConditions.JevClient.class)
-public final class JevSectionClassifier implements SectionClassifier {
+public final class JevSectionClassifier implements SectionClassifier, PromptSource {
 
     static final String BOUNDARIES = "Boundaries: the applicant's own name, birth date and contact details are "
         + "PERSONAL, while contact details of other people such as references, guardians or family are NONE. "
@@ -38,6 +39,19 @@ public final class JevSectionClassifier implements SectionClassifier {
         return "Classify section " + questionId + " of a job application form into exactly one applicant "
             + "profile category using only its sanitized title, field labels, control kinds, repeated flag and "
             + "parent section. " + BOUNDARIES;
+    }
+
+    @Override
+    public String promptSourceId() {
+        return "jev-section-classification";
+    }
+
+    @Override
+    public Map<String, String> promptParts() {
+        Map<String, String> parts = new java.util.TreeMap<>();
+        parts.put("instructions", instructions(QUESTION_ID_PLACEHOLDER));
+        criteria().forEach((category, text) -> parts.put("criterion." + category, text));
+        return parts;
     }
 
     @Override

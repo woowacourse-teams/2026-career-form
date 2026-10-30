@@ -27,6 +27,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.stereotype.Component;
 
+import com.careerform.formanalysis.application.PromptSource;
 import com.careerform.formanalysis.application.RawLabelMask;
 import com.careerform.formanalysis.application.SupportedProfileFields;
 import com.careerform.formanalysis.application.port.FieldMappingResolver.DerivedRecipe;
@@ -50,7 +51,7 @@ import com.careerform.formanalysis.infrastructure.adapter.jev.JevClient;
  */
 @Component
 @Conditional(InteractionProviderConditions.JevClient.class)
-public final class JevCategoryFieldResolver {
+public final class JevCategoryFieldResolver implements PromptSource {
 
     static final String ABSTAIN_CRITERION =
         "No supported unambiguous applicant profile field, or insufficient de-identified meaning.";
@@ -65,6 +66,16 @@ public final class JevCategoryFieldResolver {
             + "only for the family name or only for the given name takes that single name field. Only fields of "
             + "the same section's direct fields or the same repeated Item row are siblings; do not pair names "
             + "across rows or sections. Field count alone does not distinguish a whole name from a partial name.";
+    static final String ENGLISH_FAMILY_ONLY_CRITERION = "Applicant profile field personal.personal.englishFamilyName"
+        + "; choose it only for a field that asks for the family name alone";
+    static final String ENGLISH_GIVEN_ONLY_CRITERION = "Applicant profile field personal.personal.englishGivenName"
+        + "; choose it only for a field that asks for the given name alone";
+    static final String ENGLISH_GIVEN_FIRST_CRITERION =
+        "Whole English name, only with explicit GIVEN_FIRST evidence; otherwise ABSTAIN.";
+    static final String ENGLISH_FAMILY_FIRST_CRITERION =
+        "Whole English name, only with explicit FAMILY_FIRST evidence; otherwise ABSTAIN.";
+    private static final List<String> NAME_RECIPES =
+        List.of("KOREAN_FULL_NAME", "ENGLISH_FULL_NAME_GIVEN_FIRST", "ENGLISH_FULL_NAME_FAMILY_FIRST");
     private static final Logger log = LoggerFactory.getLogger(JevCategoryFieldResolver.class);
 
     private final JevClient client;
@@ -243,6 +254,42 @@ public final class JevCategoryFieldResolver {
         }
     }
 
+    static String fullNameCriterion(String recipe) {
+        return "Explicit combined full-name target using this exact order: " + recipe;
+    }
+
+    static String datePartCriterion(String key, DatePart part) {
+        return "Select only the " + part + " component of applicant date field " + key;
+    }
+
+    @Override
+    public String promptSourceId() {
+        return "jev-generic-fields";
+    }
+
+    @Override
+    public Map<String, String> promptParts() {
+        Map<String, String> parts = new java.util.TreeMap<>();
+        parts.put("instructions", instructions(QUESTION_ID_PLACEHOLDER));
+        parts.put("confusionBoundaries", fields.promptGuidance());
+        parts.put("englishNameGuidance", ENGLISH_NAME_GUIDANCE);
+        parts.put("criterion.ABSTAIN", ABSTAIN_CRITERION);
+        parts.put("criterion.englishFamilyName.alone", ENGLISH_FAMILY_ONLY_CRITERION);
+        parts.put("criterion.englishGivenName.alone", ENGLISH_GIVEN_ONLY_CRITERION);
+        parts.put("criterion.ENGLISH_FULL_NAME_GIVEN_FIRST.evidence", ENGLISH_GIVEN_FIRST_CRITERION);
+        parts.put("criterion.ENGLISH_FULL_NAME_FAMILY_FIRST.evidence", ENGLISH_FAMILY_FIRST_CRITERION);
+        NAME_RECIPES.forEach(recipe -> parts.put("criterion." + recipe, fullNameCriterion(recipe)));
+        for (String key : fields.keys()) {
+            parts.put("criterion." + key, GenericProfileSemantics.describe(key));
+            if (fields.isDateField(key)) {
+                for (DatePart part : DatePart.values()) {
+                    parts.put("criterion.DATE_PART:" + key + ":" + part, datePartCriterion(key, part));
+                }
+            }
+        }
+        return parts;
+    }
+
     static String instructions(String questionId) {
         return "Map fields." + questionId + " of this job application form section to exactly one applicant "
             + "profile field using its de-identified observation, the section context and confusionBoundaries. "
@@ -288,25 +335,20 @@ public final class JevCategoryFieldResolver {
         }
         String nameGuidance = "";
         if (bindings.containsKey("ENGLISH_FULL_NAME_GIVEN_FIRST")) {
-            criteria.put("personal.personal.englishFamilyName", "Applicant profile field personal.personal.englishFamilyName"
-                + "; choose it only for a field that asks for the family name alone");
-            criteria.put("personal.personal.englishGivenName", "Applicant profile field personal.personal.englishGivenName"
-                + "; choose it only for a field that asks for the given name alone");
+            criteria.put("personal.personal.englishFamilyName", ENGLISH_FAMILY_ONLY_CRITERION);
+            criteria.put("personal.personal.englishGivenName", ENGLISH_GIVEN_ONLY_CRITERION);
             nameGuidance = ENGLISH_NAME_GUIDANCE;
         }
-        bindings.keySet().forEach(recipe -> criteria.put(recipe,
-            "Explicit combined full-name target using this exact order: " + recipe));
+        bindings.keySet().forEach(recipe -> criteria.put(recipe, fullNameCriterion(recipe)));
         if (!nameGuidance.isEmpty()) {
-            criteria.put("ENGLISH_FULL_NAME_GIVEN_FIRST",
-                "Whole English name, only with explicit GIVEN_FIRST evidence; otherwise ABSTAIN.");
-            criteria.put("ENGLISH_FULL_NAME_FAMILY_FIRST",
-                "Whole English name, only with explicit FAMILY_FIRST evidence; otherwise ABSTAIN.");
+            criteria.put("ENGLISH_FULL_NAME_GIVEN_FIRST", ENGLISH_GIVEN_FIRST_CRITERION);
+            criteria.put("ENGLISH_FULL_NAME_FAMILY_FIRST", ENGLISH_FAMILY_FIRST_CRITERION);
         }
         keys.stream().filter(fields::isDateField).forEach(key -> {
             for (DatePart part : DatePart.values()) {
                 String id = "DATE_PART:" + key + ":" + part;
                 bindings.put(id, new DatePartBinding(part));
-                criteria.put(id, "Select only the " + part + " component of applicant date field " + key);
+                criteria.put(id, datePartCriterion(key, part));
             }
         });
         criteria.put(JevClient.ABSTAIN, ABSTAIN_CRITERION);
