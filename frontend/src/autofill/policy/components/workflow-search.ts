@@ -14,6 +14,7 @@ import {
   matchesCatalogHighSchoolRegion,
   matchesCatalogInstitution,
   matchesCatalogLabel,
+  matchesCatalogNumberedCollege,
   normalizedCatalogLabel,
   verifiedSearchCatalogEntry,
 } from "../../profile/catalog-identity";
@@ -21,6 +22,7 @@ import { componentFieldLabel } from "./collection";
 import { componentText, componentUsable } from "./write";
 import { currentTrigger, mayMutate, waitFor } from "./workflow-controls";
 import { ownedPopup, retainedSearchPopup } from "./workflow-popup";
+import { expectedSearchRegion, regionTieBreak } from "./workflow-search-region";
 import { catalogApprovalForItem } from "../../profile/catalog-identity";
 import {
   hasCatalogSelection,
@@ -30,12 +32,39 @@ import {
 
 const receiptCleanup = new WeakMap<HTMLInputElement, () => void>();
 
-function nameOnlySearch(input: HTMLInputElement): boolean {
-  return (
-    componentPolicy(input.ownerDocument).searchKinds.find((rule) =>
-      new RegExp(rule.pattern).test(input.name),
-    )?.matchMode === "NAME_ONLY"
+function searchKindRule(input: HTMLInputElement) {
+  return componentPolicy(input.ownerDocument).searchKinds.find((rule) =>
+    new RegExp(rule.pattern).test(input.name),
   );
+}
+function nameOnlySearch(input: HTMLInputElement): boolean {
+  return searchKindRule(input)?.matchMode === "NAME_ONLY";
+}
+/** Matching coded options, canonical ones only when the policy prefers them. */
+function preferredOptions(
+  input: HTMLInputElement,
+  popup: HTMLElement,
+  matches: (option: HTMLElement) => boolean,
+  usable: (element: HTMLElement) => boolean = componentUsable,
+) {
+  const policy = componentPolicy(input.ownerDocument);
+  const code = (node: HTMLElement) =>
+    node.getAttribute(policy.widget.optionCodeAttribute);
+  const coded = [
+    ...popup.querySelectorAll<HTMLElement>(
+      componentSelector(popup, "codedSearchItem"),
+    ),
+  ].filter((node) => usable(node) && !!code(node));
+  const options = coded.filter(matches);
+  const canonical = options.filter(
+    (node) => code(node) !== policy.directSearch.code,
+  );
+  const prefer = componentRules(input.ownerDocument).search
+    .preferCatalogOptions;
+  return {
+    listed: coded.length,
+    preferred: prefer && canonical.length ? canonical : options,
+  };
 }
 
 function rememberComponentSelection(
@@ -254,12 +283,30 @@ export async function search(
       )
     : undefined;
   if (selectedIdentity && !catalog) return false;
-  if (catalog) {
-    const inputKind = componentPolicy(input.ownerDocument).searchKinds.find(
-      (rule) => new RegExp(rule.pattern).test(input.name),
-    )?.kind;
-    if (catalog.kind !== inputKind) return false;
-  }
+  const inputKind = searchKindRule(input)?.kind;
+  if (catalog && catalog.kind !== inputKind) return false;
+  // Same-name high schools differ only by the sido each option describes.
+  const region = expectedSearchRegion(inputKind, catalog, item.searchRegion);
+  let tieBroken = false;
+  const tieBreak = (options: HTMLElement[]) =>
+    regionTieBreak(
+      options,
+      region,
+      optionDescription,
+      (option, description) =>
+        !catalog ||
+        matchesCatalogHighSchoolRegion(
+          catalog,
+          searchOptionLabel(option),
+          description,
+        ),
+    );
+  const receiptDetail = (description: string | undefined) =>
+    tieBroken
+      ? { detail: catalog!.detail, description: region }
+      : nameOnlySearch(input) || !catalog!.detail
+        ? {}
+        : { detail: catalog!.detail, description };
   const language =
     catalog &&
     componentRules(input.ownerDocument).search.languageQualifierKinds.includes(
@@ -271,6 +318,8 @@ export async function search(
   const catalogLabelOf = (label: string): string | undefined => {
     if (!catalog) return undefined;
     if (matchesCatalogLabel(catalog, label)) return label;
+    // A college number only the site shows, e.g. "한국폴리텍 I 대학 …".
+    if (matchesCatalogNumberedCollege(catalog, label)) return catalog.name;
     const suffix = language
       ? componentRules(
           input.ownerDocument,
@@ -292,7 +341,10 @@ export async function search(
     if (nameOnlySearch(input) || !catalog.detail) return true;
     if (
       !option.querySelector(componentSelector(option, "optionDetail")) &&
-      matchesCatalogInstitution(catalog, searchOptionLabel(option))
+      matchesCatalogInstitution(
+        catalog,
+        catalogLabelOf(searchOptionLabel(option))!,
+      )
     )
       return true;
     const description = optionDescription(option);
@@ -350,9 +402,7 @@ export async function search(
           label: original,
           evidenceLabel: catalogLabelOf(original),
           code: "",
-          ...(nameOnlySearch(input) || !catalog.detail
-            ? {}
-            : { detail: catalog.detail }),
+          ...receiptDetail(undefined),
         });
       return success;
     }
@@ -374,6 +424,7 @@ export async function search(
       let emptyList = false;
       let retainedCode: string | undefined;
       let retainedDescription: string | undefined;
+      let retainedAmbiguous = false;
       const retained = await waitFor(
         () => {
           if (!current() || input.value !== original) return false;
@@ -397,6 +448,21 @@ export async function search(
             retainedPopup.usable(checked[0]) &&
             searchOptionLabel(checked[0]) === original &&
             matchesOption(checked[0]);
+          // A reopened high-school list with same-name rivals must agree with
+          // the tie-break; without a usable region it stays ambiguous.
+          const rivals =
+            inputKind === "highSchool"
+              ? preferredOptions(
+                  input,
+                  retainedPopup.popup,
+                  matchesOption,
+                  retainedPopup.usable,
+                ).preferred
+              : [];
+          tieBroken = rivals.length > 1;
+          retainedAmbiguous =
+            verified && tieBroken && tieBreak(rivals) !== checked[0];
+          if (retainedAmbiguous) return false;
           if (verified) {
             retainedCode =
               checked[0].getAttribute(
@@ -418,6 +484,7 @@ export async function search(
       // Some Component forms forms reopen an exact value without rendering options.
       if (retained === undefined && emptyList && original === item.profileValue)
         report?.("SEARCH_SELECTION_UNVERIFIED");
+      if (retainedAmbiguous) report?.("SEARCH_AMBIGUOUS");
       if (
         retained !== true ||
         !(await mayMutate(signal, beforeMutation)) ||
@@ -455,12 +522,7 @@ export async function search(
             label: original,
             evidenceLabel: catalogLabelOf(original),
             code: retainedCode,
-            ...(nameOnlySearch(input) || !catalog.detail
-              ? {}
-              : {
-                  detail: catalog.detail,
-                  description: retainedDescription,
-                }),
+            ...receiptDetail(retainedDescription),
           });
       }
       return success;
@@ -527,36 +589,12 @@ export async function search(
           return undefined;
         sawOpenPopup = true;
         popup = livePopup;
-        const coded = [
-          ...popup.querySelectorAll<HTMLElement>(
-            componentSelector(popup, "codedSearchItem"),
-          ),
-        ].filter(
-          (node) =>
-            componentUsable(node) &&
-            !!node.getAttribute(
-              componentPolicy(node.ownerDocument).widget.optionCodeAttribute,
-            ),
-        );
-        listed = coded.length;
+        const found = preferredOptions(input, popup, matchesOption);
+        listed = found.listed;
         everListed = Math.max(everListed, listed);
-        const options = coded.filter((node) => matchesOption(node));
-        const canonical = options.filter(
-          (node) =>
-            node.getAttribute(
-              componentPolicy(node.ownerDocument).widget.optionCodeAttribute,
-            ) !== componentPolicy(input.ownerDocument).directSearch.code,
-        );
-        const preferred =
-          componentRules(input.ownerDocument).search.preferCatalogOptions &&
-          canonical.length
-            ? canonical
-            : options;
-        return preferred.length === 1
-          ? preferred[0]
-          : preferred.length > 1
-            ? null
-            : undefined;
+        // Several exact options stay ambiguous unless the region picks one.
+        tieBroken = found.preferred.length > 1;
+        return tieBroken ? tieBreak(found.preferred) : found.preferred[0];
       },
       signal,
       input.ownerDocument,
@@ -720,12 +758,7 @@ export async function search(
           label: input.value,
           evidenceLabel: catalogLabelOf(input.value),
           code: selectedId,
-          ...(nameOnlySearch(input) || !catalog.detail
-            ? {}
-            : {
-                detail: catalog.detail,
-                description: optionDescription(option),
-              }),
+          ...receiptDetail(optionDescription(option)),
         });
     }
     return success;

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { TOGGLE_IN_PAGE_PROFILE_PANEL_MESSAGE } from "../autofill-demo/messages";
 import { openInPagePanel } from "./open-in-page-panel";
 
 describe("openInPagePanel", () => {
@@ -40,6 +41,30 @@ describe("openInPagePanel", () => {
       files: ["content-scripts/autofill.js"],
     });
     expect(tabs.sendMessage).toHaveBeenCalledTimes(2);
+  });
+
+  it("sends the given panel message, also after injecting the content script", async () => {
+    const tabs = {
+      query: vi.fn(async () => [{ id: 27 }]),
+      sendMessage: vi
+        .fn()
+        .mockRejectedValueOnce(new Error("Could not establish connection"))
+        .mockResolvedValueOnce(undefined),
+    };
+    const scripting = { executeScript: vi.fn(async () => undefined) };
+
+    await openInPagePanel(
+      { tabs, scripting },
+      27,
+      TOGGLE_IN_PAGE_PROFILE_PANEL_MESSAGE,
+    );
+
+    expect(tabs.sendMessage).toHaveBeenNthCalledWith(1, 27, {
+      type: "career-form:toggle-in-page-profile-panel",
+    });
+    expect(tabs.sendMessage).toHaveBeenNthCalledWith(2, 27, {
+      type: "career-form:toggle-in-page-profile-panel",
+    });
   });
 
   it("still opens the panel when a frame refuses the MAIN-world bridge", async () => {

@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { PROFILE_CATEGORIES } from "./field-definitions";
 import { createEmptyProfile } from "./model";
-import { categoryStatus, editorFieldGroups } from "./editor-presentation";
+import {
+  categoryStatus,
+  editorFieldGroups,
+  entryIdentity,
+  entrySummary,
+} from "./editor-presentation";
 
 describe("profile editor presentation", () => {
   it("keeps every existing field and its behavior exactly once when grouping", () => {
@@ -55,5 +60,25 @@ describe("profile editor presentation", () => {
     expect(categoryStatus(education, profile)).toBe("1건 등록");
     profile.education.pop();
     expect(categoryStatus(education, profile)).toBe("미입력");
+  });
+
+  it("finds the first identifying entry value in summary key order", () => {
+    expect(
+      entryIdentity({
+        id: "e1",
+        sectionId: "university",
+        values: { majorName: "비식별 전공", schoolName: " 비식별 대학교 " },
+      }),
+    ).toBe("비식별 대학교");
+    expect(
+      entryIdentity({
+        id: "e2",
+        sectionId: "languageTest",
+        values: { language: "영어", testName: "TOEIC" },
+      }),
+    ).toBe("TOEIC");
+    const unnamed = { id: "e3", sectionId: "project", values: { role: "x" } };
+    expect(entryIdentity(unnamed)).toBeUndefined();
+    expect(entrySummary(unnamed)).toBe("새 항목의 정보를 입력해 주세요");
   });
 });

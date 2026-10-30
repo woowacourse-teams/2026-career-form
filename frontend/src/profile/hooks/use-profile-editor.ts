@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { catalogCertificateIssuer } from "../catalog";
 import {
   createEmptyProfile,
   type Profile,
+  type ProfileEntry,
   type ProfileIdentity,
   type RepeatedProfileCategoryId,
   type SingleProfileCategoryId,
@@ -18,6 +20,34 @@ export type LoadStatus = "loading" | "ready" | "error";
 
 function createEntryId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `entry-${Date.now()}`;
+}
+
+function isIdentityField(
+  categoryId: RepeatedProfileCategoryId,
+  entry: ProfileEntry,
+  fieldId: string,
+): boolean {
+  return (
+    (categoryId === "certifications" && fieldId === "name") ||
+    (categoryId === "languages" &&
+      entry.sectionId === "languageTest" &&
+      fieldId === "testName") ||
+    (categoryId === "education" && fieldId === "schoolName")
+  );
+}
+
+/** Fill a blank certificate issuer from the catalog selection; never overwrite one. */
+function selectedIssuer(
+  categoryId: RepeatedProfileCategoryId,
+  fieldId: string,
+  entry: ProfileEntry,
+  name: string,
+  identity: ProfileIdentity | undefined,
+): { issuer?: string } {
+  if (categoryId !== "certifications" || fieldId !== "name") return {};
+  if (entry.values.issuer?.trim()) return {};
+  const issuer = catalogCertificateIssuer(identity, name);
+  return issuer ? { issuer } : {};
 }
 
 export function useProfileEditor(
@@ -147,12 +177,18 @@ export function useProfileEditor(
           entry.id === entryId
             ? {
                 ...entry,
-                values: { ...entry.values, [fieldId]: value },
-                ...((categoryId === "certifications" && fieldId === "name") ||
-                (categoryId === "languages" &&
-                  entry.sectionId === "languageTest" &&
-                  fieldId === "testName") ||
-                (categoryId === "education" && fieldId === "schoolName")
+                values: {
+                  ...entry.values,
+                  [fieldId]: value,
+                  ...selectedIssuer(
+                    categoryId,
+                    fieldId,
+                    entry,
+                    value,
+                    identity,
+                  ),
+                },
+                ...(isIdentityField(categoryId, entry, fieldId)
                   ? {
                       identity: identity ?? {
                         status: "manual" as const,
