@@ -97,7 +97,9 @@ export function matchesCatalogLabel(
 }
 
 /** First detail segment of a KESS high school record: its sido abbreviation. */
-function highSchoolRegion(entry: CatalogEntry): string | undefined {
+export function catalogHighSchoolRegion(
+  entry: CatalogEntry,
+): string | undefined {
   if (entry.kind !== "highSchool") return undefined;
   const region = entry.detail.split(" · ")[0]?.trim();
   return region || undefined;
@@ -112,13 +114,13 @@ export function matchesCatalogHighSchoolRegion(
   label: string,
   region: string,
 ): boolean {
-  const own = highSchoolRegion(entry);
+  const own = catalogHighSchoolRegion(entry);
   if (!own || normalizedCatalogLabel(region) !== normalizedCatalogLabel(own))
     return false;
   const candidates = [
     ...(labelEntries.get(`${entry.kind}:${normalizedCatalogLabel(label)}`) ??
       []),
-  ].filter((candidate) => highSchoolRegion(candidate) === own);
+  ].filter((candidate) => catalogHighSchoolRegion(candidate) === own);
   return candidates.length === 1 && candidates[0].id === entry.id;
 }
 
@@ -147,6 +149,57 @@ export function matchesCatalogInstitution(
     !!code &&
     candidates.some((candidate) => candidate.id === entry.id) &&
     candidates.every((candidate) => kessSchoolCode(candidate) === code)
+  );
+}
+
+const POLYTECH = "한국폴리텍대학";
+const POLYTECH_NUMBER = /^한국폴리텍([ivx]+)대학/;
+
+/** Normalized Korea Polytechnic label without its college number ("I", "Ⅶ"). */
+function polytechKey(label: string): { key: string; number?: string } {
+  const normalized = normalizedCatalogLabel(label);
+  const number = POLYTECH_NUMBER.exec(normalized)?.[1];
+  return {
+    key: normalized.replace(POLYTECH_NUMBER, POLYTECH),
+    ...(number ? { number } : {}),
+  };
+}
+
+const polytechEntries = new Map<string, Set<CatalogEntry>>();
+for (const entry of CATALOG) {
+  if (entry.kind !== "university" && entry.kind !== "graduateSchool") continue;
+  for (const label of catalogLabels(entry)) {
+    const { key } = polytechKey(label);
+    if (!key.startsWith(POLYTECH)) continue;
+    const entries = polytechEntries.get(`${entry.kind}:${key}`) ?? new Set();
+    polytechEntries.set(`${entry.kind}:${key}`, entries.add(entry));
+  }
+}
+
+/**
+ * KESS names some Korea Polytechnic campuses without the college number that
+ * sites list ("한국폴리텍 I 대학 서울정수캠퍼스"). Accept a label that differs
+ * only by a number present on exactly one side, and only when the numberless
+ * key identifies exactly this catalog entry.
+ */
+export function matchesCatalogNumberedCollege(
+  entry: CatalogEntry,
+  label: string,
+): boolean {
+  if (entry.kind !== "university" && entry.kind !== "graduateSchool")
+    return false;
+  const site = polytechKey(label);
+  if (!site.key.startsWith(POLYTECH)) return false;
+  const candidates = [
+    ...(polytechEntries.get(`${entry.kind}:${site.key}`) ?? []),
+  ];
+  return (
+    candidates.length === 1 &&
+    candidates[0].id === entry.id &&
+    catalogLabels(entry).some((name) => {
+      const own = polytechKey(name);
+      return own.key === site.key && !own.number !== !site.number;
+    })
   );
 }
 

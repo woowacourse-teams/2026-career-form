@@ -23,6 +23,8 @@ import {
 } from "../../src/job-postings/unread-postings";
 import styles from "./App.module.css";
 import panelCss from "./App.module.css?inline";
+import { PanelShortcutHint } from "./PanelShortcutHint";
+import { ProfileValueList } from "./ProfileValueList";
 
 interface AppProps {
   track?: TrackEvent;
@@ -40,6 +42,8 @@ interface AppProps {
   showPostings?: boolean;
   unreadPostings?: UnreadReader;
   readImportCandidates?: () => Promise<readonly ImportCandidate[]>;
+  /** Only the in-page panel, which the shortcut opens, passes this. */
+  readPanelShortcut?: () => Promise<string | undefined>;
 }
 
 type LoadStatus = "loading" | "ready" | "error";
@@ -118,6 +122,7 @@ export function App({
   showPostings = true,
   unreadPostings = unreadPostingsReader,
   readImportCandidates,
+  readPanelShortcut,
 }: AppProps) {
   const repository = useMemo(
     () => injectedRepository ?? new ChromeProfileStorage(),
@@ -274,6 +279,9 @@ export function App({
             <span aria-hidden="true">×</span>
           </button>
         </div>
+        {readPanelShortcut && !autofillActive && !importActive && (
+          <PanelShortcutHint read={readPanelShortcut} />
+        )}
         <div className={styles.titleRow}>
           {autofillActive && returnToProfile && (
             <button
@@ -500,56 +508,16 @@ export function App({
                               등록된 정보가 없습니다.
                             </p>
                           )}
-                          {groupItems.map((item) => {
-                            const isRevealed =
-                              !item.sensitive || revealed.has(item.id);
-                            return (
-                              <article
-                                className={styles.valueRow}
-                                key={item.id}
-                              >
-                                <div className={styles.valueMeta}>
-                                  {group.categoryIds.length > 1 && (
-                                    <span>{item.categoryLabel}</span>
-                                  )}
-                                  <strong>{item.fieldLabel}</strong>
-                                  <span
-                                    className={
-                                      isRevealed ? styles.value : styles.masked
-                                    }
-                                  >
-                                    {isRevealed
-                                      ? item.value
-                                      : "••••••••, 값 가림"}
-                                  </span>
-                                </div>
-                                {isRevealed ? (
-                                  <button
-                                    type="button"
-                                    data-copied={copiedId === item.id}
-                                    aria-label={`${item.fieldLabel} 복사`}
-                                    onClick={() =>
-                                      void copy(item.id, item.value)
-                                    }
-                                  >
-                                    {copiedId === item.id ? "복사됨" : "복사"}
-                                  </button>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    aria-label={`${item.fieldLabel} 펼치기`}
-                                    onClick={() =>
-                                      setRevealed((current) =>
-                                        new Set(current).add(item.id),
-                                      )
-                                    }
-                                  >
-                                    펼치기
-                                  </button>
-                                )}
-                              </article>
-                            );
-                          })}
+                          <ProfileValueList
+                            items={groupItems}
+                            showCategory={group.categoryIds.length > 1}
+                            revealed={revealed}
+                            copiedId={copiedId}
+                            onCopy={(id, value) => void copy(id, value)}
+                            onReveal={(id) =>
+                              setRevealed((current) => new Set(current).add(id))
+                            }
+                          />
                         </div>
                       )}
                     </section>

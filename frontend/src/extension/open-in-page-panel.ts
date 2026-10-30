@@ -1,6 +1,13 @@
 import { browser } from "wxt/browser";
 
-import { OPEN_IN_PAGE_PROFILE_PANEL_MESSAGE } from "../autofill-demo/messages";
+import {
+  OPEN_IN_PAGE_PROFILE_PANEL_MESSAGE,
+  type TOGGLE_IN_PAGE_PROFILE_PANEL_MESSAGE,
+} from "../autofill-demo/messages";
+
+type PanelMessage =
+  | typeof OPEN_IN_PAGE_PROFILE_PANEL_MESSAGE
+  | typeof TOGGLE_IN_PAGE_PROFILE_PANEL_MESSAGE;
 
 interface ActiveTabApi {
   query(options: {
@@ -33,6 +40,7 @@ export async function openInPagePanel(
     scripting: browser.scripting,
   },
   tabId?: number,
+  message: PanelMessage = OPEN_IN_PAGE_PROFILE_PANEL_MESSAGE,
 ): Promise<void> {
   const [tab] =
     tabId !== undefined
@@ -46,10 +54,7 @@ export async function openInPagePanel(
   }
 
   try {
-    await dependencies.tabs.sendMessage(
-      tab.id,
-      OPEN_IN_PAGE_PROFILE_PANEL_MESSAGE,
-    );
+    await dependencies.tabs.sendMessage(tab.id, message);
   } catch {
     // A tab opened before the extension was (re)loaded has neither manifest
     // content script. Re-inject the MAIN-world result-click bridge into every
@@ -76,9 +81,6 @@ export async function openInPagePanel(
       target: { tabId: tab.id },
       files: ["content-scripts/autofill.js"],
     });
-    await dependencies.tabs.sendMessage(
-      tab.id,
-      OPEN_IN_PAGE_PROFILE_PANEL_MESSAGE,
-    );
+    await dependencies.tabs.sendMessage(tab.id, message);
   }
 }

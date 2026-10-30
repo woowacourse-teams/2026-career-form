@@ -8,6 +8,7 @@ import { createProfilePanelController } from "../../src/extension/profile-panel-
 import {
   isOpenAutofillOverlayMessage,
   isOpenInPageProfilePanelMessage,
+  isToggleInPageProfilePanelMessage,
 } from "../../src/autofill-demo/messages";
 import {
   mountFloatingSidePanelLauncher,
@@ -27,8 +28,10 @@ export default defineContentScript({
     const controller = createProfilePanelController();
     let openGeneration = 0;
     let invalidated = false;
+    let panelOpen = false;
 
     const closeProfilePanel = () => {
+      panelOpen = false;
       const closingGeneration = ++openGeneration;
       controller.showProfile();
       void profilePanelPromise?.then((ui) =>
@@ -84,6 +87,14 @@ export default defineContentScript({
         host.showPopover();
       }
       setFloatingSidePanelLauncherVisibility(document, false);
+      panelOpen = true;
+    };
+    // Toolbar icon and panel shortcut close an open panel like its close button.
+    // Answers with a settled promise like an open request; the background
+    // re-sends only when no content script receives the message.
+    const toggleProfilePanel = async () => {
+      if (panelOpen) closeProfilePanel();
+      else await openProfilePanel();
     };
     const openAutofill = async () => {
       controller.startAutofill();
@@ -100,6 +111,8 @@ export default defineContentScript({
     const receiveMessage = (message: unknown) => {
       if (isOpenAutofillOverlayMessage(message)) return openAutofill();
       if (isOpenInPageProfilePanelMessage(message)) return openProfilePanel();
+      if (isToggleInPageProfilePanelMessage(message))
+        return toggleProfilePanel();
       return undefined;
     };
 

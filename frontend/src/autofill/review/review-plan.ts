@@ -60,6 +60,7 @@ import {
   type ApprovedCatalogMatch,
 } from "../profile/catalog-match";
 import { catalogEvidenceForElement } from "../profile/catalog-evidence";
+import { highSchoolSearchRegion } from "../profile/search-region";
 import { resolveChoiceOption } from "../profile/choice-option";
 import { matchStandardOption } from "../profile/standard-option-match";
 import { schoolRegionSearchValues } from "../../profile/standard-values";
@@ -137,6 +138,8 @@ export interface ReviewPlanItem {
   verifiedFreshDefaultValue?: string;
   /** Local-only approved search forms; never include these values in API requests. */
   searchValuePlan?: LocalSearchValuePlan;
+  /** Local-only same-entry high-school region label; never include in API requests. */
+  searchRegion?: string;
   /** Explicit local profile selection; never serialize to the backend. */
   searchIdentity?: ProfileIdentity;
   /** Approved local evidence for one catalog entry; never part of API requests. */
@@ -958,7 +961,8 @@ function itemForResolvedAnalysis(
       key: binding.profileFieldKey,
       itemIndex: itemIndex ?? -1,
       source: catalogSource?.status ?? "none",
-      hasEntryId: catalogSource?.status === "resolved" && !!catalogSource.profileEntryId,
+      hasEntryId:
+        catalogSource?.status === "resolved" && !!catalogSource.profileEntryId,
       entriesWithIdentity: pool.filter((entry) => !!entry.identity).length,
       entries: pool.length,
       identity: searchIdentity?.status ?? "none",
@@ -1205,10 +1209,13 @@ function itemForResolvedAnalysis(
     liveOptionMatch?.status === "unique"
       ? { ...profileValue, value: liveOptionMatch.option.displayName }
       : profileValue;
-  const choiceReview = genericOptionMatch?.status === "unique" &&
+  const choiceReview =
+    genericOptionMatch?.status === "unique" &&
     (genericOptionMatch.reason === "GRADE_OTHER_OPTION" ||
-      (binding.type === "DIRECT" && binding.profileFieldKey.startsWith("military.military.") &&
-        normalizeDisplayName(profileValue.value) !== normalizeDisplayName(genericOptionMatch.option.displayName)));
+      (binding.type === "DIRECT" &&
+        binding.profileFieldKey.startsWith("military.military.") &&
+        normalizeDisplayName(profileValue.value) !==
+          normalizeDisplayName(genericOptionMatch.option.displayName)));
   const catalogChoices =
     catalogMatch &&
     !(lookup.handle.buttonDropdown && catalogMatch.requiredDetail) &&
@@ -1275,6 +1282,14 @@ function itemForResolvedAnalysis(
           binding.profileFieldKey,
           resolvedProfileValue.profileEntryId,
           resolvedProfileValue.value,
+        )
+      : undefined;
+  const searchRegion =
+    binding.type === "DIRECT"
+      ? highSchoolSearchRegion(
+          profile,
+          binding.profileFieldKey,
+          resolvedProfileValue.profileEntryId,
         )
       : undefined;
 
@@ -1344,6 +1359,7 @@ function itemForResolvedAnalysis(
       ...(dayCalendarApproval ? { dayCalendarApproval } : {}),
       ...(dialogDateApproval ? { dialogDateApproval } : {}),
       ...(searchValuePlan ? { searchValuePlan } : {}),
+      ...(searchRegion ? { searchRegion } : {}),
       ...(searchIdentity
         ? { searchIdentity, ...(catalogMatch ? { catalogMatch } : {}) }
         : {}),
@@ -1425,6 +1441,7 @@ function itemForResolvedAnalysis(
       ...(dayCalendarApproval ? { dayCalendarApproval } : {}),
       ...(dialogDateApproval ? { dialogDateApproval } : {}),
       ...(searchValuePlan ? { searchValuePlan } : {}),
+      ...(searchRegion ? { searchRegion } : {}),
       ...(searchIdentity
         ? { searchIdentity, ...(catalogMatch ? { catalogMatch } : {}) }
         : {}),
@@ -1448,21 +1465,20 @@ function itemForResolvedAnalysis(
     // A calendar target whose approval was built from a complete profile date
     // (format resolved by the calendar surface) is a format difference, not an
     // ambiguity, so it is auto-selected. Conflicts returned earlier.
-    selected:
-      choiceReview
-        ? false
-        : analysis.writePlan.command === "SELECT_DATE"
-          ? generic &&
-            !!(calendarApproval || dayCalendarApproval || dialogDateApproval)
-          : true,
+    selected: choiceReview
+      ? false
+      : analysis.writePlan.command === "SELECT_DATE"
+        ? generic &&
+          !!(calendarApproval || dayCalendarApproval || dialogDateApproval)
+        : true,
     disabled: false,
     revealed: true,
-    reason:
-      choiceReview
-        ? genericOptionMatch?.status === "unique" && genericOptionMatch.reason === "GRADE_OTHER_OPTION"
-          ? genericReasonText("GRADE_OTHER_OPTION")
-          : "프로필 병역 정보에 맞는 지원서 선택지예요. 맞는지 확인한 뒤 포함해 주세요."
-        : analysis.writePlan.command === "SELECT_DATE"
+    reason: choiceReview
+      ? genericOptionMatch?.status === "unique" &&
+        genericOptionMatch.reason === "GRADE_OTHER_OPTION"
+        ? genericReasonText("GRADE_OTHER_OPTION")
+        : "프로필 병역 정보에 맞는 지원서 선택지예요. 맞는지 확인한 뒤 포함해 주세요."
+      : analysis.writePlan.command === "SELECT_DATE"
         ? currentValue(lookup.handle).trim() === finalizedProfileValue.value
           ? dayCalendarApproval
             ? "지원서에 같은 날짜가 이미 입력되어 있습니다."
@@ -1483,6 +1499,7 @@ function itemForResolvedAnalysis(
     ...(dayCalendarApproval ? { dayCalendarApproval } : {}),
     ...(dialogDateApproval ? { dialogDateApproval } : {}),
     ...(searchValuePlan ? { searchValuePlan } : {}),
+    ...(searchRegion ? { searchRegion } : {}),
     ...(searchIdentity
       ? { searchIdentity, ...(catalogMatch ? { catalogMatch } : {}) }
       : {}),

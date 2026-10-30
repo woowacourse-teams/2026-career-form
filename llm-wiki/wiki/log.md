@@ -958,3 +958,11 @@
 - 추가 승인한 후보 4개를 [CF-358 bundle](../raw/issues/CF-358/manifest.md)에 기록했다. 새 칸 2차 검토 버튼 제거와 직접 확인할 새 칸 표시, 확인 필요 기본 포함 규칙, 모든 범주·숨은 칸·입력 불가 칸까지 넓힌 승인 범위, 날짜 기입 뒤 다른 컨트롤이 연 층의 보류 판정 제외.
 - [범용 검토 화면의 3단계 표시](topics/generic-review-tiers.md)와 [범용 연월 달력 선택](topics/generic-calendar-selection.md)의 Current를 CF-358 근거로 바꿨다.
 - 실제 지원값, 계정, 세션, 페이지 주소, 대화 전문은 저장하지 않았다.
+
+## [2026-10-29] ingest | CF-368 Greeting 학교명 검색, 사이드 패널, 프로필 입력 보강
+
+- Approval-Digest: b248c7c1b42ba910bc8cbbe50815c2a1adef692dbf08c12363336f19941025e5
+- Source-Revision: bd1f21a7
+- 승인된 후보 11개를 [CF-368 bundle](../raw/issues/CF-368/manifest.md)에 여섯 payload로 기록했다. Greeting 동명 고교의 FE 지역 동점 해소와 재실행 검증, 한국폴리텍 대학 번호 표기 대조, 카카오게임즈 실측(후보 1~4), 사이드 패널 라벨 표시·반복 항목 소제목·열기·닫기 토글 단축키(후보 5~7, 후보 7은 토글 반영 뒤 재승인), 자격증 발급기관 채움·등록번호 라벨·TOEIC Speaking(후보 8~10), 프론트 lint·typecheck 관찰(후보 11)이다.
+- [Greeting 공통 어댑터](topics/adapter-greeting.md), [어댑터 필드 현황](topics/adapter-field-inventory.md), [확장 프로그램 프로필·지원서 패널 UI](topics/extension-ui.md), [프로필 카탈로그 선택과 식별 연결](topics/profile-catalog-identity.md), [프로필 필드](topics/profile-fields.md)의 Current를 CF-368로 바꾸고 앞선 근거를 History에 남겼다. Greeting 문서의 "동명 고교는 합성 프로필 한계로 여러 개" 문장을 CF-368 동작으로 대체했고, CF-162의 관련 필드 불변 결정 중 자격증 발급기관만 바뀐 것을 기록했다. [프론트 정적 검사 범위](topics/frontend-static-checks.md)를 새로 추가했다.
+- 실제 지원 정보, 계정, 세션, 서버 주소, 대화 전문은 저장하지 않았다. 실측은 테스트 계정과 합성 프로필로 했다.

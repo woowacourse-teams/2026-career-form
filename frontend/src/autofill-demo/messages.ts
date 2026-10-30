@@ -6,6 +6,11 @@ export const OPEN_IN_PAGE_PROFILE_PANEL_MESSAGE = {
   type: "career-form:open-in-page-profile-panel",
 } as const;
 
+/** Toolbar icon and panel shortcut: open the in-page panel, or close it if open. */
+export const TOGGLE_IN_PAGE_PROFILE_PANEL_MESSAGE = {
+  type: "career-form:toggle-in-page-profile-panel",
+} as const;
+
 export const OPEN_OPTIONS_PAGE_MESSAGE = {
   type: "career-form:open-options-page",
 } as const;
@@ -31,6 +36,17 @@ export function isOpenInPageProfilePanelMessage(
     message !== null &&
     "type" in message &&
     message.type === OPEN_IN_PAGE_PROFILE_PANEL_MESSAGE.type
+  );
+}
+
+export function isToggleInPageProfilePanelMessage(
+  message: unknown,
+): message is typeof TOGGLE_IN_PAGE_PROFILE_PANEL_MESSAGE {
+  return (
+    typeof message === "object" &&
+    message !== null &&
+    "type" in message &&
+    message.type === TOGGLE_IN_PAGE_PROFILE_PANEL_MESSAGE.type
   );
 }
 

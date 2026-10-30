@@ -291,3 +291,32 @@ describe("personal profile fields", () => {
     expect(gender?.options).toEqual(["남성", "여성", "논바이너리"]);
   });
 });
+
+describe("registration number labels", () => {
+  function section(categoryId: string, sectionId: string) {
+    return PROFILE_CATEGORIES.find(
+      (category) => category.id === categoryId,
+    )?.sections.find((candidate) => candidate.id === sectionId);
+  }
+
+  it("labels the certificate registration number 등록번호 및 자격번호 and keeps the language label", () => {
+    const certificate = section("certifications", "certificate");
+    const languageTest = section("languages", "languageTest");
+
+    expect(
+      certificate?.fields.find((field) => field.id === "registrationNo")?.label,
+    ).toBe("등록번호 및 자격번호");
+    expect(
+      languageTest?.fields.find((field) => field.id === "registrationNo")
+        ?.label,
+    ).toBe("등록번호");
+    expect(certificate?.fields.map((field) => field.id)).toEqual([
+      "name",
+      "grade",
+      "registrationNo",
+      "issuer",
+      "acquisitionDate",
+      "evidenceDocumentPath",
+    ]);
+  });
+});

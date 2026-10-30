@@ -7,6 +7,7 @@ import type { PreparationAnalyzeResponse } from "../../src/autofill/api/types";
 import {
   OPEN_AUTOFILL_OVERLAY_MESSAGE,
   OPEN_IN_PAGE_PROFILE_PANEL_MESSAGE,
+  TOGGLE_IN_PAGE_PROFILE_PANEL_MESSAGE,
 } from "../../src/autofill-demo/messages";
 
 const boundary = vi.hoisted(() => ({
@@ -206,6 +207,67 @@ describe("content script panel lifecycle", () => {
       panel().getByRole("button", { name: "수동 복사로 돌아가기" }),
     ).toBeVisible();
     expect(receive({ type: "unknown" })).toBeUndefined();
+  });
+
+  it("toggles the panel with the toolbar and shortcut message while open requests stay open", async () => {
+    const flushClose = async () =>
+      act(async () => {
+        await Promise.resolve();
+        for (const callback of queued.splice(0)) callback();
+      });
+    await start();
+    await send(TOGGLE_IN_PAGE_PROFILE_PANEL_MESSAGE);
+    await panel().findByText("fixture@example.test");
+    expect(shells[0]!.mounted).toBe(true);
+
+    await send(TOGGLE_IN_PAGE_PROFILE_PANEL_MESSAGE);
+    await flushClose();
+    expect(shells[0]!.mounted).toBe(false);
+
+    await send(TOGGLE_IN_PAGE_PROFILE_PANEL_MESSAGE);
+    await flushClose();
+    expect(shells[0]!.mounted).toBe(true);
+
+    await send(OPEN_IN_PAGE_PROFILE_PANEL_MESSAGE);
+    await flushClose();
+    expect(shells[0]!.mounted).toBe(true);
+    expect(shells).toHaveLength(1);
+  });
+
+  it("answers the toggle message with a settled promise like an open request", async () => {
+    await start();
+    let reply: unknown;
+    await act(async () => {
+      reply = receive(TOGGLE_IN_PAGE_PROFILE_PANEL_MESSAGE);
+      await reply;
+    });
+    expect(reply).toBeInstanceOf(Promise);
+  });
+
+  it("toggles open again after the panel was closed with its close button", async () => {
+    await start();
+    await send(TOGGLE_IN_PAGE_PROFILE_PANEL_MESSAGE);
+    fireEvent.click(panel().getByRole("button", { name: "닫기" }));
+    await act(async () => {
+      await Promise.resolve();
+      for (const callback of queued.splice(0)) callback();
+    });
+    expect(shells[0]!.mounted).toBe(false);
+    await send(TOGGLE_IN_PAGE_PROFILE_PANEL_MESSAGE);
+    expect(shells[0]!.mounted).toBe(true);
+  });
+
+  it("closes a running workflow like the close button when toggled", async () => {
+    await start();
+    await send(OPEN_AUTOFILL_OVERLAY_MESSAGE);
+    await send(TOGGLE_IN_PAGE_PROFILE_PANEL_MESSAGE);
+    await act(async () => {
+      await Promise.resolve();
+      for (const callback of queued.splice(0)) callback();
+    });
+    expect(shells[0]!.mounted).toBe(false);
+    await send(TOGGLE_IN_PAGE_PROFILE_PANEL_MESSAGE);
+    expect(panel().getByRole("button", { name: "자동 기입" })).toBeVisible();
   });
 
   it("returns to the same list only for Escape inside the workflow", async () => {

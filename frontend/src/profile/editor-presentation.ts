@@ -152,7 +152,13 @@ const FIELD_GROUPS: Record<string, { title: string; fields: string[] }[]> = {
     },
     {
       title: "연구와 논문",
-      fields: ["labName", "labProfessorName", "researchField", "thesisTitle", "thesisSummary"],
+      fields: [
+        "labName",
+        "labProfessorName",
+        "researchField",
+        "thesisTitle",
+        "thesisSummary",
+      ],
     },
   ],
   languageTest: [
@@ -247,20 +253,27 @@ export function categoryStatus(
     : "미입력";
 }
 
+const ENTRY_IDENTITY_KEYS = [
+  "schoolName",
+  "testName",
+  "name",
+  "companyName",
+  "projectName",
+  "title",
+  "language",
+  "healthItemName",
+] as const;
+
+/** The value a person recognizes an entry by, such as its school or exam name. */
+export function entryIdentity(entry: ProfileEntry): string | undefined {
+  return (
+    ENTRY_IDENTITY_KEYS.map((key) => entry.values[key]?.trim()).find(Boolean) ||
+    undefined
+  );
+}
+
 export function entrySummary(entry: ProfileEntry) {
-  const identity = [
-    "schoolName",
-    "testName",
-    "name",
-    "companyName",
-    "projectName",
-    "title",
-    "language",
-    "healthItemName",
-  ]
-    .map((key) => entry.values[key]?.trim())
-    .find(Boolean);
-  return identity || "새 항목의 정보를 입력해 주세요";
+  return entryIdentity(entry) ?? "새 항목의 정보를 입력해 주세요";
 }
 
 export const FIELD_EXAMPLES: Record<string, string> = {
