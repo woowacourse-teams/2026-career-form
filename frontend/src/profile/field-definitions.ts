@@ -396,6 +396,7 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
           date("startDate", "활동 시작일"),
           date("endDate", "활동 종료일"),
           text("projectName", "프로젝트 이름"),
+          text("organization", "수행 기관"),
           text("role", "담당 역할"),
           {
             id: "activityDetails",

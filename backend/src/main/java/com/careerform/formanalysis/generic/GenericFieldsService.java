@@ -131,11 +131,14 @@ public final class GenericFieldsService {
                 section.items().forEach(item -> candidates.addAll(item.fields()));
             }
             applyPersonalAndSensitiveRules(section, candidates, mappings);
+            applyAdmissionKindRule(section, candidates, mappings);
             // 예/아니오 상태 키는 긍정·부정 두 의미만 가진 선택칸에만 둔다. 종류를 고르는 칸에 붙은 상태 키는 기권한다.
             for (FieldCandidate candidate : candidates) {
                 Mapping current = mappings.get(candidate.candidateId());
                 if (current != null && current.binding() == null
                     && GenericProfileSemantics.isYesNoStatusKey(current.profileFieldKey())
+                    && !(current.profileFieldKey().endsWith(".transferStatus")
+                        && GenericProfileSemantics.isAdmissionKindChoice(candidate))
                     && GenericProfileSemantics.meaningfulChoiceOptions(candidate) != null
                     && !GenericProfileSemantics.isPositiveNegativeChoice(candidate)) {
                     mappings.put(candidate.candidateId(),
@@ -416,6 +419,58 @@ public final class GenericFieldsService {
                 .forEach(label -> texts.add(label.text()));
         }
         return texts.stream().anyMatch(text -> text != null && DATE_EVIDENCE.matcher(text).find());
+    }
+
+    /** 입학·편입 두 선택지만 가진 입학구분 칸은 같은 항목(없으면 같은 섹션)의 학력 기록으로 편입유무·입학유형 키를 정한다. */
+    private void applyAdmissionKindRule(Section section, List<FieldCandidate> candidates,
+        Map<String, Mapping> mappings) {
+        if (!"EDUCATION".equals(section.category())) {
+            return;
+        }
+        for (FieldCandidate candidate : candidates) {
+            Mapping current = mappings.get(candidate.candidateId());
+            if (current == null || !GenericProfileSemantics.isAdmissionKindChoice(candidate)
+                || !(abstained(current) || isAdmissionKey(current.profileFieldKey()))) {
+                continue;
+            }
+            List<FieldCandidate> siblings = candidates;
+            if (section.items() != null) {
+                for (GenericFieldsRequest.Item item : section.items()) {
+                    if (item.fields().contains(candidate)) {
+                        siblings = item.fields();
+                    }
+                }
+            }
+            String key = admissionKey(candidate, siblings, mappings);
+            if (key == null && siblings != candidates) {
+                key = admissionKey(candidate, candidates, mappings);
+            }
+            if (key != null && supportedProfileFields.contains(key)) {
+                mappings.put(candidate.candidateId(), new Mapping(key, 1.0, current.categoryConfirmed(), null));
+            }
+        }
+    }
+
+    private static boolean isAdmissionKey(String key) {
+        return key != null && key.startsWith("education.")
+            && (key.endsWith(".transferStatus") || key.endsWith(".admissionType"));
+    }
+
+    /** 형제 칸의 키가 대학교 기록만 가리키면 편입유무, 대학원 기록만 가리키면 입학유형이다. 둘 다이거나 없으면 null이다. */
+    private static String admissionKey(FieldCandidate candidate, List<FieldCandidate> siblings,
+        Map<String, Mapping> mappings) {
+        boolean university = false;
+        boolean graduate = false;
+        for (FieldCandidate sibling : siblings) {
+            Mapping mapping = mappings.get(sibling.candidateId());
+            String key = sibling == candidate || mapping == null ? null : mapping.profileFieldKey();
+            university |= key != null && key.startsWith("education.university.");
+            graduate |= key != null && key.startsWith("education.graduateSchool.");
+        }
+        if (university == graduate) {
+            return null;
+        }
+        return university ? "education.university.transferStatus" : "education.graduateSchool.admissionType";
     }
 
     private static boolean abstained(Mapping mapping) {
