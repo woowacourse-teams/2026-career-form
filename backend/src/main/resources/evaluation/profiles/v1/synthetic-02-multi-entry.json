@@ -1,0 +1,196 @@
+{
+  "schemaVersion": 1,
+  "profile": {
+    "personal": {
+      "koreanFamilyName": "이",
+      "koreanGivenName": "여울",
+      "hanjaFamilyName": "李",
+      "englishFamilyName": "LEE",
+      "englishGivenName": "YEO UL",
+      "birthDate": "1999-11-08",
+      "nationality": "대한민국"
+    },
+    "contact": {
+      "email": "cf.synthetic.02@example.com",
+      "secondaryEmail": "cf.synthetic.02.alt@example.com",
+      "residenceCountry": "대한민국"
+    },
+    "compensation": {},
+    "military": {
+      "militaryStatus": "military-status:exempt"
+    },
+    "veteran": {
+      "veteranStatus": "veteran-status:eligible",
+      "veteranRelation": "자녀"
+    },
+    "disability": {
+      "disabilityStatus": "disability-status:eligible",
+      "disabilityType": "청각장애",
+      "disabilityGrade": "장애의 정도가 심하지 않은 장애인"
+    },
+    "education": [
+      {
+        "id": "p02-high",
+        "sectionId": "highSchool",
+        "values": {
+          "academicProcess": "고등학교",
+          "schoolName": "인천고등학교",
+          "completionStatus": "졸업",
+          "startDate": "2015-03-02",
+          "endDate": "2018-02-09"
+        }
+      },
+      {
+        "id": "p02-college",
+        "sectionId": "university",
+        "values": {
+          "schoolType": "전문대학",
+          "degreeLevel": "전문학사",
+          "schoolName": "인하공업전문대학",
+          "attendanceType": "attendance:day",
+          "startDate": "2018-03-02",
+          "endDate": "2020-02-14",
+          "completionStatus": "졸업",
+          "gpaScore": "4.12",
+          "gpaScale": "4.50",
+          "majorField": "공학계열",
+          "majorName": "컴퓨터정보과",
+          "transferStatus": "비해당",
+          "doubleMajorStatus": "없음",
+          "minorStatus": "없음"
+        }
+      },
+      {
+        "id": "p02-univ",
+        "sectionId": "university",
+        "values": {
+          "schoolType": "대학교",
+          "degreeLevel": "학사",
+          "schoolName": "인하대학교",
+          "attendanceType": "attendance:day",
+          "startDate": "2020-03-02",
+          "endDate": "2022-02-18",
+          "completionStatus": "졸업",
+          "schoolRegion": "region:incheon",
+          "gpaScore": "3.76",
+          "gpaScale": "4.50",
+          "majorField": "공학계열",
+          "majorName": "컴퓨터공학과",
+          "transferStatus": "해당",
+          "doubleMajorStatus": "있음",
+          "additionalMajorField": "사회계열",
+          "additionalMajorName": "경영학과",
+          "minorStatus": "없음"
+        }
+      },
+      {
+        "id": "p02-grad",
+        "sectionId": "graduateSchool",
+        "values": {
+          "degreeLevel": "석사",
+          "combinedDegreeStatus": "아니오",
+          "country": "대한민국",
+          "schoolName": "인하대학교",
+          "startDate": "2025-03-03",
+          "endDate": "2027-02-19",
+          "admissionType": "신입학",
+          "completionStatus": "졸업예정",
+          "gpaScore": "4.10",
+          "gpaScale": "4.50",
+          "majorField": "공학계열",
+          "majorName": "컴퓨터공학과",
+          "researchField": "분산 시스템",
+          "doubleMajorStatus": "없음",
+          "minorStatus": "없음"
+        }
+      }
+    ],
+    "languages": [
+      {
+        "id": "p02-opic",
+        "sectionId": "languageTest",
+        "values": {
+          "language": "영어",
+          "testName": "OPIc",
+          "acquisitionDate": "2026-07-12",
+          "grade": "IH"
+        }
+      },
+      {
+        "id": "p02-jlpt",
+        "sectionId": "languageTest",
+        "values": {
+          "language": "일본어",
+          "testName": "JLPT",
+          "acquisitionDate": "2025-12-07",
+          "grade": "N2"
+        }
+      },
+      {
+        "id": "p02-skill",
+        "sectionId": "languageSkill",
+        "values": {
+          "language": "일본어",
+          "conversationalLevel": "중"
+        }
+      }
+    ],
+    "certifications": [
+      {
+        "id": "p02-cert1",
+        "sectionId": "certificate",
+        "values": {
+          "name": "SQLD",
+          "issuer": "한국데이터산업진흥원",
+          "acquisitionDate": "2024-09-20"
+        }
+      },
+      {
+        "id": "p02-cert2",
+        "sectionId": "certificate",
+        "values": {
+          "name": "정보처리기사",
+          "issuer": "한국산업인력공단",
+          "acquisitionDate": "2023-11-15"
+        }
+      }
+    ],
+    "careers": [],
+    "projects": [
+      {
+        "id": "p02-project1",
+        "sectionId": "project",
+        "values": {
+          "startDate": "2025-04-01",
+          "endDate": "2025-08-31",
+          "projectName": "합성 작업 큐 비교 실험",
+          "role": "성능 측정 및 서버 개발",
+          "activityDetails": "평가용 가상 활동. 메시지 중복 처리와 작업 재시도 조건을 비교했다."
+        }
+      },
+      {
+        "id": "p02-project2",
+        "sectionId": "project",
+        "values": {
+          "startDate": "2025-10-01",
+          "endDate": "2026-02-28",
+          "projectName": "합성 다국어 학습 기록",
+          "role": "API 및 검색 개발",
+          "activityDetails": "평가용 가상 활동. 영어·일본어 학습 기록을 저장하고 검색 기능을 구현했다."
+        }
+      },
+      {
+        "id": "p02-project3",
+        "sectionId": "project",
+        "values": {
+          "startDate": "2026-06-01",
+          "projectName": "합성 연구 자료 검색",
+          "role": "데이터 처리 및 백엔드 개발",
+          "activityDetails": "평가용 가상 활동. 진행 중인 프로젝트로 종료일은 아직 정하지 않았다."
+        }
+      }
+    ],
+    "publications": [],
+    "health": []
+  }
+}
