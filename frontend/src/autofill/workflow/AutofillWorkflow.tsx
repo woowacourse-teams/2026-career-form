@@ -296,14 +296,14 @@ function PolicyReadyWorkflow({
   const autoWrittenKeys = useRef(new Set<string>());
   const revealWatchRounds = useRef(0);
   // Row saves (#370): the rows the extension saved, and whether a save it
-  // could not confirm stopped every later one.
+  // could not confirm stopped the later rows of its category.
   const savedRowKeys = useRef(new Set<string>());
-  const rowSaveStopped = useRef(false);
+  const rowSaveStopped = useRef(new Set<string>());
   const [rowSave, setRowSave] = useState<{
     saved: number;
     manual: RowSaveManual[];
-    stopped: boolean;
-  }>({ saved: 0, manual: [], stopped: false });
+    stopped: string[];
+  }>({ saved: 0, manual: [], stopped: [] });
   const completedDriverKeys = useRef<ReadonlySet<string>>(new Set());
   const completedGenericStateDrivers = useRef<
     ReadonlyMap<string, CompletedGenericStateDriver>
@@ -1051,11 +1051,13 @@ function PolicyReadyWorkflow({
         });
         if (!mounted.current) return;
         rows.saved.forEach((key) => savedRowKeys.current.add(key));
-        rowSaveStopped.current = rows.stopped;
+        rows.stopped.forEach((category) =>
+          rowSaveStopped.current.add(category),
+        );
         localWorkflowLog("row-save", {
           saved: rows.saved.length,
           manual: rows.manual.length,
-          stopped: rows.stopped,
+          stopped: rows.stopped.length,
         });
         if (rows.saved.length > 0 || rows.manual.length > 0)
           setRowSave((current) => ({

@@ -37,15 +37,16 @@ export interface RowSaveManual {
 export interface RowSaveOutcome {
   saved: string[];
   manual: RowSaveManual[];
-  stopped: boolean;
+  /** Categories whose later rows are stopped. */
+  stopped: string[];
 }
 
 interface RowSaveOptions {
   document: Document;
   fields: readonly RowSaveField[];
   savedKeys: ReadonlySet<string>;
-  /** An earlier pass could not confirm a row save. */
-  stopped?: boolean;
+  /** Categories an earlier pass could not confirm a row save for. */
+  stopped?: ReadonlySet<string> | readonly string[];
   signal?: AbortSignal;
   enableWaitMs?: number;
   confirmTimeoutMs?: number;
@@ -68,16 +69,13 @@ export async function saveWrittenRows({
   document,
   fields,
   savedKeys,
-  stopped: stoppedBefore = false,
+  stopped: stoppedBefore = [],
   signal,
   enableWaitMs = 1_000,
   confirmTimeoutMs = 3_000,
 }: RowSaveOptions): Promise<RowSaveOutcome> {
-  const outcome: RowSaveOutcome = {
-    saved: [],
-    manual: [],
-    stopped: stoppedBefore,
-  };
+  const outcome: RowSaveOutcome = { saved: [], manual: [], stopped: [] };
+  const stoppedCategories = new Set(stoppedBefore);
   const rows = new Map<string, Row>();
   for (const field of fields) {
     if (!field.recordKey || field.approved === false) continue;
@@ -111,7 +109,8 @@ export async function saveWrittenRows({
         recordLabel: row.label,
         reason,
       });
-    if (outcome.stopped || signal?.aborted) {
+    const category = row.key.split(".")[0];
+    if (stoppedCategories.has(category) || signal?.aborted) {
       manual("stopped");
       continue;
     }
@@ -136,9 +135,10 @@ export async function saveWrittenRows({
       outcome.saved.push(row.key);
     } else {
       manual("unconfirmed");
-      outcome.stopped = true;
+      stoppedCategories.add(category);
     }
   }
+  outcome.stopped = [...stoppedCategories];
   return outcome;
 }
 

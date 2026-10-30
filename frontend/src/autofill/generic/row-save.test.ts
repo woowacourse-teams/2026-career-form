@@ -79,7 +79,7 @@ describe("saveWrittenRows", () => {
     expect(outcome).toEqual({
       saved: ["careers.career#0", "careers.career#1"],
       manual: [],
-      stopped: false,
+      stopped: [],
     });
   });
 
@@ -112,7 +112,7 @@ describe("saveWrittenRows", () => {
       ...FAST,
     });
     expect(save0()).toBe(0);
-    expect(outcome).toEqual({ saved: [], manual: [], stopped: false });
+    expect(outcome).toEqual({ saved: [], manual: [], stopped: [] });
   });
 
   it("does not press a row it already saved", async () => {
@@ -248,7 +248,7 @@ describe("rows left for the user", () => {
         reason: "already-registered",
       },
     ]);
-    expect(outcome.stopped).toBe(false);
+    expect(outcome.stopped).toEqual([]);
   });
 
   it("leaves a row whose save button stays disabled", async () => {
@@ -294,7 +294,7 @@ describe("rows left for the user", () => {
           reason: "stopped",
         },
       ],
-      stopped: true,
+      stopped: ["careers"],
     });
   });
 
@@ -305,11 +305,49 @@ describe("rows left for the user", () => {
       document,
       fields: rowFields().slice(0, 3),
       savedKeys: new Set(),
-      stopped: true,
+      stopped: ["careers"],
       ...FAST,
     });
     expect(save0()).toBe(0);
     expect(outcome.manual.map((row) => row.reason)).toEqual(["stopped"]);
-    expect(outcome.stopped).toBe(true);
+    expect(outcome.stopped).toEqual(["careers"]);
+  });
+
+  it("still saves a row of another category after an unconfirmed registration", async () => {
+    document.body.innerHTML = `
+      <section><h3>기본 정보</h3><input name="name" value="합성이름"></section>
+      <section><h3>학력</h3>
+        <ul id="saved"></ul>
+        <div id="row0"><input name="school0" value="합성학교">
+          <button type="button" id="save0">저장</button></div>
+        <div id="row1"><input name="school1" value="합성학교2">
+          <button type="button" id="save1">저장</button></div>
+      </section>
+      <section><h3>경력</h3>
+        <div id="row2"><input name="company0" value="합성회사">
+          <button type="button" id="save2">저장</button></div>
+      </section>`;
+    // The education save changes nothing; only the career row registers.
+    registersRow("row2");
+    const save1 = clicks("#save1");
+    const save2 = clicks("#save2");
+    const outcome = await saveWrittenRows({
+      document,
+      fields: [
+        field("education.university#0", "school0"),
+        field("education.university#1", "school1"),
+        field("careers.career#0", "company0"),
+      ],
+      savedKeys: new Set(),
+      ...FAST,
+    });
+    expect(save1()).toBe(0);
+    expect(save2()).toBe(1);
+    expect(outcome.saved).toEqual(["careers.career#0"]);
+    expect(outcome.manual.map((row) => [row.recordKey, row.reason])).toEqual([
+      ["education.university#0", "unconfirmed"],
+      ["education.university#1", "stopped"],
+    ]);
+    expect(outcome.stopped).toEqual(["education"]);
   });
 });
