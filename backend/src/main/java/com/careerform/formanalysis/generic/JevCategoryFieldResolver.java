@@ -120,6 +120,15 @@ public final class JevCategoryFieldResolver implements PromptSource {
         this.permitTimeoutMs = permitTimeoutMs;
     }
 
+    /**
+     * 평가 실행용 배치 설정 사본. 클라이언트, 선택지, 서버 전체 동시 호출 상한(같은 Semaphore)과
+     * 대기 시간은 원본과 공유하고 섹션 병렬 수와 배치 크기만 바꾼다.
+     */
+    public JevCategoryFieldResolver withBatching(int sectionConcurrency, int fieldBatchSize) {
+        return new JevCategoryFieldResolver(client, fields, categories, sectionConcurrency, fieldBatchSize, permits,
+            permitTimeoutMs);
+    }
+
     public record Mapping(String profileFieldKey, double confidence, boolean categoryConfirmed, Reason reason,
         Binding binding) {
 

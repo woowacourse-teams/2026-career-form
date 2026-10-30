@@ -11,6 +11,7 @@ import static com.careerform.formanalysis.generic.GenericFieldsJevHttp.request;
 import static com.careerform.formanalysis.generic.GenericFieldsJevHttp.section;
 import static com.careerform.formanalysis.generic.GenericFieldsJevHttp.tokenLimit;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -151,6 +152,25 @@ class GenericFieldsResolverTest {
         assertThat(resolution.mappings().get("edu-1")).isEqualTo(new Mapping(SCHOOL, 0.9, true, null));
         assertThat(List.of("lang-1", "lang-2")).allSatisfy(id -> assertThat(resolution.mappings().get(id))
             .isEqualTo(new Mapping(null, 0.0, true, Reason.LLM_UNAVAILABLE)));
+    }
+
+    @Test
+    @DisplayName("평가용 배치 설정 사본은 배치 크기만 바꾸고 서버 전체 동시 호출 상한을 원본과 함께 쓴다")
+    void batchingCopySharesServerWideLimit() throws Exception {
+        var permits = new Semaphore(1);
+        var original = new JevCategoryFieldResolver(GenericFieldsJevHttp.client(http), FIELDS, CATEGORIES,
+            3, 5, permits, 1);
+        var copy = original.withBatching(1, 2);
+        var fields = List.of(field("edu-1", "학교명"), field("edu-2", "전공"), field("edu-3", "입학일"));
+        var request = request("example.test", List.of(section("edu", "EDUCATION", fields)));
+        http.respond(call -> answerAll(call, SCHOOL, 0.9));
+
+        assertThat(copy.resolve(request).jevCalls()).isEqualTo(2);
+        assertThat(original.resolve(request).jevCalls()).isEqualTo(1);
+        permits.acquire();
+        assertThat(copy.resolve(request).mappings().get("edu-1").reason()).isEqualTo(Reason.LLM_UNAVAILABLE);
+        permits.release();
+        assertThatThrownBy(() -> original.withBatching(0, 5)).isInstanceOf(IllegalStateException.class);
     }
 
     @Test
