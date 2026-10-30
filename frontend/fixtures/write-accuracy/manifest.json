@@ -121,6 +121,30 @@
       "documentUrl": "https://write-accuracy.example.test/framework-rerender",
       "expectedRoute": "generic",
       "routeCheck": "ASSERTED"
+    },
+    {
+      "snapshot": "woowahan-r2605009-initial",
+      "status": "MODEL_EVALUATION_ONLY",
+      "reason": "CF-356 model evaluation input; no write-accuracy truth",
+      "documentUrl": "https://write-accuracy.example.test/woowahan-r2605009-initial",
+      "expectedRoute": "generic",
+      "routeCheck": "ASSERTED"
+    },
+    {
+      "snapshot": "woowahan-r2605009-high-school",
+      "status": "MODEL_EVALUATION_ONLY",
+      "reason": "CF-356 model evaluation input; no write-accuracy truth",
+      "documentUrl": "https://write-accuracy.example.test/woowahan-r2605009-high-school",
+      "expectedRoute": "generic",
+      "routeCheck": "ASSERTED"
+    },
+    {
+      "snapshot": "woowahan-r2605009-university",
+      "status": "MODEL_EVALUATION_ONLY",
+      "reason": "CF-356 model evaluation input; no write-accuracy truth",
+      "documentUrl": "https://write-accuracy.example.test/woowahan-r2605009-university",
+      "expectedRoute": "generic",
+      "routeCheck": "ASSERTED"
     }
   ]
 }
