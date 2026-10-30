@@ -320,3 +320,18 @@ describe("registration number labels", () => {
     ]);
   });
 });
+
+describe("project profile fields", () => {
+  it("places the optional organization right after the project name", () => {
+    const project = PROFILE_CATEGORIES.find(
+      (category) => category.id === "projects",
+    )?.sections.find((section) => section.id === "project");
+    const ids = project?.fields.map((field) => field.id) ?? [];
+    expect(
+      project?.fields.find((field) => field.id === "organization"),
+    ).toMatchObject({
+      label: "수행 기관",
+    });
+    expect(ids.indexOf("organization")).toBe(ids.indexOf("projectName") + 1);
+  });
+});

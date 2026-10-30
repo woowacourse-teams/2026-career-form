@@ -34,7 +34,8 @@ export const CATEGORY_GUIDES: Record<ProfileCategoryId, string> = {
   certifications:
     "자격증 이름부터 취득일, 기억하기 어려운 등록번호까지 모아두세요.",
   careers: "직장별 근무 기간과 맡았던 일을 기록해 주세요.",
-  projects: "참여한 프로젝트의 기간, 역할, 활동 내용을 정리해 주세요.",
+  projects:
+    "참여한 프로젝트의 기간, 수행 기관, 역할, 활동 내용을 정리해 주세요.",
   publications: "논문이나 특허를 한 건씩 추가하고 상세 내용을 적어 주세요.",
   compensation: "지원할 때 참고할 희망 처우를 기록해 주세요.",
   military: "해당하는 병역 정보만 입력해 주세요.",

@@ -284,3 +284,30 @@ describe("site wording for stored education and military values", () => {
     ).toBe("none");
   });
 });
+
+describe("transfer status admission wording", () => {
+  const KEY = "education.university.transferStatus";
+  it.each([
+    ["비해당", ["입학", "편입"], "입학"],
+    ["해당", ["입학", "편입"], "편입"],
+    ["비해당", ["신입학", "편입학"], "신입학"],
+    ["해당", ["신입학", "편입학"], "편입학"],
+    ["비해당", ["해당", "비해당"], "비해당"],
+    ["해당", ["해당", "비해당"], "해당"],
+  ])("reads %s against %j as %s", (value, names, displayName) => {
+    expect(resolveChoiceOption(KEY, value, options(...names))).toMatchObject({
+      status: "unique",
+      option: { displayName },
+    });
+  });
+
+  it("does not apply the admission wording to another key", () => {
+    expect(
+      resolveChoiceOption(
+        "education.university.doubleMajorStatus",
+        "비해당",
+        options("입학", "편입"),
+      ).status,
+    ).toBe("none");
+  });
+});
