@@ -974,3 +974,10 @@
 - 승인한 후보 2개를 [CF-370 bundle](../raw/issues/CF-370/manifest.md)에 기록했다. 줄 저장 예외를 반영한 제품 기준 현재본과 범용 줄 저장 판정·누름 조건·등록 확인 규칙이다.
 - [제품 기준](topics/product-concept.md)과 [범용 검토 화면의 3단계 표시](topics/generic-review-tiers.md)의 Current를 CF-370 근거로 바꿨다.
 - 실제 지원값, 계정, 세션, 페이지 주소, 대화 전문은 저장하지 않았다.
+
+## [2026-10-30] ingest | CF-356 범용 매칭 모델 평가
+- Approval-Digest: 6781bc8d23ebe68e7f5f6761bf2750f3ffb256efa1df043da66380eff938f546
+- Source-Revision: cce108f
+- 승인한 후보 7개를 [CF-356 bundle](../raw/issues/CF-356/manifest.md)에 기록했다. 채점 방식, 준비 단계 구조와 채점 범위, 수집 경계, 측정 범위, 프롬프트 버전, 실행 운영과 ADR이다.
+- [범용 매칭 모델 평가](topics/generic-matching-model-evaluation.md) topic을 새로 만들었다.
+- 실제 지원값, 계정, 세션, 페이지 주소, 대화 전문은 저장하지 않았다.
