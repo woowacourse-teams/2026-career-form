@@ -143,9 +143,12 @@ function render() {
   $("#profile-count").textContent = `프로필 ${new Set(cases.map((c) => c.profileId)).size}개`;
   $("#site-count").textContent = `사이트 ${new Set(cases.map((c) => c.siteId)).size}개`;
   const active = state.runs.find(({ run }) => ["QUEUED", "RUNNING"].includes(run.status))?.run;
+  const STATUS = { QUEUED: "대기 중", RUNNING: "실행 중", COMPLETED: "완료", PARTIAL: "일부 완료", FAILED: "실패", CANCELLED: "취소됨" };
+  const last = state.runs[0]?.run;
   $("#cf-status").textContent = active
-    ? `진행 중: ${active.status} · ${active.processedCalls}/${active.plannedCalls} 호출`
-    : state.runs.length ? `최근 실행 ${state.runs.length}건` : "측정 결과 없음";
+    ? `${STATUS[active.status]} · ${active.processedCalls}/${active.plannedCalls} 호출 처리 (자동 갱신 중)`
+    : last ? `최근 실행: ${STATUS[last.status] ?? last.status} · ${last.processedCalls}/${last.plannedCalls} 호출 · 총 ${state.runs.length}건`
+      : "측정 결과 없음";
 }
 
 function renderFilters() {
@@ -317,23 +320,32 @@ function openRun() {
         datasetId: DATASET.id, datasetVersion: DATASET.version, split: split.value,
         repetitions: Number(repetitions.value), promptVersion: prompt.value.trim() || null, overrides: {},
       });
-      message.textContent = `등록했습니다. 실행 ${result.runId}`;
+      $("#cf-source").close();
+      $("#cf-status").textContent = `등록했습니다(실행 ${result.runId.slice(0, 8)}). 진행 상황을 자동으로 갱신합니다.`;
       await load();
     } catch (error) { message.textContent = error.message; } finally { submit.disabled = false; }
   });
   dialog("평가 실행", form, "criteria-dialog");
 }
 
+const POLL_MS = 3000;
+let pollTimer = null;
+
 async function load() {
+  clearTimeout(pollTimer);
+  let failed = null;
   try {
     state.runs = await api("/runs?limit=50");
   } catch (error) {
     state.runs = [];
-    $("#cf-status").textContent = error.message;
+    failed = error.message;
   }
   try { state.dataset = await api(`/datasets/${DATASET.id}/v${DATASET.version}`); } catch { state.dataset = null; }
   renderFilters();
   render();
+  if (failed) $("#cf-status").textContent = failed;
+  // 대기·실행 중인 평가가 있으면 끝날 때까지 결과를 다시 불러온다.
+  if (state.runs.some(({ run }) => ["QUEUED", "RUNNING"].includes(run.status))) pollTimer = setTimeout(load, POLL_MS);
 }
 
 root.querySelectorAll("[data-page]").forEach((b) => b.addEventListener("click", () => { state.page = b.dataset.page; render(); }));

@@ -26,6 +26,7 @@
       <header><span class="brand">Career Form</span><span class="muted">/</span><span class="muted">AI Evaluation</span></header>
       <main>
         <div class="heading"><h1>AI 평가</h1><button type="button" class="run-action" id="run-open">평가 실행</button></div>
+        <p class="run-status" aria-live="polite" id="cf-status"></p>
         <div class="filters">
           <div class="models" id="models" aria-label="비교할 모델"></div>
           <label><span class="muted">프롬프트</span><select id="prompt-version" aria-label="프롬프트 버전"></select></label>
@@ -49,7 +50,7 @@
           <details class="token-table"><summary>표로 보기</summary><div class="table-wrap"><table><thead><tr><th>모델</th><th>평균 입력 토큰</th><th>평균 출력 토큰</th><th>평균 합계 토큰</th><th>전체 사용 토큰</th><th>토큰 미관측 시도</th><th>평균 예상 비용 (USD)</th><th>전체 예상 비용 (USD)</th></tr></thead><tbody id="cf-token-body"></tbody></table></div></details>
         </section>
         <dialog id="cf-source" class="detail" aria-labelledby="cf-source-title"><div class="section-head"><h3 id="cf-source-title"></h3><button type="button" id="cf-source-close">닫기</button></div><div id="source-content"></div></dialog>
-        <footer class="bottom"><span aria-live="polite" id="cf-status"></span><button type="button" id="refresh">새로 고침</button><button type="button" id="logout" class="secondary">로그아웃</button></footer>
+        <footer class="bottom"><span></span><button type="button" id="refresh">새로 고침</button><button type="button" id="logout" class="secondary">로그아웃</button></footer>
       </main>
     </div>
   </div>
