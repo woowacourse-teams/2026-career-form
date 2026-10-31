@@ -15,7 +15,11 @@ import {
   type StaticFieldsSession,
 } from "./static-fields-session";
 import { componentBasicControls } from "../policy/components/fingerprint";
-import { AnalysisServiceError } from "../api/runtime-client";
+import {
+  AnalysisServiceError,
+  isTransientAnalysisError,
+} from "../api/runtime-client";
+import styles from "../../autofill-demo/AutofillDemo.module.css";
 import {
   resolveDocumentCompany,
   isUnsupportedHplace,
@@ -165,8 +169,9 @@ export function AutofillWorkflow(props: WorkflowProps) {
           return;
         }
         setError(
-          "사이트 정책을 불러오지 못했습니다. " +
-            (error instanceof Error ? error.message : "다시 실행해 주세요."),
+          isTransientAnalysisError(error)
+            ? "입력 정책을 확인하는 서버에 연결하지 못했어요. 네트워크 연결을 확인한 뒤 다시 시도해 주세요."
+            : "사이트 입력 정책을 확인하지 못했어요. 돌아간 뒤 다시 시도해 주세요.",
         );
       });
     return () => {
@@ -175,9 +180,14 @@ export function AutofillWorkflow(props: WorkflowProps) {
   }, [props.apiClient, props.pageDocument]);
   if (error)
     return (
-      <div role="alert">
-        {error}
-        <button onClick={props.onExit}>돌아가기</button>
+      <div className={styles.screen}>
+        <div className={styles.exceptionCard} role="alert">
+          <h2>자동 기입을 시작하지 못했어요</h2>
+          <p>{error}</p>
+        </div>
+        <button className={styles.primary} type="button" onClick={props.onExit}>
+          돌아가기
+        </button>
       </div>
     );
   if (!loaded)
@@ -314,11 +324,7 @@ function PolicyReadyWorkflow({
     registry: Parameters<typeof progressTracker.wasWritten>[1],
   ) =>
     progressTracker.wasWritten(item.candidateId, registry) &&
-    !isNextBoxEntry(
-      item,
-      singleRowEntryOffsets.current,
-      savedRowKeys.current,
-    );
+    !isNextBoxEntry(item, singleRowEntryOffsets.current, savedRowKeys.current);
   const [rowSave, setRowSave] = useState<{
     saved: number;
     manual: RowSaveManual[];
@@ -1163,10 +1169,7 @@ function PolicyReadyWorkflow({
     setReviewItems((items) => {
       let changed = false;
       const next = items.map((item) => {
-        if (
-          item.disabled ||
-          !writtenBefore(item, fieldsSnapshot.registry)
-        )
+        if (item.disabled || !writtenBefore(item, fieldsSnapshot.registry))
           return item;
         changed = true;
         return {
@@ -1186,8 +1189,7 @@ function PolicyReadyWorkflow({
     if (stage !== "review" || !revealReview || !fieldsSnapshot) return;
     setRevealReview(false);
     const unwritten = reviewItems.filter(
-      (item) =>
-        !item.disabled && !writtenBefore(item, fieldsSnapshot.registry),
+      (item) => !item.disabled && !writtenBefore(item, fieldsSnapshot.registry),
     );
     // A saved row is registered; its entry is never written again into the
     // emptied entry area.

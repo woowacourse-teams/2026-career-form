@@ -1,4 +1,10 @@
-import { useId, useState, type Dispatch, type SetStateAction } from "react";
+import {
+  useId,
+  useState,
+  type Dispatch,
+  type KeyboardEvent,
+  type SetStateAction,
+} from "react";
 import type { AddressResult } from "../address/types";
 import type { WorkflowAdapter, WorkflowDiagnostic } from "../adapters/workflow";
 import {
@@ -34,6 +40,8 @@ import {
 
 const DEFAULT_CONDITIONAL_REVIEW_REASON =
   "지원서 조건을 확인한 뒤 선택해 주세요.";
+
+type ReviewTab = "planned" | "needs-review" | "blocked";
 
 function reasonFor(item: ReviewPlanItem): string {
   return item.genericGrade ? genericItemReason(item) : item.reason;
@@ -141,9 +149,9 @@ export function WorkflowScreens({
   rowSave,
 }: WorkflowScreensProps) {
   const reviewTabsId = useId();
-  const [reviewTab, setReviewTab] = useState<
-    "planned" | "needs-review" | "blocked"
-  >("needs-review");
+  const [pickedReviewTab, setPickedReviewTab] = useState<ReviewTab | null>(
+    null,
+  );
   if (stage === "analyzing" || stage === "writing") {
     return (
       <WorkflowLoading
@@ -234,6 +242,43 @@ export function WorkflowScreens({
     const needsReviewItems = tiered
       ? exceptionalItems.filter((item) => item.genericGrade !== "BLOCKED")
       : exceptionalItems;
+    const itemCountByTab: Record<ReviewTab, number> = {
+      planned: plannedItems.length,
+      "needs-review": needsReviewItems.length,
+      blocked: blockedItems.length,
+    };
+    const tabOrder: readonly ReviewTab[] = tiered
+      ? ["planned", "needs-review", "blocked"]
+      : ["planned", "needs-review"];
+    const reviewTab =
+      pickedReviewTab && tabOrder.includes(pickedReviewTab)
+        ? pickedReviewTab
+        : needsReviewItems.length > 0
+          ? "needs-review"
+          : (tabOrder.find((tab) => itemCountByTab[tab] > 0) ?? "needs-review");
+    const moveReviewTab = (
+      event: KeyboardEvent<HTMLButtonElement>,
+      from: ReviewTab,
+    ) => {
+      const last = tabOrder.length - 1;
+      const index = tabOrder.indexOf(from);
+      const target =
+        event.key === "ArrowRight"
+          ? tabOrder[index === last ? 0 : index + 1]
+          : event.key === "ArrowLeft"
+            ? tabOrder[index === 0 ? last : index - 1]
+            : event.key === "Home"
+              ? tabOrder[0]
+              : event.key === "End"
+                ? tabOrder[last]
+                : undefined;
+      if (!target) return;
+      event.preventDefault();
+      setPickedReviewTab(target);
+      event.currentTarget.parentElement
+        ?.querySelectorAll<HTMLButtonElement>('[role="tab"]')
+        [tabOrder.indexOf(target)]?.focus();
+    };
     return (
       <div className={styles.screen}>
         <style>{resultCss}</style>
@@ -259,7 +304,9 @@ export function WorkflowScreens({
             id={`${reviewTabsId}-planned-tab`}
             aria-controls={`${reviewTabsId}-planned-panel`}
             aria-selected={reviewTab === "planned"}
-            onClick={() => setReviewTab("planned")}
+            tabIndex={reviewTab === "planned" ? 0 : -1}
+            onClick={() => setPickedReviewTab("planned")}
+            onKeyDown={(event) => moveReviewTab(event, "planned")}
           >
             자동 기입 예정 <strong>{plannedCount}</strong>
           </button>
@@ -270,7 +317,9 @@ export function WorkflowScreens({
             id={`${reviewTabsId}-needs-review-tab`}
             aria-controls={`${reviewTabsId}-needs-review-panel`}
             aria-selected={reviewTab === "needs-review"}
-            onClick={() => setReviewTab("needs-review")}
+            tabIndex={reviewTab === "needs-review" ? 0 : -1}
+            onClick={() => setPickedReviewTab("needs-review")}
+            onKeyDown={(event) => moveReviewTab(event, "needs-review")}
           >
             확인 필요 <strong>{needsReviewItems.length}</strong>
           </button>
@@ -282,7 +331,9 @@ export function WorkflowScreens({
               id={`${reviewTabsId}-blocked-tab`}
               aria-controls={`${reviewTabsId}-blocked-panel`}
               aria-selected={reviewTab === "blocked"}
-              onClick={() => setReviewTab("blocked")}
+              tabIndex={reviewTab === "blocked" ? 0 : -1}
+              onClick={() => setPickedReviewTab("blocked")}
+              onKeyDown={(event) => moveReviewTab(event, "blocked")}
             >
               입력 불가 <strong>{blockedItems.length}</strong>
             </button>
@@ -341,11 +392,12 @@ export function WorkflowScreens({
             자동 기입에서 제외할 항목이 있는지 확인해 주세요.
           </p>
         )}
-        {reviewTab === "blocked" && tiered && (
+        {tiered && (
           <section
             role="tabpanel"
             id={`${reviewTabsId}-blocked-panel`}
             aria-labelledby={`${reviewTabsId}-blocked-tab`}
+            hidden={reviewTab !== "blocked"}
             className={resultStyles.review}
             aria-label="입력 불가 항목"
           >
@@ -384,86 +436,91 @@ export function WorkflowScreens({
             ))}
           </section>
         )}
-        {reviewTab === "needs-review" && needsReviewItems.length > 0 && (
-          <section
-            role="tabpanel"
-            id={`${reviewTabsId}-needs-review-panel`}
-            aria-labelledby={`${reviewTabsId}-needs-review-tab`}
-            className={resultStyles.review}
-            aria-label="확인 필요한 항목"
-          >
-            {needsReviewItems.map((item) => {
-              return (
-                <article className={resultStyles.row} key={item.candidateId}>
-                  <div className={resultStyles.heading} data-has-values="true">
-                    <button
-                      type="button"
-                      className={resultStyles.locate}
-                      aria-label={`${resultFieldLabel(item)} 필드로 이동`}
-                      disabled={!onLocate}
-                      onClick={() => onLocate?.(item.candidateId)}
-                    >
-                      <span>{resultFieldLabel(item)}</span>
-                      {onLocate && <span aria-hidden="true">↗</span>}
-                    </button>
-                    <div className={resultStyles.valueGroup}>
-                      <span className={resultStyles.previewValue}>
-                        {item.previewValue}
-                      </span>
-                      {(item.status !== "available" ||
-                        isCalendar(item) ||
-                        !item.selected) &&
-                        !item.disabled && (
-                          <button
-                            className={resultStyles.copyButton}
-                            type="button"
-                            aria-label={`${item.fieldLabel} ${
-                              item.status === "conflict"
-                                ? item.selected
-                                  ? "기존 값 유지하기"
-                                  : "프로필 값으로 바꾸기"
-                                : item.selected
-                                  ? "제외하기"
-                                  : "포함하기"
-                            }`}
-                            onClick={() => toggleReviewItem(item.candidateId)}
-                          >
-                            {item.status === "conflict"
+        <section
+          role="tabpanel"
+          id={`${reviewTabsId}-needs-review-panel`}
+          aria-labelledby={`${reviewTabsId}-needs-review-tab`}
+          hidden={reviewTab !== "needs-review"}
+          className={resultStyles.review}
+          aria-label="확인 필요한 항목"
+        >
+          {needsReviewItems.length === 0 && (
+            <p className={resultStyles.empty}>확인할 항목이 없어요.</p>
+          )}
+          {needsReviewItems.map((item) => {
+            return (
+              <article className={resultStyles.row} key={item.candidateId}>
+                <div className={resultStyles.heading} data-has-values="true">
+                  <button
+                    type="button"
+                    className={resultStyles.locate}
+                    aria-label={`${resultFieldLabel(item)} 필드로 이동`}
+                    disabled={!onLocate}
+                    onClick={() => onLocate?.(item.candidateId)}
+                  >
+                    <span>{resultFieldLabel(item)}</span>
+                    {onLocate && <span aria-hidden="true">↗</span>}
+                  </button>
+                  <div className={resultStyles.valueGroup}>
+                    <span className={resultStyles.previewValue}>
+                      {item.previewValue}
+                    </span>
+                    {(item.status !== "available" ||
+                      isCalendar(item) ||
+                      !item.selected) &&
+                      !item.disabled && (
+                        <button
+                          className={resultStyles.copyButton}
+                          type="button"
+                          aria-label={`${item.fieldLabel} ${
+                            item.status === "conflict"
                               ? item.selected
-                                ? "기존 값 유지"
+                                ? "기존 값 유지하기"
                                 : "프로필 값으로 바꾸기"
                               : item.selected
-                                ? "제외"
-                                : "포함"}
-                          </button>
-                        )}
-                    </div>
-                  </div>
-                  {reasonFor(item) &&
-                    reasonFor(item) !== DEFAULT_CONDITIONAL_REVIEW_REASON && (
-                      <p className={resultStyles.guidance}>{reasonFor(item)}</p>
-                    )}
-                  {item.genericGrade
-                    ? item.genericGrade !== "AUTO" && (
-                        <small
-                          className={resultStyles.writtenTag}
-                          data-generic-grade={item.genericGrade}
+                                ? "제외하기"
+                                : "포함하기"
+                          }`}
+                          onClick={() => {
+                            setPickedReviewTab(reviewTab);
+                            toggleReviewItem(item.candidateId);
+                          }}
                         >
-                          {item.genericGrade === "REVIEW"
-                            ? "확인 필요"
-                            : "입력 불가"}
-                        </small>
-                      )
-                    : item.status !== "needs-review" && (
-                        <small className={resultStyles.writtenTag}>
-                          {statusLabel(item)}
-                        </small>
+                          {item.status === "conflict"
+                            ? item.selected
+                              ? "기존 값 유지"
+                              : "프로필 값으로 바꾸기"
+                            : item.selected
+                              ? "제외"
+                              : "포함"}
+                        </button>
                       )}
-                </article>
-              );
-            })}
-          </section>
-        )}
+                  </div>
+                </div>
+                {reasonFor(item) &&
+                  reasonFor(item) !== DEFAULT_CONDITIONAL_REVIEW_REASON && (
+                    <p className={resultStyles.guidance}>{reasonFor(item)}</p>
+                  )}
+                {item.genericGrade
+                  ? item.genericGrade !== "AUTO" && (
+                      <small
+                        className={resultStyles.writtenTag}
+                        data-generic-grade={item.genericGrade}
+                      >
+                        {item.genericGrade === "REVIEW"
+                          ? "확인 필요"
+                          : "입력 불가"}
+                      </small>
+                    )
+                  : item.status !== "needs-review" && (
+                      <small className={resultStyles.writtenTag}>
+                        {statusLabel(item)}
+                      </small>
+                    )}
+              </article>
+            );
+          })}
+        </section>
         {appearableItems.length > 0 && setPreApprovalOn && (
           <fieldset className={resultStyles.review}>
             <legend>나타날 수 있는 칸 {appearableItems.length}</legend>
@@ -471,17 +528,6 @@ export function WorkflowScreens({
               값을 넣은 뒤 지원서가 새로 보여 줄 수 있는 칸이에요. 빈 칸으로
               나타나면 이 값을 넣어요.
             </p>
-            <ul>
-              {appearableItems.map((item) => (
-                <li key={`${item.key}#${item.itemIndex}`}>
-                  <span>
-                    {item.categoryLabel} {item.label}
-                    {item.itemIndex > 0 ? ` (${item.itemIndex + 1}번째)` : ""}
-                  </span>{" "}
-                  <span className={resultStyles.previewValue}>{item.value}</span>
-                </li>
-              ))}
-            </ul>
             <label>
               <input
                 type="checkbox"
@@ -490,6 +536,24 @@ export function WorkflowScreens({
               />{" "}
               이 칸이 나타나면 다시 묻지 않고 기입
             </label>
+            <details>
+              <summary>
+                사용할 프로필 값 보기 ({appearableItems.length})
+              </summary>
+              <ul>
+                {appearableItems.map((item) => (
+                  <li key={`${item.key}#${item.itemIndex}`}>
+                    <span>
+                      {item.categoryLabel} {item.label}
+                      {item.itemIndex > 0 ? ` (${item.itemIndex + 1}번째)` : ""}
+                    </span>{" "}
+                    <span className={resultStyles.previewValue}>
+                      {item.value}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </details>
           </fieldset>
         )}
         <button
@@ -509,54 +573,20 @@ export function WorkflowScreens({
     return (
       <div className={`${styles.screen} ${styles.resultScreen}`}>
         <h2 className={styles.resultTitle}>기입 결과</h2>
-        {addressResult && addressResult.status !== "written" && (
-          <details className={styles.addressResult}>
-            <summary>주소 확인 필요</summary>
-            <p>주소 직접 확인 필요: {addressResult.reason}</p>
-          </details>
-        )}
-        {structureDiagnostics && (
-          <section aria-label="구조 자동 준비">
-            <h3>구조 자동 준비</h3>
-            <p className={resultStyles.guidance}>
-              {structureStatusText(structureDiagnostics.status)}
-            </p>
-            {structureDiagnostics.actions.length > 0 && (
-              <>
-                <h4>자동으로 한 일</h4>
-                <ul aria-label="자동으로 한 일">
-                  {structureDiagnostics.actions.map((action, index) => {
-                    const line = structureActionLine(action);
-                    return (
-                      <li key={index}>
-                        <span>{line.kindText}</span>{" "}
-                        {line.sectionTitle && <span>{line.sectionTitle}</span>}{" "}
-                        <small className={resultStyles.writtenTag}>
-                          {line.resultText}
-                        </small>
-                        {line.reasonText && (
-                          <p className={resultStyles.guidance}>
-                            {line.reasonText}
-                          </p>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </>
-            )}
-          </section>
-        )}
-        {autoWrittenLabels.length > 0 && (
-          <section aria-label="다시 묻지 않고 기입한 새 칸">
-            <h3>다시 묻지 않고 기입한 새 칸</h3>
-            <ul>
-              {autoWrittenLabels.map((label, index) => (
-                <li key={index}>{label}</li>
-              ))}
-            </ul>
-          </section>
-        )}
+        <WorkflowResults
+          wasWritten={wasWritten}
+          progressIdFor={progressIdFor}
+          progressStateFor={progressStateFor}
+          progress={progress}
+          fieldStateFor={fieldStateFor}
+          profile={profile}
+          optionsFor={optionsFor}
+          results={results}
+          reviewItems={reviewItems}
+          onLocate={onLocate}
+          onLocateSection={onLocateSection}
+          operatedCategories={operatedCategories}
+        />
         {manualRevealedLabels.length > 0 && (
           <section aria-label="직접 확인할 새 칸">
             <h3>직접 확인할 새 칸</h3>
@@ -565,12 +595,6 @@ export function WorkflowScreens({
                 <li key={index}>{label}</li>
               ))}
             </ul>
-          </section>
-        )}
-        {rowSave && rowSave.saved > 0 && (
-          <section aria-label="확장이 저장한 줄">
-            <h3>확장이 저장한 줄</h3>
-            <p>줄 저장 버튼을 눌러 {rowSave.saved}개 줄을 등록했어요.</p>
           </section>
         )}
         {rowSave && rowSave.manual.length > 0 && (
@@ -588,20 +612,65 @@ export function WorkflowScreens({
             </ul>
           </section>
         )}
-        <WorkflowResults
-          wasWritten={wasWritten}
-          progressIdFor={progressIdFor}
-          progressStateFor={progressStateFor}
-          progress={progress}
-          fieldStateFor={fieldStateFor}
-          profile={profile}
-          optionsFor={optionsFor}
-          results={results}
-          reviewItems={reviewItems}
-          onLocate={onLocate}
-          onLocateSection={onLocateSection}
-          operatedCategories={operatedCategories}
-        />
+        {addressResult && addressResult.status !== "written" && (
+          <details className={styles.addressResult}>
+            <summary>주소 확인 필요</summary>
+            <p>주소 직접 확인 필요: {addressResult.reason}</p>
+          </details>
+        )}
+        {structureDiagnostics && (
+          <details>
+            <summary>구조 자동 준비 내역</summary>
+            <section aria-label="구조 자동 준비">
+              <h3>구조 자동 준비</h3>
+              <p className={resultStyles.guidance}>
+                {structureStatusText(structureDiagnostics.status)}
+              </p>
+              {structureDiagnostics.actions.length > 0 && (
+                <>
+                  <h4>자동으로 한 일</h4>
+                  <ul aria-label="자동으로 한 일">
+                    {structureDiagnostics.actions.map((action, index) => {
+                      const line = structureActionLine(action);
+                      return (
+                        <li key={index}>
+                          <span>{line.kindText}</span>{" "}
+                          {line.sectionTitle && (
+                            <span>{line.sectionTitle}</span>
+                          )}{" "}
+                          <small className={resultStyles.writtenTag}>
+                            {line.resultText}
+                          </small>
+                          {line.reasonText && (
+                            <p className={resultStyles.guidance}>
+                              {line.reasonText}
+                            </p>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </>
+              )}
+            </section>
+          </details>
+        )}
+        {autoWrittenLabels.length > 0 && (
+          <section aria-label="다시 묻지 않고 기입한 새 칸">
+            <h3>다시 묻지 않고 기입한 새 칸</h3>
+            <ul>
+              {autoWrittenLabels.map((label, index) => (
+                <li key={index}>{label}</li>
+              ))}
+            </ul>
+          </section>
+        )}
+        {rowSave && rowSave.saved > 0 && (
+          <section aria-label="확장이 저장한 줄">
+            <h3>확장이 저장한 줄</h3>
+            <p>줄 저장 버튼을 눌러 {rowSave.saved}개 줄을 등록했어요.</p>
+          </section>
+        )}
         {!exitInToolbar && (
           <button className={styles.primary} type="button" onClick={onExit}>
             수동 복사로 돌아가기

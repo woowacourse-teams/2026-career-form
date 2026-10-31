@@ -128,6 +128,15 @@ async function reachResult(client: AnalysisApiClient, profile: Profile) {
   });
   fireEvent.click(proceed);
   await screen.findByRole("heading", { name: "기입 결과" });
+  const diagnostics = screen.getByRole("region", {
+    name: "구조 자동 준비",
+    hidden: true,
+  });
+  const details = diagnostics.closest("details");
+  expect(details).not.toHaveAttribute("open");
+  const summary = details?.querySelector("summary");
+  if (!summary) throw new Error("Structure disclosure summary is missing");
+  fireEvent.click(summary);
   return container;
 }
 
