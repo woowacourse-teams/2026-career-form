@@ -4,7 +4,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -40,7 +39,7 @@ import com.careerform.evaluation.run.Scoring;
  * 조회는 저장한 원자료에서 보고를 다시 계산하므로 진행 중이면 부분 결과가 나온다.
  */
 @RestController
-@ConditionalOnProperty(prefix = "career-form.evaluation", name = "enabled", havingValue = "true")
+@ConditionalOnProtectedEvaluation
 @RequestMapping("/api/v1/evaluations")
 public final class EvaluationRunController {
 

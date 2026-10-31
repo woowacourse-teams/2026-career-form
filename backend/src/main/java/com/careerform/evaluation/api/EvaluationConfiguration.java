@@ -12,7 +12,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import jakarta.validation.Validator;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -47,7 +46,7 @@ import tools.jackson.databind.json.JsonMapper;
  */
 @Configuration(proxyBeanMethods = false)
 @EnableScheduling
-@ConditionalOnProperty(prefix = "career-form.evaluation", name = "enabled", havingValue = "true")
+@ConditionalOnProtectedEvaluation
 public class EvaluationConfiguration {
 
     @Bean

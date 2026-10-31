@@ -25,7 +25,7 @@ development 서버에서만 켠다. 평가 호출은 사용자 요청과 서버 
 
 | 키 | 기본값 | 의미 |
 | --- | --- | --- |
-| `CAREER_FORM_EVALUATION_ENABLED` | false | 평가 API·작업자·화면 |
+| `CAREER_FORM_EVALUATION_ENABLED` | false | 평가 API·작업자·화면. `CAREER_FORM_QUALITY_ENABLED=true`일 때만 뜬다(비밀번호 보호 없이 열리지 않음) |
 | `CAREER_FORM_EVALUATION_MAX_MODEL_CALLS` | 500 | 실행당 모델 호출 한도. 등록 때 예상치로, 실행 중 관측치로 확인 |
 | `CAREER_FORM_EVALUATION_MAX_REPETITIONS` | 20 | 반복 수 상한 |
 | `CAREER_FORM_EVALUATION_POLL_INTERVAL` | 10s | 작업자 확인 주기 |
