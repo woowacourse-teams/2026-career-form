@@ -8,6 +8,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { PROFILE_CATEGORIES } from "../../src/profile/field-definitions";
 import { createEmptyProfile } from "../../src/profile/model";
 import type { ProfileRepository } from "../../src/profile/profile-repository";
 import { App } from "./App";
@@ -50,6 +51,49 @@ function schoolsRepository(): ProfileRepository {
     return profile;
   });
   return repository;
+}
+
+/** One saved value in each profile category, built from the category definitions. */
+function everyCategoryRepository(): ProfileRepository {
+  const profile = createEmptyProfile();
+  for (const category of PROFILE_CATEGORIES) {
+    const section = category.sections[0];
+    const field = section.fields.find(
+      (candidate) => !["select", "date"].includes(candidate.inputType),
+    );
+    if (!field) throw new Error(`No text field in ${category.id}`);
+    const values = { [field.id]: `비식별 ${category.id}` };
+    const categoryValues = profile[category.id];
+    if (Array.isArray(categoryValues)) {
+      categoryValues.push({
+        id: `${category.id}-1`,
+        sectionId: section.id,
+        values,
+      });
+    } else {
+      Object.assign(categoryValues, values);
+    }
+  }
+  return { ...createRepository(), load: vi.fn(async () => profile) };
+}
+
+function nextMutation(node: Node) {
+  return new Promise<void>((resolve, reject) => {
+    const observer = new MutationObserver(() => {
+      clearTimeout(timer);
+      observer.disconnect();
+      resolve();
+    });
+    const timer = setTimeout(() => {
+      observer.disconnect();
+      reject(new Error("the copy status was not updated"));
+    }, 2000);
+    observer.observe(node, {
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
+  });
 }
 
 describe("side panel App", () => {
@@ -449,4 +493,129 @@ it("지원 공고 관리 버튼에 미확인 공고 개수를 보여 주고 저�
   );
   act(() => notify?.(0));
   await waitFor(() => expect(manage).toHaveAccessibleName("지원 공고 관리"));
+});
+
+it("shows every profile category exactly once across the panel groups", async () => {
+  render(<App repository={everyCategoryRepository()} copyText={vi.fn()} />);
+  await screen.findByText("비식별 personal");
+
+  for (const toggle of screen.getAllByRole("button", { expanded: false })) {
+    fireEvent.click(toggle);
+  }
+
+  const rows = screen.getAllByRole("article");
+  expect(rows).toHaveLength(PROFILE_CATEGORIES.length);
+  for (const category of PROFILE_CATEGORIES) {
+    expect(
+      rows.filter((row) => within(row).queryByText(`비식별 ${category.id}`)),
+    ).toHaveLength(1);
+  }
+});
+
+it("searches the careers, publications and compensation categories by label, not by value", async () => {
+  const repository = createRepository();
+  const profile = await repository.load();
+  profile.careers = [
+    {
+      id: "career-1",
+      sectionId: "career",
+      values: { companyName: "비식별 회사" },
+    },
+  ];
+  profile.publications = [
+    {
+      id: "pub-1",
+      sectionId: "publicationPatent",
+      values: { title: "비식별 논문" },
+    },
+  ];
+  profile.compensation.desiredPosition = "비식별 직위";
+  const copyText = vi.fn(async () => undefined);
+  render(<App repository={repository} copyText={copyText} />);
+  await screen.findByText("copy@example.com");
+  const search = screen.getByRole("searchbox", { name: "프로필 검색" });
+
+  fireEvent.change(search, { target: { value: "직장명" } });
+  await act(async () => {
+    fireEvent.click(
+      screen.getByRole("button", { name: "직장경력 1 직장명 복사" }),
+    );
+  });
+  expect(copyText).toHaveBeenLastCalledWith("비식별 회사");
+
+  fireEvent.change(search, { target: { value: "제목" } });
+  await act(async () => {
+    fireEvent.click(
+      screen.getByRole("button", { name: "논문·특허 1 제목 복사" }),
+    );
+  });
+  expect(copyText).toHaveBeenLastCalledWith("비식별 논문");
+
+  fireEvent.change(search, { target: { value: "희망직위" } });
+  await act(async () => {
+    fireEvent.click(screen.getByRole("button", { name: "희망직위 복사" }));
+  });
+  expect(copyText).toHaveBeenLastCalledWith("비식별 직위");
+
+  fireEvent.change(search, { target: { value: "비식별 회사" } });
+  expect(screen.queryAllByRole("article")).toHaveLength(0);
+});
+
+it("announces each successful copy politely without the copied value", async () => {
+  const copyText = vi.fn(async () => undefined);
+  render(<App repository={createRepository()} copyText={copyText} />);
+  await screen.findByText("copy@example.com");
+  const status = screen.getByRole("status", { name: "복사 상태" });
+  const copy = screen.getByRole("button", { name: "이메일주소 복사" });
+  expect(status).toBeEmptyDOMElement();
+
+  copy.focus();
+  const first = nextMutation(status);
+  await act(async () => {
+    fireEvent.click(copy);
+  });
+  await first;
+  expect(status).not.toBeEmptyDOMElement();
+  expect(status).not.toHaveTextContent("copy@example.com");
+  expect(copy).toHaveFocus();
+  expect(copy).toHaveAccessibleName("이메일주소 복사");
+
+  const second = nextMutation(status);
+  await act(async () => {
+    fireEvent.click(copy);
+  });
+  await second;
+  expect(copyText).toHaveBeenCalledTimes(2);
+});
+
+it("does not announce a failed copy as a success or duplicate its alert", async () => {
+  const copyText = vi.fn(async () => {
+    throw new Error("clipboard unavailable");
+  });
+  render(<App repository={createRepository()} copyText={copyText} />);
+  await screen.findByText("copy@example.com");
+  const status = screen.getByRole("status", { name: "복사 상태" });
+
+  await act(async () => {
+    fireEvent.click(screen.getByRole("button", { name: "이메일주소 복사" }));
+  });
+
+  await screen.findByRole("alert");
+  expect(screen.getAllByRole("alert")).toHaveLength(1);
+  expect(status).toBeEmptyDOMElement();
+});
+
+it("shows scalar compensation without claiming zero records", async () => {
+  const repository = createRepository();
+  const profile = await repository.load();
+  profile.compensation.desiredPosition = "비식별 직위";
+  render(<App repository={repository} copyText={vi.fn()} />);
+  await screen.findByText("copy@example.com");
+
+  const group = screen.getByRole("button", {
+    name: /직장경력, 논문·특허, 처우/,
+  });
+  expect(group).not.toHaveAccessibleName(/0건/);
+  fireEvent.click(group);
+  expect(screen.getByRole("button", { name: "희망직위 복사" })).toBeVisible();
 });

@@ -167,6 +167,9 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+.copyStatus {
+  inset: 0;
+}
 .groups {
   display: grid;
   gap: 12px;

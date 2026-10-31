@@ -5,6 +5,7 @@ import {
   openOptionsPage,
 } from "../../src/extension/navigation";
 import type { ProfileRepository } from "../../src/profile/profile-repository";
+import { PROFILE_CATEGORIES } from "../../src/profile/field-definitions";
 import { countCompletedCategories } from "../../src/profile/profile-repository";
 import { ChromeProfileStorage } from "../../src/storage/chrome-profile-storage";
 import styles from "./App.module.css";
@@ -76,13 +77,13 @@ export function App({
               {completedCategories === undefined && "확인 중"}
               {completedCategories === null && "준비 상태 확인 실패"}
               {typeof completedCategories === "number" &&
-                `10개 범주 중 ${completedCategories}개 준비됨`}
+                `${PROFILE_CATEGORIES.length}개 범주 중 ${completedCategories}개 준비됨`}
             </strong>
           </div>
           <div className={styles.progress} aria-hidden="true">
             <span
               style={{
-                width: `${typeof completedCategories === "number" ? completedCategories * 10 : 0}%`,
+                width: `${typeof completedCategories === "number" ? Math.min(100, (completedCategories / PROFILE_CATEGORIES.length) * 100) : 0}%`,
               }}
             />
           </div>

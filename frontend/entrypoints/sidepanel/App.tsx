@@ -48,7 +48,12 @@ interface AppProps {
 
 type LoadStatus = "loading" | "ready" | "error";
 type PanelGroupId =
-  "personal" | "contact" | "education" | "credentials" | "additional";
+  | "personal"
+  | "contact"
+  | "education"
+  | "experience"
+  | "credentials"
+  | "additional";
 
 interface PanelGroup {
   id: PanelGroupId;
@@ -77,6 +82,11 @@ const PANEL_GROUPS: readonly PanelGroup[] = [
     label: "학력",
     categoryIds: ["education"],
     showRecordCount: true,
+  },
+  {
+    id: "experience",
+    label: "직장경력, 논문·특허, 처우",
+    categoryIds: ["careers", "publications", "compensation"],
   },
   {
     id: "credentials",
@@ -137,6 +147,7 @@ export function App({
   const [revealed, setRevealed] = useState<Set<string>>(() => new Set());
   const [copiedId, setCopiedId] = useState<string>();
   const [copyFailed, setCopyFailed] = useState(false);
+  const [copyCount, setCopyCount] = useState(0);
   const [navigationFailed, setNavigationFailed] = useState(false);
   const [postingsFailed, setPostingsFailed] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -208,7 +219,9 @@ export function App({
       setCopyFailed(false);
       await copyText(value);
       setCopiedId(id);
+      setCopyCount((count) => count + 1);
     } catch {
+      setCopyCount(0);
       setCopyFailed(true);
     }
   };
@@ -529,6 +542,15 @@ export function App({
                 </p>
               )}
             </section>
+            <div
+              className={`${styles.visuallyHidden} ${styles.copyStatus}`}
+              role="status"
+              aria-label="복사 상태"
+            >
+              {copyCount > 0 && (
+                <span key={copyCount}>클립보드에 복사했어요</span>
+              )}
+            </div>
           </main>
           {actionPosition === "bottom" && (
             <footer
