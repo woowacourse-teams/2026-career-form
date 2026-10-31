@@ -56,6 +56,7 @@ export function useProfileEditor(
 ) {
   const [profile, setProfile] = useState<Profile>(createEmptyProfile);
   const [loadStatus, setLoadStatus] = useState<LoadStatus>("loading");
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const latestProfile = useRef(profile);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
@@ -85,7 +86,13 @@ export function useProfileEditor(
       active = false;
       if (saveTimer.current) clearTimeout(saveTimer.current);
     };
-  }, [repository]);
+  }, [repository, loadAttempt]);
+
+  const retryLoad = useCallback(() => {
+    if (loadStatus !== "error") return;
+    setLoadStatus("loading");
+    setLoadAttempt((attempt) => attempt + 1);
+  }, [loadStatus]);
 
   const persist = useCallback(
     async (nextProfile: Profile) => {
@@ -262,6 +269,7 @@ export function useProfileEditor(
   return {
     profile,
     loadStatus,
+    retryLoad,
     saveStatus,
     updateSingle,
     addEntry,

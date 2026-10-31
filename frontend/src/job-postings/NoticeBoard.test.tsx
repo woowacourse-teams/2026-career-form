@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { NoticeBoard } from "./NoticeBoard";
 import {
@@ -150,8 +150,19 @@ describe("NoticeBoard", () => {
     renderBoard(fakeClient(async () => []));
     await screen.findByText("지금 진행 중인 공고가 없습니다.");
   });
+  it("does not offer a retry when the server is not configured", async () => {
+    const client = fakeClient(async () => {
+      throw new PushApiError("NOT_CONFIGURED");
+    });
+    await act(async () => {
+      renderBoard(client);
+    });
+    expect(
+      screen.queryByRole("button", { name: "공지함 다시 불러오기" }),
+    ).toBeNull();
+    expect(client.inbox).toHaveBeenCalledTimes(1);
+  });
   it.each([
-    ["NOT_CONFIGURED", /알림 서버가 설정되지 않아/],
     ["ENDPOINT_UNAVAILABLE", /아직 공고 알림을 지원하지 않습니다/],
     ["NETWORK", /네트워크 상태를 확인/],
   ] as [PushApiErrorCode, RegExp][])(

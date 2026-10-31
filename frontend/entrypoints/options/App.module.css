@@ -471,6 +471,38 @@
   color: var(--color-text-muted);
   text-align: center;
 }
+.loadError {
+  max-width: 420px;
+  margin: 80px auto;
+  padding: 20px 24px;
+  border: 1px solid var(--color-danger-border);
+  border-radius: 12px;
+  color: var(--color-danger-text);
+  background: var(--color-danger-soft);
+  text-align: center;
+}
+.loadError h1 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+.loadError p {
+  margin: 0 0 16px;
+  font-size: 13px;
+}
+.loadError button {
+  min-height: 44px;
+  border: 1px solid var(--color-brand-hover);
+  border-radius: 8px;
+  padding: 8px 16px;
+  color: var(--color-on-brand);
+  background: var(--color-brand);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.loadError button:hover {
+  background: var(--color-brand-hover);
+}
 .noResults {
   padding: 20px 12px;
   color: var(--color-text-muted);

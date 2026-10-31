@@ -1,4 +1,11 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 import { JobPostings } from "./JobPostings";
 import { PostingService } from "./service";
@@ -8,11 +15,12 @@ import type { PushClient } from "./push-client";
 import type { PushStateView } from "./push-messages";
 function setup(fail = false) {
   let rows: Posting[] = [];
+  let failure = fail ? new Error("저장 실패") : undefined;
   const service = new PostingService(
     {
       load: async () => rows,
       save: async (next) => {
-        if (fail) throw Error("저장 실패");
+        if (failure) throw failure;
         rows = next;
       },
     },
@@ -57,6 +65,9 @@ function setup(fail = false) {
     client,
     pushClient,
     inbox,
+    failWith: (error?: Error) => {
+      failure = error;
+    },
     setAutoSave: (value: boolean) => {
       pushState = { ...pushState, autoSave: value };
     },
@@ -76,6 +87,140 @@ function fill() {
     target: { value: "2026-10-07T18:00" },
   });
 }
+it.each([
+  "SYNTHETIC_WRITE_FAILURE: quota exceeded",
+  "SYNTHETIC_WRITE_FAILURE: 저장 장치 내부 오류",
+])(
+  "keeps unknown write details private and allows a save retry: %s",
+  async (raw) => {
+    const { client, pushClient, failWith } = setup();
+    await act(async () => {
+      render(
+        <JobPostings
+          client={client}
+          pushClient={pushClient}
+          now={() => Date.parse("2026-10-06T06:00Z")}
+          track={() => undefined}
+        />,
+      );
+    });
+    fireEvent.click(screen.getByRole("button", { name: "공고 추가" }));
+    fill();
+    failWith(new Error(raw));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "저장" }));
+    });
+    const alert = screen.getByRole("alert");
+    expect(alert).not.toHaveTextContent(raw);
+    expect(
+      within(alert).queryByRole("button", { name: "목록 다시 불러오기" }),
+    ).toBeNull();
+    expect(screen.getByLabelText("회사명")).toHaveValue("예시 회사");
+    failWith(undefined);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "저장" }));
+    });
+    expect(screen.getByRole("heading", { name: "예시 회사" })).toBeVisible();
+    expect((await client.list()).postings).toHaveLength(1);
+  },
+);
+
+it.each([
+  ["회사명을 입력해 주세요.", false],
+  ["다른 화면에서 공고가 변경되었습니다. 목록을 새로 불러와 주세요.", true],
+] as const)(
+  "preserves domain guidance and its recovery action: %s",
+  async (message, reload) => {
+    const { client, pushClient, failWith } = setup();
+    await act(async () => {
+      render(
+        <JobPostings
+          client={client}
+          pushClient={pushClient}
+          now={() => Date.parse("2026-10-06T06:00Z")}
+          track={() => undefined}
+        />,
+      );
+    });
+    fireEvent.click(screen.getByRole("button", { name: "공고 추가" }));
+    fill();
+    failWith(new Error(message));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "저장" }));
+    });
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent(message);
+    expect(
+      within(alert).queryByRole("button", { name: "목록 다시 불러오기" }) !==
+        null,
+    ).toBe(reload);
+    expect(screen.getByLabelText("회사명")).toHaveValue("예시 회사");
+  },
+);
+
+it("recovers a failed list read without treating it as a save retry", async () => {
+  const { client, pushClient } = setup();
+  const list = vi
+    .fn(client.list)
+    .mockRejectedValueOnce(new Error("SYNTHETIC_LIST_FAILURE"));
+  await act(async () => {
+    render(
+      <JobPostings
+        client={{ ...client, list }}
+        pushClient={pushClient}
+        now={() => Date.parse("2026-10-06T06:00Z")}
+        track={() => undefined}
+      />,
+    );
+  });
+  const alert = screen.getByRole("alert");
+  expect(alert).not.toHaveTextContent("SYNTHETIC_LIST_FAILURE");
+  await act(async () => {
+    fireEvent.click(
+      within(alert).getByRole("button", { name: "목록 다시 불러오기" }),
+    );
+  });
+  expect(list).toHaveBeenCalledTimes(2);
+  expect(screen.getByRole("button", { name: "공고 추가" })).toBeEnabled();
+});
+
+it("returns deletion focus without suppressing browser scrolling", async () => {
+  const { client, pushClient } = setup();
+  await client.save({
+    company: "삭제 예시",
+    role: "개발",
+    url: "https://example.test/jobs",
+    deadline: Date.parse("2026-10-08T18:00Z"),
+    timeZone: "Asia/Seoul",
+    minutes: [],
+  });
+  await act(async () => {
+    render(
+      <JobPostings
+        client={client}
+        pushClient={pushClient}
+        now={() => Date.parse("2026-10-06T06:00Z")}
+        track={() => undefined}
+      />,
+    );
+  });
+  const focus = vi.spyOn(HTMLElement.prototype, "focus");
+  try {
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "삭제 예시 삭제" }));
+    });
+    const add = screen.getByRole("button", { name: "공고 추가" });
+    expect(add).toHaveFocus();
+    const calls = focus.mock.calls.filter(
+      (_, index) => focus.mock.contexts[index] === add,
+    );
+    expect(calls.length).toBeGreaterThan(0);
+    expect(calls.some(([options]) => options?.preventScroll)).toBe(false);
+  } finally {
+    focus.mockRestore();
+  }
+});
+
 it("공고 등록부터 완료와 되돌리기까지 연결한다", async () => {
   const { client, pushClient } = setup();
   render(

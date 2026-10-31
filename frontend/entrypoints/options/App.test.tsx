@@ -1,4 +1,5 @@
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -31,6 +32,44 @@ function createJsonFile(contents: string): File {
   });
   return file;
 }
+
+it("recovers from an initial read failure with an in-screen retry", async () => {
+  const repository = createRepository();
+  const resolveRetry =
+    vi.fn<(profile: ReturnType<typeof createEmptyProfile>) => void>();
+  const retry = new Promise<ReturnType<typeof createEmptyProfile>>(
+    (resolve) => {
+      resolveRetry.mockImplementation(resolve);
+    },
+  );
+  vi.mocked(repository.load)
+    .mockRejectedValueOnce(new Error("synthetic read failure"))
+    .mockImplementationOnce(() => retry);
+  await act(async () => {
+    render(<App repository={repository} />);
+  });
+  const alert = screen.getByRole("alert");
+  expect(within(alert).getByRole("heading")).toBeVisible();
+  fireEvent.click(within(alert).getByRole("button", { name: "다시 불러오기" }));
+  expect(screen.getByRole("status")).toBeVisible();
+  await act(async () => {
+    resolveRetry(createEmptyProfile());
+  });
+  expect(screen.getByRole("heading", { name: "프로필 관리" })).toBeVisible();
+  expect(repository.load).toHaveBeenCalledTimes(2);
+  expect(screen.queryByRole("alert")).toBeNull();
+});
+
+it("keeps the hidden file input out of tab order while the visible import button opens it", async () => {
+  await act(async () => {
+    render(<App repository={createRepository()} />);
+  });
+  const input = screen.getByLabelText("프로필 JSON 파일");
+  expect(input).toHaveAttribute("tabindex", "-1");
+  const openPicker = vi.spyOn(input, "click").mockImplementation(() => {});
+  fireEvent.click(screen.getByRole("button", { name: "가져오기" }));
+  expect(openPicker).toHaveBeenCalledTimes(1);
+});
 
 describe("options App", () => {
   it("shows every category and keeps data when switching views", async () => {

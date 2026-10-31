@@ -124,9 +124,11 @@ export function NoticeBoard({
         {inboxError && (
           <div className={styles.warning} role="status">
             <p>{inboxMessages[inboxError] ?? defaultInboxMessage}</p>
-            <button disabled={loading} onClick={() => void loadInbox()}>
-              공지함 다시 불러오기
-            </button>
+            {inboxError !== "NOT_CONFIGURED" && (
+              <button disabled={loading} onClick={() => void loadInbox()}>
+                공지함 다시 불러오기
+              </button>
+            )}
           </div>
         )}
         {postings && !inboxError && postings.length === 0 && (

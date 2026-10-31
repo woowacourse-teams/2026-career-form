@@ -23,6 +23,38 @@ interface Props {
   now?: () => number;
   track?: TrackEvent;
 }
+interface Failure {
+  message: string;
+  reload: boolean;
+}
+const LIST_FAILURE: Failure = {
+  message: "공고를 불러오지 못했습니다. 다시 시도해 주세요.",
+  reload: true,
+};
+// Exact messages the domain layers raise on purpose (model, service,
+// repository, client, background-handler). Anything else may carry storage or
+// runtime details, so it is replaced by the action's own message.
+const VALIDATION_MESSAGES: ReadonlySet<string> = new Set([
+  "회사명을 입력해 주세요.",
+  "HTTP(S) 공고 링크를 입력해 주세요. 계정 정보가 포함된 링크는 사용할 수 없습니다.",
+  "앞으로 남은 마감 날짜·시간을 입력해 주세요.",
+  "알림은 최대 2개이며 마감 전 1분 이상의 간격이어야 합니다.",
+  "시간대를 확인해 주세요.",
+  "공고 저장소에 연결하지 못했습니다. 다시 시도해 주세요.",
+  "공고 요청에 실패했습니다.",
+  "공고 응답을 읽지 못했습니다.",
+]);
+const RELOAD_MESSAGES: ReadonlySet<string> = new Set([
+  "다른 화면에서 공고가 변경되었습니다. 목록을 새로 불러와 주세요.",
+  "저장된 공고 형식을 읽을 수 없습니다. 데이터를 덮어쓰지 않았습니다.",
+  "공고 저장 또는 조회에 실패했습니다. 목록을 다시 불러온 뒤 시도해 주세요.",
+]);
+function writeFailure(error: unknown, fallback: string): Failure {
+  const message = error instanceof Error ? error.message : "";
+  if (RELOAD_MESSAGES.has(message)) return { message, reload: true };
+  if (VALIDATION_MESSAGES.has(message)) return { message, reload: false };
+  return { message: fallback, reload: false };
+}
 export function JobPostings({
   client = postingClient,
   pushClient = defaultPushClient,
@@ -31,7 +63,7 @@ export function JobPostings({
   track = trackExtensionEvent,
 }: Props) {
   const [snapshot, setSnapshot] = useState<PostingSnapshot>();
-  const [error, setError] = useState("");
+  const [error, setError] = useState<Failure>();
   const [feedback, setFeedback] = useState("");
   useEffect(() => {
     if (!feedback) return;
@@ -70,15 +102,15 @@ export function JobPostings({
   const openNew = () => {
     returnTo.current = null;
     setForm("new");
-    setError("");
+    setError(undefined);
     setFeedback("");
   };
   const load = useCallback(async () => {
     try {
       setSnapshot(await client.list());
-      setError("");
+      setError(undefined);
     } catch {
-      setError("공고를 불러오지 못했습니다. 다시 시도해 주세요.");
+      setError(LIST_FAILURE);
     }
   }, [client]);
   useEffect(() => {
@@ -89,12 +121,11 @@ export function JobPostings({
         .then((s) => {
           if (active) {
             setSnapshot(s);
-            setError("");
+            setError(undefined);
           }
         })
         .catch(() => {
-          if (active)
-            setError("공고를 불러오지 못했습니다. 다시 시도해 주세요.");
+          if (active) setError(LIST_FAILURE);
         });
     };
     refresh();
@@ -118,9 +149,10 @@ export function JobPostings({
     action: () => Promise<PostingSnapshot>,
     message: string | ((next: PostingSnapshot) => string),
     dismissForm = false,
+    failureMessage = "요청을 처리하지 못했습니다. 다시 시도해 주세요.",
   ) => {
     setBusy(true);
-    setError("");
+    setError(undefined);
     setFeedback("");
     try {
       const next = await action();
@@ -128,11 +160,7 @@ export function JobPostings({
       setFeedback(typeof message === "string" ? message : message(next));
       if (dismissForm) closeForm();
     } catch (e) {
-      setError(
-        e instanceof Error
-          ? e.message
-          : "공고 저장에 실패했습니다. 다시 시도해 주세요.",
-      );
+      setError(writeFailure(e, failureMessage));
     } finally {
       setBusy(false);
     }
@@ -156,6 +184,7 @@ export function JobPostings({
       },
       "공고가 저장되었습니다.",
       true,
+      "공고를 저장하지 못했습니다. 입력한 내용은 그대로 두었으니 다시 시도해 주세요.",
     );
   };
   const push = usePushState(pushClient);
@@ -174,18 +203,23 @@ export function JobPostings({
     posting: ServerPosting,
     trigger: "button" | "open",
   ) =>
-    mutate(async () => {
-      const next = await client.save(postingInput(posting));
-      if (trigger === "open")
-        setAutoSavedUrls((previous) => new Set(previous).add(posting.link));
-      setView("planned");
-      track("posting_inbox_saved", {
-        surface: "options",
-        posting_id: posting.id,
-        trigger,
-      });
-      return next;
-    }, savedMessage(posting));
+    mutate(
+      async () => {
+        const next = await client.save(postingInput(posting));
+        if (trigger === "open")
+          setAutoSavedUrls((previous) => new Set(previous).add(posting.link));
+        setView("planned");
+        track("posting_inbox_saved", {
+          surface: "options",
+          posting_id: posting.id,
+          trigger,
+        });
+        return next;
+      },
+      savedMessage(posting),
+      false,
+      "공고를 마감 알림에 저장하지 못했습니다. 다시 시도해 주세요.",
+    );
   const saveFromInbox = (posting: ServerPosting) => {
     if (savedUrls.has(posting.link)) return;
     void saveServerPosting(posting, "button");
@@ -199,19 +233,24 @@ export function JobPostings({
   const undoFromInbox = (posting: ServerPosting) => {
     const saved = snapshot?.postings.find((p) => p.url === posting.link);
     if (!saved) return;
-    void mutate(async () => {
-      const next = await client.remove(saved.id, saved.version);
-      setAutoSavedUrls((previous) => {
-        const remaining = new Set(previous);
-        remaining.delete(posting.link);
-        return remaining;
-      });
-      track("posting_auto_save_cancelled", {
-        surface: "options",
-        posting_id: posting.id,
-      });
-      return next;
-    }, "마감 알림 저장을 취소했습니다.");
+    void mutate(
+      async () => {
+        const next = await client.remove(saved.id, saved.version);
+        setAutoSavedUrls((previous) => {
+          const remaining = new Set(previous);
+          remaining.delete(posting.link);
+          return remaining;
+        });
+        track("posting_auto_save_cancelled", {
+          surface: "options",
+          posting_id: posting.id,
+        });
+        return next;
+      },
+      "마감 알림 저장을 취소했습니다.",
+      false,
+      "마감 알림 저장을 취소하지 못했습니다. 다시 시도해 주세요.",
+    );
   };
   const rows = [...(snapshot?.postings ?? [])].sort(
     (a, b) => a.deadline - b.deadline,
@@ -251,7 +290,7 @@ export function JobPostings({
         returnTo.current = p.id;
         setFeedback("");
         setForm(p);
-        setError("");
+        setError(undefined);
       }}
       onComplete={(p) =>
         void mutate(
@@ -259,14 +298,21 @@ export function JobPostings({
           p.status === "completed"
             ? "지원 예정으로 되돌렸습니다."
             : "지원 완료로 표시하고 남은 알림을 취소했습니다.",
+          false,
+          "공고 상태를 바꾸지 못했습니다. 다시 시도해 주세요.",
         )
       }
       onRemove={(p) =>
-        void mutate(async () => {
-          const next = await client.remove(p.id, p.version);
-          addButton.current?.focus({ preventScroll: true });
-          return next;
-        }, "공고를 삭제했습니다.")
+        void mutate(
+          async () => {
+            const next = await client.remove(p.id, p.version);
+            addButton.current?.focus();
+            return next;
+          },
+          "공고를 삭제했습니다.",
+          false,
+          "공고를 삭제하지 못했습니다. 다시 시도해 주세요.",
+        )
       }
     />
   );
@@ -293,10 +339,12 @@ export function JobPostings({
       </header>
       {error && (
         <div className={styles.error} role="alert">
-          {error}{" "}
-          <button onClick={() => void load()} disabled={busy}>
-            목록 다시 불러오기
-          </button>
+          {error.message}{" "}
+          {error.reload && (
+            <button onClick={() => void load()} disabled={busy}>
+              목록 다시 불러오기
+            </button>
+          )}
         </div>
       )}
       {feedback && (
@@ -330,6 +378,8 @@ export function JobPostings({
               void mutate(
                 () => client.retry(),
                 "알림 상태를 다시 확인했습니다.",
+                false,
+                "알림 상태를 확인하지 못했습니다. 다시 시도해 주세요.",
               )
             }
           >

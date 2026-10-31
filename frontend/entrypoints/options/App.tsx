@@ -75,12 +75,24 @@ export function App({
       .catch(() => setLayout("a"));
   }, [repository]);
 
-  if (editor.loadStatus === "loading" || layout === null) {
-    return <p className={styles.loading}>프로필을 불러오는 중입니다.</p>;
+  if (editor.loadStatus === "error") {
+    return (
+      <div className={styles.loadError} role="alert">
+        <h1>프로필을 불러오지 못했습니다</h1>
+        <p>저장된 프로필은 변경되지 않았습니다. 다시 불러와 주세요.</p>
+        <button type="button" onClick={editor.retryLoad}>
+          다시 불러오기
+        </button>
+      </div>
+    );
   }
 
-  if (editor.loadStatus === "error") {
-    return <p className={styles.loading}>프로필을 불러오지 못했습니다.</p>;
+  if (editor.loadStatus === "loading" || layout === null) {
+    return (
+      <p className={styles.loading} role="status">
+        프로필을 불러오는 중입니다.
+      </p>
+    );
   }
 
   const changeLayout = (nextLayout: LayoutPreference) => {
@@ -167,6 +179,7 @@ export function App({
               ref={importInput}
               className={styles.importInput}
               type="file"
+              tabIndex={-1}
               accept=".json,application/json"
               aria-label="프로필 JSON 파일"
               onChange={(event) => {
