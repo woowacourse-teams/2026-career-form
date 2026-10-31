@@ -4,9 +4,12 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.UUID;
@@ -56,7 +59,26 @@ public final class RunService {
         return List.copyOf(sources);
     }
 
+    /** 비교할 수 있는 모델 수 상한. */
+    static final int MAX_TARGETS = 5;
+
+    /** 등록한 실행. 비교 등록이면 {@code comparisonId}가 있고 실행은 대상 순서다. */
+    public record Registered(String comparisonId, List<EvaluationRun> runs) {
+        public Registered {
+            runs = List.copyOf(runs);
+        }
+    }
+
+    /** 한 모델 실행을 등록한다. {@code targets}가 있으면 {@link #registerAll}을 쓴다. */
     public EvaluationRun register(RunRequest request, String requestedBy) {
+        return registerAll(request, requestedBy).runs().getFirst();
+    }
+
+    /**
+     * 실행을 등록한다. {@code targets}가 있으면 대상마다 같은 조건의 실행을 만들어 한 비교로 등록하고, 첫 실행만
+     * 바로 대기열(QUEUED)에 넣는다. 나머지는 앞 실행이 끝나면 차례로 돈다. 하나라도 검증에 실패하면 아무것도 등록하지 않는다.
+     */
+    public Registered registerAll(RunRequest request, String requestedBy) {
         DatasetCatalog.DatasetSummary dataset = datasets.find(request.datasetId(), request.datasetVersion())
             .orElseThrow(() -> new RunRejected(RunRejected.Code.UNKNOWN_DATASET));
         DatasetCatalog.SplitSummary split = dataset.splits().get(request.split());
@@ -69,44 +91,72 @@ public final class RunService {
         if (request.promptVersion() != null && !PROMPT_VERSION.matcher(request.promptVersion()).matches()) {
             throw new RunRejected(RunRejected.Code.INVALID_PROMPT_VERSION);
         }
-        EvaluationProviders.Provider provider = (request.provider() == null
-            ? providers.defaultProvider() : providers.find(request.provider()))
-            .orElseThrow(() -> new RunRejected(RunRejected.Code.UNKNOWN_PROVIDER));
-        String model = request.model() == null ? provider.defaultModel() : request.model();
-        if (!provider.models().contains(model)) {
-            throw new RunRejected(RunRejected.Code.UNKNOWN_MODEL);
+        List<RunRequest.Target> targets = request.targets() == null
+            ? List.of(new RunRequest.Target(request.provider(), request.model())) : request.targets();
+        if (targets.isEmpty() || targets.size() > MAX_TARGETS) {
+            throw new RunRejected(RunRejected.Code.INVALID_TARGETS);
         }
-        SortedMap<String, String> effective = effectiveSettings(provider, request.overrides());
         long estimated = (long) split.recordedModelCalls() * request.repetitions();
         if (estimated > settings.maxModelCallsPerRun()) {
             throw new RunRejected(RunRejected.Code.BUDGET_EXCEEDED);
         }
-        PromptSnapshot snapshot = prompts.snapshot(promptSources(promptSources, provider));
-        RunVersions versions = new RunVersions(dataset.datasetId(), dataset.version(), dataset.digest(),
-            request.split(), snapshot.digest(), request.promptVersion(), settings.codeVersion(),
-            provider.name(), model, SCORING_VERSION, effective);
-        String fingerprint = fingerprint(versions, request.repetitions());
-        EvaluationRun run = EvaluationRun.queued(UUID.randomUUID().toString(), fingerprint, versions,
-            request.repetitions(), split.productCalls() * request.repetitions(), (int) estimated, requestedBy,
-            clock.instant());
-        store.savePromptSnapshotIfAbsent(snapshot);
-        RunStore.Registration registration = store.register(run);
+        String comparisonId = request.targets() == null ? null : UUID.randomUUID().toString();
+        List<EvaluationRun> planned = new ArrayList<>();
+        List<PromptSnapshot> snapshots = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+        for (RunRequest.Target target : targets) {
+            EvaluationProviders.Provider provider = (target.provider() == null
+                ? providers.defaultProvider() : providers.find(target.provider()))
+                .orElseThrow(() -> new RunRejected(RunRejected.Code.UNKNOWN_PROVIDER));
+            String model = target.model() == null ? provider.defaultModel() : target.model();
+            if (!provider.models().contains(model)) {
+                throw new RunRejected(RunRejected.Code.UNKNOWN_MODEL);
+            }
+            if (!seen.add(provider.name() + "/" + model)) {
+                throw new RunRejected(RunRejected.Code.INVALID_TARGETS);
+            }
+            PromptSnapshot snapshot = prompts.snapshot(promptSources(promptSources, provider));
+            RunVersions versions = new RunVersions(dataset.datasetId(), dataset.version(), dataset.digest(),
+                request.split(), snapshot.digest(), request.promptVersion(), settings.codeVersion(),
+                provider.name(), model, SCORING_VERSION, effectiveSettings(provider, request.overrides()));
+            planned.add(EvaluationRun.queued(UUID.randomUUID().toString(), fingerprint(versions, request.repetitions()),
+                versions, request.repetitions(), split.productCalls() * request.repetitions(), (int) estimated,
+                requestedBy, clock.instant()).inComparison(comparisonId));
+            snapshots.add(snapshot);
+        }
+        snapshots.forEach(store::savePromptSnapshotIfAbsent);
+        RunStore.Registration registration = comparisonId == null
+            ? store.register(planned.getFirst()) : store.registerComparison(planned);
         if (registration.registered() == null) {
             EvaluationRun active = registration.activeRun();
-            throw new RunRejected(RunRejected.Code.RUN_ACTIVE, active.id(), active.fingerprint().equals(fingerprint));
+            throw new RunRejected(RunRejected.Code.RUN_ACTIVE, active.id(),
+                active.fingerprint().equals(planned.getFirst().fingerprint()));
         }
-        return registration.registered();
+        return new Registered(comparisonId, comparisonId == null ? List.of(registration.registered())
+            : store.comparison(comparisonId));
     }
 
+    /** 실행을 취소한다. 비교 실행이면 같은 비교의 끝나지 않은 실행도 모두 취소한다. */
     public EvaluationRun cancel(String runId) {
         EvaluationRun run = find(runId);
-        boolean cancelled = run.status() == RunStatus.QUEUED
-            && store.transition(runId, RunStatus.QUEUED, RunStatus.CANCELLED, clock.instant());
-        if (!cancelled) {
-            // 대기 중 취소와 작업자 시작이 겹치면 실행 중 취소 요청으로 넘긴다.
-            store.requestCancel(runId);
+        List<EvaluationRun> related = run.comparisonId() == null ? List.of(run) : store.comparison(run.comparisonId());
+        for (EvaluationRun target : related) {
+            cancelOne(target);
         }
         return find(runId);
+    }
+
+    private void cancelOne(EvaluationRun run) {
+        if (run.status() == RunStatus.WAITING
+            && store.transition(run.id(), RunStatus.WAITING, RunStatus.CANCELLED, clock.instant())) {
+            return;
+        }
+        boolean cancelled = run.status() == RunStatus.QUEUED
+            && store.transition(run.id(), RunStatus.QUEUED, RunStatus.CANCELLED, clock.instant());
+        if (!cancelled) {
+            // 대기 중 취소와 작업자 시작이 겹치면 실행 중 취소 요청으로 넘긴다.
+            store.requestCancel(run.id());
+        }
     }
 
     public EvaluationRun find(String runId) {

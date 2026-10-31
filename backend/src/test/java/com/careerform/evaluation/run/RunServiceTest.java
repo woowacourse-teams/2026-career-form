@@ -160,6 +160,55 @@ class RunServiceTest {
     }
 
     @Test
+    @DisplayName("여러 모델을 고르면 같은 조건의 실행을 모델마다 하나씩 한 비교로 등록하고 첫 실행만 바로 대기열에 넣는다")
+    void registersComparisonAcrossModels() {
+        RunService.Registered registered = service.registerAll(comparison(List.of(
+            new RunRequest.Target("jev", "jev-latest"), new RunRequest.Target("openai", "gpt-6-luna"),
+            new RunRequest.Target("openai", "gpt-5.6-luna"))), "tester");
+
+        assertThat(registered.comparisonId()).isNotBlank();
+        assertThat(registered.runs()).extracting(run -> run.versions().provider() + "/" + run.versions().model())
+            .containsExactly("jev/jev-latest", "openai/gpt-6-luna", "openai/gpt-5.6-luna");
+        assertThat(registered.runs()).allSatisfy(run -> {
+            assertThat(run.comparisonId()).isEqualTo(registered.comparisonId());
+            assertThat(run.versions().split()).isEqualTo("tuning");
+            assertThat(run.versions().promptVersion()).isEqualTo("baseline");
+            assertThat(run.repetitions()).isEqualTo(2);
+        });
+        assertThat(store.comparison(registered.comparisonId())).extracting(EvaluationRun::status)
+            .containsExactly(RunStatus.QUEUED, RunStatus.WAITING, RunStatus.WAITING);
+    }
+
+    @Test
+    @DisplayName("비교 대상은 1~5개, 중복 없이, 모두 유효해야 하고 하나라도 틀리면 아무것도 등록하지 않는다")
+    void validatesComparisonTargets() {
+        assertCode(comparison(List.of()), RunRejected.Code.INVALID_TARGETS);
+        assertCode(comparison(List.of(new RunRequest.Target("jev", "jev-latest"),
+            new RunRequest.Target("jev", "jev-latest"))), RunRejected.Code.INVALID_TARGETS);
+        assertCode(comparison(java.util.Collections.nCopies(6, new RunRequest.Target("jev", "jev-latest"))),
+            RunRejected.Code.INVALID_TARGETS);
+        assertCode(comparison(List.of(new RunRequest.Target("jev", "jev-latest"),
+            new RunRequest.Target("openai", "gpt-4o"))), RunRejected.Code.UNKNOWN_MODEL);
+        assertThat(store.all()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("비교 실행 하나를 취소하면 같은 비교의 끝나지 않은 실행이 모두 취소된다")
+    void cancellingComparisonCancelsPendingRuns() {
+        RunService.Registered registered = service.registerAll(comparison(List.of(
+            new RunRequest.Target("jev", "jev-latest"), new RunRequest.Target("openai", "gpt-6-luna"))), "tester");
+
+        service.cancel(registered.runs().get(1).id());
+
+        assertThat(store.comparison(registered.comparisonId())).extracting(EvaluationRun::status)
+            .containsOnly(RunStatus.CANCELLED);
+    }
+
+    private static RunRequest comparison(List<RunRequest.Target> targets) {
+        return new RunRequest("generic-matching", 1, "tuning", 2, "baseline", Map.of(), null, null, targets);
+    }
+
+    @Test
     @DisplayName("등록되지 않은 공급자나 그 공급자가 허용하지 않은 모델은 거부한다")
     void rejectsUnknownProviderOrModel() {
         assertCode(new RunRequest("generic-matching", 1, "tuning", 1, null, Map.of(), "gemma", null),
@@ -189,7 +238,7 @@ class RunServiceTest {
     }
 
     private void assertCode(RunRequest request, RunRejected.Code code) {
-        assertThatThrownBy(() -> service.register(request, "tester"))
+        assertThatThrownBy(() -> service.registerAll(request, "tester"))
             .isInstanceOfSatisfying(RunRejected.class, rejected -> assertThat(rejected.code()).isEqualTo(code));
     }
 

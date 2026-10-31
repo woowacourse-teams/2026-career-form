@@ -97,7 +97,7 @@ class RunReporterTest {
     private static EvaluationRun run(Instant requested, Instant started, Instant finished) {
         return new EvaluationRun("run-1", "fp", RunStoreContract.run("run-1", "fp").versions(), 1, 3, 3, "tester",
             requested, finished == null ? RunStatus.QUEUED : RunStatus.PARTIAL, started, finished, 3, false, null,
-            null);
+            null, null);
     }
 
     private static Attempt attempt(long ms, Long input, Long output) {

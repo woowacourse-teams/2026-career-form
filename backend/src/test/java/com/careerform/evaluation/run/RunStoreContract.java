@@ -3,6 +3,7 @@ package com.careerform.evaluation.run;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import org.junit.jupiter.api.DisplayName;
@@ -69,7 +70,7 @@ abstract class RunStoreContract {
         store.transition("run-1", RunStatus.QUEUED, RunStatus.CANCELLED, AT);
         EvaluationRun later = run("run-2", "fp");
         store.register(new EvaluationRun(later.id(), later.fingerprint(), later.versions(), 2, 6, 20, "tester",
-            AT.plusSeconds(60), RunStatus.QUEUED, null, null, 0, false, null, null));
+            AT.plusSeconds(60), RunStatus.QUEUED, null, null, 0, false, null, null, null));
 
         assertThat(store.recent(10)).extracting(EvaluationRun::id).containsExactly("run-2", "run-1");
         assertThat(store.recent(1)).hasSize(1);
@@ -133,6 +134,58 @@ abstract class RunStoreContract {
     }
 
     @Test
+    @DisplayName("비교 실행은 첫 실행만 QUEUED, 나머지는 WAITING으로 함께 등록하고, 진행 중이거나 대기 중인 비교가 있으면 거부한다")
+    void registersComparisonWithOneQueuedRun() {
+        RunStore store = store();
+        List<EvaluationRun> comparison = List.of(run("run-1", "fp-a", "cmp-1"), run("run-2", "fp-b", "cmp-1"),
+            run("run-3", "fp-c", "cmp-1"));
+
+        RunStore.Registration registration = store.registerComparison(comparison);
+
+        assertThat(registration.registered().id()).isEqualTo("run-1");
+        assertThat(store.find("run-1").orElseThrow().status()).isEqualTo(RunStatus.QUEUED);
+        assertThat(store.find("run-2").orElseThrow().status()).isEqualTo(RunStatus.WAITING);
+        assertThat(store.find("run-3").orElseThrow().comparisonId()).isEqualTo("cmp-1");
+        assertThat(store.comparison("cmp-1")).extracting(EvaluationRun::id).containsExactly("run-1", "run-2", "run-3");
+        assertThat(store.registerComparison(List.of(run("run-4", "fp-d", "cmp-2"))).activeRun().id()).isEqualTo("run-1");
+        store.transition("run-1", RunStatus.QUEUED, RunStatus.CANCELLED, AT);
+        assertThat(store.register(run("run-5", "fp-e")).activeRun().id())
+            .as("대기 중인 비교 실행이 남아 있으면 새 실행을 받지 않는다").isEqualTo("run-2");
+    }
+
+    @Test
+    @DisplayName("진행 중 실행이 없을 때만 가장 먼저 등록된 WAITING 실행 하나를 QUEUED로 올린다")
+    void promotesOldestWaitingRunWhenIdle() {
+        RunStore store = store();
+        store.registerComparison(List.of(run("run-1", "fp-a", "cmp-1"), run("run-2", "fp-b", "cmp-1"),
+            run("run-3", "fp-c", "cmp-1")));
+
+        assertThat(store.promoteWaiting()).isFalse();
+        store.claim("worker", AT, java.time.Duration.ofMinutes(1));
+        store.finish("run-1", "worker", RunStatus.COMPLETED, AT.plusSeconds(5));
+
+        assertThat(store.promoteWaiting()).isTrue();
+        assertThat(store.find("run-2").orElseThrow().status()).isEqualTo(RunStatus.QUEUED);
+        assertThat(store.find("run-3").orElseThrow().status()).isEqualTo(RunStatus.WAITING);
+        assertThat(store.promoteWaiting()).isFalse();
+        assertThat(store.claim("worker", AT.plusSeconds(6), java.time.Duration.ofMinutes(1))).get()
+            .extracting(EvaluationRun::id).isEqualTo("run-2");
+    }
+
+    @Test
+    @DisplayName("WAITING 실행은 작업자가 가져가지 않고 바로 취소할 수 있다")
+    void waitingRunIsNotClaimedAndCanBeCancelled() {
+        RunStore store = store();
+        store.registerComparison(List.of(run("run-1", "fp-a", "cmp-1"), run("run-2", "fp-b", "cmp-1")));
+        store.transition("run-1", RunStatus.QUEUED, RunStatus.CANCELLED, AT);
+
+        assertThat(store.claim("worker", AT, java.time.Duration.ofMinutes(1))).isEmpty();
+        assertThat(store.transition("run-2", RunStatus.WAITING, RunStatus.CANCELLED, AT)).isTrue();
+        assertThat(store.promoteWaiting()).isFalse();
+        assertThat(store.register(run("run-3", "fp")).registered()).isNotNull();
+    }
+
+    @Test
     @DisplayName("저장한 실행의 버전과 계획 값을 그대로 읽는다")
     void roundTripsRun() {
         RunStore store = store();
@@ -140,6 +193,10 @@ abstract class RunStoreContract {
         store.register(run);
 
         assertThat(store.find("run-1")).contains(run);
+    }
+
+    static EvaluationRun run(String id, String fingerprint, String comparisonId) {
+        return run(id, fingerprint).inComparison(comparisonId);
     }
 
     static EvaluationRun run(String id, String fingerprint) {

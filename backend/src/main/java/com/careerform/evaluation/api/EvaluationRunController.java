@@ -84,8 +84,23 @@ public final class EvaluationRunController {
     @PostMapping("/runs")
     public ResponseEntity<Map<String, Object>> register(@RequestBody RunRequest request,
         @RequestHeader(value = "X-Evaluation-Requester", required = false) String requester) {
-        EvaluationRun run = runs.register(request, requester(requester));
-        return ResponseEntity.status(HttpStatus.ACCEPTED).body(Map.of("runId", run.id(), "status", run.status()));
+        RunService.Registered registered = runs.registerAll(request, requester(requester));
+        EvaluationRun first = registered.runs().getFirst();
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("runId", first.id());
+        body.put("status", first.status());
+        if (registered.comparisonId() != null) {
+            body.put("comparisonId", registered.comparisonId());
+            body.put("runIds", registered.runs().stream().map(EvaluationRun::id).toList());
+        }
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(body);
+    }
+
+    /** 비교에 속한 모델별 실행과 원자료에서 다시 계산한 보고. 등록 순서다. */
+    @GetMapping("/comparisons/{comparisonId}")
+    public ResponseEntity<List<RunView>> comparison(@PathVariable String comparisonId) {
+        List<RunView> views = store.comparison(comparisonId).stream().map(this::view).toList();
+        return views.isEmpty() ? ResponseEntity.notFound().build() : ResponseEntity.ok(views);
     }
 
     @GetMapping("/runs")

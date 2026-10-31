@@ -15,12 +15,47 @@ public final class InMemoryRunStore implements RunStore {
 
     @Override
     public synchronized Registration register(EvaluationRun run) {
-        Optional<EvaluationRun> active = runs.values().stream().filter(existing -> existing.status().active()).findFirst();
-        if (active.isPresent()) {
-            return new Registration(null, active.get());
+        Optional<EvaluationRun> pending = pending();
+        if (pending.isPresent()) {
+            return new Registration(null, pending.get());
         }
         runs.put(run.id(), run);
         return new Registration(run, null);
+    }
+
+    @Override
+    public synchronized Registration registerComparison(List<EvaluationRun> comparison) {
+        Optional<EvaluationRun> pending = pending();
+        if (pending.isPresent()) {
+            return new Registration(null, pending.get());
+        }
+        for (int index = 0; index < comparison.size(); index++) {
+            EvaluationRun run = comparison.get(index);
+            runs.put(run.id(), index == 0 ? run : run.waiting());
+        }
+        return new Registration(runs.get(comparison.getFirst().id()), null);
+    }
+
+    @Override
+    public synchronized List<EvaluationRun> comparison(String comparisonId) {
+        return runs.values().stream().filter(run -> comparisonId.equals(run.comparisonId())).toList();
+    }
+
+    @Override
+    public synchronized boolean promoteWaiting() {
+        if (runs.values().stream().anyMatch(run -> run.status().active())) {
+            return false;
+        }
+        Optional<EvaluationRun> next = runs.values().stream().filter(run -> run.status() == RunStatus.WAITING)
+            .findFirst();
+        next.ifPresent(run -> runs.put(run.id(), run.moved(RunStatus.QUEUED, null)));
+        return next.isPresent();
+    }
+
+    /** 진행 중 실행을 먼저, 없으면 가장 먼저 등록된 WAITING 실행. */
+    private Optional<EvaluationRun> pending() {
+        return runs.values().stream().filter(run -> run.status().active()).findFirst()
+            .or(() -> runs.values().stream().filter(run -> run.status() == RunStatus.WAITING).findFirst());
     }
 
     @Override

@@ -4,11 +4,26 @@ import java.time.Instant;
 import java.util.Optional;
 import com.careerform.evaluation.prompt.PromptSnapshot;
 
-/** 평가 실행 저장소. 진행 중(QUEUED, RUNNING) 실행은 저장소 전체에서 하나만 있을 수 있다. */
+/**
+ * 평가 실행 저장소. 진행 중(QUEUED, RUNNING) 실행은 저장소 전체에서 하나만 있을 수 있다. 비교 실행의 나머지 실행은
+ * WAITING으로 기다리며, 끝나지 않은 실행(WAITING 포함)이 있으면 새 등록을 받지 않는다.
+ */
 public interface RunStore {
 
-    /** 등록하면 {@code registered}, 진행 중 실행이 있으면 그 실행을 {@code activeRun}으로 돌려준다. */
+    /** 등록하면 {@code registered}, 끝나지 않은 실행이 있으면 그 실행을 {@code activeRun}으로 돌려준다. */
     Registration register(EvaluationRun run);
+
+    /**
+     * 같은 비교의 실행들을 순서대로 등록한다. 첫 실행은 QUEUED, 나머지는 WAITING이다. {@code registered}는 첫 실행이다.
+     * 끝나지 않은 실행이 있으면 아무것도 등록하지 않는다.
+     */
+    Registration registerComparison(java.util.List<EvaluationRun> runs);
+
+    /** 비교에 속한 실행을 등록 순서대로. */
+    java.util.List<EvaluationRun> comparison(String comparisonId);
+
+    /** 진행 중 실행이 없으면 가장 먼저 등록된 WAITING 실행 하나를 QUEUED로 올린다. 올렸으면 true. */
+    boolean promoteWaiting();
 
     Optional<EvaluationRun> find(String runId);
 

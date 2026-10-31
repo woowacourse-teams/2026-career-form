@@ -114,6 +114,30 @@ class EvaluationRunApiTest {
     }
 
     @Test
+    @DisplayName("여러 모델을 고르면 비교 ID와 모델별 실행 ID를 돌려주고, 비교 조회는 모델별 실행과 보고를 등록 순서로 보여 준다")
+    void registersAndShowsComparison() throws Exception {
+        var registered = authorized(post("/api/v1/evaluations/runs").contentType(MediaType.APPLICATION_JSON)
+                .content(REQUEST.replace("\"overrides\": {}",
+                    "\"overrides\": {}, \"targets\": [{\"provider\": \"jev\", \"model\": \"jev-latest\"}]")))
+            .andExpect(status().isAccepted())
+            .andExpect(jsonPath("$.comparisonId").isNotEmpty())
+            .andExpect(jsonPath("$.runIds.length()").value(1));
+        String comparisonId = JsonMapper.builder().build().readTree(registered.andReturn().getResponse()
+            .getContentAsString()).path("comparisonId").asString();
+        worker.runOnce();
+
+        authorized(get("/api/v1/evaluations/comparisons/" + comparisonId)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(1))
+            .andExpect(jsonPath("$[0].run.comparisonId").value(comparisonId))
+            .andExpect(jsonPath("$[0].run.status").value("COMPLETED"))
+            .andExpect(jsonPath("$[0].report.quality.accuracy").value(1.0));
+        authorized(get("/api/v1/evaluations/comparisons/missing")).andExpect(status().isNotFound());
+        authorized(post("/api/v1/evaluations/runs").contentType(MediaType.APPLICATION_JSON)
+                .content(REQUEST.replace("\"overrides\": {}", "\"overrides\": {}, \"targets\": []")))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_TARGETS"));
+    }
+
+    @Test
     @DisplayName("진행 조회는 실행 전 측정 불가, 실행 뒤 최종 정확도와 호출별 결과를 보여 준다")
     void reportsProgressAndFinalResults() throws Exception {
         String runId = runId(register());

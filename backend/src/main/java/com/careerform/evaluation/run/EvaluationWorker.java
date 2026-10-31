@@ -52,9 +52,13 @@ public final class EvaluationWorker {
         this.lease = lease;
     }
 
-    /** 처리할 실행이 있으면 끝까지 처리하고 true, 없으면 false. */
+    /** 처리할 실행이 있으면 끝까지 처리하고 true, 없으면 false. 진행 중 실행이 없으면 비교의 다음 WAITING 실행을 올린다. */
     public boolean runOnce() {
         Optional<EvaluationRun> claimed = runs.claim(owner, clock.instant(), lease);
+        if (claimed.isEmpty() && runs.promoteWaiting()) {
+            // 비교 실행의 다음 모델 차례다.
+            claimed = runs.claim(owner, clock.instant(), lease);
+        }
         if (claimed.isEmpty()) {
             return false;
         }

@@ -16,6 +16,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.IndexOptions;
 import com.mongodb.client.model.Indexes;
+import com.mongodb.client.model.Sorts;
 import com.mongodb.client.model.Updates;
 
 /**
@@ -46,6 +47,11 @@ public final class MongoRunStore implements RunStore {
 
     @Override
     public Registration register(EvaluationRun run) {
+        Document running = runs().find(Filters.exists("activeSlot")).first();
+        Document pending = running != null ? running : oldestWaiting();
+        if (pending != null) {
+            return new Registration(null, fromDocument(pending));
+        }
         for (int attempt = 0; attempt < 2; attempt++) {
             try {
                 runs().insertOne(toDocument(run));
@@ -65,6 +71,58 @@ public final class MongoRunStore implements RunStore {
     }
 
     @Override
+    public Registration registerComparison(List<EvaluationRun> comparison) {
+        Registration first = register(comparison.getFirst());
+        if (first.registered() == null) {
+            return first;
+        }
+        List<Document> rest = new ArrayList<>();
+        for (int index = 1; index < comparison.size(); index++) {
+            rest.add(toDocument(comparison.get(index).waiting(), index));
+        }
+        if (!rest.isEmpty()) {
+            runs().insertMany(rest);
+        }
+        return first;
+    }
+
+    @Override
+    public List<EvaluationRun> comparison(String comparisonId) {
+        List<EvaluationRun> found = new ArrayList<>();
+        runs().find(Filters.eq("comparisonId", comparisonId)).sort(Sorts.ascending("comparisonOrder"))
+            .forEach(document -> found.add(fromDocument(document)));
+        return found;
+    }
+
+    @Override
+    public boolean promoteWaiting() {
+        if (runs().find(Filters.exists("activeSlot")).first() != null) {
+            return false;
+        }
+        Document next = oldestWaiting();
+        if (next == null) {
+            return false;
+        }
+        try {
+            return runs().updateOne(Filters.and(Filters.eq("_id", next.getString("_id")),
+                    Filters.eq("status", RunStatus.WAITING.name())),
+                Updates.combine(Updates.set("status", RunStatus.QUEUED.name()), Updates.set("activeSlot", ACTIVE)))
+                .getModifiedCount() == 1;
+        }
+        catch (MongoWriteException exception) {
+            if (!duplicate(exception)) {
+                throw exception;
+            }
+            return false;
+        }
+    }
+
+    private Document oldestWaiting() {
+        return runs().find(Filters.eq("status", RunStatus.WAITING.name()))
+            .sort(Sorts.ascending("requestedAt", "comparisonOrder")).first();
+    }
+
+    @Override
     public Optional<EvaluationRun> find(String runId) {
         return Optional.ofNullable(runs().find(Filters.eq("_id", runId)).first()).map(MongoRunStore::fromDocument);
     }
@@ -79,14 +137,25 @@ public final class MongoRunStore implements RunStore {
         if (to == RunStatus.RUNNING) {
             updates.add(Updates.set("startedAt", Date.from(at)));
         }
+        if (from == RunStatus.WAITING && to.active()) {
+            updates.add(Updates.set("activeSlot", ACTIVE));
+        }
         if (!to.active()) {
             updates.add(Updates.set("finishedAt", Date.from(at)));
             updates.add(Updates.unset("activeSlot"));
             updates.add(Updates.unset("leaseOwner"));
             updates.add(Updates.unset("leaseUntil"));
         }
-        return runs().updateOne(Filters.and(Filters.eq("_id", runId), Filters.eq("status", from.name())),
-            Updates.combine(updates)).getModifiedCount() == 1;
+        try {
+            return runs().updateOne(Filters.and(Filters.eq("_id", runId), Filters.eq("status", from.name())),
+                Updates.combine(updates)).getModifiedCount() == 1;
+        }
+        catch (MongoWriteException exception) {
+            if (!duplicate(exception)) {
+                throw exception;
+            }
+            return false;
+        }
     }
 
     @Override
@@ -190,6 +259,10 @@ public final class MongoRunStore implements RunStore {
     }
 
     private static Document toDocument(EvaluationRun run) {
+        return toDocument(run, 0);
+    }
+
+    private static Document toDocument(EvaluationRun run, int comparisonOrder) {
         RunVersions versions = run.versions();
         Document settings = new Document();
         versions.settings().forEach(settings::append);
@@ -217,7 +290,9 @@ public final class MongoRunStore implements RunStore {
             .append("processedCalls", run.processedCalls())
             .append("cancelRequested", run.cancelRequested())
             .append("leaseOwner", run.leaseOwner())
-            .append("leaseUntil", date(run.leaseUntil()));
+            .append("leaseUntil", date(run.leaseUntil()))
+            .append("comparisonId", run.comparisonId())
+            .append("comparisonOrder", comparisonOrder);
         if (run.status().active()) {
             document.append("activeSlot", ACTIVE);
         }
@@ -238,7 +313,8 @@ public final class MongoRunStore implements RunStore {
             instant(document.getDate("requestedAt")), RunStatus.valueOf(document.getString("status")),
             instant(document.getDate("startedAt")), instant(document.getDate("finishedAt")),
             document.getInteger("processedCalls"), document.getBoolean("cancelRequested"),
-            document.getString("leaseOwner"), instant(document.getDate("leaseUntil")));
+            document.getString("leaseOwner"), instant(document.getDate("leaseUntil")),
+            document.getString("comparisonId"));
     }
 
     private static Date date(Instant instant) {

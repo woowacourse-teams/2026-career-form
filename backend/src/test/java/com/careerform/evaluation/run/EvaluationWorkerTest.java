@@ -122,6 +122,35 @@ class EvaluationWorkerTest {
     }
 
     @Test
+    @DisplayName("비교 실행은 앞 모델 실행이 끝나면 다음 모델 실행을 이어서 처리하고 공급자·모델별로 호출을 보낸다")
+    void processesComparisonRunsInOrder() {
+        EvaluationProviders two = new EvaluationProviders(List.of(
+            new EvaluationProviders.Provider("jev", List.of("jev-latest"), Map.of(), List.of(), model -> null),
+            new EvaluationProviders.Provider("openai", List.of("gpt-6-luna"), Map.of(), List.of(), model -> null)));
+        RunService.Registered registered = new RunService(runs, loader(), new PromptCatalog(), List.of(PROMPT), two,
+            new EvaluationSettings(1000, 20, "test", Map.of("field-batch-size", 5)),
+            Clock.fixed(NOW.minusSeconds(60), ZoneOffset.UTC))
+            .registerAll(new RunRequest("synthetic", 1, "tuning", 1, "v1", Map.of(), null, null, List.of(
+                new RunRequest.Target("jev", "jev-latest"), new RunRequest.Target("openai", "gpt-6-luna"))), "tester");
+        List<String> targets = new ArrayList<>();
+        CallExecutor recording = new CallExecutor((kind, request, target) -> {
+            targets.add(target.provider() + "/" + target.model());
+            return answerAll().apply(kind);
+        });
+        EvaluationWorker worker = new EvaluationWorker(runs, results, loader(), recording, new PromptCatalog(),
+            List.of(PROMPT), two, 100, Clock.fixed(NOW, ZoneOffset.UTC), "worker", Duration.ofMinutes(5));
+
+        assertThat(worker.runOnce()).isTrue();
+        assertThat(worker.runOnce()).isTrue();
+        assertThat(worker.runOnce()).isFalse();
+
+        assertThat(registered.runs()).allSatisfy(run ->
+            assertThat(runs.find(run.id()).orElseThrow().status()).isEqualTo(RunStatus.COMPLETED));
+        assertThat(targets).containsExactly("jev/jev-latest", "jev/jev-latest", "openai/gpt-6-luna",
+            "openai/gpt-6-luna");
+    }
+
+    @Test
     @DisplayName("등록 뒤 데이터셋이나 프롬프트가 바뀌었으면 실행하지 않고 FAILED다")
     void versionMismatchFails() {
         EvaluationRun run = register(1);

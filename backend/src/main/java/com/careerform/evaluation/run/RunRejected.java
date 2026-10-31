@@ -10,6 +10,7 @@ public final class RunRejected extends RuntimeException {
         INVALID_OVERRIDE,
         UNKNOWN_PROVIDER,
         UNKNOWN_MODEL,
+        INVALID_TARGETS,
         INVALID_PROMPT_VERSION,
         BUDGET_EXCEEDED,
         RUN_ACTIVE,
