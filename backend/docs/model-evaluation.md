@@ -14,7 +14,8 @@
 | 등록 검사 | `evaluation/dataset/DatasetLoader` | 해시, 사람 검토, 입력 동일성, 형식, 분할을 통과한 데이터셋만 실행에 쓴다 |
 | 실행 | `evaluation/run/` | 등록(`RunService`), 작업자(`EvaluationWorker`), 제품 서비스 호출(`ServiceProductCallGateway`), 결과·재채점 저장 |
 | 채점 | `evaluation/scoring/` | 항목 채점(`CallScorer`), 호출 단위 집계(`RunAggregator`) |
-| 모델 호출 기록 | `monitoring/ModelCallRecording`, `JevClient` | 평가 실행 범위 안의 모델 HTTP 시도별 시간·상태·토큰 |
+| 공급자 | `formanalysis/application/port/ChoiceModel`, `evaluation/run/EvaluationProviders` | 범용 매칭이 모델에 묻는 유일한 포트와 평가에서 고를 수 있는 공급자 목록 |
+| 모델 호출 기록 | `monitoring/ModelCallRecording`, `JevClient`, `OpenAiChoiceModel` | 평가 실행 범위 안의 모델 HTTP 시도별 시간·상태·토큰 |
 | 프롬프트 버전 | `formanalysis/application/PromptSource`, `evaluation/prompt/` | 프롬프트 고정 문구 조각과 sha256 해시, 버전별 전문 |
 | 화면 | `src/main/resources/static/evaluations/` (`/evaluations/`) | 결과 비교, 데이터셋·정답 기준·프롬프트 보기, 실행 등록, 수집 지침 내려받기 |
 
@@ -30,9 +31,29 @@ development 서버에서만 켠다. 평가 호출은 사용자 요청과 서버 
 | `CAREER_FORM_EVALUATION_MAX_REPETITIONS` | 20 | 반복 수 상한 |
 | `CAREER_FORM_EVALUATION_POLL_INTERVAL` | 10s | 작업자 확인 주기 |
 | `CAREER_FORM_EVALUATION_LEASE` | 5m | 실행 임대. 끝나면 다른 작업자가 이어받는다 |
+| `CAREER_FORM_EVALUATION_OPENAI_ENABLED` | false | 평가 공급자 목록에 OpenAI를 넣는다 |
+| `CAREER_FORM_EVALUATION_OPENAI_API_KEY` | `OPENAI_API_KEY` | OpenAI 키. 사람이 서버 환경에 넣는다 |
+| `CAREER_FORM_EVALUATION_OPENAI_MODELS` | gpt-6-luna | 쉼표로 구분한 허용 모델. 첫 모델이 기본값 |
+| `CAREER_FORM_EVALUATION_OPENAI_REASONING_EFFORT` | none | 추론 강도. 실행 설정과 지문에 남는다 |
 
 API와 화면은 품질 확인 공용 비밀번호(`CAREER_FORM_QUALITY_PASSWORD_HASH`)로 보호한다. 실행자는
 `X-Evaluation-Requester` 헤더(영문·숫자·한글 32자)로 기록하고 없으면 `quality-admin`이다.
+
+## 공급자
+
+범용 매칭(섹션 분류, 필드 매핑, 버튼·선택지 결정)의 질문과 선택지는 공급자와 무관한 공통 코드(`ChoiceSectionClassifier`, `ChoiceFieldResolver`, `ChoiceInteractionDecisions`)가 만든다. 공급자는 `ChoiceModel` 하나만 구현한다.
+
+- `answer`: 질문마다 고른 선택지와 확신도를 그대로 돌려준다(섹션 분류, 필드 매핑).
+- `choose`: 확신도 기준을 넘은 답만 돌려주고 나머지는 ABSTAIN이다(버튼·선택지 결정).
+
+| 공급자 | 구현 | 확신도 | 등록 조건 |
+| --- | --- | --- | --- |
+| `jev` | `JevChoiceModel`(제품 `JevClient` 그대로) | 선택지별 확률. 단일 최고 확률이고 0.8 이상일 때만 선택 | 제품 JEV 연결이 있을 때 |
+| `openai` | `OpenAiChoiceModel`(Chat Completions, 질문별 선택지 enum 엄격 JSON) | 모델 자기 보고(0~1). 0.8 이상일 때만 선택 | `CAREER_FORM_EVALUATION_OPENAI_ENABLED=true`이고 키가 있을 때 |
+
+확신도 산출 방식이 달라 버튼·선택지 결정의 기권 비율이 공급자마다 다를 수 있다. 이 차이는 비교 범위로 적는다. 프롬프트 해시는 공통 질문 문구에 공급자 연결부 문구(OpenAI 시스템 문구)를 더해 만든다. 제품 사용자 요청은 계속 `career-form.analysis.provider`를 쓴다.
+
+새 공급자는 `ChoiceModel` 구현(따로 보내는 고정 문구가 있으면 `PromptSource`)과 `EvaluationConfiguration.evaluationProviders`의 항목 하나로 추가한다. 실행 등록 본문의 `provider`, `model`로 고르고(없으면 기본값), `GET /api/v1/evaluations/providers`가 고를 수 있는 목록(첫 항목이 기본값)을 준다.
 
 ## API
 
@@ -46,9 +67,10 @@ API와 화면은 품질 확인 공용 비밀번호(`CAREER_FORM_QUALITY_PASSWORD
 | `POST /api/v1/evaluations/runs/{id}/scorings` | 재채점. 새 기록을 추가하고 이전 기록과 호출 결과는 그대로 둔다 |
 | `GET /api/v1/evaluations/datasets/{id}/v{N}` | 데이터셋 사례, 화면 칸, 준비 동작, 검토 상태, 합성 프로필 |
 | `GET /api/v1/evaluations/prompts/{digest}` | 프롬프트 버전 전문 |
+| `GET /api/v1/evaluations/providers` | 고를 수 있는 공급자와 모델(첫 항목이 기본값) |
 
 등록 본문: `datasetId`, `datasetVersion`, `split`(tuning|final), `repetitions`, `promptVersion`(선택),
-`overrides`(`field-batch-size` 1~128, `section-concurrency` 1~16만 허용).
+`overrides`(`field-batch-size` 1~128, `section-concurrency` 1~16만 허용), `provider`·`model`(선택, 없으면 기본값).
 
 상태: `QUEUED → RUNNING → COMPLETED | PARTIAL | FAILED | CANCELLED`. 모든 호출을 채점했으면 COMPLETED, 실패 호출이 있거나
 예산에 닿아 멈추면 PARTIAL, 등록 뒤 데이터셋·프롬프트가 바뀌었거나 예외가 나면 FAILED다.
@@ -83,7 +105,7 @@ API와 화면은 품질 확인 공용 비밀번호(`CAREER_FORM_QUALITY_PASSWORD
 - 백엔드 컨텍스트 테스트가 저장본의 모든 요청을 엄격 JSON 매퍼와 Bean Validation으로 읽어 제품 서비스에 넣는다.
 - 설치 확장이 실사이트에서 보낸 요청과는 대조하지 않았다. 기본정보 섹션 제목(인사말)은 `[비식별]`이라 실제 입력과 다르다.
 - 검색 팝업(주소·학교·전공)의 SEARCH_* 결정 호출과 기입 성공은 평가하지 않는다.
-- 이번 평가는 JEV 범용 경로만 대상으로 한다. 공급자 간 비교는 하지 않는다.
+- 공급자 비교는 같은 데이터셋·요청·질문 문구로 모델 응답만 바꾼다. 공급자 연결부 문구와 확신도 산출 방식은 공급자마다 다르다.
 - 공고 하나(화면 상태 3개)와 합성 프로필 하나라 일반화 성능을 주장하지 않는다.
 
 ## 새 데이터 추가
