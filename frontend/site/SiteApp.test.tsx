@@ -139,6 +139,19 @@ describe("website navigation", () => {
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByRole("dialog")).toBeNull();
   });
+  it("connects the mobile install action to its nearby environment explanation", () => {
+    render(<SiteApp path="/" />);
+    const hero = screen.getByRole("heading", { level: 1 }).closest("section");
+    if (!hero) throw new Error("Landing hero is missing");
+    const install = within(hero).getByRole("link", { name: /Chrome에 추가/ });
+    const contextId = install.getAttribute("aria-describedby");
+    if (!contextId) throw new Error("Install context is not associated");
+    const context = document.getElementById(contextId);
+    expect(context).not.toBeNull();
+    expect(hero).toContainElement(context);
+    expect(install).toHaveAccessibleDescription();
+    expect(install).toHaveAttribute("target", "_blank");
+  });
   it("does not present an unknown route as a valid policy", () => {
     render(<SiteApp path="/missing/" />);
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(

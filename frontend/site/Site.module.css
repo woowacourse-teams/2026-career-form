@@ -209,9 +209,16 @@
 .secondary:hover {
   background: var(--color-surface-muted);
 }
-/* The trial needs a wide screen; phones get the install button instead. */
+/* Keep the installation environment next to the narrow-screen action. */
 .heroInstallMobile {
   display: none !important;
+}
+.heroInstallNote {
+  display: none;
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
 }
 @media (max-width: 700px) {
   .heroTry {
@@ -219,6 +226,9 @@
   }
   .heroInstallMobile {
     display: inline-flex !important;
+  }
+  .heroInstallNote {
+    display: block;
   }
 }
 .simulation {

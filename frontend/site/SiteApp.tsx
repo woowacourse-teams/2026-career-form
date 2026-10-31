@@ -23,14 +23,17 @@ const noopTrack: TrackEvent = () => {};
 function InstallLink({
   onInstall,
   className,
+  describedBy,
 }: {
   onInstall: () => void;
   className?: string;
+  describedBy?: string;
 }) {
   return (
     <SiteLink
       className={className ? `${styles.primary} ${className}` : styles.primary}
       href={STORE_URL}
+      aria-describedby={describedBy}
       onClick={onInstall}
       target="_blank"
       rel="noopener noreferrer"
@@ -124,7 +127,7 @@ function Landing({ onInstall }: { onInstall: () => void }) {
             </p>
             <div className={styles.actions}>
               {/* The header already carries Chrome에 추가; the hero asks for the
-                  hands-on trial. Phones cannot run it, so they get install. */}
+                  hands-on trial. Narrow screens show the install action. */}
               <TryLink
                 className={`${styles.primary} ${styles.heroTry}`}
                 label="커리어폼 체험하기"
@@ -132,7 +135,11 @@ function Landing({ onInstall }: { onInstall: () => void }) {
               <InstallLink
                 onInstall={onInstall}
                 className={styles.heroInstallMobile}
+                describedBy="hero-install-note"
               />
+              <p id="hero-install-note" className={styles.heroInstallNote}>
+                확장 프로그램 설치는 데스크톱 Chrome에서 할 수 있어요.
+              </p>
             </div>
             <small>Chrome 확장 프로그램 · 프로필은 내 브라우저에</small>
           </div>

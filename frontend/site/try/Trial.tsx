@@ -46,8 +46,34 @@ export function Trial({
   const root = useRef<HTMLDivElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const guideHeading = useRef<HTMLHeadingElement>(null);
+  const panelScope = useRef<HTMLDivElement>(null);
+  const guideOpener = useRef<HTMLElement | null>(null);
+  const guideWasOpen = useRef(false);
+  const openGuide = (next: Guide) => {
+    const active = document.activeElement;
+    guideOpener.current =
+      active instanceof HTMLElement && panelScope.current?.contains(active)
+        ? active
+        : null;
+    setGuide(next);
+  };
   useEffect(() => {
-    if (!guide) return;
+    if (!guide) {
+      if (!guideWasOpen.current) return;
+      guideWasOpen.current = false;
+      const opener = guideOpener.current;
+      if (opener?.isConnected) opener.focus();
+      else {
+        const title = panelScope.current?.querySelector("h1");
+        if (title) {
+          title.tabIndex = -1;
+          title.focus();
+        }
+      }
+      guideOpener.current = null;
+      return;
+    }
+    guideWasOpen.current = true;
     guideHeading.current?.focus();
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") setGuide(null);
@@ -135,46 +161,52 @@ export function Trial({
               </div>
             </section>
           )}
-          <PanelPreview
-            repository={experimentRepository}
-            onAutofill={start}
-            onReturn={reset}
-            openOptions={() => setGuide("profile")}
-            openPostings={async () => setGuide("postings")}
-            autofillView={
-              stage === "running" ? (
-                <LoadingVariant
-                  variant="B"
-                  completed={completed}
-                  reducedMotion={reducedMotion}
-                />
-              ) : stage === "complete" ? (
-                <section
-                  className={`${experiment.card} ${experiment.completionCard}`}
-                >
-                  <span
-                    className={experiment.completionIcon}
-                    aria-hidden="true"
+          <div
+            ref={panelScope}
+            className={styles.panelScope}
+            inert={guide ? true : undefined}
+          >
+            <PanelPreview
+              repository={experimentRepository}
+              onAutofill={start}
+              onReturn={reset}
+              openOptions={() => openGuide("profile")}
+              openPostings={async () => openGuide("postings")}
+              autofillView={
+                stage === "running" ? (
+                  <LoadingVariant
+                    variant="B"
+                    completed={completed}
+                    reducedMotion={reducedMotion}
+                  />
+                ) : stage === "complete" ? (
+                  <section
+                    className={`${experiment.card} ${experiment.completionCard}`}
                   >
-                    ✓
-                  </span>
-                  <h2 ref={heading} tabIndex={-1}>
-                    입력이 완료됐어요
-                  </h2>
-                  <p>
-                    {scenarioFields.length}개 칸을 채웠어요. 지원서를 확인해
-                    보세요.
-                  </p>
-                  <div className={styles.completionActions}>
-                    {install}
-                    <button type="button" onClick={reset}>
-                      다시 체험하기
-                    </button>
-                  </div>
-                </section>
-              ) : undefined
-            }
-          />
+                    <span
+                      className={experiment.completionIcon}
+                      aria-hidden="true"
+                    >
+                      ✓
+                    </span>
+                    <h2 ref={heading} tabIndex={-1}>
+                      입력이 완료됐어요
+                    </h2>
+                    <p>
+                      {scenarioFields.length}개 칸을 채웠어요. 지원서를 확인해
+                      보세요.
+                    </p>
+                    <div className={styles.completionActions}>
+                      {install}
+                      <button type="button" onClick={reset}>
+                        다시 체험하기
+                      </button>
+                    </div>
+                  </section>
+                ) : undefined
+              }
+            />
+          </div>
         </aside>
       </div>
     </div>
