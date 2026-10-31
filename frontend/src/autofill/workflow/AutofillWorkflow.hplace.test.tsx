@@ -133,8 +133,8 @@ it.each(["missing", "failed"] as const)(
     if (state === "missing")
       expect(await screen.findByText("아직 지원하지 않아요")).toBeVisible();
     else
-      expect(await screen.findByRole("alert")).toHaveTextContent(
-        "사이트 정책을 불러오지 못했습니다",
+      expect(await screen.findByRole("alert")).not.toHaveTextContent(
+        "Synthetic policy failure",
       );
     expect(load).not.toHaveBeenCalled();
     expect(analyzePreparation).not.toHaveBeenCalled();

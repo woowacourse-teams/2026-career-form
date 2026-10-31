@@ -75,7 +75,10 @@ it("selects both Hyundai drivers, fills corresponding detail display/code/months
   const second = await run(fixtureProfile());
   await settleWorkflow();
   expect(
-    second.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
+    second.getByRole("tab", { name: "입력 완료 0개" }),
+  ).toBeInTheDocument();
+  expect(
+    second.getByRole("tab", { name: "확인 필요 0개" }),
   ).toBeInTheDocument();
   expect(clicks).toEqual(firstClicks);
   expect(control("branchNo").value).toBe("1234567890");
@@ -130,7 +133,10 @@ it("writes Hyundai disability status and newly enabled details within one run", 
   const second = run(profile);
   await settleWorkflow();
   expect(
-    second.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
+    second.getByRole("tab", { name: "입력 완료 0개" }),
+  ).toBeInTheDocument();
+  expect(
+    second.getByRole("tab", { name: "확인 필요 0개" }),
   ).toBeInTheDocument();
   expect(clicks).toEqual(firstClicks);
   expect([hidden("injuryGrade"), hidden("injuryType")]).toEqual(["10", "10"]);
@@ -232,7 +238,10 @@ it.each([
     const second = await run(profile);
     await settleWorkflow();
     expect(
-      second.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
+      second.getByRole("tab", { name: "입력 완료 0개" }),
+    ).toBeInTheDocument();
+    expect(
+      second.getByRole("tab", { name: "확인 필요 0개" }),
     ).toBeInTheDocument();
     expect(clicks).toEqual(firstClicks);
   },

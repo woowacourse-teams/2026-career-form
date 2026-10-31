@@ -482,7 +482,11 @@ it("does not add rows or write anything when step 2 runs again on the filled pag
     profile,
     searchResponder: responder(),
   });
-  await screen.findByText("자동 기입을 마쳤어요", {}, { timeout: 150000 });
+  await screen.findByRole(
+    "tablist",
+    { name: "기입 결과 구분" },
+    { timeout: 150000 },
+  );
 
   expect(loopCounts()).toEqual(filledPage.rows);
   expect(second.counters.adds).toBe(0);
@@ -514,7 +518,11 @@ async function reopenAndRun(edit: () => void = () => {}) {
     profile: liveShapedProfile(),
     searchResponder: responder(),
   });
-  await screen.findByText("자동 기입을 마쳤어요", {}, { timeout: 150000 });
+  await screen.findByRole(
+    "tablist",
+    { name: "기입 결과 구분" },
+    { timeout: 150000 },
+  );
   return { counters, writes, valuesBefore };
 }
 
