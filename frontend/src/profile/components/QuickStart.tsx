@@ -89,6 +89,8 @@ export function QuickStart({
   const focusedScreen = useRef<string | null>(null);
   const viewSent = useRef(false);
   const transition = useRef(false);
+  const retryButton = useRef<HTMLButtonElement>(null);
+  const [restoreRetryFocus, setRestoreRetryFocus] = useState(false);
   const busy = pending || editor.isReloading;
   const entry = editor.profile[selection.chapter].find(
     (row) => row.id === selection.entry.id,
@@ -203,7 +205,9 @@ export function QuickStart({
   }, [track]);
   useEffect(() => {
     if (editor.loadStatus !== "ready" || !initialized || pending) return;
-    const screen = guide ? "guide" : step;
+    const screen = guide
+      ? "guide"
+      : `${step}:${selection.chapter}:${selection.entry.id}`;
     if (focusedScreen.current === screen) return;
     const target =
       !guide && !summary
@@ -213,7 +217,23 @@ export function QuickStart({
         : null;
     (target ?? heading.current)?.focus();
     focusedScreen.current = screen;
-  }, [step, guide, summary, pending, editor.loadStatus, initialized]);
+  }, [
+    step,
+    guide,
+    summary,
+    pending,
+    editor.loadStatus,
+    initialized,
+    selection.chapter,
+    selection.entry.id,
+  ]);
+  useEffect(() => {
+    if (!restoreRetryFocus || pending) return;
+    setRestoreRetryFocus(false);
+    const active = document.activeElement;
+    if (editor.saveStatus === "error" && (!active || active === document.body))
+      retryButton.current?.focus();
+  }, [restoreRetryFocus, pending, editor.saveStatus]);
   function move(next: Step, origin: Step | null = null) {
     setHistory((current) => [...current, { step, selection, returnTo }]);
     setStep(next);
@@ -540,7 +560,6 @@ export function QuickStart({
                           <button
                             key={label}
                             type="button"
-                            aria-label={`${label} 수정`}
                             onClick={() => target && editQuestion(target)}
                           >
                             {label} 추가
@@ -592,7 +611,6 @@ export function QuickStart({
                             <button
                               key={label}
                               type="button"
-                              aria-label={`${label} 수정`}
                               onClick={() => target && editQuestion(target)}
                             >
                               {label} 추가
@@ -649,9 +667,14 @@ export function QuickStart({
               </p>
               {editor.saveStatus === "error" && (
                 <button
+                  ref={retryButton}
                   type="button"
                   disabled={busy}
-                  onClick={() => void proceed("retry")}
+                  onClick={async (event) => {
+                    const ownedFocus = event.currentTarget.matches(":focus");
+                    if (!(await proceed("retry")) && ownedFocus)
+                      setRestoreRetryFocus(true);
+                  }}
                 >
                   다시 저장하기
                 </button>

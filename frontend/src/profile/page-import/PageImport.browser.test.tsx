@@ -403,3 +403,47 @@ it("covers the panel's bottom padding so the list does not show beneath the save
   );
   expect(footer.contains(hit)).toBe(true);
 });
+
+it.each([220, 400])(
+  "keeps natively focused name-split controls clear of the sticky save footer at %ipx",
+  async (height) => {
+    const state = await mountImport("", undefined, {
+      width: "332px",
+      height: `${height}px`,
+      overflowY: "auto",
+    });
+    const shadow = state.container.getRootNode();
+    if (!(shadow instanceof ShadowRoot))
+      throw new Error("panel is not mounted in a ShadowRoot");
+    const footer = button(state, /프로필에 저장하기/).parentElement;
+    if (!footer) throw new Error("save footer is missing");
+    expect(getComputedStyle(footer).position).toBe("sticky");
+    const expectFocusClearOfFooter = () => {
+      const target = shadow.activeElement;
+      if (!(target instanceof HTMLElement))
+        throw new Error("no focused element in the panel");
+      expect(target.closest("article")).not.toBeNull();
+      const rect = target.getBoundingClientRect();
+      expect(rect.bottom).toBeLessThanOrEqual(
+        footer.getBoundingClientRect().top,
+      );
+      const hit = shadow.elementFromPoint(
+        rect.left + rect.width / 2,
+        rect.top + rect.height / 2,
+      );
+      expect(hit !== null && target.contains(hit)).toBe(true);
+    };
+
+    await userEvent.click(button(state, "아니에요"));
+    const initial = shadow.activeElement;
+    if (!(initial instanceof HTMLElement))
+      throw new Error("name editor has no focus");
+    state.container.scrollTop +=
+      initial.getBoundingClientRect().bottom -
+      footer.getBoundingClientRect().top;
+    await userEvent.tab();
+    expectFocusClearOfFooter();
+    await userEvent.tab();
+    expectFocusClearOfFooter();
+  },
+);

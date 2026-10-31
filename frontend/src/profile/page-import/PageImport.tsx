@@ -88,6 +88,7 @@ export function PageImport({
   const alive = useRef(false);
   const pending = useRef(false);
   const panel = useRef<HTMLElement>(null);
+  const footer = useRef<HTMLDivElement>(null);
   const clearPresentation = useRef<() => void>(() => {});
   const presentTimer = useRef<number | undefined>(undefined);
 
@@ -187,9 +188,6 @@ export function PageImport({
   };
 
   const recover = async () => {
-    setError(
-      "검토하는 동안 프로필이 바뀌었어요. 최신 프로필을 다시 불러왔으니 가져올 정보를 다시 확인해 주세요.",
-    );
     try {
       const latest = await repository.load();
       if (!alive.current) return;
@@ -197,8 +195,16 @@ export function PageImport({
       setBaseline(latest);
       setDecisions(start.decisions);
       setSelected(start.selected);
+      setError(
+        "검토하는 동안 프로필이 바뀌었어요. 최신 프로필을 다시 불러왔으니 가져올 정보를 다시 확인해 주세요.",
+      );
     } catch {
-      if (alive.current) setBaseline(undefined);
+      if (alive.current) {
+        setBaseline(undefined);
+        setError(
+          "검토하는 동안 프로필이 바뀌었어요. 최신 프로필을 불러오지 못했어요. 다시 읽기로 다시 시도해 주세요.",
+        );
+      }
     }
   };
   const save = async () => {
@@ -259,6 +265,15 @@ export function PageImport({
       ref={panel}
       className={styles.importer}
       aria-label="지원서에서 프로필 가져오기"
+      onFocusCapture={(event) => {
+        const controls = footer.current;
+        if (!controls || controls.contains(event.target)) return;
+        if (
+          event.target.getBoundingClientRect().bottom >
+          controls.getBoundingClientRect().top
+        )
+          event.target.scrollIntoView({ block: "start", behavior: "instant" });
+      }}
     >
       <style>
         {css}
@@ -274,7 +289,7 @@ export function PageImport({
           {error}
         </p>
       )}
-      {!loading && !hasValues && (
+      {!loading && !hasValues && !error && (
         <p className={styles.empty}>
           가져올 정보가 없어요. Greeting 지원서에 쓴 내용이 화면에 보이는지
           확인해 주세요.
@@ -299,21 +314,21 @@ export function PageImport({
             onPresent={present}
             onDecide={decide}
           />
-          {skippedTotal > 0 && (
-            <details className={styles.skipped}>
-              <summary>가져올 수 없는 {skippedTotal}개 보기</summary>
-              <ul>
-                {[...skipped].map(([reason, n]) => (
-                  <li key={reason}>
-                    {reason}: {n}개
-                  </li>
-                ))}
-              </ul>
-            </details>
-          )}
         </fieldset>
       )}
-      <div className={styles.footer}>
+      {!loading && skippedTotal > 0 && (
+        <details className={styles.skipped}>
+          <summary>가져올 수 없는 {skippedTotal}개 보기</summary>
+          <ul>
+            {[...skipped].map(([reason, n]) => (
+              <li key={reason}>
+                {reason}: {n}개
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+      <div ref={footer} className={styles.footer}>
         {!loading && hasValues && model && (
           <>
             <button

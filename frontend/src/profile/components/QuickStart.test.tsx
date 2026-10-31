@@ -274,7 +274,7 @@ describe("QuickStart", () => {
       },
     ];
     const { repository, track } = await renderForm(initial);
-    await click(screen.getByRole("button", { name: "이메일 수정" }));
+    await click(screen.getByRole("button", { name: "이메일 추가" }));
     fireEvent.change(screen.getByLabelText("이메일"), {
       target: { value: "learner@example.test" },
     });
@@ -834,7 +834,7 @@ it("does not resurrect a cleared new project from navigation history", async () 
   });
   await next();
   expect(screen.queryByText("지울 프로젝트")).toBeNull();
-  await click(screen.getByRole("button", { name: "프로젝트 이름 수정" }));
+  await click(screen.getByRole("button", { name: "프로젝트 이름 추가" }));
   expect(screen.getByLabelText("프로젝트 이름")).toHaveValue("");
   await click(screen.getByRole("button", { name: "이전" }));
   await screen.findByText(/아직 입력한 정보가 없어요/);
@@ -1089,10 +1089,10 @@ it("offers missing basics from a partial summary without repeating the wizard", 
     target: { value: "시연" },
   });
   await goToBasicSummary();
-  const email = screen.getByRole("button", { name: "이메일 수정" });
+  const email = screen.getByRole("button", { name: "이메일 추가" });
   expect(email).toHaveTextContent("이메일 추가");
   expect(
-    screen.getByRole("button", { name: "전화번호 수정" }),
+    screen.getByRole("button", { name: "전화번호 추가" }),
   ).toHaveTextContent("전화번호 추가");
   await click(email);
   fireEvent.change(screen.getByLabelText("이메일"), {
@@ -1114,10 +1114,10 @@ it("offers missing school basics on a partial saved school's summary", async () 
   ];
   const { repository } = await renderForm(initial);
   await click(screen.getByRole("button", { name: "합성대학교 이어서 채우기" }));
-  const major = screen.getByRole("button", { name: "주전공명 수정" });
+  const major = screen.getByRole("button", { name: "주전공명 추가" });
   expect(major).toHaveTextContent("주전공명 추가");
   expect(
-    screen.getByRole("button", { name: "재학 상태 수정" }),
+    screen.getByRole("button", { name: "재학 상태 추가" }),
   ).toHaveTextContent("재학 상태 추가");
   await click(major);
   fireEvent.change(screen.getByLabelText("전공"), {
@@ -1138,7 +1138,7 @@ it("creates valid distinct project ids when adding information after skipping a 
   for (const projectName of ["첫 프로젝트", "둘째 프로젝트"]) {
     await click(screen.getByRole("button", { name: "경력·활동 추가하기" }));
     await click(screen.getByRole("button", { name: "이 묶음 건너뛰기" }));
-    await click(screen.getByRole("button", { name: "프로젝트 이름 수정" }));
+    await click(screen.getByRole("button", { name: "프로젝트 이름 추가" }));
     fireEvent.change(screen.getByLabelText("프로젝트 이름"), {
       target: { value: projectName },
     });
@@ -1202,7 +1202,7 @@ it.each(["직장명 수정", "기간 추가", "학력 추가하기", "저장한 
 it("does not revisit a completed direct edit when going back from its summary", async () => {
   await renderForm();
   await goToBasicSummary();
-  await click(screen.getByRole("button", { name: "이메일 수정" }));
+  await click(screen.getByRole("button", { name: "이메일 추가" }));
   fireEvent.change(screen.getByLabelText("이메일"), {
     target: { value: "history@example.test" },
   });
@@ -1301,7 +1301,7 @@ it("adds English name and nationality from the basic summary and returns there",
   await next();
   await next();
   await next();
-  await click(screen.getByRole("button", { name: "영문 이름 수정" }));
+  await click(screen.getByRole("button", { name: "영문 이름 추가" }));
   fireEvent.change(screen.getByLabelText("영문 성"), {
     target: { value: "Kim" },
   });
@@ -1313,7 +1313,7 @@ it("adds English name and nationality from the basic summary and returns there",
     screen.getByRole("heading", { name: "기본 정보가 준비됐어요" }),
   ).toBeVisible();
   expect(screen.getByText("Kim Test")).toBeVisible();
-  await click(screen.getByRole("button", { name: "국적 수정" }));
+  await click(screen.getByRole("button", { name: "국적 추가" }));
   fireEvent.change(screen.getByLabelText("국적"), {
     target: { value: "대한민국" },
   });

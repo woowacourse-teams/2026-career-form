@@ -34,7 +34,6 @@ export function QuickStartOverview({
               <button
                 key={label}
                 type="button"
-                aria-label={`${label} 수정`}
                 onClick={() => step && onEditBasic(step)}
               >
                 {label} 추가
@@ -58,7 +57,6 @@ export function QuickStartOverview({
                   <button
                     key={label}
                     type="button"
-                    aria-label={`${label} 수정`}
                     onClick={() => step && onEditBasic(step)}
                   >
                     {label} 추가

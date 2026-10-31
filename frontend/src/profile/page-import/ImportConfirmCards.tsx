@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { formatProfileDate } from "../../autofill/profile/date-format";
 import { ImportTargetCompare } from "./ImportTargetChoices";
 import { NameSplitEditor } from "./NameSplitEditor";
@@ -60,6 +60,7 @@ function NameCard({ card, decisions, onDecide, onLater }: CardProps<"name">) {
           givenName={draft.givenName}
           confirmed={false}
           confirmLabel="이렇게 저장할게요"
+          focusOnMount
           onChange={(familyName, givenName) =>
             setDraft({ familyName, givenName, confirmed: false })
           }
@@ -135,6 +136,10 @@ const fullDate = (month: string, day: number) =>
 function DateCard({ card, decisions, onDecide, onLater }: CardProps<"date">) {
   const [input, setInput] = useState("");
   const [error, setError] = useState<string>();
+  const errorId = useId();
+  const invalid = error
+    ? { "aria-invalid": true, "aria-describedby": errorId }
+    : {};
   const decide = (value: string | null) =>
     onDecide({ ...decisions, dates: { ...decisions.dates, [card.id]: value } });
   const submit = () => {
@@ -173,6 +178,7 @@ function DateCard({ card, decisions, onDecide, onLater }: CardProps<"date">) {
               max={31}
               value={input}
               aria-label={`${card.label}의 일`}
+              {...invalid}
               onChange={(event) => setInput(event.target.value)}
               onKeyDown={onKeyDown}
             />
@@ -183,13 +189,14 @@ function DateCard({ card, decisions, onDecide, onLater }: CardProps<"date">) {
             type="date"
             value={input}
             aria-label={card.label}
+            {...invalid}
             onChange={(event) => setInput(event.target.value)}
             onKeyDown={onKeyDown}
           />
         )}
       </div>
       {error && (
-        <p role="alert" className={styles.error}>
+        <p id={errorId} role="alert" className={styles.error}>
           {error}
         </p>
       )}
@@ -296,17 +303,69 @@ export function ImportConfirmCards({
   confirmations,
   decisions,
   duplicateCount,
-  onDecide,
+  onDecide: decideAnswer,
   onPresent,
 }: Props) {
   const [deferred, setDeferred] = useState<ReadonlySet<string>>(new Set());
   const current = confirmations.find((card) => !deferred.has(card.id));
+  const [hasInteracted, setHasInteracted] = useState(false);
+  const queue = useRef<HTMLElement>(null);
+  const pendingFocus = useRef(false);
+  const shownId = useRef(current?.id);
+  const onDecide = (next: ReviewDecisions) => {
+    pendingFocus.current = true;
+    setHasInteracted(true);
+    decideAnswer(next);
+  };
+  const showCards = (next: ReadonlySet<string>) => {
+    pendingFocus.current = true;
+    setHasInteracted(true);
+    setDeferred(next);
+  };
+  useEffect(() => {
+    const changed = shownId.current !== current?.id;
+    shownId.current = current?.id;
+    // The parent can apply a decision after this component's own render.
+    if (!pendingFocus.current || !changed) return;
+    pendingFocus.current = false;
+    const root = queue.current;
+    if (!root) return;
+    const scope = root.getRootNode();
+    const host = scope instanceof ShadowRoot ? scope.host : undefined;
+    const active =
+      scope instanceof ShadowRoot
+        ? (scope.activeElement ?? root.ownerDocument.activeElement)
+        : root.ownerDocument.activeElement;
+    if (
+      active &&
+      active !== root.ownerDocument.body &&
+      active !== host &&
+      !root.contains(active)
+    )
+      return;
+    (
+      root.querySelector<HTMLElement>(
+        "article input:not(:disabled), article button:not(:disabled)",
+      ) ?? root
+    ).focus();
+  }, [current?.id]);
   const anyResolved = NAME_GROUPS.some(
     (group) => decisions.names[group.source]?.confirmed,
   );
-  if (!confirmations.length && !anyResolved && !duplicateCount) return null;
+  if (
+    !confirmations.length &&
+    !anyResolved &&
+    !duplicateCount &&
+    !hasInteracted
+  )
+    return null;
   return (
-    <section className={styles.queue} aria-label="확인이 필요한 정보">
+    <section
+      ref={queue}
+      tabIndex={-1}
+      className={styles.queue}
+      aria-label="확인이 필요한 정보"
+    >
       {duplicateCount > 0 && (
         <p role="status" className={styles.notice}>
           같은 정보가 두 번 들어 있어 {duplicateCount}개 항목은 저장하지 않아요.
@@ -318,7 +377,7 @@ export function ImportConfirmCards({
           <span className={styles.countPill}>{confirmations.length}</span>
         </h3>
       ) : (
-        anyResolved && (
+        (anyResolved || hasInteracted) && (
           <p className={styles.allDone}>확인할 정보를 모두 정리했어요</p>
         )
       )}
@@ -333,9 +392,7 @@ export function ImportConfirmCards({
             card={current}
             decisions={decisions}
             onDecide={onDecide}
-            onLater={() =>
-              setDeferred((previous) => new Set(previous).add(current.id))
-            }
+            onLater={() => showCards(new Set(deferred).add(current.id))}
           />
         </article>
       )}
@@ -349,7 +406,7 @@ export function ImportConfirmCards({
             <button
               type="button"
               className={styles.primaryButton}
-              onClick={() => setDeferred(new Set())}
+              onClick={() => showCards(new Set())}
             >
               지금 확인할게요
             </button>
