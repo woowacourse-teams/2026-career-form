@@ -447,3 +447,36 @@ it.each([220, 400])(
     expectFocusClearOfFooter();
   },
 );
+
+it("keeps the first pointer click on a card action above the sticky footer", async () => {
+  const state = await mountImport("", undefined, {
+    width: "332px",
+    height: "400px",
+    overflowY: "auto",
+  });
+  await Promise.all(
+    state.container
+      .getAnimations({ subtree: true })
+      .filter(
+        (animation) =>
+          animation.effect?.getComputedTiming().iterations !== Infinity,
+      )
+      .map((animation) => animation.finished),
+  );
+  const defer = button(state, "나중에 할게요");
+  const footer = button(state, /프로필에 저장하기/).parentElement;
+  if (!footer) throw new Error("save footer is missing");
+  state.container.scrollTop +=
+    defer.getBoundingClientRect().bottom -
+    footer.getBoundingClientRect().top -
+    8;
+  const rect = defer.getBoundingClientRect();
+  const footerTop = footer.getBoundingClientRect().top;
+  expect(rect.top + rect.height / 2).toBeLessThan(footerTop);
+  expect(rect.bottom).toBeGreaterThan(footerTop);
+
+  await userEvent.click(defer);
+
+  expect(state.ui.queryByLabelText(/의 일$/)).not.toBeNull();
+  state.expectSourceUnchanged();
+});

@@ -267,7 +267,13 @@ export function PageImport({
       aria-label="지원서에서 프로필 가져오기"
       onFocusCapture={(event) => {
         const controls = footer.current;
-        if (!controls || controls.contains(event.target)) return;
+        // Keep a pressed pointer target in place until its click completes.
+        if (
+          !controls ||
+          controls.contains(event.target) ||
+          event.target.matches(":active")
+        )
+          return;
         if (
           event.target.getBoundingClientRect().bottom >
           controls.getBoundingClientRect().top
