@@ -290,7 +290,10 @@
   cursor: pointer;
 }
 .valueRow > button:hover {
-  background: var(--color-accent-hover);
+  background: var(--color-brand);
+}
+.valueRow > button:active {
+  background: var(--color-brand-hover);
 }
 .valueRow > button[data-copied="true"] {
   border-color: var(--color-success);

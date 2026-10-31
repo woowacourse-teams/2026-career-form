@@ -36,6 +36,9 @@ it("keeps result layout and actions styled without the separately loaded entry s
 
     expect(getComputedStyle(summary).display).toBe("grid");
     expect(getComputedStyle(summary).padding).toBe("0px");
+    const heading = within(summary).getByRole("heading");
+    expect(getComputedStyle(heading).wordBreak).toBe("keep-all");
+    expect(getComputedStyle(heading).overflowWrap).toBe("anywhere");
     expect(getComputedStyle(counts).display).toBe("grid");
     expect(counts).toHaveAttribute("role", "tablist");
     expect(getComputedStyle(counts.firstElementChild!).borderTopStyle).toBe(

@@ -59,7 +59,7 @@
 .field input:hover,
 .field textarea:hover,
 .field select:hover {
-  border-color: var(--color-accent);
+  border-color: var(--color-action);
 }
 .field input::placeholder,
 .field textarea::placeholder {

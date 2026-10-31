@@ -12,6 +12,10 @@
   display: grid;
   gap: 12px;
 }
+.summaryText h3 {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
 .results .summary h3 {
   margin: 0;
   font-size: 20px;
