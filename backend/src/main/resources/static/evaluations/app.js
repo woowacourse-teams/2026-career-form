@@ -291,16 +291,24 @@ function openPricing() {
 }
 
 function openRun() {
-  const form = element("form", undefined, "criteria-list");
-  const field = (label, input) => { const wrap = element("label", label); wrap.append(input); return wrap; };
+  const form = element("form", undefined, "criteria-list run-form");
+  const field = (label, input, hint) => {
+    const wrap = element("label");
+    wrap.append(element("span", label), input, element("span", hint, "hint"));
+    return wrap;
+  };
   const split = element("select");
   split.append(Object.assign(element("option", "튜닝용"), { value: "tuning" }), Object.assign(element("option", "최종 평가용"), { value: "final" }));
   const repetitions = Object.assign(element("input"), { type: "number", min: "1", max: "20", value: "1" });
-  const prompt = Object.assign(element("input"), { type: "text", maxLength: 32, placeholder: "예: v1" });
+  const prompt = Object.assign(element("input"), { type: "text", maxLength: 32, placeholder: "비워 두면 이름 없음" });
   const message = element("p", "실제 모델을 호출하며 비용이 발생합니다. 진행 중인 평가가 있으면 등록되지 않습니다.", "muted");
   const submit = element("button", "등록", "apply-pricing");
   submit.type = "submit";
-  form.append(field("분할", split), field("반복 수", repetitions), field("프롬프트 이름", prompt), message, submit);
+  form.append(
+    field("분할", split, "튜닝용은 개선 작업 중 확인용, 최종 평가용은 개선 전후 비교용 화면입니다."),
+    field("반복 수", repetitions, "같은 입력을 몇 번 돌릴지(1~20). 응답시간 편차를 보려면 3 이상을 권장합니다."),
+    field("프롬프트 이름", prompt, "결과를 구분할 이름표(선택). 예: baseline. 실제 프롬프트 내용은 서버가 자동으로 기록합니다."),
+    message, submit);
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     submit.disabled = true;
