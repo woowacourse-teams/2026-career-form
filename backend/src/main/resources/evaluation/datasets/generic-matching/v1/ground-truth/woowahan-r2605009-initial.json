@@ -227,7 +227,10 @@
     },
     "interactionNote": "선택지 6개: 검정고시, 고등학교, 전문대학, 대학교, 대학원(석사), 대학원(박사). 검정고시는 HIGH_SCHOOL 행 종류가 아니다.",
     "review": {
-      "status": "AGENT_DRAFT_PENDING_HUMAN_REVIEW"
+      "status": "HUMAN_REVIEWED",
+      "by": "user",
+      "on": "2026-10-30",
+      "scope": "준비 섹션 분류 4개(병역 SENSITIVE 포함), 학력 단계별 선택지 5개(검정고시 제외)"
     }
   }
 }

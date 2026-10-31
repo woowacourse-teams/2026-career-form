@@ -117,15 +117,15 @@ class DatasetLoaderTest {
     }
 
     @Test
-    @DisplayName("저장소의 generic-matching v1은 해시가 맞고 준비 단계 정답의 사람 검토만 남아 있다")
-    void repositoryDatasetWaitsForPreparationReview() {
+    @DisplayName("저장소의 generic-matching v1은 사람 검토를 마쳐 화면 3개 사례를 모두 읽는다")
+    void repositoryDatasetLoadsReviewedCases() {
         DatasetLoader loader = new DatasetLoader(DatasetLoader.classpath(getClass().getClassLoader()));
 
-        assertThatThrownBy(() -> loader.load("generic-matching", 1))
-            .isInstanceOfSatisfying(DatasetRejected.class, rejected -> {
-                assertThat(rejected.code()).isEqualTo(Code.REVIEW_MISSING);
-                assertThat(rejected.getMessage()).contains("preparationTruth");
-            });
+        LoadedDataset dataset = loader.load("generic-matching", 1);
+
+        assertThat(dataset.cases()).extracting(EvaluationCase::state)
+            .containsExactlyInAnyOrder("initial", "high-school", "university");
+        assertThat(dataset.cases()).allSatisfy(evaluationCase -> assertThat(evaluationCase.calls()).isNotEmpty());
     }
 
     private static void assertRejected(Map<String, String> files, Code code) {

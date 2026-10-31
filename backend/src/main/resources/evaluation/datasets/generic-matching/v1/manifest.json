@@ -25,7 +25,7 @@
       "sha256": "1880f43e54e1815779e61d867860a524d83b485de4674d6b78154d2a61857b9b",
       "groundTruth": {
         "file": "evaluation/datasets/generic-matching/v1/ground-truth/woowahan-r2605009-initial.json",
-        "sha256": "b3a6347cd6c4354c9c93522180b96f7247cfbd55eb39314089e90ae047095a7f"
+        "sha256": "b6d01de28b92d3d1dbd711e06d85539a22fdba22a44fc69941b44de269e52943"
       },
       "fixture": {
         "id": "woowahan-r2605009-initial",
@@ -36,7 +36,7 @@
         "privacy": "PASSED",
         "structure": "PASSED",
         "mappingTruth": "HUMAN_REVIEWED",
-        "preparationTruth": "AGENT_DRAFT",
+        "preparationTruth": "HUMAN_REVIEWED",
         "inputIdentity": "SOURCE_PIPELINE_VERIFIED",
         "reviewedOn": "2026-10-30"
       }
@@ -50,7 +50,7 @@
       "sha256": "431399c39d9f9e6c086ae681c7004d49c3d8776b4036acb8bf359eff735703bc",
       "groundTruth": {
         "file": "evaluation/datasets/generic-matching/v1/ground-truth/woowahan-r2605009-high-school.json",
-        "sha256": "dc06a645b88e5c67ddc6ac7a89fc5b1dd2d47105be12f27d77a10fd13b2adfbf"
+        "sha256": "faf1aacec8451cd00d0719d74a776cfb05a3ab80788bb134ef45deefb8efacf7"
       },
       "fixture": {
         "id": "woowahan-r2605009-high-school",
@@ -61,7 +61,7 @@
         "privacy": "PASSED",
         "structure": "PASSED",
         "mappingTruth": "HUMAN_REVIEWED",
-        "preparationTruth": "AGENT_DRAFT",
+        "preparationTruth": "HUMAN_REVIEWED",
         "inputIdentity": "SOURCE_PIPELINE_VERIFIED",
         "reviewedOn": "2026-10-30"
       }
@@ -75,7 +75,7 @@
       "sha256": "d277c49f40211715f133964cac483946e0e52a57359544195d8791b9d9df783f",
       "groundTruth": {
         "file": "evaluation/datasets/generic-matching/v1/ground-truth/woowahan-r2605009-university.json",
-        "sha256": "96c5daf19f02b4542dd4405fcfdff7fea74d2b7ab05383ccfbe147321a9bfbcb"
+        "sha256": "54a7ddcbde0cc32e28236b1fe8cce419a77c7d3f2ba3a765e10ff49045f2b759"
       },
       "fixture": {
         "id": "woowahan-r2605009-university",
@@ -86,7 +86,7 @@
         "privacy": "PASSED",
         "structure": "PASSED",
         "mappingTruth": "HUMAN_REVIEWED",
-        "preparationTruth": "AGENT_DRAFT",
+        "preparationTruth": "HUMAN_REVIEWED",
         "inputIdentity": "SOURCE_PIPELINE_VERIFIED",
         "reviewedOn": "2026-10-30"
       }

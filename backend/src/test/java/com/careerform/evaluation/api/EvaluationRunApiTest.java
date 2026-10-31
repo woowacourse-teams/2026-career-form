@@ -145,10 +145,10 @@ class EvaluationRunApiTest {
     @DisplayName("데이터셋 화면 정보는 저장소 데이터셋의 화면 칸 목록, 준비 동작, 검토 상태, 합성 프로필을 보여 준다")
     void showsRepositoryDataset() throws Exception {
         authorized(get("/api/v1/evaluations/datasets/generic-matching/v1")).andExpect(status().isOk())
-            .andExpect(jsonPath("$.usable").value(false))
+            .andExpect(jsonPath("$.usable").value(true))
             .andExpect(jsonPath("$.cases.length()").value(3))
             .andExpect(jsonPath("$.cases[0].split").value("tuning"))
-            .andExpect(jsonPath("$.cases[0].review.preparationTruth").value("AGENT_DRAFT"))
+            .andExpect(jsonPath("$.cases[0].review.preparationTruth").value("HUMAN_REVIEWED"))
             .andExpect(jsonPath("$.cases[0].actions[0]").value("ROW_KIND_OPTION:HIGH_SCHOOL"))
             .andExpect(jsonPath("$.cases[0].sections[0].fields[0].label").value("영문 성 (Last Name)"))
             .andExpect(jsonPath("$.profiles['synthetic-01-basic'].personal.koreanGivenName").value("가온"));

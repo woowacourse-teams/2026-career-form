@@ -199,7 +199,10 @@
     "interactionDecisions": {},
     "interactionNote": "학력 구분이 이미 선택된 상태라 준비 루프가 결정 질문을 보내지 않는다(준비 호출 0건).",
     "review": {
-      "status": "AGENT_DRAFT_PENDING_HUMAN_REVIEW"
+      "status": "HUMAN_REVIEWED",
+      "by": "user",
+      "on": "2026-10-30",
+      "scope": "준비 섹션 분류 4개(병역 SENSITIVE 포함), 학력 단계별 선택지 5개(검정고시 제외)"
     }
   }
 }
