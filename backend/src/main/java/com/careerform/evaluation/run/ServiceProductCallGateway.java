@@ -14,7 +14,7 @@ import com.careerform.formanalysis.application.SupportedProfileFields;
 import com.careerform.formanalysis.dto.InteractionDecisionRequest;
 import com.careerform.formanalysis.generic.GenericFieldsRequest;
 import com.careerform.formanalysis.generic.GenericFieldsService;
-import com.careerform.formanalysis.generic.JevCategoryFieldResolver;
+import com.careerform.formanalysis.generic.ChoiceFieldResolver;
 import com.careerform.formanalysis.generic.SectionClassificationRequest;
 import com.careerform.formanalysis.generic.SectionClassificationService;
 import tools.jackson.databind.JsonNode;
@@ -30,7 +30,7 @@ public final class ServiceProductCallGateway implements ProductCallGateway {
     private final Validator validator;
     private final SectionClassificationService classification;
     private final InteractionDecisionService interactions;
-    private final Optional<JevCategoryFieldResolver> resolver;
+    private final Optional<ChoiceFieldResolver> resolver;
     private final FormAnalysisRouter router;
     private final FieldInteractionPolicy interactionPolicy;
     private final SupportedProfileFields fields;
@@ -38,7 +38,7 @@ public final class ServiceProductCallGateway implements ProductCallGateway {
 
     public ServiceProductCallGateway(JsonMapper mapper, Validator validator,
         SectionClassificationService classification, InteractionDecisionService interactions,
-        Optional<JevCategoryFieldResolver> resolver, FormAnalysisRouter router,
+        Optional<ChoiceFieldResolver> resolver, FormAnalysisRouter router,
         FieldInteractionPolicy interactionPolicy, SupportedProfileFields fields) {
         this.mapper = mapper;
         this.validator = validator;

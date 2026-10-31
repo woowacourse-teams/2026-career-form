@@ -11,12 +11,12 @@ import org.springframework.stereotype.Component;
 
 import com.careerform.formanalysis.application.PromptSource;
 import com.careerform.formanalysis.infrastructure.InteractionProviderConditions;
-import com.careerform.formanalysis.infrastructure.adapter.jev.JevClient;
+import com.careerform.formanalysis.application.port.ChoiceModel;
 
-/** 섹션마다 JEV answer() 질문 하나를 만든다. 질문 분할과 토큰 초과 재시도는 하지 않는다. */
+/** 섹션마다 선택 모델 포트의 answer() 질문 하나를 만든다(공급자 중립). 질문 분할과 토큰 초과 재시도는 하지 않는다. */
 @Component
 @Conditional(InteractionProviderConditions.JevClient.class)
-public final class JevSectionClassifier implements SectionClassifier, PromptSource {
+public final class ChoiceSectionClassifier implements SectionClassifier, PromptSource {
 
     static final String BOUNDARIES = "Boundaries: the applicant's own name, birth date and contact details are "
         + "PERSONAL, while contact details of other people such as references, guardians or family are NONE. "
@@ -27,10 +27,10 @@ public final class JevSectionClassifier implements SectionClassifier, PromptSour
         + "sections are NONE. Choose MIXED only when the section clearly combines several profile categories, "
         + "and ABSTAIN when the evidence is insufficient.";
 
-    private final JevClient client;
+    private final ChoiceModel client;
     private final SectionCategories categories;
 
-    public JevSectionClassifier(JevClient client, SectionCategories categories) {
+    public ChoiceSectionClassifier(ChoiceModel client, SectionCategories categories) {
         this.client = client;
         this.categories = categories;
     }
@@ -43,7 +43,7 @@ public final class JevSectionClassifier implements SectionClassifier, PromptSour
 
     @Override
     public String promptSourceId() {
-        return "jev-section-classification";
+        return "section-classification";
     }
 
     @Override
@@ -65,16 +65,16 @@ public final class JevSectionClassifier implements SectionClassifier, PromptSour
         }
         Map<String, String> criteria = criteria();
         Map<String, Object> state = new LinkedHashMap<>();
-        Map<String, JevClient.Choice> questions = new LinkedHashMap<>();
+        Map<String, ChoiceModel.Question> questions = new LinkedHashMap<>();
         for (SectionShape section : sections) {
             String questionId = questionIds.get(section.sectionId());
             state.put(questionId, sectionState(section, questionIds));
-            questions.put(questionId, new JevClient.Choice(instructions(questionId), criteria));
+            questions.put(questionId, new ChoiceModel.Question(instructions(questionId), criteria));
         }
-        Map<String, JevClient.Judgement> answers = client.answer(Map.of("sections", state), questions);
+        Map<String, ChoiceModel.Judgement> answers = client.answer(Map.of("sections", state), questions);
         Map<String, Classification> results = new LinkedHashMap<>();
         for (SectionShape section : sections) {
-            JevClient.Judgement judgement = answers.get(questionIds.get(section.sectionId()));
+            ChoiceModel.Judgement judgement = answers.get(questionIds.get(section.sectionId()));
             if (judgement != null) {
                 results.put(section.sectionId(), new Classification(judgement.choice(), judgement.confidence()));
             }

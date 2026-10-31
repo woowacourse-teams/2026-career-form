@@ -28,7 +28,7 @@ import com.careerform.formanalysis.generic.GenericFieldsRequest.SemanticLabel;
 import com.careerform.formanalysis.generic.GenericFieldsRequest.SemanticSource;
 import com.careerform.formanalysis.generic.GenericFieldsRequest.Visibility;
 import com.careerform.formanalysis.generic.GenericFieldsResponse.NameBinding;
-import com.careerform.formanalysis.generic.JevCategoryFieldResolver.Mapping;
+import com.careerform.formanalysis.generic.ChoiceFieldResolver.Mapping;
 
 @DisplayName("범용 영문 이름 선택 경계")
 class GenericEnglishNameBoundaryTest {
@@ -154,7 +154,7 @@ class GenericEnglishNameBoundaryTest {
     }
 
     private Mapping resolve(FieldCandidate candidate) {
-        return new JevCategoryFieldResolver(client(http), FIELDS, CATEGORIES, 1, 5, 10, 8000)
+        return new ChoiceFieldResolver(client(http), FIELDS, CATEGORIES, 1, 5, 10, 8000)
             .resolve(request("example.test", List.of(section("personal", "PERSONAL", List.of(candidate)))))
             .mappings().get("name");
     }

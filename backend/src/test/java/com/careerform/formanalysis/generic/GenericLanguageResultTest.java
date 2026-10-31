@@ -22,7 +22,7 @@ import com.careerform.formanalysis.generic.GenericFieldsRequest.Option;
 import com.careerform.formanalysis.generic.GenericFieldsRequest.SemanticContext;
 import com.careerform.formanalysis.generic.GenericFieldsRequest.Visibility;
 import com.careerform.formanalysis.generic.GenericFieldsRequest.WriteCommand;
-import com.careerform.formanalysis.generic.JevCategoryFieldResolver.Mapping;
+import com.careerform.formanalysis.generic.ChoiceFieldResolver.Mapping;
 
 /** 한 어학 기록에 등급 선택칸과 점수 입력칸이 따로 있으면 두 칸을 후보로만 표시한다. 선택은 값 모양을 아는 프런트가 한다. */
 class GenericLanguageResultTest {
@@ -108,8 +108,8 @@ class GenericLanguageResultTest {
             new GenericFieldsRequest.Site("example.test", "/apply"),
             List.of(GenericFieldsJevHttp.section("language", "LANGUAGE", fields)),
             List.of(WriteCommand.SET_TEXT, WriteCommand.SELECT_OPTION));
-        var resolver = mock(JevCategoryFieldResolver.class);
-        when(resolver.resolve(request)).thenReturn(new JevCategoryFieldResolver.Resolution(mappings, 1));
+        var resolver = mock(ChoiceFieldResolver.class);
+        when(resolver.resolve(request)).thenReturn(new ChoiceFieldResolver.Resolution(mappings, 1));
         return new GenericFieldsService(Optional.of(resolver),
             new FormAnalysisRouter((host, path) -> new CompanyFormPolicyProvider.NotRegistered()),
             new FieldInteractionPolicy(), new SupportedProfileFields()).analyze(request);

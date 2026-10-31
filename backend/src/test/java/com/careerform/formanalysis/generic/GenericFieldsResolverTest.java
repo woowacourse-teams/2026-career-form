@@ -31,7 +31,7 @@ import org.junit.jupiter.api.Test;
 import com.careerform.formanalysis.generic.GenericFieldsRequest.FieldCandidate;
 import com.careerform.formanalysis.generic.GenericFieldsRequest.Item;
 import com.careerform.formanalysis.generic.GenericFieldsResponse.Reason;
-import com.careerform.formanalysis.generic.JevCategoryFieldResolver.Mapping;
+import com.careerform.formanalysis.generic.ChoiceFieldResolver.Mapping;
 import com.careerform.formanalysis.infrastructure.adapter.jev.JevClient;
 
 @DisplayName("범용 섹션별 칸 매칭 resolver")
@@ -135,7 +135,7 @@ class GenericFieldsResolverTest {
             assertThat(resolution.mappings().get("school-" + row)).isEqualTo(new Mapping(SCHOOL, 0.77, true, null));
             assertThat(resolution.mappings().get("major-" + row)).isEqualTo(new Mapping(MAJOR, 0.77, true, null));
         }
-        assertThat(resolution.jevCalls()).isEqualTo(1);
+        assertThat(resolution.modelCalls()).isEqualTo(1);
     }
 
     @Test
@@ -158,15 +158,15 @@ class GenericFieldsResolverTest {
     @DisplayName("평가용 배치 설정 사본은 배치 크기만 바꾸고 서버 전체 동시 호출 상한을 원본과 함께 쓴다")
     void batchingCopySharesServerWideLimit() throws Exception {
         var permits = new Semaphore(1);
-        var original = new JevCategoryFieldResolver(GenericFieldsJevHttp.client(http), FIELDS, CATEGORIES,
+        var original = new ChoiceFieldResolver(GenericFieldsJevHttp.client(http), FIELDS, CATEGORIES,
             3, 5, permits, 1);
         var copy = original.withBatching(1, 2);
         var fields = List.of(field("edu-1", "학교명"), field("edu-2", "전공"), field("edu-3", "입학일"));
         var request = request("example.test", List.of(section("edu", "EDUCATION", fields)));
         http.respond(call -> answerAll(call, SCHOOL, 0.9));
 
-        assertThat(copy.resolve(request).jevCalls()).isEqualTo(2);
-        assertThat(original.resolve(request).jevCalls()).isEqualTo(1);
+        assertThat(copy.resolve(request).modelCalls()).isEqualTo(2);
+        assertThat(original.resolve(request).modelCalls()).isEqualTo(1);
         permits.acquire();
         assertThat(copy.resolve(request).mappings().get("edu-1").reason()).isEqualTo(Reason.LLM_UNAVAILABLE);
         permits.release();
@@ -177,7 +177,7 @@ class GenericFieldsResolverTest {
     @DisplayName("서버 전체 동시 호출 상한 대기가 timeout을 넘으면 JEV를 호출하지 않고 LLM_UNAVAILABLE로 응답한다")
     void serverWideLimitTimeoutIsUnavailable() throws Exception {
         var permits = new Semaphore(1);
-        var resolver = new JevCategoryFieldResolver(GenericFieldsJevHttp.client(http), FIELDS, CATEGORIES,
+        var resolver = new ChoiceFieldResolver(GenericFieldsJevHttp.client(http), FIELDS, CATEGORIES,
             3, 5, permits, 1);
         var request = request("example.test", List.of(
             section("edu", "EDUCATION", List.of(field("edu-1", "학교명")))));
@@ -189,7 +189,7 @@ class GenericFieldsResolverTest {
         var resumed = resolver.resolve(request);
 
         assertThat(waited.mappings().get("edu-1")).isEqualTo(new Mapping(null, 0.0, true, Reason.LLM_UNAVAILABLE));
-        assertThat(waited.jevCalls()).isZero();
+        assertThat(waited.modelCalls()).isZero();
         assertThat(resumed.mappings().get("edu-1")).isEqualTo(new Mapping(SCHOOL, 0.9, true, null));
         assertThat(http.calls()).hasSize(1);
         assertThat(permits.availablePermits()).isEqualTo(1);
@@ -203,7 +203,7 @@ class GenericFieldsResolverTest {
 
         assertThat(http.calls()).extracting(call -> call.questionIds().size()).containsExactly(5, 5, 2);
         assertThat(http.calls().getFirst().state().path("fields").size()).isEqualTo(12);
-        assertThat(resolution.jevCalls()).isEqualTo(3);
+        assertThat(resolution.modelCalls()).isEqualTo(3);
     }
 
     @Test
@@ -227,7 +227,7 @@ class GenericFieldsResolverTest {
         assertThat(reduced).extracting(GenericFieldsJevHttp.Call::questionIds)
             .containsExactly(List.of("field_0"), List.of("field_1"));
         assertThat(reduced).allSatisfy(call -> assertThat(call.state().path("section").has("parent")).isFalse());
-        assertThat(resolution.jevCalls()).isEqualTo(15);
+        assertThat(resolution.modelCalls()).isEqualTo(15);
         assertThat(resolution.mappings().get("c1")).isEqualTo(new Mapping(null, 0.0, true, null));
         assertThat(IntStream.range(0, 12).filter(index -> index != 1).mapToObj(index -> "c" + index))
             .allSatisfy(id -> assertThat(resolution.mappings().get(id)).isEqualTo(new Mapping(SCHOOL, 0.9, true, null)));
@@ -331,7 +331,7 @@ class GenericFieldsResolverTest {
         for (String name : FIXTURES) {
             var local = new GenericFieldsJevHttp();
             local.respond(call -> answerAll(call, null, 0.9));
-            new JevCategoryFieldResolver(GenericFieldsJevHttp.client(local), FIELDS, CATEGORIES, 3, 5, 10, 8000)
+            new ChoiceFieldResolver(GenericFieldsJevHttp.client(local), FIELDS, CATEGORIES, 3, 5, 10, 8000)
                 .resolve(fixture(name));
 
             assertThat(local.calls()).hasSize(3);
@@ -357,7 +357,7 @@ class GenericFieldsResolverTest {
             GenericFieldsRequest request = fixture(name);
             var local = new GenericFieldsJevHttp();
             local.respond(call -> idealReply(request, call));
-            var resolution = new JevCategoryFieldResolver(GenericFieldsJevHttp.client(local), FIELDS, CATEGORIES,
+            var resolution = new ChoiceFieldResolver(GenericFieldsJevHttp.client(local), FIELDS, CATEGORIES,
                 3, 5, 10, 8000).resolve(request);
 
             Map<String, String> expected = expectedByCandidate(request);
@@ -403,7 +403,7 @@ class GenericFieldsResolverTest {
         // 기권: criteria에 키가 있으나 JEV가 ABSTAIN을 고른다.
         var abstainHttp = new GenericFieldsJevHttp();
         abstainHttp.respond(call -> answerAll(call, JevClient.ABSTAIN, 0.9));
-        var abstained = new JevCategoryFieldResolver(GenericFieldsJevHttp.client(abstainHttp), FIELDS, CATEGORIES, 1, 5, 10, 8000)
+        var abstained = new ChoiceFieldResolver(GenericFieldsJevHttp.client(abstainHttp), FIELDS, CATEGORIES, 1, 5, 10, 8000)
             .resolve(careerOnly);
         assertThat(abstained.mappings().get("nv-career-job-0").profileFieldKey()).isNull();
         assertThat(abstainHttp.calls().getFirst().criteria(abstainHttp.calls().getFirst().questionIds().getFirst()))
@@ -412,7 +412,7 @@ class GenericFieldsResolverTest {
         // 단일 질문 토큰 초과: 축소 state로 한 번 더 묻고도 넘으면 null이 되며 호출 수가 늘어난다.
         var limitHttp = new GenericFieldsJevHttp();
         limitHttp.respond(call -> tokenLimit());
-        var limited = new JevCategoryFieldResolver(GenericFieldsJevHttp.client(limitHttp), FIELDS, CATEGORIES, 1, 5, 10, 8000)
+        var limited = new ChoiceFieldResolver(GenericFieldsJevHttp.client(limitHttp), FIELDS, CATEGORIES, 1, 5, 10, 8000)
             .resolve(careerOnly);
         assertThat(limited.mappings().get("nv-career-job-0").profileFieldKey()).isNull();
         assertThat(limited.mappings().get("nv-career-job-0").reason()).isNull();
@@ -426,7 +426,7 @@ class GenericFieldsResolverTest {
         for (String name : FIXTURES) {
             var local = new GenericFieldsJevHttp();
             local.respond(call -> answerAll(call, null, 0.9));
-            new JevCategoryFieldResolver(GenericFieldsJevHttp.client(local), FIELDS, CATEGORIES, 3, 5, 10, 8000)
+            new ChoiceFieldResolver(GenericFieldsJevHttp.client(local), FIELDS, CATEGORIES, 3, 5, 10, 8000)
                 .resolve(fixture(name));
 
             Set<String> descriptions = new HashSet<>();
@@ -453,7 +453,7 @@ class GenericFieldsResolverTest {
             GenericFieldsRequest request = fixture(name);
             var local = new GenericFieldsJevHttp();
             local.respond(call -> idealReply(request, call));
-            new JevCategoryFieldResolver(GenericFieldsJevHttp.client(local), FIELDS, CATEGORIES, 3, 5, 10, 8000)
+            new ChoiceFieldResolver(GenericFieldsJevHttp.client(local), FIELDS, CATEGORIES, 3, 5, 10, 8000)
                 .resolve(request);
 
             for (var call : local.calls()) {
@@ -477,11 +477,11 @@ class GenericFieldsResolverTest {
     void observationProjectsStructureWithoutCounts() {
         var naverHttp = new GenericFieldsJevHttp();
         naverHttp.respond(call -> answerAll(call, null, 0.9));
-        new JevCategoryFieldResolver(GenericFieldsJevHttp.client(naverHttp), FIELDS, CATEGORIES, 3, 5, 10, 8000)
+        new ChoiceFieldResolver(GenericFieldsJevHttp.client(naverHttp), FIELDS, CATEGORIES, 3, 5, 10, 8000)
             .resolve(fixture(FIXTURES.getFirst()));
         var syntheticHttp = new GenericFieldsJevHttp();
         syntheticHttp.respond(call -> answerAll(call, null, 0.9));
-        new JevCategoryFieldResolver(GenericFieldsJevHttp.client(syntheticHttp), FIELDS, CATEGORIES, 3, 5, 10, 8000)
+        new ChoiceFieldResolver(GenericFieldsJevHttp.client(syntheticHttp), FIELDS, CATEGORIES, 3, 5, 10, 8000)
             .resolve(fixture(FIXTURES.getLast()));
 
         assertThat(naverHttp.bodies()).allSatisfy(body -> assertThat(body).doesNotContain("rowCount"));
@@ -528,7 +528,7 @@ class GenericFieldsResolverTest {
                 var local = new GenericFieldsJevHttp();
                 local.respond(GenericFieldsResolverTest::languageResultReply);
                 var request = languageRequest(fixture(name), omittedId);
-                var resolution = new JevCategoryFieldResolver(GenericFieldsJevHttp.client(local), FIELDS,
+                var resolution = new ChoiceFieldResolver(GenericFieldsJevHttp.client(local), FIELDS,
                     CATEGORIES, 1, 5, 10, 8000).resolve(request);
 
                 String targetId = omittedId.equals(scoreId) ? gradeId : scoreId;
@@ -552,7 +552,7 @@ class GenericFieldsResolverTest {
         for (String name : FIXTURES) {
             var local = new GenericFieldsJevHttp();
             local.respond(GenericFieldsResolverTest::languageResultReply);
-            var resolution = new JevCategoryFieldResolver(GenericFieldsJevHttp.client(local), FIELDS,
+            var resolution = new ChoiceFieldResolver(GenericFieldsJevHttp.client(local), FIELDS,
                 CATEGORIES, 1, 5, 10, 8000).resolve(languageRequest(fixture(name), null));
 
             String scoreId = name.equals(FIXTURES.getFirst()) ? "nv-lang-score" : "sy-lang-points";
@@ -626,7 +626,7 @@ class GenericFieldsResolverTest {
                 return answers(call, choices, 0.9);
             });
             var careerOnly = new GenericFieldsRequest(2, request.snapshotId(), request.site(), List.of(career));
-            var resolution = new JevCategoryFieldResolver(GenericFieldsJevHttp.client(local), FIELDS,
+            var resolution = new ChoiceFieldResolver(GenericFieldsJevHttp.client(local), FIELDS,
                 CATEGORIES, 1, 5, 10, 8000).resolve(careerOnly);
 
             String dutyId = name.equals(FIXTURES.getLast()) ? "sy-exp-duty" : "nv-career-job-0";
@@ -646,9 +646,9 @@ class GenericFieldsResolverTest {
         }
     }
 
-    private JevCategoryFieldResolver resolver(int sectionConcurrency, int batchSize, int maxConcurrent) {
-        JevClient client = GenericFieldsJevHttp.client(http);
-        return new JevCategoryFieldResolver(client, FIELDS, CATEGORIES, sectionConcurrency, batchSize,
+    private ChoiceFieldResolver resolver(int sectionConcurrency, int batchSize, int maxConcurrent) {
+        var client = GenericFieldsJevHttp.client(http);
+        return new ChoiceFieldResolver(client, FIELDS, CATEGORIES, sectionConcurrency, batchSize,
             maxConcurrent, 8000);
     }
 

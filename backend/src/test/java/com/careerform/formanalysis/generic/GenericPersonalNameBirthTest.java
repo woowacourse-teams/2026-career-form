@@ -32,7 +32,7 @@ import com.careerform.formanalysis.generic.GenericFieldsRequest.WriteCommand;
 import com.careerform.formanalysis.generic.GenericFieldsResponse.DatePart;
 import com.careerform.formanalysis.generic.GenericFieldsResponse.DatePartBinding;
 import com.careerform.formanalysis.generic.GenericFieldsResponse.NameBinding;
-import com.careerform.formanalysis.generic.JevCategoryFieldResolver.Mapping;
+import com.careerform.formanalysis.generic.ChoiceFieldResolver.Mapping;
 
 class GenericPersonalNameBirthTest {
 
@@ -146,8 +146,8 @@ class GenericPersonalNameBirthTest {
             new GenericFieldsRequest.Site("example.test", "/apply"),
             List.of(GenericFieldsJevHttp.section("personal", "PERSONAL", fields)),
             List.of(WriteCommand.SET_TEXT, WriteCommand.SELECT_OPTION));
-        var resolver = mock(JevCategoryFieldResolver.class);
-        when(resolver.resolve(request)).thenReturn(new JevCategoryFieldResolver.Resolution(mappings, 1));
+        var resolver = mock(ChoiceFieldResolver.class);
+        when(resolver.resolve(request)).thenReturn(new ChoiceFieldResolver.Resolution(mappings, 1));
         return new GenericFieldsService(Optional.of(resolver),
             new FormAnalysisRouter((host, path) -> new CompanyFormPolicyProvider.NotRegistered()),
             new FieldInteractionPolicy(), new SupportedProfileFields()).analyze(request);

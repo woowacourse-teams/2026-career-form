@@ -36,7 +36,7 @@ import com.careerform.formanalysis.application.FormAnalysisRouter;
 import com.careerform.formanalysis.application.InteractionDecisionService;
 import com.careerform.formanalysis.application.PromptSource;
 import com.careerform.formanalysis.application.SupportedProfileFields;
-import com.careerform.formanalysis.generic.JevCategoryFieldResolver;
+import com.careerform.formanalysis.generic.ChoiceFieldResolver;
 import com.careerform.formanalysis.generic.SectionClassificationService;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -111,7 +111,7 @@ public class EvaluationConfiguration {
     @Bean
     CallExecutor evaluationCallExecutor(JsonMapper mapper, Validator validator,
         SectionClassificationService classification, InteractionDecisionService interactions,
-        Optional<JevCategoryFieldResolver> resolver, FormAnalysisRouter router,
+        Optional<ChoiceFieldResolver> resolver, FormAnalysisRouter router,
         FieldInteractionPolicy interactionPolicy, SupportedProfileFields fields) {
         return new CallExecutor(new ServiceProductCallGateway(mapper, validator, classification, interactions,
             resolver, router, interactionPolicy, fields));

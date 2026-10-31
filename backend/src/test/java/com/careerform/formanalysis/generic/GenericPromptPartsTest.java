@@ -26,7 +26,7 @@ class GenericPromptPartsTest {
     @DisplayName("필드 매핑 요청의 지시문, 선택지 설명, 혼동 기준은 모두 프롬프트 조각에 있다")
     void fieldMappingPromptIsCovered() {
         var http = new GenericFieldsJevHttp();
-        var resolver = new JevCategoryFieldResolver(GenericFieldsJevHttp.client(http), FIELDS, CATEGORIES, 3, 5, 10, 8000);
+        var resolver = new ChoiceFieldResolver(GenericFieldsJevHttp.client(http), FIELDS, CATEGORIES, 3, 5, 10, 8000);
         resolver.resolve(GenericFieldsJevHttp.fixture("naver-career-sections.request.json"));
         resolver.resolve(GenericFieldsJevHttp.fixture("independent-synthetic-sections.request.json"));
         resolver.resolve(GenericFieldsJevHttp.fixture("naver-career.synthetic-adversarial.request.json"));
@@ -52,7 +52,7 @@ class GenericPromptPartsTest {
     @DisplayName("섹션 분류 요청의 지시문과 범주 설명은 모두 프롬프트 조각에 있다")
     void sectionClassificationPromptIsCovered() {
         var http = new GenericFieldsJevHttp();
-        var classifier = new JevSectionClassifier(GenericFieldsJevHttp.client(http), CATEGORIES);
+        var classifier = new ChoiceSectionClassifier(GenericFieldsJevHttp.client(http), CATEGORIES);
         classifier.classify(List.of(
             new SectionShape("a", null, "학력", List.of("학교명"), List.of(ControlKind.TEXT), false),
             new SectionShape("b", "a", null, List.of("회사명"), List.of(ControlKind.TEXT), true)));
@@ -64,9 +64,9 @@ class GenericPromptPartsTest {
     @Test
     @DisplayName("프롬프트 출처 이름은 서로 다르다")
     void sourceIdsAreDistinct() {
-        PromptSource fields = new JevCategoryFieldResolver(GenericFieldsJevHttp.client(new GenericFieldsJevHttp()),
+        PromptSource fields = new ChoiceFieldResolver(GenericFieldsJevHttp.client(new GenericFieldsJevHttp()),
             FIELDS, CATEGORIES, 3, 5, 10, 8000);
-        PromptSource sections = new JevSectionClassifier(GenericFieldsJevHttp.client(new GenericFieldsJevHttp()), CATEGORIES);
+        PromptSource sections = new ChoiceSectionClassifier(GenericFieldsJevHttp.client(new GenericFieldsJevHttp()), CATEGORIES);
 
         assertThat(Set.of(fields.promptSourceId(), sections.promptSourceId())).hasSize(2);
     }

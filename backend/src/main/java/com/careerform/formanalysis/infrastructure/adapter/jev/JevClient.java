@@ -333,6 +333,11 @@ public final class JevClient {
         return model;
     }
 
+    /** 요청에 쓰는 모델 이름. */
+    public String model() {
+        return model;
+    }
+
     private void completeTrace(LangSmithTraceRecorder.Trace trace, JevTraceProjection projection,
                                Response output, Map<String, String> selected, Integer httpStatus,
                                RuntimeException failure) {

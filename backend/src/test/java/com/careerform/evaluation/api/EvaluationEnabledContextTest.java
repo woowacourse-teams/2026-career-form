@@ -36,7 +36,7 @@ import com.careerform.formanalysis.application.FieldInteractionPolicy;
 import com.careerform.formanalysis.application.FormAnalysisRouter;
 import com.careerform.formanalysis.application.InteractionDecisionService;
 import com.careerform.formanalysis.application.SupportedProfileFields;
-import com.careerform.formanalysis.generic.JevCategoryFieldResolver;
+import com.careerform.formanalysis.generic.ChoiceFieldResolver;
 import com.careerform.formanalysis.generic.SectionClassificationService;
 import com.careerform.formanalysis.infrastructure.persistence.mongo.FormAnalysisCompanyMongoRepository;
 import tools.jackson.databind.JsonNode;
@@ -86,7 +86,7 @@ class EvaluationEnabledContextTest {
         JsonMapper mapper = context.getBean(JsonMapper.class);
         ServiceProductCallGateway gateway = new ServiceProductCallGateway(mapper, context.getBean(Validator.class),
             context.getBean(SectionClassificationService.class), context.getBean(InteractionDecisionService.class),
-            Optional.ofNullable(context.getBeanProvider(JevCategoryFieldResolver.class).getIfAvailable()),
+            Optional.ofNullable(context.getBeanProvider(ChoiceFieldResolver.class).getIfAvailable()),
             context.getBean(FormAnalysisRouter.class), context.getBean(FieldInteractionPolicy.class),
             context.getBean(SupportedProfileFields.class));
         List<String> statuses = new ArrayList<>();

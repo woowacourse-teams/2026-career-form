@@ -36,6 +36,8 @@ import com.careerform.formanalysis.generic.GenericFieldsRequest.FormElement;
 import com.careerform.formanalysis.generic.GenericFieldsRequest.Item;
 import com.careerform.formanalysis.generic.GenericFieldsRequest.Section;
 import com.careerform.formanalysis.generic.GenericFieldsRequest.Visibility;
+import com.careerform.formanalysis.application.port.ChoiceModel;
+import com.careerform.formanalysis.infrastructure.adapter.jev.JevChoiceModel;
 import com.careerform.formanalysis.infrastructure.adapter.jev.JevClient;
 
 /** 모의 JEV HTTP. 공급자 요청 본문을 캡처하고 호출한 스레드에서 응답을 만든다. */
@@ -79,7 +81,12 @@ final class GenericFieldsJevHttp extends HttpClient {
     private final List<Call> calls = Collections.synchronizedList(new ArrayList<>());
     private volatile Responder responder = call -> answerAll(call, null, 0.9);
 
-    static JevClient client(GenericFieldsJevHttp http) {
+    /** 가짜 HTTP로 응답하는 JEV를 선택 모델 포트로 감싼다(제품과 같은 JevClient 경로). */
+    static ChoiceModel client(GenericFieldsJevHttp http) {
+        return new JevChoiceModel(jevClient(http));
+    }
+
+    static JevClient jevClient(GenericFieldsJevHttp http) {
         JevClient client = new JevClient("synthetic-test-key", "jev-test", 8000, 0.8, true);
         install(client, http);
         return client;

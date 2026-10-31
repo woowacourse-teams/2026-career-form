@@ -202,7 +202,7 @@ class GenericFieldPolicyContractTest {
             testCase.commands().stream().map(GenericFieldsRequest.WriteCommand::valueOf).toList());
         var http = new GenericFieldsJevHttp();
         http.respond(call -> answerAll(call, testCase.key(), 0.9));
-        var resolver = new JevCategoryFieldResolver(GenericFieldsJevHttp.client(http), FIELDS, CATEGORIES, 3, 5, 10,
+        var resolver = new ChoiceFieldResolver(GenericFieldsJevHttp.client(http), FIELDS, CATEGORIES, 3, 5, 10,
             8000);
         var service = new GenericFieldsService(Optional.of(resolver), new FormAnalysisRouter(notRegistered()),
             new FieldInteractionPolicy(), new SupportedProfileFields());

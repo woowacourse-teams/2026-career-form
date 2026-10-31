@@ -59,7 +59,7 @@ class JevInteractionPromptPartsTest {
         });
         assertThat(questions.getValue()).hasSize(decisions.size());
         assertThat(missing).isEmpty();
-        assertThat(provider.promptSourceId()).isEqualTo("jev-interaction-decisions");
+        assertThat(provider.promptSourceId()).isEqualTo("interaction-decisions");
     }
 
     private static Candidate candidate(String id) {
