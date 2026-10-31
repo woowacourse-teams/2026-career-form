@@ -33,6 +33,8 @@ async function api(path, method = "GET", payload) {
       UNKNOWN_DATASET: "검토를 마친 데이터셋이 아닙니다. 데이터셋의 검토 상태를 확인해 주세요.",
       INVALID_REPETITIONS: "반복 수는 1 이상 20 이하입니다.",
       INVALID_PROMPT_VERSION: "프롬프트 이름은 영문·숫자·.-_ 32자 이하입니다.",
+      UNKNOWN_PROVIDER: "이 서버에 연결되지 않은 공급자입니다.",
+      UNKNOWN_MODEL: "이 공급자가 허용하지 않은 모델입니다.",
     };
     throw new Error(reasons[body?.code] ?? (response.status === 404 ? "평가 기능이 꺼져 있거나 대상이 없습니다." : "지금 처리할 수 없습니다."));
   }
@@ -293,13 +295,25 @@ function openPricing() {
   dialog("모델 단가 설정", form, "pricing-dialog");
 }
 
-function openRun() {
+async function openRun() {
+  let providers = [];
+  try { providers = await api("/providers"); } catch (error) { $("#cf-status").textContent = error.message; return; }
   const form = element("form", undefined, "criteria-list run-form");
   const field = (label, input, hint) => {
     const wrap = element("label");
     wrap.append(element("span", label), input, element("span", hint, "hint"));
     return wrap;
   };
+  const provider = element("select");
+  const model = element("select");
+  for (const item of providers) provider.append(Object.assign(element("option", item.provider), { value: item.provider }));
+  const fillModels = () => {
+    const chosen = providers.find((item) => item.provider === provider.value);
+    model.replaceChildren(...(chosen?.models ?? []).map((name) => Object.assign(element("option", name), { value: name })));
+    model.value = chosen?.defaultModel ?? "";
+  };
+  provider.addEventListener("change", fillModels);
+  fillModels();
   const split = element("select");
   split.append(Object.assign(element("option", "튜닝용"), { value: "tuning" }), Object.assign(element("option", "최종 평가용"), { value: "final" }));
   const repetitions = Object.assign(element("input"), { type: "number", min: "1", max: "20", value: "1" });
@@ -308,6 +322,8 @@ function openRun() {
   const submit = element("button", "등록", "apply-pricing");
   submit.type = "submit";
   form.append(
+    field("공급자", provider, providers.length ? "이 서버에 연결된 공급자만 나옵니다." : "연결된 공급자가 없습니다."),
+    field("모델", model, "같은 데이터셋으로 모델끼리 비교합니다."),
     field("분할", split, "튜닝용은 개선 작업 중 확인용, 최종 평가용은 개선 전후 비교용 화면입니다."),
     field("반복 수", repetitions, "같은 입력을 몇 번 돌릴지(1~20). 응답시간 편차를 보려면 3 이상을 권장합니다."),
     field("프롬프트 이름", prompt, "결과를 구분할 이름표(선택). 예: baseline. 실제 프롬프트 내용은 서버가 자동으로 기록합니다."),
@@ -319,6 +335,7 @@ function openRun() {
       const result = await api("/runs", "POST", {
         datasetId: DATASET.id, datasetVersion: DATASET.version, split: split.value,
         repetitions: Number(repetitions.value), promptVersion: prompt.value.trim() || null, overrides: {},
+        provider: provider.value || null, model: model.value || null,
       });
       $("#cf-source").close();
       $("#cf-status").textContent = `등록했습니다(실행 ${result.runId.slice(0, 8)}). 진행 상황을 자동으로 갱신합니다.`;
