@@ -8,6 +8,8 @@ public final class RunRejected extends RuntimeException {
         UNKNOWN_SPLIT,
         INVALID_REPETITIONS,
         INVALID_OVERRIDE,
+        UNKNOWN_PROVIDER,
+        UNKNOWN_MODEL,
         INVALID_PROMPT_VERSION,
         BUDGET_EXCEEDED,
         RUN_ACTIVE,

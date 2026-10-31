@@ -33,13 +33,13 @@ public final class CallExecutor {
         this.gateway = gateway;
     }
 
-    public ExecutedCall execute(CaseCall call, Map<String, String> settings) {
+    public ExecutedCall execute(CaseCall call, CallTarget target) {
         List<Attempt> attempts = Collections.synchronizedList(new ArrayList<>());
         long started = System.nanoTime();
         JsonNode response;
         try {
             response = ModelCallRecording.within(attempts::add,
-                () -> gateway.call(call.kind(), call.request(), settings));
+                () -> gateway.call(call.kind(), call.request(), target));
         }
         catch (RuntimeException exception) {
             log.warn("EVALUATION_PRODUCT_CALL_FAILED kind={} reason={}", call.kind(),

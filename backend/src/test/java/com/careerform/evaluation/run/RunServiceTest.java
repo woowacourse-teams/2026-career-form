@@ -20,8 +20,14 @@ class RunServiceTest {
     private static final Instant NOW = Instant.parse("2026-10-30T03:00:00Z");
     private final InMemoryRunStore store = new InMemoryRunStore();
     private final MutablePrompt prompt = new MutablePrompt("Map fields.{questionId} safely.");
+    private final MutablePrompt openAiPrompt = new MutablePrompt("openai-system", "Answer the questions.");
+    private final EvaluationProviders providers = new EvaluationProviders(List.of(
+        new EvaluationProviders.Provider("jev", List.of("jev-latest"), Map.of("timeout-ms", "8000"), List.of(),
+            model -> null),
+        new EvaluationProviders.Provider("openai", List.of("gpt-6-luna", "gpt-5.6-luna"),
+            Map.of("reasoning-effort", "none", "timeout-ms", "30000"), List.of(openAiPrompt), model -> null)));
     private final RunService service = new RunService(store, catalog(), new PromptCatalog(), List.of(prompt),
-        settings(200), Clock.fixed(NOW, ZoneOffset.UTC));
+        providers, settings(200), Clock.fixed(NOW, ZoneOffset.UTC));
 
     @Test
     @DisplayName("등록하면 QUEUED 상태와 데이터셋·프롬프트·코드·설정·채점 기준 버전을 저장한다")
@@ -41,8 +47,10 @@ class RunServiceTest {
         assertThat(versions.promptVersion()).isEqualTo("v1");
         assertThat(versions.codeVersion()).isEqualTo("image@sha256:abc");
         assertThat(versions.provider()).isEqualTo("jev");
+        assertThat(versions.model()).isEqualTo("jev-latest");
         assertThat(versions.scoringVersion()).isEqualTo(RunService.SCORING_VERSION);
-        assertThat(versions.settings()).containsEntry("field-batch-size", "5").containsEntry("section-concurrency", "3");
+        assertThat(versions.settings()).containsEntry("field-batch-size", "5").containsEntry("section-concurrency", "3")
+            .containsEntry("timeout-ms", "8000");
         assertThat(store.find(run.id())).contains(run);
         assertThat(store.findPromptSnapshot(versions.promptDigest())).isPresent();
     }
@@ -77,7 +85,7 @@ class RunServiceTest {
     @Test
     @DisplayName("예상 모델 호출 수가 실행당 한도를 넘으면 거부한다")
     void rejectsOverBudget() {
-        RunService tight = new RunService(store, catalog(), new PromptCatalog(), List.of(prompt), settings(39),
+        RunService tight = new RunService(store, catalog(), new PromptCatalog(), List.of(prompt), providers, settings(39),
             Clock.fixed(NOW, ZoneOffset.UTC));
 
         assertThatThrownBy(() -> tight.register(request(4, Map.of(), null), "tester"))
@@ -128,6 +136,41 @@ class RunServiceTest {
     }
 
     @Test
+    @DisplayName("고른 공급자와 모델을 버전·지문에 남기고, 그 공급자의 설정과 프롬프트 조각을 함께 기록한다")
+    void registersChosenProviderAndModel() {
+        EvaluationRun jev = service.register(request(1, Map.of(), null), "tester");
+        service.cancel(jev.id());
+
+        EvaluationRun gpt = service.register(new RunRequest("generic-matching", 1, "tuning", 1, null, Map.of(),
+            "openai", "gpt-6-luna"), "tester");
+
+        assertThat(gpt.versions().provider()).isEqualTo("openai");
+        assertThat(gpt.versions().model()).isEqualTo("gpt-6-luna");
+        assertThat(gpt.versions().settings()).containsEntry("reasoning-effort", "none")
+            .containsEntry("timeout-ms", "30000").containsEntry("field-batch-size", "5");
+        assertThat(gpt.fingerprint()).isNotEqualTo(jev.fingerprint());
+        assertThat(gpt.versions().promptDigest()).isNotEqualTo(jev.versions().promptDigest());
+        assertThat(store.findPromptSnapshot(gpt.versions().promptDigest()).orElseThrow().parts())
+            .containsValues("Map fields.{questionId} safely.", "Answer the questions.");
+        service.cancel(gpt.id());
+
+        EvaluationRun defaultModel = service.register(new RunRequest("generic-matching", 1, "tuning", 1, null,
+            Map.of(), "openai", null), "tester");
+        assertThat(defaultModel.versions().model()).isEqualTo("gpt-6-luna");
+    }
+
+    @Test
+    @DisplayName("등록되지 않은 공급자나 그 공급자가 허용하지 않은 모델은 거부한다")
+    void rejectsUnknownProviderOrModel() {
+        assertCode(new RunRequest("generic-matching", 1, "tuning", 1, null, Map.of(), "gemma", null),
+            RunRejected.Code.UNKNOWN_PROVIDER);
+        assertCode(new RunRequest("generic-matching", 1, "tuning", 1, null, Map.of(), "openai", "gpt-4o"),
+            RunRejected.Code.UNKNOWN_MODEL);
+        assertCode(new RunRequest("generic-matching", 1, "tuning", 1, null, Map.of(), "jev", "gpt-6-luna"),
+            RunRejected.Code.UNKNOWN_MODEL);
+    }
+
+    @Test
     @DisplayName("대기 중 취소는 바로 CANCELLED, 실행 중 취소는 요청 표시만 남기고, 끝난 실행은 그대로 둔다")
     void cancelDependsOnState() {
         EvaluationRun queued = service.register(request(1, Map.of(), null), "tester");
@@ -163,18 +206,24 @@ class RunServiceTest {
     }
 
     private static EvaluationSettings settings(int maxModelCalls) {
-        return new EvaluationSettings(maxModelCalls, 20, "jev", "jev-latest", "image@sha256:abc",
-            Map.of("field-batch-size", 5, "section-concurrency", 3, "max-concurrent", 10, "timeout-ms", 8000));
+        return new EvaluationSettings(maxModelCalls, 20, "image@sha256:abc",
+            Map.of("field-batch-size", 5, "section-concurrency", 3, "max-concurrent", 10));
     }
 
     private static final class MutablePrompt implements PromptSource {
+        private final String id;
         private String text;
 
         private MutablePrompt(String text) {
+            this("test", text);
+        }
+
+        private MutablePrompt(String id, String text) {
+            this.id = id;
             this.text = text;
         }
 
-        @Override public String promptSourceId() { return "test"; }
+        @Override public String promptSourceId() { return id; }
         @Override public Map<String, String> promptParts() { return Map.of("instructions", text); }
     }
 }

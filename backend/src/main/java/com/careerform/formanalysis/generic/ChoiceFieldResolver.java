@@ -129,6 +129,15 @@ public final class ChoiceFieldResolver implements PromptSource {
             permitTimeoutMs);
     }
 
+    /**
+     * 평가 실행용 공급자 사본. 질문 구성, 배치, 동시 호출 상한(같은 Semaphore)과 대기 시간은 원본과 같고
+     * 모델 호출만 {@code model}로 보낸다.
+     */
+    public ChoiceFieldResolver withModel(ChoiceModel model, int sectionConcurrency, int fieldBatchSize) {
+        return new ChoiceFieldResolver(model, fields, categories, sectionConcurrency, fieldBatchSize, permits,
+            permitTimeoutMs);
+    }
+
     public record Mapping(String profileFieldKey, double confidence, boolean categoryConfirmed, Reason reason,
         Binding binding) {
 

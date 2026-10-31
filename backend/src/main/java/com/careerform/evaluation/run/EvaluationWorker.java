@@ -30,20 +30,22 @@ public final class EvaluationWorker {
     private final CallExecutor executor;
     private final PromptCatalog prompts;
     private final List<? extends PromptSource> promptSources;
+    private final EvaluationProviders providers;
     private final int maxModelCallsPerRun;
     private final Clock clock;
     private final String owner;
     private final Duration lease;
 
     public EvaluationWorker(RunStore runs, ResultStore results, DatasetLoader datasets, CallExecutor executor,
-        PromptCatalog prompts, List<? extends PromptSource> promptSources, int maxModelCallsPerRun, Clock clock,
-        String owner, Duration lease) {
+        PromptCatalog prompts, List<? extends PromptSource> promptSources, EvaluationProviders providers,
+        int maxModelCallsPerRun, Clock clock, String owner, Duration lease) {
         this.runs = runs;
         this.results = results;
         this.datasets = datasets;
         this.executor = executor;
         this.prompts = prompts;
         this.promptSources = List.copyOf(promptSources);
+        this.providers = providers;
         this.maxModelCallsPerRun = maxModelCallsPerRun;
         this.clock = clock;
         this.owner = owner;
@@ -77,8 +79,14 @@ public final class EvaluationWorker {
             fail(run, "DATASET_REJECTED");
             return;
         }
-        if (!dataset.digest().equals(versions.datasetDigest())
-            || !prompts.snapshot(promptSources).digest().equals(versions.promptDigest())) {
+        Optional<EvaluationProviders.Provider> provider = providers.find(versions.provider())
+            .filter(found -> found.models().contains(versions.model()));
+        if (provider.isEmpty()) {
+            fail(run, "PROVIDER_UNAVAILABLE");
+            return;
+        }
+        if (!dataset.digest().equals(versions.datasetDigest()) || !prompts.snapshot(
+            RunService.promptSources(promptSources, provider.get())).digest().equals(versions.promptDigest())) {
             fail(run, "VERSION_MISMATCH");
             return;
         }
@@ -102,7 +110,7 @@ public final class EvaluationWorker {
                         runs.finish(run.id(), owner, RunStatus.PARTIAL, clock.instant());
                         return;
                     }
-                    ExecutedCall executed = executor.execute(call, versions.settings());
+                    ExecutedCall executed = executor.execute(call, CallTarget.of(versions));
                     results.append(CallResultRecord.of(run.id(), repetition, evaluationCase.caseId(), call.order(),
                         executed, clock.instant()));
                     usedModelCalls += executed.attempts().size();

@@ -1,5 +1,7 @@
 package com.careerform.evaluation.run;
 
+import com.careerform.evaluation.EvaluationTestData;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.StandardCharsets;
@@ -83,7 +85,7 @@ class EvaluationWorkerTest {
         EvaluationRun run = register(1);
         runs.claim("crashed-worker", NOW.minusSeconds(600), Duration.ofMinutes(1));
         ExecutedCall first = new CallExecutor((kind, request, settings) -> answerAll().apply(kind))
-            .execute(loader().load("synthetic", 1).cases().getFirst().calls().getFirst(), Map.of());
+            .execute(loader().load("synthetic", 1).cases().getFirst().calls().getFirst(), EvaluationTestData.target(Map.of()));
         results.append(CallResultRecord.of(run.id(), 1, "a", 1, first, NOW.minusSeconds(590)));
 
         assertThat(worker(answerAll(), 100).runOnce()).isTrue();
@@ -128,7 +130,7 @@ class EvaluationWorkerTest {
             @Override public Map<String, String> promptParts() { return Map.of("instructions", "Changed."); }
         };
 
-        new EvaluationWorker(runs, results, loader(), executor(answerAll()), new PromptCatalog(), List.of(changed),
+        new EvaluationWorker(runs, results, loader(), executor(answerAll()), new PromptCatalog(), List.of(changed), EvaluationTestData.PROVIDERS,
             100, Clock.fixed(NOW, ZoneOffset.UTC), "worker", Duration.ofMinutes(5)).runOnce();
 
         assertThat(executed).isEmpty();
@@ -136,23 +138,43 @@ class EvaluationWorkerTest {
     }
 
     @Test
+    @DisplayName("실행이 고른 공급자·모델이 이 서버에 없으면 모델을 호출하지 않고 FAILED로 끝낸다")
+    void failsWhenProviderIsUnavailable() {
+        EvaluationProviders withOpenAi = new EvaluationProviders(List.of(
+            new EvaluationProviders.Provider("jev", List.of("jev-latest"), Map.of(), List.of(), model -> null),
+            new EvaluationProviders.Provider("openai", List.of("gpt-6-luna"), Map.of(), List.of(), model -> null)));
+        EvaluationRun run = new RunService(runs, loader(), new PromptCatalog(), List.of(PROMPT), withOpenAi,
+            new EvaluationSettings(1000, 20, "test", Map.of("field-batch-size", 5)),
+            Clock.fixed(NOW.minusSeconds(60), ZoneOffset.UTC))
+            .register(new RunRequest("synthetic", 1, "tuning", 1, "v1", Map.of(), "openai", "gpt-6-luna"), "tester");
+        worker(answerAll(), 100).runOnce();
+
+        assertThat(runs.find(run.id()).orElseThrow().status()).isEqualTo(RunStatus.FAILED);
+        assertThat(executed).isEmpty();
+    }
+
+    @Test
     @DisplayName("실행 설정을 제품 호출에 넘긴다")
     void passesRunSettings() {
         register(1);
-        List<Map<String, String>> seen = new ArrayList<>();
+        List<CallTarget> seen = new ArrayList<>();
         CallExecutor recording = new CallExecutor((kind, request, settings) -> {
             seen.add(settings);
             return answerAll().apply(kind);
         });
 
-        new EvaluationWorker(runs, results, loader(), recording, new PromptCatalog(), List.of(PROMPT), 100,
+        new EvaluationWorker(runs, results, loader(), recording, new PromptCatalog(), List.of(PROMPT), EvaluationTestData.PROVIDERS, 100,
             Clock.fixed(NOW, ZoneOffset.UTC), "worker", Duration.ofMinutes(5)).runOnce();
 
-        assertThat(seen).allSatisfy(settings -> assertThat(settings).containsEntry("field-batch-size", "5"));
+        assertThat(seen).isNotEmpty().allSatisfy(target -> {
+            assertThat(target.settings()).containsEntry("field-batch-size", "5");
+            assertThat(target.provider()).isEqualTo("jev");
+            assertThat(target.model()).isEqualTo("jev-latest");
+        });
     }
 
     private EvaluationWorker worker(Function<CallKind, JsonNode> responses, int maxModelCalls) {
-        return new EvaluationWorker(runs, results, loader(), executor(responses), new PromptCatalog(), List.of(PROMPT),
+        return new EvaluationWorker(runs, results, loader(), executor(responses), new PromptCatalog(), List.of(PROMPT), EvaluationTestData.PROVIDERS,
             maxModelCalls, Clock.fixed(NOW, ZoneOffset.UTC), "worker", Duration.ofMinutes(5));
     }
 
@@ -166,7 +188,7 @@ class EvaluationWorkerTest {
 
     private EvaluationRun register(int repetitions) {
         RunService service = new RunService(runs, loader(), new PromptCatalog(), List.of(PROMPT),
-            new EvaluationSettings(1000, 20, "jev", "jev-latest", "test", Map.of("field-batch-size", 5)),
+            EvaluationTestData.PROVIDERS, new EvaluationSettings(1000, 20, "test", Map.of("field-batch-size", 5)),
             Clock.fixed(NOW.minusSeconds(60), ZoneOffset.UTC));
         return service.register(new RunRequest("synthetic", 1, "tuning", repetitions, "v1", Map.of()), "tester");
     }

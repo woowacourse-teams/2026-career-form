@@ -90,6 +90,15 @@ career-form:
     max-repetitions: ${CAREER_FORM_EVALUATION_MAX_REPETITIONS:20}
     poll-interval: ${CAREER_FORM_EVALUATION_POLL_INTERVAL:10s}
     lease: ${CAREER_FORM_EVALUATION_LEASE:5m}
+    # 평가에서만 고를 수 있는 OpenAI 공급자. 제품 공급자 선택(career-form.analysis.provider)과 무관하다.
+    openai:
+      enabled: ${CAREER_FORM_EVALUATION_OPENAI_ENABLED:false}
+      api-key: ${CAREER_FORM_EVALUATION_OPENAI_API_KEY:${OPENAI_API_KEY:}}
+      # 쉼표로 구분한 허용 모델. 첫 모델이 기본값이다.
+      models: ${CAREER_FORM_EVALUATION_OPENAI_MODELS:gpt-6-luna}
+      reasoning-effort: ${CAREER_FORM_EVALUATION_OPENAI_REASONING_EFFORT:none}
+      timeout-ms: ${CAREER_FORM_EVALUATION_OPENAI_TIMEOUT_MS:30000}
+      rate-limit-retries: ${CAREER_FORM_EVALUATION_OPENAI_RATE_LIMIT_RETRIES:2}
 
 logging:
   pattern:

@@ -59,15 +59,15 @@ class EvaluationRunApiTest {
     private final DatasetLoader datasets = EvaluationTestData.syntheticLoader();
     private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
     private final RunService service = new RunService(runs, datasets, new PromptCatalog(),
-        List.of(EvaluationTestData.PROMPT), new EvaluationSettings(100, 20, "jev", "jev-latest", "test",
+        List.of(EvaluationTestData.PROMPT), EvaluationTestData.PROVIDERS, new EvaluationSettings(100, 20, "test",
             Map.of("field-batch-size", 5)), clock);
     private final EvaluationWorker worker = new EvaluationWorker(runs, results, datasets,
         new CallExecutor((kind, request, settings) -> EvaluationTestData.correctResponse(kind)), new PromptCatalog(),
-        List.of(EvaluationTestData.PROMPT), 100, clock, "worker", Duration.ofMinutes(5));
+        List.of(EvaluationTestData.PROMPT), EvaluationTestData.PROVIDERS, 100, clock, "worker", Duration.ofMinutes(5));
     private final MockMvc mvc = MockMvcBuilders.standaloneSetup(new EvaluationRunController(service, runs, results,
             new RescoringService(runs, results, new InMemoryScoringStore(), datasets::load, clock),
             new DatasetLoader(DatasetLoader.classpath(getClass().getClassLoader())),
-            DatasetLoader.classpath(getClass().getClassLoader())))
+            DatasetLoader.classpath(getClass().getClassLoader()), EvaluationTestData.PROVIDERS))
         .addFilters(new QualityApiFilter(access)).build();
 
     @Test
@@ -90,6 +90,27 @@ class EvaluationRunApiTest {
         authorized(post("/api/v1/evaluations/runs").contentType(MediaType.APPLICATION_JSON)
                 .content(REQUEST.replace("tuning", "holdout")))
             .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("UNKNOWN_SPLIT"));
+    }
+
+    @Test
+    @DisplayName("공급자 목록은 고를 수 있는 공급자와 모델(첫 모델이 기본값)을 돌려주고, 등록 본문에서 공급자를 고를 수 있다")
+    void listsAndSelectsProviders() throws Exception {
+        authorized(get("/api/v1/evaluations/providers")).andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].provider").value("jev"))
+            .andExpect(jsonPath("$[0].defaultModel").value("jev-latest"))
+            .andExpect(jsonPath("$[0].models[0]").value("jev-latest"));
+        mvc.perform(get("/api/v1/evaluations/providers")).andExpect(status().isUnauthorized());
+        authorized(post("/api/v1/evaluations/runs").contentType(MediaType.APPLICATION_JSON)
+                .content(REQUEST.replace("\"overrides\": {}", "\"overrides\": {}, \"provider\": \"gemma\"")))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("UNKNOWN_PROVIDER"));
+        authorized(post("/api/v1/evaluations/runs").contentType(MediaType.APPLICATION_JSON)
+                .content(REQUEST.replace("\"overrides\": {}", "\"overrides\": {}, \"provider\": \"jev\", \"model\": \"gpt-6-luna\"")))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("UNKNOWN_MODEL"));
+        String runId = runId(authorized(post("/api/v1/evaluations/runs").contentType(MediaType.APPLICATION_JSON)
+                .content(REQUEST.replace("\"overrides\": {}", "\"overrides\": {}, \"provider\": \"jev\", \"model\": \"jev-latest\"")))
+            .andExpect(status().isAccepted()));
+        authorized(get("/api/v1/evaluations/runs/" + runId)).andExpect(jsonPath("$.run.versions.provider").value("jev"))
+            .andExpect(jsonPath("$.run.versions.model").value("jev-latest"));
     }
 
     @Test

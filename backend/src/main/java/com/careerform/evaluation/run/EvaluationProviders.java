@@ -1,0 +1,62 @@
+package com.careerform.evaluation.run;
+
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.function.Function;
+
+import com.careerform.formanalysis.application.PromptSource;
+import com.careerform.formanalysis.application.port.ChoiceModel;
+
+/**
+ * 평가에서 고를 수 있는 공급자 목록. 첫 공급자가 기본값이다. 새 공급자는 {@link ChoiceModel} 구현과 이 목록의
+ * 항목 하나로 추가한다. 제품의 공급자 선택과는 무관하다.
+ */
+public final class EvaluationProviders {
+
+    /**
+     * @param models 허용 모델. 첫 모델이 기본값이다.
+     * @param settings 결과에 영향을 주는 공급자 설정(실행 버전과 지문에 남는다).
+     * @param promptSources 공급자 연결부가 따로 보내는 고정 문구(예: 시스템 문구). 공통 질문 문구는 넣지 않는다.
+     * @param model 모델 이름으로 선택 모델을 만든다.
+     */
+    public record Provider(String name, List<String> models, Map<String, String> settings,
+        List<? extends PromptSource> promptSources, Function<String, ChoiceModel> model) {
+
+        public Provider {
+            if (name == null || name.isBlank() || models == null || models.isEmpty()) {
+                throw new IllegalStateException("평가 공급자에는 이름과 모델이 하나 이상 있어야 합니다");
+            }
+            models = List.copyOf(models);
+            settings = Map.copyOf(settings);
+            promptSources = List.copyOf(promptSources);
+        }
+
+        public String defaultModel() {
+            return models.getFirst();
+        }
+    }
+
+    private final Map<String, Provider> providers = new LinkedHashMap<>();
+
+    public EvaluationProviders(List<Provider> providers) {
+        providers.forEach(provider -> {
+            if (this.providers.putIfAbsent(provider.name(), provider) != null) {
+                throw new IllegalStateException("평가 공급자 이름이 겹칩니다: " + provider.name());
+            }
+        });
+    }
+
+    public List<Provider> all() {
+        return List.copyOf(providers.values());
+    }
+
+    public Optional<Provider> find(String name) {
+        return Optional.ofNullable(name == null ? null : providers.get(name));
+    }
+
+    public Optional<Provider> defaultProvider() {
+        return providers.values().stream().findFirst();
+    }
+}

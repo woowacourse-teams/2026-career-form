@@ -32,17 +32,28 @@ public final class RunService {
     private final DatasetCatalog datasets;
     private final PromptCatalog prompts;
     private final List<? extends PromptSource> promptSources;
+    private final EvaluationProviders providers;
     private final EvaluationSettings settings;
     private final Clock clock;
 
+    /** {@code promptSources}는 공급자와 무관한 공통 질문 문구다. 공급자 문구는 {@code providers}에 있다. */
     public RunService(RunStore store, DatasetCatalog datasets, PromptCatalog prompts,
-        List<? extends PromptSource> promptSources, EvaluationSettings settings, Clock clock) {
+        List<? extends PromptSource> promptSources, EvaluationProviders providers, EvaluationSettings settings,
+        Clock clock) {
         this.store = store;
         this.datasets = datasets;
         this.prompts = prompts;
         this.promptSources = List.copyOf(promptSources);
+        this.providers = providers;
         this.settings = settings;
         this.clock = clock;
+    }
+
+    /** 공통 질문 문구와 그 공급자의 문구를 합친 프롬프트 출처. 등록과 작업자 검사가 같은 목록을 쓴다. */
+    static List<PromptSource> promptSources(List<? extends PromptSource> common, EvaluationProviders.Provider provider) {
+        List<PromptSource> sources = new java.util.ArrayList<>(common);
+        sources.addAll(provider.promptSources());
+        return List.copyOf(sources);
     }
 
     public EvaluationRun register(RunRequest request, String requestedBy) {
@@ -58,15 +69,22 @@ public final class RunService {
         if (request.promptVersion() != null && !PROMPT_VERSION.matcher(request.promptVersion()).matches()) {
             throw new RunRejected(RunRejected.Code.INVALID_PROMPT_VERSION);
         }
-        SortedMap<String, String> effective = effectiveSettings(request.overrides());
+        EvaluationProviders.Provider provider = (request.provider() == null
+            ? providers.defaultProvider() : providers.find(request.provider()))
+            .orElseThrow(() -> new RunRejected(RunRejected.Code.UNKNOWN_PROVIDER));
+        String model = request.model() == null ? provider.defaultModel() : request.model();
+        if (!provider.models().contains(model)) {
+            throw new RunRejected(RunRejected.Code.UNKNOWN_MODEL);
+        }
+        SortedMap<String, String> effective = effectiveSettings(provider, request.overrides());
         long estimated = (long) split.recordedModelCalls() * request.repetitions();
         if (estimated > settings.maxModelCallsPerRun()) {
             throw new RunRejected(RunRejected.Code.BUDGET_EXCEEDED);
         }
-        PromptSnapshot snapshot = prompts.snapshot(promptSources);
+        PromptSnapshot snapshot = prompts.snapshot(promptSources(promptSources, provider));
         RunVersions versions = new RunVersions(dataset.datasetId(), dataset.version(), dataset.digest(),
             request.split(), snapshot.digest(), request.promptVersion(), settings.codeVersion(),
-            settings.provider(), settings.model(), SCORING_VERSION, effective);
+            provider.name(), model, SCORING_VERSION, effective);
         String fingerprint = fingerprint(versions, request.repetitions());
         EvaluationRun run = EvaluationRun.queued(UUID.randomUUID().toString(), fingerprint, versions,
             request.repetitions(), split.productCalls() * request.repetitions(), (int) estimated, requestedBy,
@@ -95,9 +113,11 @@ public final class RunService {
         return store.find(runId).orElseThrow(() -> new RunRejected(RunRejected.Code.UNKNOWN_RUN));
     }
 
-    private SortedMap<String, String> effectiveSettings(Map<String, Integer> overrides) {
+    private SortedMap<String, String> effectiveSettings(EvaluationProviders.Provider provider,
+        Map<String, Integer> overrides) {
         SortedMap<String, String> effective = new TreeMap<>();
         settings.baseSettings().forEach((key, value) -> effective.put(key, String.valueOf(value)));
+        effective.putAll(provider.settings());
         overrides.forEach((key, value) -> {
             int[] range = OVERRIDABLE.get(key);
             if (range == null || value == null || value < range[0] || value > range[1]) {

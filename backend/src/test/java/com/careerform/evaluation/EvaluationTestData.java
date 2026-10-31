@@ -1,5 +1,9 @@
 package com.careerform.evaluation;
 
+import java.util.List;
+import com.careerform.evaluation.run.CallTarget;
+import com.careerform.evaluation.run.EvaluationProviders;
+
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.HashMap;
@@ -19,7 +23,14 @@ public final class EvaluationTestData {
         @Override public String promptSourceId() { return "p"; }
         @Override public Map<String, String> promptParts() { return Map.of("instructions", "Map {questionId}."); }
     };
+    /** 기본 공급자 jev(jev-latest) 하나. 모델 호출은 테스트 게이트웨이가 대신한다. */
+    public static final EvaluationProviders PROVIDERS = new EvaluationProviders(List.of(
+        new EvaluationProviders.Provider("jev", List.of("jev-latest"), Map.of(), List.of(), model -> null)));
     private static final JsonMapper JSON = JsonMapper.builder().build();
+
+    public static CallTarget target(Map<String, String> settings) {
+        return new CallTarget("jev", "jev-latest", settings);
+    }
 
     private EvaluationTestData() {
     }

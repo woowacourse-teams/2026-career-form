@@ -1,5 +1,7 @@
 package com.careerform.evaluation.run;
 
+import com.careerform.evaluation.EvaluationTestData;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
@@ -34,7 +36,7 @@ class CallExecutorTest {
 
         ExecutedCall result = executor.execute(call(CallKind.GENERIC_FIELDS,
             Map.of("field-1", "contact.contact.email", "field-2", "x", "field-3", "DERIVED:KOREAN_FULL_NAME",
-                "field-4", "y")), Map.of());
+                "field-4", "y")), EvaluationTestData.target(Map.of()));
 
         assertThat(result.observed()).containsEntry("field-1", ObservedItem.answered("contact.contact.email"))
             .containsEntry("field-2", ObservedItem.answered(null))
@@ -57,7 +59,7 @@ class CallExecutorTest {
         CaseCall call = new CaseCall(1, CallKind.Stage.PREPARATION, CallKind.SECTION_CLASSIFY, "/c", "d",
             JSON.readTree("{}"), Map.of("ls1", "SENSITIVE", "ls2", "EDUCATION"), 1);
 
-        ExecutedCall result = executor.execute(call, Map.of());
+        ExecutedCall result = executor.execute(call, EvaluationTestData.target(Map.of()));
 
         assertThat(result.result().stage()).isEqualTo(CallKind.Stage.PREPARATION);
         assertThat(result.result().score().correct()).isEqualTo(1);
@@ -73,7 +75,7 @@ class CallExecutorTest {
               {"decisionId": "rowKind1", "selection": "ABSTAINED", "candidateId": null}]}"""), List.of(success(3, 1)));
 
         ExecutedCall result = executor.execute(call(CallKind.INTERACTION_DECISION,
-            Map.of("rowKind0", "rowKind0-option1", "rowKind1", "rowKind1-option2")), Map.of());
+            Map.of("rowKind0", "rowKind0-option1", "rowKind1", "rowKind1-option2")), EvaluationTestData.target(Map.of()));
 
         assertThat(result.result().score().correct()).isEqualTo(1);
         assertThat(result.result().score().missing()).isEqualTo(1);
@@ -89,11 +91,11 @@ class CallExecutorTest {
             {"status": "COMPLETE", "sections": [{"sectionId": "gs1", "category": "ABSTAIN"}]}""";
         CaseCall call = call(CallKind.SECTION_CLASSIFY, Map.of("gs1", "PERSONAL"));
 
-        assertThat(executor(json(abstained), List.of(rateLimited, timeout)).execute(call, Map.of())
+        assertThat(executor(json(abstained), List.of(rateLimited, timeout)).execute(call, EvaluationTestData.target(Map.of()))
             .result().failure()).isEqualTo(FailureKind.TIMEOUT);
-        assertThat(executor(json(abstained), List.of(timeout, rateLimited)).execute(call, Map.of())
+        assertThat(executor(json(abstained), List.of(timeout, rateLimited)).execute(call, EvaluationTestData.target(Map.of()))
             .result().failure()).isEqualTo(FailureKind.API_ERROR);
-        ExecutedCall invalidResult = executor(json(abstained), List.of(invalid)).execute(call, Map.of());
+        ExecutedCall invalidResult = executor(json(abstained), List.of(invalid)).execute(call, EvaluationTestData.target(Map.of()));
         assertThat(invalidResult.result().failure()).isEqualTo(FailureKind.INVALID_RESPONSE);
         assertThat(invalidResult.attempts().getFirst().inputTokens()).isEqualTo(7L);
     }
@@ -106,25 +108,26 @@ class CallExecutorTest {
             throw new IllegalStateException("rejected");
         };
 
-        assertThat(new CallExecutor(throwing).execute(call, Map.of()).result().failure())
+        assertThat(new CallExecutor(throwing).execute(call, EvaluationTestData.target(Map.of())).result().failure())
             .isEqualTo(FailureKind.API_ERROR);
         assertThat(executor(json("{\"status\": \"POLICY_UNAVAILABLE\", \"sections\": []}"), List.of())
-            .execute(call, Map.of()).result().failure()).isEqualTo(FailureKind.API_ERROR);
+            .execute(call, EvaluationTestData.target(Map.of())).result().failure()).isEqualTo(FailureKind.API_ERROR);
     }
 
     @Test
     @DisplayName("실행 설정을 제품 호출에 넘긴다")
     void passesSettings() {
-        Map<String, String>[] seen = new Map[1];
+        CallTarget[] seen = new CallTarget[1];
         ProductCallGateway gateway = (kind, request, settings) -> {
             seen[0] = settings;
             return json("{\"status\": \"COMPLETE\", \"sections\": [{\"sectionId\": \"gs1\", \"category\": \"PERSONAL\"}]}");
         };
 
         new CallExecutor(gateway).execute(call(CallKind.SECTION_CLASSIFY, Map.of("gs1", "PERSONAL")),
-            Map.of("field-batch-size", "2"));
+            EvaluationTestData.target(Map.of("field-batch-size", "2")));
 
-        assertThat(seen[0]).containsEntry("field-batch-size", "2");
+        assertThat(seen[0].settings()).containsEntry("field-batch-size", "2");
+        assertThat(seen[0].provider()).isEqualTo("jev");
     }
 
     private static CallExecutor executor(JsonNode response, List<Attempt> attempts) {

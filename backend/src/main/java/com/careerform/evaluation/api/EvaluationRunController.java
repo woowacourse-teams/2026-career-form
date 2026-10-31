@@ -28,6 +28,7 @@ import com.careerform.evaluation.run.RescoringService;
 import com.careerform.evaluation.run.ResultStore;
 import com.careerform.evaluation.run.RunReport;
 import com.careerform.evaluation.run.RunReporter;
+import com.careerform.evaluation.run.EvaluationProviders;
 import com.careerform.evaluation.run.RunRejected;
 import com.careerform.evaluation.run.RunRequest;
 import com.careerform.evaluation.run.RunService;
@@ -52,20 +53,32 @@ public final class EvaluationRunController {
     private final RescoringService scorings;
     private final DatasetLoader datasets;
     private final DatasetLoader.ResourceSource resources;
+    private final EvaluationProviders providers;
     private final RunReporter reporter = new RunReporter();
     private final JsonMapper json = JsonMapper.builder().build();
 
     public EvaluationRunController(RunService runs, RunStore store, ResultStore results, RescoringService scorings,
-        DatasetLoader datasets, DatasetLoader.ResourceSource resources) {
+        DatasetLoader datasets, DatasetLoader.ResourceSource resources, EvaluationProviders providers) {
         this.runs = runs;
         this.store = store;
         this.results = results;
         this.scorings = scorings;
         this.datasets = datasets;
         this.resources = resources;
+        this.providers = providers;
     }
 
     public record RunView(EvaluationRun run, RunReport report) {
+    }
+
+    /** 고를 수 있는 공급자. 첫 항목이 기본 공급자, {@code defaultModel}은 그 공급자의 기본 모델이다. */
+    public record ProviderView(String provider, String defaultModel, List<String> models) {
+    }
+
+    @GetMapping("/providers")
+    public List<ProviderView> providers() {
+        return providers.all().stream()
+            .map(provider -> new ProviderView(provider.name(), provider.defaultModel(), provider.models())).toList();
     }
 
     @PostMapping("/runs")
