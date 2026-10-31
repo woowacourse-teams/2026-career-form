@@ -7,7 +7,7 @@ const COLORS = ["#4e6d90", "#688b7c", "#ac8d68", "#8a6f9e", "#6f8f9e"];
 const PRICE_KEY = "cf-evaluation-model-prices-v1";
 const root = document.getElementById("cf-eval-preview");
 const $ = (selector) => root.querySelector(selector);
-const state = { runs: [], dataset: null, models: [], selected: [], promptVersion: null, stage: "total", page: "overview" };
+const state = { runs: [], dataset: null, models: [], selected: [], group: null, stage: "total", page: "overview" };
 let prices = {};
 try { prices = JSON.parse(localStorage.getItem(PRICE_KEY) || "{}") ?? {}; } catch { prices = {}; }
 
@@ -35,6 +35,7 @@ async function api(path, method = "GET", payload) {
       INVALID_PROMPT_VERSION: "프롬프트 이름은 영문·숫자·.-_ 32자 이하입니다.",
       UNKNOWN_PROVIDER: "이 서버에 연결되지 않은 공급자입니다.",
       UNKNOWN_MODEL: "이 공급자가 허용하지 않은 모델입니다.",
+      INVALID_TARGETS: "모델은 1~5개를 중복 없이 골라 주세요.",
     };
     throw new Error(reasons[body?.code] ?? (response.status === 404 ? "평가 기능이 꺼져 있거나 대상이 없습니다." : "지금 처리할 수 없습니다."));
   }
@@ -45,9 +46,21 @@ const modelKey = (run) => `${run.versions.provider}/${run.versions.model}`;
 const promptKey = (run) => run.versions.promptVersion ?? run.versions.promptDigest.slice(0, 8);
 const done = (run) => ["COMPLETED", "PARTIAL"].includes(run.status);
 
-/** 모델·프롬프트별 가장 최근에 끝난 실행. */
-function latest(model, prompt) {
-  return state.runs.find(({ run }) => done(run) && modelKey(run) === model && promptKey(run) === prompt);
+/** 함께 비교할 실행 묶음. 비교 등록은 comparisonId로, 단독 실행은 실행 하나로 묶는다. */
+const groupKey = (run) => run.comparisonId ?? run.id;
+const groupRuns = (key) => state.runs.filter(({ run }) => groupKey(run) === key).reverse();
+const SPLIT = { tuning: "튜닝용", final: "최종 평가용" };
+function groupLabel(key) {
+  const runs = groupRuns(key).map(({ run }) => run);
+  const first = runs[0];
+  const at = new Date(first.requestedAt);
+  const time = `${String(at.getMonth() + 1).padStart(2, "0")}-${String(at.getDate()).padStart(2, "0")} ${String(at.getHours()).padStart(2, "0")}:${String(at.getMinutes()).padStart(2, "0")}`;
+  return `${time} · ${SPLIT[first.versions.split] ?? first.versions.split} · 반복 ${first.repetitions} · ${promptKey(first)} · 모델 ${runs.length}개`;
+}
+
+/** 선택한 묶음에서 그 모델의 실행. 끝난 실행만 보고를 쓴다. */
+function latest(model) {
+  return groupRuns(state.group).find(({ run }) => done(run) && modelKey(run) === model);
 }
 
 const percent = (value) => value == null ? null : value * 100;
@@ -75,7 +88,7 @@ function bars(title, sub, values, max, format, foot) {
 }
 
 const color = (model) => COLORS[state.models.indexOf(model) % COLORS.length];
-const report = (model) => latest(model, state.promptVersion)?.report;
+const report = (model) => latest(model)?.report;
 
 function renderOverview() {
   const quality = $("#cf-quality");
@@ -145,16 +158,26 @@ function render() {
   $("#profile-count").textContent = `프로필 ${new Set(cases.map((c) => c.profileId)).size}개`;
   $("#site-count").textContent = `사이트 ${new Set(cases.map((c) => c.siteId)).size}개`;
   const active = state.runs.find(({ run }) => ["QUEUED", "RUNNING"].includes(run.status))?.run;
-  const STATUS = { QUEUED: "대기 중", RUNNING: "실행 중", COMPLETED: "완료", PARTIAL: "일부 완료", FAILED: "실패", CANCELLED: "취소됨" };
+  const waiting = state.runs.filter(({ run }) => run.status === "WAITING").length;
+  const STATUS = { WAITING: "차례 대기", QUEUED: "대기 중", RUNNING: "실행 중", COMPLETED: "완료", PARTIAL: "일부 완료", FAILED: "실패", CANCELLED: "취소됨" };
   const last = state.runs[0]?.run;
   $("#cf-status").textContent = active
-    ? `${STATUS[active.status]} · ${active.processedCalls}/${active.plannedCalls} 호출 처리 (자동 갱신 중)`
+    ? `${STATUS[active.status]} · ${modelKey(active)} · ${active.processedCalls}/${active.plannedCalls} 호출 처리${waiting ? ` · 다음 모델 ${waiting}개 차례 대기` : ""} (자동 갱신 중)`
     : last ? `최근 실행: ${STATUS[last.status] ?? last.status} · ${last.processedCalls}/${last.plannedCalls} 호출 · 총 ${state.runs.length}건`
       : "측정 결과 없음";
 }
 
 function renderFilters() {
-  state.models = [...new Set(state.runs.map(({ run }) => modelKey(run)))];
+  const groups = [...new Set(state.runs.map(({ run }) => groupKey(run)))];
+  if (!groups.includes(state.group)) {
+    state.group = groups[0] ?? null;
+    state.selected = [];
+  }
+  const select = $("#comparison");
+  select.replaceChildren(...groups.map((key) => Object.assign(element("option", groupLabel(key)), { value: key })));
+  select.value = state.group ?? "";
+  state.models = [...new Set(groupRuns(state.group).map(({ run }) => modelKey(run)))];
+  state.selected = state.selected.filter((model) => state.models.includes(model));
   if (!state.selected.length) state.selected = [...state.models];
   const models = $("#models");
   models.replaceChildren();
@@ -172,11 +195,6 @@ function renderFilters() {
     models.append(label);
   }
   if (!state.models.length) models.append(element("span", "실행 결과가 있는 모델이 없습니다.", "muted"));
-  const prompts = [...new Set(state.runs.map(({ run }) => promptKey(run)))];
-  state.promptVersion = prompts.includes(state.promptVersion) ? state.promptVersion : prompts[0] ?? null;
-  const select = $("#prompt-version");
-  select.replaceChildren(...prompts.map((p) => Object.assign(element("option", p), { value: p })));
-  select.value = state.promptVersion ?? "";
 }
 
 function dialog(title, content, className) {
@@ -239,7 +257,8 @@ async function promptView() {
     if (!versions.some((v) => v.digest === run.versions.promptDigest))
       versions.push({ digest: run.versions.promptDigest, name: promptKey(run) });
   if (!versions.length) return element("p", "실행 기록이 없어 프롬프트 버전이 없습니다.", "muted");
-  const index = Math.max(0, versions.findIndex((v) => v.name === state.promptVersion));
+  const shown = groupRuns(state.group)[0]?.run.versions.promptDigest;
+  const index = Math.max(0, versions.findIndex((v) => v.digest === shown));
   const current = await api(`/prompts/${versions[index].digest}`);
   const previous = index > 0 ? await api(`/prompts/${versions[index - 1].digest}`) : null;
   wrap.append(element("p", `${versions[index].name} · ${current.digest.slice(0, 12)}${previous ? ` · 이전 ${versions[index - 1].name} 대비 바뀐 조각만 표시` : ""}`, "muted"));
@@ -299,21 +318,19 @@ async function openRun() {
   let providers = [];
   try { providers = await api("/providers"); } catch (error) { $("#cf-status").textContent = error.message; return; }
   const form = element("form", undefined, "criteria-list run-form");
-  const field = (label, input, hint) => {
-    const wrap = element("label");
+  const field = (label, input, hint, tag = "label") => {
+    const wrap = element(tag, undefined, "field");
     wrap.append(element("span", label), input, element("span", hint, "hint"));
     return wrap;
   };
-  const provider = element("select");
-  const model = element("select");
-  for (const item of providers) provider.append(Object.assign(element("option", item.provider), { value: item.provider }));
-  const fillModels = () => {
-    const chosen = providers.find((item) => item.provider === provider.value);
-    model.replaceChildren(...(chosen?.models ?? []).map((name) => Object.assign(element("option", name), { value: name })));
-    model.value = chosen?.defaultModel ?? "";
-  };
-  provider.addEventListener("change", fillModels);
-  fillModels();
+  const targets = element("div", undefined, "target-list");
+  providers.forEach((item, providerIndex) => item.models.forEach((name) => {
+    const option = element("label", undefined, "target");
+    const box = Object.assign(element("input"), { type: "checkbox", value: `${item.provider}/${name}` });
+    box.checked = providerIndex === 0 && name === item.defaultModel;
+    option.append(box, document.createTextNode(`${item.provider} / ${name}`));
+    targets.append(option);
+  }));
   const split = element("select");
   split.append(Object.assign(element("option", "튜닝용"), { value: "tuning" }), Object.assign(element("option", "최종 평가용"), { value: "final" }));
   const repetitions = Object.assign(element("input"), { type: "number", min: "1", max: "20", value: "1" });
@@ -322,23 +339,31 @@ async function openRun() {
   const submit = element("button", "등록", "apply-pricing");
   submit.type = "submit";
   form.append(
-    field("공급자", provider, providers.length ? "이 서버에 연결된 공급자만 나옵니다." : "연결된 공급자가 없습니다."),
-    field("모델", model, "같은 데이터셋으로 모델끼리 비교합니다."),
+    field("모델", targets, providers.length
+      ? "비교할 모델을 고릅니다(최대 5개). 같은 조건으로 한 모델씩 차례로 돌고, 결과는 한 화면에 나란히 나옵니다."
+      : "이 서버에 연결된 공급자가 없습니다.", "div"),
     field("분할", split, "튜닝용은 개선 작업 중 확인용, 최종 평가용은 개선 전후 비교용 화면입니다."),
     field("반복 수", repetitions, "같은 입력을 몇 번 돌릴지(1~20). 응답시간 편차를 보려면 3 이상을 권장합니다."),
     field("프롬프트 이름", prompt, "결과를 구분할 이름표(선택). 예: baseline. 실제 프롬프트 내용은 서버가 자동으로 기록합니다."),
     message, submit);
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    const chosen = [...targets.querySelectorAll("input:checked")].map((box) => {
+      const [provider, ...rest] = box.value.split("/");
+      return { provider, model: rest.join("/") };
+    });
+    if (!chosen.length || chosen.length > 5) { message.textContent = "모델을 1~5개 골라 주세요."; return; }
     submit.disabled = true;
     try {
       const result = await api("/runs", "POST", {
         datasetId: DATASET.id, datasetVersion: DATASET.version, split: split.value,
         repetitions: Number(repetitions.value), promptVersion: prompt.value.trim() || null, overrides: {},
-        provider: provider.value || null, model: model.value || null,
+        targets: chosen,
       });
       $("#cf-source").close();
-      $("#cf-status").textContent = `등록했습니다(실행 ${result.runId.slice(0, 8)}). 진행 상황을 자동으로 갱신합니다.`;
+      $("#cf-status").textContent = `등록했습니다(모델 ${chosen.length}개). 진행 상황을 자동으로 갱신합니다.`;
+      state.group = result.comparisonId ?? result.runId;
+      state.selected = [];
       await load();
     } catch (error) { message.textContent = error.message; } finally { submit.disabled = false; }
   });
@@ -362,12 +387,12 @@ async function load() {
   render();
   if (failed) $("#cf-status").textContent = failed;
   // 대기·실행 중인 평가가 있으면 끝날 때까지 결과를 다시 불러온다.
-  if (state.runs.some(({ run }) => ["QUEUED", "RUNNING"].includes(run.status))) pollTimer = setTimeout(load, POLL_MS);
+  if (state.runs.some(({ run }) => ["WAITING", "QUEUED", "RUNNING"].includes(run.status))) pollTimer = setTimeout(load, POLL_MS);
 }
 
 root.querySelectorAll("[data-page]").forEach((b) => b.addEventListener("click", () => { state.page = b.dataset.page; render(); }));
 root.querySelectorAll("[data-stage]").forEach((b) => b.addEventListener("click", () => { state.stage = b.dataset.stage; render(); }));
-$("#prompt-version").addEventListener("change", (e) => { state.promptVersion = e.target.value; render(); });
+$("#comparison").addEventListener("change", (e) => { state.group = e.target.value; state.selected = []; renderFilters(); render(); });
 $("#cf-source-close").addEventListener("click", () => $("#cf-source").close());
 $("#run-open").addEventListener("click", openRun);
 $("#refresh").addEventListener("click", load);

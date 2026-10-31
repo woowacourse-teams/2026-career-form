@@ -68,11 +68,13 @@ API와 화면은 품질 확인 공용 비밀번호(`CAREER_FORM_QUALITY_PASSWORD
 | `GET /api/v1/evaluations/datasets/{id}/v{N}` | 데이터셋 사례, 화면 칸, 준비 동작, 검토 상태, 합성 프로필 |
 | `GET /api/v1/evaluations/prompts/{digest}` | 프롬프트 버전 전문 |
 | `GET /api/v1/evaluations/providers` | 고를 수 있는 공급자와 모델(첫 항목이 기본값) |
+| `GET /api/v1/evaluations/comparisons/{id}` | 비교에 속한 모델별 실행과 보고(등록 순서) |
 
 등록 본문: `datasetId`, `datasetVersion`, `split`(tuning|final), `repetitions`, `promptVersion`(선택),
 `overrides`(`field-batch-size` 1~128, `section-concurrency` 1~16만 허용), `provider`·`model`(선택, 없으면 기본값).
+여러 모델 비교는 `targets`(`[{provider, model}]`, 1~5개, 중복 불가)로 보낸다. 모델마다 같은 조건의 실행을 만들어 한 비교(`comparisonId`)로 묶고, 첫 실행만 QUEUED, 나머지는 WAITING으로 두어 앞 실행이 끝나면 작업자가 차례로 돌린다. 비교 실행 하나를 취소하면 같은 비교의 남은 실행도 취소된다. 화면은 비교 묶음을 골라 모델별 결과를 나란히 보여 준다.
 
-상태: `QUEUED → RUNNING → COMPLETED | PARTIAL | FAILED | CANCELLED`. 모든 호출을 채점했으면 COMPLETED, 실패 호출이 있거나
+상태: `WAITING →` (비교의 두 번째 이후 실행) `QUEUED → RUNNING → COMPLETED | PARTIAL | FAILED | CANCELLED`. 모든 호출을 채점했으면 COMPLETED, 실패 호출이 있거나
 예산에 닿아 멈추면 PARTIAL, 등록 뒤 데이터셋·프롬프트가 바뀌었거나 예외가 나면 FAILED다.
 
 ## 채점
