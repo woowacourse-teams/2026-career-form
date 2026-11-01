@@ -24,6 +24,11 @@
   grid-template-rows: minmax(0, 1fr);
 }
 
+/* 스크린 리더용으로 프로그램이 옮긴 포커스이므로 컨테이너 전체에 테두리를 그리지 않는다. */
+.panel[tabindex="-1"]:focus {
+  outline: none;
+}
+
 .toolbar button {
   display: inline-flex;
   align-items: center;
