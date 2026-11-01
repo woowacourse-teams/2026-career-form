@@ -54,6 +54,9 @@ interface WorkflowScreensProps {
   progressStateFor?: WorkflowResultsProps["progressStateFor"];
   activity?: WorkflowActivity;
   progress?: readonly WriteProgress[];
+  developerMode?: boolean;
+  writeTotal?: number;
+  writeDone?: number;
   fieldStateFor?: WorkflowResultsProps["fieldStateFor"];
   profile?: Profile;
   optionsFor?(candidateId: string): readonly string[];
@@ -84,6 +87,7 @@ interface WorkflowScreensProps {
   workflowDiagnostics: readonly WorkflowDiagnostic[];
   exceptionTitle: string;
   unsupportedImageUrl?: string;
+  writingImageUrl?: string;
   unsupportedKind?: "v1" | "builder";
   onLocate?(candidateId: string): boolean;
   operatedCategories?: readonly string[];
@@ -118,6 +122,9 @@ export function WorkflowScreens({
   progressIdFor,
   progressStateFor,
   progress,
+  developerMode = true,
+  writeTotal,
+  writeDone,
   activity,
   fieldStateFor,
   profile,
@@ -135,6 +142,7 @@ export function WorkflowScreens({
   structureDiagnostics,
   exceptionTitle,
   unsupportedImageUrl,
+  writingImageUrl,
   unsupportedKind,
   onExit,
   onLocate,
@@ -155,6 +163,10 @@ export function WorkflowScreens({
   if (stage === "analyzing" || stage === "writing") {
     return (
       <WorkflowLoading
+        developerMode={developerMode}
+        writingImageUrl={writingImageUrl}
+        total={writeTotal}
+        done={writeDone}
         progress={progress}
         writing={stage === "writing"}
         currentCategory={currentCategory}

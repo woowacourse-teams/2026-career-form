@@ -95,7 +95,11 @@ export default defineConfig({
     },
     web_accessible_resources: [
       {
-        resources: ["side-panel-launcher-logo.png", "unsupported-capybara.jpg"],
+        resources: [
+          "side-panel-launcher-logo.png",
+          "unsupported-capybara.jpg",
+          "capybara-writing.png",
+        ],
         matches: ["http://*/*", "https://*/*"],
       },
     ],

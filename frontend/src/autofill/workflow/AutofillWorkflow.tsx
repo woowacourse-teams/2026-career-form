@@ -127,6 +127,7 @@ import {
   type StructureDiagnostics,
 } from "../generic/structure-diagnostics";
 import { debugWarn } from "../debug/autofill-debug";
+import { useDeveloperMode } from "../debug/developer-mode";
 import { localWorkflowLog } from "../debug/local-workflow";
 
 export { localItemCount, shouldRunRevealPlan } from "./workflow-model";
@@ -203,6 +204,7 @@ function PolicyReadyWorkflow({
   pageDocument,
   onExit,
   unsupportedImageUrl,
+  writingImageUrl,
   addressSearch = runtimeAddressSearch,
 }: WorkflowProps) {
   const companyId = resolveDocumentCompany(pageDocument);
@@ -233,6 +235,10 @@ function PolicyReadyWorkflow({
     [pageDocument],
   );
   const [currentCategory, setCurrentCategory] = useState<string>();
+  const [developerMode] = useDeveloperMode();
+  // 진행 항목은 기입 묶음을 가로질러 누적되므로 묶음별 처리 수를 따로 센다.
+  const batchDoneIds = useRef(new Set<string>());
+  const [writeBatch, setWriteBatch] = useState({ total: 0, done: 0 });
   const [activity, setActivity] = useState<WorkflowActivity>("matching");
   const { operated, operatedCategories, recordOperation } =
     useOperatedFields(pageDocument);
@@ -247,6 +253,8 @@ function PolicyReadyWorkflow({
   );
   const onWriteResult: WriteResultListener = (item, result, registry) => {
     recordWriteResult(item, result, registry);
+    batchDoneIds.current.add(item.candidateId);
+    setWriteBatch((batch) => ({ ...batch, done: batchDoneIds.current.size }));
     observeQuality(() => apiClient.quality?.write(item, result, registry));
   };
   const presentField = async (
@@ -953,6 +961,8 @@ function PolicyReadyWorkflow({
         setStage("exception");
         return;
       }
+      batchDoneIds.current = new Set();
+      setWriteBatch({ total: approvedCandidateIds.size, done: 0 });
       setStage("writing");
       localWorkflowLog("writes-start", {
         passes: revealPasses.current,
@@ -1296,6 +1306,9 @@ function PolicyReadyWorkflow({
   return (
     <WorkflowScreens
       progress={progress}
+      developerMode={developerMode}
+      writeTotal={writeBatch.total}
+      writeDone={writeBatch.done}
       activity={activity}
       progressStateFor={progressTracker.progressStateFor}
       progressIdFor={(id) =>
@@ -1331,6 +1344,7 @@ function PolicyReadyWorkflow({
       workflowDiagnostics={workflowDiagnostics}
       exceptionTitle={exceptionTitle}
       unsupportedImageUrl={unsupportedImageUrl}
+      writingImageUrl={writingImageUrl}
       unsupportedKind={
         stage === "unsupported"
           ? unsupportedHplaceKind(pageDocument)

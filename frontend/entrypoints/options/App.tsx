@@ -5,6 +5,7 @@ import { trackExtensionEvent } from "../../src/analytics/extension-tracker";
 import type { LayoutPreference } from "../../src/profile/model";
 import type { ProfileRepository } from "../../src/profile/profile-repository";
 import { useProfileSaveTracking } from "../../src/analytics/use-profile-save-tracking";
+import { DeveloperSettings } from "./DeveloperSettings";
 import { ProfileWorkspace } from "./ProfileWorkspace";
 import { useProfileEditor } from "../../src/profile/hooks/use-profile-editor";
 import {
@@ -271,6 +272,7 @@ export function App({
       )}
 
       <ProfileWorkspace layout={layout} formProps={formProps} />
+      <DeveloperSettings />
       <footer className={styles.pageFooter}>
         <span>CAREER FORM</span>
         <details className={styles.storageNote}>

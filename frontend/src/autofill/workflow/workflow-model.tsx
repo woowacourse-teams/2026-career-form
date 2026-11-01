@@ -130,6 +130,7 @@ export interface WorkflowProps {
   repository: Pick<ProfileRepository, "load">;
   pageDocument: Document;
   unsupportedImageUrl?: string;
+  writingImageUrl?: string;
   onExit(): void;
 }
 

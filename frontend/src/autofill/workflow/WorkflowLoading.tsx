@@ -1,14 +1,29 @@
 import styles from "./WorkflowLoading.module.css";
-import type { WriteProgress, WorkflowActivity } from "./progress-model";
+import {
+  batchPercent,
+  type WriteProgress,
+  type WorkflowActivity,
+} from "./progress-model";
 export type { WriteProgress } from "./progress-model";
 
 export function WorkflowLoading({
+  developerMode,
+  writingImageUrl,
+  total,
+  done = 0,
   writing,
   statusMessage,
   currentCategory,
   activity = "matching",
   progress = [],
 }: {
+  developerMode: boolean;
+  /** 확장 프로그램 리소스 URL. 없으면 이미지를 그리지 않는다. */
+  writingImageUrl?: string;
+  /** 현재 기입 묶음의 항목 수. */
+  total?: number;
+  /** 현재 기입 묶음에서 처리한 항목 수. */
+  done?: number;
   writing: boolean;
   statusMessage?: string;
   currentCategory?: string;
@@ -26,6 +41,64 @@ export function WorkflowLoading({
           preparing: "필요한 입력란을 준비하고 있어요",
           address: "주소 검색 결과를 확인하고 있어요",
         }[activity]);
+  if (!developerMode) {
+    const percent =
+      writing && total !== undefined && total > 0
+        ? batchPercent(done, total)
+        : undefined;
+    return (
+      <>
+        <p className={styles.announcement} role="status" aria-live="polite">
+          {message}
+        </p>
+        <section
+          className={styles.userView}
+          aria-label="자동 기입 작업 영역"
+          aria-busy="true"
+        >
+          {writingImageUrl && (
+            <img
+              className={styles.mascot}
+              src={writingImageUrl}
+              alt="지원서를 쓰는 카피바라"
+            />
+          )}
+          <p className={styles.caption} aria-hidden="true">
+            {writing ? "지원서를 채우고 있어요" : message}
+          </p>
+          <div className={styles.metric}>
+            {percent !== undefined ? (
+              <>
+                <p className={styles.metricLabel}>진행률</p>
+                <strong className={styles.value}>
+                  {percent}
+                  <small>%</small>
+                </strong>
+                <div className={styles.indicatorSlot}>
+                  <div
+                    className={styles.track}
+                    role="progressbar"
+                    aria-label="입력 완료 비율"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={percent}
+                  >
+                    <span style={{ width: `${percent}%` }} />
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className={styles.indicatorSlot} aria-hidden="true">
+                <div className={`${styles.track} ${styles.indeterminate}`}>
+                  <span />
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+      </>
+    );
+  }
   const categories = [
     ...new Set([
       ...progress.map((entry) => entry.category),
