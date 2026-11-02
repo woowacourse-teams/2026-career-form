@@ -106,3 +106,19 @@ export function useScrollScene(
     };
   }, [track]);
 }
+
+/** Sums offsets up to `root`; offsets ignore transforms, unlike rects. */
+export function offsetWithin(
+  el: Element | null | undefined,
+  root: HTMLElement,
+) {
+  let x = 0;
+  let y = 0;
+  let node = el as HTMLElement | null;
+  while (node && node !== root) {
+    x += node.offsetLeft;
+    y += node.offsetTop;
+    node = node.offsetParent as HTMLElement | null;
+  }
+  return { x, y };
+}

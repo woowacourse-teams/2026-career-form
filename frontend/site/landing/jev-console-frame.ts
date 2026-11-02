@@ -13,7 +13,7 @@ import {
   percent,
   stepAt,
 } from "./jev";
-import { applyMotion as set, back, ease, lerp } from "./scroll";
+import { applyMotion as set, back, ease, lerp, offsetWithin } from "./scroll";
 
 type Point = { x: number; y: number };
 export type ConsoleGeometry = { grid: Point[]; list: Point[] };
@@ -22,18 +22,6 @@ type Anchors = {
   consoleLeft: number;
   groupMid: number[];
   focusY: number;
-};
-
-const within = (el: Element | null | undefined, root: HTMLElement): Point => {
-  let x = 0;
-  let y = 0;
-  let node = el as HTMLElement | null;
-  while (node && node !== root) {
-    x += node.offsetLeft;
-    y += node.offsetTop;
-    node = node.offsetParent as HTMLElement | null;
-  }
-  return { x, y };
 };
 
 /** Draws the four connection curves; jsdom has no path length, so guard it. */
@@ -76,8 +64,8 @@ export function measureConsole(
       y: 4 + Math.floor(j / 3) * 38,
     };
   });
-  const classY = els.classes.map((c) => within(c, stage).y + 10);
-  const cloudY = within(els.cloudBox, stage).y + 40;
+  const classY = els.classes.map((c) => offsetWithin(c, stage).y + 10);
+  const cloudY = offsetWithin(els.cloudBox, stage).y + 40;
   placeLines(els, [
     ...FIELD_GROUPS.map((_, gi) => [
       a.formRight,

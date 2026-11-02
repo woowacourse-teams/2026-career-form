@@ -15,7 +15,14 @@ import {
   stepAt,
 } from "./jev";
 import { reviewCount, sampleFields } from "./sample-form";
-import { applyMotion as set, clamp, ease, lerp, segment } from "./scroll";
+import {
+  applyMotion as set,
+  clamp,
+  ease,
+  lerp,
+  offsetWithin,
+  segment,
+} from "./scroll";
 import formStyles from "./SampleForm.module.css";
 import styles from "./AiScene.module.css";
 
@@ -133,19 +140,6 @@ export function collectAiElements(root: HTMLElement): AiElements {
     lines: all<SVGPathElement>("line"),
     lineEnds: all<SVGCircleElement>("line-end"),
   };
-}
-
-/** Sum offsets up to `root`; offsets ignore transforms, unlike rects. */
-export function offsetWithin(el: HTMLElement, root: HTMLElement): Point {
-  let x = 0;
-  let y = 0;
-  let node: HTMLElement | null = el;
-  while (node && node !== root) {
-    x += node.offsetLeft;
-    y += node.offsetTop;
-    node = node.offsetParent as HTMLElement | null;
-  }
-  return { x, y };
 }
 
 /** Writes the stage's size variables and returns the measured frame. */
