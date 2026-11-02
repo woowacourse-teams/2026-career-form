@@ -621,3 +621,6 @@
 #login-message:empty{display:none}
 #login-message{margin:14px 0 0;font-size:14px;color:#9a3a30}
 @media(max-width:520px){#login-panel:not([hidden]){margin-top:40px;padding:32px 24px 28px}#login-panel h1{font-size:26px}}
+#cf-eval-preview .upstream-note{color:#8a5b2f}
+#cf-eval-preview .fields-changes{font-size:12px;color:#8a5b2f;overflow-wrap:anywhere}
+#cf-eval-preview .filters .comparison-detail{white-space:normal;max-width:340px;line-height:1.45}

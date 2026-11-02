@@ -3,6 +3,7 @@ package com.careerform.evaluation.run;
 import java.util.List;
 import java.util.Map;
 import com.careerform.evaluation.scoring.AutofillOutcome;
+import com.careerform.evaluation.scoring.ItemCounts;
 import com.careerform.evaluation.scoring.RunAggregate;
 
 /**
@@ -14,6 +15,8 @@ import com.careerform.evaluation.scoring.RunAggregate;
  * 채점식과 다를 수 있다. {@code repetitions}는 반복마다 따로 계산한 항목 단위 정확도로, 같은 입력에서 점수가 얼마나
  * 흔들리는지 보이고, 자동기입 점수도 반복마다 따로 낸다. {@code autofill}은 저장한 칸 매핑 답을 실행 때의 정답과
  * 다시 비교해 사용자 화면 기준으로 나눈 합계와 점수이며, 정답을 찾을 수 없거나 칸 매핑 결과가 없으면 null이다.
+ * {@code upstream}은 칸 매핑 앞 단계(섹션 분류·선택 결정) 항목 판정 합계다. 평가는 다음 요청을 정답으로 만들므로 이 오답은
+ * 자동기입 점수에 반영되지 않는다.
  */
 public record RunReport(
     RunAggregate quality,
@@ -23,7 +26,8 @@ public record RunReport(
     Timing timing,
     String scoringVersion,
     List<RepetitionQuality> repetitions,
-    Autofill autofill
+    Autofill autofill,
+    ItemCounts upstream
 ) {
 
     public RunReport {

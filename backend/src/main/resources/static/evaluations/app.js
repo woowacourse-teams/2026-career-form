@@ -34,7 +34,7 @@ async function api(path, method = "GET", payload) {
       BUDGET_EXCEEDED: "예상 모델 호출 수가 실행 한도를 넘습니다. 반복 수를 줄여야 합니다.",
       UNKNOWN_DATASET: "검토를 마친 데이터셋이 아닙니다. 데이터셋 검토 상태 확인 필요.",
       INVALID_REPETITIONS: "반복 수는 1 이상 20 이하입니다.",
-      INVALID_PROMPT_VERSION: "프롬프트 이름은 영문·숫자·.-_ 32자 이하입니다.",
+      INVALID_PROMPT_VERSION: "실행 이름은 영문·숫자·.-_ 32자 이하입니다.",
       UNKNOWN_PROVIDER: "이 서버에 연결되지 않았거나 등록되지 않은 공급자입니다.",
       UNKNOWN_MODEL: "이 공급자가 허용하지 않은 모델입니다.",
       INVALID_TARGETS: "모델은 중복 없이 1~5개만 고를 수 있습니다.",
@@ -73,7 +73,28 @@ function comparisonDetail(key) {
   const runs = groupRuns(key).map(({ run }) => run);
   const first = runs[0];
   if (!first) return "";
-  return `데이터 v${first.versions.datasetVersion} · ${SPLIT[first.versions.split] ?? first.versions.split} · 반복 ${first.repetitions}회 · 모델 ${runs.length}개`;
+  return `데이터 v${first.versions.datasetVersion} · ${SPLIT[first.versions.split] ?? first.versions.split} · 반복 ${first.repetitions}회 · 모델 ${runs.length}개 · ${conditionText(first)}`;
+}
+
+// 결과에 영향을 주는 실행 조건. 코드 버전과 서버 설정(배치·병렬·재시도)이 바뀌면 프롬프트가 같아도 품질·성능이 달라질 수 있다.
+const SETTING_NAMES = { "field-batch-size": "칸 묶음", "section-concurrency": "섹션 동시", "max-concurrent": "최대 동시 호출",
+  "rate-limit-retries": "재시도", "timeout-ms": "시간 제한(ms)", "min-confidence": "확신도 기준", "reasoning-effort": "추론 강도" };
+const conditionText = (run) => [`코드 ${run.versions.codeVersion ?? "—"}`,
+  ...["field-batch-size", "section-concurrency"].filter((key) => run.versions.settings?.[key] != null)
+    .map((key) => `${SETTING_NAMES[key]} ${run.versions.settings[key]}`)].join(" · ");
+
+/** 기준 실행과 달라진 조건(코드, 프롬프트, 모델, 설정). 같으면 빈 목록이다. */
+function changedConditions(run, base) {
+  const changes = [];
+  if (run.versions.codeVersion !== base.versions.codeVersion) changes.push(`코드 ${base.versions.codeVersion ?? "—"} → ${run.versions.codeVersion ?? "—"}`);
+  if (run.versions.promptDigest !== base.versions.promptDigest) changes.push("프롬프트 바뀜");
+  if (run.versions.model !== base.versions.model) changes.push(`모델 ${base.versions.model} → ${run.versions.model}`);
+  const keys = new Set([...Object.keys(run.versions.settings ?? {}), ...Object.keys(base.versions.settings ?? {})]);
+  [...keys].sort().forEach((key) => {
+    const [before, after] = [base.versions.settings?.[key], run.versions.settings?.[key]];
+    if (before !== after) changes.push(`${SETTING_NAMES[key] ?? key} ${before ?? "—"} → ${after ?? "—"}`);
+  });
+  return changes;
 }
 
 /** 선택한 묶음에서 그 모델의 실행. 끝난 실행만 보고를 쓴다. */
@@ -128,6 +149,12 @@ function renderOverview() {
     Math.max(1, ...state.selected.map((m) => seconds(m) ?? 0)), (v) => `${v.toFixed(2)}초`,
     total ? "자동기입 버튼 1번(화면 하나)에 서버 API 3~4번을 처리한 시간의 합. 서버 처리·재시도 포함, 브라우저↔서버 네트워크와 화면 입력 시간 제외."
       : "서버 API 1번을 처리한 시간. 안의 모델 호출·서버 처리·재시도 포함, 브라우저↔서버 네트워크 제외.");
+  if (total) {
+    timeCard.querySelectorAll(".bar-row").forEach((row, index) => {
+      const time = report(state.selected[index])?.flows.time;
+      if (time?.p95Ms != null) row.after(element("span", `p95 ${(time.p95Ms / 1000).toFixed(2)}초 · 자동기입 ${time.count}번`, "range-note"));
+    });
+  }
   if (!total) {
     // API 1번 안에서 모델을 몇 번 불렀는지 보이면 모델 호출 1번당 시간과 이어서 읽을 수 있다.
     timeCard.querySelectorAll(".bar-row").forEach((row, index) => {
@@ -145,12 +172,33 @@ function renderOverview() {
       "실행 전체에서 끝낸 API 수 ÷ 실행 경과 시간. 평가는 API를 차례로 부르므로 API 1번당 응답시간이 짧을수록 높습니다."),
     bars("자동기입 실패율", "낮을수록 좋음", failure, 100, (v) => `${v.toFixed(1)}%`,
       "API가 하나라도 실패한 자동기입(화면 하나)의 비율"),
+    costCard(),
   ] : [
     modelTimeCard(perf),
     timeCard,
     bars("API 실패율", "낮을수록 좋음", failure, 100, (v) => `${v.toFixed(1)}%`,
       "타임아웃 · API 오류 · 응답 형식 오류 · 채점 불가인 API의 비율"),
   ]));
+}
+
+/**
+ * 자동기입 1,000번당 예상 비용. 실행의 입력·출력 토큰 합에 모델 단가 설정(사용자가 넣은 USD/100만 토큰)을 곱하고 실행 안의
+ * 자동기입 수로 나눈다. 단가를 넣지 않은 모델은 계산하지 않는다.
+ */
+function costCard() {
+  const perThousand = (model) => {
+    const tokens = report(model)?.tokens.TOTAL;
+    const flows = report(model)?.flows.count;
+    const cost = tokens?.inputTotal == null ? null : estimateCost(tokens.inputTotal, tokens.outputTotal, prices[model]);
+    return cost == null || !flows ? null : cost / flows * 1000;
+  };
+  const card = bars("자동기입 1,000번당 예상 비용", "USD · 낮을수록 좋음", perThousand,
+    Math.max(0.01, ...state.selected.map((m) => perThousand(m) ?? 0)), (v) => formatUsd(v),
+    "입력·출력 토큰 × 토큰 사용량 탭의 모델 단가 설정. 단가를 넣지 않은 모델은 —로 둡니다.");
+  card.querySelectorAll(".bar-row").forEach((row, index) => {
+    if (perThousand(state.selected[index]) == null && report(state.selected[index])) row.after(element("span", "단가 미설정 · 토큰 사용량 탭에서 입력", "range-note"));
+  });
+  return card;
 }
 
 /**
@@ -346,6 +394,10 @@ function scoreCard() {
       `채움률 ${(autofill.fillRate * 100).toFixed(1)}%`];
     if (values.length > 1) parts.push(`반복 ${values.length}회 범위 ${Math.min(...values).toFixed(1)}~${Math.max(...values).toFixed(1)}%`);
     row.after(element("span", parts.join(" · "), "range-note"));
+    // 평가는 다음 요청을 정답으로 만들어, 앞 단계(섹션 분류·학력 구분 선택) 오답은 이 점수에 반영되지 않는다.
+    const upstream = report(state.selected[index])?.upstream;
+    const upstreamWrong = upstream ? upstream.wrongKey + upstream.unnecessary : 0;
+    if (upstreamWrong) row.nextSibling.after(element("span", `앞 단계 오답 ${upstreamWrong}개(섹션 분류·학력 구분) · 실제 제품에선 이보다 낮을 수 있음`, "range-note upstream-note"));
   });
   card.append(element("p", "정밀도 = 넣은 칸 중 맞은 비율 · 채움률 = 넣어야 할 칸 중 맞게 넣은 비율. 잘못 넣으면 놓칠 때보다 2배 크게 깎입니다.", "muted metric-foot"));
   return card;
@@ -641,6 +693,9 @@ function renderFields() {
         const keys = [...rows.keys()];
         const better = keys.filter((key) => delta(model, key) > 0).length;
         const worse = keys.filter((key) => delta(model, key) < 0).length;
+        const changes = changedConditions(runs[model], bases[model]);
+        card.append(element("span", changes.length ? `달라진 조건: ${changes.join(", ")}` : "조건 같음(코드·프롬프트·설정)",
+          changes.length ? "fields-changes" : "muted"));
         const line = element("span", undefined, "fields-delta");
         line.append(element("b", `개선 ${better}${kind.noun === "칸" ? "칸" : "개"}`, "up"), element("span", " · "),
           element("b", `악화 ${worse}${kind.noun === "칸" ? "칸" : "개"}`, "down"));
@@ -1587,7 +1642,7 @@ async function openRun() {
       ? "비교할 모델을 고릅니다(최대 5개). 같은 조건으로 한 모델씩 차례로 돌고, 결과는 한 화면에 나란히 나옵니다."
       : "이 서버에 연결된 공급자가 없습니다.", "div"),
     field("반복 수", repetitions, "같은 입력을 몇 번 돌릴지(1~20). 응답시간 편차를 보려면 3 이상을 권장합니다."),
-    field("프롬프트 이름", prompt, "결과를 구분할 이름표(선택). 예: baseline. 실제 프롬프트 내용은 서버가 자동으로 기록합니다."),
+    field("실행 이름", prompt, "무엇을 바꿨는지 짧게(선택). 예: baseline, prompt-v2, batch10. 프롬프트 원문·코드 버전·서버 설정은 서버가 자동으로 기록합니다."),
     message, submit);
   form.addEventListener("submit", async (event) => {
     event.preventDefault();

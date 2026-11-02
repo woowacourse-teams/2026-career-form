@@ -45,7 +45,9 @@ public final class RunReporter {
         });
         return new RunReport(aggregator.aggregate(records.stream().map(CallResultRecord::toCallResult).toList()),
             performance, tokens, flows(records), timing(run, records), RunService.SCORING_VERSION,
-            repetitions(records, expected), autofill(records, expected).map(RunReport.Autofill::of).orElse(null));
+            repetitions(records, expected), autofill(records, expected).map(RunReport.Autofill::of).orElse(null),
+            aggregator.aggregate(records.stream().filter(record -> record.kind() != CallKind.GENERIC_FIELDS)
+                .map(CallResultRecord::toCallResult).toList()).items());
     }
 
     private static java.util.Optional<AutofillOutcome> autofill(List<CallResultRecord> records,

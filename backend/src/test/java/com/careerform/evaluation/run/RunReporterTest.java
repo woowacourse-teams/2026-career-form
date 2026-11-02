@@ -48,6 +48,18 @@ class RunReporterTest {
     }
 
     @Test
+    @DisplayName("앞 단계 판정은 칸 매핑을 뺀 호출(섹션 분류·선택 결정)의 항목만 더한다")
+    void reportsUpstreamItems() {
+        EvaluationRun run = run(AT.minusSeconds(10), AT, AT.plusSeconds(4));
+        CallResultRecord sections = new CallResultRecord("run-1", 1, "a", 1, CallKind.SECTION_CLASSIFY,
+            CallKind.Stage.PREPARATION, null, new CallScore(2, 1, 0, 1, 0), Map.of(), 100 * MS, List.of(), AT);
+        CallResultRecord fields = record(1, "a", 2, CallKind.Stage.MAPPING, new CallScore(5, 3, 2, 0, 0), 100, List.of());
+
+        assertThat(new RunReporter().report(run, List.of(sections, fields)).upstream())
+            .isEqualTo(new com.careerform.evaluation.scoring.ItemCounts(2, 1, 0, 1, 0));
+    }
+
+    @Test
     @DisplayName("반복마다 항목 단위 정확도를 따로 계산해 흔들림을 보이게 하고, 실패만 있는 반복은 측정 불가다")
     void reportsAccuracyPerRepetition() {
         EvaluationRun run = run(AT.minusSeconds(10), AT, AT.plusSeconds(4));
