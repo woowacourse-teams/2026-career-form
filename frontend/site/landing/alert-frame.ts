@@ -1,5 +1,5 @@
 // Per-frame drawing for the deadline-alert scene (transform/opacity/class only).
-import { back, clamp, ease, lerp, segment } from "./scroll";
+import { applyMotion, back, clamp, ease, lerp, segment } from "./scroll";
 import styles from "./AlertScene.module.css";
 
 const NARROW = 900;
@@ -23,16 +23,6 @@ export type AlertElements = {
 };
 export type AlertLayout = { narrow: boolean; postStartX: number };
 type Seg = (start: number, end: number) => number;
-
-const set = (
-  el: HTMLElement | null | undefined,
-  transform: string,
-  opacity?: number,
-) => {
-  if (!el) return;
-  el.style.transform = transform;
-  if (opacity !== undefined) el.style.opacity = String(opacity);
-};
 
 export function measureAlertLayout(els: AlertElements): AlertLayout | null {
   const { stage, axis, post } = els;
@@ -64,21 +54,21 @@ export function measureAlertLayout(els: AlertElements): AlertLayout | null {
 /** The posting card flips in, then the axis and its ticks draw. */
 function drawTimeline(els: AlertElements, L: AlertLayout, seg: Seg) {
   const intro = ease(seg(0, 0.18));
-  set(els.caption, `translate3d(0,${(1 - intro) * 24}px,0)`, intro);
+  applyMotion(els.caption, `translate3d(0,${(1 - intro) * 24}px,0)`, intro);
   const move = ease(seg(0.18, 0.36));
-  set(
+  applyMotion(
     els.post,
     `perspective(900px) translate3d(${lerp(L.postStartX, 0, move)}px,${lerp(-40, 0, move)}px,0) rotateX(${lerp(75, 0, intro)}deg) scale(${lerp(0.8, 1, intro)})`,
     seg(0, 0.08),
   );
   const draw = ease(seg(0.22, 0.42));
-  set(els.axis, `scaleX(${draw})`, draw > 0 ? 1 : 0);
+  applyMotion(els.axis, `scaleX(${draw})`, draw > 0 ? 1 : 0);
   [0.3, 0.36, 0.41].forEach((t0, i) => {
     const t = seg(t0, t0 + 0.04);
-    set(els.ticks[i], `scale(${back(t)})`, t);
-    set(els.labels[i], `translate3d(-50%,${(1 - t) * 8}px,0)`, t);
+    applyMotion(els.ticks[i], `scale(${back(t)})`, t);
+    applyMotion(els.labels[i], `translate3d(-50%,${(1 - t) * 8}px,0)`, t);
   });
-  set(
+  applyMotion(
     els.clock,
     `translate3d(0,${(1 - seg(0.38, 0.46)) * 30}px,0) rotate(${lerp(-14, 6, seg(0.38, 0.6))}deg)`,
     seg(0.38, 0.44),
@@ -93,14 +83,17 @@ function drawTimeline(els: AlertElements, L: AlertLayout, seg: Seg) {
 function drawNotifications(els: AlertElements, L: AlertLayout, seg: Seg) {
   const first = seg(0.46, 0.53);
   const fade = L.narrow ? 1 - seg(0.7, 0.74) : 1 - seg(0.84, 0.9) * 0.5;
-  set(
+  applyMotion(
     els.firstAlert,
     `translate3d(0,${(1 - first) * 20}px,0) scale(${lerp(0.6, 1, back(first))})`,
     first * fade,
   );
-  set(els.character, `translate3d(0,${(1 - ease(seg(0.42, 0.52))) * 110}%,0)`);
+  applyMotion(
+    els.character,
+    `translate3d(0,${(1 - ease(seg(0.42, 0.52))) * 110}%,0)`,
+  );
   const stamped = seg(0.62, 0.7);
-  set(
+  applyMotion(
     els.stamp,
     `translate3d(0,${(1 - stamped) * -80}px,0) scale(${lerp(1.8, 1, back(stamped))}) rotate(${lerp(-30, -8, stamped)}deg)`,
     stamped,
@@ -109,7 +102,7 @@ function drawNotifications(els: AlertElements, L: AlertLayout, seg: Seg) {
   const cancel = seg(0.74, 0.84);
   els.labels[1]?.classList.toggle(styles.cancelled, cancel > 0.5);
   els.ticks[1]?.classList.toggle(styles.tickCancelled, cancel > 0.5);
-  set(
+  applyMotion(
     els.cancelled,
     `translate3d(0,${(1 - cancel) * 20}px,0) scale(${lerp(0.7, 1, back(cancel))})`,
     cancel,

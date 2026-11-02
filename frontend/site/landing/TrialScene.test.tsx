@@ -57,6 +57,7 @@ describe("landing trial", () => {
 
     fireEvent.click(trial.getByRole("button", { name: "다시 해보기" }));
     expect(autofill()).toBeEnabled();
+    expect(autofill()).toHaveFocus();
     expect(trial.getAllByRole("textbox")[0]).toHaveTextContent("");
   });
 

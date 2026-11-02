@@ -35,19 +35,33 @@ export function trackProgress(
   return travel <= 0 ? 0 : clamp(-rect.top / travel);
 }
 
-export function usePrefersReducedMotion() {
-  const [reduced, setReduced] = useState(
-    () =>
-      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false,
+/** Subscribes to a media query; false where `matchMedia` is unavailable. */
+export function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(
+    () => window.matchMedia?.(query).matches ?? false,
   );
   useEffect(() => {
-    const media = window.matchMedia?.("(prefers-reduced-motion: reduce)");
+    const media = window.matchMedia?.(query);
     if (!media) return;
-    const update = () => setReduced(media.matches);
+    const update = () => setMatches(media.matches);
     media.addEventListener("change", update);
     return () => media.removeEventListener("change", update);
-  }, []);
-  return reduced;
+  }, [query]);
+  return matches;
+}
+
+export const usePrefersReducedMotion = () =>
+  useMediaQuery("(prefers-reduced-motion: reduce)");
+
+/** Writes one frame of motion: a transform and, optionally, an opacity. */
+export function applyMotion(
+  el: HTMLElement | null | undefined,
+  transform: string,
+  opacity?: number,
+) {
+  if (!el) return;
+  el.style.transform = transform;
+  if (opacity !== undefined) el.style.opacity = String(opacity);
 }
 
 /**

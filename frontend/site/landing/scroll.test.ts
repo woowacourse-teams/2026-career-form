@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { back, clamp, ease, lerp, segment, trackProgress } from "./scroll";
 import { isHolding } from "./useScrollHold";
+import { fillSchedule } from "./trial-fill";
+import { sampleFields } from "./sample-form";
 
 describe("scroll math", () => {
   it("clamps, interpolates and eases between fixed endpoints", () => {
@@ -35,5 +37,16 @@ describe("scroll math", () => {
     expect(isHolding({ top: -30, bottom: 870 }, 900)).toBe(true);
     expect(isHolding({ top: 200, bottom: 1100 }, 900)).toBe(false);
     expect(isHolding({ top: -700, bottom: 200 }, 900)).toBe(false);
+  });
+
+  it("reads every field before filling and flags review last", () => {
+    const { steps, end } = fillSchedule(1);
+    const at = (state: string) =>
+      steps.filter((s) => s.state === state).map((s) => s.at);
+    expect(at("seen")).toHaveLength(sampleFields.length);
+    expect(Math.max(...at("seen"))).toBeLessThan(Math.min(...at("done")));
+    expect(Math.max(...at("done"))).toBeLessThan(end);
+    expect(at("review").every((t) => t === end)).toBe(true);
+    expect(fillSchedule(0).steps.every((s) => s.at === 0)).toBe(true);
   });
 });
