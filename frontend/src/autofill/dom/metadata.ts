@@ -98,23 +98,12 @@ export interface StructuralLabel {
   description?: string;
 }
 
-function isRadio(control: Element): control is HTMLInputElement {
-  return control instanceof HTMLInputElement && control.type === "radio";
-}
-
-/**
- * Only preceding, control-free sibling text inside this question and row. A radio group
- * that leads its block keeps the question when detail fields revealed by its choice follow it.
- */
+/** Only preceding, control-free sibling text inside this question and row. */
 export function structuralLabelOf(controls: readonly HTMLElement[]): StructuralLabel | undefined {
   const target = controls[0];
   if (!target) return undefined;
   const row = structuralRow(target);
   if (controls.some((control) => structuralRow(control) !== row)) return undefined;
-  const last = controls[controls.length - 1]!;
-  const leadingGroup = controls.length > 1 && controls.every(isRadio);
-  const follows = (control: Element) => leadingGroup &&
-    Boolean(last.compareDocumentPosition(control) & Node.DOCUMENT_POSITION_FOLLOWING);
   let node: Element | null = target;
   while (node && !controls.every((control) => node!.contains(control))) node = node.parentElement;
   for (let depth = 0; node && depth < 10; depth += 1) {
@@ -122,7 +111,6 @@ export function structuralLabelOf(controls: readonly HTMLElement[]): StructuralL
     const parent: Element | null = node.parentElement;
     if (!parent || parent.matches(STRUCTURAL_STOP)) break;
     if (activeControls(parent, target).some((control) => !controls.includes(control) &&
-      !follows(control) &&
       (control.matches("input, select, textarea") || node!.contains(control)))) break;
     for (let sibling = node.previousElementSibling; sibling; sibling = sibling.previousElementSibling) {
       if (hiddenTextNode(sibling) || interactiveTextNode(sibling) ||
@@ -145,10 +133,7 @@ export function structuralLabelOf(controls: readonly HTMLElement[]): StructuralL
   return undefined;
 }
 
-/**
- * No name means no group unless a bounded block has its own question. The group is the
- * block's leading run of unnamed radios; detail fields revealed by the choice may follow it.
- */
+/** No name means no group unless a bounded block has its own question. */
 export function unnamedRadioGroupOf(radio: HTMLInputElement): HTMLInputElement[] {
   const row = structuralRow(radio);
   let node: Element = radio;
@@ -156,11 +141,10 @@ export function unnamedRadioGroupOf(radio: HTMLInputElement): HTMLInputElement[]
     if (node === row || node.matches(ROW_STOP)) break;
     const parent: Element | null = node.parentElement;
     if (!parent || parent.matches(STRUCTURAL_STOP)) break;
-    const all = activeControls(parent, radio);
-    const end = all.findIndex((control) =>
-      !isRadio(control) || Boolean(control.name) || structuralRow(control) !== row);
-    const controls = (end < 0 ? all : all.slice(0, end)) as HTMLInputElement[];
-    if (!controls.includes(radio)) break;
+    const controls = activeControls(parent, radio);
+    if (!controls.every((control): control is HTMLInputElement =>
+      control instanceof HTMLInputElement && control.type === "radio" &&
+      !control.name && structuralRow(control) === row)) break;
     if (controls.length > 1 && structuralLabelOf(controls)) return controls;
     node = parent;
   }

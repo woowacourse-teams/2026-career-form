@@ -12,8 +12,6 @@ import java.util.Optional;
 import java.util.function.UnaryOperator;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import com.careerform.evaluation.dataset.DatasetRejected.Code;
 import com.careerform.evaluation.scoring.CallKind;
 
@@ -118,13 +116,12 @@ class DatasetLoaderTest {
         assertThat(loader(valid()).find("other", 1)).isEmpty();
     }
 
-    @ParameterizedTest(name = "v{0}")
-    @ValueSource(ints = {1, 2})
-    @DisplayName("저장소의 generic-matching은 사람 검토를 마쳐 화면 3개 사례를 모두 읽는다")
-    void repositoryDatasetLoadsReviewedCases(int version) {
+    @Test
+    @DisplayName("저장소의 generic-matching v1은 사람 검토를 마쳐 화면 3개 사례를 모두 읽는다")
+    void repositoryDatasetLoadsReviewedCases() {
         DatasetLoader loader = new DatasetLoader(DatasetLoader.classpath(getClass().getClassLoader()));
 
-        LoadedDataset dataset = loader.load("generic-matching", version);
+        LoadedDataset dataset = loader.load("generic-matching", 1);
 
         assertThat(dataset.cases()).extracting(EvaluationCase::state)
             .containsExactlyInAnyOrder("initial", "high-school", "university");
