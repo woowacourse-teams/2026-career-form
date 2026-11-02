@@ -3,7 +3,7 @@ export function validRate(value) {
   if (value == null || String(value).trim() === '') return null;
   const rate = Number(value);
   if (!Number.isFinite(rate) || rate < 0 || rate > 1000000) {
-    throw new RangeError('단가는 0 이상 1,000,000 이하의 숫자로 입력해 주세요.');
+    throw new RangeError('단가는 0 이상 1,000,000 이하의 숫자만 허용합니다.');
   }
   return rate;
 }

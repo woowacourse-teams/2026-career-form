@@ -30,19 +30,19 @@ async function api(path, method = "GET", payload) {
   if (!response.ok) {
     const reasons = {
       RUN_ACTIVE: `이미 진행 중인 평가가 있습니다(실행 ${body?.activeRunId ?? "미확인"}).`,
-      BUDGET_EXCEEDED: "예상 모델 호출 수가 실행 한도를 넘습니다. 반복 수를 줄여 주세요.",
-      UNKNOWN_DATASET: "검토를 마친 데이터셋이 아닙니다. 데이터셋의 검토 상태를 확인해 주세요.",
+      BUDGET_EXCEEDED: "예상 모델 호출 수가 실행 한도를 넘습니다. 반복 수를 줄여야 합니다.",
+      UNKNOWN_DATASET: "검토를 마친 데이터셋이 아닙니다. 데이터셋 검토 상태 확인 필요.",
       INVALID_REPETITIONS: "반복 수는 1 이상 20 이하입니다.",
       INVALID_PROMPT_VERSION: "프롬프트 이름은 영문·숫자·.-_ 32자 이하입니다.",
       UNKNOWN_PROVIDER: "이 서버에 연결되지 않았거나 등록되지 않은 공급자입니다.",
       UNKNOWN_MODEL: "이 공급자가 허용하지 않은 모델입니다.",
-      INVALID_TARGETS: "모델은 1~5개를 중복 없이 골라 주세요.",
-      INVALID: "입력값을 확인해 주세요. 이름은 영문 소문자·숫자·-(2~32자), 모델은 1~10개, 시간 제한은 1,000~120,000ms입니다.",
+      INVALID_TARGETS: "모델은 중복 없이 1~5개만 고를 수 있습니다.",
+      INVALID: "입력값 오류. 이름은 영문 소문자·숫자·-(2~32자), 모델은 1~10개, 시간 제한은 1,000~120,000ms입니다.",
       RESERVED_NAME: "jev, openai는 서버 설정 공급자 이름이라 쓸 수 없습니다.",
       UNKNOWN_KEY: "서버에 없는 키 이름입니다.",
-      INVALID_URL: "기준 주소 형식이 올바르지 않습니다. 사용자 정보·질의·조각 없이 https 주소(호스트와 경로)로 넣어 주세요.",
+      INVALID_URL: "기준 주소 형식이 올바르지 않습니다. 사용자 정보·질의·조각 없이 https 주소(호스트와 경로)만 허용합니다.",
       INSECURE_URL: "https 주소만 쓸 수 있습니다. 로컬 자체 서빙은 서버에서 allow-local을 켜고 키 없이 등록해야 합니다.",
-      HOST_NOT_ALLOWED_FOR_KEY: "이 키는 고른 주소의 호스트로 보낼 수 없습니다. 키에 허용된 호스트를 확인해 주세요.",
+      HOST_NOT_ALLOWED_FOR_KEY: "이 키는 고른 주소의 호스트로 보낼 수 없습니다. 키에 허용된 호스트 확인 필요.",
       UNRESOLVABLE_HOST: "주소의 호스트를 찾을 수 없습니다.",
       INTERNAL_ADDRESS: "내부망·사설 주소로는 보낼 수 없습니다.",
     };
@@ -88,7 +88,7 @@ function bars(title, sub, values, max, format, foot) {
   const head = element("div", undefined, "metric-head");
   head.append(element("h3", title), element("span", sub, "muted"));
   card.append(head);
-  if (!state.selected.length) card.append(element("div", "비교할 모델을 선택하세요.", "empty"));
+  if (!state.selected.length) card.append(element("div", "비교할 모델 선택 필요.", "empty"));
   for (const model of state.selected) {
     const value = values(model);
     const row = element("div", undefined, "bar-row");
@@ -181,7 +181,7 @@ function renderTokenBars() {
   legend.append(element("span", "입력 토큰(모델 색)", "legend-input"), element("span", "출력 토큰", "legend-output"));
   box.append(legend);
   if (!state.selected.length) {
-    box.append(element("div", "비교할 모델을 선택하세요.", "empty"));
+    box.append(element("div", "비교할 모델 선택 필요.", "empty"));
     return box;
   }
   const rows = state.selected.map((model) => {
@@ -280,7 +280,7 @@ function renderTokenBars() {
     summary.append(element("p", "자동기입 1회 = 사례 하나의 준비·매핑 호출 전체. 비용 = 입력·출력 토큰 × 모델 단가 설정의 USD 단가(100만 토큰당). 서버는 비용을 계산하지 않는다.", "muted"));
     box.append(summary);
   } else if (observed.length) {
-    box.append(element("p", "비용을 보려면 모델 단가 설정에서 입력·출력 단가를 넣어 주세요.", "muted"));
+    box.append(element("p", "비용 표시에는 모델 단가 설정의 입력·출력 단가가 필요합니다.", "muted"));
   }
   return box;
 }
@@ -380,7 +380,7 @@ function renderItemBreakdown() {
   const legend = element("div", undefined, "item-legend");
   ITEM_KINDS.forEach(({ label, className }) => legend.append(element("span", label, className)));
   card.append(legend);
-  if (!state.selected.length) card.append(element("div", "비교할 모델을 선택하세요.", "empty"));
+  if (!state.selected.length) card.append(element("div", "비교할 모델 선택 필요.", "empty"));
   for (const model of state.selected) {
     const items = report(model)?.quality.items;
     const scored = items ? ITEM_KINDS.reduce((sum, { key }) => sum + (items[key] ?? 0), 0) : 0;
@@ -503,10 +503,10 @@ function dialog(title, content, className) {
 const STATE_NAMES = { initial: "처음 화면", "high-school": "고등학교", university: "대학교", ged: "검정고시" };
 // 화면 상태 설명. 같은 지원서라도 무엇을 골랐는지에 따라 나타나는 칸이 달라 상태별로 따로 평가한다.
 const STATE_NOTES = {
-  initial: "지원서를 처음 연 상태예요. 아무것도 고르지 않아 학력 행에는 '구분' 선택칸만 있고, 제품이 학력 구분을 직접 고르는 준비 단계까지 평가해요.",
-  "high-school": "학력 구분에서 '고등학교', 보훈·장애에서 '대상'을 고른 뒤 펼쳐진 화면이에요. 고등학교 학력 칸과 보훈·장애 상세 칸이 나타나요.",
-  university: "학력 구분에서 '대학교', 보훈·장애에서 '대상'을 고른 뒤 펼쳐진 화면이에요. 대학 학력 칸(전공 포함)과 보훈·장애 상세 칸이 나타나요.",
-  ged: "학력 구분에서 '검정고시'만 고른 화면이에요. 학교·전공 칸 없이 '합격연월' 칸 하나만 나타나요.",
+  initial: "지원서를 처음 연 상태. 아무것도 고르지 않아 학력 행에는 '구분' 선택칸만 있습니다. 제품이 학력 구분을 직접 고르는 준비 단계까지 평가합니다.",
+  "high-school": "학력 구분 '고등학교', 보훈·장애 '대상'을 고른 뒤 펼쳐진 화면. 고등학교 학력 칸과 보훈·장애 상세 칸이 나타납니다.",
+  university: "학력 구분 '대학교', 보훈·장애 '대상'을 고른 뒤 펼쳐진 화면. 대학 학력 칸(전공 포함)과 보훈·장애 상세 칸이 나타납니다.",
+  ged: "학력 구분 '검정고시'만 고른 화면. 학교·전공 칸 없이 '합격연월' 칸 하나만 나타납니다.",
 };
 const CONTROL_NAMES = { text: "글자", select: "선택", radio: "라디오", checkbox: "체크", textarea: "긴 글", custom: "직접 구현" };
 const CALL_NAMES = { SECTION_CLASSIFY: "섹션 분류", INTERACTION_DECISION: "학력 구분 선택", GENERIC_FIELDS: "칸 매핑" };
@@ -535,8 +535,8 @@ function datasetView(selected = 0) {
   head.append(title, element("span", data.usable ? "평가에 사용 가능" : "검토 필요", data.usable ? "badge ok" : "badge"));
   wrap.append(head);
   const about = element("details", undefined, "dataset-about");
-  about.append(element("summary", "이 데이터셋은 무엇인가요?"),
-    element("p", "실제 채용 지원서 하나를 개인정보 없이 정제한 화면들이에요. 학력 구분이나 보훈·장애를 무엇으로 고르느냐에 따라 나타나는 칸이 달라서, 화면 상태마다 따로 평가해요. 모델은 확장프로그램이 실제로 보내는 질문에 답하고, 사람이 검토한 정답과 비교해 채점해요."));
+  about.append(element("summary", "이 데이터셋이란"),
+    element("p", "실제 채용 지원서 하나를 개인정보 없이 정제한 화면 모음. 학력 구분·보훈·장애 선택에 따라 나타나는 칸이 달라 화면 상태마다 따로 평가합니다. 모델은 확장프로그램이 실제로 보내는 질문에 답하고, 사람이 검토한 정답과 비교해 채점합니다."));
   wrap.append(about);
   if (!data.usable && data.rejection) wrap.append(element("p", `미완료 검토: ${data.rejection}`, "muted"));
   const layout = element("div", undefined, "dataset-layout2");
@@ -560,7 +560,7 @@ function datasetView(selected = 0) {
   layout.append(nav);
   const main = element("div", undefined, "screen-detail");
   if (selected === "profile") {
-    main.append(element("h3", "합성 프로필"), element("p", "평가에 쓰는 가상 지원자예요. 실제 지원자 정보가 아니에요. 모델에게는 이 값이 아니라 화면 구조만 전달돼요.", "state-note"));
+    main.append(element("h3", "합성 프로필"), element("p", "평가용 가상 지원자. 실제 지원자 정보가 아닙니다. 모델에는 이 값이 아니라 화면 구조만 전달됩니다.", "state-note"));
     Object.entries(data.profiles).forEach(([id, profile]) => main.append(element("h5", id), profileTable(profile)));
   }
   else {
@@ -654,7 +654,7 @@ function criteriaView() {
   const formula = element("div", undefined, "criteria-formula");
   formula.append(element("span", "정확도", "formula-name"), element("span", "="),
     element("span", "맞힌 항목 수", "formula-part"), element("span", "÷"), element("span", "채점한 항목 수", "formula-part"));
-  wrap.append(formula, element("p", "항목은 섹션 하나, 칸 하나, 버튼·선택지 결정 하나예요. 모든 화면·모든 호출의 항목을 합쳐 계산해서, 칸이 많은 호출이 그만큼 비중을 가져요.", "muted criteria-lead"));
+  wrap.append(formula, element("p", "항목 = 섹션 하나, 칸 하나, 버튼·선택지 결정 하나. 모든 화면·모든 호출의 항목을 합쳐 계산하므로 칸이 많은 호출일수록 비중이 큽니다.", "muted criteria-lead"));
   const card = (title, ...children) => {
     const section = element("section", undefined, "criteria-card");
     section.append(element("h4", title), ...children);
@@ -675,27 +675,27 @@ function criteriaView() {
     box.append(thead, body);
     return box;
   };
-  card("1. 무엇을 정답으로 보나요",
-    element("p", "칸이 뜻하는 지원 프로필 항목이 정답이에요. 지원자가 그 값을 갖고 있는지는 상관없어요. 지원하는 프로필 항목에 없는 의미면 정답은 '넣을 항목 없음'이에요."),
+  card("1. 정답 기준",
+    element("p", "칸이 뜻하는 지원 프로필 항목이 정답. 지원자가 그 값을 가졌는지는 따지지 않습니다. 지원 프로필 항목에 없는 의미면 정답은 '넣을 항목 없음'."),
     table(["예시", "정답"], [["학교명 칸(대학교 행)", "education.university.schoolName"], ["자기소개서 칸", "넣을 항목 없음"],
       ["지원경로 섹션", "해당 없음(NONE)"]]));
   card("2. 틀림의 종류",
-    element("p", "모두 그 항목 하나를 틀린 것으로 세고, 따로 더 감점하지 않아요. 위험도는 달라서 '항목 판정' 막대에서 따로 보여요."),
+    element("p", "모두 그 항목 하나를 틀린 것으로 세고 추가 감점은 없습니다. 위험도가 달라 '항목 판정' 막대에서 따로 보여줍니다."),
     table(["종류", "뜻", "실제 위험"], [["오답", "정답이 있는데 다른 항목을 고름", "틀린 값이 들어감"],
       ["누락(판단 보류)", "정답이 있는데 고르지 않음", "사용자가 직접 입력"], ["불필요 제안", "넣을 항목이 없는데 무언가를 고름", "넣지 말아야 할 칸에 입력"]]));
   card("3. 점수에서 빠지는 것",
     table(["경우", "처리"], [["타임아웃·API 오류·응답 형식 오류", "정확도에서 빼고 실패율에 넣음"],
       ["공급자를 쓸 수 없어 답하지 못한 항목", "그 항목만 채점에서 뺌"], ["채점할 항목이 하나도 없는 호출", "채점 불가로 실패율에 넣음"]]));
   card("4. 준비 정확도와 필드 매핑 정확도",
-    element("p", "같은 계산을 단계별로 나눈 거예요. 준비는 칸을 꺼내기 위한 질문(조작할 섹션 분류, 학력 구분 선택), 필드는 칸에 넣을 값을 정하는 질문(전체 섹션 분류, 칸 매핑)이에요."));
+    element("p", "같은 계산을 단계별로 나눈 값. 준비는 칸을 꺼내기 위한 질문(조작할 섹션 분류, 학력 구분 선택), 필드는 칸에 넣을 값을 정하는 질문(전체 섹션 분류, 칸 매핑)."));
   card("5. 실제 자동기입 결과",
-    element("p", "칸 매핑 답을 확장프로그램과 같은 확신도 기준으로 나눠, 사용자 화면에 실제로 무엇이 자동으로 들어가는지 봐요."),
+    element("p", "칸 매핑 답을 확장프로그램과 같은 확신도 기준으로 나눠, 사용자 화면에 실제로 자동기입되는 결과를 봅니다."),
     table(["확신도", "제품 동작", "채점"], [["0.8 이상", "자동기입", "정답·오답을 따짐"], ["0.5 ~ 0.8", "사용자 확인 필요", "확인 필요로 셈"],
       ["0.5 미만", "막음", "막음으로 셈"]]),
-    element("p", "확장프로그램의 이름 칸 보정, 정확히 일치하는 값 올림 규칙은 반영하지 않아요. OpenAI 확신도는 모델이 스스로 적은 값이에요.", "muted"));
+    element("p", "확장프로그램의 이름 칸 보정, 정확히 일치하는 값 올림 규칙은 반영하지 않습니다. OpenAI 확신도는 모델이 스스로 적은 값입니다.", "muted"));
   card("6. 반복별 범위",
-    element("p", "같은 입력을 반복마다 따로 채점한 정확도의 최소~최대예요. 가장 높은 두 모델의 범위가 겹치면 '차이 구분 불가'로 봐요."),
-    element("p", "반복 수가 적으면 범위가 실제보다 좁게 잡혀요. 같은 입력을 새로 실행하면 범위 밖으로 움직일 수 있어요.", "muted"));
+    element("p", "같은 입력을 반복마다 따로 채점한 정확도의 최소~최대. 상위 두 모델의 범위가 겹치면 '차이 구분 불가'로 판정합니다."),
+    element("p", "반복 수가 적으면 범위가 실제보다 좁게 잡힙니다. 같은 입력을 새로 실행하면 범위 밖으로 움직일 수 있습니다.", "muted"));
   return wrap;
 }
 
@@ -1188,7 +1188,7 @@ async function openRun() {
       const [provider, ...rest] = box.value.split("/");
       return { provider, model: rest.join("/") };
     });
-    if (!chosen.length || chosen.length > 5) { message.textContent = "모델을 1~5개 골라 주세요."; return; }
+    if (!chosen.length || chosen.length > 5) { message.textContent = "모델은 1~5개만 고를 수 있습니다."; return; }
     submit.disabled = true;
     try {
       const result = await api("/runs", "POST", {
