@@ -124,10 +124,10 @@ function renderOverview() {
   };
   const failure = (m) => percent(total ? report(m)?.flows.failureRate : perf(m)?.failureRate);
   $("#cf-performance").replaceChildren(
-    bars("응답시간", "평균 · 초 ↓", seconds, Math.max(1, ...state.selected.map((m) => seconds(m) ?? 0)), (v) => `${v.toFixed(2)}초`,
-      total ? "사례 하나의 준비·매핑 호출 시간 합. 서버 관측, 실제 페이지 조작 제외."
-        : "제품 서비스 호출부터 반환까지. 서버 내부 배치·모델 대기 포함."),
     modelTimeCard(perf),
+    bars("사용자 체감 응답시간", "평균 · 초 ↓", seconds, Math.max(1, ...state.selected.map((m) => seconds(m) ?? 0)), (v) => `${v.toFixed(2)}초`,
+      total ? "자동기입 1회(사례 하나)의 준비·매핑 호출 시간 합. 재시도·서버 처리 포함, 브라우저↔서버 왕복과 페이지 조작 제외."
+        : "제품 API 호출 1건의 시작부터 반환까지. 재시도·서버 내부 배치·대기 포함."),
     bars("처리량", "완료 호출/초 ↑", (m) => perf(m)?.throughputPerSecond, Math.max(0.1, ...state.selected.map((m) => perf(m)?.throughputPerSecond ?? 0)),
       (v) => `${v.toFixed(2)}/초`, "완료 호출 수 ÷ 실행 경과 시간"),
     bars("실패율", "% ↓", failure, 100, (v) => `${v.toFixed(1)}%`,
@@ -136,12 +136,12 @@ function renderOverview() {
 
 /**
  * 모델 응답 시간: 서버가 모델 API에 요청을 보낸 직전부터 응답 전체를 받을 때까지, 시도 1건 평균. 네트워크와 공급자 대기가
- * 들어 있고 서버의 요청 만들기·해석·배치 대기는 빠진다. 응답시간 카드와의 차이가 서버 쪽 처리 시간이다.
+ * 들어 있고 서버의 요청 만들기·해석·배치 대기는 빠진다. 사용자 체감 응답시간 카드와의 차이가 재시도·서버 쪽 처리 시간이다.
  */
 function modelTimeCard(perf) {
   const attempt = (m) => perf(m)?.modelAttempt;
   const seconds = (m) => attempt(m)?.meanMs == null ? null : attempt(m).meanMs / 1000;
-  const card = bars("모델 응답 시간", "시도 1건 평균 · 초 ↓", seconds, Math.max(1, ...state.selected.map((m) => seconds(m) ?? 0)),
+  const card = bars("모델 응답 시간", "모델 비교 기준 · 시도 1건 평균 · 초 ↓", seconds, Math.max(1, ...state.selected.map((m) => seconds(m) ?? 0)),
     (v) => `${v.toFixed(2)}초`, "모델 API에 보낸 직전부터 응답을 다 받을 때까지. 네트워크·공급자 대기 포함, 서버 처리 제외. 재시도는 시도마다 따로 셉니다.");
   card.querySelectorAll(".bar-row").forEach((row, index) => {
     const value = attempt(state.selected[index]);
