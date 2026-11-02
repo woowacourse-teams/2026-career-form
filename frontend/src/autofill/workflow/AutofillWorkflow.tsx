@@ -16,11 +16,6 @@ import {
 } from "./static-fields-session";
 import { componentBasicControls } from "../policy/components/fingerprint";
 import {
-  AnalysisServiceError,
-  isTransientAnalysisError,
-} from "../api/runtime-client";
-import styles from "../../autofill-demo/AutofillDemo.module.css";
-import {
   resolveDocumentCompany,
   isUnsupportedHplace,
   unsupportedHplaceKind,
@@ -71,6 +66,8 @@ import {
   type WriteResultListener,
 } from "../write/executor";
 import { WorkflowScreens } from "./WorkflowScreens";
+import { WorkflowError, type WorkflowErrorKind } from "./WorkflowError";
+import { errorDetail, startErrorKind } from "./start-error";
 import { observeQuality } from "../quality/safe-observation";
 import {
   createAnalyzeFields,
@@ -137,7 +134,12 @@ const MAX_ENTRY_PASSES = 10;
 
 export function AutofillWorkflow(props: WorkflowProps) {
   const [loaded, setLoaded] = useState(false);
-  const [error, setError] = useState<string>();
+  const [error, setError] = useState<{
+    kind: WorkflowErrorKind;
+    detail: string;
+  }>();
+  // Retry only runs from the user's click and reloads the policy afresh.
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let active = true;
     const url = props.pageDocument.URL;
@@ -160,40 +162,32 @@ export function AutofillWorkflow(props: WorkflowProps) {
       })
       .catch((error: unknown) => {
         if (!active) return;
-        if (
-          error instanceof AnalysisServiceError &&
-          error.code === "POLICY_INCOMPATIBLE"
-        ) {
-          setError(
-            "지원서 정책이 이 확장 버전과 맞지 않아요. 확장을 최신 버전으로 업데이트한 뒤 다시 시도해 주세요.",
-          );
-          return;
-        }
-        setError(
-          isTransientAnalysisError(error)
-            ? "입력 정책을 확인하는 서버에 연결하지 못했어요. 네트워크 연결을 확인한 뒤 다시 시도해 주세요."
-            : "사이트 입력 정책을 확인하지 못했어요. 돌아간 뒤 다시 시도해 주세요.",
-        );
+        setError({ kind: startErrorKind(error), detail: errorDetail(error) });
       });
     return () => {
       active = false;
     };
-  }, [props.apiClient, props.pageDocument]);
+  }, [props.apiClient, props.pageDocument, attempt]);
+  const [developerMode] = useDeveloperMode();
   if (error)
     return (
-      <div className={styles.screen}>
-        <div className={styles.exceptionCard} role="alert">
-          <h2>자동 기입을 시작하지 못했어요</h2>
-          <p>{error}</p>
-        </div>
-        <button className={styles.primary} type="button" onClick={props.onExit}>
-          돌아가기
-        </button>
-      </div>
+      <WorkflowError
+        kind={error.kind}
+        developerMode={developerMode}
+        detail={error.detail}
+        onRetry={() => setAttempt((count) => count + 1)}
+        onBack={props.onExit}
+      />
     );
   if (!loaded)
     return <div role="status">사이트 입력 정책을 확인하고 있어요</div>;
-  return <PolicyReadyWorkflow {...props} />;
+  return (
+    <PolicyReadyWorkflow
+      key={attempt}
+      {...props}
+      onRetry={() => setAttempt((count) => count + 1)}
+    />
+  );
 }
 
 function PolicyReadyWorkflow({
@@ -206,7 +200,8 @@ function PolicyReadyWorkflow({
   unsupportedImageUrl,
   writingImageUrl,
   addressSearch = runtimeAddressSearch,
-}: WorkflowProps) {
+  onRetry,
+}: WorkflowProps & { onRetry(): void }) {
   const companyId = resolveDocumentCompany(pageDocument);
   // Analysis may replace the installed policy mid-run. The structure loop
   // stays tied to the policy present when the workflow started, so a document
@@ -372,6 +367,11 @@ function PolicyReadyWorkflow({
   const [warnings, setWarnings] = useState<string[]>([]);
   const [exceptionTitle, setExceptionTitle] =
     useState("분석을 완료하지 못했습니다");
+  // Set only when the first analysis fails; later exceptions are interruptions.
+  const [startError, setStartError] = useState<{
+    kind: WorkflowErrorKind;
+    detail: string;
+  }>();
   const [results, setResults] = useState<ApprovedWriteResult[]>([]);
   const [analysisSummary, setAnalysisSummary] = useState<{
     mode: "ADAPTER" | "GENERIC";
@@ -696,6 +696,10 @@ function PolicyReadyWorkflow({
       } catch (error) {
         if (!active) return;
         setExceptionTitle(safeErrorTitle(error));
+        setStartError({
+          kind: startErrorKind(error),
+          detail: errorDetail(error),
+        });
         setStage("exception");
       }
     };
@@ -1343,6 +1347,9 @@ function PolicyReadyWorkflow({
       adapter={adapter}
       workflowDiagnostics={workflowDiagnostics}
       exceptionTitle={exceptionTitle}
+      exceptionKind={startError?.kind ?? "interrupted"}
+      exceptionDetail={startError?.detail ?? exceptionTitle}
+      onRetry={onRetry}
       unsupportedImageUrl={unsupportedImageUrl}
       writingImageUrl={writingImageUrl}
       unsupportedKind={

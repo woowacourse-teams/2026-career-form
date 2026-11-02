@@ -26,6 +26,8 @@ import { resultFieldLabel } from "./result-label";
 import resultStyles from "./WorkflowResults.module.css";
 import resultCss from "./WorkflowResults.module.css?inline";
 import { WorkflowLoading, type WriteProgress } from "./WorkflowLoading";
+import { WorkflowError, type WorkflowErrorKind } from "./WorkflowError";
+import { buildResultModel } from "./result-model";
 import type { WorkflowActivity } from "./progress-model";
 import type { Profile } from "../../profile/model";
 import {
@@ -86,6 +88,11 @@ interface WorkflowScreensProps {
   adapter: WorkflowAdapter;
   workflowDiagnostics: readonly WorkflowDiagnostic[];
   exceptionTitle: string;
+  /** Defaults to an interruption; start errors name their own kind. */
+  exceptionKind?: WorkflowErrorKind;
+  /** Raw text for developer mode only. */
+  exceptionDetail?: string;
+  onRetry?(): void;
   unsupportedImageUrl?: string;
   writingImageUrl?: string;
   unsupportedKind?: "v1" | "builder";
@@ -141,6 +148,9 @@ export function WorkflowScreens({
   addressResult,
   structureDiagnostics,
   exceptionTitle,
+  exceptionKind = "interrupted",
+  exceptionDetail = exceptionTitle,
+  onRetry,
   unsupportedImageUrl,
   writingImageUrl,
   unsupportedKind,
@@ -715,7 +725,7 @@ export function WorkflowScreens({
           </p>
         )}
         {!exitInToolbar && (
-          <button className={styles.primary} type="button" onClick={onExit}>
+          <button className={styles.grayButton} type="button" onClick={onExit}>
             수동 복사로 돌아가기
           </button>
         )}
@@ -723,20 +733,28 @@ export function WorkflowScreens({
     );
   }
 
+  const { completed, pending } =
+    exceptionKind === "interrupted"
+      ? buildResultModel({
+          reviewItems,
+          results,
+          progress,
+          profile,
+          wasWritten,
+          progressIdFor,
+          progressStateFor,
+          fieldStateFor,
+        })
+      : { completed: [], pending: [] };
   return (
-    <div className={styles.screen}>
-      <Header step="예외" title={exceptionTitle} />
-      <div className={styles.exceptionCard}>
-        <p>
-          자동 기입은 완료하지 않았습니다. 조건부 선택 상태는 변경되었을 수
-          있으며, 수동 복사는 계속 사용할 수 있습니다.
-        </p>
-      </div>
-      {!exitInToolbar && (
-        <button className={styles.primary} type="button" onClick={onExit}>
-          수동 복사로 돌아가기
-        </button>
-      )}
-    </div>
+    <WorkflowError
+      kind={exceptionKind}
+      developerMode={developerMode}
+      detail={exceptionDetail}
+      completedCount={completed.length}
+      manualCount={pending.length}
+      onRetry={onRetry}
+      onBack={exitInToolbar ? undefined : onExit}
+    />
   );
 }

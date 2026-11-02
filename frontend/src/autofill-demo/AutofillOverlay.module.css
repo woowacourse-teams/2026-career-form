@@ -7,7 +7,7 @@
   min-height: 0;
   overflow: hidden;
   color: var(--color-text);
-  background: var(--color-surface);
+  background: var(--color-page);
   font-family: var(--font-ui);
 }
 
@@ -29,19 +29,20 @@
   outline: none;
 }
 
+/* Text button: no border or fill until hovered. */
 .toolbar button {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   min-height: 40px;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border: 0;
+  border-radius: var(--radius-control);
   padding: 8px 12px;
   color: var(--color-action-strong);
-  background: var(--color-surface);
+  background: transparent;
   font: inherit;
   font-size: 13px;
-  font-weight: 650;
+  font-weight: 500;
   cursor: pointer;
 }
 
@@ -50,7 +51,7 @@
 }
 
 .toolbar button:focus-visible {
-  outline: 2px solid var(--color-action-strong);
+  outline: 3px solid var(--color-focus);
   outline-offset: 2px;
 }
 

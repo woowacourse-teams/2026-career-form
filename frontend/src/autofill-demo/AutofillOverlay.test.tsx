@@ -237,9 +237,7 @@ describe("AutofillOverlay", () => {
         />,
       );
       await screen.findByRole("heading", {
-        name: blockedAnalysis
-          ? "이 페이지에서는 자동 기입을 진행할 수 없습니다"
-          : "기입 결과",
+        name: blockedAnalysis ? "자동 기입을 멈췄어요" : "기입 결과",
       });
       expect(fieldsPass).toBe(1);
       expect(

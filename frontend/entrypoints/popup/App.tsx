@@ -61,9 +61,13 @@ export function App({
   return (
     <div className={styles.popup}>
       <header className={styles.header}>
-        <div className={styles.logo} aria-hidden="true">
-          CF
-        </div>
+        <img
+          className={styles.logo}
+          src="/side-panel-launcher-logo.png"
+          alt=""
+          width={40}
+          height={40}
+        />
         <div>
           <p>CAREER FORM</p>
           <h1>지원서 입력을 더 가볍게</h1>
