@@ -12,6 +12,7 @@ import { AiScene } from "./AiScene";
 import { JEV_STEPS, stepAt } from "./jev";
 import { filledCount, reviewCount, sampleFields } from "./sample-form";
 import formStyles from "./SampleForm.module.css";
+import styles from "./AiScene.module.css";
 
 const layout: AiLayout = {
   narrow: false,
@@ -114,6 +115,12 @@ describe("의사결정 AI(JEV) scene", () => {
     expect(els.bigNum?.textContent).toBe("4.2");
     expect(visible(els.summary)).toBe(1);
     expect(els.summary?.textContent).toContain(`채움 ${filledCount}칸`);
+  });
+
+  it("flies values on a layer above the form and the console", () => {
+    expect(els.flies).toHaveLength(filledCount);
+    for (const fly of els.flies)
+      expect(fly.parentElement).toHaveClass(styles.flyLayer);
   });
 
   it("snaps between steps instead of moving with reduced motion", () => {

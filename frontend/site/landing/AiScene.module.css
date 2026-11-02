@@ -225,6 +225,15 @@
   background: var(--action);
   color: #fff;
 }
+/* Values fly from the console to the form, so their layer sits above both.
+   `.stage > *` gives every child its own stacking context, which would
+   otherwise trap the values' z-index under the form and the console. */
+.flyLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  pointer-events: none;
+}
 .fly {
   position: absolute;
   left: 0;

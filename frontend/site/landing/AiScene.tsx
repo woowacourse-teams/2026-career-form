@@ -103,7 +103,7 @@ export function AiScene({ onInstall }: { onInstall: InstallHandler }) {
             <i key={title} />
           ))}
         </div>
-        <div aria-hidden="true">
+        <div className={styles.flyLayer} aria-hidden="true">
           {sampleFields
             .filter((f) => f.value)
             .map((f) => (
