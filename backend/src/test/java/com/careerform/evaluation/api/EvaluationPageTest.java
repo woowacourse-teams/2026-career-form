@@ -19,16 +19,16 @@ class EvaluationPageTest {
             "id=\"cf-progress\"", "id=\"provider-open\"", "id=\"comparison-detail\"");
         String app = read("static/evaluations/app.js");
         assertThat(app).contains("/quality/access.js", "\"/api/v1/evaluations\"", "/runs?limit=50", "/datasets/",
-            "/prompts/", "맞힌 항목 ÷ 채점 항목", "?.scoringVersion", "renderProgress", "progressbar",
+            "/prompts/", "renderProgress", "progressbar",
             "aria-valuenow", "renderTokenBars", "입력 토큰", "출력 토큰", "renderItemBreakdown", "quality.items",
             "오답(다른 항목)", "누락(판단 보류)", "불필요 제안", "예상 비용 비교", "자동기입 1,000회당", "가장 저렴한 모델의",
             "openProviders", "/provider-registrations", "HOST_NOT_ALLOWED_FOR_KEY", "INTERNAL_ADDRESS",
             "키 원문은 이 화면에 입력하지 않습니다", "datasetVersion: DATASET.version", "split: \"all\"",
-            "comparisonDetail", "accuracyCard", "?.repetitions", "차이 구분 불가", "반복 1회라 흔들림을 알 수 없음",
+            "comparisonDetail", "accuracyCard", "?.repetitions",
             "renderAutofill", "?.autofill", "실제 자동기입 결과", "자동기입 정확도", "확신도를 기록하기 전 실행",
             "STATE_NAMES", "STATE_NOTES", "dataset-about", "screen-list", "score-flow", "form-wire", "criteria-formula", "틀림의 종류", "dataset-tabs", "field-table", "profileTable", "PROMPT_APIS", "prompt-group", "criteria-table", "POST /api/v1/generic/sections/classify", "change-chips", "prompt-layout",
             "api(\"/prompts\")", "commit-list", "초기 버전", "lineDiff", "diff-table", "처음 기록한 프롬프트");
-        assertThat(app).doesNotContain("이름만 바뀜", "timeline-hint", "새 버전이 쌓이고", "prompt-model", "조각 ${", "변경 없는 조각");
+        assertThat(app).doesNotContain("이름만 바뀜", "우세 · 반복별", "맞힌 항목 ÷ 채점 항목", "variation-verdict", "timeline-hint", "새 버전이 쌓이고", "prompt-model", "조각 ${", "변경 없는 조각");
         assertThat(app).doesNotContain("field(\"분할\"", "field(\"데이터셋 버전\"", "renderVariation");
         String all = index + app + read("static/evaluations/styles.css") + read("static/evaluations/pricing.js");
         assertThat(all).doesNotContain("cdn.", "https://", "http://", "window.openai", "Pretendard",
@@ -42,7 +42,7 @@ class EvaluationPageTest {
         String skill = read("static/evaluations/collection-skill.md");
         assertThat(skill).contains("실제 지원서 값, 계정, 세션", "요청 JSON을 손으로 쓰지 않는다", "HUMAN_REVIEWED",
             "SOURCE_PIPELINE_VERIFIED", "CF-356-collection-1-structure-stats", "CF-356-collection-2-sanitize",
-            "[비식별]", "https://example.test");
+            "[비식별]", "https://example.test", "generic-matching` v2", "DATASET.version", "항상 전체(`all`)");
     }
 
     private static String read(String path) throws Exception {

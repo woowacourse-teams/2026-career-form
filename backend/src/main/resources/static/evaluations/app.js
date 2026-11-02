@@ -286,7 +286,7 @@ function renderTokenBars() {
 }
 
 /**
- * 최종 정확도와 반복별 범위(최소~최대)를 한 카드에 보이고, 가장 높은 두 모델의 범위가 겹치면 차이 구분 불가로 알린다.
+ * 최종 정확도와 반복별 범위(최소~최대)를 한 카드에 보인다.
  * 자세한 설명은 정답 기준 창에 있다.
  */
 function accuracyCard() {
@@ -295,8 +295,7 @@ function accuracyCard() {
   const ranges = state.selected.map((model) => {
     const values = (report(model)?.repetitions ?? []).map((item) => item.accuracy).filter((value) => value != null)
       .map((value) => value * 100);
-    return { model, values, min: Math.min(...values), max: Math.max(...values),
-      mean: values.reduce((sum, value) => sum + value, 0) / (values.length || 1) };
+    return { values, min: Math.min(...values), max: Math.max(...values) };
   });
   card.querySelectorAll(".bar-row").forEach((row, index) => {
     const range = ranges[index];
@@ -304,15 +303,6 @@ function accuracyCard() {
     row.after(element("span", range.values.length > 1
       ? `반복 ${range.values.length}회 범위 ${range.min.toFixed(1)}~${range.max.toFixed(1)}%` : "반복 1회", "range-note"));
   });
-  const measured = ranges.filter(({ values }) => values.length);
-  if (measured.length) {
-    const [first, second] = [...measured].sort((a, b) => b.mean - a.mean);
-    const verdict = measured.some(({ values }) => values.length < 2) ? "반복 1회라 흔들림을 알 수 없음"
-      : !second ? `반복 사이 ${(first.max - first.min).toFixed(1)}%p 흔들림`
-        : first.min <= second.max ? "차이 구분 불가 · 반복별 범위가 겹침" : `${first.model} 우세 · 반복별 범위가 겹치지 않음`;
-    card.append(element("p", verdict, "variation-verdict"));
-  }
-  card.append(element("p", `맞힌 항목 ÷ 채점 항목 · 채점식 ${report(state.selected[0])?.scoringVersion ?? "—"}`, "muted metric-foot"));
   return card;
 }
 
@@ -694,7 +684,7 @@ function criteriaView() {
       ["0.5 미만", "막음", "막음으로 셈"]]),
     element("p", "확장프로그램의 이름 칸 보정, 정확히 일치하는 값 올림 규칙은 반영하지 않습니다. OpenAI 확신도는 모델이 스스로 적은 값입니다.", "muted"));
   card("6. 반복별 범위",
-    element("p", "같은 입력을 반복마다 따로 채점한 정확도의 최소~최대. 상위 두 모델의 범위가 겹치면 '차이 구분 불가'로 판정합니다."),
+    element("p", "같은 입력을 반복마다 따로 채점한 정확도의 최소~최대. 두 모델의 범위가 겹치면 차이를 구분할 수 없습니다."),
     element("p", "반복 수가 적으면 범위가 실제보다 좁게 잡힙니다. 같은 입력을 새로 실행하면 범위 밖으로 움직일 수 있습니다.", "muted"));
   return wrap;
 }

@@ -7,7 +7,8 @@ description: Career Form 범용 자동기입 AI 평가 데이터셋에 새 공�
 
 이 문서는 팀원이 자기 AI 에이전트에게 그대로 넘기는 수집 절차다. 저장소의 `AGENTS.md`,
 `harness/policies/dom-snapshot-fixtures.md`, `backend/docs/model-evaluation.md`를 함께 읽는다.
-첫 사례는 우아한형제들 공고 R2605009다(`frontend/fixtures/dom-snapshots/woowahan-r2605009-*`).
+첫 사례는 우아한형제들 공고 R2605009다(`frontend/fixtures/dom-snapshots/woowahan-r2605009-*`). 현재 데이터셋은
+`generic-matching` v2(처음 화면, 고등학교, 대학교, 검정고시 4개 화면)다.
 
 ## 지켜야 할 것
 
@@ -530,9 +531,13 @@ description: Career Form 범용 자동기입 AI 평가 데이터셋에 새 공�
 2. `frontend/src/evaluation/capture/woowahan-dataset.test.ts`를 본떠 사이트별 테스트를 만든다. 제품 범용 흐름(준비 루프 → 섹션 분류 → 필드 매핑)을 fixture에 실행하고, 후속 요청은 정답으로 만든다.
 3. `CF356_WRITE_DATASET=1 npx vitest run <테스트> --project unit`으로 사례 파일과 manifest 해시를 쓰고, 환경 변수 없이 다시 실행해 저장본과 같은지 확인한다.
 4. manifest의 `review`에 사람 검토 결과를 적는다. `privacy`, `structure`는 PASSED, `mappingTruth`, `preparationTruth`는 HUMAN_REVIEWED, `inputIdentity`는 SOURCE_PIPELINE_VERIFIED여야 평가에 쓰인다. 하나라도 아니면 백엔드 등록 검사가 거부한다.
-5. 튜닝용(`tuning`)과 최종 평가용(`final`)을 나눈다. 같은 화면 상태를 두 분할에 넣지 않는다. 확정한 버전 디렉터리는 고치지 않고 새 버전을 만든다.
+5. 확정한 버전 디렉터리는 고치지 않는다. 사례를 더할 때는 직전 버전의 사례·정답 파일을 바이트 그대로 복사한 새 버전(`v<N+1>`)을 만들고 새 사례를 더한다.
+6. manifest의 사례마다 `split`(`tuning` 또는 `final`)은 형식상 적는다. 같은 화면 상태를 두 분할에 넣지 않는다. 평가 화면은 분할을 나누지 않고 항상 전체(`all`)를 실행한다.
+7. 평가 화면이 새 버전을 쓰도록 `backend/src/main/resources/static/evaluations/app.js`의 `DATASET.version`, 화면 이름(`STATE_NAMES`)과 설명(`STATE_NOTES`)을 갱신한다. `DatasetLoaderTest`, `EvaluationEnabledContextTest`의 버전·사례 수 기대값도 함께 바꾼다.
+8. 지원 필드 목록에 없는 의미(예: 검정고시 합격연월)는 `key`를 null로 두고 `backend/docs/model-evaluation.md`에 이유를 적는다.
 
 ## 5. PR
 
 `backend/src/test/.../DatasetLoaderTest`, 프론트엔드 사례 테스트, `./gradlew check`, `.venv/bin/python harness/scripts/verify.py`를 통과시키고 PR로 올린다.
 평가 실행은 사람이 평가 화면(`/evaluations/`)에서 등록한다. 실제 모델 호출에는 비용이 든다.
+점수는 모든 화면·호출의 항목을 합친 항목 가중 정확도(`item-weighted-exact-v2`)다. 이전 결과와 비교할 때는 같은 데이터셋 버전에서 이전 코드와 새 코드를 각각 실행한다.
