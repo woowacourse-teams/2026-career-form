@@ -291,7 +291,7 @@ function renderTokenBars() {
       return;
     } else if (run && ACTIVE.includes(run.status)) {
       track.classList.add("pending");
-      value.append(element("b", RUN_STATUS[run.status]), element("span", `${run.processedCalls}/${run.plannedCalls} 호출`, "muted"));
+      value.append(element("b", RUN_STATUS[run.status]), element("span", `API ${run.processedCalls}/${run.plannedCalls}번`, "muted"));
     } else {
       track.classList.add("missing");
       value.append(element("b", run ? RUN_STATUS[run.status] ?? run.status : "—"), element("span", "토큰 미관측", "muted"));
@@ -913,7 +913,7 @@ function renderProgress() {
     bar.append(fill);
     const label = element("div", undefined, "progress-label");
     label.append(element("span", model, "progress-model"), element("span", RUN_STATUS[run.status] ?? run.status, "progress-state"));
-    row.append(label, bar, element("span", `${run.processedCalls}/${run.plannedCalls} 호출`, "number progress-count"));
+    row.append(label, bar, element("span", `API ${run.processedCalls}/${run.plannedCalls}번`, "number progress-count"));
     panel.append(row);
   }
 }
@@ -935,12 +935,20 @@ function render() {
   $("#site-count").textContent = `사이트 ${new Set(cases.map((c) => c.siteId)).size}개`;
   const active = state.runs.find(({ run }) => ["QUEUED", "RUNNING"].includes(run.status))?.run;
   const waiting = state.runs.filter(({ run }) => run.status === "WAITING").length;
-  const STATUS = RUN_STATUS;
   const last = state.runs[0]?.run;
-  $("#cf-status").textContent = active
-    ? `${STATUS[active.status]} · ${modelKey(active)} · ${active.processedCalls}/${active.plannedCalls} 호출 처리${waiting ? ` · 다음 모델 ${waiting}개 차례 대기` : ""} (자동 갱신 중)`
-    : last ? `최근 실행: ${STATUS[last.status] ?? last.status} · ${last.processedCalls}/${last.plannedCalls} 호출 · 총 ${state.runs.length}건`
-      : "측정 결과 없음";
+  // 상태 줄은 "무엇을 몇 번"인지 밝힌다. 진행 수는 모델 하나의 서버 API 호출 수(화면 × API 3~4번 × 반복)다.
+  const screens = state.dataset?.cases?.length;
+  const autofills = (run) => screens ? ` · 자동기입 ${screens * run.repetitions}번(화면 ${screens}개 × 반복 ${run.repetitions}회)` : "";
+  if (active) {
+    $("#cf-status").textContent = `${RUN_STATUS[active.status]} · ${modelKey(active)} · API ${active.processedCalls}/${active.plannedCalls}번 처리`
+      + `${waiting ? ` · 다음 모델 ${waiting}개 차례 대기` : ""} (자동 갱신 중)`;
+  }
+  else if (last) {
+    const group = groupRuns(groupKey(last)).map(({ run }) => run);
+    $("#cf-status").textContent = `최근 평가 ${RUN_STATUS[last.status] ?? last.status} · ${groupLabel(groupKey(last))} · 모델 ${group.length}개`
+      + `${autofills(last)} · 모델마다 API ${last.plannedCalls}번`;
+  }
+  else $("#cf-status").textContent = "측정 결과 없음";
 }
 
 function renderFilters() {
