@@ -50,6 +50,9 @@ public interface RunStore {
 
     Optional<PromptSnapshot> findPromptSnapshot(String digest);
 
+    /** 고른 실행 중 끝난 실행만 지운다(프롬프트 스냅샷은 남긴다). 지운 수. */
+    int deleteFinished(java.util.Collection<String> runIds);
+
     record Registration(EvaluationRun registered, EvaluationRun activeRun) {
     }
 }

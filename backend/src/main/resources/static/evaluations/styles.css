@@ -597,3 +597,15 @@ html,body{margin:0;background:#eae9e5}body{min-width:320px}
 @media(max-width:720px){#cf-eval-preview .bar-row{grid-template-columns:96px minmax(16px,1fr) 58px;gap:8px}#cf-eval-preview .item-row{grid-template-columns:96px minmax(16px,1fr);column-gap:8px}#cf-eval-preview .range-note{margin-left:104px}}
 /* 품질·성능 두 칸이 좁지 않게 화면 폭을 넓힌다. */
 #cf-eval-preview header,#cf-eval-preview main,#cf-eval-preview footer{max-width:1120px}
+#cf-eval-preview .icon-button{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border:1px solid #d4d6d3;border-radius:6px;background:#fff;color:#6b7680;cursor:pointer}
+#cf-eval-preview .icon-button:hover:not(:disabled){color:#b5483d;border-color:#e2b9b3;background:#fbf1ef}
+#cf-eval-preview .icon-button:disabled{opacity:.4;cursor:not-allowed}
+#cf-eval-preview dialog#cf-source.delete-dialog{width:min(440px,calc(100% - 32px))}
+#cf-eval-preview .delete-confirm p{margin:0 0 10px;font-size:13.5px;line-height:1.6}
+#cf-eval-preview .delete-confirm .delete-title{font-size:15px;font-weight:600;color:#233447}
+#cf-eval-preview .delete-message:empty{display:none}
+#cf-eval-preview .delete-message{color:#b5483d}
+#cf-eval-preview .delete-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+#cf-eval-preview .delete-actions button{font-size:13px;padding:7px 14px;border-radius:6px;border:1px solid #c8ccc9;background:#fff;color:#3e5874}
+#cf-eval-preview .delete-actions .danger-action{background:#b5483d;border-color:#b5483d;color:#fff}
+#cf-eval-preview .delete-actions .danger-action:disabled{opacity:.6}

@@ -820,6 +820,9 @@ function renderFilters() {
   select.replaceChildren(...groups.map((key) => Object.assign(element("option", groupLabel(key)), { value: key })));
   select.value = state.group ?? "";
   $("#comparison-detail").textContent = state.group ? comparisonDetail(state.group) : "";
+  const pendingRun = groupRuns(state.group).some(({ run }) => ACTIVE.includes(run.status));
+  $("#record-delete").disabled = !state.group || pendingRun;
+  $("#record-delete").title = !state.group ? "삭제할 기록 없음" : pendingRun ? "진행 중인 실행이 있어 삭제할 수 없음" : "이 비교 기록 삭제";
   state.models = [...new Set(groupRuns(state.group).map(({ run }) => modelKey(run)))];
   state.selected = state.selected.filter((model) => state.models.includes(model));
   if (!state.selected.length) state.selected = [...state.models];
@@ -839,6 +842,41 @@ function renderFilters() {
     models.append(label);
   }
   if (!state.models.length) models.append(element("span", "실행 결과가 있는 모델이 없습니다.", "muted"));
+}
+
+/**
+ * 비교 기록 삭제 확인. 묶음의 모델별 실행, 호출 결과, 재채점 이력을 지우고 프롬프트 원문은 남긴다. 되돌릴 수 없다.
+ */
+function confirmDelete(key) {
+  if (!key) return;
+  const runs = groupRuns(key).map(({ run }) => run);
+  const box = element("div", undefined, "delete-confirm");
+  box.append(element("p", `"${groupLabel(key)}" 비교 기록을 삭제합니다.`, "delete-title"),
+    element("p", `모델 ${runs.length}개(${runs.map(modelKey).join(", ")})의 실행, 호출 결과, 재채점 이력이 지워집니다. 프롬프트 원문은 남습니다. 되돌릴 수 없습니다.`, "muted"));
+  const message = element("p", "", "muted delete-message");
+  const actions = element("div", undefined, "delete-actions");
+  const cancel = element("button", "취소", "secondary-action");
+  cancel.type = "button";
+  cancel.addEventListener("click", () => $("#cf-source").close());
+  const remove = element("button", "삭제", "danger-action");
+  remove.type = "button";
+  remove.addEventListener("click", async () => {
+    remove.disabled = true;
+    try {
+      await api(`/records/${encodeURIComponent(key)}`, "DELETE");
+      $("#cf-source").close();
+      runs.forEach((run) => { delete state.fields[run.id]; });
+      if (state.baseline === key) state.baseline = "";
+      state.group = null;
+      await load();
+    } catch (error) {
+      message.textContent = error.message.startsWith("이미 진행 중") ? "진행 중인 실행이 있어 삭제할 수 없습니다." : error.message;
+      remove.disabled = false;
+    }
+  });
+  actions.append(cancel, remove);
+  box.append(message, actions);
+  dialog("기록 삭제", box, "delete-dialog");
 }
 
 function dialog(title, content, className) {
@@ -1583,6 +1621,7 @@ $("#comparison").addEventListener("change", (e) => {
 });
 $("#cf-source-close").addEventListener("click", () => $("#cf-source").close());
 $("#run-open").addEventListener("click", openRun);
+$("#record-delete").addEventListener("click", () => confirmDelete(state.group));
 $("#provider-open").addEventListener("click", () => openProviders());
 $("#refresh").addEventListener("click", load);
 document.getElementById("logout").addEventListener("click", () => { clearAccess(); location.reload(); });

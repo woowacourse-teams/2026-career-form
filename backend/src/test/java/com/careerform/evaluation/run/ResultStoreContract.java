@@ -36,6 +36,19 @@ abstract class ResultStoreContract {
     }
 
     @Test
+    @DisplayName("고른 실행의 결과만 지우고 지운 수를 돌려준다")
+    void deletesResultsOfRuns() {
+        ResultStore store = store();
+        store.append(scored("run-1", 1, 3));
+        store.append(scored("run-1", 2, 3));
+        store.append(scored("run-2", 1, 3));
+
+        assertThat(store.delete(List.of("run-1"))).isEqualTo(2);
+        assertThat(store.list("run-1")).isEmpty();
+        assertThat(store.list("run-2")).hasSize(1);
+    }
+
+    @Test
     @DisplayName("답, 실패 원인, 시간, 토큰(미관측은 null)을 그대로 읽는다")
     void roundTripsRecord() {
         ResultStore store = store();

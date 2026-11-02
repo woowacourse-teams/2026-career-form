@@ -89,6 +89,19 @@ public final class InMemoryRunStore implements RunStore {
     }
 
     @Override
+    public synchronized int deleteFinished(java.util.Collection<String> runIds) {
+        int deleted = 0;
+        for (String id : runIds) {
+            EvaluationRun run = runs.get(id);
+            if (run != null && !run.status().pending()) {
+                runs.remove(id);
+                deleted++;
+            }
+        }
+        return deleted;
+    }
+
+    @Override
     public synchronized Optional<PromptSnapshot> findPromptSnapshot(String digest) {
         return Optional.ofNullable(snapshots.get(digest));
     }

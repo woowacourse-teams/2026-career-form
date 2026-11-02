@@ -123,6 +123,14 @@ public final class MongoRunStore implements RunStore {
     }
 
     @Override
+    public int deleteFinished(java.util.Collection<String> runIds) {
+        List<String> finished = java.util.Arrays.stream(RunStatus.values()).filter(status -> !status.pending())
+            .map(Enum::name).toList();
+        return (int) runs().deleteMany(Filters.and(Filters.in("_id", runIds), Filters.in("status", finished)))
+            .getDeletedCount();
+    }
+
+    @Override
     public Optional<EvaluationRun> find(String runId) {
         return Optional.ofNullable(runs().find(Filters.eq("_id", runId)).first()).map(MongoRunStore::fromDocument);
     }

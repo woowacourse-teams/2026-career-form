@@ -27,6 +27,7 @@ import com.careerform.evaluation.run.MongoResultStore;
 import com.careerform.evaluation.run.MongoRunStore;
 import com.careerform.evaluation.run.MongoScoringStore;
 import com.careerform.evaluation.run.RescoringService;
+import com.careerform.evaluation.run.RunDeletionService;
 import com.careerform.evaluation.run.ResultStore;
 import com.careerform.evaluation.run.RunService;
 import com.careerform.evaluation.run.RunStore;
@@ -184,6 +185,11 @@ public class EvaluationConfiguration {
     RescoringService evaluationRescoringService(RunStore runs, ResultStore results, ScoringStore scorings,
         DatasetLoader datasets) {
         return new RescoringService(runs, results, scorings, datasets::load, Clock.systemUTC());
+    }
+
+    @Bean
+    RunDeletionService evaluationRunDeletionService(RunStore runs, ResultStore results, ScoringStore scorings) {
+        return new RunDeletionService(runs, results, scorings);
     }
 
     @Bean

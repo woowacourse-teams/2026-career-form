@@ -8,6 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -29,6 +30,7 @@ import com.careerform.evaluation.run.CallResultRecord;
 import com.careerform.evaluation.run.EvaluationRun;
 import com.careerform.evaluation.run.ItemReport;
 import com.careerform.evaluation.run.RescoringService;
+import com.careerform.evaluation.run.RunDeletionService;
 import com.careerform.evaluation.run.ResultStore;
 import com.careerform.evaluation.run.RunReport;
 import com.careerform.evaluation.run.RunReporter;
@@ -58,12 +60,15 @@ public final class EvaluationRunController {
     private final DatasetLoader datasets;
     private final DatasetLoader.ResourceSource resources;
     private final EvaluationProviders providers;
+    private final RunDeletionService deletions;
     private final RunReporter reporter = new RunReporter();
     private final Map<String, java.util.Optional<LoadedDataset>> loaded = new ConcurrentHashMap<>();
     private final JsonMapper json = JsonMapper.builder().build();
 
     public EvaluationRunController(RunService runs, RunStore store, ResultStore results, RescoringService scorings,
-        DatasetLoader datasets, DatasetLoader.ResourceSource resources, EvaluationProviders providers) {
+        DatasetLoader datasets, DatasetLoader.ResourceSource resources, EvaluationProviders providers,
+        RunDeletionService deletions) {
+        this.deletions = deletions;
         this.runs = runs;
         this.store = store;
         this.results = results;
@@ -129,6 +134,13 @@ public final class EvaluationRunController {
     public List<ItemReport.Item> items(@PathVariable String runId) {
         EvaluationRun run = runs.find(runId);
         return dataset(run).map(dataset -> ItemReport.of(dataset, results.list(runId))).orElse(List.of());
+    }
+
+    /** 평가 기록 하나(비교 ID 또는 단독 실행 ID)를 지운다. 끝나지 않은 실행이 있으면 409다. */
+    @DeleteMapping("/records/{recordKey}")
+    public RunDeletionService.Deleted deleteRecord(@PathVariable String recordKey,
+        @RequestHeader(value = "X-Evaluation-Requester", required = false) String requester) {
+        return deletions.delete(recordKey, requester(requester));
     }
 
     @PostMapping("/runs/{runId}/cancel")

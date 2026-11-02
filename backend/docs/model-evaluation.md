@@ -69,6 +69,8 @@ API와 화면은 품질 확인 공용 비밀번호(`CAREER_FORM_QUALITY_PASSWORD
 | `GET /api/v1/evaluations/prompts/{digest}` | 프롬프트 버전 전문 |
 | `GET /api/v1/evaluations/providers` | 고를 수 있는 공급자와 모델(첫 항목이 기본값) |
 | `GET /api/v1/evaluations/comparisons/{id}` | 비교에 속한 모델별 실행과 보고(등록 순서) |
+| `GET /api/v1/evaluations/runs/{id}/items` | 채점 항목별 답(칸 매핑·섹션 분류·선택 결정)과 반복별 판정 |
+| `DELETE /api/v1/evaluations/records/{key}` | 비교 묶음(비교 ID, 단독 실행이면 실행 ID)의 실행·호출 결과·재채점 이력 삭제. 끝나지 않은 실행이 있으면 409. 프롬프트 원문은 남기고 삭제 사실은 서버 로그(`EVALUATION_RECORD_DELETED`)에 남긴다 |
 
 등록 본문: `datasetId`, `datasetVersion`, `split`(tuning|final), `repetitions`, `promptVersion`(선택),
 `overrides`(`field-batch-size` 1~128, `section-concurrency` 1~16만 허용), `provider`·`model`(선택, 없으면 기본값).

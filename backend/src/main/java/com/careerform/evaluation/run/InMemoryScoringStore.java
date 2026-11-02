@@ -17,4 +17,11 @@ public final class InMemoryScoringStore implements ScoringStore {
     public synchronized List<Scoring> list(String runId) {
         return scorings.stream().filter(scoring -> scoring.runId().equals(runId)).toList();
     }
+
+    @Override
+    public synchronized long delete(java.util.Collection<String> runIds) {
+        int before = scorings.size();
+        scorings.removeIf(scoring -> runIds.contains(scoring.runId()));
+        return before - scorings.size();
+    }
 }

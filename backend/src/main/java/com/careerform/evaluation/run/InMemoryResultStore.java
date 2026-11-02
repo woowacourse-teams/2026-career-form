@@ -22,4 +22,11 @@ public final class InMemoryResultStore implements ResultStore {
     public synchronized List<CallResultRecord> list(String runId) {
         return records.stream().filter(record -> record.runId().equals(runId)).toList();
     }
+
+    @Override
+    public synchronized long delete(java.util.Collection<String> runIds) {
+        int before = records.size();
+        records.removeIf(record -> runIds.contains(record.runId()));
+        return before - records.size();
+    }
 }

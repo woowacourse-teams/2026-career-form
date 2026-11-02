@@ -63,6 +63,19 @@ abstract class RunStoreContract {
     }
 
     @Test
+    @DisplayName("삭제는 끝난 실행만 지우고 끝나지 않은 실행은 남긴다")
+    void deletesOnlyFinishedRuns() {
+        RunStore store = store();
+        store.register(run("run-1", "fp"));
+        store.transition("run-1", RunStatus.QUEUED, RunStatus.CANCELLED, AT);
+        store.register(run("run-2", "fp"));
+
+        assertThat(store.deleteFinished(List.of("run-1", "run-2", "missing"))).isEqualTo(1);
+        assertThat(store.find("run-1")).isEmpty();
+        assertThat(store.find("run-2")).isPresent();
+    }
+
+    @Test
     @DisplayName("최근 실행을 등록 시각 역순으로 돌려준다")
     void recentRunsNewestFirst() {
         RunStore store = store();

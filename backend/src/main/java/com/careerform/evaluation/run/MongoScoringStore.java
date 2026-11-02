@@ -40,6 +40,11 @@ public final class MongoScoringStore implements ScoringStore {
     }
 
     @Override
+    public long delete(java.util.Collection<String> runIds) {
+        return scorings().deleteMany(Filters.in("runId", runIds)).getDeletedCount();
+    }
+
+    @Override
     public List<Scoring> list(String runId) {
         List<Scoring> list = new ArrayList<>();
         scorings().find(Filters.eq("runId", runId)).sort(Sorts.ascending("createdAt", "_id")).forEach(document ->

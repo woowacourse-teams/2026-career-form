@@ -58,6 +58,11 @@ public final class MongoResultStore implements ResultStore {
     }
 
     @Override
+    public long delete(java.util.Collection<String> runIds) {
+        return results().deleteMany(Filters.in("runId", runIds)).getDeletedCount();
+    }
+
+    @Override
     public List<CallResultRecord> list(String runId) {
         List<CallResultRecord> records = new ArrayList<>();
         results().find(Filters.eq("runId", runId)).sort(Sorts.ascending("sequence", "recordedAt"))

@@ -1,5 +1,6 @@
 package com.careerform.evaluation.api;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -31,6 +32,7 @@ import com.careerform.evaluation.run.InMemoryResultStore;
 import com.careerform.evaluation.run.InMemoryRunStore;
 import com.careerform.evaluation.run.InMemoryScoringStore;
 import com.careerform.evaluation.run.RescoringService;
+import com.careerform.evaluation.run.RunDeletionService;
 import com.careerform.evaluation.run.RunService;
 import com.careerform.quality.QualityAccess;
 import com.careerform.quality.QualityApiFilter;
@@ -67,7 +69,8 @@ class EvaluationRunApiTest {
     private final MockMvc mvc = MockMvcBuilders.standaloneSetup(new EvaluationRunController(service, runs, results,
             new RescoringService(runs, results, new InMemoryScoringStore(), datasets::load, clock),
             new DatasetLoader(DatasetLoader.classpath(getClass().getClassLoader())),
-            DatasetLoader.classpath(getClass().getClassLoader()), EvaluationTestData.PROVIDERS))
+            DatasetLoader.classpath(getClass().getClassLoader()), EvaluationTestData.PROVIDERS,
+            new RunDeletionService(runs, results, new InMemoryScoringStore())))
         .addFilters(new QualityApiFilter(access)).build();
 
     @Test
@@ -168,6 +171,22 @@ class EvaluationRunApiTest {
         authorized(get("/api/v1/evaluations/runs/" + runId + "/items")).andExpect(status().isOk())
             .andExpect(jsonPath("$.length()").value(0));
         authorized(get("/api/v1/evaluations/runs/missing/items")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("기록 삭제는 진행 중이면 409, 끝난 뒤에는 실행과 결과를 지우고 이후 조회는 404다")
+    void deletesFinishedRecord() throws Exception {
+        String runId = runId(register());
+        authorized(delete("/api/v1/evaluations/records/" + runId)).andExpect(status().isConflict())
+            .andExpect(jsonPath("$.code").value("RUN_ACTIVE"));
+
+        worker.runOnce();
+
+        authorized(delete("/api/v1/evaluations/records/" + runId)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.runIds[0]").value(runId)).andExpect(jsonPath("$.results").value(2));
+        authorized(get("/api/v1/evaluations/runs/" + runId)).andExpect(status().isNotFound());
+        authorized(delete("/api/v1/evaluations/records/" + runId)).andExpect(status().isNotFound());
+        mvc.perform(delete("/api/v1/evaluations/records/" + runId)).andExpect(status().isUnauthorized());
     }
 
     @Test
