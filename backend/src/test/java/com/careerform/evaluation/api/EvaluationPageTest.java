@@ -27,7 +27,7 @@ class EvaluationPageTest {
             "comparisonDetail", "accuracyCard", "?.repetitions", "차이 구분 불가", "반복 1회라 흔들림을 알 수 없음",
             "renderAutofill", "?.autofill", "실제 자동기입 결과", "자동기입 정확도", "확신도를 기록하기 전 실행",
             "STATE_NAMES", "dataset-tabs", "field-table", "profileTable", "PROMPT_GROUPS", "prompt-group", "criteria-table",
-            "바뀐 조각만");
+            "바뀐 조각만", "이름만 바뀜", "prompt-model");
         assertThat(app).doesNotContain("field(\"분할\"", "field(\"데이터셋 버전\"", "renderVariation");
         String all = index + app + read("static/evaluations/styles.css") + read("static/evaluations/pricing.js");
         assertThat(all).doesNotContain("cdn.", "https://", "http://", "window.openai", "Pretendard",

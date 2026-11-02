@@ -378,3 +378,4 @@ html,body{margin:0;background:#eae9e5}body{min-width:320px}
 #cf-eval-preview .criteria-table td:first-child{width:38%;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#3e5874;overflow-wrap:anywhere}
 #cf-eval-preview dialog#cf-source.criteria-dialog{max-height:88vh;overflow:auto}
 #cf-eval-preview .criteria-search{width:100%;margin:10px 0 6px;padding:7px 10px;font:inherit;font-size:13px;border:1px solid #c8ccc9;border-radius:4px;background:#fff}
+#cf-eval-preview .prompt-renamed{margin:0 0 12px;font-size:13px;color:#3e5874;background:#e7eef5;border-radius:4px;padding:8px 12px;overflow-wrap:anywhere}#cf-eval-preview .prompt-model{font-size:13px}

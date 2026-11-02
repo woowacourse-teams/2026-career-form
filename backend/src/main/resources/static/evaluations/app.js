@@ -631,33 +631,60 @@ const PROMPT_GROUPS = [
  * 프롬프트 대화상자. 조각을 용도별로 묶고, 지시 문구는 펼쳐 두며 선택지 설명(criterion.*)은 표로 접어 둔다.
  * 이전 버전이 있으면 바뀐 조각에 표시를 달고 바뀐 조각만 볼 수 있다.
  */
-async function promptView(changedOnly = false) {
+async function promptView(changedOnly = false, model = null) {
+  // 버전은 처음 쓰인 순서로, 공급자별로 모은다. 비교는 같은 공급자의 바로 앞 버전과만 한다.
   const versions = [];
   for (const { run } of [...state.runs].reverse())
     if (!versions.some((v) => v.digest === run.versions.promptDigest))
-      versions.push({ digest: run.versions.promptDigest, name: promptKey(run) });
+      versions.push({ digest: run.versions.promptDigest, name: promptKey(run), provider: run.versions.provider });
   if (!versions.length) return element("p", "실행 기록이 없어 프롬프트 버전이 없습니다.", "muted");
-  const shown = groupRuns(state.group)[0]?.run.versions.promptDigest;
-  const index = Math.max(0, versions.findIndex((v) => v.digest === shown));
+  const groupModels = groupRuns(state.group).map(({ run }) => run);
+  const chosen = groupModels.find((run) => modelKey(run) === model) ?? groupModels[0];
+  const shown = chosen?.versions.promptDigest ?? versions[versions.length - 1].digest;
+  const index = versions.findIndex((v) => v.digest === shown);
+  const own = versions.slice(0, index).filter((v) => v.provider === versions[index].provider);
+  const before = own[own.length - 1];
   const current = await api(`/prompts/${versions[index].digest}`);
-  const previous = index > 0 ? await api(`/prompts/${versions[index - 1].digest}`) : null;
-  const status = (name) => !previous ? null : !(name in previous.parts) ? "추가"
+  const previous = before ? await api(`/prompts/${before.digest}`) : null;
+  // 문구가 같고 이름만 다른 조각은 삭제·추가가 아니라 이름 변경으로 본다.
+  const renamed = new Map();
+  if (previous) {
+    const gone = Object.keys(previous.parts).filter((name) => !(name in current.parts));
+    const added = Object.keys(current.parts).filter((name) => !(name in previous.parts));
+    for (const name of added) {
+      const match = gone.find((old) => !renamed.has(old) && previous.parts[old] === current.parts[name]);
+      if (match) renamed.set(match, name);
+    }
+  }
+  const renamedTo = new Set(renamed.values());
+  const status = (name) => !previous || renamedTo.has(name) ? null : !(name in previous.parts) ? "추가"
     : previous.parts[name] !== current.parts[name] ? "변경" : null;
   const names = Object.keys(current.parts);
   const changed = names.filter(status);
-  const removed = Object.keys(previous?.parts ?? {}).filter((name) => !(name in current.parts));
+  const removed = Object.keys(previous?.parts ?? {}).filter((name) => !(name in current.parts) && !renamed.has(name));
   const wrap = element("div", undefined, "prompt-view");
   const head = element("div", undefined, "prompt-head");
-  head.append(element("strong", versions[index].name), element("span", `${current.digest.slice(0, 12)} · 조각 ${names.length}개`
-    + (previous ? ` · ${versions[index - 1].name} 대비 바뀐 조각 ${changed.length + removed.length}개` : ""), "muted"));
+  if (groupModels.length > 1) {
+    const select = element("select", undefined, "prompt-model");
+    groupModels.forEach((run) => select.append(Object.assign(element("option", modelKey(run)), { value: modelKey(run) })));
+    select.value = modelKey(chosen);
+    select.addEventListener("change", async () => dialog("프롬프트", await promptView(changedOnly, select.value), "criteria-dialog"));
+    head.append(select);
+  }
+  head.append(element("strong", versions[index].name), element("span", `${versions[index].provider} · ${current.digest.slice(0, 12)} · 조각 ${names.length}개`
+    + (previous ? ` · 같은 공급자의 이전 버전(${before.name}) 대비 바뀐 조각 ${changed.length + removed.length}개` : " · 같은 공급자의 이전 버전 없음"), "muted"));
   if (previous) {
     const toggle = element("label", undefined, "prompt-toggle");
     const box = Object.assign(element("input"), { type: "checkbox", checked: changedOnly });
-    box.addEventListener("change", async () => dialog("프롬프트", await promptView(box.checked), "criteria-dialog"));
+    box.addEventListener("change", async () => dialog("프롬프트", await promptView(box.checked, model), "criteria-dialog"));
     toggle.append(box, document.createTextNode("바뀐 조각만"));
     head.append(toggle);
   }
   wrap.append(head);
+  if (renamed.size) {
+    const [oldName, newName] = [...renamed.entries()][0];
+    wrap.append(element("p", `이름만 바뀜 ${renamed.size}개 · 문구는 같고 조각 이름만 달라졌습니다(예: ${oldName} → ${newName}).`, "prompt-renamed"));
+  }
   const used = new Set();
   for (const group of PROMPT_GROUPS) {
     const own = names.filter((name) => !used.has(name) && (group.prefix ? name.startsWith(`${group.prefix}/`) : true))
@@ -709,7 +736,7 @@ async function promptView(changedOnly = false) {
     removed.forEach((name) => box.append(element("p", name, "prompt-text before")));
     wrap.append(box);
   }
-  if (changedOnly && !changed.length && !removed.length) wrap.append(element("p", "이전 버전과 같습니다.", "muted"));
+  if (changedOnly && !changed.length && !removed.length) wrap.append(element("p", "이전 버전과 문구가 같습니다.", "muted"));
   return wrap;
 }
 
