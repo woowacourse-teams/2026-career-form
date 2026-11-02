@@ -40,9 +40,9 @@
         </div>
         <section id="cf-progress" class="progress-panel" aria-label="모델별 분석 진행" hidden></section>
         <nav class="page-nav" aria-label="평가 화면"><button type="button" data-page="overview" aria-pressed="true">품질 · 성능</button><button type="button" data-page="tokens" aria-pressed="false">토큰 사용량</button></nav>
-        <div id="cf-overview" class="columns">
-          <section><div class="section-head"><h2>품질</h2><span class="muted">자동기입 점수 ↑</span></div><div id="cf-quality"></div></section>
-          <section><div class="section-head"><h2>성능</h2><div class="stage" aria-label="성능 측정 단계"><button type="button" data-stage="total" aria-pressed="true">전체 흐름</button><button type="button" data-stage="prepare" aria-pressed="false">준비</button><button type="button" data-stage="mapping" aria-pressed="false">매핑</button></div></div><div id="cf-performance"></div></section>
+        <div id="cf-overview" class="overview">
+          <section class="block"><div class="section-head"><h2>품질</h2><span class="muted">대표 지표 자동기입 점수 · 높을수록 좋음</span></div><div id="cf-quality" class="card-grid quality-grid"></div></section>
+          <section class="block"><div class="section-head"><h2>성능</h2><div class="stage" aria-label="성능 측정 단계"><button type="button" data-stage="total" aria-pressed="true">전체 흐름</button><button type="button" data-stage="prepare" aria-pressed="false">준비</button><button type="button" data-stage="mapping" aria-pressed="false">매핑</button></div></div><div id="cf-performance" class="card-grid"></div></section>
         </div>
         <section class="detail" id="cf-tokens" hidden>
           <div class="section-head"><h3>토큰 사용량</h3><div class="stage" aria-label="토큰 측정 단계"><button type="button" data-stage="total" aria-pressed="true">전체 흐름</button><button type="button" data-stage="prepare" aria-pressed="false">준비</button><button type="button" data-stage="mapping" aria-pressed="false">매핑</button></div></div>
