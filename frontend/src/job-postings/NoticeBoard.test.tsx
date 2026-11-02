@@ -26,7 +26,6 @@ const registered: PushStateView = {
   status: { code: "registered", updatedAt: NOW, attempts: 0 },
   permission: "granted",
   visibility: { result: "seen", checkedAt: NOW, source: "test" },
-  autoSave: true,
   unread: 0,
 };
 const unchecked: PushStateView = {
@@ -46,13 +45,10 @@ function renderBoard(
   options: {
     state?: PushStateView;
     savedUrls?: Set<string>;
-    autoSavedUrls?: Set<string>;
   } = {},
 ) {
   const handlers = {
     onSave: vi.fn(),
-    onOpen: vi.fn(),
-    onUndo: vi.fn(),
     onTest: vi.fn(async () => {}),
     onAnswer: vi.fn(async () => {}),
     onLater: vi.fn(async () => {}),
@@ -63,7 +59,6 @@ function renderBoard(
       client={client}
       state={options.state ?? registered}
       savedUrls={options.savedUrls ?? new Set()}
-      autoSavedUrls={options.autoSavedUrls ?? new Set()}
       busy={false}
       now={NOW}
       track={track}
@@ -75,7 +70,7 @@ function renderBoard(
 
 describe("NoticeBoard", () => {
   it("진행 중 공고를 마감순으로 보여 주고 저장한 공고를 구분한다", async () => {
-    const { onSave, onOpen, track } = renderBoard(fakeClient(), {
+    const { onSave, track } = renderBoard(fakeClient(), {
       savedUrls: new Set([early.link]),
     });
     await screen.findByRole("heading", { name: "나중 마감 회사" });
@@ -91,7 +86,7 @@ describe("NoticeBoard", () => {
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
     fireEvent.click(link);
-    expect(onOpen).toHaveBeenCalledWith(late);
+    expect(onSave).not.toHaveBeenCalled();
     fireEvent.click(
       screen.getByRole("button", { name: "나중 마감 회사 마감 알림 저장" }),
     );
@@ -101,29 +96,14 @@ describe("NoticeBoard", () => {
       surface: "options",
     });
   });
-  it("자동 저장 설정에 따라 카드 보조 문구가 바뀌고 열어서 저장한 카드는 취소를 보여 준다", async () => {
-    const { onUndo } = renderBoard(fakeClient(), {
-      savedUrls: new Set([early.link]),
-      autoSavedUrls: new Set([early.link]),
-    });
-    await screen.findByRole("heading", { name: "나중 마감 회사" });
-    expect(
-      screen.getByText("공고를 열면 마감 알림에 저장돼요 (24시간·2시간 전)"),
-    ).toBeInTheDocument();
-    fireEvent.click(
-      screen.getByRole("button", { name: "먼저 마감 회사 저장 취소" }),
-    );
-    expect(onUndo).toHaveBeenCalledWith(early);
-    expect(
-      screen.queryByRole("button", { name: "나중 마감 회사 저장 취소" }),
-    ).toBeNull();
-  });
-  it("자동 저장이 꺼져 있으면 기존 안내 문구를 보여 준다", async () => {
-    renderBoard(fakeClient(), { state: { ...registered, autoSave: false } });
+  it("카드는 저장 버튼 기준으로 안내하고 저장한 카드에 취소를 두지 않는다", async () => {
+    renderBoard(fakeClient(), { savedUrls: new Set([early.link]) });
     await screen.findByRole("heading", { name: "나중 마감 회사" });
     expect(
       screen.getAllByText("저장하면 마감 24시간·2시간 전에 알려드려요"),
-    ).toHaveLength(2);
+    ).toHaveLength(1);
+    expect(screen.queryByText(/공고를 열면/)).toBeNull();
+    expect(screen.queryByRole("button", { name: /저장 취소/ })).toBeNull();
   });
   it("처음 3건만 펼치고 더 보기로 나머지를 연다", async () => {
     const five = [0, 1, 2, 3, 4].map((i) => postingAt(i, `회사 ${i}`));

@@ -19,12 +19,9 @@ interface Props {
   client?: PushClient;
   state: PushStateView | undefined;
   savedUrls: ReadonlySet<string>;
-  autoSavedUrls: ReadonlySet<string>;
   busy: boolean;
   now: number;
   onSave(posting: ServerPosting): void;
-  onOpen(posting: ServerPosting): void;
-  onUndo(posting: ServerPosting): void;
   onTest(): Promise<void>;
   onAnswer(answer: VisibilityAnswer, source: RecordSource): Promise<void>;
   onLater(): Promise<void>;
@@ -54,12 +51,9 @@ export function NoticeBoard({
   client = pushClient,
   state,
   savedUrls,
-  autoSavedUrls,
   busy,
   now,
   onSave,
-  onOpen,
-  onUndo,
   onTest,
   onAnswer,
   onLater,
@@ -96,7 +90,6 @@ export function NoticeBoard({
   useEffect(() => {
     if (state && card === undefined) setCard(cardFor(state));
   }, [state, card]);
-  const autoSave = state?.autoSave ?? true;
   const visible = expanded ? postings : postings?.slice(0, COLLAPSED_COUNT);
   const hidden = (postings?.length ?? 0) - (visible?.length ?? 0);
   return (
@@ -126,7 +119,6 @@ export function NoticeBoard({
           <ul className={styles.list}>
             {visible.map((posting) => {
               const saved = savedUrls.has(posting.link);
-              const undoable = saved && autoSavedUrls.has(posting.link);
               const urgent = posting.closesAt - now <= 86400000;
               return (
                 <li
@@ -161,9 +153,7 @@ export function NoticeBoard({
                     <p className={styles.reminderStatus}>
                       {saved
                         ? "마감 알림에 저장한 공고"
-                        : autoSave
-                          ? "공고를 열면 마감 알림에 저장돼요 (24시간·2시간 전)"
-                          : "저장하면 마감 24시간·2시간 전에 알려드려요"}
+                        : "저장하면 마감 24시간·2시간 전에 알려드려요"}
                     </p>
                   </div>
                   <div className={styles.cardFooter}>
@@ -174,27 +164,16 @@ export function NoticeBoard({
                         target="_blank"
                         rel="noopener noreferrer"
                         aria-label={`${posting.company} 공고 열기`}
-                        onClick={() => onOpen(posting)}
                       >
                         공고 열기 <span aria-hidden="true">↗</span>
                       </a>
-                      {undoable ? (
-                        <button
-                          disabled={busy}
-                          aria-label={`${posting.company} 저장 취소`}
-                          onClick={() => onUndo(posting)}
-                        >
-                          취소
-                        </button>
-                      ) : (
-                        <button
-                          disabled={busy || saved}
-                          aria-label={`${posting.company} 마감 알림 저장`}
-                          onClick={() => onSave(posting)}
-                        >
-                          {saved ? "저장됨" : "마감 알림 저장"}
-                        </button>
-                      )}
+                      <button
+                        disabled={busy || saved}
+                        aria-label={`${posting.company} 마감 알림 저장`}
+                        onClick={() => onSave(posting)}
+                      >
+                        {saved ? "저장됨" : "마감 알림 저장"}
+                      </button>
                     </div>
                   </div>
                 </li>

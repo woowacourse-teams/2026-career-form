@@ -17,9 +17,8 @@ export function createPostingHandler(
   ): Promise<unknown> | undefined => {
     if (!isRecord(message)) return undefined;
     if (message.type === OPEN_POSTINGS) {
-      if (sender.id !== extensionId || typeof message.create !== "boolean")
-        return Promise.resolve({ ok: false });
-      return openPage(message.create ? "#postings/new" : "#postings")
+      if (sender.id !== extensionId) return Promise.resolve({ ok: false });
+      return openPage("#postings")
         .then(() => ({ ok: true }))
         .catch(() => ({
           ok: false,
@@ -40,7 +39,7 @@ export function createPostingHandler(
         case "retry":
           return service.recover();
         case "save":
-          return service.save(command.input, command.id, command.version);
+          return service.save(command.input);
         case "remove":
           return service.remove(command.id, command.version);
         case "complete":

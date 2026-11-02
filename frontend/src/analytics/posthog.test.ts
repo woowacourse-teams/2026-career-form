@@ -116,7 +116,7 @@ describe("PostHog answer and trigger properties", () => {
     await capture("posting_inbox_saved", {
       surface: "options",
       posting_id: "0123456789abcdef0123456789abcdef",
-      trigger: "open",
+      trigger: "button",
     });
     expect(bodies.map((b) => b.properties)).toEqual([
       {
@@ -127,7 +127,7 @@ describe("PostHog answer and trigger properties", () => {
       {
         surface: "options",
         posting_id: "0123456789abcdef0123456789abcdef",
-        trigger: "open",
+        trigger: "button",
         $process_person_profile: false,
       },
     ]);

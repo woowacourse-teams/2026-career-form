@@ -1,6 +1,5 @@
 import {
   createPosting,
-  editPosting,
   pendingReminders,
   type Posting,
   type PostingInput,
@@ -92,23 +91,13 @@ export class PostingService {
     await this.reschedule(postings);
     return this.snapshot(postings);
   }
-  save(
-    input: PostingInput,
-    id?: string,
-    version?: number,
-  ): Promise<PostingSnapshot> {
+  save(input: PostingInput): Promise<PostingSnapshot> {
     return this.serial(async () => {
       const postings = await this.repository.load();
-      const previous = id ? this.find(postings, id, version ?? 0) : undefined;
-      const next = previous
-        ? editPosting(previous, input, this.ports.now())
-        : createPosting(input, this.ports.now(), this.ports.id());
-      return this.persist(
-        previous
-          ? postings.map((p) => (p.id === id ? next : p))
-          : [...postings, next],
-        previous,
-      );
+      return this.persist([
+        ...postings,
+        createPosting(input, this.ports.now(), this.ports.id()),
+      ]);
     });
   }
   setCompleted(

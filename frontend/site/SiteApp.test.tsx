@@ -119,6 +119,7 @@ describe("website navigation", () => {
   });
   it("explains the two management buttons inside the trial panel instead of opening extension pages", () => {
     render(<SiteApp path="/try/" />);
+    fireEvent.click(screen.getByRole("button", { name: "설정" }));
     fireEvent.click(screen.getByRole("button", { name: /프로필 관리/ }));
     const profile = screen.getByRole("dialog", {
       name: /프로필 관리는 설치 후에 열려요/,
@@ -131,7 +132,8 @@ describe("website navigation", () => {
       within(profile).getByRole("button", { name: "체험으로 돌아가기" }),
     );
     expect(screen.queryByRole("dialog")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: /지원 공고 관리/ }));
+    fireEvent.click(screen.getByRole("tab", { name: /마감 공고/ }));
+    fireEvent.click(screen.getByRole("button", { name: /공고 관리/ }));
     expect(
       screen.getByRole("dialog", { name: /지원 공고 관리는 설치 후에 열려요/ }),
     ).toBeVisible();
@@ -204,7 +206,7 @@ it("does not show the notification check card on the public site or without a pu
       path="/onboarding/"
       installed
       profileHref="/options.html"
-      postingsHref="/options.html#postings/new"
+      postingsHref="/options.html#postings"
     />,
   );
   expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(

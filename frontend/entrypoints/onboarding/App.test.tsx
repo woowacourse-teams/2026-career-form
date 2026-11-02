@@ -84,9 +84,9 @@ it("공고 안내는 패널 열기, 정보 입력, 완료 단계를 제공하고
   expect(screen.getByText("방법 1 · 페이지의 네모 아이콘")).toBeVisible();
   expect(screen.getByText("방법 2 · Chrome 퍼즐 메뉴")).toBeVisible();
   expect(screen.getByText("01 / 03")).toBeVisible();
-  fireEvent.click(screen.getByRole("button", { name: /공고 정보 입력하기/ }));
+  fireEvent.click(screen.getByRole("button", { name: /공지함 저장 알아보기/ }));
   expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
-    "공고 정보와 마감을 입력하세요.",
+    "공지함에서 공고를 저장하세요.",
   );
   expect(screen.getByText(/Chrome이 완전히 종료된 동안/)).toBeVisible();
   expect(
@@ -100,10 +100,11 @@ it("공고 안내는 패널 열기, 정보 입력, 완료 단계를 제공하고
   expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
     "지원했다면 완료로 표시하세요.",
   );
-  expect(screen.getByRole("link", { name: /공고 추가하기/ })).toHaveAttribute(
+  expect(screen.getByRole("link", { name: /공지함 열기/ })).toHaveAttribute(
     "href",
-    "/options.html#postings/new",
+    "/options.html#postings",
   );
+  expect(screen.queryByRole("link", { name: /공고 추가/ })).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: /이전 안내/ }));
   expect(screen.getByText("02 / 03")).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: /시작 방법 다시 선택/ }));
@@ -134,7 +135,6 @@ it("설치 선택 화면에 새 공고 알림 카드를 보여 주고 알림 끄
     status: { code: "registered", updatedAt: 1, attempts: 0 },
     permission: "granted",
     visibility: { result: "unknown" },
-    autoSave: true,
     unread: 0,
   };
   const setEnabled = vi.fn(async (enabled: boolean) => {
@@ -144,7 +144,6 @@ it("설치 선택 화면에 새 공고 알림 카드를 보여 주고 알림 끄
   const pushClient: PushClient = {
     state: async () => state,
     setEnabled,
-    setAutoSave: async () => state,
     test: async () => state,
     record: async () => state,
     later: async () => state,

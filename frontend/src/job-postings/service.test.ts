@@ -145,15 +145,14 @@ describe("공고 알림 서비스", () => {
     expect(s.sent).toHaveLength(0);
     expect(s.next).toBe(s.input.deadline - 120 * 60000);
   });
-  it("수정 뒤 이전 버전의 저장을 거부하고 이전 알림 시각에 발송하지 않는다", async () => {
+  it("상태가 바뀐 뒤 이전 버전의 변경을 거부하고 알림을 발송하지 않는다", async () => {
     const s = setup();
     const p = (await s.service.save(s.input)).postings[0];
-    await s.service.save(
-      { ...s.input, deadline: s.input.deadline + 24 * 3600000 },
-      p.id,
-      1,
+    await s.service.setCompleted(p.id, 1, true);
+    await expect(s.service.setCompleted(p.id, 1, false)).rejects.toThrow(
+      "변경",
     );
-    await expect(s.service.save(s.input, p.id, 1)).rejects.toThrow("변경");
+    await expect(s.service.remove(p.id, 1)).rejects.toThrow("변경");
     s.advance(7 * 3600000);
     await s.service.recover();
     expect(s.sent).toHaveLength(0);

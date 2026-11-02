@@ -10,12 +10,10 @@ const base: PushStateView = {
   status: { code: "registered", updatedAt: NOW, attempts: 0 },
   permission: "granted",
   visibility: { result: "seen", checkedAt: NOW, source: "test" },
-  autoSave: true,
   unread: 0,
 };
 function renderSettings(state: PushStateView | null = base, failed = false) {
   const onEnabledChange = vi.fn(async () => {});
-  const onAutoSaveChange = vi.fn(async () => {});
   const onTest = vi.fn(async () => {});
   const onAnswer = vi.fn(async () => {});
   const track = vi.fn();
@@ -25,20 +23,18 @@ function renderSettings(state: PushStateView | null = base, failed = false) {
       failed={failed}
       busy={false}
       onEnabledChange={onEnabledChange}
-      onAutoSaveChange={onAutoSaveChange}
       onTest={onTest}
       onAnswer={onAnswer}
       track={track}
       userAgent="Mozilla/5.0 (Macintosh) Chrome/130"
     />,
   );
-  return { onEnabledChange, onAutoSaveChange, onTest, track };
+  return { onEnabledChange, onTest, track };
 }
 
 describe("SubscriptionSettings", () => {
-  it("구독 스위치, 표시 확인 결과 행, 알림 테스트, 자동 저장 스위치를 보여 준다", async () => {
-    const { onEnabledChange, onAutoSaveChange, onTest, track } =
-      renderSettings();
+  it("구독 스위치, 표시 확인 결과 행, 알림 테스트를 보여 주고 자동 저장 스위치는 두지 않는다", async () => {
+    const { onEnabledChange, onTest, track } = renderSettings();
     expect(
       screen.getByRole("heading", { name: "공고 알림 구독" }),
     ).toBeInTheDocument();
@@ -53,12 +49,8 @@ describe("SubscriptionSettings", () => {
     expect(track).toHaveBeenCalledWith("push_subscription_disabled", {
       surface: "options",
     });
-    const autoSave = screen.getByRole("switch", {
-      name: "공고를 열면 마감 알림에 자동 저장",
-    });
-    expect(autoSave).toBeChecked();
-    fireEvent.click(autoSave);
-    await waitFor(() => expect(onAutoSaveChange).toHaveBeenCalledWith(false));
+    expect(screen.getAllByRole("switch")).toEqual([subscription]);
+    expect(screen.queryByText(/자동 저장/)).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "알림 테스트" }));
     await waitFor(() => expect(onTest).toHaveBeenCalledTimes(1));
     expect(track).toHaveBeenCalledWith("notification_test_sent", {

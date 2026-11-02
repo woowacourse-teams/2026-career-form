@@ -59,7 +59,7 @@ export function App({
             path={path}
             installed
             profileHref="/options.html"
-            postingsHref="/options.html#postings/new"
+            postingsHref="/options.html#postings"
             pushClient={pushClient}
             track={track}
             onStartAutofill={() => setQuickStart(true)}

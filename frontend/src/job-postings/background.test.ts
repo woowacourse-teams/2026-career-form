@@ -48,10 +48,14 @@ it("관리 페이지에서만 공고를 읽고 쓰며 패널은 진입만 허용
   ).toMatchObject({ ok: true });
   expect(rows).toHaveLength(1);
   await handler(
+    { type: "careerForm.openPostings" },
+    { id: "own", url: "https://example.com" },
+  );
+  await handler(
     { type: "careerForm.openPostings", create: true },
     { id: "own", url: "https://example.com" },
   );
-  expect(pages).toEqual(["#postings/new"]);
+  expect(pages).toEqual(["#postings", "#postings"]);
   expect(handler({ type: "other" }, { id: "own" })).toBeUndefined();
 });
 it("완료 또는 수정된 알림 클릭으로 오래된 공고를 열지 않는다", async () => {

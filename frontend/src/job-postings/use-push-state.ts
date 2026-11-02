@@ -8,7 +8,6 @@ export interface PushStateHandle {
   failed: boolean;
   busy: boolean;
   setEnabled(enabled: boolean): Promise<void>;
-  setAutoSave(enabled: boolean): Promise<void>;
   test(): Promise<void>;
   record(answer: VisibilityAnswer, source: RecordSource): Promise<void>;
   later(): Promise<void>;
@@ -47,7 +46,6 @@ export function usePushState(client: PushClient): PushStateHandle {
     failed,
     busy,
     setEnabled: (enabled) => run(() => client.setEnabled(enabled)),
-    setAutoSave: (enabled) => run(() => client.setAutoSave(enabled)),
     test: () => run(() => client.test()),
     record: (answer, source) => run(() => client.record(answer, source)),
     later: () => run(() => client.later()),

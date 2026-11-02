@@ -8,7 +8,6 @@ import {
   type PushResponse,
   type PushStateView,
 } from "./push-messages";
-import type { AutoSaveSetting } from "./push-settings";
 import type { PushSubscriptionService } from "./push-subscription";
 import { isRecord } from "./repository";
 import type { UnreadPostings } from "./unread-postings";
@@ -21,7 +20,6 @@ interface PushHandlerOptions {
     "state" | "permission" | "sendTest" | "record" | "askLater"
   >;
   unread: Pick<UnreadPostings, "count" | "clear">;
-  autoSave: AutoSaveSetting;
   extensionId: string;
 }
 
@@ -30,7 +28,6 @@ export function createPushHandler({
   api,
   check,
   unread,
-  autoSave,
   extensionId,
 }: PushHandlerOptions) {
   const state = async (): Promise<PushStateView> => ({
@@ -39,7 +36,6 @@ export function createPushHandler({
     status: (await service.status()) ?? null,
     permission: await check.permission(),
     visibility: await check.state(),
-    autoSave: await autoSave.read(),
     unread: await unread.count(),
   });
   return (
@@ -67,9 +63,6 @@ export function createPushHandler({
           break;
         case "later":
           await check.askLater();
-          break;
-        case "autosave":
-          await autoSave.write(command.enabled);
           break;
         case "inbox": {
           const postings = await api.openPostings();

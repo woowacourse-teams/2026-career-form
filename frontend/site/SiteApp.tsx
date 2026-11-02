@@ -366,8 +366,8 @@ function Onboarding({
             <span className={styles.choiceBadge}>프로필 없이 바로 시작</span>
             <h2>관심 공고, 놓치지 않게</h2>
             <p>
-              공고 링크와 마감을 저장하고 원하는 시간에 알림을 받으세요. 프로필
-              등록 없이 바로 사용할 수 있어요.
+              공지함의 공고를 저장하고 마감 전에 알림을 받으세요. 프로필 등록
+              없이 바로 사용할 수 있어요.
             </p>
             <button
               className={styles.choiceAction}
@@ -380,7 +380,7 @@ function Onboarding({
             >
               공고 저장부터 시작하기 <Icon name="arrow" />
             </button>
-            <small>패널에서 시작 → 정보 입력 → 지원 완료</small>
+            <small>패널에서 시작 → 공지함에서 저장 → 지원 완료</small>
           </section>
         </div>
         {pushClient && (
@@ -449,13 +449,15 @@ function Onboarding({
         <div
           className={`${styles.guideLayout} ${postingFlow ? (step === 0 ? styles.postingPanelLayout : styles.postingScreenshotLayout) : ""}`}
         >
-          <div className={styles.guideVisual}>
-            {postingFlow && <PostingGuide step={step} />}
-            {contentStep === 0 && <ChromeGuide />}
-            {contentStep === 1 && <ServiceGuide kind="profile" />}
-            {contentStep === 3 && <ServiceGuide kind="results" />}
-            {contentStep === 2 && <ServiceGuide kind="autofill" />}
-          </div>
+          {!(postingFlow && step === 1) && (
+            <div className={styles.guideVisual}>
+              {postingFlow && <PostingGuide step={step} />}
+              {contentStep === 0 && <ChromeGuide />}
+              {contentStep === 1 && <ServiceGuide kind="profile" />}
+              {contentStep === 3 && <ServiceGuide kind="results" />}
+              {contentStep === 2 && <ServiceGuide kind="autofill" />}
+            </div>
+          )}
           <ol className={styles.instructions}>
             {current.instructions.map(([title, body], i) => (
               <li key={title}>
@@ -499,7 +501,7 @@ function Onboarding({
             <button className={styles.primary} onClick={() => go(step + 1)}>
               {postingFlow
                 ? step === 0
-                  ? "공고 정보 입력하기"
+                  ? "공지함 저장 알아보기"
                   : "지원 완료 알아보기"
                 : contentStep === 0
                   ? "프로필 등록 알아보기"
@@ -515,7 +517,7 @@ function Onboarding({
               target="_blank"
               rel="noreferrer"
             >
-              공고 추가하기 <Icon name="arrow" />
+              공지함 열기 <Icon name="arrow" />
             </a>
           ) : (
             <div className={styles.ready}>

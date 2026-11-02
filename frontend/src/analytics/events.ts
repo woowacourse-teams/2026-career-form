@@ -30,7 +30,6 @@ const analyticsEvents = [
   "posting_inbox_saved",
   "notification_test_sent",
   "notification_visibility_answered",
-  "posting_auto_save_cancelled",
 ] as const;
 
 const analyticsSurfaces = [
@@ -45,7 +44,7 @@ const analyticsSurfaces = [
 // Server posting identifiers only; never company names, links or profile values.
 const POSTING_ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 const visibilityAnswers = ["seen", "not_seen"] as const;
-const saveTriggers = ["button", "open"] as const;
+const saveTriggers = ["button"] as const;
 
 export type AnalyticsEvent = (typeof analyticsEvents)[number];
 export interface AnalyticsProperties {

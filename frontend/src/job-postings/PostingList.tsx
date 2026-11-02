@@ -5,7 +5,6 @@ interface Props {
   postings: Posting[];
   now: number;
   busy: boolean;
-  onEdit(p: Posting): void;
   onComplete(p: Posting): void;
   onRemove(p: Posting): void;
 }
@@ -24,7 +23,6 @@ export function PostingList({
   postings,
   now,
   busy,
-  onEdit,
   onComplete,
   onRemove,
 }: Props) {
@@ -91,15 +89,6 @@ export function PostingList({
                 </button>
               </div>
               <div className={styles.editActions}>
-                <button
-                  className={styles.quiet}
-                  data-edit-posting={p.id}
-                  aria-label={`${p.company} 수정`}
-                  disabled={busy}
-                  onClick={() => onEdit(p)}
-                >
-                  수정
-                </button>
                 <button
                   className={styles.quiet}
                   aria-label={`${p.company} 삭제`}

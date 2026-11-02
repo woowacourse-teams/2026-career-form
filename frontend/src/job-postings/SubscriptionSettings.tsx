@@ -32,7 +32,6 @@ interface Props {
   failed: boolean;
   busy: boolean;
   onEnabledChange(enabled: boolean): Promise<void>;
-  onAutoSaveChange(enabled: boolean): Promise<void>;
   onTest(): Promise<void>;
   onAnswer(answer: VisibilityAnswer, source: RecordSource): Promise<void>;
   track: TrackEvent;
@@ -44,7 +43,6 @@ export function SubscriptionSettings({
   failed,
   busy,
   onEnabledChange,
-  onAutoSaveChange,
   onTest,
   onAnswer,
   track,
@@ -102,21 +100,6 @@ export function SubscriptionSettings({
           surface="options"
           userAgent={userAgent}
         />
-        <label className={`${styles.switch} ${styles.switchSpaced}`}>
-          <input
-            type="checkbox"
-            role="switch"
-            checked={state?.autoSave ?? true}
-            disabled={!state || busy}
-            onChange={(event) => void onAutoSaveChange(event.target.checked)}
-          />
-          공고를 열면 마감 알림에 자동 저장
-        </label>
-        <p className={styles.subscriptionStatus}>
-          알림이나 공지함에서 공고를 열면 마감 24시간·2시간 전 알림을 함께
-          저장하고, 바로 취소할 수 있어요. 구독을 꺼도 이 설정은 따로
-          유지됩니다.
-        </p>
         <ul className={styles.subscriptionNotes}>
           <li>
             Chrome이 완전히 종료된 동안에는 알림이 도착하지 않으며, OS 알림

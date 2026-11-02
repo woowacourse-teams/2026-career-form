@@ -10,7 +10,6 @@ const base: PushStateView = {
   status: { code: "registered", updatedAt: NOW, attempts: 0 },
   permission: "granted",
   visibility: { result: "unknown" },
-  autoSave: true,
   unread: 0,
 };
 function renderCheck(

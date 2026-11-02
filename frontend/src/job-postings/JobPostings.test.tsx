@@ -42,19 +42,17 @@ function setup(fail = false) {
     subscribe: () => () => {},
   };
   const inbox: ServerPosting[] = [];
-  let pushState: PushStateView = {
+  const pushState: PushStateView = {
     enabled: true,
     supported: true,
     status: null,
     permission: "granted",
     visibility: { result: "seen", checkedAt: 0, source: "test" },
-    autoSave: true,
     unread: 0,
   };
   const pushClient: PushClient = {
     state: async () => pushState,
-    setEnabled: async (enabled) => (pushState = { ...pushState, enabled }),
-    setAutoSave: async (autoSave) => (pushState = { ...pushState, autoSave }),
+    setEnabled: async () => pushState,
     test: async () => pushState,
     record: async () => pushState,
     later: async () => pushState,
@@ -68,59 +66,59 @@ function setup(fail = false) {
     failWith: (error?: Error) => {
       failure = error;
     },
-    setAutoSave: (value: boolean) => {
-      pushState = { ...pushState, autoSave: value };
-    },
   };
 }
-function fill() {
-  fireEvent.change(screen.getByLabelText("회사명"), {
-    target: { value: "예시 회사" },
-  });
-  fireEvent.change(screen.getByLabelText("직무"), {
-    target: { value: "백엔드" },
-  });
-  fireEvent.change(screen.getByLabelText("공고 링크"), {
-    target: { value: "https://example.com/jobs" },
-  });
-  fireEvent.change(screen.getByLabelText("마감 날짜·시간"), {
-    target: { value: "2026-10-07T18:00" },
-  });
+const NOW = Date.parse("2026-10-06T06:00Z");
+function inboxPosting(company = "공지 회사"): ServerPosting {
+  return {
+    id: "a".repeat(32),
+    company,
+    role: "데이터",
+    link: "https://careers.example.test/jobs/notice",
+    opensAt: NOW - 3600000,
+    closesAt: NOW + 3 * 86400000,
+  };
 }
+const savedInput = (company: string) => ({
+  company,
+  role: "개발",
+  url: "https://example.test/jobs",
+  deadline: Date.parse("2026-10-08T18:00Z"),
+  timeZone: "Asia/Seoul",
+  minutes: [],
+});
 it.each([
   "SYNTHETIC_WRITE_FAILURE: quota exceeded",
   "SYNTHETIC_WRITE_FAILURE: 저장 장치 내부 오류",
 ])(
   "keeps unknown write details private and allows a save retry: %s",
   async (raw) => {
-    const { client, pushClient, failWith } = setup();
-    await act(async () => {
-      render(
-        <JobPostings
-          client={client}
-          pushClient={pushClient}
-          now={() => Date.parse("2026-10-06T06:00Z")}
-          track={() => undefined}
-        />,
-      );
+    const { client, pushClient, inbox, failWith } = setup();
+    inbox.push(inboxPosting());
+    render(
+      <JobPostings
+        client={client}
+        pushClient={pushClient}
+        now={() => NOW}
+        track={() => undefined}
+      />,
+    );
+    const save = await screen.findByRole("button", {
+      name: "공지 회사 마감 알림 저장",
     });
-    fireEvent.click(screen.getByRole("button", { name: "공고 추가" }));
-    fill();
     failWith(new Error(raw));
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "저장" }));
-    });
-    const alert = screen.getByRole("alert");
+    fireEvent.click(save);
+    const alert = await screen.findByRole("alert");
     expect(alert).not.toHaveTextContent(raw);
     expect(
       within(alert).queryByRole("button", { name: "목록 다시 불러오기" }),
     ).toBeNull();
-    expect(screen.getByLabelText("회사명")).toHaveValue("예시 회사");
+    expect(screen.queryByText("공고를 마감 알림에 저장했습니다.")).toBeNull();
     failWith(undefined);
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "저장" }));
-    });
-    expect(screen.getByRole("heading", { name: "예시 회사" })).toBeVisible();
+    fireEvent.click(
+      screen.getByRole("button", { name: "공지 회사 마감 알림 저장" }),
+    );
+    await screen.findByText("공고를 마감 알림에 저장했습니다.");
     expect((await client.list()).postings).toHaveLength(1);
   },
 );
@@ -131,30 +129,27 @@ it.each([
 ] as const)(
   "preserves domain guidance and its recovery action: %s",
   async (message, reload) => {
-    const { client, pushClient, failWith } = setup();
-    await act(async () => {
-      render(
-        <JobPostings
-          client={client}
-          pushClient={pushClient}
-          now={() => Date.parse("2026-10-06T06:00Z")}
-          track={() => undefined}
-        />,
-      );
+    const { client, pushClient, inbox, failWith } = setup();
+    inbox.push(inboxPosting());
+    render(
+      <JobPostings
+        client={client}
+        pushClient={pushClient}
+        now={() => NOW}
+        track={() => undefined}
+      />,
+    );
+    const save = await screen.findByRole("button", {
+      name: "공지 회사 마감 알림 저장",
     });
-    fireEvent.click(screen.getByRole("button", { name: "공고 추가" }));
-    fill();
     failWith(new Error(message));
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "저장" }));
-    });
-    const alert = screen.getByRole("alert");
+    fireEvent.click(save);
+    const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent(message);
     expect(
       within(alert).queryByRole("button", { name: "목록 다시 불러오기" }) !==
         null,
     ).toBe(reload);
-    expect(screen.getByLabelText("회사명")).toHaveValue("예시 회사");
   },
 );
 
@@ -181,7 +176,8 @@ it("recovers a failed list read without treating it as a save retry", async () =
     );
   });
   expect(list).toHaveBeenCalledTimes(2);
-  expect(screen.getByRole("button", { name: "공고 추가" })).toBeEnabled();
+  expect(screen.queryByRole("alert")).toBeNull();
+  expect(screen.getByText("지원할 공고를 저장해보세요.")).toBeInTheDocument();
 });
 
 it("returns deletion focus without suppressing browser scrolling", async () => {
@@ -209,10 +205,10 @@ it("returns deletion focus without suppressing browser scrolling", async () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "삭제 예시 삭제" }));
     });
-    const add = screen.getByRole("button", { name: "공고 추가" });
-    expect(add).toHaveFocus();
+    const heading = screen.getByRole("heading", { name: "다가오는 마감" });
+    expect(heading).toHaveFocus();
     const calls = focus.mock.calls.filter(
-      (_, index) => focus.mock.contexts[index] === add,
+      (_, index) => focus.mock.contexts[index] === heading,
     );
     expect(calls.length).toBeGreaterThan(0);
     expect(calls.some(([options]) => options?.preventScroll)).toBe(false);
@@ -221,22 +217,51 @@ it("returns deletion focus without suppressing browser scrolling", async () => {
   }
 });
 
-it("공고 등록부터 완료와 되돌리기까지 연결한다", async () => {
+it("공고 추가 버튼과 입력 폼 없이 저장한 공고는 열기·삭제·지원 완료만 제공한다", async () => {
+  const { client, pushClient } = setup();
+  await client.save(savedInput("저장 회사"));
+  render(
+    <JobPostings client={client} pushClient={pushClient} now={() => NOW} />,
+  );
+  await screen.findByRole("heading", { name: "저장 회사" });
+  expect(screen.queryByRole("button", { name: /공고 추가/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /공고 저장하기/ })).toBeNull();
+  expect(screen.queryByLabelText("회사명")).toBeNull();
+  expect(screen.queryByLabelText("마감 날짜·시간")).toBeNull();
+  expect(screen.queryByRole("button", { name: /수정$/ })).toBeNull();
+  expect(screen.getByRole("link", { name: /공고 열기/ })).toHaveAttribute(
+    "href",
+    "https://example.test/jobs",
+  );
+  expect(
+    screen.getByRole("button", { name: "저장 회사 삭제" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: "지원 완료로 표시" }),
+  ).toBeInTheDocument();
+});
+
+it("빈 목록은 직접 추가를 안내하지 않고 추가 동작도 두지 않는다", async () => {
   const { client, pushClient } = setup();
   render(
-    <JobPostings
-      client={client}
-      pushClient={pushClient}
-      now={() => Date.parse("2026-10-06T06:00Z")}
-    />,
+    <JobPostings client={client} pushClient={pushClient} now={() => NOW} />,
   );
-  await screen.findByText("지원할 공고를 저장해보세요.");
-  fireEvent.click(screen.getByRole("button", { name: "공고 추가" }));
-  expect(screen.getByLabelText("마감 날짜·시간")).toHaveValue("");
-  fill();
-  fireEvent.click(screen.getByRole("button", { name: "저장" }));
+  const title = await screen.findByText("지원할 공고를 저장해보세요.");
+  const empty = title.parentElement as HTMLElement;
+  expect(empty).not.toHaveTextContent(/추가|직접/);
+  expect(empty).toHaveTextContent("공지함");
+  expect(within(empty).queryByRole("button")).toBeNull();
+  expect(screen.queryByText(/설정한 시간/)).toBeNull();
+});
+
+it("저장한 공고를 지원 완료로 옮기고 되돌린다", async () => {
+  const { client, pushClient } = setup();
+  await client.save(savedInput("예시 회사"));
+  render(
+    <JobPostings client={client} pushClient={pushClient} now={() => NOW} />,
+  );
   await screen.findByRole("heading", { name: "예시 회사" });
-  expect(screen.getByText("백엔드")).toBeInTheDocument();
+  expect(screen.getByText("개발")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "지원 완료로 표시" }));
   await waitFor(() =>
     expect(
@@ -250,33 +275,6 @@ it("공고 등록부터 완료와 되돌리기까지 연결한다", async () => 
   );
   fireEvent.click(screen.getByRole("button", { name: /^지원 예정 \(/ }));
   await screen.findByRole("heading", { name: "예시 회사" });
-});
-it("저장이 실패하면 입력을 보존하고 성공 메시지를 표시하지 않는다", async () => {
-  render(
-    <JobPostings
-      {...setup(true)}
-      now={() => Date.parse("2026-10-06T06:00Z")}
-    />,
-  );
-  await screen.findByText("지원할 공고를 저장해보세요.");
-  fireEvent.click(screen.getByRole("button", { name: "공고 추가" }));
-  fill();
-  fireEvent.click(screen.getByRole("button", { name: "저장" }));
-  await screen.findByRole("alert");
-  expect(screen.getByLabelText("회사명")).toHaveValue("예시 회사");
-  expect(screen.queryByText("공고가 저장되었습니다.")).not.toBeInTheDocument();
-});
-it("과거 알림은 예약하지 않는다는 안내를 저장 전에 보여준다", async () => {
-  render(
-    <JobPostings {...setup()} now={() => Date.parse("2026-10-06T06:00Z")} />,
-  );
-  await screen.findByText("지원할 공고를 저장해보세요.");
-  fireEvent.click(screen.getByRole("button", { name: "공고 추가" }));
-  fill();
-  fireEvent.change(screen.getByLabelText("마감 날짜·시간"), {
-    target: { value: "2026-10-06T16:00" },
-  });
-  expect(screen.getByText(/예약할 미래 알림이 없습니다/)).toBeInTheDocument();
 });
 
 it("지난 마감과 늦게 전달한 알림 기록을 목록에서 구분한다", async () => {
@@ -307,81 +305,6 @@ it("지난 마감과 늦게 전달한 알림 기록을 목록에서 구분한다
   await screen.findByRole("heading", { name: "지난 마감" });
   expect(screen.getByText(/놓친 알림을 다시 안내했습니다/)).toBeInTheDocument();
   expect(screen.getByText("마감 지남")).toBeInTheDocument();
-});
-
-it("완료된 공고 수정 폼은 알림을 다시 예약한다고 안내하지 않는다", async () => {
-  const { client, pushClient } = setup();
-  await client.save({
-    company: "완료 예시",
-    role: "개발",
-    url: "https://example.com",
-    deadline: Date.parse("2026-10-08T18:00Z"),
-    timeZone: "Asia/Seoul",
-    minutes: [1440, 120],
-  });
-  await client.setCompleted("sample", 1, true);
-  render(
-    <JobPostings
-      client={client}
-      pushClient={pushClient}
-      now={() => Date.parse("2026-10-06T06:00Z")}
-    />,
-  );
-  await screen.findByRole("button", { name: "지원 완료 (1)" });
-  fireEvent.click(screen.getByRole("button", { name: "지원 완료 (1)" }));
-  fireEvent.click(screen.getByRole("button", { name: /수정$/ }));
-  expect(
-    screen.queryByText("저장하면 다음 시각에 알림을 예약합니다."),
-  ).not.toBeInTheDocument();
-});
-
-it("시간과 분으로 알림을 저장하고 수정할 때 복원한다", async () => {
-  const { client, pushClient } = setup();
-  render(
-    <JobPostings
-      client={client}
-      pushClient={pushClient}
-      now={() => Date.parse("2026-10-06T06:00Z")}
-    />,
-  );
-  await screen.findByText("지원할 공고를 저장해보세요.");
-  fireEvent.click(screen.getByRole("button", { name: "공고 추가" }));
-  fill();
-  fireEvent.change(screen.getByLabelText("마감 전 시간 1"), {
-    target: { value: "1" },
-  });
-  fireEvent.change(screen.getByLabelText("마감 전 분 1"), {
-    target: { value: "30" },
-  });
-  fireEvent.change(screen.getByLabelText("마감 전 시간 2"), {
-    target: { value: "0" },
-  });
-  fireEvent.change(screen.getByLabelText("마감 전 분 2"), {
-    target: { value: "1" },
-  });
-  fireEvent.click(screen.getByRole("button", { name: "저장" }));
-  await screen.findByRole("heading", { name: "예시 회사" });
-  const { postings } = await client.list();
-  expect(
-    postings[0].reminders.map((r) => r.minutes).sort((a, b) => a - b),
-  ).toEqual([1, 90]);
-  expect(
-    postings[0].reminders.every(
-      (r) => r.at === postings[0].deadline - r.minutes * 60000,
-    ),
-  ).toBe(true);
-  fireEvent.click(screen.getByRole("button", { name: /수정$/ }));
-  const totals = [1, 2].map(
-    (i) =>
-      Number(
-        (screen.getByLabelText(`마감 전 시간 ${i}`) as HTMLInputElement).value,
-      ) *
-        60 +
-      Number(
-        (screen.getByLabelText(`마감 전 분 ${i}`) as HTMLInputElement).value,
-      ),
-  );
-  expect(totals.sort((a, b) => a - b)).toEqual([1, 90]);
 });
 
 it("지원 예정, 지난 마감, 완료를 분리하고 빈 목록의 다음 행동을 안내한다", async () => {
@@ -438,71 +361,9 @@ it("지원 예정, 지난 마감, 완료를 분리하고 빈 목록의 다음 �
   ).toBeInTheDocument();
 });
 
-it("편집을 취소하면 목록의 원래 수정 버튼으로 초점을 돌린다", async () => {
-  const { client, pushClient } = setup();
-  await client.save({
-    company: "초점 예시",
-    role: "개발",
-    url: "https://example.com",
-    deadline: Date.parse("2026-10-08T18:00Z"),
-    timeZone: "Asia/Seoul",
-    minutes: [],
-  });
-  render(
-    <JobPostings
-      client={client}
-      pushClient={pushClient}
-      now={() => Date.parse("2026-10-06T06:00Z")}
-    />,
-  );
-  const edit = await screen.findByRole("button", { name: "초점 예시 수정" });
-  edit.focus();
-  fireEvent.click(edit);
-  fireEvent.click(screen.getByRole("button", { name: "취소" }));
-  await waitFor(() =>
-    expect(
-      screen.getByRole("button", { name: "초점 예시 수정" }),
-    ).toHaveFocus(),
-  );
-});
-
-it("지난 공고의 마감을 연장하면 지원 예정 목록으로 돌아온다", async () => {
-  const { client, pushClient } = setup();
-  await client.save({
-    company: "연장 예시",
-    role: "개발",
-    url: "https://example.com",
-    deadline: Date.parse("2026-10-06T07:00Z"),
-    timeZone: "Asia/Seoul",
-    minutes: [],
-  });
-  render(
-    <JobPostings
-      client={client}
-      pushClient={pushClient}
-      now={() => Date.parse("2026-10-06T08:00Z")}
-    />,
-  );
-  fireEvent.click(await screen.findByRole("button", { name: "마감 지남 (1)" }));
-  fireEvent.click(screen.getByRole("button", { name: "연장 예시 수정" }));
-  fireEvent.change(screen.getByLabelText("마감 날짜·시간"), {
-    target: { value: "2026-10-07T18:00" },
-  });
-  fireEvent.click(screen.getByRole("button", { name: "저장" }));
-  await screen.findByRole("heading", { name: "연장 예시" });
-  expect(screen.getByRole("button", { name: "지원 예정 (1)" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
-  await waitFor(() =>
-    expect(
-      screen.getByRole("button", { name: "연장 예시 수정" }),
-    ).toHaveFocus(),
-  );
-});
-
 it("삭제 버튼 한 번으로 확인창 없이 저장소에서 삭제한다", async () => {
   const { client, pushClient } = setup();
+  await client.save(savedInput("예시 회사"));
   render(
     <JobPostings
       client={client}
@@ -510,10 +371,6 @@ it("삭제 버튼 한 번으로 확인창 없이 저장소에서 삭제한다", 
       now={() => Date.parse("2026-10-06T06:00Z")}
     />,
   );
-  await screen.findByText("지원할 공고를 저장해보세요.");
-  fireEvent.click(screen.getByRole("button", { name: "공고 추가" }));
-  fill();
-  fireEvent.click(screen.getByRole("button", { name: "저장" }));
   await screen.findByRole("heading", { name: "예시 회사" });
   fireEvent.click(screen.getByRole("button", { name: "예시 회사 삭제" }));
   expect(screen.queryByRole("region", { name: "공고 삭제 확인" })).toBeNull();
@@ -590,71 +447,41 @@ it("남은 알림이 없는 공지함 공고를 저장하면 기존 안내를 �
   expect((await client.list()).postings).toHaveLength(1);
 });
 
-it("공지함에서 공고를 열면 자동 저장하고 취소하면 저장과 예약을 함께 지운다", async () => {
-  const now = Date.parse("2026-10-06T06:00Z");
+it("공지함에서 공고를 열면 저장하지 않고 저장 버튼으로만 저장한다", async () => {
   const { client, pushClient, inbox } = setup();
-  inbox.push({
-    id: "c".repeat(32),
-    company: "열기 회사",
-    role: "데이터",
-    link: "https://careers.example.test/jobs/open",
-    opensAt: now - 3600000,
-    closesAt: now + 3 * 86400000,
-  });
+  inbox.push(inboxPosting("열기 회사"));
   const track = vi.fn();
   render(
     <JobPostings
       client={client}
       pushClient={pushClient}
-      now={() => now}
+      now={() => NOW}
       track={track}
     />,
   );
   fireEvent.click(
     await screen.findByRole("link", { name: "열기 회사 공고 열기" }),
   );
-  await screen.findByText("공고를 마감 알림에 저장했습니다.");
-  expect((await client.list()).postings).toHaveLength(1);
-  expect(track).toHaveBeenCalledWith("posting_inbox_saved", {
-    surface: "options",
-    posting_id: "c".repeat(32),
-    trigger: "open",
-  });
-  fireEvent.click(screen.getByRole("button", { name: "열기 회사 저장 취소" }));
-  await screen.findByText("마감 알림 저장을 취소했습니다.");
-  expect((await client.list()).postings).toHaveLength(0);
-  expect(track).toHaveBeenCalledWith("posting_auto_save_cancelled", {
-    surface: "options",
-    posting_id: "c".repeat(32),
-  });
-  expect(
-    screen.queryByRole("button", { name: "열기 회사 저장 취소" }),
-  ).toBeNull();
-});
-
-it("자동 저장을 끄면 공지함에서 열어도 저장하지 않는다", async () => {
-  const now = Date.parse("2026-10-06T06:00Z");
-  const { client, pushClient, inbox, setAutoSave } = setup();
-  setAutoSave(false);
-  inbox.push({
-    id: "d".repeat(32),
-    company: "열기만 회사",
-    role: "데이터",
-    link: "https://careers.example.test/jobs/open-only",
-    opensAt: now - 3600000,
-    closesAt: now + 3 * 86400000,
-  });
-  render(
-    <JobPostings client={client} pushClient={pushClient} now={() => now} />,
-  );
-  fireEvent.click(
-    await screen.findByRole("link", { name: "열기만 회사 공고 열기" }),
-  );
-  await screen.findByRole("switch", {
-    name: "공고를 열면 마감 알림에 자동 저장",
-  });
+  // The service runs writes in order, so this list sees any save the click began.
   expect((await client.list()).postings).toHaveLength(0);
   expect(screen.queryByText("공고를 마감 알림에 저장했습니다.")).toBeNull();
+  expect(screen.queryByRole("button", { name: /저장 취소/ })).toBeNull();
+  expect(track).not.toHaveBeenCalledWith(
+    "posting_inbox_saved",
+    expect.anything(),
+  );
+  fireEvent.click(
+    await screen.findByRole("button", { name: "열기 회사 마감 알림 저장" }),
+  );
+  await screen.findByText("공고를 마감 알림에 저장했습니다.");
+  const { postings } = await client.list();
+  expect(postings).toHaveLength(1);
+  expect(postings[0].reminders.map((r) => r.minutes)).toEqual([1440, 120]);
+  expect(track).toHaveBeenCalledWith("posting_inbox_saved", {
+    surface: "options",
+    posting_id: "a".repeat(32),
+    trigger: "button",
+  });
 });
 
 it("구독 설정 패널은 저장 공고 목록 아래, 알림과 로컬 저장 안내 위에 있다", async () => {

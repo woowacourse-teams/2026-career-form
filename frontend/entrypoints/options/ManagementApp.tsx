@@ -45,11 +45,7 @@ export function ManagementApp() {
           </nav>
         </div>
       </header>
-      {postings ? (
-        <JobPostings key={hash} initialCreate={hash === "#postings/new"} />
-      ) : (
-        <App />
-      )}
+      {postings ? <JobPostings /> : <App />}
     </>
   );
 }

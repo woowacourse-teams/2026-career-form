@@ -19,7 +19,6 @@ const onboarding = { id: "own", url: "chrome-extension://own/onboarding.html" };
 function setup() {
   const calls: unknown[] = [];
   let enabled = true;
-  let autoSave = true;
   let inboxError: unknown;
   const service = {
     isEnabled: async () => enabled,
@@ -65,13 +64,6 @@ function setup() {
     },
     check,
     unread,
-    autoSave: {
-      read: async () => autoSave,
-      write: async (value: boolean) => {
-        calls.push(["autoSave", value]);
-        autoSave = value;
-      },
-    },
     extensionId: "own",
   });
   return {
@@ -107,7 +99,7 @@ describe("push background handler", () => {
       code: "UNAVAILABLE",
     });
   });
-  it("상태 조회는 구독, 권한, 표시 확인, 자동 저장, 미확인 개수를 함께 돌려준다", async () => {
+  it("상태 조회는 구독, 권한, 표시 확인, 미확인 개수를 함께 돌려준다", async () => {
     const { handler } = setup();
     expect(await handler(message("status"), options)).toEqual({
       ok: true,
@@ -117,12 +109,11 @@ describe("push background handler", () => {
         status: { code: "registered", updatedAt: 1, attempts: 0 },
         permission: "granted",
         visibility: { result: "unknown" },
-        autoSave: true,
         unread: 2,
       },
     });
   });
-  it("켜기·끄기와 자동 저장 설정은 저장 뒤 상태를 돌려준다", async () => {
+  it("켜기·끄기는 저장 뒤 상태를 돌려주고 자동 저장 설정 메시지는 거절한다", async () => {
     const { handler, calls } = setup();
     expect(await handler(message("disable"), options)).toMatchObject({
       ok: true,
@@ -134,14 +125,10 @@ describe("push background handler", () => {
     });
     expect(
       await handler(message("autosave", { enabled: false }), options),
-    ).toMatchObject({ ok: true, state: { autoSave: false } });
-    expect(
-      await handler(message("autosave", { enabled: "no" }), options),
     ).toEqual({ ok: false, code: "UNAVAILABLE" });
     expect(calls).toEqual([
       ["setEnabled", false],
       ["setEnabled", true],
-      ["autoSave", false],
     ]);
   });
   it("알림 테스트, 응답 기록, 나중에는 표시 확인 서비스로 이어진다", async () => {
@@ -222,10 +209,9 @@ describe("push background handler", () => {
     expect(parsePushMessage(message("record", { answer: "seen" }))).toBe(
       undefined,
     );
-    expect(parsePushMessage(message("autosave", { enabled: true }))).toEqual(
-      message("autosave", { enabled: true }),
-    );
-    expect(parsePushMessage(message("autosave"))).toBeUndefined();
+    expect(
+      parsePushMessage(message("autosave", { enabled: true })),
+    ).toBeUndefined();
     expect(parsePushMessage(message("delete"))).toBeUndefined();
     expect(
       parsePushMessage({ type: "careerForm.postings", action: "inbox" }),

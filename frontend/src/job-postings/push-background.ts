@@ -4,13 +4,11 @@ import { NotificationCheck, TEST_NOTIFICATION_ID } from "./notification-check";
 import { createPushApi } from "./push-api";
 import { createPushHandler } from "./push-background-handler";
 import {
-  PUSH_AUTOSAVED_NOTIFICATION_PREFIX,
   PUSH_NOTIFICATION_PREFIX,
   PUSH_SAVED_NOTIFICATION_PREFIX,
   PushReceiver,
   type PushNotification,
 } from "./push-receiver";
-import { createAutoSaveSetting } from "./push-settings";
 import {
   PushSubscriptionService,
   type PushManagerLike,
@@ -50,7 +48,7 @@ export function chromeVersion(userAgent: string): number | undefined {
 interface PushBackgroundOptions {
   baseUrl: string | undefined;
   extensionVersion: string;
-  postings: Pick<PostingService, "list" | "save" | "remove">;
+  postings: Pick<PostingService, "list" | "save">;
   track: TrackEvent;
   scope?: ServiceWorkerScopeLike;
   userAgent?: string;
@@ -116,7 +114,6 @@ export function installPushBackground({
       });
     },
   });
-  const autoSave = createAutoSaveSetting(browser.storage.local);
   const receiver = new PushReceiver({
     storage: browser.storage.local,
     now: Date.now,
@@ -131,7 +128,6 @@ export function installPushBackground({
     track,
     unread,
     visibility: check,
-    autoSaveEnabled: autoSave.read,
   });
   // Redraw the saved count after every service worker start.
   void unread.redraw().catch(() => undefined);
@@ -164,8 +160,7 @@ export function installPushBackground({
   const open = (id: string) => {
     if (
       id === TEST_NOTIFICATION_ID ||
-      id.startsWith(PUSH_SAVED_NOTIFICATION_PREFIX) ||
-      id.startsWith(PUSH_AUTOSAVED_NOTIFICATION_PREFIX)
+      id.startsWith(PUSH_SAVED_NOTIFICATION_PREFIX)
     )
       return clear(id);
     if (!id.startsWith(PUSH_NOTIFICATION_PREFIX)) return;
@@ -178,16 +173,6 @@ export function installPushBackground({
   };
   browser.notifications.onClicked.addListener(open);
   browser.notifications.onButtonClicked.addListener((id, index) => {
-    if (id.startsWith(PUSH_AUTOSAVED_NOTIFICATION_PREFIX)) {
-      if (index !== 0) return;
-      void receiver
-        .undoAutoSave(id)
-        .then((undone) => {
-          if (!undone) clear(id);
-        })
-        .catch(() => undefined);
-      return;
-    }
     if (!id.startsWith(PUSH_NOTIFICATION_PREFIX)) return;
     if (index === 0) return open(id);
     if (index !== 1) return;
@@ -204,7 +189,6 @@ export function installPushBackground({
       api,
       check,
       unread,
-      autoSave,
       extensionId: browser.runtime.id,
     }),
   };
