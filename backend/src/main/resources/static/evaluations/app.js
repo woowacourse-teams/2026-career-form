@@ -151,7 +151,7 @@ function renderOverview() {
   const timeCard = bars(total ? "자동기입 시간" : "요청 처리 시간",
     total ? "버튼 1번 · 평균 · 낮을수록 좋음" : "서버 요청 1개 · 평균 · 낮을수록 좋음", seconds,
     Math.max(1, ...state.selected.map((m) => seconds(m) ?? 0)), (v) => `${v.toFixed(2)}초`,
-    total ? richNote(["자동기입 버튼 1번"], "(화면 하나)에 ", ["서버 요청 3~4개"], "를 끝내기까지 · 화면 입력·네트워크 왕복 제외")
+    total ? richNote(["자동기입 버튼 1번"], " = ", ["처음 화면 준비"], "(섹션 분류·학력 구분 선택) + ", ["펼쳐진 화면"], "(섹션 분류·칸 매핑) · 화면 입력·네트워크 왕복 제외")
       : richNote(["서버 요청 1개"], "(섹션 분류·칸 매핑 등)를 끝내기까지 · 안에서 ", ["AI에게 여러 번"], " 물을 수 있음 · 서버 처리·재시도 포함"));
   if (total) {
     timeCard.querySelectorAll(".bar-row").forEach((row, index) => {
@@ -160,7 +160,7 @@ function renderOverview() {
       if (time?.p95Ms == null) return;
       const note = element("span", undefined, "range-note stat-line");
       note.append(stat("p95", `${(time.p95Ms / 1000).toFixed(2)}초`, "측정한 자동기입 중 느린 쪽 5%를 뺀 가장 느린 시간"),
-        stat("측정", `${time.count}번`, repetitions ? `화면 ${time.count / repetitions}개 × 반복 ${repetitions}회` : undefined));
+        stat("측정", `${time.count}번`, repetitions ? `펼쳐진 화면 ${time.count / repetitions}개 × 반복 ${repetitions}회` : undefined));
       row.after(note);
     });
   }
@@ -319,12 +319,15 @@ function renderTokenBars() {
     axis.append(element("span"), ticks, element("span", "토큰 / 시도", "muted"));
     box.append(axis);
   }
-  // 실행 하나는 자동기입 몇 회뿐이라 금액이 작다. 자동기입 1회 비용(실행 비용 ÷ 실행 안의 자동기입 수)을
-  // 1,000회 기준으로 키우고, 가장 저렴한 모델 대비 배수로 비교한다.
+  // 실행 하나는 자동기입 몇 회뿐이라 금액이 작다. 자동기입 1회 비용(자동기입 1번에 쓴 평균 토큰 × 단가)을
+  // 1,000회 기준으로 키우고, 가장 저렴한 모델 대비 배수로 비교한다. 처음 화면 준비는 자동기입마다 다시 쓰이므로
+  // 실행 토큰 합 ÷ 자동기입 수가 아니라 보고의 자동기입 단위 토큰을 쓴다.
   const priced = rows.map((row, index) => {
-    const flows = report(row.model)?.flows.count;
-    const perThousand = costs[index].total == null || !flows ? null : costs[index].total / flows * 1000;
-    return { ...row, flows, total: costs[index].total, perThousand };
+    const flows = report(row.model)?.flows;
+    const perAutofill = flows?.inputTokensMean == null ? null
+      : estimateCost(flows.inputTokensMean, flows.outputTokensMean, prices[row.model]);
+    const perThousand = perAutofill == null ? null : perAutofill * 1000;
+    return { ...row, flows: flows?.count, total: costs[index].total, perThousand };
   }).filter((_, index) => totals[index] != null);
   const known = priced.filter(({ perThousand }) => perThousand != null);
   if (known.length) {
@@ -355,7 +358,7 @@ function renderTokenBars() {
         element("span", total == null ? "" : `이번 실행 ${formatUsd(total)} · 자동기입 ${flows}회`, "muted cost-detail"));
       summary.append(line);
     });
-    summary.append(element("p", "자동기입 1회 = 사례 하나의 준비·매핑 호출 전체. 비용 = 입력·출력 토큰 × 모델 단가 설정의 USD 단가(100만 토큰당). 서버는 비용을 계산하지 않는다.", "muted"));
+    summary.append(element("p", "자동기입 1회 = 처음 화면 준비(섹션 분류·학력 구분 선택) + 고른 뒤 펼쳐진 화면(섹션 분류·칸 매핑). 비용 = 그 입력·출력 토큰 × 모델 단가 설정의 USD 단가(100만 토큰당). 서버는 비용을 계산하지 않는다.", "muted"));
     box.append(summary);
   } else if (observed.length) {
     box.append(element("p", "비용 표시에는 모델 단가 설정의 입력·출력 단가가 필요합니다.", "muted"));
@@ -962,7 +965,7 @@ function render() {
   $("#site-count").textContent = `사이트 ${new Set(cases.map((c) => c.siteId)).size}개`;
   const active = state.runs.find(({ run }) => ["QUEUED", "RUNNING"].includes(run.status))?.run;
   const waiting = state.runs.filter(({ run }) => run.status === "WAITING").length;
-  // 진행 수는 모델 하나의 서버 요청 수(화면 × 요청 3~4개 × 반복)다.
+  // 진행 수는 모델 하나의 서버 요청 수(화면마다 요청 2~3개 × 반복)다.
   // 상태 줄은 평가가 진행 중일 때만 보인다. 끝난 평가의 정보는 비교 칸과 실행 조건 칩에 있다.
   $("#cf-status").hidden = !active;
   if (active) {

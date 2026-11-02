@@ -149,20 +149,53 @@ public final class RunReporter {
             output == null ? null : (double) output / observed.size());
     }
 
+    /**
+     * 자동기입 1번(버튼 한 번) 단위로 묶는다. 같은 반복 안에서 칸 매핑이 없는 사례(학력 구분을 고르기 전 처음 화면처럼
+     * 준비 단계만 있는 화면)는 실제 흐름의 앞부분이므로, 칸 매핑까지 있는 사례(고른 뒤 펼쳐진 화면)마다 앞에 붙여
+     * 하나의 자동기입으로 본다. 모든 사례에 칸 매핑이 있으면 사례 하나가 자동기입 1번이다.
+     * 시간은 호출 시간의 합, 토큰은 관측한 시도의 합이고, 어느 호출이든 실패하면 실패한 자동기입이다.
+     */
     private static RunReport.Flows flows(List<CallResultRecord> records) {
-        Map<String, List<CallResultRecord>> byFlow = new LinkedHashMap<>();
-        records.forEach(record -> byFlow.computeIfAbsent(record.repetition() + "/" + record.caseId(),
-            key -> new ArrayList<>()).add(record));
+        Map<Integer, Map<String, List<CallResultRecord>>> byRepetition = new java.util.TreeMap<>();
+        records.forEach(record -> byRepetition.computeIfAbsent(record.repetition(), key -> new LinkedHashMap<>())
+            .computeIfAbsent(record.caseId(), key -> new ArrayList<>()).add(record));
+        List<List<CallResultRecord>> autofills = new ArrayList<>();
+        byRepetition.values().forEach(cases -> {
+            Predicate<List<CallResultRecord>> complete = group -> group.stream()
+                .anyMatch(record -> record.stage() == CallKind.Stage.MAPPING);
+            List<CallResultRecord> start = cases.values().stream().filter(complete.negate()).flatMap(List::stream).toList();
+            List<List<CallResultRecord>> branches = cases.values().stream().filter(complete).toList();
+            if (branches.isEmpty()) {
+                autofills.addAll(cases.values());
+                return;
+            }
+            branches.forEach(branch -> {
+                List<CallResultRecord> autofill = new ArrayList<>(start);
+                autofill.addAll(branch);
+                autofills.add(autofill);
+            });
+        });
         List<Double> times = new ArrayList<>();
         int failed = 0;
-        for (List<CallResultRecord> flow : byFlow.values()) {
-            times.add(flow.stream().mapToLong(CallResultRecord::productCallNanos).sum() / NANOS_PER_MS);
-            if (flow.stream().anyMatch(record -> record.toCallResult().effectiveFailure() != null)) {
+        long input = 0;
+        long output = 0;
+        boolean observed = false;
+        for (List<CallResultRecord> autofill : autofills) {
+            times.add(autofill.stream().mapToLong(CallResultRecord::productCallNanos).sum() / NANOS_PER_MS);
+            if (autofill.stream().anyMatch(record -> record.toCallResult().effectiveFailure() != null)) {
                 failed++;
             }
+            for (Attempt attempt : autofill.stream().flatMap(record -> record.attempts().stream()).toList()) {
+                if (attempt.inputTokens() != null && attempt.outputTokens() != null) {
+                    input += attempt.inputTokens();
+                    output += attempt.outputTokens();
+                    observed = true;
+                }
+            }
         }
-        return new RunReport.Flows(byFlow.size(), byFlow.isEmpty() ? null : (double) failed / byFlow.size(),
-            distribution(times));
+        int count = autofills.size();
+        return new RunReport.Flows(count, count == 0 ? null : (double) failed / count, distribution(times),
+            observed ? (double) input / count : null, observed ? (double) output / count : null);
     }
 
     private static RunReport.Timing timing(EvaluationRun run, List<CallResultRecord> records) {

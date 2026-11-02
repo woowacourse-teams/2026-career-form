@@ -138,11 +138,36 @@ class RunReporterTest {
     }
 
     @Test
-    @DisplayName("사례 하나의 흐름 시간은 그 사례 호출 시간의 합이고 호출이 하나라도 실패하면 실패 흐름이다")
-    void reportsFlows() {
+    @DisplayName("준비만 있는 처음 화면은 같은 반복의 펼쳐진 화면마다 앞에 붙어 자동기입 1번이 되고, 어느 쪽이든 실패하면 실패 자동기입이다")
+    void autofillJoinsPreparationOnlyStartWithEachBranch() {
         List<CallResultRecord> records = List.of(
-            record(1, "a", 1, CallKind.Stage.PREPARATION, new CallScore(1, 0, 0, 0, 0), 100, List.of()),
-            record(1, "a", 2, CallKind.Stage.MAPPING, new CallScore(1, 0, 0, 0, 0), 300, List.of()),
+            call(1, "start", 1, CallKind.SECTION_CLASSIFY, CallKind.Stage.PREPARATION, 100, List.of(attempt(90, 10L, 1L))),
+            call(1, "start", 2, CallKind.INTERACTION_DECISION, CallKind.Stage.PREPARATION, 200, List.of(attempt(190, 20L, 2L))),
+            call(1, "high", 1, CallKind.SECTION_CLASSIFY, CallKind.Stage.PREPARATION, 50, List.of(attempt(40, 5L, 1L))),
+            call(1, "high", 2, CallKind.GENERIC_FIELDS, CallKind.Stage.MAPPING, 300, List.of(attempt(280, 100L, 10L))),
+            call(1, "ged", 1, CallKind.SECTION_CLASSIFY, CallKind.Stage.PREPARATION, 50, List.of(attempt(40, 5L, 1L))),
+            failed(1, "ged", 2, CallKind.Stage.MAPPING, 400, List.of()),
+            failed(2, "start", 1, CallKind.Stage.PREPARATION, 10, List.of()),
+            call(2, "high", 1, CallKind.SECTION_CLASSIFY, CallKind.Stage.PREPARATION, 50, List.of()),
+            call(2, "high", 2, CallKind.GENERIC_FIELDS, CallKind.Stage.MAPPING, 300, List.of()));
+
+        RunReport.Flows flows = new RunReporter().report(run(AT, AT, AT.plusSeconds(1)), records).flows();
+
+        // 반복 1: 처음(300) + 고등학교(350) = 650, 처음(300) + 검정고시(450, 실패) = 750. 반복 2: 처음(10, 실패) + 고등학교(350) = 360.
+        assertThat(flows.count()).isEqualTo(3);
+        assertThat(flows.time().meanMs()).isEqualTo((650.0 + 750.0 + 360.0) / 3);
+        assertThat(flows.failureRate()).isEqualTo(2.0 / 3);
+        // 토큰은 자동기입 1번에 쓴 양: 처음 화면 준비(30, 3) + 펼쳐진 화면(105, 11 또는 5, 1)의 평균. 관측한 시도만 더한다.
+        assertThat(flows.inputTokensMean()).isEqualTo((135.0 + 35.0 + 0.0) / 3);
+        assertThat(flows.outputTokensMean()).isEqualTo((14.0 + 4.0 + 0.0) / 3);
+    }
+
+    @Test
+    @DisplayName("모든 사례에 칸 매핑이 있으면(이전 데이터셋) 사례 하나가 자동기입 1번이다")
+    void everyCompleteCaseIsOneAutofill() {
+        List<CallResultRecord> records = List.of(
+            call(1, "a", 1, CallKind.SECTION_CLASSIFY, CallKind.Stage.PREPARATION, 100, List.of()),
+            call(1, "a", 2, CallKind.GENERIC_FIELDS, CallKind.Stage.MAPPING, 300, List.of()),
             failed(1, "b", 1, CallKind.Stage.MAPPING, 50, List.of()));
 
         RunReport report = new RunReporter().report(run(AT, AT, AT.plusSeconds(1)), records);
@@ -187,9 +212,20 @@ class RunReporterTest {
         return new Attempt("jev", "answer", ms * MS, 200, Outcome.SUCCESS, input, output, "jev-x");
     }
 
+    /** 단계에 맞는 실제 호출 종류: 준비는 섹션 분류, 매핑은 칸 매핑. */
+    private static CallKind kindOf(CallKind.Stage stage) {
+        return stage == CallKind.Stage.PREPARATION ? CallKind.SECTION_CLASSIFY : CallKind.GENERIC_FIELDS;
+    }
+
     private static CallResultRecord record(int repetition, String caseId, int order, CallKind.Stage stage,
         CallScore score, long ms, List<Attempt> attempts) {
-        return new CallResultRecord("run-1", repetition, caseId, order, CallKind.GENERIC_FIELDS, stage, null, score,
+        return new CallResultRecord("run-1", repetition, caseId, order, kindOf(stage), stage, null, score,
+            Map.of(), ms * MS, attempts, AT);
+    }
+
+    private static CallResultRecord call(int repetition, String caseId, int order, CallKind kind, CallKind.Stage stage,
+        long ms, List<Attempt> attempts) {
+        return new CallResultRecord("run-1", repetition, caseId, order, kind, stage, null, new CallScore(1, 0, 0, 0, 0),
             Map.of(), ms * MS, attempts, AT);
     }
 
@@ -200,7 +236,7 @@ class RunReporterTest {
 
     private static CallResultRecord failed(int repetition, String caseId, int order, CallKind.Stage stage, long ms,
         List<Attempt> attempts) {
-        return new CallResultRecord("run-1", repetition, caseId, order, CallKind.GENERIC_FIELDS, stage,
+        return new CallResultRecord("run-1", repetition, caseId, order, kindOf(stage), stage,
             FailureKind.API_ERROR, null, Map.of(), ms * MS, attempts, AT);
     }
 }

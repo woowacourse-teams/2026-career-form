@@ -10,7 +10,7 @@ import com.careerform.evaluation.scoring.RunAggregate;
 /**
  * 저장한 호출 결과에서 다시 계산한 실행 보고. 측정 범위:
  * productCall은 작업자가 제품 서비스를 부르고 반환받을 때까지(서버 내부 배치·대기 포함, HTTP 전송 제외),
- * modelAttempt는 모델 HTTP 전송 직전부터 전체 응답 수신까지, flow는 반복 하나에서 사례 하나의 호출 시간 합이다.
+ * modelAttempt는 모델 HTTP 전송 직전부터 전체 응답 수신까지, flow는 자동기입 1번(처음 화면 준비 + 펼쳐진 화면 하나, 이전 데이터셋은 사례 하나)의 호출 시간 합이다.
  * 처리량은 완료 호출 수 ÷ 실행 경과 초다. 관측하지 못한 값은 null이며 0으로 채우지 않는다.
  * 키 TOTAL, PREPARATION, MAPPING. {@code scoringVersion}은 이 보고를 계산한 현재 채점식이며, 실행 등록 때 기록한
  * 채점식과 다를 수 있다. {@code repetitions}는 반복마다 따로 계산한 항목 단위 정확도로, 같은 입력에서 점수가 얼마나
@@ -80,7 +80,9 @@ public record RunReport(
     ) {
     }
 
-    public record Flows(int count, Double failureRate, Distribution time) {
+    /** 자동기입 1번 단위 묶음({@link RunReporter} 참고). 토큰은 자동기입 1번에 쓴 관측 토큰의 평균이다. */
+    public record Flows(int count, Double failureRate, Distribution time, Double inputTokensMean,
+        Double outputTokensMean) {
     }
 
     public record Timing(

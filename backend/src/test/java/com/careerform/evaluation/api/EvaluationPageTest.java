@@ -11,7 +11,7 @@ import org.springframework.core.io.ClassPathResource;
 class EvaluationPageTest {
 
     @Test
-    @DisplayName("평가 화면은 품질 로그인 틀을 쓰고 실행 API만 읽으며 외부 자원과 예시 데이터가 없다")
+    @DisplayName("평가 화면 정적 자원은 품질 로그인 틀과 실행 API만 쓰고, 외부 자원·예시 데이터가 없으며 기능 표식이 남아 있다(동작은 프론트 evaluation-page.test.ts)")
     void usesLoginShellAndApiOnly() throws Exception {
         String index = read("static/evaluations/index.html");
         assertThat(index).contains("/quality/quality.css", "/quality/login.js", "data-app=\"/evaluations/app.js\"",
