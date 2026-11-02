@@ -125,9 +125,10 @@ function renderOverview() {
   const failure = (m) => percent(total ? report(m)?.flows.failureRate : perf(m)?.failureRate);
   $("#cf-performance").replaceChildren(
     modelTimeCard(perf),
-    bars("사용자 체감 응답시간", "평균 · 초 ↓", seconds, Math.max(1, ...state.selected.map((m) => seconds(m) ?? 0)), (v) => `${v.toFixed(2)}초`,
-      total ? "자동기입 1회(사례 하나)의 준비·매핑 호출 시간 합. 재시도·서버 처리 포함, 브라우저↔서버 왕복과 페이지 조작 제외."
-        : "제품 API 호출 1건의 시작부터 반환까지. 재시도·서버 내부 배치·대기 포함."),
+    bars(total ? "자동기입 1번당 응답시간" : "API 1번당 응답시간", total ? "API 3~4번 합 · 평균 · 초 ↓" : "평균 · 초 ↓", seconds,
+      Math.max(1, ...state.selected.map((m) => seconds(m) ?? 0)), (v) => `${v.toFixed(2)}초`,
+      total ? "자동기입 버튼 1번(화면 하나)에 서버 API 3~4번을 처리한 시간의 합. 서버 처리·재시도 포함, 브라우저↔서버 네트워크와 화면 입력 시간 제외."
+        : "서버 API 1번을 처리한 시간. 안의 모델 호출·서버 처리·재시도 포함, 브라우저↔서버 네트워크 제외."),
     bars("처리량", "완료 호출/초 ↑", (m) => perf(m)?.throughputPerSecond, Math.max(0.1, ...state.selected.map((m) => perf(m)?.throughputPerSecond ?? 0)),
       (v) => `${v.toFixed(2)}/초`, "완료 호출 수 ÷ 실행 경과 시간"),
     bars("실패율", "% ↓", failure, 100, (v) => `${v.toFixed(1)}%`,
@@ -136,17 +137,17 @@ function renderOverview() {
 
 /**
  * 모델 응답 시간: 서버가 모델 API에 요청을 보낸 직전부터 응답 전체를 받을 때까지, 시도 1건 평균. 네트워크와 공급자 대기가
- * 들어 있고 서버의 요청 만들기·해석·배치 대기는 빠진다. 사용자 체감 응답시간 카드와의 차이가 재시도·서버 쪽 처리 시간이다.
+ * 들어 있고 서버의 요청 만들기·해석·배치 대기는 빠진다. API 1번당 응답시간과 비교하면 서버 쪽 처리·대기를 가늠할 수 있다.
  */
 function modelTimeCard(perf) {
   const attempt = (m) => perf(m)?.modelAttempt;
   const seconds = (m) => attempt(m)?.meanMs == null ? null : attempt(m).meanMs / 1000;
-  const card = bars("모델 응답 시간", "모델 비교 기준 · 시도 1건 평균 · 초 ↓", seconds, Math.max(1, ...state.selected.map((m) => seconds(m) ?? 0)),
-    (v) => `${v.toFixed(2)}초`, "모델 API에 보낸 직전부터 응답을 다 받을 때까지. 네트워크·공급자 대기 포함, 서버 처리 제외. 재시도는 시도마다 따로 셉니다.");
+  const card = bars("모델 호출 1번당 응답시간", "모델 비교 기준 · 평균 · 초 ↓", seconds, Math.max(1, ...state.selected.map((m) => seconds(m) ?? 0)),
+    (v) => `${v.toFixed(2)}초`, "모델 API를 1번 부를 때 보낸 직전부터 응답을 다 받을 때까지. 서버 API 1번 안에서 여러 번 부를 수 있습니다(칸 매핑은 칸 묶음마다). 모델 쪽 네트워크·대기 포함, 서버 처리 제외.");
   card.querySelectorAll(".bar-row").forEach((row, index) => {
     const value = attempt(state.selected[index]);
     if (!value?.count) return;
-    row.after(element("span", `p95 ${(value.p95Ms / 1000).toFixed(2)}초 · 시도 ${value.count}회`, "range-note"));
+    row.after(element("span", `p95 ${(value.p95Ms / 1000).toFixed(2)}초 · 모델 호출 ${value.count}번`, "range-note"));
   });
   return card;
 }
