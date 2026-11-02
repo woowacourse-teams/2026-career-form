@@ -8,6 +8,7 @@ import java.util.Map;
 import org.bson.Document;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import com.careerform.evaluation.scoring.CallKind;
+import com.careerform.evaluation.scoring.AutofillCounts;
 import com.careerform.evaluation.scoring.CallScore;
 import com.careerform.evaluation.scoring.FailureKind;
 import com.careerform.evaluation.scoring.ObservedItem;
@@ -74,7 +75,7 @@ public final class MongoResultStore implements ResultStore {
     private static Document toDocument(CallResultRecord record) {
         List<Document> observed = new ArrayList<>();
         record.observed().forEach((id, item) -> observed.add(new Document("id", id).append("value", item.value())
-            .append("unavailable", item.providerUnavailable())));
+            .append("unavailable", item.providerUnavailable()).append("confidence", item.confidence())));
         List<Document> attempts = new ArrayList<>();
         for (Attempt attempt : record.attempts()) {
             attempts.add(new Document("provider", attempt.provider()).append("operation", attempt.operation())
@@ -83,6 +84,7 @@ public final class MongoResultStore implements ResultStore {
                 .append("outputTokens", attempt.outputTokens()).append("observedModel", attempt.observedModel()));
         }
         CallScore score = record.score();
+        AutofillCounts autofill = record.autofill();
         return new Document("runId", record.runId()).append("repetition", record.repetition())
             .append("caseId", record.caseId()).append("order", record.order()).append("kind", record.kind().name())
             .append("stage", record.stage().name())
@@ -91,14 +93,18 @@ public final class MongoResultStore implements ResultStore {
                 .append("wrongKey", score.wrongKey()).append("missing", score.missing())
                 .append("unnecessary", score.unnecessary()).append("excluded", score.excluded()))
             .append("observed", observed).append("productCallNanos", record.productCallNanos())
-            .append("attempts", attempts).append("recordedAt", Date.from(record.recordedAt()));
+            .append("attempts", attempts).append("recordedAt", Date.from(record.recordedAt()))
+            .append("autofill", autofill == null ? null : new Document("autoCorrect", autofill.autoCorrect())
+                .append("autoWrong", autofill.autoWrong()).append("review", autofill.review())
+                .append("blocked", autofill.blocked()).append("empty", autofill.empty())
+                .append("unobserved", autofill.unobserved()));
     }
 
     private static CallResultRecord fromDocument(Document document) {
         Map<String, ObservedItem> observed = new LinkedHashMap<>();
         for (Document item : document.getList("observed", Document.class)) {
             observed.put(item.getString("id"), item.getBoolean("unavailable")
-                ? ObservedItem.unavailable() : ObservedItem.answered(item.getString("value")));
+                ? ObservedItem.unavailable() : ObservedItem.answered(item.getString("value"), item.getDouble("confidence")));
         }
         List<Attempt> attempts = new ArrayList<>();
         for (Document attempt : document.getList("attempts", Document.class)) {
@@ -114,7 +120,14 @@ public final class MongoResultStore implements ResultStore {
             CallKind.Stage.valueOf(document.getString("stage")), failure == null ? null : FailureKind.valueOf(failure),
             score == null ? null : new CallScore(score.getInteger("correct"), score.getInteger("wrongKey"),
                 score.getInteger("missing"), score.getInteger("unnecessary"), score.getInteger("excluded")),
-            observed, document.getLong("productCallNanos"), attempts, document.getDate("recordedAt").toInstant());
+            observed, document.getLong("productCallNanos"), attempts, document.getDate("recordedAt").toInstant(),
+            autofill(document.get("autofill", Document.class)));
+    }
+
+    private static AutofillCounts autofill(Document autofill) {
+        return autofill == null ? null : new AutofillCounts(autofill.getInteger("autoCorrect"),
+            autofill.getInteger("autoWrong"), autofill.getInteger("review"), autofill.getInteger("blocked"),
+            autofill.getInteger("empty"), autofill.getInteger("unobserved"));
     }
 
     private static Long longOrNull(Object value) {

@@ -8,6 +8,7 @@ import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import com.careerform.evaluation.scoring.CallKind;
+import com.careerform.evaluation.scoring.AutofillCounts;
 import com.careerform.evaluation.scoring.CallScore;
 import com.careerform.evaluation.scoring.FailureKind;
 import com.careerform.evaluation.scoring.ObservedItem;
@@ -46,6 +47,21 @@ abstract class ResultStoreContract {
         store.append(failed);
 
         assertThat(store.list("run-1")).containsExactly(scored, failed);
+    }
+
+    @Test
+    @DisplayName("칸별 확신도와 자동기입 결과를 그대로 읽고, 없던 기록은 null로 읽는다")
+    void roundTripsConfidenceAndAutofill() {
+        ResultStore store = store();
+        CallResultRecord withAutofill = new CallResultRecord("run-2", 1, "case-a", 1, CallKind.GENERIC_FIELDS,
+            CallKind.Stage.MAPPING, null, new CallScore(1, 0, 0, 0, 0),
+            Map.of("field-1", ObservedItem.answered("contact.contact.email", 0.93)), 1_000L, List.of(), AT,
+            new AutofillCounts(1, 0, 0, 0, 0, 0));
+        store.append(withAutofill);
+        store.append(scored("run-2", 2, 1));
+
+        assertThat(store.list("run-2")).containsExactly(withAutofill, scored("run-2", 2, 1));
+        assertThat(store.list("run-2").get(1).autofill()).isNull();
     }
 
     static CallResultRecord scored(String runId, int order, int correct) {

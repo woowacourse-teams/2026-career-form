@@ -8,6 +8,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.careerform.evaluation.dataset.CaseCall;
+import com.careerform.evaluation.scoring.AutofillCounts;
 import com.careerform.evaluation.scoring.CallKind;
 import com.careerform.evaluation.scoring.CallResult;
 import com.careerform.evaluation.scoring.CallScorer;
@@ -58,7 +59,8 @@ public final class CallExecutor {
         Map<String, ObservedItem> observed = observe(call.kind(), response);
         observed.keySet().retainAll(call.expected().keySet());
         return new ExecutedCall(CallResult.completed(call.kind(), call.stage(),
-            scorer.score(call.expected(), observed), recorded.size()), observed, elapsed, recorded);
+            scorer.score(call.expected(), observed), recorded.size()), observed, elapsed, recorded,
+            call.kind() == CallKind.GENERIC_FIELDS ? AutofillCounts.score(call.expected(), observed) : null);
     }
 
     private static ExecutedCall failed(CaseCall call, FailureKind failure, long elapsed, List<Attempt> attempts) {
@@ -97,7 +99,8 @@ public final class CallExecutor {
                 if (key == null && "DERIVED".equals(binding.path("type").asString(null))) {
                     key = "DERIVED:" + binding.path("recipe").asString();
                 }
-                observed.put(id, ObservedItem.answered(key));
+                JsonNode confidence = field.path("confidence");
+                observed.put(id, ObservedItem.answered(key, confidence.isNumber() ? confidence.asDouble() : null));
             });
             case INTERACTION_DECISION -> {
                 boolean unavailable = "LLM_UNAVAILABLE".equals(response.path("status").asString(null));

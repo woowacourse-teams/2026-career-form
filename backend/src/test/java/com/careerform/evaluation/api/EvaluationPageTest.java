@@ -24,7 +24,8 @@ class EvaluationPageTest {
             "오답(다른 항목)", "누락(판단 보류)", "불필요 제안", "예상 비용 비교", "자동기입 1,000회당", "가장 저렴한 모델의",
             "openProviders", "/provider-registrations", "HOST_NOT_ALLOWED_FOR_KEY", "INTERNAL_ADDRESS",
             "키 원문은 이 화면에 입력하지 않습니다", "datasetVersion: DATASET.version", "split: \"all\"",
-            "comparisonDetail", "accuracyCard", "?.repetitions", "차이 구분 불가", "반복 1회라 흔들림을 알 수 없음");
+            "comparisonDetail", "accuracyCard", "?.repetitions", "차이 구분 불가", "반복 1회라 흔들림을 알 수 없음",
+            "renderAutofill", "?.autofill", "실제 자동기입 결과", "자동기입 정확도", "확신도를 기록하기 전 실행");
         assertThat(app).doesNotContain("field(\"분할\"", "field(\"데이터셋 버전\"", "renderVariation");
         String all = index + app + read("static/evaluations/styles.css") + read("static/evaluations/pricing.js");
         assertThat(all).doesNotContain("cdn.", "https://", "http://", "window.openai", "Pretendard",

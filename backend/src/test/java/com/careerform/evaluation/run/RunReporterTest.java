@@ -20,6 +20,23 @@ class RunReporterTest {
     private static final long MS = 1_000_000L;
 
     @Test
+    @DisplayName("자동기입 결과는 기록한 호출끼리 더하고, 하나도 없으면 측정 불가(null)다")
+    void sumsAutofillCounts() {
+        EvaluationRun run = run(AT.minusSeconds(10), AT, AT.plusSeconds(4));
+        CallResultRecord first = new CallResultRecord("run-1", 1, "a", 1, CallKind.GENERIC_FIELDS,
+            CallKind.Stage.MAPPING, null, new CallScore(2, 1, 0, 0, 0), Map.of(), 100 * MS, List.of(), AT,
+            new com.careerform.evaluation.scoring.AutofillCounts(2, 1, 0, 0, 0, 0));
+        CallResultRecord second = new CallResultRecord("run-1", 1, "a", 2, CallKind.GENERIC_FIELDS,
+            CallKind.Stage.MAPPING, null, new CallScore(1, 0, 0, 0, 0), Map.of(), 100 * MS, List.of(), AT,
+            new com.careerform.evaluation.scoring.AutofillCounts(0, 0, 1, 1, 1, 0));
+
+        assertThat(new RunReporter().report(run, List.of(first, second)).autofill())
+            .isEqualTo(new com.careerform.evaluation.scoring.AutofillCounts(2, 1, 1, 1, 1, 0));
+        assertThat(new RunReporter().report(run, List.of(record(1, "a", 1, CallKind.Stage.MAPPING,
+            new CallScore(1, 0, 0, 0, 0), 100, List.of()))).autofill()).isNull();
+    }
+
+    @Test
     @DisplayName("반복마다 항목 단위 정확도를 따로 계산해 흔들림을 보이게 하고, 실패만 있는 반복은 측정 불가다")
     void reportsAccuracyPerRepetition() {
         EvaluationRun run = run(AT.minusSeconds(10), AT, AT.plusSeconds(4));

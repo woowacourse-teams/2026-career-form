@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import com.careerform.evaluation.scoring.CallKind;
 import com.careerform.evaluation.scoring.CallResult;
+import com.careerform.evaluation.scoring.AutofillCounts;
 import com.careerform.evaluation.scoring.CallScore;
 import com.careerform.evaluation.scoring.FailureKind;
 import com.careerform.evaluation.scoring.ObservedItem;
@@ -28,7 +29,8 @@ public record CallResultRecord(
     Map<String, ObservedItem> observed,
     long productCallNanos,
     List<Attempt> attempts,
-    Instant recordedAt
+    Instant recordedAt,
+    AutofillCounts autofill
 ) {
 
     public CallResultRecord {
@@ -36,11 +38,20 @@ public record CallResultRecord(
         attempts = List.copyOf(attempts);
     }
 
+    /** 자동기입 결과가 없는 기록(필드 매핑이 아니거나 확신도를 기록하기 전 결과). */
+    public CallResultRecord(String runId, int repetition, String caseId, int order, CallKind kind,
+        CallKind.Stage stage, FailureKind failure, CallScore score, Map<String, ObservedItem> observed,
+        long productCallNanos, List<Attempt> attempts, Instant recordedAt) {
+        this(runId, repetition, caseId, order, kind, stage, failure, score, observed, productCallNanos, attempts,
+            recordedAt, null);
+    }
+
     public static CallResultRecord of(String runId, int repetition, String caseId, int order, ExecutedCall executed,
         Instant recordedAt) {
         CallResult result = executed.result();
         return new CallResultRecord(runId, repetition, caseId, order, result.kind(), result.stage(), result.failure(),
-            result.score(), executed.observed(), executed.productCallNanos(), executed.attempts(), recordedAt);
+            result.score(), executed.observed(), executed.productCallNanos(), executed.attempts(), recordedAt,
+            executed.autofill());
     }
 
     public String key() {

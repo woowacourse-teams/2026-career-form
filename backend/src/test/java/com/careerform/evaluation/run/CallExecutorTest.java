@@ -51,6 +51,24 @@ class CallExecutorTest {
     }
 
     @Test
+    @DisplayName("필드 매핑은 칸별 확신도를 남기고 제품 확신도 구간으로 자동기입 결과를 센다")
+    void countsAutofillBandsForGenericFields() {
+        var executor = executor(json("""
+            {"status": "COMPLETE", "fields": [
+              {"candidateId": "field-1", "profileFieldKey": "contact.contact.email", "confidence": 0.93},
+              {"candidateId": "field-2", "profileFieldKey": "contact.contact.phone", "confidence": 0.6},
+              {"candidateId": "field-3", "profileFieldKey": null, "confidence": 0}]}"""),
+            List.of(success(10, 2)));
+
+        ExecutedCall result = executor.execute(call(CallKind.GENERIC_FIELDS,
+            Map.of("field-1", "contact.contact.email", "field-2", "contact.contact.phone", "field-3", "x")),
+            EvaluationTestData.target(Map.of()));
+
+        assertThat(result.observed().get("field-1").confidence()).isEqualTo(0.93);
+        assertThat(result.autofill()).isEqualTo(new com.careerform.evaluation.scoring.AutofillCounts(1, 0, 1, 0, 1, 0));
+    }
+
+    @Test
     @DisplayName("섹션 분류의 ABSTAIN은 누락이고 준비 단계 호출은 준비 단계로 기록한다")
     void normalizesClassification() {
         var executor = executor(json("""

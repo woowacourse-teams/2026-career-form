@@ -111,6 +111,7 @@ function renderOverview() {
   const quality = $("#cf-quality");
   quality.replaceChildren(
     accuracyCard(),
+    renderAutofill(),
     bars("준비 정확도", "%", (m) => percent(report(m)?.quality.preparationAccuracy), 100, (v) => `${v.toFixed(1)}%`),
     bars("필드 매핑 정확도", "%", (m) => percent(report(m)?.quality.mappingAccuracy), 100, (v) => `${v.toFixed(1)}%`),
     renderItemBreakdown());
@@ -315,6 +316,51 @@ function accuracyCard() {
   return card;
 }
 
+const AUTOFILL_KINDS = [
+  { key: "autoCorrect", label: "자동기입 정답", className: "item-correct" },
+  { key: "autoWrong", label: "자동기입 오답", className: "item-wrong" },
+  { key: "review", label: "확인 필요", className: "item-missing" },
+  { key: "blocked", label: "막음", className: "item-unnecessary" },
+  { key: "empty", label: "비움", className: "item-empty" },
+];
+
+/**
+ * 필드 매핑 답을 제품과 같은 확신도 구간(자동기입 0.8, 확인 0.5)으로 나눈 결과. 사용자 화면에 실제로 자동으로 들어갈
+ * 칸이 얼마나 맞는지 보인다. 확신도를 기록하기 전 실행은 측정 불가다.
+ */
+function renderAutofill() {
+  const card = element("div", undefined, "metric");
+  const head = element("div", undefined, "metric-head");
+  head.append(element("h3", "실제 자동기입 결과"), element("span", "제품 기준 · 칸 매핑", "muted"));
+  card.append(head);
+  const legend = element("div", undefined, "item-legend");
+  AUTOFILL_KINDS.forEach(({ label, className }) => legend.append(element("span", label, className)));
+  card.append(legend);
+  for (const model of state.selected) {
+    const counts = report(model)?.autofill;
+    const row = element("div", undefined, "item-row");
+    row.style.setProperty("--model", color(model));
+    const track = element("div", undefined, "item-track");
+    const total = counts ? AUTOFILL_KINDS.reduce((sum, { key }) => sum + counts[key], 0) : 0;
+    let text = "확신도를 기록하기 전 실행이라 측정 불가";
+    if (counts && total) {
+      AUTOFILL_KINDS.forEach(({ key, label, className }) => {
+        const part = element("span", undefined, className);
+        part.style.width = `${counts[key] / total * 100}%`;
+        part.title = `${label} ${counts[key]}`;
+        track.append(part);
+      });
+      const auto = counts.autoCorrect + counts.autoWrong;
+      text = `자동기입 정확도 ${auto ? (counts.autoCorrect / auto * 100).toFixed(1) + "%" : "—"} (자동 ${auto}칸 중 오답 ${counts.autoWrong})`
+        + ` · 확인 필요 ${counts.review} · 막음 ${counts.blocked} · 비움 ${counts.empty}`;
+    }
+    row.append(element("span", model), track, element("span", text, "item-numbers"));
+    card.append(row);
+  }
+  card.append(element("p", "확신도 0.8 이상은 자동으로 입력, 0.5~0.8은 사용자 확인, 0.5 미만은 막음(확장프로그램과 같은 기준).", "muted metric-foot"));
+  return card;
+}
+
 const ITEM_KINDS = [
   { key: "correct", label: "정답", className: "item-correct" },
   { key: "wrongKey", label: "오답(다른 항목)", className: "item-wrong" },
@@ -490,6 +536,7 @@ function criteriaView() {
     ["채점 제외", "공급자 사용 불가 항목은 빼고, 모든 항목이 빠진 호출은 채점 불가로 실패율에 넣는다."],
     ["최종 정확도", "채점 가능한 호출의 맞힌 항목 수 합 ÷ 채점한 항목 수 합(항목 단위). 칸이 많은 호출이 그만큼 비중을 가진다. 준비·매핑 정확도도 같은 방식으로 단계별로 계산한다."],
     ["실패", "타임아웃, API 오류, 응답 형식 오류는 정확도에서 빼고 실패율에 넣는다. 채점 가능한 호출이 없으면 측정 불가."],
+    ["실제 자동기입 결과", "칸 매핑 답을 제품과 같은 확신도 구간으로 나눈다. 0.8 이상은 자동기입이라 정답·오답을 따지고, 0.5~0.8은 사용자 확인, 0.5 미만은 막음이다. 확장프로그램의 이름 칸 보정과 정확히 일치하는 값 올림 규칙은 반영하지 않는다. OpenAI 확신도는 모델 자기 보고 값이다."],
     ["반복별 범위", "같은 입력을 반복마다 따로 채점한 정확도의 최소~최대. 가장 높은 두 모델의 범위가 겹치면 차이를 구분할 수 없다고 본다. 반복 수가 적으면 범위가 실제보다 좁게 잡혀, 같은 입력을 새로 실행하면 범위 밖으로 움직일 수 있다."],
   ];
   for (const [title, text] of lines) {

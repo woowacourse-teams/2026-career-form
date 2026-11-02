@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Predicate;
+import com.careerform.evaluation.scoring.AutofillCounts;
 import com.careerform.evaluation.scoring.CallKind;
 import com.careerform.evaluation.scoring.RunAggregator;
 import com.careerform.monitoring.ModelCallRecording.Attempt;
@@ -32,7 +33,9 @@ public final class RunReporter {
             tokens.put(name, tokens(selected));
         });
         return new RunReport(aggregator.aggregate(records.stream().map(CallResultRecord::toCallResult).toList()),
-            performance, tokens, flows(records), timing(run, records), RunService.SCORING_VERSION, repetitions(records));
+            performance, tokens, flows(records), timing(run, records), RunService.SCORING_VERSION, repetitions(records),
+            records.stream().map(CallResultRecord::autofill).filter(java.util.Objects::nonNull)
+                .reduce(AutofillCounts::plus).orElse(null));
     }
 
     private List<RunReport.RepetitionQuality> repetitions(List<CallResultRecord> records) {
