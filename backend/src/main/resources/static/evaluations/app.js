@@ -132,7 +132,7 @@ function bars(title, sub, values, max, format, foot) {
     row.append(name, track, element("span", value == null ? "—" : format(value), "number"));
     card.append(row);
   }
-  if (foot) card.append(element("p", foot, "muted metric-foot"));
+  if (foot) card.append(typeof foot === "string" ? element("p", foot, "muted metric-foot") : foot);
   return card;
 }
 
@@ -151,22 +151,27 @@ function renderOverview() {
   const timeCard = bars(total ? "자동기입 시간" : "요청 처리 시간",
     total ? "버튼 1번 · 평균 · 낮을수록 좋음" : "서버 요청 1개 · 평균 · 낮을수록 좋음", seconds,
     Math.max(1, ...state.selected.map((m) => seconds(m) ?? 0)), (v) => `${v.toFixed(2)}초`,
-    total ? "자동기입 버튼 1번(화면 하나)에 서버 요청 3~4개(섹션 분류·학력 구분 선택·칸 매핑)를 끝내기까지. 화면 입력과 네트워크 왕복은 제외."
-      : "섹션 분류·칸 매핑 같은 서버 요청 하나를 끝내기까지. 안에서 AI에게 여러 번 물을 수 있고, 서버 처리·재시도가 포함됩니다.");
+    total ? richNote(["자동기입 버튼 1번"], "(화면 하나)에 ", ["서버 요청 3~4개"], "를 끝내기까지 · 화면 입력·네트워크 왕복 제외")
+      : richNote(["서버 요청 1개"], "(섹션 분류·칸 매핑 등)를 끝내기까지 · 안에서 ", ["AI에게 여러 번"], " 물을 수 있음 · 서버 처리·재시도 포함"));
   if (total) {
     timeCard.querySelectorAll(".bar-row").forEach((row, index) => {
       const time = report(state.selected[index])?.flows.time;
       const repetitions = latest(state.selected[index])?.run.repetitions;
-      const basis = repetitions && time?.count ? `측정 ${time.count}번(화면 ${time.count / repetitions}개 × 반복 ${repetitions}회)` : `측정 ${time?.count}번`;
-      if (time?.p95Ms != null) row.after(element("span", `p95 ${(time.p95Ms / 1000).toFixed(2)}초 · ${basis}`, "range-note"));
+      if (time?.p95Ms == null) return;
+      const note = element("span", undefined, "range-note stat-line");
+      note.append(stat("p95", `${(time.p95Ms / 1000).toFixed(2)}초`, "측정한 자동기입 중 느린 쪽 5%를 뺀 가장 느린 시간"),
+        stat("측정", `${time.count}번`, repetitions ? `화면 ${time.count / repetitions}개 × 반복 ${repetitions}회` : undefined));
+      row.after(note);
     });
   }
   if (!total) {
     // 요청 하나 안에서 AI에게 몇 번 물었는지 보이면 AI 응답 시간과 이어서 읽을 수 있다.
     timeCard.querySelectorAll(".bar-row").forEach((row, index) => {
       const stage = perf(state.selected[index]);
-      if (stage?.calls && stage.modelAttempt?.count) row.after(element("span",
-        `요청 ${stage.calls}개 · 요청 1개에 AI 질문 평균 ${(stage.modelAttempt.count / stage.calls).toFixed(1)}번`, "range-note"));
+      if (!stage?.calls || !stage.modelAttempt?.count) return;
+      const note = element("span", undefined, "range-note stat-line");
+      note.append(stat("요청", `${stage.calls}개`), stat("요청 1개에 AI 질문", `평균 ${(stage.modelAttempt.count / stage.calls).toFixed(1)}번`));
+      row.after(note);
     });
   }
   // 전체 흐름은 자동기입 단위로 본다. AI 응답 시간은 단계마다 섞이는 준비·매핑 탭에서만 보이고, 처리량은 실행 전체
@@ -175,14 +180,14 @@ function renderOverview() {
     timeCard,
     bars("처리량", "초당 끝낸 요청 수 · 높을수록 좋음", (m) => perf(m)?.throughputPerSecond,
       Math.max(0.1, ...state.selected.map((m) => perf(m)?.throughputPerSecond ?? 0)), (v) => `${v.toFixed(2)}/초`,
-      "실행 전체에서 끝낸 서버 요청 수 ÷ 실행 경과 시간. 평가는 요청을 차례로 보내므로 요청 처리 시간이 짧을수록 높습니다."),
+      richNote(["끝낸 서버 요청 수 ÷ 실행 경과 시간"], " · 요청을 차례로 보내므로 요청 처리 시간이 짧을수록 높음")),
     bars("자동기입 실패율", "낮을수록 좋음", failure, 100, (v) => `${v.toFixed(1)}%`,
-      "서버 요청이 하나라도 실패한 자동기입(화면 하나)의 비율"),
+      richNote(["서버 요청이 하나라도 실패한 자동기입"], "(화면 하나)의 비율")),
   ] : [
     modelTimeCard(perf),
     timeCard,
     bars("요청 실패율", "낮을수록 좋음", failure, 100, (v) => `${v.toFixed(1)}%`,
-      "타임아웃 · API 오류 · 응답 형식 오류 · 채점 불가인 서버 요청의 비율"),
+      richNote(["실패한 서버 요청"], "의 비율 · 타임아웃·API 오류·응답 형식 오류·채점 불가")),
   ]));
 }
 
@@ -194,11 +199,13 @@ function modelTimeCard(perf) {
   const attempt = (m) => perf(m)?.modelAttempt;
   const seconds = (m) => attempt(m)?.meanMs == null ? null : attempt(m).meanMs / 1000;
   const card = bars("AI 응답 시간", "AI 질문 1번 · 평균 · 낮을수록 좋음", seconds, Math.max(1, ...state.selected.map((m) => seconds(m) ?? 0)),
-    (v) => `${v.toFixed(2)}초`, "AI 모델에 질문 하나를 보내고 답을 다 받기까지. 모델끼리 속도를 비교하는 기준입니다. 서버 처리는 빠지고 공급자 쪽 대기는 포함됩니다.");
+    (v) => `${v.toFixed(2)}초`, richNote(["AI에 질문 하나"], "를 보내고 답을 다 받기까지 · ", ["모델 속도 비교 기준"], " · 서버 처리 제외, 공급자 쪽 대기 포함"));
   card.querySelectorAll(".bar-row").forEach((row, index) => {
     const value = attempt(state.selected[index]);
     if (!value?.count) return;
-    row.after(element("span", `p95 ${(value.p95Ms / 1000).toFixed(2)}초 · AI 질문 ${value.count}번`, "range-note"));
+    const note = element("span", undefined, "range-note stat-line");
+    note.append(stat("p95", `${(value.p95Ms / 1000).toFixed(2)}초`, "AI 질문 중 느린 쪽 5%를 뺀 가장 느린 시간"), stat("AI 질문", `${value.count}번`));
+    row.after(note);
   });
   return card;
 }
@@ -955,22 +962,13 @@ function render() {
   $("#site-count").textContent = `사이트 ${new Set(cases.map((c) => c.siteId)).size}개`;
   const active = state.runs.find(({ run }) => ["QUEUED", "RUNNING"].includes(run.status))?.run;
   const waiting = state.runs.filter(({ run }) => run.status === "WAITING").length;
-  const last = state.runs[0]?.run;
-  // 상태 줄은 "무엇을 몇 번"인지 밝힌다. 진행 수는 모델 하나의 서버 요청 수(화면 × 요청 3~4개 × 반복)다.
-  const screens = state.dataset?.cases?.length;
-  const autofills = (run) => screens ? ` · 자동기입 ${screens * run.repetitions}번(화면 ${screens}개 × 반복 ${run.repetitions}회)` : "";
+  // 진행 수는 모델 하나의 서버 요청 수(화면 × 요청 3~4개 × 반복)다.
   // 상태 줄은 평가가 진행 중일 때만 보인다. 끝난 평가의 정보는 비교 칸과 실행 조건 칩에 있다.
   $("#cf-status").hidden = !active;
   if (active) {
     $("#cf-status").textContent = `${RUN_STATUS[active.status]} · ${modelKey(active)} · 요청 ${active.processedCalls}/${active.plannedCalls}개 처리`
       + `${waiting ? ` · 다음 모델 ${waiting}개 차례 대기` : ""} (자동 갱신 중)`;
   }
-  else if (last) {
-    const group = groupRuns(groupKey(last)).map(({ run }) => run);
-    $("#cf-status").textContent = `최근 평가 ${RUN_STATUS[last.status] ?? last.status} · ${groupLabel(groupKey(last))} · 모델 ${group.length}개`
-      + `${autofills(last)} · 모델마다 요청 ${last.plannedCalls}개`;
-  }
-  else $("#cf-status").textContent = "측정 결과 없음";
 }
 
 function renderFilters() {
@@ -1014,7 +1012,7 @@ function confirmDelete(key) {
   if (!key) return;
   const runs = groupRuns(key).map(({ run }) => run);
   const box = element("div", undefined, "delete-confirm");
-  box.append(element("p", `"${groupLabel(key)}" 비교 기록을 삭제합니다.`, "delete-title"),
+  box.append(element("p", `"${promptKey(runs[0])}" 비교 기록을 삭제합니다.`, "delete-title"),
     element("p", `모델 ${runs.length}개(${runs.map(modelKey).join(", ")})의 실행, 호출 결과, 재채점 이력이 지워집니다. 프롬프트 원문은 남습니다. 되돌릴 수 없습니다.`, "muted"));
   const message = element("p", "", "muted delete-message");
   const actions = element("div", undefined, "delete-actions");
