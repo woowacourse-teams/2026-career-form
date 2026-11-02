@@ -415,3 +415,40 @@ html,body{margin:0;background:#eae9e5}body{min-width:320px}
 #cf-eval-preview .diff-table td{font:13px/1.65 system-ui,'Apple SD Gothic Neo',sans-serif}
 #cf-eval-preview .diff-sign{font-family:ui-monospace,Menlo,monospace}
 #cf-eval-preview .diff-fold td{background:#f3f5f6;color:#59626b;font-size:12px;padding:3px 12px}
+#cf-eval-preview dialog#cf-source.criteria-dialog{width:min(1040px,calc(100% - 32px))}
+#cf-eval-preview .prompt-layout{display:grid;grid-template-columns:250px minmax(0,1fr);gap:22px;align-items:start}
+#cf-eval-preview .prompt-side{position:sticky;top:0}
+#cf-eval-preview .timeline{border:0;background:none;border-radius:0;position:relative;margin:0}
+#cf-eval-preview .timeline::before{content:"";position:absolute;left:9px;top:14px;bottom:14px;width:2px;background:#d6dad7}
+#cf-eval-preview .timeline li+li{border-top:0}
+#cf-eval-preview .timeline button{display:flex;flex-direction:column;align-items:flex-start;gap:5px;padding:10px 10px 10px 30px;border-radius:6px;position:relative;grid-template-columns:none}
+#cf-eval-preview .timeline button::before{content:"";position:absolute;left:4px;top:15px;width:12px;height:12px;border-radius:50%;background:#fff;border:2px solid #9aa6b2}
+#cf-eval-preview .timeline li.selected button{background:#eaf0f6}
+#cf-eval-preview .timeline li.selected button::before{background:#475f78;border-color:#475f78}
+#cf-eval-preview .timeline button:hover{background:#f0f3f6}
+#cf-eval-preview .commit-title{display:flex;align-items:center;gap:6px}
+#cf-eval-preview .commit-date{font-size:11.5px}
+#cf-eval-preview .timeline-hint{font-size:12px;line-height:1.6;margin:10px 4px 0 30px}
+#cf-eval-preview .change-chips{display:flex;flex-wrap:wrap;gap:5px}
+#cf-eval-preview .change-chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:2px 9px;border-radius:12px;background:#fff;border:1px solid #d6dad7;color:#33475b}
+#cf-eval-preview button.change-chip{cursor:pointer}
+#cf-eval-preview button.change-chip:hover{border-color:#475f78}
+#cf-eval-preview .change-chip b{font-weight:650;font-variant-numeric:tabular-nums}
+#cf-eval-preview .commit-detail>.change-chips{margin-bottom:6px}
+#cf-eval-preview .detail-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+#cf-eval-preview .detail-head h4{margin:0}
+#cf-eval-preview .diff-api{scroll-margin-top:10px}
+#cf-eval-preview .diff-card>summary{cursor:pointer;list-style:none}
+#cf-eval-preview .diff-card>summary::-webkit-details-marker{display:none}
+#cf-eval-preview .diff-card>summary::before{content:"▾";color:#7d8a97;font-size:11px}
+#cf-eval-preview .diff-card:not([open])>summary::before{content:"▸"}
+#cf-eval-preview .diff-head .stat-add,#cf-eval-preview .diff-head .stat-del{font-size:12px;font-weight:600}
+#cf-eval-preview .diff-head .stat-add{margin-left:auto}
+@media(max-width:760px){#cf-eval-preview .prompt-layout{grid-template-columns:1fr}#cf-eval-preview .prompt-side{position:static}}
+#cf-eval-preview .commit-detail{min-width:0}
+#cf-eval-preview .api-path{overflow-wrap:anywhere;white-space:normal}
+#cf-eval-preview .diff-api{flex-wrap:wrap}
+#cf-eval-preview .diff-table{table-layout:fixed}
+@media(max-width:760px){#cf-eval-preview .prompt-layout{grid-template-columns:minmax(0,1fr)}#cf-eval-preview .diff-sign{width:14px;padding-right:2px}}
+#cf-eval-preview .diff-sign-col{width:26px}
+#cf-eval-preview .diff-head{flex-wrap:wrap}#cf-eval-preview .diff-badge{white-space:nowrap}#cf-eval-preview .diff-head strong{min-width:0;overflow-wrap:anywhere}
