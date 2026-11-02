@@ -105,14 +105,14 @@ class EvaluationEnabledContextTest {
         List<String> statuses = new ArrayList<>();
         for (String state : List.of("initial", "high-school", "university", "ged")) {
             JsonNode file = mapper.readTree(getClass().getClassLoader().getResourceAsStream(
-                "evaluation/datasets/generic-matching/v2/cases/woowahan-r2605009-" + state + "-synthetic-01.json"));
+                "evaluation/datasets/generic-matching/v3/cases/woowahan-r2605009-" + state + "-synthetic-01.json"));
             for (JsonNode call : file.path("calls")) {
                 JsonNode response = gateway.call(CallKind.valueOf(call.path("kind").asString()), call.path("request"),
                     new CallTarget("fake", "fake-1", Map.of("field-batch-size", "5", "section-concurrency", "3")));
                 statuses.add(response.path("status").asString());
             }
         }
-        assertThat(statuses).hasSize(13).doesNotContainNull();
+        assertThat(statuses).hasSize(11).doesNotContainNull();
         assertThat(asked).contains("answer", "choose");
         assertThatThrownBy(() -> gateway.call(CallKind.SECTION_CLASSIFY, mapper.readTree("{}"),
             new CallTarget("missing", "x", Map.of()))).isInstanceOf(IllegalStateException.class);

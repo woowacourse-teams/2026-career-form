@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.HashMap;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
@@ -139,6 +140,24 @@ class DatasetLoaderTest {
             .containsExactlyInAnyOrder("initial", "high-school", "university", "ged");
         assertThat(dataset.casesIn("final")).extracting(EvaluationCase::state)
             .containsExactlyInAnyOrder("high-school", "university", "ged");
+    }
+
+    @Test
+    @DisplayName("저장소의 generic-matching v3는 처음 화면을 준비 단계만 채점하고 나머지 화면은 v2와 같다")
+    void repositoryDatasetV3ScoresInitialPreparationOnly() {
+        DatasetLoader loader = new DatasetLoader(DatasetLoader.classpath(getClass().getClassLoader()));
+
+        LoadedDataset dataset = loader.load("generic-matching", 3);
+        LoadedDataset previous = loader.load("generic-matching", 2);
+
+        EvaluationCase initial = dataset.cases().stream().filter(c -> c.state().equals("initial")).findFirst().orElseThrow();
+        assertThat(initial.calls()).extracting(com.careerform.evaluation.dataset.CaseCall::stage)
+            .containsOnly(com.careerform.evaluation.scoring.CallKind.Stage.PREPARATION);
+        for (String state : List.of("high-school", "university", "ged")) {
+            assertThat(dataset.cases().stream().filter(c -> c.state().equals(state)).findFirst().orElseThrow().calls())
+                .isEqualTo(previous.cases().stream().filter(c -> c.state().equals(state)).findFirst().orElseThrow().calls());
+        }
+        assertThat(loader.find("generic-matching", 3).orElseThrow().splits().get("all").cases()).isEqualTo(4);
     }
 
     @Test

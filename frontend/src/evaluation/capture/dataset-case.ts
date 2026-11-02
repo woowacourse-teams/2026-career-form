@@ -66,6 +66,8 @@ export interface CaseInput {
   profileId: string;
   profile: Profile;
   truth: StateTruth;
+  /** true면 준비 단계 호출만 사례에 남긴다. 고르기 전 화면처럼 칸 매핑이 실제 흐름과 다른 화면에 쓴다. */
+  preparationOnly?: boolean;
 }
 
 /**
@@ -111,7 +113,9 @@ export async function buildCase(
     fixtureId: input.fixtureId,
     fixtureSha256,
     profileId: input.profileId,
-    calls: recorded.map((call) => toCaseCall(call, truth)),
+    calls: recorded
+      .filter((call) => !input.preparationOnly || call.phase === "PREPARATION")
+      .map((call) => toCaseCall(call, truth)),
   };
 }
 

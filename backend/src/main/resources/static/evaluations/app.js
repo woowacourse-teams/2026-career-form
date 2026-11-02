@@ -3,7 +3,7 @@ import { accessHeaders, clearAccess } from "/quality/access.js";
 import { estimateCost, formatUsd, validRate } from "/evaluations/pricing.js";
 
 // 평가는 항상 현재 데이터셋의 모든 화면으로 한다. 전후 비교는 같은 데이터셋으로 개선 전·후 코드를 각각 돌려 비교한다.
-const DATASET = { id: "generic-matching", version: 2 };
+const DATASET = { id: "generic-matching", version: 3 };
 const COLORS = ["#4e6d90", "#688b7c", "#ac8d68", "#8a6f9e", "#6f8f9e"];
 const PRICE_KEY = "cf-evaluation-model-prices-v1";
 const root = document.getElementById("cf-eval-preview");
@@ -1074,7 +1074,7 @@ function dialog(title, content, className) {
 const STATE_NAMES = { initial: "처음 화면", "high-school": "고등학교", university: "대학교", ged: "검정고시" };
 // 화면 상태 설명. 같은 지원서라도 무엇을 골랐는지에 따라 나타나는 칸이 달라 상태별로 따로 평가한다.
 const STATE_NOTES = {
-  initial: "지원서를 처음 연 상태. 아무것도 고르지 않아 학력 행에는 '구분' 선택칸만 있습니다. 제품이 학력 구분을 직접 고르는 준비 단계까지 평가합니다.",
+  initial: "지원서를 처음 연 상태. 아무것도 고르지 않아 학력 행에는 '구분' 선택칸만 있습니다. 준비 단계(조작할 섹션 분류, 학력 구분 선택)만 평가합니다. 칸 채우기는 고른 뒤 펼쳐진 화면에서 평가합니다.",
   "high-school": "학력 구분 '고등학교', 보훈·장애 '대상'을 고른 뒤 펼쳐진 화면. 고등학교 학력 칸과 보훈·장애 상세 칸이 나타납니다.",
   university: "학력 구분 '대학교', 보훈·장애 '대상'을 고른 뒤 펼쳐진 화면. 대학 학력 칸(전공 포함)과 보훈·장애 상세 칸이 나타납니다.",
   ged: "학력 구분 '검정고시'만 고른 화면. 학교·전공 칸 없이 '합격연월' 칸 하나만 나타납니다.",
@@ -1180,7 +1180,8 @@ function datasetView(selected = 0) {
       });
       form.append(card);
     });
-    main.append(element("h4", `지원서 화면 · 입력 칸 ${count(item)}개`), form);
+    main.append(element("h4", `지원서 화면 · 입력 칸 ${count(item)}개`),
+      item.sections.length ? form : element("p", "이 화면은 칸 채우기를 채점하지 않아 칸 목록이 없습니다(준비 단계만).", "muted"));
     const badges = element("div", undefined, "review-badges");
     Object.entries(item.review).filter(([key]) => REVIEW_NAMES[key]).forEach(([key, value]) =>
       badges.append(element("span", `${REVIEW_NAMES[key]} ${REVIEW_OK.has(value) ? "확인" : value}`,

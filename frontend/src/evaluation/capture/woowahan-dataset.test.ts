@@ -10,21 +10,23 @@ import {
   sha256,
 } from "./dataset-case";
 
-// 평가 데이터셋 generic-matching v2의 우아한형제들 사례를 현재 제품 코드로 다시 만들어 저장본과 비교한다.
-// 저장본을 새로 만들 때만 CF356_WRITE_DATASET=1로 실행한다. v1은 같은 화면 3개의 이전 버전이라 다시 만들지 않는다.
+// 평가 데이터셋 generic-matching v3의 우아한형제들 사례를 현재 제품 코드로 다시 만들어 저장본과 비교한다.
+// 저장본을 새로 만들 때만 CF356_WRITE_DATASET=1로 실행한다. v1·v2는 이전 버전이라 다시 만들지 않는다.
+// v3는 처음 화면(학력 구분을 고르기 전)을 준비 단계만 채점한다. 실제 제품은 학력 구분을 고른 뒤 펼쳐진 화면에서
+// 칸을 채우므로, 고르기 전 화면의 칸 매핑은 실제 흐름과 다르고 공통 칸을 중복 채점한다(2026-11-03 사용자 결정).
 const DATASET = join(
   process.cwd(),
-  "../backend/src/main/resources/evaluation/datasets/generic-matching/v2",
+  "../backend/src/main/resources/evaluation/datasets/generic-matching/v3",
 );
 const PROFILE = join(
   process.cwd(),
   "../backend/src/main/resources/evaluation/profiles/v1/synthetic-01-basic.json",
 );
 const STATES = [
-  { state: "initial", split: "tuning" },
-  { state: "high-school", split: "final" },
-  { state: "university", split: "final" },
-  { state: "ged", split: "final" },
+  { state: "initial", split: "tuning", preparationOnly: true },
+  { state: "high-school", split: "final", preparationOnly: false },
+  { state: "university", split: "final", preparationOnly: false },
+  { state: "ged", split: "final", preparationOnly: false },
 ] as const;
 const write = process.env.CF356_WRITE_DATASET === "1";
 const RESOURCES = join(process.cwd(), "../backend/src/main/resources");
@@ -40,7 +42,11 @@ beforeEach(() => {
 });
 afterEach(() => document.body.replaceChildren());
 
-async function build(state: string, split: CaseFile["split"]) {
+async function build(
+  state: string,
+  split: CaseFile["split"],
+  preparationOnly = false,
+) {
   const fixtureId = `woowahan-r2605009-${state}`;
   return buildCase(document, {
     caseId: `${fixtureId}-synthetic-01`,
@@ -56,14 +62,15 @@ async function build(state: string, split: CaseFile["split"]) {
     truth: JSON.parse(
       readFileSync(join(DATASET, `ground-truth/${fixtureId}.json`), "utf8"),
     ) as StateTruth,
+    preparationOnly,
   });
 }
 
-describe("평가 데이터셋 generic-matching v2 우아한형제들 사례", () => {
+describe("평가 데이터셋 generic-matching v3 우아한형제들 사례", () => {
   it.each(STATES)(
     "$state 사례는 현재 제품 코드가 만드는 요청과 같다",
-    async ({ state, split }) => {
-      const built = await build(state, split);
+    async ({ state, split, preparationOnly }) => {
+      const built = await build(state, split, preparationOnly);
       const file = join(DATASET, `cases/${built.caseId}.json`);
       if (write) writeFileSync(file, `${JSON.stringify(built, null, 2)}\n`);
       expect(existsSync(file)).toBe(true);
@@ -78,7 +85,7 @@ describe("평가 데이터셋 generic-matching v2 우아한형제들 사례", ()
   );
 
   it("manifest의 파일 해시가 저장본과 같다(쓰기 모드에서는 다시 계산한다)", () => {
-    const path = "evaluation/datasets/generic-matching/v2/manifest.json";
+    const path = "evaluation/datasets/generic-matching/v3/manifest.json";
     if (write) refreshManifestDigests(RESOURCES, path);
     const manifest = JSON.parse(
       readFileSync(join(RESOURCES, path), "utf8"),
@@ -99,13 +106,11 @@ describe("평가 데이터셋 generic-matching v2 우아한형제들 사례", ()
     }
   });
 
-  it("호출 순서는 준비 → 매핑이고 매핑은 섹션 분류 → 필드 매핑 한 번씩이다", async () => {
-    const initial = await build("initial", "tuning");
+  it("처음 화면은 준비 단계만, 펼쳐진 화면은 준비 → 매핑(섹션 분류 → 필드 매핑)이다", async () => {
+    const initial = await build("initial", "tuning", true);
     expect(initial.calls.map((call) => `${call.phase}:${call.kind}`)).toEqual([
       "PREPARATION:SECTION_CLASSIFY",
       "PREPARATION:INTERACTION_DECISION",
-      "MAPPING:SECTION_CLASSIFY",
-      "MAPPING:GENERIC_FIELDS",
     ]);
     const university = await build("university", "final");
     expect(
@@ -118,7 +123,9 @@ describe("평가 데이터셋 generic-matching v2 우아한형제들 사례", ()
   });
 
   it("필드 매핑 정답은 요청의 모든 칸을 덮고 정답 파일의 칸 수와 같다", async () => {
-    for (const { state, split } of STATES) {
+    for (const { state, split } of STATES.filter(
+      (entry) => !entry.preparationOnly,
+    )) {
       const built = await build(state, split);
       const fields = built.calls.find(
         (call) => call.kind === "GENERIC_FIELDS",
