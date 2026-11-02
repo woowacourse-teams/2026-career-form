@@ -32,7 +32,7 @@ public final class RunReporter {
             tokens.put(name, tokens(selected));
         });
         return new RunReport(aggregator.aggregate(records.stream().map(CallResultRecord::toCallResult).toList()),
-            performance, tokens, flows(records), timing(run, records));
+            performance, tokens, flows(records), timing(run, records), RunService.SCORING_VERSION);
     }
 
     private static RunReport.StagePerformance performance(List<CallResultRecord> records, Double elapsedSeconds) {

@@ -13,7 +13,7 @@
 | 합성 프로필 | `src/main/resources/evaluation/profiles/v1/` | 가상 인물 3명. 실제 지원자 자료가 아니다 |
 | 등록 검사 | `evaluation/dataset/DatasetLoader` | 해시, 사람 검토, 입력 동일성, 형식, 분할을 통과한 데이터셋만 실행에 쓴다 |
 | 실행 | `evaluation/run/` | 등록(`RunService`), 작업자(`EvaluationWorker`), 제품 서비스 호출(`ServiceProductCallGateway`), 결과·재채점 저장 |
-| 채점 | `evaluation/scoring/` | 항목 채점(`CallScorer`), 호출 단위 집계(`RunAggregator`) |
+| 채점 | `evaluation/scoring/` | 항목 채점(`CallScorer`), 항목 단위 집계(`RunAggregator`) |
 | 공급자 | `formanalysis/application/port/ChoiceModel`, `evaluation/run/EvaluationProviders` | 범용 매칭이 모델에 묻는 유일한 포트와 평가에서 고를 수 있는 공급자 목록 |
 | 모델 호출 기록 | `monitoring/ModelCallRecording`, `JevClient`, `OpenAiChoiceModel` | 평가 실행 범위 안의 모델 HTTP 시도별 시간·상태·토큰 |
 | 프롬프트 버전 | `formanalysis/application/PromptSource`, `evaluation/prompt/` | 프롬프트 고정 문구 조각과 sha256 해시, 버전별 전문 |
@@ -79,11 +79,16 @@ API와 화면은 품질 확인 공용 비밀번호(`CAREER_FORM_QUALITY_PASSWORD
 
 ## 채점
 
-- 채점 단위는 제품 API 호출 1건이다. 서버가 그 안에서 모델을 몇 번 불렀는지는 비중에 쓰지 않는다.
+- 채점은 제품 API 호출 1건의 항목별로 한다. 서버가 그 안에서 모델을 몇 번 불렀는지는 비중에 쓰지 않는다.
 - 호출 점수 = 맞힌 항목 수 ÷ 정답 항목 수. 정답에는 매핑 불가·기권도 들어간다. 누락, 다른 키, 불필요 제안은 그 항목의 오답이다.
 - 공급자 사용 불가 항목은 채점에서 빼고, 모든 항목이 빠진 호출은 채점 불가 실패다.
 - 모델 시도가 있었는데 하나도 성공하지 못한 호출은 응답 내용과 관계없이 실패(타임아웃, API 오류, 응답 형식 오류)다.
-- 최종 정확도 = 채점 가능한 호출 점수의 평균. 준비·매핑 정확도는 호출이 일어난 단계로 나눈다(준비 루프 안의 섹션 분류는 준비).
+- 최종 정확도 = 채점 가능한 호출의 맞힌 항목 수 합 ÷ 채점한 항목 수 합(항목 단위, 채점식 `item-weighted-exact-v2`).
+  준비·매핑 정확도는 호출이 일어난 단계로 나눠 같은 방식으로 계산한다(준비 루프 안의 섹션 분류는 준비).
+- 이전 채점식 `call-unit-item-exact-v1`은 호출 점수의 평균이었다. 섹션 4개짜리 분류 호출과 칸 40여 개짜리 매핑 호출이
+  같은 비중이라 매핑 품질 차이가 가려지고 모델 순위가 바뀔 수 있어 항목 단위로 바꿨다(2026-11-02 사용자 결정).
+- 실행 보고는 원자료에서 현재 채점식으로 다시 계산하고 `report.scoringVersion`에 그 채점식을 적는다. 실행 등록 때의
+  채점식은 `versions.scoringVersion`에 남는다.
 - 채점식을 바꾸면 `RunService.SCORING_VERSION`을 올리고 재채점으로 새 기록을 만든다.
 
 ## 측정 범위

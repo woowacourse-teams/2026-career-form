@@ -94,7 +94,7 @@ function renderOverview() {
   const quality = $("#cf-quality");
   quality.replaceChildren(
     bars("자동기입 최종 정확도", "%", (m) => percent(report(m)?.quality.accuracy), 100, (v) => `${v.toFixed(1)}%`,
-      "채점 가능한 준비·매핑 호출 점수의 평균. 실패 호출은 빠진다."),
+      `맞힌 항목 수 ÷ 채점한 항목 수(준비·매핑 전체 합산). 실패 호출은 빠진다. 채점식 ${report(state.selected[0])?.scoringVersion ?? "—"}`),
     bars("준비 정확도", "%", (m) => percent(report(m)?.quality.preparationAccuracy), 100, (v) => `${v.toFixed(1)}%`),
     bars("필드 매핑 정확도", "%", (m) => percent(report(m)?.quality.mappingAccuracy), 100, (v) => `${v.toFixed(1)}%`));
   const total = state.stage === "total";
@@ -341,10 +341,10 @@ function datasetView() {
 function criteriaView() {
   const list = element("div", undefined, "criteria-list");
   const lines = [
-    ["호출 점수", "맞힌 항목 수 ÷ 정답 항목 수(매핑 불가·기권 정답 포함). 항목 안 부분 점수 없음."],
+    ["항목 판정", "항목마다 정답·오답만 판정한다(매핑 불가·기권 정답 포함, 부분 점수 없음). 호출별 점수는 참고용으로만 남는다."],
     ["오답의 종류", "다른 키, 누락(정답이 있는데 답 없음), 불필요 제안(정답이 매핑 불가인데 답함)은 모두 그 항목의 오답이며 별도 감점은 없다."],
     ["채점 제외", "공급자 사용 불가 항목은 빼고, 모든 항목이 빠진 호출은 채점 불가로 실패율에 넣는다."],
-    ["최종 정확도", "채점 가능한 호출 점수의 합 ÷ 채점 가능한 호출 수. 호출 안의 항목 수로 비중을 바꾸지 않는다."],
+    ["최종 정확도", "채점 가능한 호출의 맞힌 항목 수 합 ÷ 채점한 항목 수 합(항목 단위). 칸이 많은 호출이 그만큼 비중을 가진다. 준비·매핑 정확도도 같은 방식으로 단계별로 계산한다."],
     ["실패", "타임아웃, API 오류, 응답 형식 오류는 정확도에서 빼고 실패율에 넣는다. 채점 가능한 호출이 없으면 측정 불가."],
   ];
   for (const [title, text] of lines) {

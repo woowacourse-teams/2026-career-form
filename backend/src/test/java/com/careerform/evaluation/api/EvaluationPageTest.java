@@ -19,7 +19,7 @@ class EvaluationPageTest {
             "id=\"cf-progress\"");
         String app = read("static/evaluations/app.js");
         assertThat(app).contains("/quality/access.js", "\"/api/v1/evaluations\"", "/runs?limit=50", "/datasets/",
-            "/prompts/", "맞힌 항목 수 ÷ 정답 항목 수", "renderProgress", "progressbar",
+            "/prompts/", "맞힌 항목 수 ÷ 채점한 항목 수", "?.scoringVersion", "renderProgress", "progressbar",
             "aria-valuenow", "renderTokenBars", "입력 토큰", "출력 토큰");
         String all = index + app + read("static/evaluations/styles.css") + read("static/evaluations/pricing.js");
         assertThat(all).doesNotContain("cdn.", "https://", "http://", "window.openai", "Pretendard",

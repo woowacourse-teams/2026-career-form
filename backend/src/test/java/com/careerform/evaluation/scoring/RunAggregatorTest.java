@@ -9,28 +9,23 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import com.careerform.evaluation.scoring.CallKind.Stage;
 
-@DisplayName("평가 실행의 호출 단위 집계")
+@DisplayName("평가 실행의 항목 단위 집계")
 class RunAggregatorTest {
 
     private final RunAggregator aggregator = new RunAggregator();
 
     @Test
-    @DisplayName("준비 2회와 매핑 8회면 매핑이 80% 비중을 가지며 칸 수는 비중을 바꾸지 않는다")
-    void weighsByCallNotByItem() {
-        List<CallResult> calls = new ArrayList<>();
-        calls.add(scored(CallKind.INTERACTION_DECISION, 1, 1, 1));
-        calls.add(scored(CallKind.INTERACTION_DECISION, 0, 1, 1));
-        for (int i = 0; i < 8; i++) {
-            int items = i == 0 ? 40 : 2;
-            calls.add(scored(CallKind.GENERIC_FIELDS, items / 2, items, 1));
-        }
+    @DisplayName("정확도는 항목 단위다: 섹션 4개짜리 호출과 칸 43개짜리 호출이 같은 무게를 갖지 않는다")
+    void weighsByItemNotByCall() {
+        RunAggregate result = aggregator.aggregate(List.of(
+            CallResult.completed(CallKind.SECTION_CLASSIFY, Stage.PREPARATION, new CallScore(1, 1, 2, 0, 0), 1),
+            CallResult.completed(CallKind.SECTION_CLASSIFY, Stage.MAPPING, new CallScore(5, 1, 2, 0, 0), 1),
+            CallResult.completed(CallKind.GENERIC_FIELDS, Stage.MAPPING, new CallScore(40, 1, 1, 1, 2), 9)));
 
-        RunAggregate result = aggregator.aggregate(calls);
-
-        assertThat(result.accuracy()).isCloseTo(0.5, within(1e-9));
-        assertThat(result.preparationAccuracy()).isCloseTo(0.5, within(1e-9));
-        assertThat(result.mappingAccuracy()).isCloseTo(0.5, within(1e-9));
-        assertThat(result.scorableCalls()).isEqualTo(10);
+        assertThat(result.accuracy()).isCloseTo(46.0 / 55, within(1e-9));
+        assertThat(result.preparationAccuracy()).isCloseTo(1.0 / 4, within(1e-9));
+        assertThat(result.mappingAccuracy()).isCloseTo(45.0 / 51, within(1e-9));
+        assertThat(result.scorableCalls()).isEqualTo(3);
     }
 
     @Test

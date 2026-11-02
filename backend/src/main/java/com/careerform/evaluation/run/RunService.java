@@ -25,7 +25,7 @@ import com.careerform.formanalysis.application.PromptSource;
 public final class RunService {
 
     /** 채점식(D1, D2)을 바꾸면 이 값을 올린다. */
-    public static final String SCORING_VERSION = "call-unit-item-exact-v1";
+    public static final String SCORING_VERSION = "item-weighted-exact-v2";
     static final Map<String, int[]> OVERRIDABLE = Map.of(
         "field-batch-size", new int[] {1, 128},
         "section-concurrency", new int[] {1, 16});

@@ -33,7 +33,9 @@ class RunReporterTest {
 
         RunReport report = new RunReporter().report(run, records);
 
-        assertThat(report.quality().accuracy()).isEqualTo(0.75);
+        // 항목 단위: 맞힌 2개 ÷ 채점한 3개. 보고는 어떤 채점식으로 계산했는지 함께 준다.
+        assertThat(report.quality().accuracy()).isEqualTo(2.0 / 3);
+        assertThat(report.scoringVersion()).isEqualTo(RunService.SCORING_VERSION);
         assertThat(report.quality().preparationAccuracy()).isEqualTo(1.0);
         assertThat(report.quality().mappingAccuracy()).isEqualTo(0.5);
         assertThat(report.quality().failureRate()).isEqualTo(1.0 / 3);
