@@ -224,18 +224,43 @@ function renderTokenBars() {
     axis.append(element("span"), ticks, element("span", "토큰 / 시도", "muted"));
     box.append(axis);
   }
-  const priced = rows.map((row, index) => ({ ...row, cost: costs[index].total }))
-    .filter((_, index) => totals[index] != null);
-  if (priced.some(({ cost }) => cost != null)) {
+  // 실행 하나는 자동기입 몇 회뿐이라 금액이 작다. 자동기입 1회 비용(실행 비용 ÷ 실행 안의 자동기입 수)을
+  // 1,000회 기준으로 키우고, 가장 저렴한 모델 대비 배수로 비교한다.
+  const priced = rows.map((row, index) => {
+    const flows = report(row.model)?.flows.count;
+    const perThousand = costs[index].total == null || !flows ? null : costs[index].total / flows * 1000;
+    return { ...row, flows, total: costs[index].total, perThousand };
+  }).filter((_, index) => totals[index] != null);
+  const known = priced.filter(({ perThousand }) => perThousand != null);
+  if (known.length) {
+    const cheapest = Math.min(...known.map(({ perThousand }) => perThousand));
+    const highest = Math.max(...known.map(({ perThousand }) => perThousand));
     const summary = element("div", undefined, "token-cost-summary");
-    summary.append(element("h4", "실행 전체 예상 비용"));
-    priced.forEach(({ model, cost }) => {
-      const line = element("div", undefined, "token-cost-line");
+    const heading = element("div", undefined, "cost-heading");
+    heading.append(element("h4", "예상 비용 비교"), element("span", "자동기입 1,000회당 · USD", "muted"));
+    summary.append(heading);
+    priced.forEach(({ model, run, flows, total, perThousand }) => {
+      const line = element("div", undefined, "cost-row");
       line.style.setProperty("--model", color(model));
-      line.append(element("span", model), element("b", formatUsd(cost)));
+      const track = element("div", undefined, "cost-track");
+      const fill = element("span");
+      fill.style.width = `${perThousand == null || !highest ? 0 : perThousand / highest * 100}%`;
+      track.append(fill);
+      const amount = element("div", undefined, "cost-amount");
+      if (perThousand == null) {
+        amount.append(element("b", "단가 미설정"));
+      } else {
+        const ratio = cheapest > 0 ? perThousand / cheapest : null;
+        amount.append(element("b", perThousand >= 1 ? `$${perThousand.toFixed(2)}` : formatUsd(perThousand)),
+          element("span", known.length < 2 ? "비교할 모델 없음"
+            : ratio != null && ratio < 1.005 ? "가장 저렴" : `가장 저렴한 모델의 ${ratio?.toFixed(1) ?? "—"}배`,
+          ratio != null && ratio < 1.005 ? "cost-badge cheapest" : "cost-badge"));
+      }
+      line.append(element("span", model, "cost-model"), track, amount,
+        element("span", total == null ? "" : `이번 실행 ${formatUsd(total)} · 자동기입 ${flows}회`, "muted cost-detail"));
       summary.append(line);
     });
-    summary.append(element("p", "입력·출력 토큰 합계 × 모델 단가 설정에 입력한 USD 단가(100만 토큰당). 서버는 비용을 계산하지 않는다.", "muted"));
+    summary.append(element("p", "자동기입 1회 = 사례 하나의 준비·매핑 호출 전체. 비용 = 입력·출력 토큰 × 모델 단가 설정의 USD 단가(100만 토큰당). 서버는 비용을 계산하지 않는다.", "muted"));
     box.append(summary);
   } else if (observed.length) {
     box.append(element("p", "비용을 보려면 모델 단가 설정에서 입력·출력 단가를 넣어 주세요.", "muted"));
