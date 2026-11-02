@@ -26,9 +26,9 @@ class EvaluationPageTest {
             "키 원문은 이 화면에 입력하지 않습니다", "datasetVersion: DATASET.version", "split: \"all\"",
             "comparisonDetail", "accuracyCard", "?.repetitions", "차이 구분 불가", "반복 1회라 흔들림을 알 수 없음",
             "renderAutofill", "?.autofill", "실제 자동기입 결과", "자동기입 정확도", "확신도를 기록하기 전 실행",
-            "STATE_NAMES", "STATE_NOTES", "dataset-intro", "처음 화면과 달라진 섹션", "criteria-formula", "틀림의 종류", "dataset-tabs", "field-table", "profileTable", "PROMPT_APIS", "prompt-group", "criteria-table", "POST /api/v1/generic/sections/classify", "change-chips", "prompt-layout", "timeline-hint",
+            "STATE_NAMES", "STATE_NOTES", "dataset-about", "screen-list", "score-flow", "form-wire", "criteria-formula", "틀림의 종류", "dataset-tabs", "field-table", "profileTable", "PROMPT_APIS", "prompt-group", "criteria-table", "POST /api/v1/generic/sections/classify", "change-chips", "prompt-layout",
             "api(\"/prompts\")", "commit-list", "초기 버전", "lineDiff", "diff-table", "처음 기록한 프롬프트");
-        assertThat(app).doesNotContain("이름만 바뀜", "prompt-model", "조각 ${", "변경 없는 조각");
+        assertThat(app).doesNotContain("이름만 바뀜", "timeline-hint", "새 버전이 쌓이고", "prompt-model", "조각 ${", "변경 없는 조각");
         assertThat(app).doesNotContain("field(\"분할\"", "field(\"데이터셋 버전\"", "renderVariation");
         String all = index + app + read("static/evaluations/styles.css") + read("static/evaluations/pricing.js");
         assertThat(all).doesNotContain("cdn.", "https://", "http://", "window.openai", "Pretendard",

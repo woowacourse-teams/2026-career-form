@@ -514,93 +514,110 @@ const REVIEW_NAMES = { privacy: "개인정보", structure: "구조", mappingTrut
   inputIdentity: "입력 동일성" };
 const REVIEW_OK = new Set(["PASSED", "HUMAN_REVIEWED", "SOURCE_PIPELINE_VERIFIED", "INSTALLED_VERIFIED"]);
 
-/** 데이터셋 대화상자. 요약, 화면별 탭, 채점 순서, 섹션별 칸 표, 검토 상태, 합성 프로필을 보인다. */
+const CONTROL_ICONS = { text: "▭", select: "▾", radio: "◉", checkbox: "☑", textarea: "¶" };
+const STEP_APIS = { SECTION_CLASSIFY: "/generic/sections/classify", INTERACTION_DECISION: "/generic/interaction-decisions",
+  GENERIC_FIELDS: "/generic/fields/analyze" };
+const sectionTitle = (group) => !group.title ? "제목 없음" : group.title === "[비식별]" ? "기본정보" : group.title;
+
+/**
+ * 데이터셋 대화상자. 왼쪽에 화면 상태 목록과 합성 프로필, 오른쪽에 고른 화면의 설명·채점 흐름·지원서 와이어프레임을 둔다.
+ * {@code selected}가 "profile"이면 합성 프로필을 보인다.
+ */
 function datasetView(selected = 0) {
   const data = state.dataset;
   if (!data) return element("p", "데이터셋을 불러오지 못했습니다.", "muted");
   const wrap = element("div", undefined, "dataset-view");
-  const fieldCount = data.cases.reduce((sum, item) => sum + item.sections.reduce((n, group) => n + group.fields.length, 0), 0);
-  const summary = element("div", undefined, "dataset-summary");
-  [[`${data.cases.length}개`, "화면"], [`${fieldCount}칸`, "채점하는 입력 칸"],
-    [`${Object.keys(data.profiles).length}명`, "합성 프로필"],
-    [data.usable ? "사용 가능" : "검토 필요", "평가 상태"]].forEach(([value, label]) => {
-    const tile = element("div", undefined, "summary-tile");
-    tile.append(element("strong", value), element("span", label, "muted"));
-    summary.append(tile);
-  });
-  wrap.append(summary);
-  const intro = element("div", undefined, "dataset-intro");
-  intro.append(element("strong", "이 데이터셋은 무엇인가요?"),
-    element("p", "실제 채용 지원서(우아한형제들 공고 R2605009) 하나를 개인정보 없이 정제해 만든 화면들이에요. 같은 지원서라도 학력 구분이나 보훈·장애를 무엇으로 고르느냐에 따라 나타나는 칸이 달라져서, 화면 상태마다 따로 평가해요."),
-    element("p", "모델은 각 화면에서 확장프로그램이 실제로 보내는 질문(섹션 분류, 칸 매핑 등)에 답하고, 사람이 검토한 정답과 비교해 채점해요. 지원자 정보는 가상 인물(합성 프로필)이에요."));
-  wrap.append(intro);
+  const count = (item) => item.sections.reduce((n, group) => n + group.fields.length, 0);
+  const head = element("div", undefined, "dataset-head");
+  const title = element("div");
+  title.append(element("strong", "우아한형제들 · 공고 R2605009"),
+    element("span", `화면 ${data.cases.length}개 · 입력 칸 ${data.cases.reduce((n, item) => n + count(item), 0)}개 · 합성 프로필 ${Object.keys(data.profiles).length}명`, "muted"));
+  head.append(title, element("span", data.usable ? "평가에 사용 가능" : "검토 필요", data.usable ? "badge ok" : "badge"));
+  wrap.append(head);
+  const about = element("details", undefined, "dataset-about");
+  about.append(element("summary", "이 데이터셋은 무엇인가요?"),
+    element("p", "실제 채용 지원서 하나를 개인정보 없이 정제한 화면들이에요. 학력 구분이나 보훈·장애를 무엇으로 고르느냐에 따라 나타나는 칸이 달라서, 화면 상태마다 따로 평가해요. 모델은 확장프로그램이 실제로 보내는 질문에 답하고, 사람이 검토한 정답과 비교해 채점해요."));
+  wrap.append(about);
   if (!data.usable && data.rejection) wrap.append(element("p", `미완료 검토: ${data.rejection}`, "muted"));
-  const tabs = element("div", undefined, "dataset-tabs");
+  const layout = element("div", undefined, "dataset-layout2");
+  const nav = element("nav", undefined, "screen-list");
+  const go = (target) => dialog("데이터셋", datasetView(target), "dataset-dialog");
   data.cases.forEach((item, index) => {
-    const tab = element("button", STATE_NAMES[item.state] ?? item.state);
-    tab.type = "button";
-    tab.setAttribute("aria-pressed", String(index === selected));
-    tab.addEventListener("click", () => dialog("데이터셋", datasetView(index), "dataset-dialog"));
-    tabs.append(tab);
+    const button = element("button");
+    button.type = "button";
+    button.setAttribute("aria-pressed", String(selected === index));
+    button.append(element("strong", STATE_NAMES[item.state] ?? item.state),
+      element("span", `${count(item)}칸 · 호출 ${item.calls.length}개`, "muted"));
+    button.addEventListener("click", () => go(index));
+    nav.append(button);
   });
-  wrap.append(tabs);
-  const item = data.cases[selected];
-  if (STATE_NOTES[item.state]) wrap.append(element("p", STATE_NOTES[item.state], "state-note"));
-  // 처음 화면 대비 섹션별 칸 수 변화. 칸 이름은 화면 상태에 따라 달리 읽히므로 섹션 칸 수로 비교한다.
-  const base = data.cases.find((other) => other.state === "initial");
-  if (base && base !== item) {
-    const title = (group) => !group.title ? "제목 없음" : group.title === "[비식별]" ? "기본정보" : group.title;
-    // 섹션 제목은 화면 상태에 따라 달리 읽힐 수 있어, 섹션 수가 같으면 같은 순서끼리 비교한다.
-    const samePlan = base.sections.length === item.sections.length;
-    const beforeOf = (group, index) => samePlan ? base.sections[index].fields.length
-      : base.sections.find((other) => title(other) === title(group))?.fields.length ?? 0;
-    const grown = item.sections.map((group, index) => [group, beforeOf(group, index)])
-      .filter(([group, count]) => group.fields.length !== count);
-    if (grown.length) {
-      const box = element("div", undefined, "new-fields");
-      box.append(element("span", "처음 화면과 달라진 섹션", "new-fields-title"));
-      grown.forEach(([group, count]) => box.append(element("span", `${title(group)} ${count}→${group.fields.length}칸`, "new-field")));
-      wrap.append(box);
-    }
+  const profileButton = element("button", undefined, "profile-entry");
+  profileButton.type = "button";
+  profileButton.setAttribute("aria-pressed", String(selected === "profile"));
+  profileButton.append(element("strong", "합성 프로필"), element("span", "가상 지원자 정보", "muted"));
+  profileButton.addEventListener("click", () => go("profile"));
+  nav.append(profileButton);
+  layout.append(nav);
+  const main = element("div", undefined, "screen-detail");
+  if (selected === "profile") {
+    main.append(element("h3", "합성 프로필"), element("p", "평가에 쓰는 가상 지원자예요. 실제 지원자 정보가 아니에요. 모델에게는 이 값이 아니라 화면 구조만 전달돼요.", "state-note"));
+    Object.entries(data.profiles).forEach(([id, profile]) => main.append(element("h5", id), profileTable(profile)));
   }
-  const steps = element("ol", undefined, "call-steps");
-  item.calls.forEach((call) => {
-    const step = element("li");
-    step.append(element("span", call.stage === "PREPARATION" ? "준비" : "매핑", "step-stage"),
-      element("strong", CALL_NAMES[call.kind] ?? call.kind), element("span", `${call.items}항목`, "muted"));
-    steps.append(step);
-  });
-  wrap.append(element("h4", "채점 순서"), steps);
-  const badges = element("div", undefined, "review-badges");
-  Object.entries(item.review).filter(([key]) => REVIEW_NAMES[key]).forEach(([key, value]) =>
-    badges.append(element("span", `${REVIEW_NAMES[key]} ${REVIEW_OK.has(value) ? "확인" : value}`,
-      REVIEW_OK.has(value) ? "badge ok" : "badge")));
-  wrap.append(badges);
-  const table = element("table", undefined, "field-table");
-  const head = element("thead");
-  const headRow = element("tr");
-  headRow.append(element("th", "칸 이름"), element("th", "종류"));
-  head.append(headRow);
-  const body = element("tbody");
-  item.sections.forEach((group) => {
-    const title = !group.title ? "제목 없음" : group.title === "[비식별]" ? "기본정보 (제목 비식별)" : group.title;
-    const sectionRow = element("tr", undefined, "section-row");
-    const cell = element("th", `${title} · ${group.fields.length}칸`);
-    cell.colSpan = 2;
-    sectionRow.append(cell);
-    body.append(sectionRow);
-    group.fields.forEach((field) => {
-      const row = element("tr");
-      row.append(element("td", field.label ?? "이름 없음"), element("td", CONTROL_NAMES[field.control] ?? field.control));
-      body.append(row);
+  else {
+    const item = data.cases[selected];
+    const top = element("div", undefined, "screen-title");
+    top.append(element("h3", STATE_NAMES[item.state] ?? item.state),
+      element("span", item.split === "tuning" ? "튜닝용" : "최종 평가용", "badge"));
+    main.append(top);
+    if (STATE_NOTES[item.state]) main.append(element("p", STATE_NOTES[item.state], "state-note"));
+    // 채점 흐름: 준비 요청과 필드 요청으로 묶어 단계와 API를 보인다.
+    const flow = element("div", undefined, "score-flow");
+    [["PREPARATION", "준비 요청", "칸을 꺼내기 위한 질문"], ["MAPPING", "필드 요청", "칸에 넣을 값을 정하는 질문"]].forEach(([stage, name, note]) => {
+      const calls = item.calls.filter((call) => call.stage === stage);
+      if (!calls.length) return;
+      const lane = element("div", undefined, "flow-lane");
+      const laneHead = element("div", undefined, "lane-head");
+      laneHead.append(element("strong", name), element("span", note, "muted"));
+      lane.append(laneHead);
+      const steps = element("ol", undefined, "flow-steps");
+      calls.forEach((call) => {
+        const step = element("li");
+        step.append(element("span", String(call.order), "flow-no"), element("strong", CALL_NAMES[call.kind] ?? call.kind),
+          element("span", `${call.items}항목`, "flow-items"), element("code", STEP_APIS[call.kind] ?? "", "flow-api"));
+        steps.append(step);
+      });
+      lane.append(steps);
+      flow.append(lane);
     });
-  });
-  table.append(head, body);
-  wrap.append(element("h4", `입력 칸 · ${item.sections.reduce((n, group) => n + group.fields.length, 0)}칸`), table);
-  const profiles = element("details", undefined, "profile-details");
-  profiles.append(element("summary", "합성 프로필 보기 (가상 인물, 실제 지원자 아님)"));
-  Object.entries(data.profiles).forEach(([id, profile]) => profiles.append(element("h5", id), profileTable(profile)));
-  wrap.append(profiles);
+    main.append(element("h4", "채점 흐름"), flow);
+    // 지원서 와이어프레임: 섹션 카드와 칸 아이콘. 처음 화면보다 칸이 늘어난 섹션에 배지를 단다.
+    const base = data.cases.find((other) => other.state === "initial");
+    const samePlan = base && base !== item && base.sections.length === item.sections.length;
+    const form = element("div", undefined, "form-wire");
+    item.sections.forEach((group, index) => {
+      const card = element("section", undefined, "wire-section");
+      const cardHead = element("div", undefined, "wire-head");
+      cardHead.append(element("strong", sectionTitle(group)), element("span", `${group.fields.length}칸`, "muted"));
+      const delta = samePlan ? group.fields.length - base.sections[index].fields.length : 0;
+      if (delta > 0) cardHead.append(element("span", `+${delta}칸`, "badge ok"));
+      card.append(cardHead);
+      group.fields.forEach((field) => {
+        const row = element("div", undefined, `wire-field control-${field.control}`);
+        row.append(element("span", CONTROL_ICONS[field.control] ?? "·", "wire-icon"), element("span", field.label ?? "이름 없음"),
+          element("span", CONTROL_NAMES[field.control] ?? field.control, "wire-kind"));
+        card.append(row);
+      });
+      form.append(card);
+    });
+    main.append(element("h4", `지원서 화면 · 입력 칸 ${count(item)}개`), form);
+    const badges = element("div", undefined, "review-badges");
+    Object.entries(item.review).filter(([key]) => REVIEW_NAMES[key]).forEach(([key, value]) =>
+      badges.append(element("span", `${REVIEW_NAMES[key]} ${REVIEW_OK.has(value) ? "확인" : value}`,
+        REVIEW_OK.has(value) ? "badge ok" : "badge")));
+    main.append(element("h4", "검토 상태"), badges);
+  }
+  layout.append(main);
+  wrap.append(layout);
   return wrap;
 }
 
@@ -961,8 +978,6 @@ async function promptView(selected = null) {
   }
   const side = element("div", undefined, "prompt-side");
   side.append(timeline);
-  if (versions.length === 1)
-    side.append(element("p", "프롬프트 문구를 고친 코드로 평가를 돌리면 여기에 새 버전이 쌓이고, 바뀐 문장을 비교할 수 있습니다.", "muted timeline-hint"));
   layout.append(side);
   const version = versions[index];
   const detail = element("div", undefined, "commit-detail");
