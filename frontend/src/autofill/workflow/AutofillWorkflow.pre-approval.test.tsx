@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createEmptyProfile, type Profile } from "../../profile/model";
@@ -6,7 +12,15 @@ import type { AnalysisApiClient, GenericFieldsRequest } from "../api/types";
 import type { InteractionDecisionRequest } from "../api/interaction-types";
 import { AutofillWorkflow } from "./AutofillWorkflow";
 
+// Developer mode is on unless a test turns it off, as in a development build.
+const developerMode = vi.hoisted(() => ({ on: true }));
+vi.mock("../debug/developer-mode", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../debug/developer-mode")>()),
+  useDeveloperMode: () => [developerMode.on, vi.fn()] as const,
+}));
+
 afterEach(() => {
+  developerMode.on = true;
   cleanup();
   document.body.replaceChildren();
 });
@@ -157,7 +171,9 @@ describe("fields a reviewed area reveals after a write", () => {
   it("writes an approved revealed field at once and only lists the rest", async () => {
     militaryForm();
     start();
-    fireEvent.click(await screen.findByRole("button", { name: "1개 항목 기입하기" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "1개 항목 기입하기" }),
+    );
     await screen.findByRole("heading", { name: "기입 결과" });
     expect(input("specialty")?.value).toBe("합성병과");
     // A revealed field that already holds a value is never overwritten and
@@ -210,7 +226,9 @@ describe("fields a reviewed area reveals after a write", () => {
       .querySelector("#save")!
       .addEventListener("click", () => (saveClicks += 1));
     start();
-    fireEvent.click(await screen.findByRole("button", { name: "1개 항목 기입하기" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "1개 항목 기입하기" }),
+    );
     await screen.findByRole("heading", { name: "기입 결과" });
     expect(input("specialty")).toBeNull();
     fireEvent.click(document.querySelector("#save")!);
@@ -218,5 +236,20 @@ describe("fields a reviewed area reveals after a write", () => {
       timeout: 5_000,
     });
     expect(saveClicks).toBe(1);
+  });
+
+  it("hides the approval UI in release mode but still writes with the default approval", async () => {
+    developerMode.on = false;
+    militaryForm();
+    start();
+    const write = await screen.findByRole("button", {
+      name: "1개 항목 기입하기",
+    });
+    expect(screen.queryByText(/나타날 수 있는 칸/)).toBeNull();
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    fireEvent.click(write);
+    await screen.findByRole("heading", { name: "기입 결과" });
+    expect(input("specialty")?.value).toBe("합성병과");
+    noFillButton();
   });
 });

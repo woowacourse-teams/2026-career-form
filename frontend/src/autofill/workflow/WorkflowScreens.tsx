@@ -544,7 +544,7 @@ export function WorkflowScreens({
             );
           })}
         </section>
-        {appearableItems.length > 0 && setPreApprovalOn && (
+        {developerMode && appearableItems.length > 0 && setPreApprovalOn && (
           <fieldset className={resultStyles.review}>
             <legend>나타날 수 있는 칸 {appearableItems.length}</legend>
             <p className={resultStyles.guidance}>

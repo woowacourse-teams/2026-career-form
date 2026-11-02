@@ -255,4 +255,44 @@ describe("future values", () => {
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
   });
+
+  const future: AppearableProfileItem[] = [
+    {
+      key: "military.military.militarySpecialty",
+      itemIndex: 0,
+      categoryLabel: "병역",
+      label: "병과",
+      value: "합성병과",
+    },
+  ];
+
+  it("hides the future values outside developer mode but keeps the review", () => {
+    render(
+      reviewScreen([planned], {
+        developerMode: false,
+        appearableItems: future,
+        preApprovalOn: true,
+        setPreApprovalOn: vi.fn(),
+      }),
+    );
+    expect(screen.queryByText(/나타날 수 있는 칸/)).toBeNull();
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    expect(screen.queryByText("합성병과")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "1개 항목 기입하기" }),
+    ).toBeVisible();
+  });
+
+  it("shows the future values in developer mode", () => {
+    render(
+      reviewScreen([planned], {
+        developerMode: true,
+        appearableItems: future,
+        preApprovalOn: true,
+        setPreApprovalOn: vi.fn(),
+      }),
+    );
+    expect(screen.getByText(/나타날 수 있는 칸/)).toBeVisible();
+    expect(screen.getByRole("checkbox")).toBeChecked();
+  });
 });
