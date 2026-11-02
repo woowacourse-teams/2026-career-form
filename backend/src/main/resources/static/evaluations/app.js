@@ -307,11 +307,47 @@ function scoreCard() {
       .filter((value) => value != null).map((value) => value * 100);
     const parts = [`정밀도 ${autofill.precision == null ? "—" : (autofill.precision * 100).toFixed(1) + "%"}`,
       `채움률 ${(autofill.fillRate * 100).toFixed(1)}%`];
-    if (values.length > 1) parts.push(`반복 ${values.length}회 범위 ${Math.min(...values).toFixed(1)}~${Math.max(...values).toFixed(1)}%`);
     row.after(element("span", parts.join(" · "), "range-note"));
   });
+  card.append(rangeStrip());
   card.append(element("p", "정밀도 = 넣은 칸 중 맞은 비율 · 채움률 = 넣어야 할 칸 중 맞게 넣은 비율. 잘못 넣으면 놓칠 때보다 2배 크게 깎입니다.", "muted metric-foot"));
   return card;
+}
+
+/**
+ * 반복별 자동기입 점수 범위. 범위가 좁아 0~100% 눈금에서는 보이지 않으므로 모든 모델의 최소~최대 주변(±2%p)으로 눈금을
+ * 확대해 막대는 최소~최대, 세로선은 평균으로 그린다. 반복이 2회 미만이면 그리지 않는다.
+ */
+function rangeStrip() {
+  const rows = state.selected.map((model) => {
+    const values = (report(model)?.repetitions ?? []).map((item) => item.autofillScore).filter((value) => value != null)
+      .map((value) => value * 100);
+    return { model, values, min: Math.min(...values), max: Math.max(...values),
+      mean: values.reduce((sum, value) => sum + value, 0) / (values.length || 1) };
+  }).filter(({ values }) => values.length > 1);
+  const box = element("div", undefined, "range-strip");
+  if (!rows.length) return box;
+  const low = Math.max(0, Math.floor(Math.min(...rows.map(({ min }) => min)) - 2));
+  const high = Math.min(100, Math.ceil(Math.max(...rows.map(({ max }) => max)) + 2));
+  const at = (value) => `${(value - low) / Math.max(1, high - low) * 100}%`;
+  const head = element("div", undefined, "range-head");
+  head.append(element("strong", "반복별 범위"), element("span", `눈금 ${low}~${high}% · 막대 최소~최대, 세로선 평균`, "muted"));
+  box.append(head);
+  for (const row of rows) {
+    const line = element("div", undefined, "bar-row variation-row");
+    line.style.setProperty("--model", color(row.model));
+    const track = element("div", undefined, "track variation-track");
+    const span = element("span", undefined, "variation-span");
+    span.style.left = at(row.min);
+    span.style.width = `calc(${at(row.max)} - ${at(row.min)} + 3px)`;
+    const mean = element("span", undefined, "variation-mean");
+    mean.style.left = at(row.mean);
+    track.append(span, mean);
+    line.append(Object.assign(element("span", row.model), { title: row.model }), track,
+      element("span", `${row.min.toFixed(1)}~${row.max.toFixed(1)}%`, "number variation-number"));
+    box.append(line);
+  }
+  return box;
 }
 
 const AUTOFILL_KINDS = [
