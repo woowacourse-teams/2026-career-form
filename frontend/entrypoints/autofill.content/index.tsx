@@ -16,6 +16,7 @@ import {
 } from "../../src/extension/floating-side-panel-launcher";
 import { shouldShowSidePanelLauncher } from "../../src/extension/side-panel-launcher-visibility";
 import { openOptionsPageFromContent } from "../../src/extension/navigation";
+import { loadPanelFont } from "../../src/extension/panel-font";
 import { syncAutofillDebugWithDeveloperMode } from "../../src/autofill/debug/developer-mode";
 import "./style.css";
 
@@ -51,6 +52,7 @@ export default defineContentScript({
         zIndex: 2_147_483_646,
         isolateEvents: true,
         onMount(container) {
+          void loadPanelFont();
           const root = createRoot(container);
           root.render(
             <div className="career-form-in-page-panel">

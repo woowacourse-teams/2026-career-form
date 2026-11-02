@@ -6,6 +6,7 @@ import {
   serializeBuildInfo,
 } from "./scripts/build-info";
 import type { BuildInfo } from "./scripts/build-info";
+import { PANEL_FONT_PATH } from "./src/extension/panel-font-path";
 import { PANEL_COMMANDS } from "./src/extension/panel-shortcut";
 
 let buildInfo: BuildInfo;
@@ -46,6 +47,20 @@ export default defineConfig({
       });
     },
     "vite:build:extendConfig": (entrypoints, config) => {
+      // The in-page panel fetches the font the extension pages already ship.
+      // Content scripts cannot import its hashed name: lib mode inlines assets.
+      const output = config.build?.rollupOptions?.output;
+      if (
+        output &&
+        !Array.isArray(output) &&
+        typeof output.assetFileNames === "string"
+      ) {
+        const assetFileNames = output.assetFileNames;
+        output.assetFileNames = (asset) =>
+          asset.names.includes("PretendardVariable.woff2")
+            ? PANEL_FONT_PATH
+            : assetFileNames;
+      }
       if (!entrypoints.some((entrypoint) => entrypoint.type === "background"))
         return;
       config.plugins ??= [];
@@ -99,6 +114,7 @@ export default defineConfig({
           "side-panel-launcher-logo.png",
           "unsupported-capybara.jpg",
           "capybara-writing.png",
+          PANEL_FONT_PATH,
         ],
         matches: ["http://*/*", "https://*/*"],
       },
