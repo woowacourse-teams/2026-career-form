@@ -153,6 +153,28 @@ public final class EvaluationRunController {
         return ResponseEntity.ok(DatasetView.of(inspection, profiles));
     }
 
+    /** 실행이 쓴 프롬프트 버전 하나. {@code names}는 그 버전으로 등록한 실행 이름(프롬프트 이름), 처음 쓴 순서다. */
+    public record PromptHistoryEntry(String digest, String provider, java.time.Instant firstUsedAt, List<String> names,
+        int runs) {
+    }
+
+    /** 프롬프트 버전 이력. 최근 실행 500건에서 지문마다 처음 쓴 순서로 모은다. 같은 지문이면 같은 프롬프트다. */
+    @GetMapping("/prompts")
+    public List<PromptHistoryEntry> promptHistory() {
+        Map<String, List<EvaluationRun>> byDigest = new LinkedHashMap<>();
+        store.recent(500).stream()
+            .sorted(java.util.Comparator.comparing(EvaluationRun::requestedAt))
+            .forEach(run -> byDigest.computeIfAbsent(run.versions().promptDigest(), key -> new java.util.ArrayList<>()).add(run));
+        return byDigest.entrySet().stream().map(entry -> {
+            List<EvaluationRun> runs = entry.getValue();
+            EvaluationRun first = runs.getFirst();
+            List<String> names = runs.stream().map(run -> run.versions().promptVersion())
+                .filter(java.util.Objects::nonNull).distinct().toList();
+            return new PromptHistoryEntry(entry.getKey(), first.versions().provider(), first.requestedAt(), names,
+                runs.size());
+        }).toList();
+    }
+
     @GetMapping("/prompts/{digest}")
     public ResponseEntity<PromptSnapshot> prompt(@PathVariable String digest) {
         return store.findPromptSnapshot(digest).map(ResponseEntity::ok)

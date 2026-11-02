@@ -200,6 +200,19 @@ class EvaluationRunApiTest {
         authorized(get("/api/v1/evaluations/datasets/missing/v1")).andExpect(status().isNotFound());
     }
 
+    @Test
+    @DisplayName("프롬프트 버전 이력은 실행이 쓴 프롬프트 지문마다 공급자, 처음 쓴 시각, 실행 이름을 처음 쓴 순서로 준다")
+    void listsPromptHistory() throws Exception {
+        register().andExpect(status().isAccepted());
+
+        authorized(get("/api/v1/evaluations/prompts")).andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].digest").isString())
+            .andExpect(jsonPath("$[0].provider").value("jev"))
+            .andExpect(jsonPath("$[0].firstUsedAt").value(NOW.toString()))
+            .andExpect(jsonPath("$[0].names[0]").value("v1"))
+            .andExpect(jsonPath("$[0].runs").value(1));
+    }
+
     private ResultActions register() throws Exception {
         return authorized(post("/api/v1/evaluations/runs").contentType(MediaType.APPLICATION_JSON).content(REQUEST)
             .header("X-Evaluation-Requester", "tester"));

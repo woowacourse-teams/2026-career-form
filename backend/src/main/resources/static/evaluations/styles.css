@@ -379,3 +379,25 @@ html,body{margin:0;background:#eae9e5}body{min-width:320px}
 #cf-eval-preview dialog#cf-source.criteria-dialog{max-height:88vh;overflow:auto}
 #cf-eval-preview .criteria-search{width:100%;margin:10px 0 6px;padding:7px 10px;font:inherit;font-size:13px;border:1px solid #c8ccc9;border-radius:4px;background:#fff}
 #cf-eval-preview .prompt-renamed{margin:0 0 12px;font-size:13px;color:#3e5874;background:#e7eef5;border-radius:4px;padding:8px 12px;overflow-wrap:anywhere}#cf-eval-preview .prompt-model{font-size:13px}
+#cf-eval-preview .prompt-history .dataset-tabs{margin-bottom:14px}
+#cf-eval-preview .commit-list{list-style:none;margin:0 0 18px;padding:0;border:1px solid #d6dad7;border-radius:6px;background:#fff;overflow:hidden}
+#cf-eval-preview .commit-list li+li{border-top:1px solid #e6e9e7}
+#cf-eval-preview .commit-list button{width:100%;display:grid;grid-template-columns:90px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 14px;text-align:left;font-size:13px;color:var(--ink);border-radius:0}
+#cf-eval-preview .commit-list li.selected button{background:#eaf0f6}
+#cf-eval-preview .commit-list li.selected strong{color:#2f5f8a}
+#cf-eval-preview .commit-stats{display:flex;gap:8px;font-variant-numeric:tabular-nums;font-size:12px;font-weight:600}
+#cf-eval-preview .stat-add{color:#2f6a4f}#cf-eval-preview .stat-del{color:#a8483d}#cf-eval-preview .stat-chg{color:#8a6a1f}
+#cf-eval-preview .commit-detail h4{margin:0 0 12px;font-size:14px}
+#cf-eval-preview .diff-card{border:1px solid #d6dad7;border-radius:6px;background:#fff;margin-bottom:12px;overflow:hidden}
+#cf-eval-preview .diff-head{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f3f5f6;border-bottom:1px solid #e3e6e4;font-size:12px}
+#cf-eval-preview .diff-head code{font-family:ui-monospace,Menlo,monospace;overflow-wrap:anywhere}
+#cf-eval-preview .diff-badge{font-size:11px;font-weight:600;border-radius:10px;padding:1px 8px}
+#cf-eval-preview .diff-badge.added{background:#dcebe2;color:#2f6a4f}#cf-eval-preview .diff-badge.removed{background:#f6dcd8;color:#a8483d}#cf-eval-preview .diff-badge.changed{background:#f3e7c9;color:#8a6a1f}
+#cf-eval-preview .diff-table{width:100%;border-collapse:collapse;margin:0;white-space:normal}
+#cf-eval-preview .diff-table td{border:0;padding:2px 10px;font:12.5px/1.6 ui-monospace,Menlo,monospace;text-align:left;vertical-align:top}
+#cf-eval-preview .diff-sign{width:18px;color:#59626b;user-select:none}
+#cf-eval-preview .diff-text{white-space:pre-wrap;overflow-wrap:anywhere}
+#cf-eval-preview .diff-add td{background:#e6f4ea}#cf-eval-preview .diff-add .diff-sign{color:#2f6a4f}
+#cf-eval-preview .diff-del td{background:#fbe9e7}#cf-eval-preview .diff-del .diff-sign{color:#a8483d}
+@media(max-width:620px){#cf-eval-preview .commit-list button{grid-template-columns:1fr auto}#cf-eval-preview .commit-list button .muted{grid-column:1/-1;grid-row:2}}
+#cf-eval-preview .diff-add mark{background:#a9dcb8;color:inherit;border-radius:2px}#cf-eval-preview .diff-del mark{background:#f2b8b0;color:inherit;border-radius:2px}
