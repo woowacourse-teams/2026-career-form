@@ -975,10 +975,10 @@
 - [제품 기준](topics/product-concept.md)과 [범용 검토 화면의 3단계 표시](topics/generic-review-tiers.md)의 Current를 CF-370 근거로 바꿨다.
 - 실제 지원값, 계정, 세션, 페이지 주소, 대화 전문은 저장하지 않았다.
 
-## [2026-11-02] ingest | CF-384 AI 자동 기입 스크롤 장면과 직접 체험 중심의 랜딩
+## [2026-11-02] ingest | CF-384 의사결정 AI(JEV) 스크롤 장면과 직접 체험 중심의 하늘색 랜딩
 
-- Approval-Digest: 0caf3fe3f039ef66676d7919d86b013650a705ad2d58b10b8a8a17754abc3aeb
-- Source-Revision: 7b5febad
-- 승인한 후보 4개를 [CF-384 bundle](../raw/issues/CF-384/manifest.md)에 기록했다. 랜딩 구성, 스크롤 연출 방식과 조사 근거, 시안 체험 선택과 스크롤 붙잡기, 정책 문의 이메일 미기재다.
+- Approval-Digest: 7775d31086d0d715392cabd90c6f69e7e5d6d8cff7d76bf543855407873a990b
+- Source-Revision: 7e65ab5d
+- 승인한 후보 5개를 [CF-384 bundle](../raw/issues/CF-384/manifest.md)에 기록했다. JEV 7단계 랜딩 구성과 확신 표기, 스크롤 연출 방식과 조사 근거, 하늘색 전용 토큰과 대비 규칙, 시안 체험 선택과 스크롤 붙잡기, 정책 문의 이메일 미기재다.
 - [랜딩·온보딩 웹 페이지](topics/landing-onboarding.md)의 Current를 CF-384로 바꾸고 CF-363을 History에 남겼다.
 - 실제 지원값, 계정, 세션, 대화 전문은 저장하지 않았다.
