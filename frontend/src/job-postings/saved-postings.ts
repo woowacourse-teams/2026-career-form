@@ -52,10 +52,15 @@ export function upcomingPostings(
     .sort((a, b) => a.deadline - b.deadline);
 }
 
-export function deadlineSummary(posting: Posting): string {
-  const { month, day, hour, minute } = partsOf(posting.deadline);
+/** "11월 3일 17시", adding " 32분" only when the minutes are not zero. */
+export function deadlineLabel(at: number): string {
+  const { month, day, hour, minute } = partsOf(at);
   const minutes = minute > 0 ? ` ${minute}분` : "";
-  const deadline = `${month}월 ${day}일 ${hour}시${minutes}`;
+  return `${month}월 ${day}일 ${hour}시${minutes}`;
+}
+
+export function deadlineSummary(posting: Posting): string {
+  const deadline = deadlineLabel(posting.deadline);
   return posting.role ? `${posting.role}, ${deadline}` : deadline;
 }
 

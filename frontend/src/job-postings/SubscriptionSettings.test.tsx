@@ -1,7 +1,10 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { PushStateView } from "./push-messages";
-import { SubscriptionSettings } from "./SubscriptionSettings";
+import {
+  SubscriptionSettings,
+  SubscriptionSwitch,
+} from "./SubscriptionSettings";
 
 const NOW = Date.parse("2026-10-26T03:00:00Z");
 const base: PushStateView = {
@@ -31,25 +34,48 @@ function renderSettings(state: PushStateView | null = base, failed = false) {
   );
   return { onEnabledChange, onTest, track };
 }
+function renderSwitch(state: PushStateView | null = base) {
+  const onEnabledChange = vi.fn(async () => {});
+  const track = vi.fn();
+  render(
+    <SubscriptionSwitch
+      state={state ?? undefined}
+      busy={false}
+      onEnabledChange={onEnabledChange}
+      track={track}
+    />,
+  );
+  return { onEnabledChange, track };
+}
 
-describe("SubscriptionSettings", () => {
-  it("구독 스위치, 표시 확인 결과 행, 알림 테스트를 보여 주고 자동 저장 스위치는 두지 않는다", async () => {
-    const { onEnabledChange, onTest, track } = renderSettings();
-    expect(
-      screen.getByRole("heading", { name: "공고 알림 구독" }),
-    ).toBeInTheDocument();
-    const subscription = screen.getByRole("switch", {
-      name: "새 공고를 Chrome 알림으로 받기",
-    });
-    expect(subscription).toBeChecked();
-    expect(screen.getByText(/등록됨/)).toBeInTheDocument();
-    expect(screen.getByText("알림 표시 확인됨 · 10/26")).toBeInTheDocument();
-    fireEvent.click(subscription);
+describe("SubscriptionSwitch", () => {
+  it("새 공고 알림 스위치로 구독을 끄고 이벤트를 보낸다", async () => {
+    const { onEnabledChange, track } = renderSwitch();
+    const toggle = screen.getByRole("switch", { name: "새 공고 알림" });
+    expect(toggle).toBeChecked();
+    fireEvent.click(toggle);
     await waitFor(() => expect(onEnabledChange).toHaveBeenCalledWith(false));
     expect(track).toHaveBeenCalledWith("push_subscription_disabled", {
       surface: "options",
     });
-    expect(screen.getAllByRole("switch")).toEqual([subscription]);
+  });
+  it("상태를 모르거나 미지원 Chrome이면 스위치를 잠근다", () => {
+    renderSwitch(null);
+    expect(screen.getByRole("switch", { name: "새 공고 알림" })).toBeDisabled();
+  });
+  it("미지원 Chrome이면 스위치를 잠근다", () => {
+    renderSwitch({ ...base, supported: false, status: null });
+    expect(screen.getByRole("switch", { name: "새 공고 알림" })).toBeDisabled();
+  });
+});
+
+describe("SubscriptionSettings", () => {
+  it("구독 상태, 표시 확인 결과, 알림 테스트를 짧은 항목으로 보여 준다", async () => {
+    const { onTest, track } = renderSettings();
+    expect(screen.getByText("구독")).toBeInTheDocument();
+    expect(screen.getByText("등록됨")).toBeInTheDocument();
+    expect(screen.getByText("알림 표시 확인됨 · 10/26")).toBeInTheDocument();
+    expect(screen.queryByRole("switch")).toBeNull();
     expect(screen.queryByText(/자동 저장/)).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "알림 테스트" }));
     await waitFor(() => expect(onTest).toHaveBeenCalledTimes(1));
@@ -57,29 +83,41 @@ describe("SubscriptionSettings", () => {
       surface: "options",
     });
   });
-  it("배지·공지함, Chrome 종료, OS 알림 차단, 구독 주소 저장을 안내한다", () => {
+  it("Chrome 종료, OS 알림, 로컬 저장, 서버 전송을 이름과 값으로 안내한다", () => {
     renderSettings();
-    expect(
-      screen.getByText(/아이콘 숫자와 공지함으로 새 공고를/),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/완전히 종료된 동안에는/)).toBeInTheDocument();
-    expect(screen.getByText(/OS 알림 설정/)).toBeInTheDocument();
-    expect(screen.getByText(/구독 주소가 서버에 저장/)).toBeInTheDocument();
+    const facts = Object.fromEntries(
+      Array.from(document.querySelectorAll("dt")).map((dt) => [
+        dt.textContent,
+        dt.nextElementSibling?.textContent,
+      ]),
+    );
+    expect(facts).toMatchObject({
+      "마감 알림": "마감 24시간·2시간 전",
+      "Chrome 종료 중": "알림 없음",
+      "OS 알림 꺼짐": "아이콘 숫자와 새 공고 탭으로 확인",
+      "놓친 알림": "다시 실행하면 공고당 1개",
+      "저장 위치": "이 브라우저에만 저장 (암호화 안 됨, 서버 동기화 없음)",
+      "확장 삭제 시": "저장한 공고도 삭제",
+      "서버 전송": "푸시 구독 주소만 (프로필·지원서 내용 없음)",
+    });
   });
-  it("상태를 읽지 못하면 안내하고 스위치를 잠근다", () => {
+  it("상태를 읽지 못하면 짧게 알린다", () => {
     renderSettings(null, true);
     expect(
-      screen.getByText("구독 상태를 불러오지 못했습니다."),
+      screen.getByText("구독 상태를 불러오지 못했어요"),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("switch", { name: "새 공고를 Chrome 알림으로 받기" }),
-    ).toBeDisabled();
   });
-  it("미지원 Chrome에서는 구독 스위치를 잠그고 안내한다", () => {
+  it("미지원 Chrome은 필요한 버전을 보여 준다", () => {
     renderSettings({ ...base, supported: false, status: null });
-    expect(screen.getByText(/Chrome 121 이상/)).toBeInTheDocument();
-    expect(
-      screen.getByRole("switch", { name: "새 공고를 Chrome 알림으로 받기" }),
-    ).toBeDisabled();
+    expect(screen.getByText("Chrome 121 이상 필요")).toBeInTheDocument();
+  });
+  it("등록에 실패하면 다시 등록할 수 있다", async () => {
+    const { onEnabledChange } = renderSettings({
+      ...base,
+      status: { code: "failed", updatedAt: NOW, attempts: 1 },
+    });
+    expect(screen.getByText("등록 실패 (자동 재시도)")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "다시 등록" }));
+    await waitFor(() => expect(onEnabledChange).toHaveBeenCalledWith(true));
   });
 });

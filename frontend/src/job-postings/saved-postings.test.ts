@@ -5,6 +5,7 @@ import { POSTINGS_KEY } from "./repository";
 import {
   createSavedPostingsReader,
   daysUntil,
+  deadlineLabel,
   deadlineSummary,
   isUrgent,
   upcomingPostings,
@@ -107,6 +108,15 @@ describe("deadlineSummary", () => {
   it("keeps the minutes of a deadline that is not on the hour", () => {
     expect(deadlineSummary(posting("a", kst("2026-11-03T16:32:00")))).toBe(
       "프론트엔드, 11월 3일 16시 32분",
+    );
+  });
+});
+
+describe("deadlineLabel", () => {
+  it("writes the deadline alone in Korean time, adding minutes only when set", () => {
+    expect(deadlineLabel(kst("2026-11-03T17:00:00"))).toBe("11월 3일 17시");
+    expect(deadlineLabel(kst("2026-11-03T17:32:00"))).toBe(
+      "11월 3일 17시 32분",
     );
   });
 });

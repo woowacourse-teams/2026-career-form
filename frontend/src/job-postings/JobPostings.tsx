@@ -1,19 +1,31 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
 import type { TrackEvent } from "../analytics/events";
 import { trackExtensionEvent } from "../analytics/extension-tracker";
 import { postingClient, type PostingClient } from "./client";
-import type { Posting } from "./model";
-import { NoticeBoard } from "./NoticeBoard";
-import type { ServerPosting } from "./push-api";
+import type { PushApiErrorCode, ServerPosting } from "./push-api";
 import {
   pushClient as defaultPushClient,
   type PushClient,
 } from "./push-client";
+import type { PushStateView } from "./push-messages";
+import { PostingTable, type PostingRow } from "./PostingTable";
+import { isUrgent } from "./saved-postings";
 import { postingInput, reminderOutcome } from "./server-posting";
 import type { PostingSnapshot } from "./service";
-import { SubscriptionSettings } from "./SubscriptionSettings";
+import {
+  SubscriptionSettings,
+  SubscriptionSwitch,
+} from "./SubscriptionSettings";
+import { useInbox } from "./use-inbox";
 import { usePushState } from "./use-push-state";
-import { PostingList } from "./PostingList";
+import { VisibilityCheck, type VisibilityVariant } from "./VisibilityCheck";
 import styles from "./JobPostings.module.css";
 interface Props {
   client?: PostingClient;
@@ -26,7 +38,7 @@ interface Failure {
   reload: boolean;
 }
 const LIST_FAILURE: Failure = {
-  message: "공고를 불러오지 못했습니다. 다시 시도해 주세요.",
+  message: "공고를 불러오지 못했어요",
   reload: true,
 };
 // Exact messages the domain layers raise on purpose (model, service,
@@ -53,12 +65,49 @@ function writeFailure(error: unknown, fallback: string): Failure {
   if (VALIDATION_MESSAGES.has(message)) return { message, reload: false };
   return { message: fallback, reload: false };
 }
+type View = "inbox" | "planned" | "expired" | "completed";
+const VIEWS: readonly View[] = ["inbox", "planned", "expired", "completed"];
+const TAB_LABELS: Record<View, string> = {
+  inbox: "새 공고",
+  planned: "지원 예정",
+  expired: "마감 지남",
+  completed: "지원 완료",
+};
+const EMPTY_LABELS: Record<View, string> = {
+  inbox: "새 공고 없음",
+  planned: "저장한 공고 없음",
+  expired: "마감 지난 공고 없음",
+  completed: "지원 완료 없음",
+};
+const INBOX_FAILURES: Partial<Record<PushApiErrorCode, string>> = {
+  NOT_CONFIGURED: "알림 서버 없음",
+  ENDPOINT_UNAVAILABLE: "서버 미지원",
+};
+// Which visibility card to ask with, decided once per page visit.
+function cardFor(state: PushStateView): VisibilityVariant | undefined {
+  const { visibility } = state;
+  if (visibility.result !== "unknown") return undefined;
+  if (visibility.shownAt !== undefined) return "confirm";
+  if (state.enabled && state.supported && visibility.askLaterAt === undefined)
+    return "question";
+  return undefined;
+}
+function problemText(problems: PostingSnapshot["problems"]): string {
+  if (problems.includes("permission"))
+    return "알림 권한 차단됨 (Chrome·OS 설정 확인)";
+  const parts = [
+    problems.includes("schedule") && "알림 예약 실패",
+    problems.includes("notification") && "알림 표시 실패",
+  ].filter(Boolean);
+  return parts.length ? parts.join(" · ") : "알림 처리 실패";
+}
 export function JobPostings({
   client = postingClient,
   pushClient = defaultPushClient,
   now = Date.now,
   track = trackExtensionEvent,
 }: Props) {
+  const id = useId();
   const [snapshot, setSnapshot] = useState<PostingSnapshot>();
   const [error, setError] = useState<Failure>();
   const [feedback, setFeedback] = useState("");
@@ -68,10 +117,13 @@ export function JobPostings({
     return () => clearTimeout(timer);
   }, [feedback]);
   const [busy, setBusy] = useState(false);
-  const [view, setView] = useState<"planned" | "expired" | "completed">(
-    "planned",
-  );
-  const listHeading = useRef<HTMLHeadingElement>(null);
+  const [chosenView, setChosenView] = useState<View>();
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [card, setCard] = useState<VisibilityVariant>();
+  const panel = useRef<HTMLDivElement>(null);
+  const tabs = useRef<Partial<Record<View, HTMLButtonElement | null>>>({});
+  const settingsButton = useRef<HTMLButtonElement>(null);
+  const settingsDialog = useRef<HTMLDivElement>(null);
   const [time, setTime] = useState(now);
   const load = useCallback(async () => {
     try {
@@ -132,6 +184,17 @@ export function JobPostings({
     }
   };
   const push = usePushState(pushClient);
+  const inbox = useInbox(pushClient, track);
+  useEffect(() => {
+    if (push.state && card === undefined) setCard(cardFor(push.state));
+  }, [push.state, card]);
+  useEffect(() => {
+    if (settingsOpen) settingsDialog.current?.focus();
+  }, [settingsOpen]);
+  const closeSettings = () => {
+    setSettingsOpen(false);
+    settingsButton.current?.focus();
+  };
   const savedUrls = new Set((snapshot?.postings ?? []).map((p) => p.url));
   const savedMessage = (posting: ServerPosting) => (next: PostingSnapshot) => {
     const saved = next.postings.find((p) => p.url === posting.link);
@@ -140,12 +203,12 @@ export function JobPostings({
       : "공고를 마감 알림에 저장했습니다.";
   };
   // Server postings become ordinary local postings with the default reminders.
+  // The saved posting stays in the inbox tab, marked as saved.
   const saveFromInbox = (posting: ServerPosting) => {
     if (savedUrls.has(posting.link)) return;
     void mutate(
       async () => {
         const next = await client.save(postingInput(posting));
-        setView("planned");
         track("posting_inbox_saved", {
           surface: "options",
           posting_id: posting.id,
@@ -157,79 +220,220 @@ export function JobPostings({
       "공고를 마감 알림에 저장하지 못했습니다. 다시 시도해 주세요.",
     );
   };
-  const rows = [...(snapshot?.postings ?? [])].sort(
+  const sorted = [...(snapshot?.postings ?? [])].sort(
     (a, b) => a.deadline - b.deadline,
   );
   const groups = {
-    planned: rows.filter((p) => p.status === "planned" && p.deadline > time),
-    expired: rows
+    planned: sorted.filter((p) => p.status === "planned" && p.deadline > time),
+    expired: sorted
       .filter((p) => p.status === "planned" && p.deadline <= time)
       .reverse(),
-    completed: rows.filter((p) => p.status === "completed"),
+    completed: sorted.filter((p) => p.status === "completed"),
   };
-  const selected = groups[view];
-  const urgentCount = groups.planned.filter(
-    (p) => p.deadline - time <= 86400000,
+  const urgentCount = groups.planned.filter((p) =>
+    isUrgent(p.deadline, time),
   ).length;
-  const headings = {
-    planned: "다가오는 마감",
-    expired: "지난 마감",
-    completed: "완료한 지원",
+  const counts: Record<View, number | undefined> = {
+    inbox: inbox.postings?.length,
+    planned: snapshot && groups.planned.length,
+    expired: snapshot && groups.expired.length,
+    completed: snapshot && groups.completed.length,
   };
-  const emptyTitles = {
-    planned: "다가오는 마감이 없어요",
-    expired: "지난 마감이 없어요",
-    completed: "아직 완료한 지원이 없어요",
+  const view: View =
+    chosenView ?? (inbox.postings?.length ? "inbox" : "planned");
+  const select = (next: View, focus = false) => {
+    setChosenView(next);
+    setFeedback("");
+    if (focus) tabs.current[next]?.focus();
   };
-  const emptyDescriptions = {
-    planned: "공지함에서 공고를 저장하면 마감 전에 알려드려요.",
-    expired: "마감이 지난 공고는 이곳에서 따로 확인할 수 있어요.",
-    completed: "지원을 마친 공고를 완료로 표시하면 여기에 모아볼 수 있어요.",
+  const onTabKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    const index = VIEWS.indexOf(view);
+    const target = {
+      ArrowRight: VIEWS[(index + 1) % VIEWS.length],
+      ArrowLeft: VIEWS[(index + VIEWS.length - 1) % VIEWS.length],
+      Home: VIEWS[0],
+      End: VIEWS[VIEWS.length - 1],
+    }[event.key];
+    if (!target) return;
+    event.preventDefault();
+    select(target, true);
   };
-  const list = (postings: Posting[]) => (
-    <PostingList
-      postings={postings}
-      now={time}
-      busy={busy}
-      onComplete={(p) =>
-        void mutate(
-          () => client.setCompleted(p.id, p.version, p.status !== "completed"),
-          p.status === "completed"
-            ? "지원 예정으로 되돌렸습니다."
-            : "지원 완료로 표시하고 남은 알림을 취소했습니다.",
-          "공고 상태를 바꾸지 못했습니다. 다시 시도해 주세요.",
-        )
-      }
-      onRemove={(p) =>
-        void mutate(
-          async () => {
-            const next = await client.remove(p.id, p.version);
-            listHeading.current?.focus();
-            return next;
-          },
-          "공고를 삭제했습니다.",
-          "공고를 삭제하지 못했습니다. 다시 시도해 주세요.",
-        )
-      }
-    />
-  );
+  const toggleCompleted = (p: (typeof sorted)[number]) =>
+    void mutate(
+      () => client.setCompleted(p.id, p.version, p.status !== "completed"),
+      p.status === "completed"
+        ? "지원 예정으로 되돌렸습니다."
+        : "지원 완료로 표시하고 남은 알림을 취소했습니다.",
+      "공고 상태를 바꾸지 못했습니다. 다시 시도해 주세요.",
+    );
+  const remove = (p: (typeof sorted)[number]) =>
+    void mutate(
+      async () => {
+        const next = await client.remove(p.id, p.version);
+        panel.current?.focus();
+        return next;
+      },
+      "공고를 삭제했습니다.",
+      "공고를 삭제하지 못했습니다. 다시 시도해 주세요.",
+    );
+  const inboxRows: PostingRow[] = (inbox.postings ?? []).map((posting) => ({
+    key: posting.id,
+    company: posting.company,
+    role: posting.role,
+    url: posting.link,
+    deadline: posting.closesAt,
+    closed: false,
+    action: savedUrls.has(posting.link) ? (
+      <span className={styles.savedMark}>✓ 저장됨</span>
+    ) : (
+      <button
+        className={styles.outline}
+        aria-label={`${posting.company} 저장`}
+        disabled={busy || !snapshot}
+        onClick={() => saveFromInbox(posting)}
+      >
+        저장
+      </button>
+    ),
+  }));
+  const savedRows = (key: Exclude<View, "inbox">): PostingRow[] =>
+    groups[key].map((p) => {
+      const done = p.status === "completed";
+      const label = done ? "되돌리기" : "지원 완료";
+      return {
+        key: p.id,
+        company: p.company,
+        role: p.role,
+        url: p.url,
+        deadline: p.deadline,
+        closed: key !== "planned",
+        action: (
+          <button
+            className={styles.outline}
+            aria-label={`${p.company} ${label}`}
+            disabled={busy}
+            onClick={() => toggleCompleted(p)}
+          >
+            {label}
+          </button>
+        ),
+        remove: (
+          <button
+            className={styles.quiet}
+            aria-label={`${p.company} 삭제`}
+            disabled={busy}
+            onClick={() => remove(p)}
+          >
+            삭제
+          </button>
+        ),
+      };
+    });
+  const rows = view === "inbox" ? inboxRows : savedRows(view);
+  const inboxBlocked = view === "inbox" && !!inbox.error;
+  const panelBody = () => {
+    if (view === "inbox") {
+      if (inbox.error)
+        return (
+          <div className={styles.panelMessage} role="status">
+            <span>
+              {INBOX_FAILURES[inbox.error] ?? "새 공고를 불러오지 못했어요"}
+            </span>
+            {inbox.error !== "NOT_CONFIGURED" && (
+              <button
+                disabled={inbox.loading}
+                onClick={() => void inbox.reload()}
+              >
+                다시 시도
+              </button>
+            )}
+          </div>
+        );
+      if (!inbox.postings)
+        return (
+          <p className={styles.panelMessage} role="status">
+            불러오는 중
+          </p>
+        );
+    } else if (!snapshot) {
+      return null;
+    }
+    if (!rows.length)
+      return <p className={styles.panelMessage}>{EMPTY_LABELS[view]}</p>;
+    return <PostingTable rows={rows} now={time} />;
+  };
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-        <div>
-          <p className={styles.eyebrow}>MY APPLICATIONS</p>
+        <div className={styles.title}>
           <h1>지원 공고</h1>
-          <p className={styles.subtitle}>
-            관심 있는 공고부터 지원 완료까지, 한곳에서 챙기세요.
-          </p>
+          {urgentCount > 0 && (
+            <span className={styles.urgentCount}>
+              3일 내 마감 {urgentCount}
+            </span>
+          )}
+        </div>
+        <div className={styles.headerActions}>
+          <SubscriptionSwitch
+            state={push.state}
+            busy={push.busy}
+            onEnabledChange={push.setEnabled}
+            track={track}
+          />
+          <button
+            ref={settingsButton}
+            type="button"
+            aria-haspopup="dialog"
+            aria-expanded={settingsOpen}
+            onClick={() =>
+              settingsOpen ? closeSettings() : setSettingsOpen(true)
+            }
+          >
+            알림 설정
+          </button>
+          {settingsOpen && (
+            <div
+              ref={settingsDialog}
+              className={styles.settings}
+              role="dialog"
+              aria-labelledby={`${id}-settings`}
+              tabIndex={-1}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  event.stopPropagation();
+                  closeSettings();
+                }
+              }}
+            >
+              <div className={styles.settingsHeading}>
+                <h2 id={`${id}-settings`}>알림 설정</h2>
+                <button
+                  type="button"
+                  className={styles.quiet}
+                  onClick={closeSettings}
+                >
+                  닫기
+                </button>
+              </div>
+              <SubscriptionSettings
+                state={push.state}
+                failed={push.failed}
+                busy={push.busy}
+                onEnabledChange={push.setEnabled}
+                onTest={push.test}
+                onAnswer={push.record}
+                track={track}
+              />
+            </div>
+          )}
         </div>
       </header>
       {error && (
         <div className={styles.error} role="alert">
-          {error.message}{" "}
+          <span>{error.message}</span>
           {error.reload && (
             <button onClick={() => void load()} disabled={busy}>
-              목록 다시 불러오기
+              다시 시도
             </button>
           )}
         </div>
@@ -248,17 +452,7 @@ export function JobPostings({
       )}
       {snapshot?.problems.length ? (
         <div className={styles.warning} role="status">
-          <p>
-            {snapshot.problems.includes("permission")
-              ? "Chrome 알림이 차단되었거나 권한을 확인할 수 없습니다. Chrome과 OS의 알림 설정을 확인해 주세요."
-              : "공고는 저장되었지만 알림 처리에 문제가 있습니다."}
-          </p>
-          {snapshot.problems.includes("schedule") && (
-            <p>알림 예약에 실패했습니다.</p>
-          )}
-          {snapshot.problems.includes("notification") && (
-            <p>알림 표시 또는 이전 알림 정리에 실패했습니다.</p>
-          )}
+          <span>{problemText(snapshot.problems)}</span>
           <button
             disabled={busy}
             onClick={() =>
@@ -273,112 +467,68 @@ export function JobPostings({
           </button>
         </div>
       ) : null}
-      {!snapshot && !error && <p role="status">공고를 불러오는 중입니다.</p>}
-      {snapshot && (
-        <>
-          <div className={styles.overview}>
-            <span className={styles.localNote}>
-              <span aria-hidden="true">●</span> 이 브라우저에 저장됨
-            </span>
-            <p>
-              {urgentCount > 0 ? (
-                <>
-                  24시간 안에 마감되는 공고가 <strong>{urgentCount}개</strong>{" "}
-                  있어요.
-                </>
-              ) : (
-                "공고를 저장해 두면 마감 24시간·2시간 전에 알려드려요."
-              )}
-            </p>
-          </div>
-          <NoticeBoard
-            client={pushClient}
-            state={push.state}
-            savedUrls={savedUrls}
-            busy={busy || push.busy}
-            now={time}
-            onSave={saveFromInbox}
-            onTest={push.test}
-            onAnswer={push.record}
-            onLater={push.later}
-            track={track}
-          />
-          <nav className={styles.tabs} aria-label="지원 상태">
-            {(["planned", "expired", "completed"] as const).map((key) => (
+      {card && (
+        <VisibilityCheck
+          variant={card}
+          state={push.state}
+          busy={busy || push.busy}
+          onTest={push.test}
+          onAnswer={push.record}
+          onLater={push.later}
+          track={track}
+          surface="options"
+        />
+      )}
+      {!snapshot && !error && <p role="status">불러오는 중</p>}
+      <section className={styles.listCard} aria-label="공고 목록">
+        <div className={styles.tabBar}>
+          <div
+            role="tablist"
+            aria-label="공고 분류"
+            className={styles.tabs}
+            onKeyDown={onTabKey}
+          >
+            {VIEWS.map((key) => (
               <button
                 key={key}
-                aria-pressed={view === key}
-                onClick={() => {
-                  setView(key);
-                  setFeedback("");
+                ref={(element) => {
+                  tabs.current[key] = element;
                 }}
+                id={`${id}-tab-${key}`}
+                type="button"
+                role="tab"
+                aria-selected={view === key}
+                aria-controls={`${id}-panel`}
+                tabIndex={view === key ? 0 : -1}
+                onClick={() => select(key)}
               >
-                {
-                  {
-                    planned: "지원 예정",
-                    expired: "마감 지남",
-                    completed: "지원 완료",
-                  }[key]
-                }{" "}
-                ({groups[key].length})
+                {TAB_LABELS[key]}
+                {counts[key] !== undefined && (
+                  <>
+                    {" "}
+                    <span className={styles.tabCount}>{counts[key]}</span>
+                  </>
+                )}
               </button>
             ))}
-          </nav>
-          <section aria-label={headings[view]} className={styles.results}>
-            <div className={styles.sectionHeading}>
-              <h2 ref={listHeading} tabIndex={-1}>
-                {headings[view]}
-              </h2>
-              <span>{view === "expired" ? "최근 마감순" : "마감일순"}</span>
-            </div>
-            {view === "expired" && selected.length > 0 && (
-              <p className={styles.sectionNote}>
-                마감이 지나도 지원 완료로 자동 변경하지 않습니다. 지원했다면
-                완료로 표시해 주세요.
-              </p>
-            )}
-            {selected.length ? (
-              list(selected)
-            ) : (
-              <div className={styles.empty}>
-                <span className={styles.emptyIcon} aria-hidden="true">
-                  {view === "completed" ? "✓" : "○"}
-                </span>
-                <h3>
-                  {!rows.length && view === "planned"
-                    ? "지원할 공고를 저장해보세요."
-                    : emptyTitles[view]}
-                </h3>
-                <p>{emptyDescriptions[view]}</p>
-              </div>
-            )}
-          </section>
-          <SubscriptionSettings
-            state={push.state}
-            failed={push.failed}
-            busy={push.busy}
-            onEnabledChange={push.setEnabled}
-            onTest={push.test}
-            onAnswer={push.record}
-            track={track}
-          />
-        </>
-      )}
-      <details className={styles.notice}>
-        <summary>알림과 로컬 저장 안내</summary>
-        <p>
-          Chrome이 완전히 종료된 동안에는 알림이 표시되지 않습니다. 절전 상태나
-          OS 알림 설정에 따라 늦게 표시되거나 차단될 수 있습니다.
-        </p>
-        <p>
-          다시 실행하면 놓친 알림은 공고당 하나로 안내하고, 이미 지난 마감은
-          목록에서 구분합니다.
-        </p>
-        <p>
-          공고는 이 Chrome 프로필에만 저장됩니다. 확장 프로그램을 삭제하면
-          공고도 사라질 수 있습니다. 서버 동기화는 제공하지 않습니다.
-        </p>
-      </details>
+          </div>
+          {!inboxBlocked && (
+            <span className={styles.sort}>
+              {view === "expired" ? "최근 마감순" : "마감순"}
+            </span>
+          )}
+        </div>
+        <div
+          ref={panel}
+          id={`${id}-panel`}
+          role="tabpanel"
+          aria-labelledby={`${id}-tab-${view}`}
+          tabIndex={-1}
+          className={styles.panel}
+        >
+          {panelBody()}
+        </div>
+      </section>
     </main>
   );
 }
