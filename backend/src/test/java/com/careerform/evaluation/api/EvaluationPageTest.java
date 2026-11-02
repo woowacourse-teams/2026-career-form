@@ -24,7 +24,7 @@ class EvaluationPageTest {
             "오답(다른 항목)", "누락(판단 보류)", "불필요 제안", "예상 비용 비교", "자동기입 1,000회당", "가장 저렴한 모델의",
             "openProviders", "/provider-registrations", "HOST_NOT_ALLOWED_FOR_KEY", "INTERNAL_ADDRESS",
             "키 원문은 이 화면에 입력하지 않습니다", "datasetVersion: DATASET.version", "split: \"all\"",
-            "comparisonDetail", "scoreCard", "?.repetitions", "item.autofillScore", "diagnosisHead", "전체 항목 정확도",
+            "comparisonDetail", "scoreCard", "?.repetitions", "item.autofillScore", "diagnosis()", "stage-table", "correctSwatch", "전체 항목",
             "renderAutofill", "?.autofill", "칸별 결과", "자동기입 점수", "맞게 비움", "놓침", "잘못 넣음", "확신도 기록 전 실행", "F0.5",
             "STATE_NAMES", "STATE_NOTES", "dataset-about", "screen-list", "score-flow", "form-wire", "criteria-formula", "진단 지표", "dataset-tabs", "field-table", "profileTable", "PROMPT_APIS", "prompt-group", "criteria-table", "POST /api/v1/generic/sections/classify", "change-chips", "prompt-layout",
             "api(\"/prompts\")", "commit-list", "초기 버전", "lineDiff", "diff-table", "처음 기록한 프롬프트");

@@ -8,7 +8,7 @@ const COLORS = ["#4e6d90", "#688b7c", "#ac8d68", "#8a6f9e", "#6f8f9e"];
 const PRICE_KEY = "cf-evaluation-model-prices-v1";
 const root = document.getElementById("cf-eval-preview");
 const $ = (selector) => root.querySelector(selector);
-const state = { runs: [], dataset: null, models: [], selected: [], group: null, stage: "total", page: "overview" };
+const state = { runs: [], dataset: null, models: [], selected: [], group: null, stage: "total", page: "overview", diagnosisOpen: false };
 let prices = {};
 try { prices = JSON.parse(localStorage.getItem(PRICE_KEY) || "{}") ?? {}; } catch { prices = {}; }
 
@@ -112,11 +112,7 @@ function renderOverview() {
   quality.replaceChildren(
     scoreCard(),
     renderAutofill(),
-    diagnosisHead(),
-    bars("전체 항목 정확도", "%", (m) => percent(report(m)?.quality.accuracy), 100, (v) => `${v.toFixed(1)}%`),
-    bars("준비 정확도", "%", (m) => percent(report(m)?.quality.preparationAccuracy), 100, (v) => `${v.toFixed(1)}%`),
-    bars("필드 매핑 정확도", "%", (m) => percent(report(m)?.quality.mappingAccuracy), 100, (v) => `${v.toFixed(1)}%`),
-    renderItemBreakdown());
+    diagnosis());
   const total = state.stage === "total";
   const perf = (m) => report(m)?.performance[stageKey()];
   const seconds = (m) => {
@@ -333,6 +329,7 @@ function renderAutofill() {
   card.append(head);
   const legend = element("div", undefined, "item-legend");
   AUTOFILL_KINDS.forEach(({ label, className }) => legend.append(element("span", label, className)));
+  correctSwatch(legend);
   card.append(legend);
   if (!state.selected.length) card.append(element("div", "비교할 모델 선택 필요.", "empty"));
   for (const model of state.selected) {
@@ -372,11 +369,43 @@ const ITEM_KINDS = [
  * 모델별 항목 판정 수(quality.items)를 정답·오답·누락·불필요 제안으로 나눈 100% 막대로 그린다. 정확도가 같아도
  * 다른 항목을 고른 오답(잘못 기입)과 판단 보류(직접 입력)는 위험이 달라 따로 보인다.
  */
-/** 진단 구역 제목. 아래 지표는 확신도와 무관하게 모델 답 그대로 채점해 어느 단계에서 틀리는지 본다. */
-function diagnosisHead() {
-  const head = element("div", undefined, "diagnosis-head");
-  head.append(element("strong", "진단"), element("span", "확신도와 무관하게 모델 답 그대로 채점 · 어느 단계에서 틀리는지", "muted"));
-  return head;
+/**
+ * 진단 구역. 확신도와 무관하게 모델 답 그대로 채점해 어느 단계에서 틀리는지 본다. 기본으로 접어 두고, 다시 그려도
+ * 펼친 상태를 유지한다.
+ */
+function diagnosis() {
+  const box = element("details", undefined, "diagnosis");
+  box.open = state.diagnosisOpen === true;
+  box.addEventListener("toggle", () => { state.diagnosisOpen = box.open; });
+  const summary = element("summary");
+  summary.append(element("strong", "진단"), element("span", "모델 답 그대로 채점 · 어느 단계에서 틀리는지", "muted"));
+  const table = element("table", undefined, "stage-table");
+  const head = element("tr");
+  ["모델", "전체 항목", "준비", "필드 매핑"].forEach((text) => head.append(element("th", text)));
+  const body = element("tbody");
+  const cell = (value) => element("td", value == null ? "—" : `${(value * 100).toFixed(1)}%`);
+  for (const model of state.selected) {
+    const quality = report(model)?.quality;
+    const row = element("tr");
+    const name = element("td", model, "stage-model");
+    name.style.setProperty("--model", color(model));
+    row.append(name, cell(quality?.accuracy), cell(quality?.preparationAccuracy), cell(quality?.mappingAccuracy));
+    body.append(row);
+  }
+  const thead = element("thead");
+  thead.append(head);
+  table.append(thead, body);
+  box.append(summary, table, renderItemBreakdown());
+  return box;
+}
+
+/** 범례의 맞은 칸 색. 막대가 모델 색으로 칠해지므로 고른 모델 색을 나란히 보인다. */
+function correctSwatch(legend) {
+  const colors = state.selected.map(color);
+  if (!colors.length) return;
+  const step = 100 / colors.length;
+  legend.querySelector(".item-correct")?.style.setProperty("--swatch",
+    `linear-gradient(90deg, ${colors.map((value, index) => `${value} ${index * step}% ${(index + 1) * step}%`).join(", ")})`);
 }
 
 function renderItemBreakdown() {
@@ -386,6 +415,7 @@ function renderItemBreakdown() {
   card.append(head);
   const legend = element("div", undefined, "item-legend");
   ITEM_KINDS.forEach(({ label, className }) => legend.append(element("span", label, className)));
+  correctSwatch(legend);
   card.append(legend);
   if (!state.selected.length) card.append(element("div", "비교할 모델 선택 필요.", "empty"));
   for (const model of state.selected) {
