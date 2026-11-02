@@ -9,7 +9,7 @@ const PRICE_KEY = "cf-evaluation-model-prices-v1";
 const root = document.getElementById("cf-eval-preview");
 const $ = (selector) => root.querySelector(selector);
 const state = { runs: [], dataset: null, models: [], selected: [], group: null, stage: "total", page: "overview", diagnosisOpen: false,
-  fields: {}, baseline: "", fieldFilter: "diff", fieldScreen: "all", openField: null };
+  fields: {}, baseline: "", fieldFilter: "diff", fieldScreen: "all", openField: null, itemKind: "GENERIC_FIELDS" };
 let prices = {};
 try { prices = JSON.parse(localStorage.getItem(PRICE_KEY) || "{}") ?? {}; } catch { prices = {}; }
 
@@ -440,11 +440,41 @@ const OUTCOMES = {
   FILLED_UNNEEDED: { label: "넣지 말 칸", className: "o-wrong", points: -1 },
   UNOBSERVED: { label: "확인 불가", className: "o-none", points: 0 },
   EXCLUDED: { label: "제외", className: "o-none", points: 0 },
+  CORRECT: { label: "정답", className: "o-correct", points: 1 },
+  WRONG_KEY: { label: "오답", className: "o-wrong", points: -1 },
+  MISSING: { label: "누락", className: "o-missed", points: 0 },
+  UNNECESSARY: { label: "불필요 제안", className: "o-wrong", points: -1 },
 };
-const FIELD_FILTERS = [["diff", "모델끼리 다른 칸"], ["wrong", "잘못 넣은 칸"], ["missed", "놓친 칸"], ["changed", "기준 대비 바뀐 칸"],
-  ["all", "전체"]];
-const fieldKey = (field) => `${field.caseId}/${field.fieldId}`;
-const WRONG = new Set(["FILLED_WRONG_KEY", "FILLED_UNNEEDED"]);
+// 항목 종류. 칸 매핑은 사용자 화면 기준(확신도 0.8), 나머지는 모델 답 그대로 채점한다.
+const COMPARE_KINDS = [
+  { kind: "GENERIC_FIELDS", name: "칸 매핑", noun: "칸" },
+  { kind: "SECTION_CLASSIFY", name: "섹션 분류", noun: "섹션" },
+  { kind: "INTERACTION_DECISION", name: "학력 구분 선택", noun: "결정" },
+];
+const CATEGORY_NAMES = { PERSONAL: "기본정보", EDUCATION: "학력", CAREER: "경력", SENSITIVE: "민감정보(병역·보훈·장애)",
+  LANGUAGE: "어학", CERTIFICATE: "자격증", PROJECT: "프로젝트", ACTIVITY: "활동", NONE: "해당 없음", MIXED: "여러 범주",
+  ABSTAIN: "판단 보류" };
+const TARGET_NAMES = { HIGH_SCHOOL: "고등학교 행", ASSOCIATE: "전문대학 행", BACHELOR: "대학교 행", MASTER: "대학원(석사) 행",
+  DOCTOR: "대학원(박사) 행" };
+const ROLE_NAMES = { ROW_KIND_OPTION: "학력 구분 선택" };
+/** 항목의 정답·답을 사람이 읽는 글자로. */
+function itemValue(item, value) {
+  if (item.kind === "SECTION_CLASSIFY") return value == null ? "답 없음" : `${value} · ${CATEGORY_NAMES[value] ?? value}`;
+  if (item.kind === "INTERACTION_DECISION") return value ?? "고르지 않음";
+  return value ?? "넣을 항목 없음";
+}
+const itemLabel = (item) => item.kind === "SECTION_CLASSIFY" ? sectionTitle({ title: item.label })
+  : item.kind === "INTERACTION_DECISION" ? TARGET_NAMES[item.label] ?? item.label ?? item.itemId : item.label ?? item.itemId;
+function itemGroup(item) {
+  const screen = STATE_NAMES[item.state] ?? item.state;
+  if (item.kind === "SECTION_CLASSIFY") return `${screen} · ${item.stage === "PREPARATION" ? "준비 단계" : "필드 단계"}`;
+  if (item.kind === "INTERACTION_DECISION") return `${screen} · ${ROLE_NAMES[item.group] ?? item.group ?? "선택 결정"}`;
+  return `${screen} · ${sectionTitle({ title: item.group })}`;
+}
+const FIELD_FILTERS = [["diff", "모델끼리 다른"], ["wrong", "틀린"], ["missed", "놓친"], ["changed", "기준 대비 바뀐"], ["all", "전체"]];
+const fieldKey = (item) => `${item.caseId}/${item.stage}/${item.kind}/${item.itemId}`;
+const WRONG = new Set(["FILLED_WRONG_KEY", "FILLED_UNNEEDED", "WRONG_KEY", "UNNECESSARY"]);
+const MISSED = new Set(["MISSED", "MISSING"]);
 
 /** 칸 하나의 반복별 판정 요약. 가장 많은 판정, 반복이 갈렸는지, 점수(맞음 +1, 놓침 0, 잘못 넣음 −1의 평균). */
 function cellOf(field) {
@@ -456,13 +486,13 @@ function cellOf(field) {
     points: field.answers.reduce((sum, { outcome }) => sum + OUTCOMES[outcome].points, 0) / field.answers.length };
 }
 
-/** 실행의 칸별 답. 한 번 받은 결과는 다시 받지 않는다. 받는 중이면 null이고, 끝나면 다시 그린다. */
+/** 실행의 항목별 답. 한 번 받은 결과는 다시 받지 않는다. 받는 중이면 null이고, 끝나면 다시 그린다. */
 function runFields(run) {
   if (!run) return undefined;
   const cached = state.fields[run.id];
   if (cached === undefined) {
     state.fields[run.id] = null;
-    api(`/runs/${run.id}/fields`).then((fields) => { state.fields[run.id] = fields; })
+    api(`/runs/${run.id}/items`).then((fields) => { state.fields[run.id] = fields; })
       .catch(() => { state.fields[run.id] = []; }).finally(() => { if (state.page === "fields") renderFields(); });
     return null;
   }
@@ -478,8 +508,8 @@ function baselineGroups() {
 }
 
 /**
- * 칸별 비교. 고른 모델의 칸 매핑 답을 칸×모델 표로 놓고, 기준 실행을 고르면 같은 모델끼리 칸마다 개선·악화를 표시한다.
- * 행을 누르면 반복별 답과 확신도를 펼친다.
+ * 항목별 비교. 고른 종류(칸 매핑·섹션 분류·학력 구분 선택)의 답을 항목×모델 표로 놓고, 기준 실행을 고르면 같은 모델끼리
+ * 항목마다 개선·악화를 표시한다. 행을 누르면 반복별 답과 확신도를 펼친다.
  */
 function renderFields() {
   const page = $("#cf-fields");
@@ -487,12 +517,16 @@ function renderFields() {
   const runs = Object.fromEntries(models.map((model) => [model, latest(model)?.run]));
   const bases = Object.fromEntries(models.map((model) => [model, state.baseline
     ? groupRuns(state.baseline).find(({ run }) => done(run) && modelKey(run) === model)?.run : undefined]));
-  const data = Object.fromEntries(models.map((model) => [model, runFields(runs[model])]));
-  const baseData = Object.fromEntries(models.map((model) => [model, runFields(bases[model])]));
+  const kind = COMPARE_KINDS.find((entry) => entry.kind === state.itemKind) ?? COMPARE_KINDS[0];
+  const ofKind = (list) => list && list.filter((item) => item.kind === kind.kind);
+  const data = Object.fromEntries(models.map((model) => [model, ofKind(runFields(runs[model]))]));
+  const baseData = Object.fromEntries(models.map((model) => [model, ofKind(runFields(bases[model]))]));
 
   const head = element("div", undefined, "fields-head");
   const title = element("div");
-  title.append(element("h2", "칸별 비교"), element("p", "칸 매핑 답을 칸마다 모델끼리, 기준 실행과 비교합니다. 확신도 0.8 이상만 넣은 것으로 봅니다.", "muted"));
+  title.append(element("h2", "항목별 비교"), element("p", kind.kind === "GENERIC_FIELDS"
+    ? "칸 매핑 답을 칸마다 모델끼리, 기준 실행과 비교합니다. 확신도 0.8 이상만 넣은 것으로 봅니다."
+    : `${kind.name} 답을 항목마다 모델끼리, 기준 실행과 비교합니다. 확신도와 무관하게 모델 답 그대로 채점합니다.`, "muted"));
   const controls = element("div", undefined, "fields-controls");
   const baseSelect = element("select");
   baseSelect.setAttribute("aria-label", "기준 실행");
@@ -509,13 +543,23 @@ function renderFields() {
   screenSelect.addEventListener("change", () => { state.fieldScreen = screenSelect.value; renderFields(); });
   controls.append(baseSelect, screenSelect);
   head.append(title, controls);
+  const kinds = element("div", undefined, "stage item-kinds");
+  kinds.setAttribute("aria-label", "항목 종류");
+  COMPARE_KINDS.forEach((entry) => {
+    const button = element("button", entry.name);
+    button.type = "button";
+    button.setAttribute("aria-pressed", String(entry.kind === kind.kind));
+    button.addEventListener("click", () => { state.itemKind = entry.kind; state.openField = null; renderFields(); });
+    kinds.append(button);
+  });
+  head.append(kinds);
 
   if (!models.length) {
     page.replaceChildren(head, element("div", "비교할 모델 선택 필요.", "empty"));
     return;
   }
   if (models.some((model) => data[model] === null) || models.some((model) => baseData[model] === null)) {
-    page.replaceChildren(head, element("div", "칸별 답을 불러오는 중.", "empty"));
+    page.replaceChildren(head, element("div", "항목별 답을 불러오는 중.", "empty"));
     return;
   }
 
@@ -542,9 +586,12 @@ function renderFields() {
     fields.forEach((field) => field.answers.forEach(({ outcome }) => { tally[outcome] = (tally[outcome] ?? 0) + 1; }));
     card.append(element("strong", model, "row-name"));
     if (!runs[model]) card.append(element("span", "끝난 실행 없음", "muted"));
-    else if (!fields.length) card.append(element("span", "칸별 답 없음(데이터셋 확인 불가)", "muted"));
-    else {
+    else if (!fields.length) card.append(element("span", "항목별 답 없음(데이터셋 확인 불가)", "muted"));
+    else if (kind.kind === "GENERIC_FIELDS") {
       card.append(element("span", `맞게 넣음 ${tally.FILLED_CORRECT ?? 0} · 잘못 넣음 ${(tally.FILLED_WRONG_KEY ?? 0) + (tally.FILLED_UNNEEDED ?? 0)} · 놓침 ${tally.MISSED ?? 0}`, "muted"));
+    }
+    else {
+      card.append(element("span", `정답 ${tally.CORRECT ?? 0} · 오답 ${(tally.WRONG_KEY ?? 0) + (tally.UNNECESSARY ?? 0)} · 누락 ${tally.MISSING ?? 0}`, "muted"));
     }
     if (state.baseline) {
       if (!bases[model]) card.append(element("span", "기준 실행에 이 모델 없음", "muted"));
@@ -553,7 +600,8 @@ function renderFields() {
         const better = keys.filter((key) => delta(model, key) > 0).length;
         const worse = keys.filter((key) => delta(model, key) < 0).length;
         const line = element("span", undefined, "fields-delta");
-        line.append(element("b", `개선 ${better}칸`, "up"), element("span", " · "), element("b", `악화 ${worse}칸`, "down"));
+        line.append(element("b", `개선 ${better}${kind.noun === "칸" ? "칸" : "개"}`, "up"), element("span", " · "),
+          element("b", `악화 ${worse}${kind.noun === "칸" ? "칸" : "개"}`, "down"));
         card.append(line);
       }
     }
@@ -562,7 +610,7 @@ function renderFields() {
 
   const chips = element("div", undefined, "fields-filters");
   FIELD_FILTERS.filter(([key]) => key !== "changed" || state.baseline).forEach(([key, label]) => {
-    const chip = element("button", label);
+    const chip = element("button", key === "all" ? label : `${label} ${kind.noun}`);
     chip.type = "button";
     chip.setAttribute("aria-pressed", String(state.fieldFilter === key));
     chip.addEventListener("click", () => { state.fieldFilter = key; renderFields(); });
@@ -575,7 +623,7 @@ function renderFields() {
     if (filter === "all") return true;
     if (filter === "diff") return new Set(cells.map((cell) => cell?.main)).size > 1 || cells.some((cell) => cell && cell.count < cell.total);
     if (filter === "wrong") return cells.some((cell) => cell && Object.keys(cell.counts).some((outcome) => WRONG.has(outcome)));
-    if (filter === "missed") return cells.some((cell) => cell?.counts.MISSED);
+    if (filter === "missed") return cells.some((cell) => cell && Object.keys(cell.counts).some((outcome) => MISSED.has(outcome)));
     return models.some((model) => delta(model, key) !== 0);
   };
   const visible = [...rows.entries()].filter(([key, field]) => keep(key, field));
@@ -583,7 +631,7 @@ function renderFields() {
   const table = element("table", undefined, "fields-table");
   const thead = element("thead");
   const headRow = element("tr");
-  headRow.append(element("th", "칸"), element("th", "정답"));
+  headRow.append(element("th", kind.noun === "결정" ? "대상" : kind.noun), element("th", "정답"));
   models.forEach((model) => {
     const th = element("th", model, "model-col");
     th.style.setProperty("--model", color(model));
@@ -593,7 +641,7 @@ function renderFields() {
   const body = element("tbody");
   let group = null;
   for (const [key, field] of visible) {
-    const groupName = `${STATE_NAMES[field.state] ?? field.state} · ${sectionTitle({ title: field.section })}`;
+    const groupName = itemGroup(field);
     if (groupName !== group) {
       group = groupName;
       const groupRow = element("tr", undefined, "fields-group");
@@ -606,8 +654,9 @@ function renderFields() {
     row.tabIndex = 0;
     row.setAttribute("aria-expanded", String(state.openField === key));
     const labelCell = element("td", undefined, "field-label");
-    labelCell.append(element("span", field.label ?? field.fieldId), element("span", CONTROL_NAMES[field.control] ?? field.control ?? "", "muted"));
-    row.append(labelCell, element("td", field.expected ?? "넣을 항목 없음", field.expected ? "field-key" : "field-key none"));
+    labelCell.append(element("span", itemLabel(field)));
+    if (field.control) labelCell.append(element("span", CONTROL_NAMES[field.control] ?? field.control, "muted"));
+    row.append(labelCell, element("td", itemValue(field, field.expected), field.expected ? "field-key" : "field-key none"));
     for (const model of models) {
       const td = element("td");
       const cell = cellOf(byModel[model].get(key));
@@ -629,8 +678,8 @@ function renderFields() {
   }
   table.append(thead, body);
   const wrap = element("div", undefined, "table-wrap fields-wrap");
-  wrap.append(visible.length ? table : element("div", "조건에 맞는 칸이 없습니다.", "empty"));
-  const foot = element("p", `${visible.length}칸 표시 · 반복이 갈린 칸은 가장 많은 판정과 횟수(예: 2/3)를 보입니다. ${state.baseline ? "개선·악화는 맞음 +1, 놓침 0, 잘못 넣음 −1의 반복 평균을 같은 모델의 기준 실행과 비교합니다." : ""}`, "muted metric-foot");
+  wrap.append(visible.length ? table : element("div", `조건에 맞는 ${kind.noun}이 없습니다.`, "empty"));
+  const foot = element("p", `${visible.length}개 표시 · 반복이 갈린 항목은 가장 많은 판정과 횟수(예: 2/3)를 보입니다. ${state.baseline ? "개선·악화는 맞음 +1, 놓침·누락 0, 틀림 −1의 반복 평균을 같은 모델의 기준 실행과 비교합니다." : ""}`, "muted metric-foot");
   page.replaceChildren(head, summary, chips, wrap, foot);
 }
 
@@ -646,7 +695,8 @@ function fieldDetail(key, models, byModel, baseByModel) {
     if (!field?.answers.length) box.append(element("p", "답 없음", "muted"));
     else field.answers.forEach((answer) => {
       const line = element("div", undefined, "answer-line");
-      line.append(element("span", `${answer.repetition}회`, "muted"), element("code", answer.value ?? "비움"),
+      line.append(element("span", `${answer.repetition}회`, "muted"),
+        element("code", answer.value == null && field.kind === "GENERIC_FIELDS" ? "비움" : itemValue(field, answer.value)),
         element("span", answer.confidence == null ? "확신도 —" : `확신도 ${answer.confidence.toFixed(2)}`, "muted"),
         element("span", OUTCOMES[answer.outcome].label, `outcome ${OUTCOMES[answer.outcome].className}`));
       box.append(line);

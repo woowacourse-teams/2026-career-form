@@ -574,3 +574,5 @@ html,body{margin:0;background:#eae9e5}body{min-width:320px}
 #cf-eval-preview .filters>label{margin-left:auto}
 #cf-eval-preview .filters select#comparison{min-height:32px;padding-top:4px;padding-bottom:4px}
 @media(max-width:720px){#cf-eval-preview .filters{padding:10px 12px}#cf-eval-preview .filters>label{margin-left:0;flex:1 1 100%}#cf-eval-preview .filters select#comparison{flex:1;min-width:0}#cf-eval-preview .comparison-detail{white-space:normal}}
+#cf-eval-preview .item-kinds{flex-basis:100%;margin-top:2px}
+#cf-eval-preview .item-kinds button{font-size:13px;padding:6px 10px}

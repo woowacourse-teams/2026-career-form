@@ -27,7 +27,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import com.careerform.evaluation.run.CallResultRecord;
 import com.careerform.evaluation.run.EvaluationRun;
-import com.careerform.evaluation.run.FieldReport;
+import com.careerform.evaluation.run.ItemReport;
 import com.careerform.evaluation.run.RescoringService;
 import com.careerform.evaluation.run.ResultStore;
 import com.careerform.evaluation.run.RunReport;
@@ -124,11 +124,11 @@ public final class EvaluationRunController {
         return results.list(runId);
     }
 
-    /** 칸 매핑 답을 칸마다 모은 목록. 실행 때의 데이터셋을 찾을 수 없으면 빈 목록이다. */
-    @GetMapping("/runs/{runId}/fields")
-    public List<FieldReport.FieldAnswers> fields(@PathVariable String runId) {
+    /** 답을 채점 항목마다 모은 목록(칸 매핑, 섹션 분류, 선택 결정). 실행 때의 데이터셋을 찾을 수 없으면 빈 목록이다. */
+    @GetMapping("/runs/{runId}/items")
+    public List<ItemReport.Item> items(@PathVariable String runId) {
         EvaluationRun run = runs.find(runId);
-        return dataset(run).map(dataset -> FieldReport.of(dataset, results.list(runId))).orElse(List.of());
+        return dataset(run).map(dataset -> ItemReport.of(dataset, results.list(runId))).orElse(List.of());
     }
 
     @PostMapping("/runs/{runId}/cancel")

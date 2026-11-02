@@ -9,36 +9,32 @@ import java.util.Objects;
  */
 public final class CallScorer {
 
+    /** 항목 하나의 판정. */
+    public enum Verdict { CORRECT, WRONG_KEY, MISSING, UNNECESSARY, EXCLUDED }
+
+    public static Verdict verdict(String want, ObservedItem item) {
+        if (item.providerUnavailable()) {
+            return Verdict.EXCLUDED;
+        }
+        if (Objects.equals(want, item.value())) {
+            return Verdict.CORRECT;
+        }
+        if (want == null) {
+            return Verdict.UNNECESSARY;
+        }
+        return item.value() == null ? Verdict.MISSING : Verdict.WRONG_KEY;
+    }
+
     public CallScore score(Map<String, String> expected, Map<String, ObservedItem> observed) {
         for (String id : observed.keySet()) {
             if (!expected.containsKey(id)) {
                 throw new IllegalArgumentException("정답표에 없는 응답 항목입니다: " + id);
             }
         }
-        int correct = 0;
-        int wrongKey = 0;
-        int missing = 0;
-        int unnecessary = 0;
-        int excluded = 0;
-        for (Map.Entry<String, String> entry : expected.entrySet()) {
-            ObservedItem item = observed.getOrDefault(entry.getKey(), ObservedItem.answered(null));
-            String want = entry.getValue();
-            if (item.providerUnavailable()) {
-                excluded++;
-            }
-            else if (Objects.equals(want, item.value())) {
-                correct++;
-            }
-            else if (want == null) {
-                unnecessary++;
-            }
-            else if (item.value() == null) {
-                missing++;
-            }
-            else {
-                wrongKey++;
-            }
-        }
-        return new CallScore(correct, wrongKey, missing, unnecessary, excluded);
+        int[] counts = new int[Verdict.values().length];
+        expected.forEach((id, want) ->
+            counts[verdict(want, observed.getOrDefault(id, ObservedItem.answered(null))).ordinal()]++);
+        return new CallScore(counts[Verdict.CORRECT.ordinal()], counts[Verdict.WRONG_KEY.ordinal()],
+            counts[Verdict.MISSING.ordinal()], counts[Verdict.UNNECESSARY.ordinal()], counts[Verdict.EXCLUDED.ordinal()]);
     }
 }
