@@ -500,32 +500,105 @@ function dialog(title, content, className) {
   if (!box.open) box.showModal();
 }
 
-function datasetView() {
-  const wrap = element("div", undefined, "dataset-layout");
+const STATE_NAMES = { initial: "처음 화면", "high-school": "고등학교", university: "대학교", ged: "검정고시" };
+const CONTROL_NAMES = { text: "글자", select: "선택", radio: "라디오", checkbox: "체크", textarea: "긴 글", custom: "직접 구현" };
+const CALL_NAMES = { SECTION_CLASSIFY: "섹션 분류", INTERACTION_DECISION: "학력 구분 선택", GENERIC_FIELDS: "칸 매핑" };
+const REVIEW_NAMES = { privacy: "개인정보", structure: "구조", mappingTruth: "칸 정답", preparationTruth: "준비 정답",
+  inputIdentity: "입력 동일성" };
+const REVIEW_OK = new Set(["PASSED", "HUMAN_REVIEWED", "SOURCE_PIPELINE_VERIFIED", "INSTALLED_VERIFIED"]);
+
+/** 데이터셋 대화상자. 요약, 화면별 탭, 채점 순서, 섹션별 칸 표, 검토 상태, 합성 프로필을 보인다. */
+function datasetView(selected = 0) {
   const data = state.dataset;
   if (!data) return element("p", "데이터셋을 불러오지 못했습니다.", "muted");
-  wrap.append(element("p", `${data.datasetId} v${data.version} · ${data.usable ? "평가에 사용 가능" : "평가 전 검토 필요"}`, "muted"));
+  const wrap = element("div", undefined, "dataset-view");
+  const fieldCount = data.cases.reduce((sum, item) => sum + item.sections.reduce((n, group) => n + group.fields.length, 0), 0);
+  const summary = element("div", undefined, "dataset-summary");
+  [[`${data.cases.length}개`, "화면"], [`${fieldCount}칸`, "채점하는 입력 칸"],
+    [`${Object.keys(data.profiles).length}명`, "합성 프로필"],
+    [data.usable ? "사용 가능" : "검토 필요", "평가 상태"]].forEach(([value, label]) => {
+    const tile = element("div", undefined, "summary-tile");
+    tile.append(element("strong", value), element("span", label, "muted"));
+    summary.append(tile);
+  });
+  wrap.append(summary);
   if (!data.usable && data.rejection) wrap.append(element("p", `미완료 검토: ${data.rejection}`, "muted"));
-  for (const item of data.cases) {
-    const section = element("section", undefined, "application-preview");
-    section.append(element("h5", `${item.siteId} · ${item.state} · ${item.split === "tuning" ? "튜닝용" : "최종 평가용"}`));
-    section.append(element("p", `호출 ${item.calls.map((c) => `${c.order}.${c.stage === "PREPARATION" ? "준비" : "매핑"} ${c.kind}(${c.items})`).join(" → ")}`, "muted"));
-    if (item.actions.length) section.append(element("p", `화면 동작: ${item.actions.join(", ")}`, "muted"));
-    const fields = element("div", undefined, "application-fields");
-    for (const group of item.sections) for (const field of group.fields)
-      fields.append(Object.assign(element("div"), { textContent: `${group.title ?? "제목 없음"} · ${field.label ?? "이름 없음"} (${field.control})` }));
-    section.append(fields);
-    const review = element("p", Object.entries(item.review).map(([k, v]) => `${k} ${v}`).join(" · "), "muted");
-    section.append(review);
-    wrap.append(section);
-  }
-  for (const [id, profile] of Object.entries(data.profiles)) {
-    const box = element("section", undefined, "profile-preview");
-    box.append(element("h5", `평가 프로필 ${id} (합성)`));
-    box.append(element("pre", JSON.stringify(profile, null, 2)));
-    wrap.append(box);
-  }
+  const tabs = element("div", undefined, "dataset-tabs");
+  data.cases.forEach((item, index) => {
+    const tab = element("button", STATE_NAMES[item.state] ?? item.state);
+    tab.type = "button";
+    tab.setAttribute("aria-pressed", String(index === selected));
+    tab.addEventListener("click", () => dialog("데이터셋", datasetView(index), "dataset-dialog"));
+    tabs.append(tab);
+  });
+  wrap.append(tabs);
+  const item = data.cases[selected];
+  const steps = element("ol", undefined, "call-steps");
+  item.calls.forEach((call) => {
+    const step = element("li");
+    step.append(element("span", call.stage === "PREPARATION" ? "준비" : "매핑", "step-stage"),
+      element("strong", CALL_NAMES[call.kind] ?? call.kind), element("span", `${call.items}항목`, "muted"));
+    steps.append(step);
+  });
+  wrap.append(element("h4", "채점 순서"), steps);
+  const badges = element("div", undefined, "review-badges");
+  Object.entries(item.review).filter(([key]) => REVIEW_NAMES[key]).forEach(([key, value]) =>
+    badges.append(element("span", `${REVIEW_NAMES[key]} ${REVIEW_OK.has(value) ? "확인" : value}`,
+      REVIEW_OK.has(value) ? "badge ok" : "badge")));
+  wrap.append(badges);
+  const table = element("table", undefined, "field-table");
+  const head = element("thead");
+  const headRow = element("tr");
+  headRow.append(element("th", "칸 이름"), element("th", "종류"));
+  head.append(headRow);
+  const body = element("tbody");
+  item.sections.forEach((group) => {
+    const title = !group.title ? "제목 없음" : group.title === "[비식별]" ? "기본정보 (제목 비식별)" : group.title;
+    const sectionRow = element("tr", undefined, "section-row");
+    const cell = element("th", `${title} · ${group.fields.length}칸`);
+    cell.colSpan = 2;
+    sectionRow.append(cell);
+    body.append(sectionRow);
+    group.fields.forEach((field) => {
+      const row = element("tr");
+      row.append(element("td", field.label ?? "이름 없음"), element("td", CONTROL_NAMES[field.control] ?? field.control));
+      body.append(row);
+    });
+  });
+  table.append(head, body);
+  wrap.append(element("h4", `입력 칸 · ${item.sections.reduce((n, group) => n + group.fields.length, 0)}칸`), table);
+  const profiles = element("details", undefined, "profile-details");
+  profiles.append(element("summary", "합성 프로필 보기 (가상 인물, 실제 지원자 아님)"));
+  Object.entries(data.profiles).forEach(([id, profile]) => profiles.append(element("h5", id), profileTable(profile)));
+  wrap.append(profiles);
   return wrap;
+}
+
+/** 합성 프로필을 항목별 표로. 반복 기록은 기록마다 한 줄씩 값을 이어 붙인다. */
+function profileTable(profile) {
+  const table = element("table", undefined, "field-table");
+  const body = element("tbody");
+  const add = (name, value) => {
+    const row = element("tr");
+    row.append(element("td", name), element("td", value));
+    body.append(row);
+  };
+  Object.entries(profile.profile ?? profile).forEach(([category, value]) => {
+    const head = element("tr", undefined, "section-row");
+    const cell = element("th", category);
+    cell.colSpan = 2;
+    head.append(cell);
+    body.append(head);
+    const entries = Array.isArray(value) ? value : [value];
+    entries.forEach((entry) => {
+      const values = entry?.values ?? entry;
+      if (values && typeof values === "object")
+        Object.entries(values).forEach(([key, item]) => add(`${entry?.sectionId ? `${entry.sectionId} · ` : ""}${key}`, String(item)));
+      else add(category, String(values));
+    });
+  });
+  table.append(body);
+  return table;
 }
 
 function criteriaView() {
@@ -547,8 +620,18 @@ function criteriaView() {
   return list;
 }
 
-async function promptView() {
-  const wrap = element("div", undefined, "criteria-list");
+const PROMPT_GROUPS = [
+  { prefix: "section-classification", name: "섹션 분류", note: "섹션이 어느 프로필 범주인지 고르는 질문" },
+  { prefix: "generic-fields", name: "칸 매핑", note: "칸마다 어떤 프로필 항목을 넣을지 고르는 질문" },
+  { prefix: "interaction-decisions", name: "버튼·선택지 결정", note: "학력 구분처럼 화면을 바꾸는 선택" },
+  { prefix: "", name: "공급자 고정 문구", note: "공급자 연결부가 따로 보내는 시스템 문구" },
+];
+
+/**
+ * 프롬프트 대화상자. 조각을 용도별로 묶고, 지시 문구는 펼쳐 두며 선택지 설명(criterion.*)은 표로 접어 둔다.
+ * 이전 버전이 있으면 바뀐 조각에 표시를 달고 바뀐 조각만 볼 수 있다.
+ */
+async function promptView(changedOnly = false) {
   const versions = [];
   for (const { run } of [...state.runs].reverse())
     if (!versions.some((v) => v.digest === run.versions.promptDigest))
@@ -558,21 +641,75 @@ async function promptView() {
   const index = Math.max(0, versions.findIndex((v) => v.digest === shown));
   const current = await api(`/prompts/${versions[index].digest}`);
   const previous = index > 0 ? await api(`/prompts/${versions[index - 1].digest}`) : null;
-  wrap.append(element("p", `${versions[index].name} · ${current.digest.slice(0, 12)}${previous ? ` · 이전 ${versions[index - 1].name} 대비 바뀐 조각만 표시` : ""}`, "muted"));
-  for (const [name, text] of Object.entries(current.parts)) {
-    const before = previous?.parts[name];
-    if (previous && before === text) continue;
-    const section = element("section");
-    section.append(element("h4", `${name}${previous ? (before === undefined ? " (추가)" : " (변경)") : ""}`));
-    if (before !== undefined) section.append(element("pre", `- ${before}`));
-    section.append(element("pre", `${previous ? "+ " : ""}${text}`));
-    wrap.append(section);
+  const status = (name) => !previous ? null : !(name in previous.parts) ? "추가"
+    : previous.parts[name] !== current.parts[name] ? "변경" : null;
+  const names = Object.keys(current.parts);
+  const changed = names.filter(status);
+  const removed = Object.keys(previous?.parts ?? {}).filter((name) => !(name in current.parts));
+  const wrap = element("div", undefined, "prompt-view");
+  const head = element("div", undefined, "prompt-head");
+  head.append(element("strong", versions[index].name), element("span", `${current.digest.slice(0, 12)} · 조각 ${names.length}개`
+    + (previous ? ` · ${versions[index - 1].name} 대비 바뀐 조각 ${changed.length + removed.length}개` : ""), "muted"));
+  if (previous) {
+    const toggle = element("label", undefined, "prompt-toggle");
+    const box = Object.assign(element("input"), { type: "checkbox", checked: changedOnly });
+    box.addEventListener("change", async () => dialog("프롬프트", await promptView(box.checked), "criteria-dialog"));
+    toggle.append(box, document.createTextNode("바뀐 조각만"));
+    head.append(toggle);
   }
-  for (const name of Object.keys(previous?.parts ?? {}).filter((n) => !(n in current.parts))) {
-    const section = element("section");
-    section.append(element("h4", `${name} (삭제)`), element("pre", `- ${previous.parts[name]}`));
-    wrap.append(section);
+  wrap.append(head);
+  const used = new Set();
+  for (const group of PROMPT_GROUPS) {
+    const own = names.filter((name) => !used.has(name) && (group.prefix ? name.startsWith(`${group.prefix}/`) : true))
+      .filter((name) => !changedOnly || status(name));
+    own.forEach((name) => used.add(name));
+    if (!own.length) continue;
+    const box = element("details", undefined, "prompt-group");
+    box.open = true;
+    const summary = element("summary");
+    summary.append(element("strong", group.name), element("span", `${group.note} · ${own.length}개`, "muted"));
+    box.append(summary);
+    const criteria = own.filter((name) => name.split("/").slice(1).join("/").startsWith("criterion."));
+    own.filter((name) => !criteria.includes(name)).forEach((name) => {
+      const part = element("section", undefined, "prompt-part");
+      part.append(element("h5", `${name.split("/").slice(1).join("/") || name}${status(name) ? ` · ${status(name)}` : ""}`,
+        status(name) ? "part-changed" : undefined));
+      if (status(name) === "변경") part.append(element("p", previous.parts[name], "prompt-text before"));
+      part.append(element("p", current.parts[name], "prompt-text"));
+      box.append(part);
+    });
+    if (criteria.length) {
+      const list = element("details", undefined, "criteria-fold");
+      list.open = changedOnly;
+      list.append(element("summary", `선택지 설명 ${criteria.length}개`));
+      const table = element("table", undefined, "criteria-table");
+      const body = element("tbody");
+      criteria.forEach((name) => {
+        const row = element("tr", undefined, status(name) ? "part-changed" : undefined);
+        row.append(element("td", name.split("criterion.").slice(1).join("criterion.")),
+          element("td", `${status(name) ? `[${status(name)}] ` : ""}${current.parts[name]}`));
+        body.append(row);
+      });
+      table.append(body);
+      const search = Object.assign(element("input"), { type: "search", placeholder: "선택지 이름이나 설명으로 찾기" });
+      search.className = "criteria-search";
+      search.addEventListener("input", () => {
+        const word = search.value.trim().toLowerCase();
+        body.querySelectorAll("tr").forEach((row) => { row.hidden = Boolean(word) && !row.textContent.toLowerCase().includes(word); });
+      });
+      list.append(search, table);
+      box.append(list);
+    }
+    wrap.append(box);
   }
+  if (removed.length) {
+    const box = element("details", undefined, "prompt-group");
+    box.open = true;
+    box.append(element("summary", `삭제된 조각 ${removed.length}개`));
+    removed.forEach((name) => box.append(element("p", name, "prompt-text before")));
+    wrap.append(box);
+  }
+  if (changedOnly && !changed.length && !removed.length) wrap.append(element("p", "이전 버전과 같습니다.", "muted"));
   return wrap;
 }
 

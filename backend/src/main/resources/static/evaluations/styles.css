@@ -342,3 +342,39 @@ html,body{margin:0;background:#eae9e5}body{min-width:320px}
 #cf-eval-preview .range-note{display:block;margin:4px 0 0 95px;font-size:12px;color:var(--sub);font-variant-numeric:tabular-nums}
 #cf-eval-preview .comparison-detail{flex-basis:100%;text-align:right;font-size:12px}
 #cf-eval-preview .item-track .item-empty{background:#c9cfd3}#cf-eval-preview .item-legend .item-empty::before{background:#c9cfd3}
+#cf-eval-preview dialog#cf-source.dataset-dialog,#cf-eval-preview dialog#cf-source.criteria-dialog{width:min(860px,calc(100% - 32px))}
+#cf-eval-preview .dataset-view h4{margin:22px 0 10px;font-size:14px;font-weight:600}
+#cf-eval-preview .dataset-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:18px}
+#cf-eval-preview .summary-tile{background:#fff;border:1px solid #dde1de;border-radius:6px;padding:12px 14px;display:flex;flex-direction:column;gap:2px}
+#cf-eval-preview .summary-tile strong{font-size:20px;font-weight:650;color:#233447}
+#cf-eval-preview .dataset-tabs{display:flex;flex-wrap:wrap;gap:6px;border-bottom:1px solid #d4d6d3;padding-bottom:10px}
+#cf-eval-preview .dataset-tabs button{font-size:14px;padding:7px 14px;border-radius:16px;border:1px solid #c8ccc9;color:#3e5874;background:#fff}
+#cf-eval-preview .dataset-tabs button[aria-pressed=true]{background:#475f78;border-color:#475f78;color:#fff}
+#cf-eval-preview .call-steps{display:flex;flex-wrap:wrap;gap:8px;list-style:none;padding:0;margin:0;counter-reset:step}
+#cf-eval-preview .call-steps li{counter-increment:step;display:flex;align-items:center;gap:7px;background:#fff;border:1px solid #dde1de;border-radius:6px;padding:7px 11px;font-size:13px}
+#cf-eval-preview .call-steps li::before{content:counter(step);display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#475f78;color:#fff;font-size:11px}
+#cf-eval-preview .step-stage{font-size:11px;color:#59626b;background:#eef1f3;border-radius:4px;padding:1px 6px}
+#cf-eval-preview .review-badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+#cf-eval-preview .badge{font-size:12px;border-radius:10px;padding:2px 9px;background:#f3e4d9;color:#8a4b2f}
+#cf-eval-preview .badge.ok{background:#dcebe2;color:#2f6a4f}
+#cf-eval-preview .field-table,#cf-eval-preview .criteria-table{width:100%;border-collapse:collapse;font-size:13px;margin:0;white-space:normal}
+#cf-eval-preview .field-table td,#cf-eval-preview .criteria-table td{padding:7px 10px;border-bottom:1px solid #e3e6e4;text-align:left;vertical-align:top;font-size:13px}
+#cf-eval-preview .field-table td:last-child{width:90px;color:var(--sub);white-space:nowrap}
+#cf-eval-preview .field-table th{padding:6px 10px;text-align:left}
+#cf-eval-preview .field-table .section-row th{background:#e7ebee;color:#33475b;font-weight:600;font-size:12px;border-top:0}
+#cf-eval-preview .profile-details{margin-top:22px}
+#cf-eval-preview .profile-details summary,#cf-eval-preview .criteria-fold summary{cursor:pointer;color:#3e5874;font-size:13px}
+#cf-eval-preview .prompt-head{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 12px;margin-bottom:14px}
+#cf-eval-preview .prompt-head strong{font-size:16px}
+#cf-eval-preview .prompt-toggle{margin-left:auto}
+#cf-eval-preview .prompt-group{background:#fff;border:1px solid #dde1de;border-radius:6px;padding:12px 16px;margin-bottom:12px}
+#cf-eval-preview .prompt-group>summary{cursor:pointer;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;font-size:15px}
+#cf-eval-preview .prompt-part{margin-top:14px}
+#cf-eval-preview .prompt-part h5{margin:0 0 6px;font-size:12px;color:var(--sub);font-weight:600;font-family:ui-monospace,Menlo,monospace}
+#cf-eval-preview .prompt-text{margin:0;font-size:13.5px;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere;color:#2a3440}
+#cf-eval-preview .prompt-text.before{background:#fbecea;color:#7d3a31;border-left:3px solid #c76a5d;padding:6px 10px;margin-bottom:6px;text-decoration:line-through}
+#cf-eval-preview .part-changed,#cf-eval-preview tr.part-changed td{color:#2f6a4f}
+#cf-eval-preview .criteria-fold{margin-top:14px}
+#cf-eval-preview .criteria-table td:first-child{width:38%;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#3e5874;overflow-wrap:anywhere}
+#cf-eval-preview dialog#cf-source.criteria-dialog{max-height:88vh;overflow:auto}
+#cf-eval-preview .criteria-search{width:100%;margin:10px 0 6px;padding:7px 10px;font:inherit;font-size:13px;border:1px solid #c8ccc9;border-radius:4px;background:#fff}
