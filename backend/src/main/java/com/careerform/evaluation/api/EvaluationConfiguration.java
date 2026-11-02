@@ -77,11 +77,12 @@ public class EvaluationConfiguration {
     EvaluationSettings evaluationSettings(
         @Value("${career-form.evaluation.max-model-calls-per-run:500}") int maxModelCalls,
         @Value("${career-form.evaluation.max-repetitions:20}") int maxRepetitions,
+        @Value("${career-form.evaluation.commit:}") String commit,
         @Value("${career-form.evaluation.code-version:${career-form.quality.version:UNKNOWN}}") String codeVersion,
         @Value("${career-form.analysis.jev.field-batch-size:5}") int batch,
         @Value("${career-form.analysis.jev.section-concurrency:3}") int concurrency,
         @Value("${career-form.analysis.jev.max-concurrent:10}") int maxConcurrent) {
-        return new EvaluationSettings(maxModelCalls, maxRepetitions, codeVersion,
+        return new EvaluationSettings(maxModelCalls, maxRepetitions, EvaluationSettings.codeVersion(commit, codeVersion),
             Map.of("field-batch-size", batch, "section-concurrency", concurrency, "max-concurrent", maxConcurrent));
     }
 

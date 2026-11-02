@@ -86,6 +86,8 @@ career-form:
   evaluation:
     # development 서버에서만 켠다. 사용자 요청과 서버 동시 호출 상한을 나눠 쓴다.
     enabled: ${CAREER_FORM_EVALUATION_ENABLED:false}
+    # 배포 이미지가 담은 커밋(Dockerfile ARG). 비면 career-form.quality.version(이미지 digest, 로컬 버전)을 쓴다.
+    commit: ${CAREER_FORM_COMMIT:}
     max-model-calls-per-run: ${CAREER_FORM_EVALUATION_MAX_MODEL_CALLS:500}
     max-repetitions: ${CAREER_FORM_EVALUATION_MAX_REPETITIONS:20}
     poll-interval: ${CAREER_FORM_EVALUATION_POLL_INTERVAL:10s}

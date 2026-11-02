@@ -47,8 +47,22 @@ python3 scripts/evaluation_local.py reset-password
 `CAREER_FORM_EVALUATION_AUTO_RUN_ENABLED=true`면 서버가 뜬 뒤 이 코드 버전으로 돌린 같은 데이터셋 평가가 없을 때
 공급자마다 기본 모델로 비교 하나(`auto-deploy`, 반복 3회)를 등록한다. 머지 → 배포마다 한 번이며, 진행 중인 평가가
 있으면 건너뛴다. 실행당 두 모델 합 약 $0.1이 든다. 데이터셋 버전(`..._AUTO_RUN_DATASET_VERSION`)은 평가 화면이 쓰는 버전과
-같아야 하고 테스트가 이를 확인한다. 코드 버전은 `CAREER_FORM_QUALITY_VERSION`(배포 이미지)이며, 커밋 번호로 보이게 하는 것은
-배포 설정 변경이 필요하다.
+같아야 하고 테스트가 이를 확인한다. 코드 버전은 이미지에 담긴 커밋 번호(짧은 SHA)다. 개발 배포 워크플로가 이미지 빌드 때
+`CAREER_FORM_COMMIT`을 넘기므로 롤백해도 그 이미지의 커밋으로 보이고, 커밋이 없는 빌드는 `CAREER_FORM_QUALITY_VERSION`을 쓴다.
+
+개발서버에서 켜는 값은 GitHub `development` Environment에 사람이 넣는다. 배포 워크플로와 `infra/compose.deploy.yaml`이
+이 값을 백엔드로 넘기고, 값이 없으면 모두 꺼진다. staging·production 워크플로는 평가 값을 넘기지 않는다.
+
+| 종류 | 이름 | 값 |
+| --- | --- | --- |
+| 변수 | `CAREER_FORM_QUALITY_ENABLED` | true (평가 화면 비밀번호 보호에 필요) |
+| 시크릿 | `CAREER_FORM_QUALITY_PASSWORD_HASH` | 팀 공용 비밀번호 해시(`pbkdf2-sha256$600000$...`) |
+| 변수 | `CAREER_FORM_EVALUATION_ENABLED` | true |
+| 변수 | `CAREER_FORM_EVALUATION_AUTO_RUN_ENABLED` | true (머지 → 배포마다 평가 1회) |
+| 변수 | `CAREER_FORM_EVALUATION_OPENAI_ENABLED` | OpenAI와 비교할 때 true. 키는 기존 `OPENAI_API_KEY` 시크릿 |
+| 시크릿 | `CAREER_FORM_EVALUATION_PROVIDER_KEYS` | 화면에서 등록하는 공급자의 키 묶음(필요할 때만) |
+
+값을 넣거나 바꾼 뒤에는 다음 develop 머지(또는 개발 배포 워크플로 재실행) 때 반영된다.
 
 ## 켜는 방법
 
@@ -69,6 +83,7 @@ development 서버에서만 켠다. 평가 호출은 사용자 요청과 서버 
 | `CAREER_FORM_EVALUATION_AUTO_RUN_ENABLED` | false | 새 코드 배포 뒤 평가 1회 자동 실행 |
 | `CAREER_FORM_EVALUATION_AUTO_RUN_REPETITIONS` | 3 | 자동 실행 반복 수 |
 | `CAREER_FORM_EVALUATION_AUTO_RUN_DATASET_VERSION` | 3 | 자동 실행 데이터셋 버전(평가 화면과 같게) |
+| `CAREER_FORM_COMMIT` | 빈 값 | 이미지가 만들어진 커밋. 개발 배포 이미지 빌드 인자로 넣고, 코드 버전에 앞 7자를 쓴다 |
 
 API와 화면은 품질 확인 공용 비밀번호(`CAREER_FORM_QUALITY_PASSWORD_HASH`)로 보호한다. 실행자는
 `X-Evaluation-Requester` 헤더(영문·숫자·한글 32자)로 기록하고 없으면 `quality-admin`이다.

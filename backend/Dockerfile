@@ -42,6 +42,10 @@ COPY --from=agent --chown=careerform:careerform /otel/opentelemetry-javaagent.ja
 COPY --chown=careerform:careerform otel/agent.properties /otel/agent.properties
 COPY --chmod=0555 docker-entrypoint.sh /application/docker-entrypoint.sh
 
+# 평가 화면의 코드 버전. 배포 워크플로가 커밋 SHA를 넘기고, 로컬 빌드는 빈 값이라 다른 버전 값을 쓴다.
+ARG CAREER_FORM_COMMIT=
+ENV CAREER_FORM_COMMIT=${CAREER_FORM_COMMIT}
+
 USER careerform:careerform
 
 EXPOSE 8080

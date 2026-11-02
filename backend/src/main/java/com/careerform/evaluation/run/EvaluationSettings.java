@@ -19,4 +19,13 @@ public record EvaluationSettings(
         }
         baseSettings = Map.copyOf(baseSettings);
     }
+
+    /** 이미지에 담긴 커밋(짧은 SHA)을 코드 버전으로 쓰고, 커밋이 없는 빌드는 {@code fallback}(이미지, 로컬 버전)을 쓴다. */
+    public static String codeVersion(String commit, String fallback) {
+        if (commit == null || commit.isBlank()) {
+            return fallback;
+        }
+        String trimmed = commit.strip();
+        return trimmed.length() > 7 ? trimmed.substring(0, 7) : trimmed;
+    }
 }
