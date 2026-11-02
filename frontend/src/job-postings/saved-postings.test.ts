@@ -103,6 +103,12 @@ describe("deadlineSummary", () => {
       "프론트엔드, 11월 3일 0시",
     );
   });
+
+  it("keeps the minutes of a deadline that is not on the hour", () => {
+    expect(deadlineSummary(posting("a", kst("2026-11-03T16:32:00")))).toBe(
+      "프론트엔드, 11월 3일 16시 32분",
+    );
+  });
 });
 
 describe("createSavedPostingsReader", () => {

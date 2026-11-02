@@ -207,8 +207,8 @@
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
-  min-height: 68px;
-  padding: 12px 14px;
+  min-height: 40px;
+  padding: 2px 14px;
   background: var(--color-surface);
 }
 .valueRow {
@@ -251,10 +251,13 @@
 }
 .valueMeta {
   display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  align-items: baseline;
   min-width: 0;
-  gap: 4px;
+  gap: 2px 8px;
 }
 .valueMeta > span:first-child:not(.value):not(.masked) {
+  grid-column: 1 / -1;
   color: var(--color-text-muted);
   font-size: 11px;
   font-weight: 600;
@@ -267,7 +270,7 @@
 .value,
 .masked {
   color: var(--color-text-strong);
-  font-size: 14.5px;
+  font-size: 13.5px;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }

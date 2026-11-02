@@ -11,6 +11,7 @@ const koreanParts = new Intl.DateTimeFormat("en-US", {
   month: "numeric",
   day: "numeric",
   hour: "numeric",
+  minute: "numeric",
   hourCycle: "h23",
 });
 
@@ -23,6 +24,7 @@ function partsOf(at: number) {
     month: Number(parts.month),
     day: Number(parts.day),
     hour: Number(parts.hour),
+    minute: Number(parts.minute),
   };
 }
 
@@ -51,8 +53,9 @@ export function upcomingPostings(
 }
 
 export function deadlineSummary(posting: Posting): string {
-  const { month, day, hour } = partsOf(posting.deadline);
-  const deadline = `${month}월 ${day}일 ${hour}시`;
+  const { month, day, hour, minute } = partsOf(posting.deadline);
+  const minutes = minute > 0 ? ` ${minute}분` : "";
+  const deadline = `${month}월 ${day}일 ${hour}시${minutes}`;
   return posting.role ? `${posting.role}, ${deadline}` : deadline;
 }
 
