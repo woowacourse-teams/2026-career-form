@@ -645,3 +645,12 @@
 #cf-eval-preview .comparison-detail .stat b{font-size:12.5px}
 #cf-eval-preview .help-tip{position:fixed;z-index:1000;max-width:280px;padding:8px 11px;border-radius:6px;background:#233447;color:#fff;font-size:12.5px;line-height:1.5;box-shadow:0 6px 18px rgba(20,30,40,.18);pointer-events:none}
 #cf-eval-preview .stat.has-help:focus-visible{outline:2px solid #475f78;outline-offset:2px;border-radius:3px}
+#cf-eval-preview .diagnosis-block{margin-top:18px}
+#cf-eval-preview .diagnosis-block .metric-head{margin-bottom:6px}
+#cf-eval-preview .stage-table th.count{display:table-cell;white-space:nowrap}
+#cf-eval-preview .stage-table th.count::before{content:"";display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;vertical-align:0}
+#cf-eval-preview .stage-table th.item-correct::before{background:#3d6f9e}
+#cf-eval-preview .stage-table th.item-wrong::before{background:#b5483d}
+#cf-eval-preview .stage-table th.item-missing::before{background:#d6ae52}
+#cf-eval-preview .stage-table th.item-unnecessary::before{background:#8f7ab5}
+#cf-eval-preview .stage-table th.count{color:var(--sub)}

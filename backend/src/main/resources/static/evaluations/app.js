@@ -507,52 +507,44 @@ function diagnosis() {
   box.addEventListener("toggle", () => { state.diagnosisOpen = box.open; });
   const summary = element("summary");
   summary.append(element("strong", "진단"), element("span", "모델 답 그대로 채점 · 어느 단계에서 틀리는지", "muted"));
-  const table = element("table", undefined, "stage-table");
-  const head = element("tr");
-  ["모델", "전체 항목", "준비", "필드 매핑"].forEach((text) => head.append(element("th", text)));
-  const body = element("tbody");
-  const cell = (value) => element("td", value == null ? "—" : `${(value * 100).toFixed(1)}%`);
-  for (const model of state.selected) {
-    const quality = report(model)?.quality;
-    const row = element("tr");
-    const name = element("td", model, "stage-model");
-    name.style.setProperty("--model", color(model));
-    row.append(name, cell(quality?.accuracy), cell(quality?.preparationAccuracy), cell(quality?.mappingAccuracy));
-    body.append(row);
-  }
-  const thead = element("thead");
-  thead.append(head);
-  table.append(thead, body);
-  box.append(summary, table, renderItemBreakdown());
+  const percentCell = (value) => value == null ? "—" : `${(value * 100).toFixed(1)}%`;
+  box.append(summary,
+    diagnosisTable("단계별 정확도", "모델 답 그대로 맞힌 비율", ["전체 항목", "준비", "필드 매핑"], (model) => {
+      const quality = report(model)?.quality;
+      return [percentCell(quality?.accuracy), percentCell(quality?.preparationAccuracy), percentCell(quality?.mappingAccuracy)];
+    }),
+    diagnosisTable("항목 판정", "실행 전체 · 항목 수", [...ITEM_KINDS.map(({ label }) => label.split("(")[0]), "채점 항목"], (model) => {
+      const items = report(model)?.quality.items;
+      if (!items) return ITEM_KINDS.map(() => "—").concat("—");
+      const counts = ITEM_KINDS.map(({ key }) => items[key] ?? 0);
+      return [...counts.map(String), String(counts.reduce((sum, value) => sum + value, 0))];
+    }, ITEM_KINDS.map(({ className }) => className)),
+    element("p", "공급자를 쓸 수 없어 답하지 못한 항목은 채점에서 뺍니다. 오답·불필요 제안은 틀린 값이 들어갈 위험, 누락은 직접 입력할 칸입니다.", "muted metric-foot"));
   return box;
 }
 
-function renderItemBreakdown() {
-  const card = element("div", undefined, "metric");
+/** 진단 표 하나. 행은 모델, 열은 지표다. {@code marks}를 주면 열 머리에 판정 색 점을 붙인다. */
+function diagnosisTable(title, note, columns, values, marks = []) {
+  const wrap = element("div", undefined, "diagnosis-block");
   const head = element("div", undefined, "metric-head");
-  head.append(element("h3", "항목 판정"), element("span", "실행 전체 · 항목 수", "muted"));
-  card.append(head);
-  if (!state.selected.length) card.append(element("div", "비교할 모델 선택 필요.", "empty"));
+  head.append(element("h3", title), element("span", note, "muted"));
+  const table = element("table", undefined, "stage-table");
+  const headRow = element("tr");
+  headRow.append(element("th", "모델"));
+  columns.forEach((text, index) => headRow.append(element("th", text, marks[index] ? `count ${marks[index]}` : undefined)));
+  const thead = element("thead");
+  thead.append(headRow);
+  const body = element("tbody");
   for (const model of state.selected) {
-    const items = report(model)?.quality.items;
-    const scored = items ? ITEM_KINDS.reduce((sum, { key }) => sum + (items[key] ?? 0), 0) : 0;
-    const row = element("div", undefined, "item-row");
-    row.style.setProperty("--model", color(model));
-    const track = element("div", undefined, "item-track");
-    if (scored) {
-      ITEM_KINDS.forEach(({ key, label, className }) => {
-        const part = element("span", undefined, className);
-        part.style.width = `${(items[key] ?? 0) / scored * 100}%`;
-        part.title = `${label} ${items[key] ?? 0}`;
-        track.append(part);
-      });
-    }
-    const numbers = scored ? countLine(ITEM_KINDS, items, scored, "개") : element("span", "—", "item-numbers");
-    row.append(Object.assign(element("span", model), { title: model }), track, numbers);
-    card.append(row);
+    const row = element("tr");
+    const name = element("td", model, "stage-model");
+    name.style.setProperty("--model", color(model));
+    row.append(name, ...values(model).map((value) => element("td", value)));
+    body.append(row);
   }
-  card.append(element("p", "공급자를 쓸 수 없어 답하지 못한 항목은 채점에서 뺍니다.", "muted metric-foot"));
-  return card;
+  table.append(thead, body);
+  wrap.append(head, table);
+  return wrap;
 }
 
 const OUTCOMES = {
