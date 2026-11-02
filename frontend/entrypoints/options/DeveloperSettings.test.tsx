@@ -30,19 +30,19 @@ describe("DeveloperSettings", () => {
     render(<DeveloperSettings developerBuild={false} store={store} />);
     expect(screen.queryByRole("switch")).toBeNull();
     expect(screen.queryByText("개발자 설정")).toBeNull();
+    expect(screen.queryByText("개발 빌드만")).toBeNull();
   });
 
-  it("shows an ON switch with help text by default in a developer build", () => {
+  it("shows a compact ON switch row with a dev-build marker by default in a developer build", () => {
     const { store } = fakeStore(true);
     render(<DeveloperSettings developerBuild store={store} />);
-    expect(screen.getByText("개발자 설정")).toBeVisible();
-    expect(screen.getByRole("switch", { name: "개발자 모드" })).toHaveAttribute(
-      "aria-checked",
-      "true",
+    expect(screen.queryByText("개발자 설정")).toBeNull();
+    expect(screen.getByText("개발 빌드만")).toBeVisible();
+    const toggle = screen.getByRole("switch", { name: "개발자 모드" });
+    expect(toggle).toHaveAttribute("aria-checked", "true");
+    expect(toggle).toHaveAccessibleDescription(
+      "자동 기입 중 상세 진행 화면과 진단 로그 표시",
     );
-    expect(
-      screen.getByText("자동 기입 중 상세 진행 화면과 진단 로그를 표시합니다."),
-    ).toBeVisible();
   });
 
   it("persists the toggled value to storage", async () => {

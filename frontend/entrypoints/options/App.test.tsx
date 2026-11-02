@@ -6,6 +6,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 
 import { createEmptyProfile } from "../../src/profile/model";
@@ -72,6 +73,86 @@ it("keeps the hidden file input out of tab order while the visible import button
 });
 
 describe("options App", () => {
+  it("puts the category count, save state and transfer buttons in the title row", async () => {
+    const repository = createRepository();
+    repository.load = vi.fn(async () => ({
+      ...createEmptyProfile(),
+      personal: { koreanFamilyName: "예시" },
+      contact: { email: "example@example.test" },
+    }));
+    render(<App repository={repository} />);
+    const heading = await screen.findByRole("heading", { name: "프로필 관리" });
+    const titleRow = within(heading.closest("header") as HTMLElement);
+
+    expect(titleRow.getByText(`2/${PROFILE_CATEGORIES.length}`)).toBeVisible();
+    expect(titleRow.getByRole("status")).toHaveTextContent("자동 저장");
+    expect(titleRow.getByRole("button", { name: "내보내기" })).toBeVisible();
+    expect(titleRow.getByRole("button", { name: "가져오기" })).toBeVisible();
+    expect(screen.getByText("이 브라우저에 저장 (암호화 안 됨)")).toBeVisible();
+  });
+
+  it("shows no explanatory sentences on the profile page", async () => {
+    render(<App repository={createRepository()} />);
+    await screen.findByRole("heading", { name: "프로필 관리" });
+
+    for (const sentence of [
+      /한 번 정리해 두면/,
+      /필요한 정보만 입력하세요/,
+      /자동 저장됩니다/,
+      /나의 프로필/,
+      /범주에 정보 입력/,
+      /필요한 항목만 채워도 괜찮아요/,
+      /지원서에 사용할 이름과 기본 정보를 정리해 주세요/,
+      /내 정보는 암호화 없이 이 브라우저에 저장돼요/,
+    ]) {
+      expect(screen.queryByText(sentence)).toBeNull();
+    }
+  });
+
+  it("shows sidebar rows and the section card as name and count without description", async () => {
+    render(<App repository={createRepository()} />);
+    await screen.findByRole("heading", { name: "프로필 관리" });
+    const nav = within(screen.getByRole("navigation", { name: "프로필 범주" }));
+    const health = nav.getByRole("button", { name: "건강" });
+    const empty = within(health).getByText("미입력");
+
+    expect(empty).toHaveAttribute("data-empty", "true");
+    expect(empty.className).not.toMatch(/danger/i);
+    const appCss = readFileSync("entrypoints/options/App.module.css", "utf8");
+    const emptyRule = appCss.match(/\[data-empty="true"\][^{]*\{[^}]*\}/g);
+    expect(emptyRule).not.toBeNull();
+    expect(emptyRule!.join("")).toContain("var(--color-text-muted)");
+    expect(emptyRule!.join("")).not.toMatch(/danger/);
+
+    fireEvent.change(screen.getByLabelText("국문 성"), {
+      target: { value: "예시" },
+    });
+    const section = screen.getByRole("region", { name: "기본 인적사항" });
+    expect(within(section).getByText("1개")).toBeVisible();
+    expect(
+      within(section).getByRole("button", { name: "다음: 연락처와 주소 →" }),
+    ).toBeVisible();
+
+    fireEvent.click(nav.getByRole("button", { name: "연락처와 주소" }));
+    const contact = screen.getByRole("region", { name: "연락처와 주소" });
+    expect(
+      within(contact).getByRole("button", { name: "← 이전" }),
+    ).toBeVisible();
+  });
+
+  it("places the developer mode row at the bottom of the sidebar", async () => {
+    render(<App repository={createRepository()} />);
+    await screen.findByRole("heading", { name: "프로필 관리" });
+    const sidebar = screen
+      .getByRole("navigation", { name: "프로필 범주" })
+      .closest("aside") as HTMLElement;
+
+    expect(
+      within(sidebar).getByRole("switch", { name: "개발자 모드" }),
+    ).toBeInTheDocument();
+    expect(within(sidebar).getByText("개발 빌드만")).toBeVisible();
+  });
+
   it("shows every category and keeps data when switching views", async () => {
     const repository = createRepository();
     render(<App repository={repository} />);

@@ -6,11 +6,24 @@
 }
 .header {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
-  gap: 24px;
+  flex-wrap: wrap;
+  gap: 12px 24px;
   max-width: 1160px;
-  margin: 0 auto 28px;
+  margin: 0 auto 12px;
+}
+.titleGroup {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+.titleCount {
+  color: var(--color-text-muted);
+  font-size: 18px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
 }
 .header h1 {
   margin: 0;
@@ -20,40 +33,32 @@
   letter-spacing: -0.045em;
   line-height: 1.3;
 }
-.description {
-  margin: 8px 0 0;
-  color: var(--color-text-muted);
-  font-size: 14px;
-}
 .toolbar {
-  display: grid;
-  justify-items: end;
-  gap: 12px;
-  padding-bottom: 2px;
-}
-.transferActions {
   display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
 }
-.transferActions button {
-  border: 0;
+.transferButton {
+  min-height: 36px;
+  border: 1px solid var(--color-field-border);
   border-radius: 8px;
-  min-height: 32px;
-  padding: 6px 10px;
-  color: var(--color-action-strong);
-  background: transparent;
+  padding: 6px 14px;
+  color: var(--color-text-strong);
+  background: var(--color-surface);
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
 }
-.transferActions button:hover {
+.transferButton:hover {
   background: var(--color-accent-soft);
 }
 .saveState {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: var(--color-text-muted);
+  margin-right: 8px;
+  color: var(--color-success);
   font-size: 12px;
   min-height: 20px;
 }
@@ -90,25 +95,21 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
+  flex-wrap: wrap;
+  gap: 8px 20px;
   max-width: 1160px;
   margin: 0 auto 18px;
-  border-top: 1px solid var(--color-border);
-  padding-top: 18px;
 }
-.workspaceToolbar > p {
+.storageLabel {
   margin: 0;
   font-size: 12px;
-  color: var(--color-text);
-}
-.workspaceToolbar > p span {
   color: var(--color-text-muted);
 }
 .layoutSwitch {
   display: flex;
   gap: 2px;
   flex-shrink: 0;
-  background: rgb(118 118 128 / 12%);
+  background: var(--color-surface-muted);
   padding: 2px;
   border-radius: 9px;
 }
@@ -126,7 +127,7 @@
   color: var(--color-text-strong);
   background: var(--color-surface);
   font-weight: 600;
-  box-shadow: 0 1px 3px rgb(0 0 0 / 16%);
+  box-shadow: 0 1px 3px var(--color-backdrop);
 }
 .layoutA {
   display: grid;
@@ -143,36 +144,6 @@
   overflow-y: auto;
   scrollbar-width: thin;
   padding: 4px 0 12px;
-}
-.navOverview {
-  margin: 0 0 16px;
-  padding: 16px;
-  border-radius: 12px;
-  background: var(--color-surface);
-}
-.navOverview > p:first-child {
-  margin: 0 0 5px;
-  color: var(--color-text);
-  font-size: 12px;
-  font-weight: 650;
-}
-.navOverview > strong {
-  color: var(--color-text-strong);
-  font-size: 24px;
-  font-weight: 700;
-}
-.navOverview > strong span {
-  color: var(--color-text-muted);
-  font-size: 11px;
-  font-weight: 450;
-}
-.optionalNote {
-  color: var(--color-text-muted);
-  font-size: 11px;
-  font-weight: 400;
-}
-.navOverview .optionalNote {
-  margin: 3px 0 0;
 }
 .categorySearch {
   display: flex;
@@ -239,17 +210,6 @@
   color: var(--color-text-strong);
   background: var(--color-accent-hover);
 }
-.navDot {
-  flex-shrink: 0;
-  height: 5px;
-  width: 5px;
-  border: 1px solid var(--color-field-border);
-  border-radius: 50%;
-}
-.navDot[data-filled="true"] {
-  background: var(--color-success);
-  border-color: var(--color-success);
-}
 .navLabel {
   font-size: 13px;
   font-weight: 550;
@@ -266,6 +226,12 @@
 .categoryNav button[aria-current="page"] small {
   color: var(--color-text);
 }
+.categoryNav button small[data-empty="true"],
+.accordionStatus[data-empty="true"],
+.categoryCount[data-empty="true"] {
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
 .formPanel {
   min-width: 0;
   border-radius: 12px;
@@ -274,23 +240,13 @@
   overflow: hidden;
 }
 .sectionHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   padding: 28px 32px 22px;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
-}
-.sectionMeta {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-  color: var(--color-text-subtle);
-  font-size: 11px;
-}
-.categoryBadge {
-  border-radius: 5px;
-  padding: 3px 8px;
-  background: var(--color-info-soft);
-  color: var(--color-info);
 }
 .sectionHeading h2 {
   margin: 0;
@@ -302,8 +258,8 @@
 .sectionHeading h2:focus {
   outline: none;
 }
-.categoryGuide {
-  margin: 7px 0 0;
+.categoryCount {
+  flex-shrink: 0;
   color: var(--color-text-muted);
   font-size: 12px;
 }
@@ -321,7 +277,7 @@
 .formFooter button {
   border: 0;
   background: transparent;
-  color: var(--color-text-muted);
+  color: var(--color-text);
   font-size: 12px;
   cursor: pointer;
   min-height: 38px;
@@ -391,34 +347,6 @@
 .accordionBody {
   border-top: 1px solid var(--color-border);
   padding: 24px;
-}
-.accordionBody > .categoryGuide {
-  margin: 0 0 24px;
-}
-.pageFooter {
-  display: flex;
-  align-items: start;
-  justify-content: space-between;
-  gap: 16px;
-  max-width: 1160px;
-  margin: 26px auto 0;
-  color: var(--color-text-subtle);
-  font-size: 11px;
-}
-.pageFooter > span {
-  font-size: 10px;
-  letter-spacing: 0.1em;
-}
-.storageNote {
-  max-width: 450px;
-  text-align: right;
-}
-.storageNote summary {
-  cursor: pointer;
-}
-.storageNote p {
-  line-height: 1.8;
-  color: var(--color-text-muted);
 }
 .transferStatus,
 .transferError,
@@ -490,10 +418,6 @@
     padding-left: 24px;
     padding-right: 24px;
   }
-  .workspaceToolbar > p span {
-    display: block;
-    margin-top: 3px;
-  }
 }
 @media (max-width: 680px) {
   .page {
@@ -505,26 +429,8 @@
     flex-wrap: wrap;
     margin-bottom: 20px;
   }
-  .description {
-    font-size: 12px;
-  }
-  .toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    width: 100%;
-    justify-content: space-between;
-  }
-  .workspaceToolbar {
-    align-items: start;
-    gap: 8px;
-  }
-  .workspaceToolbar > p {
-    max-width: 160px;
+  .storageLabel {
     font-size: 11px;
-  }
-  .workspaceToolbar > p span {
-    display: none;
   }
   .layoutSwitch button {
     padding: 7px 9px;
@@ -538,9 +444,6 @@
     position: static;
     max-height: none;
     padding: 0;
-  }
-  .navOverview {
-    display: none;
   }
   .categorySearch {
     margin: 0 0 12px;
@@ -567,8 +470,7 @@
   .categoryNav button[aria-current="page"] {
     background: var(--color-accent-hover);
   }
-  .categoryNav button small,
-  .navDot {
+  .categoryNav button small {
     display: none;
   }
   .navLabel {
@@ -597,12 +499,5 @@
   }
   .accordionBody {
     padding: 20px;
-  }
-  .pageFooter {
-    flex-direction: column;
-    gap: 10px;
-  }
-  .storageNote {
-    text-align: left;
   }
 }

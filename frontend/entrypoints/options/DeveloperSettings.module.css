@@ -1,38 +1,40 @@
-.settings {
-  max-width: 1160px;
-  margin: 28px auto 0;
-  padding: 18px 20px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-card);
-  background: var(--color-surface);
-}
-.title {
-  margin: 0 0 12px;
-  color: var(--color-text-strong);
-  font-size: 15px;
-  font-weight: 700;
-}
 .row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 12px 12px 0;
+  border-top: 1px solid var(--color-border);
 }
 .label {
-  color: var(--color-text-strong);
-  font-size: 14px;
+  color: var(--color-text);
+  font-size: 12px;
   font-weight: 600;
+  white-space: nowrap;
+}
+.marker {
+  border-radius: 5px;
+  padding: 2px 6px;
+  background: var(--color-info-soft);
+  color: var(--color-info);
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 .help {
-  margin: 2px 0 0;
-  color: var(--color-text-muted);
-  font-size: 13px;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 .switch {
   position: relative;
   flex: 0 0 auto;
-  width: 44px;
-  height: 24px;
+  width: 36px;
+  height: 20px;
+  margin-left: auto;
   padding: 0;
   border: 1px solid var(--color-field-border);
   border-radius: 999px;
@@ -51,15 +53,15 @@
   position: absolute;
   top: 2px;
   left: 2px;
-  width: 18px;
-  height: 18px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background: var(--color-on-action);
   box-shadow: 0 1px 2px var(--color-backdrop);
   transition: transform 160ms ease;
 }
 .switch[aria-checked="true"] .thumb {
-  transform: translateX(20px);
+  transform: translateX(16px);
 }
 @media (prefers-reduced-motion: reduce) {
   .thumb {
