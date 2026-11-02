@@ -401,3 +401,17 @@ html,body{margin:0;background:#eae9e5}body{min-width:320px}
 #cf-eval-preview .diff-del td{background:#fbe9e7}#cf-eval-preview .diff-del .diff-sign{color:#a8483d}
 @media(max-width:620px){#cf-eval-preview .commit-list button{grid-template-columns:1fr auto}#cf-eval-preview .commit-list button .muted{grid-column:1/-1;grid-row:2}}
 #cf-eval-preview .diff-add mark{background:#a9dcb8;color:inherit;border-radius:2px}#cf-eval-preview .diff-del mark{background:#f2b8b0;color:inherit;border-radius:2px}
+#cf-eval-preview .commit-list button{grid-template-columns:80px minmax(0,1fr) auto}
+#cf-eval-preview .commit-message{font-size:13px;color:#2a3440;overflow-wrap:anywhere}
+#cf-eval-preview .api-path{font:12px ui-monospace,Menlo,monospace;color:#3e5874;background:#eef2f5;border-radius:4px;padding:2px 7px}
+#cf-eval-preview .prompt-group>summary{align-items:center}
+#cf-eval-preview .prompt-group>summary .muted{flex-basis:100%;font-size:12px}
+#cf-eval-preview .prompt-part h5{font-family:inherit;font-size:12.5px;color:#475f78;font-weight:600;margin:0 0 6px}
+#cf-eval-preview .prompt-text{white-space:normal;max-width:72ch}
+#cf-eval-preview .prompt-text p{margin:0 0 6px;font-size:14px;line-height:1.7;color:#27313c}
+#cf-eval-preview .prompt-text code{font:12.5px ui-monospace,Menlo,monospace;background:#eef1f3;color:#33475b;border-radius:3px;padding:0 4px}
+#cf-eval-preview .diff-api{display:flex;align-items:center;gap:8px;margin:18px 0 8px}
+#cf-eval-preview .diff-head strong{font-size:13px}
+#cf-eval-preview .diff-table td{font:13px/1.65 system-ui,'Apple SD Gothic Neo',sans-serif}
+#cf-eval-preview .diff-sign{font-family:ui-monospace,Menlo,monospace}
+#cf-eval-preview .diff-fold td{background:#f3f5f6;color:#59626b;font-size:12px;padding:3px 12px}

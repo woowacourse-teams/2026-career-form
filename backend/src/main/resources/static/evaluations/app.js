@@ -620,41 +620,83 @@ function criteriaView() {
   return list;
 }
 
-const PROMPT_GROUPS = [
-  { prefix: "section-classification", name: "섹션 분류", note: "섹션이 어느 프로필 범주인지 고르는 질문" },
-  { prefix: "generic-fields", name: "칸 매핑", note: "칸마다 어떤 프로필 항목을 넣을지 고르는 질문" },
-  { prefix: "interaction-decisions", name: "버튼·선택지 결정", note: "학력 구분처럼 화면을 바꾸는 선택" },
-  { prefix: "", name: "공급자 고정 문구", note: "공급자 연결부가 따로 보내는 시스템 문구" },
+// 프롬프트 조각을 그 조각을 보내는 제품 API별로 묶는다. 공급자 고정 문구는 모든 요청에 붙는다.
+const PROMPT_APIS = [
+  { prefix: "section-classification", path: "POST /api/v1/generic/sections/classify", name: "섹션 분류",
+    note: "섹션이 어느 프로필 범주인지 묻는 질문" },
+  { prefix: "generic-fields", path: "POST /api/v1/generic/fields/analyze", name: "칸 매핑",
+    note: "칸마다 어떤 프로필 항목을 넣을지 묻는 질문" },
+  { prefix: "interaction-decisions", path: "POST /api/v1/generic/interaction-decisions", name: "버튼·선택지 결정",
+    note: "학력 구분, 행 추가, 검색 팝업처럼 화면을 조작할 대상을 묻는 질문" },
+  { prefix: "", path: "모든 요청 공통", name: "공급자 고정 문구", note: "공급자 연결부가 질문 앞에 붙이는 시스템 문구" },
 ];
+const PART_NAMES = { instructions: "지시문", confusionBoundaries: "헷갈리기 쉬운 경계", englishNameGuidance: "영문 이름 안내",
+  system: "시스템 문구" };
+const ROLE_FAMILIES = [
+  { match: /^ROW_KIND_OPTION/, name: "학력 구분 선택지" }, { match: /^CALENDAR_/, name: "달력 조작" },
+  { match: /^SEARCH_/, name: "검색 팝업 조작" }, { match: /^(REPEAT_ADD|SECTION_REVEAL)$/, name: "행 추가·섹션 펼치기" },
+];
+const apiOf = (name) => PROMPT_APIS.find((api) => api.prefix && name.startsWith(`${api.prefix}/`)) ?? PROMPT_APIS[3];
+const localName = (name) => name.split("/").slice(1).join("/") || name;
+const isCriterion = (name) => localName(name).startsWith("criterion.");
+const roleOf = (name) => localName(name).startsWith("instructions.") ? localName(name).slice("instructions.".length) : null;
+/** 사람이 읽는 조각 이름. 선택지는 선택지 키, 역할별 지시문은 역할 이름을 쓴다. */
+const partLabel = (name) => isCriterion(name) ? `선택지 ${localName(name).slice("criterion.".length)}`
+  : roleOf(name) ? `지시문 · ${roleOf(name)}` : PART_NAMES[localName(name)] ?? localName(name);
 
-/** 프롬프트 조각을 용도별로 묶어 보인다. 지시 문구는 펼치고 선택지 설명(criterion.*)은 검색 가능한 표로 접는다. */
+/** 읽기 좋게 문장마다 줄을 나누고 범주·역할 같은 대문자 키와 {자리표시자}를 강조한다. 원문은 바꾸지 않는다. */
+function sentences(text) {
+  return text.split("\n").flatMap((line) => line.split(/(?<=[.;])\s+(?=[A-Z{])/)).filter((line) => line.trim());
+}
+function readable(text) {
+  const box = element("div", undefined, "prompt-text");
+  sentences(text).forEach((sentence) => {
+    const line = element("p");
+    sentence.split(/(\{[A-Za-z]+\}|\b[A-Z][A-Z0-9_]{2,}(?:\.[A-Z0-9_]+)*\b)/).forEach((piece, index) =>
+      line.append(index % 2 ? element("code", piece) : document.createTextNode(piece)));
+    box.append(line);
+  });
+  return box;
+}
+
+/** 프롬프트 전체를 API별로. 지시문은 펼치고, 역할별 지시문은 종류별로, 선택지 설명은 검색되는 표로 접는다. */
 function renderPromptGroups(parts) {
   const wrap = element("div");
-  const names = Object.keys(parts);
-  const used = new Set();
-  for (const group of PROMPT_GROUPS) {
-    const own = names.filter((name) => !used.has(name) && (group.prefix ? name.startsWith(`${group.prefix}/`) : true));
-    own.forEach((name) => used.add(name));
+  for (const api of PROMPT_APIS) {
+    const own = Object.keys(parts).filter((name) => apiOf(name) === api);
     if (!own.length) continue;
     const box = element("details", undefined, "prompt-group");
     box.open = true;
     const summary = element("summary");
-    summary.append(element("strong", group.name), element("span", `${group.note} · ${own.length}개`, "muted"));
+    summary.append(element("code", api.path, "api-path"), element("strong", api.name), element("span", api.note, "muted"));
     box.append(summary);
-    const criteria = own.filter((name) => name.split("/").slice(1).join("/").startsWith("criterion."));
-    own.filter((name) => !criteria.includes(name)).forEach((name) => {
+    own.filter((name) => !isCriterion(name) && !roleOf(name)).forEach((name) => {
       const part = element("section", undefined, "prompt-part");
-      part.append(element("h5", name.split("/").slice(1).join("/") || name), element("p", parts[name], "prompt-text"));
+      part.append(element("h5", partLabel(name)), readable(parts[name]));
       box.append(part);
     });
+    const roles = own.filter((name) => roleOf(name));
+    ROLE_FAMILIES.forEach((family) => {
+      const members = roles.filter((name) => family.match.test(roleOf(name)));
+      if (!members.length) return;
+      const fold = element("details", undefined, "criteria-fold");
+      fold.append(element("summary", `지시문 · ${family.name} (${members.length}가지 역할)`));
+      members.forEach((name) => {
+        const part = element("section", undefined, "prompt-part");
+        part.append(element("h5", roleOf(name)), readable(parts[name]));
+        fold.append(part);
+      });
+      box.append(fold);
+    });
+    const criteria = own.filter(isCriterion);
     if (criteria.length) {
       const list = element("details", undefined, "criteria-fold");
-      list.append(element("summary", `선택지 설명 ${criteria.length}개`));
+      list.append(element("summary", `선택지 설명 (${criteria.length})`));
       const table = element("table", undefined, "criteria-table");
       const body = element("tbody");
       criteria.forEach((name) => {
         const row = element("tr");
-        row.append(element("td", name.split("criterion.").slice(1).join("criterion.")), element("td", parts[name]));
+        row.append(element("td", localName(name).slice("criterion.".length)), element("td", parts[name]));
         body.append(row);
       });
       table.append(body);
@@ -691,10 +733,10 @@ function diffPromptParts(before, after) {
   };
 }
 
-/** 줄 단위 차이(최장 공통 부분열). 각 줄은 " "(같음), "-"(삭제), "+"(추가)다. */
+/** 문장 단위 차이(최장 공통 부분열). 각 줄은 " "(같음), "-"(삭제), "+"(추가)다. */
 function lineDiff(before, after) {
-  const a = before.split("\n");
-  const b = after.split("\n");
+  const a = sentences(before);
+  const b = sentences(after);
   const table = Array.from({ length: a.length + 1 }, () => new Array(b.length + 1).fill(0));
   for (let i = a.length - 1; i >= 0; i -= 1)
     for (let j = b.length - 1; j >= 0; j -= 1)
@@ -715,43 +757,70 @@ function lineDiff(before, after) {
 function diffCard(name, kind, before, after) {
   const card = element("section", undefined, "diff-card");
   const head = element("div", undefined, "diff-head");
-  head.append(element("span", { added: "추가", removed: "삭제", changed: "변경" }[kind], `diff-badge ${kind}`), element("code", name));
+  head.append(element("span", { added: "추가", removed: "삭제", changed: "변경" }[kind], `diff-badge ${kind}`),
+    element("strong", partLabel(name)));
   card.append(head);
   const table = element("table", undefined, "diff-table");
   const body = element("tbody");
-  const rows = kind === "added" ? after.split("\n").map((line) => ["+", line])
-    : kind === "removed" ? before.split("\n").map((line) => ["-", line]) : lineDiff(before, after);
-  // 바로 붙은 삭제·추가 줄은 같은 앞뒤를 빼고 달라진 가운데만 강조한다.
-  const marked = (text, start, end) => {
-    const cell = element("td", undefined, "diff-text");
-    cell.append(document.createTextNode(text.slice(0, start)), element("mark", text.slice(start, text.length - end)),
-      document.createTextNode(text.slice(text.length - end)));
-    return cell;
+  const rows = kind === "added" ? sentences(after).map((line) => ["+", line])
+    : kind === "removed" ? sentences(before).map((line) => ["-", line]) : lineDiff(before, after);
+  // 바뀐 문장 앞뒤 한 문장만 남기고 나머지 같은 문장은 접는다.
+  const near = (index) => [-1, 0, 1].some((step) => rows[index + step] && rows[index + step][0] !== " ");
+  let hidden = 0;
+  const flush = () => {
+    if (!hidden) return;
+    const row = element("tr", undefined, "diff-fold");
+    const cell = element("td", `… 변경 없는 문장 ${hidden}개`);
+    cell.colSpan = 2;
+    row.append(cell);
+    body.append(row);
+    hidden = 0;
   };
+  // 바로 붙은 삭제·추가 문장은 같은 앞뒤를 빼고 달라진 가운데만 강조한다.
   rows.forEach(([sign, text], index) => {
+    if (sign === " " && !near(index)) {
+      hidden += 1;
+      return;
+    }
+    flush();
     const row = element("tr", undefined, sign === "+" ? "diff-add" : sign === "-" ? "diff-del" : "diff-ctx");
     const pair = sign === "-" && rows[index + 1]?.[0] === "+" ? rows[index + 1][1]
       : sign === "+" && rows[index - 1]?.[0] === "-" ? rows[index - 1][1] : null;
-    let cell = element("td", text, "diff-text");
+    const cell = element("td", undefined, "diff-text");
+    let start = text.length;
+    let end = 0;
     if (pair !== null) {
-      let start = 0;
+      start = 0;
       while (start < text.length && start < pair.length && text[start] === pair[start]) start += 1;
-      let end = 0;
       while (end < text.length - start && end < pair.length - start
         && text[text.length - 1 - end] === pair[pair.length - 1 - end]) end += 1;
-      if (start + end < text.length) cell = marked(text, start, end);
     }
+    if (pair !== null && start + end < text.length)
+      cell.append(document.createTextNode(text.slice(0, start)), element("mark", text.slice(start, text.length - end)),
+        document.createTextNode(text.slice(text.length - end)));
+    else cell.textContent = text;
     row.append(element("td", sign, "diff-sign"), cell);
     body.append(row);
   });
+  flush();
   table.append(body);
   card.append(table);
   return card;
 }
 
+/** 버전 사이 바뀐 조각을 API별로 센 요약. 예: "섹션 분류 변경 2 · 칸 매핑 추가 1". */
+function changeSummary(diff) {
+  return PROMPT_APIS.map((api) => {
+    const count = (list) => list.filter((name) => apiOf(name) === api).length;
+    const parts = [["추가", count(diff.added)], ["삭제", count(diff.removed)], ["변경", count(diff.changed)]]
+      .filter(([, value]) => value).map(([label, value]) => `${label} ${value}`);
+    return parts.length ? `${api.name} ${parts.join(" ")}` : null;
+  }).filter(Boolean).join(" · ") || "문구 변경 없음";
+}
+
 /**
- * 프롬프트 대화상자. 공급자별로 버전을 커밋 목록처럼 최신순으로 보이고, 고른 버전이 첫 버전이면 전체 프롬프트를,
- * 아니면 이전 버전 대비 바뀐 조각만 줄 단위로 보인다. 문구가 완전히 같은 연속 버전은 하나로 합친다.
+ * 프롬프트 대화상자. 공급자별로 버전을 커밋 목록처럼 최신순으로 보이고, 첫 버전은 전체 프롬프트를, 이후 버전은
+ * 이전 버전 대비 바뀐 조각만 API별·문장 단위로 보인다. 문구가 완전히 같은 연속 버전은 하나로 합친다.
  */
 async function promptView(selected = null) {
   const history = await api("/prompts");
@@ -790,22 +859,18 @@ async function promptView(selected = null) {
   const label = (i) => i === 0 ? "초기 버전" : `v${i + 1}`;
   const when = (iso) => {
     const at = new Date(iso);
-    return `${String(at.getMonth() + 1).padStart(2, "0")}-${String(at.getDate()).padStart(2, "0")} ${String(at.getHours()).padStart(2, "0")}:${String(at.getMinutes()).padStart(2, "0")}`;
+    return `${at.getFullYear()}-${String(at.getMonth() + 1).padStart(2, "0")}-${String(at.getDate()).padStart(2, "0")}`;
   };
   const commits = element("ol", undefined, "commit-list");
   for (let i = versions.length - 1; i >= 0; i -= 1) {
     const version = versions[i];
-    const diff = i > 0 ? diffPromptParts(versions[i - 1].parts, version.parts) : null;
     const item = element("li", undefined, i === index ? "selected" : undefined);
     const button = element("button");
     button.type = "button";
-    const names = [...new Set(version.entries.flatMap((entry) => entry.names))];
-    button.append(element("strong", label(i)), element("span", `${when(version.entries[0].firstUsedAt)} · ${names.join(", ") || "이름 없음"}`, "muted"));
-    const stats = element("span", undefined, "commit-stats");
-    if (diff) stats.append(element("span", `+${diff.added.length}`, "stat-add"), element("span", `−${diff.removed.length}`, "stat-del"),
-      element("span", `~${diff.changed.length}`, "stat-chg"));
-    else stats.append(element("span", `조각 ${Object.keys(version.parts).length}개`, "muted"));
-    button.append(stats);
+    const diff = i > 0 ? diffPromptParts(versions[i - 1].parts, version.parts) : null;
+    button.append(element("strong", label(i)),
+      element("span", diff ? changeSummary(diff) : "처음 기록한 프롬프트", "commit-message"),
+      element("span", when(version.entries[0].firstUsedAt), "muted"));
     button.addEventListener("click", async () => dialog("프롬프트", await promptView({ provider, index: i }), "criteria-dialog"));
     item.append(button);
     commits.append(item);
@@ -814,16 +879,25 @@ async function promptView(selected = null) {
   const version = versions[index];
   const detail = element("div", undefined, "commit-detail");
   if (index === 0) {
-    detail.append(element("h4", `초기 버전 · 조각 ${Object.keys(version.parts).length}개`), renderPromptGroups(version.parts));
+    detail.append(renderPromptGroups(version.parts));
   }
   else {
     const before = versions[index - 1].parts;
     const diff = diffPromptParts(before, version.parts);
-    const unchanged = Object.keys(version.parts).length - diff.added.length - diff.changed.length;
-    detail.append(element("h4", `${label(index)} · ${label(index - 1)} 대비 추가 ${diff.added.length} · 삭제 ${diff.removed.length} · 변경 ${diff.changed.length} · 변경 없는 조각 ${unchanged}개`));
-    diff.changed.forEach((name) => detail.append(diffCard(name, "changed", before[name], version.parts[name])));
-    diff.added.forEach((name) => detail.append(diffCard(name, "added", "", version.parts[name])));
-    diff.removed.forEach((name) => detail.append(diffCard(name, "removed", before[name], "")));
+    detail.append(element("h4", `${label(index)} · ${label(index - 1)} 대비 바뀐 내용`));
+    for (const api of PROMPT_APIS) {
+      const pick = (list) => list.filter((name) => apiOf(name) === api);
+      const changed = pick(diff.changed);
+      const added = pick(diff.added);
+      const removed = pick(diff.removed);
+      if (!changed.length && !added.length && !removed.length) continue;
+      const head = element("div", undefined, "diff-api");
+      head.append(element("code", api.path, "api-path"), element("strong", api.name));
+      detail.append(head);
+      changed.forEach((name) => detail.append(diffCard(name, "changed", before[name], version.parts[name])));
+      added.forEach((name) => detail.append(diffCard(name, "added", "", version.parts[name])));
+      removed.forEach((name) => detail.append(diffCard(name, "removed", before[name], "")));
+    }
     const full = element("details", undefined, "profile-details");
     full.append(element("summary", "이 버전 전체 프롬프트 보기"), renderPromptGroups(version.parts));
     detail.append(full);
