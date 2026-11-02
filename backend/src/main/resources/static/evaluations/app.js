@@ -67,20 +67,21 @@ function groupLabel(key) {
   return `${promptKey(first)} · ${time}`;
 }
 
-/** 고른 비교 묶음의 조건. 목록 이름은 짧게 두고 조건은 이름·값 칩으로 보이며, 칩에 마우스를 올리면 뜻이 나온다. */
+/** 고른 비교 묶음의 실행 조건. 화면에는 작은 칩 하나만 두고, 마우스를 올리면 조건 전체가 말풍선으로 보인다. */
 function comparisonDetail(key) {
   const runs = groupRuns(key).map(({ run }) => run);
   const first = runs[0];
   if (!first) return [];
   const settings = first.versions.settings ?? {};
-  return [
-    stat("데이터", `v${first.versions.datasetVersion}`, "평가에 쓴 데이터셋 버전. 화면 4개 전체를 채점합니다."),
-    stat("반복", `${first.repetitions}회`, "같은 입력을 몇 번 돌렸는지. 반복마다 따로 채점해 흔들림을 봅니다."),
-    stat("모델", `${runs.length}개`, runs.map(modelKey).join(", ")),
-    stat("코드", first.versions.codeVersion ?? "—", "실행한 백엔드 코드 버전(커밋). 호출 구조·병렬 처리가 바뀌면 달라집니다."),
-    ...(settings["field-batch-size"] != null ? [stat("칸 묶음", settings["field-batch-size"], "칸 매핑에서 모델 1번에 묻는 칸 수")] : []),
-    ...(settings["section-concurrency"] != null ? [stat("섹션 동시", settings["section-concurrency"], "섹션 분류·칸 매핑을 동시에 처리하는 섹션 수")] : []),
-  ];
+  const lines = [`데이터셋 v${first.versions.datasetVersion} · 반복 ${first.repetitions}회`,
+    `모델 ${runs.map(modelKey).join(", ")}`,
+    `코드 ${first.versions.codeVersion ?? "—"}`,
+    ...["field-batch-size", "section-concurrency"].filter((name) => settings[name] != null)
+      .map((name) => `${SETTING_NAMES[name]} ${settings[name]}`)];
+  const chip = element("span", "실행 조건", "condition-chip");
+  chip.dataset.help = lines.join("\n");
+  chip.tabIndex = 0;
+  return [chip];
 }
 
 // 결과에 영향을 주는 실행 조건. 코드 버전과 서버 설정(배치·병렬·재시도)이 바뀌면 프롬프트가 같아도 품질·성능이 달라질 수 있다.
@@ -939,6 +940,8 @@ function render() {
   // 상태 줄은 "무엇을 몇 번"인지 밝힌다. 진행 수는 모델 하나의 서버 API 호출 수(화면 × API 3~4번 × 반복)다.
   const screens = state.dataset?.cases?.length;
   const autofills = (run) => screens ? ` · 자동기입 ${screens * run.repetitions}번(화면 ${screens}개 × 반복 ${run.repetitions}회)` : "";
+  // 상태 줄은 평가가 진행 중일 때만 보인다. 끝난 평가의 정보는 비교 칸과 실행 조건 칩에 있다.
+  $("#cf-status").hidden = !active;
   if (active) {
     $("#cf-status").textContent = `${RUN_STATUS[active.status]} · ${modelKey(active)} · API ${active.processedCalls}/${active.plannedCalls}번 처리`
       + `${waiting ? ` · 다음 모델 ${waiting}개 차례 대기` : ""} (자동 갱신 중)`;
@@ -1750,7 +1753,7 @@ async function load() {
   try { state.dataset = await api(`/datasets/${DATASET.id}/v${DATASET.version}`); } catch { state.dataset = null; }
   renderFilters();
   render();
-  if (failed) $("#cf-status").textContent = failed;
+  if (failed) Object.assign($("#cf-status"), { textContent: failed, hidden: false });
   // 대기·실행 중인 평가가 있으면 끝날 때까지 결과를 다시 불러온다.
   if (state.runs.some(({ run }) => ["WAITING", "QUEUED", "RUNNING"].includes(run.status))) pollTimer = setTimeout(load, POLL_MS);
 }
