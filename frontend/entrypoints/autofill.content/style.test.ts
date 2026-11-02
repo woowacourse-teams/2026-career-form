@@ -28,6 +28,22 @@ describe("autofill content-script host styles", () => {
     }
   });
 
+  it("lets the panel shrink to its tabs only while App marks them as fitting", () => {
+    const styles = readFileSync(
+      `${process.cwd()}/entrypoints/autofill.content/style.css`,
+      "utf8",
+    );
+
+    expect(
+      styles.match(/\.career-form-in-page-panel\s*\{([\s\S]*?)\}/)?.[1],
+    ).toContain("height: calc(100dvh - 100px)");
+    expect(
+      styles.match(
+        /\.career-form-in-page-panel:has\(\[data-panel-fit\]\)\s*\{([\s\S]*?)\}/,
+      )?.[1],
+    ).toContain("height: auto");
+  });
+
   it("keeps the shadow host as a viewport-level layer on hostile pages", () => {
     const styles = readFileSync(
       `${process.cwd()}/entrypoints/autofill.content/style.css`,

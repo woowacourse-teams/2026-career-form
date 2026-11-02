@@ -7,7 +7,7 @@ interface PanelShortcutHintProps {
   read: () => Promise<string | undefined>;
 }
 
-/** One line under the brand telling how to open and close this panel from the keyboard. */
+/** One line in the settings menu telling how to open and close this panel from the keyboard. */
 export function PanelShortcutHint({ read }: PanelShortcutHintProps) {
   const [shortcut, setShortcut] = useState<string>();
 

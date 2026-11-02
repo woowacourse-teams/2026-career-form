@@ -186,7 +186,9 @@ describe("content script panel lifecycle", () => {
   it("starts autofill inside the existing profile panel without another UI root", async () => {
     await start();
     await send(OPEN_IN_PAGE_PROFILE_PANEL_MESSAGE);
+    fireEvent.click(await panel().findByRole("tab", { name: "내 정보" }));
     await panel().findByText("fixture@example.test");
+    fireEvent.click(panel().getByRole("tab", { name: "자동 기입" }));
     fireEvent.click(panel().getByRole("button", { name: "자동 기입" }));
     await waitFor(() => expect(boundary.preparation).toHaveBeenCalledOnce());
     expect(shells).toHaveLength(1);
@@ -217,6 +219,7 @@ describe("content script panel lifecycle", () => {
       });
     await start();
     await send(TOGGLE_IN_PAGE_PROFILE_PANEL_MESSAGE);
+    fireEvent.click(await panel().findByRole("tab", { name: "내 정보" }));
     await panel().findByText("fixture@example.test");
     expect(shells[0]!.mounted).toBe(true);
 

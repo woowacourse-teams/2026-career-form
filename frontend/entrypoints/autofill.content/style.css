@@ -40,6 +40,12 @@
   pointer-events: auto;
 }
 
+/* The tabs fit their content from the same top-right anchor; App caps the
+   height at the panel's maximum. Workflow screens keep the full height. */
+.career-form-in-page-panel:has([data-panel-fit]) {
+  height: auto;
+}
+
 * {
   box-sizing: border-box;
 }

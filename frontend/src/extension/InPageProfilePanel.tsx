@@ -107,6 +107,7 @@ export function InPageProfilePanel({
   return (
     <App
       inPage
+      fitContent
       track={track}
       readImportCandidates={readImportCandidates}
       readPanelShortcut={readPanelShortcut}

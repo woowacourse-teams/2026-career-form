@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 import { ProfileForm } from "../../src/profile/components/ProfileForm";
 import { getCategoryDefinition } from "../../src/profile/field-definitions";
@@ -11,6 +11,9 @@ const emptyRepository = {
   loadLayout: async () => "a" as const,
   saveLayout: async () => undefined,
 };
+
+const selectProfileTab = () =>
+  fireEvent.click(screen.getByRole("tab", { name: "내 정보" }));
 
 function resolveVars(value: string): string {
   const root = getComputedStyle(document.documentElement);
@@ -89,12 +92,12 @@ it("keeps panel layout and logo constrained without fetched entry CSS", async ()
         }}
       />,
     );
-    await screen.findByText("내 지원 정보");
+    await screen.findByRole("tablist");
     const logo = screen.getByRole("img", { name: "커리어폼" });
-    expect(logo).toHaveAttribute("width", "42");
-    expect(logo).toHaveAttribute("height", "42");
-    expect(getComputedStyle(logo).width).toBe("42px");
-    expect(getComputedStyle(logo).height).toBe("42px");
+    expect(logo).toHaveAttribute("width", "28");
+    expect(logo).toHaveAttribute("height", "28");
+    expect(getComputedStyle(logo).width).toBe("28px");
+    expect(getComputedStyle(logo).height).toBe("28px");
     expect(
       getComputedStyle(logo.closest("header")!.parentElement!).display,
     ).toBe("grid");
@@ -105,6 +108,7 @@ it("keeps panel layout and logo constrained without fetched entry CSS", async ()
 
 it("keeps the empty search field boundary at 3:1 on white and cream surfaces", async () => {
   render(<App inPage repository={emptyRepository} />);
+  selectProfileTab();
   const field = (
     await screen.findByRole("searchbox", { name: "프로필 검색" })
   ).closest("label")!;
@@ -126,6 +130,7 @@ it("distinguishes copy hover and pressed states without changing geometry", asyn
       repository={{ ...emptyRepository, load: async () => profile }}
     />,
   );
+  selectProfileTab();
   const copy = await screen.findByRole("button", { name: "국문 이름 복사" });
   const rest = declared(copy, "background", null);
   const hover = declared(copy, "background", ":hover");

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { createEmptyProfile } from "../../src/profile/model";
@@ -6,6 +6,14 @@ import type { ProfileRepository } from "../../src/profile/profile-repository";
 import { App } from "./App";
 
 const SHORTCUT_TEXT = /이 패널을 열고 닫을 수 있어요|단축키가 없어요/;
+
+const openSettings = () =>
+  fireEvent.click(screen.getByRole("button", { name: "설정" }));
+/** Waits for the profile, which settles after the shortcut read has been answered. */
+const profileLoaded = () => {
+  fireEvent.click(screen.getByRole("tab", { name: "내 정보" }));
+  return screen.findByText("copy@example.com");
+};
 
 function repository(): ProfileRepository {
   const profile = createEmptyProfile();
@@ -19,13 +27,14 @@ function repository(): ProfileRepository {
 }
 
 describe("panel shortcut hint", () => {
-  it("현재 할당된 패널 단축키를 헤더에 보여 준다", async () => {
+  it("현재 할당된 패널 단축키를 설정 메뉴에 보여 준다", async () => {
     render(
       <App
         repository={repository()}
         readPanelShortcut={async () => "Alt+Shift+C"}
       />,
     );
+    openSettings();
 
     const hint = await screen.findByText(/로 이 패널을 열고 닫을 수 있어요/);
     expect(hint.querySelector("kbd")).toHaveTextContent("Alt+Shift+C");
@@ -36,6 +45,7 @@ describe("panel shortcut hint", () => {
     render(
       <App repository={repository()} readPanelShortcut={async () => ""} />,
     );
+    openSettings();
 
     expect(
       await screen.findByText(
@@ -52,7 +62,8 @@ describe("panel shortcut hint", () => {
     render(
       <App repository={repository()} readPanelShortcut={readPanelShortcut} />,
     );
-    await screen.findByText("copy@example.com");
+    openSettings();
+    await profileLoaded();
 
     expect(readPanelShortcut).toHaveBeenCalled();
     expect(screen.queryByText(SHORTCUT_TEXT)).toBeNull();
@@ -65,12 +76,14 @@ describe("panel shortcut hint", () => {
         readPanelShortcut={async () => undefined}
       />,
     );
-    await screen.findByText("copy@example.com");
+    openSettings();
+    await profileLoaded();
     expect(screen.queryByText(SHORTCUT_TEXT)).toBeNull();
     unmount();
 
     render(<App repository={repository()} />);
-    await screen.findByText("copy@example.com");
+    openSettings();
+    await profileLoaded();
     expect(screen.queryByText(SHORTCUT_TEXT)).toBeNull();
   });
 

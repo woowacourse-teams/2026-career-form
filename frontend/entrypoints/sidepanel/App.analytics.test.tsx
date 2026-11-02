@@ -29,10 +29,13 @@ it.each([false, true])(
         openAutofill={openAutofill}
       />,
     );
+    fireEvent.click(screen.getByRole("tab", { name: "내 정보" }));
     await screen.findByText(profile.contact.email);
     expect(track).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "이메일주소 복사" }));
+    fireEvent.click(screen.getByRole("button", { name: "설정" }));
     fireEvent.click(screen.getByRole("button", { name: "프로필 관리" }));
+    fireEvent.click(screen.getByRole("tab", { name: "자동 기입" }));
     fireEvent.click(screen.getByRole("button", { name: "자동 기입" }));
     const properties = inPage
       ? { surface: "in_page_panel", page_host: window.location.hostname }
