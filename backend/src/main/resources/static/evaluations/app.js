@@ -73,13 +73,17 @@ function comparisonDetail(key) {
   const first = runs[0];
   if (!first) return [];
   const settings = first.versions.settings ?? {};
-  const lines = [`데이터셋 v${first.versions.datasetVersion} · 반복 ${first.repetitions}회`,
-    `모델 ${runs.map(modelKey).join(", ")}`,
-    `코드 ${first.versions.codeVersion ?? "—"}`,
-    ...["field-batch-size", "section-concurrency"].filter((name) => settings[name] != null)
-      .map((name) => `${SETTING_NAMES[name]} ${settings[name]}`)];
+  const rows = [
+    ["데이터셋", `v${first.versions.datasetVersion} · 화면 ${state.dataset?.cases?.length ?? "—"}개`, "채점에 쓴 지원서 화면 묶음"],
+    ["반복", `${first.repetitions}회`, "같은 입력을 몇 번 돌렸는지"],
+    ["모델", runs.map(modelKey).join("\n"), ""],
+    ["코드 버전", first.versions.codeVersion ?? "—", "실행한 백엔드 커밋. 호출 구조가 바뀌면 달라짐"],
+    ...(settings["field-batch-size"] != null ? [["칸 묶음", `${settings["field-batch-size"]}칸`, "칸 매핑에서 AI에 한 번에 묻는 칸 수"]] : []),
+    ...(settings["section-concurrency"] != null ? [["섹션 동시", `${settings["section-concurrency"]}개`, "동시에 처리하는 섹션 수"]] : []),
+  ];
   const chip = element("span", "실행 조건", "condition-chip");
-  chip.dataset.help = lines.join("\n");
+  chip.dataset.helpTitle = "실행 조건";
+  chip.dataset.helpRows = JSON.stringify(rows);
   chip.tabIndex = 0;
   return [chip];
 }
@@ -396,7 +400,18 @@ function stat(label, value, help) {
 const helpTip = Object.assign(document.createElement("div"), { className: "help-tip", role: "tooltip" });
 root.append(helpTip);
 function showHelp(target) {
-  helpTip.textContent = target.dataset.help;
+  if (target.dataset.helpRows) {
+    // 이름·값·설명 표 형태의 말풍선. 값은 굵게, 설명은 흐리게 둔다.
+    const grid = element("dl", undefined, "help-rows");
+    JSON.parse(target.dataset.helpRows).forEach(([label, value, note]) => {
+      const detail = element("dd");
+      detail.append(element("b", value));
+      if (note) detail.append(element("span", note, "help-note"));
+      grid.append(element("dt", label), detail);
+    });
+    helpTip.replaceChildren(element("strong", target.dataset.helpTitle ?? "", "help-title"), grid);
+  }
+  else helpTip.textContent = target.dataset.help;
   const box = target.getBoundingClientRect();
   const tip = helpTip.getBoundingClientRect();
   const left = Math.min(Math.max(8, box.left + box.width / 2 - tip.width / 2), innerWidth - tip.width - 8);
@@ -407,10 +422,10 @@ function showHelp(target) {
 }
 const hideHelp = () => { helpTip.classList.remove("show"); };
 root.addEventListener("mouseover", (event) => {
-  const target = event.target.closest?.("[data-help]");
+  const target = event.target.closest?.("[data-help], [data-help-rows]");
   if (target) showHelp(target); else hideHelp();
 });
-root.addEventListener("focusin", (event) => { if (event.target.dataset?.help) showHelp(event.target); });
+root.addEventListener("focusin", (event) => { if (event.target.dataset?.help || event.target.dataset?.helpRows) showHelp(event.target); });
 root.addEventListener("focusout", hideHelp);
 addEventListener("scroll", hideHelp, { passive: true });
 
@@ -1025,6 +1040,29 @@ function confirmDelete(key) {
   actions.append(cancel, remove);
   box.append(message, actions);
   dialog("기록 삭제", box, "delete-dialog");
+}
+
+/** 실행 이름 짓는 법. 예시를 누르면 이름 칸에 들어간다. 서버 규칙: 영문·숫자·.-_ 32자 이하. */
+function namingGuide(input) {
+  const box = element("div", undefined, "naming-guide");
+  box.append(element("strong", "이름 짓는 법"));
+  const list = element("ul");
+  [["기준이 되는 첫 실행", ["baseline"]],
+    ["프롬프트를 바꾼 실행", ["prompt-none-sections", "prompt-v2"]],
+    ["호출 구조·설정을 바꾼 실행", ["batch10", "concurrency6", "parallel-mapping"]],
+    ["모델 버전을 바꾼 실행", ["jev-1.14"]]].forEach(([when, examples]) => {
+    const item = element("li");
+    item.append(element("span", when, "naming-when"));
+    examples.forEach((example) => {
+      const chip = element("button", example, "naming-example");
+      chip.type = "button";
+      chip.addEventListener("click", () => { input.value = example; input.focus(); });
+      item.append(chip);
+    });
+    list.append(item);
+  });
+  box.append(list, element("p", "바꾼 것 하나만 소문자 영어로, 단어는 -로 잇기 · 날짜·모델 이름은 넣지 않기(자동 기록) · 영문·숫자·.-_ 32자 이하", "muted"));
+  return box;
 }
 
 function dialog(title, content, className) {
@@ -1707,7 +1745,8 @@ async function openRun() {
     targets.append(option);
   }));
   const repetitions = Object.assign(element("input"), { type: "number", min: "1", max: "20", value: "1" });
-  const prompt = Object.assign(element("input"), { type: "text", maxLength: 32, placeholder: "비워 두면 이름 없음" });
+  const prompt = Object.assign(element("input"), { type: "text", maxLength: 32, placeholder: "예: baseline",
+    pattern: "[A-Za-z0-9._\\-]{1,32}", title: "영문·숫자·.-_ 32자 이하" });
   const message = element("p", "실제 모델을 호출하며 비용이 발생합니다. 진행 중인 평가가 있으면 등록되지 않습니다.", "muted");
   const submit = element("button", "등록", "apply-pricing");
   submit.type = "submit";
@@ -1716,7 +1755,8 @@ async function openRun() {
       ? "비교할 모델을 고릅니다(최대 5개). 같은 조건으로 한 모델씩 차례로 돌고, 결과는 한 화면에 나란히 나옵니다."
       : "이 서버에 연결된 공급자가 없습니다.", "div"),
     field("반복 수", repetitions, "같은 입력을 몇 번 돌릴지(1~20). 응답시간 편차를 보려면 3 이상을 권장합니다."),
-    field("실행 이름", prompt, "무엇을 바꿨는지 짧게(선택). 예: baseline, prompt-v2, batch10. 프롬프트 원문·코드 버전·서버 설정은 서버가 자동으로 기록합니다."),
+    field("실행 이름", prompt, "무엇을 바꿨는지 짧게(선택). 프롬프트 원문·코드 버전·서버 설정·날짜는 서버가 자동으로 기록합니다."),
+    namingGuide(prompt),
     message, submit);
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
