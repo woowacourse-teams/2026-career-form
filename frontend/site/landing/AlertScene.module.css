@@ -1,0 +1,258 @@
+/* The deadline story: posting card, time axis, two notifications. 300vh pinned. */
+.track {
+  position: relative;
+  height: 300vh;
+}
+.stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+  background:
+    radial-gradient(50% 50% at 50% 70%, #fff1de, transparent 70%), #fff;
+}
+.caption {
+  position: absolute;
+  left: max(var(--gutter), calc(50% - 560px));
+  top: 16%;
+  max-width: 440px;
+  display: grid;
+  gap: 12px;
+  z-index: 3;
+  opacity: 0;
+}
+.caption h2 {
+  font-size: clamp(30px, 3.4vw, 46px);
+  font-weight: 800;
+  line-height: 1.2;
+}
+.caption p {
+  color: var(--sub);
+  font-size: 17px;
+}
+.axis {
+  position: absolute;
+  left: max(var(--gutter), calc(50% - 520px));
+  right: max(var(--gutter), calc(50% - 520px));
+  top: 68%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line-strong);
+  transform-origin: left center;
+  opacity: 0;
+}
+.tick {
+  position: absolute;
+  top: calc(68% - 10px);
+  width: 24px;
+  height: 24px;
+  margin-left: -12px;
+  border-radius: 50%;
+  background: #fff;
+  border: 4px solid var(--accent);
+  z-index: 2;
+  opacity: 0;
+}
+.tickEnd {
+  composes: tick;
+  border-color: var(--action);
+  background: var(--action);
+}
+.tickCancelled {
+  border-color: var(--line-strong);
+}
+.label {
+  position: absolute;
+  top: calc(68% + 24px);
+  transform: translateX(-50%);
+  text-align: center;
+  font-size: 13px;
+  color: var(--sub);
+  white-space: nowrap;
+  line-height: 1.4;
+  opacity: 0;
+}
+.label b {
+  display: block;
+  color: var(--strong);
+  font-size: 14px;
+}
+.cancelled b {
+  text-decoration: line-through;
+  color: var(--sub);
+}
+.clock {
+  position: absolute;
+  top: calc(68% - 130px);
+  width: 96px;
+  z-index: 1;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.post {
+  position: absolute;
+  left: var(--axis-left);
+  top: calc(68% - 190px);
+  width: 300px;
+  background: #fff;
+  border-radius: 22px;
+  box-shadow: var(--clay);
+  padding: 18px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 14px;
+  align-items: center;
+  z-index: 3;
+  transform-origin: 50% 100%;
+  opacity: 0;
+}
+.postLogo {
+  grid-row: span 2;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  object-fit: cover;
+}
+.post b {
+  color: var(--strong);
+  font-size: 17px;
+}
+.post > span {
+  font-size: 14px;
+  color: var(--sub);
+}
+.deadline {
+  grid-column: 1 / -1;
+  margin-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+  font-size: 14px;
+}
+.deadline em {
+  font-style: normal;
+  font-weight: 700;
+  color: var(--action);
+}
+.applied {
+  grid-column: 1 / -1;
+  margin-top: 6px;
+  height: 40px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 14px;
+  background: var(--brand);
+  color: var(--strong);
+  position: relative;
+  overflow: hidden;
+}
+.applied span {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--ok-check);
+  color: #fff;
+  opacity: 0;
+}
+.stamp {
+  position: absolute;
+  top: calc(68% - 220px);
+  width: 86px;
+  z-index: 4;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.toast {
+  position: absolute;
+  top: calc(68% - 150px);
+  width: 300px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow:
+    0 22px 40px -18px rgb(57 41 29 / 45%),
+    0 0 0 1px rgb(231 216 197 / 80%);
+  padding: 12px 14px;
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 2px 12px;
+  align-items: center;
+  z-index: 5;
+  opacity: 0;
+  transform-origin: 50% 100%;
+}
+.toast img {
+  grid-row: span 2;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--brand);
+  padding: 4px;
+}
+.toast b {
+  font-size: 14px;
+  color: var(--strong);
+}
+.toast span {
+  font-size: 13px;
+  color: var(--sub);
+}
+.toastCancelled {
+  background: var(--cream);
+}
+
+.character {
+  position: absolute;
+  left: max(var(--gutter), calc(50% - 600px));
+  bottom: 0;
+  height: min(28vh, 240px);
+  z-index: 4;
+  pointer-events: none;
+  transform: translate3d(0, 110%, 0);
+}
+.character img {
+  height: 100%;
+  width: auto;
+}
+.ring img {
+  animation: ring 0.5s ease-in-out 2;
+}
+@keyframes ring {
+  25% {
+    transform: rotate(-4deg);
+  }
+  75% {
+    transform: rotate(4deg);
+  }
+}
+
+@media (max-width: 900px) {
+  .caption {
+    top: 12%;
+    right: var(--gutter);
+  }
+  .post,
+  .toast {
+    width: 250px;
+  }
+  .toast {
+    top: calc(68% + 70px);
+  }
+  .label {
+    font-size: 11px;
+  }
+  .label b {
+    font-size: 12px;
+  }
+  .character,
+  .clock {
+    display: none;
+  }
+}

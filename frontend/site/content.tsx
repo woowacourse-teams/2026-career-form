@@ -2,20 +2,6 @@ import type { ReactNode } from "react";
 
 export const STORE_URL =
   "https://chromewebstore.google.com/detail/career-form/lneeceajpkjfffibjoajdkfelhoojbam?hl=ko&utm_source=ext_sidebar";
-export const benefits = [
-  [
-    "한 번 등록하고, 다음 지원에도",
-    "이름·학력·경력 등 자주 쓰는 정보를 모아두고 다시 쓰세요.",
-  ],
-  [
-    "여러 칸을 한 번에",
-    "작성 중인 지원서에서 입력 가능한 항목을 자동으로 채워요.",
-  ],
-  [
-    "남은 입력도 더 간단하게",
-    "자동 입력이 어려운 항목은 저장한 값을 복사해 마무리하세요.",
-  ],
-];
 export const faqs = [
   [
     "어떤 채용사이트에서 사용할 수 있나요?",

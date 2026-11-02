@@ -5,7 +5,7 @@ import { SiteApp } from "./SiteApp";
 beforeEach(() => vi.spyOn(window, "scrollTo").mockImplementation(() => {}));
 afterEach(() => vi.restoreAllMocks());
 describe("website navigation", () => {
-  it("offers the published extension and a single automatic demonstration", () => {
+  it("offers the published extension from every install button on the landing", () => {
     const { container } = render(<SiteApp path="/" />);
     const install = screen.getAllByRole("link", { name: /Chrome에 추가/ });
     expect(install.length).toBeGreaterThan(0);
@@ -15,7 +15,7 @@ describe("website navigation", () => {
       );
       expect(link).toHaveAttribute("target", "_blank");
     }
-    expect(container.querySelectorAll("iframe")).toHaveLength(1);
+    expect(container.querySelectorAll("iframe")).toHaveLength(0);
     expect(
       screen.getByRole("link", { name: "개인정보처리방침" }),
     ).toHaveAttribute("href", "/privacy/");
@@ -46,21 +46,24 @@ describe("website navigation", () => {
     expect(container.querySelector('iframe[src*="simulation"]')).toBeNull();
   });
   it.each(["/privacy/", "/terms/"])(
-    "identifies %s as a draft rather than an effective policy",
+    "identifies %s as a draft without a contact address that does not exist yet",
     (path) => {
       render(<SiteApp path={path} />);
+      expect(screen.getByText("검토용 초안 · 시행일 미정")).toBeVisible();
+      expect(screen.getByText("개설 후 기재")).toBeInTheDocument();
+      expect(screen.queryByText(/careerform@gmail\.com/)).toBeNull();
       expect(
-        within(screen.getByRole("complementary")).getByText(/검토용 초안/),
+        screen.getByRole("navigation", { name: "문서 목차" }),
       ).toBeInTheDocument();
       expect(
-        screen.getByRole("link", { name: "careerform@gmail.com" }),
-      ).toHaveAttribute("href", "mailto:careerform@gmail.com");
+        screen.getByRole("link", { name: /Chrome에 추가/ }),
+      ).toHaveAttribute("target", "_blank");
     },
   );
-  it("links the landing to the tech page and shows measured results there", () => {
+  it("links the landing to the tech page from the footer", () => {
     render(<SiteApp path="/" />);
     expect(
-      within(screen.getByRole("navigation", { name: "주 메뉴" })).getByRole(
+      within(screen.getByRole("navigation", { name: "안내 페이지" })).getByRole(
         "link",
         { name: "기술 소개" },
       ),
@@ -69,38 +72,34 @@ describe("website navigation", () => {
   it("explains the field matching change with its measurement conditions", () => {
     render(<SiteApp path="/tech/" />);
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
-      "기술 소개",
+      "커리어폼은 이렇게 동작해요",
     );
-    const [results, defaults] = screen.getAllByRole("table");
+    expect(screen.getByText("4.2초")).toBeInTheDocument();
+    expect(screen.getByText("0%")).toBeInTheDocument();
     expect(
-      within(results).getByText("4.2초 (약 5배 빠름)"),
+      within(screen.getByRole("table")).getByText("aes128gcm"),
     ).toBeInTheDocument();
-    expect(within(results).getByText("0%")).toBeInTheDocument();
-    expect(
-      within(defaults).getByText(/Web Push, VAPID, aes128gcm/),
-    ).toBeInTheDocument();
-    expect(screen.getAllByRole("img", { name: /흐름|눈금/ })).toHaveLength(3);
-    expect(
-      screen.getByRole("region", { name: "마감 알림 동작 미리보기" }),
-    ).toBeInTheDocument();
+    expect(screen.getAllByRole("figure")).toHaveLength(2);
+    expect(screen.getByRole("img", { name: /신뢰도 0.5 미만/ })).toBeVisible();
     expect(screen.getByText(/측정 조건: 칸 67개/)).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: /마감 알림이 브라우저에/ }),
     ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "기술 소개" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
   });
-  it("offers the hands-on trial from the hero and the menu", () => {
+  it("offers the hands-on trial right below the AI scene", () => {
     render(<SiteApp path="/" />);
+    expect(screen.getByRole("link", { name: "직접 해보기" })).toHaveAttribute(
+      "href",
+      "#try",
+    );
     expect(
-      screen.getByRole("link", { name: /커리어폼 체험하기/ }),
-    ).toHaveAttribute("href", "/try/");
-    for (const link of screen.getAllByRole("link", { name: /체험하기/ }))
-      expect(link).toHaveAttribute("href", "/try/");
-    expect(
-      within(screen.getByRole("navigation", { name: "주 메뉴" })).getByRole(
-        "link",
-        { name: "체험" },
-      ),
-    ).toHaveAttribute("href", "/try/");
+      screen.getByRole("heading", { name: "이번엔 직접 눌러보세요." }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /자동 기입/ })).toBeEnabled();
   });
   it("runs the trial on a virtual application without storing anything", () => {
     const track = vi.fn();
@@ -163,26 +162,33 @@ it("explains grouped results and copy after the application step", () => {
   expect(container.querySelector("input")).toBeNull();
 });
 
-it("leads with the value of reused information and keeps detailed guidance in onboarding", () => {
+it("leads with AI reading and filling the application", () => {
   const { container } = render(<SiteApp path="/" />);
   expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
-    "지원서는 매번 달라도,내 정보는 그대로니까.",
+    "지원서 칸,AI가 읽고 채워요.",
   );
-  expect(container.querySelector('iframe[src*="guide-results"]')).toBeNull();
-  expect(screen.queryByText(/다른 구역을 누르면 이전 강조/)).toBeNull();
+  for (const step of [
+    "칸을 읽어요",
+    "무슨 칸인지 이해해요",
+    "내 정보로 채워요",
+    "애매한 칸은 물어봐요",
+  ])
+    expect(screen.getByRole("heading", { name: step })).toBeInTheDocument();
   expect(container.querySelector("details[open]")).toBeNull();
   expect(screen.getAllByRole("link", { name: /Chrome에 추가/ })).toHaveLength(
     3,
   );
 });
 
-it("랜딩에서 공고 저장과 마감 알림 흐름을 소개한다", () => {
+it("랜딩에서 마감 알림과 지원 완료 시 남은 알림 취소를 소개한다", () => {
   render(<SiteApp path="/" />);
   expect(
-    screen.getByRole("heading", { name: /관심 공고는 모아두고/ }),
-  ).toBeVisible();
-  expect(screen.getByText(/프로필 등록 없이/)).toBeVisible();
-  expect(screen.getByText(/지원 완료로 표시하면 남은 알림/)).toBeVisible();
+    screen.getByRole("heading", { name: /마감 전에 다시 알려드려요/ }),
+  ).toBeInTheDocument();
+  expect(screen.getByText("2시간 전 알림 취소")).toBeInTheDocument();
+  expect(
+    screen.getByText(/지원 완료라서 더 알리지 않아요/),
+  ).toBeInTheDocument();
 });
 
 it("does not show the notification check card on the public site or without a push client", () => {

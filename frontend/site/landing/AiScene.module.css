@@ -1,0 +1,351 @@
+/* Hero and the four AI steps share one pinned stage, 460vh of scroll. */
+.track {
+  position: relative;
+  height: 460vh;
+}
+.stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+  background:
+    radial-gradient(60% 50% at 70% 40%, #fff1de 0%, transparent 70%),
+    var(--page);
+}
+.stage > * {
+  will-change: transform, opacity;
+}
+
+.hero {
+  position: absolute;
+  left: max(var(--gutter), calc(50% - 560px));
+  top: 50%;
+  width: min(560px, 44vw);
+  transform: translateY(-50%);
+  display: grid;
+  gap: 22px;
+  z-index: 3;
+}
+.hero h1 {
+  font-size: clamp(40px, 5.4vw, 72px);
+  line-height: 1.12;
+  font-weight: 800;
+}
+.hero h1 em {
+  font-style: normal;
+  color: var(--action);
+  white-space: nowrap;
+}
+.hero p {
+  font-size: clamp(17px, 1.6vw, 20px);
+  color: var(--sub);
+}
+.actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.hint {
+  font-size: 13px;
+  color: var(--sub);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.hint i {
+  display: inline-block;
+  width: 18px;
+  height: 28px;
+  border: 2px solid var(--line-strong);
+  border-radius: 10px;
+  position: relative;
+}
+.hint i::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 5px;
+  width: 4px;
+  height: 6px;
+  margin-left: -2px;
+  border-radius: 2px;
+  background: var(--action);
+  animation: wheel 1.6s ease-in-out infinite;
+}
+@keyframes wheel {
+  50% {
+    transform: translateY(7px);
+    opacity: 0.3;
+  }
+}
+
+.captions {
+  position: absolute;
+  left: max(var(--gutter), calc(50% - 560px));
+  top: 22%;
+  width: min(330px, 28vw);
+  z-index: 3;
+  pointer-events: none;
+}
+.caption {
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 100%;
+  opacity: 0;
+  display: grid;
+  gap: 10px;
+}
+.caption span {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--action);
+  font-variant-numeric: tabular-nums;
+}
+.caption h2 {
+  font-size: clamp(28px, 2.9vw, 40px);
+  line-height: 1.2;
+  font-weight: 800;
+}
+.caption p {
+  color: var(--sub);
+}
+
+.status {
+  position: absolute;
+  left: var(--fx);
+  top: calc(var(--fy) - 52px);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px 0 8px;
+  border-radius: 999px;
+  background: var(--strong);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+.status img {
+  width: 24px;
+  height: 24px;
+  animation: spin 3.2s linear infinite;
+}
+.status b {
+  color: #ffd9b0;
+  font-variant-numeric: tabular-nums;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.form {
+  position: absolute;
+  left: var(--fx);
+  top: var(--fy);
+  width: var(--fw);
+  z-index: 2;
+  transform-origin: 50% 60%;
+}
+.scan {
+  position: absolute;
+  left: -14px;
+  right: -14px;
+  top: 0;
+  height: 3px;
+  border-radius: 3px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--orange) 20%,
+    #ffd28f 50%,
+    var(--orange) 80%,
+    transparent
+  );
+  box-shadow: 0 0 18px 4px rgb(227 138 62 / 45%);
+  opacity: 0;
+  z-index: 2;
+}
+.scan::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 3px;
+  height: 60px;
+  background: linear-gradient(to top, rgb(255 210 143 / 28%), transparent);
+}
+.summary {
+  position: absolute;
+  left: var(--fx);
+  top: calc(var(--fy) + var(--fh) + 16px);
+  display: flex;
+  gap: 8px;
+  opacity: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+.summary span {
+  height: 34px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+.summary .summaryReview {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+.fly {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--strong);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  opacity: 0;
+  z-index: 5;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+.dots {
+  position: absolute;
+  left: var(--fx);
+  width: var(--fw);
+  bottom: 28px;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  opacity: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+.dots i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--line-strong);
+  transition:
+    width 0.3s,
+    background-color 0.3s;
+}
+.dots i.on {
+  width: 26px;
+  border-radius: 4px;
+  background: var(--action);
+}
+
+.profile {
+  position: absolute;
+  left: calc(var(--fx) - 230px);
+  top: calc(var(--fy) + var(--fh) * 0.48);
+  width: 190px;
+  z-index: 3;
+  opacity: 0;
+  pointer-events: none;
+}
+.profile img,
+.sparkle img {
+  animation: bob 5s ease-in-out infinite;
+}
+.sparkle {
+  position: absolute;
+  left: calc(var(--fx) + var(--fw) - 40px);
+  top: calc(var(--fy) - 70px);
+  width: 92px;
+  z-index: 3;
+  pointer-events: none;
+}
+@keyframes bob {
+  50% {
+    transform: translateY(-10px) rotate(-2deg);
+  }
+}
+.heroCharacter {
+  position: absolute;
+  right: max(var(--gutter), calc(50% - 600px));
+  bottom: -2%;
+  height: min(52vh, 460px);
+  z-index: 4;
+  pointer-events: none;
+}
+.inspector {
+  position: absolute;
+  left: max(var(--gutter), calc(50% - 600px));
+  bottom: 0;
+  height: min(26vh, 230px);
+  z-index: 1;
+  pointer-events: none;
+  transform: translate3d(0, 110%, 0);
+}
+.heroCharacter img,
+.inspector img {
+  height: 100%;
+  width: auto;
+}
+
+@media (max-width: 900px) {
+  .hero {
+    top: 14%;
+    transform: none;
+    width: auto;
+    right: var(--gutter);
+  }
+  .hero h1 {
+    font-size: clamp(34px, 8.6vw, 56px);
+  }
+  .actions a {
+    flex: 1;
+  }
+  .captions {
+    top: 12%;
+    width: auto;
+    right: var(--gutter);
+    height: 110px;
+  }
+  .caption h2 {
+    font-size: clamp(24px, 6vw, 32px);
+  }
+  .caption p {
+    font-size: 14px;
+  }
+  .status {
+    top: calc(var(--fy) - 46px);
+  }
+  .dots,
+  .sparkle {
+    display: none;
+  }
+  .profile {
+    left: auto;
+    right: var(--gutter);
+    top: calc(var(--fy) - 60px);
+    width: 110px;
+  }
+  .heroCharacter {
+    height: 30vh;
+    right: -10px;
+  }
+  .inspector {
+    height: 20vh;
+    left: auto;
+    right: -10px;
+  }
+}

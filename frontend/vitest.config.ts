@@ -10,7 +10,8 @@ export default defineConfig({
   test: {
     reporters: ["default", createRequireBrowserSuite()],
     css: {
-      include: /WorkflowResults\.module\.css|sidepanel\/App\.module\.css/,
+      include:
+        /WorkflowResults\.module\.css|sidepanel\/App\.module\.css|site\/landing\/\w+\.module\.css/,
       modules: { classNameStrategy: "scoped" },
     },
     coverage: {

@@ -1,0 +1,250 @@
+/* Shared surface for the redesigned pages (landing, 기술 소개, 정책): the
+   product palette from theme.css plus the clay depth used by the characters. */
+.brand {
+  --page: var(--color-surface-muted);
+  --surface: var(--color-surface);
+  --cream: #fff6ea;
+  --brand: var(--color-brand);
+  --line: var(--color-border);
+  --line-strong: var(--color-border-strong);
+  --text: var(--color-text);
+  --strong: var(--color-text-strong);
+  --sub: var(--color-text-muted);
+  --action: var(--color-action);
+  --action-strong: var(--color-action-strong);
+  --accent: var(--color-accent);
+  --orange: #e38a3e;
+  --warn: var(--color-warning);
+  --warn-soft: var(--color-warning-soft);
+  --ok: var(--color-success);
+  --ok-check: #5bb784;
+  --ok-soft: #eaf5ee;
+  --danger-soft: #fbe9e4;
+  --clay:
+    0 34px 60px -28px rgb(117 69 34 / 35%),
+    0 10px 22px -12px rgb(117 69 34 / 18%),
+    inset 0 2px 0 rgb(255 255 255 / 90%),
+    inset 0 -8px 16px rgb(206 181 150 / 22%);
+  --gutter: max(20px, env(safe-area-inset-left, 0px));
+  --header-height: 64px;
+
+  background: var(--page);
+  color: var(--text);
+  font:
+    16px/1.65 SitePretendard,
+    "Apple SD Gothic Neo",
+    sans-serif;
+  word-break: keep-all;
+  -webkit-font-smoothing: antialiased;
+}
+.brand *,
+.brand *::before,
+.brand *::after {
+  box-sizing: border-box;
+}
+/* Zero-specificity resets so button and link classes always win. */
+:where(.brand) a {
+  color: inherit;
+  text-decoration: none;
+}
+:where(.brand) button {
+  font: inherit;
+}
+.skipLink {
+  z-index: 30;
+}
+.brand h1,
+.brand h2,
+.brand h3,
+.brand h4 {
+  margin: 0;
+  color: var(--strong);
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+.brand p {
+  margin: 0;
+}
+.brand img {
+  max-width: 100%;
+  display: block;
+}
+.brand :focus-visible {
+  outline: 3px solid rgb(166 95 45 / 45%);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 52px;
+  padding: 0 24px;
+  border-radius: 999px;
+  border: 0;
+  font: inherit;
+  font-weight: 700;
+  font-size: 16px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    background-color 0.15s ease;
+}
+.button:active {
+  transform: scale(0.97);
+}
+.primary {
+  composes: button;
+  background: var(--action);
+  color: #fff;
+  box-shadow:
+    0 10px 20px -10px rgb(117 69 34 / 70%),
+    inset 0 -3px 0 rgb(0 0 0 / 15%);
+}
+.primary:hover {
+  background: var(--action-strong);
+}
+.soft {
+  composes: button;
+  background: var(--brand);
+  color: var(--strong);
+  box-shadow: inset 0 -3px 0 rgb(117 69 34 / 10%);
+}
+.soft:hover {
+  background: var(--color-brand-hover);
+}
+
+/* header */
+.header {
+  z-index: 20;
+  padding-top: env(safe-area-inset-top, 0px);
+  background: rgb(255 250 244 / 92%);
+  border-bottom: 1px solid rgb(231 216 197 / 70%);
+}
+.headerFixed {
+  composes: header;
+  position: fixed;
+  inset: 0 0 auto;
+}
+.headerSticky {
+  composes: header;
+  position: sticky;
+  top: 0;
+}
+.headerInner {
+  max-width: 1200px;
+  margin: 0 auto;
+  height: var(--header-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-inline: var(--gutter);
+}
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: -0.02em;
+  color: var(--strong);
+}
+.logo img {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+}
+.headerInstall {
+  composes: primary;
+  height: 40px;
+  padding: 0 18px;
+  font-size: 14px;
+}
+
+/* footer */
+.footer {
+  border-top: 1px solid var(--line);
+  padding: 28px var(--gutter) 40px;
+  background: var(--page);
+}
+.footerInner {
+  max-width: 1120px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--sub);
+}
+.footerInner nav {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.footerInner a:hover,
+.footerInner a[aria-current="page"] {
+  color: var(--strong);
+}
+.footerInner a[aria-current="page"] {
+  font-weight: 700;
+}
+
+/* closing call to action */
+.cta {
+  border-radius: 36px;
+  background: var(--action);
+  color: #fff;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  overflow: hidden;
+  box-shadow: var(--clay);
+}
+.ctaText {
+  padding: 56px clamp(24px, 5vw, 64px);
+  display: grid;
+  gap: 22px;
+  align-self: center;
+}
+.brand .ctaText h2 {
+  color: #fff;
+  font-size: clamp(28px, 3.8vw, 48px);
+  font-weight: 800;
+  line-height: 1.2;
+}
+.ctaButton {
+  composes: button;
+  background: #fff;
+  color: var(--action-strong);
+  justify-self: start;
+}
+.ctaButton:hover {
+  background: var(--cream);
+}
+.ctaArt {
+  height: 300px;
+  width: auto;
+  margin-right: clamp(10px, 4vw, 60px);
+}
+@media (max-width: 900px) {
+  .cta {
+    grid-template-columns: 1fr;
+  }
+  .ctaArt {
+    height: 220px;
+    justify-self: end;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .brand *,
+  .brand *::before,
+  .brand *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
