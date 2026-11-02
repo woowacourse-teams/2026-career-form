@@ -172,33 +172,12 @@ function renderOverview() {
       "실행 전체에서 끝낸 API 수 ÷ 실행 경과 시간. 평가는 API를 차례로 부르므로 API 1번당 응답시간이 짧을수록 높습니다."),
     bars("자동기입 실패율", "낮을수록 좋음", failure, 100, (v) => `${v.toFixed(1)}%`,
       "API가 하나라도 실패한 자동기입(화면 하나)의 비율"),
-    costCard(),
   ] : [
     modelTimeCard(perf),
     timeCard,
     bars("API 실패율", "낮을수록 좋음", failure, 100, (v) => `${v.toFixed(1)}%`,
       "타임아웃 · API 오류 · 응답 형식 오류 · 채점 불가인 API의 비율"),
   ]));
-}
-
-/**
- * 자동기입 1,000번당 예상 비용. 실행의 입력·출력 토큰 합에 모델 단가 설정(사용자가 넣은 USD/100만 토큰)을 곱하고 실행 안의
- * 자동기입 수로 나눈다. 단가를 넣지 않은 모델은 계산하지 않는다.
- */
-function costCard() {
-  const perThousand = (model) => {
-    const tokens = report(model)?.tokens.TOTAL;
-    const flows = report(model)?.flows.count;
-    const cost = tokens?.inputTotal == null ? null : estimateCost(tokens.inputTotal, tokens.outputTotal, prices[model]);
-    return cost == null || !flows ? null : cost / flows * 1000;
-  };
-  const card = bars("자동기입 1,000번당 예상 비용", "USD · 낮을수록 좋음", perThousand,
-    Math.max(0.01, ...state.selected.map((m) => perThousand(m) ?? 0)), (v) => formatUsd(v),
-    "입력·출력 토큰 × 토큰 사용량 탭의 모델 단가 설정. 단가를 넣지 않은 모델은 —로 둡니다.");
-  card.querySelectorAll(".bar-row").forEach((row, index) => {
-    if (perThousand(state.selected[index]) == null && report(state.selected[index])) row.after(element("span", "단가 미설정 · 토큰 사용량 탭에서 입력", "range-note"));
-  });
-  return card;
 }
 
 /**
@@ -375,6 +354,21 @@ function renderTokenBars() {
  * 대표 점수: 자동기입 점수(정밀도를 채움률보다 2배 중시하는 F0.5)와 반복별 범위. 막대 아래에 정밀도와 채움률을 보인다.
  * 자세한 설명은 정답 기준 창에 있다.
  */
+const shortPercent = (value) => `${(value * 100).toFixed(1).replace(/\.0$/, "")}%`;
+
+/** 막대 아래 판정별 수. 색 점과 이름·수를 나란히 두고 합계를 끝에 둔다. 범례를 대신한다. */
+function countLine(kinds, counts, total, unit, titles = {}) {
+  const line = element("span", undefined, "item-numbers count-line");
+  kinds.forEach(({ key, label, className }) => {
+    const part = element("span", undefined, `count ${className}`);
+    part.append(element("b", String(counts[key] ?? 0)), document.createTextNode(` ${label.split("(")[0]}`));
+    if (titles[key]) part.title = titles[key];
+    line.append(part);
+  });
+  line.append(element("span", `/ ${total}${unit}`, "count-total"));
+  return line;
+}
+
 function scoreCard() {
   const fill = (model) => report(model)?.autofill;
   const card = bars("자동기입 점수", "높을수록 좋음", (m) => percent(fill(m)?.score), 100, (v) => `${v.toFixed(1)}%`);
@@ -390,16 +384,21 @@ function scoreCard() {
     }
     const values = (report(state.selected[index])?.repetitions ?? []).map((item) => item.autofillScore)
       .filter((value) => value != null).map((value) => value * 100);
-    const parts = [`정밀도 ${autofill.precision == null ? "—" : (autofill.precision * 100).toFixed(1) + "%"}`,
-      `채움률 ${(autofill.fillRate * 100).toFixed(1)}%`];
-    if (values.length > 1) parts.push(`반복 ${values.length}회 범위 ${Math.min(...values).toFixed(1)}~${Math.max(...values).toFixed(1)}%`);
-    row.after(element("span", parts.join(" · "), "range-note"));
+    const parts = [`정밀도 ${autofill.precision == null ? "—" : shortPercent(autofill.precision)}`,
+      `채움률 ${shortPercent(autofill.fillRate)}`];
+    if (values.length > 1) parts.push(`반복 ${Math.min(...values).toFixed(1)}~${Math.max(...values).toFixed(1)}%`);
+    const note = element("span", parts.join(" · "), "range-note");
     // 평가는 다음 요청을 정답으로 만들어, 앞 단계(섹션 분류·학력 구분 선택) 오답은 이 점수에 반영되지 않는다.
     const upstream = report(state.selected[index])?.upstream;
     const upstreamWrong = upstream ? upstream.wrongKey + upstream.unnecessary : 0;
-    if (upstreamWrong) row.nextSibling.after(element("span", `앞 단계 오답 ${upstreamWrong}개(섹션 분류·학력 구분) · 실제 제품에선 이보다 낮을 수 있음`, "range-note upstream-note"));
+    if (upstreamWrong) {
+      const warn = element("span", ` · 앞 단계 오답 ${upstreamWrong}`, "upstream-note");
+      warn.title = "섹션 분류·학력 구분 오답. 평가 점수에는 반영되지 않아 실제 제품에선 더 낮을 수 있습니다.";
+      note.append(warn);
+    }
+    row.after(note);
   });
-  card.append(element("p", "정밀도 = 넣은 칸 중 맞은 비율 · 채움률 = 넣어야 할 칸 중 맞게 넣은 비율. 잘못 넣으면 놓칠 때보다 2배 크게 깎입니다.", "muted metric-foot"));
+  card.append(element("p", "정밀도: 넣은 칸 중 맞은 비율 · 채움률: 넣어야 할 칸 중 맞게 넣은 비율 · 잘못 넣으면 2배 감점", "muted metric-foot"));
   return card;
 }
 
@@ -419,9 +418,6 @@ function renderAutofill() {
   const head = element("div", undefined, "metric-head");
   head.append(element("h3", "칸별 결과"), element("span", "사용자 화면 기준 · 칸 수", "muted"));
   card.append(head);
-  const legend = element("div", undefined, "item-legend");
-  AUTOFILL_KINDS.forEach(({ label, className }) => legend.append(element("span", label, className)));
-  card.append(legend);
   if (!state.selected.length) card.append(element("div", "비교할 모델 선택 필요.", "empty"));
   for (const model of state.selected) {
     const autofill = report(model)?.autofill;
@@ -430,8 +426,8 @@ function renderAutofill() {
     row.style.setProperty("--model", color(model));
     const track = element("div", undefined, "item-track");
     const total = counts ? AUTOFILL_KINDS.reduce((sum, { key }) => sum + counts[key], 0) : 0;
-    let text = "자동기입 결과 없음";
-    if (counts?.unobserved) text = "확신도 기록 전 실행이라 측정 불가";
+    let text = element("span", "자동기입 결과 없음", "item-numbers");
+    if (counts?.unobserved) text = element("span", "확신도 기록 전 실행이라 측정 불가", "item-numbers");
     else if (total) {
       AUTOFILL_KINDS.forEach(({ key, label, className }) => {
         const part = element("span", undefined, className);
@@ -439,13 +435,13 @@ function renderAutofill() {
         part.title = `${label} ${counts[key]}`;
         track.append(part);
       });
-      text = `잘못 넣음 ${counts.wrong} (다른 항목 ${counts.filledWrongKey} · 넣지 말 칸 ${counts.filledUnneeded})`
-        + ` · 놓침 ${counts.missed} / ${total}칸`;
+      text = countLine(AUTOFILL_KINDS, counts, total, "칸",
+        { wrong: `다른 항목 ${counts.filledWrongKey} · 넣지 말아야 할 칸 ${counts.filledUnneeded}` });
     }
-    row.append(Object.assign(element("span", model), { title: model }), track, element("span", text, "item-numbers"));
+    row.append(Object.assign(element("span", model), { title: model }), track, text);
     card.append(row);
   }
-  card.append(element("p", "놓침에는 확인 필요(0.5~0.8)·막음(0.5 미만)으로 넘긴 칸이 들어갑니다. 놓친 칸은 사용자가 직접 입력합니다.", "muted metric-foot"));
+  card.append(element("p", "놓침 = 비움 + 확인 필요(0.5~0.8) + 막음(0.5 미만) · 사용자가 직접 입력", "muted metric-foot"));
   return card;
 }
 
@@ -495,9 +491,6 @@ function renderItemBreakdown() {
   const head = element("div", undefined, "metric-head");
   head.append(element("h3", "항목 판정"), element("span", "실행 전체 · 항목 수", "muted"));
   card.append(head);
-  const legend = element("div", undefined, "item-legend");
-  ITEM_KINDS.forEach(({ label, className }) => legend.append(element("span", label, className)));
-  card.append(legend);
   if (!state.selected.length) card.append(element("div", "비교할 모델 선택 필요.", "empty"));
   for (const model of state.selected) {
     const items = report(model)?.quality.items;
@@ -513,13 +506,11 @@ function renderItemBreakdown() {
         track.append(part);
       });
     }
-    const numbers = element("span", scored
-      ? ITEM_KINDS.slice(1).map(({ key, label }) => `${label.split("(")[0]} ${items[key] ?? 0}`).join(" · ") + ` / ${scored}`
-      : "—", "item-numbers");
+    const numbers = scored ? countLine(ITEM_KINDS, items, scored, "개") : element("span", "—", "item-numbers");
     row.append(Object.assign(element("span", model), { title: model }), track, numbers);
     card.append(row);
   }
-  card.append(element("p", "채점 제외(공급자 사용 불가) 항목은 빠진다. 오답은 틀린 값이 들어갈 위험, 누락은 사용자가 직접 입력해야 하는 칸이다.", "muted metric-foot"));
+  card.append(element("p", "공급자를 쓸 수 없어 답하지 못한 항목은 채점에서 뺍니다.", "muted metric-foot"));
   return card;
 }
 

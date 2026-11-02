@@ -24,11 +24,11 @@ class EvaluationPageTest {
             "오답(다른 항목)", "누락(판단 보류)", "불필요 제안", "예상 비용 비교", "자동기입 1,000회당", "가장 저렴한 모델의",
             "openProviders", "/provider-registrations", "HOST_NOT_ALLOWED_FOR_KEY", "INTERNAL_ADDRESS",
             "키 원문은 이 화면에 입력하지 않습니다", "datasetVersion: DATASET.version", "split: \"all\"",
-            "comparisonDetail", "scoreCard", "?.repetitions", "item.autofillScore", "diagnosis()", "stage-table", "confirmDelete", "/records/", "되돌릴 수 없습니다", "modelTimeCard", "모델 응답 시간", "자동기입 1번당 응답시간", "모델 호출 1번당 응답시간", "API 1번당 응답시간", "자동기입 실패율", "API 실패율", "conditionText", "changedConditions", "달라진 조건", "costCard", "앞 단계 오답", "실행 이름", "1번에 모델 호출 평균", "modelAttempt", "renderFields", "/items`", "항목별 비교", "COMPARE_KINDS", "섹션 분류", "CATEGORY_NAMES", "기준 실행", "fieldDetail", "개선 ${better}", "전체 항목",
+            "comparisonDetail", "scoreCard", "?.repetitions", "item.autofillScore", "diagnosis()", "stage-table", "confirmDelete", "/records/", "되돌릴 수 없습니다", "modelTimeCard", "모델 응답 시간", "자동기입 1번당 응답시간", "모델 호출 1번당 응답시간", "API 1번당 응답시간", "자동기입 실패율", "API 실패율", "conditionText", "changedConditions", "달라진 조건", "countLine", "앞 단계 오답", "실행 이름", "1번에 모델 호출 평균", "modelAttempt", "renderFields", "/items`", "항목별 비교", "COMPARE_KINDS", "섹션 분류", "CATEGORY_NAMES", "기준 실행", "fieldDetail", "개선 ${better}", "전체 항목",
             "renderAutofill", "?.autofill", "칸별 결과", "자동기입 점수", "맞게 비움", "놓침", "잘못 넣음", "확신도 기록 전 실행", "F0.5",
             "STATE_NAMES", "STATE_NOTES", "dataset-about", "screen-list", "score-flow", "form-wire", "criteria-formula", "진단 지표", "dataset-tabs", "field-table", "profileTable", "PROMPT_APIS", "prompt-group", "criteria-table", "POST /api/v1/generic/sections/classify", "change-chips", "prompt-layout",
             "api(\"/prompts\")", "commit-list", "초기 버전", "lineDiff", "diff-table", "처음 기록한 프롬프트");
-        assertThat(app).doesNotContain("accuracyCard", "autoCorrect", "자동기입 최종 정확도", "이름만 바뀜", "우세 · 반복별", "맞힌 항목 ÷ 채점 항목", "variation-verdict", "timeline-hint", "새 버전이 쌓이고", "prompt-model", "조각 ${", "변경 없는 조각");
+        assertThat(app).doesNotContain("costCard", "자동기입 1,000번당 예상 비용", "accuracyCard", "autoCorrect", "자동기입 최종 정확도", "이름만 바뀜", "우세 · 반복별", "맞힌 항목 ÷ 채점 항목", "variation-verdict", "timeline-hint", "새 버전이 쌓이고", "prompt-model", "조각 ${", "변경 없는 조각");
         assertThat(app).doesNotContain("field(\"분할\"", "field(\"데이터셋 버전\"", "renderVariation");
         String all = index + app + read("static/evaluations/styles.css") + read("static/evaluations/pricing.js");
         assertThat(all).doesNotContain("cdn.", "https://", "http://", "window.openai", "Pretendard",

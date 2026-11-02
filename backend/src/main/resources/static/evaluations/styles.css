@@ -624,3 +624,15 @@
 #cf-eval-preview .upstream-note{color:#8a5b2f}
 #cf-eval-preview .fields-changes{font-size:12px;color:#8a5b2f;overflow-wrap:anywhere}
 #cf-eval-preview .filters .comparison-detail{white-space:normal;max-width:340px;line-height:1.45}
+#cf-eval-preview .count-line{display:flex;flex-wrap:wrap;align-items:center;gap:3px 10px;margin-top:2px;font-size:12px;color:#4a5560}
+#cf-eval-preview .count-line .count{display:inline-flex;align-items:center;gap:4px;color:#4a5560;white-space:nowrap}
+#cf-eval-preview .count-line .count::before{content:"";width:8px;height:8px;border-radius:2px;background:#c9cfd3}
+#cf-eval-preview .count-line .count b{font-weight:650;color:#233447;font-variant-numeric:tabular-nums}
+#cf-eval-preview .count-line .item-correct::before{background:#3d6f9e}
+#cf-eval-preview .count-line .item-blank::before{background:#a9c9b5}
+#cf-eval-preview .count-line .item-missing::before{background:#d6ae52}
+#cf-eval-preview .count-line .item-wrong::before{background:#b5483d}
+#cf-eval-preview .count-line .item-unnecessary::before{background:#8f7ab5}
+#cf-eval-preview .count-line .count[title]{cursor:help}
+#cf-eval-preview .count-line .count-total{margin-left:auto;color:#8a929b;font-variant-numeric:tabular-nums}
+#cf-eval-preview .upstream-note{color:#8a5b2f;cursor:help;white-space:nowrap}
