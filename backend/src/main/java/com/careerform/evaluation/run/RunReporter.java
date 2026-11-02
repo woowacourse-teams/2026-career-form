@@ -12,6 +12,7 @@ import com.careerform.evaluation.scoring.AutofillOutcome;
 import com.careerform.evaluation.scoring.CallKind;
 import com.careerform.evaluation.scoring.RunAggregator;
 import com.careerform.monitoring.ModelCallRecording.Attempt;
+import com.careerform.monitoring.ModelCallRecording.Outcome;
 
 /** 호출 결과 원자료로 {@link RunReport}를 만든다. 저장한 집계값은 쓰지 않는다. */
 public final class RunReporter {
@@ -119,15 +120,16 @@ public final class RunReporter {
         long failed = records.stream().filter(record -> record.toCallResult().effectiveFailure() != null).count();
         long completed = records.size() - failed;
         List<Double> attempts = new ArrayList<>();
-        int retried = 0;
-        double retriedMs = 0;
+        // 제품 요청 하나가 배치마다 모델을 여러 번 부르므로, 두 번째 이후 시도가 아니라 실패한 시도(429 등)를 센다.
+        int failedAttempts = 0;
+        double failedMs = 0;
         for (CallResultRecord record : records) {
-            for (int index = 0; index < record.attempts().size(); index++) {
-                double ms = record.attempts().get(index).durationNanos() / NANOS_PER_MS;
+            for (Attempt attempt : record.attempts()) {
+                double ms = attempt.durationNanos() / NANOS_PER_MS;
                 attempts.add(ms);
-                if (index > 0) {
-                    retried++;
-                    retriedMs += ms;
+                if (attempt.outcome() != Outcome.SUCCESS) {
+                    failedAttempts++;
+                    failedMs += ms;
                 }
             }
         }
@@ -135,7 +137,7 @@ public final class RunReporter {
             records.isEmpty() ? null : (double) failed / records.size(),
             elapsedSeconds == null || elapsedSeconds <= 0 ? null : completed / elapsedSeconds,
             distribution(records.stream().map(record -> record.productCallNanos() / NANOS_PER_MS).toList()),
-            distribution(attempts), retried, retried == 0 ? null : retriedMs);
+            distribution(attempts), failedAttempts, failedAttempts == 0 ? null : failedMs);
     }
 
     private static RunReport.Tokens tokens(List<CallResultRecord> records) {

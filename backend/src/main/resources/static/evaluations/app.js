@@ -186,7 +186,7 @@ function renderOverview() {
       Math.max(0.1, ...state.selected.map((m) => perf(m)?.throughputPerSecond ?? 0)), (v) => `${v.toFixed(2)}/초`,
       richNote(["끝낸 서버 요청 수 ÷ 실행 경과 시간"], " · 요청을 차례로 보내므로 요청 처리 시간이 짧을수록 높음")),
     bars("자동기입 실패율", "낮을수록 좋음", failure, 100, (v) => `${v.toFixed(1)}%`,
-      richNote(["서버 요청이 하나라도 실패한 자동기입"], "(화면 하나)의 비율")),
+      richNote(["서버 요청이 하나라도 실패한 자동기입"], "(처음 화면 준비 + 펼쳐진 화면)의 비율")),
   ] : [
     modelTimeCard(perf),
     timeCard,
@@ -219,8 +219,8 @@ function modelTimeCard(perf) {
 }
 
 function renderTokens() {
-  const caption = { total: "자동기입 1회 · 준비 + 매핑", prepare: "준비", mapping: "필드 매핑" }[state.stage];
-  $("#cf-token-caption").textContent = `${caption} · 모델 HTTP 시도 1건당 평균. 미관측 시도는 평균에서 뺀다.`;
+  const caption = { total: "준비 + 매핑 전체", prepare: "준비", mapping: "매핑" }[state.stage];
+  $("#cf-token-caption").textContent = `${caption} · AI 질문 1번당 평균 · 토큰을 알려 주지 않은 질문은 평균에서 뺍니다.`;
   const body = $("#cf-token-body");
   body.replaceChildren();
   const chart = $("#cf-token-chart");
@@ -229,7 +229,7 @@ function renderTokens() {
   const pricing = element("button", "모델 단가 설정", "pricing-trigger");
   pricing.type = "button";
   pricing.addEventListener("click", openPricing);
-  heading.append(element("h4", "시도당 평균 토큰"), pricing);
+  heading.append(element("h4", "AI 질문 1번당 평균 토큰"), pricing);
   chart.append(heading);
   for (const model of state.selected) {
     const tokens = report(model)?.tokens[stageKey()];
@@ -304,7 +304,7 @@ function renderTokenBars() {
       };
       stat("입력", count(tokens.inputMean));
       stat("출력", count(tokens.outputMean));
-      stat("시도당 비용", costs[index].mean == null ? "단가 미설정" : formatUsd(costs[index].mean));
+      stat("질문당 비용", costs[index].mean == null ? "단가 미설정" : formatUsd(costs[index].mean));
       stat("실행 전체 비용", costs[index].total == null ? "단가 미설정" : formatUsd(costs[index].total));
       row.append(name, track, value, stats);
       box.append(row);
@@ -324,7 +324,7 @@ function renderTokenBars() {
     const axis = element("div", undefined, "token-axis");
     const ticks = element("div", undefined, "token-ticks");
     for (let tick = 0; tick <= 4; tick += 1) ticks.append(element("span", count(max * tick / 4)));
-    axis.append(element("span"), ticks, element("span", "토큰 / 시도", "muted"));
+    axis.append(element("span"), ticks, element("span", "토큰 / 질문", "muted"));
     box.append(axis);
   }
   // 실행 하나는 자동기입 몇 회뿐이라 금액이 작다. 자동기입 1회 비용(자동기입 1번에 쓴 평균 토큰 × 단가)을
@@ -366,7 +366,7 @@ function renderTokenBars() {
         element("span", total == null ? "" : `이번 실행 ${formatUsd(total)} · 자동기입 ${flows}회`, "muted cost-detail"));
       summary.append(line);
     });
-    summary.append(element("p", "자동기입 1회 = 처음 화면 준비(섹션 분류·학력 구분 선택) + 고른 뒤 펼쳐진 화면(섹션 분류·칸 매핑). 비용 = 그 입력·출력 토큰 × 모델 단가 설정의 USD 단가(100만 토큰당). 서버는 비용을 계산하지 않는다.", "muted"));
+    summary.append(element("p", "자동기입 1회 = 처음 화면 준비(섹션 분류·학력 구분 선택) + 고른 뒤 펼쳐진 화면(섹션 분류·칸 매핑). 비용 = 그 입력·출력 토큰 × 모델 단가 설정의 USD 단가(100만 토큰당). 서버는 비용을 계산하지 않습니다.", "muted"));
     box.append(summary);
   } else if (observed.length) {
     box.append(element("p", "비용 표시에는 모델 단가 설정의 입력·출력 단가가 필요합니다.", "muted"));
@@ -401,7 +401,7 @@ function addDeltas(card, now, before, better, format) {
   });
 }
 
-const shortPercent = (value) => `${(value * 100).toFixed(1).replace(/\.0$/, "")}%`;
+const shortPercent = (value) => `${(value * 100).toFixed(1)}%`;
 
 /** 막대 아래 판정별 수. 색 점과 이름·수를 나란히 두고 합계를 끝에 둔다. 범례를 대신한다. */
 function countLine(kinds, counts, total, unit, titles = {}) {
@@ -1362,8 +1362,8 @@ function criteriaView() {
     element("p", "칸이 뜻하는 지원 프로필 항목이 정답. 지원자가 그 값을 가졌는지는 따지지 않습니다. 지원 프로필 항목에 없는 의미면 정답은 '넣을 항목 없음'."),
     table(["예시", "정답"], [["학교명 칸(대학교 행)", "education.university.schoolName"], ["자기소개서 칸", "넣을 항목 없음"],
       ["지원경로 섹션", "해당 없음(NONE)"]]));
-  card("3. 준비·매핑 탭의 단계 정확도",
-    element("p", "준비(섹션 분류·학력 구분 선택)와 매핑(섹션 분류)의 질문을 확신도와 무관하게 모델 답 그대로 채점합니다. 맞힌 항목 비율이며 항목은 섹션 하나, 칸 하나, 버튼·선택지 결정 하나. 준비는 칸을 꺼내기 위한 질문(조작할 섹션 분류, 학력 구분 선택), 필드는 칸에 넣을 값을 정하는 질문(전체 섹션 분류, 칸 매핑)."),
+  card("3. 준비 결과 · 섹션 분류 결과",
+    element("p", "준비(섹션 분류·학력 구분 선택)와 매핑(섹션 분류)의 질문을 확신도와 무관하게 모델 답 그대로 채점합니다. 맞힌 항목 비율이며 항목은 섹션 하나, 칸 하나, 버튼·선택지 결정 하나. 준비는 칸을 꺼내기 위한 질문(조작할 섹션 분류, 학력 구분 선택), 매핑은 칸에 넣을 값을 정하는 질문(전체 섹션 분류, 칸 매핑)."),
     table(["항목 판정", "뜻"], [["오답", "정답이 있는데 다른 항목을 고름"], ["누락(판단 보류)", "정답이 있는데 고르지 않음"],
       ["불필요 제안", "넣을 항목이 없는데 무언가를 고름"]]));
   card("4. 점수에서 빠지는 것",
@@ -1402,7 +1402,9 @@ const partLabel = (name) => isCriterion(name) ? `선택지 ${localName(name).sli
 
 /** 읽기 좋게 문장마다 줄을 나누고 범주·역할 같은 대문자 키와 {자리표시자}를 강조한다. 원문은 바꾸지 않는다. */
 function sentences(text) {
-  return text.split("\n").flatMap((line) => line.split(/(?<=[.;])\s+(?=[A-Z{])/)).filter((line) => line.trim());
+  // 원문은 코드 폭에 맞춰 문장 중간에서 줄을 바꾸므로, 소문자로 이어지는 줄은 앞 줄에 붙인 뒤 문장으로 나눈다.
+  return text.replace(/\s*\n\s*(?=[a-z])/g, " ").split("\n")
+    .flatMap((line) => line.split(/(?<=[.;])\s+(?=[A-Z{])/)).filter((line) => line.trim());
 }
 function readable(text) {
   const box = element("div", undefined, "prompt-text");
@@ -1714,7 +1716,7 @@ function openPricing() {
   const message = element("p", "", "muted");
   const apply = element("button", "적용", "apply-pricing");
   apply.type = "submit";
-  form.append(element("p", "100만 토큰당 USD 단가. 이 브라우저에만 저장한다.", "pricing-explanation"), message, apply);
+  form.append(element("p", "100만 토큰당 USD 단가. 이 브라우저에만 저장합니다.", "pricing-explanation"), message, apply);
   form.addEventListener("submit", (event) => {
     event.preventDefault();
     try {

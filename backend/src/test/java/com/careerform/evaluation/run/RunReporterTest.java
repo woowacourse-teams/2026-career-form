@@ -129,7 +129,9 @@ class RunReporterTest {
         assertThat(mapping.p95Ms()).isEqualTo(900.0);
         assertThat(report.performance().get("MAPPING").failureRate()).isEqualTo(0.5);
         assertThat(report.performance().get("TOTAL").throughputPerSecond()).isEqualTo(0.5);
-        assertThat(report.performance().get("MAPPING").retriedAttempts()).isEqualTo(1);
+        // 배치로 나눈 성공 호출은 실패가 아니다. 429 같은 실패 시도만 센다.
+        assertThat(report.performance().get("MAPPING").failedAttempts()).isEqualTo(1);
+        assertThat(report.performance().get("MAPPING").failedAttemptMs()).isEqualTo(800.0);
         RunReport.Tokens tokens = report.tokens().get("MAPPING");
         assertThat(tokens.observedAttempts()).isEqualTo(2);
         assertThat(tokens.unobservedAttempts()).isEqualTo(1);

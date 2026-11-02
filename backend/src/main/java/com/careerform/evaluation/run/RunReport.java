@@ -65,8 +65,8 @@ public record RunReport(
         Double throughputPerSecond,
         Distribution productCall,
         Distribution modelAttempt,
-        int retriedAttempts,
-        Double retriedAttemptMs
+        int failedAttempts,
+        Double failedAttemptMs
     ) {
     }
 
