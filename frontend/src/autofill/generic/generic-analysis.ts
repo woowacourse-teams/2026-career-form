@@ -20,7 +20,11 @@ import {
   type ReviewPlanItem,
 } from "../review/review-plan";
 import { resolveValueBinding } from "../profile/value-binding";
-import { kindOfOptionText, sectionOfKind } from "../profile/education-row-kind";
+import {
+  type EducationRowKind,
+  kindOfOptionText,
+  sectionOfKind,
+} from "../profile/education-row-kind";
 import { localWorkflowLog } from "../debug/local-workflow";
 import { datePartOf, matchDatePartOption } from "./date-part-options";
 import {
@@ -291,6 +295,29 @@ function singleEducationRecord(profile: Profile): string | undefined {
   return records.filter((entry) => entry.sectionId === sectionId).length === 1
     ? sectionId
     : undefined;
+}
+
+/**
+ * The education stage the row's own stage select already shows, read locally and
+ * never sent. Undefined without exactly one stage select or without a shown stage.
+ */
+function shownEducationStage(
+  section: GenericSection<SegmentField>,
+): EducationRowKind | undefined {
+  const selects = section.fields
+    .map(({ element }) => element)
+    .filter(
+      (element): element is HTMLSelectElement =>
+        element instanceof HTMLSelectElement &&
+        new Set(
+          Array.from(element.options)
+            .map((option) => kindOfOptionText(option.text))
+            .filter(Boolean),
+        ).size >= 2,
+    );
+  if (selects.length !== 1) return undefined;
+  const shown = selects[0]!.selectedOptions[0];
+  return shown && shown.value !== "" ? kindOfOptionText(shown.text) : undefined;
 }
 
 /** One unbound row: no structure stage, no second row, no repeat beyond one. */
@@ -706,11 +733,19 @@ export async function analyzeGenericFields(
   }
   const educationRecord = singleEducationRecord(profile);
   const recordOf = (section: GenericSection<SegmentField>) => {
-    if (!educationRecord) return undefined;
     // Unreadable fields get no hint here; the section's own local processing
     // reads them again inside its failure isolation and blocks only it.
     try {
-      return isSingleRow(section) ? educationRecord : undefined;
+      if (!isSingleRow(section)) return undefined;
+      // A stage the row already shows names its record; the profile must hold
+      // exactly one record of it, otherwise the row keeps abstaining.
+      const stage = shownEducationStage(section);
+      if (!stage) return educationRecord;
+      const sectionId = sectionOfKind(stage);
+      return profile.education.filter((entry) => entry.sectionId === sectionId)
+        .length === 1
+        ? sectionId
+        : undefined;
     } catch {
       return undefined;
     }

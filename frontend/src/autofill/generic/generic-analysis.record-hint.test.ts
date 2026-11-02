@@ -94,6 +94,37 @@ describe("generic education record hint", () => {
     ]);
   });
 
+  const stageRow = (selected: string) => `<section><h2>학력</h2>
+    <select aria-label="구분"><option value="">구분</option>
+      <option value="a"${selected === "고등학교" ? " selected" : ""}>고등학교</option>
+      <option value="b"${selected === "대학교" ? " selected" : ""}>대학교</option>
+      <option value="c">대학원(석사)</option></select>
+    <input name="school" aria-label="학교명">
+    <input name="start" aria-label="입학연월"></section>`;
+
+  it.each([
+    ["고등학교", "highSchool"],
+    ["대학교", "university"],
+  ])("sends the record of the stage the page row already shows: %s", async (selected, record) => {
+    const sections = await sentSections(
+      [highSchool, university({ latestEducationType: "대학교" })],
+      "EDUCATION",
+      stageRow(selected),
+    );
+    expect(sections.map((section) => section.recordSectionId)).toEqual([record]);
+  });
+
+  it("omits the stage hint when the row shows no stage or the profile lacks one record of it", async () => {
+    expect(
+      (await sentSections([highSchool, university()], "EDUCATION", stageRow("")))
+        .every((section) => !("recordSectionId" in section)),
+    ).toBe(true);
+    expect(
+      (await sentSections([university()], "EDUCATION", stageRow("고등학교")))
+        .every((section) => !("recordSectionId" in section)),
+    ).toBe(true);
+  });
+
   it("omits the hint when several records remain undecided", async () => {
     const sections = await sentSections([highSchool, university()]);
     expect(sections.every((section) => !("recordSectionId" in section))).toBe(
