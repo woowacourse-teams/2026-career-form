@@ -135,16 +135,120 @@ function renderTokens() {
     const row = element("tr");
     const name = element("td", model);
     name.style.setProperty("--model", color(model));
-    const number = (value) => value == null ? "—" : Math.round(value).toLocaleString();
-    row.append(name, element("td", number(tokens?.inputMean)), element("td", number(tokens?.outputMean)),
-      element("td", number(tokens?.inputMean == null ? null : tokens.inputMean + tokens.outputMean)),
-      element("td", number(tokens?.inputTotal == null ? null : tokens.inputTotal + tokens.outputTotal)),
+    row.append(name, element("td", count(tokens?.inputMean)), element("td", count(tokens?.outputMean)),
+      element("td", count(tokens?.inputMean == null ? null : tokens.inputMean + tokens.outputMean)),
+      element("td", count(tokens?.inputTotal == null ? null : tokens.inputTotal + tokens.outputTotal)),
       element("td", tokens ? String(tokens.unobservedAttempts) : "—"),
       element("td", tokens ? formatUsd(cost) : "—", "cost-cell"), element("td", tokens ? formatUsd(totalCost) : "—", "cost-cell"));
     body.append(row);
-    const line = element("div", undefined, "token-comparison");
-    line.append(element("div", `${model} · ${tokens?.inputMean == null ? "—" : number(tokens.inputMean + tokens.outputMean) + " 토큰"} · 평균 예상 비용 ${tokens ? formatUsd(cost) : "—"}`, "token-model"));
-    chart.append(line);
+  }
+  chart.append(renderTokenBars());
+}
+
+const count = (value) => value == null ? "—" : Math.round(value).toLocaleString();
+
+/** 눈금이 깔끔하게 끝나는 축 최댓값(1·2·2.5·5 × 10ⁿ). */
+function niceMax(value) {
+  if (!(value > 0)) return 1;
+  const unit = 10 ** Math.floor(Math.log10(value));
+  return [1, 2, 2.5, 5, 10].map((step) => step * unit).find((step) => step >= value);
+}
+
+/**
+ * 모델별 시도당 평균 토큰을 입력·출력을 이어 붙인 가로 막대로 그린다. 끝나지 않은 실행은 분석 중,
+ * 끝났지만 토큰을 받지 못한 실행은 미관측으로 표시하고 값을 지어내지 않는다.
+ */
+function renderTokenBars() {
+  const box = element("div", undefined, "token-bars");
+  const legend = element("div", undefined, "token-legend");
+  legend.append(element("span", "입력 토큰(모델 색)", "legend-input"), element("span", "출력 토큰", "legend-output"));
+  box.append(legend);
+  if (!state.selected.length) {
+    box.append(element("div", "비교할 모델을 선택하세요.", "empty"));
+    return box;
+  }
+  const rows = state.selected.map((model) => {
+    const run = groupRuns(state.group).find(({ run: candidate }) => modelKey(candidate) === model)?.run;
+    return { model, run, tokens: report(model)?.tokens[stageKey()] };
+  });
+  const totals = rows.map(({ tokens }) => tokens?.inputMean == null ? null : tokens.inputMean + tokens.outputMean);
+  const max = niceMax(Math.max(0, ...totals.filter((value) => value != null)));
+  rows.forEach(({ model, run, tokens }, index) => {
+    const row = element("div", undefined, "token-bar-row");
+    row.style.setProperty("--model", color(model));
+    const [provider, ...rest] = model.split("/");
+    const name = element("div", undefined, "token-bar-name");
+    name.append(element("strong", rest.join("/")), element("span", provider, "muted"));
+    const track = element("div", undefined, "token-bar-track");
+    const value = element("div", undefined, "token-bar-value");
+    if (totals[index] != null) {
+      const input = element("span", undefined, "token-input");
+      input.style.width = `${tokens.inputMean / max * 100}%`;
+      const output = element("span", undefined, "token-output");
+      output.style.width = `${tokens.outputMean / max * 100}%`;
+      track.append(input, output);
+      track.setAttribute("aria-label", `${model} 입력 ${count(tokens.inputMean)}, 출력 ${count(tokens.outputMean)} 토큰`);
+      value.append(element("b", `${count(totals[index])} 토큰`),
+        element("span", `입력 ${count(tokens.inputMean)} · 출력 ${count(tokens.outputMean)}`, "muted"));
+    } else if (run && ACTIVE.includes(run.status)) {
+      track.classList.add("pending");
+      value.append(element("b", RUN_STATUS[run.status]), element("span", `${run.processedCalls}/${run.plannedCalls} 호출`, "muted"));
+    } else {
+      track.classList.add("missing");
+      value.append(element("b", run ? RUN_STATUS[run.status] ?? run.status : "—"), element("span", "토큰 미관측", "muted"));
+    }
+    row.append(name, track, value);
+    box.append(row);
+  });
+  const observed = rows.filter((_, index) => totals[index] != null);
+  if (observed.length) {
+    const axis = element("div", undefined, "token-axis");
+    const ticks = element("div", undefined, "token-ticks");
+    for (let tick = 0; tick <= 4; tick += 1) ticks.append(element("span", count(max * tick / 4)));
+    axis.append(element("span"), ticks, element("span", "토큰 / 시도", "muted"));
+    box.append(axis);
+  }
+  if (observed.length > 1) {
+    const sorted = [...observed].sort((a, b) => totals[rows.indexOf(a)] - totals[rows.indexOf(b)]);
+    const low = totals[rows.indexOf(sorted[0])];
+    const high = totals[rows.indexOf(sorted[sorted.length - 1])];
+    box.append(element("p", `같은 입력에서 시도당 토큰이 ${count(low)}에서 ${count(high)}까지 ${(high / low).toFixed(1)}배 벌어집니다.`, "token-summary"));
+  }
+  return box;
+}
+
+const RUN_STATUS = { WAITING: "차례 대기", QUEUED: "대기 중", RUNNING: "분석 중", COMPLETED: "완료", PARTIAL: "일부 완료", FAILED: "실패", CANCELLED: "취소됨" };
+const ACTIVE = ["WAITING", "QUEUED", "RUNNING"];
+
+/** 선택한 묶음의 모델별 진행. 하나라도 끝나지 않았을 때만 보인다. 값은 서버가 센 처리 호출 수다. */
+function renderProgress() {
+  const panel = $("#cf-progress");
+  const runs = groupRuns(state.group).map(({ run }) => run);
+  panel.hidden = !runs.some((run) => ACTIVE.includes(run.status));
+  panel.replaceChildren();
+  if (panel.hidden) return;
+  const head = element("div", undefined, "progress-head");
+  const finished = runs.filter((run) => !ACTIVE.includes(run.status)).length;
+  head.append(element("h3", "모델 분석 진행"), element("span", `${finished}/${runs.length}개 모델 완료 · 한 모델씩 차례로 실행`, "muted"));
+  panel.append(head);
+  for (const run of runs) {
+    const model = modelKey(run);
+    const row = element("div", undefined, `progress-row status-${run.status.toLowerCase()}`);
+    row.style.setProperty("--model", color(model));
+    const ratio = run.plannedCalls ? Math.min(1, run.processedCalls / run.plannedCalls) : 0;
+    const bar = element("div", undefined, "progress-track");
+    bar.setAttribute("role", "progressbar");
+    bar.setAttribute("aria-label", `${model} 분석 진행`);
+    bar.setAttribute("aria-valuemin", "0");
+    bar.setAttribute("aria-valuemax", String(run.plannedCalls));
+    bar.setAttribute("aria-valuenow", String(run.processedCalls));
+    const fill = element("div", undefined, "progress-fill");
+    fill.style.width = `${(run.status === "COMPLETED" ? 1 : ratio) * 100}%`;
+    bar.append(fill);
+    const label = element("div", undefined, "progress-label");
+    label.append(element("span", model, "progress-model"), element("span", RUN_STATUS[run.status] ?? run.status, "progress-state"));
+    row.append(label, bar, element("span", `${run.processedCalls}/${run.plannedCalls} 호출`, "number progress-count"));
+    panel.append(row);
   }
 }
 
@@ -153,6 +257,7 @@ function render() {
   $("#cf-tokens").hidden = state.page !== "tokens";
   root.querySelectorAll("[data-page]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.page === state.page)));
   root.querySelectorAll("[data-stage]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.stage === state.stage)));
+  renderProgress();
   renderOverview();
   renderTokens();
   const cases = state.dataset?.cases ?? [];
@@ -160,7 +265,7 @@ function render() {
   $("#site-count").textContent = `사이트 ${new Set(cases.map((c) => c.siteId)).size}개`;
   const active = state.runs.find(({ run }) => ["QUEUED", "RUNNING"].includes(run.status))?.run;
   const waiting = state.runs.filter(({ run }) => run.status === "WAITING").length;
-  const STATUS = { WAITING: "차례 대기", QUEUED: "대기 중", RUNNING: "실행 중", COMPLETED: "완료", PARTIAL: "일부 완료", FAILED: "실패", CANCELLED: "취소됨" };
+  const STATUS = RUN_STATUS;
   const last = state.runs[0]?.run;
   $("#cf-status").textContent = active
     ? `${STATUS[active.status]} · ${modelKey(active)} · ${active.processedCalls}/${active.plannedCalls} 호출 처리${waiting ? ` · 다음 모델 ${waiting}개 차례 대기` : ""} (자동 갱신 중)`
