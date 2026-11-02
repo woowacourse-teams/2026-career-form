@@ -29,14 +29,14 @@
         <p class="run-status" aria-live="polite" id="cf-status"></p>
         <div class="filters">
           <div class="models" id="models" aria-label="비교할 모델"></div>
-          <div class="compare"><label><span class="muted">비교</span><select id="comparison" aria-label="비교할 실행 묶음"></select></label><span class="muted comparison-detail" id="comparison-detail"></span></div>
+          <label><span class="muted">비교</span><select id="comparison" aria-label="비교할 실행 묶음"></select></label><span class="muted comparison-detail" id="comparison-detail"></span>
         </div>
         <div class="context">
           <a href="#cf-source" data-source="데이터셋">데이터셋</a>
           <a href="#cf-source" data-source="정답 기준">정답 기준</a>
           <a href="#cf-source" data-source="프롬프트">프롬프트</a>
           <a href="/evaluations/collection-skill.md" download="career-form-collection-skill.md">수집 지침 내려받기</a>
-          <span class="context-meta"><span id="profile-count">프로필 0개</span><span id="site-count">사이트 0개</span></span>
+          <span id="profile-count">프로필 0개</span><span id="site-count">사이트 0개</span>
         </div>
         <section id="cf-progress" class="progress-panel" aria-label="모델별 분석 진행" hidden></section>
         <nav class="page-nav" aria-label="평가 화면"><button type="button" data-page="overview" aria-pressed="true">품질 · 성능</button><button type="button" data-page="tokens" aria-pressed="false">토큰 사용량</button></nav>
