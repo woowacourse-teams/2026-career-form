@@ -324,3 +324,12 @@ html,body{margin:0;background:#eae9e5}body{min-width:320px}
 #cf-eval-preview .cost-badge.cheapest{color:#2f6a4f;background:#dcebe2}
 #cf-eval-preview .cost-detail{grid-column:2/-1;font-size:12px}
 @media(max-width:720px){#cf-eval-preview .cost-row{grid-template-columns:1fr auto}#cf-eval-preview .cost-track{grid-column:1/-1;grid-row:2}#cf-eval-preview .cost-detail{grid-column:1/-1}}
+#cf-eval-preview .heading .secondary-action{margin-left:auto;background:#f5f4f0;color:#3e5874;border:1px solid #c3cdc7}
+#cf-eval-preview .heading .secondary-action+.run-action{margin-left:8px}
+#cf-eval-preview .provider-admin section{margin-bottom:22px}
+#cf-eval-preview .provider-admin h4{margin:0 0 10px;font-size:14px;font-weight:600}
+#cf-eval-preview .provider-key{font-size:13px;font-variant-numeric:tabular-nums;padding:3px 0}
+#cf-eval-preview .provider-row{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:10px 0;border-top:1px solid #d4d6d3}
+#cf-eval-preview .provider-row.disabled{opacity:.6}
+#cf-eval-preview .provider-info{display:flex;flex-direction:column;gap:2px;min-width:0;overflow-wrap:anywhere}
+#cf-eval-preview .provider-actions{display:flex;gap:8px;flex-shrink:0}

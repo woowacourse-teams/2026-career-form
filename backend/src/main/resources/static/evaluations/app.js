@@ -33,9 +33,17 @@ async function api(path, method = "GET", payload) {
       UNKNOWN_DATASET: "검토를 마친 데이터셋이 아닙니다. 데이터셋의 검토 상태를 확인해 주세요.",
       INVALID_REPETITIONS: "반복 수는 1 이상 20 이하입니다.",
       INVALID_PROMPT_VERSION: "프롬프트 이름은 영문·숫자·.-_ 32자 이하입니다.",
-      UNKNOWN_PROVIDER: "이 서버에 연결되지 않은 공급자입니다.",
+      UNKNOWN_PROVIDER: "이 서버에 연결되지 않았거나 등록되지 않은 공급자입니다.",
       UNKNOWN_MODEL: "이 공급자가 허용하지 않은 모델입니다.",
       INVALID_TARGETS: "모델은 1~5개를 중복 없이 골라 주세요.",
+      INVALID: "입력값을 확인해 주세요. 이름은 영문 소문자·숫자·-(2~32자), 모델은 1~10개, 시간 제한은 1,000~120,000ms입니다.",
+      RESERVED_NAME: "jev, openai는 서버 설정 공급자 이름이라 쓸 수 없습니다.",
+      UNKNOWN_KEY: "서버에 없는 키 이름입니다.",
+      INVALID_URL: "기준 주소 형식이 올바르지 않습니다. 사용자 정보·질의·조각 없이 https 주소(호스트와 경로)로 넣어 주세요.",
+      INSECURE_URL: "https 주소만 쓸 수 있습니다. 로컬 자체 서빙은 서버에서 allow-local을 켜고 키 없이 등록해야 합니다.",
+      HOST_NOT_ALLOWED_FOR_KEY: "이 키는 고른 주소의 호스트로 보낼 수 없습니다. 키에 허용된 호스트를 확인해 주세요.",
+      UNRESOLVABLE_HOST: "주소의 호스트를 찾을 수 없습니다.",
+      INTERNAL_ADDRESS: "내부망·사설 주소로는 보낼 수 없습니다.",
     };
     throw new Error(reasons[body?.code] ?? (response.status === 404 ? "평가 기능이 꺼져 있거나 대상이 없습니다." : "지금 처리할 수 없습니다."));
   }
@@ -515,6 +523,104 @@ function openPricing() {
   dialog("모델 단가 설정", form, "pricing-dialog");
 }
 
+const FORMATS = { JSON_OBJECT: "json_object (대부분의 호환 서버)", JSON_SCHEMA: "json_schema 엄격 스키마 (OpenAI 등)" };
+
+/**
+ * OpenAI 호환 평가 공급자 등록·수정·비활성화. 키 원문은 받지 않고 서버 키 묶음의 이름만 고른다. 저장하면 바로 평가
+ * 실행의 모델 목록에 나온다.
+ */
+async function openProviders(editing) {
+  let data;
+  try { data = await api("/provider-registrations"); } catch (error) { $("#cf-status").textContent = error.message; return; }
+  const wrap = element("div", undefined, "provider-admin");
+  const keys = element("section", undefined, "provider-keys");
+  keys.append(element("h4", "서버 키"));
+  if (!data.keys.length) keys.append(element("p", "서버에 등록된 키가 없습니다. 키가 필요한 공급자는 CAREER_FORM_EVALUATION_PROVIDER_KEYS에 이름·키·허용 호스트를 넣고 서버를 다시 배포해야 합니다.", "muted"));
+  data.keys.forEach((key) => keys.append(element("div", `${key.name} → ${key.hosts.join(", ")}`, "provider-key")));
+  keys.append(element("p", "키 원문은 이 화면에 입력하지 않습니다. 키는 허용 호스트로만 보내집니다.", "muted"));
+  const list = element("section", undefined, "provider-list");
+  list.append(element("h4", "등록한 공급자"));
+  if (!data.registrations.length) list.append(element("p", "아직 등록한 공급자가 없습니다.", "muted"));
+  for (const item of data.registrations) {
+    const row = element("div", undefined, `provider-row${item.enabled ? "" : " disabled"}`);
+    const info = element("div", undefined, "provider-info");
+    info.append(element("strong", `${item.name}${item.enabled ? "" : " (꺼짐)"}`),
+      element("span", item.baseUrl, "muted"),
+      element("span", `모델 ${item.models.join(", ")} · 키 ${item.keyName ?? "없음"} · ${item.format === "JSON_SCHEMA" ? "json_schema" : "json_object"} · 확신도 ${item.minConfidence}`, "muted"));
+    const actions = element("div", undefined, "provider-actions");
+    const edit = element("button", "수정", "pricing-trigger");
+    edit.type = "button";
+    edit.addEventListener("click", () => openProviders(item));
+    actions.append(edit);
+    if (item.enabled) {
+      const off = element("button", "끄기", "pricing-trigger");
+      off.type = "button";
+      off.addEventListener("click", async () => {
+        try { await api(`/provider-registrations/${encodeURIComponent(item.name)}/disable`, "POST"); await openProviders(); }
+        catch (error) { message.textContent = error.message; }
+      });
+      actions.append(off);
+    }
+    row.append(info, actions);
+    list.append(row);
+  }
+  const form = element("form", undefined, "criteria-list run-form");
+  const field = (label, input, hint) => {
+    const box = element("label", undefined, "field");
+    box.append(element("span", label), input, element("span", hint, "hint"));
+    return box;
+  };
+  const text = (value, attrs = {}) => Object.assign(element("input"), { type: "text", value: value ?? "", ...attrs });
+  const name = text(editing?.name, { maxLength: 32, placeholder: "deepseek", readOnly: Boolean(editing) });
+  const baseUrl = text(editing?.baseUrl, { maxLength: 300, placeholder: "https 주소, 예: api.deepseek.com/v1" });
+  const keyName = element("select");
+  keyName.append(Object.assign(element("option", "키 없음 (자체 서빙)"), { value: "" }));
+  data.keys.forEach((key) => keyName.append(Object.assign(element("option", key.name), { value: key.name })));
+  keyName.value = editing?.keyName ?? "";
+  const models = text(editing?.models?.join(", "), { placeholder: "deepseek-chat, deepseek-reasoner" });
+  const format = element("select");
+  Object.entries(FORMATS).forEach(([value, label]) => format.append(Object.assign(element("option", label), { value })));
+  format.value = editing?.format ?? "JSON_OBJECT";
+  const reasoning = text(editing?.reasoningEffort, { maxLength: 16, placeholder: "비워 두면 보내지 않음" });
+  const timeout = Object.assign(element("input"), { type: "number", min: "1000", max: "120000", step: "1000", value: String(editing?.timeoutMs ?? 30000) });
+  const confidence = Object.assign(element("input"), { type: "number", min: "0", max: "1", step: "0.05", value: String(editing?.minConfidence ?? 0.8) });
+  const message = element("p", "저장하면 바로 평가 실행의 모델 목록에 나옵니다. 주소·설정을 바꾸면 이미 대기 중인 실행은 실행하지 않고 실패로 끝납니다.", "muted");
+  const submit = element("button", editing ? "수정 저장" : "등록", "apply-pricing");
+  submit.type = "submit";
+  form.append(element("h4", editing ? `${editing.name} 수정` : "새 공급자"),
+    field("이름", name, "결과에 남는 공급자 이름. 영문 소문자·숫자·-"),
+    field("기준 주소", baseUrl, "끝에 /chat/completions를 붙여 보냅니다. https만 가능"),
+    field("키", keyName, "서버 키 묶음에서 고릅니다"),
+    field("모델", models, "쉼표로 구분, 첫 모델이 기본값"),
+    field("응답 형식", format, "엄격 스키마를 지원하지 않는 서버는 json_object"),
+    field("추론 옵션", reasoning, "reasoning_effort 값. 지원하는 서버만"),
+    field("시간 제한(ms)", timeout, "호출 한 번의 최대 대기"),
+    field("확신도 기준", confidence, "버튼·선택지 결정에 쓰는 최소 확신도(0~1)"),
+    message, submit);
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    submit.disabled = true;
+    try {
+      await api("/provider-registrations", "POST", {
+        name: name.value.trim(), baseUrl: baseUrl.value.trim(), keyName: keyName.value || null,
+        models: models.value.split(",").map((value) => value.trim()).filter(Boolean),
+        format: format.value, reasoningEffort: reasoning.value.trim() || null,
+        timeoutMs: Number(timeout.value), minConfidence: Number(confidence.value),
+      });
+      $("#cf-status").textContent = `공급자 ${name.value.trim()}을(를) 저장했습니다.`;
+      await openProviders();
+    } catch (error) { message.textContent = error.message; } finally { submit.disabled = false; }
+  });
+  if (editing) {
+    const cancel = element("button", "새로 등록하기", "pricing-trigger");
+    cancel.type = "button";
+    cancel.addEventListener("click", () => openProviders());
+    form.append(cancel);
+  }
+  wrap.append(keys, list, form);
+  dialog("공급자 관리", wrap, "criteria-dialog");
+}
+
 async function openRun() {
   let providers = [];
   try { providers = await api("/providers"); } catch (error) { $("#cf-status").textContent = error.message; return; }
@@ -596,6 +702,7 @@ root.querySelectorAll("[data-stage]").forEach((b) => b.addEventListener("click",
 $("#comparison").addEventListener("change", (e) => { state.group = e.target.value; state.selected = []; renderFilters(); render(); });
 $("#cf-source-close").addEventListener("click", () => $("#cf-source").close());
 $("#run-open").addEventListener("click", openRun);
+$("#provider-open").addEventListener("click", () => openProviders());
 $("#refresh").addEventListener("click", load);
 document.getElementById("logout").addEventListener("click", () => { clearAccess(); location.reload(); });
 root.querySelectorAll("[data-source]").forEach((link) => link.addEventListener("click", async (event) => {
