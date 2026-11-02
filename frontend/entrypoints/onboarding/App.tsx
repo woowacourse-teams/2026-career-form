@@ -10,6 +10,7 @@ import {
 } from "../../src/job-postings/push-client";
 import { SiteApp } from "../../site/SiteApp";
 import { SiteUrlContext } from "../../site/site-navigation";
+import styles from "./App.module.css";
 
 export function extensionSiteUrl(path: string): string {
   if (path.startsWith("/demo/"))
@@ -53,16 +54,18 @@ export function App({
           }}
         />
       ) : (
-        <SiteApp
-          path={path}
-          installed
-          profileHref="/options.html"
-          postingsHref="/options.html#postings/new"
-          pushClient={pushClient}
-          track={track}
-          onStartAutofill={() => setQuickStart(true)}
-          surface="extension_onboarding"
-        />
+        <div className={styles.shell}>
+          <SiteApp
+            path={path}
+            installed
+            profileHref="/options.html"
+            postingsHref="/options.html#postings/new"
+            pushClient={pushClient}
+            track={track}
+            onStartAutofill={() => setQuickStart(true)}
+            surface="extension_onboarding"
+          />
+        </div>
       )}
     </SiteUrlContext>
   );

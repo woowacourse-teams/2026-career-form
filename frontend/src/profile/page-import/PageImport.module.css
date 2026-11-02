@@ -29,8 +29,8 @@
 }
 .empty {
   padding: 24px 14px;
-  border: 1px dashed var(--color-border-strong);
   border-radius: 12px;
+  background: var(--color-surface);
   text-align: center;
 }
 .error {
@@ -44,8 +44,8 @@
 }
 .skipped {
   padding: 10px 14px;
-  border: 1px dashed var(--color-border-strong);
   border-radius: 12px;
+  background: var(--color-surface);
   color: var(--color-text-muted);
   font-size: 12.5px;
 }
@@ -82,7 +82,7 @@
   width: 100%;
   min-height: 50px;
   padding: 12px 16px;
-  border: 2px solid var(--color-border-strong);
+  border: 2px solid var(--color-brand);
   border-radius: 12px;
   color: var(--color-on-brand);
   background: var(--color-brand);

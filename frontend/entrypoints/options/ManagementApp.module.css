@@ -50,8 +50,8 @@
   cursor: pointer;
 }
 .navigation button[aria-current="page"] {
-  background: var(--color-brand);
-  color: var(--color-on-brand);
+  background: var(--color-accent-hover);
+  color: var(--color-text-strong);
   font-weight: 700;
 }
 .navigation button:hover {

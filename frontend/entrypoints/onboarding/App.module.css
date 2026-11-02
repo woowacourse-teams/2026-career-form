@@ -1,0 +1,33 @@
+/*
+ * Extension-onboarding-only restyle of the shared site start screen (#383).
+ * The public site renders the same components, so nothing here edits
+ * site/Site.module.css; the rules are scoped by this wrapper and reach the
+ * site's hashed class names through attribute selectors.
+ */
+.shell {
+  min-height: 100vh;
+  background: var(--color-page);
+}
+.shell [class*="choiceGrid"] {
+  gap: 18px;
+}
+.shell [class*="choiceCard"] {
+  border: 0;
+  border-radius: 18px;
+  background: var(--color-surface);
+}
+/* Notification card: same white surface as the choice cards, no outline. */
+.shell [class*="onboardingCard"] {
+  padding: 26px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--color-surface);
+}
+.shell [class*="onboardingCard"] [class*="actions"] {
+  margin-top: 16px;
+}
+/* Only the first choice keeps the filled primary button. */
+.shell [class*="choiceCard"]:nth-child(2) [class*="choiceAction"] {
+  background: var(--color-accent-soft);
+  color: var(--color-action-strong);
+}

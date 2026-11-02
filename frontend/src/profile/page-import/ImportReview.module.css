@@ -32,10 +32,10 @@
   gap: 12px;
   min-width: 0;
   padding: 16px;
-  border: 1px solid var(--color-border-strong);
-  border-radius: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
   background: var(--color-surface);
-  box-shadow: 0 8px 24px rgb(57 41 29 / 12%);
+  box-shadow: var(--shadow-card);
   animation: rise 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 @keyframes rise {
@@ -106,15 +106,15 @@
   overflow-wrap: anywhere;
   cursor: pointer;
 }
+/* Card answers are neutral fills; only the pinned save button stays filled. */
 .primaryButton {
-  border: 2px solid var(--color-border-strong);
-  color: var(--color-on-brand);
-  background: var(--color-brand);
+  border: 0;
+  color: var(--color-action-strong);
+  background: rgb(118 118 128 / 12%);
   font-weight: 750;
 }
 .primaryButton:hover:not(:disabled) {
-  border-color: var(--color-brand-hover);
-  background: var(--color-brand-hover);
+  background: rgb(118 118 128 / 20%);
 }
 .primaryButton small {
   color: var(--color-text-muted);
@@ -122,13 +122,13 @@
   font-weight: 600;
 }
 .secondaryButton {
-  border: 1px solid var(--color-accent);
-  color: var(--color-action-strong);
-  background: var(--color-accent-soft);
-  font-weight: 650;
+  border: 0;
+  color: var(--color-text-strong);
+  background: rgb(118 118 128 / 12%);
+  font-weight: 600;
 }
 .secondaryButton:hover:not(:disabled) {
-  background: var(--color-accent-hover);
+  background: rgb(118 118 128 / 20%);
 }
 .plainButton {
   grid-column: 1 / -1;
@@ -303,13 +303,8 @@
   display: grid;
   gap: 10px;
   padding: 16px;
-  border: 1px solid var(--color-border);
-  border-radius: 16px;
-  background: linear-gradient(
-    160deg,
-    var(--color-surface-muted),
-    var(--color-brand)
-  );
+  border-radius: 12px;
+  background: var(--color-surface);
 }
 .summaryLabel,
 .summaryCount,
@@ -442,7 +437,7 @@
 }
 .tag {
   color: var(--color-action-strong);
-  background: var(--color-brand);
+  background: var(--color-accent-soft);
 }
 .tagWarn {
   color: var(--color-warning);
@@ -475,7 +470,7 @@
   height: 20px;
   border-radius: 50%;
   background: var(--color-surface);
-  box-shadow: 0 1px 3px rgb(57 41 29 / 25%);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 20%);
   transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .switch[aria-checked="true"] {
@@ -528,7 +523,7 @@
 }
 .modeExisting {
   color: var(--color-action-strong);
-  background: var(--color-brand);
+  background: var(--color-accent-soft);
 }
 .modePending {
   color: var(--color-warning);

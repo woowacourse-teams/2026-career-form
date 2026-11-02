@@ -167,7 +167,10 @@ export function VisibilityCheck({
   if (variant === "onboarding") {
     const off = disabledHere || (state !== undefined && !state.enabled);
     return (
-      <section className={styles.card} aria-label="새 공고 알림">
+      <section
+        className={`${styles.card} ${styles.onboardingCard}`}
+        aria-label="새 공고 알림"
+      >
         <span className={styles.eyebrow}>새 공고 알림</span>
         <h3>새 공고 알림이 켜져 있어요</h3>
         <p>

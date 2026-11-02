@@ -101,18 +101,6 @@ export function NoticeBoard({
   const hidden = (postings?.length ?? 0) - (visible?.length ?? 0);
   return (
     <>
-      {card && (
-        <VisibilityCheck
-          variant={card}
-          state={state}
-          busy={busy}
-          onTest={onTest}
-          onAnswer={onAnswer}
-          onLater={onLater}
-          track={track}
-          surface="options"
-        />
-      )}
       <section className={styles.inbox} aria-labelledby={`${id}-inbox`}>
         <div className={styles.sectionHeading}>
           <h2 id={`${id}-inbox`}>공지함</h2>
@@ -222,6 +210,18 @@ export function NoticeBoard({
           </div>
         )}
       </section>
+      {card && (
+        <VisibilityCheck
+          variant={card}
+          state={state}
+          busy={busy}
+          onTest={onTest}
+          onAnswer={onAnswer}
+          onLater={onLater}
+          track={track}
+          surface="options"
+        />
+      )}
     </>
   );
 }

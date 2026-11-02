@@ -148,15 +148,6 @@ export function App({
     <div className={styles.page}>
       <header className={styles.header}>
         <div>
-          <p className={styles.eyebrow}>
-            <img
-              className={styles.brandMark}
-              src="/side-panel-launcher-logo.png"
-              alt=""
-            />
-            CAREER FORM <span className={styles.brandDivider}>/</span>
-            <span className={styles.brandSection}>MY PROFILE</span>
-          </p>
           <h1>프로필 관리</h1>
           <p className={styles.description}>
             한 번 정리해 두면, 다음 지원이 더 가벼워져요.

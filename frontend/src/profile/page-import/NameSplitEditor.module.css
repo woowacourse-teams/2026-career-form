@@ -77,7 +77,7 @@
 }
 .family {
   color: var(--color-text-strong);
-  background: var(--color-brand);
+  background: var(--color-accent-hover);
 }
 .given {
   color: var(--color-text);
@@ -186,18 +186,17 @@
   width: 100%;
   min-height: 46px;
   padding: 10px 14px;
-  border: 2px solid var(--color-border-strong);
+  border: 0;
   border-radius: 12px;
-  color: var(--color-on-brand);
-  background: var(--color-brand);
+  color: var(--color-action-strong);
+  background: rgb(118 118 128 / 12%);
   font: inherit;
   font-size: 14.5px;
   font-weight: 750;
   cursor: pointer;
 }
 .confirm:hover:not(:disabled) {
-  border-color: var(--color-brand-hover);
-  background: var(--color-brand-hover);
+  background: rgb(118 118 128 / 20%);
 }
 .confirm:disabled {
   opacity: 0.55;
