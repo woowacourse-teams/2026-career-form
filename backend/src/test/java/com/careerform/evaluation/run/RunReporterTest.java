@@ -48,15 +48,18 @@ class RunReporterTest {
     }
 
     @Test
-    @DisplayName("앞 단계 판정은 칸 매핑을 뺀 호출(섹션 분류·선택 결정)의 항목만 더한다")
-    void reportsUpstreamItems() {
+    @DisplayName("항목 판정을 단계/호출 종류별로 나눠 더한다")
+    void reportsItemsByCall() {
         EvaluationRun run = run(AT.minusSeconds(10), AT, AT.plusSeconds(4));
         CallResultRecord sections = new CallResultRecord("run-1", 1, "a", 1, CallKind.SECTION_CLASSIFY,
             CallKind.Stage.PREPARATION, null, new CallScore(2, 1, 0, 1, 0), Map.of(), 100 * MS, List.of(), AT);
+        CallResultRecord again = new CallResultRecord("run-1", 2, "a", 1, CallKind.SECTION_CLASSIFY,
+            CallKind.Stage.PREPARATION, null, new CallScore(3, 0, 1, 0, 0), Map.of(), 100 * MS, List.of(), AT);
         CallResultRecord fields = record(1, "a", 2, CallKind.Stage.MAPPING, new CallScore(5, 3, 2, 0, 0), 100, List.of());
 
-        assertThat(new RunReporter().report(run, List.of(sections, fields)).upstream())
-            .isEqualTo(new com.careerform.evaluation.scoring.ItemCounts(2, 1, 0, 1, 0));
+        assertThat(new RunReporter().report(run, List.of(sections, again, fields)).itemsByCall()).containsExactly(
+            Map.entry("PREPARATION/SECTION_CLASSIFY", new com.careerform.evaluation.scoring.ItemCounts(5, 1, 1, 1, 0)),
+            Map.entry("MAPPING/GENERIC_FIELDS", new com.careerform.evaluation.scoring.ItemCounts(5, 3, 2, 0, 0)));
     }
 
     @Test

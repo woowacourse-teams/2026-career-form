@@ -8,7 +8,7 @@ const COLORS = ["#4e6d90", "#688b7c", "#ac8d68", "#8a6f9e", "#6f8f9e"];
 const PRICE_KEY = "cf-evaluation-model-prices-v1";
 const root = document.getElementById("cf-eval-preview");
 const $ = (selector) => root.querySelector(selector);
-const state = { runs: [], dataset: null, models: [], selected: [], group: null, stage: "total", page: "overview", diagnosisOpen: false,
+const state = { runs: [], dataset: null, models: [], selected: [], group: null, stage: "total", page: "overview",
   fields: {}, baseline: "", fieldFilter: "diff", fieldScreen: "all", openField: null, itemKind: "GENERIC_FIELDS" };
 let prices = {};
 try { prices = JSON.parse(localStorage.getItem(PRICE_KEY) || "{}") ?? {}; } catch { prices = {}; }
@@ -135,11 +135,7 @@ const color = (model) => COLORS[state.models.indexOf(model) % COLORS.length];
 const report = (model) => latest(model)?.report;
 
 function renderOverview() {
-  const quality = $("#cf-quality");
-  quality.replaceChildren(
-    scoreCard(),
-    renderAutofill(),
-    diagnosis());
+  renderQuality();
   const total = state.stage === "total";
   const perf = (m) => report(m)?.performance[stageKey()];
   const seconds = (m) => {
@@ -497,54 +493,89 @@ const ITEM_KINDS = [
  * 모델별 항목 판정 수(quality.items)를 정답·오답·누락·불필요 제안으로 나눈 100% 막대로 그린다. 정확도가 같아도
  * 다른 항목을 고른 오답(잘못 기입)과 판단 보류(직접 입력)는 위험이 달라 따로 보인다.
  */
-/**
- * 진단 구역. 확신도와 무관하게 모델 답 그대로 채점해 어느 단계에서 틀리는지 본다. 기본으로 접어 두고, 다시 그려도
- * 펼친 상태를 유지한다.
- */
-function diagnosis() {
-  const box = element("details", undefined, "diagnosis");
-  box.open = state.diagnosisOpen === true;
-  box.addEventListener("toggle", () => { state.diagnosisOpen = box.open; });
-  const summary = element("summary");
-  summary.append(element("strong", "진단"), element("span", "모델 답 그대로 채점 · 어느 단계에서 틀리는지", "muted"));
-  const percentCell = (value) => value == null ? "—" : `${(value * 100).toFixed(1)}%`;
-  box.append(summary,
-    diagnosisTable("단계별 정확도", "모델 답 그대로 맞힌 비율", ["전체 항목", "준비", "필드 매핑"], (model) => {
-      const quality = report(model)?.quality;
-      return [percentCell(quality?.accuracy), percentCell(quality?.preparationAccuracy), percentCell(quality?.mappingAccuracy)];
-    }),
-    diagnosisTable("항목 판정", "실행 전체 · 항목 수", [...ITEM_KINDS.map(({ label }) => label.split("(")[0]), "채점 항목"], (model) => {
-      const items = report(model)?.quality.items;
-      if (!items) return ITEM_KINDS.map(() => "—").concat("—");
-      const counts = ITEM_KINDS.map(({ key }) => items[key] ?? 0);
-      return [...counts.map(String), String(counts.reduce((sum, value) => sum + value, 0))];
-    }, ITEM_KINDS.map(({ className }) => className)),
-    element("p", "공급자를 쓸 수 없어 답하지 못한 항목은 채점에서 뺍니다. 오답·불필요 제안은 틀린 값이 들어갈 위험, 누락은 직접 입력할 칸입니다.", "muted metric-foot"));
-  return box;
+// 평가 단계. 자동기입 흐름의 준비(섹션 분류 → 학력 구분 선택)와 매핑(섹션 분류 → 칸 매핑)에 맞춰 품질·성능을 함께 나눠 본다.
+const STAGE_NOTES = {
+  total: "자동기입 버튼 1번 전체 · 대표 지표는 자동기입 점수(칸 매핑 기준)",
+  prepare: "칸을 꺼내는 단계 · 섹션 분류 → 학력 구분 선택 · 모델 답 그대로 채점",
+  mapping: "칸에 값을 정하는 단계 · 섹션 분류 → 칸 매핑",
+};
+const CALL_LABELS = { "PREPARATION/SECTION_CLASSIFY": "섹션 분류", "PREPARATION/INTERACTION_DECISION": "학력 구분 선택",
+  "MAPPING/SECTION_CLASSIFY": "섹션 분류", "MAPPING/GENERIC_FIELDS": "칸 매핑" };
+
+/** 고른 호출 종류들의 항목 판정 합. 없으면 null이다. */
+function itemsOf(model, keys) {
+  const byCall = report(model)?.itemsByCall;
+  if (!byCall) return null;
+  const found = keys.map((key) => byCall[key]).filter(Boolean);
+  if (!found.length) return null;
+  return Object.fromEntries(ITEM_KINDS.map(({ key }) => [key, found.reduce((sum, items) => sum + (items[key] ?? 0), 0)]));
+}
+const scoredOf = (items) => items ? ITEM_KINDS.reduce((sum, { key }) => sum + items[key], 0) : 0;
+const accuracyOf = (items) => scoredOf(items) ? items.correct / scoredOf(items) : null;
+
+function renderQuality() {
+  const quality = $("#cf-quality");
+  if (state.stage === "prepare") {
+    quality.replaceChildren(stageAccuracyCard("준비 정확도", ["PREPARATION/SECTION_CLASSIFY", "PREPARATION/INTERACTION_DECISION"],
+      richNote(["섹션 분류"], " 조작할 섹션을 고르는 질문 · ", ["학력 구분 선택"], " 학력 행마다 고를 선택지를 정하는 질문 · 확신도와 무관하게 모델 답 그대로 채점")));
+  }
+  else if (state.stage === "mapping") {
+    quality.replaceChildren(scoreCard(), renderAutofill(),
+      stageAccuracyCard("섹션 분류 정확도", ["MAPPING/SECTION_CLASSIFY"],
+        richNote(["섹션 분류"], " 화면의 섹션마다 범주(기본정보·학력·해당 없음 …)를 정하는 질문 · 모델 답 그대로 채점")));
+  }
+  else quality.replaceChildren(scoreCard(), renderAutofill(), stageSummary());
 }
 
-/** 진단 표 하나. 행은 모델, 열은 지표다. {@code marks}를 주면 열 머리에 판정 색 점을 붙인다. */
-function diagnosisTable(title, note, columns, values, marks = []) {
-  const wrap = element("div", undefined, "diagnosis-block");
+/**
+ * 단계 정확도 카드. 막대는 맞힌 항목 비율, 아래는 판정 수, 호출 종류가 둘 이상이면 종류별 정확도를 붙인다.
+ * 평가는 다음 요청을 정답으로 만들므로 여기 오답은 자동기입 점수에 반영되지 않는다.
+ */
+function stageAccuracyCard(title, keys, foot) {
+  const card = bars(title, "모델 답 그대로 · 높을수록 좋음", (m) => percent(accuracyOf(itemsOf(m, keys))), 100, (v) => `${v.toFixed(1)}%`);
+  card.querySelectorAll(".bar-row").forEach((row, index) => {
+    const model = state.selected[index];
+    const items = itemsOf(model, keys);
+    if (!items) {
+      row.after(element("span", "결과 없음", "range-note"));
+      return;
+    }
+    const notes = [countLine(ITEM_KINDS, items, scoredOf(items), "개")];
+    if (keys.length > 1) {
+      const kinds = element("span", undefined, "range-note stat-line");
+      keys.forEach((key) => {
+        const value = accuracyOf(itemsOf(model, [key]));
+        kinds.append(stat(CALL_LABELS[key], value == null ? "—" : shortPercent(value)));
+      });
+      notes.push(kinds);
+    }
+    row.after(...notes);
+  });
+  card.append(foot);
+  return card;
+}
+
+/** 전체 흐름의 단계 요약: 모델마다 준비·섹션 분류·칸 매핑 정확도를 한 줄로. 자세한 건 준비·매핑 탭에서 본다. */
+function stageSummary() {
+  const card = element("div", undefined, "metric");
   const head = element("div", undefined, "metric-head");
-  head.append(element("h3", title), element("span", note, "muted"));
-  const table = element("table", undefined, "stage-table");
-  const headRow = element("tr");
-  headRow.append(element("th", "모델"));
-  columns.forEach((text, index) => headRow.append(element("th", text, marks[index] ? `count ${marks[index]}` : undefined)));
-  const thead = element("thead");
-  thead.append(headRow);
-  const body = element("tbody");
+  head.append(element("h3", "단계별 정확도"), element("span", "모델 답 그대로 · 자세히는 준비·매핑 탭", "muted"));
+  card.append(head);
   for (const model of state.selected) {
-    const row = element("tr");
-    const name = element("td", model, "stage-model");
+    const row = element("div", undefined, "summary-row");
+    const name = element("span", model, "stage-model");
     name.style.setProperty("--model", color(model));
-    row.append(name, ...values(model).map((value) => element("td", value)));
-    body.append(row);
+    const line = element("span", undefined, "stat-line");
+    [["준비", ["PREPARATION/SECTION_CLASSIFY", "PREPARATION/INTERACTION_DECISION"], "섹션 분류 + 학력 구분 선택"],
+      ["섹션 분류", ["MAPPING/SECTION_CLASSIFY"], "필드 단계에서 섹션마다 범주를 정한 정확도"],
+      ["칸 매핑", ["MAPPING/GENERIC_FIELDS"], "칸마다 고른 프로필 항목이 맞은 비율(확신도 무시)"]].forEach(([label, keys, help]) => {
+      const value = accuracyOf(itemsOf(model, keys));
+      line.append(stat(label, value == null ? "—" : shortPercent(value), help));
+    });
+    row.append(name, line);
+    card.append(row);
   }
-  table.append(thead, body);
-  wrap.append(head, table);
-  return wrap;
+  return card;
 }
 
 const OUTCOMES = {
@@ -887,6 +918,8 @@ function renderProgress() {
 
 function render() {
   $("#cf-overview").hidden = state.page !== "overview";
+  $("#cf-overview-stage").hidden = state.page !== "overview";
+  $("#cf-stage-note").textContent = STAGE_NOTES[state.stage];
   $("#cf-tokens").hidden = state.page !== "tokens";
   $("#cf-fields").hidden = state.page !== "fields";
   root.querySelectorAll("[data-page]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.page === state.page)));
@@ -1133,7 +1166,7 @@ function profileTable(profile) {
   return table;
 }
 
-/** 정답 기준 대화상자. 대표 점수(자동기입 점수)와 칸별 결과, 정답 기준, 진단 지표, 흔들림을 예시와 함께 보인다. */
+/** 정답 기준 대화상자. 대표 점수(자동기입 점수)와 칸별 결과, 정답 기준, 단계 정확도, 흔들림을 예시와 함께 보인다. */
 function criteriaView() {
   const wrap = element("div", undefined, "criteria-view");
   const formula = element("div", undefined, "criteria-formula");
@@ -1171,8 +1204,8 @@ function criteriaView() {
     element("p", "칸이 뜻하는 지원 프로필 항목이 정답. 지원자가 그 값을 가졌는지는 따지지 않습니다. 지원 프로필 항목에 없는 의미면 정답은 '넣을 항목 없음'."),
     table(["예시", "정답"], [["학교명 칸(대학교 행)", "education.university.schoolName"], ["자기소개서 칸", "넣을 항목 없음"],
       ["지원경로 섹션", "해당 없음(NONE)"]]));
-  card("3. 진단 지표",
-    element("p", "확신도와 무관하게 모델 답 그대로 채점합니다. 맞힌 항목 ÷ 채점한 항목이며 항목은 섹션 하나, 칸 하나, 버튼·선택지 결정 하나. 준비는 칸을 꺼내기 위한 질문(조작할 섹션 분류, 학력 구분 선택), 필드는 칸에 넣을 값을 정하는 질문(전체 섹션 분류, 칸 매핑)."),
+  card("3. 준비·매핑 탭의 단계 정확도",
+    element("p", "준비(섹션 분류·학력 구분 선택)와 매핑(섹션 분류)의 질문을 확신도와 무관하게 모델 답 그대로 채점합니다. 맞힌 항목 비율이며 항목은 섹션 하나, 칸 하나, 버튼·선택지 결정 하나. 준비는 칸을 꺼내기 위한 질문(조작할 섹션 분류, 학력 구분 선택), 필드는 칸에 넣을 값을 정하는 질문(전체 섹션 분류, 칸 매핑)."),
     table(["항목 판정", "뜻"], [["오답", "정답이 있는데 다른 항목을 고름"], ["누락(판단 보류)", "정답이 있는데 고르지 않음"],
       ["불필요 제안", "넣을 항목이 없는데 무언가를 고름"]]));
   card("4. 점수에서 빠지는 것",

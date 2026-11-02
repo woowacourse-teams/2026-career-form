@@ -46,8 +46,18 @@ public final class RunReporter {
         return new RunReport(aggregator.aggregate(records.stream().map(CallResultRecord::toCallResult).toList()),
             performance, tokens, flows(records), timing(run, records), RunService.SCORING_VERSION,
             repetitions(records, expected), autofill(records, expected).map(RunReport.Autofill::of).orElse(null),
-            aggregator.aggregate(records.stream().filter(record -> record.kind() != CallKind.GENERIC_FIELDS)
-                .map(CallResultRecord::toCallResult).toList()).items());
+            itemsByCall(records));
+    }
+
+    /** 채점한 호출의 항목 판정을 "단계/호출 종류"별로 더한다. 처음 나온 순서를 지킨다. */
+    private Map<String, com.careerform.evaluation.scoring.ItemCounts> itemsByCall(List<CallResultRecord> records) {
+        Map<String, List<CallResultRecord>> groups = new LinkedHashMap<>();
+        records.stream().filter(record -> record.score() != null).forEach(record ->
+            groups.computeIfAbsent(record.stage() + "/" + record.kind(), key -> new ArrayList<>()).add(record));
+        Map<String, com.careerform.evaluation.scoring.ItemCounts> items = new LinkedHashMap<>();
+        groups.forEach((key, group) -> items.put(key,
+            aggregator.aggregate(group.stream().map(CallResultRecord::toCallResult).toList()).items()));
+        return items;
     }
 
     private static java.util.Optional<AutofillOutcome> autofill(List<CallResultRecord> records,
