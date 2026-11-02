@@ -625,18 +625,20 @@
 #cf-eval-preview .count-line .item-missing::before{background:#d6ae52}
 #cf-eval-preview .count-line .item-wrong::before{background:#b5483d}
 #cf-eval-preview .count-line .item-unnecessary::before{background:#8f7ab5}
-#cf-eval-preview .count-line .count[title]{cursor:help}
+#cf-eval-preview .count-line .count[title]{cursor:default}
 #cf-eval-preview .count-line .count-total{margin-left:auto;color:#4a5560;font-variant-numeric:tabular-nums;white-space:nowrap}#cf-eval-preview .count-line .count-total b{color:#233447;font-weight:650}
 #cf-eval-preview .stat-line{display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px}
 #cf-eval-preview .stat{display:inline-flex;align-items:baseline;gap:5px;white-space:nowrap}
 #cf-eval-preview .stat-label{color:#7a838c;font-size:12px}
 #cf-eval-preview .stat b{color:#233447;font-weight:650;font-size:13px;font-variant-numeric:tabular-nums}
 #cf-eval-preview .rich-note b{color:#2a3440;font-weight:650}
-#cf-eval-preview .stat.has-help{cursor:help}
+#cf-eval-preview .stat.has-help{cursor:default}
 #cf-eval-preview .stat.has-help .stat-label{text-decoration:underline dotted #a7afb7;text-underline-offset:3px}
 #cf-eval-preview .comparison-detail{display:flex;flex-wrap:wrap;gap:2px 12px;align-items:baseline}
 #cf-eval-preview .comparison-detail .stat b{font-size:12.5px}
-#cf-eval-preview .help-tip{position:fixed;z-index:1000;max-width:280px;padding:8px 11px;border-radius:6px;background:#233447;color:#fff;font-size:12.5px;line-height:1.5;box-shadow:0 6px 18px rgba(20,30,40,.18);pointer-events:none}
+#cf-eval-preview .help-tip{position:fixed;z-index:1000;max-width:280px;padding:8px 11px;border-radius:6px;background:#233447;color:#fff;font-size:12.5px;line-height:1.5;box-shadow:0 6px 18px rgba(20,30,40,.18);pointer-events:none;opacity:0;visibility:hidden;transform:translateY(4px);transition:opacity .16s ease,transform .16s ease,visibility 0s linear .16s}
+#cf-eval-preview .help-tip.show{opacity:1;visibility:visible;transform:none;transition:opacity .16s ease,transform .16s ease,visibility 0s}
+@media(prefers-reduced-motion:reduce){#cf-eval-preview .help-tip,#cf-eval-preview .help-tip.show{transition:none;transform:none}}
 #cf-eval-preview .stat.has-help:focus-visible{outline:2px solid #475f78;outline-offset:2px;border-radius:3px}
 #cf-eval-preview .stage-table th.count{display:table-cell;white-space:nowrap}
 #cf-eval-preview .stage-table th.count::before{content:"";display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;vertical-align:0}

@@ -151,7 +151,9 @@ function renderOverview() {
   if (total) {
     timeCard.querySelectorAll(".bar-row").forEach((row, index) => {
       const time = report(state.selected[index])?.flows.time;
-      if (time?.p95Ms != null) row.after(element("span", `p95 ${(time.p95Ms / 1000).toFixed(2)}초 · 자동기입 ${time.count}번`, "range-note"));
+      const repetitions = latest(state.selected[index])?.run.repetitions;
+      const basis = repetitions && time?.count ? `측정 ${time.count}번(화면 ${time.count / repetitions}개 × 반복 ${repetitions}회)` : `측정 ${time?.count}번`;
+      if (time?.p95Ms != null) row.after(element("span", `p95 ${(time.p95Ms / 1000).toFixed(2)}초 · ${basis}`, "range-note"));
     });
   }
   if (!total) {
@@ -361,7 +363,7 @@ function countLine(kinds, counts, total, unit, titles = {}) {
   kinds.forEach(({ key, label, className }) => {
     const part = element("span", undefined, `count ${className}`);
     part.append(element("b", String(counts[key] ?? 0)), document.createTextNode(` ${label.split("(")[0]}`));
-    if (titles[key]) part.title = titles[key];
+    if (titles[key]) part.dataset.help = titles[key];
     line.append(part);
   });
   const sum = element("span", undefined, "count-total");
@@ -390,19 +392,19 @@ function stat(label, value, help) {
 
 // 설명 말풍선. 브라우저 기본 title은 늦게 뜨거나 안 뜨는 환경이 있어, data-help가 있는 요소에 마우스를 올리거나
 // 포커스하면 바로 띄운다. 화면 밖으로 나가지 않게 위치를 맞춘다.
-const helpTip = Object.assign(document.createElement("div"), { className: "help-tip", role: "tooltip", hidden: true });
+const helpTip = Object.assign(document.createElement("div"), { className: "help-tip", role: "tooltip" });
 root.append(helpTip);
 function showHelp(target) {
   helpTip.textContent = target.dataset.help;
-  helpTip.hidden = false;
   const box = target.getBoundingClientRect();
   const tip = helpTip.getBoundingClientRect();
   const left = Math.min(Math.max(8, box.left + box.width / 2 - tip.width / 2), innerWidth - tip.width - 8);
   const above = box.top - tip.height - 8;
   helpTip.style.left = `${left}px`;
   helpTip.style.top = `${above >= 8 ? above : box.bottom + 8}px`;
+  helpTip.classList.add("show");
 }
-const hideHelp = () => { helpTip.hidden = true; };
+const hideHelp = () => { helpTip.classList.remove("show"); };
 root.addEventListener("mouseover", (event) => {
   const target = event.target.closest?.("[data-help]");
   if (target) showHelp(target); else hideHelp();
