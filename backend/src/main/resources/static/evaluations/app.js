@@ -144,11 +144,11 @@ function renderOverview() {
     return value == null ? null : value / 1000;
   };
   const failure = (m) => percent(total ? report(m)?.flows.failureRate : perf(m)?.failureRate);
-  const timeCard = bars(total ? "자동기입 1번당 응답시간" : "API 1번당 응답시간",
-    total ? "API 3~4번 합 · 평균 · 낮을수록 좋음" : "평균 · 낮을수록 좋음", seconds,
+  const timeCard = bars(total ? "자동기입 시간" : "요청 처리 시간",
+    total ? "버튼 1번 · 평균 · 낮을수록 좋음" : "서버 요청 1개 · 평균 · 낮을수록 좋음", seconds,
     Math.max(1, ...state.selected.map((m) => seconds(m) ?? 0)), (v) => `${v.toFixed(2)}초`,
-    total ? "자동기입 버튼 1번(화면 하나)에 서버 API 3~4번을 처리한 시간의 합. 서버 처리·재시도 포함, 브라우저↔서버 네트워크와 화면 입력 시간 제외."
-      : "서버 API 1번을 처리한 시간. 안의 모델 호출·서버 처리·재시도 포함, 브라우저↔서버 네트워크 제외.");
+    total ? "자동기입 버튼 1번(화면 하나)에 서버 요청 3~4개(섹션 분류·학력 구분 선택·칸 매핑)를 끝내기까지. 화면 입력과 네트워크 왕복은 제외."
+      : "섹션 분류·칸 매핑 같은 서버 요청 하나를 끝내기까지. 안에서 AI에게 여러 번 물을 수 있고, 서버 처리·재시도가 포함됩니다.");
   if (total) {
     timeCard.querySelectorAll(".bar-row").forEach((row, index) => {
       const time = report(state.selected[index])?.flows.time;
@@ -158,43 +158,43 @@ function renderOverview() {
     });
   }
   if (!total) {
-    // API 1번 안에서 모델을 몇 번 불렀는지 보이면 모델 호출 1번당 시간과 이어서 읽을 수 있다.
+    // 요청 하나 안에서 AI에게 몇 번 물었는지 보이면 AI 응답 시간과 이어서 읽을 수 있다.
     timeCard.querySelectorAll(".bar-row").forEach((row, index) => {
       const stage = perf(state.selected[index]);
       if (stage?.calls && stage.modelAttempt?.count) row.after(element("span",
-        `API ${stage.calls}번 · 1번에 모델 호출 평균 ${(stage.modelAttempt.count / stage.calls).toFixed(1)}번`, "range-note"));
+        `요청 ${stage.calls}개 · 요청 1개에 AI 질문 평균 ${(stage.modelAttempt.count / stage.calls).toFixed(1)}번`, "range-note"));
     });
   }
-  // 전체 흐름은 자동기입 단위로 본다. 모델 호출 1번당 시간은 단계마다 섞이는 준비·매핑 탭에서만 보이고, 처리량은 실행 전체
+  // 전체 흐름은 자동기입 단위로 본다. AI 응답 시간은 단계마다 섞이는 준비·매핑 탭에서만 보이고, 처리량은 실행 전체
   // 경과 시간으로 나누므로 전체 흐름에서만 뜻이 있다.
   $("#cf-performance").replaceChildren(...(total ? [
     timeCard,
-    bars("처리량", "초당 끝낸 API 수 · 높을수록 좋음", (m) => perf(m)?.throughputPerSecond,
+    bars("처리량", "초당 끝낸 요청 수 · 높을수록 좋음", (m) => perf(m)?.throughputPerSecond,
       Math.max(0.1, ...state.selected.map((m) => perf(m)?.throughputPerSecond ?? 0)), (v) => `${v.toFixed(2)}/초`,
-      "실행 전체에서 끝낸 API 수 ÷ 실행 경과 시간. 평가는 API를 차례로 부르므로 API 1번당 응답시간이 짧을수록 높습니다."),
+      "실행 전체에서 끝낸 서버 요청 수 ÷ 실행 경과 시간. 평가는 요청을 차례로 보내므로 요청 처리 시간이 짧을수록 높습니다."),
     bars("자동기입 실패율", "낮을수록 좋음", failure, 100, (v) => `${v.toFixed(1)}%`,
-      "API가 하나라도 실패한 자동기입(화면 하나)의 비율"),
+      "서버 요청이 하나라도 실패한 자동기입(화면 하나)의 비율"),
   ] : [
     modelTimeCard(perf),
     timeCard,
-    bars("API 실패율", "낮을수록 좋음", failure, 100, (v) => `${v.toFixed(1)}%`,
-      "타임아웃 · API 오류 · 응답 형식 오류 · 채점 불가인 API의 비율"),
+    bars("요청 실패율", "낮을수록 좋음", failure, 100, (v) => `${v.toFixed(1)}%`,
+      "타임아웃 · API 오류 · 응답 형식 오류 · 채점 불가인 서버 요청의 비율"),
   ]));
 }
 
 /**
  * 모델 응답 시간: 서버가 모델 API에 요청을 보낸 직전부터 응답 전체를 받을 때까지, 시도 1건 평균. 네트워크와 공급자 대기가
- * 들어 있고 서버의 요청 만들기·해석·배치 대기는 빠진다. API 1번당 응답시간과 비교하면 서버 쪽 처리·대기를 가늠할 수 있다.
+ * 들어 있고 서버의 요청 만들기·해석·배치 대기는 빠진다. 요청 처리 시간과 비교하면 서버 쪽 처리·대기를 가늠할 수 있다.
  */
 function modelTimeCard(perf) {
   const attempt = (m) => perf(m)?.modelAttempt;
   const seconds = (m) => attempt(m)?.meanMs == null ? null : attempt(m).meanMs / 1000;
-  const card = bars("모델 호출 1번당 응답시간", "모델 비교 기준 · 평균 · 낮을수록 좋음", seconds, Math.max(1, ...state.selected.map((m) => seconds(m) ?? 0)),
-    (v) => `${v.toFixed(2)}초`, "모델 API를 1번 부를 때 보낸 직전부터 응답을 다 받을 때까지. 서버 API 1번 안에서 여러 번 부를 수 있습니다(칸 매핑은 칸 묶음마다). 모델 쪽 네트워크·대기 포함, 서버 처리 제외.");
+  const card = bars("AI 응답 시간", "AI 질문 1번 · 평균 · 낮을수록 좋음", seconds, Math.max(1, ...state.selected.map((m) => seconds(m) ?? 0)),
+    (v) => `${v.toFixed(2)}초`, "AI 모델에 질문 하나를 보내고 답을 다 받기까지. 모델끼리 속도를 비교하는 기준입니다. 서버 처리는 빠지고 공급자 쪽 대기는 포함됩니다.");
   card.querySelectorAll(".bar-row").forEach((row, index) => {
     const value = attempt(state.selected[index]);
     if (!value?.count) return;
-    row.after(element("span", `p95 ${(value.p95Ms / 1000).toFixed(2)}초 · 모델 호출 ${value.count}번`, "range-note"));
+    row.after(element("span", `p95 ${(value.p95Ms / 1000).toFixed(2)}초 · AI 질문 ${value.count}번`, "range-note"));
   });
   return card;
 }
@@ -292,7 +292,7 @@ function renderTokenBars() {
       return;
     } else if (run && ACTIVE.includes(run.status)) {
       track.classList.add("pending");
-      value.append(element("b", RUN_STATUS[run.status]), element("span", `API ${run.processedCalls}/${run.plannedCalls}번`, "muted"));
+      value.append(element("b", RUN_STATUS[run.status]), element("span", `요청 ${run.processedCalls}/${run.plannedCalls}개`, "muted"));
     } else {
       track.classList.add("missing");
       value.append(element("b", run ? RUN_STATUS[run.status] ?? run.status : "—"), element("span", "토큰 미관측", "muted"));
@@ -918,7 +918,7 @@ function renderProgress() {
     bar.append(fill);
     const label = element("div", undefined, "progress-label");
     label.append(element("span", model, "progress-model"), element("span", RUN_STATUS[run.status] ?? run.status, "progress-state"));
-    row.append(label, bar, element("span", `API ${run.processedCalls}/${run.plannedCalls}번`, "number progress-count"));
+    row.append(label, bar, element("span", `요청 ${run.processedCalls}/${run.plannedCalls}개`, "number progress-count"));
     panel.append(row);
   }
 }
@@ -941,19 +941,19 @@ function render() {
   const active = state.runs.find(({ run }) => ["QUEUED", "RUNNING"].includes(run.status))?.run;
   const waiting = state.runs.filter(({ run }) => run.status === "WAITING").length;
   const last = state.runs[0]?.run;
-  // 상태 줄은 "무엇을 몇 번"인지 밝힌다. 진행 수는 모델 하나의 서버 API 호출 수(화면 × API 3~4번 × 반복)다.
+  // 상태 줄은 "무엇을 몇 번"인지 밝힌다. 진행 수는 모델 하나의 서버 요청 수(화면 × 요청 3~4개 × 반복)다.
   const screens = state.dataset?.cases?.length;
   const autofills = (run) => screens ? ` · 자동기입 ${screens * run.repetitions}번(화면 ${screens}개 × 반복 ${run.repetitions}회)` : "";
   // 상태 줄은 평가가 진행 중일 때만 보인다. 끝난 평가의 정보는 비교 칸과 실행 조건 칩에 있다.
   $("#cf-status").hidden = !active;
   if (active) {
-    $("#cf-status").textContent = `${RUN_STATUS[active.status]} · ${modelKey(active)} · API ${active.processedCalls}/${active.plannedCalls}번 처리`
+    $("#cf-status").textContent = `${RUN_STATUS[active.status]} · ${modelKey(active)} · 요청 ${active.processedCalls}/${active.plannedCalls}개 처리`
       + `${waiting ? ` · 다음 모델 ${waiting}개 차례 대기` : ""} (자동 갱신 중)`;
   }
   else if (last) {
     const group = groupRuns(groupKey(last)).map(({ run }) => run);
     $("#cf-status").textContent = `최근 평가 ${RUN_STATUS[last.status] ?? last.status} · ${groupLabel(groupKey(last))} · 모델 ${group.length}개`
-      + `${autofills(last)} · 모델마다 API ${last.plannedCalls}번`;
+      + `${autofills(last)} · 모델마다 요청 ${last.plannedCalls}개`;
   }
   else $("#cf-status").textContent = "측정 결과 없음";
 }
