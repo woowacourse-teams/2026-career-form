@@ -31,10 +31,42 @@ public record AutofillOutcome(int filledCorrect, int filledWrongKey, int filledU
         return want == null ? Kind.BLANK_CORRECT : Kind.MISSED;
     }
 
+    /**
+     * 칸 매핑이 아닌 질문(섹션 분류, 선택 결정)은 확신도와 무관하게 답 그대로 나눈다. 답한 것은 넣음, 답하지 않은 것은 비움으로
+     * 보아 정답과 같은 4가지(맞게 넣음·맞게 비움·놓침·잘못 넣음)로 센다. 그래서 단계마다 같은 점수식을 쓸 수 있다.
+     */
+    public static Kind classifyAnswer(String want, ObservedItem item) {
+        if (item.providerUnavailable()) {
+            return Kind.EXCLUDED;
+        }
+        if (java.util.Objects.equals(want, item.value())) {
+            return want == null ? Kind.BLANK_CORRECT : Kind.FILLED_CORRECT;
+        }
+        if (item.value() == null) {
+            return Kind.MISSED;
+        }
+        return want == null ? Kind.FILLED_UNNEEDED : Kind.FILLED_WRONG_KEY;
+    }
+
+    /** 호출 종류에 맞는 분류로 센다. 칸 매핑은 {@link #classify}, 나머지는 {@link #classifyAnswer}다. */
+    public static AutofillOutcome score(CallKind kind, Map<String, String> expected, Map<String, ObservedItem> observed) {
+        if (kind == CallKind.GENERIC_FIELDS) {
+            return score(expected, observed);
+        }
+        int[] counts = new int[Kind.values().length];
+        expected.forEach((id, want) ->
+            counts[classifyAnswer(want, observed.getOrDefault(id, ObservedItem.answered(null))).ordinal()]++);
+        return of(counts);
+    }
+
     public static AutofillOutcome score(Map<String, String> expected, Map<String, ObservedItem> observed) {
         int[] counts = new int[Kind.values().length];
         expected.forEach((id, want) ->
             counts[classify(want, observed.getOrDefault(id, ObservedItem.answered(null))).ordinal()]++);
+        return of(counts);
+    }
+
+    private static AutofillOutcome of(int[] counts) {
         return new AutofillOutcome(counts[Kind.FILLED_CORRECT.ordinal()], counts[Kind.FILLED_WRONG_KEY.ordinal()],
             counts[Kind.FILLED_UNNEEDED.ordinal()], counts[Kind.BLANK_CORRECT.ordinal()], counts[Kind.MISSED.ordinal()],
             counts[Kind.UNOBSERVED.ordinal()]);

@@ -16,6 +16,8 @@ import com.careerform.evaluation.scoring.RunAggregate;
  * 채점식과 다를 수 있다. {@code repetitions}는 반복마다 따로 계산한 항목 단위 정확도로, 같은 입력에서 점수가 얼마나
  * 흔들리는지 보이고, 자동기입 점수도 반복마다 따로 낸다. {@code autofill}은 저장한 칸 매핑 답을 실행 때의 정답과
  * 다시 비교해 사용자 화면 기준으로 나눈 합계와 점수이며, 정답을 찾을 수 없거나 칸 매핑 결과가 없으면 null이다.
+ * {@code scores}는 단계별(TOTAL·PREPARATION·MAPPING) 점수다. 같은 식(정밀도를 중시한 F0.5)으로 내며 칸 매핑은 확신도 0.8
+ * 기준, 나머지 질문은 답 그대로 나눈다. TOTAL은 두 단계 항목을 합친다. {@code autofill}은 칸 매핑만의 결과다.
  * {@code itemsByCall}은 항목 판정 합계를 "단계/호출 종류"(예: PREPARATION/SECTION_CLASSIFY)별로 나눈 것으로, 화면의
  * 준비·매핑 탭이 쓴다. 평가는 다음 요청을 정답으로 만들므로 앞 단계 오답은 자동기입 점수에 반영되지 않는다.
  */
@@ -28,16 +30,22 @@ public record RunReport(
     String scoringVersion,
     List<RepetitionQuality> repetitions,
     Autofill autofill,
+    Map<String, Autofill> scores,
     Map<String, ItemCounts> itemsByCall
 ) {
 
     public RunReport {
         repetitions = List.copyOf(repetitions);
+        scores = java.util.Collections.unmodifiableMap(new LinkedHashMap<>(scores));
         itemsByCall = java.util.Collections.unmodifiableMap(new LinkedHashMap<>(itemsByCall));
     }
 
-    /** 반복 하나의 항목 단위 정확도와 자동기입 점수. 계산할 수 없으면 null이다. */
-    public record RepetitionQuality(int repetition, Double accuracy, Double autofillScore) {
+    /** 반복 하나의 항목 단위 정확도와 단계별(TOTAL·PREPARATION·MAPPING) 점수. 계산할 수 없는 값은 빠지거나 null이다. */
+    public record RepetitionQuality(int repetition, Double accuracy, Map<String, Double> scores) {
+
+        public RepetitionQuality {
+            scores = java.util.Collections.unmodifiableMap(new LinkedHashMap<>(scores));
+        }
     }
 
     /** 자동기입 결과 합계와 정밀도·채움률·점수({@link AutofillOutcome}). */

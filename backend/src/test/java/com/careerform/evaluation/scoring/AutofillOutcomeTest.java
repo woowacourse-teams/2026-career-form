@@ -64,4 +64,26 @@ class AutofillOutcomeTest {
         assertThat(new AutofillOutcome(3, 0, 0, 1, 0, 1).score()).isNull();
         assertThat(new AutofillOutcome(0, 0, 0, 4, 0, 0).score()).isNull();
     }
+
+    @Test
+    @DisplayName("칸 매핑이 아닌 질문은 확신도 없이 답 그대로 같은 4가지로 나눈다")
+    void classifiesOtherCallsByAnswer() {
+        Map<String, String> expected = new HashMap<>();
+        expected.put("s1", "PERSONAL");
+        expected.put("s2", "NONE");
+        expected.put("s3", "EDUCATION");
+        expected.put("d1", null);
+        expected.put("d2", null);
+        Map<String, ObservedItem> observed = Map.of(
+            "s1", ObservedItem.answered("PERSONAL", 0.2),
+            "s2", ObservedItem.answered("PERSONAL", 0.9),
+            "s3", ObservedItem.answered(null),
+            "d1", ObservedItem.answered(null),
+            "d2", ObservedItem.answered("o1"));
+
+        assertThat(AutofillOutcome.score(CallKind.SECTION_CLASSIFY, expected, observed))
+            .isEqualTo(new AutofillOutcome(1, 1, 1, 1, 1, 0));
+        assertThat(AutofillOutcome.score(CallKind.GENERIC_FIELDS, Map.of("f", "k"), Map.of("f", ObservedItem.answered("k", 0.9))))
+            .isEqualTo(new AutofillOutcome(1, 0, 0, 0, 0, 0));
+    }
 }

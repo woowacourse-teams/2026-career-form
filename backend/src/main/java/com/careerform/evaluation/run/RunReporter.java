@@ -46,7 +46,31 @@ public final class RunReporter {
         return new RunReport(aggregator.aggregate(records.stream().map(CallResultRecord::toCallResult).toList()),
             performance, tokens, flows(records), timing(run, records), RunService.SCORING_VERSION,
             repetitions(records, expected), autofill(records, expected).map(RunReport.Autofill::of).orElse(null),
-            itemsByCall(records));
+            stageScores(records, expected), itemsByCall(records));
+    }
+
+    /** 단계별 점수. 정답을 모르는 기록은 빼고, 결과가 없는 단계는 넣지 않는다. */
+    private static Map<String, RunReport.Autofill> stageScores(List<CallResultRecord> records,
+        Function<CallResultRecord, Map<String, String>> expected) {
+        Map<String, RunReport.Autofill> scores = new LinkedHashMap<>();
+        stageOutcomes(records, expected).forEach((stage, outcome) -> scores.put(stage, RunReport.Autofill.of(outcome)));
+        return scores;
+    }
+
+    private static Map<String, AutofillOutcome> stageOutcomes(List<CallResultRecord> records,
+        Function<CallResultRecord, Map<String, String>> expected) {
+        Map<String, AutofillOutcome> outcomes = new LinkedHashMap<>();
+        Map<String, Predicate<CallResultRecord>> stages = new LinkedHashMap<>();
+        stages.put("TOTAL", record -> true);
+        stages.put("PREPARATION", record -> record.stage() == CallKind.Stage.PREPARATION);
+        stages.put("MAPPING", record -> record.stage() == CallKind.Stage.MAPPING);
+        stages.forEach((stage, filter) -> records.stream().filter(record -> record.score() != null).filter(filter)
+            .map(record -> {
+                Map<String, String> truth = expected.apply(record);
+                return truth == null ? null : AutofillOutcome.score(record.kind(), truth, record.observed());
+            })
+            .filter(Objects::nonNull).reduce(AutofillOutcome::plus).ifPresent(outcome -> outcomes.put(stage, outcome)));
+        return outcomes;
     }
 
     /** 채점한 호출의 항목 판정을 "단계/호출 종류"별로 더한다. 처음 나온 순서를 지킨다. */
@@ -58,6 +82,16 @@ public final class RunReporter {
         groups.forEach((key, group) -> items.put(key,
             aggregator.aggregate(group.stream().map(CallResultRecord::toCallResult).toList()).items()));
         return items;
+    }
+
+    private static Map<String, Double> scoresOf(Map<String, AutofillOutcome> outcomes) {
+        Map<String, Double> scores = new LinkedHashMap<>();
+        outcomes.forEach((stage, outcome) -> {
+            if (outcome.score() != null) {
+                scores.put(stage, outcome.score());
+            }
+        });
+        return scores;
     }
 
     private static java.util.Optional<AutofillOutcome> autofill(List<CallResultRecord> records,
@@ -77,7 +111,7 @@ public final class RunReporter {
         List<RunReport.RepetitionQuality> qualities = new ArrayList<>();
         byRepetition.forEach((repetition, group) -> qualities.add(new RunReport.RepetitionQuality(repetition,
             aggregator.aggregate(group.stream().map(CallResultRecord::toCallResult).toList()).accuracy(),
-            autofill(group, expected).map(AutofillOutcome::score).orElse(null))));
+            scoresOf(stageOutcomes(group, expected)))));
         return qualities;
     }
 

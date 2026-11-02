@@ -414,9 +414,13 @@ root.addEventListener("focusin", (event) => { if (event.target.dataset?.help) sh
 root.addEventListener("focusout", hideHelp);
 addEventListener("scroll", hideHelp, { passive: true });
 
-function scoreCard() {
-  const fill = (model) => report(model)?.autofill;
-  const card = bars("자동기입 점수", "높을수록 좋음", (m) => percent(fill(m)?.score), 100, (v) => `${v.toFixed(1)}%`);
+/**
+ * 단계 점수 카드(정밀도를 중시한 F0.5). stage는 TOTAL·PREPARATION·MAPPING이며, 막대 아래에 정밀도·채움률·반복 범위를 둔다.
+ * 칸 매핑은 확신도 0.8 이상만 답한 것으로 보고, 섹션 분류·학력 구분 선택은 답 그대로 본다.
+ */
+function scoreCard(stage, title) {
+  const fill = (model) => report(model)?.scores?.[stage];
+  const card = bars(title, "높을수록 좋음", (m) => percent(fill(m)?.score), 100, (v) => `${v.toFixed(1)}%`);
   card.querySelectorAll(".bar-row").forEach((row, index) => {
     const autofill = fill(state.selected[index]);
     if (!autofill) {
@@ -427,18 +431,18 @@ function scoreCard() {
       row.after(element("span", "확신도 기록 전 실행이라 측정 불가", "range-note"));
       return;
     }
-    const values = (report(state.selected[index])?.repetitions ?? []).map((item) => item.autofillScore)
+    const values = (report(state.selected[index])?.repetitions ?? []).map((item) => item.scores?.[stage])
       .filter((value) => value != null).map((value) => value * 100);
     const note = element("span", undefined, "range-note stat-line");
     note.append(stat("정밀도", autofill.precision == null ? "—" : shortPercent(autofill.precision),
-      "넣은 칸 중 맞게 넣은 비율. 잘못 넣은 칸이 많을수록 낮아집니다."),
-    stat("채움률", shortPercent(autofill.fillRate), "정답이 있는 칸 중 맞게 넣은 비율. 놓친 칸이 많을수록 낮아집니다."));
+      "답한 것 중 맞은 비율. 잘못 답할수록 낮아집니다(칸 매핑은 확신도 0.8 이상만 답한 것으로 봄)."),
+    stat("채움률", shortPercent(autofill.fillRate), "정답이 있는 질문 중 맞게 답한 비율. 놓칠수록 낮아집니다."));
     if (values.length > 1) note.append(stat(`반복 ${values.length}회`, `${Math.min(...values).toFixed(1)}~${Math.max(...values).toFixed(1)}%`,
       "같은 입력을 반복마다 따로 채점한 점수의 최소~최대. 두 모델의 범위가 겹치면 차이를 구분하기 어렵습니다."));
     row.after(note);
   });
-  card.append(richNote(["정밀도"], " 넣은 칸 중 맞은 비율 · ", ["채움률"], " 넣어야 할 칸 중 맞게 넣은 비율 · ",
-    ["잘못 넣으면 놓칠 때보다 2배 감점"]));
+  card.append(richNote(["정밀도"], " 답한 것 중 맞은 비율 · ", ["채움률"], " 답해야 할 것 중 맞게 답한 비율 · ",
+    ["잘못 답하면 놓칠 때보다 2배 감점"]));
   return card;
 }
 
@@ -498,8 +502,8 @@ const ITEM_KINDS = [
  */
 // 평가 단계. 자동기입 흐름의 준비(섹션 분류 → 학력 구분 선택)와 매핑(섹션 분류 → 칸 매핑)에 맞춰 품질·성능을 함께 나눠 본다.
 const STAGE_NOTES = {
-  total: "자동기입 버튼 1번 전체 · 대표 지표는 자동기입 점수(칸 매핑 기준)",
-  prepare: "칸을 꺼내는 단계 · 섹션 분류 → 학력 구분 선택 · 모델 답 그대로 채점",
+  total: "자동기입 버튼 1번 전체 · 준비 + 매핑",
+  prepare: "칸을 꺼내는 단계 · 섹션 분류 → 학력 구분 선택",
   mapping: "칸에 값을 정하는 단계 · 섹션 분류 → 칸 매핑",
 };
 const CALL_LABELS = { "PREPARATION/SECTION_CLASSIFY": "섹션 분류", "PREPARATION/INTERACTION_DECISION": "학력 구분 선택",
@@ -519,15 +523,16 @@ const accuracyOf = (items) => scoredOf(items) ? items.correct / scoredOf(items) 
 function renderQuality() {
   const quality = $("#cf-quality");
   if (state.stage === "prepare") {
-    quality.replaceChildren(stageAccuracyCard("준비 정확도", ["PREPARATION/SECTION_CLASSIFY", "PREPARATION/INTERACTION_DECISION"],
-      richNote(["섹션 분류"], " 조작할 섹션을 고르는 질문 · ", ["학력 구분 선택"], " 학력 행마다 고를 선택지를 정하는 질문 · 확신도와 무관하게 모델 답 그대로 채점")));
+    quality.replaceChildren(scoreCard("PREPARATION", "준비 점수"),
+      stageAccuracyCard("준비 결과", ["PREPARATION/SECTION_CLASSIFY", "PREPARATION/INTERACTION_DECISION"],
+        richNote(["섹션 분류"], " 조작할 섹션을 고르는 질문 · ", ["학력 구분 선택"], " 학력 행마다 고를 선택지를 정하는 질문")));
   }
   else if (state.stage === "mapping") {
-    quality.replaceChildren(scoreCard(), renderAutofill(),
-      stageAccuracyCard("섹션 분류 정확도", ["MAPPING/SECTION_CLASSIFY"],
-        richNote(["섹션 분류"], " 화면의 섹션마다 범주(기본정보·학력·해당 없음 …)를 정하는 질문 · 모델 답 그대로 채점")));
+    quality.replaceChildren(scoreCard("MAPPING", "매핑 점수"), renderAutofill(),
+      stageAccuracyCard("섹션 분류 결과", ["MAPPING/SECTION_CLASSIFY"],
+        richNote(["섹션 분류"], " 화면의 섹션마다 범주(기본정보·학력·해당 없음 …)를 정하는 질문")));
   }
-  else quality.replaceChildren(scoreCard(), renderAutofill(), stageSummary());
+  else quality.replaceChildren(scoreCard("TOTAL", "자동기입 점수"), stageSummary());
 }
 
 /**
@@ -535,7 +540,7 @@ function renderQuality() {
  * 평가는 다음 요청을 정답으로 만들므로 여기 오답은 자동기입 점수에 반영되지 않는다.
  */
 function stageAccuracyCard(title, keys, foot) {
-  const card = bars(title, "모델 답 그대로 · 높을수록 좋음", (m) => percent(accuracyOf(itemsOf(m, keys))), 100, (v) => `${v.toFixed(1)}%`);
+  const card = bars(title, "맞힌 비율 · 높을수록 좋음", (m) => percent(accuracyOf(itemsOf(m, keys))), 100, (v) => `${v.toFixed(1)}%`);
   card.querySelectorAll(".bar-row").forEach((row, index) => {
     const model = state.selected[index];
     const items = itemsOf(model, keys);
@@ -558,26 +563,25 @@ function stageAccuracyCard(title, keys, foot) {
   return card;
 }
 
-/** 전체 흐름의 단계 요약: 모델마다 준비·섹션 분류·칸 매핑 정확도를 한 줄로. 자세한 건 준비·매핑 탭에서 본다. */
+/** 전체 흐름의 단계 요약: 모델마다 준비·매핑 점수를 한 줄로. 자세한 결과는 준비·매핑 탭에서 본다. */
 function stageSummary() {
   const card = element("div", undefined, "metric");
   const head = element("div", undefined, "metric-head");
-  head.append(element("h3", "단계별 정확도"), element("span", "모델 답 그대로 · 자세히는 준비·매핑 탭", "muted"));
+  head.append(element("h3", "단계별 점수"), element("span", "자세히는 준비·매핑 탭", "muted"));
   card.append(head);
   for (const model of state.selected) {
     const row = element("div", undefined, "summary-row");
     const name = element("span", model, "stage-model");
     name.style.setProperty("--model", color(model));
     const line = element("span", undefined, "stat-line");
-    [["준비", ["PREPARATION/SECTION_CLASSIFY", "PREPARATION/INTERACTION_DECISION"], "섹션 분류 + 학력 구분 선택"],
-      ["섹션 분류", ["MAPPING/SECTION_CLASSIFY"], "필드 단계에서 섹션마다 범주를 정한 정확도"],
-      ["칸 매핑", ["MAPPING/GENERIC_FIELDS"], "칸마다 고른 프로필 항목이 맞은 비율(확신도 무시)"]].forEach(([label, keys, help]) => {
-      const value = accuracyOf(itemsOf(model, keys));
-      line.append(stat(label, value == null ? "—" : shortPercent(value), help));
+    [["준비", "PREPARATION", "섹션 분류 + 학력 구분 선택"], ["매핑", "MAPPING", "섹션 분류 + 칸 매핑"]].forEach(([label, stage, help]) => {
+      const value = report(model)?.scores?.[stage]?.score;
+      line.append(stat(`${label} 점수`, value == null ? "—" : shortPercent(value), help));
     });
     row.append(name, line);
     card.append(row);
   }
+  card.append(richNote(["자동기입 점수"], " = 준비와 매핑의 모든 질문을 합쳐 같은 식으로 낸 점수"));
   return card;
 }
 
@@ -1186,7 +1190,7 @@ function criteriaView() {
   formula.append(element("span", "자동기입 점수", "formula-name"), element("span", "="),
     element("span", "정밀도", "formula-part"), element("span", "×2 와"), element("span", "채움률", "formula-part"),
     element("span", "의 조화 평균(F0.5)"));
-  wrap.append(formula, element("p", "사용자 화면 기준 점수. 잘못 넣은 칸은 사용자가 찾아서 고쳐야 하고 그대로 제출될 위험이 있지만, 놓친 칸은 직접 입력하면 됩니다. 그래서 잘못 넣으면 놓칠 때보다 2배 크게 깎습니다. 아무것도 넣지 않으면 0점입니다.", "muted criteria-lead"));
+  wrap.append(formula, element("p", "잘못 답하면(엉뚱한 값을 넣거나 엉뚱한 섹션을 조작하면) 사용자가 찾아서 고쳐야 하지만, 놓친 것은 직접 하면 됩니다. 그래서 잘못 답하면 놓칠 때보다 2배 크게 깎습니다. 아무것도 답하지 않으면 0점입니다. 같은 식으로 준비 점수(섹션 분류·학력 구분 선택), 매핑 점수(섹션 분류·칸 매핑), 둘을 합친 자동기입 점수를 냅니다. 칸 매핑은 확신도 0.8 이상만 답한 것으로 보고, 나머지 질문은 답 그대로 봅니다.", "muted criteria-lead"));
   const card = (title, ...children) => {
     const section = element("section", undefined, "criteria-card");
     section.append(element("h4", title), ...children);

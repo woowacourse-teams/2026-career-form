@@ -42,7 +42,7 @@ class RunReporterTest {
         assertThat(report.autofill().counts()).isEqualTo(new AutofillOutcome(1, 1, 1, 1, 0, 0));
         assertThat(report.autofill().precision()).isCloseTo(1.0 / 3, within(1e-9));
         assertThat(report.autofill().fillRate()).isEqualTo(0.5);
-        assertThat(report.repetitions()).extracting(RunReport.RepetitionQuality::autofillScore)
+        assertThat(report.repetitions()).extracting(quality -> quality.scores().get("MAPPING"))
             .containsExactly(1.0, 0.0);
         assertThat(new RunReporter().report(run, List.of(first)).autofill()).isNull();
     }
@@ -63,6 +63,28 @@ class RunReporterTest {
     }
 
     @Test
+    @DisplayName("점수는 전체·준비·매핑 단계마다 같은 식으로 내고, 전체는 두 단계 항목을 합친다")
+    void scoresEachStage() {
+        EvaluationRun run = run(AT.minusSeconds(10), AT, AT.plusSeconds(4));
+        CallResultRecord preparation = new CallResultRecord("run-1", 1, "a", 1, CallKind.SECTION_CLASSIFY,
+            CallKind.Stage.PREPARATION, null, new CallScore(1, 1, 0, 0, 0),
+            Map.of("s1", ObservedItem.answered("PERSONAL"), "s2", ObservedItem.answered("PERSONAL")), 100 * MS, List.of(), AT);
+        CallResultRecord fields = fields(1, Map.of("field-1", ObservedItem.answered("k1", 0.9),
+            "field-2", ObservedItem.answered(null, 0.9)));
+        Map<String, Map<String, String>> truth = Map.of(
+            "a/1", Map.of("s1", "PERSONAL", "s2", "NONE"),
+            "a/2", new java.util.HashMap<>(Map.of("field-1", "k1")) {{ put("field-2", null); }});
+
+        RunReport report = new RunReporter().report(run, List.of(preparation, fields),
+            record -> truth.get(record.caseId() + "/" + record.order()));
+
+        assertThat(report.scores().get("PREPARATION").counts()).isEqualTo(new AutofillOutcome(1, 1, 0, 0, 0, 0));
+        assertThat(report.scores().get("MAPPING").counts()).isEqualTo(new AutofillOutcome(1, 0, 0, 1, 0, 0));
+        assertThat(report.scores().get("TOTAL").counts()).isEqualTo(new AutofillOutcome(2, 1, 0, 1, 0, 0));
+        assertThat(report.repetitions().getFirst().scores()).containsKeys("TOTAL", "PREPARATION", "MAPPING");
+    }
+
+    @Test
     @DisplayName("반복마다 항목 단위 정확도를 따로 계산해 흔들림을 보이게 하고, 실패만 있는 반복은 측정 불가다")
     void reportsAccuracyPerRepetition() {
         EvaluationRun run = run(AT.minusSeconds(10), AT, AT.plusSeconds(4));
@@ -74,8 +96,8 @@ class RunReporterTest {
         RunReport report = new RunReporter().report(run, records);
 
         assertThat(report.repetitions()).containsExactly(
-            new RunReport.RepetitionQuality(1, 0.75, null), new RunReport.RepetitionQuality(2, 0.5, null),
-            new RunReport.RepetitionQuality(3, null, null));
+            new RunReport.RepetitionQuality(1, 0.75, Map.of()), new RunReport.RepetitionQuality(2, 0.5, Map.of()),
+            new RunReport.RepetitionQuality(3, null, Map.of()));
     }
 
     @Test
