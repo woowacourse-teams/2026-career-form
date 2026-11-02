@@ -83,37 +83,22 @@ function latest(model) {
 const percent = (value) => value == null ? null : value * 100;
 const stageKey = () => ({ total: "TOTAL", prepare: "PREPARATION", mapping: "MAPPING" })[state.stage];
 
-/** 지표 카드. 제목 앞 색 사각형(tone)으로 지표 묶음을 구분하고, 제목 아래 한 줄로 단위와 좋은 방향을 보인다. */
-function metricCard(title, sub, tone) {
+function bars(title, sub, values, max, format, foot) {
   const card = element("div", undefined, "metric");
-  card.dataset.tone = tone;
   const head = element("div", undefined, "metric-head");
   head.append(element("h3", title), element("span", sub, "muted"));
   card.append(head);
-  return card;
-}
-
-/** 모델마다 세로 막대 하나. 값은 막대 윗부분 안에 쓰고, 막대가 낮으면 막대 위에 쓴다. */
-function bars(title, sub, values, max, format, foot, tone = "speed") {
-  const card = metricCard(title, sub, tone);
   if (!state.selected.length) card.append(element("div", "비교할 모델 선택 필요.", "empty"));
-  else {
-    const chart = element("div", undefined, "vchart");
-    chart.append(element("div", undefined, "vgrid"));
-    for (const model of state.selected) {
-      const value = values(model);
-      const ratio = value == null ? 0 : Math.max(0, Math.min(1, value / max));
-      const column = element("div", undefined, "vcol");
-      column.style.setProperty("--model", color(model));
-      const plot = element("div", undefined, "vplot");
-      const bar = element("div", undefined, ratio < 0.2 ? "vbar short" : "vbar");
-      bar.style.height = `${ratio * 100}%`;
-      bar.append(element("span", value == null ? "—" : format(value), "number"));
-      plot.append(bar);
-      column.append(plot, modelLabel(model));
-      chart.append(column);
-    }
-    card.append(chart);
+  for (const model of state.selected) {
+    const value = values(model);
+    const row = element("div", undefined, "bar-row");
+    row.style.setProperty("--model", color(model));
+    const track = element("div", undefined, "track");
+    const fill = element("div", undefined, "fill");
+    fill.style.width = `${value == null ? 0 : Math.max(0, Math.min(100, value / max * 100))}%`;
+    track.append(fill);
+    row.append(modelName(model), track, element("span", value == null ? "—" : format(value), "number"));
+    card.append(row);
   }
   if (foot) card.append(element("p", foot, "muted metric-foot"));
   return card;
@@ -125,14 +110,6 @@ function modelName(model) {
   const name = element("span", model, "row-model");
   name.title = model;
   return name;
-}
-/** 세로 막대 아래 모델 이름. 모델명을 굵게, 공급자를 그 아래 작게 둔다. */
-function modelLabel(model) {
-  const slash = model.indexOf("/");
-  const label = element("div", undefined, "vlabel");
-  label.title = model;
-  label.append(element("strong", model.slice(slash + 1)), element("span", slash > 0 ? model.slice(0, slash) : "", "muted"));
-  return label;
 }
 const report = (model) => latest(model)?.report;
 
@@ -150,13 +127,13 @@ function renderOverview() {
   };
   const failure = (m) => percent(total ? report(m)?.flows.failureRate : perf(m)?.failureRate);
   $("#cf-performance").replaceChildren(
-    bars("응답시간", "평균 초 · 낮을수록 좋음", seconds, Math.max(1, ...state.selected.map((m) => seconds(m) ?? 0)), (v) => `${v.toFixed(2)}초`,
+    bars("응답시간", "평균 · 초 ↓", seconds, Math.max(1, ...state.selected.map((m) => seconds(m) ?? 0)), (v) => `${v.toFixed(2)}초`,
       total ? "사례 하나의 준비·매핑 호출 시간 합. 서버 관측, 실제 페이지 조작 제외."
         : "제품 서비스 호출부터 반환까지. 서버 내부 배치·모델 대기 포함."),
-    bars("처리량", "완료 호출/초 · 높을수록 좋음", (m) => perf(m)?.throughputPerSecond, Math.max(0.1, ...state.selected.map((m) => perf(m)?.throughputPerSecond ?? 0)),
-      (v) => `${v.toFixed(2)}/초`, "완료 호출 수 ÷ 실행 경과 시간", "throughput"),
-    bars("실패율", "% · 낮을수록 좋음", failure, 100, (v) => `${v.toFixed(1)}%`,
-      total ? "호출이 하나라도 실패한 사례의 비율" : "타임아웃 · API 오류 · 응답 형식 오류 · 채점 불가", "failure"));
+    bars("처리량", "완료 호출/초 ↑", (m) => perf(m)?.throughputPerSecond, Math.max(0.1, ...state.selected.map((m) => perf(m)?.throughputPerSecond ?? 0)),
+      (v) => `${v.toFixed(2)}/초`, "완료 호출 수 ÷ 실행 경과 시간"),
+    bars("실패율", "% ↓", failure, 100, (v) => `${v.toFixed(1)}%`,
+      total ? "호출이 하나라도 실패한 사례의 비율" : "타임아웃 · API 오류 · 응답 형식 오류 · 채점 불가"));
 }
 
 function renderTokens() {
@@ -318,27 +295,26 @@ function renderTokenBars() {
  */
 function scoreCard() {
   const fill = (model) => report(model)?.autofill;
-  const card = bars("자동기입 점수", "% · 높을수록 좋음", (m) => percent(fill(m)?.score), 100, (v) => `${v.toFixed(1)}%`, undefined, "quality");
+  const card = bars("자동기입 점수", "%", (m) => percent(fill(m)?.score), 100, (v) => `${v.toFixed(1)}%`);
   card.classList.add("headline");
-  const notes = element("div", undefined, "score-notes");
-  for (const model of state.selected) {
-    const autofill = fill(model);
-    let text = "자동기입 결과 없음";
-    if (autofill?.score == null && autofill) text = "확신도 기록 전 실행이라 측정 불가";
-    else if (autofill) {
-      const values = (report(model)?.repetitions ?? []).map((item) => item.autofillScore)
-        .filter((value) => value != null).map((value) => value * 100);
-      const parts = [`정밀도 ${autofill.precision == null ? "—" : (autofill.precision * 100).toFixed(1) + "%"}`,
-        `채움률 ${(autofill.fillRate * 100).toFixed(1)}%`];
-      if (values.length > 1) parts.push(`반복 ${values.length}회 범위 ${Math.min(...values).toFixed(1)}~${Math.max(...values).toFixed(1)}%`);
-      text = parts.join(" · ");
+  card.querySelectorAll(".bar-row").forEach((row, index) => {
+    const autofill = fill(state.selected[index]);
+    if (!autofill) {
+      row.after(element("span", "자동기입 결과 없음", "range-note"));
+      return;
     }
-    const row = element("div", undefined, "score-note");
-    row.style.setProperty("--model", color(model));
-    row.append(modelName(model), element("span", text, "range-note"));
-    notes.append(row);
-  }
-  card.append(notes, element("p", "정밀도 = 넣은 칸 중 맞은 비율 · 채움률 = 넣어야 할 칸 중 맞게 넣은 비율. 잘못 넣으면 놓칠 때보다 2배 크게 깎입니다.", "muted metric-foot"));
+    if (autofill.score == null) {
+      row.after(element("span", "확신도 기록 전 실행이라 측정 불가", "range-note"));
+      return;
+    }
+    const values = (report(state.selected[index])?.repetitions ?? []).map((item) => item.autofillScore)
+      .filter((value) => value != null).map((value) => value * 100);
+    const parts = [`정밀도 ${autofill.precision == null ? "—" : (autofill.precision * 100).toFixed(1) + "%"}`,
+      `채움률 ${(autofill.fillRate * 100).toFixed(1)}%`];
+    if (values.length > 1) parts.push(`반복 ${values.length}회 범위 ${Math.min(...values).toFixed(1)}~${Math.max(...values).toFixed(1)}%`);
+    row.after(element("span", parts.join(" · "), "range-note"));
+  });
+  card.append(element("p", "정밀도 = 넣은 칸 중 맞은 비율 · 채움률 = 넣어야 할 칸 중 맞게 넣은 비율. 잘못 넣으면 놓칠 때보다 2배 크게 깎입니다.", "muted metric-foot"));
   return card;
 }
 
@@ -354,7 +330,10 @@ const AUTOFILL_KINDS = [
  * 맞게 비움과 놓침을 나눈다. 잘못 넣음은 다른 항목을 넣은 칸과 넣지 말아야 할 칸에 넣은 칸의 합이다.
  */
 function renderAutofill() {
-  const card = metricCard("칸별 결과", "사용자 화면 기준 · 칸 수", "quality");
+  const card = element("div", undefined, "metric");
+  const head = element("div", undefined, "metric-head");
+  head.append(element("h3", "칸별 결과"), element("span", "사용자 화면 기준 · 칸 수", "muted"));
+  card.append(head);
   const legend = element("div", undefined, "item-legend");
   AUTOFILL_KINDS.forEach(({ label, className }) => legend.append(element("span", label, className)));
   card.append(legend);
@@ -430,7 +409,10 @@ function diagnosis() {
 }
 
 function renderItemBreakdown() {
-  const card = metricCard("항목 판정", "실행 전체 · 항목 수", "quality");
+  const card = element("div", undefined, "metric");
+  const head = element("div", undefined, "metric-head");
+  head.append(element("h3", "항목 판정"), element("span", "실행 전체 · 항목 수", "muted"));
+  card.append(head);
   const legend = element("div", undefined, "item-legend");
   ITEM_KINDS.forEach(({ label, className }) => legend.append(element("span", label, className)));
   card.append(legend);
