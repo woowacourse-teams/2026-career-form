@@ -8,7 +8,8 @@ const COLORS = ["#4e6d90", "#688b7c", "#ac8d68", "#8a6f9e", "#6f8f9e"];
 const PRICE_KEY = "cf-evaluation-model-prices-v1";
 const root = document.getElementById("cf-eval-preview");
 const $ = (selector) => root.querySelector(selector);
-const state = { runs: [], dataset: null, models: [], selected: [], group: null, stage: "total", page: "overview", diagnosisOpen: false };
+const state = { runs: [], dataset: null, models: [], selected: [], group: null, stage: "total", page: "overview", diagnosisOpen: false,
+  fields: {}, baseline: "", fieldFilter: "diff", fieldScreen: "all", openField: null };
 let prices = {};
 try { prices = JSON.parse(localStorage.getItem(PRICE_KEY) || "{}") ?? {}; } catch { prices = {}; }
 
@@ -431,6 +432,239 @@ function renderItemBreakdown() {
   return card;
 }
 
+const OUTCOMES = {
+  FILLED_CORRECT: { label: "맞게 넣음", className: "o-correct", points: 1 },
+  BLANK_CORRECT: { label: "맞게 비움", className: "o-blank", points: 1 },
+  MISSED: { label: "놓침", className: "o-missed", points: 0 },
+  FILLED_WRONG_KEY: { label: "다른 항목", className: "o-wrong", points: -1 },
+  FILLED_UNNEEDED: { label: "넣지 말 칸", className: "o-wrong", points: -1 },
+  UNOBSERVED: { label: "확인 불가", className: "o-none", points: 0 },
+  EXCLUDED: { label: "제외", className: "o-none", points: 0 },
+};
+const FIELD_FILTERS = [["diff", "모델끼리 다른 칸"], ["wrong", "잘못 넣은 칸"], ["missed", "놓친 칸"], ["changed", "기준 대비 바뀐 칸"],
+  ["all", "전체"]];
+const fieldKey = (field) => `${field.caseId}/${field.fieldId}`;
+const WRONG = new Set(["FILLED_WRONG_KEY", "FILLED_UNNEEDED"]);
+
+/** 칸 하나의 반복별 판정 요약. 가장 많은 판정, 반복이 갈렸는지, 점수(맞음 +1, 놓침 0, 잘못 넣음 −1의 평균). */
+function cellOf(field) {
+  if (!field?.answers.length) return null;
+  const counts = {};
+  field.answers.forEach(({ outcome }) => { counts[outcome] = (counts[outcome] ?? 0) + 1; });
+  const [main, count] = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+  return { main, count, total: field.answers.length, counts,
+    points: field.answers.reduce((sum, { outcome }) => sum + OUTCOMES[outcome].points, 0) / field.answers.length };
+}
+
+/** 실행의 칸별 답. 한 번 받은 결과는 다시 받지 않는다. 받는 중이면 null이고, 끝나면 다시 그린다. */
+function runFields(run) {
+  if (!run) return undefined;
+  const cached = state.fields[run.id];
+  if (cached === undefined) {
+    state.fields[run.id] = null;
+    api(`/runs/${run.id}/fields`).then((fields) => { state.fields[run.id] = fields; })
+      .catch(() => { state.fields[run.id] = []; }).finally(() => { if (state.page === "fields") renderFields(); });
+    return null;
+  }
+  return cached;
+}
+
+/** 같은 데이터셋 버전으로 돌린 다른 비교 묶음. 기준 실행 후보다. */
+function baselineGroups() {
+  const current = groupRuns(state.group)[0]?.run;
+  if (!current) return [];
+  return [...new Set(state.runs.map(({ run }) => groupKey(run)))].filter((key) => key !== state.group
+    && groupRuns(key).some(({ run }) => done(run) && run.versions.datasetVersion === current.versions.datasetVersion));
+}
+
+/**
+ * 칸별 비교. 고른 모델의 칸 매핑 답을 칸×모델 표로 놓고, 기준 실행을 고르면 같은 모델끼리 칸마다 개선·악화를 표시한다.
+ * 행을 누르면 반복별 답과 확신도를 펼친다.
+ */
+function renderFields() {
+  const page = $("#cf-fields");
+  const models = state.selected;
+  const runs = Object.fromEntries(models.map((model) => [model, latest(model)?.run]));
+  const bases = Object.fromEntries(models.map((model) => [model, state.baseline
+    ? groupRuns(state.baseline).find(({ run }) => done(run) && modelKey(run) === model)?.run : undefined]));
+  const data = Object.fromEntries(models.map((model) => [model, runFields(runs[model])]));
+  const baseData = Object.fromEntries(models.map((model) => [model, runFields(bases[model])]));
+
+  const head = element("div", undefined, "fields-head");
+  const title = element("div");
+  title.append(element("h2", "칸별 비교"), element("p", "칸 매핑 답을 칸마다 모델끼리, 기준 실행과 비교합니다. 확신도 0.8 이상만 넣은 것으로 봅니다.", "muted"));
+  const controls = element("div", undefined, "fields-controls");
+  const baseSelect = element("select");
+  baseSelect.setAttribute("aria-label", "기준 실행");
+  baseSelect.append(Object.assign(element("option", "기준 실행 없음"), { value: "" }),
+    ...baselineGroups().map((key) => Object.assign(element("option", `기준: ${groupLabel(key)}`), { value: key })));
+  baseSelect.value = state.baseline;
+  baseSelect.addEventListener("change", () => { state.baseline = baseSelect.value; renderFields(); });
+  const screenSelect = element("select");
+  screenSelect.setAttribute("aria-label", "화면");
+  const states = [...new Set((state.dataset?.cases ?? []).map((item) => item.state))];
+  screenSelect.append(Object.assign(element("option", "모든 화면"), { value: "all" }),
+    ...states.map((key) => Object.assign(element("option", STATE_NAMES[key] ?? key), { value: key })));
+  screenSelect.value = state.fieldScreen;
+  screenSelect.addEventListener("change", () => { state.fieldScreen = screenSelect.value; renderFields(); });
+  controls.append(baseSelect, screenSelect);
+  head.append(title, controls);
+
+  if (!models.length) {
+    page.replaceChildren(head, element("div", "비교할 모델 선택 필요.", "empty"));
+    return;
+  }
+  if (models.some((model) => data[model] === null) || models.some((model) => baseData[model] === null)) {
+    page.replaceChildren(head, element("div", "칸별 답을 불러오는 중.", "empty"));
+    return;
+  }
+
+  // 칸 목록은 고른 모델의 답을 합친 순서(데이터셋 순서)다.
+  const rows = new Map();
+  for (const model of models) (data[model] ?? []).forEach((field) => { if (!rows.has(fieldKey(field))) rows.set(fieldKey(field), field); });
+  const index = (list) => new Map((list ?? []).map((field) => [fieldKey(field), field]));
+  const byModel = Object.fromEntries(models.map((model) => [model, index(data[model])]));
+  const baseByModel = Object.fromEntries(models.map((model) => [model, index(baseData[model])]));
+  const delta = (model, key) => {
+    const now = cellOf(byModel[model].get(key));
+    const before = cellOf(baseByModel[model].get(key));
+    if (!now || !before) return 0;
+    return Math.sign(Math.round((now.points - before.points) * 1000));
+  };
+
+  // 모델별 요약: 칸 수(반복 합)와 기준 대비 개선·악화 칸 수.
+  const summary = element("div", undefined, "fields-summary");
+  for (const model of models) {
+    const card = element("div", undefined, "fields-model");
+    card.style.setProperty("--model", color(model));
+    const fields = data[model] ?? [];
+    const tally = {};
+    fields.forEach((field) => field.answers.forEach(({ outcome }) => { tally[outcome] = (tally[outcome] ?? 0) + 1; }));
+    card.append(element("strong", model, "row-name"));
+    if (!runs[model]) card.append(element("span", "끝난 실행 없음", "muted"));
+    else if (!fields.length) card.append(element("span", "칸별 답 없음(데이터셋 확인 불가)", "muted"));
+    else {
+      card.append(element("span", `맞게 넣음 ${tally.FILLED_CORRECT ?? 0} · 잘못 넣음 ${(tally.FILLED_WRONG_KEY ?? 0) + (tally.FILLED_UNNEEDED ?? 0)} · 놓침 ${tally.MISSED ?? 0}`, "muted"));
+    }
+    if (state.baseline) {
+      if (!bases[model]) card.append(element("span", "기준 실행에 이 모델 없음", "muted"));
+      else {
+        const keys = [...rows.keys()];
+        const better = keys.filter((key) => delta(model, key) > 0).length;
+        const worse = keys.filter((key) => delta(model, key) < 0).length;
+        const line = element("span", undefined, "fields-delta");
+        line.append(element("b", `개선 ${better}칸`, "up"), element("span", " · "), element("b", `악화 ${worse}칸`, "down"));
+        card.append(line);
+      }
+    }
+    summary.append(card);
+  }
+
+  const chips = element("div", undefined, "fields-filters");
+  FIELD_FILTERS.filter(([key]) => key !== "changed" || state.baseline).forEach(([key, label]) => {
+    const chip = element("button", label);
+    chip.type = "button";
+    chip.setAttribute("aria-pressed", String(state.fieldFilter === key));
+    chip.addEventListener("click", () => { state.fieldFilter = key; renderFields(); });
+    chips.append(chip);
+  });
+  const filter = state.fieldFilter === "changed" && !state.baseline ? "diff" : state.fieldFilter;
+  const keep = (key, field) => {
+    if (state.fieldScreen !== "all" && field.state !== state.fieldScreen) return false;
+    const cells = models.map((model) => cellOf(byModel[model].get(key)));
+    if (filter === "all") return true;
+    if (filter === "diff") return new Set(cells.map((cell) => cell?.main)).size > 1 || cells.some((cell) => cell && cell.count < cell.total);
+    if (filter === "wrong") return cells.some((cell) => cell && Object.keys(cell.counts).some((outcome) => WRONG.has(outcome)));
+    if (filter === "missed") return cells.some((cell) => cell?.counts.MISSED);
+    return models.some((model) => delta(model, key) !== 0);
+  };
+  const visible = [...rows.entries()].filter(([key, field]) => keep(key, field));
+
+  const table = element("table", undefined, "fields-table");
+  const thead = element("thead");
+  const headRow = element("tr");
+  headRow.append(element("th", "칸"), element("th", "정답"));
+  models.forEach((model) => {
+    const th = element("th", model, "model-col");
+    th.style.setProperty("--model", color(model));
+    headRow.append(th);
+  });
+  thead.append(headRow);
+  const body = element("tbody");
+  let group = null;
+  for (const [key, field] of visible) {
+    const groupName = `${STATE_NAMES[field.state] ?? field.state} · ${sectionTitle({ title: field.section })}`;
+    if (groupName !== group) {
+      group = groupName;
+      const groupRow = element("tr", undefined, "fields-group");
+      const cell = element("th", groupName);
+      cell.colSpan = models.length + 2;
+      groupRow.append(cell);
+      body.append(groupRow);
+    }
+    const row = element("tr", undefined, "fields-row");
+    row.tabIndex = 0;
+    row.setAttribute("aria-expanded", String(state.openField === key));
+    const labelCell = element("td", undefined, "field-label");
+    labelCell.append(element("span", field.label ?? field.fieldId), element("span", CONTROL_NAMES[field.control] ?? field.control ?? "", "muted"));
+    row.append(labelCell, element("td", field.expected ?? "넣을 항목 없음", field.expected ? "field-key" : "field-key none"));
+    for (const model of models) {
+      const td = element("td");
+      const cell = cellOf(byModel[model].get(key));
+      if (!cell) td.append(element("span", "—", "muted"));
+      else {
+        const chip = element("span", OUTCOMES[cell.main].label, `outcome ${OUTCOMES[cell.main].className}`);
+        td.append(chip);
+        if (cell.count < cell.total) td.append(element("span", `${cell.count}/${cell.total}`, "outcome-mixed"));
+        const change = state.baseline ? delta(model, key) : 0;
+        if (change) td.append(element("span", change > 0 ? "▲" : "▼", change > 0 ? "up" : "down"));
+      }
+      row.append(td);
+    }
+    const toggle = () => { state.openField = state.openField === key ? null : key; renderFields(); };
+    row.addEventListener("click", toggle);
+    row.addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); toggle(); } });
+    body.append(row);
+    if (state.openField === key) body.append(fieldDetail(key, models, byModel, baseByModel));
+  }
+  table.append(thead, body);
+  const wrap = element("div", undefined, "table-wrap fields-wrap");
+  wrap.append(visible.length ? table : element("div", "조건에 맞는 칸이 없습니다.", "empty"));
+  const foot = element("p", `${visible.length}칸 표시 · 반복이 갈린 칸은 가장 많은 판정과 횟수(예: 2/3)를 보입니다. ${state.baseline ? "개선·악화는 맞음 +1, 놓침 0, 잘못 넣음 −1의 반복 평균을 같은 모델의 기준 실행과 비교합니다." : ""}`, "muted metric-foot");
+  page.replaceChildren(head, summary, chips, wrap, foot);
+}
+
+/** 펼친 칸의 반복별 답·확신도. 기준 실행이 있으면 그 답도 함께 보인다. */
+function fieldDetail(key, models, byModel, baseByModel) {
+  const row = element("tr", undefined, "fields-detail");
+  const cell = element("td");
+  cell.colSpan = models.length + 2;
+  const grid = element("div", undefined, "detail-grid");
+  const answers = (field, title) => {
+    const box = element("div");
+    box.append(element("h5", title));
+    if (!field?.answers.length) box.append(element("p", "답 없음", "muted"));
+    else field.answers.forEach((answer) => {
+      const line = element("div", undefined, "answer-line");
+      line.append(element("span", `${answer.repetition}회`, "muted"), element("code", answer.value ?? "비움"),
+        element("span", answer.confidence == null ? "확신도 —" : `확신도 ${answer.confidence.toFixed(2)}`, "muted"),
+        element("span", OUTCOMES[answer.outcome].label, `outcome ${OUTCOMES[answer.outcome].className}`));
+      box.append(line);
+    });
+    return box;
+  };
+  for (const model of models) {
+    const column = element("div", undefined, "detail-model");
+    column.style.setProperty("--model", color(model));
+    column.append(element("strong", model, "row-name"), answers(byModel[model].get(key), "이번 실행"));
+    if (state.baseline) column.append(answers(baseByModel[model].get(key), "기준 실행"));
+    grid.append(column);
+  }
+  cell.append(grid);
+  row.append(cell);
+  return row;
+}
+
 const RUN_STATUS = { WAITING: "차례 대기", QUEUED: "대기 중", RUNNING: "분석 중", COMPLETED: "완료", PARTIAL: "일부 완료", FAILED: "실패", CANCELLED: "취소됨" };
 const ACTIVE = ["WAITING", "QUEUED", "RUNNING"];
 
@@ -467,13 +701,15 @@ function renderProgress() {
 }
 
 function render() {
-  $("#cf-overview").hidden = state.page === "tokens";
+  $("#cf-overview").hidden = state.page !== "overview";
   $("#cf-tokens").hidden = state.page !== "tokens";
+  $("#cf-fields").hidden = state.page !== "fields";
   root.querySelectorAll("[data-page]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.page === state.page)));
   root.querySelectorAll("[data-stage]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.stage === state.stage)));
   renderProgress();
   renderOverview();
   renderTokens();
+  if (state.page === "fields") renderFields();
   const cases = state.dataset?.cases ?? [];
   $("#profile-count").textContent = `프로필 ${new Set(cases.map((c) => c.profileId)).size}개`;
   $("#site-count").textContent = `사이트 ${new Set(cases.map((c) => c.siteId)).size}개`;
@@ -1255,7 +1491,9 @@ async function load() {
 
 root.querySelectorAll("[data-page]").forEach((b) => b.addEventListener("click", () => { state.page = b.dataset.page; render(); }));
 root.querySelectorAll("[data-stage]").forEach((b) => b.addEventListener("click", () => { state.stage = b.dataset.stage; render(); }));
-$("#comparison").addEventListener("change", (e) => { state.group = e.target.value; state.selected = []; renderFilters(); render(); });
+$("#comparison").addEventListener("change", (e) => {
+  state.group = e.target.value; state.selected = []; state.baseline = ""; state.openField = null; renderFilters(); render();
+});
 $("#cf-source-close").addEventListener("click", () => $("#cf-source").close());
 $("#run-open").addEventListener("click", openRun);
 $("#provider-open").addEventListener("click", () => openProviders());

@@ -160,6 +160,17 @@ class EvaluationRunApiTest {
     }
 
     @Test
+    @DisplayName("칸별 답 조회는 실행이 없으면 404, 실행 때의 데이터셋을 찾지 못하면 빈 목록이다")
+    void listsFieldAnswers() throws Exception {
+        String runId = runId(register());
+        worker.runOnce();
+
+        authorized(get("/api/v1/evaluations/runs/" + runId + "/fields")).andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(0));
+        authorized(get("/api/v1/evaluations/runs/missing/fields")).andExpect(status().isNotFound());
+    }
+
+    @Test
     @DisplayName("재채점은 호출할 때마다 새 기록을 추가하고 이전 기록을 남긴다")
     void rescoringKeepsHistory() throws Exception {
         String runId = runId(register());

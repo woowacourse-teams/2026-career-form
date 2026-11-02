@@ -14,41 +14,30 @@ public record AutofillOutcome(int filledCorrect, int filledWrongKey, int filledU
     /** 정밀도를 채움률보다 2배 중시한다. 잘못 넣은 칸은 사용자가 찾아 고쳐야 하고, 놓친 칸은 직접 입력하면 된다. */
     private static final double BETA = 0.5;
 
-    public static AutofillOutcome score(Map<String, String> expected, Map<String, ObservedItem> observed) {
-        int filledCorrect = 0;
-        int filledWrongKey = 0;
-        int filledUnneeded = 0;
-        int blankCorrect = 0;
-        int missed = 0;
-        int unobserved = 0;
-        for (Map.Entry<String, String> entry : expected.entrySet()) {
-            ObservedItem item = observed.getOrDefault(entry.getKey(), ObservedItem.answered(null));
-            String want = entry.getValue();
-            if (item.providerUnavailable()) {
-                continue;
-            }
-            if (item.value() != null && item.confidence() == null) {
-                unobserved++;
-            }
-            else if (item.value() != null && item.confidence() >= AutofillCounts.AUTO_MIN) {
-                if (item.value().equals(want)) {
-                    filledCorrect++;
-                }
-                else if (want == null) {
-                    filledUnneeded++;
-                }
-                else {
-                    filledWrongKey++;
-                }
-            }
-            else if (want == null) {
-                blankCorrect++;
-            }
-            else {
-                missed++;
-            }
+    /** 칸 하나의 결과. 공급자를 쓸 수 없어 답하지 못한 칸은 {@code EXCLUDED}다. */
+    public enum Kind { FILLED_CORRECT, FILLED_WRONG_KEY, FILLED_UNNEEDED, BLANK_CORRECT, MISSED, UNOBSERVED, EXCLUDED }
+
+    public static Kind classify(String want, ObservedItem item) {
+        if (item.providerUnavailable()) {
+            return Kind.EXCLUDED;
         }
-        return new AutofillOutcome(filledCorrect, filledWrongKey, filledUnneeded, blankCorrect, missed, unobserved);
+        if (item.value() != null && item.confidence() == null) {
+            return Kind.UNOBSERVED;
+        }
+        if (item.value() != null && item.confidence() >= AutofillCounts.AUTO_MIN) {
+            return item.value().equals(want) ? Kind.FILLED_CORRECT
+                : want == null ? Kind.FILLED_UNNEEDED : Kind.FILLED_WRONG_KEY;
+        }
+        return want == null ? Kind.BLANK_CORRECT : Kind.MISSED;
+    }
+
+    public static AutofillOutcome score(Map<String, String> expected, Map<String, ObservedItem> observed) {
+        int[] counts = new int[Kind.values().length];
+        expected.forEach((id, want) ->
+            counts[classify(want, observed.getOrDefault(id, ObservedItem.answered(null))).ordinal()]++);
+        return new AutofillOutcome(counts[Kind.FILLED_CORRECT.ordinal()], counts[Kind.FILLED_WRONG_KEY.ordinal()],
+            counts[Kind.FILLED_UNNEEDED.ordinal()], counts[Kind.BLANK_CORRECT.ordinal()], counts[Kind.MISSED.ordinal()],
+            counts[Kind.UNOBSERVED.ordinal()]);
     }
 
     public AutofillOutcome plus(AutofillOutcome other) {

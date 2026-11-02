@@ -27,6 +27,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import com.careerform.evaluation.run.CallResultRecord;
 import com.careerform.evaluation.run.EvaluationRun;
+import com.careerform.evaluation.run.FieldReport;
 import com.careerform.evaluation.run.RescoringService;
 import com.careerform.evaluation.run.ResultStore;
 import com.careerform.evaluation.run.RunReport;
@@ -58,7 +59,7 @@ public final class EvaluationRunController {
     private final DatasetLoader.ResourceSource resources;
     private final EvaluationProviders providers;
     private final RunReporter reporter = new RunReporter();
-    private final Map<String, Map<String, Map<String, String>>> truths = new ConcurrentHashMap<>();
+    private final Map<String, java.util.Optional<LoadedDataset>> loaded = new ConcurrentHashMap<>();
     private final JsonMapper json = JsonMapper.builder().build();
 
     public EvaluationRunController(RunService runs, RunStore store, ResultStore results, RescoringService scorings,
@@ -121,6 +122,13 @@ public final class EvaluationRunController {
     public List<CallResultRecord> results(@PathVariable String runId) {
         runs.find(runId);
         return results.list(runId);
+    }
+
+    /** 칸 매핑 답을 칸마다 모은 목록. 실행 때의 데이터셋을 찾을 수 없으면 빈 목록이다. */
+    @GetMapping("/runs/{runId}/fields")
+    public List<FieldReport.FieldAnswers> fields(@PathVariable String runId) {
+        EvaluationRun run = runs.find(runId);
+        return dataset(run).map(dataset -> FieldReport.of(dataset, results.list(runId))).orElse(List.of());
     }
 
     @PostMapping("/runs/{runId}/cancel")
@@ -209,21 +217,25 @@ public final class EvaluationRunController {
 
     /** 실행 때의 데이터셋 정답표(사례/순서별). 데이터셋을 읽을 수 없거나 해시가 다르면 비어 있다. */
     private Map<String, Map<String, String>> truth(EvaluationRun run) {
+        Map<String, Map<String, String>> calls = new HashMap<>();
+        dataset(run).ifPresent(dataset -> dataset.cases().forEach(evaluationCase -> evaluationCase.calls()
+            .forEach(call -> calls.put(evaluationCase.caseId() + "/" + call.order(), call.expected()))));
+        return calls;
+    }
+
+    /** 실행 때의 데이터셋. 읽을 수 없거나 해시가 다르면 비어 있다. 같은 버전·해시는 한 번만 읽는다. */
+    private java.util.Optional<LoadedDataset> dataset(EvaluationRun run) {
         String key = run.versions().datasetId() + "/v" + run.versions().datasetVersion() + "/"
             + run.versions().datasetDigest();
-        return truths.computeIfAbsent(key, ignored -> {
-            Map<String, Map<String, String>> calls = new HashMap<>();
+        return loaded.computeIfAbsent(key, ignored -> {
             try {
                 LoadedDataset dataset = datasets.load(run.versions().datasetId(), run.versions().datasetVersion());
-                if (dataset.digest().equals(run.versions().datasetDigest())) {
-                    dataset.cases().forEach(evaluationCase -> evaluationCase.calls().forEach(call ->
-                        calls.put(evaluationCase.caseId() + "/" + call.order(), call.expected())));
-                }
+                return dataset.digest().equals(run.versions().datasetDigest()) ? java.util.Optional.of(dataset)
+                    : java.util.Optional.empty();
             }
             catch (RuntimeException exception) {
-                return Map.of();
+                return java.util.Optional.empty();
             }
-            return calls;
         });
     }
 

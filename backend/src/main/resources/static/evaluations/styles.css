@@ -526,3 +526,45 @@ html,body{margin:0;background:#eae9e5}body{min-width:320px}
 #cf-eval-preview .stage-table td{text-align:right;padding:8px;border-bottom:1px solid #e6e8e6}
 #cf-eval-preview .stage-model{overflow-wrap:anywhere}
 #cf-eval-preview .stage-model::before{content:"";display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;background:var(--model)}
+#cf-eval-preview .fields-page{margin-top:22px}
+#cf-eval-preview .fields-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+#cf-eval-preview .fields-head h2{margin:0;font-size:20px;font-weight:650}
+#cf-eval-preview .fields-head p{margin:4px 0 0;font-size:13px}
+#cf-eval-preview .fields-controls{display:flex;gap:8px;flex-wrap:wrap}
+#cf-eval-preview .fields-controls select{min-width:0;max-width:100%}
+#cf-eval-preview .fields-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:16px 0 12px}
+#cf-eval-preview .fields-model{display:flex;flex-direction:column;gap:4px;background:#fff;border:1px solid #dde1de;border-left:4px solid var(--model);border-radius:6px;padding:10px 14px;font-size:13px;min-width:0}
+#cf-eval-preview .fields-model .row-name{font-size:14px;overflow-wrap:anywhere}
+#cf-eval-preview .fields-delta .up,#cf-eval-preview .fields-table .up{color:#2f6a4f}
+#cf-eval-preview .fields-delta .down,#cf-eval-preview .fields-table .down{color:#b5483d}
+#cf-eval-preview .fields-filters{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+#cf-eval-preview .fields-filters button{font-size:13px;padding:5px 12px;border-radius:14px;border:1px solid #c8ccc9;background:#fff;color:#3e5874}
+#cf-eval-preview .fields-filters button[aria-pressed=true]{background:#475f78;border-color:#475f78;color:#fff}
+#cf-eval-preview .fields-wrap{background:#fff;border:1px solid #dde1de;border-radius:6px;overflow-x:auto}
+#cf-eval-preview .fields-table{width:100%;margin:0;border-collapse:collapse;font-size:13px;white-space:normal}
+#cf-eval-preview .fields-table thead th{position:sticky;top:0;background:#f3f5f6;text-align:left;font-weight:600;font-size:12px;padding:8px 10px;border-bottom:1px solid #dde1de}
+#cf-eval-preview .fields-table .model-col{border-top:3px solid var(--model);min-width:110px;overflow-wrap:anywhere}
+#cf-eval-preview .fields-group th{text-align:left;font-size:12px;font-weight:600;color:#475f78;background:#f8f9f8;padding:7px 10px;border-top:1px solid #e3e6e4}
+#cf-eval-preview .fields-row{cursor:pointer}
+#cf-eval-preview .fields-row:hover,#cf-eval-preview .fields-row[aria-expanded=true]{background:#f4f7fa}
+#cf-eval-preview .fields-row:focus-visible{outline:2px solid #475f78;outline-offset:-2px}
+#cf-eval-preview .fields-row td{text-align:left;padding:8px 10px;border-top:1px solid #eef0ee;vertical-align:middle}
+#cf-eval-preview .field-label{display:flex;flex-direction:column;gap:1px;min-width:120px}
+#cf-eval-preview .field-label .muted{font-size:11px}
+#cf-eval-preview .field-key{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:#3e5874;overflow-wrap:anywhere;min-width:140px}
+#cf-eval-preview .field-key.none{font-family:inherit;color:#6b7680}
+#cf-eval-preview .outcome{display:inline-block;font-size:12px;border-radius:10px;padding:1px 8px;white-space:nowrap}
+#cf-eval-preview .o-correct{background:#dfe9f3;color:#2c5a85}
+#cf-eval-preview .o-blank{background:#e3efe7;color:#3f6b52}
+#cf-eval-preview .o-missed{background:#f6ecd3;color:#7d5f1c}
+#cf-eval-preview .o-wrong{background:#f5dfdc;color:#9a3a30}
+#cf-eval-preview .o-none{background:#eceeef;color:#59626b}
+#cf-eval-preview .outcome-mixed{margin-left:5px;font-size:11px;color:#59626b}
+#cf-eval-preview .fields-table td .up,#cf-eval-preview .fields-table td .down{margin-left:5px;font-size:11px}
+#cf-eval-preview .fields-detail td{text-align:left;background:#f7f9fa;padding:12px 14px;border-top:1px solid #e3e6e4}
+#cf-eval-preview .detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+#cf-eval-preview .detail-model{background:#fff;border:1px solid #dde1de;border-top:3px solid var(--model);border-radius:6px;padding:10px 12px;min-width:0}
+#cf-eval-preview .detail-model h5{margin:10px 0 6px;font-size:12px;color:#59626b}
+#cf-eval-preview .answer-line{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;font-size:12px;padding:3px 0}
+#cf-eval-preview .answer-line code{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;overflow-wrap:anywhere}
+@media(max-width:620px){#cf-eval-preview .fields-controls{width:100%}#cf-eval-preview .fields-controls select{flex:1}}
