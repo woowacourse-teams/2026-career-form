@@ -96,7 +96,8 @@ function renderOverview() {
     bars("자동기입 최종 정확도", "%", (m) => percent(report(m)?.quality.accuracy), 100, (v) => `${v.toFixed(1)}%`,
       `맞힌 항목 수 ÷ 채점한 항목 수(준비·매핑 전체 합산). 실패 호출은 빠진다. 채점식 ${report(state.selected[0])?.scoringVersion ?? "—"}`),
     bars("준비 정확도", "%", (m) => percent(report(m)?.quality.preparationAccuracy), 100, (v) => `${v.toFixed(1)}%`),
-    bars("필드 매핑 정확도", "%", (m) => percent(report(m)?.quality.mappingAccuracy), 100, (v) => `${v.toFixed(1)}%`));
+    bars("필드 매핑 정확도", "%", (m) => percent(report(m)?.quality.mappingAccuracy), 100, (v) => `${v.toFixed(1)}%`),
+    renderItemBreakdown());
   const total = state.stage === "total";
   const perf = (m) => report(m)?.performance[stageKey()];
   const seconds = (m) => {
@@ -172,6 +173,10 @@ function renderTokenBars() {
   });
   const totals = rows.map(({ tokens }) => tokens?.inputMean == null ? null : tokens.inputMean + tokens.outputMean);
   const max = niceMax(Math.max(0, ...totals.filter((value) => value != null)));
+  const costs = rows.map(({ model, tokens }) => ({
+    mean: tokens?.inputMean == null ? null : estimateCost(tokens.inputMean, tokens.outputMean, prices[model]),
+    total: tokens?.inputTotal == null ? null : estimateCost(tokens.inputTotal, tokens.outputTotal, prices[model]),
+  }));
   rows.forEach(({ model, run, tokens }, index) => {
     const row = element("div", undefined, "token-bar-row");
     row.style.setProperty("--model", color(model));
@@ -188,7 +193,10 @@ function renderTokenBars() {
       track.append(input, output);
       track.setAttribute("aria-label", `${model} 입력 ${count(tokens.inputMean)}, 출력 ${count(tokens.outputMean)} 토큰`);
       value.append(element("b", `${count(totals[index])} 토큰`),
-        element("span", `입력 ${count(tokens.inputMean)} · 출력 ${count(tokens.outputMean)}`, "muted"));
+        element("span", `입력 ${count(tokens.inputMean)} · 출력 ${count(tokens.outputMean)}`, "muted"),
+        ...(costs[index].total == null ? [element("span", "단가 미설정", "token-cost")]
+          : [element("span", `시도당 ${formatUsd(costs[index].mean)}`, "token-cost"),
+            element("span", `실행 전체 ${formatUsd(costs[index].total)}`, "token-cost")]));
     } else if (run && ACTIVE.includes(run.status)) {
       track.classList.add("pending");
       value.append(element("b", RUN_STATUS[run.status]), element("span", `${run.processedCalls}/${run.plannedCalls} 호출`, "muted"));
@@ -213,7 +221,67 @@ function renderTokenBars() {
     const high = totals[rows.indexOf(sorted[sorted.length - 1])];
     box.append(element("p", `같은 입력에서 시도당 토큰이 ${count(low)}에서 ${count(high)}까지 ${(high / low).toFixed(1)}배 벌어집니다.`, "token-summary"));
   }
+  const priced = rows.map((row, index) => ({ ...row, cost: costs[index].total }))
+    .filter((_, index) => totals[index] != null);
+  if (priced.some(({ cost }) => cost != null)) {
+    const summary = element("div", undefined, "token-cost-summary");
+    summary.append(element("h4", "실행 전체 예상 비용"));
+    priced.forEach(({ model, cost }) => {
+      const line = element("div", undefined, "token-cost-line");
+      line.style.setProperty("--model", color(model));
+      line.append(element("span", model), element("b", formatUsd(cost)));
+      summary.append(line);
+    });
+    summary.append(element("p", "입력·출력 토큰 합계 × 모델 단가 설정에 입력한 USD 단가(100만 토큰당). 서버는 비용을 계산하지 않는다.", "muted"));
+    box.append(summary);
+  } else if (observed.length) {
+    box.append(element("p", "비용을 보려면 모델 단가 설정에서 입력·출력 단가를 넣어 주세요.", "muted"));
+  }
   return box;
+}
+
+const ITEM_KINDS = [
+  { key: "correct", label: "정답", className: "item-correct" },
+  { key: "wrongKey", label: "오답(다른 항목)", className: "item-wrong" },
+  { key: "missing", label: "누락(판단 보류)", className: "item-missing" },
+  { key: "unnecessary", label: "불필요 제안", className: "item-unnecessary" },
+];
+
+/**
+ * 모델별 항목 판정 수(quality.items)를 정답·오답·누락·불필요 제안으로 나눈 100% 막대로 그린다. 정확도가 같아도
+ * 다른 항목을 고른 오답(잘못 기입)과 판단 보류(직접 입력)는 위험이 달라 따로 보인다.
+ */
+function renderItemBreakdown() {
+  const card = element("div", undefined, "metric");
+  const head = element("div", undefined, "metric-head");
+  head.append(element("h3", "항목 판정"), element("span", "실행 전체 · 항목 수", "muted"));
+  card.append(head);
+  const legend = element("div", undefined, "item-legend");
+  ITEM_KINDS.forEach(({ label, className }) => legend.append(element("span", label, className)));
+  card.append(legend);
+  if (!state.selected.length) card.append(element("div", "비교할 모델을 선택하세요.", "empty"));
+  for (const model of state.selected) {
+    const items = report(model)?.quality.items;
+    const scored = items ? ITEM_KINDS.reduce((sum, { key }) => sum + (items[key] ?? 0), 0) : 0;
+    const row = element("div", undefined, "item-row");
+    row.style.setProperty("--model", color(model));
+    const track = element("div", undefined, "item-track");
+    if (scored) {
+      ITEM_KINDS.forEach(({ key, label, className }) => {
+        const part = element("span", undefined, className);
+        part.style.width = `${(items[key] ?? 0) / scored * 100}%`;
+        part.title = `${label} ${items[key] ?? 0}`;
+        track.append(part);
+      });
+    }
+    const numbers = element("span", scored
+      ? ITEM_KINDS.slice(1).map(({ key, label }) => `${label.split("(")[0]} ${items[key] ?? 0}`).join(" · ") + ` / ${scored}`
+      : "—", "item-numbers");
+    row.append(element("span", model), track, numbers);
+    card.append(row);
+  }
+  card.append(element("p", "채점 제외(공급자 사용 불가) 항목은 빠진다. 오답은 틀린 값이 들어갈 위험, 누락은 사용자가 직접 입력해야 하는 칸이다.", "muted metric-foot"));
+  return card;
 }
 
 const RUN_STATUS = { WAITING: "차례 대기", QUEUED: "대기 중", RUNNING: "분석 중", COMPLETED: "완료", PARTIAL: "일부 완료", FAILED: "실패", CANCELLED: "취소됨" };
