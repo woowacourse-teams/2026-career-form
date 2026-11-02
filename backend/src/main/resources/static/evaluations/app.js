@@ -542,7 +542,7 @@ function renderFields() {
   screenSelect.value = state.fieldScreen;
   screenSelect.addEventListener("change", () => { state.fieldScreen = screenSelect.value; renderFields(); });
   controls.append(baseSelect, screenSelect);
-  head.append(title, controls);
+  head.append(title);
   const kinds = element("div", undefined, "stage item-kinds");
   kinds.setAttribute("aria-label", "항목 종류");
   COMPARE_KINDS.forEach((entry) => {
@@ -552,7 +552,10 @@ function renderFields() {
     button.addEventListener("click", () => { state.itemKind = entry.kind; state.openField = null; renderFields(); });
     kinds.append(button);
   });
-  head.append(kinds);
+  // 종류 전환은 왼쪽, 기준 실행·화면 선택은 오른쪽 한 줄에 둔다.
+  const toolbar = element("div", undefined, "fields-toolbar");
+  toolbar.append(kinds, controls);
+  head.append(toolbar);
 
   if (!models.length) {
     page.replaceChildren(head, element("div", "비교할 모델 선택 필요.", "empty"));
@@ -608,7 +611,7 @@ function renderFields() {
     summary.append(card);
   }
 
-  const chips = element("div", undefined, "fields-filters");
+  const chips = element("div", undefined, "fields-chips");
   FIELD_FILTERS.filter(([key]) => key !== "changed" || state.baseline).forEach(([key, label]) => {
     const chip = element("button", key === "all" ? label : `${label} ${kind.noun}`);
     chip.type = "button";
@@ -678,9 +681,23 @@ function renderFields() {
   }
   table.append(thead, body);
   const wrap = element("div", undefined, "table-wrap fields-wrap");
-  wrap.append(visible.length ? table : element("div", `조건에 맞는 ${kind.noun}이 없습니다.`, "empty"));
-  const foot = element("p", `${visible.length}개 표시 · 반복이 갈린 항목은 가장 많은 판정과 횟수(예: 2/3)를 보입니다. ${state.baseline ? "개선·악화는 맞음 +1, 놓침·누락 0, 틀림 −1의 반복 평균을 같은 모델의 기준 실행과 비교합니다." : ""}`, "muted metric-foot");
-  page.replaceChildren(head, summary, chips, wrap, foot);
+  if (visible.length) wrap.append(table);
+  else {
+    // 거른 결과가 없으면 이유와 함께 전체 보기로 바로 넘어갈 수 있게 한다.
+    const empty = element("div", undefined, "fields-empty");
+    empty.append(element("span", `조건에 맞는 ${kind.noun} 없음 · 전체 ${rows.size}개`));
+    if (filter !== "all") {
+      const all = element("button", "전체 보기");
+      all.type = "button";
+      all.addEventListener("click", () => { state.fieldFilter = "all"; renderFields(); });
+      empty.append(all);
+    }
+    wrap.append(empty);
+  }
+  const filterbar = element("div", undefined, "fields-filters");
+  filterbar.append(chips, element("span", `${visible.length} / ${rows.size}개`, "muted fields-count"));
+  const foot = element("p", `반복이 갈린 항목은 가장 많은 판정과 횟수(예: 2/3)를 보입니다. ${state.baseline ? "개선·악화는 맞음 +1, 놓침·누락 0, 틀림 −1의 반복 평균을 같은 모델의 기준 실행과 비교합니다." : ""}`, "muted metric-foot");
+  page.replaceChildren(head, summary, filterbar, wrap, foot);
 }
 
 /** 펼친 칸의 반복별 답·확신도. 기준 실행이 있으면 그 답도 함께 보인다. */
