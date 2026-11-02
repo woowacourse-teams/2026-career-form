@@ -4,6 +4,11 @@
 }
 .hero {
   padding: 64px var(--gutter) 40px;
+  background: radial-gradient(
+    50% 80% at 85% 60%,
+    rgb(177 229 253 / 70%),
+    transparent 70%
+  );
 }
 .heroInner {
   max-width: 1120px;

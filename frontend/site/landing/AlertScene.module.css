@@ -10,7 +10,12 @@
   height: 100svh;
   overflow: hidden;
   background:
-    radial-gradient(50% 50% at 50% 70%, #fff1de, transparent 70%), #fff;
+    radial-gradient(
+      55% 50% at 50% 72%,
+      rgb(177 229 253 / 70%),
+      transparent 70%
+    ),
+    #fff;
 }
 .caption {
   position: absolute;
@@ -177,8 +182,8 @@
   background: #fff;
   border-radius: 16px;
   box-shadow:
-    0 22px 40px -18px rgb(57 41 29 / 45%),
-    0 0 0 1px rgb(231 216 197 / 80%);
+    0 22px 40px -18px rgb(19 41 58 / 45%),
+    0 0 0 1px rgb(210 231 242 / 80%);
   padding: 12px 14px;
   display: grid;
   grid-template-columns: 40px 1fr;

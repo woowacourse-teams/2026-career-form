@@ -77,8 +77,8 @@
 }
 .tagProblem {
   composes: tag;
-  background: var(--danger-soft);
-  color: var(--color-danger);
+  background: var(--problem-soft);
+  color: var(--problem);
 }
 .tagSolve {
   composes: tag;
@@ -120,8 +120,8 @@
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: var(--danger-soft);
-  color: var(--color-danger);
+  background: var(--problem-soft);
+  color: var(--problem);
   font-size: 13px;
   font-weight: 700;
   display: grid;

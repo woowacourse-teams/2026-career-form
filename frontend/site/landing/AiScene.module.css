@@ -10,7 +10,12 @@
   height: 100svh;
   overflow: hidden;
   background:
-    radial-gradient(60% 50% at 70% 40%, #fff1de 0%, transparent 70%),
+    radial-gradient(
+      55% 55% at 72% 45%,
+      rgb(177 229 253 / 85%) 0%,
+      rgb(177 229 253 / 25%) 45%,
+      transparent 72%
+    ),
     var(--page);
 }
 .stage > * {
@@ -136,7 +141,7 @@
   animation: spin 3.2s linear infinite;
 }
 .status b {
-  color: #ffd9b0;
+  color: #b1e5fd;
   font-variant-numeric: tabular-nums;
 }
 @keyframes spin {
@@ -163,12 +168,12 @@
   background: linear-gradient(
     90deg,
     transparent,
-    var(--orange) 20%,
-    #ffd28f 50%,
-    var(--orange) 80%,
+    var(--scan) 20%,
+    #c9efff 50%,
+    var(--scan) 80%,
     transparent
   );
-  box-shadow: 0 0 18px 4px rgb(227 138 62 / 45%);
+  box-shadow: 0 0 18px 4px rgb(63 169 224 / 45%);
   opacity: 0;
   z-index: 2;
 }
@@ -179,7 +184,7 @@
   right: 0;
   bottom: 3px;
   height: 60px;
-  background: linear-gradient(to top, rgb(255 210 143 / 28%), transparent);
+  background: linear-gradient(to top, rgb(177 229 253 / 28%), transparent);
 }
 .summary {
   position: absolute;
@@ -199,12 +204,13 @@
   border-radius: 999px;
   font-size: 13px;
   font-weight: 700;
-  background: var(--ok-soft);
-  color: var(--ok);
+  background: var(--ok);
+  color: #fff;
+  box-shadow: 0 8px 16px -10px rgb(17 58 92 / 70%);
 }
 .summary .summaryReview {
-  background: var(--warn-soft);
-  color: var(--warn);
+  background: var(--action);
+  color: #fff;
 }
 .fly {
   position: absolute;

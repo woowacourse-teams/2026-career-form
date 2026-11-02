@@ -61,7 +61,7 @@
 }
 .form {
   max-width: 440px;
-  box-shadow: 0 18px 40px -26px rgb(117 69 34 / 35%);
+  box-shadow: 0 18px 40px -26px rgb(17 58 92 / 35%);
   --row-height: clamp(28px, 4vh, 38px);
   --row-gap: 7px;
 }
@@ -114,7 +114,7 @@
   cursor: pointer;
   box-shadow:
     0 6px 0 var(--action-strong),
-    0 18px 26px -12px rgb(117 69 34 / 70%);
+    0 18px 26px -12px rgb(17 58 92 / 70%);
   transition:
     transform 0.12s ease,
     box-shadow 0.12s ease,
@@ -128,26 +128,27 @@
   transform: translateY(-2px);
   box-shadow:
     0 8px 0 var(--action-strong),
-    0 22px 30px -12px rgb(117 69 34 / 70%);
+    0 22px 30px -12px rgb(17 58 92 / 70%);
 }
 .fill:not(:disabled):active {
   transform: translateY(5px);
   box-shadow:
     0 1px 0 var(--action-strong),
-    0 6px 10px -6px rgb(117 69 34 / 60%);
+    0 6px 10px -6px rgb(17 58 92 / 60%);
 }
 .fill:disabled {
-  background: var(--accent);
+  background: var(--brand);
+  color: var(--action-strong);
   cursor: progress;
   transform: translateY(4px);
-  box-shadow: 0 2px 0 #b8935f;
+  box-shadow: 0 2px 0 #5e9fc7;
 }
 .pulse::after {
   content: "";
   position: absolute;
   inset: -7px;
   border-radius: 24px;
-  border: 3px solid rgb(166 95 45 / 45%);
+  border: 3px solid rgb(29 111 165 / 45%);
   animation: ring 2.4s ease-out 0.9s infinite;
 }
 @keyframes ring {
@@ -189,7 +190,7 @@
   stroke: #fff;
   stroke-width: 1.6;
   stroke-linejoin: round;
-  filter: drop-shadow(0 3px 4px rgb(57 41 29 / 35%));
+  filter: drop-shadow(0 3px 4px rgb(19 41 58 / 35%));
   animation: tap 2.4s ease-in-out infinite;
 }
 @keyframes tap {
@@ -224,7 +225,7 @@
   padding: 18px;
   background: #fff;
   border: 1.5px solid var(--line);
-  box-shadow: 0 12px 24px -18px rgb(117 69 34 / 45%);
+  box-shadow: 0 12px 24px -18px rgb(17 58 92 / 45%);
 }
 .resultHead {
   display: flex;
@@ -261,8 +262,8 @@
 .result em {
   font-style: normal;
   font-weight: 700;
-  color: var(--warn);
-  background: var(--warn-soft);
+  color: #fff;
+  background: var(--action);
   padding: 1px 6px;
   border-radius: 6px;
 }
@@ -337,7 +338,7 @@
   white-space: nowrap;
   padding: 8px 14px;
   border-radius: 14px;
-  box-shadow: 0 10px 20px -10px rgb(57 41 29 / 60%);
+  box-shadow: 0 10px 20px -10px rgb(19 41 58 / 60%);
 }
 .bubble::after {
   content: "";

@@ -89,12 +89,30 @@
 }
 .reviewNote {
   position: absolute;
-  right: 10px;
-  font-size: 12px;
-  color: var(--warn);
-  font-weight: 700;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px 3px 5px;
+  border-radius: 999px;
+  background: var(--action);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 800;
   opacity: 0;
+  box-shadow: 0 4px 10px -4px rgb(17 58 92 / 60%);
   transition: opacity 0.2s;
+}
+.reviewNote::before {
+  content: "?";
+  display: inline-grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--action);
+  font-size: 10px;
 }
 .seen .label {
   color: var(--action);
@@ -110,11 +128,26 @@
   transform: scale(1);
 }
 .review .input {
-  border-color: #e0a54b;
-  background: var(--warn-soft);
+  border: 2px dashed var(--action);
+  background: repeating-linear-gradient(
+    135deg,
+    #fff 0 7px,
+    var(--review-stripe) 7px 14px
+  );
+  box-shadow: 0 0 0 4px rgb(29 111 165 / 16%);
+  animation: reviewRing 1.2s ease-out 2;
+}
+@keyframes reviewRing {
+  from {
+    box-shadow: 0 0 0 0 rgb(29 111 165 / 45%);
+  }
+  to {
+    box-shadow: 0 0 0 10px rgb(29 111 165 / 0%);
+  }
 }
 .review .label {
-  color: var(--warn);
+  color: var(--action);
+  font-weight: 800;
 }
 .review .reviewNote {
   opacity: 1;
@@ -139,7 +172,7 @@
   color: var(--strong);
   white-space: nowrap;
   opacity: 0;
-  box-shadow: 0 6px 14px -8px rgb(117 69 34 / 40%);
+  box-shadow: 0 6px 14px -8px rgb(17 58 92 / 40%);
   pointer-events: none;
 }
 .chip::before {
@@ -150,9 +183,9 @@
   background: var(--brand) url("./assets/O2.webp") center / 14px no-repeat;
 }
 .chipReview {
-  border-color: #e0a54b;
-  background: var(--warn-soft);
-  color: var(--warn);
+  border-color: var(--action);
+  background: var(--action);
+  color: #fff;
 }
 
 @media (max-width: 900px) {

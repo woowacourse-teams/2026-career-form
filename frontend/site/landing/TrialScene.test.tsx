@@ -43,7 +43,7 @@ describe("landing trial", () => {
     expect(trial.getByRole("status")).toHaveTextContent(
       `${filledCount}칸을 채웠어요`,
     );
-    expect(trial.getByText(`노란 칸 ${reviewCount}개`)).toBeVisible();
+    expect(trial.getByText(`확인할 칸 ${reviewCount}개`)).toBeVisible();
     const fields = trial.getAllByRole("textbox");
     sampleFields.forEach((field, i) =>
       field.value

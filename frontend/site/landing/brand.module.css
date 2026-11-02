@@ -1,30 +1,35 @@
 /* Shared surface for the redesigned pages (landing, 기술 소개, 정책): the
    product palette from theme.css plus the clay depth used by the characters. */
 .brand {
-  --page: var(--color-surface-muted);
-  --surface: var(--color-surface);
-  --cream: #fff6ea;
-  --brand: var(--color-brand);
-  --line: var(--color-border);
-  --line-strong: var(--color-border-strong);
-  --text: var(--color-text);
-  --strong: var(--color-text-strong);
-  --sub: var(--color-text-muted);
-  --action: var(--color-action);
-  --action-strong: var(--color-action-strong);
-  --accent: var(--color-accent);
-  --orange: #e38a3e;
-  --warn: var(--color-warning);
-  --warn-soft: var(--color-warning-soft);
-  --ok: var(--color-success);
+  /* Sky palette for the landing, 기술 소개 and policies. Literal values on
+     purpose: theme.css is shared with the extension, which keeps its colours. */
+  --sky: #b1e5fd;
+  --page: #f2faff;
+  --surface: #ffffff;
+  --cream: #eaf6fd;
+  --brand: #d6f0fd;
+  --brand-hover: #c2e7fb;
+  --line: #d2e7f2;
+  --line-strong: #a6cde2;
+  --text: #2e4a5d;
+  --strong: #13293a;
+  --sub: #5a7487;
+  --action: #1d6fa5;
+  --action-strong: #13527e;
+  --accent: #7cc6ee;
+  --scan: #3fa9e0;
+  --warn: #1b5c8f;
+  --warn-soft: #dcf0fd;
+  --review-stripe: #dff1fd;
+  --ok: #24724f;
   --ok-check: #5bb784;
   --ok-soft: #eaf5ee;
-  --danger-soft: #fbe9e4;
+  --problem: #34536b;
+  --problem-soft: #e3ebf2;
   --clay:
-    0 34px 60px -28px rgb(117 69 34 / 35%),
-    0 10px 22px -12px rgb(117 69 34 / 18%),
-    inset 0 2px 0 rgb(255 255 255 / 90%),
-    inset 0 -8px 16px rgb(206 181 150 / 22%);
+    0 34px 60px -28px rgb(17 58 92 / 35%),
+    0 10px 22px -12px rgb(17 58 92 / 18%), inset 0 2px 0 rgb(255 255 255 / 90%),
+    inset 0 -8px 16px rgb(140 196 228 / 22%);
   --gutter: max(20px, env(safe-area-inset-left, 0px));
   --header-height: 64px;
 
@@ -70,7 +75,7 @@
   display: block;
 }
 .brand :focus-visible {
-  outline: 3px solid rgb(166 95 45 / 45%);
+  outline: 3px solid rgb(29 111 165 / 45%);
   outline-offset: 3px;
   border-radius: 8px;
 }
@@ -101,7 +106,7 @@
   background: var(--action);
   color: #fff;
   box-shadow:
-    0 10px 20px -10px rgb(117 69 34 / 70%),
+    0 10px 20px -10px rgb(17 58 92 / 70%),
     inset 0 -3px 0 rgb(0 0 0 / 15%);
 }
 .primary:hover {
@@ -111,18 +116,18 @@
   composes: button;
   background: var(--brand);
   color: var(--strong);
-  box-shadow: inset 0 -3px 0 rgb(117 69 34 / 10%);
+  box-shadow: inset 0 -3px 0 rgb(17 58 92 / 10%);
 }
 .soft:hover {
-  background: var(--color-brand-hover);
+  background: var(--brand-hover);
 }
 
 /* header */
 .header {
   z-index: 20;
   padding-top: env(safe-area-inset-top, 0px);
-  background: rgb(255 250 244 / 92%);
-  border-bottom: 1px solid rgb(231 216 197 / 70%);
+  background: rgb(242 250 255 / 92%);
+  border-bottom: 1px solid rgb(210 231 242 / 70%);
 }
 .headerFixed {
   composes: header;
@@ -197,8 +202,8 @@
 /* closing call to action */
 .cta {
   border-radius: 36px;
-  background: var(--action);
-  color: #fff;
+  background: var(--sky);
+  color: var(--strong);
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: end;
@@ -212,19 +217,19 @@
   align-self: center;
 }
 .brand .ctaText h2 {
-  color: #fff;
+  color: var(--strong);
   font-size: clamp(28px, 3.8vw, 48px);
   font-weight: 800;
   line-height: 1.2;
 }
 .ctaButton {
   composes: button;
-  background: #fff;
-  color: var(--action-strong);
+  background: var(--action);
+  color: #fff;
   justify-self: start;
 }
 .ctaButton:hover {
-  background: var(--cream);
+  background: var(--action-strong);
 }
 .ctaArt {
   height: 300px;

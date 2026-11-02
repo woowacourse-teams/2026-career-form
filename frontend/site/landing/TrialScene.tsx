@@ -172,7 +172,8 @@ function TrialPanel({
             <b>{filledCount}칸을 채웠어요</b>
           </div>
           <p>
-            <em>노란 칸 {reviewCount}개</em>는 직접 확인하고, 제출도 직접 해요.
+            <em>확인할 칸 {reviewCount}개</em>는 직접 확인하고, 제출도 직접
+            해요.
           </p>
           <InstallLink
             onInstall={onInstall}
