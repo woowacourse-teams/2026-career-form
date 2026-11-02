@@ -2,8 +2,8 @@
 import { accessHeaders, clearAccess } from "/quality/access.js";
 import { estimateCost, formatUsd, validRate } from "/evaluations/pricing.js";
 
-// 첫 버전이 기본값이다. 이전 버전은 이전 결과와 같은 입력으로 다시 잴 때 고른다.
-const DATASET = { id: "generic-matching", versions: [2, 1] };
+// 평가는 항상 현재 데이터셋의 모든 화면으로 한다. 전후 비교는 같은 데이터셋으로 개선 전·후 코드를 각각 돌려 비교한다.
+const DATASET = { id: "generic-matching", version: 2 };
 const COLORS = ["#4e6d90", "#688b7c", "#ac8d68", "#8a6f9e", "#6f8f9e"];
 const PRICE_KEY = "cf-evaluation-model-prices-v1";
 const root = document.getElementById("cf-eval-preview");
@@ -58,13 +58,21 @@ const done = (run) => ["COMPLETED", "PARTIAL"].includes(run.status);
 /** 함께 비교할 실행 묶음. 비교 등록은 comparisonId로, 단독 실행은 실행 하나로 묶는다. */
 const groupKey = (run) => run.comparisonId ?? run.id;
 const groupRuns = (key) => state.runs.filter(({ run }) => groupKey(run) === key).reverse();
-const SPLIT = { tuning: "튜닝용", final: "최종 평가용" };
+const SPLIT = { tuning: "튜닝용", final: "최종 평가용", all: "전체 화면" };
 function groupLabel(key) {
   const runs = groupRuns(key).map(({ run }) => run);
   const first = runs[0];
   const at = new Date(first.requestedAt);
   const time = `${String(at.getMonth() + 1).padStart(2, "0")}-${String(at.getDate()).padStart(2, "0")} ${String(at.getHours()).padStart(2, "0")}:${String(at.getMinutes()).padStart(2, "0")}`;
-  return `${time} · ${SPLIT[first.versions.split] ?? first.versions.split} · 데이터 v${first.versions.datasetVersion} · 반복 ${first.repetitions} · ${promptKey(first)} · 모델 ${runs.length}개`;
+  return `${promptKey(first)} · ${time}`;
+}
+
+/** 고른 비교 묶음의 조건. 목록 이름은 짧게 두고 조건은 여기서 한 줄로 보인다. */
+function comparisonDetail(key) {
+  const runs = groupRuns(key).map(({ run }) => run);
+  const first = runs[0];
+  if (!first) return "";
+  return `데이터 v${first.versions.datasetVersion} · ${SPLIT[first.versions.split] ?? first.versions.split} · 반복 ${first.repetitions}회 · 모델 ${runs.length}개`;
 }
 
 /** 선택한 묶음에서 그 모델의 실행. 끝난 실행만 보고를 쓴다. */
@@ -102,9 +110,7 @@ const report = (model) => latest(model)?.report;
 function renderOverview() {
   const quality = $("#cf-quality");
   quality.replaceChildren(
-    bars("자동기입 최종 정확도", "%", (m) => percent(report(m)?.quality.accuracy), 100, (v) => `${v.toFixed(1)}%`,
-      `맞힌 항목 수 ÷ 채점한 항목 수(준비·매핑 전체 합산). 실패 호출은 빠진다. 채점식 ${report(state.selected[0])?.scoringVersion ?? "—"}`),
-    renderVariation(),
+    accuracyCard(),
     bars("준비 정확도", "%", (m) => percent(report(m)?.quality.preparationAccuracy), 100, (v) => `${v.toFixed(1)}%`),
     bars("필드 매핑 정확도", "%", (m) => percent(report(m)?.quality.mappingAccuracy), 100, (v) => `${v.toFixed(1)}%`),
     renderItemBreakdown());
@@ -279,52 +285,33 @@ function renderTokenBars() {
 }
 
 /**
- * 반복별 정확도의 범위(최소~최대)를 모델마다 같은 눈금에 그리고, 가장 높은 두 모델의 범위가 겹치면 차이를 구분할 수
- * 없다고 알린다. 반복 수가 적으면 범위가 실제 흔들림보다 좁게 잡힌다.
+ * 최종 정확도와 반복별 범위(최소~최대)를 한 카드에 보이고, 가장 높은 두 모델의 범위가 겹치면 차이 구분 불가로 알린다.
+ * 자세한 설명은 정답 기준 창에 있다.
  */
-function renderVariation() {
-  const card = element("div", undefined, "metric");
-  const head = element("div", undefined, "metric-head");
-  head.append(element("h3", "반복별 흔들림"), element("span", "같은 입력을 반복한 정확도 범위", "muted"));
-  card.append(head);
-  const rows = state.selected.map((model) => {
+function accuracyCard() {
+  const card = bars("자동기입 최종 정확도", "%", (m) => percent(report(m)?.quality.accuracy), 100,
+    (v) => `${v.toFixed(1)}%`);
+  const ranges = state.selected.map((model) => {
     const values = (report(model)?.repetitions ?? []).map((item) => item.accuracy).filter((value) => value != null)
       .map((value) => value * 100);
     return { model, values, min: Math.min(...values), max: Math.max(...values),
       mean: values.reduce((sum, value) => sum + value, 0) / (values.length || 1) };
-  }).filter(({ values }) => values.length);
-  if (!rows.length) {
-    card.append(element("div", "완료된 실행이 없습니다.", "empty"));
-    return card;
+  });
+  card.querySelectorAll(".bar-row").forEach((row, index) => {
+    const range = ranges[index];
+    if (!range?.values.length) return;
+    row.after(element("span", range.values.length > 1
+      ? `반복 ${range.values.length}회 범위 ${range.min.toFixed(1)}~${range.max.toFixed(1)}%` : "반복 1회", "range-note"));
+  });
+  const measured = ranges.filter(({ values }) => values.length);
+  if (measured.length) {
+    const [first, second] = [...measured].sort((a, b) => b.mean - a.mean);
+    const verdict = measured.some(({ values }) => values.length < 2) ? "반복 1회라 흔들림을 알 수 없음"
+      : !second ? `반복 사이 ${(first.max - first.min).toFixed(1)}%p 흔들림`
+        : first.min <= second.max ? "차이 구분 불가 · 반복별 범위가 겹침" : `${first.model} 우세 · 반복별 범위가 겹치지 않음`;
+    card.append(element("p", verdict, "variation-verdict"));
   }
-  const low = Math.max(0, Math.floor(Math.min(...rows.map(({ min }) => min)) - 2));
-  const high = Math.min(100, Math.ceil(Math.max(...rows.map(({ max }) => max)) + 2));
-  const at = (value) => `${(value - low) / Math.max(1, high - low) * 100}%`;
-  for (const row of rows) {
-    const line = element("div", undefined, "bar-row variation-row");
-    line.style.setProperty("--model", color(row.model));
-    const track = element("div", undefined, "track variation-track");
-    const span = element("span", undefined, "variation-span");
-    span.style.left = at(row.min);
-    span.style.width = `calc(${at(row.max)} - ${at(row.min)} + 3px)`;
-    const mean = element("span", undefined, "variation-mean");
-    mean.style.left = at(row.mean);
-    track.append(span, mean);
-    line.append(element("span", row.model), track, element("span", row.values.length > 1
-      ? `${row.min.toFixed(1)}~${row.max.toFixed(1)}%` : `${row.min.toFixed(1)}%`, "number variation-number"));
-    card.append(line);
-  }
-  card.append(element("p", `눈금 ${low}%~${high}% · 막대는 반복별 최소~최대, 세로선은 평균`, "muted metric-foot"));
-  const verdict = (() => {
-    if (rows.some(({ values }) => values.length < 2)) return "반복 1회라 흔들림을 알 수 없습니다. 모델을 비교하려면 반복 3회 이상으로 실행해 주세요.";
-    if (rows.length < 2) return `반복 ${rows[0].values.length}회 사이 정확도가 ${(rows[0].max - rows[0].min).toFixed(1)}%p 흔들립니다.`;
-    const [first, second] = [...rows].sort((a, b) => b.mean - a.mean);
-    return first.min <= second.max
-      ? `${first.model}와 ${second.model}의 반복별 범위가 겹쳐 차이를 구분할 수 없습니다.`
-      : `${first.model}가 ${second.model}보다 높고 반복별 범위도 겹치지 않습니다.`;
-  })();
-  card.append(element("p", verdict, "variation-verdict"));
-  card.append(element("p", "반복 수가 적으면 범위가 실제보다 좁게 잡힙니다. 같은 입력을 새로 실행하면 이 범위 밖으로 움직일 수 있습니다.", "muted metric-foot"));
+  card.append(element("p", `맞힌 항목 ÷ 채점 항목 · 채점식 ${report(state.selected[0])?.scoringVersion ?? "—"}`, "muted metric-foot"));
   return card;
 }
 
@@ -437,6 +424,7 @@ function renderFilters() {
   const select = $("#comparison");
   select.replaceChildren(...groups.map((key) => Object.assign(element("option", groupLabel(key)), { value: key })));
   select.value = state.group ?? "";
+  $("#comparison-detail").textContent = state.group ? comparisonDetail(state.group) : "";
   state.models = [...new Set(groupRuns(state.group).map(({ run }) => modelKey(run)))];
   state.selected = state.selected.filter((model) => state.models.includes(model));
   if (!state.selected.length) state.selected = [...state.models];
@@ -502,6 +490,7 @@ function criteriaView() {
     ["채점 제외", "공급자 사용 불가 항목은 빼고, 모든 항목이 빠진 호출은 채점 불가로 실패율에 넣는다."],
     ["최종 정확도", "채점 가능한 호출의 맞힌 항목 수 합 ÷ 채점한 항목 수 합(항목 단위). 칸이 많은 호출이 그만큼 비중을 가진다. 준비·매핑 정확도도 같은 방식으로 단계별로 계산한다."],
     ["실패", "타임아웃, API 오류, 응답 형식 오류는 정확도에서 빼고 실패율에 넣는다. 채점 가능한 호출이 없으면 측정 불가."],
+    ["반복별 범위", "같은 입력을 반복마다 따로 채점한 정확도의 최소~최대. 가장 높은 두 모델의 범위가 겹치면 차이를 구분할 수 없다고 본다. 반복 수가 적으면 범위가 실제보다 좁게 잡혀, 같은 입력을 새로 실행하면 범위 밖으로 움직일 수 있다."],
   ];
   for (const [title, text] of lines) {
     const section = element("section");
@@ -690,10 +679,6 @@ async function openRun() {
     option.append(box, document.createTextNode(`${item.provider} / ${name}`));
     targets.append(option);
   }));
-  const split = element("select");
-  split.append(Object.assign(element("option", "튜닝용"), { value: "tuning" }), Object.assign(element("option", "최종 평가용"), { value: "final" }));
-  const version = element("select");
-  DATASET.versions.forEach((value) => version.append(Object.assign(element("option", `v${value}`), { value: String(value) })));
   const repetitions = Object.assign(element("input"), { type: "number", min: "1", max: "20", value: "1" });
   const prompt = Object.assign(element("input"), { type: "text", maxLength: 32, placeholder: "비워 두면 이름 없음" });
   const message = element("p", "실제 모델을 호출하며 비용이 발생합니다. 진행 중인 평가가 있으면 등록되지 않습니다.", "muted");
@@ -703,8 +688,6 @@ async function openRun() {
     field("모델", targets, providers.length
       ? "비교할 모델을 고릅니다(최대 5개). 같은 조건으로 한 모델씩 차례로 돌고, 결과는 한 화면에 나란히 나옵니다."
       : "이 서버에 연결된 공급자가 없습니다.", "div"),
-    field("데이터셋 버전", version, "v2는 v1 화면 3개에 검정고시 화면(최종 평가용)을 더했습니다. 개선 전후는 같은 버전끼리 비교합니다."),
-    field("분할", split, "튜닝용은 개선 작업 중 확인용, 최종 평가용은 개선 전후 비교용 화면입니다."),
     field("반복 수", repetitions, "같은 입력을 몇 번 돌릴지(1~20). 응답시간 편차를 보려면 3 이상을 권장합니다."),
     field("프롬프트 이름", prompt, "결과를 구분할 이름표(선택). 예: baseline. 실제 프롬프트 내용은 서버가 자동으로 기록합니다."),
     message, submit);
@@ -718,7 +701,7 @@ async function openRun() {
     submit.disabled = true;
     try {
       const result = await api("/runs", "POST", {
-        datasetId: DATASET.id, datasetVersion: Number(version.value), split: split.value,
+        datasetId: DATASET.id, datasetVersion: DATASET.version, split: "all",
         repetitions: Number(repetitions.value), promptVersion: prompt.value.trim() || null, overrides: {},
         targets: chosen,
       });
@@ -744,7 +727,7 @@ async function load() {
     state.runs = [];
     failed = error.message;
   }
-  try { state.dataset = await api(`/datasets/${DATASET.id}/v${DATASET.versions[0]}`); } catch { state.dataset = null; }
+  try { state.dataset = await api(`/datasets/${DATASET.id}/v${DATASET.version}`); } catch { state.dataset = null; }
   renderFilters();
   render();
   if (failed) $("#cf-status").textContent = failed;

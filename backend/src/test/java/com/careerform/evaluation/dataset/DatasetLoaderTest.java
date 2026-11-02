@@ -141,6 +141,15 @@ class DatasetLoaderTest {
             .containsExactlyInAnyOrder("high-school", "university", "ged");
     }
 
+    @Test
+    @DisplayName("분할 all은 데이터셋의 모든 사례이고 요약에도 나온다")
+    void allSplitCoversEveryCase() {
+        DatasetLoader loader = new DatasetLoader(DatasetLoader.classpath(getClass().getClassLoader()));
+
+        assertThat(loader.load("generic-matching", 2).casesIn("all")).hasSize(4);
+        assertThat(loader.find("generic-matching", 2).orElseThrow().splits().get("all").cases()).isEqualTo(4);
+    }
+
     private static void assertRejected(Map<String, String> files, Code code) {
         assertThatThrownBy(() -> loader(files).load("synthetic", 1))
             .isInstanceOfSatisfying(DatasetRejected.class, rejected -> assertThat(rejected.code()).isEqualTo(code));

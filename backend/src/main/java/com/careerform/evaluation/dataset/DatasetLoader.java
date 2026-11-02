@@ -58,7 +58,7 @@ public final class DatasetLoader implements DatasetCatalog {
         try {
             LoadedDataset dataset = load(datasetId, version);
             Map<String, SplitSummary> splits = new HashMap<>();
-            for (String split : SPLITS) {
+            for (String split : List.of("tuning", "final", LoadedDataset.ALL)) {
                 List<EvaluationCase> cases = dataset.casesIn(split);
                 if (!cases.isEmpty()) {
                     splits.put(split, new SplitSummary(cases.size(),

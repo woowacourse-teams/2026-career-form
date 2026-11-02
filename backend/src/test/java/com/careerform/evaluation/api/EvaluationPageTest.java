@@ -16,16 +16,16 @@ class EvaluationPageTest {
         String index = read("static/evaluations/index.html");
         assertThat(index).contains("/quality/quality.css", "/quality/login.js", "data-app=\"/evaluations/app.js\"",
             "id=\"login-form\"", "id=\"management-panel\"", "수집 지침 내려받기", "/evaluations/collection-skill.md",
-            "id=\"cf-progress\"", "id=\"provider-open\"");
+            "id=\"cf-progress\"", "id=\"provider-open\"", "id=\"comparison-detail\"");
         String app = read("static/evaluations/app.js");
         assertThat(app).contains("/quality/access.js", "\"/api/v1/evaluations\"", "/runs?limit=50", "/datasets/",
-            "/prompts/", "맞힌 항목 수 ÷ 채점한 항목 수", "?.scoringVersion", "renderProgress", "progressbar",
+            "/prompts/", "맞힌 항목 ÷ 채점 항목", "?.scoringVersion", "renderProgress", "progressbar",
             "aria-valuenow", "renderTokenBars", "입력 토큰", "출력 토큰", "renderItemBreakdown", "quality.items",
             "오답(다른 항목)", "누락(판단 보류)", "불필요 제안", "예상 비용 비교", "자동기입 1,000회당", "가장 저렴한 모델의",
             "openProviders", "/provider-registrations", "HOST_NOT_ALLOWED_FOR_KEY", "INTERNAL_ADDRESS",
-            "키 원문은 이 화면에 입력하지 않습니다", "데이터셋 버전", "datasetVersion: Number(version.value)",
-            "· 데이터 v${first.versions.datasetVersion}", "renderVariation", "?.repetitions", "차이를 구분할 수 없습니다",
-            "반복 1회라 흔들림을 알 수 없습니다");
+            "키 원문은 이 화면에 입력하지 않습니다", "datasetVersion: DATASET.version", "split: \"all\"",
+            "comparisonDetail", "accuracyCard", "?.repetitions", "차이 구분 불가", "반복 1회라 흔들림을 알 수 없음");
+        assertThat(app).doesNotContain("field(\"분할\"", "field(\"데이터셋 버전\"", "renderVariation");
         String all = index + app + read("static/evaluations/styles.css") + read("static/evaluations/pricing.js");
         assertThat(all).doesNotContain("cdn.", "https://", "http://", "window.openai", "Pretendard",
             "dataset-preview", "예시 결과", "sessionStorage");

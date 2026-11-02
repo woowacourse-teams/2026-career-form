@@ -9,7 +9,12 @@ public record LoadedDataset(String datasetId, int version, String digest, List<E
         cases = List.copyOf(cases);
     }
 
+    /** 데이터셋의 모든 사례를 뜻하는 분할 이름. */
+    public static final String ALL = "all";
+
+    /** 분할의 사례. {@link #ALL}이면 모든 사례다. */
     public List<EvaluationCase> casesIn(String split) {
-        return cases.stream().filter(evaluationCase -> evaluationCase.split().equals(split)).toList();
+        return ALL.equals(split) ? cases
+            : cases.stream().filter(evaluationCase -> evaluationCase.split().equals(split)).toList();
     }
 }
