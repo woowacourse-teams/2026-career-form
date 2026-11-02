@@ -162,15 +162,18 @@ it("explains grouped results and copy after the application step", () => {
   expect(container.querySelector("input")).toBeNull();
 });
 
-it("leads with AI reading and filling the application", () => {
+it("leads with 의사결정 AI(JEV) reading and filling the application", () => {
   const { container } = render(<SiteApp path="/" />);
   expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
     "지원서 칸,AI가 읽고 채워요.",
   );
   for (const step of [
-    "칸을 읽어요",
-    "무슨 칸인지 이해해요",
-    "내 정보로 채워요",
+    "자동 기입을 누르면",
+    "지원서를 묶음으로 나눠요",
+    "묶음의 종류를 판단해요",
+    "후보를 좁혀요",
+    "하나 고르고 확신을 재요",
+    "몇 초 만에 채워요",
     "애매한 칸은 물어봐요",
   ])
     expect(screen.getByRole("heading", { name: step })).toBeInTheDocument();

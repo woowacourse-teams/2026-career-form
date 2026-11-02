@@ -1,7 +1,7 @@
 /* Hero and the four AI steps share one pinned stage, 460vh of scroll. */
 .track {
   position: relative;
-  height: 460vh;
+  height: 760vh;
 }
 .stage {
   position: sticky;
@@ -150,13 +150,26 @@
   }
 }
 
-.form {
+.formSlot {
   position: absolute;
   left: var(--fx);
   top: var(--fy);
   width: var(--fw);
   z-index: 2;
   transform-origin: 50% 60%;
+}
+/* Sizes measured by ai-frame.ts live on the wrapper; let the form use them. */
+.formSlot .form {
+  --row-height: inherit;
+  --row-gap: inherit;
+}
+.formSlot .form > :last-child {
+  padding-bottom: calc(var(--group-gap) * 3);
+}
+.rowsAnchor {
+  position: absolute;
+  left: 0;
+  top: 0;
 }
 .scan {
   position: absolute;
@@ -258,16 +271,6 @@
   background: var(--action);
 }
 
-.profile {
-  position: absolute;
-  left: calc(var(--fx) - 230px);
-  top: calc(var(--fy) + var(--fh) * 0.48);
-  width: 190px;
-  z-index: 3;
-  opacity: 0;
-  pointer-events: none;
-}
-.profile img,
 .sparkle img {
   animation: bob 5s ease-in-out infinite;
 }
@@ -339,12 +342,6 @@
   .sparkle {
     display: none;
   }
-  .profile {
-    left: auto;
-    right: var(--gutter);
-    top: calc(var(--fy) - 60px);
-    width: 110px;
-  }
   .heroCharacter {
     height: 30vh;
     right: -10px;
@@ -353,5 +350,151 @@
     height: 20vh;
     left: auto;
     right: -10px;
+  }
+}
+
+/* JEV scene additions: dot grid, groups, confidence, lines, cursor */
+.dotGrid {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(
+    rgb(29 111 165 / 22%) 1.1px,
+    transparent 1.6px
+  );
+  background-size: 22px 22px;
+  opacity: 0;
+  pointer-events: none;
+  mask-image: radial-gradient(65% 65% at 62% 50%, #000 30%, transparent 75%);
+}
+.formSlot [data-state] {
+  z-index: 1;
+  will-change: transform, opacity;
+}
+.group {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+.group span {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--action);
+  white-space: nowrap;
+}
+.group b {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  background: var(--strong);
+  border-radius: 999px;
+  padding: 4px 8px;
+  opacity: 0;
+  white-space: nowrap;
+}
+.group::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--accent), transparent);
+}
+.bracket {
+  position: absolute;
+  left: -10px;
+  right: -10px;
+  border: 1.5px solid var(--accent);
+  border-radius: 14px;
+  background: rgb(177 229 253 / 14%);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 0;
+  transition:
+    box-shadow 0.3s,
+    border-color 0.3s;
+}
+.bracket.lit {
+  border-color: var(--scan);
+  box-shadow:
+    0 0 0 3px rgb(63 169 224 / 15%),
+    0 0 22px rgb(63 169 224 / 45%);
+}
+.confidence {
+  position: absolute;
+  right: 34px;
+  top: 50%;
+  margin-top: -10px;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 20px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0;
+}
+.confidence[data-certainty="sure"] {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+.confidence[data-certainty="unsure"] {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+.confidence[data-certainty="unknown"] {
+  background: #eef2f5;
+  color: var(--sub);
+}
+.links {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 4;
+  overflow: visible;
+}
+.links path {
+  fill: none;
+  stroke: var(--scan);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  opacity: 0;
+  filter: drop-shadow(0 0 6px rgb(63 169 224 / 80%));
+}
+.links circle {
+  fill: #fff;
+  stroke: var(--scan);
+  stroke-width: 2;
+  opacity: 0;
+}
+.cursor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 34px;
+  height: 34px;
+  z-index: 6;
+  fill: var(--strong);
+  stroke: #fff;
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 4px 6px rgb(19 41 58 / 40%));
+  opacity: 0;
+  pointer-events: none;
+}
+@media (max-width: 900px) {
+  .links,
+  .cursor {
+    display: none;
+  }
+  .confidence {
+    right: 30px;
   }
 }

@@ -127,6 +127,12 @@
   opacity: 1;
   transform: scale(1);
 }
+.focus .input {
+  border-color: var(--scan);
+  box-shadow:
+    0 0 0 4px rgb(63 169 224 / 25%),
+    0 0 24px rgb(63 169 224 / 35%);
+}
 .review .input {
   border: 2px dashed var(--action);
   background: repeating-linear-gradient(

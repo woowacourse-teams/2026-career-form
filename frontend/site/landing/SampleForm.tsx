@@ -24,6 +24,7 @@ export function SampleForm({
   rowRef,
   states,
   withChips = false,
+  fieldExtra,
   children,
 }: {
   idPrefix: string;
@@ -33,6 +34,8 @@ export function SampleForm({
   rowRef?: (index: number, row: HTMLDivElement | null) => void;
   states?: FieldState[];
   withChips?: boolean;
+  /** Extra content inside each field, e.g. the AI's confidence. */
+  fieldExtra?: (index: number) => ReactNode;
   children?: ReactNode;
 }) {
   return (
@@ -74,6 +77,7 @@ export function SampleForm({
                   {!states || state === "done" ? (field.value ?? "") : ""}
                 </span>
                 <i className={styles.check} aria-hidden="true" />
+                {fieldExtra?.(i)}
                 {!field.value && (
                   <span className={styles.reviewNote}>확인 필요</span>
                 )}
