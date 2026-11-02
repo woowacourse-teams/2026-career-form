@@ -87,6 +87,7 @@ interface WorkflowScreensProps {
   addressResult?: AddressResult;
   adapter: WorkflowAdapter;
   workflowDiagnostics: readonly WorkflowDiagnostic[];
+  /** Our own wording for why the run stopped; shown to everyone when interrupted. */
   exceptionTitle: string;
   /** Defaults to an interruption; start errors name their own kind. */
   exceptionKind?: WorkflowErrorKind;
@@ -149,7 +150,7 @@ export function WorkflowScreens({
   structureDiagnostics,
   exceptionTitle,
   exceptionKind = "interrupted",
-  exceptionDetail = exceptionTitle,
+  exceptionDetail,
   onRetry,
   unsupportedImageUrl,
   writingImageUrl,
@@ -750,6 +751,7 @@ export function WorkflowScreens({
     <WorkflowError
       kind={exceptionKind}
       developerMode={developerMode}
+      reason={exceptionKind === "interrupted" ? exceptionTitle : undefined}
       detail={exceptionDetail}
       completedCount={completed.length}
       manualCount={pending.length}

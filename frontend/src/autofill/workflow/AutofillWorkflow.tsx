@@ -367,6 +367,9 @@ function PolicyReadyWorkflow({
   const [warnings, setWarnings] = useState<string[]>([]);
   const [exceptionTitle, setExceptionTitle] =
     useState("분석을 완료하지 못했습니다");
+  // A caught error can carry server or contract text. It never becomes the
+  // reason on screen; developer mode shows it in the error details.
+  const [caughtText, setCaughtText] = useState<string>();
   // Set only when the first analysis fails; later exceptions are interruptions.
   const [startError, setStartError] = useState<{
     kind: WorkflowErrorKind;
@@ -695,7 +698,7 @@ function PolicyReadyWorkflow({
         setPreparationExecutionPending(true);
       } catch (error) {
         if (!active) return;
-        setExceptionTitle(safeErrorTitle(error));
+        setCaughtText(safeErrorTitle(error));
         setStartError({
           kind: startErrorKind(error),
           detail: errorDetail(error),
@@ -861,13 +864,13 @@ function PolicyReadyWorkflow({
         await analyzeFields(profile, addedRowsToEmptyForm);
       } catch (error) {
         if (mounted.current) {
-          setExceptionTitle(safeErrorTitle(error));
+          setCaughtText(safeErrorTitle(error));
           setStage("exception");
         }
       }
     } catch (error) {
       if (mounted.current) {
-        setExceptionTitle(safeErrorTitle(error));
+        setCaughtText(safeErrorTitle(error));
         setStage("exception");
       }
     } finally {
@@ -1167,7 +1170,7 @@ function PolicyReadyWorkflow({
       setStage("result");
     } catch (error) {
       if (mounted.current) {
-        setExceptionTitle(safeErrorTitle(error));
+        setCaughtText(safeErrorTitle(error));
         setStage("exception");
       }
     } finally {
@@ -1346,9 +1349,9 @@ function PolicyReadyWorkflow({
       addressResult={addressResult}
       adapter={adapter}
       workflowDiagnostics={workflowDiagnostics}
-      exceptionTitle={exceptionTitle}
+      exceptionTitle={caughtText === undefined ? exceptionTitle : ""}
       exceptionKind={startError?.kind ?? "interrupted"}
-      exceptionDetail={startError?.detail ?? exceptionTitle}
+      exceptionDetail={startError?.detail ?? caughtText}
       onRetry={onRetry}
       unsupportedImageUrl={unsupportedImageUrl}
       writingImageUrl={writingImageUrl}

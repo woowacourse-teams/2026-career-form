@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import styles from "../../autofill-demo/AutofillDemo.module.css";
 
 export type WorkflowErrorKind =
@@ -80,8 +80,8 @@ const ERROR_COPY: Record<WorkflowErrorKind, ErrorCopy> = {
   interrupted: {
     tone: "warning",
     title: "자동 기입을 멈췄어요",
-    description:
-      "문제가 생겨 안전하게 멈췄어요. 이미 입력한 값은 그대로 있어요. 남은 항목은 복사 버튼으로 채울 수 있어요.",
+    // Built from the stop reason and what was written; see describe().
+    description: "",
     icon: (
       <svg {...iconProps}>
         <path d="M12 8v5" />
@@ -92,6 +92,32 @@ const ERROR_COPY: Record<WorkflowErrorKind, ErrorCopy> = {
   },
 };
 
+const GENERIC_STOP_REASON = "문제가 생겨 안전하게 멈췄어요.";
+
+/**
+ * An interrupted run says why it stopped, then only what is true about the
+ * page: the kept-values claim is made only when something was written. Each
+ * sentence is returned separately so the reason stays its own text element.
+ */
+function describe(
+  kind: WorkflowErrorKind,
+  reason: string | undefined,
+  completedCount: number,
+): string[] {
+  if (kind !== "interrupted") return [ERROR_COPY[kind].description];
+  const cause = reason?.trim()
+    ? /[.!?]$/.test(reason.trim())
+      ? reason.trim()
+      : `${reason.trim()}.`
+    : GENERIC_STOP_REASON;
+  return completedCount > 0
+    ? [
+        cause,
+        "이미 입력한 값은 그대로 있어요. 남은 항목은 복사 버튼으로 채울 수 있어요.",
+      ]
+    : [cause, "복사 버튼으로 직접 입력할 수 있어요."];
+}
+
 const RETRYABLE: ReadonlySet<WorkflowErrorKind> = new Set([
   "connection",
   "rateLimited",
@@ -101,6 +127,8 @@ const RETRYABLE: ReadonlySet<WorkflowErrorKind> = new Set([
 export interface WorkflowErrorProps {
   kind: WorkflowErrorKind;
   developerMode: boolean;
+  /** Our own wording for why an interrupted run stopped. Shown to everyone. */
+  reason?: string;
   /** Raw server text or code. Shown only in developer mode. */
   detail?: string;
   /** Interrupted runs lead with how far the run got. */
@@ -114,6 +142,7 @@ export interface WorkflowErrorProps {
 export function WorkflowError({
   kind,
   developerMode,
+  reason,
   detail,
   completedCount = 0,
   manualCount = 0,
@@ -131,7 +160,14 @@ export function WorkflowError({
           {copy.icon}
         </div>
         <h2 className={styles.errorTitle}>{copy.title}</h2>
-        <p className={styles.errorDescription}>{copy.description}</p>
+        <p className={styles.errorDescription}>
+          {describe(kind, reason, completedCount).map((sentence, index) => (
+            <Fragment key={sentence}>
+              {index > 0 && " "}
+              <span>{sentence}</span>
+            </Fragment>
+          ))}
+        </p>
         {showSummary && (
           <div
             className={styles.errorSummary}

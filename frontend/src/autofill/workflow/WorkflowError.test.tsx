@@ -174,4 +174,80 @@ describe("WorkflowError", () => {
 
     expect(screen.queryAllByRole("button")).toHaveLength(0);
   });
+
+  it("shows an authored reason as the cause sentence in normal mode", () => {
+    render(
+      <WorkflowError
+        kind="interrupted"
+        developerMode={false}
+        reason="검색 후 프로필이 변경되었습니다. 다시 시작해 주세요"
+        completedCount={2}
+        manualCount={1}
+        onBack={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByText(/검색 후 프로필이 변경되었습니다. 다시 시작해 주세요\./),
+    ).toBeVisible();
+    expect(screen.queryByText(/문제가 생겨 안전하게 멈췄어요/)).toBeNull();
+  });
+
+  it("keeps a reason that already ends a sentence as it is", () => {
+    render(
+      <WorkflowError
+        kind="interrupted"
+        developerMode={false}
+        reason="이 지원서의 자동 기입 정책이 아직 등록되지 않았어요. 수동 복사를 이용해 주세요."
+        onBack={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(/수동 복사를 이용해 주세요\.(?!\.)/)).toBeVisible();
+  });
+
+  it("falls back to the generic cause when no reason is given", () => {
+    render(
+      <WorkflowError
+        kind="interrupted"
+        developerMode={false}
+        onBack={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(/문제가 생겨 안전하게 멈췄어요\./)).toBeVisible();
+  });
+
+  it("claims kept values only when something was already written", () => {
+    const { rerender } = render(
+      <WorkflowError
+        kind="interrupted"
+        developerMode={false}
+        completedCount={3}
+        manualCount={1}
+        onBack={vi.fn()}
+      />,
+    );
+    const description = () => screen.getByRole("alert");
+
+    expect(description()).toHaveTextContent("이미 입력한 값은 그대로 있어요.");
+    expect(description()).toHaveTextContent(
+      "남은 항목은 복사 버튼으로 채울 수 있어요.",
+    );
+
+    rerender(
+      <WorkflowError
+        kind="interrupted"
+        developerMode={false}
+        completedCount={0}
+        manualCount={0}
+        onBack={vi.fn()}
+      />,
+    );
+
+    expect(description()).not.toHaveTextContent("이미 입력한 값");
+    expect(description()).toHaveTextContent(
+      "복사 버튼으로 직접 입력할 수 있어요.",
+    );
+  });
 });
