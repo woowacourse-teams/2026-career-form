@@ -365,8 +365,24 @@ function countLine(kinds, counts, total, unit, titles = {}) {
     if (titles[key]) part.title = titles[key];
     line.append(part);
   });
-  line.append(element("span", `/ ${total}${unit}`, "count-total"));
+  const sum = element("span", undefined, "count-total");
+  sum.append(document.createTextNode("총 "), element("b", String(total)), document.createTextNode(unit));
+  line.append(sum);
   return line;
+}
+
+/** 설명 한 줄. 배열로 넘긴 부분([글자])은 굵게, 나머지는 그대로 둔다. */
+function richNote(...parts) {
+  const note = element("p", undefined, "muted metric-foot rich-note");
+  parts.forEach((part) => note.append(Array.isArray(part) ? element("b", part[0]) : document.createTextNode(part)));
+  return note;
+}
+
+/** 점수 막대 아래 작은 지표 하나: 이름은 흐리게, 값은 굵게. */
+function stat(label, value) {
+  const item = element("span", undefined, "stat");
+  item.append(element("span", label, "stat-label"), element("b", value));
+  return item;
 }
 
 function scoreCard() {
@@ -384,21 +400,22 @@ function scoreCard() {
     }
     const values = (report(state.selected[index])?.repetitions ?? []).map((item) => item.autofillScore)
       .filter((value) => value != null).map((value) => value * 100);
-    const parts = [`정밀도 ${autofill.precision == null ? "—" : shortPercent(autofill.precision)}`,
-      `채움률 ${shortPercent(autofill.fillRate)}`];
-    if (values.length > 1) parts.push(`반복 ${Math.min(...values).toFixed(1)}~${Math.max(...values).toFixed(1)}%`);
-    const note = element("span", parts.join(" · "), "range-note");
+    const note = element("span", undefined, "range-note stat-line");
+    note.append(stat("정밀도", autofill.precision == null ? "—" : shortPercent(autofill.precision)),
+      stat("채움률", shortPercent(autofill.fillRate)));
+    if (values.length > 1) note.append(stat(`반복 ${values.length}회`, `${Math.min(...values).toFixed(1)}~${Math.max(...values).toFixed(1)}%`));
     // 평가는 다음 요청을 정답으로 만들어, 앞 단계(섹션 분류·학력 구분 선택) 오답은 이 점수에 반영되지 않는다.
     const upstream = report(state.selected[index])?.upstream;
     const upstreamWrong = upstream ? upstream.wrongKey + upstream.unnecessary : 0;
     if (upstreamWrong) {
-      const warn = element("span", ` · 앞 단계 오답 ${upstreamWrong}`, "upstream-note");
+      const warn = element("span", `앞 단계 오답 ${upstreamWrong}`, "upstream-note");
       warn.title = "섹션 분류·학력 구분 오답. 평가 점수에는 반영되지 않아 실제 제품에선 더 낮을 수 있습니다.";
       note.append(warn);
     }
     row.after(note);
   });
-  card.append(element("p", "정밀도: 넣은 칸 중 맞은 비율 · 채움률: 넣어야 할 칸 중 맞게 넣은 비율 · 잘못 넣으면 2배 감점", "muted metric-foot"));
+  card.append(richNote(["정밀도"], " 넣은 칸 중 맞은 비율 · ", ["채움률"], " 넣어야 할 칸 중 맞게 넣은 비율 · ",
+    ["잘못 넣으면 놓칠 때보다 2배 감점"]));
   return card;
 }
 
@@ -441,7 +458,7 @@ function renderAutofill() {
     row.append(Object.assign(element("span", model), { title: model }), track, text);
     card.append(row);
   }
-  card.append(element("p", "놓침 = 비움 + 확인 필요(0.5~0.8) + 막음(0.5 미만) · 사용자가 직접 입력", "muted metric-foot"));
+  card.append(richNote(["놓침"], " = 비움 + 확인 필요(확신도 0.5~0.8) + 막음(0.5 미만) → ", ["사용자가 직접 입력하는 칸"]));
   return card;
 }
 
