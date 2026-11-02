@@ -20,6 +20,22 @@ class RunReporterTest {
     private static final long MS = 1_000_000L;
 
     @Test
+    @DisplayName("반복마다 항목 단위 정확도를 따로 계산해 흔들림을 보이게 하고, 실패만 있는 반복은 측정 불가다")
+    void reportsAccuracyPerRepetition() {
+        EvaluationRun run = run(AT.minusSeconds(10), AT, AT.plusSeconds(4));
+        List<CallResultRecord> records = List.of(
+            record(1, "a", 1, CallKind.Stage.MAPPING, new CallScore(3, 1, 0, 0, 0), 100, List.of(attempt(80, 10L, 2L))),
+            record(2, "a", 1, CallKind.Stage.MAPPING, new CallScore(2, 2, 0, 0, 0), 100, List.of(attempt(80, 10L, 2L))),
+            failed(3, "a", 1, CallKind.Stage.MAPPING, 100, List.of()));
+
+        RunReport report = new RunReporter().report(run, records);
+
+        assertThat(report.repetitions()).containsExactly(
+            new RunReport.RepetitionQuality(1, 0.75), new RunReport.RepetitionQuality(2, 0.5),
+            new RunReport.RepetitionQuality(3, null));
+    }
+
+    @Test
     @DisplayName("원자료에서 정확도, 시간 분포, 처리량, 실패율, 토큰을 다시 계산하고 미관측 토큰은 0으로 채우지 않는다")
     void recomputesFromRawRecords() {
         EvaluationRun run = run(AT.minusSeconds(10), AT, AT.plusSeconds(4));

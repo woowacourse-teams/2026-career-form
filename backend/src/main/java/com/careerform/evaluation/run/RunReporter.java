@@ -32,7 +32,16 @@ public final class RunReporter {
             tokens.put(name, tokens(selected));
         });
         return new RunReport(aggregator.aggregate(records.stream().map(CallResultRecord::toCallResult).toList()),
-            performance, tokens, flows(records), timing(run, records), RunService.SCORING_VERSION);
+            performance, tokens, flows(records), timing(run, records), RunService.SCORING_VERSION, repetitions(records));
+    }
+
+    private List<RunReport.RepetitionQuality> repetitions(List<CallResultRecord> records) {
+        Map<Integer, List<CallResultRecord>> byRepetition = new java.util.TreeMap<>();
+        records.forEach(record -> byRepetition.computeIfAbsent(record.repetition(), key -> new ArrayList<>()).add(record));
+        List<RunReport.RepetitionQuality> qualities = new ArrayList<>();
+        byRepetition.forEach((repetition, group) -> qualities.add(new RunReport.RepetitionQuality(repetition,
+            aggregator.aggregate(group.stream().map(CallResultRecord::toCallResult).toList()).accuracy())));
+        return qualities;
     }
 
     private static RunReport.StagePerformance performance(List<CallResultRecord> records, Double elapsedSeconds) {

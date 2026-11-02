@@ -333,3 +333,9 @@ html,body{margin:0;background:#eae9e5}body{min-width:320px}
 #cf-eval-preview .provider-row.disabled{opacity:.6}
 #cf-eval-preview .provider-info{display:flex;flex-direction:column;gap:2px;min-width:0;overflow-wrap:anywhere}
 #cf-eval-preview .provider-actions{display:flex;gap:8px;flex-shrink:0}
+#cf-eval-preview .variation-track{position:relative;overflow:visible;height:10px}
+#cf-eval-preview .variation-span{position:absolute;top:0;height:100%;background:var(--model);opacity:.55;border-radius:3px}
+#cf-eval-preview .variation-mean{position:absolute;top:-3px;width:2px;height:16px;margin-left:-1px;background:var(--model)}
+#cf-eval-preview .variation-number{font-size:13px;white-space:nowrap}
+#cf-eval-preview .variation-row{grid-template-columns:85px minmax(16px,1fr) 92px}
+#cf-eval-preview .variation-verdict{margin:14px 0 0;font-size:13px;font-weight:600;color:#2f5f8a}

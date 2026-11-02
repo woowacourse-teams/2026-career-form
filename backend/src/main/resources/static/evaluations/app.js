@@ -104,6 +104,7 @@ function renderOverview() {
   quality.replaceChildren(
     bars("자동기입 최종 정확도", "%", (m) => percent(report(m)?.quality.accuracy), 100, (v) => `${v.toFixed(1)}%`,
       `맞힌 항목 수 ÷ 채점한 항목 수(준비·매핑 전체 합산). 실패 호출은 빠진다. 채점식 ${report(state.selected[0])?.scoringVersion ?? "—"}`),
+    renderVariation(),
     bars("준비 정확도", "%", (m) => percent(report(m)?.quality.preparationAccuracy), 100, (v) => `${v.toFixed(1)}%`),
     bars("필드 매핑 정확도", "%", (m) => percent(report(m)?.quality.mappingAccuracy), 100, (v) => `${v.toFixed(1)}%`),
     renderItemBreakdown());
@@ -275,6 +276,56 @@ function renderTokenBars() {
     box.append(element("p", "비용을 보려면 모델 단가 설정에서 입력·출력 단가를 넣어 주세요.", "muted"));
   }
   return box;
+}
+
+/**
+ * 반복별 정확도의 범위(최소~최대)를 모델마다 같은 눈금에 그리고, 가장 높은 두 모델의 범위가 겹치면 차이를 구분할 수
+ * 없다고 알린다. 반복 수가 적으면 범위가 실제 흔들림보다 좁게 잡힌다.
+ */
+function renderVariation() {
+  const card = element("div", undefined, "metric");
+  const head = element("div", undefined, "metric-head");
+  head.append(element("h3", "반복별 흔들림"), element("span", "같은 입력을 반복한 정확도 범위", "muted"));
+  card.append(head);
+  const rows = state.selected.map((model) => {
+    const values = (report(model)?.repetitions ?? []).map((item) => item.accuracy).filter((value) => value != null)
+      .map((value) => value * 100);
+    return { model, values, min: Math.min(...values), max: Math.max(...values),
+      mean: values.reduce((sum, value) => sum + value, 0) / (values.length || 1) };
+  }).filter(({ values }) => values.length);
+  if (!rows.length) {
+    card.append(element("div", "완료된 실행이 없습니다.", "empty"));
+    return card;
+  }
+  const low = Math.max(0, Math.floor(Math.min(...rows.map(({ min }) => min)) - 2));
+  const high = Math.min(100, Math.ceil(Math.max(...rows.map(({ max }) => max)) + 2));
+  const at = (value) => `${(value - low) / Math.max(1, high - low) * 100}%`;
+  for (const row of rows) {
+    const line = element("div", undefined, "bar-row variation-row");
+    line.style.setProperty("--model", color(row.model));
+    const track = element("div", undefined, "track variation-track");
+    const span = element("span", undefined, "variation-span");
+    span.style.left = at(row.min);
+    span.style.width = `calc(${at(row.max)} - ${at(row.min)} + 3px)`;
+    const mean = element("span", undefined, "variation-mean");
+    mean.style.left = at(row.mean);
+    track.append(span, mean);
+    line.append(element("span", row.model), track, element("span", row.values.length > 1
+      ? `${row.min.toFixed(1)}~${row.max.toFixed(1)}%` : `${row.min.toFixed(1)}%`, "number variation-number"));
+    card.append(line);
+  }
+  card.append(element("p", `눈금 ${low}%~${high}% · 막대는 반복별 최소~최대, 세로선은 평균`, "muted metric-foot"));
+  const verdict = (() => {
+    if (rows.some(({ values }) => values.length < 2)) return "반복 1회라 흔들림을 알 수 없습니다. 모델을 비교하려면 반복 3회 이상으로 실행해 주세요.";
+    if (rows.length < 2) return `반복 ${rows[0].values.length}회 사이 정확도가 ${(rows[0].max - rows[0].min).toFixed(1)}%p 흔들립니다.`;
+    const [first, second] = [...rows].sort((a, b) => b.mean - a.mean);
+    return first.min <= second.max
+      ? `${first.model}와 ${second.model}의 반복별 범위가 겹쳐 차이를 구분할 수 없습니다.`
+      : `${first.model}가 ${second.model}보다 높고 반복별 범위도 겹치지 않습니다.`;
+  })();
+  card.append(element("p", verdict, "variation-verdict"));
+  card.append(element("p", "반복 수가 적으면 범위가 실제보다 좁게 잡힙니다. 같은 입력을 새로 실행하면 이 범위 밖으로 움직일 수 있습니다.", "muted metric-foot"));
+  return card;
 }
 
 const ITEM_KINDS = [

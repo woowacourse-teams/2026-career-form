@@ -1,5 +1,6 @@
 package com.careerform.evaluation.run;
 
+import java.util.List;
 import java.util.Map;
 import com.careerform.evaluation.scoring.RunAggregate;
 
@@ -9,7 +10,8 @@ import com.careerform.evaluation.scoring.RunAggregate;
  * modelAttempt는 모델 HTTP 전송 직전부터 전체 응답 수신까지, flow는 반복 하나에서 사례 하나의 호출 시간 합이다.
  * 처리량은 완료 호출 수 ÷ 실행 경과 초다. 관측하지 못한 값은 null이며 0으로 채우지 않는다.
  * 키 TOTAL, PREPARATION, MAPPING. {@code scoringVersion}은 이 보고를 계산한 현재 채점식이며, 실행 등록 때 기록한
- * 채점식과 다를 수 있다.
+ * 채점식과 다를 수 있다. {@code repetitions}는 반복마다 따로 계산한 항목 단위 정확도로, 같은 입력에서 점수가 얼마나
+ * 흔들리는지 보인다.
  */
 public record RunReport(
     RunAggregate quality,
@@ -17,8 +19,17 @@ public record RunReport(
     Map<String, Tokens> tokens,
     Flows flows,
     Timing timing,
-    String scoringVersion
+    String scoringVersion,
+    List<RepetitionQuality> repetitions
 ) {
+
+    public RunReport {
+        repetitions = List.copyOf(repetitions);
+    }
+
+    /** 반복 하나의 항목 단위 정확도. 채점 가능한 호출이 없으면 null이다. */
+    public record RepetitionQuality(int repetition, Double accuracy) {
+    }
 
     public record Distribution(int count, Double meanMs, Double p50Ms, Double p95Ms, Double totalMs) {
     }
