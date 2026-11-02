@@ -1,4 +1,4 @@
-html,body{margin:0;background:#eae9e5}body{min-width:320px}
+:root,html,body{margin:0;background:#eae9e5}body{min-width:320px;min-height:100dvh}
 
 #cf-eval-preview{color-scheme:light;--paper:#fff;--panel:#fff;--ink:#252b33;--sub:#737c88;--line:#e5e9ee;--track:#f0f3f6;background:#fff;color:var(--ink);font:14px/1.55 system-ui,'Apple SD Gothic Neo',-apple-system,sans-serif;padding:0 36px;min-height:760px}
 #cf-eval-preview *{box-sizing:border-box}#cf-eval-preview [hidden]{display:none!important}
@@ -609,3 +609,15 @@ html,body{margin:0;background:#eae9e5}body{min-width:320px}
 #cf-eval-preview .delete-actions button{font-size:13px;padding:7px 14px;border-radius:6px;border:1px solid #c8ccc9;background:#fff;color:#3e5874}
 #cf-eval-preview .delete-actions .danger-action{background:#b5483d;border-color:#b5483d;color:#fff}
 #cf-eval-preview .delete-actions .danger-action:disabled{opacity:.6}
+/* 로그인 카드: 화면 가운데 위쪽에 넉넉한 크기로 둔다. 공용 로그인 스타일(quality.css)은 건드리지 않는다. */
+#login-panel:not([hidden]){box-sizing:border-box;width:calc(100% - 32px);max-width:480px;margin:min(16vh,160px) auto 32px;padding:44px 40px 36px;background:#f5f4f0;border:1px solid #d4d6d3;border-radius:12px;box-shadow:0 10px 30px rgba(37,43,51,.06);color:#252b33;font-family:system-ui,'Apple SD Gothic Neo',-apple-system,sans-serif}
+#login-panel .eyebrow{color:#59626b;font-size:12px;letter-spacing:.14em}
+#login-panel h1{font-size:30px;font-weight:700;margin:8px 0 10px}
+#login-panel>p:not(.eyebrow){font-size:15px;color:#4a5560;margin:0 0 8px}
+#login-panel label{font-size:14px;margin:24px 0 8px}
+#login-panel input{padding:13px 14px;font-size:16px;border-color:#c8ccc9;border-radius:8px}
+#login-panel button{margin-top:16px;padding:13px 16px;font-size:15px;font-weight:600;background:#475f78;border-color:#475f78;border-radius:8px}
+#login-panel button:hover{background:#3d5267}
+#login-message:empty{display:none}
+#login-message{margin:14px 0 0;font-size:14px;color:#9a3a30}
+@media(max-width:520px){#login-panel:not([hidden]){margin-top:40px;padding:32px 24px 28px}#login-panel h1{font-size:26px}}
