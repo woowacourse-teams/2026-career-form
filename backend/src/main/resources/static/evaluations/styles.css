@@ -339,7 +339,7 @@ html,body{margin:0;background:#eae9e5}body{min-width:320px}
 #cf-eval-preview .variation-number{font-size:13px;white-space:nowrap}
 #cf-eval-preview .variation-row{grid-template-columns:85px minmax(16px,1fr) 92px}
 #cf-eval-preview .range-note{display:block;margin:4px 0 0 95px;font-size:12px;color:var(--sub);font-variant-numeric:tabular-nums}
-#cf-eval-preview .comparison-detail{flex-basis:100%;text-align:right;font-size:12px}
+#cf-eval-preview .comparison-detail{font-size:12px;white-space:nowrap}
 #cf-eval-preview .item-track .item-empty{background:#c9cfd3}#cf-eval-preview .item-legend .item-empty::before{background:#c9cfd3}
 #cf-eval-preview dialog#cf-source.dataset-dialog,#cf-eval-preview dialog#cf-source.criteria-dialog{width:min(860px,calc(100% - 32px))}
 #cf-eval-preview .dataset-view h4{margin:22px 0 10px;font-size:14px;font-weight:600}
@@ -569,3 +569,8 @@ html,body{margin:0;background:#eae9e5}body{min-width:320px}
 #cf-eval-preview .answer-line code{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;overflow-wrap:anywhere}
 @media(max-width:620px){#cf-eval-preview .fields-controls{width:100%}#cf-eval-preview .fields-controls select{flex:1}}
 #cf-eval-preview .fields-model .row-name::before,#cf-eval-preview .fields-table .model-col::before,#cf-eval-preview .detail-model .row-name::before{content:"";display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;background:var(--model)}
+#cf-eval-preview .filters{gap:8px 16px;padding:10px 14px}
+#cf-eval-preview .models{flex:1 1 auto;gap:6px 18px}#cf-eval-preview .models label,#cf-eval-preview .filters>label{margin:0}
+#cf-eval-preview .filters>label{margin-left:auto}
+#cf-eval-preview .filters select#comparison{min-height:32px;padding-top:4px;padding-bottom:4px}
+@media(max-width:720px){#cf-eval-preview .filters{padding:10px 12px}#cf-eval-preview .filters>label{margin-left:0;flex:1 1 100%}#cf-eval-preview .filters select#comparison{flex:1;min-width:0}#cf-eval-preview .comparison-detail{white-space:normal}}
