@@ -1,0 +1,1788 @@
+{
+  "schemaVersion": 1,
+  "caseId": "woowahan-r2605009-university-synthetic-01",
+  "siteId": "woowahan-recruitment",
+  "state": "university",
+  "split": "final",
+  "fixtureId": "woowahan-r2605009-university",
+  "fixtureSha256": "613e76f2013f47d45787b9e565b675d705a49637614820aa1122e0e806d71595",
+  "profileId": "synthetic-01-basic",
+  "calls": [
+    {
+      "order": 1,
+      "phase": "PREPARATION",
+      "kind": "SECTION_CLASSIFY",
+      "endpoint": "/api/v1/generic/sections/classify",
+      "requestDigest": "40990f46db1a66acfa9c3710da076997fb4cc7a3c99718ca6e37897bde5cbfc3",
+      "request": {
+        "schemaVersion": 1,
+        "snapshotId": "fields-825bfc37-48ce-45e8-a600-680df7930a3f",
+        "site": {
+          "host": "career.woowahan.com",
+          "pathPattern": "/recruitment/R2605009/form"
+        },
+        "sections": [
+          {
+            "sectionId": "ls1",
+            "title": "병역필수",
+            "labels": [
+              "병역구분",
+              "면제사유를 입력하세요"
+            ],
+            "controlKinds": [
+              "SELECT",
+              "TEXT"
+            ],
+            "repeated": false
+          },
+          {
+            "sectionId": "ls2",
+            "title": "학력필수",
+            "labels": [
+              "구분",
+              "야간",
+              "학교명",
+              "입학연월 YYYYMM",
+              "선택",
+              "졸업(예정)연월 YYYYMM",
+              "선택",
+              "주전공",
+              "전공추가",
+              "복수/부전공"
+            ],
+            "controlKinds": [
+              "SELECT",
+              "CHECKBOX",
+              "TEXT"
+            ],
+            "repeated": false
+          },
+          {
+            "sectionId": "ls3",
+            "title": "첨부자료필수",
+            "labels": [
+              "첨부파일선택",
+              "https://example.test",
+              "첨부파일선택",
+              "https://example.test"
+            ],
+            "controlKinds": [
+              "TEXT"
+            ],
+            "repeated": false
+          },
+          {
+            "sectionId": "ls4",
+            "labels": [
+              "지원경로 및 세부사항필수",
+              "위 사항은 모두 본인이 직접 작성하였으며, 사실과 다름없습니까?"
+            ],
+            "controlKinds": [
+              "SELECT",
+              "RADIO"
+            ],
+            "repeated": false
+          }
+        ]
+      },
+      "expected": {
+        "ls1": "SENSITIVE",
+        "ls2": "EDUCATION",
+        "ls3": "NONE",
+        "ls4": "NONE"
+      },
+      "estimatedModelCalls": 1
+    },
+    {
+      "order": 2,
+      "phase": "MAPPING",
+      "kind": "SECTION_CLASSIFY",
+      "endpoint": "/api/v1/generic/sections/classify",
+      "requestDigest": "60adcbadd050d421af1232c028a5711e5f436cf3fef04e6e44913906acee2a17",
+      "request": {
+        "schemaVersion": 1,
+        "snapshotId": "fields-f75a51e6-9a26-48f8-8cac-b32ba50cf3bb",
+        "site": {
+          "host": "career.woowahan.com",
+          "pathPattern": "/recruitment/R2605009/form"
+        },
+        "sections": [
+          {
+            "sectionId": "gs1",
+            "title": "[비식별]",
+            "labels": [
+              "영문 성 (Last Name)",
+              "영문 이름 (First Name)",
+              "내국인",
+              "외국인",
+              "주소",
+              "해외거주",
+              "상세주소를 입력해주세요",
+              "비상연락처",
+              "관계"
+            ],
+            "controlKinds": [
+              "TEXT",
+              "RADIO",
+              "CHECKBOX",
+              "SELECT"
+            ],
+            "repeated": false
+          },
+          {
+            "sectionId": "gs2",
+            "title": "보훈/장애",
+            "labels": [
+              "보훈여부필수",
+              "보훈번호를 입력하세요",
+              "보훈구분",
+              "관계",
+              "장애여부필수",
+              "장애내용",
+              "장애정도"
+            ],
+            "controlKinds": [
+              "RADIO",
+              "TEXT",
+              "SELECT"
+            ],
+            "repeated": false
+          },
+          {
+            "sectionId": "gs3",
+            "title": "병역필수",
+            "labels": [
+              "병역구분",
+              "면제사유를 입력하세요"
+            ],
+            "controlKinds": [
+              "SELECT",
+              "TEXT"
+            ],
+            "repeated": false
+          },
+          {
+            "sectionId": "gs4",
+            "title": "학력필수",
+            "labels": [
+              "구분",
+              "야간",
+              "학교명",
+              "입학연월 YYYYMM",
+              "선택",
+              "졸업(예정)연월 YYYYMM",
+              "선택",
+              "주전공",
+              "전공추가",
+              "복수/부전공"
+            ],
+            "controlKinds": [
+              "SELECT",
+              "CHECKBOX",
+              "TEXT"
+            ],
+            "repeated": false
+          },
+          {
+            "sectionId": "gs5",
+            "title": "경력필수",
+            "labels": [
+              "회사명",
+              "근무부서",
+              "직급/직책",
+              "재직중",
+              "근무형태",
+              "근무시작일 YYYYMMDD",
+              "근무종료일 YYYYMMDD",
+              "담당업무"
+            ],
+            "controlKinds": [
+              "TEXT",
+              "CHECKBOX",
+              "SELECT"
+            ],
+            "repeated": false
+          },
+          {
+            "sectionId": "gs6",
+            "title": "첨부자료필수",
+            "labels": [
+              "첨부파일선택",
+              "https://example.test",
+              "첨부파일선택",
+              "https://example.test"
+            ],
+            "controlKinds": [
+              "TEXT"
+            ],
+            "repeated": false
+          },
+          {
+            "sectionId": "gs7",
+            "title": "자기소개서",
+            "labels": [
+              "스스로 문제를 발견하고 해결한 경험을 알려 주세요. 당시 상황, 문제라고 판단한 이유, 어려움을 극복한 방법, 결과적으로 달라진 점을 구체적으로 작성해 주세요."
+            ],
+            "controlKinds": [
+              "TEXTAREA"
+            ],
+            "repeated": false
+          },
+          {
+            "sectionId": "gs8",
+            "labels": [
+              "지원경로 및 세부사항필수",
+              "위 사항은 모두 본인이 직접 작성하였으며, 사실과 다름없습니까?"
+            ],
+            "controlKinds": [
+              "SELECT",
+              "RADIO"
+            ],
+            "repeated": false
+          }
+        ]
+      },
+      "expected": {
+        "gs1": "PERSONAL",
+        "gs2": "SENSITIVE",
+        "gs3": "SENSITIVE",
+        "gs4": "EDUCATION",
+        "gs5": "CAREER",
+        "gs6": "NONE",
+        "gs7": "NONE",
+        "gs8": "NONE"
+      },
+      "estimatedModelCalls": 1
+    },
+    {
+      "order": 3,
+      "phase": "MAPPING",
+      "kind": "GENERIC_FIELDS",
+      "endpoint": "/api/v1/generic/fields/analyze",
+      "requestDigest": "0e4cf0b7b2afc1239ee3d810978e813d7078c1a6dd6107766108a109827dadff",
+      "request": {
+        "schemaVersion": 2,
+        "supportedWriteCommands": [
+          "SELECT_DATE"
+        ],
+        "snapshotId": "fields-f75a51e6-9a26-48f8-8cac-b32ba50cf3bb",
+        "site": {
+          "host": "career.woowahan.com",
+          "pathPattern": "/recruitment/R2605009/form"
+        },
+        "sections": [
+          {
+            "sectionId": "gs1",
+            "displayName": "[비식별]",
+            "fields": [
+              {
+                "candidateId": "field-1",
+                "visibility": "visible",
+                "displayName": "영문 성 (Last Name)",
+                "domId": "id-1",
+                "placeholder": "예: Kim",
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "영문 성 (Last Name)"
+                    },
+                    {
+                      "source": "placeholder",
+                      "text": "예: Kim"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "[비식별]필수"
+                    }
+                  ],
+                  "inputType": "text",
+                  "maxLength": 30
+                }
+              },
+              {
+                "candidateId": "field-2",
+                "visibility": "visible",
+                "displayName": "영문 이름 (First Name)",
+                "domId": "id-2",
+                "placeholder": "예: Baemin",
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "영문 이름 (First Name)"
+                    },
+                    {
+                      "source": "placeholder",
+                      "text": "예: Baemin"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "[비식별]필수"
+                    }
+                  ],
+                  "inputType": "text",
+                  "maxLength": 30
+                }
+              },
+              {
+                "candidateId": "field-3",
+                "visibility": "visible",
+                "displayName": "내국인",
+                "domId": "id-3",
+                "element": "input",
+                "control": "radio",
+                "options": [
+                  {
+                    "optionId": "field-3-option-1",
+                    "displayName": "내국인"
+                  }
+                ],
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "내국인"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "[비식별]필수"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "field-4",
+                "visibility": "visible",
+                "displayName": "외국인",
+                "domId": "id-4",
+                "element": "input",
+                "control": "radio",
+                "options": [
+                  {
+                    "optionId": "field-4-option-1",
+                    "displayName": "외국인"
+                  }
+                ],
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "외국인"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "[비식별]필수"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "field-5",
+                "visibility": "visible",
+                "displayName": "주소",
+                "domId": "id-5",
+                "placeholder": "주소",
+                "readonly": true,
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "주소"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "[비식별]필수"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-6",
+                "visibility": "visible",
+                "displayName": "해외거주",
+                "domId": "id-6",
+                "element": "input",
+                "control": "checkbox",
+                "options": [
+                  {
+                    "optionId": "field-6-option-1",
+                    "displayName": "해외거주"
+                  }
+                ],
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "해외거주"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "[비식별]필수"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "field-7",
+                "visibility": "visible",
+                "displayName": "상세주소를 입력해주세요",
+                "domId": "id-7",
+                "placeholder": "상세주소를 입력해주세요",
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "상세주소를 입력해주세요"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "[비식별]필수"
+                    }
+                  ],
+                  "inputType": "text",
+                  "maxLength": 100
+                }
+              },
+              {
+                "candidateId": "field-8",
+                "visibility": "visible",
+                "displayName": "비상연락처",
+                "domId": "id-8",
+                "placeholder": "비상연락처",
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "비상연락처"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "[비식별]필수"
+                    }
+                  ],
+                  "inputType": "text",
+                  "maxLength": 13
+                }
+              },
+              {
+                "candidateId": "field-9",
+                "visibility": "visible",
+                "displayName": "관계",
+                "domId": "id-9",
+                "element": "select",
+                "control": "select",
+                "options": [
+                  {
+                    "optionId": "field-9-option-1",
+                    "displayName": "관계",
+                    "placeholder": true
+                  },
+                  {
+                    "optionId": "field-9-option-2",
+                    "displayName": "본인"
+                  },
+                  {
+                    "optionId": "field-9-option-3",
+                    "displayName": "배우자"
+                  },
+                  {
+                    "optionId": "field-9-option-4",
+                    "displayName": "부모"
+                  },
+                  {
+                    "optionId": "field-9-option-5",
+                    "displayName": "형제/자매"
+                  },
+                  {
+                    "optionId": "field-9-option-6",
+                    "displayName": "기타"
+                  }
+                ],
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "section-heading",
+                      "text": "[비식별]필수"
+                    }
+                  ]
+                }
+              }
+            ],
+            "category": "PERSONAL"
+          },
+          {
+            "sectionId": "gs2",
+            "displayName": "보훈/장애",
+            "fields": [
+              {
+                "candidateId": "field-10",
+                "visibility": "visible",
+                "displayName": "보훈여부필수",
+                "domId": "id-10",
+                "element": "input",
+                "control": "radio",
+                "options": [
+                  {
+                    "optionId": "field-10-option-1",
+                    "displayName": "대상"
+                  },
+                  {
+                    "optionId": "field-10-option-2",
+                    "displayName": "비대상"
+                  }
+                ],
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "보훈여부필수"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "보훈/장애"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "field-11",
+                "visibility": "visible",
+                "displayName": "보훈번호를 입력하세요",
+                "domId": "id-12",
+                "placeholder": "보훈번호를 입력하세요",
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "보훈번호를 입력하세요"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "보훈/장애"
+                    }
+                  ],
+                  "inputType": "text",
+                  "maxLength": 20
+                }
+              },
+              {
+                "candidateId": "field-12",
+                "visibility": "visible",
+                "displayName": "보훈구분",
+                "domId": "id-13",
+                "element": "select",
+                "control": "select",
+                "options": [
+                  {
+                    "optionId": "field-12-option-1",
+                    "displayName": "보훈구분",
+                    "placeholder": true
+                  },
+                  {
+                    "optionId": "field-12-option-2",
+                    "displayName": "독립유공자"
+                  },
+                  {
+                    "optionId": "field-12-option-3",
+                    "displayName": "국가유공자"
+                  },
+                  {
+                    "optionId": "field-12-option-4",
+                    "displayName": "보훈보상대상자"
+                  },
+                  {
+                    "optionId": "field-12-option-5",
+                    "displayName": "5·18민주유공자"
+                  },
+                  {
+                    "optionId": "field-12-option-6",
+                    "displayName": "특수임무유공자"
+                  },
+                  {
+                    "optionId": "field-12-option-7",
+                    "displayName": "고엽제후유의증환자"
+                  },
+                  {
+                    "optionId": "field-12-option-8",
+                    "displayName": "기타"
+                  }
+                ],
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "section-heading",
+                      "text": "보훈/장애"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "field-13",
+                "visibility": "visible",
+                "displayName": "관계",
+                "domId": "id-14",
+                "element": "select",
+                "control": "select",
+                "options": [
+                  {
+                    "optionId": "field-13-option-1",
+                    "displayName": "관계",
+                    "placeholder": true
+                  },
+                  {
+                    "optionId": "field-13-option-2",
+                    "displayName": "조부"
+                  },
+                  {
+                    "optionId": "field-13-option-3",
+                    "displayName": "조모"
+                  },
+                  {
+                    "optionId": "field-13-option-4",
+                    "displayName": "부"
+                  },
+                  {
+                    "optionId": "field-13-option-5",
+                    "displayName": "모"
+                  },
+                  {
+                    "optionId": "field-13-option-6",
+                    "displayName": "배우자부"
+                  },
+                  {
+                    "optionId": "field-13-option-7",
+                    "displayName": "배우자모"
+                  },
+                  {
+                    "optionId": "field-13-option-8",
+                    "displayName": "남편"
+                  },
+                  {
+                    "optionId": "field-13-option-9",
+                    "displayName": "아내"
+                  },
+                  {
+                    "optionId": "field-13-option-10",
+                    "displayName": "아들"
+                  },
+                  {
+                    "optionId": "field-13-option-11",
+                    "displayName": "딸"
+                  },
+                  {
+                    "optionId": "field-13-option-12",
+                    "displayName": "형/오빠"
+                  },
+                  {
+                    "optionId": "field-13-option-13",
+                    "displayName": "남동생"
+                  },
+                  {
+                    "optionId": "field-13-option-14",
+                    "displayName": "언니/누나"
+                  },
+                  {
+                    "optionId": "field-13-option-15",
+                    "displayName": "여동생"
+                  },
+                  {
+                    "optionId": "field-13-option-16",
+                    "displayName": "배우자조부"
+                  },
+                  {
+                    "optionId": "field-13-option-17",
+                    "displayName": "배우자조모"
+                  },
+                  {
+                    "optionId": "field-13-option-18",
+                    "displayName": "본인"
+                  },
+                  {
+                    "optionId": "field-13-option-19",
+                    "displayName": "기타"
+                  }
+                ],
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "section-heading",
+                      "text": "보훈/장애"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "field-14",
+                "visibility": "visible",
+                "displayName": "장애여부필수",
+                "domId": "id-15",
+                "element": "input",
+                "control": "radio",
+                "options": [
+                  {
+                    "optionId": "field-14-option-1",
+                    "displayName": "대상"
+                  },
+                  {
+                    "optionId": "field-14-option-2",
+                    "displayName": "비대상"
+                  }
+                ],
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "장애여부필수"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "보훈/장애"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "field-15",
+                "visibility": "visible",
+                "displayName": "장애내용",
+                "domId": "id-17",
+                "element": "select",
+                "control": "select",
+                "options": [
+                  {
+                    "optionId": "field-15-option-1",
+                    "displayName": "장애내용",
+                    "placeholder": true
+                  },
+                  {
+                    "optionId": "field-15-option-2",
+                    "displayName": "지체장애"
+                  },
+                  {
+                    "optionId": "field-15-option-3",
+                    "displayName": "뇌병변장애"
+                  },
+                  {
+                    "optionId": "field-15-option-4",
+                    "displayName": "시각장애"
+                  },
+                  {
+                    "optionId": "field-15-option-5",
+                    "displayName": "청각장애"
+                  },
+                  {
+                    "optionId": "field-15-option-6",
+                    "displayName": "언어장애"
+                  },
+                  {
+                    "optionId": "field-15-option-7",
+                    "displayName": "안면장애"
+                  },
+                  {
+                    "optionId": "field-15-option-8",
+                    "displayName": "지적장애"
+                  },
+                  {
+                    "optionId": "field-15-option-9",
+                    "displayName": "정신장애"
+                  },
+                  {
+                    "optionId": "field-15-option-10",
+                    "displayName": "자페성장애"
+                  },
+                  {
+                    "optionId": "field-15-option-11",
+                    "displayName": "신장장애"
+                  },
+                  {
+                    "optionId": "field-15-option-12",
+                    "displayName": "심장장애"
+                  },
+                  {
+                    "optionId": "field-15-option-13",
+                    "displayName": "호흡기장애"
+                  },
+                  {
+                    "optionId": "field-15-option-14",
+                    "displayName": "간장애"
+                  },
+                  {
+                    "optionId": "field-15-option-15",
+                    "displayName": "장루.요루 장애"
+                  },
+                  {
+                    "optionId": "field-15-option-16",
+                    "displayName": "뇌전증장애"
+                  }
+                ],
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "section-heading",
+                      "text": "보훈/장애"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "field-16",
+                "visibility": "visible",
+                "displayName": "장애정도",
+                "domId": "id-18",
+                "element": "select",
+                "control": "select",
+                "options": [
+                  {
+                    "optionId": "field-16-option-1",
+                    "displayName": "장애정도",
+                    "placeholder": true
+                  },
+                  {
+                    "optionId": "field-16-option-2",
+                    "displayName": "경증"
+                  },
+                  {
+                    "optionId": "field-16-option-3",
+                    "displayName": "중증"
+                  },
+                  {
+                    "optionId": "field-16-option-4",
+                    "displayName": "기타"
+                  }
+                ],
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "section-heading",
+                      "text": "보훈/장애"
+                    }
+                  ]
+                }
+              }
+            ],
+            "category": "SENSITIVE"
+          },
+          {
+            "sectionId": "gs3",
+            "displayName": "병역필수",
+            "fields": [
+              {
+                "candidateId": "field-17",
+                "visibility": "visible",
+                "displayName": "병역구분",
+                "domId": "id-19",
+                "element": "select",
+                "control": "select",
+                "options": [
+                  {
+                    "optionId": "field-17-option-1",
+                    "displayName": "병역구분",
+                    "placeholder": true
+                  },
+                  {
+                    "optionId": "field-17-option-2",
+                    "displayName": "병역필_현역(병)"
+                  },
+                  {
+                    "optionId": "field-17-option-3",
+                    "displayName": "병역필_현역(장교)"
+                  },
+                  {
+                    "optionId": "field-17-option-4",
+                    "displayName": "병역필_현역(부사관)"
+                  },
+                  {
+                    "optionId": "field-17-option-5",
+                    "displayName": "병역필_사회복무요원"
+                  },
+                  {
+                    "optionId": "field-17-option-6",
+                    "displayName": "병역필_전문연구요원"
+                  },
+                  {
+                    "optionId": "field-17-option-7",
+                    "displayName": "병역필_산업기능요원"
+                  },
+                  {
+                    "optionId": "field-17-option-8",
+                    "displayName": "병역면제"
+                  },
+                  {
+                    "optionId": "field-17-option-9",
+                    "displayName": "미필"
+                  },
+                  {
+                    "optionId": "field-17-option-10",
+                    "displayName": "해당없음"
+                  }
+                ],
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "section-heading",
+                      "text": "병역필수"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "field-18",
+                "visibility": "visible",
+                "displayName": "면제사유를 입력하세요",
+                "domId": "id-20",
+                "placeholder": "면제사유를 입력하세요",
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "면제사유를 입력하세요"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "병역필수"
+                    }
+                  ],
+                  "inputType": "text",
+                  "maxLength": 100
+                }
+              }
+            ],
+            "category": "SENSITIVE"
+          },
+          {
+            "sectionId": "gs4",
+            "displayName": "학력필수",
+            "fields": [
+              {
+                "candidateId": "field-19",
+                "visibility": "visible",
+                "displayName": "구분",
+                "domId": "id-22",
+                "element": "select",
+                "control": "select",
+                "options": [
+                  {
+                    "optionId": "field-19-option-1",
+                    "displayName": "구분",
+                    "placeholder": true
+                  },
+                  {
+                    "optionId": "field-19-option-2",
+                    "displayName": "검정고시"
+                  },
+                  {
+                    "optionId": "field-19-option-3",
+                    "displayName": "고등학교"
+                  },
+                  {
+                    "optionId": "field-19-option-4",
+                    "displayName": "전문대학"
+                  },
+                  {
+                    "optionId": "field-19-option-5",
+                    "displayName": "대학교"
+                  },
+                  {
+                    "optionId": "field-19-option-6",
+                    "displayName": "대학원(석사)"
+                  },
+                  {
+                    "optionId": "field-19-option-7",
+                    "displayName": "대학원(박사)"
+                  }
+                ],
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "section-heading",
+                      "text": "학력필수"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "field-20",
+                "visibility": "visible",
+                "displayName": "야간",
+                "domId": "id-23",
+                "element": "input",
+                "control": "checkbox",
+                "options": [
+                  {
+                    "optionId": "field-20-option-1",
+                    "displayName": "야간"
+                  }
+                ],
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "야간"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "학력필수"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "field-21",
+                "visibility": "visible",
+                "displayName": "학교명",
+                "domId": "id-24",
+                "placeholder": "학교명",
+                "readonly": true,
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "학교명"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "학력필수"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-22",
+                "visibility": "visible",
+                "displayName": "입학연월 YYYYMM",
+                "domId": "id-25",
+                "placeholder": "입학연월 YYYYMM",
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "입학연월 YYYYMM"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "학력필수"
+                    }
+                  ],
+                  "inputType": "text",
+                  "maxLength": 7
+                }
+              },
+              {
+                "candidateId": "field-23",
+                "visibility": "visible",
+                "displayName": "선택",
+                "domId": "id-26",
+                "element": "select",
+                "control": "select",
+                "options": [
+                  {
+                    "optionId": "field-23-option-1",
+                    "displayName": "선택",
+                    "placeholder": true
+                  },
+                  {
+                    "optionId": "field-23-option-2",
+                    "displayName": "입학"
+                  },
+                  {
+                    "optionId": "field-23-option-3",
+                    "displayName": "편입"
+                  }
+                ],
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "section-heading",
+                      "text": "학력필수"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "field-24",
+                "visibility": "visible",
+                "displayName": "졸업(예정)연월 YYYYMM",
+                "domId": "id-27",
+                "placeholder": "졸업(예정)연월 YYYYMM",
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "졸업(예정)연월 YYYYMM"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "학력필수"
+                    }
+                  ],
+                  "inputType": "text",
+                  "maxLength": 7
+                }
+              },
+              {
+                "candidateId": "field-25",
+                "visibility": "visible",
+                "displayName": "선택",
+                "domId": "id-28",
+                "element": "select",
+                "control": "select",
+                "options": [
+                  {
+                    "optionId": "field-25-option-1",
+                    "displayName": "선택",
+                    "placeholder": true
+                  },
+                  {
+                    "optionId": "field-25-option-2",
+                    "displayName": "재학"
+                  },
+                  {
+                    "optionId": "field-25-option-3",
+                    "displayName": "휴학"
+                  },
+                  {
+                    "optionId": "field-25-option-4",
+                    "displayName": "졸업"
+                  },
+                  {
+                    "optionId": "field-25-option-5",
+                    "displayName": "졸업예정"
+                  },
+                  {
+                    "optionId": "field-25-option-6",
+                    "displayName": "편입"
+                  },
+                  {
+                    "optionId": "field-25-option-7",
+                    "displayName": "중퇴"
+                  },
+                  {
+                    "optionId": "field-25-option-8",
+                    "displayName": "수료"
+                  },
+                  {
+                    "optionId": "field-25-option-9",
+                    "displayName": "기타"
+                  }
+                ],
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "section-heading",
+                      "text": "학력필수"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "field-26",
+                "visibility": "visible",
+                "displayName": "주전공",
+                "domId": "id-29",
+                "placeholder": "주전공",
+                "readonly": true,
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "주전공"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "학력필수"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-27",
+                "visibility": "visible",
+                "displayName": "전공추가",
+                "domId": "id-30",
+                "element": "select",
+                "control": "select",
+                "options": [
+                  {
+                    "optionId": "field-27-option-1",
+                    "displayName": "전공추가",
+                    "placeholder": true
+                  },
+                  {
+                    "optionId": "field-27-option-2",
+                    "displayName": "복수전공"
+                  },
+                  {
+                    "optionId": "field-27-option-3",
+                    "displayName": "부전공"
+                  },
+                  {
+                    "optionId": "field-27-option-4",
+                    "displayName": "심화전공"
+                  },
+                  {
+                    "optionId": "field-27-option-5",
+                    "displayName": "연계·융합전공"
+                  }
+                ],
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "section-heading",
+                      "text": "학력필수"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "field-28",
+                "visibility": "visible",
+                "displayName": "복수/부전공",
+                "domId": "id-31",
+                "placeholder": "복수/부전공",
+                "disabled": true,
+                "readonly": true,
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "복수/부전공"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "학력필수"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              }
+            ],
+            "category": "EDUCATION",
+            "recordSectionId": "university"
+          },
+          {
+            "sectionId": "gs5",
+            "displayName": "경력필수",
+            "fields": [
+              {
+                "candidateId": "field-29",
+                "visibility": "visible",
+                "displayName": "회사명",
+                "domId": "id-33",
+                "placeholder": "회사명",
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "회사명"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "경력필수"
+                    }
+                  ],
+                  "inputType": "text",
+                  "maxLength": 30
+                }
+              },
+              {
+                "candidateId": "field-30",
+                "visibility": "visible",
+                "displayName": "근무부서",
+                "domId": "id-34",
+                "placeholder": "근무부서",
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "근무부서"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "경력필수"
+                    }
+                  ],
+                  "inputType": "text",
+                  "maxLength": 30
+                }
+              },
+              {
+                "candidateId": "field-31",
+                "visibility": "visible",
+                "displayName": "직급/직책",
+                "domId": "id-35",
+                "placeholder": "직급/직책",
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "직급/직책"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "경력필수"
+                    }
+                  ],
+                  "inputType": "text",
+                  "maxLength": 30
+                }
+              },
+              {
+                "candidateId": "field-32",
+                "visibility": "visible",
+                "displayName": "재직중",
+                "domId": "id-36",
+                "element": "input",
+                "control": "checkbox",
+                "options": [
+                  {
+                    "optionId": "field-32-option-1",
+                    "displayName": "재직중"
+                  }
+                ],
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "재직중"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "경력필수"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "field-33",
+                "visibility": "visible",
+                "displayName": "근무형태",
+                "domId": "id-37",
+                "element": "select",
+                "control": "select",
+                "options": [
+                  {
+                    "optionId": "field-33-option-1",
+                    "displayName": "근무형태",
+                    "placeholder": true
+                  },
+                  {
+                    "optionId": "field-33-option-2",
+                    "displayName": "정규직"
+                  },
+                  {
+                    "optionId": "field-33-option-3",
+                    "displayName": "기간제(계약직)"
+                  },
+                  {
+                    "optionId": "field-33-option-4",
+                    "displayName": "인턴"
+                  },
+                  {
+                    "optionId": "field-33-option-5",
+                    "displayName": "프리랜서"
+                  },
+                  {
+                    "optionId": "field-33-option-6",
+                    "displayName": "파견직"
+                  },
+                  {
+                    "optionId": "field-33-option-7",
+                    "displayName": "병역특례"
+                  },
+                  {
+                    "optionId": "field-33-option-8",
+                    "displayName": "개인사업"
+                  }
+                ],
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "section-heading",
+                      "text": "경력필수"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "field-34",
+                "visibility": "visible",
+                "displayName": "근무시작일 YYYYMMDD",
+                "domId": "id-38",
+                "placeholder": "근무시작일 YYYYMMDD",
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "근무시작일 YYYYMMDD"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "경력필수"
+                    }
+                  ],
+                  "inputType": "text",
+                  "autocomplete": "off",
+                  "maxLength": 10
+                },
+                "containerId": "pair-5"
+              },
+              {
+                "candidateId": "field-35",
+                "visibility": "visible",
+                "displayName": "근무종료일 YYYYMMDD",
+                "domId": "id-39",
+                "placeholder": "근무종료일 YYYYMMDD",
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "근무종료일 YYYYMMDD"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "경력필수"
+                    }
+                  ],
+                  "inputType": "text",
+                  "autocomplete": "off",
+                  "maxLength": 10
+                },
+                "containerId": "pair-5"
+              },
+              {
+                "candidateId": "field-36",
+                "visibility": "visible",
+                "displayName": "담당업무",
+                "domId": "id-40",
+                "placeholder": "담당업무",
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "담당업무"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "경력필수"
+                    }
+                  ],
+                  "inputType": "text",
+                  "maxLength": 100
+                }
+              }
+            ],
+            "category": "CAREER"
+          },
+          {
+            "sectionId": "gs6",
+            "displayName": "첨부자료필수",
+            "fields": [
+              {
+                "candidateId": "field-37",
+                "visibility": "hidden",
+                "displayName": "첨부파일선택",
+                "domId": "id-41",
+                "placeholder": "첨부파일선택",
+                "readonly": true,
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "첨부파일선택"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "첨부자료필수"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-38",
+                "visibility": "visible",
+                "displayName": "https://example.test",
+                "domId": "id-43",
+                "placeholder": "https://example.test",
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "https://example.test"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "첨부자료필수"
+                    }
+                  ],
+                  "inputType": "text",
+                  "maxLength": 500
+                }
+              },
+              {
+                "candidateId": "field-39",
+                "visibility": "hidden",
+                "displayName": "첨부파일선택",
+                "domId": "id-41",
+                "placeholder": "첨부파일선택",
+                "readonly": true,
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "첨부파일선택"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "첨부자료필수"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-40",
+                "visibility": "visible",
+                "displayName": "https://example.test",
+                "domId": "id-45",
+                "placeholder": "https://example.test",
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "https://example.test"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "첨부자료필수"
+                    }
+                  ],
+                  "inputType": "text",
+                  "maxLength": 500
+                }
+              }
+            ],
+            "category": "NONE"
+          },
+          {
+            "sectionId": "gs7",
+            "displayName": "자기소개서",
+            "fields": [
+              {
+                "candidateId": "field-41",
+                "visibility": "visible",
+                "displayName": "스스로 문제를 발견하고 해결한 경험을 알려 주세요. 당시 상황, 문제라고 판단한 이유, 어려움을 극복한 방법, 결과적으로 달라진 점을 구체적으로 작성해 주세요.",
+                "domId": "id-46",
+                "element": "textarea",
+                "control": "textarea",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "스스로 문제를 발견하고 해결한 경험을 알려 주세요. 당시 상황, 문제라고 판단한 이유, 어려움을 극복한 방법, 결과적으로 달라진 점을 구체적으로 작성해 주세요."
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "자기소개서"
+                    }
+                  ],
+                  "maxLength": 10000
+                }
+              }
+            ],
+            "category": "NONE"
+          },
+          {
+            "sectionId": "gs8",
+            "fields": [
+              {
+                "candidateId": "field-42",
+                "visibility": "visible",
+                "displayName": "지원경로 및 세부사항필수",
+                "domId": "id-47",
+                "element": "select",
+                "control": "select",
+                "options": [
+                  {
+                    "optionId": "field-42-option-1",
+                    "displayName": "지원경로",
+                    "placeholder": true
+                  },
+                  {
+                    "optionId": "field-42-option-2",
+                    "displayName": "공식홈페이지"
+                  },
+                  {
+                    "optionId": "field-42-option-3",
+                    "displayName": "취업포털"
+                  },
+                  {
+                    "optionId": "field-42-option-4",
+                    "displayName": "헤드헌터"
+                  },
+                  {
+                    "optionId": "field-42-option-5",
+                    "displayName": "사내리크루터"
+                  },
+                  {
+                    "optionId": "field-42-option-6",
+                    "displayName": "사내추천"
+                  },
+                  {
+                    "optionId": "field-42-option-7",
+                    "displayName": "행사(채용 설명회, 학회 등)"
+                  },
+                  {
+                    "optionId": "field-42-option-8",
+                    "displayName": "SNS(인스타그램, 페이스북, 유튜브)"
+                  },
+                  {
+                    "optionId": "field-42-option-9",
+                    "displayName": "기타"
+                  }
+                ],
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "지원경로 및 세부사항필수"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "지원경로 및 세부사항필수"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "field-43",
+                "visibility": "visible",
+                "displayName": "위 사항은 모두 본인이 직접 작성하였으며, 사실과 다름없습니까?",
+                "domId": "id-48",
+                "element": "input",
+                "control": "radio",
+                "options": [
+                  {
+                    "optionId": "field-43-option-1",
+                    "displayName": "네"
+                  },
+                  {
+                    "optionId": "field-43-option-2",
+                    "displayName": "아니요"
+                  }
+                ],
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "위 사항은 모두 본인이 직접 작성하였으며, 사실과 다름없습니까?"
+                    },
+                    {
+                      "source": "description",
+                      "text": "지원서에 기재된 내용이 사실과 다를 경우 합격 또는 입사가 취소될 수 있습니다."
+                    }
+                  ]
+                }
+              }
+            ],
+            "category": "NONE"
+          }
+        ]
+      },
+      "expected": {
+        "field-1": "personal.personal.englishFamilyName",
+        "field-2": "personal.personal.englishGivenName",
+        "field-3": "personal.personal.nationality",
+        "field-4": "personal.personal.nationality",
+        "field-5": "contact.contact.addressLine1",
+        "field-6": "contact.contact.residenceCountry",
+        "field-7": "contact.contact.addressLine2",
+        "field-8": "contact.contact.emergencyPhoneNumber",
+        "field-9": null,
+        "field-10": "veteran.veteran.veteranStatus",
+        "field-11": "veteran.veteran.veteranNumber",
+        "field-12": "veteran.veteran.veteranType",
+        "field-13": "veteran.veteran.veteranRelation",
+        "field-14": "disability.disability.disabilityStatus",
+        "field-15": "disability.disability.disabilityType",
+        "field-16": "disability.disability.disabilityGrade",
+        "field-17": "military.military.militaryStatus",
+        "field-18": "military.military.exemptionReason",
+        "field-19": null,
+        "field-20": "education.university.attendanceType",
+        "field-21": "education.university.schoolName",
+        "field-22": "education.university.startDate",
+        "field-23": "education.university.transferStatus",
+        "field-24": "education.university.endDate",
+        "field-25": "education.university.completionStatus",
+        "field-26": "education.university.majorName",
+        "field-27": null,
+        "field-28": "education.university.additionalMajorName",
+        "field-29": "careers.career.companyName",
+        "field-30": "careers.career.department",
+        "field-31": "careers.career.position",
+        "field-32": "careers.career.employmentStatus",
+        "field-33": "careers.career.employmentType",
+        "field-34": "careers.career.startDate",
+        "field-35": "careers.career.endDate",
+        "field-36": "careers.career.responsibilities",
+        "field-37": null,
+        "field-38": null,
+        "field-39": null,
+        "field-40": null,
+        "field-41": null,
+        "field-42": null,
+        "field-43": null
+      },
+      "estimatedModelCalls": 12
+    }
+  ]
+}

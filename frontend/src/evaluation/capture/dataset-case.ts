@@ -66,6 +66,8 @@ export interface CaseInput {
   profileId: string;
   profile: Profile;
   truth: StateTruth;
+  /** 정제로 지운 화면 상태(예: 학력 구분 선택)를 사례 정의대로 되살린다. 실제 값은 넣지 않는다. */
+  restoreState?: (document: Document) => void;
 }
 
 /**
@@ -83,6 +85,7 @@ export async function buildCase(
     /^[\s\S]*<body>|<\/body>[\s\S]*$/g,
     "",
   );
+  input.restoreState?.(document);
   const { truth } = input;
   const recorded = await recordGenericCalls(document, input.profile, {
     category: (section, phase) =>

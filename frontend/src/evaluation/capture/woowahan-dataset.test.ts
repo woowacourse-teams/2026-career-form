@@ -10,11 +10,11 @@ import {
   sha256,
 } from "./dataset-case";
 
-// 평가 데이터셋 generic-matching v1의 우아한형제들 사례를 현재 제품 코드로 다시 만들어 저장본과 비교한다.
-// 저장본을 새로 만들 때만 CF356_WRITE_DATASET=1로 실행한다.
+// 평가 데이터셋 generic-matching v2의 우아한형제들 사례를 현재 제품 코드로 다시 만들어 저장본과 비교한다.
+// 저장본을 새로 만들 때만 CF356_WRITE_DATASET=1로 실행한다. v1은 이전 수집기의 요청이라 다시 만들지 않는다.
 const DATASET = join(
   process.cwd(),
-  "../backend/src/main/resources/evaluation/datasets/generic-matching/v1",
+  "../backend/src/main/resources/evaluation/datasets/generic-matching/v2",
 );
 const PROFILE = join(
   process.cwd(),
@@ -25,6 +25,24 @@ const STATES = [
   { state: "high-school", split: "final" },
   { state: "university", split: "final" },
 ] as const;
+// 정제본은 선택 상태를 지운다. 수집 기록(review.md)의 화면 상태대로 학력 구분만 되살린다.
+const SHOWN_STAGE: Record<string, string | undefined> = {
+  "high-school": "고등학교",
+  university: "대학교",
+};
+
+function restoreStage(state: string) {
+  const stage = SHOWN_STAGE[state];
+  if (!stage) return undefined;
+  return (document: Document) => {
+    const selects = [...document.querySelectorAll("select")].filter((select) =>
+      [...select.options].some((option) => option.text === stage),
+    );
+    if (selects.length !== 1) throw new Error(`학력 구분 선택 칸이 하나가 아닙니다: ${state}`);
+    const option = [...selects[0]!.options].find((candidate) => candidate.text === stage)!;
+    selects[0]!.selectedIndex = option.index;
+  };
+}
 const write = process.env.CF356_WRITE_DATASET === "1";
 const RESOURCES = join(process.cwd(), "../backend/src/main/resources");
 
@@ -55,10 +73,11 @@ async function build(state: string, split: CaseFile["split"]) {
     truth: JSON.parse(
       readFileSync(join(DATASET, `ground-truth/${fixtureId}.json`), "utf8"),
     ) as StateTruth,
+    restoreState: restoreStage(state),
   });
 }
 
-describe("평가 데이터셋 generic-matching v1 우아한형제들 사례", () => {
+describe("평가 데이터셋 generic-matching v2 우아한형제들 사례", () => {
   it.each(STATES)(
     "$state 사례는 현재 제품 코드가 만드는 요청과 같다",
     async ({ state, split }) => {
@@ -77,7 +96,7 @@ describe("평가 데이터셋 generic-matching v1 우아한형제들 사례", ()
   );
 
   it("manifest의 파일 해시가 저장본과 같다(쓰기 모드에서는 다시 계산한다)", () => {
-    const path = "evaluation/datasets/generic-matching/v1/manifest.json";
+    const path = "evaluation/datasets/generic-matching/v2/manifest.json";
     if (write) refreshManifestDigests(RESOURCES, path);
     const manifest = JSON.parse(
       readFileSync(join(RESOURCES, path), "utf8"),
