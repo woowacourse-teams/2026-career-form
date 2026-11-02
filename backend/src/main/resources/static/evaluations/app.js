@@ -501,6 +501,13 @@ function dialog(title, content, className) {
 }
 
 const STATE_NAMES = { initial: "처음 화면", "high-school": "고등학교", university: "대학교", ged: "검정고시" };
+// 화면 상태 설명. 같은 지원서라도 무엇을 골랐는지에 따라 나타나는 칸이 달라 상태별로 따로 평가한다.
+const STATE_NOTES = {
+  initial: "지원서를 처음 연 상태예요. 아무것도 고르지 않아 학력 행에는 '구분' 선택칸만 있고, 제품이 학력 구분을 직접 고르는 준비 단계까지 평가해요.",
+  "high-school": "학력 구분에서 '고등학교', 보훈·장애에서 '대상'을 고른 뒤 펼쳐진 화면이에요. 고등학교 학력 칸과 보훈·장애 상세 칸이 나타나요.",
+  university: "학력 구분에서 '대학교', 보훈·장애에서 '대상'을 고른 뒤 펼쳐진 화면이에요. 대학 학력 칸(전공 포함)과 보훈·장애 상세 칸이 나타나요.",
+  ged: "학력 구분에서 '검정고시'만 고른 화면이에요. 학교·전공 칸 없이 '합격연월' 칸 하나만 나타나요.",
+};
 const CONTROL_NAMES = { text: "글자", select: "선택", radio: "라디오", checkbox: "체크", textarea: "긴 글", custom: "직접 구현" };
 const CALL_NAMES = { SECTION_CLASSIFY: "섹션 분류", INTERACTION_DECISION: "학력 구분 선택", GENERIC_FIELDS: "칸 매핑" };
 const REVIEW_NAMES = { privacy: "개인정보", structure: "구조", mappingTruth: "칸 정답", preparationTruth: "준비 정답",
@@ -522,6 +529,11 @@ function datasetView(selected = 0) {
     summary.append(tile);
   });
   wrap.append(summary);
+  const intro = element("div", undefined, "dataset-intro");
+  intro.append(element("strong", "이 데이터셋은 무엇인가요?"),
+    element("p", "실제 채용 지원서(우아한형제들 공고 R2605009) 하나를 개인정보 없이 정제해 만든 화면들이에요. 같은 지원서라도 학력 구분이나 보훈·장애를 무엇으로 고르느냐에 따라 나타나는 칸이 달라져서, 화면 상태마다 따로 평가해요."),
+    element("p", "모델은 각 화면에서 확장프로그램이 실제로 보내는 질문(섹션 분류, 칸 매핑 등)에 답하고, 사람이 검토한 정답과 비교해 채점해요. 지원자 정보는 가상 인물(합성 프로필)이에요."));
+  wrap.append(intro);
   if (!data.usable && data.rejection) wrap.append(element("p", `미완료 검토: ${data.rejection}`, "muted"));
   const tabs = element("div", undefined, "dataset-tabs");
   data.cases.forEach((item, index) => {
@@ -533,6 +545,24 @@ function datasetView(selected = 0) {
   });
   wrap.append(tabs);
   const item = data.cases[selected];
+  if (STATE_NOTES[item.state]) wrap.append(element("p", STATE_NOTES[item.state], "state-note"));
+  // 처음 화면 대비 섹션별 칸 수 변화. 칸 이름은 화면 상태에 따라 달리 읽히므로 섹션 칸 수로 비교한다.
+  const base = data.cases.find((other) => other.state === "initial");
+  if (base && base !== item) {
+    const title = (group) => !group.title ? "제목 없음" : group.title === "[비식별]" ? "기본정보" : group.title;
+    // 섹션 제목은 화면 상태에 따라 달리 읽힐 수 있어, 섹션 수가 같으면 같은 순서끼리 비교한다.
+    const samePlan = base.sections.length === item.sections.length;
+    const beforeOf = (group, index) => samePlan ? base.sections[index].fields.length
+      : base.sections.find((other) => title(other) === title(group))?.fields.length ?? 0;
+    const grown = item.sections.map((group, index) => [group, beforeOf(group, index)])
+      .filter(([group, count]) => group.fields.length !== count);
+    if (grown.length) {
+      const box = element("div", undefined, "new-fields");
+      box.append(element("span", "처음 화면과 달라진 섹션", "new-fields-title"));
+      grown.forEach(([group, count]) => box.append(element("span", `${title(group)} ${count}→${group.fields.length}칸`, "new-field")));
+      wrap.append(box);
+    }
+  }
   const steps = element("ol", undefined, "call-steps");
   item.calls.forEach((call) => {
     const step = element("li");
@@ -601,23 +631,55 @@ function profileTable(profile) {
   return table;
 }
 
+/** 정답 기준 대화상자. 무엇을 채점하는지, 틀림의 종류, 점수 계산, 실제 자동기입, 흔들림을 예시와 함께 보인다. */
 function criteriaView() {
-  const list = element("div", undefined, "criteria-list");
-  const lines = [
-    ["항목 판정", "항목마다 정답·오답만 판정한다(매핑 불가·기권 정답 포함, 부분 점수 없음). 호출별 점수는 참고용으로만 남는다."],
-    ["오답의 종류", "다른 키, 누락(정답이 있는데 답 없음), 불필요 제안(정답이 매핑 불가인데 답함)은 모두 그 항목의 오답이며 별도 감점은 없다."],
-    ["채점 제외", "공급자 사용 불가 항목은 빼고, 모든 항목이 빠진 호출은 채점 불가로 실패율에 넣는다."],
-    ["최종 정확도", "채점 가능한 호출의 맞힌 항목 수 합 ÷ 채점한 항목 수 합(항목 단위). 칸이 많은 호출이 그만큼 비중을 가진다. 준비·매핑 정확도도 같은 방식으로 단계별로 계산한다."],
-    ["실패", "타임아웃, API 오류, 응답 형식 오류는 정확도에서 빼고 실패율에 넣는다. 채점 가능한 호출이 없으면 측정 불가."],
-    ["실제 자동기입 결과", "칸 매핑 답을 제품과 같은 확신도 구간으로 나눈다. 0.8 이상은 자동기입이라 정답·오답을 따지고, 0.5~0.8은 사용자 확인, 0.5 미만은 막음이다. 확장프로그램의 이름 칸 보정과 정확히 일치하는 값 올림 규칙은 반영하지 않는다. OpenAI 확신도는 모델 자기 보고 값이다."],
-    ["반복별 범위", "같은 입력을 반복마다 따로 채점한 정확도의 최소~최대. 가장 높은 두 모델의 범위가 겹치면 차이를 구분할 수 없다고 본다. 반복 수가 적으면 범위가 실제보다 좁게 잡혀, 같은 입력을 새로 실행하면 범위 밖으로 움직일 수 있다."],
-  ];
-  for (const [title, text] of lines) {
-    const section = element("section");
-    section.append(element("h4", title), element("p", text));
-    list.append(section);
-  }
-  return list;
+  const wrap = element("div", undefined, "criteria-view");
+  const formula = element("div", undefined, "criteria-formula");
+  formula.append(element("span", "정확도", "formula-name"), element("span", "="),
+    element("span", "맞힌 항목 수", "formula-part"), element("span", "÷"), element("span", "채점한 항목 수", "formula-part"));
+  wrap.append(formula, element("p", "항목은 섹션 하나, 칸 하나, 버튼·선택지 결정 하나예요. 모든 화면·모든 호출의 항목을 합쳐 계산해서, 칸이 많은 호출이 그만큼 비중을 가져요.", "muted criteria-lead"));
+  const card = (title, ...children) => {
+    const section = element("section", undefined, "criteria-card");
+    section.append(element("h4", title), ...children);
+    wrap.append(section);
+  };
+  const table = (head, rows) => {
+    const box = element("table", undefined, "criteria-table criteria-grid");
+    const thead = element("thead");
+    const headRow = element("tr");
+    head.forEach((text) => headRow.append(element("th", text)));
+    thead.append(headRow);
+    const body = element("tbody");
+    rows.forEach((cells) => {
+      const row = element("tr");
+      cells.forEach((text) => row.append(element("td", text)));
+      body.append(row);
+    });
+    box.append(thead, body);
+    return box;
+  };
+  card("1. 무엇을 정답으로 보나요",
+    element("p", "칸이 뜻하는 지원 프로필 항목이 정답이에요. 지원자가 그 값을 갖고 있는지는 상관없어요. 지원하는 프로필 항목에 없는 의미면 정답은 '넣을 항목 없음'이에요."),
+    table(["예시", "정답"], [["학교명 칸(대학교 행)", "education.university.schoolName"], ["자기소개서 칸", "넣을 항목 없음"],
+      ["지원경로 섹션", "해당 없음(NONE)"]]));
+  card("2. 틀림의 종류",
+    element("p", "모두 그 항목 하나를 틀린 것으로 세고, 따로 더 감점하지 않아요. 위험도는 달라서 '항목 판정' 막대에서 따로 보여요."),
+    table(["종류", "뜻", "실제 위험"], [["오답", "정답이 있는데 다른 항목을 고름", "틀린 값이 들어감"],
+      ["누락(판단 보류)", "정답이 있는데 고르지 않음", "사용자가 직접 입력"], ["불필요 제안", "넣을 항목이 없는데 무언가를 고름", "넣지 말아야 할 칸에 입력"]]));
+  card("3. 점수에서 빠지는 것",
+    table(["경우", "처리"], [["타임아웃·API 오류·응답 형식 오류", "정확도에서 빼고 실패율에 넣음"],
+      ["공급자를 쓸 수 없어 답하지 못한 항목", "그 항목만 채점에서 뺌"], ["채점할 항목이 하나도 없는 호출", "채점 불가로 실패율에 넣음"]]));
+  card("4. 준비 정확도와 필드 매핑 정확도",
+    element("p", "같은 계산을 단계별로 나눈 거예요. 준비는 칸을 꺼내기 위한 질문(조작할 섹션 분류, 학력 구분 선택), 필드는 칸에 넣을 값을 정하는 질문(전체 섹션 분류, 칸 매핑)이에요."));
+  card("5. 실제 자동기입 결과",
+    element("p", "칸 매핑 답을 확장프로그램과 같은 확신도 기준으로 나눠, 사용자 화면에 실제로 무엇이 자동으로 들어가는지 봐요."),
+    table(["확신도", "제품 동작", "채점"], [["0.8 이상", "자동기입", "정답·오답을 따짐"], ["0.5 ~ 0.8", "사용자 확인 필요", "확인 필요로 셈"],
+      ["0.5 미만", "막음", "막음으로 셈"]]),
+    element("p", "확장프로그램의 이름 칸 보정, 정확히 일치하는 값 올림 규칙은 반영하지 않아요. OpenAI 확신도는 모델이 스스로 적은 값이에요.", "muted"));
+  card("6. 반복별 범위",
+    element("p", "같은 입력을 반복마다 따로 채점한 정확도의 최소~최대예요. 가장 높은 두 모델의 범위가 겹치면 '차이 구분 불가'로 봐요."),
+    element("p", "반복 수가 적으면 범위가 실제보다 좁게 잡혀요. 같은 입력을 새로 실행하면 범위 밖으로 움직일 수 있어요.", "muted"));
+  return wrap;
 }
 
 // 프롬프트 조각을 그 조각을 보내는 제품 API별로 묶는다. 공급자 고정 문구는 모든 요청에 붙는다.
