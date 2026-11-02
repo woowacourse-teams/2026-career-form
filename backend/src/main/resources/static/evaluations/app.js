@@ -329,7 +329,6 @@ function renderAutofill() {
   card.append(head);
   const legend = element("div", undefined, "item-legend");
   AUTOFILL_KINDS.forEach(({ label, className }) => legend.append(element("span", label, className)));
-  correctSwatch(legend);
   card.append(legend);
   if (!state.selected.length) card.append(element("div", "비교할 모델 선택 필요.", "empty"));
   for (const model of state.selected) {
@@ -399,15 +398,6 @@ function diagnosis() {
   return box;
 }
 
-/** 범례의 맞은 칸 색. 막대가 모델 색으로 칠해지므로 고른 모델 색을 나란히 보인다. */
-function correctSwatch(legend) {
-  const colors = state.selected.map(color);
-  if (!colors.length) return;
-  const step = 100 / colors.length;
-  legend.querySelector(".item-correct")?.style.setProperty("--swatch",
-    `linear-gradient(90deg, ${colors.map((value, index) => `${value} ${index * step}% ${(index + 1) * step}%`).join(", ")})`);
-}
-
 function renderItemBreakdown() {
   const card = element("div", undefined, "metric");
   const head = element("div", undefined, "metric-head");
@@ -415,7 +405,6 @@ function renderItemBreakdown() {
   card.append(head);
   const legend = element("div", undefined, "item-legend");
   ITEM_KINDS.forEach(({ label, className }) => legend.append(element("span", label, className)));
-  correctSwatch(legend);
   card.append(legend);
   if (!state.selected.length) card.append(element("div", "비교할 모델 선택 필요.", "empty"));
   for (const model of state.selected) {
