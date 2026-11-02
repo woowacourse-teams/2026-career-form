@@ -2,7 +2,7 @@ package com.careerform.evaluation.run;
 
 import java.util.List;
 import java.util.Map;
-import com.careerform.evaluation.scoring.AutofillCounts;
+import com.careerform.evaluation.scoring.AutofillOutcome;
 import com.careerform.evaluation.scoring.RunAggregate;
 
 /**
@@ -12,8 +12,8 @@ import com.careerform.evaluation.scoring.RunAggregate;
  * 처리량은 완료 호출 수 ÷ 실행 경과 초다. 관측하지 못한 값은 null이며 0으로 채우지 않는다.
  * 키 TOTAL, PREPARATION, MAPPING. {@code scoringVersion}은 이 보고를 계산한 현재 채점식이며, 실행 등록 때 기록한
  * 채점식과 다를 수 있다. {@code repetitions}는 반복마다 따로 계산한 항목 단위 정확도로, 같은 입력에서 점수가 얼마나
- * 흔들리는지 보인다. {@code autofill}은 필드 매핑 답을 제품 확신도 구간으로 나눈 합계이며, 확신도를 기록하기 전
- * 실행처럼 기록한 호출이 없으면 null이다.
+ * 흔들리는지 보이고, 자동기입 점수도 반복마다 따로 낸다. {@code autofill}은 저장한 칸 매핑 답을 실행 때의 정답과
+ * 다시 비교해 사용자 화면 기준으로 나눈 합계와 점수이며, 정답을 찾을 수 없거나 칸 매핑 결과가 없으면 null이다.
  */
 public record RunReport(
     RunAggregate quality,
@@ -23,15 +23,23 @@ public record RunReport(
     Timing timing,
     String scoringVersion,
     List<RepetitionQuality> repetitions,
-    AutofillCounts autofill
+    Autofill autofill
 ) {
 
     public RunReport {
         repetitions = List.copyOf(repetitions);
     }
 
-    /** 반복 하나의 항목 단위 정확도. 채점 가능한 호출이 없으면 null이다. */
-    public record RepetitionQuality(int repetition, Double accuracy) {
+    /** 반복 하나의 항목 단위 정확도와 자동기입 점수. 계산할 수 없으면 null이다. */
+    public record RepetitionQuality(int repetition, Double accuracy, Double autofillScore) {
+    }
+
+    /** 자동기입 결과 합계와 정밀도·채움률·점수({@link AutofillOutcome}). */
+    public record Autofill(AutofillOutcome counts, Double precision, Double fillRate, Double score) {
+
+        public static Autofill of(AutofillOutcome counts) {
+            return new Autofill(counts, counts.precision(), counts.fillRate(), counts.score());
+        }
     }
 
     public record Distribution(int count, Double meanMs, Double p50Ms, Double p95Ms, Double totalMs) {

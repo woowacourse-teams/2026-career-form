@@ -512,3 +512,7 @@ html,body{margin:0;background:#eae9e5}body{min-width:320px}
 #cf-eval-preview .control-textarea .wire-icon{background:#f6efe2;color:#8a5b2f}
 #cf-eval-preview .wire-kind{font-size:11px;color:#59626b;white-space:nowrap}
 @media(max-width:760px){#cf-eval-preview .dataset-layout2{grid-template-columns:1fr;gap:14px}#cf-eval-preview .screen-list{position:static;flex-direction:row;overflow-x:auto;padding-bottom:4px}#cf-eval-preview .screen-list button{flex:0 0 auto;border-left-width:1px}#cf-eval-preview .screen-list button[aria-pressed=true]{border-color:#475f78}#cf-eval-preview .screen-list .profile-entry{margin-top:0}#cf-eval-preview .form-wire{grid-template-columns:1fr}}
+#cf-eval-preview .item-blank{color:#4f7a62}#cf-eval-preview .item-track .item-blank{background:#a9c9b5}#cf-eval-preview .item-legend .item-blank::before{background:#a9c9b5}
+#cf-eval-preview .diagnosis-head{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px;margin-top:14px;padding:12px 14px;border-radius:6px;background:#eef1f3}
+#cf-eval-preview .diagnosis-head strong{font-size:14px;color:#233447}
+#cf-eval-preview .diagnosis-head .muted{font-size:12px}

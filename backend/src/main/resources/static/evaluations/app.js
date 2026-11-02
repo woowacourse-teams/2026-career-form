@@ -110,8 +110,10 @@ const report = (model) => latest(model)?.report;
 function renderOverview() {
   const quality = $("#cf-quality");
   quality.replaceChildren(
-    accuracyCard(),
+    scoreCard(),
     renderAutofill(),
+    diagnosisHead(),
+    bars("전체 항목 정확도", "%", (m) => percent(report(m)?.quality.accuracy), 100, (v) => `${v.toFixed(1)}%`),
     bars("준비 정확도", "%", (m) => percent(report(m)?.quality.preparationAccuracy), 100, (v) => `${v.toFixed(1)}%`),
     bars("필드 매핑 정확도", "%", (m) => percent(report(m)?.quality.mappingAccuracy), 100, (v) => `${v.toFixed(1)}%`),
     renderItemBreakdown());
@@ -286,68 +288,76 @@ function renderTokenBars() {
 }
 
 /**
- * 최종 정확도와 반복별 범위(최소~최대)를 한 카드에 보인다.
+ * 대표 점수: 자동기입 점수(정밀도를 채움률보다 2배 중시하는 F0.5)와 반복별 범위. 막대 아래에 정밀도와 채움률을 보인다.
  * 자세한 설명은 정답 기준 창에 있다.
  */
-function accuracyCard() {
-  const card = bars("자동기입 최종 정확도", "%", (m) => percent(report(m)?.quality.accuracy), 100,
-    (v) => `${v.toFixed(1)}%`);
-  const ranges = state.selected.map((model) => {
-    const values = (report(model)?.repetitions ?? []).map((item) => item.accuracy).filter((value) => value != null)
-      .map((value) => value * 100);
-    return { values, min: Math.min(...values), max: Math.max(...values) };
-  });
+function scoreCard() {
+  const fill = (model) => report(model)?.autofill;
+  const card = bars("자동기입 점수", "%", (m) => percent(fill(m)?.score), 100, (v) => `${v.toFixed(1)}%`);
   card.querySelectorAll(".bar-row").forEach((row, index) => {
-    const range = ranges[index];
-    if (!range?.values.length) return;
-    row.after(element("span", range.values.length > 1
-      ? `반복 ${range.values.length}회 범위 ${range.min.toFixed(1)}~${range.max.toFixed(1)}%` : "반복 1회", "range-note"));
+    const autofill = fill(state.selected[index]);
+    if (!autofill) {
+      row.after(element("span", "자동기입 결과 없음", "range-note"));
+      return;
+    }
+    if (autofill.score == null) {
+      row.after(element("span", "확신도 기록 전 실행이라 측정 불가", "range-note"));
+      return;
+    }
+    const values = (report(state.selected[index])?.repetitions ?? []).map((item) => item.autofillScore)
+      .filter((value) => value != null).map((value) => value * 100);
+    const parts = [`정밀도 ${autofill.precision == null ? "—" : (autofill.precision * 100).toFixed(1) + "%"}`,
+      `채움률 ${(autofill.fillRate * 100).toFixed(1)}%`];
+    if (values.length > 1) parts.push(`반복 ${values.length}회 범위 ${Math.min(...values).toFixed(1)}~${Math.max(...values).toFixed(1)}%`);
+    row.after(element("span", parts.join(" · "), "range-note"));
   });
+  card.append(element("p", "정밀도 = 넣은 칸 중 맞은 비율 · 채움률 = 넣어야 할 칸 중 맞게 넣은 비율. 잘못 넣으면 놓칠 때보다 2배 크게 깎입니다.", "muted metric-foot"));
   return card;
 }
 
 const AUTOFILL_KINDS = [
-  { key: "autoCorrect", label: "자동기입 정답", className: "item-correct" },
-  { key: "autoWrong", label: "자동기입 오답", className: "item-wrong" },
-  { key: "review", label: "확인 필요", className: "item-missing" },
-  { key: "blocked", label: "막음", className: "item-unnecessary" },
-  { key: "empty", label: "비움", className: "item-empty" },
+  { key: "filledCorrect", label: "맞게 넣음", className: "item-correct" },
+  { key: "blankCorrect", label: "맞게 비움", className: "item-blank" },
+  { key: "missed", label: "놓침", className: "item-missing" },
+  { key: "wrong", label: "잘못 넣음", className: "item-wrong" },
 ];
 
 /**
- * 필드 매핑 답을 제품과 같은 확신도 구간(자동기입 0.8, 확인 0.5)으로 나눈 결과. 사용자 화면에 실제로 자동으로 들어갈
- * 칸이 얼마나 맞는지 보인다. 확신도를 기록하기 전 실행은 측정 불가다.
+ * 칸 매핑 답이 사용자 화면에서 어떻게 되는지. 제품처럼 확신도 0.8 이상만 넣은 것으로 보고, 넣지 않은 칸은 정답 유무로
+ * 맞게 비움과 놓침을 나눈다. 잘못 넣음은 다른 항목을 넣은 칸과 넣지 말아야 할 칸에 넣은 칸의 합이다.
  */
 function renderAutofill() {
   const card = element("div", undefined, "metric");
   const head = element("div", undefined, "metric-head");
-  head.append(element("h3", "실제 자동기입 결과"), element("span", "제품 기준 · 칸 매핑", "muted"));
+  head.append(element("h3", "칸별 결과"), element("span", "사용자 화면 기준 · 칸 수", "muted"));
   card.append(head);
   const legend = element("div", undefined, "item-legend");
   AUTOFILL_KINDS.forEach(({ label, className }) => legend.append(element("span", label, className)));
   card.append(legend);
+  if (!state.selected.length) card.append(element("div", "비교할 모델 선택 필요.", "empty"));
   for (const model of state.selected) {
-    const counts = report(model)?.autofill;
+    const autofill = report(model)?.autofill;
+    const counts = autofill && { ...autofill.counts, wrong: autofill.counts.filledWrongKey + autofill.counts.filledUnneeded };
     const row = element("div", undefined, "item-row");
     row.style.setProperty("--model", color(model));
     const track = element("div", undefined, "item-track");
     const total = counts ? AUTOFILL_KINDS.reduce((sum, { key }) => sum + counts[key], 0) : 0;
-    let text = "확신도를 기록하기 전 실행이라 측정 불가";
-    if (counts && total) {
+    let text = "자동기입 결과 없음";
+    if (counts?.unobserved) text = "확신도 기록 전 실행이라 측정 불가";
+    else if (total) {
       AUTOFILL_KINDS.forEach(({ key, label, className }) => {
         const part = element("span", undefined, className);
         part.style.width = `${counts[key] / total * 100}%`;
         part.title = `${label} ${counts[key]}`;
         track.append(part);
       });
-      const auto = counts.autoCorrect + counts.autoWrong;
-      text = `자동기입 정확도 ${auto ? (counts.autoCorrect / auto * 100).toFixed(1) + "%" : "—"} (자동 ${auto}칸 중 오답 ${counts.autoWrong})`
-        + ` · 확인 필요 ${counts.review} · 막음 ${counts.blocked} · 비움 ${counts.empty}`;
+      text = `잘못 넣음 ${counts.wrong} (다른 항목 ${counts.filledWrongKey} · 넣지 말 칸 ${counts.filledUnneeded})`
+        + ` · 놓침 ${counts.missed} / ${total}칸`;
     }
     row.append(element("span", model), track, element("span", text, "item-numbers"));
     card.append(row);
   }
-  card.append(element("p", "확신도 0.8 이상은 자동으로 입력, 0.5~0.8은 사용자 확인, 0.5 미만은 막음(확장프로그램과 같은 기준).", "muted metric-foot"));
+  card.append(element("p", "놓침에는 확인 필요(0.5~0.8)·막음(0.5 미만)으로 넘긴 칸이 들어갑니다. 놓친 칸은 사용자가 직접 입력합니다.", "muted metric-foot"));
   return card;
 }
 
@@ -362,6 +372,13 @@ const ITEM_KINDS = [
  * 모델별 항목 판정 수(quality.items)를 정답·오답·누락·불필요 제안으로 나눈 100% 막대로 그린다. 정확도가 같아도
  * 다른 항목을 고른 오답(잘못 기입)과 판단 보류(직접 입력)는 위험이 달라 따로 보인다.
  */
+/** 진단 구역 제목. 아래 지표는 확신도와 무관하게 모델 답 그대로 채점해 어느 단계에서 틀리는지 본다. */
+function diagnosisHead() {
+  const head = element("div", undefined, "diagnosis-head");
+  head.append(element("strong", "진단"), element("span", "확신도와 무관하게 모델 답 그대로 채점 · 어느 단계에서 틀리는지", "muted"));
+  return head;
+}
+
 function renderItemBreakdown() {
   const card = element("div", undefined, "metric");
   const head = element("div", undefined, "metric-head");
@@ -638,13 +655,14 @@ function profileTable(profile) {
   return table;
 }
 
-/** 정답 기준 대화상자. 무엇을 채점하는지, 틀림의 종류, 점수 계산, 실제 자동기입, 흔들림을 예시와 함께 보인다. */
+/** 정답 기준 대화상자. 대표 점수(자동기입 점수)와 칸별 결과, 정답 기준, 진단 지표, 흔들림을 예시와 함께 보인다. */
 function criteriaView() {
   const wrap = element("div", undefined, "criteria-view");
   const formula = element("div", undefined, "criteria-formula");
-  formula.append(element("span", "정확도", "formula-name"), element("span", "="),
-    element("span", "맞힌 항목 수", "formula-part"), element("span", "÷"), element("span", "채점한 항목 수", "formula-part"));
-  wrap.append(formula, element("p", "항목 = 섹션 하나, 칸 하나, 버튼·선택지 결정 하나. 모든 화면·모든 호출의 항목을 합쳐 계산하므로 칸이 많은 호출일수록 비중이 큽니다.", "muted criteria-lead"));
+  formula.append(element("span", "자동기입 점수", "formula-name"), element("span", "="),
+    element("span", "정밀도", "formula-part"), element("span", "×2 와"), element("span", "채움률", "formula-part"),
+    element("span", "의 조화 평균(F0.5)"));
+  wrap.append(formula, element("p", "사용자 화면 기준 점수. 잘못 넣은 칸은 사용자가 찾아서 고쳐야 하고 그대로 제출될 위험이 있지만, 놓친 칸은 직접 입력하면 됩니다. 그래서 잘못 넣으면 놓칠 때보다 2배 크게 깎습니다. 아무것도 넣지 않으면 0점입니다.", "muted criteria-lead"));
   const card = (title, ...children) => {
     const section = element("section", undefined, "criteria-card");
     section.append(element("h4", title), ...children);
@@ -665,26 +683,26 @@ function criteriaView() {
     box.append(thead, body);
     return box;
   };
-  card("1. 정답 기준",
+  card("1. 칸별 결과",
+    element("p", "칸 매핑 답을 확장프로그램과 같은 확신도 기준으로 봅니다. 0.8 이상만 자동기입, 0.5~0.8은 사용자 확인, 0.5 미만은 막음."),
+    table(["결과", "뜻", "사용자 입장"], [["맞게 넣음", "정답 항목을 자동기입", "이득"], ["맞게 비움", "넣을 항목이 없는 칸을 넣지 않음", "이득"],
+      ["놓침", "정답이 있는데 넣지 않음(비움·확인 필요·막음)", "직접 입력"], ["잘못 넣음", "다른 항목을 넣거나 넣지 말아야 할 칸에 넣음", "찾아서 고쳐야 함"]]),
+    table(["지표", "계산"], [["정밀도", "맞게 넣음 ÷ 넣은 칸"], ["채움률", "맞게 넣음 ÷ 정답이 있는 칸"]]),
+    element("p", "확장프로그램의 이름 칸 보정, 정확히 일치하는 값 올림 규칙은 반영하지 않습니다. OpenAI 확신도는 모델이 스스로 적은 값입니다.", "muted"));
+  card("2. 정답 기준",
     element("p", "칸이 뜻하는 지원 프로필 항목이 정답. 지원자가 그 값을 가졌는지는 따지지 않습니다. 지원 프로필 항목에 없는 의미면 정답은 '넣을 항목 없음'."),
     table(["예시", "정답"], [["학교명 칸(대학교 행)", "education.university.schoolName"], ["자기소개서 칸", "넣을 항목 없음"],
       ["지원경로 섹션", "해당 없음(NONE)"]]));
-  card("2. 틀림의 종류",
-    element("p", "모두 그 항목 하나를 틀린 것으로 세고 추가 감점은 없습니다. 위험도가 달라 '항목 판정' 막대에서 따로 보여줍니다."),
-    table(["종류", "뜻", "실제 위험"], [["오답", "정답이 있는데 다른 항목을 고름", "틀린 값이 들어감"],
-      ["누락(판단 보류)", "정답이 있는데 고르지 않음", "사용자가 직접 입력"], ["불필요 제안", "넣을 항목이 없는데 무언가를 고름", "넣지 말아야 할 칸에 입력"]]));
-  card("3. 점수에서 빠지는 것",
-    table(["경우", "처리"], [["타임아웃·API 오류·응답 형식 오류", "정확도에서 빼고 실패율에 넣음"],
-      ["공급자를 쓸 수 없어 답하지 못한 항목", "그 항목만 채점에서 뺌"], ["채점할 항목이 하나도 없는 호출", "채점 불가로 실패율에 넣음"]]));
-  card("4. 준비 정확도와 필드 매핑 정확도",
-    element("p", "같은 계산을 단계별로 나눈 값. 준비는 칸을 꺼내기 위한 질문(조작할 섹션 분류, 학력 구분 선택), 필드는 칸에 넣을 값을 정하는 질문(전체 섹션 분류, 칸 매핑)."));
-  card("5. 실제 자동기입 결과",
-    element("p", "칸 매핑 답을 확장프로그램과 같은 확신도 기준으로 나눠, 사용자 화면에 실제로 자동기입되는 결과를 봅니다."),
-    table(["확신도", "제품 동작", "채점"], [["0.8 이상", "자동기입", "정답·오답을 따짐"], ["0.5 ~ 0.8", "사용자 확인 필요", "확인 필요로 셈"],
-      ["0.5 미만", "막음", "막음으로 셈"]]),
-    element("p", "확장프로그램의 이름 칸 보정, 정확히 일치하는 값 올림 규칙은 반영하지 않습니다. OpenAI 확신도는 모델이 스스로 적은 값입니다.", "muted"));
-  card("6. 반복별 범위",
-    element("p", "같은 입력을 반복마다 따로 채점한 정확도의 최소~최대. 두 모델의 범위가 겹치면 차이를 구분할 수 없습니다."),
+  card("3. 진단 지표",
+    element("p", "확신도와 무관하게 모델 답 그대로 채점합니다. 맞힌 항목 ÷ 채점한 항목이며 항목은 섹션 하나, 칸 하나, 버튼·선택지 결정 하나. 준비는 칸을 꺼내기 위한 질문(조작할 섹션 분류, 학력 구분 선택), 필드는 칸에 넣을 값을 정하는 질문(전체 섹션 분류, 칸 매핑)."),
+    table(["항목 판정", "뜻"], [["오답", "정답이 있는데 다른 항목을 고름"], ["누락(판단 보류)", "정답이 있는데 고르지 않음"],
+      ["불필요 제안", "넣을 항목이 없는데 무언가를 고름"]]));
+  card("4. 점수에서 빠지는 것",
+    table(["경우", "처리"], [["타임아웃·API 오류·응답 형식 오류", "점수에서 빼고 실패율에 넣음"],
+      ["공급자를 쓸 수 없어 답하지 못한 항목", "그 항목만 채점에서 뺌"], ["채점할 항목이 하나도 없는 호출", "채점 불가로 실패율에 넣음"],
+      ["확신도를 기록하기 전 실행", "자동기입 점수 측정 불가"]]));
+  card("5. 반복별 범위",
+    element("p", "같은 입력을 반복마다 따로 채점한 자동기입 점수의 최소~최대. 두 모델의 범위가 겹치면 차이를 구분할 수 없습니다."),
     element("p", "반복 수가 적으면 범위가 실제보다 좁게 잡힙니다. 같은 입력을 새로 실행하면 범위 밖으로 움직일 수 있습니다.", "muted"));
   return wrap;
 }

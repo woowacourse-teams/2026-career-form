@@ -6,8 +6,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.function.Predicate;
-import com.careerform.evaluation.scoring.AutofillCounts;
+import com.careerform.evaluation.scoring.AutofillOutcome;
 import com.careerform.evaluation.scoring.CallKind;
 import com.careerform.evaluation.scoring.RunAggregator;
 import com.careerform.monitoring.ModelCallRecording.Attempt;
@@ -18,7 +19,17 @@ public final class RunReporter {
     private static final double NANOS_PER_MS = 1_000_000.0;
     private final RunAggregator aggregator = new RunAggregator();
 
+    /** 정답을 모를 때의 보고. 자동기입 결과는 측정 불가(null)다. */
     public RunReport report(EvaluationRun run, List<CallResultRecord> records) {
+        return report(run, records, record -> null);
+    }
+
+    /**
+     * {@code expected}는 기록 하나의 정답표를 돌려주고, 모르면 null이다. 칸 매핑 답은 이 정답과 다시 비교해
+     * 자동기입 결과를 낸다.
+     */
+    public RunReport report(EvaluationRun run, List<CallResultRecord> records,
+        Function<CallResultRecord, Map<String, String>> expected) {
         Double elapsedSeconds = run.startedAt() == null || run.finishedAt() == null ? null
             : Duration.between(run.startedAt(), run.finishedAt()).toMillis() / 1000.0;
         Map<String, Predicate<CallResultRecord>> stages = new LinkedHashMap<>();
@@ -33,17 +44,28 @@ public final class RunReporter {
             tokens.put(name, tokens(selected));
         });
         return new RunReport(aggregator.aggregate(records.stream().map(CallResultRecord::toCallResult).toList()),
-            performance, tokens, flows(records), timing(run, records), RunService.SCORING_VERSION, repetitions(records),
-            records.stream().map(CallResultRecord::autofill).filter(java.util.Objects::nonNull)
-                .reduce(AutofillCounts::plus).orElse(null));
+            performance, tokens, flows(records), timing(run, records), RunService.SCORING_VERSION,
+            repetitions(records, expected), autofill(records, expected).map(RunReport.Autofill::of).orElse(null));
     }
 
-    private List<RunReport.RepetitionQuality> repetitions(List<CallResultRecord> records) {
+    private static java.util.Optional<AutofillOutcome> autofill(List<CallResultRecord> records,
+        Function<CallResultRecord, Map<String, String>> expected) {
+        return records.stream().filter(record -> record.kind() == CallKind.GENERIC_FIELDS && record.score() != null)
+            .map(record -> {
+                Map<String, String> truth = expected.apply(record);
+                return truth == null ? null : AutofillOutcome.score(truth, record.observed());
+            })
+            .filter(Objects::nonNull).reduce(AutofillOutcome::plus);
+    }
+
+    private List<RunReport.RepetitionQuality> repetitions(List<CallResultRecord> records,
+        Function<CallResultRecord, Map<String, String>> expected) {
         Map<Integer, List<CallResultRecord>> byRepetition = new java.util.TreeMap<>();
         records.forEach(record -> byRepetition.computeIfAbsent(record.repetition(), key -> new ArrayList<>()).add(record));
         List<RunReport.RepetitionQuality> qualities = new ArrayList<>();
         byRepetition.forEach((repetition, group) -> qualities.add(new RunReport.RepetitionQuality(repetition,
-            aggregator.aggregate(group.stream().map(CallResultRecord::toCallResult).toList()).accuracy())));
+            aggregator.aggregate(group.stream().map(CallResultRecord::toCallResult).toList()).accuracy(),
+            autofill(group, expected).map(AutofillOutcome::score).orElse(null))));
         return qualities;
     }
 

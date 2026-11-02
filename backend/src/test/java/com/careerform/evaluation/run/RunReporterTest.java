@@ -1,15 +1,18 @@
 package com.careerform.evaluation.run;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import com.careerform.evaluation.scoring.AutofillOutcome;
 import com.careerform.evaluation.scoring.CallKind;
 import com.careerform.evaluation.scoring.CallScore;
 import com.careerform.evaluation.scoring.FailureKind;
+import com.careerform.evaluation.scoring.ObservedItem;
 import com.careerform.monitoring.ModelCallRecording.Attempt;
 import com.careerform.monitoring.ModelCallRecording.Outcome;
 
@@ -20,20 +23,28 @@ class RunReporterTest {
     private static final long MS = 1_000_000L;
 
     @Test
-    @DisplayName("자동기입 결과는 기록한 호출끼리 더하고, 하나도 없으면 측정 불가(null)다")
-    void sumsAutofillCounts() {
+    @DisplayName("자동기입 결과는 저장한 답을 정답과 다시 비교해 더하고, 반복마다 점수를 내며, 정답을 모르면 측정 불가(null)다")
+    void scoresAutofillFromObservedAnswers() {
         EvaluationRun run = run(AT.minusSeconds(10), AT, AT.plusSeconds(4));
-        CallResultRecord first = new CallResultRecord("run-1", 1, "a", 1, CallKind.GENERIC_FIELDS,
-            CallKind.Stage.MAPPING, null, new CallScore(2, 1, 0, 0, 0), Map.of(), 100 * MS, List.of(), AT,
-            new com.careerform.evaluation.scoring.AutofillCounts(2, 1, 0, 0, 0, 0));
-        CallResultRecord second = new CallResultRecord("run-1", 1, "a", 2, CallKind.GENERIC_FIELDS,
-            CallKind.Stage.MAPPING, null, new CallScore(1, 0, 0, 0, 0), Map.of(), 100 * MS, List.of(), AT,
-            new com.careerform.evaluation.scoring.AutofillCounts(0, 0, 1, 1, 1, 0));
+        Map<String, String> truth = new java.util.HashMap<>();
+        truth.put("field-1", "k1");
+        truth.put("field-2", null);
+        CallResultRecord first = fields(1, Map.of("field-1", ObservedItem.answered("k1", 0.9),
+            "field-2", ObservedItem.answered(null, 0.9)));
+        CallResultRecord second = fields(2, Map.of("field-1", ObservedItem.answered("k2", 0.9),
+            "field-2", ObservedItem.answered("k9", 0.9)));
+        CallResultRecord preparation = record(1, "a", 1, CallKind.Stage.PREPARATION, new CallScore(1, 0, 0, 0, 0),
+            100, List.of());
 
-        assertThat(new RunReporter().report(run, List.of(first, second)).autofill())
-            .isEqualTo(new com.careerform.evaluation.scoring.AutofillCounts(2, 1, 1, 1, 1, 0));
-        assertThat(new RunReporter().report(run, List.of(record(1, "a", 1, CallKind.Stage.MAPPING,
-            new CallScore(1, 0, 0, 0, 0), 100, List.of()))).autofill()).isNull();
+        RunReport report = new RunReporter().report(run, List.of(first, second, preparation),
+            record -> record.order() == 2 ? truth : null);
+
+        assertThat(report.autofill().counts()).isEqualTo(new AutofillOutcome(1, 1, 1, 1, 0, 0));
+        assertThat(report.autofill().precision()).isCloseTo(1.0 / 3, within(1e-9));
+        assertThat(report.autofill().fillRate()).isEqualTo(0.5);
+        assertThat(report.repetitions()).extracting(RunReport.RepetitionQuality::autofillScore)
+            .containsExactly(1.0, 0.0);
+        assertThat(new RunReporter().report(run, List.of(first)).autofill()).isNull();
     }
 
     @Test
@@ -48,8 +59,8 @@ class RunReporterTest {
         RunReport report = new RunReporter().report(run, records);
 
         assertThat(report.repetitions()).containsExactly(
-            new RunReport.RepetitionQuality(1, 0.75), new RunReport.RepetitionQuality(2, 0.5),
-            new RunReport.RepetitionQuality(3, null));
+            new RunReport.RepetitionQuality(1, 0.75, null), new RunReport.RepetitionQuality(2, 0.5, null),
+            new RunReport.RepetitionQuality(3, null, null));
     }
 
     @Test
@@ -143,6 +154,11 @@ class RunReporterTest {
         CallScore score, long ms, List<Attempt> attempts) {
         return new CallResultRecord("run-1", repetition, caseId, order, CallKind.GENERIC_FIELDS, stage, null, score,
             Map.of(), ms * MS, attempts, AT);
+    }
+
+    private static CallResultRecord fields(int repetition, Map<String, ObservedItem> observed) {
+        return new CallResultRecord("run-1", repetition, "a", 2, CallKind.GENERIC_FIELDS, CallKind.Stage.MAPPING, null,
+            new CallScore(1, 0, 0, 0, 0), observed, 100 * MS, List.of(), AT);
     }
 
     private static CallResultRecord failed(int repetition, String caseId, int order, CallKind.Stage stage, long ms,

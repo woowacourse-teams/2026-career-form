@@ -1,8 +1,10 @@
 package com.careerform.evaluation.api;
 
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +21,7 @@ import com.careerform.evaluation.dataset.DatasetInspection;
 import com.careerform.evaluation.dataset.DatasetLoader;
 import com.careerform.evaluation.dataset.DatasetRejected;
 import com.careerform.evaluation.dataset.EvaluationCase;
+import com.careerform.evaluation.dataset.LoadedDataset;
 import com.careerform.evaluation.prompt.PromptSnapshot;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -55,6 +58,7 @@ public final class EvaluationRunController {
     private final DatasetLoader.ResourceSource resources;
     private final EvaluationProviders providers;
     private final RunReporter reporter = new RunReporter();
+    private final Map<String, Map<String, Map<String, String>>> truths = new ConcurrentHashMap<>();
     private final JsonMapper json = JsonMapper.builder().build();
 
     public EvaluationRunController(RunService runs, RunStore store, ResultStore results, RescoringService scorings,
@@ -198,7 +202,29 @@ public final class EvaluationRunController {
     }
 
     private RunView view(EvaluationRun run) {
-        return new RunView(run, reporter.report(run, results.list(run.id())));
+        Map<String, Map<String, String>> truth = truth(run);
+        return new RunView(run, reporter.report(run, results.list(run.id()),
+            record -> truth.get(record.caseId() + "/" + record.order())));
+    }
+
+    /** 실행 때의 데이터셋 정답표(사례/순서별). 데이터셋을 읽을 수 없거나 해시가 다르면 비어 있다. */
+    private Map<String, Map<String, String>> truth(EvaluationRun run) {
+        String key = run.versions().datasetId() + "/v" + run.versions().datasetVersion() + "/"
+            + run.versions().datasetDigest();
+        return truths.computeIfAbsent(key, ignored -> {
+            Map<String, Map<String, String>> calls = new HashMap<>();
+            try {
+                LoadedDataset dataset = datasets.load(run.versions().datasetId(), run.versions().datasetVersion());
+                if (dataset.digest().equals(run.versions().datasetDigest())) {
+                    dataset.cases().forEach(evaluationCase -> evaluationCase.calls().forEach(call ->
+                        calls.put(evaluationCase.caseId() + "/" + call.order(), call.expected())));
+                }
+            }
+            catch (RuntimeException exception) {
+                return Map.of();
+            }
+            return calls;
+        });
     }
 
     private static String requester(String header) {
