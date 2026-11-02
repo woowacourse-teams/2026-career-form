@@ -643,3 +643,5 @@
 #cf-eval-preview .stat.has-help .stat-label{text-decoration:underline dotted #a7afb7;text-underline-offset:3px}
 #cf-eval-preview .comparison-detail{display:flex;flex-wrap:wrap;gap:2px 12px;align-items:baseline}
 #cf-eval-preview .comparison-detail .stat b{font-size:12.5px}
+#cf-eval-preview .help-tip{position:fixed;z-index:1000;max-width:280px;padding:8px 11px;border-radius:6px;background:#233447;color:#fff;font-size:12.5px;line-height:1.5;box-shadow:0 6px 18px rgba(20,30,40,.18);pointer-events:none}
+#cf-eval-preview .stat.has-help:focus-visible{outline:2px solid #475f78;outline-offset:2px;border-radius:3px}

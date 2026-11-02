@@ -385,9 +385,35 @@ function richNote(...parts) {
 function stat(label, value, help) {
   const item = element("span", undefined, help ? "stat has-help" : "stat");
   item.append(element("span", label, "stat-label"), element("b", value));
-  if (help) item.title = help;
+  if (help) {
+    item.dataset.help = help;
+    item.tabIndex = 0;
+  }
   return item;
 }
+
+// 설명 말풍선. 브라우저 기본 title은 늦게 뜨거나 안 뜨는 환경이 있어, data-help가 있는 요소에 마우스를 올리거나
+// 포커스하면 바로 띄운다. 화면 밖으로 나가지 않게 위치를 맞춘다.
+const helpTip = Object.assign(document.createElement("div"), { className: "help-tip", role: "tooltip", hidden: true });
+root.append(helpTip);
+function showHelp(target) {
+  helpTip.textContent = target.dataset.help;
+  helpTip.hidden = false;
+  const box = target.getBoundingClientRect();
+  const tip = helpTip.getBoundingClientRect();
+  const left = Math.min(Math.max(8, box.left + box.width / 2 - tip.width / 2), innerWidth - tip.width - 8);
+  const above = box.top - tip.height - 8;
+  helpTip.style.left = `${left}px`;
+  helpTip.style.top = `${above >= 8 ? above : box.bottom + 8}px`;
+}
+const hideHelp = () => { helpTip.hidden = true; };
+root.addEventListener("mouseover", (event) => {
+  const target = event.target.closest?.("[data-help]");
+  if (target) showHelp(target); else hideHelp();
+});
+root.addEventListener("focusin", (event) => { if (event.target.dataset?.help) showHelp(event.target); });
+root.addEventListener("focusout", hideHelp);
+addEventListener("scroll", hideHelp, { passive: true });
 
 function scoreCard() {
   const fill = (model) => report(model)?.autofill;
