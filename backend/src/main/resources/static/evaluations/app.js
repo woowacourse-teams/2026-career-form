@@ -97,7 +97,7 @@ function bars(title, sub, values, max, format, foot) {
     const fill = element("div", undefined, "fill");
     fill.style.width = `${value == null ? 0 : Math.max(0, Math.min(100, value / max * 100))}%`;
     track.append(fill);
-    row.append(element("span", model), track, element("span", value == null ? "—" : format(value), "number"));
+    row.append(modelName(model), track, element("span", value == null ? "—" : format(value), "number"));
     card.append(row);
   }
   if (foot) card.append(element("p", foot, "muted metric-foot"));
@@ -105,6 +105,12 @@ function bars(title, sub, values, max, format, foot) {
 }
 
 const color = (model) => COLORS[state.models.indexOf(model) % COLORS.length];
+/** 막대 위 모델 이름. 좁으면 말줄임하고 전체 이름은 title로 보인다. */
+function modelName(model) {
+  const name = element("span", model, "row-model");
+  name.title = model;
+  return name;
+}
 const report = (model) => latest(model)?.report;
 
 function renderOverview() {
@@ -290,6 +296,7 @@ function renderTokenBars() {
 function scoreCard() {
   const fill = (model) => report(model)?.autofill;
   const card = bars("자동기입 점수", "%", (m) => percent(fill(m)?.score), 100, (v) => `${v.toFixed(1)}%`);
+  card.classList.add("headline");
   card.querySelectorAll(".bar-row").forEach((row, index) => {
     const autofill = fill(state.selected[index]);
     if (!autofill) {
@@ -350,7 +357,7 @@ function renderAutofill() {
       text = `잘못 넣음 ${counts.wrong} (다른 항목 ${counts.filledWrongKey} · 넣지 말 칸 ${counts.filledUnneeded})`
         + ` · 놓침 ${counts.missed} / ${total}칸`;
     }
-    row.append(element("span", model), track, element("span", text, "item-numbers"));
+    row.append(modelName(model), track, element("span", text, "item-numbers"));
     card.append(row);
   }
   card.append(element("p", "놓침에는 확인 필요(0.5~0.8)·막음(0.5 미만)으로 넘긴 칸이 들어갑니다. 놓친 칸은 사용자가 직접 입력합니다.", "muted metric-foot"));
@@ -386,8 +393,11 @@ function diagnosis() {
   for (const model of state.selected) {
     const quality = report(model)?.quality;
     const row = element("tr");
-    const name = element("td", model, "stage-model");
+    const name = element("td", undefined, "stage-model");
     name.style.setProperty("--model", color(model));
+    // 좁은 화면에서는 공급자와 모델 이름 사이에서 줄을 바꾼다.
+    const slash = model.indexOf("/") + 1;
+    name.append(model.slice(0, slash), document.createElement("wbr"), model.slice(slash));
     row.append(name, cell(quality?.accuracy), cell(quality?.preparationAccuracy), cell(quality?.mappingAccuracy));
     body.append(row);
   }
@@ -424,7 +434,7 @@ function renderItemBreakdown() {
     const numbers = element("span", scored
       ? ITEM_KINDS.slice(1).map(({ key, label }) => `${label.split("(")[0]} ${items[key] ?? 0}`).join(" · ") + ` / ${scored}`
       : "—", "item-numbers");
-    row.append(element("span", model), track, numbers);
+    row.append(modelName(model), track, numbers);
     card.append(row);
   }
   card.append(element("p", "채점 제외(공급자 사용 불가) 항목은 빠진다. 오답은 틀린 값이 들어갈 위험, 누락은 사용자가 직접 입력해야 하는 칸이다.", "muted metric-foot"));
