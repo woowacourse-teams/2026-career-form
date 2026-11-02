@@ -2,7 +2,8 @@
 import { accessHeaders, clearAccess } from "/quality/access.js";
 import { estimateCost, formatUsd, validRate } from "/evaluations/pricing.js";
 
-const DATASET = { id: "generic-matching", version: 1 };
+// 첫 버전이 기본값이다. 이전 버전은 이전 결과와 같은 입력으로 다시 잴 때 고른다.
+const DATASET = { id: "generic-matching", versions: [2, 1] };
 const COLORS = ["#4e6d90", "#688b7c", "#ac8d68", "#8a6f9e", "#6f8f9e"];
 const PRICE_KEY = "cf-evaluation-model-prices-v1";
 const root = document.getElementById("cf-eval-preview");
@@ -63,7 +64,7 @@ function groupLabel(key) {
   const first = runs[0];
   const at = new Date(first.requestedAt);
   const time = `${String(at.getMonth() + 1).padStart(2, "0")}-${String(at.getDate()).padStart(2, "0")} ${String(at.getHours()).padStart(2, "0")}:${String(at.getMinutes()).padStart(2, "0")}`;
-  return `${time} · ${SPLIT[first.versions.split] ?? first.versions.split} · 반복 ${first.repetitions} · ${promptKey(first)} · 모델 ${runs.length}개`;
+  return `${time} · ${SPLIT[first.versions.split] ?? first.versions.split} · 데이터 v${first.versions.datasetVersion} · 반복 ${first.repetitions} · ${promptKey(first)} · 모델 ${runs.length}개`;
 }
 
 /** 선택한 묶음에서 그 모델의 실행. 끝난 실행만 보고를 쓴다. */
@@ -640,6 +641,8 @@ async function openRun() {
   }));
   const split = element("select");
   split.append(Object.assign(element("option", "튜닝용"), { value: "tuning" }), Object.assign(element("option", "최종 평가용"), { value: "final" }));
+  const version = element("select");
+  DATASET.versions.forEach((value) => version.append(Object.assign(element("option", `v${value}`), { value: String(value) })));
   const repetitions = Object.assign(element("input"), { type: "number", min: "1", max: "20", value: "1" });
   const prompt = Object.assign(element("input"), { type: "text", maxLength: 32, placeholder: "비워 두면 이름 없음" });
   const message = element("p", "실제 모델을 호출하며 비용이 발생합니다. 진행 중인 평가가 있으면 등록되지 않습니다.", "muted");
@@ -649,6 +652,7 @@ async function openRun() {
     field("모델", targets, providers.length
       ? "비교할 모델을 고릅니다(최대 5개). 같은 조건으로 한 모델씩 차례로 돌고, 결과는 한 화면에 나란히 나옵니다."
       : "이 서버에 연결된 공급자가 없습니다.", "div"),
+    field("데이터셋 버전", version, "v2는 v1 화면 3개에 검정고시 화면(최종 평가용)을 더했습니다. 개선 전후는 같은 버전끼리 비교합니다."),
     field("분할", split, "튜닝용은 개선 작업 중 확인용, 최종 평가용은 개선 전후 비교용 화면입니다."),
     field("반복 수", repetitions, "같은 입력을 몇 번 돌릴지(1~20). 응답시간 편차를 보려면 3 이상을 권장합니다."),
     field("프롬프트 이름", prompt, "결과를 구분할 이름표(선택). 예: baseline. 실제 프롬프트 내용은 서버가 자동으로 기록합니다."),
@@ -663,7 +667,7 @@ async function openRun() {
     submit.disabled = true;
     try {
       const result = await api("/runs", "POST", {
-        datasetId: DATASET.id, datasetVersion: DATASET.version, split: split.value,
+        datasetId: DATASET.id, datasetVersion: Number(version.value), split: split.value,
         repetitions: Number(repetitions.value), promptVersion: prompt.value.trim() || null, overrides: {},
         targets: chosen,
       });
@@ -689,7 +693,7 @@ async function load() {
     state.runs = [];
     failed = error.message;
   }
-  try { state.dataset = await api(`/datasets/${DATASET.id}/v${DATASET.version}`); } catch { state.dataset = null; }
+  try { state.dataset = await api(`/datasets/${DATASET.id}/v${DATASET.versions[0]}`); } catch { state.dataset = null; }
   renderFilters();
   render();
   if (failed) $("#cf-status").textContent = failed;

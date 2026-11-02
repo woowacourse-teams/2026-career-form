@@ -23,7 +23,8 @@ class EvaluationPageTest {
             "aria-valuenow", "renderTokenBars", "입력 토큰", "출력 토큰", "renderItemBreakdown", "quality.items",
             "오답(다른 항목)", "누락(판단 보류)", "불필요 제안", "예상 비용 비교", "자동기입 1,000회당", "가장 저렴한 모델의",
             "openProviders", "/provider-registrations", "HOST_NOT_ALLOWED_FOR_KEY", "INTERNAL_ADDRESS",
-            "키 원문은 이 화면에 입력하지 않습니다");
+            "키 원문은 이 화면에 입력하지 않습니다", "데이터셋 버전", "datasetVersion: Number(version.value)",
+            "· 데이터 v${first.versions.datasetVersion}");
         String all = index + app + read("static/evaluations/styles.css") + read("static/evaluations/pricing.js");
         assertThat(all).doesNotContain("cdn.", "https://", "http://", "window.openai", "Pretendard",
             "dataset-preview", "예시 결과", "sessionStorage");

@@ -7,6 +7,7 @@ const STATES = {
   initial: { candidates: 29, controls: 34 },
   "high-school": { candidates: 43, controls: 46 },
   university: { candidates: 45, controls: 48 },
+  ged: { candidates: 30, controls: 35 },
 } as const;
 type State = keyof typeof STATES;
 
@@ -52,6 +53,13 @@ describe("우아한형제들 R2605009 지원서 평가 fixture", () => {
       expect(fields.some((field) => field.control === "custom")).toBe(false);
     },
   );
+
+  it("검정고시 화면은 학력 행에 구분과 합격연월만 있고 학교·전공 칸이 없다", () => {
+    const labels = collect("ged").map((field) => field.displayName);
+    expect(labels).toContain("합격연월 YYYYMM");
+    expect(labels).not.toContain("학교명");
+    expect(labels).not.toContain("주전공");
+  });
 
   it("첫 화면은 기본정보 표시값이 입력 칸이 아니고 학력은 구분 선택 하나만 있다", () => {
     const labels = collect("initial").map((field) => field.displayName);

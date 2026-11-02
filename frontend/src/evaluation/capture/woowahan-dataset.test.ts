@@ -10,11 +10,11 @@ import {
   sha256,
 } from "./dataset-case";
 
-// 평가 데이터셋 generic-matching v1의 우아한형제들 사례를 현재 제품 코드로 다시 만들어 저장본과 비교한다.
-// 저장본을 새로 만들 때만 CF356_WRITE_DATASET=1로 실행한다.
+// 평가 데이터셋 generic-matching v2의 우아한형제들 사례를 현재 제품 코드로 다시 만들어 저장본과 비교한다.
+// 저장본을 새로 만들 때만 CF356_WRITE_DATASET=1로 실행한다. v1은 같은 화면 3개의 이전 버전이라 다시 만들지 않는다.
 const DATASET = join(
   process.cwd(),
-  "../backend/src/main/resources/evaluation/datasets/generic-matching/v1",
+  "../backend/src/main/resources/evaluation/datasets/generic-matching/v2",
 );
 const PROFILE = join(
   process.cwd(),
@@ -24,6 +24,7 @@ const STATES = [
   { state: "initial", split: "tuning" },
   { state: "high-school", split: "final" },
   { state: "university", split: "final" },
+  { state: "ged", split: "final" },
 ] as const;
 const write = process.env.CF356_WRITE_DATASET === "1";
 const RESOURCES = join(process.cwd(), "../backend/src/main/resources");
@@ -58,7 +59,7 @@ async function build(state: string, split: CaseFile["split"]) {
   });
 }
 
-describe("평가 데이터셋 generic-matching v1 우아한형제들 사례", () => {
+describe("평가 데이터셋 generic-matching v2 우아한형제들 사례", () => {
   it.each(STATES)(
     "$state 사례는 현재 제품 코드가 만드는 요청과 같다",
     async ({ state, split }) => {
@@ -77,7 +78,7 @@ describe("평가 데이터셋 generic-matching v1 우아한형제들 사례", ()
   );
 
   it("manifest의 파일 해시가 저장본과 같다(쓰기 모드에서는 다시 계산한다)", () => {
-    const path = "evaluation/datasets/generic-matching/v1/manifest.json";
+    const path = "evaluation/datasets/generic-matching/v2/manifest.json";
     if (write) refreshManifestDigests(RESOURCES, path);
     const manifest = JSON.parse(
       readFileSync(join(RESOURCES, path), "utf8"),

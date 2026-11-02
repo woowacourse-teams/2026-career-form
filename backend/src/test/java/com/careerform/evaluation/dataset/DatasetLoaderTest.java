@@ -128,6 +128,19 @@ class DatasetLoaderTest {
         assertThat(dataset.cases()).allSatisfy(evaluationCase -> assertThat(evaluationCase.calls()).isNotEmpty());
     }
 
+    @Test
+    @DisplayName("저장소의 generic-matching v2는 검정고시 화면을 최종 평가용에 더해 화면 4개를 읽는다")
+    void repositoryDatasetV2AddsGedCase() {
+        DatasetLoader loader = new DatasetLoader(DatasetLoader.classpath(getClass().getClassLoader()));
+
+        LoadedDataset dataset = loader.load("generic-matching", 2);
+
+        assertThat(dataset.cases()).extracting(EvaluationCase::state)
+            .containsExactlyInAnyOrder("initial", "high-school", "university", "ged");
+        assertThat(dataset.casesIn("final")).extracting(EvaluationCase::state)
+            .containsExactlyInAnyOrder("high-school", "university", "ged");
+    }
+
     private static void assertRejected(Map<String, String> files, Code code) {
         assertThatThrownBy(() -> loader(files).load("synthetic", 1))
             .isInstanceOfSatisfying(DatasetRejected.class, rejected -> assertThat(rejected.code()).isEqualTo(code));
