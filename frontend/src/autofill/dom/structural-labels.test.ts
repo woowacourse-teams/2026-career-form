@@ -75,6 +75,30 @@ describe("generic structural collection boundaries", () => {
     }
   });
 
+  it("keeps an unnamed radio group's question when its revealed detail fields follow it", () => {
+    const block = (title: string) => `<div><div>${title}<span>필수</span></div>
+      <div><div><div><input id="${title}-y" type="radio"><label for="${title}-y">대상</label>
+      <input id="${title}-n" type="radio"><label for="${title}-n">비대상</label></div>
+      <div><input placeholder="${title} 번호"></div>
+      <div><select><option value="">${title} 구분</option><option value="a">가</option></select></div></div></div></div>`;
+    document.body.innerHTML = `<section><h3>보훈/장애</h3>${block("보훈여부")}${block("장애여부")}</section>`;
+    const radios = fields().filter((field) => field.control === "radio");
+    // Same question text as the unrevealed state, which joins the required mark.
+    expect(radios.map((field) => field.displayName)).toEqual(["보훈여부필수", "장애여부필수"]);
+    for (const field of radios) {
+      expect(field.options?.map((option) => option.displayName)).toEqual(["대상", "비대상"]);
+      expect(field.semanticContext?.labels).toContainEqual({ source: "label", text: field.displayName });
+    }
+  });
+
+  it("does not give a radio group the question of a control that precedes it", () => {
+    document.body.innerHTML = `<section><div><p>앞 칸 질문</p><div><input placeholder="앞 칸">
+      <div><input type="radio"><span>가</span></div><div><input type="radio"><span>나</span></div></div></div></section>`;
+    const radios = fields().filter((field) => field.control === "radio");
+    expect(radios).toHaveLength(2);
+    expect(radios.map((field) => field.displayName)).not.toContain("앞 칸 질문");
+  });
+
   it("does not invent a radio group from option text or another control's question", () => {
     document.body.innerHTML = `<section><div><label><input type="radio">단독 하나</label>
       <label><input type="radio">단독 둘</label></div>
