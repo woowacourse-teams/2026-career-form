@@ -59,7 +59,6 @@ const done = (run) => ["COMPLETED", "PARTIAL"].includes(run.status);
 /** 함께 비교할 실행 묶음. 비교 등록은 comparisonId로, 단독 실행은 실행 하나로 묶는다. */
 const groupKey = (run) => run.comparisonId ?? run.id;
 const groupRuns = (key) => state.runs.filter(({ run }) => groupKey(run) === key).reverse();
-const SPLIT = { tuning: "튜닝용", final: "최종 평가용", all: "전체 화면" };
 function groupLabel(key) {
   const runs = groupRuns(key).map(({ run }) => run);
   const first = runs[0];
@@ -68,21 +67,25 @@ function groupLabel(key) {
   return `${promptKey(first)} · ${time}`;
 }
 
-/** 고른 비교 묶음의 조건. 목록 이름은 짧게 두고 조건은 여기서 한 줄로 보인다. */
+/** 고른 비교 묶음의 조건. 목록 이름은 짧게 두고 조건은 이름·값 칩으로 보이며, 칩에 마우스를 올리면 뜻이 나온다. */
 function comparisonDetail(key) {
   const runs = groupRuns(key).map(({ run }) => run);
   const first = runs[0];
-  if (!first) return "";
-  return `데이터 v${first.versions.datasetVersion} · ${SPLIT[first.versions.split] ?? first.versions.split} · 반복 ${first.repetitions}회 · 모델 ${runs.length}개 · ${conditionText(first)}`;
+  if (!first) return [];
+  const settings = first.versions.settings ?? {};
+  return [
+    stat("데이터", `v${first.versions.datasetVersion}`, "평가에 쓴 데이터셋 버전. 화면 4개 전체를 채점합니다."),
+    stat("반복", `${first.repetitions}회`, "같은 입력을 몇 번 돌렸는지. 반복마다 따로 채점해 흔들림을 봅니다."),
+    stat("모델", `${runs.length}개`, runs.map(modelKey).join(", ")),
+    stat("코드", first.versions.codeVersion ?? "—", "실행한 백엔드 코드 버전(커밋). 호출 구조·병렬 처리가 바뀌면 달라집니다."),
+    ...(settings["field-batch-size"] != null ? [stat("칸 묶음", settings["field-batch-size"], "칸 매핑에서 모델 1번에 묻는 칸 수")] : []),
+    ...(settings["section-concurrency"] != null ? [stat("섹션 동시", settings["section-concurrency"], "섹션 분류·칸 매핑을 동시에 처리하는 섹션 수")] : []),
+  ];
 }
 
 // 결과에 영향을 주는 실행 조건. 코드 버전과 서버 설정(배치·병렬·재시도)이 바뀌면 프롬프트가 같아도 품질·성능이 달라질 수 있다.
 const SETTING_NAMES = { "field-batch-size": "칸 묶음", "section-concurrency": "섹션 동시", "max-concurrent": "최대 동시 호출",
   "rate-limit-retries": "재시도", "timeout-ms": "시간 제한(ms)", "min-confidence": "확신도 기준", "reasoning-effort": "추론 강도" };
-const conditionText = (run) => [`코드 ${run.versions.codeVersion ?? "—"}`,
-  ...["field-batch-size", "section-concurrency"].filter((key) => run.versions.settings?.[key] != null)
-    .map((key) => `${SETTING_NAMES[key]} ${run.versions.settings[key]}`)].join(" · ");
-
 /** 기준 실행과 달라진 조건(코드, 프롬프트, 모델, 설정). 같으면 빈 목록이다. */
 function changedConditions(run, base) {
   const changes = [];
@@ -378,10 +381,11 @@ function richNote(...parts) {
   return note;
 }
 
-/** 점수 막대 아래 작은 지표 하나: 이름은 흐리게, 값은 굵게. */
-function stat(label, value) {
-  const item = element("span", undefined, "stat");
+/** 작은 지표 하나: 이름은 흐리게, 값은 굵게. 설명을 주면 마우스를 올렸을 때 보인다. */
+function stat(label, value, help) {
+  const item = element("span", undefined, help ? "stat has-help" : "stat");
   item.append(element("span", label, "stat-label"), element("b", value));
+  if (help) item.title = help;
   return item;
 }
 
@@ -401,17 +405,11 @@ function scoreCard() {
     const values = (report(state.selected[index])?.repetitions ?? []).map((item) => item.autofillScore)
       .filter((value) => value != null).map((value) => value * 100);
     const note = element("span", undefined, "range-note stat-line");
-    note.append(stat("정밀도", autofill.precision == null ? "—" : shortPercent(autofill.precision)),
-      stat("채움률", shortPercent(autofill.fillRate)));
-    if (values.length > 1) note.append(stat(`반복 ${values.length}회`, `${Math.min(...values).toFixed(1)}~${Math.max(...values).toFixed(1)}%`));
-    // 평가는 다음 요청을 정답으로 만들어, 앞 단계(섹션 분류·학력 구분 선택) 오답은 이 점수에 반영되지 않는다.
-    const upstream = report(state.selected[index])?.upstream;
-    const upstreamWrong = upstream ? upstream.wrongKey + upstream.unnecessary : 0;
-    if (upstreamWrong) {
-      const warn = element("span", `앞 단계 오답 ${upstreamWrong}`, "upstream-note");
-      warn.title = "섹션 분류·학력 구분 오답. 평가 점수에는 반영되지 않아 실제 제품에선 더 낮을 수 있습니다.";
-      note.append(warn);
-    }
+    note.append(stat("정밀도", autofill.precision == null ? "—" : shortPercent(autofill.precision),
+      "넣은 칸 중 맞게 넣은 비율. 잘못 넣은 칸이 많을수록 낮아집니다."),
+    stat("채움률", shortPercent(autofill.fillRate), "정답이 있는 칸 중 맞게 넣은 비율. 놓친 칸이 많을수록 낮아집니다."));
+    if (values.length > 1) note.append(stat(`반복 ${values.length}회`, `${Math.min(...values).toFixed(1)}~${Math.max(...values).toFixed(1)}%`,
+      "같은 입력을 반복마다 따로 채점한 점수의 최소~최대. 두 모델의 범위가 겹치면 차이를 구분하기 어렵습니다."));
     row.after(note);
   });
   card.append(richNote(["정밀도"], " 넣은 칸 중 맞은 비율 · ", ["채움률"], " 넣어야 할 칸 중 맞게 넣은 비율 · ",
@@ -901,7 +899,7 @@ function renderFilters() {
   const select = $("#comparison");
   select.replaceChildren(...groups.map((key) => Object.assign(element("option", groupLabel(key)), { value: key })));
   select.value = state.group ?? "";
-  $("#comparison-detail").textContent = state.group ? comparisonDetail(state.group) : "";
+  $("#comparison-detail").replaceChildren(...(state.group ? comparisonDetail(state.group) : []));
   const pendingRun = groupRuns(state.group).some(({ run }) => ACTIVE.includes(run.status));
   $("#record-delete").disabled = !state.group || pendingRun;
   $("#record-delete").title = !state.group ? "삭제할 기록 없음" : pendingRun ? "진행 중인 실행이 있어 삭제할 수 없음" : "이 비교 기록 삭제";
