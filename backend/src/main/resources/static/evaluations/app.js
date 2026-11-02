@@ -123,16 +123,34 @@ function renderOverview() {
     return value == null ? null : value / 1000;
   };
   const failure = (m) => percent(total ? report(m)?.flows.failureRate : perf(m)?.failureRate);
-  $("#cf-performance").replaceChildren(
+  const timeCard = bars(total ? "자동기입 1번당 응답시간" : "API 1번당 응답시간",
+    total ? "API 3~4번 합 · 평균 · 낮을수록 좋음" : "평균 · 낮을수록 좋음", seconds,
+    Math.max(1, ...state.selected.map((m) => seconds(m) ?? 0)), (v) => `${v.toFixed(2)}초`,
+    total ? "자동기입 버튼 1번(화면 하나)에 서버 API 3~4번을 처리한 시간의 합. 서버 처리·재시도 포함, 브라우저↔서버 네트워크와 화면 입력 시간 제외."
+      : "서버 API 1번을 처리한 시간. 안의 모델 호출·서버 처리·재시도 포함, 브라우저↔서버 네트워크 제외.");
+  if (!total) {
+    // API 1번 안에서 모델을 몇 번 불렀는지 보이면 모델 호출 1번당 시간과 이어서 읽을 수 있다.
+    timeCard.querySelectorAll(".bar-row").forEach((row, index) => {
+      const stage = perf(state.selected[index]);
+      if (stage?.calls && stage.modelAttempt?.count) row.after(element("span",
+        `API ${stage.calls}번 · 1번에 모델 호출 평균 ${(stage.modelAttempt.count / stage.calls).toFixed(1)}번`, "range-note"));
+    });
+  }
+  // 전체 흐름은 자동기입 단위로 본다. 모델 호출 1번당 시간은 단계마다 섞이는 준비·매핑 탭에서만 보이고, 처리량은 실행 전체
+  // 경과 시간으로 나누므로 전체 흐름에서만 뜻이 있다.
+  $("#cf-performance").replaceChildren(...(total ? [
+    timeCard,
+    bars("처리량", "초당 끝낸 API 수 · 높을수록 좋음", (m) => perf(m)?.throughputPerSecond,
+      Math.max(0.1, ...state.selected.map((m) => perf(m)?.throughputPerSecond ?? 0)), (v) => `${v.toFixed(2)}/초`,
+      "실행 전체에서 끝낸 API 수 ÷ 실행 경과 시간. 평가는 API를 차례로 부르므로 API 1번당 응답시간이 짧을수록 높습니다."),
+    bars("자동기입 실패율", "낮을수록 좋음", failure, 100, (v) => `${v.toFixed(1)}%`,
+      "API가 하나라도 실패한 자동기입(화면 하나)의 비율"),
+  ] : [
     modelTimeCard(perf),
-    bars(total ? "자동기입 1번당 응답시간" : "API 1번당 응답시간", total ? "API 3~4번 합 · 평균 · 초 ↓" : "평균 · 초 ↓", seconds,
-      Math.max(1, ...state.selected.map((m) => seconds(m) ?? 0)), (v) => `${v.toFixed(2)}초`,
-      total ? "자동기입 버튼 1번(화면 하나)에 서버 API 3~4번을 처리한 시간의 합. 서버 처리·재시도 포함, 브라우저↔서버 네트워크와 화면 입력 시간 제외."
-        : "서버 API 1번을 처리한 시간. 안의 모델 호출·서버 처리·재시도 포함, 브라우저↔서버 네트워크 제외."),
-    bars("처리량", "완료 호출/초 ↑", (m) => perf(m)?.throughputPerSecond, Math.max(0.1, ...state.selected.map((m) => perf(m)?.throughputPerSecond ?? 0)),
-      (v) => `${v.toFixed(2)}/초`, "완료 호출 수 ÷ 실행 경과 시간"),
-    bars("실패율", "% ↓", failure, 100, (v) => `${v.toFixed(1)}%`,
-      total ? "호출이 하나라도 실패한 사례의 비율" : "타임아웃 · API 오류 · 응답 형식 오류 · 채점 불가"));
+    timeCard,
+    bars("API 실패율", "낮을수록 좋음", failure, 100, (v) => `${v.toFixed(1)}%`,
+      "타임아웃 · API 오류 · 응답 형식 오류 · 채점 불가인 API의 비율"),
+  ]));
 }
 
 /**
@@ -142,7 +160,7 @@ function renderOverview() {
 function modelTimeCard(perf) {
   const attempt = (m) => perf(m)?.modelAttempt;
   const seconds = (m) => attempt(m)?.meanMs == null ? null : attempt(m).meanMs / 1000;
-  const card = bars("모델 호출 1번당 응답시간", "모델 비교 기준 · 평균 · 초 ↓", seconds, Math.max(1, ...state.selected.map((m) => seconds(m) ?? 0)),
+  const card = bars("모델 호출 1번당 응답시간", "모델 비교 기준 · 평균 · 낮을수록 좋음", seconds, Math.max(1, ...state.selected.map((m) => seconds(m) ?? 0)),
     (v) => `${v.toFixed(2)}초`, "모델 API를 1번 부를 때 보낸 직전부터 응답을 다 받을 때까지. 서버 API 1번 안에서 여러 번 부를 수 있습니다(칸 매핑은 칸 묶음마다). 모델 쪽 네트워크·대기 포함, 서버 처리 제외.");
   card.querySelectorAll(".bar-row").forEach((row, index) => {
     const value = attempt(state.selected[index]);
@@ -311,7 +329,7 @@ function renderTokenBars() {
  */
 function scoreCard() {
   const fill = (model) => report(model)?.autofill;
-  const card = bars("자동기입 점수", "%", (m) => percent(fill(m)?.score), 100, (v) => `${v.toFixed(1)}%`);
+  const card = bars("자동기입 점수", "높을수록 좋음", (m) => percent(fill(m)?.score), 100, (v) => `${v.toFixed(1)}%`);
   card.querySelectorAll(".bar-row").forEach((row, index) => {
     const autofill = fill(state.selected[index]);
     if (!autofill) {
