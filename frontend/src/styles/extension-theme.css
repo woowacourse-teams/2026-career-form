@@ -1,5 +1,5 @@
 /*
- * Extension-only token overrides (Apple-style system, #383).
+ * Extension-only token overrides (sky palette, #383).
  *
  * theme.css is shared with the public site and must stay unchanged, so only
  * extension entrypoints load this file. Every declaration is !important: the
@@ -9,42 +9,42 @@
  */
 :root,
 :host {
-  --color-page: #f5f5f7 !important;
+  --color-page: #f2faff !important;
   --color-surface: #ffffff !important;
-  --color-surface-muted: #f9f9fb !important;
-  /* Neutral selected/hover fills, never a brown tint. */
-  --color-accent-soft: #f2f2f7 !important;
-  --color-accent-hover: #ebebf0 !important;
-  --color-accent: #a4592a !important;
-  --color-action: #a4592a !important;
-  --color-action-strong: #86461d !important;
+  --color-surface-muted: #eaf6fd !important;
+  /* Selected and hover fills. */
+  --color-accent-soft: #d6f0fd !important;
+  --color-accent-hover: #c2e7fb !important;
+  --color-accent: #1d6fa5 !important;
+  --color-action: #1d6fa5 !important;
+  --color-action-strong: #13527e !important;
   --color-on-action: #ffffff !important;
   /* Filled primary buttons: accent background, white text. */
-  --color-brand: #a4592a !important;
-  --color-brand-hover: #86461d !important;
+  --color-brand: #1d6fa5 !important;
+  --color-brand-hover: #13527e !important;
   --color-on-brand: #ffffff !important;
-  --color-text: #1d1d1f !important;
-  --color-text-strong: #1d1d1f !important;
-  --color-text-muted: #6e6e73 !important;
-  --color-text-subtle: #6e6e73 !important;
-  --color-border: rgb(60 60 67 / 14%) !important;
-  --color-border-strong: #c7c7cc !important;
-  /* 3:1 or more against --color-surface and --color-surface-muted. */
-  --color-field-border: #8e8e93 !important;
-  --color-focus: rgb(164 89 42 / 25%) !important;
-  --color-info: #6e6e73 !important;
-  --color-info-soft: #f2f2f7 !important;
-  --color-info-border: rgb(60 60 67 / 14%) !important;
-  --color-success: #1f7a45 !important;
-  --color-success-soft: #edf7f0 !important;
-  --color-review-status: #9a4500 !important;
-  --color-warning: #9a4500 !important;
-  --color-warning-soft: #fff3e0 !important;
+  --color-text: #2e4a5d !important;
+  --color-text-strong: #13293a !important;
+  --color-text-muted: #5a7487 !important;
+  --color-text-subtle: #5a7487 !important;
+  --color-border: #d2e7f2 !important;
+  --color-border-strong: #a6cde2 !important;
+  /* 3:1 or more against --color-page, --color-surface and --color-surface-muted. */
+  --color-field-border: #6c90a6 !important;
+  --color-focus: rgb(29 111 165 / 25%) !important;
+  --color-info: #1b5c8f !important;
+  --color-info-soft: #dcf0fd !important;
+  --color-info-border: #d2e7f2 !important;
+  --color-success: #24724f !important;
+  --color-success-soft: #eaf5ee !important;
+  --color-review-status: #1b5c8f !important;
+  --color-warning: #1b5c8f !important;
+  --color-warning-soft: #dcf0fd !important;
   --color-danger: #b3261e !important;
   --color-danger-border: #e2a9a4 !important;
   --color-danger-text: #b3261e !important;
   --color-danger-soft: #fdf0ef !important;
-  --color-result-action-surface: #f2f2f7 !important;
+  --color-result-action-surface: #eaf6fd !important;
   --color-backdrop: rgb(0 0 0 / 32%) !important;
   --radius-control: 11px !important;
   --radius-card: 12px !important;
