@@ -153,6 +153,10 @@ function renderOverview() {
     Math.max(1, ...state.selected.map((m) => seconds(m) ?? 0)), (v) => `${v.toFixed(2)}초`,
     total ? richNote(["자동기입 버튼 1번"], " = ", ["처음 화면 준비"], "(섹션 분류·학력 구분 선택) + ", ["펼쳐진 화면"], "(섹션 분류·칸 매핑) · 화면 입력·네트워크 왕복 제외")
       : richNote(["서버 요청 1개"], "(섹션 분류·칸 매핑 등)를 끝내기까지 · 안에서 ", ["AI에게 여러 번"], " 물을 수 있음 · 서버 처리·재시도 포함"));
+  addDeltas(timeCard, seconds, (m) => {
+    const value = total ? baseReport(m)?.flows.time.meanMs : baseReport(m)?.performance[stageKey()]?.productCall.meanMs;
+    return value == null ? null : value / 1000;
+  }, "lower", (v) => `${v.toFixed(2)}초`);
   if (total) {
     timeCard.querySelectorAll(".bar-row").forEach((row, index) => {
       const time = report(state.selected[index])?.flows.time;
@@ -200,6 +204,10 @@ function modelTimeCard(perf) {
   const seconds = (m) => attempt(m)?.meanMs == null ? null : attempt(m).meanMs / 1000;
   const card = bars("AI 응답 시간", "AI 질문 1번 · 평균 · 낮을수록 좋음", seconds, Math.max(1, ...state.selected.map((m) => seconds(m) ?? 0)),
     (v) => `${v.toFixed(2)}초`, richNote(["AI에 질문 하나"], "를 보내고 답을 다 받기까지 · ", ["모델 속도 비교 기준"], " · 서버 처리 제외, 공급자 쪽 대기 포함"));
+  addDeltas(card, seconds, (m) => {
+    const value = baseReport(m)?.performance[stageKey()]?.modelAttempt?.meanMs;
+    return value == null ? null : value / 1000;
+  }, "lower", (v) => `${v.toFixed(2)}초`);
   card.querySelectorAll(".bar-row").forEach((row, index) => {
     const value = attempt(state.selected[index]);
     if (!value?.count) return;
@@ -370,6 +378,29 @@ function renderTokenBars() {
  * 대표 점수: 자동기입 점수(정밀도를 채움률보다 2배 중시하는 F0.5)와 반복별 범위. 막대 아래에 정밀도와 채움률을 보인다.
  * 자세한 설명은 정답 기준 창에 있다.
  */
+/** 기준 실행에서 같은 모델의 보고. 기준을 고르지 않았거나 그 모델이 없으면 undefined다. */
+const baseReport = (model) => state.baseline
+  ? groupRuns(state.baseline).find(({ run }) => done(run) && modelKey(run) === model)?.report : undefined;
+
+/**
+ * 막대 카드의 숫자 옆에 기준 대비 변화를 붙인다. better가 "higher"면 오를 때, "lower"면 내릴 때 좋음 색이다.
+ * 변화가 없으면 "변화 없음", 한쪽 값이 없으면 붙이지 않는다.
+ */
+function addDeltas(card, now, before, better, format) {
+  if (!state.baseline) return;
+  card.querySelectorAll(".bar-row").forEach((row, index) => {
+    const model = state.selected[index];
+    const [current, previous] = [now(model), before(model)];
+    if (current == null || previous == null) return;
+    const change = current - previous;
+    const good = better === "higher" ? change > 0 : change < 0;
+    const text = Math.abs(change) < 1e-9 ? "변화 없음" : `${change > 0 ? "+" : "−"}${format(Math.abs(change))}`;
+    const delta = element("span", text, `delta ${Math.abs(change) < 1e-9 ? "same" : good ? "good" : "bad"}`);
+    delta.dataset.help = "고른 기준 실행의 같은 모델과 비교한 변화";
+    row.querySelector(".number").append(delta);
+  });
+}
+
 const shortPercent = (value) => `${(value * 100).toFixed(1).replace(/\.0$/, "")}%`;
 
 /** 막대 아래 판정별 수. 색 점과 이름·수를 나란히 두고 합계를 끝에 둔다. 범례를 대신한다. */
@@ -466,6 +497,8 @@ function scoreCard(stage, title) {
       "같은 입력을 반복마다 따로 채점한 점수의 최소~최대. 두 모델의 범위가 겹치면 차이를 구분하기 어렵습니다."));
     row.after(note);
   });
+  addDeltas(card, (m) => percent(fill(m)?.score), (m) => percent(baseReport(m)?.scores?.[stage]?.score), "higher",
+    (v) => `${v.toFixed(1)}%p`);
   card.append(richNote(["정밀도"], " 답한 것 중 맞은 비율 · ", ["채움률"], " 답해야 할 것 중 맞게 답한 비율 · ",
     ["잘못 답하면 놓칠 때보다 2배 감점"]));
   return card;
@@ -584,6 +617,13 @@ function stageAccuracyCard(title, keys, foot) {
     }
     row.after(...notes);
   });
+  addDeltas(card, (m) => percent(accuracyOf(itemsOf(m, keys))), (m) => {
+    const byCall = baseReport(m)?.itemsByCall;
+    const found = byCall && keys.map((key) => byCall[key]).filter(Boolean);
+    if (!found?.length) return null;
+    const sum = Object.fromEntries(ITEM_KINDS.map(({ key }) => [key, found.reduce((total, items) => total + (items[key] ?? 0), 0)]));
+    return percent(accuracyOf(sum));
+  }, "higher", (v) => `${v.toFixed(1)}%p`);
   card.append(foot);
   return card;
 }
@@ -706,12 +746,6 @@ function renderFields() {
     ? "칸 매핑 답을 칸마다 모델끼리, 기준 실행과 비교합니다. 확신도 0.8 이상만 넣은 것으로 봅니다."
     : `${kind.name} 답을 항목마다 모델끼리, 기준 실행과 비교합니다. 확신도와 무관하게 모델 답 그대로 채점합니다.`, "muted"));
   const controls = element("div", undefined, "fields-controls");
-  const baseSelect = element("select");
-  baseSelect.setAttribute("aria-label", "기준 실행");
-  baseSelect.append(Object.assign(element("option", "기준 실행 없음"), { value: "" }),
-    ...baselineGroups().map((key) => Object.assign(element("option", `기준: ${groupLabel(key)}`), { value: key })));
-  baseSelect.value = state.baseline;
-  baseSelect.addEventListener("change", () => { state.baseline = baseSelect.value; renderFields(); });
   const screenSelect = element("select");
   screenSelect.setAttribute("aria-label", "화면");
   const states = [...new Set((state.dataset?.cases ?? []).map((item) => item.state))];
@@ -719,7 +753,7 @@ function renderFields() {
     ...states.map((key) => Object.assign(element("option", STATE_NAMES[key] ?? key), { value: key })));
   screenSelect.value = state.fieldScreen;
   screenSelect.addEventListener("change", () => { state.fieldScreen = screenSelect.value; renderFields(); });
-  controls.append(baseSelect, screenSelect);
+  controls.append(screenSelect);
   head.append(title);
   const kinds = element("div", undefined, "stage item-kinds");
   kinds.setAttribute("aria-label", "항목 종류");
@@ -984,8 +1018,15 @@ function renderFilters() {
   select.replaceChildren(...groups.map((key) => Object.assign(element("option", groupLabel(key)), { value: key })));
   select.value = state.group ?? "";
   $("#comparison-detail").replaceChildren(...(state.group ? comparisonDetail(state.group) : []));
+  // 기준 실행: 같은 데이터셋 버전의 다른 비교. 고르면 메인 화면의 점수·시간 옆과 항목별 비교에 기준 대비 변화가 나온다.
+  const bases = baselineGroups();
+  if (!bases.includes(state.baseline)) state.baseline = "";
+  $("#baseline").replaceChildren(Object.assign(element("option", "없음"), { value: "" }),
+    ...bases.map((key) => Object.assign(element("option", groupLabel(key)), { value: key })));
+  $("#baseline").value = state.baseline;
   const pendingRun = groupRuns(state.group).some(({ run }) => ACTIVE.includes(run.status));
   $("#record-delete").disabled = !state.group || pendingRun;
+  $("#result-copy").disabled = !state.group;
   $("#record-delete").title = !state.group ? "삭제할 기록 없음" : pendingRun ? "진행 중인 실행이 있어 삭제할 수 없음" : "이 비교 기록 삭제";
   state.models = [...new Set(groupRuns(state.group).map(({ run }) => modelKey(run)))];
   state.selected = state.selected.filter((model) => state.models.includes(model));
@@ -1006,6 +1047,66 @@ function renderFilters() {
     models.append(label);
   }
   if (!state.models.length) models.append(element("span", "실행 결과가 있는 모델이 없습니다.", "muted"));
+}
+
+/**
+ * PR에 붙일 결과 요약(마크다운). 고른 비교의 조건과 모델별 점수·시간을 표로 만들고, 기준 실행을 골랐으면 변화와
+ * 달라진 조건을 함께 적는다.
+ */
+function resultSummary() {
+  const runs = groupRuns(state.group).map(({ run }) => run).filter((run) => state.selected.includes(modelKey(run)));
+  const first = runs[0];
+  if (!first) return "";
+  const percentText = (value) => value == null ? "—" : `${(value * 100).toFixed(1)}%`;
+  const secondsText = (ms) => ms == null ? "—" : `${(ms / 1000).toFixed(2)}초`;
+  const change = (now, before, unit, scale = 1) => now == null || before == null ? ""
+    : ` (${now - before >= 0 ? "+" : "−"}${(Math.abs(now - before) * scale).toFixed(unit === "%p" ? 1 : 2)}${unit})`;
+  const lines = [`### AI 평가 결과 · ${promptKey(first)}`, "",
+    `- 데이터셋 v${first.versions.datasetVersion} · 반복 ${first.repetitions}회 · 코드 \`${first.versions.codeVersion ?? "—"}\``];
+  if (state.baseline) {
+    const base = groupRuns(state.baseline)[0]?.run;
+    lines.push(`- 기준: ${groupLabel(state.baseline)} · 코드 \`${base?.versions.codeVersion ?? "—"}\``);
+  }
+  lines.push("", "| 모델 | 자동기입 점수 | 준비 점수 | 매핑 점수 | 정밀도 | 채움률 | 자동기입 시간 | AI 응답 시간 |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- |");
+  for (const run of runs) {
+    const model = modelKey(run);
+    const now = latest(model)?.report;
+    const before = baseReport(model);
+    const score = (stage) => percentText(now?.scores?.[stage]?.score)
+      + change(now?.scores?.[stage]?.score, before?.scores?.[stage]?.score, "%p", 100);
+    const total = now?.scores?.TOTAL;
+    lines.push(`| ${model} | ${score("TOTAL")} | ${score("PREPARATION")} | ${score("MAPPING")} | ${percentText(total?.precision)} | `
+      + `${percentText(total?.fillRate)} | ${secondsText(now?.flows.time.meanMs)}${change(now?.flows.time.meanMs, before?.flows.time.meanMs, "초", 0.001)} | `
+      + `${secondsText(now?.performance.TOTAL?.modelAttempt?.meanMs)} |`);
+  }
+  if (state.baseline) {
+    const changes = runs.flatMap((run) => {
+      const base = groupRuns(state.baseline).find(({ run: other }) => modelKey(other) === modelKey(run))?.run;
+      return base ? changedConditions(run, base).map((text) => `${modelKey(run)}: ${text}`) : [];
+    });
+    lines.push("", `- 달라진 조건: ${changes.length ? changes.join(" · ") : "없음(코드·프롬프트·설정 같음)"}`);
+  }
+  return lines.join("\n");
+}
+
+async function copySummary() {
+  const text = resultSummary();
+  if (!text) return;
+  const button = $("#result-copy");
+  try {
+    await navigator.clipboard.writeText(text);
+    button.dataset.help = "결과 요약을 복사했습니다. PR 본문에 붙여 넣으세요.";
+    button.classList.add("copied");
+    showHelp(button);
+    setTimeout(() => { button.classList.remove("copied"); delete button.dataset.help; hideHelp(); }, 1800);
+  }
+  catch {
+    // 클립보드를 쓸 수 없는 환경이면 직접 복사할 수 있게 보여 준다.
+    const area = Object.assign(element("textarea", text, "summary-text"), { readOnly: true, rows: 12 });
+    dialog("결과 요약", area, "criteria-dialog");
+    area.select();
+  }
 }
 
 /**
@@ -1806,12 +1907,14 @@ async function load() {
 
 root.querySelectorAll("[data-page]").forEach((b) => b.addEventListener("click", () => { state.page = b.dataset.page; render(); }));
 root.querySelectorAll("[data-stage]").forEach((b) => b.addEventListener("click", () => { state.stage = b.dataset.stage; render(); }));
+$("#baseline").addEventListener("change", (e) => { state.baseline = e.target.value; render(); });
 $("#comparison").addEventListener("change", (e) => {
   state.group = e.target.value; state.selected = []; state.baseline = ""; state.openField = null; renderFilters(); render();
 });
 $("#cf-source-close").addEventListener("click", () => $("#cf-source").close());
 $("#run-open").addEventListener("click", openRun);
 $("#record-delete").addEventListener("click", () => confirmDelete(state.group));
+$("#result-copy").addEventListener("click", copySummary);
 $("#provider-open").addEventListener("click", () => openProviders());
 $("#refresh").addEventListener("click", load);
 document.getElementById("logout").addEventListener("click", () => { clearAccess(); location.reload(); });

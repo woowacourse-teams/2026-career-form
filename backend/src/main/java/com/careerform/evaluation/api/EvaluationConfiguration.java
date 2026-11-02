@@ -26,6 +26,7 @@ import com.careerform.evaluation.run.EvaluationWorker;
 import com.careerform.evaluation.run.MongoResultStore;
 import com.careerform.evaluation.run.MongoRunStore;
 import com.careerform.evaluation.run.MongoScoringStore;
+import com.careerform.evaluation.run.EvaluationAutoRun;
 import com.careerform.evaluation.run.RescoringService;
 import com.careerform.evaluation.run.RunDeletionService;
 import com.careerform.evaluation.run.ResultStore;
@@ -179,6 +180,31 @@ public class EvaluationConfiguration {
         EvaluationPromptSources promptSources, EvaluationProviders providers, EvaluationSettings settings) {
         return new RunService(runs, datasets, prompts, promptSources.sources(), providers, settings,
             Clock.systemUTC());
+    }
+
+    /** 새 코드 배포 뒤 자동 평가. 꺼져 있으면 아무것도 하지 않는다. 데이터셋 버전은 평가 화면(app.js DATASET)과 같아야 한다. */
+    @Bean
+    EvaluationAutoRun evaluationAutoRun(RunService runs, RunStore store, EvaluationProviders providers,
+        EvaluationSettings settings,
+        @Value("${career-form.evaluation.auto-run.enabled:false}") boolean enabled,
+        @Value("${career-form.evaluation.auto-run.dataset-id:generic-matching}") String datasetId,
+        @Value("${career-form.evaluation.auto-run.dataset-version:3}") int datasetVersion,
+        @Value("${career-form.evaluation.auto-run.repetitions:3}") int repetitions,
+        @Value("${career-form.evaluation.auto-run.name:auto-deploy}") String name) {
+        return new EvaluationAutoRun(runs, store, providers,
+            new EvaluationAutoRun.Settings(enabled, datasetId, datasetVersion, repetitions, name), settings.codeVersion());
+    }
+
+    /** 서버가 다 뜬 뒤 한 번 확인한다. 실패해도 서버 기동은 막지 않는다. */
+    @org.springframework.context.event.EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
+    void runEvaluationAfterDeploy(org.springframework.boot.context.event.ApplicationReadyEvent event) {
+        try {
+            event.getApplicationContext().getBean(EvaluationAutoRun.class).runIfNewCode();
+        }
+        catch (RuntimeException exception) {
+            org.slf4j.LoggerFactory.getLogger(EvaluationAutoRun.class)
+                .warn("EVALUATION_AUTO_RUN_FAILED reason={}", exception.getClass().getSimpleName());
+        }
     }
 
     @Bean

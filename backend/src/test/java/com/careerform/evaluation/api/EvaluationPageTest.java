@@ -45,6 +45,16 @@ class EvaluationPageTest {
             "[비식별]", "https://example.test", "generic-matching` v3", "preparationOnly", "DATASET.version", "항상 전체(`all`)");
     }
 
+    @Test
+    @DisplayName("자동 평가의 데이터셋 버전은 평가 화면이 쓰는 버전과 같다")
+    void autoRunUsesScreenDatasetVersion() throws Exception {
+        java.util.regex.Matcher screen = java.util.regex.Pattern
+            .compile("const DATASET = \\{ id: \"generic-matching\", version: (\\d+) \\}")
+            .matcher(read("static/evaluations/app.js"));
+        assertThat(screen.find()).isTrue();
+        assertThat(read("application.yml")).contains("CAREER_FORM_EVALUATION_AUTO_RUN_DATASET_VERSION:" + screen.group(1) + "}");
+    }
+
     private static String read(String path) throws Exception {
         return new ClassPathResource(path).getContentAsString(StandardCharsets.UTF_8);
     }

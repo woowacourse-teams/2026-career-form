@@ -19,6 +19,37 @@
 | 프롬프트 버전 | `formanalysis/application/PromptSource`, `evaluation/prompt/` | 프롬프트 고정 문구 조각과 sha256 해시, 버전별 전문 |
 | 화면 | `src/main/resources/static/evaluations/` (`/evaluations/`) | 결과 비교, 데이터셋·정답 기준·프롬프트 보기, 실행 등록, 수집 지침 내려받기 |
 
+## 쓰는 방법
+
+| 환경 | 용도 | 기록 |
+| --- | --- | --- |
+| 로컬 | 프롬프트·호출 구조·설정을 고칠 때마다 개선됐는지 잰다. 고치기 전 실행을 기준으로 골라 비교한다 | 로컬 MongoDB 볼륨에만 |
+| 개발서버 | 머지된 변경마다 자동으로 한 번 재서 팀이 변경별 결과를 본다 | 개발서버 MongoDB에 계속 쌓임 |
+
+### 로컬에서 돌리기
+
+```bash
+python3 scripts/evaluation_local.py          # 이 체크아웃 코드로 빌드해 http://127.0.0.1:18090/evaluations/ 에 띄움
+python3 scripts/evaluation_local.py stop     # 끄기(기록은 남음)
+python3 scripts/evaluation_local.py reset-password
+```
+
+- 키(JEV·OpenAI)는 `.env.local`에서 읽는다(이 체크아웃, 없으면 메인 체크아웃). 처음 실행 때 정한 로그인 비밀번호는 해시만
+  Git 메타데이터 폴더(`cf-workflow/evaluation-password.hash`, 저장소 밖)에 둔다.
+- 코드 버전은 커밋 번호이고, 커밋하지 않은 `backend/` 변경이 있으면 `-dirty-<지문>`을 붙여 실행 조건에서 구분한다.
+  프롬프트 원문 지문과 서버 설정도 실행마다 남는다.
+- 고친 코드로 다시 띄워 평가를 돌린 뒤, 화면 위쪽 **기준**에서 고치기 전 실행을 고르면 점수·시간 옆에 변화(`+2.1%p`,
+  `−0.50초`)가 붙고 항목별 비교에 개선·악화와 달라진 조건이 나온다. **결과 복사** 버튼으로 PR 본문용 요약을 복사한다.
+- 포트·볼륨·프로젝트 이름은 `CF_EVAL_PORT`, `CF_EVAL_DATA_VOLUME`, `CF_EVAL_PROJECT`로 바꾼다.
+
+### 개발서버 자동 평가
+
+`CAREER_FORM_EVALUATION_AUTO_RUN_ENABLED=true`면 서버가 뜬 뒤 이 코드 버전으로 돌린 같은 데이터셋 평가가 없을 때
+공급자마다 기본 모델로 비교 하나(`auto-deploy`, 반복 3회)를 등록한다. 머지 → 배포마다 한 번이며, 진행 중인 평가가
+있으면 건너뛴다. 실행당 두 모델 합 약 $0.1이 든다. 데이터셋 버전(`..._AUTO_RUN_DATASET_VERSION`)은 평가 화면이 쓰는 버전과
+같아야 하고 테스트가 이를 확인한다. 코드 버전은 `CAREER_FORM_QUALITY_VERSION`(배포 이미지)이며, 커밋 번호로 보이게 하는 것은
+배포 설정 변경이 필요하다.
+
 ## 켜는 방법
 
 development 서버에서만 켠다. 평가 호출은 사용자 요청과 서버 동시 호출 상한(`career-form.analysis.jev.max-concurrent`)을
@@ -35,6 +66,9 @@ development 서버에서만 켠다. 평가 호출은 사용자 요청과 서버 
 | `CAREER_FORM_EVALUATION_OPENAI_API_KEY` | `OPENAI_API_KEY` | OpenAI 키. 사람이 서버 환경에 넣는다 |
 | `CAREER_FORM_EVALUATION_OPENAI_MODELS` | gpt-6-luna | 쉼표로 구분한 허용 모델. 첫 모델이 기본값 |
 | `CAREER_FORM_EVALUATION_OPENAI_REASONING_EFFORT` | none | 추론 강도. 실행 설정과 지문에 남는다 |
+| `CAREER_FORM_EVALUATION_AUTO_RUN_ENABLED` | false | 새 코드 배포 뒤 평가 1회 자동 실행 |
+| `CAREER_FORM_EVALUATION_AUTO_RUN_REPETITIONS` | 3 | 자동 실행 반복 수 |
+| `CAREER_FORM_EVALUATION_AUTO_RUN_DATASET_VERSION` | 3 | 자동 실행 데이터셋 버전(평가 화면과 같게) |
 
 API와 화면은 품질 확인 공용 비밀번호(`CAREER_FORM_QUALITY_PASSWORD_HASH`)로 보호한다. 실행자는
 `X-Evaluation-Requester` 헤더(영문·숫자·한글 32자)로 기록하고 없으면 `quality-admin`이다.

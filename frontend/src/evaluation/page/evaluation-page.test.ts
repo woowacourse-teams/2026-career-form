@@ -117,6 +117,22 @@ const run = {
     settings: { "field-batch-size": "5", "section-concurrency": "3" },
   },
 };
+// 기준 실행: 같은 데이터셋 버전의 이전 실행. 전체 점수 0.75, 자동기입 시간 2.0초다.
+const baseRun = {
+  ...run,
+  id: "run-0",
+  requestedAt: "2026-11-02T00:00:00Z",
+  versions: {
+    ...run.versions,
+    promptVersion: "before",
+    codeVersion: "old0000",
+  },
+};
+const baseReport = {
+  ...report,
+  scores: { ...report.scores, TOTAL: score(0.75) },
+  flows: { ...report.flows, time: { ...report.flows.time, meanMs: 2000 } },
+};
 const dataset = {
   usable: true,
   profiles: {},
@@ -134,7 +150,10 @@ const dataset = {
 
 function respond(url: string) {
   const body = url.includes("/runs?")
-    ? [{ run, report }]
+    ? [
+        { run, report },
+        { run: baseRun, report: baseReport },
+      ]
     : url.includes("/datasets/")
       ? dataset
       : [];
@@ -221,5 +240,18 @@ describe("AI 평가 화면의 단계 탭", () => {
       "요청 처리 시간",
       "요청 실패율",
     ]);
+  });
+
+  it("기준 실행을 고르면 점수·시간 옆에 기준 대비 변화가 좋음·나쁨 색으로 붙는다", async () => {
+    await pick("total");
+    const baseline = document.querySelector("#baseline") as HTMLSelectElement;
+    baseline.value = "run-0";
+    baseline.dispatchEvent(new Event("change"));
+    await Promise.resolve();
+    const deltas = [
+      ...document.querySelectorAll("#cf-eval-preview .delta"),
+    ].map((delta) => `${delta.textContent}:${delta.className}`);
+    expect(deltas).toContain("+5.0%p:delta good");
+    expect(deltas).toContain("−0.50초:delta good");
   });
 });
