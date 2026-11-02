@@ -306,3 +306,9 @@ html,body{margin:0;background:#eae9e5}body{min-width:320px}
 #cf-eval-preview .token-cost-line{display:flex;justify-content:space-between;gap:12px;padding:6px 0;font-size:14px}
 #cf-eval-preview .token-cost-line span::before{content:"";display:inline-block;width:9px;height:9px;margin-right:8px;background:var(--model);border-radius:2px}
 #cf-eval-preview .token-cost-line b{font-variant-numeric:tabular-nums;color:#233447}
+#cf-eval-preview .token-bar-row{row-gap:10px;margin-top:26px}
+#cf-eval-preview .token-stats{grid-column:2/-1;display:flex;flex-wrap:wrap;gap:8px 36px;margin:0}
+#cf-eval-preview .token-stats div{display:flex;flex-direction:column;gap:2px;min-width:72px}
+#cf-eval-preview .token-stats dt{font-size:12px;color:var(--sub)}
+#cf-eval-preview .token-stats dd{margin:0;font-size:14px;font-weight:600;color:#233447;font-variant-numeric:tabular-nums}
+@media(max-width:720px){#cf-eval-preview .token-stats{grid-column:1/-1;gap:8px 22px}}

@@ -192,11 +192,20 @@ function renderTokenBars() {
       output.style.width = `${tokens.outputMean / max * 100}%`;
       track.append(input, output);
       track.setAttribute("aria-label", `${model} 입력 ${count(tokens.inputMean)}, 출력 ${count(tokens.outputMean)} 토큰`);
-      value.append(element("b", `${count(totals[index])} 토큰`),
-        element("span", `입력 ${count(tokens.inputMean)} · 출력 ${count(tokens.outputMean)}`, "muted"),
-        ...(costs[index].total == null ? [element("span", "단가 미설정", "token-cost")]
-          : [element("span", `시도당 ${formatUsd(costs[index].mean)}`, "token-cost"),
-            element("span", `실행 전체 ${formatUsd(costs[index].total)}`, "token-cost")]));
+      value.append(element("b", `${count(totals[index])} 토큰`));
+      const stats = element("dl", undefined, "token-stats");
+      const stat = (label, text) => {
+        const item = element("div");
+        item.append(element("dt", label), element("dd", text));
+        stats.append(item);
+      };
+      stat("입력", count(tokens.inputMean));
+      stat("출력", count(tokens.outputMean));
+      stat("시도당 비용", costs[index].mean == null ? "단가 미설정" : formatUsd(costs[index].mean));
+      stat("실행 전체 비용", costs[index].total == null ? "단가 미설정" : formatUsd(costs[index].total));
+      row.append(name, track, value, stats);
+      box.append(row);
+      return;
     } else if (run && ACTIVE.includes(run.status)) {
       track.classList.add("pending");
       value.append(element("b", RUN_STATUS[run.status]), element("span", `${run.processedCalls}/${run.plannedCalls} 호출`, "muted"));
@@ -214,12 +223,6 @@ function renderTokenBars() {
     for (let tick = 0; tick <= 4; tick += 1) ticks.append(element("span", count(max * tick / 4)));
     axis.append(element("span"), ticks, element("span", "토큰 / 시도", "muted"));
     box.append(axis);
-  }
-  if (observed.length > 1) {
-    const sorted = [...observed].sort((a, b) => totals[rows.indexOf(a)] - totals[rows.indexOf(b)]);
-    const low = totals[rows.indexOf(sorted[0])];
-    const high = totals[rows.indexOf(sorted[sorted.length - 1])];
-    box.append(element("p", `같은 입력에서 시도당 토큰이 ${count(low)}에서 ${count(high)}까지 ${(high / low).toFixed(1)}배 벌어집니다.`, "token-summary"));
   }
   const priced = rows.map((row, index) => ({ ...row, cost: costs[index].total }))
     .filter((_, index) => totals[index] != null);
