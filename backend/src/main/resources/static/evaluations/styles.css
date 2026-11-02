@@ -580,3 +580,18 @@ html,body{margin:0;background:#eae9e5}body{min-width:320px}
 #cf-eval-preview .fields-empty{display:flex;align-items:center;justify-content:center;gap:12px;padding:28px 16px;font-size:13px;color:#59626b}
 #cf-eval-preview .fields-empty button{font-size:13px;padding:5px 12px;border-radius:14px;border:1px solid #c8ccc9;background:#fff;color:#3e5874}
 #cf-eval-preview .fields-summary{margin-top:14px}
+/* 막대 그래프 다듬기: 이름 한 줄, 둥근 굵은 막대, 누적 막대 조각 사이 간격 */
+#cf-eval-preview .bar-row{grid-template-columns:132px minmax(16px,1fr) 64px;gap:12px;margin-top:16px}
+#cf-eval-preview .bar-row>span:first-child,#cf-eval-preview .item-row>span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#2a3440}
+#cf-eval-preview .track{height:10px;border-radius:5px;background:#e4e8ea}
+#cf-eval-preview .fill{border-radius:5px;transition:width .3s ease}
+#cf-eval-preview .number{font-size:15px}
+#cf-eval-preview .range-note{margin-left:144px}
+#cf-eval-preview .item-row{grid-template-columns:132px minmax(16px,1fr);column-gap:12px;margin-top:16px}
+#cf-eval-preview .item-track{height:12px;gap:2px;background:transparent;border-radius:6px}
+#cf-eval-preview .item-track span{min-width:0}
+#cf-eval-preview .item-track span:first-child{border-radius:6px 0 0 6px}
+#cf-eval-preview .item-track span:last-child{border-radius:0 6px 6px 0}
+#cf-eval-preview .item-track span:only-child{border-radius:6px}
+#cf-eval-preview .item-legend span::before{border-radius:3px}
+@media(max-width:720px){#cf-eval-preview .bar-row{grid-template-columns:96px minmax(16px,1fr) 58px;gap:8px}#cf-eval-preview .item-row{grid-template-columns:96px minmax(16px,1fr);column-gap:8px}#cf-eval-preview .range-note{margin-left:104px}}

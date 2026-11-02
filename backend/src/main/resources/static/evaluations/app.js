@@ -98,7 +98,9 @@ function bars(title, sub, values, max, format, foot) {
     const fill = element("div", undefined, "fill");
     fill.style.width = `${value == null ? 0 : Math.max(0, Math.min(100, value / max * 100))}%`;
     track.append(fill);
-    row.append(element("span", model), track, element("span", value == null ? "—" : format(value), "number"));
+    const name = element("span", model);
+    name.title = model;
+    row.append(name, track, element("span", value == null ? "—" : format(value), "number"));
     card.append(row);
   }
   if (foot) card.append(element("p", foot, "muted metric-foot"));
@@ -351,7 +353,7 @@ function renderAutofill() {
       text = `잘못 넣음 ${counts.wrong} (다른 항목 ${counts.filledWrongKey} · 넣지 말 칸 ${counts.filledUnneeded})`
         + ` · 놓침 ${counts.missed} / ${total}칸`;
     }
-    row.append(element("span", model), track, element("span", text, "item-numbers"));
+    row.append(Object.assign(element("span", model), { title: model }), track, element("span", text, "item-numbers"));
     card.append(row);
   }
   card.append(element("p", "놓침에는 확인 필요(0.5~0.8)·막음(0.5 미만)으로 넘긴 칸이 들어갑니다. 놓친 칸은 사용자가 직접 입력합니다.", "muted metric-foot"));
@@ -425,7 +427,7 @@ function renderItemBreakdown() {
     const numbers = element("span", scored
       ? ITEM_KINDS.slice(1).map(({ key, label }) => `${label.split("(")[0]} ${items[key] ?? 0}`).join(" · ") + ` / ${scored}`
       : "—", "item-numbers");
-    row.append(element("span", model), track, numbers);
+    row.append(Object.assign(element("span", model), { title: model }), track, numbers);
     card.append(row);
   }
   card.append(element("p", "채점 제외(공급자 사용 불가) 항목은 빠진다. 오답은 틀린 값이 들어갈 위험, 누락은 사용자가 직접 입력해야 하는 칸이다.", "muted metric-foot"));
