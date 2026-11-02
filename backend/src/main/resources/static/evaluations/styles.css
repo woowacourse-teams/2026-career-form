@@ -595,3 +595,5 @@ html,body{margin:0;background:#eae9e5}body{min-width:320px}
 #cf-eval-preview .item-track span:only-child{border-radius:6px}
 #cf-eval-preview .item-legend span::before{border-radius:3px}
 @media(max-width:720px){#cf-eval-preview .bar-row{grid-template-columns:96px minmax(16px,1fr) 58px;gap:8px}#cf-eval-preview .item-row{grid-template-columns:96px minmax(16px,1fr);column-gap:8px}#cf-eval-preview .range-note{margin-left:104px}}
+/* 품질·성능 두 칸이 좁지 않게 화면 폭을 넓힌다. */
+#cf-eval-preview header,#cf-eval-preview main,#cf-eval-preview footer{max-width:1120px}
