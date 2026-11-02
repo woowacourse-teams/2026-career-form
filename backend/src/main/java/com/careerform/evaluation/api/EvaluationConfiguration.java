@@ -44,6 +44,10 @@ import com.careerform.formanalysis.generic.ChoiceSectionClassifier;
 import com.careerform.formanalysis.generic.SectionCategories;
 import com.careerform.formanalysis.infrastructure.adapter.jev.JevChoiceModel;
 import com.careerform.formanalysis.infrastructure.adapter.openai.OpenAiChoiceModel;
+import com.careerform.evaluation.provider.EndpointPolicy;
+import com.careerform.evaluation.provider.MongoProviderRegistrationStore;
+import com.careerform.evaluation.provider.ProviderKeys;
+import com.careerform.evaluation.provider.ProviderRegistry;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
@@ -81,10 +85,11 @@ public class EvaluationConfiguration {
 
     /**
      * 평가에서 고를 수 있는 공급자. JEV는 제품 JEV 연결이 있을 때, OpenAI는 평가 전용 설정을 켜고 키가 있을 때만
-     * 등록한다. 첫 항목이 기본 공급자다. 새 공급자는 선택 모델 구현과 여기 항목 하나로 추가한다.
+     * 등록한다. 첫 항목이 기본 공급자다. 새 공급자는 선택 모델 구현과 여기 항목 하나로 추가하거나, OpenAI 호환이면
+     * 평가 화면에서 등록한다(등록 공급자는 서버 설정 공급자 뒤에 붙는다).
      */
     @Bean
-    EvaluationProviders evaluationProviders(Optional<JevChoiceModel> jev,
+    EvaluationProviders evaluationProviders(Optional<JevChoiceModel> jev, ProviderRegistry registry,
         @Value("${career-form.analysis.jev.timeout-ms:8000}") int jevTimeoutMs,
         @Value("${career-form.analysis.jev.rate-limit-retries:2}") int jevRetries,
         @Value("${career-form.evaluation.openai.enabled:false}") boolean openAiEnabled,
@@ -108,7 +113,7 @@ public class EvaluationConfiguration {
                     "rate-limit-retries", String.valueOf(openAiRetries)),
                 List.of(base), base::withModel));
         }
-        return new EvaluationProviders(providers);
+        return new EvaluationProviders(providers, registry::providers);
     }
 
     /** 공급자와 무관한 공통 질문 문구. 제품 bean과 같은 클래스의 문구다. */
@@ -136,6 +141,21 @@ public class EvaluationConfiguration {
     @Bean
     ScoringStore evaluationScoringStore(MongoTemplate mongo) {
         return new MongoScoringStore(mongo);
+    }
+
+    /**
+     * 화면에서 등록하는 OpenAI 호환 평가 공급자. 키는 서버 환경 변수 하나(CAREER_FORM_EVALUATION_PROVIDER_KEYS, 이름별 키와
+     * 허용 호스트 JSON)로만 받고 DB에는 저장하지 않는다. 로컬 자체 서빙(http·내부 주소)은 allow-local을 켠 서버에서만,
+     * 키 없는 공급자에만 허용한다.
+     */
+    @Bean
+    ProviderRegistry evaluationProviderRegistry(MongoTemplate mongo,
+        @Value("${career-form.evaluation.provider-keys:}") String providerKeys,
+        @Value("${career-form.evaluation.providers.allow-local:false}") boolean allowLocal) {
+        ProviderKeys keys = ProviderKeys.parse(providerKeys);
+        return new ProviderRegistry(new MongoProviderRegistrationStore(mongo),
+            new EndpointPolicy(keys, allowLocal, EndpointPolicy.systemResolver()), keys, Clock.systemUTC(),
+            OpenAiChoiceModel::http);
     }
 
     @Bean

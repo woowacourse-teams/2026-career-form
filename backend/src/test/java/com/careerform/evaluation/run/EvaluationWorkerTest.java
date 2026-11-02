@@ -183,6 +183,29 @@ class EvaluationWorkerTest {
     }
 
     @Test
+    @DisplayName("등록 뒤 공급자 설정(주소·키 이름 등)이 바뀌었으면 바뀐 대상으로 호출하지 않고 FAILED로 끝낸다")
+    void failsWhenProviderSettingsChangedAfterRegistration() {
+        EvaluationProviders atRegistration = new EvaluationProviders(List.of(
+            new EvaluationProviders.Provider("jev", List.of("jev-latest"), Map.of(), List.of(), model -> null),
+            new EvaluationProviders.Provider("deepseek", List.of("deepseek-chat"),
+                Map.of("base-url", "https://api.deepseek.com/v1"), List.of(), model -> null)));
+        EvaluationProviders atRun = new EvaluationProviders(List.of(
+            new EvaluationProviders.Provider("jev", List.of("jev-latest"), Map.of(), List.of(), model -> null),
+            new EvaluationProviders.Provider("deepseek", List.of("deepseek-chat"),
+                Map.of("base-url", "https://other.example.com/v1"), List.of(), model -> null)));
+        EvaluationRun run = new RunService(runs, loader(), new PromptCatalog(), List.of(PROMPT), atRegistration,
+            new EvaluationSettings(1000, 20, "test", Map.of("field-batch-size", 5)),
+            Clock.fixed(NOW.minusSeconds(60), ZoneOffset.UTC))
+            .register(new RunRequest("synthetic", 1, "tuning", 1, "v1", Map.of(), "deepseek", "deepseek-chat"), "tester");
+
+        new EvaluationWorker(runs, results, loader(), executor(answerAll()), new PromptCatalog(), List.of(PROMPT), atRun,
+            100, Clock.fixed(NOW, ZoneOffset.UTC), "worker", Duration.ofMinutes(5)).runOnce();
+
+        assertThat(runs.find(run.id()).orElseThrow().status()).isEqualTo(RunStatus.FAILED);
+        assertThat(executed).isEmpty();
+    }
+
+    @Test
     @DisplayName("실행 설정을 제품 호출에 넘긴다")
     void passesRunSettings() {
         register(1);

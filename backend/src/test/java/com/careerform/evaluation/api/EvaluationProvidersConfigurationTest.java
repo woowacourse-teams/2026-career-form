@@ -8,6 +8,10 @@ import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import com.careerform.evaluation.provider.EndpointPolicy;
+import com.careerform.evaluation.provider.InMemoryProviderRegistrationStore;
+import com.careerform.evaluation.provider.ProviderKeys;
+import com.careerform.evaluation.provider.ProviderRegistry;
 import com.careerform.evaluation.run.EvaluationProviders;
 import com.careerform.formanalysis.infrastructure.adapter.jev.JevChoiceModel;
 import com.careerform.formanalysis.infrastructure.adapter.jev.JevClient;
@@ -19,9 +23,25 @@ class EvaluationProvidersConfigurationTest {
     private final EvaluationConfiguration configuration = new EvaluationConfiguration();
     private final JevChoiceModel jev = new JevChoiceModel(new JevClient("synthetic-key", "jev-latest", 8000, 0.8, true));
 
+    private final InMemoryProviderRegistrationStore registered = new InMemoryProviderRegistrationStore();
+    private final ProviderRegistry registry = new ProviderRegistry(registered,
+        new EndpointPolicy(ProviderKeys.empty(), true, host -> List.of(java.net.InetAddress.getByName("127.0.0.1"))),
+        ProviderKeys.empty(), java.time.Clock.systemUTC(), OpenAiChoiceModel::http);
+
     private EvaluationProviders providers(Optional<JevChoiceModel> jev, boolean openAiEnabled, String key) {
-        return configuration.evaluationProviders(jev, 8000, 2, openAiEnabled, key, List.of("gpt-6-luna", "gpt-5.6-luna"),
-            "none", 30000, 0.8, 2);
+        return configuration.evaluationProviders(jev, registry, 8000, 2, openAiEnabled, key,
+            List.of("gpt-6-luna", "gpt-5.6-luna"), "none", 30000, 0.8, 2);
+    }
+
+    @Test
+    @DisplayName("화면에서 등록한 공급자는 저장 즉시 서버 설정 공급자 뒤에 붙는다")
+    void appendsRegisteredProviders() {
+        EvaluationProviders providers = providers(Optional.of(jev), true, "synthetic-openai-key");
+
+        registry.save(new ProviderRegistry.Input("gemma", "http://host.docker.internal:11434/v1", null,
+            List.of("gemma-4-26b"), OpenAiChoiceModel.ResponseFormat.JSON_OBJECT, null, 30000, 0.8), "tester");
+
+        assertThat(providers.all()).extracting(EvaluationProviders.Provider::name).containsExactly("jev", "openai", "gemma");
     }
 
     @Test

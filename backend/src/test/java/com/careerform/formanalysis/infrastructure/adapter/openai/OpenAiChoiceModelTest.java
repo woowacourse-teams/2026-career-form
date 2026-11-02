@@ -167,6 +167,41 @@ class OpenAiChoiceModelTest {
     }
 
     @Test
+    @DisplayName("OpenAI 호환 공급자: json_object 형식이면 스키마 대신 답 모양을 시스템 문구로 알리고 추론 옵션을 빼며 공급자 이름으로 기록한다")
+    void compatibleProtocolUsesJsonObjectAndProviderName() {
+        var transport = new FakeTransport(ok("{\"field_0\":{\"choice\":\"ABSTAIN\",\"confidence\":0.4}}"));
+        var protocol = new OpenAiChoiceModel.Protocol("deepseek", OpenAiChoiceModel.ResponseFormat.JSON_OBJECT, null);
+        var model = new OpenAiChoiceModel(transport, protocol, "deepseek-chat", 0.8, 1, delay -> { });
+        List<ModelCallRecording.Attempt> attempts = new ArrayList<>();
+
+        var answers = ModelCallRecording.within(attempts::add, () -> model.answer(Map.of(), QUESTIONS));
+
+        assertThat(answers.get("field_0").choice()).isEqualTo("ABSTAIN");
+        JsonNode sent = JSON.readTree(transport.bodies.getFirst());
+        assertThat(sent.has("reasoning_effort")).isFalse();
+        assertThat(sent.path("response_format").path("type").asString()).isEqualTo("json_object");
+        assertThat(sent.path("response_format").has("json_schema")).isFalse();
+        String system = sent.path("messages").get(0).path("content").asString();
+        assertThat(system).startsWith(OpenAiChoiceModel.SYSTEM_PROMPT).contains("Return only a JSON object");
+        assertThat(model.provider()).isEqualTo("deepseek");
+        assertThat(model.promptParts()).containsEntry("system", system);
+        assertThat(attempts).singleElement().extracting(ModelCallRecording.Attempt::provider).isEqualTo("deepseek");
+    }
+
+    @Test
+    @DisplayName("HTTP 요청은 등록한 주소로 보내고 키가 없으면 인증 헤더를 붙이지 않는다")
+    void httpRequestUsesEndpointAndOptionalKey() {
+        var endpoint = java.net.URI.create("https://api.deepseek.com/v1/chat/completions");
+
+        var withKey = OpenAiChoiceModel.request(endpoint, "secret-key", 1000, "{}");
+        var withoutKey = OpenAiChoiceModel.request(endpoint, null, 1000, "{}");
+
+        assertThat(withKey.uri()).isEqualTo(endpoint);
+        assertThat(withKey.headers().firstValue("Authorization")).contains("Bearer secret-key");
+        assertThat(withoutKey.headers().firstValue("Authorization")).isEmpty();
+    }
+
+    @Test
     @DisplayName("시스템 문구는 프롬프트 조각으로 버전 해시에 들어간다")
     void systemPromptIsPromptSource() {
         var model = model(new FakeTransport());

@@ -89,6 +89,12 @@ public final class EvaluationWorker {
             fail(run, "PROVIDER_UNAVAILABLE");
             return;
         }
+        // 등록 뒤 공급자 설정(주소, 키 이름 등)이 바뀌었으면 기록과 다른 대상으로 호출하지 않는다.
+        if (provider.get().settings().entrySet().stream()
+            .anyMatch(entry -> !entry.getValue().equals(versions.settings().get(entry.getKey())))) {
+            fail(run, "PROVIDER_SETTINGS_CHANGED");
+            return;
+        }
         if (!dataset.digest().equals(versions.datasetDigest()) || !prompts.snapshot(
             RunService.promptSources(promptSources, provider.get())).digest().equals(versions.promptDigest())) {
             fail(run, "VERSION_MISMATCH");
