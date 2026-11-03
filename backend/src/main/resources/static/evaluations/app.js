@@ -378,15 +378,33 @@ function renderTokenBars() {
  * 대표 점수: 자동기입 점수(정밀도를 채움률보다 2배 중시하는 F0.5)와 반복별 범위. 막대 아래에 정밀도와 채움률을 보인다.
  * 자세한 설명은 정답 기준 창에 있다.
  */
-/** 기준 실행에서 같은 모델의 보고. 기준을 고르지 않았거나 그 모델이 없으면 undefined다. */
-const baseReport = (model) => state.baseline
-  ? groupRuns(state.baseline).find(({ run }) => done(run) && modelKey(run) === model)?.report : undefined;
+/** 기준 실행에서 같은 모델의 실행과 보고. 기준을 고르지 않았거나 그 모델이 없으면 undefined다. */
+const baseEntry = (model) => state.baseline
+  ? groupRuns(state.baseline).find(({ run }) => done(run) && modelKey(run) === model) : undefined;
+const baseReport = (model) => baseEntry(model)?.report;
+
+/**
+ * 기준 대비 변화를 실행마다 생기는 흔들림과 구분할 수 없는 이유. 구분할 수 있으면 null이다. 어느 한쪽이 반복 1회면
+ * 흔들림 폭을 모르고, values(보고 → 반복별 값)를 주면 두 실행의 반복별 범위가 겹칠 때도 구분할 수 없다고 본다.
+ */
+function unclearReason(model, values) {
+  const [now, base] = [latest(model), baseEntry(model)];
+  if ((now?.run.repetitions ?? 0) < 2 || (base?.run.repetitions ?? 0) < 2)
+    return "이번이나 기준 실행이 반복 1회라 흔들림과 구분할 수 없습니다. 반복 3회 이상으로 비교해야 합니다.";
+  const [a, b] = [values?.(now.report) ?? [], values?.(base.report) ?? []];
+  if (a.length > 1 && b.length > 1 && Math.min(...a) <= Math.max(...b) && Math.min(...b) <= Math.max(...a))
+    return "두 실행의 반복별 범위가 겹쳐 흔들림과 구분할 수 없습니다.";
+  return null;
+}
+const repetitionScores = (stage) => (value) => (value?.repetitions ?? []).map((item) => item.scores?.[stage])
+  .filter((score) => score != null);
 
 /**
  * 막대 카드의 숫자 옆에 기준 대비 변화를 붙인다. better가 "higher"면 오를 때, "lower"면 내릴 때 좋음 색이다.
- * 변화가 없으면 "변화 없음", 한쪽 값이 없으면 붙이지 않는다.
+ * 변화가 없으면 "변화 없음", 한쪽 값이 없으면 붙이지 않는다. 흔들림과 구분할 수 없으면(unclearReason) 색 없이
+ * "구분 불가"를 붙인다. values는 unclearReason에 넘기는 반복별 값이다.
  */
-function addDeltas(card, now, before, better, format) {
+function addDeltas(card, now, before, better, format, values) {
   if (!state.baseline) return;
   card.querySelectorAll(".bar-row").forEach((row, index) => {
     const model = state.selected[index];
@@ -394,9 +412,11 @@ function addDeltas(card, now, before, better, format) {
     if (current == null || previous == null) return;
     const change = current - previous;
     const good = better === "higher" ? change > 0 : change < 0;
+    const unclear = Math.abs(change) < 1e-9 ? null : unclearReason(model, values);
     const text = Math.abs(change) < 1e-9 ? "변화 없음" : `${change > 0 ? "+" : "−"}${format(Math.abs(change))}`;
-    const delta = element("span", text, `delta ${Math.abs(change) < 1e-9 ? "same" : good ? "good" : "bad"}`);
-    delta.dataset.help = "고른 기준 실행의 같은 모델과 비교한 변화";
+    const delta = element("span", unclear ? `${text} 구분 불가` : text,
+      `delta ${Math.abs(change) < 1e-9 ? "same" : unclear ? "unclear" : good ? "good" : "bad"}`);
+    delta.dataset.help = unclear ?? "고른 기준 실행의 같은 모델과 비교한 변화";
     row.querySelector(".number").append(delta);
   });
 }
@@ -498,7 +518,7 @@ function scoreCard(stage, title) {
     row.after(note);
   });
   addDeltas(card, (m) => percent(fill(m)?.score), (m) => percent(baseReport(m)?.scores?.[stage]?.score), "higher",
-    (v) => `${v.toFixed(1)}%p`);
+    (v) => `${v.toFixed(1)}%p`, repetitionScores(stage));
   card.append(richNote(["정밀도"], " 답한 것 중 맞은 비율 · ", ["채움률"], " 답해야 할 것 중 맞게 답한 비율 · ",
     ["잘못 답하면 놓칠 때보다 2배 감점"]));
   return card;
@@ -1059,8 +1079,9 @@ function resultSummary() {
   if (!first) return "";
   const percentText = (value) => value == null ? "—" : `${(value * 100).toFixed(1)}%`;
   const secondsText = (ms) => ms == null ? "—" : `${(ms / 1000).toFixed(2)}초`;
-  const change = (now, before, unit, scale = 1) => now == null || before == null ? ""
-    : ` (${now - before >= 0 ? "+" : "−"}${(Math.abs(now - before) * scale).toFixed(unit === "%p" ? 1 : 2)}${unit})`;
+  const change = (now, before, unit, scale = 1, unclear = null) => now == null || before == null ? ""
+    : ` (${now - before >= 0 ? "+" : "−"}${(Math.abs(now - before) * scale).toFixed(unit === "%p" ? 1 : 2)}${unit}`
+      + `${unclear && Math.abs(now - before) > 1e-9 ? ", 구분 불가" : ""})`;
   const lines = [`### AI 평가 결과 · ${promptKey(first)}`, "",
     `- 데이터셋 v${first.versions.datasetVersion} · 반복 ${first.repetitions}회 · 코드 \`${first.versions.codeVersion ?? "—"}\``];
   if (state.baseline) {
@@ -1074,10 +1095,12 @@ function resultSummary() {
     const now = latest(model)?.report;
     const before = baseReport(model);
     const score = (stage) => percentText(now?.scores?.[stage]?.score)
-      + change(now?.scores?.[stage]?.score, before?.scores?.[stage]?.score, "%p", 100);
+      + change(now?.scores?.[stage]?.score, before?.scores?.[stage]?.score, "%p", 100,
+        before && unclearReason(model, repetitionScores(stage)));
     const total = now?.scores?.TOTAL;
     lines.push(`| ${model} | ${score("TOTAL")} | ${score("PREPARATION")} | ${score("MAPPING")} | ${percentText(total?.precision)} | `
-      + `${percentText(total?.fillRate)} | ${secondsText(now?.flows.time.meanMs)}${change(now?.flows.time.meanMs, before?.flows.time.meanMs, "초", 0.001)} | `
+      + `${percentText(total?.fillRate)} | ${secondsText(now?.flows.time.meanMs)}${change(now?.flows.time.meanMs, before?.flows.time.meanMs, "초", 0.001,
+        before && unclearReason(model))} | `
       + `${secondsText(now?.performance.TOTAL?.modelAttempt?.meanMs)} |`);
   }
   if (state.baseline) {
@@ -1372,7 +1395,8 @@ function criteriaView() {
       ["확신도를 기록하기 전 실행", "자동기입 점수 측정 불가"]]));
   card("5. 반복별 범위",
     element("p", "같은 입력을 반복마다 따로 채점한 자동기입 점수의 최소~최대. 두 모델의 범위가 겹치면 차이를 구분할 수 없습니다."),
-    element("p", "반복 수가 적으면 범위가 실제보다 좁게 잡힙니다. 같은 입력을 새로 실행하면 범위 밖으로 움직일 수 있습니다.", "muted"));
+    element("p", "반복 수가 적으면 범위가 실제보다 좁게 잡힙니다. 같은 입력을 새로 실행하면 범위 밖으로 움직일 수 있습니다.", "muted"),
+    element("p", "기준 대비 변화는 이번이나 기준 실행이 반복 1회이거나 두 실행의 반복별 범위가 겹치면 좋음·나쁨 색 없이 '구분 불가'로 보입니다. 프롬프트·코드가 같아도 실행마다 몇 %p씩 움직이므로, 개선을 판단할 때는 둘 다 반복 3회 이상으로 돌립니다.", "muted"));
   return wrap;
 }
 

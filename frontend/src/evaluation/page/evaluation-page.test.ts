@@ -37,8 +37,8 @@ const stage = (calls: number, attempts: number) => ({
     p95Ms: 300,
     totalMs: 200 * attempts,
   },
-  retriedAttempts: 0,
-  retriedAttemptMs: null,
+  failedAttempts: 0,
+  failedAttemptMs: null,
 });
 const tokens = {
   observedAttempts: 10,
@@ -83,13 +83,11 @@ const report = {
     laterRepetitionsMeanMs: 500,
   },
   scoringVersion: "item-weighted-exact-v2",
-  repetitions: [
-    {
-      repetition: 1,
-      accuracy: 0.8,
-      scores: { TOTAL: 0.8, PREPARATION: 0.7, MAPPING: 0.9 },
-    },
-  ],
+  repetitions: [0.79, 0.8, 0.81].map((total, index) => ({
+    repetition: index + 1,
+    accuracy: 0.8,
+    scores: { TOTAL: total, PREPARATION: 0.7, MAPPING: 0.89 + index * 0.01 },
+  })),
   autofill: score(0.9),
   scores: { TOTAL: score(0.8), PREPARATION: score(0.7), MAPPING: score(0.9) },
   itemsByCall: {
@@ -104,7 +102,7 @@ const run = {
   status: "COMPLETED",
   processedCalls: 11,
   plannedCalls: 11,
-  repetitions: 1,
+  repetitions: 3,
   requestedAt: "2026-11-03T00:00:00Z",
   comparisonId: null,
   versions: {
@@ -117,7 +115,8 @@ const run = {
     settings: { "field-batch-size": "5", "section-concurrency": "3" },
   },
 };
-// 기준 실행: 같은 데이터셋 버전의 이전 실행. 전체 점수 0.75, 자동기입 시간 2.0초다.
+// 기준 실행: 같은 데이터셋 버전의 이전 실행. 전체 점수 0.75(반복 범위가 이번과 겹치지 않음), 매핑 점수 0.88(범위가
+// 이번과 겹침), 자동기입 시간 2.0초다.
 const baseRun = {
   ...run,
   id: "run-0",
@@ -130,7 +129,12 @@ const baseRun = {
 };
 const baseReport = {
   ...report,
-  scores: { ...report.scores, TOTAL: score(0.75) },
+  repetitions: [0.74, 0.75, 0.76].map((total, index) => ({
+    repetition: index + 1,
+    accuracy: 0.75,
+    scores: { TOTAL: total, PREPARATION: 0.7, MAPPING: 0.87 + index * 0.01 },
+  })),
+  scores: { ...report.scores, TOTAL: score(0.75), MAPPING: score(0.88) },
   flows: { ...report.flows, time: { ...report.flows.time, meanMs: 2000 } },
 };
 const dataset = {
@@ -171,6 +175,11 @@ const titles = (selector: string) =>
   );
 const headline = () =>
   document.querySelector("#cf-quality .metric .number")?.textContent;
+// 해당 영역 첫 카드의 첫 모델 변화 표시(글자:클래스).
+const deltaOf = (selector: string) => {
+  const delta = document.querySelector(`${selector} .metric .delta`);
+  return delta && `${delta.textContent}:${delta.className}`;
+};
 const pick = async (stageName: string) => {
   (
     document.querySelector(
@@ -253,5 +262,20 @@ describe("AI 평가 화면의 단계 탭", () => {
     ].map((delta) => `${delta.textContent}:${delta.className}`);
     expect(deltas).toContain("+5.0%p:delta good");
     expect(deltas).toContain("−0.50초:delta good");
+  });
+
+  it("반복별 범위가 겹치는 점수 변화는 좋음·나쁨 대신 구분 불가로 보인다", async () => {
+    await pick("mapping");
+    expect(deltaOf("#cf-quality")).toBe("+2.0%p 구분 불가:delta unclear");
+  });
+
+  it("기준이 반복 1회면 점수·시간 변화를 모두 구분 불가로 보인다", async () => {
+    baseRun.repetitions = 1;
+    baseReport.repetitions = baseReport.repetitions.slice(0, 1);
+    (document.querySelector("#refresh") as HTMLButtonElement).click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await pick("total");
+    expect(deltaOf("#cf-quality")).toBe("+5.0%p 구분 불가:delta unclear");
+    expect(deltaOf("#cf-performance")).toBe("−0.50초 구분 불가:delta unclear");
   });
 });

@@ -674,10 +674,11 @@
 #cf-eval-preview .naming-example{font-family:ui-monospace,Menlo,monospace;font-size:12px;padding:2px 8px;border:1px solid #c8ccc9;border-radius:10px;background:#fff;color:#3e5874;cursor:pointer}
 #cf-eval-preview .naming-example:hover{border-color:#475f78}
 #cf-eval-preview .naming-guide p{margin:0;font-size:11.5px;line-height:1.5}
-#cf-eval-preview .number .delta{display:block;font-size:11.5px;font-weight:600;line-height:1.2;text-align:right;cursor:default}
+#cf-eval-preview .number .delta{display:block;font-size:11.5px;font-weight:600;line-height:1.2;text-align:right;white-space:nowrap;cursor:default}
 #cf-eval-preview .delta.good{color:#2f6a4f}
 #cf-eval-preview .delta.bad{color:#b5483d}
 #cf-eval-preview .delta.same{color:#8a929b;font-weight:500}
+#cf-eval-preview .delta.unclear{color:#8a929b;font-weight:500}
 #cf-eval-preview .baseline-pick select{min-height:32px;padding-top:4px;padding-bottom:4px;max-width:220px}
 #cf-eval-preview .copy-button:hover:not(:disabled){color:#2f5f8a;border-color:#b9c9d8;background:#eef3f8}
 #cf-eval-preview .copy-button.copied{color:#2f6a4f;border-color:#a9c9b5;background:#e3efe7}
