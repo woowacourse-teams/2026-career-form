@@ -115,7 +115,7 @@ const run = {
     settings: { "field-batch-size": "5", "section-concurrency": "3" },
   },
 };
-// 기준 실행: 같은 데이터셋 버전의 이전 실행. 전체 점수 0.75(반복 범위가 이번과 겹치지 않음), 매핑 점수 0.88(범위가
+// 이전 실행: 같은 데이터셋 버전의 이전 실행. 전체 점수 0.75(반복 범위가 이번과 겹치지 않음), 매핑 점수 0.88(범위가
 // 이번과 겹침), 자동기입 시간 2.0초다.
 const baseRun = {
   ...run,
@@ -175,9 +175,18 @@ const titles = (selector: string) =>
   );
 const headline = () =>
   document.querySelector("#cf-quality .metric .number")?.textContent;
-// 해당 영역 첫 카드의 첫 모델 변화 표시(글자:클래스).
-const deltaOf = (selector: string) => {
-  const delta = document.querySelector(`${selector} .metric .delta`);
+const openCompare = async () => {
+  (
+    document.querySelector('[data-page="compare"]') as HTMLButtonElement
+  ).click();
+  await Promise.resolve();
+};
+// 전후 비교 표에서 지표 행의 첫 모델 변화 칸(글자:클래스).
+const changeOf = (label: string) => {
+  const row = [...document.querySelectorAll("#cf-compare tbody tr")].find(
+    (tr) => tr.querySelector("th")?.textContent === label,
+  );
+  const delta = row?.querySelector(".delta");
   return delta && `${delta.textContent}:${delta.className}`;
 };
 const pick = async (stageName: string) => {
@@ -251,31 +260,33 @@ describe("AI 평가 화면의 단계 탭", () => {
     ]);
   });
 
-  it("기준 실행을 고르면 점수·시간 옆에 기준 대비 변화가 좋음·나쁨 색으로 붙는다", async () => {
+  it("메인 화면은 실행 하나만 보이고 이전 실행과의 변화는 붙이지 않는다", async () => {
     await pick("total");
-    const baseline = document.querySelector("#baseline") as HTMLSelectElement;
-    baseline.value = "run-0";
-    baseline.dispatchEvent(new Event("change"));
-    await Promise.resolve();
-    const deltas = [
-      ...document.querySelectorAll("#cf-eval-preview .delta"),
-    ].map((delta) => `${delta.textContent}:${delta.className}`);
-    expect(deltas).toContain("+5.0%p:delta good");
-    expect(deltas).toContain("−0.50초:delta good");
+    expect(document.querySelector("#baseline")).toBeNull();
+    expect(document.querySelectorAll("#cf-overview .delta")).toHaveLength(0);
+  });
+
+  it("전후 비교 탭은 이전·이후 실행을 같은 모델끼리 지표마다 비교하고 좋음·나쁨 색을 붙인다", async () => {
+    await openCompare();
+    expect(
+      (document.querySelector("#compare-before") as HTMLSelectElement).value,
+    ).toBe("run-0");
+    expect(changeOf("자동기입 점수")).toBe("+5.0%p:delta good");
+    expect(changeOf("자동기입 시간")).toBe("−0.50초:delta good");
   });
 
   it("반복별 범위가 겹치는 점수 변화는 좋음·나쁨 대신 구분 불가로 보인다", async () => {
-    await pick("mapping");
-    expect(deltaOf("#cf-quality")).toBe("+2.0%p 구분 불가:delta unclear");
+    await openCompare();
+    expect(changeOf("매핑 점수")).toBe("+2.0%p 구분 불가:delta unclear");
   });
 
-  it("기준이 반복 1회면 점수·시간 변화를 모두 구분 불가로 보인다", async () => {
+  it("이전 실행이 반복 1회면 점수·시간 변화를 모두 구분 불가로 보인다", async () => {
     baseRun.repetitions = 1;
     baseReport.repetitions = baseReport.repetitions.slice(0, 1);
     (document.querySelector("#refresh") as HTMLButtonElement).click();
     await new Promise((resolve) => setTimeout(resolve, 0));
-    await pick("total");
-    expect(deltaOf("#cf-quality")).toBe("+5.0%p 구분 불가:delta unclear");
-    expect(deltaOf("#cf-performance")).toBe("−0.50초 구분 불가:delta unclear");
+    await openCompare();
+    expect(changeOf("자동기입 점수")).toBe("+5.0%p 구분 불가:delta unclear");
+    expect(changeOf("자동기입 시간")).toBe("−0.50초 구분 불가:delta unclear");
   });
 });
