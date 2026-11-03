@@ -198,6 +198,7 @@ function DateCard({ card, decisions, onDecide, onLater }: CardProps<"date">) {
         ) : (
           <input
             type="date"
+            max="9999-12-31"
             value={input}
             aria-label={card.label}
             {...invalid}

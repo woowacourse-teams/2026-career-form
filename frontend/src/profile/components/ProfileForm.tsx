@@ -222,6 +222,11 @@ function Fields({
                             id={id}
                             aria-label={field.label}
                             type={field.inputType}
+                            max={
+                              field.inputType === "date"
+                                ? "9999-12-31"
+                                : undefined
+                            }
                             value={values[field.id] ?? ""}
                             placeholder={
                               field.placeholder ??
