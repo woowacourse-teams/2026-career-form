@@ -32,6 +32,7 @@
           <label><span class="muted">실행</span><select id="comparison" aria-label="볼 실행"></select></label><span class="muted comparison-detail" id="comparison-detail"></span><button type="button" class="icon-button copy-button" id="result-copy" aria-label="결과 요약 복사" title="결과 요약 복사(PR에 붙이기)"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button><button type="button" class="icon-button" id="record-delete" aria-label="이 실행 기록 삭제" title="이 실행 기록 삭제"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>
         </div>
         <div class="context">
+          <a href="#cf-source" data-source="자동기입 흐름">자동기입 흐름</a>
           <a href="#cf-source" data-source="데이터셋">데이터셋</a>
           <a href="#cf-source" data-source="정답 기준">정답 기준</a>
           <a href="#cf-source" data-source="프롬프트">프롬프트</a>
@@ -40,7 +41,6 @@
         </div>
         <section id="cf-progress" class="progress-panel" aria-label="모델별 분석 진행" hidden></section>
         <nav class="page-nav" aria-label="평가 화면"><button type="button" data-page="overview" aria-pressed="true">품질 · 성능</button><button type="button" data-page="compare" aria-pressed="false">전후 비교</button><button type="button" data-page="fields" aria-pressed="false">항목별 비교</button><button type="button" data-page="tokens" aria-pressed="false">토큰 사용량</button></nav>
-        <details class="flow-panel" id="cf-flow" open><summary>자동기입 흐름 · 평가가 재는 곳</summary><div id="cf-flow-body"></div></details>
         <div class="overview-stage" id="cf-overview-stage"><div class="stage" aria-label="평가 단계"><button type="button" data-stage="total" aria-pressed="true">전체 흐름</button><button type="button" data-stage="prepare" aria-pressed="false">준비</button><button type="button" data-stage="mapping" aria-pressed="false">매핑</button></div><span class="muted" id="cf-stage-note"></span></div>
         <div id="cf-overview" class="columns">
           <section><div class="section-head"><h2>품질</h2></div><div id="cf-quality"></div></section>

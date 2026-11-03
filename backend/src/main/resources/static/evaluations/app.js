@@ -67,7 +67,7 @@ function groupLabel(key) {
   return `${promptKey(first)} · ${time}`;
 }
 
-/** 고른 비교 묶음의 실행 조건. 화면에는 작은 칩 하나만 두고, 마우스를 올리면 조건 전체가 말풍선으로 보인다. */
+/** 고른 실행의 실행 조건. 화면에는 작은 칩 하나만 두고, 마우스를 올리면 조건 전체가 말풍선으로 보인다. */
 function comparisonDetail(key) {
   const runs = groupRuns(key).map(({ run }) => run);
   const first = runs[0];
@@ -151,7 +151,7 @@ function renderOverview() {
   const timeCard = bars(total ? "자동기입 시간" : "요청 처리 시간",
     total ? "버튼 1번 · 평균 · 낮을수록 좋음" : "서버 요청 1개 · 평균 · 낮을수록 좋음", seconds,
     Math.max(1, ...state.selected.map((m) => seconds(m) ?? 0)), (v) => `${v.toFixed(2)}초`,
-    total ? richNote(["자동기입 버튼 1번"], " = ", ["처음 화면 준비"], "(섹션 분류·버튼·선택 결정) + ", ["펼쳐진 화면"], "(섹션 분류·칸 매핑) · 화면 입력·네트워크 왕복 제외")
+    total ? richNote(["자동기입 버튼 1번"], " = ", ["준비"], "(섹션 분류·버튼·선택 결정) + ", ["매핑"], "(섹션 분류·칸 매핑)의 서버 요청 시간 합 · 클릭·칸 입력·네트워크 왕복 제외")
       : richNote(["서버 요청 1개"], "(섹션 분류·칸 매핑 등)를 끝내기까지 · 안에서 ", ["AI에게 여러 번"], " 물을 수 있음 · 서버 처리·재시도 포함"));
   if (total) {
     timeCard.querySelectorAll(".bar-row").forEach((row, index) => {
@@ -160,7 +160,7 @@ function renderOverview() {
       if (time?.p95Ms == null) return;
       const note = element("span", undefined, "range-note stat-line");
       note.append(stat("p95", `${(time.p95Ms / 1000).toFixed(2)}초`, "측정한 자동기입 중 느린 쪽 5%를 뺀 가장 느린 시간"),
-        stat("측정", `${time.count}번`, repetitions ? `펼쳐진 화면 ${time.count / repetitions}개 × 반복 ${repetitions}회` : undefined));
+        stat("측정", `${time.count}번`, repetitions ? `자동기입 ${time.count / repetitions}번 × 반복 ${repetitions}회` : undefined));
       row.after(note);
     });
   }
@@ -182,7 +182,7 @@ function renderOverview() {
       Math.max(0.1, ...state.selected.map((m) => perf(m)?.throughputPerSecond ?? 0)), (v) => `${v.toFixed(2)}/초`,
       richNote(["끝낸 서버 요청 수 ÷ 실행 경과 시간"], " · 요청을 차례로 보내므로 요청 처리 시간이 짧을수록 높음")),
     bars("자동기입 실패율", "낮을수록 좋음", failure, 100, (v) => `${v.toFixed(1)}%`,
-      richNote(["서버 요청이 하나라도 실패한 자동기입"], "(처음 화면 준비 + 펼쳐진 화면)의 비율")),
+      richNote(["서버 요청이 하나라도 실패한 자동기입"], "(준비 + 매핑)의 비율")),
   ] : [
     modelTimeCard(perf),
     timeCard,
@@ -358,7 +358,7 @@ function renderTokenBars() {
         element("span", total == null ? "" : `이번 실행 ${formatUsd(total)} · 자동기입 ${flows}회`, "muted cost-detail"));
       summary.append(line);
     });
-    summary.append(element("p", "자동기입 1회 = 처음 화면 준비(섹션 분류·버튼·선택 결정) + 고른 뒤 펼쳐진 화면(섹션 분류·칸 매핑). 비용 = 그 입력·출력 토큰 × 모델 단가 설정의 USD 단가(100만 토큰당). 서버는 비용을 계산하지 않습니다.", "muted"));
+    summary.append(element("p", "자동기입 1회 = 준비(섹션 분류·버튼·선택 결정) + 매핑(섹션 분류·칸 매핑). 우아한형제들처럼 고르기 전 화면이 따로 있으면 그 화면의 준비를 고른 뒤 화면마다 더합니다. 비용 = 그 입력·출력 토큰 × 모델 단가 설정의 USD 단가(100만 토큰당). 서버는 비용을 계산하지 않습니다.", "muted"));
     box.append(summary);
   } else if (observed.length) {
     box.append(element("p", "비용 표시에는 모델 단가 설정의 입력·출력 단가가 필요합니다.", "muted"));
@@ -579,7 +579,7 @@ function renderQuality() {
 }
 
 /**
- * 단계 정확도 카드. 막대는 맞힌 항목 비율, 아래는 판정 수, 호출 종류가 둘 이상이면 종류별 정확도를 붙인다.
+ * 준비 결과·섹션 분류 결과 카드. 막대는 맞힌 항목 비율, 아래는 판정 수, 호출 종류가 둘 이상이면 종류별 정확도를 붙인다.
  * 평가는 다음 요청을 정답으로 만들므로 여기 오답은 자동기입 점수에 반영되지 않는다.
  */
 function stageAccuracyCard(title, keys, foot) {
@@ -929,7 +929,6 @@ function renderProgress() {
 function render() {
   $("#cf-overview").hidden = state.page !== "overview";
   $("#cf-overview-stage").hidden = state.page !== "overview";
-  $("#cf-flow").hidden = state.page !== "overview";
   $("#cf-stage-note").textContent = STAGE_NOTES[state.stage];
   $("#cf-tokens").hidden = state.page !== "tokens";
   $("#cf-fields").hidden = state.page !== "fields";
@@ -937,7 +936,6 @@ function render() {
   root.querySelectorAll("[data-page]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.page === state.page)));
   root.querySelectorAll("[data-stage]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.stage === state.stage)));
   renderProgress();
-  renderFlow();
   renderOverview();
   renderTokens();
   if (state.page === "fields") renderFields();
@@ -957,7 +955,7 @@ function render() {
 }
 
 // 자동기입 흐름도(시퀀스): 참여자 세로선과 순서대로 오가는 요청. 파란 알약은 서버 요청(요청 처리 시간), 보라 알약은 AI 질문
-// (AI 응답 시간)이고 회색은 평가가 재지 않는 동작이다. 단계 탭을 고르면 다른 단계의 줄을 흐리게 한다.
+// (AI 응답 시간)이고 회색은 평가가 재지 않는 동작이다. 위쪽 링크로 여는 창이고, 창 안의 단계 탭을 고르면 다른 단계 줄을 흐리게 한다.
 const FLOW_ACTORS = [["지원자", "지원서 화면"], ["확장프로그램", "평가 땐 저장된 요청"], ["서버", "Career Form"], ["AI 모델", "JEV · GPT 등"]];
 const FLOW_ROWS = [
   { stage: "START", arrows: [[0, 1, "자동기입 버튼"]] },
@@ -973,12 +971,11 @@ const FLOW_ROWS = [
   { stage: "END", arrows: [[1, 0, "확신도 0.8 이상 칸 입력", "result"]] },
 ];
 
-function renderFlow() {
+function flowSvg(focus) {
   const X = [100, 340, 600, 840];
   const top = 62;
   const step = 32;
   const height = top + FLOW_ROWS.length * step + 10;
-  const focus = { prepare: "PREPARATION", mapping: "MAPPING" }[state.stage];
   const text = (x, y, value, cls, anchor = "middle") =>
     `<text x="${x}" y="${y}" class="${cls}" text-anchor="${anchor}" dominant-baseline="central">${value}</text>`;
   const parts = [`<defs><marker id="flow-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1L9 5L1 9z" fill="context-stroke"/></marker></defs>`];
@@ -1000,7 +997,27 @@ function renderFlow() {
     }).join("");
     parts.push(`<g class="flow-row${dim}" data-flow-stage="${row.stage}">${arrows}</g>`);
   });
-  const svg = `<svg viewBox="0 0 940 ${height + 4}" role="img" aria-label="자동기입 흐름">${parts.join("")}</svg>`;
+  return `<svg viewBox="0 0 940 ${height + 4}" role="img" aria-label="자동기입 흐름">${parts.join("")}</svg>`;
+}
+
+/** 자동기입 흐름 창. 단계 탭(전체 흐름·준비·매핑)은 메인 화면에서 고른 단계로 시작한다. */
+function flowView() {
+  const box = element("div", undefined, "flow-view");
+  const tabs = element("div", undefined, "stage flow-tabs");
+  const drawing = element("div", undefined, "flow-drawing");
+  let current = state.stage;
+  const show = () => {
+    tabs.querySelectorAll("button").forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.flow === current)));
+    drawing.innerHTML = flowSvg({ prepare: "PREPARATION", mapping: "MAPPING" }[current]);
+  };
+  [["total", "전체 흐름"], ["prepare", "준비"], ["mapping", "매핑"]].forEach(([key, name]) => {
+    const button = element("button", name);
+    button.type = "button";
+    button.dataset.flow = key;
+    button.addEventListener("click", () => { current = key; show(); });
+    tabs.append(button);
+  });
+  show();
   const legend = element("div", undefined, "flow-legend");
   [["request", "서버 요청", "요청 처리 시간 · 요청 하나 안에서 AI에게 여러 번 물을 수 있음"],
     ["ai", "AI 질문", "AI 응답 시간 · 서버가 모델에 보내고 답을 다 받기까지"],
@@ -1010,9 +1027,8 @@ function renderFlow() {
     legend.append(item);
   });
   legend.append(element("p", "자동기입 시간 = 파란 요청 4개의 처리 시간 합. 준비 탭은 위쪽 두 요청, 매핑 탭은 아래쪽 두 요청을 봅니다. 평가 때는 확장프로그램 대신 저장해 둔 요청을 서버에 보내고, 답을 사람이 검토한 정답과 비교해 채점합니다.", "muted flow-foot"));
-  const body = $("#cf-flow-body");
-  body.innerHTML = svg;
-  body.append(legend);
+  box.append(element("p", "자동기입 버튼 한 번에 오가는 요청을 순서대로 보입니다. 평가가 채점하고 시간을 재는 곳은 서버 요청과 AI 질문입니다.", "muted criteria-lead"), tabs, drawing, legend);
+  return box;
 }
 
 function renderFilters() {
@@ -1405,7 +1421,7 @@ const GUIDES = {
     steps: [
       "실행에서 가장 최근 `auto-deploy`를 고릅니다. 실행 조건의 코드 버전이 그 머지의 커밋 번호입니다.",
       "전후 비교 탭에서 이전에 그 전 `auto-deploy`를 고르면 머지 하나가 바꾼 점수·시간·항목을 봅니다.",
-      "더 재보고 싶으면 평가 실행으로 직접 돌립니다. 한 번에 약 $0.1(GPT 약 $0.08, JEV 약 $0.04)이 듭니다.",
+      "더 재보고 싶으면 평가 실행으로 직접 돌립니다. 반복 3회 한 번에 약 $0.2(GPT 약 $0.13, JEV 약 $0.07)가 듭니다.",
     ],
     rows: [
       ["자동 평가", "`auto-deploy` · 반복 3회", "공급자마다 기본 모델 하나. 같은 코드 버전으로는 다시 돌지 않습니다(재시작 무관)"],
@@ -1538,9 +1554,9 @@ function datasetView(selected = 0) {
       element("span", item.split === "tuning" ? "튜닝용" : "최종 평가용", "badge"));
     main.append(top);
     if (STATE_NOTES[item.state]) main.append(element("p", STATE_NOTES[item.state], "state-note"));
-    // 채점 흐름: 준비 요청과 필드 요청으로 묶어 단계와 API를 보인다.
+    // 채점 흐름: 준비 요청과 매핑 요청으로 묶어 단계와 API를 보인다.
     const flow = element("div", undefined, "score-flow");
-    [["PREPARATION", "준비 요청", "칸을 꺼내기 위한 질문"], ["MAPPING", "필드 요청", "칸에 넣을 값을 정하는 질문"]].forEach(([stage, name, note]) => {
+    [["PREPARATION", "준비 요청", "칸을 꺼내기 위한 질문"], ["MAPPING", "매핑 요청", "칸에 넣을 값을 정하는 질문"]].forEach(([stage, name, note]) => {
       const calls = item.calls.filter((call) => call.stage === stage);
       if (!calls.length) return;
       const lane = element("div", undefined, "flow-lane");
@@ -1617,7 +1633,7 @@ function profileTable(profile) {
   return table;
 }
 
-/** 정답 기준 대화상자. 대표 점수(자동기입 점수)와 칸별 결과, 정답 기준, 단계 정확도, 흔들림을 예시와 함께 보인다. */
+/** 정답 기준 대화상자. 대표 점수(자동기입 점수)와 칸별 결과, 정답 기준, 준비 결과·섹션 분류 결과, 흔들림을 예시와 함께 보인다. */
 function criteriaView() {
   const wrap = element("div", undefined, "criteria-view");
   const formula = element("div", undefined, "criteria-formula");
@@ -2143,7 +2159,7 @@ async function openRun() {
     option.append(box, document.createTextNode(`${item.provider} / ${name}`));
     targets.append(option);
   }));
-  const repetitions = Object.assign(element("input"), { type: "number", min: "1", max: "20", value: "1" });
+  const repetitions = Object.assign(element("input"), { type: "number", min: "1", max: "20", value: "3" });
   const prompt = Object.assign(element("input"), { type: "text", maxLength: 32, placeholder: "예: baseline",
     pattern: "[A-Za-z0-9._\\-]{1,32}", title: "영문·숫자·.-_ 32자 이하" });
   const message = element("p", "실제 모델을 호출하며 비용이 발생합니다. 진행 중인 평가가 있으면 등록되지 않습니다.", "muted");
@@ -2153,7 +2169,7 @@ async function openRun() {
     field("모델", targets, providers.length
       ? "비교할 모델을 고릅니다(최대 5개). 같은 조건으로 한 모델씩 차례로 돌고, 결과는 한 화면에 나란히 나옵니다."
       : "이 서버에 연결된 공급자가 없습니다.", "div"),
-    field("반복 수", repetitions, "같은 입력을 몇 번 돌릴지(1~20). 응답시간 편차를 보려면 3 이상을 권장합니다."),
+    field("반복 수", repetitions, "같은 입력을 몇 번 돌릴지(1~20). 전후 비교에서 흔들림과 진짜 변화를 가르려면 3 이상이 필요합니다."),
     field("실행 이름", prompt, "무엇을 바꿨는지 짧게(선택). 프롬프트 원문·코드 버전·서버 설정·날짜는 서버가 자동으로 기록합니다."),
     namingGuide(prompt),
     message, submit);
@@ -2219,6 +2235,7 @@ root.querySelectorAll("[data-source]").forEach((link) => link.addEventListener("
   const kind = link.dataset.source;
   try {
     if (kind === "데이터셋") dialog(kind, datasetView(), "dataset-dialog");
+    else if (kind === "자동기입 흐름") dialog(kind, flowView(), "dataset-dialog");
     else if (kind === "정답 기준") dialog(kind, criteriaView(), "criteria-dialog");
     else dialog(kind, await promptView(), "criteria-dialog");
   } catch (error) { dialog(kind, element("p", error.message, "muted"), "criteria-dialog"); }

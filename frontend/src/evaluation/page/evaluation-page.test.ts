@@ -277,24 +277,40 @@ describe("AI 평가 화면의 단계 탭", () => {
     ]);
   });
 
-  it("메인 화면 흐름도는 네 참여자와 단계 탭에 맞춘 강조를 보인다", async () => {
+  it("자동기입 흐름 창은 네 참여자를 그리고 창 안의 단계 탭에 맞춰 다른 단계 줄을 흐린다", async () => {
     await pick("total");
-    // 흐름도는 그릴 때마다 새로 만들므로 매번 다시 찾는다.
-    const flow = () => document.querySelector("#cf-flow svg")!;
+    expect(document.querySelector("#cf-flow")).toBeNull();
+    (
+      document.querySelector(
+        '[data-source="자동기입 흐름"]',
+      ) as HTMLAnchorElement
+    ).click();
+    await Promise.resolve();
+    // 흐름도는 탭을 누를 때마다 새로 그리므로 매번 다시 찾는다.
+    const flow = () => document.querySelector("#source-content svg")!;
     expect(
       [...flow().querySelectorAll(".flow-actor")].map(
         (actor) => actor.textContent,
       ),
     ).toEqual(["지원자", "확장프로그램", "서버", "AI 모델"]);
     const dimmed = () =>
-      [...flow().querySelectorAll(".flow-row.dim")].map((row) =>
-        row.getAttribute("data-flow-stage"),
+      new Set(
+        [...flow().querySelectorAll(".flow-row.dim")].map((row) =>
+          row.getAttribute("data-flow-stage"),
+        ),
       );
-    expect(dimmed()).toEqual([]);
-    await pick("prepare");
-    expect(new Set(dimmed())).toEqual(new Set(["START", "MAPPING", "END"]));
-    await pick("mapping");
-    expect(new Set(dimmed())).toEqual(new Set(["START", "PREPARATION", "END"]));
+    const tab = (key: string) =>
+      (
+        document.querySelector(
+          `#source-content [data-flow="${key}"]`,
+        ) as HTMLButtonElement
+      ).click();
+    expect(dimmed()).toEqual(new Set());
+    tab("prepare");
+    expect(dimmed()).toEqual(new Set(["START", "MAPPING", "END"]));
+    tab("mapping");
+    expect(dimmed()).toEqual(new Set(["START", "PREPARATION", "END"]));
+    (document.querySelector("#cf-source") as HTMLDialogElement).close();
   });
 
   it("데이터셋 창은 공고별 탭으로 나뉘고 탭을 고르면 그 공고의 화면만 보인다", async () => {

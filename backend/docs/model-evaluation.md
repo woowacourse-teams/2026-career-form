@@ -52,7 +52,7 @@ python3 scripts/evaluation_local.py reset-password
 
 `CAREER_FORM_EVALUATION_AUTO_RUN_ENABLED=true`면 서버가 뜬 뒤 이 코드 버전으로 돌린 같은 데이터셋 평가가 없을 때
 공급자마다 기본 모델로 비교 하나(`auto-deploy`, 반복 3회)를 등록한다. 머지 → 배포마다 한 번이며, 진행 중인 평가가
-있으면 건너뛴다. 실행당 두 모델 합 약 $0.1이 든다. 데이터셋 버전(`..._AUTO_RUN_DATASET_VERSION`)은 평가 화면이 쓰는 버전과
+있으면 건너뛴다. 데이터셋 v4·반복 3회 기준 실행당 두 모델 합 약 $0.2(GPT 약 $0.13, JEV 약 $0.07)가 든다. 데이터셋 버전(`..._AUTO_RUN_DATASET_VERSION`)은 평가 화면이 쓰는 버전과
 같아야 하고 테스트가 이를 확인한다. 코드 버전은 이미지에 담긴 커밋 번호(짧은 SHA)다. 개발 배포 워크플로가 이미지 빌드 때
 `CAREER_FORM_COMMIT`을 넘기므로 롤백해도 그 이미지의 커밋으로 보이고, 커밋이 없는 빌드는 `CAREER_FORM_QUALITY_VERSION`을 쓴다.
 
