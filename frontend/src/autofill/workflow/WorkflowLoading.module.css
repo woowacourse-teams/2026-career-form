@@ -1,8 +1,7 @@
 .container {
   display: grid;
   align-content: start;
-  gap: 16px;
-  padding: 24px 16px;
+  padding: 20px;
   text-align: left;
 }
 
@@ -20,9 +19,11 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 0;
+  margin: 0 0 8px;
   color: var(--color-text-muted);
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: -0.224px;
 }
 
 .activityDot {
@@ -32,40 +33,84 @@
   background: var(--color-action);
   animation: pulse 1.2s ease-in-out infinite;
 }
+.titleRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
 .total {
   margin: 0;
-  font-size: 20px;
   color: var(--color-text-strong);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 25px;
+  letter-spacing: -0.374px;
+}
+.count {
+  flex: none;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: -0.224px;
+  font-variant-numeric: tabular-nums;
 }
 .progress {
-  list-style: none;
-  padding: 0;
-  margin: 0;
   display: grid;
-  gap: 0;
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
 }
 .progress li {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 14px 0;
-  border-bottom: 1px solid var(--color-border);
-  font-size: 13px;
+  gap: 11px;
+  min-height: 44px;
   color: var(--color-text-strong);
+  font-size: 17px;
+  letter-spacing: -0.374px;
+}
+.progress li + li {
+  border-top: 1px solid var(--color-border);
+}
+.dot {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  /* DESIGN.md secondary text; the theme has no token for it. */
+  color: #515154;
+}
+.dot svg {
+  width: 17px;
+  height: 17px;
 }
 .progress strong {
-  font-weight: 600;
+  font-weight: 400;
 }
-.progress li > span {
+.progress li > span:last-child {
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-left: auto;
   color: var(--color-text-muted);
+  font-size: 14px;
+  letter-spacing: -0.224px;
 }
-.progress small,
-.progress li[data-active="true"] > span {
+.progress small {
+  font-size: 14px;
+}
+.progress li[data-active="true"] .dot {
   color: var(--color-action);
+}
+.progress li[data-active="true"] strong,
+.progress small,
+.progress li[data-active="true"] > span:last-child {
+  color: var(--color-text-strong);
+  font-weight: 600;
 }
 
 @keyframes pulse {
@@ -77,5 +122,106 @@
 @media (prefers-reduced-motion: reduce) {
   .activityDot {
     animation: none;
+  }
+}
+
+.userView {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  color: var(--color-text-strong);
+}
+.mascot {
+  display: block;
+  width: 132px;
+  height: 132px;
+  object-fit: contain;
+  flex-shrink: 0;
+  transform-origin: 50% 85%;
+  animation: mascotWriting 1.5s ease-in-out infinite;
+}
+.caption {
+  margin: 20px 0;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 25px;
+  letter-spacing: -0.374px;
+  text-align: center;
+}
+.metric {
+  width: 100%;
+  text-align: center;
+}
+.metricLabel {
+  margin: 0 0 8px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: -0.224px;
+}
+.value {
+  display: block;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 32px;
+  color: var(--color-text-strong);
+  font-variant-numeric: tabular-nums;
+}
+.value small {
+  margin-left: 2px;
+  font-size: 17px;
+  font-weight: 400;
+}
+.indicatorSlot {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 11px;
+}
+.track {
+  width: 100%;
+  height: 8px;
+  border-radius: 980px;
+  background: var(--color-surface-muted);
+  overflow: hidden;
+}
+.track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-action);
+  transition: width 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.indeterminate span {
+  width: 40%;
+  animation: trackSweep 1.4s ease-in-out infinite;
+}
+
+@keyframes mascotWriting {
+  0%,
+  100% {
+    transform: rotate(-1deg) translateY(0);
+  }
+  30% {
+    transform: rotate(1deg) translateY(1px);
+  }
+  60% {
+    transform: rotate(-0.5deg) translateY(0);
+  }
+}
+@keyframes trackSweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(250%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .userView * {
+    animation: none;
+    transition: none;
   }
 }

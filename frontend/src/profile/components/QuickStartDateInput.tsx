@@ -57,7 +57,7 @@ export function QuickStartDateInput({
           data-date-input
           value={draft}
           aria-invalid={showError && !!error}
-          aria-describedby={`${id}-hint`}
+          aria-describedby={showError && error ? `${id}-hint` : undefined}
           onChange={(event) => change(event.target.value)}
           onBlur={() => setShowError(true)}
           onInvalid={(event) => {
@@ -87,15 +87,11 @@ export function QuickStartDateInput({
           }}
         />
       </div>
-      <span
-        id={`${id}-hint`}
-        className={showError && error ? styles.error : styles.note}
-        role={showError && error ? "alert" : undefined}
-      >
-        {showError && error
-          ? error
-          : "숫자 8자리로 입력하거나 달력에서 고르세요."}
-      </span>
+      {showError && error && (
+        <span id={`${id}-hint`} className={styles.error} role="alert">
+          {error}
+        </span>
+      )}
     </div>
   );
 }

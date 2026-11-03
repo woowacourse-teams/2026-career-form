@@ -1,7 +1,6 @@
 import type { steps } from "./content";
 import styles from "./Site.module.css";
 import panelScreenshot from "./assets/posting-panel.png";
-import formScreenshot from "./assets/posting-form.png";
 import { NotificationDemo } from "./NotificationDemo";
 import listScreenshot from "./assets/posting-list.png";
 
@@ -14,23 +13,23 @@ export const postingSteps: typeof steps = [
     instructions: [
       [
         "지원 공고 관리 클릭하기",
-        "패널 상단의 ‘지원 공고 관리’를 누르면 공고 목록이 열려요. ‘+ 공고 추가’를 눌러 등록을 시작하세요.",
+        "패널 상단의 ‘지원 공고 관리’를 누르면 새 공고와 저장한 공고 목록이 열려요.",
       ],
     ],
   },
   {
-    label: "공고 정보 입력",
-    title: "공고 정보와 마감을 입력하세요.",
+    label: "새 공고에서 저장",
+    title: "새 공고를 저장하세요.",
     description:
-      "회사명, 직무, 공고 링크와 마감 시각을 입력하고 알림을 설정하세요.",
+      "진행 중인 공고를 확인하고, 마감 알림을 받을 공고를 저장하세요.",
     instructions: [
       [
-        "공고 정보 입력하기",
-        "회사명, 직무, 공고 링크를 입력하세요. 마감 날짜와 시간은 실제 공고에서 직접 확인해 주세요.",
+        "새 공고 확인하기",
+        "지원 공고 화면의 새 공고 탭에서 접수 기간을 확인하세요. ‘공고 열기’로 공고를 봐도 저장되지는 않아요.",
       ],
       [
-        "알림 설정 후 저장하기",
-        "기본 하루 전·2시간 전 알림을 사용하거나 원하는 시간과 분으로 변경한 뒤 ‘저장’을 누르세요.",
+        "마감 알림 저장하기",
+        "‘마감 알림 저장’을 누르면 마감 24시간 전과 2시간 전에 알려드려요.",
       ],
       [
         "알림 수신 환경 확인하기",
@@ -56,7 +55,7 @@ export const postingSteps: typeof steps = [
 ];
 
 export function PostingGuide({ step }: { step: number }) {
-  const screenshot = [panelScreenshot, formScreenshot, listScreenshot][step];
+  const screenshot = step === 0 ? panelScreenshot : listScreenshot;
   return (
     <figure
       className={`${styles.postingGuide} ${step === 0 ? styles.panelScreenshotGuide : ""}`}
@@ -94,11 +93,7 @@ export function PostingGuide({ step }: { step: number }) {
           <img
             className={styles.postingScreenshot}
             src={screenshot}
-            alt={
-              step === 2
-                ? "실제 지원 공고 목록: 회사 정보, 마감 시각과 지원 완료로 표시 버튼"
-                : "실제 새 공고 저장 화면: 회사명, 직무, 공고 링크, 마감 날짜·시간과 알림 설정"
-            }
+            alt="실제 지원 공고 목록: 회사 정보, 마감 시각과 지원 완료로 표시 버튼"
           />
         </a>
       )}
@@ -113,7 +108,7 @@ export function PostingNotificationGuide() {
       aria-labelledby="notification-preview-title"
     >
       <div>
-        <h2 id="notification-preview-title">설정한 시간에 이렇게 알려드려요</h2>
+        <h2 id="notification-preview-title">마감 전에 이렇게 알려드려요</h2>
         <p>회사명과 마감 시각을 확인하고 바로 지원하세요.</p>
         <p>알림을 누르면 저장한 공고가 열려요.</p>
       </div>

@@ -1,3 +1,4 @@
+import type { SavedPostingsReader } from "../../src/job-postings/saved-postings";
 import type { ProfileRepository } from "../../src/profile/profile-repository";
 import type { ReactNode } from "react";
 import { ReviewPreview } from "./ReviewPreview";
@@ -7,6 +8,11 @@ import { createDemoRepository } from "./fixtures";
 import styles from "./Simulation.module.css";
 export const demoRepository = createDemoRepository();
 const noop = () => {};
+// The web has no extension storage: the demo always starts with no saved postings.
+const noSavedPostings: SavedPostingsReader = {
+  list: async () => [],
+  subscribe: () => noop,
+};
 export function PanelPreview({
   onAutofill = async () => {},
   autofillView,
@@ -33,6 +39,7 @@ export function PanelPreview({
       <App
         track={noop}
         showPostings={showPostings}
+        savedPostings={noSavedPostings}
         autofillView={autofillView}
         returnToProfile={onReturn}
         inPage

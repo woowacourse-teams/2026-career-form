@@ -192,7 +192,7 @@ describe("generic search follow-up review", () => {
         screen.getByRole("button", { name: /개 항목 기입하기$/ }),
       );
       await screen.findByText(
-        "검색 후 입력 항목이 변경되어 다시 확인해야 합니다",
+        /^검색 후 입력 항목이 변경되어 다시 확인해야 합니다\.?$/,
       );
       expect(executeWritesMock).toHaveBeenCalledTimes(1);
       expect(setup.grade()?.value).toBe("");

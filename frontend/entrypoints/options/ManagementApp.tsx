@@ -27,7 +27,7 @@ export function ManagementApp() {
               src="/side-panel-launcher-logo.png"
               alt=""
             />{" "}
-            CAREER FORM
+            Career Form
           </div>
           <nav className={styles.navigation} aria-label="관리 메뉴">
             <button
@@ -45,11 +45,7 @@ export function ManagementApp() {
           </nav>
         </div>
       </header>
-      {postings ? (
-        <JobPostings key={hash} initialCreate={hash === "#postings/new"} />
-      ) : (
-        <App />
-      )}
+      {postings ? <JobPostings /> : <App />}
     </>
   );
 }

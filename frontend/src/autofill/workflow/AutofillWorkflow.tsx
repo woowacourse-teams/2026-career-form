@@ -15,7 +15,6 @@ import {
   type StaticFieldsSession,
 } from "./static-fields-session";
 import { componentBasicControls } from "../policy/components/fingerprint";
-import { AnalysisServiceError } from "../api/runtime-client";
 import {
   resolveDocumentCompany,
   isUnsupportedHplace,
@@ -67,6 +66,9 @@ import {
   type WriteResultListener,
 } from "../write/executor";
 import { WorkflowScreens } from "./WorkflowScreens";
+import { WorkflowError, type WorkflowErrorKind } from "./WorkflowError";
+import loadingStyles from "./WorkflowLoading.module.css";
+import { errorDetail, startErrorKind } from "./start-error";
 import { observeQuality } from "../quality/safe-observation";
 import {
   createAnalyzeFields,
@@ -123,6 +125,7 @@ import {
   type StructureDiagnostics,
 } from "../generic/structure-diagnostics";
 import { debugWarn } from "../debug/autofill-debug";
+import { useDeveloperMode } from "../debug/developer-mode";
 import { localWorkflowLog } from "../debug/local-workflow";
 
 export { localItemCount, shouldRunRevealPlan } from "./workflow-model";
@@ -132,7 +135,12 @@ const MAX_ENTRY_PASSES = 10;
 
 export function AutofillWorkflow(props: WorkflowProps) {
   const [loaded, setLoaded] = useState(false);
-  const [error, setError] = useState<string>();
+  const [error, setError] = useState<{
+    kind: WorkflowErrorKind;
+    detail: string;
+  }>();
+  // Retry only runs from the user's click and reloads the policy afresh.
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let active = true;
     const url = props.pageDocument.URL;
@@ -155,34 +163,38 @@ export function AutofillWorkflow(props: WorkflowProps) {
       })
       .catch((error: unknown) => {
         if (!active) return;
-        if (
-          error instanceof AnalysisServiceError &&
-          error.code === "POLICY_INCOMPATIBLE"
-        ) {
-          setError(
-            "지원서 정책이 이 확장 버전과 맞지 않아요. 확장을 최신 버전으로 업데이트한 뒤 다시 시도해 주세요.",
-          );
-          return;
-        }
-        setError(
-          "사이트 정책을 불러오지 못했습니다. " +
-            (error instanceof Error ? error.message : "다시 실행해 주세요."),
-        );
+        setError({ kind: startErrorKind(error), detail: errorDetail(error) });
       });
     return () => {
       active = false;
     };
-  }, [props.apiClient, props.pageDocument]);
+  }, [props.apiClient, props.pageDocument, attempt]);
+  const [developerMode] = useDeveloperMode();
   if (error)
     return (
-      <div role="alert">
-        {error}
-        <button onClick={props.onExit}>돌아가기</button>
-      </div>
+      <WorkflowError
+        kind={error.kind}
+        developerMode={developerMode}
+        detail={error.detail}
+        onRetry={() => setAttempt((count) => count + 1)}
+        onBack={props.onExit}
+      />
     );
   if (!loaded)
-    return <div role="status">사이트 입력 정책을 확인하고 있어요</div>;
-  return <PolicyReadyWorkflow {...props} />;
+    return (
+      <div className={loadingStyles.container}>
+        <p className={loadingStyles.status} role="status">
+          사이트 입력 정책을 확인하고 있어요
+        </p>
+      </div>
+    );
+  return (
+    <PolicyReadyWorkflow
+      key={attempt}
+      {...props}
+      onRetry={() => setAttempt((count) => count + 1)}
+    />
+  );
 }
 
 function PolicyReadyWorkflow({
@@ -193,8 +205,10 @@ function PolicyReadyWorkflow({
   pageDocument,
   onExit,
   unsupportedImageUrl,
+  writingImageUrl,
   addressSearch = runtimeAddressSearch,
-}: WorkflowProps) {
+  onRetry,
+}: WorkflowProps & { onRetry(): void }) {
   const companyId = resolveDocumentCompany(pageDocument);
   // Analysis may replace the installed policy mid-run. The structure loop
   // stays tied to the policy present when the workflow started, so a document
@@ -223,6 +237,10 @@ function PolicyReadyWorkflow({
     [pageDocument],
   );
   const [currentCategory, setCurrentCategory] = useState<string>();
+  const [developerMode] = useDeveloperMode();
+  // 진행 항목은 기입 묶음을 가로질러 누적되므로 묶음별 처리 수를 따로 센다.
+  const batchDoneIds = useRef(new Set<string>());
+  const [writeBatch, setWriteBatch] = useState({ total: 0, done: 0 });
   const [activity, setActivity] = useState<WorkflowActivity>("matching");
   const { operated, operatedCategories, recordOperation } =
     useOperatedFields(pageDocument);
@@ -237,6 +255,8 @@ function PolicyReadyWorkflow({
   );
   const onWriteResult: WriteResultListener = (item, result, registry) => {
     recordWriteResult(item, result, registry);
+    batchDoneIds.current.add(item.candidateId);
+    setWriteBatch((batch) => ({ ...batch, done: batchDoneIds.current.size }));
     observeQuality(() => apiClient.quality?.write(item, result, registry));
   };
   const presentField = async (
@@ -314,11 +334,7 @@ function PolicyReadyWorkflow({
     registry: Parameters<typeof progressTracker.wasWritten>[1],
   ) =>
     progressTracker.wasWritten(item.candidateId, registry) &&
-    !isNextBoxEntry(
-      item,
-      singleRowEntryOffsets.current,
-      savedRowKeys.current,
-    );
+    !isNextBoxEntry(item, singleRowEntryOffsets.current, savedRowKeys.current);
   const [rowSave, setRowSave] = useState<{
     saved: number;
     manual: RowSaveManual[];
@@ -358,6 +374,14 @@ function PolicyReadyWorkflow({
   const [warnings, setWarnings] = useState<string[]>([]);
   const [exceptionTitle, setExceptionTitle] =
     useState("분석을 완료하지 못했습니다");
+  // A caught error can carry server or contract text. It never becomes the
+  // reason on screen; developer mode shows it in the error details.
+  const [caughtText, setCaughtText] = useState<string>();
+  // Set only when the first analysis fails; later exceptions are interruptions.
+  const [startError, setStartError] = useState<{
+    kind: WorkflowErrorKind;
+    detail: string;
+  }>();
   const [results, setResults] = useState<ApprovedWriteResult[]>([]);
   const [analysisSummary, setAnalysisSummary] = useState<{
     mode: "ADAPTER" | "GENERIC";
@@ -681,7 +705,11 @@ function PolicyReadyWorkflow({
         setPreparationExecutionPending(true);
       } catch (error) {
         if (!active) return;
-        setExceptionTitle(safeErrorTitle(error));
+        setCaughtText(safeErrorTitle(error));
+        setStartError({
+          kind: startErrorKind(error),
+          detail: errorDetail(error),
+        });
         setStage("exception");
       }
     };
@@ -843,13 +871,13 @@ function PolicyReadyWorkflow({
         await analyzeFields(profile, addedRowsToEmptyForm);
       } catch (error) {
         if (mounted.current) {
-          setExceptionTitle(safeErrorTitle(error));
+          setCaughtText(safeErrorTitle(error));
           setStage("exception");
         }
       }
     } catch (error) {
       if (mounted.current) {
-        setExceptionTitle(safeErrorTitle(error));
+        setCaughtText(safeErrorTitle(error));
         setStage("exception");
       }
     } finally {
@@ -947,6 +975,8 @@ function PolicyReadyWorkflow({
         setStage("exception");
         return;
       }
+      batchDoneIds.current = new Set();
+      setWriteBatch({ total: approvedCandidateIds.size, done: 0 });
       setStage("writing");
       localWorkflowLog("writes-start", {
         passes: revealPasses.current,
@@ -1147,7 +1177,7 @@ function PolicyReadyWorkflow({
       setStage("result");
     } catch (error) {
       if (mounted.current) {
-        setExceptionTitle(safeErrorTitle(error));
+        setCaughtText(safeErrorTitle(error));
         setStage("exception");
       }
     } finally {
@@ -1163,10 +1193,7 @@ function PolicyReadyWorkflow({
     setReviewItems((items) => {
       let changed = false;
       const next = items.map((item) => {
-        if (
-          item.disabled ||
-          !writtenBefore(item, fieldsSnapshot.registry)
-        )
+        if (item.disabled || !writtenBefore(item, fieldsSnapshot.registry))
           return item;
         changed = true;
         return {
@@ -1186,8 +1213,7 @@ function PolicyReadyWorkflow({
     if (stage !== "review" || !revealReview || !fieldsSnapshot) return;
     setRevealReview(false);
     const unwritten = reviewItems.filter(
-      (item) =>
-        !item.disabled && !writtenBefore(item, fieldsSnapshot.registry),
+      (item) => !item.disabled && !writtenBefore(item, fieldsSnapshot.registry),
     );
     // A saved row is registered; its entry is never written again into the
     // emptied entry area.
@@ -1294,6 +1320,9 @@ function PolicyReadyWorkflow({
   return (
     <WorkflowScreens
       progress={progress}
+      developerMode={developerMode}
+      writeTotal={writeBatch.total}
+      writeDone={writeBatch.done}
       activity={activity}
       progressStateFor={progressTracker.progressStateFor}
       progressIdFor={(id) =>
@@ -1327,8 +1356,12 @@ function PolicyReadyWorkflow({
       addressResult={addressResult}
       adapter={adapter}
       workflowDiagnostics={workflowDiagnostics}
-      exceptionTitle={exceptionTitle}
+      exceptionTitle={caughtText === undefined ? exceptionTitle : ""}
+      exceptionKind={startError?.kind ?? "interrupted"}
+      exceptionDetail={startError?.detail ?? caughtText}
+      onRetry={onRetry}
       unsupportedImageUrl={unsupportedImageUrl}
+      writingImageUrl={writingImageUrl}
       unsupportedKind={
         stage === "unsupported"
           ? unsupportedHplaceKind(pageDocument)

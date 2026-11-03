@@ -29,7 +29,7 @@ describe("AutofillOverlay failure and lifecycle", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: "분석을 완료하지 못했습니다",
+        name: "자동 기입을 시작하지 못했어요",
       }),
     ).toBeInTheDocument();
     expect(screen.queryByText("me@example.test")).not.toBeInTheDocument();
@@ -38,7 +38,7 @@ describe("AutofillOverlay failure and lifecycle", () => {
     });
     expect(back).toHaveLength(1);
     expect(back[0]!.parentElement!.nextElementSibling).toContainElement(
-      screen.getByRole("heading", { name: "분석을 완료하지 못했습니다" }),
+      screen.getByRole("heading", { name: "자동 기입을 시작하지 못했어요" }),
     );
     expect(apiClient.analyzeFields).not.toHaveBeenCalled();
     expect(pageDocument.querySelector("input")?.value).toBe("");
@@ -73,7 +73,7 @@ describe("AutofillOverlay failure and lifecycle", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: "이 페이지에서는 자동 기입을 진행할 수 없습니다",
+        name: "자동 기입을 멈췄어요",
       }),
     ).toBeInTheDocument();
     expect(screen.queryByText("me@example.test")).not.toBeInTheDocument();
@@ -110,7 +110,7 @@ describe("AutofillOverlay failure and lifecycle", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: "이 페이지에서는 자동 기입을 진행할 수 없습니다",
+        name: "자동 기입을 멈췄어요",
       }),
     ).toBeInTheDocument();
     expect(apiClient.analyzeFields).toHaveBeenCalledTimes(1);

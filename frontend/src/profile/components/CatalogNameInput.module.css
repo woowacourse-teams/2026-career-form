@@ -37,7 +37,7 @@
 .option span,
 .help {
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.5;
   font-weight: 400;
   overflow-wrap: anywhere;
@@ -57,7 +57,7 @@
   color: var(--color-text);
   background: var(--color-surface-muted);
   font: inherit;
-  font-size: 12px;
+  font-size: 14px;
   cursor: pointer;
 }
 .footer button:focus-visible {

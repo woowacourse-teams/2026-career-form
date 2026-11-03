@@ -100,8 +100,10 @@ function setup({ inPage = false, failure = "", alreadySaved = false } = {}) {
     },
   };
 }
-const enter = () =>
-  fireEvent.click(screen.getByRole("button", { name: "지원서에서 가져오기" }));
+const enter = () => {
+  fireEvent.click(screen.getByRole("button", { name: "설정" }));
+  fireEvent.click(screen.getByRole("button", { name: "프로필 가져오기" }));
+};
 const save = () =>
   fireEvent.click(screen.getByRole("button", { name: /프로필에 저장하기/ }));
 const ready = () => screen.findByText("프로필에 가져올 정보");

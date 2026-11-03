@@ -4,20 +4,24 @@ import {
   type ProfileCategoryDefinition,
 } from "../../src/profile/field-definitions";
 import {
-  CATEGORY_GUIDES,
   EDITOR_GROUPS,
   categoryMatches,
-  categoryStatus,
   categoryFilledCount,
 } from "../../src/profile/editor-presentation";
 import type {
   LayoutPreference,
+  Profile,
   ProfileCategoryId,
 } from "../../src/profile/model";
 import { ProfileForm } from "../../src/profile/components/ProfileForm";
 import styles from "./App.module.css";
 
 type FormProps = Omit<ComponentProps<typeof ProfileForm>, "category">;
+
+function categoryCount(category: ProfileCategoryDefinition, profile: Profile) {
+  const count = categoryFilledCount(category, profile);
+  return count ? `${count}${category.repeatable ? "건" : "개"}` : "미입력";
+}
 
 function Accordion({
   category,
@@ -40,15 +44,17 @@ function Accordion({
     >
       <summary>
         <strong>{category.label}</strong>
-        <span className={styles.accordionStatus}>{status}</span>
+        <span
+          className={styles.accordionStatus}
+          data-empty={status === "미입력"}
+        >
+          {status}
+        </span>
         <span className={styles.accordionChevron} aria-hidden="true">
           {open ? "−" : "+"}
         </span>
       </summary>
-      <div className={styles.accordionBody}>
-        <p className={styles.categoryGuide}>{CATEGORY_GUIDES[category.id]}</p>
-        {children}
-      </div>
+      <div className={styles.accordionBody}>{children}</div>
     </details>
   );
 }
@@ -56,9 +62,11 @@ function Accordion({
 export function ProfileWorkspace({
   layout,
   formProps,
+  sidebarFooter,
 }: {
   layout: LayoutPreference;
   formProps: FormProps;
+  sidebarFooter?: ReactNode;
 }) {
   const [activeCategory, setActiveCategory] =
     useState<ProfileCategoryId>("personal");
@@ -71,9 +79,7 @@ export function ProfileWorkspace({
     (category) => category.id === activeCategory,
   );
   const activeDefinition = PROFILE_CATEGORIES[activeIndex];
-  const registeredCount = PROFILE_CATEGORIES.filter(
-    (category) => categoryFilledCount(category, formProps.profile) > 0,
-  ).length;
+  const activeCount = categoryCount(activeDefinition, formProps.profile);
 
   const navigate = (id: ProfileCategoryId) => {
     setActiveCategory(id);
@@ -99,7 +105,7 @@ export function ProfileWorkspace({
       <input
         type="search"
         aria-label="입력 항목 찾기"
-        placeholder="입력 항목 찾기"
+        placeholder="항목 찾기"
         value={query}
         onChange={(event) => setQuery(event.target.value)}
       />
@@ -117,35 +123,25 @@ export function ProfileWorkspace({
   if (layout === "b")
     return (
       <main className={styles.layoutB}>
-        <div className={styles.overviewHeader}>
-          <span>필요한 항목을 펼쳐 입력하세요</span>
-          {search}
-        </div>
+        <div className={styles.overviewHeader}>{search}</div>
         {!visibleCategories.length && noResults}
         {visibleCategories.map((category) => (
           <Accordion
             key={`${category.id}-${query.trim() ? "search" : "browse"}`}
             category={category}
-            status={categoryStatus(category, formProps.profile)}
+            status={categoryCount(category, formProps.profile)}
             initiallyOpen={category.id === activeCategory || !!query}
           >
             <ProfileForm category={category} {...formProps} />
           </Accordion>
         ))}
+        {sidebarFooter}
       </main>
     );
 
   return (
     <main className={styles.layoutA}>
       <aside className={styles.sidebar}>
-        <div className={styles.navOverview}>
-          <p>나의 프로필</p>
-          <strong>
-            {registeredCount}
-            <span> / {PROFILE_CATEGORIES.length}개 범주에 정보 입력</span>
-          </strong>
-          <p className={styles.optionalNote}>필요한 항목만 채워도 괜찮아요.</p>
-        </div>
         {search}
         <nav className={styles.categoryNav} aria-label="프로필 범주">
           {EDITOR_GROUPS.map((group) => {
@@ -156,56 +152,44 @@ export function ProfileWorkspace({
             return (
               <div className={styles.navGroup} key={group.label}>
                 <p>{group.label}</p>
-                {categories.map((category) => (
-                  <button
-                    key={category.id}
-                    type="button"
-                    aria-label={category.label}
-                    aria-current={
-                      activeCategory === category.id ? "page" : undefined
-                    }
-                    onClick={() => navigate(category.id)}
-                  >
-                    <span
-                      className={styles.navDot}
-                      data-filled={
-                        categoryFilledCount(category, formProps.profile) > 0
+                {categories.map((category) => {
+                  const count = categoryCount(category, formProps.profile);
+                  return (
+                    <button
+                      key={category.id}
+                      type="button"
+                      aria-label={category.label}
+                      aria-current={
+                        activeCategory === category.id ? "page" : undefined
                       }
-                      aria-hidden="true"
-                    />
-                    <span className={styles.navLabel}>{category.label}</span>
-                    <small>{categoryStatus(category, formProps.profile)}</small>
-                  </button>
-                ))}
+                      onClick={() => navigate(category.id)}
+                    >
+                      <span className={styles.navLabel}>{category.label}</span>
+                      <small data-empty={count === "미입력"}>{count}</small>
+                    </button>
+                  );
+                })}
               </div>
             );
           })}
           {!visibleCategories.length && noResults}
         </nav>
+        {sidebarFooter}
       </aside>
       <section
         className={styles.formPanel}
         aria-labelledby="profile-category-heading"
       >
         <div className={styles.sectionHeading}>
-          <div className={styles.sectionMeta}>
-            <span>
-              {
-                EDITOR_GROUPS.find((group) =>
-                  group.categories.includes(activeCategory),
-                )?.label
-              }
-            </span>
-            <span className={styles.categoryBadge}>
-              {categoryStatus(activeDefinition, formProps.profile)}
-            </span>
-          </div>
           <h2 id="profile-category-heading" tabIndex={-1} ref={heading}>
             {activeDefinition.label}
           </h2>
-          <p className={styles.categoryGuide}>
-            {CATEGORY_GUIDES[activeCategory]}
-          </p>
+          <span
+            className={styles.categoryCount}
+            data-empty={activeCount === "미입력"}
+          >
+            {activeCount}
+          </span>
         </div>
         <div className={styles.formBody}>
           <ProfileForm
@@ -220,7 +204,7 @@ export function ProfileWorkspace({
               type="button"
               onClick={() => navigate(PROFILE_CATEGORIES[activeIndex - 1].id)}
             >
-              <span aria-hidden="true">← </span>이전 항목
+              이전
             </button>
           ) : (
             <span />
@@ -232,12 +216,9 @@ export function ProfileWorkspace({
               onClick={() => navigate(PROFILE_CATEGORIES[activeIndex + 1].id)}
             >
               다음: {PROFILE_CATEGORIES[activeIndex + 1].label}
-              <span aria-hidden="true"> →</span>
             </button>
           ) : (
-            <span className={styles.optionalNote}>
-              필요한 정보는 언제든 다시 수정할 수 있어요.
-            </span>
+            <span />
           )}
         </footer>
       </section>

@@ -5,12 +5,15 @@ import { trackExtensionEvent } from "../../src/analytics/extension-tracker";
 import type { LayoutPreference } from "../../src/profile/model";
 import type { ProfileRepository } from "../../src/profile/profile-repository";
 import { useProfileSaveTracking } from "../../src/analytics/use-profile-save-tracking";
+import { DeveloperSettings } from "./DeveloperSettings";
 import { ProfileWorkspace } from "./ProfileWorkspace";
 import { useProfileEditor } from "../../src/profile/hooks/use-profile-editor";
 import {
   parseProfileImport,
   serializeProfileExport,
 } from "../../src/profile/profile-transfer";
+import { PROFILE_CATEGORIES } from "../../src/profile/field-definitions";
+import { categoryFilledCount } from "../../src/profile/editor-presentation";
 import { ChromeProfileStorage } from "../../src/storage/chrome-profile-storage";
 import styles from "./App.module.css";
 
@@ -24,7 +27,7 @@ interface AppProps {
 }
 
 const SAVE_STATUS_LABEL = {
-  idle: "자동 저장 켜짐",
+  idle: "자동 저장",
   saving: "저장 중",
   saved: "저장됨",
   error: "저장 실패",
@@ -75,12 +78,24 @@ export function App({
       .catch(() => setLayout("a"));
   }, [repository]);
 
-  if (editor.loadStatus === "loading" || layout === null) {
-    return <p className={styles.loading}>프로필을 불러오는 중입니다.</p>;
+  if (editor.loadStatus === "error") {
+    return (
+      <div className={styles.loadError} role="alert">
+        <h1>프로필을 불러오지 못했습니다</h1>
+        <p>저장된 프로필은 변경되지 않았습니다. 다시 불러와 주세요.</p>
+        <button type="button" onClick={editor.retryLoad}>
+          다시 불러오기
+        </button>
+      </div>
+    );
   }
 
-  if (editor.loadStatus === "error") {
-    return <p className={styles.loading}>프로필을 불러오지 못했습니다.</p>;
+  if (editor.loadStatus === "loading" || layout === null) {
+    return (
+      <p className={styles.loading} role="status">
+        프로필을 불러오는 중입니다.
+      </p>
+    );
   }
 
   const changeLayout = (nextLayout: LayoutPreference) => {
@@ -122,6 +137,9 @@ export function App({
       });
     }
   };
+  const filledCategoryCount = PROFILE_CATEGORIES.filter(
+    (category) => categoryFilledCount(category, editor.profile) > 0,
+  ).length;
   const formProps = {
     profile: editor.profile,
     onAddEntry: editor.addEntry,
@@ -134,50 +152,19 @@ export function App({
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <div>
-          <p className={styles.eyebrow}>
-            <img
-              className={styles.brandMark}
-              src="/side-panel-launcher-logo.png"
-              alt=""
-            />
-            CAREER FORM <span className={styles.brandDivider}>/</span>
-            <span className={styles.brandSection}>MY PROFILE</span>
-          </p>
+        <div className={styles.titleGroup}>
           <h1>프로필 관리</h1>
-          <p className={styles.description}>
-            한 번 정리해 두면, 다음 지원이 더 가벼워져요.
-          </p>
+          <span className={styles.titleCount} title="입력한 범주 / 전체 범주">
+            {filledCategoryCount}/{PROFILE_CATEGORIES.length}
+          </span>
         </div>
         <div className={styles.toolbar}>
-          <div className={styles.transferActions}>
-            <button type="button" onClick={exportProfile}>
-              내보내기
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                track("profile_import_clicked", { surface: "options" });
-                importInput.current?.click();
-              }}
-            >
-              가져오기
-            </button>
-            <input
-              ref={importInput}
-              className={styles.importInput}
-              type="file"
-              accept=".json,application/json"
-              aria-label="프로필 JSON 파일"
-              onChange={(event) => {
-                const file = event.currentTarget.files?.[0];
-                event.currentTarget.value = "";
-                if (file) void importProfile(file);
-              }}
-            />
-          </div>
-          <div className={styles.saveState} role="status" aria-live="polite">
-            <span data-status={editor.saveStatus} />
+          <div
+            className={styles.saveState}
+            data-status={editor.saveStatus}
+            role="status"
+            aria-live="polite"
+          >
             {SAVE_STATUS_LABEL[editor.saveStatus]}
             {editor.saveStatus === "error" && (
               <button type="button" onClick={() => void editor.retrySave()}>
@@ -185,6 +172,36 @@ export function App({
               </button>
             )}
           </div>
+          <button
+            className={styles.transferButton}
+            type="button"
+            onClick={exportProfile}
+          >
+            내보내기
+          </button>
+          <button
+            className={styles.transferButton}
+            type="button"
+            onClick={() => {
+              track("profile_import_clicked", { surface: "options" });
+              importInput.current?.click();
+            }}
+          >
+            가져오기
+          </button>
+          <input
+            ref={importInput}
+            className={styles.importInput}
+            type="file"
+            tabIndex={-1}
+            accept=".json,application/json"
+            aria-label="프로필 JSON 파일"
+            onChange={(event) => {
+              const file = event.currentTarget.files?.[0];
+              event.currentTarget.value = "";
+              if (file) void importProfile(file);
+            }}
+          />
         </div>
       </header>
 
@@ -233,9 +250,11 @@ export function App({
       )}
 
       <div className={styles.workspaceToolbar}>
-        <p>
-          필요한 정보만 입력하세요.{" "}
-          <span>변경 내용은 이 브라우저에 자동 저장됩니다.</span>
+        <p
+          className={styles.storageLabel}
+          title="Chrome 로컬 저장소 · 같은 기기 사용자에게 보일 수 있음"
+        >
+          이 브라우저에 저장 (암호화 안 됨)
         </p>
         <div className={styles.layoutSwitch} aria-label="프로필 레이아웃 선택">
           {(["a", "b"] as const).map((candidate) => (
@@ -257,17 +276,11 @@ export function App({
         </p>
       )}
 
-      <ProfileWorkspace layout={layout} formProps={formProps} />
-      <footer className={styles.pageFooter}>
-        <span>CAREER FORM</span>
-        <details className={styles.storageNote}>
-          <summary>내 정보는 암호화 없이 이 브라우저에 저장돼요</summary>
-          <p>
-            프로필은 암호화 없이 Chrome 로컬 저장소에 보관됩니다. 같은 브라우저
-            프로필이나 기기에 접근할 수 있는 사람에게 보일 수 있습니다.
-          </p>
-        </details>
-      </footer>
+      <ProfileWorkspace
+        layout={layout}
+        formProps={formProps}
+        sidebarFooter={<DeveloperSettings />}
+      />
     </div>
   );
 }

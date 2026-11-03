@@ -17,6 +17,7 @@ const boundary = vi.hoisted(() => ({
   preparation: vi.fn(),
   fields: vi.fn(),
   load: vi.fn(),
+  loadPanelFont: vi.fn(),
 }));
 vi.mock("wxt/browser", () => ({
   browser: {
@@ -34,6 +35,9 @@ vi.mock("wxt/utils/define-content-script", () => ({
 }));
 vi.mock("wxt/utils/content-script-ui/shadow-root", () => ({
   createShadowRootUi: boundary.createUi,
+}));
+vi.mock("../../src/extension/panel-font", () => ({
+  loadPanelFont: boundary.loadPanelFont,
 }));
 vi.mock("../../src/autofill/api/runtime-client", () => ({
   RuntimeAnalysisApiClient: class {
@@ -152,6 +156,17 @@ function panel() {
 // Catches splitting the workflow into a second Shadow DOM, remounts on messages,
 // and an old deferred close removing a newly reopened panel.
 describe("content script panel lifecycle", () => {
+  it("loads the panel font when the panel mounts, without waiting for it", async () => {
+    boundary.loadPanelFont.mockReturnValue(new Promise(() => undefined));
+    await start();
+    expect(boundary.loadPanelFont).not.toHaveBeenCalled();
+
+    await send(OPEN_IN_PAGE_PROFILE_PANEL_MESSAGE);
+
+    expect(boundary.loadPanelFont).toHaveBeenCalledTimes(1);
+    expect(shells[0]!.mounted).toBe(true);
+  });
+
   it("keeps the panel open while the page accepts clicks, focus, and manual edits", async () => {
     const input = document.createElement("input");
     input.setAttribute("aria-label", "지원서 직접 입력");
@@ -186,7 +201,9 @@ describe("content script panel lifecycle", () => {
   it("starts autofill inside the existing profile panel without another UI root", async () => {
     await start();
     await send(OPEN_IN_PAGE_PROFILE_PANEL_MESSAGE);
+    fireEvent.click(await panel().findByRole("tab", { name: "내 정보" }));
     await panel().findByText("fixture@example.test");
+    fireEvent.click(panel().getByRole("tab", { name: "자동 기입" }));
     fireEvent.click(panel().getByRole("button", { name: "자동 기입" }));
     await waitFor(() => expect(boundary.preparation).toHaveBeenCalledOnce());
     expect(shells).toHaveLength(1);
@@ -217,6 +234,7 @@ describe("content script panel lifecycle", () => {
       });
     await start();
     await send(TOGGLE_IN_PAGE_PROFILE_PANEL_MESSAGE);
+    fireEvent.click(await panel().findByRole("tab", { name: "내 정보" }));
     await panel().findByText("fixture@example.test");
     expect(shells[0]!.mounted).toBe(true);
 

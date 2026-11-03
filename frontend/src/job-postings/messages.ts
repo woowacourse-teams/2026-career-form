@@ -8,8 +8,6 @@ export type PostingCommand =
       type: typeof POSTING_MESSAGE;
       action: "save";
       input: PostingInput;
-      id?: string;
-      version?: number;
     }
   | {
       type: typeof POSTING_MESSAGE;
@@ -54,8 +52,8 @@ export function parsePostingMessage(
   if (
     value.action === "save" &&
     validInput(value.input) &&
-    ((value.id === undefined && value.version === undefined) ||
-      validIdentity(value))
+    value.id === undefined &&
+    value.version === undefined
   )
     return value as unknown as PostingCommand;
   if (

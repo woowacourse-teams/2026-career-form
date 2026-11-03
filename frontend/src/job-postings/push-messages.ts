@@ -16,7 +16,6 @@ const pushActions = [
   "test",
   "record",
   "later",
-  "autosave",
 ] as const;
 export type PushAction = (typeof pushActions)[number];
 const visibilityAnswers: readonly VisibilityAnswer[] = ["seen", "not_seen"];
@@ -25,22 +24,20 @@ export type RecordSource = (typeof recordSources)[number];
 export type PushCommand =
   | {
       type: typeof PUSH_MESSAGE;
-      action: Exclude<PushAction, "record" | "autosave">;
+      action: Exclude<PushAction, "record">;
     }
   | {
       type: typeof PUSH_MESSAGE;
       action: "record";
       answer: VisibilityAnswer;
       source: RecordSource;
-    }
-  | { type: typeof PUSH_MESSAGE; action: "autosave"; enabled: boolean };
+    };
 export interface PushStateView {
   enabled: boolean;
   supported: boolean;
   status: PushStatus | null;
   permission: NotificationPermission;
   visibility: VisibilityState;
-  autoSave: boolean;
   unread: number;
 }
 export type PushResponse =
@@ -92,9 +89,5 @@ export function parsePushMessage(value: unknown): PushCommand | undefined {
       ? { type: PUSH_MESSAGE, action, answer, source }
       : undefined;
   }
-  if (action === "autosave")
-    return typeof value.enabled === "boolean"
-      ? { type: PUSH_MESSAGE, action, enabled: value.enabled }
-      : undefined;
   return { type: PUSH_MESSAGE, action };
 }

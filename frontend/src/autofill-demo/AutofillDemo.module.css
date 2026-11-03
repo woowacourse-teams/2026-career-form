@@ -1,47 +1,65 @@
 .screen {
   display: grid;
   align-content: start;
-  gap: 15px;
+  gap: 11px;
   min-height: 100%;
-  padding: 18px 16px;
+  padding: 20px;
   background: var(--color-surface);
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: -0.224px;
 }
 .resultScreen {
-  gap: 12px;
-  padding: 16px;
+  gap: 20px;
+  padding: 20px;
 }
 .resultTitle {
   margin: 0;
-  font-size: 12px;
+  font-size: 17px;
+  line-height: 25px;
+  letter-spacing: -0.374px;
   font-weight: 600;
-  color: var(--color-text-muted);
+  color: var(--color-text-strong);
 }
 .addressResult {
-  font-size: 12px;
   color: var(--color-text-muted);
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: -0.224px;
 }
 .addressResult p {
   margin: 8px 0 0;
 }
 
+.header {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .header span {
-  color: var(--color-action);
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  letter-spacing: -0.224px;
 }
 
 .header h2 {
-  margin: 5px 0 0;
-  color: var(--color-action-strong);
-  font-size: 22px;
+  margin: 0;
+  color: var(--color-text-strong);
+  font-size: 17px;
+  line-height: 25px;
+  letter-spacing: -0.374px;
+  font-weight: 600;
 }
 
 .lead {
   margin: 0;
   color: var(--color-text-muted);
-  font-size: 13px;
-  line-height: 1.55;
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: -0.224px;
 }
 
 .analysisGraphic {
@@ -148,32 +166,31 @@
 .safety,
 .exceptionCard {
   margin: 0;
-  border: 1px solid var(--color-accent);
   border-radius: var(--radius-control);
-  padding: 12px;
-  color: var(--color-action-strong);
-  background: var(--color-accent-soft);
-  font-size: 12px;
+  padding: 11px 15px;
+  color: var(--color-warning);
+  background: var(--color-warning-soft);
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .preparationCard {
   display: grid;
   gap: 6px;
-  border: 1px solid var(--color-border);
   border-radius: var(--radius-card);
   padding: 15px;
   background: var(--color-surface);
 }
 
 .preparationCard > strong {
-  color: var(--color-action-strong);
+  color: var(--color-text-strong);
   font-size: 16px;
 }
 
 .preparationCard > span,
 .preparationCard small {
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .preparationCard ul {
@@ -192,7 +209,7 @@
   border-radius: 9px;
   padding: 9px 10px;
   background: var(--color-accent-soft);
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .preparationCard li[data-runnable="false"] {
@@ -201,16 +218,24 @@
 
 .primary,
 .actions button,
-.linkButton {
-  border-radius: var(--radius-control);
-  padding: 11px 13px;
+.linkButton,
+.textButton,
+.grayButton {
+  min-height: 44px;
+  border-radius: 980px;
+  padding: 11px 21px;
   font: inherit;
-  font-weight: 800;
+  font-size: 17px;
+  font-weight: 400;
+  letter-spacing: -0.374px;
+  line-height: 1;
   cursor: pointer;
 }
 
 .primary {
-  border: 1px solid var(--color-brand-hover);
+  justify-self: center;
+  width: fit-content;
+  border: 0;
   color: var(--color-on-brand);
   background: var(--color-brand);
 }
@@ -219,11 +244,64 @@
   background: var(--color-brand-hover);
 }
 
+/* The primary action stays reachable at the panel bottom while content scrolls. */
+.screen > .primary:last-child {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  box-shadow: 0 0 0 8px var(--color-surface);
+}
+
+/* Bottom action bar of a scrolling screen; the bleed cancels the screen padding. */
+.act {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  display: flex;
+  justify-content: center;
+  margin: 0 -20px -20px;
+  border-top: 1px solid var(--color-border);
+  padding: 11px 20px 20px;
+  background: var(--color-surface);
+}
+
 .linkButton,
 .actions button:not(.primary) {
-  border: 1px solid var(--color-border);
+  border: 0;
+  color: var(--color-text);
+  background: var(--color-accent-soft);
+}
+
+/* Secondary action: text only, no border or fill. */
+.textButton {
+  border: 0;
   color: var(--color-action-strong);
-  background: var(--color-surface);
+  background: transparent;
+}
+
+.textButton:hover:not(:disabled) {
+  background: var(--color-accent-soft);
+}
+
+/* Outline pill for the single action of an informational screen. */
+.grayButton {
+  border: 1px solid var(--color-action-strong);
+  color: var(--color-action-strong);
+  background: transparent;
+}
+
+.grayButton:hover:not(:disabled) {
+  background: var(--color-accent-hover);
+}
+
+.primary:focus-visible,
+.textButton:focus-visible,
+.grayButton:focus-visible,
+.actions button:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px #fff,
+    0 0 0 4px var(--color-action);
 }
 
 .reviewGroups,
@@ -258,14 +336,14 @@
 }
 
 .reviewGroupHeader h3 span {
-  color: var(--color-action);
-  font-size: 11px;
+  color: var(--color-action-strong);
+  font-size: 14px;
 }
 
 .reviewGroupHeader p {
   margin-top: 4px;
   color: var(--color-text-muted);
-  font-size: 10px;
+  font-size: 14px;
 }
 
 .reviewGroup .reviewList {
@@ -312,14 +390,14 @@
 .reviewCopy small {
   overflow: hidden;
   color: var(--color-text-muted);
-  font-size: 11px;
+  font-size: 14px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .reviewItem em {
   color: var(--color-action-strong);
-  font-size: 10px;
+  font-size: 14px;
   font-style: normal;
   font-weight: 900;
 }
@@ -327,12 +405,13 @@
 .reviewAction {
   grid-column: 1 / -1;
   justify-self: start;
+  min-height: 32px;
   border: 1px solid var(--color-border-strong);
   border-radius: 999px;
   padding: 6px 10px;
   background: var(--color-surface);
   color: var(--color-text);
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 800;
 }
 
@@ -343,26 +422,28 @@
 
 .countCard {
   display: grid;
-  gap: 7px;
+  gap: 8px;
   border-radius: var(--radius-card);
-  padding: 24px;
-  color: var(--color-action-strong);
-  background: var(--color-accent-soft);
+  padding: 20px;
+  color: var(--color-text-strong);
+  background: var(--color-surface-muted);
   text-align: center;
 }
 
 .countCard strong {
   font-size: 28px;
+  line-height: 32px;
+  font-weight: 600;
 }
 .countCard span {
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .boundaries {
   margin: 0;
   padding-left: 22px;
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.8;
 }
 
@@ -402,7 +483,7 @@
 .resultItem p {
   margin: 0;
   color: var(--color-text-muted);
-  font-size: 11px;
+  font-size: 14px;
 }
 
 .resultItem > p:not(.resultValue) {
@@ -422,7 +503,7 @@
   border-radius: var(--radius-card);
   padding: 18px;
   background: var(--color-surface);
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .progressList strong {
@@ -441,7 +522,6 @@
 .resultGrid div {
   display: grid;
   gap: 4px;
-  border: 1px solid var(--color-border);
   border-radius: var(--radius-card);
   padding: 18px 10px;
   background: var(--color-surface);
@@ -449,12 +529,12 @@
 }
 
 .resultGrid strong {
-  color: var(--color-action-strong);
+  color: var(--color-text-strong);
   font-size: 24px;
 }
 .resultGrid span {
   color: var(--color-text-muted);
-  font-size: 11px;
+  font-size: 14px;
 }
 
 .exceptionTabs {
@@ -465,12 +545,13 @@
 
 .exceptionTabs button {
   flex: none;
+  min-height: 32px;
   border: 1px solid var(--color-border);
   border-radius: 999px;
   padding: 6px 9px;
   color: var(--color-text-muted);
   background: var(--color-surface);
-  font-size: 10px;
+  font-size: 14px;
   cursor: pointer;
 }
 
@@ -486,6 +567,7 @@
 }
 
 .unsupportedScreen {
+  background: var(--color-surface);
   align-content: center;
   justify-items: center;
   gap: 12px;
@@ -500,6 +582,151 @@
 
 .unsupportedTitle {
   margin: 0;
-  color: var(--color-action-strong);
-  font-size: 18px;
+  color: var(--color-text-strong);
+  font-size: 17px;
+  line-height: 25px;
+  letter-spacing: -0.374px;
+  font-weight: 600;
+}
+
+.unsupportedScreen .grayButton {
+  width: auto;
+}
+
+/* Shared error screen: icon, title, cause and action, then the buttons. */
+.errorScreen {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  background: var(--color-surface);
+}
+
+.errorBody {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 20px 20px;
+  text-align: center;
+}
+
+.errorIcon {
+  display: grid;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 20px;
+  place-items: center;
+  border-radius: 50%;
+  /* DESIGN.md secondary text; the theme has no token for it. */
+  color: #515154;
+  background: var(--color-surface-muted);
+}
+
+.errorTitle {
+  margin: 0 0 8px;
+  color: var(--color-text-strong);
+  font-size: 17px;
+  line-height: 25px;
+  letter-spacing: -0.374px;
+  font-weight: 600;
+}
+
+.errorDescription {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: -0.224px;
+}
+
+.errorSummary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 11px;
+  width: 100%;
+  margin-top: 20px;
+}
+
+.errorSummary > div {
+  border-radius: var(--radius-card);
+  padding: 15px;
+  background: var(--color-surface-muted);
+}
+
+.errorSummary strong {
+  display: block;
+  color: var(--color-text-strong);
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 32px;
+  font-variant-numeric: tabular-nums;
+}
+
+.errorSummary strong[data-tone="warning"] {
+  color: var(--color-danger-text);
+}
+
+.errorSummary span {
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+.errorDetails {
+  width: 100%;
+  margin-top: 20px;
+  border-radius: var(--radius-control);
+  padding: 8px 15px;
+  background: var(--color-surface-muted);
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: -0.224px;
+  text-align: left;
+}
+
+.errorDetails summary {
+  color: var(--color-text-muted);
+  line-height: 32px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.errorDetails pre {
+  margin: 8px 0 0;
+  font-family: ui-monospace, Consolas, monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.errorFooter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 0 20px 20px;
+}
+
+.addressResult summary,
+.resultScreen summary {
+  line-height: 32px;
+}
+
+.resultScreen > section {
+  display: grid;
+  gap: 8px;
+}
+
+.resultScreen > section h3 {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.resultScreen > section p,
+.resultScreen > section ul {
+  margin: 0;
+}
+
+.resultScreen > section ul {
+  padding-left: 18px;
 }

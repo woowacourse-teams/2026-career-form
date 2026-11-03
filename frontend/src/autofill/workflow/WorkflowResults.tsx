@@ -70,22 +70,32 @@ export function WorkflowResults({
   }
   const activeTab =
     selectedTab ?? (pending.length > 0 ? "pending" : "completed");
+  const noFieldResults = completed.length === 0 && pending.length === 0;
   return (
     <section className={styles.results}>
       {/* Keep scoped selectors with their markup when entry CSS is fetched later. */}
       <style>{resultCss}</style>
-      <div className={styles.summary}>
+      <div
+        className={`${styles.summary} ${noFieldResults ? "" : styles.visuallyHidden}`}
+      >
         <div className={styles.summaryText} role="status" aria-atomic="true">
-          <h3>자동 기입을 마쳤어요</h3>
+          <h3>
+            {noFieldResults
+              ? operatedCategories?.length
+                ? "선택·검색 결과를 확인해 주세요"
+                : "자동 기입으로 바뀐 값이 없어요"
+              : "자동 기입을 마쳤어요"}
+          </h3>
         </div>
       </div>
-      <div className={styles.counts} role="tablist" aria-label="기입 결과 구분">
+      <div className={styles.tiles} role="tablist" aria-label="기입 결과 구분">
         {(["pending", "completed"] as const).map((tab, index) => (
           <button
             key={tab}
             type="button"
             role="tab"
             data-state={tab}
+            data-count={tab === "pending" ? pending.length : completed.length}
             id={`${tabsId}-${tab}-tab`}
             aria-controls={`${tabsId}-${tab}-panel`}
             aria-selected={activeTab === tab}
@@ -169,7 +179,11 @@ export function WorkflowResults({
             operatedCategories={operatedCategories}
           />
         ) : (
-          <p className={styles.empty}>입력 완료된 항목이 없어요.</p>
+          <p className={styles.empty}>
+            {noFieldResults
+              ? "수동 복사로 돌아가 필요한 값을 복사해 주세요."
+              : "입력 완료된 항목이 없어요."}
+          </p>
         )}
       </div>
     </section>

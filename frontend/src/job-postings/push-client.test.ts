@@ -47,7 +47,6 @@ const state = {
   status: { code: "registered", updatedAt: 1, attempts: 0 },
   permission: "granted",
   visibility: { result: "unknown" },
-  autoSave: true,
   unread: 0,
 };
 
@@ -74,13 +73,17 @@ describe("push client", () => {
       state: { enabled: true, supported: true, status: null },
     }));
     expect(await code(partial.client.state())).toBe("INVALID_RESPONSE");
+    const stale = setup(() => ({
+      ok: true,
+      state: { ...state, autoSave: false },
+    }));
+    expect(await stale.client.state()).toEqual(state);
   });
-  it("알림 테스트, 응답 기록, 나중에, 자동 저장 설정 메시지를 보낸다", async () => {
+  it("알림 테스트, 응답 기록, 나중에 메시지를 보낸다", async () => {
     const { client, sent } = setup(() => ({ ok: true, state }));
     await client.test();
     await client.record("not_seen", "card");
     await client.later();
-    await client.setAutoSave(false);
     expect(sent).toEqual([
       { type: "careerForm.push", action: "test" },
       {
@@ -90,7 +93,6 @@ describe("push client", () => {
         source: "card",
       },
       { type: "careerForm.push", action: "later" },
-      { type: "careerForm.push", action: "autosave", enabled: false },
     ]);
   });
   it("공지함 응답의 유효한 공고만 돌려주고 오류 코드를 그대로 전달한다", async () => {

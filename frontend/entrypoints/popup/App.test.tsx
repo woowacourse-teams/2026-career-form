@@ -1,9 +1,12 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+import { PROFILE_CATEGORIES } from "../../src/profile/field-definitions";
 import { createEmptyProfile } from "../../src/profile/model";
 import type { ProfileRepository } from "../../src/profile/profile-repository";
 import { App } from "./App";
+
+const CATEGORY_COUNT = PROFILE_CATEGORIES.length;
 
 function createRepository(): ProfileRepository {
   const profile = createEmptyProfile();
@@ -17,6 +20,29 @@ function createRepository(): ProfileRepository {
   };
 }
 
+function completeRepository(): ProfileRepository {
+  const profile = createEmptyProfile();
+  for (const category of PROFILE_CATEGORIES) {
+    const section = category.sections[0];
+    const field = section.fields.find(
+      (candidate) => !["select", "date"].includes(candidate.inputType),
+    );
+    if (!field) throw new Error(`No text field in ${category.id}`);
+    const values = { [field.id]: "비식별 값" };
+    const categoryValues = profile[category.id];
+    if (Array.isArray(categoryValues)) {
+      categoryValues.push({
+        id: `${category.id}-1`,
+        sectionId: section.id,
+        values,
+      });
+    } else {
+      Object.assign(categoryValues, values);
+    }
+  }
+  return { ...createRepository(), load: vi.fn(async () => profile) };
+}
+
 describe("popup App", () => {
   it("shows readiness without exposing profile values", async () => {
     render(
@@ -27,7 +53,7 @@ describe("popup App", () => {
     );
 
     expect(
-      await screen.findByText("10개 범주 중 2개 준비됨"),
+      await screen.findByText(`${CATEGORY_COUNT}개 범주 중 2개 준비됨`),
     ).toBeInTheDocument();
     expect(
       screen.queryByText("화면에 보이면 안 되는 값"),
@@ -48,7 +74,7 @@ describe("popup App", () => {
         closePopup={closePopup}
       />,
     );
-    await screen.findByText("10개 범주 중 2개 준비됨");
+    await screen.findByText(`${CATEGORY_COUNT}개 범주 중 2개 준비됨`);
 
     fireEvent.click(screen.getByRole("button", { name: "지원서 패널 열기" }));
     fireEvent.click(screen.getByRole("button", { name: "프로필 관리" }));
@@ -56,6 +82,21 @@ describe("popup App", () => {
     expect(navigation.openInPageProfilePanel).toHaveBeenCalledOnce();
     expect(navigation.openOptions).toHaveBeenCalledOnce();
     await waitFor(() => expect(closePopup).toHaveBeenCalledTimes(2));
+  });
+
+  it("shows the readiness ratio and keeps both actions without the guide copy", async () => {
+    render(
+      <App
+        repository={createRepository()}
+        navigation={{ openOptions: vi.fn(), openInPageProfilePanel: vi.fn() }}
+      />,
+    );
+
+    expect(await screen.findByText(`2 / ${CATEGORY_COUNT}`)).toBeVisible();
+    expect(
+      screen.getAllByRole("button").map((button) => button.textContent),
+    ).toEqual(["지원서 패널 열기", "프로필 관리"]);
+    expect(screen.queryByRole("contentinfo")).toBeNull();
   });
 
   it("does not present a load failure as an empty profile", async () => {
@@ -72,7 +113,25 @@ describe("popup App", () => {
 
     expect(await screen.findByText("준비 상태 확인 실패")).toBeInTheDocument();
     expect(
-      screen.queryByText("10개 범주 중 0개 준비됨"),
+      screen.queryByText(`${CATEGORY_COUNT}개 범주 중 0개 준비됨`),
     ).not.toBeInTheDocument();
+  });
+
+  it("fills the progress bar to the actual range when every category is ready", async () => {
+    const { container } = render(
+      <App
+        repository={completeRepository()}
+        navigation={{ openOptions: vi.fn(), openInPageProfilePanel: vi.fn() }}
+      />,
+    );
+
+    expect(
+      await screen.findByText(
+        `${CATEGORY_COUNT}개 범주 중 ${CATEGORY_COUNT}개 준비됨`,
+      ),
+    ).toBeInTheDocument();
+    expect(container.querySelector("[aria-hidden] > span[style]")).toHaveStyle({
+      width: "100%",
+    });
   });
 });

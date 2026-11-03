@@ -186,13 +186,15 @@ export function CompletedReview(props: Props) {
   return (
     <section className={styles.completed} aria-label="입력 완료 내역">
       <div className={styles.completedIntro}>
-        <span className={styles.reviewEyebrow}>
+        <span className={styles.visuallyHidden}>
           {checked.length === categories.length
             ? "입력한 내용을 모두 살펴봤어요"
             : "입력은 끝났고, 검토가 남았어요"}
         </span>
-        <h4>제출 전, 입력한 내용을 살펴보세요</h4>
-        <p>
+        <h4 className={styles.visuallyHidden}>
+          제출 전, 입력한 내용을 살펴보세요
+        </h4>
+        <p className={styles.visuallyHidden}>
           구역을 눌러 지원서에서 내용을 살펴보세요. 확인했어요를 누르면 해당
           구역이 접혀요.
         </p>
@@ -200,7 +202,13 @@ export function CompletedReview(props: Props) {
           <span role="status">
             {checked.length} / {categories.length}개 구역 확인
           </span>
-          <span>
+          <span
+            className={
+              checked.length === categories.length
+                ? undefined
+                : styles.visuallyHidden
+            }
+          >
             {checked.length === categories.length
               ? "모두 살펴봤어요"
               : "직접 확인한 구역만 표시돼요"}
@@ -237,7 +245,7 @@ export function CompletedReview(props: Props) {
           );
         })}
       </ul>
-      <p className={styles.completedFootnote}>
+      <p className={styles.visuallyHidden}>
         이 표시는 이번 입력 내용의 검토용이에요. 저장과 제출은 지원서에서 직접
         진행해 주세요.
       </p>

@@ -75,10 +75,9 @@ export async function openInPageProfilePanel(
   await runtime.sendMessage(OPEN_IN_PAGE_PROFILE_PANEL_MESSAGE);
 }
 
-export async function openPostingsPage(create = false): Promise<void> {
+export async function openPostingsPage(): Promise<void> {
   const response: unknown = await browser.runtime.sendMessage({
     type: "careerForm.openPostings",
-    create,
   });
   if (
     !response ||

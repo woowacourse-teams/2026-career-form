@@ -10,7 +10,6 @@ const base: PushStateView = {
   status: { code: "registered", updatedAt: NOW, attempts: 0 },
   permission: "granted",
   visibility: { result: "unknown" },
-  autoSave: true,
   unread: 0,
 };
 function renderCheck(
@@ -90,7 +89,7 @@ describe("VisibilityCheck", () => {
     expect(screen.queryByText(/설정 › 시스템 › 알림/)).not.toBeInTheDocument();
     expect(screen.getByText(/Chrome에서 이 확장의 알림/)).toBeInTheDocument();
     // The settings panel's own notes already say this once.
-    expect(screen.queryByText(/아이콘의 숫자와 공지함/)).toBeNull();
+    expect(screen.queryByText(/아이콘의 숫자와 새 공고 탭/)).toBeNull();
     expect(
       screen.getByRole("button", { name: "다시 테스트" }),
     ).toBeInTheDocument();
@@ -100,7 +99,7 @@ describe("VisibilityCheck", () => {
   });
   it("카드와 온보딩 안내에는 배지·공지함으로 대신 확인할 수 있다는 문장을 둔다", () => {
     renderCheck("onboarding", { ...base, permission: "denied" });
-    expect(screen.getByText(/아이콘의 숫자와 공지함/)).toBeInTheDocument();
+    expect(screen.getByText(/아이콘의 숫자와 새 공고 탭/)).toBeInTheDocument();
   });
   it("Windows에서는 Windows 경로를, 알 수 없는 OS에서는 둘 다 안내한다", () => {
     const denied = { ...base, permission: "denied" as const };

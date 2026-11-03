@@ -172,7 +172,7 @@
 .guideAutofill .nativePanel {
   height: 640px;
 }
-.guideProfile header > div:nth-child(2) button,
+.guideProfile [data-panel-settings],
 .guideAutofill [data-autofill-start] {
   outline: 2px solid #ad5b2f;
   outline-offset: 3px;

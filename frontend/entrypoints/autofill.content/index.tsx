@@ -16,6 +16,8 @@ import {
 } from "../../src/extension/floating-side-panel-launcher";
 import { shouldShowSidePanelLauncher } from "../../src/extension/side-panel-launcher-visibility";
 import { openOptionsPageFromContent } from "../../src/extension/navigation";
+import { loadPanelFont } from "../../src/extension/panel-font";
+import { syncAutofillDebugWithDeveloperMode } from "../../src/autofill/debug/developer-mode";
 import "./style.css";
 
 export default defineContentScript({
@@ -26,6 +28,7 @@ export default defineContentScript({
     let profilePanelPromise:
       ReturnType<typeof createShadowRootUi<Root>> | undefined;
     const controller = createProfilePanelController();
+    ctx.onInvalidated(syncAutofillDebugWithDeveloperMode());
     let openGeneration = 0;
     let invalidated = false;
     let panelOpen = false;
@@ -49,6 +52,7 @@ export default defineContentScript({
         zIndex: 2_147_483_646,
         isolateEvents: true,
         onMount(container) {
+          void loadPanelFont();
           const root = createRoot(container);
           root.render(
             <div className="career-form-in-page-panel">
@@ -57,6 +61,7 @@ export default defineContentScript({
                 pageDocument={document}
                 logoUrl={`chrome-extension://${browser.runtime.id}/side-panel-launcher-logo.png`}
                 unsupportedImageUrl={`chrome-extension://${browser.runtime.id}/unsupported-capybara.jpg`}
+                writingImageUrl={`chrome-extension://${browser.runtime.id}/capybara-writing.png`}
                 closePanel={closeProfilePanel}
                 openOptions={openOptionsPageFromContent}
               />

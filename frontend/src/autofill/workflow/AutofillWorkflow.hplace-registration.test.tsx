@@ -116,7 +116,14 @@ it.each(["preparation", "fields"] as const)(
         }}
       />,
     );
-    expect(await screen.findByText("예외")).toBeVisible();
+    expect(
+      await screen.findByRole("heading", {
+        name:
+          phase === "preparation"
+            ? "자동 기입을 시작하지 못했어요"
+            : "자동 기입을 멈췄어요",
+      }),
+    ).toBeVisible();
     if (phase === "preparation") expect(fields).not.toHaveBeenCalled();
     expect((document.getElementById("name") as HTMLInputElement).value).toBe(
       "",

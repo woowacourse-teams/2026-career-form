@@ -8,6 +8,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { PROFILE_CATEGORIES } from "../../src/profile/field-definitions";
 import { createEmptyProfile } from "../../src/profile/model";
 import type { ProfileRepository } from "../../src/profile/profile-repository";
 import { App } from "./App";
@@ -52,11 +53,64 @@ function schoolsRepository(): ProfileRepository {
   return repository;
 }
 
+/** One saved value in each profile category, built from the category definitions. */
+function everyCategoryRepository(): ProfileRepository {
+  const profile = createEmptyProfile();
+  for (const category of PROFILE_CATEGORIES) {
+    const section = category.sections[0];
+    const field = section.fields.find(
+      (candidate) => !["select", "date"].includes(candidate.inputType),
+    );
+    if (!field) throw new Error(`No text field in ${category.id}`);
+    const values = { [field.id]: `비식별 ${category.id}` };
+    const categoryValues = profile[category.id];
+    if (Array.isArray(categoryValues)) {
+      categoryValues.push({
+        id: `${category.id}-1`,
+        sectionId: section.id,
+        values,
+      });
+    } else {
+      Object.assign(categoryValues, values);
+    }
+  }
+  return { ...createRepository(), load: vi.fn(async () => profile) };
+}
+
+const selectTab = (name: string | RegExp) =>
+  fireEvent.click(screen.getByRole("tab", { name }));
+const openSettings = () =>
+  fireEvent.click(screen.getByRole("button", { name: "설정" }));
+async function showProfile() {
+  selectTab("내 정보");
+  await screen.findByText("copy@example.com");
+}
+
+function nextMutation(node: Node) {
+  return new Promise<void>((resolve, reject) => {
+    const observer = new MutationObserver(() => {
+      clearTimeout(timer);
+      observer.disconnect();
+      resolve();
+    });
+    const timer = setTimeout(() => {
+      observer.disconnect();
+      reject(new Error("the copy status was not updated"));
+    }, 2000);
+    observer.observe(node, {
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
+  });
+}
+
 describe("side panel App", () => {
   it("keeps personal values read-only while retaining copy and profile management", async () => {
     const repository = createRepository();
     const copyText = vi.fn(async () => undefined);
     render(<App repository={repository} copyText={copyText} />);
+    selectTab("내 정보");
     const value = await screen.findByText("지원");
     expect(value.closest("button")).toBeNull();
     fireEvent.click(value);
@@ -65,6 +119,7 @@ describe("side panel App", () => {
       screen.queryByRole("button", { name: /^(수정|저장|취소)$/ }),
     ).toBeNull();
     expect(screen.queryByText("값을 누르면 바로 수정할 수 있어요.")).toBeNull();
+    openSettings();
     expect(screen.getByRole("button", { name: "프로필 관리" })).toBeEnabled();
     fireEvent.click(screen.getByRole("button", { name: "국문 이름 복사" }));
     expect(copyText).toHaveBeenCalledWith("지원");
@@ -82,6 +137,7 @@ describe("side panel App", () => {
       />,
     );
 
+    selectTab("내 정보");
     expect(await screen.findByLabelText("지원 정보 목록")).toHaveAttribute(
       "data-panel-mode",
       "in-page",
@@ -103,7 +159,7 @@ describe("side panel App", () => {
         closePanel={closePanel}
       />,
     );
-    await screen.findByText("copy@example.com");
+    await showProfile();
 
     fireEvent.click(screen.getByRole("button", { name: "닫기" }));
 
@@ -119,8 +175,9 @@ describe("side panel App", () => {
         openOptions={openOptions}
       />,
     );
-    await screen.findByText("copy@example.com");
+    await showProfile();
 
+    openSettings();
     fireEvent.click(screen.getByRole("button", { name: "프로필 관리" }));
 
     expect(openOptions).toHaveBeenCalledOnce();
@@ -137,8 +194,9 @@ describe("side panel App", () => {
         openOptions={openOptions}
       />,
     );
-    await screen.findByText("copy@example.com");
+    await showProfile();
 
+    openSettings();
     fireEvent.click(screen.getByRole("button", { name: "프로필 관리" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
@@ -150,9 +208,10 @@ describe("side panel App", () => {
   it("groups the profile into scannable summary sections", async () => {
     render(<App repository={createRepository()} copyText={vi.fn()} />);
 
+    await showProfile();
     expect(
-      await screen.findByRole("heading", { name: "내 지원 정보" }),
-    ).toBeInTheDocument();
+      screen.queryByRole("heading", { name: "내 지원 정보" }),
+    ).not.toBeInTheDocument();
     expect(screen.queryByText(/개 범주 등록/)).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "기본 인적사항 접기" }),
@@ -180,7 +239,7 @@ describe("side panel App", () => {
 
   it("expands a collapsed group without flattening its fields", async () => {
     render(<App repository={createRepository()} copyText={vi.fn()} />);
-    await screen.findByText("copy@example.com");
+    await showProfile();
 
     fireEvent.click(screen.getByRole("button", { name: "학력 1건 펼치기" }));
 
@@ -194,7 +253,7 @@ describe("side panel App", () => {
 
   it("filters saved fields by category and field labels", async () => {
     render(<App repository={createRepository()} copyText={vi.fn()} />);
-    await screen.findByText("copy@example.com");
+    await showProfile();
 
     fireEvent.change(screen.getByRole("searchbox", { name: "프로필 검색" }), {
       target: { value: "병역" },
@@ -215,7 +274,7 @@ describe("side panel App", () => {
   it("copies a general value only after the user clicks copy", async () => {
     const copyText = vi.fn(async () => undefined);
     render(<App repository={createRepository()} copyText={copyText} />);
-    await screen.findByText("copy@example.com");
+    await showProfile();
 
     expect(copyText).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "이메일주소 복사" }));
@@ -225,7 +284,7 @@ describe("side panel App", () => {
   it("shows a saved military value directly and copies only on request", async () => {
     const copyText = vi.fn(async () => undefined);
     render(<App repository={createRepository()} copyText={copyText} />);
-    await screen.findByText("copy@example.com");
+    await showProfile();
 
     fireEvent.click(
       screen.getByRole("button", { name: "병역, 보훈, 장애와 건강 펼치기" }),
@@ -239,11 +298,12 @@ describe("side panel App", () => {
 
   it("shows the autofill action without an experimental environment gate", async () => {
     render(<App repository={createRepository()} copyText={vi.fn()} />);
-    await screen.findByText("copy@example.com");
+    await showProfile();
 
     expect(
       screen.queryByText("직접 복사하거나 자동 기입을 시작하세요"),
     ).not.toBeInTheDocument();
+    selectTab("자동 기입");
     expect(
       screen.getByRole("button", { name: "자동 기입" }),
     ).toBeInTheDocument();
@@ -258,28 +318,34 @@ describe("side panel App", () => {
         openAutofill={openAutofill}
       />,
     );
-    await screen.findByText("copy@example.com");
+    await showProfile();
 
+    selectTab("자동 기입");
     fireEvent.click(screen.getByRole("button", { name: "자동 기입" }));
 
     expect(openAutofill).toHaveBeenCalledOnce();
     expect(
       screen.queryByRole("dialog", { name: "지원서 자동 기입" }),
     ).not.toBeInTheDocument();
+    selectTab("내 정보");
     expect(screen.getByText("copy@example.com")).toBeInTheDocument();
   });
 
   it("keeps the autofill action outside the scrollable profile list", async () => {
     render(<App repository={createRepository()} copyText={vi.fn()} />);
-    await screen.findByText("copy@example.com");
+    await showProfile();
 
     const profileList = screen.getByRole("main", {
       name: "지원 정보 목록",
     });
-    const autofillButton = screen.getByRole("button", { name: "자동 기입" });
+    expect(
+      within(profileList).queryByRole("button", { name: "자동 기입" }),
+    ).toBeNull();
 
-    expect(profileList).not.toContainElement(autofillButton);
-    expect(autofillButton.closest("header")).not.toBeNull();
+    selectTab("자동 기입");
+    const autofillButton = screen.getByRole("button", { name: "자동 기입" });
+    expect(autofillButton.closest("main")).toBeNull();
+    expect(screen.getByRole("tabpanel")).toContainElement(autofillButton);
   });
 
   it("reports when the current webpage cannot open the autofill overlay", async () => {
@@ -293,8 +359,9 @@ describe("side panel App", () => {
         openAutofill={openAutofill}
       />,
     );
-    await screen.findByText("copy@example.com");
+    await showProfile();
 
+    selectTab("자동 기입");
     fireEvent.click(screen.getByRole("button", { name: "자동 기입" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
@@ -309,6 +376,7 @@ describe("side panel App", () => {
       throw new Error("storage unavailable");
     });
     render(<App repository={repository} copyText={vi.fn()} />);
+    selectTab("내 정보");
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "프로필을 불러오지 못했습니다",
@@ -329,7 +397,7 @@ describe("side panel App", () => {
     profile.military.militaryStatus = "military-status:served";
     const copyText = vi.fn(async () => undefined);
     render(<App repository={repository} copyText={copyText} />);
-    await screen.findByText("copy@example.com");
+    await showProfile();
 
     fireEvent.click(screen.getByRole("button", { name: "학력 1건 펼치기" }));
     expect(screen.getByText("주간")).toBeInTheDocument();
@@ -351,7 +419,7 @@ describe("side panel App", () => {
   it("고등학교와 대학교를 항목별 소제목으로 나눠 보여 준다", async () => {
     const copyText = vi.fn(async () => undefined);
     render(<App repository={schoolsRepository()} copyText={copyText} />);
-    await screen.findByText("copy@example.com");
+    await showProfile();
 
     fireEvent.click(screen.getByRole("button", { name: "학력 2건 펼치기" }));
 
@@ -375,7 +443,7 @@ describe("side panel App", () => {
 
   it("검색 결과에서도 학교별 구분을 유지한다", async () => {
     render(<App repository={schoolsRepository()} copyText={vi.fn()} />);
-    await screen.findByText("copy@example.com");
+    await showProfile();
 
     fireEvent.change(screen.getByRole("searchbox", { name: "프로필 검색" }), {
       target: { value: "학교명" },
@@ -389,7 +457,7 @@ describe("side panel App", () => {
 
   it("반복 항목이 아닌 값은 소제목 없이 기존 버튼 이름을 유지한다", async () => {
     render(<App repository={schoolsRepository()} copyText={vi.fn()} />);
-    await screen.findByText("copy@example.com");
+    await showProfile();
 
     const copy = screen.getByRole("button", { name: "이메일주소 복사" });
     expect(copy.closest('[role="group"]')).toBeNull();
@@ -400,7 +468,7 @@ describe("side panel App", () => {
       throw new Error("clipboard unavailable");
     });
     render(<App repository={createRepository()} copyText={copyText} />);
-    await screen.findByText("copy@example.com");
+    await showProfile();
 
     fireEvent.click(screen.getByRole("button", { name: "이메일주소 복사" }));
 
@@ -411,25 +479,22 @@ describe("side panel App", () => {
   });
 });
 
-it("공고 관리 진입을 하나로 합치고 자동 기입 앞에 배치한다", async () => {
+it("공고 관리 진입을 마감 공고 탭 하단에 하나로 둔다", async () => {
   const openPostings = vi.fn(async () => undefined);
   render(<App repository={createRepository()} openPostings={openPostings} />);
-  const manage = await screen.findByRole("button", { name: "지원 공고 관리" });
+  selectTab(/마감 공고/);
+  const manage = await screen.findByRole("button", { name: "공고 관리" });
   expect(
     screen.queryByRole("button", { name: "공고 저장" }),
   ).not.toBeInTheDocument();
   expect(
     screen.queryByRole("button", { name: "저장한 공고 보기" }),
   ).not.toBeInTheDocument();
-  const autofill = screen.getByRole("button", { name: "자동 기입" });
-  expect(
-    manage.compareDocumentPosition(autofill) & Node.DOCUMENT_POSITION_FOLLOWING,
-  ).toBeTruthy();
   fireEvent.click(manage);
   expect(openPostings).toHaveBeenCalledWith(false);
 });
 
-it("지원 공고 관리 버튼에 미확인 공고 개수를 보여 주고 저장소 변경에 따라 갱신한다", async () => {
+it("공고 관리 버튼에 미확인 공고 개수를 보여 주고 저장소 변경에 따라 갱신한다", async () => {
   let notify: ((count: number) => void) | undefined;
   render(
     <App
@@ -443,10 +508,140 @@ it("지원 공고 관리 버튼에 미확인 공고 개수를 보여 주고 저�
       }}
     />,
   );
-  const manage = await screen.findByRole("button", { name: /지원 공고 관리/ });
+  selectTab(/마감 공고/);
+  const manage = await screen.findByRole("button", { name: /공고 관리/ });
   await waitFor(() =>
-    expect(manage).toHaveAccessibleName("지원 공고 관리 새 공고 3건"),
+    expect(manage).toHaveAccessibleName("공고 관리 새 공고 3건"),
   );
   act(() => notify?.(0));
-  await waitFor(() => expect(manage).toHaveAccessibleName("지원 공고 관리"));
+  await waitFor(() => expect(manage).toHaveAccessibleName("공고 관리"));
+});
+
+it("shows every profile category exactly once across the panel groups", async () => {
+  render(<App repository={everyCategoryRepository()} copyText={vi.fn()} />);
+  selectTab("내 정보");
+  await screen.findByText("비식별 personal");
+
+  const list = screen.getByRole("main", { name: "지원 정보 목록" });
+  for (const toggle of within(list).getAllByRole("button", {
+    expanded: false,
+  })) {
+    fireEvent.click(toggle);
+  }
+
+  const rows = screen.getAllByRole("article");
+  expect(rows).toHaveLength(PROFILE_CATEGORIES.length);
+  for (const category of PROFILE_CATEGORIES) {
+    expect(
+      rows.filter((row) => within(row).queryByText(`비식별 ${category.id}`)),
+    ).toHaveLength(1);
+  }
+});
+
+it("searches the careers, publications and compensation categories by label, not by value", async () => {
+  const repository = createRepository();
+  const profile = await repository.load();
+  profile.careers = [
+    {
+      id: "career-1",
+      sectionId: "career",
+      values: { companyName: "비식별 회사" },
+    },
+  ];
+  profile.publications = [
+    {
+      id: "pub-1",
+      sectionId: "publicationPatent",
+      values: { title: "비식별 논문" },
+    },
+  ];
+  profile.compensation.desiredPosition = "비식별 직위";
+  const copyText = vi.fn(async () => undefined);
+  render(<App repository={repository} copyText={copyText} />);
+  await showProfile();
+  const search = screen.getByRole("searchbox", { name: "프로필 검색" });
+
+  fireEvent.change(search, { target: { value: "직장명" } });
+  await act(async () => {
+    fireEvent.click(
+      screen.getByRole("button", { name: "직장경력 1 직장명 복사" }),
+    );
+  });
+  expect(copyText).toHaveBeenLastCalledWith("비식별 회사");
+
+  fireEvent.change(search, { target: { value: "제목" } });
+  await act(async () => {
+    fireEvent.click(
+      screen.getByRole("button", { name: "논문·특허 1 제목 복사" }),
+    );
+  });
+  expect(copyText).toHaveBeenLastCalledWith("비식별 논문");
+
+  fireEvent.change(search, { target: { value: "희망직위" } });
+  await act(async () => {
+    fireEvent.click(screen.getByRole("button", { name: "희망직위 복사" }));
+  });
+  expect(copyText).toHaveBeenLastCalledWith("비식별 직위");
+
+  fireEvent.change(search, { target: { value: "비식별 회사" } });
+  expect(screen.queryAllByRole("article")).toHaveLength(0);
+});
+
+it("announces each successful copy politely without the copied value", async () => {
+  const copyText = vi.fn(async () => undefined);
+  render(<App repository={createRepository()} copyText={copyText} />);
+  await showProfile();
+  const status = screen.getByRole("status", { name: "복사 상태" });
+  const copy = screen.getByRole("button", { name: "이메일주소 복사" });
+  expect(status).toBeEmptyDOMElement();
+
+  copy.focus();
+  const first = nextMutation(status);
+  await act(async () => {
+    fireEvent.click(copy);
+  });
+  await first;
+  expect(status).not.toBeEmptyDOMElement();
+  expect(status).not.toHaveTextContent("copy@example.com");
+  expect(copy).toHaveFocus();
+  expect(copy).toHaveAccessibleName("이메일주소 복사");
+
+  const second = nextMutation(status);
+  await act(async () => {
+    fireEvent.click(copy);
+  });
+  await second;
+  expect(copyText).toHaveBeenCalledTimes(2);
+});
+
+it("does not announce a failed copy as a success or duplicate its alert", async () => {
+  const copyText = vi.fn(async () => {
+    throw new Error("clipboard unavailable");
+  });
+  render(<App repository={createRepository()} copyText={copyText} />);
+  await showProfile();
+  const status = screen.getByRole("status", { name: "복사 상태" });
+
+  await act(async () => {
+    fireEvent.click(screen.getByRole("button", { name: "이메일주소 복사" }));
+  });
+
+  await screen.findByRole("alert");
+  expect(screen.getAllByRole("alert")).toHaveLength(1);
+  expect(status).toBeEmptyDOMElement();
+});
+
+it("shows scalar compensation without claiming zero records", async () => {
+  const repository = createRepository();
+  const profile = await repository.load();
+  profile.compensation.desiredPosition = "비식별 직위";
+  render(<App repository={repository} copyText={vi.fn()} />);
+  await showProfile();
+
+  const group = screen.getByRole("button", {
+    name: /직장경력, 논문·특허, 처우/,
+  });
+  expect(group).not.toHaveAccessibleName(/0건/);
+  fireEvent.click(group);
+  expect(screen.getByRole("button", { name: "희망직위 복사" })).toBeVisible();
 });

@@ -19,6 +19,9 @@ import {
   entrySummary,
   FIELD_EXAMPLES,
   FULL_WIDTH_FIELDS,
+  NAME_GROUP_TITLE,
+  NAME_TABLE_COLUMNS,
+  nameTableRows,
 } from "../editor-presentation";
 
 interface ProfileFormProps {
@@ -65,6 +68,52 @@ function fieldValue(field: ProfileFieldDefinition, value: string): string {
     : value;
 }
 
+function NameTable({
+  fields,
+  values,
+  idPrefix,
+  onChange,
+}: {
+  fields: readonly ProfileFieldDefinition[];
+  values: Record<string, string>;
+  idPrefix: string;
+  onChange(fieldId: string, value: string): void;
+}) {
+  return (
+    <table className={styles.nameTable} aria-label={NAME_GROUP_TITLE}>
+      <thead>
+        <tr>
+          <td />
+          {NAME_TABLE_COLUMNS.map((column) => (
+            <th scope="col" key={column}>
+              {column}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {nameTableRows(fields).map((row) => (
+          <tr key={row.label}>
+            <th scope="row">{row.label}</th>
+            {row.fields.map((field) => (
+              <td key={field.id}>
+                <input
+                  id={`${idPrefix}-${field.id}`}
+                  aria-label={field.label}
+                  type={field.inputType}
+                  value={values[field.id] ?? ""}
+                  placeholder={field.placeholder ?? FIELD_EXAMPLES[field.id]}
+                  onChange={(event) => onChange(field.id, event.target.value)}
+                />
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
 function Fields({
   section,
   values,
@@ -72,113 +121,139 @@ function Fields({
   identity,
   onChange,
 }: FieldsProps) {
+  const personal = section.id === "personal";
   return (
     <div className={styles.fieldGroups}>
-      {editorFieldGroups(section).map((group) => (
-        <fieldset className={styles.fieldGroup} key={group.title}>
-          {group.title && <legend>{group.title}</legend>}
-          <div className={styles.fieldGrid}>
-            {group.fields
-              .filter(
-                (field) => !field.visibleWhen || field.visibleWhen(values),
-              )
-              .map((field) => {
-                const id = `${idPrefix}-${field.id}`;
-                const options = optionsForField(field, values);
-                const value = values[field.id] ?? "";
-                const catalogKind = catalogKindForField(section.id, field.id);
-                if (catalogKind) {
-                  return (
-                    <div className={styles.field} key={field.id}>
-                      <label className={styles.fieldLabel} htmlFor={id}>
-                        {field.label}
-                      </label>
-                      <CatalogNameInput
-                        id={id}
-                        label={field.label}
-                        kind={catalogKind}
-                        value={value}
-                        identity={identity}
-                        onChange={(name, selection) =>
-                          onChange(field.id, name, selection)
-                        }
-                      />
-                    </div>
-                  );
-                }
-                const hasLegacyValue =
-                  value.length > 0 &&
-                  !options.some((option) => option.value === value);
-                return (
-                  <label
-                    className={`${styles.field} ${field.inputType === "textarea" || FULL_WIDTH_FIELDS.has(field.id) ? styles.fullWidth : ""}`}
-                    htmlFor={id}
-                    key={field.id}
-                  >
-                    <span className={styles.fieldLabel}>
-                      <span>{field.label}</span>
-                    </span>
-                    {field.inputType === "textarea" ? (
-                      <textarea
-                        id={id}
-                        aria-label={field.label}
-                        value={values[field.id] ?? ""}
-                        onChange={(event) =>
-                          onChange(field.id, event.target.value)
-                        }
-                        rows={5}
-                      />
-                    ) : field.inputType === "select" ? (
-                      <select
-                        id={id}
-                        aria-label={field.label}
-                        value={value}
-                        onChange={(event) =>
-                          onChange(field.id, event.target.value)
-                        }
+      {editorFieldGroups(section).map((group) =>
+        personal && group.title === NAME_GROUP_TITLE ? (
+          <NameTable
+            key={group.title}
+            fields={group.fields}
+            values={values}
+            idPrefix={idPrefix}
+            onChange={onChange}
+          />
+        ) : (
+          <fieldset
+            className={`${styles.fieldGroup} ${personal ? styles.personalDetails : ""}`}
+            key={group.title}
+          >
+            {group.title && (
+              <legend className={personal ? styles.srOnly : undefined}>
+                {group.title}
+              </legend>
+            )}
+            <div className={styles.fieldGrid}>
+              {group.fields
+                .filter(
+                  (field) => !field.visibleWhen || field.visibleWhen(values),
+                )
+                .map((field) => {
+                  const id = `${idPrefix}-${field.id}`;
+                  const options = optionsForField(field, values);
+                  const value = values[field.id] ?? "";
+                  const catalogKind = catalogKindForField(section.id, field.id);
+                  if (catalogKind) {
+                    return (
+                      <div
+                        className={`${styles.field} ${styles.fieldTop}`}
+                        key={field.id}
                       >
-                        <option value="">선택하세요</option>
-                        {hasLegacyValue && (
-                          <option value={value}>{`기존 값: ${value}`}</option>
-                        )}
-                        {options.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <>
-                        <input
+                        <label className={styles.fieldLabel} htmlFor={id}>
+                          {field.label}
+                        </label>
+                        <CatalogNameInput
                           id={id}
-                          aria-label={field.label}
-                          type={field.inputType}
-                          value={values[field.id] ?? ""}
-                          placeholder={
-                            field.placeholder ??
-                            (field.id === "grade" &&
-                            section.id !== "languageTest"
-                              ? "등급이 있다면 입력"
-                              : FIELD_EXAMPLES[field.id])
-                          }
-                          inputMode={
-                            field.inputType === "tel" ? "numeric" : undefined
-                          }
-                          onChange={(event) =>
-                            onChange(
-                              field.id,
-                              fieldValue(field, event.target.value),
-                            )
+                          label={field.label}
+                          kind={catalogKind}
+                          value={value}
+                          identity={identity}
+                          onChange={(name, selection) =>
+                            onChange(field.id, name, selection)
                           }
                         />
-                      </>
-                    )}
-                  </label>
-                );
-              })}
-          </div>
-        </fieldset>
-      ))}
+                      </div>
+                    );
+                  }
+                  const hasLegacyValue =
+                    value.length > 0 &&
+                    !options.some((option) => option.value === value);
+                  return (
+                    <label
+                      className={`${styles.field} ${field.inputType === "textarea" ? styles.fieldTop : ""} ${field.inputType === "textarea" || FULL_WIDTH_FIELDS.has(field.id) ? styles.fullWidth : ""}`}
+                      htmlFor={id}
+                      key={field.id}
+                    >
+                      <span className={styles.fieldLabel}>
+                        <span>{field.label}</span>
+                      </span>
+                      {field.inputType === "textarea" ? (
+                        <textarea
+                          id={id}
+                          aria-label={field.label}
+                          value={values[field.id] ?? ""}
+                          onChange={(event) =>
+                            onChange(field.id, event.target.value)
+                          }
+                          rows={5}
+                        />
+                      ) : field.inputType === "select" ? (
+                        <select
+                          id={id}
+                          aria-label={field.label}
+                          value={value}
+                          onChange={(event) =>
+                            onChange(field.id, event.target.value)
+                          }
+                        >
+                          <option value="">선택</option>
+                          {hasLegacyValue && (
+                            <option value={value}>{value}</option>
+                          )}
+                          {options.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <>
+                          <input
+                            id={id}
+                            aria-label={field.label}
+                            type={field.inputType}
+                            max={
+                              field.inputType === "date"
+                                ? "9999-12-31"
+                                : undefined
+                            }
+                            value={values[field.id] ?? ""}
+                            placeholder={
+                              field.placeholder ??
+                              (field.id === "grade" &&
+                              section.id !== "languageTest"
+                                ? "등급이 있다면 입력"
+                                : FIELD_EXAMPLES[field.id])
+                            }
+                            inputMode={
+                              field.inputType === "tel" ? "numeric" : undefined
+                            }
+                            onChange={(event) =>
+                              onChange(
+                                field.id,
+                                fieldValue(field, event.target.value),
+                              )
+                            }
+                          />
+                        </>
+                      )}
+                    </label>
+                  );
+                })}
+            </div>
+          </fieldset>
+        ),
+      )}
     </div>
   );
 }

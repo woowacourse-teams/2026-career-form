@@ -7,6 +7,9 @@
 .sidebar {
   position: relative;
 }
+.panelScope {
+  display: contents;
+}
 /* Until the visitor presses it, the panel's own 자동 기입 button breathes so
    the one thing to click is unmistakable. The pulse stops once pressed. */
 .sidebar[data-trial-stage="ready"] :global([data-autofill-start]) {
