@@ -400,6 +400,10 @@
   }
 }
 
+/* The shared workflow panel paints the page color elsewhere; white here. */
+.workflowMain > * {
+  background: var(--color-surface);
+}
 .workflowMain {
   background: var(--color-surface);
   min-width: 0;

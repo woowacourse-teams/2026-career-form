@@ -67,6 +67,7 @@ import {
 } from "../write/executor";
 import { WorkflowScreens } from "./WorkflowScreens";
 import { WorkflowError, type WorkflowErrorKind } from "./WorkflowError";
+import loadingStyles from "./WorkflowLoading.module.css";
 import { errorDetail, startErrorKind } from "./start-error";
 import { observeQuality } from "../quality/safe-observation";
 import {
@@ -180,7 +181,13 @@ export function AutofillWorkflow(props: WorkflowProps) {
       />
     );
   if (!loaded)
-    return <div role="status">사이트 입력 정책을 확인하고 있어요</div>;
+    return (
+      <div className={loadingStyles.container}>
+        <p className={loadingStyles.status} role="status">
+          사이트 입력 정책을 확인하고 있어요
+        </p>
+      </div>
+    );
   return (
     <PolicyReadyWorkflow
       key={attempt}
