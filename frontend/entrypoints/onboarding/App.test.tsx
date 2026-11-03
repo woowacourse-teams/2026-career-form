@@ -87,7 +87,9 @@ it("공고 안내는 패널 열기, 정보 입력, 완료 단계를 제공하고
   expect(screen.getByText("방법 1 · 페이지의 네모 아이콘")).toBeVisible();
   expect(screen.getByText("방법 2 · Chrome 퍼즐 메뉴")).toBeVisible();
   expect(screen.getByText("01 / 03")).toBeVisible();
-  fireEvent.click(screen.getByRole("button", { name: /새 공고 저장 알아보기/ }));
+  fireEvent.click(
+    screen.getByRole("button", { name: /새 공고 저장 알아보기/ }),
+  );
   expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
     "새 공고를 저장하세요.",
   );

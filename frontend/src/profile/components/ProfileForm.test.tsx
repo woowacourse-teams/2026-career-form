@@ -318,7 +318,7 @@ it("renders a legacy military status as a preserved select option", () => {
   expect(status.tagName).toBe("SELECT");
   expect(status).toHaveValue("legacy-status");
   expect(
-    screen.getByRole("option", { name: "기존 값: legacy-status" }),
+    screen.getByRole("option", { name: "legacy-status" }),
   ).toBeInTheDocument();
 });
 
@@ -428,7 +428,7 @@ describe("ProfileForm name table", () => {
     const gender = screen.getByLabelText("성별");
 
     expect(gender).toHaveValue("미지정");
-    expect(gender).toHaveDisplayValue("기존 값: 미지정");
+    expect(gender).toHaveDisplayValue("미지정");
     expect(onUpdateSingle).not.toHaveBeenCalled();
   });
 });

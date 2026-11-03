@@ -207,7 +207,7 @@ function Fields({
                         >
                           <option value="">선택</option>
                           {hasLegacyValue && (
-                            <option value={value}>{`기존 값: ${value}`}</option>
+                            <option value={value}>{value}</option>
                           )}
                           {options.map((option) => (
                             <option key={option.value} value={option.value}>
