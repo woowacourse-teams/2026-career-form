@@ -3,7 +3,7 @@ import { accessHeaders, clearAccess } from "/quality/access.js";
 import { estimateCost, formatUsd, validRate } from "/evaluations/pricing.js";
 
 // 평가는 항상 현재 데이터셋의 모든 화면으로 한다. 전후 비교는 같은 데이터셋으로 개선 전·후 코드를 각각 돌려 비교한다.
-const DATASET = { id: "generic-matching", version: 3 };
+const DATASET = { id: "generic-matching", version: 4 };
 const COLORS = ["#4e6d90", "#688b7c", "#ac8d68", "#8a6f9e", "#6f8f9e"];
 const PRICE_KEY = "cf-evaluation-model-prices-v1";
 const root = document.getElementById("cf-eval-preview");
@@ -1389,13 +1389,14 @@ function guideView() {
   return box;
 }
 
-const STATE_NAMES = { initial: "처음 화면", "high-school": "고등학교", university: "대학교", ged: "검정고시" };
+const STATE_NAMES = { initial: "처음 화면", "high-school": "고등학교", university: "대학교", ged: "검정고시", "nhn-initial": "NHN 지원서" };
 // 화면 상태 설명. 같은 지원서라도 무엇을 골랐는지에 따라 나타나는 칸이 달라 상태별로 따로 평가한다.
 const STATE_NOTES = {
   initial: "지원서를 처음 연 상태. 아무것도 고르지 않아 학력 행에는 '구분' 선택칸만 있습니다. 준비 단계(조작할 섹션 분류, 학력 구분 선택)만 평가합니다. 칸 채우기는 고른 뒤 펼쳐진 화면에서 평가합니다.",
   "high-school": "학력 구분 '고등학교', 보훈·장애 '대상'을 고른 뒤 펼쳐진 화면. 고등학교 학력 칸과 보훈·장애 상세 칸이 나타납니다.",
   university: "학력 구분 '대학교', 보훈·장애 '대상'을 고른 뒤 펼쳐진 화면. 대학 학력 칸(전공 포함)과 보훈·장애 상세 칸이 나타납니다.",
   ged: "학력 구분 '검정고시'만 고른 화면. 학교·전공 칸 없이 '합격연월' 칸 하나만 나타납니다.",
+  "nhn-initial": "다른 회사(NHN Careers) 지원서 1단계를 처음 연 상태. 드롭다운이 직접 만든 형태라 선택지가 없고, 섹션 제목이 약해 여러 항목이 한 섹션으로 묶입니다. 준비 단계(섹션 분류, 학력 행 추가)와 칸 채우기를 모두 평가합니다. 처음 보는 양식에서의 일반화를 봅니다.",
 };
 const CONTROL_NAMES = { text: "글자", select: "선택", radio: "라디오", checkbox: "체크", textarea: "긴 글", custom: "직접 구현" };
 const CALL_NAMES = { SECTION_CLASSIFY: "섹션 분류", INTERACTION_DECISION: "학력 구분 선택", GENERIC_FIELDS: "칸 매핑" };
@@ -1419,13 +1420,13 @@ function datasetView(selected = 0) {
   const count = (item) => item.sections.reduce((n, group) => n + group.fields.length, 0);
   const head = element("div", undefined, "dataset-head");
   const title = element("div");
-  title.append(element("strong", "우아한형제들 · 공고 R2605009"),
+  title.append(element("strong", "우아한형제들 공고 R2605009 · NHN Careers 프리세일즈 공고"),
     element("span", `화면 ${data.cases.length}개 · 입력 칸 ${data.cases.reduce((n, item) => n + count(item), 0)}개 · 합성 프로필 ${Object.keys(data.profiles).length}명`, "muted"));
   head.append(title, element("span", data.usable ? "평가에 사용 가능" : "검토 필요", data.usable ? "badge ok" : "badge"));
   wrap.append(head);
   const about = element("details", undefined, "dataset-about");
   about.append(element("summary", "이 데이터셋이란"),
-    element("p", "실제 채용 지원서 하나를 개인정보 없이 정제한 화면 모음. 학력 구분·보훈·장애 선택에 따라 나타나는 칸이 달라 화면 상태마다 따로 평가합니다. 모델은 확장프로그램이 실제로 보내는 질문에 답하고, 사람이 검토한 정답과 비교해 채점합니다."));
+    element("p", "실제 채용 지원서 두 곳을 개인정보 없이 정제한 화면 모음. 우아한형제들 지원서는 학력 구분·보훈·장애 선택에 따라 나타나는 칸이 달라 화면 상태마다 따로 평가합니다. 모델은 확장프로그램이 실제로 보내는 질문에 답하고, 사람이 검토한 정답과 비교해 채점합니다."));
   wrap.append(about);
   if (!data.usable && data.rejection) wrap.append(element("p", `미완료 검토: ${data.rejection}`, "muted"));
   const layout = element("div", undefined, "dataset-layout2");

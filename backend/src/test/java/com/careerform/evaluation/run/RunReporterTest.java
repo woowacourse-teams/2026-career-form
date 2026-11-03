@@ -165,6 +165,24 @@ class RunReporterTest {
     }
 
     @Test
+    @DisplayName("준비만 있는 처음 화면은 같은 사이트의 펼쳐진 화면에만 붙고 다른 사이트 화면은 그대로 자동기입 1번이다")
+    void preparationStartJoinsOnlyBranchesOfTheSameSite() {
+        List<CallResultRecord> records = List.of(
+            call(1, "start", 1, CallKind.SECTION_CLASSIFY, CallKind.Stage.PREPARATION, 100, List.of()),
+            call(1, "high", 1, CallKind.GENERIC_FIELDS, CallKind.Stage.MAPPING, 300, List.of()),
+            call(1, "other", 1, CallKind.SECTION_CLASSIFY, CallKind.Stage.PREPARATION, 20, List.of()),
+            call(1, "other", 2, CallKind.GENERIC_FIELDS, CallKind.Stage.MAPPING, 500, List.of()));
+        Map<String, String> sites = Map.of("start", "a", "high", "a", "other", "b");
+
+        RunReport.Flows flows = new RunReporter().report(run(AT, AT, AT.plusSeconds(1)), records, record -> null,
+            sites::get).flows();
+
+        // 사이트 a: 처음(100) + 고등학교(300) = 400. 사이트 b: 처음 화면 없이 520.
+        assertThat(flows.count()).isEqualTo(2);
+        assertThat(flows.time().meanMs()).isEqualTo((400.0 + 520.0) / 2);
+    }
+
+    @Test
     @DisplayName("모든 사례에 칸 매핑이 있으면(이전 데이터셋) 사례 하나가 자동기입 1번이다")
     void everyCompleteCaseIsOneAutofill() {
         List<CallResultRecord> records = List.of(

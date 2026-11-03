@@ -223,8 +223,10 @@ public final class EvaluationRunController {
 
     private RunView view(EvaluationRun run) {
         Map<String, Map<String, String>> truth = truth(run);
+        Map<String, String> sites = new HashMap<>();
+        dataset(run).ifPresent(dataset -> dataset.cases().forEach(c -> sites.put(c.caseId(), c.siteId())));
         return new RunView(run, reporter.report(run, results.list(run.id()),
-            record -> truth.get(record.caseId() + "/" + record.order())));
+            record -> truth.get(record.caseId() + "/" + record.order()), sites::get));
     }
 
     /** 실행 때의 데이터셋 정답표(사례/순서별). 데이터셋을 읽을 수 없거나 해시가 다르면 비어 있다. */

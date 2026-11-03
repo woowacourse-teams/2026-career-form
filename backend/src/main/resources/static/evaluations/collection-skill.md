@@ -8,7 +8,7 @@ description: Career Form 범용 자동기입 AI 평가 데이터셋에 새 공�
 이 문서는 팀원이 자기 AI 에이전트에게 그대로 넘기는 수집 절차다. 저장소의 `AGENTS.md`,
 `harness/policies/dom-snapshot-fixtures.md`, `backend/docs/model-evaluation.md`를 함께 읽는다.
 첫 사례는 우아한형제들 공고 R2605009다(`frontend/fixtures/dom-snapshots/woowahan-r2605009-*`). 현재 데이터셋은
-`generic-matching` v3(처음 화면, 고등학교, 대학교, 검정고시 4개 화면)다. 학력 구분을 고르기 전 처음 화면은 준비 단계만
+`generic-matching` v4(우아한형제들 처음 화면, 고등학교, 대학교, 검정고시 4개 화면 + NHN Careers 지원서 1단계 최초 화면)다. 학력 구분을 고르기 전 처음 화면은 준비 단계만
 채점한다(사례를 만들 때 `preparationOnly`). 실제 제품은 고른 뒤 펼쳐진 화면에서 칸을 채우기 때문이다.
 
 ## 지켜야 할 것

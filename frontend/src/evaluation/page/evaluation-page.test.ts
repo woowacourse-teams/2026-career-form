@@ -108,7 +108,7 @@ const run = {
   versions: {
     provider: "jev",
     model: "jev-latest",
-    datasetVersion: 3,
+    datasetVersion: 4,
     promptVersion: "baseline",
     promptDigest: "d".repeat(64),
     codeVersion: "abc1234",

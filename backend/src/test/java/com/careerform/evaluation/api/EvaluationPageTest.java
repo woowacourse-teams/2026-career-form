@@ -42,7 +42,7 @@ class EvaluationPageTest {
         String skill = read("static/evaluations/collection-skill.md");
         assertThat(skill).contains("실제 지원서 값, 계정, 세션", "요청 JSON을 손으로 쓰지 않는다", "HUMAN_REVIEWED",
             "SOURCE_PIPELINE_VERIFIED", "CF-356-collection-1-structure-stats", "CF-356-collection-2-sanitize",
-            "[비식별]", "https://example.test", "generic-matching` v3", "preparationOnly", "DATASET.version", "항상 전체(`all`)");
+            "[비식별]", "https://example.test", "generic-matching` v4", "preparationOnly", "DATASET.version", "항상 전체(`all`)");
     }
 
     @Test

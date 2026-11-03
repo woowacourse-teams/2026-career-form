@@ -161,6 +161,25 @@ class DatasetLoaderTest {
     }
 
     @Test
+    @DisplayName("저장소의 generic-matching v4는 v3의 4개 화면에 NHN 지원서 화면 하나를 최종 평가용으로 더한다")
+    void repositoryDatasetV4AddsSecondSite() {
+        DatasetLoader loader = new DatasetLoader(DatasetLoader.classpath(getClass().getClassLoader()));
+
+        LoadedDataset dataset = loader.load("generic-matching", 4);
+        LoadedDataset previous = loader.load("generic-matching", 3);
+
+        assertThat(dataset.cases()).extracting(EvaluationCase::siteId).containsOnly("woowahan-recruitment", "nhn-careers");
+        for (EvaluationCase before : previous.cases()) {
+            assertThat(dataset.cases().stream().filter(c -> c.caseId().equals(before.caseId())).findFirst().orElseThrow().calls())
+                .isEqualTo(before.calls());
+        }
+        EvaluationCase nhn = dataset.cases().stream().filter(c -> c.siteId().equals("nhn-careers")).findFirst().orElseThrow();
+        assertThat(nhn.split()).isEqualTo("final");
+        assertThat(nhn.calls()).hasSize(4);
+        assertThat(dataset.casesIn("all")).hasSize(5);
+    }
+
+    @Test
     @DisplayName("분할 all은 데이터셋의 모든 사례이고 요약에도 나온다")
     void allSplitCoversEveryCase() {
         DatasetLoader loader = new DatasetLoader(DatasetLoader.classpath(getClass().getClassLoader()));

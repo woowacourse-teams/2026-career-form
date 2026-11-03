@@ -31,6 +31,14 @@ public final class RunReporter {
      */
     public RunReport report(EvaluationRun run, List<CallResultRecord> records,
         Function<CallResultRecord, Map<String, String>> expected) {
+        return report(run, records, expected, caseId -> null);
+    }
+
+    /**
+     * {@code siteOf}는 사례 ID의 사이트를 돌려주고, 모르면 null이다. 자동기입 1번은 같은 사이트 안에서만 묶는다.
+     */
+    public RunReport report(EvaluationRun run, List<CallResultRecord> records,
+        Function<CallResultRecord, Map<String, String>> expected, Function<String, String> siteOf) {
         Double elapsedSeconds = run.startedAt() == null || run.finishedAt() == null ? null
             : Duration.between(run.startedAt(), run.finishedAt()).toMillis() / 1000.0;
         Map<String, Predicate<CallResultRecord>> stages = new LinkedHashMap<>();
@@ -45,7 +53,7 @@ public final class RunReporter {
             tokens.put(name, tokens(selected));
         });
         return new RunReport(aggregator.aggregate(records.stream().map(CallResultRecord::toCallResult).toList()),
-            performance, tokens, flows(records), timing(run, records), RunService.SCORING_VERSION,
+            performance, tokens, flows(records, siteOf), timing(run, records), RunService.SCORING_VERSION,
             repetitions(records, expected), autofill(records, expected).map(RunReport.Autofill::of).orElse(null),
             stageScores(records, expected), itemsByCall(records));
     }
@@ -154,15 +162,17 @@ public final class RunReporter {
     /**
      * 자동기입 1번(버튼 한 번) 단위로 묶는다. 같은 반복 안에서 칸 매핑이 없는 사례(학력 구분을 고르기 전 처음 화면처럼
      * 준비 단계만 있는 화면)는 실제 흐름의 앞부분이므로, 칸 매핑까지 있는 사례(고른 뒤 펼쳐진 화면)마다 앞에 붙여
-     * 하나의 자동기입으로 본다. 모든 사례에 칸 매핑이 있으면 사례 하나가 자동기입 1번이다.
+     * 하나의 자동기입으로 본다. 처음 화면은 같은 사이트(지원서)의 화면에만 붙인다. 모든 사례에 칸 매핑이 있으면 사례 하나가
+     * 자동기입 1번이다.
      * 시간은 호출 시간의 합, 토큰은 관측한 시도의 합이고, 어느 호출이든 실패하면 실패한 자동기입이다.
      */
-    private static RunReport.Flows flows(List<CallResultRecord> records) {
-        Map<Integer, Map<String, List<CallResultRecord>>> byRepetition = new java.util.TreeMap<>();
-        records.forEach(record -> byRepetition.computeIfAbsent(record.repetition(), key -> new LinkedHashMap<>())
+    private static RunReport.Flows flows(List<CallResultRecord> records, Function<String, String> siteOf) {
+        Map<String, Map<String, List<CallResultRecord>>> bySite = new java.util.TreeMap<>();
+        records.forEach(record -> bySite.computeIfAbsent(record.repetition() + "/"
+                + Objects.requireNonNullElse(siteOf.apply(record.caseId()), ""), key -> new LinkedHashMap<>())
             .computeIfAbsent(record.caseId(), key -> new ArrayList<>()).add(record));
         List<List<CallResultRecord>> autofills = new ArrayList<>();
-        byRepetition.values().forEach(cases -> {
+        bySite.values().forEach(cases -> {
             Predicate<List<CallResultRecord>> complete = group -> group.stream()
                 .anyMatch(record -> record.stage() == CallKind.Stage.MAPPING);
             List<CallResultRecord> start = cases.values().stream().filter(complete.negate()).flatMap(List::stream).toList();
