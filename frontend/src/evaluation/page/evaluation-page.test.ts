@@ -277,6 +277,26 @@ describe("AI 평가 화면의 단계 탭", () => {
     ]);
   });
 
+  it("메인 화면 흐름도는 네 참여자와 단계 탭에 맞춘 강조를 보인다", async () => {
+    await pick("total");
+    // 흐름도는 그릴 때마다 새로 만들므로 매번 다시 찾는다.
+    const flow = () => document.querySelector("#cf-flow svg")!;
+    expect(
+      [...flow().querySelectorAll(".flow-actor")].map(
+        (actor) => actor.textContent,
+      ),
+    ).toEqual(["지원자", "확장프로그램", "서버", "AI 모델"]);
+    const dimmed = () =>
+      [...flow().querySelectorAll(".flow-row.dim")].map((row) =>
+        row.getAttribute("data-flow-stage"),
+      );
+    expect(dimmed()).toEqual([]);
+    await pick("prepare");
+    expect(new Set(dimmed())).toEqual(new Set(["START", "MAPPING", "END"]));
+    await pick("mapping");
+    expect(new Set(dimmed())).toEqual(new Set(["START", "PREPARATION", "END"]));
+  });
+
   it("데이터셋 창은 공고별 탭으로 나뉘고 탭을 고르면 그 공고의 화면만 보인다", async () => {
     (
       document.querySelector('[data-source="데이터셋"]') as HTMLAnchorElement

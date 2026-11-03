@@ -929,6 +929,7 @@ function renderProgress() {
 function render() {
   $("#cf-overview").hidden = state.page !== "overview";
   $("#cf-overview-stage").hidden = state.page !== "overview";
+  $("#cf-flow").hidden = state.page !== "overview";
   $("#cf-stage-note").textContent = STAGE_NOTES[state.stage];
   $("#cf-tokens").hidden = state.page !== "tokens";
   $("#cf-fields").hidden = state.page !== "fields";
@@ -936,6 +937,7 @@ function render() {
   root.querySelectorAll("[data-page]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.page === state.page)));
   root.querySelectorAll("[data-stage]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.stage === state.stage)));
   renderProgress();
+  renderFlow();
   renderOverview();
   renderTokens();
   if (state.page === "fields") renderFields();
@@ -952,6 +954,65 @@ function render() {
     $("#cf-status").textContent = `${RUN_STATUS[active.status]} · ${modelKey(active)} · 요청 ${active.processedCalls}/${active.plannedCalls}개 처리`
       + `${waiting ? ` · 다음 모델 ${waiting}개 차례 대기` : ""} (자동 갱신 중)`;
   }
+}
+
+// 자동기입 흐름도(시퀀스): 참여자 세로선과 순서대로 오가는 요청. 파란 알약은 서버 요청(요청 처리 시간), 보라 알약은 AI 질문
+// (AI 응답 시간)이고 회색은 평가가 재지 않는 동작이다. 단계 탭을 고르면 다른 단계의 줄을 흐리게 한다.
+const FLOW_ACTORS = [["지원자", "지원서 화면"], ["확장프로그램", "평가 땐 저장된 요청"], ["서버", "Career Form"], ["AI 모델", "JEV · GPT 등"]];
+const FLOW_ROWS = [
+  { stage: "START", arrows: [[0, 1, "자동기입 버튼"]] },
+  { stage: "PREPARATION", arrows: [[1, 2, "섹션 분류", "request"], [2, 3, "AI 질문", "ai"]] },
+  { stage: "PREPARATION", arrows: [[3, 1, "조작할 섹션"]] },
+  { stage: "PREPARATION", arrows: [[1, 2, "버튼·선택 결정", "request"], [2, 3, "AI 질문", "ai"]] },
+  { stage: "PREPARATION", arrows: [[3, 1, "누를 버튼 · 고를 선택지"]] },
+  { stage: "PREPARATION", arrows: [[1, 0, "클릭해 칸 펼치기"]] },
+  { stage: "MAPPING", arrows: [[1, 2, "섹션 분류", "request"], [2, 3, "AI 질문", "ai"]] },
+  { stage: "MAPPING", arrows: [[3, 1, "섹션 범주"]] },
+  { stage: "MAPPING", arrows: [[1, 2, "칸 매핑", "request"], [2, 3, "AI 질문 · 5칸씩", "ai"]] },
+  { stage: "MAPPING", arrows: [[3, 1, "칸별 항목 · 확신도"]] },
+  { stage: "END", arrows: [[1, 0, "확신도 0.8 이상 칸 입력", "result"]] },
+];
+
+function renderFlow() {
+  const X = [100, 340, 600, 840];
+  const top = 62;
+  const step = 32;
+  const height = top + FLOW_ROWS.length * step + 10;
+  const focus = { prepare: "PREPARATION", mapping: "MAPPING" }[state.stage];
+  const text = (x, y, value, cls, anchor = "middle") =>
+    `<text x="${x}" y="${y}" class="${cls}" text-anchor="${anchor}" dominant-baseline="central">${value}</text>`;
+  const parts = [`<defs><marker id="flow-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1L9 5L1 9z" fill="context-stroke"/></marker></defs>`];
+  FLOW_ACTORS.forEach(([name, note], index) => {
+    parts.push(`<g class="flow-actor-group a${index}">${text(X[index], 16, name, "flow-actor")}${text(X[index], 34, note, "flow-note")}`
+      + `<line x1="${X[index]}" y1="46" x2="${X[index]}" y2="${height}" class="flow-life"/></g>`);
+  });
+  FLOW_ROWS.forEach((row, index) => {
+    const y = top + index * step;
+    const dim = focus && row.stage !== focus ? " dim" : "";
+    const arrows = row.arrows.map(([from, to, label, kind]) => {
+      const [x1, x2] = from < to ? [X[from] + 6, X[to] - 6] : [X[from] - 6, X[to] + 6];
+      const mid = (X[from] + X[to]) / 2;
+      const width = [...label].length * 12.5 + 22;
+      const pill = kind ? `<rect x="${mid - width / 2}" y="${y - 11}" width="${width}" height="22" rx="6" class="flow-pill ${kind}"/>`
+        + text(mid, y, label, `flow-pill-text ${kind}`)
+        : `<rect x="${mid - width / 2}" y="${y - 9}" width="${width}" height="18" class="flow-gap"/>${text(mid, y, label, "flow-label")}`;
+      return `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" class="flow-line ${kind ?? "plain"}" marker-end="url(#flow-arrow)"/>${pill}`;
+    }).join("");
+    parts.push(`<g class="flow-row${dim}" data-flow-stage="${row.stage}">${arrows}</g>`);
+  });
+  const svg = `<svg viewBox="0 0 940 ${height + 4}" role="img" aria-label="자동기입 흐름">${parts.join("")}</svg>`;
+  const legend = element("div", undefined, "flow-legend");
+  [["request", "서버 요청", "요청 처리 시간 · 요청 하나 안에서 AI에게 여러 번 물을 수 있음"],
+    ["ai", "AI 질문", "AI 응답 시간 · 서버가 모델에 보내고 답을 다 받기까지"],
+    ["plain", "회색 화살표", "평가가 재지 않음 · 클릭·칸 입력·네트워크 왕복"]].forEach(([kind, name, note]) => {
+    const item = element("span", undefined, "flow-legend-item");
+    item.append(element("b", name, `flow-chip ${kind}`), element("span", note, "muted"));
+    legend.append(item);
+  });
+  legend.append(element("p", "자동기입 시간 = 파란 요청 4개의 처리 시간 합. 준비 탭은 위쪽 두 요청, 매핑 탭은 아래쪽 두 요청을 봅니다. 평가 때는 확장프로그램 대신 저장해 둔 요청을 서버에 보내고, 답을 사람이 검토한 정답과 비교해 채점합니다.", "muted flow-foot"));
+  const body = $("#cf-flow-body");
+  body.innerHTML = svg;
+  body.append(legend);
 }
 
 function renderFilters() {
