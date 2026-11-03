@@ -143,9 +143,7 @@ function Fields({
                 {group.title}
               </legend>
             )}
-            <div
-              className={`${styles.fieldGrid} ${personal ? styles.threeColumns : ""}`}
-            >
+            <div className={styles.fieldGrid}>
               {group.fields
                 .filter(
                   (field) => !field.visibleWhen || field.visibleWhen(values),

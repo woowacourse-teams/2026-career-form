@@ -29,12 +29,9 @@
 }
 .fieldGrid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px 15px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
   align-items: start;
-}
-.threeColumns {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 /* The divider sits halfway through a 40px group gap: 20px on either side. */
 .personalDetails {
@@ -42,11 +39,13 @@
   padding-top: 20px;
   border-top: 1px solid var(--color-border);
 }
+/* Every control starts on one line after a 96px label column. */
 .field {
   display: grid;
-  align-content: start;
+  grid-template-columns: 96px minmax(0, 1fr);
+  align-items: center;
   min-width: 0;
-  gap: 8px;
+  gap: 8px 15px;
   color: var(--color-text-muted);
   font-size: 14px;
   font-weight: 400;
@@ -56,14 +55,33 @@
 .fieldLabel {
   display: block;
   line-height: 18px;
+  word-break: keep-all;
+}
+.field > :not(.fieldLabel) {
+  grid-column: 2;
+}
+/* Width follows the value: 210px short, 435px long. */
+.field > input,
+.field > select {
+  max-width: 210px;
+}
+.field > input[type="email"],
+.field > div,
+.fullWidth > input {
+  max-width: 435px;
+}
+.field:has(> div, > textarea) > .fieldLabel {
+  align-self: start;
+  margin-top: 13px;
 }
 .fullWidth {
   grid-column: 1 / -1;
 }
 
 /* 기본 인적사항: 국문, 영문, 한자 by 성, 이름. */
+/* 96px label, two 210px controls, three 15px spacings. */
 .nameTable {
-  width: calc(100% + 30px);
+  width: 576px;
   margin: -8px -15px;
   border-collapse: separate;
   border-spacing: 15px 8px;
@@ -79,13 +97,13 @@
   letter-spacing: -0.224px;
 }
 .nameTable thead td {
-  width: 56px;
+  width: 96px;
 }
 .nameTable thead th {
   color: var(--color-text-muted);
 }
 .nameTable tbody th {
-  color: #515154;
+  color: var(--color-text-muted);
 }
 
 .field input,
@@ -281,9 +299,24 @@
   padding: 20px;
 }
 @media (max-width: 640px) {
-  .fieldGrid,
-  .threeColumns {
+  .fieldGrid {
+    gap: 20px;
+  }
+  .field {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .field > :not(.fieldLabel) {
+    grid-column: 1;
+  }
+  .field > input,
+  .field > select,
+  .field > input[type="email"],
+  .field > div,
+  .fullWidth > input {
+    max-width: none;
+  }
+  .field:has(> div, > textarea) > .fieldLabel {
+    margin-top: 0;
   }
   .nameTable {
     width: calc(100% + 16px);
