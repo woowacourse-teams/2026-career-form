@@ -313,6 +313,31 @@ describe("AI 평가 화면의 단계 탭", () => {
     (document.querySelector("#cf-source") as HTMLDialogElement).close();
   });
 
+  it("항목별 비교의 화면 선택은 공고별로 묶이고 공고 전체를 고를 수 있다", async () => {
+    (
+      document.querySelector('[data-page="fields"]') as HTMLButtonElement
+    ).click();
+    await Promise.resolve();
+    const select = document.querySelector(
+      '#cf-fields select[aria-label="화면"]',
+    ) as HTMLSelectElement;
+    expect(
+      [...select.querySelectorAll("optgroup")].map((group) => [
+        group.label,
+        [...group.querySelectorAll("option")].map(
+          (option) => option.textContent,
+        ),
+      ]),
+    ).toEqual([
+      ["우아한형제들 · R2605009", ["공고 전체", "처음 화면", "고등학교"]],
+      ["NHN Careers · 프리세일즈", ["공고 전체", "NHN 지원서"]],
+    ]);
+    expect(select.options[0].textContent).toBe("모든 공고");
+    (
+      document.querySelector('[data-page="overview"]') as HTMLButtonElement
+    ).click();
+  });
+
   it("데이터셋 창은 공고별 탭으로 나뉘고 탭을 고르면 그 공고의 화면만 보인다", async () => {
     (
       document.querySelector('[data-source="데이터셋"]') as HTMLAnchorElement

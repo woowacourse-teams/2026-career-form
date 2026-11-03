@@ -718,9 +718,19 @@ function renderFields() {
   const controls = element("div", undefined, "fields-controls");
   const screenSelect = element("select");
   screenSelect.setAttribute("aria-label", "화면");
-  const states = [...new Set((state.dataset?.cases ?? []).map((item) => item.state))];
-  screenSelect.append(Object.assign(element("option", "모든 화면"), { value: "all" }),
-    ...states.map((key) => Object.assign(element("option", STATE_NAMES[key] ?? key), { value: key })));
+  // 화면은 공고별로 묶는다. "site:<공고>"는 그 공고의 모든 화면이다.
+  const cases = state.dataset?.cases ?? [];
+  const siteOfState = new Map(cases.map((item) => [item.state, item.siteId]));
+  const inScreen = (field) => state.fieldScreen.startsWith("site:") ? siteOfState.get(field.state) === state.fieldScreen.slice(5)
+    : state.fieldScreen === "all" || field.state === state.fieldScreen;
+  screenSelect.append(Object.assign(element("option", "모든 공고"), { value: "all" }));
+  [...new Set(cases.map((item) => item.siteId))].forEach((site) => {
+    const group = Object.assign(element("optgroup"), { label: SITE_NAMES[site] ?? site });
+    group.append(Object.assign(element("option", "공고 전체"), { value: `site:${site}` }),
+      ...cases.filter((item) => item.siteId === site)
+        .map((item) => Object.assign(element("option", STATE_NAMES[item.state] ?? item.state), { value: item.state })));
+    screenSelect.append(group);
+  });
   screenSelect.value = state.fieldScreen;
   screenSelect.addEventListener("change", () => { state.fieldScreen = screenSelect.value; renderFields(); });
   controls.append(screenSelect);
@@ -761,7 +771,7 @@ function renderFields() {
     card.style.setProperty("--model", color(model));
     const fields = data[model] ?? [];
     const tally = {};
-    fields.forEach((field) => field.answers.forEach(({ outcome }) => { tally[outcome] = (tally[outcome] ?? 0) + 1; }));
+    fields.filter(inScreen).forEach((field) => field.answers.forEach(({ outcome }) => { tally[outcome] = (tally[outcome] ?? 0) + 1; }));
     card.append(element("strong", model, "row-name"));
     if (!runs[model]) card.append(element("span", "끝난 실행 없음", "muted"));
     else if (!fields.length) card.append(element("span", "항목별 답 없음(데이터셋 확인 불가)", "muted"));
@@ -784,7 +794,7 @@ function renderFields() {
   });
   const filter = FIELD_FILTERS.some(([key]) => key === state.fieldFilter) ? state.fieldFilter : "diff";
   const keep = (key, field) => {
-    if (state.fieldScreen !== "all" && field.state !== state.fieldScreen) return false;
+    if (!inScreen(field)) return false;
     const cells = models.map((model) => cellOf(byModel[model].get(key)));
     if (filter === "all") return true;
     if (filter === "diff") return new Set(cells.map((cell) => cell?.main)).size > 1 || cells.some((cell) => cell && cell.count < cell.total);
@@ -792,6 +802,7 @@ function renderFields() {
     return cells.some((cell) => cell && Object.keys(cell.counts).some((outcome) => MISSED.has(outcome)));
   };
   const visible = [...rows.entries()].filter(([key, field]) => keep(key, field));
+  const screenTotal = [...rows.values()].filter(inScreen).length;
 
   const table = element("table", undefined, "fields-table");
   const thead = element("thead");
@@ -845,7 +856,7 @@ function renderFields() {
   else {
     // 거른 결과가 없으면 이유와 함께 전체 보기로 바로 넘어갈 수 있게 한다.
     const empty = element("div", undefined, "fields-empty");
-    empty.append(element("span", `조건에 맞는 ${kind.noun} 없음 · 전체 ${rows.size}개`));
+    empty.append(element("span", `조건에 맞는 ${kind.noun} 없음 · 전체 ${screenTotal}개`));
     if (filter !== "all") {
       const all = element("button", "전체 보기");
       all.type = "button";
@@ -855,7 +866,7 @@ function renderFields() {
     wrap.append(empty);
   }
   const filterbar = element("div", undefined, "fields-filters");
-  filterbar.append(chips, element("span", `${visible.length} / ${rows.size}개`, "muted fields-count"));
+  filterbar.append(chips, element("span", `${visible.length} / ${screenTotal}개`, "muted fields-count"));
   const foot = element("p", "반복이 갈린 항목은 가장 많은 판정과 횟수(예: 2/3)를 보입니다.", "muted metric-foot");
   page.replaceChildren(head, summary, filterbar, wrap, foot);
 }
