@@ -513,7 +513,12 @@ export function safeErrorTitle(error: unknown): string {
         ? (error.stack ?? "")
             .split("\n")
             .slice(1, 6)
-            .map((line) => line.trim().replace(/\(?chrome-extension:\/\/[^)]*\)?/g, "").slice(0, 60))
+            .map((line) =>
+              line
+                .trim()
+                .replace(/\(?chrome-extension:\/\/[^)]*\)?/g, "")
+                .slice(0, 60),
+            )
             .join(" | ")
         : "",
   });
