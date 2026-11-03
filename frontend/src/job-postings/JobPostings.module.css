@@ -605,3 +605,7 @@
   height: 36px;
   object-fit: contain;
 }
+.loadingStatus {
+  font-size: 14px;
+  color: var(--color-text-muted);
+}

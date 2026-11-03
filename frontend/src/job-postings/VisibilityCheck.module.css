@@ -24,9 +24,8 @@
 .eyebrow {
   display: inline-block;
   margin-bottom: 8px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
+  font-size: 14px;
+  font-weight: 600;
   color: var(--color-action);
 }
 .actions {

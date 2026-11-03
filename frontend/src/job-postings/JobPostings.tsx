@@ -504,7 +504,11 @@ export function JobPostings({
           surface="options"
         />
       )}
-      {!snapshot && !error && <p role="status">불러오는 중</p>}
+      {!snapshot && !error && (
+        <p className={styles.loadingStatus} role="status">
+          불러오는 중
+        </p>
+      )}
       <section className={styles.listCard} aria-label="공고 목록">
         <div className={styles.tabBar}>
           <div
