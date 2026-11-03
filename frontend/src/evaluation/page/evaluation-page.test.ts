@@ -199,6 +199,13 @@ const pick = async (stageName: string) => {
 };
 
 beforeAll(async () => {
+  // jsdom에는 대화상자 열기·닫기가 없어 open 속성만 바꾼다.
+  HTMLDialogElement.prototype.showModal = function () {
+    this.open = true;
+  };
+  HTMLDialogElement.prototype.close = function () {
+    this.open = false;
+  };
   const html = readFileSync(join(STATIC, "evaluations/index.html"), "utf8");
   document.body.innerHTML = html.replace(
     /^[\s\S]*<body[^>]*>|<\/body>[\s\S]*$/g,
@@ -258,6 +265,28 @@ describe("AI 평가 화면의 단계 탭", () => {
       "요청 처리 시간",
       "요청 실패율",
     ]);
+  });
+
+  it("사용 가이드는 로컬·개발서버 탭으로 나뉘고 지금 서버에 맞는 탭이 먼저 열린다", async () => {
+    (document.querySelector("#guide-open") as HTMLButtonElement).click();
+    await Promise.resolve();
+    const tabs = [
+      ...document.querySelectorAll("#source-content .guide-tabs button"),
+    ];
+    expect(tabs.map((tab) => tab.textContent)).toEqual(["로컬", "개발서버"]);
+    // 테스트 환경 주소는 localhost라 로컬 탭이 먼저 열린다.
+    expect(tabs.map((tab) => tab.getAttribute("aria-pressed"))).toEqual([
+      "true",
+      "false",
+    ]);
+    expect(document.querySelector("#source-content")?.textContent).toContain(
+      "scripts/evaluation_local.py",
+    );
+    (tabs[1] as HTMLButtonElement).click();
+    expect(document.querySelector("#source-content")?.textContent).toContain(
+      "auto-deploy",
+    );
+    (document.querySelector("#cf-source") as HTMLDialogElement).close();
   });
 
   it("메인 화면은 실행 하나만 보이고 이전 실행과의 변화는 붙이지 않는다", async () => {

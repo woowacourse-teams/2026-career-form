@@ -705,3 +705,6 @@
 #cf-eval-preview .compare-items h3{margin:0 0 4px;font-size:15px;font-weight:650}
 #cf-eval-preview .compare-item td{text-align:left;padding:7px 10px;border-top:1px solid #eef0ee;vertical-align:middle}
 #cf-eval-preview .compare-item td:nth-child(-n+2),#cf-eval-preview .compare-item td:nth-last-child(-n+2){white-space:nowrap}
+#cf-eval-preview .guide h4{margin:18px 0 8px;font-size:14px;font-weight:650}
+#cf-eval-preview .guide-steps{margin:0;padding-left:20px;font-size:13px;line-height:1.7}
+#cf-eval-preview .guide code{font-size:12px;background:#eef1f0;padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}

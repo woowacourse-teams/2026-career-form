@@ -1312,6 +1312,83 @@ function dialog(title, content, className) {
   if (!box.open) box.showModal();
 }
 
+/** 글과 `코드`를 섞은 한 줄. 백틱으로 감싼 부분을 code로 바꾼다. */
+function codeLine(tag, text) {
+  const node = element(tag);
+  text.split(/(`[^`]+`)/).forEach((part) => node.append(part.startsWith("`") ? element("code", part.slice(1, -1)) : part));
+  return node;
+}
+
+// 환경별 사용 가이드. 로컬은 고칠 때마다 직접 재고, 개발서버는 머지마다 자동으로 잰다.
+const GUIDES = {
+  local: {
+    name: "로컬",
+    lead: "프롬프트·호출 구조·설정을 고친 뒤 나아졌는지 잽니다. 기록은 내 컴퓨터의 Docker 볼륨에만 남습니다.",
+    steps: [
+      "`python3 scripts/evaluation_local.py`로 이 체크아웃 코드를 띄웁니다. 처음 실행 때 로그인 비밀번호를 정합니다.",
+      "고치기 전에 평가 실행 → 이름 `baseline`, 반복 3회로 돌립니다.",
+      "코드·프롬프트를 고치고 같은 명령으로 다시 띄웁니다. 커밋 전이면 코드 버전에 `-dirty-`가 붙어 구분됩니다.",
+      "고친 뒤 평가를 반복 3회로 돌립니다. 이름에는 바꾼 내용을 적습니다(예: `batch10`).",
+      "전후 비교 탭에서 이전 `baseline` → 이후 `batch10`을 고르고, 복사 버튼으로 요약을 PR 본문에 붙입니다.",
+    ],
+    rows: [
+      ["띄우기", "`python3 scripts/evaluation_local.py`", "`127.0.0.1:18090/evaluations/`"],
+      ["끄기", "`python3 scripts/evaluation_local.py stop`", "기록은 남습니다"],
+      ["비밀번호 다시 정하기", "`python3 scripts/evaluation_local.py reset-password`", "해시만 저장합니다"],
+      ["모델 키", "`.env.local`", "JEV·OpenAI 키를 읽습니다(없으면 메인 체크아웃)"],
+    ],
+  },
+  dev: {
+    name: "개발서버",
+    lead: "develop에 머지되어 배포될 때마다 서버가 평가를 한 번 자동으로 돌립니다. 팀원은 이 화면에서 머지별 결과를 봅니다. 기록은 개발서버 MongoDB에 계속 남습니다.",
+    steps: [
+      "실행에서 가장 최근 `auto-deploy`를 고릅니다. 실행 조건의 코드 버전이 그 머지의 커밋 번호입니다.",
+      "전후 비교 탭에서 이전에 그 전 `auto-deploy`를 고르면 머지 하나가 바꾼 점수·시간·항목을 봅니다.",
+      "더 재보고 싶으면 평가 실행으로 직접 돌립니다. 한 번에 약 $0.1(GPT 약 $0.08, JEV 약 $0.04)이 듭니다.",
+    ],
+    rows: [
+      ["자동 평가", "`auto-deploy` · 반복 3회", "공급자마다 기본 모델 하나. 같은 코드 버전으로는 다시 돌지 않습니다(재시작 무관)"],
+      ["켜는 값(관리자)", "GitHub `development` Environment", "변수 `CAREER_FORM_QUALITY_ENABLED`, `CAREER_FORM_EVALUATION_ENABLED`, `CAREER_FORM_EVALUATION_AUTO_RUN_ENABLED`, `CAREER_FORM_EVALUATION_OPENAI_ENABLED`를 true로, 시크릿 `CAREER_FORM_QUALITY_PASSWORD_HASH`"],
+      ["로그인", "팀 공용 비밀번호", "비밀번호 원문은 서버에 없고 해시만 있습니다"],
+      ["운영·스테이징", "켜지 않음", "배포 설정이 평가 값을 넘기지 않습니다"],
+    ],
+  },
+};
+
+/** 사용 가이드 대화상자. 지금 서버가 로컬 주소면 로컬 탭을, 아니면 개발서버 탭을 먼저 연다. */
+function guideView() {
+  const local = ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname);
+  let current = local ? "local" : "dev";
+  const box = element("div", undefined, "guide");
+  const tabs = element("div", undefined, "dataset-tabs guide-tabs");
+  const body = element("div");
+  const show = () => {
+    tabs.querySelectorAll("button").forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.guide === current)));
+    const guide = GUIDES[current];
+    const steps = element("ol", undefined, "guide-steps");
+    guide.steps.forEach((step) => steps.append(codeLine("li", step)));
+    const table = element("table", undefined, "criteria-table");
+    const rows = element("tbody");
+    guide.rows.forEach(([name, value, note]) => {
+      const row = element("tr");
+      row.append(element("td", name), codeLine("td", value), codeLine("td", note));
+      rows.append(row);
+    });
+    table.append(rows);
+    body.replaceChildren(element("p", guide.lead, "muted criteria-lead"), element("h4", "순서"), steps, element("h4", "참고"), table);
+  };
+  Object.entries(GUIDES).forEach(([key, guide]) => {
+    const button = element("button", guide.name);
+    button.type = "button";
+    button.dataset.guide = key;
+    button.addEventListener("click", () => { current = key; show(); });
+    tabs.append(button);
+  });
+  show();
+  box.append(tabs, body);
+  return box;
+}
+
 const STATE_NAMES = { initial: "처음 화면", "high-school": "고등학교", university: "대학교", ged: "검정고시" };
 // 화면 상태 설명. 같은 지원서라도 무엇을 골랐는지에 따라 나타나는 칸이 달라 상태별로 따로 평가한다.
 const STATE_NOTES = {
@@ -2055,6 +2132,7 @@ $("#run-open").addEventListener("click", openRun);
 $("#record-delete").addEventListener("click", () => confirmDelete(state.group));
 $("#result-copy").addEventListener("click", () => copySummary($("#result-copy"), resultSummary(state.group, null, state.selected)));
 $("#provider-open").addEventListener("click", () => openProviders());
+$("#guide-open").addEventListener("click", () => dialog("사용 가이드", guideView(), "criteria-dialog"));
 $("#refresh").addEventListener("click", load);
 document.getElementById("logout").addEventListener("click", () => { clearAccess(); location.reload(); });
 root.querySelectorAll("[data-source]").forEach((link) => link.addEventListener("click", async (event) => {
