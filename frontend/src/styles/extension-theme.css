@@ -1,5 +1,5 @@
 /*
- * Extension-only token overrides (sky palette, #383).
+ * Extension-only token overrides (Apple DESIGN.md at the repo root, #383).
  *
  * theme.css is shared with the public site and must stay unchanged, so only
  * extension entrypoints load this file. Every declaration is !important: the
@@ -9,45 +9,45 @@
  */
 :root,
 :host {
-  --color-page: #f2faff !important;
+  --color-page: #f5f5f7 !important;
   --color-surface: #ffffff !important;
-  --color-surface-muted: #eaf6fd !important;
+  --color-surface-muted: #f5f5f7 !important;
   /* Selected and hover fills. */
-  --color-accent-soft: #d6f0fd !important;
-  --color-accent-hover: #c2e7fb !important;
-  --color-accent: #1d6fa5 !important;
-  --color-action: #1d6fa5 !important;
-  --color-action-strong: #13527e !important;
+  --color-accent-soft: #f5f5f7 !important;
+  --color-accent-hover: #f5f5f7 !important;
+  --color-accent: #0071e3 !important;
+  --color-action: #0071e3 !important;
+  --color-action-strong: #0066cc !important;
   --color-on-action: #ffffff !important;
   /* Filled primary buttons: accent background, white text. */
-  --color-brand: #1d6fa5 !important;
-  --color-brand-hover: #13527e !important;
+  --color-brand: #0071e3 !important;
+  --color-brand-hover: #0076df !important;
   --color-on-brand: #ffffff !important;
-  --color-text: #2e4a5d !important;
-  --color-text-strong: #13293a !important;
-  --color-text-muted: #5a7487 !important;
-  --color-text-subtle: #5a7487 !important;
-  --color-border: #d2e7f2 !important;
-  --color-border-strong: #a6cde2 !important;
+  --color-text: #1d1d1f !important;
+  --color-text-strong: #1d1d1f !important;
+  --color-text-muted: #6e6e73 !important;
+  --color-text-subtle: #6e6e73 !important;
+  --color-border: #f5f5f7 !important;
+  --color-border-strong: #6e6e73 !important;
   /* 3:1 or more against --color-page, --color-surface and --color-surface-muted. */
-  --color-field-border: #6c90a6 !important;
-  --color-focus: rgb(29 111 165 / 25%) !important;
-  --color-info: #1b5c8f !important;
-  --color-info-soft: #dcf0fd !important;
-  --color-info-border: #d2e7f2 !important;
+  --color-field-border: #6e6e73 !important;
+  --color-focus: rgb(0 113 227 / 25%) !important;
+  --color-info: #0066cc !important;
+  --color-info-soft: #f5f5f7 !important;
+  --color-info-border: #f5f5f7 !important;
   --color-success: #24724f !important;
   --color-success-soft: #eaf5ee !important;
-  --color-review-status: #1b5c8f !important;
-  --color-warning: #1b5c8f !important;
-  --color-warning-soft: #dcf0fd !important;
+  --color-review-status: #0066cc !important;
+  --color-warning: #515154 !important;
+  --color-warning-soft: #f5f5f7 !important;
   --color-danger: #b3261e !important;
   --color-danger-border: #e2a9a4 !important;
   --color-danger-text: #b3261e !important;
   --color-danger-soft: #fdf0ef !important;
-  --color-result-action-surface: #eaf6fd !important;
+  --color-result-action-surface: #f5f5f7 !important;
   --color-backdrop: rgb(0 0 0 / 32%) !important;
-  --radius-control: 11px !important;
-  --radius-card: 12px !important;
+  --radius-control: 8px !important;
+  --radius-card: 18px !important;
   --shadow-card: none !important;
   --shadow-panel:
     0 8px 28px rgb(0 0 0 / 16%), 0 1px 3px rgb(0 0 0 / 10%) !important;
