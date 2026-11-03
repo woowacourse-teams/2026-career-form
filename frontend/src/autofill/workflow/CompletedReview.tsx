@@ -245,7 +245,7 @@ export function CompletedReview(props: Props) {
           );
         })}
       </ul>
-      <p className={styles.completedFootnote}>
+      <p className={styles.visuallyHidden}>
         이 표시는 이번 입력 내용의 검토용이에요. 저장과 제출은 지원서에서 직접
         진행해 주세요.
       </p>

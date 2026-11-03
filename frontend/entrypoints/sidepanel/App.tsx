@@ -323,8 +323,8 @@ export function App({
 
   return (
     <div
-      className={`${styles.panel} ${inPage ? styles.inPagePanel : ""} ${styles.homePanel} ${fitContent && homeView ? styles.fitContent : ""}`}
-      data-panel-fit={fitContent && homeView ? "content" : undefined}
+      className={`${styles.panel} ${inPage ? styles.inPagePanel : ""} ${styles.homePanel} ${fitContent ? styles.fitContent : ""}`}
+      data-panel-fit={fitContent ? "content" : undefined}
     >
       <style>{panelCss}</style>
       <header className={`${styles.header} ${styles.homeHeader}`}>

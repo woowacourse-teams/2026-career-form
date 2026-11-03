@@ -642,7 +642,7 @@ describe("내 정보 tab", () => {
 });
 
 describe("panel height", () => {
-  it("fits content only on the tabs and only when asked", async () => {
+  it("fits content on every screen only when asked", async () => {
     const common = { repository: repository(), track: vi.fn() };
     const saved = storedPostings([]).reader;
     const fitted = () => document.querySelector("[data-panel-fit]");
@@ -658,7 +658,7 @@ describe("panel height", () => {
         autofillView={<p>진행 화면</p>}
       />,
     );
-    expect(fitted()).toBeNull();
+    expect(fitted()).not.toBeNull();
 
     view.rerender(<App {...common} savedPostings={saved} />);
     expect(fitted()).toBeNull();
