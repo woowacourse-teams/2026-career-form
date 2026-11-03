@@ -219,6 +219,6 @@ it("asks for an extension update when the served policy is incompatible", async 
     />,
   );
   expect(await screen.findByRole("alert")).toHaveTextContent(
-    "이 지원서 정책은 새 버전에서 지원해요. Chrome 확장 프로그램 화면에서 업데이트한 뒤 다시 시도해 주세요.",
+    "이 지원서는 새 버전에서 지원해요",
   );
 });

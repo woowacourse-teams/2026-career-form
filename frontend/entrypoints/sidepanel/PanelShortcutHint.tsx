@@ -34,7 +34,7 @@ export function PanelShortcutHint({ read }: PanelShortcutHintProps) {
         </>
       ) : (
         // Content scripts cannot open chrome:// pages, so the address is text.
-        "패널을 여는 단축키가 없어요. chrome://extensions/shortcuts에서 지정할 수 있어요"
+        "단축키 없음: chrome://extensions/shortcuts"
       )}
     </p>
   );

@@ -75,7 +75,9 @@ export function WorkflowResults({
     <section className={styles.results}>
       {/* Keep scoped selectors with their markup when entry CSS is fetched later. */}
       <style>{resultCss}</style>
-      <div className={styles.summary}>
+      <div
+        className={`${styles.summary} ${noFieldResults ? "" : styles.visuallyHidden}`}
+      >
         <div className={styles.summaryText} role="status" aria-atomic="true">
           <h3>
             {noFieldResults
@@ -86,13 +88,14 @@ export function WorkflowResults({
           </h3>
         </div>
       </div>
-      <div className={styles.counts} role="tablist" aria-label="기입 결과 구분">
+      <div className={styles.tiles} role="tablist" aria-label="기입 결과 구분">
         {(["pending", "completed"] as const).map((tab, index) => (
           <button
             key={tab}
             type="button"
             role="tab"
             data-state={tab}
+            data-count={tab === "pending" ? pending.length : completed.length}
             id={`${tabsId}-${tab}-tab`}
             aria-controls={`${tabsId}-${tab}-panel`}
             aria-selected={activeTab === tab}

@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { formatProfileDate } from "../../autofill/profile/date-format";
 import { ImportTargetCompare } from "./ImportTargetChoices";
+import { usePanelHeading } from "../../autofill/workflow/panel-heading";
 import { NameSplitEditor } from "./NameSplitEditor";
 import { NAME_GROUPS } from "./review-fields";
 import type {
@@ -30,8 +31,13 @@ const nameLabel = (language: "korean" | "english") =>
   language === "korean" ? "국문 이름" : "영문 이름";
 
 const later = (onLater: () => void) => (
-  <button type="button" className={styles.plainButton} onClick={onLater}>
-    나중에 할게요
+  <button
+    type="button"
+    className={styles.plainButton}
+    aria-label="나중에 할게요"
+    onClick={onLater}
+  >
+    나중에
   </button>
 );
 
@@ -74,7 +80,15 @@ function NameCard({ card, decisions, onDecide, onLater }: CardProps<"name">) {
   );
   return (
     <>
-      <h4 className={styles.cardTitle}>{label}을 이렇게 나누면 될까요?</h4>
+      <p className={styles.kicker}>
+        {label}: {card.value}
+      </p>
+      <h4
+        className={styles.cardTitle}
+        aria-label={`${label}을 이렇게 나누면 될까요?`}
+      >
+        이렇게 나눌까요?
+      </h4>
       <div className={styles.split}>
         <div>
           <small>성</small>
@@ -85,9 +99,6 @@ function NameCard({ card, decisions, onDecide, onLater }: CardProps<"name">) {
           <b>{suggestion.givenName || "없음"}</b>
         </div>
       </div>
-      <p className={styles.cardText}>
-        지원서에는 {label}이 ‘{card.value}’ 한 칸으로 적혀 있어요.
-      </p>
       <div className={styles.cardActions}>
         <button
           type="button"
@@ -309,6 +320,14 @@ export function ImportConfirmCards({
   const [deferred, setDeferred] = useState<ReadonlySet<string>>(new Set());
   const current = confirmations.find((card) => !deferred.has(card.id));
   const [hasInteracted, setHasInteracted] = useState(false);
+  // Answered cards leave the list, so the step counts against the longest list seen.
+  const [total, setTotal] = useState(confirmations.length);
+  if (confirmations.length > total) setTotal(confirmations.length);
+  usePanelHeading({
+    step: current
+      ? `확인 ${total - confirmations.length + confirmations.indexOf(current) + 1} / ${total}`
+      : undefined,
+  });
   const queue = useRef<HTMLElement>(null);
   const pendingFocus = useRef(false);
   const shownId = useRef(current?.id);

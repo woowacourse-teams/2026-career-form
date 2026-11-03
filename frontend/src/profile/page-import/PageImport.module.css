@@ -1,21 +1,24 @@
 /* Colors come from src/styles/theme.css; review components style themselves in ImportReview.module.css. */
 .importer {
   display: grid;
-  gap: 16px;
+  gap: 20px;
   min-width: 0;
   color: var(--color-text);
   font-family: inherit;
   font-size: 14px;
-  line-height: 1.55;
+  line-height: 18px;
+  letter-spacing: -0.224px;
   overflow-wrap: anywhere;
 }
 .importer :focus-visible {
-  outline: 3px solid var(--color-focus);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow:
+    0 0 0 2px #fff,
+    0 0 0 4px var(--color-action);
 }
 .fields {
   display: grid;
-  gap: 18px;
+  gap: 20px;
   min-width: 0;
   margin: 0;
   padding: 0;
@@ -25,12 +28,12 @@
 .empty {
   margin: 0;
   color: var(--color-text-muted);
-  font-size: 13px;
+  font-size: 14px;
 }
 .empty {
-  padding: 24px 14px;
-  border-radius: 12px;
-  background: var(--color-surface);
+  padding: 40px 20px;
+  border-radius: var(--radius-card);
+  background: var(--color-surface-muted);
   text-align: center;
 }
 .error {
@@ -40,18 +43,19 @@
   border-radius: var(--radius-control);
   color: var(--color-danger-text);
   background: var(--color-danger-soft);
-  font-size: 12.5px;
+  font-size: 14px;
 }
 .skipped {
-  padding: 10px 14px;
-  border-radius: 12px;
-  background: var(--color-surface);
+  padding: 8px 15px;
+  border-radius: var(--radius-card);
+  background: var(--color-surface-muted);
   color: var(--color-text-muted);
-  font-size: 12.5px;
+  font-size: 14px;
 }
 .skipped summary {
   color: var(--color-text);
-  font-weight: 650;
+  font-weight: 600;
+  line-height: 32px;
   cursor: pointer;
 }
 .skipped ul {
@@ -68,31 +72,33 @@
   bottom: calc(-1 * var(--import-panel-bottom-gap));
   z-index: 1;
   display: grid;
+  justify-items: center;
   gap: 8px;
   margin-bottom: calc(-1 * var(--import-panel-bottom-gap));
-  padding: 12px 0 calc(4px + var(--import-panel-bottom-gap));
+  padding: 11px 0 var(--import-panel-bottom-gap);
   border-top: 1px solid var(--color-border);
   background: var(--color-surface);
 }
 .saveButton {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  width: 100%;
-  min-height: 50px;
-  padding: 12px 16px;
-  border: 2px solid var(--color-brand);
-  border-radius: 12px;
+  width: fit-content;
+  min-height: 44px;
+  padding: 11px 21px;
+  border: 0;
+  border-radius: 980px;
   color: var(--color-on-brand);
   background: var(--color-brand);
   font: inherit;
-  font-size: 15px;
-  font-weight: 750;
+  font-size: 17px;
+  font-weight: 400;
+  letter-spacing: -0.374px;
+  line-height: 1;
   cursor: pointer;
 }
 .saveButton:hover:not(:disabled) {
-  border-color: var(--color-brand-hover);
   background: var(--color-brand-hover);
 }
 .saveButton:disabled {
@@ -100,21 +106,12 @@
   cursor: not-allowed;
 }
 .badge {
-  display: inline-grid;
-  place-items: center;
-  min-width: 26px;
-  height: 22px;
-  padding: 0 7px;
-  border-radius: 99px;
-  color: var(--color-on-action);
-  background: var(--color-action);
-  font-size: 12.5px;
   font-variant-numeric: tabular-nums;
 }
 .footNote {
   margin: 0;
   color: var(--color-text-muted);
-  font-size: 11.5px;
+  font-size: 14px;
   text-align: center;
 }
 .exitActions {
@@ -123,19 +120,17 @@
   gap: 8px;
 }
 .exitActions button {
-  min-height: 36px;
-  padding: 6px 12px;
+  min-height: 32px;
+  padding: 0 11px;
   border: 0;
-  border-radius: 8px;
-  color: var(--color-text-muted);
+  border-radius: 980px;
+  color: var(--color-action-strong);
   background: transparent;
   font: inherit;
-  font-size: 12.5px;
-  font-weight: 600;
+  font-size: 14px;
   cursor: pointer;
 }
 .exitActions button:hover:not(:disabled) {
-  color: var(--color-text);
   background: var(--color-surface-muted);
 }
 .exitActions button:disabled {

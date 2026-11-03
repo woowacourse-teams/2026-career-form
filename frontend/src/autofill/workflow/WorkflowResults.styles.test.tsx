@@ -111,6 +111,6 @@ it("lays out a plain field row with an ellipsized value and separate copy action
     view.getByRole("button", { name: "전공 복사" }),
   );
   expect(getComputedStyle(reason).wordBreak).toBe("keep-all");
-  expect(getComputedStyle(reason).fontSize).toBe("12px");
+  expect(getComputedStyle(reason).fontSize).toBe("14px");
   expect(view.queryByText("확인 안내")).not.toBeInTheDocument();
 });

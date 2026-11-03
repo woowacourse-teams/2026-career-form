@@ -1,8 +1,7 @@
 .container {
   display: grid;
   align-content: start;
-  gap: 16px;
-  padding: 24px 16px;
+  padding: 20px;
   text-align: left;
 }
 
@@ -20,9 +19,11 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 0;
+  margin: 0 0 8px;
   color: var(--color-text-muted);
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: -0.224px;
 }
 
 .activityDot {
@@ -32,40 +33,84 @@
   background: var(--color-action);
   animation: pulse 1.2s ease-in-out infinite;
 }
+.titleRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
 .total {
   margin: 0;
-  font-size: 20px;
   color: var(--color-text-strong);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 25px;
+  letter-spacing: -0.374px;
+}
+.count {
+  flex: none;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: -0.224px;
+  font-variant-numeric: tabular-nums;
 }
 .progress {
-  list-style: none;
-  padding: 0;
-  margin: 0;
   display: grid;
-  gap: 0;
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
 }
 .progress li {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 14px 0;
-  border-bottom: 1px solid var(--color-border);
-  font-size: 13px;
+  gap: 11px;
+  min-height: 44px;
   color: var(--color-text-strong);
+  font-size: 17px;
+  letter-spacing: -0.374px;
+}
+.progress li + li {
+  border-top: 1px solid var(--color-border);
+}
+.dot {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  /* DESIGN.md secondary text; the theme has no token for it. */
+  color: #515154;
+}
+.dot svg {
+  width: 17px;
+  height: 17px;
 }
 .progress strong {
-  font-weight: 600;
+  font-weight: 400;
 }
-.progress li > span {
+.progress li > span:last-child {
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-left: auto;
   color: var(--color-text-muted);
+  font-size: 14px;
+  letter-spacing: -0.224px;
 }
-.progress small,
-.progress li[data-active="true"] > span {
+.progress small {
+  font-size: 14px;
+}
+.progress li[data-active="true"] .dot {
   color: var(--color-action);
+}
+.progress li[data-active="true"] strong,
+.progress small,
+.progress li[data-active="true"] > span:last-child {
+  color: var(--color-text-strong);
+  font-weight: 600;
 }
 
 @keyframes pulse {
@@ -84,8 +129,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 28px 20px;
-  min-height: 340px;
+  padding: 20px;
   color: var(--color-text-strong);
 }
 .mascot {
@@ -98,10 +142,11 @@
   animation: mascotWriting 1.5s ease-in-out infinite;
 }
 .caption {
-  margin: 18px 0 24px;
-  font-size: 16px;
+  margin: 20px 0;
+  font-size: 17px;
   font-weight: 600;
-  line-height: 1.6;
+  line-height: 25px;
+  letter-spacing: -0.374px;
   text-align: center;
 }
 .metric {
@@ -112,35 +157,33 @@
   margin: 0 0 8px;
   color: var(--color-text-muted);
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 18px;
+  letter-spacing: -0.224px;
 }
 .value {
   display: block;
-  font-size: 48px;
-  font-weight: 700;
-  line-height: 1.3;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 32px;
   color: var(--color-text-strong);
   font-variant-numeric: tabular-nums;
 }
 .value small {
-  font-size: 20px;
-  margin-left: 5px;
+  margin-left: 2px;
+  font-size: 17px;
+  font-weight: 400;
 }
 .indicatorSlot {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 28px;
-  margin-top: 12px;
+  margin-top: 11px;
 }
 .track {
   width: 100%;
-  max-width: 260px;
-  height: 10px;
-  padding: 2px;
-  box-sizing: border-box;
-  border-radius: 999px;
-  background: var(--color-accent-hover);
+  height: 8px;
+  border-radius: 980px;
+  background: var(--color-surface-muted);
   overflow: hidden;
 }
 .track span {

@@ -27,8 +27,7 @@ const ERROR_COPY: Record<WorkflowErrorKind, ErrorCopy> = {
   connection: {
     tone: "neutral",
     title: "서버에 연결하지 못했어요",
-    description:
-      "인터넷 연결을 확인한 뒤 다시 시도해 주세요. 지원서는 바뀌지 않았어요.",
+    description: "지원서는 바뀌지 않았어요",
     icon: (
       <svg {...iconProps}>
         <path d="M2 8.8a15 15 0 0 1 20 0" />
@@ -42,8 +41,7 @@ const ERROR_COPY: Record<WorkflowErrorKind, ErrorCopy> = {
   rateLimited: {
     tone: "neutral",
     title: "잠시 후 다시 시도해 주세요",
-    description:
-      "지금 요청이 많아 분석을 시작하지 못했어요. 지원서는 바뀌지 않았어요.",
+    description: "요청이 많아요. 지원서는 바뀌지 않았어요",
     icon: (
       <svg {...iconProps}>
         <circle cx="12" cy="12" r="9" />
@@ -54,8 +52,7 @@ const ERROR_COPY: Record<WorkflowErrorKind, ErrorCopy> = {
   updateNeeded: {
     tone: "accent",
     title: "확장 프로그램을 업데이트해 주세요",
-    description:
-      "이 지원서 정책은 새 버전에서 지원해요. Chrome 확장 프로그램 화면에서 업데이트한 뒤 다시 시도해 주세요.",
+    description: "이 지원서는 새 버전에서 지원해요",
     icon: (
       <svg {...iconProps}>
         <path d="M12 19V6" />
@@ -67,8 +64,7 @@ const ERROR_COPY: Record<WorkflowErrorKind, ErrorCopy> = {
   unknown: {
     tone: "neutral",
     title: "자동 기입을 시작하지 못했어요",
-    description:
-      "잠시 후 다시 시도해 주세요. 계속되면 복사 버튼으로 직접 입력할 수 있어요.",
+    description: "복사 버튼으로 직접 입력할 수 있어요",
     icon: (
       <svg {...iconProps}>
         <circle cx="12" cy="12" r="9" />

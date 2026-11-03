@@ -77,7 +77,9 @@ export function PendingResultRow({
           </div>
         )}
       </div>
-      <p className={styles.guidance}>{resultGuidance(reason, failureCode)}</p>
+      <p className={`${styles.guidance} ${styles.reason}`}>
+        {resultGuidance(reason, failureCode)}
+      </p>
       {options.length > 0 && (
         <details>
           <summary>지원서 선택지</summary>

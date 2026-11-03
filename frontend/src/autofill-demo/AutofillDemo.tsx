@@ -212,9 +212,9 @@ export function AutofillDemo({
       <div className={styles.screen}>
         <Header step="4 / 4" title="기입 중" />
         <div className={styles.progressList}>
-          <span>완료 · 이메일주소</span>
-          <strong>처리 중 · 선택한 항목</strong>
-          <span>대기 · 결과 확인</span>
+          <span>완료, 이메일주소</span>
+          <strong>처리 중, 선택한 항목</strong>
+          <span>대기, 결과 확인</span>
         </div>
         <p className={styles.lead}>승인된 항목만 처리하는 목업 화면입니다.</p>
         <button

@@ -30,6 +30,7 @@ import { WorkflowError, type WorkflowErrorKind } from "./WorkflowError";
 import { buildResultModel } from "./result-model";
 import type { WorkflowActivity } from "./progress-model";
 import type { Profile } from "../../profile/model";
+import { usePanelHeading, type PanelHeading } from "./panel-heading";
 import {
   Header,
   mappingLabel,
@@ -124,6 +125,36 @@ const ROW_SAVE_REASON: Record<RowSaveManualReason, string> = {
   stopped: "같은 영역 앞 줄의 등록을 확인하지 못해 누르지 않았어요.",
 };
 
+function stageHeading(stage: Stage): PanelHeading {
+  if (stage === "preparation-review")
+    return { title: "입력 항목 준비", step: "1 / 3" };
+  if (stage === "review")
+    return { title: "기입 확인", titleLabel: "자동 기입 확인", step: "2 / 3" };
+  if (stage === "writing") return { title: "기입 중", step: "3 / 3" };
+  if (stage === "result") return { title: "기입 결과" };
+  return {};
+}
+
+/** Marks what the row will do; the row itself stays a jump to the field. */
+function CheckMark({ on }: { on: boolean }) {
+  return (
+    <span className={resultStyles.checkMark} data-on={on} aria-hidden="true">
+      {on && (
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="m5 12 5 5 9-10" />
+        </svg>
+      )}
+    </span>
+  );
+}
+
 export function WorkflowScreens({
   exitInToolbar = false,
   wasWritten,
@@ -168,6 +199,7 @@ export function WorkflowScreens({
   rowSave,
 }: WorkflowScreensProps) {
   const reviewTabsId = useId();
+  const inPanel = usePanelHeading(stageHeading(stage));
   const [pickedReviewTab, setPickedReviewTab] = useState<ReviewTab | null>(
     null,
   );
@@ -195,7 +227,7 @@ export function WorkflowScreens({
     const unavailableCount = preparationItems.length - runnableItems.length;
     return (
       <div className={`${styles.screen} ${resultStyles.results}`}>
-        <Header step="1 / 3" title="입력 항목 준비" />
+        {!inPanel && <Header step="1 / 3" title="입력 항목 준비" />}
         <p className={styles.lead}>
           필요한 입력칸을 준비한 뒤 자동 기입할 항목만 확인합니다.
         </p>
@@ -223,13 +255,15 @@ export function WorkflowScreens({
                 : warning}
           </aside>
         ))}
-        <button
-          className={styles.primary}
-          type="button"
-          onClick={() => void executePreparation()}
-        >
-          준비하고 계속
-        </button>
+        <div className={styles.act}>
+          <button
+            className={styles.primary}
+            type="button"
+            onClick={() => void executePreparation()}
+          >
+            준비하고 계속
+          </button>
+        </div>
       </div>
     );
   }
@@ -305,8 +339,10 @@ export function WorkflowScreens({
     return (
       <div className={styles.screen}>
         <style>{resultCss}</style>
-        <Header step="2 / 3" title="자동 기입 확인" />
-        <div className={resultStyles.summary}>
+        {!inPanel && <Header step="2 / 3" title="자동 기입 확인" />}
+        <div
+          className={`${resultStyles.summary} ${resultStyles.visuallyHidden}`}
+        >
           <div
             className={resultStyles.summaryText}
             role="status"
@@ -326,12 +362,13 @@ export function WorkflowScreens({
             data-state="completed"
             id={`${reviewTabsId}-planned-tab`}
             aria-controls={`${reviewTabsId}-planned-panel`}
+            aria-label={`자동 기입 예정 ${plannedCount}`}
             aria-selected={reviewTab === "planned"}
             tabIndex={reviewTab === "planned" ? 0 : -1}
             onClick={() => setPickedReviewTab("planned")}
             onKeyDown={(event) => moveReviewTab(event, "planned")}
           >
-            자동 기입 예정 <strong>{plannedCount}</strong>
+            기입 예정 <strong>{plannedCount}</strong>
           </button>
           <button
             type="button"
@@ -372,7 +409,11 @@ export function WorkflowScreens({
           {plannedItems.length > 0 ? (
             plannedItems.map((item) => (
               <article className={resultStyles.row} key={item.candidateId}>
-                <div className={resultStyles.heading} data-has-values="true">
+                <div
+                  className={`${resultStyles.heading} ${resultStyles.reviewHeading}`}
+                  data-has-values="true"
+                >
+                  <CheckMark on={true} />
                   <button
                     type="button"
                     className={resultStyles.locate}
@@ -429,7 +470,11 @@ export function WorkflowScreens({
             )}
             {blockedItems.map((item) => (
               <article className={resultStyles.row} key={item.candidateId}>
-                <div className={resultStyles.heading} data-has-values="true">
+                <div
+                  className={`${resultStyles.heading} ${resultStyles.reviewHeading}`}
+                  data-has-values="true"
+                >
+                  <CheckMark on={false} />
                   <button
                     type="button"
                     className={resultStyles.locate}
@@ -473,7 +518,11 @@ export function WorkflowScreens({
           {needsReviewItems.map((item) => {
             return (
               <article className={resultStyles.row} key={item.candidateId}>
-                <div className={resultStyles.heading} data-has-values="true">
+                <div
+                  className={`${resultStyles.heading} ${resultStyles.reviewHeading}`}
+                  data-has-values="true"
+                >
+                  <CheckMark on={item.selected} />
                   <button
                     type="button"
                     className={resultStyles.locate}
@@ -579,15 +628,17 @@ export function WorkflowScreens({
             </details>
           </fieldset>
         )}
-        <button
-          className={styles.primary}
-          type="button"
-          onClick={() => void executeWrites()}
-        >
-          {selectedCount > 0
-            ? `${selectedCount}개 항목 기입하기`
-            : "선택하지 않고 계속"}
-        </button>
+        <div className={styles.act}>
+          <button
+            className={styles.primary}
+            type="button"
+            onClick={() => void executeWrites()}
+          >
+            {selectedCount > 0
+              ? `${selectedCount}개 항목 기입하기`
+              : "선택하지 않고 계속"}
+          </button>
+        </div>
       </div>
     );
   }
@@ -595,7 +646,7 @@ export function WorkflowScreens({
   if (stage === "result") {
     return (
       <div className={`${styles.screen} ${styles.resultScreen}`}>
-        <h2 className={styles.resultTitle}>기입 결과</h2>
+        {!inPanel && <h2 className={styles.resultTitle}>기입 결과</h2>}
         <WorkflowResults
           wasWritten={wasWritten}
           progressIdFor={progressIdFor}
@@ -694,10 +745,17 @@ export function WorkflowScreens({
             <p>줄 저장 버튼을 눌러 {rowSave.saved}개 줄을 등록했어요.</p>
           </section>
         )}
-        {!exitInToolbar && (
-          <button className={styles.primary} type="button" onClick={onExit}>
-            수동 복사로 돌아가기
-          </button>
+        {(inPanel || !exitInToolbar) && (
+          <div className={styles.act}>
+            <button
+              className={styles.grayButton}
+              type="button"
+              aria-label={inPanel ? undefined : "수동 복사로 돌아가기"}
+              onClick={onExit}
+            >
+              돌아가기
+            </button>
+          </div>
         )}
       </div>
     );

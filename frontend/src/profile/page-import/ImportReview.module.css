@@ -1,41 +1,32 @@
 /* Injected inline by PageImport because the panel renders inside a shadow root. Colors come from src/styles/theme.css. */
 .queue {
   display: grid;
-  gap: 10px;
+  gap: 11px;
   min-width: 0;
 }
 .sectionTitle {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   margin: 0;
   color: var(--color-text-strong);
   font-size: 14px;
-  font-weight: 750;
-  letter-spacing: -0.02em;
+  font-weight: 600;
+  letter-spacing: -0.224px;
 }
 .countPill {
-  display: inline-grid;
-  place-items: center;
-  min-width: 22px;
-  height: 20px;
-  padding: 0 6px;
-  border-radius: 99px;
-  color: var(--color-warning);
-  background: var(--color-warning-soft);
-  font-size: 11.5px;
-  font-weight: 800;
+  color: var(--color-danger-text);
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 .card {
   display: grid;
-  gap: 12px;
+  gap: 15px;
   min-width: 0;
-  padding: 16px;
+  padding: 20px;
   border: 1px solid var(--color-border);
-  border-radius: 12px;
-  background: var(--color-surface);
-  box-shadow: var(--shadow-card);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-muted);
   animation: rise 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 @keyframes rise {
@@ -45,102 +36,102 @@
   }
 }
 .kicker {
-  margin: 0;
-  color: var(--color-action);
-  font-size: 11.5px;
-  font-weight: 700;
+  margin: 0 0 -7px;
+  color: var(--panel-secondary, #515154);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.224px;
 }
 .cardTitle {
   margin: 0;
   color: var(--color-text-strong);
-  font-size: 16px;
-  line-height: 1.45;
-  letter-spacing: -0.03em;
+  font-size: 17px;
+  line-height: 25px;
+  letter-spacing: -0.374px;
+  font-weight: 600;
   text-wrap: balance;
 }
 .cardText,
 .cardHint {
   margin: 0;
   color: var(--color-text-muted);
-  font-size: 12.5px;
+  font-size: 14px;
 }
 .split {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  gap: 11px;
 }
 .split > div {
   display: grid;
   min-width: 0;
-  padding: 10px 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  background: var(--color-surface-muted);
+  padding: 8px 15px;
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
 }
 .split small {
   color: var(--color-text-muted);
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: -0.224px;
 }
 .split b {
   color: var(--color-text-strong);
-  font-size: 20px;
+  font-size: 17px;
+  font-weight: 600;
   overflow-wrap: anywhere;
 }
 .cardActions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
 }
 .primaryButton,
 .secondaryButton,
 .plainButton {
-  display: grid;
+  display: inline-grid;
   place-items: center;
   min-width: 0;
-  min-height: 42px;
-  padding: 8px 12px;
-  border-radius: 10px;
+  min-height: 36px;
+  padding: 8px 15px;
+  border-radius: 980px;
   font: inherit;
-  font-size: 13px;
+  font-size: 14px;
+  letter-spacing: -0.224px;
+  line-height: 1;
   overflow-wrap: anywhere;
   cursor: pointer;
 }
-/* Card answers are neutral fills; only the pinned save button stays filled. */
+/* Compact pills: filled answer, outline alternative and a text link. */
 .primaryButton {
   border: 0;
-  color: var(--color-action-strong);
-  background: rgb(118 118 128 / 12%);
-  font-weight: 750;
+  color: var(--color-on-brand);
+  background: var(--color-brand);
 }
 .primaryButton:hover:not(:disabled) {
-  background: rgb(118 118 128 / 20%);
+  background: var(--color-brand-hover);
 }
 .primaryButton small {
-  color: var(--color-text-muted);
-  font-size: 11px;
-  font-weight: 600;
+  margin-top: 4px;
+  color: inherit;
+  font-size: 14px;
 }
 .secondaryButton {
-  border: 0;
-  color: var(--color-text-strong);
-  background: rgb(118 118 128 / 12%);
-  font-weight: 600;
+  border: 1px solid var(--color-action-strong);
+  color: var(--color-action-strong);
+  background: transparent;
 }
 .secondaryButton:hover:not(:disabled) {
-  background: rgb(118 118 128 / 20%);
+  background: var(--color-surface);
 }
 .plainButton {
-  grid-column: 1 / -1;
-  min-height: 36px;
+  margin-left: auto;
   border: 0;
-  color: var(--color-text-muted);
+  color: var(--color-action-strong);
   background: transparent;
-  font-weight: 600;
 }
 .plainButton:hover {
-  color: var(--color-text);
-  background: var(--color-surface-muted);
+  background: var(--color-surface);
 }
 .primaryButton:disabled,
 .secondaryButton:disabled {
@@ -149,14 +140,14 @@
 }
 .textButton {
   flex: none;
-  padding: 2px 6px;
+  min-height: 32px;
+  padding: 0 8px;
   border: 0;
-  border-radius: 6px;
-  color: var(--color-action);
+  border-radius: 980px;
+  color: var(--color-action-strong);
   background: none;
   font: inherit;
-  font-size: 12.5px;
-  font-weight: 650;
+  font-size: 14px;
   cursor: pointer;
 }
 .textButton:hover {
@@ -168,13 +159,12 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
+  padding: 11px;
+  border-radius: var(--radius-control);
   color: var(--color-text-strong);
-  background: var(--color-surface-muted);
+  background: var(--color-surface);
   font-size: 17px;
-  font-weight: 700;
+  font-weight: 600;
 }
 .dayInput input {
   box-sizing: border-box;
@@ -195,7 +185,7 @@
 .error {
   margin: 0;
   color: var(--color-danger-text);
-  font-size: 12px;
+  font-size: 14px;
   text-align: center;
 }
 .compare {
@@ -204,7 +194,7 @@
   overflow: hidden;
   border-radius: 12px;
   box-shadow: 0 0 0 1px var(--color-border);
-  font-size: 12.5px;
+  font-size: 14px;
   table-layout: fixed;
 }
 .compare th,
@@ -219,7 +209,7 @@
   border-top: 0;
   color: var(--color-text-muted);
   background: var(--color-surface-muted);
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 700;
 }
 .compare tbody th {
@@ -239,18 +229,19 @@
   margin: 0;
   padding: 0;
   border: 0;
-  font-size: 13px;
+  font-size: 14px;
 }
 .entryChoices legend {
   margin-bottom: 4px;
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
 }
 .entryChoices label {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-height: 32px;
 }
 .notice {
   margin: 0;
@@ -259,16 +250,16 @@
   border-radius: 12px;
   color: var(--color-danger-text);
   background: var(--color-danger-soft);
-  font-size: 12.5px;
+  font-size: 14px;
 }
 .allDone {
   margin: 0;
-  padding: 12px 14px;
-  border-radius: 14px;
+  padding: 11px 15px;
+  border-radius: var(--radius-card);
   color: var(--color-success);
   background: var(--color-success-soft);
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 600;
 }
 .resolved {
   display: grid;
@@ -284,7 +275,7 @@
   align-items: center;
   gap: 8px;
   padding: 6px;
-  font-size: 12.5px;
+  font-size: 14px;
 }
 .resolved li > span:nth-child(2) {
   flex: 1;
@@ -301,48 +292,35 @@
 }
 .summary {
   display: grid;
-  gap: 10px;
-  padding: 16px;
-  border-radius: 12px;
-  background: var(--color-surface);
+  gap: 8px;
 }
 .summaryLabel,
-.summaryCount,
-.summaryHint {
+.summaryCount {
   margin: 0;
 }
 .summaryLabel {
-  color: var(--color-text-muted);
-  font-size: 12px;
-  font-weight: 600;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 .summaryCount {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
   color: var(--color-text-strong);
-  font-size: 34px;
-  font-weight: 800;
-  line-height: 1.1;
-  letter-spacing: -0.05em;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 32px;
   font-variant-numeric: tabular-nums;
 }
 .summaryCount small {
-  margin-left: 2px;
-  font-size: 16px;
-  letter-spacing: -0.02em;
-}
-.summaryHint {
-  color: var(--color-text-muted);
-  font-size: 12.5px;
-}
-.bar {
-  display: flex;
-  gap: 2px;
-  height: 8px;
-  overflow: hidden;
-  border-radius: 99px;
-  background: var(--color-surface);
-}
-.bar span {
-  transition: flex-grow 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  color: var(--panel-secondary, #515154);
+  font-size: 17px;
+  font-weight: 400;
+  letter-spacing: -0.374px;
 }
 .toneNew {
   background: var(--color-accent);
@@ -356,11 +334,13 @@
 .legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 12px;
+  gap: 8px 11px;
   margin: 0;
   padding: 0;
   list-style: none;
-  font-size: 12px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  letter-spacing: -0.224px;
   font-variant-numeric: tabular-nums;
 }
 .legend li {
@@ -379,26 +359,22 @@
 }
 .categories {
   display: grid;
-  gap: 10px;
   min-width: 0;
 }
 .category {
   overflow: hidden;
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
   background: var(--color-surface);
 }
-.category[data-open="true"] {
-  border-color: var(--color-border-strong);
+.category + .category {
+  border-top: 1px solid var(--color-border);
 }
 .categoryHead {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
-  min-height: 56px;
-  padding: 10px 12px 10px 14px;
-  background: var(--color-surface-muted);
+  gap: 11px;
+  min-height: 44px;
+  padding: 8px 0;
 }
 .categoryToggle {
   display: grid;
@@ -416,24 +392,25 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   color: var(--color-text-strong);
-  font-size: 13.5px;
+  font-size: 14px;
+  font-weight: 600;
 }
 .categoryToggle > span {
   overflow: hidden;
   color: var(--color-text-muted);
-  font-size: 11.5px;
+  font-size: 14px;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 .tag,
 .tagWarn,
 .mode {
-  padding: 1px 7px;
-  border-radius: 99px;
-  font-size: 10.5px;
-  font-weight: 700;
+  padding: 0 8px;
+  border-radius: 980px;
+  font-size: 14px;
+  font-weight: 400;
 }
 .tag {
   color: var(--color-action-strong);
@@ -454,11 +431,11 @@
 .switch {
   position: relative;
   flex: none;
-  width: 44px;
-  height: 26px;
+  width: 52px;
+  height: 32px;
   padding: 3px;
   border: 0;
-  border-radius: 99px;
+  border-radius: 980px;
   background: var(--color-border-strong);
   cursor: pointer;
   transition: background 0.2s;
@@ -466,8 +443,8 @@
 .switch::after {
   content: "";
   display: block;
-  width: 20px;
-  height: 20px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   background: var(--color-surface);
   box-shadow: 0 1px 3px rgb(0 0 0 / 20%);
@@ -477,13 +454,13 @@
   background: var(--color-action);
 }
 .switch[aria-checked="true"]::after {
-  transform: translateX(18px);
+  transform: translateX(20px);
 }
 .switch[aria-checked="mixed"] {
   background: var(--color-accent);
 }
 .switch[aria-checked="mixed"]::after {
-  transform: translateX(9px);
+  transform: translateX(10px);
 }
 .switch:disabled {
   opacity: 0.45;
@@ -500,19 +477,19 @@
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 8px;
-  padding: 12px 14px 4px;
+  padding: 11px 0 4px;
 }
 .entryTitle {
   min-width: 0;
 }
 .entryTitle b {
   color: var(--color-text-strong);
-  font-size: 13px;
+  font-size: 14px;
 }
 .entryTitle small {
   display: block;
   color: var(--color-text-muted);
-  font-size: 11.5px;
+  font-size: 14px;
 }
 .mode {
   margin-left: 6px;
@@ -538,8 +515,8 @@
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 8px;
-  min-height: 52px;
-  padding: 8px 14px;
+  min-height: 44px;
+  padding: 8px 0;
 }
 .row:hover,
 .row:focus-within {
@@ -552,22 +529,27 @@
   cursor: pointer;
 }
 .rowLabel {
-  color: var(--color-action-strong);
-  font-size: 10.5px;
-  font-weight: 650;
+  color: var(--panel-secondary, #515154);
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: -0.224px;
 }
 .rowValue {
   color: var(--color-text-strong);
-  font-size: 13px;
+  font-size: 17px;
+  line-height: 25px;
+  letter-spacing: -0.374px;
   overflow-wrap: anywhere;
 }
 .rowOld {
   color: var(--color-text-muted);
-  font-size: 11px;
+  font-size: 14px;
 }
 .row[data-status="pending"] .rowValue {
   color: var(--color-warning);
-  font-size: 12px;
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: -0.224px;
 }
 .row[data-status="excluded"] .rowValue {
   color: var(--color-text-subtle);
@@ -579,10 +561,10 @@
 .check {
   display: grid;
   place-content: center;
-  width: 24px;
-  height: 24px;
-  margin: 0;
-  border: 1.5px solid var(--color-field-border);
+  width: 20px;
+  height: 20px;
+  margin: 6px;
+  border: 1px solid var(--color-field-border);
   border-radius: 50%;
   background: var(--color-surface);
   appearance: none;

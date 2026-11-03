@@ -342,9 +342,10 @@ export function PageImport({
               className={styles.saveButton}
               disabled={!count || saving}
               aria-busy={saving}
+              aria-label={`프로필에 저장하기 ${count}`}
               onClick={() => void save()}
             >
-              프로필에 저장하기
+              프로필에 저장
               <span className={styles.badge}>{count}</span>
             </button>
             <p className={styles.footNote}>{note}</p>

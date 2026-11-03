@@ -48,9 +48,7 @@ describe("panel shortcut hint", () => {
     openSettings();
 
     expect(
-      await screen.findByText(
-        "패널을 여는 단축키가 없어요. chrome://extensions/shortcuts에서 지정할 수 있어요",
-      ),
+      await screen.findByText("단축키 없음: chrome://extensions/shortcuts"),
     ).toBeInTheDocument();
     expect(screen.queryByText(/이 패널을 열고 닫을 수 있어요/)).toBeNull();
   });

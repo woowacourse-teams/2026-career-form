@@ -22,6 +22,10 @@ import {
   type ProfileSearchItem,
 } from "../../src/profile/profile-search";
 import { ChromeProfileStorage } from "../../src/storage/chrome-profile-storage";
+import {
+  PanelHeadingProvider,
+  type PanelHeading,
+} from "../../src/autofill/workflow/panel-heading";
 import { PageImport } from "../../src/profile/page-import/PageImport";
 import type { ImportCandidate } from "../../src/profile/page-import/reader";
 import {
@@ -162,6 +166,7 @@ export function App({
   const deadlinePostings = useDeadlinePostings(savedPostings, now);
   const profileLoadGeneration = useRef(0);
   const [importActive, setImportActive] = useState(false);
+  const [heading, setHeading] = useState<PanelHeading>({});
   const [importSavedCount, setImportSavedCount] = useState<number>();
   const [loadStatus, setLoadStatus] = useState<LoadStatus>("loading");
   const [query, setQuery] = useState("");
@@ -318,28 +323,20 @@ export function App({
 
   return (
     <div
-      className={`${styles.panel} ${inPage ? styles.inPagePanel : ""} ${homeView ? styles.homePanel : ""} ${fitContent && homeView ? styles.fitContent : ""}`}
+      className={`${styles.panel} ${inPage ? styles.inPagePanel : ""} ${styles.homePanel} ${fitContent && homeView ? styles.fitContent : ""}`}
       data-panel-fit={fitContent && homeView ? "content" : undefined}
     >
       <style>{panelCss}</style>
-      <header
-        className={`${styles.header} ${homeView ? styles.homeHeader : ""}`}
-      >
+      <header className={`${styles.header} ${styles.homeHeader}`}>
         <div className={styles.brandRow}>
           <div className={styles.brandIdentity}>
             <img
               className={styles.brandMark}
               src={logoUrl}
               alt="커리어폼"
-              width={homeView ? 28 : 42}
-              height={homeView ? 28 : 42}
+              width={28}
+              height={28}
             />
-            {!homeView && (
-              <div>
-                <p>CAREER FORM</p>
-                <span>지원서 패널</span>
-              </div>
-            )}
           </div>
           <div className={styles.headerActions}>
             {homeView && (
@@ -445,33 +442,71 @@ export function App({
                   returnToProfile();
                 }}
               >
-                <span aria-hidden="true">←</span>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  aria-hidden="true"
+                >
+                  <path d="m15 6-6 6 6 6" />
+                </svg>
               </button>
             )}
-            <h1>{autofillActive ? "자동 기입" : "프로필 가져오기"}</h1>
+            {importActive && !autofillActive && (
+              <button
+                type="button"
+                className={styles.returnButton}
+                aria-label="돌아가기"
+                onClick={() => setImportActive(false)}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  aria-hidden="true"
+                >
+                  <path d="m15 6-6 6 6 6" />
+                </svg>
+              </button>
+            )}
+            <h1 aria-label={heading.titleLabel}>
+              {heading.title ??
+                (autofillActive ? "자동 기입" : "프로필 가져오기")}
+            </h1>
+            {heading.step && (
+              <span className={styles.stepCount}>{heading.step}</span>
+            )}
           </div>
         )}
       </header>
       {importActive && readImportCandidates ? (
         <main className={styles.main} aria-label="프로필 가져오기 화면">
-          <PageImport
-            analytics={{ track, properties: analyticsProperties }}
-            repository={repository}
-            readCandidates={readImportCandidates}
-            onClose={() => setImportActive(false)}
-            onSaved={(saved, count) => {
-              ++profileLoadGeneration.current;
-              setProfile(saved);
-              setLoadStatus("ready");
-              setImportActive(false);
-              setImportSavedCount(count);
-              setSelectedTab("profile");
-            }}
-          />
+          <PanelHeadingProvider value={setHeading}>
+            <PageImport
+              analytics={{ track, properties: analyticsProperties }}
+              repository={repository}
+              readCandidates={readImportCandidates}
+              onClose={() => setImportActive(false)}
+              onSaved={(saved, count) => {
+                ++profileLoadGeneration.current;
+                setProfile(saved);
+                setLoadStatus("ready");
+                setImportActive(false);
+                setImportSavedCount(count);
+                setSelectedTab("profile");
+              }}
+            />
+          </PanelHeadingProvider>
         </main>
       ) : autofillActive ? (
         <main className={styles.workflowMain} aria-label="지원서 작업 화면">
-          {autofillView}
+          <PanelHeadingProvider value={setHeading}>
+            {autofillView}
+          </PanelHeadingProvider>
         </main>
       ) : (
         <div

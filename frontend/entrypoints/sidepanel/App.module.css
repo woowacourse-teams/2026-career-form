@@ -60,21 +60,10 @@
 }
 .brandMark {
   display: block;
-  width: 42px;
-  height: 42px;
-  border-radius: 11px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
   object-fit: cover;
-}
-.brandIdentity p {
-  margin: 0;
-  color: var(--color-text-strong);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-}
-.brandIdentity span {
-  color: var(--color-text-muted);
-  font-size: 11px;
 }
 .closeButton {
   display: grid;
@@ -98,21 +87,39 @@
   color: var(--color-text-strong);
   background: var(--color-accent-hover);
 }
-.titleRow {
-  margin-top: 18px;
+.panel > .homeHeader .titleRow {
+  justify-content: flex-start;
+  gap: 8px;
+  height: 44px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+.panel > .homeHeader .titleRow:has(.returnButton) {
+  padding-left: 11px;
+}
+.stepCount {
+  flex: none;
+  margin-left: auto;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  letter-spacing: -0.224px;
+  font-variant-numeric: tabular-nums;
 }
 .header h1 {
   margin: 0;
+  overflow: hidden;
   color: var(--color-text-strong);
-  font-size: 23px;
-  font-weight: 750;
-  letter-spacing: -0.04em;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.374px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .main {
   min-height: 0;
   min-width: 0;
   overflow-y: auto;
-  padding: 16px 16px 20px;
+  padding: 20px;
   scrollbar-width: thin;
   scrollbar-color: var(--color-border-strong) transparent;
   overscroll-behavior: contain;
@@ -368,29 +375,25 @@
   display: grid;
   place-items: center;
   flex: none;
-  width: 40px;
-  min-height: 44px;
+  width: 32px;
+  height: 32px;
   padding: 0;
-  border: none;
-  border-radius: 8px;
+  border: 0;
+  border-radius: 980px;
   background: transparent;
-  color: var(--color-action-strong);
-  font-size: 24px;
+  color: var(--panel-secondary);
   cursor: pointer;
+}
+.returnButton svg {
+  width: 17px;
+  height: 17px;
 }
 .returnButton:hover {
   background: var(--color-accent-hover);
 }
-.titleRow:has(.returnButton) {
-  justify-content: flex-start;
-  gap: 6px;
-}
 @media (max-width: 340px) {
   .header {
     padding: 16px;
-  }
-  .header h1 {
-    font-size: 21px;
   }
   .main {
     padding: 12px;
@@ -398,6 +401,7 @@
 }
 
 .workflowMain {
+  background: var(--color-surface);
   min-width: 0;
   min-height: 0;
   overflow: hidden;
@@ -481,6 +485,7 @@
   background: var(--color-accent-hover);
 }
 .closeButton:focus-visible,
+.returnButton:focus-visible,
 .settingsButton:focus-visible,
 .settingsItem:focus-visible,
 .tab:focus-visible,
@@ -524,7 +529,7 @@
   right: -40px;
   z-index: 2;
   display: grid;
-  width: 220px;
+  width: 264px;
   padding: 8px;
   border-radius: 18px;
   background: var(--color-surface);
@@ -548,6 +553,7 @@
   background: var(--color-accent-hover);
 }
 .settingsMenu .shortcutHint {
+  overflow-wrap: normal;
   margin: 8px 0 0;
   border-top: 1px solid var(--color-border);
   padding: 8px 11px;

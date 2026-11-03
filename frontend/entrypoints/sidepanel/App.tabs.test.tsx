@@ -131,7 +131,6 @@ describe("header", () => {
     expect(
       screen.getByRole("heading", { name: "자동 기입" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("지원서 패널")).toBeVisible();
     expect(
       screen.getByRole("button", { name: "수동 복사로 돌아가기" }),
     ).toBeVisible();
