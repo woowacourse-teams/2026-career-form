@@ -155,7 +155,10 @@ function Fields({
                   const catalogKind = catalogKindForField(section.id, field.id);
                   if (catalogKind) {
                     return (
-                      <div className={styles.field} key={field.id}>
+                      <div
+                        className={`${styles.field} ${styles.fieldTop}`}
+                        key={field.id}
+                      >
                         <label className={styles.fieldLabel} htmlFor={id}>
                           {field.label}
                         </label>
@@ -177,7 +180,7 @@ function Fields({
                     !options.some((option) => option.value === value);
                   return (
                     <label
-                      className={`${styles.field} ${field.inputType === "textarea" || FULL_WIDTH_FIELDS.has(field.id) ? styles.fullWidth : ""}`}
+                      className={`${styles.field} ${field.inputType === "textarea" ? styles.fieldTop : ""} ${field.inputType === "textarea" || FULL_WIDTH_FIELDS.has(field.id) ? styles.fullWidth : ""}`}
                       htmlFor={id}
                       key={field.id}
                     >

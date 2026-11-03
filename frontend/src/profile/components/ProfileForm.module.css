@@ -70,7 +70,7 @@
 .fullWidth > input {
   max-width: 435px;
 }
-.field:has(> div, > textarea) > .fieldLabel {
+.fieldTop > .fieldLabel {
   align-self: start;
   margin-top: 13px;
 }
@@ -315,7 +315,7 @@
   .fullWidth > input {
     max-width: none;
   }
-  .field:has(> div, > textarea) > .fieldLabel {
+  .fieldTop > .fieldLabel {
     margin-top: 0;
   }
   .nameTable {
