@@ -14,18 +14,17 @@ import {
   basicSummary,
   type SummaryValue,
   titles,
-  descriptions,
   type Chapter,
   type Step,
 } from "./QuickStartFields";
 import styles from "./QuickStart.module.css";
 const properties = { surface: "extension_onboarding" } as const;
 const saveLabels = {
-  idle: "입력한 정보는 이 브라우저에 자동 저장돼요.",
-  saving: "저장 중이에요…",
-  saved: "이 브라우저에 저장했어요.",
+  idle: "자동 저장",
+  saving: "저장 중",
+  saved: "저장됨",
   error: "저장하지 못했어요. 입력한 내용은 유지되니 다시 시도해 주세요.",
-  conflict: "최신 프로필 확인이 필요해요.",
+  conflict: "확인 필요",
 };
 const basicSteps: Step[] = [
   "name",
@@ -388,385 +387,405 @@ export function QuickStart({
       </main>
     );
   const autofillExit = (
-    <div className={`${styles.exit} ${summary ? styles.summaryExit : ""}`}>
+    <div className={summary ? styles.summaryExit : styles.after}>
       <button
         className={summary ? styles.primary : undefined}
         type="button"
         disabled={busy}
+        aria-label="지금 자동 기입 사용하기"
         onClick={() => void proceed("guide")}
       >
-        지금 자동 기입 사용하기 <span aria-hidden="true">↗</span>
+        지금 자동 기입 사용 <span aria-hidden="true">↗</span>
       </button>
-      <span>지원서에서 사용하는 방법을 안내해 드려요</span>
+      <span className={styles.tag}>이 브라우저에 저장</span>
     </div>
   );
+  const counting = !guide && step !== "overview" && !returnTo;
   return (
     <main className={styles.page} id="main">
-      <div className={styles.shell}>
-        <header className={styles.brand}>
-          <img src="/side-panel-launcher-logo.png" alt="" />
-          CAREER FORM<span>내 속도로 준비하는 지원서</span>
-        </header>
-        <ol className={styles.steps} aria-label="등록 묶음">
-          {["기본 정보", "학력", "경력·활동"].map((label, index) => (
-            <li
-              key={label}
-              aria-current={
-                !guide && step !== "overview" && index === chapter
-                  ? "step"
-                  : undefined
-              }
-            >
-              <span>{index + 1}</span>
-              {label}
-              <small>{index > 0 ? "선택" : "시작"}</small>
-            </li>
-          ))}
-        </ol>
-        <section className={styles.card}>
-          <div className={styles.topline}>
-            <p className={styles.eyebrow}>
-              {guide
-                ? "다음은 실제 지원서에서"
-                : step === "overview"
-                  ? "내가 준비한 정보"
-                  : returnTo
-                    ? "필요한 정보만 보충해요"
-                    : `${["나를 소개하는 첫걸음", "학교에서 쌓은 시간", "나만의 경험"][chapter]} · ${steps.indexOf(step) + 1} / ${steps.length}`}
-            </p>
-            {!guide && (
-              <button
-                type="button"
-                className={styles.textButton}
-                disabled={busy}
-                onClick={() => void proceed("profile")}
-              >
-                전체 프로필 편집
-              </button>
-            )}
+      <header className={styles.top}>
+        <div className={styles.topIn}>
+          <div className={styles.brand}>
+            <img src="/side-panel-launcher-logo.png" alt="" />
+            <span>Career Form</span>
           </div>
-          {!guide && step !== "overview" && !returnTo && (
-            <progress
-              aria-label="현재 묶음 진행"
-              value={steps.indexOf(step) + 1}
-              max={steps.length}
-            />
-          )}
-          <h1 ref={heading} tabIndex={-1}>
-            {guide
-              ? "지원서에서 자동 기입을 시작하세요"
-              : summary && step !== "overview" && !summaryHasValues
-                ? "필요한 정보는 나중에 채워도 좋아요"
-                : titles[step]}
-          </h1>
-          {guide ? (
-            <QuickStartGuide
-              hasValues={hasValues}
-              pending={busy}
-              onBack={() => {
-                if (!transition.current && !editor.isReloading) setGuide(false);
-              }}
-              onOpenProfile={() => void proceed("profile")}
-            />
-          ) : (
-            <form
-              noValidate
-              onSubmit={(event) => event.preventDefault()}
-              onKeyDown={(event) => {
-                const target = event.target as HTMLElement;
-                if (
-                  event.key !== "Enter" ||
-                  event.defaultPrevented ||
-                  event.nativeEvent.isComposing ||
-                  event.keyCode === 229 ||
-                  target.tagName !== "INPUT" ||
-                  target.getAttribute("role") === "combobox"
-                )
-                  return;
-                event.preventDefault();
-                const inputs = Array.from(
-                  question.current?.querySelectorAll<HTMLInputElement>(
-                    'input:not(:disabled):not([aria-hidden="true"])',
-                  ) ?? [],
-                );
-                const following =
-                  inputs[inputs.indexOf(target as HTMLInputElement) + 1];
-                if (following) following.focus();
-                else next();
-              }}
+          {!guide && (
+            <button
+              type="button"
+              className={styles.topLink}
+              disabled={busy}
+              onClick={() => void proceed("profile")}
             >
-              <p className={styles.description}>{descriptions[step]}</p>
-              <fieldset
-                ref={question}
-                disabled={busy}
-                className={`${styles.question} ${step === "school" ? styles.schoolQuestion : ""}`}
-                key={step}
-              >
-                {!summary && (
-                  <p className={styles.optional}>
-                    선택 입력 · 건너뛰어도 괜찮아요
-                  </p>
-                )}
-                {choosing ? (
-                  <QuickStartPicker
-                    education={step === "educationType"}
-                    profile={editor.profile}
-                    selectEntry={selectEntry}
-                  />
-                ) : summary ? (
-                  <>
-                    {summaryHasValues &&
-                      (editor.saveStatus === "idle" ||
-                        editor.saveStatus === "saved") && (
-                        <div className={styles.savedBadge}>
-                          ✓ 여기까지 저장했어요
-                        </div>
-                      )}
-                    {step === "overview" && autofillExit}
-                    {step === "overview" ? (
-                      <QuickStartOverview
+              전체 프로필 편집
+            </button>
+          )}
+        </div>
+      </header>
+      <div className={styles.wrap}>
+        <div className={styles.head}>
+          <h1>첫 등록</h1>
+          {counting && (
+            <>
+              <span className={styles.count} aria-hidden="true">
+                {steps.indexOf(step) + 1}/{steps.length}
+              </span>
+              <progress
+                className={styles.srOnly}
+                aria-label="현재 묶음 진행"
+                value={steps.indexOf(step) + 1}
+                max={steps.length}
+              />
+            </>
+          )}
+          {editor.saveStatus !== "error" && (
+            <p role="status" className={styles.saved}>
+              {saveLabels[editor.saveStatus]}
+            </p>
+          )}
+        </div>
+        <div className={styles.grid}>
+          <div>
+            <p className={styles.grp} aria-hidden="true">
+              등록 묶음
+            </p>
+            <ol className={styles.steps} aria-label="등록 묶음">
+              {["기본 정보", "학력", "경력·활동"].map((label, index) => (
+                <li
+                  key={label}
+                  aria-current={
+                    !guide && step !== "overview" && index === chapter
+                      ? "step"
+                      : undefined
+                  }
+                >
+                  {label}
+                  <small>{index > 0 ? "선택" : "시작"}</small>
+                </li>
+              ))}
+            </ol>
+          </div>
+          <div>
+            <section className={styles.card}>
+              <h2 ref={heading} tabIndex={-1}>
+                {guide ? "지원서에서 자동 기입을 시작하세요" : titles[step]}
+              </h2>
+              {guide ? (
+                <QuickStartGuide
+                  hasValues={hasValues}
+                  pending={busy}
+                  onBack={() => {
+                    if (!transition.current && !editor.isReloading)
+                      setGuide(false);
+                  }}
+                  onOpenProfile={() => void proceed("profile")}
+                />
+              ) : (
+                <form
+                  noValidate
+                  onSubmit={(event) => event.preventDefault()}
+                  onKeyDown={(event) => {
+                    const target = event.target as HTMLElement;
+                    if (
+                      event.key !== "Enter" ||
+                      event.defaultPrevented ||
+                      event.nativeEvent.isComposing ||
+                      event.keyCode === 229 ||
+                      target.tagName !== "INPUT" ||
+                      target.getAttribute("role") === "combobox"
+                    )
+                      return;
+                    event.preventDefault();
+                    const inputs = Array.from(
+                      question.current?.querySelectorAll<HTMLInputElement>(
+                        'input:not(:disabled):not([aria-hidden="true"])',
+                      ) ?? [],
+                    );
+                    const following =
+                      inputs[inputs.indexOf(target as HTMLInputElement) + 1];
+                    if (following) following.focus();
+                    else next();
+                  }}
+                >
+                  <fieldset
+                    ref={question}
+                    disabled={busy}
+                    className={`${styles.question} ${step === "school" ? styles.schoolQuestion : ""}`}
+                    key={step}
+                  >
+                    {choosing ? (
+                      <QuickStartPicker
+                        education={step === "educationType"}
                         profile={editor.profile}
-                        onEditBasic={editQuestion}
-                        onSelectEntry={(chapter, row) =>
-                          selectEntry(chapter, row.sectionId, row)
-                        }
+                        selectEntry={selectEntry}
                       />
+                    ) : summary ? (
+                      <>
+                        {summaryHasValues &&
+                          (editor.saveStatus === "idle" ||
+                            editor.saveStatus === "saved") && (
+                            <div className={styles.savedBadge}>
+                              ✓ 여기까지 저장했어요
+                            </div>
+                          )}
+                        {step === "overview" && autofillExit}
+                        {step === "overview" ? (
+                          <QuickStartOverview
+                            profile={editor.profile}
+                            onEditBasic={editQuestion}
+                            onSelectEntry={(chapter, row) =>
+                              selectEntry(chapter, row.sectionId, row)
+                            }
+                          />
+                        ) : (
+                          <Summary
+                            values={summaryValues}
+                            onEdit={editQuestion}
+                          />
+                        )}
+                        {(staleCareerDate || staleEducationDate) && (
+                          <div className={styles.note}>
+                            <p>
+                              {staleCareerDate
+                                ? "재직중인데 이전 퇴사일이 남아 있어요."
+                                : "현재 재학 상태와 함께 이전 졸업일이 남아 있어요."}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => updateEntry("endDate", "")}
+                            >
+                              {staleCareerDate
+                                ? "퇴사일 지우기"
+                                : "졸업일 지우기"}
+                            </button>
+                          </div>
+                        )}
+                        {step !== "overview" && autofillExit}
+                        <p className={styles.continueLabel}>추가 항목</p>
+                        <div className={styles.supplementActions}>
+                          {missingFields
+                            .filter(([, value]) => !value.trim())
+                            .map(([label, , target]) => (
+                              <button
+                                key={label}
+                                type="button"
+                                onClick={() => target && editQuestion(target)}
+                              >
+                                {label} 추가
+                              </button>
+                            ))}
+                          {step === "educationSummary" && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => editQuestion("educationDates")}
+                              >
+                                입학·졸업일 추가
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => editQuestion("educationDetails")}
+                              >
+                                학위·학교 정보 추가
+                              </button>
+                            </>
+                          )}
+                          {step === "experienceSummary" && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => editQuestion("experienceDates")}
+                              >
+                                기간 추가
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  editQuestion("experienceDetails")
+                                }
+                              >
+                                활동 내용 추가
+                              </button>
+                            </>
+                          )}
+                        </div>
+                        {step === "basics" && (
+                          <div className={styles.supplementActions}>
+                            {summaryValues
+                              .filter(
+                                ([, value, target]) =>
+                                  (target === "englishName" ||
+                                    target === "nationality") &&
+                                  !value.trim(),
+                              )
+                              .map(([label, , target]) => (
+                                <button
+                                  key={label}
+                                  type="button"
+                                  onClick={() => target && editQuestion(target)}
+                                >
+                                  {label} 추가
+                                </button>
+                              ))}
+                          </div>
+                        )}
+                        <div className={styles.chapterChoices}>
+                          <button
+                            type="button"
+                            aria-label="학력 추가하기"
+                            onClick={() => void proceed("educationType")}
+                          >
+                            <strong>학력 추가하기</strong>
+                            <span>학교·전공·재학 상태 →</span>
+                          </button>
+                          <button
+                            type="button"
+                            aria-label="경력·활동 추가하기"
+                            onClick={() => void proceed("experienceType")}
+                          >
+                            <strong>경력·활동 추가하기</strong>
+                            <span>직장경력 또는 프로젝트 →</span>
+                          </button>
+                        </div>
+                        {step !== "overview" && (
+                          <button
+                            type="button"
+                            className={styles.textButton}
+                            onClick={() => void proceed("overview")}
+                          >
+                            저장한 정보 보기
+                          </button>
+                        )}
+                      </>
                     ) : (
-                      <Summary values={summaryValues} onEdit={editQuestion} />
+                      <QuickStartFields
+                        step={step}
+                        profile={editor.profile}
+                        entry={entry}
+                        chapter={selection.chapter}
+                        updateSingle={editor.updateSingle}
+                        updateEntry={updateEntry}
+                      />
                     )}
-                    {(staleCareerDate || staleEducationDate) && (
-                      <div className={styles.note}>
-                        <p>
-                          {staleCareerDate
-                            ? "재직중인데 이전 퇴사일이 남아 있어요."
-                            : "현재 재학 상태와 함께 이전 졸업일이 남아 있어요."}
-                        </p>
+                  </fieldset>
+                  {editor.saveStatus === "error" && (
+                    <>
+                      <p role="alert" className={styles.error}>
+                        {saveLabels.error}
+                      </p>
+                      <button
+                        ref={retryButton}
+                        type="button"
+                        disabled={busy}
+                        onClick={async (event) => {
+                          const ownedFocus =
+                            event.currentTarget.matches(":focus");
+                          if (!(await proceed("retry")) && ownedFocus)
+                            setRestoreRetryFocus(true);
+                        }}
+                      >
+                        다시 저장하기
+                      </button>
+                    </>
+                  )}
+                  {(!summary || history.length > 0) && (
+                    <div className={styles.foot}>
+                      {!summary && (
                         <button
                           type="button"
-                          onClick={() => updateEntry("endDate", "")}
+                          className={styles.quiet}
+                          disabled={busy}
+                          aria-label={
+                            choosing ? "이 묶음 건너뛰기" : "이 질문 건너뛰기"
+                          }
+                          onClick={async () => {
+                            if (!choosing) {
+                              next(true);
+                              return;
+                            }
+                            if (step === "educationType") {
+                              void proceed("experienceType");
+                              return;
+                            }
+                            if (await proceed("experienceSummary"))
+                              setSelection({
+                                chapter: "projects",
+                                entry: {
+                                  id: crypto.randomUUID(),
+                                  sectionId: "project",
+                                  values: {},
+                                },
+                              });
+                          }}
                         >
-                          {staleCareerDate ? "퇴사일 지우기" : "졸업일 지우기"}
+                          건너뛰기
                         </button>
+                      )}
+                      <div className={styles.footEnd}>
+                        {history.length > 0 && (
+                          <button
+                            type="button"
+                            className={styles.quiet}
+                            disabled={busy}
+                            onClick={async () => {
+                              if (!(await proceed("retry"))) return;
+                              setStep(history[history.length - 1].step);
+                              setSelection(
+                                history[history.length - 1].selection,
+                              );
+                              setReturnTo(history[history.length - 1].returnTo);
+                              setHistory(history.slice(0, -1));
+                            }}
+                          >
+                            이전
+                          </button>
+                        )}
+                        {!summary && !choosing && (
+                          <button
+                            type="button"
+                            className={styles.primary}
+                            disabled={busy}
+                            onClick={() => next()}
+                          >
+                            {returnTo ? "확인하고 돌아가기" : "다음"}
+                          </button>
+                        )}
                       </div>
-                    )}
-                    {step !== "overview" && autofillExit}
-                    <p className={styles.continueLabel}>
-                      조금 더 준비하고 싶다면 <span>선택</span>
+                    </div>
+                  )}
+                </form>
+              )}
+              {editor.saveStatus === "conflict" && (
+                <div role="alert" className={styles.error}>
+                  <p>
+                    다른 화면에서 프로필이 변경되었습니다. 현재 편집은 저장하지
+                    않았습니다. 최신 프로필을 다시 불러온 뒤 편집해 주세요.
+                  </p>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void reloadLatest()}
+                  >
+                    {editor.isReloading
+                      ? "불러오는 중…"
+                      : "최신 프로필 다시 불러오기"}
+                  </button>
+                  {editor.reloadFailed && (
+                    <p>
+                      최신 프로필을 불러오지 못했습니다. 편집 내용은 유지됩니다.
+                      다시 시도해 주세요.
                     </p>
-                    <div className={styles.supplementActions}>
-                      {missingFields
-                        .filter(([, value]) => !value.trim())
-                        .map(([label, , target]) => (
-                          <button
-                            key={label}
-                            type="button"
-                            onClick={() => target && editQuestion(target)}
-                          >
-                            {label} 추가
-                          </button>
-                        ))}
-                      {step === "educationSummary" && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => editQuestion("educationDates")}
-                          >
-                            입학·졸업일 추가
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => editQuestion("educationDetails")}
-                          >
-                            학위·학교 정보 추가
-                          </button>
-                        </>
-                      )}
-                      {step === "experienceSummary" && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => editQuestion("experienceDates")}
-                          >
-                            기간 추가
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => editQuestion("experienceDetails")}
-                          >
-                            활동 내용 추가
-                          </button>
-                        </>
-                      )}
-                    </div>
-                    {step === "basics" && (
-                      <div className={styles.supplementActions}>
-                        {summaryValues
-                          .filter(
-                            ([, value, target]) =>
-                              (target === "englishName" ||
-                                target === "nationality") &&
-                              !value.trim(),
-                          )
-                          .map(([label, , target]) => (
-                            <button
-                              key={label}
-                              type="button"
-                              onClick={() => target && editQuestion(target)}
-                            >
-                              {label} 추가
-                            </button>
-                          ))}
-                      </div>
-                    )}
-                    <div className={styles.chapterChoices}>
-                      <button
-                        type="button"
-                        aria-label="학력 추가하기"
-                        onClick={() => void proceed("educationType")}
-                      >
-                        <strong>학력 추가하기</strong>
-                        <span>학교·전공·재학 상태 →</span>
-                      </button>
-                      <button
-                        type="button"
-                        aria-label="경력·활동 추가하기"
-                        onClick={() => void proceed("experienceType")}
-                      >
-                        <strong>경력·활동 추가하기</strong>
-                        <span>직장경력 또는 프로젝트 →</span>
-                      </button>
-                    </div>
-                    {step !== "overview" && (
-                      <button
-                        type="button"
-                        className={styles.textButton}
-                        onClick={() => void proceed("overview")}
-                      >
-                        저장한 정보 보기
-                      </button>
-                    )}
-                  </>
-                ) : (
-                  <QuickStartFields
-                    step={step}
-                    profile={editor.profile}
-                    entry={entry}
-                    chapter={selection.chapter}
-                    updateSingle={editor.updateSingle}
-                    updateEntry={updateEntry}
-                  />
-                )}
-              </fieldset>
-              <p
-                role={editor.saveStatus === "error" ? "alert" : "status"}
-                className={
-                  editor.saveStatus === "error" ? styles.error : styles.note
-                }
-              >
-                {saveLabels[editor.saveStatus]}
-              </p>
-              {editor.saveStatus === "error" && (
-                <button
-                  ref={retryButton}
-                  type="button"
-                  disabled={busy}
-                  onClick={async (event) => {
-                    const ownedFocus = event.currentTarget.matches(":focus");
-                    if (!(await proceed("retry")) && ownedFocus)
-                      setRestoreRetryFocus(true);
-                  }}
-                >
-                  다시 저장하기
-                </button>
+                  )}
+                </div>
               )}
-              <div className={styles.actions}>
-                {history.length > 0 && (
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={async () => {
-                      if (!(await proceed("retry"))) return;
-                      setStep(history[history.length - 1].step);
-                      setSelection(history[history.length - 1].selection);
-                      setReturnTo(history[history.length - 1].returnTo);
-                      setHistory(history.slice(0, -1));
-                    }}
-                  >
-                    이전
-                  </button>
-                )}
-                {!summary && !choosing && (
-                  <button
-                    type="button"
-                    className={styles.primary}
-                    disabled={busy}
-                    onClick={() => next()}
-                  >
-                    {returnTo ? "확인하고 돌아가기" : "다음"}
-                  </button>
-                )}
-              </div>
-              {!summary && (
-                <button
-                  type="button"
-                  className={styles.skip}
-                  disabled={busy}
-                  onClick={async () => {
-                    if (!choosing) {
-                      next(true);
-                      return;
-                    }
-                    if (step === "educationType") {
-                      void proceed("experienceType");
-                      return;
-                    }
-                    if (await proceed("experienceSummary"))
-                      setSelection({
-                        chapter: "projects",
-                        entry: {
-                          id: crypto.randomUUID(),
-                          sectionId: "project",
-                          values: {},
-                        },
-                      });
-                  }}
-                >
-                  {choosing ? "이 묶음 건너뛰기" : "이 질문 건너뛰기"}
-                </button>
-              )}
-              {!summary && autofillExit}
-            </form>
-          )}
-          {editor.saveStatus === "conflict" && (
-            <div role="alert" className={styles.error}>
-              <p>
-                다른 화면에서 프로필이 변경되었습니다. 현재 편집은 저장하지
-                않았습니다. 최신 프로필을 다시 불러온 뒤 편집해 주세요.
-              </p>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => void reloadLatest()}
-              >
-                {editor.isReloading
-                  ? "불러오는 중…"
-                  : "최신 프로필 다시 불러오기"}
-              </button>
-              {editor.reloadFailed && (
-                <p>
-                  최신 프로필을 불러오지 못했습니다. 편집 내용은 유지됩니다.
-                  다시 시도해 주세요.
+              {navigationFailed && (
+                <p role="alert" className={styles.error}>
+                  화면을 열지 못했어요. 다시 시도해 주세요.
                 </p>
               )}
-            </div>
-          )}
-          {navigationFailed && (
-            <p role="alert" className={styles.error}>
-              화면을 열지 못했어요. 다시 시도해 주세요.
-            </p>
-          )}
-        </section>
-        <p className={styles.footer}>내 정보는 현재 브라우저에 보관돼요.</p>
+            </section>
+            {!guide && !summary && autofillExit}
+          </div>
+        </div>
       </div>
     </main>
   );

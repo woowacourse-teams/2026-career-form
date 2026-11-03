@@ -1,381 +1,589 @@
 .page {
   min-height: 100vh;
   background: var(--color-page);
-  color: var(--color-text-strong);
-  padding: 32px 24px 48px;
+  color: var(--color-text);
   font-family: var(--font-ui);
+  font-size: 17px;
+  line-height: 25px;
+  letter-spacing: -0.374px;
+  word-break: keep-all;
 }
 .page *,
 .page *::before,
 .page *::after {
   box-sizing: border-box;
 }
-.shell {
-  max-width: 760px;
-  margin: auto;
+.page > p {
+  max-width: 1016px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+/* Header */
+.top {
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+.topIn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 1016px;
+  height: 52px;
+  margin: 0 auto;
+  padding: 0 20px;
 }
 .brand {
   display: flex;
   align-items: center;
-  gap: 9px;
-  font-size: 14px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  margin-bottom: 40px;
+  gap: 8px;
+  margin-right: auto;
+  font-weight: 600;
+  white-space: nowrap;
 }
 .brand img {
   width: 28px;
   height: 28px;
+  border-radius: 8px;
 }
-.brand span {
-  margin-left: auto;
-  font-weight: 400;
-  color: var(--color-text-subtle);
-  font-size: 12px;
-  letter-spacing: 0;
+.wrap {
+  max-width: 1016px;
+  margin: 0 auto;
+  padding: 40px 20px;
 }
-.steps {
+.head {
   display: flex;
-  list-style: none;
-  padding: 0;
-  margin: 0 0 22px;
-  gap: 20px;
+  align-items: baseline;
+  gap: 15px;
+  margin-bottom: 20px;
 }
-.steps li {
-  flex: 1;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  font-size: 13px;
-  color: var(--color-text-subtle);
+.head h1 {
+  margin: 0;
+  font-size: 40px;
+  line-height: 44px;
+  font-weight: 600;
+  letter-spacing: normal;
   white-space: nowrap;
 }
-.steps li > span {
+.count {
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.saved {
+  margin: 0 8px 0 auto;
+  align-self: center;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: -0.224px;
+}
+
+/* Step list */
+.grid {
   display: grid;
-  place-items: center;
-  background: var(--color-accent-hover);
-  color: var(--color-text-strong);
-  width: 25px;
-  height: 25px;
-  border-radius: 50%;
-  font-size: 12px;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
 }
-.steps li[aria-current] {
-  color: var(--color-action);
-  font-weight: 700;
+.grid > * {
+  min-width: 0;
 }
-.steps li[aria-current] > span {
-  background: var(--color-action);
-  color: var(--color-on-action);
+.grp {
+  margin: 0 0 8px;
+  padding: 0 11px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: -0.224px;
+  font-weight: 600;
 }
-.steps small {
-  font-size: 10px;
-  font-weight: 400;
+.steps {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
-.card {
-  background: var(--color-surface);
-  padding: 36px 44px;
-  border-radius: 12px;
-  box-shadow: var(--shadow-card);
-}
-.topline {
+.steps li {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  min-height: 32px;
+  padding: 0 11px;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: -0.224px;
 }
-.eyebrow {
-  color: var(--color-text-muted);
-  font-size: 12px;
+.steps li[aria-current] {
+  background: var(--color-surface);
   font-weight: 600;
 }
-.card progress {
-  display: block;
-  width: 100%;
-  height: 6px;
-  border: 0;
-  border-radius: 3px;
-  overflow: hidden;
-  margin: 14px 0 30px;
-  appearance: none;
-  background: var(--color-border);
-}
-.card progress::-webkit-progress-bar {
-  background: var(--color-border);
-}
-.card progress::-webkit-progress-value {
-  background: var(--color-action);
-  transition: width 0.2s;
-}
-.card progress::-moz-progress-bar {
-  background: var(--color-action);
-}
-.card h1 {
-  font-size: 30px;
-  line-height: 1.4;
-  letter-spacing: -1px;
-  margin: 16px 0 12px;
-  outline: none;
-  word-break: keep-all;
-}
-.card h1:focus-visible {
-  outline: 2px solid var(--color-action);
-  outline-offset: 6px;
-}
-.description {
-  font-size: 14px;
+.steps small {
   color: var(--color-text-muted);
-  line-height: 1.7;
-  margin: 0 0 30px;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+/* Card */
+.card {
+  padding: 40px;
+  border-radius: 18px;
+  background: var(--color-surface);
+}
+.card h2 {
+  margin: 0 0 20px;
+  font-size: 28px;
+  line-height: 32px;
+  font-weight: 400;
+  letter-spacing: 0.196px;
+  outline: none;
+}
+.card h2:focus-visible {
+  border-radius: 4px;
+  box-shadow:
+    0 0 0 2px var(--color-surface),
+    0 0 0 4px var(--color-action);
 }
 .question {
-  border: 0;
-  padding: 0;
-  margin: 0 0 28px;
   min-width: 0;
-  min-height: 146px;
+  margin: 0;
+  padding: 0;
+  border: 0;
   animation: arrive 0.22s ease-out;
 }
-.nameFields {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
+.schoolQuestion {
+  min-height: 350px;
 }
+.schoolQuestion [role="listbox"] {
+  max-height: 180px;
+}
+.nameFields,
+.dateFields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 15px;
+}
+
+/* Fields */
 .field {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text);
+  gap: 8px;
   min-width: 0;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: -0.224px;
 }
 .field input,
 .field textarea {
-  font: inherit;
-  font-size: 21px;
-  font-weight: 500;
-  color: var(--color-text-strong);
-  background: var(--color-surface);
-  border: 1px solid var(--color-field-border);
-  border-radius: 12px;
-  padding: 17px 16px;
   width: 100%;
   min-width: 0;
-  transition:
-    border-color 0.15s,
-    box-shadow 0.15s;
+  height: 44px;
+  padding: 0 15px;
+  border: 1px solid var(--color-field-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 17px;
+  letter-spacing: -0.374px;
 }
 .field textarea {
+  height: auto;
+  padding: 11px 15px;
+  line-height: 25px;
   resize: vertical;
-  font-size: 16px;
-  line-height: 1.7;
 }
 .field input::placeholder,
 .field textarea::placeholder {
-  color: var(--color-text-subtle);
-  font-weight: 400;
+  color: var(--color-text-muted);
 }
 .field input:focus,
 .field textarea:focus {
   outline: none;
   border-color: var(--color-action);
-  box-shadow: 0 0 0 3px var(--color-focus);
+  box-shadow: 0 0 0 1px var(--color-action);
 }
-.page button {
-  font: inherit;
+.field > div:has(> [role="combobox"]) {
+  position: relative;
+}
+/* Search results float above the question so closing them cannot move Next
+   between pointerdown and click. */
+.field [role="combobox"] + div {
+  position: absolute;
+  top: 48px;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  border-radius: 8px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-panel);
+}
+.page .field [role="listbox"] span,
+.page .field [class*="help"] {
   font-size: 14px;
+}
+.page .field [class*="footer"] button {
+  min-height: 44px;
+  padding: 4px 11px;
   border: 0;
-  border-radius: 11px;
-  cursor: pointer;
-  background: var(--color-accent-soft);
+  border-radius: 8px;
+  background: var(--color-surface-muted);
   color: var(--color-text);
-  padding: 14px 18px;
-  line-height: 1.5;
+  font-size: 14px;
+}
+
+/* Buttons */
+.page button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 11px 21px;
+  border: 1px solid var(--color-action-strong);
+  border-radius: 980px;
+  background: transparent;
+  color: var(--color-action-strong);
+  font: inherit;
+  font-size: 17px;
+  line-height: 1.2;
+  letter-spacing: -0.374px;
+  cursor: pointer;
 }
 .page button:focus-visible {
-  outline: 3px solid var(--color-action);
-  outline-offset: 3px;
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--color-surface),
+    0 0 0 4px var(--color-action);
 }
 .page button:disabled {
   opacity: 0.55;
   cursor: wait;
 }
-.page button:hover:not(:disabled) {
-  filter: brightness(0.97);
-}
-.actions {
-  display: flex;
-  gap: 12px;
-  margin-top: 20px;
-}
-.actions > button {
-  flex: 1;
-  word-break: keep-all;
-  overflow-wrap: anywhere;
-}
 .page button.primary {
+  border-color: var(--color-action);
   background: var(--color-action);
   color: var(--color-on-action);
-  font-weight: 700;
-  padding: 16px;
 }
-.page button.textButton {
-  padding: 4px 0;
-  background: none;
-  font-size: 12px;
-  color: var(--color-text-subtle);
-  text-decoration: underline;
+.page button.primary:hover:not(:disabled) {
+  border-color: var(--color-brand-hover);
+  background: var(--color-brand-hover);
+}
+.page button.quiet {
+  padding-left: 11px;
+  padding-right: 11px;
+  border-color: transparent;
+  color: #515154;
+}
+.page button.topLink {
+  min-height: 32px;
+  padding: 0 15px;
+  border: 0;
+  font-size: 14px;
+  letter-spacing: -0.224px;
   white-space: nowrap;
 }
-.page button.skip {
-  display: block;
-  background: none;
-  margin: 14px auto;
-  padding: 6px;
-  color: var(--color-text-subtle);
-  font-size: 13px;
+.page button.textButton {
+  min-height: 36px;
+  padding: 8px 11px;
+  border: 0;
+  font-size: 14px;
+  letter-spacing: -0.224px;
 }
-.exit {
-  border-top: 1px solid var(--color-border);
-  margin-top: 24px;
-  padding-top: 22px;
-  text-align: center;
+
+/* Footer of the card */
+.foot {
   display: flex;
-  flex-direction: column;
-  gap: 7px;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid var(--color-border);
 }
-.exit button {
-  background: var(--color-accent-soft);
-  color: var(--color-action);
-  font-weight: 700;
+.footEnd {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
 }
-.exit > span {
-  font-size: 11px;
-  color: var(--color-text-subtle);
+.after,
+.summaryExit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 15px;
 }
-.note {
-  font-size: 12px;
-  color: var(--color-text-subtle);
-  line-height: 1.7;
+.after {
+  margin-top: 20px;
+}
+.summaryExit {
+  margin: 0 0 20px;
+}
+.tag {
+  color: #515154;
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: -0.224px;
+}
+
+/* Messages */
+.note,
+.error,
+.empty {
+  margin: 8px 0 0;
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: -0.224px;
+}
+.note,
+.empty {
+  color: var(--color-text-muted);
 }
 .error {
-  font-size: 13px;
   color: var(--color-danger-text);
-  line-height: 1.7;
 }
-.footer {
-  text-align: center;
-  font-size: 12px;
-  color: var(--color-text-subtle);
-  margin-top: 24px;
+.error + button,
+.error button {
+  margin-top: 8px;
 }
-.choiceGroup {
-  margin-bottom: 24px;
-}
-.choiceGroup > p {
+.savedBadge {
+  margin-bottom: 20px;
+  color: var(--color-success);
   font-size: 14px;
   font-weight: 600;
-  color: var(--color-text);
-  margin: 0 0 12px;
 }
-.choices {
+
+/* Choices */
+.choiceGroup {
+  margin-bottom: 20px;
+}
+.choiceGroup > p {
+  margin: 0 0 8px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: -0.224px;
+}
+.choices,
+.emailSuggestions,
+.supplementActions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
+.choices button,
+.emailSuggestions button,
+.supplementActions button,
+.dateControl button,
+.page button.existing,
+.page button.summaryEdit {
+  min-height: 36px;
+  padding: 8px 15px;
+  font-size: 14px;
+  letter-spacing: -0.224px;
+}
 .choices button {
-  padding: 12px 18px;
-  border: 1px solid transparent;
-  background: var(--color-accent-soft);
+  border-color: var(--color-field-border);
+  color: var(--color-text);
 }
 .choices button[aria-pressed="true"] {
-  color: var(--color-action);
-  background: var(--color-accent-soft);
   border-color: var(--color-action);
+  background: var(--color-accent-soft);
+  color: var(--color-action-strong);
+  font-weight: 600;
+}
+.emailSuggestions {
+  margin-top: 8px;
+}
+.emailSuggestions button {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+.supplementActions {
+  margin: 8px 0 20px;
+}
+.supplementActions:empty {
+  display: none;
+}
+.continueLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  line-height: 18px;
 }
 .chapterChoices {
   display: grid;
-  gap: 12px;
+  gap: 8px;
+  margin-bottom: 20px;
 }
-.chapterChoices button {
-  display: flex;
-  align-items: center;
+.page .chapterChoices button {
   justify-content: space-between;
-  text-align: left;
-  padding: 20px;
+  flex-wrap: wrap;
+  padding: 15px;
+  border: 0;
+  border-radius: 8px;
   background: var(--color-surface-muted);
-  gap: 12px;
+  color: var(--color-text);
+  text-align: left;
 }
 .chapterChoices strong {
-  font-size: 16px;
-  color: var(--color-text-strong);
+  font-weight: 600;
 }
 .chapterChoices span {
-  font-size: 12px;
-  color: var(--color-text-subtle);
+  color: var(--color-text-muted);
+  font-size: 14px;
+  letter-spacing: -0.224px;
 }
 .page button.existing {
-  display: block;
-  text-align: left;
+  justify-content: flex-start;
   width: 100%;
-  margin-top: 12px;
-  background: none;
-  border: 1px solid var(--color-field-border);
+  margin-bottom: 8px;
+  border-radius: 8px;
+  text-align: left;
 }
-.savedBadge {
-  font-size: 13px;
-  color: var(--color-success);
-  font-weight: 600;
-  margin-bottom: 18px;
-}
+
+/* Summary */
 .summary {
-  margin: 0 0 22px;
-  background: var(--color-surface-muted);
-  border-radius: 14px;
-  padding: 8px 20px;
+  margin: 0 0 20px;
 }
 .summary > div {
   display: grid;
-  grid-template-columns: 110px 1fr;
-  gap: 14px;
-  padding: 14px 0;
-  border-bottom: 1px solid var(--color-border);
+  grid-template-columns: 140px minmax(0, 1fr);
+  column-gap: 15px;
+  align-items: center;
+  min-height: 44px;
+  padding: 4px 0;
+  border-top: 1px solid var(--color-border);
 }
-.summary > div:last-child {
-  border-bottom: 0;
+.summary > div:first-child {
+  border-top: 0;
 }
 .summary dt {
-  font-size: 13px;
-  color: var(--color-text-subtle);
+  color: var(--color-text-muted);
+  font-size: 14px;
+  letter-spacing: -0.224px;
 }
 .summary dd {
+  min-width: 0;
   margin: 0;
   font-size: 14px;
-  font-weight: 600;
-  word-break: break-word;
+  letter-spacing: -0.224px;
+  overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
-.empty {
-  font-size: 14px;
-  color: var(--color-text-muted);
-  line-height: 1.8;
+.page button.summaryEdit {
+  margin-left: 8px;
+  border-color: transparent;
 }
+.overview {
+  display: grid;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+.overview h3 {
+  margin: 0 0 8px;
+  font-size: 17px;
+  font-weight: 600;
+}
+.overviewCards {
+  display: grid;
+  gap: 8px;
+}
+.page button.overviewCard {
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  padding: 15px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.overviewCard strong {
+  font-weight: 600;
+}
+.overviewCard span {
+  color: var(--color-text-muted);
+  font-size: 14px;
+  letter-spacing: -0.224px;
+}
+.optionalDetails {
+  margin: 0 0 8px;
+  color: var(--color-action-strong);
+  font-size: 14px;
+}
+.optionalDetails > summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  cursor: pointer;
+}
+.optionalDetails > summary:focus-visible {
+  outline: none;
+  border-radius: 4px;
+  box-shadow:
+    0 0 0 2px var(--color-surface),
+    0 0 0 4px var(--color-action);
+}
+
+/* Date input */
+.dateControl {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dateControl .calendarInput {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Guide */
 .instructions {
-  padding-left: 24px;
-  line-height: 1.7;
+  margin: 0 0 20px;
+  padding-left: 20px;
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: -0.224px;
 }
 .instructions li {
   padding: 8px 0;
 }
 .instructions strong {
-  display: block;
+  font-weight: 400;
+}
+.page .card figcaption,
+.page .card figcaption strong,
+.page .card figcaption span,
+.page .card figcaption small {
   font-size: 14px;
 }
-.instructions span {
-  font-size: 12px;
-  color: var(--color-text-muted);
-}
+
 @keyframes arrive {
   from {
     opacity: 0;
@@ -390,250 +598,60 @@
   .question {
     animation: none;
   }
-  .page * {
-    transition: none !important;
-  }
 }
-@media (max-width: 600px) {
-  .page {
-    padding: 20px 16px 32px;
-  }
-  .brand {
-    margin-bottom: 28px;
-    font-size: 12px;
+@media (max-width: 640px) {
+  .topIn {
+    gap: 0;
+    padding: 0 15px;
   }
   .brand span {
     display: none;
   }
+  .head {
+    flex-wrap: wrap;
+    gap: 8px 15px;
+  }
+  .saved {
+    flex: 1 0 100%;
+    margin: 0;
+  }
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .grp {
+    display: none;
+  }
   .steps {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
   }
   .steps li {
-    font-size: 11px;
-    gap: 5px;
-  }
-  .steps small {
-    display: none;
+    flex-wrap: wrap;
+    justify-content: center;
+    min-height: 44px;
+    padding: 4px 8px;
   }
   .card {
-    padding: 24px 20px;
-    border-radius: 18px;
+    padding: 20px;
   }
-  .card h1 {
-    font-size: 25px;
+  .nameFields,
+  .dateFields {
+    grid-template-columns: minmax(0, 1fr);
   }
-  .description {
-    font-size: 13px;
-  }
-  .nameFields {
-    gap: 12px;
-  }
-  .field input {
-    font-size: 18px;
-    padding: 15px 12px;
-  }
-  .chapterChoices button {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 6px;
+  .foot {
+    margin-top: 20px;
   }
   .summary > div {
-    grid-template-columns: 80px 1fr;
+    grid-template-columns: 96px minmax(0, 1fr);
   }
-  .topline {
-    gap: 5px;
+  .page button.topLink,
+  .page button.textButton,
+  .choices button,
+  .emailSuggestions button,
+  .supplementActions button,
+  .dateControl button,
+  .page button.existing,
+  .page button.summaryEdit {
+    min-height: 44px;
   }
-  .eyebrow {
-    font-size: 10px;
-  }
-  .page button.textButton {
-    font-size: 10px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .card progress::-webkit-progress-value {
-    transition: none;
-  }
-}
-
-/* Search results float above the question so closing them cannot move Next
-   between pointerdown and click. */
-.field > div:has(> [role="combobox"]) {
-  position: relative;
-}
-.field [role="combobox"] + div {
-  position: absolute;
-  top: 62px;
-  left: 0;
-  right: 0;
-  z-index: 3;
-  background: var(--color-surface);
-  border-radius: 12px;
-  box-shadow: var(--shadow-panel);
-}
-@media (max-width: 600px) {
-  .field [role="combobox"] + div {
-    top: 56px;
-  }
-}
-
-.schoolQuestion {
-  min-height: 350px;
-}
-.schoolQuestion [role="listbox"] {
-  max-height: 180px;
-}
-
-.optional {
-  color: var(--color-text-subtle);
-  font-size: 12px;
-  margin: 0 0 18px;
-}
-.emailSuggestions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
-}
-.emailSuggestions button {
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  color: var(--color-action-strong);
-  padding: 8px 12px;
-  font-size: 13px;
-  max-width: 100%;
-  overflow-wrap: anywhere;
-  text-align: left;
-}
-.summaryExit {
-  border: 0;
-  margin: 0 0 30px;
-  padding: 0;
-}
-.continueLabel {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--color-text-muted);
-  font-size: 13px;
-  margin: 0 0 14px;
-}
-.continueLabel span {
-  background: var(--color-accent-hover);
-  color: var(--color-text-strong);
-  border-radius: 4px;
-  padding: 2px 6px;
-  font-size: 11px;
-}
-
-.dateFields {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-.dateControl {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.dateControl input {
-  font-size: 16px;
-  padding: 16px 10px;
-}
-.dateControl button {
-  flex-shrink: 0;
-  padding: 14px 10px;
-}
-.dateControl .calendarInput {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  border: 0;
-  opacity: 0;
-  pointer-events: none;
-  right: 0;
-  bottom: 0;
-}
-@media (max-width: 600px) {
-  .dateFields {
-    grid-template-columns: 1fr;
-  }
-}
-
-.summary dd {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-.page button.summaryEdit {
-  display: inline-block;
-  margin-left: 10px;
-  padding: 4px 8px;
-  color: var(--color-action-strong);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  font-size: 12px;
-  vertical-align: middle;
-}
-.overview {
-  display: grid;
-  gap: 24px;
-  margin-bottom: 24px;
-}
-.overview h2 {
-  margin: 0 0 12px;
-  font-size: 16px;
-  color: var(--color-text-strong);
-}
-.overviewCards {
-  display: grid;
-  gap: 10px;
-}
-.page button.overviewCard {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-  width: 100%;
-  padding: 18px;
-  text-align: left;
-  overflow-wrap: anywhere;
-  background: var(--color-surface-muted);
-  border: 1px solid var(--color-border);
-}
-.overviewCard span {
-  color: var(--color-text-muted);
-  font-size: 12px;
-}
-.supplementActions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin: 12px 0 20px;
-}
-.supplementActions:empty {
-  display: none;
-}
-.supplementActions button {
-  text-align: left;
-  background: var(--color-surface-muted);
-  border: 1px solid var(--color-border);
-  color: var(--color-action-strong);
-}
-@media (max-width: 600px) {
-  .supplementActions > button {
-    flex: 1 1 140px;
-  }
-}
-
-.optionalDetails {
-  margin: 0 0 18px;
-  font-size: 13px;
-  color: var(--color-action-strong);
-}
-.optionalDetails > summary {
-  cursor: pointer;
-  font-weight: 600;
 }

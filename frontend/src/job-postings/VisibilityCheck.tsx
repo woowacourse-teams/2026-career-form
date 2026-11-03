@@ -149,8 +149,8 @@ export function VisibilityCheck({
       </ul>
       {variant !== "settings" && (
         <p>
-          OS 알림이 꺼져 있어도 확장 아이콘의 숫자와 공지함으로 새 공고를 확인할
-          수 있어요.
+          OS 알림이 꺼져 있어도 확장 아이콘의 숫자와 새 공고 탭으로 새 공고를
+          확인할 수 있어요.
         </p>
       )}
       <div className={styles.actions}>

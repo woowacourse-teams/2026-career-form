@@ -20,7 +20,7 @@ export function QuickStartOverview({
   return (
     <div className={styles.overview}>
       <section aria-label="저장한 기본 정보">
-        <h2>기본 정보</h2>
+        <h3>기본 정보</h3>
         <Summary values={basics} onEdit={onEditBasic} />
         <div className={styles.supplementActions}>
           {basics
@@ -79,7 +79,7 @@ export function QuickStartOverview({
         if (!entries.length) return null;
         return (
           <section key={chapter} aria-label={`저장한 ${label}`}>
-            <h2>{label}</h2>
+            <h3>{label}</h3>
             <div className={styles.overviewCards}>
               {entries.map((entry) => {
                 const displayName =
@@ -96,7 +96,7 @@ export function QuickStartOverview({
                     onClick={() => onSelectEntry(chapter, entry)}
                   >
                     <strong>{displayName}</strong>
-                    <span>저장한 내용 확인 · 이어서 채우기 →</span>
+                    <span>이어서 채우기 →</span>
                   </button>
                 );
               })}

@@ -23,8 +23,9 @@ it("첫 설치 선택 화면에서는 자동 기입 준비가 공고 저장보�
   render(<App repository={createRepository()} />);
   const choices = screen.getAllByRole("heading", { level: 2 });
   expect(choices.map((heading) => heading.textContent)).toEqual([
-    "내 정보는 한 번만",
-    "관심 공고, 놓치지 않게",
+    "자동 기입",
+    "공고 저장",
+    "새 공고 알림",
   ]);
 });
 
@@ -53,10 +54,12 @@ it("설치 후 자동 기입을 선택하면 설치 안내 없이 기본 정보�
 it("프로필 없이 공고 등록으로 시작하고 시작 방법을 다시 선택할 수 있다", () => {
   render(<App repository={createRepository()} />);
   expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
-    "무엇부터 시작할까요?",
+    "설치 완료",
   );
-  expect(screen.getByText(/프로필 등록 없이 바로/)).toBeVisible();
-  expect(screen.getByText(/Chrome이 완전히 종료된 동안/)).toBeVisible();
+  expect(screen.getByText("새 공고에서 저장")).toBeVisible();
+  expect(screen.getByText("Chrome 종료 중")).toBeVisible();
+  expect(screen.getByText("늦거나 차단될 수 있음")).toBeVisible();
+  expect(screen.getByText("공고와 프로필 모두 이 브라우저")).toBeVisible();
   fireEvent.click(
     screen.getByRole("button", { name: /공고 저장부터 시작하기/ }),
   );
@@ -84,9 +87,9 @@ it("공고 안내는 패널 열기, 정보 입력, 완료 단계를 제공하고
   expect(screen.getByText("방법 1 · 페이지의 네모 아이콘")).toBeVisible();
   expect(screen.getByText("방법 2 · Chrome 퍼즐 메뉴")).toBeVisible();
   expect(screen.getByText("01 / 03")).toBeVisible();
-  fireEvent.click(screen.getByRole("button", { name: /공지함 저장 알아보기/ }));
+  fireEvent.click(screen.getByRole("button", { name: /새 공고 저장 알아보기/ }));
   expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
-    "공지함에서 공고를 저장하세요.",
+    "새 공고를 저장하세요.",
   );
   expect(screen.getByText(/Chrome이 완전히 종료된 동안/)).toBeVisible();
   expect(
@@ -100,7 +103,7 @@ it("공고 안내는 패널 열기, 정보 입력, 완료 단계를 제공하고
   expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
     "지원했다면 완료로 표시하세요.",
   );
-  expect(screen.getByRole("link", { name: /공지함 열기/ })).toHaveAttribute(
+  expect(screen.getByRole("link", { name: /새 공고 열기/ })).toHaveAttribute(
     "href",
     "/options.html#postings",
   );
@@ -120,7 +123,7 @@ it("저장한 프로필이 있으면 다시 질문하지 않고 보충할 정보
   render(<App repository={repository} />);
   fireEvent.click(screen.getByRole("button", { name: /자동 기입 준비하기/ }));
   await screen.findByRole("heading", {
-    name: "저장한 정보부터 이어서 준비해요",
+    name: "저장한 정보",
   });
   expect(screen.queryByLabelText("국문 성")).toBeNull();
   expect(screen.getByText("saved@example.test")).toBeVisible();
@@ -158,17 +161,72 @@ it("설치 선택 화면에 새 공고 알림 카드를 보여 주고 알림 끄
       pushClient={pushClient}
     />,
   );
-  await screen.findByText("새 공고 알림이 켜져 있어요");
-  expect(
-    screen.getByText(/아이콘의 숫자와 관리 페이지의 공지함/),
-  ).toBeVisible();
+  await screen.findByText("켜짐");
+  expect(screen.getByText("확인 전")).toBeVisible();
+  expect(screen.getByText("아이콘 숫자와 새 공고 탭으로 확인")).toBeVisible();
   expect(
     screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
-  ).toEqual(["내 정보는 한 번만", "관심 공고, 놓치지 않게"]);
+  ).toEqual(["자동 기입", "공고 저장", "새 공고 알림"]);
   fireEvent.click(screen.getByRole("button", { name: "알림 끄기" }));
   await waitFor(() => expect(setEnabled).toHaveBeenCalledWith(false));
   await screen.findByText(/알림을 껐어요/);
+  expect(screen.getByText("꺼짐")).toBeVisible();
   expect(track).toHaveBeenCalledWith("push_subscription_disabled", {
     surface: "extension_onboarding",
   });
+});
+
+it("설치 시작 화면의 선택과 알림 테스트 응답을 기록한다", async () => {
+  const state: PushStateView = {
+    enabled: true,
+    supported: true,
+    status: { code: "registered", updatedAt: 1, attempts: 0 },
+    permission: "granted",
+    visibility: { result: "unknown" },
+    unread: 0,
+  };
+  const test = vi.fn(async () => state);
+  const record = vi.fn(async () => state);
+  const pushClient: PushClient = {
+    state: async () => state,
+    setEnabled: async () => state,
+    test,
+    record,
+    later: async () => state,
+    inbox: async () => [],
+    subscribe: () => () => {},
+  };
+  const track = vi.fn();
+  render(
+    <App
+      repository={createRepository()}
+      track={track}
+      pushClient={pushClient}
+    />,
+  );
+  await screen.findByText("켜짐");
+  fireEvent.click(screen.getByRole("button", { name: "알림 테스트" }));
+  await waitFor(() => expect(test).toHaveBeenCalledOnce());
+  expect(screen.queryByRole("button", { name: "알림 끄기" })).toBeNull();
+  fireEvent.click(await screen.findByRole("button", { name: "보였어요" }));
+  await waitFor(() => expect(record).toHaveBeenCalledWith("seen", "test"));
+  expect(track).toHaveBeenCalledWith("notification_test_sent", {
+    surface: "extension_onboarding",
+  });
+  expect(track).toHaveBeenCalledWith("notification_visibility_answered", {
+    surface: "extension_onboarding",
+    answer: "seen",
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: "공고 저장부터 시작하기" }),
+  );
+  expect(track).toHaveBeenCalledWith("onboarding_postings_selected", {
+    surface: "extension_onboarding",
+  });
+  fireEvent.click(screen.getByRole("button", { name: /시작 방법 다시 선택/ }));
+  fireEvent.click(screen.getByRole("button", { name: "자동 기입 준비하기" }));
+  expect(track).toHaveBeenCalledWith("onboarding_autofill_selected", {
+    surface: "extension_onboarding",
+  });
+  expect(await screen.findByLabelText("국문 성")).toBeVisible();
 });

@@ -10,6 +10,7 @@ import {
 } from "../../src/job-postings/push-client";
 import { SiteApp } from "../../site/SiteApp";
 import { SiteUrlContext } from "../../site/site-navigation";
+import { StartScreen } from "./StartScreen";
 import styles from "./App.module.css";
 
 export function extensionSiteUrl(path: string): string {
@@ -60,9 +61,15 @@ export function App({
             installed
             profileHref="/options.html"
             postingsHref="/options.html#postings"
-            pushClient={pushClient}
             track={track}
             onStartAutofill={() => setQuickStart(true)}
+            renderStart={(start) => (
+              <StartScreen
+                start={start}
+                pushClient={pushClient}
+                track={track}
+              />
+            )}
             surface="extension_onboarding"
           />
         </div>

@@ -71,8 +71,8 @@ async function renderForm(initial?: Profile) {
     />,
   );
   await screen.findByRole("heading", {
-    level: 1,
-    name: /이름|저장한 정보부터/,
+    level: 2,
+    name: /이름|저장한 정보/,
   });
   return { ...memory, track, open, ...view };
 }
@@ -136,7 +136,7 @@ describe("QuickStart", () => {
       target: { value: "2024" },
     });
     await click(screen.getByRole("button", { name: "이 질문 건너뛰기" }));
-    await screen.findByRole("heading", { name: "학력도 준비됐어요" });
+    await screen.findByRole("heading", { name: "학력" });
     expect((await repository.load()).education[0].values.startDate).toBe(
       "2020-03-02",
     );
@@ -223,7 +223,7 @@ describe("QuickStart", () => {
     await next();
     await next();
     await waitFor(() =>
-      expect(screen.getByRole("heading", { level: 1 })).toHaveFocus(),
+      expect(screen.getByRole("heading", { level: 2 })).toHaveFocus(),
     );
     await click(screen.getByRole("button", { name: "학력 추가하기" }));
     await waitFor(() =>
@@ -254,7 +254,7 @@ describe("QuickStart", () => {
     await screen.findByRole("heading", {
       name: "지원서에서 자동 기입을 시작하세요",
     });
-    expect(screen.getByText(/저장한 정보가 없다면/)).toBeVisible();
+    expect(screen.getByText("저장한 정보 없음")).toBeVisible();
     expect(track).toHaveBeenCalledWith("quick_profile_skipped", {
       surface: "extension_onboarding",
     });
@@ -340,7 +340,7 @@ describe("QuickStart", () => {
     unmount();
     render(<QuickStart repository={repository} onOpenProfile={() => {}} />);
     await screen.findByRole("heading", {
-      name: "저장한 정보부터 이어서 준비해요",
+      name: "저장한 정보",
     });
     await click(screen.getByRole("button", { name: "이름 수정" }));
     expect(screen.getByLabelText("국문 성")).toHaveValue("김");
@@ -667,7 +667,7 @@ it("skipping all information does not claim a saved profile", async () => {
   expect(screen.queryByText("✓ 여기까지 저장했어요")).toBeNull();
   await click(screen.getByRole("button", { name: "경력·활동 추가하기" }));
   await click(screen.getByRole("button", { name: "이 묶음 건너뛰기" }));
-  await screen.findByText(/아직 입력한 정보가 없어요/);
+  await screen.findByText("입력한 정보 없음");
   expect(screen.queryByText("✓ 여기까지 저장했어요")).toBeNull();
 });
 it("explicitly edits an existing project without replacing its id or extra values", async () => {
@@ -837,7 +837,7 @@ it("does not resurrect a cleared new project from navigation history", async () 
   await click(screen.getByRole("button", { name: "프로젝트 이름 추가" }));
   expect(screen.getByLabelText("프로젝트 이름")).toHaveValue("");
   await click(screen.getByRole("button", { name: "이전" }));
-  await screen.findByText(/아직 입력한 정보가 없어요/);
+  await screen.findByText("입력한 정보 없음");
   expect(screen.queryByText("지울 프로젝트")).toBeNull();
   expect((await repository.load()).projects).toEqual([]);
 });
@@ -850,7 +850,7 @@ it("reopens saved information at an overview and returns directly after editing 
     <QuickStart repository={memory.repository} onOpenProfile={() => {}} />,
   );
   await screen.findByRole("heading", {
-    name: "저장한 정보부터 이어서 준비해요",
+    name: "저장한 정보",
   });
   expect(screen.queryByLabelText("국문 성")).toBeNull();
   await click(screen.getByRole("button", { name: "이메일 수정" }));
@@ -864,7 +864,7 @@ it("reopens saved information at an overview and returns directly after editing 
   memory.fail(false);
   await click(screen.getByRole("button", { name: "확인하고 돌아가기" }));
   await screen.findByRole("heading", {
-    name: "저장한 정보부터 이어서 준비해요",
+    name: "저장한 정보",
   });
   expect((await memory.repository.load()).contact.email).toBe(
     "after@example.test",
@@ -886,9 +886,7 @@ it("finishes the short education flow before asking optional dates", async () =>
   await next();
   await click(screen.getByRole("button", { name: "졸업" }));
   await next();
-  expect(
-    screen.getByRole("heading", { name: "학력도 준비됐어요" }),
-  ).toBeVisible();
+  expect(screen.getByRole("heading", { name: "학력" })).toBeVisible();
   expect(screen.queryByLabelText("입학일")).toBeNull();
   expect(
     screen.getByRole("button", { name: "입학·졸업일 추가" }),
@@ -950,7 +948,7 @@ it("resumes an existing career summary and clears its hidden end date only expli
   });
   await click(screen.getByRole("button", { name: "저장한 정보 보기" }));
   await screen.findByRole("heading", {
-    name: "저장한 정보부터 이어서 준비해요",
+    name: "저장한 정보",
   });
 });
 
@@ -999,9 +997,7 @@ it("ignores empty saved rows when deciding the initial question", async () => {
   ];
   const { repository } = await renderForm(initial);
   expect(screen.getByLabelText("국문 성")).toBeVisible();
-  expect(
-    screen.queryByRole("heading", { name: "저장한 정보부터 이어서 준비해요" }),
-  ).toBeNull();
+  expect(screen.queryByRole("heading", { name: "저장한 정보" })).toBeNull();
   expect((await repository.load()).education).toEqual(initial.education);
 });
 
@@ -1047,7 +1043,7 @@ it("edits a basic summary answer and returns without repeating later questions",
     target: { value: "수정" },
   });
   fireEvent.keyDown(screen.getByLabelText("국문 이름"), { key: "Enter" });
-  await screen.findByRole("heading", { name: "기본 정보가 준비됐어요" });
+  await screen.findByRole("heading", { name: "기본 정보" });
   expect(screen.queryByLabelText("이메일")).toBeNull();
   expect((await repository.load()).personal.koreanGivenName).toBe("수정");
 });
@@ -1068,7 +1064,7 @@ it("adds optional school choices to the selected row without changing its identi
   await click(screen.getByRole("button", { name: "학사" }));
   await click(screen.getByRole("button", { name: "주간" }));
   await next();
-  await screen.findByRole("heading", { name: "학력도 준비됐어요" });
+  await screen.findByRole("heading", { name: "학력" });
   expect((await repository.load()).education).toEqual([
     {
       id: "options-school",
@@ -1099,7 +1095,7 @@ it("offers missing basics from a partial summary without repeating the wizard", 
     target: { value: "added@example.test" },
   });
   await next();
-  await screen.findByRole("heading", { name: "기본 정보가 준비됐어요" });
+  await screen.findByRole("heading", { name: "기본 정보" });
   expect((await repository.load()).contact.email).toBe("added@example.test");
 });
 
@@ -1124,7 +1120,7 @@ it("offers missing school basics on a partial saved school's summary", async () 
     target: { value: "컴퓨터공학" },
   });
   await next();
-  await screen.findByRole("heading", { name: "학력도 준비됐어요" });
+  await screen.findByRole("heading", { name: "학력" });
   expect((await repository.load()).education).toHaveLength(1);
   expect((await repository.load()).education[0]).toMatchObject({
     id: "partial-school",
@@ -1182,9 +1178,7 @@ it.each(["직장명 수정", "기간 추가", "학력 추가하기", "저장한 
         screen.getByRole("button", { name: "지금 자동 기입 사용하기" }),
       ).toBeEnabled(),
     );
-    expect(
-      screen.getByRole("heading", { name: "경험까지 차곡차곡 준비됐어요" }),
-    ).toBeVisible();
+    expect(screen.getByRole("heading", { name: "경력·활동" })).toBeVisible();
     expect(screen.getByRole("alert")).toBeVisible();
     expect((await repository.load()).careers[0].values.endDate).toBe(
       "2024-12-31",
@@ -1193,9 +1187,7 @@ it.each(["직장명 수정", "기간 추가", "학력 추가하기", "저장한 
     await click(screen.getByRole("button", { name: action }));
     expect(screen.queryByRole("alert")).toBeNull();
     expect((await repository.load()).careers[0].values.endDate ?? "").toBe("");
-    expect(
-      screen.queryByRole("heading", { name: "경험까지 차곡차곡 준비됐어요" }),
-    ).toBeNull();
+    expect(screen.queryByRole("heading", { name: "경력·활동" })).toBeNull();
   },
 );
 
@@ -1207,7 +1199,7 @@ it("does not revisit a completed direct edit when going back from its summary", 
     target: { value: "history@example.test" },
   });
   await next();
-  await screen.findByRole("heading", { name: "기본 정보가 준비됐어요" });
+  await screen.findByRole("heading", { name: "기본 정보" });
   await click(screen.getByRole("button", { name: "이전" }));
   expect(
     await screen.findByLabelText("생년월일", { exact: true }),
@@ -1231,9 +1223,7 @@ it("collects five common basics before showing the summary", async () => {
   fireEvent.change(birthDate, { target: { value: "20000102" } });
   expect(birthDate).toHaveValue("2000-01-02");
   await next();
-  expect(
-    screen.getByRole("heading", { name: "기본 정보가 준비됐어요" }),
-  ).toBeVisible();
+  expect(screen.getByRole("heading", { name: "기본 정보" })).toBeVisible();
   expect(screen.getByText("남성")).toBeVisible();
   expect(screen.getByText("2000-01-02")).toBeVisible();
   expect((await repository.load()).personal).toMatchObject({
@@ -1258,9 +1248,7 @@ it("offers gender only as a catalog choice and protects an incomplete birth date
   await click(screen.getByRole("button", { name: "지금 자동 기입 사용하기" }));
   expect(birthDate).toBeVisible();
   await click(screen.getByRole("button", { name: "이 질문 건너뛰기" }));
-  expect(
-    screen.getByRole("heading", { name: "기본 정보가 준비됐어요" }),
-  ).toBeVisible();
+  expect(screen.getByRole("heading", { name: "기본 정보" })).toBeVisible();
   expect((await repository.load()).personal).toMatchObject({
     gender: "논바이너리",
   });
@@ -1309,9 +1297,7 @@ it("adds English name and nationality from the basic summary and returns there",
     target: { value: "Test" },
   });
   await next();
-  expect(
-    screen.getByRole("heading", { name: "기본 정보가 준비됐어요" }),
-  ).toBeVisible();
+  expect(screen.getByRole("heading", { name: "기본 정보" })).toBeVisible();
   expect(screen.getByText("Kim Test")).toBeVisible();
   await click(screen.getByRole("button", { name: "국적 추가" }));
   fireEvent.change(screen.getByLabelText("국적"), {
@@ -1409,9 +1395,7 @@ it("blocks edits while reloading and discards stale repeated-entry navigation on
   expect(screen.getByRole("button", { name: "이전" })).toBeDisabled();
   expect(screen.getByRole("button", { name: "불러오는 중…" })).toBeDisabled();
   await act(async () => resolveLoad(latest));
-  expect(
-    screen.getByRole("heading", { name: "저장한 정보부터 이어서 준비해요" }),
-  ).toBeVisible();
+  expect(screen.getByRole("heading", { name: "저장한 정보" })).toBeVisible();
   expect(screen.queryByRole("button", { name: "이전" })).toBeNull();
   expect(screen.queryByText("카카오")).toBeNull();
   expect(screen.getByText("우아한형제들")).toBeVisible();
@@ -1462,7 +1446,5 @@ it("keeps the guide open while a confirmed conflict reload is pending", async ()
     screen.getByRole("heading", { name: "지원서에서 자동 기입을 시작하세요" }),
   ).toBeVisible();
   await act(async () => resolveLoad(createEmptyProfile()));
-  expect(
-    screen.getByRole("heading", { name: "저장한 정보부터 이어서 준비해요" }),
-  ).toBeVisible();
+  expect(screen.getByRole("heading", { name: "저장한 정보" })).toBeVisible();
 });

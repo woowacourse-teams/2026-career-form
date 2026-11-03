@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import type { TrackEvent } from "../src/analytics/events";
 import { OnboardingNotificationCard } from "../src/job-postings/OnboardingNotificationCard";
 import type { PushClient } from "../src/job-postings/push-client";
@@ -19,6 +25,12 @@ import {
 import { SiteLink, useSiteUrl } from "./site-navigation";
 
 const noopTrack: TrackEvent = () => {};
+
+export interface OnboardingStart {
+  autofill: () => void;
+  postings: () => void;
+  heading: RefObject<HTMLHeadingElement | null>;
+}
 
 function InstallLink({
   onInstall,
@@ -45,16 +57,28 @@ function InstallLink({
 function Header({
   landing,
   onInstall,
+  extension,
 }: {
   landing: boolean;
   onInstall: () => void;
+  extension: boolean;
 }) {
   return (
     <header className={styles.header}>
-      <SiteLink className={styles.brand} href="/">
+      <SiteLink
+        className={styles.brand}
+        href="/"
+        aria-label={extension ? "Career Form" : undefined}
+      >
         <img src={logo} alt="" />
-        career<span>form</span>
-        <b>.</b>
+        {extension ? (
+          <span>Career Form</span>
+        ) : (
+          <>
+            career<span>form</span>
+            <b>.</b>
+          </>
+        )}
       </SiteLink>
       {landing ? (
         <>
@@ -68,8 +92,12 @@ function Header({
           <InstallLink onInstall={onInstall} />
         </>
       ) : (
-        <SiteLink className={styles.introductionLink} href="/">
-          소개 페이지로 ↗
+        <SiteLink
+          className={styles.introductionLink}
+          href="/"
+          aria-label={extension ? "소개 페이지로 ↗" : undefined}
+        >
+          {extension ? "소개 페이지 ↗" : "소개 페이지로 ↗"}
         </SiteLink>
       )}
     </header>
@@ -289,6 +317,7 @@ function Onboarding({
   postingsHref,
   pushClient,
   onStartAutofill,
+  renderStart,
   track,
   surface,
 }: {
@@ -298,6 +327,7 @@ function Onboarding({
   postingsHref?: string;
   pushClient?: PushClient;
   onStartAutofill?: () => void;
+  renderStart?: (start: OnboardingStart) => ReactNode;
   track: TrackEvent;
   surface: "site" | "extension_onboarding";
 }) {
@@ -325,6 +355,29 @@ function Onboarding({
     setStep(next);
     window.scrollTo({ top: 0, behavior: "instant" });
   }
+  function startAutofill() {
+    track("onboarding_autofill_selected", { surface });
+    if (onStartAutofill) {
+      onStartAutofill();
+      return;
+    }
+    moved.current = true;
+    setChoosing(false);
+    setPostingFlow(false);
+    go(0);
+  }
+  function startPostings() {
+    track("onboarding_postings_selected", { surface });
+    setPostingFlow(true);
+    setChoosing(false);
+    go(0);
+  }
+  if (choosing && renderStart)
+    return renderStart({
+      autofill: startAutofill,
+      postings: startPostings,
+      heading,
+    });
   if (choosing)
     return (
       <main id="main" className={styles.startChoice}>
@@ -344,20 +397,7 @@ function Onboarding({
               이름과 연락처부터 등록하고 지원서에서 자동 기입을 사용하세요.
               나머지는 필요할 때 추가할 수 있어요.
             </p>
-            <button
-              className={styles.choiceAction}
-              onClick={() => {
-                track("onboarding_autofill_selected", { surface });
-                if (onStartAutofill) {
-                  onStartAutofill();
-                  return;
-                }
-                moved.current = true;
-                setChoosing(false);
-                setPostingFlow(false);
-                go(0);
-              }}
-            >
+            <button className={styles.choiceAction} onClick={startAutofill}>
               자동 기입 준비하기 <Icon name="arrow" />
             </button>
             <small>프로필 등록 → 자동 기입 → 결과 확인</small>
@@ -366,21 +406,13 @@ function Onboarding({
             <span className={styles.choiceBadge}>프로필 없이 바로 시작</span>
             <h2>관심 공고, 놓치지 않게</h2>
             <p>
-              공지함의 공고를 저장하고 마감 전에 알림을 받으세요. 프로필 등록
-              없이 바로 사용할 수 있어요.
+              새 공고를 저장하고 마감 전에 알림을 받으세요. 프로필 등록 없이
+              바로 사용할 수 있어요.
             </p>
-            <button
-              className={styles.choiceAction}
-              onClick={() => {
-                track("onboarding_postings_selected", { surface });
-                setPostingFlow(true);
-                setChoosing(false);
-                go(0);
-              }}
-            >
+            <button className={styles.choiceAction} onClick={startPostings}>
               공고 저장부터 시작하기 <Icon name="arrow" />
             </button>
-            <small>패널에서 시작 → 공지함에서 저장 → 지원 완료</small>
+            <small>패널에서 시작 → 새 공고에서 저장 → 지원 완료</small>
           </section>
         </div>
         {pushClient && (
@@ -389,7 +421,7 @@ function Onboarding({
         <p className={styles.choiceNote}>
           Chrome이 완전히 종료된 동안에는 알림이 뜨지 않으며, 절전·방해금지
           설정에 따라 늦거나 차단될 수 있어요. OS 알림이 꺼져 있어도 확장
-          아이콘의 숫자와 관리 페이지의 공지함에서 새 공고를 확인할 수 있어요.
+          아이콘의 숫자와 관리 페이지의 새 공고 탭에서 공고를 확인할 수 있어요.
           공고와 프로필은 현재 브라우저에 저장됩니다.
         </p>
       </main>
@@ -501,7 +533,7 @@ function Onboarding({
             <button className={styles.primary} onClick={() => go(step + 1)}>
               {postingFlow
                 ? step === 0
-                  ? "공지함 저장 알아보기"
+                  ? "새 공고 저장 알아보기"
                   : "지원 완료 알아보기"
                 : contentStep === 0
                   ? "프로필 등록 알아보기"
@@ -517,7 +549,7 @@ function Onboarding({
               target="_blank"
               rel="noreferrer"
             >
-              공지함 열기 <Icon name="arrow" />
+              새 공고 열기 <Icon name="arrow" />
             </a>
           ) : (
             <div className={styles.ready}>
@@ -728,6 +760,7 @@ export function SiteApp({
   postingsHref,
   pushClient,
   onStartAutofill,
+  renderStart,
 }: {
   track?: TrackEvent;
   surface?: "site" | "extension_onboarding";
@@ -737,6 +770,7 @@ export function SiteApp({
   postingsHref?: string;
   pushClient?: PushClient;
   onStartAutofill?: () => void;
+  renderStart?: (start: OnboardingStart) => ReactNode;
 }) {
   const normalized = path.replace(/\/$/, "") || "/";
   const landing = normalized === "/";
@@ -755,7 +789,11 @@ export function SiteApp({
       <SiteLink className={styles.skip} href="#main">
         본문으로 건너뛰기
       </SiteLink>
-      <Header landing={landing} onInstall={onInstall} />
+      <Header
+        landing={landing}
+        onInstall={onInstall}
+        extension={surface === "extension_onboarding"}
+      />
       {landing ? (
         <Landing onInstall={onInstall} />
       ) : normalized === "/onboarding" ? (
@@ -766,6 +804,7 @@ export function SiteApp({
           pushClient={pushClient}
           onInstall={onInstall}
           onStartAutofill={onStartAutofill}
+          renderStart={renderStart}
           track={track}
           surface={surface}
         />
