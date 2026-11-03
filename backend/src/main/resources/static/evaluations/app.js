@@ -151,7 +151,7 @@ function renderOverview() {
   const timeCard = bars(total ? "자동기입 시간" : "요청 처리 시간",
     total ? "버튼 1번 · 평균 · 낮을수록 좋음" : "서버 요청 1개 · 평균 · 낮을수록 좋음", seconds,
     Math.max(1, ...state.selected.map((m) => seconds(m) ?? 0)), (v) => `${v.toFixed(2)}초`,
-    total ? richNote(["자동기입 버튼 1번"], " = ", ["처음 화면 준비"], "(섹션 분류·학력 구분 선택) + ", ["펼쳐진 화면"], "(섹션 분류·칸 매핑) · 화면 입력·네트워크 왕복 제외")
+    total ? richNote(["자동기입 버튼 1번"], " = ", ["처음 화면 준비"], "(섹션 분류·버튼·선택 결정) + ", ["펼쳐진 화면"], "(섹션 분류·칸 매핑) · 화면 입력·네트워크 왕복 제외")
       : richNote(["서버 요청 1개"], "(섹션 분류·칸 매핑 등)를 끝내기까지 · 안에서 ", ["AI에게 여러 번"], " 물을 수 있음 · 서버 처리·재시도 포함"));
   if (total) {
     timeCard.querySelectorAll(".bar-row").forEach((row, index) => {
@@ -358,7 +358,7 @@ function renderTokenBars() {
         element("span", total == null ? "" : `이번 실행 ${formatUsd(total)} · 자동기입 ${flows}회`, "muted cost-detail"));
       summary.append(line);
     });
-    summary.append(element("p", "자동기입 1회 = 처음 화면 준비(섹션 분류·학력 구분 선택) + 고른 뒤 펼쳐진 화면(섹션 분류·칸 매핑). 비용 = 그 입력·출력 토큰 × 모델 단가 설정의 USD 단가(100만 토큰당). 서버는 비용을 계산하지 않습니다.", "muted"));
+    summary.append(element("p", "자동기입 1회 = 처음 화면 준비(섹션 분류·버튼·선택 결정) + 고른 뒤 펼쳐진 화면(섹션 분류·칸 매핑). 비용 = 그 입력·출력 토큰 × 모델 단가 설정의 USD 단가(100만 토큰당). 서버는 비용을 계산하지 않습니다.", "muted"));
     box.append(summary);
   } else if (observed.length) {
     box.append(element("p", "비용 표시에는 모델 단가 설정의 입력·출력 단가가 필요합니다.", "muted"));
@@ -459,7 +459,7 @@ addEventListener("scroll", hideHelp, { passive: true });
 
 /**
  * 단계 점수 카드(정밀도를 중시한 F0.5). stage는 TOTAL·PREPARATION·MAPPING이며, 막대 아래에 정밀도·채움률·반복 범위를 둔다.
- * 칸 매핑은 확신도 0.8 이상만 답한 것으로 보고, 섹션 분류·학력 구분 선택은 답 그대로 본다.
+ * 칸 매핑은 확신도 0.8 이상만 답한 것으로 보고, 섹션 분류·버튼·선택 결정은 답 그대로 본다.
  */
 function scoreCard(stage, title) {
   const fill = (model) => report(model)?.scores?.[stage];
@@ -543,13 +543,13 @@ const ITEM_KINDS = [
  * 모델별 항목 판정 수(quality.items)를 정답·오답·누락·불필요 제안으로 나눈 100% 막대로 그린다. 정확도가 같아도
  * 다른 항목을 고른 오답(잘못 기입)과 판단 보류(직접 입력)는 위험이 달라 따로 보인다.
  */
-// 평가 단계. 자동기입 흐름의 준비(섹션 분류 → 학력 구분 선택)와 매핑(섹션 분류 → 칸 매핑)에 맞춰 품질·성능을 함께 나눠 본다.
+// 평가 단계. 자동기입 흐름의 준비(섹션 분류 → 버튼·선택 결정)와 매핑(섹션 분류 → 칸 매핑)에 맞춰 품질·성능을 함께 나눠 본다.
 const STAGE_NOTES = {
   total: "자동기입 버튼 1번 전체 · 준비 + 매핑",
-  prepare: "칸을 꺼내는 단계 · 섹션 분류 → 학력 구분 선택",
+  prepare: "칸을 꺼내는 단계 · 섹션 분류 → 버튼·선택 결정",
   mapping: "칸에 값을 정하는 단계 · 섹션 분류 → 칸 매핑",
 };
-const CALL_LABELS = { "PREPARATION/SECTION_CLASSIFY": "섹션 분류", "PREPARATION/INTERACTION_DECISION": "학력 구분 선택",
+const CALL_LABELS = { "PREPARATION/SECTION_CLASSIFY": "섹션 분류", "PREPARATION/INTERACTION_DECISION": "버튼·선택 결정",
   "MAPPING/SECTION_CLASSIFY": "섹션 분류", "MAPPING/GENERIC_FIELDS": "칸 매핑" };
 
 /** 고른 호출 종류들의 항목 판정 합. 없으면 null이다. */
@@ -568,7 +568,7 @@ function renderQuality() {
   if (state.stage === "prepare") {
     quality.replaceChildren(scoreCard("PREPARATION", "준비 점수"),
       stageAccuracyCard("준비 결과", ["PREPARATION/SECTION_CLASSIFY", "PREPARATION/INTERACTION_DECISION"],
-        richNote(["섹션 분류"], " 조작할 섹션을 고르는 질문 · ", ["학력 구분 선택"], " 학력 행마다 고를 선택지를 정하는 질문")));
+        richNote(["섹션 분류"], " 조작할 섹션을 고르는 질문 · ", ["버튼·선택 결정"], " 학력 구분이나 행 추가처럼 무엇을 누르고 고를지 정하는 질문")));
   }
   else if (state.stage === "mapping") {
     quality.replaceChildren(scoreCard("MAPPING", "매핑 점수"), renderAutofill(),
@@ -617,7 +617,7 @@ function stageSummary() {
     const name = element("span", model, "stage-model");
     name.style.setProperty("--model", color(model));
     const line = element("span", undefined, "stat-line");
-    [["준비", "PREPARATION", "섹션 분류 + 학력 구분 선택"], ["매핑", "MAPPING", "섹션 분류 + 칸 매핑"]].forEach(([label, stage, help]) => {
+    [["준비", "PREPARATION", "섹션 분류 + 버튼·선택 결정"], ["매핑", "MAPPING", "섹션 분류 + 칸 매핑"]].forEach(([label, stage, help]) => {
       const value = report(model)?.scores?.[stage]?.score;
       line.append(stat(`${label} 점수`, value == null ? "—" : shortPercent(value), help));
     });
@@ -645,14 +645,14 @@ const OUTCOMES = {
 const COMPARE_KINDS = [
   { kind: "GENERIC_FIELDS", name: "칸 매핑", noun: "칸" },
   { kind: "SECTION_CLASSIFY", name: "섹션 분류", noun: "섹션" },
-  { kind: "INTERACTION_DECISION", name: "학력 구분 선택", noun: "결정" },
+  { kind: "INTERACTION_DECISION", name: "버튼·선택 결정", noun: "결정" },
 ];
 const CATEGORY_NAMES = { PERSONAL: "기본정보", EDUCATION: "학력", CAREER: "경력", SENSITIVE: "민감정보(병역·보훈·장애)",
   LANGUAGE: "어학", CERTIFICATE: "자격증", PROJECT: "프로젝트", ACTIVITY: "활동", NONE: "해당 없음", MIXED: "여러 범주",
   ABSTAIN: "판단 보류" };
 const TARGET_NAMES = { HIGH_SCHOOL: "고등학교 행", ASSOCIATE: "전문대학 행", BACHELOR: "대학교 행", MASTER: "대학원(석사) 행",
   DOCTOR: "대학원(박사) 행" };
-const ROLE_NAMES = { ROW_KIND_OPTION: "학력 구분 선택" };
+const ROLE_NAMES = { ROW_KIND_OPTION: "학력 구분 선택", REPEAT_ADD: "행 추가", SECTION_REVEAL: "접힌 섹션 열기" };
 /** 항목의 정답·답을 사람이 읽는 글자로. */
 function itemValue(item, value) {
   if (item.kind === "SECTION_CLASSIFY") return value == null ? "답 없음" : `${value} · ${CATEGORY_NAMES[value] ?? value}`;
@@ -699,7 +699,7 @@ function runFields(run) {
 }
 
 /**
- * 항목별 비교. 고른 종류(칸 매핑·섹션 분류·학력 구분 선택)의 답을 항목×모델 표로 놓는다. 행을 누르면 반복별 답과 확신도를
+ * 항목별 비교. 고른 종류(칸 매핑·섹션 분류·버튼·선택 결정)의 답을 항목×모델 표로 놓는다. 행을 누르면 반복별 답과 확신도를
  * 펼친다. 같은 모델의 이전 실행과 견주는 것은 전후 비교 탭이 맡는다.
  */
 function renderFields() {
@@ -1389,6 +1389,8 @@ function guideView() {
   return box;
 }
 
+// 데이터셋 사례의 공고(사이트) 이름. 데이터셋 창은 공고별 탭으로 나눈다.
+const SITE_NAMES = { "woowahan-recruitment": "우아한형제들 · R2605009", "nhn-careers": "NHN Careers · 프리세일즈" };
 const STATE_NAMES = { initial: "처음 화면", "high-school": "고등학교", university: "대학교", ged: "검정고시", "nhn-initial": "NHN 지원서" };
 // 화면 상태 설명. 같은 지원서라도 무엇을 골랐는지에 따라 나타나는 칸이 달라 상태별로 따로 평가한다.
 const STATE_NOTES = {
@@ -1399,7 +1401,7 @@ const STATE_NOTES = {
   "nhn-initial": "다른 회사(NHN Careers) 지원서 1단계를 처음 연 상태. 드롭다운이 직접 만든 형태라 선택지가 없고, 섹션 제목이 약해 여러 항목이 한 섹션으로 묶입니다. 준비 단계(섹션 분류, 학력 행 추가)와 칸 채우기를 모두 평가합니다. 처음 보는 양식에서의 일반화를 봅니다.",
 };
 const CONTROL_NAMES = { text: "글자", select: "선택", radio: "라디오", checkbox: "체크", textarea: "긴 글", custom: "직접 구현" };
-const CALL_NAMES = { SECTION_CLASSIFY: "섹션 분류", INTERACTION_DECISION: "학력 구분 선택", GENERIC_FIELDS: "칸 매핑" };
+const CALL_NAMES = { SECTION_CLASSIFY: "섹션 분류", INTERACTION_DECISION: "버튼·선택 결정", GENERIC_FIELDS: "칸 매핑" };
 const REVIEW_NAMES = { privacy: "개인정보", structure: "구조", mappingTruth: "칸 정답", preparationTruth: "준비 정답",
   inputIdentity: "입력 동일성" };
 const REVIEW_OK = new Set(["PASSED", "HUMAN_REVIEWED", "SOURCE_PIPELINE_VERIFIED", "INSTALLED_VERIFIED"]);
@@ -1410,8 +1412,8 @@ const STEP_APIS = { SECTION_CLASSIFY: "/generic/sections/classify", INTERACTION_
 const sectionTitle = (group) => !group.title ? "제목 없음" : group.title === "[비식별]" ? "기본정보" : group.title;
 
 /**
- * 데이터셋 대화상자. 왼쪽에 화면 상태 목록과 합성 프로필, 오른쪽에 고른 화면의 설명·채점 흐름·지원서 와이어프레임을 둔다.
- * {@code selected}가 "profile"이면 합성 프로필을 보인다.
+ * 데이터셋 대화상자. 위에 공고 탭, 왼쪽에 고른 공고의 화면 상태 목록과 합성 프로필, 오른쪽에 고른 화면의 설명·채점 흐름·
+ * 지원서 와이어프레임을 둔다. {@code selected}가 "profile"이면 합성 프로필을 보인다.
  */
 function datasetView(selected = 0) {
   const data = state.dataset;
@@ -1420,7 +1422,8 @@ function datasetView(selected = 0) {
   const count = (item) => item.sections.reduce((n, group) => n + group.fields.length, 0);
   const head = element("div", undefined, "dataset-head");
   const title = element("div");
-  title.append(element("strong", "우아한형제들 공고 R2605009 · NHN Careers 프리세일즈 공고"),
+  const sites = [...new Set(data.cases.map((item) => item.siteId))];
+  title.append(element("strong", `공고 ${sites.length}개`),
     element("span", `화면 ${data.cases.length}개 · 입력 칸 ${data.cases.reduce((n, item) => n + count(item), 0)}개 · 합성 프로필 ${Object.keys(data.profiles).length}명`, "muted"));
   head.append(title, element("span", data.usable ? "평가에 사용 가능" : "검토 필요", data.usable ? "badge ok" : "badge"));
   wrap.append(head);
@@ -1429,10 +1432,24 @@ function datasetView(selected = 0) {
     element("p", "실제 채용 지원서 두 곳을 개인정보 없이 정제한 화면 모음. 우아한형제들 지원서는 학력 구분·보훈·장애 선택에 따라 나타나는 칸이 달라 화면 상태마다 따로 평가합니다. 모델은 확장프로그램이 실제로 보내는 질문에 답하고, 사람이 검토한 정답과 비교해 채점합니다."));
   wrap.append(about);
   if (!data.usable && data.rejection) wrap.append(element("p", `미완료 검토: ${data.rejection}`, "muted"));
+  const go = (target) => dialog("데이터셋", datasetView(target), "dataset-dialog");
+  // 공고 탭: 고른 화면의 공고가 눌린 상태다. 합성 프로필을 볼 때는 첫 공고를 둔다.
+  const site = selected === "profile" ? sites[0] : data.cases[selected]?.siteId;
+  const tabs = element("div", undefined, "dataset-tabs posting-tabs");
+  sites.forEach((key) => {
+    const cases = data.cases.filter((item) => item.siteId === key);
+    const tab = element("button");
+    tab.type = "button";
+    tab.setAttribute("aria-pressed", String(key === site));
+    tab.append(element("strong", SITE_NAMES[key] ?? key), element("span", `화면 ${cases.length}개`, "muted"));
+    tab.addEventListener("click", () => go(data.cases.indexOf(cases[0])));
+    tabs.append(tab);
+  });
+  wrap.append(tabs);
   const layout = element("div", undefined, "dataset-layout2");
   const nav = element("nav", undefined, "screen-list");
-  const go = (target) => dialog("데이터셋", datasetView(target), "dataset-dialog");
   data.cases.forEach((item, index) => {
+    if (item.siteId !== site) return;
     const button = element("button");
     button.type = "button";
     button.setAttribute("aria-pressed", String(selected === index));
@@ -1481,7 +1498,7 @@ function datasetView(selected = 0) {
     });
     main.append(element("h4", "채점 흐름"), flow);
     // 지원서 와이어프레임: 섹션 카드와 칸 아이콘. 처음 화면보다 칸이 늘어난 섹션에 배지를 단다.
-    const base = data.cases.find((other) => other.state === "initial");
+    const base = data.cases.find((other) => other.siteId === item.siteId && other.state === "initial");
     const samePlan = base && base !== item && base.sections.length === item.sections.length;
     const form = element("div", undefined, "form-wire");
     item.sections.forEach((group, index) => {
@@ -1546,7 +1563,7 @@ function criteriaView() {
   formula.append(element("span", "자동기입 점수", "formula-name"), element("span", "="),
     element("span", "정밀도", "formula-part"), element("span", "×2 와"), element("span", "채움률", "formula-part"),
     element("span", "의 조화 평균(F0.5)"));
-  wrap.append(formula, element("p", "잘못 답하면(엉뚱한 값을 넣거나 엉뚱한 섹션을 조작하면) 사용자가 찾아서 고쳐야 하지만, 놓친 것은 직접 하면 됩니다. 그래서 잘못 답하면 놓칠 때보다 2배 크게 깎습니다. 아무것도 답하지 않으면 0점입니다. 같은 식으로 준비 점수(섹션 분류·학력 구분 선택), 매핑 점수(섹션 분류·칸 매핑), 둘을 합친 자동기입 점수를 냅니다. 칸 매핑은 확신도 0.8 이상만 답한 것으로 보고, 나머지 질문은 답 그대로 봅니다.", "muted criteria-lead"));
+  wrap.append(formula, element("p", "잘못 답하면(엉뚱한 값을 넣거나 엉뚱한 섹션을 조작하면) 사용자가 찾아서 고쳐야 하지만, 놓친 것은 직접 하면 됩니다. 그래서 잘못 답하면 놓칠 때보다 2배 크게 깎습니다. 아무것도 답하지 않으면 0점입니다. 같은 식으로 준비 점수(섹션 분류·버튼·선택 결정), 매핑 점수(섹션 분류·칸 매핑), 둘을 합친 자동기입 점수를 냅니다. 칸 매핑은 확신도 0.8 이상만 답한 것으로 보고, 나머지 질문은 답 그대로 봅니다.", "muted criteria-lead"));
   const card = (title, ...children) => {
     const section = element("section", undefined, "criteria-card");
     section.append(element("h4", title), ...children);
@@ -1578,7 +1595,7 @@ function criteriaView() {
     table(["예시", "정답"], [["학교명 칸(대학교 행)", "education.university.schoolName"], ["자기소개서 칸", "넣을 항목 없음"],
       ["지원경로 섹션", "해당 없음(NONE)"]]));
   card("3. 준비 결과 · 섹션 분류 결과",
-    element("p", "준비(섹션 분류·학력 구분 선택)와 매핑(섹션 분류)의 질문을 확신도와 무관하게 모델 답 그대로 채점합니다. 맞힌 항목 비율이며 항목은 섹션 하나, 칸 하나, 버튼·선택지 결정 하나. 준비는 칸을 꺼내기 위한 질문(조작할 섹션 분류, 학력 구분 선택), 매핑은 칸에 넣을 값을 정하는 질문(전체 섹션 분류, 칸 매핑)."),
+    element("p", "준비(섹션 분류·버튼·선택 결정)와 매핑(섹션 분류)의 질문을 확신도와 무관하게 모델 답 그대로 채점합니다. 맞힌 항목 비율이며 항목은 섹션 하나, 칸 하나, 버튼·선택지 결정 하나. 준비는 칸을 꺼내기 위한 질문(조작할 섹션 분류, 버튼·선택 결정), 매핑은 칸에 넣을 값을 정하는 질문(전체 섹션 분류, 칸 매핑)."),
     table(["항목 판정", "뜻"], [["오답", "정답이 있는데 다른 항목을 고름"], ["누락(판단 보류)", "정답이 있는데 고르지 않음"],
       ["불필요 제안", "넣을 항목이 없는데 무언가를 고름"]]));
   card("4. 점수에서 빠지는 것",

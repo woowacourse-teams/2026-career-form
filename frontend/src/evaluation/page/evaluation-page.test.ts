@@ -141,9 +141,19 @@ const dataset = {
   usable: true,
   profiles: {},
   cases: [
+    ...["initial", "high-school"].map((state) => ({
+      state,
+      siteId: "woowahan-recruitment",
+      split: state === "initial" ? "tuning" : "final",
+      profileId: "p",
+      calls: [],
+      sections: [],
+      review: {},
+    })),
     {
-      state: "initial",
-      siteId: "s",
+      state: "nhn-initial",
+      siteId: "nhn-careers",
+      split: "final",
       profileId: "p",
       calls: [],
       sections: [],
@@ -265,6 +275,31 @@ describe("AI 평가 화면의 단계 탭", () => {
       "요청 처리 시간",
       "요청 실패율",
     ]);
+  });
+
+  it("데이터셋 창은 공고별 탭으로 나뉘고 탭을 고르면 그 공고의 화면만 보인다", async () => {
+    (
+      document.querySelector('[data-source="데이터셋"]') as HTMLAnchorElement
+    ).click();
+    await Promise.resolve();
+    const postings = () => [
+      ...document.querySelectorAll("#source-content .posting-tabs button"),
+    ];
+    const screens = () =>
+      [
+        ...document.querySelectorAll(
+          "#source-content .screen-list button:not(.profile-entry) strong",
+        ),
+      ].map((name) => name.textContent);
+    expect(postings().map((tab) => tab.textContent)).toEqual([
+      "우아한형제들 · R2605009화면 2개",
+      "NHN Careers · 프리세일즈화면 1개",
+    ]);
+    expect(screens()).toEqual(["처음 화면", "고등학교"]);
+    (postings()[1] as HTMLButtonElement).click();
+    expect(postings()[1].getAttribute("aria-pressed")).toBe("true");
+    expect(screens()).toEqual(["NHN 지원서"]);
+    (document.querySelector("#cf-source") as HTMLDialogElement).close();
   });
 
   it("사용 가이드는 로컬·개발서버 탭으로 나뉘고 지금 서버에 맞는 탭이 먼저 열린다", async () => {

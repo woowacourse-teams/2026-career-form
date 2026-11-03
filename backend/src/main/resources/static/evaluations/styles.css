@@ -708,3 +708,6 @@
 #cf-eval-preview .guide h4{margin:18px 0 8px;font-size:14px;font-weight:650}
 #cf-eval-preview .guide-steps{margin:0;padding-left:20px;font-size:13px;line-height:1.7}
 #cf-eval-preview .guide code{font-size:12px;background:#eef1f0;padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+#cf-eval-preview .posting-tabs{margin:14px 0 18px}
+#cf-eval-preview .posting-tabs button{display:flex;align-items:baseline;gap:8px}
+#cf-eval-preview .posting-tabs button span{font-size:12px;font-weight:400;color:inherit;opacity:.75}
