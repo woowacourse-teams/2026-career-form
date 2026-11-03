@@ -9,10 +9,7 @@ import type { TrackEvent } from "../src/analytics/events";
 import { OnboardingNotificationCard } from "../src/job-postings/OnboardingNotificationCard";
 import type { PushClient } from "../src/job-postings/push-client";
 import logo from "../public/side-panel-launcher-logo.png";
-import { benefits, faqs, steps, STORE_URL } from "./content";
-import { policies } from "./policies";
-import { techTopics } from "./tech";
-import { TechFigure } from "./TechFigures";
+import { steps, STORE_URL } from "./content";
 import { Trial } from "./try/Trial";
 import { Icon } from "./Icons";
 import { ChromeGuide, OpeningGuide, ServiceGuide } from "./Guide";
@@ -22,7 +19,11 @@ import {
   PostingNotificationGuide,
   postingSteps,
 } from "./PostingGuide";
-import { SiteLink, useSiteUrl } from "./site-navigation";
+import { SiteLink } from "./site-navigation";
+import { Landing } from "./landing/Landing";
+import brand from "./landing/brand.module.css";
+import { PolicyPage } from "./pages/PolicyPage";
+import { TechPage } from "./pages/TechPage";
 
 const noopTrack: TrackEvent = () => {};
 
@@ -54,15 +55,7 @@ function InstallLink({
     </SiteLink>
   );
 }
-function Header({
-  landing,
-  onInstall,
-  extension,
-}: {
-  landing: boolean;
-  onInstall: () => void;
-  extension: boolean;
-}) {
+function Header({ extension }: { extension: boolean }) {
   return (
     <header className={styles.header}>
       <SiteLink
@@ -80,26 +73,13 @@ function Header({
           </>
         )}
       </SiteLink>
-      {landing ? (
-        <>
-          <nav aria-label="주 메뉴">
-            <SiteLink href="#features">주요 기능</SiteLink>
-            <SiteLink href="/onboarding/">사용 방법</SiteLink>
-            <SiteLink href="/try/">체험</SiteLink>
-            <SiteLink href="/tech/">기술 소개</SiteLink>
-            <SiteLink href="#faq">궁금한 점</SiteLink>
-          </nav>
-          <InstallLink onInstall={onInstall} />
-        </>
-      ) : (
-        <SiteLink
-          className={styles.introductionLink}
-          href="/"
-          aria-label={extension ? "소개 페이지로 ↗" : undefined}
-        >
-          {extension ? "소개 페이지 ↗" : "소개 페이지로 ↗"}
-        </SiteLink>
-      )}
+      <SiteLink
+        className={styles.introductionLink}
+        href="/"
+        aria-label={extension ? "소개 페이지로 ↗" : undefined}
+      >
+        {extension ? "소개 페이지 ↗" : "소개 페이지로 ↗"}
+      </SiteLink>
     </header>
   );
 }
@@ -118,196 +98,6 @@ function Footer() {
       </nav>
       <small>© 2026 Career Form</small>
     </footer>
-  );
-}
-function TryLink({
-  className,
-  label = "설치 없이 체험하기",
-}: {
-  className?: string;
-  label?: string;
-}) {
-  return (
-    <SiteLink className={className ?? styles.secondary} href="/try/">
-      {label} <Icon name="arrow" />
-    </SiteLink>
-  );
-}
-function Landing({ onInstall }: { onInstall: () => void }) {
-  const siteUrl = useSiteUrl();
-  return (
-    <main id="main">
-      <section className={styles.hero}>
-        <div className={styles.heroCopy}>
-          <div>
-            <p className={styles.eyebrow}>지원서 자동 입력 · 커리어폼</p>
-            <h1>
-              지원서는 매번 달라도,
-              <br />
-              <em>내 정보는 그대로니까.</em>
-            </h1>
-          </div>
-          <div className={styles.heroDetail}>
-            <p>
-              한 번 등록한 내 정보로,
-              <br />
-              반복되는 지원서 입력을 줄이세요.
-            </p>
-            <div className={styles.actions}>
-              {/* The header already carries Chrome에 추가; the hero asks for the
-                  hands-on trial. Narrow screens show the install action. */}
-              <TryLink
-                className={`${styles.primary} ${styles.heroTry}`}
-                label="커리어폼 체험하기"
-              />
-              <InstallLink
-                onInstall={onInstall}
-                className={styles.heroInstallMobile}
-                describedBy="hero-install-note"
-              />
-              <p id="hero-install-note" className={styles.heroInstallNote}>
-                확장 프로그램 설치는 데스크톱 Chrome에서 할 수 있어요.
-              </p>
-            </div>
-            <small>Chrome 확장 프로그램 · 프로필은 내 브라우저에</small>
-          </div>
-        </div>
-        <figure
-          className={styles.simulation}
-          tabIndex={0}
-          aria-label="자동 입력 시뮬레이션 재생"
-        >
-          <iframe
-            src={siteUrl("/demo/?view=simulation")}
-            title="커리어폼 자동 입력 시뮬레이션"
-            tabIndex={-1}
-            inert
-          />
-          <figcaption>
-            {"마우스를 올리거나 눌러보세요. · 가상 정보로 만든 예시"}
-          </figcaption>
-        </figure>
-      </section>
-      <section className={styles.features} id="features">
-        <div className={styles.sectionHeading}>
-          <div>
-            <p className={styles.eyebrow}>주요 기능</p>
-            <h2>
-              같은 정보를 쓰는 일,
-              <br />
-              이제 조금 덜 하세요.
-            </h2>
-          </div>
-        </div>
-        <div className={styles.benefits}>
-          {benefits.map(([title, body], i) => (
-            <article key={title}>
-              <Icon name={(["document", "panel", "check"] as const)[i]} />
-              <h3>{title}</h3>
-              <p>{body}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-      <section
-        className={styles.postingsFeature}
-        id="saved-jobs"
-        aria-labelledby="postings-title"
-      >
-        <div>
-          <p className={styles.eyebrow}>공고 저장 · 마감 알림</p>
-          <h2 id="postings-title">
-            관심 공고는 모아두고,
-            <br />
-            마감 전에 다시 만나요.
-          </h2>
-          <p>
-            회사명, 직무, 링크와 마감 시각을 저장하세요.
-            <br />
-            프로필 등록 없이 공고 저장부터 시작할 수 있어요.
-          </p>
-          <ol className={styles.postingSteps}>
-            <li>
-              <strong>01 · 공고 저장</strong>
-              <span>공고에서 확인한 마감 날짜와 시간을 직접 등록해요.</span>
-            </li>
-            <li>
-              <strong>02 · 마감 알림</strong>
-              <span>
-                기본 하루 전·2시간 전, 원하는 시간으로 바꿀 수 있어요.
-              </span>
-            </li>
-            <li>
-              <strong>03 · 지원 완료</strong>
-              <span>지원 완료로 표시하면 남은 알림을 취소해요.</span>
-            </li>
-          </ol>
-          <SiteLink href="/onboarding/">공고 저장부터 시작하는 방법 ↗</SiteLink>
-        </div>
-        <div
-          className={styles.postingsExample}
-          aria-label="저장한 공고와 알림 예시"
-        >
-          <p className={styles.exampleLabel}>
-            이렇게 챙겨드려요 · 가상 공고 예시
-          </p>
-          <div className={styles.exampleJob}>
-            <span className={styles.exampleCompany}>가</span>
-            <div>
-              <strong>가온테크</strong>
-              <p>백엔드 개발자</p>
-            </div>
-            <b>마감 임박</b>
-          </div>
-          <div className={styles.exampleDeadline}>
-            <span>마감</span>
-            <strong>10월 15일 · 18:00</strong>
-          </div>
-          <div className={styles.exampleNotification}>
-            <span aria-hidden="true">⏰</span>
-            <div>
-              <strong>가온테크 (~10/15 18:00)</strong>
-              <p>지금 바로 지원하기 →</p>
-            </div>
-          </div>
-          <p className={styles.exampleLabel}>공고는 내 브라우저에 저장돼요.</p>
-        </div>
-      </section>
-      <section className={styles.conversion} aria-labelledby="start-title">
-        <p className={styles.eyebrow}>다음 지원부터, 커리어폼</p>
-        <h2 id="start-title">
-          반복 입력은 줄이고,
-          <br />
-          다음 기회에 집중하세요.
-        </h2>
-        <div className={styles.actions}>
-          <InstallLink onInstall={onInstall} />
-          <TryLink />
-        </div>
-        <p>Chrome에 추가하고, 공고 저장 또는 자동 기입부터 시작하세요.</p>
-      </section>
-      <section className={styles.faq} id="faq">
-        <div>
-          <p className={styles.eyebrow}>궁금한 점이 있나요?</p>
-          <h2>
-            시작하기 전에
-            <br />
-            알아두면 좋아요.
-          </h2>
-        </div>
-        <div>
-          {faqs.map(([title, body]) => (
-            <details key={title}>
-              <summary>
-                {title}
-                <span>＋</span>
-              </summary>
-              <p>{body}</p>
-            </details>
-          ))}
-        </div>
-      </section>
-    </main>
   );
 }
 function Onboarding({
@@ -569,40 +359,6 @@ function Onboarding({
     </main>
   );
 }
-function Policy({ kind }: { kind: "privacy" | "terms" }) {
-  const policy = policies[kind];
-  return (
-    <main id="main" className={styles.policy}>
-      <p className={styles.eyebrow}>CAREER FORM / POLICY</p>
-      <h1>{policy.title}</h1>
-      <aside className={styles.notice}>
-        <strong>검토용 초안 · 시행 전</strong>
-        <p>정식 서비스의 처리 내역과 시행일은 확정 후 반영합니다.</p>
-      </aside>
-      <nav aria-label="문서 목차">
-        {policy.sections.map(([title], i) => (
-          <SiteLink key={title} href={`#section-${i}`}>
-            {title}
-          </SiteLink>
-        ))}
-      </nav>
-      {policy.sections.map(([title, body], i) => (
-        <section key={title} id={`section-${i}`}>
-          <h2>{title}</h2>
-          <p>{body}</p>
-        </section>
-      ))}
-      <p>
-        운영자: 커리어폼
-        <br />
-        문의:{" "}
-        <SiteLink href="mailto:careerform@gmail.com">
-          careerform@gmail.com
-        </SiteLink>
-      </p>
-    </main>
-  );
-}
 function TryPage({
   track,
   surface,
@@ -660,97 +416,6 @@ function TryPage({
     </div>
   );
 }
-function Tech() {
-  return (
-    <main id="main" className={`${styles.policy} ${styles.tech}`}>
-      <p className={styles.eyebrow}>CAREER FORM / TECH</p>
-      <h1>기술 소개</h1>
-      <p className={styles.techLead}>
-        커리어폼이 지원서 칸을 연결하고 공고 알림을 보내는 방법입니다. 어떤
-        기술을 어디에 어떻게 넣었는지 적었습니다.
-      </p>
-      <nav aria-label="주제 목차">
-        {techTopics.map((topic) => (
-          <SiteLink key={topic.id} href={`#${topic.id}`}>
-            {topic.label} · {topic.title}
-          </SiteLink>
-        ))}
-      </nav>
-      {techTopics.map((topic) => (
-        <article key={topic.id} id={topic.id} className={styles.techTopic}>
-          <p className={styles.eyebrow}>{topic.label}</p>
-          <h2>{topic.title}</h2>
-          <p className={styles.techLead}>{topic.lead}</p>
-          {topic.sections.map((section) => (
-            <section key={section.heading}>
-              <h3>{section.heading}</h3>
-              {section.paragraphs?.map((text) => (
-                <p key={text}>{text}</p>
-              ))}
-              {section.bullets && (
-                <ul>
-                  {section.bullets.map((text) => (
-                    <li key={text}>{text}</li>
-                  ))}
-                </ul>
-              )}
-              {section.steps && (
-                <ol>
-                  {section.steps.map(([title, detail]) => (
-                    <li key={title}>
-                      <strong>{title}</strong> {detail}
-                    </li>
-                  ))}
-                </ol>
-              )}
-              {section.figure && <TechFigure kind={section.figure} />}
-              {section.table && (
-                <div className={styles.techTable}>
-                  <table>
-                    <thead>
-                      <tr>
-                        {section.table.head.map((cell) => (
-                          <th key={cell} scope="col">
-                            {cell}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {section.table.rows.map((row, rowIndex) => (
-                        <tr key={row[0]}>
-                          {row.map((cell, i) => (
-                            <td key={cell}>
-                              {i === 1 && section.table?.icons?.[rowIndex] && (
-                                <Icon
-                                  name={section.table.icons[rowIndex]}
-                                  style={{ width: 18, height: 18 }}
-                                />
-                              )}
-                              {section.table?.emphasizeLast &&
-                              i === row.length - 1 ? (
-                                <strong>{cell}</strong>
-                              ) : (
-                                cell
-                              )}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-              {section.note && (
-                <p className={styles.techNote}>{section.note}</p>
-              )}
-            </section>
-          ))}
-        </article>
-      ))}
-    </main>
-  );
-}
 export function SiteApp({
   track = noopTrack,
   surface = "site",
@@ -773,7 +438,6 @@ export function SiteApp({
   renderStart?: (start: OnboardingStart) => ReactNode;
 }) {
   const normalized = path.replace(/\/$/, "") || "/";
-  const landing = normalized === "/";
   const lastRoute = useRef<string | undefined>(undefined);
   useEffect(() => {
     if (lastRoute.current === normalized) return;
@@ -784,19 +448,40 @@ export function SiteApp({
     else if (normalized === "/try") track("trial_viewed", { surface });
   }, [normalized, surface, track]);
   const onInstall = () => track("install_link_clicked", { surface });
+  const skipLink = (
+    <SiteLink className={styles.skip} href="#main">
+      본문으로 건너뛰기
+    </SiteLink>
+  );
+  // The landing, 기술 소개 and policies use the redesigned frame; onboarding
+  // (also opened by the extension after install) and /try keep theirs.
+  const redesigned =
+    normalized === "/" ? (
+      <Landing onInstall={onInstall} track={track} />
+    ) : normalized === "/tech" ? (
+      <TechPage onInstall={onInstall} />
+    ) : normalized === "/privacy" || normalized === "/terms" ? (
+      <PolicyPage
+        kind={normalized === "/privacy" ? "privacy" : "terms"}
+        onInstall={onInstall}
+      />
+    ) : null;
+  // Rendered outside `.site`: its element rules (button background, svg
+  // size, heading colour) belong to the older pages.
+  if (redesigned)
+    return (
+      <>
+        <SiteLink className={`${styles.skip} ${brand.skipLink}`} href="#main">
+          본문으로 건너뛰기
+        </SiteLink>
+        {redesigned}
+      </>
+    );
   return (
     <div className={styles.site}>
-      <SiteLink className={styles.skip} href="#main">
-        본문으로 건너뛰기
-      </SiteLink>
-      <Header
-        landing={landing}
-        onInstall={onInstall}
-        extension={surface === "extension_onboarding"}
-      />
-      {landing ? (
-        <Landing onInstall={onInstall} />
-      ) : normalized === "/onboarding" ? (
+      {skipLink}
+      <Header extension={surface === "extension_onboarding"} />
+      {normalized === "/onboarding" ? (
         <Onboarding
           installed={installed}
           profileHref={profileHref}
@@ -808,10 +493,6 @@ export function SiteApp({
           track={track}
           surface={surface}
         />
-      ) : normalized === "/privacy" || normalized === "/terms" ? (
-        <Policy kind={normalized === "/privacy" ? "privacy" : "terms"} />
-      ) : normalized === "/tech" ? (
-        <Tech />
       ) : normalized === "/try" ? (
         <TryPage track={track} surface={surface} onInstall={onInstall} />
       ) : (

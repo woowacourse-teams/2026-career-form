@@ -11,7 +11,7 @@ export default defineConfig({
     reporters: ["default", createRequireBrowserSuite()],
     css: {
       include:
-        /WorkflowResults\.module\.css|ProfileForm\.module\.css|sidepanel\/App\.module\.css/,
+        /WorkflowResults\.module\.css|ProfileForm\.module\.css|sidepanel\/App\.module\.css|site\/landing\/\w+\.module\.css/,
       modules: { classNameStrategy: "scoped" },
     },
     coverage: {
