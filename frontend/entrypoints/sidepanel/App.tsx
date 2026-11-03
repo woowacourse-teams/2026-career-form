@@ -355,7 +355,16 @@ export function App({
               aria-label="닫기"
               onClick={closePanel}
             >
-              <span aria-hidden="true">×</span>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                aria-hidden="true"
+              >
+                <path d="M6 6l12 12M18 6 6 18" />
+              </svg>
             </button>
           </div>
         </div>
@@ -385,7 +394,7 @@ export function App({
                   onClick={() => setSelectedTab(tab.id)}
                   onKeyDown={(event) => moveTab(event, tab.id)}
                 >
-                  {tab.label}
+                  <span className={styles.tabLabel}>{tab.label}</span>
                   {tab.id === "postings" &&
                     deadlinePostings.urgentCount > 0 && (
                       <>
@@ -530,7 +539,7 @@ export function App({
           )}
           {activeTab === "profile" && (
             <main
-              className={styles.main}
+              className={`${styles.main} ${styles.profileMain}`}
               aria-label="지원 정보 목록"
               data-panel-mode={inPage ? "in-page" : "side-panel"}
             >
@@ -540,11 +549,12 @@ export function App({
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
-                  strokeWidth="1.8"
+                  strokeWidth="2"
+                  strokeLinecap="round"
                   aria-hidden="true"
                 >
-                  <circle cx="10.5" cy="10.5" r="6.5" />
-                  <path d="m16 16 4.5 4.5" />
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="m20 20-3.5-3.5" />
                 </svg>
                 <input
                   type="search"
@@ -602,9 +612,24 @@ export function App({
                         >
                           <span>{group.label}</span>
                           <small>
-                            {countLabel}
-                            {actionLabel}
+                            {group.showRecordCount
+                              ? recordCount
+                              : groupItems.length}
                           </small>
+                          {!hasQuery && (
+                            <svg
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              aria-hidden="true"
+                            >
+                              <path
+                                d={isOpen ? "m6 15 6-6 6 6" : "m6 9 6 6 6-6"}
+                              />
+                            </svg>
+                          )}
                         </button>
                         {isOpen && (
                           <div className={styles.groupValues} id={regionId}>

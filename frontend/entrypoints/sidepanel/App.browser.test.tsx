@@ -86,7 +86,7 @@ it("keeps the tabs in place, fits short tabs and scrolls only below the tabs", a
     const profileTab = ui.getByRole("tab", { name: "내 정보" });
     const top = profileTab.getBoundingClientRect().top;
     const start = ui.getByRole("button", { name: "자동 기입" });
-    expect(start.getBoundingClientRect().height).toBe(64);
+    expect(start.getBoundingClientRect().height).toBe(44);
     expect(host.getBoundingClientRect().height).toBeLessThan(260);
 
     await act(async () => ui.getByRole("tab", { name: "마감 공고" }).click());

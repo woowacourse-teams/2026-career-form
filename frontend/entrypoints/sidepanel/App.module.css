@@ -1,6 +1,9 @@
 @import "../../src/styles/theme.css";
 
 .panel {
+  /* DESIGN.md secondary text and focus ring; the theme has no token for either. */
+  --panel-secondary: #515154;
+  --panel-focus-ring: 0 0 0 2px #fff, 0 0 0 4px var(--color-action);
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   min-width: 0;
@@ -38,8 +41,10 @@
 }
 .shortcutHint {
   margin: 10px 0 0;
-  color: var(--color-text-muted);
-  font-size: 11px;
+  color: var(--panel-secondary);
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: -0.224px;
   overflow-wrap: anywhere;
 }
 .shortcutHint kbd {
@@ -50,8 +55,8 @@
   color: var(--color-text-strong);
   background: var(--color-surface-muted);
   font-family: inherit;
-  font-size: 11px;
-  font-weight: 650;
+  font-size: 14px;
+  font-weight: 600;
 }
 .brandMark {
   display: block;
@@ -82,9 +87,12 @@
   border-radius: 50%;
   color: var(--color-text-muted);
   background: var(--color-accent-soft);
-  font-size: 23px;
   line-height: 1;
   cursor: pointer;
+}
+.closeButton svg {
+  width: 17px;
+  height: 17px;
 }
 .closeButton:hover {
   color: var(--color-text-strong);
@@ -109,13 +117,16 @@
   scrollbar-color: var(--color-border-strong) transparent;
   overscroll-behavior: contain;
 }
+.profileMain {
+  padding: 20px 20px 11px;
+}
 .search {
   display: flex;
   align-items: center;
   gap: 9px;
   width: 100%;
-  min-height: 44px;
-  padding: 10px 12px;
+  height: 44px;
+  padding: 0 15px;
   border: 1px solid var(--color-field-border);
   border-radius: var(--radius-control);
   background: var(--color-surface);
@@ -124,7 +135,7 @@
   flex: none;
   width: 17px;
   height: 17px;
-  color: var(--color-text-muted);
+  color: var(--panel-secondary);
 }
 .search input {
   width: 100%;
@@ -134,15 +145,16 @@
   padding: 0;
   color: var(--color-text);
   background: transparent;
-  font-size: 13px;
+  font-family: inherit;
+  font-size: 17px;
+  letter-spacing: -0.374px;
 }
 .search input::placeholder {
   color: var(--color-text-subtle);
   opacity: 1;
 }
 .search:focus-within {
-  border-color: var(--color-action);
-  box-shadow: 0 0 0 3px var(--color-focus);
+  box-shadow: var(--panel-focus-ring);
 }
 .visuallyHidden {
   position: absolute;
@@ -157,73 +169,69 @@
 }
 .groups {
   display: grid;
-  gap: 12px;
-  margin-top: 16px;
+  margin-top: 11px;
 }
-.group {
-  overflow: hidden;
-  border-radius: var(--radius-card);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-card);
+.group + .group {
+  border-top: 1px solid var(--color-border);
 }
 .groupToggle {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
-  min-height: 48px;
+  height: 44px;
   border: 0;
-  padding: 13px 14px;
+  border-radius: var(--radius-control);
+  padding: 0 8px;
   color: var(--color-text);
-  background: var(--color-surface);
+  background: transparent;
+  font-family: inherit;
   text-align: left;
   cursor: pointer;
-}
-.groupToggle[aria-expanded="true"] {
-  color: var(--color-text-strong);
 }
 .groupToggle:hover:not(:disabled) {
   background: var(--color-accent-hover);
 }
 .groupToggle > span {
-  font-size: 13px;
-  font-weight: 650;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.224px;
 }
 .groupToggle small {
   flex: none;
+  margin-left: auto;
   color: var(--color-text-muted);
-  font-size: 10px;
-  font-weight: 450;
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: -0.224px;
+  font-variant-numeric: tabular-nums;
+}
+.groupToggle svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--panel-secondary);
 }
 .groupToggle:disabled {
   cursor: default;
 }
-.groupValues {
-  border-top: 1px solid var(--color-border);
-}
 .valueRow {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
-  min-height: 40px;
-  padding: 2px 14px;
-  background: var(--color-surface);
+  gap: 8px;
+  padding: 8px;
 }
-.valueRow {
-  position: relative;
-}
-/* Inset hairline between rows of one grouped card; no per-row borders. */
-.valueRow + .valueRow::before,
+/* Hairline between repeated records; rows of one record stay unruled. */
 .entry + .entry::before,
 .entry + .valueRow::before,
 .valueRow + .entry::before {
   content: "";
   position: absolute;
   top: 0;
-  right: 0;
-  left: 14px;
+  right: 8px;
+  left: 8px;
   height: 1px;
   background: var(--color-border);
 }
@@ -235,14 +243,15 @@
   align-items: baseline;
   gap: 8px;
   min-width: 0;
-  padding: 10px 14px 8px;
-  background: var(--color-page);
-  font-size: 11px;
+  padding: 8px 8px 0;
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: -0.224px;
 }
 .entryHead strong {
   flex: none;
   color: var(--color-text-strong);
-  font-weight: 650;
+  font-weight: 600;
 }
 .entryHead span {
   min-width: 0;
@@ -251,45 +260,50 @@
 }
 .valueMeta {
   display: grid;
-  grid-template-columns: 88px minmax(0, 1fr);
-  align-items: baseline;
   min-width: 0;
-  gap: 2px 8px;
 }
 .valueMeta > span:first-child:not(.value):not(.masked) {
-  grid-column: 1 / -1;
-  color: var(--color-text-muted);
-  font-size: 11px;
+  color: var(--panel-secondary);
+  font-size: 14px;
   font-weight: 600;
+  line-height: 18px;
+  letter-spacing: -0.224px;
 }
 .valueMeta strong {
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 400;
+  line-height: 18px;
+  letter-spacing: -0.224px;
 }
 .value,
 .masked {
   color: var(--color-text-strong);
-  font-size: 13.5px;
+  font-size: 17px;
+  line-height: 25px;
+  letter-spacing: -0.374px;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
 .masked {
   color: var(--color-text-muted);
-  letter-spacing: 0.02em;
 }
-/* Icon-only copy button: 36px hit area, name comes from aria-label. */
+/* Icon-only copy button: name comes from aria-label. */
 .copyButton {
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border: 0;
-  border-radius: 8px;
+  border-radius: 980px;
   padding: 0;
-  color: var(--color-action-strong);
+  color: var(--panel-secondary);
   background: transparent;
   cursor: pointer;
+}
+.copyButton svg {
+  width: 17px;
+  height: 17px;
 }
 .copyButton:hover {
   background: var(--color-accent-soft);
@@ -300,20 +314,16 @@
 .copyButton[data-copied="true"] {
   color: var(--color-success);
 }
-.copyButton:focus-visible,
-.revealButton:focus-visible {
-  outline: 3px solid var(--color-focus);
-  outline-offset: 1px;
-}
 .revealButton {
-  min-height: 36px;
+  min-height: 32px;
   border: 0;
-  border-radius: 8px;
-  padding: 0 10px;
+  border-radius: 980px;
+  padding: 0 11px;
   color: var(--color-action-strong);
   background: transparent;
-  font-size: 13px;
-  font-weight: 500;
+  font-family: inherit;
+  font-size: 14px;
+  letter-spacing: -0.224px;
   cursor: pointer;
 }
 .revealButton:hover {
@@ -321,21 +331,25 @@
 }
 .groupEmpty {
   margin: 0;
-  padding: 20px 14px;
+  padding: 8px;
   color: var(--color-text-muted);
-  font-size: 12px;
-  text-align: center;
+  font-size: 14px;
+  letter-spacing: -0.224px;
 }
 .empty {
   display: grid;
-  gap: 7px;
+  gap: 8px;
   margin: 0;
-  border-radius: var(--radius-card);
-  padding: 28px 14px;
+  padding: 40px 20px;
   color: var(--color-text-muted);
-  background: var(--color-surface);
-  font-size: 12px;
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: -0.224px;
   text-align: center;
+}
+.empty strong {
+  color: var(--color-text-strong);
+  font-weight: 600;
 }
 .navigationError,
 .copyError,
@@ -346,7 +360,9 @@
   padding: 10px 12px;
   color: var(--color-danger-text);
   background: var(--color-danger-soft);
-  font-size: 12px;
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: -0.224px;
 }
 .returnButton {
   display: grid;
@@ -379,14 +395,6 @@
   .main {
     padding: 12px;
   }
-  .groupToggle,
-  .valueRow {
-    padding-left: 12px;
-    padding-right: 12px;
-  }
-  .groupToggle > span {
-    font-size: 12px;
-  }
 }
 
 .workflowMain {
@@ -404,28 +412,31 @@
   background: var(--color-success-soft);
 }
 .importResult strong {
-  font-size: 13px;
+  font-size: 14px;
 }
 .importResult p {
   margin: 0;
-  color: var(--color-text-muted);
-  font-size: 12px;
+  color: var(--panel-secondary);
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: -0.224px;
 }
 
 /* Unread server postings count beside the postings entry. */
 .unreadBadge {
   display: inline-grid;
   place-items: center;
-  min-width: 20px;
-  height: 20px;
-  margin-left: 6px;
+  min-width: 22px;
+  height: 22px;
+  margin-left: 8px;
   padding: 0 6px;
-  border-radius: 10px;
+  border-radius: 980px;
   background: var(--color-action-strong);
   color: var(--color-on-action);
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 600;
   line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 
 /* The home view: logo row, fixed tabs and one panel below them. */
@@ -447,23 +458,27 @@
   background: var(--color-surface);
 }
 .homeHeader .brandRow {
-  min-height: 48px;
-  padding: 0 16px;
+  gap: 8px;
+  min-height: 52px;
+  padding: 0 11px 0 20px;
 }
 .homeHeader .brandMark {
   width: 28px;
   height: 28px;
-  border-radius: 7px;
+  border-radius: 8px;
 }
 .headerActions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 .homeHeader .closeButton {
-  width: 28px;
-  height: 28px;
-  font-size: 20px;
+  border-radius: 980px;
+  color: var(--panel-secondary);
+  background: transparent;
+}
+.homeHeader .closeButton:hover {
+  background: var(--color-accent-hover);
 }
 .closeButton:focus-visible,
 .settingsButton:focus-visible,
@@ -472,9 +487,12 @@
 .startButton:focus-visible,
 .postingRow:focus-visible,
 .postingsManage:focus-visible,
-.postingsRetry:focus-visible {
-  outline: 3px solid var(--color-focus);
-  outline-offset: 1px;
+.postingsRetry:focus-visible,
+.groupToggle:focus-visible,
+.copyButton:focus-visible,
+.revealButton:focus-visible {
+  outline: none;
+  box-shadow: var(--panel-focus-ring);
 }
 .settings {
   position: relative;
@@ -482,43 +500,47 @@
 .settingsButton {
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   padding: 0;
   border: 0;
-  border-radius: 50%;
-  color: var(--color-text-muted);
-  background: var(--color-accent-soft);
+  border-radius: 980px;
+  color: var(--panel-secondary);
+  background: transparent;
   cursor: pointer;
+}
+.settingsButton svg {
+  width: 17px;
+  height: 17px;
 }
 .settingsButton:hover,
 .settingsButton[aria-expanded="true"] {
-  color: var(--color-text-strong);
   background: var(--color-accent-hover);
 }
 .settingsMenu {
   position: absolute;
   top: calc(100% + 6px);
-  right: 0;
+  /* The close button and its gap sit right of the trigger. */
+  right: -40px;
   z-index: 2;
   display: grid;
-  gap: 2px;
   width: 220px;
-  padding: 5px;
-  border: 1px solid var(--color-border);
-  border-radius: 10px;
+  padding: 8px;
+  border-radius: 18px;
   background: var(--color-surface);
-  box-shadow: var(--shadow-panel);
+  box-shadow: 0 8px 32px rgb(0 0 0 / 16%);
 }
 .settingsItem {
   width: 100%;
+  height: 44px;
   border: 0;
-  border-radius: 6px;
-  padding: 8px 10px;
+  border-radius: 8px;
+  padding: 0 11px;
   color: var(--color-text);
   background: transparent;
   font-family: inherit;
-  font-size: 13.5px;
+  font-size: 14px;
+  letter-spacing: -0.224px;
   text-align: left;
   cursor: pointer;
 }
@@ -526,53 +548,66 @@
   background: var(--color-accent-hover);
 }
 .settingsMenu .shortcutHint {
-  margin: 3px 0 0;
+  margin: 8px 0 0;
   border-top: 1px solid var(--color-border);
-  padding: 8px 10px 5px;
+  padding: 8px 11px;
 }
 .tabs {
   display: grid;
   grid-auto-columns: minmax(0, 1fr);
   grid-auto-flow: column;
-  height: 44px;
-  padding: 0 8px;
+  padding: 0 20px;
   border-bottom: 1px solid var(--color-border);
 }
 .tab {
+  /* Positioned so the focus ring paints over the tab panel below. */
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
   border: 0;
+  border-radius: 8px;
   padding: 0;
-  color: var(--color-text-muted);
+  color: var(--panel-secondary);
   background: transparent;
   font-family: inherit;
-  font-size: 14.5px;
+  font-size: 14px;
   font-weight: 400;
+  letter-spacing: -0.224px;
   cursor: pointer;
+}
+.tabLabel {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 44px;
 }
 .tab[aria-selected="true"] {
   color: var(--color-text-strong);
-  font-weight: 700;
+  font-weight: 600;
 }
-.tab[aria-selected="true"]::after {
+.tab[aria-selected="true"] .tabLabel::after {
   content: "";
   position: absolute;
-  right: 12px;
-  bottom: -1px;
-  left: 12px;
-  height: 2.5px;
-  border-radius: 2px;
-  background: var(--color-accent);
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: var(--color-text-strong);
 }
 .tabCount {
+  margin-left: 8px;
   color: var(--color-danger-text);
-  font-size: 11.5px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 .homeHeader .navigationError {
-  margin: 12px 16px 0;
+  margin: 12px 20px 0;
 }
 .homeHeader .importResult {
-  margin: 12px 16px 0;
+  margin: 12px 20px 0;
 }
 .tabPanel {
   display: grid;
@@ -582,20 +617,29 @@
   background: var(--color-surface);
 }
 .autofillTab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 11px;
   align-self: start;
-  padding: 16px;
+  padding: 40px 20px;
 }
 .startButton {
-  width: 100%;
-  height: 64px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  height: 44px;
   border: 0;
-  border-radius: 16px;
-  padding: 0 16px;
+  border-radius: 980px;
+  padding: 11px 21px;
   color: var(--color-on-brand);
   background: var(--color-brand);
   font-family: inherit;
-  font-size: 20px;
-  font-weight: 800;
+  font-size: 17px;
+  font-weight: 400;
+  letter-spacing: -0.374px;
+  line-height: 1;
   cursor: pointer;
 }
 .startButton:hover:not(:disabled) {
@@ -606,7 +650,8 @@
   opacity: 0.65;
 }
 .autofillTab .autofillError {
-  margin: 10px 0 0;
+  align-self: stretch;
+  margin: 0;
 }
 .postingsTab {
   display: grid;
@@ -615,23 +660,28 @@
 }
 .postingsMessage {
   margin: 0;
-  padding: 22px 16px;
+  padding: 40px 20px;
   color: var(--color-text-muted);
   font-size: 14px;
+  line-height: 18px;
+  letter-spacing: -0.224px;
+  text-align: center;
 }
 .postingsMessage p {
   margin: 0;
 }
 .postingsRetry {
-  margin-top: 10px;
-  border: 0;
-  border-radius: 8px;
-  padding: 8px 12px;
-  color: var(--color-text);
-  background: var(--color-accent-soft);
+  height: 36px;
+  margin-top: 20px;
+  border: 1px solid var(--color-action-strong);
+  border-radius: 980px;
+  padding: 8px 15px;
+  color: var(--color-action-strong);
+  background: transparent;
   font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: -0.224px;
+  line-height: 1;
   cursor: pointer;
 }
 .postingsRetry:hover {
@@ -640,7 +690,8 @@
 .postingsList {
   min-height: 0;
   margin: 0;
-  padding: 0;
+  /* The block padding keeps the first and last rows' focus rings unclipped. */
+  padding: 4px 20px;
   overflow-y: auto;
   list-style: none;
   overscroll-behavior: contain;
@@ -650,25 +701,27 @@
 }
 .postingRow {
   display: grid;
-  grid-template-columns: 46px minmax(0, 1fr);
-  gap: 0 6px;
+  grid-template-columns: 56px minmax(0, 1fr);
   align-items: center;
-  min-height: 52px;
-  margin: 0 16px;
+  min-height: 64px;
   color: inherit;
   text-decoration: none;
+}
+.postingRow:focus-visible {
+  border-radius: 8px;
 }
 .postingRow:hover .postingCompany {
   text-decoration: underline;
 }
 .dDay {
-  color: var(--color-text-muted);
-  font-size: 15px;
-  font-weight: 500;
+  color: var(--panel-secondary);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.374px;
+  font-variant-numeric: tabular-nums;
 }
 .dDayUrgent {
   color: var(--color-danger-text);
-  font-weight: 700;
 }
 .postingText {
   display: grid;
@@ -677,33 +730,48 @@
 .postingCompany {
   overflow: hidden;
   color: var(--color-text-strong);
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 25px;
+  letter-spacing: -0.374px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .postingDetail {
   overflow: hidden;
-  margin-top: 1px;
   color: var(--color-text-muted);
-  font-size: 12.5px;
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: -0.224px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .postingsFooter {
-  padding: 11px 16px 13px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  padding: 8px 20px;
   border-top: 1px solid var(--color-border);
 }
+.postingsFooter .navigationError {
+  flex-basis: 100%;
+  margin: 0 0 8px;
+}
 .postingsManage {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 32px;
   border: 0;
+  border-radius: 8px;
   padding: 0;
-  color: var(--color-text-muted);
+  color: var(--color-action-strong);
   background: transparent;
   font-family: inherit;
-  font-size: 12.5px;
+  font-size: 14px;
+  letter-spacing: -0.224px;
   cursor: pointer;
 }
 .postingsManage:hover {
-  color: var(--color-text-strong);
   text-decoration: underline;
 }

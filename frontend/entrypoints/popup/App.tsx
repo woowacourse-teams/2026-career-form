@@ -65,23 +65,28 @@ export function App({
           className={styles.logo}
           src="/side-panel-launcher-logo.png"
           alt=""
-          width={40}
-          height={40}
+          width={32}
+          height={32}
         />
-        <div>
-          <p>CAREER FORM</p>
-          <h1>지원서 입력을 더 가볍게</h1>
-        </div>
+        <h1>커리어폼</h1>
       </header>
       <main className={styles.main}>
         <section className={styles.readiness} aria-label="프로필 준비 상태">
-          <div>
-            <span>프로필 준비 상태</span>
+          <div className={styles.readinessRow}>
+            <span>프로필 준비</span>
             <strong>
               {completedCategories === undefined && "확인 중"}
               {completedCategories === null && "준비 상태 확인 실패"}
-              {typeof completedCategories === "number" &&
-                `${PROFILE_CATEGORIES.length}개 범주 중 ${completedCategories}개 준비됨`}
+              {typeof completedCategories === "number" && (
+                <>
+                  <span aria-hidden="true">
+                    {`${completedCategories} / ${PROFILE_CATEGORIES.length}`}
+                  </span>
+                  <span className={styles.visuallyHidden}>
+                    {`${PROFILE_CATEGORIES.length}개 범주 중 ${completedCategories}개 준비됨`}
+                  </span>
+                </>
+              )}
             </strong>
           </div>
           <div className={styles.progress} aria-hidden="true">
@@ -92,31 +97,26 @@ export function App({
             />
           </div>
         </section>
-        <p className={styles.guide}>
-          저장된 실제 값은 팝업에 표시하지 않습니다. 지원서 페이지의 패널에서
-          필요한 값만 확인하세요.
-        </p>
-        <button
-          className={styles.primaryButton}
-          type="button"
-          onClick={() => void runAction(actions.openInPageProfilePanel)}
-        >
-          지원서 패널 열기
-        </button>
-        <button
-          className={styles.secondaryButton}
-          type="button"
-          onClick={() => void runAction(actions.openOptions)}
-        >
-          프로필 관리
-        </button>
-        {actionError && (
-          <p role="alert">화면을 열지 못했습니다. 다시 시도해 주세요.</p>
-        )}
+        <div className={styles.actions}>
+          <button
+            className={styles.primaryButton}
+            type="button"
+            onClick={() => void runAction(actions.openInPageProfilePanel)}
+          >
+            지원서 패널 열기
+          </button>
+          <button
+            className={styles.secondaryButton}
+            type="button"
+            onClick={() => void runAction(actions.openOptions)}
+          >
+            프로필 관리
+          </button>
+          {actionError && (
+            <p role="alert">화면을 열지 못했습니다. 다시 시도해 주세요.</p>
+          )}
+        </div>
       </main>
-      <footer className={styles.footer}>
-        선택한 항목만 기입하며 저장, 이동, 제출은 실행하지 않습니다.
-      </footer>
     </div>
   );
 }

@@ -321,21 +321,21 @@ describe("tabs", () => {
     await screen.findByText("copy@example.com");
   });
 
-  it("underlines the selected tab with the accent color at 2.5px", async () => {
+  it("underlines the selected tab's label in the text color at 2px", async () => {
     renderApp();
     await screen.findByRole("tablist");
     const selected = tab("자동 기입");
 
-    expect(getComputedStyle(selected).fontWeight).toBe("700");
-    expect(getComputedStyle(tab("내 정보")).fontWeight).not.toBe("700");
+    expect(getComputedStyle(selected).fontWeight).toBe("600");
+    expect(getComputedStyle(tab("내 정보")).fontWeight).toBe("400");
     const css = [...document.querySelectorAll("style")]
       .map((style) => style.textContent)
       .join("");
     const underline = css.match(
-      /\[aria-selected="?true"?\]::after\s*{([^}]*)}/,
+      /\[aria-selected="?true"?\]\s+\S*tabLabel\S*::after\s*{([^}]*)}/,
     )?.[1];
-    expect(underline).toContain("height: 2.5px");
-    expect(underline).toContain("var(--color-accent)");
+    expect(underline).toContain("height: 2px");
+    expect(underline).toContain("var(--color-text-strong)");
   });
 });
 
@@ -350,11 +350,12 @@ describe("자동 기입 tab", () => {
     expect(
       within(screen.getByRole("tabpanel")).getAllByRole("button"),
     ).toHaveLength(1);
-    expect(declared(start, "height")).toBe("64px");
-    expect(declared(start, "border-radius")).toBe("16px");
-    expect(declared(start, "font-size")).toBe("20px");
-    expect(declared(start, "font-weight")).toBe("800");
-    expect(declared(start, "width")).toBe("100%");
+    expect(declared(start, "height")).toBe("44px");
+    expect(declared(start, "padding")).toBe("11px 21px");
+    expect(declared(start, "border-radius")).toBe("980px");
+    expect(declared(start, "font-size")).toBe("17px");
+    expect(declared(start, "font-weight")).toBe("400");
+    expect(declared(start, "width")).toBe("fit-content");
     expect(declared(start, "background")).toBe("var(--color-brand)");
     expect(container.textContent).not.toContain("지원서에서 가져오기");
     expect(container.textContent).not.toContain("Greeting 지원서");
@@ -457,14 +458,14 @@ describe("마감 공고 tab", () => {
     await screen.findByText("예시 회사 today");
 
     for (const [label, weight, color] of [
-      ["D-0", "700", "var(--color-danger-text)"],
-      ["D-3", "700", "var(--color-danger-text)"],
-      ["D-4", "500", "var(--color-text-muted)"],
+      ["D-0", "600", "var(--color-danger-text)"],
+      ["D-3", "600", "var(--color-danger-text)"],
+      ["D-4", "600", "var(--panel-secondary)"],
     ] as const) {
       const dDay = screen.getByText(label);
       expect(declared(dDay, "font-weight")).toBe(weight);
       expect(declared(dDay, "color")).toBe(color);
-      expect(declared(dDay, "font-size")).toBe("15px");
+      expect(declared(dDay, "font-size")).toBe("17px");
     }
   });
 

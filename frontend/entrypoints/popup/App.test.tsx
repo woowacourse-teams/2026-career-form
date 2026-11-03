@@ -84,6 +84,21 @@ describe("popup App", () => {
     await waitFor(() => expect(closePopup).toHaveBeenCalledTimes(2));
   });
 
+  it("shows the readiness ratio and keeps both actions without the guide copy", async () => {
+    render(
+      <App
+        repository={createRepository()}
+        navigation={{ openOptions: vi.fn(), openInPageProfilePanel: vi.fn() }}
+      />,
+    );
+
+    expect(await screen.findByText(`2 / ${CATEGORY_COUNT}`)).toBeVisible();
+    expect(
+      screen.getAllByRole("button").map((button) => button.textContent),
+    ).toEqual(["지원서 패널 열기", "프로필 관리"]);
+    expect(screen.queryByRole("contentinfo")).toBeNull();
+  });
+
   it("does not present a load failure as an empty profile", async () => {
     const repository = createRepository();
     repository.load = vi.fn(async () => {
