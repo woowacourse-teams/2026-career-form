@@ -74,7 +74,7 @@ describe("SubscriptionSettings", () => {
     const { onTest, track } = renderSettings();
     expect(screen.getByText("구독")).toBeInTheDocument();
     expect(screen.getByText("등록됨")).toBeInTheDocument();
-    expect(screen.getByText("알림 표시 확인됨 · 10/26")).toBeInTheDocument();
+    expect(screen.getByText("확인됨, 10월 26일")).toBeInTheDocument();
     expect(screen.queryByRole("switch")).toBeNull();
     expect(screen.queryByText(/자동 저장/)).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "알림 테스트" }));

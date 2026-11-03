@@ -96,7 +96,7 @@ export function SubscriptionSettings({
 }: Props) {
   return (
     <div className={styles.settingsBody}>
-      <dl className={styles.facts}>
+      <dl className={`${styles.facts} ${styles.status}`}>
         <div>
           <dt>구독</dt>
           <dd role="status">{subscriptionStatusText(state)}</dd>

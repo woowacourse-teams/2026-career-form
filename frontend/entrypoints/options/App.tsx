@@ -159,8 +159,12 @@ export function App({
           </span>
         </div>
         <div className={styles.toolbar}>
-          <div className={styles.saveState} role="status" aria-live="polite">
-            <span data-status={editor.saveStatus} />
+          <div
+            className={styles.saveState}
+            data-status={editor.saveStatus}
+            role="status"
+            aria-live="polite"
+          >
             {SAVE_STATUS_LABEL[editor.saveStatus]}
             {editor.saveStatus === "error" && (
               <button type="button" onClick={() => void editor.retrySave()}>

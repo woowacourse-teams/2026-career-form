@@ -20,9 +20,8 @@ interface Props {
   userAgent?: string;
 }
 
-function shortDate(at: number | undefined): string {
-  if (at === undefined) return "";
-  const parts = Object.fromEntries(
+function dateParts(at: number) {
+  return Object.fromEntries(
     new Intl.DateTimeFormat("ko-KR", {
       timeZone: POSTING_TIME_ZONE,
       month: "numeric",
@@ -31,6 +30,10 @@ function shortDate(at: number | undefined): string {
       .formatToParts(at)
       .map(({ type, value }) => [type, value]),
   );
+}
+function shortDate(at: number | undefined): string {
+  if (at === undefined) return "";
+  const parts = dateParts(at);
   return `${parts.month}/${parts.day}`;
 }
 export function visibilityText(visibility: VisibilityState): string {
@@ -39,6 +42,15 @@ export function visibilityText(visibility: VisibilityState): string {
   if (visibility.result === "not_seen")
     return "보이지 않는다고 응답 · 설정 안내";
   return "아직 확인하지 않음";
+}
+
+/** Value beside the 알림 표시 label in the settings dialog. */
+export function settingsVisibilityText(visibility: VisibilityState): string {
+  if (visibility.result === "seen" && visibility.checkedAt !== undefined) {
+    const parts = dateParts(visibility.checkedAt);
+    return `확인됨, ${parts.month}월 ${parts.day}일`;
+  }
+  return visibilityText(visibility);
 }
 
 const MAC_GUIDE =
@@ -154,12 +166,13 @@ export function VisibilityCheck({
   if (variant === "settings")
     return (
       <div>
-        <div className={styles.row}>
-          <span role="status">{visibilityText(visibility)}</span>
+        <dl className={styles.settingsRow}>
+          <dt>알림 표시</dt>
+          <dd role="status">{settingsVisibilityText(visibility)}</dd>
           {!needsGuidance && phase === "idle" && (
-            <div className={styles.actions}>{testButton()}</div>
+            <dd className={styles.actions}>{testButton()}</dd>
           )}
-        </div>
+        </dl>
         {asking}
         {guidance}
       </div>

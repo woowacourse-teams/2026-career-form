@@ -1,14 +1,15 @@
 .row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   margin-top: 8px;
-  padding: 12px 12px 0;
+  padding: 12px 11px 0;
   border-top: 1px solid var(--color-border);
 }
 .label {
   color: var(--color-text);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -17,7 +18,7 @@
   padding: 2px 6px;
   background: var(--color-info-soft);
   color: var(--color-info);
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -46,8 +47,10 @@
   background: var(--color-action);
 }
 .switch:focus-visible {
-  outline: 3px solid var(--color-focus);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--color-surface),
+    0 0 0 4px var(--color-action);
 }
 .thumb {
   position: absolute;
@@ -62,6 +65,14 @@
 }
 .switch[aria-checked="true"] .thumb {
   transform: translateX(16px);
+}
+/* The hit area reaches 44px while the track keeps its size. */
+@media (max-width: 640px) {
+  .switch::after {
+    content: "";
+    position: absolute;
+    inset: -12px -4px;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .thumb {

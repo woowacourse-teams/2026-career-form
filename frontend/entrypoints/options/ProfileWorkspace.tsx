@@ -204,7 +204,7 @@ export function ProfileWorkspace({
               type="button"
               onClick={() => navigate(PROFILE_CATEGORIES[activeIndex - 1].id)}
             >
-              ← 이전
+              이전
             </button>
           ) : (
             <span />
@@ -215,7 +215,7 @@ export function ProfileWorkspace({
               type="button"
               onClick={() => navigate(PROFILE_CATEGORIES[activeIndex + 1].id)}
             >
-              다음: {PROFILE_CATEGORIES[activeIndex + 1].label} →
+              다음: {PROFILE_CATEGORIES[activeIndex + 1].label}
             </button>
           ) : (
             <span />

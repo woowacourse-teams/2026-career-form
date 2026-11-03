@@ -25,59 +25,69 @@ function dDay(deadline: number, now: number): string {
 export function PostingTable({ rows, now }: Props) {
   const removable = rows.some((row) => row.remove);
   return (
-    <div className={styles.tableScroll}>
-      <table className={styles.table}>
-        <thead>
-          <tr>
-            <th scope="col">마감</th>
-            <th scope="col">회사</th>
-            <th scope="col">직무</th>
-            <th scope="col">마감일</th>
-            <th scope="col">
-              <span className={styles.srOnly}>동작</span>
+    <table className={styles.table}>
+      <thead>
+        <tr>
+          <th className={styles.colDeadline} scope="col">
+            마감
+          </th>
+          <th scope="col">회사</th>
+          <th className={styles.colRole} scope="col">
+            직무
+          </th>
+          <th className={styles.colWhen} scope="col">
+            마감일
+          </th>
+          <th className={styles.colAction} scope="col">
+            <span className={styles.srOnly}>동작</span>
+          </th>
+          {removable && (
+            <th className={styles.colRemove} scope="col">
+              <span className={styles.srOnly}>삭제</span>
             </th>
-            {removable && (
-              <th scope="col">
-                <span className={styles.srOnly}>삭제</span>
-              </th>
-            )}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => {
-            const urgent =
-              !row.closed && row.deadline > now && isUrgent(row.deadline, now);
-            return (
-              <tr key={row.key}>
-                <td className={styles.dDay} data-urgent={urgent}>
-                  {dDay(row.deadline, now)}
-                </td>
-                <td>
-                  <a
-                    className={styles.companyLink}
-                    href={row.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <span className={styles.companyName}>{row.company}</span>{" "}
-                    <span className={styles.open}>
-                      열기<span aria-hidden="true"> ↗</span>
-                    </span>
-                  </a>
-                </td>
-                <td className={styles.secondary}>{row.role}</td>
-                <td className={styles.secondary}>
-                  <time dateTime={new Date(row.deadline).toISOString()}>
-                    {deadlineLabel(row.deadline)}
-                  </time>
-                </td>
-                <td className={styles.action}>{row.action}</td>
-                {removable && <td className={styles.remove}>{row.remove}</td>}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+          )}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row) => {
+          const urgent =
+            !row.closed && row.deadline > now && isUrgent(row.deadline, now);
+          return (
+            <tr key={row.key}>
+              <td
+                className={styles.dDay}
+                data-urgent={urgent}
+                data-closed={row.deadline <= now}
+              >
+                {dDay(row.deadline, now)}
+              </td>
+              <td className={styles.company}>
+                <a
+                  className={styles.companyLink}
+                  href={row.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <span className={styles.companyName}>{row.company}</span>{" "}
+                  <span className={styles.open}>
+                    열기<span aria-hidden="true"> ↗</span>
+                  </span>
+                </a>
+              </td>
+              <td className={`${styles.secondary} ${styles.role}`}>
+                {row.role}
+              </td>
+              <td className={`${styles.secondary} ${styles.when}`}>
+                <time dateTime={new Date(row.deadline).toISOString()}>
+                  {deadlineLabel(row.deadline)}
+                </time>
+              </td>
+              <td className={styles.action}>{row.action}</td>
+              {removable && <td className={styles.remove}>{row.remove}</td>}
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
   );
 }

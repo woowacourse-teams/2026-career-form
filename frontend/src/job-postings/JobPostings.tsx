@@ -195,6 +195,25 @@ export function JobPostings({
     setSettingsOpen(false);
     settingsButton.current?.focus();
   };
+  // The scrim makes the page behind unavailable, so Tab stays in the dialog.
+  const keepTabInSettings = (event: KeyboardEvent<HTMLDivElement>) => {
+    const controls = event.currentTarget.querySelectorAll<HTMLElement>(
+      "button:not(:disabled)",
+    );
+    const first = controls[0];
+    const last = controls[controls.length - 1];
+    const active = document.activeElement;
+    if (
+      event.shiftKey &&
+      (active === first || active === event.currentTarget)
+    ) {
+      event.preventDefault();
+      last?.focus();
+    } else if (!event.shiftKey && active === last) {
+      event.preventDefault();
+      first?.focus();
+    }
+  };
   const savedUrls = new Set((snapshot?.postings ?? []).map((p) => p.url));
   const savedMessage = (posting: ServerPosting) => (next: PostingSnapshot) => {
     const saved = next.postings.find((p) => p.url === posting.link);
@@ -392,16 +411,22 @@ export function JobPostings({
             알림 설정
           </button>
           {settingsOpen && (
+            <div className={styles.scrim} onClick={closeSettings} />
+          )}
+          {settingsOpen && (
             <div
               ref={settingsDialog}
               className={styles.settings}
               role="dialog"
+              aria-modal="true"
               aria-labelledby={`${id}-settings`}
               tabIndex={-1}
               onKeyDown={(event) => {
                 if (event.key === "Escape") {
                   event.stopPropagation();
                   closeSettings();
+                } else if (event.key === "Tab") {
+                  keepTabInSettings(event);
                 }
               }}
             >

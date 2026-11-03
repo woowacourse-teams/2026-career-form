@@ -666,7 +666,7 @@ it("알림 설정은 테스트, 표시 확인, 안내 항목을 담은 대화상
   fireEvent.click(open);
   const dialog = screen.getByRole("dialog", { name: "알림 설정" });
   expect(dialog).toContainElement(document.activeElement as HTMLElement);
-  await within(dialog).findByText(/알림 표시 확인됨/);
+  await within(dialog).findByText(/^확인됨, /);
   expect(within(dialog).getByText("등록됨")).toBeInTheDocument();
   expect(within(dialog).getByText("Chrome 종료 중")).toBeInTheDocument();
   expect(
@@ -713,4 +713,26 @@ it("직무 없이 저장한 공고는 직무 칸을 비운다", async () => {
     await screen.findByRole("link", { name: "직무 없는 회사 열기" })
   ).closest("tr") as HTMLElement;
   expect(row.querySelectorAll("td")[2].textContent).toBe("");
+});
+
+it("알림 설정 대화상자는 Tab을 안에 가두고 배경을 누르면 닫는다", async () => {
+  const env = setup();
+  renderPage(env);
+  const open = screen.getByRole("button", { name: "알림 설정" });
+  fireEvent.click(open);
+  const dialog = screen.getByRole("dialog", { name: "알림 설정" });
+  expect(dialog).toHaveAttribute("aria-modal", "true");
+  const close = within(dialog).getByRole("button", { name: "닫기" });
+  const test = await within(dialog).findByRole("button", {
+    name: "알림 테스트",
+  });
+  await waitFor(() => expect(test).toBeEnabled());
+  test.focus();
+  fireEvent.keyDown(test, { key: "Tab" });
+  expect(close).toHaveFocus();
+  fireEvent.keyDown(close, { key: "Tab", shiftKey: true });
+  expect(test).toHaveFocus();
+  fireEvent.click(dialog.previousElementSibling as HTMLElement);
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(open).toHaveFocus();
 });

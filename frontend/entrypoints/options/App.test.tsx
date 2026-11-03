@@ -130,14 +130,12 @@ describe("options App", () => {
     const section = screen.getByRole("region", { name: "기본 인적사항" });
     expect(within(section).getByText("1개")).toBeVisible();
     expect(
-      within(section).getByRole("button", { name: "다음: 연락처와 주소 →" }),
+      within(section).getByRole("button", { name: "다음: 연락처와 주소" }),
     ).toBeVisible();
 
     fireEvent.click(nav.getByRole("button", { name: "연락처와 주소" }));
     const contact = screen.getByRole("region", { name: "연락처와 주소" });
-    expect(
-      within(contact).getByRole("button", { name: "← 이전" }),
-    ).toBeVisible();
+    expect(within(contact).getByRole("button", { name: "이전" })).toBeVisible();
   });
 
   it("places the developer mode row at the bottom of the sidebar", async () => {
