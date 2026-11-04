@@ -982,3 +982,11 @@
 - 승인한 후보 5개를 [CF-384 bundle](../raw/issues/CF-384/manifest.md)에 기록했다. JEV 7단계 랜딩 구성과 확신 표기, 스크롤 연출 방식과 조사 근거, 하늘색 전용 토큰과 대비 규칙, 시안 체험 선택과 스크롤 붙잡기, 정책 문의 이메일 미기재다.
 - [랜딩·온보딩 웹 페이지](topics/landing-onboarding.md)의 Current를 CF-384로 바꾸고 CF-363을 History에 남겼다.
 - 실제 지원값, 계정, 세션, 대화 전문은 저장하지 않았다.
+
+## [2026-11-04] ingest | CF-394 공고 알림 직무 필터
+
+- Approval-Digest: 8d904686571f07dbb79657781e7ef2f8c58fa44922c855656c06d451750558fc
+- Source-Revision: fb132f7f
+- 승인한 후보 6개를 [CF-394 bundle](../raw/issues/CF-394/manifest.md)에 payload 하나로 기록했다. 공고 직무 필터 계약(roles 1~10개 필수, role 라벨 파생, 레거시 공고의 roles 생략과 role 유지), 구독 받을 직무 규칙(덮어쓰기·빈 배열 미선택·없으면 유지, 키 유지), 대상 산정과 전환 설정(subscriptionIdsForRoles, 멀티키 인덱스, role-filter.enforced 기본 false, 배포 순서), 발송기 재검사(FILTER_MISMATCH, 로그·메트릭 경계), 직무 분류 정본(job-categories-v1.json 형식과 기동 검증, 가안), 검증 환경(Mongo 계약 테스트 실행 방법)이다.
+- [공고 구독 알림](topics/job-posting-notifications.md)의 Current를 CF-394로 바꾸고 CF-348 ADR을 History에 남겼다. 다른 topic 문서는 바꾸지 않았다.
+- 실제 지원값·계정·세션·시크릿·VAPID 키·구독 endpoint·사용자의 직무 선택·대화 전문은 저장하지 않았다.
