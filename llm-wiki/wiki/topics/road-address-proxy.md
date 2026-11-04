@@ -2,8 +2,8 @@
 
 > Topic: road-address-proxy
 > Status: Current
-> Current: [도로명주소 검색 프록시 ADR 초안](../../raw/issues/CF-392/documents/adr/392-road-address-proxy.md)
-> History: [도로명주소 검색 프록시 ADR 초안](../../raw/issues/CF-392/documents/adr/392-road-address-proxy.md)
+> Current: [도로명주소 검색 프록시 ADR](../../raw/issues/CF-392/documents/adr/392-road-address-proxy.md)
+> History: [도로명주소 검색 프록시 ADR](../../raw/issues/CF-392/documents/adr/392-road-address-proxy.md)
 > Updated: 2026-11-04
 
 ## 현재 상태
