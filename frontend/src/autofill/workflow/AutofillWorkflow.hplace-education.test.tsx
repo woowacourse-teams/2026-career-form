@@ -189,7 +189,7 @@ it.each([
       await screen.findByText("기입 결과", {}, { timeout: 120_000 });
       fireEvent.click(screen.getByRole("tab", { name: /확인 필요/ }));
       expect(
-        screen.queryAllByText("입력 불가(학교 확정 후 다시 실행)"),
+        screen.queryAllByLabelText("입력 불가(학교 확정 후 다시 실행)"),
       ).toHaveLength(2);
       expect(screen.getByText("가상복수전공")).toBeVisible();
       expect(screen.getByText("가상부전공")).toBeVisible();
