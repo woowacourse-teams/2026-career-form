@@ -1342,6 +1342,8 @@ function PolicyReadyWorkflow({
       unfilledPresentation.clear();
       return;
     }
+    const fieldStateFor = (id: string) =>
+      resultFieldState(visibleRegistry, pageDocument, id);
     unfilledPresentation.mark(
       visibleRegistry,
       unfilledCandidateIds(
@@ -1354,9 +1356,9 @@ function PolicyReadyWorkflow({
           progressIdFor: (id) =>
             progressTracker.progressIdFor(id, visibleRegistry),
           progressStateFor: progressTracker.progressStateFor,
-          fieldStateFor: (id) =>
-            resultFieldState(visibleRegistry, pageDocument, id),
+          fieldStateFor,
         }),
+        (id) => fieldStateFor(id)?.value,
       ),
     );
   }, [stage, results, progress, visibleRegistry]);

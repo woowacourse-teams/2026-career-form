@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import type { ReviewPlanItem } from "../review/review-plan";
-import { buildResultModel } from "./result-model";
+import { buildResultModel, unfilledCandidateIds } from "./result-model";
 
 const item = {
   candidateId: "field-1",
@@ -378,3 +378,27 @@ it.each([
     expect(result.pending).toMatchObject([{ reason: "입력 못함" }]);
   },
 );
+
+it("leaves a skipped field that already holds a value out of the unfilled ids but keeps pending ones", () => {
+  const skip = (id: string, reason: string) => ({ id, item, reason });
+  const model = {
+    completed: [],
+    pending: [
+      { id: "pending-with-value", reason: "기존 값과 다름", written: false },
+    ],
+    skipped: [
+      skip("default-value", "등록된 정보 없음"),
+      skip("empty", "등록된 정보 없음"),
+      skip("kept", "기존 값 유지"),
+    ],
+  };
+  const values: Record<string, string> = {
+    "pending-with-value": "기존",
+    "default-value": "사이트 기본값",
+    kept: "유지",
+  };
+  expect(unfilledCandidateIds(model, (id) => values[id])).toEqual([
+    "pending-with-value",
+    "empty",
+  ]);
+});

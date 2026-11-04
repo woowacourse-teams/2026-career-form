@@ -283,12 +283,21 @@ const NOT_UNFILLED_REASONS = new Set([
   "현재 표시되지 않는 항목",
 ]);
 
-/** Candidate ids of fields the autofill left empty and the user still has to fill. */
-export function unfilledCandidateIds(model: ResultModel): string[] {
+/**
+ * Candidate ids of fields the user still has to fill. A pending item keeps its
+ * mark even with a value; a skipped one with a value (a site default) does not.
+ */
+export function unfilledCandidateIds(
+  model: ResultModel,
+  valueOf: (id: string) => string | undefined = () => undefined,
+): string[] {
   return [
     ...model.pending.map(({ id }) => id),
     ...model.skipped
-      .filter(({ reason }) => !NOT_UNFILLED_REASONS.has(reason))
+      .filter(
+        ({ id, reason }) =>
+          !NOT_UNFILLED_REASONS.has(reason) && !valueOf(id)?.trim(),
+      )
       .map(({ id }) => id),
   ];
 }
