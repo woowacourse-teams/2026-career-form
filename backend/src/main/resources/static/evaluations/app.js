@@ -9,7 +9,7 @@ const PRICE_KEY = "cf-evaluation-model-prices-v1";
 const root = document.getElementById("cf-eval-preview");
 const $ = (selector) => root.querySelector(selector);
 const state = { runs: [], dataset: null, models: [], selected: [], group: null, stage: "total", page: "overview",
-  fields: {}, canDelete: false, compare: { before: "", after: "" }, fieldFilter: "diff", fieldScreen: "all", openField: null, itemKind: "GENERIC_FIELDS" };
+  fields: {}, fieldModel: "all", canDelete: false, compare: { before: "", after: "" }, fieldFilter: "diff", fieldScreen: "all", openField: null, itemKind: "GENERIC_FIELDS" };
 let prices = {};
 try { prices = JSON.parse(localStorage.getItem(PRICE_KEY) || "{}") ?? {}; } catch { prices = {}; }
 
@@ -588,29 +588,43 @@ function renderQuality() {
 }
 
 /**
- * 준비 결과·섹션 분류 결과 카드. 막대는 맞힌 항목 비율, 아래는 판정 수, 호출 종류가 둘 이상이면 종류별 정확도를 붙인다.
+ * 준비 결과·섹션 분류 결과 카드. 칸별 결과처럼 판정별로 나뉜 막대와 판정 수를 보이고, 아래에 맞힌 비율과 호출 종류별 비율을 둔다.
  * 평가는 다음 요청을 정답으로 만들므로 여기 오답은 자동기입 점수에 반영되지 않는다.
  */
 function stageAccuracyCard(title, keys, foot) {
-  const card = bars(title, "맞힌 비율 · 높을수록 좋음", (m) => percent(accuracyOf(itemsOf(m, keys))), 100, (v) => `${v.toFixed(1)}%`);
-  card.querySelectorAll(".bar-row").forEach((row, index) => {
-    const model = state.selected[index];
+  const card = element("div", undefined, "metric");
+  const head = element("div", undefined, "metric-head");
+  head.append(element("h3", title), element("span", "항목 수", "muted"));
+  card.append(head);
+  if (!state.selected.length) card.append(element("div", "비교할 모델 선택 필요.", "empty"));
+  for (const model of state.selected) {
     const items = itemsOf(model, keys);
-    if (!items) {
-      row.after(element("span", "결과 없음", "range-note"));
-      return;
-    }
-    const notes = [countLine(ITEM_KINDS, items, scoredOf(items), "개")];
-    if (keys.length > 1) {
-      const kinds = element("span", undefined, "range-note stat-line");
-      keys.forEach((key) => {
-        const value = accuracyOf(itemsOf(model, [key]));
-        kinds.append(stat(CALL_LABELS[key], value == null ? "—" : shortPercent(value)));
+    const row = element("div", undefined, "item-row");
+    row.style.setProperty("--model", color(model));
+    const track = element("div", undefined, "item-track");
+    const total = items ? scoredOf(items) : 0;
+    let text = element("span", "결과 없음", "item-numbers");
+    if (total) {
+      ITEM_KINDS.forEach(({ key, label, className }) => {
+        const part = element("span", undefined, className);
+        part.style.width = `${items[key] / total * 100}%`;
+        part.title = `${label} ${items[key]}`;
+        track.append(part);
       });
-      notes.push(kinds);
+      text = countLine(ITEM_KINDS, items, total, "개");
     }
-    row.after(...notes);
-  });
+    row.append(Object.assign(element("span", model), { title: model }), track, text);
+    if (total) {
+      const rates = element("span", undefined, "item-numbers item-rates stat-line");
+      rates.append(stat("맞힌 비율", shortPercent(accuracyOf(items))));
+      if (keys.length > 1) keys.forEach((key) => {
+        const value = accuracyOf(itemsOf(model, [key]));
+        rates.append(stat(CALL_LABELS[key], value == null ? "—" : shortPercent(value)));
+      });
+      row.append(rates);
+    }
+    card.append(row);
+  }
   cardHelp(card, foot);
   return card;
 }
@@ -713,7 +727,9 @@ function runFields(run) {
  */
 function renderFields() {
   const page = $("#cf-fields");
-  const models = state.selected;
+  // 위쪽 모델 체크로 고른 모델 안에서, 이 탭에서 한 모델만 볼 수 있다.
+  const fieldModel = state.selected.includes(state.fieldModel) ? state.fieldModel : "all";
+  const models = fieldModel === "all" ? state.selected : [fieldModel];
   const runs = Object.fromEntries(models.map((model) => [model, latest(model)?.run]));
   const kind = COMPARE_KINDS.find((entry) => entry.kind === state.itemKind) ?? COMPARE_KINDS[0];
   const ofKind = (list) => list && list.filter((item) => item.kind === kind.kind);
@@ -742,7 +758,13 @@ function renderFields() {
   });
   screenSelect.value = state.fieldScreen;
   screenSelect.addEventListener("change", () => { state.fieldScreen = screenSelect.value; renderFields(); });
-  controls.append(screenSelect);
+  const modelSelect = element("select");
+  modelSelect.setAttribute("aria-label", "모델");
+  modelSelect.append(Object.assign(element("option", "모든 모델"), { value: "all" }),
+    ...state.selected.map((model) => Object.assign(element("option", model), { value: model })));
+  modelSelect.value = fieldModel;
+  modelSelect.addEventListener("change", () => { state.fieldModel = modelSelect.value; state.openField = null; renderFields(); });
+  controls.append(modelSelect, screenSelect);
   head.append(title);
   const kinds = element("div", undefined, "stage item-kinds");
   kinds.setAttribute("aria-label", "항목 종류");
@@ -794,14 +816,16 @@ function renderFields() {
   }
 
   const chips = element("div", undefined, "fields-chips");
-  FIELD_FILTERS.forEach(([key, label]) => {
+  // 모델이 하나면 모델끼리 다른 항목이 없으므로 그 필터를 빼고 전체를 기본으로 본다.
+  const filters = FIELD_FILTERS.filter(([key]) => key !== "diff" || models.length > 1);
+  const filter = filters.some(([key]) => key === state.fieldFilter) ? state.fieldFilter : "all";
+  filters.forEach(([key, label]) => {
     const chip = element("button", key === "all" ? label : `${label} ${kind.noun}`);
     chip.type = "button";
-    chip.setAttribute("aria-pressed", String(state.fieldFilter === key));
+    chip.setAttribute("aria-pressed", String(filter === key));
     chip.addEventListener("click", () => { state.fieldFilter = key; renderFields(); });
     chips.append(chip);
   });
-  const filter = FIELD_FILTERS.some(([key]) => key === state.fieldFilter) ? state.fieldFilter : "diff";
   const keep = (key, field) => {
     if (!inScreen(field)) return false;
     const cells = models.map((model) => cellOf(byModel[model].get(key)));

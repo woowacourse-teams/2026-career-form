@@ -165,14 +165,14 @@ const dataset = {
 // 서버가 기록 삭제를 허용하는지. 개발서버처럼 함께 쓰는 서버는 꺼져 있다.
 const capabilities = { recordDelete: false };
 
+// 같은 비교에 모델을 더할 때 쓰는 실행 목록.
+const extraRuns: { run: typeof run; report: typeof report }[] = [];
+
 function respond(url: string) {
   const body = url.includes("/capabilities")
     ? capabilities
     : url.includes("/runs?")
-      ? [
-          { run, report },
-          { run: baseRun, report: baseReport },
-        ]
+      ? [...extraRuns, { run, report }, { run: baseRun, report: baseReport }]
       : url.includes("/datasets/")
         ? dataset
         : [];
@@ -282,6 +282,23 @@ describe("AI 평가 화면의 단계 탭", () => {
     ]);
   });
 
+  it("준비 결과와 섹션 분류 결과는 칸별 결과처럼 판정별로 나뉜 막대다", async () => {
+    const card = (title: string) =>
+      [...document.querySelectorAll("#cf-quality .metric")].find(
+        (metric) => metric.querySelector("h3")?.textContent === title,
+      )!;
+    await pick("prepare");
+    const prepare = card("준비 결과");
+    expect(prepare.querySelector(".bar-row")).toBeNull();
+    expect(prepare.querySelectorAll(".item-track > span")).toHaveLength(4);
+    expect(prepare.textContent).toContain("맞힌 비율");
+    expect(prepare.textContent).toContain("버튼·선택 결정");
+    await pick("mapping");
+    const mapping = card("섹션 분류 결과");
+    expect(mapping.querySelector(".bar-row")).toBeNull();
+    expect(mapping.querySelectorAll(".item-track > span")).toHaveLength(4);
+  });
+
   it("점수 카드는 점수만 크게 보이고 설명은 아래에 적지 않고 제목에 커서를 올리면 보인다", async () => {
     await pick("total");
     const card = document.querySelector("#cf-quality .metric")!;
@@ -339,6 +356,67 @@ describe("AI 평가 화면의 단계 탭", () => {
     tab("mapping");
     expect(dimmed()).toEqual(new Set(["START", "PREPARATION", "END"]));
     (document.querySelector("#cf-source") as HTMLDialogElement).close();
+  });
+
+  it("항목별 비교는 고른 모델만 보이고, 모델이 하나면 모델끼리 다른 항목 필터를 뺀다", async () => {
+    const refresh = async () => {
+      (document.querySelector("#refresh") as HTMLButtonElement).click();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    };
+    const select = () =>
+      document.querySelector(
+        '#cf-fields select[aria-label="모델"]',
+      ) as HTMLSelectElement;
+    const chips = () =>
+      [...document.querySelectorAll("#cf-fields .fields-chips button")].map(
+        (chip) => chip.textContent,
+      );
+    const changeModel = (value: string) => {
+      select().value = value;
+      select().dispatchEvent(new Event("change"));
+    };
+    const original = run.comparisonId;
+    (run as { comparisonId: string | null }).comparisonId = "both";
+    extraRuns.push({
+      run: {
+        ...run,
+        id: "run-2",
+        versions: { ...run.versions, provider: "openai", model: "gpt" },
+      },
+      report,
+    });
+    await refresh();
+    (
+      document.querySelector('[data-page="fields"]') as HTMLButtonElement
+    ).click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect([...select().options].map((option) => option.textContent)).toEqual([
+      "모든 모델",
+      "jev/jev-latest",
+      "openai/gpt",
+    ]);
+    expect(document.querySelectorAll("#cf-fields .fields-model")).toHaveLength(
+      2,
+    );
+    expect(chips().join()).toContain("모델끼리 다른");
+    changeModel("openai/gpt");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const shown = [...document.querySelectorAll("#cf-fields .fields-model")];
+    expect(
+      shown.map((card) => card.querySelector("strong")?.textContent),
+    ).toEqual(["openai/gpt"]);
+    expect(chips().join()).not.toContain("모델끼리 다른");
+    changeModel("all");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(document.querySelectorAll("#cf-fields .fields-model")).toHaveLength(
+      2,
+    );
+    extraRuns.length = 0;
+    (run as { comparisonId: string | null }).comparisonId = original;
+    (
+      document.querySelector('[data-page="overview"]') as HTMLButtonElement
+    ).click();
+    await refresh();
   });
 
   it("항목별 비교의 화면 선택은 공고별로 묶이고 공고 전체를 고를 수 있다", async () => {
