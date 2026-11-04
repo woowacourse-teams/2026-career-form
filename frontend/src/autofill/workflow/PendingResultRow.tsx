@@ -19,7 +19,7 @@ export function PendingResultRow({
   onLocate?(id: string): boolean;
   copyText(value: string): Promise<void>;
 }) {
-  const { id, item, reason, written, failureCode } = entry;
+  const { id, item, reason, written, failureCode, detail } = entry;
   const { label, shortLabel } = pendingResultPresentation(item);
   const [unavailable, setUnavailable] = useState(false);
   const [copied, setCopied] = useState<number>();
@@ -78,7 +78,7 @@ export function PendingResultRow({
         )}
       </div>
       <p className={`${styles.guidance} ${styles.reason}`}>
-        {resultGuidance(reason, failureCode)}
+        {detail ?? resultGuidance(reason, failureCode)}
       </p>
       {options.length > 0 && (
         <details>

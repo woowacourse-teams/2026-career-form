@@ -306,10 +306,9 @@ function PolicyReadyWorkflow({
   // Generic pages that reveal new fields after a write get a bounded number
   // of extra review passes (observed reveal, no aria-controls needed).
   const revealPasses = useRef(0);
-  // Revealed fields the first review approved in advance (#358): written in
-  // their reveal pass without a second review. A reveal pass never asks
-  // again; the fields it does not write are listed in the result.
-  const [preApprovalOn, setPreApprovalOn] = useState(true);
+  // Revealed fields approved in advance by the first pass (#358): written in
+  // their reveal pass. The fields a reveal pass does not write are listed in
+  // the result.
   const preApprovedScope = useRef<ReadonlySet<string>>(new Set());
   const firstReviewKeys = useRef<ReadonlySet<string>>(new Set());
   const [revealReview, setRevealReview] = useState(false);
@@ -906,9 +905,7 @@ function PolicyReadyWorkflow({
     if (!fieldsSnapshot || executionPending.current) return;
     executionPending.current = true;
     if (revealPasses.current === 0) {
-      preApprovedScope.current = preApprovalOn
-        ? preApprovalScope(appearableItems)
-        : new Set();
+      preApprovedScope.current = preApprovalScope(appearableItems);
       firstReviewKeys.current = new Set(
         reviewItems.flatMap((item) => {
           const key =
@@ -945,8 +942,8 @@ function PolicyReadyWorkflow({
       }
       const retainedCandidateIds = new Set([
         ...retainedDrivers.results.map((result) => result.candidateId),
-        // A later reveal pass never re-executes a field an earlier pass wrote.
-        ...(revealPasses.current > 0
+        // A later generic pass never re-executes a field an earlier pass wrote.
+        ...(analysisSummary?.mode === "GENERIC"
           ? reviewItems
               .filter((item) => writtenBefore(item, fieldsSnapshot.registry))
               .map((item) => item.candidateId)
@@ -1207,8 +1204,21 @@ function PolicyReadyWorkflow({
     });
   }, [stage, fieldsSnapshot]);
 
+  // A generic page never stops at the review screen: the analysis hands over
+  // its items and the selected ones are written at once.
+  useEffect(() => {
+    if (
+      stage !== "review" ||
+      revealReview ||
+      analysisSummary?.mode !== "GENERIC" ||
+      !fieldsSnapshot
+    )
+      return;
+    setAutoExecutePending(true);
+  }, [stage, revealReview]);
+
   // A reveal pass writes the approved revealed fields at once and lists the
-  // other new fields in the result; it never shows a second review.
+  // other new fields in the result.
   useEffect(() => {
     if (stage !== "review" || !revealReview || !fieldsSnapshot) return;
     setRevealReview(false);
@@ -1219,7 +1229,8 @@ function PolicyReadyWorkflow({
     // emptied entry area.
     const approved = unwritten.filter(
       (item) =>
-        isPreApprovedItem(item, preApprovedScope.current) &&
+        (item.includedByDeveloper ||
+          isPreApprovedItem(item, preApprovedScope.current)) &&
         !savedRowKeys.current.has(recordOf(item)?.key ?? ""),
     );
     const approvedIds = new Set(approved.map((item) => item.candidateId));
@@ -1254,6 +1265,7 @@ function PolicyReadyWorkflow({
         approvedIds.has(item.candidateId) ? item : { ...item, selected: false },
       ),
     );
+    setStage("writing");
     setAutoExecutePending(true);
   }, [stage, revealReview, reviewItems, fieldsSnapshot]);
 
@@ -1338,7 +1350,11 @@ function PolicyReadyWorkflow({
       }
       profile={profile}
       optionsFor={(id) => resultFieldOptions(visibleRegistry, id)}
-      stage={stage === "review" && revealReview ? "writing" : stage}
+      stage={
+        stage === "review" && analysisSummary?.mode === "GENERIC"
+          ? "writing"
+          : stage
+      }
       preparationItems={preparationItems}
       warnings={warnings}
       revealedPreparationKeys={revealedPreparationKeys}
@@ -1382,9 +1398,6 @@ function PolicyReadyWorkflow({
       onLocate={(candidateId) =>
         !!visibleRegistry && presentation.show(visibleRegistry, candidateId)
       }
-      appearableItems={appearableItems}
-      preApprovalOn={preApprovalOn}
-      setPreApprovalOn={setPreApprovalOn}
       autoWrittenLabels={autoWrittenLabels}
       manualRevealedLabels={manualRevealedLabels}
       rowSave={rowSave}
