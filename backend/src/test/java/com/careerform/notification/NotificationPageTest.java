@@ -26,16 +26,17 @@ class NotificationPageTest {
     }
 
     @Test
-    @DisplayName("등록 폼은 자유 글자 직무 입력 대신 분류 API의 대분류 선택과 소분류 체크박스로 직무 코드를 고르고 최소 1개를 안내한다")
+    @DisplayName("등록 폼은 자유 글자 직무 입력 대신 분류 API의 대분류 선택과 소분류 체크박스로 직무 코드를 고르고 최소 1개를 안내하며, 대분류 전체·전체 직무 선택과 모두 해제 버튼을 둔다")
     void picksRoleCodesFromCategories() throws Exception {
         var index = read("static/notifications/index.html");
         assertThat(index).doesNotContain("name=\"role\"", "비우면 직무 없이", "직무를 비우면", "구독자 전원에게");
-        assertThat(index).contains("for=\"role-category\"", "id=\"role-category\"", "id=\"role-options\"", "id=\"role-selected\"", "최대 10개",
-            "받을 직무를 고른 구독자에게");
+        assertThat(index).contains("for=\"role-category\"", "id=\"role-category\"", "id=\"role-options\"", "id=\"role-selected\"",
+            "id=\"role-select-category\"", "id=\"role-select-all\"", "id=\"role-clear\"", "전체 직무", "받을 직무를 고른 구독자에게");
+        assertThat(index).doesNotContain("최대 10개");
         var postings = read("static/notifications/postings.js");
         assertThat(postings).contains("/api/v1/notifications/job-categories", "roles:", "1개 이상", "분류를 불러올 수 없어 공고를 등록할 수 없습니다.",
-            "분류에 있는 코드만 골라 주세요.");
-        assertThat(postings).doesNotContain("data.get(\"role\")", "localStorage", "sessionStorage");
+            "분류에 있는 코드만 골라 주세요.", "role-select-category", "role-select-all", "role-clear", "전체 직무");
+        assertThat(postings).doesNotContain("data.get(\"role\")", "localStorage", "sessionStorage", "MAX_ROLES", "최대 10개");
     }
 
     @Test

@@ -35,8 +35,13 @@
         <label for="role-category">직무 대분류</label>
         <select id="role-category" autocomplete="off"></select>
         <fieldset id="role-options"><legend>소분류 (복수 선택)</legend></fieldset>
+        <div class="actions">
+          <button type="button" class="secondary" id="role-select-category">이 대분류 전체 선택</button>
+          <button type="button" class="secondary" id="role-select-all">전체 직무 선택</button>
+          <button type="button" class="secondary" id="role-clear">모두 해제</button>
+        </div>
         <div id="role-selected" class="meta" aria-live="polite"></div>
-        <p class="hint">공채처럼 직무가 여럿이면 소분류를 여러 개 고릅니다(최대 10개). 고른 직무를 받기로 한 구독자에게만 알림이 갑니다.</p>
+        <p class="hint">공채처럼 직무가 여럿이면 소분류를 여러 개 고르거나 "이 대분류 전체 선택"·"전체 직무 선택"을 씁니다. 상한은 분류 전체이고, 전체를 고른 공고의 직무 라벨은 "전체 직무"입니다. 고른 직무를 받기로 한 구독자에게만 알림이 갑니다.</p>
         <label>공고 링크<input name="link" type="url" maxlength="1024" placeholder="https://" autocomplete="off" required></label>
         <label>접수 시작<input name="opensAt" type="datetime-local" required></label>
         <label>마감<input name="closesAt" type="datetime-local" required></label>

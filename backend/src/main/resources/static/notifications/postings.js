@@ -1,6 +1,5 @@
 import { accessHeaders, clearAccess } from "/quality/access.js";
 
-const MAX_ROLES = 10;
 const form = document.getElementById("posting-form");
 const list = document.getElementById("postings");
 const message = document.getElementById("message");
@@ -8,9 +7,14 @@ const dialog = document.getElementById("delete-dialog");
 const categorySelect = document.getElementById("role-category");
 const roleOptions = document.getElementById("role-options");
 const roleSelected = document.getElementById("role-selected");
+const bulkButtons = {
+  category: document.getElementById("role-select-category"),
+  all: document.getElementById("role-select-all"),
+  clear: document.getElementById("role-clear"),
+};
 const reasons = {
   COMPANY: "회사명은 1자 이상 80자 이하여야 합니다.",
-  ROLE: "직무 소분류를 1개 이상 10개 이하로, 분류에 있는 코드만 골라 주세요.",
+  ROLE: "직무 소분류를 1개 이상, 분류에 있는 코드만 골라 주세요.",
   LINK: "HTTP(S) 공고 링크를 1024자 안으로 입력해 주세요. 계정 정보가 포함된 링크는 사용할 수 없습니다.",
   PERIOD: "접수 시작은 마감보다 앞서야 합니다.",
   CLOSED: "마감이 지난 공고는 등록할 수 없습니다.",
@@ -59,6 +63,7 @@ async function loadCategories() {
   } catch {
     message.textContent = "분류를 불러올 수 없어 공고를 등록할 수 없습니다.";
     form.querySelector("button[type=submit]").disabled = true;
+    for (const button of Object.values(bulkButtons)) button.disabled = true;
     return;
   }
   for (const category of categories) for (const role of category.roles) roleLabels.set(role.code, role.label);
@@ -68,8 +73,12 @@ async function loadCategories() {
 }
 
 // 고른 대분류의 소분류만 체크박스로 그린다. 체크 상태는 대분류를 오가도 유지되는 누적 선택 집합을 따른다.
+function currentCategory() {
+  return categories.find(candidate => candidate.code === categorySelect.value);
+}
+
 function renderRoleOptions() {
-  const category = categories.find(candidate => candidate.code === categorySelect.value);
+  const category = currentCategory();
   const legend = roleOptions.querySelector("legend");
   roleOptions.replaceChildren(legend, ...(category?.roles ?? []).map(role => {
     const label = element("label", undefined, "check");
@@ -84,21 +93,36 @@ function renderRoleOptions() {
 }
 
 function toggleRole(code, input) {
-  if (input.checked && !selectedRoles.has(code) && selectedRoles.size >= MAX_ROLES) {
-    input.checked = false;
-    message.textContent = `직무는 최대 ${MAX_ROLES}개까지 고를 수 있습니다. 다른 직무를 제거한 뒤 골라 주세요.`;
-    return;
-  }
   if (input.checked) selectedRoles.add(code); else selectedRoles.delete(code);
   renderSelectedRoles();
 }
 
+// 대분류 전체·전체 직무 선택과 모두 해제. 공채처럼 직무가 많은 공고를 하나씩 체크하지 않게 한다. 상한은 서버와 같이 분류 전체다.
+function selectRoles(codes) {
+  for (const code of codes) selectedRoles.add(code);
+  renderRoleOptions();
+  renderSelectedRoles();
+}
+bulkButtons.category.addEventListener("click", () => selectRoles((currentCategory()?.roles ?? []).map(role => role.code)));
+bulkButtons.all.addEventListener("click", () => selectRoles(roleLabels.keys()));
+bulkButtons.clear.addEventListener("click", () => {
+  selectedRoles.clear();
+  renderRoleOptions();
+  renderSelectedRoles();
+  categorySelect.focus();
+});
+
+// 분류 전체를 골랐으면 칩 대신 한 줄로 알린다. 서버도 이 경우 라벨을 "전체 직무"로 파생한다.
 function renderSelectedRoles() {
   if (!selectedRoles.size) {
     roleSelected.replaceChildren(element("span", "고른 직무가 없습니다. 받을 직무를 1개 이상 골라 주세요."));
     return;
   }
-  roleSelected.replaceChildren(...[...selectedRoles].map(code => {
+  if (roleLabels.size && selectedRoles.size === roleLabels.size) {
+    roleSelected.replaceChildren(element("span", `전체 직무 ${selectedRoles.size}개를 골랐습니다. 공고 라벨은 "전체 직무"로 표시됩니다.`));
+    return;
+  }
+  roleSelected.replaceChildren(element("span", `고른 직무 ${selectedRoles.size}개`), ...[...selectedRoles].map(code => {
     const label = roleLabels.get(code) ?? code;
     const chip = element("span", `${label} `, "badge");
     const remove = element("button", "제거", "secondary");
