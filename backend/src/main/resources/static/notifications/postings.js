@@ -1,16 +1,23 @@
 import { accessHeaders, clearAccess } from "/quality/access.js";
 
+const MAX_ROLES = 10;
 const form = document.getElementById("posting-form");
 const list = document.getElementById("postings");
 const message = document.getElementById("message");
 const dialog = document.getElementById("delete-dialog");
+const categorySelect = document.getElementById("role-category");
+const roleOptions = document.getElementById("role-options");
+const roleSelected = document.getElementById("role-selected");
 const reasons = {
   COMPANY: "회사명은 1자 이상 80자 이하여야 합니다.",
-  ROLE: "직무는 1자 이상 120자 이하여야 합니다.",
+  ROLE: "직무 소분류를 1개 이상 10개 이하로, 분류에 있는 코드만 골라 주세요.",
   LINK: "HTTP(S) 공고 링크를 1024자 안으로 입력해 주세요. 계정 정보가 포함된 링크는 사용할 수 없습니다.",
   PERIOD: "접수 시작은 마감보다 앞서야 합니다.",
   CLOSED: "마감이 지난 공고는 등록할 수 없습니다.",
 };
+let categories = [];
+const roleLabels = new Map();
+const selectedRoles = new Set();
 let selected = null;
 
 function element(tag, text, className) {
@@ -43,18 +50,89 @@ async function api(path, method = "GET", payload) {
   return body;
 }
 
+// 직무 분류는 인증 없는 확장용 API에서 받는다. 토글이 꺼져 404면 등록을 막고 안내한다.
+async function loadCategories() {
+  try {
+    const response = await fetch("/api/v1/notifications/job-categories", { credentials: "omit" });
+    if (!response.ok) throw new Error(String(response.status));
+    categories = (await response.json()).categories;
+  } catch {
+    message.textContent = "분류를 불러올 수 없어 공고를 등록할 수 없습니다.";
+    form.querySelector("button[type=submit]").disabled = true;
+    return;
+  }
+  for (const category of categories) for (const role of category.roles) roleLabels.set(role.code, role.label);
+  categorySelect.replaceChildren(...categories.map(category => new Option(category.label, category.code)));
+  renderRoleOptions();
+  renderSelectedRoles();
+}
+
+// 고른 대분류의 소분류만 체크박스로 그린다. 체크 상태는 대분류를 오가도 유지되는 누적 선택 집합을 따른다.
+function renderRoleOptions() {
+  const category = categories.find(candidate => candidate.code === categorySelect.value);
+  const legend = roleOptions.querySelector("legend");
+  roleOptions.replaceChildren(legend, ...(category?.roles ?? []).map(role => {
+    const label = element("label", undefined, "check");
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.value = role.code;
+    input.checked = selectedRoles.has(role.code);
+    input.addEventListener("change", () => toggleRole(role.code, input));
+    label.append(input, role.label);
+    return label;
+  }));
+}
+
+function toggleRole(code, input) {
+  if (input.checked && !selectedRoles.has(code) && selectedRoles.size >= MAX_ROLES) {
+    input.checked = false;
+    message.textContent = `직무는 최대 ${MAX_ROLES}개까지 고를 수 있습니다. 다른 직무를 제거한 뒤 골라 주세요.`;
+    return;
+  }
+  if (input.checked) selectedRoles.add(code); else selectedRoles.delete(code);
+  renderSelectedRoles();
+}
+
+function renderSelectedRoles() {
+  if (!selectedRoles.size) {
+    roleSelected.replaceChildren(element("span", "고른 직무가 없습니다. 받을 직무를 1개 이상 골라 주세요."));
+    return;
+  }
+  roleSelected.replaceChildren(...[...selectedRoles].map(code => {
+    const label = roleLabels.get(code) ?? code;
+    const chip = element("span", `${label} `, "badge");
+    const remove = element("button", "제거", "secondary");
+    remove.type = "button";
+    remove.setAttribute("aria-label", `${label} 제거`);
+    remove.addEventListener("click", () => {
+      selectedRoles.delete(code);
+      renderRoleOptions();
+      renderSelectedRoles();
+      const next = roleSelected.querySelector("button");
+      (next ?? categorySelect).focus();
+    });
+    chip.append(remove);
+    return chip;
+  }));
+}
+
 function state(row, now) {
   if (new Date(row.closesAt) <= now) return "마감";
   if (new Date(row.opensAt) > now) return "접수 전";
   return "접수 중";
 }
 
+// 제목은 서버가 소분류 라벨로 파생한 role이고, roles가 없는 레거시 공고에만 직무 없음을 표시한다.
+function title(row) {
+  return row.role ? `${row.company} · ${row.role}` : row.company;
+}
+
 function card(row) {
   const card = element("article", undefined, "candidate");
   card.dataset.postingId = row.id;
   const header = element("div", undefined, "candidate-header");
-  header.append(element("h2", row.role ? `${row.company} · ${row.role}` : row.company), element("span", state(row, new Date()), "badge"));
-  if (!row.role) header.append(element("span", "직무 없음", "badge"));
+  header.append(element("h2", title(row)), element("span", state(row, new Date()), "badge"));
+  if (!row.roles) header.append(element("span", "직무 없음", "badge"));
   const period = element("div", undefined, "meta");
   period.append(element("span", `접수 시작 ${date(row.opensAt)}`), element("span", `마감 ${date(row.closesAt)}`),
     element("span", `등록 ${date(row.registeredAt)}`), element("span", `발송 예정 ${date(row.scheduledAt)}`));
@@ -70,7 +148,7 @@ function card(row) {
   const remove = element("button", "삭제", "secondary");
   remove.addEventListener("click", () => {
     selected = row;
-    document.getElementById("delete-context").textContent = `${row.role ? `${row.company} · ${row.role}` : row.company} 공고를 삭제합니다.`;
+    document.getElementById("delete-context").textContent = `${title(row)} 공고를 삭제합니다.`;
     dialog.showModal();
   });
   actions.append(remove);
@@ -96,12 +174,12 @@ async function loadSummary() {
       const cells = [summary.postings, summary.deliveries.pending, summary.deliveries.sending, summary.deliveries.accepted, summary.deliveries.abandoned,
         percent(summary.acceptanceRate), percent(summary.abandonRate),
         summary.deliveries.averageAttempts === null ? "—" : summary.deliveries.averageAttempts.toFixed(2),
-        seconds(summary.latencyMillis.p50), seconds(summary.latencyMillis.p95), summary.subscriptions];
+        seconds(summary.latencyMillis.p50), seconds(summary.latencyMillis.p95), summary.subscriptions, summary.roleSelectedSubscriptions];
       row.replaceChildren(element("th", `최근 ${days}일`), ...cells.map(value => element("td", String(value))));
       row.firstChild.setAttribute("scope", "row");
     } catch (error) {
       const failed = element("td", error.message);
-      failed.colSpan = 11;
+      failed.colSpan = 12;
       row.replaceChildren(element("th", `최근 ${days}일`), failed);
       row.firstChild.setAttribute("scope", "row");
     }
@@ -120,16 +198,20 @@ async function load() {
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (!selectedRoles.size) { message.textContent = "받을 직무를 1개 이상 골라 주세요."; return; }
   const button = form.querySelector("button[type=submit]");
   button.disabled = true;
   try {
     const data = new FormData(form);
     const result = await api("/postings", "POST", {
-      company: String(data.get("company")).trim(), role: String(data.get("role")).trim() || undefined, link: String(data.get("link")).trim(),
+      company: String(data.get("company")).trim(), roles: [...selectedRoles], link: String(data.get("link")).trim(),
       opensAt: new Date(String(data.get("opensAt"))).toISOString(), closesAt: new Date(String(data.get("closesAt"))).toISOString(),
     });
     message.textContent = `등록했습니다. 구독자 ${result.deliveries}명에게 ${date(result.scheduledAt)} 발송을 예약했습니다.`;
+    selectedRoles.clear();
     form.reset();
+    renderRoleOptions();
+    renderSelectedRoles();
     await load();
     await loadSummary();
   } catch (error) {
@@ -159,5 +241,7 @@ document.getElementById("logout").addEventListener("click", () => {
   clearAccess();
   location.reload();
 });
+categorySelect.addEventListener("change", renderRoleOptions);
+void loadCategories();
 void load();
 void loadSummary();
