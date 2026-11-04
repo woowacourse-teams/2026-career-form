@@ -246,6 +246,8 @@ function PolicyReadyWorkflow({
   const [developerMode] = useDeveloperMode();
   // 진행 항목은 기입 묶음을 가로질러 누적되므로 묶음별 처리 수를 따로 센다.
   const batchDoneIds = useRef(new Set<string>());
+  // 범용 재확인 뒤의 묶음은 앞 묶음의 처리 수에 이어서 센다.
+  const batchBase = useRef(0);
   const [writeBatch, setWriteBatch] = useState({ total: 0, done: 0 });
   const [activity, setActivity] = useState<WorkflowActivity>("matching");
   const { operated, operatedCategories, recordOperation } =
@@ -262,7 +264,10 @@ function PolicyReadyWorkflow({
   const onWriteResult: WriteResultListener = (item, result, registry) => {
     recordWriteResult(item, result, registry);
     batchDoneIds.current.add(item.candidateId);
-    setWriteBatch((batch) => ({ ...batch, done: batchDoneIds.current.size }));
+    setWriteBatch((batch) => ({
+      ...batch,
+      done: batchBase.current + batchDoneIds.current.size,
+    }));
     observeQuality(() => apiClient.quality?.write(item, result, registry));
   };
   const presentField = async (
@@ -978,8 +983,15 @@ function PolicyReadyWorkflow({
         setStage("exception");
         return;
       }
+      batchBase.current =
+        revealPasses.current > 0 && analysisSummary?.mode === "GENERIC"
+          ? batchBase.current + batchDoneIds.current.size
+          : 0;
       batchDoneIds.current = new Set();
-      setWriteBatch({ total: approvedCandidateIds.size, done: 0 });
+      setWriteBatch({
+        total: batchBase.current + approvedCandidateIds.size,
+        done: batchBase.current,
+      });
       setStage("writing");
       localWorkflowLog("writes-start", {
         passes: revealPasses.current,
@@ -1369,7 +1381,13 @@ function PolicyReadyWorkflow({
       developerMode={developerMode}
       writeTotal={writeBatch.total}
       writeDone={writeBatch.done}
-      activity={activity}
+      activity={
+        revealReview &&
+        analysisSummary?.mode === "GENERIC" &&
+        activity !== "address"
+          ? "rechecking"
+          : activity
+      }
       progressStateFor={progressTracker.progressStateFor}
       progressIdFor={(id) =>
         visibleRegistry
