@@ -78,6 +78,7 @@ function comparisonDetail(key) {
     ["반복", `${first.repetitions}회`, "같은 입력을 몇 번 돌렸는지"],
     ["모델", runs.map(modelKey).join("\n"), ""],
     ["코드 버전", first.versions.codeVersion ?? "—", "실행한 백엔드 커밋. 호출 구조가 바뀌면 달라짐"],
+    ["실행", first.requestedBy === "auto-deploy" ? "자동(배포)" : first.requestedBy ?? "—", "자동은 평가에 영향을 주는 변경이 배포됐을 때 돈 실행. 이름이 바뀐 것을 뜻함"],
     ...(settings["field-batch-size"] != null ? [["칸 묶음", `${settings["field-batch-size"]}칸`, "칸 매핑에서 AI에 한 번에 묻는 칸 수"]] : []),
     ...(settings["section-concurrency"] != null ? [["섹션 동시", `${settings["section-concurrency"]}개`, "동시에 처리하는 섹션 수"]] : []),
   ];
@@ -1428,14 +1429,15 @@ const GUIDES = {
   },
   dev: {
     name: "개발서버",
-    lead: "develop에 머지되어 배포될 때마다 서버가 평가를 한 번 자동으로 돌립니다. 팀원은 이 화면에서 머지별 결과를 봅니다. 기록은 개발서버 MongoDB에 계속 남습니다.",
+    lead: "develop에 머지되어 배포될 때, 평가에 영향을 주는 변경이 있으면 서버가 평가를 한 번 자동으로 돌립니다. 변수명 변경처럼 AI에 묻는 내용이 같으면 돌지 않습니다. 기록은 개발서버 MongoDB에 계속 남습니다.",
     steps: [
-      "실행에서 가장 최근 `auto-deploy`를 고릅니다. 실행 조건의 코드 버전이 그 머지의 커밋 번호입니다.",
-      "전후 비교 탭에서 이전에 그 전 `auto-deploy`를 고르면 머지 하나가 바꾼 점수·시간·항목을 봅니다.",
+      "실행에서 가장 최근 자동 평가를 고릅니다. 이름이 바뀐 것과 커밋입니다(예: `prompt-391fbd8`, `call-391fbd8`). 실행 조건에 '자동(배포)'로 표시됩니다.",
+      "전후 비교 탭에서 이전에 그 전 자동 평가를 고르면 그 변경이 바꾼 점수·시간·항목을 봅니다.",
       "더 재보고 싶으면 평가 실행으로 직접 돌립니다. 반복 3회 한 번에 약 $0.2(GPT 약 $0.13, JEV 약 $0.07)가 듭니다.",
     ],
     rows: [
-      ["자동 평가", "`auto-deploy` · 반복 3회", "공급자마다 기본 모델 하나. 같은 코드 버전으로는 다시 돌지 않습니다(재시작 무관)"],
+      ["자동 평가 조건", "AI 질문·응답, 프롬프트, 설정, 공급자 연결 코드, 데이터셋", "하나라도 바뀌면 돕니다. AI 호출 없이 가짜 모델로 판단합니다. 공급자가 같은 이름으로 모델을 바꾼 경우와 속도만 바뀐 변경은 알 수 없어 직접 돌립니다"],
+      ["자동 평가 이름", "`prompt` `call` `settings` `provider` `dataset` + 커밋", "첫 평가는 `first`, 많이 바뀌면 `multi`. 반복 3회, 공급자마다 기본 모델 하나"],
       ["켜는 값(관리자)", "GitHub `development` Environment", "변수 `CAREER_FORM_QUALITY_ENABLED`, `CAREER_FORM_EVALUATION_ENABLED`, `CAREER_FORM_EVALUATION_AUTO_RUN_ENABLED`, `CAREER_FORM_EVALUATION_OPENAI_ENABLED`를 true로, 시크릿 `CAREER_FORM_QUALITY_PASSWORD_HASH`"],
       ["로그인", "팀 공용 비밀번호", "비밀번호 원문은 서버에 없고 해시만 있습니다"],
       ["운영·스테이징", "켜지 않음", "배포 설정이 평가 값을 넘기지 않습니다"],

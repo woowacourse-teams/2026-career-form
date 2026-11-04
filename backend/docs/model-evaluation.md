@@ -24,7 +24,7 @@
 | 환경 | 용도 | 기록 |
 | --- | --- | --- |
 | 로컬 | 프롬프트·호출 구조·설정을 고칠 때마다 개선됐는지 잰다. 전후 비교 탭에서 고치기 전과 후 실행을 비교한다 | 로컬 MongoDB 볼륨에만 |
-| 개발서버 | 머지된 변경마다 자동으로 한 번 재서 팀이 변경별 결과를 본다 | 개발서버 MongoDB에 계속 쌓임 |
+| 개발서버 | 평가에 영향을 주는 변경이 머지되면 자동으로 한 번 재서 팀이 변경별 결과를 본다 | 개발서버 MongoDB에 계속 쌓임 |
 
 화면 위쪽 **사용 가이드**에 두 환경의 순서와 명령을 적어 두었다. 지금 서버가 로컬 주소면 로컬 탭이 먼저 열린다.
 
@@ -47,14 +47,33 @@ python3 scripts/evaluation_local.py reset-password
   본다). 프롬프트·모델·설정이 같은 두 실행에서도 OpenAI 자동기입 점수가 4.7%p 움직였으므로(2026-11-03, 이전 반복 1회),
   개선 판단은 둘 다 반복 3회 이상으로 한다.
 - 포트·볼륨·프로젝트 이름은 `CF_EVAL_PORT`, `CF_EVAL_DATA_VOLUME`, `CF_EVAL_PROJECT`로 바꾼다.
+- `CF_EVAL_AUTO_RUN=true`면 로컬에서도 개발서버와 같은 자동 평가 판단이 돈다(실제 모델 호출 비용이 든다).
 
 ### 개발서버 자동 평가
 
-`CAREER_FORM_EVALUATION_AUTO_RUN_ENABLED=true`면 서버가 뜬 뒤 이 코드 버전으로 돌린 같은 데이터셋 평가가 없을 때
-공급자마다 기본 모델로 비교 하나(`auto-deploy`, 반복 3회)를 등록한다. 머지 → 배포마다 한 번이며, 진행 중인 평가가
-있으면 건너뛴다. 데이터셋 v4·반복 3회 기준 실행당 두 모델 합 약 $0.2(GPT 약 $0.13, JEV 약 $0.07)가 든다. 데이터셋 버전(`..._AUTO_RUN_DATASET_VERSION`)은 평가 화면이 쓰는 버전과
-같아야 하고 테스트가 이를 확인한다. 코드 버전은 이미지에 담긴 커밋 번호(짧은 SHA)다. 개발 배포 워크플로가 이미지 빌드 때
-`CAREER_FORM_COMMIT`을 넘기므로 롤백해도 그 이미지의 커밋으로 보이고, 커밋이 없는 빌드는 `CAREER_FORM_QUALITY_VERSION`을 쓴다.
+`CAREER_FORM_EVALUATION_AUTO_RUN_ENABLED=true`면 서버가 뜬 뒤 평가 입력을 계산해 지난 자동 평가의 입력과 비교하고, 다를 때만
+공급자마다 기본 모델로 비교 하나(반복 3회)를 등록한다. 판단에는 AI를 쓰지 않는다.
+
+| 입력 | 잡아내는 변경 | 만드는 방법 |
+| --- | --- | --- |
+| `behavior` | 질문 구성, 칸 묶음, 후보 좁히기, 응답 후처리 | 데이터셋 요청을 제품 코드에 넣고 가짜 모델(첫 선택지, 판단 보류 두 벌)로 돌려 AI에 간 질문과 최종 응답을 해시(`BehaviorFingerprint`). 측정 시간은 뺀다 |
+| `prompt` | 공통·공급자 프롬프트 문구 | 프롬프트 스냅샷 지문 |
+| `settings` | 기본 모델, 동시 호출, 재시도, 시간 제한, 추론 강도 | 공급자별 실효 설정 |
+| `provider` | JEV·OpenAI 연결 코드 | 빌드 때 넣는 adapter 폴더의 Git 트리 지문(`CAREER_FORM_ADAPTER_DIGEST`) |
+| `dataset` | 화면 추가, 정답 변경 | 데이터셋 지문 |
+
+입력은 실행 기록(`versions.inputs`)에 남고 코드 버전은 표시용으로 따로 남는다. 변수명만 바꾸면 입력이 같아 돌지 않고, 서버 로그에
+`EVALUATION_AUTO_RUN_UNCHANGED`가 남는다. 단 adapter 폴더는 소스 지문이라 변수명 변경에도 돈다. 진행 중인 평가가 있으면 건너뛰고, 다음
+서버 시작 때 다시 비교한다. 실패·취소된 자동 평가도 그 입력으로는 다시 돌지 않는다(비용 반복 방지).
+
+이름은 바뀐 입력과 커밋 앞 7자다: `prompt-391fbd8`, `call-391fbd8`(프롬프트·설정·데이터셋이 같은데 동작 지문만 바뀜), `settings-…`,
+`provider-…`, `dataset-…`, 여러 개면 이어 붙이고(`settings-dataset-…`), 32자를 넘으면 `multi-…`, 지난 기록이 없으면 `first-…`다. 실행자는
+`auto-deploy`로 남고 화면 실행 조건에 "자동(배포)"로 보인다.
+
+알 수 없는 변경: 공급자가 같은 이름으로 모델을 바꾼 경우(`jev-latest`), 질문과 응답이 같고 속도만 바뀐 변경, 가짜 답이 지나가지 않는
+후처리 분기. 이런 변경은 평가 실행으로 직접 돌린다. 데이터셋 버전(`..._AUTO_RUN_DATASET_VERSION`)은 평가 화면이 쓰는 버전과 같아야 하고 테스트가
+이를 확인한다. 데이터셋 v4·반복 3회 기준 실행당 두 모델 합 약 $0.2(GPT 약 $0.13, JEV 약 $0.07)가 든다. 코드 버전은 이미지에 담긴 커밋 번호(짧은 SHA)다.
+개발 배포 워크플로가 이미지 빌드 때 `CAREER_FORM_COMMIT`을 넘기므로 롤백해도 그 이미지의 커밋으로 보이고, 커밋이 없는 빌드는 `CAREER_FORM_QUALITY_VERSION`을 쓴다.
 
 개발서버에서 켜는 값은 GitHub `development` Environment에 사람이 넣는다. 배포 워크플로와 `infra/compose.deploy.yaml`이
 이 값을 백엔드로 넘기고, 값이 없으면 모두 꺼진다. staging·production 워크플로는 평가 값을 넘기지 않는다.
@@ -64,7 +83,7 @@ python3 scripts/evaluation_local.py reset-password
 | 변수 | `CAREER_FORM_QUALITY_ENABLED` | true (평가 화면 비밀번호 보호에 필요) |
 | 시크릿 | `CAREER_FORM_QUALITY_PASSWORD_HASH` | 팀 공용 비밀번호 해시(`pbkdf2-sha256$600000$...`) |
 | 변수 | `CAREER_FORM_EVALUATION_ENABLED` | true |
-| 변수 | `CAREER_FORM_EVALUATION_AUTO_RUN_ENABLED` | true (머지 → 배포마다 평가 1회) |
+| 변수 | `CAREER_FORM_EVALUATION_AUTO_RUN_ENABLED` | true (평가에 영향을 주는 머지가 배포될 때 평가 1회) |
 | 변수 | `CAREER_FORM_EVALUATION_OPENAI_ENABLED` | OpenAI와 비교할 때 true. 키는 기존 `OPENAI_API_KEY` 시크릿 |
 | 시크릿 | `CAREER_FORM_EVALUATION_PROVIDER_KEYS` | 화면에서 등록하는 공급자의 키 묶음(필요할 때만) |
 
@@ -86,9 +105,10 @@ development 서버에서만 켠다. 평가 호출은 사용자 요청과 서버 
 | `CAREER_FORM_EVALUATION_OPENAI_API_KEY` | `OPENAI_API_KEY` | OpenAI 키. 사람이 서버 환경에 넣는다 |
 | `CAREER_FORM_EVALUATION_OPENAI_MODELS` | gpt-6-luna | 쉼표로 구분한 허용 모델. 첫 모델이 기본값 |
 | `CAREER_FORM_EVALUATION_OPENAI_REASONING_EFFORT` | none | 추론 강도. 실행 설정과 지문에 남는다 |
-| `CAREER_FORM_EVALUATION_AUTO_RUN_ENABLED` | false | 새 코드 배포 뒤 평가 1회 자동 실행 |
+| `CAREER_FORM_EVALUATION_AUTO_RUN_ENABLED` | false | 평가 입력이 바뀐 배포 뒤 평가 1회 자동 실행 |
 | `CAREER_FORM_EVALUATION_AUTO_RUN_REPETITIONS` | 3 | 자동 실행 반복 수 |
 | `CAREER_FORM_EVALUATION_AUTO_RUN_DATASET_VERSION` | 3 | 자동 실행 데이터셋 버전(평가 화면과 같게) |
+| `CAREER_FORM_ADAPTER_DIGEST` | 빈 값 | 공급자 연결 코드의 Git 트리 지문. 개발 배포 이미지 빌드 인자로 넣고 자동 평가 입력에 쓴다 |
 | `CAREER_FORM_COMMIT` | 빈 값 | 이미지가 만들어진 커밋. 개발 배포 이미지 빌드 인자로 넣고, 코드 버전에 앞 7자를 쓴다 |
 
 API와 화면은 품질 확인 공용 비밀번호(`CAREER_FORM_QUALITY_PASSWORD_HASH`)로 보호한다. 실행자는

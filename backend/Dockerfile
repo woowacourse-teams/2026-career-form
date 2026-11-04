@@ -45,6 +45,9 @@ COPY --chmod=0555 docker-entrypoint.sh /application/docker-entrypoint.sh
 # 평가 화면의 코드 버전. 배포 워크플로가 커밋 SHA를 넘기고, 로컬 빌드는 빈 값이라 다른 버전 값을 쓴다.
 ARG CAREER_FORM_COMMIT=
 ENV CAREER_FORM_COMMIT=${CAREER_FORM_COMMIT}
+# 공급자 연결 코드(formanalysis adapter)의 Git 트리 지문. 자동 평가가 이 코드의 변경을 알아보는 데 쓴다.
+ARG CAREER_FORM_ADAPTER_DIGEST=
+ENV CAREER_FORM_ADAPTER_DIGEST=${CAREER_FORM_ADAPTER_DIGEST}
 
 USER careerform:careerform
 

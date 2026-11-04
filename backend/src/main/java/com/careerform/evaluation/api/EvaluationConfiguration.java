@@ -18,6 +18,7 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import com.careerform.evaluation.dataset.DatasetLoader;
+import com.careerform.evaluation.dataset.LoadedDataset;
 import com.careerform.evaluation.prompt.PromptCatalog;
 import com.careerform.evaluation.run.CallExecutor;
 import com.careerform.evaluation.run.EvaluationProviders;
@@ -33,6 +34,7 @@ import com.careerform.evaluation.run.ResultStore;
 import com.careerform.evaluation.run.RunService;
 import com.careerform.evaluation.run.RunStore;
 import com.careerform.evaluation.run.ScoringStore;
+import com.careerform.evaluation.run.BehaviorFingerprint;
 import com.careerform.evaluation.run.ServiceProductCallGateway;
 import com.careerform.formanalysis.application.FieldInteractionPolicy;
 import com.careerform.formanalysis.application.FormAnalysisRouter;
@@ -183,24 +185,38 @@ public class EvaluationConfiguration {
             Clock.systemUTC());
     }
 
-    /** 새 코드 배포 뒤 자동 평가. 꺼져 있으면 아무것도 하지 않는다. 데이터셋 버전은 평가 화면(app.js DATASET)과 같아야 한다. */
+    /**
+     * 평가 입력이 바뀐 배포 뒤 자동 평가. 꺼져 있으면 아무것도 하지 않는다. 데이터셋 버전은 평가 화면(app.js DATASET)과 같아야 한다.
+     * 공급자 연결 코드는 가짜 모델로 지나가지 않으므로 빌드 때 넣은 소스 지문(CAREER_FORM_ADAPTER_DIGEST)으로 본다.
+     */
     @Bean
     EvaluationAutoRun evaluationAutoRun(RunService runs, RunStore store, EvaluationProviders providers,
-        EvaluationSettings settings,
+        EvaluationSettings settings, DatasetLoader datasets, JsonMapper mapper, Validator validator,
+        ServiceProductCallGateway.ProductParts parts,
+        @Value("${career-form.evaluation.adapter-digest:}") String adapterDigest,
         @Value("${career-form.evaluation.auto-run.enabled:false}") boolean enabled,
         @Value("${career-form.evaluation.auto-run.dataset-id:generic-matching}") String datasetId,
-        @Value("${career-form.evaluation.auto-run.dataset-version:3}") int datasetVersion,
-        @Value("${career-form.evaluation.auto-run.repetitions:3}") int repetitions,
-        @Value("${career-form.evaluation.auto-run.name:auto-deploy}") String name) {
+        @Value("${career-form.evaluation.auto-run.dataset-version:4}") int datasetVersion,
+        @Value("${career-form.evaluation.auto-run.repetitions:3}") int repetitions) {
+        BehaviorFingerprint behavior = new BehaviorFingerprint(mapper, validator, parts);
         return new EvaluationAutoRun(runs, store, providers,
-            new EvaluationAutoRun.Settings(enabled, datasetId, datasetVersion, repetitions, name), settings.codeVersion());
+            new EvaluationAutoRun.Settings(enabled, datasetId, datasetVersion, repetitions), settings.codeVersion(), () -> {
+                LoadedDataset dataset = datasets.load(datasetId, datasetVersion);
+                return Map.of(
+                    EvaluationAutoRun.BEHAVIOR, behavior.digest(dataset, settings.baseSettings().getOrDefault("section-concurrency", 3),
+                        settings.baseSettings().getOrDefault("field-batch-size", 5)),
+                    EvaluationAutoRun.PROMPT, runs.promptDigest(),
+                    EvaluationAutoRun.SETTINGS, runs.settingsDigest(),
+                    EvaluationAutoRun.PROVIDER, adapterDigest,
+                    EvaluationAutoRun.DATASET, dataset.digest());
+            });
     }
 
     /** 서버가 다 뜬 뒤 한 번 확인한다. 실패해도 서버 기동은 막지 않는다. */
     @org.springframework.context.event.EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
     void runEvaluationAfterDeploy(org.springframework.boot.context.event.ApplicationReadyEvent event) {
         try {
-            event.getApplicationContext().getBean(EvaluationAutoRun.class).runIfNewCode();
+            event.getApplicationContext().getBean(EvaluationAutoRun.class).runIfChanged();
         }
         catch (RuntimeException exception) {
             org.slf4j.LoggerFactory.getLogger(EvaluationAutoRun.class)

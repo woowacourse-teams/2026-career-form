@@ -286,7 +286,8 @@ public final class MongoRunStore implements RunStore {
                 .append("provider", versions.provider())
                 .append("model", versions.model())
                 .append("scoringVersion", versions.scoringVersion())
-                .append("settings", settings))
+                .append("settings", settings)
+                .append("inputs", new Document(versions.inputs())))
             .append("repetitions", run.repetitions())
             .append("plannedCalls", run.plannedCalls())
             .append("estimatedModelCalls", run.estimatedModelCalls())
@@ -311,10 +312,16 @@ public final class MongoRunStore implements RunStore {
         Document versions = document.get("versions", Document.class);
         TreeMap<String, String> settings = new TreeMap<>();
         versions.get("settings", Document.class).forEach((key, value) -> settings.put(key, (String) value));
+        // 자동 평가 입력 지문이 생기기 전 기록에는 이 값이 없다.
+        TreeMap<String, String> inputs = new TreeMap<>();
+        Document storedInputs = versions.get("inputs", Document.class);
+        if (storedInputs != null) {
+            storedInputs.forEach((key, value) -> inputs.put(key, (String) value));
+        }
         RunVersions runVersions = new RunVersions(versions.getString("datasetId"), versions.getInteger("datasetVersion"),
             versions.getString("datasetDigest"), versions.getString("split"), versions.getString("promptDigest"),
             versions.getString("promptVersion"), versions.getString("codeVersion"), versions.getString("provider"),
-            versions.getString("model"), versions.getString("scoringVersion"), settings);
+            versions.getString("model"), versions.getString("scoringVersion"), settings, inputs);
         return new EvaluationRun(document.getString("_id"), document.getString("fingerprint"), runVersions,
             document.getInteger("repetitions"), document.getInteger("plannedCalls"),
             document.getInteger("estimatedModelCalls"), document.getString("requestedBy"),

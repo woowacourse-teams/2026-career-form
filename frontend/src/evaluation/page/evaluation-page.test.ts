@@ -380,7 +380,7 @@ describe("AI 평가 화면의 단계 탭", () => {
     );
     (tabs[1] as HTMLButtonElement).click();
     expect(document.querySelector("#source-content")?.textContent).toContain(
-      "auto-deploy",
+      "prompt-391fbd8",
     );
     (document.querySelector("#cf-source") as HTMLDialogElement).close();
   });

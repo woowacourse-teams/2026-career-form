@@ -61,14 +61,21 @@ class EvaluationDeploymentTest(unittest.TestCase):
             with self.subTest(filename=filename):
                 self.assertNotIn("CAREER_FORM_EVALUATION_", (ROOT / ".github/workflows" / filename).read_text())
 
-    def test_development_image_carries_its_commit_for_the_evaluation_code_version(self):
+    def test_development_image_carries_its_commit_and_adapter_digest(self):
         workflow = yaml.load((ROOT / ".github/workflows/deploy-development.yml").read_text(), Loader=yaml.BaseLoader)
-        image = next(step for step in workflow["jobs"]["build"]["steps"] if step.get("id") == "image")
-        self.assertEqual("CAREER_FORM_COMMIT=${{ github.sha }}", image["with"]["build-args"].strip())
+        steps = workflow["jobs"]["build"]["steps"]
+        image = next(step for step in steps if step.get("id") == "image")
+        self.assertEqual(["CAREER_FORM_COMMIT=${{ github.sha }}", "CAREER_FORM_ADAPTER_DIGEST=${{ steps.adapter.outputs.digest }}"],
+            image["with"]["build-args"].strip().splitlines())
+        adapter = next(step for step in steps if step.get("id") == "adapter")
+        self.assertIn("git rev-parse HEAD:backend/src/main/java/com/careerform/formanalysis/infrastructure/adapter", adapter["run"])
+        self.assertLess(steps.index(adapter), steps.index(image))
         dockerfile = (ROOT / "backend/Dockerfile").read_text(encoding="utf-8")
         runtime = dockerfile[dockerfile.rindex("FROM "):]
         self.assertRegex(runtime, r"(?m)^ARG CAREER_FORM_COMMIT=$")
         self.assertRegex(runtime, r"(?m)^ENV CAREER_FORM_COMMIT=\$\{CAREER_FORM_COMMIT\}$")
+        self.assertRegex(runtime, r"(?m)^ARG CAREER_FORM_ADAPTER_DIGEST=$")
+        self.assertRegex(runtime, r"(?m)^ENV CAREER_FORM_ADAPTER_DIGEST=\$\{CAREER_FORM_ADAPTER_DIGEST\}$")
         # 커밋 값이 바뀌어도 앞 레이어 캐시를 쓰도록 마지막 COPY 뒤에 둔다.
         self.assertLess(runtime.rindex("COPY "), runtime.index("ARG CAREER_FORM_COMMIT"))
 

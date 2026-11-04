@@ -79,6 +79,11 @@ public final class RunService {
      * 바로 대기열(QUEUED)에 넣는다. 나머지는 앞 실행이 끝나면 차례로 돈다. 하나라도 검증에 실패하면 아무것도 등록하지 않는다.
      */
     public Registered registerAll(RunRequest request, String requestedBy) {
+        return registerAll(request, requestedBy, Map.of());
+    }
+
+    /** {@code inputs}는 자동 평가가 다음 배포와 비교하려고 실행에 남기는 입력 지문이다. */
+    public Registered registerAll(RunRequest request, String requestedBy, Map<String, String> inputs) {
         DatasetCatalog.DatasetSummary dataset = datasets.find(request.datasetId(), request.datasetVersion())
             .orElseThrow(() -> new RunRejected(RunRejected.Code.UNKNOWN_DATASET));
         DatasetCatalog.SplitSummary split = dataset.splits().get(request.split());
@@ -118,7 +123,7 @@ public final class RunService {
             PromptSnapshot snapshot = prompts.snapshot(promptSources(promptSources, provider));
             RunVersions versions = new RunVersions(dataset.datasetId(), dataset.version(), dataset.digest(),
                 request.split(), snapshot.digest(), request.promptVersion(), settings.codeVersion(),
-                provider.name(), model, SCORING_VERSION, effectiveSettings(provider, request.overrides()));
+                provider.name(), model, SCORING_VERSION, effectiveSettings(provider, request.overrides()), inputs);
             planned.add(EvaluationRun.queued(UUID.randomUUID().toString(), fingerprint(versions, request.repetitions()),
                 versions, request.repetitions(), split.productCalls() * request.repetitions(), (int) estimated,
                 requestedBy, clock.instant()).inComparison(comparisonId));
@@ -163,6 +168,34 @@ public final class RunService {
         return store.find(runId).orElseThrow(() -> new RunRejected(RunRejected.Code.UNKNOWN_RUN));
     }
 
+    /** 모든 공급자의 프롬프트 지문. 공통 문구나 공급자 문구가 바뀌면 달라진다. */
+    public String promptDigest() {
+        StringBuilder text = new StringBuilder();
+        providersByName().forEach(provider -> {
+            append(text, provider.name());
+            append(text, prompts.snapshot(promptSources(promptSources, provider)).digest());
+        });
+        return sha256(text.toString());
+    }
+
+    /** 모든 공급자의 기본 모델과 결과에 영향을 주는 설정의 지문. */
+    public String settingsDigest() {
+        StringBuilder text = new StringBuilder();
+        providersByName().forEach(provider -> {
+            append(text, provider.name());
+            append(text, provider.defaultModel());
+            effectiveSettings(provider, Map.of()).forEach((key, value) -> {
+                append(text, key);
+                append(text, value);
+            });
+        });
+        return sha256(text.toString());
+    }
+
+    private List<EvaluationProviders.Provider> providersByName() {
+        return providers.all().stream().sorted(java.util.Comparator.comparing(EvaluationProviders.Provider::name)).toList();
+    }
+
     private SortedMap<String, String> effectiveSettings(EvaluationProviders.Provider provider,
         Map<String, Integer> overrides) {
         SortedMap<String, String> effective = new TreeMap<>();
@@ -194,8 +227,12 @@ public final class RunService {
             append(text, value);
         });
         append(text, String.valueOf(repetitions));
+        return sha256(text.toString());
+    }
+
+    private static String sha256(String text) {
         try {
-            byte[] hash = MessageDigest.getInstance("SHA-256").digest(text.toString().getBytes(StandardCharsets.UTF_8));
+            byte[] hash = MessageDigest.getInstance("SHA-256").digest(text.getBytes(StandardCharsets.UTF_8));
             return HexFormat.of().formatHex(hash);
         }
         catch (NoSuchAlgorithmException exception) {

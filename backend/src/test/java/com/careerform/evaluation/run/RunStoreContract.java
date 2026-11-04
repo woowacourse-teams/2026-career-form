@@ -208,6 +208,20 @@ abstract class RunStoreContract {
         assertThat(store.find("run-1")).contains(run);
     }
 
+    @Test
+    @DisplayName("자동 평가 입력 지문을 저장하고 없으면 빈 값으로 읽는다")
+    void keepsInputs() {
+        RunStore store = store();
+        RunVersions base = run("run-1", "fp").versions();
+        RunVersions versions = new RunVersions(base.datasetId(), base.datasetVersion(), base.datasetDigest(), base.split(),
+            base.promptDigest(), base.promptVersion(), base.codeVersion(), base.provider(), base.model(),
+            base.scoringVersion(), base.settings(), Map.of("behavior", "b1", "prompt", "p1"));
+        store.register(EvaluationRun.queued("run-1", "fp", versions, 2, 6, 20, "tester", AT));
+
+        assertThat(store.find("run-1").orElseThrow().versions().inputs()).containsEntry("behavior", "b1").hasSize(2);
+        assertThat(base.inputs()).isEmpty();
+    }
+
     static EvaluationRun run(String id, String fingerprint, String comparisonId) {
         return run(id, fingerprint).inComparison(comparisonId);
     }
