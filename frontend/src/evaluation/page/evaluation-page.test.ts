@@ -165,6 +165,23 @@ const dataset = {
 // 서버가 기록 삭제를 허용하는지. 개발서버처럼 함께 쓰는 서버는 꺼져 있다.
 const capabilities = { recordDelete: false };
 
+// 항목별 비교의 칸 하나. 반복 2회에서 한 번은 맞게 넣고 한 번은 놓쳤다.
+const fieldItem = {
+  caseId: "c",
+  stage: "MAPPING",
+  kind: "GENERIC_FIELDS",
+  itemId: "field-1",
+  state: "initial",
+  label: "학교명",
+  group: "학력",
+  control: "text",
+  expected: "education.university.schoolName",
+  answers: [
+    { repetition: 1, value: "x", confidence: 0.9, outcome: "FILLED_CORRECT" },
+    { repetition: 2, value: null, confidence: null, outcome: "MISSED" },
+  ],
+};
+
 // 같은 비교에 모델을 더할 때 쓰는 실행 목록.
 const extraRuns: { run: typeof run; report: typeof report }[] = [];
 
@@ -175,7 +192,9 @@ function respond(url: string) {
       ? [...extraRuns, { run, report }, { run: baseRun, report: baseReport }]
       : url.includes("/datasets/")
         ? dataset
-        : [];
+        : url.includes("/items")
+          ? [fieldItem]
+          : [];
   return {
     ok: true,
     status: 200,
@@ -366,16 +385,21 @@ describe("AI 평가 화면의 단계 탭", () => {
     };
     const boxes = () => [
       ...document.querySelectorAll<HTMLInputElement>(
-        '#cf-fields .fields-models input[type="checkbox"]',
+        '#cf-fields .fields-model input[type="checkbox"]',
       ),
     ];
     const toggle = async (index: number) => {
       boxes()[index].click();
       await wait();
     };
-    const shown = () =>
-      [...document.querySelectorAll("#cf-fields .fields-model strong")].map(
-        (name) => name.textContent,
+    const columns = () =>
+      [...document.querySelectorAll("#cf-fields thead .model-col")].map(
+        (column) => column.textContent,
+      );
+    const listed = () =>
+      [...document.querySelectorAll("#cf-fields .fields-model")].map(
+        (row) =>
+          `${row.querySelector("label")?.textContent}:${row.classList.contains("off")}`,
       );
     const chips = () =>
       [...document.querySelectorAll("#cf-fields .fields-chips button")]
@@ -400,12 +424,24 @@ describe("AI 평가 화면의 단계 탭", () => {
       document.querySelector('#cf-fields select[aria-label="모델"]'),
     ).toBeNull();
     expect(boxes().map((box) => box.checked)).toEqual([true, true]);
-    expect(shown()).toEqual(["jev/jev-latest", "openai/gpt"]);
+    expect(columns()).toEqual(["jev/jev-latest", "openai/gpt"]);
     expect(chips()).toContain("모델끼리 다른");
+    // 모델 목록 상자 안에 체크박스와 판정 막대·수가 함께 있고, 따로 떠 있는 체크박스는 없다.
+    expect(
+      document.querySelector("#cf-fields .fields-controls input"),
+    ).toBeNull();
+    const row = document.querySelector(
+      "#cf-fields .fields-summary .fields-model",
+    )!;
+    expect(row.querySelectorAll(".item-track > span")).toHaveLength(4);
+    expect(row.textContent).toContain("1 맞게 넣음");
+    expect(row.textContent).toContain("1 놓침");
 
     await toggle(0);
     expect(boxes().map((box) => box.checked)).toEqual([false, true]);
-    expect(shown()).toEqual(["openai/gpt"]);
+    // 체크를 푼 모델도 다시 켤 수 있게 목록에 흐리게 남고, 표에서만 빠진다.
+    expect(listed()).toEqual(["jev/jev-latest:true", "openai/gpt:false"]);
+    expect(columns()).toEqual(["openai/gpt"]);
     expect(chips()).not.toContain("모델끼리 다른");
     // 이 탭의 체크는 위쪽 모델 체크와 품질·성능 화면에 영향을 주지 않는다.
     expect(
@@ -416,14 +452,14 @@ describe("AI 평가 화면의 단계 탭", () => {
 
     await toggle(1);
     expect(boxes()).toHaveLength(2);
-    expect(shown()).toEqual([]);
+    expect(columns()).toEqual([]);
     expect(document.querySelector("#cf-fields")?.textContent).toContain(
       "볼 모델을 체크",
     );
 
     await toggle(0);
     await toggle(1);
-    expect(shown()).toEqual(["jev/jev-latest", "openai/gpt"]);
+    expect(columns()).toEqual(["jev/jev-latest", "openai/gpt"]);
     extraRuns.length = 0;
     (run as { comparisonId: string | null }).comparisonId = original;
     (

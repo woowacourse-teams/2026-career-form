@@ -729,10 +729,10 @@ function renderFields() {
   const page = $("#cf-fields");
   // 위쪽 모델 체크로 고른 모델 안에서 이 탭에 보일 모델을 따로 체크한다. 다른 탭에는 영향을 주지 않는다.
   const models = state.selected.filter((model) => !state.fieldHidden.includes(model));
-  const runs = Object.fromEntries(models.map((model) => [model, latest(model)?.run]));
+  const runs = Object.fromEntries(state.selected.map((model) => [model, latest(model)?.run]));
   const kind = COMPARE_KINDS.find((entry) => entry.kind === state.itemKind) ?? COMPARE_KINDS[0];
   const ofKind = (list) => list && list.filter((item) => item.kind === kind.kind);
-  const data = Object.fromEntries(models.map((model) => [model, ofKind(runFields(runs[model]))]));
+  const data = Object.fromEntries(state.selected.map((model) => [model, ofKind(runFields(runs[model]))]));
 
   const head = element("div", undefined, "fields-head");
   const title = element("div");
@@ -757,23 +757,7 @@ function renderFields() {
   });
   screenSelect.value = state.fieldScreen;
   screenSelect.addEventListener("change", () => { state.fieldScreen = screenSelect.value; renderFields(); });
-  const modelChecks = element("div", undefined, "models fields-models");
-  modelChecks.setAttribute("aria-label", "항목별 비교에 보일 모델");
-  state.selected.forEach((model) => {
-    const label = element("label");
-    label.style.setProperty("--model", color(model));
-    const input = element("input");
-    input.type = "checkbox";
-    input.checked = models.includes(model);
-    input.addEventListener("change", () => {
-      state.fieldHidden = input.checked ? state.fieldHidden.filter((hidden) => hidden !== model) : [...state.fieldHidden, model];
-      state.openField = null;
-      renderFields();
-    });
-    label.append(input, document.createTextNode(model));
-    modelChecks.append(label);
-  });
-  controls.append(modelChecks, screenSelect);
+  controls.append(screenSelect);
   head.append(title);
   const kinds = element("div", undefined, "stage item-kinds");
   kinds.setAttribute("aria-label", "항목 종류");
@@ -789,12 +773,52 @@ function renderFields() {
   toolbar.append(kinds, controls);
   head.append(toolbar);
 
-  if (!models.length) {
-    page.replaceChildren(head, element("div", "볼 모델을 체크해야 합니다.", "empty"));
+  if (state.selected.some((model) => data[model] === null)) {
+    page.replaceChildren(head, element("div", "항목별 답을 불러오는 중.", "empty"));
     return;
   }
-  if (models.some((model) => data[model] === null)) {
-    page.replaceChildren(head, element("div", "항목별 답을 불러오는 중.", "empty"));
+  // 모델 목록: 체크박스로 표에 보일 모델을 고르고, 고른 공고·화면의 판정(반복 합)을 막대와 수로 보인다. 체크를 풀어도 다시 켤 수 있게 남긴다.
+  const summary = element("div", undefined, "fields-summary");
+  state.selected.forEach((model) => {
+    const line = element("div", undefined, models.includes(model) ? "fields-model" : "fields-model off");
+    line.style.setProperty("--model", color(model));
+    const label = element("label");
+    const input = element("input");
+    input.type = "checkbox";
+    input.checked = models.includes(model);
+    input.addEventListener("change", () => {
+      state.fieldHidden = input.checked ? state.fieldHidden.filter((hidden) => hidden !== model) : [...state.fieldHidden, model];
+      state.openField = null;
+      renderFields();
+    });
+    label.append(input, document.createTextNode(model));
+    line.append(label);
+    const fields = data[model] ?? [];
+    const tally = {};
+    fields.filter(inScreen).forEach((field) => field.answers.forEach(({ outcome }) => { tally[outcome] = (tally[outcome] ?? 0) + 1; }));
+    if (!runs[model]) line.append(element("span", "끝난 실행 없음", "muted"));
+    else if (!fields.length) line.append(element("span", "항목별 답 없음(데이터셋 확인 불가)", "muted"));
+    else {
+      const autofill = kind.kind === "GENERIC_FIELDS";
+      const kinds = autofill ? AUTOFILL_KINDS : ITEM_KINDS;
+      const counts = autofill
+        ? { filledCorrect: tally.FILLED_CORRECT ?? 0, blankCorrect: tally.BLANK_CORRECT ?? 0, missed: tally.MISSED ?? 0,
+          wrong: (tally.FILLED_WRONG_KEY ?? 0) + (tally.FILLED_UNNEEDED ?? 0) }
+        : { correct: tally.CORRECT ?? 0, wrongKey: tally.WRONG_KEY ?? 0, missing: tally.MISSING ?? 0, unnecessary: tally.UNNECESSARY ?? 0 };
+      const total = kinds.reduce((sum, { key }) => sum + counts[key], 0);
+      const track = element("div", undefined, "item-track");
+      kinds.forEach(({ key, label: name, className }) => {
+        const part = element("span", undefined, className);
+        part.style.width = `${total ? counts[key] / total * 100 : 0}%`;
+        part.title = `${name} ${counts[key]}`;
+        track.append(part);
+      });
+      line.append(track, countLine(kinds, counts, total, autofill ? "칸" : "개"));
+    }
+    summary.append(line);
+  });
+  if (!models.length) {
+    page.replaceChildren(head, summary, element("div", "볼 모델을 체크해야 합니다.", "empty"));
     return;
   }
 
@@ -803,26 +827,6 @@ function renderFields() {
   for (const model of models) (data[model] ?? []).forEach((field) => { if (!rows.has(fieldKey(field))) rows.set(fieldKey(field), field); });
   const index = (list) => new Map((list ?? []).map((field) => [fieldKey(field), field]));
   const byModel = Object.fromEntries(models.map((model) => [model, index(data[model])]));
-
-  // 모델별 요약: 판정별 칸 수(반복 합).
-  const summary = element("div", undefined, "fields-summary");
-  for (const model of models) {
-    const card = element("div", undefined, "fields-model");
-    card.style.setProperty("--model", color(model));
-    const fields = data[model] ?? [];
-    const tally = {};
-    fields.filter(inScreen).forEach((field) => field.answers.forEach(({ outcome }) => { tally[outcome] = (tally[outcome] ?? 0) + 1; }));
-    card.append(element("strong", model, "row-name"));
-    if (!runs[model]) card.append(element("span", "끝난 실행 없음", "muted"));
-    else if (!fields.length) card.append(element("span", "항목별 답 없음(데이터셋 확인 불가)", "muted"));
-    else if (kind.kind === "GENERIC_FIELDS") {
-      card.append(element("span", `맞게 넣음 ${tally.FILLED_CORRECT ?? 0} · 잘못 넣음 ${(tally.FILLED_WRONG_KEY ?? 0) + (tally.FILLED_UNNEEDED ?? 0)} · 놓침 ${tally.MISSED ?? 0}`, "muted"));
-    }
-    else {
-      card.append(element("span", `정답 ${tally.CORRECT ?? 0} · 오답 ${(tally.WRONG_KEY ?? 0) + (tally.UNNECESSARY ?? 0)} · 누락 ${tally.MISSING ?? 0}`, "muted"));
-    }
-    summary.append(card);
-  }
 
   const chips = element("div", undefined, "fields-chips");
   // 모델이 하나면 모델끼리 다른 항목이 없으므로 그 필터를 빼고 전체를 기본으로 본다.
