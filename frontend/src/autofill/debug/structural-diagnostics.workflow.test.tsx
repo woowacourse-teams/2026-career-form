@@ -111,12 +111,21 @@ it("names each preparation stage line by its caller", async () => {
   const log = vi.spyOn(console, "info").mockImplementation(() => {});
   setAutofillDebugEnabled(true);
   const policy = mountEducation(1, 1, true);
+  // 이 전체 실행은 jsdom에서 CPU 시간을 거의 다 쓰므로 부하가 걸리면 그만큼 느려진다.
+  // 검사에 필요한 만큼만 돌린다. 대학 두 건은 남겨야 한다: 학교 행 추가가 먼저 일어나야
+  // 전공 추가가 학교 확정 뒤로 밀려 preparation-majors 단계가 실행된다.
+  const profile = educationProfile();
+  profile.education = profile.education.filter(
+    (entry) => entry.sectionId === "university",
+  );
   renderNativeWorkflow({
     policy,
-    profile: educationProfile(),
+    profile,
+    pageChrome: false,
     searchResponder: catalogResponder(exactTitleCatalog()),
   });
-  await screen.findByText("기입 결과", {}, { timeout: 120_000 });
+  // 테스트 상한보다 짧아야 실패 메시지가 기다리던 대상을 알려 준다.
+  await screen.findByText("기입 결과", {}, { timeout: 80_000 });
   await waitFor(() =>
     expect(
       document.querySelector<HTMLInputElement>(
@@ -133,6 +142,4 @@ it("names each preparation stage line by its caller", async () => {
   expect(stages).toContain("preparation-plan");
   expect(stages).toContain("preparation-initial");
   expect(stages).toContain("preparation-majors");
-  // CI 러너(worker 1개)에서 통과할 때도 22초쯤 걸려 30초 상한을 넘기는 날이 있다.
-  // 안의 findByText가 120초까지 기다리므로 테스트 상한도 그 안에서 넉넉히 둔다.
 }, 90_000);
