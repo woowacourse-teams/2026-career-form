@@ -47,9 +47,12 @@ public final class JobPostingService {
     /** 관리 목록 행. roles는 공고의 소분류 코드에 라벨을 붙인 목록이고 레거시 공고는 null이다. */
     public record Row(JobPosting posting, List<JobCategories.Role> roles, DeliveryProgress progress) { }
 
-    /** 기간별 요약. 수락률·포기율은 끝난 발송(수락+포기) 기준, 평균 시도는 기간 안 전체 발송 기준이며 분모가 0이면 null이다. */
+    /**
+     * 기간별 요약. 수락률·포기율은 끝난 발송(수락+포기) 기준, 평균 시도는 기간 안 전체 발송 기준이며 분모가 0이면 null이다.
+     * 구독 수와 직무 선택 구독 수(roles가 1개 이상)는 기간과 무관한 현재값이며, 후자는 전환 설정을 켤 시점을 판단하는 수치다.
+     */
     public record Summary(Instant from, Instant to, long postings, DeliverySummary deliveries, Double acceptanceRate, Double abandonRate,
-                          Double averageAttempts, long subscriptions) { }
+                          Double averageAttempts, long subscriptions, long roleSelectedSubscriptions) { }
 
     public static final class InvalidRange extends IllegalArgumentException {
         public InvalidRange() { super("Invalid summary range"); }
@@ -103,7 +106,7 @@ public final class JobPostingService {
             finished == 0 ? null : (double) deliveries.accepted() / finished,
             finished == 0 ? null : (double) deliveries.abandoned() / finished,
             total == 0 ? null : (double) deliveries.attempts() / total,
-            store.countSubscriptions());
+            store.countSubscriptions(), store.countSubscriptionsWithRoles());
     }
 
     private JobPosting validate(Draft draft, Instant now) {

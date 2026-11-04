@@ -204,7 +204,7 @@ class JobPostingAdminApiTest {
     @DisplayName("기간 요약은 로그인 뒤에서 집계값만 돌려주고 잘못된 기간은 400이다")
     void summarizesPeriodBehindLogin() throws Exception {
         store.insertSubscription(new PushSubscription("s1", "https://fcm.googleapis.com/fcm/send/s1", "p", "a", NOW, null, null));
-        store.insertSubscription(new PushSubscription("s2", "https://fcm.googleapis.com/fcm/send/s2", "p", "a", NOW, null, null));
+        store.insertSubscription(new PushSubscription("s2", "https://fcm.googleapis.com/fcm/send/s2", "p", "a", NOW, List.of("IT.BACKEND", "IT.DATA"), NOW));
         postings.register(new JobPostingService.Draft("합성 회사", List.of("IT.BACKEND"), "https://careers.example.test/jobs/summary", NOW.minusSeconds(60), NOW.plusSeconds(86400)));
         var claimed = store.claimDelivery(store.findDueDeliveries(NOW, 1).getFirst(), NOW.plusSeconds(30), NOW.plusSeconds(150)).orElseThrow();
         store.completeDelivery(claimed, claimed.accepted(201));
@@ -227,8 +227,9 @@ class JobPostingAdminApiTest {
             .andExpect(jsonPath("$.latencyMillis.p50").value(30000))
             .andExpect(jsonPath("$.latencyMillis.p95").value(30000))
             .andExpect(jsonPath("$.subscriptions").value(2))
+            .andExpect(jsonPath("$.roleSelectedSubscriptions").value(1))
             .andReturn().getResponse().getContentAsString();
-        assertThat(body).doesNotContain("fcm.googleapis.com", "careers.example.test", "\"endpoint\"", "p256dh");
+        assertThat(body).doesNotContain("fcm.googleapis.com", "careers.example.test", "\"endpoint\"", "p256dh", "IT.BACKEND", "IT.DATA");
         mvc.perform(get("/api/v1/notifications/admin/summary").header("Authorization", PASSWORD)
                 .param("from", "2030-01-02T00:00:00Z").param("to", "2029-12-31T00:00:00Z"))
             .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("INVALID_RANGE"));

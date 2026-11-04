@@ -22,6 +22,8 @@ class AdminSummaryTest {
     @DisplayName("수락률·포기율은 끝난 발송 기준, 평균 시도는 전체 발송 기준이고 지연 백분위는 최근접 순위다")
     void computesRatesAndPercentiles() {
         store.insertSubscription(new PushSubscription("s1", "https://fcm.googleapis.com/fcm/send/s1", "p", "a", NOW, null, null));
+        store.insertSubscription(new PushSubscription("s2", "https://fcm.googleapis.com/fcm/send/s2", "p", "a", NOW, List.of("IT.BACKEND"), NOW));
+        store.insertSubscription(new PushSubscription("s3", "https://fcm.googleapis.com/fcm/send/s3", "p", "a", NOW, List.of(), NOW));
         store.insertPosting(new JobPosting("p1", "합성 회사", null, null, "https://careers.example.test/jobs/1", NOW.minusSeconds(60), NOW.plusSeconds(7200), NOW.minusSeconds(60)));
         var lease = NOW.plusSeconds(120);
         var scheduled = NOW.minusSeconds(600);
@@ -40,13 +42,16 @@ class AdminSummaryTest {
         assertThat(summary.acceptanceRate()).isEqualTo(0.8);
         assertThat(summary.abandonRate()).isEqualTo(0.2);
         assertThat(summary.averageAttempts()).isEqualTo(1.0);
-        assertThat(summary.subscriptions()).isEqualTo(1);
+        assertThat(summary.subscriptions()).isEqualTo(3);
+        assertThat(summary.roleSelectedSubscriptions()).as("roles가 1개 이상인 구독만 센다").isEqualTo(1);
 
         var empty = service.summary(NOW.plusSeconds(10_000), NOW.plusSeconds(20_000));
         assertThat(empty.deliveries()).isEqualTo(new DeliverySummary(0, 0, 0, 0, 0, null, null));
         assertThat(empty.acceptanceRate()).isNull();
         assertThat(empty.abandonRate()).isNull();
         assertThat(empty.averageAttempts()).isNull();
+        assertThat(empty.subscriptions()).as("구독 수는 기간과 무관하다").isEqualTo(3);
+        assertThat(empty.roleSelectedSubscriptions()).isEqualTo(1);
     }
 
     @Test

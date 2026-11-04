@@ -47,8 +47,9 @@ public final class JobPostingAdminController {
         public Rows { postings = List.copyOf(postings); }
     }
 
+    /** 요약 응답. roleSelectedSubscriptions는 받을 직무를 1개 이상 고른 구독 수다. */
     public record SummaryResponse(Instant from, Instant to, long postings, Deliveries deliveries, Double acceptanceRate, Double abandonRate,
-                                  Latency latencyMillis, long subscriptions) {
+                                  Latency latencyMillis, long subscriptions, long roleSelectedSubscriptions) {
         public record Deliveries(long pending, long sending, long accepted, long abandoned, long total, Double averageAttempts) { }
 
         public record Latency(Long p50, Long p95) { }
@@ -57,7 +58,8 @@ public final class JobPostingAdminController {
             var deliveries = summary.deliveries();
             return new SummaryResponse(summary.from(), summary.to(), summary.postings(),
                 new Deliveries(deliveries.pending(), deliveries.sending(), deliveries.accepted(), deliveries.abandoned(), deliveries.total(), summary.averageAttempts()),
-                summary.acceptanceRate(), summary.abandonRate(), new Latency(deliveries.latencyP50Millis(), deliveries.latencyP95Millis()), summary.subscriptions());
+                summary.acceptanceRate(), summary.abandonRate(), new Latency(deliveries.latencyP50Millis(), deliveries.latencyP95Millis()), summary.subscriptions(),
+                summary.roleSelectedSubscriptions());
         }
     }
 
