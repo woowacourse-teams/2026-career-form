@@ -181,6 +181,29 @@ GitHub 저장소의 Settings → Environments에서 각 환경의 Variables에
 Mistral Small 4, GPT-5.6 Luna, GPT-5.4 nano, Gemini 3.1 Flash-Lite의 비용, 오매핑,
 매핑 범위와 응답 속도를 비교하고 모델 선택 ADR을 작성한다.
 
+## 주소 검색 API
+
+`POST /api/v1/address/search`는 확장이 표준 도로명주소를 찾을 때 쓰는 행정안전부 도로명주소 검색 API 프록시다. 결정 근거는 [ADR](../llm-wiki/raw/issues/CF-392/documents/adr/392-road-address-proxy.md)을 따른다. 검색어는 개인정보이므로 본문으로만 받고 로그, 지표, 트레이스와 오류 응답에 남기지 않으며 캐시하지 않는다.
+
+요청 `{"query": "<1~80자>", "page": <1~100, 생략 시 1>}`에 대한 응답은 다음과 같다.
+
+| 상태 | 본문 | 의미 |
+|---|---|---|
+| 200 | `{"addresses": [{"postalCode", "roadAddress", "jibunAddress", "buildingManagementNumber"}], "page", "pageSize", "totalCount"}` | 검색 결과. 페이지당 10건 |
+| 400 | `{"error": "INVALID_INPUT"}` | 빈 검색어, 길이 또는 페이지 범위 위반, 깨진 본문 |
+| 429 | `{"error": "RATE_LIMITED"}` | 클라이언트별 요청 한도 초과. `Retry-After` 포함 |
+| 502 | `{"error": "ADDRESS_SEARCH_UNAVAILABLE"}` | 외부 API 오류, 시간 초과, 응답 형식 위반 |
+| 503 | `{"error": "ADDRESS_SEARCH_NOT_CONFIGURED"}` | 승인키 미설정. 애플리케이션은 정상 시작한다 |
+
+| 환경 변수 | 기본값 | 설명 |
+|---|---|---|
+| `JUSO_API_KEY` | 빈 값 | 승인키 시크릿. 저장소와 확장에 넣지 않는다. |
+| `CAREER_FORM_JUSO_BASE_URL` | `https://business.juso.go.kr/addrlink/addrLinkApi.do` | 외부 API 주소 |
+| `CAREER_FORM_JUSO_TIMEOUT_MS` | `5000` | 외부 API 시간 제한 |
+| `CAREER_FORM_ADDRESS_RATE_LIMIT_MAX_REQUESTS` | `30` | 창당 클라이언트별 허용 요청 수 |
+| `CAREER_FORM_ADDRESS_RATE_LIMIT_WINDOW` | `60s` | 고정 창 길이 |
+| `CAREER_FORM_ADDRESS_RATE_LIMIT_MAX_CLIENTS` | `10000` | 창당 추적 클라이언트 상한 |
+
 ## 빌드와 검증
 
 `backend/` 디렉터리에서 실행한다.

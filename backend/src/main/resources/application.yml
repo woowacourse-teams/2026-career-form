@@ -58,6 +58,15 @@ career-form:
         public-key: ${CAREER_FORM_PUSH_VAPID_PUBLIC_KEY:}
         private-key: ${CAREER_FORM_PUSH_VAPID_PRIVATE_KEY:}
         subject: ${CAREER_FORM_PUSH_VAPID_SUBJECT:}
+  address:
+    juso:
+      api-key: ${JUSO_API_KEY:}
+      base-url: ${CAREER_FORM_JUSO_BASE_URL:https://business.juso.go.kr/addrlink/addrLinkApi.do}
+      timeout-ms: ${CAREER_FORM_JUSO_TIMEOUT_MS:5000}
+    rate-limit:
+      max-requests: ${CAREER_FORM_ADDRESS_RATE_LIMIT_MAX_REQUESTS:30}
+      window: ${CAREER_FORM_ADDRESS_RATE_LIMIT_WINDOW:60s}
+      max-clients: ${CAREER_FORM_ADDRESS_RATE_LIMIT_MAX_CLIENTS:10000}
   tracing:
     langsmith:
       enabled: ${CAREER_FORM_LANGSMITH_ENABLED:false}

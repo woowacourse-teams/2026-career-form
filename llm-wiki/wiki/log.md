@@ -982,3 +982,10 @@
 - 승인한 후보 5개를 [CF-384 bundle](../raw/issues/CF-384/manifest.md)에 기록했다. JEV 7단계 랜딩 구성과 확신 표기, 스크롤 연출 방식과 조사 근거, 하늘색 전용 토큰과 대비 규칙, 시안 체험 선택과 스크롤 붙잡기, 정책 문의 이메일 미기재다.
 - [랜딩·온보딩 웹 페이지](topics/landing-onboarding.md)의 Current를 CF-384로 바꾸고 CF-363을 History에 남겼다.
 - 실제 지원값, 계정, 세션, 대화 전문은 저장하지 않았다.
+
+## [2026-11-04] ingest | CF-392 도로명주소 검색 프록시 ADR
+
+- Approval-Digest: 25240f97b8ef1c28071040dd1ffc96330a753408f2b6756ece4dcda3d216b02c
+- Source-Revision: 493ca72
+- Issue 계약이 요구한 ADR을 [CF-392 bundle](../raw/issues/CF-392/manifest.md)에 제안됨 상태로 기록하고 [도로명주소 검색 프록시](topics/road-address-proxy.md)를 추가했다. digest에 대한 사람 승인은 PR 검토에서 받는다.
+- 실제 지원값, 계정, 세션, 대화 전문은 저장하지 않았다.
