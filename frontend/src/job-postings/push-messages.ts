@@ -68,7 +68,14 @@ export const ONBOARDING_PUSH_ACTIONS: readonly PushAction[] = [
   "test",
   "record",
 ];
-export type PushSenderPage = "options" | "onboarding";
+// The side panel and the in-page panel (a content script) read the state,
+// switch alerts back on and look up the categories; nothing else.
+export const PANEL_PUSH_ACTIONS: readonly PushAction[] = [
+  "status",
+  "enable",
+  "categories",
+];
+export type PushSenderPage = "options" | "onboarding" | "panel";
 
 export function pushSenderPage(
   sender: { id?: string; url?: string },
@@ -77,10 +84,13 @@ export function pushSenderPage(
   if (sender.id !== extensionId || !sender.url) return undefined;
   try {
     const url = new URL(sender.url);
+    // A content script reports the host page; only the in-page panel sends.
+    if (url.protocol === "http:" || url.protocol === "https:") return "panel";
     if (url.protocol !== "chrome-extension:" || url.hostname !== extensionId)
       return undefined;
     if (url.pathname === "/options.html") return "options";
     if (url.pathname === "/onboarding.html") return "onboarding";
+    if (url.pathname === "/sidepanel.html") return "panel";
     return undefined;
   } catch {
     return undefined;
@@ -90,7 +100,10 @@ export function isPushActionAllowed(
   page: PushSenderPage,
   action: PushAction,
 ): boolean {
-  return page === "options" || ONBOARDING_PUSH_ACTIONS.includes(action);
+  if (page === "options") return true;
+  const allowed =
+    page === "onboarding" ? ONBOARDING_PUSH_ACTIONS : PANEL_PUSH_ACTIONS;
+  return allowed.includes(action);
 }
 
 export function parsePushMessage(value: unknown): PushCommand | undefined {
