@@ -4,7 +4,6 @@ import { describe, expect, it, vi } from "vitest";
 import { getWorkflowAdapter } from "../adapters/workflow";
 import { applyGenericGrade } from "../generic/generic-analysis";
 import type { ReviewPlanItem } from "../review/review-plan";
-import type { AppearableProfileItem } from "./pre-approval";
 import { WorkflowScreens } from "./WorkflowScreens";
 
 function base(candidateId: string, fieldLabel: string): ReviewPlanItem {
@@ -66,6 +65,13 @@ function reviewScreen(
 const plannedTab = () => screen.getByRole("tab", { name: /^자동 기입 예정/ });
 const needsTab = () => screen.getByRole("tab", { name: /^확인 필요/ });
 const blockedTab = () => screen.getByRole("tab", { name: /^입력 불가/ });
+
+describe("step indicator", () => {
+  it("counts two steps because the flow has no review step", () => {
+    render(reviewScreen([], { stage: "preparation-review" }));
+    expect(screen.getByText("1 / 2")).toBeVisible();
+  });
+});
 
 describe("review tabs", () => {
   it("keeps a controlled panel for every tab before it is selected", () => {
@@ -213,86 +219,5 @@ describe("result priority", () => {
     fireEvent.click(summary);
     expect(diagnostics).toBeVisible();
     expect(manual).toBeVisible();
-  });
-});
-
-describe("future values", () => {
-  it("collapses the long list but keeps the approval choice visible", () => {
-    const setPreApprovalOn = vi.fn();
-    const future: AppearableProfileItem[] = [
-      {
-        key: "military.military.militarySpecialty",
-        itemIndex: 0,
-        categoryLabel: "병역",
-        label: "병과",
-        value: "합성병과",
-      },
-    ];
-    render(
-      reviewScreen([planned], {
-        appearableItems: future,
-        preApprovalOn: true,
-        setPreApprovalOn,
-      }),
-    );
-    const details = screen.getByText("합성병과").closest("details");
-    expect(details).not.toBeNull();
-    if (!details) throw new Error("Future values must have a disclosure");
-    expect(details).not.toHaveAttribute("open");
-    const consent = screen.getByRole("checkbox", {
-      name: /다시 묻지 않고 기입/,
-    });
-    expect(consent).toBeVisible();
-    expect(consent).toBeChecked();
-    expect(details.contains(consent)).toBe(false);
-    fireEvent.click(consent);
-    expect(setPreApprovalOn).toHaveBeenCalledWith(false);
-    expect(
-      screen.getByRole("button", { name: "1개 항목 기입하기" }),
-    ).toBeVisible();
-    expect(
-      screen.getByText("합성 값").compareDocumentPosition(details) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-  });
-
-  const future: AppearableProfileItem[] = [
-    {
-      key: "military.military.militarySpecialty",
-      itemIndex: 0,
-      categoryLabel: "병역",
-      label: "병과",
-      value: "합성병과",
-    },
-  ];
-
-  it("hides the future values outside developer mode but keeps the review", () => {
-    render(
-      reviewScreen([planned], {
-        developerMode: false,
-        appearableItems: future,
-        preApprovalOn: true,
-        setPreApprovalOn: vi.fn(),
-      }),
-    );
-    expect(screen.queryByText(/나타날 수 있는 칸/)).toBeNull();
-    expect(screen.queryByRole("checkbox")).toBeNull();
-    expect(screen.queryByText("합성병과")).toBeNull();
-    expect(
-      screen.getByRole("button", { name: "1개 항목 기입하기" }),
-    ).toBeVisible();
-  });
-
-  it("shows the future values in developer mode", () => {
-    render(
-      reviewScreen([planned], {
-        developerMode: true,
-        appearableItems: future,
-        preApprovalOn: true,
-        setPreApprovalOn: vi.fn(),
-      }),
-    );
-    expect(screen.getByText(/나타날 수 있는 칸/)).toBeVisible();
-    expect(screen.getByRole("checkbox")).toBeChecked();
   });
 });

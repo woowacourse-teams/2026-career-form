@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createEmptyProfile, type Profile } from "../../profile/model";
@@ -131,9 +131,6 @@ describe("row save of a single entry box", () => {
       singleBoxForm();
       const rowSave = clicks("#rowSave");
       start();
-      fireEvent.click(
-        await screen.findByRole("button", { name: /항목 기입하기/ }),
-      );
       await screen.findByRole(
         "heading",
         { name: "기입 결과" },
@@ -149,29 +146,6 @@ describe("row save of a single entry box", () => {
       expect(input("certIssuer")?.value).toBe("");
       const saved = screen.getByRole("region", { name: "확장이 저장한 줄" });
       expect(saved).toHaveTextContent("3개 줄");
-    },
-  );
-
-  it(
-    "saves only the first entry when pre-approval is off",
-    { timeout: 40_000 },
-    async () => {
-      singleBoxForm();
-      const rowSave = clicks("#rowSave");
-      start();
-      fireEvent.click(
-        await screen.findByRole("checkbox", { name: /다시 묻지 않고 기입/ }),
-      );
-      fireEvent.click(
-        await screen.findByRole("button", { name: /항목 기입하기/ }),
-      );
-      await screen.findByRole(
-        "heading",
-        { name: "기입 결과" },
-        { timeout: 30_000 },
-      );
-      expect(rowSave()).toBe(1);
-      expect(document.querySelectorAll("#registered li")).toHaveLength(1);
     },
   );
 });

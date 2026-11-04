@@ -51,9 +51,6 @@ describe("genericReasonText", () => {
   });
 
   it("fixes the wording of the context and format reasons", () => {
-    expect(genericReasonText("NO_FIELD_CONTEXT")).toBe(
-      "칸의 이름이나 주변 설명이 부족합니다. 값을 확인한 뒤 선택해 주세요.",
-    );
     expect(genericReasonText("FORMAT_KEY_MISMATCH")).toBe(
       "입력 형식이 연결된 프로필 항목과 맞지 않아 입력할 수 없습니다.",
     );

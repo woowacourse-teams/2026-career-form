@@ -217,7 +217,7 @@ it("lists the prepared school's majors when its nested add stays disabled in a m
 
   const panel = await pendingPanel();
   expect(
-    within(panel).queryAllByText("입력 불가(학교 확정 후 다시 실행)"),
+    within(panel).queryAllByLabelText("입력 불가(학교 확정 후 다시 실행)"),
   ).toHaveLength(2);
   expect(majorRows(0)).toHaveLength(1);
   expect(counters.adds).toBe(0);
@@ -254,14 +254,20 @@ it("reports a failed school's additional major as a manual row without adding un
   // row carries the row-search guidance.
   const rows = within(panel)
     .getAllByText("가상복수전공 B", { selector: "span" })
-    .map((value) => value.closest("article")!.textContent ?? "");
+    .map(
+      (value) =>
+        value
+          .closest("article")!
+          .querySelector('[role="note"]')
+          ?.getAttribute("aria-label") ?? "",
+    );
   expect(
     rows.filter((text) =>
       text.includes("같은 행의 검색 항목을 확정하지 못해 입력을 보류했어요."),
     ),
   ).toHaveLength(1);
   expect(
-    within(panel).queryAllByText("입력 불가(학교 확정 후 다시 실행)"),
+    within(panel).queryAllByLabelText("입력 불가(학교 확정 후 다시 실행)"),
   ).toHaveLength(0);
   expect(failedSchoolAdds).toBe(0);
   expect(majorRows(1)).toHaveLength(1);

@@ -36,7 +36,12 @@ async function unverifiedLabels(): Promise<string[]> {
   fireEvent.click(tab);
   const panel = screen.getByRole("tabpanel");
   return Array.from(panel.querySelectorAll("article"))
-    .filter((row) => row.textContent?.includes(UNVERIFIED))
+    .filter((row) =>
+      row
+        .querySelector('[role="note"]')
+        ?.getAttribute("aria-label")
+        ?.includes(UNVERIFIED),
+    )
     .map(
       (row) =>
         row

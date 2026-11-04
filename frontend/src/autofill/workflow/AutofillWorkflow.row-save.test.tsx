@@ -1,10 +1,4 @@
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  within,
-} from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createEmptyProfile, type Profile } from "../../profile/model";
@@ -149,9 +143,6 @@ describe("row save on the generic path", () => {
     const tempSave = clicks("#tempSave");
     const submit = clicks("#submit");
     start();
-    fireEvent.click(
-      await screen.findByRole("button", { name: "2개 항목 기입하기" }),
-    );
     await screen.findByRole(
       "heading",
       { name: "기입 결과" },
@@ -170,9 +161,6 @@ describe("row save on the generic path", () => {
     rowSaveForm({ register: false });
     const rowSave = clicks("#rowSave");
     start();
-    fireEvent.click(
-      await screen.findByRole("button", { name: "2개 항목 기입하기" }),
-    );
     await screen.findByRole(
       "heading",
       { name: "기입 결과" },

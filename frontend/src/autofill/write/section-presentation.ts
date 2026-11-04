@@ -2,7 +2,12 @@ import { runtimeRules } from "../policy/runtime-rules";
 import { executionPolicy } from "../workflow/execution-policy";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import { FIELD_HIGHLIGHT } from "./field-highlight-style";
-import { fieldHighlightClip, floatingLabelRects } from "./field-highlight-clip";
+import {
+  candidateElements,
+  drawOutlines,
+  isOutlineTarget,
+  isVisibleElement,
+} from "./outline-overlays";
 
 /** Only presentation uses these containers; this never authorizes a write. */
 function reviewRoots(element: HTMLElement): HTMLElement[] {
@@ -39,44 +44,9 @@ export function presentSection(
 ): (() => void) | undefined {
   const view = document.defaultView;
   if (!view) return;
-  const candidates = [...new Set(ids)].flatMap((id) => {
-    const lookup = registry.lookupField(id);
-    if (lookup.status !== "ready" && lookup.status !== "blocked") return [];
-    if (
-      lookup.status === "blocked" &&
-      ["hidden", "inert", "unsupported"].includes(lookup.reason)
-    )
-      return [];
-    return [...lookup.handle.elements, ...(lookup.handle.customElements ?? [])];
-  });
-  const isVisible = (element: HTMLElement) => {
-    if (
-      !element?.isConnected ||
-      element.ownerDocument !== document ||
-      element.getAttribute("type") === "hidden" ||
-      (element.tagName === "BUTTON" && !candidates.includes(element)) ||
-      (element instanceof HTMLInputElement &&
-        element.type === "radio" &&
-        !element.checked)
-    )
-      return false;
-    for (
-      let node: HTMLElement | null = element;
-      node;
-      node = node.parentElement
-    ) {
-      const style = view.getComputedStyle(node);
-      if (
-        node.hidden ||
-        node.hasAttribute("inert") ||
-        style.display === "none" ||
-        style.visibility === "hidden"
-      )
-        return false;
-    }
-    const rect = element.getBoundingClientRect();
-    return rect.width > 0 && rect.height > 0;
-  };
+  const candidates = candidateElements(registry, ids);
+  const isVisible = (element: HTMLElement) =>
+    isVisibleElement(document, element, candidates);
   const elements = [...new Set([...candidates, ...recorded])].filter(isVisible);
   if (!elements.length) return;
   const readingBounds = (element: HTMLElement) => {
@@ -226,18 +196,10 @@ export function presentSection(
     });
   });
   if (!visible) return;
-  const outlined = [...new Set(highlighted ?? elements)].filter(
-    (element) =>
-      isVisible(element) &&
-      (["INPUT", "SELECT", "TEXTAREA"].includes(element.tagName) ||
-        (candidates.includes(element) &&
-          (element.tagName === "BUTTON" ||
-            element.getAttribute("role") === "radiogroup"))) &&
-      !["radio", "checkbox", "submit", "reset", "image", "file"].includes(
-        element.getAttribute("type") ?? "",
-      ),
+  const outlined = [...new Set(highlighted ?? elements)].filter((element) =>
+    isOutlineTarget(document, element, candidates),
   );
-  const overlays = outlined.map((element) => {
+  const restores = outlined.map((element) => {
     const background = element.style.getPropertyValue("background-color");
     const priority = element.style.getPropertyPriority("background-color");
     element.style.setProperty(
@@ -245,58 +207,16 @@ export function presentSection(
       FIELD_HIGHLIGHT.background,
       "important",
     );
-    const restoreBackground = () => {
+    return () => {
       if (background)
         element.style.setProperty("background-color", background, priority);
       else element.style.removeProperty("background-color");
     };
-    const overlay = document.createElement("div");
-    overlay.setAttribute("data-career-form-section-highlight", "");
-    overlay.setAttribute("aria-hidden", "true");
-    overlay.style.cssText = `all:initial;position:fixed;box-sizing:border-box;pointer-events:none;border:${FIELD_HIGHLIGHT.border};border-radius:8px;background:transparent;z-index:2147483000;`;
-    return { element, overlay, restoreBackground };
   });
-  const update = () => {
-    if (!elements.some((element) => element.isConnected)) {
-      clear();
-      return;
-    }
-    const labels = floatingLabelRects(document, outlined);
-    for (const { element, overlay } of overlays) {
-      const rect = element.getBoundingClientRect();
-      const hidden =
-        !element.isConnected ||
-        !rect.width ||
-        !rect.height ||
-        !!element.closest("[hidden], [inert]") ||
-        view.getComputedStyle(element).visibility === "hidden";
-      Object.assign(overlay.style, {
-        display: hidden ? "none" : "block",
-        clipPath: fieldHighlightClip(rect, labels),
-        left: `${rect.left}px`,
-        top: `${rect.top}px`,
-        width: `${rect.width}px`,
-        height: `${rect.height}px`,
-      });
-    }
-  };
-  const observer =
-    typeof ResizeObserver === "undefined"
-      ? undefined
-      : new ResizeObserver(update);
-  const clear = () => {
-    overlays.forEach(({ overlay, restoreBackground }) => {
-      overlay.remove();
-      restoreBackground();
-    });
-    document.removeEventListener("scroll", update, true);
-    view.removeEventListener("resize", update);
-    observer?.disconnect();
-  };
-  document.body.append(...overlays.map(({ overlay }) => overlay));
-  document.addEventListener("scroll", update, true);
-  view.addEventListener("resize", update);
-  outlined.forEach((element) => observer?.observe(element));
-  update();
-  return clear;
+  return drawOutlines(document, outlined, {
+    attribute: "data-career-form-section-highlight",
+    border: FIELD_HIGHLIGHT.border,
+    alive: () => elements.some((element) => element.isConnected),
+    onClear: () => restores.forEach((restore) => restore()),
+  }).clear;
 }

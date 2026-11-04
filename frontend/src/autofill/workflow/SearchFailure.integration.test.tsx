@@ -191,12 +191,12 @@ it.each(["input", "button"] as const)(
     }
     render(<WorkflowResults reviewItems={test.items} results={results} />);
     expect(
-      screen.getByText(
+      screen.getByLabelText(
         "검색창 구조를 안전하게 확인하지 못해 입력을 보류했어요.",
       ),
     ).toBeVisible();
     expect(
-      screen.getByText("앞선 검색 실패로 후속 입력을 보류했어요."),
+      screen.getByLabelText("앞선 검색 실패로 후속 입력을 보류했어요."),
     ).toBeVisible();
     expect(screen.getByLabelText("입력 완료 0개")).toBeInTheDocument();
     expect(
