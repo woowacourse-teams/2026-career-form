@@ -148,6 +148,21 @@ abstract class NotificationStoreContract {
     }
 
     @Test
+    @DisplayName("직무 코드 배열은 순서대로 저장·복원되고 roles가 없는 레거시 공고는 null로 읽힌다")
+    void roundTripsRolesAndKeepsLegacyNull() {
+        var store = store();
+        store.insertPosting(new JobPosting("with-roles", "합성 회사", "백엔드·프론트엔드", List.of("IT.BACKEND", "IT.FRONTEND"),
+            "https://careers.example.test/jobs/roles", NOW.minusSeconds(60), NOW.plusSeconds(3600), NOW));
+        store.insertPosting(new JobPosting("legacy", "합성 회사", "합성 직무", null, "https://careers.example.test/jobs/legacy",
+            NOW.minusSeconds(60), NOW.plusSeconds(3600), NOW.minusSeconds(1)));
+        assertThat(store.findPosting("with-roles").orElseThrow().roles()).containsExactly("IT.BACKEND", "IT.FRONTEND");
+        assertThat(store.findPosting("legacy").orElseThrow().roles()).isNull();
+        assertThat(store.findPostingByLink("https://careers.example.test/jobs/roles").orElseThrow().roles()).containsExactly("IT.BACKEND", "IT.FRONTEND");
+        assertThat(store.listPostings()).extracting(JobPosting::roles).containsExactly(List.of("IT.BACKEND", "IT.FRONTEND"), null);
+        assertThat(store.listOpenPostings(NOW)).extracting(JobPosting::roles).containsExactlyInAnyOrder(List.of("IT.BACKEND", "IT.FRONTEND"), null);
+    }
+
+    @Test
     @DisplayName("기간 요약은 예정 시각이 기간 안인 발송의 상태별 건수·시도 합·수락 지연 백분위와 기간 안 등록 공고 수, 구독 수를 준다")
     void summarizesDeliveriesAndCounts() {
         var store = store();
@@ -155,7 +170,7 @@ abstract class NotificationStoreContract {
         var to = NOW.plusSeconds(3600);
         store.insertPosting(posting("in-1", "https://careers.example.test/jobs/a", NOW.minusSeconds(60), NOW.plusSeconds(7200)));
         store.insertPosting(posting("in-2", "https://careers.example.test/jobs/b", NOW.minusSeconds(60), NOW.plusSeconds(7200)));
-        store.insertPosting(new JobPosting("out", "합성 회사", null, "https://careers.example.test/jobs/c", NOW.minusSeconds(60), NOW.plusSeconds(7200), NOW.minusSeconds(7200)));
+        store.insertPosting(new JobPosting("out", "합성 회사", null, null, "https://careers.example.test/jobs/c", NOW.minusSeconds(60), NOW.plusSeconds(7200), NOW.minusSeconds(7200)));
         store.insertSubscription(subscription("s1", "https://fcm.googleapis.com/fcm/send/synthetic-1"));
         store.insertSubscription(subscription("s2", "https://fcm.googleapis.com/fcm/send/synthetic-2"));
         var lease = NOW.plusSeconds(120);
@@ -187,7 +202,7 @@ abstract class NotificationStoreContract {
     }
 
     static JobPosting posting(String id, String link, Instant opensAt, Instant closesAt) {
-        return new JobPosting(id, "합성 회사", "합성 직무", link, opensAt, closesAt, NOW.minusSeconds(120));
+        return new JobPosting(id, "합성 회사", "백엔드", List.of("IT.BACKEND"), link, opensAt, closesAt, NOW.minusSeconds(120));
     }
 
     static PushSubscription subscription(String id, String endpoint) {

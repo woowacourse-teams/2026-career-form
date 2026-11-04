@@ -24,16 +24,21 @@ public final class JobPostingAdminController {
 
     public JobPostingAdminController(JobPostingService postings) { this.postings = postings; }
 
-    public record Registration(String company, String role, String link, Instant opensAt, Instant closesAt) { }
+    /** 등록 요청. roles는 직무 분류의 소분류 코드 배열이고 요청의 role 자유 글자는 받지 않는다(모르는 필드로 무시된다). */
+    public record Registration(String company, List<String> roles, String link, Instant opensAt, Instant closesAt) { }
+
+    public record RoleView(String code, String label) { }
 
     public record Registered(String id, Instant scheduledAt, long deliveries) { }
 
+    /** 목록 행. roles는 코드와 라벨 목록이며 레거시 공고는 role과 함께 생략된다. */
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public record Row(String id, String company, String role, String link, Instant opensAt, Instant closesAt, Instant registeredAt,
+    public record Row(String id, String company, String role, List<RoleView> roles, String link, Instant opensAt, Instant closesAt, Instant registeredAt,
                       Instant scheduledAt, DeliveryProgress progress) {
         static Row of(JobPostingService.Row row) {
             var posting = row.posting();
-            return new Row(posting.id(), posting.company(), posting.role(), posting.link(), posting.opensAt(), posting.closesAt(),
+            var roles = row.roles() == null ? null : row.roles().stream().map(role -> new RoleView(role.code(), role.label())).toList();
+            return new Row(posting.id(), posting.company(), posting.role(), roles, posting.link(), posting.opensAt(), posting.closesAt(),
                 posting.registeredAt(), posting.scheduledAt(), row.progress());
         }
     }
@@ -65,7 +70,7 @@ public final class JobPostingAdminController {
 
     @PostMapping("/api/v1/notifications/admin/postings")
     public ResponseEntity<?> register(@RequestBody Registration registration) {
-        var outcome = postings.register(new JobPostingService.Draft(registration.company(), registration.role(), registration.link(),
+        var outcome = postings.register(new JobPostingService.Draft(registration.company(), registration.roles(), registration.link(),
             registration.opensAt(), registration.closesAt()));
         return switch (outcome) {
             case JobPostingService.Registered registered -> ResponseEntity.status(201)

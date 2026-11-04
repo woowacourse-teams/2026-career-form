@@ -13,17 +13,21 @@ import java.util.Objects;
 public final class JobPostingService {
     static final int MAX_COMPANY_LENGTH = 80;
     static final int MAX_ROLE_LENGTH = 120;
+    static final int MAX_ROLES_PER_POSTING = 10;
     static final int MAX_LINK_LENGTH = 1024;
     static final Duration MAX_SUMMARY_RANGE = Duration.ofDays(400);
     private final NotificationStore store;
+    private final JobCategories categories;
     private final Clock clock;
 
-    public JobPostingService(NotificationStore store, Clock clock) {
+    public JobPostingService(NotificationStore store, JobCategories categories, Clock clock) {
         this.store = Objects.requireNonNull(store);
+        this.categories = Objects.requireNonNull(categories);
         this.clock = Objects.requireNonNull(clock);
     }
 
-    public record Draft(String company, String role, String link, Instant opensAt, Instant closesAt) { }
+    /** 등록 입력. roles는 직무 분류의 소분류 코드 배열이며 role 라벨은 서버가 파생한다. */
+    public record Draft(String company, List<String> roles, String link, Instant opensAt, Instant closesAt) { }
 
     public sealed interface Outcome permits Registered, Duplicate { }
 
@@ -31,7 +35,8 @@ public final class JobPostingService {
 
     public record Duplicate(String existingId) implements Outcome { }
 
-    public record Row(JobPosting posting, DeliveryProgress progress) { }
+    /** 관리 목록 행. roles는 공고의 소분류 코드에 라벨을 붙인 목록이고 레거시 공고는 null이다. */
+    public record Row(JobPosting posting, List<JobCategories.Role> roles, DeliveryProgress progress) { }
 
     /** 기간별 요약. 수락률·포기율은 끝난 발송(수락+포기) 기준, 평균 시도는 기간 안 전체 발송 기준이며 분모가 0이면 null이다. */
     public record Summary(Instant from, Instant to, long postings, DeliverySummary deliveries, Double acceptanceRate, Double abandonRate,
@@ -74,7 +79,7 @@ public final class JobPostingService {
     }
 
     public List<Row> list() {
-        return store.listPostings().stream().map(posting -> new Row(posting, store.deliveryProgress(posting.id()))).toList();
+        return store.listPostings().stream().map(posting -> new Row(posting, roles(posting), store.deliveryProgress(posting.id()))).toList();
     }
 
     public List<JobPosting> open() { return store.listOpenPostings(clock.instant()); }
@@ -94,16 +99,24 @@ public final class JobPostingService {
     private JobPosting validate(Draft draft, Instant now) {
         Objects.requireNonNull(draft);
         var company = text(draft.company(), MAX_COMPANY_LENGTH, "COMPANY");
-        var role = optionalText(draft.role(), MAX_ROLE_LENGTH, "ROLE");
+        var roles = roles(draft.roles());
         var link = link(draft.link());
         if (draft.opensAt() == null || draft.closesAt() == null || !draft.opensAt().isBefore(draft.closesAt())) { throw new InvalidPosting("PERIOD"); }
         if (!draft.closesAt().isAfter(now)) { throw new InvalidPosting("CLOSED"); }
-        return new JobPosting(Identifiers.random(), company, role, link, draft.opensAt(), draft.closesAt(), now);
+        return new JobPosting(Identifiers.random(), company, categories.label(roles, MAX_ROLE_LENGTH), roles, link, draft.opensAt(), draft.closesAt(), now);
     }
 
-    /** 직무처럼 비우거나 생략할 수 있는 값. 값이 있을 때만 길이와 제어 문자를 검사한다. */
-    private static String optionalText(String value, int maxLength, String reason) {
-        return value == null || value.isBlank() ? null : text(value, maxLength, reason);
+    /** 소분류 코드를 정규화한 뒤 1개 이상 상한 이하이고 모두 분류에 있어야 한다. */
+    private List<String> roles(List<String> value) {
+        var roles = JobCategories.normalize(value);
+        if (roles.isEmpty() || roles.size() > MAX_ROLES_PER_POSTING || !roles.stream().allMatch(categories::containsRole)) { throw new InvalidPosting("ROLE"); }
+        return roles;
+    }
+
+    /** 저장된 코드에 라벨을 붙인다. 분류에서 사라진 코드는 코드를 라벨로 쓰고 레거시 공고는 null이다. */
+    private List<JobCategories.Role> roles(JobPosting posting) {
+        if (posting.roles() == null) { return null; }
+        return posting.roles().stream().map(code -> new JobCategories.Role(code, categories.roleLabel(code).orElse(code))).toList();
     }
 
     private static String text(String value, int maxLength, String reason) {

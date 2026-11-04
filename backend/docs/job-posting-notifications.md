@@ -24,7 +24,7 @@ CF-348은 팀이 등록한 채용 공고를 접수 가능 시점(등록 시각�
 
 | 컬렉션 | 내용 | 인덱스 |
 |---|---|---|
-| `job_postings` | 회사, 직무(선택, 없으면 필드 없음), 링크, 접수 시작, 마감, 등록 시각 | `link` 유일, `(opensAt, closesAt)` |
+| `job_postings` | 회사, 직무 코드 배열 `roles`(소분류 코드 1~10개), 직무 라벨 `role`(소분류 라벨을 가운뎃점으로 이은 문자열, 120자 이하), 링크, 접수 시작, 마감, 등록 시각. `roles` 도입 전 레거시 문서는 `roles`가 없고 `role`도 없을 수 있으며 재분류하지 않는다 | `link` 유일, `(opensAt, closesAt)` |
 | `push_subscriptions` | endpoint, p256dh, auth, 등록 시각 | `endpoint` 유일 |
 | `push_deliveries` | 공고 ID × 구독 ID, 상태(PENDING·SENDING·ACCEPTED·ABANDONED), 예정 시각, 시도 횟수, 다음 시도 시각, 리스 만료 시각, 마지막 시도 시각·응답 코드·이유 | `(postingId, subscriptionId)` 유일, `(status, nextAttemptAt)`, `(status, leaseUntil)`, `(postingId, status)`, `scheduledAt` |
 
@@ -39,10 +39,10 @@ CF-348은 팀이 등록한 채용 공고를 접수 가능 시점(등록 시각�
 | `GET /api/v1/notifications/vapid-public-key` | 200 `{"publicKey"}` |
 | `POST /api/v1/notifications/subscriptions` `{"endpoint","expirationTime"?,"keys":{"p256dh","auth"}}` | 201 신규 / 200 기존 `{"subscriptionId","created"}`. 같은 endpoint는 새로 만들지 않는다. 400 `INVALID_SUBSCRIPTION`(허용 호스트 `fcm.googleapis.com`·`jmt17.google.com`의 HTTPS가 아니거나 키 길이가 다름), 400 `INVALID_INPUT`(본문 해석 실패) |
 | `POST /api/v1/notifications/subscriptions/unsubscribe` `{"endpoint"}` | 204. 없는 endpoint도 204 |
-| `GET /api/v1/notifications/postings` | 200 `{"postings":[{"id","company","role"?,"link","opensAt","closesAt"}]}`. 접수 시작 ≤ 현재 < 마감인 공고를 마감순으로. 직무가 없는 공고는 `role` 필드를 생략한다 |
+| `GET /api/v1/notifications/postings` | 200 `{"postings":[{"id","company","role"?,"roles"?,"link","opensAt","closesAt"}]}`. 접수 시작 ≤ 현재 < 마감인 공고를 마감순으로. `roles`는 소분류 코드 배열, `role`은 파생 라벨이며 레거시 공고는 두 필드를 생략한다 |
 | `GET /api/v1/notifications/job-categories` | 200 `{"version","categories":[{"code","label","roles":[{"code","label"}]}]}`. 직무 분류 정본 `backend/src/main/resources/notification/job-categories-v1.json`의 버전과 대분류·소분류. 코드는 `IT.BACKEND`처럼 대분류와 소분류를 점으로 이은 안정 문자열(`[A-Z][A-Z0-9_]{0,31}`)이고 라벨은 한글 1~40자다. 기동 시 코드 형식·유일성과 라벨을 검증해 실패하면 기동을 막는다. 코드는 추가만 하고 삭제·변경하지 않는다 |
 
-푸시 payload는 목록 항목에 `sentAt`(FCM 요청 시각, ISO-8601)을 더한 UTF-8 JSON `{"id","company","role"?,"link","opensAt","closesAt","sentAt"}`이며 직무가 없으면 `role` 필드를 생략한다(확장은 없음과 빈 문자열을 모두 직무 없음으로 다루고 `sentAt`으로 표시 지연을 계측한다). 회사 80자, 직무 120자, 링크 1024자 상한에서 평문 3,900바이트 이하이며 aes128gcm 암호화 뒤에도 4,096바이트 한도 안에 든다(테스트로 보장).
+푸시 payload는 목록 항목에 `sentAt`(FCM 요청 시각, ISO-8601)을 더한 UTF-8 JSON `{"id","company","role"?,"roles"?,"link","opensAt","closesAt","sentAt"}`이며 레거시 공고는 `role`·`roles` 필드를 생략한다(확장은 없음과 빈 문자열을 모두 직무 없음으로 다루고 `sentAt`으로 표시 지연을 계측한다). 회사 80자, 직무 라벨 120자, 링크 1024자에 65자 소분류 코드 10개를 더한 상한에서 평문 3,900바이트 이하이며 aes128gcm 암호화 뒤에도 4,096바이트 한도 안에 든다(테스트로 보장).
 
 ## 관리 API와 화면
 
@@ -50,8 +50,8 @@ CF-348은 팀이 등록한 채용 공고를 접수 가능 시점(등록 시각�
 
 | 요청 | 응답 |
 |---|---|
-| `GET /api/v1/notifications/admin/postings` | 200 `{"postings":[{id, company, role?, link, opensAt, closesAt, registeredAt, scheduledAt, progress:{pending, sending, accepted, abandoned, lastAttemptAt}}]}` 최근 등록 순. 직무가 없으면 `role` 생략 |
-| `POST /api/v1/notifications/admin/postings` `{company, role?, link, opensAt, closesAt}` | 201 `{"id","scheduledAt","deliveries"}`. 직무는 생략하거나 비울 수 있고 값이 있으면 120자 이하다. 저장과 구독자 전원의 대기 발송 생성이 끝났다는 뜻이며 FCM 수락을 기다리지 않는다. 409 `{"error":"DUPLICATE_LINK","postingId"}`, 400 `{"error":"INVALID_POSTING","reason": COMPANY·ROLE·LINK·PERIOD·CLOSED}` |
+| `GET /api/v1/notifications/admin/postings` | 200 `{"postings":[{id, company, role?, roles?:[{code, label}], link, opensAt, closesAt, registeredAt, scheduledAt, progress:{pending, sending, accepted, abandoned, lastAttemptAt}}]}` 최근 등록 순. `roles`는 저장된 소분류 코드에 현재 분류의 라벨을 붙인 목록이고 레거시 공고는 `role`·`roles`를 생략한다 |
+| `POST /api/v1/notifications/admin/postings` `{company, roles, link, opensAt, closesAt}` | 201 `{"id","scheduledAt","deliveries"}`. `roles`는 분류의 소분류 코드 배열로 필수이며 null 요소 제거·공백 제거·순서 유지 중복 제거 뒤 1~10개이고 분류에 없는 코드가 하나라도 있으면 거절한다. `role` 라벨은 서버가 소분류 라벨을 가운뎃점(`·`)으로 이어 만들고 120자를 넘으면 앞 라벨 몇 개에 ` 외 n개`를 붙여 줄인다. 요청의 `role` 자유 글자는 무시된다. 검증 순서는 COMPANY → ROLE → LINK → PERIOD → CLOSED. 저장과 구독자 전원의 대기 발송 생성이 끝났다는 뜻이며 FCM 수락을 기다리지 않는다. 409 `{"error":"DUPLICATE_LINK","postingId"}`, 400 `{"error":"INVALID_POSTING","reason": COMPANY·ROLE·LINK·PERIOD·CLOSED}` |
 | `DELETE /api/v1/notifications/admin/postings/{id}` | 204. 대기 발송만 삭제하고 수락·포기·발송 중 기록은 남긴다. 404 `POSTING_NOT_FOUND` |
 | `GET /api/v1/notifications/admin/summary?from=<ISO>&to=<ISO>` | 200 `{from, to, postings, deliveries:{pending, sending, accepted, abandoned, total, averageAttempts}, acceptanceRate, abandonRate, latencyMillis:{p50, p95}, subscriptions}`. 예정 시각이 `[from, to)`인 발송 문서를 집계한다. `postings`는 기간 안 등록 공고 수, 수락률·포기율은 끝난 발송(수락+포기) 기준, 평균 시도는 기간 안 전체 발송 기준, 지연은 `lastAttemptAt - scheduledAt`(MongoDB `$percentile`, 7.0 이상)이며 분모가 없으면 null이다. `subscriptions`는 현재 구독 수. 400 `INVALID_RANGE`(시작 ≥ 끝, 400일 초과), 400 `INVALID_INPUT`(매개변수 누락). 집계값만 돌려주고 endpoint·키·링크는 내지 않는다 |
 

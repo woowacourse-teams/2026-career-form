@@ -13,6 +13,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -42,7 +43,7 @@ class JobPostingAdminApiTest {
     };
     private final QualityAccess access = new QualityAccess(Clock.fixed(NOW, ZoneOffset.UTC), HASH, "", sessionStore);
     private final MemoryNotificationStore store = new MemoryNotificationStore();
-    private final JobPostingService postings = new JobPostingService(store, Clock.fixed(NOW, ZoneOffset.UTC));
+    private final JobPostingService postings = new JobPostingService(store, JobCategories.load(), Clock.fixed(NOW, ZoneOffset.UTC));
     private final MockMvc mvc = MockMvcBuilders.standaloneSetup(new JobPostingAdminController(postings), new Fixture())
         .setControllerAdvice(new NotificationInputErrors()).addFilters(new QualityApiFilter(access)).build();
 
@@ -108,12 +109,12 @@ class JobPostingAdminApiTest {
     @DisplayName("잘못된 입력은 이유 코드와 함께 400이다")
     void rejectsInvalidRegistrations() throws Exception {
         mvc.perform(post("/api/v1/notifications/admin/postings").header("Authorization", PASSWORD).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"company\":\"합성 회사\",\"role\":\"백엔드\",\"link\":\"ftp://careers.example.test/jobs/1\",\"opensAt\":\"2030-01-01T06:00:00Z\",\"closesAt\":\"2030-01-31T15:00:00Z\"}"))
+                .content("{\"company\":\"합성 회사\",\"roles\":[\"IT.BACKEND\"],\"link\":\"ftp://careers.example.test/jobs/1\",\"opensAt\":\"2030-01-01T06:00:00Z\",\"closesAt\":\"2030-01-31T15:00:00Z\"}"))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.error").value("INVALID_POSTING"))
             .andExpect(jsonPath("$.reason").value("LINK"));
         mvc.perform(post("/api/v1/notifications/admin/postings").header("Authorization", PASSWORD).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"company\":\"합성 회사\",\"role\":\"백엔드\",\"link\":\"https://careers.example.test/jobs/1\",\"opensAt\":\"2030-01-31T15:00:00Z\",\"closesAt\":\"2030-01-01T06:00:00Z\"}"))
+                .content("{\"company\":\"합성 회사\",\"roles\":[\"IT.BACKEND\"],\"link\":\"https://careers.example.test/jobs/1\",\"opensAt\":\"2030-01-31T15:00:00Z\",\"closesAt\":\"2030-01-01T06:00:00Z\"}"))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.reason").value("PERIOD"));
         mvc.perform(post("/api/v1/notifications/admin/postings").header("Authorization", PASSWORD).contentType(MediaType.APPLICATION_JSON)
@@ -121,7 +122,7 @@ class JobPostingAdminApiTest {
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.error").value("INVALID_INPUT"));
         mvc.perform(post("/api/v1/notifications/admin/postings").header("Authorization", PASSWORD).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"company\":\"합성 회사\",\"role\":\"백엔드\",\"link\":\"https://careers.example.test/jobs/1\",\"opensAt\":\"not-a-time\",\"closesAt\":\"2030-01-31T15:00:00Z\"}"))
+                .content("{\"company\":\"합성 회사\",\"roles\":[\"IT.BACKEND\"],\"link\":\"https://careers.example.test/jobs/1\",\"opensAt\":\"not-a-time\",\"closesAt\":\"2030-01-31T15:00:00Z\"}"))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.error").value("INVALID_INPUT"));
         assertThat(store.listPostings()).isEmpty();
@@ -132,7 +133,7 @@ class JobPostingAdminApiTest {
     void listsProgressAndDeletesPendingOnly() throws Exception {
         store.insertSubscription(new PushSubscription("s1", "https://fcm.googleapis.com/fcm/send/s1", "p", "a", NOW));
         store.insertSubscription(new PushSubscription("s2", "https://fcm.googleapis.com/fcm/send/s2", "p", "a", NOW));
-        var registered = (JobPostingService.Registered) postings.register(new JobPostingService.Draft("합성 회사", "백엔드",
+        var registered = (JobPostingService.Registered) postings.register(new JobPostingService.Draft("합성 회사", List.of("IT.BACKEND"),
             "https://careers.example.test/jobs/2", NOW.minusSeconds(60), NOW.plusSeconds(86400)));
         var claimed = store.claimDelivery(store.findDueDeliveries(NOW, 1).getFirst(), NOW, NOW.plusSeconds(120)).orElseThrow();
         store.completeDelivery(claimed, claimed.accepted(201));
@@ -162,25 +163,41 @@ class JobPostingAdminApiTest {
     }
 
     @Test
-    @DisplayName("직무를 생략하거나 비워도 등록되고 목록은 직무 필드를 생략한다")
-    void registersWithoutRole() throws Exception {
+    @DisplayName("직무 코드가 없거나 비거나 분류에 없으면 ROLE로 400이고, 유효한 코드로 등록하면 요청의 role 자유 글자는 무시되고 파생 라벨과 코드·라벨 목록이 내려간다")
+    void requiresKnownRolesAndDerivesLabel() throws Exception {
         store.insertSubscription(new PushSubscription("s1", "https://fcm.googleapis.com/fcm/send/s1", "p", "a", NOW));
         mvc.perform(post("/api/v1/notifications/admin/postings").header("Authorization", PASSWORD).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"company\":\"합성 회사\",\"link\":\"https://careers.example.test/jobs/omitted\",\"opensAt\":\"2030-01-01T06:00:00Z\",\"closesAt\":\"2030-01-31T15:00:00Z\"}"))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("INVALID_POSTING")).andExpect(jsonPath("$.reason").value("ROLE"));
+        mvc.perform(post("/api/v1/notifications/admin/postings").header("Authorization", PASSWORD).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"company\":\"합성 회사\",\"roles\":[],\"link\":\"https://careers.example.test/jobs/empty\",\"opensAt\":\"2030-01-01T06:00:00Z\",\"closesAt\":\"2030-01-31T15:00:00Z\"}"))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("INVALID_POSTING")).andExpect(jsonPath("$.reason").value("ROLE"));
+        mvc.perform(post("/api/v1/notifications/admin/postings").header("Authorization", PASSWORD).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"company\":\"합성 회사\",\"roles\":[\"IT.BACKEND\",\"IT.NOPE\"],\"link\":\"https://careers.example.test/jobs/unknown\",\"opensAt\":\"2030-01-01T06:00:00Z\",\"closesAt\":\"2030-01-31T15:00:00Z\"}"))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("INVALID_POSTING")).andExpect(jsonPath("$.reason").value("ROLE"));
+        mvc.perform(post("/api/v1/notifications/admin/postings").header("Authorization", PASSWORD).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"company\":\"합성 회사\",\"role\":\"자유 글자 직무\",\"roles\":[\"IT.BACKEND\",\"DESIGN.UX_UI\"],\"link\":\"https://careers.example.test/jobs/valid\",\"opensAt\":\"2030-01-01T06:00:00Z\",\"closesAt\":\"2030-01-31T15:00:00Z\"}"))
             .andExpect(status().isCreated()).andExpect(jsonPath("$.deliveries").value(1));
-        mvc.perform(post("/api/v1/notifications/admin/postings").header("Authorization", PASSWORD).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"company\":\"합성 회사\",\"role\":\"\",\"link\":\"https://careers.example.test/jobs/blank\",\"opensAt\":\"2030-01-01T06:00:00Z\",\"closesAt\":\"2030-01-31T15:00:00Z\"}"))
-            .andExpect(status().isCreated());
-        mvc.perform(post("/api/v1/notifications/admin/postings").header("Authorization", PASSWORD).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"company\":\"합성 회사\",\"role\":\"" + "직".repeat(121) + "\",\"link\":\"https://careers.example.test/jobs/long\",\"opensAt\":\"2030-01-01T06:00:00Z\",\"closesAt\":\"2030-01-31T15:00:00Z\"}"))
-            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.reason").value("ROLE"));
+        store.insertPosting(new JobPosting("0123456789abcdef0123456789abcdef", "레거시 회사", "합성 직무", null, "https://careers.example.test/jobs/legacy",
+            NOW.minusSeconds(60), NOW.plusSeconds(86400), NOW.minusSeconds(60)));
         mvc.perform(get("/api/v1/notifications/admin/postings").header("Authorization", PASSWORD))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.postings.length()").value(2))
-            .andExpect(jsonPath("$.postings[0].role").doesNotExist())
-            .andExpect(jsonPath("$.postings[1].role").doesNotExist())
-            .andExpect(jsonPath("$.postings[0].company").value("합성 회사"));
-        assertThat(store.deliveries()).hasSize(2);
+            .andExpect(jsonPath("$.postings[0].company").value("합성 회사"))
+            .andExpect(jsonPath("$.postings[0].role").value("백엔드·UX/UI"))
+            .andExpect(jsonPath("$.postings[0].roles.length()").value(2))
+            .andExpect(jsonPath("$.postings[0].roles[0].code").value("IT.BACKEND"))
+            .andExpect(jsonPath("$.postings[0].roles[0].label").value("백엔드"))
+            .andExpect(jsonPath("$.postings[0].roles[1].code").value("DESIGN.UX_UI"))
+            .andExpect(jsonPath("$.postings[0].roles[1].label").value("UX/UI"))
+            .andExpect(jsonPath("$.postings[1].company").value("레거시 회사"))
+            .andExpect(jsonPath("$.postings[1].role").value("합성 직무"))
+            .andExpect(jsonPath("$.postings[1].roles").doesNotExist());
+        assertThat(store.listPostings()).filteredOn(posting -> posting.link().endsWith("/valid")).singleElement().satisfies(posting -> {
+            assertThat(posting.roles()).containsExactly("IT.BACKEND", "DESIGN.UX_UI");
+            assertThat(posting.role()).isEqualTo("백엔드·UX/UI");
+        });
+        assertThat(store.deliveries()).hasSize(1);
     }
 
     @Test
@@ -188,7 +205,7 @@ class JobPostingAdminApiTest {
     void summarizesPeriodBehindLogin() throws Exception {
         store.insertSubscription(new PushSubscription("s1", "https://fcm.googleapis.com/fcm/send/s1", "p", "a", NOW));
         store.insertSubscription(new PushSubscription("s2", "https://fcm.googleapis.com/fcm/send/s2", "p", "a", NOW));
-        postings.register(new JobPostingService.Draft("합성 회사", "백엔드", "https://careers.example.test/jobs/summary", NOW.minusSeconds(60), NOW.plusSeconds(86400)));
+        postings.register(new JobPostingService.Draft("합성 회사", List.of("IT.BACKEND"), "https://careers.example.test/jobs/summary", NOW.minusSeconds(60), NOW.plusSeconds(86400)));
         var claimed = store.claimDelivery(store.findDueDeliveries(NOW, 1).getFirst(), NOW.plusSeconds(30), NOW.plusSeconds(150)).orElseThrow();
         store.completeDelivery(claimed, claimed.accepted(201));
 
@@ -223,6 +240,6 @@ class JobPostingAdminApiTest {
     }
 
     private static String registration(String link) {
-        return "{\"company\":\"합성 회사\",\"role\":\"백엔드\",\"link\":\"" + link + "\",\"opensAt\":\"2030-01-01T06:00:00Z\",\"closesAt\":\"2030-01-31T15:00:00Z\"}";
+        return "{\"company\":\"합성 회사\",\"roles\":[\"IT.BACKEND\"],\"link\":\"" + link + "\",\"opensAt\":\"2030-01-01T06:00:00Z\",\"closesAt\":\"2030-01-31T15:00:00Z\"}";
     }
 }

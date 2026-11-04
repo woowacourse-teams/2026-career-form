@@ -19,6 +19,8 @@ import tools.jackson.databind.json.JsonMapper;
 public final class JobCategories {
     static final String RESOURCE = "/notification/job-categories-v1.json";
     static final int MAX_LABEL_LENGTH = 40;
+    /** 라벨 구분자 가운뎃점(U+00B7). 앞뒤 공백 없이 잇는다. */
+    static final String LABEL_SEPARATOR = "·";
     private static final Pattern CODE = Pattern.compile("[A-Z][A-Z0-9_]{0,31}");
     private static final JsonMapper MAPPER = JsonMapper.builder().build();
     private final int version;
@@ -97,6 +99,25 @@ public final class JobCategories {
 
     /** 소분류 전체 수. */
     public int roleCount() { return roleLabels.size(); }
+
+    /** 공고·구독 공통 코드 정규화: null 요소를 빼고 앞뒤 공백을 벗긴 뒤 입력 순서를 지키며 중복을 없앤다. 모르는 코드 거절은 호출 쪽이 containsRole로 한다. */
+    public static List<String> normalize(List<String> codes) {
+        if (codes == null) { return List.of(); }
+        return codes.stream().filter(Objects::nonNull).map(String::strip).distinct().toList();
+    }
+
+    /** 소분류 라벨을 가운뎃점으로 이은 표시 문자열. maxLength를 넘으면 앞 k개 라벨에 " 외 n개"를 붙여 maxLength 이하가 되는 가장 큰 k(1 이상)를 쓴다. */
+    public String label(List<String> roleCodes, int maxLength) {
+        var labels = roleCodes.stream().map(code -> roleLabel(code).orElseThrow(() -> new IllegalArgumentException("Unknown role code"))).toList();
+        if (labels.isEmpty()) { throw new IllegalArgumentException("At least one role code is required"); }
+        var joined = String.join(LABEL_SEPARATOR, labels);
+        if (joined.length() <= maxLength) { return joined; }
+        for (var kept = labels.size() - 1; kept > 1; kept--) {
+            var candidate = String.join(LABEL_SEPARATOR, labels.subList(0, kept)) + " 외 " + (labels.size() - kept) + "개";
+            if (candidate.length() <= maxLength) { return candidate; }
+        }
+        return labels.getFirst() + " 외 " + (labels.size() - 1) + "개";
+    }
 
     private static String label(JsonNode node, String owner) {
         var label = text(node, "label", owner);

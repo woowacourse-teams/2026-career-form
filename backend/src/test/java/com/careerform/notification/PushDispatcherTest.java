@@ -8,6 +8,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -33,7 +34,7 @@ class PushDispatcherTest {
     private final PushDispatchMetrics metrics = new PushDispatchMetrics(meters, new ExternalCallMetrics(meters));
     private final PushSettings settings = PushSettings.defaults();
     private final PushDispatcher dispatcher = new PushDispatcher(store, client, new RetryPolicy(settings.maxAttempts()), settings, clock, Runnable::run, metrics);
-    private final JobPostingService postings = new JobPostingService(store, clock);
+    private final JobPostingService postings = new JobPostingService(store, JobCategories.load(), clock);
     private final String p256dh = VapidTestKeys.generate().publicKey;
     private final String auth = randomAuth();
 
@@ -347,7 +348,7 @@ class PushDispatcherTest {
     }
 
     private String register(String link, Instant opensAt, Instant closesAt) {
-        var registered = (JobPostingService.Registered) postings.register(new JobPostingService.Draft("합성 회사", "합성 직무", link, opensAt, closesAt));
+        var registered = (JobPostingService.Registered) postings.register(new JobPostingService.Draft("합성 회사", List.of("IT.BACKEND"), link, opensAt, closesAt));
         return registered.posting().id();
     }
 

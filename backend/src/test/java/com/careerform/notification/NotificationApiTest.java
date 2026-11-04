@@ -10,6 +10,7 @@ import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Set;
 
 import org.junit.jupiter.api.DisplayName;
@@ -31,7 +32,7 @@ class NotificationApiTest {
     private final VapidTestKeys keys = VapidTestKeys.generate();
     private final MemoryNotificationStore store = new MemoryNotificationStore();
     private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
-    private final JobPostingService postings = new JobPostingService(store, clock);
+    private final JobPostingService postings = new JobPostingService(store, JobCategories.load(), clock);
     private final PushSubscriptionService subscriptions = new PushSubscriptionService(store, clock, Set.of("fcm.googleapis.com"));
     private final MockMvc mvc = MockMvcBuilders.standaloneSetup(new NotificationController(
             VapidKeys.parse(keys.publicKey, keys.privateKey, "mailto:synthetic@example.test"), subscriptions, postings, JobCategories.load()))
@@ -88,26 +89,32 @@ class NotificationApiTest {
     }
 
     @Test
-    @DisplayName("진행 중 공고 목록은 접수 시작 이후 마감 전인 공고만 마감순으로 주고 등록 시각은 숨긴다")
+    @DisplayName("진행 중 공고 목록은 접수 시작 이후 마감 전인 공고만 마감순으로 주고 직무 코드 배열을 싣되 레거시 공고는 생략하며 등록 시각은 숨긴다")
     void listsOpenPostingsForExtension() throws Exception {
-        postings.register(new JobPostingService.Draft("합성 회사 A", "백엔드", "https://careers.example.test/jobs/a", NOW.minusSeconds(60), NOW.plusSeconds(7200)));
-        postings.register(new JobPostingService.Draft("합성 회사 B", "프론트엔드", "https://careers.example.test/jobs/b", NOW, NOW.plusSeconds(3600)));
-        postings.register(new JobPostingService.Draft("합성 회사 C", "데이터", "https://careers.example.test/jobs/c", NOW.plusSeconds(1), NOW.plusSeconds(3600)));
-        postings.register(new JobPostingService.Draft("합성 회사 D", null, "https://careers.example.test/jobs/d", NOW.minusSeconds(60), NOW.plusSeconds(1800)));
+        postings.register(new JobPostingService.Draft("합성 회사 A", List.of("IT.BACKEND"), "https://careers.example.test/jobs/a", NOW.minusSeconds(60), NOW.plusSeconds(7200)));
+        postings.register(new JobPostingService.Draft("합성 회사 B", List.of("IT.FRONTEND", "IT.MOBILE"), "https://careers.example.test/jobs/b", NOW, NOW.plusSeconds(3600)));
+        postings.register(new JobPostingService.Draft("합성 회사 C", List.of("IT.DATA"), "https://careers.example.test/jobs/c", NOW.plusSeconds(1), NOW.plusSeconds(3600)));
+        store.insertPosting(new JobPosting("0123456789abcdef0123456789abcdef", "합성 회사 D", null, null, "https://careers.example.test/jobs/d",
+            NOW.minusSeconds(60), NOW.plusSeconds(1800), NOW.minusSeconds(60)));
         mvc.perform(get("/api/v1/notifications/postings"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.postings.length()").value(3))
             .andExpect(jsonPath("$.postings[0].company").value("합성 회사 D"))
             .andExpect(jsonPath("$.postings[0].role").doesNotExist())
+            .andExpect(jsonPath("$.postings[0].roles").doesNotExist())
             .andExpect(jsonPath("$.postings[0].link").value("https://careers.example.test/jobs/d"))
             .andExpect(jsonPath("$.postings[1].company").value("합성 회사 B"))
-            .andExpect(jsonPath("$.postings[1].role").value("프론트엔드"))
+            .andExpect(jsonPath("$.postings[1].role").value("프론트엔드·모바일"))
+            .andExpect(jsonPath("$.postings[1].roles.length()").value(2))
+            .andExpect(jsonPath("$.postings[1].roles[0]").value("IT.FRONTEND"))
+            .andExpect(jsonPath("$.postings[1].roles[1]").value("IT.MOBILE"))
             .andExpect(jsonPath("$.postings[1].link").value("https://careers.example.test/jobs/b"))
             .andExpect(jsonPath("$.postings[1].opensAt").value("2030-01-01T00:00:00Z"))
             .andExpect(jsonPath("$.postings[1].closesAt").value("2030-01-01T01:00:00Z"))
             .andExpect(jsonPath("$.postings[1].id").isString())
             .andExpect(jsonPath("$.postings[1].registeredAt").doesNotExist())
-            .andExpect(jsonPath("$.postings[2].company").value("합성 회사 A"));
+            .andExpect(jsonPath("$.postings[2].company").value("합성 회사 A"))
+            .andExpect(jsonPath("$.postings[2].roles[0]").value("IT.BACKEND"));
     }
 
     @Test

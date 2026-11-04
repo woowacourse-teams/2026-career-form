@@ -48,7 +48,9 @@ public class NotificationConfiguration {
     /** 분류 파일이 깨져 있으면 예외가 그대로 올라가 기동이 멈춘다. */
     @Bean public JobCategories jobCategories() { return JobCategories.load(); }
 
-    @Bean public JobPostingService jobPostingService(NotificationStore store) { return new JobPostingService(store, Clock.systemUTC()); }
+    @Bean public JobPostingService jobPostingService(NotificationStore store, JobCategories categories) {
+        return new JobPostingService(store, categories, Clock.systemUTC());
+    }
 
     @Bean public PushSubscriptionService pushSubscriptionService(NotificationStore store, PushSettings settings) {
         return new PushSubscriptionService(store, Clock.systemUTC(), settings.allowedEndpointHosts());
