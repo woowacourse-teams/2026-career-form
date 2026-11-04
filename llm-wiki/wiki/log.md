@@ -1014,6 +1014,13 @@
 - [확장 Web Push 구독과 공고 알림](topics/extension-push-notifications.md)의 Current를 CF-395로 바꾸고 CF-349를 History에 남겼다. [선택적 이용 계측](topics/usage-analytics.md)의 Current를 CF-395로 바꾸고 CF-361을 History에 남겼다. 다른 topic 문서는 바꾸지 않았다.
 - 실제 지원값·계정·세션·시크릿·VAPID 키·구독 endpoint·사용자의 직무 선택값·대화 전문은 저장하지 않았다.
 
+## [2026-11-05] ingest | CF-413 공고 알림 직무 필터 전환 변수의 배포 전달
+
+- Approval-Digest: 058720dcf405d4c6c31bfaa925163a583a91843a28d3f459f0a5b1cc732c7aec
+- Source-Revision: 378814aa
+- 승인한 후보 1개를 [CF-413 bundle](../raw/issues/CF-413/manifest.md)에 기록했다. 전환 변수 `CAREER_FORM_PUSH_ROLE_FILTER_ENFORCED`의 workflow·compose 전달 경로와 기본값, 릴리스와 분리한 켜는 순서, 계약 테스트의 두 사전으로 이름을 더하는 방법이다.
+- [CI/CD 설정](topics/cicd-setup.md)의 Current를 CF-413으로 바꾸고 CF-350을 History에 남겼다. payload는 CF-409·CF-410이 더한 이름까지 포함한 전체 목록(변수 15개·시크릿 12개)을 다시 적어 topic의 목록과 jev 전달 경로 서술을 현재 상태로 맞췄다. 다른 topic 문서는 바꾸지 않았다.
+- 호스트 주소, 키 값, 계정, 대화 전문은 저장하지 않았다.
 ## [2026-11-05] ingest | CF-415 프론트엔드 CI의 frontend 경로 필터
 
 - Approval-Digest: 0331d54bd1a62ae15bdab9c1de13450ceb567cb14a7ef3bae73f0c4b4ab19846

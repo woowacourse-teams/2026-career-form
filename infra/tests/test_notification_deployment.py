@@ -14,6 +14,7 @@ WORKFLOWS = ("deploy-development.yml", "deploy-staging.yml", "deploy-production.
 NOTIFICATION_PREFIXES = ("CAREER_FORM_NOTIFICATION_", "CAREER_FORM_PUSH_")
 DEFAULTS = {
     "CAREER_FORM_NOTIFICATION_ENABLED": "false",
+    "CAREER_FORM_PUSH_ROLE_FILTER_ENFORCED": "false",
     "CAREER_FORM_PUSH_DISPATCH_INTERVAL": "60s",
     "CAREER_FORM_PUSH_CONCURRENCY": "20",
     "CAREER_FORM_PUSH_VAPID_PUBLIC_KEY": "",
@@ -28,6 +29,7 @@ SECRETS = {
 # base64url 모양의 합성 값: 공개키 87자(65바이트), 비공개키 43자(32바이트). 실제 키가 아니다.
 SYNTHETIC = {
     "CAREER_FORM_NOTIFICATION_ENABLED": "true",
+    "CAREER_FORM_PUSH_ROLE_FILTER_ENFORCED": "true",
     "CAREER_FORM_PUSH_DISPATCH_INTERVAL": "30s",
     "CAREER_FORM_PUSH_CONCURRENCY": "5",
     "CAREER_FORM_PUSH_VAPID_PUBLIC_KEY": "BSynthetic-vapid_public-key_" + "A" * 59,
