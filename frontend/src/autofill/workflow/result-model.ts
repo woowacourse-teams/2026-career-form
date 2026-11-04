@@ -9,6 +9,7 @@ import { isSkippedByApproval } from "./workflow-model";
 import { matchesResultValue } from "./result-value-match";
 import { resultFieldLabel } from "./result-label";
 import { nativeRetainedValueMatches } from "../policy/native-form-write";
+import { genericReasonText } from "../generic/grade-reason-text";
 
 export interface ResultModelInput {
   reviewItems: readonly ReviewPlanItem[];
@@ -32,6 +33,8 @@ export interface ResultModel {
     reason: string;
     written: boolean;
     failureCode?: WriteFailureCode;
+    /** Generic-path only: why the grade kept this field from being written. */
+    detail?: string;
   }[];
   skipped: { id: string; item: ReviewPlanItem; reason: string }[];
 }
@@ -51,6 +54,13 @@ function pendingReason(item: ReviewPlanItem): string {
   )
     return "선택 필요";
   return "입력 못함";
+}
+
+function gradeDetail(item: ReviewPlanItem): string | undefined {
+  if (!item.genericGrade || item.genericGrade === "AUTO") return undefined;
+  return item.genericReasonCode
+    ? genericReasonText(item.genericReasonCode)
+    : item.reason || undefined;
 }
 
 export function buildResultModel(input: ResultModelInput): ResultModel {
@@ -131,7 +141,11 @@ export function buildResultModel(input: ResultModelInput): ResultModel {
       completed.delete(stableId);
       skipped.push({ id, item, reason });
     };
-    const review = (reason: string, failureCode?: WriteFailureCode) => {
+    const review = (
+      reason: string,
+      failureCode?: WriteFailureCode,
+      detail?: string,
+    ) => {
       completed.delete(stableId);
       pending.push({
         id,
@@ -139,10 +153,17 @@ export function buildResultModel(input: ResultModelInput): ResultModel {
         reason,
         written: written && !entry?.unchanged,
         ...(failureCode ? { failureCode } : {}),
+        ...(detail ? { detail } : {}),
       });
     };
     if (live?.visible === false) {
       skip("현재 표시되지 않는 항목");
+    } else if (
+      !saved.length &&
+      item.genericGrade === "BLOCKED" &&
+      !item.hiddenFromReview
+    ) {
+      review("입력 못함", undefined, gradeDetail(item));
     } else if (!saved.length) {
       skip(
         item.profileFieldKey ||
@@ -205,10 +226,8 @@ export function buildResultModel(input: ResultModelInput): ResultModel {
     } else if (matches) {
       skip("기존 값 유지");
     } else {
-      review(
-        pendingReason(item),
-        entry?.status === "skipped" ? entry.failureCode : undefined,
-      );
+      const code = entry?.status === "skipped" ? entry.failureCode : undefined;
+      review(pendingReason(item), code, code ? undefined : gradeDetail(item));
     }
   }
   for (const result of resultsById.values()) {
