@@ -645,6 +645,36 @@ describe("fields whose analysis failed", () => {
     ...extra,
   });
 
+  it("keeps a field with a mismatched row stage as not filled in", () => {
+    const model = buildResultModel({
+      reviewItems: [
+        failed("a", {
+          genericReasonCode: "STRUCTURE_BLOCKED",
+          reason: "STAGE_KEY_MISMATCH",
+        }),
+      ],
+      results: [],
+    });
+    expect(model.skipped).toEqual([]);
+    expect(model.pending.map(({ reason }) => reason)).toEqual(["입력 못함"]);
+  });
+
+  it("does not list other structure-blocked fields as not filled in", () => {
+    const model = buildResultModel({
+      reviewItems: [
+        failed("a", {
+          genericReasonCode: "STRUCTURE_BLOCKED",
+          reason: "ROW_KIND_ALREADY_PREPARED",
+        }),
+      ],
+      results: [],
+    });
+    expect(model.pending).toEqual([]);
+    expect(model.skipped.map(({ reason }) => reason)).toEqual([
+      "자동 입력 미지원",
+    ]);
+  });
+
   it.each(Object.values(GENERIC_SECTION_FAILURE))(
     "shows a %s field as not filled in instead of unsupported",
     (code) => {

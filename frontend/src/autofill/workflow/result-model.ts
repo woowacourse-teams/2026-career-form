@@ -11,6 +11,10 @@ import { resultFieldLabel } from "./result-label";
 import { nativeRetainedValueMatches } from "../policy/native-form-write";
 import { genericReasonText } from "../generic/grade-reason-text";
 import { GENERIC_SECTION_FAILURE } from "../generic/section-failure";
+import {
+  GENERIC_STRUCTURE_BLOCKED_REASON,
+  STAGE_KEY_MISMATCH,
+} from "../generic/structure-context";
 
 export interface ResultModelInput {
   reviewItems: readonly ReviewPlanItem[];
@@ -67,14 +71,16 @@ const SECTION_FAILURE_CODES: ReadonlySet<string> = new Set(
   Object.values(GENERIC_SECTION_FAILURE),
 );
 
-/** The analysis itself failed for this field: a real failure, not "unsupported". */
+/**
+ * The analysis failed for this field, or the model linked it to a profile key
+ * of another row stage: a real failure, not "unsupported".
+ */
 function analysisFailed(item: ReviewPlanItem): boolean {
-  return (
-    item.genericGrade === "BLOCKED" &&
-    !item.hiddenFromReview &&
-    item.genericReasonCode !== undefined &&
-    SECTION_FAILURE_CODES.has(item.genericReasonCode)
-  );
+  if (item.genericGrade !== "BLOCKED" || item.hiddenFromReview) return false;
+  const code = item.genericReasonCode;
+  if (code === GENERIC_STRUCTURE_BLOCKED_REASON)
+    return item.reason.includes(STAGE_KEY_MISMATCH);
+  return code !== undefined && SECTION_FAILURE_CODES.has(code);
 }
 
 function gradeDetail(item: ReviewPlanItem): string | undefined {
