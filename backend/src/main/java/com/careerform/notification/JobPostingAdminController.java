@@ -31,7 +31,7 @@ public final class JobPostingAdminController {
 
     public record Registered(String id, Instant scheduledAt, long deliveries) { }
 
-    /** 목록 행. roles는 코드와 라벨 목록이며 레거시 공고는 role과 함께 생략된다. */
+    /** 목록 행. roles는 코드와 라벨 목록이며 레거시 공고는 roles를 생략하되 기존 자유 글자 role이 있으면 유지하고 role도 null일 때만 생략한다. */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record Row(String id, String company, String role, List<RoleView> roles, String link, Instant opensAt, Instant closesAt, Instant registeredAt,
                       Instant scheduledAt, DeliveryProgress progress) {

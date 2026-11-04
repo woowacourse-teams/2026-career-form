@@ -52,6 +52,19 @@ class PushPayloadTest {
     }
 
     @Test
+    @DisplayName("roles 없이 자유 글자 role만 있는 레거시 공고는 role을 그대로 싣고 roles만 생략한다")
+    void keepsLegacyFreeTextRoleWithoutRoles() {
+        var posting = new JobPosting("0123456789abcdef0123456789abcdef", "합성 회사", "합성 직무", null, "https://careers.example.test/jobs/3",
+            NOW.minusSeconds(60), NOW.plusSeconds(3600), NOW.minusSeconds(120));
+        var text = new String(PushPayload.of(posting, NOW), StandardCharsets.UTF_8);
+        var json = JsonMapper.builder().build().readTree(text);
+        assertThat(json.path("role").asString()).isEqualTo("합성 직무");
+        assertThat(json.has("roles")).isFalse();
+        assertThat(json.size()).isEqualTo(7);
+        assertThat(text).contains("\"role\":\"합성 직무\",\"link\":");
+    }
+
+    @Test
     @DisplayName("회사 80자, 직무 120자, 링크 1024자에 65자 소분류 코드 10개를 더한 상한에서도 암호화 여유를 둔 4KB 한도 안에 든다")
     void staysUnderWebPushLimitForMaximalInputs() {
         assertThat(maximalRoles()).hasSize(10).doesNotHaveDuplicates().allSatisfy(code -> assertThat(code).hasSize(65));

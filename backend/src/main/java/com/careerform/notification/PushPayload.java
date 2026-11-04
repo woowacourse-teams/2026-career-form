@@ -8,7 +8,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 
 import tools.jackson.databind.json.JsonMapper;
 
-/** 푸시 payload: 공고 ID, 회사, 직무 라벨과 코드 배열(레거시는 생략), 링크, 접수 시작, 마감, FCM 요청 시각. 암호화 뒤에도 Web Push 4KB 한도 안에 든다. */
+/** 푸시 payload: 공고 ID, 회사, 직무 라벨과 코드 배열, 링크, 접수 시작, 마감, FCM 요청 시각. 레거시 공고는 코드 배열을 생략하되 기존 자유 글자 라벨은 유지하고 라벨도 없을 때만 생략한다. 암호화 뒤에도 Web Push 4KB 한도 안에 든다. */
 public final class PushPayload {
     /** aes128gcm 헤더 86바이트 + 패딩 구분자 1바이트 + GCM 태그 16바이트. */
     public static final int AES128GCM_OVERHEAD_BYTES = 103;

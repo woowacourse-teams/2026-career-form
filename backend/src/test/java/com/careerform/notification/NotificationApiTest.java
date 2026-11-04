@@ -161,6 +161,20 @@ class NotificationApiTest {
     }
 
     @Test
+    @DisplayName("roles 없이 자유 글자 role만 있는 레거시 공고는 진행 중 목록 항목에 role을 그대로 싣고 roles만 생략한다")
+    void keepsLegacyFreeTextRoleInOpenPostings() throws Exception {
+        store.insertPosting(new JobPosting("0123456789abcdef0123456789abcdef", "합성 회사 E", "합성 직무", null, "https://careers.example.test/jobs/e",
+            NOW.minusSeconds(60), NOW.plusSeconds(1800), NOW.minusSeconds(60)));
+        mvc.perform(get("/api/v1/notifications/postings"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.postings.length()").value(1))
+            .andExpect(jsonPath("$.postings[0].company").value("합성 회사 E"))
+            .andExpect(jsonPath("$.postings[0].role").value("합성 직무"))
+            .andExpect(jsonPath("$.postings[0].roles").doesNotExist())
+            .andExpect(jsonPath("$.postings[0].link").value("https://careers.example.test/jobs/e"));
+    }
+
+    @Test
     @DisplayName("직무 분류는 버전과 대분류·소분류의 코드·라벨을 돌려준다")
     void servesJobCategories() throws Exception {
         mvc.perform(get("/api/v1/notifications/job-categories"))

@@ -39,7 +39,7 @@ public record JobPosting(
 
     public View view() { return new View(id, company, role, roles, link, opensAt, closesAt); }
 
-    /** 확장에 내려주는 모양. 진행 중 목록 항목과 푸시 payload가 같은 모양을 쓰고, 레거시 공고는 role·roles 필드를 생략한다. */
+    /** 확장에 내려주는 모양. 진행 중 목록 항목과 푸시 payload가 같은 모양을 쓰고, 레거시 공고는 roles를 생략하되 기존 자유 글자 role이 있으면 유지하고 role도 null일 때만 생략한다. */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record View(String id, String company, String role, List<String> roles, String link, Instant opensAt, Instant closesAt) { }
 }
