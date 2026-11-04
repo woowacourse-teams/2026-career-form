@@ -275,3 +275,29 @@ export function buildResultModel(input: ResultModelInput): ResultModel {
   }
   return { completed: [...completed.values()], pending, skipped };
 }
+
+// These skipped items are not left empty: the page already holds the value,
+// or the field is not on screen.
+const NOT_UNFILLED_REASONS = new Set([
+  "기존 값 유지",
+  "현재 표시되지 않는 항목",
+]);
+
+/**
+ * Candidate ids of fields the user still has to fill. A pending item keeps its
+ * mark even with a value; a skipped one with a value (a site default) does not.
+ */
+export function unfilledCandidateIds(
+  model: ResultModel,
+  valueOf: (id: string) => string | undefined = () => undefined,
+): string[] {
+  return [
+    ...model.pending.map(({ id }) => id),
+    ...model.skipped
+      .filter(
+        ({ id, reason }) =>
+          !NOT_UNFILLED_REASONS.has(reason) && !valueOf(id)?.trim(),
+      )
+      .map(({ id }) => id),
+  ];
+}

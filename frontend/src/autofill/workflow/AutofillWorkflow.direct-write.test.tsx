@@ -106,7 +106,7 @@ async function runToResult() {
       reviewShown = true;
   });
   observer.observe(document.body, { childList: true, subtree: true });
-  render(
+  const view = render(
     <AutofillWorkflow
       repository={{ load: async () => profile() }}
       apiClient={client()}
@@ -116,7 +116,7 @@ async function runToResult() {
   );
   await screen.findByRole("heading", { name: "기입 결과" }, { timeout: 5_000 });
   observer.disconnect();
-  return { reviewShown };
+  return { reviewShown, view };
 }
 
 describe("generic autofill without a review screen", () => {
@@ -174,5 +174,40 @@ describe("generic autofill without a review screen", () => {
     });
     await runToResult();
     expect(input("nationality").value).toBe("합성국적");
+  });
+});
+
+describe("unfilled field borders after the result", () => {
+  const OVERLAY = "[data-career-form-unfilled-highlight]";
+  const rects = () =>
+    vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(function (this: HTMLElement) {
+        return this.tagName === "INPUT"
+          ? new DOMRect(40, 100, 300, 30)
+          : new DOMRect(0, 0, 0, 0);
+      });
+  afterEach(() => vi.restoreAllMocks());
+
+  it("marks only the fields left unfilled and drops a border when the user types", async () => {
+    form();
+    rects();
+    await runToResult();
+    expect(input("specialty").value).toBe("합성병과");
+    // memo (blocked), nationality (needs check), email (differs from page)
+    expect(document.querySelectorAll(OVERLAY)).toHaveLength(3);
+    input("memo").value = "직접 입력";
+    input("memo").dispatchEvent(new Event("input", { bubbles: true }));
+    expect(document.querySelectorAll(OVERLAY)).toHaveLength(2);
+    expect(input("specialty").getAttribute("style")).toBeNull();
+  });
+
+  it("removes every border when the workflow unmounts", async () => {
+    form();
+    rects();
+    const { view } = await runToResult();
+    expect(document.querySelectorAll(OVERLAY)).toHaveLength(3);
+    view.unmount();
+    expect(document.querySelectorAll(OVERLAY)).toHaveLength(0);
   });
 });
