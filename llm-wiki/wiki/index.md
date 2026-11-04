@@ -53,7 +53,7 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [검토된 DOM 스냅샷 fixture의 공백 정규화](topics/dom-snapshot-fixture-whitespace.md) | pre-commit 공백 검사 통과를 위한 승인된 공백만 정규화 기록 | 2026-10-18 |
 | [입력 위치 표시와 설치 안내](topics/autofill-follow-and-install.md) | 기본 필드 추적, 확인 필요 결과와 첫 설치 안내 | 2026-09-22 |
 | [프로젝트 컨벤션](topics/project-conventions.md) | 공통, Git과 스택별 규약 | 2026-08-22 |
-| [프론트 브라우저 테스트](topics/frontend-browser-testing.md) | jsdom/Chromium 계층, 합성 상호작용 검증과 CI shard 병합 검증 경계 | 2026-10-20 |
+| [프론트 브라우저 테스트](topics/frontend-browser-testing.md) | jsdom/Chromium 계층, 합성 상호작용 검증과 CI shard 병합 검증 경계, frontend 변경에만 도는 CI 경로 필터와 2026-11 실행 시간 측정 | 2026-11-05 |
 | [프론트 정적 검사 범위](topics/frontend-static-checks.md) | lint의 TS 소스 제외, 기존 typecheck 실패와 CI·verify.py 미실행 관찰 | 2026-10-29 |
 | [Issue 개발 흐름](topics/issue-development-workflow.md) | Issue, 체크포인트와 사람 승인 경계 | 2026-08-22 |
 | [ADR 작성 규약](topics/adr-authoring.md) | ADR 판단과 Issue raw 기록 | 2026-08-22 |

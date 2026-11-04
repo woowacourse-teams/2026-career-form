@@ -1013,3 +1013,10 @@
 - 승인한 후보 7개를 [CF-395 bundle](../raw/issues/CF-395/manifest.md)에 payload 둘로 기록했다. 확장 문서는 받을 직무 저장과 구독 등록(careerForm.push.roles, 항상 roles 전송, 꺼짐 상태 지연 반영, 저장이 재등록을 기다리지 않음), 분류 캐시와 선택기(careerForm.push.jobCategories, 실패 시 캐시, 대분류 전체 선택), 거르기 규칙(roles 없음은 전원, 겹침만 표시, 미선택은 거름, 안내 조건), 사이드 패널 마감 공고 탭 안내와 panel 발신자 허용(status·enable·categories, #369 완화, #postings/settings 경로), 알림 설정 안내 목록 접기, 검증 환경(로컬 Chromium 확장 로드와 로컬 백엔드 빌드)이고, 계측 문서는 push_roles_saved와 role_count다.
 - [확장 Web Push 구독과 공고 알림](topics/extension-push-notifications.md)의 Current를 CF-395로 바꾸고 CF-349를 History에 남겼다. [선택적 이용 계측](topics/usage-analytics.md)의 Current를 CF-395로 바꾸고 CF-361을 History에 남겼다. 다른 topic 문서는 바꾸지 않았다.
 - 실제 지원값·계정·세션·시크릿·VAPID 키·구독 endpoint·사용자의 직무 선택값·대화 전문은 저장하지 않았다.
+
+## [2026-11-05] ingest | CF-415 프론트엔드 CI의 frontend 경로 필터
+
+- Approval-Digest: 0331d54bd1a62ae15bdab9c1de13450ceb567cb14a7ef3bae73f0c4b4ab19846
+- Source-Revision: bc613742
+- 승인한 후보 1개를 [CF-415 bundle](../raw/issues/CF-415/manifest.md)에 기록했다. frontend-ci.yml의 두 트리거 경로 필터, develop 보호 규칙에 필수 상태 체크가 없다는 확인, 2026-11-04 실행 시간 측정(파일 597개·2,808초, 20초 이상 38개 파일 73%, shard 146~702초)이다.
+- [프론트 브라우저 테스트](topics/frontend-browser-testing.md)의 Current를 CF-415로 바꾸고 CF-304·CF-178을 History에 남겼다. 다른 topic 문서는 바꾸지 않았다.
