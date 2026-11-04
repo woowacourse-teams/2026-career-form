@@ -35,6 +35,9 @@ interface Props {
   pushClient?: PushClient;
   now?: () => number;
   track?: TrackEvent;
+  /** Opens the 알림 설정 dialog as soon as it turns true (side panel deep link). */
+  openSettings?: boolean;
+  onSettingsOpened?: () => void;
 }
 interface Failure {
   message: string;
@@ -109,6 +112,8 @@ export function JobPostings({
   pushClient = defaultPushClient,
   now = Date.now,
   track = trackExtensionEvent,
+  openSettings = false,
+  onSettingsOpened,
 }: Props) {
   const id = useId();
   const [snapshot, setSnapshot] = useState<PostingSnapshot>();
@@ -195,6 +200,11 @@ export function JobPostings({
   useEffect(() => {
     if (settingsOpen) settingsDialog.current?.focus();
   }, [settingsOpen]);
+  useEffect(() => {
+    if (!openSettings) return;
+    setSettingsOpen(true);
+    onSettingsOpened?.();
+  }, [openSettings, onSettingsOpened]);
   const closeSettings = () => {
     setSettingsOpen(false);
     settingsButton.current?.focus();

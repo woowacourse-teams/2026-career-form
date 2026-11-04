@@ -55,7 +55,11 @@ it("관리 페이지에서만 공고를 읽고 쓰며 패널은 진입만 허용
     { type: "careerForm.openPostings", create: true },
     { id: "own", url: "https://example.com" },
   );
-  expect(pages).toEqual(["#postings", "#postings"]);
+  await handler(
+    { type: "careerForm.openPostings", settings: true },
+    { id: "own", url: "https://example.com" },
+  );
+  expect(pages).toEqual(["#postings", "#postings", "#postings/settings"]);
   expect(handler({ type: "other" }, { id: "own" })).toBeUndefined();
 });
 it("완료 또는 수정된 알림 클릭으로 오래된 공고를 열지 않는다", async () => {

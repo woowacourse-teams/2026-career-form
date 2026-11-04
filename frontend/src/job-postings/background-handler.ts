@@ -18,7 +18,10 @@ export function createPostingHandler(
     if (!isRecord(message)) return undefined;
     if (message.type === OPEN_POSTINGS) {
       if (sender.id !== extensionId) return Promise.resolve({ ok: false });
-      return openPage("#postings")
+      // The side panel may ask for the page with the 알림 설정 dialog open.
+      return openPage(
+        message.settings === true ? "#postings/settings" : "#postings",
+      )
         .then(() => ({ ok: true }))
         .catch(() => ({
           ok: false,
