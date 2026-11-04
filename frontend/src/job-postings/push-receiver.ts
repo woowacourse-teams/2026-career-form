@@ -1,4 +1,5 @@
 import type { AnalyticsEvent, TrackEvent } from "../analytics/events";
+import { matchesSelectedRoles } from "./job-roles";
 import { isHttpUrl, remainingTime, type PostingInput } from "./model";
 import {
   isServerPosting,
@@ -44,6 +45,8 @@ export interface PushReceiverPorts {
     save(input: PostingInput): Promise<PostingSnapshot>;
   };
   track: TrackEvent;
+  // The user's selected role codes; empty when none are chosen.
+  roles(): Promise<string[]>;
   unread: {
     add(postingId: string, closesAt: number): Promise<unknown>;
     remove(postingId: string): Promise<unknown>;
@@ -53,7 +56,8 @@ export interface PushReceiverPorts {
     markSeenByClick(): Promise<unknown>;
   };
 }
-export type ReceiveOutcome = "notified" | "duplicate" | "expired" | "invalid";
+export type ReceiveOutcome =
+  "notified" | "filtered" | "duplicate" | "expired" | "invalid";
 export type SaveOutcome =
   "saved" | "no_future_reminders" | "already_saved" | "expired";
 
@@ -160,6 +164,10 @@ export class PushReceiver {
     return this.serial(async () => {
       const posting = parseServerPosting(payload);
       if (!posting) return "invalid";
+      // Second check behind the server's targeting: covers the period before
+      // role filtering is enforced server-side. Nothing is shown or counted.
+      if (!matchesSelectedRoles(posting.roles, await this.ports.roles()))
+        return "filtered";
       const now = this.ports.now();
       const notified = Object.fromEntries(
         Object.entries(await this.load()).filter(([, p]) => p.closesAt > now),

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
+import type { JobCategoryStore } from "./job-roles";
 import type { NotificationCheck } from "./notification-check";
-import { PushApiError } from "./push-api";
+import { PushApiError, type JobCategories } from "./push-api";
 import { createPushHandler } from "./push-background-handler";
 import { parsePushMessage, PUSH_MESSAGE } from "./push-messages";
 import type { PushSubscriptionService } from "./push-subscription";
@@ -14,19 +15,42 @@ const posting = {
   opensAt: 1,
   closesAt: 2,
 };
+const categories: JobCategories = {
+  version: 1,
+  categories: [
+    {
+      code: "IT",
+      label: "IT/개발",
+      roles: [
+        { code: "IT.BACKEND", label: "백엔드" },
+        { code: "IT.FRONTEND", label: "프론트엔드" },
+      ],
+    },
+  ],
+};
 const options = { id: "own", url: "chrome-extension://own/options.html" };
 const onboarding = { id: "own", url: "chrome-extension://own/onboarding.html" };
 function setup() {
   const calls: unknown[] = [];
   let enabled = true;
   let inboxError: unknown;
+  let roles: string[] = [];
+  let categoriesView: Awaited<ReturnType<JobCategoryStore["load"]>> = {
+    categories,
+    error: null,
+  };
   const service = {
     isEnabled: async () => enabled,
     supported: () => true,
     status: async () => ({ code: "registered", updatedAt: 1, attempts: 0 }),
+    roles: async () => roles,
     setEnabled: async (value: boolean) => {
       calls.push(["setEnabled", value]);
       enabled = value;
+    },
+    setRoles: async (value: string[]) => {
+      calls.push(["setRoles", value]);
+      roles = value;
     },
   } as unknown as PushSubscriptionService;
   const check = {
@@ -61,9 +85,16 @@ function setup() {
         if (inboxError) throw inboxError;
         return [posting];
       },
+      jobCategories: async () => categories,
     },
     check,
     unread,
+    categories: {
+      load: async () => {
+        calls.push(["loadCategories"]);
+        return categoriesView;
+      },
+    },
     extensionId: "own",
   });
   return {
@@ -71,6 +102,12 @@ function setup() {
     calls,
     failInbox: (error: unknown) => {
       inboxError = error;
+    },
+    setRoles: (value: string[]) => {
+      roles = value;
+    },
+    serveCategories: (view: typeof categoriesView) => {
+      categoriesView = view;
     },
   };
 }
@@ -110,8 +147,47 @@ describe("push background handler", () => {
         permission: "granted",
         visibility: { result: "unknown" },
         unread: 2,
+        roles: [],
       },
     });
+  });
+  it("받을 직무 저장은 선택값을 구독 서비스에 넘기고 새 상태를 돌려준다", async () => {
+    const { handler, calls } = setup();
+    expect(
+      await handler(message("roles", { roles: ["IT.BACKEND"] }), options),
+    ).toMatchObject({ ok: true, state: { roles: ["IT.BACKEND"] } });
+    expect(calls).toEqual([["setRoles", ["IT.BACKEND"]]]);
+    expect(
+      await handler(message("roles", { roles: ["bad code"] }), options),
+    ).toEqual({ ok: false, code: "UNAVAILABLE" });
+    expect(await handler(message("roles"), options)).toEqual({
+      ok: false,
+      code: "UNAVAILABLE",
+    });
+  });
+  it("분류 조회는 서버 응답으로 캐시하고 분류에 없는 선택 코드를 버린다", async () => {
+    const { handler, calls, setRoles } = setup();
+    setRoles(["IT.BACKEND", "IT.GONE"]);
+    expect(await handler(message("categories"), options)).toEqual({
+      ok: true,
+      categories: { categories, error: null },
+    });
+    expect(calls).toEqual([["loadCategories"], ["setRoles", ["IT.BACKEND"]]]);
+  });
+  it("분류 조회가 실패하면 캐시와 오류를 그대로 전달하고 선택값은 건드리지 않는다", async () => {
+    const { handler, calls, setRoles, serveCategories } = setup();
+    setRoles(["IT.GONE"]);
+    serveCategories({ categories, error: "ENDPOINT_UNAVAILABLE" });
+    expect(await handler(message("categories"), options)).toEqual({
+      ok: true,
+      categories: { categories, error: "ENDPOINT_UNAVAILABLE" },
+    });
+    serveCategories({ categories: null, error: "NOT_CONFIGURED" });
+    expect(await handler(message("categories"), options)).toEqual({
+      ok: true,
+      categories: { categories: null, error: "NOT_CONFIGURED" },
+    });
+    expect(calls).toEqual([["loadCategories"], ["loadCategories"]]);
   });
   it("켜기·끄기는 저장 뒤 상태를 돌려주고 자동 저장 설정 메시지는 거절한다", async () => {
     const { handler, calls } = setup();
@@ -186,11 +262,14 @@ describe("push background handler", () => {
         onboarding,
       ),
     ).toMatchObject({ ok: true });
-    for (const action of ["enable", "inbox", "later"])
+    for (const action of ["enable", "inbox", "later", "categories"])
       expect(await handler(message(action), onboarding)).toEqual({
         ok: false,
         code: "UNAVAILABLE",
       });
+    expect(
+      await handler(message("roles", { roles: ["IT.BACKEND"] }), onboarding),
+    ).toEqual({ ok: false, code: "UNAVAILABLE" });
     expect(
       await handler(message("autosave", { enabled: true }), onboarding),
     ).toEqual({ ok: false, code: "UNAVAILABLE" });
@@ -208,6 +287,23 @@ describe("push background handler", () => {
     ).toEqual(message("record", { answer: "seen", source: "card" }));
     expect(parsePushMessage(message("record", { answer: "seen" }))).toBe(
       undefined,
+    );
+    expect(
+      parsePushMessage(
+        message("roles", { roles: ["IT.BACKEND", "IT.BACKEND", "IT.QA"] }),
+      ),
+    ).toEqual(message("roles", { roles: ["IT.BACKEND", "IT.QA"] }));
+    expect(parsePushMessage(message("roles", { roles: [] }))).toEqual(
+      message("roles", { roles: [] }),
+    );
+    expect(
+      parsePushMessage(message("roles", { roles: ["IT.BACKEND", 1] })),
+    ).toBeUndefined();
+    expect(parsePushMessage(message("roles", { roles: "IT.BACKEND" }))).toBe(
+      undefined,
+    );
+    expect(parsePushMessage(message("categories"))).toEqual(
+      message("categories"),
     );
     expect(
       parsePushMessage(message("autosave", { enabled: true })),

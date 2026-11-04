@@ -141,6 +141,7 @@ it("설치 선택 화면에 새 공고 알림 카드를 보여 주고 알림 끄
     permission: "granted",
     visibility: { result: "unknown" },
     unread: 0,
+    roles: [],
   };
   const setEnabled = vi.fn(async (enabled: boolean) => {
     state = { ...state, enabled };
@@ -152,7 +153,9 @@ it("설치 선택 화면에 새 공고 알림 카드를 보여 주고 알림 끄
     test: async () => state,
     record: async () => state,
     later: async () => state,
+    setRoles: async () => state,
     inbox: async () => [],
+    categories: async () => ({ categories: null, error: null }),
     subscribe: () => () => {},
   };
   const track = vi.fn();
@@ -186,6 +189,7 @@ it("설치 시작 화면의 선택과 알림 테스트 응답을 기록한다", 
     permission: "granted",
     visibility: { result: "unknown" },
     unread: 0,
+    roles: [],
   };
   const test = vi.fn(async () => state);
   const record = vi.fn(async () => state);
@@ -195,7 +199,9 @@ it("설치 시작 화면의 선택과 알림 테스트 응답을 기록한다", 
     test,
     record,
     later: async () => state,
+    setRoles: async () => state,
     inbox: async () => [],
+    categories: async () => ({ categories: null, error: null }),
     subscribe: () => () => {},
   };
   const track = vi.fn();

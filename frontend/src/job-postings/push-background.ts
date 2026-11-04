@@ -1,5 +1,6 @@
 import { browser } from "wxt/browser";
 import type { TrackEvent } from "../analytics/events";
+import { JobCategoryStore } from "./job-roles";
 import { NotificationCheck, TEST_NOTIFICATION_ID } from "./notification-check";
 import { createPushApi } from "./push-api";
 import { createPushHandler } from "./push-background-handler";
@@ -126,8 +127,14 @@ export function installPushBackground({
     },
     postings,
     track,
+    roles: () => service.roles(),
     unread,
     visibility: check,
+  });
+  const categories = new JobCategoryStore({
+    api,
+    storage: browser.storage.local,
+    now: Date.now,
   });
   // Redraw the saved count after every service worker start.
   void unread.redraw().catch(() => undefined);
@@ -189,6 +196,7 @@ export function installPushBackground({
       api,
       check,
       unread,
+      categories,
       extensionId: browser.runtime.id,
     }),
   };

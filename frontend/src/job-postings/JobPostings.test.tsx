@@ -23,6 +23,7 @@ const seenState: PushStateView = {
   permission: "granted",
   visibility: { result: "seen", checkedAt: NOW, source: "test" },
   unread: 0,
+  roles: [],
 };
 function setup(
   options: {
@@ -65,7 +66,12 @@ function setup(
     test: vi.fn(async () => pushState),
     record: vi.fn(async () => pushState),
     later: vi.fn(async () => pushState),
+    setRoles: vi.fn(async (roles: readonly string[]) => ({
+      ...pushState,
+      roles: [...roles],
+    })),
     inbox: vi.fn(options.inbox ?? (async () => [...inbox])),
+    categories: vi.fn(async () => ({ categories: null, error: null })),
     subscribe: () => () => {},
   } satisfies PushClient;
   return {

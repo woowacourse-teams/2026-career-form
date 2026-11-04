@@ -3,7 +3,12 @@ import type {
   VisibilityAnswer,
   VisibilityState,
 } from "./notification-check";
-import type { PushApiErrorCode, ServerPosting } from "./push-api";
+import type { JobCategoriesView } from "./job-roles";
+import {
+  isRoleCode,
+  type PushApiErrorCode,
+  type ServerPosting,
+} from "./push-api";
 import type { PushStatus } from "./push-subscription";
 import { isRecord } from "./repository";
 
@@ -16,6 +21,8 @@ const pushActions = [
   "test",
   "record",
   "later",
+  "categories",
+  "roles",
 ] as const;
 export type PushAction = (typeof pushActions)[number];
 const visibilityAnswers: readonly VisibilityAnswer[] = ["seen", "not_seen"];
@@ -24,13 +31,18 @@ export type RecordSource = (typeof recordSources)[number];
 export type PushCommand =
   | {
       type: typeof PUSH_MESSAGE;
-      action: Exclude<PushAction, "record">;
+      action: Exclude<PushAction, "record" | "roles">;
     }
   | {
       type: typeof PUSH_MESSAGE;
       action: "record";
       answer: VisibilityAnswer;
       source: RecordSource;
+    }
+  | {
+      type: typeof PUSH_MESSAGE;
+      action: "roles";
+      roles: string[];
     };
 export interface PushStateView {
   enabled: boolean;
@@ -39,10 +51,13 @@ export interface PushStateView {
   permission: NotificationPermission;
   visibility: VisibilityState;
   unread: number;
+  // Selected role codes; empty until the user picks some.
+  roles: string[];
 }
 export type PushResponse =
   | { ok: true; state: PushStateView }
   | { ok: true; postings: ServerPosting[] }
+  | { ok: true; categories: JobCategoriesView }
   | { ok: false; code: PushApiErrorCode | "UNAVAILABLE" };
 
 // The onboarding page may check, test and switch off; everything else stays
@@ -88,6 +103,13 @@ export function parsePushMessage(value: unknown): PushCommand | undefined {
     return answer && source
       ? { type: PUSH_MESSAGE, action, answer, source }
       : undefined;
+  }
+  if (action === "roles") {
+    // Every entry must be a role code; a malformed list is rejected whole
+    // rather than silently saved in part.
+    if (!Array.isArray(value.roles) || !value.roles.every(isRoleCode))
+      return undefined;
+    return { type: PUSH_MESSAGE, action, roles: [...new Set(value.roles)] };
   }
   return { type: PUSH_MESSAGE, action };
 }

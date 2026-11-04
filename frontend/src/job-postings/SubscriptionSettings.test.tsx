@@ -14,6 +14,7 @@ const base: PushStateView = {
   permission: "granted",
   visibility: { result: "seen", checkedAt: NOW, source: "test" },
   unread: 0,
+  roles: [],
 };
 function renderSettings(state: PushStateView | null = base, failed = false) {
   const onEnabledChange = vi.fn(async () => {});

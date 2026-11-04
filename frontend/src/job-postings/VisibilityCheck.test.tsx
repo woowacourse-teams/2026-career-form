@@ -11,6 +11,7 @@ const base: PushStateView = {
   permission: "granted",
   visibility: { result: "unknown" },
   unread: 0,
+  roles: [],
 };
 function renderCheck(
   variant: "onboarding" | "question" | "confirm" | "settings",
