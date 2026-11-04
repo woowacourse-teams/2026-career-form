@@ -185,6 +185,19 @@ describe("user view", () => {
     expect(screen.queryByText(/%/)).toBeNull();
   });
 
+  it("names the recheck for fields that were not filled", () => {
+    render(
+      <WorkflowLoading
+        developerMode={false}
+        writing={false}
+        activity="rechecking"
+      />,
+    );
+    expect(
+      screen.getAllByText("입력이 안된 칸들이 있는지 확인하고 있어요").length,
+    ).toBeGreaterThan(0);
+  });
+
   it("shows no progressbar while writing without a known total", () => {
     render(
       <WorkflowLoading developerMode={false} writing total={0} done={0} />,

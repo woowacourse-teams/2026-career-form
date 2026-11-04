@@ -23,7 +23,8 @@ export interface WriteProgress {
   retryRecovered?: boolean;
   failureCode?: WriteFailureCode;
 }
-export type WorkflowActivity = "matching" | "preparing" | "address";
+export type WorkflowActivity =
+  "matching" | "preparing" | "address" | "rechecking";
 function uniqueDomId(element: Element): string | undefined {
   return element.id &&
     Array.from(element.ownerDocument.querySelectorAll("[id]")).filter(
