@@ -499,3 +499,34 @@ describe("display delay property and key-less console record", () => {
     }
   });
 });
+
+describe("role count property", () => {
+  it.each([
+    [{ role_count: 0 }, { role_count: 0 }],
+    [{ role_count: 3 }, { role_count: 3 }],
+    [{ role_count: -1 }, {}],
+    [{ role_count: 1.5 }, {}],
+    [{ role_count: "3" }, {}],
+    [{ roles: ["IT.BACKEND"] }, {}],
+  ])(
+    "keeps only a non-negative integer role_count and never codes: %j",
+    async (input, expected) => {
+      const { handle, payloads } = collector();
+      await handle({
+        type: "ANALYTICS_TRACK",
+        event: "push_roles_saved",
+        properties: { surface: "options", ...input },
+      });
+      expect(payloads).toEqual([
+        expect.objectContaining({
+          event: "push_roles_saved",
+          properties: {
+            surface: "options",
+            ...expected,
+            $process_person_profile: false,
+          },
+        }),
+      ]);
+    },
+  );
+});
