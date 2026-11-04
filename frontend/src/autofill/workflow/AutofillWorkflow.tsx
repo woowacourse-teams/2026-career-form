@@ -29,6 +29,7 @@ import { useWriteProgress } from "./use-write-progress";
 import { useReviewDiagnostics } from "./use-review-diagnostics";
 import { useOperatedFields } from "./use-operated-fields";
 import { resultFieldOptions, resultFieldState } from "./result-field-state";
+import { buildResultModel, unfilledCandidateIds } from "./result-model";
 import {
   captureComponentResultTargets,
   recollectComponentResultRegistry,
@@ -39,6 +40,7 @@ import {
 } from "./retained-drivers";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createFieldPresentation } from "../write/field-presentation";
+import { createUnfilledPresentation } from "../write/unfilled-presentation";
 import { progressCategory, type WorkflowActivity } from "./progress-model";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import type { AddressResult } from "../address/types";
@@ -234,6 +236,10 @@ function PolicyReadyWorkflow({
   const adapter = getWorkflowAdapter(pageDocument);
   const presentation = useMemo(
     () => createFieldPresentation(pageDocument),
+    [pageDocument],
+  );
+  const unfilledPresentation = useMemo(
+    () => createUnfilledPresentation(pageDocument),
     [pageDocument],
   );
   const [currentCategory, setCurrentCategory] = useState<string>();
@@ -1328,6 +1334,32 @@ function PolicyReadyWorkflow({
       .captureDriverResults
       ? (resultRegistry ?? fieldsSnapshot?.registry)
       : fieldsSnapshot?.registry;
+
+  // Red borders stay until the user fills a field, the panel closes or the page changes.
+  useEffect(() => () => unfilledPresentation.clear(), [unfilledPresentation]);
+  useEffect(() => {
+    if (stage !== "result" || !visibleRegistry) {
+      unfilledPresentation.clear();
+      return;
+    }
+    unfilledPresentation.mark(
+      visibleRegistry,
+      unfilledCandidateIds(
+        buildResultModel({
+          reviewItems,
+          results,
+          progress,
+          profile,
+          wasWritten: (id) => progressTracker.wasWritten(id, visibleRegistry),
+          progressIdFor: (id) =>
+            progressTracker.progressIdFor(id, visibleRegistry),
+          progressStateFor: progressTracker.progressStateFor,
+          fieldStateFor: (id) =>
+            resultFieldState(visibleRegistry, pageDocument, id),
+        }),
+      ),
+    );
+  }, [stage, results, progress, visibleRegistry]);
 
   return (
     <WorkflowScreens
