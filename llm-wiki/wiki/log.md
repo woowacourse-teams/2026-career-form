@@ -1013,3 +1013,11 @@
 - 승인한 후보 7개를 [CF-395 bundle](../raw/issues/CF-395/manifest.md)에 payload 둘로 기록했다. 확장 문서는 받을 직무 저장과 구독 등록(careerForm.push.roles, 항상 roles 전송, 꺼짐 상태 지연 반영, 저장이 재등록을 기다리지 않음), 분류 캐시와 선택기(careerForm.push.jobCategories, 실패 시 캐시, 대분류 전체 선택), 거르기 규칙(roles 없음은 전원, 겹침만 표시, 미선택은 거름, 안내 조건), 사이드 패널 마감 공고 탭 안내와 panel 발신자 허용(status·enable·categories, #369 완화, #postings/settings 경로), 알림 설정 안내 목록 접기, 검증 환경(로컬 Chromium 확장 로드와 로컬 백엔드 빌드)이고, 계측 문서는 push_roles_saved와 role_count다.
 - [확장 Web Push 구독과 공고 알림](topics/extension-push-notifications.md)의 Current를 CF-395로 바꾸고 CF-349를 History에 남겼다. [선택적 이용 계측](topics/usage-analytics.md)의 Current를 CF-395로 바꾸고 CF-361을 History에 남겼다. 다른 topic 문서는 바꾸지 않았다.
 - 실제 지원값·계정·세션·시크릿·VAPID 키·구독 endpoint·사용자의 직무 선택값·대화 전문은 저장하지 않았다.
+
+## [2026-11-05] ingest | CF-412 범용 결과 화면 분류와 민감 항목 문장 정정
+
+- Approval-Digest: eba6ba6cbb48683b950a554a698c63bb45e0c56442e5f1e0245e3e858f486e6e
+- Source-Revision: 08faae7f
+- 승인한 후보 4개를 [CF-412 bundle](../raw/issues/CF-412/manifest.md)에 payload 둘로 기록했다.
+- [범용 결과 화면 분류](topics/generic-result-classification.md)를 새로 만들었다. [구조 행동 자동 실행](topics/generic-autonomous-structural-actions.md)과 [실사이트 평가](topics/live-autofill-evaluation.md)의 민감 항목 문장을 고치고 Current를 CF-412로 바꿨다.
+- 실제 지원값·라벨·URL·계정·세션·시크릿·대화 전문은 저장하지 않았다.
