@@ -1,12 +1,14 @@
 package com.careerform.notification;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 /** 테스트용 메모리 저장소. 조건부 갱신(선점·완료)은 MongoDB findAndModify와 같은 비교 후 교체 의미를 synchronized로 재현한다. */
 public final class MemoryNotificationStore implements NotificationStore {
@@ -51,6 +53,24 @@ public final class MemoryNotificationStore implements NotificationStore {
     }
 
     @Override public synchronized List<String> subscriptionIds() { return List.copyOf(subscriptions.keySet()); }
+
+    @Override public synchronized boolean updateSubscriptionRoles(String id, List<String> roles, Instant updatedAt) {
+        var current = subscriptions.get(id);
+        if (current == null) { return false; }
+        subscriptions.put(id, current.withRoles(roles, updatedAt));
+        return true;
+    }
+
+    @Override public synchronized List<String> subscriptionIdsForRoles(Collection<String> roles, boolean includeUnselected) {
+        var wanted = Set.copyOf(roles);
+        return subscriptions.values().stream()
+            .filter(subscription -> unselected(subscription) ? includeUnselected : subscription.roles().stream().anyMatch(wanted::contains))
+            .map(PushSubscription::id).toList();
+    }
+
+    @Override public synchronized long countSubscriptionsWithRoles() {
+        return subscriptions.values().stream().filter(subscription -> !unselected(subscription)).count();
+    }
 
     @Override public synchronized boolean deleteSubscription(String id) { return subscriptions.remove(id) != null; }
 
@@ -136,6 +156,9 @@ public final class MemoryNotificationStore implements NotificationStore {
     }
 
     public synchronized List<PushDelivery> deliveries() { return List.copyOf(deliveries.values()); }
+
+    /** roles가 없거나 빈 구독은 미선택이다. */
+    private static boolean unselected(PushSubscription subscription) { return subscription.roles() == null || subscription.roles().isEmpty(); }
 
     private static boolean due(PushDelivery delivery, Instant now) {
         return (delivery.status() == PushDelivery.Status.PENDING && !delivery.nextAttemptAt().isAfter(now))

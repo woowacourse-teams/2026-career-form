@@ -413,7 +413,7 @@ it("leaves an incompatible veteran number blank while completing other fields", 
     })
     .closest("article")!;
   expect(
-    within(veteranRow).getByText(
+    within(veteranRow).getByLabelText(
       "자동으로 입력하지 못했어요. 지원서에서 이 값을 직접 입력해 주세요.",
     ),
   ).toBeInTheDocument();

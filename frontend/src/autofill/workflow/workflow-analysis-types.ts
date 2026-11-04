@@ -45,6 +45,8 @@ type AddressRun = {
   nativeDependents?: NativeDependentState;
   button?: Element;
   task?: Promise<AddressResult>;
+  /** Address fields a manual generic address result leaves to the user. */
+  genericAddressRows?: ReviewPlanItem[];
 };
 export type DeferredDriverFailures = WeakMap<
   Element,

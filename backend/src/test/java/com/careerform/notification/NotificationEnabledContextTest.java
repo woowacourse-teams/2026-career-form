@@ -14,9 +14,12 @@ import java.util.Base64;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -45,6 +48,7 @@ import com.careerform.formanalysis.infrastructure.persistence.mongo.FormAnalysis
 @MockitoBean(name = "startupPolicySeeder", types = org.springframework.boot.ApplicationRunner.class)
 @MockitoBean(name = "hplaceFormPolicySeeder", types = org.springframework.boot.ApplicationRunner.class)
 @Import(NotificationEnabledContextTest.Fakes.class)
+@ExtendWith(OutputCaptureExtension.class)
 @DisplayName("알림 기능 토글이 켜진 애플리케이션 컨텍스트")
 class NotificationEnabledContextTest {
     private static final VapidTestKeys KEYS = VapidTestKeys.generate();
@@ -83,6 +87,22 @@ class NotificationEnabledContextTest {
     }
 
     @Test
+    @DisplayName("직무 분류 조회는 인증 없이 번들된 분류 파일의 버전과 대분류를 돌려준다")
+    void servesBundledJobCategories() throws Exception {
+        mockMvc.perform(get("/api/v1/notifications/job-categories")).andExpect(status().isOk())
+            .andExpect(jsonPath("$.version").value(1))
+            .andExpect(jsonPath("$.categories[0].roles[0].code").value("IT.BACKEND"));
+        assertThat(context.getBean(JobCategories.class).roleCount()).isGreaterThan(7);
+    }
+
+    @Test
+    @DisplayName("직무 필터 전환 설정은 기본 꺼짐으로 뜨고 기동 로그에 모드를 남긴다")
+    void startsWithRelaxedRoleFilterAndLogsMode(CapturedOutput output) {
+        assertThat(context.getBean(RoleFilterPolicy.class)).isEqualTo(RoleFilterPolicy.defaults());
+        assertThat(output.getAll()).contains("NOTIFICATION_ROLE_FILTER enforced=false");
+    }
+
+    @Test
     @DisplayName("관리 API와 화면은 품질 로그인 뒤에 있고 /notifications는 정적 관리 화면으로 전달된다")
     void protectsAdminApiAndServesManagementPage() throws Exception {
         mockMvc.perform(get("/api/v1/notifications/admin/postings")).andExpect(status().isUnauthorized());
@@ -93,7 +113,7 @@ class NotificationEnabledContextTest {
         mockMvc.perform(get("/notifications/index.html")).andExpect(status().isOk())
             .andExpect(result -> assertThat(new String(result.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8)).contains("공고 알림 관리"));
         mockMvc.perform(get("/notifications/postings.js")).andExpect(status().isOk())
-            .andExpect(result -> assertThat(new String(result.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8)).contains("/api/v1/notifications/admin", "/summary?from="));
+            .andExpect(result -> assertThat(new String(result.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8)).contains("/api/v1/notifications/admin", "/summary?from=", "/job-categories"));
     }
 
     @Test

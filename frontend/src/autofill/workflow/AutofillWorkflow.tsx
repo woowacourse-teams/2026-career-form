@@ -29,6 +29,7 @@ import { useWriteProgress } from "./use-write-progress";
 import { useReviewDiagnostics } from "./use-review-diagnostics";
 import { useOperatedFields } from "./use-operated-fields";
 import { resultFieldOptions, resultFieldState } from "./result-field-state";
+import { buildResultModel, unfilledCandidateIds } from "./result-model";
 import {
   captureComponentResultTargets,
   recollectComponentResultRegistry,
@@ -39,6 +40,7 @@ import {
 } from "./retained-drivers";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createFieldPresentation } from "../write/field-presentation";
+import { createUnfilledPresentation } from "../write/unfilled-presentation";
 import { progressCategory, type WorkflowActivity } from "./progress-model";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import type { AddressResult } from "../address/types";
@@ -236,10 +238,16 @@ function PolicyReadyWorkflow({
     () => createFieldPresentation(pageDocument),
     [pageDocument],
   );
+  const unfilledPresentation = useMemo(
+    () => createUnfilledPresentation(pageDocument),
+    [pageDocument],
+  );
   const [currentCategory, setCurrentCategory] = useState<string>();
   const [developerMode] = useDeveloperMode();
   // 진행 항목은 기입 묶음을 가로질러 누적되므로 묶음별 처리 수를 따로 센다.
   const batchDoneIds = useRef(new Set<string>());
+  // 범용 재확인 뒤의 묶음은 앞 묶음의 처리 수에 이어서 센다.
+  const batchBase = useRef(0);
   const [writeBatch, setWriteBatch] = useState({ total: 0, done: 0 });
   const [activity, setActivity] = useState<WorkflowActivity>("matching");
   const { operated, operatedCategories, recordOperation } =
@@ -256,7 +264,10 @@ function PolicyReadyWorkflow({
   const onWriteResult: WriteResultListener = (item, result, registry) => {
     recordWriteResult(item, result, registry);
     batchDoneIds.current.add(item.candidateId);
-    setWriteBatch((batch) => ({ ...batch, done: batchDoneIds.current.size }));
+    setWriteBatch((batch) => ({
+      ...batch,
+      done: batchBase.current + batchDoneIds.current.size,
+    }));
     observeQuality(() => apiClient.quality?.write(item, result, registry));
   };
   const presentField = async (
@@ -306,10 +317,9 @@ function PolicyReadyWorkflow({
   // Generic pages that reveal new fields after a write get a bounded number
   // of extra review passes (observed reveal, no aria-controls needed).
   const revealPasses = useRef(0);
-  // Revealed fields the first review approved in advance (#358): written in
-  // their reveal pass without a second review. A reveal pass never asks
-  // again; the fields it does not write are listed in the result.
-  const [preApprovalOn, setPreApprovalOn] = useState(true);
+  // Revealed fields approved in advance by the first pass (#358): written in
+  // their reveal pass. The fields a reveal pass does not write are listed in
+  // the result.
   const preApprovedScope = useRef<ReadonlySet<string>>(new Set());
   const firstReviewKeys = useRef<ReadonlySet<string>>(new Set());
   const [revealReview, setRevealReview] = useState(false);
@@ -906,9 +916,7 @@ function PolicyReadyWorkflow({
     if (!fieldsSnapshot || executionPending.current) return;
     executionPending.current = true;
     if (revealPasses.current === 0) {
-      preApprovedScope.current = preApprovalOn
-        ? preApprovalScope(appearableItems)
-        : new Set();
+      preApprovedScope.current = preApprovalScope(appearableItems);
       firstReviewKeys.current = new Set(
         reviewItems.flatMap((item) => {
           const key =
@@ -945,8 +953,8 @@ function PolicyReadyWorkflow({
       }
       const retainedCandidateIds = new Set([
         ...retainedDrivers.results.map((result) => result.candidateId),
-        // A later reveal pass never re-executes a field an earlier pass wrote.
-        ...(revealPasses.current > 0
+        // A later generic pass never re-executes a field an earlier pass wrote.
+        ...(analysisSummary?.mode === "GENERIC"
           ? reviewItems
               .filter((item) => writtenBefore(item, fieldsSnapshot.registry))
               .map((item) => item.candidateId)
@@ -975,8 +983,15 @@ function PolicyReadyWorkflow({
         setStage("exception");
         return;
       }
+      batchBase.current =
+        revealPasses.current > 0 && analysisSummary?.mode === "GENERIC"
+          ? batchBase.current + batchDoneIds.current.size
+          : 0;
       batchDoneIds.current = new Set();
-      setWriteBatch({ total: approvedCandidateIds.size, done: 0 });
+      setWriteBatch({
+        total: batchBase.current + approvedCandidateIds.size,
+        done: batchBase.current,
+      });
       setStage("writing");
       localWorkflowLog("writes-start", {
         passes: revealPasses.current,
@@ -1207,8 +1222,21 @@ function PolicyReadyWorkflow({
     });
   }, [stage, fieldsSnapshot]);
 
+  // A generic page never stops at the review screen: the analysis hands over
+  // its items and the selected ones are written at once.
+  useEffect(() => {
+    if (
+      stage !== "review" ||
+      revealReview ||
+      analysisSummary?.mode !== "GENERIC" ||
+      !fieldsSnapshot
+    )
+      return;
+    setAutoExecutePending(true);
+  }, [stage, revealReview]);
+
   // A reveal pass writes the approved revealed fields at once and lists the
-  // other new fields in the result; it never shows a second review.
+  // other new fields in the result.
   useEffect(() => {
     if (stage !== "review" || !revealReview || !fieldsSnapshot) return;
     setRevealReview(false);
@@ -1219,7 +1247,8 @@ function PolicyReadyWorkflow({
     // emptied entry area.
     const approved = unwritten.filter(
       (item) =>
-        isPreApprovedItem(item, preApprovedScope.current) &&
+        (item.includedByDeveloper ||
+          isPreApprovedItem(item, preApprovedScope.current)) &&
         !savedRowKeys.current.has(recordOf(item)?.key ?? ""),
     );
     const approvedIds = new Set(approved.map((item) => item.candidateId));
@@ -1254,6 +1283,7 @@ function PolicyReadyWorkflow({
         approvedIds.has(item.candidateId) ? item : { ...item, selected: false },
       ),
     );
+    setStage("writing");
     setAutoExecutePending(true);
   }, [stage, revealReview, reviewItems, fieldsSnapshot]);
 
@@ -1317,13 +1347,47 @@ function PolicyReadyWorkflow({
       ? (resultRegistry ?? fieldsSnapshot?.registry)
       : fieldsSnapshot?.registry;
 
+  // Red borders stay until the user fills a field, the panel closes or the page changes.
+  useEffect(() => () => unfilledPresentation.clear(), [unfilledPresentation]);
+  useEffect(() => {
+    if (stage !== "result" || !visibleRegistry) {
+      unfilledPresentation.clear();
+      return;
+    }
+    const fieldStateFor = (id: string) =>
+      resultFieldState(visibleRegistry, pageDocument, id);
+    unfilledPresentation.mark(
+      visibleRegistry,
+      unfilledCandidateIds(
+        buildResultModel({
+          reviewItems,
+          results,
+          progress,
+          profile,
+          wasWritten: (id) => progressTracker.wasWritten(id, visibleRegistry),
+          progressIdFor: (id) =>
+            progressTracker.progressIdFor(id, visibleRegistry),
+          progressStateFor: progressTracker.progressStateFor,
+          fieldStateFor,
+        }),
+        (id) => fieldStateFor(id)?.value,
+      ),
+    );
+  }, [stage, results, progress, visibleRegistry]);
+
   return (
     <WorkflowScreens
       progress={progress}
       developerMode={developerMode}
       writeTotal={writeBatch.total}
       writeDone={writeBatch.done}
-      activity={activity}
+      activity={
+        revealReview &&
+        analysisSummary?.mode === "GENERIC" &&
+        activity !== "address"
+          ? "rechecking"
+          : activity
+      }
       progressStateFor={progressTracker.progressStateFor}
       progressIdFor={(id) =>
         visibleRegistry
@@ -1338,7 +1402,11 @@ function PolicyReadyWorkflow({
       }
       profile={profile}
       optionsFor={(id) => resultFieldOptions(visibleRegistry, id)}
-      stage={stage === "review" && revealReview ? "writing" : stage}
+      stage={
+        stage === "review" && analysisSummary?.mode === "GENERIC"
+          ? "writing"
+          : stage
+      }
       preparationItems={preparationItems}
       warnings={warnings}
       revealedPreparationKeys={revealedPreparationKeys}
@@ -1382,9 +1450,6 @@ function PolicyReadyWorkflow({
       onLocate={(candidateId) =>
         !!visibleRegistry && presentation.show(visibleRegistry, candidateId)
       }
-      appearableItems={appearableItems}
-      preApprovalOn={preApprovalOn}
-      setPreApprovalOn={setPreApprovalOn}
       autoWrittenLabels={autoWrittenLabels}
       manualRevealedLabels={manualRevealedLabels}
       rowSave={rowSave}

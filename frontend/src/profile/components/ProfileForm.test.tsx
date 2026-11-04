@@ -432,3 +432,46 @@ describe("ProfileForm name table", () => {
     expect(onUpdateSingle).not.toHaveBeenCalled();
   });
 });
+
+describe("ProfileForm address search", () => {
+  const renderForm = (categoryId: "contact" | "personal", contact = {}) => {
+    const profile = createEmptyProfile();
+    profile.contact = contact;
+    render(
+      <ProfileForm
+        category={getCategoryDefinition(categoryId)}
+        profile={profile}
+        onAddEntry={vi.fn()}
+        onRemoveEntry={vi.fn()}
+        onUpdateEntry={vi.fn()}
+        onUpdateSingle={vi.fn()}
+        onSelectAddress={vi.fn()}
+        confirmDelete={() => true}
+      />,
+    );
+  };
+
+  it("offers the search inside the address group with direct inputs intact", () => {
+    renderForm("contact", { addressLine1: "직접 입력" });
+
+    const group = screen.getByRole("group", { name: "주소" });
+    expect(
+      within(group).getByRole("button", { name: "주소 검색" }),
+    ).toBeInTheDocument();
+    expect(within(group).getByText("검증 안 된 주소")).toBeInTheDocument();
+    expect(within(group).getByLabelText("기본주소")).toHaveValue("직접 입력");
+    expect(within(group).getByLabelText("우편번호")).toBeEnabled();
+    expect(within(group).getByLabelText("상세주소")).toBeEnabled();
+    expect(
+      within(screen.getByRole("group", { name: "연락받을 곳" })).queryByRole(
+        "button",
+        { name: "주소 검색" },
+      ),
+    ).toBeNull();
+  });
+
+  it("does not offer it on other categories", () => {
+    renderForm("personal");
+    expect(screen.queryByRole("button", { name: "주소 검색" })).toBeNull();
+  });
+});

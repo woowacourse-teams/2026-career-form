@@ -3,6 +3,7 @@ import type { Profile } from "../../profile/model";
 import type { ResultModel } from "./result-model";
 import { savedResultValues } from "./result-preview";
 import { resultGuidance } from "./result-guidance";
+import { resultTagLabel } from "./result-tag";
 import { pendingResultPresentation } from "./pending-result-presentation";
 import styles from "./WorkflowResults.module.css";
 
@@ -12,15 +13,22 @@ export function PendingResultRow({
   options = [],
   onLocate,
   copyText,
+  position,
 }: {
   entry: ResultModel["pending"][number];
   profile?: Profile;
   options?: readonly string[];
   onLocate?(id: string): boolean;
   copyText(value: string): Promise<void>;
+  /** Set when other rows share this label, so they can be told apart. */
+  position?: { index: number; total: number };
 }) {
-  const { id, item, reason, written, failureCode } = entry;
-  const { label, shortLabel } = pendingResultPresentation(item);
+  const { id, item, reason, written, failureCode, detail } = entry;
+  const presentation = pendingResultPresentation(item);
+  const ordinal = position ? ` (${position.index}/${position.total})` : "";
+  const label = presentation.label + ordinal;
+  const shortLabel = presentation.shortLabel + ordinal;
+  const guidance = detail ?? resultGuidance(reason, failureCode);
   const [unavailable, setUnavailable] = useState(false);
   const [copied, setCopied] = useState<number>();
   const [copyFailed, setCopyFailed] = useState(false);
@@ -54,6 +62,14 @@ export function PendingResultRow({
             {canLocate && <span aria-hidden="true">↗</span>}
           </button>
           {written && <span className={styles.writtenTag}>입력됨</span>}
+          <span
+            className={styles.reasonTag}
+            role="note"
+            aria-label={guidance}
+            title={guidance}
+          >
+            {resultTagLabel(reason, failureCode)}
+          </span>
         </div>
         {values.length > 0 && (
           <div className={styles.values}>
@@ -77,9 +93,6 @@ export function PendingResultRow({
           </div>
         )}
       </div>
-      <p className={`${styles.guidance} ${styles.reason}`}>
-        {resultGuidance(reason, failureCode)}
-      </p>
       {options.length > 0 && (
         <details>
           <summary>지원서 선택지</summary>

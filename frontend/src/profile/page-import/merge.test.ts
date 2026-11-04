@@ -289,3 +289,45 @@ it("uses atomic compare-and-save and rejects a race after the preview load", asy
     phoneNumber: "01012345678",
   });
 });
+
+describe("page import over a selected address", () => {
+  const verified = () => {
+    const profile = createEmptyProfile();
+    profile.contact = {
+      postalCode: "63309",
+      addressLine1: "제주특별자치도 제주시 첨단로 242",
+      jibunAddress: "제주특별자치도 제주시 영평동 2181",
+      buildingManagementNumber: "5011010400121810000000001",
+      addressVerified: "true",
+    };
+    return profile;
+  };
+
+  it("drops the selection when the import replaces the address", () => {
+    const merged = mergeImportSelection(verified(), {
+      single: { contact: { addressLine1: "가져온 다른 주소" } },
+    });
+
+    expect(merged.contact).toEqual({
+      postalCode: "63309",
+      addressLine1: "가져온 다른 주소",
+    });
+  });
+
+  it("keeps the selection when the import changes another contact field", () => {
+    const merged = mergeImportSelection(verified(), {
+      contact: { email: "a@example.invalid" },
+    });
+
+    expect(merged.contact.addressVerified).toBe("true");
+    expect(merged.contact.email).toBe("a@example.invalid");
+  });
+
+  it("refuses an import that tries to set the selection fields", () => {
+    expect(() =>
+      mergeImportSelection(createEmptyProfile(), {
+        single: { contact: { addressVerified: "true" } },
+      }),
+    ).toThrow();
+  });
+});

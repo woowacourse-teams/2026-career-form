@@ -11,10 +11,13 @@ import type {
   ProfileFieldDefinition,
   ProfileSectionDefinition,
 } from "../field-definitions";
+import type { StructuredAddress } from "../address";
+import { AddressSearchPanel } from "./AddressSearchPanel";
 import styles from "./ProfileForm.module.css";
 import { CatalogNameInput } from "./CatalogNameInput";
 import { catalogKindForField } from "../catalog-search";
 import {
+  ADDRESS_GROUP_TITLE,
   editorFieldGroups,
   entrySummary,
   FIELD_EXAMPLES,
@@ -41,6 +44,7 @@ interface ProfileFormProps {
     fieldId: string,
     value: string,
   ): void;
+  onSelectAddress?(address: StructuredAddress): void;
   confirmDelete(message: string): boolean;
 }
 
@@ -50,6 +54,7 @@ interface FieldsProps {
   idPrefix: string;
   identity?: ProfileIdentity;
   onChange(fieldId: string, value: string, identity?: ProfileIdentity): void;
+  onSelectAddress?(address: StructuredAddress): void;
 }
 
 function optionsForField(
@@ -120,6 +125,7 @@ function Fields({
   idPrefix,
   identity,
   onChange,
+  onSelectAddress,
 }: FieldsProps) {
   const personal = section.id === "personal";
   return (
@@ -143,6 +149,14 @@ function Fields({
                 {group.title}
               </legend>
             )}
+            {section.id === "contact" &&
+              group.title === ADDRESS_GROUP_TITLE &&
+              onSelectAddress && (
+                <AddressSearchPanel
+                  contact={values}
+                  onSelect={onSelectAddress}
+                />
+              )}
             <div className={styles.fieldGrid}>
               {group.fields
                 .filter(
@@ -335,6 +349,7 @@ export function ProfileForm({
   onRemoveEntry,
   onUpdateEntry,
   onUpdateSingle,
+  onSelectAddress,
   confirmDelete,
 }: ProfileFormProps) {
   const formRef = useRef<HTMLDivElement>(null);
@@ -361,6 +376,7 @@ export function ProfileForm({
         onChange={(fieldId, value) =>
           onUpdateSingle(categoryId, fieldId, value)
         }
+        onSelectAddress={onSelectAddress}
       />
     );
   }

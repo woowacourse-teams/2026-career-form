@@ -28,6 +28,19 @@ export const LANGUAGE_TEST_OPTIONS: readonly StandardValueOption[] = [
   { value: "ielts", label: "IELTS" },
   { value: "jlpt", label: "JLPT" },
   { value: "hsk", label: "HSK" },
+  { value: "teps-speaking", label: "TEPS Speaking" },
+  { value: "g-telp", label: "G-TELP" },
+  { value: "flex", label: "FLEX" },
+  { value: "jpt", label: "JPT" },
+  { value: "sjpt", label: "SJPT" },
+  { value: "hskk", label: "HSKK" },
+  { value: "tsc", label: "TSC" },
+  { value: "delf", label: "DELF" },
+  { value: "dalf", label: "DALF" },
+  { value: "dele", label: "DELE" },
+  { value: "goethe-zertifikat", label: "Goethe-Zertifikat" },
+  { value: "testdaf", label: "TestDaF" },
+  { value: "topik", label: "TOPIK" },
 ];
 
 export const SCHOOL_REGION_OPTIONS: readonly StandardValueOption[] = [

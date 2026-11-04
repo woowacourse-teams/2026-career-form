@@ -1,4 +1,5 @@
 import { loadPolicyForSender } from "../src/autofill/policy/background";
+import { createAddressSearchHandler } from "../src/profile/address-search-background";
 import { createProfileWriteHandler } from "../src/storage/profile-write-handler";
 import { installPostingBackground } from "../src/job-postings/background";
 import { installPushBackground } from "../src/job-postings/push-background";
@@ -44,6 +45,10 @@ export default defineBackground(() => {
     browser.storage.local,
     browser.runtime.id,
   );
+  const handleAddressSearch = createAddressSearchHandler({
+    baseUrl: import.meta.env.VITE_API_BASE_URL,
+    extensionId: browser.runtime.id,
+  });
   const handlePanelShortcut = createPanelShortcutHandler(
     browser.commands,
     browser.runtime.id,
@@ -89,6 +94,8 @@ export default defineBackground(() => {
       return loadPolicyForSender(message, sender);
     const profileResponse = handleProfileWrite(message, sender);
     if (profileResponse !== undefined) return profileResponse;
+    const addressSearchResponse = handleAddressSearch(message, sender);
+    if (addressSearchResponse !== undefined) return addressSearchResponse;
     const postingResponse = postings.handleMessage(message, sender);
     if (postingResponse !== undefined) return postingResponse;
     const pushResponse = push.handleMessage(message, sender);

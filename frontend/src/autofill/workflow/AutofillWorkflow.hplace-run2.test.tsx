@@ -102,7 +102,7 @@ it("executes live preparation through collection, action request, modal commit a
     Object.values(addressExpected),
   );
   expect(screen.getByLabelText("입력 완료 3개")).toBeVisible();
-  expect(screen.queryByText("자동으로 입력하지 못했어요")).toBeNull();
+  expect(screen.queryByLabelText("자동으로 입력하지 못했어요")).toBeNull();
   expect(forbidden).not.toHaveBeenCalled();
 });
 

@@ -24,16 +24,21 @@ public final class JobPostingAdminController {
 
     public JobPostingAdminController(JobPostingService postings) { this.postings = postings; }
 
-    public record Registration(String company, String role, String link, Instant opensAt, Instant closesAt) { }
+    /** 등록 요청. roles는 직무 분류의 소분류 코드 배열이고 요청의 role 자유 글자는 받지 않는다(모르는 필드로 무시된다). */
+    public record Registration(String company, List<String> roles, String link, Instant opensAt, Instant closesAt) { }
+
+    public record RoleView(String code, String label) { }
 
     public record Registered(String id, Instant scheduledAt, long deliveries) { }
 
+    /** 목록 행. roles는 코드와 라벨 목록이며 레거시 공고는 roles를 생략하되 기존 자유 글자 role이 있으면 유지하고 role도 null일 때만 생략한다. */
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public record Row(String id, String company, String role, String link, Instant opensAt, Instant closesAt, Instant registeredAt,
+    public record Row(String id, String company, String role, List<RoleView> roles, String link, Instant opensAt, Instant closesAt, Instant registeredAt,
                       Instant scheduledAt, DeliveryProgress progress) {
         static Row of(JobPostingService.Row row) {
             var posting = row.posting();
-            return new Row(posting.id(), posting.company(), posting.role(), posting.link(), posting.opensAt(), posting.closesAt(),
+            var roles = row.roles() == null ? null : row.roles().stream().map(role -> new RoleView(role.code(), role.label())).toList();
+            return new Row(posting.id(), posting.company(), posting.role(), roles, posting.link(), posting.opensAt(), posting.closesAt(),
                 posting.registeredAt(), posting.scheduledAt(), row.progress());
         }
     }
@@ -42,8 +47,9 @@ public final class JobPostingAdminController {
         public Rows { postings = List.copyOf(postings); }
     }
 
+    /** 요약 응답. roleSelectedSubscriptions는 받을 직무를 1개 이상 고른 구독 수다. */
     public record SummaryResponse(Instant from, Instant to, long postings, Deliveries deliveries, Double acceptanceRate, Double abandonRate,
-                                  Latency latencyMillis, long subscriptions) {
+                                  Latency latencyMillis, long subscriptions, long roleSelectedSubscriptions) {
         public record Deliveries(long pending, long sending, long accepted, long abandoned, long total, Double averageAttempts) { }
 
         public record Latency(Long p50, Long p95) { }
@@ -52,7 +58,8 @@ public final class JobPostingAdminController {
             var deliveries = summary.deliveries();
             return new SummaryResponse(summary.from(), summary.to(), summary.postings(),
                 new Deliveries(deliveries.pending(), deliveries.sending(), deliveries.accepted(), deliveries.abandoned(), deliveries.total(), summary.averageAttempts()),
-                summary.acceptanceRate(), summary.abandonRate(), new Latency(deliveries.latencyP50Millis(), deliveries.latencyP95Millis()), summary.subscriptions());
+                summary.acceptanceRate(), summary.abandonRate(), new Latency(deliveries.latencyP50Millis(), deliveries.latencyP95Millis()), summary.subscriptions(),
+                summary.roleSelectedSubscriptions());
         }
     }
 
@@ -65,7 +72,7 @@ public final class JobPostingAdminController {
 
     @PostMapping("/api/v1/notifications/admin/postings")
     public ResponseEntity<?> register(@RequestBody Registration registration) {
-        var outcome = postings.register(new JobPostingService.Draft(registration.company(), registration.role(), registration.link(),
+        var outcome = postings.register(new JobPostingService.Draft(registration.company(), registration.roles(), registration.link(),
             registration.opensAt(), registration.closesAt()));
         return switch (outcome) {
             case JobPostingService.Registered registered -> ResponseEntity.status(201)

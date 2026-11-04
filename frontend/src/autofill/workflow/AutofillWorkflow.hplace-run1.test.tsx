@@ -71,7 +71,7 @@ it("keeps a profile false HTML default as already entered without clicking", asy
   run(policy, p);
   await screen.findByText("기입 결과", {}, { timeout: 120_000 });
   expect(clicks).not.toHaveBeenCalled();
-  expect(screen.queryByText(/자동으로 입력하지 못했어요/)).toBeNull();
+  expect(screen.queryByLabelText(/자동으로 입력하지 못했어요/)).toBeNull();
 });
 it.each(["beforeMutation", "focus"])(
   "rechecks default dependents populated at %s before clicking",

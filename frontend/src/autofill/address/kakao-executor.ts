@@ -11,6 +11,7 @@ import {
   normalizeAddress,
   type AddressIdentity,
 } from "./match";
+import { writtenAddressMatchesProfile } from "./profile-address-check";
 import { splitRoadReference } from "./road-reference";
 import {
   openedSearchDialog,
@@ -193,6 +194,36 @@ async function runGenericKakaoAddress(
     const matchesSelection = () =>
       (!zip || zip.value === selection!.postalCode) &&
       sameAddress(address.value, selection!.address);
+    const matchesProfile = () =>
+      writtenAddressMatchesProfile(
+        {
+          postalCode: zip ? zip.value : selection!.postalCode,
+          address: address.value,
+        },
+        expected,
+        inPage ? expected.detail : undefined,
+      );
+    const writtenOverProfile = () =>
+      !signal.aborted &&
+      fields.some((field, index) => field.value !== originals[index]) &&
+      !matchesProfile();
+    const restoreAfterMismatch = () => {
+      const setValue = Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        "value",
+      )!.set!;
+      fields.forEach((field, index) => {
+        if (field.value === originals[index]) return;
+        setValue.call(field, originals[index]);
+        field.dispatchEvent(new Event("input", { bubbles: true }));
+        field.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+      return manual(
+        fields.every((field, index) => field.value === originals[index])
+          ? "사이트 주소 결과가 프로필과 달라 되돌렸습니다."
+          : "사이트 주소 결과가 프로필과 달라 되돌리지 못했습니다. 직접 확인해 주세요.",
+      );
+    };
     const deadline = Date.now() + GENERIC_CALLBACK_MS;
     while (!signal.aborted && Date.now() < deadline && !matchesSelection())
       await new Promise((resolve) => setTimeout(resolve, GENERIC_POLL_MS));
@@ -206,6 +237,8 @@ async function runGenericKakaoAddress(
       .filter(([, passed]) => !passed)
       .map(([name]) => name);
     localWorkflowLog("address-callback-checks", { ...checks, generic: true });
+    if (writtenOverProfile() || (!failed.length && !matchesProfile()))
+      return restoreAfterMismatch();
     if (failed.length) return manual("주소 반영 확인 실패: " + failed.join(", "));
     stage = "settle";
     const pause = () =>
@@ -226,6 +259,7 @@ async function runGenericKakaoAddress(
         stableSince = Date.now();
       }
     }
+    if (writtenOverProfile()) return restoreAfterMismatch();
     if (
       !valid() ||
       !matchesSelection() ||

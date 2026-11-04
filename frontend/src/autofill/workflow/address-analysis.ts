@@ -9,6 +9,7 @@ import type { AddressSearch } from "../address/types";
 import type { WorkflowAdapter } from "../adapters/workflow";
 import type { FieldsAnalyzeResponse } from "../api/types";
 import type { collectFieldsSnapshot } from "../dom/collect";
+import type { ReviewPlanItem } from "../review/review-plan";
 import type { WriteResultListener } from "../write/executor";
 import { addressValue } from "./workflow-model";
 
@@ -18,6 +19,7 @@ type AddressRun = {
   task?: Promise<
     Awaited<ReturnType<NonNullable<WorkflowAdapter["runAddress"]>>>
   >;
+  genericAddressRows?: ReviewPlanItem[];
 };
 
 export async function runAddressAnalysis({
@@ -47,6 +49,7 @@ export async function runAddressAnalysis({
   onWriteResult?: WriteResultListener;
   setAddressResult: (result: Awaited<NonNullable<AddressRun["task"]>>) => void;
 }): Promise<FieldsAnalyzeResponse | undefined> {
+  run.genericAddressRows = undefined;
   const staged = stagedAddressNodes(pageDocument);
   if (staged) {
     // A populated original triplet belongs to the existing detail-only path.
@@ -509,7 +512,22 @@ export async function runAddressAnalysis({
     aborted: run.controller.signal.aborted,
   });
   if (run.controller.signal.aborted) return undefined;
-  setAddressResult(result);
+  // Static results keep their own note; generic ones become regular review rows.
+  if (genericAddressPermitted && result.status === "manual")
+    run.genericAddressRows = addressTargets.map((target) => ({
+      candidateId: target.candidateId,
+      fieldLabel: target.fieldLabel,
+      profileFieldKey: target.profileFieldKey,
+      currentValue: target.originalValue,
+      previewValue: "",
+      status: "unavailable",
+      selected: false,
+      disabled: true,
+      revealed: true,
+      reason: result.reason,
+      addressManualReason: result.reason,
+    }));
+  else setAddressResult(result);
   if (result.status === "written") {
     for (const target of addressTargets) {
       const lookup = snapshot.registry.lookupField(target.candidateId);
