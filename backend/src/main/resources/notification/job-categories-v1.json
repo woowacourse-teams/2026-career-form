@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "categories": [
+    {"code": "IT", "label": "IT/개발", "roles": [
+      {"code": "IT.BACKEND", "label": "백엔드"}, {"code": "IT.FRONTEND", "label": "프론트엔드"}, {"code": "IT.MOBILE", "label": "모바일"},
+      {"code": "IT.DATA", "label": "데이터"}, {"code": "IT.AI_ML", "label": "AI/ML"}, {"code": "IT.INFRA", "label": "인프라/DevOps"},
+      {"code": "IT.QA", "label": "QA"}, {"code": "IT.SECURITY", "label": "보안"}]},
+    {"code": "PLANNING", "label": "기획", "roles": [{"code": "PLANNING.SERVICE", "label": "서비스 기획"}, {"code": "PLANNING.PM_PO", "label": "PM/PO"}]},
+    {"code": "DESIGN", "label": "디자인", "roles": [{"code": "DESIGN.UX_UI", "label": "UX/UI"}, {"code": "DESIGN.GRAPHIC", "label": "그래픽/브랜드"}]},
+    {"code": "MARKETING", "label": "마케팅", "roles": [{"code": "MARKETING.PERFORMANCE", "label": "퍼포먼스"}, {"code": "MARKETING.CONTENT", "label": "콘텐츠"}, {"code": "MARKETING.BRAND", "label": "브랜드"}]},
+    {"code": "SALES", "label": "영업/사업개발", "roles": [{"code": "SALES.SALES", "label": "영업"}, {"code": "SALES.BIZDEV", "label": "사업개발"}]},
+    {"code": "BUSINESS", "label": "경영지원", "roles": [{"code": "BUSINESS.HR", "label": "인사"}, {"code": "BUSINESS.FINANCE", "label": "재무/회계"}, {"code": "BUSINESS.LEGAL", "label": "법무/총무"}]},
+    {"code": "RND", "label": "연구개발/생산/품질", "roles": [{"code": "RND.RND", "label": "연구개발"}, {"code": "RND.PRODUCTION", "label": "생산"}, {"code": "RND.QUALITY", "label": "품질"}]}
+  ]
+}

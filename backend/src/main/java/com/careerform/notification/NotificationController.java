@@ -18,11 +18,13 @@ public final class NotificationController {
     private final VapidKeys keys;
     private final PushSubscriptionService subscriptions;
     private final JobPostingService postings;
+    private final JobCategories categories;
 
-    public NotificationController(VapidKeys keys, PushSubscriptionService subscriptions, JobPostingService postings) {
+    public NotificationController(VapidKeys keys, PushSubscriptionService subscriptions, JobPostingService postings, JobCategories categories) {
         this.keys = keys;
         this.subscriptions = subscriptions;
         this.postings = postings;
+        this.categories = categories;
     }
 
     public record SubscriptionRequest(String endpoint, Long expirationTime, Keys keys) {
@@ -43,6 +45,9 @@ public final class NotificationController {
         public PostingsResponse { postings = List.copyOf(postings); }
     }
 
+    /** 직무 분류 정본의 버전과 대분류·소분류(code, label). */
+    public record CategoriesResponse(int version, List<JobCategories.Category> categories) { }
+
     @GetMapping("/api/v1/notifications/vapid-public-key")
     public Map<String, String> publicKey() { return Map.of("publicKey", keys.publicKey()); }
 
@@ -62,6 +67,9 @@ public final class NotificationController {
 
     @GetMapping("/api/v1/notifications/postings")
     public PostingsResponse openPostings() { return new PostingsResponse(postings.open().stream().map(JobPosting::view).toList()); }
+
+    @GetMapping("/api/v1/notifications/job-categories")
+    public CategoriesResponse jobCategories() { return new CategoriesResponse(categories.version(), categories.categories()); }
 
     @ExceptionHandler(PushSubscriptionService.InvalidSubscription.class)
     public ResponseEntity<Map<String, String>> invalidSubscription() { return ResponseEntity.badRequest().body(Map.of("error", "INVALID_SUBSCRIPTION")); }

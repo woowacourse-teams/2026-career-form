@@ -40,6 +40,7 @@ CF-348은 팀이 등록한 채용 공고를 접수 가능 시점(등록 시각�
 | `POST /api/v1/notifications/subscriptions` `{"endpoint","expirationTime"?,"keys":{"p256dh","auth"}}` | 201 신규 / 200 기존 `{"subscriptionId","created"}`. 같은 endpoint는 새로 만들지 않는다. 400 `INVALID_SUBSCRIPTION`(허용 호스트 `fcm.googleapis.com`·`jmt17.google.com`의 HTTPS가 아니거나 키 길이가 다름), 400 `INVALID_INPUT`(본문 해석 실패) |
 | `POST /api/v1/notifications/subscriptions/unsubscribe` `{"endpoint"}` | 204. 없는 endpoint도 204 |
 | `GET /api/v1/notifications/postings` | 200 `{"postings":[{"id","company","role"?,"link","opensAt","closesAt"}]}`. 접수 시작 ≤ 현재 < 마감인 공고를 마감순으로. 직무가 없는 공고는 `role` 필드를 생략한다 |
+| `GET /api/v1/notifications/job-categories` | 200 `{"version","categories":[{"code","label","roles":[{"code","label"}]}]}`. 직무 분류 정본 `backend/src/main/resources/notification/job-categories-v1.json`의 버전과 대분류·소분류. 코드는 `IT.BACKEND`처럼 대분류와 소분류를 점으로 이은 안정 문자열(`[A-Z][A-Z0-9_]{0,31}`)이고 라벨은 한글 1~40자다. 기동 시 코드 형식·유일성과 라벨을 검증해 실패하면 기동을 막는다. 코드는 추가만 하고 삭제·변경하지 않는다 |
 
 푸시 payload는 목록 항목에 `sentAt`(FCM 요청 시각, ISO-8601)을 더한 UTF-8 JSON `{"id","company","role"?,"link","opensAt","closesAt","sentAt"}`이며 직무가 없으면 `role` 필드를 생략한다(확장은 없음과 빈 문자열을 모두 직무 없음으로 다루고 `sentAt`으로 표시 지연을 계측한다). 회사 80자, 직무 120자, 링크 1024자 상한에서 평문 3,900바이트 이하이며 aes128gcm 암호화 뒤에도 4,096바이트 한도 안에 든다(테스트로 보장).
 

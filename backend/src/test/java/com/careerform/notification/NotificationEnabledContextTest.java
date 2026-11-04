@@ -83,6 +83,15 @@ class NotificationEnabledContextTest {
     }
 
     @Test
+    @DisplayName("직무 분류 조회는 인증 없이 번들된 분류 파일의 버전과 대분류를 돌려준다")
+    void servesBundledJobCategories() throws Exception {
+        mockMvc.perform(get("/api/v1/notifications/job-categories")).andExpect(status().isOk())
+            .andExpect(jsonPath("$.version").value(1))
+            .andExpect(jsonPath("$.categories[0].roles[0].code").value("IT.BACKEND"));
+        assertThat(context.getBean(JobCategories.class).roleCount()).isGreaterThan(7);
+    }
+
+    @Test
     @DisplayName("관리 API와 화면은 품질 로그인 뒤에 있고 /notifications는 정적 관리 화면으로 전달된다")
     void protectsAdminApiAndServesManagementPage() throws Exception {
         mockMvc.perform(get("/api/v1/notifications/admin/postings")).andExpect(status().isUnauthorized());

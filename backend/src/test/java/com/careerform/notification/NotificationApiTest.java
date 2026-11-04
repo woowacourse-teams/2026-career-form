@@ -34,7 +34,7 @@ class NotificationApiTest {
     private final JobPostingService postings = new JobPostingService(store, clock);
     private final PushSubscriptionService subscriptions = new PushSubscriptionService(store, clock, Set.of("fcm.googleapis.com"));
     private final MockMvc mvc = MockMvcBuilders.standaloneSetup(new NotificationController(
-            VapidKeys.parse(keys.publicKey, keys.privateKey, "mailto:synthetic@example.test"), subscriptions, postings))
+            VapidKeys.parse(keys.publicKey, keys.privateKey, "mailto:synthetic@example.test"), subscriptions, postings, JobCategories.load()))
         .setControllerAdvice(new NotificationInputErrors()).build();
 
     @Test
@@ -108,6 +108,19 @@ class NotificationApiTest {
             .andExpect(jsonPath("$.postings[1].id").isString())
             .andExpect(jsonPath("$.postings[1].registeredAt").doesNotExist())
             .andExpect(jsonPath("$.postings[2].company").value("합성 회사 A"));
+    }
+
+    @Test
+    @DisplayName("직무 분류는 버전과 대분류·소분류의 코드·라벨을 돌려준다")
+    void servesJobCategories() throws Exception {
+        mvc.perform(get("/api/v1/notifications/job-categories"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.version").value(1))
+            .andExpect(jsonPath("$.categories.length()").value(7))
+            .andExpect(jsonPath("$.categories[0].code").value("IT"))
+            .andExpect(jsonPath("$.categories[0].label").value("IT/개발"))
+            .andExpect(jsonPath("$.categories[0].roles[0].code").value("IT.BACKEND"))
+            .andExpect(jsonPath("$.categories[0].roles[0].label").value("백엔드"));
     }
 
     static String subscriptionJson(String endpoint, String p256dh, String auth) {
