@@ -35,6 +35,24 @@ class WorkflowContractTest(unittest.TestCase):
         self.assertIn("clean check bootJar", build_step["run"])
         self.assertNotIn("self-hosted", str(workflow))
 
+    def test_frontend_ci_runs_only_for_frontend_changes(self) -> None:
+        workflow = self._workflow("frontend-ci.yml")
+        expected_paths = ["frontend/**", ".github/workflows/frontend-ci.yml"]
+
+        self.assertEqual(expected_paths, workflow["on"]["pull_request"]["paths"])
+        self.assertEqual(expected_paths, workflow["on"]["push"]["paths"])
+        self.assertEqual(["develop", "main"], workflow["on"]["push"]["branches"])
+        test_job = workflow["jobs"]["test"]
+        self.assertEqual(
+            [str(shard) for shard in range(1, 9)],
+            [str(shard) for shard in test_job["strategy"]["matrix"]["shard"]],
+        )
+        shard_step = next(
+            step for step in test_job["steps"] if "coverage:shard" in step.get("run", "")
+        )
+        self.assertIn("--maxWorkers=1", shard_step["run"])
+        self.assertEqual("test", workflow["jobs"]["coverage"]["needs"])
+
     def test_development_and_staging_build_arm64_then_deploy_digest(self) -> None:
         cases = (
             ("deploy-development.yml", "develop", "development", "dev"),
