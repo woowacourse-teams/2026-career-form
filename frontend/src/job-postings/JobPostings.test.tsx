@@ -146,7 +146,12 @@ const basePosting: Posting = {
 };
 function renderPage(
   env: ReturnType<typeof setup>,
-  props: { track?: (...args: unknown[]) => void; now?: number } = {},
+  props: {
+    track?: (...args: unknown[]) => void;
+    now?: number;
+    openSettings?: boolean;
+    onSettingsOpened?: () => void;
+  } = {},
 ) {
   return render(
     <JobPostings
@@ -154,6 +159,8 @@ function renderPage(
       pushClient={env.pushClient}
       now={() => props.now ?? NOW}
       track={props.track ?? (() => undefined)}
+      openSettings={props.openSettings}
+      onSettingsOpened={props.onSettingsOpened}
     />,
   );
 }
@@ -905,4 +912,12 @@ it("알림 설정 대화상자의 Tab 가두기는 직무 체크박스를 마지
   expect(close).toHaveFocus();
   fireEvent.keyDown(close, { key: "Tab", shiftKey: true });
   expect(last).toHaveFocus();
+});
+it("openSettings가 켜지면 알림 설정 대화상자를 바로 열고 열렸다고 알린다", async () => {
+  const env = setup();
+  const onSettingsOpened = vi.fn();
+  renderPage(env, { openSettings: true, onSettingsOpened });
+  const dialog = await screen.findByRole("dialog", { name: "알림 설정" });
+  expect(dialog).toContainElement(document.activeElement as HTMLElement);
+  expect(onSettingsOpened).toHaveBeenCalledOnce();
 });
