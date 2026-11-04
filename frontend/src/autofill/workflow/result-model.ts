@@ -273,7 +273,50 @@ export function buildResultModel(input: ResultModelInput): ResultModel {
       },
     });
   }
-  return { completed: [...completed.values()], pending, skipped };
+  return {
+    completed: [...completed.values()],
+    pending: mergeSameControl(pending, fieldStateFor),
+    skipped,
+  };
+}
+
+// Least to most actionable: a failed write tells the user to act, a result to
+// confirm only asks for a look.
+const REASON_ACTIONABILITY = [
+  "입력 결과 확인",
+  "기존 값과 다름",
+  "선택 필요",
+  "입력 못함",
+];
+
+/**
+ * Review items are collected per scan, so one control can be reviewed twice
+ * under different candidate ids. Keep the most actionable row per control.
+ */
+function mergeSameControl(
+  pending: ResultModel["pending"],
+  fieldStateFor: ResultModelInput["fieldStateFor"],
+): ResultModel["pending"] {
+  if (!fieldStateFor) return pending;
+  const rowOfControl = new Map<Element, number>();
+  const merged: ResultModel["pending"] = [];
+  for (const entry of pending) {
+    const handle = entry.id.startsWith("progress:")
+      ? undefined
+      : fieldStateFor(entry.id)?.handle;
+    const control = handle?.elements[0] ?? handle?.customElements?.[0];
+    const at = control ? rowOfControl.get(control) : undefined;
+    if (at === undefined) {
+      if (control) rowOfControl.set(control, merged.length);
+      merged.push(entry);
+    } else if (
+      REASON_ACTIONABILITY.indexOf(entry.reason) >
+      REASON_ACTIONABILITY.indexOf(merged[at].reason)
+    ) {
+      merged[at] = entry;
+    }
+  }
+  return merged;
 }
 
 // These skipped items are not left empty: the page already holds the value,

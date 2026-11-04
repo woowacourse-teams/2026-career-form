@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+import type { FieldCandidateHandle } from "../dom/types";
 import type { ReviewPlanItem } from "../review/review-plan";
 import { buildResultModel, unfilledCandidateIds } from "./result-model";
 
@@ -401,4 +402,69 @@ it("leaves a skipped field that already holds a value out of the unfilled ids bu
     "pending-with-value",
     "empty",
   ]);
+});
+
+function handleOf(element: HTMLElement) {
+  return {
+    kind: "field",
+    elements: [element],
+    candidate: {},
+  } as unknown as FieldCandidateHandle;
+}
+
+it("merges rows that target the same control and keeps the most actionable reason", () => {
+  const control = document.createElement("input");
+  const result = buildResultModel({
+    reviewItems: [
+      {
+        ...item,
+        candidateId: "a",
+        status: "conflict",
+        currentValue: "다른 값",
+      },
+      {
+        ...item,
+        candidateId: "b",
+        status: "needs-review",
+        currentValue: "다른 값",
+      },
+    ],
+    results: [],
+    fieldStateFor: () => ({
+      visible: true,
+      value: "다른 값",
+      handle: handleOf(control),
+    }),
+  });
+  expect(result.pending).toMatchObject([{ id: "b", reason: "선택 필요" }]);
+});
+
+it("keeps rows that target different controls", () => {
+  const handles = new Map([
+    ["a", handleOf(document.createElement("input"))],
+    ["b", handleOf(document.createElement("input"))],
+  ]);
+  const result = buildResultModel({
+    reviewItems: [
+      {
+        ...item,
+        candidateId: "a",
+        status: "conflict",
+        currentValue: "다른 값",
+      },
+      {
+        ...item,
+        candidateId: "b",
+        status: "needs-review",
+        currentValue: "다른 값",
+      },
+    ],
+    results: [],
+    fieldStateFor: (id) => ({
+      visible: true,
+      value: "다른 값",
+      handle: handles.get(id),
+    }),
+  });
+  expect(result.pending.map(({ id }) => id)).toEqual(["a", "b"]);
 });
