@@ -90,6 +90,8 @@ career-form:
     commit: ${CAREER_FORM_COMMIT:}
     # 배포 이미지가 담은 공급자 연결 코드 지문(Dockerfile ARG). 바뀌면 자동 평가가 돈다.
     adapter-digest: ${CAREER_FORM_ADAPTER_DIGEST:}
+    # 평가 기록 삭제. 함께 쓰는 서버의 기록은 팀의 변경 이력이라 기본은 끄고 로컬 실행기에서만 켠다.
+    record-delete-enabled: ${CAREER_FORM_EVALUATION_RECORD_DELETE_ENABLED:false}
     max-model-calls-per-run: ${CAREER_FORM_EVALUATION_MAX_MODEL_CALLS:500}
     max-repetitions: ${CAREER_FORM_EVALUATION_MAX_REPETITIONS:20}
     poll-interval: ${CAREER_FORM_EVALUATION_POLL_INTERVAL:10s}

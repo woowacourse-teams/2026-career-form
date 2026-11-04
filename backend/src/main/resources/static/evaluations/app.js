@@ -9,7 +9,7 @@ const PRICE_KEY = "cf-evaluation-model-prices-v1";
 const root = document.getElementById("cf-eval-preview");
 const $ = (selector) => root.querySelector(selector);
 const state = { runs: [], dataset: null, models: [], selected: [], group: null, stage: "total", page: "overview",
-  fields: {}, compare: { before: "", after: "" }, fieldFilter: "diff", fieldScreen: "all", openField: null, itemKind: "GENERIC_FIELDS" };
+  fields: {}, canDelete: false, compare: { before: "", after: "" }, fieldFilter: "diff", fieldScreen: "all", openField: null, itemKind: "GENERIC_FIELDS" };
 let prices = {};
 try { prices = JSON.parse(localStorage.getItem(PRICE_KEY) || "{}") ?? {}; } catch { prices = {}; }
 
@@ -133,7 +133,7 @@ function bars(title, sub, values, max, format, foot) {
     row.append(name, track, element("span", value == null ? "—" : format(value), "number"));
     card.append(row);
   }
-  if (foot) card.append(typeof foot === "string" ? element("p", foot, "muted metric-foot") : foot);
+  if (foot) cardHelp(card, foot);
   return card;
 }
 
@@ -407,6 +407,14 @@ function countLine(kinds, counts, total, unit, titles = {}) {
 }
 
 /** 설명 한 줄. 배열로 넘긴 부분([글자])은 굵게, 나머지는 그대로 둔다. */
+/** 카드 설명은 아래에 적지 않고 제목에 커서를 올리면 보인다. {@code note}는 글자이거나 richNote 결과다. */
+function cardHelp(card, note) {
+  const title = card.querySelector("h3");
+  title.dataset.help = typeof note === "string" ? note : note.textContent;
+  title.classList.add("has-help");
+  title.tabIndex = 0;
+}
+
 function richNote(...parts) {
   const note = element("p", undefined, "muted metric-foot rich-note");
   parts.forEach((part) => note.append(Array.isArray(part) ? element("b", part[0]) : document.createTextNode(part)));
@@ -485,7 +493,7 @@ function scoreCard(stage, title) {
       "같은 입력을 반복마다 따로 채점한 점수의 최소~최대. 두 모델의 범위가 겹치면 차이를 구분하기 어렵습니다."));
     row.after(note);
   });
-  card.append(richNote(["정밀도"], " 답한 것 중 맞은 비율 · ", ["채움률"], " 답해야 할 것 중 맞게 답한 비율 · ",
+  cardHelp(card, richNote(["정밀도"], " 답한 것 중 맞은 비율 · ", ["채움률"], " 답해야 할 것 중 맞게 답한 비율 · ",
     ["잘못 답하면 놓칠 때보다 2배 감점"]));
   return card;
 }
@@ -529,7 +537,7 @@ function renderAutofill() {
     row.append(Object.assign(element("span", model), { title: model }), track, text);
     card.append(row);
   }
-  card.append(richNote(["놓침"], " = 비움 + 확인 필요(확신도 0.5~0.8) + 막음(0.5 미만) → ", ["사용자가 직접 입력하는 칸"]));
+  cardHelp(card, richNote(["놓침"], " = 비움 + 확인 필요(확신도 0.5~0.8) + 막음(0.5 미만) → ", ["사용자가 직접 입력하는 칸"]));
   return card;
 }
 
@@ -603,7 +611,7 @@ function stageAccuracyCard(title, keys, foot) {
     }
     row.after(...notes);
   });
-  card.append(foot);
+  cardHelp(card, foot);
   return card;
 }
 
@@ -625,7 +633,7 @@ function stageSummary() {
     row.append(name, line);
     card.append(row);
   }
-  card.append(richNote(["자동기입 점수"], " = 준비와 매핑의 모든 질문을 합쳐 같은 식으로 낸 점수"));
+  cardHelp(card, richNote(["자동기입 점수"], " = 준비와 매핑의 모든 질문을 합쳐 같은 식으로 낸 점수"));
   return card;
 }
 
@@ -1054,6 +1062,7 @@ function renderFilters() {
   select.value = state.group ?? "";
   $("#comparison-detail").replaceChildren(...(state.group ? comparisonDetail(state.group) : []));
   const pendingRun = groupRuns(state.group).some(({ run }) => ACTIVE.includes(run.status));
+  $("#record-delete").hidden = !state.canDelete;
   $("#record-delete").disabled = !state.group || pendingRun;
   $("#result-copy").disabled = !state.group;
   $("#record-delete").title = !state.group ? "삭제할 기록 없음" : pendingRun ? "진행 중인 실행이 있어 삭제할 수 없음" : "이 실행 기록 삭제";
@@ -1424,6 +1433,7 @@ const GUIDES = {
       ["띄우기", "`python3 scripts/evaluation_local.py`", "`127.0.0.1:18090/evaluations/`"],
       ["끄기", "`python3 scripts/evaluation_local.py stop`", "기록은 남습니다"],
       ["비밀번호 다시 정하기", "`python3 scripts/evaluation_local.py reset-password`", "해시만 저장합니다"],
+      ["기록 지우기", "휴지통 버튼", "로컬에서만 보입니다. 개발서버 기록은 지울 수 없습니다"],
       ["모델 키", "`.env.local`", "JEV·OpenAI 키를 읽습니다(없으면 메인 체크아웃)"],
     ],
   },
@@ -2218,6 +2228,8 @@ async function load() {
   let failed = null;
   try {
     state.runs = await api("/runs?limit=50");
+    // 기록 삭제는 서버가 허용할 때만 보인다(개발서버처럼 함께 쓰는 서버는 꺼져 있다).
+    state.canDelete = (await api("/capabilities")).recordDelete === true;
   } catch (error) {
     state.runs = [];
     failed = error.message;

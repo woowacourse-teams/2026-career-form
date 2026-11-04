@@ -61,14 +61,17 @@ public final class EvaluationRunController {
     private final DatasetLoader.ResourceSource resources;
     private final EvaluationProviders providers;
     private final RunDeletionService deletions;
+    private final boolean recordDeleteEnabled;
     private final RunReporter reporter = new RunReporter();
     private final Map<String, java.util.Optional<LoadedDataset>> loaded = new ConcurrentHashMap<>();
     private final JsonMapper json = JsonMapper.builder().build();
 
     public EvaluationRunController(RunService runs, RunStore store, ResultStore results, RescoringService scorings,
         DatasetLoader datasets, DatasetLoader.ResourceSource resources, EvaluationProviders providers,
-        RunDeletionService deletions) {
+        RunDeletionService deletions,
+        @org.springframework.beans.factory.annotation.Value("${career-form.evaluation.record-delete-enabled:false}") boolean recordDeleteEnabled) {
         this.deletions = deletions;
+        this.recordDeleteEnabled = recordDeleteEnabled;
         this.runs = runs;
         this.store = store;
         this.results = results;
@@ -136,11 +139,23 @@ public final class EvaluationRunController {
         return dataset(run).map(dataset -> ItemReport.of(dataset, results.list(runId))).orElse(List.of());
     }
 
-    /** 평가 기록 하나(비교 ID 또는 단독 실행 ID)를 지운다. 끝나지 않은 실행이 있으면 409다. */
+    /** 화면이 켜고 끌 기능. 기록 삭제는 로컬에서만 켠다. */
+    @GetMapping("/capabilities")
+    public Map<String, Boolean> capabilities() {
+        return Map.of("recordDelete", recordDeleteEnabled);
+    }
+
+    /**
+     * 평가 기록 하나(비교 ID 또는 단독 실행 ID)를 지운다. 끝나지 않은 실행이 있으면 409다. 함께 쓰는 서버의 기록은 팀의 변경 이력이라
+     * 기록 삭제를 켠 서버(로컬)가 아니면 403이다.
+     */
     @DeleteMapping("/records/{recordKey}")
-    public RunDeletionService.Deleted deleteRecord(@PathVariable String recordKey,
+    public ResponseEntity<?> deleteRecord(@PathVariable String recordKey,
         @RequestHeader(value = "X-Evaluation-Requester", required = false) String requester) {
-        return deletions.delete(recordKey, requester(requester));
+        if (!recordDeleteEnabled) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("code", "RECORD_DELETE_DISABLED"));
+        }
+        return ResponseEntity.ok(deletions.delete(recordKey, requester(requester)));
     }
 
     @PostMapping("/runs/{runId}/cancel")

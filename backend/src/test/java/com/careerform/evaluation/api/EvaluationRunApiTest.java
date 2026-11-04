@@ -66,12 +66,16 @@ class EvaluationRunApiTest {
     private final EvaluationWorker worker = new EvaluationWorker(runs, results, datasets,
         new CallExecutor((kind, request, settings) -> EvaluationTestData.correctResponse(kind)), new PromptCatalog(),
         List.of(EvaluationTestData.PROMPT), EvaluationTestData.PROVIDERS, 100, clock, "worker", Duration.ofMinutes(5));
-    private final MockMvc mvc = MockMvcBuilders.standaloneSetup(new EvaluationRunController(service, runs, results,
-            new RescoringService(runs, results, new InMemoryScoringStore(), datasets::load, clock),
-            new DatasetLoader(DatasetLoader.classpath(getClass().getClassLoader())),
-            DatasetLoader.classpath(getClass().getClassLoader()), EvaluationTestData.PROVIDERS,
-            new RunDeletionService(runs, results, new InMemoryScoringStore())))
-        .addFilters(new QualityApiFilter(access)).build();
+    private final MockMvc mvc = mvc(true);
+
+    private MockMvc mvc(boolean recordDeleteEnabled) {
+        return MockMvcBuilders.standaloneSetup(new EvaluationRunController(service, runs, results,
+                new RescoringService(runs, results, new InMemoryScoringStore(), datasets::load, clock),
+                new DatasetLoader(DatasetLoader.classpath(getClass().getClassLoader())),
+                DatasetLoader.classpath(getClass().getClassLoader()), EvaluationTestData.PROVIDERS,
+                new RunDeletionService(runs, results, new InMemoryScoringStore()), recordDeleteEnabled))
+            .addFilters(new QualityApiFilter(access)).build();
+    }
 
     @Test
     @DisplayName("비밀번호가 없으면 실행 등록과 조회 모두 401이다")
@@ -187,6 +191,21 @@ class EvaluationRunApiTest {
         authorized(get("/api/v1/evaluations/runs/" + runId)).andExpect(status().isNotFound());
         authorized(delete("/api/v1/evaluations/records/" + runId)).andExpect(status().isNotFound());
         mvc.perform(delete("/api/v1/evaluations/records/" + runId)).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("기록 삭제를 켜지 않은 서버(개발서버)는 끝난 기록도 지우지 않고 403이며, 화면에 꺼져 있다고 알린다")
+    void recordDeleteDisabledByDefaultOnSharedServers() throws Exception {
+        String runId = runId(register());
+        worker.runOnce();
+        MockMvc shared = mvc(false);
+
+        shared.perform(delete("/api/v1/evaluations/records/" + runId).header("Authorization", PASSWORD))
+            .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("RECORD_DELETE_DISABLED"));
+        authorized(get("/api/v1/evaluations/runs/" + runId)).andExpect(status().isOk());
+        shared.perform(get("/api/v1/evaluations/capabilities").header("Authorization", PASSWORD))
+            .andExpect(jsonPath("$.recordDelete").value(false));
+        authorized(get("/api/v1/evaluations/capabilities")).andExpect(jsonPath("$.recordDelete").value(true));
     }
 
     @Test

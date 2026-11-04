@@ -630,7 +630,7 @@
 #cf-eval-preview .stat-line{display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px}
 #cf-eval-preview .stat{display:inline-flex;align-items:baseline;gap:5px;white-space:nowrap}
 #cf-eval-preview .stat-label{color:#7a838c;font-size:12px}
-#cf-eval-preview .stat b{color:#233447;font-weight:650;font-size:13px;font-variant-numeric:tabular-nums}
+#cf-eval-preview .stat b{color:#59626b;font-weight:500;font-size:12px;font-variant-numeric:tabular-nums}
 #cf-eval-preview .rich-note b{color:#2a3440;font-weight:650}
 #cf-eval-preview .stat.has-help{cursor:default}
 #cf-eval-preview .stat.has-help .stat-label{text-decoration:underline dotted #a7afb7;text-underline-offset:3px}
@@ -735,3 +735,8 @@
 #cf-eval-preview .flow-chip{padding:1px 8px;border-radius:5px;color:#fff;font-size:11.5px;font-weight:600}
 #cf-eval-preview .flow-chip.request{background:#4e6d90}#cf-eval-preview .flow-chip.ai{background:#8a6f9e}#cf-eval-preview .flow-chip.plain{background:#b3bac0}
 #cf-eval-preview .flow-foot{flex-basis:100%;margin:2px 0 0;font-size:12px}
+#cf-eval-preview .bar-row .number{font-size:18px;font-weight:700;color:#192c3d}
+#cf-eval-preview .bar-row{grid-template-columns:132px minmax(16px,1fr) 78px}
+#cf-eval-preview .summary-row .stat b{color:#233447;font-weight:650;font-size:14px}
+#cf-eval-preview .metric-head h3.has-help{cursor:default;text-decoration:underline dotted #a7afb7;text-underline-offset:4px}
+#cf-eval-preview .icon-button[hidden]{display:none}

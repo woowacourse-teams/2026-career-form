@@ -106,6 +106,7 @@ development 서버에서만 켠다. 평가 호출은 사용자 요청과 서버 
 | `CAREER_FORM_EVALUATION_OPENAI_MODELS` | gpt-6-luna | 쉼표로 구분한 허용 모델. 첫 모델이 기본값 |
 | `CAREER_FORM_EVALUATION_OPENAI_REASONING_EFFORT` | none | 추론 강도. 실행 설정과 지문에 남는다 |
 | `CAREER_FORM_EVALUATION_AUTO_RUN_ENABLED` | false | 평가 입력이 바뀐 배포 뒤 평가 1회 자동 실행 |
+| `CAREER_FORM_EVALUATION_RECORD_DELETE_ENABLED` | false | 평가 기록 삭제와 휴지통 버튼. 로컬 실행기만 켠다. 개발서버 기록은 팀의 변경 이력이라 지우지 않는다 |
 | `CAREER_FORM_EVALUATION_AUTO_RUN_REPETITIONS` | 3 | 자동 실행 반복 수 |
 | `CAREER_FORM_EVALUATION_AUTO_RUN_DATASET_VERSION` | 3 | 자동 실행 데이터셋 버전(평가 화면과 같게) |
 | `CAREER_FORM_ADAPTER_DIGEST` | 빈 값 | 공급자 연결 코드의 Git 트리 지문. 개발 배포 이미지 빌드 인자로 넣고 자동 평가 입력에 쓴다 |
@@ -145,7 +146,8 @@ API와 화면은 품질 확인 공용 비밀번호(`CAREER_FORM_QUALITY_PASSWORD
 | `GET /api/v1/evaluations/providers` | 고를 수 있는 공급자와 모델(첫 항목이 기본값) |
 | `GET /api/v1/evaluations/comparisons/{id}` | 비교에 속한 모델별 실행과 보고(등록 순서) |
 | `GET /api/v1/evaluations/runs/{id}/items` | 채점 항목별 답(칸 매핑·섹션 분류·선택 결정)과 반복별 판정 |
-| `DELETE /api/v1/evaluations/records/{key}` | 비교 묶음(비교 ID, 단독 실행이면 실행 ID)의 실행·호출 결과·재채점 이력 삭제. 끝나지 않은 실행이 있으면 409. 프롬프트 원문은 남기고 삭제 사실은 서버 로그(`EVALUATION_RECORD_DELETED`)에 남긴다 |
+| `GET /api/v1/evaluations/capabilities` | 화면이 켜고 끌 기능(`recordDelete`) |
+| `DELETE /api/v1/evaluations/records/{key}` | 비교 묶음(비교 ID, 단독 실행이면 실행 ID)의 실행·호출 결과·재채점 이력 삭제. 기록 삭제를 켠 서버(로컬)가 아니면 403, 끝나지 않은 실행이 있으면 409. 프롬프트 원문은 남기고 삭제 사실은 서버 로그(`EVALUATION_RECORD_DELETED`)에 남긴다 |
 
 등록 본문: `datasetId`, `datasetVersion`, `split`(tuning|final), `repetitions`, `promptVersion`(선택),
 `overrides`(`field-batch-size` 1~128, `section-concurrency` 1~16만 허용), `provider`·`model`(선택, 없으면 기본값).

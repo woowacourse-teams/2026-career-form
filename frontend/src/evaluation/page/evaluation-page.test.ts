@@ -162,15 +162,20 @@ const dataset = {
   ],
 };
 
+// 서버가 기록 삭제를 허용하는지. 개발서버처럼 함께 쓰는 서버는 꺼져 있다.
+const capabilities = { recordDelete: false };
+
 function respond(url: string) {
-  const body = url.includes("/runs?")
-    ? [
-        { run, report },
-        { run: baseRun, report: baseReport },
-      ]
-    : url.includes("/datasets/")
-      ? dataset
-      : [];
+  const body = url.includes("/capabilities")
+    ? capabilities
+    : url.includes("/runs?")
+      ? [
+          { run, report },
+          { run: baseRun, report: baseReport },
+        ]
+      : url.includes("/datasets/")
+        ? dataset
+        : [];
   return {
     ok: true,
     status: 200,
@@ -275,6 +280,29 @@ describe("AI 평가 화면의 단계 탭", () => {
       "요청 처리 시간",
       "요청 실패율",
     ]);
+  });
+
+  it("점수 카드는 점수만 크게 보이고 설명은 아래에 적지 않고 제목에 커서를 올리면 보인다", async () => {
+    await pick("total");
+    const card = document.querySelector("#cf-quality .metric")!;
+    expect(card.querySelector(".metric-foot")).toBeNull();
+    expect(card.querySelector("h3")?.getAttribute("data-help")).toContain(
+      "2배",
+    );
+  });
+
+  it("휴지통은 서버가 기록 삭제를 허용할 때만 보인다", async () => {
+    const button = () =>
+      document.querySelector("#record-delete") as HTMLButtonElement;
+    expect(button().hidden).toBe(true);
+    capabilities.recordDelete = true;
+    (document.querySelector("#refresh") as HTMLButtonElement).click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(button().hidden).toBe(false);
+    capabilities.recordDelete = false;
+    (document.querySelector("#refresh") as HTMLButtonElement).click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(button().hidden).toBe(true);
   });
 
   it("자동기입 흐름 창은 네 참여자를 그리고 창 안의 단계 탭에 맞춰 다른 단계 줄을 흐린다", async () => {
