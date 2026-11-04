@@ -11,4 +11,4 @@
 ## frontend-browser-testing
 
 > Payload: [20초 넘는 fixture 통합 테스트 38개 삭제 결정과 측정](documents/slow-fixture-test-removal.md)
-> Supersedes: [CF-304 shard 실행과 병합 검증 경계](../CF-304/documents/frontend-test-sharding.md)
+> Supersedes: [CF-415 프론트엔드 CI의 frontend 경로 필터와 실행 시간 측정](../CF-415/documents/frontend-ci-path-filter.md)
