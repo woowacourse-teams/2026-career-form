@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import type { AddressSearchResult, StructuredAddress } from "../address-search";
 import { AddressSearchPanel } from "./AddressSearchPanel";
 
@@ -23,6 +23,17 @@ function page(
     totalCount,
   };
 }
+
+// jsdom has no showModal/close; stub only the open state they toggle.
+beforeAll(() => {
+  HTMLDialogElement.prototype.showModal = function showModal() {
+    this.setAttribute("open", "");
+  };
+  HTMLDialogElement.prototype.close = function close() {
+    this.removeAttribute("open");
+    this.dispatchEvent(new Event("close"));
+  };
+});
 
 function setup(
   search: (query: string, page: number) => Promise<AddressSearchResult>,
@@ -52,6 +63,76 @@ function submit(query = "첨단로 242") {
 }
 
 describe("AddressSearchPanel", () => {
+  it("opens a modal dialog with a focused query input and no inline search", () => {
+    setup(async () => page([]));
+    const toggle = screen.getByRole("button", { name: "주소 검색" });
+    expect(toggle).toHaveAttribute("aria-haspopup", "dialog");
+    expect(toggle).not.toHaveAttribute("aria-expanded");
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    const input = open();
+
+    const dialog = screen.getByRole("dialog", { name: "주소 검색" });
+    expect(dialog).toContainElement(input);
+    expect(input).toHaveFocus();
+    expect(toggle.closest("dialog")).toBeNull();
+  });
+
+  it("closes with the close button, forgets the query and returns focus", async () => {
+    const search = vi.fn(async () => page([first]));
+    setup(search);
+    submit();
+    await screen.findByText("63309");
+
+    fireEvent.click(screen.getByRole("button", { name: "닫기" }));
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByRole("button", { name: "주소 검색" })).toHaveFocus();
+    expect(open()).toHaveValue("");
+    expect(screen.queryByText("63309")).toBeNull();
+  });
+
+  it("does not close on a backdrop click", () => {
+    setup(async () => page([]));
+    open();
+
+    fireEvent.click(screen.getByRole("dialog"));
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("keeps Escape from reaching the rest of the page", () => {
+    const outer = vi.fn();
+    const onSelect = vi.fn();
+    render(
+      <div onKeyDown={outer}>
+        <AddressSearchPanel
+          contact={{}}
+          onSelect={onSelect}
+          search={async () => page([])}
+        />
+      </div>,
+    );
+
+    fireEvent.keyDown(open(), { key: "Escape" });
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(outer).not.toHaveBeenCalled();
+  });
+
+  it("ignores a response that arrives after the dialog closed", async () => {
+    let resolve!: (value: AddressSearchResult) => void;
+    setup(() => new Promise((done) => (resolve = done)));
+    submit();
+
+    fireEvent.click(screen.getByRole("button", { name: "닫기" }));
+    resolve(page([{ ...first, postalCode: "33333" }]));
+    await Promise.resolve();
+    open();
+
+    expect(screen.queryByText("33333")).toBeNull();
+  });
+
   it("shows road address, postal code and jibun and selects with the keyboard-reachable row", async () => {
     const search = vi.fn(async () => page([first]));
     const { onSelect } = setup(search);

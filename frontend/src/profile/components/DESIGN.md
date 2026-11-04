@@ -38,8 +38,11 @@ selecting an exam does not change its language or grade.
 
 `AddressSearchPanel` sits in the 주소 group above the direct inputs. Its states
 are closed, searching, no results, error, results, verified address and
-"검증 안 된 주소". Results are native buttons in document flow; the same list
-sizes apply. Labels stay short. Closing forgets the query.
+"검증 안 된 주소". The group keeps only the 주소 검색 button and the
+verification label; the search opens in a modal dialog with a dimmed backdrop,
+a 닫기 button and Escape to close. Results are native buttons that scroll
+inside the modal; the same list sizes apply. Labels stay short. Closing
+forgets the query and returns focus to the button.
 
 The input uses combobox/listbox semantics, `aria-expanded`, `aria-controls`,
 `aria-activedescendant`, and linked description text. Arrow keys navigate,
