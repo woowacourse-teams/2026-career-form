@@ -1,5 +1,12 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import type { JobCategoriesView } from "./job-roles";
 import type { PushStateView } from "./push-messages";
 import {
   SubscriptionSettings,
@@ -14,25 +21,53 @@ const base: PushStateView = {
   permission: "granted",
   visibility: { result: "seen", checkedAt: NOW, source: "test" },
   unread: 0,
+  roles: [],
 };
-function renderSettings(state: PushStateView | null = base, failed = false) {
+const categoriesView: JobCategoriesView = {
+  categories: {
+    version: 1,
+    categories: [
+      {
+        code: "IT",
+        label: "IT/개발",
+        roles: [
+          { code: "IT.BACKEND", label: "백엔드" },
+          { code: "IT.FRONTEND", label: "프론트엔드" },
+        ],
+      },
+    ],
+  },
+  error: null,
+};
+function renderSettings(
+  state: PushStateView | null = base,
+  failed = false,
+  categories: JobCategoriesView = {
+    categories: null,
+    error: "ENDPOINT_UNAVAILABLE",
+  },
+) {
   const onEnabledChange = vi.fn(async () => {});
+  const onRolesChange = vi.fn(async () => true);
   const onTest = vi.fn(async () => {});
   const onAnswer = vi.fn(async () => {});
+  const reload = vi.fn(async () => {});
   const track = vi.fn();
   render(
     <SubscriptionSettings
       state={state ?? undefined}
       failed={failed}
       busy={false}
+      categories={{ view: categories, loading: false, reload }}
       onEnabledChange={onEnabledChange}
+      onRolesChange={onRolesChange}
       onTest={onTest}
       onAnswer={onAnswer}
       track={track}
       userAgent="Mozilla/5.0 (Macintosh) Chrome/130"
     />,
   );
-  return { onEnabledChange, onTest, track };
+  return { onEnabledChange, onRolesChange, onTest, reload, track };
 }
 function renderSwitch(state: PushStateView | null = base) {
   const onEnabledChange = vi.fn(async () => {});
@@ -83,23 +118,89 @@ describe("SubscriptionSettings", () => {
       surface: "options",
     });
   });
-  it("Chrome 종료, OS 알림, 로컬 저장, 서버 전송을 이름과 값으로 안내한다", () => {
+  it("마감 알림과 데이터 항목은 바로 보이고, 문제 해결 항목은 '알림이 안 보일 때'를 열어야 보인다", () => {
     renderSettings();
-    const facts = Object.fromEntries(
-      Array.from(document.querySelectorAll("dt")).map((dt) => [
-        dt.textContent,
-        dt.nextElementSibling?.textContent,
-      ]),
-    );
-    expect(facts).toMatchObject({
+    const facts = () =>
+      Object.fromEntries(
+        Array.from(document.querySelectorAll("dt")).map((dt) => [
+          dt.textContent,
+          dt.nextElementSibling?.textContent,
+        ]),
+      );
+    const visibleTerms = () =>
+      Array.from(document.querySelectorAll("dt"))
+        .filter((dt) => dt.closest("details")?.open !== false)
+        .map((dt) => dt.textContent);
+    expect(visibleTerms()).toEqual([
+      "구독",
+      "알림 표시",
+      "마감 알림",
+      "서버 전송",
+      "저장 위치",
+      "확장 삭제 시",
+      "구독 끄기",
+    ]);
+    expect(facts()).toMatchObject({
       "마감 알림": "마감 24시간·2시간 전",
-      "Chrome 종료 중": "알림 없음",
-      "OS 알림 꺼짐": "아이콘 숫자와 새 공고 탭으로 확인",
-      "놓친 알림": "다시 실행하면 공고당 1개",
+      "서버 전송": "푸시 구독 주소와 받을 직무 (프로필·지원서 내용 없음)",
       "저장 위치": "이 브라우저에만 저장 (암호화 안 됨, 서버 동기화 없음)",
       "확장 삭제 시": "저장한 공고도 삭제",
-      "서버 전송": "푸시 구독 주소만 (프로필·지원서 내용 없음)",
+      "구독 끄기":
+        "서버에 구독 주소 삭제 요청 (받을 직무는 이 브라우저에 남음)",
     });
+    expect(screen.getByText("Chrome 종료 중")).not.toBeVisible();
+
+    const more = screen.getByText("알림이 안 보일 때");
+    fireEvent.click(more);
+    expect(more.closest("details")).toHaveAttribute("open");
+    expect(screen.getByText("Chrome 종료 중")).toBeVisible();
+    expect(visibleTerms().slice(-4)).toEqual([
+      "Chrome 종료 중",
+      "OS 알림 설정",
+      "OS 알림 꺼짐",
+      "놓친 알림",
+    ]);
+  });
+  it("받을 직무 영역에서 소분류를 고르면 저장하고 선택 개수만 계측한다", async () => {
+    const { onRolesChange, track } = renderSettings(
+      { ...base, roles: ["IT.FRONTEND"] },
+      false,
+      categoriesView,
+    );
+    const region = screen.getByRole("region", { name: "받을 직무" });
+    expect(within(region).getByText("1개 선택")).toBeInTheDocument();
+    fireEvent.click(within(region).getByRole("checkbox", { name: "백엔드" }));
+    await waitFor(() =>
+      expect(onRolesChange).toHaveBeenCalledWith(["IT.FRONTEND", "IT.BACKEND"]),
+    );
+    expect(track).toHaveBeenCalledWith("push_roles_saved", {
+      surface: "options",
+      role_count: 2,
+    });
+    expect(track).not.toHaveBeenCalledWith(
+      "push_roles_saved",
+      expect.objectContaining({ roles: expect.anything() }),
+    );
+  });
+  it("저장에 실패하면 계측하지 않는다", async () => {
+    const { onRolesChange, track } = renderSettings(
+      base,
+      false,
+      categoriesView,
+    );
+    onRolesChange.mockResolvedValue(false);
+    fireEvent.click(screen.getByRole("checkbox", { name: "백엔드" }));
+    await waitFor(() => expect(onRolesChange).toHaveBeenCalledTimes(1));
+    expect(track).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "선택을 저장하지 못했어요",
+    );
+  });
+  it("분류 API가 없는 구 백엔드면 받을 직무 영역에 서버 미지원만 보인다", () => {
+    renderSettings();
+    const region = screen.getByRole("region", { name: "받을 직무" });
+    expect(within(region).getByRole("status")).toHaveTextContent("서버 미지원");
+    expect(within(region).queryByRole("checkbox")).toBeNull();
   });
   it("상태를 읽지 못하면 짧게 알린다", () => {
     renderSettings(null, true);

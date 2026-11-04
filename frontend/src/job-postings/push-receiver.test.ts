@@ -20,7 +20,7 @@ const payload = {
   closesAt: "2026-11-03T09:00:00Z",
 };
 
-function harness() {
+function harness(selectedRoles: string[] = []) {
   let now = NOW;
   const store: Record<string, unknown> = {};
   let rows: Posting[] = [];
@@ -65,6 +65,7 @@ function harness() {
     },
     postings,
     track: (event, properties) => tracked.push([event, properties]),
+    roles: async () => selectedRoles,
     unread: {
       add: async (id, closesAt) => {
         unreadLog.push(`add:${id}:${closesAt}`);
@@ -251,6 +252,42 @@ describe("PushReceiver", () => {
     expect(h.shown[1].message).toContain("마감이 지난 공고");
     expect(await h.receiver.save(postingNotificationId("missing"))).toBe(
       undefined,
+    );
+  });
+});
+
+describe("PushReceiver role filter", () => {
+  const tagged = { ...payload, roles: ["IT.BACKEND", "IT.QA"] };
+  it("선택한 직무와 겹치는 공고는 알림을 띄운다", async () => {
+    const h = harness(["IT.QA", "DESIGN.UX_UI"]);
+    expect(await h.receiver.receive(tagged)).toBe("notified");
+    expect(h.shown).toHaveLength(1);
+    expect(h.store[PUSH_NOTIFIED_KEY]).toMatchObject({
+      [ID]: { roles: ["IT.BACKEND", "IT.QA"] },
+    });
+  });
+  it.each([
+    ["겹치지 않는 선택", ["DESIGN.UX_UI"]],
+    ["미선택", []],
+  ])("%s이면 알림도 배지도 계측도 없이 거른다", async (_name, selected) => {
+    const h = harness(selected);
+    expect(await h.receiver.receive(tagged)).toBe("filtered");
+    expect(h.shown).toEqual([]);
+    expect(h.unreadLog).toEqual([]);
+    expect(h.visibilityLog).toEqual([]);
+    expect(h.tracked).toEqual([]);
+    expect(h.store[PUSH_NOTIFIED_KEY]).toBeUndefined();
+  });
+  it("roles 없는 payload는 미선택이어도 기존처럼 띄운다", async () => {
+    const h = harness([]);
+    expect(await h.receiver.receive(payload)).toBe("notified");
+    expect(h.shown).toHaveLength(1);
+    expect(h.unreadLog).toEqual([`add:${ID}:${Date.parse(payload.closesAt)}`]);
+  });
+  it("roles가 빈 배열인 payload는 아무 직무와도 겹치지 않아 거른다", async () => {
+    const h = harness(["IT.BACKEND"]);
+    expect(await h.receiver.receive({ ...payload, roles: [] })).toBe(
+      "filtered",
     );
   });
 });

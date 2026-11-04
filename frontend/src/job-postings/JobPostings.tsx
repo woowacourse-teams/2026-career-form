@@ -9,6 +9,7 @@ import {
 import type { TrackEvent } from "../analytics/events";
 import { trackExtensionEvent } from "../analytics/extension-tracker";
 import { postingClient, type PostingClient } from "./client";
+import { matchesSelectedRoles } from "./job-roles";
 import type { PushApiErrorCode, ServerPosting } from "./push-api";
 import {
   pushClient as defaultPushClient,
@@ -17,6 +18,7 @@ import {
 import type { PushStateView } from "./push-messages";
 import { PostingTable, type PostingRow } from "./PostingTable";
 import { isUrgent } from "./saved-postings";
+import { CHOOSE_ROLES_TEXT } from "./RoleSelector";
 import { postingInput, reminderOutcome } from "./server-posting";
 import type { PostingSnapshot } from "./service";
 import {
@@ -24,6 +26,7 @@ import {
   SubscriptionSwitch,
 } from "./SubscriptionSettings";
 import { useInbox } from "./use-inbox";
+import { useJobCategories } from "./use-job-categories";
 import { usePushState } from "./use-push-state";
 import { VisibilityCheck, type VisibilityVariant } from "./VisibilityCheck";
 import styles from "./JobPostings.module.css";
@@ -32,6 +35,9 @@ interface Props {
   pushClient?: PushClient;
   now?: () => number;
   track?: TrackEvent;
+  /** Opens the 알림 설정 dialog as soon as it turns true (side panel deep link). */
+  openSettings?: boolean;
+  onSettingsOpened?: () => void;
 }
 interface Failure {
   message: string;
@@ -106,6 +112,8 @@ export function JobPostings({
   pushClient = defaultPushClient,
   now = Date.now,
   track = trackExtensionEvent,
+  openSettings = false,
+  onSettingsOpened,
 }: Props) {
   const id = useId();
   const [snapshot, setSnapshot] = useState<PostingSnapshot>();
@@ -185,20 +193,27 @@ export function JobPostings({
   };
   const push = usePushState(pushClient);
   const inbox = useInbox(pushClient, track);
+  const categories = useJobCategories(pushClient);
   useEffect(() => {
     if (push.state && card === undefined) setCard(cardFor(push.state));
   }, [push.state, card]);
   useEffect(() => {
     if (settingsOpen) settingsDialog.current?.focus();
   }, [settingsOpen]);
+  useEffect(() => {
+    if (!openSettings) return;
+    setSettingsOpen(true);
+    onSettingsOpened?.();
+  }, [openSettings, onSettingsOpened]);
   const closeSettings = () => {
     setSettingsOpen(false);
     settingsButton.current?.focus();
   };
   // The scrim makes the page behind unavailable, so Tab stays in the dialog.
+  // Roving tabs (tabindex -1) are reached with arrow keys, not Tab.
   const keepTabInSettings = (event: KeyboardEvent<HTMLDivElement>) => {
     const controls = event.currentTarget.querySelectorAll<HTMLElement>(
-      "button:not(:disabled)",
+      'button:not(:disabled):not([tabindex="-1"]), input:not(:disabled)',
     );
     const first = controls[0];
     const last = controls[controls.length - 1];
@@ -252,14 +267,34 @@ export function JobPostings({
   const urgentCount = groups.planned.filter((p) =>
     isUrgent(p.deadline, time),
   ).length;
+  // Role-tagged postings need an overlap with the selection; legacy postings
+  // without roles reach everyone. Until the selection is known the inbox keeps
+  // loading, unless the background is unreachable, where nothing is hidden.
+  const selectedRoles = push.state?.roles;
+  const visibleInbox =
+    inbox.postings && (selectedRoles || push.failed)
+      ? inbox.postings.filter((p) =>
+          matchesSelectedRoles(p.roles, selectedRoles ?? []),
+        )
+      : undefined;
+  const hiddenCount =
+    inbox.postings && visibleInbox
+      ? inbox.postings.length - visibleInbox.length
+      : 0;
+  // Ask for a selection only where one can be made: the server (or its
+  // cached list) offers categories, or it already tagged a posting.
+  const needsRoles =
+    selectedRoles !== undefined &&
+    selectedRoles.length === 0 &&
+    (!!categories.view?.categories || hiddenCount > 0);
   const counts: Record<View, number | undefined> = {
-    inbox: inbox.postings?.length,
+    inbox: visibleInbox?.length,
     planned: snapshot && groups.planned.length,
     expired: snapshot && groups.expired.length,
     completed: snapshot && groups.completed.length,
   };
   const view: View =
-    chosenView ?? (inbox.postings?.length ? "inbox" : "planned");
+    chosenView ?? (visibleInbox?.length || needsRoles ? "inbox" : "planned");
   const select = (next: View, focus = false) => {
     setChosenView(next);
     setFeedback("");
@@ -295,7 +330,7 @@ export function JobPostings({
       "공고를 삭제했습니다.",
       "공고를 삭제하지 못했습니다. 다시 시도해 주세요.",
     );
-  const inboxRows: PostingRow[] = (inbox.postings ?? []).map((posting) => ({
+  const inboxRows: PostingRow[] = (visibleInbox ?? []).map((posting) => ({
     key: posting.id,
     company: posting.company,
     role: posting.role,
@@ -350,6 +385,19 @@ export function JobPostings({
     });
   const rows = view === "inbox" ? inboxRows : savedRows(view);
   const inboxBlocked = view === "inbox" && !!inbox.error;
+  const roleNotice = (asBanner: boolean) => (
+    <div
+      className={asBanner ? styles.panelNotice : styles.panelMessage}
+      role="status"
+    >
+      <span>
+        {CHOOSE_ROLES_TEXT}. 고르기 전에는 직무가 있는 새 공고를 받지 않아요.
+      </span>
+      <button type="button" onClick={() => setSettingsOpen(true)}>
+        받을 직무 고르기
+      </button>
+    </div>
+  );
   const panelBody = () => {
     if (view === "inbox") {
       if (inbox.error)
@@ -368,7 +416,7 @@ export function JobPostings({
             )}
           </div>
         );
-      if (!inbox.postings)
+      if (!visibleInbox)
         return (
           <p className={styles.panelMessage} role="status">
             불러오는 중
@@ -377,9 +425,19 @@ export function JobPostings({
     } else if (!snapshot) {
       return null;
     }
+    const askRoles = view === "inbox" && needsRoles;
     if (!rows.length)
-      return <p className={styles.panelMessage}>{EMPTY_LABELS[view]}</p>;
-    return <PostingTable rows={rows} now={time} />;
+      return askRoles ? (
+        roleNotice(false)
+      ) : (
+        <p className={styles.panelMessage}>{EMPTY_LABELS[view]}</p>
+      );
+    return (
+      <>
+        {askRoles && roleNotice(true)}
+        <PostingTable rows={rows} now={time} />
+      </>
+    );
   };
   return (
     <main className={styles.page}>
@@ -444,7 +502,9 @@ export function JobPostings({
                 state={push.state}
                 failed={push.failed}
                 busy={push.busy}
+                categories={categories}
                 onEnabledChange={push.setEnabled}
+                onRolesChange={push.setRoles}
                 onTest={push.test}
                 onAnswer={push.record}
                 track={track}

@@ -33,13 +33,23 @@ import {
   type SavedPostingsReader,
 } from "../../src/job-postings/saved-postings";
 import {
+  pushClient as defaultPushClient,
+  type PushClient,
+} from "../../src/job-postings/push-client";
+import {
   unreadPostingsReader,
   type UnreadReader,
 } from "../../src/job-postings/unread-postings";
+import { usePushState } from "../../src/job-postings/use-push-state";
 import styles from "./App.module.css";
 import panelCss from "./App.module.css?inline";
 import { DeadlinePostingList, useDeadlinePostings } from "./DeadlinePostings";
 import { PanelSettingsMenu } from "./PanelSettingsMenu";
+import {
+  guidanceFor,
+  PostingsEmptyGuidance,
+  PostingsNotice,
+} from "./PostingsGuidance";
 import { ProfileValueList } from "./ProfileValueList";
 
 interface AppProps {
@@ -49,6 +59,8 @@ interface AppProps {
   closePanel?: () => void;
   openOptions?: () => Promise<void> | void;
   openPostings?: (create: boolean) => Promise<void>;
+  /** Opens posting management with the 알림 설정 dialog showing. */
+  openPostingSettings?: () => Promise<void>;
   openAutofill?: () => Promise<void>;
   inPage?: boolean;
   logoUrl?: string;
@@ -57,6 +69,8 @@ interface AppProps {
   showPostings?: boolean;
   unreadPostings?: UnreadReader;
   savedPostings?: SavedPostingsReader;
+  /** New posting alert state; the 마감 공고 tab explains why it may be empty. */
+  pushClient?: PushClient;
   now?: () => number;
   /** The in-page panel shrinks to its tabs' content; other surfaces keep their height. */
   fitContent?: boolean;
@@ -142,7 +156,8 @@ export function App({
   copyText = (value) => navigator.clipboard.writeText(value),
   closePanel = () => window.close(),
   openOptions = openOptionsPage,
-  openPostings = openPostingsPage,
+  openPostings = () => openPostingsPage(),
+  openPostingSettings = () => openPostingsPage({ settings: true }),
   openAutofill = openAutofillOverlay,
   inPage = false,
   logoUrl = "/side-panel-launcher-logo.png",
@@ -151,6 +166,7 @@ export function App({
   showPostings = true,
   unreadPostings = unreadPostingsReader,
   savedPostings = savedPostingsReader,
+  pushClient = defaultPushClient,
   now = Date.now,
   fitContent = false,
   readImportCandidates,
@@ -164,6 +180,7 @@ export function App({
   const [selectedTab, setSelectedTab] = useState<PanelTabId>("autofill");
   const tabButtons = useRef(new Map<PanelTabId, HTMLButtonElement>());
   const deadlinePostings = useDeadlinePostings(savedPostings, now);
+  const push = usePushState(pushClient);
   const profileLoadGeneration = useRef(0);
   const [importActive, setImportActive] = useState(false);
   const [heading, setHeading] = useState<PanelHeading>({});
@@ -310,6 +327,43 @@ export function App({
   ];
   const activeTab =
     selectedTab === "postings" && !showPostings ? "autofill" : selectedTab;
+
+  // The 받을 직무 guidance only applies when the server offers categories;
+  // looked up once, and only for an unselected user viewing this tab.
+  const [rolesChoosable, setRolesChoosable] = useState<boolean>();
+  const unselected =
+    push.state?.enabled === true &&
+    push.state.status?.code === "registered" &&
+    push.state.roles.length === 0;
+  useEffect(() => {
+    if (!unselected || rolesChoosable !== undefined || activeTab !== "postings")
+      return;
+    let active = true;
+    pushClient.categories().then(
+      (view) => {
+        if (active) setRolesChoosable(view.categories !== null);
+      },
+      () => {
+        if (active) setRolesChoosable(false);
+      },
+    );
+    return () => {
+      active = false;
+    };
+  }, [unselected, rolesChoosable, activeTab, pushClient]);
+  const guidance = push.failed
+    ? undefined
+    : guidanceFor(push.state, rolesChoosable);
+  const enableAlerts = async () => {
+    await push.setEnabled(true);
+    track("push_subscription_enabled", analyticsProperties);
+  };
+  const openManagement = (settings: boolean) => {
+    setPostingsFailed(false);
+    void (settings ? openPostingSettings() : openPostings(false)).catch(() =>
+      setPostingsFailed(true),
+    );
+  };
 
   const moveTab = (event: KeyboardEvent, from: PanelTabId) => {
     if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
@@ -537,11 +591,34 @@ export function App({
           )}
           {activeTab === "postings" && (
             <div className={styles.postingsTab}>
+              {guidance &&
+                deadlinePostings.status === "ready" &&
+                deadlinePostings.postings.length > 0 && (
+                  <PostingsNotice
+                    guidance={guidance}
+                    busy={push.busy}
+                    onEnable={() => void enableAlerts()}
+                    onOpenSettings={() => openManagement(true)}
+                  />
+                )}
               <DeadlinePostingList
                 status={deadlinePostings.status}
                 postings={deadlinePostings.postings}
                 time={deadlinePostings.time}
                 onRetry={deadlinePostings.retry}
+                empty={
+                  guidance && push.state ? (
+                    <PostingsEmptyGuidance
+                      guidance={guidance}
+                      state={push.state}
+                      unread={unreadCount}
+                      busy={push.busy}
+                      onEnable={() => void enableAlerts()}
+                      onOpenSettings={() => openManagement(true)}
+                      onOpenPostings={() => openManagement(false)}
+                    />
+                  ) : undefined
+                }
               />
               <div className={styles.postingsFooter}>
                 {postingsFailed && (
@@ -552,12 +629,7 @@ export function App({
                 <button
                   className={styles.postingsManage}
                   type="button"
-                  onClick={() => {
-                    setPostingsFailed(false);
-                    void openPostings(false).catch(() =>
-                      setPostingsFailed(true),
-                    );
-                  }}
+                  onClick={() => openManagement(false)}
                 >
                   공고 관리 <span aria-hidden="true">↗</span>
                   {unreadCount > 0 && (

@@ -158,3 +158,23 @@ describe("PostHog delay_ms property", () => {
     });
   });
 });
+
+describe("PostHog role_count property", () => {
+  it("forwards role_count including zero", async () => {
+    const bodies: { properties: Record<string, unknown> }[] = [];
+    const capture = createPosthogCapture({
+      key: "test-project",
+      getDistinctId: async () => "anonymous",
+      fetch: async (_input, init) => {
+        bodies.push(JSON.parse(String(init?.body)));
+        return new Response("1");
+      },
+    });
+    await capture("push_roles_saved", { surface: "options", role_count: 0 });
+    expect(bodies[0].properties).toEqual({
+      surface: "options",
+      role_count: 0,
+      $process_person_profile: false,
+    });
+  });
+});

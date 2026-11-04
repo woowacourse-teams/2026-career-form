@@ -211,6 +211,148 @@
 .status dd {
   font-weight: 600;
 }
+/* Troubleshooting rows stay folded behind one line. */
+.factsMore {
+  margin: 0;
+  border-top: 1px solid var(--color-border);
+}
+.factsMore summary {
+  padding: 8px 0;
+  color: var(--color-text-muted);
+  list-style: none;
+  cursor: pointer;
+}
+.factsMore summary::-webkit-details-marker {
+  display: none;
+}
+.factsMore summary::before {
+  content: "▸ ";
+}
+.factsMore[open] summary::before {
+  content: "▾ ";
+}
+.factsMore summary:hover {
+  color: var(--color-text-strong);
+}
+.factsMore summary:focus-visible {
+  outline: 2px solid var(--color-action);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.factsMore .facts {
+  margin-top: 0;
+}
+.factsMore .facts > div:first-child {
+  border-top: 1px solid var(--color-border);
+}
+
+/* 받을 직무: category tabs on the left, role checkboxes on the right. */
+.roles {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+.roles h3 {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.374px;
+}
+.rolesHeading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 15px;
+}
+.rolesCount {
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.rolesHint {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+.rolesNote,
+.rolesFailure {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 15px;
+  margin: 0;
+  color: #515154;
+}
+.rolePicker {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.roleCategories {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-surface-muted);
+}
+.page .roleCategories button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 36px;
+  padding: 8px 11px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text);
+  text-align: left;
+  white-space: normal;
+}
+.page .roleCategories button:hover:not(:disabled) {
+  background: var(--color-surface);
+}
+.page .roleCategories button[aria-selected="true"] {
+  background: var(--color-surface);
+  color: var(--color-text-strong);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 6%);
+}
+.roleCount {
+  color: var(--color-action-strong);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+.roleOptions {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  padding: 8px 15px;
+}
+.roleOption {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-height: 36px;
+  color: var(--color-text-strong);
+  cursor: pointer;
+}
+.roleOption input {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--color-action);
+  cursor: pointer;
+}
+.roleAll {
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--color-border);
+  font-weight: 600;
+}
 
 .error,
 .warning {
@@ -293,6 +435,18 @@
 .panel {
   border-radius: 8px;
   outline: none;
+}
+/* Inbox request to pick roles, shown above the rows that still apply. */
+.panelNotice {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 15px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--color-border);
+  color: #515154;
+  font-size: 14px;
+  letter-spacing: -0.224px;
 }
 .panelMessage {
   display: flex;
@@ -475,6 +629,23 @@
   }
   .facts > div {
     grid-template-columns: 110px minmax(0, 1fr);
+  }
+  /* Narrow dialogs stack the picker: categories scroll sideways on top. */
+  .rolePicker {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .roleCategories {
+    flex-direction: row;
+    overflow-x: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .page .roleCategories button {
+    flex: none;
+    min-height: 44px;
+  }
+  .roleOption {
+    min-height: 44px;
   }
   .listCard {
     padding: 0 15px 8px;

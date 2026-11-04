@@ -23,6 +23,7 @@ const analyticsEvents = [
   "trial_completed",
   "push_subscription_enabled",
   "push_subscription_disabled",
+  "push_roles_saved",
   "posting_notification_shown",
   "posting_notification_opened",
   "posting_notification_saved",
@@ -55,6 +56,8 @@ export interface AnalyticsProperties {
   readonly trigger?: (typeof saveTriggers)[number];
   // Notification display delay in milliseconds; a non-negative integer only.
   readonly delay_ms?: number;
+  // How many roles the user keeps selected; never the codes themselves.
+  readonly role_count?: number;
 }
 export type TrackEvent = (
   event: AnalyticsEvent,
@@ -111,6 +114,12 @@ export function parseAnalyticsMessage(message: unknown) {
     Number.isSafeInteger(input.delay_ms) &&
     input.delay_ms >= 0
       ? { delay_ms: input.delay_ms }
+      : {}),
+    ...("role_count" in input &&
+    typeof input.role_count === "number" &&
+    Number.isSafeInteger(input.role_count) &&
+    input.role_count >= 0
+      ? { role_count: input.role_count }
       : {}),
   };
   return { event, properties };

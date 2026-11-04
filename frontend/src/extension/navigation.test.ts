@@ -5,6 +5,7 @@ import {
   openInPageProfilePanel,
   openOptionsPageFromContent,
   openOptionsPage,
+  openPostingsPage,
   openSidePanel,
 } from "./navigation";
 
@@ -71,6 +72,26 @@ describe("extension navigation", () => {
     expect(runtime.sendMessage).toHaveBeenCalledWith({
       type: "career-form:open-in-page-profile-panel",
     });
+  });
+
+  it("asks the background to open posting management, with the settings dialog on request", async () => {
+    const runtime = { sendMessage: vi.fn(async () => ({ ok: true })) };
+
+    await openPostingsPage({}, runtime);
+    await openPostingsPage({ settings: true }, runtime);
+
+    expect(runtime.sendMessage.mock.calls).toEqual([
+      [{ type: "careerForm.openPostings" }],
+      [{ type: "careerForm.openPostings", settings: true }],
+    ]);
+  });
+
+  it("reports a refused posting management request", async () => {
+    const runtime = { sendMessage: vi.fn(async () => ({ ok: false })) };
+
+    await expect(openPostingsPage({}, runtime)).rejects.toThrow(
+      "공고 관리 화면을 열지 못했습니다.",
+    );
   });
 
   it("does not send an autofill message when the active tab has no id", async () => {

@@ -1,3 +1,4 @@
+import { pruneRoles, type JobCategoryStore } from "./job-roles";
 import type { NotificationCheck } from "./notification-check";
 import { PushApiError, type PushApi } from "./push-api";
 import {
@@ -20,6 +21,7 @@ interface PushHandlerOptions {
     "state" | "permission" | "sendTest" | "record" | "askLater"
   >;
   unread: Pick<UnreadPostings, "count" | "clear">;
+  categories: Pick<JobCategoryStore, "load">;
   extensionId: string;
 }
 
@@ -28,6 +30,7 @@ export function createPushHandler({
   api,
   check,
   unread,
+  categories,
   extensionId,
 }: PushHandlerOptions) {
   const state = async (): Promise<PushStateView> => ({
@@ -37,7 +40,14 @@ export function createPushHandler({
     permission: await check.permission(),
     visibility: await check.state(),
     unread: await unread.count(),
+    roles: await service.roles(),
   });
+  // The answer carries the stored selection right away; the re-registration
+  // that mirrors it to the server runs behind the subscription queue.
+  const saveRoles = async (roles: readonly string[]) => {
+    await service.storeRoles(roles);
+    void service.sync().catch(() => undefined);
+  };
   return (
     message: unknown,
     sender: { id?: string; url?: string },
@@ -70,6 +80,20 @@ export function createPushHandler({
           await unread.clear();
           return { ok: true, postings };
         }
+        case "categories": {
+          const view = await categories.load();
+          // Only a fresh server list may drop selected codes; a cached list
+          // could predate the selection.
+          if (view.categories && view.error === null) {
+            const current = await service.roles();
+            const kept = pruneRoles(current, view.categories);
+            if (kept.length !== current.length) await saveRoles(kept);
+          }
+          return { ok: true, categories: view };
+        }
+        case "roles":
+          await saveRoles(command.roles);
+          break;
       }
       return { ok: true, state: await state() };
     };

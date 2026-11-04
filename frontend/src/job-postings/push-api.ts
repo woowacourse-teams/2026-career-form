@@ -8,6 +8,7 @@ export const PUSH_API_PATHS = {
   subscriptions: "/api/v1/notifications/subscriptions",
   unsubscribe: "/api/v1/notifications/subscriptions/unsubscribe",
   openPostings: "/api/v1/notifications/postings",
+  jobCategories: "/api/v1/notifications/job-categories",
 } as const;
 
 const errorCodes = [
@@ -35,11 +36,28 @@ export interface ServerPosting {
   id: string;
   company: string;
   role: string;
+  // Role codes from the job category list (e.g. IT.BACKEND). Postings
+  // registered before the category list have no roles and reach everyone.
+  roles?: string[];
   link: string;
   opensAt: number;
   closesAt: number;
   // FCM request time from the backend; only used for display-delay metrics.
   sentAt?: number;
+}
+
+export interface JobRole {
+  code: string;
+  label: string;
+}
+export interface JobCategory {
+  code: string;
+  label: string;
+  roles: JobRole[];
+}
+export interface JobCategories {
+  version: number;
+  categories: JobCategory[];
 }
 
 export interface SubscriptionJson {
@@ -50,14 +68,34 @@ export interface SubscriptionJson {
 
 export interface PushApi {
   publicKey(): Promise<string>;
-  register(subscription: SubscriptionJson): Promise<{ created: boolean }>;
+  // roles is the user's role selection; an empty array means none chosen.
+  register(
+    subscription: SubscriptionJson,
+    roles: readonly string[],
+  ): Promise<{ created: boolean }>;
   unregister(endpoint: string): Promise<void>;
   openPostings(): Promise<ServerPosting[]>;
+  jobCategories(): Promise<JobCategories>;
 }
 
 const ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 const MAX_TEXT_LENGTH = 200;
 const MAX_LINK_LENGTH = 2048;
+// Category codes are stable upper-case identifiers; a role code is
+// `<category>.<role>` (backend contract, CF-394).
+const CATEGORY_CODE_PATTERN = /^[A-Z][A-Z0-9_]{0,31}$/;
+const ROLE_CODE_PATTERN = /^[A-Z][A-Z0-9_]{0,31}\.[A-Z][A-Z0-9_]{0,31}$/;
+const MAX_LABEL_LENGTH = 40;
+
+export function isRoleCode(value: unknown): value is string {
+  return typeof value === "string" && ROLE_CODE_PATTERN.test(value);
+}
+// Valid, de-duplicated role codes in their original order; undefined unless
+// the value is an array. Malformed entries are dropped, not fatal.
+export function roleCodes(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return Array.from(new Set(value.filter(isRoleCode)));
+}
 
 function text(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
@@ -104,10 +142,12 @@ export function parseServerPosting(value: unknown): ServerPosting | undefined {
   )
     return undefined;
   const sentAt = instant(value.sentAt);
+  const roles = roleCodes(value.roles);
   return {
     id,
     company,
     role,
+    ...(roles === undefined ? {} : { roles }),
     link,
     opensAt,
     closesAt,
@@ -124,6 +164,8 @@ export function isServerPosting(value: unknown): value is ServerPosting {
     text(value.company) === value.company &&
     typeof value.role === "string" &&
     (value.role === "" || text(value.role) === value.role) &&
+    (value.roles === undefined ||
+      (Array.isArray(value.roles) && value.roles.every(isRoleCode))) &&
     typeof value.link === "string" &&
     value.link.length <= MAX_LINK_LENGTH &&
     isHttpUrl(value.link) &&
@@ -135,6 +177,57 @@ export function isServerPosting(value: unknown): value is ServerPosting {
     (value.sentAt === undefined ||
       (typeof value.sentAt === "number" && Number.isFinite(value.sentAt)))
   );
+}
+
+function label(value: unknown): string | undefined {
+  const trimmed = text(value);
+  return trimmed !== undefined && trimmed.length <= MAX_LABEL_LENGTH
+    ? trimmed
+    : undefined;
+}
+// Strict: the backend validates the list at startup, so any deviation is a
+// contract drift the extension must not guess around.
+export function parseJobCategories(value: unknown): JobCategories | undefined {
+  if (
+    !isRecord(value) ||
+    !Number.isSafeInteger(value.version) ||
+    (value.version as number) < 1 ||
+    !Array.isArray(value.categories) ||
+    value.categories.length === 0
+  )
+    return undefined;
+  const codes = new Set<string>();
+  const categories: JobCategory[] = [];
+  for (const entry of value.categories) {
+    if (
+      !isRecord(entry) ||
+      typeof entry.code !== "string" ||
+      !CATEGORY_CODE_PATTERN.test(entry.code) ||
+      codes.has(entry.code) ||
+      !Array.isArray(entry.roles) ||
+      entry.roles.length === 0
+    )
+      return undefined;
+    const categoryLabel = label(entry.label);
+    if (categoryLabel === undefined) return undefined;
+    codes.add(entry.code);
+    const roles: JobRole[] = [];
+    for (const role of entry.roles) {
+      if (
+        !isRecord(role) ||
+        !isRoleCode(role.code) ||
+        !role.code.startsWith(`${entry.code}.`) ||
+        codes.has(role.code)
+      )
+        return undefined;
+      const roleLabel = label(role.label);
+      if (roleLabel === undefined) return undefined;
+      codes.add(role.code);
+      roles.push({ code: role.code, label: roleLabel });
+    }
+    categories.push({ code: entry.code, label: categoryLabel, roles });
+  }
+  return { version: value.version as number, categories };
 }
 
 export function base64UrlToBytes(value: string): Uint8Array {
@@ -225,8 +318,10 @@ export function createPushApi({
         throw new PushApiError("INVALID_RESPONSE");
       return body.publicKey;
     },
-    async register(subscription) {
+    async register(subscription, roles) {
       // Send only the contract fields; never forward unknown browser fields.
+      // roles always travels so the server copy mirrors the local selection
+      // (an empty array clears it); older backends ignore the field.
       const { status, body } = await request(PUSH_API_PATHS.subscriptions, {
         method: "POST",
         body: {
@@ -236,6 +331,7 @@ export function createPushApi({
             p256dh: subscription.keys.p256dh,
             auth: subscription.keys.auth,
           },
+          roles: [...roles],
         },
       });
       return {
@@ -256,6 +352,12 @@ export function createPushApi({
         .map(parseServerPosting)
         .filter((posting): posting is ServerPosting => posting !== undefined)
         .sort((a, b) => a.closesAt - b.closesAt || a.id.localeCompare(b.id));
+    },
+    async jobCategories() {
+      const { body } = await request(PUSH_API_PATHS.jobCategories);
+      const categories = parseJobCategories(body);
+      if (!categories) throw new PushApiError("INVALID_RESPONSE");
+      return categories;
     },
   };
 }
