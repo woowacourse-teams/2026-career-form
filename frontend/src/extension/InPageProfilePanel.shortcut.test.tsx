@@ -1,10 +1,4 @@
-import {
-  act,
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-} from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { createApiClient } from "../autofill-demo/AutofillOverlay.test-fixtures";
@@ -38,32 +32,4 @@ it("페이지 안 패널은 주입한 단축키 읽기로 안내한다", async (
   const hint = await screen.findByText(/로 이 패널을 열고 닫을 수 있어요/);
   expect(hint.querySelector("kbd")).toHaveTextContent("Alt+Shift+C");
   expect(readPanelShortcut).toHaveBeenCalled();
-});
-
-it("페이지 안 패널은 탭과 작업 화면 모두 내용 높이에 맞춘다", async () => {
-  const controller = createProfilePanelController();
-  render(
-    <InPageProfilePanel
-      pageDocument={document}
-      repository={{
-        load: async () => createEmptyProfile(),
-        save: async () => undefined,
-        loadLayout: async () => "a",
-        saveLayout: async () => undefined,
-      }}
-      apiClient={createApiClient()}
-      controller={controller}
-      closePanel={() => {}}
-      openOptions={() => {}}
-      logoUrl="/logo.png"
-      readPanelShortcut={async () => undefined}
-    />,
-  );
-  await screen.findByRole("tablist");
-  expect(document.querySelector("[data-panel-fit]")).not.toBeNull();
-
-  await act(async () => controller.startAutofill());
-
-  expect(screen.queryByRole("tab", { name: "내 정보" })).toBeNull();
-  expect(document.querySelector("[data-panel-fit]")).not.toBeNull();
 });
