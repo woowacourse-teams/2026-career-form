@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import { POSTINGS_KEY } from "../../src/job-postings/repository";
 import type { Posting } from "../../src/job-postings/model";
+import type { PushClient } from "../../src/job-postings/push-client";
+import type { PushStateView } from "../../src/job-postings/push-messages";
 import { createSavedPostingsReader } from "../../src/job-postings/saved-postings";
 import { createEmptyProfile } from "../../src/profile/model";
 import { App } from "./App";
@@ -697,4 +699,291 @@ it("keeps the import result visible and shows the imported values on 내 정보"
 
   fireEvent.click(tab("자동 기입"));
   expect(screen.getByRole("status", { name: "가져오기 결과" })).toBeVisible();
+});
+
+describe("마감 공고 안내", () => {
+  const registered = {
+    code: "registered",
+    updatedAt: NOW,
+    attempts: 0,
+  } as const;
+  const readyState: PushStateView = {
+    enabled: true,
+    supported: true,
+    status: registered,
+    permission: "granted",
+    visibility: { result: "unknown" },
+    unread: 0,
+    roles: ["IT.BACKEND"],
+  };
+  const categoryList = {
+    version: 1,
+    categories: [
+      {
+        code: "IT",
+        label: "IT/개발",
+        roles: [{ code: "IT.BACKEND", label: "백엔드" }],
+      },
+    ],
+  };
+  /** Fake background: a state the test can change, categories on request. */
+  function pushStub(
+    initial: PushStateView | Error,
+    options: { categories?: boolean } = {},
+  ) {
+    let state = initial;
+    const listeners = new Set<() => void>();
+    const current = async () => {
+      if (state instanceof Error) throw state;
+      return state;
+    };
+    const client: PushClient = {
+      state: current,
+      setEnabled: vi.fn(async (enabled: boolean) => {
+        if (state instanceof Error) throw state;
+        state = {
+          ...state,
+          enabled,
+          status: enabled
+            ? registered
+            : { code: "disabled", updatedAt: NOW, attempts: 0 },
+        };
+        return state;
+      }),
+      test: current,
+      record: current,
+      later: current,
+      setRoles: current,
+      inbox: async () => [],
+      categories: vi.fn(async () =>
+        options.categories === false
+          ? { categories: null, error: "ENDPOINT_UNAVAILABLE" as const }
+          : { categories: categoryList, error: null },
+      ),
+      subscribe: (listener) => {
+        listeners.add(listener);
+        return () => listeners.delete(listener);
+      },
+    };
+    return {
+      client,
+      change: (next: PushStateView) => {
+        state = next;
+        listeners.forEach((listener) => listener());
+      },
+    };
+  }
+  const openPostingsTab = async () => {
+    fireEvent.click(tab(/마감 공고/));
+    await screen.findByRole("tabpanel");
+  };
+
+  it("explains switched-off alerts and switches them on without leaving the panel", async () => {
+    const push = pushStub({ ...readyState, enabled: false });
+    const track = vi.fn();
+    renderApp({ pushClient: push.client, track });
+    await openPostingsTab();
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "새 공고 알림이 꺼져 있어요",
+      }),
+    ).toBeVisible();
+    expect(screen.queryByText("저장한 공고 없음")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "알림 켜기" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "아직 저장한 공고가 없어요" }),
+    ).toBeVisible();
+    expect(push.client.setEnabled).toHaveBeenCalledWith(true);
+    expect(track).toHaveBeenCalledWith("push_subscription_enabled", {
+      surface: "side_panel",
+    });
+  });
+
+  it("explains a failed registration with its status and opens the settings dialog", async () => {
+    const openPostingSettings = vi.fn(async () => undefined);
+    renderApp({
+      pushClient: pushStub({
+        ...readyState,
+        status: { code: "failed", updatedAt: NOW, attempts: 2 },
+      }).client,
+      openPostingSettings,
+    });
+    await openPostingsTab();
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "새 공고 알림이 아직 안 와요",
+      }),
+    ).toBeVisible();
+    expect(
+      screen.getByText(
+        "알림 서버에 등록하지 못했어요. 자동으로 다시 시도하고 있어요.",
+      ),
+    ).toBeVisible();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "구독: 등록 실패 (자동 재시도)",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "알림 설정 열기" }));
+    expect(openPostingSettings).toHaveBeenCalledOnce();
+  });
+
+  it("names the server and Chrome reasons for a missing registration", async () => {
+    const push = pushStub({
+      ...readyState,
+      status: { code: "not_configured", updatedAt: NOW, attempts: 0 },
+    });
+    renderApp({ pushClient: push.client });
+    await openPostingsTab();
+    expect(
+      await screen.findByText("이 빌드에는 알림 서버가 없어요."),
+    ).toBeVisible();
+
+    await act(async () =>
+      push.change({
+        ...readyState,
+        supported: false,
+        status: { code: "unsupported", updatedAt: NOW, attempts: 0 },
+      }),
+    );
+    expect(
+      await screen.findByText("Chrome 121 이상에서 받을 수 있어요."),
+    ).toBeVisible();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "구독: Chrome 121 이상 필요",
+    );
+  });
+
+  it("asks for 받을 직무 only on this tab and only when the server offers categories", async () => {
+    const openPostingSettings = vi.fn(async () => undefined);
+    const push = pushStub({ ...readyState, roles: [] });
+    renderApp({ pushClient: push.client, openPostingSettings });
+    await screen.findByRole("tab", { name: /마감 공고/ });
+    expect(push.client.categories).not.toHaveBeenCalled();
+
+    await openPostingsTab();
+    expect(
+      await screen.findByRole("heading", { name: "받을 직무를 골라 주세요" }),
+    ).toBeVisible();
+    expect(push.client.categories).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole("button", { name: "받을 직무 고르기" }));
+    expect(openPostingSettings).toHaveBeenCalledOnce();
+  });
+
+  it("falls back to the saved-postings guidance on a backend without categories", async () => {
+    const push = pushStub({ ...readyState, roles: [] }, { categories: false });
+    renderApp({ pushClient: push.client });
+    await openPostingsTab();
+
+    expect(
+      await screen.findByRole("heading", { name: "아직 저장한 공고가 없어요" }),
+    ).toBeVisible();
+    expect(screen.queryByText(/받을 직무/)).toBeNull();
+  });
+
+  it("offers the new postings when alerts work and nothing is saved yet", async () => {
+    const openPostings = vi.fn(async () => undefined);
+    const { rerender } = renderApp({
+      pushClient: pushStub(readyState).client,
+      openPostings,
+      unreadPostings: { count: async () => 3, subscribe: () => () => {} },
+    });
+    await openPostingsTab();
+
+    expect(
+      await screen.findByRole("heading", { name: "아직 저장한 공고가 없어요" }),
+    ).toBeVisible();
+    fireEvent.click(
+      await screen.findByRole("button", { name: "새 공고 3건 보기" }),
+    );
+    expect(openPostings).toHaveBeenCalledWith(false);
+
+    rerender(
+      <App
+        repository={repository()}
+        track={vi.fn()}
+        savedPostings={storedPostings([]).reader}
+        pushClient={pushStub(readyState).client}
+        unreadPostings={{ count: async () => 0, subscribe: () => () => {} }}
+        now={() => NOW}
+      />,
+    );
+    expect(
+      await screen.findByRole("button", { name: "새 공고 보기" }),
+    ).toBeVisible();
+  });
+
+  it("keeps the plain empty line when the alert state cannot be read", async () => {
+    renderApp({ pushClient: pushStub(new Error("no background")).client });
+    await openPostingsTab();
+
+    expect(await screen.findByText("저장한 공고 없음")).toBeVisible();
+    expect(screen.queryByRole("heading", { level: 2 })).toBeNull();
+  });
+
+  it("puts a one-line notice above saved postings while alerts are off and clears it once on", async () => {
+    const push = pushStub({ ...readyState, enabled: false });
+    renderApp({ pushClient: push.client }, [
+      posting("a", "2026-11-03T17:00:00"),
+    ]);
+    await openPostingsTab();
+    await screen.findByText("예시 회사 a");
+
+    const notice = await screen.findByRole("status");
+    expect(notice).toHaveTextContent("새 공고 알림이 꺼져 있어요");
+    fireEvent.click(within(notice).getByRole("button", { name: "켜기" }));
+
+    expect(push.client.setEnabled).toHaveBeenCalledWith(true);
+    await act(async () => undefined);
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.getByText("예시 회사 a")).toBeVisible();
+  });
+
+  it("routes the notice buttons for a missing registration and unselected roles to the settings", async () => {
+    const openPostingSettings = vi.fn(async () => undefined);
+    const push = pushStub({
+      ...readyState,
+      status: { code: "endpoint_unavailable", updatedAt: NOW, attempts: 0 },
+    });
+    renderApp({ pushClient: push.client, openPostingSettings }, [
+      posting("a", "2026-11-03T17:00:00"),
+    ]);
+    await openPostingsTab();
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "새 공고 알림이 아직 안 와요",
+    );
+    fireEvent.click(
+      within(screen.getByRole("status")).getByRole("button", {
+        name: "알림 설정",
+      }),
+    );
+
+    await act(async () => push.change({ ...readyState, roles: [] }));
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "받을 직무를 고르면 새 공고를 받아요",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "고르기" }));
+    expect(openPostingSettings).toHaveBeenCalledTimes(2);
+  });
+
+  it("reports when the settings page cannot open", async () => {
+    renderApp({
+      pushClient: pushStub({
+        ...readyState,
+        status: { code: "failed", updatedAt: NOW, attempts: 1 },
+      }).client,
+      openPostingSettings: async () => {
+        throw new Error("unavailable");
+      },
+    });
+    await openPostingsTab();
+    fireEvent.click(
+      await screen.findByRole("button", { name: "알림 설정 열기" }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "공고 관리 화면을 열지 못했습니다",
+    );
+  });
 });

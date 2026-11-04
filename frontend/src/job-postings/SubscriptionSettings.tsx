@@ -2,31 +2,10 @@ import type { TrackEvent } from "../analytics/events";
 import styles from "./JobPostings.module.css";
 import type { VisibilityAnswer } from "./notification-check";
 import type { PushStateView, RecordSource } from "./push-messages";
-import { MINIMUM_CHROME_VERSION } from "./push-subscription";
 import { RoleSelector } from "./RoleSelector";
+import { subscriptionStatusText } from "./subscription-status";
 import type { JobCategoriesHandle } from "./use-job-categories";
 import { VisibilityCheck } from "./VisibilityCheck";
-
-const unsupportedText = `Chrome ${MINIMUM_CHROME_VERSION} 이상 필요`;
-export function subscriptionStatusText(state: PushStateView | undefined) {
-  if (!state) return "확인 중";
-  if (!state.supported) return unsupportedText;
-  if (!state.enabled) return "꺼짐";
-  switch (state.status?.code) {
-    case "registered":
-      return "등록됨";
-    case "failed":
-      return "등록 실패 (자동 재시도)";
-    case "not_configured":
-      return "알림 서버 없음";
-    case "endpoint_unavailable":
-      return "서버 미지원";
-    case "unsupported":
-      return unsupportedText;
-    default:
-      return "등록 확인 중";
-  }
-}
 
 const FACTS: readonly (readonly [string, string])[] = [
   ["마감 알림", "마감 24시간·2시간 전"],
