@@ -32,6 +32,8 @@ export interface ResultModel {
     reason: string;
     written: boolean;
     failureCode?: WriteFailureCode;
+    /** Replaces the standard guidance sentence for this row. */
+    detail?: string;
   }[];
   skipped: { id: string; item: ReviewPlanItem; reason: string }[];
 }
@@ -131,7 +133,11 @@ export function buildResultModel(input: ResultModelInput): ResultModel {
       completed.delete(stableId);
       skipped.push({ id, item, reason });
     };
-    const review = (reason: string, failureCode?: WriteFailureCode) => {
+    const review = (
+      reason: string,
+      failureCode?: WriteFailureCode,
+      detail?: string,
+    ) => {
       completed.delete(stableId);
       pending.push({
         id,
@@ -139,10 +145,13 @@ export function buildResultModel(input: ResultModelInput): ResultModel {
         reason,
         written: written && !entry?.unchanged,
         ...(failureCode ? { failureCode } : {}),
+        ...(detail ? { detail } : {}),
       });
     };
     if (live?.visible === false) {
       skip("현재 표시되지 않는 항목");
+    } else if (item.addressManualReason) {
+      review("입력 결과 확인", undefined, item.addressManualReason);
     } else if (!saved.length) {
       skip(
         item.profileFieldKey ||

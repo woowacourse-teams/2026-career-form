@@ -713,6 +713,7 @@ export function createAnalyzeFields({
           loadedProfile,
         ),
       );
+    if (run.genericAddressRows) plan.items.push(...run.genericAddressRows);
     const finishReviewLog = startLocalTiming("review-log");
     debugReviewPlan(plan);
     finishReviewLog();

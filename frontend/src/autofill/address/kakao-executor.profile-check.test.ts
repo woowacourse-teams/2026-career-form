@@ -239,12 +239,16 @@ describe("generic address check against the profile", () => {
     };
     const setAddressResult = vi.fn();
     const onWriteResult = vi.fn();
+    const run: Parameters<typeof runAddressAnalysis>[0]["run"] = {
+      controller: new AbortController(),
+      button: page.button,
+    };
 
     const result = await runAddressAnalysis({
       analysis,
       snapshot,
       adapter: {} as unknown as WorkflowAdapter,
-      run: { controller: new AbortController(), button: page.button },
+      run,
       pageDocument: document,
       profile,
       repository: { load: async () => profile },
@@ -256,11 +260,15 @@ describe("generic address check against the profile", () => {
       setAddressResult,
     });
 
-    expect(setAddressResult).toHaveBeenCalledOnce();
-    expect(setAddressResult.mock.calls[0]![0]).toMatchObject({
-      status: "manual",
-      reason: expect.stringContaining("프로필과 달라"),
-    });
+    expect(setAddressResult).not.toHaveBeenCalled();
+    expect(run.genericAddressRows?.map((row) => row.candidateId)).toEqual([
+      "f0",
+      "f1",
+      "f2",
+    ]);
+    expect(run.genericAddressRows?.[0]?.addressManualReason).toContain(
+      "프로필과 달라",
+    );
     expect(onWriteResult).not.toHaveBeenCalled();
     expect(result?.fields).toEqual([]);
     expect(elements.map((element) => element.value)).toEqual(["", "", ""]);
