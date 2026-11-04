@@ -1029,7 +1029,7 @@
 - [프론트 브라우저 테스트](topics/frontend-browser-testing.md)의 Current를 CF-415로 바꾸고 CF-304·CF-178을 History에 남겼다. 다른 topic 문서는 바꾸지 않았다.
 ## [2026-11-05] ingest | CF-417 20초 넘는 프론트 fixture 통합 테스트 38개 삭제
 
-- Approval-Digest: 8ac79d222b67025f9b957d911e318172f6108fcf0771e9ee3450cc8b20c1155a
-- Source-Revision: 7d2436bf
-- 사전 승인된 후보 1개를 [CF-417 bundle](../raw/issues/CF-417/manifest.md)에 기록했다. 삭제 파일 범위, 단독 커버리지 측정(38개 모두 고유 statement 0), 삭제 뒤 커버리지와 테스트 수, 잃은 회귀 시나리오다.
+- Approval-Digest: ca329dd0ce59462e14b4d0212c590d4cb6b0cd86a8ee359333ae05b5355566ab
+- Source-Revision: 4fab9205
+- 사전 승인된 후보 2개를 [CF-417 bundle](../raw/issues/CF-417/manifest.md)에 기록했다. 삭제 파일 범위, 단독 커버리지 측정(38개 모두 고유 statement 0), 삭제 뒤 커버리지와 테스트 수, 잃은 회귀 시나리오, 그리고 현대 테스트 간헐 실패의 원인(afterEach 역순)과 `sequence.hooks: list` 수정이다.
 - [프론트 브라우저 테스트](topics/frontend-browser-testing.md)의 Current를 CF-417로 바꾸고 CF-304·CF-178을 History에 남겼다. 다른 topic 문서는 바꾸지 않았다.
