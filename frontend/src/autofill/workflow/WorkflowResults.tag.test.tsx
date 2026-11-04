@@ -1,6 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import { expect, it } from "vitest";
 import type { ReviewPlanItem } from "../review/review-plan";
+import { genericReasonText } from "../generic/grade-reason-text";
 import { WorkflowResults } from "./WorkflowResults";
 
 const SENTENCE =
@@ -51,4 +52,52 @@ it("tells apart rows of the same field that target different controls", () => {
   expect(
     review.getByRole("button", { name: "전공 (2/2) 필드로 이동" }),
   ).toBeVisible();
+});
+
+const held = (
+  status: ReviewPlanItem["status"],
+  genericReasonCode: string,
+): ReviewPlanItem => ({
+  ...major,
+  status,
+  reason: "",
+  genericGrade: "REVIEW",
+  genericReasonCode,
+});
+
+it.each(["available", "needs-review"] as const)(
+  "tags a %s row held back by its generic grade as needing a check",
+  (status) => {
+    render(
+      <WorkflowResults
+        reviewItems={[held(status, "MODERATE_CONFIDENCE")]}
+        results={[]}
+      />,
+    );
+    expect(
+      screen.getByLabelText(genericReasonText("MODERATE_CONFIDENCE")),
+    ).toHaveTextContent("확인 필요");
+  },
+);
+
+it("keeps the direct selection tag for a generic row with no matching option", () => {
+  render(
+    <WorkflowResults
+      reviewItems={[held("needs-review", "OPTION_VALUE_UNMATCHED")]}
+      results={[]}
+    />,
+  );
+  expect(
+    screen.getByLabelText(genericReasonText("OPTION_VALUE_UNMATCHED")),
+  ).toHaveTextContent("직접 선택");
+});
+
+it("keeps the failed write tag for a row without a generic grade", () => {
+  render(
+    <WorkflowResults
+      reviewItems={[{ ...major, status: "available", reason: "" }]}
+      results={[]}
+    />,
+  );
+  expect(screen.getByRole("note")).toHaveTextContent("입력 못함");
 });

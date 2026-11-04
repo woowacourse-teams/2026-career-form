@@ -47,6 +47,12 @@ function pendingReason(item: ReviewPlanItem): string {
     item.currentValue.trim()
   )
     return "기존 값과 다름";
+  // Held back by its grade: nothing failed, the applicant only has to check it.
+  if (
+    item.genericGrade === "REVIEW" &&
+    item.genericReasonCode !== "OPTION_VALUE_UNMATCHED"
+  )
+    return "값 확인 필요";
   if (
     item.status === "needs-review" ||
     /선택|반복|후보/.test(item.reason) ||
