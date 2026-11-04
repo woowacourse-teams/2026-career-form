@@ -1005,3 +1005,11 @@
 - 같은 날 [CF-394 bundle](../raw/issues/CF-394/manifest.md)의 후보 1·5번을 고쳐 다시 승인했다. 공고 roles 상한을 Issue의 10개에서 분류 전체로 넓히고(대기업 공채 대응), 분류 파일 소분류 총수 30 상한(payload 3,900바이트 보장)과 분류 전체 선택 시 "전체 직무" 라벨, 관리 화면의 대분류 전체·전체 직무·모두 해제 버튼을 기록했다. 다른 후보 4개는 그대로다.
 - [공고 구독 알림](topics/job-posting-notifications.md)의 공고 직무 문장을 같은 내용으로 고쳤다. Current·History 링크는 바뀌지 않았다.
 - 실제 지원값·계정·세션·시크릿·VAPID 키·구독 endpoint·사용자의 직무 선택·대화 전문은 저장하지 않았다.
+
+## [2026-11-04] ingest | CF-395 확장 받을 직무 선택과 직무별 거르기
+
+- Approval-Digest: 06bed9b73b031ba11fd558442feb39e15b45b702740a2cf873c46a68bc574dbd
+- Source-Revision: 4e6283fa
+- 승인한 후보 7개를 [CF-395 bundle](../raw/issues/CF-395/manifest.md)에 payload 둘로 기록했다. 확장 문서는 받을 직무 저장과 구독 등록(careerForm.push.roles, 항상 roles 전송, 꺼짐 상태 지연 반영, 저장이 재등록을 기다리지 않음), 분류 캐시와 선택기(careerForm.push.jobCategories, 실패 시 캐시, 대분류 전체 선택), 거르기 규칙(roles 없음은 전원, 겹침만 표시, 미선택은 거름, 안내 조건), 사이드 패널 마감 공고 탭 안내와 panel 발신자 허용(status·enable·categories, #369 완화, #postings/settings 경로), 알림 설정 안내 목록 접기, 검증 환경(로컬 Chromium 확장 로드와 로컬 백엔드 빌드)이고, 계측 문서는 push_roles_saved와 role_count다.
+- [확장 Web Push 구독과 공고 알림](topics/extension-push-notifications.md)의 Current를 CF-395로 바꾸고 CF-349를 History에 남겼다. [선택적 이용 계측](topics/usage-analytics.md)의 Current를 CF-395로 바꾸고 CF-361을 History에 남겼다. 다른 topic 문서는 바꾸지 않았다.
+- 실제 지원값·계정·세션·시크릿·VAPID 키·구독 endpoint·사용자의 직무 선택값·대화 전문은 저장하지 않았다.
