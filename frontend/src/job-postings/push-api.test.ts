@@ -3,6 +3,7 @@ import {
   base64UrlToBytes,
   createPushApi,
   isServerPosting,
+  parseJobCategories,
   parseServerPosting,
   PushApiError,
 } from "./push-api";
@@ -114,7 +115,9 @@ describe("push api contract", () => {
       keys: { p256dh: "p", auth: "a" },
       extra: "must-not-be-sent",
     };
-    expect(await client.register(subscription)).toEqual({ created: true });
+    expect(await client.register(subscription, ["IT.BACKEND"])).toEqual({
+      created: true,
+    });
     expect(calls[0].url).toBe(
       "https://api.example.test/api/v1/notifications/subscriptions",
     );
@@ -126,24 +129,43 @@ describe("push api contract", () => {
       endpoint: subscription.endpoint,
       expirationTime: null,
       keys: { p256dh: "p", auth: "a" },
+      roles: ["IT.BACKEND"],
     });
+  });
+  it("받을 직무를 고르지 않았으면 빈 roles를 보내 서버의 미선택과 맞춘다", async () => {
+    const { client, calls } = setup(() => json({ created: true }, 201));
+    await client.register(
+      {
+        endpoint: "https://fcm.googleapis.com/fcm/send/synthetic-token",
+        expirationTime: null,
+        keys: { p256dh: "p", auth: "a" },
+      },
+      [],
+    );
+    expect(JSON.parse(String(calls[0].init?.body)).roles).toEqual([]);
   });
   it("같은 endpoint의 재등록 200 응답은 created=false로 돌려주고 본문이 비어도 성공이다", async () => {
     const existing = setup(() => json({ created: false }, 200));
     expect(
-      await existing.client.register({
-        endpoint: "https://fcm.googleapis.com/fcm/send/synthetic-token",
-        expirationTime: null,
-        keys: { p256dh: "p", auth: "a" },
-      }),
+      await existing.client.register(
+        {
+          endpoint: "https://fcm.googleapis.com/fcm/send/synthetic-token",
+          expirationTime: null,
+          keys: { p256dh: "p", auth: "a" },
+        },
+        [],
+      ),
     ).toEqual({ created: false });
     const empty = setup(() => new Response(null, { status: 200 }));
     expect(
-      await empty.client.register({
-        endpoint: "https://fcm.googleapis.com/fcm/send/synthetic-token",
-        expirationTime: null,
-        keys: { p256dh: "p", auth: "a" },
-      }),
+      await empty.client.register(
+        {
+          endpoint: "https://fcm.googleapis.com/fcm/send/synthetic-token",
+          expirationTime: null,
+          keys: { p256dh: "p", auth: "a" },
+        },
+        [],
+      ),
     ).toEqual({ created: false });
   });
   it("구독 해지는 unsubscribe 경로에 endpoint만 보내고 204면 끝난다", async () => {
@@ -334,5 +356,176 @@ describe("base64UrlToBytes", () => {
   });
   it("허용되지 않은 문자가 있으면 거부한다", () => {
     expect(() => base64UrlToBytes("a+b/c=")).toThrow();
+  });
+});
+
+describe("직무 코드 roles", () => {
+  const valid = {
+    id: "0123456789abcdef0123456789abcdef",
+    company: "합성 회사",
+    role: "백엔드·프론트엔드",
+    link: "https://careers.example.test/jobs/1",
+    opensAt: "2030-01-01T00:00:00Z",
+    closesAt: "2030-01-01T01:00:00Z",
+  };
+  it("소분류 코드 배열을 중복 없이 받고 형식이 틀린 항목은 버린다", () => {
+    expect(
+      parseServerPosting({
+        ...valid,
+        roles: ["IT.BACKEND", "IT.FRONTEND", "IT.BACKEND", "bad code", 3],
+      })?.roles,
+    ).toEqual(["IT.BACKEND", "IT.FRONTEND"]);
+  });
+  it("roles가 없거나 배열이 아니면 분류 없는 기존 공고로 받는다", () => {
+    expect("roles" in parseServerPosting(valid)!).toBe(false);
+    expect("roles" in parseServerPosting({ ...valid, roles: null })!).toBe(
+      false,
+    );
+    expect("roles" in parseServerPosting({ ...valid, roles: "IT" })!).toBe(
+      false,
+    );
+  });
+  it("정규화된 모양 검사도 roles 배열을 허용한다", () => {
+    const normalized = parseServerPosting({ ...valid, roles: ["IT.BACKEND"] });
+    expect(isServerPosting(normalized)).toBe(true);
+    expect(isServerPosting({ ...normalized, roles: ["bad code"] })).toBe(false);
+    expect(isServerPosting({ ...normalized, roles: "IT.BACKEND" })).toBe(false);
+  });
+  it("진행 중 공고 목록은 roles를 함께 돌려준다", async () => {
+    const { client } = setup(() =>
+      json({ postings: [{ ...valid, roles: ["DESIGN.UX_UI"] }, valid] }),
+    );
+    expect((await client.openPostings()).map((p) => p.roles)).toEqual([
+      ["DESIGN.UX_UI"],
+      undefined,
+    ]);
+  });
+});
+
+describe("직무 분류 조회", () => {
+  const categories = {
+    version: 1,
+    categories: [
+      {
+        code: "IT",
+        label: "IT/개발",
+        roles: [
+          { code: "IT.BACKEND", label: "백엔드" },
+          { code: "IT.FRONTEND", label: "프론트엔드" },
+        ],
+      },
+      {
+        code: "DESIGN",
+        label: " 디자인 ",
+        roles: [{ code: "DESIGN.UX_UI", label: "UX/UI" }],
+      },
+    ],
+  };
+  it("버전과 대분류·소분류 코드·라벨을 검증해 돌려준다", async () => {
+    const { client, calls } = setup(() => json(categories));
+    expect(await client.jobCategories()).toEqual({
+      version: 1,
+      categories: [
+        {
+          code: "IT",
+          label: "IT/개발",
+          roles: [
+            { code: "IT.BACKEND", label: "백엔드" },
+            { code: "IT.FRONTEND", label: "프론트엔드" },
+          ],
+        },
+        {
+          code: "DESIGN",
+          label: "디자인",
+          roles: [{ code: "DESIGN.UX_UI", label: "UX/UI" }],
+        },
+      ],
+    });
+    expect(calls[0].url).toBe(
+      "https://api.example.test/api/v1/notifications/job-categories",
+    );
+    expect(calls[0].init?.method).toBe("GET");
+  });
+  it.each([
+    [404, "ENDPOINT_UNAVAILABLE"],
+    [500, "SERVER_ERROR"],
+  ])("HTTP %i는 %s로 강등한다", async (status, expected) => {
+    const { client } = setup(() => json({}, status));
+    expect(await code(client.jobCategories())).toBe(expected);
+  });
+  it("baseUrl이 없으면 NOT_CONFIGURED다", async () => {
+    const { client, calls } = setup(() => json(categories), {
+      baseUrl: undefined,
+    });
+    expect(await code(client.jobCategories())).toBe("NOT_CONFIGURED");
+    expect(calls).toHaveLength(0);
+  });
+  it.each([
+    ["버전 없음", { ...categories, version: undefined }],
+    ["버전 0", { ...categories, version: 0 }],
+    ["빈 분류", { ...categories, categories: [] }],
+    [
+      "소분류 없음",
+      { version: 1, categories: [{ code: "IT", label: "IT", roles: [] }] },
+    ],
+    [
+      "대분류 코드 형식",
+      {
+        version: 1,
+        categories: [
+          { code: "it", label: "IT", roles: [{ code: "it.X", label: "X" }] },
+        ],
+      },
+    ],
+    [
+      "소분류 코드가 대분류로 시작하지 않음",
+      {
+        version: 1,
+        categories: [
+          { code: "IT", label: "IT", roles: [{ code: "HR.X", label: "X" }] },
+        ],
+      },
+    ],
+    [
+      "중복 코드",
+      {
+        version: 1,
+        categories: [
+          {
+            code: "IT",
+            label: "IT",
+            roles: [
+              { code: "IT.X", label: "X" },
+              { code: "IT.X", label: "Y" },
+            ],
+          },
+        ],
+      },
+    ],
+    [
+      "라벨 없음",
+      {
+        version: 1,
+        categories: [{ code: "IT", label: "", roles: [{ code: "IT.X" }] }],
+      },
+    ],
+    [
+      "라벨 길이 초과",
+      {
+        version: 1,
+        categories: [
+          {
+            code: "IT",
+            label: "가".repeat(41),
+            roles: [{ code: "IT.X", label: "X" }],
+          },
+        ],
+      },
+    ],
+    ["객체 아님", "text"],
+  ])("형식이 맞지 않으면 INVALID_RESPONSE: %s", async (_name, body) => {
+    expect(parseJobCategories(body)).toBeUndefined();
+    const { client } = setup(() => json(body));
+    expect(await code(client.jobCategories())).toBe("INVALID_RESPONSE");
   });
 });

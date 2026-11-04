@@ -2,6 +2,7 @@ import {
   base64UrlToBytes,
   isPushApiErrorCode,
   PushApiError,
+  roleCodes,
   type PushApi,
   type PushApiErrorCode,
   type SubscriptionJson,
@@ -10,6 +11,9 @@ import { isRecord } from "./repository";
 
 export const PUSH_ENABLED_KEY = "careerForm.push.enabled";
 export const PUSH_STATUS_KEY = "careerForm.push.status";
+// Role codes the user wants postings for. Missing or empty means none chosen,
+// which stops role-tagged postings until the user picks some.
+export const PUSH_ROLES_KEY = "careerForm.push.roles";
 // Silent (userVisibleOnly: false) extension push needs Chrome 121 or later.
 export const MINIMUM_CHROME_VERSION = 121;
 export const RETRY_DELAYS_MS = [60_000, 300_000, 900_000, 3_600_000] as const;
@@ -54,6 +58,10 @@ export interface PushSubscriptionPorts {
   chromeVersion(): number | undefined;
   now(): number;
   scheduleRetry(delayMs: number | undefined): Promise<void>;
+}
+
+export function parseRoleSelection(value: unknown): string[] {
+  return roleCodes(value) ?? [];
 }
 
 export function parsePushStatus(value: unknown): PushStatus | undefined {
@@ -114,6 +122,10 @@ export class PushSubscriptionService {
     const stored = await this.ports.storage.get(PUSH_STATUS_KEY);
     return parsePushStatus(stored[PUSH_STATUS_KEY]);
   }
+  async roles(): Promise<string[]> {
+    const stored = await this.ports.storage.get(PUSH_ROLES_KEY);
+    return parseRoleSelection(stored[PUSH_ROLES_KEY]);
+  }
   supported(): boolean {
     const version = this.ports.chromeVersion();
     return (
@@ -136,6 +148,18 @@ export class PushSubscriptionService {
       return enabled ? this.register() : this.disable();
     });
   }
+  // The selection lives locally and rides along with every registration, so
+  // a change while off is simply sent the next time the subscription is on.
+  setRoles(roles: readonly string[]): Promise<PushStatus> {
+    return this.serial(async () => {
+      await this.ports.storage.set({
+        [PUSH_ROLES_KEY]: parseRoleSelection(roles),
+      });
+      return (await this.isEnabled())
+        ? this.register()
+        : this.record({ code: "disabled", attempts: 0 }, undefined);
+    });
+  }
   private async register(): Promise<PushStatus> {
     if (!this.supported())
       return this.record({ code: "unsupported", attempts: 0 }, undefined);
@@ -156,7 +180,10 @@ export class PushSubscriptionService {
         applicationServerKey: key,
       });
       // The server deduplicates by endpoint, so re-sending is safe.
-      await this.ports.api.register(subscriptionJson(subscription));
+      await this.ports.api.register(
+        subscriptionJson(subscription),
+        await this.roles(),
+      );
       return this.record({ code: "registered", attempts: 0 }, undefined);
     } catch (error) {
       const code = error instanceof PushApiError ? error.code : undefined;
