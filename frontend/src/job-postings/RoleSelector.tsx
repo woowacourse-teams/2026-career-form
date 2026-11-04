@@ -81,7 +81,12 @@ export function RoleSelector({
     categories[0];
   const move = (event: KeyboardEvent<HTMLDivElement>) => {
     const codes = categories.map((c) => c.code);
-    const index = codes.indexOf(active.code);
+    // Step from the focused tab, which is the active one unless focus was
+    // moved there by script.
+    const focused = Object.entries(tabs.current).find(
+      ([, element]) => element === event.target,
+    )?.[0];
+    const index = codes.indexOf(focused ?? active.code);
     const target = {
       ArrowDown: codes[(index + 1) % codes.length],
       ArrowUp: codes[(index + codes.length - 1) % codes.length],
