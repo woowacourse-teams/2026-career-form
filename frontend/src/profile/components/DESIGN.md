@@ -36,6 +36,11 @@ The same control serves certificate, school and language-test names, with
 kind-specific results. Selecting a certificate fills a blank issuer only;
 selecting an exam does not change its language or grade.
 
+`AddressSearchPanel` sits in the 주소 group above the direct inputs. Its states
+are closed, searching, no results, error, results, verified address and
+"검증 안 된 주소". Results are native buttons in document flow; the same list
+sizes apply. Labels stay short. Closing forgets the query.
+
 The input uses combobox/listbox semantics, `aria-expanded`, `aria-controls`,
 `aria-activedescendant`, and linked description text. Arrow keys navigate,
 Enter chooses only an active result, Escape closes without changing the value,
