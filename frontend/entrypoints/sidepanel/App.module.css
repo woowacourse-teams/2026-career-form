@@ -497,6 +497,8 @@
 .postingRow:focus-visible,
 .postingsManage:focus-visible,
 .postingsRetry:focus-visible,
+.guideAction:focus-visible,
+.postingsNotice button:focus-visible,
 .groupToggle:focus-visible,
 .copyButton:focus-visible,
 .revealButton:focus-visible {
@@ -664,8 +666,15 @@
   margin: 0;
 }
 .postingsTab {
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+/* The list, message or guidance takes the room between notice and footer. */
+.postingsTab > .postingsList,
+.postingsTab > .postingsMessage,
+.postingsTab > .postingsGuide {
+  flex: 1 1 auto;
   min-height: 0;
 }
 .postingsMessage {
@@ -696,6 +705,107 @@
 }
 .postingsRetry:hover {
   background: var(--color-accent-hover);
+}
+/* Empty-state guidance: reason, next step and one button (PostingsGuidance). */
+.postingsGuide {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 40px 28px;
+  text-align: center;
+}
+.postingsGuide h2 {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 25px;
+  letter-spacing: -0.374px;
+}
+.postingsGuide p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.224px;
+}
+.postingsGuide .guideStatus {
+  margin-top: 4px;
+  color: var(--color-danger-text);
+  font-weight: 600;
+  line-height: 18px;
+}
+/* Filled when the action completes inside the panel; outlined when it leaves. */
+.guideAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  margin-top: 12px;
+  border: 0;
+  border-radius: 980px;
+  padding: 0 16px;
+  color: var(--color-on-brand);
+  background: var(--color-brand);
+  font-family: inherit;
+  font-size: 14px;
+  letter-spacing: -0.224px;
+  line-height: 1;
+  cursor: pointer;
+}
+.guideAction:hover:not(:disabled) {
+  background: var(--color-brand-hover);
+}
+.guideAction:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+.guideSecondary {
+  border: 1px solid var(--color-action-strong);
+  color: var(--color-action-strong);
+  background: transparent;
+}
+.guideSecondary:hover:not(:disabled) {
+  background: var(--color-accent-hover);
+}
+/* One line above a non-empty list while new postings are not arriving. */
+.postingsNotice {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 12px 20px 4px;
+  border-radius: var(--radius-control);
+  padding: 6px 4px 6px 12px;
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: -0.224px;
+}
+.postingsNotice button {
+  flex: none;
+  height: 36px;
+  border: 0;
+  border-radius: 8px;
+  padding: 0 8px;
+  color: var(--color-action-strong);
+  background: transparent;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.224px;
+  cursor: pointer;
+}
+.postingsNotice button:hover:not(:disabled) {
+  text-decoration: underline;
+}
+.postingsNotice button:disabled {
+  cursor: wait;
+  opacity: 0.65;
 }
 .postingsList {
   min-height: 0;

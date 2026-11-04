@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 
 import type { Posting } from "../../src/job-postings/model";
 import {
@@ -74,6 +80,8 @@ interface DeadlinePostingListProps {
   postings: readonly Posting[];
   time: number;
   onRetry: () => void;
+  /** Shown instead of the plain "저장한 공고 없음" line when provided. */
+  empty?: ReactNode;
 }
 
 export function DeadlinePostingList({
@@ -81,6 +89,7 @@ export function DeadlinePostingList({
   postings,
   time,
   onRetry,
+  empty,
 }: DeadlinePostingListProps) {
   if (status === "loading")
     return <p className={styles.postingsMessage}>공고를 불러오는 중입니다.</p>;
@@ -98,7 +107,7 @@ export function DeadlinePostingList({
       </div>
     );
   if (postings.length === 0)
-    return <p className={styles.postingsMessage}>저장한 공고 없음</p>;
+    return empty ?? <p className={styles.postingsMessage}>저장한 공고 없음</p>;
   return (
     <ul className={styles.postingsList}>
       {postings.map((posting) => (
