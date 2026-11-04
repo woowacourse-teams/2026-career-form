@@ -5,12 +5,16 @@
  * 개발자 빌드(`DEV` 또는 `VITE_AUTOFILL_DEBUG=true`)에서만 켤 수 있고,
  * 저장된 값이 없으면 개발자 빌드에서는 켜진 상태다. 일반 빌드는 저장값과
  * 관계없이 항상 꺼져 있다.
+ *
+ * "확인 필요 포함"은 실측용 개발자 설정이다. 저장값이 없으면 꺼져 있고,
+ * 개발자 모드가 켜져 있을 때만 적용한다.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { browser } from "wxt/browser";
 import { setAutofillDebugDeveloperMode } from "./autofill-debug";
 
 export const DEVELOPER_MODE_KEY = "careerForm.developerMode";
+export const INCLUDE_NEEDS_REVIEW_KEY = "careerForm.includeNeedsReview";
 
 export function isDeveloperBuild(env: {
   DEV?: boolean;
@@ -36,30 +40,34 @@ interface DeveloperModePorts {
 export interface DeveloperModeStore {
   /** 개발자 빌드 여부만으로 정해지는, 저장값을 읽기 전의 값. */
   readonly initial: boolean;
+  /** 이 빌드에서 저장값이 실제로 뜻하는 값. */
+  resolve(stored: unknown): boolean;
   read(): Promise<boolean>;
   set(value: boolean): Promise<void>;
   subscribe(listener: (value: boolean) => void): () => void;
 }
 
-export function createDeveloperModeStore(
+function createDeveloperSettingStore(
+  key: string,
+  resolve: (stored: unknown) => boolean,
   ports: DeveloperModePorts,
 ): DeveloperModeStore {
-  const resolve = (stored: unknown) => ports.developerBuild && stored !== false;
   return {
-    initial: ports.developerBuild,
+    initial: resolve(undefined),
+    resolve,
     read: async () => {
       try {
-        const stored = await ports.storage.get(DEVELOPER_MODE_KEY);
-        return resolve(stored[DEVELOPER_MODE_KEY]);
+        const stored = await ports.storage.get(key);
+        return resolve(stored[key]);
       } catch {
         return resolve(undefined);
       }
     },
-    set: (value) => ports.storage.set({ [DEVELOPER_MODE_KEY]: value }),
+    set: (value) => ports.storage.set({ [key]: value }),
     subscribe: (listener) => {
       const changed: ChangeListener = (changes, area) => {
-        if (area !== "local" || !(DEVELOPER_MODE_KEY in changes)) return;
-        const change = changes[DEVELOPER_MODE_KEY];
+        if (area !== "local" || !(key in changes)) return;
+        const change = changes[key];
         listener(
           resolve(
             typeof change === "object" && change !== null
@@ -74,7 +82,27 @@ export function createDeveloperModeStore(
   };
 }
 
-export const developerModeStore: DeveloperModeStore = createDeveloperModeStore({
+export function createDeveloperModeStore(
+  ports: DeveloperModePorts,
+): DeveloperModeStore {
+  return createDeveloperSettingStore(
+    DEVELOPER_MODE_KEY,
+    (stored) => ports.developerBuild && stored !== false,
+    ports,
+  );
+}
+
+export function createIncludeNeedsReviewStore(
+  ports: DeveloperModePorts,
+): DeveloperModeStore {
+  return createDeveloperSettingStore(
+    INCLUDE_NEEDS_REVIEW_KEY,
+    (stored) => ports.developerBuild && stored === true,
+    ports,
+  );
+}
+
+const extensionPorts: DeveloperModePorts = {
   developerBuild: isDeveloperBuild(import.meta.env),
   storage: {
     get: (key) => browser.storage.local.get(key),
@@ -96,7 +124,19 @@ export const developerModeStore: DeveloperModeStore = createDeveloperModeStore({
       }
     },
   },
-});
+};
+
+export const developerModeStore = createDeveloperModeStore(extensionPorts);
+export const includeNeedsReviewStore =
+  createIncludeNeedsReviewStore(extensionPorts);
+
+/** 실행 시점의 저장값을 읽어 이번 분석에 "확인 필요 포함"을 적용할지 정한다. */
+export async function readIncludeNeedsReview(
+  modeStore: DeveloperModeStore = developerModeStore,
+  includeStore: DeveloperModeStore = includeNeedsReviewStore,
+): Promise<boolean> {
+  return (await modeStore.read()) && (await includeStore.read());
+}
 
 export function useDeveloperMode(
   store: DeveloperModeStore = developerModeStore,
@@ -123,7 +163,7 @@ export function useDeveloperMode(
     async (value: boolean) => {
       revision.current += 1;
       await store.set(value);
-      setEnabled(store.initial && value);
+      setEnabled(store.resolve(value));
     },
     [store],
   );

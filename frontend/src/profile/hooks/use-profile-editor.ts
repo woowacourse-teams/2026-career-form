@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import {
+  contactWithSelectedAddress,
+  withoutStaleAddressVerification,
+  type StructuredAddress,
+} from "../address";
 import { catalogCertificateIssuer } from "../catalog";
 import {
   createEmptyProfile,
@@ -149,9 +154,25 @@ export function useProfileEditor(
 
   const updateSingle = useCallback(
     (categoryId: SingleProfileCategoryId, fieldId: string, value: string) => {
+      changeProfile((current) => {
+        const values = { ...current[categoryId], [fieldId]: value };
+        return {
+          ...current,
+          [categoryId]:
+            categoryId === "contact"
+              ? withoutStaleAddressVerification(current.contact, values)
+              : values,
+        };
+      });
+    },
+    [changeProfile],
+  );
+
+  const selectAddress = useCallback(
+    (address: StructuredAddress) => {
       changeProfile((current) => ({
         ...current,
-        [categoryId]: { ...current[categoryId], [fieldId]: value },
+        contact: contactWithSelectedAddress(current.contact, address),
       }));
     },
     [changeProfile],
@@ -272,6 +293,7 @@ export function useProfileEditor(
     retryLoad,
     saveStatus,
     updateSingle,
+    selectAddress,
     addEntry,
     updateEntry,
     removeEntry,

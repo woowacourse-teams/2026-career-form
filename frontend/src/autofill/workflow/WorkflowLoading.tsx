@@ -40,6 +40,7 @@ export function WorkflowLoading({
           matching: "지원서 항목과 프로필 정보를 맞추고 있어요",
           preparing: "필요한 입력란을 준비하고 있어요",
           address: "주소 검색 결과를 확인하고 있어요",
+          rechecking: "입력이 안된 칸들이 있는지 확인하고 있어요",
         }[activity]);
   const percent =
     writing && total !== undefined && total > 0

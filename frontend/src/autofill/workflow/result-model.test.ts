@@ -1,6 +1,7 @@
 import { expect, it } from "vitest";
+import type { FieldCandidateHandle } from "../dom/types";
 import type { ReviewPlanItem } from "../review/review-plan";
-import { buildResultModel } from "./result-model";
+import { buildResultModel, unfilledCandidateIds } from "./result-model";
 
 const item = {
   candidateId: "field-1",
@@ -378,3 +379,124 @@ it.each([
     expect(result.pending).toMatchObject([{ reason: "입력 못함" }]);
   },
 );
+
+it("leaves a skipped field that already holds a value out of the unfilled ids but keeps pending ones", () => {
+  const skip = (id: string, reason: string) => ({ id, item, reason });
+  const model = {
+    completed: [],
+    pending: [
+      { id: "pending-with-value", reason: "기존 값과 다름", written: false },
+    ],
+    skipped: [
+      skip("default-value", "등록된 정보 없음"),
+      skip("empty", "등록된 정보 없음"),
+      skip("kept", "기존 값 유지"),
+    ],
+  };
+  const values: Record<string, string> = {
+    "pending-with-value": "기존",
+    "default-value": "사이트 기본값",
+    kept: "유지",
+  };
+  expect(unfilledCandidateIds(model, (id) => values[id])).toEqual([
+    "pending-with-value",
+    "empty",
+  ]);
+});
+
+function handleOf(element: HTMLElement) {
+  return {
+    kind: "field",
+    elements: [element],
+    candidate: {},
+  } as unknown as FieldCandidateHandle;
+}
+
+it("merges rows that target the same control and keeps the most actionable reason", () => {
+  const control = document.createElement("input");
+  const result = buildResultModel({
+    reviewItems: [
+      {
+        ...item,
+        candidateId: "a",
+        status: "conflict",
+        currentValue: "다른 값",
+      },
+      {
+        ...item,
+        candidateId: "b",
+        status: "needs-review",
+        currentValue: "다른 값",
+      },
+    ],
+    results: [],
+    fieldStateFor: () => ({
+      visible: true,
+      value: "다른 값",
+      handle: handleOf(control),
+    }),
+  });
+  expect(result.pending).toMatchObject([{ id: "b", reason: "선택 필요" }]);
+});
+
+it("keeps rows that target different controls", () => {
+  const handles = new Map([
+    ["a", handleOf(document.createElement("input"))],
+    ["b", handleOf(document.createElement("input"))],
+  ]);
+  const result = buildResultModel({
+    reviewItems: [
+      {
+        ...item,
+        candidateId: "a",
+        status: "conflict",
+        currentValue: "다른 값",
+      },
+      {
+        ...item,
+        candidateId: "b",
+        status: "needs-review",
+        currentValue: "다른 값",
+      },
+    ],
+    results: [],
+    fieldStateFor: (id) => ({
+      visible: true,
+      value: "다른 값",
+      handle: handles.get(id),
+    }),
+  });
+  expect(result.pending.map(({ id }) => id)).toEqual(["a", "b"]);
+});
+
+it("lists a manual generic address field as pending with its own reason", () => {
+  const address = {
+    candidateId: "road",
+    fieldLabel: "기본주소",
+    profileFieldKey: "contact.contact.addressLine1",
+    currentValue: "",
+    previewValue: "",
+    status: "unavailable",
+    selected: false,
+    disabled: true,
+    revealed: true,
+    reason: "address reason",
+    addressManualReason: "address reason",
+  } satisfies ReviewPlanItem;
+
+  const { pending, skipped } = buildResultModel({
+    reviewItems: [address],
+    results: [],
+    fieldStateFor: () => ({ visible: true, value: "" }),
+  });
+
+  expect(pending).toMatchObject([
+    {
+      id: "road",
+      reason: "입력 결과 확인",
+      written: false,
+      detail: "address reason",
+    },
+  ]);
+  expect(skipped).toEqual([]);
+});

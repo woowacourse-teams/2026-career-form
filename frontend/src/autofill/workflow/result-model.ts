@@ -9,6 +9,7 @@ import { isSkippedByApproval } from "./workflow-model";
 import { matchesResultValue } from "./result-value-match";
 import { resultFieldLabel } from "./result-label";
 import { nativeRetainedValueMatches } from "../policy/native-form-write";
+import { genericReasonText } from "../generic/grade-reason-text";
 
 export interface ResultModelInput {
   reviewItems: readonly ReviewPlanItem[];
@@ -32,6 +33,8 @@ export interface ResultModel {
     reason: string;
     written: boolean;
     failureCode?: WriteFailureCode;
+    /** Replaces the standard guidance sentence for this row. */
+    detail?: string;
   }[];
   skipped: { id: string; item: ReviewPlanItem; reason: string }[];
 }
@@ -44,6 +47,12 @@ function pendingReason(item: ReviewPlanItem): string {
     item.currentValue.trim()
   )
     return "기존 값과 다름";
+  // Held back by its grade: nothing failed, the applicant only has to check it.
+  if (
+    item.genericGrade === "REVIEW" &&
+    item.genericReasonCode !== "OPTION_VALUE_UNMATCHED"
+  )
+    return "값 확인 필요";
   if (
     item.status === "needs-review" ||
     /선택|반복|후보/.test(item.reason) ||
@@ -51,6 +60,13 @@ function pendingReason(item: ReviewPlanItem): string {
   )
     return "선택 필요";
   return "입력 못함";
+}
+
+function gradeDetail(item: ReviewPlanItem): string | undefined {
+  if (!item.genericGrade || item.genericGrade === "AUTO") return undefined;
+  return item.genericReasonCode
+    ? genericReasonText(item.genericReasonCode)
+    : item.reason || undefined;
 }
 
 export function buildResultModel(input: ResultModelInput): ResultModel {
@@ -131,7 +147,11 @@ export function buildResultModel(input: ResultModelInput): ResultModel {
       completed.delete(stableId);
       skipped.push({ id, item, reason });
     };
-    const review = (reason: string, failureCode?: WriteFailureCode) => {
+    const review = (
+      reason: string,
+      failureCode?: WriteFailureCode,
+      detail?: string,
+    ) => {
       completed.delete(stableId);
       pending.push({
         id,
@@ -139,10 +159,19 @@ export function buildResultModel(input: ResultModelInput): ResultModel {
         reason,
         written: written && !entry?.unchanged,
         ...(failureCode ? { failureCode } : {}),
+        ...(detail ? { detail } : {}),
       });
     };
     if (live?.visible === false) {
       skip("현재 표시되지 않는 항목");
+    } else if (item.addressManualReason) {
+      review("입력 결과 확인", undefined, item.addressManualReason);
+    } else if (
+      !saved.length &&
+      item.genericGrade === "BLOCKED" &&
+      !item.hiddenFromReview
+    ) {
+      review("입력 못함", undefined, gradeDetail(item));
     } else if (!saved.length) {
       skip(
         item.profileFieldKey ||
@@ -205,10 +234,8 @@ export function buildResultModel(input: ResultModelInput): ResultModel {
     } else if (matches) {
       skip("기존 값 유지");
     } else {
-      review(
-        pendingReason(item),
-        entry?.status === "skipped" ? entry.failureCode : undefined,
-      );
+      const code = entry?.status === "skipped" ? entry.failureCode : undefined;
+      review(pendingReason(item), code, code ? undefined : gradeDetail(item));
     }
   }
   for (const result of resultsById.values()) {
@@ -254,5 +281,74 @@ export function buildResultModel(input: ResultModelInput): ResultModel {
       },
     });
   }
-  return { completed: [...completed.values()], pending, skipped };
+  return {
+    completed: [...completed.values()],
+    pending: mergeSameControl(pending, fieldStateFor),
+    skipped,
+  };
+}
+
+// Least to most actionable: a failed write tells the user to act, a result to
+// confirm only asks for a look.
+const REASON_ACTIONABILITY = [
+  "입력 결과 확인",
+  "기존 값과 다름",
+  "선택 필요",
+  "입력 못함",
+];
+
+/**
+ * Review items are collected per scan, so one control can be reviewed twice
+ * under different candidate ids. Keep the most actionable row per control.
+ */
+function mergeSameControl(
+  pending: ResultModel["pending"],
+  fieldStateFor: ResultModelInput["fieldStateFor"],
+): ResultModel["pending"] {
+  if (!fieldStateFor) return pending;
+  const rowOfControl = new Map<Element, number>();
+  const merged: ResultModel["pending"] = [];
+  for (const entry of pending) {
+    const handle = entry.id.startsWith("progress:")
+      ? undefined
+      : fieldStateFor(entry.id)?.handle;
+    const control = handle?.elements[0] ?? handle?.customElements?.[0];
+    const at = control ? rowOfControl.get(control) : undefined;
+    if (at === undefined) {
+      if (control) rowOfControl.set(control, merged.length);
+      merged.push(entry);
+    } else if (
+      REASON_ACTIONABILITY.indexOf(entry.reason) >
+      REASON_ACTIONABILITY.indexOf(merged[at].reason)
+    ) {
+      merged[at] = entry;
+    }
+  }
+  return merged;
+}
+
+// These skipped items are not left empty: the page already holds the value,
+// or the field is not on screen.
+const NOT_UNFILLED_REASONS = new Set([
+  "기존 값 유지",
+  "현재 표시되지 않는 항목",
+]);
+
+/**
+ * Candidate ids of fields the user still has to fill. A pending item keeps its
+ * mark even with a value; a skipped one with a value (a site default) does not.
+ */
+export function unfilledCandidateIds(
+  model: ResultModel,
+  valueOf: (id: string) => string | undefined = () => undefined,
+): string[] {
+  return [
+    ...model.pending.map(({ id }) => id),
+    ...model.skipped
+      .filter(
+        ({ id, reason }) =>
+          !NOT_UNFILLED_REASONS.has(reason) && !valueOf(id)?.trim(),
+      )
+      .map(({ id }) => id),
+  ];
 }

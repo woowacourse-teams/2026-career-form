@@ -983,6 +983,13 @@
 - [랜딩·온보딩 웹 페이지](topics/landing-onboarding.md)의 Current를 CF-384로 바꾸고 CF-363을 History에 남겼다.
 - 실제 지원값, 계정, 세션, 대화 전문은 저장하지 않았다.
 
+## [2026-11-04] ingest | CF-392 도로명주소 검색 프록시 ADR
+
+- Approval-Digest: 25240f97b8ef1c28071040dd1ffc96330a753408f2b6756ece4dcda3d216b02c
+- Source-Revision: 493ca72
+- Issue 계약이 요구한 ADR을 [CF-392 bundle](../raw/issues/CF-392/manifest.md)에 제안됨 상태로 기록하고 [도로명주소 검색 프록시](topics/road-address-proxy.md)를 추가했다. digest에 대한 사람 승인은 PR 검토에서 받는다.
+- 실제 지원값, 계정, 세션, 대화 전문은 저장하지 않았다.
+
 ## [2026-11-04] ingest | CF-394 공고 알림 직무 필터
 
 - Approval-Digest: 8d904686571f07dbb79657781e7ef2f8c58fa44922c855656c06d451750558fc

@@ -1,4 +1,5 @@
 import { formatProfileDate } from "../../autofill/profile/date-format";
+import { withoutStaleAddressVerification } from "../address";
 import { catalogKindForField } from "../catalog-search";
 import {
   PROFILE_CATEGORIES,
@@ -177,6 +178,11 @@ export function mergeImportSelection(
     )!.sections.flatMap((section) => section.fields);
     validateValues(values, definitions, current[categoryId]);
     Object.assign(result[categoryId], values);
+    if (categoryId === "contact")
+      result.contact = withoutStaleAddressVerification(
+        current.contact,
+        result.contact,
+      );
     count += Object.keys(values).length;
   }
   const legacyEntries: ImportEntrySelection[] = (selection.education ?? []).map(

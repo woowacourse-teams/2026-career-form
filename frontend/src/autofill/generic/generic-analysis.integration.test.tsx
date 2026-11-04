@@ -407,6 +407,52 @@ describe("generic section flow", () => {
     },
   );
 
+  it("keeps address fields in the review items when the address stays manual", async () => {
+    document.body.innerHTML = `
+      <h2>연락처</h2>
+      <div>
+        <label>우편번호<input name="zip" readonly /></label>
+        <label>기본주소<input name="road" readonly /></label>
+        <button type="button">주소 검색</button>
+        <label>상세주소<input name="detail" value="${PREFILLED}" /></label>
+      </div>`;
+    const keys: Record<string, string> = {
+      zip: "contact.contact.postalCode",
+      road: "contact.contact.addressLine1",
+      detail: "contact.contact.addressLine2",
+    };
+    const api = createClient({
+      field: (candidate) => ({
+        profileFieldKey: keys[candidate.domName ?? ""],
+        confidence: 0.95,
+        categoryConfirmed: true,
+        autofillPolicy: "ALLOWED",
+        interactionStatus: "READY",
+        writePlan: {
+          command: candidate.readonly ? "SEARCH_SELECTION" : "SET_TEXT",
+        },
+      }),
+    });
+    const profile = createEmptyProfile();
+    profile.contact = {
+      postalCode: "00001",
+      addressLine1: "합성특별시 합성구 큐에이로 1",
+      addressLine2: "합성 상세",
+    };
+    const run = workflow(api.client, profile);
+
+    await run.analyze();
+
+    for (const name of ["zip", "road", "detail"]) {
+      const row = run.item(name);
+      expect(row.addressManualReason).toBeTruthy();
+      expect(row).toMatchObject({ selected: false, disabled: true });
+    }
+    expect(document.querySelector<HTMLInputElement>("[name=detail]")!.value).toBe(
+      PREFILLED,
+    );
+  });
+
   it("splits, classifies, matches by category and grades before review", async () => {
     mountSyntheticForm();
     const api = createClient();

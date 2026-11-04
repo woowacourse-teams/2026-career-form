@@ -2,8 +2,11 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   DEVELOPER_MODE_KEY,
+  INCLUDE_NEEDS_REVIEW_KEY,
   createDeveloperModeStore,
+  createIncludeNeedsReviewStore,
   isDeveloperBuild,
+  readIncludeNeedsReview,
   syncAutofillDebugWithDeveloperMode,
   useDeveloperMode,
 } from "./developer-mode";
@@ -130,6 +133,55 @@ describe("useDeveloperMode", () => {
     });
     expect(data[DEVELOPER_MODE_KEY]).toBe(false);
     expect(result.current[0]).toBe(false);
+  });
+});
+
+describe("include needs-review store", () => {
+  function includeStore(data: Record<string, unknown>, developerBuild = true) {
+    return createIncludeNeedsReviewStore({
+      developerBuild,
+      storage: {
+        get: async (key) => (key in data ? { [key]: data[key] } : {}),
+        set: async (values) => {
+          Object.assign(data, values);
+        },
+      },
+      onChanged: {
+        addListener: () => undefined,
+        removeListener: () => undefined,
+      },
+    });
+  }
+
+  it("defaults to OFF in a developer build", async () => {
+    const store = includeStore({});
+    expect(store.initial).toBe(false);
+    await expect(store.read()).resolves.toBe(false);
+  });
+
+  it("is ON only when stored ON in a developer build", async () => {
+    const on = { [INCLUDE_NEEDS_REVIEW_KEY]: true };
+    await expect(includeStore(on).read()).resolves.toBe(true);
+    await expect(includeStore(on, false).read()).resolves.toBe(false);
+  });
+
+  it("exposes a setter that persists and turns the value on", async () => {
+    const data: Record<string, unknown> = {};
+    const store = includeStore(data);
+    const { result } = renderHook(() => useDeveloperMode(store));
+    await act(async () => result.current[1](true));
+    expect(data[INCLUDE_NEEDS_REVIEW_KEY]).toBe(true);
+    expect(result.current[0]).toBe(true);
+  });
+
+  it("applies only while developer mode is on", async () => {
+    const on = includeStore({ [INCLUDE_NEEDS_REVIEW_KEY]: true });
+    await expect(
+      readIncludeNeedsReview(fakeStore(true).store, on),
+    ).resolves.toBe(true);
+    await expect(
+      readIncludeNeedsReview(fakeStore(false).store, on),
+    ).resolves.toBe(false);
   });
 });
 
