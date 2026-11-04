@@ -232,7 +232,9 @@ describe("structure loop through the entire workflow", () => {
     await finished;
     // The result lists the blocked row with its fixed reason.
     expect(
-      screen.getAllByText(genericReasonText("STRUCTURE_BLOCKED")).length,
+      screen.getAllByRole("note", {
+        name: genericReasonText("STRUCTURE_BLOCKED"),
+      }).length,
     ).toBeGreaterThanOrEqual(blocked.length);
     expect(
       document.querySelector<HTMLInputElement>("[name=major0]")?.value,

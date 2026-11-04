@@ -158,7 +158,10 @@
   position: relative;
   isolation: isolate;
   min-width: 0;
-  padding: 10px 0;
+  /* The hover background gets inner space while the text stays aligned with the section title. */
+  margin-inline: -12px;
+  padding: 10px 12px;
+  border-radius: 8px;
   overflow-wrap: anywhere;
 }
 .row:has(.locate:not(:disabled)):hover {
@@ -169,7 +172,7 @@
   box-shadow:
     0 0 0 2px #fff,
     0 0 0 4px var(--color-action);
-  border-radius: 4px;
+  border-radius: 8px;
 }
 .locate:not(:disabled)::after {
   content: "";
@@ -178,8 +181,23 @@
   z-index: 1;
   cursor: pointer;
 }
+/* The separator sits in a 1px gap so a hovered row's background never covers it. */
 .row + .row {
-  border-top: 1px solid var(--color-border);
+  margin-top: 1px;
+}
+.row + .row::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 12px;
+  right: 12px;
+  height: 1px;
+  background: var(--color-border);
+}
+/* --color-border equals the hover background, so a neighbor of a hovered row needs a darker line. */
+.row:has(.locate:not(:disabled)):hover + .row::before,
+.row + .row:has(.locate:not(:disabled)):hover::before {
+  background: var(--color-field-border);
 }
 .heading {
   display: grid;
@@ -259,8 +277,13 @@
 }
 .locate > [aria-hidden] {
   flex: none;
-  color: var(--color-action-strong);
+  color: var(--color-text-muted);
   font-size: 14px;
+  opacity: 0;
+}
+.row:hover .locate > [aria-hidden],
+.locate:focus-visible > [aria-hidden] {
+  opacity: 1;
 }
 .locate:disabled {
   cursor: default;
@@ -330,8 +353,21 @@
   font-weight: 400;
   word-break: keep-all;
 }
-.reason {
-  color: var(--color-danger-text);
+.reasonTag {
+  position: relative;
+  z-index: 2;
+  padding: 2px 8px;
+  border-radius: 980px;
+  background: var(--color-surface-muted);
+  /* DESIGN.md secondary text; the theme has no token for it. */
+  color: #515154;
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: -0.12px;
+  white-space: nowrap;
+}
+.row:has(.locate:not(:disabled)):hover .reasonTag {
+  background: var(--color-surface);
 }
 .row details {
   position: relative;

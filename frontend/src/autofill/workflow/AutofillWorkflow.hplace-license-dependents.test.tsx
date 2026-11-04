@@ -107,9 +107,9 @@ it("lists the license and exam details withheld by searches without results", as
   });
   await openPending();
   // The searches themselves keep their explicit C8 code.
-  expect(screen.getAllByText(NO_RESULTS)).toHaveLength(2);
+  expect(screen.getAllByLabelText(NO_RESULTS)).toHaveLength(2);
   // Issuer, acquisition date and one merged grade/score row, each once.
-  expect(screen.getAllByText(ROW_SEARCH)).toHaveLength(3);
+  expect(screen.getAllByLabelText(ROW_SEARCH)).toHaveLength(3);
   expect(screen.getAllByText("가상발급기관")).toHaveLength(1);
   expect(screen.getAllByText("2022-05-01")).toHaveLength(1);
   expect(screen.getAllByText("가상등급AL")).toHaveLength(1);
@@ -117,7 +117,7 @@ it("lists the license and exam details withheld by searches without results", as
   expect(document.body.textContent).not.toContain("SYN-LIC-0001");
   expect(document.body.textContent).not.toContain("SYN-EXAM-0001");
   expect(
-    screen.queryByText(
+    screen.queryByLabelText(
       "목록 선택을 확인하지 못했어요. 항목을 직접 골라 주세요.",
     ),
   ).not.toBeInTheDocument();
@@ -173,13 +173,13 @@ it("does not report the details of a saved license whose tuple equals the profil
   });
   await openPending();
   expect(
-    screen.getByText(
+    screen.getByLabelText(
       "보이는 값은 프로필과 같지만 사이트가 목록 선택 상태를 보여 주지 않아 확인하지 못했어요. 필요하면 목록에서 다시 골라 주세요.",
     ),
   ).toBeVisible();
-  expect(screen.queryAllByText(ROW_SEARCH)).toHaveLength(0);
+  expect(screen.queryAllByLabelText(ROW_SEARCH)).toHaveLength(0);
   expect(
-    screen.queryAllByText(
+    screen.queryAllByLabelText(
       "자동으로 입력하지 못했어요. 지원서에서 이 값을 직접 입력해 주세요.",
     ),
   ).toHaveLength(0);
@@ -209,8 +209,8 @@ it("lists the details a committed license search never enabled", async () => {
       .value,
   ).toBe("합성자격증 없는제목");
   // The commit stays; its never-enabled details are listed once each.
-  expect(screen.queryByText(NO_RESULTS)).not.toBeInTheDocument();
-  expect(screen.getAllByText(ROW_SEARCH)).toHaveLength(2);
+  expect(screen.queryByLabelText(NO_RESULTS)).not.toBeInTheDocument();
+  expect(screen.getAllByLabelText(ROW_SEARCH)).toHaveLength(2);
   expect(screen.getAllByText("가상발급기관")).toHaveLength(1);
   expect(screen.getAllByText("2022-05-01")).toHaveLength(1);
   expect(document.body.textContent).not.toContain("SYN-LIC-0001");

@@ -47,6 +47,12 @@ function pendingReason(item: ReviewPlanItem): string {
     item.currentValue.trim()
   )
     return "기존 값과 다름";
+  // Held back by its grade: nothing failed, the applicant only has to check it.
+  if (
+    item.genericGrade === "REVIEW" &&
+    item.genericReasonCode !== "OPTION_VALUE_UNMATCHED"
+  )
+    return "값 확인 필요";
   if (
     item.status === "needs-review" ||
     /선택|반복|후보/.test(item.reason) ||
@@ -273,7 +279,76 @@ export function buildResultModel(input: ResultModelInput): ResultModel {
       },
     });
   }
-  return { completed: [...completed.values()], pending, skipped };
+  return {
+    completed: [...completed.values()],
+    pending: mergeSameControl(pending, fieldStateFor),
+    skipped,
+  };
+}
+
+// Least to most actionable: a failed write tells the user to act, a result to
+// confirm only asks for a look.
+const REASON_ACTIONABILITY = [
+  "입력 결과 확인",
+  "기존 값과 다름",
+  "선택 필요",
+  "입력 못함",
+];
+
+/**
+ * Review items are collected per scan, so one control can be reviewed twice
+ * under different candidate ids. Keep the most actionable row per control.
+ */
+function mergeSameControl(
+  pending: ResultModel["pending"],
+  fieldStateFor: ResultModelInput["fieldStateFor"],
+): ResultModel["pending"] {
+  if (!fieldStateFor) return pending;
+  const rowOfControl = new Map<Element, number>();
+  const merged: ResultModel["pending"] = [];
+  for (const entry of pending) {
+    const handle = entry.id.startsWith("progress:")
+      ? undefined
+      : fieldStateFor(entry.id)?.handle;
+    const control = handle?.elements[0] ?? handle?.customElements?.[0];
+    const at = control ? rowOfControl.get(control) : undefined;
+    if (at === undefined) {
+      if (control) rowOfControl.set(control, merged.length);
+      merged.push(entry);
+    } else if (
+      REASON_ACTIONABILITY.indexOf(entry.reason) >
+      REASON_ACTIONABILITY.indexOf(merged[at].reason)
+    ) {
+      merged[at] = entry;
+    }
+  }
+  return merged;
+}
+
+// These skipped items are not left empty: the page already holds the value,
+// or the field is not on screen.
+const NOT_UNFILLED_REASONS = new Set([
+  "기존 값 유지",
+  "현재 표시되지 않는 항목",
+]);
+
+/**
+ * Candidate ids of fields the user still has to fill. A pending item keeps its
+ * mark even with a value; a skipped one with a value (a site default) does not.
+ */
+export function unfilledCandidateIds(
+  model: ResultModel,
+  valueOf: (id: string) => string | undefined = () => undefined,
+): string[] {
+  return [
+    ...model.pending.map(({ id }) => id),
+    ...model.skipped
+      .filter(
+        ({ id, reason }) =>
+          !NOT_UNFILLED_REASONS.has(reason) && !valueOf(id)?.trim(),
+      )
+      .map(({ id }) => id),
+  ];
 }
 
 // These skipped items are not left empty: the page already holds the value,

@@ -19,7 +19,10 @@ function fixture(current = "", split = true) {
   return document.querySelector<HTMLInputElement>("#local")!;
 }
 
-function setup(mode: FieldsAnalyzeResponse["mode"] = "GENERIC", email = "qa@example.test") {
+function setup(
+  mode: FieldsAnalyzeResponse["mode"] = "GENERIC",
+  email = "qa@example.test",
+) {
   const snapshot = collectFieldsSnapshot(document);
   const field = snapshot.request.sections
     .flatMap((section) => section.fields)
@@ -53,7 +56,11 @@ describe("generic split-email writing", () => {
   it("fills the local part and selects the matching domain", () => {
     const input = fixture("");
     const { snapshot, profile, analysis } = setup();
-    const plan = buildReviewPlan({ analysis, profile, registry: snapshot.registry });
+    const plan = buildReviewPlan({
+      analysis,
+      profile,
+      registry: snapshot.registry,
+    });
     expect(plan.items[0]?.status).toBe("available");
     const results = executeApprovedWrites({
       items: plan.items,
@@ -61,36 +68,53 @@ describe("generic split-email writing", () => {
       registry: snapshot.registry,
     });
     expect(input.value).toBe("qa");
-    expect(document.querySelector<HTMLSelectElement>("#domain")!.value).toBe("example.test");
+    expect(document.querySelector<HTMLSelectElement>("#domain")!.value).toBe(
+      "example.test",
+    );
     expect(results[0]?.status).toBe("written");
   });
 
   it("keeps a different existing local part as a conflict", () => {
     const input = fixture("existing-local");
     const { snapshot, profile, analysis } = setup();
-    const plan = buildReviewPlan({ analysis, profile, registry: snapshot.registry });
+    const plan = buildReviewPlan({
+      analysis,
+      profile,
+      registry: snapshot.registry,
+    });
     const results = executeApprovedWrites({
       items: plan.items,
       approvedCandidateIds: new Set([plan.items[0]!.candidateId]),
       registry: snapshot.registry,
     });
     expect(input.value).toBe("existing-local");
-    expect(document.querySelector<HTMLSelectElement>("#domain")!.value).toBe("");
+    expect(document.querySelector<HTMLSelectElement>("#domain")!.value).toBe(
+      "",
+    );
     expect(results[0]?.status).toBe("skipped");
   });
 
   it("writes only the local part when no domain option matches the profile", () => {
     const input = fixture("");
     const { snapshot, profile, analysis } = setup("GENERIC", "qa@other.test");
-    const plan = buildReviewPlan({ analysis, profile, registry: snapshot.registry });
-    expect(plan.items[0]).toMatchObject({ status: "available", disabled: false });
+    const plan = buildReviewPlan({
+      analysis,
+      profile,
+      registry: snapshot.registry,
+    });
+    expect(plan.items[0]).toMatchObject({
+      status: "available",
+      disabled: false,
+    });
     const results = executeApprovedWrites({
       items: plan.items,
       approvedCandidateIds: new Set([plan.items[0]!.candidateId]),
       registry: snapshot.registry,
     });
     expect(input.value).toBe("qa");
-    expect(document.querySelector<HTMLSelectElement>("#domain")!.value).toBe("");
+    expect(document.querySelector<HTMLSelectElement>("#domain")!.value).toBe(
+      "",
+    );
     expect(results[0]).toMatchObject({
       status: "skipped",
       failureCode: "SPLIT_EMAIL_UNSUPPORTED",
@@ -107,18 +131,25 @@ describe("generic split-email writing", () => {
       <input id="local"><span>@</span><select id="domain"><option value="">선택</option><option value="example.test">example.test</option><option value="custom">직접입력</option></select><input id="domain_text" style="display:none">
     </div></section>`;
     const select = document.querySelector<HTMLSelectElement>("#domain")!;
-    const domainText = document.querySelector<HTMLInputElement>("#domain_text")!;
+    const domainText =
+      document.querySelector<HTMLInputElement>("#domain_text")!;
     select.addEventListener("change", () => {
       domainText.style.display = select.value === "custom" ? "" : "none";
     });
     const { snapshot, profile, analysis } = setup("GENERIC", "qa@other.test");
-    const plan = buildReviewPlan({ analysis, profile, registry: snapshot.registry });
+    const plan = buildReviewPlan({
+      analysis,
+      profile,
+      registry: snapshot.registry,
+    });
     const results = executeApprovedWrites({
       items: plan.items,
       approvedCandidateIds: new Set([plan.items[0]!.candidateId]),
       registry: snapshot.registry,
     });
-    expect(document.querySelector<HTMLInputElement>("#local")!.value).toBe("qa");
+    expect(document.querySelector<HTMLInputElement>("#local")!.value).toBe(
+      "qa",
+    );
     expect(select.value).toBe("custom");
     expect(domainText.value).toBe("other.test");
     expect(results[0]?.status).toBe("written");
@@ -133,13 +164,20 @@ describe("generic split-email writing", () => {
     analysis.fields.push({
       candidateId: select.candidateId,
       matchType: "MATCH",
-      valueBinding: { type: "DIRECT", profileFieldKey: "contact.contact.email" },
+      valueBinding: {
+        type: "DIRECT",
+        profileFieldKey: "contact.contact.email",
+      },
       autofillPolicy: "ALLOWED",
       mappingStatus: "LLM_SUGGESTED",
       interactionStatus: "READY",
       writePlan: { command: "SELECT_OPTION" },
     });
-    const plan = buildReviewPlan({ analysis, profile, registry: snapshot.registry });
+    const plan = buildReviewPlan({
+      analysis,
+      profile,
+      registry: snapshot.registry,
+    });
     expect(plan.items.map((item) => item.candidateId)).toEqual([
       analysis.fields[0]!.candidateId,
     ]);
@@ -163,7 +201,9 @@ describe("generic split-email writing", () => {
       registry: snapshot.registry,
     });
     expect(input.value).toBe("qa");
-    expect(input.parentElement!.querySelector("select")!.value).toBe("example.test");
+    expect(input.parentElement!.querySelector("select")!.value).toBe(
+      "example.test",
+    );
     expect(results[0]?.status).toBe("written");
   });
 
@@ -313,9 +353,11 @@ describe("generic split-email writing", () => {
     expect(input.value).toBe("qa");
     const pending = screen.getByRole("tabpanel", { name: /확인 필요/ });
     expect(pending.querySelector("article")).not.toBeNull();
-    expect(pending.querySelector("article p")?.textContent).toBe(
-      SPLIT_EMAIL_REASON,
-    );
+    expect(
+      pending
+        .querySelector('article [role="note"]')
+        ?.getAttribute("aria-label"),
+    ).toBe(SPLIT_EMAIL_REASON);
     expect(pending.querySelector("article")?.textContent).toContain(
       "qa@other.test",
     );

@@ -99,12 +99,12 @@ it.each([
     const review = screen.queryByRole("tab", { name: /확인 필요/ });
     if (review) fireEvent.click(review);
     expect(
-      screen.queryAllByText(
+      screen.queryAllByLabelText(
         "목록 선택을 확인하지 못했어요. 항목을 직접 골라 주세요.",
       ),
     ).toHaveLength(0);
     expect(
-      screen.queryAllByText(/같은 행의 검색 항목을 확정하지 못해/),
+      screen.queryAllByLabelText(/같은 행의 검색 항목을 확정하지 못해/),
     ).toHaveLength(0);
     expect(counters.forbidden).toBe(0);
     expect(counters.requests).toBeLessThanOrEqual(8);

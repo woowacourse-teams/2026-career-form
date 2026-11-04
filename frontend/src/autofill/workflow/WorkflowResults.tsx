@@ -144,16 +144,31 @@ export function WorkflowResults({
                   aria-label={category}
                 >
                   <h4 className={styles.pendingCategory}>{category}</h4>
-                  {entries.map((entry) => (
-                    <PendingResultRow
-                      key={entry.id}
-                      entry={entry}
-                      profile={profile}
-                      options={optionsFor?.(entry.id)}
-                      onLocate={onLocate}
-                      copyText={copyText}
-                    />
-                  ))}
+                  {entries.map((entry) => {
+                    const name = pendingResultPresentation(entry.item).label;
+                    const same = entries.filter(
+                      ({ item }) =>
+                        pendingResultPresentation(item).label === name,
+                    );
+                    return (
+                      <PendingResultRow
+                        key={entry.id}
+                        entry={entry}
+                        profile={profile}
+                        options={optionsFor?.(entry.id)}
+                        onLocate={onLocate}
+                        copyText={copyText}
+                        position={
+                          same.length > 1
+                            ? {
+                                index: same.indexOf(entry) + 1,
+                                total: same.length,
+                              }
+                            : undefined
+                        }
+                      />
+                    );
+                  })}
                 </section>
               ))}
             </div>

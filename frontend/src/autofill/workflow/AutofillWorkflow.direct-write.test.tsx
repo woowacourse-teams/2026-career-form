@@ -135,9 +135,9 @@ describe("generic autofill without a review screen", () => {
     const pending = within(
       screen.getByRole("region", { name: "확인 필요한 항목" }),
     );
-    expect(pending.getByText(/연결 확신이 보통/)).toBeInTheDocument();
+    expect(pending.getByLabelText(/연결 확신이 보통/)).toBeInTheDocument();
     expect(
-      pending.getByText(/지원서 값과 등록한 값이 달라요/),
+      pending.getByLabelText(/지원서 값과 등록한 값이 달라요/),
     ).toBeInTheDocument();
   });
 
@@ -149,7 +149,7 @@ describe("generic autofill without a review screen", () => {
       screen.getByRole("region", { name: "확인 필요한 항목" }),
     );
     expect(
-      pending.getByText("저장된 정보와 연결하지 못했습니다."),
+      pending.getByLabelText("저장된 정보와 연결하지 못했습니다."),
     ).toBeInTheDocument();
   });
 
