@@ -42,6 +42,12 @@ export function createPushHandler({
     unread: await unread.count(),
     roles: await service.roles(),
   });
+  // The answer carries the stored selection right away; the re-registration
+  // that mirrors it to the server runs behind the subscription queue.
+  const saveRoles = async (roles: readonly string[]) => {
+    await service.storeRoles(roles);
+    void service.sync().catch(() => undefined);
+  };
   return (
     message: unknown,
     sender: { id?: string; url?: string },
@@ -81,12 +87,12 @@ export function createPushHandler({
           if (view.categories && view.error === null) {
             const current = await service.roles();
             const kept = pruneRoles(current, view.categories);
-            if (kept.length !== current.length) await service.setRoles(kept);
+            if (kept.length !== current.length) await saveRoles(kept);
           }
           return { ok: true, categories: view };
         }
         case "roles":
-          await service.setRoles(command.roles);
+          await saveRoles(command.roles);
           break;
       }
       return { ok: true, state: await state() };

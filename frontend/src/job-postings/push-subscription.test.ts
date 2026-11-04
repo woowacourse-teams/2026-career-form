@@ -300,25 +300,43 @@ describe("받을 직무 선택값", () => {
     await h.service.sync();
     expect(h.registered).toEqual([[]]);
   });
-  it("선택을 저장하면 켜져 있을 때 바뀐 roles로 바로 다시 등록한다", async () => {
+  it("선택을 저장한 뒤 동기화하면 켜져 있을 때 바뀐 roles로 다시 등록한다", async () => {
     const h = harness();
     await h.service.sync();
-    const status = await h.service.setRoles(["IT.BACKEND", "IT.FRONTEND"]);
-    expect(status).toMatchObject({ code: "registered", attempts: 0 });
+    expect(await h.service.storeRoles(["IT.BACKEND", "IT.FRONTEND"])).toEqual([
+      "IT.BACKEND",
+      "IT.FRONTEND",
+    ]);
     expect(h.store[PUSH_ROLES_KEY]).toEqual(["IT.BACKEND", "IT.FRONTEND"]);
     expect(await h.service.roles()).toEqual(["IT.BACKEND", "IT.FRONTEND"]);
+    expect(h.registered).toEqual([[]]);
+    expect(await h.service.sync()).toMatchObject({
+      code: "registered",
+      attempts: 0,
+    });
     expect(h.registered).toEqual([[], ["IT.BACKEND", "IT.FRONTEND"]]);
     expect(h.log.filter((e) => e.startsWith("browser:subscribe"))).toHaveLength(
       1,
     );
   });
+  it("저장은 진행 중인 등록 뒤에 줄을 서지 않고 바로 끝난다", async () => {
+    const h = harness();
+    const release = h.hold();
+    const syncing = h.service.sync();
+    await h.service.storeRoles(["IT.QA"]);
+    expect(h.store[PUSH_ROLES_KEY]).toEqual(["IT.QA"]);
+    expect(h.registered).toEqual([]);
+    release();
+    await syncing;
+    // The registration that was already running sends the new selection.
+    expect(h.registered).toEqual([["IT.QA"]]);
+  });
   it("꺼져 있으면 로컬에만 두었다가 켤 때 싣고, 끄기·켜기 뒤에도 선택값이 남는다", async () => {
     const h = harness();
     await h.service.sync();
     await h.service.setEnabled(false);
-    expect(await h.service.setRoles(["DESIGN.UX_UI"])).toMatchObject({
-      code: "disabled",
-    });
+    await h.service.storeRoles(["DESIGN.UX_UI"]);
+    expect(await h.service.sync()).toMatchObject({ code: "disabled" });
     expect(h.registered).toEqual([[]]);
     expect(h.store[PUSH_ROLES_KEY]).toEqual(["DESIGN.UX_UI"]);
     await h.service.setEnabled(true);
@@ -330,9 +348,10 @@ describe("받을 직무 선택값", () => {
   });
   it("형식이 틀린 코드와 중복은 버리고 비우면 미선택이 된다", async () => {
     const h = harness();
-    await h.service.setRoles(["IT.BACKEND", "bad code", "IT.BACKEND"]);
+    await h.service.storeRoles(["IT.BACKEND", "bad code", "IT.BACKEND"]);
     expect(h.store[PUSH_ROLES_KEY]).toEqual(["IT.BACKEND"]);
-    await h.service.setRoles([]);
+    await h.service.storeRoles([]);
+    await h.service.sync();
     expect(h.store[PUSH_ROLES_KEY]).toEqual([]);
     expect(h.registered.at(-1)).toEqual([]);
     h.store[PUSH_ROLES_KEY] = "garbage";
@@ -342,9 +361,8 @@ describe("받을 직무 선택값", () => {
   });
   it("미지원 Chrome에서도 선택값은 저장한다", async () => {
     const old = harness({ chrome: MINIMUM_CHROME_VERSION - 1 });
-    expect(await old.service.setRoles(["IT.BACKEND"])).toMatchObject({
-      code: "unsupported",
-    });
+    await old.service.storeRoles(["IT.BACKEND"]);
+    expect(await old.service.sync()).toMatchObject({ code: "unsupported" });
     expect(old.store[PUSH_ROLES_KEY]).toEqual(["IT.BACKEND"]);
     expect(old.registered).toEqual([]);
   });

@@ -48,9 +48,14 @@ function setup() {
       calls.push(["setEnabled", value]);
       enabled = value;
     },
-    setRoles: async (value: string[]) => {
-      calls.push(["setRoles", value]);
+    storeRoles: async (value: string[]) => {
+      calls.push(["storeRoles", value]);
       roles = value;
+      return value;
+    },
+    sync: async () => {
+      calls.push(["sync"]);
+      return { code: "registered", updatedAt: 1, attempts: 0 };
     },
   } as unknown as PushSubscriptionService;
   const check = {
@@ -156,7 +161,7 @@ describe("push background handler", () => {
     expect(
       await handler(message("roles", { roles: ["IT.BACKEND"] }), options),
     ).toMatchObject({ ok: true, state: { roles: ["IT.BACKEND"] } });
-    expect(calls).toEqual([["setRoles", ["IT.BACKEND"]]]);
+    expect(calls).toEqual([["storeRoles", ["IT.BACKEND"]], ["sync"]]);
     expect(
       await handler(message("roles", { roles: ["bad code"] }), options),
     ).toEqual({ ok: false, code: "UNAVAILABLE" });
@@ -172,7 +177,11 @@ describe("push background handler", () => {
       ok: true,
       categories: { categories, error: null },
     });
-    expect(calls).toEqual([["loadCategories"], ["setRoles", ["IT.BACKEND"]]]);
+    expect(calls).toEqual([
+      ["loadCategories"],
+      ["storeRoles", ["IT.BACKEND"]],
+      ["sync"],
+    ]);
   });
   it("분류 조회가 실패하면 캐시와 오류를 그대로 전달하고 선택값은 건드리지 않는다", async () => {
     const { handler, calls, setRoles, serveCategories } = setup();

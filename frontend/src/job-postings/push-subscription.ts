@@ -148,17 +148,13 @@ export class PushSubscriptionService {
       return enabled ? this.register() : this.disable();
     });
   }
-  // The selection lives locally and rides along with every registration, so
-  // a change while off is simply sent the next time the subscription is on.
-  setRoles(roles: readonly string[]): Promise<PushStatus> {
-    return this.serial(async () => {
-      await this.ports.storage.set({
-        [PUSH_ROLES_KEY]: parseRoleSelection(roles),
-      });
-      return (await this.isEnabled())
-        ? this.register()
-        : this.record({ code: "disabled", attempts: 0 }, undefined);
-    });
+  // Writes the selection at once, outside the queue, so it never waits behind
+  // a slow registration. It rides along with every registration, so the
+  // caller follows up with sync(); a change while off is sent at the next on.
+  async storeRoles(roles: readonly string[]): Promise<string[]> {
+    const selection = parseRoleSelection(roles);
+    await this.ports.storage.set({ [PUSH_ROLES_KEY]: selection });
+    return selection;
   }
   private async register(): Promise<PushStatus> {
     if (!this.supported())
