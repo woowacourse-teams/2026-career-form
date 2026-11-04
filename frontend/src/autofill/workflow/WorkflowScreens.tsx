@@ -14,7 +14,6 @@ import {
 import type { ApprovedWriteResult } from "../write/executor";
 import styles from "../../autofill-demo/AutofillDemo.module.css";
 import { WorkflowResults, type WorkflowResultsProps } from "./WorkflowResults";
-import type { AppearableProfileItem } from "./pre-approval";
 import type { RowSaveManual, RowSaveManualReason } from "../generic/row-save";
 import { genericItemReason } from "../generic/grade-reason-text";
 import {
@@ -102,10 +101,6 @@ interface WorkflowScreensProps {
   operatedCategories?: readonly string[];
   onLocateSection?(candidateIds: readonly string[], category?: string): boolean;
   onExit(): void;
-  /** Generic first review only: stored values a reviewed area may reveal. */
-  appearableItems?: readonly AppearableProfileItem[];
-  preApprovalOn?: boolean;
-  setPreApprovalOn?(on: boolean): void;
   /** Revealed fields written without a second review. */
   autoWrittenLabels?: readonly string[];
   manualRevealedLabels?: readonly string[];
@@ -127,12 +122,40 @@ const ROW_SAVE_REASON: Record<RowSaveManualReason, string> = {
 
 function stageHeading(stage: Stage): PanelHeading {
   if (stage === "preparation-review")
-    return { title: "입력 항목 준비", step: "1 / 3" };
+    return { title: "입력 항목 준비", step: "1 / 2" };
   if (stage === "review")
-    return { title: "기입 확인", titleLabel: "자동 기입 확인", step: "2 / 3" };
-  if (stage === "writing") return { title: "기입 중", step: "3 / 3" };
+    return { title: "기입 확인", titleLabel: "자동 기입 확인", step: "2 / 2" };
+  if (stage === "writing") return { title: "기입 중", step: "2 / 2" };
   if (stage === "result") return { title: "기입 결과" };
   return {};
+}
+
+function AnalysisNotices({
+  partial,
+  warnings,
+}: {
+  partial: boolean;
+  warnings: readonly string[];
+}) {
+  return (
+    <>
+      {partial && (
+        <aside className={styles.safety}>
+          일부 필드는 분석하지 못해 자동 기입 대상에서 제외했습니다.
+        </aside>
+      )}
+      {[...new Set(warnings)].map((warning) => (
+        <aside className={styles.safety} key={warning}>
+          분석 경고:{" "}
+          {warning === "UNRESOLVED_FIELD"
+            ? "일부 필드를 연결하지 못했습니다."
+            : warning === "LLM_UNAVAILABLE"
+              ? "LLM 분석 일부 미완료"
+              : warning}
+        </aside>
+      ))}
+    </>
+  );
 }
 
 /** Marks what the row will do; the row itself stays a jump to the field. */
@@ -178,6 +201,7 @@ export function WorkflowScreens({
   executeWrites,
   results,
   addressResult,
+  analysisSummary,
   structureDiagnostics,
   exceptionTitle,
   exceptionKind = "interrupted",
@@ -191,9 +215,6 @@ export function WorkflowScreens({
   onLocateSection,
   operatedCategories,
   currentCategory,
-  appearableItems = [],
-  preApprovalOn = false,
-  setPreApprovalOn,
   autoWrittenLabels = [],
   manualRevealedLabels = [],
   rowSave,
@@ -227,7 +248,7 @@ export function WorkflowScreens({
     const unavailableCount = preparationItems.length - runnableItems.length;
     return (
       <div className={`${styles.screen} ${resultStyles.results}`}>
-        {!inPanel && <Header step="1 / 3" title="입력 항목 준비" />}
+        {!inPanel && <Header step="1 / 2" title="입력 항목 준비" />}
         <p className={styles.lead}>
           필요한 입력칸을 준비한 뒤 자동 기입할 항목만 확인합니다.
         </p>
@@ -339,7 +360,7 @@ export function WorkflowScreens({
     return (
       <div className={styles.screen}>
         <style>{resultCss}</style>
-        {!inPanel && <Header step="2 / 3" title="자동 기입 확인" />}
+        {!inPanel && <Header step="2 / 2" title="자동 기입 확인" />}
         <div
           className={`${resultStyles.summary} ${resultStyles.visuallyHidden}`}
         >
@@ -436,21 +457,7 @@ export function WorkflowScreens({
             <p className={resultStyles.empty}>자동 기입 예정 항목이 없어요.</p>
           )}
         </section>
-        {partial && (
-          <aside className={styles.safety}>
-            일부 필드는 분석하지 못해 자동 기입 대상에서 제외했습니다.
-          </aside>
-        )}
-        {warnings.map((warning) => (
-          <aside className={styles.safety} key={warning}>
-            분석 경고:{" "}
-            {warning === "UNRESOLVED_FIELD"
-              ? "일부 필드를 연결하지 못했습니다."
-              : warning === "LLM_UNAVAILABLE"
-                ? "LLM 분석 일부 미완료"
-                : warning}
-          </aside>
-        ))}
+        <AnalysisNotices partial={partial} warnings={warnings} />
         {reviewTab === "needs-review" && needsReviewItems.length > 0 && (
           <p className={resultStyles.guidance}>
             자동 기입에서 제외할 항목이 있는지 확인해 주세요.
@@ -593,41 +600,6 @@ export function WorkflowScreens({
             );
           })}
         </section>
-        {developerMode && appearableItems.length > 0 && setPreApprovalOn && (
-          <fieldset className={resultStyles.review}>
-            <legend>나타날 수 있는 칸 {appearableItems.length}</legend>
-            <p className={resultStyles.guidance}>
-              값을 넣은 뒤 지원서가 새로 보여 줄 수 있는 칸이에요. 빈 칸으로
-              나타나면 이 값을 넣어요.
-            </p>
-            <label>
-              <input
-                type="checkbox"
-                checked={preApprovalOn}
-                onChange={(event) => setPreApprovalOn(event.target.checked)}
-              />{" "}
-              이 칸이 나타나면 다시 묻지 않고 기입
-            </label>
-            <details>
-              <summary>
-                사용할 프로필 값 보기 ({appearableItems.length})
-              </summary>
-              <ul>
-                {appearableItems.map((item) => (
-                  <li key={`${item.key}#${item.itemIndex}`}>
-                    <span>
-                      {item.categoryLabel} {item.label}
-                      {item.itemIndex > 0 ? ` (${item.itemIndex + 1}번째)` : ""}
-                    </span>{" "}
-                    <span className={resultStyles.previewValue}>
-                      {item.value}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </details>
-          </fieldset>
-        )}
         <div className={styles.act}>
           <button
             className={styles.primary}
@@ -647,6 +619,9 @@ export function WorkflowScreens({
     return (
       <div className={`${styles.screen} ${styles.resultScreen}`}>
         {!inPanel && <h2 className={styles.resultTitle}>기입 결과</h2>}
+        {analysisSummary?.mode === "GENERIC" && (
+          <AnalysisNotices partial={partial} warnings={warnings} />
+        )}
         <WorkflowResults
           wasWritten={wasWritten}
           progressIdFor={progressIdFor}

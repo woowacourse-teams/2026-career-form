@@ -113,7 +113,11 @@ import {
 } from "./search-follow-up-analysis";
 import { takeWrittenSearchFollowUp } from "./search-follow-up-state";
 import { runAddressAnalysis } from "./address-analysis";
-import { belongsToFailedGroup } from "./workflow-write-items";
+import { readIncludeNeedsReview } from "../debug/developer-mode";
+import {
+  belongsToFailedGroup,
+  includeNeedsReviewItem,
+} from "./workflow-write-items";
 import {
   settleVisibleFields,
   transientlyHidden,
@@ -431,6 +435,9 @@ export function createAnalyzeFields({
     const finishAnalysisLog = startLocalTiming("analysis-log");
     debugAnalysis(snapshot, analysis);
     finishAnalysisLog();
+    // Read per pass: the run may start before a mounted setting hook has loaded.
+    const includeNeedsReview =
+      analysis.mode === "GENERIC" && (await readIncludeNeedsReview());
     if (
       run.controller.signal.aborted ||
       currentAnalysisGeneration !== analysisGeneration
@@ -814,16 +821,21 @@ export function createAnalyzeFields({
         })
       : plan.items;
     const automaticItems = snapshot.registry.withReadCache(() =>
-      planItems.map((item) => {
+      planItems.map((planItem) => {
+        const item = includeNeedsReview
+          ? includeNeedsReviewItem(planItem)
+          : planItem;
         if (options.reviewOnly) {
-          return completedSearchCandidateIds.has(item.candidateId)
-            ? {
-                ...item,
-                selected: false,
-                disabled: true,
-                reason:
-                  "검색 결과가 같은 행에 유지되어 다시 검색하지 않습니다.",
-              }
+          if (completedSearchCandidateIds.has(item.candidateId))
+            return {
+              ...item,
+              selected: false,
+              disabled: true,
+              reason: "검색 결과가 같은 행에 유지되어 다시 검색하지 않습니다.",
+            };
+          // A generic pass keeps its own selection and writes without a review.
+          return analysis.mode === "GENERIC"
+            ? item
             : { ...item, selected: false };
         }
         if (genericResult) return item;
@@ -849,6 +861,8 @@ export function createAnalyzeFields({
     debugReviewDecisions({ ...plan, items: automaticItems }, snapshot.registry);
     finishAutomaticItems();
     setReviewItems(automaticItems);
+    // On a generic page this stage only hands the items to executeWrites; the
+    // workflow writes them at once and never shows the review screen.
     if (options.reviewOnly || genericResult) {
       setStage("review");
       return;
