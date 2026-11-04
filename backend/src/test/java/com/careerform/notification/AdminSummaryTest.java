@@ -16,12 +16,12 @@ import org.junit.jupiter.api.Test;
 class AdminSummaryTest {
     private static final Instant NOW = Instant.parse("2030-01-01T00:00:00Z");
     private final MemoryNotificationStore store = new MemoryNotificationStore();
-    private final JobPostingService service = new JobPostingService(store, JobCategories.load(), Clock.fixed(NOW, ZoneOffset.UTC));
+    private final JobPostingService service = new JobPostingService(store, JobCategories.load(), RoleFilterPolicy.defaults(), Clock.fixed(NOW, ZoneOffset.UTC));
 
     @Test
     @DisplayName("수락률·포기율은 끝난 발송 기준, 평균 시도는 전체 발송 기준이고 지연 백분위는 최근접 순위다")
     void computesRatesAndPercentiles() {
-        store.insertSubscription(new PushSubscription("s1", "https://fcm.googleapis.com/fcm/send/s1", "p", "a", NOW));
+        store.insertSubscription(new PushSubscription("s1", "https://fcm.googleapis.com/fcm/send/s1", "p", "a", NOW, null, null));
         store.insertPosting(new JobPosting("p1", "합성 회사", null, null, "https://careers.example.test/jobs/1", NOW.minusSeconds(60), NOW.plusSeconds(7200), NOW.minusSeconds(60)));
         var lease = NOW.plusSeconds(120);
         var scheduled = NOW.minusSeconds(600);

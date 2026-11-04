@@ -205,7 +205,49 @@ abstract class NotificationStoreContract {
         return new JobPosting(id, "합성 회사", "백엔드", List.of("IT.BACKEND"), link, opensAt, closesAt, NOW.minusSeconds(120));
     }
 
+    @Test
+    @DisplayName("구독의 받을 직무는 갱신 시각과 함께 저장되고 null이면 미선택으로 돌아가며 없는 구독은 false다")
+    void updatesSubscriptionRoles() {
+        var store = store();
+        store.insertSubscription(subscription("s1", "https://fcm.googleapis.com/fcm/send/synthetic-1"));
+        assertThat(store.findSubscription("s1").orElseThrow().roles()).isNull();
+        assertThat(store.updateSubscriptionRoles("s1", List.of("IT.BACKEND", "IT.DATA"), NOW.plusSeconds(10))).isTrue();
+        var selected = store.findSubscription("s1").orElseThrow();
+        assertThat(selected.roles()).containsExactly("IT.BACKEND", "IT.DATA");
+        assertThat(selected.rolesUpdatedAt()).isEqualTo(NOW.plusSeconds(10));
+        assertThat(selected.endpoint()).isEqualTo("https://fcm.googleapis.com/fcm/send/synthetic-1");
+        assertThat(selected.registeredAt()).isEqualTo(NOW);
+        assertThat(store.updateSubscriptionRoles("s1", null, NOW.plusSeconds(20))).isTrue();
+        var unselected = store.findSubscriptionByEndpoint("https://fcm.googleapis.com/fcm/send/synthetic-1").orElseThrow();
+        assertThat(unselected.roles()).isNull();
+        assertThat(unselected.rolesUpdatedAt()).isEqualTo(NOW.plusSeconds(20));
+        assertThat(store.updateSubscriptionRoles("missing", List.of("IT.BACKEND"), NOW)).isFalse();
+        assertThat(store.countSubscriptions()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("직무별 대상 조회는 겹치는 선택 구독만 주고, 미선택 포함이면 roles가 없거나 빈 구독도 더하며, 겹치지 않는 선택 구독은 늘 뺀다")
+    void findsSubscriptionIdsOverlappingRoles() {
+        var store = store();
+        store.insertSubscription(subscription("backend", "https://fcm.googleapis.com/fcm/send/synthetic-1", List.of("IT.BACKEND")));
+        store.insertSubscription(subscription("both", "https://fcm.googleapis.com/fcm/send/synthetic-2", List.of("IT.FRONTEND", "IT.BACKEND")));
+        store.insertSubscription(subscription("frontend", "https://fcm.googleapis.com/fcm/send/synthetic-3", List.of("IT.FRONTEND")));
+        store.insertSubscription(subscription("unselected", "https://fcm.googleapis.com/fcm/send/synthetic-4"));
+        store.insertSubscription(subscription("empty", "https://fcm.googleapis.com/fcm/send/synthetic-5", List.of()));
+        assertThat(store.subscriptionIdsForRoles(List.of("IT.BACKEND"), false)).containsExactlyInAnyOrder("backend", "both");
+        assertThat(store.subscriptionIdsForRoles(List.of("IT.BACKEND"), true)).containsExactlyInAnyOrder("backend", "both", "unselected", "empty");
+        assertThat(store.subscriptionIdsForRoles(List.of("IT.BACKEND", "IT.FRONTEND"), false)).containsExactlyInAnyOrder("backend", "both", "frontend");
+        assertThat(store.subscriptionIdsForRoles(List.of("IT.DATA"), false)).isEmpty();
+        assertThat(store.subscriptionIdsForRoles(List.of("IT.DATA"), true)).containsExactlyInAnyOrder("unselected", "empty");
+        assertThat(store.countSubscriptionsWithRoles()).as("roles가 1개 이상인 구독 수").isEqualTo(3);
+        assertThat(store.countSubscriptions()).isEqualTo(5);
+    }
+
     static PushSubscription subscription(String id, String endpoint) {
-        return new PushSubscription(id, endpoint, "synthetic-p256dh", "synthetic-auth", NOW);
+        return new PushSubscription(id, endpoint, "synthetic-p256dh", "synthetic-auth", NOW, null, null);
+    }
+
+    static PushSubscription subscription(String id, String endpoint, List<String> roles) {
+        return new PushSubscription(id, endpoint, "synthetic-p256dh", "synthetic-auth", NOW, roles, NOW);
     }
 }

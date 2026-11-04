@@ -32,8 +32,8 @@ class NotificationApiTest {
     private final VapidTestKeys keys = VapidTestKeys.generate();
     private final MemoryNotificationStore store = new MemoryNotificationStore();
     private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
-    private final JobPostingService postings = new JobPostingService(store, JobCategories.load(), clock);
-    private final PushSubscriptionService subscriptions = new PushSubscriptionService(store, clock, Set.of("fcm.googleapis.com"));
+    private final JobPostingService postings = new JobPostingService(store, JobCategories.load(), RoleFilterPolicy.defaults(), clock);
+    private final PushSubscriptionService subscriptions = new PushSubscriptionService(store, JobCategories.load(), clock, Set.of("fcm.googleapis.com"));
     private final MockMvc mvc = MockMvcBuilders.standaloneSetup(new NotificationController(
             VapidKeys.parse(keys.publicKey, keys.privateKey, "mailto:synthetic@example.test"), subscriptions, postings, JobCategories.load()))
         .setControllerAdvice(new NotificationInputErrors()).build();
@@ -89,6 +89,49 @@ class NotificationApiTest {
     }
 
     @Test
+    @DisplayName("구독 등록의 roles는 저장되고, 재등록에 roles가 있으면 덮어쓰고 없거나 null이면 유지하며 빈 배열은 미선택이고, 모르는 코드는 400 INVALID_SUBSCRIPTION이다")
+    void storesAndUpdatesSubscriptionRoles(CapturedOutput output) throws Exception {
+        var p256dh = VapidTestKeys.generate().publicKey;
+        var auth = randomAuth();
+        mvc.perform(post("/api/v1/notifications/subscriptions").contentType(MediaType.APPLICATION_JSON)
+                .content(subscriptionJson(ENDPOINT, p256dh, auth, "[\"IT.BACKEND\",\"IT.NOPE\"]")))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("INVALID_SUBSCRIPTION"));
+        assertThat(store.subscriptionIds()).isEmpty();
+
+        var created = mvc.perform(post("/api/v1/notifications/subscriptions").contentType(MediaType.APPLICATION_JSON)
+                .content(subscriptionJson(ENDPOINT, p256dh, auth, "[\"IT.BACKEND\",\"IT.DATA\"]")))
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.created").value(true)).andExpect(jsonPath("$.subscriptionId").isString())
+            .andExpect(jsonPath("$.roles").doesNotExist()).andReturn().getResponse().getContentAsString();
+        var id = JsonMapper.builder().build().readTree(created).path("subscriptionId").asString();
+        var subscription = store.findSubscriptionByEndpoint(ENDPOINT).orElseThrow();
+        assertThat(subscription.id()).isEqualTo(id);
+        assertThat(subscription.roles()).containsExactly("IT.BACKEND", "IT.DATA");
+        assertThat(subscription.rolesUpdatedAt()).isEqualTo(NOW);
+
+        mvc.perform(post("/api/v1/notifications/subscriptions").contentType(MediaType.APPLICATION_JSON).content(subscriptionJson(ENDPOINT, p256dh, auth)))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.created").value(false)).andExpect(jsonPath("$.subscriptionId").value(id));
+        assertThat(store.findSubscription(id).orElseThrow().roles()).as("roles 필드가 없으면 유지").containsExactly("IT.BACKEND", "IT.DATA");
+        mvc.perform(post("/api/v1/notifications/subscriptions").contentType(MediaType.APPLICATION_JSON)
+                .content(subscriptionJson(ENDPOINT, p256dh, auth, "null")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.created").value(false));
+        assertThat(store.findSubscription(id).orElseThrow().roles()).as("roles가 null이어도 유지").containsExactly("IT.BACKEND", "IT.DATA");
+
+        mvc.perform(post("/api/v1/notifications/subscriptions").contentType(MediaType.APPLICATION_JSON)
+                .content(subscriptionJson(ENDPOINT, p256dh, auth, "[\"DESIGN.UX_UI\"]")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.created").value(false)).andExpect(jsonPath("$.subscriptionId").value(id));
+        assertThat(store.findSubscription(id).orElseThrow().roles()).as("roles가 있으면 덮어쓴다").containsExactly("DESIGN.UX_UI");
+
+        mvc.perform(post("/api/v1/notifications/subscriptions").contentType(MediaType.APPLICATION_JSON).content(subscriptionJson(ENDPOINT, p256dh, auth, "[]")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.created").value(false));
+        assertThat(store.findSubscription(id).orElseThrow().roles()).as("빈 배열은 미선택").isNull();
+
+        mvc.perform(post("/api/v1/notifications/subscriptions").contentType(MediaType.APPLICATION_JSON).content(subscriptionJson(ENDPOINT, p256dh, auth, "[\"IT.NOPE\"]")))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("INVALID_SUBSCRIPTION"));
+        assertThat(store.subscriptionIds()).containsExactly(id);
+        assertThat(output.getAll()).doesNotContain("synthetic-token-for-api-test", p256dh, auth, "IT.BACKEND", "DESIGN.UX_UI");
+    }
+
+    @Test
     @DisplayName("진행 중 공고 목록은 접수 시작 이후 마감 전인 공고만 마감순으로 주고 직무 코드 배열을 싣되 레거시 공고는 생략하며 등록 시각은 숨긴다")
     void listsOpenPostingsForExtension() throws Exception {
         postings.register(new JobPostingService.Draft("합성 회사 A", List.of("IT.BACKEND"), "https://careers.example.test/jobs/a", NOW.minusSeconds(60), NOW.plusSeconds(7200)));
@@ -132,6 +175,12 @@ class NotificationApiTest {
 
     static String subscriptionJson(String endpoint, String p256dh, String auth) {
         return "{\"endpoint\":\"" + endpoint + "\",\"expirationTime\":null,\"keys\":{\"p256dh\":\"" + p256dh + "\",\"auth\":\"" + auth + "\"}}";
+    }
+
+    /** rolesJson은 JSON 배열 글자 그대로("[]", "null", "[\"IT.BACKEND\"]")다. */
+    static String subscriptionJson(String endpoint, String p256dh, String auth, String rolesJson) {
+        return "{\"endpoint\":\"" + endpoint + "\",\"expirationTime\":null,\"keys\":{\"p256dh\":\"" + p256dh + "\",\"auth\":\"" + auth + "\"},"
+            + "\"roles\":" + rolesJson + "}";
     }
 
     static String randomAuth() {

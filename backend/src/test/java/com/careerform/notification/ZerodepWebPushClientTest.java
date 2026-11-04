@@ -32,7 +32,7 @@ class ZerodepWebPushClientTest {
     private final VapidTestKeys browser = VapidTestKeys.generate();
     private final byte[] authSecret = randomAuth();
     private final VapidKeys keys = VapidKeys.parse(vapid.publicKey, vapid.privateKey, "mailto:synthetic@example.test");
-    private final PushSubscription subscription = new PushSubscription("s1", ENDPOINT, browser.publicKey, VapidTestKeys.base64Url(authSecret), NOW);
+    private final PushSubscription subscription = new PushSubscription("s1", ENDPOINT, browser.publicKey, VapidTestKeys.base64Url(authSecret), NOW, null, null);
     private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
 
     @Test

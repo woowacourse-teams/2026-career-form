@@ -43,7 +43,7 @@ class JobPostingAdminApiTest {
     };
     private final QualityAccess access = new QualityAccess(Clock.fixed(NOW, ZoneOffset.UTC), HASH, "", sessionStore);
     private final MemoryNotificationStore store = new MemoryNotificationStore();
-    private final JobPostingService postings = new JobPostingService(store, JobCategories.load(), Clock.fixed(NOW, ZoneOffset.UTC));
+    private final JobPostingService postings = new JobPostingService(store, JobCategories.load(), RoleFilterPolicy.defaults(), Clock.fixed(NOW, ZoneOffset.UTC));
     private final MockMvc mvc = MockMvcBuilders.standaloneSetup(new JobPostingAdminController(postings), new Fixture())
         .setControllerAdvice(new NotificationInputErrors()).addFilters(new QualityApiFilter(access)).build();
 
@@ -87,8 +87,8 @@ class JobPostingAdminApiTest {
     @Test
     @DisplayName("등록은 저장과 예약 확인을 즉시 돌려주고 같은 링크는 기존 공고 ID와 함께 409다")
     void registersAndRejectsDuplicateLink() throws Exception {
-        store.insertSubscription(new PushSubscription("s1", "https://fcm.googleapis.com/fcm/send/s1", "p", "a", NOW));
-        store.insertSubscription(new PushSubscription("s2", "https://fcm.googleapis.com/fcm/send/s2", "p", "a", NOW));
+        store.insertSubscription(new PushSubscription("s1", "https://fcm.googleapis.com/fcm/send/s1", "p", "a", NOW, null, null));
+        store.insertSubscription(new PushSubscription("s2", "https://fcm.googleapis.com/fcm/send/s2", "p", "a", NOW, null, null));
         var created = mvc.perform(post("/api/v1/notifications/admin/postings").header("Authorization", PASSWORD).contentType(MediaType.APPLICATION_JSON)
                 .content(registration("https://careers.example.test/jobs/1")))
             .andExpect(status().isCreated())
@@ -131,8 +131,8 @@ class JobPostingAdminApiTest {
     @Test
     @DisplayName("목록은 최근 등록 순으로 발송 진행과 예정 시각을 주고 삭제는 대기 발송만 취소한다")
     void listsProgressAndDeletesPendingOnly() throws Exception {
-        store.insertSubscription(new PushSubscription("s1", "https://fcm.googleapis.com/fcm/send/s1", "p", "a", NOW));
-        store.insertSubscription(new PushSubscription("s2", "https://fcm.googleapis.com/fcm/send/s2", "p", "a", NOW));
+        store.insertSubscription(new PushSubscription("s1", "https://fcm.googleapis.com/fcm/send/s1", "p", "a", NOW, null, null));
+        store.insertSubscription(new PushSubscription("s2", "https://fcm.googleapis.com/fcm/send/s2", "p", "a", NOW, null, null));
         var registered = (JobPostingService.Registered) postings.register(new JobPostingService.Draft("합성 회사", List.of("IT.BACKEND"),
             "https://careers.example.test/jobs/2", NOW.minusSeconds(60), NOW.plusSeconds(86400)));
         var claimed = store.claimDelivery(store.findDueDeliveries(NOW, 1).getFirst(), NOW, NOW.plusSeconds(120)).orElseThrow();
@@ -165,7 +165,7 @@ class JobPostingAdminApiTest {
     @Test
     @DisplayName("직무 코드가 없거나 비거나 분류에 없으면 ROLE로 400이고, 유효한 코드로 등록하면 요청의 role 자유 글자는 무시되고 파생 라벨과 코드·라벨 목록이 내려간다")
     void requiresKnownRolesAndDerivesLabel() throws Exception {
-        store.insertSubscription(new PushSubscription("s1", "https://fcm.googleapis.com/fcm/send/s1", "p", "a", NOW));
+        store.insertSubscription(new PushSubscription("s1", "https://fcm.googleapis.com/fcm/send/s1", "p", "a", NOW, null, null));
         mvc.perform(post("/api/v1/notifications/admin/postings").header("Authorization", PASSWORD).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"company\":\"합성 회사\",\"link\":\"https://careers.example.test/jobs/omitted\",\"opensAt\":\"2030-01-01T06:00:00Z\",\"closesAt\":\"2030-01-31T15:00:00Z\"}"))
             .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("INVALID_POSTING")).andExpect(jsonPath("$.reason").value("ROLE"));
@@ -203,8 +203,8 @@ class JobPostingAdminApiTest {
     @Test
     @DisplayName("기간 요약은 로그인 뒤에서 집계값만 돌려주고 잘못된 기간은 400이다")
     void summarizesPeriodBehindLogin() throws Exception {
-        store.insertSubscription(new PushSubscription("s1", "https://fcm.googleapis.com/fcm/send/s1", "p", "a", NOW));
-        store.insertSubscription(new PushSubscription("s2", "https://fcm.googleapis.com/fcm/send/s2", "p", "a", NOW));
+        store.insertSubscription(new PushSubscription("s1", "https://fcm.googleapis.com/fcm/send/s1", "p", "a", NOW, null, null));
+        store.insertSubscription(new PushSubscription("s2", "https://fcm.googleapis.com/fcm/send/s2", "p", "a", NOW, null, null));
         postings.register(new JobPostingService.Draft("합성 회사", List.of("IT.BACKEND"), "https://careers.example.test/jobs/summary", NOW.minusSeconds(60), NOW.plusSeconds(86400)));
         var claimed = store.claimDelivery(store.findDueDeliveries(NOW, 1).getFirst(), NOW.plusSeconds(30), NOW.plusSeconds(150)).orElseThrow();
         store.completeDelivery(claimed, claimed.accepted(201));

@@ -27,7 +27,8 @@ public final class NotificationController {
         this.categories = categories;
     }
 
-    public record SubscriptionRequest(String endpoint, Long expirationTime, Keys keys) {
+    /** 브라우저 구독 JSON에 선택 필드 roles(받을 소분류 코드 배열)를 더한 모양. roles가 없으면 기존 선택을 유지한다. */
+    public record SubscriptionRequest(String endpoint, Long expirationTime, Keys keys, List<String> roles) {
         public record Keys(String p256dh, String auth) {
             @Override public String toString() { return "Keys[redacted]"; }
         }
@@ -54,7 +55,7 @@ public final class NotificationController {
     @PostMapping("/api/v1/notifications/subscriptions")
     public ResponseEntity<SubscriptionResponse> subscribe(@RequestBody SubscriptionRequest request) {
         if (request.keys() == null) { throw new PushSubscriptionService.InvalidSubscription("KEYS"); }
-        var registration = subscriptions.register(request.endpoint(), request.keys().p256dh(), request.keys().auth());
+        var registration = subscriptions.register(request.endpoint(), request.keys().p256dh(), request.keys().auth(), request.roles());
         return ResponseEntity.status(registration.created() ? 201 : 200)
             .body(new SubscriptionResponse(registration.subscription().id(), registration.created()));
     }

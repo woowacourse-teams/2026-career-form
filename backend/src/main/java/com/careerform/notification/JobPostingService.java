@@ -9,20 +9,29 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 
-/** 공고 등록·삭제와 발송 예약. 등록 응답은 저장과 예약 완료를 뜻하며 FCM 수락을 기다리지 않는다. */
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * 공고 등록·삭제와 발송 예약. 등록 응답은 저장과 예약 완료를 뜻하며 FCM 수락을 기다리지 않는다.
+ * 대기 발송은 공고 직무와 겹치는 구독에만 만들고, 전환 설정이 꺼져 있으면 받을 직무를 고르지 않은 구독도 포함한다.
+ */
 public final class JobPostingService {
     static final int MAX_COMPANY_LENGTH = 80;
     static final int MAX_ROLE_LENGTH = 120;
     static final int MAX_ROLES_PER_POSTING = 10;
     static final int MAX_LINK_LENGTH = 1024;
     static final Duration MAX_SUMMARY_RANGE = Duration.ofDays(400);
+    private static final Logger log = LoggerFactory.getLogger(JobPostingService.class);
     private final NotificationStore store;
     private final JobCategories categories;
+    private final RoleFilterPolicy roleFilter;
     private final Clock clock;
 
-    public JobPostingService(NotificationStore store, JobCategories categories, Clock clock) {
+    public JobPostingService(NotificationStore store, JobCategories categories, RoleFilterPolicy roleFilter, Clock clock) {
         this.store = Objects.requireNonNull(store);
         this.categories = Objects.requireNonNull(categories);
+        this.roleFilter = Objects.requireNonNull(roleFilter);
         this.clock = Objects.requireNonNull(clock);
     }
 
@@ -65,9 +74,10 @@ public final class JobPostingService {
         if (!store.insertPosting(posting)) {
             return new Duplicate(store.findPostingByLink(posting.link()).map(JobPosting::id).orElse("UNKNOWN"));
         }
-        var deliveries = store.subscriptionIds().stream()
+        var deliveries = store.subscriptionIdsForRoles(posting.roles(), !roleFilter.enforced()).stream()
             .map(subscriptionId -> PushDelivery.pending(Identifiers.random(), posting.id(), subscriptionId, posting.scheduledAt())).toList();
         store.insertDeliveries(deliveries);
+        log.info("POSTING_REGISTERED postingId={} roles={} deliveries={}", posting.id(), posting.roles().size(), deliveries.size());
         return new Registered(posting, deliveries.size());
     }
 

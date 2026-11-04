@@ -14,9 +14,12 @@ import java.util.Base64;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -45,6 +48,7 @@ import com.careerform.formanalysis.infrastructure.persistence.mongo.FormAnalysis
 @MockitoBean(name = "startupPolicySeeder", types = org.springframework.boot.ApplicationRunner.class)
 @MockitoBean(name = "hplaceFormPolicySeeder", types = org.springframework.boot.ApplicationRunner.class)
 @Import(NotificationEnabledContextTest.Fakes.class)
+@ExtendWith(OutputCaptureExtension.class)
 @DisplayName("알림 기능 토글이 켜진 애플리케이션 컨텍스트")
 class NotificationEnabledContextTest {
     private static final VapidTestKeys KEYS = VapidTestKeys.generate();
@@ -89,6 +93,13 @@ class NotificationEnabledContextTest {
             .andExpect(jsonPath("$.version").value(1))
             .andExpect(jsonPath("$.categories[0].roles[0].code").value("IT.BACKEND"));
         assertThat(context.getBean(JobCategories.class).roleCount()).isGreaterThan(7);
+    }
+
+    @Test
+    @DisplayName("직무 필터 전환 설정은 기본 꺼짐으로 뜨고 기동 로그에 모드를 남긴다")
+    void startsWithRelaxedRoleFilterAndLogsMode(CapturedOutput output) {
+        assertThat(context.getBean(RoleFilterPolicy.class)).isEqualTo(RoleFilterPolicy.defaults());
+        assertThat(output.getAll()).contains("NOTIFICATION_ROLE_FILTER enforced=false");
     }
 
     @Test

@@ -34,7 +34,7 @@ class PushDispatcherTest {
     private final PushDispatchMetrics metrics = new PushDispatchMetrics(meters, new ExternalCallMetrics(meters));
     private final PushSettings settings = PushSettings.defaults();
     private final PushDispatcher dispatcher = new PushDispatcher(store, client, new RetryPolicy(settings.maxAttempts()), settings, clock, Runnable::run, metrics);
-    private final JobPostingService postings = new JobPostingService(store, JobCategories.load(), clock);
+    private final JobPostingService postings = new JobPostingService(store, JobCategories.load(), RoleFilterPolicy.defaults(), clock);
     private final String p256dh = VapidTestKeys.generate().publicKey;
     private final String auth = randomAuth();
 
@@ -303,7 +303,7 @@ class PushDispatcherTest {
     @Test
     @DisplayName("로그와 메트릭에 endpoint와 키를 남기지 않고 결과별 건수와 호출 소요를 기록한다")
     void recordsObservabilityWithoutSecrets(CapturedOutput output) {
-        store.insertSubscription(new PushSubscription("s1", "https://fcm.googleapis.com/fcm/send/synthetic-endpoint-token-xyz", p256dh, auth, NOW));
+        store.insertSubscription(new PushSubscription("s1", "https://fcm.googleapis.com/fcm/send/synthetic-endpoint-token-xyz", p256dh, auth, NOW, null, null));
         subscribe("s2");
         register("https://careers.example.test/jobs/14", NOW.minusSeconds(60), NOW.plusSeconds(86400));
         var cycle = dispatcher.dispatch();
@@ -344,7 +344,7 @@ class PushDispatcherTest {
     }
 
     private void subscribe(String id) {
-        store.insertSubscription(new PushSubscription(id, "https://fcm.googleapis.com/fcm/send/" + id, p256dh, auth, NOW));
+        store.insertSubscription(new PushSubscription(id, "https://fcm.googleapis.com/fcm/send/" + id, p256dh, auth, NOW, null, null));
     }
 
     private String register(String link, Instant opensAt, Instant closesAt) {

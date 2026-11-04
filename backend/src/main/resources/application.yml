@@ -47,6 +47,8 @@ career-form:
       minimum-sample: ${CAREER_FORM_QUALITY_SELECTION_MINIMUM_SAMPLE:20}
   notification:
     enabled: ${CAREER_FORM_NOTIFICATION_ENABLED:false}
+    role-filter:
+      enforced: ${CAREER_FORM_PUSH_ROLE_FILTER_ENFORCED:false}
     push:
       dispatch-interval: ${CAREER_FORM_PUSH_DISPATCH_INTERVAL:60s}
       concurrency: ${CAREER_FORM_PUSH_CONCURRENCY:20}

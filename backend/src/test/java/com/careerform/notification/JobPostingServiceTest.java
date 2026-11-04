@@ -12,13 +12,17 @@ import java.util.List;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 
 @DisplayName("공고 등록과 발송 예약")
+@ExtendWith(OutputCaptureExtension.class)
 class JobPostingServiceTest {
     private static final Instant NOW = Instant.parse("2030-01-01T00:00:00Z");
     private final MemoryNotificationStore store = new MemoryNotificationStore();
     private final MutableClock clock = new MutableClock(NOW);
-    private final JobPostingService service = new JobPostingService(store, JobCategories.load(), clock);
+    private final JobPostingService service = new JobPostingService(store, JobCategories.load(), RoleFilterPolicy.defaults(), clock);
 
     @Test
     @DisplayName("등록 즉시 구독자 수만큼 대기 발송이 만들어지고 예정 시각은 등록 시각이다")
@@ -130,7 +134,7 @@ class JobPostingServiceTest {
         var synthetic = JobCategories.parse(JobCategoriesTest.json(1, JobCategoriesTest.category("LONG", "긴 분류",
             JobCategoriesTest.role("LONG.A", "가".repeat(40)), JobCategoriesTest.role("LONG.B", "나".repeat(40)),
             JobCategoriesTest.role("LONG.C", "다".repeat(38)), JobCategoriesTest.role("LONG.D", "라".repeat(40)))));
-        var longService = new JobPostingService(store, synthetic, clock);
+        var longService = new JobPostingService(store, synthetic, RoleFilterPolicy.defaults(), clock);
         var exact = register(longService, List.of("LONG.A", "LONG.B", "LONG.C"), "https://careers.example.test/jobs/exact");
         assertThat(exact.role()).hasSize(JobPostingService.MAX_ROLE_LENGTH).isEqualTo("가".repeat(40) + "·" + "나".repeat(40) + "·" + "다".repeat(38));
         var over = register(longService, List.of("LONG.A", "LONG.B", "LONG.D"), "https://careers.example.test/jobs/over");
@@ -139,6 +143,36 @@ class JobPostingServiceTest {
         assertThat(four.role()).isEqualTo("가".repeat(40) + "·" + "나".repeat(40) + " 외 2개");
         assertThat(four.roles()).containsExactly("LONG.A", "LONG.B", "LONG.C", "LONG.D");
         assertThat(store.listPostings()).extracting(JobPosting::role).allSatisfy(role -> assertThat(role).hasSizeLessThanOrEqualTo(JobPostingService.MAX_ROLE_LENGTH));
+    }
+
+    @Test
+    @DisplayName("대기 발송은 공고 직무와 겹치는 구독에만 만들어지고 미선택 구독은 전환 설정이 꺼져 있을 때만 포함되며 등록 로그에는 건수만 남는다")
+    void targetsSubscriptionsOverlappingRoles(CapturedOutput output) {
+        subscribe("backend", List.of("IT.BACKEND"));
+        subscribe("frontend", List.of("IT.FRONTEND"));
+        subscribe("both", List.of("IT.FRONTEND", "IT.BACKEND"));
+        subscribe("unselected");
+        var relaxed = assertInstanceOf(JobPostingService.Registered.class,
+            service.register(draft("https://careers.example.test/jobs/relaxed", NOW.minusSeconds(60), NOW.plusSeconds(86400))));
+        assertThat(relaxed.deliveries()).isEqualTo(3);
+        assertThat(store.deliveries()).filteredOn(delivery -> delivery.postingId().equals(relaxed.posting().id()))
+            .extracting(PushDelivery::subscriptionId).containsExactlyInAnyOrder("backend", "both", "unselected");
+        assertThat(output.getAll()).contains("POSTING_REGISTERED postingId=" + relaxed.posting().id() + " roles=1 deliveries=3")
+            .doesNotContain("careers.example.test", "IT.BACKEND", "합성 회사");
+
+        var enforcing = new JobPostingService(store, JobCategories.load(), new RoleFilterPolicy(true), clock);
+        var enforced = assertInstanceOf(JobPostingService.Registered.class,
+            enforcing.register(draft("https://careers.example.test/jobs/enforced", NOW.minusSeconds(60), NOW.plusSeconds(86400))));
+        assertThat(enforced.deliveries()).isEqualTo(2);
+        assertThat(store.deliveries()).filteredOn(delivery -> delivery.postingId().equals(enforced.posting().id()))
+            .extracting(PushDelivery::subscriptionId).containsExactlyInAnyOrder("backend", "both");
+
+        var none = assertInstanceOf(JobPostingService.Registered.class, enforcing.register(new JobPostingService.Draft("합성 회사", List.of("IT.DATA"),
+            "https://careers.example.test/jobs/none", NOW.minusSeconds(60), NOW.plusSeconds(86400))));
+        assertThat(none.deliveries()).isZero();
+        assertThat(store.findPosting(none.posting().id())).as("대상이 없어도 등록은 성공한다").isPresent();
+        assertThat(store.deliveries()).hasSize(5);
+        assertThat(output.getAll()).contains("POSTING_REGISTERED postingId=" + none.posting().id() + " roles=1 deliveries=0");
     }
 
     @Test
@@ -204,8 +238,11 @@ class JobPostingServiceTest {
             .extracting(exception -> ((JobPostingService.InvalidPosting) exception).reason()).isEqualTo(reason);
     }
 
-    private void subscribe(String id) {
-        store.insertSubscription(new PushSubscription(id, "https://fcm.googleapis.com/fcm/send/" + id, "synthetic-p256dh", "synthetic-auth", NOW));
+    private void subscribe(String id) { subscribe(id, null); }
+
+    private void subscribe(String id, List<String> roles) {
+        store.insertSubscription(new PushSubscription(id, "https://fcm.googleapis.com/fcm/send/" + id, "synthetic-p256dh", "synthetic-auth", NOW, roles,
+            roles == null ? null : NOW));
     }
 
     private static JobPosting register(JobPostingService target, List<String> roles, String link) {
