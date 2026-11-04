@@ -1021,3 +1021,9 @@
 - 승인한 후보 1개를 [CF-413 bundle](../raw/issues/CF-413/manifest.md)에 기록했다. 전환 변수 `CAREER_FORM_PUSH_ROLE_FILTER_ENFORCED`의 workflow·compose 전달 경로와 기본값, 릴리스와 분리한 켜는 순서, 계약 테스트의 두 사전으로 이름을 더하는 방법이다.
 - [CI/CD 설정](topics/cicd-setup.md)의 Current를 CF-413으로 바꾸고 CF-350을 History에 남겼다. payload는 CF-409·CF-410이 더한 이름까지 포함한 전체 목록(변수 15개·시크릿 12개)을 다시 적어 topic의 목록과 jev 전달 경로 서술을 현재 상태로 맞췄다. 다른 topic 문서는 바꾸지 않았다.
 - 호스트 주소, 키 값, 계정, 대화 전문은 저장하지 않았다.
+## [2026-11-05] ingest | CF-415 프론트엔드 CI의 frontend 경로 필터
+
+- Approval-Digest: 0331d54bd1a62ae15bdab9c1de13450ceb567cb14a7ef3bae73f0c4b4ab19846
+- Source-Revision: bc613742
+- 승인한 후보 1개를 [CF-415 bundle](../raw/issues/CF-415/manifest.md)에 기록했다. frontend-ci.yml의 두 트리거 경로 필터, develop 보호 규칙에 필수 상태 체크가 없다는 확인, 2026-11-04 실행 시간 측정(파일 597개·2,808초, 20초 이상 38개 파일 73%, shard 146~702초)이다.
+- [프론트 브라우저 테스트](topics/frontend-browser-testing.md)의 Current를 CF-415로 바꾸고 CF-304·CF-178을 History에 남겼다. 다른 topic 문서는 바꾸지 않았다.
