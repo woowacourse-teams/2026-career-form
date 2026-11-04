@@ -71,7 +71,8 @@ describe("RoleSelector", () => {
         .map((t) => t.textContent),
     ).toEqual(["IT/개발", "디자인", "마케팅"]);
     expect(tab("IT/개발")).toHaveAttribute("aria-selected", "true");
-    expect(screen.getAllByRole("checkbox")).toHaveLength(2);
+    expect(screen.getAllByRole("checkbox")).toHaveLength(3);
+    expect(box("IT/개발 전체")).not.toBeChecked();
     expect(box("백엔드")).not.toBeChecked();
     expect(box("프론트엔드")).not.toBeChecked();
     expect(screen.getByRole("tabpanel")).toHaveAttribute(
@@ -129,6 +130,65 @@ describe("RoleSelector", () => {
       expect(onChange).toHaveBeenLastCalledWith(["DESIGN.UX_UI"]),
     );
     expect(screen.queryByText("받을 직무를 고르세요")).toBeNull();
+  });
+  it("대분류 전체 체크박스로 소분류를 한 번에 고르고 해제하며 일부면 중간 상태다", async () => {
+    const onChange = vi.fn(async () => true);
+    const props = {
+      view: ready,
+      loading: false,
+      busy: false,
+      onChange,
+      onReload: vi.fn(async () => {}),
+    };
+    const { rerender } = render(
+      <RoleSelector {...props} selected={["DESIGN.UX_UI"]} />,
+    );
+    fireEvent.click(tab("IT/개발"));
+    const all = box("IT/개발 전체") as HTMLInputElement;
+    expect(all).not.toBeChecked();
+    expect(all.indeterminate).toBe(false);
+    fireEvent.click(all);
+    await waitFor(() =>
+      expect(onChange).toHaveBeenCalledWith([
+        "DESIGN.UX_UI",
+        "IT.BACKEND",
+        "IT.FRONTEND",
+      ]),
+    );
+    rerender(
+      <RoleSelector
+        {...props}
+        selected={["DESIGN.UX_UI", "IT.BACKEND", "IT.FRONTEND"]}
+      />,
+    );
+    expect(box("IT/개발 전체")).toBeChecked();
+    expect(box("백엔드")).toBeChecked();
+    expect(tab("IT/개발 2")).toHaveAttribute("aria-selected", "true");
+    fireEvent.click(box("프론트엔드"));
+    rerender(
+      <RoleSelector {...props} selected={["DESIGN.UX_UI", "IT.BACKEND"]} />,
+    );
+    const partial = box("IT/개발 전체") as HTMLInputElement;
+    expect(partial).not.toBeChecked();
+    expect(partial.indeterminate).toBe(true);
+    fireEvent.click(partial);
+    await waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith([
+        "DESIGN.UX_UI",
+        "IT.BACKEND",
+        "IT.FRONTEND",
+      ]),
+    );
+    rerender(
+      <RoleSelector
+        {...props}
+        selected={["DESIGN.UX_UI", "IT.BACKEND", "IT.FRONTEND"]}
+      />,
+    );
+    fireEvent.click(box("IT/개발 전체"));
+    await waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith(["DESIGN.UX_UI"]),
+    );
   });
   it("저장 결과가 돌아오면 전달받은 선택값을 따른다", async () => {
     let resolve = (_ok: boolean) => {};

@@ -314,6 +314,11 @@
   accent-color: var(--color-action);
   cursor: pointer;
 }
+.roleAll {
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--color-border);
+  font-weight: 600;
+}
 
 .error,
 .warning {

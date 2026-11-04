@@ -98,10 +98,7 @@ export function RoleSelector({
     setActiveCode(target);
     tabs.current[target]?.focus();
   };
-  const toggle = async (code: string) => {
-    const next = current.includes(code)
-      ? current.filter((c) => c !== code)
-      : [...current, code];
+  const save = async (next: string[]) => {
     setDraft(next);
     pending.current += 1;
     const ok = (await onChange(next)) !== false;
@@ -110,6 +107,21 @@ export function RoleSelector({
     if (pending.current === 0) setDraft(undefined);
     setSaveFailed(!ok);
   };
+  const toggle = (code: string) =>
+    save(
+      current.includes(code)
+        ? current.filter((c) => c !== code)
+        : [...current, code],
+    );
+  // One box per category: all of its roles on, or all of them off.
+  const activeCodes = active.roles.map((r) => r.code);
+  const activeCount = countIn(activeCodes);
+  const toggleAll = () =>
+    save(
+      activeCount === activeCodes.length
+        ? current.filter((c) => !activeCodes.includes(c))
+        : [...current, ...activeCodes.filter((c) => !current.includes(c))],
+    );
   return (
     <section className={styles.roles} aria-labelledby={`${id}-title`}>
       <div className={styles.rolesHeading}>
@@ -173,6 +185,19 @@ export function RoleSelector({
           aria-labelledby={`${id}-tab-${active.code}`}
           className={styles.roleOptions}
         >
+          <label className={`${styles.roleOption} ${styles.roleAll}`}>
+            <input
+              type="checkbox"
+              checked={activeCount === activeCodes.length}
+              ref={(element) => {
+                if (element)
+                  element.indeterminate =
+                    activeCount > 0 && activeCount < activeCodes.length;
+              }}
+              onChange={() => void toggleAll()}
+            />
+            {active.label} 전체
+          </label>
           {active.roles.map((role) => (
             <label key={role.code} className={styles.roleOption}>
               <input
