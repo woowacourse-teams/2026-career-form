@@ -10,6 +10,7 @@ import { matchesResultValue } from "./result-value-match";
 import { resultFieldLabel } from "./result-label";
 import { nativeRetainedValueMatches } from "../policy/native-form-write";
 import { genericReasonText } from "../generic/grade-reason-text";
+import { GENERIC_SECTION_FAILURE } from "../generic/section-failure";
 
 export interface ResultModelInput {
   reviewItems: readonly ReviewPlanItem[];
@@ -60,6 +61,20 @@ function pendingReason(item: ReviewPlanItem): string {
   )
     return "선택 필요";
   return "입력 못함";
+}
+
+const SECTION_FAILURE_CODES: ReadonlySet<string> = new Set(
+  Object.values(GENERIC_SECTION_FAILURE),
+);
+
+/** The analysis itself failed for this field: a real failure, not "unsupported". */
+function analysisFailed(item: ReviewPlanItem): boolean {
+  return (
+    item.genericGrade === "BLOCKED" &&
+    !item.hiddenFromReview &&
+    item.genericReasonCode !== undefined &&
+    SECTION_FAILURE_CODES.has(item.genericReasonCode)
+  );
 }
 
 function gradeDetail(item: ReviewPlanItem): string | undefined {
@@ -166,6 +181,8 @@ export function buildResultModel(input: ResultModelInput): ResultModel {
       skip("현재 표시되지 않는 항목");
     } else if (item.addressManualReason) {
       review("입력 결과 확인", undefined, item.addressManualReason);
+    } else if (analysisFailed(item)) {
+      review("입력 못함", undefined, gradeDetail(item));
     } else if (!saved.length) {
       skip(
         item.profileFieldKey ||
@@ -374,6 +391,14 @@ export function profileGroups(
   const taken = new Set<Element>();
   for (const { id } of model.pending) {
     const control = id.startsWith("progress:") ? undefined : controlOf(id);
+    if (control) taken.add(control);
+  }
+  for (const { candidateId } of model.completed) {
+    const control = candidateId ? controlOf(candidateId) : undefined;
+    if (control) taken.add(control);
+  }
+  for (const { id, reason } of model.skipped) {
+    const control = reason === "기존 값 유지" ? controlOf(id) : undefined;
     if (control) taken.add(control);
   }
   const groups: ProfileGroups = { notInProfile: [], profileUnset: [] };

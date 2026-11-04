@@ -94,6 +94,22 @@ describe("profile groups in the pending panel", () => {
     expect(screen.getByText("확인할 항목이 없어요.")).toBeInTheDocument();
     expect(screen.getByLabelText("확인 필요 0개")).toBeVisible();
     expect(document.querySelectorAll("details")).toHaveLength(1);
+    expect(document.querySelector("details summary")).toBeVisible();
+  });
+
+  it("keeps the groups visible on the pending tab when something is pending", () => {
+    render(
+      <WorkflowResults
+        reviewItems={reviewItems}
+        results={[]}
+        profileGroupsVisible
+      />,
+    );
+    const groups = [...document.querySelectorAll("details")];
+    expect(groups).toHaveLength(2);
+    groups.forEach((group) =>
+      expect(group.querySelector("summary")).toBeVisible(),
+    );
   });
 
   it("renders no groups by default", () => {

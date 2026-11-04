@@ -466,7 +466,10 @@ function collectFieldsSnapshotInternal(
       const groups = groupBySection(
         [
           ...collectFieldElements(document, adapter, companyId),
-          ...dropdowns.keys(),
+          ...[...dropdowns.keys()].filter(
+            (trigger) =>
+              !(companyId === "generic" && isPageChromeControl(trigger)),
+          ),
         ],
         sectionSelector(adapter, document),
         adapter === collectionAdapterForHost(""),

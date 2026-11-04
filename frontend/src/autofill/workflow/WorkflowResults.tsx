@@ -185,41 +185,6 @@ export function WorkflowResults({
         ) : (
           <p className={styles.empty}>확인할 항목이 없어요.</p>
         )}
-        {unlisted && (
-          <div className={styles.profileGroups}>
-            {(
-              [
-                ["프로필에 없는 항목", unlisted.notInProfile, false],
-                ["프로필 미입력", unlisted.profileUnset, true],
-              ] as const
-            ).map(
-              ([title, entries, canOpenProfile]) =>
-                entries.length > 0 && (
-                  <details key={title} className={styles.profileGroup}>
-                    <summary>
-                      {title} <strong>{entries.length}</strong>
-                    </summary>
-                    <ul className={styles.profileGroupList}>
-                      {entries.map((entry) => (
-                        <li key={entry.id}>
-                          {pendingResultPresentation(entry.item).label}
-                        </li>
-                      ))}
-                    </ul>
-                    {canOpenProfile && onOpenProfile && (
-                      <button
-                        type="button"
-                        className={styles.profileGroupLink}
-                        onClick={onOpenProfile}
-                      >
-                        프로필 채우기
-                      </button>
-                    )}
-                  </details>
-                ),
-            )}
-          </div>
-        )}
       </div>
       <div
         role="tabpanel"
@@ -245,6 +210,41 @@ export function WorkflowResults({
           </p>
         )}
       </div>
+      {unlisted && (
+        <div className={styles.profileGroups}>
+          {(
+            [
+              ["프로필에 없는 항목", unlisted.notInProfile, false],
+              ["프로필 미입력", unlisted.profileUnset, true],
+            ] as const
+          ).map(
+            ([title, entries, canOpenProfile]) =>
+              entries.length > 0 && (
+                <details key={title} className={styles.profileGroup}>
+                  <summary>
+                    {title} <strong>{entries.length}</strong>
+                  </summary>
+                  <ul className={styles.profileGroupList}>
+                    {entries.map((entry) => (
+                      <li key={entry.id}>
+                        {pendingResultPresentation(entry.item).label}
+                      </li>
+                    ))}
+                  </ul>
+                  {canOpenProfile && onOpenProfile && (
+                    <button
+                      type="button"
+                      className={styles.profileGroupLink}
+                      onClick={onOpenProfile}
+                    >
+                      프로필 채우기
+                    </button>
+                  )}
+                </details>
+              ),
+          )}
+        </div>
+      )}
     </section>
   );
 }

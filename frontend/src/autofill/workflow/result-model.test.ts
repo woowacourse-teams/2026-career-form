@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { FieldCandidateHandle } from "../dom/types";
 import type { ReviewPlanItem } from "../review/review-plan";
+import { GENERIC_SECTION_FAILURE } from "../generic/generic-analysis";
+import { genericReasonText } from "../generic/grade-reason-text";
 import {
   buildResultModel,
   profileGroups,
@@ -622,5 +624,123 @@ describe("fields without a saved value", () => {
     expect(
       unfilledCandidateIds(model, undefined, { pendingOnly: true }),
     ).toEqual(["p"]);
+  });
+});
+
+describe("fields whose analysis failed", () => {
+  const failed = (
+    id: string,
+    extra: Partial<ReviewPlanItem> = {},
+  ): ReviewPlanItem => ({
+    candidateId: id,
+    fieldLabel: `항목 ${id}`,
+    currentValue: "",
+    previewValue: "",
+    status: "unavailable",
+    selected: false,
+    disabled: true,
+    revealed: true,
+    reason: "",
+    genericGrade: "BLOCKED",
+    ...extra,
+  });
+
+  it.each(Object.values(GENERIC_SECTION_FAILURE))(
+    "shows a %s field as not filled in instead of unsupported",
+    (code) => {
+      const model = buildResultModel({
+        reviewItems: [failed("a", { genericReasonCode: code })],
+        results: [],
+      });
+      expect(model.skipped).toEqual([]);
+      expect(model.pending).toMatchObject([
+        { id: "a", reason: "입력 못함", detail: genericReasonText(code) },
+      ]);
+    },
+  );
+
+  it("keeps an unlinked field without a value skipped as unsupported", () => {
+    const model = buildResultModel({
+      reviewItems: [failed("a", { genericReasonCode: "UNLINKED" })],
+      results: [],
+    });
+    expect(model.pending).toEqual([]);
+    expect(model.skipped).toMatchObject([
+      { id: "a", reason: "자동 입력 미지원" },
+    ]);
+  });
+
+  it("does not list a failed field that is hidden from review", () => {
+    const model = buildResultModel({
+      reviewItems: [
+        failed("a", {
+          genericReasonCode: GENERIC_SECTION_FAILURE.LLM_UNAVAILABLE,
+          hiddenFromReview: true,
+        }),
+      ],
+      results: [],
+    });
+    expect(model.pending).toEqual([]);
+  });
+});
+
+describe("profile groups leave out controls already handled", () => {
+  const unsupported = (id: string): ReviewPlanItem => ({
+    candidateId: id,
+    fieldLabel: `항목 ${id}`,
+    currentValue: "",
+    previewValue: "",
+    status: "unavailable",
+    selected: false,
+    disabled: true,
+    revealed: true,
+    reason: "",
+    genericGrade: "BLOCKED",
+  });
+
+  it("drops a duplicate of a completed or kept control", () => {
+    const written = document.createElement("input");
+    const kept = document.createElement("input");
+    const free = document.createElement("input");
+    const controls: Record<string, Element> = {
+      done: written,
+      dupOfDone: written,
+      keep: kept,
+      dupOfKeep: kept,
+      free,
+    };
+    const stateFor = (id: string) => ({
+      visible: true,
+      value: "",
+      handle: { elements: [controls[id]] } as unknown as FieldCandidateHandle,
+    });
+    const model = {
+      completed: [
+        {
+          id: "stable-done",
+          candidateId: "done",
+          label: "완료",
+          category: "기타 항목",
+          status: "written" as const,
+        },
+      ],
+      pending: [],
+      skipped: [
+        { id: "keep", item: unsupported("keep"), reason: "기존 값 유지" },
+        {
+          id: "dupOfDone",
+          item: unsupported("dupOfDone"),
+          reason: "자동 입력 미지원",
+        },
+        {
+          id: "dupOfKeep",
+          item: unsupported("dupOfKeep"),
+          reason: "자동 입력 미지원",
+        },
+        { id: "free", item: unsupported("free"), reason: "자동 입력 미지원" },
+      ],
+    };
+    const groups = profileGroups(model, stateFor);
+    expect(groups.notInProfile.map(({ id }) => id)).toEqual(["free"]);
   });
 });

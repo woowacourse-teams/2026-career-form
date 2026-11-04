@@ -8,6 +8,7 @@ import { AutofillWorkflow } from "./AutofillWorkflow";
 
 afterEach(() => {
   cleanup();
+  vi.unstubAllEnvs();
   vi.restoreAllMocks();
   document.body.replaceChildren();
 });
@@ -131,5 +132,57 @@ describe.each(Object.entries(SHAPES))("generic page with %s", (_name, html) => {
     expect(
       document.querySelector<HTMLInputElement>("[name=specialty]")!.value,
     ).toBe("합성병과");
+  });
+});
+
+describe("generic result diagnostics", () => {
+  it("logs counts equal to the numbers on screen", async () => {
+    vi.stubEnv("DEV", true);
+    vi.stubEnv("VITE_LOCAL_WORKFLOW_DIAGNOSTICS", "1");
+    vi.stubEnv("VITE_API_BASE_URL", "http://localhost:8080");
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    document.body.innerHTML = SHAPES["label-wrapped inputs"];
+    render(
+      <AutofillWorkflow
+        repository={{ load: async () => profile() }}
+        apiClient={client()}
+        pageDocument={document}
+        onExit={() => undefined}
+      />,
+    );
+    await screen.findByRole(
+      "heading",
+      { name: "기입 결과" },
+      { timeout: 5_000 },
+    );
+    const tab = (state: string) =>
+      Number(
+        document
+          .querySelector(`[data-state=${state}]`)!
+          .getAttribute("data-count"),
+      );
+    const group = (title: string) =>
+      Number(
+        [...document.querySelectorAll("details")]
+          .find((node) =>
+            node.querySelector("summary")?.textContent?.includes(title),
+          )
+          ?.querySelector("summary strong")?.textContent ?? 0,
+      );
+    const prefix = "[CareerForm] 결과 진단:";
+    const logged = await waitFor(() => {
+      const line = info.mock.calls
+        .map(([message]) => String(message))
+        .find((message) => message.startsWith(prefix));
+      expect(line).toBeDefined();
+      return JSON.parse(line!.slice(prefix.length));
+    });
+    expect(logged).toEqual({
+      completed: tab("completed"),
+      pending: tab("pending"),
+      notInProfile: group("프로필에 없는 항목"),
+      profileUnset: group("프로필 미입력"),
+    });
+    expect(logged).toMatchObject({ pending: 1, notInProfile: 2 });
   });
 });
