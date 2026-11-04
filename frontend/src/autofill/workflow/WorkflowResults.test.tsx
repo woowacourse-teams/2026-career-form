@@ -740,3 +740,23 @@ it("masks unrevealed sensitive completed values including tooltips", () => {
   expect(screen.queryByText("값 가림")).toBeNull();
   expect(container.innerHTML).not.toContain(value);
 });
+
+it("counts a manual generic address field and shows why it stopped", () => {
+  const reason = "address reason";
+  render(
+    <WorkflowResults
+      reviewItems={[
+        {
+          ...item,
+          candidateId: "road",
+          fieldLabel: "기본주소",
+          reason,
+          addressManualReason: reason,
+        },
+      ]}
+      results={[]}
+    />,
+  );
+  expect(screen.getByRole("tab", { name: "확인 필요 1개" })).toBeVisible();
+  expect(screen.getByLabelText(reason)).toHaveTextContent("확인 필요");
+});

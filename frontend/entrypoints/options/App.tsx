@@ -146,6 +146,7 @@ export function App({
     onRemoveEntry: editor.removeEntry,
     onUpdateEntry: editor.updateEntry,
     onUpdateSingle: editor.updateSingle,
+    onSelectAddress: editor.selectAddress,
     confirmDelete,
   };
 

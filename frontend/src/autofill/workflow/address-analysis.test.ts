@@ -20,7 +20,7 @@ const keys = [
   "contact.contact.addressLine2",
 ];
 
-function setup(button?: Element) {
+function setup(button?: Element, outcome: "written" | "manual" = "written") {
   const inputs = names.map((name, index) => {
     const input = document.createElement("input");
     input.name = name;
@@ -62,6 +62,8 @@ function setup(button?: Element) {
     ],
   } as unknown as FieldsAnalyzeResponse;
   const runAddress = vi.fn(async () => {
+    if (outcome === "manual")
+      return { status: "manual" as const, reason: "static reason" };
     inputs[0].value = "06152";
     inputs[1].value = "서울특별시 강남구 테헤란로 305";
     inputs[2].value = "10층";
@@ -73,20 +75,137 @@ function setup(button?: Element) {
     addressRequiresSearch: true,
   } as unknown as WorkflowAdapter;
   const onWriteResult = vi.fn();
+  const setAddressResult = vi.fn();
+  const run: Parameters<typeof runAddressAnalysis>[0]["run"] = {
+    controller: new AbortController(),
+    button,
+  };
   const result = runAddressAnalysis({
     analysis,
     snapshot,
     adapter,
-    run: { controller: new AbortController(), button },
+    run,
     pageDocument: document,
     profile: createEmptyProfile(),
     repository: { load: async () => createEmptyProfile() },
     addressSearch: vi.fn(),
     onWriteResult,
-    setAddressResult: vi.fn(),
+    setAddressResult,
   });
-  return { result, runAddress, onWriteResult };
+  return { result, runAddress, onWriteResult, setAddressResult, run };
 }
+
+function genericManualRun() {
+  const button = document.createElement("button");
+  button.setAttribute("aria-label", "검색");
+  const scope = document.createElement("div");
+  scope.append(button);
+  document.body.append(scope);
+  const rows = keys.map((key, index) => ({
+    candidateId: `f${index}`,
+    domName: `generic-${index}`,
+    element: "input",
+    control: "text",
+    visibility: "visible",
+    readonly: index < 2,
+    disabled: false,
+    inert: false,
+  }));
+  const inputs = rows.map((row) => {
+    const input = document.createElement("input");
+    input.name = row.domName;
+    input.readOnly = row.readonly;
+    scope.append(input);
+    return input;
+  });
+  const snapshot = {
+    request: { sections: [{ fields: rows }] },
+    registry: {
+      lookupField: (id: string) => ({
+        status: "ready",
+        handle: { elements: [inputs[Number(id.slice(1))]] },
+      }),
+    },
+  } as unknown as ReturnType<typeof collectFieldsSnapshot>;
+  const analysis = {
+    mode: "GENERIC",
+    fields: keys.map((key, index) => ({
+      candidateId: `f${index}`,
+      matchType: "MATCH",
+      mappingStatus: "LLM_SUGGESTED",
+      valueBinding: { type: "DIRECT", profileFieldKey: key },
+    })),
+  } as unknown as FieldsAnalyzeResponse;
+  const setAddressResult = vi.fn();
+  const run: Parameters<typeof runAddressAnalysis>[0]["run"] = {
+    controller: new AbortController(),
+    button,
+  };
+  const result = runAddressAnalysis({
+    analysis,
+    snapshot,
+    adapter: {} as unknown as WorkflowAdapter,
+    run,
+    pageDocument: document,
+    profile: createEmptyProfile(),
+    repository: { load: async () => createEmptyProfile() },
+    addressSearch: vi.fn(),
+    onWriteResult: vi.fn(),
+    setAddressResult,
+  });
+  return { result, run, setAddressResult };
+}
+
+it("turns a manual generic address result into review rows instead of the collapsed note", async () => {
+  const { runKakaoAddress } = await import("../address/kakao-executor");
+  vi.mocked(runKakaoAddress).mockResolvedValueOnce({
+    status: "manual",
+    reason: "generic reason",
+  });
+  const { result, run, setAddressResult } = genericManualRun();
+
+  expect((await result)?.fields).toEqual([]);
+  expect(run.genericAddressRows).toMatchObject(
+    keys.map((key, index) => ({
+      candidateId: `f${index}`,
+      profileFieldKey: key,
+      addressManualReason: "generic reason",
+      selected: false,
+      disabled: true,
+    })),
+  );
+  expect(setAddressResult).not.toHaveBeenCalled();
+});
+
+it("adds no generic rows when the generic address was written", async () => {
+  const { runKakaoAddress } = await import("../address/kakao-executor");
+  vi.mocked(runKakaoAddress).mockResolvedValueOnce({
+    status: "written",
+    reason: "ok",
+  });
+  const { result, run, setAddressResult } = genericManualRun();
+
+  await result;
+  expect(run.genericAddressRows).toBeUndefined();
+  expect(setAddressResult).toHaveBeenCalledWith({
+    status: "written",
+    reason: "ok",
+  });
+});
+
+it("keeps a manual static address result out of the review rows", async () => {
+  const { result, run, setAddressResult } = setup(
+    document.createElement("button"),
+    "manual",
+  );
+
+  await result;
+  expect(run.genericAddressRows).toBeUndefined();
+  expect(setAddressResult).toHaveBeenCalledWith({
+    status: "manual",
+    reason: "static reason",
+  });
+});
 
 it("runs a search-only address whose fields are identified by name", async () => {
   const { result, runAddress, onWriteResult } = setup(

@@ -16,6 +16,10 @@ vi.mock("wxt/browser", () => ({
   },
 }));
 
+import {
+  addressVerification,
+  contactWithSelectedAddress,
+} from "../profile/address";
 import { createEmptyProfile, PROFILE_SCHEMA_VERSION } from "../profile/model";
 import {
   ChromeProfileStorage,
@@ -187,4 +191,51 @@ it("recovers the instance queue after a failed atomic write", async () => {
   expect((await repository.load()).contact.email).toBe(
     "recovered@example.invalid",
   );
+});
+
+describe("stored address compatibility", () => {
+  it("opens a profile saved before the structured address unchanged", async () => {
+    const old = {
+      ...createEmptyProfile(),
+      contact: {
+        email: "old@example.invalid",
+        postalCode: "12345",
+        addressLine1: "직접 입력한 기존 주소",
+        addressLine2: "101호",
+      },
+    };
+    const storage = createStorage({
+      [PROFILE_STORAGE_KEY]: {
+        schemaVersion: PROFILE_SCHEMA_VERSION,
+        profile: old,
+      },
+    });
+    const repository = new ChromeProfileStorage(storage);
+
+    const loaded = await repository.load();
+
+    expect(loaded).toEqual(old);
+    expect(addressVerification(loaded.contact)).toBe("unverified");
+    expect(storage.set).not.toHaveBeenCalled();
+  });
+
+  it("keeps a selected address after it is saved and opened again", async () => {
+    const storage = createStorage();
+    const profile = createEmptyProfile();
+    profile.contact = contactWithSelectedAddress(
+      { addressLine2: "101호" },
+      {
+        postalCode: "63309",
+        roadAddress: "제주특별자치도 제주시 첨단로 242",
+        jibunAddress: "제주특별자치도 제주시 영평동 2181",
+        buildingManagementNumber: "5011010400121810000000001",
+      },
+    );
+
+    await new ChromeProfileStorage(storage).save(profile);
+    const reopened = await new ChromeProfileStorage(storage).load();
+
+    expect(reopened.contact).toEqual(profile.contact);
+    expect(addressVerification(reopened.contact)).toBe("verified");
+  });
 });

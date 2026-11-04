@@ -130,6 +130,8 @@ export interface ReviewPlanItem {
   hiddenFromReview?: boolean;
   /** Generic-path only: selected by the developer "확인 필요 포함" setting. */
   includedByDeveloper?: boolean;
+  /** Generic-path only: why the address search left this field to the user. */
+  addressManualReason?: string;
   failureCode?: WriteFailureCode;
   analysis?: MatchedFieldAnalysis;
   dateApproval?: DateTargetApproval;

@@ -468,3 +468,35 @@ it("keeps rows that target different controls", () => {
   });
   expect(result.pending.map(({ id }) => id)).toEqual(["a", "b"]);
 });
+
+it("lists a manual generic address field as pending with its own reason", () => {
+  const address = {
+    candidateId: "road",
+    fieldLabel: "기본주소",
+    profileFieldKey: "contact.contact.addressLine1",
+    currentValue: "",
+    previewValue: "",
+    status: "unavailable",
+    selected: false,
+    disabled: true,
+    revealed: true,
+    reason: "address reason",
+    addressManualReason: "address reason",
+  } satisfies ReviewPlanItem;
+
+  const { pending, skipped } = buildResultModel({
+    reviewItems: [address],
+    results: [],
+    fieldStateFor: () => ({ visible: true, value: "" }),
+  });
+
+  expect(pending).toMatchObject([
+    {
+      id: "road",
+      reason: "입력 결과 확인",
+      written: false,
+      detail: "address reason",
+    },
+  ]);
+  expect(skipped).toEqual([]);
+});

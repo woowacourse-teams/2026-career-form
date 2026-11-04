@@ -46,6 +46,7 @@ export const CATEGORY_GUIDES: Record<ProfileCategoryId, string> = {
 };
 
 export const NAME_GROUP_TITLE = "이름";
+export const ADDRESS_GROUP_TITLE = "주소";
 export const NAME_TABLE_COLUMNS = ["성", "이름"] as const;
 const NAME_TABLE_ROWS = [
   { label: "국문", fields: ["koreanFamilyName", "koreanGivenName"] },
@@ -84,7 +85,7 @@ const FIELD_GROUPS: Record<string, { title: string; fields: string[] }[]> = {
       ],
     },
     {
-      title: "주소",
+      title: ADDRESS_GROUP_TITLE,
       fields: [
         "residenceCountry",
         "postalCode",

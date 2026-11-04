@@ -448,3 +448,82 @@ describe("useProfileEditor certificate issuer", () => {
     });
   });
 });
+
+describe("structured address", () => {
+  const selected = {
+    postalCode: "63309",
+    roadAddress: "제주특별자치도 제주시 첨단로 242",
+    jibunAddress: "제주특별자치도 제주시 영평동 2181",
+    buildingManagementNumber: "5011010400121810000000001",
+  };
+
+  async function selectedEditor() {
+    const repository = createRepository();
+    const hook = renderHook(() => useProfileEditor(repository, 0));
+    await act(async () => Promise.resolve());
+    act(() =>
+      hook.result.current.updateSingle("contact", "addressLine2", "101호"),
+    );
+    act(() => hook.result.current.selectAddress(selected));
+    return { repository, result: hook.result };
+  }
+
+  it("stores a selection without touching the detail line and saves it", async () => {
+    const { repository, result } = await selectedEditor();
+
+    const contact = {
+      postalCode: "63309",
+      addressLine1: "제주특별자치도 제주시 첨단로 242",
+      addressLine2: "101호",
+      jibunAddress: "제주특별자치도 제주시 영평동 2181",
+      buildingManagementNumber: "5011010400121810000000001",
+      addressVerified: "true",
+    };
+    expect(result.current.profile.contact).toEqual(contact);
+    await waitFor(() =>
+      expect(repository.save).toHaveBeenLastCalledWith(
+        expect.objectContaining({ contact }),
+      ),
+    );
+  });
+
+  it.each(["postalCode", "addressLine1"])(
+    "clears the selection when %s is edited by hand",
+    async (fieldId) => {
+      const { result } = await selectedEditor();
+
+      act(() => result.current.updateSingle("contact", fieldId, "직접 수정"));
+
+      const { contact } = result.current.profile;
+      expect(contact[fieldId]).toBe("직접 수정");
+      expect(contact.addressVerified).toBeUndefined();
+      expect(contact.jibunAddress).toBeUndefined();
+      expect(contact.buildingManagementNumber).toBeUndefined();
+      expect(contact.addressLine2).toBe("101호");
+    },
+  );
+
+  it("keeps the selection when the detail line is edited", async () => {
+    const { result } = await selectedEditor();
+
+    act(() => result.current.updateSingle("contact", "addressLine2", "102호"));
+
+    expect(result.current.profile.contact.addressVerified).toBe("true");
+    expect(result.current.profile.contact.addressLine2).toBe("102호");
+  });
+
+  it("does not change an old profile on load", async () => {
+    const stored = createEmptyProfile();
+    stored.contact = { postalCode: "12345", addressLine1: "기존 주소" };
+    const repository = createRepository();
+    vi.mocked(repository.load).mockResolvedValue(stored);
+    const { result } = renderHook(() => useProfileEditor(repository, 0));
+    await act(async () => Promise.resolve());
+
+    expect(result.current.profile.contact).toEqual({
+      postalCode: "12345",
+      addressLine1: "기존 주소",
+    });
+    expect(repository.save).not.toHaveBeenCalled();
+  });
+});

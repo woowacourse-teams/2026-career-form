@@ -165,6 +165,53 @@ describe("fields a reviewed area reveals after a write", () => {
     expect(manual).not.toHaveTextContent("병과");
   });
 
+  it("keeps counting across a reveal pass and names the recheck", async () => {
+    militaryForm();
+    const api = client();
+    const analyze = api.analyzeGenericFields!;
+    let calls = 0;
+    let release = () => undefined as void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    api.analyzeGenericFields = async (request) => {
+      calls += 1;
+      if (calls === 2) await held;
+      return analyze(request);
+    };
+    const percents: string[] = [];
+    const observer = new MutationObserver(() => {
+      const value = document
+        .querySelector("[role=progressbar]")
+        ?.getAttribute("aria-valuenow");
+      if (value && percents.at(-1) !== value) percents.push(value);
+    });
+    observer.observe(document.body, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+    });
+    render(
+      <AutofillWorkflow
+        repository={{
+          // Writes re-read the profile, so each write sees the committed bar.
+          load: async () => {
+            await act(async () => undefined);
+            return profile();
+          },
+        }}
+        apiClient={api}
+        pageDocument={document}
+        onExit={() => undefined}
+      />,
+    );
+    await screen.findAllByText("입력이 안된 칸들이 있는지 확인하고 있어요");
+    release();
+    await screen.findByRole("heading", { name: "기입 결과" });
+    observer.disconnect();
+    expect(percents.slice(percents.indexOf("100") + 1)).toEqual(["50", "100"]);
+  });
+
   it("writes a field the first review held hidden once the page shows it", async () => {
     hiddenSpecialtyForm();
     start();
