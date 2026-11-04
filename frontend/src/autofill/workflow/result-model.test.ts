@@ -532,7 +532,9 @@ describe("fields without a saved value", () => {
       results: [],
     });
     expect(model.pending).toEqual([]);
-    expect(model.skipped).toMatchObject([{ id: "a", reason: "등록된 정보 없음" }]);
+    expect(model.skipped).toMatchObject([
+      { id: "a", reason: "등록된 정보 없음" },
+    ]);
   });
 
   it("skips an unlinked BLOCKED field without a value as unsupported", () => {
@@ -617,8 +619,8 @@ describe("fields without a saved value", () => {
       results: [],
     });
     expect(unfilledCandidateIds(model)).toEqual(["p", "a", "b"]);
-    expect(unfilledCandidateIds(model, undefined, { pendingOnly: true })).toEqual(
-      ["p"],
-    );
+    expect(
+      unfilledCandidateIds(model, undefined, { pendingOnly: true }),
+    ).toEqual(["p"]);
   });
 });

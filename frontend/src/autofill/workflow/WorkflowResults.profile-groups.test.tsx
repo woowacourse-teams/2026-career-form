@@ -121,7 +121,9 @@ describe("result diagnostics", () => {
       profileUnset: 1,
     });
     const tab = (state: string) =>
-      document.querySelector(`[data-state=${state}]`)!.getAttribute("data-count");
+      document
+        .querySelector(`[data-state=${state}]`)!
+        .getAttribute("data-count");
     expect(tab("pending")).toBe(String(counts.pending));
     expect(tab("completed")).toBe(String(counts.completed));
     expect(

@@ -1,7 +1,4 @@
-import type {
-  ProfileGroups,
-  ResultModel,
-} from "../workflow/result-model";
+import type { ProfileGroups, ResultModel } from "../workflow/result-model";
 import { localDiagnosticsEnabled } from "./review-diagnostics";
 
 /** Counts only: no labels, values or identifiers. */

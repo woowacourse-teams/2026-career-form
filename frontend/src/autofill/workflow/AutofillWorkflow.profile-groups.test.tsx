@@ -116,8 +116,8 @@ describe.each(Object.entries(SHAPES))("generic page with %s", (_name, html) => {
     // Only email (differs from the page) is pending; memo and note have no
     // saved value.
     expect(screen.getByLabelText("확인 필요 1개")).toBeVisible();
-    const details = [...document.querySelectorAll("details")].filter(
-      (node) => node.querySelector("summary")?.textContent?.includes("프로필"),
+    const details = [...document.querySelectorAll("details")].filter((node) =>
+      node.querySelector("summary")?.textContent?.includes("프로필"),
     );
     expect(details).toHaveLength(1);
     expect(details[0].open).toBe(false);
