@@ -128,11 +128,17 @@ describe("push background handler", () => {
     expect(handler({ type: "other" }, options)).toBeUndefined();
     expect(handler("text", options)).toBeUndefined();
   });
-  it("관리 페이지가 아닌 발신자와 알 수 없는 동작은 거절한다", async () => {
+  it("알 수 없는 발신자와 알 수 없는 동작은 거절한다", async () => {
     const { handler } = setup();
     expect(
       await handler(message("status"), {
         id: "own",
+        url: "chrome-extension://own/popup.html",
+      }),
+    ).toEqual({ ok: false, code: "UNAVAILABLE" });
+    expect(
+      await handler(message("status"), {
+        id: "other",
         url: "https://example.com",
       }),
     ).toEqual({ ok: false, code: "UNAVAILABLE" });
@@ -282,12 +288,34 @@ describe("push background handler", () => {
     expect(
       await handler(message("autosave", { enabled: true }), onboarding),
     ).toEqual({ ok: false, code: "UNAVAILABLE" });
-    expect(
-      await handler(message("status"), {
-        id: "own",
-        url: "chrome-extension://own/sidepanel.html",
-      }),
-    ).toEqual({ ok: false, code: "UNAVAILABLE" });
+  });
+  it("사이드 패널과 페이지 내 패널은 상태 조회, 켜기, 분류 조회만 보낼 수 있다", async () => {
+    const { handler } = setup();
+    const sidePanel = {
+      id: "own",
+      url: "chrome-extension://own/sidepanel.html",
+    };
+    const inPage = { id: "own", url: "https://example.com/apply" };
+    for (const sender of [sidePanel, inPage]) {
+      for (const action of ["status", "enable", "categories"])
+        expect(await handler(message(action), sender)).toMatchObject({
+          ok: true,
+        });
+      for (const action of ["disable", "test", "later", "inbox"])
+        expect(await handler(message(action), sender)).toEqual({
+          ok: false,
+          code: "UNAVAILABLE",
+        });
+      expect(
+        await handler(
+          message("record", { answer: "seen", source: "test" }),
+          sender,
+        ),
+      ).toEqual({ ok: false, code: "UNAVAILABLE" });
+      expect(
+        await handler(message("roles", { roles: ["IT.BACKEND"] }), sender),
+      ).toEqual({ ok: false, code: "UNAVAILABLE" });
+    }
   });
   it("명령 파서는 허용된 동작과 유효한 값만 받아들인다", () => {
     expect(parsePushMessage(message("inbox"))).toEqual(message("inbox"));
