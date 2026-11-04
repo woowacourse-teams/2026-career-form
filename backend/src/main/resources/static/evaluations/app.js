@@ -9,7 +9,7 @@ const PRICE_KEY = "cf-evaluation-model-prices-v1";
 const root = document.getElementById("cf-eval-preview");
 const $ = (selector) => root.querySelector(selector);
 const state = { runs: [], dataset: null, models: [], selected: [], group: null, stage: "total", page: "overview",
-  fields: {}, fieldModel: "all", canDelete: false, compare: { before: "", after: "" }, fieldFilter: "diff", fieldScreen: "all", openField: null, itemKind: "GENERIC_FIELDS" };
+  fields: {}, fieldHidden: [], canDelete: false, compare: { before: "", after: "" }, fieldFilter: "diff", fieldScreen: "all", openField: null, itemKind: "GENERIC_FIELDS" };
 let prices = {};
 try { prices = JSON.parse(localStorage.getItem(PRICE_KEY) || "{}") ?? {}; } catch { prices = {}; }
 
@@ -727,9 +727,8 @@ function runFields(run) {
  */
 function renderFields() {
   const page = $("#cf-fields");
-  // 위쪽 모델 체크로 고른 모델 안에서, 이 탭에서 한 모델만 볼 수 있다.
-  const fieldModel = state.selected.includes(state.fieldModel) ? state.fieldModel : "all";
-  const models = fieldModel === "all" ? state.selected : [fieldModel];
+  // 위쪽 모델 체크로 고른 모델 안에서 이 탭에 보일 모델을 따로 체크한다. 다른 탭에는 영향을 주지 않는다.
+  const models = state.selected.filter((model) => !state.fieldHidden.includes(model));
   const runs = Object.fromEntries(models.map((model) => [model, latest(model)?.run]));
   const kind = COMPARE_KINDS.find((entry) => entry.kind === state.itemKind) ?? COMPARE_KINDS[0];
   const ofKind = (list) => list && list.filter((item) => item.kind === kind.kind);
@@ -758,13 +757,23 @@ function renderFields() {
   });
   screenSelect.value = state.fieldScreen;
   screenSelect.addEventListener("change", () => { state.fieldScreen = screenSelect.value; renderFields(); });
-  const modelSelect = element("select");
-  modelSelect.setAttribute("aria-label", "모델");
-  modelSelect.append(Object.assign(element("option", "모든 모델"), { value: "all" }),
-    ...state.selected.map((model) => Object.assign(element("option", model), { value: model })));
-  modelSelect.value = fieldModel;
-  modelSelect.addEventListener("change", () => { state.fieldModel = modelSelect.value; state.openField = null; renderFields(); });
-  controls.append(modelSelect, screenSelect);
+  const modelChecks = element("div", undefined, "models fields-models");
+  modelChecks.setAttribute("aria-label", "항목별 비교에 보일 모델");
+  state.selected.forEach((model) => {
+    const label = element("label");
+    label.style.setProperty("--model", color(model));
+    const input = element("input");
+    input.type = "checkbox";
+    input.checked = models.includes(model);
+    input.addEventListener("change", () => {
+      state.fieldHidden = input.checked ? state.fieldHidden.filter((hidden) => hidden !== model) : [...state.fieldHidden, model];
+      state.openField = null;
+      renderFields();
+    });
+    label.append(input, document.createTextNode(model));
+    modelChecks.append(label);
+  });
+  controls.append(modelChecks, screenSelect);
   head.append(title);
   const kinds = element("div", undefined, "stage item-kinds");
   kinds.setAttribute("aria-label", "항목 종류");
@@ -781,7 +790,7 @@ function renderFields() {
   head.append(toolbar);
 
   if (!models.length) {
-    page.replaceChildren(head, element("div", "비교할 모델 선택 필요.", "empty"));
+    page.replaceChildren(head, element("div", "볼 모델을 체크해야 합니다.", "empty"));
     return;
   }
   if (models.some((model) => data[model] === null)) {

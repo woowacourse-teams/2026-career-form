@@ -358,23 +358,29 @@ describe("AI 평가 화면의 단계 탭", () => {
     (document.querySelector("#cf-source") as HTMLDialogElement).close();
   });
 
-  it("항목별 비교는 고른 모델만 보이고, 모델이 하나면 모델끼리 다른 항목 필터를 뺀다", async () => {
+  it("항목별 비교는 체크한 모델만 보이고, 모델이 하나면 모델끼리 다른 항목 필터를 뺀다", async () => {
+    const wait = () => new Promise((resolve) => setTimeout(resolve, 0));
     const refresh = async () => {
       (document.querySelector("#refresh") as HTMLButtonElement).click();
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      await wait();
     };
-    const select = () =>
-      document.querySelector(
-        '#cf-fields select[aria-label="모델"]',
-      ) as HTMLSelectElement;
-    const chips = () =>
-      [...document.querySelectorAll("#cf-fields .fields-chips button")].map(
-        (chip) => chip.textContent,
+    const boxes = () => [
+      ...document.querySelectorAll<HTMLInputElement>(
+        '#cf-fields .fields-models input[type="checkbox"]',
+      ),
+    ];
+    const toggle = async (index: number) => {
+      boxes()[index].click();
+      await wait();
+    };
+    const shown = () =>
+      [...document.querySelectorAll("#cf-fields .fields-model strong")].map(
+        (name) => name.textContent,
       );
-    const changeModel = (value: string) => {
-      select().value = value;
-      select().dispatchEvent(new Event("change"));
-    };
+    const chips = () =>
+      [...document.querySelectorAll("#cf-fields .fields-chips button")]
+        .map((chip) => chip.textContent)
+        .join();
     const original = run.comparisonId;
     (run as { comparisonId: string | null }).comparisonId = "both";
     extraRuns.push({
@@ -389,28 +395,35 @@ describe("AI 평가 화면의 단계 탭", () => {
     (
       document.querySelector('[data-page="fields"]') as HTMLButtonElement
     ).click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect([...select().options].map((option) => option.textContent)).toEqual([
-      "모든 모델",
-      "jev/jev-latest",
-      "openai/gpt",
-    ]);
-    expect(document.querySelectorAll("#cf-fields .fields-model")).toHaveLength(
-      2,
-    );
-    expect(chips().join()).toContain("모델끼리 다른");
-    changeModel("openai/gpt");
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    const shown = [...document.querySelectorAll("#cf-fields .fields-model")];
+    await wait();
     expect(
-      shown.map((card) => card.querySelector("strong")?.textContent),
-    ).toEqual(["openai/gpt"]);
-    expect(chips().join()).not.toContain("모델끼리 다른");
-    changeModel("all");
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(document.querySelectorAll("#cf-fields .fields-model")).toHaveLength(
-      2,
+      document.querySelector('#cf-fields select[aria-label="모델"]'),
+    ).toBeNull();
+    expect(boxes().map((box) => box.checked)).toEqual([true, true]);
+    expect(shown()).toEqual(["jev/jev-latest", "openai/gpt"]);
+    expect(chips()).toContain("모델끼리 다른");
+
+    await toggle(0);
+    expect(boxes().map((box) => box.checked)).toEqual([false, true]);
+    expect(shown()).toEqual(["openai/gpt"]);
+    expect(chips()).not.toContain("모델끼리 다른");
+    // 이 탭의 체크는 위쪽 모델 체크와 품질·성능 화면에 영향을 주지 않는다.
+    expect(
+      [...document.querySelectorAll<HTMLInputElement>("#models input")].map(
+        (box) => box.checked,
+      ),
+    ).toEqual([true, true]);
+
+    await toggle(1);
+    expect(boxes()).toHaveLength(2);
+    expect(shown()).toEqual([]);
+    expect(document.querySelector("#cf-fields")?.textContent).toContain(
+      "볼 모델을 체크",
     );
+
+    await toggle(0);
+    await toggle(1);
+    expect(shown()).toEqual(["jev/jev-latest", "openai/gpt"]);
     extraRuns.length = 0;
     (run as { comparisonId: string | null }).comparisonId = original;
     (

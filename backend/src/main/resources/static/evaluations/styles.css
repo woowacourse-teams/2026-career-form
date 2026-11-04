@@ -740,3 +740,6 @@
 #cf-eval-preview .summary-row .stat b{color:#233447;font-weight:650;font-size:14px}
 #cf-eval-preview .metric-head h3.has-help{cursor:default;text-decoration:underline dotted #a7afb7;text-underline-offset:4px}
 #cf-eval-preview .icon-button[hidden]{display:none}
+#cf-eval-preview .fields-controls{align-items:center}
+#cf-eval-preview .fields-models{flex:0 1 auto}
+#cf-eval-preview .fields-models label{font-size:13px;font-weight:400}
