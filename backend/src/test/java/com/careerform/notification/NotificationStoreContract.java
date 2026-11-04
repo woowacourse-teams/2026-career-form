@@ -148,6 +148,21 @@ abstract class NotificationStoreContract {
     }
 
     @Test
+    @DisplayName("직무 코드 배열은 순서대로 저장·복원되고 roles가 없는 레거시 공고는 null로 읽힌다")
+    void roundTripsRolesAndKeepsLegacyNull() {
+        var store = store();
+        store.insertPosting(new JobPosting("with-roles", "합성 회사", "백엔드·프론트엔드", List.of("IT.BACKEND", "IT.FRONTEND"),
+            "https://careers.example.test/jobs/roles", NOW.minusSeconds(60), NOW.plusSeconds(3600), NOW));
+        store.insertPosting(new JobPosting("legacy", "합성 회사", "합성 직무", null, "https://careers.example.test/jobs/legacy",
+            NOW.minusSeconds(60), NOW.plusSeconds(3600), NOW.minusSeconds(1)));
+        assertThat(store.findPosting("with-roles").orElseThrow().roles()).containsExactly("IT.BACKEND", "IT.FRONTEND");
+        assertThat(store.findPosting("legacy").orElseThrow().roles()).isNull();
+        assertThat(store.findPostingByLink("https://careers.example.test/jobs/roles").orElseThrow().roles()).containsExactly("IT.BACKEND", "IT.FRONTEND");
+        assertThat(store.listPostings()).extracting(JobPosting::roles).containsExactly(List.of("IT.BACKEND", "IT.FRONTEND"), null);
+        assertThat(store.listOpenPostings(NOW)).extracting(JobPosting::roles).containsExactlyInAnyOrder(List.of("IT.BACKEND", "IT.FRONTEND"), null);
+    }
+
+    @Test
     @DisplayName("기간 요약은 예정 시각이 기간 안인 발송의 상태별 건수·시도 합·수락 지연 백분위와 기간 안 등록 공고 수, 구독 수를 준다")
     void summarizesDeliveriesAndCounts() {
         var store = store();
@@ -155,7 +170,7 @@ abstract class NotificationStoreContract {
         var to = NOW.plusSeconds(3600);
         store.insertPosting(posting("in-1", "https://careers.example.test/jobs/a", NOW.minusSeconds(60), NOW.plusSeconds(7200)));
         store.insertPosting(posting("in-2", "https://careers.example.test/jobs/b", NOW.minusSeconds(60), NOW.plusSeconds(7200)));
-        store.insertPosting(new JobPosting("out", "합성 회사", null, "https://careers.example.test/jobs/c", NOW.minusSeconds(60), NOW.plusSeconds(7200), NOW.minusSeconds(7200)));
+        store.insertPosting(new JobPosting("out", "합성 회사", null, null, "https://careers.example.test/jobs/c", NOW.minusSeconds(60), NOW.plusSeconds(7200), NOW.minusSeconds(7200)));
         store.insertSubscription(subscription("s1", "https://fcm.googleapis.com/fcm/send/synthetic-1"));
         store.insertSubscription(subscription("s2", "https://fcm.googleapis.com/fcm/send/synthetic-2"));
         var lease = NOW.plusSeconds(120);
@@ -187,10 +202,52 @@ abstract class NotificationStoreContract {
     }
 
     static JobPosting posting(String id, String link, Instant opensAt, Instant closesAt) {
-        return new JobPosting(id, "합성 회사", "합성 직무", link, opensAt, closesAt, NOW.minusSeconds(120));
+        return new JobPosting(id, "합성 회사", "백엔드", List.of("IT.BACKEND"), link, opensAt, closesAt, NOW.minusSeconds(120));
+    }
+
+    @Test
+    @DisplayName("구독의 받을 직무는 갱신 시각과 함께 저장되고 null이면 미선택으로 돌아가며 없는 구독은 false다")
+    void updatesSubscriptionRoles() {
+        var store = store();
+        store.insertSubscription(subscription("s1", "https://fcm.googleapis.com/fcm/send/synthetic-1"));
+        assertThat(store.findSubscription("s1").orElseThrow().roles()).isNull();
+        assertThat(store.updateSubscriptionRoles("s1", List.of("IT.BACKEND", "IT.DATA"), NOW.plusSeconds(10))).isTrue();
+        var selected = store.findSubscription("s1").orElseThrow();
+        assertThat(selected.roles()).containsExactly("IT.BACKEND", "IT.DATA");
+        assertThat(selected.rolesUpdatedAt()).isEqualTo(NOW.plusSeconds(10));
+        assertThat(selected.endpoint()).isEqualTo("https://fcm.googleapis.com/fcm/send/synthetic-1");
+        assertThat(selected.registeredAt()).isEqualTo(NOW);
+        assertThat(store.updateSubscriptionRoles("s1", null, NOW.plusSeconds(20))).isTrue();
+        var unselected = store.findSubscriptionByEndpoint("https://fcm.googleapis.com/fcm/send/synthetic-1").orElseThrow();
+        assertThat(unselected.roles()).isNull();
+        assertThat(unselected.rolesUpdatedAt()).isEqualTo(NOW.plusSeconds(20));
+        assertThat(store.updateSubscriptionRoles("missing", List.of("IT.BACKEND"), NOW)).isFalse();
+        assertThat(store.countSubscriptions()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("직무별 대상 조회는 겹치는 선택 구독만 주고, 미선택 포함이면 roles가 없거나 빈 구독도 더하며, 겹치지 않는 선택 구독은 늘 뺀다")
+    void findsSubscriptionIdsOverlappingRoles() {
+        var store = store();
+        store.insertSubscription(subscription("backend", "https://fcm.googleapis.com/fcm/send/synthetic-1", List.of("IT.BACKEND")));
+        store.insertSubscription(subscription("both", "https://fcm.googleapis.com/fcm/send/synthetic-2", List.of("IT.FRONTEND", "IT.BACKEND")));
+        store.insertSubscription(subscription("frontend", "https://fcm.googleapis.com/fcm/send/synthetic-3", List.of("IT.FRONTEND")));
+        store.insertSubscription(subscription("unselected", "https://fcm.googleapis.com/fcm/send/synthetic-4"));
+        store.insertSubscription(subscription("empty", "https://fcm.googleapis.com/fcm/send/synthetic-5", List.of()));
+        assertThat(store.subscriptionIdsForRoles(List.of("IT.BACKEND"), false)).containsExactlyInAnyOrder("backend", "both");
+        assertThat(store.subscriptionIdsForRoles(List.of("IT.BACKEND"), true)).containsExactlyInAnyOrder("backend", "both", "unselected", "empty");
+        assertThat(store.subscriptionIdsForRoles(List.of("IT.BACKEND", "IT.FRONTEND"), false)).containsExactlyInAnyOrder("backend", "both", "frontend");
+        assertThat(store.subscriptionIdsForRoles(List.of("IT.DATA"), false)).isEmpty();
+        assertThat(store.subscriptionIdsForRoles(List.of("IT.DATA"), true)).containsExactlyInAnyOrder("unselected", "empty");
+        assertThat(store.countSubscriptionsWithRoles()).as("roles가 1개 이상인 구독 수").isEqualTo(3);
+        assertThat(store.countSubscriptions()).isEqualTo(5);
     }
 
     static PushSubscription subscription(String id, String endpoint) {
-        return new PushSubscription(id, endpoint, "synthetic-p256dh", "synthetic-auth", NOW);
+        return new PushSubscription(id, endpoint, "synthetic-p256dh", "synthetic-auth", NOW, null, null);
+    }
+
+    static PushSubscription subscription(String id, String endpoint, List<String> roles) {
+        return new PushSubscription(id, endpoint, "synthetic-p256dh", "synthetic-auth", NOW, roles, NOW);
     }
 }

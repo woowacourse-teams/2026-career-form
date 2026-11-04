@@ -133,4 +133,6 @@ it("names each preparation stage line by its caller", async () => {
   expect(stages).toContain("preparation-plan");
   expect(stages).toContain("preparation-initial");
   expect(stages).toContain("preparation-majors");
-}, 30000);
+  // CI 러너(worker 1개)에서 통과할 때도 22초쯤 걸려 30초 상한을 넘기는 날이 있다.
+  // 안의 findByText가 120초까지 기다리므로 테스트 상한도 그 안에서 넉넉히 둔다.
+}, 90_000);

@@ -18,14 +18,17 @@ public final class NotificationController {
     private final VapidKeys keys;
     private final PushSubscriptionService subscriptions;
     private final JobPostingService postings;
+    private final JobCategories categories;
 
-    public NotificationController(VapidKeys keys, PushSubscriptionService subscriptions, JobPostingService postings) {
+    public NotificationController(VapidKeys keys, PushSubscriptionService subscriptions, JobPostingService postings, JobCategories categories) {
         this.keys = keys;
         this.subscriptions = subscriptions;
         this.postings = postings;
+        this.categories = categories;
     }
 
-    public record SubscriptionRequest(String endpoint, Long expirationTime, Keys keys) {
+    /** 브라우저 구독 JSON에 선택 필드 roles(받을 소분류 코드 배열)를 더한 모양. roles가 없으면 기존 선택을 유지한다. */
+    public record SubscriptionRequest(String endpoint, Long expirationTime, Keys keys, List<String> roles) {
         public record Keys(String p256dh, String auth) {
             @Override public String toString() { return "Keys[redacted]"; }
         }
@@ -43,13 +46,16 @@ public final class NotificationController {
         public PostingsResponse { postings = List.copyOf(postings); }
     }
 
+    /** 직무 분류 정본의 버전과 대분류·소분류(code, label). */
+    public record CategoriesResponse(int version, List<JobCategories.Category> categories) { }
+
     @GetMapping("/api/v1/notifications/vapid-public-key")
     public Map<String, String> publicKey() { return Map.of("publicKey", keys.publicKey()); }
 
     @PostMapping("/api/v1/notifications/subscriptions")
     public ResponseEntity<SubscriptionResponse> subscribe(@RequestBody SubscriptionRequest request) {
         if (request.keys() == null) { throw new PushSubscriptionService.InvalidSubscription("KEYS"); }
-        var registration = subscriptions.register(request.endpoint(), request.keys().p256dh(), request.keys().auth());
+        var registration = subscriptions.register(request.endpoint(), request.keys().p256dh(), request.keys().auth(), request.roles());
         return ResponseEntity.status(registration.created() ? 201 : 200)
             .body(new SubscriptionResponse(registration.subscription().id(), registration.created()));
     }
@@ -62,6 +68,9 @@ public final class NotificationController {
 
     @GetMapping("/api/v1/notifications/postings")
     public PostingsResponse openPostings() { return new PostingsResponse(postings.open().stream().map(JobPosting::view).toList()); }
+
+    @GetMapping("/api/v1/notifications/job-categories")
+    public CategoriesResponse jobCategories() { return new CategoriesResponse(categories.version(), categories.categories()); }
 
     @ExceptionHandler(PushSubscriptionService.InvalidSubscription.class)
     public ResponseEntity<Map<String, String>> invalidSubscription() { return ResponseEntity.badRequest().body(Map.of("error", "INVALID_SUBSCRIPTION")); }

@@ -111,5 +111,5 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [범용 전용 API 분리와 섹션 범주별 칸 매칭](topics/generic-api-section-category-matching.md) | 범용 API 분리와 섹션 분류 기반 범주별 매칭, 제안됨 ADR | 2026-10-16 |
 | [범용 범주 안 JEV 매칭 누락 원인과 의미 근거 보강](topics/generic-category-semantic-matching.md) | 라벨 손실 보강, 등급·점수 계약 보존과 합성 반례 출처 | 2026-10-19 |
 | [분석 응답과 품질 관측의 비동기 분리](topics/async-quality-observation.md) | 메모리 등록, 제한 큐, 약 1분 집계와 유실 허용 경계 | 2026-10-20 |
-| [공고 구독 알림](topics/job-posting-notifications.md) | 접수 가능 시점 1회 Web Push, FCM 수락까지 재시도하는 선점 발송기, 큐를 두지 않은 근거와 재검토 조건 | 2026-10-25 |
+| [공고 구독 알림](topics/job-posting-notifications.md) | 접수 가능 시점 1회 Web Push, FCM 수락까지 재시도하는 선점 발송기, 큐를 두지 않은 근거와 재검토 조건, 직무 분류 정본과 공고 직무 필수, 구독별 받을 직무와 대상 발송·재검사, 전환 설정과 배포 순서 | 2026-11-04 |
 | [도로명주소 검색 프록시](topics/road-address-proxy.md) | 승인키 서버 보관, 검색어 개인정보 처리와 POST 프록시, 제안됨 ADR | 2026-11-04 |

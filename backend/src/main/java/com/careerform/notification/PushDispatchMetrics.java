@@ -20,7 +20,8 @@ public final class PushDispatchMetrics {
         new String[] {"accepted", "ACCEPTED"}, new String[] {"retry", "RETRY_AFTER"}, new String[] {"retry", "SERVER_ERROR"},
         new String[] {"retry", "TIMEOUT"}, new String[] {"retry", "IO_ERROR"}, new String[] {"retry", "UNEXPECTED_STATUS"},
         new String[] {"abandoned", "GONE"}, new String[] {"abandoned", "INVALID_REQUEST"}, new String[] {"abandoned", "MAX_ATTEMPTS"},
-        new String[] {"abandoned", "DEADLINE_PASSED"}, new String[] {"abandoned", "SUBSCRIPTION_MISSING"}, new String[] {"abandoned", "POSTING_MISSING"});
+        new String[] {"abandoned", "DEADLINE_PASSED"}, new String[] {"abandoned", "SUBSCRIPTION_MISSING"}, new String[] {"abandoned", "POSTING_MISSING"},
+        new String[] {"abandoned", "FILTER_MISMATCH"});
     private final MeterRegistry registry;
     private final ExternalCallMetrics external;
     private final AtomicLong pendingBacklog = new AtomicLong();
