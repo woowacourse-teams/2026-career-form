@@ -118,6 +118,27 @@ class WorkflowContractTest(unittest.TestCase):
                     if job_name != "deploy":
                         self.assertNotIn("JUSO_API_KEY", str(job))
 
+    def test_deploy_jobs_alone_receive_jev_provider_settings(self) -> None:
+        for filename in (
+            "deploy-development.yml",
+            "deploy-staging.yml",
+            "deploy-production.yml",
+        ):
+            with self.subTest(filename=filename):
+                workflow = self._workflow(filename)
+                deploy = workflow["jobs"]["deploy"]
+                self.assertEqual(
+                    "${{ secrets.TYPESAFE_API_KEY }}",
+                    deploy["env"]["TYPESAFE_API_KEY"],
+                )
+                self.assertEqual(
+                    "${{ vars.CAREER_FORM_JEV_DATA_POLICY_REVIEWED }}",
+                    deploy["env"]["CAREER_FORM_JEV_DATA_POLICY_REVIEWED"],
+                )
+                for job_name, job in workflow["jobs"].items():
+                    if job_name != "deploy":
+                        self.assertNotIn("TYPESAFE_API_KEY", str(job))
+
     def test_deploy_jobs_inject_llm_enabled_variable_only_at_runtime(self) -> None:
         for filename in (
             "deploy-development.yml",

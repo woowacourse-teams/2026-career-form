@@ -20,6 +20,7 @@ class DeployComposeContractTest(unittest.TestCase):
             "SPRING_MONGODB_URI": "mongodb://redacted.invalid/career-form",
             "OPENAI_API_KEY": "synthetic-openai-key",
             "JUSO_API_KEY": "synthetic-juso-key",
+            "TYPESAFE_API_KEY": "synthetic-typesafe-key",
         }
         environment.pop("CAREER_FORM_LLM_ENABLED", None)
 
@@ -67,6 +68,12 @@ class DeployComposeContractTest(unittest.TestCase):
         )
         self.assertEqual(
             "synthetic-juso-key", backend["environment"]["JUSO_API_KEY"]
+        )
+        self.assertEqual(
+            "synthetic-typesafe-key", backend["environment"]["TYPESAFE_API_KEY"]
+        )
+        self.assertEqual(
+            "false", backend["environment"]["CAREER_FORM_JEV_DATA_POLICY_REVIEWED"]
         )
         self.assertEqual(
             {
