@@ -102,6 +102,22 @@ class WorkflowContractTest(unittest.TestCase):
                     if job_name != "deploy":
                         self.assertNotIn("OPENAI_API_KEY", str(job))
 
+    def test_deploy_jobs_alone_receive_address_search_key(self) -> None:
+        for filename in (
+            "deploy-development.yml",
+            "deploy-staging.yml",
+            "deploy-production.yml",
+        ):
+            with self.subTest(filename=filename):
+                workflow = self._workflow(filename)
+                self.assertEqual(
+                    "${{ secrets.JUSO_API_KEY }}",
+                    workflow["jobs"]["deploy"]["env"]["JUSO_API_KEY"],
+                )
+                for job_name, job in workflow["jobs"].items():
+                    if job_name != "deploy":
+                        self.assertNotIn("JUSO_API_KEY", str(job))
+
     def test_deploy_jobs_inject_llm_enabled_variable_only_at_runtime(self) -> None:
         for filename in (
             "deploy-development.yml",
