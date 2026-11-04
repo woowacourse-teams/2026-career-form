@@ -2,10 +2,10 @@
 
 > Issue: CF-394
 > Collected: 2026-11-04
-> Approval-Digest: 8d904686571f07dbb79657781e7ef2f8c58fa44922c855656c06d451750558fc
-> Source-Revision: fb132f7f
+> Approval-Digest: 86a77363cc4d6108f80d087edea3caf55ae7260cc2c2cb98ebb251ec1ce0b667
+> Source-Revision: 667fc9d4
 
-승인 digest는 worktree 체크포인트가 계산한 [후보 여섯 개 스냅샷](documents/approved-candidates.md)의 후보 digest이며 사람이 2026-11-04 "승인"으로 확정했다. payload는 후보 여섯 개를 주제별로 묶은 문서 하나다. 실제 지원값·계정·세션·시크릿·VAPID 키·구독 endpoint·대화 전문은 포함하지 않는다.
+승인 digest는 worktree 체크포인트가 계산한 [후보 여섯 개 스냅샷](documents/approved-candidates.md)의 후보 digest이며 사람이 2026-11-04 "승인"으로 확정했고, 같은 날 공고 직무 상한을 분류 전체로 넓힌 뒤 1·5번을 고쳐 다시 승인했다(이전 digest 8d904686…, Source-Revision fb132f7f). payload는 후보 여섯 개를 주제별로 묶은 문서 하나다. 실제 지원값·계정·세션·시크릿·VAPID 키·구독 endpoint·대화 전문은 포함하지 않는다.
 
 ## job-posting-notifications
 

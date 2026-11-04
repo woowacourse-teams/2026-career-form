@@ -990,3 +990,11 @@
 - 승인한 후보 6개를 [CF-394 bundle](../raw/issues/CF-394/manifest.md)에 payload 하나로 기록했다. 공고 직무 필터 계약(roles 1~10개 필수, role 라벨 파생, 레거시 공고의 roles 생략과 role 유지), 구독 받을 직무 규칙(덮어쓰기·빈 배열 미선택·없으면 유지, 키 유지), 대상 산정과 전환 설정(subscriptionIdsForRoles, 멀티키 인덱스, role-filter.enforced 기본 false, 배포 순서), 발송기 재검사(FILTER_MISMATCH, 로그·메트릭 경계), 직무 분류 정본(job-categories-v1.json 형식과 기동 검증, 가안), 검증 환경(Mongo 계약 테스트 실행 방법)이다.
 - [공고 구독 알림](topics/job-posting-notifications.md)의 Current를 CF-394로 바꾸고 CF-348 ADR을 History에 남겼다. 다른 topic 문서는 바꾸지 않았다.
 - 실제 지원값·계정·세션·시크릿·VAPID 키·구독 endpoint·사용자의 직무 선택·대화 전문은 저장하지 않았다.
+
+## [2026-11-04] update | CF-394 공고 직무 상한을 분류 전체로 재승인
+
+- Approval-Digest: 86a77363cc4d6108f80d087edea3caf55ae7260cc2c2cb98ebb251ec1ce0b667
+- Source-Revision: 667fc9d4
+- 같은 날 [CF-394 bundle](../raw/issues/CF-394/manifest.md)의 후보 1·5번을 고쳐 다시 승인했다. 공고 roles 상한을 Issue의 10개에서 분류 전체로 넓히고(대기업 공채 대응), 분류 파일 소분류 총수 30 상한(payload 3,900바이트 보장)과 분류 전체 선택 시 "전체 직무" 라벨, 관리 화면의 대분류 전체·전체 직무·모두 해제 버튼을 기록했다. 다른 후보 4개는 그대로다.
+- [공고 구독 알림](topics/job-posting-notifications.md)의 공고 직무 문장을 같은 내용으로 고쳤다. Current·History 링크는 바뀌지 않았다.
+- 실제 지원값·계정·세션·시크릿·VAPID 키·구독 endpoint·사용자의 직무 선택·대화 전문은 저장하지 않았다.

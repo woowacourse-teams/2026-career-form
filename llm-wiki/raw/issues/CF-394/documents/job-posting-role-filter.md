@@ -2,18 +2,18 @@
 
 > Issue: [CF-394](https://github.com/woowacourse-teams/2026-career-form/issues/394)
 > Collected: 2026-11-04
-> Approval-Digest: 8d904686571f07dbb79657781e7ef2f8c58fa44922c855656c06d451750558fc
-> Source-Revision: fb132f7f
+> Approval-Digest: 86a77363cc4d6108f80d087edea3caf55ae7260cc2c2cb98ebb251ec1ce0b667
+> Source-Revision: 667fc9d4
 
-공고 알림을 사용자가 고른 직무로 좁히는 서버 쪽 결정이다. 2026-11-02 검토에서 정한 범위를 #386에서 서버 #394와 확장 #395로 나눴고, 이 문서는 #394 구현(브랜치 CF-394)에서 확정한 계약을 적는다. 전달 경로와 발송 보장은 CF-348 ADR을 그대로 따르며 여기서는 거르기 규칙만 더한다. 설정 키, API 응답 모양, 상태 전이 표의 정본은 `backend/docs/job-posting-notifications.md`다.
+공고 알림을 사용자가 고른 직무로 좁히는 서버 쪽 결정이다. 2026-11-02 검토에서 정한 범위를 #386에서 서버 #394와 확장 #395로 나눴고, 이 문서는 #394 구현(브랜치 CF-394)에서 확정한 계약을 적는다. 2026-11-04 같은 날 대기업 공채가 전 직무를 한 번에 고를 수 있도록 공고 직무 상한을 Issue의 10개에서 분류 전체로 넓혀 다시 승인했다(아래 '공고의 직무'와 '직무 분류 정본'). 전달 경로와 발송 보장은 CF-348 ADR을 그대로 따르며 여기서는 거르기 규칙만 더한다. 설정 키, API 응답 모양, 상태 전이 표의 정본은 `backend/docs/job-posting-notifications.md`다.
 
 ## 직무 분류 정본
 
-직무 분류 정본(CF-394): backend/src/main/resources/notification/job-categories-v1.json에 version과 대분류(code, label)·소분류(code, label)를 둔다. 코드는 [A-Z][A-Z0-9_]{0,31}이고 소분류는 <대분류>.<소분류>(예: IT.BACKEND), 라벨은 한글 1~40자다. 기동 시 JobCategories.load()가 형식·유일성·라벨을 검증해 실패하면 기동을 막는다. 코드는 추가만 하고 삭제·변경하지 않으며 변경은 파일 버전 올리기와 배포로 한다. GET /api/v1/notifications/job-categories가 version과 categories[].roles[]를 돌려주고 알림 토글이 꺼지면 404다. 2026-11-04 목록(대분류 7·소분류 23)은 Issue #394 예시를 그대로 옮긴 가안이라 사람 확정이 남아 있다.
+직무 분류 정본(CF-394): backend/src/main/resources/notification/job-categories-v1.json에 version과 대분류(code, label)·소분류(code, label)를 둔다. 코드는 [A-Z][A-Z0-9_]{0,31}이고 소분류는 <대분류>.<소분류>(예: IT.BACKEND), 라벨은 한글 1~40자다. 기동 시 JobCategories.load()가 형식·유일성·라벨·소분류 총수(JobCategories.MAX_ROLES=30 이하, 공고 직무 상한과 payload 상한에 묶임)를 검증해 실패하면 기동을 막는다. 코드는 추가만 하고 삭제·변경하지 않으며 변경은 파일 버전 올리기와 배포로 한다. GET /api/v1/notifications/job-categories가 version과 categories[].roles[]를 돌려주고 알림 토글이 꺼지면 404다. 2026-11-04 목록(대분류 7·소분류 23)은 Issue #394 예시를 그대로 옮긴 가안이라 사람 확정이 남아 있다.
 
 ## 공고의 직무
 
-공고 직무 필터 계약(CF-394): 공고는 분류 소분류 코드 roles 1~10개가 필수이고(null 제거·strip·순서 유지 중복 제거, 분류에 없는 코드는 400 INVALID_POSTING/ROLE), role 라벨은 서버가 소분류 라벨을 가운뎃점(·)으로 이어 만들며 120자를 넘으면 앞 라벨 몇 개와 " 외 n개"로 줄인다. roles 없는 레거시 공고는 재분류하지 않고 목록·payload·관리 행에서 roles만 생략하며 기존 자유 글자 role은 그대로 유지한다.
+공고 직무 필터 계약(CF-394): 공고는 분류 소분류 코드 roles가 1개 이상 필수이고 상한은 분류 전체다(null 제거·strip·순서 유지 중복 제거, 분류에 없는 코드는 400 INVALID_POSTING/ROLE). Issue 본문의 10개 상한은 대기업 공채가 전 직무를 한 번에 고를 수 있도록 구현에서 분류 전체로 넓혔고, 대신 분류 파일의 소분류 총수를 JobCategories.MAX_ROLES=30으로 막는다(65자 코드 30개를 실은 payload가 평문 3,900바이트 안에 드는 것을 테스트로 보장). role 라벨은 서버가 소분류 라벨을 가운뎃점(·)으로 이어 만들며 120자를 넘으면 앞 라벨 몇 개와 " 외 n개"로 줄이고, 분류 전체를 고른 공고는 길이와 무관하게 "전체 직무"다. 관리 화면은 "이 대분류 전체 선택"·"전체 직무 선택"·"모두 해제" 버튼을 둔다. roles 없는 레거시 공고는 재분류하지 않고 목록·payload·관리 행에서 roles만 생략하며 기존 자유 글자 role은 그대로 유지한다.
 
 ## 구독의 받을 직무
 
