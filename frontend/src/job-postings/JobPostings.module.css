@@ -211,6 +211,40 @@
 .status dd {
   font-weight: 600;
 }
+/* Troubleshooting rows stay folded behind one line. */
+.factsMore {
+  margin: 0;
+  border-top: 1px solid var(--color-border);
+}
+.factsMore summary {
+  padding: 8px 0;
+  color: var(--color-text-muted);
+  list-style: none;
+  cursor: pointer;
+}
+.factsMore summary::-webkit-details-marker {
+  display: none;
+}
+.factsMore summary::before {
+  content: "▸ ";
+}
+.factsMore[open] summary::before {
+  content: "▾ ";
+}
+.factsMore summary:hover {
+  color: var(--color-text-strong);
+}
+.factsMore summary:focus-visible {
+  outline: 2px solid var(--color-action);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.factsMore .facts {
+  margin-top: 0;
+}
+.factsMore .facts > div:first-child {
+  border-top: 1px solid var(--color-border);
+}
 
 /* 받을 직무: category tabs on the left, role checkboxes on the right. */
 .roles {

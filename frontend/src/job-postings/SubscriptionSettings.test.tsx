@@ -118,23 +118,48 @@ describe("SubscriptionSettings", () => {
       surface: "options",
     });
   });
-  it("Chrome 종료, OS 알림, 로컬 저장, 서버 전송을 이름과 값으로 안내한다", () => {
+  it("마감 알림과 데이터 항목은 바로 보이고, 문제 해결 항목은 '알림이 안 보일 때'를 열어야 보인다", () => {
     renderSettings();
-    const facts = Object.fromEntries(
-      Array.from(document.querySelectorAll("dt")).map((dt) => [
-        dt.textContent,
-        dt.nextElementSibling?.textContent,
-      ]),
-    );
-    expect(facts).toMatchObject({
+    const facts = () =>
+      Object.fromEntries(
+        Array.from(document.querySelectorAll("dt")).map((dt) => [
+          dt.textContent,
+          dt.nextElementSibling?.textContent,
+        ]),
+      );
+    const visibleTerms = () =>
+      Array.from(document.querySelectorAll("dt"))
+        .filter((dt) => dt.closest("details")?.open !== false)
+        .map((dt) => dt.textContent);
+    expect(visibleTerms()).toEqual([
+      "구독",
+      "알림 표시",
+      "마감 알림",
+      "서버 전송",
+      "저장 위치",
+      "확장 삭제 시",
+      "구독 끄기",
+    ]);
+    expect(facts()).toMatchObject({
       "마감 알림": "마감 24시간·2시간 전",
-      "Chrome 종료 중": "알림 없음",
-      "OS 알림 꺼짐": "아이콘 숫자와 새 공고 탭으로 확인",
-      "놓친 알림": "다시 실행하면 공고당 1개",
+      "서버 전송": "푸시 구독 주소와 받을 직무 (프로필·지원서 내용 없음)",
       "저장 위치": "이 브라우저에만 저장 (암호화 안 됨, 서버 동기화 없음)",
       "확장 삭제 시": "저장한 공고도 삭제",
-      "서버 전송": "푸시 구독 주소와 받을 직무 (프로필·지원서 내용 없음)",
+      "구독 끄기":
+        "서버에 구독 주소 삭제 요청 (받을 직무는 이 브라우저에 남음)",
     });
+    expect(screen.getByText("Chrome 종료 중")).not.toBeVisible();
+
+    const more = screen.getByText("알림이 안 보일 때");
+    fireEvent.click(more);
+    expect(more.closest("details")).toHaveAttribute("open");
+    expect(screen.getByText("Chrome 종료 중")).toBeVisible();
+    expect(visibleTerms().slice(-4)).toEqual([
+      "Chrome 종료 중",
+      "OS 알림 설정",
+      "OS 알림 꺼짐",
+      "놓친 알림",
+    ]);
   });
   it("받을 직무 영역에서 소분류를 고르면 저장하고 선택 개수만 계측한다", async () => {
     const { onRolesChange, track } = renderSettings(
