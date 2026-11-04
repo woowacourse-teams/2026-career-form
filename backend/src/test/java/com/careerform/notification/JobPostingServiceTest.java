@@ -90,7 +90,6 @@ class JobPostingServiceTest {
         assertReason(new JobPostingService.Draft("회사", List.of("IT.BACKEND", "IT.NOPE"), "https://careers.example.test/jobs/4", opens, closes), "ROLE");
         assertReason(new JobPostingService.Draft("회사", List.of("it.backend"), "https://careers.example.test/jobs/4", opens, closes), "ROLE");
         assertReason(new JobPostingService.Draft("회사", List.of("IT"), "https://careers.example.test/jobs/4", opens, closes), "ROLE");
-        assertReason(new JobPostingService.Draft("회사", roleCodes(11), "https://careers.example.test/jobs/4", opens, closes), "ROLE");
         assertReason(new JobPostingService.Draft("회사", null, "ftp://careers.example.test/jobs/4", opens, closes), "ROLE");
         assertReason(new JobPostingService.Draft("회사", roles, null, opens, closes), "LINK");
         assertReason(new JobPostingService.Draft("회사", roles, "ftp://careers.example.test/jobs/4", opens, closes), "LINK");
@@ -106,7 +105,7 @@ class JobPostingServiceTest {
     }
 
     @Test
-    @DisplayName("직무 코드는 공백을 벗기고 null과 중복을 뺀 순서대로 저장되며 라벨은 소분류 라벨을 가운뎃점으로 이어 파생한다")
+    @DisplayName("직무 코드는 공백을 벗기고 null과 중복을 뺀 순서대로 저장되며 라벨은 소분류 라벨을 가운뎃점으로 이어 파생하고, 분류 전체를 고르면 '전체 직무'다")
     void normalizesRolesAndDerivesLabel() {
         subscribe("s1");
         var registered = assertInstanceOf(JobPostingService.Registered.class, service.register(new JobPostingService.Draft("합성 회사",
@@ -120,20 +119,27 @@ class JobPostingServiceTest {
         var row = service.list().stream().filter(candidate -> candidate.posting().id().equals(registered.posting().id())).findFirst().orElseThrow();
         assertThat(row.roles()).containsExactly(new JobCategories.Role("IT.BACKEND", "백엔드"), new JobCategories.Role("IT.FRONTEND", "프론트엔드"));
 
-        var elevenWithDuplicate = new ArrayList<>(roleCodes(10));
-        elevenWithDuplicate.add(roleCodes(1).getFirst());
-        var maximal = assertInstanceOf(JobPostingService.Registered.class, service.register(new JobPostingService.Draft("합성 회사", elevenWithDuplicate,
-            "https://careers.example.test/jobs/ten", NOW.minusSeconds(60), NOW.plusSeconds(86400))));
-        assertThat(maximal.posting().roles()).hasSize(JobPostingService.MAX_ROLES_PER_POSTING).containsExactlyElementsOf(roleCodes(10));
-        assertThat(maximal.posting().role()).isEqualTo(String.join("·", roleCodes(10).stream().map(code -> JobCategories.load().roleLabel(code).orElseThrow()).toList()));
+        var all = roleCodes(Integer.MAX_VALUE);
+        assertThat(all).hasSize(JobCategories.load().roleCount()).hasSizeGreaterThan(10);
+        var allWithDuplicate = new ArrayList<>(all);
+        allWithDuplicate.add(all.getFirst());
+        var everything = assertInstanceOf(JobPostingService.Registered.class, service.register(new JobPostingService.Draft("합성 회사", allWithDuplicate,
+            "https://careers.example.test/jobs/all", NOW.minusSeconds(60), NOW.plusSeconds(86400))));
+        assertThat(everything.posting().roles()).containsExactlyElementsOf(all);
+        assertThat(everything.posting().role()).isEqualTo("전체 직무");
+        var allButOne = all.subList(0, all.size() - 1);
+        var most = register(service, allButOne, "https://careers.example.test/jobs/most");
+        assertThat(most.roles()).containsExactlyElementsOf(allButOne);
+        assertThat(most.role()).isNotEqualTo("전체 직무").hasSizeLessThanOrEqualTo(JobPostingService.MAX_ROLE_LENGTH)
+            .isEqualTo(String.join("·", allButOne.stream().map(code -> JobCategories.load().roleLabel(code).orElseThrow()).toList()));
     }
 
     @Test
-    @DisplayName("라벨 합이 120자를 넘으면 앞 라벨 몇 개와 ' 외 n개'를 붙여 120자 안에 드는 가장 긴 모양으로 줄인다")
+    @DisplayName("라벨 합이 120자를 넘으면 앞 라벨 몇 개와 ' 외 n개'를 붙여 120자 안에 드는 가장 긴 모양으로 줄이고, 분류 전체를 고르면 길이와 무관하게 '전체 직무'다")
     void truncatesDerivedLabelBeyondLimit() {
         var synthetic = JobCategories.parse(JobCategoriesTest.json(1, JobCategoriesTest.category("LONG", "긴 분류",
             JobCategoriesTest.role("LONG.A", "가".repeat(40)), JobCategoriesTest.role("LONG.B", "나".repeat(40)),
-            JobCategoriesTest.role("LONG.C", "다".repeat(38)), JobCategoriesTest.role("LONG.D", "라".repeat(40)))));
+            JobCategoriesTest.role("LONG.C", "다".repeat(38)), JobCategoriesTest.role("LONG.D", "라".repeat(40)), JobCategoriesTest.role("LONG.E", "마".repeat(40)))));
         var longService = new JobPostingService(store, synthetic, RoleFilterPolicy.defaults(), clock);
         var exact = register(longService, List.of("LONG.A", "LONG.B", "LONG.C"), "https://careers.example.test/jobs/exact");
         assertThat(exact.role()).hasSize(JobPostingService.MAX_ROLE_LENGTH).isEqualTo("가".repeat(40) + "·" + "나".repeat(40) + "·" + "다".repeat(38));
@@ -142,6 +148,9 @@ class JobPostingServiceTest {
         var four = register(longService, List.of("LONG.A", "LONG.B", "LONG.C", "LONG.D"), "https://careers.example.test/jobs/four");
         assertThat(four.role()).isEqualTo("가".repeat(40) + "·" + "나".repeat(40) + " 외 2개");
         assertThat(four.roles()).containsExactly("LONG.A", "LONG.B", "LONG.C", "LONG.D");
+        var all = register(longService, List.of("LONG.E", "LONG.D", "LONG.C", "LONG.B", "LONG.A"), "https://careers.example.test/jobs/all-long");
+        assertThat(all.role()).isEqualTo("전체 직무");
+        assertThat(all.roles()).containsExactly("LONG.E", "LONG.D", "LONG.C", "LONG.B", "LONG.A");
         assertThat(store.listPostings()).extracting(JobPosting::role).allSatisfy(role -> assertThat(role).hasSizeLessThanOrEqualTo(JobPostingService.MAX_ROLE_LENGTH));
     }
 

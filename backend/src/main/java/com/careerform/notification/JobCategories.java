@@ -19,6 +19,13 @@ import tools.jackson.databind.json.JsonMapper;
 public final class JobCategories {
     static final String RESOURCE = "/notification/job-categories-v1.json";
     static final int MAX_LABEL_LENGTH = 40;
+    /**
+     * 분류 전체 소분류 수 상한. 공고는 분류 전체를 한 번에 고를 수 있어야 하므로(대기업 공채) 공고 roles 상한이 따로 없고 이 값이 상한이 된다.
+     * 65자 코드를 이 개수만큼 실은 푸시 payload가 평문 3,900바이트 안에 드는 것을 PushPayloadTest가 보장하므로, 값을 올릴 때는 그 테스트를 함께 본다.
+     */
+    static final int MAX_ROLES = 30;
+    /** 분류 전체를 고른 공고의 라벨. */
+    static final String ALL_ROLES_LABEL = "전체 직무";
     /** 라벨 구분자 가운뎃점(U+00B7). 앞뒤 공백 없이 잇는다. */
     static final String LABEL_SEPARATOR = "·";
     private static final Pattern CODE = Pattern.compile("[A-Z][A-Z0-9_]{0,31}");
@@ -86,6 +93,9 @@ public final class JobCategories {
             }
             categories.add(new Category(code, label(categoryNode, code), roles));
         }
+        if (roleLabels.size() > MAX_ROLES) {
+            throw new IllegalStateException("Job categories must have at most " + MAX_ROLES + " roles in total: " + roleLabels.size());
+        }
         return new JobCategories(version.intValue(), categories, roleLabels);
     }
 
@@ -106,10 +116,14 @@ public final class JobCategories {
         return codes.stream().filter(Objects::nonNull).map(String::strip).distinct().toList();
     }
 
-    /** 소분류 라벨을 가운뎃점으로 이은 표시 문자열. maxLength를 넘으면 앞 k개 라벨에 " 외 n개"를 붙여 maxLength 이하가 되는 가장 큰 k(1 이상)를 쓴다. */
+    /**
+     * 소분류 라벨을 가운뎃점으로 이은 표시 문자열. maxLength를 넘으면 앞 k개 라벨에 " 외 n개"를 붙여 maxLength 이하가 되는 가장 큰 k(1 이상)를 쓴다.
+     * 분류의 소분류 전체를 골랐으면 길이와 무관하게 ALL_ROLES_LABEL("전체 직무")이다.
+     */
     public String label(List<String> roleCodes, int maxLength) {
         var labels = roleCodes.stream().map(code -> roleLabel(code).orElseThrow(() -> new IllegalArgumentException("Unknown role code"))).toList();
         if (labels.isEmpty()) { throw new IllegalArgumentException("At least one role code is required"); }
+        if (new HashSet<>(roleCodes).size() == roleLabels.size()) { return ALL_ROLES_LABEL; }
         var joined = String.join(LABEL_SEPARATOR, labels);
         if (joined.length() <= maxLength) { return joined; }
         for (var kept = labels.size() - 1; kept > 1; kept--) {

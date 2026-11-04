@@ -19,7 +19,6 @@ import org.slf4j.LoggerFactory;
 public final class JobPostingService {
     static final int MAX_COMPANY_LENGTH = 80;
     static final int MAX_ROLE_LENGTH = 120;
-    static final int MAX_ROLES_PER_POSTING = 10;
     static final int MAX_LINK_LENGTH = 1024;
     static final Duration MAX_SUMMARY_RANGE = Duration.ofDays(400);
     private static final Logger log = LoggerFactory.getLogger(JobPostingService.class);
@@ -119,10 +118,10 @@ public final class JobPostingService {
         return new JobPosting(Identifiers.random(), company, categories.label(roles, MAX_ROLE_LENGTH), roles, link, draft.opensAt(), draft.closesAt(), now);
     }
 
-    /** 소분류 코드를 정규화한 뒤 1개 이상 상한 이하이고 모두 분류에 있어야 한다. */
+    /** 소분류 코드를 정규화한 뒤 1개 이상이고 모두 분류에 있어야 한다. 상한은 분류 전체이며(중복 제거 뒤 분류 소분류 수를 넘을 수 없다) 그 수는 JobCategories.MAX_ROLES가 막는다. */
     private List<String> roles(List<String> value) {
         var roles = JobCategories.normalize(value);
-        if (roles.isEmpty() || roles.size() > MAX_ROLES_PER_POSTING || !roles.stream().allMatch(categories::containsRole)) { throw new InvalidPosting("ROLE"); }
+        if (roles.isEmpty() || !roles.stream().allMatch(categories::containsRole)) { throw new InvalidPosting("ROLE"); }
         return roles;
     }
 

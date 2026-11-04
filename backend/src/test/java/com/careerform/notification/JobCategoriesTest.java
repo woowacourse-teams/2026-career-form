@@ -3,6 +3,9 @@ package com.careerform.notification;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.List;
+import java.util.stream.IntStream;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -20,7 +23,7 @@ class JobCategoriesTest {
         assertThat(categories.containsRole(null)).isFalse();
         assertThat(categories.roleLabel("IT.BACKEND")).contains("백엔드");
         assertThat(categories.roleLabel("IT.UNKNOWN")).isEmpty();
-        assertThat(categories.roleCount()).isEqualTo(categories.categories().stream().mapToInt(category -> category.roles().size()).sum()).isGreaterThan(7);
+        assertThat(categories.roleCount()).isEqualTo(categories.categories().stream().mapToInt(category -> category.roles().size()).sum()).isGreaterThan(7).isLessThanOrEqualTo(JobCategories.MAX_ROLES);
         assertThat(categories.categories()).allSatisfy(category -> assertThat(category.roles()).isNotEmpty()
             .allSatisfy(role -> assertThat(role.code()).startsWith(category.code() + ".")));
     }
@@ -56,6 +59,21 @@ class JobCategoriesTest {
         assertThat(boundary.roleCount()).isEqualTo(2);
     }
 
+    @Test
+    @DisplayName("소분류 총수는 공고가 전체를 고를 수 있는 상한 30개까지만 허용하고, 분류 전체를 고른 라벨은 '전체 직무'다")
+    void capsTotalRolesAndLabelsFullSelection() {
+        assertThat(JobCategories.MAX_ROLES).isEqualTo(30);
+        var full = JobCategories.parse(json(1, category("ALL", "전체", syntheticRoles("ALL", JobCategories.MAX_ROLES))));
+        assertThat(full.roleCount()).isEqualTo(JobCategories.MAX_ROLES);
+        var codes = full.categories().getFirst().roles().stream().map(JobCategories.Role::code).toList();
+        assertThat(full.label(codes, 120)).isEqualTo(JobCategories.ALL_ROLES_LABEL).isEqualTo("전체 직무");
+        assertThat(full.label(codes.reversed(), 120)).isEqualTo("전체 직무");
+        assertThat(full.label(codes.subList(0, codes.size() - 1), 120)).isNotEqualTo("전체 직무").hasSizeLessThanOrEqualTo(120).endsWith("개");
+        assertThat(full.label(List.of("ALL.R0"), 120)).isEqualTo("직무 0");
+        assertInvalid(json(1, category("ALL", "전체", syntheticRoles("ALL", JobCategories.MAX_ROLES + 1))), "소분류 31개");
+        assertInvalid(json(1, category("A", "가", syntheticRoles("A", JobCategories.MAX_ROLES)), category("B", "나", syntheticRoles("B", 1))), "두 대분류 합계 31개");
+    }
+
     private static void assertInvalid(String json, String description) {
         assertThatThrownBy(() -> JobCategories.parse(json)).as(description).isInstanceOf(IllegalStateException.class);
     }
@@ -69,4 +87,9 @@ class JobCategoriesTest {
     }
 
     static String role(String code, String label) { return "{\"code\":\"" + code + "\",\"label\":\"" + label + "\"}"; }
+
+    /** `<대분류>.R<번호>` 코드와 `직무 <번호>` 라벨인 합성 소분류 count개. */
+    static String[] syntheticRoles(String category, int count) {
+        return IntStream.range(0, count).mapToObj(index -> role(category + ".R" + index, "직무 " + index)).toArray(String[]::new);
+    }
 }

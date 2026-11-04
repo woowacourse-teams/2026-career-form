@@ -65,20 +65,25 @@ class PushPayloadTest {
     }
 
     @Test
-    @DisplayName("회사 80자, 직무 120자, 링크 1024자에 65자 소분류 코드 10개를 더한 상한에서도 암호화 여유를 둔 4KB 한도 안에 든다")
+    @DisplayName("회사 80자, 직무 120자, 링크 1024자에 65자 소분류 코드를 분류 상한인 30개 더한 공고도 암호화 여유를 둔 4KB 한도 안에 든다")
     void staysUnderWebPushLimitForMaximalInputs() {
-        assertThat(maximalRoles()).hasSize(10).doesNotHaveDuplicates().allSatisfy(code -> assertThat(code).hasSize(65));
+        assertThat(maximalRoles()).hasSize(JobCategories.MAX_ROLES).hasSize(30).doesNotHaveDuplicates().allSatisfy(code -> assertThat(code).hasSize(65));
         var payload = PushPayload.of(maximalPosting(), NOW);
         assertThat(payload.length).isLessThanOrEqualTo(PushPayload.MAX_PLAINTEXT_BYTES);
         assertThat(PushPayload.MAX_PLAINTEXT_BYTES + PushPayload.AES128GCM_OVERHEAD_BYTES).isLessThanOrEqualTo(4096);
     }
 
-    /** 대분류 32자 + `.` + 소분류 32자인 합성 코드 10개. 분류 검증을 거치지 않고 JobPosting에 직접 넣는다. */
+    /** 대분류 32자 + `.` + 소분류 32자인 합성 코드를 분류 상한(JobCategories.MAX_ROLES)만큼. 분류 검증을 거치지 않고 JobPosting에 직접 넣는다. */
     static List<String> maximalRoles() {
-        return IntStream.range(0, 10).mapToObj(index -> ("R" + index).repeat(16) + "." + ("S" + index).repeat(16)).toList();
+        return IntStream.range(0, JobCategories.MAX_ROLES).mapToObj(index -> ("R" + symbol(index)).repeat(16) + "." + ("S" + symbol(index)).repeat(16)).toList();
     }
 
-    /** 회사 80자, 직무 라벨 120자, 링크 1024자, 소분류 코드 10개의 상한 공고. */
+    /** 0~9는 숫자, 10 이상은 A부터 한 글자. 코드 형식 [A-Z0-9_] 안에서 서로 다른 코드를 만든다. */
+    private static String symbol(int index) {
+        return index < 10 ? String.valueOf(index) : String.valueOf((char) ('A' + index - 10));
+    }
+
+    /** 회사 80자, 직무 라벨 120자, 링크 1024자, 분류 상한 개수의 소분류 코드를 실은 상한 공고. */
     static JobPosting maximalPosting() {
         var link = "https://careers.example.test/" + "a".repeat(1024 - "https://careers.example.test/".length());
         return new JobPosting("0123456789abcdef0123456789abcdef", "회".repeat(80), "직".repeat(120), maximalRoles(), link,
