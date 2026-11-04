@@ -1,7 +1,11 @@
-import { expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { FieldCandidateHandle } from "../dom/types";
 import type { ReviewPlanItem } from "../review/review-plan";
-import { buildResultModel, unfilledCandidateIds } from "./result-model";
+import {
+  buildResultModel,
+  profileGroups,
+  unfilledCandidateIds,
+} from "./result-model";
 
 const item = {
   candidateId: "field-1",
@@ -499,4 +503,122 @@ it("lists a manual generic address field as pending with its own reason", () => 
     },
   ]);
   expect(skipped).toEqual([]);
+});
+
+describe("fields without a saved value", () => {
+  const blocked = (
+    id: string,
+    extra: Partial<ReviewPlanItem> = {},
+  ): ReviewPlanItem => ({
+    candidateId: id,
+    fieldLabel: `항목 ${id}`,
+    currentValue: "",
+    previewValue: "",
+    status: "unavailable",
+    selected: false,
+    disabled: true,
+    revealed: true,
+    reason: "",
+    genericGrade: "BLOCKED",
+    ...extra,
+  });
+  const linked = { profileFieldKey: "contact.contact.email" } as const;
+  const handleOf = (...elements: Element[]) =>
+    ({ elements }) as unknown as FieldCandidateHandle;
+
+  it("skips a linked BLOCKED field without a value instead of asking for review", () => {
+    const model = buildResultModel({
+      reviewItems: [blocked("a", linked)],
+      results: [],
+    });
+    expect(model.pending).toEqual([]);
+    expect(model.skipped).toMatchObject([{ id: "a", reason: "등록된 정보 없음" }]);
+  });
+
+  it("skips an unlinked BLOCKED field without a value as unsupported", () => {
+    const model = buildResultModel({
+      reviewItems: [blocked("a")],
+      results: [],
+    });
+    expect(model.pending).toEqual([]);
+    expect(model.skipped).toMatchObject([
+      { id: "a", reason: "자동 입력 미지원" },
+    ]);
+  });
+
+  it("keeps a BLOCKED field that has a saved value in review", () => {
+    const model = buildResultModel({
+      reviewItems: [blocked("a", { ...linked, profileValue: "값" })],
+      results: [],
+    });
+    expect(model.skipped).toEqual([]);
+    expect(model.pending).toMatchObject([{ id: "a", reason: "입력 못함" }]);
+  });
+
+  it("groups skipped fields by reason and counts one entry per control", () => {
+    const shared = document.createElement("input");
+    const other = document.createElement("input");
+    const pendingControl = document.createElement("input");
+    const handles: Record<string, FieldCandidateHandle> = {
+      a: handleOf(shared),
+      b: handleOf(shared),
+      c: handleOf(other),
+      p: handleOf(pendingControl),
+      d: handleOf(pendingControl),
+    };
+    const model = buildResultModel({
+      reviewItems: [
+        blocked("a", linked),
+        blocked("b", linked),
+        blocked("c"),
+        blocked("d", linked),
+        blocked("e"),
+        blocked("f"),
+        blocked("p", { ...linked, profileValue: "값" }),
+      ],
+      results: [],
+      fieldStateFor: (id) =>
+        id in handles
+          ? { visible: true, value: "", handle: handles[id] }
+          : { visible: true, value: "" },
+    });
+    expect(model.pending.map(({ id }) => id)).toEqual(["p"]);
+    const groups = profileGroups(model, (id) =>
+      id in handles
+        ? { visible: true, value: "", handle: handles[id] }
+        : { visible: true, value: "" },
+    );
+    expect(groups.profileUnset.map(({ id }) => id)).toEqual(["a"]);
+    expect(groups.notInProfile.map(({ id }) => id)).toEqual(["c", "e", "f"]);
+  });
+
+  it("leaves hidden duplicate fields out of the profile groups", () => {
+    const model = buildResultModel({
+      reviewItems: [
+        blocked("a", linked),
+        blocked("b", { ...linked, hiddenFromReview: true }),
+        blocked("c", { hiddenFromReview: true }),
+        blocked("d"),
+      ],
+      results: [],
+    });
+    const groups = profileGroups(model);
+    expect(groups.profileUnset.map(({ id }) => id)).toEqual(["a"]);
+    expect(groups.notInProfile.map(({ id }) => id)).toEqual(["d"]);
+  });
+
+  it("marks only pending fields when asked, and keeps the default unchanged", () => {
+    const model = buildResultModel({
+      reviewItems: [
+        blocked("a", linked),
+        blocked("b"),
+        blocked("p", { ...linked, profileValue: "값" }),
+      ],
+      results: [],
+    });
+    expect(unfilledCandidateIds(model)).toEqual(["p", "a", "b"]);
+    expect(unfilledCandidateIds(model, undefined, { pendingOnly: true })).toEqual(
+      ["p"],
+    );
+  });
 });

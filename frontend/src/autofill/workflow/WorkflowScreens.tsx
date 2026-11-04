@@ -62,6 +62,7 @@ interface WorkflowScreensProps {
   fieldStateFor?: WorkflowResultsProps["fieldStateFor"];
   profile?: Profile;
   optionsFor?(candidateId: string): readonly string[];
+  onOpenProfile?(): void;
   currentCategory?: string;
   analysisSummary?: {
     mode: "ADAPTER" | "GENERIC";
@@ -191,6 +192,7 @@ export function WorkflowScreens({
   fieldStateFor,
   profile,
   optionsFor,
+  onOpenProfile,
   stage,
   preparationItems,
   warnings,
@@ -635,6 +637,8 @@ export function WorkflowScreens({
           onLocate={onLocate}
           onLocateSection={onLocateSection}
           operatedCategories={operatedCategories}
+          profileGroupsVisible={analysisSummary?.mode === "GENERIC"}
+          onOpenProfile={onOpenProfile}
         />
         {manualRevealedLabels.length > 0 && (
           <section aria-label="직접 확인할 새 칸">
