@@ -8,6 +8,7 @@ import {
 } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 import { JobPostings } from "./JobPostings";
+import type { JobCategoriesView } from "./job-roles";
 import { PostingService } from "./service";
 import type { Posting } from "./model";
 import { PushApiError, type ServerPosting } from "./push-api";
@@ -25,10 +26,32 @@ const seenState: PushStateView = {
   unread: 0,
   roles: [],
 };
+const categoriesView: JobCategoriesView = {
+  categories: {
+    version: 1,
+    categories: [
+      {
+        code: "IT",
+        label: "IT/개발",
+        roles: [
+          { code: "IT.BACKEND", label: "백엔드" },
+          { code: "IT.FRONTEND", label: "프론트엔드" },
+        ],
+      },
+      {
+        code: "DESIGN",
+        label: "디자인",
+        roles: [{ code: "DESIGN.UX_UI", label: "UX/UI" }],
+      },
+    ],
+  },
+  error: null,
+};
 function setup(
   options: {
     inbox?: () => Promise<ServerPosting[]>;
     pushState?: PushStateView;
+    categories?: () => Promise<JobCategoriesView>;
   } = {},
 ) {
   let rows: Posting[] = [];
@@ -59,19 +82,23 @@ function setup(
     subscribe: () => () => {},
   };
   const inbox: ServerPosting[] = [];
-  const pushState = options.pushState ?? seenState;
+  let pushState = options.pushState ?? seenState;
+  // Default: a backend without the category API (older than CF-394).
+  const categories: () => Promise<JobCategoriesView> =
+    options.categories ??
+    (async () => ({ categories: null, error: "ENDPOINT_UNAVAILABLE" }));
   const pushClient = {
     state: vi.fn(async () => pushState),
     setEnabled: vi.fn(async (enabled: boolean) => ({ ...pushState, enabled })),
     test: vi.fn(async () => pushState),
     record: vi.fn(async () => pushState),
     later: vi.fn(async () => pushState),
-    setRoles: vi.fn(async (roles: readonly string[]) => ({
-      ...pushState,
-      roles: [...roles],
-    })),
+    setRoles: vi.fn(async (roles: readonly string[]) => {
+      pushState = { ...pushState, roles: [...roles] };
+      return pushState;
+    }),
     inbox: vi.fn(options.inbox ?? (async () => [...inbox])),
-    categories: vi.fn(async () => ({ categories: null, error: null })),
+    categories: vi.fn(categories),
     subscribe: () => () => {},
   } satisfies PushClient;
   return {
@@ -741,4 +768,141 @@ it("알림 설정 대화상자는 Tab을 안에 가두고 배경을 누르면 �
   fireEvent.click(dialog.previousElementSibling as HTMLElement);
   expect(screen.queryByRole("dialog")).toBeNull();
   expect(open).toHaveFocus();
+});
+
+const taggedPosting = (company: string, id: string, roles: string[]) =>
+  inboxPosting(company, {
+    id: id.repeat(32),
+    roles,
+    link: `https://careers.example.test/jobs/${id}`,
+  });
+const legacyPosting = () =>
+  inboxPosting("기존 회사", {
+    id: "c".repeat(32),
+    link: "https://careers.example.test/jobs/legacy",
+  });
+
+it("새 공고 탭은 선택한 직무와 겹치는 공고와 직무 없는 기존 공고만 보여 주고 개수도 거른 뒤 수다", async () => {
+  const env = setup({
+    pushState: { ...seenState, roles: ["IT.BACKEND"] },
+    categories: async () => categoriesView,
+  });
+  env.inbox.push(
+    taggedPosting("백엔드 회사", "a", ["IT.BACKEND", "IT.QA"]),
+    taggedPosting("디자인 회사", "b", ["DESIGN.UX_UI"]),
+    legacyPosting(),
+  );
+  renderPage(env);
+  await screen.findByRole("tab", { name: "새 공고 2" });
+  expect(screen.getByRole("link", { name: "백엔드 회사 열기" })).toBeVisible();
+  expect(screen.getByRole("link", { name: "기존 회사 열기" })).toBeVisible();
+  expect(screen.queryByRole("link", { name: "디자인 회사 열기" })).toBeNull();
+  expect(panel()).not.toHaveTextContent("받을 직무를 고르세요");
+});
+
+it("받을 직무를 고르지 않았으면 직무 있는 공고 대신 안내를 보여 주고 기존 공고는 그대로 보여 준다", async () => {
+  const env = setup({ categories: async () => categoriesView });
+  env.inbox.push(
+    taggedPosting("백엔드 회사", "a", ["IT.BACKEND"]),
+    legacyPosting(),
+  );
+  renderPage(env);
+  await screen.findByRole("tab", { name: "새 공고 1" });
+  expect(panel()).toHaveTextContent("받을 직무를 고르세요");
+  expect(
+    within(panel()).getByRole("link", { name: "기존 회사 열기" }),
+  ).toBeVisible();
+  expect(
+    within(panel()).queryByRole("link", { name: "백엔드 회사 열기" }),
+  ).toBeNull();
+  fireEvent.click(
+    within(panel()).getByRole("button", { name: "받을 직무 고르기" }),
+  );
+  expect(screen.getByRole("dialog", { name: "알림 설정" })).toBeVisible();
+});
+
+it("미선택이고 보여 줄 공고가 없으면 목록 대신 안내를 보여 주고 새 공고 탭에서 시작한다", async () => {
+  const env = setup({ categories: async () => categoriesView });
+  env.inbox.push(taggedPosting("백엔드 회사", "a", ["IT.BACKEND"]));
+  renderPage(env);
+  await screen.findByRole("tab", { name: "새 공고 0" });
+  await waitFor(() =>
+    expect(tab("새 공고 0")).toHaveAttribute("aria-selected", "true"),
+  );
+  expect(panel()).toHaveTextContent("받을 직무를 고르세요");
+  expect(panel()).not.toHaveTextContent("새 공고 없음");
+});
+
+it("분류 API가 없는 구 백엔드와 조합하면 새 공고 탭과 설정이 지금처럼 동작한다", async () => {
+  const env = setup();
+  env.inbox.push(legacyPosting());
+  renderPage(env);
+  await screen.findByRole("tab", { name: "새 공고 1" });
+  expect(screen.getByRole("link", { name: "기존 회사 열기" })).toBeVisible();
+  expect(panel()).not.toHaveTextContent("받을 직무");
+  fireEvent.click(screen.getByRole("button", { name: "알림 설정" }));
+  const dialog = screen.getByRole("dialog", { name: "알림 설정" });
+  const region = await within(dialog).findByRole("region", {
+    name: "받을 직무",
+  });
+  expect(within(region).getByRole("status")).toHaveTextContent("서버 미지원");
+  expect(within(region).queryByRole("checkbox")).toBeNull();
+});
+
+it("알림 설정에서 직무를 고르면 바로 저장되고 새 공고 탭이 다시 걸러진다", async () => {
+  const env = setup({ categories: async () => categoriesView });
+  env.inbox.push(
+    taggedPosting("백엔드 회사", "a", ["IT.BACKEND"]),
+    legacyPosting(),
+  );
+  const track = vi.fn();
+  renderPage(env, { track });
+  await screen.findByRole("tab", { name: "새 공고 1" });
+  fireEvent.click(screen.getByRole("button", { name: "알림 설정" }));
+  const dialog = screen.getByRole("dialog", { name: "알림 설정" });
+  const region = await within(dialog).findByRole("region", {
+    name: "받을 직무",
+  });
+  fireEvent.click(within(region).getByRole("checkbox", { name: "백엔드" }));
+  await waitFor(() =>
+    expect(env.pushClient.setRoles).toHaveBeenCalledWith(["IT.BACKEND"]),
+  );
+  await waitFor(() =>
+    expect(track).toHaveBeenCalledWith("push_roles_saved", {
+      surface: "options",
+      role_count: 1,
+    }),
+  );
+  await screen.findByRole("tab", { name: "새 공고 2" });
+  expect(within(region).getByText("1개 선택")).toBeInTheDocument();
+  fireEvent.keyDown(dialog, { key: "Escape" });
+  expect(screen.getByRole("link", { name: "백엔드 회사 열기" })).toBeVisible();
+  expect(panel()).not.toHaveTextContent("받을 직무를 고르세요");
+});
+
+it("알림 설정 대화상자의 Tab 가두기는 직무 체크박스를 마지막 조작 요소로 셈한다", async () => {
+  const env = setup({ categories: async () => categoriesView });
+  env.pushClient.test.mockImplementation(() => new Promise(() => {}));
+  renderPage(env);
+  fireEvent.click(screen.getByRole("button", { name: "알림 설정" }));
+  const dialog = screen.getByRole("dialog", { name: "알림 설정" });
+  const region = await within(dialog).findByRole("region", {
+    name: "받을 직무",
+  });
+  const close = within(dialog).getByRole("button", { name: "닫기" });
+  const test = within(dialog).getByRole("button", { name: "알림 테스트" });
+  await waitFor(() => expect(test).toBeEnabled());
+  // A pending test keeps every later button disabled, so the last checkbox
+  // becomes the final Tab stop.
+  fireEvent.click(test);
+  await waitFor(() => {
+    for (const button of within(dialog).getAllByRole("button"))
+      if (button !== close) expect(button).toBeDisabled();
+  });
+  const last = within(region).getByRole("checkbox", { name: "프론트엔드" });
+  last.focus();
+  fireEvent.keyDown(last, { key: "Tab" });
+  expect(close).toHaveFocus();
+  fireEvent.keyDown(close, { key: "Tab", shiftKey: true });
+  expect(last).toHaveFocus();
 });

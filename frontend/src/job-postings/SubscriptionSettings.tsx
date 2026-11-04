@@ -3,6 +3,8 @@ import styles from "./JobPostings.module.css";
 import type { VisibilityAnswer } from "./notification-check";
 import type { PushStateView, RecordSource } from "./push-messages";
 import { MINIMUM_CHROME_VERSION } from "./push-subscription";
+import { RoleSelector } from "./RoleSelector";
+import type { JobCategoriesHandle } from "./use-job-categories";
 import { VisibilityCheck } from "./VisibilityCheck";
 
 const unsupportedText = `Chrome ${MINIMUM_CHROME_VERSION} 이상 필요`;
@@ -34,8 +36,8 @@ const FACTS: readonly (readonly [string, string])[] = [
   ["놓친 알림", "다시 실행하면 공고당 1개"],
   ["저장 위치", "이 브라우저에만 저장 (암호화 안 됨, 서버 동기화 없음)"],
   ["확장 삭제 시", "저장한 공고도 삭제"],
-  ["서버 전송", "푸시 구독 주소만 (프로필·지원서 내용 없음)"],
-  ["구독 끄기", "서버에 구독 주소 삭제 요청"],
+  ["서버 전송", "푸시 구독 주소와 받을 직무 (프로필·지원서 내용 없음)"],
+  ["구독 끄기", "서버에 구독 주소 삭제 요청 (받을 직무는 이 브라우저에 남음)"],
 ];
 
 interface SwitchProps {
@@ -76,24 +78,38 @@ interface Props {
   state: PushStateView | undefined;
   failed: boolean;
   busy: boolean;
+  categories: JobCategoriesHandle;
   onEnabledChange(enabled: boolean): Promise<void>;
+  onRolesChange(roles: string[]): Promise<boolean>;
   onTest(): Promise<void>;
   onAnswer(answer: VisibilityAnswer, source: RecordSource): Promise<void>;
   track: TrackEvent;
   userAgent?: string;
 }
 
-/** Body of the 알림 설정 dialog: status, test, visibility check and facts. */
+/** Body of the 알림 설정 dialog: status, roles, test, visibility check, facts. */
 export function SubscriptionSettings({
   state,
   failed,
   busy,
+  categories,
   onEnabledChange,
+  onRolesChange,
   onTest,
   onAnswer,
   track,
   userAgent,
 }: Props) {
+  // Only the count leaves the browser; the codes stay a local preference.
+  const saveRoles = async (roles: string[]) => {
+    const ok = await onRolesChange(roles);
+    if (ok)
+      track("push_roles_saved", {
+        surface: "options",
+        role_count: roles.length,
+      });
+    return ok;
+  };
   return (
     <div className={styles.settingsBody}>
       <dl className={`${styles.facts} ${styles.status}`}>
@@ -110,6 +126,14 @@ export function SubscriptionSettings({
           다시 등록
         </button>
       )}
+      <RoleSelector
+        view={categories.view}
+        loading={categories.loading}
+        selected={state?.roles ?? []}
+        busy={busy}
+        onChange={saveRoles}
+        onReload={categories.reload}
+      />
       <VisibilityCheck
         variant="settings"
         state={state}
