@@ -39,6 +39,7 @@ const stage = (calls: number, attempts: number) => ({
   },
   failedAttempts: 0,
   failedAttemptMs: null,
+  tokenLimitAttempts: 0,
 });
 const tokens = {
   observedAttempts: 10,
@@ -308,7 +309,7 @@ describe("AI 평가 화면의 단계 탭", () => {
     expect(titles("#cf-performance")).toEqual([
       "자동기입 시간",
       "처리량",
-      "자동기입 실패율",
+      "자동기입 실패율", "입력 토큰 초과",
     ]);
   });
 
@@ -319,7 +320,7 @@ describe("AI 평가 화면의 단계 탭", () => {
     expect(titles("#cf-performance")).toEqual([
       "AI 응답 시간",
       "요청 처리 시간",
-      "요청 실패율",
+      "요청 실패율", "입력 토큰 초과",
     ]);
   });
 
@@ -334,7 +335,7 @@ describe("AI 평가 화면의 단계 탭", () => {
     expect(titles("#cf-performance")).toEqual([
       "AI 응답 시간",
       "요청 처리 시간",
-      "요청 실패율",
+      "요청 실패율", "입력 토큰 초과",
     ]);
   });
 
