@@ -981,3 +981,10 @@
 - 승인한 후보 7개를 [CF-356 bundle](../raw/issues/CF-356/manifest.md)에 기록했다. 채점 방식, 준비 단계 구조와 채점 범위, 수집 경계, 측정 범위, 프롬프트 버전, 실행 운영과 ADR이다.
 - [범용 매칭 모델 평가](topics/generic-matching-model-evaluation.md) topic을 새로 만들었다.
 - 실제 지원값, 계정, 세션, 페이지 주소, 대화 전문은 저장하지 않았다.
+
+## [2026-11-05] ingest | CF-356 범용 매칭 모델 평가 갱신
+- Approval-Digest: c285e0e7eb9262fa98363b50cb41a353738772ee8c5712c751ea3ce0390118b1
+- Source-Revision: 11aff08
+- 승인한 후보 9개를 더해 [CF-356 bundle](../raw/issues/CF-356/manifest.md)을 갱신했다. 대표 채점식, 자동기입 1번과 측정 범위, 실행 사이 흔들림, 데이터셋 v4, 기준 측정, 목록 파일, 자동 평가 조건, 환경 운영, 수집 예외다.
+- [범용 매칭 모델 평가](topics/generic-matching-model-evaluation.md) topic의 현재 상태를 고쳤다.
+- 실제 지원값, 계정, 세션, 페이지 주소, 대화 전문은 저장하지 않았다.
