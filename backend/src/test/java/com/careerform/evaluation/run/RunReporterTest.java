@@ -198,6 +198,38 @@ class RunReporterTest {
     }
 
     @Test
+    @DisplayName("실패한 호출의 칸은 사용자에게 비어 있으므로 빼지 않고, 정답이 있으면 놓침, 없으면 맞게 비움으로 센다")
+    void failedCallsCountAsUnanswered() {
+        Map<String, String> truth = new java.util.HashMap<>();
+        truth.put("x", "k1");
+        truth.put("y", null);
+        List<CallResultRecord> records = List.of(fields(1, Map.of("x", ObservedItem.answered("k1", 0.9), "y", ObservedItem.answered(null, 0.9))),
+            failed(1, "b", 1, CallKind.Stage.MAPPING, 50, List.of()));
+
+        RunReport report = new RunReporter().report(run(AT, AT, AT.plusSeconds(1)), records, record -> truth, caseId -> "site");
+
+        AutofillOutcome expected = new AutofillOutcome(1, 0, 0, 2, 1, 0);
+        assertThat(report.scores().get("TOTAL").counts()).isEqualTo(expected);
+        assertThat(report.scores().get("MAPPING").counts()).isEqualTo(expected);
+        assertThat(report.autofill().counts()).isEqualTo(expected);
+        assertThat(report.autofill().fillRate()).isEqualTo(0.5);
+    }
+
+    @Test
+    @DisplayName("입력 토큰 초과로 거절된 시도를 다른 실패 시도와 구분해 센다")
+    void countsTokenLimitAttempts() {
+        Attempt tokenLimit = new Attempt("jev", "answer", 10 * MS, 400, Outcome.TOKEN_LIMIT, null, null, null);
+        Attempt rateLimit = new Attempt("jev", "answer", 10 * MS, 429, Outcome.HTTP_ERROR, null, null, null);
+        List<CallResultRecord> records = List.of(record(1, "a", 1, CallKind.Stage.MAPPING, new CallScore(1, 0, 0, 0, 0), 100,
+            List.of(tokenLimit, tokenLimit, rateLimit, attempt(50, 10L, 1L))));
+
+        RunReport report = new RunReporter().report(run(AT, AT, AT.plusSeconds(1)), records);
+
+        assertThat(report.performance().get("TOTAL").tokenLimitAttempts()).isEqualTo(2);
+        assertThat(report.performance().get("TOTAL").failedAttempts()).isEqualTo(3);
+    }
+
+    @Test
     @DisplayName("결과가 없으면 정확도와 분포는 null이다")
     void emptyRunIsUnmeasured() {
         RunReport report = new RunReporter().report(run(AT, null, null), List.of());

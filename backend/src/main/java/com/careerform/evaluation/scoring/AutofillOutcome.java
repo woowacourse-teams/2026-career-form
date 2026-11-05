@@ -6,7 +6,7 @@ import java.util.Map;
  * 칸 매핑 답을 사용자 화면에서 일어나는 일로 나눈 결과. 확장프로그램처럼 확신도 0.8 이상만 자동기입으로 본다.
  * 넣은 칸은 맞게 넣음, 다른 항목을 넣음, 넣지 말아야 할 칸에 넣음으로, 넣지 않은 칸(비움·확인 필요·막음)은
  * 정답이 없으면 맞게 비움, 있으면 놓침으로 나눈다. 확신도를 기록하지 않은 답은 확인 불가다.
- * 공급자를 쓸 수 없어 답하지 못한 칸은 뺀다.
+ * 공급자를 쓸 수 없어 답하지 못한 칸도 사용자에게는 빈 칸이므로 같이 나눈다. 빼면 실패가 많은 모델의 점수가 오른다.
  */
 public record AutofillOutcome(int filledCorrect, int filledWrongKey, int filledUnneeded, int blankCorrect, int missed,
     int unobserved) {
@@ -14,13 +14,10 @@ public record AutofillOutcome(int filledCorrect, int filledWrongKey, int filledU
     /** 정밀도를 채움률보다 2배 중시한다. 잘못 넣은 칸은 사용자가 찾아 고쳐야 하고, 놓친 칸은 직접 입력하면 된다. */
     private static final double BETA = 0.5;
 
-    /** 칸 하나의 결과. 공급자를 쓸 수 없어 답하지 못한 칸은 {@code EXCLUDED}다. */
-    public enum Kind { FILLED_CORRECT, FILLED_WRONG_KEY, FILLED_UNNEEDED, BLANK_CORRECT, MISSED, UNOBSERVED, EXCLUDED }
+    /** 칸 하나의 결과. */
+    public enum Kind { FILLED_CORRECT, FILLED_WRONG_KEY, FILLED_UNNEEDED, BLANK_CORRECT, MISSED, UNOBSERVED }
 
     public static Kind classify(String want, ObservedItem item) {
-        if (item.providerUnavailable()) {
-            return Kind.EXCLUDED;
-        }
         if (item.value() != null && item.confidence() == null) {
             return Kind.UNOBSERVED;
         }
@@ -36,9 +33,6 @@ public record AutofillOutcome(int filledCorrect, int filledWrongKey, int filledU
      * 보아 정답과 같은 4가지(맞게 넣음·맞게 비움·놓침·잘못 넣음)로 센다. 그래서 단계마다 같은 점수식을 쓸 수 있다.
      */
     public static Kind classifyAnswer(String want, ObservedItem item) {
-        if (item.providerUnavailable()) {
-            return Kind.EXCLUDED;
-        }
         if (java.util.Objects.equals(want, item.value())) {
             return want == null ? Kind.BLANK_CORRECT : Kind.FILLED_CORRECT;
         }

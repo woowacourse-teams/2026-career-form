@@ -153,7 +153,12 @@ class OpenAiChoiceModelTest {
         var transport = new FakeTransport(new OpenAiChoiceModel.Reply(400,
             "{\"error\":{\"code\":\"context_length_exceeded\",\"message\":\"too long\"}}"));
 
-        assertThatThrownBy(() -> model(transport).answer(Map.of(), QUESTIONS)).isInstanceOf(TokenLimitExceeded.class);
+        var seen = new java.util.ArrayList<com.careerform.monitoring.ModelCallRecording.Attempt>();
+
+        assertThatThrownBy(() -> com.careerform.monitoring.ModelCallRecording.within(seen::add,
+            () -> model(transport).answer(Map.of(), QUESTIONS))).isInstanceOf(TokenLimitExceeded.class);
+        assertThat(seen).singleElement().satisfies(attempt -> assertThat(attempt.outcome())
+            .isEqualTo(com.careerform.monitoring.ModelCallRecording.Outcome.TOKEN_LIMIT));
     }
 
     @Test

@@ -297,8 +297,10 @@ public final class JevClient {
         }
         Sent sent = new Sent(response, System.nanoTime() - started);
         if (response.statusCode() != 200) {
+            ModelCallRecording.Outcome outcome = response.statusCode() == 400 && "max_tokens_exceeded".equals(errorType(response.body()))
+                ? ModelCallRecording.Outcome.TOKEN_LIMIT : ModelCallRecording.Outcome.HTTP_ERROR;
             ModelCallRecording.record(new ModelCallRecording.Attempt("jev", operation, sent.durationNanos(),
-                response.statusCode(), ModelCallRecording.Outcome.HTTP_ERROR, null, null, null));
+                response.statusCode(), outcome, null, null, null));
         }
         return sent;
     }

@@ -285,6 +285,21 @@ class JevClientTest {
     }
 
     @Test
+    void tokenLimitAttemptIsRecordedApartFromOtherHttpErrors() throws Exception {
+        var http = new FixedResponseHttpClient(List.of(Map.entry(400, "{\"error_type\":\"max_tokens_exceeded\"}")));
+        var seen = new ArrayList<com.careerform.monitoring.ModelCallRecording.Attempt>();
+
+        assertThatThrownBy(() -> com.careerform.monitoring.ModelCallRecording.within(seen::add,
+            () -> answerClient(http, new ArrayList<>()).answer("safe-state", questions())))
+            .isInstanceOf(TokenLimitExceeded.class);
+
+        assertThat(seen).singleElement().satisfies(attempt -> {
+            assertThat(attempt.outcome()).isEqualTo(com.careerform.monitoring.ModelCallRecording.Outcome.TOKEN_LIMIT);
+            assertThat(attempt.httpStatus()).isEqualTo(400);
+        });
+    }
+
+    @Test
     void answerSurfacesTokenLimitWithoutLoggingTheProviderBody(CapturedOutput output) throws Exception {
         var http = new FixedResponseHttpClient(List.of(
             Map.entry(400, "{\"error_type\":\"max_tokens_exceeded\",\"detail\":\"" + SECRET + "\"}")));

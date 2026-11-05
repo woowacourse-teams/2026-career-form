@@ -21,6 +21,8 @@ public final class ModelCallRecording {
     public enum Outcome {
         SUCCESS,
         HTTP_ERROR,
+        /** 입력 토큰 한도를 넘어 공급자가 거절했다. 범용 로직이 질문을 나눠 다시 묻는다. */
+        TOKEN_LIMIT,
         TIMEOUT,
         NETWORK_ERROR,
         INVALID_RESPONSE

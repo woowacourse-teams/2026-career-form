@@ -175,6 +175,9 @@ function renderOverview() {
       row.after(note);
     });
   }
+  const tokenLimitCard = () => bars("입력 토큰 초과", "거절된 AI 질문 수 · 낮을수록 좋음", (m) => perf(m)?.tokenLimitAttempts ?? null,
+    Math.max(1, ...state.selected.map((m) => perf(m)?.tokenLimitAttempts ?? 0)), (v) => `${v}번`,
+    richNote(["입력 토큰 한도를 넘어 거절된 질문"], " · 반으로 나눠 다시 물으므로 요청 실패는 아님 · 시간은 위 수치에 포함"));
   // 전체 흐름은 자동기입 단위로 본다. AI 응답 시간은 단계마다 섞이는 준비·매핑 탭에서만 보이고, 처리량은 실행 전체
   // 경과 시간으로 나누므로 전체 흐름에서만 뜻이 있다.
   $("#cf-performance").replaceChildren(...(total ? [
@@ -184,11 +187,13 @@ function renderOverview() {
       richNote(["끝낸 서버 요청 수 ÷ 실행 경과 시간"], " · 요청을 차례로 보내므로 요청 처리 시간이 짧을수록 높음")),
     bars("자동기입 실패율", "낮을수록 좋음", failure, 100, (v) => `${v.toFixed(1)}%`,
       richNote(["서버 요청이 하나라도 실패한 자동기입"], "(준비 + 매핑)의 비율")),
+    tokenLimitCard(),
   ] : [
     modelTimeCard(perf),
     timeCard,
     bars("요청 실패율", "낮을수록 좋음", failure, 100, (v) => `${v.toFixed(1)}%`,
       richNote(["실패한 서버 요청"], "의 비율 · 타임아웃·API 오류·응답 형식 오류·채점 불가")),
+    tokenLimitCard(),
   ]));
 }
 

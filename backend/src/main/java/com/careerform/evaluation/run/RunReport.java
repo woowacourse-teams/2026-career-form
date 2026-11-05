@@ -66,7 +66,8 @@ public record RunReport(
         Distribution productCall,
         Distribution modelAttempt,
         int failedAttempts,
-        Double failedAttemptMs
+        Double failedAttemptMs,
+        int tokenLimitAttempts
     ) {
     }
 

@@ -39,8 +39,9 @@ class AutofillOutcomeTest {
 
         AutofillOutcome outcome = AutofillOutcome.score(expected, observed);
 
-        assertThat(outcome).isEqualTo(new AutofillOutcome(1, 1, 1, 3, 2, 1));
-        assertThat(outcome.plus(outcome)).isEqualTo(new AutofillOutcome(2, 2, 2, 6, 4, 2));
+        // h는 공급자가 답하지 못했어도 사용자에게는 빈 칸이므로 놓침이다.
+        assertThat(outcome).isEqualTo(new AutofillOutcome(1, 1, 1, 3, 3, 1));
+        assertThat(outcome.plus(outcome)).isEqualTo(new AutofillOutcome(2, 2, 2, 6, 6, 2));
     }
 
     @Test

@@ -242,11 +242,13 @@ public final class OpenAiChoiceModel implements ChoiceModel, PromptSource {
             }
             long duration = System.nanoTime() - started;
             if (reply.status() != 200) {
-                ModelCallRecording.record(new ModelCallRecording.Attempt(protocol.provider(), operation, duration,
-                    reply.status(), ModelCallRecording.Outcome.HTTP_ERROR, null, null, null));
                 String code = errorCode(reply.body());
+                boolean tokenLimit = reply.status() == 400 && "context_length_exceeded".equals(code);
+                ModelCallRecording.record(new ModelCallRecording.Attempt(protocol.provider(), operation, duration,
+                    reply.status(), tokenLimit ? ModelCallRecording.Outcome.TOKEN_LIMIT : ModelCallRecording.Outcome.HTTP_ERROR,
+                    null, null, null));
                 log.warn("OPENAI_CHOICE_UNAVAILABLE status={} code={} attempt={}", reply.status(), code, attempt + 1);
-                if (reply.status() == 400 && "context_length_exceeded".equals(code)) {
+                if (tokenLimit) {
                     throw new TokenLimitExceeded();
                 }
                 if (reply.status() != 429 || attempt >= rateLimitRetries) {

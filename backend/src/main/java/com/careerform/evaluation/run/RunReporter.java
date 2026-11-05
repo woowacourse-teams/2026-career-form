@@ -58,7 +58,7 @@ public final class RunReporter {
             stageScores(records, expected), itemsByCall(records));
     }
 
-    /** 단계별 점수. 정답을 모르는 기록은 빼고, 결과가 없는 단계는 넣지 않는다. */
+    /** 단계별 점수. 정답을 모르는 기록은 빼고, 결과가 없는 단계는 넣지 않는다. 실패한 호출의 칸은 답이 없는 칸으로 센다. */
     private static Map<String, RunReport.Autofill> stageScores(List<CallResultRecord> records,
         Function<CallResultRecord, Map<String, String>> expected) {
         Map<String, RunReport.Autofill> scores = new LinkedHashMap<>();
@@ -73,7 +73,7 @@ public final class RunReporter {
         stages.put("TOTAL", record -> true);
         stages.put("PREPARATION", record -> record.stage() == CallKind.Stage.PREPARATION);
         stages.put("MAPPING", record -> record.stage() == CallKind.Stage.MAPPING);
-        stages.forEach((stage, filter) -> records.stream().filter(record -> record.score() != null).filter(filter)
+        stages.forEach((stage, filter) -> records.stream().filter(filter)
             .map(record -> {
                 Map<String, String> truth = expected.apply(record);
                 return truth == null ? null : AutofillOutcome.score(record.kind(), truth, record.observed());
@@ -105,7 +105,7 @@ public final class RunReporter {
 
     private static java.util.Optional<AutofillOutcome> autofill(List<CallResultRecord> records,
         Function<CallResultRecord, Map<String, String>> expected) {
-        return records.stream().filter(record -> record.kind() == CallKind.GENERIC_FIELDS && record.score() != null)
+        return records.stream().filter(record -> record.kind() == CallKind.GENERIC_FIELDS)
             .map(record -> {
                 Map<String, String> truth = expected.apply(record);
                 return truth == null ? null : AutofillOutcome.score(truth, record.observed());
@@ -130,6 +130,7 @@ public final class RunReporter {
         List<Double> attempts = new ArrayList<>();
         // 제품 요청 하나가 배치마다 모델을 여러 번 부르므로, 두 번째 이후 시도가 아니라 실패한 시도(429 등)를 센다.
         int failedAttempts = 0;
+        int tokenLimitAttempts = 0;
         double failedMs = 0;
         for (CallResultRecord record : records) {
             for (Attempt attempt : record.attempts()) {
@@ -139,13 +140,16 @@ public final class RunReporter {
                     failedAttempts++;
                     failedMs += ms;
                 }
+                if (attempt.outcome() == Outcome.TOKEN_LIMIT) {
+                    tokenLimitAttempts++;
+                }
             }
         }
         return new RunReport.StagePerformance(records.size(),
             records.isEmpty() ? null : (double) failed / records.size(),
             elapsedSeconds == null || elapsedSeconds <= 0 ? null : completed / elapsedSeconds,
             distribution(records.stream().map(record -> record.productCallNanos() / NANOS_PER_MS).toList()),
-            distribution(attempts), failedAttempts, failedAttempts == 0 ? null : failedMs);
+            distribution(attempts), failedAttempts, failedAttempts == 0 ? null : failedMs, tokenLimitAttempts);
     }
 
     private static RunReport.Tokens tokens(List<CallResultRecord> records) {
