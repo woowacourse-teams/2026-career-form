@@ -788,6 +788,20 @@ describe("AI 평가 화면의 단계 탭", () => {
     }
   });
 
+  it("매핑 탭의 확신도 그래프는 점수·정밀도·채움률을 나눠 모델마다 선으로 그리고 현재 기준을 표시한다", async () => {
+    await pick("mapping");
+    const charts = [...document.querySelectorAll("#cf-confidence .confidence-chart")];
+    expect(charts.map((chart) => chart.querySelector("h4")?.textContent)).toEqual(["점수", "정밀도", "채움률"]);
+    charts.forEach((chart) => {
+      expect(chart.querySelectorAll(".confidence-line")).toHaveLength(1);
+      expect(chart.querySelectorAll("circle")).toHaveLength(3);
+      expect(chart.querySelector(".confidence-now")).not.toBeNull();
+    });
+    expect(charts[0].querySelector("circle title")?.textContent).toContain("기준 0.5");
+    expect(charts[0].querySelector("circle title")?.textContent).toContain("73.0%");
+    expect(document.querySelector("#cf-confidence details summary")?.textContent).toBe("표로 보기");
+  });
+
   it("매핑 탭의 확신도 표는 기준별 값을 모델마다 보이고 현재 기준과 모델별 최고 점수를 표시한다", async () => {
     await pick("mapping");
     const table = document.querySelector("#cf-confidence table");

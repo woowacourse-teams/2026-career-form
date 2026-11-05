@@ -589,18 +589,61 @@ function itemsOf(model, keys) {
 const scoredOf = (items) => items ? ITEM_KINDS.reduce((sum, { key }) => sum + items[key], 0) : 0;
 const accuracyOf = (items) => scoredOf(items) ? items.correct / scoredOf(items) : null;
 
+const CONFIDENCE_METRICS = [["점수", "score"], ["정밀도", "precision"], ["채움률", "fillRate"]];
+
+/** 지표 하나의 기준별 선 그래프. 지표끼리 눈금을 맞춰 기준을 올릴 때 무엇이 얼마나 움직이는지 비교할 수 있게 한다. */
+function confidenceChart(label, key, models) {
+  const all = models.flatMap((model) => report(model).confidence);
+  const values = all.flatMap((point) => CONFIDENCE_METRICS.map(([, metric]) => point[metric])).filter((value) => value != null);
+  const low = Math.floor(Math.min(...values) * 10) / 10;
+  const thresholds = [...new Set(all.map((point) => point.threshold))].sort((a, b) => a - b);
+  const [width, height, left, right, top, bottom] = [150, 118, 28, 6, 6, 18];
+  const x = (threshold) => left + (threshold - thresholds[0]) / ((thresholds.at(-1) - thresholds[0]) || 1) * (width - left - right);
+  const y = (value) => top + (1 - (value - low) / ((1 - low) || 1)) * (height - top - bottom);
+  const gridValues = [low, (low + 1) / 2, 1];
+  const parts = gridValues.map((value) => `<line class="confidence-grid" x1="${left}" x2="${width - right}" y1="${y(value)}" y2="${y(value)}"></line>`
+    + `<text class="confidence-tick" x="${left - 4}" y="${y(value) + 3}" text-anchor="end">${Math.round(value * 100)}</text>`);
+  thresholds.forEach((threshold) => parts.push(`<text class="confidence-tick" x="${x(threshold)}" y="${height - 5}" text-anchor="middle">${threshold}</text>`));
+  if (thresholds.includes(CURRENT_CONFIDENCE)) parts.push(`<line class="confidence-now" x1="${x(CURRENT_CONFIDENCE)}" x2="${x(CURRENT_CONFIDENCE)}" y1="${top}" y2="${height - bottom}"></line>`);
+  const dots = [];
+  models.forEach((model) => {
+    const points = report(model).confidence.filter((point) => point[key] != null);
+    parts.push(`<polyline class="confidence-line" stroke="${color(model)}" points="${points.map((point) => `${x(point.threshold)},${y(point[key])}`).join(" ")}"></polyline>`);
+    points.forEach((point) => {
+      parts.push(`<circle class="confidence-dot" fill="${color(model)}" cx="${x(point.threshold)}" cy="${y(point[key])}" r="3"><title></title></circle>`);
+      dots.push(`${model} · 기준 ${point.threshold} · ${label} ${(point[key] * 100).toFixed(1)}%`);
+    });
+  });
+  const chart = element("div", undefined, "confidence-chart");
+  chart.append(element("h4", label));
+  const figure = element("div");
+  figure.innerHTML = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${label} 기준별 그래프">${parts.join("")}</svg>`;
+  figure.querySelectorAll("circle title").forEach((title, index) => { title.textContent = dots[index]; });
+  chart.append(figure);
+  return chart;
+}
+
 /** 확신도 기준을 바꾸면 칸 매핑이 어떻게 달라지는지. 모델마다 확신도의 뜻이 달라 같은 기준이 공정한지 본다. */
 function confidenceCard() {
   const card = element("div", undefined, "metric");
   card.id = "cf-confidence";
   const head = element("div", undefined, "metric-head");
-  head.append(element("h3", "확신도 기준별 칸 매핑"), element("span", "굵은 값이 모델별 최고 점수", "muted"));
+  head.append(element("h3", "확신도 기준별 칸 매핑"), element("span", "세로선이 현재 기준 · 점에 올리면 값", "muted"));
   card.append(head);
   const models = state.selected.filter((model) => report(model)?.confidence?.length);
   if (!models.length) {
     card.append(element("div", state.selected.length ? "확신도 기록 전 실행이라 측정 불가." : "비교할 모델 선택 필요.", "empty"));
     return card;
   }
+  const legend = element("div", undefined, "confidence-legend");
+  models.forEach((model) => {
+    const name = element("span", model, "stage-model");
+    name.style.setProperty("--model", color(model));
+    legend.append(name);
+  });
+  const charts = element("div", undefined, "confidence-charts");
+  charts.append(...CONFIDENCE_METRICS.map(([label, key]) => confidenceChart(label, key, models)));
+  card.append(legend, charts);
   const table = element("table", undefined, "compare-table confidence-table");
   const thead = element("thead");
   const top = element("tr");
@@ -630,7 +673,9 @@ function confidenceCard() {
   table.append(thead, body);
   const wrap = element("div", undefined, "table-wrap compare-wrap");
   wrap.append(table);
-  card.append(wrap);
+  const details = element("details", undefined, "confidence-details");
+  details.append(element("summary", "표로 보기"), wrap);
+  card.append(details);
   cardHelp(card, richNote(["칸 매핑 질문만"], " · 섹션 분류 제외 · 같은 데이터로 본 값이라 최고 점수 기준을 그대로 믿으면 안 됨 · ", ["JEV는 확률, OpenAI는 모델이 적은 값"], "이라 같은 숫자가 같은 뜻이 아님"));
   return card;
 }
