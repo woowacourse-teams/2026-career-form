@@ -799,8 +799,10 @@ describe("AI 평가 화면의 단계 탭", () => {
     expect(chart().querySelector(".confidence-now")).not.toBeNull();
     expect(chart().querySelector(".confidence-value")?.textContent).toBe("82.0%");
     expect(chart().querySelector("circle title")?.textContent).toContain("점수 73.0%");
-    // 값 범위 68~82%에 맞춰 0부터 그리지 않는다.
-    expect(chart().querySelector(".confidence-tick")?.textContent).toBe("65");
+    // 값 범위 68~82%에 바짝 맞춰 0부터 그리지 않는다.
+    expect(chart().querySelector(".confidence-tick")?.textContent).toBe("67");
+    // 모델 영역을 겹쳐 그려 모델 사이 간격이 보인다.
+    expect(chart().querySelectorAll(".confidence-area")).toHaveLength(1);
 
     buttons()[2].click();
     expect(buttons()[2].getAttribute("aria-pressed")).toBe("true");

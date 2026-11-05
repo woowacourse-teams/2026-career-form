@@ -591,12 +591,12 @@ const accuracyOf = (items) => scoredOf(items) ? items.correct / scoredOf(items) 
 
 const CONFIDENCE_METRICS = [["점수", "score"], ["정밀도", "precision"], ["채움률", "fillRate"]];
 
-/** 지표 하나의 기준별 선 그래프. 작은 차이가 보이도록 세로축을 값 범위에 맞추고, 현재 기준 값은 점 옆에 적는다. */
+/** 지표 하나의 기준별 그래프. 모델 영역을 겹쳐 간격이 보이게 하고, 작은 차이가 보이도록 세로축을 값 범위에 바짝 맞춘다. */
 function confidenceChart(label, key, models) {
   const all = models.flatMap((model) => report(model).confidence);
   const values = all.map((point) => point[key]).filter((value) => value != null);
-  const high = Math.min(1, Math.ceil((Math.max(...values) + 0.005) * 20) / 20);
-  const low = Math.max(0, Math.min(Math.floor((Math.min(...values) - 0.005) * 20) / 20, high - 0.1));
+  const high = Math.min(1, Math.ceil((Math.max(...values) + 0.01) * 100) / 100);
+  const low = Math.max(0, Math.min(Math.floor((Math.min(...values) - 0.01) * 100) / 100, high - 0.04));
   const thresholds = [...new Set(all.map((point) => point.threshold))].sort((a, b) => a - b);
   const [width, height, left, right, top, bottom] = [400, 210, 36, 16, 14, 24];
   const x = (threshold) => left + (threshold - thresholds[0]) / ((thresholds.at(-1) - thresholds[0]) || 1) * (width - left - right);
@@ -607,24 +607,27 @@ function confidenceChart(label, key, models) {
   if (thresholds.includes(CURRENT_CONFIDENCE)) parts.push(`<line class="confidence-now" x1="${x(CURRENT_CONFIDENCE)}" x2="${x(CURRENT_CONFIDENCE)}" y1="${top}" y2="${height - bottom}"></line>`);
   const dots = [];
   const labels = [];
+  const areas = [];
   models.forEach((model) => {
     const points = report(model).confidence.filter((point) => point[key] != null);
-    parts.push(`<polyline class="confidence-line" stroke="${color(model)}" points="${points.map((point) => `${x(point.threshold)},${y(point[key])}`).join(" ")}"></polyline>`);
+    const line = points.map((point) => `${x(point.threshold)},${y(point[key])}`).join(" ");
+    if (points.length) areas.push(`<polygon class="confidence-area" fill="${color(model)}" points="${x(points[0].threshold)},${y(low)} ${line} ${x(points.at(-1).threshold)},${y(low)}"></polygon>`);
+    parts.push(`<polyline class="confidence-line" stroke="${color(model)}" points="${line}"></polyline>`);
     points.forEach((point) => {
       const now = point.threshold === CURRENT_CONFIDENCE;
-      parts.push(`<circle class="confidence-dot" fill="${color(model)}" cx="${x(point.threshold)}" cy="${y(point[key])}" r="${now ? 6 : 4.5}"><title></title></circle>`);
+      parts.push(`<circle class="confidence-dot" fill="${color(model)}" cx="${x(point.threshold)}" cy="${y(point[key])}" r="${now ? 4.5 : 3}"><title></title></circle>`);
       dots.push(`${model} · 기준 ${point.threshold} · ${label} ${(point[key] * 100).toFixed(1)}%`);
       if (now) labels.push({ y: y(point[key]), text: `${(point[key] * 100).toFixed(1)}%` });
     });
   });
   // 현재 기준 값이 비슷하면 글자가 겹치므로 위쪽 값부터 줄 간격만큼 밀어 적는다.
   labels.sort((a, b) => a.y - b.y).reduce((previous, entry) => {
-    const placed = Math.max(entry.y - 8, previous + 14);
-    parts.push(`<text class="confidence-value" x="${x(CURRENT_CONFIDENCE) - 9}" y="${placed}" text-anchor="end">${entry.text}</text>`);
+    const placed = Math.max(entry.y - 7, previous + 11);
+    parts.push(`<text class="confidence-value" x="${x(CURRENT_CONFIDENCE) - 7}" y="${placed}" text-anchor="end">${entry.text}</text>`);
     return placed;
   }, -Infinity);
   const chart = element("div", undefined, "confidence-chart");
-  chart.innerHTML = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${label} 기준별 그래프">${parts.join("")}</svg>`;
+  chart.innerHTML = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${label} 기준별 그래프">${areas.join("")}${parts.join("")}</svg>`;
   chart.querySelectorAll("circle title").forEach((title, index) => { title.textContent = dots[index]; });
   return chart;
 }

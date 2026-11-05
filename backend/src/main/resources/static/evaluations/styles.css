@@ -700,11 +700,12 @@
 #cf-eval-preview .confidence-tabs{margin-top:10px}
 #cf-eval-preview .confidence-chart svg{display:block;width:100%;height:auto;overflow:visible}
 #cf-eval-preview .confidence-grid{stroke:#e5e9ee;stroke-width:1}
-#cf-eval-preview .confidence-tick{font-size:11px;fill:#737c88;font-variant-numeric:tabular-nums}
-#cf-eval-preview .confidence-value{font-size:12px;font-weight:600;fill:var(--ink);font-variant-numeric:tabular-nums;paint-order:stroke;stroke:#fff;stroke-width:3px}
+#cf-eval-preview .confidence-area{opacity:.18}
+#cf-eval-preview .confidence-tick{font-size:9.5px;fill:#737c88;font-variant-numeric:tabular-nums}
+#cf-eval-preview .confidence-value{font-size:10px;font-weight:500;fill:var(--ink);font-variant-numeric:tabular-nums;paint-order:stroke;stroke:#fff;stroke-width:2.5px}
 #cf-eval-preview .confidence-now{stroke:#737c88;stroke-width:1;stroke-dasharray:3 2}
-#cf-eval-preview .confidence-line{fill:none;stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}
-#cf-eval-preview .confidence-dot{stroke:#fff;stroke-width:2;cursor:default}
+#cf-eval-preview .confidence-line{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+#cf-eval-preview .confidence-dot{stroke:#fff;stroke-width:1.5;cursor:default}
 #cf-eval-preview .confidence-details{margin-top:12px;font-size:13px}
 #cf-eval-preview .confidence-details summary{color:#3d5870;cursor:pointer}
 #cf-eval-preview .confidence-details .table-wrap{margin-top:8px}
