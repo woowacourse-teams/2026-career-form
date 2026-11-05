@@ -306,10 +306,12 @@ function drawPress(els: AiElements, L: AiLayout, seg: Seg) {
 
 /** Captions, progress dots, the status pill, the dot grid and the summary. */
 function drawNarration(els: AiElements, seg: Seg, step: number, clock: number) {
+  // A caption leaves right after its step ends and the next one follows, so
+  // playback resting at a step's end still shows that step's caption.
   els.captions.forEach((cap, i) => {
-    const enter = seg(JEV_STEPS[i], JEV_STEPS[i] + 0.02);
+    const enter = seg(JEV_STEPS[i] + 0.01, JEV_STEPS[i] + 0.03);
     const leave =
-      i === 6 ? 1 : 1 - seg(JEV_STEPS[i + 1] - 0.02, JEV_STEPS[i + 1]);
+      i === 6 ? 1 : 1 - seg(JEV_STEPS[i + 1], JEV_STEPS[i + 1] + 0.01);
     set(
       cap,
       `translate3d(0,${(1 - enter) * 18 - (1 - leave) * 18}px,0)`,

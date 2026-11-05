@@ -1,5 +1,6 @@
 import { useCallback, useRef } from "react";
 import {
+  ALERT_PLAYBACK,
   drawAlertFrame,
   measureAlertLayout,
   ringBell,
@@ -7,7 +8,8 @@ import {
   type AlertLayout,
 } from "./alert-frame";
 import { SAMPLE_COMPANY } from "./sample-form";
-import { usePrefersReducedMotion, useScrollScene } from "./scroll";
+import { usePrefersReducedMotion } from "./scroll";
+import { useSteppedScene } from "./useSteppedScene";
 import bellCharacter from "./assets/C4.webp";
 import logo from "./assets/logo.webp";
 import bellArt from "./assets/O3.webp";
@@ -21,7 +23,10 @@ const TICKS = [
   { label: "마감", time: "11/20 18:00" },
 ];
 
-/** Posting card, deadline axis and the two notifications, pinned for 300vh. */
+/**
+ * Posting card, deadline axis and the two notifications, pinned while the
+ * visitor scrolls. Scrolling picks the beat; each beat then plays through.
+ */
 export function AlertScene() {
   const reduced = usePrefersReducedMotion();
   const track = useRef<HTMLElement>(null);
@@ -53,7 +58,7 @@ export function AlertScene() {
     },
     [reduced],
   );
-  useScrollScene(track, render, layout);
+  useSteppedScene(track, ALERT_PLAYBACK, render, layout, reduced);
 
   return (
     <section

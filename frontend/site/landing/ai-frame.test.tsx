@@ -9,7 +9,10 @@ import {
   type AiLayout,
 } from "./ai-frame";
 import { AiScene } from "./AiScene";
-import { JEV_STEPS, stepAt } from "./jev";
+import { AI_PLAYBACK, JEV_STEPS, stepAt } from "./jev";
+import { progressAt as at } from "./step-playback";
+
+const progressAt = (u: number) => at(AI_PLAYBACK, u);
 import { filledCount, reviewCount, sampleFields } from "./sample-form";
 import formStyles from "./SampleForm.module.css";
 import styles from "./AiScene.module.css";
@@ -121,6 +124,24 @@ describe("의사결정 AI(JEV) scene", () => {
     expect(els.flies).toHaveLength(filledCount);
     for (const fly of els.flies)
       expect(fly.parentElement).toHaveClass(styles.flyLayer);
+  });
+
+  it("shows each step finished, caption and console included, where playback rests", () => {
+    const VIEW_AT_REST = [0, 0, 1, 2, 3, 4, 4];
+    for (let s = 1; s < AI_PLAYBACK.rests.length; s++) {
+      drawAiFrame(els, layout, progressAt(s), false);
+      const step = s - 1;
+      els.captions.forEach((c, i) =>
+        expect(visible(c)).toBe(i === step ? 1 : 0),
+      );
+      els.views.forEach((v, i) =>
+        expect(visible(v)).toBe(i === VIEW_AT_REST[step] ? 1 : 0),
+      );
+    }
+    drawAiFrame(els, layout, progressAt(3), false);
+    expect(els.lines.slice(0, 3).map(visible)).toEqual([1, 1, 1]);
+    drawAiFrame(els, layout, progressAt(4), false);
+    expect(visible(els.lines[3])).toBe(1);
   });
 
   it("snaps between steps instead of moving with reduced motion", () => {

@@ -9,6 +9,7 @@ import {
 import { InstallLink, type InstallHandler } from "./BrandChrome";
 import { JevConsole } from "./JevConsole";
 import {
+  AI_PLAYBACK,
   CERTAINTY_WORD,
   FIELD_GROUPS,
   JEV_CAPTIONS,
@@ -17,7 +18,8 @@ import {
 } from "./jev";
 import { SampleForm } from "./SampleForm";
 import { filledCount, reviewCount, sampleFields } from "./sample-form";
-import { usePrefersReducedMotion, useScrollScene } from "./scroll";
+import { usePrefersReducedMotion } from "./scroll";
+import { useSteppedScene } from "./useSteppedScene";
 import heroArt from "./assets/C1.webp";
 import inspectArt from "./assets/C2.webp";
 import sparkleArt from "./assets/O2.webp";
@@ -26,7 +28,10 @@ import styles from "./AiScene.module.css";
 
 const LINES = [0, 1, 2, 3];
 
-/** Hero plus the seven 의사결정 AI(JEV) steps, pinned while the visitor scrolls. */
+/**
+ * Hero plus the seven 의사결정 AI(JEV) steps, pinned while the visitor scrolls.
+ * Scrolling picks the step; each step then plays through on its own.
+ */
 export function AiScene({ onInstall }: { onInstall: InstallHandler }) {
   const reduced = usePrefersReducedMotion();
   const track = useRef<HTMLElement>(null);
@@ -44,7 +49,7 @@ export function AiScene({ onInstall }: { onInstall: InstallHandler }) {
     },
     [reduced],
   );
-  useScrollScene(track, render, layout);
+  useSteppedScene(track, AI_PLAYBACK, render, layout, reduced);
 
   return (
     <section

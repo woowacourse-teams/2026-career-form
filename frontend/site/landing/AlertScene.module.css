@@ -1,7 +1,9 @@
-/* The deadline story: posting card, time axis, two notifications. 300vh pinned. */
+/* The deadline story: posting card, time axis, two notifications. */
 .track {
   position: relative;
-  height: 300vh;
+  /* 100vh pinned + 170vh of scroll: beats start at -0.3, 0.4 and 1.1
+     screens (ALERT_PLAYBACK in alert-frame.ts), then a short dwell. */
+  height: 270vh;
 }
 .stage {
   position: sticky;

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  ALERT_PLAYBACK,
   drawAlertFrame,
   type AlertElements,
   type AlertLayout,
@@ -41,6 +42,23 @@ describe("alert scene frames", () => {
     expect(els.cancelled.style.opacity).toBe("1");
     expect(els.labels[1]).toHaveClass(alertStyles.cancelled);
     expect(els.ticks[1]).toHaveClass(alertStyles.tickCancelled);
+  });
+
+  it("shows each beat finished where playback rests", () => {
+    const els = alertElements();
+    const [, axisUp, alerted, done] = ALERT_PLAYBACK.rests;
+    expect(drawAlertFrame(els, layout, axisUp, false)).toBe(false);
+    expect(els.caption.style.opacity).toBe("1");
+    expect(els.axis.style.transform).toBe("scaleX(1)");
+    expect(els.labels.map((l) => l.style.opacity)).toEqual(["1", "1", "1"]);
+    expect(els.firstAlert.style.opacity).toBe("0");
+    expect(drawAlertFrame(els, layout, alerted, false)).toBe(true);
+    expect(els.firstAlert.style.opacity).toBe("1");
+    expect(els.applied.style.opacity).toBe("0");
+    expect(els.cancelled.style.opacity).toBe("0");
+    drawAlertFrame(els, layout, done, false);
+    expect(els.applied.style.opacity).toBe("1");
+    expect(els.cancelled.style.opacity).toBe("1");
   });
 
   it("swaps the notifications in one slot on narrow screens", () => {
