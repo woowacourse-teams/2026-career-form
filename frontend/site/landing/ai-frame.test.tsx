@@ -4,12 +4,16 @@ import {
   collectAiElements,
   currentStep,
   drawAiFrame,
+  narrowRowHeight,
   statusCountText,
   type AiElements,
   type AiLayout,
 } from "./ai-frame";
 import { AiScene } from "./AiScene";
-import { JEV_STEPS, stepAt } from "./jev";
+import { AI_PLAYBACK, JEV_STEPS, stepAt } from "./jev";
+import { progressAt as at } from "./step-playback";
+
+const progressAt = (u: number) => at(AI_PLAYBACK, u);
 import { filledCount, reviewCount, sampleFields } from "./sample-form";
 import formStyles from "./SampleForm.module.css";
 import styles from "./AiScene.module.css";
@@ -123,10 +127,44 @@ describe("의사결정 AI(JEV) scene", () => {
       expect(fly.parentElement).toHaveClass(styles.flyLayer);
   });
 
+  it("shows each step finished, caption and console included, where playback rests", () => {
+    const VIEW_AT_REST = [0, 0, 1, 2, 3, 4, 4];
+    for (let s = 1; s < AI_PLAYBACK.rests.length; s++) {
+      drawAiFrame(els, layout, progressAt(s), false);
+      const step = s - 1;
+      els.captions.forEach((c, i) =>
+        expect(visible(c)).toBe(i === step ? 1 : 0),
+      );
+      els.views.forEach((v, i) =>
+        expect(visible(v)).toBe(i === VIEW_AT_REST[step] ? 1 : 0),
+      );
+    }
+    drawAiFrame(els, layout, progressAt(3), false);
+    expect(els.lines.slice(0, 3).map(visible)).toEqual([1, 1, 1]);
+    drawAiFrame(els, layout, progressAt(4), false);
+    expect(visible(els.lines[3])).toBe(1);
+  });
+
   it("snaps between steps instead of moving with reduced motion", () => {
     drawAiFrame(els, layout, stepAt(1, 0.6), true);
     expect(field(9).style.transform).toContain("translate3d(0,0px,0)");
     drawAiFrame(els, layout, stepAt(1, 0.75), true);
     expect(field(9).style.transform).toContain("translate3d(0,30px,0)");
+  });
+});
+
+describe("narrowRowHeight", () => {
+  // The form measured 300px tall at 20px rows and 500px at 40px rows.
+  it("picks the tallest row that keeps the whole form on screen", () => {
+    expect(narrowRowHeight(350, 300, 500)).toBe(25);
+  });
+  it("never grows rows past the desktop size", () => {
+    expect(narrowRowHeight(2000, 300, 500)).toBe(34);
+  });
+  it("keeps the largest row when the form did not change height", () => {
+    expect(narrowRowHeight(300, 300, 300)).toBe(34);
+  });
+  it("reports rows below the readable minimum so the caller can compact", () => {
+    expect(narrowRowHeight(300, 300, 500)).toBeLessThan(24);
   });
 });

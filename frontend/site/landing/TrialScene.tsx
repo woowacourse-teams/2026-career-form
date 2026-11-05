@@ -4,7 +4,8 @@ import { InstallLink, type InstallHandler } from "./BrandChrome";
 import { SampleForm } from "./SampleForm";
 import { ShareCard } from "./ShareCard";
 import { SAMPLE_NAME, filledCount, reviewCount } from "./sample-form";
-import { useMediaQuery, usePrefersReducedMotion } from "./scroll";
+import { useHandoff } from "./handoff";
+import { usePrefersReducedMotion } from "./scroll";
 import { useTrialFill, type TrialStage } from "./trial-fill";
 import { useScrollHold } from "./useScrollHold";
 import pointerArt from "./assets/C3.webp";
@@ -30,7 +31,7 @@ export function TrialScene({
   onInstall: InstallHandler;
 }) {
   const reduced = usePrefersReducedMotion();
-  const narrow = useMediaQuery("(max-width: 700px)");
+  const handoff = useHandoff();
   const section = useRef<HTMLElement>(null);
   const { stage, fields, start, reset } = useTrialFill(track, reduced);
   const [released, setReleased] = useState(false);
@@ -40,7 +41,7 @@ export function TrialScene({
     setHint(NUDGE);
     setShakes((n) => n + 1);
   }, []);
-  useScrollHold(section, !released && !narrow, nudge);
+  useScrollHold(section, !released && !handoff, nudge);
 
   const run = () => {
     setReleased(true);
@@ -62,17 +63,17 @@ export function TrialScene({
       ref={section}
       id="try"
       className={styles.trial}
-      aria-labelledby="try-title"
+      aria-labelledby={handoff ? "share-title" : "try-title"}
     >
       <div className={styles.inner}>
-        <div className={styles.head}>
-          <h2 id="try-title">이번엔 직접 눌러보세요.</h2>
-          <p>가상 지원서예요. 아무 정보도 저장하지 않아요.</p>
-        </div>
-        {narrow ? (
-          <ShareCard onInstall={onInstall} />
+        {handoff ? (
+          <ShareCard />
         ) : (
           <>
+            <div className={styles.head}>
+              <h2 id="try-title">이번엔 직접 눌러보세요.</h2>
+              <p>가상 지원서예요. 아무 정보도 저장하지 않아요.</p>
+            </div>
             <div
               className={`${styles.window} ${waiting ? styles.waiting : ""}`}
             >

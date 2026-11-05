@@ -2,11 +2,26 @@
 // The steps mirror the real pipeline described on 기술 소개: split the form
 // into sections, classify each section, narrow candidates, pick one with a
 // confidence, fill, and leave uncertain fields for the visitor.
+import { evenTriggers, type Playback } from "./step-playback";
 
 /** Scroll boundaries: hero until 0.1, then seven equal steps. */
 export const JEV_STEPS = [
   0.1, 0.2286, 0.3571, 0.4857, 0.6143, 0.7429, 0.8714, 1,
 ];
+
+/** Rest stops sit just before the next step starts, so they read as that step finished. */
+const STEP_EDGE = 1e-4;
+
+/**
+ * Stage 0 is the hero, stage s (1..7) is JEV step s-1 fully played. 0.08
+ * screens leave the hero, then each step owns 0.7 screens of scroll;
+ * AiScene.module.css sizes the track to match.
+ */
+export const AI_PLAYBACK: Playback = {
+  rests: [0, ...JEV_STEPS.slice(1, -1).map((end) => end - STEP_EDGE), 1],
+  triggers: evenTriggers(0.08, 0.7, 7),
+  seconds: Array(7).fill(0.9),
+};
 
 /** A point `fraction` of the way through step `index` (0-based). */
 export const stepAt = (index: number, fraction: number) =>

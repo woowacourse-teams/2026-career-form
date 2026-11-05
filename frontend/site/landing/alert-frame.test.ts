@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  ALERT_PLAYBACK,
   drawAlertFrame,
+  stackNarrow,
   type AlertElements,
   type AlertLayout,
 } from "./alert-frame";
@@ -43,6 +45,23 @@ describe("alert scene frames", () => {
     expect(els.ticks[1]).toHaveClass(alertStyles.tickCancelled);
   });
 
+  it("shows each beat finished where playback rests", () => {
+    const els = alertElements();
+    const [, axisUp, alerted, done] = ALERT_PLAYBACK.rests;
+    expect(drawAlertFrame(els, layout, axisUp, false)).toBe(false);
+    expect(els.caption.style.opacity).toBe("1");
+    expect(els.axis.style.transform).toBe("scaleX(1)");
+    expect(els.labels.map((l) => l.style.opacity)).toEqual(["1", "1", "1"]);
+    expect(els.firstAlert.style.opacity).toBe("0");
+    expect(drawAlertFrame(els, layout, alerted, false)).toBe(true);
+    expect(els.firstAlert.style.opacity).toBe("1");
+    expect(els.applied.style.opacity).toBe("0");
+    expect(els.cancelled.style.opacity).toBe("0");
+    drawAlertFrame(els, layout, done, false);
+    expect(els.applied.style.opacity).toBe("1");
+    expect(els.cancelled.style.opacity).toBe("1");
+  });
+
   it("swaps the notifications in one slot on narrow screens", () => {
     const els = alertElements();
     drawAlertFrame(els, { narrow: true, postStartX: 0 }, 1, false);
@@ -56,5 +75,24 @@ describe("alert scene frames", () => {
     expect(els.firstAlert.style.opacity).toBe("0");
     drawAlertFrame(els, layout, 0.5, true);
     expect(els.firstAlert.style.opacity).toBe("1");
+  });
+});
+
+describe("stackNarrow", () => {
+  const sizes = { captionBottom: 220, postHeight: 190, toastHeight: 80 };
+
+  it("stacks caption, posting, axis and alerts without overlap", () => {
+    const at = stackNarrow({ ...sizes, height: 844 });
+    expect(at.fits).toBe(true);
+    expect(at.postTop).toBeGreaterThanOrEqual(sizes.captionBottom + 16);
+    // Tick dots reach 12px above the axis.
+    expect(at.postTop + sizes.postHeight).toBeLessThanOrEqual(at.axisY - 24);
+    // Tick labels hang about 60px under the axis.
+    expect(at.toastTop).toBeGreaterThanOrEqual(at.axisY + 60);
+    expect(at.toastTop + sizes.toastHeight).toBeLessThanOrEqual(844);
+  });
+
+  it("reports when a short screen cannot hold the whole stack", () => {
+    expect(stackNarrow({ ...sizes, height: 560 }).fits).toBe(false);
   });
 });

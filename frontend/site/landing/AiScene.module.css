@@ -1,7 +1,9 @@
-/* Hero and the four AI steps share one pinned stage, 460vh of scroll. */
+/* Hero and the seven JEV steps share one pinned stage. */
 .track {
   position: relative;
-  height: 760vh;
+  /* 100vh pinned + 500vh of scroll: the first 0.08 screens leave the hero,
+     then 0.7 screens per JEV step (step-playback.ts), and a short dwell. */
+  height: 600vh;
 }
 .stage {
   position: sticky;
@@ -50,6 +52,11 @@
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+}
+.handoffNote {
+  flex-basis: 100%;
+  font-size: 13px;
+  color: var(--sub);
 }
 .hint {
   font-size: 13px;
@@ -333,10 +340,16 @@
     flex: 1;
   }
   .captions {
-    top: 12%;
+    top: calc(var(--header-height) + env(safe-area-inset-top, 0px) + 16px);
     width: auto;
     right: var(--gutter);
-    height: 110px;
+  }
+  .caption {
+    gap: 6px;
+  }
+  /* ai-frame.ts drops the caption body when a short phone needs the room. */
+  .captions[data-fit="compact"] .caption p {
+    display: none;
   }
   .caption h2 {
     font-size: clamp(24px, 6vw, 32px);
@@ -344,21 +357,24 @@
   .caption p {
     font-size: 14px;
   }
+  /* Docked under the form; values fly up from it (ai-frame.ts). */
   .status {
-    top: calc(var(--fy) - 46px);
+    top: auto;
+    left: var(--gutter);
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   }
   .dots,
-  .sparkle {
+  .sparkle,
+  .summary {
     display: none;
   }
   .heroCharacter {
     height: 30vh;
     right: -10px;
   }
-  .inspector {
-    height: 20vh;
-    left: auto;
-    right: -10px;
+  /* Peeks in cut off beside a phone-width form. */
+  .stage .inspector {
+    display: none;
   }
 }
 
