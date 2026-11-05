@@ -70,7 +70,10 @@ public final class OpenAiChoiceModel implements ChoiceModel, PromptSource {
         }
     }
 
-    /** 엄격 스키마의 enum 값 총수 한도. 넘으면 선택지 키를 enum 없이 문자열로 받고 응답에서 검증한다. */
+    /**
+     * 엄격 스키마의 enum 값 총수 한도(OpenAI 구조화 출력 제한). 질문마다 enum을 적으면 질문 수만큼 곱해지므로, 넘으면 같은 선택지를
+     * 쓰는 질문끼리 정의 하나를 공유한다. 그래도 넘으면 선택지 키를 enum 없이 문자열로 받고 응답에서 검증한다.
+     */
     static final int MAX_ENUM_VALUES = 1000;
     private static final URI ENDPOINT = URI.create("https://api.openai.com/v1/chat/completions");
     private static final Duration RATE_LIMIT_BACKOFF = Duration.ofMillis(500);
@@ -346,7 +349,14 @@ public final class OpenAiChoiceModel implements ChoiceModel, PromptSource {
 
     private static ObjectNode schema(Map<String, Question> questions) {
         int enumValues = questions.values().stream().mapToInt(question -> question.criteria().size()).sum();
-        boolean constrained = enumValues <= MAX_ENUM_VALUES;
+        boolean inline = enumValues <= MAX_ENUM_VALUES;
+        // 한도 안의 요청은 지금까지와 같은 본문을 보내도록, 넘을 때만 공유 정의를 쓴다.
+        Map<List<String>, String> shared = new LinkedHashMap<>();
+        if (!inline) {
+            new TreeMap<>(questions).values().forEach(question -> shared.computeIfAbsent(
+                List.copyOf(new TreeMap<>(question.criteria()).keySet()), ignored -> "choices_" + shared.size()));
+        }
+        boolean referenced = !inline && shared.keySet().stream().mapToInt(List::size).sum() <= MAX_ENUM_VALUES;
         ObjectNode schema = JSON.createObjectNode();
         schema.put("type", "object");
         schema.put("additionalProperties", false);
@@ -360,13 +370,28 @@ public final class OpenAiChoiceModel implements ChoiceModel, PromptSource {
             answer.put("additionalProperties", false);
             ObjectNode fields = answer.putObject("properties");
             ObjectNode choice = fields.putObject("choice");
-            choice.put("type", "string");
-            if (constrained) {
-                ArrayNode values = choice.putArray("enum");
-                new TreeMap<>(questions.get(id).criteria()).keySet().forEach(values::add);
+            List<String> choices = List.copyOf(new TreeMap<>(questions.get(id).criteria()).keySet());
+            if (referenced) {
+                choice.put("$ref", "#/$defs/" + shared.get(choices));
+            }
+            else {
+                choice.put("type", "string");
+                if (inline) {
+                    ArrayNode values = choice.putArray("enum");
+                    choices.forEach(values::add);
+                }
             }
             fields.putObject("confidence").put("type", "number");
             answer.putArray("required").add("choice").add("confidence");
+        }
+        if (referenced) {
+            ObjectNode definitions = schema.putObject("$defs");
+            shared.forEach((choices, name) -> {
+                ObjectNode definition = definitions.putObject(name);
+                definition.put("type", "string");
+                ArrayNode values = definition.putArray("enum");
+                choices.forEach(values::add);
+            });
         }
         return schema;
     }

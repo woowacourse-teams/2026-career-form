@@ -103,6 +103,57 @@ class OpenAiChoiceModelTest {
         });
     }
 
+    /** 질문 count개가 같은 선택지 choices개를 쓰는 요청의 응답 스키마. */
+    private static JsonNode schemaFor(int count, int choices, boolean sameChoices) {
+        Map<String, ChoiceModel.Question> questions = new LinkedHashMap<>();
+        StringBuilder content = new StringBuilder("{");
+        for (int index = 0; index < count; index++) {
+            Map<String, String> criteria = new LinkedHashMap<>();
+            for (int choice = 0; choice < choices - 1; choice++) {
+                criteria.put((sameChoices ? "key" : "key" + index + "_") + choice, "meaning");
+            }
+            criteria.put(ChoiceModel.ABSTAIN, "No supported field");
+            questions.put("field_" + index, new ChoiceModel.Question("Map it.", criteria));
+            content.append(index == 0 ? "" : ",").append("\"field_").append(index)
+                .append("\":{\"choice\":\"ABSTAIN\",\"confidence\":0.9}");
+        }
+        var transport = new FakeTransport(ok(content.append("}").toString()));
+        model(transport).answer(Map.of(), questions);
+        return JSON.readTree(transport.bodies.getFirst()).path("response_format").path("json_schema").path("schema");
+    }
+
+    @Test
+    @DisplayName("선택지 총수가 한도를 넘어도 질문들이 같은 선택지를 쓰면 한 번만 정의해 공유하고 엄격 enum을 유지한다")
+    void sharesIdenticalChoicesAboveTheEnumLimit() {
+        // 9 x 125 = 1,125개로 한도(1,000)를 넘지만 서로 같은 선택지라 정의는 125개다.
+        JsonNode schema = schemaFor(9, 125, true);
+
+        assertThat(schema.path("$defs").size()).isEqualTo(1);
+        JsonNode shared = schema.path("$defs").path("choices_0");
+        assertThat(shared.path("type").asString()).isEqualTo("string");
+        assertThat(shared.path("enum").size()).isEqualTo(125);
+        for (int index = 0; index < 9; index++) {
+            JsonNode choice = schema.path("properties").path("field_" + index).path("properties").path("choice");
+            assertThat(choice.path("$ref").asString()).isEqualTo("#/$defs/choices_0");
+            assertThat(choice.has("enum")).isFalse();
+        }
+    }
+
+    @Test
+    @DisplayName("한도 안이면 지금처럼 질문마다 enum을 적고, 서로 다른 선택지가 한도를 넘으면 enum 없이 받아 응답에서 검증한다")
+    void keepsInlineEnumsWithinTheLimitAndDropsThemWhenDistinctChoicesExceedIt() {
+        JsonNode inline = schemaFor(5, 125, true);
+        assertThat(inline.has("$defs")).isFalse();
+        assertThat(inline.path("properties").path("field_0").path("properties").path("choice").path("enum").size()).isEqualTo(125);
+
+        JsonNode unconstrained = schemaFor(9, 125, false);
+        assertThat(unconstrained.has("$defs")).isFalse();
+        JsonNode choice = unconstrained.path("properties").path("field_0").path("properties").path("choice");
+        assertThat(choice.path("type").asString()).isEqualTo("string");
+        assertThat(choice.has("enum")).isFalse();
+        assertThat(choice.has("$ref")).isFalse();
+    }
+
     @Test
     @DisplayName("choose는 확신도 기준 미만의 답을 ABSTAIN으로 바꾼다")
     void chooseAppliesConfidenceCut() {
