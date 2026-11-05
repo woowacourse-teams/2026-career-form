@@ -18,10 +18,15 @@ public record AutofillOutcome(int filledCorrect, int filledWrongKey, int filledU
     public enum Kind { FILLED_CORRECT, FILLED_WRONG_KEY, FILLED_UNNEEDED, BLANK_CORRECT, MISSED, UNOBSERVED }
 
     public static Kind classify(String want, ObservedItem item) {
+        return classify(want, item, AutofillCounts.AUTO_MIN);
+    }
+
+    /** 넣는 기준이 다르면 어떻게 달라지는지 보려고 기준을 받는다. 실제 제품은 {@link AutofillCounts#AUTO_MIN}이다. */
+    public static Kind classify(String want, ObservedItem item, double minConfidence) {
         if (item.value() != null && item.confidence() == null) {
             return Kind.UNOBSERVED;
         }
-        if (item.value() != null && item.confidence() >= AutofillCounts.AUTO_MIN) {
+        if (item.value() != null && item.confidence() >= minConfidence) {
             return item.value().equals(want) ? Kind.FILLED_CORRECT
                 : want == null ? Kind.FILLED_UNNEEDED : Kind.FILLED_WRONG_KEY;
         }
@@ -54,9 +59,13 @@ public record AutofillOutcome(int filledCorrect, int filledWrongKey, int filledU
     }
 
     public static AutofillOutcome score(Map<String, String> expected, Map<String, ObservedItem> observed) {
+        return score(expected, observed, AutofillCounts.AUTO_MIN);
+    }
+
+    public static AutofillOutcome score(Map<String, String> expected, Map<String, ObservedItem> observed, double minConfidence) {
         int[] counts = new int[Kind.values().length];
         expected.forEach((id, want) ->
-            counts[classify(want, observed.getOrDefault(id, ObservedItem.answered(null))).ordinal()]++);
+            counts[classify(want, observed.getOrDefault(id, ObservedItem.answered(null)), minConfidence).ordinal()]++);
         return of(counts);
     }
 

@@ -19,7 +19,7 @@ class EvaluationPageTest {
             "id=\"cf-progress\"", "id=\"record-delete\"", "id=\"cf-fields\"", "data-page=\"fields\"", "id=\"provider-open\"", "id=\"comparison-detail\"");
         String app = read("static/evaluations/app.js");
         assertThat(app).contains("/quality/access.js", "\"/api/v1/evaluations\"", "/runs?limit=50", "/datasets/",
-            "/prompts/", "renderProgress", "progressbar", "입력 토큰 초과", "tokenLimitAttempts",
+            "/prompts/", "renderProgress", "progressbar", "입력 토큰 초과", "tokenLimitAttempts", "confidenceCard", "확신도 기준별 칸 매핑", "baseEntry",
             "aria-valuenow", "renderTokenBars", "입력 토큰", "출력 토큰", "stageAccuracyCard", "stageSummary", "itemsByCall", "단계별 점수", "준비 점수", "매핑 점수", "?.scores?.[stage]", "cf-overview-stage",
             "오답(다른 항목)", "누락(판단 보류)", "불필요 제안", "예상 비용 비교", "자동기입 1,000회당", "가장 저렴한 모델의",
             "openProviders", "/provider-registrations", "HOST_NOT_ALLOWED_FOR_KEY", "INTERNAL_ADDRESS",

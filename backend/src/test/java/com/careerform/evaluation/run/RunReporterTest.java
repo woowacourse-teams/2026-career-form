@@ -216,6 +216,36 @@ class RunReporterTest {
     }
 
     @Test
+    @DisplayName("칸 매핑 답을 확신도 기준별로 다시 나눠 기준이 정밀도와 채움률을 어떻게 바꾸는지 보인다")
+    void reportsConfidenceSweep() {
+        Map<String, String> truth = Map.of("x", "k1", "y", "k2", "z", "k3");
+        List<CallResultRecord> records = List.of(fields(1, Map.of("x", ObservedItem.answered("k1", 0.95),
+            "y", ObservedItem.answered("k2", 0.65), "z", ObservedItem.answered("wrong", 0.55))));
+
+        RunReport report = new RunReporter().report(run(AT, AT, AT.plusSeconds(1)), records, record -> truth, caseId -> "site");
+
+        assertThat(report.confidence()).extracting(RunReport.ConfidencePoint::threshold)
+            .containsExactly(0.5, 0.6, 0.7, 0.8, 0.9);
+        RunReport.ConfidencePoint lowest = report.confidence().getFirst();
+        assertThat(lowest.precision()).isCloseTo(2.0 / 3, within(1e-9));
+        assertThat(lowest.fillRate()).isCloseTo(2.0 / 3, within(1e-9));
+        RunReport.ConfidencePoint current = report.confidence().get(3);
+        assertThat(current.precision()).isEqualTo(1.0);
+        assertThat(current.fillRate()).isCloseTo(1.0 / 3, within(1e-9));
+        assertThat(current.score()).isEqualTo(report.autofill().score());
+    }
+
+    @Test
+    @DisplayName("확신도를 기록하지 않은 실행은 기준별로 나눌 수 없다")
+    void confidenceSweepNeedsRecordedConfidence() {
+        List<CallResultRecord> records = List.of(fields(1, Map.of("x", ObservedItem.answered("k1"))));
+
+        RunReport report = new RunReporter().report(run(AT, AT, AT.plusSeconds(1)), records, record -> Map.of("x", "k1"), caseId -> "site");
+
+        assertThat(report.confidence()).isEmpty();
+    }
+
+    @Test
     @DisplayName("입력 토큰 초과로 거절된 시도를 다른 실패 시도와 구분해 센다")
     void countsTokenLimitAttempts() {
         Attempt tokenLimit = new Attempt("jev", "answer", 10 * MS, 400, Outcome.TOKEN_LIMIT, null, null, null);

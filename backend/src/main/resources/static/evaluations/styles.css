@@ -695,6 +695,7 @@
 #cf-eval-preview .compare-table .model-col{text-align:center;border-left:1px solid #dde1de}
 #cf-eval-preview .compare-table .model-col::before{content:"";display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;background:var(--model)}
 #cf-eval-preview .compare-table tbody td:nth-child(3n+2),#cf-eval-preview .compare-table thead tr:last-child th:nth-child(3n+2){border-left:1px solid #dde1de}
+#cf-eval-preview .compare-table .best{font-weight:700}
 #cf-eval-preview .compare-table .delta{font-weight:600;font-size:12.5px}
 #cf-eval-preview .compare-range{display:block;font-size:11px;color:#8a929b}
 #cf-eval-preview .compare-conditions{margin:10px 0 18px;font-size:13px}

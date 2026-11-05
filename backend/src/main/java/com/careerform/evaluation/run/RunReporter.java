@@ -17,6 +17,8 @@ import com.careerform.monitoring.ModelCallRecording.Outcome;
 /** 호출 결과 원자료로 {@link RunReport}를 만든다. 저장한 집계값은 쓰지 않는다. */
 public final class RunReporter {
 
+    private static final double[] CONFIDENCE_THRESHOLDS = {0.5, 0.6, 0.7, 0.8, 0.9};
+
     private static final double NANOS_PER_MS = 1_000_000.0;
     private final RunAggregator aggregator = new RunAggregator();
 
@@ -55,7 +57,7 @@ public final class RunReporter {
         return new RunReport(aggregator.aggregate(records.stream().map(CallResultRecord::toCallResult).toList()),
             performance, tokens, flows(records, siteOf), timing(run, records), RunService.SCORING_VERSION,
             repetitions(records, expected), autofill(records, expected).map(RunReport.Autofill::of).orElse(null),
-            stageScores(records, expected), itemsByCall(records));
+            stageScores(records, expected), itemsByCall(records), confidence(records, expected));
     }
 
     /** 단계별 점수. 정답을 모르는 기록은 빼고, 결과가 없는 단계는 넣지 않는다. 실패한 호출의 칸은 답이 없는 칸으로 센다. */
@@ -105,10 +107,29 @@ public final class RunReporter {
 
     private static java.util.Optional<AutofillOutcome> autofill(List<CallResultRecord> records,
         Function<CallResultRecord, Map<String, String>> expected) {
+        return autofill(records, expected, com.careerform.evaluation.scoring.AutofillCounts.AUTO_MIN);
+    }
+
+    /** 확신도 기준별 칸 매핑 결과. 확신도를 기록하지 않은 답이 있으면 나눌 수 없어 비어 있다. */
+    private static List<RunReport.ConfidencePoint> confidence(List<CallResultRecord> records,
+        Function<CallResultRecord, Map<String, String>> expected) {
+        List<RunReport.ConfidencePoint> points = new ArrayList<>();
+        for (double threshold : CONFIDENCE_THRESHOLDS) {
+            AutofillOutcome outcome = autofill(records, expected, threshold).orElse(null);
+            if (outcome == null || outcome.unobserved() > 0) {
+                return List.of();
+            }
+            points.add(new RunReport.ConfidencePoint(threshold, outcome.precision(), outcome.fillRate(), outcome.score()));
+        }
+        return points;
+    }
+
+    private static java.util.Optional<AutofillOutcome> autofill(List<CallResultRecord> records,
+        Function<CallResultRecord, Map<String, String>> expected, double minConfidence) {
         return records.stream().filter(record -> record.kind() == CallKind.GENERIC_FIELDS)
             .map(record -> {
                 Map<String, String> truth = expected.apply(record);
-                return truth == null ? null : AutofillOutcome.score(truth, record.observed());
+                return truth == null ? null : AutofillOutcome.score(truth, record.observed(), minConfidence);
             })
             .filter(Objects::nonNull).reduce(AutofillOutcome::plus);
     }

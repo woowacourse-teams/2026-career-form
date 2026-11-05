@@ -57,6 +57,11 @@ const items = (correct: number) => ({
   excluded: 0,
 });
 const report = {
+  confidence: [
+    { threshold: 0.5, precision: 0.7, fillRate: 0.9, score: 0.73 },
+    { threshold: 0.8, precision: 0.9, fillRate: 0.6, score: 0.82 },
+    { threshold: 0.9, precision: 1, fillRate: 0.3, score: 0.68 },
+  ],
   quality: {
     accuracy: 0.8,
     preparationAccuracy: 0.6,
@@ -329,6 +334,7 @@ describe("AI 평가 화면의 단계 탭", () => {
     expect(titles("#cf-quality")).toEqual([
       "매핑 점수",
       "칸별 결과",
+      "확신도 기준별 칸 매핑",
       "섹션 분류 결과",
     ]);
     expect(headline()).toBe("90.0%");
@@ -764,6 +770,35 @@ describe("AI 평가 화면의 단계 탭", () => {
     ).toBe("run-0");
     expect(changeOf("자동기입 점수")).toBe("+5.0%p:delta good");
     expect(changeOf("자동기입 시간")).toBe("−0.50초:delta good");
+  });
+
+  it("모델을 바꾼 전후도 같은 공급자끼리 비교하고 모델 변경을 달라진 조건에 보인다", async () => {
+    const model = baseRun.versions.model;
+    baseRun.versions.model = "older-model";
+    try {
+      (document.querySelector("#refresh") as HTMLButtonElement).click();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await openCompare();
+      expect(changeOf("자동기입 점수")).toContain("+5.0%p");
+      const page = document.querySelector("#cf-compare")?.textContent;
+      expect(page).toContain(`older-model → ${model}`);
+      expect(page).toContain(`모델 older-model → ${model}`);
+    } finally {
+      baseRun.versions.model = model;
+    }
+  });
+
+  it("매핑 탭의 확신도 표는 기준별 값을 모델마다 보이고 현재 기준과 모델별 최고 점수를 표시한다", async () => {
+    await pick("mapping");
+    const table = document.querySelector("#cf-confidence table");
+    const rows = [...(table?.querySelectorAll("tbody tr") ?? [])];
+    expect(rows.map((row) => row.querySelector("th")?.textContent)).toEqual([
+      "0.5",
+      "0.8 현재",
+      "0.9",
+    ]);
+    expect(rows[1].textContent).toContain("82.0%");
+    expect(rows[1].querySelector(".best")?.textContent).toBe("82.0%");
   });
 
   it("반복별 범위가 겹치는 점수 변화는 좋음·나쁨 대신 구분 불가로 보인다", async () => {

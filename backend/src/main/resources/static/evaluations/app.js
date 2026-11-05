@@ -90,6 +90,7 @@ function comparisonDetail(key) {
 }
 
 // 결과에 영향을 주는 실행 조건. 코드 버전과 서버 설정(배치·병렬·재시도)이 바뀌면 프롬프트가 같아도 품질·성능이 달라질 수 있다.
+const CURRENT_CONFIDENCE = 0.8;
 const SETTING_NAMES = { "field-batch-size": "칸 묶음", "section-concurrency": "섹션 동시", "max-concurrent": "최대 동시 호출",
   "rate-limit-retries": "재시도", "timeout-ms": "시간 제한(ms)", "min-confidence": "확신도 기준", "reasoning-effort": "추론 강도", "whole-form": "화면 전체 질문" };
 /** 이전 실행과 달라진 조건(코드, 프롬프트, 모델, 설정). 같으면 빈 목록이다. */
@@ -378,6 +379,17 @@ function renderTokenBars() {
  */
 /** 실행 묶음에서 그 모델의 끝난 실행과 보고. 없으면 undefined다. */
 const groupEntry = (key, model) => key ? groupRuns(key).find(({ run }) => done(run) && modelKey(run) === model) : undefined;
+/**
+ * 이후 실행의 모델과 비교할 이전 실행. 같은 모델이 없으면 모델을 바꾼 것이므로 같은 공급자의 남은 모델과 짝짓는다.
+ * 모델 변경은 달라진 조건에 나타난다.
+ */
+function baseEntry(after, before, model) {
+  const exact = groupEntry(before, model);
+  if (exact) return exact;
+  const finished = groupRuns(after).filter(({ run }) => done(run)).map(({ run }) => modelKey(run));
+  const provider = groupEntry(after, model)?.run.versions.provider;
+  return groupRuns(before).find(({ run }) => done(run) && run.versions.provider === provider && !finished.includes(modelKey(run)));
+}
 
 /**
  * 이전 대비 변화를 실행마다 생기는 흔들림과 구분할 수 없는 이유. 구분할 수 있으면 null이다. 어느 한쪽이 반복 1회면
@@ -577,6 +589,54 @@ function itemsOf(model, keys) {
 const scoredOf = (items) => items ? ITEM_KINDS.reduce((sum, { key }) => sum + items[key], 0) : 0;
 const accuracyOf = (items) => scoredOf(items) ? items.correct / scoredOf(items) : null;
 
+/** 확신도 기준을 바꾸면 칸 매핑이 어떻게 달라지는지. 모델마다 확신도의 뜻이 달라 같은 기준이 공정한지 본다. */
+function confidenceCard() {
+  const card = element("div", undefined, "metric");
+  card.id = "cf-confidence";
+  const head = element("div", undefined, "metric-head");
+  head.append(element("h3", "확신도 기준별 칸 매핑"), element("span", "굵은 값이 모델별 최고 점수", "muted"));
+  card.append(head);
+  const models = state.selected.filter((model) => report(model)?.confidence?.length);
+  if (!models.length) {
+    card.append(element("div", state.selected.length ? "확신도 기록 전 실행이라 측정 불가." : "비교할 모델 선택 필요.", "empty"));
+    return card;
+  }
+  const table = element("table", undefined, "compare-table");
+  const thead = element("thead");
+  const top = element("tr");
+  top.append(element("th", "기준"));
+  const sub = element("tr");
+  sub.append(element("th"));
+  models.forEach((model) => {
+    const th = element("th", model, "model-col");
+    th.colSpan = 3;
+    th.style.setProperty("--model", color(model));
+    top.append(th);
+    sub.append(element("th", "정밀도", "number"), element("th", "채움률", "number"), element("th", "점수", "number"));
+  });
+  thead.append(top, sub);
+  const body = element("tbody");
+  const text = (value) => value == null ? "—" : `${(value * 100).toFixed(1)}%`;
+  report(models[0]).confidence.forEach(({ threshold }) => {
+    const row = element("tr");
+    row.append(element("th", threshold === CURRENT_CONFIDENCE ? `${threshold} 현재` : String(threshold)));
+    models.forEach((model) => {
+      const points = report(model).confidence;
+      const point = points.find((entry) => entry.threshold === threshold);
+      const best = Math.max(...points.map((entry) => entry.score ?? 0));
+      row.append(element("td", text(point?.precision), "number"), element("td", text(point?.fillRate), "number"),
+        element("td", text(point?.score), point?.score === best ? "number best" : "number"));
+    });
+    body.append(row);
+  });
+  table.append(thead, body);
+  const wrap = element("div", undefined, "table-wrap compare-wrap");
+  wrap.append(table);
+  card.append(wrap);
+  cardHelp(card, richNote(["칸 매핑 질문만"], " · 섹션 분류 제외 · 같은 데이터로 본 값이라 최고 점수 기준을 그대로 믿으면 안 됨 · ", ["JEV는 확률, OpenAI는 모델이 적은 값"], "이라 같은 숫자가 같은 뜻이 아님"));
+  return card;
+}
+
 function renderQuality() {
   const quality = $("#cf-quality");
   if (state.stage === "prepare") {
@@ -585,7 +645,7 @@ function renderQuality() {
         richNote(["섹션 분류"], " 조작할 섹션을 고르는 질문 · ", ["버튼·선택 결정"], " 학력 구분이나 행 추가처럼 무엇을 누르고 고를지 정하는 질문")));
   }
   else if (state.stage === "mapping") {
-    quality.replaceChildren(scoreCard("MAPPING", "매핑 점수"), renderAutofill(),
+    quality.replaceChildren(scoreCard("MAPPING", "매핑 점수"), renderAutofill(), confidenceCard(),
       stageAccuracyCard("섹션 분류 결과", ["MAPPING/SECTION_CLASSIFY"],
         richNote(["섹션 분류"], " 화면의 섹션마다 범주(기본정보·학력·해당 없음 …)를 정하는 질문")));
   }
@@ -1169,7 +1229,7 @@ function resultSummary(after, before, models) {
   for (const entry of entries) {
     const model = modelKey(entry.run);
     const now = entry.report;
-    const base = before ? groupEntry(before, model) : undefined;
+    const base = before ? baseEntry(after, before, model) : undefined;
     const then = base?.report;
     const score = (stage) => percentText(now?.scores?.[stage]?.score)
       + change(now?.scores?.[stage]?.score, then?.scores?.[stage]?.score, "%p", 100, base && unclearReason(entry, base, repetitionScores(stage)));
@@ -1181,7 +1241,7 @@ function resultSummary(after, before, models) {
   }
   if (before) {
     const changes = entries.flatMap((entry) => {
-      const base = groupEntry(before, modelKey(entry.run))?.run;
+      const base = baseEntry(after, before, modelKey(entry.run))?.run;
       return base ? changedConditions(entry.run, base).map((text) => `${modelKey(entry.run)}: ${text}`) : [];
     });
     lines.push("", `- 달라진 조건: ${changes.length ? changes.join(" · ") : "없음(코드·프롬프트·설정 같음)"}`);
@@ -1280,7 +1340,7 @@ function renderCompare() {
 
   const head = element("div", undefined, "compare-head");
   const title = element("div");
-  title.append(element("h2", "전후 비교"), element("p", "고치기 전 실행(이전)과 고친 뒤 실행(이후)을 같은 모델끼리 비교합니다.", "muted"));
+  title.append(element("h2", "전후 비교"), element("p", "고치기 전 실행(이전)과 고친 뒤 실행(이후)을 같은 모델끼리, 모델을 바꿨으면 같은 공급자끼리 비교합니다.", "muted"));
   const picks = element("div", undefined, "compare-picks");
   const picker = (label, key, id) => {
     const select = element("select");
@@ -1307,7 +1367,12 @@ function renderCompare() {
     return;
   }
   const models = [...new Set(groupRuns(compare.after).map(({ run }) => modelKey(run)))]
-    .filter((model) => groupEntry(compare.after, model) && groupEntry(compare.before, model));
+    .filter((model) => groupEntry(compare.after, model) && baseEntry(compare.after, compare.before, model));
+  const baseOf = (model) => baseEntry(compare.after, compare.before, model);
+  const pairLabel = (model) => {
+    const base = baseOf(model).run;
+    return modelKey(base) === model ? model : `${base.versions.provider} ${base.versions.model} → ${model.split("/")[1]}`;
+  };
   copy.addEventListener("click", () => copySummary(copy, resultSummary(compare.after, compare.before, models)));
   if (!models.length) {
     page.replaceChildren(head, element("div", "두 실행에 함께 끝난 모델이 없습니다.", "empty"));
@@ -1322,7 +1387,7 @@ function renderCompare() {
   const sub = element("tr");
   sub.append(element("th"));
   models.forEach((model) => {
-    const th = element("th", model, "model-col");
+    const th = element("th", pairLabel(model), "model-col");
     th.colSpan = 3;
     th.style.setProperty("--model", color(model));
     top.append(th);
@@ -1333,7 +1398,7 @@ function renderCompare() {
   for (const metric of COMPARE_METRICS) {
     const row = element("tr");
     row.append(element("th", metric.label));
-    models.forEach((model) => row.append(...compareCells(metric, groupEntry(compare.after, model), groupEntry(compare.before, model))));
+    models.forEach((model) => row.append(...compareCells(metric, groupEntry(compare.after, model), baseOf(model))));
     body.append(row);
   }
   table.append(thead, body);
@@ -1343,7 +1408,7 @@ function renderCompare() {
   // 달라진 조건: 같으면 모델이 같은 입력에 다르게 답한 흔들림뿐이다.
   const conditions = element("div", undefined, "compare-conditions");
   models.forEach((model) => {
-    const changes = changedConditions(groupEntry(compare.after, model).run, groupEntry(compare.before, model).run);
+    const changes = changedConditions(groupEntry(compare.after, model).run, baseOf(model).run);
     const line = element("p");
     const name = element("span", model, "stage-model");
     name.style.setProperty("--model", color(model));
@@ -1355,7 +1420,7 @@ function renderCompare() {
   // 판정이 바뀐 항목. 악화를 먼저 보인다.
   const items = element("div", undefined, "compare-items");
   items.append(element("h3", "판정이 바뀐 항목"));
-  const loaded = models.map((model) => [model, runFields(groupEntry(compare.before, model).run), runFields(groupEntry(compare.after, model).run)]);
+  const loaded = models.map((model) => [model, runFields(baseOf(model).run), runFields(groupEntry(compare.after, model).run)]);
   if (loaded.some(([, before, after]) => before === null || after === null)) items.append(element("p", "항목별 답을 불러오는 중.", "muted"));
   else {
     const list = element("table", undefined, "fields-table");
