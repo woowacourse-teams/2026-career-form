@@ -9,6 +9,10 @@ import {
 export default defineConfig({
   test: {
     reporters: ["default", createRequireBrowserSuite()],
+    // afterEach를 등록 순서대로 돌린다(기본 "stack"은 역순). setup.ts의 cleanup(언마운트)이
+    // 파일별 afterEach의 URL 되돌리기·실행 정책 해제보다 먼저 실행되어야, 아직 돌고 있는
+    // 워크플로가 바뀐 환경을 보고 "Missing hidden-code execution rules"로 터지지 않는다.
+    sequence: { hooks: "list" },
     css: {
       include:
         /WorkflowResults\.module\.css|ProfileForm\.module\.css|sidepanel\/App\.module\.css|site\/landing\/\w+\.module\.css/,
