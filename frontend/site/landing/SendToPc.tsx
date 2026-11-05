@@ -20,7 +20,7 @@ const TOAST_MS = 4000;
 export function SendToPc({
   className = brand.primary,
   copy = false,
-  children = "PC로 링크 보내기",
+  children = "공유하기",
 }: {
   className?: string;
   copy?: boolean;

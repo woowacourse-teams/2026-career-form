@@ -47,7 +47,7 @@ export function BrandHeader({
           커리어폼
         </SiteLink>
         {handoff ? (
-          <SendToPc className={brand.headerInstall}>PC로 보내기</SendToPc>
+          <SendToPc className={brand.headerInstall} />
         ) : (
           <InstallLink onInstall={onInstall} className={brand.headerInstall} />
         )}

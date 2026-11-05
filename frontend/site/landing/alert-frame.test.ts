@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   ALERT_PLAYBACK,
   drawAlertFrame,
+  stackNarrow,
   type AlertElements,
   type AlertLayout,
 } from "./alert-frame";
@@ -74,5 +75,24 @@ describe("alert scene frames", () => {
     expect(els.firstAlert.style.opacity).toBe("0");
     drawAlertFrame(els, layout, 0.5, true);
     expect(els.firstAlert.style.opacity).toBe("1");
+  });
+});
+
+describe("stackNarrow", () => {
+  const sizes = { captionBottom: 220, postHeight: 190, toastHeight: 80 };
+
+  it("stacks caption, posting, axis and alerts without overlap", () => {
+    const at = stackNarrow({ ...sizes, height: 844 });
+    expect(at.fits).toBe(true);
+    expect(at.postTop).toBeGreaterThanOrEqual(sizes.captionBottom + 16);
+    // Tick dots reach 12px above the axis.
+    expect(at.postTop + sizes.postHeight).toBeLessThanOrEqual(at.axisY - 24);
+    // Tick labels hang about 60px under the axis.
+    expect(at.toastTop).toBeGreaterThanOrEqual(at.axisY + 60);
+    expect(at.toastTop + sizes.toastHeight).toBeLessThanOrEqual(844);
+  });
+
+  it("reports when a short screen cannot hold the whole stack", () => {
+    expect(stackNarrow({ ...sizes, height: 560 }).fits).toBe(false);
   });
 });

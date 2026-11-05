@@ -42,7 +42,7 @@
   position: absolute;
   left: max(var(--gutter), calc(50% - 520px));
   right: max(var(--gutter), calc(50% - 520px));
-  top: 68%;
+  top: var(--axis-y, 68%);
   height: 4px;
   border-radius: 2px;
   background: var(--line-strong);
@@ -51,7 +51,7 @@
 }
 .tick {
   position: absolute;
-  top: calc(68% - 10px);
+  top: calc(var(--axis-y, 68%) - 10px);
   width: 24px;
   height: 24px;
   margin-left: -12px;
@@ -71,7 +71,7 @@
 }
 .label {
   position: absolute;
-  top: calc(68% + 24px);
+  top: calc(var(--axis-y, 68%) + 24px);
   transform: translateX(-50%);
   text-align: center;
   font-size: 13px;
@@ -91,7 +91,7 @@
 }
 .clock {
   position: absolute;
-  top: calc(68% - 130px);
+  top: calc(var(--axis-y, 68%) - 130px);
   width: 96px;
   z-index: 1;
   opacity: 0;
@@ -101,7 +101,7 @@
 .post {
   position: absolute;
   left: var(--axis-left);
-  top: calc(68% - 190px);
+  top: calc(var(--axis-y, 68%) - 190px);
   width: 300px;
   background: #fff;
   border-radius: 22px;
@@ -170,7 +170,7 @@
 }
 .stamp {
   position: absolute;
-  top: calc(68% - 220px);
+  top: calc(var(--axis-y, 68%) - 220px);
   width: 86px;
   z-index: 4;
   opacity: 0;
@@ -179,7 +179,7 @@
 
 .toast {
   position: absolute;
-  top: calc(68% - 150px);
+  top: calc(var(--axis-y, 68%) - 150px);
   width: 300px;
   background: #fff;
   border-radius: 16px;
@@ -249,8 +249,18 @@
   .toast {
     width: 250px;
   }
+  /* alert-frame.ts stacks these under the caption (placeNarrow). */
+  .post {
+    top: var(--post-top);
+  }
+  .stamp {
+    top: calc(var(--post-top) - 14px);
+  }
   .toast {
-    top: calc(68% + 70px);
+    top: var(--toast-top);
+  }
+  .caption[data-fit="compact"] p {
+    display: none;
   }
   .label {
     font-size: 11px;

@@ -30,12 +30,6 @@ export function handoffUrl(location: { origin: string }) {
   return `${location.origin}/#try`;
 }
 
-/** A mail draft to oneself; works in in-app browsers without a share sheet. */
-export function handoffMailto(url: string) {
-  const body = `${SHARE_TEXT}\n${url}`;
-  return `mailto:?subject=${encodeURIComponent(SHARE_TITLE)}&body=${encodeURIComponent(body)}`;
-}
-
 export async function copyLink(
   url: string,
   nav: ShareNavigator,

@@ -109,7 +109,7 @@ describe("landing trial", () => {
     });
     afterEach(() => vi.unstubAllGlobals());
 
-    it("offers to send the trial to a PC instead of running it", async () => {
+    it("offers to share the trial instead of running it", async () => {
       const share = vi.fn().mockResolvedValue(undefined);
       vi.stubGlobal("navigator", { ...navigator, share });
       render(<SiteApp path="/" />);
@@ -117,7 +117,7 @@ describe("landing trial", () => {
       await act(async () =>
         fireEvent.click(
           within(document.getElementById("try")!).getByRole("button", {
-            name: "PC로 링크 보내기",
+            name: "공유하기",
           }),
         ),
       );
@@ -137,7 +137,7 @@ describe("landing trial", () => {
       await act(async () =>
         fireEvent.click(
           within(document.getElementById("try")!).getByRole("button", {
-            name: "PC로 링크 보내기",
+            name: "공유하기",
           }),
         ),
       );

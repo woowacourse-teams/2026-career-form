@@ -144,7 +144,7 @@ function Hero({ onInstall }: { onInstall: InstallHandler }) {
         <div className={styles.actions}>
           <SendToPc />
           <small className={styles.handoffNote}>
-            커리어폼은 PC Chrome 확장 프로그램이에요. 링크를 보내 두고 PC에서
+            커리어폼은 PC Chrome 확장 프로그램이에요. 링크를 공유해 두고 PC에서
             이어서 써보세요.
           </small>
         </div>

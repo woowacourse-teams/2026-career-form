@@ -2,13 +2,7 @@ import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SiteApp } from "../SiteApp";
 import { STORE_URL } from "../content";
-import {
-  HANDOFF_QUERY,
-  copyLink,
-  handoffMailto,
-  handoffUrl,
-  sendToPc,
-} from "./handoff";
+import { HANDOFF_QUERY, copyLink, handoffUrl, sendToPc } from "./handoff";
 
 const URL = "https://career.example/#try";
 
@@ -53,12 +47,6 @@ describe("handoff links", () => {
     expect(handoffUrl({ origin: "https://career.example" })).toBe(URL);
   });
 
-  it("drafts a mail to oneself carrying the link", () => {
-    const href = handoffMailto(URL);
-    expect(href.startsWith("mailto:?subject=")).toBe(true);
-    expect(decodeURIComponent(href)).toContain(URL);
-  });
-
   it("treats touch-only screens as phones, not just narrow ones", () => {
     expect(HANDOFF_QUERY).toContain("max-width: 700px");
     expect(HANDOFF_QUERY).toContain("hover: none");
@@ -88,24 +76,20 @@ describe("landing on a phone", () => {
     expect(screen.queryByRole("link", { name: "Chrome에 추가" })).toBeNull();
   });
 
-  it("offers to send the link to a PC from the header, hero and closing", () => {
+  it("offers to share the link from the header, hero and closing", () => {
     render(<SiteApp path="/" />);
     const header = within(screen.getByRole("banner"));
-    expect(header.getByRole("button", { name: "PC로 보내기" })).toBeVisible();
+    expect(header.getByRole("button", { name: "공유하기" })).toBeVisible();
     const hero = within(document.querySelector('[data-ai="hero"]')!);
-    expect(
-      hero.getByRole("button", { name: "PC로 링크 보내기" }),
-    ).toBeVisible();
+    expect(hero.getByRole("button", { name: "공유하기" })).toBeVisible();
     expect(hero.getByText(/PC Chrome 확장 프로그램/)).toBeVisible();
     const closing = within(
       screen.getByRole("region", { name: /커리어폼이 채울게요/ }),
     );
-    expect(
-      closing.getByRole("button", { name: "PC로 링크 보내기" }),
-    ).toBeVisible();
+    expect(closing.getByRole("button", { name: "공유하기" })).toBeVisible();
   });
 
-  it("gives the trial copy and mail options alongside the share sheet", async () => {
+  it("replaces the trial with just share and copy buttons", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal("navigator", {
       ...navigator,
@@ -113,12 +97,18 @@ describe("landing on a phone", () => {
       clipboard: { writeText },
     });
     render(<SiteApp path="/" />);
-    const trial = within(document.getElementById("try")!);
-    expect(trial.getByRole("link", { name: "메일로 보내기" })).toHaveAttribute(
-      "href",
-      expect.stringMatching(/^mailto:/),
-    );
-    expect(trial.getByText(handoffUrl(window.location))).toBeVisible();
+    const section = document.getElementById("try")!;
+    const trial = within(section);
+    expect(
+      trial.queryByRole("heading", { name: /직접 눌러보세요/ }),
+    ).toBeNull();
+    expect(trial.queryByText(/가상 지원서예요/)).toBeNull();
+    expect(trial.queryByRole("link")).toBeNull();
+    expect(trial.queryByText(handoffUrl(window.location))).toBeNull();
+    expect(trial.getAllByRole("button").map((b) => b.textContent)).toEqual([
+      "공유하기",
+      "링크 복사",
+    ]);
     await act(async () =>
       fireEvent.click(trial.getByRole("button", { name: "링크 복사" })),
     );

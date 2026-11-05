@@ -63,17 +63,17 @@ export function TrialScene({
       ref={section}
       id="try"
       className={styles.trial}
-      aria-labelledby="try-title"
+      aria-labelledby={handoff ? "share-title" : "try-title"}
     >
       <div className={styles.inner}>
-        <div className={styles.head}>
-          <h2 id="try-title">이번엔 직접 눌러보세요.</h2>
-          <p>가상 지원서예요. 아무 정보도 저장하지 않아요.</p>
-        </div>
         {handoff ? (
           <ShareCard />
         ) : (
           <>
+            <div className={styles.head}>
+              <h2 id="try-title">이번엔 직접 눌러보세요.</h2>
+              <p>가상 지원서예요. 아무 정보도 저장하지 않아요.</p>
+            </div>
             <div
               className={`${styles.window} ${waiting ? styles.waiting : ""}`}
             >
