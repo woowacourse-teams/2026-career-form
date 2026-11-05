@@ -169,7 +169,10 @@ const dataset = {
 };
 
 // 서버가 기록 삭제를 허용하는지. 개발서버처럼 함께 쓰는 서버는 꺼져 있다.
-const capabilities = { recordDelete: false };
+const capabilities: { recordDelete: boolean; baselineOrder: string[] } = {
+  recordDelete: false,
+  baselineOrder: [],
+};
 
 // 항목별 비교의 칸 하나. 반복 2회에서 한 번은 맞게 넣고 한 번은 놓쳤다.
 const fieldItem = {
@@ -837,6 +840,82 @@ describe("AI 평가 화면의 단계 탭", () => {
     ]);
     expect(rows[1].textContent).toContain("82.0%");
     expect(rows[1].querySelector(".best")?.textContent).toBe("82.0%");
+  });
+
+  it("기준 기록은 측정한 시각이 아니라 정해진 순서로, 다른 실행보다 오래된 쪽에 놓인다", async () => {
+    const refresh = async () => {
+      (document.querySelector("#refresh") as HTMLButtonElement).click();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    };
+    const options = () =>
+      [...document.querySelectorAll("#comparison option")].map((option) => option.textContent?.split(" · ")[0]);
+    expect(options()).toEqual(["baseline", "before"]);
+    // "baseline"을 먼저 재고 "before"를 나중에 쟀어도, 기준 순서가 baseline 다음 before면 before가 더 최근 쪽이다.
+    const requested = { run: run.requestedAt, base: baseRun.requestedAt };
+    Object.assign(run, { requestedBy: "baseline-seed", requestedAt: "2026-11-01T00:00:00Z" });
+    Object.assign(baseRun, { requestedBy: "baseline-seed" });
+    capabilities.baselineOrder = ["baseline", "before"];
+    extraRuns.push({
+      run: { ...run, id: "run-9", requestedBy: "auto-deploy", requestedAt: "2026-10-01T00:00:00Z",
+        versions: { ...run.versions, promptVersion: "first-abc1234" } } as typeof run,
+      report,
+    });
+    try {
+      await refresh();
+      expect(options()).toEqual(["first-abc1234", "before", "baseline"]);
+    } finally {
+      extraRuns.length = 0;
+      capabilities.baselineOrder = [];
+      Object.assign(run, { requestedBy: undefined, requestedAt: requested.run });
+      Object.assign(baseRun, { requestedBy: undefined, requestedAt: requested.base });
+      await refresh();
+    }
+  });
+
+  it("좋은 순을 누르면 카드마다 그 카드의 값이 좋은 모델부터 놓고, 모델 순을 누르면 되돌린다", async () => {
+    const refresh = async () => {
+      (document.querySelector("#refresh") as HTMLButtonElement).click();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    };
+    const rows = (title: string) => {
+      const card = [...document.querySelectorAll("#cf-overview .metric")].find(
+        (metric) => metric.querySelector("h3")?.textContent === title,
+      );
+      return [...(card?.querySelectorAll(".bar-row") ?? [])].map((row) => row.firstElementChild?.textContent);
+    };
+    const sort = async (key: string) => {
+      (document.querySelector(`#cf-overview-stage [data-sort=${key}]`) as HTMLButtonElement).click();
+      await Promise.resolve();
+    };
+    const original = run.comparisonId;
+    (run as { comparisonId: string | null }).comparisonId = "both";
+    // 두 번째 모델은 점수가 더 높고(0.95) 더 느리다(9초).
+    extraRuns.push({
+      run: { ...run, id: "run-2", versions: { ...run.versions, provider: "openai", model: "gpt" } },
+      report: { ...report, scores: { ...report.scores, TOTAL: { ...score(0.95), precision: 0.5 } },
+        flows: { ...report.flows, time: { ...report.flows.time, meanMs: 9000 } } },
+    });
+    try {
+      await refresh();
+      await pick("total");
+      expect(rows("자동기입 점수")).toEqual(["jev/jev-latest", "openai/gpt"]);
+      await sort("value");
+      // 점수는 높을수록, 시간은 낮을수록 좋다.
+      expect(rows("자동기입 점수")).toEqual(["openai/gpt", "jev/jev-latest"]);
+      expect(rows("자동기입 시간")).toEqual(["jev/jev-latest", "openai/gpt"]);
+      // 막대 아래 설명은 순서가 바뀌어도 그 모델의 값이다.
+      const card = [...document.querySelectorAll("#cf-quality .metric")][0];
+      expect(card.querySelector(".bar-row .number")?.textContent).toBe("95.0%");
+      expect(card.querySelector(".bar-row")?.nextElementSibling?.textContent).toContain("50");
+      expect(document.querySelector("#cf-overview-stage [data-sort=value]")?.getAttribute("aria-pressed")).toBe("true");
+      await sort("model");
+      expect(rows("자동기입 점수")).toEqual(["jev/jev-latest", "openai/gpt"]);
+    } finally {
+      await sort("model");
+      extraRuns.length = 0;
+      (run as { comparisonId: string | null }).comparisonId = original;
+      await refresh();
+    }
   });
 
   it("반복별 범위가 겹치는 점수 변화는 좋음·나쁨 대신 구분 불가로 보인다", async () => {

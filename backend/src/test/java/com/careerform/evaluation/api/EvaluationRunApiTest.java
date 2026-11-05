@@ -205,7 +205,11 @@ class EvaluationRunApiTest {
         authorized(get("/api/v1/evaluations/runs/" + runId)).andExpect(status().isOk());
         shared.perform(get("/api/v1/evaluations/capabilities").header("Authorization", PASSWORD))
             .andExpect(jsonPath("$.recordDelete").value(false));
-        authorized(get("/api/v1/evaluations/capabilities")).andExpect(jsonPath("$.recordDelete").value(true));
+        authorized(get("/api/v1/evaluations/capabilities")).andExpect(jsonPath("$.recordDelete").value(true))
+            // 기준 기록의 표시 순서는 저장소 파일 순서다.
+            .andExpect(jsonPath("$.baselineOrder[0]").value("initial-openai"))
+            .andExpect(jsonPath("$.baselineOrder[1]").value("token-limit"))
+            .andExpect(jsonPath("$.baselineOrder[2]").value("current"));
     }
 
     @Test

@@ -98,6 +98,8 @@ python3 scripts/evaluation_local.py reset-password
 | `token-limit` | JEV `jev-latest` | 같은 초기 구조 | JEV 도입 직후의 입력 토큰 초과와 반으로 나눠 다시 묻는 동작 |
 | `current` | JEV `jev-latest`, OpenAI `gpt-5.6-luna`, `gpt-6-luna` | 현재 구조(섹션별, 5칸씩) | 구조 개선 뒤. 같은 모델로 구조만 바꾼 효과와 모델 차이를 가른다 |
 
+화면은 기준 기록을 측정한 시각이 아니라 파일 순서(`순번-이름.jsonl`, `capabilities.baselineOrder`)대로 다른 실행보다 오래된 쪽에 놓는다. 다시 측정해 시각이 뒤섞여도 초기 → 이후 순서가 유지된다.
+
 호출 구조만 재현한 측정이고 당시 결과가 아니다. 프롬프트, 후처리, 데이터셋(v4)은 측정 시점의 것이고, 초기에는 없던 섹션 분류·준비 호출도 그대로 돌므로 초기 구조 기록은 칸 매핑(자동기입 점수)만 본다. 초기 코드는 답을 목록으로 받아 모르는 칸을 뺄 수 있었지만 지금은 모든 칸에 답한다.
 
 초기 코드는 선택지 목록을 응답 스키마에 한 번만 넣었고, 지금 연결 코드는 질문마다 넣는다. 그래서 화면 전체를 한 번에 물으면 OpenAI 구조화 출력의 enum 한도(1,000개)를 넘어 enum 없이 답을 받게 되고, 답 하나가 목록에 없으면 응답 전체가 버려져 요청의 절반 이상이 실패했다(초기에는 없던 실패). 한도를 넘으면 같은 선택지를 쓰는 질문이 정의 하나를 공유하도록 고친 뒤(`OpenAiChoiceModel`) 다시 측정한 것이 이 기록이다. JEV는 입력 토큰 초과로 거절되면 나눠 다시 물어 실패 없이 끝나며, 거절 횟수는 `performance.*.tokenLimitAttempts`(화면의 입력 토큰 초과)로 본다.
@@ -161,7 +163,7 @@ API와 화면은 품질 확인 공용 비밀번호(`CAREER_FORM_QUALITY_PASSWORD
 | `GET /api/v1/evaluations/providers` | 고를 수 있는 공급자와 모델(첫 항목이 기본값) |
 | `GET /api/v1/evaluations/comparisons/{id}` | 비교에 속한 모델별 실행과 보고(등록 순서) |
 | `GET /api/v1/evaluations/runs/{id}/items` | 채점 항목별 답(칸 매핑·섹션 분류·선택 결정)과 반복별 판정 |
-| `GET /api/v1/evaluations/capabilities` | 화면이 켜고 끌 기능(`recordDelete`) |
+| `GET /api/v1/evaluations/capabilities` | 화면이 켜고 끌 기능(`recordDelete`)과 기준 기록의 표시 순서(`baselineOrder`) |
 | `DELETE /api/v1/evaluations/records/{key}` | 비교 묶음(비교 ID, 단독 실행이면 실행 ID)의 실행·호출 결과·재채점 이력 삭제. 기록 삭제를 켠 서버(로컬)가 아니면 403, 끝나지 않은 실행이 있으면 409. 프롬프트 원문은 남기고 삭제 사실은 서버 로그(`EVALUATION_RECORD_DELETED`)에 남긴다 |
 
 등록 본문: `datasetId`, `datasetVersion`, `split`(tuning|final), `repetitions`, `promptVersion`(선택),

@@ -52,6 +52,12 @@ public final class EvaluationSeedRecords {
         }
     }
 
+    /** 기준 기록의 이름을 파일 순서대로. 파일 이름은 {@code 순번-이름.jsonl}이고, 화면이 이 순서로 기준 기록을 놓는다. */
+    public static List<String> names() {
+        return bundled().stream().map(Resource::getFilename)
+            .map(name -> name.replaceFirst("^\\d+-", "").replaceFirst("\\.jsonl$", "")).toList();
+    }
+
     /** 새로 넣은 문서 수. */
     public int insertMissing() {
         int inserted = 0;

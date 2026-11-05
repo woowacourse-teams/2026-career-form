@@ -8,7 +8,7 @@ const COLORS = ["#4e6d90", "#688b7c", "#ac8d68", "#8a6f9e", "#6f8f9e"];
 const PRICE_KEY = "cf-evaluation-model-prices-v1";
 const root = document.getElementById("cf-eval-preview");
 const $ = (selector) => root.querySelector(selector);
-const state = { runs: [], dataset: null, models: [], selected: [], group: null, stage: "total", page: "overview", confidenceMetric: "score",
+const state = { runs: [], dataset: null, models: [], selected: [], group: null, stage: "total", page: "overview", sort: "model", confidenceMetric: "score",
   fields: {}, catalog: null, fieldHidden: [], canDelete: false, compare: { before: "", after: "" }, fieldFilter: "diff", fieldScreen: "all", openField: null, itemKind: "GENERIC_FIELDS" };
 let prices = {};
 try { prices = JSON.parse(localStorage.getItem(PRICE_KEY) || "{}") ?? {}; } catch { prices = {}; }
@@ -115,15 +115,25 @@ function latest(model) {
 const percent = (value) => value == null ? null : value * 100;
 const stageKey = () => ({ total: "TOTAL", prepare: "PREPARATION", mapping: "MAPPING" })[state.stage];
 
+/**
+ * 막대 카드. 좋은 순을 켜면 이 카드의 값이 좋은 모델부터 놓는다(값이 없으면 맨 뒤). 좋은 방향은 부제의 "낮을수록"으로 정한다.
+ * 줄마다 data-model을 달아, 줄 아래에 설명을 붙이는 쪽이 순서와 무관하게 모델을 찾게 한다. 색은 모델을 따라간다.
+ */
 function bars(title, sub, values, max, format, foot) {
   const card = element("div", undefined, "metric");
   const head = element("div", undefined, "metric-head");
   head.append(element("h3", title), element("span", sub, "muted"));
   card.append(head);
   if (!state.selected.length) card.append(element("div", "비교할 모델 선택 필요.", "empty"));
-  for (const model of state.selected) {
+  const direction = sub.includes("낮을수록") ? 1 : -1;
+  const models = state.sort !== "value" ? state.selected : [...state.selected].sort((a, b) => {
+    const [left, right] = [values(a), values(b)];
+    return left == null || right == null ? (left == null) - (right == null) : (left - right) * direction;
+  });
+  for (const model of models) {
     const value = values(model);
     const row = element("div", undefined, "bar-row");
+    row.dataset.model = model;
     row.style.setProperty("--model", color(model));
     const track = element("div", undefined, "track");
     const fill = element("div", undefined, "fill");
@@ -156,9 +166,9 @@ function renderOverview() {
     total ? richNote(["자동기입 버튼 1번"], " = ", ["준비"], "(섹션 분류·버튼·선택 결정) + ", ["매핑"], "(섹션 분류·칸 매핑)의 서버 요청 시간 합 · 클릭·칸 입력·네트워크 왕복 제외")
       : richNote(["서버 요청 1개"], "(섹션 분류·칸 매핑 등)를 끝내기까지 · 안에서 ", ["AI에게 여러 번"], " 물을 수 있음 · 서버 처리·재시도 포함"));
   if (total) {
-    timeCard.querySelectorAll(".bar-row").forEach((row, index) => {
-      const time = report(state.selected[index])?.flows.time;
-      const repetitions = latest(state.selected[index])?.run.repetitions;
+    timeCard.querySelectorAll(".bar-row").forEach((row) => {
+      const time = report(row.dataset.model)?.flows.time;
+      const repetitions = latest(row.dataset.model)?.run.repetitions;
       if (time?.p95Ms == null) return;
       const note = element("span", undefined, "range-note stat-line");
       note.append(stat("p95", `${(time.p95Ms / 1000).toFixed(2)}초`, "측정한 자동기입 중 느린 쪽 5%를 뺀 가장 느린 시간"),
@@ -168,8 +178,8 @@ function renderOverview() {
   }
   if (!total) {
     // 요청 하나 안에서 AI에게 몇 번 물었는지 보이면 AI 응답 시간과 이어서 읽을 수 있다.
-    timeCard.querySelectorAll(".bar-row").forEach((row, index) => {
-      const stage = perf(state.selected[index]);
+    timeCard.querySelectorAll(".bar-row").forEach((row) => {
+      const stage = perf(row.dataset.model);
       if (!stage?.calls || !stage.modelAttempt?.count) return;
       const note = element("span", undefined, "range-note stat-line");
       note.append(stat("요청", `${stage.calls}개`), stat("요청 1개에 AI 질문", `평균 ${(stage.modelAttempt.count / stage.calls).toFixed(1)}번`));
@@ -207,8 +217,8 @@ function modelTimeCard(perf) {
   const seconds = (m) => attempt(m)?.meanMs == null ? null : attempt(m).meanMs / 1000;
   const card = bars("AI 응답 시간", "AI 질문 1번 · 평균 · 낮을수록 좋음", seconds, Math.max(1, ...state.selected.map((m) => seconds(m) ?? 0)),
     (v) => `${v.toFixed(2)}초`, richNote(["AI에 질문 하나"], "를 보내고 답을 다 받기까지 · ", ["모델 속도 비교 기준"], " · 서버 처리 제외, 공급자 쪽 대기 포함"));
-  card.querySelectorAll(".bar-row").forEach((row, index) => {
-    const value = attempt(state.selected[index]);
+  card.querySelectorAll(".bar-row").forEach((row) => {
+    const value = attempt(row.dataset.model);
     if (!value?.count) return;
     const note = element("span", undefined, "range-note stat-line");
     note.append(stat("p95", `${(value.p95Ms / 1000).toFixed(2)}초`, "AI 질문 중 느린 쪽 5%를 뺀 가장 느린 시간"), stat("AI 질문", `${value.count}번`));
@@ -490,8 +500,8 @@ addEventListener("scroll", hideHelp, { passive: true });
 function scoreCard(stage, title) {
   const fill = (model) => report(model)?.scores?.[stage];
   const card = bars(title, "높을수록 좋음", (m) => percent(fill(m)?.score), 100, (v) => `${v.toFixed(1)}%`);
-  card.querySelectorAll(".bar-row").forEach((row, index) => {
-    const autofill = fill(state.selected[index]);
+  card.querySelectorAll(".bar-row").forEach((row) => {
+    const autofill = fill(row.dataset.model);
     if (!autofill) {
       row.after(element("span", "자동기입 결과 없음", "range-note"));
       return;
@@ -500,7 +510,7 @@ function scoreCard(stage, title) {
       row.after(element("span", "확신도 기록 전 실행이라 측정 불가", "range-note"));
       return;
     }
-    const values = (report(state.selected[index])?.repetitions ?? []).map((item) => item.scores?.[stage])
+    const values = (report(row.dataset.model)?.repetitions ?? []).map((item) => item.scores?.[stage])
       .filter((value) => value != null).map((value) => value * 100);
     const note = element("span", undefined, "range-note stat-line");
     note.append(stat("정밀도", autofill.precision == null ? "—" : shortPercent(autofill.precision),
@@ -1171,6 +1181,7 @@ function render() {
   $("#cf-compare").hidden = state.page !== "compare";
   root.querySelectorAll("[data-page]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.page === state.page)));
   root.querySelectorAll("[data-stage]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.stage === state.stage)));
+  root.querySelectorAll("[data-sort]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.sort === state.sort)));
   renderProgress();
   renderOverview();
   renderTokens();
@@ -2464,14 +2475,26 @@ async function selectDataset() {
   state.dataset = loadedDatasets[key];
 }
 
+/**
+ * 기준 기록(저장소에 담은 실행)은 측정한 시각과 상관없이 정해진 순서로, 다른 실행보다 오래된 쪽에 둔다. 다시 측정하면 시각이
+ * 뒤섞이지만 뜻하는 순서(초기 → 이후)는 그대로여야 한다. 목록은 최신이 먼저다.
+ */
+function baselineLast(runs, order) {
+  const rank = ({ run }) => run.requestedBy === "baseline-seed" ? order.indexOf(promptKey(run)) : -1;
+  return [...runs.filter((entry) => rank(entry) < 0),
+    ...runs.filter((entry) => rank(entry) >= 0).sort((a, b) => rank(b) - rank(a))];
+}
+
 async function load() {
   clearTimeout(pollTimer);
   let failed = null;
   try {
-    state.runs = await api("/runs?limit=50");
+    const runs = await api("/runs?limit=50");
     state.catalog = await api(`/datasets/${DATASET.id}/catalog`);
     // 기록 삭제는 서버가 허용할 때만 보인다(개발서버처럼 함께 쓰는 서버는 꺼져 있다).
-    state.canDelete = (await api("/capabilities")).recordDelete === true;
+    const capabilities = await api("/capabilities");
+    state.canDelete = capabilities.recordDelete === true;
+    state.runs = baselineLast(runs, capabilities.baselineOrder ?? []);
   } catch (error) {
     state.runs = [];
     failed = error.message;
@@ -2487,6 +2510,7 @@ async function load() {
 
 root.querySelectorAll("[data-page]").forEach((b) => b.addEventListener("click", () => { state.page = b.dataset.page; render(); }));
 root.querySelectorAll("[data-stage]").forEach((b) => b.addEventListener("click", () => { state.stage = b.dataset.stage; render(); }));
+root.querySelectorAll("[data-sort]").forEach((b) => b.addEventListener("click", () => { state.sort = b.dataset.sort; render(); }));
 $("#comparison").addEventListener("change", async (e) => {
   state.group = e.target.value; state.selected = []; state.openField = null;
   await selectDataset();

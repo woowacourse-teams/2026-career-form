@@ -141,8 +141,9 @@ public final class EvaluationRunController {
 
     /** 화면이 켜고 끌 기능. 기록 삭제는 로컬에서만 켠다. */
     @GetMapping("/capabilities")
-    public Map<String, Boolean> capabilities() {
-        return Map.of("recordDelete", recordDeleteEnabled);
+    public Map<String, Object> capabilities() {
+        return Map.of("recordDelete", recordDeleteEnabled,
+            "baselineOrder", com.careerform.evaluation.run.EvaluationSeedRecords.names());
     }
 
     /**
