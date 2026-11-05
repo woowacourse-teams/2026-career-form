@@ -8,7 +8,7 @@ description: Career Form 범용 자동기입 AI 평가 데이터셋에 새 공�
 이 문서는 팀원이 자기 AI 에이전트에게 그대로 넘기는 수집 절차다. 저장소의 `AGENTS.md`,
 `harness/policies/dom-snapshot-fixtures.md`, `backend/docs/model-evaluation.md`를 함께 읽는다.
 첫 사례는 우아한형제들 공고 R2605009다(`frontend/fixtures/dom-snapshots/woowahan-r2605009-*`). 현재 데이터셋은
-`generic-matching` v4(우아한형제들 처음 화면, 고등학교, 대학교, 검정고시 4개 화면 + NHN Careers 지원서 1단계 최초 화면)다. 학력 구분을 고르기 전 처음 화면은 준비 단계만
+`generic-matching`의 `currentVersion`(`evaluation/datasets/generic-matching/catalog.json`)이다. 학력 구분을 고르기 전 처음 화면은 준비 단계만
 채점한다(사례를 만들 때 `preparationOnly`). 실제 제품은 고른 뒤 펼쳐진 화면에서 칸을 채우기 때문이다.
 
 ## 지켜야 할 것
@@ -534,7 +534,7 @@ description: Career Form 범용 자동기입 AI 평가 데이터셋에 새 공�
 4. manifest의 `review`에 사람 검토 결과를 적는다. `privacy`, `structure`는 PASSED, `mappingTruth`, `preparationTruth`는 HUMAN_REVIEWED, `inputIdentity`는 SOURCE_PIPELINE_VERIFIED여야 평가에 쓰인다. 하나라도 아니면 백엔드 등록 검사가 거부한다.
 5. 확정한 버전 디렉터리는 고치지 않는다. 사례를 더할 때는 직전 버전의 사례·정답 파일을 바이트 그대로 복사한 새 버전(`v<N+1>`)을 만들고 새 사례를 더한다.
 6. manifest의 사례마다 `split`(`tuning` 또는 `final`)은 형식상 적는다. 같은 화면 상태를 두 분할에 넣지 않는다. 평가 화면은 분할을 나누지 않고 항상 전체(`all`)를 실행한다.
-7. 평가 화면이 새 버전을 쓰도록 `backend/src/main/resources/static/evaluations/app.js`의 `DATASET.version`, 화면 이름(`STATE_NAMES`)과 설명(`STATE_NOTES`)을 갱신한다. `DatasetLoaderTest`, `EvaluationEnabledContextTest`의 버전·사례 수 기대값도 함께 바꾼다.
+7. `evaluation/datasets/generic-matching/catalog.json`의 `currentVersion`을 올리고 새 공고(`sites`)와 화면(`states`)의 이름·설명을 더한다. 평가 화면과 자동 평가가 이 파일을 읽으므로 코드는 고치지 않는다. 칸 수·화면 수·요청 수는 데이터셋에서 계산한다. `DatasetLoaderTest`가 이름 누락과 버전 불일치를 잡는다.
 8. 지원 필드 목록에 없는 의미(예: 검정고시 합격연월)는 `key`를 null로 두고 `backend/docs/model-evaluation.md`에 이유를 적는다.
 
 ## 5. PR

@@ -180,6 +180,29 @@ class DatasetLoaderTest {
     }
 
     @Test
+    @DisplayName("목록 파일은 현재 버전을 가리키고, 모든 버전의 공고·화면에 이름이 있다. 화면을 추가하고 이름을 빠뜨리면 실패한다")
+    void catalogCoversEveryVersion() {
+        DatasetLoader loader = new DatasetLoader(DatasetLoader.classpath(getClass().getClassLoader()));
+
+        DatasetNames names = loader.names("generic-matching").orElseThrow();
+
+        assertThat(loader.find("generic-matching", names.currentVersion())).isPresent();
+        assertThat(loader.find("generic-matching", names.currentVersion() + 1))
+            .as("새 버전을 추가하면 catalog.json의 currentVersion도 올려야 한다").isEmpty();
+        for (int version = 1; version <= names.currentVersion(); version++) {
+            for (EvaluationCase evaluationCase : loader.load("generic-matching", version).cases()) {
+                assertThat(names.sites()).as("공고 이름 %s", evaluationCase.siteId()).containsKey(evaluationCase.siteId());
+                assertThat(names.sites().get(evaluationCase.siteId()).name()).isNotBlank();
+                assertThat(names.states()).as("화면 이름 %s", evaluationCase.state()).containsKey(evaluationCase.state());
+                assertThat(names.states().get(evaluationCase.state()).name()).isNotBlank();
+                assertThat(names.states().get(evaluationCase.state()).note()).isNotBlank();
+            }
+        }
+        assertThat(loader.names("../secret")).isEmpty();
+        assertThat(loader.names("synthetic")).isEmpty();
+    }
+
+    @Test
     @DisplayName("분할 all은 데이터셋의 모든 사례이고 요약에도 나온다")
     void allSplitCoversEveryCase() {
         DatasetLoader loader = new DatasetLoader(DatasetLoader.classpath(getClass().getClassLoader()));

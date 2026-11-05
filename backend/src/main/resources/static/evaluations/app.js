@@ -3,13 +3,13 @@ import { accessHeaders, clearAccess } from "/quality/access.js";
 import { estimateCost, formatUsd, validRate } from "/evaluations/pricing.js";
 
 // 평가는 항상 현재 데이터셋의 모든 화면으로 한다. 전후 비교는 같은 데이터셋으로 개선 전·후 코드를 각각 돌려 비교한다.
-const DATASET = { id: "generic-matching", version: 4 };
+const DATASET = { id: "generic-matching" };
 const COLORS = ["#4e6d90", "#688b7c", "#ac8d68", "#8a6f9e", "#6f8f9e"];
 const PRICE_KEY = "cf-evaluation-model-prices-v1";
 const root = document.getElementById("cf-eval-preview");
 const $ = (selector) => root.querySelector(selector);
 const state = { runs: [], dataset: null, models: [], selected: [], group: null, stage: "total", page: "overview",
-  fields: {}, fieldHidden: [], canDelete: false, compare: { before: "", after: "" }, fieldFilter: "diff", fieldScreen: "all", openField: null, itemKind: "GENERIC_FIELDS" };
+  fields: {}, catalog: null, fieldHidden: [], canDelete: false, compare: { before: "", after: "" }, fieldFilter: "diff", fieldScreen: "all", openField: null, itemKind: "GENERIC_FIELDS" };
 let prices = {};
 try { prices = JSON.parse(localStorage.getItem(PRICE_KEY) || "{}") ?? {}; } catch { prices = {}; }
 
@@ -359,7 +359,7 @@ function renderTokenBars() {
         element("span", total == null ? "" : `이번 실행 ${formatUsd(total)} · 자동기입 ${flows}회`, "muted cost-detail"));
       summary.append(line);
     });
-    summary.append(element("p", "자동기입 1회 = 준비(섹션 분류·버튼·선택 결정) + 매핑(섹션 분류·칸 매핑). 우아한형제들처럼 고르기 전 화면이 따로 있으면 그 화면의 준비를 고른 뒤 화면마다 더합니다. 비용 = 그 입력·출력 토큰 × 모델 단가 설정의 USD 단가(100만 토큰당). 서버는 비용을 계산하지 않습니다.", "muted"));
+    summary.append(element("p", "자동기입 1회 = 준비(섹션 분류·버튼·선택 결정) + 매핑(섹션 분류·칸 매핑). 고르기 전 화면이 따로 있는 공고는 그 화면의 준비를 고른 뒤 화면마다 더합니다. 비용 = 그 입력·출력 토큰 × 모델 단가 설정의 USD 단가(100만 토큰당). 서버는 비용을 계산하지 않습니다.", "muted"));
     box.append(summary);
   } else if (observed.length) {
     box.append(element("p", "비용 표시에는 모델 단가 설정의 입력·출력 단가가 필요합니다.", "muted"));
@@ -685,7 +685,7 @@ function itemValue(item, value) {
 const itemLabel = (item) => item.kind === "SECTION_CLASSIFY" ? sectionTitle({ title: item.label })
   : item.kind === "INTERACTION_DECISION" ? TARGET_NAMES[item.label] ?? item.label ?? ROLE_NAMES[item.group] ?? item.itemId : item.label ?? item.itemId;
 function itemGroup(item) {
-  const screen = STATE_NAMES[item.state] ?? item.state;
+  const screen = stateName(item.state);
   if (item.kind === "SECTION_CLASSIFY") return `${screen} · ${item.stage === "PREPARATION" ? "준비 단계" : "매핑 단계"}`;
   if (item.kind === "INTERACTION_DECISION") return `${screen} · ${ROLE_NAMES[item.group] ?? item.group ?? "선택 결정"}`;
   return `${screen} · ${sectionTitle({ title: item.group })}`;
@@ -751,10 +751,10 @@ function renderFields() {
     : state.fieldScreen === "all" || field.state === state.fieldScreen;
   screenSelect.append(Object.assign(element("option", "모든 공고"), { value: "all" }));
   [...new Set(cases.map((item) => item.siteId))].forEach((site) => {
-    const group = Object.assign(element("optgroup"), { label: SITE_NAMES[site] ?? site });
+    const group = Object.assign(element("optgroup"), { label: siteName(site) });
     group.append(Object.assign(element("option", "공고 전체"), { value: `site:${site}` }),
       ...cases.filter((item) => item.siteId === site)
-        .map((item) => Object.assign(element("option", STATE_NAMES[item.state] ?? item.state), { value: item.state })));
+        .map((item) => Object.assign(element("option", stateName(item.state)), { value: item.state })));
     screenSelect.append(group);
   });
   screenSelect.value = state.fieldScreen;
@@ -1031,6 +1031,18 @@ const FLOW_ROWS = [
   { stage: "END", arrows: [[1, 0, "확신도 0.8 이상 칸 입력", "result"]] },
 ];
 
+/** 공고별 자동기입 1번의 서버 요청 수. 준비만 있는 화면의 요청과 칸 매핑이 있는 화면 하나의 요청을 더한다(서버 묶음 규칙과 같다). */
+function autofillRequestCounts() {
+  const cases = state.dataset?.cases ?? [];
+  return [...new Set(cases.map((item) => item.siteId))].map((site) => {
+    const inSite = cases.filter((item) => item.siteId === site);
+    const mapped = (item) => item.calls.some((call) => call.stage === "MAPPING");
+    const start = inSite.filter((item) => !mapped(item)).reduce((sum, item) => sum + item.calls.length, 0);
+    const branch = inSite.find(mapped);
+    return { site, count: start + (branch?.calls.length ?? 0) };
+  }).filter(({ count }) => count).map(({ site, count }) => `${siteName(site)} ${count}개`).join(", ");
+}
+
 function flowSvg(focus) {
   const X = [100, 340, 600, 840];
   const top = 62;
@@ -1086,7 +1098,8 @@ function flowView() {
     item.append(element("b", name, `flow-chip ${kind}`), element("span", note, "muted"));
     legend.append(item);
   });
-  legend.append(element("p", "자동기입 시간 = 준비와 매핑의 서버 요청 처리 시간의 합. 요청 수는 공고마다 다릅니다(NHN 4개, 우아한형제들은 고른 뒤 화면의 준비 요청까지 5개). 준비 탭은 준비 요청, 매핑 탭은 매핑 요청을 봅니다. 평가 때는 확장프로그램 대신 저장해 둔 요청을 서버에 보내고, 답을 사람이 검토한 정답과 비교해 채점합니다.", "muted flow-foot"));
+  const counts = autofillRequestCounts();
+  legend.append(element("p", `자동기입 시간 = 준비와 매핑의 서버 요청 처리 시간의 합.${counts ? ` 자동기입 1번의 요청 수: ${counts}.` : ""} 준비 탭은 준비 요청, 매핑 탭은 매핑 요청을 봅니다. 평가 때는 확장프로그램 대신 저장해 둔 요청을 서버에 보내고, 답을 사람이 검토한 정답과 비교해 채점합니다.`, "muted flow-foot"));
   box.append(element("p", "자동기입 버튼 한 번에 오가는 요청을 순서대로 보입니다. 평가가 채점하고 시간을 재는 곳은 서버 요청과 AI 질문입니다.", "muted criteria-lead"), tabs, drawing, legend);
   return box;
 }
@@ -1202,7 +1215,7 @@ const COMPARE_METRICS = [
 
 /** 같은 데이터셋 버전으로 끝난 실행이 있는 묶음(최신 순). */
 function compareGroups() {
-  const version = DATASET.version;
+  const version = state.catalog?.currentVersion;
   return [...new Set(state.runs.map(({ run }) => groupKey(run)))]
     .filter((key) => groupRuns(key).some(({ run }) => done(run) && run.versions.datasetVersion === version));
 }
@@ -1529,17 +1542,10 @@ function guideView() {
   return box;
 }
 
-// 데이터셋 사례의 공고(사이트) 이름. 데이터셋 창은 공고별 탭으로 나눈다.
-const SITE_NAMES = { "woowahan-recruitment": "우아한형제들 · R2605009", "nhn-careers": "NHN Careers · 프리세일즈" };
-const STATE_NAMES = { initial: "처음 화면", "high-school": "고등학교", university: "대학교", ged: "검정고시", "nhn-initial": "NHN 지원서" };
-// 화면 상태 설명. 같은 지원서라도 무엇을 골랐는지에 따라 나타나는 칸이 달라 상태별로 따로 평가한다.
-const STATE_NOTES = {
-  initial: "지원서를 처음 연 상태. 아무것도 고르지 않아 학력 행에는 '구분' 선택칸만 있습니다. 준비 단계(조작할 섹션 분류, 학력 구분 선택)만 평가합니다. 칸 채우기는 고른 뒤 펼쳐진 화면에서 평가합니다.",
-  "high-school": "학력 구분 '고등학교', 보훈·장애 '대상'을 고른 뒤 펼쳐진 화면. 고등학교 학력 칸과 보훈·장애 상세 칸이 나타납니다.",
-  university: "학력 구분 '대학교', 보훈·장애 '대상'을 고른 뒤 펼쳐진 화면. 대학 학력 칸(전공 포함)과 보훈·장애 상세 칸이 나타납니다.",
-  ged: "학력 구분 '검정고시'만 고른 화면. 학교·전공 칸 없이 '합격연월' 칸 하나만 나타납니다.",
-  "nhn-initial": "다른 회사(NHN Careers) 지원서 1단계를 처음 연 상태. 드롭다운이 직접 만든 형태라 선택지가 없고, 섹션 제목이 약해 여러 항목이 한 섹션으로 묶입니다. 준비 단계(섹션 분류, 학력 행 추가)와 칸 채우기를 모두 평가합니다. 처음 보는 양식에서의 일반화를 봅니다.",
-};
+// 공고·화면 이름과 설명은 데이터셋 목록 파일(catalog.json)에서 온다. 공고나 화면을 더해도 이 코드는 고치지 않는다.
+const siteName = (site) => state.catalog?.sites?.[site]?.name ?? site;
+const stateName = (key) => state.catalog?.states?.[key]?.name ?? key;
+const stateNote = (key) => state.catalog?.states?.[key]?.note;
 const CONTROL_NAMES = { text: "글자", select: "선택", radio: "라디오", checkbox: "체크", textarea: "긴 글", custom: "직접 구현" };
 const CALL_NAMES = { SECTION_CLASSIFY: "섹션 분류", INTERACTION_DECISION: "버튼·선택 결정", GENERIC_FIELDS: "칸 매핑" };
 const REVIEW_NAMES = { privacy: "개인정보", structure: "구조", mappingTruth: "칸 정답", preparationTruth: "준비 정답",
@@ -1569,7 +1575,7 @@ function datasetView(selected = 0) {
   wrap.append(head);
   const about = element("details", undefined, "dataset-about");
   about.append(element("summary", "이 데이터셋이란"),
-    element("p", "실제 채용 지원서를 개인정보 없이 정제한 화면 모음. 우아한형제들 지원서는 학력 구분·보훈·장애 선택에 따라 나타나는 칸이 달라 화면 상태마다 따로 평가합니다. 모델은 확장프로그램이 실제로 보내는 질문에 답하고, 사람이 검토한 정답과 비교해 채점합니다."));
+    element("p", "실제 채용 지원서를 개인정보 없이 정제한 화면 모음. 선택에 따라 나타나는 칸이 달라지는 지원서는 화면 상태마다 따로 평가합니다. 모델은 확장프로그램이 실제로 보내는 질문에 답하고, 사람이 검토한 정답과 비교해 채점합니다."));
   wrap.append(about);
   if (!data.usable && data.rejection) wrap.append(element("p", `미완료 검토: ${data.rejection}`, "muted"));
   const go = (target) => dialog("데이터셋", datasetView(target), "dataset-dialog");
@@ -1581,7 +1587,7 @@ function datasetView(selected = 0) {
     const tab = element("button");
     tab.type = "button";
     tab.setAttribute("aria-pressed", String(key === site));
-    tab.append(element("strong", SITE_NAMES[key] ?? key), element("span", `화면 ${cases.length}개`, "muted"));
+    tab.append(element("strong", siteName(key)), element("span", `화면 ${cases.length}개`, "muted"));
     tab.addEventListener("click", () => go(data.cases.indexOf(cases[0])));
     tabs.append(tab);
   });
@@ -1593,7 +1599,7 @@ function datasetView(selected = 0) {
     const button = element("button");
     button.type = "button";
     button.setAttribute("aria-pressed", String(selected === index));
-    button.append(element("strong", STATE_NAMES[item.state] ?? item.state),
+    button.append(element("strong", stateName(item.state)),
       element("span", `${count(item)}칸 · 호출 ${item.calls.length}개`, "muted"));
     button.addEventListener("click", () => go(index));
     nav.append(button);
@@ -1613,10 +1619,10 @@ function datasetView(selected = 0) {
   else {
     const item = data.cases[selected];
     const top = element("div", undefined, "screen-title");
-    top.append(element("h3", STATE_NAMES[item.state] ?? item.state),
+    top.append(element("h3", stateName(item.state)),
       element("span", item.split === "tuning" ? "튜닝용" : "최종 평가용", "badge"));
     main.append(top);
-    if (STATE_NOTES[item.state]) main.append(element("p", STATE_NOTES[item.state], "state-note"));
+    if (stateNote(item.state)) main.append(element("p", stateNote(item.state), "state-note"));
     // 채점 흐름: 준비 요청과 매핑 요청으로 묶어 단계와 API를 보인다.
     const flow = element("div", undefined, "score-flow");
     [["PREPARATION", "준비 요청", "칸을 꺼내기 위한 질문"], ["MAPPING", "매핑 요청", "칸에 넣을 값을 정하는 질문"]].forEach(([stage, name, note]) => {
@@ -2246,7 +2252,7 @@ async function openRun() {
     submit.disabled = true;
     try {
       const result = await api("/runs", "POST", {
-        datasetId: DATASET.id, datasetVersion: DATASET.version, split: "all",
+        datasetId: DATASET.id, datasetVersion: state.catalog?.currentVersion, split: "all",
         repetitions: Number(repetitions.value), promptVersion: prompt.value.trim() || null, overrides: {},
         targets: chosen,
       });
@@ -2268,7 +2274,9 @@ const loadedDatasets = {};
 /** 화면에 보이는 데이터셋을 고른 실행의 버전으로 맞춘다. 실행이 없으면 새 평가가 쓰는 버전이다. */
 async function selectDataset() {
   const versions = groupRuns(state.group)[0]?.run.versions;
-  const key = `${versions?.datasetId ?? DATASET.id}/v${versions?.datasetVersion ?? DATASET.version}`;
+  const version = versions?.datasetVersion ?? state.catalog?.currentVersion;
+  if (version == null) return void (state.dataset = null);
+  const key = `${versions?.datasetId ?? DATASET.id}/v${version}`;
   if (!(key in loadedDatasets)) {
     try { loadedDatasets[key] = await api(`/datasets/${key}`); } catch { return void (state.dataset = null); }
   }
@@ -2280,6 +2288,7 @@ async function load() {
   let failed = null;
   try {
     state.runs = await api("/runs?limit=50");
+    state.catalog = await api(`/datasets/${DATASET.id}/catalog`);
     // 기록 삭제는 서버가 허용할 때만 보인다(개발서버처럼 함께 쓰는 서버는 꺼져 있다).
     state.canDelete = (await api("/capabilities")).recordDelete === true;
   } catch (error) {

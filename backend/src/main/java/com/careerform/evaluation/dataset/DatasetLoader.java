@@ -53,6 +53,15 @@ public final class DatasetLoader implements DatasetCatalog {
         };
     }
 
+    /** 데이터셋 목록 파일. 없거나 데이터셋 ID 형식이 아니면 비어 있다. */
+    public Optional<DatasetNames> names(String datasetId) {
+        if (!DATASET_ID.matcher(datasetId).matches()) {
+            return Optional.empty();
+        }
+        return resources.read("evaluation/datasets/" + datasetId + "/catalog.json")
+            .map(bytes -> JSON.readValue(bytes, DatasetNames.class));
+    }
+
     @Override
     public Optional<DatasetSummary> find(String datasetId, int version) {
         try {

@@ -175,6 +175,12 @@ public final class EvaluationRunController {
         return scorings.history(runId);
     }
 
+    /** 현재 버전과 공고·화면 이름. 평가 화면은 이 값으로 그리므로 공고를 더할 때 화면 코드를 고치지 않는다. */
+    @GetMapping("/datasets/{datasetId}/catalog")
+    public ResponseEntity<com.careerform.evaluation.dataset.DatasetNames> datasetCatalog(@PathVariable String datasetId) {
+        return datasets.names(datasetId).map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
     @GetMapping("/datasets/{datasetId}/v{version}")
     public ResponseEntity<DatasetView> dataset(@PathVariable String datasetId, @PathVariable int version) {
         DatasetInspection inspection;

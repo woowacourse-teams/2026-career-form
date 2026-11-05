@@ -209,6 +209,16 @@ class EvaluationRunApiTest {
     }
 
     @Test
+    @DisplayName("데이터셋 목록 파일을 비밀번호 뒤에서 내주고 없는 데이터셋은 404다")
+    void servesDatasetCatalog() throws Exception {
+        authorized(get("/api/v1/evaluations/datasets/generic-matching/catalog")).andExpect(status().isOk())
+            .andExpect(jsonPath("$.currentVersion").isNumber())
+            .andExpect(jsonPath("$.sites.nhn-careers.name").isNotEmpty());
+        authorized(get("/api/v1/evaluations/datasets/missing/catalog")).andExpect(status().isNotFound());
+        mvc.perform(get("/api/v1/evaluations/datasets/generic-matching/catalog")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
     @DisplayName("재채점은 호출할 때마다 새 기록을 추가하고 이전 기록을 남긴다")
     void rescoringKeepsHistory() throws Exception {
         String runId = runId(register());

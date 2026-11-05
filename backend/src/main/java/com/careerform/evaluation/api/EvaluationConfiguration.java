@@ -186,7 +186,8 @@ public class EvaluationConfiguration {
     }
 
     /**
-     * 평가 입력이 바뀐 배포 뒤 자동 평가. 꺼져 있으면 아무것도 하지 않는다. 데이터셋 버전은 평가 화면(app.js DATASET)과 같아야 한다.
+     * 평가 입력이 바뀐 배포 뒤 자동 평가. 꺼져 있으면 아무것도 하지 않는다. 데이터셋 버전을 따로 주지 않으면(0) 평가 화면과 같은
+     * 목록 파일의 현재 버전을 쓴다.
      * 공급자 연결 코드는 가짜 모델로 지나가지 않으므로 빌드 때 넣은 소스 지문(CAREER_FORM_ADAPTER_DIGEST)으로 본다.
      */
     @Bean
@@ -196,9 +197,11 @@ public class EvaluationConfiguration {
         @Value("${career-form.evaluation.adapter-digest:}") String adapterDigest,
         @Value("${career-form.evaluation.auto-run.enabled:false}") boolean enabled,
         @Value("${career-form.evaluation.auto-run.dataset-id:generic-matching}") String datasetId,
-        @Value("${career-form.evaluation.auto-run.dataset-version:4}") int datasetVersion,
+        @Value("${career-form.evaluation.auto-run.dataset-version:0}") int configuredVersion,
         @Value("${career-form.evaluation.auto-run.repetitions:3}") int repetitions) {
         BehaviorFingerprint behavior = new BehaviorFingerprint(mapper, validator, parts);
+        int datasetVersion = configuredVersion > 0 ? configuredVersion
+            : datasets.names(datasetId).map(com.careerform.evaluation.dataset.DatasetNames::currentVersion).orElse(0);
         return new EvaluationAutoRun(runs, store, providers,
             new EvaluationAutoRun.Settings(enabled, datasetId, datasetVersion, repetitions), settings.codeVersion(), () -> {
                 LoadedDataset dataset = datasets.load(datasetId, datasetVersion);

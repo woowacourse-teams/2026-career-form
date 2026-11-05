@@ -198,6 +198,20 @@ const decisionItem = {
   ],
 };
 
+// 데이터셋 목록 파일(catalog.json). 공고·화면 이름과 현재 버전은 화면 코드가 아니라 여기서 온다.
+const catalog = {
+  currentVersion: 4,
+  sites: {
+    "woowahan-recruitment": { name: "우아한형제들 · R2605009" },
+    "nhn-careers": { name: "NHN Careers · 프리세일즈" },
+  },
+  states: {
+    initial: { name: "처음 화면", note: "처음 연 상태." },
+    "high-school": { name: "고등학교", note: "고등학교를 고른 상태." },
+    "nhn-initial": { name: "NHN 지원서", note: "NHN 처음 화면." },
+  },
+};
+
 // 이전 데이터셋 버전. 화면 하나, 공고 하나다.
 const datasetV3 = { ...dataset, cases: dataset.cases.slice(0, 1) };
 
@@ -209,13 +223,15 @@ function respond(url: string) {
     ? capabilities
     : url.includes("/runs?")
       ? [...extraRuns, { run, report }, { run: baseRun, report: baseReport }]
-      : url.includes("/datasets/")
-        ? url.includes("/v3")
-          ? datasetV3
-          : dataset
-        : url.includes("/items")
-          ? [fieldItem, decisionItem]
-          : [];
+      : url.endsWith("/catalog")
+        ? catalog
+        : url.includes("/datasets/")
+          ? url.includes("/v3")
+            ? datasetV3
+            : dataset
+          : url.includes("/items")
+            ? [fieldItem, decisionItem]
+            : [];
   return {
     ok: true,
     status: 200,
@@ -466,6 +482,104 @@ describe("AI 평가 화면의 단계 탭", () => {
     (
       document.querySelector('[data-page="overview"]') as HTMLButtonElement
     ).click();
+  });
+
+  it("공고·화면 이름은 목록 파일에서 오고, 이름을 바꾸면 코드 수정 없이 모든 곳에 반영된다", async () => {
+    const wait = () => new Promise((resolve) => setTimeout(resolve, 0));
+    const before = catalog.sites["nhn-careers"].name;
+    catalog.sites["nhn-careers"].name = "새 회사 · 새 공고";
+    catalog.states["nhn-initial"].name = "새 화면";
+    catalog.states["nhn-initial"].note = "새 설명.";
+    (document.querySelector("#refresh") as HTMLButtonElement).click();
+    await wait();
+    (
+      document.querySelector('[data-source="데이터셋"]') as HTMLAnchorElement
+    ).click();
+    await wait();
+    const tabs = [
+      ...document.querySelectorAll<HTMLButtonElement>(
+        "#source-content .posting-tabs button",
+      ),
+    ];
+    expect(tabs[1].textContent).toContain("새 회사 · 새 공고");
+    tabs[1].click();
+    await wait();
+    const content = document.querySelector("#source-content")?.textContent;
+    expect(content).toContain("새 화면");
+    expect(content).toContain("새 설명.");
+    (document.querySelector("#cf-source") as HTMLDialogElement).close();
+    (
+      document.querySelector('[data-page="fields"]') as HTMLButtonElement
+    ).click();
+    await wait();
+    expect(
+      [
+        ...document.querySelectorAll(
+          '#cf-fields select[aria-label="화면"] optgroup',
+        ),
+      ].map((group) => (group as HTMLOptGroupElement).label),
+    ).toContain("새 회사 · 새 공고");
+    (
+      document.querySelector('[data-page="overview"]') as HTMLButtonElement
+    ).click();
+    catalog.sites["nhn-careers"].name = before;
+    catalog.states["nhn-initial"].name = "NHN 지원서";
+    catalog.states["nhn-initial"].note = "NHN 처음 화면.";
+    (document.querySelector("#refresh") as HTMLButtonElement).click();
+    await wait();
+  });
+
+  it("평가 등록과 전후 비교는 목록 파일의 현재 버전을 쓴다", async () => {
+    const wait = () => new Promise((resolve) => setTimeout(resolve, 0));
+    catalog.currentVersion = 3;
+    (document.querySelector("#refresh") as HTMLButtonElement).click();
+    await wait();
+    (
+      document.querySelector('[data-page="compare"]') as HTMLButtonElement
+    ).click();
+    await wait();
+    // 실행은 모두 v4라 현재 버전이 v3이면 비교할 실행이 없다.
+    expect(document.querySelectorAll("#compare-before option")).toHaveLength(0);
+    (
+      document.querySelector('[data-page="overview"]') as HTMLButtonElement
+    ).click();
+    catalog.currentVersion = 4;
+    (document.querySelector("#refresh") as HTMLButtonElement).click();
+    await wait();
+  });
+
+  it("흐름도의 공고별 요청 수는 데이터셋에서 계산한다", async () => {
+    const wait = () => new Promise((resolve) => setTimeout(resolve, 0));
+    const [initial, branch, nhn] = dataset.cases as {
+      calls: unknown[];
+    }[];
+    const call = (stage: string) => ({
+      order: 1,
+      stage,
+      kind: "SECTION_CLASSIFY",
+      items: 1,
+      estimatedModelCalls: 1,
+    });
+    initial.calls = [call("PREPARATION"), call("PREPARATION")];
+    branch.calls = [call("PREPARATION"), call("MAPPING"), call("MAPPING")];
+    nhn.calls = [call("PREPARATION"), call("MAPPING")];
+    (document.querySelector("#refresh") as HTMLButtonElement).click();
+    await wait();
+    (
+      document.querySelector(
+        '[data-source="자동기입 흐름"]',
+      ) as HTMLAnchorElement
+    ).click();
+    await wait();
+    const text = document.querySelector("#source-content")?.textContent;
+    expect(text).toContain("우아한형제들 · R2605009 5개");
+    expect(text).toContain("NHN Careers · 프리세일즈 2개");
+    (document.querySelector("#cf-source") as HTMLDialogElement).close();
+    initial.calls = [];
+    branch.calls = [];
+    nhn.calls = [];
+    (document.querySelector("#refresh") as HTMLButtonElement).click();
+    await wait();
   });
 
   it("흐름도 설명은 공고마다 다른 요청 수를 적지 않는다", async () => {

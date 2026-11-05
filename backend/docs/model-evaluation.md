@@ -71,8 +71,7 @@ python3 scripts/evaluation_local.py reset-password
 `auto-deploy`로 남고 화면 실행 조건에 "자동(배포)"로 보인다.
 
 알 수 없는 변경: 공급자가 같은 이름으로 모델을 바꾼 경우(`jev-latest`), 질문과 응답이 같고 속도만 바뀐 변경, 가짜 답이 지나가지 않는
-후처리 분기. 이런 변경은 평가 실행으로 직접 돌린다. 데이터셋 버전(`..._AUTO_RUN_DATASET_VERSION`)은 평가 화면이 쓰는 버전과 같아야 하고 테스트가
-이를 확인한다. 데이터셋 v4·반복 3회 기준 실행당 두 모델 합 약 $0.2(GPT 약 $0.13, JEV 약 $0.07)가 든다. 코드 버전은 이미지에 담긴 커밋 번호(짧은 SHA)다.
+후처리 분기. 이런 변경은 평가 실행으로 직접 돌린다. 데이터셋 버전은 평가 화면과 같은 `catalog.json`의 현재 버전이다. 데이터셋 v4·반복 3회 기준 실행당 두 모델 합 약 $0.2(GPT 약 $0.13, JEV 약 $0.07)가 든다. 코드 버전은 이미지에 담긴 커밋 번호(짧은 SHA)다.
 개발 배포 워크플로가 이미지 빌드 때 `CAREER_FORM_COMMIT`을 넘기므로 롤백해도 그 이미지의 커밋으로 보이고, 커밋이 없는 빌드는 `CAREER_FORM_QUALITY_VERSION`을 쓴다.
 
 개발서버에서 켜는 값은 GitHub `development` Environment에 사람이 넣는다. 배포 워크플로와 `infra/compose.deploy.yaml`이
@@ -108,7 +107,7 @@ development 서버에서만 켠다. 평가 호출은 사용자 요청과 서버 
 | `CAREER_FORM_EVALUATION_AUTO_RUN_ENABLED` | false | 평가 입력이 바뀐 배포 뒤 평가 1회 자동 실행 |
 | `CAREER_FORM_EVALUATION_RECORD_DELETE_ENABLED` | false | 평가 기록 삭제와 휴지통 버튼. 로컬 실행기만 켠다. 개발서버 기록은 팀의 변경 이력이라 지우지 않는다 |
 | `CAREER_FORM_EVALUATION_AUTO_RUN_REPETITIONS` | 3 | 자동 실행 반복 수 |
-| `CAREER_FORM_EVALUATION_AUTO_RUN_DATASET_VERSION` | 3 | 자동 실행 데이터셋 버전(평가 화면과 같게) |
+| `CAREER_FORM_EVALUATION_AUTO_RUN_DATASET_VERSION` | 0 | 자동 실행 데이터셋 버전. 0이면 `catalog.json`의 현재 버전 |
 | `CAREER_FORM_ADAPTER_DIGEST` | 빈 값 | 공급자 연결 코드의 Git 트리 지문. 개발 배포 이미지 빌드 인자로 넣고 자동 평가 입력에 쓴다 |
 | `CAREER_FORM_COMMIT` | 빈 값 | 이미지가 만들어진 커밋. 개발 배포 이미지 빌드 인자로 넣고, 코드 버전에 앞 7자를 쓴다 |
 
@@ -248,6 +247,14 @@ API와 화면은 품질 확인 공용 비밀번호(`CAREER_FORM_QUALITY_PASSWORD
 평가 화면은 항상 현재 데이터셋(최신 버전)의 모든 화면(`split: all`)으로 실행한다. 튜닝용·최종 평가용 분할은 데이터셋
 파일에 남지만 화면에서는 고르지 않는다. 개선 전후는 같은 데이터셋으로 개선 전 코드와 개선 후 코드를 각각 실행해
 비교한다. 데이터셋 버전과 해시는 실행·재채점 때 입력이 바뀌지 않았는지 확인하는 데만 쓴다.
+
+### 데이터셋 목록 파일
+
+`evaluation/datasets/<id>/catalog.json`이 현재 버전(`currentVersion`)과 공고(`sites`)·화면(`states`)의 이름·설명을 가진다. 평가 화면은
+`GET /api/v1/evaluations/datasets/{id}/catalog`로 읽고, 자동 평가도 같은 현재 버전을 쓴다. 공고나 화면을 더할 때 이 파일과 새 버전 폴더만
+고치면 실행 조건, 사이트 수, 공고 드롭다운, 데이터셋 창, 흐름도 요청 수에 반영된다. 칸·화면·요청 수는 데이터셋에서 계산한다. 이름을
+빠뜨리거나 새 버전을 만들고 `currentVersion`을 안 올리면 `DatasetLoaderTest`가 실패한다. 버전 폴더 밖에 있어 이름을 고쳐도 이전 실행의 데이터셋
+지문은 그대로다.
 
 ### 데이터셋 버전
 
