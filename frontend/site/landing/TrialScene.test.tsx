@@ -116,7 +116,9 @@ describe("landing trial", () => {
       expect(screen.queryByRole("button", { name: /자동 기입/ })).toBeNull();
       await act(async () =>
         fireEvent.click(
-          screen.getByRole("button", { name: "PC로 링크 보내기" }),
+          within(document.getElementById("try")!).getByRole("button", {
+            name: "PC로 링크 보내기",
+          }),
         ),
       );
       expect(share).toHaveBeenCalledWith(
@@ -134,7 +136,9 @@ describe("landing trial", () => {
       render(<SiteApp path="/" />);
       await act(async () =>
         fireEvent.click(
-          screen.getByRole("button", { name: "PC로 링크 보내기" }),
+          within(document.getElementById("try")!).getByRole("button", {
+            name: "PC로 링크 보내기",
+          }),
         ),
       );
       expect(writeText).toHaveBeenCalled();

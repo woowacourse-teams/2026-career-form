@@ -53,6 +53,11 @@
   gap: 10px;
   flex-wrap: wrap;
 }
+.handoffNote {
+  flex-basis: 100%;
+  font-size: 13px;
+  color: var(--sub);
+}
 .hint {
   font-size: 13px;
   color: var(--sub);

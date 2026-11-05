@@ -371,10 +371,29 @@
 .share button {
   width: 100%;
 }
-.share small {
+.share p {
+  color: var(--sub);
+  font-size: 15px;
+}
+.shareMore {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.shareMore a,
+.shareMore button {
+  padding: 0 12px;
+}
+.shareUrl {
+  max-width: 100%;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: var(--cream);
   color: var(--sub);
   font-size: 13px;
-  min-height: 1.4em;
+  overflow-wrap: anywhere;
+  user-select: all;
 }
 
 @media (max-width: 1100px) {
