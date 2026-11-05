@@ -246,8 +246,12 @@ public final class EvaluationRunController {
         Map<String, Map<String, String>> truth = truth(run);
         Map<String, String> sites = new HashMap<>();
         dataset(run).ifPresent(dataset -> dataset.cases().forEach(c -> sites.put(c.caseId(), c.siteId())));
+        Map<String, java.util.Set<String>> unconfirmed = new HashMap<>();
+        dataset(run).ifPresent(dataset -> dataset.cases().forEach(evaluationCase -> evaluationCase.calls()
+            .forEach(call -> unconfirmed.put(evaluationCase.caseId() + "/" + call.order(), call.unconfirmedFields()))));
         return new RunView(run, reporter.report(run, results.list(run.id()),
-            record -> truth.get(record.caseId() + "/" + record.order()), sites::get));
+            record -> truth.get(record.caseId() + "/" + record.order()), sites::get,
+            record -> unconfirmed.getOrDefault(record.caseId() + "/" + record.order(), java.util.Set.of())));
     }
 
     /** 실행 때의 데이터셋 정답표(사례/순서별). 데이터셋을 읽을 수 없거나 해시가 다르면 비어 있다. */

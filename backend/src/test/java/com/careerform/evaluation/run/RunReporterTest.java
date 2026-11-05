@@ -216,6 +216,22 @@ class RunReporterTest {
     }
 
     @Test
+    @DisplayName("범주 미확정 섹션의 칸은 제품이 자동으로 넣지 않으므로 확신도가 높아도 넣지 않은 칸으로 센다")
+    void unconfirmedFieldsAreNotFilled() {
+        Map<String, String> truth = Map.of("x", "k1", "y", "k2");
+        List<CallResultRecord> records = List.of(fields(1, Map.of("x", ObservedItem.answered("k1", 0.95), "y", ObservedItem.answered("k2", 0.95))));
+
+        RunReport report = new RunReporter().report(run(AT, AT, AT.plusSeconds(1)), records, record -> truth, caseId -> "site",
+            record -> java.util.Set.of("y"));
+
+        AutofillOutcome expected = new AutofillOutcome(1, 0, 0, 0, 1, 0);
+        assertThat(report.autofill().counts()).isEqualTo(expected);
+        assertThat(report.scores().get("MAPPING").counts()).isEqualTo(expected);
+        assertThat(report.confidence().get(3).counts()).isEqualTo(expected);
+        assertThat(report.quality().items().correct()).isEqualTo(1);
+    }
+
+    @Test
     @DisplayName("칸 매핑 답을 확신도 기준별로 다시 나눠 기준이 정밀도와 채움률을 어떻게 바꾸는지 보인다")
     void reportsConfidenceSweep() {
         Map<String, String> truth = Map.of("x", "k1", "y", "k2", "z", "k3");

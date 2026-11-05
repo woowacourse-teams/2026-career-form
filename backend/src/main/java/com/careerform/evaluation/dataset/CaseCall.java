@@ -24,4 +24,19 @@ public record CaseCall(
     public CaseCall {
         expected = Collections.unmodifiableMap(new LinkedHashMap<>(expected));
     }
+
+    /** 섹션 범주가 확정되지 않은 칸. 제품은 이 칸을 확신도와 상관없이 자동으로 넣지 않고 확인 필요로 둔다. */
+    public java.util.Set<String> unconfirmedFields() {
+        java.util.Set<String> fields = new java.util.HashSet<>();
+        request.path("sections").forEach(section -> {
+            String category = section.path("category").asString("");
+            if (com.careerform.formanalysis.generic.SectionCategories.MIXED.equals(category)
+                || com.careerform.formanalysis.generic.SectionCategories.ABSTAIN.equals(category)) {
+                section.path("fields").forEach(field -> fields.add(field.path("candidateId").asString()));
+                section.path("items").forEach(item -> item.path("fields")
+                    .forEach(field -> fields.add(field.path("candidateId").asString())));
+            }
+        });
+        return fields;
+    }
 }
