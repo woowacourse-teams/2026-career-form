@@ -788,22 +788,39 @@ describe("AI 평가 화면의 단계 탭", () => {
     }
   });
 
-  it("매핑 탭의 확신도 카드는 결론을 문장으로 말하고 기준별 칸 수 증감을 현재 기준과 비교해 보인다", async () => {
+  it("매핑 탭의 확신도 그래프는 지표를 눌러 하나씩 보고, 세로축은 값 범위에 맞추며 현재 기준 값을 적는다", async () => {
     await pick("mapping");
-    const card = document.querySelector("#cf-confidence") as Element;
-    expect(card.querySelector(".confidence-verdict")?.textContent).toContain("0.8 유지가 가장 좋습니다");
-    const rows = [...card.querySelectorAll(".confidence-row:not(.confidence-labels)")];
-    expect(rows.map((row) => row.querySelector(".confidence-threshold")?.textContent)).toEqual(["0.5", "0.8 현재", "0.9"]);
-    // 0.5는 맞은 칸 +30, 잘못 넣은 칸 +31. 0.9는 맞은 칸 −30, 잘못 넣은 칸 −7. 현재 기준은 칸 수 그대로다.
-    const values = (row: Element) => [...row.querySelectorAll(".confidence-value")].map((value) => value.textContent);
-    expect(values(rows[0])).toEqual(["+30", "+31"]);
-    expect(values(rows[1])).toEqual(["60", "7"]);
-    expect(values(rows[2])).toEqual(["−30", "−7"]);
-    expect(rows[0].querySelector(".confidence-bar")).not.toBeNull();
-    // 맞은 칸이 늘면 좋음, 잘못 넣은 칸이 늘면 나쁨이다.
-    expect(rows[0].querySelectorAll(".up")).toHaveLength(1);
-    expect(rows[0].querySelectorAll(".down")).toHaveLength(1);
-    expect(card.querySelector("details summary")?.textContent).toBe("표로 보기");
+    expect(document.querySelector("#cf-confidence .confidence-verdict")?.textContent).toContain("0.8 유지가 가장 좋습니다");
+    const buttons = () => [...document.querySelectorAll<HTMLButtonElement>("#cf-confidence .stage button")];
+    const chart = () => document.querySelector("#cf-confidence .confidence-chart") as Element;
+    expect(buttons().map((button) => button.textContent)).toEqual(["점수", "정밀도", "채움률"]);
+    expect(buttons()[0].getAttribute("aria-pressed")).toBe("true");
+    expect(chart().querySelectorAll(".confidence-line")).toHaveLength(1);
+    expect(chart().querySelectorAll("circle")).toHaveLength(3);
+    expect(chart().querySelector(".confidence-now")).not.toBeNull();
+    expect(chart().querySelector(".confidence-value")?.textContent).toBe("82.0%");
+    const hover = (index: number) =>
+      chart().querySelectorAll(".confidence-hit")[index].dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+    const tip = () => chart().querySelector(".confidence-tip") as HTMLElement;
+    expect(tip().hidden).toBe(true);
+    hover(0);
+    expect(tip().hidden).toBe(false);
+    expect(tip().textContent).toContain("기준 0.5");
+    expect(tip().textContent).toContain("73.0%");
+    chart().dispatchEvent(new MouseEvent("mouseleave"));
+    expect(tip().hidden).toBe(true);
+    // 값 범위 68~82%에 바짝 맞춰 0부터 그리지 않는다.
+    expect(chart().querySelector(".confidence-tick")?.textContent).toBe("67");
+    // 모델 영역을 겹쳐 그려 모델 사이 간격이 보인다.
+    expect(chart().querySelectorAll(".confidence-area")).toHaveLength(1);
+
+    buttons()[2].click();
+    expect(buttons()[2].getAttribute("aria-pressed")).toBe("true");
+    expect(chart().querySelector(".confidence-value")?.textContent).toBe("60.0%");
+    hover(0);
+    expect(tip().textContent).toContain("채움률");
+    expect(tip().textContent).toContain("90.0%");
+    expect(document.querySelector("#cf-confidence details summary")?.textContent).toBe("표로 보기");
   });
 
   it("매핑 탭의 확신도 표는 기준별 값을 모델마다 보이고 현재 기준과 모델별 최고 점수를 표시한다", async () => {
