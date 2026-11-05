@@ -798,7 +798,16 @@ describe("AI 평가 화면의 단계 탭", () => {
     expect(chart().querySelectorAll("circle")).toHaveLength(3);
     expect(chart().querySelector(".confidence-now")).not.toBeNull();
     expect(chart().querySelector(".confidence-value")?.textContent).toBe("82.0%");
-    expect(chart().querySelector("circle title")?.textContent).toContain("점수 73.0%");
+    const hover = (index: number) =>
+      chart().querySelectorAll(".confidence-hit")[index].dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+    const tip = () => chart().querySelector(".confidence-tip") as HTMLElement;
+    expect(tip().hidden).toBe(true);
+    hover(0);
+    expect(tip().hidden).toBe(false);
+    expect(tip().textContent).toContain("기준 0.5");
+    expect(tip().textContent).toContain("73.0%");
+    chart().dispatchEvent(new MouseEvent("mouseleave"));
+    expect(tip().hidden).toBe(true);
     // 값 범위 68~82%에 바짝 맞춰 0부터 그리지 않는다.
     expect(chart().querySelector(".confidence-tick")?.textContent).toBe("67");
     // 모델 영역을 겹쳐 그려 모델 사이 간격이 보인다.
@@ -807,7 +816,9 @@ describe("AI 평가 화면의 단계 탭", () => {
     buttons()[2].click();
     expect(buttons()[2].getAttribute("aria-pressed")).toBe("true");
     expect(chart().querySelector(".confidence-value")?.textContent).toBe("60.0%");
-    expect(chart().querySelector("circle title")?.textContent).toContain("채움률 90.0%");
+    hover(0);
+    expect(tip().textContent).toContain("채움률");
+    expect(tip().textContent).toContain("90.0%");
     expect(document.querySelector("#cf-confidence details summary")?.textContent).toBe("표로 보기");
   });
 

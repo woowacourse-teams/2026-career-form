@@ -605,7 +605,6 @@ function confidenceChart(label, key, models) {
     + `<text class="confidence-tick" x="${left - 6}" y="${y(value) + 4}" text-anchor="end">${Math.round(value * 1000) / 10}</text>`);
   thresholds.forEach((threshold) => parts.push(`<text class="confidence-tick" x="${x(threshold)}" y="${height - 6}" text-anchor="middle">${threshold === CURRENT_CONFIDENCE ? `${threshold} 현재` : threshold}</text>`));
   if (thresholds.includes(CURRENT_CONFIDENCE)) parts.push(`<line class="confidence-now" x1="${x(CURRENT_CONFIDENCE)}" x2="${x(CURRENT_CONFIDENCE)}" y1="${top}" y2="${height - bottom}"></line>`);
-  const dots = [];
   const labels = [];
   const areas = [];
   models.forEach((model) => {
@@ -615,8 +614,7 @@ function confidenceChart(label, key, models) {
     parts.push(`<polyline class="confidence-line" stroke="${color(model)}" points="${line}"></polyline>`);
     points.forEach((point) => {
       const now = point.threshold === CURRENT_CONFIDENCE;
-      parts.push(`<circle class="confidence-dot" fill="${color(model)}" cx="${x(point.threshold)}" cy="${y(point[key])}" r="${now ? 4.5 : 3}"><title></title></circle>`);
-      dots.push(`${model} · 기준 ${point.threshold} · ${label} ${(point[key] * 100).toFixed(1)}%`);
+      parts.push(`<circle class="confidence-dot" fill="${color(model)}" cx="${x(point.threshold)}" cy="${y(point[key])}" r="${now ? 4.5 : 3}"></circle>`);
       if (now) labels.push({ y: y(point[key]), text: `${(point[key] * 100).toFixed(1)}%` });
     });
   });
@@ -626,9 +624,40 @@ function confidenceChart(label, key, models) {
     parts.push(`<text class="confidence-value" x="${x(CURRENT_CONFIDENCE) - 7}" y="${placed}" text-anchor="end">${entry.text}</text>`);
     return placed;
   }, -Infinity);
+  const step = thresholds.length > 1 ? x(thresholds[1]) - x(thresholds[0]) : width;
+  const hits = thresholds.map((threshold) => `<rect class="confidence-hit" data-threshold="${threshold}" x="${x(threshold) - step / 2}" y="0" width="${step}" height="${height}"></rect>`);
   const chart = element("div", undefined, "confidence-chart");
-  chart.innerHTML = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${label} 기준별 그래프">${areas.join("")}${parts.join("")}</svg>`;
-  chart.querySelectorAll("circle title").forEach((title, index) => { title.textContent = dots[index]; });
+  chart.innerHTML = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${label} 기준별 그래프">${areas.join("")}${parts.join("")}<line class="confidence-guide" y1="${top}" y2="${height - bottom}"></line>${hits.join("")}</svg>`;
+  // 기준 칸에 커서를 올리면 그 기준의 모델별 값을 보인다. 작은 점을 맞히지 않아도 되도록 칸 전체가 대상이다.
+  const svg = chart.querySelector("svg");
+  const guide = svg.querySelector(".confidence-guide");
+  const tip = element("div", undefined, "confidence-tip");
+  tip.hidden = true;
+  chart.append(tip);
+  chart.addEventListener("mouseover", (event) => {
+    const threshold = Number(event.target.dataset?.threshold);
+    if (!threshold) return;
+    tip.replaceChildren(element("strong", `기준 ${threshold}${threshold === CURRENT_CONFIDENCE ? " 현재" : ""} · ${label}`));
+    models.forEach((model) => {
+      const value = report(model).confidence.find((point) => point.threshold === threshold)?.[key];
+      const row = element("span", undefined, "confidence-tip-row");
+      const name = element("span", model, "stage-model");
+      name.style.setProperty("--model", color(model));
+      row.append(name, element("b", value == null ? "—" : `${(value * 100).toFixed(1)}%`));
+      tip.append(row);
+    });
+    tip.hidden = false;
+    const ratio = x(threshold) / width;
+    tip.style.left = `${ratio * 100}%`;
+    tip.style.transform = ratio > 0.5 ? "translateX(calc(-100% - 10px))" : "translateX(10px)";
+    guide.setAttribute("x1", x(threshold));
+    guide.setAttribute("x2", x(threshold));
+    guide.style.display = "block";
+  });
+  chart.addEventListener("mouseleave", () => {
+    tip.hidden = true;
+    guide.style.display = "none";
+  });
   return chart;
 }
 
@@ -637,7 +666,7 @@ function confidenceCard() {
   const card = element("div", undefined, "metric");
   card.id = "cf-confidence";
   const head = element("div", undefined, "metric-head");
-  head.append(element("h3", "확신도 기준별 칸 매핑"), element("span", "세로축은 값 범위에 맞춤 · 점선이 현재 기준", "muted"));
+  head.append(element("h3", "확신도 기준별 칸 매핑"), element("span", "세로축은 값 범위에 맞춤 · 올리면 값 표시", "muted"));
   card.append(head);
   const models = state.selected.filter((model) => report(model)?.confidence?.length);
   if (!models.length) {
