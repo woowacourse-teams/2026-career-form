@@ -78,6 +78,46 @@ class EvaluationEnabledContextTest {
     }
 
     @Test
+    @DisplayName("whole-form 조건은 화면 전체를 한 덩어리로 묶고 칸마다 전체 항목을 선택지로 묻는다(범주 좁히기 전 구조)")
+    void wholeFormAsksEveryKeyForTheWholeScreen() throws Exception {
+        JsonMapper mapper = context.getBean(JsonMapper.class);
+        List<Integer> questionCounts = new ArrayList<>();
+        List<Integer> criteriaCounts = new ArrayList<>();
+        ChoiceModel fake = new ChoiceModel() {
+            @Override public String provider() { return "fake"; }
+            @Override public String model() { return "fake-1"; }
+            @Override public Map<String, Judgement> answer(Object state, Map<String, Question> questions) {
+                questionCounts.add(questions.size());
+                questions.values().forEach(question -> criteriaCounts.add(question.criteria().size()));
+                Map<String, Judgement> result = new java.util.LinkedHashMap<>();
+                questions.keySet().forEach(id -> result.put(id, new Judgement(ChoiceModel.ABSTAIN, 0.5, Map.of())));
+                return result;
+            }
+            @Override public Map<String, String> choose(Object state, Map<String, Question> questions) {
+                return Map.of();
+            }
+        };
+        ServiceProductCallGateway gateway = new ServiceProductCallGateway(mapper, context.getBean(Validator.class),
+            new EvaluationProviders(List.of(new EvaluationProviders.Provider("fake", List.of("fake-1"), Map.of(), List.of(),
+                model -> fake))), context.getBean(ServiceProductCallGateway.ProductParts.class));
+        JsonNode file = mapper.readTree(getClass().getClassLoader().getResourceAsStream(
+            "evaluation/datasets/generic-matching/v4/cases/nhn-presales-initial-synthetic-01.json"));
+        JsonNode fields = null;
+        for (JsonNode call : file.path("calls")) {
+            if ("GENERIC_FIELDS".equals(call.path("kind").asString())) {
+                fields = call.path("request");
+            }
+        }
+
+        JsonNode response = gateway.call(CallKind.GENERIC_FIELDS, fields,
+            new CallTarget("fake", "fake-1", Map.of("field-batch-size", "128", "section-concurrency", "3", "whole-form", "1")));
+
+        assertThat(questionCounts).containsExactly(52);
+        assertThat(criteriaCounts).allMatch(count -> count > 100);
+        assertThat(response.path("fields")).hasSize(52);
+    }
+
+    @Test
     @DisplayName("저장소 데이터셋의 제품 요청을 엄격 JSON과 검증 규칙으로 읽어, 실행이 고른 공급자의 선택 모델로 제품 서비스를 부른다")
     void repositoryDatasetRequestsGoToChosenProvider() throws Exception {
         JsonMapper mapper = context.getBean(JsonMapper.class);

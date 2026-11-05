@@ -104,6 +104,7 @@ class RunServiceTest {
         assertCode(request(1, Map.of("timeout-ms", 1), null), RunRejected.Code.INVALID_OVERRIDE);
         assertCode(request(1, Map.of("field-batch-size", 129), null), RunRejected.Code.INVALID_OVERRIDE);
         assertCode(request(1, Map.of("section-concurrency", 0), null), RunRejected.Code.INVALID_OVERRIDE);
+        assertCode(request(1, Map.of("whole-form", 2), null), RunRejected.Code.INVALID_OVERRIDE);
         assertCode(request(1, Map.of(), "v 1!"), RunRejected.Code.INVALID_PROMPT_VERSION);
     }
 

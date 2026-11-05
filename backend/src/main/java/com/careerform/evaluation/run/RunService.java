@@ -28,7 +28,9 @@ public final class RunService {
     public static final String SCORING_VERSION = "item-weighted-exact-v2";
     static final Map<String, int[]> OVERRIDABLE = Map.of(
         "field-batch-size", new int[] {1, 128},
-        "section-concurrency", new int[] {1, 16});
+        "section-concurrency", new int[] {1, 16},
+        // 1이면 범주 좁히기 전 호출 구조로 잰다. 화면 전체를 한 덩어리로 칸마다 전체 항목을 묻는다.
+        ServiceProductCallGateway.WHOLE_FORM, new int[] {0, 1});
     private static final Pattern PROMPT_VERSION = Pattern.compile("[A-Za-z0-9._-]{1,32}");
 
     private final RunStore store;

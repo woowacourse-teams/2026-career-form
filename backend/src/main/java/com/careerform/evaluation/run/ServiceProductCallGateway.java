@@ -23,6 +23,8 @@ import com.careerform.formanalysis.generic.SectionCategories;
 import com.careerform.formanalysis.generic.SectionClassificationRequest;
 import com.careerform.formanalysis.generic.SectionClassificationService;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
@@ -48,6 +50,9 @@ public final class ServiceProductCallGateway implements ProductCallGateway {
         GenericFieldsService fields) {
     }
 
+    /** 실행 조건: 범주 좁히기 전 호출 구조로 잰다. 제품 코드는 그대로이고 요청만 바꿔 넣는다. */
+    public static final String WHOLE_FORM = "whole-form";
+
     private final JsonMapper mapper;
     private final Validator validator;
     private final EvaluationProviders providers;
@@ -65,12 +70,31 @@ public final class ServiceProductCallGateway implements ProductCallGateway {
     @Override
     public JsonNode call(CallKind kind, JsonNode request, CallTarget target) {
         Services selected = services(target);
+        JsonNode input = kind == CallKind.GENERIC_FIELDS && "1".equals(target.settings().get(WHOLE_FORM))
+            ? wholeForm(request) : request;
         Object response = switch (kind) {
             case SECTION_CLASSIFY -> selected.classification().classify(read(request, SectionClassificationRequest.class));
             case INTERACTION_DECISION -> selected.interactions().decide(read(request, InteractionDecisionRequest.class));
-            case GENERIC_FIELDS -> selected.fields().analyze(read(request, GenericFieldsRequest.class));
+            case GENERIC_FIELDS -> selected.fields().analyze(read(input, GenericFieldsRequest.class));
         };
         return mapper.valueToTree(response);
+    }
+
+    /**
+     * 모든 섹션의 칸(반복 행 포함)을 범주 없는(MIXED) 섹션 하나로 합친다. 범주가 확정되지 않은 섹션은 칸마다 전체 프로필 항목을 묻는다.
+     * 칸 ID는 그대로라 정답과 채점은 같다.
+     */
+    private JsonNode wholeForm(JsonNode request) {
+        ArrayNode fields = mapper.createArrayNode();
+        request.path("sections").forEach(section -> {
+            section.path("fields").forEach(fields::add);
+            section.path("items").forEach(item -> item.path("fields").forEach(fields::add));
+        });
+        ObjectNode section = mapper.createObjectNode().put("sectionId", WHOLE_FORM).put("category", SectionCategories.MIXED);
+        section.set("fields", fields);
+        ObjectNode merged = ((ObjectNode) request).deepCopy();
+        merged.set("sections", mapper.createArrayNode().add(section));
+        return merged;
     }
 
     private <T> T read(JsonNode request, Class<T> type) {

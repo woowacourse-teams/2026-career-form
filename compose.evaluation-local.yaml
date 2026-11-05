@@ -20,6 +20,7 @@ services:
       CAREER_FORM_EVALUATION_MAX_MODEL_CALLS: ${CF_EVAL_MAX_MODEL_CALLS:-200}
       # OPENAI_API_KEY가 .env.local에 있으면 평가 공급자 목록에 openai가 생긴다.
       CAREER_FORM_EVALUATION_OPENAI_ENABLED: "true"
+      CAREER_FORM_EVALUATION_OPENAI_MODELS: ${CF_EVAL_OPENAI_MODELS:-gpt-6-luna}
     depends_on:
       mongodb:
         condition: service_healthy

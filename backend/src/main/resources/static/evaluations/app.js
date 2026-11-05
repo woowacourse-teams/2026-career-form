@@ -91,7 +91,7 @@ function comparisonDetail(key) {
 
 // 결과에 영향을 주는 실행 조건. 코드 버전과 서버 설정(배치·병렬·재시도)이 바뀌면 프롬프트가 같아도 품질·성능이 달라질 수 있다.
 const SETTING_NAMES = { "field-batch-size": "칸 묶음", "section-concurrency": "섹션 동시", "max-concurrent": "최대 동시 호출",
-  "rate-limit-retries": "재시도", "timeout-ms": "시간 제한(ms)", "min-confidence": "확신도 기준", "reasoning-effort": "추론 강도" };
+  "rate-limit-retries": "재시도", "timeout-ms": "시간 제한(ms)", "min-confidence": "확신도 기준", "reasoning-effort": "추론 강도", "whole-form": "화면 전체 질문" };
 /** 이전 실행과 달라진 조건(코드, 프롬프트, 모델, 설정). 같으면 빈 목록이다. */
 function changedConditions(run, base) {
   const changes = [];
