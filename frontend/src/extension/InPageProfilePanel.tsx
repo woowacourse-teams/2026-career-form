@@ -30,6 +30,7 @@ interface InPageProfilePanelProps {
   openOptions(): Promise<void> | void;
   logoUrl: string;
   unsupportedImageUrl?: string;
+  writingImageUrl?: string;
   pageDocument: Document;
   apiClient?: AnalysisApiClient;
   repository?: ProfileRepository;
@@ -48,6 +49,7 @@ export function InPageProfilePanel({
   openOptions,
   logoUrl,
   unsupportedImageUrl,
+  writingImageUrl,
   pageDocument,
   apiClient: injectedApiClient,
   repository: injectedRepository,
@@ -105,6 +107,7 @@ export function InPageProfilePanel({
   return (
     <App
       inPage
+      fitContent
       track={track}
       readImportCandidates={readImportCandidates}
       readPanelShortcut={readPanelShortcut}
@@ -125,6 +128,7 @@ export function InPageProfilePanel({
             repository={repository}
             pageDocument={pageDocument}
             unsupportedImageUrl={unsupportedImageUrl}
+            writingImageUrl={writingImageUrl}
             onClose={controller.showProfile}
           />
         ) : undefined

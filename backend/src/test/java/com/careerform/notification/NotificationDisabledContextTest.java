@@ -43,11 +43,13 @@ class NotificationDisabledContextTest {
     void exposesNoNotificationEndpointsOrBeans() throws Exception {
         mockMvc.perform(get("/api/v1/notifications/vapid-public-key")).andExpect(status().isNotFound());
         mockMvc.perform(get("/api/v1/notifications/postings")).andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/v1/notifications/job-categories")).andExpect(status().isNotFound());
         mockMvc.perform(post("/api/v1/notifications/subscriptions").contentType(MediaType.APPLICATION_JSON)
             .content("{\"endpoint\":\"https://fcm.googleapis.com/fcm/send/x\",\"keys\":{\"p256dh\":\"a\",\"auth\":\"b\"}}")).andExpect(status().isNotFound());
         mockMvc.perform(get("/api/v1/notifications/admin/postings")).andExpect(status().isNotFound());
         assertThat(context.getBeansOfType(NotificationStore.class)).isEmpty();
         assertThat(context.getBeansOfType(JobPostingService.class)).isEmpty();
+        assertThat(context.getBeansOfType(JobCategories.class)).isEmpty();
         assertThat(context.getBeansOfType(VapidKeys.class)).isEmpty();
     }
 }

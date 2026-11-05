@@ -2,6 +2,7 @@ import { createRoot } from "react-dom/client";
 import { PanelGuide } from "../../site/demo/PanelPreview";
 import { Simulation } from "../../site/demo/Simulation";
 import "../../src/styles/global.css";
+import "../../src/styles/extension-theme.css";
 
 const view = new URLSearchParams(window.location.search).get("view");
 createRoot(document.getElementById("root")!).render(

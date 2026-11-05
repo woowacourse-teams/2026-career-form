@@ -2,13 +2,13 @@
 
 > Topic: generic-autonomous-structural-actions
 > Status: Current
-> Current: [범용 지원서의 구조 행동 자동 실행 ADR 초안](../../raw/issues/CF-222/documents/adr/222-generic-autonomous-structural-actions.md)
-> History: [범용 지원서의 구조 행동 자동 실행 ADR 초안](../../raw/issues/CF-222/documents/adr/222-generic-autonomous-structural-actions.md)
-> Updated: 2026-10-16
+> Current: [CF-412 민감 항목 자동 기입 정책 정정](../../raw/issues/CF-412/documents/sensitive-item-policy.md)
+> History: [범용 지원서의 구조 행동 자동 실행 ADR 초안](../../raw/issues/CF-222/documents/adr/222-generic-autonomous-structural-actions.md); [CF-412 민감 항목 자동 기입 정책 정정](../../raw/issues/CF-412/documents/sensitive-item-policy.md)
+> Updated: 2026-11-05
 
 ## 현재 상태
 
-범용 지원서에서 행 추가, 섹션 펼치기, 행 종류 선택은 승인 없이 자동 실행하고 값 쓰기와 민감 항목 승인은 유지한다. 제출, 저장, 임시저장, 페이지 이동은 어떤 경우에도 자동화하지 않는다. 클릭 허용 목록을 코드로 먼저 적용하고 JEV 판단은 2차로 쓴다.
+범용 지원서에서 행 추가, 섹션 펼치기, 행 종류 선택은 승인 없이 자동 실행하고 값 쓰기는 분석과 등급 판정을 그대로 거치고, 민감 항목에는 별도 승인이 없다(#212, [CF-412 민감 항목 자동 기입 정책 정정](../../raw/issues/CF-412/documents/sensitive-item-policy.md)). 제출, 저장, 임시저장, 페이지 이동은 어떤 경우에도 자동화하지 않는다. 클릭 허용 목록을 코드로 먼저 적용하고 JEV 판단은 2차로 쓴다.
 
 ## 변경 이유
 

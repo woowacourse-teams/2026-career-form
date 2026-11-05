@@ -1,56 +1,55 @@
-import { useId } from "react";
 import type { TrackEvent } from "../analytics/events";
 import styles from "./JobPostings.module.css";
 import type { VisibilityAnswer } from "./notification-check";
 import type { PushStateView, RecordSource } from "./push-messages";
-import { MINIMUM_CHROME_VERSION } from "./push-subscription";
+import { RoleSelector } from "./RoleSelector";
+import { subscriptionStatusText } from "./subscription-status";
+import type { JobCategoriesHandle } from "./use-job-categories";
 import { VisibilityCheck } from "./VisibilityCheck";
 
-const unsupportedText = `Chrome ${MINIMUM_CHROME_VERSION} 이상에서만 새 공고 알림을 받을 수 있습니다. 현재 Chrome에서는 구독하지 않습니다.`;
-export function subscriptionStatusText(state: PushStateView | undefined) {
-  if (!state) return "구독 상태를 확인하는 중입니다.";
-  if (!state.supported) return unsupportedText;
-  if (!state.enabled) return "꺼짐 · 새 공고 알림을 받지 않습니다.";
-  switch (state.status?.code) {
-    case "registered":
-      return "등록됨 · 새 공고가 등록되면 알림이 옵니다.";
-    case "failed":
-      return "등록 실패 · 잠시 후 자동으로 다시 시도합니다.";
-    case "not_configured":
-      return "백엔드 없음 · 이 빌드에는 알림 서버가 설정되지 않았습니다.";
-    case "endpoint_unavailable":
-      return "서버 미지원 · 서버가 아직 공고 알림을 지원하지 않습니다.";
-    case "unsupported":
-      return unsupportedText;
-    default:
-      return "등록 확인 중 · 구독을 서버에 등록하고 있습니다.";
-  }
+type Fact = readonly [string, string];
+// When reminders fire and where the data goes: always in view.
+const DATA_FACTS: readonly Fact[] = [
+  ["마감 알림", "마감 24시간·2시간 전"],
+  ["서버 전송", "푸시 구독 주소와 받을 직무 (프로필·지원서 내용 없음)"],
+  ["저장 위치", "이 브라우저에만 저장 (암호화 안 됨, 서버 동기화 없음)"],
+  ["확장 삭제 시", "저장한 공고도 삭제"],
+  ["구독 끄기", "서버에 구독 주소 삭제 요청 (받을 직무는 이 브라우저에 남음)"],
+];
+// Troubleshooting, folded away until an alert goes missing.
+export const TROUBLE_FACTS_SUMMARY = "알림이 안 보일 때";
+const TROUBLE_FACTS: readonly Fact[] = [
+  ["Chrome 종료 중", "알림 없음"],
+  ["OS 알림 설정", "차단되거나 늦게 표시될 수 있음"],
+  ["OS 알림 꺼짐", "아이콘 숫자와 새 공고 탭으로 확인"],
+  ["놓친 알림", "다시 실행하면 공고당 1개"],
+];
+function FactList({ facts }: { facts: readonly Fact[] }) {
+  return (
+    <dl className={styles.facts}>
+      {facts.map(([term, value]) => (
+        <div key={term}>
+          <dt>{term}</dt>
+          <dd>{value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
 }
 
-interface Props {
+interface SwitchProps {
   state: PushStateView | undefined;
-  failed: boolean;
   busy: boolean;
   onEnabledChange(enabled: boolean): Promise<void>;
-  onAutoSaveChange(enabled: boolean): Promise<void>;
-  onTest(): Promise<void>;
-  onAnswer(answer: VisibilityAnswer, source: RecordSource): Promise<void>;
   track: TrackEvent;
-  userAgent?: string;
 }
 
-export function SubscriptionSettings({
+export function SubscriptionSwitch({
   state,
-  failed,
   busy,
   onEnabledChange,
-  onAutoSaveChange,
-  onTest,
-  onAnswer,
   track,
-  userAgent,
-}: Props) {
-  const id = useId();
+}: SwitchProps) {
   const toggle = async (enabled: boolean) => {
     await onEnabledChange(enabled);
     track(
@@ -59,79 +58,94 @@ export function SubscriptionSettings({
     );
   };
   return (
-    <section
-      className={styles.subscription}
-      aria-labelledby={`${id}-subscription`}
-    >
-      <div className={styles.sectionHeading}>
-        <h2 id={`${id}-subscription`}>공고 알림 구독</h2>
-      </div>
-      <div className={styles.subscriptionPanel}>
-        <label className={styles.switch}>
-          <input
-            type="checkbox"
-            role="switch"
-            checked={state?.enabled ?? true}
-            disabled={!state || busy || !state.supported}
-            onChange={(event) => void toggle(event.target.checked)}
-          />
-          새 공고를 Chrome 알림으로 받기
-        </label>
-        <p className={styles.subscriptionStatus} role="status">
-          {subscriptionStatusText(state)}
-        </p>
-        {failed && (
-          <p className={styles.subscriptionStatus}>
-            구독 상태를 불러오지 못했습니다.
-          </p>
-        )}
-        {state?.enabled && state.status?.code === "failed" && (
-          <div className={styles.subscriptionActions}>
-            <button disabled={busy} onClick={() => void onEnabledChange(true)}>
-              다시 등록
-            </button>
-          </div>
-        )}
-        <VisibilityCheck
-          variant="settings"
-          state={state}
-          busy={busy}
-          onTest={onTest}
-          onAnswer={onAnswer}
-          track={track}
-          surface="options"
-          userAgent={userAgent}
-        />
-        <label className={`${styles.switch} ${styles.switchSpaced}`}>
-          <input
-            type="checkbox"
-            role="switch"
-            checked={state?.autoSave ?? true}
-            disabled={!state || busy}
-            onChange={(event) => void onAutoSaveChange(event.target.checked)}
-          />
-          공고를 열면 마감 알림에 자동 저장
-        </label>
-        <p className={styles.subscriptionStatus}>
-          알림이나 공지함에서 공고를 열면 마감 24시간·2시간 전 알림을 함께
-          저장하고, 바로 취소할 수 있어요. 구독을 꺼도 이 설정은 따로
-          유지됩니다.
-        </p>
-        <ul className={styles.subscriptionNotes}>
-          <li>
-            Chrome이 완전히 종료된 동안에는 알림이 도착하지 않으며, OS 알림
-            설정에 따라 차단되거나 늦게 표시될 수 있습니다.
-          </li>
-          <li>
-            OS 알림이 꺼져 있어도 확장 아이콘 숫자와 공지함으로 새 공고를 알 수
-            있어요. 공지함을 열면 숫자가 사라집니다.
-          </li>
-          <li>
-            구독을 켜면 이 브라우저의 푸시 구독 주소가 서버에 저장되고, 끄면
-            서버에 삭제를 요청합니다. 프로필 값과 지원서 내용은 보내지 않습니다.
-          </li>
-        </ul>
-      </div>
-    </section>
+    <label className={styles.switch}>
+      새 공고 알림
+      <input
+        type="checkbox"
+        role="switch"
+        checked={state?.enabled ?? true}
+        disabled={!state || busy || !state.supported}
+        onChange={(event) => void toggle(event.target.checked)}
+      />
+    </label>
+  );
+}
+
+interface Props {
+  state: PushStateView | undefined;
+  failed: boolean;
+  busy: boolean;
+  categories: JobCategoriesHandle;
+  onEnabledChange(enabled: boolean): Promise<void>;
+  onRolesChange(roles: string[]): Promise<boolean>;
+  onTest(): Promise<void>;
+  onAnswer(answer: VisibilityAnswer, source: RecordSource): Promise<void>;
+  track: TrackEvent;
+  userAgent?: string;
+}
+
+/** Body of the 알림 설정 dialog: status, roles, test, visibility check, facts. */
+export function SubscriptionSettings({
+  state,
+  failed,
+  busy,
+  categories,
+  onEnabledChange,
+  onRolesChange,
+  onTest,
+  onAnswer,
+  track,
+  userAgent,
+}: Props) {
+  // Only the count leaves the browser; the codes stay a local preference.
+  const saveRoles = async (roles: string[]) => {
+    const ok = await onRolesChange(roles);
+    if (ok)
+      track("push_roles_saved", {
+        surface: "options",
+        role_count: roles.length,
+      });
+    return ok;
+  };
+  return (
+    <div className={styles.settingsBody}>
+      <dl className={`${styles.facts} ${styles.status}`}>
+        <div>
+          <dt>구독</dt>
+          <dd role="status">{subscriptionStatusText(state)}</dd>
+        </div>
+      </dl>
+      {failed && (
+        <p className={styles.settingsError}>구독 상태를 불러오지 못했어요</p>
+      )}
+      {state?.enabled && state.status?.code === "failed" && (
+        <button disabled={busy} onClick={() => void onEnabledChange(true)}>
+          다시 등록
+        </button>
+      )}
+      <RoleSelector
+        view={categories.view}
+        loading={categories.loading}
+        selected={state?.roles ?? []}
+        busy={busy}
+        onChange={saveRoles}
+        onReload={categories.reload}
+      />
+      <VisibilityCheck
+        variant="settings"
+        state={state}
+        busy={busy}
+        onTest={onTest}
+        onAnswer={onAnswer}
+        track={track}
+        surface="options"
+        userAgent={userAgent}
+      />
+      <FactList facts={DATA_FACTS} />
+      <details className={styles.factsMore}>
+        <summary>{TROUBLE_FACTS_SUMMARY}</summary>
+        <FactList facts={TROUBLE_FACTS} />
+      </details>
+    </div>
   );
 }

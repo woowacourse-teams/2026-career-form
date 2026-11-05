@@ -1,18 +1,15 @@
 /* Colors come from src/styles/theme.css. */
 .editor {
   display: grid;
-  gap: 12px;
+  gap: 11px;
   min-width: 0;
-  padding: 14px;
-  border: 1px solid;
-  border-radius: 14px;
+  padding: 15px;
+  border-radius: var(--radius-control);
 }
 .review {
-  border-color: var(--color-border);
-  background: var(--color-surface-muted);
+  background: var(--color-surface);
 }
 .confirmed {
-  border-color: var(--color-success);
   background: var(--color-success-soft);
 }
 .source {
@@ -23,18 +20,18 @@
 }
 .source small {
   color: var(--color-text-muted);
-  font-size: 11.5px;
+  font-size: 14px;
   font-weight: 600;
 }
 .source b {
   color: var(--color-text-strong);
-  font-size: 16px;
-  font-weight: 750;
+  font-size: 17px;
+  font-weight: 600;
 }
 .hint {
   margin: 0;
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.5;
 }
 .splitArea {
@@ -45,8 +42,8 @@
   display: flex;
   justify-content: space-between;
   padding: 0 10px;
-  color: var(--color-action);
-  font-size: 11.5px;
+  color: var(--color-action-strong);
+  font-size: 14px;
   font-weight: 650;
 }
 .splitter {
@@ -56,9 +53,8 @@
 .units {
   display: grid;
   overflow: hidden;
-  min-height: 48px;
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
+  min-height: 44px;
+  border-radius: var(--radius-control);
   text-align: center;
   align-items: stretch;
 }
@@ -76,12 +72,12 @@
   box-shadow: inset -3px 0 0 var(--color-surface-muted);
 }
 .family {
-  color: var(--color-text-strong);
-  background: var(--color-brand);
+  color: var(--color-on-action);
+  background: var(--color-action);
 }
 .given {
   color: var(--color-text);
-  background: var(--color-surface);
+  background: var(--color-surface-muted);
 }
 .divider {
   appearance: none;
@@ -117,8 +113,10 @@
   background: var(--color-action);
 }
 .divider:focus-visible {
-  outline: 3px solid var(--color-focus);
-  outline-offset: 4px;
+  outline: none;
+  box-shadow:
+    0 0 0 2px #fff,
+    0 0 0 4px var(--color-action);
 }
 .fields {
   display: grid;
@@ -130,7 +128,7 @@
   gap: 4px;
   min-width: 0;
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
 }
 .fields input {
@@ -150,16 +148,16 @@
   display: inline-flex;
   align-items: center;
   justify-self: center;
-  gap: 6px;
+  gap: 8px;
   min-height: 36px;
-  padding: 6px 14px;
-  border: 1px solid var(--color-accent);
-  border-radius: 99px;
+  padding: 8px 15px;
+  border: 1px solid var(--color-action-strong);
+  border-radius: 980px;
   color: var(--color-action-strong);
-  background: var(--color-surface);
+  background: transparent;
   font: inherit;
-  font-size: 13px;
-  font-weight: 650;
+  font-size: 14px;
+  letter-spacing: -0.224px;
   cursor: pointer;
   transition: background-color 120ms ease;
 }
@@ -183,20 +181,20 @@
   transform: rotate(360deg);
 }
 .confirm {
-  width: 100%;
-  min-height: 46px;
-  padding: 10px 14px;
-  border: 2px solid var(--color-border-strong);
-  border-radius: 12px;
+  justify-self: center;
+  width: fit-content;
+  min-height: 36px;
+  padding: 8px 15px;
+  border: 0;
+  border-radius: 980px;
   color: var(--color-on-brand);
   background: var(--color-brand);
   font: inherit;
-  font-size: 14.5px;
-  font-weight: 750;
+  font-size: 14px;
+  letter-spacing: -0.224px;
   cursor: pointer;
 }
 .confirm:hover:not(:disabled) {
-  border-color: var(--color-brand-hover);
   background: var(--color-brand-hover);
 }
 .confirm:disabled {
@@ -206,7 +204,7 @@
 .status {
   margin: -4px 0 0;
   color: var(--color-text-muted);
-  font-size: 11.5px;
+  font-size: 14px;
   text-align: center;
 }
 @media (prefers-reduced-motion: reduce) {

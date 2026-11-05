@@ -1,0 +1,221 @@
+.form {
+  --row-height: 40px;
+  --row-gap: 8px;
+  background: var(--surface);
+  border-radius: 26px;
+  padding: 22px 22px 18px;
+  box-shadow: var(--clay);
+}
+.head {
+  display: grid;
+  gap: 2px;
+  padding-bottom: 14px;
+  margin-bottom: 12px;
+  border-bottom: 1px dashed var(--line);
+}
+.head small {
+  font-size: 12px;
+  color: var(--sub);
+}
+.head b {
+  font-size: 16px;
+  color: var(--strong);
+}
+.rows {
+  position: relative;
+  display: grid;
+  gap: var(--row-gap);
+}
+.row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 86px 1fr;
+  align-items: center;
+  gap: 10px;
+  height: var(--row-height);
+}
+.label {
+  font-size: 13px;
+  color: var(--sub);
+  font-weight: 600;
+  transition: color 0.2s;
+}
+.input {
+  position: relative;
+  height: 100%;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  background: var(--cream);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  font-size: 14px;
+  color: var(--strong);
+  font-weight: 600;
+  overflow: hidden;
+  transition:
+    border-color 0.25s,
+    background-color 0.25s;
+}
+.value {
+  opacity: 0;
+  white-space: nowrap;
+}
+.check {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  margin-top: -9px;
+  border-radius: 50%;
+  background: var(--ok-check);
+  opacity: 0;
+  transform: scale(0.4);
+  transition:
+    opacity 0.2s,
+    transform 0.25s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+.check::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 5px;
+  height: 9px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: translate(-50%, -62%) rotate(45deg);
+}
+.reviewNote {
+  position: absolute;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px 3px 5px;
+  border-radius: 999px;
+  background: var(--action);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 800;
+  opacity: 0;
+  box-shadow: 0 4px 10px -4px rgb(17 58 92 / 60%);
+  transition: opacity 0.2s;
+}
+.reviewNote::before {
+  content: "?";
+  display: inline-grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--action);
+  font-size: 10px;
+}
+.seen .label {
+  color: var(--action);
+}
+.seen .input {
+  border-color: var(--accent);
+}
+.done .value {
+  opacity: 1;
+}
+.done .check {
+  opacity: 1;
+  transform: scale(1);
+}
+.focus .input {
+  border-color: var(--scan);
+  box-shadow:
+    0 0 0 4px rgb(63 169 224 / 25%),
+    0 0 24px rgb(63 169 224 / 35%);
+}
+.review .input {
+  border: 2px dashed var(--action);
+  background: repeating-linear-gradient(
+    135deg,
+    #fff 0 7px,
+    var(--review-stripe) 7px 14px
+  );
+  box-shadow: 0 0 0 4px rgb(29 111 165 / 16%);
+  animation: reviewRing 1.2s ease-out 2;
+}
+@keyframes reviewRing {
+  from {
+    box-shadow: 0 0 0 0 rgb(29 111 165 / 45%);
+  }
+  to {
+    box-shadow: 0 0 0 10px rgb(29 111 165 / 0%);
+  }
+}
+.review .label {
+  color: var(--action);
+  font-weight: 800;
+}
+.review .reviewNote {
+  opacity: 1;
+}
+
+/* AI meaning chips, shown beside each row in the AI scene */
+.chip {
+  position: absolute;
+  left: calc(100% + 14px);
+  top: 50%;
+  margin-top: -15px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px 0 6px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--strong);
+  white-space: nowrap;
+  opacity: 0;
+  box-shadow: 0 6px 14px -8px rgb(17 58 92 / 40%);
+  pointer-events: none;
+}
+.chip::before {
+  content: "";
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--brand) url("./assets/O2.webp") center / 14px no-repeat;
+}
+.chipReview {
+  border-color: var(--action);
+  background: var(--action);
+  color: #fff;
+}
+
+@media (max-width: 900px) {
+  .row {
+    grid-template-columns: 70px 1fr;
+  }
+  .label {
+    font-size: 12px;
+  }
+  .chip {
+    left: auto;
+    right: 8px;
+    height: 24px;
+    margin-top: -12px;
+    font-size: 11px;
+    padding: 0 8px 0 4px;
+  }
+  .chip::before {
+    width: 14px;
+    height: 14px;
+    background-size: 11px;
+  }
+  /* The chip sits inside the field on narrow screens; drop the duplicate note. */
+  .form:has(.chip) .reviewNote {
+    display: none;
+  }
+}

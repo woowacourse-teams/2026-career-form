@@ -22,7 +22,8 @@
   --color-text-subtle: #816e5b;
   --color-border: #e7d8c5;
   --color-border-strong: #ceb596;
-  --color-field-border: #cbb79d;
+  /* At least 3:1 against both --color-surface and --color-surface-muted. */
+  --color-field-border: #a08a73;
   --color-focus: rgb(166 95 45 / 22%);
   --color-info: #786453;
   --color-info-soft: #fffaf4;

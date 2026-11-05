@@ -1,4 +1,11 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createEmptyProfile, type Profile } from "../../profile/model";
@@ -139,25 +146,9 @@ function start() {
 }
 
 describe("fields a reviewed area reveals after a write", () => {
-  it("shows the stored values the area may reveal in the first review", async () => {
-    militaryForm();
-    start();
-    const group = await screen.findByRole("group", {
-      name: /나타날 수 있는 칸/,
-    });
-    expect(group).toHaveTextContent("병과");
-    expect(group).toHaveTextContent("합성병과");
-    // A category the page has no field for yet is offered too.
-    expect(group).toHaveTextContent("합성국적");
-    expect(
-      screen.getByRole("checkbox", { name: /다시 묻지 않고 기입/ }),
-    ).toBeChecked();
-  });
-
   it("writes an approved revealed field at once and only lists the rest", async () => {
     militaryForm();
     start();
-    fireEvent.click(await screen.findByRole("button", { name: "1개 항목 기입하기" }));
     await screen.findByRole("heading", { name: "기입 결과" });
     expect(input("specialty")?.value).toBe("합성병과");
     // A revealed field that already holds a value is never overwritten and
@@ -174,30 +165,56 @@ describe("fields a reviewed area reveals after a write", () => {
     expect(manual).not.toHaveTextContent("병과");
   });
 
-  it("writes no revealed field and asks nothing again when the approval is off", async () => {
+  it("keeps counting across a reveal pass and names the recheck", async () => {
     militaryForm();
-    start();
-    fireEvent.click(
-      await screen.findByRole("checkbox", { name: /다시 묻지 않고 기입/ }),
+    const api = client();
+    const analyze = api.analyzeGenericFields!;
+    let calls = 0;
+    let release = () => undefined as void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    api.analyzeGenericFields = async (request) => {
+      calls += 1;
+      if (calls === 2) await held;
+      return analyze(request);
+    };
+    const percents: string[] = [];
+    const observer = new MutationObserver(() => {
+      const value = document
+        .querySelector("[role=progressbar]")
+        ?.getAttribute("aria-valuenow");
+      if (value && percents.at(-1) !== value) percents.push(value);
+    });
+    observer.observe(document.body, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+    });
+    render(
+      <AutofillWorkflow
+        repository={{
+          // Writes re-read the profile, so each write sees the committed bar.
+          load: async () => {
+            await act(async () => undefined);
+            return profile();
+          },
+        }}
+        apiClient={api}
+        pageDocument={document}
+        onExit={() => undefined}
+      />,
     );
-    fireEvent.click(screen.getByRole("button", { name: "1개 항목 기입하기" }));
+    await screen.findAllByText("입력이 안된 칸들이 있는지 확인하고 있어요");
+    release();
     await screen.findByRole("heading", { name: "기입 결과" });
-    noFillButton();
-    expect(input("specialty")?.value).toBe("");
-    expect(input("nationality")?.value).toBe("다른국적");
-    const manual = screen.getByRole("region", { name: "직접 확인할 새 칸" });
-    expect(manual).toHaveTextContent("병과");
-    expect(manual).toHaveTextContent("국적");
+    observer.disconnect();
+    expect(percents.slice(percents.indexOf("100") + 1)).toEqual(["50", "100"]);
   });
 
   it("writes a field the first review held hidden once the page shows it", async () => {
     hiddenSpecialtyForm();
     start();
-    const group = await screen.findByRole("group", {
-      name: /나타날 수 있는 칸/,
-    });
-    expect(group).toHaveTextContent("합성병과");
-    fireEvent.click(screen.getByRole("button", { name: "1개 항목 기입하기" }));
     await screen.findByRole("heading", { name: "기입 결과" });
     expect(input("specialty")?.value).toBe("합성병과");
     noFillButton();
@@ -210,7 +227,6 @@ describe("fields a reviewed area reveals after a write", () => {
       .querySelector("#save")!
       .addEventListener("click", () => (saveClicks += 1));
     start();
-    fireEvent.click(await screen.findByRole("button", { name: "1개 항목 기입하기" }));
     await screen.findByRole("heading", { name: "기입 결과" });
     expect(input("specialty")).toBeNull();
     fireEvent.click(document.querySelector("#save")!);

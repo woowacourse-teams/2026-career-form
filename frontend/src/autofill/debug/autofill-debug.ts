@@ -30,7 +30,9 @@ export function defaultDebugEnabled(env: {
   return env.MODE !== "test" && env.VITE_AUTOFILL_DEBUG === "true";
 }
 
-let enabled = defaultDebugEnabled(import.meta.env);
+let buildEnabled = defaultDebugEnabled(import.meta.env);
+let developerModeOn = true;
+let enabled = buildEnabled;
 
 export function isAutofillDebugEnabled(): boolean {
   return enabled;
@@ -38,7 +40,14 @@ export function isAutofillDebugEnabled(): boolean {
 
 /** 테스트에서만 사용한다. */
 export function setAutofillDebugEnabled(value: boolean): void {
-  enabled = value;
+  buildEnabled = value;
+  enabled = buildEnabled && developerModeOn;
+}
+
+/** 저장된 개발자 모드가 꺼져 있으면 빌드 설정과 관계없이 Console 진단을 끈다. */
+export function setAutofillDebugDeveloperMode(value: boolean): void {
+  developerModeOn = value;
+  enabled = buildEnabled && developerModeOn;
 }
 
 function group(title: string, body: () => void): void {

@@ -1,0 +1,81 @@
+.row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 12px 11px 0;
+  border-top: 1px solid var(--color-border);
+}
+.label {
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.marker {
+  border-radius: 5px;
+  padding: 2px 6px;
+  background: var(--color-info-soft);
+  color: var(--color-info);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.help {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.switch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 36px;
+  height: 20px;
+  margin-left: auto;
+  padding: 0;
+  border: 1px solid var(--color-field-border);
+  border-radius: 999px;
+  background: var(--color-field-border);
+  cursor: pointer;
+}
+.switch[aria-checked="true"] {
+  border-color: var(--color-action);
+  background: var(--color-action);
+}
+.switch:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--color-surface),
+    0 0 0 4px var(--color-action);
+}
+.thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-on-action);
+  box-shadow: 0 1px 2px var(--color-backdrop);
+  transition: transform 160ms ease;
+}
+.switch[aria-checked="true"] .thumb {
+  transform: translateX(16px);
+}
+/* The hit area reaches 44px while the track keeps its size. */
+@media (max-width: 640px) {
+  .switch::after {
+    content: "";
+    position: absolute;
+    inset: -12px -4px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .thumb {
+    transition: none;
+  }
+}

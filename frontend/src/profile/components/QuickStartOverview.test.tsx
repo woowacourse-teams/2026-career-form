@@ -37,9 +37,9 @@ it("lets people add missing basics and resume only nonempty saved entries", () =
     />,
   );
   expect(screen.getByText("demo@example.test")).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "이름 수정" }));
+  fireEvent.click(screen.getByRole("button", { name: "이름 추가" }));
   expect(action).toBe("name");
-  fireEvent.click(screen.getByRole("button", { name: "전화번호 수정" }));
+  fireEvent.click(screen.getByRole("button", { name: "전화번호 추가" }));
   expect(action).toBe("phone");
   fireEvent.click(
     screen.getByRole("button", { name: "합성대학교 이어서 채우기" }),
@@ -74,6 +74,6 @@ it("reveals optional English name and nationality only when requested", () => {
   expect(disclosure.closest("details")).not.toHaveAttribute("open");
   fireEvent.click(disclosure);
   expect(disclosure.closest("details")).toHaveAttribute("open");
-  fireEvent.click(screen.getByRole("button", { name: "영문 이름 수정" }));
+  fireEvent.click(screen.getByRole("button", { name: "영문 이름 추가" }));
   expect(selected).toBe("englishName");
 });

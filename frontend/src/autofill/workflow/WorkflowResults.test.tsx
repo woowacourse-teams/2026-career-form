@@ -208,7 +208,7 @@ it("presents unsuccessful writes as an actionable review item instead of a separ
   expect(screen.getByLabelText("입력 완료 0개")).toBeInTheDocument();
   expect(screen.getByLabelText("확인 필요 1개")).toBeInTheDocument();
   expect(
-    screen.getByText(
+    screen.getByLabelText(
       "자동으로 입력하지 못했어요. 지원서에서 이 값을 직접 입력해 주세요.",
     ),
   ).toBeInTheDocument();
@@ -238,7 +238,7 @@ it("marks an uncertain written value as entered without counting it again as com
   const review = screen.getByRole("region", { name: "확인 필요한 항목" });
   expect(within(review).getByText("입력됨")).toBeInTheDocument();
   expect(
-    within(review).getByText(
+    within(review).getByLabelText(
       "입력 결과를 확인하지 못했어요. 지원서에 값이 들어갔는지 확인해 주세요.",
     ),
   ).toBeInTheDocument();
@@ -347,7 +347,7 @@ it("keeps an earlier failure visible without locating a reused candidate from an
     screen.getByRole("button", { name: "전공 필드로 이동" }),
   ).toBeDisabled();
   expect(
-    screen.getByText(
+    screen.getByLabelText(
       "자동으로 입력하지 못했어요. 지원서에서 이 값을 직접 입력해 주세요.",
     ),
   ).toBeInTheDocument();
@@ -471,7 +471,7 @@ it("keeps a ready but unwritten field in review when its live value is still bla
     screen.getByRole("button", { name: "전공 필드로 이동" }),
   ).toBeInTheDocument();
   expect(
-    screen.getByText(
+    screen.getByLabelText(
       "자동으로 선택하기 어려운 항목이에요. 지원서 목록에서 직접 골라 주세요.",
     ),
   ).toBeInTheDocument();
@@ -512,7 +512,7 @@ it("keeps unresolved unapproved items visible and reports unavailable locations"
   );
   expect(screen.getByText("컴퓨터공학")).toBeVisible();
   expect(
-    screen.getByText(
+    screen.getByLabelText(
       "자동으로 선택하기 어려운 항목이에요. 지원서 목록에서 직접 골라 주세요.",
     ),
   ).toBeInTheDocument();
@@ -549,7 +549,7 @@ it("combines write failures with unresolved fields while showing the saved value
   expect(screen.queryByLabelText("입력 실패 1개")).not.toBeInTheDocument();
   expect(screen.getByLabelText("확인 필요 2개")).toBeInTheDocument();
   expect(
-    screen.getByText(
+    screen.getByLabelText(
       "자동으로 입력하지 못했어요. 지원서에서 이 값을 직접 입력해 주세요.",
     ),
   ).toBeInTheDocument();
@@ -739,4 +739,24 @@ it("masks unrevealed sensitive completed values including tooltips", () => {
   );
   expect(screen.queryByText("값 가림")).toBeNull();
   expect(container.innerHTML).not.toContain(value);
+});
+
+it("counts a manual generic address field and shows why it stopped", () => {
+  const reason = "address reason";
+  render(
+    <WorkflowResults
+      reviewItems={[
+        {
+          ...item,
+          candidateId: "road",
+          fieldLabel: "기본주소",
+          reason,
+          addressManualReason: reason,
+        },
+      ]}
+      results={[]}
+    />,
+  );
+  expect(screen.getByRole("tab", { name: "확인 필요 1개" })).toBeVisible();
+  expect(screen.getByLabelText(reason)).toHaveTextContent("확인 필요");
 });

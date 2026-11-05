@@ -113,7 +113,6 @@ function install() {
     },
   };
   const saved: unknown[] = [];
-  const removed: unknown[] = [];
   const tracked: [string, unknown][] = [];
   let rows: Posting[] = [];
   const installed = installPushBackground({
@@ -135,17 +134,12 @@ function install() {
         ];
         return { postings: rows, problems: [] };
       },
-      remove: async (id, version) => {
-        removed.push([id, version]);
-        rows = rows.filter((row) => row.id !== id);
-        return { postings: rows, problems: [] };
-      },
     },
     track: (event, properties) => tracked.push([event, properties]),
     scope,
     userAgent: "Mozilla/5.0 Chrome/130.0.0.0 Safari/537.36",
   });
-  return { ...installed, scopeListeners, saved, removed, tracked };
+  return { ...installed, scopeListeners, saved, tracked };
 }
 const dispatch = async (listener: Listener | undefined, event: unknown) => {
   const waits: Promise<unknown>[] = [];
@@ -299,28 +293,25 @@ it("온보딩 페이지는 알림 테스트만 보낼 수 있고 공지함은 �
   ).toEqual({ ok: false, code: "UNAVAILABLE" });
 });
 
-it("자동 저장 후속 알림의 저장 취소 버튼은 저장을 되돌린다", async () => {
-  const { scopeListeners, saved, removed } = install();
+it("알림을 눌러 공고를 열면 저장하지 않고 후속 알림도 띄우지 않는다", async () => {
+  mocks.store["careerForm.push.autoSave"] = true;
+  const { scopeListeners, saved } = install();
   const id = "e".repeat(32);
   await dispatch(scopeListeners.push[0], {
     data: { json: () => ({ ...payload, id }) },
   });
   const clicked = mocks.listeners.clicked.at(-1) as (id: string) => void;
-  const button = mocks.listeners.button.at(-1) as (
-    id: string,
-    index: number,
-  ) => void;
   clicked(`careerForm.push.posting.${id}`);
-  await vi.waitFor(() =>
-    expect(mocks.notifications.at(-1)).toMatchObject({
-      id: `careerForm.push.autosaved.${id}`,
-      buttons: [{ title: "저장 취소" }],
-    }),
-  );
-  expect(saved).toHaveLength(1);
-  button(`careerForm.push.autosaved.${id}`, 0);
-  await vi.waitFor(() => expect(removed).toHaveLength(1));
-  expect(mocks.cleared).toContain(`careerForm.push.autosaved.${id}`);
+  // Receiver work is serial, so this push finishes after the click's work.
+  await dispatch(scopeListeners.push[0], {
+    data: { json: () => ({ ...payload, id: "f".repeat(32) }) },
+  });
+  expect(mocks.tabs.at(-1)).toEqual({ url: payload.link });
+  expect(saved).toEqual([]);
+  expect(
+    mocks.notifications.filter((n) => String(n.id).includes("autosaved")),
+  ).toEqual([]);
+  delete mocks.store["careerForm.push.autoSave"];
   clicked("careerForm.push.test");
   await vi.waitFor(() =>
     expect(mocks.cleared).toContain("careerForm.push.test"),

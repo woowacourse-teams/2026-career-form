@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { App } from "./App";
 import { JobPostings } from "../../src/job-postings/JobPostings";
 import styles from "./ManagementApp.module.css";
@@ -10,10 +10,13 @@ export function ManagementApp() {
     return () => window.removeEventListener("hashchange", changed);
   }, []);
   const postings = hash.startsWith("#postings");
-  const navigate = (value: string) => {
+  // The side panel deep-links to the 알림 설정 dialog with this hash.
+  const settings = hash === "#postings/settings";
+  const navigate = useCallback((value: string) => {
     window.location.hash = value;
     setHash(value);
-  };
+  }, []);
+  const settingsOpened = useCallback(() => navigate("#postings"), [navigate]);
   useEffect(() => {
     document.title = `${postings ? "지원 공고" : "프로필 관리"} | Career Form`;
   }, [postings]);
@@ -27,7 +30,7 @@ export function ManagementApp() {
               src="/side-panel-launcher-logo.png"
               alt=""
             />{" "}
-            CAREER FORM
+            Career Form
           </div>
           <nav className={styles.navigation} aria-label="관리 메뉴">
             <button
@@ -46,7 +49,10 @@ export function ManagementApp() {
         </div>
       </header>
       {postings ? (
-        <JobPostings key={hash} initialCreate={hash === "#postings/new"} />
+        <JobPostings
+          openSettings={settings}
+          onSettingsOpened={settingsOpened}
+        />
       ) : (
         <App />
       )}

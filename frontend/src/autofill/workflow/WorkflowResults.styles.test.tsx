@@ -1,4 +1,4 @@
-import { render, within } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { expect, it } from "vitest";
 import { WorkflowResults } from "./WorkflowResults";
 
@@ -36,6 +36,9 @@ it("keeps result layout and actions styled without the separately loaded entry s
 
     expect(getComputedStyle(summary).display).toBe("grid");
     expect(getComputedStyle(summary).padding).toBe("0px");
+    const heading = within(summary).getByRole("heading");
+    expect(getComputedStyle(heading).wordBreak).toBe("keep-all");
+    expect(getComputedStyle(heading).overflowWrap).toBe("anywhere");
     expect(getComputedStyle(counts).display).toBe("grid");
     expect(counts).toHaveAttribute("role", "tablist");
     expect(getComputedStyle(counts.firstElementChild!).borderTopStyle).toBe(
@@ -80,7 +83,7 @@ it("lays out a plain field row with an ellipsized value and separate copy action
   const locate = view.getByRole("button", { name: "전공 필드로 이동" });
   const heading = locate.parentElement!.parentElement!;
   expect(view.getByText(value)).toBeVisible();
-  const reason = view.getByText(
+  const reason = view.getByLabelText(
     "자동으로 선택하기 어려운 항목이에요. 지원서 목록에서 직접 골라 주세요.",
   );
 
@@ -89,8 +92,9 @@ it("lays out a plain field row with an ellipsized value and separate copy action
     "minmax(0, 0.8fr) minmax(0, 1.2fr)",
   );
   expect(heading).toContainElement(view.getByText("전공"));
-  expect(heading).not.toContainElement(reason);
-  expect(heading.nextElementSibling).toBe(reason);
+  expect(reason).toHaveTextContent("직접 선택");
+  expect(locate.parentElement).toContainElement(reason);
+  expect(heading.nextElementSibling).toBeNull();
   expect(getComputedStyle(locate).minHeight).toBe("32px");
   const rowStyle = getComputedStyle(locate.closest("article")!);
   expect(rowStyle.position).toBe("relative");
@@ -99,7 +103,8 @@ it("lays out a plain field row with an ellipsized value and separate copy action
     getComputedStyle(view.getByRole("button", { name: "전공 복사" })).zIndex,
   ).toBe("2");
   expect(rowStyle.paddingTop).toBe("10px");
-  expect(rowStyle.paddingLeft).toBe("0px");
+  expect(rowStyle.paddingLeft).toBe("12px");
+  expect(rowStyle.borderRadius).toBe("8px");
   const valueStyle = getComputedStyle(view.getByText(value));
   expect(valueStyle.whiteSpace).toBe("nowrap");
   expect(valueStyle.textOverflow).toBe("ellipsis");
@@ -107,7 +112,60 @@ it("lays out a plain field row with an ellipsized value and separate copy action
   expect(heading).toContainElement(
     view.getByRole("button", { name: "전공 복사" }),
   );
-  expect(getComputedStyle(reason).wordBreak).toBe("keep-all");
-  expect(getComputedStyle(reason).fontSize).toBe("12px");
+  const tag = getComputedStyle(reason);
+  expect(tag.fontSize).toBe("12px");
+  expect(tag.lineHeight).toBe("16px");
+  expect(tag.letterSpacing).toBe("-0.12px");
+  expect(tag.color).toBe("rgb(81, 81, 84)");
+  expect(tag.borderRadius).toBe("980px");
+  expect(tag.padding).toBe("2px 8px");
   expect(view.queryByText("확인 안내")).not.toBeInTheDocument();
+});
+
+function cssRules(...fragments: string[]) {
+  const found: string[] = [];
+  for (const sheet of Array.from(document.styleSheets))
+    for (const rule of Array.from(sheet.cssRules)) {
+      const { selectorText } = rule as CSSStyleRule;
+      if (selectorText && fragments.every((f) => selectorText.includes(f)))
+        found.push(rule.cssText);
+    }
+  return found.join("\n");
+}
+
+it("keeps one saturated color per row and a visible tag and separator on a hovered row", () => {
+  render(
+    <WorkflowResults
+      reviewItems={[
+        {
+          candidateId: "major",
+          fieldLabel: "전공",
+          currentValue: "",
+          previewValue: "컴퓨터공학",
+          profileValue: "컴퓨터공학",
+          status: "unavailable",
+          selected: false,
+          disabled: true,
+          revealed: true,
+          reason: "후보 여러 개",
+        },
+      ]}
+      results={[]}
+      onLocate={() => true}
+    />,
+  );
+  const arrow = screen
+    .getByRole("button", { name: "전공 필드로 이동" })
+    .querySelector("[aria-hidden]")!;
+  const arrowStyle = getComputedStyle(arrow);
+  expect(arrowStyle.opacity).toBe("0");
+  expect(cssRules("locate", "> [aria-hidden]")).toContain("--color-text-muted");
+  expect(cssRules(":hover", "[aria-hidden]")).toContain("opacity: 1");
+  expect(cssRules(":focus-visible", "[aria-hidden]")).toContain("opacity: 1");
+  expect(cssRules(":hover", "reasonTag")).toContain("--color-surface");
+  expect(cssRules("row", "::before")).toContain("--color-border");
+  expect(cssRules(":hover", "row", "::before")).toContain(
+    "--color-field-border",
+  );
+  expect(cssRules("row")).toContain("margin-inline: -12px");
 });

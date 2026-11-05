@@ -1,5 +1,6 @@
 import type {
   ProfileCategoryDefinition,
+  ProfileFieldDefinition,
   ProfileSectionDefinition,
 } from "./field-definitions";
 import type { Profile, ProfileCategoryId, ProfileEntry } from "./model";
@@ -44,12 +45,33 @@ export const CATEGORY_GUIDES: Record<ProfileCategoryId, string> = {
   health: "필요한 건강정보만 항목별로 기록해 주세요.",
 };
 
+export const NAME_GROUP_TITLE = "이름";
+export const ADDRESS_GROUP_TITLE = "주소";
+export const NAME_TABLE_COLUMNS = ["성", "이름"] as const;
+const NAME_TABLE_ROWS = [
+  { label: "국문", fields: ["koreanFamilyName", "koreanGivenName"] },
+  { label: "영문", fields: ["englishFamilyName", "englishGivenName"] },
+  { label: "한자", fields: ["hanjaFamilyName", "hanjaGivenName"] },
+] as const;
+
+/** Rows of the 이름 table, in display and keyboard order. */
+export function nameTableRows(fields: readonly ProfileFieldDefinition[]) {
+  return NAME_TABLE_ROWS.map((row) => ({
+    label: row.label,
+    fields: row.fields.flatMap((id) => {
+      const field = fields.find((candidate) => candidate.id === id);
+      return field ? [field] : [];
+    }),
+  }));
+}
+
 // Display grouping only: storage keys and the shared autofill field contract stay stable.
 const FIELD_GROUPS: Record<string, { title: string; fields: string[] }[]> = {
   personal: [
-    { title: "국문 이름", fields: ["koreanFamilyName", "koreanGivenName"] },
-    { title: "영문 이름", fields: ["englishFamilyName", "englishGivenName"] },
-    { title: "한자 이름", fields: ["hanjaFamilyName", "hanjaGivenName"] },
+    {
+      title: NAME_GROUP_TITLE,
+      fields: NAME_TABLE_ROWS.flatMap((row) => [...row.fields]),
+    },
     { title: "기본 정보", fields: ["birthDate", "gender", "nationality"] },
   ],
   contact: [
@@ -63,7 +85,7 @@ const FIELD_GROUPS: Record<string, { title: string; fields: string[] }[]> = {
       ],
     },
     {
-      title: "주소",
+      title: ADDRESS_GROUP_TITLE,
       fields: [
         "residenceCountry",
         "postalCode",

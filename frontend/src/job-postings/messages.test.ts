@@ -32,6 +32,22 @@ it("잘못된 메시지와 외부 URL의 쓰기 권한을 거부한다", () => {
     }),
   ).toBeUndefined();
   expect(
+    parsePostingMessage({
+      type: "careerForm.postings",
+      action: "save",
+      id: "x",
+      version: 1,
+      input: {
+        company: "a",
+        role: "b",
+        url: "https://example.com",
+        deadline: 1,
+        timeZone: "Asia/Seoul",
+        minutes: [],
+      },
+    }),
+  ).toBeUndefined();
+  expect(
     isPostingPage(
       { id: "own", url: "https://example.com/options.html" },
       "own",

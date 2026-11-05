@@ -1,105 +1,90 @@
 .page {
+  box-sizing: border-box;
   min-height: 100vh;
-  padding: 32px clamp(18px, 4vw, 56px) 28px;
+  padding: 40px 20px;
   background: var(--color-page);
   line-height: 1.5;
+  word-break: keep-all;
 }
 .header {
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 24px;
-  max-width: 1160px;
-  margin: 0 auto 28px;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 15px;
+  max-width: 976px;
+  margin: 0 auto 20px;
 }
-.eyebrow {
+.titleGroup {
   display: flex;
-  align-items: center;
-  gap: 9px;
-  margin: 0 0 22px;
-  color: var(--color-text-strong);
-  font-size: 11px;
-  font-weight: 750;
-  letter-spacing: 0.1em;
+  align-items: baseline;
+  gap: 15px;
+  min-width: 0;
 }
-.brandMark {
-  display: block;
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
-  object-fit: cover;
-}
-.brandDivider {
-  color: var(--color-field-border);
-  padding: 0 3px;
-}
-.brandSection {
+.titleCount {
   color: var(--color-text-muted);
-  font-weight: 500;
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.374px;
 }
 .header h1 {
   margin: 0;
   color: var(--color-text-strong);
-  font-size: clamp(28px, 3vw, 36px);
-  font-weight: 750;
-  letter-spacing: -0.045em;
-  line-height: 1.3;
-}
-.description {
-  margin: 8px 0 0;
-  color: var(--color-text-muted);
-  font-size: 14px;
+  font-size: 40px;
+  font-weight: 600;
+  line-height: 44px;
+  white-space: nowrap;
 }
 .toolbar {
-  display: grid;
-  justify-items: end;
-  gap: 12px;
-  padding-bottom: 2px;
-}
-.transferActions {
   display: flex;
+  align-items: center;
+  align-self: center;
+  flex-wrap: wrap;
   gap: 8px;
+  margin-left: auto;
 }
-.transferActions button {
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  padding: 8px 13px;
-  color: var(--color-text);
-  background: var(--color-surface);
-  font-size: 12px;
-  font-weight: 600;
+.transferButton {
+  min-height: 36px;
+  border: 1px solid var(--color-action-strong);
+  border-radius: 980px;
+  padding: 8px 15px;
+  color: var(--color-action-strong);
+  background: transparent;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: -0.224px;
+  line-height: 1;
+  white-space: nowrap;
   cursor: pointer;
 }
-.transferActions button:hover {
-  border-color: var(--color-accent);
-  background: var(--color-accent-soft);
+.transferButton:hover {
+  background: var(--color-surface);
 }
 .saveState {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  margin-right: 8px;
   color: var(--color-text-muted);
-  font-size: 12px;
-  min-height: 20px;
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: -0.224px;
 }
-.saveState > span {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--color-success);
-}
-.saveState > span[data-status="saving"] {
-  background: var(--color-warning);
-}
-.saveState > span[data-status="error"] {
-  background: var(--color-danger);
+.saveState[data-status="error"],
+.saveState[data-status="conflict"] {
+  color: var(--color-danger-text);
 }
 .saveState button,
 .noResults button {
+  min-height: 36px;
   border: 0;
-  padding: 2px;
+  border-radius: 8px;
+  padding: 0 8px;
   background: transparent;
   color: var(--color-action-strong);
+  font-family: inherit;
+  font-size: 14px;
+  letter-spacing: -0.224px;
   text-decoration: underline;
   cursor: pointer;
 }
@@ -115,103 +100,78 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  max-width: 1160px;
-  margin: 0 auto 18px;
-  border-top: 1px solid var(--color-border);
-  padding-top: 18px;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  max-width: 976px;
+  margin: 0 auto 20px;
 }
-.workspaceToolbar > p {
+.storageLabel {
   margin: 0;
-  font-size: 12px;
-  color: var(--color-text);
-}
-.workspaceToolbar > p span {
   color: var(--color-text-muted);
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: -0.224px;
 }
 .layoutSwitch {
   display: flex;
-  gap: 2px;
   flex-shrink: 0;
-  background: var(--color-info-soft);
-  padding: 3px;
-  border-radius: 8px;
 }
 .layoutSwitch button {
+  min-height: 32px;
   border: 0;
-  padding: 7px 12px;
-  border-radius: 6px;
-  color: var(--color-text-muted);
+  border-radius: 980px;
+  padding: 0 15px;
+  color: #515154;
   background: transparent;
-  font-size: 12px;
-  font-weight: 600;
+  font-family: inherit;
+  font-size: 14px;
+  letter-spacing: -0.224px;
   cursor: pointer;
 }
+.layoutSwitch button:hover {
+  color: var(--color-text-strong);
+}
 .layoutSwitch button[aria-pressed="true"] {
-  color: var(--color-action-strong);
-  background: var(--color-accent-soft);
-  box-shadow: inset 0 0 0 1px var(--color-accent);
+  color: var(--color-text-strong);
+  background: var(--color-surface);
+  font-weight: 600;
 }
 .layoutA {
   display: grid;
-  grid-template-columns: 246px minmax(0, 1fr);
+  grid-template-columns: 220px minmax(0, 1fr);
   align-items: start;
-  gap: 24px;
-  max-width: 1160px;
+  gap: 20px;
+  max-width: 976px;
   margin: auto;
 }
+/* Padding with a matching negative margin keeps focus rings from clipping. */
 .sidebar {
   position: sticky;
   top: 24px;
   max-height: calc(100vh - 48px);
+  margin: -4px;
+  padding: 4px;
   overflow-y: auto;
   scrollbar-width: thin;
-  padding: 4px 0 12px;
-}
-.navOverview {
-  margin: 0 0 16px;
-  padding: 16px;
-  border: 1px solid var(--color-info-border);
-  border-radius: 14px;
-  background: var(--color-info-soft);
-}
-.navOverview > p:first-child {
-  margin: 0 0 5px;
-  color: var(--color-text);
-  font-size: 12px;
-  font-weight: 650;
-}
-.navOverview > strong {
-  color: var(--color-text-strong);
-  font-size: 24px;
-  font-weight: 700;
-}
-.navOverview > strong span {
-  color: var(--color-text-muted);
-  font-size: 11px;
-  font-weight: 450;
-}
-.optionalNote {
-  color: var(--color-text-muted);
-  font-size: 11px;
-  font-weight: 400;
-}
-.navOverview .optionalNote {
-  margin: 3px 0 0;
 }
 .categorySearch {
   display: flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid var(--color-border);
+  box-sizing: border-box;
+  min-height: 36px;
+  border: 1px solid var(--color-field-border);
   border-radius: 8px;
-  padding: 9px 10px;
+  padding: 0 11px;
   background: var(--color-surface);
-  margin: 0 6px 17px;
+  margin: 0 0 20px;
+}
+.categorySearch:hover {
+  border-color: #515154;
 }
 .categorySearch:focus-within {
   border-color: var(--color-action);
-  box-shadow: 0 0 0 3px var(--color-focus);
+  box-shadow: 0 0 0 1px var(--color-action);
 }
 .categorySearch svg {
   flex-shrink: 0;
@@ -226,181 +186,187 @@
   background: transparent;
   color: var(--color-text-strong);
   padding: 0;
-  font-size: 12px;
+  font-family: inherit;
+  font-size: 14px;
+  letter-spacing: -0.224px;
   outline: none;
 }
 .categorySearch input::placeholder {
-  color: var(--color-text-subtle);
+  color: var(--color-text-muted);
+  opacity: 1;
 }
 .navGroup {
-  margin: 0 0 15px;
+  margin: 0 0 20px;
 }
 .navGroup > p {
-  margin: 0 0 6px;
-  padding: 0 12px;
-  font-size: 10px;
-  color: var(--color-text-subtle);
-  font-weight: 650;
-  letter-spacing: 0.04em;
+  margin: 0 0 8px;
+  padding: 0 11px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 18px;
+  letter-spacing: -0.224px;
 }
 .categoryNav button {
   display: flex;
   align-items: center;
-  gap: 9px;
+  justify-content: space-between;
+  gap: 8px;
   width: 100%;
-  min-height: 41px;
-  border: 1px solid transparent;
+  min-height: 32px;
+  border: 0;
   border-radius: 8px;
-  padding: 9px 12px;
-  color: var(--color-text-muted);
+  padding: 0 11px;
+  color: var(--color-text-strong);
   background: transparent;
+  font-family: inherit;
   text-align: left;
   cursor: pointer;
 }
-.categoryNav button:hover {
-  background: var(--color-accent-soft);
-}
+.categoryNav button:hover,
 .categoryNav button[aria-current="page"] {
-  color: var(--color-action-strong);
-  background: var(--color-accent-soft);
-  border-color: var(--color-accent);
-}
-.navDot {
-  flex-shrink: 0;
-  height: 5px;
-  width: 5px;
-  border: 1px solid var(--color-field-border);
-  border-radius: 50%;
-}
-.navDot[data-filled="true"] {
-  background: var(--color-success);
-  border-color: var(--color-success);
+  background: var(--color-surface);
 }
 .navLabel {
-  font-size: 13px;
-  font-weight: 550;
+  font-size: 14px;
+  letter-spacing: -0.224px;
 }
 .categoryNav button[aria-current="page"] .navLabel {
-  font-weight: 750;
+  font-weight: 600;
 }
 .categoryNav button small {
-  margin-left: auto;
-  font-size: 10px;
-  color: var(--color-text-subtle);
+  color: var(--color-text-muted);
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: -0.224px;
   white-space: nowrap;
 }
-.categoryNav button[aria-current="page"] small {
-  color: var(--color-action-strong);
+.categoryNav button small[data-empty="true"],
+.accordionStatus[data-empty="true"],
+.categoryCount[data-empty="true"] {
+  color: var(--color-text-muted);
+  font-weight: 400;
 }
 .formPanel {
   min-width: 0;
-  border: 1px solid var(--color-border);
-  border-radius: 16px;
+  box-sizing: border-box;
+  padding: 40px;
+  border-radius: 18px;
   background: var(--color-surface);
-  box-shadow: var(--shadow-card);
-  overflow: hidden;
 }
 .sectionHeading {
-  padding: 28px 32px 22px;
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface);
-}
-.sectionMeta {
   display: flex;
+  align-items: baseline;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-  color: var(--color-text-subtle);
-  font-size: 11px;
-}
-.categoryBadge {
-  border-radius: 5px;
-  padding: 3px 8px;
-  background: var(--color-info-soft);
-  color: var(--color-info);
+  gap: 15px;
+  margin-bottom: 20px;
 }
 .sectionHeading h2 {
   margin: 0;
   color: var(--color-text-strong);
-  font-size: 24px;
-  letter-spacing: -0.04em;
-  line-height: 1.35;
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 32px;
+  letter-spacing: 0.196px;
 }
 .sectionHeading h2:focus {
   outline: none;
 }
-.categoryGuide {
-  margin: 7px 0 0;
+.categoryCount {
+  flex-shrink: 0;
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: 14px;
+  letter-spacing: -0.224px;
 }
 .formBody {
-  padding: 26px 32px 32px;
+  min-width: 0;
 }
 .formFooter {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  border-top: 1px solid var(--color-border);
-  padding: 18px 32px;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 40px;
 }
 .formFooter button {
-  border: 0;
+  min-height: 44px;
+  border: 1px solid var(--color-action-strong);
+  border-radius: 980px;
+  padding: 11px 21px;
+  color: var(--color-action-strong);
   background: transparent;
-  color: var(--color-text-muted);
-  font-size: 12px;
+  font-family: inherit;
+  font-size: 17px;
+  font-weight: 400;
+  letter-spacing: -0.374px;
+  line-height: 1;
   cursor: pointer;
-  min-height: 38px;
-  padding: 8px 0;
+}
+.formFooter button:hover {
+  background: var(--color-surface-muted);
 }
 .formFooter .nextButton {
-  padding: 9px 14px;
-  border: 1px solid var(--color-brand-hover);
-  border-radius: 7px;
+  border-color: var(--color-brand);
   color: var(--color-on-brand);
   background: var(--color-brand);
-  font-weight: 600;
 }
 .formFooter .nextButton:hover {
+  border-color: var(--color-brand-hover);
   background: var(--color-brand-hover);
+}
+.formFooter .nextButton:active {
+  border-color: #006edb;
+  background: #006edb;
+}
+.transferButton:focus-visible,
+.saveState button:focus-visible,
+.noResults button:focus-visible,
+.layoutSwitch button:focus-visible,
+.categoryNav button:focus-visible,
+.formFooter button:focus-visible,
+.accordion summary:focus-visible,
+.loadError button:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--color-surface),
+    0 0 0 4px var(--color-action);
 }
 .layoutB {
   display: grid;
-  gap: 14px;
-  max-width: 920px;
+  gap: 20px;
+  max-width: 976px;
   margin: auto;
 }
 .overviewHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
-  color: var(--color-text-muted);
-  font-size: 12px;
+  gap: 15px;
 }
 .overviewHeader .categorySearch {
   margin: 0;
   width: 240px;
 }
 .accordion {
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
+  border-radius: 18px;
   background: var(--color-surface);
-  overflow: hidden;
 }
 .accordion summary {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 20px 24px;
+  gap: 15px;
+  min-height: 44px;
+  padding: 20px 40px;
+  border-radius: 18px;
   cursor: pointer;
   color: var(--color-text-strong);
-  font-size: 14px;
+  font-size: 17px;
+  letter-spacing: -0.374px;
   list-style: none;
 }
-.accordion summary:hover {
-  background: var(--color-accent-soft);
+.accordion summary strong {
+  font-weight: 600;
 }
 .accordion summary::-webkit-details-marker {
   display: none;
@@ -408,7 +374,8 @@
 .accordionStatus {
   margin-left: auto;
   color: var(--color-text-muted);
-  font-size: 11px;
+  font-size: 14px;
+  letter-spacing: -0.224px;
 }
 .accordionChevron {
   width: 18px;
@@ -417,142 +384,134 @@
   text-align: center;
 }
 .accordionBody {
+  padding: 20px 40px 40px;
   border-top: 1px solid var(--color-border);
-  padding: 24px;
-}
-.accordionBody > .categoryGuide {
-  margin: 0 0 24px;
-}
-.pageFooter {
-  display: flex;
-  align-items: start;
-  justify-content: space-between;
-  gap: 16px;
-  max-width: 1160px;
-  margin: 26px auto 0;
-  color: var(--color-text-subtle);
-  font-size: 11px;
-}
-.pageFooter > span {
-  font-size: 10px;
-  letter-spacing: 0.1em;
-}
-.storageNote {
-  max-width: 450px;
-  text-align: right;
-}
-.storageNote summary {
-  cursor: pointer;
-}
-.storageNote p {
-  line-height: 1.8;
-  color: var(--color-text-muted);
 }
 .transferStatus,
 .transferError,
 .preferenceError {
-  max-width: 1160px;
-  margin: 0 auto 16px;
-  padding: 10px 14px;
-  font-size: 12px;
-  border: 1px solid var(--color-accent);
+  max-width: 976px;
+  box-sizing: border-box;
+  margin: 0 auto 20px;
+  padding: 11px 15px;
   border-radius: 8px;
-  background: var(--color-accent-soft);
-  color: var(--color-action-strong);
+  background: var(--color-surface);
+  color: var(--color-text-strong);
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: -0.224px;
 }
 .transferError,
 .preferenceError {
-  border-color: var(--color-danger-border);
+  border: 1px solid var(--color-danger-border);
   color: var(--color-danger-text);
-  background: var(--color-danger-soft);
+}
+.transferError p {
+  margin: 0 0 8px;
+}
+.transferError button {
+  min-height: 36px;
+  border: 1px solid var(--color-action-strong);
+  border-radius: 980px;
+  padding: 8px 15px;
+  color: var(--color-action-strong);
+  background: transparent;
+  font-family: inherit;
+  font-size: 14px;
+  letter-spacing: -0.224px;
+  line-height: 1;
+  cursor: pointer;
+}
+.transferError button:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--color-surface),
+    0 0 0 4px var(--color-action);
 }
 .loading {
   margin: 80px auto;
   color: var(--color-text-muted);
+  font-size: 17px;
   text-align: center;
 }
+.loadError {
+  box-sizing: border-box;
+  max-width: 560px;
+  margin: 80px auto;
+  padding: 40px;
+  border-radius: 18px;
+  color: var(--color-danger-text);
+  background: var(--color-surface);
+  text-align: center;
+}
+.loadError h1 {
+  margin: 0 0 8px;
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 32px;
+  letter-spacing: 0.196px;
+}
+.loadError p {
+  margin: 0 0 20px;
+  color: #515154;
+  font-size: 14px;
+  letter-spacing: -0.224px;
+}
+.loadError button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 980px;
+  padding: 11px 21px;
+  color: var(--color-on-brand);
+  background: var(--color-brand);
+  font-family: inherit;
+  font-size: 17px;
+  letter-spacing: -0.374px;
+  line-height: 1;
+  cursor: pointer;
+}
+.loadError button:hover {
+  background: var(--color-brand-hover);
+}
 .noResults {
-  padding: 20px 12px;
+  padding: 20px 11px;
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: 14px;
+  letter-spacing: -0.224px;
 }
-@media (max-width: 900px) {
-  .layoutA {
-    grid-template-columns: 216px minmax(0, 1fr);
-    gap: 16px;
-  }
-  .sectionHeading,
-  .formBody {
-    padding-left: 24px;
-    padding-right: 24px;
-  }
-  .workspaceToolbar > p span {
-    display: block;
-    margin-top: 3px;
-  }
+.noResults p {
+  margin: 0 0 8px;
 }
-@media (max-width: 680px) {
-  .page {
-    padding: 20px 16px;
-  }
-  .header {
-    align-items: start;
-    gap: 14px;
-    flex-wrap: wrap;
-    margin-bottom: 20px;
-  }
-  .eyebrow {
-    margin-bottom: 16px;
-  }
-  .brandSection,
-  .brandDivider {
-    display: none;
-  }
-  .description {
-    font-size: 12px;
-  }
+@media (max-width: 640px) {
   .toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
+    margin-left: 0;
     width: 100%;
-    justify-content: space-between;
   }
-  .workspaceToolbar {
-    align-items: start;
-    gap: 8px;
-  }
-  .workspaceToolbar > p {
-    max-width: 160px;
-    font-size: 11px;
-  }
-  .workspaceToolbar > p span {
-    display: none;
-  }
-  .layoutSwitch button {
-    padding: 7px 9px;
-    font-size: 11px;
+  .transferButton,
+  .saveState button,
+  .noResults button,
+  .layoutSwitch button,
+  .transferError button {
+    min-height: 44px;
   }
   .layoutA {
     grid-template-columns: minmax(0, 1fr);
-    gap: 16px;
   }
   .sidebar {
     position: static;
     max-height: none;
-    padding: 0;
-  }
-  .navOverview {
-    display: none;
+    min-width: 0;
   }
   .categorySearch {
-    margin: 0 0 12px;
+    min-height: 44px;
+    margin-bottom: 8px;
   }
   .categoryNav {
     display: flex;
     gap: 8px;
+    margin: -4px;
+    padding: 4px;
     overflow-x: auto;
-    padding: 0 0 8px;
   }
   .navGroup {
     display: contents;
@@ -563,47 +522,28 @@
   .categoryNav button {
     width: auto;
     flex-shrink: 0;
-    min-height: 38px;
-    padding: 7px 12px;
-    background: var(--color-surface);
-    border-color: var(--color-border);
+    min-height: 44px;
+    white-space: nowrap;
   }
-  .categoryNav button small,
-  .navDot {
-    display: none;
+  .categoryNav button:hover:not([aria-current="page"]) {
+    background: transparent;
   }
-  .navLabel {
-    font-size: 12px;
-  }
-  .sectionHeading {
-    padding: 22px 20px 18px;
-  }
-  .sectionHeading h2 {
-    font-size: 22px;
-  }
-  .formBody {
-    padding: 22px 20px;
+  .formPanel {
+    padding: 20px;
   }
   .formFooter {
-    padding: 14px 20px;
-  }
-  .overviewHeader {
-    flex-wrap: wrap;
+    margin-top: 20px;
   }
   .overviewHeader .categorySearch {
     width: 100%;
   }
   .accordion summary {
-    padding: 16px 20px;
+    padding: 15px 20px;
   }
   .accordionBody {
     padding: 20px;
   }
-  .pageFooter {
-    flex-direction: column;
-    gap: 10px;
-  }
-  .storageNote {
-    text-align: left;
+  .loadError {
+    padding: 20px;
   }
 }

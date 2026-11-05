@@ -56,6 +56,174 @@
     "aliases": []
   },
   {
+    "id": "certificate:krivet:f93ce129a8fe51ed",
+    "kind": "certificate",
+    "name": "AI CERTIFICATE FOR EVERYONE",
+    "detail": "주식회사 케이티ㆍ주식회사 한국경제신문 · 국가공인민간자격 · 과학기술정보통신부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:b7f82a7069a1423c",
+    "kind": "certificate",
+    "name": "AT(Accounting Technician)",
+    "detail": "한국공인회계사회 · 국가공인민간자격 · 금융위원회",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:88083e3667b390d2",
+    "kind": "certificate",
+    "name": "CS Leaders(관리사)",
+    "detail": "(사)한국정보평가협회 · 국가공인민간자격 · 산업통상자원부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:b63d0801c6e955b2",
+    "kind": "certificate",
+    "name": "DEQ(인터넷윤리자격)",
+    "detail": "한국생산성본부 · 국가공인민간자격 · 과학기술정보통신부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:73492cbc2058b20c",
+    "kind": "certificate",
+    "name": "ERP물류정보관리사",
+    "detail": "한국생산성본부 · 국가공인민간자격 · 과학기술정보통신부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:9ca8be003d45fb86",
+    "kind": "certificate",
+    "name": "ERP생산정보관리사",
+    "detail": "한국생산성본부 · 국가공인민간자격 · 과학기술정보통신부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:8bf98a1903baa4a4",
+    "kind": "certificate",
+    "name": "ERP인사정보관리사",
+    "detail": "한국생산성본부 · 국가공인민간자격 · 과학기술정보통신부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:d05b2e9fa9964fe1",
+    "kind": "certificate",
+    "name": "ERP회계정보관리사",
+    "detail": "한국생산성본부 · 국가공인민간자격 · 과학기술정보통신부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:f79c2f7d2f87181e",
+    "kind": "certificate",
+    "name": "FLEX 독일어(듣기/읽기)",
+    "detail": "대한상공회의소 · 국가공인민간자격 · 교육부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:ccb18df9ea486ab6",
+    "kind": "certificate",
+    "name": "FLEX 스페인어(듣기/읽기)",
+    "detail": "대한상공회의소 · 국가공인민간자격 · 교육부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:072fb4b5a88d22f0",
+    "kind": "certificate",
+    "name": "FLEX 영어(듣기/읽기)",
+    "detail": "대한상공회의소 · 국가공인민간자격 · 교육부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:fe9287fbab221923",
+    "kind": "certificate",
+    "name": "FLEX 일본어(듣기/읽기)",
+    "detail": "대한상공회의소 · 국가공인민간자격 · 교육부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:87c3f087615ed56d",
+    "kind": "certificate",
+    "name": "FLEX 중국어(듣기/읽기)",
+    "detail": "대한상공회의소 · 국가공인민간자격 · 교육부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:970cb816832b1b30",
+    "kind": "certificate",
+    "name": "FLEX 프랑스어(듣기/읽기)",
+    "detail": "대한상공회의소 · 국가공인민간자격 · 교육부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:6325faeb521e91cd",
+    "kind": "certificate",
+    "name": "FLEX러시아어(듣기/읽기)",
+    "detail": "대한상공회의소 · 국가공인민간자격 · 교육부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:c3d16bf617db7acd",
+    "kind": "certificate",
+    "name": "GTQ(그래픽기술자격)",
+    "detail": "한국생산성본부 · 국가공인민간자격 · 산업통상자원부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:8e4ac1001e89a540",
+    "kind": "certificate",
+    "name": "GTQi(그래픽기술자격일러스트)",
+    "detail": "한국생산성본부 · 국가공인민간자격 · 산업통상자원부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:b188161e08de8701",
+    "kind": "certificate",
+    "name": "KBS한국어능력시험",
+    "detail": "KBS한국방송공사 · 국가공인민간자격 · 문화체육관광부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:bf23fe30db033a5e",
+    "kind": "certificate",
+    "name": "PC Master(정비사)",
+    "detail": "(사)한국정보평가협회 · 국가공인민간자격 · 과학기술정보통신부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:c37c299f8360c558",
+    "kind": "certificate",
+    "name": "PC정비사",
+    "detail": "(사)한국정보통신자격협회 · 국가공인민간자격 · 과학기술정보통신부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:3b391b5dc8ba7b53",
+    "kind": "certificate",
+    "name": "PC활용능력평가시험(PCT)",
+    "detail": "(주)피씨티 · 국가공인민간자격 · 과학기술정보통신부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:4c4bc95bfa3a231d",
+    "kind": "certificate",
+    "name": "RFID기술자격검정",
+    "detail": "(사)한국지능형사물인터넷협회 · 국가공인민간자격 · 과학기술정보통신부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:a9c7fcee0ecb7b24",
+    "kind": "certificate",
+    "name": "SMAT(서비스경영자격)",
+    "detail": "한국생산성본부 · 국가공인민간자격 · 산업통상자원부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:9350b529fdac8564",
+    "kind": "certificate",
+    "name": "SQL",
+    "detail": "(재)한국데이터산업진흥원 · 국가공인민간자격 · 과학기술정보통신부",
+    "aliases": []
+  },
+  {
     "id": "certificate:kdata:sqld",
     "kind": "certificate",
     "name": "SQL 개발자",
@@ -68,6 +236,27 @@
     "name": "SQL 전문가",
     "detail": "한국데이터산업진흥원",
     "aliases": ["SQLP"]
+  },
+  {
+    "id": "certificate:krivet:349ced34e9ec7c44",
+    "kind": "certificate",
+    "name": "SW테스트전문가(CSTS)",
+    "detail": "한국정보통신기술협회 · 국가공인민간자격 · 과학기술정보통신부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:3021b569d44badaf",
+    "kind": "certificate",
+    "name": "TEPS(영어능력검정)",
+    "detail": "재단법인 서울대학교발전재단 · 국가공인민간자격 · 교육부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:f94909f5789ef1f2",
+    "kind": "certificate",
+    "name": "e-Test Professionals",
+    "detail": "(사)한국창의인성교육연구원 · 국가공인민간자격 · 과학기술정보통신부",
+    "aliases": []
   },
   {
     "id": "certificate:hrdk:b729cc0b7e491efd",
@@ -133,6 +322,13 @@
     "aliases": []
   },
   {
+    "id": "certificate:krivet:0f30110f66b93cb7",
+    "kind": "certificate",
+    "name": "가정용에어컨설치관리사",
+    "detail": "한국냉동공조산업협회 · 국가공인민간자격 · 산업통상자원부",
+    "aliases": []
+  },
+  {
     "id": "certificate:hrdk:cf45bc4885c17a62",
     "kind": "certificate",
     "name": "감정사",
@@ -144,6 +340,13 @@
     "kind": "certificate",
     "name": "감정평가사",
     "detail": "한국산업인력공단 · 국가전문자격 · 감정평가사",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:c523bc7e017aa2b8",
+    "kind": "certificate",
+    "name": "개인보험심사역",
+    "detail": "사단법인 보험연수원 · 국가공인민간자격 · 금융위원회",
     "aliases": []
   },
   {
@@ -413,6 +616,13 @@
     "aliases": []
   },
   {
+    "id": "certificate:curated:business-information-visualization",
+    "kind": "certificate",
+    "name": "경영정보시각화능력",
+    "detail": "대한상공회의소",
+    "aliases": []
+  },
+  {
     "id": "certificate:hrdk:f93a48e6076e74f6",
     "kind": "certificate",
     "name": "경영지도사(1차공통)",
@@ -445,6 +655,20 @@
     "kind": "certificate",
     "name": "경영지도사(재무관리)",
     "detail": "한국산업인력공단 · 국가전문자격 · 경영지도사",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:03d514d56f3b09ae",
+    "kind": "certificate",
+    "name": "경제·금융이해력인증시험(틴매경 TEST)",
+    "detail": "매일경제신문사 · 국가공인민간자격 · 기획재정부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:52511b535bc4c024",
+    "kind": "certificate",
+    "name": "경제이해력검증시험(TESAT)",
+    "detail": "한국경제신문 · 국가공인민간자격 · 기획재정부",
     "aliases": []
   },
   {
@@ -889,6 +1113,20 @@
     "aliases": []
   },
   {
+    "id": "certificate:krivet:8683be9e6786adca",
+    "kind": "certificate",
+    "name": "국방원가관리사",
+    "detail": "사단법인 한국방위산업진흥회 · 국가공인민간자격 · 방위사업청",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:9f241f8a3b53313e",
+    "kind": "certificate",
+    "name": "국제금융역",
+    "detail": "(사)한국금융연수원 · 국가공인민간자격 · 기획재정부",
+    "aliases": []
+  },
+  {
     "id": "certificate:hrdk:d36e06055baeb1d9",
     "kind": "certificate",
     "name": "국제의료관광코디네이터",
@@ -1127,6 +1365,13 @@
     "aliases": []
   },
   {
+    "id": "certificate:krivet:909ff4250e3c3156",
+    "kind": "certificate",
+    "name": "기업보험심사역",
+    "detail": "사단법인 보험연수원 · 국가공인민간자격 · 금융위원회",
+    "aliases": []
+  },
+  {
     "id": "certificate:hrdk:bb5dfc64878b8fa9",
     "kind": "certificate",
     "name": "기중기운전기능사",
@@ -1138,6 +1383,20 @@
     "kind": "certificate",
     "name": "남성복기능사",
     "detail": "한국산업인력공단 · 국가기술자격 · 기능사",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:4cc0d5e59c06b336",
+    "kind": "certificate",
+    "name": "냉매취급관리사",
+    "detail": "한국냉동공조산업협회 · 국가공인민간자격 · 산업통상자원부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:2d48b396f4e5d461",
+    "kind": "certificate",
+    "name": "네트워크관리사",
+    "detail": "(사)한국정보통신자격협회 · 국가공인민간자격 · 과학기술정보통신부",
     "aliases": []
   },
   {
@@ -1173,6 +1432,13 @@
     "kind": "certificate",
     "name": "농어업토목기술사",
     "detail": "한국산업인력공단 · 국가기술자격 · 기술사",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:1fa1170d8fb0b2ed",
+    "kind": "certificate",
+    "name": "농어촌개발컨설턴트",
+    "detail": "한국농어촌공사 · 국가공인민간자격 · 농림축산식품부",
     "aliases": []
   },
   {
@@ -1243,13 +1509,27 @@
     "kind": "certificate",
     "name": "데이터 분석 전문가",
     "detail": "한국데이터산업진흥원",
-    "aliases": []
+    "aliases": ["ADP"]
   },
   {
     "id": "certificate:kdata:9fc4cc62283580a3",
     "kind": "certificate",
     "name": "데이터 분석 준전문가",
     "detail": "한국데이터산업진흥원",
+    "aliases": ["ADsP"]
+  },
+  {
+    "id": "certificate:krivet:c6698bc7eddd9c60",
+    "kind": "certificate",
+    "name": "데이터분석",
+    "detail": "(재)한국데이터산업진흥원 · 국가공인민간자격 · 과학기술정보통신부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:fe911dd26d6dba9a",
+    "kind": "certificate",
+    "name": "데이터아키텍처",
+    "detail": "(재)한국데이터산업진흥원 · 국가공인민간자격 · 과학기술정보통신부",
     "aliases": []
   },
   {
@@ -1264,6 +1544,13 @@
     "kind": "certificate",
     "name": "데이터아키텍처 준전문가",
     "detail": "한국데이터산업진흥원",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:f6c716b4decb290c",
+    "kind": "certificate",
+    "name": "도로교통사고감정사",
+    "detail": "도로교통공단 · 국가공인민간자격 · 경찰청",
     "aliases": []
   },
   {
@@ -1316,6 +1603,20 @@
     "aliases": []
   },
   {
+    "id": "certificate:krivet:387447baffbed106",
+    "kind": "certificate",
+    "name": "디지털정보활용능력(DIAT)",
+    "detail": "(사)한국정보통신진흥협회 · 국가공인민간자격 · 과학기술정보통신부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:2bbfd1a7cc14d46b",
+    "kind": "certificate",
+    "name": "디지털포렌식전문가",
+    "detail": "(사)한국포렌식학회/한국인터넷진흥원 · 국가공인민간자격 · 법무부",
+    "aliases": []
+  },
+  {
     "id": "certificate:hrdk:b5cc2497e724a25a",
     "kind": "certificate",
     "name": "떡제조기능사",
@@ -1355,6 +1656,20 @@
     "kind": "certificate",
     "name": "롤러운전기능사",
     "detail": "한국산업인력공단 · 국가기술자격 · 기능사",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:ef83fd2ac559704a",
+    "kind": "certificate",
+    "name": "리눅스마스터",
+    "detail": "(사)한국정보통신진흥협회 · 국가공인민간자격 · 과학기술정보통신부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:a0e5088c776d7201",
+    "kind": "certificate",
+    "name": "매경TEST",
+    "detail": "매일경제신문사 · 국가공인민간자격 · 기획재정부",
     "aliases": []
   },
   {
@@ -1414,10 +1729,24 @@
     "aliases": []
   },
   {
+    "id": "certificate:krivet:43ca382bcc649dff",
+    "kind": "certificate",
+    "name": "무역영어",
+    "detail": "대한상공회의소 · 국가공인민간자격 · 산업통상자원부",
+    "aliases": []
+  },
+  {
     "id": "certificate:hrdk:aba039be2ed244a7",
     "kind": "certificate",
     "name": "물류관리사",
     "detail": "한국산업인력공단 · 국가전문자격 · 물류관리사",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:6545809407223a1d",
+    "kind": "certificate",
+    "name": "미디어교육사",
+    "detail": "한국언론진흥재단 · 국가공인민간자격 · 문화체육관광부",
     "aliases": []
   },
   {
@@ -1502,6 +1831,13 @@
     "kind": "certificate",
     "name": "반도체커스텀레이아웃산업기사",
     "detail": "한국산업인력공단 · 국가기술자격 · 기사",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:6794a2d6e22255cd",
+    "kind": "certificate",
+    "name": "반려견스타일리스트",
+    "detail": "(사)한국애견협회 · 국가공인민간자격 · 농림축산식품부",
     "aliases": []
   },
   {
@@ -1596,6 +1932,20 @@
     "aliases": []
   },
   {
+    "id": "certificate:krivet:86a4cb53df35bbef",
+    "kind": "certificate",
+    "name": "병원행정사",
+    "detail": "(사)대한병원행정관리자협회 · 국가공인민간자격 · 보건복지부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:a7cbd0d97ba759fb",
+    "kind": "certificate",
+    "name": "보상관리사",
+    "detail": "(사)한국토지보상관리사협회 · 국가공인민간자격 · 국토교통부",
+    "aliases": []
+  },
+  {
     "id": "certificate:hrdk:0383b90561b30cca",
     "kind": "certificate",
     "name": "보석가공기능사",
@@ -1624,6 +1974,13 @@
     "aliases": []
   },
   {
+    "id": "certificate:krivet:ab87726d48fa49c0",
+    "kind": "certificate",
+    "name": "보행지도사",
+    "detail": "(사)한국시각장애인연합회 · 국가공인민간자격 · 보건복지부",
+    "aliases": []
+  },
+  {
     "id": "certificate:hrdk:1c94d7f38a173e16",
     "kind": "certificate",
     "name": "복어조리기능사",
@@ -1645,6 +2002,13 @@
     "aliases": []
   },
   {
+    "id": "certificate:krivet:255b4a02d2fbb0d1",
+    "kind": "certificate",
+    "name": "분재관리사",
+    "detail": "(사)한국분재조합 · 국가공인민간자격 · 산림청",
+    "aliases": []
+  },
+  {
     "id": "certificate:hrdk:8addfafa70b21078",
     "kind": "certificate",
     "name": "불도저운전기능사",
@@ -1652,10 +2016,38 @@
     "aliases": []
   },
   {
+    "id": "certificate:krivet:e556ec8a25033f0e",
+    "kind": "certificate",
+    "name": "브레인트레이너",
+    "detail": "국제뇌교육종합대학원대학교 · 국가공인민간자격 · 교육부",
+    "aliases": []
+  },
+  {
     "id": "certificate:hrdk:279b3ada006b7fda",
     "kind": "certificate",
     "name": "비계기능사",
     "detail": "한국산업인력공단 · 국가기술자격 · 기능사",
+    "aliases": []
+  },
+  {
+    "id": "certificate:curated:secretary-1",
+    "kind": "certificate",
+    "name": "비서 1급",
+    "detail": "대한상공회의소",
+    "aliases": []
+  },
+  {
+    "id": "certificate:curated:secretary-2",
+    "kind": "certificate",
+    "name": "비서 2급",
+    "detail": "대한상공회의소",
+    "aliases": []
+  },
+  {
+    "id": "certificate:curated:secretary-3",
+    "kind": "certificate",
+    "name": "비서 3급",
+    "detail": "대한상공회의소",
     "aliases": []
   },
   {
@@ -1792,6 +2184,13 @@
     "aliases": []
   },
   {
+    "id": "certificate:krivet:b6329c2d318d2753",
+    "kind": "certificate",
+    "name": "산업보안관리사",
+    "detail": "(사)한국산업기술보호협회 · 국가공인민간자격 · 산업통상자원부",
+    "aliases": []
+  },
+  {
     "id": "certificate:hrdk:867682b83a80481c",
     "kind": "certificate",
     "name": "산업안전기사",
@@ -1855,6 +2254,13 @@
     "aliases": []
   },
   {
+    "id": "certificate:krivet:fd039896af996c0c",
+    "kind": "certificate",
+    "name": "상공회의소 한자",
+    "detail": "대한상공회의소 · 국가공인민간자격 · 교육부",
+    "aliases": []
+  },
+  {
     "id": "certificate:hrdk:4a6648ac95e3ab02",
     "kind": "certificate",
     "name": "상하수도기술사",
@@ -1873,6 +2279,13 @@
     "kind": "certificate",
     "name": "생물분류기사(식물)",
     "detail": "한국산업인력공단 · 국가기술자격 · 기사",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:0d83e475f7776f6b",
+    "kind": "certificate",
+    "name": "샵마스터",
+    "detail": "(사)한국직업연구진흥원 · 국가공인민간자격 · 산업통상자원부",
     "aliases": []
   },
   {
@@ -1974,6 +2387,13 @@
     "aliases": []
   },
   {
+    "id": "certificate:krivet:009f2e7ed82e7a67",
+    "kind": "certificate",
+    "name": "세무회계",
+    "detail": "한국세무사회 · 국가공인민간자격 · 기획재정부",
+    "aliases": []
+  },
+  {
     "id": "certificate:hrdk:c1a03c01fc2106cd",
     "kind": "certificate",
     "name": "세탁기능사",
@@ -2065,6 +2485,13 @@
     "aliases": []
   },
   {
+    "id": "certificate:krivet:98c37f3fb08df857",
+    "kind": "certificate",
+    "name": "소프트웨어자산관리사(C-SAM)",
+    "detail": "(사)한국소프트웨어저작권협회 · 국가공인민간자격 · 문화체육관광부",
+    "aliases": []
+  },
+  {
     "id": "certificate:hrdk:f02699efbb805e0b",
     "kind": "certificate",
     "name": "손해평가사",
@@ -2149,6 +2576,13 @@
     "aliases": []
   },
   {
+    "id": "certificate:krivet:282945f22c8ad1d5",
+    "kind": "certificate",
+    "name": "수화통역사",
+    "detail": "(사)한국농아인협회 · 국가공인민간자격 · 보건복지부",
+    "aliases": []
+  },
+  {
     "id": "certificate:hrdk:ecef2ce6feae3fe9",
     "kind": "certificate",
     "name": "스마트공장기능사",
@@ -2160,6 +2594,13 @@
     "kind": "certificate",
     "name": "스마트공장산업기사",
     "detail": "한국산업인력공단 · 국가기술자격 · 기사",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:5d1c30808e721039",
+    "kind": "certificate",
+    "name": "스마트해상물류관리사",
+    "detail": "울산항만공사 · 국가공인민간자격 · 해양수산부",
     "aliases": []
   },
   {
@@ -2216,6 +2657,13 @@
     "kind": "certificate",
     "name": "시설원예기술사",
     "detail": "한국산업인력공단 · 국가기술자격 · 기술사",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:45cf2e8443bbbad6",
+    "kind": "certificate",
+    "name": "시스템에어컨설계시공관리사",
+    "detail": "한국냉동공조산업협회 · 국가공인민간자격 · 산업통상자원부",
     "aliases": []
   },
   {
@@ -2289,6 +2737,41 @@
     "aliases": []
   },
   {
+    "id": "certificate:krivet:5ea39c561d10c56b",
+    "kind": "certificate",
+    "name": "신변보호사",
+    "detail": "(사)한국경비협회 · 국가공인민간자격 · 경찰청",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:26ab60087f3d1dc1",
+    "kind": "certificate",
+    "name": "신용관리사",
+    "detail": "(사)신용정보협회 · 국가공인민간자격 · 금융위원회",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:51656796312056d8",
+    "kind": "certificate",
+    "name": "신용분석사",
+    "detail": "(사)한국금융연수원 · 국가공인민간자격 · 금융위원회",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:778aa5f8cd3d7fe5",
+    "kind": "certificate",
+    "name": "신용상담사",
+    "detail": "신용회복위원회 · 국가공인민간자격 · 금융위원회",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:da12b7c143b80cfb",
+    "kind": "certificate",
+    "name": "신용위험분석사(CRA)",
+    "detail": "(사)한국금융연수원 · 국가공인민간자격 · 금융위원회",
+    "aliases": []
+  },
+  {
     "id": "certificate:hrdk:af834f39efec7b4c",
     "kind": "certificate",
     "name": "신재생에너지발전설비기능사(태양광)",
@@ -2328,6 +2811,20 @@
     "kind": "certificate",
     "name": "실내건축산업기사",
     "detail": "한국산업인력공단 · 국가기술자격 · 기사",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:2aaa7a03e91c30c1",
+    "kind": "certificate",
+    "name": "실내디자이너",
+    "detail": "한국실내건축가협회 · 국가공인민간자격 · 국토교통부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:2d0e5e5cb66e357c",
+    "kind": "certificate",
+    "name": "실천예절지도사",
+    "detail": "(사)범국민예의생활실천운동본부 · 국가공인민간자격 · 문화체육관광부",
     "aliases": []
   },
   {
@@ -2436,6 +2933,20 @@
     "aliases": []
   },
   {
+    "id": "certificate:krivet:e9876b06b8b68218",
+    "kind": "certificate",
+    "name": "여신심사역",
+    "detail": "(사)한국금융연수원 · 국가공인민간자격 · 금융위원회",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:c910e1d755ed1806",
+    "kind": "certificate",
+    "name": "열쇠관리사",
+    "detail": "(사)한국열쇠협회 · 국가공인민간자격 · 경찰청",
+    "aliases": []
+  },
+  {
     "id": "certificate:hrdk:859a13f08a1eae22",
     "kind": "certificate",
     "name": "열처리기능사",
@@ -2454,6 +2965,20 @@
     "kind": "certificate",
     "name": "염색기능사(침염)",
     "detail": "한국산업인력공단 · 국가기술자격 · 기능사",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:5911b41f2e735e4a",
+    "kind": "certificate",
+    "name": "영상정보관리사",
+    "detail": "(사)한국정보통신자격협회 · 국가공인민간자격 · 개인정보보호위원회",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:853e459161be4eb2",
+    "kind": "certificate",
+    "name": "옥외광고사",
+    "detail": "한국옥외광고협회중앙회 · 국가공인민간자격 · 행정안전부",
     "aliases": []
   },
   {
@@ -2485,6 +3010,13 @@
     "aliases": []
   },
   {
+    "id": "certificate:krivet:3ef62acc9fe8ea35",
+    "kind": "certificate",
+    "name": "외환전문역I,II종",
+    "detail": "(사)한국금융연수원 · 국가공인민간자격 · 기획재정부",
+    "aliases": []
+  },
+  {
     "id": "certificate:hrdk:8ace140f9ccb0d85",
     "kind": "certificate",
     "name": "용접기능장",
@@ -2510,6 +3042,27 @@
     "kind": "certificate",
     "name": "용접산업기사",
     "detail": "한국산업인력공단 · 국가기술자격 · 기사",
+    "aliases": []
+  },
+  {
+    "id": "certificate:curated:word-processor",
+    "kind": "certificate",
+    "name": "워드프로세서",
+    "detail": "대한상공회의소",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:d8fa54dcfaee227d",
+    "kind": "certificate",
+    "name": "원가분석사",
+    "detail": "(사)한국원가관리협회 · 국가공인민간자격 · 기획재정부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:dcde27e5d67c519f",
+    "kind": "certificate",
+    "name": "원산지관리사",
+    "detail": "한국원산지정보원 · 국가공인민간자격 · 관세청",
     "aliases": []
   },
   {
@@ -2594,6 +3147,13 @@
     "kind": "certificate",
     "name": "의공산업기사",
     "detail": "한국산업인력공단 · 국가기술자격 · 기사",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:adf30af30fb3d1b2",
+    "kind": "certificate",
+    "name": "의료기기 RA전문가",
+    "detail": "한국의료기기안전정보원 · 국가공인민간자격 · 식품의약품안전처",
     "aliases": []
   },
   {
@@ -2821,6 +3381,13 @@
     "aliases": []
   },
   {
+    "id": "certificate:krivet:dae3905c2bd8c2a6",
+    "kind": "certificate",
+    "name": "자동차진단평가사",
+    "detail": "(사)한국자동차진단보증협회 · 국가공인민간자격 · 국토교통부",
+    "aliases": []
+  },
+  {
     "id": "certificate:hrdk:09cfba26f920bb9e",
     "kind": "certificate",
     "name": "자동차차체수리기능사",
@@ -2839,6 +3406,13 @@
     "kind": "certificate",
     "name": "자동화설비산업기사",
     "detail": "한국산업인력공단 · 국가기술자격 · 기사",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:41ef610b22ec1e8e",
+    "kind": "certificate",
+    "name": "자산관리사(FP)",
+    "detail": "(사)한국금융연수원 · 국가공인민간자격 · 금융위원회",
     "aliases": []
   },
   {
@@ -2881,6 +3455,13 @@
     "kind": "certificate",
     "name": "잠수산업기사",
     "detail": "한국산업인력공단 · 국가기술자격 · 기사",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:5784c99fb6b79a2b",
+    "kind": "certificate",
+    "name": "재경관리사",
+    "detail": "삼일회계법인 · 국가공인민간자격 · 금융위원회",
     "aliases": []
   },
   {
@@ -2968,6 +3549,13 @@
     "aliases": []
   },
   {
+    "id": "certificate:krivet:eff597c2b9b1c7b9",
+    "kind": "certificate",
+    "name": "전산세무회계",
+    "detail": "한국세무사회 · 국가공인민간자격 · 고용노동부",
+    "aliases": []
+  },
+  {
     "id": "certificate:hrdk:2cc118cdcfb94637",
     "kind": "certificate",
     "name": "전산응용건축제도기능사",
@@ -2986,6 +3574,27 @@
     "kind": "certificate",
     "name": "전산응용토목제도기능사",
     "detail": "한국산업인력공단 · 국가기술자격 · 기능사",
+    "aliases": []
+  },
+  {
+    "id": "certificate:curated:computerized-accounting-1",
+    "kind": "certificate",
+    "name": "전산회계운용사 1급",
+    "detail": "대한상공회의소",
+    "aliases": []
+  },
+  {
+    "id": "certificate:curated:computerized-accounting-2",
+    "kind": "certificate",
+    "name": "전산회계운용사 2급",
+    "detail": "대한상공회의소",
+    "aliases": []
+  },
+  {
+    "id": "certificate:curated:computerized-accounting-3",
+    "kind": "certificate",
+    "name": "전산회계운용사 3급",
+    "detail": "대한상공회의소",
     "aliases": []
   },
   {
@@ -3017,6 +3626,13 @@
     "aliases": []
   },
   {
+    "id": "certificate:curated:e-commerce-operator",
+    "kind": "certificate",
+    "name": "전자상거래운용사",
+    "detail": "대한상공회의소",
+    "aliases": []
+  },
+  {
     "id": "certificate:hrdk:de61815958b9aa29",
     "kind": "certificate",
     "name": "전자응용기술사",
@@ -3042,6 +3658,13 @@
     "kind": "certificate",
     "name": "전자회로설계산업기사",
     "detail": "한국산업인력공단 · 국가기술자격 · 기사",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:b69ca86f3c55da4a",
+    "kind": "certificate",
+    "name": "점역 교정사",
+    "detail": "(사)한국시각장애인연합회 · 국가공인민간자격 · 보건복지부",
     "aliases": []
   },
   {
@@ -3077,6 +3700,27 @@
     "kind": "certificate",
     "name": "정보기기운용기능사",
     "detail": "한국산업인력공단 · 국가기술자격 · 기능사",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:37fa80bce69ca06a",
+    "kind": "certificate",
+    "name": "정보기술자격(ITQ)시험",
+    "detail": "한국생산성본부 · 국가공인민간자격 · 과학기술정보통신부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:bc61287e334bfb50",
+    "kind": "certificate",
+    "name": "정보기술프로젝트관리전문가(IT-PMP)",
+    "detail": "대한정보통신기술(합) · 국가공인민간자격 · 과학기술정보통신부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:4fc4c894f4c41de4",
+    "kind": "certificate",
+    "name": "정보시스템감리사",
+    "detail": "한국지능정보사회진흥원 · 국가공인민간자격 · 행정안전부",
     "aliases": []
   },
   {
@@ -3290,6 +3934,13 @@
     "aliases": []
   },
   {
+    "id": "certificate:krivet:efe04022b1dfd481",
+    "kind": "certificate",
+    "name": "종이접기",
+    "detail": "(사)한국종이접기협회 · 국가공인민간자격 · 문화체육관광부",
+    "aliases": []
+  },
+  {
     "id": "certificate:hrdk:3c1d66aecad7a98c",
     "kind": "certificate",
     "name": "종자기능사",
@@ -3315,6 +3966,13 @@
     "kind": "certificate",
     "name": "종자산업기사",
     "detail": "한국산업인력공단 · 국가기술자격 · 기사",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:cc060b2f089e7fb3",
+    "kind": "certificate",
+    "name": "주거복지사",
+    "detail": "(사)한국주거학회 · 국가공인민간자격 · 국토교통부",
     "aliases": []
   },
   {
@@ -3367,10 +4025,31 @@
     "aliases": []
   },
   {
+    "id": "certificate:krivet:5998ba7969a1f1e4",
+    "kind": "certificate",
+    "name": "지능형홈관리사",
+    "detail": "(사)한국정보통신자격협회 · 국가공인민간자격 · 과학기술정보통신부",
+    "aliases": []
+  },
+  {
     "id": "certificate:hrdk:e7e68b60f6313f2c",
     "kind": "certificate",
     "name": "지도제작기능사",
     "detail": "한국산업인력공단 · 국가기술자격 · 기능사",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:a8766933e9cec05e",
+    "kind": "certificate",
+    "name": "지식재산능력시험(IPAT)",
+    "detail": "한국발명진흥회 · 국가공인민간자격 · 지식재산처",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:c2e071b972b15b34",
+    "kind": "certificate",
+    "name": "지역난방설비관리사",
+    "detail": "(사)한국에너지기술인협회 · 국가공인민간자격 · 산업통상자원부",
     "aliases": []
   },
   {
@@ -3556,6 +4235,13 @@
     "aliases": []
   },
   {
+    "id": "certificate:krivet:fe7fccea38bbbb78",
+    "kind": "certificate",
+    "name": "청소년경제이해력검증시험 주니어 TESAT(테샛)",
+    "detail": "한국경제신문 · 국가공인민간자격 · 기획재정부",
+    "aliases": []
+  },
+  {
     "id": "certificate:hrdk:7f0cf1d0d6f58680",
     "kind": "certificate",
     "name": "초음파비파괴검사기능사",
@@ -3735,6 +4421,20 @@
     "kind": "certificate",
     "name": "컴퓨터응용선반기능사",
     "detail": "한국산업인력공단 · 국가기술자격 · 기능사",
+    "aliases": []
+  },
+  {
+    "id": "certificate:curated:computer-specialist-1",
+    "kind": "certificate",
+    "name": "컴퓨터활용능력 1급",
+    "detail": "대한상공회의소 · 국가기술자격 · 고용노동부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:curated:computer-specialist-2",
+    "kind": "certificate",
+    "name": "컴퓨터활용능력 2급",
+    "detail": "대한상공회의소 · 국가기술자격 · 고용노동부",
     "aliases": []
   },
   {
@@ -4032,10 +4732,52 @@
     "aliases": []
   },
   {
+    "id": "certificate:curated:korean-history-test",
+    "kind": "certificate",
+    "name": "한국사능력검정시험",
+    "detail": "국사편찬위원회",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:315ada1e35ceb9f6",
+    "kind": "certificate",
+    "name": "한국실용글쓰기검정",
+    "detail": "(사)한국국어능력평가협회 · 국가공인민간자격 · 문화체육관광부",
+    "aliases": []
+  },
+  {
     "id": "certificate:hrdk:0a93a7f40c3fed55",
     "kind": "certificate",
     "name": "한국어교육능력검정시험",
     "detail": "한국산업인력공단 · 국가전문자격 · 한국어교육능력검정시험",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:ec97419b04daeda6",
+    "kind": "certificate",
+    "name": "한국한자검정",
+    "detail": "(사)한국평생교육평가원 · 국가공인민간자격 · 교육부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:curated:hangul-shorthand-1",
+    "kind": "certificate",
+    "name": "한글속기 1급",
+    "detail": "대한상공회의소",
+    "aliases": []
+  },
+  {
+    "id": "certificate:curated:hangul-shorthand-2",
+    "kind": "certificate",
+    "name": "한글속기 2급",
+    "detail": "대한상공회의소",
+    "aliases": []
+  },
+  {
+    "id": "certificate:curated:hangul-shorthand-3",
+    "kind": "certificate",
+    "name": "한글속기 3급",
+    "detail": "대한상공회의소",
     "aliases": []
   },
   {
@@ -4071,6 +4813,48 @@
     "kind": "certificate",
     "name": "한식조리산업기사",
     "detail": "한국산업인력공단 · 국가기술자격 · 기사",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:1d1ddbffb9d3c5a7",
+    "kind": "certificate",
+    "name": "한자.한문 전문지도사",
+    "detail": "(사)대한민국한자교육연구회·대한검정회 · 국가공인민간자격 · 교육부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:fcde62cc59ab7446",
+    "kind": "certificate",
+    "name": "한자·한문지도사",
+    "detail": "(사)한자교육진흥회 · 국가공인민간자격 · 교육부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:16af49c49dabb4dd",
+    "kind": "certificate",
+    "name": "한자급수자격검정",
+    "detail": "(사)대한민국한자교육연구회·대한검정회 · 국가공인민간자격 · 교육부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:04ea3af223bfa086",
+    "kind": "certificate",
+    "name": "한자능력급수",
+    "detail": "(사)한국어문회 · 국가공인민간자격 · 교육부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:bfbb9ed75d07ad3e",
+    "kind": "certificate",
+    "name": "한자실력급수",
+    "detail": "(사)한자교육진흥회 · 국가공인민간자격 · 교육부",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:f475666eb1ffc493",
+    "kind": "certificate",
+    "name": "한자어능력",
+    "detail": "(사)한국정보관리협회 · 국가공인민간자격 · 교육부",
     "aliases": []
   },
   {
@@ -4190,6 +4974,13 @@
     "kind": "certificate",
     "name": "해양환경기사",
     "detail": "한국산업인력공단 · 국가기술자격 · 기사",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:3175a9f4714f7627",
+    "kind": "certificate",
+    "name": "행정관리사",
+    "detail": "(사)한국행정관리협회 · 국가공인민간자격 · 행정안전부",
     "aliases": []
   },
   {
@@ -4337,6 +5128,13 @@
     "kind": "certificate",
     "name": "환경위해관리기사",
     "detail": "한국산업인력공단 · 국가기술자격 · 기사",
+    "aliases": []
+  },
+  {
+    "id": "certificate:krivet:8c4dd5ef29980aff",
+    "kind": "certificate",
+    "name": "회계관리",
+    "detail": "삼일회계법인 · 국가공인민간자격 · 금융위원회",
     "aliases": []
   },
   {

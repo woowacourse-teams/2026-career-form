@@ -2,9 +2,9 @@
 
 > Topic: live-autofill-evaluation
 > Status: Current
-> Current: [CF-346 정확 일치 없음 전수 조사와 로컬 스택 정책 검증](../../raw/issues/CF-346/documents/live-harness-no-exact-match-survey-and-local-policy-stack.md)
-> History: [CF-124 최초 공용 실행 계약](../../raw/issues/CF-124/documents/adr/124-ai-operated-live-autofill-evaluation.md); [CF-124 사전 판정 분모와 평가 보고서](../../raw/issues/CF-124/documents/reports/2026-09-28-live-autofill-evaluation.md); [CF-173 평가 계약 1.1](../../raw/issues/CF-173/documents/evaluation-contract-1.1.md); [CF-310 원복·대화상자 근거](../../raw/issues/CF-310/documents/live-browser-pitfalls.md); [CF-310 원복 재키·표시 규칙 근거](../../raw/issues/CF-310/documents/live-harness-residue-and-display.md); [CF-310 재설치·응답 없는 탭 근거](../../raw/issues/CF-310/documents/live-harness-reinstall-and-hung-tab.md); [CF-314 실사이트 기입 정확도 재평가와 측정 절차](../../raw/issues/CF-314/documents/live-autofill-recheck-2026-10-22.md); [CF-333 테스트 계정 모드·설치본 잠금·채점 재사용 근거](../../raw/issues/CF-333/documents/live-harness-test-account-mode.md); [CF-336 합성 프로필 학교 검색 한계와 reset의 버튼형 위젯 잔여](../../raw/issues/CF-336/documents/live-harness-synthetic-identity-and-reset-widgets.md); [CF-334 반복 관찰 루프와 서비스 워커 API 관찰](../../raw/issues/CF-334/documents/live-harness-service-worker-observation-and-repeat-loop.md); [CF-346 정확 일치 없음 전수 조사와 로컬 스택 정책 검증](../../raw/issues/CF-346/documents/live-harness-no-exact-match-survey-and-local-policy-stack.md)
-> Updated: 2026-10-25
+> Current: [CF-412 민감 항목 자동 기입 정책 정정](../../raw/issues/CF-412/documents/sensitive-item-policy.md)
+> History: [CF-124 최초 공용 실행 계약](../../raw/issues/CF-124/documents/adr/124-ai-operated-live-autofill-evaluation.md); [CF-124 사전 판정 분모와 평가 보고서](../../raw/issues/CF-124/documents/reports/2026-09-28-live-autofill-evaluation.md); [CF-173 평가 계약 1.1](../../raw/issues/CF-173/documents/evaluation-contract-1.1.md); [CF-310 원복·대화상자 근거](../../raw/issues/CF-310/documents/live-browser-pitfalls.md); [CF-310 원복 재키·표시 규칙 근거](../../raw/issues/CF-310/documents/live-harness-residue-and-display.md); [CF-310 재설치·응답 없는 탭 근거](../../raw/issues/CF-310/documents/live-harness-reinstall-and-hung-tab.md); [CF-314 실사이트 기입 정확도 재평가와 측정 절차](../../raw/issues/CF-314/documents/live-autofill-recheck-2026-10-22.md); [CF-333 테스트 계정 모드·설치본 잠금·채점 재사용 근거](../../raw/issues/CF-333/documents/live-harness-test-account-mode.md); [CF-336 합성 프로필 학교 검색 한계와 reset의 버튼형 위젯 잔여](../../raw/issues/CF-336/documents/live-harness-synthetic-identity-and-reset-widgets.md); [CF-334 반복 관찰 루프와 서비스 워커 API 관찰](../../raw/issues/CF-334/documents/live-harness-service-worker-observation-and-repeat-loop.md); [CF-346 정확 일치 없음 전수 조사와 로컬 스택 정책 검증](../../raw/issues/CF-346/documents/live-harness-no-exact-match-survey-and-local-policy-stack.md); [CF-412 민감 항목 자동 기입 정책 정정](../../raw/issues/CF-412/documents/sensitive-item-policy.md)
+> Updated: 2026-11-05
 
 ## 현재 상태
 
@@ -12,7 +12,7 @@
 
 평가 에이전트는 확장 프로그램 UI를 열기 전에 페이지 전체 필드를 다섯 분류로 판정하고 `AUTOFILLABLE` 수를 고정한다. 매핑 정확도는 확장 프로그램 제안 수, 매핑 재현율과 정답 입력률은 `AUTOFILLABLE` 수를 분모로 계산한다. 대화 출력만으로 끝내지 않고 승인된 raw 보고서와 topic Wiki가 기록돼야 평가를 완료한다.
 
-비민감 기존 값은 회원가입 기본값과 사용자 입력을 구분하지 않고 현재 평가 실행에서 덮어쓴다. 민감값과 입력 불가 항목은 `DEFERRED`로 남기며 저장, 이동, 미리보기와 제출은 실행하지 않는다.
+비민감 기존 값은 회원가입 기본값과 사용자 입력을 구분하지 않고 현재 평가 실행에서 덮어쓴다. 입력 불가 항목은 `DEFERRED`로 남기고 민감 항목은 일반 항목처럼 처리하며([CF-412 민감 항목 자동 기입 정책 정정](../../raw/issues/CF-412/documents/sensitive-item-policy.md), 스킬 문구는 별도 하네스 Issue에서 고친다) 저장, 이동, 미리보기와 제출은 실행하지 않는다.
 
 Console의 `[CareerForm]` 로그는 수집, 분석, 리뷰, 기입과 검색 실패의 현장 진단에 사용한다. 값, 요청과 응답 원문, 스크린샷을 보관하지 않고 최종 결과는 실제 DOM으로 판정한다.
 

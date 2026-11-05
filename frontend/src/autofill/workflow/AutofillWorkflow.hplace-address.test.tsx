@@ -189,7 +189,8 @@ it.each([true, false])(
 
 it("preserves a complete identical triplet as already entered without a second writer", async () => {
   const { s, detailWrites } = mountWorkflow("all");
-  await screen.findByText("자동 기입을 마쳤어요");
+  expect(await screen.findByLabelText("입력 완료 0개")).toBeVisible();
+  expect(screen.getByLabelText("확인 필요 0개")).toBeVisible();
   expect(screen.queryByLabelText("확인 필요 1개")).toBeNull();
   expect(screen.queryByLabelText("확인 필요 2개")).toBeNull();
   expect(s.events).toEqual([]);

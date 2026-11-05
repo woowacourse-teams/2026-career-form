@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { createApiClient } from "../autofill-demo/AutofillOverlay.test-fixtures";
@@ -28,6 +28,7 @@ it("페이지 안 패널은 주입한 단축키 읽기로 안내한다", async (
     />,
   );
 
+  fireEvent.click(screen.getByRole("button", { name: "설정" }));
   const hint = await screen.findByText(/로 이 패널을 열고 닫을 수 있어요/);
   expect(hint.querySelector("kbd")).toHaveTextContent("Alt+Shift+C");
   expect(readPanelShortcut).toHaveBeenCalled();

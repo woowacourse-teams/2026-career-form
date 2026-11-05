@@ -166,7 +166,7 @@ it("records the chosen purpose and invokes installed quick registration", () => 
     <SiteApp
       path="/onboarding/"
       installed
-      postingsHref="/options.html#postings/new"
+      postingsHref="/options.html#postings"
       track={track}
       surface="extension_onboarding"
       onStartAutofill={start}
@@ -192,9 +192,12 @@ it("keeps the embedded demo panel inert even when extension tracking is configur
     .mockImplementation(() => {});
   const { PanelPreview } = await import("./demo/PanelPreview");
   render(<PanelPreview />);
+  fireEvent.click(screen.getByRole("tab", { name: "내 정보" }));
   const copy = await screen.findAllByRole("button", { name: /복사/ });
   fireEvent.click(copy[0]);
+  fireEvent.click(screen.getByRole("button", { name: "설정" }));
   fireEvent.click(screen.getByRole("button", { name: "프로필 관리" }));
+  fireEvent.click(screen.getByRole("tab", { name: "자동 기입" }));
   fireEvent.click(screen.getByRole("button", { name: "자동 기입" }));
   expect(track).not.toHaveBeenCalled();
 });

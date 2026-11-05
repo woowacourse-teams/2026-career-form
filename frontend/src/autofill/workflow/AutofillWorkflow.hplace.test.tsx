@@ -5,6 +5,12 @@ import { createEmptyProfile } from "../../profile/model";
 import { AnalysisServiceError } from "../api/runtime-client";
 import type { AnalysisApiClient } from "../api/types";
 import { AutofillWorkflow } from "./AutofillWorkflow";
+
+// Normal mode: raw error text must stay hidden (developer mode reveals it).
+vi.mock("../debug/developer-mode", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../debug/developer-mode")>()),
+  useDeveloperMode: () => [false, vi.fn()] as const,
+}));
 import {
   renderHplaceLogin,
   setHplacePage,
@@ -133,8 +139,8 @@ it.each(["missing", "failed"] as const)(
     if (state === "missing")
       expect(await screen.findByText("아직 지원하지 않아요")).toBeVisible();
     else
-      expect(await screen.findByRole("alert")).toHaveTextContent(
-        "사이트 정책을 불러오지 못했습니다",
+      expect(await screen.findByRole("alert")).not.toHaveTextContent(
+        "Synthetic policy failure",
       );
     expect(load).not.toHaveBeenCalled();
     expect(analyzePreparation).not.toHaveBeenCalled();
@@ -213,6 +219,6 @@ it("asks for an extension update when the served policy is incompatible", async 
     />,
   );
   expect(await screen.findByRole("alert")).toHaveTextContent(
-    "지원서 정책이 이 확장 버전과 맞지 않아요. 확장을 최신 버전으로 업데이트한 뒤 다시 시도해 주세요.",
+    "이 지원서는 새 버전에서 지원해요",
   );
 });

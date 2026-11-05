@@ -1,0 +1,54 @@
+/*
+ * Extension-only token overrides (Apple DESIGN.md at the repo root, #383).
+ *
+ * theme.css is shared with the public site and must stay unchanged, so only
+ * extension entrypoints load this file. Every declaration is !important: the
+ * panel renders inside a shadow root whose bundled CSS can repeat theme.css
+ * after this file, and an important custom property wins over any normal
+ * declaration regardless of source order or specificity.
+ */
+:root,
+:host {
+  --color-page: #f5f5f7 !important;
+  --color-surface: #ffffff !important;
+  --color-surface-muted: #f5f5f7 !important;
+  /* Selected and hover fills. */
+  --color-accent-soft: #f5f5f7 !important;
+  --color-accent-hover: #f5f5f7 !important;
+  --color-accent: #0071e3 !important;
+  --color-action: #0071e3 !important;
+  --color-action-strong: #0066cc !important;
+  --color-on-action: #ffffff !important;
+  /* Filled primary buttons: accent background, white text. */
+  --color-brand: #0071e3 !important;
+  --color-brand-hover: #0076df !important;
+  --color-on-brand: #ffffff !important;
+  --color-text: #1d1d1f !important;
+  --color-text-strong: #1d1d1f !important;
+  --color-text-muted: #6e6e73 !important;
+  --color-text-subtle: #6e6e73 !important;
+  --color-border: #f5f5f7 !important;
+  --color-border-strong: #6e6e73 !important;
+  /* 3:1 or more against --color-page, --color-surface and --color-surface-muted. */
+  --color-field-border: #8e8e93 !important;
+  --color-focus: rgb(0 113 227 / 25%) !important;
+  --color-info: #0066cc !important;
+  --color-info-soft: #f5f5f7 !important;
+  --color-info-border: #f5f5f7 !important;
+  --color-success: #24724f !important;
+  --color-success-soft: #eaf5ee !important;
+  --color-review-status: #0066cc !important;
+  --color-warning: #515154 !important;
+  --color-warning-soft: #f5f5f7 !important;
+  --color-danger: #b3261e !important;
+  --color-danger-border: #e2a9a4 !important;
+  --color-danger-text: #b3261e !important;
+  --color-danger-soft: #fdf0ef !important;
+  --color-result-action-surface: #f5f5f7 !important;
+  --color-backdrop: rgb(0 0 0 / 32%) !important;
+  --radius-control: 8px !important;
+  --radius-card: 18px !important;
+  --shadow-card: none !important;
+  --shadow-panel:
+    0 8px 28px rgb(0 0 0 / 16%), 0 1px 3px rgb(0 0 0 / 10%) !important;
+}

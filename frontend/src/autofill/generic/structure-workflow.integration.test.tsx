@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createEmptyProfile, type Profile } from "../../profile/model";
 import type { AnalysisApiClient, GenericFieldsRequest } from "../api/types";
@@ -11,7 +11,7 @@ import type { ReviewPlanItem } from "../review/review-plan";
 import { genericReasonText } from "./grade-reason-text";
 
 const observed = vi.hoisted(() => ({
-  review: undefined as undefined | ((items: readonly ReviewPlanItem[]) => void),
+  planned: undefined as undefined | ((items: readonly ReviewPlanItem[]) => void),
   result: undefined as undefined | (() => void),
 }));
 vi.mock("../workflow/WorkflowScreens", async (original) => {
@@ -19,7 +19,9 @@ vi.mock("../workflow/WorkflowScreens", async (original) => {
   return {
     ...module,
     WorkflowScreens(props: Parameters<typeof module.WorkflowScreens>[0]) {
-      if (props.stage === "review") observed.review?.(props.reviewItems);
+      // A generic run renders its reviewed plan as the writing screen.
+      if (props.stage === "writing" && props.reviewItems.length > 0)
+        observed.planned?.(props.reviewItems);
       if (props.stage === "result") observed.result?.();
       return <module.WorkflowScreens {...props} />;
     },
@@ -28,7 +30,7 @@ vi.mock("../workflow/WorkflowScreens", async (original) => {
 
 afterEach(() => {
   cleanup();
-  observed.review = undefined;
+  observed.planned = undefined;
   observed.result = undefined;
   vi.restoreAllMocks();
   document.body.replaceChildren();
@@ -144,12 +146,15 @@ function client(options: { wrongMaster?: boolean; abstain?: boolean } = {}) {
   return { api, analyzePreparation };
 }
 
-async function review(api: AnalysisApiClient) {
+async function run(api: AnalysisApiClient) {
   let resolve!: (items: readonly ReviewPlanItem[]) => void;
   const ready = new Promise<readonly ReviewPlanItem[]>((done) => {
     resolve = done;
   });
-  observed.review = resolve;
+  observed.planned = resolve;
+  const finished = new Promise<void>((done) => {
+    observed.result = done;
+  });
   render(
     <AutofillWorkflow
       repository={{ load: async () => profile() }}
@@ -158,7 +163,7 @@ async function review(api: AnalysisApiClient) {
       onExit={() => undefined}
     />,
   );
-  return ready;
+  return { items: await ready, finished };
 }
 
 const majors = (items: readonly ReviewPlanItem[]) =>
@@ -171,7 +176,7 @@ describe("structure loop through the entire workflow", () => {
     const assignment = vi.spyOn(mixed, "assignMixedRows");
     const mixedPreparation = vi.spyOn(preparation, "prepareMixedSectionRows");
     const api = client();
-    const items = await review(api.api);
+    const { items, finished } = await run(api.api);
 
     expect(detection).not.toHaveBeenCalled();
     expect(assignment).not.toHaveBeenCalled();
@@ -193,11 +198,7 @@ describe("structure loop through the entire workflow", () => {
       "AUTO",
       "AUTO",
     ]);
-    const done = new Promise<void>((resolve) => {
-      observed.result = resolve;
-    });
-    fireEvent.click(screen.getByRole("button", { name: "2개 항목 기입하기" }));
-    await done;
+    await finished;
     expect(
       document.querySelector<HTMLInputElement>("[name=major0]")?.value,
     ).toBe("합성학사전공");
@@ -209,9 +210,9 @@ describe("structure loop through the entire workflow", () => {
     expect(mixedPreparation).not.toHaveBeenCalled();
   });
 
-  it("keeps a stage-mismatch row disabled through final review", async () => {
+  it("keeps a stage-mismatch row disabled and unwritten", async () => {
     educationForm();
-    const items = await review(client({ wrongMaster: true }).api);
+    const { items, finished } = await run(client({ wrongMaster: true }).api);
     const blocked = items.filter((item) =>
       item.reason?.includes("STAGE_KEY_MISMATCH"),
     );
@@ -228,30 +229,13 @@ describe("structure loop through the entire workflow", () => {
       majors(items).find((item) => item.profileEntryId === "bachelor")
         ?.disabled,
     ).not.toBe(true);
-    const reviewTab = screen.getByRole("tab", { name: /입력 불가/ });
-    fireEvent.click(reviewTab);
-    const panel = document.getElementById(
-      reviewTab.getAttribute("aria-controls")!,
-    )!;
-    expect(panel).toHaveAttribute("role", "tabpanel");
-    const badges = panel.querySelectorAll('[data-generic-grade="BLOCKED"]');
-    expect(badges.length).toBeGreaterThanOrEqual(blocked.length);
+    await finished;
+    // The result lists the blocked row with its fixed reason.
     expect(
-      within(panel).getAllByText(genericReasonText("STRUCTURE_BLOCKED")).length,
+      screen.getAllByRole("note", {
+        name: genericReasonText("STRUCTURE_BLOCKED"),
+      }).length,
     ).toBeGreaterThanOrEqual(blocked.length);
-    for (const badge of badges) {
-      expect(badge).toBeVisible();
-      expect(
-        within(badge.closest("article")!).queryByRole("button", {
-          name: /포함하기/,
-        }),
-      ).toBeNull();
-    }
-    const done = new Promise<void>((resolve) => {
-      observed.result = resolve;
-    });
-    fireEvent.click(screen.getByRole("button", { name: "1개 항목 기입하기" }));
-    await done;
     expect(
       document.querySelector<HTMLInputElement>("[name=major0]")?.value,
     ).toBe("합성학사전공");
@@ -260,9 +244,9 @@ describe("structure loop through the entire workflow", () => {
     ).toBe("");
   });
 
-  it("never makes an undecided kind row writable through final review", async () => {
+  it("never makes an undecided kind row writable", async () => {
     educationForm();
-    const items = await review(client({ abstain: true }).api);
+    const { items, finished } = await run(client({ abstain: true }).api);
     const blocked = items.filter((item) =>
       item.reason?.includes("ROW_KIND_OPTION_UNDECIDED"),
     );
@@ -276,6 +260,13 @@ describe("structure loop through the entire workflow", () => {
       ),
     ).toBe(true);
     expect(items.some((item) => item.selected && !item.disabled)).toBe(false);
+    await finished;
+    expect(
+      document.querySelector<HTMLInputElement>("[name=major0]")?.value,
+    ).toBe("");
+    expect(
+      document.querySelector<HTMLInputElement>("[name=major1]")?.value,
+    ).toBe("");
   });
 
   it("preserves default collection bytes when the injection is omitted", async () => {

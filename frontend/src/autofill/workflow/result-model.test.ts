@@ -1,6 +1,13 @@
-import { expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
+import type { FieldCandidateHandle } from "../dom/types";
 import type { ReviewPlanItem } from "../review/review-plan";
-import { buildResultModel } from "./result-model";
+import { GENERIC_SECTION_FAILURE } from "../generic/generic-analysis";
+import { genericReasonText } from "../generic/grade-reason-text";
+import {
+  buildResultModel,
+  profileGroups,
+  unfilledCandidateIds,
+} from "./result-model";
 
 const item = {
   candidateId: "field-1",
@@ -378,3 +385,392 @@ it.each([
     expect(result.pending).toMatchObject([{ reason: "입력 못함" }]);
   },
 );
+
+it("leaves a skipped field that already holds a value out of the unfilled ids but keeps pending ones", () => {
+  const skip = (id: string, reason: string) => ({ id, item, reason });
+  const model = {
+    completed: [],
+    pending: [
+      { id: "pending-with-value", reason: "기존 값과 다름", written: false },
+    ],
+    skipped: [
+      skip("default-value", "등록된 정보 없음"),
+      skip("empty", "등록된 정보 없음"),
+      skip("kept", "기존 값 유지"),
+    ],
+  };
+  const values: Record<string, string> = {
+    "pending-with-value": "기존",
+    "default-value": "사이트 기본값",
+    kept: "유지",
+  };
+  expect(unfilledCandidateIds(model, (id) => values[id])).toEqual([
+    "pending-with-value",
+    "empty",
+  ]);
+});
+
+function handleOf(element: HTMLElement) {
+  return {
+    kind: "field",
+    elements: [element],
+    candidate: {},
+  } as unknown as FieldCandidateHandle;
+}
+
+it("merges rows that target the same control and keeps the most actionable reason", () => {
+  const control = document.createElement("input");
+  const result = buildResultModel({
+    reviewItems: [
+      {
+        ...item,
+        candidateId: "a",
+        status: "conflict",
+        currentValue: "다른 값",
+      },
+      {
+        ...item,
+        candidateId: "b",
+        status: "needs-review",
+        currentValue: "다른 값",
+      },
+    ],
+    results: [],
+    fieldStateFor: () => ({
+      visible: true,
+      value: "다른 값",
+      handle: handleOf(control),
+    }),
+  });
+  expect(result.pending).toMatchObject([{ id: "b", reason: "선택 필요" }]);
+});
+
+it("keeps rows that target different controls", () => {
+  const handles = new Map([
+    ["a", handleOf(document.createElement("input"))],
+    ["b", handleOf(document.createElement("input"))],
+  ]);
+  const result = buildResultModel({
+    reviewItems: [
+      {
+        ...item,
+        candidateId: "a",
+        status: "conflict",
+        currentValue: "다른 값",
+      },
+      {
+        ...item,
+        candidateId: "b",
+        status: "needs-review",
+        currentValue: "다른 값",
+      },
+    ],
+    results: [],
+    fieldStateFor: (id) => ({
+      visible: true,
+      value: "다른 값",
+      handle: handles.get(id),
+    }),
+  });
+  expect(result.pending.map(({ id }) => id)).toEqual(["a", "b"]);
+});
+
+it("lists a manual generic address field as pending with its own reason", () => {
+  const address = {
+    candidateId: "road",
+    fieldLabel: "기본주소",
+    profileFieldKey: "contact.contact.addressLine1",
+    currentValue: "",
+    previewValue: "",
+    status: "unavailable",
+    selected: false,
+    disabled: true,
+    revealed: true,
+    reason: "address reason",
+    addressManualReason: "address reason",
+  } satisfies ReviewPlanItem;
+
+  const { pending, skipped } = buildResultModel({
+    reviewItems: [address],
+    results: [],
+    fieldStateFor: () => ({ visible: true, value: "" }),
+  });
+
+  expect(pending).toMatchObject([
+    {
+      id: "road",
+      reason: "입력 결과 확인",
+      written: false,
+      detail: "address reason",
+    },
+  ]);
+  expect(skipped).toEqual([]);
+});
+
+describe("fields without a saved value", () => {
+  const blocked = (
+    id: string,
+    extra: Partial<ReviewPlanItem> = {},
+  ): ReviewPlanItem => ({
+    candidateId: id,
+    fieldLabel: `항목 ${id}`,
+    currentValue: "",
+    previewValue: "",
+    status: "unavailable",
+    selected: false,
+    disabled: true,
+    revealed: true,
+    reason: "",
+    genericGrade: "BLOCKED",
+    ...extra,
+  });
+  const linked = { profileFieldKey: "contact.contact.email" } as const;
+  const handleOf = (...elements: Element[]) =>
+    ({ elements }) as unknown as FieldCandidateHandle;
+
+  it("skips a linked BLOCKED field without a value instead of asking for review", () => {
+    const model = buildResultModel({
+      reviewItems: [blocked("a", linked)],
+      results: [],
+    });
+    expect(model.pending).toEqual([]);
+    expect(model.skipped).toMatchObject([
+      { id: "a", reason: "등록된 정보 없음" },
+    ]);
+  });
+
+  it("skips an unlinked BLOCKED field without a value as unsupported", () => {
+    const model = buildResultModel({
+      reviewItems: [blocked("a")],
+      results: [],
+    });
+    expect(model.pending).toEqual([]);
+    expect(model.skipped).toMatchObject([
+      { id: "a", reason: "자동 입력 미지원" },
+    ]);
+  });
+
+  it("keeps a BLOCKED field that has a saved value in review", () => {
+    const model = buildResultModel({
+      reviewItems: [blocked("a", { ...linked, profileValue: "값" })],
+      results: [],
+    });
+    expect(model.skipped).toEqual([]);
+    expect(model.pending).toMatchObject([{ id: "a", reason: "입력 못함" }]);
+  });
+
+  it("groups skipped fields by reason and counts one entry per control", () => {
+    const shared = document.createElement("input");
+    const other = document.createElement("input");
+    const pendingControl = document.createElement("input");
+    const handles: Record<string, FieldCandidateHandle> = {
+      a: handleOf(shared),
+      b: handleOf(shared),
+      c: handleOf(other),
+      p: handleOf(pendingControl),
+      d: handleOf(pendingControl),
+    };
+    const model = buildResultModel({
+      reviewItems: [
+        blocked("a", linked),
+        blocked("b", linked),
+        blocked("c"),
+        blocked("d", linked),
+        blocked("e"),
+        blocked("f"),
+        blocked("p", { ...linked, profileValue: "값" }),
+      ],
+      results: [],
+      fieldStateFor: (id) =>
+        id in handles
+          ? { visible: true, value: "", handle: handles[id] }
+          : { visible: true, value: "" },
+    });
+    expect(model.pending.map(({ id }) => id)).toEqual(["p"]);
+    const groups = profileGroups(model, (id) =>
+      id in handles
+        ? { visible: true, value: "", handle: handles[id] }
+        : { visible: true, value: "" },
+    );
+    expect(groups.profileUnset.map(({ id }) => id)).toEqual(["a"]);
+    expect(groups.notInProfile.map(({ id }) => id)).toEqual(["c", "e", "f"]);
+  });
+
+  it("leaves hidden duplicate fields out of the profile groups", () => {
+    const model = buildResultModel({
+      reviewItems: [
+        blocked("a", linked),
+        blocked("b", { ...linked, hiddenFromReview: true }),
+        blocked("c", { hiddenFromReview: true }),
+        blocked("d"),
+      ],
+      results: [],
+    });
+    const groups = profileGroups(model);
+    expect(groups.profileUnset.map(({ id }) => id)).toEqual(["a"]);
+    expect(groups.notInProfile.map(({ id }) => id)).toEqual(["d"]);
+  });
+
+  it("marks only pending fields when asked, and keeps the default unchanged", () => {
+    const model = buildResultModel({
+      reviewItems: [
+        blocked("a", linked),
+        blocked("b"),
+        blocked("p", { ...linked, profileValue: "값" }),
+      ],
+      results: [],
+    });
+    expect(unfilledCandidateIds(model)).toEqual(["p", "a", "b"]);
+    expect(
+      unfilledCandidateIds(model, undefined, { pendingOnly: true }),
+    ).toEqual(["p"]);
+  });
+});
+
+describe("fields whose analysis failed", () => {
+  const failed = (
+    id: string,
+    extra: Partial<ReviewPlanItem> = {},
+  ): ReviewPlanItem => ({
+    candidateId: id,
+    fieldLabel: `항목 ${id}`,
+    currentValue: "",
+    previewValue: "",
+    status: "unavailable",
+    selected: false,
+    disabled: true,
+    revealed: true,
+    reason: "",
+    genericGrade: "BLOCKED",
+    ...extra,
+  });
+
+  it("keeps a field with a mismatched row stage as not filled in", () => {
+    const model = buildResultModel({
+      reviewItems: [
+        failed("a", {
+          genericReasonCode: "STRUCTURE_BLOCKED",
+          reason: "STAGE_KEY_MISMATCH",
+        }),
+      ],
+      results: [],
+    });
+    expect(model.skipped).toEqual([]);
+    expect(model.pending.map(({ reason }) => reason)).toEqual(["입력 못함"]);
+  });
+
+  it("does not list other structure-blocked fields as not filled in", () => {
+    const model = buildResultModel({
+      reviewItems: [
+        failed("a", {
+          genericReasonCode: "STRUCTURE_BLOCKED",
+          reason: "ROW_KIND_ALREADY_PREPARED",
+        }),
+      ],
+      results: [],
+    });
+    expect(model.pending).toEqual([]);
+    expect(model.skipped.map(({ reason }) => reason)).toEqual([
+      "자동 입력 미지원",
+    ]);
+  });
+
+  it.each(Object.values(GENERIC_SECTION_FAILURE))(
+    "shows a %s field as not filled in instead of unsupported",
+    (code) => {
+      const model = buildResultModel({
+        reviewItems: [failed("a", { genericReasonCode: code })],
+        results: [],
+      });
+      expect(model.skipped).toEqual([]);
+      expect(model.pending).toMatchObject([
+        { id: "a", reason: "입력 못함", detail: genericReasonText(code) },
+      ]);
+    },
+  );
+
+  it("keeps an unlinked field without a value skipped as unsupported", () => {
+    const model = buildResultModel({
+      reviewItems: [failed("a", { genericReasonCode: "UNLINKED" })],
+      results: [],
+    });
+    expect(model.pending).toEqual([]);
+    expect(model.skipped).toMatchObject([
+      { id: "a", reason: "자동 입력 미지원" },
+    ]);
+  });
+
+  it("does not list a failed field that is hidden from review", () => {
+    const model = buildResultModel({
+      reviewItems: [
+        failed("a", {
+          genericReasonCode: GENERIC_SECTION_FAILURE.LLM_UNAVAILABLE,
+          hiddenFromReview: true,
+        }),
+      ],
+      results: [],
+    });
+    expect(model.pending).toEqual([]);
+  });
+});
+
+describe("profile groups leave out controls already handled", () => {
+  const unsupported = (id: string): ReviewPlanItem => ({
+    candidateId: id,
+    fieldLabel: `항목 ${id}`,
+    currentValue: "",
+    previewValue: "",
+    status: "unavailable",
+    selected: false,
+    disabled: true,
+    revealed: true,
+    reason: "",
+    genericGrade: "BLOCKED",
+  });
+
+  it("drops a duplicate of a completed or kept control", () => {
+    const written = document.createElement("input");
+    const kept = document.createElement("input");
+    const free = document.createElement("input");
+    const controls: Record<string, Element> = {
+      done: written,
+      dupOfDone: written,
+      keep: kept,
+      dupOfKeep: kept,
+      free,
+    };
+    const stateFor = (id: string) => ({
+      visible: true,
+      value: "",
+      handle: { elements: [controls[id]] } as unknown as FieldCandidateHandle,
+    });
+    const model = {
+      completed: [
+        {
+          id: "stable-done",
+          candidateId: "done",
+          label: "완료",
+          category: "기타 항목",
+          status: "written" as const,
+        },
+      ],
+      pending: [],
+      skipped: [
+        { id: "keep", item: unsupported("keep"), reason: "기존 값 유지" },
+        {
+          id: "dupOfDone",
+          item: unsupported("dupOfDone"),
+          reason: "자동 입력 미지원",
+        },
+        {
+          id: "dupOfKeep",
+          item: unsupported("dupOfKeep"),
+          reason: "자동 입력 미지원",
+        },
+        { id: "free", item: unsupported("free"), reason: "자동 입력 미지원" },
+      ],
+    };
+    const groups = profileGroups(model, stateFor);
+    expect(groups.notInProfile.map(({ id }) => id)).toEqual(["free"]);
+  });
+});

@@ -16,6 +16,13 @@ import { usePolicyFixture } from "../test/fixtures/execution-policy";
 
 usePolicyFixture("greeting");
 
+const openSettings = async () =>
+  fireEvent.click(await screen.findByRole("button", { name: "설정" }));
+const openImport = async () => {
+  await openSettings();
+  fireEvent.click(screen.getByRole("button", { name: "프로필 가져오기" }));
+};
+
 afterEach(() => {
   cleanup();
   document.body.replaceChildren();
@@ -46,9 +53,7 @@ it("imports current Greeting values through the panel, refreshes profile, and ke
       logoUrl="/logo.png"
     />,
   );
-  fireEvent.click(
-    await screen.findByRole("button", { name: "지원서에서 가져오기" }),
-  );
+  await openImport();
   await screen.findByText("프로필에 가져올 정보");
   fireEvent.click(screen.getByRole("button", { name: /프로필에 저장하기/ }));
   await waitFor(() =>
@@ -66,6 +71,7 @@ it("imports current Greeting values through the panel, refreshes profile, and ke
   expect(form.outerHTML).toBe(original);
   expect(api.analyzePreparation).not.toHaveBeenCalled();
   expect(api.analyzeFields).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("tab", { name: "자동 기입" }));
   fireEvent.click(screen.getByRole("button", { name: /자동 기입/ }));
   expect(controller.getSnapshot()).toBe("autofill");
 });
@@ -99,7 +105,7 @@ it("does not replace an imported profile with the panel's late initial load", as
       logoUrl="/logo.png"
     />,
   );
-  fireEvent.click(screen.getByRole("button", { name: "지원서에서 가져오기" }));
+  await openImport();
   await screen.findByText("프로필에 가져올 정보");
   fireEvent.click(screen.getByRole("button", { name: /프로필에 저장하기/ }));
   await screen.findByRole("status", { name: "가져오기 결과" });
@@ -135,7 +141,7 @@ it("loads the Greeting policy before reading when none is installed yet", async 
       logoUrl="/logo.png"
     />,
   );
-  fireEvent.click(screen.getByRole("button", { name: "지원서에서 가져오기" }));
+  await openImport();
   expect(await screen.findByText("프로필에 가져올 정보")).toBeVisible();
   expect(api.loadExecutionPolicy).toHaveBeenCalledOnce();
 });
@@ -165,7 +171,7 @@ it("offers another read when the policy cannot be loaded", async () => {
       logoUrl="/logo.png"
     />,
   );
-  fireEvent.click(screen.getByRole("button", { name: "지원서에서 가져오기" }));
+  await openImport();
   expect(await screen.findByRole("alert")).toHaveTextContent("불러오지 못");
   expect(screen.queryByText(/private network detail/)).toBeNull();
   expect(screen.getByRole("button", { name: "다시 읽기" })).toBeEnabled();
@@ -200,7 +206,7 @@ it("records one import offer when the panel opens on a recognized Greeting form"
   expect(
     track.mock.calls.filter(([event]) => event === "greeting_import_offered"),
   ).toHaveLength(1);
-  fireEvent.click(screen.getByRole("button", { name: "지원서에서 가져오기" }));
+  await openImport();
   await screen.findByText("프로필에 가져올 정보");
   expect(track).toHaveBeenCalledWith("greeting_import_viewed", {
     surface: "in_page_panel",
@@ -228,9 +234,8 @@ it("records no import offer when the page is not a recognized Greeting form", as
       track={track}
     />,
   );
-  expect(
-    await screen.findByRole("button", { name: "지원서에서 가져오기" }),
-  ).toBeVisible();
+  await openSettings();
+  expect(screen.getByRole("button", { name: "프로필 가져오기" })).toBeVisible();
   await new Promise((resolve) => setTimeout(resolve, 0));
   expect(track).not.toHaveBeenCalledWith(
     "greeting_import_offered",
@@ -265,9 +270,8 @@ it("keeps the panel usable and records no offer when the policy cannot be loaded
       track={track}
     />,
   );
-  expect(
-    await screen.findByRole("button", { name: "지원서에서 가져오기" }),
-  ).toBeVisible();
+  await openSettings();
+  expect(screen.getByRole("button", { name: "프로필 가져오기" })).toBeVisible();
   await waitFor(() => expect(api.loadExecutionPolicy).toHaveBeenCalled());
   await new Promise((resolve) => setTimeout(resolve, 0));
   expect(track).not.toHaveBeenCalledWith(

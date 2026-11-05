@@ -1,9 +1,12 @@
 .card {
   padding: 18px 20px;
-  border: 1px solid var(--color-border);
-  border-radius: 14px;
+  border-radius: 12px;
   background: var(--color-surface);
   margin-bottom: 20px;
+}
+/* The onboarding card sits under the choice cards; keep a gap between them. */
+.onboardingCard {
+  margin-top: 18px;
 }
 .card h3 {
   margin: 0 0 6px;
@@ -21,9 +24,8 @@
 .eyebrow {
   display: inline-block;
   margin-bottom: 8px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
+  font-size: 14px;
+  font-weight: 600;
   color: var(--color-action);
 }
 .actions {
@@ -34,8 +36,7 @@
 /* Scoped twice so the public-site button reset cannot flatten these. */
 .card .actions button,
 .ask .actions button,
-.guidance .actions button,
-.row .actions button {
+.guidance .actions button {
   appearance: none;
   display: inline-flex;
   align-items: center;
@@ -53,18 +54,22 @@
 }
 .card .actions button:disabled,
 .ask .actions button:disabled,
-.guidance .actions button:disabled,
-.row .actions button:disabled {
+.guidance .actions button:disabled {
   opacity: 0.55;
   cursor: default;
 }
+/* Tinted fill: these cards never add a second filled primary to the screen. */
 .card .actions .primary,
 .ask .actions .primary,
-.guidance .actions .primary,
-.row .actions .primary {
-  background: var(--color-action);
-  border-color: var(--color-action);
-  color: var(--color-on-action);
+.guidance .actions .primary {
+  background: var(--color-accent-soft);
+  border-color: transparent;
+  color: var(--color-action-strong);
+}
+.onboardingCard .actions button:not(.primary) {
+  border-color: transparent;
+  background: transparent;
+  color: var(--color-text-muted);
 }
 .row {
   display: flex;
@@ -73,8 +78,37 @@
   justify-content: space-between;
   gap: 8px 16px;
   margin: 12px 0 0;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-text-muted);
+}
+/* 알림 설정 dialog: same columns as the fact rows; the action uses the page pill. */
+.settingsRow {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr) auto;
+  column-gap: 15px;
+  align-items: center;
+  margin: 0;
+  padding: 8px 0;
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: -0.224px;
+}
+.settingsRow dt {
+  color: var(--color-text-muted);
+}
+.settingsRow dd {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-weight: 600;
+}
+@media (max-width: 640px) {
+  .settingsRow {
+    grid-template-columns: 110px minmax(0, 1fr);
+    row-gap: 8px;
+  }
+  .settingsRow .actions {
+    grid-column: 2;
+  }
 }
 .ask,
 .guidance {
@@ -82,12 +116,11 @@
   padding: 14px 16px;
   border-radius: 10px;
   background: var(--color-surface-muted);
-  border: 1px solid var(--color-border);
 }
 .guidance ul {
   margin: 0 0 12px;
   padding-left: 18px;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.7;
   color: var(--color-text);
 }

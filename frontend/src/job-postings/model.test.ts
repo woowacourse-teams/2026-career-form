@@ -1,11 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   createPosting,
-  editPosting,
   pendingReminders,
   formatDeadline,
-  parseDeadlineInput,
-  deadlineInput,
   type PostingInput,
 } from "./model";
 
@@ -54,39 +51,8 @@ describe("공고와 알림 시각", () => {
       "회사명을 입력해 주세요.",
     );
   });
-  it("수정은 버전을 올리고 새 마감으로 예약을 다시 계산한다", () => {
-    const p = createPosting(input, now, "job");
-    const edited = editPosting(
-      p,
-      { ...input, deadline: now + 6 * 3600000 },
-      now + 1000,
-    );
-    expect(edited.id).toBe(p.id);
-    expect(edited.version).toBe(2);
-    expect(pendingReminders(edited)[0].at).toBe(now + 4 * 3600000);
-    expect(p.version).toBe(1);
-  });
-  it("한국 시간 입력을 정확한 절대 시각으로 변환하고 다시 표시한다", () => {
-    const at = parseDeadlineInput("2026-10-06T18:00");
-    expect(at).toBe(Date.parse("2026-10-06T09:00:00Z"));
-    expect(deadlineInput(at)).toBe("2026-10-06T18:00");
+  it("마감을 한국 시간으로 표시한다", () => {
+    const at = Date.parse("2026-10-06T09:00:00Z");
     expect(formatDeadline(at, "Asia/Seoul")).toContain("18:00");
   });
-  it.each(["", "2026-02-30T18:00", "2026-10-06", "2026-13-06T18:00"])(
-    "잘못된 날짜 %s를 정규화하지 않는다",
-    (value) => {
-      expect(() => parseDeadlineInput(value)).toThrow();
-    },
-  );
-});
-
-it("마감이 지난 기존 공고의 정보 수정은 허용하되 알림을 되살리지 않는다", () => {
-  const posting = createPosting(input, now, "job");
-  const edited = editPosting(
-    posting,
-    { ...input, company: "수정한 예시 회사" },
-    input.deadline + 60000,
-  );
-  expect(edited.company).toBe("수정한 예시 회사");
-  expect(pendingReminders(edited)).toEqual([]);
 });

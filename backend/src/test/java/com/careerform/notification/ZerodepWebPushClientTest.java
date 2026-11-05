@@ -32,16 +32,14 @@ class ZerodepWebPushClientTest {
     private final VapidTestKeys browser = VapidTestKeys.generate();
     private final byte[] authSecret = randomAuth();
     private final VapidKeys keys = VapidKeys.parse(vapid.publicKey, vapid.privateKey, "mailto:synthetic@example.test");
-    private final PushSubscription subscription = new PushSubscription("s1", ENDPOINT, browser.publicKey, VapidTestKeys.base64Url(authSecret), NOW);
+    private final PushSubscription subscription = new PushSubscription("s1", ENDPOINT, browser.publicKey, VapidTestKeys.base64Url(authSecret), NOW, null, null);
     private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
 
     @Test
     @DisplayName("VAPID 서명과 aes128gcm 암호화, 마감까지의 TTL을 실은 요청을 만들고 본문은 4KB 이하이며 수신기에서 풀린다")
     void preparesEncryptedVapidRequestWithinLimit() throws Exception {
         var client = new ZerodepWebPushClient(keys, Duration.ofSeconds(10), clock, request -> new ZerodepWebPushClient.Reply(201, headers(Map.of())));
-        var link = "https://careers.example.test/" + "a".repeat(1024 - "https://careers.example.test/".length());
-        var payload = PushPayload.of(new JobPosting("0123456789abcdef0123456789abcdef", "회".repeat(80), "직".repeat(120), link,
-            NOW.minusSeconds(60), NOW.plusSeconds(3600), NOW.minusSeconds(120)), NOW);
+        var payload = PushPayload.of(PushPayloadTest.maximalPosting(), NOW);
 
         var request = client.prepare(subscription, payload, Duration.ofSeconds(3600));
         assertThat(request.uri()).isEqualTo(URI.create(ENDPOINT));

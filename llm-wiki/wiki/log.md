@@ -982,6 +982,72 @@
 - [범용 매칭 모델 평가](topics/generic-matching-model-evaluation.md) topic을 새로 만들었다.
 - 실제 지원값, 계정, 세션, 페이지 주소, 대화 전문은 저장하지 않았다.
 
+## [2026-11-02] ingest | CF-384 의사결정 AI(JEV) 스크롤 장면과 직접 체험 중심의 하늘색 랜딩
+
+- Approval-Digest: 7775d31086d0d715392cabd90c6f69e7e5d6d8cff7d76bf543855407873a990b
+- Source-Revision: 7e65ab5d
+- 승인한 후보 5개를 [CF-384 bundle](../raw/issues/CF-384/manifest.md)에 기록했다. JEV 7단계 랜딩 구성과 확신 표기, 스크롤 연출 방식과 조사 근거, 하늘색 전용 토큰과 대비 규칙, 시안 체험 선택과 스크롤 붙잡기, 정책 문의 이메일 미기재다.
+- [랜딩·온보딩 웹 페이지](topics/landing-onboarding.md)의 Current를 CF-384로 바꾸고 CF-363을 History에 남겼다.
+- 실제 지원값, 계정, 세션, 대화 전문은 저장하지 않았다.
+
+## [2026-11-04] ingest | CF-392 도로명주소 검색 프록시 ADR
+
+- Approval-Digest: 25240f97b8ef1c28071040dd1ffc96330a753408f2b6756ece4dcda3d216b02c
+- Source-Revision: 493ca72
+- Issue 계약이 요구한 ADR을 [CF-392 bundle](../raw/issues/CF-392/manifest.md)에 제안됨 상태로 기록하고 [도로명주소 검색 프록시](topics/road-address-proxy.md)를 추가했다. digest에 대한 사람 승인은 PR 검토에서 받는다.
+- 실제 지원값, 계정, 세션, 대화 전문은 저장하지 않았다.
+
+## [2026-11-04] ingest | CF-394 공고 알림 직무 필터
+
+- Approval-Digest: 8d904686571f07dbb79657781e7ef2f8c58fa44922c855656c06d451750558fc
+- Source-Revision: fb132f7f
+- 승인한 후보 6개를 [CF-394 bundle](../raw/issues/CF-394/manifest.md)에 payload 하나로 기록했다. 공고 직무 필터 계약(roles 1~10개 필수, role 라벨 파생, 레거시 공고의 roles 생략과 role 유지), 구독 받을 직무 규칙(덮어쓰기·빈 배열 미선택·없으면 유지, 키 유지), 대상 산정과 전환 설정(subscriptionIdsForRoles, 멀티키 인덱스, role-filter.enforced 기본 false, 배포 순서), 발송기 재검사(FILTER_MISMATCH, 로그·메트릭 경계), 직무 분류 정본(job-categories-v1.json 형식과 기동 검증, 가안), 검증 환경(Mongo 계약 테스트 실행 방법)이다.
+- [공고 구독 알림](topics/job-posting-notifications.md)의 Current를 CF-394로 바꾸고 CF-348 ADR을 History에 남겼다. 다른 topic 문서는 바꾸지 않았다.
+- 실제 지원값·계정·세션·시크릿·VAPID 키·구독 endpoint·사용자의 직무 선택·대화 전문은 저장하지 않았다.
+
+## [2026-11-04] update | CF-394 공고 직무 상한을 분류 전체로 재승인
+
+- Approval-Digest: 86a77363cc4d6108f80d087edea3caf55ae7260cc2c2cb98ebb251ec1ce0b667
+- Source-Revision: 667fc9d4
+- 같은 날 [CF-394 bundle](../raw/issues/CF-394/manifest.md)의 후보 1·5번을 고쳐 다시 승인했다. 공고 roles 상한을 Issue의 10개에서 분류 전체로 넓히고(대기업 공채 대응), 분류 파일 소분류 총수 30 상한(payload 3,900바이트 보장)과 분류 전체 선택 시 "전체 직무" 라벨, 관리 화면의 대분류 전체·전체 직무·모두 해제 버튼을 기록했다. 다른 후보 4개는 그대로다.
+- [공고 구독 알림](topics/job-posting-notifications.md)의 공고 직무 문장을 같은 내용으로 고쳤다. Current·History 링크는 바뀌지 않았다.
+- 실제 지원값·계정·세션·시크릿·VAPID 키·구독 endpoint·사용자의 직무 선택·대화 전문은 저장하지 않았다.
+
+## [2026-11-04] ingest | CF-395 확장 받을 직무 선택과 직무별 거르기
+
+- Approval-Digest: 06bed9b73b031ba11fd558442feb39e15b45b702740a2cf873c46a68bc574dbd
+- Source-Revision: 4e6283fa
+- 승인한 후보 7개를 [CF-395 bundle](../raw/issues/CF-395/manifest.md)에 payload 둘로 기록했다. 확장 문서는 받을 직무 저장과 구독 등록(careerForm.push.roles, 항상 roles 전송, 꺼짐 상태 지연 반영, 저장이 재등록을 기다리지 않음), 분류 캐시와 선택기(careerForm.push.jobCategories, 실패 시 캐시, 대분류 전체 선택), 거르기 규칙(roles 없음은 전원, 겹침만 표시, 미선택은 거름, 안내 조건), 사이드 패널 마감 공고 탭 안내와 panel 발신자 허용(status·enable·categories, #369 완화, #postings/settings 경로), 알림 설정 안내 목록 접기, 검증 환경(로컬 Chromium 확장 로드와 로컬 백엔드 빌드)이고, 계측 문서는 push_roles_saved와 role_count다.
+- [확장 Web Push 구독과 공고 알림](topics/extension-push-notifications.md)의 Current를 CF-395로 바꾸고 CF-349를 History에 남겼다. [선택적 이용 계측](topics/usage-analytics.md)의 Current를 CF-395로 바꾸고 CF-361을 History에 남겼다. 다른 topic 문서는 바꾸지 않았다.
+- 실제 지원값·계정·세션·시크릿·VAPID 키·구독 endpoint·사용자의 직무 선택값·대화 전문은 저장하지 않았다.
+
+## [2026-11-05] ingest | CF-412 범용 결과 화면 분류와 민감 항목 문장 정정
+
+- Approval-Digest: eba6ba6cbb48683b950a554a698c63bb45e0c56442e5f1e0245e3e858f486e6e
+- Source-Revision: 08faae7f
+- 승인한 후보 4개를 [CF-412 bundle](../raw/issues/CF-412/manifest.md)에 payload 둘로 기록했다.
+- [범용 결과 화면 분류](topics/generic-result-classification.md)를 새로 만들었다. [구조 행동 자동 실행](topics/generic-autonomous-structural-actions.md)과 [실사이트 평가](topics/live-autofill-evaluation.md)의 민감 항목 문장을 고치고 Current를 CF-412로 바꿨다.
+- 실제 지원값·라벨·URL·계정·세션·시크릿·대화 전문은 저장하지 않았다.
+## [2026-11-05] ingest | CF-413 공고 알림 직무 필터 전환 변수의 배포 전달
+
+- Approval-Digest: 058720dcf405d4c6c31bfaa925163a583a91843a28d3f459f0a5b1cc732c7aec
+- Source-Revision: 378814aa
+- 승인한 후보 1개를 [CF-413 bundle](../raw/issues/CF-413/manifest.md)에 기록했다. 전환 변수 `CAREER_FORM_PUSH_ROLE_FILTER_ENFORCED`의 workflow·compose 전달 경로와 기본값, 릴리스와 분리한 켜는 순서, 계약 테스트의 두 사전으로 이름을 더하는 방법이다.
+- [CI/CD 설정](topics/cicd-setup.md)의 Current를 CF-413으로 바꾸고 CF-350을 History에 남겼다. payload는 CF-409·CF-410이 더한 이름까지 포함한 전체 목록(변수 15개·시크릿 12개)을 다시 적어 topic의 목록과 jev 전달 경로 서술을 현재 상태로 맞췄다. 다른 topic 문서는 바꾸지 않았다.
+- 호스트 주소, 키 값, 계정, 대화 전문은 저장하지 않았다.
+## [2026-11-05] ingest | CF-415 프론트엔드 CI의 frontend 경로 필터
+
+- Approval-Digest: 0331d54bd1a62ae15bdab9c1de13450ceb567cb14a7ef3bae73f0c4b4ab19846
+- Source-Revision: bc613742
+- 승인한 후보 1개를 [CF-415 bundle](../raw/issues/CF-415/manifest.md)에 기록했다. frontend-ci.yml의 두 트리거 경로 필터, develop 보호 규칙에 필수 상태 체크가 없다는 확인, 2026-11-04 실행 시간 측정(파일 597개·2,808초, 20초 이상 38개 파일 73%, shard 146~702초)이다.
+- [프론트 브라우저 테스트](topics/frontend-browser-testing.md)의 Current를 CF-415로 바꾸고 CF-304·CF-178을 History에 남겼다. 다른 topic 문서는 바꾸지 않았다.
+## [2026-11-05] ingest | CF-417 20초 넘는 프론트 fixture 통합 테스트 38개 삭제
+
+- Approval-Digest: ca329dd0ce59462e14b4d0212c590d4cb6b0cd86a8ee359333ae05b5355566ab
+- Source-Revision: 4fab9205
+- 사전 승인된 후보 2개를 [CF-417 bundle](../raw/issues/CF-417/manifest.md)에 기록했다. 삭제 파일 범위, 단독 커버리지 측정(38개 모두 고유 statement 0), 삭제 뒤 커버리지와 테스트 수, 잃은 회귀 시나리오, 그리고 현대 테스트 간헐 실패의 원인(afterEach 역순)과 `sequence.hooks: list` 수정이다.
+- [프론트 브라우저 테스트](topics/frontend-browser-testing.md)의 Current를 CF-417로 바꾸고 CF-304·CF-178을 History에 남겼다. 다른 topic 문서는 바꾸지 않았다.
+
 ## [2026-11-05] ingest | CF-356 범용 매칭 모델 평가 갱신
 - Approval-Digest: c285e0e7eb9262fa98363b50cb41a353738772ee8c5712c751ea3ce0390118b1
 - Source-Revision: 11aff08

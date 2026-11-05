@@ -1,4 +1,5 @@
 import { browser } from "wxt/browser";
+import { parseJobCategoriesView, type JobCategoriesView } from "./job-roles";
 import {
   parseVisibilityState,
   PUSH_VISIBILITY_KEY,
@@ -9,6 +10,7 @@ import {
   isPushApiErrorCode,
   isServerPosting,
   PushApiError,
+  roleCodes,
   type ServerPosting,
 } from "./push-api";
 import {
@@ -17,10 +19,10 @@ import {
   type PushStateView,
   type RecordSource,
 } from "./push-messages";
-import { PUSH_AUTO_SAVE_KEY } from "./push-settings";
 import {
   parsePushStatus,
   PUSH_ENABLED_KEY,
+  PUSH_ROLES_KEY,
   PUSH_STATUS_KEY,
 } from "./push-subscription";
 import { isRecord } from "./repository";
@@ -29,14 +31,15 @@ import { PUSH_UNREAD_KEY } from "./unread-postings";
 export interface PushClient {
   state(): Promise<PushStateView>;
   setEnabled(enabled: boolean): Promise<PushStateView>;
-  setAutoSave(enabled: boolean): Promise<PushStateView>;
   test(): Promise<PushStateView>;
   record(
     answer: VisibilityAnswer,
     source: RecordSource,
   ): Promise<PushStateView>;
   later(): Promise<PushStateView>;
+  setRoles(roles: readonly string[]): Promise<PushStateView>;
   inbox(): Promise<ServerPosting[]>;
+  categories(): Promise<JobCategoriesView>;
   subscribe(listener: () => void): () => void;
 }
 type ChangeListener = (changes: Record<string, unknown>, area: string) => void;
@@ -56,8 +59,8 @@ const WATCHED_KEYS = [
   PUSH_STATUS_KEY,
   PUSH_ENABLED_KEY,
   PUSH_VISIBILITY_KEY,
-  PUSH_AUTO_SAVE_KEY,
   PUSH_UNREAD_KEY,
+  PUSH_ROLES_KEY,
 ];
 
 function parseState(value: unknown): PushStateView | undefined {
@@ -67,7 +70,6 @@ function parseState(value: unknown): PushStateView | undefined {
     typeof value.supported !== "boolean" ||
     !permissions.some((p) => p === value.permission) ||
     !isRecord(value.visibility) ||
-    typeof value.autoSave !== "boolean" ||
     typeof value.unread !== "number" ||
     !Number.isFinite(value.unread)
   )
@@ -76,15 +78,16 @@ function parseState(value: unknown): PushStateView | undefined {
     value.status === null || value.status === undefined
       ? null
       : parsePushStatus(value.status);
-  if (status === undefined) return undefined;
+  const roles = roleCodes(value.roles);
+  if (status === undefined || roles === undefined) return undefined;
   return {
     enabled: value.enabled,
     supported: value.supported,
     status,
     permission: value.permission as NotificationPermission,
     visibility: parseVisibilityState(value.visibility),
-    autoSave: value.autoSave,
     unread: Math.max(0, Math.floor(value.unread)),
+    roles,
   };
 }
 
@@ -120,17 +123,24 @@ export function createPushClient(ports: PushClientPorts): PushClient {
     state: async () => stateOf(await send("status")),
     setEnabled: async (enabled) =>
       stateOf(await send(enabled ? "enable" : "disable")),
-    setAutoSave: async (enabled) =>
-      stateOf(await send("autosave", { enabled })),
     test: async () => stateOf(await send("test")),
     record: async (answer, source) =>
       stateOf(await send("record", { answer, source })),
     later: async () => stateOf(await send("later")),
+    setRoles: async (roles) =>
+      stateOf(await send("roles", { roles: [...roles] })),
     inbox: async () => {
       const response = await send("inbox");
       if (!Array.isArray(response.postings))
         throw new PushApiError("INVALID_RESPONSE");
       return response.postings.filter(isServerPosting);
+    },
+    categories: async () => {
+      const view = parseJobCategoriesView(
+        (await send("categories")).categories,
+      );
+      if (!view) throw new PushApiError("INVALID_RESPONSE");
+      return view;
     },
     subscribe: (listener) => {
       const changed: ChangeListener = (changes, area) => {

@@ -30,67 +30,28 @@ export type Step =
   | "experienceDetails"
   | "experienceSummary";
 export const titles: Record<Step, string> = {
-  overview: "저장한 정보부터 이어서 준비해요",
-  educationDetails: "학력을 조금 더 채워볼까요?",
-  name: "어떤 이름으로 불러드릴까요?",
-  email: "연락받을 이메일을 알려주세요",
-  phone: "전화번호도 함께 준비해 볼까요?",
-  gender: "성별은 어떻게 적을까요?",
-  birthDate: "생년월일을 알려주세요",
-  englishName: "영문 이름도 준비할까요?",
-  nationality: "국적을 알려주세요",
-  basics: "기본 정보가 준비됐어요",
-  educationType: "어떤 학력을 추가할까요?",
-  school: "다닌 학교를 알려주세요",
-  major: "어떤 전공을 공부했나요?",
-  completion: "현재 재학 상태는 어떤가요?",
-  educationDates: "학교에 다닌 기간을 알려주세요",
-  educationSummary: "학력도 준비됐어요",
-  experienceType: "어떤 경험을 추가할까요?",
-  experienceName: "경험의 이름을 알려주세요",
-  experienceRole: "어떤 일을 맡았나요?",
-  experienceDates: "함께한 기간을 알려주세요",
-  experienceDetails: "어떤 일을 했는지 적어주세요",
-  experienceSummary: "경험까지 차곡차곡 준비됐어요",
-};
-export const descriptions: Record<Step, string> = {
-  overview:
-    "이미 준비한 정보로 자동 기입을 시작하거나, 원하는 항목만 보충해 보세요.",
-  educationDetails:
-    "바로 떠오르는 정보만 골라 주세요. 나머지는 나중에 채워도 괜찮아요.",
-  name: "지원서에 사용할 이름이에요. Enter를 누르면 다음 칸으로 이동해요.",
-  email:
-    "아이디를 입력한 뒤 이메일 주소를 골라 완성할 수 있어요. 직접 입력해도 좋아요.",
-  phone: "평소 연락받는 번호를 입력해 주세요. 하이픈 없이 입력해도 괜찮아요.",
-  gender:
-    "지원서 선택지와 맞출 수 있도록 아래 표기 중에서 골라 주세요.",
-  birthDate:
-    "숫자 8자리로 입력하거나 달력에서 고를 수 있어요. 모르면 건너뛰세요.",
-  englishName: "영문 성과 이름은 지원서에 사용할 표기 그대로 입력해 주세요.",
-  nationality: "지원서에 사용할 국적 표기를 적어 주세요.",
-  basics:
-    "여기까지 입력한 내용을 확인해 보세요. 학력과 경험은 나중에 채워도 좋아요.",
-  educationType:
-    "먼저 학력 하나만 골라볼까요? 필요한 항목은 나중에 더 추가할 수 있어요.",
-  school:
-    "학교 이름을 검색하거나 직접 입력해 주세요. 검색 결과는 방향키와 Enter로 고를 수 있어요.",
-  major: "지원서에 사용할 전공 이름을 적어 주세요.",
-  completion: "지금 상태를 골라 주세요. 선택한 항목을 다시 누르면 해제돼요.",
-  educationDates:
-    "기억나는 날짜만 입력해도 괜찮아요. 건너뛰면 미완성 날짜는 저장하지 않아요.",
-  educationSummary:
-    "학력 하나가 준비됐어요. 날짜와 자세한 정보는 원할 때만 더 채워요.",
-  experienceType:
-    "소개하고 싶은 경험 하나부터 시작해요. 직장경력이 없어도 괜찮아요.",
-  experienceName: "지원서에 적을 회사 또는 프로젝트 이름을 입력해 주세요.",
-  experienceRole:
-    "맡았던 역할이나 근무 형태를 알려주세요. 필요한 항목만 선택해도 좋아요.",
-  experienceDates:
-    "재직 중이라면 퇴사일은 필요 없어요. 건너뛰면 미완성 날짜는 저장하지 않아요.",
-  experienceDetails:
-    "맡은 일과 결과를 한두 문장으로 적어 보세요. 자세한 내용은 나중에 다듬어도 좋아요.",
-  experienceSummary:
-    "경험 하나가 준비됐어요. 기간과 설명은 원할 때만 더 채워요.",
+  overview: "저장한 정보",
+  educationDetails: "학력 상세",
+  name: "이름",
+  email: "이메일",
+  phone: "전화번호",
+  gender: "성별",
+  birthDate: "생년월일",
+  englishName: "영문 이름",
+  nationality: "국적",
+  basics: "기본 정보",
+  educationType: "학력 종류",
+  school: "학교",
+  major: "전공",
+  completion: "재학 상태",
+  educationDates: "재학 기간",
+  educationSummary: "학력",
+  experienceType: "경력·활동 종류",
+  experienceName: "경력·활동 이름",
+  experienceRole: "역할",
+  experienceDates: "기간",
+  experienceDetails: "활동 내용",
+  experienceSummary: "경력·활동",
 };
 
 function emailSuggestions(value: string) {
@@ -106,7 +67,7 @@ export function phoneHint(value: string) {
   const digits = value.replace(/[ -]/g, "");
   return /^01\d{9}$/.test(digits)
     ? digits.replace(/(\d{3})(\d{4})(\d{4})/, "$1-$2-$3")
-    : "국가번호가 있는 번호도 그대로 입력할 수 있어요.";
+    : "";
 }
 function Input({
   label,
@@ -225,7 +186,7 @@ export function QuickStartFields({
           <Input
             label="국문 성"
             autoComplete="family-name"
-            placeholder="김"
+            placeholder="예: 김"
             value={profile.personal.koreanFamilyName ?? ""}
             onChange={(e) =>
               updateSingle("personal", "koreanFamilyName", e.target.value)
@@ -234,7 +195,7 @@ export function QuickStartFields({
           <Input
             label="국문 이름"
             autoComplete="given-name"
-            placeholder="이름"
+            placeholder="예: 민지"
             value={profile.personal.koreanGivenName ?? ""}
             onChange={(e) =>
               updateSingle("personal", "koreanGivenName", e.target.value)
@@ -293,9 +254,11 @@ export function QuickStartFields({
               updateSingle("contact", "phoneNumber", e.target.value)
             }
           />
-          <p className={styles.note}>
-            {phoneHint(profile.contact.phoneNumber ?? "")}
-          </p>
+          {phoneHint(profile.contact.phoneNumber ?? "") && (
+            <p className={styles.note}>
+              {phoneHint(profile.contact.phoneNumber ?? "")}
+            </p>
+          )}
         </>
       );
     case "gender":
@@ -462,7 +425,6 @@ export function QuickStartFields({
           <textarea
             rows={5}
             value={values[id] ?? ""}
-            placeholder="지금 생각나는 만큼만 적어도 괜찮아요."
             onChange={(e) => updateEntry(id, e.target.value)}
           />
         </label>
@@ -524,9 +486,7 @@ export function Summary({
       ))}
     </dl>
   ) : (
-    <p className={styles.empty}>
-      아직 입력한 정보가 없어요. 필요할 때 돌아와 채워도 괜찮아요.
-    </p>
+    <p className={styles.empty}>입력한 정보 없음</p>
   );
 }
 export function entrySummary(entry: ProfileEntry): SummaryValue[] {

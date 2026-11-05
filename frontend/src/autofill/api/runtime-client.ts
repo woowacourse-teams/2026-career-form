@@ -55,7 +55,7 @@ export class AnalysisServiceError extends Error {
   constructor(
     message: string,
     readonly status?: 404,
-    readonly code?: "POLICY_INCOMPATIBLE",
+    readonly code?: "POLICY_INCOMPATIBLE" | "RATE_LIMITED",
     /** Set only when the request never got a server answer in time. */
     readonly transport?: "TIMEOUT" | "NETWORK",
   ) {
@@ -66,9 +66,7 @@ export class AnalysisServiceError extends Error {
 
 /** A timeout or unreachable server, as opposed to a server or contract answer. */
 export function isTransientAnalysisError(error: unknown): boolean {
-  return (
-    error instanceof AnalysisServiceError && error.transport !== undefined
-  );
+  return error instanceof AnalysisServiceError && error.transport !== undefined;
 }
 
 export class RuntimeAnalysisApiClient implements AnalysisApiClient {
@@ -209,7 +207,7 @@ export class RuntimeAnalysisApiClient implements AnalysisApiClient {
       throw new AnalysisServiceError(
         errorMessages[envelope.code],
         envelope.status,
-        undefined,
+        envelope.code === "RATE_LIMITED" ? "RATE_LIMITED" : undefined,
         envelope.code === "TIMEOUT" || envelope.code === "NETWORK"
           ? envelope.code
           : undefined,

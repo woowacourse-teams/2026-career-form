@@ -82,12 +82,12 @@ it("reports a sole unoffered career from the review in one analysis", async () =
   expect(counters.forbidden).toBe(0);
   expect(rows()).toBe(1);
   expect(selected(0)).not.toBe("아르바이트");
-  expect(within(panel).getByText(UNMATCHED)).toBeVisible();
+  expect(within(panel).getByLabelText(UNMATCHED)).toBeVisible();
   expect(
     within(panel).getAllByText("아르바이트", { selector: "span" }).length,
   ).toBeGreaterThan(0);
   expect(
-    screen.queryByText(
+    screen.queryByLabelText(
       "조건부 선택 결과를 확인하지 못했어요. 이 항목을 직접 골라 주세요.",
     ),
   ).not.toBeInTheDocument();
@@ -103,7 +103,7 @@ it("reports several unoffered careers in one analysis without adding rows", asyn
   expect(counters.requests).toBe(1);
   expect(counters.adds).toBe(0);
   expect(rows()).toBe(1);
-  expect(within(panel).getAllByText(UNMATCHED)).toHaveLength(2);
+  expect(within(panel).getAllByLabelText(UNMATCHED)).toHaveLength(2);
   for (const value of ["아르바이트", "기타"])
     expect(
       within(panel).getAllByText(value, { selector: "span" }).length,
@@ -125,7 +125,7 @@ it("adds no row for the unoffered career and still writes the offered one", asyn
     document.querySelector<HTMLInputElement>('[name="career[0].company"]')!
       .value,
   ).toBe("합성회사 0");
-  expect(within(panel).getAllByText(UNMATCHED)).toHaveLength(1);
+  expect(within(panel).getAllByLabelText(UNMATCHED)).toHaveLength(1);
   expect(
     within(panel).getAllByText("아르바이트", { selector: "span" }).length,
   ).toBeGreaterThan(0);
