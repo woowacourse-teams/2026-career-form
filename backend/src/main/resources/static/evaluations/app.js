@@ -777,12 +777,12 @@ function renderFields() {
     page.replaceChildren(head, element("div", "항목별 답을 불러오는 중.", "empty"));
     return;
   }
-  // 모델 목록: 체크박스로 표에 보일 모델을 고르고, 고른 공고·화면의 판정(반복 합)을 막대와 수로 보인다. 체크를 풀어도 다시 켤 수 있게 남긴다.
+  // 모델 상자: 표에 보일 모델을 체크한다. 가로로 줄바꿈되어 모델이 늘어도 세로로 쌓이지 않고, 체크를 풀어도 남아 다시 켤 수 있다.
   const summary = element("div", undefined, "fields-summary");
+  summary.setAttribute("aria-label", "항목별 비교에 보일 모델");
   state.selected.forEach((model) => {
-    const line = element("div", undefined, models.includes(model) ? "fields-model" : "fields-model off");
-    line.style.setProperty("--model", color(model));
     const label = element("label");
+    label.style.setProperty("--model", color(model));
     const input = element("input");
     input.type = "checkbox";
     input.checked = models.includes(model);
@@ -792,31 +792,31 @@ function renderFields() {
       renderFields();
     });
     label.append(input, document.createTextNode(model));
-    line.append(label);
-    const fields = data[model] ?? [];
-    const tally = {};
-    fields.filter(inScreen).forEach((field) => field.answers.forEach(({ outcome }) => { tally[outcome] = (tally[outcome] ?? 0) + 1; }));
-    if (!runs[model]) line.append(element("span", "끝난 실행 없음", "muted"));
-    else if (!fields.length) line.append(element("span", "항목별 답 없음(데이터셋 확인 불가)", "muted"));
-    else {
-      const autofill = kind.kind === "GENERIC_FIELDS";
-      const kinds = autofill ? AUTOFILL_KINDS : ITEM_KINDS;
-      const counts = autofill
-        ? { filledCorrect: tally.FILLED_CORRECT ?? 0, blankCorrect: tally.BLANK_CORRECT ?? 0, missed: tally.MISSED ?? 0,
-          wrong: (tally.FILLED_WRONG_KEY ?? 0) + (tally.FILLED_UNNEEDED ?? 0) }
-        : { correct: tally.CORRECT ?? 0, wrongKey: tally.WRONG_KEY ?? 0, missing: tally.MISSING ?? 0, unnecessary: tally.UNNECESSARY ?? 0 };
-      const total = kinds.reduce((sum, { key }) => sum + counts[key], 0);
-      const track = element("div", undefined, "item-track");
-      kinds.forEach(({ key, label: name, className }) => {
-        const part = element("span", undefined, className);
-        part.style.width = `${total ? counts[key] / total * 100 : 0}%`;
-        part.title = `${name} ${counts[key]}`;
-        track.append(part);
-      });
-      line.append(track, countLine(kinds, counts, total, autofill ? "칸" : "개"));
-    }
-    summary.append(line);
+    if (!runs[model]) label.append(element("span", "끝난 실행 없음", "muted"));
+    else if (!data[model]?.length) label.append(element("span", "항목별 답 없음", "muted"));
+    summary.append(label);
   });
+  // 표의 모델 칸 머리: 고른 공고·화면의 판정(반복 합)을 작은 막대로, 수는 커서를 올리면 보인다.
+  const verdictHead = (model, th) => {
+    const tally = {};
+    (data[model] ?? []).filter(inScreen).forEach((field) => field.answers.forEach(({ outcome }) => { tally[outcome] = (tally[outcome] ?? 0) + 1; }));
+    const autofill = kind.kind === "GENERIC_FIELDS";
+    const kinds = autofill ? AUTOFILL_KINDS : ITEM_KINDS;
+    const counts = autofill
+      ? { filledCorrect: tally.FILLED_CORRECT ?? 0, blankCorrect: tally.BLANK_CORRECT ?? 0, missed: tally.MISSED ?? 0,
+        wrong: (tally.FILLED_WRONG_KEY ?? 0) + (tally.FILLED_UNNEEDED ?? 0) }
+      : { correct: tally.CORRECT ?? 0, wrongKey: tally.WRONG_KEY ?? 0, missing: tally.MISSING ?? 0, unnecessary: tally.UNNECESSARY ?? 0 };
+    const total = kinds.reduce((sum, { key }) => sum + counts[key], 0);
+    if (!total) return;
+    const track = element("div", undefined, "item-track");
+    kinds.forEach(({ key, className }) => {
+      const part = element("span", undefined, className);
+      part.style.width = `${counts[key] / total * 100}%`;
+      track.append(part);
+    });
+    th.append(track);
+    th.dataset.help = [...kinds.map(({ key, label }) => `${label.split("(")[0]} ${counts[key]}`), `총 ${total}${autofill ? "칸" : "개"}`].join(" · ");
+  };
   if (!models.length) {
     page.replaceChildren(head, summary, element("div", "볼 모델을 체크해야 합니다.", "empty"));
     return;
@@ -857,6 +857,7 @@ function renderFields() {
   models.forEach((model) => {
     const th = element("th", model, "model-col");
     th.style.setProperty("--model", color(model));
+    verdictHead(model, th);
     headRow.append(th);
   });
   thead.append(headRow);

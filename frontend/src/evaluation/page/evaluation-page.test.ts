@@ -385,7 +385,7 @@ describe("AI 평가 화면의 단계 탭", () => {
     };
     const boxes = () => [
       ...document.querySelectorAll<HTMLInputElement>(
-        '#cf-fields .fields-model input[type="checkbox"]',
+        '#cf-fields .fields-summary input[type="checkbox"]',
       ),
     ];
     const toggle = async (index: number) => {
@@ -395,11 +395,6 @@ describe("AI 평가 화면의 단계 탭", () => {
     const columns = () =>
       [...document.querySelectorAll("#cf-fields thead .model-col")].map(
         (column) => column.textContent,
-      );
-    const listed = () =>
-      [...document.querySelectorAll("#cf-fields .fields-model")].map(
-        (row) =>
-          `${row.querySelector("label")?.textContent}:${row.classList.contains("off")}`,
       );
     const chips = () =>
       [...document.querySelectorAll("#cf-fields .fields-chips button")]
@@ -426,21 +421,18 @@ describe("AI 평가 화면의 단계 탭", () => {
     expect(boxes().map((box) => box.checked)).toEqual([true, true]);
     expect(columns()).toEqual(["jev/jev-latest", "openai/gpt"]);
     expect(chips()).toContain("모델끼리 다른");
-    // 모델 목록 상자 안에 체크박스와 판정 막대·수가 함께 있고, 따로 떠 있는 체크박스는 없다.
-    expect(
-      document.querySelector("#cf-fields .fields-controls input"),
-    ).toBeNull();
-    const row = document.querySelector(
-      "#cf-fields .fields-summary .fields-model",
-    )!;
-    expect(row.querySelectorAll(".item-track > span")).toHaveLength(4);
-    expect(row.textContent).toContain("1 맞게 넣음");
-    expect(row.textContent).toContain("1 놓침");
+    // 상자에는 체크박스만 있어 모델이 늘어도 세로로 쌓이지 않고, 판정은 표의 모델 칸 머리에 막대로 있고 수는 커서를 올리면 보인다.
+    const box = document.querySelector("#cf-fields .fields-summary")!;
+    expect(box.querySelector(".item-track")).toBeNull();
+    expect(box.querySelector(".count-line")).toBeNull();
+    const head = document.querySelector("#cf-fields thead .model-col")!;
+    expect(head.querySelectorAll(".item-track > span")).toHaveLength(4);
+    expect(head.getAttribute("data-help")).toContain("맞게 넣음 1");
+    expect(head.getAttribute("data-help")).toContain("놓침 1");
 
     await toggle(0);
     expect(boxes().map((box) => box.checked)).toEqual([false, true]);
-    // 체크를 푼 모델도 다시 켤 수 있게 목록에 흐리게 남고, 표에서만 빠진다.
-    expect(listed()).toEqual(["jev/jev-latest:true", "openai/gpt:false"]);
+    // 체크를 푼 모델도 상자에 남아 다시 켤 수 있고, 표에서만 빠진다.
     expect(columns()).toEqual(["openai/gpt"]);
     expect(chips()).not.toContain("모델끼리 다른");
     // 이 탭의 체크는 위쪽 모델 체크와 품질·성능 화면에 영향을 주지 않는다.

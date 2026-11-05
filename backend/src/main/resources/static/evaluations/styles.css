@@ -737,11 +737,9 @@
 #cf-eval-preview .summary-row .stat b{color:#233447;font-weight:650;font-size:14px}
 #cf-eval-preview .metric-head h3.has-help{cursor:default;text-decoration:underline dotted #a7afb7;text-underline-offset:4px}
 #cf-eval-preview .icon-button[hidden]{display:none}
-#cf-eval-preview .fields-summary{background:#fff;border:1px solid #dde1de;border-radius:6px;margin:16px 0 12px;padding:4px 16px}
-#cf-eval-preview .fields-model{display:grid;grid-template-columns:minmax(150px,200px) minmax(100px,240px) minmax(0,1fr);align-items:center;gap:6px 18px;padding:10px 0;font-size:13px}
-#cf-eval-preview .fields-model+.fields-model{border-top:1px solid #eef0ee}
-#cf-eval-preview .fields-model label{font-size:14px;font-weight:500;overflow-wrap:anywhere}
-#cf-eval-preview .fields-model input{width:15px;height:15px;flex:none;accent-color:var(--model)}
-#cf-eval-preview .fields-model .count-line{grid-column:3;margin-top:0}
-#cf-eval-preview .fields-model.off .item-track,#cf-eval-preview .fields-model.off .count-line,#cf-eval-preview .fields-model.off label{opacity:.45}
-@media(max-width:720px){#cf-eval-preview .fields-model{grid-template-columns:minmax(0,1fr)}#cf-eval-preview .fields-model .count-line{grid-column:1}}
+#cf-eval-preview .fields-summary{display:flex;flex-wrap:wrap;gap:8px 22px;background:#fff;border:1px solid #dde1de;border-radius:6px;margin:16px 0 12px;padding:10px 16px}
+#cf-eval-preview .fields-summary label{font-size:13px;font-weight:500;margin:0;overflow-wrap:anywhere}
+#cf-eval-preview .fields-summary input{width:15px;height:15px;flex:none;accent-color:var(--model)}
+#cf-eval-preview .fields-summary label .muted{font-size:12px;font-weight:400}
+#cf-eval-preview .fields-table thead .model-col{cursor:default}
+#cf-eval-preview .fields-table .model-col .item-track{height:6px;margin-top:5px;min-width:90px}
