@@ -55,9 +55,11 @@ export function useSteppedScene(
       target = scrolledStage();
       if (!frame && playhead !== target) frame = requestAnimationFrame(tick);
     };
+    // A new viewport height changes how many screens were scrolled.
     const relayout = () => {
       layoutRef.current();
       draw();
+      onScroll();
     };
     relayout();
     document.fonts?.ready.then(relayout).catch(() => {});

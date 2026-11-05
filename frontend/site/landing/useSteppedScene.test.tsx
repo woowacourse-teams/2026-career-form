@@ -88,6 +88,15 @@ describe("useSteppedScene", () => {
     expect(lastFrame(render)).toBeLessThan(progressAt(0.2));
   });
 
+  it("re-picks the stage when a resize changes how many screens were scrolled", () => {
+    const { render, layout } = mount(true);
+    top = -2 * window.innerHeight;
+    window.dispatchEvent(new Event("resize"));
+    expect(layout).toHaveBeenCalledTimes(2);
+    flush(0);
+    expect(lastFrame(render)).toBe(progressAt(3));
+  });
+
   it("snaps to the target stage with reduced motion", () => {
     const { render } = mount(true);
     scrollTo(2);
