@@ -1040,3 +1040,9 @@
 - Source-Revision: 4fab9205
 - 사전 승인된 후보 2개를 [CF-417 bundle](../raw/issues/CF-417/manifest.md)에 기록했다. 삭제 파일 범위, 단독 커버리지 측정(38개 모두 고유 statement 0), 삭제 뒤 커버리지와 테스트 수, 잃은 회귀 시나리오, 그리고 현대 테스트 간헐 실패의 원인(afterEach 역순)과 `sequence.hooks: list` 수정이다.
 - [프론트 브라우저 테스트](topics/frontend-browser-testing.md)의 Current를 CF-417로 바꾸고 CF-304·CF-178을 History에 남겼다. 다른 topic 문서는 바꾸지 않았다.
+## [2026-11-05] ingest | CF-424 랜딩 화면 고정 장면의 단계별 끝까지 재생
+
+- Approval-Digest: 3b9b97a2d043c27abace35945afdfd658744d1f1284936d895a498b3409d7548
+- Source-Revision: 34b09299
+- 승인한 후보 3개를 [CF-424 bundle](../raw/issues/CF-424/manifest.md)에 기록했다. 랜딩 AI·마감 알림 장면의 단계 재생 결정과 이유, 멈춤 지점에서 완성 상태가 보이도록 퇴장 효과를 단계 경계 뒤에 두는 규칙, 한글 worktree 경로의 compose 계약 테스트 실패와 우회다.
+- [랜딩,온보딩 웹 페이지](topics/landing-onboarding.md)의 Current를 CF-424로 바꾸고 CF-384를 History에 남겼다. [로컬 검증 환경 주의점](topics/verification-environment.md)을 새로 만들었다.
