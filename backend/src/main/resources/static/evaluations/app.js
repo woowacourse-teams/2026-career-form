@@ -601,20 +601,16 @@ function confidenceCard() {
     card.append(element("div", state.selected.length ? "확신도 기록 전 실행이라 측정 불가." : "비교할 모델 선택 필요.", "empty"));
     return card;
   }
-  const table = element("table", undefined, "compare-table");
+  const table = element("table", undefined, "compare-table confidence-table");
   const thead = element("thead");
   const top = element("tr");
   top.append(element("th", "기준"));
-  const sub = element("tr");
-  sub.append(element("th"));
   models.forEach((model) => {
     const th = element("th", model, "model-col");
-    th.colSpan = 3;
     th.style.setProperty("--model", color(model));
     top.append(th);
-    sub.append(element("th", "정밀도", "number"), element("th", "채움률", "number"), element("th", "점수", "number"));
   });
-  thead.append(top, sub);
+  thead.append(top);
   const body = element("tbody");
   const text = (value) => value == null ? "—" : `${(value * 100).toFixed(1)}%`;
   report(models[0]).confidence.forEach(({ threshold }) => {
@@ -624,8 +620,10 @@ function confidenceCard() {
       const points = report(model).confidence;
       const point = points.find((entry) => entry.threshold === threshold);
       const best = Math.max(...points.map((entry) => entry.score ?? 0));
-      row.append(element("td", text(point?.precision), "number"), element("td", text(point?.fillRate), "number"),
-        element("td", text(point?.score), point?.score === best ? "number best" : "number"));
+      const cell = element("td", undefined, "number");
+      cell.append(element("span", text(point?.score), point?.score === best ? "best" : undefined),
+        element("span", `정밀도 ${text(point?.precision)} · 채움률 ${text(point?.fillRate)}`, "compare-range"));
+      row.append(cell);
     });
     body.append(row);
   });
