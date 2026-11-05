@@ -1,0 +1,25 @@
+/* Lives on <body>, outside `.brand`, so colours are literal. */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  z-index: 40;
+  width: max-content;
+  max-width: calc(100vw - 40px);
+  margin: 0;
+  padding: 12px 18px;
+  border-radius: 14px;
+  background: #13293a;
+  color: #fff;
+  font:
+    600 14px/1.5 SitePretendard,
+    "Apple SD Gothic Neo",
+    sans-serif;
+  word-break: keep-all;
+  text-align: center;
+  transform: translateX(-50%);
+  box-shadow: 0 14px 30px -12px rgb(19 41 58 / 60%);
+}
+.toast[hidden] {
+  display: none;
+}

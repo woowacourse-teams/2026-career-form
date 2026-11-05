@@ -103,3 +103,33 @@
     grid-template-columns: 1fr;
   }
 }
+@media (max-width: 700px) {
+  .assurance {
+    padding-block: 72px;
+    gap: 28px;
+  }
+  .card {
+    grid-template-columns: 64px 1fr;
+    column-gap: 16px;
+    align-items: center;
+    padding: 20px;
+  }
+  .card img {
+    grid-row: span 2;
+    width: 64px;
+    height: 64px;
+    margin: 0;
+  }
+  .card h3 {
+    font-size: 18px;
+  }
+  .closing {
+    padding-bottom: 72px;
+  }
+  .faq {
+    padding-bottom: 80px;
+  }
+  .faq summary {
+    font-size: 15px;
+  }
+}

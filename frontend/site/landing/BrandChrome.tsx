@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { STORE_URL } from "../content";
 import { SiteLink } from "../site-navigation";
+import { useHandoff } from "./handoff";
+import { SendToPc } from "./SendToPc";
 import logo from "./assets/logo.webp";
 import closingArt from "./assets/C5.webp";
 import brand from "./brand.module.css";
@@ -36,6 +38,7 @@ export function BrandHeader({
   onInstall: InstallHandler;
   fixed?: boolean;
 }) {
+  const handoff = useHandoff();
   return (
     <header className={fixed ? brand.headerFixed : brand.headerSticky}>
       <div className={brand.headerInner}>
@@ -43,7 +46,11 @@ export function BrandHeader({
           <img src={logo} alt="" />
           커리어폼
         </SiteLink>
-        <InstallLink onInstall={onInstall} className={brand.headerInstall} />
+        {handoff ? (
+          <SendToPc className={brand.headerInstall} />
+        ) : (
+          <InstallLink onInstall={onInstall} className={brand.headerInstall} />
+        )}
       </div>
     </header>
   );
@@ -78,6 +85,7 @@ export function BrandFooter({ current }: { current?: string }) {
 }
 
 export function ClosingCta({ onInstall }: { onInstall: InstallHandler }) {
+  const handoff = useHandoff();
   return (
     <section className={brand.cta} aria-labelledby="closing-title">
       <div className={brand.ctaText}>
@@ -86,7 +94,11 @@ export function ClosingCta({ onInstall }: { onInstall: InstallHandler }) {
           <br />
           커리어폼이 채울게요.
         </h2>
-        <InstallLink onInstall={onInstall} className={brand.ctaButton} />
+        {handoff ? (
+          <SendToPc className={brand.ctaButton} />
+        ) : (
+          <InstallLink onInstall={onInstall} className={brand.ctaButton} />
+        )}
       </div>
       <img
         className={brand.ctaArt}

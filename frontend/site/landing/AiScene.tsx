@@ -7,6 +7,7 @@ import {
   type AiLayout,
 } from "./ai-frame";
 import { InstallLink, type InstallHandler } from "./BrandChrome";
+import { useHandoff } from "./handoff";
 import { JevConsole } from "./JevConsole";
 import {
   AI_PLAYBACK,
@@ -17,6 +18,7 @@ import {
   percent,
 } from "./jev";
 import { SampleForm } from "./SampleForm";
+import { SendToPc } from "./SendToPc";
 import { filledCount, reviewCount, sampleFields } from "./sample-form";
 import { usePrefersReducedMotion } from "./scroll";
 import { useSteppedScene } from "./useSteppedScene";
@@ -60,7 +62,7 @@ export function AiScene({ onInstall }: { onInstall: InstallHandler }) {
       <div className={styles.stage} data-ai="stage">
         <div className={styles.dotGrid} data-ai="dotGrid" aria-hidden="true" />
         <Hero onInstall={onInstall} />
-        <div className={styles.captions}>
+        <div className={styles.captions} data-ai="captions">
           {JEV_CAPTIONS.map(([title, body], i) => (
             <div key={title} className={styles.caption} data-ai-caption>
               <span>
@@ -129,6 +131,7 @@ export function AiScene({ onInstall }: { onInstall: InstallHandler }) {
 }
 
 function Hero({ onInstall }: { onInstall: InstallHandler }) {
+  const handoff = useHandoff();
   return (
     <div className={styles.hero} data-ai="hero">
       <h1>
@@ -137,12 +140,22 @@ function Hero({ onInstall }: { onInstall: InstallHandler }) {
         <em>AI가 읽고</em> 채워요.
       </h1>
       <p>한 번 등록한 내 정보로, 지원서마다 알아서.</p>
-      <div className={styles.actions}>
-        <a className={brand.primary} href="#try">
-          직접 해보기
-        </a>
-        <InstallLink onInstall={onInstall} className={brand.soft} />
-      </div>
+      {handoff ? (
+        <div className={styles.actions}>
+          <SendToPc />
+          <small className={styles.handoffNote}>
+            커리어폼은 PC Chrome 확장 프로그램이에요. 링크를 공유해 두고 PC에서
+            이어서 써보세요.
+          </small>
+        </div>
+      ) : (
+        <div className={styles.actions}>
+          <a className={brand.primary} href="#try">
+            직접 해보기
+          </a>
+          <InstallLink onInstall={onInstall} className={brand.soft} />
+        </div>
+      )}
       <span className={styles.hint}>
         <i aria-hidden="true" />
         내려서 AI가 채우는 모습을 보세요
