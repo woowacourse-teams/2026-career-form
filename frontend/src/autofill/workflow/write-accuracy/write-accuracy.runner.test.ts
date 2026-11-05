@@ -229,6 +229,8 @@ it("covers every snapshot directory with the initial route and review classifica
     "woowahan-r2605009-initial",
     "woowahan-r2605009-high-school",
     "woowahan-r2605009-university",
+    "woowahan-r2605009-ged",
+    "nhn-presales-initial",
   ]);
   expect(
     manifest
