@@ -772,3 +772,11 @@
 #cf-eval-preview .fields-summary label .muted{font-size:12px;font-weight:400}
 #cf-eval-preview .fields-table thead .model-col{cursor:default}
 #cf-eval-preview .fields-table .model-col .item-track{height:6px;margin-top:5px;min-width:90px}
+#cf-eval-preview .record-note{display:flex;align-items:baseline;gap:8px;margin:8px 2px 0;font-size:13px;line-height:1.5}
+#cf-eval-preview .record-note:empty{display:none}
+#cf-eval-preview .record-note .muted{font-size:12px;white-space:nowrap}
+#cf-eval-preview .record-note-text{overflow-wrap:anywhere}
+#cf-eval-preview .record-note .note-edit{font-size:12px;color:#3d5870;background:none;border:0;padding:0;text-decoration:underline;white-space:nowrap}
+#cf-eval-preview .note-form{display:flex;gap:8px;align-items:center;flex:1}
+#cf-eval-preview .note-form input{flex:1;min-width:0;font:inherit;font-size:13px;padding:5px 8px;border:1px solid #c8ccc9;border-radius:4px;background:#fff;cursor:text}
+#cf-eval-preview .note-form button[type=submit]{font-size:12px;padding:5px 10px;border:1px solid #475f78;border-radius:4px;background:#475f78;color:#fff}

@@ -8,7 +8,7 @@ const COLORS = ["#4e6d90", "#688b7c", "#ac8d68", "#8a6f9e", "#6f8f9e"];
 const PRICE_KEY = "cf-evaluation-model-prices-v1";
 const root = document.getElementById("cf-eval-preview");
 const $ = (selector) => root.querySelector(selector);
-const state = { runs: [], dataset: null, models: [], selected: [], group: null, stage: "total", page: "overview", cardSort: {}, confidenceMetric: "score",
+const state = { runs: [], notes: {}, noteEditing: null, dataset: null, models: [], selected: [], group: null, stage: "total", page: "overview", cardSort: {}, confidenceMetric: "score",
   fields: {}, catalog: null, fieldHidden: [], canDelete: false, compare: { before: "", after: "" }, fieldFilter: "diff", fieldScreen: "all", openField: null, itemKind: "GENERIC_FIELDS" };
 let prices = {};
 try { prices = JSON.parse(localStorage.getItem(PRICE_KEY) || "{}") ?? {}; } catch { prices = {}; }
@@ -34,6 +34,7 @@ async function api(path, method = "GET", payload) {
       BUDGET_EXCEEDED: "예상 모델 호출 수가 실행 한도를 넘습니다. 반복 수를 줄여야 합니다.",
       UNKNOWN_DATASET: "검토를 마친 데이터셋이 아닙니다. 데이터셋 검토 상태 확인 필요.",
       INVALID_REPETITIONS: "반복 수는 1 이상 20 이하입니다.",
+      NOTE_TOO_LONG: "변경 내용은 300자 이하입니다.",
       INVALID_PROMPT_VERSION: "실행 이름은 영문·숫자·.-_ 32자 이하입니다.",
       UNKNOWN_PROVIDER: "이 서버에 연결되지 않았거나 등록되지 않은 공급자입니다.",
       UNKNOWN_MODEL: "이 공급자가 허용하지 않은 모델입니다.",
@@ -1303,6 +1304,52 @@ function flowView() {
   return box;
 }
 
+/**
+ * 고른 기록의 변경 내용(이전과 무엇이 달라졌는지 사람이 적는 글). 실행 조건의 달라진 점은 자동으로 나오지만 왜 바꿨는지는
+ * 나오지 않으므로 여기 적는다. 적거나 고치면 서버에 저장하고, 비우면 지운다.
+ */
+function renderNote() {
+  const box = $("#cf-note");
+  const key = state.group;
+  if (!key) return void box.replaceChildren();
+  const note = state.notes[key];
+  if (state.noteEditing !== key) {
+    const edit = element("button", note ? "수정" : "변경 내용 적기", "note-edit");
+    edit.type = "button";
+    edit.addEventListener("click", () => { state.noteEditing = key; renderNote(); });
+    box.replaceChildren(...(note ? [element("span", "변경 내용", "muted"), element("span", note, "record-note-text")] : []), edit);
+    return;
+  }
+  const form = element("form", undefined, "note-form");
+  const input = element("input");
+  input.type = "text";
+  input.maxLength = 300;
+  input.value = note ?? "";
+  input.placeholder = "이전 실행과 무엇이 달라졌는지";
+  input.setAttribute("aria-label", "변경 내용");
+  const save = element("button", "저장");
+  save.type = "submit";
+  const cancel = element("button", "취소", "note-edit");
+  cancel.type = "button";
+  cancel.addEventListener("click", () => { state.noteEditing = null; renderNote(); });
+  form.append(input, save, cancel);
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    try {
+      const saved = await api(`/records/${key}/note`, "PUT", { note: input.value });
+      if (saved?.note) state.notes[key] = saved.note;
+      else delete state.notes[key];
+      state.noteEditing = null;
+      renderNote();
+      render();
+    } catch (error) {
+      $("#cf-status").textContent = error.message;
+    }
+  });
+  box.replaceChildren(form);
+  input.focus();
+}
+
 function renderFilters() {
   const groups = [...new Set(state.runs.map(({ run }) => groupKey(run)))];
   if (!groups.includes(state.group)) {
@@ -1313,6 +1360,7 @@ function renderFilters() {
   select.replaceChildren(...groups.map((key) => Object.assign(element("option", groupLabel(key)), { value: key })));
   select.value = state.group ?? "";
   $("#comparison-detail").replaceChildren(...(state.group ? comparisonDetail(state.group) : []));
+  renderNote();
   const pendingRun = groupRuns(state.group).some(({ run }) => ACTIVE.includes(run.status));
   $("#record-delete").hidden = !state.canDelete;
   $("#record-delete").disabled = !state.group || pendingRun;
@@ -1548,6 +1596,13 @@ function renderCompare() {
     name.style.setProperty("--model", color(model));
     line.append(name, element("span", changes.length ? ` 달라진 조건: ${changes.join(", ")}` : " 조건 같음(코드·프롬프트·설정)",
       changes.length ? "fields-changes" : "muted"));
+    conditions.append(line);
+  });
+
+  [["이전", compare.before], ["이후", compare.after]].forEach(([label, key]) => {
+    if (!state.notes[key]) return;
+    const line = element("p");
+    line.append(element("span", `${label} 변경 내용 `, "muted"), element("span", state.notes[key]));
     conditions.append(line);
   });
 
@@ -2505,6 +2560,7 @@ async function load() {
     state.catalog = await api(`/datasets/${DATASET.id}/catalog`);
     // 기록 삭제는 서버가 허용할 때만 보인다(개발서버처럼 함께 쓰는 서버는 꺼져 있다).
     const capabilities = await api("/capabilities");
+    state.notes = await api("/notes") ?? {};
     state.canDelete = capabilities.recordDelete === true;
     state.runs = baselineLast(runs, capabilities.baselineOrder ?? []);
   } catch (error) {

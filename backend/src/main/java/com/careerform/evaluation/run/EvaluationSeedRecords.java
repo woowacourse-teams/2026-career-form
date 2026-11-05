@@ -28,7 +28,7 @@ public final class EvaluationSeedRecords {
     private static final Logger log = LoggerFactory.getLogger(EvaluationSeedRecords.class);
     private static final String LOCATION = "classpath*:evaluation/seed-records/*.jsonl";
     private static final Set<String> COLLECTIONS = Set.of(MongoRunStore.RUNS, MongoRunStore.PROMPTS,
-        MongoResultStore.RESULTS, MongoScoringStore.SCORINGS);
+        MongoResultStore.RESULTS, MongoScoringStore.SCORINGS, MongoRecordNoteStore.NOTES);
     private static final Set<String> FINISHED = Set.of("COMPLETED", "PARTIAL");
 
     record Line(String collection, Document document) {

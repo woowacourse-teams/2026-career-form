@@ -245,8 +245,14 @@ public class EvaluationConfiguration {
     }
 
     @Bean
-    RunDeletionService evaluationRunDeletionService(RunStore runs, ResultStore results, ScoringStore scorings) {
-        return new RunDeletionService(runs, results, scorings);
+    RunDeletionService evaluationRunDeletionService(RunStore runs, ResultStore results, ScoringStore scorings,
+        com.careerform.evaluation.run.RecordNoteStore notes) {
+        return new RunDeletionService(runs, results, scorings, notes);
+    }
+
+    @Bean
+    com.careerform.evaluation.run.RecordNoteStore evaluationRecordNoteStore(MongoTemplate mongo) {
+        return new com.careerform.evaluation.run.MongoRecordNoteStore(mongo, java.time.Clock.systemUTC());
     }
 
     @Bean

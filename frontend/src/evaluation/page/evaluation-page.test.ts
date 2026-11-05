@@ -227,8 +227,13 @@ const datasetV3 = { ...dataset, cases: dataset.cases.slice(0, 1) };
 // 같은 비교에 모델을 더할 때 쓰는 실행 목록.
 const extraRuns: { run: typeof run; report: typeof report }[] = [];
 
+// 기록 키(비교 ID, 단독 실행이면 실행 ID)별 메모.
+const notes: Record<string, string> = {};
+
 function respond(url: string) {
-  const body = url.includes("/capabilities")
+  const body = url.endsWith("/notes")
+    ? notes
+    : url.includes("/capabilities")
     ? capabilities
     : url.includes("/runs?")
       ? [...extraRuns, { run, report }, { run: baseRun, report: baseReport }]
@@ -868,6 +873,55 @@ describe("AI 평가 화면의 단계 탭", () => {
       capabilities.baselineOrder = [];
       Object.assign(run, { requestedBy: undefined, requestedAt: requested.run });
       Object.assign(baseRun, { requestedBy: undefined, requestedAt: requested.base });
+      await refresh();
+    }
+  });
+
+  it("고른 기록에 이전과 달라진 점을 보이고, 화면에서 적거나 고치면 서버에 저장한다", async () => {
+    const wait = () => new Promise((resolve) => setTimeout(resolve, 0));
+    const refresh = async () => {
+      (document.querySelector("#refresh") as HTMLButtonElement).click();
+      await wait();
+    };
+    const box = () => document.querySelector("#cf-note") as HTMLElement;
+    // 적은 내용이 없으면 적으라는 버튼만 보인다.
+    expect(box().querySelector(".record-note-text")).toBeNull();
+    expect(box().querySelector("button")?.textContent).toBe("변경 내용 적기");
+
+    notes["run-1"] = "5칸씩 나눠 묻기";
+    const original = globalThis.fetch;
+    const sent: { url: string; method?: string; body?: string }[] = [];
+    (globalThis as unknown as { fetch: unknown }).fetch = async (url: string, options?: { method?: string; body?: string }) => {
+      if (options?.method === "PUT") {
+        sent.push({ url, method: options.method, body: options.body });
+        return { ok: true, status: 200, headers: { get: () => "application/json" },
+          json: async () => ({ note: JSON.parse(options.body ?? "{}").note.trim() }) };
+      }
+      return respond(url);
+    };
+    try {
+      await refresh();
+      expect(box().querySelector(".record-note-text")?.textContent).toBe("5칸씩 나눠 묻기");
+
+      (box().querySelector("button") as HTMLButtonElement).click();
+      const input = box().querySelector("input") as HTMLInputElement;
+      expect(input.value).toBe("5칸씩 나눠 묻기");
+      expect(input.maxLength).toBe(300);
+      input.value = " 섹션별로 나눠 5칸씩 묻기 ";
+      (box().querySelector("form") as HTMLFormElement).dispatchEvent(new Event("submit", { cancelable: true }));
+      await wait();
+      expect(sent).toEqual([{ url: "/api/v1/evaluations/records/run-1/note", method: "PUT",
+        body: JSON.stringify({ note: " 섹션별로 나눠 5칸씩 묻기 " }) }]);
+      expect(box().querySelector(".record-note-text")?.textContent).toBe("섹션별로 나눠 5칸씩 묻기");
+      expect(box().querySelector("input")).toBeNull();
+
+      // 전후 비교에도 이후 기록의 변경 내용을 보인다.
+      await openCompare();
+      expect(document.querySelector("#cf-compare .compare-conditions")?.textContent).toContain("섹션별로 나눠 5칸씩 묻기");
+    } finally {
+      (globalThis as unknown as { fetch: unknown }).fetch = original;
+      delete notes["run-1"];
+      (document.querySelector('[data-page="overview"]') as HTMLButtonElement).click();
       await refresh();
     }
   });
