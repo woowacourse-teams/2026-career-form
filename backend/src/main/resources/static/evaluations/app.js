@@ -8,7 +8,7 @@ const COLORS = ["#4e6d90", "#688b7c", "#ac8d68", "#8a6f9e", "#6f8f9e"];
 const PRICE_KEY = "cf-evaluation-model-prices-v1";
 const root = document.getElementById("cf-eval-preview");
 const $ = (selector) => root.querySelector(selector);
-const state = { runs: [], dataset: null, models: [], selected: [], group: null, stage: "total", page: "overview", sort: "model", confidenceMetric: "score",
+const state = { runs: [], dataset: null, models: [], selected: [], group: null, stage: "total", page: "overview", cardSort: {}, confidenceMetric: "score",
   fields: {}, catalog: null, fieldHidden: [], canDelete: false, compare: { before: "", after: "" }, fieldFilter: "diff", fieldScreen: "all", openField: null, itemKind: "GENERIC_FIELDS" };
 let prices = {};
 try { prices = JSON.parse(localStorage.getItem(PRICE_KEY) || "{}") ?? {}; } catch { prices = {}; }
@@ -115,18 +115,31 @@ function latest(model) {
 const percent = (value) => value == null ? null : value * 100;
 const stageKey = () => ({ total: "TOTAL", prepare: "PREPARATION", mapping: "MAPPING" })[state.stage];
 
+const CARD_SORTS = [["model", "모델 순"], ["high", "높은 순"], ["low", "낮은 순"]];
+
 /**
- * 막대 카드. 좋은 순을 켜면 이 카드의 값이 좋은 모델부터 놓는다(값이 없으면 맨 뒤). 좋은 방향은 부제의 "낮을수록"으로 정한다.
- * 줄마다 data-model을 달아, 줄 아래에 설명을 붙이는 쪽이 순서와 무관하게 모델을 찾게 한다. 색은 모델을 따라간다.
+ * 막대 카드. 모델이 둘 이상이면 제목 줄에 이 카드만의 정렬 선택을 두고, 고른 대로 값이 높은(또는 낮은) 모델부터 놓는다(값이 없으면
+ * 맨 뒤). 줄마다 data-model을 달아, 줄 아래에 설명을 붙이는 쪽이 순서와 무관하게 모델을 찾게 한다. 색은 모델을 따라간다.
  */
 function bars(title, sub, values, max, format, foot) {
   const card = element("div", undefined, "metric");
   const head = element("div", undefined, "metric-head");
-  head.append(element("h3", title), element("span", sub, "muted"));
+  const side = element("span", undefined, "metric-side");
+  side.append(element("span", sub, "muted"));
+  head.append(element("h3", title), side);
   card.append(head);
   if (!state.selected.length) card.append(element("div", "비교할 모델 선택 필요.", "empty"));
-  const direction = sub.includes("낮을수록") ? 1 : -1;
-  const models = state.sort !== "value" ? state.selected : [...state.selected].sort((a, b) => {
+  const sort = state.cardSort[title] ?? "model";
+  if (state.selected.length > 1) {
+    const select = element("select", undefined, "card-sort");
+    select.setAttribute("aria-label", `${title} 정렬`);
+    select.append(...CARD_SORTS.map(([value, label]) => Object.assign(element("option", label), { value })));
+    select.value = sort;
+    select.addEventListener("change", () => { state.cardSort[title] = select.value; render(); });
+    side.append(select);
+  }
+  const direction = sort === "low" ? 1 : -1;
+  const models = sort === "model" ? state.selected : [...state.selected].sort((a, b) => {
     const [left, right] = [values(a), values(b)];
     return left == null || right == null ? (left == null) - (right == null) : (left - right) * direction;
   });
@@ -1181,7 +1194,6 @@ function render() {
   $("#cf-compare").hidden = state.page !== "compare";
   root.querySelectorAll("[data-page]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.page === state.page)));
   root.querySelectorAll("[data-stage]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.stage === state.stage)));
-  root.querySelectorAll("[data-sort]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.sort === state.sort)));
   renderProgress();
   renderOverview();
   renderTokens();
@@ -2510,7 +2522,6 @@ async function load() {
 
 root.querySelectorAll("[data-page]").forEach((b) => b.addEventListener("click", () => { state.page = b.dataset.page; render(); }));
 root.querySelectorAll("[data-stage]").forEach((b) => b.addEventListener("click", () => { state.stage = b.dataset.stage; render(); }));
-root.querySelectorAll("[data-sort]").forEach((b) => b.addEventListener("click", () => { state.sort = b.dataset.sort; render(); }));
 $("#comparison").addEventListener("change", async (e) => {
   state.group = e.target.value; state.selected = []; state.openField = null;
   await selectDataset();

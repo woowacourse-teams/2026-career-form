@@ -649,7 +649,8 @@
 #cf-eval-preview .overview-stage .stage{background:#e0e5e4;border-radius:6px;padding:3px}
 #cf-eval-preview .overview-stage .stage button{font-size:13px;padding:6px 14px}
 #cf-eval-preview .overview-stage .muted{font-size:12.5px}
-#cf-eval-preview .overview-stage .sort{margin-left:auto}
+#cf-eval-preview .metric-side{display:flex;align-items:center;gap:8px}
+#cf-eval-preview select.card-sort{font-size:11px;padding:2px 4px;color:#4e5d6d;border-color:#d9ddda;background:transparent}
 #cf-eval-preview .summary-row{display:grid;grid-template-columns:132px minmax(0,1fr);gap:4px 12px;align-items:baseline;margin-top:12px;font-size:13px}
 #cf-eval-preview .summary-row .stage-model{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media(max-width:720px){#cf-eval-preview .summary-row{grid-template-columns:1fr}}

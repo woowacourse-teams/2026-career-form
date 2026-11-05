@@ -872,21 +872,27 @@ describe("AI 평가 화면의 단계 탭", () => {
     }
   });
 
-  it("좋은 순을 누르면 카드마다 그 카드의 값이 좋은 모델부터 놓고, 모델 순을 누르면 되돌린다", async () => {
+  it("막대 카드마다 정렬을 따로 고르고, 한 카드의 정렬이 다른 카드에 영향을 주지 않는다", async () => {
     const refresh = async () => {
       (document.querySelector("#refresh") as HTMLButtonElement).click();
       await new Promise((resolve) => setTimeout(resolve, 0));
     };
-    const rows = (title: string) => {
-      const card = [...document.querySelectorAll("#cf-overview .metric")].find(
+    const cardOf = (title: string) =>
+      [...document.querySelectorAll("#cf-overview .metric")].find(
         (metric) => metric.querySelector("h3")?.textContent === title,
-      );
-      return [...(card?.querySelectorAll(".bar-row") ?? [])].map((row) => row.firstElementChild?.textContent);
-    };
-    const sort = async (key: string) => {
-      (document.querySelector(`#cf-overview-stage [data-sort=${key}]`) as HTMLButtonElement).click();
+      ) as Element;
+    const rows = (title: string) =>
+      [...cardOf(title).querySelectorAll(".bar-row")].map((row) => row.firstElementChild?.textContent);
+    const sort = async (title: string, value: string) => {
+      const select = cardOf(title).querySelector("select.card-sort") as HTMLSelectElement;
+      select.value = value;
+      select.dispatchEvent(new Event("change"));
       await Promise.resolve();
     };
+    // 모델이 하나면 정렬할 것이 없어 정렬 선택을 보이지 않는다.
+    await pick("total");
+    expect(cardOf("자동기입 점수").querySelector("select.card-sort")).toBeNull();
+    expect(document.querySelector("#cf-overview-stage [data-sort]")).toBeNull();
     const original = run.comparisonId;
     (run as { comparisonId: string | null }).comparisonId = "both";
     // 두 번째 모델은 점수가 더 높고(0.95) 더 느리다(9초).
@@ -898,20 +904,30 @@ describe("AI 평가 화면의 단계 탭", () => {
     try {
       await refresh();
       await pick("total");
+      const options = [...cardOf("자동기입 점수").querySelectorAll("select.card-sort option")].map((option) => option.textContent);
+      expect(options).toEqual(["모델 순", "높은 순", "낮은 순"]);
       expect(rows("자동기입 점수")).toEqual(["jev/jev-latest", "openai/gpt"]);
-      await sort("value");
-      // 점수는 높을수록, 시간은 낮을수록 좋다.
+
+      await sort("자동기입 점수", "high");
       expect(rows("자동기입 점수")).toEqual(["openai/gpt", "jev/jev-latest"]);
-      expect(rows("자동기입 시간")).toEqual(["jev/jev-latest", "openai/gpt"]);
       // 막대 아래 설명은 순서가 바뀌어도 그 모델의 값이다.
-      const card = [...document.querySelectorAll("#cf-quality .metric")][0];
-      expect(card.querySelector(".bar-row .number")?.textContent).toBe("95.0%");
-      expect(card.querySelector(".bar-row")?.nextElementSibling?.textContent).toContain("50");
-      expect(document.querySelector("#cf-overview-stage [data-sort=value]")?.getAttribute("aria-pressed")).toBe("true");
-      await sort("model");
+      expect(cardOf("자동기입 점수").querySelector(".bar-row .number")?.textContent).toBe("95.0%");
+      expect(cardOf("자동기입 점수").querySelector(".bar-row")?.nextElementSibling?.textContent).toContain("50");
+      // 다른 카드는 그대로다.
+      expect(rows("자동기입 시간")).toEqual(["jev/jev-latest", "openai/gpt"]);
+
+      await sort("자동기입 시간", "high");
+      expect(rows("자동기입 시간")).toEqual(["openai/gpt", "jev/jev-latest"]);
+      await sort("자동기입 시간", "low");
+      expect(rows("자동기입 시간")).toEqual(["jev/jev-latest", "openai/gpt"]);
+      // 고른 정렬은 다시 그려도 남는다.
+      expect((cardOf("자동기입 점수").querySelector("select.card-sort") as HTMLSelectElement).value).toBe("high");
+
+      await sort("자동기입 점수", "model");
       expect(rows("자동기입 점수")).toEqual(["jev/jev-latest", "openai/gpt"]);
     } finally {
-      await sort("model");
+      await sort("자동기입 점수", "model");
+      await sort("자동기입 시간", "model");
       extraRuns.length = 0;
       (run as { comparisonId: string | null }).comparisonId = original;
       await refresh();
