@@ -975,6 +975,13 @@
 - [제품 기준](topics/product-concept.md)과 [범용 검토 화면의 3단계 표시](topics/generic-review-tiers.md)의 Current를 CF-370 근거로 바꿨다.
 - 실제 지원값, 계정, 세션, 페이지 주소, 대화 전문은 저장하지 않았다.
 
+## [2026-10-30] ingest | CF-356 범용 매칭 모델 평가
+- Approval-Digest: 6781bc8d23ebe68e7f5f6761bf2750f3ffb256efa1df043da66380eff938f546
+- Source-Revision: cce108f
+- 승인한 후보 7개를 [CF-356 bundle](../raw/issues/CF-356/manifest.md)에 기록했다. 채점 방식, 준비 단계 구조와 채점 범위, 수집 경계, 측정 범위, 프롬프트 버전, 실행 운영과 ADR이다.
+- [범용 매칭 모델 평가](topics/generic-matching-model-evaluation.md) topic을 새로 만들었다.
+- 실제 지원값, 계정, 세션, 페이지 주소, 대화 전문은 저장하지 않았다.
+
 ## [2026-11-02] ingest | CF-384 의사결정 AI(JEV) 스크롤 장면과 직접 체험 중심의 하늘색 랜딩
 
 - Approval-Digest: 7775d31086d0d715392cabd90c6f69e7e5d6d8cff7d76bf543855407873a990b
@@ -1040,6 +1047,7 @@
 - Source-Revision: 4fab9205
 - 사전 승인된 후보 2개를 [CF-417 bundle](../raw/issues/CF-417/manifest.md)에 기록했다. 삭제 파일 범위, 단독 커버리지 측정(38개 모두 고유 statement 0), 삭제 뒤 커버리지와 테스트 수, 잃은 회귀 시나리오, 그리고 현대 테스트 간헐 실패의 원인(afterEach 역순)과 `sequence.hooks: list` 수정이다.
 - [프론트 브라우저 테스트](topics/frontend-browser-testing.md)의 Current를 CF-417로 바꾸고 CF-304·CF-178을 History에 남겼다. 다른 topic 문서는 바꾸지 않았다.
+
 ## [2026-11-05] ingest | CF-424 랜딩 화면 고정 장면의 단계별 끝까지 재생
 
 - Approval-Digest: 3b9b97a2d043c27abace35945afdfd658744d1f1284936d895a498b3409d7548
@@ -1053,3 +1061,17 @@
 - Source-Revision: 10d7bf6
 - 승인한 후보 4개를 [CF-427 bundle](../raw/issues/CF-427/manifest.md)에 기록했다. 모바일 판정과 웹스토어 대신 공유하기 동선, AI 장면 좁은 화면 행 높이 맞춤, 알림 장면 실측 쌓기, `.brand img` 특이도로 숨김이 막히는 CSS 규약이다.
 - [랜딩,온보딩 웹 페이지](topics/landing-onboarding.md)의 Current를 CF-427로 바꾸고 CF-424를 History에 남겼다. 다른 topic 문서는 바꾸지 않았다.
+
+## [2026-11-05] ingest | CF-356 범용 매칭 모델 평가 갱신
+- Approval-Digest: c285e0e7eb9262fa98363b50cb41a353738772ee8c5712c751ea3ce0390118b1
+- Source-Revision: 11aff08
+- 승인한 후보 9개를 더해 [CF-356 bundle](../raw/issues/CF-356/manifest.md)을 갱신했다. 대표 채점식, 자동기입 1번과 측정 범위, 실행 사이 흔들림, 데이터셋 v4, 기준 측정, 목록 파일, 자동 평가 조건, 환경 운영, 수집 예외다.
+- [범용 매칭 모델 평가](topics/generic-matching-model-evaluation.md) topic의 현재 상태를 고쳤다.
+- 실제 지원값, 계정, 세션, 페이지 주소, 대화 전문은 저장하지 않았다.
+
+## [2026-11-05] ingest | CF-356 범용 매칭 모델 평가 채점·기준 기록 갱신
+- Approval-Digest: 92fbe1ea992d3e02d38ddbb113d54ee0fe5a4f36643d51ab6b1e4e1cbd2ed17a
+- Source-Revision: e93f9fe
+- 승인한 후보 21개로 [CF-356 bundle](../raw/issues/CF-356/manifest.md)을 갱신했다(3개 갱신, 5개 추가). 칸 매핑만의 자동기입 점수와 점수 분리, 가중치 근거, 저장소 기준 기록 3건, 기록 삭제 비밀번호 재입력, OpenAI enum 한도와 선택지 공유, 평가 기준과 제품 등급 규칙의 차이, 섹션 범주로 선택지를 좁힐 때의 약점, 측정 사이 흔들림, 평가 화면의 기록 표시다.
+- [범용 매칭 모델 평가](topics/generic-matching-model-evaluation.md) topic의 현재 상태를 고쳤다.
+- 실제 지원값, 계정, 세션, 페이지 주소, 대화 전문은 저장하지 않았다.

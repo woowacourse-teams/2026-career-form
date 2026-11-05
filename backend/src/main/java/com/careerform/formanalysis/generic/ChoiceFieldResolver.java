@@ -27,6 +27,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.stereotype.Component;
 
+import com.careerform.formanalysis.application.PromptSource;
 import com.careerform.formanalysis.application.RawLabelMask;
 import com.careerform.formanalysis.application.SupportedProfileFields;
 import com.careerform.formanalysis.application.port.FieldMappingResolver.DerivedRecipe;
@@ -42,15 +43,15 @@ import com.careerform.formanalysis.generic.GenericFieldsResponse.DatePart;
 import com.careerform.formanalysis.generic.GenericFieldsResponse.DatePartBinding;
 import com.careerform.formanalysis.generic.GenericFieldsResponse.NameBinding;
 import com.careerform.formanalysis.infrastructure.InteractionProviderConditions;
-import com.careerform.formanalysis.infrastructure.adapter.jev.JevClient;
+import com.careerform.formanalysis.application.port.ChoiceModel;
 
 /**
- * 섹션 범주 키로 선택지를 좁혀 칸을 JEV answer()로 매칭한다.
+ * 섹션 범주 키로 선택지를 좁혀 칸을 선택 모델 포트의 answer()로 매칭한다(공급자 중립).
  * 섹션 단위 제한 병렬, 섹션 안 배치, 토큰 초과 반분 재시도, 서버 전체 동시 호출 상한을 이 클래스 안에서만 처리한다.
  */
 @Component
 @Conditional(InteractionProviderConditions.JevClient.class)
-public final class JevCategoryFieldResolver {
+public final class ChoiceFieldResolver implements PromptSource {
 
     static final String ABSTAIN_CRITERION =
         "No supported unambiguous applicant profile field, or insufficient de-identified meaning.";
@@ -65,9 +66,19 @@ public final class JevCategoryFieldResolver {
             + "only for the family name or only for the given name takes that single name field. Only fields of "
             + "the same section's direct fields or the same repeated Item row are siblings; do not pair names "
             + "across rows or sections. Field count alone does not distinguish a whole name from a partial name.";
-    private static final Logger log = LoggerFactory.getLogger(JevCategoryFieldResolver.class);
+    static final String ENGLISH_FAMILY_ONLY_CRITERION = "Applicant profile field personal.personal.englishFamilyName"
+        + "; choose it only for a field that asks for the family name alone";
+    static final String ENGLISH_GIVEN_ONLY_CRITERION = "Applicant profile field personal.personal.englishGivenName"
+        + "; choose it only for a field that asks for the given name alone";
+    static final String ENGLISH_GIVEN_FIRST_CRITERION =
+        "Whole English name, only with explicit GIVEN_FIRST evidence; otherwise ABSTAIN.";
+    static final String ENGLISH_FAMILY_FIRST_CRITERION =
+        "Whole English name, only with explicit FAMILY_FIRST evidence; otherwise ABSTAIN.";
+    private static final List<String> NAME_RECIPES =
+        List.of("KOREAN_FULL_NAME", "ENGLISH_FULL_NAME_GIVEN_FIRST", "ENGLISH_FULL_NAME_FAMILY_FIRST");
+    private static final Logger log = LoggerFactory.getLogger(ChoiceFieldResolver.class);
 
-    private final JevClient client;
+    private final ChoiceModel client;
     private final SupportedProfileFields fields;
     private final SectionCategories categories;
     private final int sectionConcurrency;
@@ -76,8 +87,8 @@ public final class JevCategoryFieldResolver {
     private final long permitTimeoutMs;
 
     @Autowired
-    public JevCategoryFieldResolver(
-        JevClient client,
+    public ChoiceFieldResolver(
+        ChoiceModel client,
         SupportedProfileFields fields,
         SectionCategories categories,
         @Value("${career-form.analysis.jev.section-concurrency:3}") int sectionConcurrency,
@@ -88,8 +99,8 @@ public final class JevCategoryFieldResolver {
         this(client, fields, categories, sectionConcurrency, fieldBatchSize, permits(maxConcurrent), permitTimeoutMs);
     }
 
-    JevCategoryFieldResolver(
-        JevClient client,
+    ChoiceFieldResolver(
+        ChoiceModel client,
         SupportedProfileFields fields,
         SectionCategories categories,
         int sectionConcurrency,
@@ -109,6 +120,24 @@ public final class JevCategoryFieldResolver {
         this.permitTimeoutMs = permitTimeoutMs;
     }
 
+    /**
+     * 평가 실행용 배치 설정 사본. 클라이언트, 선택지, 서버 전체 동시 호출 상한(같은 Semaphore)과
+     * 대기 시간은 원본과 공유하고 섹션 병렬 수와 배치 크기만 바꾼다.
+     */
+    public ChoiceFieldResolver withBatching(int sectionConcurrency, int fieldBatchSize) {
+        return new ChoiceFieldResolver(client, fields, categories, sectionConcurrency, fieldBatchSize, permits,
+            permitTimeoutMs);
+    }
+
+    /**
+     * 평가 실행용 공급자 사본. 질문 구성, 배치, 동시 호출 상한(같은 Semaphore)과 대기 시간은 원본과 같고
+     * 모델 호출만 {@code model}로 보낸다.
+     */
+    public ChoiceFieldResolver withModel(ChoiceModel model, int sectionConcurrency, int fieldBatchSize) {
+        return new ChoiceFieldResolver(model, fields, categories, sectionConcurrency, fieldBatchSize, permits,
+            permitTimeoutMs);
+    }
+
     public record Mapping(String profileFieldKey, double confidence, boolean categoryConfirmed, Reason reason,
         Binding binding) {
 
@@ -117,7 +146,7 @@ public final class JevCategoryFieldResolver {
         }
     }
 
-    public record Resolution(Map<String, Mapping> mappings, int jevCalls) {
+    public record Resolution(Map<String, Mapping> mappings, int modelCalls) {
 
         public Resolution {
             mappings = Map.copyOf(mappings);
@@ -135,7 +164,7 @@ public final class JevCategoryFieldResolver {
             }
         }
         Map<String, Mapping> mappings = new ConcurrentHashMap<>();
-        AtomicInteger jevCalls = new AtomicInteger();
+        AtomicInteger modelCalls = new AtomicInteger();
         int workers = Math.min(sectionConcurrency, queue.size());
         try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
             List<Future<?>> running = new ArrayList<>();
@@ -143,7 +172,7 @@ public final class JevCategoryFieldResolver {
                 running.add(executor.submit(() -> {
                     SectionWork next;
                     while ((next = queue.poll()) != null) {
-                        mappings.putAll(resolveSection(next, jevCalls));
+                        mappings.putAll(resolveSection(next, modelCalls));
                     }
                 }));
             }
@@ -151,16 +180,16 @@ public final class JevCategoryFieldResolver {
                 await(future);
             }
         }
-        return new Resolution(mappings, jevCalls.get());
+        return new Resolution(mappings, modelCalls.get());
     }
 
-    private Map<String, Mapping> resolveSection(SectionWork work, AtomicInteger jevCalls) {
-        Map<String, JevClient.Judgement> answers = new HashMap<>();
+    private Map<String, Mapping> resolveSection(SectionWork work, AtomicInteger modelCalls) {
+        Map<String, ChoiceModel.Judgement> answers = new HashMap<>();
         try {
             for (int start = 0; start < work.questions().size(); start += fieldBatchSize) {
                 List<Question> batch = List.copyOf(work.questions()
                     .subList(start, Math.min(start + fieldBatchSize, work.questions().size())));
-                ask(work, batch, answers, jevCalls);
+                ask(work, batch, answers, modelCalls);
             }
         }
         catch (ResolverException | PermitUnavailable exception) {
@@ -173,12 +202,12 @@ public final class JevCategoryFieldResolver {
         }
         Map<String, Mapping> mappings = new LinkedHashMap<>();
         work.assignment().forEach((candidateId, questionId) -> {
-            JevClient.Judgement judgement = answers.get(questionId);
+            ChoiceModel.Judgement judgement = answers.get(questionId);
             if (judgement == null) {
                 mappings.put(candidateId, new Mapping(null, 0.0, work.confirmed(), null));
                 return;
             }
-            String key = JevClient.ABSTAIN.equals(judgement.choice()) ? null : judgement.choice();
+            String key = ChoiceModel.ABSTAIN.equals(judgement.choice()) ? null : judgement.choice();
             Binding binding = key == null ? null : work.bindings().get(key);
             if (binding instanceof NameBinding) {
                 key = null;
@@ -196,23 +225,23 @@ public final class JevCategoryFieldResolver {
     }
 
     /** 토큰 한도를 넘으면 배치를 반으로 나누고, 질문 1개도 넘으면 축소 state로 1회만 다시 묻는다. */
-    private void ask(SectionWork work, List<Question> batch, Map<String, JevClient.Judgement> answers,
-        AtomicInteger jevCalls) {
+    private void ask(SectionWork work, List<Question> batch, Map<String, ChoiceModel.Judgement> answers,
+        AtomicInteger modelCalls) {
         try {
-            answers.putAll(call(work, batch, state(work, work.questions(), false), jevCalls));
+            answers.putAll(call(work, batch, state(work, work.questions(), false), modelCalls));
         }
         catch (TokenLimitExceeded exceeded) {
             if (batch.size() > 1) {
                 int half = (batch.size() + 1) / 2;
                 log.warn("GENERIC_FIELDS_TOKEN_LIMIT_SPLIT questions={} halves={}+{}",
                     batch.size(), half, batch.size() - half);
-                ask(work, batch.subList(0, half), answers, jevCalls);
-                ask(work, batch.subList(half, batch.size()), answers, jevCalls);
+                ask(work, batch.subList(0, half), answers, modelCalls);
+                ask(work, batch.subList(half, batch.size()), answers, modelCalls);
                 return;
             }
             log.warn("GENERIC_FIELDS_TOKEN_LIMIT_REDUCED_STATE_RETRY questions=1 stateFields=1");
             try {
-                answers.putAll(call(work, batch, state(work, batch, true), jevCalls));
+                answers.putAll(call(work, batch, state(work, batch, true), modelCalls));
             }
             catch (TokenLimitExceeded again) {
                 log.warn("GENERIC_FIELDS_TOKEN_LIMIT_NULL_MAPPING questions=1");
@@ -220,11 +249,11 @@ public final class JevCategoryFieldResolver {
         }
     }
 
-    private Map<String, JevClient.Judgement> call(SectionWork work, List<Question> batch, Map<String, Object> state,
-        AtomicInteger jevCalls) {
-        Map<String, JevClient.Choice> questions = new LinkedHashMap<>();
+    private Map<String, ChoiceModel.Judgement> call(SectionWork work, List<Question> batch, Map<String, Object> state,
+        AtomicInteger modelCalls) {
+        Map<String, ChoiceModel.Question> questions = new LinkedHashMap<>();
         batch.forEach(question -> questions.put(question.id(),
-            new JevClient.Choice(instructions(question.id()), work.criteria())));
+            new ChoiceModel.Question(instructions(question.id()), work.criteria())));
         try {
             if (!permits.tryAcquire(permitTimeoutMs, TimeUnit.MILLISECONDS)) {
                 throw new PermitUnavailable();
@@ -235,12 +264,48 @@ public final class JevCategoryFieldResolver {
             throw new PermitUnavailable();
         }
         try {
-            jevCalls.incrementAndGet();
+            modelCalls.incrementAndGet();
             return client.answer(state, questions);
         }
         finally {
             permits.release();
         }
+    }
+
+    static String fullNameCriterion(String recipe) {
+        return "Explicit combined full-name target using this exact order: " + recipe;
+    }
+
+    static String datePartCriterion(String key, DatePart part) {
+        return "Select only the " + part + " component of applicant date field " + key;
+    }
+
+    @Override
+    public String promptSourceId() {
+        return "generic-fields";
+    }
+
+    @Override
+    public Map<String, String> promptParts() {
+        Map<String, String> parts = new java.util.TreeMap<>();
+        parts.put("instructions", instructions(QUESTION_ID_PLACEHOLDER));
+        parts.put("confusionBoundaries", fields.promptGuidance());
+        parts.put("englishNameGuidance", ENGLISH_NAME_GUIDANCE);
+        parts.put("criterion.ABSTAIN", ABSTAIN_CRITERION);
+        parts.put("criterion.englishFamilyName.alone", ENGLISH_FAMILY_ONLY_CRITERION);
+        parts.put("criterion.englishGivenName.alone", ENGLISH_GIVEN_ONLY_CRITERION);
+        parts.put("criterion.ENGLISH_FULL_NAME_GIVEN_FIRST.evidence", ENGLISH_GIVEN_FIRST_CRITERION);
+        parts.put("criterion.ENGLISH_FULL_NAME_FAMILY_FIRST.evidence", ENGLISH_FAMILY_FIRST_CRITERION);
+        NAME_RECIPES.forEach(recipe -> parts.put("criterion." + recipe, fullNameCriterion(recipe)));
+        for (String key : fields.keys()) {
+            parts.put("criterion." + key, GenericProfileSemantics.describe(key));
+            if (fields.isDateField(key)) {
+                for (DatePart part : DatePart.values()) {
+                    parts.put("criterion.DATE_PART:" + key + ":" + part, datePartCriterion(key, part));
+                }
+            }
+        }
+        return parts;
     }
 
     static String instructions(String questionId) {
@@ -288,28 +353,23 @@ public final class JevCategoryFieldResolver {
         }
         String nameGuidance = "";
         if (bindings.containsKey("ENGLISH_FULL_NAME_GIVEN_FIRST")) {
-            criteria.put("personal.personal.englishFamilyName", "Applicant profile field personal.personal.englishFamilyName"
-                + "; choose it only for a field that asks for the family name alone");
-            criteria.put("personal.personal.englishGivenName", "Applicant profile field personal.personal.englishGivenName"
-                + "; choose it only for a field that asks for the given name alone");
+            criteria.put("personal.personal.englishFamilyName", ENGLISH_FAMILY_ONLY_CRITERION);
+            criteria.put("personal.personal.englishGivenName", ENGLISH_GIVEN_ONLY_CRITERION);
             nameGuidance = ENGLISH_NAME_GUIDANCE;
         }
-        bindings.keySet().forEach(recipe -> criteria.put(recipe,
-            "Explicit combined full-name target using this exact order: " + recipe));
+        bindings.keySet().forEach(recipe -> criteria.put(recipe, fullNameCriterion(recipe)));
         if (!nameGuidance.isEmpty()) {
-            criteria.put("ENGLISH_FULL_NAME_GIVEN_FIRST",
-                "Whole English name, only with explicit GIVEN_FIRST evidence; otherwise ABSTAIN.");
-            criteria.put("ENGLISH_FULL_NAME_FAMILY_FIRST",
-                "Whole English name, only with explicit FAMILY_FIRST evidence; otherwise ABSTAIN.");
+            criteria.put("ENGLISH_FULL_NAME_GIVEN_FIRST", ENGLISH_GIVEN_FIRST_CRITERION);
+            criteria.put("ENGLISH_FULL_NAME_FAMILY_FIRST", ENGLISH_FAMILY_FIRST_CRITERION);
         }
         keys.stream().filter(fields::isDateField).forEach(key -> {
             for (DatePart part : DatePart.values()) {
                 String id = "DATE_PART:" + key + ":" + part;
                 bindings.put(id, new DatePartBinding(part));
-                criteria.put(id, "Select only the " + part + " component of applicant date field " + key);
+                criteria.put(id, datePartCriterion(key, part));
             }
         });
-        criteria.put(JevClient.ABSTAIN, ABSTAIN_CRITERION);
+        criteria.put(ChoiceModel.ABSTAIN, ABSTAIN_CRITERION);
 
         Map<String, Object> context = new LinkedHashMap<>();
         text(context, "label", section.displayName());
@@ -578,7 +638,7 @@ public final class JevCategoryFieldResolver {
     private static final class PermitUnavailable extends RuntimeException {
 
         PermitUnavailable() {
-            super("JEV 동시 호출 상한 대기 시간을 넘었습니다", null, false, false);
+            super("모델 동시 호출 상한 대기 시간을 넘었습니다", null, false, false);
         }
     }
 }

@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "profile": {
+    "personal": {
+      "koreanFamilyName": "박",
+      "koreanGivenName": "새봄",
+      "englishFamilyName": "PARK",
+      "englishGivenName": "SAEBOM",
+      "birthDate": "2005-02-23",
+      "nationality": "대한민국"
+    },
+    "contact": {
+      "email": "cf.synthetic.03@example.com"
+    },
+    "compensation": {},
+    "military": {},
+    "veteran": {},
+    "disability": {},
+    "education": [
+      {
+        "id": "p03-ged",
+        "sectionId": "highSchool",
+        "values": {
+          "academicProcess": "대입 검정고시",
+          "qualificationPassDate": "2023-08-29"
+        }
+      }
+    ],
+    "languages": [],
+    "certifications": [],
+    "careers": [],
+    "projects": [
+      {
+        "id": "p03-project",
+        "sectionId": "project",
+        "values": {
+          "startDate": "2026-08-01",
+          "projectName": "합성 동네 공구 대여",
+          "role": "개인 프로젝트 개발",
+          "activityDetails": "평가용 가상 활동. 공구 목록과 대여 신청을 구현하고 있다."
+        }
+      }
+    ],
+    "publications": [],
+    "health": []
+  }
+}

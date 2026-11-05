@@ -23,6 +23,7 @@ import jakarta.servlet.http.HttpServletResponse;
 public final class QualityApiFilter extends OncePerRequestFilter {
     private static final String PREFIX = "/api/v1/quality";
     private static final String NOTIFICATION_ADMIN_PREFIX = "/api/v1/notifications/admin";
+    private static final String EVALUATION_PREFIX = "/api/v1/evaluations";
     private final QualityAccess access;
 
     public QualityApiFilter(QualityAccess access) { this.access = access; }
@@ -33,12 +34,14 @@ public final class QualityApiFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         var path = request.getRequestURI();
-        return !path.startsWith(PREFIX + "/") && !path.startsWith(NOTIFICATION_ADMIN_PREFIX + "/") && !path.equals(NOTIFICATION_ADMIN_PREFIX) && !managementPage(path);
+        return !path.startsWith(PREFIX + "/") && !path.startsWith(NOTIFICATION_ADMIN_PREFIX + "/") && !path.equals(NOTIFICATION_ADMIN_PREFIX)
+            && !path.startsWith(EVALUATION_PREFIX + "/") && !path.equals(EVALUATION_PREFIX) && !managementPage(path);
     }
 
-    /** 품질 확인 목록과 공고 알림 관리 화면은 같은 공용 비밀번호 로그인 틀을 쓴다. */
+    /** 품질 확인 목록, 공고 알림 관리 화면, AI 평가 화면은 같은 공용 비밀번호 로그인 틀을 쓴다. */
     private static boolean managementPage(String path) {
-        return path.equals("/quality") || path.startsWith("/quality/") || path.equals("/notifications") || path.startsWith("/notifications/");
+        return path.equals("/quality") || path.startsWith("/quality/") || path.equals("/notifications") || path.startsWith("/notifications/")
+            || path.equals("/evaluations") || path.startsWith("/evaluations/");
     }
 
     @Override

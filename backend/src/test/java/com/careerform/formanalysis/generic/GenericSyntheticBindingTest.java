@@ -187,7 +187,7 @@ class GenericSyntheticBindingTest {
     }
 
     private GenericFieldsService service() {
-        return new GenericFieldsService(Optional.of(new JevCategoryFieldResolver(
+        return new GenericFieldsService(Optional.of(new ChoiceFieldResolver(
             client(http), FIELDS, CATEGORIES, 3, 5, 10, 8000)), new FormAnalysisRouter(POLICIES),
             new FieldInteractionPolicy(), FIELDS);
     }

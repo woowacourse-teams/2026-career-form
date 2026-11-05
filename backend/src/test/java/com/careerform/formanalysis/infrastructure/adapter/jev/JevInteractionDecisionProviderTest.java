@@ -68,14 +68,14 @@ class JevInteractionDecisionProviderTest {
                 List.of(button("c2_1")))));
 
         assertThat(captured.questions().get("d1").criteria()).containsExactlyInAnyOrderEntriesOf(Map.of(
-            JevClient.ABSTAIN, JevInteractionDecisionProvider.REPEAT_ADD_ABSTAIN_CRITERION,
-            "c1_1", JevInteractionDecisionProvider.REPEAT_ADD_CRITERION,
-            "c1_2", JevInteractionDecisionProvider.REPEAT_ADD_CRITERION));
+            JevClient.ABSTAIN, com.careerform.formanalysis.generic.ChoiceInteractionDecisions.REPEAT_ADD_ABSTAIN_CRITERION,
+            "c1_1", com.careerform.formanalysis.generic.ChoiceInteractionDecisions.REPEAT_ADD_CRITERION,
+            "c1_2", com.careerform.formanalysis.generic.ChoiceInteractionDecisions.REPEAT_ADD_CRITERION));
         assertThat(captured.questions().get("d2").criteria()).containsExactlyInAnyOrderEntriesOf(Map.of(
-            JevClient.ABSTAIN, JevInteractionDecisionProvider.SECTION_REVEAL_ABSTAIN_CRITERION,
-            "c2_1", JevInteractionDecisionProvider.SECTION_REVEAL_CRITERION));
-        assertThat(JevInteractionDecisionProvider.REPEAT_ADD_CRITERION).startsWith("ADD:");
-        assertThat(JevInteractionDecisionProvider.SECTION_REVEAL_CRITERION).startsWith("REVEAL:");
+            JevClient.ABSTAIN, com.careerform.formanalysis.generic.ChoiceInteractionDecisions.SECTION_REVEAL_ABSTAIN_CRITERION,
+            "c2_1", com.careerform.formanalysis.generic.ChoiceInteractionDecisions.SECTION_REVEAL_CRITERION));
+        assertThat(com.careerform.formanalysis.generic.ChoiceInteractionDecisions.REPEAT_ADD_CRITERION).startsWith("ADD:");
+        assertThat(com.careerform.formanalysis.generic.ChoiceInteractionDecisions.SECTION_REVEAL_CRITERION).startsWith("REVEAL:");
         assertThat(captured.result().results()).containsExactly(
             new InteractionDecisionProvider.Selected("d1", Role.REPEAT_ADD, "c1_2"),
             new InteractionDecisionProvider.Abstained("d2", Role.SECTION_REVEAL));
@@ -95,9 +95,9 @@ class JevInteractionDecisionProviderTest {
             String id = "d" + (kind.ordinal() + 1);
             var question = captured.questions().get(id);
             assertThat(question.criteria()).containsExactlyInAnyOrderEntriesOf(Map.of(
-                JevClient.ABSTAIN, JevInteractionDecisionProvider.rowKindAbstainCriterion(kind),
-                "c" + (kind.ordinal() + 1) + "_1", JevInteractionDecisionProvider.rowKindCriterion(kind),
-                "c" + (kind.ordinal() + 1) + "_2", JevInteractionDecisionProvider.rowKindCriterion(kind)));
+                JevClient.ABSTAIN, com.careerform.formanalysis.generic.ChoiceInteractionDecisions.rowKindAbstainCriterion(kind),
+                "c" + (kind.ordinal() + 1) + "_1", com.careerform.formanalysis.generic.ChoiceInteractionDecisions.rowKindCriterion(kind),
+                "c" + (kind.ordinal() + 1) + "_2", com.careerform.formanalysis.generic.ChoiceInteractionDecisions.rowKindCriterion(kind)));
         }
         assertThat(captured.result().results()).contains(
             new InteractionDecisionProvider.Selected("d4", Role.ROW_KIND_OPTION, "c4_2"),

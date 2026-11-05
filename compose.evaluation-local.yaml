@@ -1,0 +1,46 @@
+# AI 평가 화면을 이 체크아웃의 코드로 로컬에서 띄운다. scripts/evaluation_local.py가 값을 채워 실행한다.
+# 시크릿(JEV·OpenAI 키)은 .env.local에서 읽고, 평가 기록은 로컬 MongoDB 볼륨에만 남는다.
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: career-form-backend:evaluation-local
+    env_file:
+      - ${CF_EVAL_ENV_FILE:?.env.local 경로가 필요합니다}
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      SPRING_MONGODB_URI: mongodb://mongodb:27017/career-form
+      CAREER_FORM_QUALITY_ENABLED: "true"
+      CAREER_FORM_QUALITY_PASSWORD_HASH: ${CF_EVAL_PASSWORD_HASH:?품질 비밀번호 해시가 필요합니다}
+      CAREER_FORM_QUALITY_VERSION: ${CF_EVAL_CODE_VERSION:-UNKNOWN}
+      CAREER_FORM_EVALUATION_ENABLED: "true"
+      # false로 두면 개발서버처럼 삭제할 때 로그인 비밀번호를 다시 묻는다.
+      CAREER_FORM_EVALUATION_RECORD_DELETE_ENABLED: ${CF_EVAL_RECORD_DELETE:-true}
+      CAREER_FORM_EVALUATION_AUTO_RUN_ENABLED: ${CF_EVAL_AUTO_RUN:-false}
+      # 기준 기록을 다시 측정할 때만 false로 둔다. 저장소에 담은 기록이 먼저 들어가면 같은 이름이 겹친다.
+      CAREER_FORM_EVALUATION_SEED_RECORDS_ENABLED: ${CF_EVAL_SEED_RECORDS:-true}
+      CAREER_FORM_EVALUATION_MAX_MODEL_CALLS: ${CF_EVAL_MAX_MODEL_CALLS:-200}
+      # OPENAI_API_KEY가 .env.local에 있으면 평가 공급자 목록에 openai가 생긴다.
+      CAREER_FORM_EVALUATION_OPENAI_ENABLED: "true"
+      CAREER_FORM_EVALUATION_OPENAI_MODELS: ${CF_EVAL_OPENAI_MODELS:-gpt-6-luna}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${CF_EVAL_PORT:-18090}:8080"
+  mongodb:
+    image: mongo:8.0-noble
+    expose:
+      - "27017"
+    volumes:
+      - evaluation-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "quit(db.adminCommand({ ping: 1 }).ok ? 0 : 1)"]
+      start_period: 10s
+      interval: 5s
+      timeout: 5s
+      retries: 10
+volumes:
+  evaluation-data:
+    name: ${CF_EVAL_DATA_VOLUME:-career-form-evaluation-data}

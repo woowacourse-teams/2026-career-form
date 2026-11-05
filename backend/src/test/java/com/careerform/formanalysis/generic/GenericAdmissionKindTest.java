@@ -23,7 +23,7 @@ import com.careerform.formanalysis.generic.GenericFieldsRequest.Option;
 import com.careerform.formanalysis.generic.GenericFieldsRequest.SemanticContext;
 import com.careerform.formanalysis.generic.GenericFieldsRequest.Visibility;
 import com.careerform.formanalysis.generic.GenericFieldsRequest.WriteCommand;
-import com.careerform.formanalysis.generic.JevCategoryFieldResolver.Mapping;
+import com.careerform.formanalysis.generic.ChoiceFieldResolver.Mapping;
 
 /** 입학·편입 두 선택지만 가진 입학구분 선택칸은 같은 섹션의 학력 기록(대학교·대학원)으로 편입유무·입학유형을 정한다. */
 class GenericAdmissionKindTest {
@@ -155,8 +155,8 @@ class GenericAdmissionKindTest {
             new GenericFieldsRequest.Site("example.test", "/apply"),
             List.of(GenericFieldsJevHttp.section("edu", category, fields)),
             List.of(WriteCommand.SET_TEXT, WriteCommand.SELECT_OPTION));
-        var resolver = mock(JevCategoryFieldResolver.class);
-        when(resolver.resolve(request)).thenReturn(new JevCategoryFieldResolver.Resolution(mappings, 1));
+        var resolver = mock(ChoiceFieldResolver.class);
+        when(resolver.resolve(request)).thenReturn(new ChoiceFieldResolver.Resolution(mappings, 1));
         return new GenericFieldsService(Optional.of(resolver),
             new FormAnalysisRouter((host, path) -> new CompanyFormPolicyProvider.NotRegistered()),
             new FieldInteractionPolicy(), new SupportedProfileFields()).analyze(request);

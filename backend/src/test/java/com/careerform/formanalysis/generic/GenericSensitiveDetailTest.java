@@ -23,7 +23,7 @@ import com.careerform.formanalysis.generic.GenericFieldsRequest.Option;
 import com.careerform.formanalysis.generic.GenericFieldsRequest.SemanticContext;
 import com.careerform.formanalysis.generic.GenericFieldsRequest.Visibility;
 import com.careerform.formanalysis.generic.GenericFieldsRequest.WriteCommand;
-import com.careerform.formanalysis.generic.JevCategoryFieldResolver.Mapping;
+import com.careerform.formanalysis.generic.ChoiceFieldResolver.Mapping;
 
 /** 보훈·장애 여부를 고르면 나타나는 상세 선택칸을 라벨로 판정한다. */
 class GenericSensitiveDetailTest {
@@ -106,8 +106,8 @@ class GenericSensitiveDetailTest {
             new GenericFieldsRequest.Site("example.test", "/apply"),
             List.of(GenericFieldsJevHttp.section("sensitive", "SENSITIVE", fields)),
             List.of(WriteCommand.SET_TEXT, WriteCommand.SELECT_OPTION));
-        var resolver = mock(JevCategoryFieldResolver.class);
-        when(resolver.resolve(request)).thenReturn(new JevCategoryFieldResolver.Resolution(mappings, 1));
+        var resolver = mock(ChoiceFieldResolver.class);
+        when(resolver.resolve(request)).thenReturn(new ChoiceFieldResolver.Resolution(mappings, 1));
         return new GenericFieldsService(Optional.of(resolver),
             new FormAnalysisRouter((host, path) -> new CompanyFormPolicyProvider.NotRegistered()),
             new FieldInteractionPolicy(), new SupportedProfileFields()).analyze(request);

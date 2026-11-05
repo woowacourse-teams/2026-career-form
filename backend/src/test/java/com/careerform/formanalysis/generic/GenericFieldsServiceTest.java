@@ -149,7 +149,7 @@ class GenericFieldsServiceTest {
     }
 
     private GenericFieldsService service(CompanyFormPolicyProvider policies) {
-        var resolver = new JevCategoryFieldResolver(GenericFieldsJevHttp.client(http), FIELDS, CATEGORIES, 3, 5, 10,
+        var resolver = new ChoiceFieldResolver(GenericFieldsJevHttp.client(http), FIELDS, CATEGORIES, 3, 5, 10,
             8000);
         return new GenericFieldsService(Optional.of(resolver), new FormAnalysisRouter(policies),
             new FieldInteractionPolicy(), new SupportedProfileFields());

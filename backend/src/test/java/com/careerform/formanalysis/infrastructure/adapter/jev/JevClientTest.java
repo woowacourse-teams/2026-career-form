@@ -285,6 +285,21 @@ class JevClientTest {
     }
 
     @Test
+    void tokenLimitAttemptIsRecordedApartFromOtherHttpErrors() throws Exception {
+        var http = new FixedResponseHttpClient(List.of(Map.entry(400, "{\"error_type\":\"max_tokens_exceeded\"}")));
+        var seen = new ArrayList<com.careerform.monitoring.ModelCallRecording.Attempt>();
+
+        assertThatThrownBy(() -> com.careerform.monitoring.ModelCallRecording.within(seen::add,
+            () -> answerClient(http, new ArrayList<>()).answer("safe-state", questions())))
+            .isInstanceOf(TokenLimitExceeded.class);
+
+        assertThat(seen).singleElement().satisfies(attempt -> {
+            assertThat(attempt.outcome()).isEqualTo(com.careerform.monitoring.ModelCallRecording.Outcome.TOKEN_LIMIT);
+            assertThat(attempt.httpStatus()).isEqualTo(400);
+        });
+    }
+
+    @Test
     void answerSurfacesTokenLimitWithoutLoggingTheProviderBody(CapturedOutput output) throws Exception {
         var http = new FixedResponseHttpClient(List.of(
             Map.entry(400, "{\"error_type\":\"max_tokens_exceeded\",\"detail\":\"" + SECRET + "\"}")));
@@ -391,6 +406,73 @@ class JevClientTest {
         assertThatThrownBy(() -> client.choose("safe-state", questions()))
             .isExactlyInstanceOf(ResolverException.class)
             .hasMessage("Jev 분석 응답을 사용할 수 없습니다");
+    }
+
+    @Test
+    void answerRecordsTimeTokensAndModelInsideRecordingScope() throws Exception {
+        var http = new FixedResponseHttpClient(choiceBody(0.9, 0.9, 0.1));
+        var seen = new ArrayList<com.careerform.monitoring.ModelCallRecording.Attempt>();
+
+        var answers = com.careerform.monitoring.ModelCallRecording.within(seen::add,
+            () -> answerClient(http, new ArrayList<>()).answer("safe-state", questions()));
+
+        assertThat(answers.get("decision").choice()).isEqualTo("candidate");
+        assertThat(seen).singleElement().satisfies(attempt -> {
+            assertThat(attempt.provider()).isEqualTo("jev");
+            assertThat(attempt.operation()).isEqualTo("answer");
+            assertThat(attempt.httpStatus()).isEqualTo(200);
+            assertThat(attempt.outcome()).isEqualTo(com.careerform.monitoring.ModelCallRecording.Outcome.SUCCESS);
+            assertThat(attempt.inputTokens()).isEqualTo(1L);
+            assertThat(attempt.outputTokens()).isEqualTo(1L);
+            assertThat(attempt.observedModel()).isEqualTo("jev-test");
+            assertThat(attempt.durationNanos()).isNotNegative();
+        });
+    }
+
+    @Test
+    void answerRecordsEachRateLimitAttemptWithUnknownTokens() throws Exception {
+        var http = new FixedResponseHttpClient(List.of(
+            Map.entry(429, "{}"), Map.entry(200, choiceBody(0.9, 0.9, 0.1))));
+        var seen = new ArrayList<com.careerform.monitoring.ModelCallRecording.Attempt>();
+
+        com.careerform.monitoring.ModelCallRecording.within(seen::add,
+            () -> answerClient(http, new ArrayList<>()).answer("safe-state", questions()));
+
+        assertThat(seen).hasSize(2);
+        assertThat(seen.get(0).httpStatus()).isEqualTo(429);
+        assertThat(seen.get(0).outcome()).isEqualTo(com.careerform.monitoring.ModelCallRecording.Outcome.HTTP_ERROR);
+        assertThat(seen.get(0).inputTokens()).isNull();
+        assertThat(seen.get(0).outputTokens()).isNull();
+        assertThat(seen.get(1).outcome()).isEqualTo(com.careerform.monitoring.ModelCallRecording.Outcome.SUCCESS);
+    }
+
+    @Test
+    void answerKeepsObservedUsageOfAnInvalidAnswer() throws Exception {
+        var http = new FixedResponseHttpClient(choiceBody(0.9, 0.5, 0.1));
+        var seen = new ArrayList<com.careerform.monitoring.ModelCallRecording.Attempt>();
+
+        assertThatThrownBy(() -> com.careerform.monitoring.ModelCallRecording.within(seen::add,
+            () -> answerClient(http, new ArrayList<>()).answer("safe-state", questions())))
+            .isInstanceOf(ResolverException.class);
+
+        assertThat(seen).singleElement().satisfies(attempt -> {
+            assertThat(attempt.outcome()).isEqualTo(com.careerform.monitoring.ModelCallRecording.Outcome.INVALID_RESPONSE);
+            assertThat(attempt.inputTokens()).isEqualTo(1L);
+        });
+    }
+
+    @Test
+    void chooseRecordsItsAttemptAndNothingIsRecordedOutsideScope() throws Exception {
+        var seen = new ArrayList<com.careerform.monitoring.ModelCallRecording.Attempt>();
+        JevClient client = clientWith(choiceBody(0.9, 0.9, 0.1));
+
+        com.careerform.monitoring.ModelCallRecording.within(seen::add, () -> client.choose("safe-state", questions()));
+        client.choose("safe-state", questions());
+
+        assertThat(seen).singleElement().satisfies(attempt -> {
+            assertThat(attempt.operation()).isEqualTo("choose");
+            assertThat(attempt.outcome()).isEqualTo(com.careerform.monitoring.ModelCallRecording.Outcome.SUCCESS);
+        });
     }
 
     private static String choiceBody(double confidence, double candidate, double abstain) {

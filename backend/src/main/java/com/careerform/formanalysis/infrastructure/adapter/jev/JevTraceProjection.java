@@ -79,8 +79,8 @@ final class JevTraceProjection {
                 instruction = JevActionResolver.instructions(alias);
             else if (stage.equals("interaction") && tree.has(id) && tree.get(id).has("role")) {
                 String role = ProviderTraceProjection.role(tree.get(id).get("role").asString());
-                if (!role.equals("UNRECOGNIZED_ROLE") && JevInteractionDecisionProvider.instructions(role, id).equals(question.instructions()))
-                    instruction = JevInteractionDecisionProvider.instructions(role, alias);
+                if (!role.equals("UNRECOGNIZED_ROLE") && com.careerform.formanalysis.generic.ChoiceInteractionDecisions.instructions(role, id).equals(question.instructions()))
+                    instruction = com.careerform.formanalysis.generic.ChoiceInteractionDecisions.instructions(role, alias);
             }
             Map<String, String> aliases = new LinkedHashMap<>();
             Map<String, String> criteria = new LinkedHashMap<>();
@@ -113,7 +113,7 @@ final class JevTraceProjection {
                 }
             }
         }
-        if (stage.equals("interaction") && criterion.equals(JevInteractionDecisionProvider.CANDIDATE_CRITERION))
+        if (stage.equals("interaction") && criterion.equals(com.careerform.formanalysis.generic.ChoiceInteractionDecisions.CANDIDATE_CRITERION))
             return values.reference("candidateId", option);
         return "UNKNOWN_REFERENCE";
     }
@@ -121,11 +121,11 @@ final class JevTraceProjection {
     private static String criterion(String option, String raw) {
         if (option.equals("ABSTAIN")) {
             if (raw.equals(JevFieldMappingResolver.ABSTAIN_CRITERION) || raw.equals(JevActionResolver.ABSTAIN_CRITERION) ||
-                raw.equals(JevInteractionDecisionProvider.ABSTAIN_CRITERION)) return raw;
+                raw.equals(com.careerform.formanalysis.generic.ChoiceInteractionDecisions.ABSTAIN_CRITERION)) return raw;
         } else if (!option.equals("UNKNOWN_REFERENCE")) {
             if (option.startsWith("REVEAL_")) return "Reveal existing section " + option.substring(7) + ": " +
                 ProviderTraceProjection.semantic(raw.substring(raw.indexOf(": ") + 2));
-            if (option.startsWith("candidate_")) return JevInteractionDecisionProvider.CANDIDATE_CRITERION;
+            if (option.startsWith("candidate_")) return com.careerform.formanalysis.generic.ChoiceInteractionDecisions.CANDIDATE_CRITERION;
             return raw;
         }
         return "UNRECOGNIZED_CRITERION";

@@ -27,7 +27,7 @@ import com.careerform.formanalysis.generic.GenericFieldsRequest.SemanticLabel;
 import com.careerform.formanalysis.generic.GenericFieldsRequest.SemanticSource;
 import com.careerform.formanalysis.generic.GenericFieldsRequest.Visibility;
 import com.careerform.formanalysis.generic.GenericFieldsResponse.NameBinding;
-import com.careerform.formanalysis.generic.JevCategoryFieldResolver.Mapping;
+import com.careerform.formanalysis.generic.ChoiceFieldResolver.Mapping;
 
 /** 모의 공급자는 실제 전송된 관측만 읽는다. 실제 JEV 품질이나 원본 사이트에 없는 순서 근거를 입증하지 않는다. */
 @DisplayName("범용 영문 이름 선택의 독립 구조 회귀")
@@ -112,8 +112,8 @@ class GenericEnglishNameStructuresTest {
         assertPrivateStructureOnly();
     }
 
-    private JevCategoryFieldResolver.Resolution resolve(List<GenericFieldsRequest.Section> sections) {
-        return new JevCategoryFieldResolver(client(http), FIELDS, CATEGORIES, 1, 5, 10, 8000)
+    private ChoiceFieldResolver.Resolution resolve(List<GenericFieldsRequest.Section> sections) {
+        return new ChoiceFieldResolver(client(http), FIELDS, CATEGORIES, 1, 5, 10, 8000)
             .resolve(request("example.test", sections));
     }
 

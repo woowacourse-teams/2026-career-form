@@ -22,7 +22,7 @@ import com.careerform.formanalysis.generic.GenericFieldsRequest.Option;
 import com.careerform.formanalysis.generic.GenericFieldsRequest.SemanticContext;
 import com.careerform.formanalysis.generic.GenericFieldsRequest.Visibility;
 import com.careerform.formanalysis.generic.GenericFieldsRequest.WriteCommand;
-import com.careerform.formanalysis.generic.JevCategoryFieldResolver.Mapping;
+import com.careerform.formanalysis.generic.ChoiceFieldResolver.Mapping;
 
 /** 값 없는 안내 선택지와 같은 섹션의 상세칸 구조로 보훈·장애 상태 칸을 정하고, 예/아니오 상태 키의 경계를 지킨다. */
 class GenericStatusChoiceStructureTest {
@@ -142,8 +142,8 @@ class GenericStatusChoiceStructureTest {
             new GenericFieldsRequest.Site("example.test", "/apply"),
             List.of(GenericFieldsJevHttp.section("status", category, fields)),
             List.of(WriteCommand.SET_TEXT, WriteCommand.SELECT_OPTION));
-        var resolver = mock(JevCategoryFieldResolver.class);
-        when(resolver.resolve(request)).thenReturn(new JevCategoryFieldResolver.Resolution(mappings, 1));
+        var resolver = mock(ChoiceFieldResolver.class);
+        when(resolver.resolve(request)).thenReturn(new ChoiceFieldResolver.Resolution(mappings, 1));
         return new GenericFieldsService(Optional.of(resolver),
             new FormAnalysisRouter((host, path) -> new CompanyFormPolicyProvider.NotRegistered()),
             new FieldInteractionPolicy(), new SupportedProfileFields()).analyze(request);

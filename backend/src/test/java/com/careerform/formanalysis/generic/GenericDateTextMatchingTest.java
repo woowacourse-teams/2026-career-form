@@ -84,7 +84,7 @@ class GenericDateTextMatchingTest {
                         List.of(structure.candidate().displayName()),
                         List.of(SectionClassificationRequest.ControlKind.TEXT), false)));
                 var classification = new SectionClassificationService(
-                    Optional.of(new JevSectionClassifier(client(http), CATEGORIES)),
+                    Optional.of(new ChoiceSectionClassifier(client(http), CATEGORIES)),
                     new FormAnalysisRouter(POLICIES), CATEGORIES).classify(classificationRequest);
                 var returnedSection = classification.sections().getFirst();
                 assertThat(classification.status()).isEqualTo(SectionClassificationResponse.Status.COMPLETE);
@@ -286,7 +286,7 @@ class GenericDateTextMatchingTest {
     }
 
     private GenericFieldsService service() {
-        return new GenericFieldsService(Optional.of(new JevCategoryFieldResolver(
+        return new GenericFieldsService(Optional.of(new ChoiceFieldResolver(
             client(http), FIELDS, CATEGORIES, 3, 5, 10, 8000)), new FormAnalysisRouter(POLICIES),
             new FieldInteractionPolicy(), FIELDS);
     }

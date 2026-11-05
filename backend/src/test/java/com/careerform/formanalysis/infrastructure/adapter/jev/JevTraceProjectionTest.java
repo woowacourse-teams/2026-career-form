@@ -53,9 +53,9 @@ class JevTraceProjectionTest {
             "candidates", java.util.List.of(Map.of("candidateId", candidate, "label", SECRET,
                 "visibility", "visible", "relationToTarget", "DIALOG_CONTROL",
                 "structure", Map.of("tag", "button", "activation", "native", "depth", 2)))));
-        var questions = Map.of(id, new JevClient.Choice(JevInteractionDecisionProvider.instructions(role, id),
-            Map.of("ABSTAIN", JevInteractionDecisionProvider.ABSTAIN_CRITERION,
-                candidate, JevInteractionDecisionProvider.CANDIDATE_CRITERION)));
+        var questions = Map.of(id, new JevClient.Choice(com.careerform.formanalysis.generic.ChoiceInteractionDecisions.instructions(role, id),
+            Map.of("ABSTAIN", com.careerform.formanalysis.generic.ChoiceInteractionDecisions.ABSTAIN_CRITERION,
+                candidate, com.careerform.formanalysis.generic.ChoiceInteractionDecisions.CANDIDATE_CRITERION)));
         var projection = JevTraceProjection.create(state, questions);
         var output = projection.answer(id, candidate, 0.9, Map.of(candidate, 0.9, "ABSTAIN", 0.1), candidate, false, 0.8);
         assertThat(output).containsEntry("questionId", "decision_0").containsEntry("providerChoice", "candidate_0")

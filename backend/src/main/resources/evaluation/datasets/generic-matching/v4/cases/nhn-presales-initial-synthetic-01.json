@@ -1,0 +1,1469 @@
+{
+  "schemaVersion": 1,
+  "caseId": "nhn-presales-initial-synthetic-01",
+  "siteId": "nhn-careers",
+  "state": "nhn-initial",
+  "split": "final",
+  "fixtureId": "nhn-presales-initial",
+  "fixtureSha256": "c82bb37cb4a22e3e27a8fd71a1035324ae82154f0e39f39b9c9ae27a62e4a098",
+  "profileId": "synthetic-01-basic",
+  "calls": [
+    {
+      "order": 1,
+      "phase": "PREPARATION",
+      "kind": "SECTION_CLASSIFY",
+      "endpoint": "/api/v1/generic/sections/classify",
+      "requestDigest": "0417b57e52120f4ab3ab46ea966ab7d0e339a4e33954339e3d63b94d0984b083",
+      "request": {
+        "schemaVersion": 1,
+        "snapshotId": "fields-d3a453a1-54b9-4c65-9ed2-b3a40f391a01",
+        "site": {
+          "host": "careers.nhn.com",
+          "pathPattern": "/apply"
+        },
+        "sections": [
+          {
+            "sectionId": "ls1",
+            "labels": [
+              "학력 구분",
+              "야간",
+              "학교명",
+              "소재지",
+              "입학일",
+              "졸업일",
+              "전공",
+              "부전공",
+              "평점",
+              "총점",
+              "입학 구분",
+              "졸업 구분",
+              "이수과목 또는 연구내용"
+            ],
+            "controlKinds": [
+              "TEXT",
+              "CHECKBOX"
+            ],
+            "repeated": false
+          },
+          {
+            "sectionId": "ls2",
+            "title": "0",
+            "labels": [
+              "병역"
+            ],
+            "controlKinds": [
+              "TEXT"
+            ],
+            "repeated": false
+          },
+          {
+            "sectionId": "ls3",
+            "labels": [
+              "회사명",
+              "부서명/직책",
+              "고용 형태",
+              "입사일",
+              "퇴사일",
+              "재직 중",
+              "프로젝트명",
+              "시작일",
+              "종료일",
+              "주요 역할 및 담당 업무, 주요 성과를 기입해 주세요."
+            ],
+            "controlKinds": [
+              "TEXT",
+              "CHECKBOX",
+              "TEXTAREA"
+            ],
+            "repeated": true
+          },
+          {
+            "sectionId": "ls4",
+            "title": "0",
+            "labels": [
+              "활동기관명",
+              "시작일",
+              "종료일",
+              "봉사시간",
+              "내용"
+            ],
+            "controlKinds": [
+              "TEXT"
+            ],
+            "repeated": false
+          }
+        ]
+      },
+      "expected": {
+        "ls1": "EDUCATION",
+        "ls2": "SENSITIVE",
+        "ls3": "MIXED",
+        "ls4": "NONE"
+      },
+      "estimatedModelCalls": 1
+    },
+    {
+      "order": 2,
+      "phase": "PREPARATION",
+      "kind": "INTERACTION_DECISION",
+      "endpoint": "/api/v1/generic/interaction-decisions",
+      "requestDigest": "09d77ae66e7254e22b73d0a97e2c5857aad66c2e53a0fa5b45f4ac05d80773cd",
+      "request": {
+        "schemaVersion": 2,
+        "snapshotId": "fields-d3a453a1-54b9-4c65-9ed2-b3a40f391a01",
+        "site": {
+          "host": "careers.nhn.com",
+          "pathPattern": "/apply"
+        },
+        "decisions": [
+          {
+            "decisionId": "structure",
+            "role": "REPEAT_ADD",
+            "canonicalFieldKey": "education.university.schoolName",
+            "candidates": [
+              {
+                "candidateId": "action-2",
+                "element": "button",
+                "control": "button",
+                "visibility": "visible",
+                "relationToTarget": "SAME_REPEAT_ROW",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "+"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "structure": "action-2"
+      },
+      "estimatedModelCalls": 1
+    },
+    {
+      "order": 3,
+      "phase": "MAPPING",
+      "kind": "SECTION_CLASSIFY",
+      "endpoint": "/api/v1/generic/sections/classify",
+      "requestDigest": "5bd9759dffaae505f9e9c8dff6c342ad8e9d7000a885a7da91b339c53c63fe9f",
+      "request": {
+        "schemaVersion": 1,
+        "snapshotId": "fields-54d13ab8-d07d-41ca-bbcf-9e49f6f4e67e",
+        "site": {
+          "host": "careers.nhn.com",
+          "pathPattern": "/apply"
+        },
+        "sections": [
+          {
+            "sectionId": "gs1",
+            "labels": [
+              "학력 구분",
+              "야간",
+              "학교명",
+              "소재지",
+              "입학일",
+              "졸업일",
+              "전공",
+              "부전공",
+              "평점",
+              "총점",
+              "입학 구분",
+              "졸업 구분",
+              "이수과목 또는 연구내용"
+            ],
+            "controlKinds": [
+              "TEXT",
+              "CHECKBOX"
+            ],
+            "repeated": false
+          },
+          {
+            "sectionId": "gs2",
+            "title": "0",
+            "labels": [
+              "병역"
+            ],
+            "controlKinds": [
+              "TEXT"
+            ],
+            "repeated": false
+          },
+          {
+            "sectionId": "gs3",
+            "title": "장애사항",
+            "labels": [
+              "민감정보 활용 동의"
+            ],
+            "controlKinds": [
+              "CHECKBOX"
+            ],
+            "repeated": false
+          },
+          {
+            "sectionId": "gs4",
+            "labels": [
+              "[비식별]",
+              "보훈대상여부",
+              "경력없음"
+            ],
+            "controlKinds": [
+              "TEXT",
+              "CHECKBOX"
+            ],
+            "repeated": false
+          },
+          {
+            "sectionId": "gs5",
+            "labels": [
+              "회사명",
+              "부서명/직책",
+              "고용 형태",
+              "입사일",
+              "퇴사일",
+              "재직 중",
+              "프로젝트명",
+              "시작일",
+              "종료일",
+              "주요 역할 및 담당 업무, 주요 성과를 기입해 주세요."
+            ],
+            "controlKinds": [
+              "TEXT",
+              "CHECKBOX",
+              "TEXTAREA"
+            ],
+            "repeated": true
+          },
+          {
+            "sectionId": "gs6",
+            "title": "0",
+            "labels": [
+              "• 업무 성과를 보여줄 수 있는 링크나 파일이 있다면 작성 및 첨부해 주세요.",
+              "스킬명",
+              "활용 기간",
+              "활용 능력",
+              "세부사항 (최대 200자)",
+              "자격명",
+              "등급/점수",
+              "취득일",
+              "발급기관",
+              "언어",
+              "시험명",
+              "등급/점수",
+              "응시일",
+              "주최기관",
+              "대회명",
+              "수상명",
+              "수상일",
+              "주최기관",
+              "내용"
+            ],
+            "controlKinds": [
+              "TEXT"
+            ],
+            "repeated": false
+          },
+          {
+            "sectionId": "gs7",
+            "title": "0",
+            "labels": [
+              "활동기관명",
+              "시작일",
+              "종료일",
+              "봉사시간",
+              "내용"
+            ],
+            "controlKinds": [
+              "TEXT"
+            ],
+            "repeated": false
+          }
+        ]
+      },
+      "expected": {
+        "gs1": "EDUCATION",
+        "gs2": "SENSITIVE",
+        "gs3": "SENSITIVE",
+        "gs4": "SENSITIVE",
+        "gs5": "MIXED",
+        "gs6": "MIXED",
+        "gs7": "NONE"
+      },
+      "estimatedModelCalls": 1
+    },
+    {
+      "order": 4,
+      "phase": "MAPPING",
+      "kind": "GENERIC_FIELDS",
+      "endpoint": "/api/v1/generic/fields/analyze",
+      "requestDigest": "43d35af0672a418e160fd64542e815914f1cb660105b41b74f8d8a715addf9ae",
+      "request": {
+        "schemaVersion": 2,
+        "supportedWriteCommands": [
+          "SELECT_DATE"
+        ],
+        "snapshotId": "fields-54d13ab8-d07d-41ca-bbcf-9e49f6f4e67e",
+        "site": {
+          "host": "careers.nhn.com",
+          "pathPattern": "/apply"
+        },
+        "sections": [
+          {
+            "sectionId": "gs1",
+            "fields": [
+              {
+                "candidateId": "field-1",
+                "visibility": "visible",
+                "displayName": "학력 구분",
+                "placeholder": "학력 구분",
+                "readonly": true,
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "학력 구분"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-2",
+                "visibility": "hidden",
+                "displayName": "야간",
+                "domId": "id-2",
+                "element": "input",
+                "control": "checkbox",
+                "options": [
+                  {
+                    "optionId": "field-2-option-1",
+                    "displayName": "야간"
+                  }
+                ],
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "야간"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "field-3",
+                "visibility": "visible",
+                "displayName": "학교명",
+                "placeholder": "학교명",
+                "readonly": true,
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "학교명"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-4",
+                "visibility": "visible",
+                "displayName": "소재지",
+                "placeholder": "소재지",
+                "readonly": true,
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "소재지"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-5",
+                "visibility": "visible",
+                "displayName": "입학일",
+                "placeholder": "입학일",
+                "readonly": true,
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "입학일"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-6",
+                "visibility": "visible",
+                "displayName": "졸업일",
+                "placeholder": "졸업일",
+                "readonly": true,
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "졸업일"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-7",
+                "visibility": "visible",
+                "displayName": "전공",
+                "placeholder": "전공",
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "전공"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-8",
+                "visibility": "visible",
+                "displayName": "부전공",
+                "placeholder": "부전공",
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "부전공"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-9",
+                "visibility": "visible",
+                "displayName": "평점",
+                "placeholder": "평점",
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "평점"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-10",
+                "visibility": "visible",
+                "displayName": "총점",
+                "placeholder": "총점",
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "총점"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-11",
+                "visibility": "visible",
+                "displayName": "입학 구분",
+                "placeholder": "입학 구분",
+                "readonly": true,
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "입학 구분"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-12",
+                "visibility": "visible",
+                "displayName": "졸업 구분",
+                "placeholder": "졸업 구분",
+                "readonly": true,
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "졸업 구분"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-13",
+                "visibility": "visible",
+                "displayName": "이수과목 또는 연구내용",
+                "placeholder": "이수과목 또는 연구내용",
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "이수과목 또는 연구내용"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              }
+            ],
+            "category": "EDUCATION"
+          },
+          {
+            "sectionId": "gs2",
+            "displayName": "0",
+            "fields": [
+              {
+                "candidateId": "field-14",
+                "visibility": "visible",
+                "displayName": "병역",
+                "placeholder": "병역 구분",
+                "readonly": true,
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "병역"
+                    },
+                    {
+                      "source": "placeholder",
+                      "text": "병역 구분"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "병역"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              }
+            ],
+            "category": "SENSITIVE"
+          },
+          {
+            "sectionId": "gs3",
+            "displayName": "장애사항",
+            "fields": [
+              {
+                "candidateId": "field-15",
+                "visibility": "hidden",
+                "displayName": "민감정보 활용 동의",
+                "domId": "id-9",
+                "element": "input",
+                "control": "checkbox",
+                "options": [
+                  {
+                    "optionId": "field-15-option-1",
+                    "displayName": "민감정보 활용 동의"
+                  }
+                ],
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "민감정보 활용 동의"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "장애사항"
+                    }
+                  ]
+                }
+              }
+            ],
+            "category": "SENSITIVE"
+          },
+          {
+            "sectionId": "gs4",
+            "fields": [
+              {
+                "candidateId": "field-16",
+                "visibility": "visible",
+                "displayName": "[비식별]",
+                "placeholder": "[비식별]",
+                "disabled": true,
+                "readonly": true,
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "[비식별]"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-17",
+                "visibility": "visible",
+                "displayName": "보훈대상여부",
+                "placeholder": "[비식별]",
+                "readonly": true,
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "보훈대상여부"
+                    },
+                    {
+                      "source": "placeholder",
+                      "text": "[비식별]"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "보훈대상여부"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-18",
+                "visibility": "hidden",
+                "displayName": "경력없음",
+                "domId": "id-12",
+                "element": "input",
+                "control": "checkbox",
+                "options": [
+                  {
+                    "optionId": "field-18-option-1",
+                    "displayName": "경력없음"
+                  }
+                ],
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "경력없음"
+                    }
+                  ]
+                }
+              }
+            ],
+            "category": "SENSITIVE"
+          },
+          {
+            "sectionId": "gs5",
+            "fields": [
+              {
+                "candidateId": "field-43",
+                "visibility": "visible",
+                "displayName": "회사명",
+                "placeholder": "회사명",
+                "readonly": true,
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "회사명"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "프로젝트"
+                    }
+                  ],
+                  "inputType": "text",
+                  "repeat": {
+                    "groupId": "section-2-group-1",
+                    "rowIndex": 0,
+                    "rowCount": 1
+                  }
+                }
+              },
+              {
+                "candidateId": "field-44",
+                "visibility": "visible",
+                "displayName": "부서명/직책",
+                "placeholder": "부서명/직책",
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "부서명/직책"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "프로젝트"
+                    }
+                  ],
+                  "inputType": "text",
+                  "repeat": {
+                    "groupId": "section-2-group-1",
+                    "rowIndex": 0,
+                    "rowCount": 1
+                  }
+                }
+              },
+              {
+                "candidateId": "field-45",
+                "visibility": "visible",
+                "displayName": "고용 형태",
+                "placeholder": "고용 형태",
+                "readonly": true,
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "고용 형태"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "프로젝트"
+                    }
+                  ],
+                  "inputType": "text",
+                  "repeat": {
+                    "groupId": "section-2-group-1",
+                    "rowIndex": 0,
+                    "rowCount": 1
+                  }
+                }
+              },
+              {
+                "candidateId": "field-46",
+                "visibility": "visible",
+                "displayName": "입사일",
+                "placeholder": "입사일",
+                "readonly": true,
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "입사일"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "프로젝트"
+                    }
+                  ],
+                  "inputType": "text",
+                  "repeat": {
+                    "groupId": "section-2-group-1",
+                    "rowIndex": 0,
+                    "rowCount": 1
+                  }
+                }
+              },
+              {
+                "candidateId": "field-47",
+                "visibility": "visible",
+                "displayName": "퇴사일",
+                "placeholder": "퇴사일",
+                "readonly": true,
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "퇴사일"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "프로젝트"
+                    }
+                  ],
+                  "inputType": "text",
+                  "repeat": {
+                    "groupId": "section-2-group-1",
+                    "rowIndex": 0,
+                    "rowCount": 1
+                  }
+                }
+              },
+              {
+                "candidateId": "field-48",
+                "visibility": "hidden",
+                "displayName": "재직 중",
+                "domId": "id-16",
+                "element": "input",
+                "control": "checkbox",
+                "options": [
+                  {
+                    "optionId": "field-48-option-1",
+                    "displayName": "재직 중"
+                  }
+                ],
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "재직 중"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "프로젝트"
+                    }
+                  ],
+                  "repeat": {
+                    "groupId": "section-2-group-1",
+                    "rowIndex": 0,
+                    "rowCount": 1
+                  }
+                }
+              },
+              {
+                "candidateId": "field-49",
+                "visibility": "visible",
+                "displayName": "프로젝트명",
+                "placeholder": "프로젝트명",
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "프로젝트명"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "프로젝트"
+                    }
+                  ],
+                  "inputType": "text",
+                  "repeat": {
+                    "groupId": "section-2-group-1",
+                    "rowIndex": 0,
+                    "rowCount": 1
+                  }
+                }
+              },
+              {
+                "candidateId": "field-50",
+                "visibility": "visible",
+                "displayName": "시작일",
+                "placeholder": "시작일",
+                "readonly": true,
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "시작일"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "프로젝트"
+                    }
+                  ],
+                  "inputType": "text",
+                  "repeat": {
+                    "groupId": "section-2-group-1",
+                    "rowIndex": 0,
+                    "rowCount": 1
+                  }
+                }
+              },
+              {
+                "candidateId": "field-51",
+                "visibility": "visible",
+                "displayName": "종료일",
+                "placeholder": "종료일",
+                "readonly": true,
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "종료일"
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "프로젝트"
+                    }
+                  ],
+                  "inputType": "text",
+                  "repeat": {
+                    "groupId": "section-2-group-1",
+                    "rowIndex": 0,
+                    "rowCount": 1
+                  }
+                }
+              },
+              {
+                "candidateId": "field-52",
+                "visibility": "visible",
+                "displayName": "주요 역할 및 담당 업무, 주요 성과를 기입해 주세요.",
+                "placeholder": "주요 역할 및 담당 업무, 주요 성과를 기입해 주세요.",
+                "element": "textarea",
+                "control": "textarea",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "주요 역할 및 담당 업무, 주요 성과를 기입해 주세요."
+                    },
+                    {
+                      "source": "section-heading",
+                      "text": "프로젝트"
+                    }
+                  ],
+                  "repeat": {
+                    "groupId": "section-2-group-1",
+                    "rowIndex": 0,
+                    "rowCount": 1
+                  }
+                }
+              }
+            ],
+            "category": "MIXED"
+          },
+          {
+            "sectionId": "gs6",
+            "displayName": "0",
+            "fields": [
+              {
+                "candidateId": "field-19",
+                "visibility": "visible",
+                "displayName": "• 업무 성과를 보여줄 수 있는 링크나 파일이 있다면 작성 및 첨부해 주세요.",
+                "domName": "field-2",
+                "placeholder": "링크 URL (500자 미만)",
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "• 업무 성과를 보여줄 수 있는 링크나 파일이 있다면 작성 및 첨부해 주세요."
+                    },
+                    {
+                      "source": "description",
+                      "text": "• 첨부파일은 파일5개 /100MB까지 첨부 가능합니다."
+                    },
+                    {
+                      "source": "placeholder",
+                      "text": "링크 URL (500자 미만)"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-20",
+                "visibility": "visible",
+                "displayName": "스킬명",
+                "placeholder": "스킬명",
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "스킬명"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-21",
+                "visibility": "visible",
+                "displayName": "활용 기간",
+                "placeholder": "활용 기간",
+                "readonly": true,
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "활용 기간"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-22",
+                "visibility": "visible",
+                "displayName": "활용 능력",
+                "placeholder": "활용 능력",
+                "readonly": true,
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "활용 능력"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-23",
+                "visibility": "visible",
+                "displayName": "세부사항 (최대 200자)",
+                "placeholder": "세부사항 (최대 200자)",
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "세부사항 (최대 200자)"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-24",
+                "visibility": "visible",
+                "displayName": "자격명",
+                "placeholder": "자격명",
+                "readonly": true,
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "자격명"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-25",
+                "visibility": "visible",
+                "displayName": "등급/점수",
+                "placeholder": "등급/점수",
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "등급/점수"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-26",
+                "visibility": "visible",
+                "displayName": "취득일",
+                "placeholder": "취득일",
+                "readonly": true,
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "취득일"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-27",
+                "visibility": "visible",
+                "displayName": "발급기관",
+                "placeholder": "발급기관",
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "발급기관"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-28",
+                "visibility": "visible",
+                "displayName": "언어",
+                "placeholder": "언어",
+                "readonly": true,
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "언어"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-29",
+                "visibility": "visible",
+                "displayName": "시험명",
+                "placeholder": "시험명",
+                "readonly": true,
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "시험명"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-30",
+                "visibility": "visible",
+                "displayName": "등급/점수",
+                "placeholder": "등급/점수",
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "등급/점수"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-31",
+                "visibility": "visible",
+                "displayName": "응시일",
+                "placeholder": "응시일",
+                "readonly": true,
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "응시일"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-32",
+                "visibility": "visible",
+                "displayName": "주최기관",
+                "placeholder": "주최기관",
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "주최기관"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-33",
+                "visibility": "visible",
+                "displayName": "대회명",
+                "placeholder": "대회명",
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "대회명"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-34",
+                "visibility": "visible",
+                "displayName": "수상명",
+                "placeholder": "수상명",
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "수상명"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-35",
+                "visibility": "visible",
+                "displayName": "수상일",
+                "placeholder": "수상일",
+                "readonly": true,
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "수상일"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-36",
+                "visibility": "visible",
+                "displayName": "주최기관",
+                "placeholder": "주최기관",
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "주최기관"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-37",
+                "visibility": "visible",
+                "displayName": "내용",
+                "placeholder": "내용",
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "내용"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              }
+            ],
+            "category": "MIXED"
+          },
+          {
+            "sectionId": "gs7",
+            "displayName": "0",
+            "fields": [
+              {
+                "candidateId": "field-38",
+                "visibility": "visible",
+                "displayName": "활동기관명",
+                "placeholder": "활동기관명",
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "활동기관명"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-39",
+                "visibility": "visible",
+                "displayName": "시작일",
+                "placeholder": "시작일",
+                "readonly": true,
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "시작일"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-40",
+                "visibility": "visible",
+                "displayName": "종료일",
+                "placeholder": "종료일",
+                "readonly": true,
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "종료일"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-41",
+                "visibility": "visible",
+                "displayName": "봉사시간",
+                "placeholder": "봉사시간",
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "봉사시간"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              },
+              {
+                "candidateId": "field-42",
+                "visibility": "visible",
+                "displayName": "내용",
+                "placeholder": "내용",
+                "element": "input",
+                "control": "text",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "placeholder",
+                      "text": "내용"
+                    }
+                  ],
+                  "inputType": "text"
+                }
+              }
+            ],
+            "category": "NONE"
+          }
+        ]
+      },
+      "expected": {
+        "field-1": null,
+        "field-2": "education.university.attendanceType",
+        "field-3": "education.university.schoolName",
+        "field-4": "education.university.schoolRegion",
+        "field-5": "education.university.startDate",
+        "field-6": "education.university.endDate",
+        "field-7": "education.university.majorName",
+        "field-8": "education.university.minorName",
+        "field-9": "education.university.gpaScore",
+        "field-10": "education.university.gpaScale",
+        "field-11": "education.university.transferStatus",
+        "field-12": "education.university.completionStatus",
+        "field-13": null,
+        "field-14": "military.military.militaryStatus",
+        "field-15": null,
+        "field-16": "disability.disability.disabilityStatus",
+        "field-17": "veteran.veteran.veteranStatus",
+        "field-18": null,
+        "field-43": "careers.career.companyName",
+        "field-44": "careers.career.department",
+        "field-45": "careers.career.employmentType",
+        "field-46": "careers.career.startDate",
+        "field-47": "careers.career.endDate",
+        "field-48": "careers.career.employmentStatus",
+        "field-49": "projects.project.projectName",
+        "field-50": "projects.project.startDate",
+        "field-51": "projects.project.endDate",
+        "field-52": "projects.project.activityDetails",
+        "field-19": null,
+        "field-20": null,
+        "field-21": null,
+        "field-22": null,
+        "field-23": null,
+        "field-24": "certifications.certificate.name",
+        "field-25": "certifications.certificate.grade",
+        "field-26": "certifications.certificate.acquisitionDate",
+        "field-27": "certifications.certificate.issuer",
+        "field-28": "languages.languageTest.language",
+        "field-29": "languages.languageTest.testName",
+        "field-30": "languages.languageTest.grade",
+        "field-31": "languages.languageTest.acquisitionDate",
+        "field-32": null,
+        "field-33": null,
+        "field-34": null,
+        "field-35": null,
+        "field-36": null,
+        "field-37": null,
+        "field-38": null,
+        "field-39": null,
+        "field-40": null,
+        "field-41": null,
+        "field-42": null
+      },
+      "estimatedModelCalls": 13
+    }
+  ]
+}

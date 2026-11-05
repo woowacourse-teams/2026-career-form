@@ -88,7 +88,7 @@ class GenericCertificateDateContractTest {
         String choice, boolean supportsDate) {
         var http = new GenericFieldsJevHttp();
         http.respond(call -> answerAll(call, choice, "ABSTAIN".equals(choice) ? 0.46 : 0.48));
-        var resolver = new JevCategoryFieldResolver(GenericFieldsJevHttp.client(http), FIELDS, CATEGORIES,
+        var resolver = new ChoiceFieldResolver(GenericFieldsJevHttp.client(http), FIELDS, CATEGORIES,
             3, 5, 10, 8000);
         var service = new GenericFieldsService(Optional.of(resolver),
             new FormAnalysisRouter((host, path) -> new CompanyFormPolicyProvider.NotRegistered()),
