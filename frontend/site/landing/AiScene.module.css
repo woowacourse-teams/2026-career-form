@@ -1,7 +1,9 @@
-/* Hero and the four AI steps share one pinned stage, 460vh of scroll. */
+/* Hero and the seven JEV steps share one pinned stage. */
 .track {
   position: relative;
-  height: 760vh;
+  /* 100vh pinned + 500vh of scroll: the first 0.08 screens leave the hero,
+     then 0.7 screens per JEV step (step-playback.ts), and a short dwell. */
+  height: 600vh;
 }
 .stage {
   position: sticky;

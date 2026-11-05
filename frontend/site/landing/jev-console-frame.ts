@@ -78,8 +78,9 @@ export function measureConsole(
   return { grid, list };
 }
 
+/** Shown in [from, to]; it leaves just after `to`, then the next view enters. */
 const visible = (seg: Seg, from: number, to: number) =>
-  seg(from, from + 0.015) * (to >= 1 ? 1 : 1 - seg(to - 0.015, to));
+  seg(from + 0.0075, from + 0.015) * (to >= 1 ? 1 : 1 - seg(to, to + 0.0075));
 
 function drawViews(els: AiElements, seg: Seg) {
   const windows = [
@@ -169,15 +170,14 @@ function drawLines(els: AiElements, seg: Seg, step: number) {
     const t = group
       ? seg(stepAt(2, 0.05 + k * 0.12), stepAt(2, 0.4 + k * 0.12))
       : seg(stepAt(3, 0.05), stepAt(3, 0.35));
-    const live = group ? step === 2 : step === 3;
-    const fade = group
-      ? 1 - seg(stepAt(2, 0.92), JEV_STEPS[3])
-      : 1 - seg(stepAt(3, 0.92), JEV_STEPS[4]);
+    const live = group ? step >= 2 : step >= 3;
+    const end = group ? JEV_STEPS[3] : JEV_STEPS[4];
+    const fade = 1 - seg(end, end + 0.0075);
     const length = Number(path.dataset.length ?? 1);
     path.style.strokeDashoffset = String(length * (1 - t));
     path.style.opacity = String(live ? fade : 0);
-    const end = els.lineEnds[k];
-    if (end) end.style.opacity = String(live && t >= 1 ? fade : 0);
+    const dot = els.lineEnds[k];
+    if (dot) dot.style.opacity = String(live && t >= 1 ? fade : 0);
   });
 }
 
