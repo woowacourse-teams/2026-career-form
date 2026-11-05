@@ -620,9 +620,9 @@ function confidenceChart(label, key, models) {
       if (now) labels.push({ y: y(point[key]), text: `${(point[key] * 100).toFixed(1)}%` });
     });
   });
-  // 현재 기준 값이 비슷하면 글자가 겹치므로 위쪽 값부터 줄 간격만큼 밀어 적는다.
+  // 값은 점 위에 적되, 현재 기준 값이 비슷해 앞 글자와 겹치면 선을 피해 점 아래로 내린다.
   labels.sort((a, b) => a.y - b.y).reduce((previous, entry) => {
-    const placed = Math.max(entry.y - 7, previous + 11);
+    const placed = entry.y - 7 >= previous + 11 ? entry.y - 7 : Math.max(entry.y + 14, previous + 11);
     parts.push(`<text class="confidence-value" x="${x(CURRENT_CONFIDENCE) - 7}" y="${placed}" text-anchor="end">${entry.text}</text>`);
     return placed;
   }, -Infinity);
