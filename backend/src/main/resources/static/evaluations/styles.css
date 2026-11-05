@@ -696,24 +696,20 @@
 #cf-eval-preview .compare-table .model-col::before{content:"";display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;background:var(--model)}
 #cf-eval-preview .compare-table tbody td:nth-child(3n+2),#cf-eval-preview .compare-table thead tr:last-child th:nth-child(3n+2){border-left:1px solid #dde1de}
 #cf-eval-preview .compare-table .best{font-weight:700}
-#cf-eval-preview .confidence-legend{display:flex;flex-wrap:wrap;gap:4px 14px;margin:8px 0 10px;font-size:12px}
-#cf-eval-preview .confidence-tabs{margin-top:10px}
-#cf-eval-preview .confidence-chart svg{display:block;width:100%;height:auto;overflow:visible}
-#cf-eval-preview .confidence-grid{stroke:#e5e9ee;stroke-width:1}
-#cf-eval-preview .confidence-area{opacity:.18}
-#cf-eval-preview .confidence-chart{position:relative}
-#cf-eval-preview .confidence-hit{fill:transparent;pointer-events:all}
-#cf-eval-preview .confidence-guide{display:none;stroke:#252b33;stroke-width:1;opacity:.45}
-#cf-eval-preview .confidence-tip{position:absolute;top:6px;z-index:2;min-width:170px;padding:7px 9px;background:#fff;border:1px solid #d9ddda;border-radius:5px;box-shadow:0 2px 8px rgba(37,43,51,.14);font-size:11.5px;pointer-events:none}
-#cf-eval-preview .confidence-tip[hidden]{display:none}
-#cf-eval-preview .confidence-tip strong{display:block;margin-bottom:3px;font-weight:600}
-#cf-eval-preview .confidence-tip-row{display:flex;justify-content:space-between;gap:12px;white-space:nowrap}
-#cf-eval-preview .confidence-tip-row b{font-weight:600;font-variant-numeric:tabular-nums}
-#cf-eval-preview .confidence-tick{font-size:9.5px;fill:#737c88;font-variant-numeric:tabular-nums}
-#cf-eval-preview .confidence-value{font-size:10px;font-weight:500;fill:var(--ink);font-variant-numeric:tabular-nums;paint-order:stroke;stroke:#fff;stroke-width:2.5px}
-#cf-eval-preview .confidence-now{stroke:#737c88;stroke-width:1;stroke-dasharray:3 2}
-#cf-eval-preview .confidence-line{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
-#cf-eval-preview .confidence-dot{stroke:#fff;stroke-width:1.5;cursor:default}
+#cf-eval-preview .confidence-verdicts{margin:8px 0 12px;font-size:12.5px;line-height:1.5}
+#cf-eval-preview .confidence-verdict{margin:0 0 5px}
+#cf-eval-preview .confidence-verdict .stage-model{display:block;font-weight:600}
+#cf-eval-preview .confidence-row{display:grid;grid-template-columns:48px 1fr 1fr;gap:10px;align-items:center;padding:6px 0;border-top:1px solid #eceeed}
+#cf-eval-preview .confidence-labels{border-top:0;padding:0 0 4px;font-size:11.5px;color:#737c88}
+#cf-eval-preview .confidence-current{background:#f0f2f1}
+#cf-eval-preview .confidence-threshold{font-size:12px;font-weight:600;white-space:nowrap}
+#cf-eval-preview .confidence-line{display:grid;grid-template-columns:1fr 30px;gap:6px;align-items:center;min-height:15px}
+#cf-eval-preview .confidence-track{position:relative;height:8px;background:linear-gradient(#c9cfcb,#c9cfcb) center/1px 100% no-repeat}
+#cf-eval-preview .confidence-current .confidence-track{background:none}
+#cf-eval-preview .confidence-bar{position:absolute;top:0;bottom:0;min-width:2px;border-radius:2px;background:var(--model)}
+#cf-eval-preview .confidence-value{font-size:11.5px;font-weight:600;text-align:right;font-variant-numeric:tabular-nums}
+#cf-eval-preview .confidence-value.up{color:#2f6a4f}
+#cf-eval-preview .confidence-value.down{color:#b5483d}
 #cf-eval-preview .confidence-details{margin-top:12px;font-size:13px}
 #cf-eval-preview .confidence-details summary{color:#3d5870;cursor:pointer}
 #cf-eval-preview .confidence-details .table-wrap{margin-top:8px}

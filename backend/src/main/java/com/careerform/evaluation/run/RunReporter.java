@@ -119,7 +119,7 @@ public final class RunReporter {
             if (outcome == null || outcome.unobserved() > 0) {
                 return List.of();
             }
-            points.add(new RunReport.ConfidencePoint(threshold, outcome.precision(), outcome.fillRate(), outcome.score()));
+            points.add(new RunReport.ConfidencePoint(threshold, outcome, outcome.precision(), outcome.fillRate(), outcome.score()));
         }
         return points;
     }

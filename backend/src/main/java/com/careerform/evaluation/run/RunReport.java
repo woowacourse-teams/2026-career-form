@@ -43,7 +43,7 @@ public record RunReport(
     }
 
     /** 칸 매핑 답을 이 확신도 이상만 넣는다고 볼 때의 결과. 모델마다 확신도의 뜻이 달라 같은 기준이 공정한지 보려는 값이다. */
-    public record ConfidencePoint(double threshold, Double precision, Double fillRate, Double score) {
+    public record ConfidencePoint(double threshold, AutofillOutcome counts, Double precision, Double fillRate, Double score) {
     }
 
     /** 반복 하나의 항목 단위 정확도와 단계별(TOTAL·PREPARATION·MAPPING) 점수. 계산할 수 없는 값은 빠지거나 null이다. */

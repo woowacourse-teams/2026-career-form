@@ -231,6 +231,10 @@ class RunReporterTest {
         assertThat(lowest.fillRate()).isCloseTo(2.0 / 3, within(1e-9));
         RunReport.ConfidencePoint current = report.confidence().get(3);
         assertThat(current.precision()).isEqualTo(1.0);
+        assertThat(lowest.counts().filledCorrect()).isEqualTo(2);
+        assertThat(lowest.counts().filledWrongKey()).isEqualTo(1);
+        assertThat(current.counts().filledCorrect()).isEqualTo(1);
+        assertThat(current.counts().filledWrongKey()).isZero();
         assertThat(current.fillRate()).isCloseTo(1.0 / 3, within(1e-9));
         assertThat(current.score()).isEqualTo(report.autofill().score());
     }
