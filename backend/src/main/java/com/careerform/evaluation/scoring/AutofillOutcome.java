@@ -11,7 +11,11 @@ import java.util.Map;
 public record AutofillOutcome(int filledCorrect, int filledWrongKey, int filledUnneeded, int blankCorrect, int missed,
     int unobserved) {
 
-    /** 정밀도를 채움률보다 2배 중시한다. 잘못 넣은 칸은 사용자가 찾아 고쳐야 하고, 놓친 칸은 직접 입력하면 된다. */
+    /**
+     * F0.5. 점수식 분모에서 잘못 넣은 칸 1개가 놓친 칸 4개(1/β²)와 같은 무게다. 제품이 확신도 0.8 이상만 자동으로 넣는 것과 같은
+     * 비율이다: 확신도 p인 칸을 넣는 것이 이득이려면 (1−p)×잘못 넣은 비용 < p×놓친 비용이어야 하고, 경계가 0.8이면 비용 비가 4다.
+     * 잘못 넣은 칸은 사용자가 찾아 고쳐야 하고 그대로 제출될 수 있지만, 놓친 칸은 직접 입력하면 된다.
+     */
     private static final double BETA = 0.5;
 
     /** 칸 하나의 결과. */

@@ -60,7 +60,7 @@ public final class RunReporter {
             stageScores(records, expected), itemsByCall(records), confidence(records, expected));
     }
 
-    /** 단계별 점수. 정답을 모르는 기록은 빼고, 결과가 없는 단계는 넣지 않는다. 실패한 호출의 칸은 답이 없는 칸으로 센다. */
+    /** 질문 종류별 점수(TOTAL·MAPPING은 칸 매핑, PREPARATION은 준비 단계, SECTION은 매핑 단계 섹션 분류). 정답을 모르는 기록은 빼고, 결과가 없는 단계는 넣지 않는다. 실패한 호출의 칸은 답이 없는 칸으로 센다. */
     private static Map<String, RunReport.Autofill> stageScores(List<CallResultRecord> records,
         Function<CallResultRecord, Map<String, String>> expected) {
         Map<String, RunReport.Autofill> scores = new LinkedHashMap<>();
@@ -71,10 +71,13 @@ public final class RunReporter {
     private static Map<String, AutofillOutcome> stageOutcomes(List<CallResultRecord> records,
         Function<CallResultRecord, Map<String, String>> expected) {
         Map<String, AutofillOutcome> outcomes = new LinkedHashMap<>();
+        // 질문 종류를 섞지 않는다. 값을 넣는 것은 칸 매핑뿐이라 자동기입 점수(TOTAL)는 칸 매핑이고, 준비(섹션 고르기·버튼·선택
+        // 결정)와 매핑 단계의 섹션 분류는 따로 낸다. 섞으면 섹션 분류 오답이 "잘못 넣은 칸"처럼 정밀도를 깎는다.
         Map<String, Predicate<CallResultRecord>> stages = new LinkedHashMap<>();
-        stages.put("TOTAL", record -> true);
+        stages.put("TOTAL", record -> record.kind() == CallKind.GENERIC_FIELDS);
         stages.put("PREPARATION", record -> record.stage() == CallKind.Stage.PREPARATION);
-        stages.put("MAPPING", record -> record.stage() == CallKind.Stage.MAPPING);
+        stages.put("SECTION", record -> record.stage() == CallKind.Stage.MAPPING && record.kind() == CallKind.SECTION_CLASSIFY);
+        stages.put("MAPPING", record -> record.kind() == CallKind.GENERIC_FIELDS);
         stages.forEach((stage, filter) -> records.stream().filter(filter)
             .map(record -> {
                 Map<String, String> truth = expected.apply(record);

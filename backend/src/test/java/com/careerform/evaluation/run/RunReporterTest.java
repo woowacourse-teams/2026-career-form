@@ -63,7 +63,7 @@ class RunReporterTest {
     }
 
     @Test
-    @DisplayName("점수는 전체·준비·매핑 단계마다 같은 식으로 내고, 전체는 두 단계 항목을 합친다")
+    @DisplayName("점수는 준비·섹션 분류·칸 매핑을 섞지 않고 따로 내며, 자동기입 점수는 값을 넣는 칸 매핑만이다")
     void scoresEachStage() {
         EvaluationRun run = run(AT.minusSeconds(10), AT, AT.plusSeconds(4));
         CallResultRecord preparation = new CallResultRecord("run-1", 1, "a", 1, CallKind.SECTION_CLASSIFY,
@@ -71,17 +71,25 @@ class RunReporterTest {
             Map.of("s1", ObservedItem.answered("PERSONAL"), "s2", ObservedItem.answered("PERSONAL")), 100 * MS, List.of(), AT);
         CallResultRecord fields = fields(1, Map.of("field-1", ObservedItem.answered("k1", 0.9),
             "field-2", ObservedItem.answered(null, 0.9)));
+        CallResultRecord classify = new CallResultRecord("run-1", 1, "a", 3, CallKind.SECTION_CLASSIFY,
+            CallKind.Stage.MAPPING, null, new CallScore(1, 1, 0, 0, 0),
+            Map.of("s1", ObservedItem.answered("PERSONAL"), "s2", ObservedItem.answered("PERSONAL")), 100 * MS, List.of(), AT);
         Map<String, Map<String, String>> truth = Map.of(
             "a/1", Map.of("s1", "PERSONAL", "s2", "NONE"),
-            "a/2", new java.util.HashMap<>(Map.of("field-1", "k1")) {{ put("field-2", null); }});
+            "a/2", new java.util.HashMap<>(Map.of("field-1", "k1")) {{ put("field-2", null); }},
+            "a/3", Map.of("s1", "PERSONAL", "s2", "NONE"));
 
-        RunReport report = new RunReporter().report(run, List.of(preparation, fields),
+        RunReport report = new RunReporter().report(run, List.of(preparation, fields, classify),
             record -> truth.get(record.caseId() + "/" + record.order()));
 
         assertThat(report.scores().get("PREPARATION").counts()).isEqualTo(new AutofillOutcome(1, 1, 0, 0, 0, 0));
-        assertThat(report.scores().get("MAPPING").counts()).isEqualTo(new AutofillOutcome(1, 0, 0, 1, 0, 0));
-        assertThat(report.scores().get("TOTAL").counts()).isEqualTo(new AutofillOutcome(2, 1, 0, 1, 0, 0));
-        assertThat(report.repetitions().getFirst().scores()).containsKeys("TOTAL", "PREPARATION", "MAPPING");
+        assertThat(report.scores().get("SECTION").counts()).isEqualTo(new AutofillOutcome(1, 1, 0, 0, 0, 0));
+        // 섹션을 잘못 분류해도 칸에 틀린 값이 들어간 것은 아니므로 칸 매핑 정밀도를 깎지 않는다.
+        AutofillOutcome mapped = new AutofillOutcome(1, 0, 0, 1, 0, 0);
+        assertThat(report.scores().get("MAPPING").counts()).isEqualTo(mapped);
+        assertThat(report.scores().get("TOTAL").counts()).isEqualTo(mapped);
+        assertThat(report.scores().get("TOTAL").precision()).isEqualTo(1.0);
+        assertThat(report.repetitions().getFirst().scores()).containsKeys("TOTAL", "PREPARATION", "SECTION", "MAPPING");
     }
 
     @Test

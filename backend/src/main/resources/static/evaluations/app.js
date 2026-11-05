@@ -374,7 +374,7 @@ function renderTokenBars() {
 }
 
 /**
- * 대표 점수: 자동기입 점수(정밀도를 채움률보다 2배 중시하는 F0.5)와 반복별 범위. 막대 아래에 정밀도와 채움률을 보인다.
+ * 대표 점수: 자동기입 점수(칸 매핑의 F0.5, 잘못 넣은 1칸을 놓친 4칸과 같게 침)와 반복별 범위. 막대 아래에 정밀도와 채움률을 보인다.
  * 자세한 설명은 정답 기준 창에 있다.
  */
 /** 실행 묶음에서 그 모델의 끝난 실행과 보고. 없으면 undefined다. */
@@ -484,7 +484,7 @@ root.addEventListener("focusout", hideHelp);
 addEventListener("scroll", hideHelp, { passive: true });
 
 /**
- * 단계 점수 카드(정밀도를 중시한 F0.5). stage는 TOTAL·PREPARATION·MAPPING이며, 막대 아래에 정밀도·채움률·반복 범위를 둔다.
+ * 점수 카드(정밀도를 중시한 F0.5). stage는 TOTAL·PREPARATION·SECTION·MAPPING이며(TOTAL과 MAPPING은 칸 매핑), 막대 아래에 정밀도·채움률·반복 범위를 둔다.
  * 칸 매핑은 확신도 0.8 이상만 답한 것으로 보고, 섹션 분류·버튼·선택 결정은 답 그대로 본다.
  */
 function scoreCard(stage, title) {
@@ -511,7 +511,7 @@ function scoreCard(stage, title) {
     row.after(note);
   });
   cardHelp(card, richNote(["정밀도"], " 답한 것 중 맞은 비율 · ", ["채움률"], " 답해야 할 것 중 맞게 답한 비율 · ",
-    ["잘못 답하면 놓칠 때보다 2배 감점"]));
+    ["잘못 답한 1개 = 놓친 4개의 감점"], "(제품의 자동 입력 기준 0.8과 같은 비율)"));
   return card;
 }
 
@@ -756,7 +756,7 @@ function renderQuality() {
         richNote(["섹션 분류"], " 조작할 섹션을 고르는 질문 · ", ["버튼·선택 결정"], " 학력 구분이나 행 추가처럼 무엇을 누르고 고를지 정하는 질문")));
   }
   else if (state.stage === "mapping") {
-    quality.replaceChildren(scoreCard("MAPPING", "매핑 점수"), renderAutofill(), confidenceCard(),
+    quality.replaceChildren(scoreCard("MAPPING", "칸 매핑 점수"), renderAutofill(), confidenceCard(),
       stageAccuracyCard("섹션 분류 결과", ["MAPPING/SECTION_CLASSIFY"],
         richNote(["섹션 분류"], " 화면의 섹션마다 범주(기본정보·학력·해당 없음 …)를 정하는 질문")));
   }
@@ -805,7 +805,7 @@ function stageAccuracyCard(title, keys, foot) {
   return card;
 }
 
-/** 전체 흐름의 단계 요약: 모델마다 준비·매핑 점수를 한 줄로. 자세한 결과는 준비·매핑 탭에서 본다. */
+/** 전체 흐름의 단계 요약: 값을 넣지 않아 자동기입 점수에 섞지 않는 준비·섹션 분류 점수를 모델마다 한 줄로. */
 function stageSummary() {
   const card = element("div", undefined, "metric");
   const head = element("div", undefined, "metric-head");
@@ -816,14 +816,14 @@ function stageSummary() {
     const name = element("span", model, "stage-model");
     name.style.setProperty("--model", color(model));
     const line = element("span", undefined, "stat-line");
-    [["준비", "PREPARATION", "섹션 분류 + 버튼·선택 결정"], ["매핑", "MAPPING", "섹션 분류 + 칸 매핑"]].forEach(([label, stage, help]) => {
+    [["준비", "PREPARATION", "조작할 섹션 고르기 + 버튼·선택 결정"], ["섹션 분류", "SECTION", "매핑 단계에서 섹션마다 범주를 정하는 질문"]].forEach(([label, stage, help]) => {
       const value = report(model)?.scores?.[stage]?.score;
       line.append(stat(`${label} 점수`, value == null ? "—" : shortPercent(value), help));
     });
     row.append(name, line);
     card.append(row);
   }
-  cardHelp(card, richNote(["자동기입 점수"], " = 준비와 매핑의 모든 질문을 합쳐 같은 식으로 낸 점수"));
+  cardHelp(card, richNote(["자동기입 점수"], " = 값을 넣는 칸 매핑만 · ", ["준비·섹션 분류"], "는 값을 넣지 않아 같은 식으로 따로 채점"));
   return card;
 }
 
@@ -1335,7 +1335,7 @@ function resultSummary(after, before, models) {
     const base = groupRuns(before)[0]?.run;
     lines.push(`- 이전: ${groupLabel(before)} · 반복 ${base?.repetitions ?? "—"}회 · 코드 \`${base?.versions.codeVersion ?? "—"}\``);
   }
-  lines.push("", "| 모델 | 자동기입 점수 | 준비 점수 | 매핑 점수 | 정밀도 | 채움률 | 자동기입 시간 | AI 응답 시간 |",
+  lines.push("", "| 모델 | 자동기입 점수 | 준비 점수 | 섹션 분류 점수 | 정밀도 | 채움률 | 자동기입 시간 | AI 응답 시간 |",
     "| --- | --- | --- | --- | --- | --- | --- | --- |");
   for (const entry of entries) {
     const model = modelKey(entry.run);
@@ -1345,7 +1345,7 @@ function resultSummary(after, before, models) {
     const score = (stage) => percentText(now?.scores?.[stage]?.score)
       + change(now?.scores?.[stage]?.score, then?.scores?.[stage]?.score, "%p", 100, base && unclearReason(entry, base, repetitionScores(stage)));
     const total = now?.scores?.TOTAL;
-    lines.push(`| ${model} | ${score("TOTAL")} | ${score("PREPARATION")} | ${score("MAPPING")} | ${percentText(total?.precision)} | `
+    lines.push(`| ${model} | ${score("TOTAL")} | ${score("PREPARATION")} | ${score("SECTION")} | ${percentText(total?.precision)} | `
       + `${percentText(total?.fillRate)} | ${secondsText(now?.flows.time.meanMs)}`
       + `${change(now?.flows.time.meanMs, then?.flows.time.meanMs, "초", 0.001, base && unclearReason(entry, base))} | `
       + `${secondsText(now?.performance.TOTAL?.modelAttempt?.meanMs)} |`);
@@ -1381,7 +1381,7 @@ async function copySummary(button, text) {
 const COMPARE_METRICS = [
   { label: "자동기입 점수", value: (r) => r?.scores?.TOTAL?.score, values: repetitionScores("TOTAL"), kind: "percent" },
   { label: "준비 점수", value: (r) => r?.scores?.PREPARATION?.score, values: repetitionScores("PREPARATION"), kind: "percent" },
-  { label: "매핑 점수", value: (r) => r?.scores?.MAPPING?.score, values: repetitionScores("MAPPING"), kind: "percent" },
+  { label: "섹션 분류 점수", value: (r) => r?.scores?.SECTION?.score, values: repetitionScores("SECTION"), kind: "percent" },
   { label: "정밀도", value: (r) => r?.scores?.TOTAL?.precision, kind: "percent" },
   { label: "채움률", value: (r) => r?.scores?.TOTAL?.fillRate, kind: "percent" },
   { label: "자동기입 시간", value: (r) => r?.flows?.time?.meanMs, kind: "seconds" },
@@ -1890,7 +1890,7 @@ function criteriaView() {
   formula.append(element("span", "자동기입 점수", "formula-name"), element("span", "="),
     element("span", "정밀도", "formula-part"), element("span", "×2 와"), element("span", "채움률", "formula-part"),
     element("span", "의 조화 평균(F0.5)"));
-  wrap.append(formula, element("p", "잘못 답하면(엉뚱한 값을 넣거나 엉뚱한 섹션을 조작하면) 사용자가 찾아서 고쳐야 하지만, 놓친 것은 직접 하면 됩니다. 그래서 잘못 답하면 놓칠 때보다 2배 크게 깎습니다. 아무것도 답하지 않으면 0점입니다. 같은 식으로 준비 점수(섹션 분류·버튼·선택 결정), 매핑 점수(섹션 분류·칸 매핑), 둘을 합친 자동기입 점수를 냅니다. 칸 매핑은 확신도 0.8 이상만 답한 것으로 보고, 나머지 질문은 답 그대로 봅니다.", "muted criteria-lead"));
+  wrap.append(formula, element("p", "자동기입 점수는 값을 실제로 넣는 칸 매핑만으로 냅니다. 잘못 넣은 칸은 사용자가 찾아서 고쳐야 하고 그대로 제출될 수 있지만, 놓친 칸은 직접 입력하면 됩니다. 그래서 잘못 넣은 칸 1개를 놓친 칸 4개만큼 깎습니다. 제품이 확신도 0.8 이상만 자동으로 넣는 것과 같은 비율입니다. 아무것도 넣지 않으면 0점입니다. 준비 점수(조작할 섹션 고르기·버튼·선택 결정)와 섹션 분류 점수는 값을 넣지 않으므로 섞지 않고 같은 식으로 따로 냅니다. 칸 매핑은 확신도 0.8 이상만 넣은 것으로 보고, 나머지 질문은 답 그대로 봅니다.", "muted criteria-lead"));
   const card = (title, ...children) => {
     const section = element("section", undefined, "criteria-card");
     section.append(element("h4", title), ...children);

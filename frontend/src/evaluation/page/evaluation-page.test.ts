@@ -92,10 +92,10 @@ const report = {
   repetitions: [0.79, 0.8, 0.81].map((total, index) => ({
     repetition: index + 1,
     accuracy: 0.8,
-    scores: { TOTAL: total, PREPARATION: 0.7, MAPPING: 0.89 + index * 0.01 },
+    scores: { TOTAL: total, PREPARATION: 0.7, SECTION: 0.89 + index * 0.01, MAPPING: 0.89 + index * 0.01 },
   })),
   autofill: score(0.9),
-  scores: { TOTAL: score(0.8), PREPARATION: score(0.7), MAPPING: score(0.9) },
+  scores: { TOTAL: score(0.8), PREPARATION: score(0.7), SECTION: score(0.9), MAPPING: score(0.9) },
   itemsByCall: {
     "PREPARATION/SECTION_CLASSIFY": items(4),
     "PREPARATION/INTERACTION_DECISION": items(2),
@@ -138,9 +138,9 @@ const baseReport = {
   repetitions: [0.74, 0.75, 0.76].map((total, index) => ({
     repetition: index + 1,
     accuracy: 0.75,
-    scores: { TOTAL: total, PREPARATION: 0.7, MAPPING: 0.87 + index * 0.01 },
+    scores: { TOTAL: total, PREPARATION: 0.7, SECTION: 0.87 + index * 0.01, MAPPING: 0.87 + index * 0.01 },
   })),
-  scores: { ...report.scores, TOTAL: score(0.75), MAPPING: score(0.88) },
+  scores: { ...report.scores, TOTAL: score(0.75), SECTION: score(0.88), MAPPING: score(0.88) },
   flows: { ...report.flows, time: { ...report.flows.time, meanMs: 2000 } },
 };
 const dataset = {
@@ -310,6 +310,9 @@ describe("AI 평가 화면의 단계 탭", () => {
   it("전체 흐름은 합친 자동기입 점수와 단계별 점수, 자동기입 단위 성능만 보인다", async () => {
     await pick("total");
     expect(titles("#cf-quality")).toEqual(["자동기입 점수", "단계별 점수"]);
+    // 값을 넣지 않는 준비·섹션 분류는 자동기입 점수에 섞지 않고 따로 보인다.
+    expect(document.querySelector("#cf-quality .summary-row")?.textContent).toContain("준비 점수");
+    expect(document.querySelector("#cf-quality .summary-row")?.textContent).toContain("섹션 분류 점수");
     expect(headline()).toBe("80.0%");
     expect(titles("#cf-performance")).toEqual([
       "자동기입 시간",
@@ -332,7 +335,7 @@ describe("AI 평가 화면의 단계 탭", () => {
   it("매핑은 매핑 점수와 칸별 결과·섹션 분류 결과, 요청·AI 질문 단위 성능만 보인다", async () => {
     await pick("mapping");
     expect(titles("#cf-quality")).toEqual([
-      "매핑 점수",
+      "칸 매핑 점수",
       "칸별 결과",
       "확신도 기준별 칸 매핑",
       "섹션 분류 결과",
@@ -367,7 +370,7 @@ describe("AI 평가 화면의 단계 탭", () => {
     const card = document.querySelector("#cf-quality .metric")!;
     expect(card.querySelector(".metric-foot")).toBeNull();
     expect(card.querySelector("h3")?.getAttribute("data-help")).toContain(
-      "2배",
+      "놓친 4개",
     );
   });
 
@@ -838,7 +841,7 @@ describe("AI 평가 화면의 단계 탭", () => {
 
   it("반복별 범위가 겹치는 점수 변화는 좋음·나쁨 대신 구분 불가로 보인다", async () => {
     await openCompare();
-    expect(changeOf("매핑 점수")).toBe("+2.0%p 구분 불가:delta unclear");
+    expect(changeOf("섹션 분류 점수")).toBe("+2.0%p 구분 불가:delta unclear");
   });
 
   it("이전 실행이 반복 1회면 점수·시간 변화를 모두 구분 불가로 보인다", async () => {
