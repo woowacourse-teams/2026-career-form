@@ -125,7 +125,7 @@ function bars(title, sub, values, max, format, foot) {
   const card = element("div", undefined, "metric");
   const head = element("div", undefined, "metric-head");
   const side = element("span", undefined, "metric-side");
-  side.append(element("span", sub, "muted"));
+  if (sub) side.append(element("span", sub, "muted"));
   head.append(element("h3", title), side);
   card.append(head);
   if (!state.selected.length) card.append(element("div", "비교할 모델 선택 필요.", "empty"));
@@ -174,7 +174,7 @@ function renderOverview() {
   };
   const failure = (m) => percent(total ? report(m)?.flows.failureRate : perf(m)?.failureRate);
   const timeCard = bars(total ? "자동기입 시간" : "요청 처리 시간",
-    total ? "버튼 1번 · 평균 · 낮을수록 좋음" : "서버 요청 1개 · 평균 · 낮을수록 좋음", seconds,
+    total ? "버튼 1번 · 평균" : "서버 요청 1개 · 평균", seconds,
     Math.max(1, ...state.selected.map((m) => seconds(m) ?? 0)), (v) => `${v.toFixed(2)}초`,
     total ? richNote(["자동기입 버튼 1번"], " = ", ["준비"], "(섹션 분류·버튼·선택 결정) + ", ["매핑"], "(섹션 분류·칸 매핑)의 서버 요청 시간 합 · 클릭·칸 입력·네트워크 왕복 제외")
       : richNote(["서버 요청 1개"], "(섹션 분류·칸 매핑 등)를 끝내기까지 · 안에서 ", ["AI에게 여러 번"], " 물을 수 있음 · 서버 처리·재시도 포함"));
@@ -199,23 +199,23 @@ function renderOverview() {
       row.after(note);
     });
   }
-  const tokenLimitCard = () => bars("입력 토큰 초과", "거절된 AI 질문 수 · 낮을수록 좋음", (m) => perf(m)?.tokenLimitAttempts ?? null,
+  const tokenLimitCard = () => bars("입력 토큰 초과", "거절된 AI 질문 수", (m) => perf(m)?.tokenLimitAttempts ?? null,
     Math.max(1, ...state.selected.map((m) => perf(m)?.tokenLimitAttempts ?? 0)), (v) => `${v}번`,
     richNote(["입력 토큰 한도를 넘어 거절된 질문"], " · 반으로 나눠 다시 물으므로 요청 실패는 아님 · 시간은 위 수치에 포함"));
   // 전체 흐름은 자동기입 단위로 본다. AI 응답 시간은 단계마다 섞이는 준비·매핑 탭에서만 보이고, 처리량은 실행 전체
   // 경과 시간으로 나누므로 전체 흐름에서만 뜻이 있다.
   $("#cf-performance").replaceChildren(...(total ? [
     timeCard,
-    bars("처리량", "초당 끝낸 요청 수 · 높을수록 좋음", (m) => perf(m)?.throughputPerSecond,
+    bars("처리량", "초당 끝낸 요청 수", (m) => perf(m)?.throughputPerSecond,
       Math.max(0.1, ...state.selected.map((m) => perf(m)?.throughputPerSecond ?? 0)), (v) => `${v.toFixed(2)}/초`,
       richNote(["끝낸 서버 요청 수 ÷ 실행 경과 시간"], " · 요청을 차례로 보내므로 요청 처리 시간이 짧을수록 높음")),
-    bars("자동기입 실패율", "낮을수록 좋음", failure, 100, (v) => `${v.toFixed(1)}%`,
+    bars("자동기입 실패율", "", failure, 100, (v) => `${v.toFixed(1)}%`,
       richNote(["서버 요청이 하나라도 실패한 자동기입"], "(준비 + 매핑)의 비율")),
     tokenLimitCard(),
   ] : [
     modelTimeCard(perf),
     timeCard,
-    bars("요청 실패율", "낮을수록 좋음", failure, 100, (v) => `${v.toFixed(1)}%`,
+    bars("요청 실패율", "", failure, 100, (v) => `${v.toFixed(1)}%`,
       richNote(["실패한 서버 요청"], "의 비율 · 타임아웃·API 오류·응답 형식 오류·채점 불가")),
     tokenLimitCard(),
   ]));
@@ -228,7 +228,7 @@ function renderOverview() {
 function modelTimeCard(perf) {
   const attempt = (m) => perf(m)?.modelAttempt;
   const seconds = (m) => attempt(m)?.meanMs == null ? null : attempt(m).meanMs / 1000;
-  const card = bars("AI 응답 시간", "AI 질문 1번 · 평균 · 낮을수록 좋음", seconds, Math.max(1, ...state.selected.map((m) => seconds(m) ?? 0)),
+  const card = bars("AI 응답 시간", "AI 질문 1번 · 평균", seconds, Math.max(1, ...state.selected.map((m) => seconds(m) ?? 0)),
     (v) => `${v.toFixed(2)}초`, richNote(["AI에 질문 하나"], "를 보내고 답을 다 받기까지 · ", ["모델 속도 비교 기준"], " · 서버 처리 제외, 공급자 쪽 대기 포함"));
   card.querySelectorAll(".bar-row").forEach((row) => {
     const value = attempt(row.dataset.model);
@@ -512,7 +512,7 @@ addEventListener("scroll", hideHelp, { passive: true });
  */
 function scoreCard(stage, title) {
   const fill = (model) => report(model)?.scores?.[stage];
-  const card = bars(title, "높을수록 좋음", (m) => percent(fill(m)?.score), 100, (v) => `${v.toFixed(1)}%`);
+  const card = bars(title, "", (m) => percent(fill(m)?.score), 100, (v) => `${v.toFixed(1)}%`);
   card.querySelectorAll(".bar-row").forEach((row) => {
     const autofill = fill(row.dataset.model);
     if (!autofill) {
