@@ -17,6 +17,8 @@ services:
       CAREER_FORM_EVALUATION_ENABLED: "true"
       CAREER_FORM_EVALUATION_RECORD_DELETE_ENABLED: "true"
       CAREER_FORM_EVALUATION_AUTO_RUN_ENABLED: ${CF_EVAL_AUTO_RUN:-false}
+      # 기준 기록을 다시 측정할 때만 false로 둔다. 저장소에 담은 기록이 먼저 들어가면 같은 이름이 겹친다.
+      CAREER_FORM_EVALUATION_SEED_RECORDS_ENABLED: ${CF_EVAL_SEED_RECORDS:-true}
       CAREER_FORM_EVALUATION_MAX_MODEL_CALLS: ${CF_EVAL_MAX_MODEL_CALLS:-200}
       # OPENAI_API_KEY가 .env.local에 있으면 평가 공급자 목록에 openai가 생긴다.
       CAREER_FORM_EVALUATION_OPENAI_ENABLED: "true"
