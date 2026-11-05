@@ -308,7 +308,7 @@ public final class MongoRunStore implements RunStore {
         return document;
     }
 
-    private static EvaluationRun fromDocument(Document document) {
+    static EvaluationRun fromDocument(Document document) {
         Document versions = document.get("versions", Document.class);
         TreeMap<String, String> settings = new TreeMap<>();
         versions.get("settings", Document.class).forEach((key, value) -> settings.put(key, (String) value));

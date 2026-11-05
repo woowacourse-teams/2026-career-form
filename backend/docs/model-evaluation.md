@@ -88,6 +88,17 @@ python3 scripts/evaluation_local.py reset-password
 
 값을 넣거나 바꾼 뒤에는 다음 develop 머지(또는 개발 배포 워크플로 재실행) 때 반영된다.
 
+### 저장소에 담은 기준 기록
+
+평가를 켠 서버는 뜰 때 `evaluation/seed-records/*.jsonl`의 기록 중 없는 것만 넣는다(`EvaluationSeedRecords`). 모델을 호출하지 않고, 있는 기록은 건드리지 않으며, 입력(`versions.inputs`)이 없어 첫 자동 평가를 막지 않는다. 그래서 개발서버는 이후 개선과 비교할 기준 두 건을 갖고 시작한다. 두 건 모두 2026-11-05 로컬 측정이다.
+
+| 이름 | 모델 | 재현한 것 |
+|---|---|---|
+| `initial-openai` | OpenAI `gpt-5.6-luna` | 초기 구조: 화면 전체 칸을 지원 키 전부와 한 번에 묻는다(`whole-form=1`, 칸 묶음 128) |
+| `token-limit` | JEV `jev-latest`, OpenAI `gpt-5.6-luna` | 같은 구조에서 JEV 입력 토큰 초과와 반으로 나눠 다시 묻는 동작 |
+
+호출 구조만 재현한 측정이고 당시 결과가 아니다. 프롬프트, 후처리, 데이터셋(v4)은 측정 시점의 것이고 섹션 분류 호출도 그대로 돈다. 실패한 호출의 칸은 점수에서 빠지므로(OpenAI는 큰 화면에서 답 형식 오류가 났다) 자동기입 점수는 실패율과 함께 본다. 형식을 보존하려면 `mongoexport --jsonFormat=canonical`로 내보낸다.
+
 ## 켜는 방법
 
 development 서버에서만 켠다. 평가 호출은 사용자 요청과 서버 동시 호출 상한(`career-form.analysis.jev.max-concurrent`)을

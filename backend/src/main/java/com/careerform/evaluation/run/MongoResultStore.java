@@ -105,7 +105,7 @@ public final class MongoResultStore implements ResultStore {
                 .append("unobserved", autofill.unobserved()));
     }
 
-    private static CallResultRecord fromDocument(Document document) {
+    static CallResultRecord fromDocument(Document document) {
         Map<String, ObservedItem> observed = new LinkedHashMap<>();
         for (Document item : document.getList("observed", Document.class)) {
             observed.put(item.getString("id"), item.getBoolean("unavailable")

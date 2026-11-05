@@ -29,6 +29,7 @@ import tools.jackson.databind.json.JsonMapper;
     "career-form.llm.enabled=false",
     "management.health.mongodb.enabled=false",
     "career-form.evaluation.enabled=true",
+    "career-form.evaluation.seed-records.enabled=false",
     "career-form.evaluation.poll-interval=1h",
     "career-form.quality.enabled=true",
     "career-form.quality.password-hash=pbkdf2-sha256$600000$cXVhbGl0eS10ZXN0LXNhbHQ=$/lpJNQ22MGBxyHPYyp6YAZCUPj5Wxy6qAUnA421bHCk="

@@ -215,9 +215,20 @@ public class EvaluationConfiguration {
             });
     }
 
-    /** 서버가 다 뜬 뒤 한 번 확인한다. 실패해도 서버 기동은 막지 않는다. */
+    /** 저장소에 담은 기준 기록을 넣고, 서버가 다 뜬 뒤 한 번 확인한다. 실패해도 서버 기동은 막지 않는다. */
     @org.springframework.context.event.EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
     void runEvaluationAfterDeploy(org.springframework.boot.context.event.ApplicationReadyEvent event) {
+        try {
+            if (event.getApplicationContext().getEnvironment()
+                .getProperty("career-form.evaluation.seed-records.enabled", Boolean.class, true)) {
+                new com.careerform.evaluation.run.EvaluationSeedRecords(event.getApplicationContext().getBean(MongoTemplate.class),
+                    com.careerform.evaluation.run.EvaluationSeedRecords.bundled()).insertMissing();
+            }
+        }
+        catch (RuntimeException exception) {
+            org.slf4j.LoggerFactory.getLogger(com.careerform.evaluation.run.EvaluationSeedRecords.class)
+                .warn("EVALUATION_SEED_RECORDS_FAILED reason={}", exception.getClass().getSimpleName());
+        }
         try {
             event.getApplicationContext().getBean(EvaluationAutoRun.class).runIfChanged();
         }
