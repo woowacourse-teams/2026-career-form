@@ -27,12 +27,21 @@ import formStyles from "./SampleForm.module.css";
 import styles from "./AiScene.module.css";
 
 const NARROW = 900;
+/** Narrow rows shrink with the screen down to a readable size. */
+const ROW_MAX = 34;
+const ROW_MIN = 24;
+/** Room under the form for the status pill docked at the bottom. */
+const STATUS_RESERVE = 66;
+/** Ways to free height on short phones, tried in order. */
+const FIT_LEVELS = ["full", "noHead", "compact"] as const;
+type FitLevel = (typeof FIT_LEVELS)[number];
 type Point = { x: number; y: number };
 export type Seg = (start: number, end: number) => number;
 
 export type AiElements = {
   root?: HTMLElement | null;
   stage?: HTMLElement | null;
+  captionBox?: HTMLElement | null;
   hero?: HTMLElement | null;
   form?: HTMLElement | null;
   rowsBox?: HTMLElement | null;
@@ -87,6 +96,7 @@ export type AiLayout = ConsoleGeometry & {
 
 const NAMED = [
   "stage",
+  "captionBox",
   "hero",
   "form",
   "rowsBox",
@@ -119,7 +129,12 @@ export function collectAiElements(root: HTMLElement): AiElements {
     ...root.querySelectorAll<T>(`[data-ai-${attr}]`),
   ];
   const named = Object.fromEntries(
-    NAMED.map((k) => [k, root.querySelector<HTMLElement>(`[data-ai="${k}"]`)]),
+    NAMED.map((k) => [
+      k,
+      root.querySelector<HTMLElement>(
+        `[data-ai="${k === "captionBox" ? "captions" : k}"]`,
+      ),
+    ]),
   );
   return {
     ...named,
@@ -142,13 +157,67 @@ export function collectAiElements(root: HTMLElement): AiElements {
   };
 }
 
+function setRows(form: HTMLElement, rowHeight: number) {
+  form.style.setProperty("--row-height", `${rowHeight}px`);
+  form.style.setProperty("--row-gap", `${Math.round(rowHeight * 0.22)}px`);
+  form.style.setProperty("--group-gap", `${Math.round(rowHeight * 0.85)}px`);
+}
+
+/**
+ * Tallest narrow row height that keeps the form within `available` pixels,
+ * from the form's height measured at 20px and 40px rows. Values under
+ * ROW_MIN tell the caller to free more room first.
+ */
+export function narrowRowHeight(available: number, at20: number, at40: number) {
+  const perRow = (at40 - at20) / 20;
+  const fixed = at20 - 20 * perRow;
+  return Math.min(ROW_MAX, Math.floor((available - fixed) / perRow));
+}
+
+/** Hides the form heading and, last, the caption body to free height. */
+function applyFit(els: AiElements, form: HTMLElement, level: FitLevel) {
+  const head = form.querySelector<HTMLElement>(`.${formStyles.head}`);
+  if (head) head.style.display = level === "full" ? "" : "none";
+  if (els.captionBox) els.captionBox.dataset.fit = level;
+}
+
+function captionsBottom(els: AiElements) {
+  const box = els.captionBox;
+  if (!box) return 0;
+  return (
+    box.offsetTop + Math.max(0, ...els.captions.map((c) => c.offsetHeight))
+  );
+}
+
+/**
+ * Phones: captions on top, the status pill docked at the bottom and the
+ * form sized to fit between them, freeing room level by level.
+ */
+function fitNarrow(els: AiElements, form: HTMLElement, h: number) {
+  for (const level of FIT_LEVELS) {
+    applyFit(els, form, level);
+    const top = captionsBottom(els) + 14;
+    setRows(form, 20);
+    const at20 = form.offsetHeight;
+    setRows(form, 40);
+    const at40 = form.offsetHeight;
+    const available = h - top - STATUS_RESERVE;
+    const rowHeight = narrowRowHeight(available, at20, at40);
+    if (rowHeight >= ROW_MIN || level === "compact") {
+      const fitted = Math.max(rowHeight, ROW_MIN);
+      setRows(form, fitted);
+      const spare = Math.max(0, available - form.offsetHeight);
+      return { rowHeight: fitted, fy: top + spare / 2 };
+    }
+  }
+  return { rowHeight: ROW_MIN, fy: 0 };
+}
+
 /** Writes the stage's size variables and returns the measured frame. */
-function sizeStage(stage: HTMLElement, form: HTMLElement) {
+function sizeStage(els: AiElements, stage: HTMLElement, form: HTMLElement) {
   const w = stage.clientWidth;
   const h = stage.clientHeight;
   const narrow = w <= NARROW;
-  const rowHeight = clamp(Math.round(h * (narrow ? 0.038 : 0.04)), 28, 36);
-  const gap = Math.round(rowHeight * 0.85);
   const captionsEnd = Math.max(20, w / 2 - 560) + Math.min(300, w * 0.24);
   const fw = narrow ? Math.min(w - 40, 420) : clamp(w * 0.27, 320, 380);
   const fx = narrow ? (w - fw) / 2 : captionsEnd + 40;
@@ -156,14 +225,19 @@ function sizeStage(stage: HTMLElement, form: HTMLElement) {
   const sizes = { fx, fw, cx, cw: clamp(w * 0.25, 300, 350) };
   for (const [k, v] of Object.entries(sizes))
     stage.style.setProperty(`--${k}`, `${v}px`);
-  form.style.setProperty("--row-height", `${rowHeight}px`);
-  form.style.setProperty("--row-gap", `${Math.round(rowHeight * 0.22)}px`);
-  form.style.setProperty("--group-gap", `${gap}px`);
+  let rowHeight: number;
+  let fy: number;
+  if (narrow) {
+    ({ rowHeight, fy } = fitNarrow(els, form, h));
+  } else {
+    applyFit(els, form, "full");
+    rowHeight = clamp(Math.round(h * 0.04), 28, 36);
+    setRows(form, rowHeight);
+    fy = Math.max(100, (h - form.offsetHeight) / 2 + 16);
+  }
+  const gap = Math.round(rowHeight * 0.85);
   const fh = form.offsetHeight;
   const ch = Math.max(fh, 540);
-  const fy = narrow
-    ? Math.max(h * 0.28, h - fh - 60)
-    : Math.max(100, (h - fh) / 2 + 16);
   stage.style.setProperty("--fy", `${fy}px`);
   stage.style.setProperty("--fh", `${fh}px`);
   stage.style.setProperty("--ch", `${ch}px`);
@@ -192,7 +266,7 @@ function placeGroups(
 export function measureAiLayout(els: AiElements): AiLayout | null {
   const { stage, form, rowsBox, ghost } = els;
   if (!stage || !form || !rowsBox || !ghost) return null;
-  const s = sizeStage(stage, form);
+  const s = sizeStage(els, stage, form);
   const base = offsetWithin(rowsBox, stage);
   const rowTop = els.rows.map((r) => r.offsetTop);
   const shift = els.rows.map((_, i) => (groupOf(i) + 1) * s.gap);
@@ -232,11 +306,22 @@ export function measureAiLayout(els: AiElements): AiLayout | null {
     heroDx: s.narrow ? 0 : s.w * 0.56 - s.fx - s.fw / 2,
     heroDy: s.narrow ? s.h * 0.42 : s.h * 0.05,
     source: s.narrow
-      ? { x: s.fx + 20, y: s.fy - 40 }
+      ? statusPoint(els.status, stage, s.fx)
       : { x: s.cx + 24, y: s.fy + s.ch * 0.42 },
     targets,
     button: { x: b.x, y: b.y, w: ghost.offsetWidth, h: ghost.offsetHeight },
   };
+}
+
+/** Narrow values fly up from the status pill docked under the form. */
+function statusPoint(
+  status: HTMLElement | null | undefined,
+  stage: HTMLElement,
+  fallbackX: number,
+) {
+  if (!status) return { x: fallbackX + 20, y: stage.clientHeight - 60 };
+  const at = offsetWithin(status, stage);
+  return { x: at.x + 20, y: at.y };
 }
 
 export function currentStep(p: number) {

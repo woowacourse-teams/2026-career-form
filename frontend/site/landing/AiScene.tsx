@@ -62,7 +62,7 @@ export function AiScene({ onInstall }: { onInstall: InstallHandler }) {
       <div className={styles.stage} data-ai="stage">
         <div className={styles.dotGrid} data-ai="dotGrid" aria-hidden="true" />
         <Hero onInstall={onInstall} />
-        <div className={styles.captions}>
+        <div className={styles.captions} data-ai="captions">
           {JEV_CAPTIONS.map(([title, body], i) => (
             <div key={title} className={styles.caption} data-ai-caption>
               <span>

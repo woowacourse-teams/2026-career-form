@@ -4,6 +4,7 @@ import {
   collectAiElements,
   currentStep,
   drawAiFrame,
+  narrowRowHeight,
   statusCountText,
   type AiElements,
   type AiLayout,
@@ -149,5 +150,18 @@ describe("의사결정 AI(JEV) scene", () => {
     expect(field(9).style.transform).toContain("translate3d(0,0px,0)");
     drawAiFrame(els, layout, stepAt(1, 0.75), true);
     expect(field(9).style.transform).toContain("translate3d(0,30px,0)");
+  });
+});
+
+describe("narrowRowHeight", () => {
+  // The form measured 300px tall at 20px rows and 500px at 40px rows.
+  it("picks the tallest row that keeps the whole form on screen", () => {
+    expect(narrowRowHeight(350, 300, 500)).toBe(25);
+  });
+  it("never grows rows past the desktop size", () => {
+    expect(narrowRowHeight(2000, 300, 500)).toBe(34);
+  });
+  it("reports rows below the readable minimum so the caller can compact", () => {
+    expect(narrowRowHeight(300, 300, 500)).toBeLessThan(24);
   });
 });
