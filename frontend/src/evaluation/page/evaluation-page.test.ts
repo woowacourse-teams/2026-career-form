@@ -182,6 +182,25 @@ const fieldItem = {
   ],
 };
 
+// 대상 이름이 없는 행 추가 결정. 내부 ID(structure) 대신 역할 이름이 보여야 한다.
+const decisionItem = {
+  caseId: "n",
+  stage: "PREPARATION",
+  kind: "INTERACTION_DECISION",
+  itemId: "structure",
+  state: "nhn-initial",
+  label: null,
+  group: "REPEAT_ADD",
+  control: null,
+  expected: "+",
+  answers: [
+    { repetition: 1, value: "+", confidence: null, outcome: "CORRECT" },
+  ],
+};
+
+// 이전 데이터셋 버전. 화면 하나, 공고 하나다.
+const datasetV3 = { ...dataset, cases: dataset.cases.slice(0, 1) };
+
 // 같은 비교에 모델을 더할 때 쓰는 실행 목록.
 const extraRuns: { run: typeof run; report: typeof report }[] = [];
 
@@ -191,9 +210,11 @@ function respond(url: string) {
     : url.includes("/runs?")
       ? [...extraRuns, { run, report }, { run: baseRun, report: baseReport }]
       : url.includes("/datasets/")
-        ? dataset
+        ? url.includes("/v3")
+          ? datasetV3
+          : dataset
         : url.includes("/items")
-          ? [fieldItem]
+          ? [fieldItem, decisionItem]
           : [];
   return {
     ok: true,
@@ -374,6 +395,89 @@ describe("AI 평가 화면의 단계 탭", () => {
     expect(dimmed()).toEqual(new Set(["START", "MAPPING", "END"]));
     tab("mapping");
     expect(dimmed()).toEqual(new Set(["START", "PREPARATION", "END"]));
+    (document.querySelector("#cf-source") as HTMLDialogElement).close();
+  });
+
+  it("이전 데이터셋 버전의 실행을 고르면 화면 수·공고 수·화면 선택이 그 버전 기준이다", async () => {
+    const wait = () => new Promise((resolve) => setTimeout(resolve, 0));
+    const pickRun = async (id: string) => {
+      const select = document.querySelector("#comparison") as HTMLSelectElement;
+      select.value = id;
+      select.dispatchEvent(new Event("change"));
+      await wait();
+    };
+    const chip = () =>
+      document.querySelector(".condition-chip")?.getAttribute("data-help-rows");
+    const sites = () => document.querySelector("#site-count")?.textContent;
+    extraRuns.push({
+      run: {
+        ...run,
+        id: "run-v3",
+        versions: { ...run.versions, datasetVersion: 3, promptVersion: "old" },
+      },
+      report,
+    });
+    (document.querySelector("#refresh") as HTMLButtonElement).click();
+    await wait();
+    await pickRun("run-v3");
+    expect(chip()).toContain("v3 · 화면 1개");
+    expect(sites()).toBe("사이트 1개");
+    (
+      document.querySelector('[data-page="fields"]') as HTMLButtonElement
+    ).click();
+    await wait();
+    const options = () =>
+      [
+        ...document.querySelectorAll(
+          '#cf-fields select[aria-label="화면"] optgroup',
+        ),
+      ].map((group) => (group as HTMLOptGroupElement).label);
+    expect(options()).toEqual(["우아한형제들 · R2605009"]);
+    await pickRun("run-1");
+    expect(chip()).toContain("v4 · 화면 3개");
+    expect(sites()).toBe("사이트 2개");
+    expect(options()).toHaveLength(2);
+    (
+      document.querySelector('[data-page="overview"]') as HTMLButtonElement
+    ).click();
+    extraRuns.length = 0;
+    (document.querySelector("#refresh") as HTMLButtonElement).click();
+    await wait();
+  });
+
+  it("항목별 비교에서 대상 이름이 없는 결정은 내부 ID 대신 역할 이름을 보인다", async () => {
+    const wait = () => new Promise((resolve) => setTimeout(resolve, 0));
+    (
+      document.querySelector('[data-page="fields"]') as HTMLButtonElement
+    ).click();
+    await wait();
+    const button = (name: string) =>
+      [
+        ...document.querySelectorAll<HTMLButtonElement>("#cf-fields button"),
+      ].find((item) => item.textContent === name)!;
+    button("버튼·선택 결정").click();
+    await wait();
+    button("전체").click();
+    await wait();
+    const text = document.querySelector("#cf-fields .fields-row")?.textContent;
+    expect(text).toContain("행 추가");
+    expect(text).not.toContain("structure");
+    button("칸 매핑").click();
+    (
+      document.querySelector('[data-page="overview"]') as HTMLButtonElement
+    ).click();
+  });
+
+  it("흐름도 설명은 공고마다 다른 요청 수를 적지 않는다", async () => {
+    (
+      document.querySelector(
+        '[data-source="자동기입 흐름"]',
+      ) as HTMLAnchorElement
+    ).click();
+    await Promise.resolve();
+    const text = document.querySelector("#source-content")?.textContent;
+    expect(text).not.toContain("요청 4개");
+    expect(text).toContain("서버 요청 처리 시간의 합");
     (document.querySelector("#cf-source") as HTMLDialogElement).close();
   });
 

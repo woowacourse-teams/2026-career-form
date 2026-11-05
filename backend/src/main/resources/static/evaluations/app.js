@@ -683,7 +683,7 @@ function itemValue(item, value) {
   return value ?? "넣을 항목 없음";
 }
 const itemLabel = (item) => item.kind === "SECTION_CLASSIFY" ? sectionTitle({ title: item.label })
-  : item.kind === "INTERACTION_DECISION" ? TARGET_NAMES[item.label] ?? item.label ?? item.itemId : item.label ?? item.itemId;
+  : item.kind === "INTERACTION_DECISION" ? TARGET_NAMES[item.label] ?? item.label ?? ROLE_NAMES[item.group] ?? item.itemId : item.label ?? item.itemId;
 function itemGroup(item) {
   const screen = STATE_NAMES[item.state] ?? item.state;
   if (item.kind === "SECTION_CLASSIFY") return `${screen} · ${item.stage === "PREPARATION" ? "준비 단계" : "매핑 단계"}`;
@@ -745,6 +745,8 @@ function renderFields() {
   // 화면은 공고별로 묶는다. "site:<공고>"는 그 공고의 모든 화면이다.
   const cases = state.dataset?.cases ?? [];
   const siteOfState = new Map(cases.map((item) => [item.state, item.siteId]));
+  // 이전 버전 실행으로 바꾸면 고른 공고·화면이 없을 수 있어 모든 공고로 되돌린다.
+  if (state.fieldScreen !== "all" && !cases.some((item) => item.state === state.fieldScreen || `site:${item.siteId}` === state.fieldScreen)) state.fieldScreen = "all";
   const inScreen = (field) => state.fieldScreen.startsWith("site:") ? siteOfState.get(field.state) === state.fieldScreen.slice(5)
     : state.fieldScreen === "all" || field.state === state.fieldScreen;
   screenSelect.append(Object.assign(element("option", "모든 공고"), { value: "all" }));
@@ -1084,7 +1086,7 @@ function flowView() {
     item.append(element("b", name, `flow-chip ${kind}`), element("span", note, "muted"));
     legend.append(item);
   });
-  legend.append(element("p", "자동기입 시간 = 파란 요청 4개의 처리 시간 합. 준비 탭은 위쪽 두 요청, 매핑 탭은 아래쪽 두 요청을 봅니다. 평가 때는 확장프로그램 대신 저장해 둔 요청을 서버에 보내고, 답을 사람이 검토한 정답과 비교해 채점합니다.", "muted flow-foot"));
+  legend.append(element("p", "자동기입 시간 = 준비와 매핑의 서버 요청 처리 시간의 합. 요청 수는 공고마다 다릅니다(NHN 4개, 우아한형제들은 고른 뒤 화면의 준비 요청까지 5개). 준비 탭은 준비 요청, 매핑 탭은 매핑 요청을 봅니다. 평가 때는 확장프로그램 대신 저장해 둔 요청을 서버에 보내고, 답을 사람이 검토한 정답과 비교해 채점합니다.", "muted flow-foot"));
   box.append(element("p", "자동기입 버튼 한 번에 오가는 요청을 순서대로 보입니다. 평가가 채점하고 시간을 재는 곳은 서버 요청과 AI 질문입니다.", "muted criteria-lead"), tabs, drawing, legend);
   return box;
 }
@@ -1561,13 +1563,13 @@ function datasetView(selected = 0) {
   const head = element("div", undefined, "dataset-head");
   const title = element("div");
   const sites = [...new Set(data.cases.map((item) => item.siteId))];
-  title.append(element("strong", `공고 ${sites.length}개`),
+  title.append(element("strong", `데이터셋 v${data.version} · 공고 ${sites.length}개`),
     element("span", `화면 ${data.cases.length}개 · 입력 칸 ${data.cases.reduce((n, item) => n + count(item), 0)}개 · 합성 프로필 ${Object.keys(data.profiles).length}명`, "muted"));
   head.append(title, element("span", data.usable ? "평가에 사용 가능" : "검토 필요", data.usable ? "badge ok" : "badge"));
   wrap.append(head);
   const about = element("details", undefined, "dataset-about");
   about.append(element("summary", "이 데이터셋이란"),
-    element("p", "실제 채용 지원서 두 곳을 개인정보 없이 정제한 화면 모음. 우아한형제들 지원서는 학력 구분·보훈·장애 선택에 따라 나타나는 칸이 달라 화면 상태마다 따로 평가합니다. 모델은 확장프로그램이 실제로 보내는 질문에 답하고, 사람이 검토한 정답과 비교해 채점합니다."));
+    element("p", "실제 채용 지원서를 개인정보 없이 정제한 화면 모음. 우아한형제들 지원서는 학력 구분·보훈·장애 선택에 따라 나타나는 칸이 달라 화면 상태마다 따로 평가합니다. 모델은 확장프로그램이 실제로 보내는 질문에 답하고, 사람이 검토한 정답과 비교해 채점합니다."));
   wrap.append(about);
   if (!data.usable && data.rejection) wrap.append(element("p", `미완료 검토: ${data.rejection}`, "muted"));
   const go = (target) => dialog("데이터셋", datasetView(target), "dataset-dialog");
@@ -2261,6 +2263,18 @@ async function openRun() {
 const POLL_MS = 3000;
 let pollTimer = null;
 
+const loadedDatasets = {};
+
+/** 화면에 보이는 데이터셋을 고른 실행의 버전으로 맞춘다. 실행이 없으면 새 평가가 쓰는 버전이다. */
+async function selectDataset() {
+  const versions = groupRuns(state.group)[0]?.run.versions;
+  const key = `${versions?.datasetId ?? DATASET.id}/v${versions?.datasetVersion ?? DATASET.version}`;
+  if (!(key in loadedDatasets)) {
+    try { loadedDatasets[key] = await api(`/datasets/${key}`); } catch { return void (state.dataset = null); }
+  }
+  state.dataset = loadedDatasets[key];
+}
+
 async function load() {
   clearTimeout(pollTimer);
   let failed = null;
@@ -2272,7 +2286,8 @@ async function load() {
     state.runs = [];
     failed = error.message;
   }
-  try { state.dataset = await api(`/datasets/${DATASET.id}/v${DATASET.version}`); } catch { state.dataset = null; }
+  renderFilters();
+  await selectDataset();
   renderFilters();
   render();
   if (failed) Object.assign($("#cf-status"), { textContent: failed, hidden: false });
@@ -2282,8 +2297,11 @@ async function load() {
 
 root.querySelectorAll("[data-page]").forEach((b) => b.addEventListener("click", () => { state.page = b.dataset.page; render(); }));
 root.querySelectorAll("[data-stage]").forEach((b) => b.addEventListener("click", () => { state.stage = b.dataset.stage; render(); }));
-$("#comparison").addEventListener("change", (e) => {
-  state.group = e.target.value; state.selected = []; state.openField = null; renderFilters(); render();
+$("#comparison").addEventListener("change", async (e) => {
+  state.group = e.target.value; state.selected = []; state.openField = null;
+  await selectDataset();
+  renderFilters();
+  render();
 });
 $("#cf-source-close").addEventListener("click", () => $("#cf-source").close());
 $("#run-open").addEventListener("click", openRun);
