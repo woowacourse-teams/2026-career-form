@@ -58,9 +58,27 @@ const items = (correct: number) => ({
 });
 const report = {
   confidence: [
-    { threshold: 0.5, counts: { filledCorrect: 90, filledWrongKey: 30, filledUnneeded: 8 }, precision: 0.7, fillRate: 0.9, score: 0.73 },
-    { threshold: 0.8, counts: { filledCorrect: 60, filledWrongKey: 6, filledUnneeded: 1 }, precision: 0.9, fillRate: 0.6, score: 0.82 },
-    { threshold: 0.9, counts: { filledCorrect: 30, filledWrongKey: 0, filledUnneeded: 0 }, precision: 1, fillRate: 0.3, score: 0.68 },
+    {
+      threshold: 0.5,
+      counts: { filledCorrect: 90, filledWrongKey: 30, filledUnneeded: 8 },
+      precision: 0.7,
+      fillRate: 0.9,
+      score: 0.73,
+    },
+    {
+      threshold: 0.8,
+      counts: { filledCorrect: 60, filledWrongKey: 6, filledUnneeded: 1 },
+      precision: 0.9,
+      fillRate: 0.6,
+      score: 0.82,
+    },
+    {
+      threshold: 0.9,
+      counts: { filledCorrect: 30, filledWrongKey: 0, filledUnneeded: 0 },
+      precision: 1,
+      fillRate: 0.3,
+      score: 0.68,
+    },
   ],
   quality: {
     accuracy: 0.8,
@@ -92,10 +110,20 @@ const report = {
   repetitions: [0.79, 0.8, 0.81].map((total, index) => ({
     repetition: index + 1,
     accuracy: 0.8,
-    scores: { TOTAL: total, PREPARATION: 0.7, SECTION: 0.89 + index * 0.01, MAPPING: 0.89 + index * 0.01 },
+    scores: {
+      TOTAL: total,
+      PREPARATION: 0.7,
+      SECTION: 0.89 + index * 0.01,
+      MAPPING: 0.89 + index * 0.01,
+    },
   })),
   autofill: score(0.9),
-  scores: { TOTAL: score(0.8), PREPARATION: score(0.7), SECTION: score(0.9), MAPPING: score(0.9) },
+  scores: {
+    TOTAL: score(0.8),
+    PREPARATION: score(0.7),
+    SECTION: score(0.9),
+    MAPPING: score(0.9),
+  },
   itemsByCall: {
     "PREPARATION/SECTION_CLASSIFY": items(4),
     "PREPARATION/INTERACTION_DECISION": items(2),
@@ -138,9 +166,19 @@ const baseReport = {
   repetitions: [0.74, 0.75, 0.76].map((total, index) => ({
     repetition: index + 1,
     accuracy: 0.75,
-    scores: { TOTAL: total, PREPARATION: 0.7, SECTION: 0.87 + index * 0.01, MAPPING: 0.87 + index * 0.01 },
+    scores: {
+      TOTAL: total,
+      PREPARATION: 0.7,
+      SECTION: 0.87 + index * 0.01,
+      MAPPING: 0.87 + index * 0.01,
+    },
   })),
-  scores: { ...report.scores, TOTAL: score(0.75), SECTION: score(0.88), MAPPING: score(0.88) },
+  scores: {
+    ...report.scores,
+    TOTAL: score(0.75),
+    SECTION: score(0.88),
+    MAPPING: score(0.88),
+  },
   flows: { ...report.flows, time: { ...report.flows.time, meanMs: 2000 } },
 };
 const dataset = {
@@ -169,7 +207,11 @@ const dataset = {
 };
 
 // 서버가 기록 삭제를 허용하는지. 개발서버처럼 함께 쓰는 서버는 꺼져 있다.
-const capabilities: { recordDelete: boolean; recordDeletePassword: boolean; baselineOrder: string[] } = {
+const capabilities: {
+  recordDelete: boolean;
+  recordDeletePassword: boolean;
+  baselineOrder: string[];
+} = {
   recordDelete: false,
   recordDeletePassword: false,
   baselineOrder: [],
@@ -235,18 +277,18 @@ function respond(url: string) {
   const body = url.endsWith("/notes")
     ? notes
     : url.includes("/capabilities")
-    ? capabilities
-    : url.includes("/runs?")
-      ? [...extraRuns, { run, report }, { run: baseRun, report: baseReport }]
-      : url.endsWith("/catalog")
-        ? catalog
-        : url.includes("/datasets/")
-          ? url.includes("/v3")
-            ? datasetV3
-            : dataset
-          : url.includes("/items")
-            ? [fieldItem, decisionItem]
-            : [];
+      ? capabilities
+      : url.includes("/runs?")
+        ? [...extraRuns, { run, report }, { run: baseRun, report: baseReport }]
+        : url.endsWith("/catalog")
+          ? catalog
+          : url.includes("/datasets/")
+            ? url.includes("/v3")
+              ? datasetV3
+              : dataset
+            : url.includes("/items")
+              ? [fieldItem, decisionItem]
+              : [];
   return {
     ok: true,
     status: 200,
@@ -320,13 +362,18 @@ describe("AI 평가 화면의 단계 탭", () => {
     await pick("total");
     expect(titles("#cf-quality")).toEqual(["자동기입 점수", "단계별 점수"]);
     // 값을 넣지 않는 준비·섹션 분류는 자동기입 점수에 섞지 않고 따로 보인다.
-    expect(document.querySelector("#cf-quality .summary-row")?.textContent).toContain("준비 점수");
-    expect(document.querySelector("#cf-quality .summary-row")?.textContent).toContain("섹션 분류 점수");
+    expect(
+      document.querySelector("#cf-quality .summary-row")?.textContent,
+    ).toContain("준비 점수");
+    expect(
+      document.querySelector("#cf-quality .summary-row")?.textContent,
+    ).toContain("섹션 분류 점수");
     expect(headline()).toBe("80.0%");
     expect(titles("#cf-performance")).toEqual([
       "자동기입 시간",
       "처리량",
-      "자동기입 실패율", "입력 토큰 초과",
+      "자동기입 실패율",
+      "입력 토큰 초과",
     ]);
   });
 
@@ -337,7 +384,8 @@ describe("AI 평가 화면의 단계 탭", () => {
     expect(titles("#cf-performance")).toEqual([
       "AI 응답 시간",
       "요청 처리 시간",
-      "요청 실패율", "입력 토큰 초과",
+      "요청 실패율",
+      "입력 토큰 초과",
     ]);
   });
 
@@ -353,7 +401,8 @@ describe("AI 평가 화면의 단계 탭", () => {
     expect(titles("#cf-performance")).toEqual([
       "AI 응답 시간",
       "요청 처리 시간",
-      "요청 실패율", "입력 토큰 초과",
+      "요청 실패율",
+      "입력 토큰 초과",
     ]);
   });
 
@@ -404,15 +453,22 @@ describe("AI 평가 화면의 단계 탭", () => {
       await wait();
     };
     const dialog = () => document.querySelector("#cf-source") as HTMLElement;
-    const remove = () => dialog().querySelector(".danger-action") as HTMLButtonElement;
+    const remove = () =>
+      dialog().querySelector(".danger-action") as HTMLButtonElement;
     const original = globalThis.fetch;
     const sent: { url: string; headers: Record<string, string> }[] = [];
     (globalThis as unknown as { fetch: unknown }).fetch = async (
-      url: string, options?: { method?: string; headers?: Record<string, string> }) => {
+      url: string,
+      options?: { method?: string; headers?: Record<string, string> },
+    ) => {
       if (options?.method === "DELETE") {
         sent.push({ url, headers: options.headers ?? {} });
-        return { ok: false, status: 403, headers: { get: () => "application/json" },
-          json: async () => ({ code: "PASSWORD_MISMATCH" }) };
+        return {
+          ok: false,
+          status: 403,
+          headers: { get: () => "application/json" },
+          json: async () => ({ code: "PASSWORD_MISMATCH" }),
+        };
       }
       return respond(url);
     };
@@ -423,12 +479,16 @@ describe("AI 평가 화면의 단계 탭", () => {
       (document.querySelector("#record-delete") as HTMLButtonElement).click();
       expect(dialog().querySelector('input[type="password"]')).toBeNull();
       expect(remove().disabled).toBe(false);
-      (dialog().querySelector(".secondary-action") as HTMLButtonElement).click();
+      (
+        dialog().querySelector(".secondary-action") as HTMLButtonElement
+      ).click();
 
       capabilities.recordDeletePassword = true;
       await refresh();
       (document.querySelector("#record-delete") as HTMLButtonElement).click();
-      const input = dialog().querySelector('input[type="password"]') as HTMLInputElement;
+      const input = dialog().querySelector(
+        'input[type="password"]',
+      ) as HTMLInputElement;
       expect(input.autocomplete).toBe("off");
       expect(remove().disabled).toBe(true);
       input.value = "비밀 pw";
@@ -439,10 +499,19 @@ describe("AI 평가 화면의 단계 탭", () => {
       expect(sent).toHaveLength(1);
       expect(sent[0].url).toBe("/api/v1/evaluations/records/run-1");
       // 한글 비밀번호도 헤더에 실리도록 UTF-8 Base64로 보낸다.
-      expect(Buffer.from(sent[0].headers["X-Evaluation-Delete-Password"], "base64").toString("utf8")).toBe("비밀 pw");
-      expect(dialog().querySelector(".delete-message")?.textContent).toBe("비밀번호가 맞지 않습니다.");
+      expect(
+        Buffer.from(
+          sent[0].headers["X-Evaluation-Delete-Password"],
+          "base64",
+        ).toString("utf8"),
+      ).toBe("비밀 pw");
+      expect(dialog().querySelector(".delete-message")?.textContent).toBe(
+        "비밀번호가 맞지 않습니다.",
+      );
     } finally {
-      (dialog().querySelector(".secondary-action") as HTMLButtonElement | null)?.click();
+      (
+        dialog().querySelector(".secondary-action") as HTMLButtonElement | null
+      )?.click();
       (globalThis as unknown as { fetch: unknown }).fetch = original;
       capabilities.recordDelete = false;
       capabilities.recordDeletePassword = false;
@@ -855,17 +924,32 @@ describe("AI 평가 화면의 단계 탭", () => {
 
   it("매핑 탭의 확신도 그래프는 지표를 눌러 하나씩 보고, 세로축은 값 범위에 맞추며 현재 기준 값을 적는다", async () => {
     await pick("mapping");
-    expect(document.querySelector("#cf-confidence .confidence-verdict")?.textContent).toContain("0.8 유지가 가장 좋습니다");
-    const buttons = () => [...document.querySelectorAll<HTMLButtonElement>("#cf-confidence .stage button")];
-    const chart = () => document.querySelector("#cf-confidence .confidence-chart") as Element;
-    expect(buttons().map((button) => button.textContent)).toEqual(["점수", "정밀도", "채움률"]);
+    expect(
+      document.querySelector("#cf-confidence .confidence-verdict")?.textContent,
+    ).toContain("0.8 유지가 가장 좋습니다");
+    const buttons = () => [
+      ...document.querySelectorAll<HTMLButtonElement>(
+        "#cf-confidence .stage button",
+      ),
+    ];
+    const chart = () =>
+      document.querySelector("#cf-confidence .confidence-chart") as Element;
+    expect(buttons().map((button) => button.textContent)).toEqual([
+      "점수",
+      "정밀도",
+      "채움률",
+    ]);
     expect(buttons()[0].getAttribute("aria-pressed")).toBe("true");
     expect(chart().querySelectorAll(".confidence-line")).toHaveLength(1);
     expect(chart().querySelectorAll("circle")).toHaveLength(3);
     expect(chart().querySelector(".confidence-now")).not.toBeNull();
-    expect(chart().querySelector(".confidence-value")?.textContent).toBe("82.0%");
+    expect(chart().querySelector(".confidence-value")?.textContent).toBe(
+      "82.0%",
+    );
     const hover = (index: number) =>
-      chart().querySelectorAll(".confidence-hit")[index].dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+      chart()
+        .querySelectorAll(".confidence-hit")
+        [index].dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
     const tip = () => chart().querySelector(".confidence-tip") as HTMLElement;
     expect(tip().hidden).toBe(true);
     hover(0);
@@ -881,11 +965,15 @@ describe("AI 평가 화면의 단계 탭", () => {
 
     buttons()[2].click();
     expect(buttons()[2].getAttribute("aria-pressed")).toBe("true");
-    expect(chart().querySelector(".confidence-value")?.textContent).toBe("60.0%");
+    expect(chart().querySelector(".confidence-value")?.textContent).toBe(
+      "60.0%",
+    );
     hover(0);
     expect(tip().textContent).toContain("채움률");
     expect(tip().textContent).toContain("90.0%");
-    expect(document.querySelector("#cf-confidence details summary")?.textContent).toBe("표로 보기");
+    expect(
+      document.querySelector("#cf-confidence details summary")?.textContent,
+    ).toBe("표로 보기");
   });
 
   it("매핑 탭의 확신도 표는 기준별 값을 모델마다 보이고 현재 기준과 모델별 최고 점수를 표시한다", async () => {
@@ -907,16 +995,26 @@ describe("AI 평가 화면의 단계 탭", () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     };
     const options = () =>
-      [...document.querySelectorAll("#comparison option")].map((option) => option.textContent?.split(" · ")[0]);
+      [...document.querySelectorAll("#comparison option")].map(
+        (option) => option.textContent?.split(" · ")[0],
+      );
     expect(options()).toEqual(["baseline", "before"]);
     // "baseline"을 먼저 재고 "before"를 나중에 쟀어도, 기준 순서가 baseline 다음 before면 before가 더 최근 쪽이다.
     const requested = { run: run.requestedAt, base: baseRun.requestedAt };
-    Object.assign(run, { requestedBy: "baseline-seed", requestedAt: "2026-11-01T00:00:00Z" });
+    Object.assign(run, {
+      requestedBy: "baseline-seed",
+      requestedAt: "2026-11-01T00:00:00Z",
+    });
     Object.assign(baseRun, { requestedBy: "baseline-seed" });
     capabilities.baselineOrder = ["baseline", "before"];
     extraRuns.push({
-      run: { ...run, id: "run-9", requestedBy: "auto-deploy", requestedAt: "2026-10-01T00:00:00Z",
-        versions: { ...run.versions, promptVersion: "first-abc1234" } } as typeof run,
+      run: {
+        ...run,
+        id: "run-9",
+        requestedBy: "auto-deploy",
+        requestedAt: "2026-10-01T00:00:00Z",
+        versions: { ...run.versions, promptVersion: "first-abc1234" },
+      } as typeof run,
       report,
     });
     try {
@@ -925,8 +1023,14 @@ describe("AI 평가 화면의 단계 탭", () => {
     } finally {
       extraRuns.length = 0;
       capabilities.baselineOrder = [];
-      Object.assign(run, { requestedBy: undefined, requestedAt: requested.run });
-      Object.assign(baseRun, { requestedBy: undefined, requestedAt: requested.base });
+      Object.assign(run, {
+        requestedBy: undefined,
+        requestedAt: requested.run,
+      });
+      Object.assign(baseRun, {
+        requestedBy: undefined,
+        requestedAt: requested.base,
+      });
       await refresh();
     }
   });
@@ -945,37 +1049,61 @@ describe("AI 평가 화면의 단계 탭", () => {
     notes["run-1"] = "5칸씩 나눠 묻기";
     const original = globalThis.fetch;
     const sent: { url: string; method?: string; body?: string }[] = [];
-    (globalThis as unknown as { fetch: unknown }).fetch = async (url: string, options?: { method?: string; body?: string }) => {
+    (globalThis as unknown as { fetch: unknown }).fetch = async (
+      url: string,
+      options?: { method?: string; body?: string },
+    ) => {
       if (options?.method === "PUT") {
         sent.push({ url, method: options.method, body: options.body });
-        return { ok: true, status: 200, headers: { get: () => "application/json" },
-          json: async () => ({ note: JSON.parse(options.body ?? "{}").note.trim() }) };
+        return {
+          ok: true,
+          status: 200,
+          headers: { get: () => "application/json" },
+          json: async () => ({
+            note: JSON.parse(options.body ?? "{}").note.trim(),
+          }),
+        };
       }
       return respond(url);
     };
     try {
       await refresh();
-      expect(box().querySelector(".record-note-text")?.textContent).toBe("5칸씩 나눠 묻기");
+      expect(box().querySelector(".record-note-text")?.textContent).toBe(
+        "5칸씩 나눠 묻기",
+      );
 
       (box().querySelector("button") as HTMLButtonElement).click();
       const input = box().querySelector("input") as HTMLInputElement;
       expect(input.value).toBe("5칸씩 나눠 묻기");
       expect(input.maxLength).toBe(300);
       input.value = " 섹션별로 나눠 5칸씩 묻기 ";
-      (box().querySelector("form") as HTMLFormElement).dispatchEvent(new Event("submit", { cancelable: true }));
+      (box().querySelector("form") as HTMLFormElement).dispatchEvent(
+        new Event("submit", { cancelable: true }),
+      );
       await wait();
-      expect(sent).toEqual([{ url: "/api/v1/evaluations/records/run-1/note", method: "PUT",
-        body: JSON.stringify({ note: " 섹션별로 나눠 5칸씩 묻기 " }) }]);
-      expect(box().querySelector(".record-note-text")?.textContent).toBe("섹션별로 나눠 5칸씩 묻기");
+      expect(sent).toEqual([
+        {
+          url: "/api/v1/evaluations/records/run-1/note",
+          method: "PUT",
+          body: JSON.stringify({ note: " 섹션별로 나눠 5칸씩 묻기 " }),
+        },
+      ]);
+      expect(box().querySelector(".record-note-text")?.textContent).toBe(
+        "섹션별로 나눠 5칸씩 묻기",
+      );
       expect(box().querySelector("input")).toBeNull();
 
       // 전후 비교에도 이후 기록의 변경 내용을 보인다.
       await openCompare();
-      expect(document.querySelector("#cf-compare .compare-conditions")?.textContent).toContain("섹션별로 나눠 5칸씩 묻기");
+      expect(
+        document.querySelector("#cf-compare .compare-conditions")?.textContent,
+      ).toContain("섹션별로 나눠 5칸씩 묻기");
     } finally {
       (globalThis as unknown as { fetch: unknown }).fetch = original;
       delete notes["run-1"];
-      (document.querySelector('[data-page="overview"]') as HTMLButtonElement).click();
+      (
+        document.querySelector('[data-page="overview"]') as HTMLButtonElement
+      ).click();
       await refresh();
     }
   });
@@ -990,37 +1118,60 @@ describe("AI 평가 화면의 단계 탭", () => {
         (metric) => metric.querySelector("h3")?.textContent === title,
       ) as Element;
     const rows = (title: string) =>
-      [...cardOf(title).querySelectorAll(".bar-row")].map((row) => row.firstElementChild?.textContent);
+      [...cardOf(title).querySelectorAll(".bar-row")].map(
+        (row) => row.firstElementChild?.textContent,
+      );
     const sort = async (title: string, value: string) => {
-      const select = cardOf(title).querySelector("select.card-sort") as HTMLSelectElement;
+      const select = cardOf(title).querySelector(
+        "select.card-sort",
+      ) as HTMLSelectElement;
       select.value = value;
       select.dispatchEvent(new Event("change"));
       await Promise.resolve();
     };
     // 모델이 하나면 정렬할 것이 없어 정렬 선택을 보이지 않는다.
     await pick("total");
-    expect(cardOf("자동기입 점수").querySelector("select.card-sort")).toBeNull();
+    expect(
+      cardOf("자동기입 점수").querySelector("select.card-sort"),
+    ).toBeNull();
     expect(document.querySelector("#cf-overview-stage [data-sort]")).toBeNull();
     const original = run.comparisonId;
     (run as { comparisonId: string | null }).comparisonId = "both";
     // 두 번째 모델은 점수가 더 높고(0.95) 더 느리다(9초).
     extraRuns.push({
-      run: { ...run, id: "run-2", versions: { ...run.versions, provider: "openai", model: "gpt" } },
-      report: { ...report, scores: { ...report.scores, TOTAL: { ...score(0.95), precision: 0.5 } },
-        flows: { ...report.flows, time: { ...report.flows.time, meanMs: 9000 } } },
+      run: {
+        ...run,
+        id: "run-2",
+        versions: { ...run.versions, provider: "openai", model: "gpt" },
+      },
+      report: {
+        ...report,
+        scores: { ...report.scores, TOTAL: { ...score(0.95), precision: 0.5 } },
+        flows: {
+          ...report.flows,
+          time: { ...report.flows.time, meanMs: 9000 },
+        },
+      },
     });
     try {
       await refresh();
       await pick("total");
-      const options = [...cardOf("자동기입 점수").querySelectorAll("select.card-sort option")].map((option) => option.textContent);
+      const options = [
+        ...cardOf("자동기입 점수").querySelectorAll("select.card-sort option"),
+      ].map((option) => option.textContent);
       expect(options).toEqual(["모델 순", "높은 순", "낮은 순"]);
       expect(rows("자동기입 점수")).toEqual(["jev/jev-latest", "openai/gpt"]);
 
       await sort("자동기입 점수", "high");
       expect(rows("자동기입 점수")).toEqual(["openai/gpt", "jev/jev-latest"]);
       // 막대 아래 설명은 순서가 바뀌어도 그 모델의 값이다.
-      expect(cardOf("자동기입 점수").querySelector(".bar-row .number")?.textContent).toBe("95.0%");
-      expect(cardOf("자동기입 점수").querySelector(".bar-row")?.nextElementSibling?.textContent).toContain("50");
+      expect(
+        cardOf("자동기입 점수").querySelector(".bar-row .number")?.textContent,
+      ).toBe("95.0%");
+      expect(
+        cardOf("자동기입 점수").querySelector(".bar-row")?.nextElementSibling
+          ?.textContent,
+      ).toContain("50");
       // 다른 카드는 그대로다.
       expect(rows("자동기입 시간")).toEqual(["jev/jev-latest", "openai/gpt"]);
 
@@ -1029,7 +1180,13 @@ describe("AI 평가 화면의 단계 탭", () => {
       await sort("자동기입 시간", "low");
       expect(rows("자동기입 시간")).toEqual(["jev/jev-latest", "openai/gpt"]);
       // 고른 정렬은 다시 그려도 남는다.
-      expect((cardOf("자동기입 점수").querySelector("select.card-sort") as HTMLSelectElement).value).toBe("high");
+      expect(
+        (
+          cardOf("자동기입 점수").querySelector(
+            "select.card-sort",
+          ) as HTMLSelectElement
+        ).value,
+      ).toBe("high");
 
       await sort("자동기입 점수", "model");
       expect(rows("자동기입 점수")).toEqual(["jev/jev-latest", "openai/gpt"]);

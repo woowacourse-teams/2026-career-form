@@ -59,33 +59,43 @@ let cached: ReturnType<typeof build> | undefined;
 const builtOnce = () => (cached ??= build());
 
 describe("평가 데이터셋 generic-matching v4", () => {
-  it("NHN 사례는 현재 제품 코드가 만드는 요청과 같다", async () => {
-    const built = await builtOnce();
-    const file = join(DATASET, `cases/${built.caseId}.json`);
-    if (write) writeFileSync(file, `${JSON.stringify(built, null, 2)}\n`);
-    expect(existsSync(file)).toBe(true);
-    const stored = JSON.parse(readFileSync(file, "utf8")) as CaseFile;
-    expect(built.calls.map((call) => call.requestDigest)).toEqual(
-      stored.calls.map((call) => call.requestDigest),
-    );
-    expect(built.calls.map((call) => call.expected)).toEqual(
-      stored.calls.map((call) => call.expected),
-    );
-  }, BUILD_TIMEOUT_MS);
+  it(
+    "NHN 사례는 현재 제품 코드가 만드는 요청과 같다",
+    async () => {
+      const built = await builtOnce();
+      const file = join(DATASET, `cases/${built.caseId}.json`);
+      if (write) writeFileSync(file, `${JSON.stringify(built, null, 2)}\n`);
+      expect(existsSync(file)).toBe(true);
+      const stored = JSON.parse(readFileSync(file, "utf8")) as CaseFile;
+      expect(built.calls.map((call) => call.requestDigest)).toEqual(
+        stored.calls.map((call) => call.requestDigest),
+      );
+      expect(built.calls.map((call) => call.expected)).toEqual(
+        stored.calls.map((call) => call.expected),
+      );
+    },
+    BUILD_TIMEOUT_MS,
+  );
 
-  it("NHN 화면은 준비(섹션 분류 → 학력 행 추가 결정) → 매핑(섹션 분류 → 필드 매핑)이고 정답이 모든 칸을 덮는다", async () => {
-    const built = await builtOnce();
-    expect(built.calls.map((call) => `${call.phase}:${call.kind}`)).toEqual([
-      "PREPARATION:SECTION_CLASSIFY",
-      "PREPARATION:INTERACTION_DECISION",
-      "MAPPING:SECTION_CLASSIFY",
-      "MAPPING:GENERIC_FIELDS",
-    ]);
-    const fields = built.calls.find((call) => call.kind === "GENERIC_FIELDS")!;
-    expect(Object.keys(fields.expected).sort()).toEqual(
-      Object.keys(truth().fieldMapping).sort(),
-    );
-  }, BUILD_TIMEOUT_MS);
+  it(
+    "NHN 화면은 준비(섹션 분류 → 학력 행 추가 결정) → 매핑(섹션 분류 → 필드 매핑)이고 정답이 모든 칸을 덮는다",
+    async () => {
+      const built = await builtOnce();
+      expect(built.calls.map((call) => `${call.phase}:${call.kind}`)).toEqual([
+        "PREPARATION:SECTION_CLASSIFY",
+        "PREPARATION:INTERACTION_DECISION",
+        "MAPPING:SECTION_CLASSIFY",
+        "MAPPING:GENERIC_FIELDS",
+      ]);
+      const fields = built.calls.find(
+        (call) => call.kind === "GENERIC_FIELDS",
+      )!;
+      expect(Object.keys(fields.expected).sort()).toEqual(
+        Object.keys(truth().fieldMapping).sort(),
+      );
+    },
+    BUILD_TIMEOUT_MS,
+  );
 
   it("우아한형제들 사례·정답은 v3와 바이트까지 같다", () => {
     for (const dir of ["cases", "ground-truth"]) {
