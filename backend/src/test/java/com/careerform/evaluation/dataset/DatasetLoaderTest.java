@@ -282,18 +282,4 @@ class DatasetLoaderTest {
             throw new IllegalStateException(exception);
         }
     }
-
-    @org.junit.jupiter.api.Test
-    @org.junit.jupiter.api.DisplayName("범주 미확정 칸은 섹션 범주가 MIXED·ABSTAIN인 칸(행 안의 칸 포함)이다")
-    void unconfirmedFieldsComeFromSectionCategories() {
-        var request = tools.jackson.databind.json.JsonMapper.builder().build().readTree("""
-            {"sections":[
-              {"category":"PERSONAL","fields":[{"candidateId":"a"}]},
-              {"category":"MIXED","fields":[{"candidateId":"b"}],"items":[{"fields":[{"candidateId":"c"}]}]},
-              {"category":"ABSTAIN","fields":[{"candidateId":"d"}]}]}
-            """);
-        var call = new CaseCall(1, com.careerform.evaluation.scoring.CallKind.Stage.MAPPING,
-            com.careerform.evaluation.scoring.CallKind.GENERIC_FIELDS, "/f", "d", request, java.util.Map.of(), 1);
-        org.assertj.core.api.Assertions.assertThat(call.unconfirmedFields()).containsExactlyInAnyOrder("b", "c", "d");
-    }
 }

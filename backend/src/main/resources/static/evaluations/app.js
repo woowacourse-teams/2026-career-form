@@ -554,7 +554,7 @@ function renderAutofill() {
     row.append(Object.assign(element("span", model), { title: model }), track, text);
     card.append(row);
   }
-  cardHelp(card, richNote(["놓침"], " = 비움 + 확인 필요(확신도 0.5~0.8) + 막음(0.5 미만) + 범주 미확정 + 요청 실패 → ", ["사용자가 직접 입력하는 칸"]));
+  cardHelp(card, richNote(["놓침"], " = 비움 + 확인 필요(확신도 0.5~0.8) + 막음(0.5 미만) + 요청 실패 → ", ["사용자가 직접 입력하는 칸"]));
   return card;
 }
 
@@ -602,7 +602,7 @@ function confidenceVerdict(points) {
   const best = points.reduce((top, point) => (point.score ?? 0) > (top.score ?? 0) ? point : top, current);
   if ((best.score ?? 0) - (current.score ?? 0) < 0.005) return `${CURRENT_CONFIDENCE} 유지가 가장 좋습니다.`;
   const signed = (value) => value > 0 ? `+${value}` : value < 0 ? `−${-value}` : "0";
-  return `${best.threshold}이 후보입니다. 맞은 칸 ${signed(best.counts.filledCorrect - current.counts.filledCorrect)}, 틀린 칸 ${signed(wrongCells(best.counts) - wrongCells(current.counts))}`;
+  return `${best.threshold}에서 점수가 가장 높습니다. 맞은 칸 ${signed(best.counts.filledCorrect - current.counts.filledCorrect)}, 틀린 칸 ${signed(wrongCells(best.counts) - wrongCells(current.counts))}`;
 }
 
 /** 지표 하나의 기준별 그래프. 모델 영역을 겹쳐 간격이 보이게 하고, 작은 차이가 보이도록 세로축을 값 범위에 바짝 맞춘다. */
@@ -744,7 +744,7 @@ function confidenceCard() {
   const details = element("details", undefined, "confidence-details");
   details.append(element("summary", "표로 보기"), wrap);
   card.append(details);
-  cardHelp(card, richNote(["칸 매핑 질문만"], " · 섹션 분류 제외 · 같은 데이터로 본 값이라 최고 점수 기준을 그대로 믿으면 안 됨 · ", ["JEV는 확률, OpenAI는 모델이 적은 값"], "이라 같은 숫자가 같은 뜻이 아님"));
+  cardHelp(card, richNote(["칸 매핑 질문만"], " · 섹션 분류 제외 · 모델의 확신도가 오답을 거르는지 보는 진단 · 제품은 0.8 아래 칸도 조건이 맞으면 넣으므로 제품 기준 조정 근거로 쓰지 않음 · ", ["JEV는 확률, OpenAI는 모델이 적은 값"], "이라 같은 숫자가 같은 뜻이 아님"));
   return card;
 }
 
@@ -1914,7 +1914,7 @@ function criteriaView() {
   card("1. 칸별 결과",
     element("p", "칸 매핑 답을 확장프로그램과 같은 확신도 기준으로 봅니다. 0.8 이상만 자동기입, 0.5~0.8은 사용자 확인, 0.5 미만은 막음."),
     table(["결과", "뜻", "사용자 입장"], [["맞게 넣음", "정답 항목을 자동기입", "이득"], ["맞게 비움", "넣을 항목이 없는 칸을 넣지 않음", "이득"],
-      ["놓침", "정답이 있는데 넣지 않음(비움·확인 필요·막음·범주 미확정·요청 실패)", "직접 입력"], ["잘못 넣음", "다른 항목을 넣거나 넣지 말아야 할 칸에 넣음", "찾아서 고쳐야 함"]]),
+      ["놓침", "정답이 있는데 넣지 않음(비움·확인 필요·막음·요청 실패)", "직접 입력"], ["잘못 넣음", "다른 항목을 넣거나 넣지 말아야 할 칸에 넣음", "찾아서 고쳐야 함"]]),
     table(["지표", "계산"], [["정밀도", "맞게 넣음 ÷ 넣은 칸"], ["채움률", "맞게 넣음 ÷ 정답이 있는 칸"]]),
     element("p", "확장프로그램의 이름 칸 보정, 정확히 일치하는 값 올림 규칙은 반영하지 않습니다. OpenAI 확신도는 모델이 스스로 적은 값입니다.", "muted"));
   card("2. 정답 기준",

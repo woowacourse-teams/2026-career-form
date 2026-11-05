@@ -41,17 +41,6 @@ public final class RunReporter {
      */
     public RunReport report(EvaluationRun run, List<CallResultRecord> records,
         Function<CallResultRecord, Map<String, String>> expected, Function<String, String> siteOf) {
-        return report(run, records, expected, siteOf, record -> java.util.Set.of());
-    }
-
-    /**
-     * {@code unconfirmed}는 기록 하나에서 범주가 확정되지 않은 칸을 돌려준다. 제품이 이 칸을 자동으로 넣지 않으므로 자동기입
-     * 점수에서는 답이 없는 칸으로 센다. 항목 단위 정확도는 AI의 답을 보는 진단 지표라 그대로 둔다.
-     */
-    public RunReport report(EvaluationRun run, List<CallResultRecord> records,
-        Function<CallResultRecord, Map<String, String>> expected, Function<String, String> siteOf,
-        Function<CallResultRecord, java.util.Set<String>> unconfirmed) {
-        List<CallResultRecord> filled = records.stream().map(record -> withoutUnconfirmed(record, unconfirmed.apply(record))).toList();
         Double elapsedSeconds = run.startedAt() == null || run.finishedAt() == null ? null
             : Duration.between(run.startedAt(), run.finishedAt()).toMillis() / 1000.0;
         Map<String, Predicate<CallResultRecord>> stages = new LinkedHashMap<>();
@@ -67,19 +56,8 @@ public final class RunReporter {
         });
         return new RunReport(aggregator.aggregate(records.stream().map(CallResultRecord::toCallResult).toList()),
             performance, tokens, flows(records, siteOf), timing(run, records), RunService.SCORING_VERSION,
-            repetitions(filled, expected), autofill(filled, expected).map(RunReport.Autofill::of).orElse(null),
-            stageScores(filled, expected), itemsByCall(records), confidence(filled, expected));
-    }
-
-    private static CallResultRecord withoutUnconfirmed(CallResultRecord record, java.util.Set<String> unconfirmed) {
-        if (record.kind() != CallKind.GENERIC_FIELDS || unconfirmed.isEmpty()) {
-            return record;
-        }
-        Map<String, com.careerform.evaluation.scoring.ObservedItem> observed = new LinkedHashMap<>(record.observed());
-        observed.keySet().removeAll(unconfirmed);
-        return new CallResultRecord(record.runId(), record.repetition(), record.caseId(), record.order(), record.kind(),
-            record.stage(), record.failure(), record.score(), observed, record.productCallNanos(), record.attempts(),
-            record.recordedAt(), record.autofill());
+            repetitions(records, expected), autofill(records, expected).map(RunReport.Autofill::of).orElse(null),
+            stageScores(records, expected), itemsByCall(records), confidence(records, expected));
     }
 
     /** 단계별 점수. 정답을 모르는 기록은 빼고, 결과가 없는 단계는 넣지 않는다. 실패한 호출의 칸은 답이 없는 칸으로 센다. */
