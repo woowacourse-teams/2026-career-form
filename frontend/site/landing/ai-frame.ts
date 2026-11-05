@@ -170,6 +170,8 @@ function setRows(form: HTMLElement, rowHeight: number) {
  */
 export function narrowRowHeight(available: number, at20: number, at40: number) {
   const perRow = (at40 - at20) / 20;
+  // Nothing measurable (no layout yet): rows do not decide the height.
+  if (perRow <= 0) return ROW_MAX;
   const fixed = at20 - 20 * perRow;
   return Math.min(ROW_MAX, Math.floor((available - fixed) / perRow));
 }

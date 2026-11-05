@@ -161,6 +161,9 @@ describe("narrowRowHeight", () => {
   it("never grows rows past the desktop size", () => {
     expect(narrowRowHeight(2000, 300, 500)).toBe(34);
   });
+  it("keeps the largest row when the form did not change height", () => {
+    expect(narrowRowHeight(300, 300, 300)).toBe(34);
+  });
   it("reports rows below the readable minimum so the caller can compact", () => {
     expect(narrowRowHeight(300, 300, 500)).toBeLessThan(24);
   });
