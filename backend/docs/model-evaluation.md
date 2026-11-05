@@ -90,12 +90,13 @@ python3 scripts/evaluation_local.py reset-password
 
 ### 저장소에 담은 기준 기록
 
-평가를 켠 서버는 뜰 때 `evaluation/seed-records/*.jsonl`의 기록 중 없는 것만 넣는다(`EvaluationSeedRecords`). 모델을 호출하지 않고, 있는 기록은 건드리지 않으며, 입력(`versions.inputs`)이 없어 첫 자동 평가를 막지 않는다. 그래서 개발서버는 이후 개선과 비교할 기준 두 건을 갖고 시작한다. 모두 2026-11-05 로컬 측정이다.
+평가를 켠 서버는 뜰 때 `evaluation/seed-records/*.jsonl`의 기록 중 없는 것만 넣는다(`EvaluationSeedRecords`). 모델을 호출하지 않고, 있는 기록은 건드리지 않으며, 입력(`versions.inputs`)이 없어 첫 자동 평가를 막지 않는다. 그래서 개발서버는 이후 개선과 비교할 기준 세 건을 갖고 시작한다. 모두 2026-11-05 로컬 측정이다.
 
 | 이름 | 모델 | 묻는 방식 | 보려는 것 |
 |---|---|---|---|
 | `initial-openai` | OpenAI `gpt-5.6-luna`, `gpt-6-luna` | 초기 구조: 화면 전체 칸을 지원 키 전부와 한 번에(`whole-form=1`, 칸 묶음 128) | OpenAI만 쓰던 때의 호출 방식. 당시 기본 모델은 `gpt-5.6-luna`이고 `gpt-6-luna`는 비교용이다 |
 | `token-limit` | JEV `jev-latest` | 같은 초기 구조 | JEV 도입 직후의 입력 토큰 초과와 반으로 나눠 다시 묻는 동작 |
+| `current` | JEV `jev-latest`, OpenAI `gpt-5.6-luna`, `gpt-6-luna` | 현재 구조(섹션별, 5칸씩) | 구조 개선 뒤. 같은 모델로 구조만 바꾼 효과와 모델 차이를 가른다 |
 
 호출 구조만 재현한 측정이고 당시 결과가 아니다. 프롬프트, 후처리, 데이터셋(v4)은 측정 시점의 것이고, 초기에는 없던 섹션 분류·준비 호출도 그대로 돌므로 초기 구조 기록은 칸 매핑(자동기입 점수)만 본다. 초기 코드는 답을 목록으로 받아 모르는 칸을 뺄 수 있었지만 지금은 모든 칸에 답한다.
 
