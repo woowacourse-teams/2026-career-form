@@ -788,17 +788,24 @@ describe("AI 평가 화면의 단계 탭", () => {
     }
   });
 
-  it("매핑 탭의 확신도 그래프는 점수·정밀도·채움률을 나눠 모델마다 선으로 그리고 현재 기준을 표시한다", async () => {
+  it("매핑 탭의 확신도 그래프는 지표를 눌러 하나씩 보고, 세로축은 값 범위에 맞추며 현재 기준 값을 적는다", async () => {
     await pick("mapping");
-    const charts = [...document.querySelectorAll("#cf-confidence .confidence-chart")];
-    expect(charts.map((chart) => chart.querySelector("h4")?.textContent)).toEqual(["점수", "정밀도", "채움률"]);
-    charts.forEach((chart) => {
-      expect(chart.querySelectorAll(".confidence-line")).toHaveLength(1);
-      expect(chart.querySelectorAll("circle")).toHaveLength(3);
-      expect(chart.querySelector(".confidence-now")).not.toBeNull();
-    });
-    expect(charts[0].querySelector("circle title")?.textContent).toContain("기준 0.5");
-    expect(charts[0].querySelector("circle title")?.textContent).toContain("73.0%");
+    const buttons = () => [...document.querySelectorAll<HTMLButtonElement>("#cf-confidence .stage button")];
+    const chart = () => document.querySelector("#cf-confidence .confidence-chart") as Element;
+    expect(buttons().map((button) => button.textContent)).toEqual(["점수", "정밀도", "채움률"]);
+    expect(buttons()[0].getAttribute("aria-pressed")).toBe("true");
+    expect(chart().querySelectorAll(".confidence-line")).toHaveLength(1);
+    expect(chart().querySelectorAll("circle")).toHaveLength(3);
+    expect(chart().querySelector(".confidence-now")).not.toBeNull();
+    expect(chart().querySelector(".confidence-value")?.textContent).toBe("82.0%");
+    expect(chart().querySelector("circle title")?.textContent).toContain("점수 73.0%");
+    // 값 범위 68~82%에 맞춰 0부터 그리지 않는다.
+    expect(chart().querySelector(".confidence-tick")?.textContent).toBe("65");
+
+    buttons()[2].click();
+    expect(buttons()[2].getAttribute("aria-pressed")).toBe("true");
+    expect(chart().querySelector(".confidence-value")?.textContent).toBe("60.0%");
+    expect(chart().querySelector("circle title")?.textContent).toContain("채움률 90.0%");
     expect(document.querySelector("#cf-confidence details summary")?.textContent).toBe("표로 보기");
   });
 

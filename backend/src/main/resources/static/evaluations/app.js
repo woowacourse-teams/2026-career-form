@@ -8,7 +8,7 @@ const COLORS = ["#4e6d90", "#688b7c", "#ac8d68", "#8a6f9e", "#6f8f9e"];
 const PRICE_KEY = "cf-evaluation-model-prices-v1";
 const root = document.getElementById("cf-eval-preview");
 const $ = (selector) => root.querySelector(selector);
-const state = { runs: [], dataset: null, models: [], selected: [], group: null, stage: "total", page: "overview",
+const state = { runs: [], dataset: null, models: [], selected: [], group: null, stage: "total", page: "overview", confidenceMetric: "score",
   fields: {}, catalog: null, fieldHidden: [], canDelete: false, compare: { before: "", after: "" }, fieldFilter: "diff", fieldScreen: "all", openField: null, itemKind: "GENERIC_FIELDS" };
 let prices = {};
 try { prices = JSON.parse(localStorage.getItem(PRICE_KEY) || "{}") ?? {}; } catch { prices = {}; }
@@ -591,35 +591,41 @@ const accuracyOf = (items) => scoredOf(items) ? items.correct / scoredOf(items) 
 
 const CONFIDENCE_METRICS = [["점수", "score"], ["정밀도", "precision"], ["채움률", "fillRate"]];
 
-/** 지표 하나의 기준별 선 그래프. 지표끼리 눈금을 맞춰 기준을 올릴 때 무엇이 얼마나 움직이는지 비교할 수 있게 한다. */
+/** 지표 하나의 기준별 선 그래프. 작은 차이가 보이도록 세로축을 값 범위에 맞추고, 현재 기준 값은 점 옆에 적는다. */
 function confidenceChart(label, key, models) {
   const all = models.flatMap((model) => report(model).confidence);
-  const values = all.flatMap((point) => CONFIDENCE_METRICS.map(([, metric]) => point[metric])).filter((value) => value != null);
-  const low = Math.floor(Math.min(...values) * 10) / 10;
+  const values = all.map((point) => point[key]).filter((value) => value != null);
+  const high = Math.min(1, Math.ceil((Math.max(...values) + 0.005) * 20) / 20);
+  const low = Math.max(0, Math.min(Math.floor((Math.min(...values) - 0.005) * 20) / 20, high - 0.1));
   const thresholds = [...new Set(all.map((point) => point.threshold))].sort((a, b) => a - b);
-  const [width, height, left, right, top, bottom] = [150, 118, 28, 6, 6, 18];
+  const [width, height, left, right, top, bottom] = [400, 210, 36, 16, 14, 24];
   const x = (threshold) => left + (threshold - thresholds[0]) / ((thresholds.at(-1) - thresholds[0]) || 1) * (width - left - right);
-  const y = (value) => top + (1 - (value - low) / ((1 - low) || 1)) * (height - top - bottom);
-  const gridValues = [low, (low + 1) / 2, 1];
-  const parts = gridValues.map((value) => `<line class="confidence-grid" x1="${left}" x2="${width - right}" y1="${y(value)}" y2="${y(value)}"></line>`
-    + `<text class="confidence-tick" x="${left - 4}" y="${y(value) + 3}" text-anchor="end">${Math.round(value * 100)}</text>`);
-  thresholds.forEach((threshold) => parts.push(`<text class="confidence-tick" x="${x(threshold)}" y="${height - 5}" text-anchor="middle">${threshold}</text>`));
+  const y = (value) => top + (1 - (value - low) / (high - low)) * (height - top - bottom);
+  const parts = [low, (low + high) / 2, high].map((value) => `<line class="confidence-grid" x1="${left}" x2="${width - right}" y1="${y(value)}" y2="${y(value)}"></line>`
+    + `<text class="confidence-tick" x="${left - 6}" y="${y(value) + 4}" text-anchor="end">${Math.round(value * 1000) / 10}</text>`);
+  thresholds.forEach((threshold) => parts.push(`<text class="confidence-tick" x="${x(threshold)}" y="${height - 6}" text-anchor="middle">${threshold === CURRENT_CONFIDENCE ? `${threshold} 현재` : threshold}</text>`));
   if (thresholds.includes(CURRENT_CONFIDENCE)) parts.push(`<line class="confidence-now" x1="${x(CURRENT_CONFIDENCE)}" x2="${x(CURRENT_CONFIDENCE)}" y1="${top}" y2="${height - bottom}"></line>`);
   const dots = [];
+  const labels = [];
   models.forEach((model) => {
     const points = report(model).confidence.filter((point) => point[key] != null);
     parts.push(`<polyline class="confidence-line" stroke="${color(model)}" points="${points.map((point) => `${x(point.threshold)},${y(point[key])}`).join(" ")}"></polyline>`);
     points.forEach((point) => {
-      parts.push(`<circle class="confidence-dot" fill="${color(model)}" cx="${x(point.threshold)}" cy="${y(point[key])}" r="3"><title></title></circle>`);
+      const now = point.threshold === CURRENT_CONFIDENCE;
+      parts.push(`<circle class="confidence-dot" fill="${color(model)}" cx="${x(point.threshold)}" cy="${y(point[key])}" r="${now ? 6 : 4.5}"><title></title></circle>`);
       dots.push(`${model} · 기준 ${point.threshold} · ${label} ${(point[key] * 100).toFixed(1)}%`);
+      if (now) labels.push({ y: y(point[key]), text: `${(point[key] * 100).toFixed(1)}%` });
     });
   });
+  // 현재 기준 값이 비슷하면 글자가 겹치므로 위쪽 값부터 줄 간격만큼 밀어 적는다.
+  labels.sort((a, b) => a.y - b.y).reduce((previous, entry) => {
+    const placed = Math.max(entry.y - 8, previous + 14);
+    parts.push(`<text class="confidence-value" x="${x(CURRENT_CONFIDENCE) - 9}" y="${placed}" text-anchor="end">${entry.text}</text>`);
+    return placed;
+  }, -Infinity);
   const chart = element("div", undefined, "confidence-chart");
-  chart.append(element("h4", label));
-  const figure = element("div");
-  figure.innerHTML = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${label} 기준별 그래프">${parts.join("")}</svg>`;
-  figure.querySelectorAll("circle title").forEach((title, index) => { title.textContent = dots[index]; });
-  chart.append(figure);
+  chart.innerHTML = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${label} 기준별 그래프">${parts.join("")}</svg>`;
+  chart.querySelectorAll("circle title").forEach((title, index) => { title.textContent = dots[index]; });
   return chart;
 }
 
@@ -628,7 +634,7 @@ function confidenceCard() {
   const card = element("div", undefined, "metric");
   card.id = "cf-confidence";
   const head = element("div", undefined, "metric-head");
-  head.append(element("h3", "확신도 기준별 칸 매핑"), element("span", "세로선이 현재 기준 · 점에 올리면 값", "muted"));
+  head.append(element("h3", "확신도 기준별 칸 매핑"), element("span", "세로축은 값 범위에 맞춤 · 점선이 현재 기준", "muted"));
   card.append(head);
   const models = state.selected.filter((model) => report(model)?.confidence?.length);
   if (!models.length) {
@@ -641,9 +647,17 @@ function confidenceCard() {
     name.style.setProperty("--model", color(model));
     legend.append(name);
   });
-  const charts = element("div", undefined, "confidence-charts");
-  charts.append(...CONFIDENCE_METRICS.map(([label, key]) => confidenceChart(label, key, models)));
-  card.append(legend, charts);
+  const tabs = element("div", undefined, "stage confidence-tabs");
+  tabs.setAttribute("aria-label", "확신도 그래프 지표");
+  CONFIDENCE_METRICS.forEach(([label, key]) => {
+    const button = element("button", label);
+    button.type = "button";
+    button.setAttribute("aria-pressed", String(key === state.confidenceMetric));
+    button.addEventListener("click", () => { state.confidenceMetric = key; renderQuality(); });
+    tabs.append(button);
+  });
+  const metric = CONFIDENCE_METRICS.find(([, key]) => key === state.confidenceMetric);
+  card.append(tabs, legend, confidenceChart(metric[0], metric[1], models));
   const table = element("table", undefined, "compare-table confidence-table");
   const thead = element("thead");
   const top = element("tr");
