@@ -90,14 +90,18 @@ python3 scripts/evaluation_local.py reset-password
 
 ### 저장소에 담은 기준 기록
 
-평가를 켠 서버는 뜰 때 `evaluation/seed-records/*.jsonl`의 기록 중 없는 것만 넣는다(`EvaluationSeedRecords`). 모델을 호출하지 않고, 있는 기록은 건드리지 않으며, 입력(`versions.inputs`)이 없어 첫 자동 평가를 막지 않는다. 그래서 개발서버는 이후 개선과 비교할 기준 두 건을 갖고 시작한다. 두 건 모두 2026-11-05 로컬 측정이다.
+평가를 켠 서버는 뜰 때 `evaluation/seed-records/*.jsonl`의 기록 중 없는 것만 넣는다(`EvaluationSeedRecords`). 모델을 호출하지 않고, 있는 기록은 건드리지 않으며, 입력(`versions.inputs`)이 없어 첫 자동 평가를 막지 않는다. 그래서 개발서버는 이후 개선과 비교할 기준 두 건을 갖고 시작한다. 모두 2026-11-05 로컬 측정이다.
 
-| 이름 | 모델 | 재현한 것 |
-|---|---|---|
-| `initial-openai` | OpenAI `gpt-5.6-luna` | 초기 구조: 화면 전체 칸을 지원 키 전부와 한 번에 묻는다(`whole-form=1`, 칸 묶음 128) |
-| `token-limit` | JEV `jev-latest`, OpenAI `gpt-5.6-luna` | 같은 구조에서 JEV 입력 토큰 초과와 반으로 나눠 다시 묻는 동작 |
+| 이름 | 모델 | 묻는 방식 | 보려는 것 |
+|---|---|---|---|
+| `initial-openai` | OpenAI `gpt-5.6-luna`, `gpt-6-luna` | 초기 구조: 화면 전체 칸을 지원 키 전부와 한 번에(`whole-form=1`, 칸 묶음 128) | OpenAI만 쓰던 때의 호출 방식. 당시 기본 모델은 `gpt-5.6-luna`이고 `gpt-6-luna`는 비교용이다 |
+| `token-limit` | JEV `jev-latest` | 같은 초기 구조 | JEV 도입 직후의 입력 토큰 초과와 반으로 나눠 다시 묻는 동작 |
 
-호출 구조만 재현한 측정이고 당시 결과가 아니다. 프롬프트, 후처리, 데이터셋(v4)은 측정 시점의 것이고 섹션 분류 호출도 그대로 돈다. OpenAI는 칸이 많은 화면에서 목록에 없는 답을 내 응답이 거부되고, 그 칸은 놓침으로 센다. JEV는 입력 토큰 초과로 거절되면 나눠 다시 물어 실패 없이 끝나며, 거절 횟수는 `performance.*.tokenLimitAttempts`(화면의 입력 토큰 초과)로 본다. 내보낼 때 형식을 보존하려면 `mongoexport --jsonFormat=canonical`로 내보낸다.
+호출 구조만 재현한 측정이고 당시 결과가 아니다. 프롬프트, 후처리, 데이터셋(v4)은 측정 시점의 것이고, 초기에는 없던 섹션 분류·준비 호출도 그대로 돌므로 초기 구조 기록은 칸 매핑(자동기입 점수)만 본다. 초기 코드는 답을 목록으로 받아 모르는 칸을 뺄 수 있었지만 지금은 모든 칸에 답한다.
+
+초기 코드는 선택지 목록을 응답 스키마에 한 번만 넣었고, 지금 연결 코드는 질문마다 넣는다. 그래서 화면 전체를 한 번에 물으면 OpenAI 구조화 출력의 enum 한도(1,000개)를 넘어 enum 없이 답을 받게 되고, 답 하나가 목록에 없으면 응답 전체가 버려져 요청의 절반 이상이 실패했다(초기에는 없던 실패). 한도를 넘으면 같은 선택지를 쓰는 질문이 정의 하나를 공유하도록 고친 뒤(`OpenAiChoiceModel`) 다시 측정한 것이 이 기록이다. JEV는 입력 토큰 초과로 거절되면 나눠 다시 물어 실패 없이 끝나며, 거절 횟수는 `performance.*.tokenLimitAttempts`(화면의 입력 토큰 초과)로 본다.
+
+다시 측정할 때는 기준 기록이 먼저 들어가 이름이 겹치지 않도록 `CF_EVAL_SEED_RECORDS=false`로 로컬 서버를 띄우고, 형식을 보존하도록 `mongoexport --jsonFormat=canonical`로 내보낸다.
 
 ## 켜는 방법
 
