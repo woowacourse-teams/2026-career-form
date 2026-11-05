@@ -1,11 +1,24 @@
 // Per-frame drawing for the deadline-alert scene (transform/opacity/class only).
 import { applyMotion, back, clamp, ease, lerp, segment } from "./scroll";
+import { evenTriggers, type Playback } from "./step-playback";
 import styles from "./AlertScene.module.css";
 
 const NARROW = 900;
 // Tick positions along the axis: one day before, two hours before, deadline.
 const WIDE_STOPS = [0.5, 0.8, 1];
 const NARROW_STOPS = [0.2, 0.55, 0.9];
+
+/**
+ * Three beats: the posting and its deadline axis arrive, the day-before
+ * alert rings, then marking it applied cancels the 2-hour alert. The first
+ * starts while the section is still docking; AlertScene.module.css sizes the
+ * track to match.
+ */
+export const ALERT_PLAYBACK: Playback = {
+  rests: [0, 0.46, 0.61, 1],
+  triggers: evenTriggers(-0.3, 0.7, 3),
+  seconds: [1.4, 0.8, 1.2],
+};
 
 export type AlertElements = {
   stage?: HTMLDivElement | null;
