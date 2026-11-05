@@ -2,7 +2,10 @@ import { afterEach, describe, expect, it } from "vitest";
 import fixtureHtml from "../../../fixtures/date-format/synthetic-cj-shaped.html?raw";
 import type { FieldsAnalyzeResponse } from "../api/types";
 import { collectFieldsSnapshot } from "../dom/collect";
-import { buildReviewPlan } from "../review/review-plan";
+import {
+  buildReviewPlan,
+  revealSensitiveReviewItem,
+} from "../review/review-plan";
 import type { ReviewPlan, ReviewPlanItem } from "../review/review-plan";
 import { createEmptyProfile } from "../../profile/model";
 import type { Profile } from "../../profile/model";
@@ -473,8 +476,14 @@ describe("synthetic date-format approved-write workflow", () => {
     });
     expect(unapproved[0]?.status).toBe("skipped");
     expect(target.value).toBe("");
+    const revealed = revealSensitiveReviewItem(masked);
+    expect(revealed).toMatchObject({
+      revealed: true,
+      previewValue: "2021.04.05",
+      disabled: false,
+    });
     const result = executeApprovedWrites({
-      ...approve([masked], [masked.candidateId]),
+      ...approve([revealed], [revealed.candidateId]),
       registry: snapshot.registry,
     });
     expect(result[0]?.status).toBe("written");

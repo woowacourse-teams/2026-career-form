@@ -58,6 +58,7 @@ describe("certificate search review provenance", () => {
         ]}
         partial={false}
         toggleReviewItem={toggleReviewItem}
+        revealSensitiveItem={vi.fn()}
         executeWrites={vi.fn()}
         results={[]}
         adapter={{} as WorkflowAdapter}
@@ -87,6 +88,7 @@ describe("certificate search review provenance", () => {
         reviewItems={[certificateItem]}
         partial={false}
         toggleReviewItem={vi.fn()}
+        revealSensitiveItem={vi.fn()}
         executeWrites={vi.fn()}
         results={[]}
         adapter={{} as WorkflowAdapter}
@@ -149,6 +151,7 @@ describe("certificate search review provenance", () => {
         ]}
         partial={false}
         toggleReviewItem={vi.fn()}
+        revealSensitiveItem={vi.fn()}
         executeWrites={vi.fn()}
         results={[]}
         adapter={{} as WorkflowAdapter}

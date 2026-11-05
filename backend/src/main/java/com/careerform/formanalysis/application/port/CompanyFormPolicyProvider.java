@@ -8,14 +8,10 @@ public interface CompanyFormPolicyProvider {
 
     LookupResult find(String host, String pathPattern);
 
-    sealed interface LookupResult permits NotRegistered, RegisteredPathMismatch, Available, Unavailable {
+    sealed interface LookupResult permits NotRegistered, Available, Unavailable {
     }
 
     record NotRegistered() implements LookupResult {
-    }
-
-    /** Registered host outside its policy paths; shared platform lookup must be skipped. */
-    record RegisteredPathMismatch(String registeredHost) implements LookupResult {
     }
 
     record Available(CompanyFormPolicy policy) implements LookupResult {

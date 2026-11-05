@@ -7,13 +7,9 @@ import {
   type RepeatedProfileCategoryId,
   type SingleProfileCategoryId,
 } from "../model";
-import {
-  cloneProfile,
-  ProfileWriteConflictError,
-  type ProfileRepository,
-} from "../profile-repository";
+import { cloneProfile, type ProfileRepository } from "../profile-repository";
 
-export type SaveStatus = "idle" | "saving" | "saved" | "error" | "conflict";
+export type SaveStatus = "idle" | "saving" | "saved" | "error";
 export type LoadStatus = "loading" | "ready" | "error";
 
 function createEntryId(): string {
@@ -33,10 +29,6 @@ export function useProfileEditor(
   );
   const saveQueue = useRef<Promise<void>>(Promise.resolve());
   const saveRequestId = useRef(0);
-  const conflicted = useRef(false);
-  const reloading = useRef(false);
-  const [isReloading, setIsReloading] = useState(false);
-  const [reloadFailed, setReloadFailed] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -59,35 +51,17 @@ export function useProfileEditor(
 
   const persist = useCallback(
     async (nextProfile: Profile) => {
-      if (conflicted.current || reloading.current) return false;
       const requestId = ++saveRequestId.current;
       const operation = saveQueue.current
         .catch(() => undefined)
-        .then(async () => {
-          if (conflicted.current || reloading.current) return false;
-          try {
-            await repository.save(nextProfile);
-            return true;
-          } catch (error) {
-            if (error instanceof ProfileWriteConflictError) {
-              conflicted.current = true;
-              if (saveTimer.current) clearTimeout(saveTimer.current);
-            }
-            throw error;
-          }
-        });
-      saveQueue.current = operation.then(
-        () => undefined,
-        () => undefined,
-      );
+        .then(() => repository.save(nextProfile));
+      saveQueue.current = operation;
       try {
-        const saved = await operation;
-        if (!saved) return false;
+        await operation;
         if (requestId === saveRequestId.current) setSaveStatus("saved");
         return true;
       } catch {
-        if (requestId === saveRequestId.current || conflicted.current)
-          setSaveStatus(conflicted.current ? "conflict" : "error");
+        if (requestId === saveRequestId.current) setSaveStatus("error");
         return false;
       }
     },
@@ -96,11 +70,9 @@ export function useProfileEditor(
 
   const changeProfile = useCallback(
     (updater: (current: Profile) => Profile) => {
-      if (reloading.current) return;
       setProfile((current) => {
         const next = updater(current);
         latestProfile.current = next;
-        if (conflicted.current) return next;
         setSaveStatus("saving");
         if (saveTimer.current) clearTimeout(saveTimer.current);
         saveTimer.current = setTimeout(() => void persist(next), saveDelay);
@@ -181,14 +153,12 @@ export function useProfileEditor(
   );
 
   const retrySave = useCallback(async () => {
-    if (conflicted.current || reloading.current) return;
     setSaveStatus("saving");
     await persist(latestProfile.current);
   }, [persist]);
 
   const replaceProfile = useCallback(
     async (nextProfile: Profile) => {
-      if (conflicted.current || reloading.current) return false;
       if (saveTimer.current) clearTimeout(saveTimer.current);
       const replacement = cloneProfile(nextProfile);
       latestProfile.current = replacement;
@@ -198,30 +168,6 @@ export function useProfileEditor(
     },
     [persist],
   );
-
-  const reloadLatest = useCallback(async () => {
-    if (reloading.current) return false;
-    reloading.current = true;
-    setIsReloading(true);
-    setReloadFailed(false);
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    ++saveRequestId.current;
-    try {
-      await saveQueue.current.catch(() => undefined);
-      const loaded = await repository.load();
-      latestProfile.current = loaded;
-      setProfile(loaded);
-      conflicted.current = false;
-      setSaveStatus("idle");
-      return true;
-    } catch {
-      setReloadFailed(true);
-      return false;
-    } finally {
-      reloading.current = false;
-      setIsReloading(false);
-    }
-  }, [repository]);
 
   return {
     profile,
@@ -233,8 +179,5 @@ export function useProfileEditor(
     removeEntry,
     retrySave,
     replaceProfile,
-    reloadLatest,
-    isReloading,
-    reloadFailed,
   };
 }

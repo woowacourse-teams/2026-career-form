@@ -59,12 +59,6 @@ type ExecuteApprovedSearchWritesArgs = {
     item: ReviewPlanItem,
     controls: readonly SearchFollowUpControl[],
   ) => void;
-  /**
-   * How far an unconfirmed search failure holds later approved items. The
-   * default "all" holds the rest of the list; "row" holds only items of the same
-   * profile entry (and items whose entry is unknown), then continues.
-   */
-  followUpHaltScope?: "all" | "row";
   writeOrdinary?: (
     item: ReviewPlanItem,
   ) =>
@@ -318,9 +312,7 @@ export async function executeApprovedSearchWrites({
   beforeWrite,
   onResult,
   onSearchFollowUp,
-  followUpHaltScope = "all",
 }: ExecuteApprovedSearchWritesArgs): Promise<boolean> {
-  const heldIndexes = new Set<number>();
   const seenBindings = new Set<string>();
   const seenCandidates = new Set<string>();
   const decisionSession = interactionDecisionProvider
@@ -329,7 +321,6 @@ export async function executeApprovedSearchWrites({
   let searchCount = 0;
 
   for (const [index, item] of items.entries()) {
-    if (heldIndexes.has(index)) continue;
     const key = bindingKey(item);
     const duplicate =
       seenCandidates.has(item.candidateId) ||
@@ -514,7 +505,6 @@ export async function executeApprovedSearchWrites({
       targetCandidateId: item.candidateId,
       canonicalFieldKey: expectedKey,
       expectedValue,
-      ...(followUpHaltScope === "row" ? { genericPopupRecovery: true } : {}),
       ...(catalogMatch ? { catalogMatch } : {}),
       ...(localSearchPlan
         ? { searchValues: localSearchPlan.forms.map((form) => form.name) }
@@ -596,14 +586,6 @@ export async function executeApprovedSearchWrites({
                 searchFailureMessage(failedResult!.reason),
                 searchDiagnosticCode(failedResult!.reason),
               );
-    if (failedResult?.surfaceLeftOpen && results[index]!.status === "skipped")
-      results[index] = {
-        ...results[index]!,
-        surfaceLeftOpen: true,
-        ...(failedResult.surfaceLeftOpenReason
-          ? { surfaceLeftOpenReason: failedResult.surfaceLeftOpenReason }
-          : {}),
-      };
     onResult?.(item, results[index]!);
     if (result.status === "selected" && result.followUp?.controls.length) {
       onSearchFollowUp?.(item, result.followUp.controls);
@@ -625,24 +607,12 @@ export async function executeApprovedSearchWrites({
         result.status !== "unchanged" &&
         result.effect !== "none")
     ) {
-      const rowOnly =
-        followUpHaltScope === "row" &&
-        item.profileEntryId !== undefined &&
-        failedResult?.surfaceLeftOpen !== true;
       for (let later = index + 1; later < items.length; later++) {
         if (
           !approvedCandidateIds.has(items[later]!.candidateId) ||
           !isSelectableApproved(items[later]!)
         )
           continue;
-        const laterEntry = items[later]!.profileEntryId;
-        if (
-          rowOnly &&
-          laterEntry !== undefined &&
-          laterEntry !== item.profileEntryId
-        )
-          continue;
-        heldIndexes.add(later);
         results[later] = skipped(
           items[later]!.candidateId,
           "needs-verification",
@@ -651,7 +621,7 @@ export async function executeApprovedSearchWrites({
           "SEARCH_FOLLOWUP_HALTED",
         );
       }
-      if (!rowOnly) return true;
+      return true;
     }
   }
   return false;

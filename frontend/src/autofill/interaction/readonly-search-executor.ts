@@ -13,7 +13,6 @@ import {
   type ExecuteReadonlySearchArgs,
   type ReadonlySearchExecutionResult,
   type SearchEffect,
-  type SurfaceLeftOpenReason,
   type TargetIdentity,
 } from "./readonly-search";
 import { SearchFailure, SearchSession } from "./search-session";
@@ -39,8 +38,6 @@ import {
 import { captureSearchFollowUp } from "./search-follow-up";
 import { interactive, elements, safeActivation } from "./search-surface-dom";
 import type { SearchSurface } from "./search-surface";
-import { isSafeSurfaceCloseClick } from "../generic/click-policy";
-import { queryCandidates } from "./readonly-search-popup";
 
 import { resultActivation } from "./search-result-structure";
 import { bindStructuredEffects } from "./search-result-effects";
@@ -151,39 +148,6 @@ function validateRegionContext(
     throw new SearchFailure("unverified_search_form");
 }
 
-/** Prefer bare close; generic failures before result activation may confirm. */
-function closeOwnedSurface(
-  surface: SearchSurface,
-  allowConfirmation: boolean,
-): SurfaceLeftOpenReason | undefined {
-  if (surface.kind === "inline-listbox") return undefined;
-  if (surface.closure() !== "open") return undefined;
-  const controls = Array.from(
-    surface.container.querySelectorAll<HTMLElement>(
-      "button, a[href], input[type=button]",
-    ),
-  );
-  const control =
-    controls.find(
-      (element) => isSafeSurfaceCloseClick(element, surface.container).allowed,
-    ) ??
-    (allowConfirmation
-      ? controls.find(
-          (element) =>
-            isSafeSurfaceCloseClick(element, surface.container, {
-              allowConfirmation: true,
-            }).allowed,
-        )
-      : undefined);
-  if (!control) return "no_safe_close_control";
-  try {
-    control.click();
-  } catch {
-    return "close_not_confirmed";
-  }
-  return surface.closure() === "closed" ? undefined : "close_not_confirmed";
-}
-
 export async function executeReadonlySearch(
   args: ExecuteReadonlySearchArgs,
 ): Promise<ReadonlySearchExecutionResult> {
@@ -220,7 +184,6 @@ export async function executeReadonlySearch(
   let effect: SearchEffect = "none";
   let identity: TargetIdentity | undefined;
   let surface: SearchSurface | undefined;
-  let selectionStarted = false;
   let followUpObservation: ReturnType<typeof captureSearchFollowUp>;
   try {
     session.check();
@@ -345,20 +308,6 @@ export async function executeReadonlySearch(
       surfaceGuard();
       const queries = queryControls(currentSurface);
       const submits = submitControls(currentSurface);
-      if (args.genericPopupRecovery) {
-        if (queries.length > 1)
-          throw new SearchFailure("multiple_search_query_inputs");
-        // A visible search button/result shell can precede its query input.
-        // Recollect within this wait's existing budget instead of accepting it.
-        if (
-          !queries.length &&
-          (submits.length ||
-            queryCandidates(currentSurface.document).some((input) =>
-              currentSurface.contains(input),
-            ))
-        )
-          return undefined;
-      }
       return queries.length ||
         submits.length ||
         currentSurface.resultRoots().length ||
@@ -657,7 +606,6 @@ export async function executeReadonlySearch(
       ? captureSearchFollowUp(selectionBinding.scope, identity.target)
       : undefined;
     trace("결과 선택 클릭", candidate.element);
-    selectionStarted = true;
     const resultLink =
       candidate.element.tagName === "A"
         ? (candidate.element as HTMLAnchorElement)
@@ -772,23 +720,11 @@ export async function executeReadonlySearch(
     const reason =
       error instanceof SearchFailure ? error.reason : "execution_failed";
     debugSearchFailure(targetCandidateId, step, reason, effect, error);
-    const leftOpenReason = surface
-      ? closeOwnedSurface(
-          surface,
-          args.genericPopupRecovery === true && !selectionStarted,
-        )
-      : undefined;
     return {
       status: effect === "none" ? "unsupported" : "failed",
       targetCandidateId,
       effect,
       reason,
-      ...(leftOpenReason
-        ? {
-            surfaceLeftOpen: true as const,
-            surfaceLeftOpenReason: leftOpenReason,
-          }
-        : {}),
     };
   } finally {
     followUpObservation?.dispose();

@@ -23,24 +23,7 @@ class AnalysisProviderConfigurationTest {
         );
 
         assertThat(selection.enabled()).isTrue();
-        assertThat(selection.provider()).isEqualTo("jev");
-        assertThat(selection.searchProvider()).isEqualTo("jev");
-        assertThat(selection.calendarProvider()).isEqualTo("jev");
-    }
-
-    @Test
-    void inheritsJevDefaultWhenInteractionOverridesAreBlank() {
-        AnalysisProviderSelection selection = AnalysisProviderSelection.from(environment(
-            "career-form.analysis.enabled", "true",
-            "career-form.analysis.search-provider", "",
-            "career-form.analysis.calendar-provider", " "
-        ));
-
-        assertThat(selection.provider()).isEqualTo("jev");
-        assertThat(selection.searchProvider()).isEqualTo("jev");
-        assertThat(selection.calendarProvider()).isEqualTo("jev");
-        assertThat(selection.uses("openai")).isFalse();
-        assertThat(selection.splitInteractions()).isFalse();
+        assertThat(selection.provider()).isEqualTo("openai");
     }
 
     @Test
@@ -111,7 +94,6 @@ class AnalysisProviderConfigurationTest {
     void preservesConfiguredOpenAiTimeoutWhilePinningRetriesToZero() {
         MockEnvironment environment = environment(
             "career-form.analysis.enabled", "true",
-            "career-form.analysis.provider", "openai",
             "spring.ai.openai.timeout", "45s"
         );
 
@@ -125,7 +107,6 @@ class AnalysisProviderConfigurationTest {
     void forcesOpenAiRetriesToZeroWhenAnExplicitRetryValueIsConfigured() {
         MockEnvironment environment = environment(
             "career-form.analysis.enabled", "true",
-            "career-form.analysis.provider", "openai",
             "spring.ai.openai.timeout", "30s",
             "spring.ai.openai.max-retries", "9"
         );
@@ -157,7 +138,6 @@ class AnalysisProviderConfigurationTest {
         for (String timeout : new String[] {"1ms", "59999ms", "PT0.001S", "PT59.999S"}) {
             MockEnvironment environment = environment(
                 "career-form.analysis.enabled", "true",
-                "career-form.analysis.provider", "openai",
                 "spring.ai.openai.timeout", timeout
             );
 
@@ -175,7 +155,6 @@ class AnalysisProviderConfigurationTest {
         }) {
             MockEnvironment environment = environment(
                 "career-form.analysis.enabled", "true",
-                "career-form.analysis.provider", "openai",
                 "spring.ai.openai.timeout", timeout
             );
 

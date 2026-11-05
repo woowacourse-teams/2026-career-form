@@ -13,14 +13,7 @@ export type InteractionRole =
   | "CALENDAR_YEAR_CONTROL"
   | "CALENDAR_MONTH_CONTROL"
   | "CALENDAR_DAY_CONTROL"
-  | "CALENDAR_NAVIGATION"
-  | "REPEAT_ADD"
-  | "SECTION_REVEAL"
-  | "ROW_KIND_OPTION";
-
-/** Education level a ROW_KIND_OPTION decision asks about; never the user's own level. */
-export type TargetKind =
-  "HIGH_SCHOOL" | "ASSOCIATE" | "BACHELOR" | "MASTER" | "DOCTOR";
+  | "CALENDAR_NAVIGATION";
 
 /** Finite structural evidence only; never labels, selectors or handler source. */
 export interface ResultStructure {
@@ -64,9 +57,8 @@ export interface CalendarStructure {
 
 export interface InteractionCandidate {
   candidateId: string;
-  element: "input" | "button" | "link" | "custom" | "select";
-  control:
-    "text" | "search" | "button" | "submit" | "container" | "item" | "option";
+  element: "input" | "button" | "link" | "custom";
+  control: "text" | "search" | "button" | "submit" | "container" | "item";
   structure?: ResultStructure;
   calendarStructure?: CalendarStructure;
   visibility: "visible" | "hidden";
@@ -98,7 +90,6 @@ export interface InteractionDecisionRequest {
     role: InteractionRole;
     canonicalFieldKey: string;
     candidates: InteractionCandidate[];
-    targetKind?: TargetKind;
   }>;
 }
 

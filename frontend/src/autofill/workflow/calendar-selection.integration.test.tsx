@@ -33,6 +33,7 @@ function renderReview(items: ReviewPlanItem[]) {
       reviewItems={items}
       partial={false}
       toggleReviewItem={vi.fn()}
+      revealSensitiveItem={vi.fn()}
       executeWrites={executeWrites}
       results={[]}
       adapter={{} as WorkflowAdapter}

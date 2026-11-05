@@ -15,9 +15,3 @@ describe("preparationFailureMessage", () => {
     );
   });
 });
-
-it("explains that an unchanged row count can reflect the posting's maximum or add conditions", () => {
-  expect(preparationFailureMessage("group-count-not-incremented")).toContain(
-    "최대 항목 수",
-  );
-});

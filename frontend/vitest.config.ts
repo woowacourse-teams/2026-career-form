@@ -1,14 +1,30 @@
 import { playwright } from "@vitest/browser-playwright";
 import { configDefaults, defineConfig } from "vitest/config";
+import type { Reporter } from "vitest/reporters";
 import { searchFixtureServer } from "./tests/browser/search-fixture-server.ts";
-import {
-  coverageThresholds,
-  createRequireBrowserSuite,
-} from "./tests/vitest/run-policy.ts";
+
+let browserRequested = true;
+const requireBrowserSuite: Reporter = {
+  onInit(vitest) {
+    browserRequested =
+      vitest.config.project.length !== 1 || vitest.config.project[0] !== "unit";
+  },
+  onTestRunStart(specifications) {
+    if (
+      browserRequested &&
+      !specifications.some((specification) => specification.pool === "browser")
+    ) {
+      throw new Error(
+        "Browser tests were not collected. Use test:unit for unit-only runs.",
+      );
+    }
+  },
+};
 
 export default defineConfig({
   test: {
-    reporters: ["default", createRequireBrowserSuite()],
+    maxWorkers: 1,
+    reporters: ["default", requireBrowserSuite],
     css: {
       include: /WorkflowResults\.module\.css|sidepanel\/App\.module\.css/,
       modules: { classNameStrategy: "scoped" },
@@ -27,7 +43,12 @@ export default defineConfig({
       ],
       provider: "v8",
       reportOnFailure: true,
-      thresholds: coverageThresholds(process.argv),
+      thresholds: {
+        branches: 80,
+        functions: 80,
+        lines: 80,
+        statements: 80,
+      },
     },
     projects: [
       {
@@ -45,14 +66,6 @@ export default defineConfig({
       {
         extends: true,
         plugins: [searchFixtureServer()],
-        optimizeDeps: {
-          include: [
-            "react",
-            "react-dom/client",
-            "react/jsx-dev-runtime",
-            "@testing-library/dom",
-          ],
-        },
         test: {
           name: "browser",
           include: ["**/*.browser.test.{ts,tsx}"],

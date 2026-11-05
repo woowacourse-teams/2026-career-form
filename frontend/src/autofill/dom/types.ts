@@ -6,8 +6,6 @@ export type CandidateBlockReason =
   "disabled" | "readonly" | "hidden" | "inert" | "unsupported";
 
 interface CandidateHandleBase {
-  owner?: "legacy" | "native";
-  unsupportedReason?: string;
   candidateId: string;
   sectionId: string;
   itemId?: string;
@@ -18,7 +16,6 @@ interface CandidateHandleBase {
 
 export interface ActionCandidateHandle extends CandidateHandleBase {
   kind: "action";
-  isCurrentContext?: () => boolean;
   candidate: ActionCandidate;
   element: HTMLButtonElement | HTMLInputElement | HTMLSelectElement;
 }

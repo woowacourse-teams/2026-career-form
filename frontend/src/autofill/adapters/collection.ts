@@ -48,7 +48,6 @@ export function collectionAdapterForHost(
         ? genericCollectionAdapter
         : createComponentCollectionAdapter(source);
     case "policy":
-    case "hplace":
     case "generic":
       return genericCollectionAdapter;
   }

@@ -1,20 +1,16 @@
 import type { QualityReport, QualityState } from "./observation";
-import { batchReports, type QualityBatch } from "./report-batch";
+import { qualityIdentity } from "./identity";
 
 interface BufferedReport {
   run: string;
   snapshotId: string | null;
   fields: Record<string, QualityState>;
   identities: Record<string, string>;
-  bytes: number;
 }
 
 export class QualityReportQueue {
   private buffered: ReadonlyMap<string, BufferedReport> = new Map();
   private sending: Promise<void> = Promise.resolve();
-  private pendingCount = 0;
-  private pendingBytes = 0;
-  private bufferedBytes = 0;
 
   constructor(
     private readonly sendMessage: (message: unknown) => Promise<unknown>,
@@ -41,23 +37,13 @@ export class QualityReportQueue {
       fields: { ...previous?.fields, ...merged },
       identities: { ...previous?.identities, ...identities },
     };
-    const bytes = new TextEncoder().encode(JSON.stringify(report)).length;
-    if (
-      (!previous && this.buffered.size >= 64) ||
-      Object.keys(report.fields).length > 2000 ||
-      this.bufferedBytes - (previous?.bytes ?? 0) + bytes + this.pendingBytes >
-        4 * 1024 * 1024
-    )
-      return;
     if (
       !finished ||
       previous ||
       Object.keys(fields).length ||
       Object.keys(identities).length
-    ) {
-      this.bufferedBytes += bytes - (previous?.bytes ?? 0);
-      this.buffered = new Map([...this.buffered, [id, { ...report, bytes }]]);
-    }
+    )
+      this.buffered = new Map([...this.buffered, [id, report]]);
     if (finished) this.flush(run, snapshotId, finished);
   }
 
@@ -76,27 +62,32 @@ export class QualityReportQueue {
     this.buffered = new Map(
       [...this.buffered].filter(([, report]) => report.run !== run),
     );
-    this.bufferedBytes -= buffered.reduce(
-      (total, report) => total + report.bytes,
-      0,
-    );
-    const reports: ReadonlyArray<Omit<BufferedReport, "bytes">> =
-      buffered.length
-        ? buffered
-        : [{ run, snapshotId, fields: {}, identities: {} }];
-    for (const batch of batchReports(reports, finished)) this.send(run, batch);
+    const reports = buffered.length
+      ? buffered
+      : [{ run, snapshotId, fields: {}, identities: {} }];
+    for (const [index, report] of reports.entries()) {
+      const fields = Object.entries(report.fields);
+      for (let offset = 0; offset < Math.max(1, fields.length); offset += 300) {
+        this.send(report.run, {
+          eventId: this.eventId(),
+          snapshotId: report.snapshotId,
+          fields: Object.fromEntries(fields.slice(offset, offset + 300)),
+          identities: offset === 0 ? report.identities : {},
+          finished:
+            index === reports.length - 1 && offset + 300 >= fields.length
+              ? finished
+              : null,
+        });
+      }
+    }
   }
 
-  private send(run: string, payload: QualityBatch): void {
-    if (!run || !payload.reports.length) return;
-    const bytes = new TextEncoder().encode(JSON.stringify(payload)).length;
-    if (
-      this.pendingCount >= 64 ||
-      this.pendingBytes + this.bufferedBytes + bytes > 4 * 1024 * 1024
-    )
-      return;
-    this.pendingCount++;
-    this.pendingBytes += bytes;
+  private eventId(): string {
+    return qualityIdentity();
+  }
+
+  private send(run: string, payload: QualityReport): void {
+    if (!run || !payload.eventId) return;
     this.sending = this.sending.then(async () => {
       try {
         await this.sendMessage({
@@ -106,9 +97,6 @@ export class QualityReportQueue {
         });
       } catch {
         return;
-      } finally {
-        this.pendingCount--;
-        this.pendingBytes -= bytes;
       }
     });
   }

@@ -425,11 +425,9 @@ export function revalidateDropdown(
     : undefined;
 }
 
-/** `canClick` rejects a trigger before it is opened; rejected triggers are never clicked. */
 export async function collectButtonDropdowns(
   document: Document,
   signal?: AbortSignal,
-  canClick?: (trigger: HTMLElement) => boolean,
 ): Promise<ReadonlyMap<HTMLElement, ButtonDropdown>> {
   const collected = new Map<HTMLElement, ButtonDropdown>();
   const triggers = Array.from(
@@ -456,7 +454,6 @@ export async function collectButtonDropdowns(
   );
   for (const trigger of triggers) {
     if (signal?.aborted || visibleMenus(document).length) break;
-    if (canClick && !canClick(trigger)) continue;
     const field = trigger.parentElement;
     const scope = fieldScope(trigger);
     if (!field || !scope) continue;

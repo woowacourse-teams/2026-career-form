@@ -39,10 +39,10 @@ export interface ActionRule {
   assetSelector?: string;
   requiredSelector?: string;
 }
-interface BrowserPolicyBase {
+export interface BrowserPolicy {
   runtimeRules?: import("./runtime-rules").RuntimeRules;
   completionAutocompleteSelector?: string;
-
+  schemaVersion: 1;
   resultComparisons?: { name: string; key: string; mode: "GROUPED_NUMBER" }[];
   presentationGroups?: {
     rootSelector: string;
@@ -90,12 +90,3 @@ interface BrowserPolicyBase {
   addressVerification?: "POSTAL_AND_ROAD_WITHOUT_REFERENCE";
   mainWorldBridge: "JQUERY_AUTOCOMPLETE" | "NONE";
 }
-
-export type BrowserPolicy = BrowserPolicyBase &
-  (
-    | { schemaVersion: 1; nativeForm?: never }
-    | {
-        schemaVersion: 2;
-        nativeForm: import("./native-form-contract").NativeForm;
-      }
-  );

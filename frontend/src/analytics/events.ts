@@ -12,8 +12,6 @@ const analyticsEvents = [
   "profile_management_clicked",
   "profile_export_clicked",
   "profile_import_clicked",
-  "greeting_import_viewed",
-  "greeting_import_saved",
   "landing_viewed",
   "onboarding_viewed",
   "install_link_clicked",

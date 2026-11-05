@@ -1,4 +1,3 @@
-import { stagedAddressReceipt } from "../policy/staged-address-receipt";
 import { componentEmploymentStatusValue } from "../policy/components/write";
 import { customFieldValue } from "../dom/custom-field-value";
 import type { CandidateRegistry } from "../dom/candidate-registry";
@@ -14,13 +13,11 @@ export function resultFieldState(
   const handle = lookup.handle;
   const element = handle.elements[0] ?? handle.customElements?.[0];
   const style = element && pageDocument.defaultView?.getComputedStyle(element);
-  const address = stagedAddressReceipt(handle);
   const hidden =
-    !address?.visible &&
-    (handle.candidate.visibility === "hidden" ||
-      (lookup.status === "blocked" && lookup.reason === "hidden") ||
-      style?.display === "none" ||
-      style?.visibility === "hidden");
+    handle.candidate.visibility === "hidden" ||
+    (lookup.status === "blocked" && lookup.reason === "hidden") ||
+    style?.display === "none" ||
+    style?.visibility === "hidden";
   let value =
     element instanceof HTMLSelectElement
       ? (element.selectedOptions[0]?.textContent ?? "")

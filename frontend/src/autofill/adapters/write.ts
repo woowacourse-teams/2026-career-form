@@ -39,11 +39,6 @@ const standardWriteAdapter: CompanyWriteAdapter = {
   tryWrite: () => ({ handled: false }),
 };
 
-// Platform identity alone does not establish a writable application field.
-const unverifiedWriteAdapter: CompanyWriteAdapter = {
-  tryWrite: () => ({ handled: true, written: false }),
-};
-
 export function getWriteAdapter(
   source: string | Document,
 ): CompanyWriteAdapter {
@@ -58,8 +53,6 @@ export function getWriteAdapter(
       ? resolveCompany(source)
       : resolveDocumentCompany(source)
   ) {
-    case "hplace":
-      return unverifiedWriteAdapter;
     case "components":
       return componentWriteAdapter;
     default:

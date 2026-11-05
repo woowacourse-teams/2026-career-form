@@ -65,20 +65,21 @@ export function isRolelessLayerCandidate(element: Element): boolean {
 
 /** Subjects a target field and a search surface can explicitly share. */
 export const SEARCH_SUBJECTS = [
-  ["학교", "school"],
-  ["전공", "major"],
-  ["소재지", "region"],
-  ["자격증", "certificate"],
-  ["회사", "직장", "기업", "company", "employer"],
+  "학교",
+  "school",
+  "전공",
+  "major",
+  "소재지",
+  "region",
+  "자격증",
+  "certificate",
 ] as const;
 
 export function sharesSearchSubject(fieldName: string, surfaceName: string) {
   const field = fieldName.toLowerCase();
   const surface = surfaceName.toLowerCase();
   return SEARCH_SUBJECTS.some(
-    (words) =>
-      words.some((word) => field.includes(word)) &&
-      words.some((word) => surface.includes(word)),
+    (subject) => field.includes(subject) && surface.includes(subject),
   );
 }
 

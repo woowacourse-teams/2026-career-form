@@ -19,17 +19,9 @@ import type {
   AnalysisApiClient,
   FieldsAnalyzeRequest,
   FieldsAnalyzeResponse,
-  GenericFieldsRequest,
-  GenericFieldsResponse,
   PreparationAnalyzeRequest,
   PreparationAnalyzeResponse,
-  SectionClassifyRequest,
-  SectionClassifyResponse,
 } from "./types";
-import {
-  validateGenericFieldsResponse,
-  validateSectionClassifyResponse,
-} from "./validate-generic-response";
 import {
   validateFieldsResponse,
   validatePreparationResponse,
@@ -52,11 +44,7 @@ const errorMessages: Record<
 };
 
 export class AnalysisServiceError extends Error {
-  constructor(
-    message: string,
-    readonly status?: 404,
-    readonly code?: "POLICY_INCOMPATIBLE",
-  ) {
+  constructor(message: string) {
     super(message);
     this.name = "AnalysisServiceError";
   }
@@ -64,34 +52,24 @@ export class AnalysisServiceError extends Error {
 
 export class RuntimeAnalysisApiClient implements AnalysisApiClient {
   readonly quality: QualityObservation;
+  private reportingSupported = false;
   constructor(
     private readonly sendMessage: SendMessage = (message) =>
       browser.runtime.sendMessage(message),
   ) {
     this.quality = new QualityObservation((message) =>
-      this.sendMessage(message),
+      this.reportingSupported
+        ? this.sendMessage(message)
+        : Promise.resolve(undefined),
     );
   }
 
   async loadExecutionPolicy(
     site: import("./types").SiteDescriptor,
   ): Promise<ExecutionPolicy | undefined> {
-    const incompatible = () =>
-      new AnalysisServiceError(
-        errorMessages.INVALID_RESPONSE,
-        undefined,
-        "POLICY_INCOMPATIBLE",
-      );
-    // The background validates the served policy; an unusable response on
-    // this path means the server's policy is newer than this extension.
     const response = await this.request({
       type: "AUTOFILL_LOAD_EXECUTION_POLICY",
       payload: site,
-    }).catch((error: unknown) => {
-      throw error instanceof AnalysisServiceError &&
-        error.message === errorMessages.INVALID_RESPONSE
-        ? incompatible()
-        : error;
     });
     if (
       !response ||
@@ -100,7 +78,8 @@ export class RuntimeAnalysisApiClient implements AnalysisApiClient {
     )
       throw new AnalysisServiceError(errorMessages.INVALID_RESPONSE);
     if (response.executionPolicy === null) return undefined;
-    if (!validExecutionPolicy(response.executionPolicy)) throw incompatible();
+    if (!validExecutionPolicy(response.executionPolicy))
+      throw new AnalysisServiceError(errorMessages.INVALID_RESPONSE);
     return response.executionPolicy;
   }
 
@@ -112,26 +91,6 @@ export class RuntimeAnalysisApiClient implements AnalysisApiClient {
       payload: request,
     });
     return validateInteractionDecisionResponse(request, response);
-  }
-
-  async classifySections(
-    request: SectionClassifyRequest,
-  ): Promise<SectionClassifyResponse> {
-    const response = await this.request({
-      type: "AUTOFILL_GENERIC_CLASSIFY_SECTIONS",
-      payload: request,
-    });
-    return validateSectionClassifyResponse(request, response);
-  }
-
-  async analyzeGenericFields(
-    request: GenericFieldsRequest,
-  ): Promise<GenericFieldsResponse> {
-    const response = await this.request({
-      type: "AUTOFILL_GENERIC_ANALYZE_FIELDS",
-      payload: request,
-    });
-    return validateGenericFieldsResponse(request, response);
   }
 
   async analyzePreparation(
@@ -154,7 +113,8 @@ export class RuntimeAnalysisApiClient implements AnalysisApiClient {
     });
     try {
       const analysis = validateFieldsResponse(request, response);
-      observeQuality(() => this.quality.readySnapshot(request.snapshotId));
+      if (this.reportingSupported)
+        observeQuality(() => this.quality.readySnapshot(request.snapshotId));
       return analysis;
     } catch (error) {
       debugApiMessage(
@@ -192,11 +152,9 @@ export class RuntimeAnalysisApiClient implements AnalysisApiClient {
       throw new AnalysisServiceError(errorMessages.INVALID_RESPONSE);
     }
     if (!envelope.ok) {
-      throw new AnalysisServiceError(
-        errorMessages[envelope.code],
-        envelope.status,
-      );
+      throw new AnalysisServiceError(errorMessages[envelope.code]);
     }
+    this.reportingSupported = envelope.quality === true;
     return envelope.data;
   }
 }

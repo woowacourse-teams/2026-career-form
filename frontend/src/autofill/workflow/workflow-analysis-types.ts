@@ -1,5 +1,3 @@
-import type { NativeMajorPreparationState } from "./native-major-preparation";
-import type { NativeDependentState } from "./native-dependent-rows";
 import type {
   AnalyzeFieldsSnapshot,
   StaticFieldsSession,
@@ -8,12 +6,7 @@ import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import type { AddressResult, AddressSearch } from "../address/types";
 import type { WorkflowAdapter } from "../adapters/workflow";
 import type { AnalysisApiClient } from "../api/types";
-import type {
-  collectFieldsSnapshot,
-  collectFieldsSnapshotWithDropdowns,
-  CollectedSnapshot,
-} from "../dom/collect";
-import type { GenericStructureContext } from "../generic/structure-context";
+import type { collectFieldsSnapshot, CollectedSnapshot } from "../dom/collect";
 import type { ReviewPlanItem } from "../review/review-plan";
 import type {
   ApprovedWriteResult,
@@ -26,21 +19,12 @@ import type { WriteFailureCode } from "../write/failure";
 import type { SearchFollowUpControl } from "../interaction/search-follow-up";
 import type { Stage } from "./workflow-model";
 import type { ComponentResultTargets } from "./component-result-registry";
-import type {
-  GenericFieldGrade,
-  GenericSectionResult,
-} from "../generic/generic-analysis";
 
 type FieldsSnapshot = CollectedSnapshot<
   ReturnType<typeof collectFieldsSnapshot>["request"]
 >;
 type AddressRun = {
   controller: AbortController;
-  hplaceFieldsRequests?: number;
-  nativeFieldsRequests?: number;
-  nativeProgress?: string;
-  nativeMajors?: NativeMajorPreparationState;
-  nativeDependents?: NativeDependentState;
   button?: Element;
   task?: Promise<AddressResult>;
 };
@@ -95,11 +79,6 @@ export interface WorkflowAnalysisContext {
     registry: CandidateRegistry,
     item: ReviewPlanItem,
   ) => Promise<void>;
-  /** Generic section flow only: field grades and section results for review. */
-  onGenericGrades?: (
-    grades: ReadonlyMap<string, GenericFieldGrade>,
-    sections: readonly GenericSectionResult[],
-  ) => void;
   onAnalysis?: (summary: {
     mode: "ADAPTER" | "GENERIC";
     durationMs: number;
@@ -111,9 +90,6 @@ export interface WorkflowAnalysisContext {
   addressSearch: AddressSearch;
   apiClient: AnalysisApiClient;
   analyzeFieldsSnapshot?: AnalyzeFieldsSnapshot;
-  /** Injected only by the generic structure gate; omission keeps the old collector. */
-  collectFields?: typeof collectFieldsSnapshotWithDropdowns;
-  genericStructure?: GenericStructureContext;
   refreshFieldsAfterPass?: StaticFieldsSession["refreshAfterPass"];
   pageDocument: Document;
   repository: Pick<ProfileRepository, "load">;

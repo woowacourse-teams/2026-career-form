@@ -1,23 +1,11 @@
-import { withStructuralCollection } from "../debug/structural-diagnostics";
-import {
-  collectNativeFields,
-  collectNativePreparation,
-} from "../policy/native-form-collection";
 import { runtimeRules, componentName } from "../policy/runtime-rules";
 import { componentPolicy } from "../policy/component-policy";
 import { componentSelector } from "../policy/component-dom";
 import { cachedDomRead, displayState, withDomReadPass } from "./read-pass";
 import { startLocalTiming } from "../debug/local-timing";
-import {
-  nativePolicyRequired,
-  executionPolicy,
-} from "../workflow/execution-policy";
+import { executionPolicy } from "../workflow/execution-policy";
 import { targetOnlyRadio } from "../policy/radio-validation";
 import { resolveDocumentCompany } from "../adapters/company";
-import {
-  collectHplaceFields,
-  collectHplacePreparation,
-} from "../adapters/hplace/collection";
 import type { CompanyId } from "../adapters/company";
 import type {
   ActionCandidate,
@@ -52,15 +40,8 @@ import {
   semanticText,
   collectActionSemanticContext,
 } from "./semantic-context";
-import {
-  metadata,
-  labelOf,
-  sectionName,
-  structuralLabelOf,
-  unnamedRadioGroupOf,
-} from "./metadata";
+import { metadata, labelOf, sectionName } from "./metadata";
 import { collectButtonDropdowns, type ButtonDropdown } from "./button-dropdown";
-import { isSafeStructuralClick } from "../generic/click-policy";
 import { acquireDocumentRun } from "../interaction/document-run";
 import { genericFormGroupFor, genericFormGroups } from "./generic-form-groups";
 import { genericRowFor, genericRows } from "./repeatable-rows";
@@ -303,7 +284,6 @@ function baseCandidate(
   element: HTMLElement,
   candidateId: string,
   syntheticDomName?: string,
-  generic = false,
 ) {
   const control =
     element instanceof HTMLInputElement ||
@@ -312,9 +292,7 @@ function baseCandidate(
   return {
     candidateId,
     visibility: visibility(element),
-    ...(labelOf(element, generic)
-      ? { displayName: labelOf(element, generic) }
-      : {}),
+    ...(labelOf(element) ? { displayName: labelOf(element) } : {}),
     ...(metadata(element.id) ? { domId: metadata(element.id) } : {}),
     ...((metadata(element.getAttribute("name")) ?? syntheticDomName)
       ? { domName: metadata(element.getAttribute("name")) ?? syntheticDomName }
@@ -356,39 +334,14 @@ function collectFieldElements(
     : native;
 }
 
-function collectFieldsSnapshotInternal(
+export function collectFieldsSnapshot(
   document: Document,
   dropdowns: ReadonlyMap<HTMLElement, ButtonDropdown> = new Map(),
-  options: {
-    recoverBrokenLabels?: boolean;
-    /** Opt in to title-only name cues on the generic path. */
-    titleNameCues?: boolean;
-    /** Opt out of mixed section detection; omitted keeps it on. */
-    mixedSectionDetection?: boolean;
-  } = {},
 ): CollectedSnapshot<FieldsAnalyzeRequest> {
   const finishTiming = startLocalTiming("collect", { version: 2 });
   try {
     return withDomReadPass(() => {
       const companyId = resolveDocumentCompany(document);
-      if (nativePolicyRequired(document))
-        return collectNativeFields(
-          document,
-          createSnapshotId("fields"),
-          siteOf(document),
-          collectHplaceFields(
-            document,
-            createSnapshotId("fields"),
-            siteOf(document),
-          ),
-        );
-      if (companyId === "hplace")
-        return collectHplaceFields(
-          document,
-          createSnapshotId("fields"),
-          siteOf(document),
-        );
-      const generic = companyId === "generic";
       const adapter = collectionAdapterForHost(document);
       const registry = new CandidateRegistry();
       let candidateIndex = 0;
@@ -445,11 +398,7 @@ function collectFieldsSnapshotInternal(
             Element,
             { groupKey: string; rowIndex: number; group: MixedSectionGroup }
           >();
-          if (
-            container &&
-            adapter === collectionAdapterForHost("") &&
-            options.mixedSectionDetection !== false
-          ) {
+          if (container && adapter === collectionAdapterForHost("")) {
             const byGroup = new Map<number, Element[]>();
             for (const item of repeatableItems)
               if (!item.ambiguous)
@@ -498,22 +447,7 @@ function collectFieldsSnapshotInternal(
                           row.contains(element),
                         )?.element,
                   )
-                : generic &&
-                    element instanceof HTMLInputElement &&
-                    element.type === "radio" &&
-                    !element.name
-                  ? unnamedRadioGroupOf(element).filter(
-                      (peer) =>
-                        elements.includes(peer) &&
-                        !consumed.has(peer) &&
-                        repeatableItems.find(({ element: row }) =>
-                          row.contains(peer),
-                        )?.element ===
-                          repeatableItems.find(({ element: row }) =>
-                            row.contains(element),
-                          )?.element,
-                    )
-                  : [element];
+                : [element];
             grouped.forEach((peer) => consumed.add(peer));
 
             const candidateId = createOpaqueId("field", candidateIndex++);
@@ -533,7 +467,7 @@ function collectFieldsSnapshotInternal(
                 return { optionId, displayName: option.text };
               });
               candidate = {
-                ...baseCandidate(first, candidateId, undefined, generic),
+                ...baseCandidate(first, candidateId),
                 element: "custom",
                 control: "select",
                 options,
@@ -554,8 +488,7 @@ function collectFieldsSnapshotInternal(
                 optionElements.set(optionId, peer);
                 return {
                   optionId,
-                  displayName:
-                    labelOf(peer, generic) ?? `선택 ${optionIndex + 1}`,
+                  displayName: labelOf(peer) ?? `선택 ${optionIndex + 1}`,
                 };
               });
               candidate = {
@@ -565,7 +498,6 @@ function collectFieldsSnapshotInternal(
                   companyId === "components"
                     ? componentSyntheticDomName(first)
                     : undefined,
-                  generic,
                 ),
                 element: "input",
                 control: customRadio
@@ -573,11 +505,6 @@ function collectFieldsSnapshotInternal(
                   : ((first as HTMLInputElement).type as "radio" | "checkbox"),
                 options,
               };
-              const question =
-                generic && !customRadio && grouped.length > 1
-                  ? structuralLabelOf(grouped)?.label
-                  : undefined;
-              if (question) candidate.displayName = question;
             } else if (first instanceof HTMLSelectElement) {
               const options = Array.from(first.options)
                 .map((option, optionIndex) => {
@@ -603,7 +530,6 @@ function collectFieldsSnapshotInternal(
                   companyId === "components"
                     ? componentSyntheticDomName(first)
                     : undefined,
-                  generic,
                 ),
                 element: "select",
                 control: "select",
@@ -620,7 +546,6 @@ function collectFieldsSnapshotInternal(
                   companyId === "components"
                     ? componentSyntheticDomName(first)
                     : undefined,
-                  generic,
                 ),
                 element:
                   first instanceof HTMLTextAreaElement ? "textarea" : "input",
@@ -663,14 +588,7 @@ function collectFieldsSnapshotInternal(
                 }
               }
             }
-            const semanticContext = collectSemanticContext(first, container, {
-              generic,
-              recoverBrokenLabels: generic && options.recoverBrokenLabels,
-              titleNameCues: generic && options.titleNameCues,
-              ...(generic && isChoice && !customRadio && grouped.length > 1
-                ? { group: grouped }
-                : {}),
-            });
+            const semanticContext = collectSemanticContext(first, container);
             if (
               runtimeRules(document)?.components?.collection.ownedLabelsOnly
             ) {
@@ -843,30 +761,14 @@ function collectFieldsSnapshotInternal(
 export async function collectFieldsSnapshotWithDropdowns(
   document: Document,
   signal?: AbortSignal,
-  options: { mixedSectionDetection?: boolean } = {},
 ): Promise<CollectedSnapshot<FieldsAnalyzeRequest>> {
   if (resolveDocumentCompany(document) !== "generic")
     return collectFieldsSnapshot(document);
   const release = acquireDocumentRun(document);
-  if (!release)
-    return collectFieldsSnapshot(document, new Map(), {
-      recoverBrokenLabels: true,
-      titleNameCues: true,
-      ...options,
-    });
+  if (!release) return collectFieldsSnapshot(document);
   try {
-    const dropdowns = await collectButtonDropdowns(
-      document,
-      signal,
-      (trigger) =>
-        isSafeStructuralClick(trigger, trigger.closest("form") ?? document.body)
-          .allowed,
-    );
-    return collectFieldsSnapshot(document, dropdowns, {
-      recoverBrokenLabels: true,
-      titleNameCues: true,
-      ...options,
-    });
+    const dropdowns = await collectButtonDropdowns(document, signal);
+    return collectFieldsSnapshot(document, dropdowns);
   } finally {
     release();
   }
@@ -1125,31 +1027,10 @@ function repeatableItemElementsForAction(
   return hasTypedItems ? [] : singleGroupItems();
 }
 
-function collectPreparationSnapshotInternal(
+export function collectPreparationSnapshot(
   document: Document,
-  options: {
-    /** Opt out of mixed section detection; omitted keeps it on. */
-    mixedSectionDetection?: boolean;
-  } = {},
 ): PreparationCollectedSnapshot {
   const companyId = resolveDocumentCompany(document);
-  if (nativePolicyRequired(document))
-    return collectNativePreparation(
-      document,
-      createSnapshotId("preparation"),
-      siteOf(document),
-      collectHplacePreparation(
-        document,
-        createSnapshotId("preparation"),
-        siteOf(document),
-      ),
-    );
-  if (companyId === "hplace")
-    return collectHplacePreparation(
-      document,
-      createSnapshotId("preparation"),
-      siteOf(document),
-    );
   const adapter = collectionAdapterForHost(document);
   const registry = new CandidateRegistry();
   let candidateIndex = 0;
@@ -1218,9 +1099,7 @@ function collectPreparationSnapshotInternal(
               ? "radio"
               : "button",
         visibility: visibility(element),
-        semanticContext: collectActionSemanticContext(element, container, {
-          generic: companyId === "generic",
-        }),
+        semanticContext: collectActionSemanticContext(element, container),
         ...(labelOf(element) ? { displayName: labelOf(element) } : {}),
         ...(domId ? { domId } : {}),
         ...(metadata(element.name) ? { domName: metadata(element.name) } : {}),
@@ -1289,7 +1168,7 @@ function collectPreparationSnapshotInternal(
       );
     },
     mixedSectionGroup(actionCandidateId) {
-      if (!generic || options.mixedSectionDetection === false) return undefined;
+      if (!generic) return undefined;
       const sectionId = actionSectionIds.get(actionCandidateId);
       if (!sectionId) return undefined;
       const action = actionElements.get(actionCandidateId);
@@ -1354,23 +1233,4 @@ function collectPreparationSnapshotInternal(
       return action ? genericFormGroupFor(action)?.maximumRows : undefined;
     },
   };
-}
-
-export function collectPreparationSnapshot(
-  document: Document,
-  options: Parameters<typeof collectPreparationSnapshotInternal>[1] = {},
-): PreparationCollectedSnapshot {
-  return withStructuralCollection("preparation", () =>
-    collectPreparationSnapshotInternal(document, options),
-  );
-}
-
-export function collectFieldsSnapshot(
-  document: Document,
-  dropdowns: ReadonlyMap<HTMLElement, ButtonDropdown> = new Map(),
-  options: Parameters<typeof collectFieldsSnapshotInternal>[2] = {},
-): CollectedSnapshot<FieldsAnalyzeRequest> {
-  return withStructuralCollection("fields", () =>
-    collectFieldsSnapshotInternal(document, dropdowns, options),
-  );
 }

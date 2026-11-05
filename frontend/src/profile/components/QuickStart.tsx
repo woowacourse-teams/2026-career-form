@@ -25,7 +25,6 @@ const saveLabels = {
   saving: "저장 중이에요…",
   saved: "이 브라우저에 저장했어요.",
   error: "저장하지 못했어요. 입력한 내용은 유지되니 다시 시도해 주세요.",
-  conflict: "최신 프로필 확인이 필요해요.",
 };
 const basicSteps: Step[] = [
   "name",
@@ -89,7 +88,6 @@ export function QuickStart({
   const focusedScreen = useRef<string | null>(null);
   const viewSent = useRef(false);
   const transition = useRef(false);
-  const busy = pending || editor.isReloading;
   const entry = editor.profile[selection.chapter].find(
     (row) => row.id === selection.entry.id,
   ) ?? {
@@ -227,7 +225,7 @@ export function QuickStart({
     skipIncompleteDates = false,
     origin: Step | null = null,
   ) {
-    if (transition.current || editor.isReloading) return false;
+    if (transition.current) return false;
     const invalidDate = question.current?.querySelector<HTMLInputElement>(
       "input[data-date-input]:invalid",
     );
@@ -263,33 +261,6 @@ export function QuickStart({
       setPending(false);
     }
   }
-  async function reloadLatest() {
-    if (transition.current || editor.isReloading) return;
-    if (
-      !globalThis.confirm(
-        "저장되지 않은 편집이 사라집니다. 최신 프로필을 다시 불러올까요?",
-      )
-    )
-      return;
-    transition.current = true;
-    setPending(true);
-    try {
-      if (!(await editor.reloadLatest())) return;
-      setSelection({
-        chapter: "education",
-        entry: { id: "", sectionId: "university", values: {} },
-      });
-      createdIds.current.clear();
-      setHistory([]);
-      setReturnTo(null);
-      setGuide(false);
-      setNavigationFailed(false);
-      setStep("overview");
-    } finally {
-      transition.current = false;
-      setPending(false);
-    }
-  }
   function next(skipIncompleteDates = false) {
     const following = returnTo ?? steps[steps.indexOf(step) + 1];
     if (following) void proceed(following, skipIncompleteDates);
@@ -318,7 +289,6 @@ export function QuickStart({
     value: string,
     identity?: ProfileIdentity,
   ) {
-    if (transition.current || editor.isReloading) return;
     const current = editor.profile[selection.chapter].find(
       (row) => row.id === entry.id,
     );
@@ -372,7 +342,7 @@ export function QuickStart({
       <button
         className={summary ? styles.primary : undefined}
         type="button"
-        disabled={busy}
+        disabled={pending}
         onClick={() => void proceed("guide")}
       >
         지금 자동 기입 사용하기 <span aria-hidden="true">↗</span>
@@ -418,7 +388,7 @@ export function QuickStart({
               <button
                 type="button"
                 className={styles.textButton}
-                disabled={busy}
+                disabled={pending}
                 onClick={() => void proceed("profile")}
               >
                 전체 프로필 편집
@@ -442,10 +412,8 @@ export function QuickStart({
           {guide ? (
             <QuickStartGuide
               hasValues={hasValues}
-              pending={busy}
-              onBack={() => {
-                if (!transition.current && !editor.isReloading) setGuide(false);
-              }}
+              pending={pending}
+              onBack={() => setGuide(false)}
               onOpenProfile={() => void proceed("profile")}
             />
           ) : (
@@ -478,7 +446,7 @@ export function QuickStart({
               <p className={styles.description}>{descriptions[step]}</p>
               <fieldset
                 ref={question}
-                disabled={busy}
+                disabled={pending}
                 className={`${styles.question} ${step === "school" ? styles.schoolQuestion : ""}`}
                 key={step}
               >
@@ -650,7 +618,7 @@ export function QuickStart({
               {editor.saveStatus === "error" && (
                 <button
                   type="button"
-                  disabled={busy}
+                  disabled={pending}
                   onClick={() => void proceed("retry")}
                 >
                   다시 저장하기
@@ -660,7 +628,7 @@ export function QuickStart({
                 {history.length > 0 && (
                   <button
                     type="button"
-                    disabled={busy}
+                    disabled={pending}
                     onClick={async () => {
                       if (!(await proceed("retry"))) return;
                       setStep(history[history.length - 1].step);
@@ -676,7 +644,7 @@ export function QuickStart({
                   <button
                     type="button"
                     className={styles.primary}
-                    disabled={busy}
+                    disabled={pending}
                     onClick={() => next()}
                   >
                     {returnTo ? "확인하고 돌아가기" : "다음"}
@@ -687,7 +655,7 @@ export function QuickStart({
                 <button
                   type="button"
                   className={styles.skip}
-                  disabled={busy}
+                  disabled={pending}
                   onClick={async () => {
                     if (!choosing) {
                       next(true);
@@ -713,29 +681,6 @@ export function QuickStart({
               )}
               {!summary && autofillExit}
             </form>
-          )}
-          {editor.saveStatus === "conflict" && (
-            <div role="alert" className={styles.error}>
-              <p>
-                다른 화면에서 프로필이 변경되었습니다. 현재 편집은 저장하지
-                않았습니다. 최신 프로필을 다시 불러온 뒤 편집해 주세요.
-              </p>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => void reloadLatest()}
-              >
-                {editor.isReloading
-                  ? "불러오는 중…"
-                  : "최신 프로필 다시 불러오기"}
-              </button>
-              {editor.reloadFailed && (
-                <p>
-                  최신 프로필을 불러오지 못했습니다. 편집 내용은 유지됩니다.
-                  다시 시도해 주세요.
-                </p>
-              )}
-            </div>
           )}
           {navigationFailed && (
             <p role="alert" className={styles.error}>

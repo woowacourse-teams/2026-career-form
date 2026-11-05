@@ -14,7 +14,9 @@ export function savedResultValues(
   profile?: Profile,
 ): { value: string; sensitive: boolean }[] {
   if (item.profileValue?.trim())
-    return [{ value: item.profileValue, sensitive: false }];
+    return [
+      { value: item.profileValue, sensitive: item.status === "sensitive" },
+    ];
   if (!profile) return [];
   const key = item.profileFieldKey ?? item.analysis?.profileFieldKey;
   const binding =
