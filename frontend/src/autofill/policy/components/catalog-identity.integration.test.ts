@@ -1,6 +1,7 @@
 import { fixturePolicy } from "../../../test/fixtures/execution-policy";
 import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
-usePolicyFixture("greeting");
+// Only fail-closed paths run here: cap the live wait budgets (wait-cap.ts).
+usePolicyFixture("greeting", { capWaits: 300 });
 import { afterEach, expect, it, vi } from "vitest";
 import {
   createEmptyProfile,
@@ -119,7 +120,7 @@ async function run(
   const registry = new CandidateRegistry();
   registry.registerField(handle);
   const analysis: FieldsAnalyzeResponse = {
-    executionPolicy: fixturePolicy("greeting"),
+    executionPolicy: fixturePolicy("greeting", { capWaits: 300 }),
     snapshotId: "snapshot",
     mode: "ADAPTER",
     analysisStatus: "COMPLETE",

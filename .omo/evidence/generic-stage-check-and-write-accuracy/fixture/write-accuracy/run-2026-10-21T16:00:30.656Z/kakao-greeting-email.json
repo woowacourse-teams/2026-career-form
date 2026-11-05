@@ -1,0 +1,704 @@
+{
+  "schemaVersion": 1,
+  "snapshot": "kakao-greeting-email",
+  "status": "UNREVIEWED",
+  "expectedRoute": "generic",
+  "actualRoute": "generic",
+  "scored": false,
+  "metrics": {
+    "registered": 53,
+    "exercisable": 0,
+    "approved": 0,
+    "attempted": 0,
+    "reportedWritten": 0,
+    "correct": 0,
+    "wrong": 0,
+    "held": 0,
+    "unscored": 53,
+    "reportedSuccessButWrong": 0,
+    "preservedViolated": 0
+  },
+  "byControlKind": {
+    "text": {
+      "registered": 44,
+      "exercisable": 0,
+      "approved": 0,
+      "attempted": 0,
+      "reportedWritten": 0,
+      "correct": 0,
+      "wrong": 0,
+      "held": 0,
+      "unscored": 44,
+      "reportedSuccessButWrong": 0,
+      "preservedViolated": 0
+    },
+    "checkbox": {
+      "registered": 6,
+      "exercisable": 0,
+      "approved": 0,
+      "attempted": 0,
+      "reportedWritten": 0,
+      "correct": 0,
+      "wrong": 0,
+      "held": 0,
+      "unscored": 6,
+      "reportedSuccessButWrong": 0,
+      "preservedViolated": 0
+    },
+    "textarea": {
+      "registered": 3,
+      "exercisable": 0,
+      "approved": 0,
+      "attempted": 0,
+      "reportedWritten": 0,
+      "correct": 0,
+      "wrong": 0,
+      "held": 0,
+      "unscored": 3,
+      "reportedSuccessButWrong": 0,
+      "preservedViolated": 0
+    }
+  },
+  "fields": [
+    {
+      "ordinal": 0,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > input:nth-child(2)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 1,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > div:nth-child(3) > input:nth-child(2)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 2,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > div:nth-child(7) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 3,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > div:nth-child(8) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 4,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > div:nth-child(9) > div:nth-child(2) > input:nth-child(2)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 5,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(3) > div:nth-child(4) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 6,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(3) > div:nth-child(1) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 7,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(4) > div:nth-child(3) > div:nth-child(1) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 8,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 9,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 10,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(3) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "rowIndex": 0,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 11,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(3) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "rowIndex": 0,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 12,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(3) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(10) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "rowIndex": 0,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 13,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(3) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(11) > div:nth-child(1) > div:nth-child(2) > input:nth-child(1)"
+      ],
+      "rowIndex": 0,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 14,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(3) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(12) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "rowIndex": 0,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 15,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(4) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "rowIndex": 0,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 16,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(4) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "rowIndex": 0,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 17,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(4) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(10) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "rowIndex": 0,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 18,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(4) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(11) > div:nth-child(1) > div:nth-child(2) > input:nth-child(1)"
+      ],
+      "rowIndex": 0,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 19,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(4) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(12) > div:nth-child(1) > div:nth-child(2) > input:nth-child(1)"
+      ],
+      "rowIndex": 0,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 20,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(4) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(13) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "rowIndex": 0,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 21,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(4) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 22,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(4) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > label:nth-child(3) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "checkbox",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 23,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(4) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(4) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 24,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(4) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 25,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(4) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(6) > div:nth-child(2) > textarea:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "textarea",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 26,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 27,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 28,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > div:nth-child(2) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 29,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > div:nth-child(2) > input:nth-child(2)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 30,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > div:nth-child(4) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 31,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > div:nth-child(4) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 32,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > div:nth-child(4) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 33,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > div:nth-child(4) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(4) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 34,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > div:nth-child(4) > div:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 35,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > div:nth-child(4) > div:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 36,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > div:nth-child(4) > div:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 37,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > div:nth-child(4) > div:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(4) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 38,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > div:nth-child(4) > div:nth-child(4) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 39,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > div:nth-child(4) > div:nth-child(4) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 40,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > div:nth-child(4) > div:nth-child(4) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 41,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(5) > div:nth-child(1) > div:nth-child(4) > div:nth-child(4) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(4) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 42,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(7) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > textarea:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "textarea",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 43,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(7) > div:nth-child(1) > div:nth-child(3) > div:nth-child(2) > textarea:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "textarea",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 44,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(8) > div:nth-child(1) > div:nth-child(3) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 45,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(8) > div:nth-child(1) > div:nth-child(3) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 46,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(8) > div:nth-child(1) > div:nth-child(3) > div:nth-child(2) > div:nth-child(3) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 47,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(8) > div:nth-child(1) > div:nth-child(3) > div:nth-child(2) > div:nth-child(4) > div:nth-child(1) > input:nth-child(2)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 48,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(9) > div:nth-child(1) > div:nth-child(2) > label:nth-child(1) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "checkbox",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 49,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(9) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > label:nth-child(1) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "checkbox",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 50,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(9) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > label:nth-child(1) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "checkbox",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 51,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(9) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > label:nth-child(1) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "checkbox",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    },
+    {
+      "ordinal": 52,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(9) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(4) > label:nth-child(1) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "checkbox",
+      "outcome": "unscored",
+      "approved": false,
+      "reportedWritten": false,
+      "preservedViolated": false
+    }
+  ],
+  "diagnostics": [
+    "MISSING_TRUTH",
+    "UNSCORED_FIELDS"
+  ]
+}

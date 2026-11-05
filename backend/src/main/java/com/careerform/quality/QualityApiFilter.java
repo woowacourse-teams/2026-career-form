@@ -22,6 +22,7 @@ import jakarta.servlet.http.HttpServletResponse;
 @Order(-90)
 public final class QualityApiFilter extends OncePerRequestFilter {
     private static final String PREFIX = "/api/v1/quality";
+    private static final String NOTIFICATION_ADMIN_PREFIX = "/api/v1/notifications/admin";
     private final QualityAccess access;
 
     public QualityApiFilter(QualityAccess access) { this.access = access; }
@@ -31,7 +32,13 @@ public final class QualityApiFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return !request.getRequestURI().startsWith(PREFIX + "/") && !request.getRequestURI().startsWith("/quality/") && !request.getRequestURI().equals("/quality");
+        var path = request.getRequestURI();
+        return !path.startsWith(PREFIX + "/") && !path.startsWith(NOTIFICATION_ADMIN_PREFIX + "/") && !path.equals(NOTIFICATION_ADMIN_PREFIX) && !managementPage(path);
+    }
+
+    /** 품질 확인 목록과 공고 알림 관리 화면은 같은 공용 비밀번호 로그인 틀을 쓴다. */
+    private static boolean managementPage(String path) {
+        return path.equals("/quality") || path.startsWith("/quality/") || path.equals("/notifications") || path.startsWith("/notifications/");
     }
 
     @Override
@@ -39,7 +46,7 @@ public final class QualityApiFilter extends OncePerRequestFilter {
         secureHeaders(response);
         if (access == null) { reject(response, 404); return; }
         var path = request.getRequestURI();
-        if (path.equals("/quality") || path.startsWith("/quality/")) {
+        if (managementPage(path)) {
             if (!access.configured()) { reject(response, 503); return; }
             chain.doFilter(request, response);
             return;

@@ -1,6 +1,6 @@
 .fieldGroups {
   display: grid;
-  gap: 28px;
+  gap: 40px;
 }
 .fieldGroup {
   margin: 0;
@@ -10,93 +10,163 @@
 }
 .fieldGroup legend {
   width: 100%;
-  margin: 0 0 14px;
+  margin: 0 0 15px;
   padding: 0;
-  color: var(--color-text);
-  font-size: 13px;
-  font-weight: 650;
+  color: var(--color-text-strong);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 25px;
+  letter-spacing: -0.374px;
+}
+.fieldGroup legend.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 .fieldGrid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px 20px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
   align-items: start;
 }
+/* The divider sits halfway through a 40px group gap: 20px on either side. */
+.personalDetails {
+  margin-top: -20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--color-border);
+}
+/* Every control starts on one line after a 96px label column. */
 .field {
   display: grid;
-  align-content: start;
+  grid-template-columns: 96px minmax(0, 1fr);
+  align-items: center;
   min-width: 0;
-  gap: 7px;
-  color: var(--color-text);
-  font-size: 13px;
-  font-weight: 500;
+  gap: 8px 15px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 18px;
+  letter-spacing: -0.224px;
 }
 .fieldLabel {
   display: block;
-  line-height: 1.5;
+  line-height: 18px;
+  word-break: keep-all;
+}
+.field > :not(.fieldLabel) {
+  grid-column: 2;
+}
+/* Width follows the value: 210px short, 435px long. */
+.field > input,
+.field > select {
+  max-width: 210px;
+}
+.field > input[type="email"],
+.field > div,
+.fullWidth > input {
+  max-width: 435px;
+}
+.fieldTop > .fieldLabel {
+  align-self: start;
+  margin-top: 13px;
 }
 .fullWidth {
   grid-column: 1 / -1;
 }
+
+/* 기본 인적사항: 국문, 영문, 한자 by 성, 이름. */
+/* 96px label, two 210px controls, three 15px spacings. */
+.nameTable {
+  width: 576px;
+  margin: -8px -15px;
+  border-collapse: separate;
+  border-spacing: 15px 8px;
+  table-layout: fixed;
+}
+.nameTable td,
+.nameTable th {
+  padding: 0;
+  text-align: left;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: -0.224px;
+}
+.nameTable thead td {
+  width: 96px;
+}
+.nameTable thead th {
+  color: var(--color-text-muted);
+}
+.nameTable tbody th {
+  color: var(--color-text-muted);
+}
+
 .field input,
 .field textarea,
-.field select {
+.field select,
+.nameTable input {
+  display: block;
+  box-sizing: border-box;
   width: 100%;
   min-width: 0;
-  min-height: 44px;
+  height: 44px;
   border: 1px solid var(--color-field-border);
   border-radius: 8px;
-  padding: 10px 12px;
+  padding: 0 15px;
   color: var(--color-text-strong);
   background: var(--color-surface);
   font: inherit;
-  font-size: 14px;
-  font-weight: 450;
+  font-size: 17px;
+  font-weight: 400;
+  letter-spacing: -0.374px;
   transition:
     border-color 0.15s,
     box-shadow 0.15s;
 }
 .field input:hover,
 .field textarea:hover,
-.field select:hover {
-  border-color: var(--color-accent);
+.field select:hover,
+.nameTable input:hover {
+  border-color: #515154;
 }
 .field input::placeholder,
-.field textarea::placeholder {
+.field textarea::placeholder,
+.nameTable input::placeholder {
   color: var(--color-text-muted);
   opacity: 1;
   font-weight: 400;
 }
 .field textarea {
-  resize: vertical;
-  line-height: 1.8;
+  height: auto;
   min-height: 136px;
+  padding: 11px 15px;
+  line-height: 25px;
+  resize: vertical;
 }
 .field input:focus,
 .field textarea:focus,
-.field select:focus {
+.field select:focus,
+.nameTable input:focus {
   border-color: var(--color-action);
   outline: none;
-  box-shadow: 0 0 0 3px var(--color-focus);
+  box-shadow: 0 0 0 1px var(--color-action);
 }
 .field select {
   appearance: none;
   cursor: pointer;
-  background-image:
-    linear-gradient(45deg, transparent 50%, var(--color-text-muted) 50%),
-    linear-gradient(135deg, var(--color-text-muted) 50%, transparent 50%);
-  background-position:
-    calc(100% - 17px) 50%,
-    calc(100% - 12px) 50%;
-  background-repeat: no-repeat;
-  background-size:
-    5px 5px,
-    5px 5px;
-  padding-right: 34px;
+  background: var(--color-surface)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23515154' stroke-width='2'/%3E%3C/svg%3E")
+    no-repeat right 15px center;
+  padding-right: 42px;
 }
 .repeatedSection {
   display: grid;
-  gap: 18px;
+  gap: 20px;
 }
 .addActions {
   display: flex;
@@ -104,151 +174,174 @@
   gap: 8px;
 }
 .secondaryButton {
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  padding: 9px 12px;
+  min-height: 36px;
+  border: 1px solid var(--color-action-strong);
+  border-radius: 980px;
+  padding: 8px 15px;
   color: var(--color-action-strong);
-  background: var(--color-surface);
-  font-size: 12px;
-  font-weight: 600;
+  background: transparent;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: -0.224px;
+  line-height: 1;
   cursor: pointer;
-  min-height: 40px;
 }
 .secondaryButton:hover {
-  background: var(--color-accent-hover);
-  border-color: var(--color-accent);
-}
-.secondaryButton > span {
-  font-size: 16px;
-  font-weight: 400;
+  background: var(--color-surface-muted);
 }
 .deleteButton {
   flex-shrink: 0;
+  min-height: 36px;
   border: 0;
-  border-radius: 6px;
-  padding: 8px;
+  border-radius: 980px;
+  padding: 8px 11px;
   color: var(--color-danger-text);
   background: transparent;
-  font-size: 11px;
+  font-family: inherit;
+  font-size: 14px;
+  letter-spacing: -0.224px;
   cursor: pointer;
 }
 .deleteButton:hover {
   background: var(--color-danger-soft);
-  color: var(--color-danger-text);
+}
+.secondaryButton:focus-visible,
+.deleteButton:focus-visible,
+.cardToggle:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--color-surface),
+    0 0 0 4px var(--color-action);
 }
 .empty {
   display: grid;
   justify-items: center;
-  gap: 12px;
-  padding: 50px 20px;
-  border: 1px dashed var(--color-border);
-  border-radius: 12px;
+  gap: 8px;
+  padding: 40px 20px;
+  border-radius: 18px;
   background: var(--color-surface-muted);
   text-align: center;
 }
 .emptyIcon {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  color: var(--color-info);
-  background: var(--color-info-soft);
-  font-size: 22px;
+  display: none;
 }
 .empty strong {
-  color: var(--color-text);
-  font-size: 14px;
-  font-weight: 600;
+  color: var(--color-text-strong);
+  font-size: 17px;
+  font-weight: 400;
+  letter-spacing: -0.374px;
 }
 .empty p {
   margin: 0;
-  color: var(--color-text-subtle);
-  font-size: 12px;
-  line-height: 1.8;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: -0.224px;
 }
 .card {
   min-width: 0;
   border: 1px solid var(--color-border);
-  border-radius: 10px;
-  overflow: hidden;
+  border-radius: 18px;
 }
 .cardHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 14px 16px;
-  background: var(--color-accent-soft);
+  gap: 15px;
+  padding: 11px 20px;
+  border-radius: 17px 17px 0 0;
+  background: var(--color-surface-muted);
 }
 .cardToggle {
   display: flex;
   align-items: center;
   min-width: 0;
+  min-height: 44px;
   flex: 1;
-  gap: 12px;
+  gap: 11px;
   padding: 0;
   border: 0;
+  border-radius: 8px;
+  font-family: inherit;
   text-align: left;
   cursor: pointer;
   background: transparent;
-  color: var(--color-text);
+  color: var(--color-text-strong);
 }
 .cardChevron {
   width: 22px;
   flex-shrink: 0;
-  font-size: 19px;
+  font-size: 17px;
   text-align: center;
   color: var(--color-text-muted);
 }
 .cardIdentity {
   display: grid;
   min-width: 0;
-  gap: 3px;
+  gap: 2px;
 }
 .cardTitle {
-  font-size: 12px;
-  font-weight: 650;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 25px;
+  letter-spacing: -0.374px;
 }
 .cardSummary {
   overflow-wrap: anywhere;
-  color: var(--color-text-subtle);
-  font-size: 11px;
+  color: var(--color-text-muted);
+  font-size: 14px;
   font-weight: 400;
+  line-height: 18px;
+  letter-spacing: -0.224px;
 }
 .cardBody {
-  border-top: 1px solid var(--color-border);
-  padding: 22px;
+  padding: 20px;
 }
-@media (max-width: 900px) {
+@media (max-width: 640px) {
   .fieldGrid {
-    gap: 16px 14px;
+    gap: 20px;
   }
-  .cardBody {
-    padding: 18px;
-  }
-}
-@media (max-width: 440px) {
-  .fieldGrid {
+  .field {
     grid-template-columns: minmax(0, 1fr);
   }
-  .cardBody {
-    padding: 16px;
+  .field > :not(.fieldLabel) {
+    grid-column: 1;
+  }
+  .field > input,
+  .field > select,
+  .field > input[type="email"],
+  .field > div,
+  .fullWidth > input {
+    max-width: none;
+  }
+  .fieldTop > .fieldLabel {
+    margin-top: 0;
+  }
+  .nameTable {
+    width: calc(100% + 16px);
+    margin: -8px;
+    border-spacing: 8px;
+  }
+  .nameTable thead td {
+    width: 44px;
+  }
+  .secondaryButton,
+  .deleteButton {
+    min-height: 44px;
   }
   .cardHeader {
-    padding: 12px;
+    padding: 8px 15px;
   }
-  .field input,
-  .field textarea,
-  .field select {
-    font-size: 16px;
+  .cardBody {
+    padding: 15px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
   .field input,
   .field textarea,
-  .field select {
+  .field select,
+  .nameTable input {
     transition: none;
   }
 }

@@ -1,5 +1,10 @@
 import { componentEmploymentStatusValue } from "../policy/components/write";
 import { customFieldValue } from "../dom/custom-field-value";
+import {
+  hasVisibleWriteElement,
+  isVisibleWriteElement,
+  readbackWriteElement,
+} from "../dom/write-target";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import type { ReviewPlanItem } from "../review/review-plan";
 import type { ApprovedWriteResult } from "../write/executor";
@@ -18,7 +23,8 @@ export interface WriteProgress {
   retryRecovered?: boolean;
   failureCode?: WriteFailureCode;
 }
-export type WorkflowActivity = "matching" | "preparing" | "address";
+export type WorkflowActivity =
+  "matching" | "preparing" | "address" | "rechecking";
 function uniqueDomId(element: Element): string | undefined {
   return element.id &&
     Array.from(element.ownerDocument.querySelectorAll("[id]")).filter(
@@ -43,6 +49,7 @@ export function progressCategory(item: ReviewPlanItem): string {
 function stillReflected(
   item: ReviewPlanItem,
   registry: CandidateRegistry,
+  written?: Element,
 ): boolean {
   if (
     item.status === "needs-review" &&
@@ -53,11 +60,17 @@ function stillReflected(
   const lookup = registry.lookupField(item.candidateId);
   if (lookup.status !== "ready" && lookup.status !== "blocked") return false;
   const handle = lookup.handle;
-  const element = handle.elements[0];
+  const visible = hasVisibleWriteElement(handle);
+  const element =
+    readbackWriteElement(handle, written) ?? handle.customElements?.[0];
+  if (!element || !element.isConnected) return false;
   let value =
     element instanceof HTMLSelectElement
       ? (element.selectedOptions[0]?.textContent ?? "")
-      : (element?.value ?? "");
+      : element instanceof HTMLInputElement ||
+          element instanceof HTMLTextAreaElement
+        ? element.value
+        : "";
   if (
     handle.candidate.control === "radio" ||
     handle.candidate.control === "checkbox"
@@ -66,7 +79,11 @@ function stillReflected(
       handle.candidate.options
         ?.filter((option) => {
           const control = handle.optionElements.get(option.optionId);
-          return control instanceof HTMLInputElement && control.checked;
+          return (
+            control instanceof HTMLInputElement &&
+            control.checked &&
+            (!visible || isVisibleWriteElement(control))
+          );
         })
         .map((option) => option.displayName)
         .join(", ") ?? "";
@@ -98,7 +115,8 @@ function visibleDisabledTextField(
 ): boolean {
   const lookup = registry.lookupField(item.candidateId);
   if (lookup.status !== "blocked" || lookup.reason !== "disabled") return false;
-  const element = lookup.handle.elements[0];
+  const element =
+    readbackWriteElement(lookup.handle) ?? lookup.handle.elements[0];
   if (
     !(
       element instanceof HTMLInputElement ||
@@ -190,7 +208,10 @@ export function createProgressTracker() {
         lookup.status === "ready" || lookup.status === "blocked"
           ? lookup.handle
           : undefined;
-      const element = handle?.elements[0] ?? handle?.customElements?.[0];
+      const element =
+        (handle && readbackWriteElement(handle)) ??
+        handle?.elements[0] ??
+        handle?.customElements?.[0];
       const registryIds =
         candidateIds.get(registry) ?? new Map<string, string>();
       let id = progressIdFor(item.candidateId, registry);
@@ -236,7 +257,7 @@ export function createProgressTracker() {
         evidence.element === element &&
         verifiers.get(id)?.() === true &&
         visibleDisabledTextField(item, registry) &&
-        stillReflected(item, registry);
+        stillReflected(item, registry, evidence.element);
       const status = retryRecovered ? "written" : result.status;
       if (result.status === "written" && binding && element)
         writeEvidence.set(id, {
@@ -278,4 +299,9 @@ export function createProgressTracker() {
       return [...entries.values()];
     },
   };
+}
+
+/** 현재 기입 묶음에서 처리한 항목 비율(0..100). */
+export function batchPercent(done: number, total: number): number {
+  return Math.min(100, Math.max(0, Math.round((done / total) * 100)));
 }

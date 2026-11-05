@@ -87,7 +87,7 @@ describe("review-to-write calendar route", () => {
     const item = plan.items[0]!;
     expect(item).toMatchObject({
       status: "available",
-      selected: false,
+      selected: true,
       profileValue: "2026-03",
     });
     expect(target.value).toBe("");

@@ -1,0 +1,16 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.10 [39m[90m/home/dbsghwns1209/workspaces/2026-career-form/.worktrees/CF-313/frontend[39m
+
+ [32m✓[39m [30m[42m unit [49m[39m src/autofill/workflow/write-accuracy/write-accuracy.runner.test.ts [2m([22m[2m11 tests[22m[2m)[22m[33m 8100[2mms[22m[39m
+   [33m[2m✓[22m[39m writes text, native select and radio using the product pipeline [33m 2556[2mms[22m[39m
+   [33m[2m✓[22m[39m detects an intentionally wrong truth instead of trusting the writer [33m 1076[2mms[22m[39m
+   [33m[2m✓[22m[39m detects a page listener reverting an input after the write [33m 878[2mms[22m[39m
+   [33m[2m✓[22m[39m counts a missing truth entry as unscored and fails the report gate [33m 684[2mms[22m[39m
+   [33m[2m✓[22m[39m detects mutation of a preserve-marked field by the page [33m 773[2mms[22m[39m
+   [33m[2m✓[22m[39m rejects broken metric conservation [33m 768[2mms[22m[39m
+   [33m[2m✓[22m[39m aggregates only the current manifest set and separates unreviewed metrics by control [33m 819[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m11 passed[39m[22m[90m (11)[39m
+[2m   Start at [22m 01:09:23
+[2m   Duration [22m 24.09s[2m (transform 8.94s, setup 799ms, import 10.47s, tests 8.10s, environment 4.06s)[22m

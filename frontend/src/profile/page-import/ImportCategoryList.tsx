@@ -1,5 +1,6 @@
 import { useId, useState } from "react";
 import { PROFILE_CATEGORIES } from "../field-definitions";
+import { optionLabel } from "../field-display";
 import { IMPORT_SENSITIVE_CATEGORIES } from "./review-fields";
 import {
   isSelectable,
@@ -26,11 +27,10 @@ const PENDING_TEXT = {
 } as const;
 
 function displayValue(row: ReviewRow, value: string) {
-  const option = row.field?.options?.find((item) =>
-    typeof item === "string" ? item === value : item.value === value,
+  return (
+    optionLabel(row.field?.options, value) ??
+    (value.replace(/^(\d{4})-(\d{2})-(\d{2})$/u, "$1.$2.$3") || "없음")
   );
-  if (option && typeof option !== "string") return option.label;
-  return value.replace(/^(\d{4})-(\d{2})-(\d{2})$/u, "$1.$2.$3") || "없음";
 }
 
 const fullLabel = (row: ReviewRow) =>

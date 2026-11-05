@@ -29,7 +29,7 @@ const decisionProvider: InteractionDecisionProvider = async (request) => ({
   })),
 });
 
-function fixture(kind: "table" | "dialog", delayed = false) {
+function fixture(kind: "table" | "dialog", delayed = false, lockedSubmit = false) {
   const content =
     kind === "table"
       ? `<h2>전공 검색</h2><p>항목명을 입력하세요.</p>
@@ -66,6 +66,13 @@ function fixture(kind: "table" | "dialog", delayed = false) {
   const confirm = popup.querySelector<HTMLElement>("[data-confirm]")!;
   const search = popup.querySelector<HTMLButtonElement>("[data-search]")!;
   const results = popup.querySelector<HTMLElement>("[data-search-results]")!;
+  if (lockedSubmit) {
+    // The site enables its search button only after a query is typed.
+    search.disabled = true;
+    query.addEventListener("input", () => {
+      search.disabled = query.value === "";
+    });
+  }
   const direct = vi.fn();
   popup.querySelector("[data-direct]")!.addEventListener("click", direct);
   const forbidden = vi.fn();
@@ -426,6 +433,27 @@ describe.each(["table", "dialog"] as const)("%s search popup", (kind) => {
     ]);
     expect(clicked).not.toHaveBeenCalled();
     expect(test.surface.closure()).toBe("open");
+    expect(test.forbidden).not.toHaveBeenCalled();
+  });
+});
+
+describe.each(["table", "dialog"] as const)("%s popup with a query-locked submit", (kind) => {
+  it("types the query first and then uses the unlocked search button on the generic route", async () => {
+    vi.useFakeTimers();
+    const test = fixture(kind, false, true);
+    const result = await test.run(true);
+    expect(result, JSON.stringify(result)).toMatchObject({ status: "selected" });
+    expect(test.target.value).toBe(VALUE);
+    expect(test.direct).not.toHaveBeenCalled();
+    expect(test.forbidden).not.toHaveBeenCalled();
+  });
+
+  it("keeps the legacy route stopping before any query is typed", async () => {
+    vi.useFakeTimers();
+    const test = fixture(kind, false, true);
+    const result = await test.run(false);
+    expect(result).toMatchObject({ status: "failed", reason: "search_submit_not_found" });
+    expect(test.query.value).toBe("");
     expect(test.forbidden).not.toHaveBeenCalled();
   });
 });

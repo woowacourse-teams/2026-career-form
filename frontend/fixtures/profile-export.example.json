@@ -149,6 +149,7 @@
           "startDate": "2024-01-01",
           "endDate": "2024-06-30",
           "projectName": "샘플 프로젝트",
+          "organization": "샘플 기관",
           "role": "프런트엔드 개발",
           "activityDetails": "사용자 프로필 입력 화면과 검증 흐름을 구현했습니다."
         }

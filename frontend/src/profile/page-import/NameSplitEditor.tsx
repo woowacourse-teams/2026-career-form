@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useEffect, useId, useRef } from "react";
 import styles from "./NameSplitEditor.module.css";
 import cssText from "./NameSplitEditor.module.css?inline";
 
@@ -76,6 +76,7 @@ type Props = {
   givenName: string;
   confirmed: boolean;
   confirmLabel?: string;
+  focusOnMount?: boolean;
   /** The owner must revoke confirmation and import selection whenever names change. */
   onChange: (familyName: string, givenName: string) => void;
   onConfirm: () => void;
@@ -88,10 +89,15 @@ export function NameSplitEditor({
   givenName,
   confirmed,
   confirmLabel = "이름 확인 완료",
+  focusOnMount = false,
   onChange,
   onConfirm,
 }: Props) {
   const id = useId();
+  const root = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (focusOnMount) root.current?.querySelector("input")?.focus();
+  }, [focusOnMount]);
   const prefix = language === "korean" ? "국문" : "영문";
   const { units, position } = splitUnits(
     source,
@@ -105,6 +111,7 @@ export function NameSplitEditor({
 
   return (
     <section
+      ref={root}
       className={`${styles.editor} ${confirmed && valid ? styles.confirmed : styles.review}`}
       aria-label={`${prefix} 이름 나누기`}
     >

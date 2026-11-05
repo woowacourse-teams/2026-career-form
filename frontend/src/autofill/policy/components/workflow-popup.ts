@@ -1,5 +1,6 @@
 import { componentPolicy } from "../component-policy";
 import { componentSelector } from "../component-dom";
+import { executionPolicy } from "../../workflow/execution-policy";
 import { componentUsable } from "./write";
 
 export function ownedPopup(trigger: HTMLElement): HTMLElement | undefined {
@@ -64,4 +65,41 @@ export function retainedSearchPopup(
     return true;
   };
   return usable(popup) ? { popup, usable } : undefined;
+}
+
+const ESCAPE = () =>
+  new KeyboardEvent("keydown", { key: "Escape", bubbles: true });
+
+/**
+ * Close floating Component forms widgets a driver left open. An open combobox,
+ * calendar or choice menu makes the page mark everything else `aria-hidden`
+ * (a modal-style popover), so the next snapshot sees no visible fields and the
+ * run would end with silent gaps. Only closes widgets, never changes a value.
+ */
+export function dismissLeftoverComponentPopups(document: Document): boolean {
+  if (!executionPolicy(document)?.componentPolicy) return false;
+  const dismissed: HTMLElement[] = [];
+  const open = [
+    ...document.querySelectorAll<HTMLElement>(
+      `${componentSelector(document, "searchInput")}[aria-expanded="true"]`,
+    ),
+    ...document.querySelectorAll<HTMLElement>(
+      `${componentSelector(document, "calendarTrigger")}[${componentPolicy(document).widget.stateAttribute}="${componentPolicy(document).widget.openState}"]`,
+    ),
+    ...document.querySelectorAll<HTMLElement>(
+      'button[aria-controls][aria-expanded="true"]',
+    ),
+  ].filter((element) => element.isConnected && componentUsable(element));
+  for (const element of new Set(open)) {
+    element.dispatchEvent(ESCAPE());
+    dismissed.push(element);
+  }
+  const active = document.activeElement;
+  if (
+    dismissed.length &&
+    active instanceof HTMLElement &&
+    dismissed.includes(active)
+  )
+    active.blur();
+  return dismissed.length > 0;
 }

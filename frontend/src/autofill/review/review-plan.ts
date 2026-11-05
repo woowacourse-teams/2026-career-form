@@ -1,3 +1,4 @@
+import { localWorkflowLog } from "../debug/local-workflow";
 import {
   nativeProfileAssignment,
   nativeUnofferedEntries,
@@ -13,7 +14,7 @@ import {
 import type { NativeSection } from "../policy/native-form-contract";
 import { text } from "../policy/primitives";
 import { executionPolicy } from "../workflow/execution-policy";
-import { isSplitEmailTarget, SPLIT_EMAIL_REASON } from "../dom/split-email";
+import { isSplitEmailMember } from "../dom/split-email";
 import type { WriteFailureCode } from "../write/failure";
 import { resolveDocumentCompany } from "../adapters/company";
 import {
@@ -21,6 +22,11 @@ import {
   type ComponentGpaApproval,
 } from "../policy/components/gpa";
 import { customFieldValue } from "../dom/custom-field-value";
+import {
+  hasVisibleWriteElement,
+  isVisibleWriteElement,
+  readbackWriteElement,
+} from "../dom/write-target";
 import { normalizeDisplayName } from "../write/display-name";
 import {
   isReadonlySearchEligible,
@@ -39,6 +45,7 @@ import { PROFILE_CATEGORIES } from "../../profile/field-definitions";
 import type {
   FieldValues,
   Profile,
+  ProfileEntry,
   ProfileIdentity,
   ProfileCategoryId,
   RepeatedProfileCategoryId,
@@ -54,8 +61,11 @@ import {
   type ApprovedCatalogMatch,
 } from "../profile/catalog-match";
 import { catalogEvidenceForElement } from "../profile/catalog-evidence";
+import { highSchoolSearchRegion } from "../profile/search-region";
+import { resolveChoiceOption } from "../profile/choice-option";
 import { matchStandardOption } from "../profile/standard-option-match";
 import { schoolRegionSearchValues } from "../../profile/standard-values";
+import type { SearchContextValue } from "../interaction/search-gate";
 import { formatProfileDate } from "../profile/date-format";
 import {
   buildLocalSearchValuePlan,
@@ -74,7 +84,15 @@ import {
   createDayCalendarApproval,
   type DayCalendarApproval,
 } from "./day-calendar-approval";
+import {
+  createDialogDateApproval,
+  dialogDateButtonValue,
+  isDialogDateButton,
+  type DialogDateApproval,
+} from "../interaction/dialog-date-picker";
 import { assignMixedRows } from "../dom/mixed-section-rows";
+import { genericFormGroupFor } from "../dom/generic-form-groups";
+import { genericReasonText } from "../generic/grade-reason-text";
 
 export type ProfileValueResolution =
   | {
@@ -108,20 +126,32 @@ export interface ReviewPlanItem {
   genericGrade?: "AUTO" | "REVIEW" | "BLOCKED";
   /** Generic-path only: the grade reason or section failure code. */
   genericReasonCode?: string;
+  /** Generic-path only: the control is hidden on the page; display filter only. */
+  hiddenFromReview?: boolean;
+  /** Generic-path only: selected by the developer "확인 필요 포함" setting. */
+  includedByDeveloper?: boolean;
+  /** Generic-path only: why the address search left this field to the user. */
+  addressManualReason?: string;
   failureCode?: WriteFailureCode;
   analysis?: MatchedFieldAnalysis;
   dateApproval?: DateTargetApproval;
   calendarApproval?: CalendarApproval;
   /** Separate approval for readonly year-month-day calendars. */
   dayCalendarApproval?: DayCalendarApproval;
+  /** Separate approval for date buttons that open their own dialog. */
+  dialogDateApproval?: DialogDateApproval;
   componentGpaApproval?: ComponentGpaApproval;
   verifiedFreshDefaultValue?: string;
   /** Local-only approved search forms; never include these values in API requests. */
   searchValuePlan?: LocalSearchValuePlan;
+  /** Local-only same-entry high-school region label; never include in API requests. */
+  searchRegion?: string;
   /** Explicit local profile selection; never serialize to the backend. */
   searchIdentity?: ProfileIdentity;
   /** Approved local evidence for one catalog entry; never part of API requests. */
   catalogMatch?: ApprovedCatalogMatch;
+  /** Generic search only: other stored values of the same entry; local only. */
+  searchContextValues?: readonly SearchContextValue[];
 }
 
 export interface ReviewPlan {
@@ -136,7 +166,8 @@ export function reviewItemsForDisplay(
     .map((item, index) => ({ item, index }))
     .filter(
       ({ item }) =>
-        item.status !== "unavailable" || item.genericGrade === "BLOCKED",
+        !item.hiddenFromReview &&
+        (item.status !== "unavailable" || item.genericGrade !== undefined),
     )
     .sort((left, right) => {
       const leftOrder = left.item.status === "available" ? 0 : 1;
@@ -186,6 +217,23 @@ function profileFieldParts(value: string): ProfileFieldParts | undefined {
       ) === true,
     inputType: field.inputType,
   };
+}
+
+/** The other stored values of the repeatable entry a search field belongs to. */
+function entryContextValues(
+  profile: Profile,
+  profileFieldKey: string,
+  profileEntryId: string | undefined,
+): SearchContextValue[] {
+  const [categoryId, , fieldId] = profileFieldKey.split(".");
+  const entries = (profile as unknown as Record<string, unknown>)[categoryId ?? ""];
+  if (!profileEntryId || !Array.isArray(entries)) return [];
+  const entry = (entries as ProfileEntry[]).find(({ id }) => id === profileEntryId);
+  return Object.entries(entry?.values ?? {}).flatMap(([id, value]) =>
+    id !== fieldId && value?.trim()
+      ? [{ key: `${categoryId}.${entry!.sectionId}.${id}`, value }]
+      : [],
+  );
 }
 
 function valueAt(values: FieldValues, fieldId: string): string | undefined {
@@ -292,7 +340,22 @@ function sameNativeDecimal(
   );
 }
 
+function dialogDateButtonOf(
+  handle: FieldCandidateHandle,
+): HTMLButtonElement | undefined {
+  const button =
+    handle.candidate.element === "custom" &&
+    handle.candidate.control === "button" &&
+    handle.elements.length === 0 &&
+    handle.customElements?.length === 1
+      ? handle.customElements[0]
+      : undefined;
+  return button && isDialogDateButton(button) ? button : undefined;
+}
+
 function currentValue(handle: FieldCandidateHandle): string {
+  const dialogButton = dialogDateButtonOf(handle);
+  if (dialogButton) return dialogDateButtonValue(dialogButton);
   const customValue = customFieldValue(handle);
   if (customValue !== undefined) return customValue;
   const nativeRadio = nativeRadioValue(handle);
@@ -301,20 +364,23 @@ function currentValue(handle: FieldCandidateHandle): string {
     handle.candidate.control === "radio" ||
     handle.candidate.control === "checkbox"
   ) {
+    const visible = hasVisibleWriteElement(handle);
     return handle.elements
       .filter(
         (element): element is HTMLInputElement =>
-          element instanceof HTMLInputElement && element.checked,
+          element instanceof HTMLInputElement &&
+          element.checked &&
+          (!visible || isVisibleWriteElement(element)),
       )
       .map((element) => element.value)
       .join(", ");
   }
-  const select = handle.elements[0];
+  const select = readbackWriteElement(handle);
   if (select instanceof HTMLSelectElement) {
     const selected = select.selectedOptions[0];
     return selected?.value ? (selected.textContent ?? "") : "";
   }
-  return handle.elements[0]?.value ?? "";
+  return select?.value ?? "";
 }
 
 const NATIVE_OPTION_ABSENT_REASON =
@@ -394,6 +460,14 @@ function unavailableItem(
   reason: string,
   analysis?: MatchedFieldAnalysis,
 ): ReviewPlanItem {
+  localWorkflowLog("review-unavailable", {
+    key:
+      analysis?.valueBinding?.type === "DIRECT" ||
+      analysis?.valueBinding?.type === "LOOKUP"
+        ? analysis.valueBinding.profileFieldKey
+        : undefined,
+    reason,
+  });
   return {
     candidateId,
     fieldLabel,
@@ -444,6 +518,56 @@ function certificateSearchValuePlan(
   });
 }
 
+/**
+ * A single editable input without a calendar widget whose accepted date
+ * format, read from its own type, placeholder and constraints, is year-month.
+ */
+function isYearMonthOnlyTarget(handle: FieldCandidateHandle): boolean {
+  const element = handle.elements[0];
+  if (handle.elements.length !== 1 || !(element instanceof HTMLInputElement))
+    return false;
+  if (calendarSurfaceFor(element) || dayCalendarSurfaceFor(element))
+    return false;
+  const target = resolveDateTargetFormat(handle);
+  return (
+    target.status === "resolved" &&
+    (target.format === "YYYY-MM" || target.format === "YYYY.MM")
+  );
+}
+
+/**
+ * A SELECT_DATE target that is a plain editable year-month-only control needs
+ * no calendar interaction: plan it as an ordinary text write so the date
+ * format path derives and validates YYYY-MM. Anything else is unchanged.
+ */
+function withYearMonthWritePlan(
+  analysis: FieldAnalysis,
+  registry: CandidateRegistry,
+  generic: boolean,
+): FieldAnalysis {
+  if (
+    !generic ||
+    analysis.matchType === "NO_MATCH" ||
+    analysis.interactionStatus !== "READY" ||
+    analysis.writePlan?.command !== "SELECT_DATE"
+  )
+    return analysis;
+  const binding =
+    analysis.valueBinding ??
+    (analysis.profileFieldKey
+      ? { type: "DIRECT" as const, profileFieldKey: analysis.profileFieldKey }
+      : undefined);
+  if (
+    binding?.type !== "DIRECT" ||
+    profileFieldParts(binding.profileFieldKey)?.inputType !== "date"
+  )
+    return analysis;
+  const lookup = registry.lookupField(analysis.candidateId);
+  return lookup.status === "ready" && isYearMonthOnlyTarget(lookup.handle)
+    ? { ...analysis, writePlan: { command: "SET_TEXT" } }
+    : analysis;
+}
+
 function itemForAnalysis(
   analysis: FieldAnalysis,
   profile: Profile,
@@ -453,6 +577,67 @@ function itemForAnalysis(
   normalizeDirectValue?: (profileFieldKey: string, value: string) => string,
   generic = true,
   components = false,
+  ungroupedRows: ReadonlySet<string> = new Set(),
+  singleRowEntryOffsets?: ReadonlyMap<string, number>,
+): ReviewPlanItem {
+  return itemForResolvedAnalysis(
+    withYearMonthWritePlan(analysis, registry, generic),
+    profile,
+    registry,
+    ignoreCurrentValueCandidateIds,
+    freshDefaultCandidateIds,
+    normalizeDirectValue,
+    generic,
+    components,
+    ungroupedRows,
+    singleRowEntryOffsets,
+  );
+}
+
+function ungroupedRowKey(sectionId: string | undefined, categoryId: string) {
+  return `${sectionId ?? ""}\u0000${categoryId}`;
+}
+
+/** Section direct fields covering two or more fields of one repeated category form one implicit row. */
+function ungroupedRepeatRows(
+  analysis: FieldsAnalyzeResponse,
+  registry: CandidateRegistry,
+): ReadonlySet<string> {
+  const fieldIds = new Map<string, Set<string>>();
+  for (const field of analysis.fields) {
+    if (field.matchType === "NO_MATCH") continue;
+    const key =
+      field.valueBinding?.type === "DIRECT"
+        ? field.valueBinding.profileFieldKey
+        : field.profileFieldKey;
+    const parts = key ? profileFieldParts(key) : undefined;
+    const lookup = registry.lookupField(field.candidateId);
+    if (
+      !parts?.repeatable ||
+      parts.topLevel ||
+      !("handle" in lookup) ||
+      lookup.handle.itemId !== undefined
+    )
+      continue;
+    const row = ungroupedRowKey(lookup.handle.sectionId, parts.categoryId);
+    fieldIds.set(row, (fieldIds.get(row) ?? new Set()).add(parts.fieldId));
+  }
+  return new Set(
+    [...fieldIds].filter(([, ids]) => ids.size > 1).map(([row]) => row),
+  );
+}
+
+function itemForResolvedAnalysis(
+  analysis: FieldAnalysis,
+  profile: Profile,
+  registry: CandidateRegistry,
+  ignoreCurrentValueCandidateIds: ReadonlySet<string>,
+  freshDefaultCandidateIds: ReadonlySet<string>,
+  normalizeDirectValue?: (profileFieldKey: string, value: string) => string,
+  generic = true,
+  components = false,
+  ungroupedRows: ReadonlySet<string> = new Set(),
+  singleRowEntryOffsets?: ReadonlyMap<string, number>,
 ): ReviewPlanItem {
   const fieldLabel = labelFor(analysis.candidateId, registry);
   const local = registry.lookupField(analysis.candidateId);
@@ -571,22 +756,6 @@ function itemForAnalysis(
       analysis,
     );
   }
-  if (
-    generic &&
-    analysis.mappingStatus === "LLM_SUGGESTED" &&
-    binding.profileFieldKey === "contact.contact.email" &&
-    isSplitEmailTarget(lookup.handle)
-  ) {
-    return {
-      ...unavailableItem(
-        analysis.candidateId,
-        fieldLabel,
-        SPLIT_EMAIL_REASON,
-        analysis,
-      ),
-      failureCode: "SPLIT_EMAIL_UNSUPPORTED",
-    };
-  }
   const parts =
     binding.type === "DERIVED" &&
     /^UNIVERSITY_ADDITIONAL_MAJOR_[12]_(NAME|CLASSIFICATION|FIELD)$/.test(
@@ -638,6 +807,7 @@ function itemForAnalysis(
     };
   }
   let itemIndex = nativeIndex ?? lookup.handle.itemIndex;
+  let firstEntrySingleRow = false;
   // A mixed-section row is bound through its local assignment (C8).
   const mixed = lookup.handle.mixedSectionRow;
   if (mixed?.isKindSelect) {
@@ -681,8 +851,63 @@ function itemForAnalysis(
       parts.categoryId as RepeatedProfileCategoryId
     ].filter((entry) => entry.sectionId === parts.sectionId);
     const formItemCount = registry.fieldItemCount(analysis.candidateId);
-    if (profileEntries.length === 1 && !unindexedRepeatRow) {
-      itemIndex = 0;
+    // A single box refilled after each saved entry binds the next entry.
+    const entryOffset = generic
+      ? singleRowEntryOffsets?.get(`${parts.categoryId}.${parts.sectionId}`)
+      : undefined;
+    // Structure preparation has finished. A remaining single row without an
+    // available add control can offer entry zero, but only with user approval.
+    // Section direct fields that form one implicit row are that single row too.
+    firstEntrySingleRow =
+      generic &&
+      analysis.mappingStatus === "LLM_SUGGESTED" &&
+      lookup.handle.owner !== "legacy" &&
+      (formItemCount === 1 ||
+        (!formItemCount &&
+          lookup.handle.itemId === undefined &&
+          ungroupedRows.has(
+            ungroupedRowKey(lookup.handle.sectionId, parts.categoryId),
+          ))) &&
+      profileEntries.length > 1 &&
+      (itemIndex === undefined || itemIndex === 0);
+    if (firstEntrySingleRow) {
+      const element = lookup.handle.elements[0];
+      const addControl = element && genericFormGroupFor(element)?.action;
+      firstEntrySingleRow =
+        !addControl ||
+        !isVisibleWriteElement(addControl) ||
+        addControl.matches(":disabled, [inert], [inert] *");
+    }
+    // The page may already offer more rows than there are stored entries. A
+    // row with a proven index then binds to the entry at the same position;
+    // rows past the last entry have no value and stay empty.
+    const spareRows =
+      analysis.mappingStatus === "LLM_SUGGESTED" &&
+      lookup.handle.owner !== "legacy" &&
+      lookup.handle.itemIndex !== undefined &&
+      !unindexedRepeatRow &&
+      formItemCount !== undefined &&
+      formItemCount > profileEntries.length &&
+      profileEntries.length > 0;
+    if (
+      entryOffset !== undefined &&
+      (firstEntrySingleRow ||
+        (profileEntries.length === 1 && !unindexedRepeatRow)) &&
+      entryOffset >= profileEntries.length
+    ) {
+      return unavailableItem(
+        analysis.candidateId,
+        fieldLabel,
+        "입력할 프로필 값이 없습니다.",
+        analysis,
+      );
+    }
+    if (firstEntrySingleRow) {
+      itemIndex = entryOffset ?? 0;
+    } else if (spareRows) {
+      itemIndex = lookup.handle.itemIndex;
+    } else if (profileEntries.length === 1 && !unindexedRepeatRow) {
+      itemIndex = entryOffset ?? 0;
     }
     const soleUngroupedProfileEntry =
       itemIndex === 0 &&
@@ -691,9 +916,18 @@ function itemForAnalysis(
     if (
       itemIndex === undefined ||
       (!soleUngroupedProfileEntry &&
+        !firstEntrySingleRow &&
+        !spareRows &&
         (formItemCount === undefined ||
           formItemCount !== profileEntries.length))
     ) {
+      localWorkflowLog("repeat-count-mismatch", {
+        category: parts.categoryId,
+        formItemCount: formItemCount ?? -1,
+        profileEntries: profileEntries.length,
+        itemIndex: itemIndex ?? -1,
+        unindexedRepeatRow,
+      });
       return unavailableItem(
         analysis.candidateId,
         fieldLabel,
@@ -703,6 +937,15 @@ function itemForAnalysis(
     }
   }
 
+  const singleRowReview: Partial<ReviewPlanItem> = firstEntrySingleRow
+    ? {
+        genericGrade: "REVIEW",
+        genericReasonCode: "FIRST_ENTRY_SINGLE_ROW",
+        status: "needs-review",
+        selected: false,
+        reason: genericReasonText("FIRST_ENTRY_SINGLE_ROW"),
+      }
+    : {};
   const boundProfileValue = resolveValueBinding(profile, binding, itemIndex);
   if (boundProfileValue.status !== "resolved") {
     const reason =
@@ -746,6 +989,31 @@ function itemForAnalysis(
           catalogSource.value,
         )
       : undefined;
+  if (
+    binding.type !== "DERIVED" &&
+    /\.(name|schoolName|testName)$/.test(binding.profileFieldKey)
+  ) {
+    const category = binding.profileFieldKey.split(".")[0];
+    const pool =
+      category === "education"
+        ? profile.education
+        : category === "languages"
+          ? profile.languages
+          : category === "certifications"
+            ? profile.certifications
+            : [];
+    localWorkflowLog("catalog-identity", {
+      key: binding.profileFieldKey,
+      itemIndex: itemIndex ?? -1,
+      source: catalogSource?.status ?? "none",
+      hasEntryId:
+        catalogSource?.status === "resolved" && !!catalogSource.profileEntryId,
+      entriesWithIdentity: pool.filter((entry) => !!entry.identity).length,
+      entries: pool.length,
+      identity: searchIdentity?.status ?? "none",
+      approval: catalogApproval?.status ?? "none",
+    });
+  }
   if (catalogApproval?.status === "invalid")
     return unavailableItem(
       analysis.candidateId,
@@ -758,8 +1026,44 @@ function itemForAnalysis(
   let dateApproval: DateTargetApproval | undefined;
   let calendarApproval: CalendarApproval | undefined;
   let dayCalendarApproval: DayCalendarApproval | undefined;
+  let dialogDateApproval: DialogDateApproval | undefined;
   let finalizedProfileValue = boundProfileValue;
-  if (generic && analysis.writePlan.command === "SELECT_DATE") {
+  const dialogButton =
+    generic && analysis.writePlan.command === "SELECT_DATE"
+      ? dialogDateButtonOf(lookup.handle)
+      : undefined;
+  if (dialogButton) {
+    if (binding.type !== "DIRECT" || parts?.inputType !== "date")
+      return unavailableItem(
+        analysis.candidateId,
+        fieldLabel,
+        "달력 버튼과 프로필 날짜 연결을 확인할 수 없습니다.",
+        analysis,
+      );
+    try {
+      dialogDateApproval = createDialogDateApproval({
+        target: dialogButton,
+        originalDate: boundProfileValue.value,
+        profileFieldKey: binding.profileFieldKey,
+        ...(boundProfileValue.profileEntryId
+          ? { profileEntryId: boundProfileValue.profileEntryId }
+          : {}),
+        ...(itemIndex !== undefined ? { itemIndex } : {}),
+      });
+    } catch {
+      return unavailableItem(
+        analysis.candidateId,
+        fieldLabel,
+        "달력 버튼의 대상이나 저장된 날짜를 확인할 수 없습니다.",
+        analysis,
+      );
+    }
+  }
+  if (
+    generic &&
+    analysis.writePlan.command === "SELECT_DATE" &&
+    !dialogButton
+  ) {
     if (
       binding.type !== "DIRECT" ||
       parts?.inputType !== "date" ||
@@ -895,7 +1199,8 @@ function itemForAnalysis(
     binding.type === "DIRECT" &&
     normalizeDirectValue &&
     !dateApproval &&
-    !dayCalendarApproval
+    !dayCalendarApproval &&
+    !dialogDateApproval
       ? {
           ...finalizedProfileValue,
           value: normalizeDirectValue(
@@ -905,7 +1210,9 @@ function itemForAnalysis(
         }
       : finalizedProfileValue;
 
-  const liveOptionMatch =
+  // Static adapters keep their verified standard-ID matching unchanged.
+  const adapterOptionMatch =
+    !generic &&
     analysis.writePlan.command === "SELECT_OPTION" &&
     profileValue.standardValueId
       ? matchStandardOption(
@@ -913,7 +1220,25 @@ function itemForAnalysis(
           lookup.handle.candidate.options ?? [],
         )
       : undefined;
+  const genericOptionMatch =
+    generic &&
+    binding.type === "DIRECT" &&
+    (analysis.writePlan.command === "SELECT_OPTION" ||
+      analysis.writePlan.command === "CHECK_RADIO")
+      ? resolveChoiceOption(
+          binding.profileFieldKey,
+          profileValue.standardValueId ?? profileValue.value,
+          lookup.handle.candidate.options,
+          {
+            militaryStatus: profile.military.militaryStatus,
+            militaryType: profile.military.militaryType,
+            militaryRank: profile.military.militaryRank,
+          },
+        )
+      : undefined;
+  const liveOptionMatch = adapterOptionMatch ?? genericOptionMatch;
   if (
+    profileValue.standardValueId &&
     liveOptionMatch &&
     (liveOptionMatch.status === "none" ||
       liveOptionMatch.status === "ambiguous")
@@ -929,6 +1254,13 @@ function itemForAnalysis(
     liveOptionMatch?.status === "unique"
       ? { ...profileValue, value: liveOptionMatch.option.displayName }
       : profileValue;
+  const choiceReview =
+    genericOptionMatch?.status === "unique" &&
+    (genericOptionMatch.reason === "GRADE_OTHER_OPTION" ||
+      (binding.type === "DIRECT" &&
+        binding.profileFieldKey.startsWith("military.military.") &&
+        normalizeDisplayName(profileValue.value) !==
+          normalizeDisplayName(genericOptionMatch.option.displayName)));
   const catalogChoices =
     catalogMatch &&
     !(lookup.handle.buttonDropdown && catalogMatch.requiredDetail) &&
@@ -988,6 +1320,14 @@ function itemForAnalysis(
         value: option.displayName,
       };
   }
+  const searchContextValues =
+    searchCommand && binding.type === "DIRECT"
+      ? entryContextValues(
+          profile,
+          binding.profileFieldKey,
+          resolvedProfileValue.profileEntryId,
+        )
+      : [];
   const searchValuePlan =
     searchCommand && binding.type === "DIRECT"
       ? certificateSearchValuePlan(
@@ -995,6 +1335,14 @@ function itemForAnalysis(
           binding.profileFieldKey,
           resolvedProfileValue.profileEntryId,
           resolvedProfileValue.value,
+        )
+      : undefined;
+  const searchRegion =
+    binding.type === "DIRECT"
+      ? highSchoolSearchRegion(
+          profile,
+          binding.profileFieldKey,
+          resolvedProfileValue.profileEntryId,
         )
       : undefined;
 
@@ -1056,16 +1404,33 @@ function itemForAnalysis(
       disabled: false,
       revealed: true,
       reason: "지원서에 기존 값이 있습니다.",
+      ...singleRowReview,
+      ...(firstEntrySingleRow ? { status: "conflict" as const } : {}),
       analysis,
       ...(dateApproval ? { dateApproval } : {}),
       ...(calendarApproval ? { calendarApproval } : {}),
       ...(dayCalendarApproval ? { dayCalendarApproval } : {}),
+      ...(dialogDateApproval ? { dialogDateApproval } : {}),
       ...(searchValuePlan ? { searchValuePlan } : {}),
+      ...(searchContextValues.length ? { searchContextValues } : {}),
+      ...(searchRegion ? { searchRegion } : {}),
       ...(searchIdentity
         ? { searchIdentity, ...(catalogMatch ? { catalogMatch } : {}) }
         : {}),
     };
   }
+  // Preselect only when the write-time search compares results with the stored
+  // name alone. Alternative query forms (certificate name+grade splits, region
+  // aliases, approved catalog queries) can select a different name.
+  const selectsOriginalSearchName =
+    generic &&
+    searchCommand &&
+    binding.type === "DIRECT" &&
+    !catalogMatch &&
+    !binding.profileFieldKey.endsWith(".schoolRegion") &&
+    (!searchValuePlan ||
+      (searchValuePlan.forms.length === 1 &&
+        searchValuePlan.forms[0]?.kind === "original-exact"));
   const optionPresence = nativeChoicePresence(
     lookup.handle,
     resolvedProfileValue.value,
@@ -1113,11 +1478,14 @@ function itemForAnalysis(
       currentValue: pageValue,
       profileValue: resolvedProfileValue.value,
       previewValue: resolvedProfileValue.value,
-      status: "needs-review",
-      selected: false,
+      status: selectsOriginalSearchName ? "available" : "needs-review",
+      selected: selectsOriginalSearchName,
       disabled: false,
       revealed: true,
-      reason: "지원서 조건을 확인한 뒤 선택해 주세요.",
+      reason: selectsOriginalSearchName
+        ? "검색 결과에서 저장된 값과 정확히 일치하는 항목만 선택해 입력합니다."
+        : "지원서 조건을 확인한 뒤 선택해 주세요.",
+      ...singleRowReview,
       analysis,
       ...(verifiedFreshDefault
         ? { verifiedFreshDefaultValue: component!.labels.defaultMajor }
@@ -1125,7 +1493,10 @@ function itemForAnalysis(
       ...(dateApproval ? { dateApproval } : {}),
       ...(calendarApproval ? { calendarApproval } : {}),
       ...(dayCalendarApproval ? { dayCalendarApproval } : {}),
+      ...(dialogDateApproval ? { dialogDateApproval } : {}),
       ...(searchValuePlan ? { searchValuePlan } : {}),
+      ...(searchContextValues.length ? { searchContextValues } : {}),
+      ...(searchRegion ? { searchRegion } : {}),
       ...(searchIdentity
         ? { searchIdentity, ...(catalogMatch ? { catalogMatch } : {}) }
         : {}),
@@ -1145,20 +1516,35 @@ function itemForAnalysis(
     currentValue: pageValue,
     profileValue: resolvedProfileValue.value,
     previewValue: resolvedProfileValue.value,
-    status: "available",
-    selected: analysis.writePlan.command === "SELECT_DATE" ? false : true,
+    status: choiceReview ? "needs-review" : "available",
+    // A calendar target whose approval was built from a complete profile date
+    // (format resolved by the calendar surface) is a format difference, not an
+    // ambiguity, so it is auto-selected. Conflicts returned earlier.
+    selected: choiceReview
+      ? false
+      : analysis.writePlan.command === "SELECT_DATE"
+        ? generic &&
+          !!(calendarApproval || dayCalendarApproval || dialogDateApproval)
+        : true,
     disabled: false,
     revealed: true,
-    reason:
-      analysis.writePlan.command === "SELECT_DATE"
+    reason: choiceReview
+      ? genericOptionMatch?.status === "unique" &&
+        genericOptionMatch.reason === "GRADE_OTHER_OPTION"
+        ? genericReasonText("GRADE_OTHER_OPTION")
+        : "프로필 병역 정보에 맞는 지원서 선택지예요. 맞는지 확인한 뒤 포함해 주세요."
+      : analysis.writePlan.command === "SELECT_DATE"
         ? currentValue(lookup.handle).trim() === finalizedProfileValue.value
           ? dayCalendarApproval
             ? "지원서에 같은 날짜가 이미 입력되어 있습니다."
             : "지원서에 같은 연월이 이미 입력되어 있습니다."
-          : dayCalendarApproval
-            ? "달력 날짜를 확인한 뒤 선택해 주세요."
-            : "달력 연월을 확인한 뒤 선택해 주세요."
+          : dayCalendarApproval || dialogDateApproval
+            ? "달력을 열어 저장된 날짜를 선택해 입력합니다."
+            : calendarApproval
+              ? "달력을 열어 저장된 연월을 선택해 입력합니다."
+              : "달력 연월을 확인한 뒤 선택해 주세요."
         : "저장된 값과 지원서 필드가 명확히 연결되었습니다.",
+    ...singleRowReview,
     analysis,
     ...(verifiedFreshDefault
       ? { verifiedFreshDefaultValue: component!.labels.defaultMajor }
@@ -1166,11 +1552,28 @@ function itemForAnalysis(
     ...(dateApproval ? { dateApproval } : {}),
     ...(calendarApproval ? { calendarApproval } : {}),
     ...(dayCalendarApproval ? { dayCalendarApproval } : {}),
+    ...(dialogDateApproval ? { dialogDateApproval } : {}),
     ...(searchValuePlan ? { searchValuePlan } : {}),
+    ...(searchContextValues.length ? { searchContextValues } : {}),
+    ...(searchRegion ? { searchRegion } : {}),
     ...(searchIdentity
       ? { searchIdentity, ...(catalogMatch ? { catalogMatch } : {}) }
       : {}),
   };
+}
+
+function splitEmailMember(
+  field: FieldAnalysis,
+  registry: CandidateRegistry,
+): boolean {
+  if (field.matchType !== "MATCH" || field.mappingStatus !== "LLM_SUGGESTED")
+    return false;
+  const key = field.valueBinding?.profileFieldKey ?? field.profileFieldKey;
+  if (key !== "contact.contact.email") return false;
+  const lookup = registry.lookupField(field.candidateId);
+  if (lookup.status !== "ready" && lookup.status !== "blocked") return false;
+  const [element, ...rest] = lookup.handle.elements;
+  return !!element && rest.length === 0 && isSplitEmailMember(element);
 }
 
 function repeatedBindingKey(item: ReviewPlanItem): string | undefined {
@@ -1215,6 +1618,7 @@ export function buildReviewPlan({
   ignoreCurrentValueCandidateIds = new Set<string>(),
   freshDefaultCandidateIds = new Set<string>(),
   normalizeDirectValue,
+  singleRowEntryOffsets,
 }: {
   analysis: FieldsAnalyzeResponse;
   profile: Profile;
@@ -1222,6 +1626,8 @@ export function buildReviewPlan({
   ignoreCurrentValueCandidateIds?: ReadonlySet<string>;
   freshDefaultCandidateIds?: ReadonlySet<string>;
   normalizeDirectValue?: (profileFieldKey: string, value: string) => string;
+  /** Generic single entry boxes: next stored entry per "category.section". */
+  singleRowEntryOffsets?: ReadonlyMap<string, number>;
 }): ReviewPlan {
   if (analysis.analysisStatus === "BLOCKED") {
     return { status: "blocked", items: [] };
@@ -1237,8 +1643,17 @@ export function buildReviewPlan({
       resolveDocumentCompany(document) === "components"
     );
   });
-  const items = analysis.fields.map((field) =>
-    itemForAnalysis(
+  const ungroupedRows =
+    analysis.mode === "GENERIC"
+      ? ungroupedRepeatRows(analysis, registry)
+      : new Set<string>();
+  // The domain select or input of a split email pair is written by the pair.
+  const fields =
+    analysis.mode === "GENERIC"
+      ? analysis.fields.filter((field) => !splitEmailMember(field, registry))
+      : analysis.fields;
+  const items = fields.map((field) => {
+    const item = itemForAnalysis(
       field,
       profile,
       registry,
@@ -1247,8 +1662,15 @@ export function buildReviewPlan({
       normalizeDirectValue,
       analysis.mode === "GENERIC",
       components && analysis.mode === "ADAPTER",
-    ),
-  );
+      ungroupedRows,
+      singleRowEntryOffsets,
+    );
+    if (analysis.mode !== "GENERIC") return item;
+    const lookup = registry.lookupField(field.candidateId);
+    return lookup.status === "blocked" && lookup.reason === "hidden"
+      ? { ...item, hiddenFromReview: true }
+      : item;
+  });
   const unoffered =
     analysis.mode === "ADAPTER"
       ? nativeUnofferedItems(analysis, profile, registry)

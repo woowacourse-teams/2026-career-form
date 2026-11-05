@@ -49,7 +49,9 @@ export type DebugStageName =
   | "preparation-follow-up"
   | "preparation-majors"
   | "address"
-  | "drivers";
+  | "drivers"
+  | "fields-resettled"
+  | "fields-still-hidden";
 let scope: Set<string> | undefined;
 let scopeStage: "collect" | "prepare" = "collect";
 function line(message: string) {

@@ -126,12 +126,19 @@ const EDUCATION_ACTION_FIXTURES = [
   },
 ] as const;
 
+// Every live high-school row carries the status select; the school-name
+// input is absent on some postings (R262309), so the add rule re-identifies
+// by the select. It stays disabled here so no test writes through it.
+const HIGH_SCHOOL_STATUS =
+  '<select name="eduhgEducationStatus" disabled><option value=""></option></select>';
+
 function renderedEducationRow(
   fixture: (typeof EDUCATION_ACTION_FIXTURES)[number],
 ): string {
   return `
     <div class="form-item-group ${fixture.rowClass} no-space">
       <div class="form-item-asset">
+        ${fixture.rowClass === "educationhigh-item" ? HIGH_SCHOOL_STATUS : ""}
         <input name="${fixture.schoolName}" type="text" />
         <div class="form-item-column btn-control">
           <div class="form-add-control column">
@@ -562,7 +569,13 @@ describe("SK collection adapter", () => {
       ".education-root .form-item-group .form-add-control",
     )!;
     incomplete.innerHTML = `<button type="button" class="btn medium btn-dashed ${fixture.actionId}">${fixture.actionLabel}</button>`;
-    document.querySelector(".education-root .form-item-group input")!.remove();
+    // A high-school row without its status select is not a verified row; the
+    // school-name input alone no longer qualifies it (R262309 has none).
+    document
+      .querySelector(
+        ".education-root .form-item-group select[name='eduhgEducationStatus']",
+      )!
+      .remove();
     document
       .querySelectorAll(".education-root .form-item-group")[1]!
       .querySelector(".form-item-column")!

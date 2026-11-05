@@ -9,6 +9,8 @@ const pages = [
   "onboarding/index.html",
   "privacy/index.html",
   "terms/index.html",
+  "tech/index.html",
+  "try/index.html",
   "demo/index.html",
   "experiment/index.html",
 ];

@@ -190,6 +190,28 @@ describe("application form DOM collection", () => {
     expect(JSON.stringify(collected.request)).not.toContain("checked");
   });
 
+  it("marks only an empty-value select option as a placeholder on the generic path", () => {
+    setPageUrl("https://careers.example.test/apply");
+    document.body.innerHTML = `
+      <label for="status">여부</label>
+      <select id="status">
+        <option value="">선택</option>
+        <option value="internal-y">해당</option>
+        <option value="internal-n">비해당</option>
+      </select>
+    `;
+
+    const collected = collectFieldsSnapshot(document);
+    const candidate = collected.request.sections[0]?.fields[0];
+
+    expect(candidate?.options).toEqual([
+      { optionId: expect.any(String), displayName: "선택", placeholder: true },
+      { optionId: expect.any(String), displayName: "해당" },
+      { optionId: expect.any(String), displayName: "비해당" },
+    ]);
+    expect(JSON.stringify(collected.request)).not.toContain("internal-y");
+  });
+
   it("preserves repeated certification row boundaries and local indexes", () => {
     document.body.innerHTML = `
       <div role="group" class="apply-form-box">
@@ -234,6 +256,38 @@ describe("application form DOM collection", () => {
       handle: { itemId: expect.any(String), itemIndex: 1 },
     });
     expect(collected.registry.fieldItemCount(firstCandidateId)).toBe(2);
+  });
+
+  it("keeps a repeat-row field current while an open modal hides the page behind it", () => {
+    const row = (id: string, action: string) =>
+      `<div class="r"><select name="eduKind"><option value="">학력구분 선택</option><option value="u">대학</option></select><input id="${id}" name="schoolName" type="text" /><button type="button">${action}</button></div>`;
+    document.body.innerHTML = `<div id="root"><section><h3>학력</h3><div id="list">${row("s0", "내용추가")}${row("s1", "삭제")}</div></section></div>`;
+    const collected = collectFieldsSnapshot(document);
+    const candidate = collected.request.sections
+      .flatMap((section) => [
+        ...section.fields,
+        ...(section.items ?? []).flatMap((item) => item.fields),
+      ])
+      .find((field) => field.domId === "s1")!;
+    expect(collected.registry.lookupField(candidate.candidateId).status).toBe(
+      "ready",
+    );
+
+    const root = document.querySelector("#root")!;
+    root.setAttribute("inert", "");
+    root.setAttribute("aria-hidden", "true");
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      '<div role="dialog" aria-modal="true"><input name="query" /></div>',
+    );
+    expect(
+      collected.registry.lookupField(candidate.candidateId).status,
+    ).not.toBe("stale");
+
+    document.querySelector("[role='dialog']")!.remove();
+    expect(collected.registry.lookupField(candidate.candidateId).status).toBe(
+      "stale",
+    );
   });
 
   it("indexes different repeated field groups independently within one section", () => {

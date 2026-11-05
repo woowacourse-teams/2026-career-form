@@ -4,6 +4,22 @@ import {
   debugStageCounts,
 } from "../debug/structural-diagnostics";
 import { prepareNativeMajorsAfterSchool } from "./native-major-preparation";
+
+/** Fields the collected request carries, across sections and their items. */
+function countRequestFields(request: {
+  sections: { fields: unknown[]; items?: { fields: unknown[] }[] }[];
+}): number {
+  return request.sections.reduce(
+    (count, section) =>
+      count +
+      section.fields.length +
+      (section.items ?? []).reduce(
+        (total, item) => total + item.fields.length,
+        0,
+      ),
+    0,
+  );
+}
 import { reportNativeMajorsOfFailedSchools } from "./native-major-unavailable";
 import { hplaceUnverifiedRows } from "../adapters/hplace/unverified-structure";
 import {
@@ -71,7 +87,11 @@ import {
   type GenericAnalysisCache,
   type GenericAnalysisResult,
 } from "../generic/generic-analysis";
-import { debugAnalysis, debugReviewPlan } from "../debug/autofill-debug";
+import {
+  debugAnalysis,
+  debugReviewPlan,
+  debugWarn,
+} from "../debug/autofill-debug";
 import {
   buildReviewPlan,
   resolveProfileFieldValue,
@@ -93,7 +113,17 @@ import {
 } from "./search-follow-up-analysis";
 import { takeWrittenSearchFollowUp } from "./search-follow-up-state";
 import { runAddressAnalysis } from "./address-analysis";
-import { belongsToFailedGroup } from "./workflow-write-items";
+import { readIncludeNeedsReview } from "../debug/developer-mode";
+import {
+  belongsToFailedGroup,
+  includeNeedsReviewItem,
+} from "./workflow-write-items";
+import {
+  settleVisibleFields,
+  transientlyHidden,
+  visibleFieldCount,
+} from "./visible-fields-settle";
+import { dismissLeftoverComponentPopups } from "../policy/components/workflow-popup";
 
 import {
   isGenericStateDriver,
@@ -150,6 +180,7 @@ export function createAnalyzeFields({
   pageDocument,
   repository,
   freshDefaultControls,
+  singleRowEntryOffsets,
   completedDriverKeys,
   completedGenericStateDrivers,
   completedComponentStateDrivers = { current: new Map() },
@@ -214,6 +245,30 @@ export function createAnalyzeFields({
     setStage("exception");
     return true;
   };
+  // A Component forms page can hide its whole form for a moment after writes
+  // or a server action. A snapshot taken then rebinds nothing and would end the
+  // run with silent gaps, so wait for the page to show its fields again.
+  const collectSettledFields = async (run: (typeof addressRun)["current"]) => {
+    const collect = () => collectFields(pageDocument, run.controller.signal);
+    const settled = await settleVisibleFields({
+      snapshot: await collect(),
+      previousVisible: run.visibleFields,
+      collect,
+      dismiss: () => dismissLeftoverComponentPopups(pageDocument),
+      signal: run.controller.signal,
+    });
+    if (settled.retries)
+      debugStageCounts(
+        settled.stillHidden ? "fields-still-hidden" : "fields-resettled",
+        visibleFieldCount(settled.snapshot),
+        settled.retries,
+      );
+    if (settled.dismissed)
+      debugWarn(`dismissed leftover popups=${settled.dismissed}`);
+    if (!transientlyHidden(run.visibleFields, settled.snapshot))
+      run.visibleFields = visibleFieldCount(settled.snapshot);
+    return settled.snapshot;
+  };
   const analyzeFields = async (
     loadedProfile: Profile,
     ignoreFreshRowDefaults = false,
@@ -251,7 +306,7 @@ export function createAnalyzeFields({
     setStage("analyzing");
     setResultRegistry?.(undefined);
     onActivity?.("matching");
-    const snapshot = await collectFields(pageDocument, run.controller.signal);
+    const snapshot = await collectSettledFields(run);
     if (
       run.controller.signal.aborted ||
       currentAnalysisGeneration !== analysisGeneration
@@ -343,11 +398,33 @@ export function createAnalyzeFields({
         cache,
       );
     }
+    // A step without an analyzable field (Hplace MRS2 step 4 holds only
+    // cover-letter textareas no section contract owns) has nothing to map.
+    // The server rejects an empty request, so end with an empty plan instead.
+    const emptyRequest =
+      !genericResult && countRequestFields(snapshot.request) === 0;
+    if (emptyRequest)
+      debugRuntimeSkip(
+        "fields-analysis",
+        "section-missing",
+        "no-analyzable-field",
+        "collect",
+      );
     let analysis =
       genericResult?.analysis ??
-      (await (analyzeFieldsSnapshot
-        ? analyzeFieldsSnapshot(snapshot)
-        : apiClient.analyzeFields(snapshot.request)));
+      (emptyRequest
+        ? {
+            snapshotId: snapshot.request.snapshotId,
+            mode: "ADAPTER" as const,
+            analysisStatus: "COMPLETE" as const,
+            // The server echoes the installed policy; keep it so the native
+            // policy digest check below sees the same policy.
+            executionPolicy: executionPolicy(pageDocument),
+            fields: [],
+          }
+        : await (analyzeFieldsSnapshot
+            ? analyzeFieldsSnapshot(snapshot)
+            : apiClient.analyzeFields(snapshot.request)));
     if (genericResult && genericStructure)
       analysis = applyGenericStructureAnalysis(
         analysis,
@@ -358,6 +435,9 @@ export function createAnalyzeFields({
     const finishAnalysisLog = startLocalTiming("analysis-log");
     debugAnalysis(snapshot, analysis);
     finishAnalysisLog();
+    // Read per pass: the run may start before a mounted setting hook has loaded.
+    const includeNeedsReview =
+      analysis.mode === "GENERIC" && (await readIncludeNeedsReview());
     if (
       run.controller.signal.aborted ||
       currentAnalysisGeneration !== analysisGeneration
@@ -417,16 +497,7 @@ export function createAnalyzeFields({
     onAnalysis?.({
       mode: analysis.mode,
       durationMs: Math.round(performance.now() - analysisStarted),
-      fieldCount: snapshot.request.sections.reduce(
-        (count, section) =>
-          count +
-          section.fields.length +
-          (section.items ?? []).reduce(
-            (total, item) => total + item.fields.length,
-            0,
-          ),
-        0,
-      ),
+      fieldCount: countRequestFields(snapshot.request),
       matchedCount: analysis.fields.filter(
         (field) => field.matchType === "MATCH",
       ).length,
@@ -483,9 +554,10 @@ export function createAnalyzeFields({
     );
 
     // The section flow writes nothing before the user approves the review.
-    const addressAnalysis = genericResult
-      ? analysis
-      : await runAddressAnalysis({
+    // Generic pages run the same address step: the vendor postcode widget is
+    // site-independent, and runAddressAnalysis already fails closed when the
+    // generic preconditions do not hold.
+    const addressAnalysis = await runAddressAnalysis({
           analysis,
           snapshot,
           adapter,
@@ -511,7 +583,7 @@ export function createAnalyzeFields({
             .refreshAfterPass)
       )
         return false;
-      const next = await collectFields(pageDocument, run.controller.signal);
+      const next = await collectSettledFields(run);
       if (
         run.controller.signal.aborted ||
         currentAnalysisGeneration !== analysisGeneration
@@ -622,6 +694,9 @@ export function createAnalyzeFields({
         freshDefaultCandidateIds,
         normalizeDirectValue: (key, value) =>
           adapterProfileValue(adapter, key, value),
+        ...(singleRowEntryOffsets
+          ? { singleRowEntryOffsets: singleRowEntryOffsets.current }
+          : {}),
       });
       finishPlan();
       return preparedPlan;
@@ -645,6 +720,7 @@ export function createAnalyzeFields({
           loadedProfile,
         ),
       );
+    if (run.genericAddressRows) plan.items.push(...run.genericAddressRows);
     const finishReviewLog = startLocalTiming("review-log");
     debugReviewPlan(plan);
     finishReviewLog();
@@ -680,6 +756,23 @@ export function createAnalyzeFields({
     setFieldsSnapshot(snapshot);
     setPartial(plan.status === "partial");
     const analysisWarnings: string[] = [...(analysis.warningCodes ?? [])];
+    // Server matches this snapshot could not rebind. Mid-run that is normal
+    // (rows were just added and a refresh follows); it only matters when the
+    // run ends here with nothing left to write, so the warning waits for that.
+    let unresolvedWarning: string | undefined;
+    if (analysis.unresolvedFields?.length) {
+      const labels = [
+        ...new Set(
+          analysis.unresolvedFields
+            .map((field) => field.displayName)
+            .filter((label): label is string => Boolean(label)),
+        ),
+      ];
+      const shown = labels.slice(0, 5).join(", ");
+      const more =
+        analysis.unresolvedFields.length - Math.min(labels.length, 5);
+      unresolvedWarning = `페이지가 바뀌어 다시 연결하지 못한 항목 ${analysis.unresolvedFields.length}개: ${shown || "(이름 없음)"}${more > 0 ? ` 외 ${more}개` : ""}. 지원서에서 직접 확인해 주세요.`;
+    }
     if (
       options.reviewOnly &&
       reviewFollowUps.some((followUp) =>
@@ -692,6 +785,12 @@ export function createAnalyzeFields({
     if (plan.items.length === 0) {
       debugReviewDecisions(plan, snapshot.registry);
       if (await refreshAfterWrites()) return;
+      if (unresolvedWarning) {
+        setWarnings((current) => [...current, unresolvedWarning!]);
+        debugWarn(
+          `unresolved fields=${analysis.unresolvedFields?.length ?? 0} ${unresolvedWarning}`,
+        );
+      }
       setReviewItems([]);
       setResults([]);
       if (options.reviewOnly) {
@@ -723,16 +822,21 @@ export function createAnalyzeFields({
         })
       : plan.items;
     const automaticItems = snapshot.registry.withReadCache(() =>
-      planItems.map((item) => {
+      planItems.map((planItem) => {
+        const item = includeNeedsReview
+          ? includeNeedsReviewItem(planItem)
+          : planItem;
         if (options.reviewOnly) {
-          return completedSearchCandidateIds.has(item.candidateId)
-            ? {
-                ...item,
-                selected: false,
-                disabled: true,
-                reason:
-                  "검색 결과가 같은 행에 유지되어 다시 검색하지 않습니다.",
-              }
+          if (completedSearchCandidateIds.has(item.candidateId))
+            return {
+              ...item,
+              selected: false,
+              disabled: true,
+              reason: "검색 결과가 같은 행에 유지되어 다시 검색하지 않습니다.",
+            };
+          // A generic pass keeps its own selection and writes without a review.
+          return analysis.mode === "GENERIC"
+            ? item
             : { ...item, selected: false };
         }
         if (genericResult) return item;
@@ -758,6 +862,8 @@ export function createAnalyzeFields({
     debugReviewDecisions({ ...plan, items: automaticItems }, snapshot.registry);
     finishAutomaticItems();
     setReviewItems(automaticItems);
+    // On a generic page this stage only hands the items to executeWrites; the
+    // workflow writes them at once and never shows the review screen.
     if (options.reviewOnly || genericResult) {
       setStage("review");
       return;

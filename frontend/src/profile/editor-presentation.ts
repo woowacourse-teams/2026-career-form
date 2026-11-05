@@ -1,5 +1,6 @@
 import type {
   ProfileCategoryDefinition,
+  ProfileFieldDefinition,
   ProfileSectionDefinition,
 } from "./field-definitions";
 import type { Profile, ProfileCategoryId, ProfileEntry } from "./model";
@@ -34,7 +35,8 @@ export const CATEGORY_GUIDES: Record<ProfileCategoryId, string> = {
   certifications:
     "자격증 이름부터 취득일, 기억하기 어려운 등록번호까지 모아두세요.",
   careers: "직장별 근무 기간과 맡았던 일을 기록해 주세요.",
-  projects: "참여한 프로젝트의 기간, 역할, 활동 내용을 정리해 주세요.",
+  projects:
+    "참여한 프로젝트의 기간, 수행 기관, 역할, 활동 내용을 정리해 주세요.",
   publications: "논문이나 특허를 한 건씩 추가하고 상세 내용을 적어 주세요.",
   compensation: "지원할 때 참고할 희망 처우를 기록해 주세요.",
   military: "해당하는 병역 정보만 입력해 주세요.",
@@ -43,12 +45,33 @@ export const CATEGORY_GUIDES: Record<ProfileCategoryId, string> = {
   health: "필요한 건강정보만 항목별로 기록해 주세요.",
 };
 
+export const NAME_GROUP_TITLE = "이름";
+export const ADDRESS_GROUP_TITLE = "주소";
+export const NAME_TABLE_COLUMNS = ["성", "이름"] as const;
+const NAME_TABLE_ROWS = [
+  { label: "국문", fields: ["koreanFamilyName", "koreanGivenName"] },
+  { label: "영문", fields: ["englishFamilyName", "englishGivenName"] },
+  { label: "한자", fields: ["hanjaFamilyName", "hanjaGivenName"] },
+] as const;
+
+/** Rows of the 이름 table, in display and keyboard order. */
+export function nameTableRows(fields: readonly ProfileFieldDefinition[]) {
+  return NAME_TABLE_ROWS.map((row) => ({
+    label: row.label,
+    fields: row.fields.flatMap((id) => {
+      const field = fields.find((candidate) => candidate.id === id);
+      return field ? [field] : [];
+    }),
+  }));
+}
+
 // Display grouping only: storage keys and the shared autofill field contract stay stable.
 const FIELD_GROUPS: Record<string, { title: string; fields: string[] }[]> = {
   personal: [
-    { title: "국문 이름", fields: ["koreanFamilyName", "koreanGivenName"] },
-    { title: "영문 이름", fields: ["englishFamilyName", "englishGivenName"] },
-    { title: "한자 이름", fields: ["hanjaFamilyName", "hanjaGivenName"] },
+    {
+      title: NAME_GROUP_TITLE,
+      fields: NAME_TABLE_ROWS.flatMap((row) => [...row.fields]),
+    },
     { title: "기본 정보", fields: ["birthDate", "gender", "nationality"] },
   ],
   contact: [
@@ -62,7 +85,7 @@ const FIELD_GROUPS: Record<string, { title: string; fields: string[] }[]> = {
       ],
     },
     {
-      title: "주소",
+      title: ADDRESS_GROUP_TITLE,
       fields: [
         "residenceCountry",
         "postalCode",
@@ -152,7 +175,13 @@ const FIELD_GROUPS: Record<string, { title: string; fields: string[] }[]> = {
     },
     {
       title: "연구와 논문",
-      fields: ["labName", "labProfessorName", "researchField", "thesisTitle", "thesisSummary"],
+      fields: [
+        "labName",
+        "labProfessorName",
+        "researchField",
+        "thesisTitle",
+        "thesisSummary",
+      ],
     },
   ],
   languageTest: [
@@ -247,20 +276,27 @@ export function categoryStatus(
     : "미입력";
 }
 
+const ENTRY_IDENTITY_KEYS = [
+  "schoolName",
+  "testName",
+  "name",
+  "companyName",
+  "projectName",
+  "title",
+  "language",
+  "healthItemName",
+] as const;
+
+/** The value a person recognizes an entry by, such as its school or exam name. */
+export function entryIdentity(entry: ProfileEntry): string | undefined {
+  return (
+    ENTRY_IDENTITY_KEYS.map((key) => entry.values[key]?.trim()).find(Boolean) ||
+    undefined
+  );
+}
+
 export function entrySummary(entry: ProfileEntry) {
-  const identity = [
-    "schoolName",
-    "testName",
-    "name",
-    "companyName",
-    "projectName",
-    "title",
-    "language",
-    "healthItemName",
-  ]
-    .map((key) => entry.values[key]?.trim())
-    .find(Boolean);
-  return identity || "새 항목의 정보를 입력해 주세요";
+  return entryIdentity(entry) ?? "새 항목의 정보를 입력해 주세요";
 }
 
 export const FIELD_EXAMPLES: Record<string, string> = {

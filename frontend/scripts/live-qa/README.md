@@ -1,0 +1,194 @@
+# 실사이트 정적 맵핑 QA 하네스
+
+정적 맵핑 플랫폼(에이치닷 MRS2, Greeting, SK, 현대자동차)의 실제 지원서에서 확장 프로그램의 자동 기입을 측정한다. 입력률의 분모는 확장을 실행하기 전에 독립 채점으로 동결한다. 결과는 확장이 실제로 바꾼 DOM 값으로만 판정한다.
+
+앱 결과 패널의 `입력 완료 / 확인 필요` 수치는 항목 단위로 센다. 비어 있는 필수 칸은 보여 주지 않는다. 그래서 이 도구는 패널 수치를 비교용으로만 기록한다.
+
+## 안전 경계
+
+- 지원서를 저장, 임시저장, 최종 제출하지 않는다. 동의, 본인 인증, 파일 업로드도 하지 않는다. 로그인과 지원서 화면 진입(동의 포함)은 사람이 한다.
+- 실행 중에는 모든 프레임에서 다음 클릭을 막는다(`page/guard.mjs`). 막은 요소는 고정 UI 정보만 `guard.blocked`에 남는다.
+  - 단계 탭(`#tab`, `button[data-step]`, `[role="tab"]`), 파일 입력, submit 버튼
+  - 문구가 이동인 컨트롤: `다음`, `다음 단계로`, `이전으로`, `Next`, `Back`
+  - 문구에 저장·임시저장·제출·미리보기·지원하기·작성 완료·인증번호·본인 인증·전체 동의·로그아웃이 있는 컨트롤. 아이콘의 `alt`·`title`도 문구로 본다.
+  - id·class·name·onclick·href·`data-type` 같은 식별자: `save`, `submit`, `temp`, `preview`, `sms`, `otp`, `verify`, `agree`, `consent`, `logout`은 어디에 있어도 막는다. `next`, `prev`, `back`, `apply`, `send`는 식별자 전체일 때만 막는다(`goNext`, `btn_next`는 막고 `addPrevCareer`는 허용).
+  - 단독 "저장"은 에이치닷 주소 모달의 확정 버튼(`#modal.modal-bg > .modal button[data-button="modalSubmit"]`)만 허용한다.
+- form 제출(이벤트와 스크립트)도 막는다.
+- 요청은 실패 시 막는 방향으로 다룬다(`requests.mjs`). GET·HEAD·OPTIONS가 아닌 요청은 모두 막고, 2026-10-21 실사이트에서 확인한 읽기 전용 조회만 허용한다. 분석 수집 요청도 막힌다.
+  - 에이치닷: 코드 검색(`/com/code/retrieve*List`), 단계 데이터(`stepN.json`), 공고 팝업(`/app/noticePopup/get*`)
+  - SK: 학교·전공·자격증·어학·회사 검색
+  - Greeting: 지원 페이지로 보내는 Next.js 서버 액션 중 본문이 200바이트 이하이고 짧은 문자열·숫자로만 된 JSON 배열(검색어)
+  - 하네스의 에이치닷 무저장 단계 이동(아래 원복 참고)
+  - 허용 경로라도 쿼리에 저장·제출·동의·인증 낱말이 있으면 막는다.
+  - 알려진 한계: GET 요청과 WebSocket은 막지 않는다.
+- 서비스 워커가 제어하는 탭은 요청을 가로챌 수 없으므로 `run`, `step`, `discard`를 거부한다(`service-worker-active`).
+- 대화상자(`dialogs.mjs`): 붙어 있는 동안 Playwright가 모든 탭의 대화상자를 스스로 닫지 않도록 모든 명령이 정책을 건다.
+  - 다른 탭: 로그인 연장만 묻는 확인창(`keepalive.mjs`의 `isSessionPrompt`)만 수락하고 나머지는 사람에게 남긴다.
+  - 실행 중인 탭: 사이트 대화상자는 취소하고, 로그인 연장 확인창은 수락한다. 페이지 이탈 확인은 원복하는 동안에만 수락한다.
+  - 기록에는 종류와 처리만 남기고 문구는 남기지 않는다.
+- 매 실행 뒤 저장하지 않고 같은 화면을 다시 열어 합성 값을 버린다. 원복이 끝날 때까지 요청 차단과 가드를 유지한다.
+  - 에이치닷: 사이트의 미리보기 이동과 같은 `{resumeSn, recruitNoticeSn, step}` POST로 다시 연다. 이 세 키만 담은 요청은 차단 예외다. 가드가 보관한 원래 `submit`으로 이 form만 보낸다.
+  - 그 밖: `#`을 뗀 같은 주소로 새로 이동하고, 문서가 실제로 바뀌었는지 marker로 확인한다. 새로고침(`reload`)은 브라우저가 입력값을 복원해서 합성 값이 남는다.
+  - 원복 검증: 같은 주소와 같은 에이치닷 단계로 돌아와야 하고, 칸 수가 실행 전의 80% 이상이어야 한다. 값이 있는 칸(숨은 칸 포함)은 칸마다 실행 전 값과 같아야 한다(체크 상태가 서로 바뀐 경우도 잡는다). 하나라도 어긋나면 `run`이 `discard-residue`로 실패한다. 이 경우 누가 저장하기 전에 탭을 다시 연다.
+  - `run` 도중 Ctrl-C나 종료 신호를 받으면 자동 기입을 멈추고 정리(차단·가드 상태의 원복, 검증, 가드 해제, 차단 해제)를 끝낸 뒤 종료한다. 정리 중에 다시 받은 신호는 무시한다.
+- 단독 `step`, `discard`도 같은 요청 차단과 대화상자 처리 안에서 실행한다.
+- 오류는 코드와 고정 문구로만 남긴다. Playwright 오류 문구는 선택자, 페이지 문구, 주소를 담기 때문이다. 로컬 디버깅에만 `LIVE_QA_DEBUG=1`로 원문을 본다.
+- 브라우저와 context를 닫는 명령은 없다. 모든 명령은 상주 브라우저에 붙었다가 떨어지기만 한다.
+
+## 개인정보
+
+- 프로필은 합성 export(`schemaVersion: 1`)만 주입한다. 기본 경로는 공용 git 디렉터리의 `cf-workflow/live-eval/profile-export.synthetic-full.json`이며 `--profile`로 바꿀 수 있다.
+- 값 비교는 실행마다 새로 만드는 무작위 솔트로 계산한 지문으로 한다. 솔트와 지문은 메모리에만 있고 파일에는 쓰지 않는다.
+- 마운트 감시(`page/mounts.mjs`)는 실행 전 수집보다 먼저 건다. 그래서 모든 칸은 실행 전 값 집합에 있거나, 실행 중 마운트될 때의 값이 기록된다. 감시가 없는 문서(리다이렉트 뒤 새 페이지)에서는 아무 값도 표시하지 않는다.
+- 실행 뒤 값은 다음 중 하나일 때만 표시한다.
+  - 실행 전 값 집합(숨은 칸 포함)에 없고, 칸이 마운트될 때 가진 값 그대로가 아니다. 마운트 값 그대로라도 합성 프로필 값과 정확히 같으면 표시한다.
+  - 실행 전 값 집합에 있지만, 합성 프로필 값(날짜·전화 형식, 이름 조합 같은 변형 포함)과 코드·문구까지 정확히 같고, 실행이 그 칸을 바꿨으며, 마운트 값 그대로가 아니다.
+- 그래서 실행 전 값은 어느 칸, 어느 key로 다시 나타나도 표시되지 않는다. 문구만 합성 값과 같거나(`있음`), 실행이 건드리지 않은 칸(`남성`)도 마찬가지다. 경우의 수가 적은 값이 새어 나가지 않게 하려는 것이다.
+- 실행 중 사이트가 서버에서 받은 값을 기존 칸에 새로 채우고 그 값이 합성 값과 정확히 같으면 구분하지 못한다(알려진 한계).
+- 실행 전 값과 같아 표시되지 않은 칸은 판정에서 `UNVERIFIABLE`로 따로 센다.
+- 합성 프로필 값이 이미 서버에 저장된 지원서에서는 선택형 칸(라디오, select)의 값이 실행 전 값과 같아 표시되지 않으므로 `UNVERIFIABLE`이 늘어난다. 측정 전에 `reset`(테스트 계정 모드)으로 저장값을 비우거나, 사람이 비우거나, 저장값이 없는 공고를 쓴다.
+- 위 은닉 규칙은 테스트 계정 모드(아래)에서 완화된다. 그 밖의 탭에서는 그대로다.
+- 지원서 화면에서는 `text` 명령을 거부한다.
+- 결과 파일은 저장소 밖 `~/.career-form-live-eval/live-qa`(권한 700)에 쓴다. 평가 브라우저 프로필 디렉터리에는 로그인 세션이 있으므로 공유하거나 커밋하지 않는다.
+
+## 테스트 계정 모드
+
+이 하네스는 확장을 시험하는 도구이지 지원서를 쓰는 도구가 아니다. 그래서 로그인이 테스트 계정인 탭에서는 위의 값 은닉 규칙과 저장 금지를 일부 푼다. 어떤 탭이 테스트 계정인지는 사람이 `~/.career-form-live-eval/test-accounts.json`에 적는다.
+
+```json
+{
+  "hosts": [
+    "www.skcareers.com",
+    "*.recruiter.co.kr",
+    "talent.hyundai.com",
+    "*.greetinghr.com",
+    "recruit.kakaogames.com"
+  ]
+}
+```
+
+- `*.`로 시작하면 그 도메인과 하위 도메인, 아니면 호스트가 정확히 같아야 한다. 파일이 없거나 깨져 있으면 아무 탭도 테스트 계정이 아니다.
+- **값 기록.** 테스트 계정 탭의 `run`은 실행 전·후 값을 그대로 기록한다(`run.json`의 `testAccount: true`). 실행 전부터 있던 값이 합성 프로필 값이 아니면서 계정 신원 칸(이름·이메일·전화·생년월일, `sites.mjs`의 `IDENTITY_FIELD`)이면 `[account]`로 가린다. 마운트 값 그대로인 칸은 `mountedAsIs`로 표시한다. `join`은 `beforeValue`와 `mountedAsIs`를 함께 넘기고, 판정 규칙 10(`workflows/verify.md`)이 "이미 있던 값"과 "확장이 쓴 값"을 가른다. 그 밖의 탭은 종전처럼 지문으로만 비교한다.
+- **`cli.mjs reset <tab> --yes`.** 화면을 비운 뒤(`page/clear.mjs`) 사이트의 임시저장 버튼(`sites.mjs`의 사이트 프로필, 문구가 `임시저장`인 것만)을 눌러 빈 양식을 서버에 저장하고, 같은 화면을 서버에서 다시 열어 남은 값을 `saved`와 같은 형식으로 보고한다. 에이치닷은 1–3단계를 돈다. `--yes`가 없으면 현재 `saved` 결과만 보여 주고 끝난다. 테스트 계정이 아닌 탭은 `account-not-allowlisted`로 거부한다. Greeting은 서버에 임시저장이 없어 `no-server-draft`를 낸다.
+  - `reset` 중에만 가드가 완화된다(`installGuard({ allowSave: true })`): 저장·임시저장·이전·다음 클릭은 허용하고, 제출·지원하기·작성 완료·미리보기·동의·본인 인증·로그아웃·파일 입력·단계 탭과 스크립트 제출은 그대로 막는다.
+  - `reset` 중에만 그 탭의 호스트로 가는 쓰기 요청을 허용한다. 경로나 쿼리에 `final`, `submit`, `apply`, `oath`, `agree`, `consent`, `verify`, `cert`, `auth`, `sms`, `otp`, `complete`가 있으면 여전히 막는다(`requests.mjs`의 `SUBMIT_WORDS`). 다른 호스트는 평소 규칙이다.
+  - `reset` 중에만 사이트의 확인창(임시저장 확인, 저장 완료 알림)을 수락한다. 사이트가 자체 레이어로 묻는 경우는 사이트 프로필의 `confirm` 버튼을 누른다(2026-10-23 확인: 에이치닷은 `#wrapDialog`의 "설정을 임시저장하시겠습니까?" → 확인 뒤 `saveStepN` POST, SK는 `POST /Application/ApplicationSave` 뒤 `#temporarySavePopup`의 확인).
+  - 계정 신원 칸(이메일·전화 등)은 비우지 않는다. SK는 그 칸이 비면 임시저장을 거부하고, 어차피 로그인 정보로 다시 채워진다.
+  - 이전 저장 알림이 열린 채 남아 있으면 다음 클릭을 삼키므로 `reset`은 먼저 그 알림을 닫는다. 하네스 밖에서 탐색 스크립트로 임시저장을 눌렀다면 알림까지 닫아 둔다.
+- `saved`는 계정 신원 칸을 `accountFields`로, 사이트 기본값만 가진 칸을 `defaultFields`로 따로 보고하고, 그 두 종류만 남았으면 `saved: false`다. 사이트가 로그인 정보로 매번 채우는 칸은 `reset`으로도 비워지지 않고, 사이트 기본값은 저장값이 아니기 때문이다. `reset`의 단계별 결과에도 `defaultFields`가 있다.
+- **사이트 기본값.** 구조 수집(`page/census.mjs`)은 칸마다 `siteDefault`를 붙인다. select는 선택된 option이 `selected` 속성이거나 아무 option에도 `selected`가 없는데 첫 선택지가 선택된 경우, 라디오·체크박스는 `checked` 속성 그대로인 경우, 텍스트·textarea는 값이 HTML `value` 속성과 같은 경우다(값이 없으면 false). SK 병역 대상 라디오, 첫 선택지가 기본인 select가 여기에 든다. 사이트 기본값은 `saved`에 세지 않고, `join`이 `siteDefault`를 판정에 넘긴다. 알려진 한계: 서버가 저장값을 HTML 속성으로 렌더링하는 사이트에서는 저장값도 기본값처럼 보일 수 있으므로, `saved` 출력의 `defaultFields`를 사람이 한 번 확인한다.
+- **코드 칸의 숨은 이름 칸.** 보이는 칸의 `name`(또는 id)이 `cd`·`code`로 끝나고 같은 행(가장 가까운 `tr`·`li`·`.row`·`fieldset`, 없으면 부모 3단계 안)에 `nm`·`name`으로 끝나는 숨은 input이 있으면(반대 방향도 같다) 그 숨은 칸을 `hidden: true, companionOf: <보이는 칸의 i>`로 함께 수집한다. 한 행에 짝이 여럿이면 어간이 같은 것끼리 묶는다(`schoolCd`↔`schoolNm`). 어학·자격 코드 칸의 문구가 이렇게 판정에 들어간다. 값 표시 규칙은 다른 칸과 같다.
+- **캡처.** 테스트 계정 탭의 `run`은 실행 후 수집 직후, 원복 전에(가드와 요청 차단이 켜진 상태로) 섹션마다 화면을 `<out>/<label>.captures/NN.png`(디렉터리 0700, 파일 0600)로 남기고 `run.json`의 `captures`(`file`, `name`, `frame: "main"`, `controls`)에 적는다. 섹션은 구조 수집의 섹션 이름과 같은 컨테이너이고, 섹션을 못 찾으면 문서를 1,200px 높이 조각(`step N`)으로 나눈다. 캡처 실패는 `captureError: {code}`로 남고 실행은 실패하지 않는다. `--no-capture`로 끈다. 캡처는 개인정보가 아니다: 합성 프로필 값과 가려지지 않은 화면이며, 저장소 밖 0700 디렉터리에만 있다. 테스트 계정이 아닌 탭에서는 캡처를 남기지 않는다.
+- **임시저장 요청 본문.** 테스트 계정 탭의 `run`은 차단한 요청 중 탭 호스트로 가는 POST/PUT이고 경로·쿼리에 `save`·`temp`·`draft`·`store`가 있는 것의 본문(`application/x-www-form-urlencoded` 또는 JSON 1단계)을 `run.json`의 `savePayloads`(`path`, `fieldCount`, `fields`)에 남긴다. 계정 신원 칸(`IDENTITY_FIELD`)의 값은 `[account]`로 가린다. 사이트가 "저장하려던 값"을 DOM 판정과 대조하는 용도다. 테스트 계정이 아닌 탭에서는 이 필드를 만들지 않는다.
+- 최종 제출, 동의, 본인 인증은 테스트 계정에서도 하지 않는다. 테스트 계정이라도 회사에는 실제 지원으로 들어가기 때문이다.
+
+## 로그인 세션 유지
+
+로그인은 사람만 할 수 있어서, 세션이 끊기면 QA 전체가 멈춘다.
+
+- `cli.mjs keepalive [<tab>]`: 지원서 탭마다 한 번 실행한다. `--every <분>`이면 Ctrl-C까지 반복한다. 탭을 잠시 못 찾아도 오류만 출력하고 계속 돈다. 붙어 있는 동안 로그인 연장 확인창만 수락하고, 나머지 대화상자는 그대로 둔다(모든 명령 공통).
+  - 에이치닷: 남은 시간(`#countTime`)이 `--threshold`(기본 20분)보다 적으면 사이트 자체의 "연장" 버튼을 누른다(`/app/applicant/keepLogin` GET). 사이트가 이미 로그아웃으로 판단하면 누르지 않는다. 남은 시간을 읽지 못하면 `timer-unreadable`을 낸다. 누른 뒤 남은 시간이 늘어야 `extended`이고, 아니면 `not-extended`다. `--force`는 남은 시간과 관계없이 연장한다.
+  - 그 밖: 현재 주소로 쿠키가 실린 GET 요청을 보낸다. 화면은 이동하지 않는다.
+- `run`은 시작 전에 한 번 자동으로 실행하고 결과를 `run.json`의 `session`에 남긴다.
+- `run`·`census`·`saved`·`reset`은 도는 동안 다른 지원서 탭 전부(구동 중인 탭 제외)에 `--keepalive-every <분>`(기본 10, 0이면 끔)마다 keepalive를 보낸다(`driver.mjs`의 `withKeepalive`). 에이치닷 연장 기준은 `--keepalive-threshold <분>`(기본 30)이다. 결과는 `[{ at, tab, action, code }]`로 모아 결과의 `keepalive`에 붙이고(`run.json`에도 남는다), 오류는 기록만 한다.
+
+## 측정 범위 선택
+
+측정은 사람이 정한 범위에서만 돈다. 열려 있는 탭을 전부 돌리지 않는다.
+
+1. `cli.mjs scope`: 열린 http 탭을 플랫폼별(`hplace`, `greeting`, `sk`, `hyundai`, 그 밖은 `generic`)로 묶어 플랫폼, 주소(쿼리 제외), 상태를 표로 보여 준다. 상태는 `open`, `closed`(본문에 `마감되었습니다`·`접수가 종료`·`지원 기간이 아닙`·`모집이 종료`·`마감된 공고` 중 하나), `list-page`(지원서 경로가 아님, 목록으로 튕긴 경우), `unknown`이다(`scope.mjs`의 `postingStatus`, 고정 문구와 칸 수만 본다). `generic`은 범위 밖(이번 Issue 제외)으로 표시만 한다. 그다음 플랫폼별 열린 탭 수를 보여 주고, 선택이 없으면 "플랫폼별로 몇 곳을 돌릴지 `--pick`으로 정해 달라"는 메시지와 exit 2로 끝난다.
+2. `cli.mjs scope --pick hplace=2,greeting=1,sk=1,hyundai=0`: 플랫폼별 `open` 탭을 목록 순서로 그 수만큼 골라 `<out>/scope.json`(`{ at, picked: [{ platform, tab }], closed: [...] }`)에 쓴다. 열린 탭이 요청보다 적으면 `short`에 적는다. `--tabs <spec1,spec2>`(`url 일부` 또는 `url 일부|문구`)로 직접 고를 수도 있다.
+3. `census`와 `run`은 `scope.json`이 있고 대상 탭의 주소가 `picked` 어디에도 들어 있지 않으면 `tab-not-in-scope`로 거부한다. `--ignore-scope`로 우회한다. `scope.json`이 없으면 종전대로 돈다.
+
+## 저장된 양식 점검
+
+사이트에 이미 저장된 지원서 값(에이치닷 MRS2의 임시저장 행, 이전 작성 값)은 확장이 쓴 값과 구분되지 않아 측정을 흐린다. 측정 전에 사람이 지운다.
+
+1. `cli.mjs saved [<tab>]`: 지원서 탭마다 초기화가 지울 값의 개수와 칸 이름만 보고한다(값은 보고하지 않는다). 계정 신원 칸은 `accountFields`, 사이트 기본값만 가진 칸은 `defaultFields`로 따로 보고하고 `saved`에 세지 않는다. 에이치닷은 1–3단계를 무저장 이동으로 돌며 단계별로 보고하고 원래 단계로 돌아온다. 페이지를 바꾸지 않는다.
+2. `saved: true`인 양식은 테스트 계정이면 `cli.mjs reset <tab> --yes`로 비운다(테스트 계정 모드 참고). 아니면 사람이 사이트에서 직접 값과 행을 지우고 임시저장하거나, 지원을 취소하고 다시 들어가 빈 양식을 만든다. 하네스는 테스트 계정의 `reset` 말고는 저장·임시저장을 하지 않고, 제출은 어디서도 하지 않는다.
+3. 다시 `saved`를 실행해 비어 있는지 확인한 뒤 측정한다.
+4. 계정에서 가져오는 이름·이메일·전화는 사이트가 매번 채우므로 `saved`에 남을 수 있다. 이 칸은 `run`의 화면 초기화가 비운다.
+
+## 준비
+
+```sh
+cd frontend
+VITE_API_BASE_URL=<API origin> VITE_AUTOFILL_DEBUG=true npm run build   # 확인 대상 빌드
+node scripts/live-qa/cli.mjs start                                      # 설치·reload·revision 확인·프로필 주입
+```
+
+- 상태 디렉터리는 CF-177 live-eval과 같은 `~/.career-form-live-eval`이라 기존 로그인이 유지된다. `LIVE_QA_STATE_DIR`로 바꿀 수 있다.
+- `start`는 실행 중인 서비스 워커가 보고하는 revision을 출력한다. 확장의 API 호스트는 빌드 manifest의 `host_permissions`에서 읽어 요청 차단에서 제외한다.
+- 재설치 판정: 실행 중인 revision이 빌드와 다르거나, 설치본 manifest의 `host_permissions`가 빌드 manifest와 다르면(revision이 같아도 API 호스트가 다른 빌드) 설치본을 바꾸고 reload한다. `--reinstall`은 무조건 재설치한다. 출력의 `reinstalled`가 이유(`revision`, `api-hosts`, `flag`)다.
+- 재설치 뒤 복구: 확장을 바꾸면 열려 있던 탭에는 새 콘텐츠 스크립트가 붙지 않아 다음 `run`이 `panel-trigger-missing`으로 끝난다(2026-10-22). 옛 런처 요소는 DOM에 남아 있어 있는지 여부로는 살아 있는 스크립트를 가릴 수 없으므로, `start`는 재설치 뒤 지원서 탭을 모두 같은 주소로 다시 들어간 다음 확장 런처(`[data-career-form-side-panel-launcher]`)가 있는지 확인한다. 에이치닷 `writeResume`은 현재 단계를 무저장 이동으로 다시 열고, 그 밖은 `#`을 뗀 같은 주소로 이동한다(이탈 확인창은 이동 중에만 수락). 현대차 `talent.hyundai.com`의 `applyWrite`는 같은 주소로 다시 열면 본문이 비므로 `needsPerson`으로 알리고 사람이 목록에서 다시 들어간다. 결과는 `recovery: {recovered, stillMissing, needsPerson}`이며, 로그인 만료로 다른 주소로 간 탭은 `stillMissing`에 남는다.
+- 설치본 잠금: 평가 브라우저와 설치본은 이 컴퓨터의 모든 세션이 같이 쓴다. `start`가 설치하면 `<상태 디렉터리>/extension.lock.json`에 설치한 세션(pid, 부모·조부모 pid, 시각, revision, API 호스트)을 적는다. 다른 세션의 lock이 살아 있는데(그 세션의 프로세스 중 하나가 살아 있고 현재 프로세스 계보와 겹치지 않음) 재설치가 필요하면 `install-locked`로 거부하고 lock 주인을 출력한다. `--force`를 주면 경고만 하고 진행한다. 재설치하지 않을 때도 lock의 revision이 실행 중인 revision과 다르면 `install-lock-revision-mismatch` 경고를 낸다. 프로세스가 모두 끝난 lock은 무시한다.
+
+## 탭·환경 관리
+
+측정 중 생기는 탭·환경 문제를 하네스 명령으로 처리한다. 모두 상주 브라우저를 재시작하지 않는다.
+
+- `cli.mjs health [--timeout 초]`: Playwright를 거치지 않고 `/json/list`의 page target마다 WebSocket으로 `Runtime.evaluate`를 보내 응답 시간(ms)과 상태(`ok`, `timeout`, `ws-error`)를 표로 출력한다. 멈춘 탭이 있으면 exit 1과 함께 `hung: [...]`를 JSON으로 출력한다. 렌더러가 멈춘 탭 하나가 Playwright의 CDP 접속 전체를 30초 시간 초과로 막기 때문에(2026-10-22), `run`·`step`이 연달아 `TimeoutError`나 `panel-trigger-missing`으로 끝나면 먼저 이 명령으로 확인한다. 기본 timeout은 5초다.
+- `cli.mjs replace <url-substring> | --all-hung`: 멈춘 탭을 같은 주소(`#` 제외)의 새 탭으로 바꾼다. 브라우저 세션에서 `Target.createTarget`으로 새 탭을 먼저 만들고 `Target.closeTarget`으로 그 탭만 닫는다. 로그인 쿠키는 같은 브라우저라 유지된다. `<url-substring>`은 정확히 하나의 target과 일치해야 하며 아니면 `tab-not-unique`다. 교체 뒤 모든 target을 다시 점검해 새 탭이 응답하는지 출력한다. 기록에는 brief 주소(origin + 경로)만 남는다. 새 탭은 사이트가 다시 불러오므로 임시저장하지 않은 값은 남지 않는다.
+- `cli.mjs lock [--show]`: 설치본 lock을 현재 세션의 것으로 갱신한다(긴 측정을 시작하기 전에 실행하면 다른 세션의 `start`가 재설치를 거부한다). 다른 세션의 lock을 넘겨받으면 `takenFrom`에 이전 주인을 출력한다. `--show`는 현재 lock과 `heldByOther`만 보여 준다.
+- `cli.mjs alias <name> <spec>` / `alias --list` / `alias <name> --remove`: 탭 식별 키(`url-substring` 또는 `url-substring|화면 문구`)를 이름으로 `<out>/tabs.json`(권한 600)에 저장한다. 이름은 `[A-Za-z0-9_-]`만 쓴다. 현대처럼 주소가 같은 탭을 문구로 가른 키를 회차마다 다시 적지 않기 위한 것이다. `tabs`는 각 탭 옆에 일치하는 별칭을 `@name`으로 표시한다(문구가 있는 별칭은 화면 문구까지 확인). 별칭은 `<tab>` 인자 자리에 그대로 쓴다.
+
+## 측정 순서
+
+1. 사람이 평가 브라우저에서 로그인하고 각 지원서 작성 화면을 연다. `cli.mjs scope --pick ...`으로 플랫폼별 측정 범위를 정한다(측정 범위 선택 참고).
+2. 구조 수집: `cli.mjs census <tab> --label <label>`
+   - label은 `<platform>-<site>[-s<step>]` 형식이다. 예: `hp-gsenc-s2`, `gr-kurly`, `sk-r262303`, `hy-backend`
+   - `<tab>`은 URL 일부 또는 `URL 일부|화면 문구`다. 현대처럼 주소가 같은 탭을 구분할 때 쓴다.
+   - 에이치닷은 `cli.mjs step <tab> <1-4>`로 단계를 옮기며 1–4단계를 모두 수집한다.
+3. 사전 채점: `cli.mjs grade-input <labels> [--reuse-from <dir1,dir2>]`를 실행한 뒤 [workflows/pregrade.md](workflows/pregrade.md)를 따른다. **확장을 실행하기 전에 분모를 동결한다.**
+   - 구조 해시가 같은 채점이 이미 있으면 `final.json`을 복사하고 `reused-from=<label>`로 표시한다(아래 "채점 재사용과 집계"). 마지막 줄 `labelsToGrade: [...]`만 워크플로 `args.labels`로 넘긴다. 비어 있으면 채점을 돌리지 않는다.
+   - Claude Code의 Workflow 도구는 작업 폴더 안의 스크립트만 읽는다. `cli.mjs workflow-script <name> --out <작업 폴더 안 경로>`로 꺼낸다. `--out`은 스크립트 파일 위치만 바꾼다. 측정 데이터의 `dir`는 `args`로 따로 넘긴다.
+4. 실행: `cli.mjs run <tab> --label <label>`
+   - 초기화, 실행 전 수집, 클릭 가드, 자동 기입("확인 필요" 포함), 실행 후 수집, 원복을 차례로 한다.
+   - 실행 전에 `saved`로 저장된 값이 없는지 확인한다.
+   - `--no-clear`, `--no-approve`를 쓸 수 있다. 원복을 생략하는 옵션은 없다. 차단을 푼 뒤 사이트가 자동 저장하면 합성 값이 실제 지원서에 남기 때문이다.
+5. 결합과 판정: `cli.mjs join <labels>`를 실행한 뒤 [workflows/verify.md](workflows/verify.md)를 따른다.
+   - `run.json`에 캡처(`captures`, 테스트 계정 탭)가 있는 label은 `grade/<label>.capture-input.json`(캡처 파일 경로와 AUTOFILLABLE 칸의 기대값만)을 함께 쓰고, 마지막 줄 `captureLabels: [...]`에 나열한다. 이 배열을 verify 워크플로 `args.captureLabels`로 넘기면 Judge와 병렬로 캡처 판정이 돌아 `grade/<label>.capture.json`을 쓴다.
+6. 보고서: `cli.mjs report <labels> --verdicts <file> [--uncreated <file>] [--names <file>]`
+   - `--uncreated`는 `{label: 칸 수}` 또는 `{label: {cells, policyCells}}` 형식이다. 확장이 만들지 못한 행의 칸을 분모에 넣고, `policyCells`는 그중 정책 제외 칸이다.
+   - 생략했는데 행이 덜 만들어졌으면, 사전 채점의 행 추가 예상(행 수 × 행당 칸 수)으로 칸 수를 추정해 넣고 "추정"으로 표시한다.
+   - `grade/<label>.capture.json`이 있으면 캡처 판정과 DOM 판정을 대조해 비고에 `캡처 대조 일치/비교`, 메타 줄에 전체 일치율, 표 아래 `## 캡처·DOM 불일치` 절에 불일치 칸(i, DOM 판정, 캡처 값, 기대값)을 적는다. 캡처가 하나도 없으면 아무것도 추가하지 않는다.
+
+## 초기화 규칙(`page/clear.mjs`)과 플랫폼별 주의
+
+| 플랫폼        | 규칙                                                                                                                                                                                    | 이유                                                                                                              |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| 에이치닷 MRS2 | `section.writeResume` 안의 숨김 행 ID, 비활성 칸, 검색 결과 표시(`span.searchResultName`), readonly 주소까지 비운다. 보훈·장애는 `비대상` 기본값으로 되돌린다                           | 행 안의 모든 칸(숨김 포함)이 비어야 확장이 새 행으로 본다. 보이는 값만 지우면 "읽을 수 없는 기존 행"으로 건너뛴다 |
+| 그 밖         | 화면에 보이는 칸만 비운다                                                                                                                                                               | 숨은 행 템플릿 기본값까지 지우면 행 복제가 깨진다                                                                 |
+| 공통 보호     | 지원분야·직무(SK `appJobRole*`, `title`·`.select-label` 문구 포함), 동의, 잠긴 신원 칸(disabled·readonly), 현대 `inExGb`(국내/해외), 에이치닷 섹션 안의 `contact`·`applySector` 숨김 칸 | 새 지원서에서 사이트가 미리 정해 두는 값이다                                                                      |
+
+- 현대 버튼형 select, Greeting 콤보박스와 토글처럼 DOM으로 안전하게 비울 수 없는 위젯은 지우지 않고 `cleared.widgetsLeft`에 개수만 남긴다.
+- 점검(`dryRun`)은 지울 칸 이름을 `fields`에, 그중 HTML이 준 값 그대로인 칸(사이트 기본값)을 `defaultFields`에 따로 담는다. 숨은 input(에이치닷 행 ID)은 기본값으로 보지 않되, 같은 행에 다른 값이 하나도 없는 행 ID(`...Sn`, 예: 빈 경험 빌더의 `experienceBuilder.resumeBuilderSn`)는 서버가 빈 행에 붙이는 자체 상태라 `saved`가 `defaultFields`로 분류한다(`driver.mjs`의 `lonelyRowIds`). 2026-10-23·24 ABL 2단계에서 `reset`을 해도 이 ID만 남았다.
+- 현대 페이지는 `Map`과 `Set`을 polyfill로 바꿔 둔다. 페이지에 넣는 함수(`page/*.mjs`와 `keepalive.mjs`의 페이지 함수)는 둘을 쓰지 않는다(`page/page-functions.test.mjs`로 고정). 여러 인자는 `callInPage`로 넘긴다.
+- 칸 번호 `i`는 프레임을 가로질러 이어지고, 같은 주소의 iframe은 순번으로 구분한다.
+- 에이치닷 4단계(자기소개서)처럼 입력할 칸이 없는 단계는 확장이 예외 화면을 띄울 수 있다. 결과는 `measured: false`로 남는다.
+
+## 지표
+
+- 입력 가능 칸 = 정답 + 오입력 + 누락. 새로 만든 행의 칸과 만들어지지 않은 행의 칸을 포함한다.
+- 입력률 = 정답 ÷ 입력 가능 칸이다.
+- 에이치닷은 위키에 문서화된 의도적 미지원 칸을 뺀 입력률("정책 반영" 열)도 낸다. 대상은 대학 계열, 다전공 2·3번째 주야간, 어학 응시일이다.
+- 확인 불가 비율 = 확인 불가 ÷ (입력 가능 칸 + 확인 불가). 첫 표 위 메타 줄에 측정 품질 지표로 적는다. 낮을수록 좋고, 저장값이 남아 있으면 올라간다. 표에는 페이지별 "확인 불가" 열이 있다.
+- 합계 행 앞에 측정된 페이지가 있는 플랫폼(에이치닷, Greeting, SK, 현대자동차, 기타)별 소계 행을 둔다.
+- 캡처·DOM 일치율 = 캡처 판정과 DOM 판정이 일치한 칸 ÷ 대조한 칸. 캡처가 있는 페이지에서만 계산하고, `UNVERIFIABLE`·`EXPECTATION_ERROR` 칸과 캡처에 안 보이는 칸(`안 보임`)은 대조에서 뺀다.
+- 보고서에는 측정 당시 실행 중이던 확장 revision(페이지마다 다르면 표시), 실행 오류(⚠), 가드 실패(측정 무효), 기대 행보다 적게 만든 경우의 경고, 모델 합계와 재계산이 어긋난 필드(`⚠ verdict-mismatch:<필드> model=X recount=Y`)를 함께 적는다.
+
+## 채점 재사용과 집계
+
+- **구조 해시.** `grade-input`은 값 없는 구조(`controls`에서 칸 번호 `i`를 뺀 것, `addButtons`)를 정렬 키 canonical JSON으로 직렬화해 SHA-256을 `grade/<label>.input.json`의 `structureHash`에 쓴다. 주소와 label은 넣지 않으므로 같은 양식의 다른 공고도 같은 해시가 된다.
+- **structure-index.** `grade/structure-index.json`은 `{ "<hash>": { label, finalFile, at } }`로 어느 label의 `final.json`이 그 구조의 채점인지 기록한다. `grade-input`은 현재 `--out`의 index, 그다음 `--reuse-from <dir1,dir2>`로 준 이전 결과 디렉터리의 index 순서로 같은 해시를 찾아 `final.json`을 `grade/<label>.final.json`으로 복사한다(`label`을 바꾸고 `reusedFrom: { label, finalFile, hash }`를 붙인다). 이미 있는 `final.json`의 해시가 같으면 `unchanged`, 구조가 바뀌었으면 옛 index 항목을 지우고 다시 채점한다.
+- **출력.** label마다 `<label> controls=N hash=<앞 12자리> reused-from=<label> | unchanged | grading-needed`, 요약 `pregrade: K pages need grading (labels: [...]), M reused; agents=3K; est-tokens≈T`, 그리고 `labelsToGrade: [...]`를 낸다. 토큰 추정은 2026-10-22 측정(31페이지 1,296칸, 사전 채점 93 에이전트 약 710만 토큰)에 맞춘 상수(페이지당 3 에이전트, 에이전트당 2.5만 + 칸당 1.3천)다.
+- **합계 재계산.** 판정 파일의 숫자 필드(`autofillable`, `correct`, `wrong`, `missed`, `expectationErrors`, `unverifiable`, `extraCorrect`, `extraWrong`, `extraWritten`, `createdRowsExpected`)는 더 이상 믿지 않는다. `report`가 `items`와 joined 행에서 다시 센다: `autofillable`은 `category === "AUTOFILLABLE"`인 행 수, `wrong`·`missed`·`expectationErrors`·`unverifiable`·`extraCorrect`·`extraWrong`은 kind별 항목 수, `correct`는 `autofillable`에서 AUTOFILLABLE 행을 가리키는 `WRONG`·`MISSED`·`EXPECTATION_ERROR`·`UNVERIFIABLE` 항목(같은 `i`는 한 번)을 뺀 값, `createdRowsExpected`는 `rowExpansion`의 `extraRowsExpected` 합이다. `createdRowsObserved`만 모델 값을 쓴다. AUTOFILLABLE이 아닌 행이나 새 행의 `MISSED`는 누락(분모)에 들어가지만 `correct`를 줄이지 않는다. 모델 숫자와 다르면 비고에 `⚠ verdict-mismatch`로 남긴다.
+- **캡처 대조.** `report/capture-compare.mjs`가 AUTOFILLABLE 행마다 DOM 판정(`items`에 없으면 `CORRECT`)과 캡처 판정의 `seen`을 비교한다. 정규화(공백·하이픈·점·슬래시 제거, 소문자, `code|문구`와 라디오 `문구 [v=값]`은 문구만) 뒤 `CORRECT`는 `seen`이 기대값과 같을 때(사이트가 일자를 빼고 보여 주는 날짜 `2007. 03` ↔ `2007-03-01`은 같은 값, 판정 규칙 9와 같다), `MISSED`는 `seen`이 빈 문자열일 때, `WRONG`은 `seen`이 비어 있지 않고 기대값과 다를 때 일치다. `UNVERIFIABLE`·`EXPECTATION_ERROR`와 `seen`이 `null`(안 보임)인 칸은 대조하지 않는다. `seen`이 선택 안내 문구(`…을 선택하세요.`, `선택`)면 빈 값으로 본다. 캡처 판정 입력에는 기대값(합성 프로필)만 들어가고 DOM 결과는 들어가지 않는다. 2026-10-24 CF-333 검증 회차(5페이지)에서 남은 불일치는 주소 축약(`서울 중구` ↔ `서울특별시 중구`), 괄호 설명, 시험명의 언어 표기(`OPIc(영어)`)처럼 표시 문구 차이였다.
+
+## 테스트
+
+```sh
+npx vitest run --project unit scripts/live-qa
+```
+
+페이지 함수는 jsdom fixture로 검증한다. 실사이트 접속은 자동 테스트에 포함하지 않는다.

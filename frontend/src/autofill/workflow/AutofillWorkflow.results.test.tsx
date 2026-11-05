@@ -1,10 +1,13 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { createEmptyProfile } from "../../profile/model";
 import type { AnalysisApiClient } from "../api/types";
 import { AutofillWorkflow } from "./AutofillWorkflow";
 
-afterEach(() => document.body.replaceChildren());
+afterEach(() => {
+  vi.restoreAllMocks();
+  document.body.replaceChildren();
+});
 const client: AnalysisApiClient = {
   analyzePreparation: async (request) => ({
     snapshotId: request.snapshotId,
@@ -192,4 +195,56 @@ it("replaces the previous category highlights when another category is selected"
       .map((outline) => parseFloat(outline.style.top))
       .sort((a, b) => a - b),
   ).toEqual([100, 170]);
+});
+
+it("keeps static-adapter counts and red borders: an unfilled mapped field is still marked", async () => {
+  document.body.innerHTML =
+    '<label>이름<input name="name"></label><label>메모<input name="memo"></label>';
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
+    function (this: HTMLElement) {
+      return this.tagName === "INPUT"
+        ? new DOMRect(40, 100, 300, 30)
+        : new DOMRect(0, 0, 0, 0);
+    },
+  );
+  const profile = createEmptyProfile();
+  profile.personal.koreanGivenName = "테스트";
+  render(
+    <AutofillWorkflow
+      repository={{ load: async () => profile }}
+      apiClient={{
+        ...client,
+        analyzeFields: async (request) => {
+          const result = await client.analyzeFields(request);
+          const memo = request.sections
+            .flatMap((section) => section.fields)
+            .find((field) => field.domName === "memo")?.candidateId;
+          return {
+            ...result,
+            fields: result.fields.map((field) =>
+              field.candidateId === memo
+                ? {
+                    ...field,
+                    valueBinding: {
+                      type: "DIRECT" as const,
+                      profileFieldKey: "contact.contact.email",
+                    },
+                  }
+                : field,
+            ),
+          };
+        },
+      }}
+      pageDocument={document}
+      onExit={() => undefined}
+    />,
+  );
+  await screen.findByRole("heading", { name: "기입 결과" });
+  expect(screen.getByLabelText("입력 완료 1개")).toBeVisible();
+  expect(screen.getByLabelText("확인 필요 0개")).toBeVisible();
+  expect(screen.queryByText(/프로필에 없는 항목|프로필 미입력/)).toBeNull();
+  const marked = document.querySelectorAll(
+    "[data-career-form-unfilled-highlight]",
+  );
+  expect(marked).toHaveLength(1);
 });

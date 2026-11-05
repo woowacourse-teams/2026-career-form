@@ -1,4 +1,5 @@
 import { SearchFailure } from "./search-session";
+import { localWorkflowLog } from "../debug/local-workflow";
 
 export interface SearchFollowUpObservation {
   wait(args: {
@@ -85,6 +86,8 @@ function ready(control: SearchFollowUpControl): boolean {
 export function captureSearchFollowUp(
   scope: Element,
   target: HTMLInputElement,
+  /** Generic recovery: a control the selection hid is settled, not pending. */
+  settleHidden = false,
 ): SearchFollowUpObservation | undefined {
   if (!scope.isConnected || !scope.contains(target)) return undefined;
   const parent = scope.parentElement;
@@ -128,8 +131,15 @@ export function captureSearchFollowUp(
           const currentControls = controls(scope);
           if ([...baseline.keys()].some((control) => !scope.contains(control)))
             throw new SearchFailure("selection_postcondition_failed");
+          // A control the selection hid (e.g. an alternate free-text input) is
+          // settled: it can no longer be filled, so it never keeps the wait open.
           const changed = currentControls.filter(
-            (control) => baseline.get(control) !== state(control),
+            (control) =>
+              baseline.get(control) !== state(control) &&
+              (!settleHidden || visible(control)),
+          );
+          const hiddenPending = settleHidden && currentControls.some(
+            (control) => !baseline.has(control) && !visible(control),
           );
           const signature = JSON.stringify(currentControls.map(state));
           if (signature !== last) {
@@ -138,6 +148,7 @@ export function captureSearchFollowUp(
           }
           if (
             changed.length &&
+            !hiddenPending &&
             changed.every(ready) &&
             expected.every(
               (control) => changed.includes(control) && ready(control),
@@ -147,19 +158,32 @@ export function captureSearchFollowUp(
             return changed;
           if (
             !changed.length &&
+            !hiddenPending &&
             !expected.length &&
             Date.now() - start >= MINIMUM_SETTLE_MS
           )
             return [];
           await new Promise<void>((resolve) => setTimeout(resolve, 50));
         }
-        if (
-          expected.length ||
-          controls(scope).some(
-            (control) => baseline.get(control) !== state(control),
-          )
-        )
+        const changedNow = controls(scope).filter(
+          (control) =>
+            baseline.get(control) !== state(control) &&
+              (!settleHidden || visible(control)),
+        );
+        const hiddenPending = settleHidden && controls(scope).some(
+          (control) => !baseline.has(control) && !visible(control),
+        );
+        if (expected.length || changedNow.length || hiddenPending) {
+          // Local QA: control shapes only, never values.
+          const shape = (control: SearchFollowUpControl) =>
+            `${control.tagName.toLowerCase()}${control.disabled ? ":disabled" : ""}${visible(control) ? "" : ":hidden"}${control instanceof HTMLSelectElement ? `:${control.options.length}opt` : ""}${ready(control) ? ":ready" : ""}`;
+          localWorkflowLog("followup-pending", {
+            expected: expected.map(shape).join(","),
+            expectedChanged: expected.filter((control) => changedNow.includes(control)).length,
+            changed: changedNow.map(shape).join(","),
+          });
           throw new SearchFailure("result_pending");
+        }
         return [];
       } finally {
         dispose();

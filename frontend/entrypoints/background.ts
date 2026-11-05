@@ -1,6 +1,8 @@
 import { loadPolicyForSender } from "../src/autofill/policy/background";
+import { createAddressSearchHandler } from "../src/profile/address-search-background";
 import { createProfileWriteHandler } from "../src/storage/profile-write-handler";
 import { installPostingBackground } from "../src/job-postings/background";
+import { installPushBackground } from "../src/job-postings/push-background";
 import { browser } from "wxt/browser";
 import { defineBackground } from "wxt/utils/define-background";
 
@@ -13,20 +15,50 @@ import {
   isOpenInPageProfilePanelMessage,
   isOpenOptionsPageMessage,
   isOpenSidePanelMessage,
+  TOGGLE_IN_PAGE_PROFILE_PANEL_MESSAGE,
 } from "../src/autofill-demo/messages";
 import { openInPagePanel } from "../src/extension/open-in-page-panel";
 import { openInstalledOnboarding } from "../src/extension/install-onboarding";
+import { createPanelShortcutHandler } from "../src/extension/panel-shortcut";
 import { openToolbarPanel } from "../src/extension/toolbar-panel";
 
 export default defineBackground(() => {
-  const handlePostings = installPostingBackground();
+  const postings = installPostingBackground();
+  const handleAnalytics = createAnalyticsMessageHandler({
+    key: import.meta.env.VITE_POSTHOG_KEY,
+    host: import.meta.env.VITE_POSTHOG_HOST,
+    storage: browser.storage.local,
+  });
+  const push = installPushBackground({
+    baseUrl: import.meta.env.VITE_API_BASE_URL,
+    extensionVersion: browser.runtime.getManifest().version,
+    postings: postings.service,
+    track: (event, properties) => {
+      void handleAnalytics({
+        type: "ANALYTICS_TRACK",
+        event,
+        properties,
+      }).catch(() => undefined);
+    },
+  });
   const handleProfileWrite = createProfileWriteHandler(
     browser.storage.local,
     browser.runtime.id,
   );
+  const handleAddressSearch = createAddressSearchHandler({
+    baseUrl: import.meta.env.VITE_API_BASE_URL,
+    extensionId: browser.runtime.id,
+  });
+  const handlePanelShortcut = createPanelShortcutHandler(
+    browser.commands,
+    browser.runtime.id,
+  );
+  // The panel shortcut (_execute_action) also lands here, like a toolbar click;
+  // both open the in-page panel or close it when it is already open.
   browser.action.onClicked.addListener((tab) => {
     void openToolbarPanel(tab, {
-      openPanel: (tabId) => openInPagePanel(undefined, tabId),
+      openPanel: (tabId) =>
+        openInPagePanel(undefined, tabId, TOGGLE_IN_PAGE_PROFILE_PANEL_MESSAGE),
       openProfile: () => browser.runtime.openOptionsPage(),
     }).catch(() => undefined);
   });
@@ -42,11 +74,6 @@ export default defineBackground(() => {
     baseUrl: import.meta.env.VITE_API_BASE_URL,
     extensionId: browser.runtime.id,
     extensionVersion: browser.runtime.getManifest().version,
-  });
-  const handleAnalytics = createAnalyticsMessageHandler({
-    key: import.meta.env.VITE_POSTHOG_KEY,
-    host: import.meta.env.VITE_POSTHOG_HOST,
-    storage: browser.storage.local,
   });
   browser.runtime.onMessage.addListener((message, sender) => {
     if (message?.type === "AUTOFILL_GET_INSTALLED_BUILD") {
@@ -67,8 +94,14 @@ export default defineBackground(() => {
       return loadPolicyForSender(message, sender);
     const profileResponse = handleProfileWrite(message, sender);
     if (profileResponse !== undefined) return profileResponse;
-    const postingResponse = handlePostings(message, sender);
+    const addressSearchResponse = handleAddressSearch(message, sender);
+    if (addressSearchResponse !== undefined) return addressSearchResponse;
+    const postingResponse = postings.handleMessage(message, sender);
     if (postingResponse !== undefined) return postingResponse;
+    const pushResponse = push.handleMessage(message, sender);
+    if (pushResponse !== undefined) return pushResponse;
+    const shortcutResponse = handlePanelShortcut(message, sender);
+    if (shortcutResponse !== undefined) return shortcutResponse;
     if (parseAnalyticsMessage(message)) {
       return handleAnalytics(message);
     }

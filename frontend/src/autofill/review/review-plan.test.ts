@@ -315,6 +315,36 @@ describe("review plan", () => {
     ).toEqual(["available-1", "available-2", "needs-review", "conflict"]);
   });
 
+  it("flags a hidden generic control for display hiding but keeps it in the plan", () => {
+    const profile = createEmptyProfile();
+    profile.contact.email = "me@example.test";
+    const registry = registryWithTextField();
+    (document.body.lastElementChild as HTMLInputElement).hidden = true;
+
+    const plan = buildReviewPlan({
+      analysis: response([allowedEmail]),
+      profile,
+      registry,
+    });
+
+    expect(plan.items).toHaveLength(1);
+    expect(plan.items[0]).toMatchObject({ hiddenFromReview: true });
+    expect(reviewItemsForDisplay(plan.items)).toEqual([]);
+  });
+
+  it("does not flag hidden controls on the static path", () => {
+    const registry = registryWithTextField();
+    (document.body.lastElementChild as HTMLInputElement).hidden = true;
+
+    const plan = buildReviewPlan({
+      analysis: response([allowedEmail], "COMPLETE", "ADAPTER"),
+      profile: createEmptyProfile(),
+      registry,
+    });
+
+    expect(plan.items[0]?.hiddenFromReview).toBeUndefined();
+  });
+
   it("selects a ready allowed value when the page field is empty", () => {
     const profile = createEmptyProfile();
     profile.contact.email = "me@example.test";
@@ -1220,7 +1250,7 @@ describe("review plan", () => {
 });
 
 describe("calendar review plan", () => {
-  it("routes a monthpicker to month approval and keeps it unselected by default", () => {
+  it("routes a monthpicker to month approval and selects it automatically", () => {
     document.body.innerHTML = `<div class="ip-calbox">
       <label for="schlstaYm0" class="blind">입학년월</label>
       <input type="text" id="schlstaYm0" name="schoolStaYmd" autocomplete="off" class="input_text cal monthpicker hasDatepicker" placeholder="입학년월" maxlength="7" readonly>
@@ -1269,7 +1299,7 @@ describe("calendar review plan", () => {
       profileValue: "2026-03",
       previewValue: "2026-03",
       status: "available",
-      selected: false,
+      selected: true,
       calendarApproval: {
         target,
         targetYearMonth: "2026-03",
@@ -1278,6 +1308,93 @@ describe("calendar review plan", () => {
     });
     expect(item.dateApproval).toBeUndefined();
     expect(item.dayCalendarApproval).toBeUndefined();
+  });
+
+  describe("readonly month calendar auto-selection", () => {
+    const planMonth = (
+      birthDate: string,
+      { widget = true, pageValue = "" } = {},
+    ) => {
+      document.body.innerHTML = widget
+        ? `<div class="ip-calbox"><label for="m0">입학년월</label>
+          <input type="text" id="m0" name="schoolStaYmd" class="input_text cal monthpicker hasDatepicker" placeholder="입학년월" maxlength="7" readonly value="${pageValue}">
+          <img class="ui-datepicker-trigger" alt="달력 열기" title="달력 열기"></div>
+          <div id="ui-datepicker-div" class="ui-datepicker ui-widget" style="display: none"></div>`
+        : `<input type="text" id="m0" name="when" readonly value="${pageValue}">`;
+      const target = document.querySelector<HTMLInputElement>("#m0")!;
+      const registry = new CandidateRegistry();
+      registry.registerField({
+        kind: "field",
+        candidateId: "calendar-field",
+        candidate: {
+          candidateId: "calendar-field",
+          element: "input",
+          control: "text",
+          readonly: true,
+          visibility: "visible",
+          displayName: "입학년월",
+        },
+        elements: [target],
+        optionElements: new Map(),
+        sectionId: "calendar-section",
+        signature: createStructuralSignature([target]),
+      });
+      const profile = createEmptyProfile();
+      profile.personal.birthDate = birthDate;
+      return buildReviewPlan({
+        analysis: response([
+          {
+            candidateId: "calendar-field",
+            matchType: "MATCH",
+            valueBinding: {
+              type: "DIRECT",
+              profileFieldKey: "personal.personal.birthDate",
+            },
+            autofillPolicy: "ALLOWED",
+            mappingStatus: "LLM_SUGGESTED",
+            interactionStatus: "READY",
+            writePlan: { command: "SELECT_DATE" },
+          },
+        ]),
+        profile,
+        registry,
+      }).items[0]!;
+    };
+
+    it("selects a complete profile date as the target year-month", () => {
+      expect(planMonth("2026-03-15")).toMatchObject({
+        status: "available",
+        selected: true,
+        profileValue: "2026-03",
+      });
+    });
+
+    it("keeps a year-month-only profile date unselected", () => {
+      const item = planMonth("2026-03");
+      expect(item.selected).toBe(false);
+      expect(item.status).toBe("unavailable");
+    });
+
+    it.each([
+      ["an empty date", ""],
+      ["a malformed date", "2026-13-99"],
+    ])("keeps %s unselected", (_name, birthDate) => {
+      const item = planMonth(birthDate);
+      expect(item.selected).toBe(false);
+      expect(item.status).toBe("unavailable");
+    });
+
+    it("keeps a readonly input with no calendar surface unselected", () => {
+      const item = planMonth("2026-03-15", { widget: false });
+      expect(item.selected).toBe(false);
+      expect(item.status).toBe("unavailable");
+    });
+
+    it("keeps a different existing page value as a conflict", () => {
+      const item = planMonth("2026-03-15", { pageValue: "2025-01" });
+      expect(item.selected).toBe(false);
+      expect(item.status).toBe("conflict");
+    });
   });
 });
 
@@ -1392,3 +1509,69 @@ it.each(["valid", "wrong-name", "wrong-label", "wrong-binding", "untrusted"])(
 );
 
 afterEach(() => installExecutionPolicy(document));
+
+describe("year-month-only SELECT_DATE targets", () => {
+  const selectDate = (key: string) =>
+    ({
+      candidateId: "date-field",
+      matchType: "MATCH",
+      valueBinding: { type: "DIRECT", profileFieldKey: key },
+      autofillPolicy: "ALLOWED",
+      mappingStatus: "LLM_SUGGESTED",
+      interactionStatus: "READY",
+      writePlan: { command: "SELECT_DATE" },
+    }) as const;
+  const planFor = (
+    birthDate: string,
+    options: { placeholder?: string; type?: string },
+  ) => {
+    const profile = createEmptyProfile();
+    profile.personal.birthDate = birthDate;
+    const { registry } = registryWithDateInput({
+      placeholder: options.placeholder,
+      type: options.type,
+    });
+    return buildReviewPlan({
+      analysis: response([selectDate("personal.personal.birthDate")]),
+      profile,
+      registry,
+    }).items[0]!;
+  };
+
+  it.each([
+    ["a YYYY.MM placeholder", { placeholder: "YYYY.MM" }, "2001.02", "YYYY.MM"],
+    ["a month input", { type: "month" }, "2001-02", "YYYY-MM"],
+  ])("writes a full profile date as year-month for %s", (_name, options, value, format) => {
+    const item = planFor("2001-02-03", options);
+
+    expect(item).toMatchObject({
+      status: "available",
+      selected: true,
+      disabled: false,
+      profileValue: value,
+      previewValue: value,
+      dateApproval: { format },
+      analysis: { writePlan: { command: "SET_TEXT" } },
+    });
+    expect(item.calendarApproval).toBeUndefined();
+  });
+
+  it("keeps a full-date target on the SELECT_DATE path", () => {
+    const item = planFor("2001-02-03", { placeholder: "YYYY.MM.DD" });
+
+    expect(item.selected).toBe(false);
+    expect(item.analysis?.writePlan?.command).toBe("SELECT_DATE");
+    expect(item.dateApproval).toBeUndefined();
+  });
+
+  it.each([
+    ["an empty date", ""],
+    ["a malformed date", "2001-13-99"],
+  ])("keeps a year-month target blocked for %s", (_name, birthDate) => {
+    const item = planFor(birthDate, { placeholder: "YYYY.MM" });
+
+    expect(item.selected).toBe(false);
+    expect(item.status).toBe("unavailable");
+    expect(item.dateApproval).toBeUndefined();
+  });
+});

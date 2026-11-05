@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   catalogKindForField,
+  catalogLabels,
   searchCatalog,
   type CatalogEntry,
 } from "./catalog-search";
@@ -52,6 +53,19 @@ describe("local catalog search", () => {
       ).toEqual(["d"]);
     },
   );
+  it("labels a site's alias-first form such as SQLD(SQL 개발자)", () => {
+    const entry: CatalogEntry = {
+      id: "sqld",
+      kind: "certificate",
+      name: "SQL 개발자",
+      detail: "KDATA",
+      aliases: ["SQLD"],
+    };
+    expect(catalogLabels(entry)).toEqual(
+      expect.arrayContaining(["SQL 개발자(SQLD)", "SQLD(SQL 개발자)"]),
+    );
+  });
+
   it("returns SQLD and SQLP as candidates without resolving ambiguous SQL", () => {
     expect(
       searchCatalog(entries, "certificate", "SQL").map((entry) => entry.id),

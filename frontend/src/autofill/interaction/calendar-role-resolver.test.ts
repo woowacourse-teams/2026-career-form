@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { InteractionDecisionProvider } from "../api/interaction-types";
+import { AnalysisServiceError } from "../api/runtime-client";
 import { setAutofillDebugEnabled } from "../debug/autofill-debug";
 import {
   createCalendarRoleResolver,
@@ -247,3 +248,188 @@ it.each(["selected", "abstained", "provider-error", "stale"])(
     );
   },
 );
+
+describe("transient provider failure before the first calendar gesture", () => {
+  const evidence = {
+    unit: "month" as const,
+    unitEvidence: "month-options" as const,
+    ownership: "single-field" as const,
+  };
+  const transient = (code: "TIMEOUT" | "NETWORK") =>
+    new AnalysisServiceError("transient", undefined, undefined, code);
+  const selected =
+    (role: "CALENDAR_OPENER" | "CALENDAR_YEAR_TRIGGER"): InteractionDecisionProvider =>
+    async (request) => ({
+      schemaVersion: 2,
+      snapshotId: request.snapshotId,
+      status: "COMPLETE",
+      mode: "GENERIC",
+      decisions: [
+        {
+          decisionId: "calendar-role",
+          role,
+          selection: "SELECTED",
+          candidateId: "c1",
+        },
+      ],
+    });
+  const button = () => {
+    const element = document.createElement("button");
+    element.type = "button";
+    document.body.append(element);
+    return element;
+  };
+
+  it.each(["TIMEOUT", "NETWORK"] as const)(
+    "retries the opener decision once after a %s and uses the answer",
+    async (code) => {
+      const element = button();
+      const provider = vi
+        .fn<InteractionDecisionProvider>()
+        .mockRejectedValueOnce(transient(code))
+        .mockImplementation(selected("CALENDAR_OPENER"));
+      const result = await resolveCalendarRole({
+        role: "CALENDAR_OPENER",
+        candidates: [{ candidateId: "c1", element }],
+        evidence,
+        provider,
+        canonicalFieldKey: "calendar-month",
+        deadline: Date.now() + 10_000,
+      });
+      expect(provider).toHaveBeenCalledTimes(2);
+      expect(result?.element).toBe(element);
+    },
+  );
+
+  it("keeps today's stop when the retried opener decision fails again", async () => {
+    const element = button();
+    const provider = vi
+      .fn<InteractionDecisionProvider>()
+      .mockRejectedValue(transient("TIMEOUT"));
+    const result = await resolveCalendarRole({
+      role: "CALENDAR_OPENER",
+      candidates: [{ candidateId: "c1", element }],
+      evidence,
+      provider,
+      canonicalFieldKey: "calendar-month",
+      deadline: Date.now() + 10_000,
+    });
+    expect(provider).toHaveBeenCalledTimes(2);
+    expect(result).toBeUndefined();
+  });
+
+  it.each([
+    ["a non-transport provider error", () => new Error("contract")],
+    [
+      "a server error",
+      () => new AnalysisServiceError("server", undefined, undefined),
+    ],
+  ])("does not retry %s", async (_case, error) => {
+    const element = button();
+    const provider = vi
+      .fn<InteractionDecisionProvider>()
+      .mockRejectedValueOnce(error())
+      .mockImplementation(selected("CALENDAR_OPENER"));
+    const result = await resolveCalendarRole({
+      role: "CALENDAR_OPENER",
+      candidates: [{ candidateId: "c1", element }],
+      evidence,
+      provider,
+      canonicalFieldKey: "calendar-month",
+      deadline: Date.now() + 10_000,
+    });
+    expect(provider).toHaveBeenCalledTimes(1);
+    expect(result).toBeUndefined();
+  });
+
+  it("does not retry a role resolved after the calendar was already operated", async () => {
+    const element = button();
+    const provider = vi
+      .fn<InteractionDecisionProvider>()
+      .mockRejectedValueOnce(transient("TIMEOUT"))
+      .mockImplementation(selected("CALENDAR_YEAR_TRIGGER"));
+    const result = await resolveCalendarRole({
+      role: "CALENDAR_YEAR_TRIGGER",
+      candidates: [{ candidateId: "c1", element }],
+      evidence,
+      provider,
+      canonicalFieldKey: "calendar-month",
+      deadline: Date.now() + 10_000,
+    });
+    expect(provider).toHaveBeenCalledTimes(1);
+    expect(result).toBeUndefined();
+  });
+
+  it("does not retry when the field budget is spent", async () => {
+    const element = button();
+    let clock = 0;
+    const provider = vi
+      .fn<InteractionDecisionProvider>()
+      .mockImplementationOnce(async () => {
+        clock = 10_000;
+        throw transient("TIMEOUT");
+      })
+      .mockImplementation(selected("CALENDAR_OPENER"));
+    const result = await resolveCalendarRole({
+      role: "CALENDAR_OPENER",
+      candidates: [{ candidateId: "c1", element }],
+      evidence,
+      provider,
+      canonicalFieldKey: "calendar-month",
+      deadline: 10_000,
+      now: () => clock,
+    });
+    expect(provider).toHaveBeenCalledTimes(1);
+    expect(result).toBeUndefined();
+  });
+
+  it.each([
+    ["the opener changed", (element: HTMLElement) => element.setAttribute("data-x", "1")],
+    ["the field was revalidated as stale", () => undefined],
+  ])("does not retry when %s while the request failed", async (name, mutate) => {
+    const element = button();
+    let current = true;
+    const provider = vi
+      .fn<InteractionDecisionProvider>()
+      .mockImplementationOnce(async () => {
+        mutate(element);
+        if (name.includes("stale")) current = false;
+        throw transient("NETWORK");
+      })
+      .mockImplementation(selected("CALENDAR_OPENER"));
+    const result = await resolveCalendarRole({
+      role: "CALENDAR_OPENER",
+      candidates: [{ candidateId: "c1", element }],
+      evidence,
+      provider,
+      revalidate: () => current,
+      canonicalFieldKey: "calendar-month",
+      deadline: Date.now() + 10_000,
+    });
+    expect(provider).toHaveBeenCalledTimes(1);
+    expect(result).toBeUndefined();
+  });
+
+  it("does not retry after the run was aborted", async () => {
+    const element = button();
+    const controller = new AbortController();
+    const provider = vi
+      .fn<InteractionDecisionProvider>()
+      .mockImplementationOnce(async () => {
+        controller.abort();
+        throw transient("TIMEOUT");
+      })
+      .mockImplementation(selected("CALENDAR_OPENER"));
+    const result = await resolveCalendarRole({
+      role: "CALENDAR_OPENER",
+      candidates: [{ candidateId: "c1", element }],
+      evidence,
+      provider,
+      signal: controller.signal,
+      canonicalFieldKey: "calendar-month",
+      deadline: Date.now() + 10_000,
+    });
+    expect(provider).toHaveBeenCalledTimes(1);
+    expect(result).toBeUndefined();
+  });
+});

@@ -50,12 +50,109 @@ function addOtherFormSection(test: ReturnType<typeof setup>): HTMLElement {
 }
 
 describe("generic search selection effects", () => {
-  it("refuses a result click when a related hidden value cannot be bound before selection", () => {
+  it("verifies a generic name-only result without inventing a hidden code", () => {
     const test = setup("<button>합성 자격</button>");
+    test.code.remove();
+    const binding = bindSelectionEffects(
+      test.identity,
+      test.candidate,
+      ["합성 자격"],
+      undefined,
+      true,
+    );
+    test.target.value = "합성 자격";
+    expect(() => verifySelectionEffects(binding)).not.toThrow();
+    test.date.value = "changed";
+    expect(() => verifySelectionEffects(binding)).toThrow();
+  });
+
+  it.each([false, true])(
+    "rejects a declared code with no relation target (generic=%s)",
+    (generic) => {
+      const test = setup();
+      test.code.remove();
+      expect(() =>
+        bindSelectionEffects(
+          test.identity,
+          test.candidate,
+          ["합성 자격"],
+          undefined,
+          generic,
+        ),
+      ).toThrow();
+    },
+  );
+
+  it("keeps legacy name-only selection blocked", () => {
+    const test = setup("<button>합성 자격</button>");
+    test.code.remove();
+    expect(() =>
+      bindSelectionEffects(
+        test.identity,
+        test.candidate,
+        ["합성 자격"],
+        undefined,
+        false,
+      ),
+    ).toThrow();
+  });
+
+  it("rejects conflicting explicit codes before selection", () => {
+    const test = setup(
+      '<button data-code="code-1" data-value-code="code-2" data-result-id="code-1">합성 자격</button>',
+    );
+
     expect(() =>
       bindSelectionEffects(test.identity, test.candidate, ["합성 자격"]),
     ).toThrowError(
       expect.objectContaining({ reason: "selection_effect_unverified" }),
+    );
+  });
+
+  it("accepts matching explicit codes", () => {
+    const test = setup(
+      '<button data-code="code-1" data-value-code="code-1" data-result-id="code-1">합성 자격</button>',
+    );
+    const binding = bindSelectionEffects(test.identity, test.candidate, [
+      "합성 자격",
+    ]);
+
+    test.target.value = "합성 자격";
+    test.code.value = "code-1";
+
+    expect(() => verifySelectionEffects(binding)).not.toThrow();
+  });
+
+  it("accepts an undeclared hidden code only when the click fills it", () => {
+    const test = setup("<button>합성 자격</button>");
+    const binding = bindSelectionEffects(
+      test.identity,
+      test.candidate,
+      ["합성 자격"],
+      undefined,
+      true,
+    );
+
+    test.target.value = "합성 자격";
+    test.code.value = "code-from-site";
+
+    expect(() => verifySelectionEffects(binding)).not.toThrow();
+  });
+
+  it("rejects an undeclared hidden code that the click left empty", () => {
+    const test = setup("<button>합성 자격</button>");
+    const binding = bindSelectionEffects(
+      test.identity,
+      test.candidate,
+      ["합성 자격"],
+      undefined,
+      true,
+    );
+
+    test.target.value = "합성 자격";
+
+    expect(() => verifySelectionEffects(binding)).toThrowError(
+      expect.objectContaining({ reason: "selection_postcondition_failed" }),
     );
   });
 

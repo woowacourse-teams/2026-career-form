@@ -15,30 +15,24 @@ export function QuickStartGuide({
 }) {
   return (
     <>
-      <p className={styles.description}>
-        {hasValues
-          ? "등록한 정보로 시작하고, 나머지는 필요할 때 추가하세요."
-          : "저장한 정보가 없다면 입력할 항목이 없을 수 있어요. 필요한 정보는 언제든 추가할 수 있어요."}
-      </p>
+      {!hasValues && <p className={styles.note}>저장한 정보 없음</p>}
       <ol className={styles.instructions}>
         <li>
           <strong>작성 중인 지원서 탭을 열어 주세요.</strong>
-          <span>지금 지원서가 없다면 다음에 작성할 때 시작해도 괜찮아요.</span>
         </li>
         <li>
           <strong>Chrome 확장 프로그램에서 Career Form을 여세요.</strong>
-          <span>페이지의 커리어폼 아이콘으로도 패널을 열 수 있어요.</span>
         </li>
         <li>
           <strong>패널의 ‘자동 기입’을 누르세요.</strong>
-          <span>
-            입력 예정 값과 항목을 확인하고 원하는 항목만 선택해 적용하세요.
-          </span>
         </li>
       </ol>
       <OpeningGuide />
       <p className={styles.note}>지원서 저장과 제출은 직접 해 주세요.</p>
-      <div className={styles.actions}>
+      <div className={styles.foot}>
+        <button type="button" disabled={pending} onClick={onOpenProfile}>
+          전체 프로필 편집
+        </button>
         <button
           type="button"
           className={styles.primary}
@@ -46,9 +40,6 @@ export function QuickStartGuide({
           onClick={onBack}
         >
           입력 이어가기
-        </button>
-        <button type="button" disabled={pending} onClick={onOpenProfile}>
-          전체 프로필 편집
         </button>
       </div>
     </>

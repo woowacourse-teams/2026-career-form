@@ -1,0 +1,106 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.10 [39m[90m/home/dbsghwns1209/workspaces/2026-career-form/.worktrees/CF-313/frontend[39m
+
+ [32m✓[39m [30m[42m unit [49m[39m src/autofill/workflow/write-accuracy/write-accuracy.routes.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 2112[2mms[22m[39m
+   [33m[2m✓[22m[39m hplace-mrs2-step2-abl [33m 513[2mms[22m[39m
+   [33m[2m✓[22m[39m hplace-mrs2-step2-careerhyundai [33m 391[2mms[22m[39m
+   [33m[2m✓[22m[39m sk-careers-application-form [33m 770[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m src/autofill/workflow/write-accuracy/write-accuracy.runner.test.ts [2m([22m[2m11 tests[22m[2m)[22m[33m 8305[2mms[22m[39m
+   [33m[2m✓[22m[39m writes text, native select and radio using the product pipeline [33m 2582[2mms[22m[39m
+   [33m[2m✓[22m[39m detects an intentionally wrong truth instead of trusting the writer [33m 1298[2mms[22m[39m
+   [33m[2m✓[22m[39m detects a page listener reverting an input after the write [33m 832[2mms[22m[39m
+   [33m[2m✓[22m[39m counts a missing truth entry as unscored and fails the report gate [33m 721[2mms[22m[39m
+   [33m[2m✓[22m[39m detects mutation of a preserve-marked field by the page [33m 725[2mms[22m[39m
+   [33m[2m✓[22m[39m reports a manifest route mismatch before collection or writes [33m 312[2mms[22m[39m
+   [33m[2m✓[22m[39m rejects broken metric conservation [33m 816[2mms[22m[39m
+   [33m[2m✓[22m[39m aggregates only the current manifest set and separates unreviewed metrics by control [33m 789[2mms[22m[39m
+ [31m❯[39m [30m[42m unit [49m[39m src/autofill/workflow/write-accuracy/write-accuracy.test.ts [2m([22m[2m5 tests[22m[2m | [22m[31m5 failed[39m[2m)[22m[33m 147385[2mms[22m[39m
+[31m   [31m×[31m ahnlab-write-resume-form[39m[33m 15106[2mms[22m[39m
+[31m   [31m×[31m kakao-greeting-email[39m[33m 83509[2mms[22m[39m
+[31m   [31m×[31m lg-ai-research-birth-split-email[39m[33m 2859[2mms[22m[39m
+[31m   [31m×[31m naver-step2-form[39m[33m 45831[2mms[22m[39m
+[31m   [31m×[31m aggregate[39m[32m 41[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 5 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m src/autofill/workflow/write-accuracy/write-accuracy.test.ts[2m > [22mahnlab-write-resume-form
+[31m[1mError[22m: ahnlab-write-resume-form:MISSING_TRUTH,UNSCORED_FIELDS[39m
+[36m [2m❯[22m assertAccuracyReport src/autofill/workflow/write-accuracy/report.ts:[2m35:11[22m[39m
+    [90m 33|[39m   ][33m;[39m
+    [90m 34|[39m   [35mif[39m (failed[33m.[39mlength)
+    [90m 35|[39m     throw new Error(`${report.snapshot}:${[...new Set(failed)].join(",…
+    [90m   |[39m           [31m^[39m
+    [90m 36|[39m }
+    [90m 37|[39m
+[90m [2m❯[22m src/autofill/workflow/write-accuracy/write-accuracy.test.ts:[2m52:7[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m src/autofill/workflow/write-accuracy/write-accuracy.test.ts[2m > [22mkakao-greeting-email
+[31m[1mError[22m: kakao-greeting-email:MISSING_TRUTH,UNSCORED_FIELDS[39m
+[36m [2m❯[22m assertAccuracyReport src/autofill/workflow/write-accuracy/report.ts:[2m35:11[22m[39m
+    [90m 33|[39m   ][33m;[39m
+    [90m 34|[39m   [35mif[39m (failed[33m.[39mlength)
+    [90m 35|[39m     throw new Error(`${report.snapshot}:${[...new Set(failed)].join(",…
+    [90m   |[39m           [31m^[39m
+    [90m 36|[39m }
+    [90m 37|[39m
+[90m [2m❯[22m src/autofill/workflow/write-accuracy/write-accuracy.test.ts:[2m52:7[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m src/autofill/workflow/write-accuracy/write-accuracy.test.ts[2m > [22mlg-ai-research-birth-split-email
+[31m[1mError[22m: lg-ai-research-birth-split-email:MISSING_TRUTH,UNSCORED_FIELDS[39m
+[36m [2m❯[22m assertAccuracyReport src/autofill/workflow/write-accuracy/report.ts:[2m35:11[22m[39m
+    [90m 33|[39m   ][33m;[39m
+    [90m 34|[39m   [35mif[39m (failed[33m.[39mlength)
+    [90m 35|[39m     throw new Error(`${report.snapshot}:${[...new Set(failed)].join(",…
+    [90m   |[39m           [31m^[39m
+    [90m 36|[39m }
+    [90m 37|[39m
+[90m [2m❯[22m src/autofill/workflow/write-accuracy/write-accuracy.test.ts:[2m52:7[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m src/autofill/workflow/write-accuracy/write-accuracy.test.ts[2m > [22mnaver-step2-form
+[31m[1mError[22m: naver-step2-form:MISSING_TRUTH,UNSCORED_FIELDS[39m
+[36m [2m❯[22m assertAccuracyReport src/autofill/workflow/write-accuracy/report.ts:[2m35:11[22m[39m
+    [90m 33|[39m   ][33m;[39m
+    [90m 34|[39m   [35mif[39m (failed[33m.[39mlength)
+    [90m 35|[39m     throw new Error(`${report.snapshot}:${[...new Set(failed)].join(",…
+    [90m   |[39m           [31m^[39m
+    [90m 36|[39m }
+    [90m 37|[39m
+[90m [2m❯[22m src/autofill/workflow/write-accuracy/write-accuracy.test.ts:[2m52:7[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m src/autofill/workflow/write-accuracy/write-accuracy.test.ts[2m > [22maggregate
+[31m[1mAssertionError[22m: UNSCORED_OR_FAILED_SNAPSHOTS: expected [ 'ahnlab-write-resume-form', …(3) ] to deeply equal [][39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- [][39m
+[31m+ [[39m
+[31m+   "ahnlab-write-resume-form",[39m
+[31m+   "kakao-greeting-email",[39m
+[31m+   "lg-ai-research-birth-split-email",[39m
+[31m+   "naver-step2-form",[39m
+[31m+ ][39m
+
+[36m [2m❯[22m src/autofill/workflow/write-accuracy/write-accuracy.test.ts:[2m77:62[22m[39m
+    [90m 75|[39m   [34mexpect[39m(aggregate[33m.[39mmissing[33m,[39m [32m"MISSING_SNAPSHOT_RESULTS"[39m)[33m.[39m[34mtoEqual[39m([])[33m;[39m
+    [90m 76|[39m   [34mexpect[39m(aggregate[33m.[39mextra[33m,[39m [32m"EXTRA_SNAPSHOT_RESULTS"[39m)[33m.[39m[34mtoEqual[39m([])[33m;[39m
+    [90m 77|[39m   expect(aggregate.failures, "UNSCORED_OR_FAILED_SNAPSHOTS").toEqual([…
+    [90m   |[39m                                                              [31m^[39m
+    [90m 78|[39m   [34mexpect[39m(
+    [90m 79|[39m     aggregate[33m.[39mreviewed[33m.[39munscored [33m+[39m aggregate[33m.[39munreviewed[33m.[39munscored[33m,[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m2 passed[39m[22m[90m (3)[39m
+[2m      Tests [22m [1m[31m5 failed[39m[22m[2m | [22m[1m[32m18 passed[39m[22m[90m (23)[39m
+[2m   Start at [22m 01:06:14
+[2m   Duration [22m 162.23s[2m (transform 17.59s, setup 2.92s, import 24.18s, tests 157.80s, environment 14.74s)[22m

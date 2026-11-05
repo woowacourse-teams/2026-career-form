@@ -1,8 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
+  contactWithSelectedAddress,
+  withoutStaleAddressVerification,
+  type StructuredAddress,
+} from "../address";
+import { catalogCertificateIssuer } from "../catalog";
+import {
   createEmptyProfile,
   type Profile,
+  type ProfileEntry,
   type ProfileIdentity,
   type RepeatedProfileCategoryId,
   type SingleProfileCategoryId,
@@ -20,12 +27,41 @@ function createEntryId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `entry-${Date.now()}`;
 }
 
+function isIdentityField(
+  categoryId: RepeatedProfileCategoryId,
+  entry: ProfileEntry,
+  fieldId: string,
+): boolean {
+  return (
+    (categoryId === "certifications" && fieldId === "name") ||
+    (categoryId === "languages" &&
+      entry.sectionId === "languageTest" &&
+      fieldId === "testName") ||
+    (categoryId === "education" && fieldId === "schoolName")
+  );
+}
+
+/** Fill a blank certificate issuer from the catalog selection; never overwrite one. */
+function selectedIssuer(
+  categoryId: RepeatedProfileCategoryId,
+  fieldId: string,
+  entry: ProfileEntry,
+  name: string,
+  identity: ProfileIdentity | undefined,
+): { issuer?: string } {
+  if (categoryId !== "certifications" || fieldId !== "name") return {};
+  if (entry.values.issuer?.trim()) return {};
+  const issuer = catalogCertificateIssuer(identity, name);
+  return issuer ? { issuer } : {};
+}
+
 export function useProfileEditor(
   repository: ProfileRepository,
   saveDelay = 500,
 ) {
   const [profile, setProfile] = useState<Profile>(createEmptyProfile);
   const [loadStatus, setLoadStatus] = useState<LoadStatus>("loading");
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const latestProfile = useRef(profile);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
@@ -55,7 +91,13 @@ export function useProfileEditor(
       active = false;
       if (saveTimer.current) clearTimeout(saveTimer.current);
     };
-  }, [repository]);
+  }, [repository, loadAttempt]);
+
+  const retryLoad = useCallback(() => {
+    if (loadStatus !== "error") return;
+    setLoadStatus("loading");
+    setLoadAttempt((attempt) => attempt + 1);
+  }, [loadStatus]);
 
   const persist = useCallback(
     async (nextProfile: Profile) => {
@@ -112,9 +154,25 @@ export function useProfileEditor(
 
   const updateSingle = useCallback(
     (categoryId: SingleProfileCategoryId, fieldId: string, value: string) => {
+      changeProfile((current) => {
+        const values = { ...current[categoryId], [fieldId]: value };
+        return {
+          ...current,
+          [categoryId]:
+            categoryId === "contact"
+              ? withoutStaleAddressVerification(current.contact, values)
+              : values,
+        };
+      });
+    },
+    [changeProfile],
+  );
+
+  const selectAddress = useCallback(
+    (address: StructuredAddress) => {
       changeProfile((current) => ({
         ...current,
-        [categoryId]: { ...current[categoryId], [fieldId]: value },
+        contact: contactWithSelectedAddress(current.contact, address),
       }));
     },
     [changeProfile],
@@ -147,12 +205,18 @@ export function useProfileEditor(
           entry.id === entryId
             ? {
                 ...entry,
-                values: { ...entry.values, [fieldId]: value },
-                ...((categoryId === "certifications" && fieldId === "name") ||
-                (categoryId === "languages" &&
-                  entry.sectionId === "languageTest" &&
-                  fieldId === "testName") ||
-                (categoryId === "education" && fieldId === "schoolName")
+                values: {
+                  ...entry.values,
+                  [fieldId]: value,
+                  ...selectedIssuer(
+                    categoryId,
+                    fieldId,
+                    entry,
+                    value,
+                    identity,
+                  ),
+                },
+                ...(isIdentityField(categoryId, entry, fieldId)
                   ? {
                       identity: identity ?? {
                         status: "manual" as const,
@@ -226,8 +290,10 @@ export function useProfileEditor(
   return {
     profile,
     loadStatus,
+    retryLoad,
     saveStatus,
     updateSingle,
+    selectAddress,
     addEntry,
     updateEntry,
     removeEntry,

@@ -22,6 +22,8 @@ export function catalogLabels(entry: CatalogEntry): readonly string[] {
     entry.name,
     ...entry.aliases,
     ...entry.aliases.map((alias) => `${entry.name}(${alias})`),
+    // Sites also lead with the alias, e.g. "SQLD(SQL 개발자)".
+    ...entry.aliases.map((alias) => `${alias}(${entry.name})`),
   ];
 }
 

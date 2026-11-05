@@ -75,9 +75,12 @@ it.each<[WriteFailureCode, string]>([
         ]}
       />,
     );
-    expect(screen.getByText(guidance)).toBeVisible();
+    expect(screen.getByLabelText(guidance)).toBeVisible();
     expect(screen.getByText("합성테스트전공")).toBeVisible();
     expect(screen.queryByText(/RAW_PRIVATE_ERROR/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText(/RAW_PRIVATE_ERROR/),
+    ).not.toBeInTheDocument();
     expect(screen.getByLabelText("입력 완료 0개")).toBeInTheDocument();
     expect(screen.getByLabelText("확인 필요 1개")).toBeInTheDocument();
   },
@@ -100,7 +103,7 @@ it("keeps specific failure guidance after its snapshot disappears without retain
     />,
   );
   expect(
-    screen.getByText("검색 결과가 없어요. 다른 이름으로 찾아 주세요."),
+    screen.getByLabelText("검색 결과가 없어요. 다른 이름으로 찾아 주세요."),
   ).toBeVisible();
   expect(
     screen.getByRole("button", { name: "전공 필드로 이동" }),
@@ -130,11 +133,12 @@ it("shows the saved value with cautious fallback guidance for unknown failures",
   expect(screen.getByText("PRIVATE_VALUE")).toBeVisible();
   expect(screen.queryByText("••••••••")).not.toBeInTheDocument();
   expect(
-    screen.getByText(
+    screen.getByLabelText(
       "자동으로 입력하지 못했어요. 지원서에서 이 값을 직접 입력해 주세요.",
     ),
   ).toBeVisible();
   expect(screen.queryByText(/검색 결과가 없어요/)).not.toBeInTheDocument();
+  expect(screen.queryByLabelText(/검색 결과가 없어요/)).not.toBeInTheDocument();
 });
 
 it.each<[WriteFailureCode, string]>([
@@ -179,9 +183,10 @@ it.each<[WriteFailureCode, string]>([
         ]}
       />,
     );
-    expect(screen.getByText(guidance)).toBeVisible();
+    expect(screen.getByLabelText(guidance)).toBeVisible();
     expect(screen.getByText("PRIVATE_PROFILE")).toBeVisible();
     expect(screen.queryByText(/RAW_SITE/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/RAW_SITE/)).not.toBeInTheDocument();
     expect(screen.getByLabelText("입력 완료 0개")).toBeInTheDocument();
     expect(screen.getByLabelText("확인 필요 1개")).toBeInTheDocument();
   },
@@ -221,11 +226,14 @@ it("shows the failed search separately from its halted follow-up in the result U
     />,
   );
   expect(
-    screen.getByText("검색창 구조를 안전하게 확인하지 못해 입력을 보류했어요."),
+    screen.getByLabelText(
+      "검색창 구조를 안전하게 확인하지 못해 입력을 보류했어요.",
+    ),
   ).toBeVisible();
   expect(
-    screen.getByText("앞선 검색 실패로 후속 입력을 보류했어요."),
+    screen.getByLabelText("앞선 검색 실패로 후속 입력을 보류했어요."),
   ).toBeVisible();
   expect(screen.getByLabelText("확인 필요 2개")).toBeInTheDocument();
   expect(screen.queryByText(/RAW_SITE/)).not.toBeInTheDocument();
+  expect(screen.queryByLabelText(/RAW_SITE/)).not.toBeInTheDocument();
 });

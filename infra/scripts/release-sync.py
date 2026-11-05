@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Keep release refs until deployment and development synchronization complete."""
+"""Keep release refs until synchronization completes and delete merged work branches safely."""
 import json
 import os
 import re
@@ -10,6 +10,10 @@ from pathlib import Path
 
 RELEASE_PATTERN = re.compile(r"release/(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)")
 SHA_PATTERN = re.compile(r"[0-9a-f]{40}")
+WORK_PATTERN = re.compile(r"CF-[1-9][0-9]*")
+HOTFIX_PATTERN = re.compile(r"hotfix/CF-[1-9][0-9]*")
+REVERT_PATTERN = re.compile(r"revert/[0-9a-f]{7,40}")
+LONG_LIVED_BRANCHES = ("main", "develop")
 
 
 class SyncError(ValueError):
@@ -45,11 +49,11 @@ def remote_sha(branch: str) -> str:
 def verify_head(branch: str, expected: str) -> str:
     current = remote_sha(branch)
     if current and current != expected:
-        raise SyncError("release SHA가 확인한 커밋과 다릅니다. 변경을 확인하고 수동 복구하세요")
+        raise SyncError(f"{branch} SHA가 확인한 커밋과 다릅니다. 변경을 확인하고 수동 복구하세요")
     return current
 
 
-def delete_release(branch: str, expected: str) -> None:
+def delete_branch(branch: str, expected: str) -> None:
     if not verify_head(branch, expected):
         return
     ref = f"refs/heads/{branch}"
@@ -70,7 +74,7 @@ def prepare() -> str:
         text=True, capture_output=True, check=False,
     )
     if result.returncode == 0:
-        delete_release(branch, expected)
+        delete_branch(branch, expected)
         return "complete"
     if result.returncode != 1:
         raise SyncError(result.stderr.strip() or "develop 반영 여부를 확인할 수 없습니다")
@@ -94,16 +98,67 @@ def cleanup() -> str:
         return "skipped"
     expected = head.get("sha", "")
     validate_release(branch, expected)
-    delete_release(branch, expected)
+    delete_branch(branch, expected)
+    return "complete"
+
+
+def is_cleanable_work_branch(head: str, base: str) -> bool:
+    if head in LONG_LIVED_BRANCHES or head.startswith("release/"):
+        return False
+    if WORK_PATTERN.fullmatch(head):
+        return base == "develop" or RELEASE_PATTERN.fullmatch(base) is not None
+    if HOTFIX_PATTERN.fullmatch(head) or REVERT_PATTERN.fullmatch(head):
+        return base == "main"
+    return False
+
+
+def read_open_pulls(path: str) -> list:
+    pulls = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(pulls, list):
+        raise SyncError("열린 PR 목록 형식이 올바르지 않습니다")
+    return pulls
+
+
+def cleanup_work_branch(open_pulls_path: str) -> str:
+    event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text(encoding="utf-8"))
+    pull_request = event.get("pull_request") or {}
+    head = pull_request.get("head") or {}
+    branch = head.get("ref", "")
+    if not (
+        event.get("action") == "closed"
+        and pull_request.get("merged") is True
+        and (head.get("repo") or {}).get("full_name") == os.environ["GITHUB_REPOSITORY"]
+        and is_cleanable_work_branch(branch, (pull_request.get("base") or {}).get("ref", ""))
+    ):
+        return "skipped"
+    # An unreadable list means the open-PR state is unknown, so never delete.
+    if read_open_pulls(open_pulls_path):
+        return "skipped"
+    expected = head.get("sha", "")
+    if not SHA_PATTERN.fullmatch(expected):
+        raise SyncError("작업 브랜치 SHA 형식이 올바르지 않습니다")
+    delete_branch(branch, expected)
     return "complete"
 
 
 def main() -> int:
-    if len(sys.argv) != 2 or sys.argv[1] not in ("prepare", "cleanup"):
-        print("사용법: release-sync.py prepare|cleanup", file=sys.stderr)
+    arguments = sys.argv[1:]
+    if not (
+        arguments in (["prepare"], ["cleanup"])
+        or (len(arguments) == 2 and arguments[0] == "cleanup-work-branch")
+    ):
+        print(
+            "사용법: release-sync.py prepare|cleanup|cleanup-work-branch <열린 PR 목록 JSON>",
+            file=sys.stderr,
+        )
         return 2
     try:
-        print(prepare() if sys.argv[1] == "prepare" else cleanup())
+        if arguments[0] == "prepare":
+            print(prepare())
+        elif arguments[0] == "cleanup":
+            print(cleanup())
+        else:
+            print(cleanup_work_branch(arguments[1]))
     except (SyncError, OSError, KeyError, ValueError) as error:
         print(error, file=sys.stderr)
         return 1

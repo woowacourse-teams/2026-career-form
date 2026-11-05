@@ -6,6 +6,7 @@ import {
   mountSyntheticNative,
 } from "./hplace-mrs2-native.synthetic";
 import { installExecutionPolicy } from "../../workflow/execution-policy";
+import { FIXTURE_ADDRESS_WAIT_MS } from "../../../test/fixtures/wait-cap";
 import { getWorkflowAdapter } from "../../adapters/workflow";
 import { isForbiddenClick, mountPageChrome } from "./hplace-mrs2-page-chrome";
 import type { AddressValue } from "../../address/types";
@@ -76,7 +77,8 @@ export const addressContract = () => ({
   confirmCancelSelector: 'button[data-button="cancel"]',
   confirmCancelLabel: "취소",
   modalCloseSelector: 'button[data-button="modalClose"]',
-  timeoutMs: 1500,
+  // The contract floor is 1 s (live budget 1.5–2.5 s); the fixture dialog answers within a few ticks.
+  timeoutMs: FIXTURE_ADDRESS_WAIT_MS,
 });
 export function addressPolicy() {
   const p = syntheticNativePolicy();

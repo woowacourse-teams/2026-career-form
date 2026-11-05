@@ -15,7 +15,6 @@ import {
   type StaticFieldsSession,
 } from "./static-fields-session";
 import { componentBasicControls } from "../policy/components/fingerprint";
-import { AnalysisServiceError } from "../api/runtime-client";
 import {
   resolveDocumentCompany,
   isUnsupportedHplace,
@@ -27,8 +26,16 @@ import {
   preparationExceptionTitle,
 } from "./preparation-options";
 import { useWriteProgress } from "./use-write-progress";
+import { useReviewDiagnostics } from "./use-review-diagnostics";
 import { useOperatedFields } from "./use-operated-fields";
 import { resultFieldOptions, resultFieldState } from "./result-field-state";
+import { openOptionsPageFromContent } from "../../extension/navigation";
+import { emitResultDiagnostics } from "../generic/result-diagnostics";
+import {
+  buildResultModel,
+  profileGroups,
+  unfilledCandidateIds,
+} from "./result-model";
 import {
   captureComponentResultTargets,
   recollectComponentResultRegistry,
@@ -39,6 +46,7 @@ import {
 } from "./retained-drivers";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createFieldPresentation } from "../write/field-presentation";
+import { createUnfilledPresentation } from "../write/unfilled-presentation";
 import { progressCategory, type WorkflowActivity } from "./progress-model";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import type { AddressResult } from "../address/types";
@@ -66,6 +74,9 @@ import {
   type WriteResultListener,
 } from "../write/executor";
 import { WorkflowScreens } from "./WorkflowScreens";
+import { WorkflowError, type WorkflowErrorKind } from "./WorkflowError";
+import loadingStyles from "./WorkflowLoading.module.css";
+import { errorDetail, startErrorKind } from "./start-error";
 import { observeQuality } from "../quality/safe-observation";
 import {
   createAnalyzeFields,
@@ -75,6 +86,21 @@ import {
   type GenericSearchFollowUp,
 } from "./workflow-analysis";
 import { createWriteRevealedFields } from "./revealed-fields";
+import { fillableControls, newlyRevealedControls } from "./generic-follow-up";
+import {
+  appearableProfileItems,
+  isPreApprovedItem,
+  preApprovalKeyOf,
+  preApprovalScope,
+} from "./pre-approval";
+import { watchRevealedFields } from "./reveal-watch";
+import { saveWrittenRows, type RowSaveManual } from "../generic/row-save";
+import {
+  hasUnsavedEntries,
+  isNextBoxEntry,
+  savedEntryOffsets,
+} from "./single-box-entries";
+import { recordOf, rowSaveFields } from "./row-save-fields";
 import { createReviewActions, sensitiveValueApproved } from "./review-actions";
 import {
   createSearchFollowUpRecorder,
@@ -107,12 +133,22 @@ import {
   type StructureDiagnostics,
 } from "../generic/structure-diagnostics";
 import { debugWarn } from "../debug/autofill-debug";
+import { useDeveloperMode } from "../debug/developer-mode";
+import { localWorkflowLog } from "../debug/local-workflow";
 
 export { localItemCount, shouldRunRevealPlan } from "./workflow-model";
 
+const MAX_REVEAL_WATCH_ROUNDS = 5;
+const MAX_ENTRY_PASSES = 10;
+
 export function AutofillWorkflow(props: WorkflowProps) {
   const [loaded, setLoaded] = useState(false);
-  const [error, setError] = useState<string>();
+  const [error, setError] = useState<{
+    kind: WorkflowErrorKind;
+    detail: string;
+  }>();
+  // Retry only runs from the user's click and reloads the policy afresh.
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let active = true;
     const url = props.pageDocument.URL;
@@ -135,34 +171,38 @@ export function AutofillWorkflow(props: WorkflowProps) {
       })
       .catch((error: unknown) => {
         if (!active) return;
-        if (
-          error instanceof AnalysisServiceError &&
-          error.code === "POLICY_INCOMPATIBLE"
-        ) {
-          setError(
-            "지원서 정책이 이 확장 버전과 맞지 않아요. 확장을 최신 버전으로 업데이트한 뒤 다시 시도해 주세요.",
-          );
-          return;
-        }
-        setError(
-          "사이트 정책을 불러오지 못했습니다. " +
-            (error instanceof Error ? error.message : "다시 실행해 주세요."),
-        );
+        setError({ kind: startErrorKind(error), detail: errorDetail(error) });
       });
     return () => {
       active = false;
     };
-  }, [props.apiClient, props.pageDocument]);
+  }, [props.apiClient, props.pageDocument, attempt]);
+  const [developerMode] = useDeveloperMode();
   if (error)
     return (
-      <div role="alert">
-        {error}
-        <button onClick={props.onExit}>돌아가기</button>
-      </div>
+      <WorkflowError
+        kind={error.kind}
+        developerMode={developerMode}
+        detail={error.detail}
+        onRetry={() => setAttempt((count) => count + 1)}
+        onBack={props.onExit}
+      />
     );
   if (!loaded)
-    return <div role="status">사이트 입력 정책을 확인하고 있어요</div>;
-  return <PolicyReadyWorkflow {...props} />;
+    return (
+      <div className={loadingStyles.container}>
+        <p className={loadingStyles.status} role="status">
+          사이트 입력 정책을 확인하고 있어요
+        </p>
+      </div>
+    );
+  return (
+    <PolicyReadyWorkflow
+      key={attempt}
+      {...props}
+      onRetry={() => setAttempt((count) => count + 1)}
+    />
+  );
 }
 
 function PolicyReadyWorkflow({
@@ -173,8 +213,10 @@ function PolicyReadyWorkflow({
   pageDocument,
   onExit,
   unsupportedImageUrl,
+  writingImageUrl,
   addressSearch = runtimeAddressSearch,
-}: WorkflowProps) {
+  onRetry,
+}: WorkflowProps & { onRetry(): void }) {
   const companyId = resolveDocumentCompany(pageDocument);
   // Analysis may replace the installed policy mid-run. The structure loop
   // stays tied to the policy present when the workflow started, so a document
@@ -202,7 +244,17 @@ function PolicyReadyWorkflow({
     () => createFieldPresentation(pageDocument),
     [pageDocument],
   );
+  const unfilledPresentation = useMemo(
+    () => createUnfilledPresentation(pageDocument),
+    [pageDocument],
+  );
   const [currentCategory, setCurrentCategory] = useState<string>();
+  const [developerMode] = useDeveloperMode();
+  // 진행 항목은 기입 묶음을 가로질러 누적되므로 묶음별 처리 수를 따로 센다.
+  const batchDoneIds = useRef(new Set<string>());
+  // 범용 재확인 뒤의 묶음은 앞 묶음의 처리 수에 이어서 센다.
+  const batchBase = useRef(0);
+  const [writeBatch, setWriteBatch] = useState({ total: 0, done: 0 });
   const [activity, setActivity] = useState<WorkflowActivity>("matching");
   const { operated, operatedCategories, recordOperation } =
     useOperatedFields(pageDocument);
@@ -217,6 +269,11 @@ function PolicyReadyWorkflow({
   );
   const onWriteResult: WriteResultListener = (item, result, registry) => {
     recordWriteResult(item, result, registry);
+    batchDoneIds.current.add(item.candidateId);
+    setWriteBatch((batch) => ({
+      ...batch,
+      done: batchBase.current + batchDoneIds.current.size,
+    }));
     observeQuality(() => apiClient.quality?.write(item, result, registry));
   };
   const presentField = async (
@@ -263,6 +320,42 @@ function PolicyReadyWorkflow({
   const approvedSensitiveValues = useRef(new Map<string, string>());
   const consideredSensitiveValues = useRef(new Map<string, string>());
   const freshDefaultControls = useRef(new WeakSet<Element>());
+  // Generic pages that reveal new fields after a write get a bounded number
+  // of extra review passes (observed reveal, no aria-controls needed).
+  const revealPasses = useRef(0);
+  // Revealed fields approved in advance by the first pass (#358): written in
+  // their reveal pass. The fields a reveal pass does not write are listed in
+  // the result.
+  const preApprovedScope = useRef<ReadonlySet<string>>(new Set());
+  const firstReviewKeys = useRef<ReadonlySet<string>>(new Set());
+  const [revealReview, setRevealReview] = useState(false);
+  const lastPassResults = useRef<ApprovedWriteResult[]>([]);
+  const [autoExecutePending, setAutoExecutePending] = useState(false);
+  const [autoWrittenLabels, setAutoWrittenLabels] = useState<string[]>([]);
+  const [manualRevealedLabels, setManualRevealedLabels] = useState<string[]>(
+    [],
+  );
+  const autoWrittenKeys = useRef(new Set<string>());
+  const revealWatchRounds = useRef(0);
+  // Row saves (#370): the rows the extension saved, and whether a save it
+  // could not confirm stopped the later rows of its category.
+  const savedRowKeys = useRef(new Set<string>());
+  const rowSaveStopped = useRef(new Set<string>());
+  // A single entry box is refilled with the next stored entry after each
+  // confirmed save; entry passes are capped apart from reveal passes.
+  const singleRowEntryOffsets = useRef<ReadonlyMap<string, number>>(new Map());
+  const entryPasses = useRef(0);
+  const writtenBefore = (
+    item: Parameters<typeof isNextBoxEntry>[0],
+    registry: Parameters<typeof progressTracker.wasWritten>[1],
+  ) =>
+    progressTracker.wasWritten(item.candidateId, registry) &&
+    !isNextBoxEntry(item, singleRowEntryOffsets.current, savedRowKeys.current);
+  const [rowSave, setRowSave] = useState<{
+    saved: number;
+    manual: RowSaveManual[];
+    stopped: string[];
+  }>({ saved: 0, manual: [], stopped: [] });
   const completedDriverKeys = useRef<ReadonlySet<string>>(new Set());
   const completedGenericStateDrivers = useRef<
     ReadonlyMap<string, CompletedGenericStateDriver>
@@ -284,11 +377,27 @@ function PolicyReadyWorkflow({
     useState<
       CollectedSnapshot<ReturnType<typeof collectFieldsSnapshot>["request"]>
     >();
+  const onGenericGrades = useReviewDiagnostics(
+    stage,
+    companyId,
+    reviewItems,
+    fieldsSnapshot,
+    pageDocument,
+    profile,
+  );
   const [resultRegistry, setResultRegistry] = useState<CandidateRegistry>();
   const [partial, setPartial] = useState(false);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [exceptionTitle, setExceptionTitle] =
     useState("분석을 완료하지 못했습니다");
+  // A caught error can carry server or contract text. It never becomes the
+  // reason on screen; developer mode shows it in the error details.
+  const [caughtText, setCaughtText] = useState<string>();
+  // Set only when the first analysis fails; later exceptions are interruptions.
+  const [startError, setStartError] = useState<{
+    kind: WorkflowErrorKind;
+    detail: string;
+  }>();
   const [results, setResults] = useState<ApprovedWriteResult[]>([]);
   const [analysisSummary, setAnalysisSummary] = useState<{
     mode: "ADAPTER" | "GENERIC";
@@ -296,6 +405,16 @@ function PolicyReadyWorkflow({
     fieldCount: number;
     matchedCount: number;
   }>();
+  const appearableItems = useMemo(
+    () =>
+      stage === "review" &&
+      revealPasses.current === 0 &&
+      analysisSummary?.mode === "GENERIC" &&
+      profile
+        ? appearableProfileItems(profile, reviewItems)
+        : [],
+    [stage, reviewItems, profile, analysisSummary],
+  );
   const [workflowDiagnostics, setWorkflowDiagnostics] = useState<
     WorkflowDiagnostic[]
   >([]);
@@ -315,6 +434,7 @@ function PolicyReadyWorkflow({
       onAddressOperation: (element) =>
         recordOperation(element, "연락처와 주소"),
       onAnalysis: setAnalysisSummary,
+      onGenericGrades,
       adapter: getWorkflowAdapter(pageDocument),
       addressRun,
       addressSearch,
@@ -330,6 +450,7 @@ function PolicyReadyWorkflow({
       approvedSensitiveValues,
       consideredSensitiveValues,
       freshDefaultControls,
+      singleRowEntryOffsets,
       completedDriverKeys,
       completedGenericStateDrivers,
       completedComponentStateDrivers,
@@ -390,6 +511,8 @@ function PolicyReadyWorkflow({
       task?: Promise<AddressResult>;
     } = { controller: new AbortController() };
     addressRun.current = run;
+    revealPasses.current = 0;
+    entryPasses.current = 0;
     const start = async () => {
       try {
         if (isUnsupportedHplace(pageDocument)) {
@@ -598,7 +721,11 @@ function PolicyReadyWorkflow({
         setPreparationExecutionPending(true);
       } catch (error) {
         if (!active) return;
-        setExceptionTitle(safeErrorTitle(error));
+        setCaughtText(safeErrorTitle(error));
+        setStartError({
+          kind: startErrorKind(error),
+          detail: errorDetail(error),
+        });
         setStage("exception");
       }
     };
@@ -760,13 +887,13 @@ function PolicyReadyWorkflow({
         await analyzeFields(profile, addedRowsToEmptyForm);
       } catch (error) {
         if (mounted.current) {
-          setExceptionTitle(safeErrorTitle(error));
+          setCaughtText(safeErrorTitle(error));
           setStage("exception");
         }
       }
     } catch (error) {
       if (mounted.current) {
-        setExceptionTitle(safeErrorTitle(error));
+        setCaughtText(safeErrorTitle(error));
         setStage("exception");
       }
     } finally {
@@ -794,6 +921,18 @@ function PolicyReadyWorkflow({
   const executeWrites = async () => {
     if (!fieldsSnapshot || executionPending.current) return;
     executionPending.current = true;
+    if (revealPasses.current === 0) {
+      preApprovedScope.current = preApprovalScope(appearableItems);
+      firstReviewKeys.current = new Set(
+        reviewItems.flatMap((item) => {
+          const key =
+            item.hiddenFromReview || item.disabled
+              ? undefined
+              : preApprovalKeyOf(item);
+          return key ? [key] : [];
+        }),
+      );
+    }
     setResultRegistry(undefined);
     try {
       const retainedDrivers = retainedDriverReviewResults(
@@ -818,9 +957,15 @@ function PolicyReadyWorkflow({
         setStage("result");
         return;
       }
-      const retainedCandidateIds = new Set(
-        retainedDrivers.results.map((result) => result.candidateId),
-      );
+      const retainedCandidateIds = new Set([
+        ...retainedDrivers.results.map((result) => result.candidateId),
+        // A later generic pass never re-executes a field an earlier pass wrote.
+        ...(analysisSummary?.mode === "GENERIC"
+          ? reviewItems
+              .filter((item) => writtenBefore(item, fieldsSnapshot.registry))
+              .map((item) => item.candidateId)
+          : []),
+      ]);
       const { executableReviewItems, approvedCandidateIds } =
         approvedReviewExecution(reviewItems, retainedCandidateIds);
       if (
@@ -844,10 +989,27 @@ function PolicyReadyWorkflow({
         setStage("exception");
         return;
       }
+      batchBase.current =
+        revealPasses.current > 0 && analysisSummary?.mode === "GENERIC"
+          ? batchBase.current + batchDoneIds.current.size
+          : 0;
+      batchDoneIds.current = new Set();
+      setWriteBatch({
+        total: batchBase.current + approvedCandidateIds.size,
+        done: batchBase.current,
+      });
       setStage("writing");
+      localWorkflowLog("writes-start", {
+        passes: revealPasses.current,
+        approved: approvedCandidateIds.size,
+      });
       writeController.current.abort();
       writeController.current = new AbortController();
       const approvedProfile = JSON.stringify(profile);
+      const controlsBefore =
+        analysisSummary?.mode === "GENERIC"
+          ? fillableControls(pageDocument)
+          : undefined;
       const componentTargets = executionPolicy(pageDocument)?.componentPolicy
         ?.workflow.captureDriverResults
         ? captureComponentResultTargets(fieldsSnapshot.registry, reviewItems)
@@ -937,17 +1099,246 @@ function PolicyReadyWorkflow({
           );
         return;
       }
+      let nextEntryPass = false;
+      if (
+        analysisSummary?.mode === "GENERIC" &&
+        !writeController.current.signal.aborted
+      ) {
+        const rows = await saveWrittenRows({
+          document: pageDocument,
+          fields: rowSaveFields({
+            items: reviewItems,
+            approvedIds: approvedCandidateIds,
+            passResults: nextResults,
+            registry: fieldsSnapshot.registry,
+            wasWritten: (id) =>
+              progressTracker.wasWritten(id, fieldsSnapshot.registry),
+          }),
+          savedKeys: savedRowKeys.current,
+          stopped: rowSaveStopped.current,
+          signal: writeController.current.signal,
+        });
+        if (!mounted.current) return;
+        rows.saved.forEach((key) => savedRowKeys.current.add(key));
+        singleRowEntryOffsets.current = savedEntryOffsets(savedRowKeys.current);
+        nextEntryPass =
+          rows.saved.length > 0 &&
+          preApprovedScope.current.size > 0 &&
+          entryPasses.current < MAX_ENTRY_PASSES &&
+          profile !== undefined &&
+          hasUnsavedEntries(profile, singleRowEntryOffsets.current);
+        rows.stopped.forEach((category) =>
+          rowSaveStopped.current.add(category),
+        );
+        localWorkflowLog("row-save", {
+          saved: rows.saved.length,
+          manual: rows.manual.length,
+          stopped: rows.stopped.length,
+        });
+        if (rows.saved.length > 0 || rows.manual.length > 0)
+          setRowSave((current) => ({
+            saved: current.saved + rows.saved.length,
+            manual: [
+              ...current.manual.filter(
+                (row) =>
+                  !rows.saved.includes(row.recordKey) &&
+                  !rows.manual.some((next) => next.recordKey === row.recordKey),
+              ),
+              ...rows.manual,
+            ],
+            stopped: rows.stopped,
+          }));
+      }
+      const revealed = controlsBefore
+        ? newlyRevealedControls(pageDocument, controlsBefore)
+        : [];
+      localWorkflowLog("reveal-check", {
+        revealed: revealed.length,
+        passes: revealPasses.current,
+        written: nextResults.filter((result) => result.status === "written")
+          .length,
+        aborted: writeController.current.signal.aborted,
+      });
+      if (
+        ((revealed.length > 0 &&
+          revealPasses.current - entryPasses.current <
+            (preApprovedScope.current.size > 0 ? 4 : 2) &&
+          nextResults.some((result) => result.status === "written")) ||
+          nextEntryPass) &&
+        !writeController.current.signal.aborted
+      ) {
+        if (
+          profile &&
+          JSON.stringify(await repository.load()) !== JSON.stringify(profile)
+        ) {
+          setExceptionTitle(
+            "입력 중 프로필이 변경되었습니다. 다시 시작해 주세요",
+          );
+          setStage("exception");
+          return;
+        }
+        revealPasses.current += 1;
+        if (nextEntryPass) entryPasses.current += 1;
+        lastPassResults.current = [...retainedDrivers.results, ...nextResults];
+        setRevealReview(true);
+        await analyzeFields(
+          profile!,
+          false,
+          completedDriverKeys.current,
+          deferredDriverGroups.current,
+        );
+        if (revealed.length > 0)
+          setWarnings((current) => [
+            ...current,
+            `값을 넣은 뒤 새 입력칸 ${revealed.length}개가 나타나 다시 확인했어요.`,
+          ]);
+        return;
+      }
       setResults([...retainedDrivers.results, ...nextResults]);
       setStage("result");
     } catch (error) {
       if (mounted.current) {
-        setExceptionTitle(safeErrorTitle(error));
+        setCaughtText(safeErrorTitle(error));
         setStage("exception");
       }
     } finally {
       executionPending.current = false;
     }
   };
+
+  // In a reveal pass, fields an earlier pass already wrote stay visible as
+  // done instead of being offered (and counted) again.
+  useEffect(() => {
+    if (stage !== "review" || revealPasses.current === 0 || !fieldsSnapshot)
+      return;
+    setReviewItems((items) => {
+      let changed = false;
+      const next = items.map((item) => {
+        if (item.disabled || !writtenBefore(item, fieldsSnapshot.registry))
+          return item;
+        changed = true;
+        return {
+          ...item,
+          selected: false,
+          disabled: true,
+          reason: "앞 단계에서 이미 기입했어요.",
+        };
+      });
+      return changed ? next : items;
+    });
+  }, [stage, fieldsSnapshot]);
+
+  // A generic page never stops at the review screen: the analysis hands over
+  // its items and the selected ones are written at once.
+  useEffect(() => {
+    if (
+      stage !== "review" ||
+      revealReview ||
+      analysisSummary?.mode !== "GENERIC" ||
+      !fieldsSnapshot
+    )
+      return;
+    setAutoExecutePending(true);
+  }, [stage, revealReview]);
+
+  // A reveal pass writes the approved revealed fields at once and lists the
+  // other new fields in the result.
+  useEffect(() => {
+    if (stage !== "review" || !revealReview || !fieldsSnapshot) return;
+    setRevealReview(false);
+    const unwritten = reviewItems.filter(
+      (item) => !item.disabled && !writtenBefore(item, fieldsSnapshot.registry),
+    );
+    // A saved row is registered; its entry is never written again into the
+    // emptied entry area.
+    const approved = unwritten.filter(
+      (item) =>
+        (item.includedByDeveloper ||
+          isPreApprovedItem(item, preApprovedScope.current)) &&
+        !savedRowKeys.current.has(recordOf(item)?.key ?? ""),
+    );
+    const approvedIds = new Set(approved.map((item) => item.candidateId));
+    const manual = unwritten.filter((item) => {
+      const key = preApprovalKeyOf(item);
+      return (
+        !approvedIds.has(item.candidateId) &&
+        !item.hiddenFromReview &&
+        key !== undefined &&
+        !firstReviewKeys.current.has(key) &&
+        !autoWrittenKeys.current.has(key)
+      );
+    });
+    setManualRevealedLabels((labels) => [
+      ...new Set([...labels, ...manual.map((item) => item.fieldLabel)]),
+    ]);
+    if (approved.length === 0) {
+      setResults(lastPassResults.current);
+      setStage("result");
+      return;
+    }
+    setAutoWrittenLabels((labels) => [
+      ...labels,
+      ...approved.map((item) => item.fieldLabel),
+    ]);
+    approved.forEach((item) => {
+      const key = preApprovalKeyOf(item);
+      if (key) autoWrittenKeys.current.add(key);
+    });
+    setReviewItems((items) =>
+      items.map((item) =>
+        approvedIds.has(item.candidateId) ? item : { ...item, selected: false },
+      ),
+    );
+    setStage("writing");
+    setAutoExecutePending(true);
+  }, [stage, revealReview, reviewItems, fieldsSnapshot]);
+
+  // After the run, the page may reveal approved fields once the user saves a
+  // section. The watch presses nothing; only row saves (#370) press a save.
+  useEffect(() => {
+    const scope = preApprovedScope.current;
+    if (
+      stage !== "result" ||
+      !profile ||
+      scope.size === 0 ||
+      revealWatchRounds.current >= MAX_REVEAL_WATCH_ROUNDS ||
+      [...scope].every((key) => autoWrittenKeys.current.has(key))
+    )
+      return;
+    const approvedProfile = JSON.stringify(profile);
+    return watchRevealedFields({
+      document: pageDocument,
+      baseline: fillableControls(pageDocument),
+      onReveal: () =>
+        void (async () => {
+          if (
+            !mounted.current ||
+            JSON.stringify(await repository.load()) !== approvedProfile
+          )
+            return;
+          revealWatchRounds.current += 1;
+          revealPasses.current += 1;
+          lastPassResults.current = results;
+          setRevealReview(true);
+          await analyzeFields(
+            profile,
+            false,
+            completedDriverKeys.current,
+            deferredDriverGroups.current,
+          );
+          setWarnings((current) => [
+            ...current,
+            "저장 뒤 새 입력칸이 나타나 다시 확인했어요.",
+          ]);
+        })(),
+    });
+  }, [stage]);
+
+  useEffect(() => {
+    if (!autoExecutePending) return;
+    setAutoExecutePending(false);
+    void executeWrites();
+  }, [autoExecutePending]);
 
   useEffect(() => {
     if (!preparationExecutionPending) return;
@@ -962,10 +1353,53 @@ function PolicyReadyWorkflow({
       ? (resultRegistry ?? fieldsSnapshot?.registry)
       : fieldsSnapshot?.registry;
 
+  // Red borders stay until the user fills a field, the panel closes or the page changes.
+  useEffect(() => () => unfilledPresentation.clear(), [unfilledPresentation]);
+  useEffect(() => {
+    if (stage !== "result" || !visibleRegistry) {
+      unfilledPresentation.clear();
+      return;
+    }
+    const fieldStateFor = (id: string) =>
+      resultFieldState(visibleRegistry, pageDocument, id);
+    const model = buildResultModel({
+      reviewItems,
+      results,
+      progress,
+      profile,
+      wasWritten: (id) => progressTracker.wasWritten(id, visibleRegistry),
+      progressIdFor: (id) => progressTracker.progressIdFor(id, visibleRegistry),
+      progressStateFor: progressTracker.progressStateFor,
+      fieldStateFor,
+    });
+    // On a generic page only fields to check get a red border; the ones with
+    // no saved value are listed in gray instead.
+    const generic = analysisSummary?.mode === "GENERIC";
+    unfilledPresentation.mark(
+      visibleRegistry,
+      unfilledCandidateIds(
+        model,
+        (id) => fieldStateFor(id)?.value,
+        generic ? { pendingOnly: true } : undefined,
+      ),
+    );
+    if (generic)
+      emitResultDiagnostics(model, profileGroups(model, fieldStateFor));
+  }, [stage, results, progress, visibleRegistry, analysisSummary?.mode]);
+
   return (
     <WorkflowScreens
       progress={progress}
-      activity={activity}
+      developerMode={developerMode}
+      writeTotal={writeBatch.total}
+      writeDone={writeBatch.done}
+      activity={
+        revealReview &&
+        analysisSummary?.mode === "GENERIC" &&
+        activity !== "address"
+          ? "rechecking"
+          : activity
+      }
       progressStateFor={progressTracker.progressStateFor}
       progressIdFor={(id) =>
         visibleRegistry
@@ -980,7 +1414,12 @@ function PolicyReadyWorkflow({
       }
       profile={profile}
       optionsFor={(id) => resultFieldOptions(visibleRegistry, id)}
-      stage={stage}
+      onOpenProfile={() => void openOptionsPageFromContent()}
+      stage={
+        stage === "review" && analysisSummary?.mode === "GENERIC"
+          ? "writing"
+          : stage
+      }
       preparationItems={preparationItems}
       warnings={warnings}
       revealedPreparationKeys={revealedPreparationKeys}
@@ -998,8 +1437,12 @@ function PolicyReadyWorkflow({
       addressResult={addressResult}
       adapter={adapter}
       workflowDiagnostics={workflowDiagnostics}
-      exceptionTitle={exceptionTitle}
+      exceptionTitle={caughtText === undefined ? exceptionTitle : ""}
+      exceptionKind={startError?.kind ?? "interrupted"}
+      exceptionDetail={startError?.detail ?? caughtText}
+      onRetry={onRetry}
       unsupportedImageUrl={unsupportedImageUrl}
+      writingImageUrl={writingImageUrl}
       unsupportedKind={
         stage === "unsupported"
           ? unsupportedHplaceKind(pageDocument)
@@ -1020,6 +1463,9 @@ function PolicyReadyWorkflow({
       onLocate={(candidateId) =>
         !!visibleRegistry && presentation.show(visibleRegistry, candidateId)
       }
+      autoWrittenLabels={autoWrittenLabels}
+      manualRevealedLabels={manualRevealedLabels}
+      rowSave={rowSave}
     />
   );
 }

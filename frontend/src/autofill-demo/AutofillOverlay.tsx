@@ -15,6 +15,7 @@ interface AutofillOverlayProps {
   repository?: Pick<ProfileRepository, "load">;
   pageDocument?: Document;
   unsupportedImageUrl?: string;
+  writingImageUrl?: string;
 }
 
 export function AutofillOverlay({
@@ -25,6 +26,7 @@ export function AutofillOverlay({
   repository: injectedRepository,
   pageDocument = document,
   unsupportedImageUrl,
+  writingImageUrl,
 }: AutofillOverlayProps) {
   const apiClient = useMemo(
     () => injectedApiClient ?? new RuntimeAnalysisApiClient(),
@@ -68,6 +70,7 @@ export function AutofillOverlay({
           repository={repository}
           pageDocument={pageDocument}
           unsupportedImageUrl={unsupportedImageUrl}
+          writingImageUrl={writingImageUrl}
           onExit={onClose}
         />
       </div>

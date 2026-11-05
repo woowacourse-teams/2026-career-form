@@ -1,13 +1,27 @@
-import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useSyncExternalStore,
+} from "react";
 
+import { browser } from "wxt/browser";
+
+import { trackExtensionEvent } from "../analytics/extension-tracker";
+import type { TrackEvent } from "../analytics/events";
 import { prepareImportPolicy } from "../profile/page-import/load-import-policy";
-import { readGreetingImport } from "../profile/page-import/reader";
+import {
+  readGreetingImport,
+  recognizesGreetingForm,
+} from "../profile/page-import/reader";
 import { App } from "../../entrypoints/sidepanel/App";
 import { RuntimeAnalysisApiClient } from "../autofill/api/runtime-client";
 import type { AnalysisApiClient } from "../autofill/api/types";
 import { AutofillOverlay } from "../autofill-demo/AutofillOverlay";
 import type { ProfileRepository } from "../profile/profile-repository";
 import { ChromeProfileStorage } from "../storage/chrome-profile-storage";
+import { requestPanelShortcut } from "./panel-shortcut";
 import type { ProfilePanelController } from "./profile-panel-controller";
 
 interface InPageProfilePanelProps {
@@ -16,10 +30,18 @@ interface InPageProfilePanelProps {
   openOptions(): Promise<void> | void;
   logoUrl: string;
   unsupportedImageUrl?: string;
+  writingImageUrl?: string;
   pageDocument: Document;
   apiClient?: AnalysisApiClient;
   repository?: ProfileRepository;
+  track?: TrackEvent;
+  readPanelShortcut?: () => Promise<string | undefined>;
 }
+
+// Stable identity so the hint reads the shortcut once per mount, not per render.
+// In jsdom `browser.runtime` is missing; the rejection only hides the hint.
+const readShortcutFromBackground = async () =>
+  requestPanelShortcut(browser.runtime);
 
 export function InPageProfilePanel({
   controller,
@@ -27,9 +49,12 @@ export function InPageProfilePanel({
   openOptions,
   logoUrl,
   unsupportedImageUrl,
+  writingImageUrl,
   pageDocument,
   apiClient: injectedApiClient,
   repository: injectedRepository,
+  track = trackExtensionEvent,
+  readPanelShortcut = readShortcutFromBackground,
 }: InPageProfilePanelProps) {
   const mode = useSyncExternalStore(
     controller.subscribe,
@@ -45,18 +70,47 @@ export function InPageProfilePanel({
   );
 
   useEffect(() => () => controller.showProfile(), [controller]);
-  const readImportCandidates = useCallback(async () => {
-    await prepareImportPolicy(
+  // One policy request serves the mount-time offer check and a click that
+  // arrives while it is still pending.
+  const pendingPolicy = useRef<Promise<void> | undefined>(undefined);
+  const preparePolicy = useCallback(() => {
+    pendingPolicy.current ??= prepareImportPolicy(
       pageDocument,
       apiClient.loadExecutionPolicy?.bind(apiClient),
-    );
-    return readGreetingImport(pageDocument);
+    ).finally(() => {
+      pendingPolicy.current = undefined;
+    });
+    return pendingPolicy.current;
   }, [pageDocument, apiClient]);
+  // Exposure for the import offer: once per panel open, only on a form the
+  // installed policy recognizes as Greeting. Only the host is recorded.
+  useEffect(() => {
+    let active = true;
+    void preparePolicy()
+      .then(() => {
+        if (!active || !recognizesGreetingForm(pageDocument)) return;
+        track("greeting_import_offered", {
+          surface: "in_page_panel",
+          page_host: new URL(pageDocument.URL).hostname,
+        });
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [preparePolicy, pageDocument, track]);
+  const readImportCandidates = useCallback(async () => {
+    await preparePolicy();
+    return readGreetingImport(pageDocument);
+  }, [preparePolicy, pageDocument]);
 
   return (
     <App
       inPage
+      fitContent
+      track={track}
       readImportCandidates={readImportCandidates}
+      readPanelShortcut={readPanelShortcut}
       repository={repository}
       logoUrl={logoUrl}
       openOptions={openOptions}
@@ -74,6 +128,7 @@ export function InPageProfilePanel({
             repository={repository}
             pageDocument={pageDocument}
             unsupportedImageUrl={unsupportedImageUrl}
+            writingImageUrl={writingImageUrl}
             onClose={controller.showProfile}
           />
         ) : undefined

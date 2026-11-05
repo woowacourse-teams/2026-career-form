@@ -1,0 +1,25 @@
+Issue #313 measurement evidence, 2026-10-21 UTC
+Worktree: /home/dbsghwns1209/workspaces/2026-career-form/.worktrees/CF-313-truth-a
+Diagnosis commit: 92fd7915dbd4086fad29d5906fe4d77741f7c316
+
+Diagnosis: the cited run-2026-10-21T16:06:30.000Z reports MISSING_TRUTH and UNSCORED_FIELDS, not TRUTH_IDENTITY_MISMATCH. It predates truth commits. Fresh reports match every zero-based ordinal, ordered structurePath, rowIndex and controlKind (NAVER 46/46, LG 10/10, Kakao 53/53). There is no ordering, path, row-grouping, profile-key, filename or index-base mismatch. The loader resolves fixtures relative to frontend/. body.innerHTML receives the full sanitized HTML, making form:nth-child(3) correct. No truth content or identity was changed. Expected states, preserve flags and exercisability remain independent of observed writes.
+
+Commands were run from frontend/:
+npx vitest run --configLoader runner --project unit src/autofill/workflow/write-accuracy -t "<filter>" --testTimeout=180000
+npx tsc --noEmit -p tsconfig.json => exit 0
+Whole frontend suite not run, per explicit task restriction.
+.venv/bin/python harness/scripts/verify.py --base-ref origin/develop => exit 2: work branch must match CF-<Issue number>. This delegated branch is CF-313-truth-a. No policy bypass or branch rename performed. The correction commit pre-commit hook passed all 400 harness tests and git diff --cached --check.
+
+Snapshot: naver-step2-form
+Status: RUNNABLE; reviewed score included: true
+Truth commit: 5f6389a96dd131c8e20b3b83c2bed54f64bc5ff2
+truth.json sha256: 71bce88f80ad2bcfb55a1ea498a70afcc0eb3941820aed7c5c1ecf31c3747d9e
+Report: .omo/evidence/generic-stage-check-and-write-accuracy/fixture/write-accuracy/run-2026-10-21T16:42:53.447Z/naver-step2-form.json
+Metrics: {"registered":46,"exercisable":8,"approved":8,"attempted":8,"reportedWritten":8,"correct":8,"wrong":0,"held":0,"unscored":0,"reportedSuccessButWrong":0,"preservedViolated":0}
+By control kind: {"select":{"registered":10,"exercisable":3,"approved":3,"attempted":3,"reportedWritten":3,"correct":3,"wrong":0,"held":0,"unscored":0,"reportedSuccessButWrong":0,"preservedViolated":0},"text":{"registered":36,"exercisable":5,"approved":5,"attempted":5,"reportedWritten":5,"correct":5,"wrong":0,"held":0,"unscored":0,"reportedSuccessButWrong":0,"preservedViolated":0}}
+Conservation: 8 = 8 + 0 + 0; PASS (also checked per control kind).
+Remaining unscored: 0; every collected candidate matches committed truth.
+Diagnostics: []
+Vitest exit 0, duration 51.71s (test 37.904s).
+
+AhnLab control: truth commit 4a8aad12d9369b6742c8c367a3b309e496655fcb, truth.json sha256 8f8fa47cc215af41136aa0e3fc1f504a4ebea695aa4b20762e97e14d77f39a18. The truth is absent on truth-a, so the first control run (16:44:43.787Z) correctly failed MISSING_TRUTH with 38 unscored. For comparison only, the exact committed truth was temporarily restored via apply_patch, then removed after the successful rerun; no other worktree was touched. Successful control report: run-2026-10-21T16:46:57.595Z/ahnlab-write-resume-form.json. All 38 identities match. Metrics: {"registered":38,"exercisable":5,"approved":3,"attempted":5,"reportedWritten":3,"correct":3,"wrong":0,"held":2,"unscored":0,"reportedSuccessButWrong":0,"preservedViolated":0}. Conservation: 5 = 3 + 0 + 2. Remaining unscored: 0. Vitest exit 0, duration 25.11s (test 11.266s).

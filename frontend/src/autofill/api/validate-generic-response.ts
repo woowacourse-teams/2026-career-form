@@ -229,7 +229,12 @@ export function validateGenericFieldsResponse(
           "interactionStatus",
           "writePlan",
           "binding",
+          "inference",
         ]) &&
+        (field.inference === undefined ||
+          field.inference === "PAIRED_DATE" ||
+          field.inference === "LANGUAGE_SCORE" ||
+          field.inference === "LANGUAGE_GRADE") &&
         validBinding(field) &&
         validFieldPolicy(field) &&
         (field.profileFieldKey === null ||

@@ -32,15 +32,16 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | --- | --- | --- |
 | [기존 docs baseline](topics/docs-baseline.md) | 기존 docs 65개와 자산의 CF-41 현재본 | 2026-08-22 |
 | [제품 기준](topics/product-concept.md) | 사용자 통제, 제출 금지와 로컬 우선 | 2026-08-22 |
-| [프로필 필드](topics/profile-fields.md) | 지원 정보 구조와 필드 계약 | 2026-08-22 |
-| [프로필 카탈로그 선택과 식별 연결](topics/profile-catalog-identity.md) | 학교, 자격, 시험명의 오프라인 카탈로그 선택과 식별자 저장 | 2026-10-07 |
+| [프로필 필드](topics/profile-fields.md) | 지원 정보 구조와 필드 계약, 자격증 등록번호 라벨 | 2026-10-29 |
+| [프로필 카탈로그 선택과 식별 연결](topics/profile-catalog-identity.md) | 학교, 자격, 시험명의 오프라인 카탈로그 선택과 식별자 저장, 빈 자격증 발급기관 채움, TOEIC Speaking, 한국폴리텍 번호 표기 대조 | 2026-10-29 |
 | [프로필 JSON 전송](topics/profile-json-transfer.md) | 로컬 프로필의 versioned JSON 백업,전체 복원 계약 | 2026-09-07 |
 | [Greeting 지원서에서 프로필 가져오기](topics/greeting-profile-import.md) | 합성 fixture의 읽기 전용 후보 생성, 한 화면 검토와 확인 카드, 병합과 실사이트 검증 경계 | 2026-10-16 |
 | [프로필 입력과 안전한 어학 선택](topics/profile-input-and-language-matching.md) | 자유 텍스트 어학과 유일 후보만 허용하는 회사 옵션 선택 | 2026-09-09 |
-| [확장 프로그램 프로필,지원서 패널 UI](topics/extension-ui.md) | 프로필,패널 탐색과 하늘색 중심 UI 계층 | 2026-09-12 |
+| [확장 프로그램 프로필,지원서 패널 UI](topics/extension-ui.md) | 프로필,패널 탐색과 하늘색 중심 UI 계층, 선택형 값 라벨 표시·복사, 반복 항목 소제목, 패널 열기 단축키 | 2026-10-29 |
 | [지원서 패널 안 자동 기입 흐름](topics/autofill-panel-workflow.md) | 단일 패널 실행,범용 실제 값 판정과 드롭다운 값 보존 | 2026-10-02 |
 | [미지원 지원서 페이지 안내](topics/unsupported-application-pages.md) | 미지원 준비 분석의 중단과 수동 복사 유지 | 2026-10-02 |
-| [선택적 이용 계측](topics/usage-analytics.md) | 24시간 첫 클릭률, Greeting 가져오기 계측, 최초 저장 중복 방지와 개인정보 경계 | 2026-10-21 |
+| [선택적 이용 계측](topics/usage-analytics.md) | 24시간 첫 클릭률, Greeting 가져오기 계측, 공고 알림 이벤트와 posting_id·answer·trigger·delay_ms, 받을 직무 저장 role_count, 최초 저장 중복 방지와 개인정보 경계 | 2026-11-04 |
+| [범용 결과 화면 분류](topics/generic-result-classification.md) | 확인 필요 범위, 회색 묶음, 빨간 테두리와 수집 제외 | 2026-11-05 |
 | [범용 버튼 드롭다운 안전성](topics/generic-button-dropdown-safety.md) | 입력 범위,목록 소유 관계,옵션 분석 전달과 실행 직전 재검증 | 2026-10-02 |
 | [범용 드롭다운의 구조 클릭 허용 경계](topics/generic-dropdown-click-gate.md) | accessible label 금지 판정 유지와 수집기의 클릭 정책 적용 | 2026-10-17 |
 | [범용 섹션 분석 캐시의 키와 수명](topics/generic-section-analysis-cache.md) | 구조·칸 상태 키, 실행·URL 수명과 변경 섹션만 재분석 | 2026-10-17 |
@@ -53,13 +54,17 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [검토된 DOM 스냅샷 fixture의 공백 정규화](topics/dom-snapshot-fixture-whitespace.md) | pre-commit 공백 검사 통과를 위한 승인된 공백만 정규화 기록 | 2026-10-18 |
 | [입력 위치 표시와 설치 안내](topics/autofill-follow-and-install.md) | 기본 필드 추적, 확인 필요 결과와 첫 설치 안내 | 2026-09-22 |
 | [프로젝트 컨벤션](topics/project-conventions.md) | 공통, Git과 스택별 규약 | 2026-08-22 |
-| [프론트 브라우저 테스트](topics/frontend-browser-testing.md) | jsdom/Chromium 계층, 합성 상호작용 검증과 CI shard 병합 검증 경계 | 2026-10-20 |
+| [프론트 브라우저 테스트](topics/frontend-browser-testing.md) | jsdom/Chromium 계층, 합성 상호작용 검증과 CI shard 병합 검증 경계, frontend 변경에만 도는 CI 경로 필터와 2026-11 실행 시간 측정, 2026-11 느린 fixture 통합 테스트 38개 삭제와 잃은 회귀 범위 | 2026-11-05 |
+| [프론트 정적 검사 범위](topics/frontend-static-checks.md) | lint의 TS 소스 제외, 기존 typecheck 실패와 CI·verify.py 미실행 관찰 | 2026-10-29 |
 | [Issue 개발 흐름](topics/issue-development-workflow.md) | Issue, 체크포인트와 사람 승인 경계 | 2026-08-22 |
 | [ADR 작성 규약](topics/adr-authoring.md) | ADR 판단과 Issue raw 기록 | 2026-08-22 |
 | [기존 아키텍처 결정](topics/architecture-decisions.md) | CF-41 이전 ADR 현재본 | 2026-08-22 |
 | [확장 프로그램 설계](topics/extension-design.md) | UI 흐름과 검토 자산 | 2026-08-22 |
-| [CI/CD 설정](topics/cicd-setup.md) | 배포 환경 준비 계약 | 2026-08-22 |
-| [배포 Runbook](topics/deployment-runbook.md) | 배포, hotfix와 rollback 절차 | 2026-08-22 |
+| [CI/CD 설정](topics/cicd-setup.md) | 배포 변수 15개·시크릿 12개 전체, deploy.sh 계약, 알림 토글·직무 필터 전환 변수와 VAPID 시크릿 전달·compose 기본값, 운영 LLM 비활성 이력, HTTP 공개 상태 | 2026-11-05 |
+| [배포 Runbook](topics/deployment-runbook.md) | 릴리스 기준 커밋 선택, main 병합 분류, digest 재사용, tag·동기화 PR, 자동 rollback, 릴리스 점검표, 정책 활성 버전은 배포 커밋의 seed를 따름, 4값 대조와 policy-versions API, 운영 알림 토글 결정 점검 항목 | 2026-10-26 |
+| [확장 프로그램 릴리스](topics/extension-release.md) | 수동 ZIP 빌드, origin 주입, 버전 상향, Web Store 게시와 보급 확인 | 2026-10-23 |
+| [확장 Web Push 구독과 공고 알림](topics/extension-push-notifications.md) | 조용한 구독 수명주기와 상태·재시도, 푸시 검증과 중복 억제, 알림 클릭·저장 연결, 공지함과 push-api.ts 계약 정본, 알림 표시 자가 진단, 미확인 배지, 열기 자동 저장, 직무 선택 입력, 표시 지연 계측, 받을 직무 선택기와 분류 캐시, 직무별 새 공고·알림 거르기, 사이드 패널 마감 공고 탭 안내와 패널 발신자 허용, 안내 목록 접기 | 2026-11-04 |
+| [확장·백엔드 호환 배포](topics/release-compatibility.md) | 호환 장치, 응답 스키마 협상 규칙, 확장 먼저 게시 순서, 1.4.0 사례 | 2026-10-23 |
 | [공용 모니터링 시스템](topics/monitoring-system.md) | 중앙 수집, 환경별 알림, 호스트 디스크 감시와 검증 경계 | 2026-10-02 |
 | [자동 입력 품질 관측과 사람 확인 요청](topics/autofill-quality-observation.md) | 실제 경로 및 버전별 지표, 사람 참고 분모와 평일 확인 요청 | 2026-10-07 |
 | [사이트별 자동 입력 결과와 일별 그래프](topics/autofill-quality-dashboard.md) | 관측 표본 비율, 회사별 사이트와 KST 일별 공백 처리 | 2026-10-14 |
@@ -69,39 +74,43 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [저장소 스킬](topics/repository-skills.md) | 저장소 스킬 역할과 범위 | 2026-08-22 |
 | [회사 어댑터 개발](topics/adapter-development.md) | 프론트 회사 어댑터와 백엔드 정책 경계 | 2026-10-20 |
 | [Greeting 플랫폼 판정과 실행 어댑터](topics/greeting-platform-routing.md) | BE의 Greeting 판정과 FE 어댑터 지정,문맥 검증 | 2026-09-27 |
-| [Greeting 공통 어댑터](topics/adapter-greeting.md) | 기업별 화면 차이와 안전한 필드 입력,검증 범위 | 2026-10-07 |
-| [Hplace 공통 어댑터](topics/adapter-hplace.md) | MRS2 실행 정책, 127키 현황, step 1–3 실화면 검증, 칸 단위 인식·재실행 멱등성·저장 페이지 재로드 보고와 배포 경계 | 2026-10-20 |
+| [Greeting 공통 어댑터](topics/adapter-greeting.md) | 기업별 화면 차이와 안전한 필드 입력,검증 범위, 검색 서버 액션 요청 구조, v18 장애 정도 별칭, 열린 Ark UI 팝오버의 양식 전체 숨김 수집과 닫기, v19 직접 입력 선택지 범위와 검색 실패 사유 코드, 동명 고교 지역 동점 해소와 한국폴리텍 번호 표기 대조 | 2026-10-29 |
+| [Hplace 공통 어댑터](topics/adapter-hplace.md) | MRS2 실행 정책, 127키 현황, step 1–3 실화면 검증, 칸 단위 인식·재실행 멱등성·저장 페이지 재로드 보고, 저장·조회·무저장 이동 요청 구조, 4단계 분석 예외와 패널 집계, 빈 단계 분석 생략, 배포 경계, 활성 정책 버전 설정값 | 2026-10-23 |
 | [SK,현대 실시간 옵션 선택 보완](topics/adapter-live-option-selection.md) | 현재 회사 화면의 유일 옵션만 선택하는 어학 보완 | 2026-09-09 |
-| [현대 어댑터](topics/adapter-hyundai.md) | 현대 주소,국적,학력 수집,입력과 검증 제한 | 2026-09-08 |
-| [SK 어댑터](topics/adapter-sk.md) | SK 조건부 입력과 검증 제한 | 2026-09-08 |
-| [어댑터 필드 현황](topics/adapter-field-inventory.md) | 회사별 구현과 자동,수동 검증 상태 | 2026-10-20 |
+| [현대 어댑터](topics/adapter-hyundai.md) | 현대 주소,국적,학력 수집,입력과 검증 제한, 페이지의 Map·Set 재정의, 버튼형 선택지 코드의 읽기 전용 수집과 trigger 식별, 작성 화면 재진입 불가, 정책 v25 경력 날짜·종료사유·자격 등급, 검색 결과 창 바깥 클릭 핸들러와 학교명 소실 | 2026-10-25 |
+| [SK 어댑터](topics/adapter-sk.md) | SK 조건부 입력과 검증 제한, R262309형 고교 행의 추가 버튼 재식별 실패, v38 재학 상태 select 기준 재식별과 장애구분 별칭 | 2026-10-22 |
+| [어댑터 필드 현황](topics/adapter-field-inventory.md) | 회사별 구현과 자동,수동 검증 상태, 현대 v25 경력·종료사유·자격 등급, Greeting v19 직접 입력 지원 범위, Greeting 동명 고교·폴리텍 학교명 확정 | 2026-10-29 |
 | [LLM Wiki 지식 모델](topics/llm-wiki-knowledge-model.md) | Issue raw, topic Wiki와 승인 digest | 2026-08-22 |
 | [지원서 분석 API](topics/application-form-analysis-api.md) | schema v2와 검색 역할, OpenAI/Jev 단일 공급자 계약 | 2026-09-23 |
 | [지원서 분석 데이터 경계](topics/application-form-analysis-data-boundary.md) | 비식별 공급자 투영과 로컬 DOM 실행 경계 | 2026-09-23 |
 | [OpenAI 분석 예산과 안전 진단](topics/openai-analysis-budget-and-diagnostics.md) | 준비,필드/상호작용 시간 예산 분리와 비식별 실패 분류 | 2026-09-24 |
 | [Jev,OpenAI 호출 추적](topics/provider-call-tracing.md) | LangSmith Java SDK, 비식별 투영과 관측 실패 격리 | 2026-10-01 |
-| [범용 분할 이메일 보호](topics/generic-split-email-safety.md) | 아이디 칸의 전체 주소 입력 차단과 쓰기 직전 재검증 | 2026-10-01 |
+| [범용 분할 이메일 보호](topics/generic-split-email-safety.md) | 아이디 칸의 전체 주소 입력 차단과 쓰기 직전 재검증, 도메인 select의 값도 판정 근거 | 2026-10-22 |
 | [범용 자동 기입 평가 기준선](topics/generic-autofill-evaluation-baselines.md) | 계약 1.1 원인별 집계, 설치 revision 근거와 비교 보류 및 과거 기준선 | 2026-10-09 |
 | [범용 폼 컨텍스트 수집](topics/generic-form-context.md) | 문서 회사 기준 수집 선택, 동기 읽기 캐시 경계와 혼합 전후 비교 | 2026-10-15 |
 | [범용 칸 라벨 문맥과 형식 검사](topics/generic-field-context-safety.md) | 끊긴 라벨 복원, 문맥 없는 칸의 REVIEW와 로컬 형식 검사 | 2026-10-18 |
 | [범용 등급의 다른 사람 대상 칸 차단](topics/generic-other-person-context.md) | 추천인·보증인 등 다른 사람 대상 칸에 본인 정보 키가 매칭되면 BLOCKED | 2026-10-18 |
-| [범용 검토 화면의 3단계 표시](topics/generic-review-tiers.md) | 자동·확인 필요·입력 불가 표시, 연결 못한 칸 노출과 이유 문구 변환 | 2026-10-18 |
+| [범용 검토 화면의 3단계 표시](topics/generic-review-tiers.md) | 자동·확인 필요·입력 불가 표시, 연결 못한 칸 노출과 이유 문구 변환, 미리 승인한 새 칸의 2차 검토 없는 기입, 확인 필요 기본 포함과 넓힌 승인 범위 | 2026-10-29 |
 | [DOM fixture 표시 텍스트 검토와 재현 경계](topics/dom-snapshot-review-boundaries.md) | v4 무변경 보존, 표시 텍스트 검토와 mock·실사이트 근거 구분 | 2026-10-18 |
-| [실사이트 자동 입력 평가 워크플로우](topics/live-autofill-evaluation.md) | 사전 분모, DOM 검증, 후보 관측 일치와 설치본 snapshot 기반 보고 | 2026-10-09 |
+| [실사이트 자동 입력 평가 워크플로우](topics/live-autofill-evaluation.md) | 사전 분모, DOM 검증, 후보 관측 일치, 설치본 snapshot과 가시 칸 두 시점 측정, 새로고침 원복·대화상자 자동 처리 함정, 원복 재키 대조와 표시 규칙의 한계, 재설치 뒤 탭 재진입과 응답 없는 탭, 테스트 계정 모드·설치본 잠금·채점 재사용, 합성 프로필 학교 검색 한계와 reset 위젯 잔여, 간헐 결함 반복 관찰 루프와 서비스 워커 API 관찰, 검색 정확 일치 없음 전수 조사와 로컬 스택 정책 검증 | 2026-10-25 |
+| [오프라인 기입 정확도 측정](topics/offline-write-accuracy.md) | 결과 전 고정 정답, 제품 경로 판정, 보존식 집계와 스냅샷별 기준선 | 2026-10-21 |
 | [범용 자동 기입 검색 표면](topics/generic-autofill-search.md) | 범용 자격증 반복 행, 검색, 후속 재검토, 혼합 학력 행, role 없는 레이어 검색, 공급자 중립 검색 결과 구조 해석과 기존 CJ 계약 및 실사이트 검증 경계 | 2026-10-01 |
 | [범용 날짜 형식 변환과 로컬 승인](topics/generic-date-format.md) | 날짜 DIRECT 변환, 로컬 승인 재검증과 자동/실사이트 검증 구분 | 2026-09-24 |
-| [범용 연월 달력 선택과 로컬 실행 경계](topics/generic-calendar-selection.md) | DOM 소유권, 개별 승인, 역할 판별과 연월, 연월일 달력 실행의 안전 경계 | 2026-09-28 |
+| [범용 연월 달력 선택과 로컬 실행 경계](topics/generic-calendar-selection.md) | DOM 소유권, 개별 승인, 역할 판별과 연월, 연월일 달력 실행의 안전 경계, 달력 기입의 최종 값 확인, 실행이 연 달력의 드롭다운 확인 제외, 다른 컨트롤이 연 층의 보류 판정 제외 | 2026-10-29 |
 | [발표 디자인 시스템](topics/presentation-design-system.md) | 독립 레이아웃, 교체 슬롯과 정적 HTML/CSS 재현 규칙 | 2026-08-26 |
-| [랜딩,온보딩 웹 페이지](topics/landing-onboarding.md) | 단계형 선택 입력과 요약 보충, 확장 온보딩과 웹 경계 | 2026-10-13 |
+| [랜딩,온보딩 웹 페이지](topics/landing-onboarding.md) | 의사결정 AI(JEV) 스크롤 장면과 직접 체험 중심의 하늘색 랜딩, 단계형 온보딩과 웹 경계 | 2026-11-02 |
 | [릴리스 브랜치 유지와 정리](topics/release-branch-lifecycle.md) | 배포,동기화 완료 후 정리와 SHA 보호, 관리자 설정 | 2026-10-03 |
+| [작업 브랜치 정리](topics/branch-cleanup.md) | 병합된 CF·hotfix·revert 브랜치 자동 삭제 대상, 건너뜀·실패 조건과 사람 정리 범위 | 2026-10-23 |
 | [확장 품질 보고의 fetch 호출 문맥](topics/extension-fetch-context.md) | 브라우저 전역 수신자, 보고 요청 계약과 검증 경계 | 2026-10-12 |
 | [Wiki 검증 기준 브랜치](topics/wiki-validation-base.md) | PR, 로컬 작업과 pre-push의 기준 ref 선택 및 raw 보호 | 2026-10-12 |
 | [품질 확인 사이트와 공개 지원서 링크](topics/quality-site-links.md) | 공고별 단일 확인, 공개 링크와 실행 분모 경계 | 2026-10-12 |
 | [시스템 PR 공유 파일 검사와 릴리스 본문 계약](topics/release-pr-contract.md) | 중앙 시스템 PR 분류, 일반 및 hotfix 보호와 릴리스 생성 본문 검증 | 2026-10-12 |
 | [품질 관측 호출의 인터럽트 처리](topics/quality-observation-interruption.md) | 제출 전 인터럽트 검사, 상태 보존과 실행 중 취소 회귀 | 2026-10-13 |
 | [범용 지원서의 구조 행동 자동 실행](topics/generic-autonomous-structural-actions.md) | 구조 행동 자동 실행과 값 쓰기 승인 유지, 제안됨 ADR | 2026-10-16 |
-| [범용 구조 반복 실행과 학력 행 격리](topics/generic-structure-loop.md) | 기본 수집 보존, 구조 반복 실행, 단계별 행 식별과 국소 보류 | 2026-10-18 |
+| [범용 구조 반복 실행과 학력 행 격리](topics/generic-structure-loop.md) | 기본 수집 보존, 구조 반복 실행, 단계별 행 식별, 숨은 다른 단계 control 제외와 국소 보류, 줄 하나만 보이는 반복 영역의 행 추가 | 2026-10-29 |
 | [범용 분석 provider의 JEV 단일화](topics/jev-single-analysis-provider.md) | JEV 단일 provider 결정과 데이터 정책 미검증 위험, 제안됨 ADR | 2026-10-16 |
 | [범용 전용 API 분리와 섹션 범주별 칸 매칭](topics/generic-api-section-category-matching.md) | 범용 API 분리와 섹션 분류 기반 범주별 매칭, 제안됨 ADR | 2026-10-16 |
 | [범용 범주 안 JEV 매칭 누락 원인과 의미 근거 보강](topics/generic-category-semantic-matching.md) | 라벨 손실 보강, 등급·점수 계약 보존과 합성 반례 출처 | 2026-10-19 |
 | [분석 응답과 품질 관측의 비동기 분리](topics/async-quality-observation.md) | 메모리 등록, 제한 큐, 약 1분 집계와 유실 허용 경계 | 2026-10-20 |
+| [공고 구독 알림](topics/job-posting-notifications.md) | 접수 가능 시점 1회 Web Push, FCM 수락까지 재시도하는 선점 발송기, 큐를 두지 않은 근거와 재검토 조건, 직무 분류 정본과 공고 직무 필수, 구독별 받을 직무와 대상 발송·재검사, 전환 설정과 배포 순서 | 2026-11-04 |
+| [도로명주소 검색 프록시](topics/road-address-proxy.md) | 승인키 서버 보관, 검색어 개인정보 처리와 POST 프록시, 제안됨 ADR | 2026-11-04 |

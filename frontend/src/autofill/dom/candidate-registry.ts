@@ -1,4 +1,11 @@
 import { displayState, withDomReadPass } from "./read-pass";
+import { localWorkflowLog } from "../debug/local-workflow";
+import {
+  captureControlState,
+  controlIdentity,
+  correspondingControls,
+  isWritableWriteElement,
+} from "./write-target";
 import { targetOnlyRadio } from "../policy/radio-validation";
 import type {
   ActionCandidateHandle,
@@ -80,6 +87,133 @@ export class CandidateRegistry {
   private readonly fields = new Map<string, Registered<FieldCandidateHandle>>();
   private readonly fieldItemCounts = new Map<string, number>();
   private readonly fieldItemElements = new Map<string, Element[]>();
+  private readonly replacementState = new Map<
+    string,
+    {
+      before: ReturnType<typeof captureControlState>;
+      contextCurrent: () => boolean;
+      row?: Element;
+    }
+  >();
+
+  isLegacyField(candidateId: string): boolean {
+    return this.fields.get(candidateId)?.handle.owner === "legacy";
+  }
+
+  /** Called once before the batch, while collected row callbacks are valid. */
+  captureReplacementState(): void {
+    this.replacementState.clear();
+    for (const [id, { handle }] of this.fields) {
+      if (this.lookupField(id).status === "stale") continue;
+      const rows = this.fieldItemElements.get(
+        this.fieldItemKey(handle.sectionId, handle.itemGroupId),
+      );
+      const row =
+        handle.itemIndex !== undefined ? rows?.[handle.itemIndex] : undefined;
+      const parents = (rows ?? []).map((element) => ({
+        element,
+        parent: element.parentElement,
+        siblings: Array.from(element.parentElement?.children ?? []),
+      }));
+      const kinds = handle.mixedSectionRow?.group.kindSelects.map((select) => ({
+        select,
+        value: select.value,
+      }));
+      const rowChoices = () =>
+        (rows ?? []).flatMap((element) =>
+          Array.from(
+            element.querySelectorAll<HTMLInputElement | HTMLSelectElement>(
+              "select, input[type='radio']",
+            ),
+          ),
+        );
+      const choicesBefore = captureControlState(rowChoices());
+      const contextWasCurrent = handle.isCurrentContext?.() !== false;
+      this.replacementState.set(id, {
+        before: captureControlState(handle.elements),
+        ...(row ? { row } : {}),
+        contextCurrent: () =>
+          contextWasCurrent &&
+          (!handle.isCurrentContext || !!row) &&
+          ((handle.itemId === undefined && handle.itemIndex === undefined) ||
+            (!!row && rows?.length === this.fieldItemCount(id))) &&
+          parents.every(
+            ({ element, parent, siblings }) =>
+              element.isConnected &&
+              element.parentElement === parent &&
+              parent?.children.length === siblings.length &&
+              siblings.every((sibling, index) => parent.children[index] === sibling),
+          ) &&
+          (kinds?.every(
+            ({ select, value }) => select.isConnected && select.value === value,
+          ) ?? true) &&
+          correspondingControls(choicesBefore, rowChoices()) !== undefined,
+      });
+    }
+  }
+
+  /**
+   * The caller must separately preserve the approved profile binding. Complex
+   * controls and approvals containing popup/opener/option objects are not moved.
+   */
+  revalidateField(candidateId: string, allowReplacement: boolean): boolean {
+    // Local QA diagnostics: record which guard refused the rebind so the
+    // failure class can be fixed from evidence instead of guesswork.
+    const deny = (reason: string): false => {
+      localWorkflowLog("rebind-deny", { reason });
+      return false;
+    };
+    const entry = this.fields.get(candidateId);
+    const snapshot = this.replacementState.get(candidateId);
+    if (!entry || !snapshot) return deny("no-snapshot");
+    const { handle } = entry;
+    const lookup = this.lookupField(candidateId);
+    if (lookup.status !== "stale") {
+      const same = handle.elements.every(
+        (element, index) =>
+          controlIdentity(element) === snapshot.before[index]?.identity,
+      );
+      if (!same) localWorkflowLog("rebind-deny", { reason: "identity-changed" });
+      return same;
+    }
+    if (!allowReplacement) return deny("not-allowed");
+    if (handle.owner === "legacy") return deny("legacy-owned");
+    if (handle.elements.length !== 1) return deny("multi-element");
+    if (handle.elements[0].isConnected) return deny("still-connected");
+    if (handle.customElements?.length) return deny("custom-widget");
+    if (handle.buttonDropdown) return deny("button-dropdown");
+    if (handle.optionElements.size) return deny("captured-options");
+    if (!snapshot.contextCurrent()) return deny("context-changed");
+    const correspondence = correspondingControls(
+      snapshot.before,
+      Array.from(
+        handle.elements[0].ownerDocument.querySelectorAll<
+          HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+        >("input, select, textarea"),
+      ),
+    );
+    const replacement = correspondence?.get(handle.elements[0]);
+    if (!correspondence) return deny("no-correspondence");
+    if (!replacement) return deny("ambiguous-or-missing");
+    if (snapshot.row && !snapshot.row.contains(replacement))
+      return deny("other-row");
+    const rebound: FieldCandidateHandle = {
+      ...handle,
+      elements: [replacement],
+      signature: createStructuralSignature([replacement]),
+      ...(handle.isCurrentContext
+        ? {
+            isCurrentContext: () =>
+              snapshot.contextCurrent() &&
+              snapshot.row?.contains(replacement) === true,
+          }
+        : {}),
+    };
+    this.fields.set(candidateId, { ...entry, handle: rebound });
+    if (this.lookupField(candidateId).status !== "ready")
+      return deny("rebound-not-ready");
+    return true;
+  }
 
   private fieldItemKey(sectionId: string, itemGroupId?: string): string {
     return `${sectionId}::${itemGroupId ?? ""}`;
@@ -202,6 +336,7 @@ export class CandidateRegistry {
       return { status: "unknown" };
     }
     if (registered.handle.isCurrentContext?.() === false) {
+      localWorkflowLog("stale-why", { reason: "context" });
       return { status: "stale" };
     }
     const elements =
@@ -215,6 +350,11 @@ export class CandidateRegistry {
       elements.some((element) => !element.isConnected) ||
       createStructuralSignature(elements) !== registered.handle.signature
     ) {
+      localWorkflowLog("stale-why", {
+        reason: elements.some((element) => !element.isConnected)
+          ? "disconnected"
+          : "signature",
+      });
       return { status: "stale" };
     }
     if (
@@ -228,6 +368,7 @@ export class CandidateRegistry {
         )
         ?.some((element) => !element.isConnected)
     ) {
+      localWorkflowLog("stale-why", { reason: "item-elements" });
       return { status: "stale" };
     }
     // A disabled placeholder option, or an initially hidden combobox menu,
@@ -235,20 +376,39 @@ export class CandidateRegistry {
     // is checked immediately before its write instead.
     const targetOnly =
       registered.handle.kind === "field" && targetOnlyRadio(elements);
-    const currentBlockReason = elements
-      .map(liveBlockReason)
-      .find(
-        (reason) =>
-          reason !== undefined && !(targetOnly && reason === "disabled"),
-      );
+    const targetVisible = elements.some(isWritableWriteElement);
+    // A readonly input that opens its own option list is selected, not typed.
+    const inputDropdown =
+      registered.handle.kind === "field" &&
+      registered.handle.buttonDropdown?.surface === "input"
+        ? registered.handle.buttonDropdown.trigger
+        : undefined;
+    const reasons = elements.map((element) => {
+      const reason = liveBlockReason(element);
+      return element === inputDropdown && reason === "readonly"
+        ? undefined
+        : reason;
+    });
+    // A hidden duplicate must not block a handle that still owns a visible,
+    // enabled control. Prefer the visible control's reason when none is usable.
+    const currentBlockReason = targetVisible
+      ? undefined
+      : (reasons.find(
+          (reason) => reason !== undefined && reason !== "hidden",
+        ) ?? reasons.find((reason) => reason !== undefined));
     const registeredReason =
-      targetOnly && registered.blockedReason === "disabled"
+      (targetOnly && registered.blockedReason === "disabled") ||
+      (targetVisible && registered.blockedReason === "hidden")
         ? undefined
         : registered.blockedReason;
-    if (registeredReason || currentBlockReason) {
+    const blockedReason =
+      targetOnly && currentBlockReason === "disabled"
+        ? undefined
+        : currentBlockReason;
+    if (registeredReason || blockedReason) {
       return {
         status: "blocked",
-        reason: registeredReason ?? currentBlockReason!,
+        reason: registeredReason ?? blockedReason!,
         handle: registered.handle,
       };
     }

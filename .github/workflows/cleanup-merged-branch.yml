@@ -1,0 +1,38 @@
+name: 병합 브랜치 정리
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [develop, main, 'release/**']
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    # release/* 정리는 complete-release-sync.yml과 deploy-production.yml이 담당한다.
+    if: >-
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref != 'main' &&
+      github.event.pull_request.head.ref != 'develop' &&
+      !startsWith(github.event.pull_request.head.ref, 'release/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+      - name: 병합된 작업 브랜치 삭제
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -euo pipefail
+          open_pulls="$RUNNER_TEMP/open-pulls.json"
+          gh api --method GET "repos/${GITHUB_REPOSITORY}/pulls" \
+            -f state=open \
+            -f "head=${GITHUB_REPOSITORY_OWNER}:${HEAD_REF}" > "$open_pulls"
+          python3 infra/scripts/release-sync.py cleanup-work-branch "$open_pulls"

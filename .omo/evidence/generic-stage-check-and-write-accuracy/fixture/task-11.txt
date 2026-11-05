@@ -1,0 +1,37 @@
+Issue #313 measurement evidence, 2026-10-21 UTC
+Worktree: /home/dbsghwns1209/workspaces/2026-career-form/.worktrees/CF-313-truth-a
+Diagnosis commit: 92fd7915dbd4086fad29d5906fe4d77741f7c316
+
+Diagnosis: the cited run-2026-10-21T16:06:30.000Z reports MISSING_TRUTH and UNSCORED_FIELDS, not TRUTH_IDENTITY_MISMATCH. It predates truth commits. Fresh reports match every zero-based ordinal, ordered structurePath, rowIndex and controlKind (NAVER 46/46, LG 10/10, Kakao 53/53). There is no ordering, path, row-grouping, profile-key, filename or index-base mismatch. The loader resolves fixtures relative to frontend/. body.innerHTML receives the full sanitized HTML, making form:nth-child(3) correct. No truth content or identity was changed. Expected states, preserve flags and exercisability remain independent of observed writes.
+
+Commands were run from frontend/:
+npx vitest run --configLoader runner --project unit src/autofill/workflow/write-accuracy -t "<filter>" --testTimeout=180000
+npx tsc --noEmit -p tsconfig.json => exit 0
+Whole frontend suite not run, per explicit task restriction.
+.venv/bin/python harness/scripts/verify.py --base-ref origin/develop => exit 2: work branch must match CF-<Issue number>. This delegated branch is CF-313-truth-a. No policy bypass or branch rename performed. The correction commit pre-commit hook passed all 400 harness tests and git diff --cached --check.
+
+Snapshot: lg-ai-research-birth-split-email
+Status: UNREVIEWED; reviewed score included: false
+Truth commit: 1df57b797ab04b6eb58b37a18c17f4617fb2c222
+truth.json sha256: 086cb42b54253cc033fb76735c8f83d593802e753c6b6334fa622515b1beef1b
+Report: .omo/evidence/generic-stage-check-and-write-accuracy/fixture/write-accuracy/run-2026-10-21T16:43:40.304Z/lg-ai-research-birth-split-email.json
+Metrics: {"registered":10,"exercisable":7,"approved":7,"attempted":7,"reportedWritten":7,"correct":6,"wrong":1,"held":0,"unscored":0,"reportedSuccessButWrong":1,"preservedViolated":0}
+By control kind: {"text":{"registered":4,"exercisable":3,"approved":3,"attempted":3,"reportedWritten":3,"correct":2,"wrong":1,"held":0,"unscored":0,"reportedSuccessButWrong":1,"preservedViolated":0},"select":{"registered":5,"exercisable":4,"approved":4,"attempted":4,"reportedWritten":4,"correct":4,"wrong":0,"held":0,"unscored":0,"reportedSuccessButWrong":0,"preservedViolated":0},"checkbox":{"registered":1,"exercisable":0,"approved":0,"attempted":0,"reportedWritten":0,"correct":0,"wrong":0,"held":0,"unscored":0,"reportedSuccessButWrong":0,"preservedViolated":0}}
+Conservation: 7 = 6 + 1 + 0; PASS (also checked per control kind).
+Remaining unscored: 0; every collected candidate matches committed truth.
+Diagnostics: ["WRONG_VALUES"]
+Vitest exit 1, duration 16.42s (test 4.229s): WRONG_VALUES. Ordinal 6 is the split-email local-part input; unchanged truth expects only the local part. Product reports WRITTEN with a different value, so wrong=1 and reportedSuccessButWrong=1 are retained, not relabeled.
+
+Snapshot: kakao-greeting-email
+Status: UNREVIEWED; reviewed score included: false
+Truth commit: 1df57b797ab04b6eb58b37a18c17f4617fb2c222
+truth.json sha256: 61f878d5a678ed1c823c8a39b29c369c081c9209b7f0efaf9dc683f699124068
+Report: .omo/evidence/generic-stage-check-and-write-accuracy/fixture/write-accuracy/run-2026-10-21T16:44:32.215Z/kakao-greeting-email.json
+Metrics: {"registered":53,"exercisable":12,"approved":17,"attempted":12,"reportedWritten":10,"correct":10,"wrong":0,"held":2,"unscored":0,"reportedSuccessButWrong":0,"preservedViolated":0}
+By control kind: {"text":{"registered":44,"exercisable":11,"approved":16,"attempted":11,"reportedWritten":9,"correct":9,"wrong":0,"held":2,"unscored":0,"reportedSuccessButWrong":0,"preservedViolated":0},"checkbox":{"registered":6,"exercisable":0,"approved":0,"attempted":0,"reportedWritten":0,"correct":0,"wrong":0,"held":0,"unscored":0,"reportedSuccessButWrong":0,"preservedViolated":0},"textarea":{"registered":3,"exercisable":1,"approved":1,"attempted":1,"reportedWritten":1,"correct":1,"wrong":0,"held":0,"unscored":0,"reportedSuccessButWrong":0,"preservedViolated":0}}
+Conservation: 12 = 10 + 0 + 2; PASS (also checked per control kind).
+Remaining unscored: 0; every collected candidate matches committed truth.
+Diagnostics: []
+Vitest exit 0, duration 86.51s (test 69.989s). Held ordinals 3 and 28 have NOT_APPROVED. Missing popup/options/script limitations remain unchanged, documented as not-exercisable rather than unscored.
+
+AhnLab control: truth commit 4a8aad12d9369b6742c8c367a3b309e496655fcb, truth.json sha256 8f8fa47cc215af41136aa0e3fc1f504a4ebea695aa4b20762e97e14d77f39a18. The truth is absent on truth-a, so the first control run (16:44:43.787Z) correctly failed MISSING_TRUTH with 38 unscored. For comparison only, the exact committed truth was temporarily restored via apply_patch, then removed after the successful rerun; no other worktree was touched. Successful control report: run-2026-10-21T16:46:57.595Z/ahnlab-write-resume-form.json. All 38 identities match. Metrics: {"registered":38,"exercisable":5,"approved":3,"attempted":5,"reportedWritten":3,"correct":3,"wrong":0,"held":2,"unscored":0,"reportedSuccessButWrong":0,"preservedViolated":0}. Conservation: 5 = 3 + 0 + 2. Remaining unscored: 0. Vitest exit 0, duration 25.11s (test 11.266s).

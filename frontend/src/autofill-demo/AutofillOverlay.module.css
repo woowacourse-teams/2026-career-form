@@ -7,7 +7,7 @@
   min-height: 0;
   overflow: hidden;
   color: var(--color-text);
-  background: var(--color-surface);
+  background: var(--color-page);
   font-family: var(--font-ui);
 }
 
@@ -24,19 +24,25 @@
   grid-template-rows: minmax(0, 1fr);
 }
 
+/* 스크린 리더용으로 프로그램이 옮긴 포커스이므로 컨테이너 전체에 테두리를 그리지 않는다. */
+.panel[tabindex="-1"]:focus {
+  outline: none;
+}
+
+/* Text button: no border or fill until hovered. */
 .toolbar button {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   min-height: 40px;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border: 0;
+  border-radius: var(--radius-control);
   padding: 8px 12px;
   color: var(--color-action-strong);
-  background: var(--color-surface);
+  background: transparent;
   font: inherit;
-  font-size: 13px;
-  font-weight: 650;
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
 }
 
@@ -45,7 +51,7 @@
 }
 
 .toolbar button:focus-visible {
-  outline: 2px solid var(--color-action-strong);
+  outline: 2px solid var(--color-action);
   outline-offset: 2px;
 }
 

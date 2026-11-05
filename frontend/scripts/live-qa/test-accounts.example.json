@@ -1,0 +1,9 @@
+{
+  "hosts": [
+    "www.skcareers.com",
+    "*.recruiter.co.kr",
+    "talent.hyundai.com",
+    "*.greetinghr.com",
+    "recruit.kakaogames.com"
+  ]
+}

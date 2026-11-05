@@ -1,4 +1,6 @@
 import { AnalysisContractError } from "../api/validate-response";
+import { isTransientAnalysisError } from "../api/runtime-client";
+import { localWorkflowLog } from "../debug/local-workflow";
 import {
   calendarDiagnostic,
   type CalendarDecisionReason,
@@ -34,7 +36,10 @@ interface CalendarRoleArgs<T extends HTMLElement> {
   signal?: AbortSignal;
 }
 
-/** One calendar execution owns this budget; no retries or authority reuse. */
+/**
+ * One calendar execution owns this budget; no authority reuse. The only
+ * retry is the opener's single transport retry inside resolveCalendarRole.
+ */
 export function createCalendarRoleResolver() {
   let calls = 0;
   return <T extends HTMLElement>(args: CalendarRoleArgs<T>) => {
@@ -57,6 +62,7 @@ export async function resolveCalendarRole<T extends HTMLElement>(
   const { candidates, provider } = args;
   const now = args.now ?? Date.now;
   const stop = (reason: CalendarDecisionReason) => {
+    localWorkflowLog("calendar-role", { role: args.role, reason });
     calendarDiagnostic({
       reason,
       role: args.role,
@@ -140,7 +146,18 @@ export async function resolveCalendarRole<T extends HTMLElement>(
   const candidateHtml = (element: HTMLElement) => {
     const clone = element.cloneNode(true);
     if (!(clone instanceof HTMLElement)) return element.outerHTML;
-    for (const property of ["position", "top", "right", "bottom", "left"])
+    // Root paint (background, border) is cosmetic too: widgets restyle their
+    // buttons after a month/year change without changing what they do.
+    // Visibility, display, size and markup still invalidate the snapshot.
+    for (const property of [
+      "position",
+      "top",
+      "right",
+      "bottom",
+      "left",
+      "background",
+      "border",
+    ])
       clone.style.removeProperty(property);
     if (clone.getAttribute("style") === "") clone.removeAttribute("style");
     return clone.outerHTML;
@@ -156,6 +173,39 @@ export async function resolveCalendarRole<T extends HTMLElement>(
         ? element.value
         : undefined,
   }));
+  const snapshotCurrent = () =>
+    args.revalidate?.() !== false &&
+    snapshots.every(
+      ({ element, parent, html, value }) =>
+        element.isConnected &&
+        element.parentElement === parent &&
+        candidateHtml(element) === html &&
+        !(
+          (element instanceof HTMLSelectElement ||
+            element instanceof HTMLInputElement) &&
+          element.value !== value
+        ) &&
+        !!calendarCandidateStructure(element, evidence),
+    );
+  // Every executor resolves the opener before its first calendar gesture, so
+  // a transport failure here precedes any DOM change for the field. Retry it
+  // once within the field budget; later roles never retry.
+  const decide = async () => {
+    try {
+      return await provider(request);
+    } catch (error) {
+      if (
+        args.role !== "CALENDAR_OPENER" ||
+        !isTransientAnalysisError(error) ||
+        args.signal?.aborted ||
+        now() >= args.deadline ||
+        !snapshotCurrent()
+      )
+        throw error;
+      localWorkflowLog("calendar-role-retry", { role: args.role });
+      return provider(request);
+    }
+  };
   let timer: ReturnType<typeof setTimeout> | undefined;
   let abort: (() => void) | undefined;
   try {
@@ -164,23 +214,28 @@ export async function resolveCalendarRole<T extends HTMLElement>(
       args.signal?.addEventListener("abort", abort, { once: true });
       timer = setTimeout(abort, Math.max(0, args.deadline - now()));
     });
-    const raw = await Promise.race([provider(request), interrupted]);
+    const raw = await Promise.race([decide(), interrupted]);
     if (args.signal?.aborted) return stop("aborted");
     if (!raw || now() >= args.deadline) return stop("timeout");
-    if (
-      args.revalidate?.() === false ||
-      snapshots.some(
-        ({ element, parent, html, value }) =>
-          !element.isConnected ||
-          element.parentElement !== parent ||
-          candidateHtml(element) !== html ||
-          ((element instanceof HTMLSelectElement ||
-            element instanceof HTMLInputElement) &&
-            element.value !== value) ||
-          !calendarCandidateStructure(element, evidence),
-      )
-    )
-      return stop("stale");
+    localWorkflowLog("calendar-role-stale-check", {
+      role: args.role,
+      revalidate: args.revalidate?.() !== false,
+      checks: JSON.stringify(snapshots.map(({ element, parent, html, value }) => ({
+        connected: element.isConnected,
+        sameParent: element.parentElement === parent,
+        sameHtml: candidateHtml(element) === html,
+        classBefore: /class="([^"]*)"/.exec(html)?.[1] ?? "",
+        classAfter: element.getAttribute("class") ?? "",
+        lengthDelta: candidateHtml(element).length - html.length,
+        sameValue:
+          !(
+            element instanceof HTMLSelectElement ||
+            element instanceof HTMLInputElement
+          ) || element.value === value,
+        structure: Boolean(calendarCandidateStructure(element, evidence)),
+      }))),
+    });
+    if (!snapshotCurrent()) return stop("stale");
     const response = validateInteractionDecisionResponse(request, raw);
     if (response.status !== "COMPLETE") return stop("provider-unavailable");
     for (const decision of response.decisions) {
@@ -202,7 +257,13 @@ export async function resolveCalendarRole<T extends HTMLElement>(
     );
     if (!decision) return stop("invalid-response");
     // Only this role authorizes the step; navigation is observed, never activated.
-    if (decision.selection !== "SELECTED") return;
+    if (decision.selection !== "SELECTED") {
+      localWorkflowLog("calendar-role", {
+        role: args.role,
+        selection: decision.selection,
+      });
+      return;
+    }
     return candidates.find(
       ({ candidateId }) => candidateId === decision.candidateId,
     );

@@ -193,6 +193,33 @@ const WRITE_PLAN_REASON = {
 } as const;
 
 describe("generic section analysis", () => {
+  it("keeps hidden English name-pair evidence available to name grading", async () => {
+    document.body.innerHTML = `<section><h2>인적사항</h2>
+      <label>영문 이름<input name="given"></label>
+      <div hidden><label>영문 성<input name="family"></label></div></section>`;
+    const profile = fullProfile();
+    profile.personal.englishGivenName = "Synthetic";
+    profile.personal.englishFamilyName = "Applicant";
+    const { byName } = await run(
+      {
+        field: (candidate) => ({
+          profileFieldKey:
+            candidate.domName === "given"
+              ? "personal.personal.englishGivenName"
+              : "personal.personal.englishFamilyName",
+          confidence: 1,
+          categoryConfirmed: true,
+          autofillPolicy: "ALLOWED",
+          interactionStatus: "READY",
+          writePlan: { command: "SET_TEXT" },
+        }),
+      },
+      profile,
+    );
+    expect(byName("given").grade).toEqual({ grade: "AUTO" });
+    expect(byName("family").grade).toEqual({ grade: "AUTO" });
+  });
+
   it.each([
     "BLOCKED",
     "MANUAL_REVEAL_REQUIRED",
@@ -1012,7 +1039,7 @@ describe("generic select and radio option values", () => {
   it.each([
     ["a radio group without the label", radios("비대상", "미필")],
     ["a radio group with a duplicate label", radios("군필", "군필", "미필")],
-  ])("blocks a stored military status on %s", async (_name, html) => {
+  ])("leaves a stored military status for review on %s", async (_name, html) => {
     document.body.innerHTML = html;
 
     const { byName } = await run(
@@ -1024,7 +1051,7 @@ describe("generic select and radio option values", () => {
       valueBinding: { type: "DIRECT" },
     });
     expect(byName("choice").grade).toEqual({
-      grade: "BLOCKED",
+      grade: "REVIEW",
       reason: "OPTION_VALUE_UNMATCHED",
     });
   });
@@ -1049,7 +1076,7 @@ describe("generic select and radio option values", () => {
   it.each([
     ["a certificate grade", "certifications.certificate.grade", select("A등급", "B등급")],
     ["a language score", "languages.languageTest.grade", select("1급", "2급")],
-  ])("blocks a numeric value on %s select", async (_name, key, html) => {
+  ])("leaves a numeric value on %s select for review", async (_name, key, html) => {
     document.body.innerHTML = html;
     const profile = createEmptyProfile();
     profile.certifications.push({
@@ -1062,7 +1089,7 @@ describe("generic select and radio option values", () => {
     const { byName } = await run({ field: choice(key) }, profile);
 
     expect(byName("choice").grade).toEqual({
-      grade: "BLOCKED",
+      grade: "REVIEW",
       reason: "OPTION_VALUE_UNMATCHED",
     });
   });

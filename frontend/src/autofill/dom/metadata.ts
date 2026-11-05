@@ -41,7 +41,12 @@ function interactiveTextNode(element: Element): boolean {
 }
 
 /** Read fixed text only; keep block boundaries for question/description ownership. */
-export function fixedTextChunks(root: Element, choiceWrapper = false): string[] {
+export function fixedTextChunks(
+  root: Element,
+  choiceWrapper = false,
+  /** The root is the control's own <label>: clicking it only focuses the control. */
+  explicitLabel = false,
+): string[] {
   for (let ancestor: Element | null = root; ancestor; ancestor = ancestor.parentElement) {
     if (hiddenTextNode(ancestor) || ancestor.matches(EDITABLE) ||
       (ancestor !== root && interactiveTextNode(ancestor))) return [];
@@ -62,7 +67,8 @@ export function fixedTextChunks(root: Element, choiceWrapper = false): string[] 
       node.matches("script, style, template, noscript, svg, option") ||
       hiddenTextNode(node)) return;
     if (interactiveTextNode(node) &&
-      !(node === root && choiceWrapper && !node.matches(INTERACTIVE))) return;
+      !(node === root && choiceWrapper && !node.matches(INTERACTIVE)) &&
+      !(node === root && explicitLabel && node instanceof HTMLLabelElement)) return;
     const block = /^(ADDRESS|ARTICLE|ASIDE|BLOCKQUOTE|DD|DIV|DT|FIGCAPTION|FOOTER|H[1-6]|HEADER|LEGEND|LI|OL|P|PRE|TD|TH|UL|BR)$/.test(node.tagName);
     if (block) flush();
     node.childNodes.forEach(walk);
@@ -161,6 +167,21 @@ function choiceLabelOf(input: HTMLInputElement): string | undefined {
 }
 
 function genericLabelOf(element: HTMLElement): string | undefined {
+  const label = uncheckedGenericLabelOf(element);
+  // A control's own current value never names the control (it shows the choice).
+  if (
+    label &&
+    element instanceof HTMLInputElement &&
+    element.readOnly &&
+    formText(element.value) === label
+  ) {
+    const placeholder = formText(element.getAttribute("placeholder"));
+    return placeholder && placeholder !== label ? placeholder : undefined;
+  }
+  return label;
+}
+
+function uncheckedGenericLabelOf(element: HTMLElement): string | undefined {
   const root = element.getRootNode() as Document | ShadowRoot;
   const labelled = formText((element.getAttribute("aria-labelledby")?.trim().split(/\s+/) ?? [])
     .filter((id) => isTrustedId(root, id))
@@ -174,7 +195,7 @@ function genericLabelOf(element: HTMLElement): string | undefined {
   if (element instanceof HTMLInputElement || element instanceof HTMLSelectElement ||
     element instanceof HTMLTextAreaElement) {
     const label = trustedLabels(element)[0] ?? unassociatedLabelOf(element);
-    const explicit = label ? formText(fixedTextChunks(label).join(" ")) : undefined;
+    const explicit = label ? formText(fixedTextChunks(label, false, true).join(" ")) : undefined;
     if (explicit) return explicit;
     if (element instanceof HTMLInputElement && ["radio", "checkbox"].includes(element.type)) {
       const choice = choiceLabelOf(element);

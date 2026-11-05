@@ -1282,6 +1282,78 @@ describe("generic native write safety boundaries", () => {
   });
 });
 
+describe("user-approved radio replacement", () => {
+  function radioPair(checked: "대상" | "비대상") {
+    const options = ["대상", "비대상"].map((value) => {
+      const radio = document.createElement("input");
+      radio.type = "radio";
+      radio.name = "veteran";
+      radio.value = value;
+      radio.checked = value === checked;
+      document.body.append(radio);
+      return radio;
+    });
+    const registry = new CandidateRegistry();
+    registry.registerField({
+      kind: "field",
+      candidateId: "radio-field",
+      candidate: {
+        candidateId: "radio-field",
+        element: "input",
+        control: "radio",
+        visibility: "visible",
+        options: options.map((radio) => ({
+          optionId: radio.value,
+          displayName: radio.value,
+        })),
+      },
+      elements: options,
+      optionElements: new Map(options.map((radio) => [radio.value, radio])),
+      sectionId: "section-1",
+      signature: createStructuralSignature(options),
+    });
+    return { options, registry };
+  }
+  const analysis: MatchedFieldAnalysis = {
+    ...textAnalysis,
+    candidateId: "radio-field",
+    writePlan: { command: "CHECK_RADIO" },
+  };
+
+  it("replaces the reviewed existing choice when the user chose the profile value", () => {
+    const { options, registry } = radioPair("비대상");
+
+    const result = executeApprovedWrites({
+      items: [
+        reviewItem(analysis, "대상", {
+          status: "conflict",
+          currentValue: "비대상",
+        }),
+      ],
+      approvedCandidateIds: new Set(["radio-field"]),
+      registry,
+    })[0]!;
+
+    expect(result).toMatchObject({ outcome: "success" });
+    expect(options[0].checked).toBe(true);
+  });
+
+  it("still stops when the page choice changed after the review", () => {
+    const { options, registry } = radioPair("비대상");
+
+    const result = executeApprovedWrites({
+      items: [
+        reviewItem(analysis, "대상", { status: "conflict", currentValue: "" }),
+      ],
+      approvedCandidateIds: new Set(["radio-field"]),
+      registry,
+    })[0]!;
+
+    expect(result).toMatchObject({ code: "CONFLICT" });
+    expect(options[1].checked).toBe(true);
+  });
+});
+
 describe("generic writer fail-closed native boundaries", () => {
   it.each([
     "file",
@@ -1739,5 +1811,84 @@ describe("calendar-only document run", () => {
       status: "skipped",
       code: "NOT_APPROVED",
     });
+  });
+});
+
+describe("visible write targets", () => {
+  it("writes the visible control and leaves a hidden duplicate first in the handle unchanged", () => {
+    const hidden = document.createElement("input");
+    hidden.name = "schoolName";
+    const visible = document.createElement("input");
+    visible.name = "schoolName";
+    const wrapper = document.createElement("div");
+    wrapper.hidden = true;
+    wrapper.append(hidden);
+    document.body.append(wrapper, visible);
+    const registry = new CandidateRegistry();
+    registry.registerField({
+      kind: "field",
+      candidateId: "field-1",
+      candidate: {
+        candidateId: "field-1",
+        element: "input",
+        control: "text",
+        visibility: "visible",
+      },
+      elements: [hidden, visible],
+      optionElements: new Map(),
+      sectionId: "section-1",
+      signature: createStructuralSignature([hidden, visible]),
+    });
+
+    const result = executeApprovedWrites({
+      items: [reviewItem(textAnalysis, "합성고등학교")],
+      approvedCandidateIds: new Set(["field-1"]),
+      registry,
+    });
+
+    expect(visible.value).toBe("합성고등학교");
+    expect(hidden.value).toBe("");
+    expect(result).toEqual([
+      {
+        candidateId: "field-1",
+        status: "written",
+        outcome: "success",
+        code: "WRITTEN",
+      },
+    ]);
+  });
+});
+
+describe("framework re-render settle", () => {
+  it("never reports completion when a framework re-render removes the value before settle readback", async () => {
+    const input = document.createElement("input");
+    input.addEventListener("input", () => {
+      setTimeout(() => {
+        input.value = "";
+      }, 0);
+    });
+    const registry = register(input, {
+      candidateId: "field-1",
+      element: "input",
+      control: "text",
+      visibility: "visible",
+    });
+
+    const results = await executeApprovedWritesAfterPageSettles({
+      items: [reviewItem(textAnalysis, "example")],
+      approvedCandidateIds: new Set(["field-1"]),
+      registry,
+    });
+
+    expect(input.value).toBe("");
+    expect(results).toEqual([
+      {
+        candidateId: "field-1",
+        status: "skipped",
+        outcome: "needs-verification",
+        code: "RETAINED_VALUE_UNCONFIRMED",
+        reason: "입력 후 값이 유지되지 않아 확인이 필요합니다.",
+      },
+    ]);
   });
 });

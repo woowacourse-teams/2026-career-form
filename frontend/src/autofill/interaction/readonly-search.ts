@@ -15,6 +15,7 @@ import type { FieldCandidateHandle } from "../dom/types";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import type { SearchFollowUpControl } from "./search-follow-up";
 import { genericRowFor } from "../dom/repeatable-rows";
+import { hiddenFromPage } from "../dom/generic-form-groups";
 import {
   elementSignature,
   isAnchorElement,
@@ -140,6 +141,8 @@ export type TargetIdentity = {
   fieldSignature: string;
   semanticSignature?: string;
   noOp?: true;
+  /** The target opens its own search dialog; no other opener exists. */
+  selfOpener?: true;
   opener?: HTMLButtonElement | HTMLInputElement | HTMLAnchorElement;
   openerSignature?: string;
   openers: readonly (
@@ -173,6 +176,12 @@ export interface ExecuteReadonlySearchArgs {
   genericPopupRecovery?: boolean;
   /** A known pre-review value, also retained locally for the conflict guard. */
   expectedCurrentValue?: string;
+  /**
+   * Generic search only: other stored values of the same profile entry. A
+   * layer whose query waits for one select may use them to choose it. Local
+   * only; never included in an interaction decision request.
+   */
+  contextValues?: readonly import("./search-gate").SearchContextValue[];
   /** Local-only exact search forms. The original expected value is always first. */
   searchValues?: readonly string[];
   /** Local approval only; never serialized in role requests. */
@@ -289,7 +298,18 @@ function isPlausibleSearchOpener(
     !["button", "submit", "reset", "image"].includes(element.type)
   )
     return false;
-  return SEARCH_ACTION.test(openerLabel(element));
+  const label = openerLabel(element);
+  if (SEARCH_ACTION.test(label)) return true;
+  // An icon-only button names no action at all. It stays a candidate so the
+  // field group can count it; the execution-time role decision must still
+  // confirm it before any click. A button that wraps a form control is that
+  // control's own trigger (for example a custom dropdown), not a search.
+  return (
+    label === "" &&
+    isButtonElement(element) &&
+    element.querySelector("svg, img") !== null &&
+    element.querySelector("input, select, textarea") === null
+  );
 }
 
 /**
@@ -318,7 +338,13 @@ export function safeSearchOpener(
   if (!isPlausibleSearchOpener(element)) return false;
   if (!isVisible(element) || element.matches(":disabled")) return false;
   if (element.closest("[aria-disabled='true']")) return false;
-  if (isButtonElement(element) && element.type !== "button") return false;
+  // A default submit button with no form owner has nothing to submit.
+  if (
+    isButtonElement(element) &&
+    element.type !== "button" &&
+    !(element.type === "submit" && element.form === null)
+  )
+    return false;
   if (isInputElement(element) && element.type !== "button") return false;
   if (isAnchorElement(element)) {
     const href = element.getAttribute("href")?.trim() ?? "";
@@ -406,6 +432,22 @@ export function observeReadonlySearch(
   // A populated field can be a no-op even if its opener is absent.
   if (openers.length > 1)
     return { status: "ambiguous", reason: "multiple_search_openers" };
+  // Collection observed this exact input open one dialog with one search box.
+  if (!openers.length && !target.value && handle.selfOpensSearchDialog)
+    return {
+      status: "eligible",
+      targetCandidateId: handle.candidateId,
+      identity: {
+        target,
+        fieldGroup,
+        repeatRow: genericRowFor(target),
+        fieldSignature: elementSignature(target),
+        semanticSignature: targetSemanticSignature(target),
+        selfOpener: true,
+        openers: [],
+        openerSignatures: [],
+      },
+    };
   if (
     !target.value &&
     (!openers.length || openers.some((item) => !safeSearchOpener(item)))
@@ -443,6 +485,10 @@ function targetSemanticSignature(target: HTMLInputElement): string {
 }
 
 export function controlSignature(element: Element): string {
+  // A page can mirror typed text into the value attribute of a text input.
+  const typedText =
+    element.tagName === "INPUT" &&
+    ["text", "search"].includes((element as HTMLInputElement).type);
   return JSON.stringify([
     elementSignature(element),
     ...[
@@ -468,7 +514,9 @@ export function controlSignature(element: Element): string {
       "data-value",
       "data-code",
       "value",
-    ].map((name) => element.getAttribute(name)),
+    ].map((name) =>
+      typedText && name === "value" ? null : element.getAttribute(name),
+    ),
     element.textContent,
   ]);
 }
@@ -524,7 +572,8 @@ export function targetIsCurrent(
     isInputElement(candidate) &&
     candidate.type === "text" &&
     candidate.readOnly &&
-    isVisible(candidate, true)
+    // The open modal may also mark the page behind it aria-hidden.
+    isVisible(candidate, true, !hiddenFromPage(candidate))
       ? candidate
       : targetInput(lookup.handle);
   if (

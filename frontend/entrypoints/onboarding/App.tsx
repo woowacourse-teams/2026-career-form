@@ -4,8 +4,14 @@ import type { ProfileRepository } from "../../src/profile/profile-repository";
 import { ChromeProfileStorage } from "../../src/storage/chrome-profile-storage";
 import { QuickStart } from "../../src/profile/components/QuickStart";
 import { trackExtensionEvent } from "../../src/analytics/extension-tracker";
+import {
+  pushClient as defaultPushClient,
+  type PushClient,
+} from "../../src/job-postings/push-client";
 import { SiteApp } from "../../site/SiteApp";
 import { SiteUrlContext } from "../../site/site-navigation";
+import { StartScreen } from "./StartScreen";
+import styles from "./App.module.css";
 
 export function extensionSiteUrl(path: string): string {
   if (path.startsWith("/demo/"))
@@ -18,7 +24,12 @@ export function extensionSiteUrl(path: string): string {
 export function App({
   repository: injectedRepository,
   track = trackExtensionEvent,
-}: { repository?: ProfileRepository; track?: TrackEvent } = {}) {
+  pushClient = defaultPushClient,
+}: {
+  repository?: ProfileRepository;
+  track?: TrackEvent;
+  pushClient?: PushClient;
+} = {}) {
   const repository = useMemo(
     () => injectedRepository ?? new ChromeProfileStorage(),
     [injectedRepository],
@@ -44,15 +55,24 @@ export function App({
           }}
         />
       ) : (
-        <SiteApp
-          path={path}
-          installed
-          profileHref="/options.html"
-          postingsHref="/options.html#postings/new"
-          track={track}
-          onStartAutofill={() => setQuickStart(true)}
-          surface="extension_onboarding"
-        />
+        <div className={styles.shell}>
+          <SiteApp
+            path={path}
+            installed
+            profileHref="/options.html"
+            postingsHref="/options.html#postings"
+            track={track}
+            onStartAutofill={() => setQuickStart(true)}
+            renderStart={(start) => (
+              <StartScreen
+                start={start}
+                pushClient={pushClient}
+                track={track}
+              />
+            )}
+            surface="extension_onboarding"
+          />
+        </div>
       )}
     </SiteUrlContext>
   );

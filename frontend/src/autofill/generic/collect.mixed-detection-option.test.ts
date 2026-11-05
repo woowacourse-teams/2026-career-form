@@ -50,15 +50,17 @@ function mixedRowCount(
 }
 
 // Digests of the default-argument collection output, recorded before the
-// opt-in `mixedSectionDetection` argument existed.
+// opt-in `mixedSectionDetection` argument existed. The fields digests were
+// re-recorded when generic collection began flagging empty-value select
+// options as `placeholder`; the only diff is that flag on those options.
 const BASELINE: Record<string, { fields: string; preparation: string }> = {
   "lg-ai-research-birth-split-email": {
-    fields: "1663b5c4caed514eb1289b6fd20f7c813611e48bba422ccf3b1a87a016693e1c",
+    fields: "e226bdcf26296a5f04f08ea7b5676a7c3489d61fbe4f4b2a3ce4596cad33bed6",
     preparation:
       "3023a0ebb4428cc9b7fcce3dc9401eb4c83e5d7ee5430d0421e535639f409f71",
   },
   "sk-careers-application-form": {
-    fields: "786e4c950f8955974e93d1fe03bf166d9c4a716214c66b714db71a39f4b67efe",
+    fields: "33a7e2cfa16d4028ee14da01586d4e3e13bdfb5295ec5cf4b5fc789d90bbb240",
     preparation:
       "d055060eb865da8290bc4be8018934bce9a130e894a1b72b749223f299145485",
   },

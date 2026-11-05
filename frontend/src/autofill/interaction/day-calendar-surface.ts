@@ -1,5 +1,9 @@
 import { calendarUnitEvidence } from "./calendar-unit";
 import { hasCalendarOwnershipConflict } from "./calendar-ownership";
+import {
+  dayCalendarGridRoots,
+  deferredCalendarOpening,
+} from "./calendar-deferred";
 
 /**
  * Detects readonly inputs bound to a ui-datepicker family day calendar.
@@ -16,6 +20,11 @@ export interface DayCalendarSurface {
   opener: HTMLElement;
   popup: HTMLElement;
   openBy: "trigger" | "target";
+  /**
+   * A calendar mounted only after opening. `popup` is then the owning field
+   * group; execution adopts the single new day-grid root.
+   */
+  rendering?: "deferred-generic";
 }
 
 const HIDDEN = "[hidden], [inert], [aria-hidden='true']";
@@ -45,6 +54,33 @@ export function dayCalendarRoots(document: Document): HTMLElement[] {
       !root.classList.contains("ui-datepicker-inline") &&
       !root.parentElement?.closest(".ui-datepicker"),
   );
+}
+
+// Roots a calendar run opened, with their openers. A page may keep a root
+// hidden after it closes and tear it down later; its year/month selects and
+// its opener's open/closed display are never applicant values.
+const openedCalendarRoots = new Map<HTMLElement, HTMLElement | undefined>();
+
+export function rememberCalendarRoot(
+  root: HTMLElement,
+  opener?: HTMLElement,
+): void {
+  openedCalendarRoots.set(root, opener);
+}
+
+export function rememberedCalendarRoots(document: Document): HTMLElement[] {
+  for (const root of openedCalendarRoots.keys())
+    if (!root.isConnected) openedCalendarRoots.delete(root);
+  return [...openedCalendarRoots.keys()].filter(
+    (root) => root.ownerDocument === document,
+  );
+}
+
+export function rememberedCalendarOpeners(document: Document): HTMLElement[] {
+  return rememberedCalendarRoots(document).flatMap((root) => {
+    const opener = openedCalendarRoots.get(root);
+    return opener ? [opener] : [];
+  });
 }
 
 export function displayedDayCalendarRoots(document: Document): HTMLElement[] {
@@ -84,11 +120,38 @@ export function dayCalendarSurfaceFor(
     target.disabled ||
     !target.isConnected ||
     target.closest(HIDDEN) ||
-    unit?.unit !== "day" ||
-    unit.unitEvidence === "unconfirmed" ||
-    !target.classList.contains("hasDatepicker")
+    unit?.unit !== "day"
   )
     return undefined;
+  // A deferred calendar proves its day grid at execution time, so one label
+  // clue suffices here; a ui-datepicker needs the confirmed unit.
+  if (!target.classList.contains("hasDatepicker")) {
+    const opening = deferredCalendarOpening(target);
+    // While open, the opener may name the day grid it mounted; that is ownership.
+    const openedGrid = (element: HTMLElement | null) =>
+      !!element &&
+      dayCalendarGridRoots(target.ownerDocument).some(
+        (root) => element.contains(root) || root.contains(element),
+      );
+    if (
+      !opening ||
+      hasCalendarOwnershipConflict(
+        target,
+        opening.opener,
+        opening.group,
+        openedGrid,
+      )
+    )
+      return undefined;
+    return {
+      target,
+      opener: opening.opener,
+      popup: opening.group,
+      openBy: opening.opener === target ? "target" : "trigger",
+      rendering: "deferred-generic",
+    };
+  }
+  if (unit.unitEvidence === "unconfirmed") return undefined;
   const roots = dayCalendarRoots(target.ownerDocument);
   if (roots.length !== 1 || roots[0]!.contains(target)) return undefined;
   const triggers = adjacentTriggers(target);

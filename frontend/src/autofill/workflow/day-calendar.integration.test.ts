@@ -160,7 +160,7 @@ describe("readonly day calendar review-to-write route", () => {
     expect(items).toHaveLength(4);
     expect(byTarget(items, "start-0")).toMatchObject({
       status: "available",
-      selected: false,
+      selected: true,
       profileValue: "2020-02-29",
       profileEntryId: "career-a",
       itemIndex: 0,

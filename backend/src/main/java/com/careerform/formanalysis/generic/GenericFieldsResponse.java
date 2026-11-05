@@ -50,8 +50,16 @@ public record GenericFieldsResponse(
         @JsonInclude(JsonInclude.Include.NON_NULL) AutofillPolicy autofillPolicy,
         InteractionStatus interactionStatus,
         @JsonInclude(JsonInclude.Include.NON_NULL) WritePlan writePlan,
-        @JsonInclude(JsonInclude.Include.NON_NULL) Binding binding
+        @JsonInclude(JsonInclude.Include.NON_NULL) Binding binding,
+        @JsonInclude(JsonInclude.Include.NON_NULL) Inference inference
     ) {
+
+        public Field(String candidateId, String profileFieldKey, double confidence, boolean categoryConfirmed,
+            Reason reason, AutofillPolicy autofillPolicy, InteractionStatus interactionStatus, WritePlan writePlan,
+            Binding binding) {
+            this(candidateId, profileFieldKey, confidence, categoryConfirmed, reason, autofillPolicy,
+                interactionStatus, writePlan, binding, null);
+        }
 
         /** 입력 판정 없이 만든 칸. 쓰기 근거가 없으므로 UNVERIFIED로 두고 autofillPolicy와 writePlan을 비운다. */
         public Field(String candidateId, String profileFieldKey, double confidence, boolean categoryConfirmed,
@@ -111,6 +119,12 @@ public record GenericFieldsResponse(
 
     public enum Reason {
         LLM_UNAVAILABLE
+    }
+
+    public enum Inference {
+        PAIRED_DATE,
+        LANGUAGE_SCORE,
+        LANGUAGE_GRADE
     }
 
     public enum Status {

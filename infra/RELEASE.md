@@ -1,4 +1,4 @@
-# 릴리스 브랜치 유지와 정리
+# 릴리스·작업 브랜치 유지와 정리
 
 `release/*`는 main 병합 이후에도 운영 배포와 develop 동기화가 끝날 때까지 유지한다.
 release → main과 release → develop은 기존 규약대로 **Merge Commit**을 사용한다.
@@ -6,8 +6,8 @@ release → main과 release → develop은 기존 규약대로 **Merge Commit**�
 ## 관리자가 적용할 설정
 
 Settings → General → Pull Requests에서 **Automatically delete head branches**를
-해제한다. 저장소 전체 설정이므로 일반 `CF-*` 기능 브랜치도 자동 삭제되지 않는다.
-기능 PR 담당자는 병합 완료를 확인한 뒤 자신의 작업 브랜치를 정리한다.
+해제한다. 저장소 전체 설정이므로 GitHub는 어떤 head 브랜치도 자동 삭제하지 않는다.
+병합된 작업 브랜치는 아래 [작업 브랜치 정리](#작업-브랜치-정리)의 워크플로가 삭제한다.
 
 읽기 전용 확인:
 
@@ -18,8 +18,8 @@ gh api repos/woowacourse-teams/2026-career-form --jq .delete_branch_on_merge
 결과가 `false`여야 한다. 이 문서를 추가하는 PR만으로 원격 설정이 바뀌지는 않는다.
 설정 해제는 다음 release → main 병합 전에 적용한다.
 
-main/develop 삭제 금지와 기존 PR 보호는 유지한다. release 삭제를 차단하는 Ruleset이
-있다면 관리자가 기존 완료 워크플로의 삭제 권한을 함께 확인한다. 삭제 거절을 숨기거나
+main/develop 삭제 금지와 기존 PR 보호는 유지한다. release 또는 작업 브랜치 삭제를
+차단하는 Ruleset이 있다면 관리자가 두 정리 워크플로의 삭제 권한을 함께 확인한다. 삭제 거절을 숨기거나
 이 작업에서 보호 규칙을 일괄 해제하지 않는다.
 
 ## 두 Actions 실행 경계
@@ -37,6 +37,22 @@ main/develop 삭제 금지와 기존 PR 보호는 유지한다. release 삭제�
 두 삭제 경로는 현재 원격 SHA가 검증한 SHA와 같을 때만 동작한다. Git의 명시적
 `--force-with-lease=<ref>:<sha>` 조건을 **삭제 refspec**과 함께 사용하므로,
 확인 이후 새 커밋이 올라와도 서버가 삭제를 거절한다. 브랜치 이력을 덮어쓰지 않는다.
+
+## 작업 브랜치 정리
+
+`cleanup-merged-branch.yml`은 같은 저장소의 PR이 **병합**됐을 때만 head 브랜치를 삭제한다.
+
+| head | base |
+|---|---|
+| `CF-<번호>` | `develop` 또는 `release/<MAJOR.MINOR.PATCH>` |
+| `hotfix/CF-<번호>` | `main` |
+| `revert/<7~40자리 소문자 SHA>` | `main` |
+
+- `main`, `develop`, `release/*` head는 어떤 경우에도 삭제하지 않는다. release 정리는 위 두 경로가 담당한다.
+- 병합 없이 닫힌 PR, fork head, 표에 없는 쌍은 `skipped`로 끝나며 사람이 정리한다.
+- 같은 head로 열린 PR이 있으면 `skipped`로 끝난다. 열린 PR 조회에 실패하면 삭제하지 않고 실패한다.
+- 삭제는 release와 같은 SHA 확인과 명시적 lease를 사용한다. 병합 뒤 push된 커밋은 보존하고 실패한다.
+- 병합된 PR의 head는 PR 페이지의 **Restore branch**로 복원할 수 있다.
 
 ## 오류와 재실행
 

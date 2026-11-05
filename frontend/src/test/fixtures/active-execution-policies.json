@@ -1,6 +1,6 @@
 {
   "sk": {
-    "version": 37,
+    "version": 38,
     "executionPolicy": {
       "version": 1,
       "searches": [
@@ -630,7 +630,7 @@
               "rowSelector": "div.form-item-group.educationhigh-item",
               "rootSelector": "#applyContentAcademic.apply-form-box.education-root",
               "assetSelector": "div.form-item-asset",
-              "requiredSelector": "input[name='eduhgEducationName']"
+              "requiredSelector": "select[name='eduhgEducationStatus']"
             },
             {
               "id": "btnAddEducationUniv",
@@ -3319,7 +3319,7 @@
     }
   },
   "greeting": {
-    "version": 17,
+    "version": 19,
     "executionPolicy": {
       "version": 1,
       "searches": [],
@@ -3461,7 +3461,7 @@
           "projectDate": "^workHistory\\.projects\\.\\d+\\.projectPeriod\\.(startDate|endDate)$",
           "acquisitionDate": "^languagesCertificationsAndOtherActivity\\.(certifiedLanguageTests|certificatesLicenses)\\.\\d+\\.acquisitionDate$",
           "examRow": "^(languagesCertificationsAndOtherActivity\\.certifiedLanguageTests\\.\\d+)\\.testName$",
-          "directSearch": "^(?:educationalBackground\\.highSchool\\.schoolName|workHistory\\.workExperiences\\.\\d+\\.companyName|languagesCertificationsAndOtherActivity\\.certificatesLicenses\\.\\d+\\.credentials)$",
+          "directSearch": "^(?:educationalBackground\\.(?:highSchool\\.schoolName|(?:universities|graduateSchools)\\.\\d+\\.(?:schoolName|majors\\.\\d+))|workHistory\\.workExperiences\\.\\d+\\.companyName|languagesCertificationsAndOtherActivity\\.certificatesLicenses\\.\\d+\\.credentials)$",
           "searchField": "^(?:educationalBackground\\.(?:(?:universities|graduateSchools)\\.\\d+\\.(?:schoolName|majors\\.\\d+)|highSchool\\.schoolName)|workHistory\\.workExperiences\\.\\d+\\.companyName|languagesCertificationsAndOtherActivity\\.(?:certifiedLanguageTests\\.\\d+\\.testName|certificatesLicenses\\.\\d+\\.credentials))$",
           "certificate": "^languagesCertificationsAndOtherActivity\\.certificatesLicenses\\.\\d+\\.credentials$",
           "languageTest": "^languagesCertificationsAndOtherActivity\\.certifiedLanguageTests\\.\\d+\\.testName$",

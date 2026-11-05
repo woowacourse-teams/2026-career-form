@@ -27,17 +27,31 @@ const EDUCATION_ACTIONS = [
 type EducationAction = (typeof EDUCATION_ACTIONS)[number];
 type EducationOutcome = "one" | "none" | "two";
 
+// Row shapes seen live (2026-10-22): most postings render the high-school row
+// with a status select plus school-name and region controls; R262309 renders
+// it with the status select and dates only. The status select is the one
+// control every high-school row has, so the add rule re-identifies by it.
+type RowShape = "full" | "no-school-name";
+
 function educationRow(
   action: EducationAction,
   firstRow: boolean,
+  shape: RowShape = "full",
 ): HTMLDivElement {
   const row = document.createElement("div");
   row.className = `form-item-group ${action.rowClass}${
     firstRow ? " no-space" : ""
   }`;
+  const status =
+    action.id === "btnAddEducationHigh"
+      ? `<select name="eduhgEducationStatus"><option value=""></option><option value="1">졸업</option></select>`
+      : "";
+  const schoolName =
+    shape === "full" ? `<input name="${action.schoolName}" type="text" />` : "";
   row.innerHTML = `
     <div class="form-item-asset">
-      <input name="${action.schoolName}" type="text" />
+      ${status}
+      ${schoolName}
       <div class="form-item-column btn-control">
         <div class="form-add-control column">
           <button class="btn medium btn-dashed ${action.id}" type="button">${action.label}</button>
@@ -47,7 +61,10 @@ function educationRow(
   return row;
 }
 
-function setupEducationForm(outcome: EducationOutcome = "one") {
+function setupEducationForm(
+  outcome: EducationOutcome = "one",
+  shape: RowShape = "full",
+) {
   document.body.innerHTML = `
     <div id="applyContentAcademic" class="apply-form-box education-root">
       <div class="form-body">
@@ -68,7 +85,11 @@ function setupEducationForm(outcome: EducationOutcome = "one") {
       button.style.display = "none";
       const additions = outcome === "two" ? 2 : outcome === "none" ? 0 : 1;
       for (let index = 0; index < additions; index += 1) {
-        const row = educationRow(action, (rowCounts.get(action.id) ?? 0) === 0);
+        const row = educationRow(
+          action,
+          (rowCounts.get(action.id) ?? 0) === 0,
+          shape,
+        );
         rowCounts.set(action.id, (rowCounts.get(action.id) ?? 0) + 1);
         formBody.append(row);
         const replacement = row.querySelector<HTMLButtonElement>("button")!;
@@ -167,6 +188,35 @@ describe("SK education repeat preparation", () => {
     expect(rerunResult).toMatchObject({
       status: "completed",
       executedPlanCount: 0,
+      mayCollectFieldsSnapshot: true,
+    });
+  });
+
+  it("re-identifies the high-school add button when the row has no school-name input (R262309 shape)", async () => {
+    const { clicks, formBody } = setupEducationForm("one", "no-school-name");
+
+    const firstResult = await runEducationPreparation({
+      btnAddEducationHigh: 1,
+      btnAddEducationUniv: 0,
+    });
+    const secondResult = await runEducationPreparation({
+      btnAddEducationHigh: 2,
+      btnAddEducationUniv: 0,
+    });
+
+    expect(clicks).toEqual(["btnAddEducationHigh", "btnAddEducationHigh"]);
+    expect(formBody.querySelectorAll(".educationhigh-item")).toHaveLength(2);
+    expect(
+      formBody.querySelectorAll(
+        ".educationhigh-item input[name='eduhgEducationName']",
+      ),
+    ).toHaveLength(0);
+    expect(firstResult).toMatchObject({
+      status: "completed",
+      mayCollectFieldsSnapshot: true,
+    });
+    expect(secondResult).toMatchObject({
+      status: "completed",
       mayCollectFieldsSnapshot: true,
     });
   });

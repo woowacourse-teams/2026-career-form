@@ -5,6 +5,7 @@ import {
   revalidateDateTarget,
 } from "./date-target-format";
 import type { FieldCandidateHandle } from "../dom/types";
+import { formatProfileDate } from "../profile/date-format";
 function handle(
   el: HTMLInputElement,
   placeholder?: string,
@@ -27,6 +28,51 @@ function handle(
   };
 }
 describe("date target approval", () => {
+  it.each([
+    ["YYYYMMDD", "20240229"],
+    ["YYYYMM", "202402"],
+    ["YYYY-MM-DD", "2024-02-29"],
+    ["YYYY-MM", "2024-02"],
+    ["YYYY/MM/DD", "2024/02/29"],
+    ["YYYY/MM", "2024/02"],
+    ["YYYY.MM.DD", "2024.02.29"],
+    ["YYYY.MM", "2024.02"],
+  ])("formats and validates a label-prefixed %s clue", (format, value) => {
+    const el = document.createElement("input");
+    el.maxLength = format.length;
+    const result = resolveDateTargetFormat(
+      handle(el, `Start date ${format.toLowerCase()}`),
+    );
+    expect(result.status).toBe("resolved");
+    if (result.status !== "resolved") throw Error(result.reason);
+    expect(result.format).toBe(format);
+    expect(formatProfileDate("2024-02-29", result.format)).toEqual({
+      status: "resolved",
+      value,
+    });
+    expect(validateDateTargetValue(result.approval, value).status).toBe("valid");
+    expect(validateDateTargetValue(result.approval, value + "0").status).toBe(
+      "invalid",
+    );
+  });
+  it.each(["title", "aria-label", "aria-labelledby", "label"])(
+    "recognizes a date clue in %s and rejects conflicting placeholder clues",
+    (source) => {
+      const el = document.createElement("input");
+      const label = document.createElement("label");
+      label.id = "date-clue";
+      label.textContent = "Start date YYYYMMDD";
+      if (source === "label") label.append(el);
+      else if (source === "aria-labelledby") el.setAttribute(source, label.id);
+      else el.setAttribute(source, label.textContent);
+      document.body.append(label);
+      const h = handle(el);
+      expect(resolveDateTargetFormat(h).status).toBe("resolved");
+      el.placeholder = "YYYY-MM-DD";
+      expect(resolveDateTargetFormat(h).status).toBe("unavailable");
+      label.remove();
+    },
+  );
   it("rejects ambiguous, mixed, unsupported, and boundary tokens", () => {
     const el = document.createElement("input");
     el.type = "text";

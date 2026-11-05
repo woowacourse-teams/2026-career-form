@@ -332,8 +332,8 @@ describe("Greeting with generic autofill controls", () => {
       await screen.findByRole("heading", {
         name:
           phase === "preparation"
-            ? "분석을 완료하지 못했습니다"
-            : "페이지 실행 방식이 변경되었습니다. 다시 시작해 주세요",
+            ? "자동 기입을 시작하지 못했어요"
+            : "자동 기입을 멈췄어요",
       });
       expect(
         page.querySelector<HTMLInputElement>("[name='basicInformation.name']")

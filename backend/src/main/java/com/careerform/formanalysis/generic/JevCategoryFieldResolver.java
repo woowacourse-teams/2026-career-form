@@ -27,6 +27,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.stereotype.Component;
 
+import com.careerform.formanalysis.application.RawLabelMask;
 import com.careerform.formanalysis.application.SupportedProfileFields;
 import com.careerform.formanalysis.application.port.FieldMappingResolver.DerivedRecipe;
 import com.careerform.formanalysis.exception.ResolverException;
@@ -41,7 +42,6 @@ import com.careerform.formanalysis.generic.GenericFieldsResponse.DatePart;
 import com.careerform.formanalysis.generic.GenericFieldsResponse.DatePartBinding;
 import com.careerform.formanalysis.generic.GenericFieldsResponse.NameBinding;
 import com.careerform.formanalysis.infrastructure.InteractionProviderConditions;
-import com.careerform.formanalysis.infrastructure.adapter.ProviderSemanticSanitizer;
 import com.careerform.formanalysis.infrastructure.adapter.jev.JevClient;
 
 /**
@@ -57,7 +57,8 @@ public final class JevCategoryFieldResolver {
     private static final String ENGLISH_NAME_GUIDANCE =
         "English name fields: a field asking for one complete applicant name takes the full-name recipe whose "
             + "order is explicitly supported by englishNameOrderEvidence: GIVEN_FIRST or FAMILY_FIRST. "
-            + "This finite observation preserves explicit fixed statements lost by vocabulary projection; "
+            + "This finite observation preserves explicit fixed statements, or the one-order standard Hong Gildong "
+            + "example, lost by vocabulary projection; "
             + "the order of words in sanitized labels is not ordering evidence. If evidence is absent or CONFLICT, "
             + "choose ABSTAIN for a whole-name target; never assume an order or choose one partial name instead. "
             + "A field that asks "
@@ -271,7 +272,7 @@ public final class JevCategoryFieldResolver {
             && !SectionCategories.MIXED.equals(category)
             && !SectionCategories.ABSTAIN.equals(category);
         List<String> keys = confirmed
-            ? categories.keysOf(category)
+            ? recordKeys(categories.keysOf(category), section.recordSectionId())
             : fields.keys().stream()
                 .filter(key -> !SectionCategories.NONE.equals(SectionCategories.categoryOf(key)))
                 .toList();
@@ -355,6 +356,23 @@ public final class JevCategoryFieldResolver {
         }
         return new SectionWork(confirmed, Map.copyOf(criteria), context, List.copyOf(questions), assignment,
             Map.copyOf(bindings), candidates, nameGuidance);
+    }
+
+    /**
+     * 확정 범주 안에서 프로필 구조로 정해진 단일 기록(키의 두 번째 마디)만 후보로 남긴다.
+     * 힌트가 없거나 어떤 키와도 맞지 않으면 범주 키를 그대로 둔다.
+     */
+    private static List<String> recordKeys(List<String> keys, String recordSectionId) {
+        if (recordSectionId == null) {
+            return keys;
+        }
+        List<String> narrowed = keys.stream()
+            .filter(key -> {
+                String[] parts = key.split("\\.");
+                return parts.length > 2 && parts[1].equals(recordSectionId);
+            })
+            .toList();
+        return narrowed.isEmpty() ? keys : narrowed;
     }
 
     private static boolean matchesDatePart(FieldCandidate candidate, DatePart part) {
@@ -451,13 +469,17 @@ public final class JevCategoryFieldResolver {
         }
         if (field.options() != null) {
             result.put("options", field.options().stream()
-                .map(option -> ProviderSemanticSanitizer.sanitize(option.displayName()))
+                .map(option -> RawLabelMask.mask(option.displayName()))
                 .filter(Objects::nonNull).distinct().toList());
         }
         return result;
     }
 
-    /** Preserve only explicit, complete fixed ordering statements, never their raw text or arbitrary token order. */
+    /**
+     * Preserve only explicit, complete fixed ordering statements, never their raw text or arbitrary token order.
+     * Without such a statement, the standard Hong Gildong example shown in one order is that order; mixed orders
+     * conflict and any other example name is no evidence.
+     */
     private static String englishNameOrderEvidence(FieldCandidate field) {
         List<String> statements = new ArrayList<>();
         statements.add(field.displayName());
@@ -469,6 +491,7 @@ public final class JevCategoryFieldResolver {
                 .forEach(label -> statements.add(label.text()));
         }
         Set<String> orders = new HashSet<>();
+        Set<String> examples = new HashSet<>();
         for (String statement : statements) {
             if (statement == null) {
                 continue;
@@ -484,9 +507,21 @@ public final class JevCategoryFieldResolver {
                 + "(?:family name then given name|family name first,? given name last)\\)?")) {
                 orders.add("FAMILY_FIRST");
             }
+            if (HONG_FAMILY_FIRST.matcher(normalized).find()) {
+                examples.add("FAMILY_FIRST");
+            }
+            if (HONG_GIVEN_FIRST.matcher(normalized).find()) {
+                examples.add("GIVEN_FIRST");
+            }
         }
-        return orders.size() > 1 ? "CONFLICT" : orders.stream().findFirst().orElse(null);
+        Set<String> evidence = orders.isEmpty() ? examples : orders;
+        return evidence.size() > 1 ? "CONFLICT" : evidence.stream().findFirst().orElse(null);
     }
+
+    private static final java.util.regex.Pattern HONG_FAMILY_FIRST =
+        java.util.regex.Pattern.compile("(?<![a-z])hong\\s*,?\\s*gil[\\s-]?dong(?![a-z])");
+    private static final java.util.regex.Pattern HONG_GIVEN_FIRST =
+        java.util.regex.Pattern.compile("(?<![a-z])gil[\\s-]?dong\\s*,?\\s*hong(?![a-z])");
 
     private static void put(Map<String, Object> target, String key, String safe) {
         if (safe != null) {
@@ -495,7 +530,7 @@ public final class JevCategoryFieldResolver {
     }
 
     private static void text(Map<String, Object> target, String key, String raw) {
-        String safe = ProviderSemanticSanitizer.sanitize(raw);
+        String safe = RawLabelMask.mask(raw);
         if (safe != null) {
             target.put(key, safe);
         }

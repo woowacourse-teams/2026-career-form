@@ -1,0 +1,579 @@
+{
+  "schemaVersion": 1,
+  "snapshot": "ahnlab-write-resume-form",
+  "fields": [
+    {
+      "ordinal": 0,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(1) > div:nth-child(1) > div:nth-child(3) > span:nth-child(2) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "profileFieldKey": null,
+      "binding": {
+        "type": "DERIVED",
+        "recipe": "ENGLISH_FULL_NAME_GIVEN_FIRST"
+      },
+      "expectedDomState": {
+        "value": "Applicant Synthetic"
+      },
+      "exercisable": true
+    },
+    {
+      "ordinal": 1,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(1) > div:nth-child(1) > div:nth-child(4) > div:nth-child(2) > label:nth-child(1) > input:nth-child(1)",
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(1) > div:nth-child(1) > div:nth-child(4) > div:nth-child(2) > label:nth-child(2) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "radio",
+      "profileFieldKey": "personal.personal.gender",
+      "expectedDomState": {
+        "checkedValues": [
+          "M"
+        ]
+      },
+      "exercisable": true
+    },
+    {
+      "ordinal": 2,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(1) > div:nth-child(1) > div:nth-child(4) > span:nth-child(4) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "profileFieldKey": "personal.personal.birthDate",
+      "expectedDomState": {
+        "value": "1998-03-14"
+      },
+      "exercisable": true
+    },
+    {
+      "ordinal": 3,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(1) > div:nth-child(2) > div:nth-child(2) > label:nth-child(1) > select:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "select",
+      "profileFieldKey": null,
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "NOT_A_PROFILE_TARGET: no synthetic profile value for this control; its state must be preserved",
+      "preserve": true
+    },
+    {
+      "ordinal": 4,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(1) > div:nth-child(2) > div:nth-child(2) > label:nth-child(2) > select:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "select",
+      "profileFieldKey": null,
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "NOT_A_PROFILE_TARGET: no synthetic profile value for this control; its state must be preserved",
+      "preserve": true
+    },
+    {
+      "ordinal": 5,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(1) > div:nth-child(2) > div:nth-child(2) > label:nth-child(3) > select:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "select",
+      "profileFieldKey": null,
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "NOT_A_PROFILE_TARGET: no synthetic profile value for this control; its state must be preserved",
+      "preserve": true
+    },
+    {
+      "ordinal": 6,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(1) > div:nth-child(3) > div:nth-child(2) > span:nth-child(2) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "profileFieldKey": null,
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "NOT_A_PROFILE_TARGET: no synthetic profile value for this control; its state must be preserved",
+      "preserve": true
+    },
+    {
+      "ordinal": 7,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(1) > div:nth-child(3) > div:nth-child(2) > span:nth-child(4) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "profileFieldKey": null,
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "NOT_A_PROFILE_TARGET: no synthetic profile value for this control; its state must be preserved",
+      "preserve": true
+    },
+    {
+      "ordinal": 8,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(1) > div:nth-child(4) > div:nth-child(2) > span:nth-child(2) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "profileFieldKey": null,
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "NOT_A_PROFILE_TARGET: no synthetic profile value for this control; its state must be preserved",
+      "preserve": true
+    },
+    {
+      "ordinal": 9,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(1) > div:nth-child(4) > div:nth-child(2) > span:nth-child(4) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "profileFieldKey": null,
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "NOT_A_PROFILE_TARGET: no synthetic profile value for this control; its state must be preserved",
+      "preserve": true
+    },
+    {
+      "ordinal": 10,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(1) > div:nth-child(4) > div:nth-child(3) > div:nth-child(2) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "profileFieldKey": null,
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "NOT_A_PROFILE_TARGET: no synthetic profile value for this control; its state must be preserved",
+      "preserve": true
+    },
+    {
+      "ordinal": 11,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(1) > div:nth-child(4) > div:nth-child(4) > div:nth-child(2) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "profileFieldKey": null,
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "NOT_A_PROFILE_TARGET: no synthetic profile value for this control; its state must be preserved",
+      "preserve": true
+    },
+    {
+      "ordinal": 12,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(1) > div:nth-child(4) > div:nth-child(4) > div:nth-child(4) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "profileFieldKey": null,
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "NOT_A_PROFILE_TARGET: no synthetic profile value for this control; its state must be preserved",
+      "preserve": true
+    },
+    {
+      "ordinal": 13,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(1) > div:nth-child(5) > div:nth-child(2) > label:nth-child(1) > select:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "select",
+      "profileFieldKey": null,
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "NOT_A_PROFILE_TARGET: no synthetic profile value for this control; its state must be preserved",
+      "preserve": true
+    },
+    {
+      "ordinal": 14,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(1) > div:nth-child(5) > div:nth-child(2) > div:nth-child(2) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "profileFieldKey": null,
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "NOT_A_PROFILE_TARGET: no synthetic profile value for this control; its state must be preserved",
+      "preserve": true
+    },
+    {
+      "ordinal": 15,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(1) > div:nth-child(6) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > label:nth-child(1) > input:nth-child(1)",
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(1) > div:nth-child(6) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > label:nth-child(2) > input:nth-child(1)",
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(1) > div:nth-child(6) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > label:nth-child(3) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "checkbox",
+      "profileFieldKey": null,
+      "expectedDomState": {
+        "checkedValues": []
+      },
+      "exercisable": false,
+      "exercisableReason": "NOT_A_PROFILE_TARGET: no synthetic profile value for this control; its state must be preserved",
+      "preserve": true
+    },
+    {
+      "ordinal": 16,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(1) > div:nth-child(6) > div:nth-child(2) > div:nth-child(3) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "profileFieldKey": null,
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "NOT_A_PROFILE_TARGET: no synthetic profile value for this control; its state must be preserved",
+      "preserve": true
+    },
+    {
+      "ordinal": 17,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(2) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "profileFieldKey": null,
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "NOT_A_PROFILE_TARGET: no synthetic profile value for this control; its state must be preserved",
+      "preserve": true
+    },
+    {
+      "ordinal": 18,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(2) > div:nth-child(2) > div:nth-child(2) > label:nth-child(1) > select:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "select",
+      "profileFieldKey": "personal.personal.nationality",
+      "expectedDomState": {
+        "value": "KR"
+      },
+      "exercisable": false,
+      "exercisableReason": "SANITIZED_OPTION_TEXT: the matching nationality option label was redacted to [TEXT] during sanitization (review.md), so no profile text can identify it offline"
+    },
+    {
+      "ordinal": 19,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(2) > div:nth-child(3) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > input:nth-child(3)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "profileFieldKey": "contact.contact.postalCode",
+      "expectedDomState": {
+        "value": "12345"
+      },
+      "exercisable": true
+    },
+    {
+      "ordinal": 20,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(2) > div:nth-child(3) > div:nth-child(2) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > label:nth-child(1) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "profileFieldKey": "contact.contact.addressLine1",
+      "expectedDomState": {
+        "value": "합성시 합성로 100"
+      },
+      "exercisable": false,
+      "exercisableReason": "PAGE_WIDGET_NOT_REPRODUCED: readonly address line is filled by the out-of-form address search popup, which the snapshot does not reproduce (metadata limitations)"
+    },
+    {
+      "ordinal": 21,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(2) > div:nth-child(3) > div:nth-child(2) > div:nth-child(2) > div:nth-child(2) > div:nth-child(2) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "profileFieldKey": "contact.contact.addressLine2",
+      "expectedDomState": {
+        "value": "합성동 101호"
+      },
+      "exercisable": true
+    },
+    {
+      "ordinal": 22,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(2) > div:nth-child(5) > div:nth-child(3) > div:nth-child(1) > label:nth-child(1) > input:nth-child(1)",
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(2) > div:nth-child(5) > div:nth-child(3) > div:nth-child(1) > label:nth-child(2) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "radio",
+      "profileFieldKey": null,
+      "expectedDomState": {
+        "checkedValues": []
+      },
+      "exercisable": false,
+      "exercisableReason": "NOT_A_PROFILE_TARGET: no synthetic profile value for this control; its state must be preserved",
+      "preserve": true
+    },
+    {
+      "ordinal": 23,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(2) > div:nth-child(5) > div:nth-child(3) > label:nth-child(2) > select:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "select",
+      "profileFieldKey": null,
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "NOT_A_PROFILE_TARGET: no synthetic profile value for this control; its state must be preserved",
+      "preserve": true
+    },
+    {
+      "ordinal": 24,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(2) > div:nth-child(5) > div:nth-child(3) > label:nth-child(3) > select:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "select",
+      "profileFieldKey": null,
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "NOT_A_PROFILE_TARGET: no synthetic profile value for this control; its state must be preserved",
+      "preserve": true
+    },
+    {
+      "ordinal": 25,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(2) > div:nth-child(6) > div:nth-child(2) > div:nth-child(1) > label:nth-child(1) > input:nth-child(1)",
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(2) > div:nth-child(6) > div:nth-child(2) > div:nth-child(1) > label:nth-child(2) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "radio",
+      "profileFieldKey": null,
+      "expectedDomState": {
+        "checkedValues": []
+      },
+      "exercisable": false,
+      "exercisableReason": "NOT_A_PROFILE_TARGET: no synthetic profile value for this control; its state must be preserved",
+      "preserve": true
+    },
+    {
+      "ordinal": 26,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(2) > div:nth-child(6) > div:nth-child(2) > div:nth-child(2) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "profileFieldKey": null,
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "NOT_A_PROFILE_TARGET: no synthetic profile value for this control; its state must be preserved",
+      "preserve": true
+    },
+    {
+      "ordinal": 27,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(2) > div:nth-child(6) > div:nth-child(2) > div:nth-child(3) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "profileFieldKey": null,
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "NOT_A_PROFILE_TARGET: no synthetic profile value for this control; its state must be preserved",
+      "preserve": true
+    },
+    {
+      "ordinal": 28,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(2) > div:nth-child(6) > div:nth-child(2) > label:nth-child(4) > select:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "select",
+      "profileFieldKey": null,
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "NOT_A_PROFILE_TARGET: no synthetic profile value for this control; its state must be preserved",
+      "preserve": true
+    },
+    {
+      "ordinal": 29,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(2) > div:nth-child(7) > div:nth-child(2) > div:nth-child(2) > label:nth-child(1) > input:nth-child(1)",
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(2) > div:nth-child(7) > div:nth-child(2) > div:nth-child(2) > label:nth-child(2) > input:nth-child(1)",
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(2) > div:nth-child(7) > div:nth-child(2) > div:nth-child(2) > label:nth-child(3) > input:nth-child(1)",
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(2) > div:nth-child(7) > div:nth-child(2) > div:nth-child(2) > label:nth-child(4) > input:nth-child(1)",
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(2) > div:nth-child(7) > div:nth-child(2) > div:nth-child(2) > label:nth-child(5) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "radio",
+      "profileFieldKey": null,
+      "expectedDomState": {
+        "checkedValues": []
+      },
+      "exercisable": false,
+      "exercisableReason": "NOT_A_PROFILE_TARGET: no synthetic profile value for this control; its state must be preserved",
+      "preserve": true
+    },
+    {
+      "ordinal": 30,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(2) > div:nth-child(7) > div:nth-child(2) > div:nth-child(3) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "profileFieldKey": null,
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "NOT_A_PROFILE_TARGET: no synthetic profile value for this control; its state must be preserved",
+      "preserve": true
+    },
+    {
+      "ordinal": 31,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(2) > div:nth-child(7) > div:nth-child(3) > label:nth-child(2) > select:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "select",
+      "profileFieldKey": null,
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "NOT_A_PROFILE_TARGET: no synthetic profile value for this control; its state must be preserved",
+      "preserve": true
+    },
+    {
+      "ordinal": 32,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(2) > div:nth-child(7) > div:nth-child(3) > span:nth-child(4) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "profileFieldKey": null,
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "NOT_A_PROFILE_TARGET: no synthetic profile value for this control; its state must be preserved",
+      "preserve": true
+    },
+    {
+      "ordinal": 33,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(2) > div:nth-child(7) > div:nth-child(4) > label:nth-child(2) > select:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "select",
+      "profileFieldKey": null,
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "NOT_A_PROFILE_TARGET: no synthetic profile value for this control; its state must be preserved",
+      "preserve": true
+    },
+    {
+      "ordinal": 34,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(2) > div:nth-child(7) > div:nth-child(4) > label:nth-child(4) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "profileFieldKey": null,
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "NOT_A_PROFILE_TARGET: no synthetic profile value for this control; its state must be preserved",
+      "preserve": true
+    },
+    {
+      "ordinal": 35,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(2) > div:nth-child(7) > div:nth-child(4) > label:nth-child(4) > input:nth-child(2)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "profileFieldKey": null,
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "NOT_A_PROFILE_TARGET: no synthetic profile value for this control; its state must be preserved",
+      "preserve": true
+    },
+    {
+      "ordinal": 36,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(2) > div:nth-child(7) > div:nth-child(5) > label:nth-child(2) > select:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "select",
+      "profileFieldKey": null,
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "NOT_A_PROFILE_TARGET: no synthetic profile value for this control; its state must be preserved",
+      "preserve": true
+    },
+    {
+      "ordinal": 37,
+      "structurePath": [
+        "body > form:nth-child(3) > div:nth-child(1) > section:nth-child(2) > div:nth-child(7) > div:nth-child(5) > label:nth-child(3) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "profileFieldKey": null,
+      "expectedDomState": {
+        "value": ""
+      },
+      "exercisable": false,
+      "exercisableReason": "NOT_A_PROFILE_TARGET: no synthetic profile value for this control; its state must be preserved",
+      "preserve": true
+    }
+  ]
+}

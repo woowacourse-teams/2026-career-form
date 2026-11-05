@@ -71,6 +71,7 @@ public final class FieldInteractionPolicy {
         WriteCommand command = dateSelection
             ? WriteCommand.SELECT_DATE
             : searchSelection ? WriteCommand.SEARCH_SELECTION
+            : generic && isCustomSelect(candidate) ? WriteCommand.SELECT_OPTION
             : writeCommand(candidate, mapping);
         if (command == null) {
             return withoutWrite(InteractionStatus.UNVERIFIED);
@@ -137,14 +138,19 @@ public final class FieldInteractionPolicy {
         FieldMappingResolver.Result mapping,
         List<WriteCommand> supportedWriteCommands
     ) {
+        boolean readonlyText = Boolean.TRUE.equals(candidate.readonly())
+            && candidate.element() == FormElement.INPUT
+            && candidate.control() == FormControl.TEXT
+            && candidate.semanticContext() != null
+            && candidate.semanticContext().inputType() == InputType.TEXT;
+        // 범용 수집기는 자기 대화상자를 여는 버튼만 custom 요소의 button 컨트롤로 보낸다.
+        boolean dialogButton = candidate.element() == FormElement.CUSTOM
+            && candidate.control() == FormControl.BUTTON
+            && !Boolean.TRUE.equals(candidate.readonly());
         if (supportedWriteCommands == null
             || !supportedWriteCommands.contains(WriteCommand.SELECT_DATE)
-            || !Boolean.TRUE.equals(candidate.readonly())
-            || candidate.element() != FormElement.INPUT
-            || candidate.control() != FormControl.TEXT
+            || !(readonlyText || dialogButton)
             || candidate.visibility() != Visibility.VISIBLE
-            || candidate.semanticContext() == null
-            || candidate.semanticContext().inputType() != InputType.TEXT
             || !(mapping instanceof FieldMappingResolver.Match match)
             || !(match.valueBinding() instanceof FieldMappingResolver.DirectBinding direct)) {
             return false;
@@ -167,6 +173,14 @@ public final class FieldInteractionPolicy {
             return false;
         }
         return CANONICAL_FIELDS.contains(direct.profileFieldKey());
+    }
+
+    // 범용 수집기가 열어서 선택지를 읽은 커스텀 드롭다운만 선택 명령을 받는다.
+    private static boolean isCustomSelect(FieldCandidate candidate) {
+        return candidate.element() == FormElement.CUSTOM
+            && candidate.control() == FormControl.SELECT
+            && candidate.options() != null
+            && !candidate.options().isEmpty();
     }
 
     private static Decision withoutWrite(InteractionStatus status) {

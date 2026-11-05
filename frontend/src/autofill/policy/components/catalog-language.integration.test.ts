@@ -1,6 +1,7 @@
 import { fixturePolicy } from "../../../test/fixtures/execution-policy";
 import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
-usePolicyFixture("greeting");
+// Only fail-closed paths run here: cap the live wait budgets (wait-cap.ts).
+usePolicyFixture("greeting", { capWaits: 300 });
 import { afterEach, expect, it } from "vitest";
 import { CATALOG_VERSION } from "../../../profile/catalog";
 import {
@@ -95,7 +96,7 @@ async function run(
     profile,
     registry,
     analysis: {
-executionPolicy: fixturePolicy("greeting"),
+      executionPolicy: fixturePolicy("greeting", { capWaits: 300 }),
       snapshotId: "snapshot",
       mode: "ADAPTER",
       analysisStatus: "COMPLETE",
@@ -227,6 +228,64 @@ it("does not treat OPI as OPIc even with a matching row language", async () => {
     selected,
     "OPIc",
     "영어",
+  );
+  expect(success).toBe(false);
+  expect(input.value).toBe("");
+}, 8000);
+
+const toeicSpeaking: ProfileIdentity = {
+  status: "selected",
+  catalogId: "languageTest:toeic-speaking",
+  displayName: "TOEIC Speaking",
+  originalText: "토익스피킹",
+  catalogVersion: CATALOG_VERSION,
+};
+const toeic: ProfileIdentity = {
+  ...selected,
+  catalogId: "languageTest:toeic",
+  displayName: "TOEIC",
+};
+
+it("selects TOEIC Speaking for a catalog-selected TOEIC Speaking profile", async () => {
+  const { success, input, item, handle } = await run(
+    ["TOEIC", "TOEIC Speaking"],
+    toeicSpeaking,
+    "TOEIC Speaking",
+  );
+  expect(success).toBe(true);
+  expect(input.value).toBe("TOEIC Speaking");
+  expect(matchesResultValue(item, input.value, "TOEIC Speaking", handle)).toBe(
+    true,
+  );
+});
+
+// Greeting's TOEIC Speaking option text is assumed from the observed OPIc form.
+it("selects the TOEIC Speaking option qualified by the row language", async () => {
+  const { success, input } = await run(
+    ["TOEIC(영어)", "TOEIC Speaking(영어)"],
+    toeicSpeaking,
+    "TOEIC Speaking",
+    "영어",
+  );
+  expect(success).toBe(true);
+  expect(input.value).toBe("TOEIC Speaking(영어)");
+});
+
+it("keeps a TOEIC profile on TOEIC when both exams are listed", async () => {
+  const { success, input } = await run(
+    ["TOEIC Speaking", "TOEIC"],
+    toeic,
+    "TOEIC",
+  );
+  expect(success).toBe(true);
+  expect(input.value).toBe("TOEIC");
+});
+
+it("does not shrink TOEIC Speaking to TOEIC", async () => {
+  const { success, input } = await run(
+    ["TOEIC"],
+    toeicSpeaking,
+    "TOEIC Speaking",
   );
   expect(success).toBe(false);
   expect(input.value).toBe("");

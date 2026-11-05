@@ -1,3 +1,6 @@
+import { careerKeyForProjectRole } from "./record-kind-key";
+import { gpaScaleKeyForCredits } from "./scale-key";
+import { majorNameKeyForText } from "./major-key";
 import type { Profile } from "../../profile/model";
 import type {
   AnalysisApiClient,
@@ -10,12 +13,15 @@ import type {
   SectionClassifyRequest,
   SectionControlKind,
 } from "../api/types";
-import type { CollectedSnapshot } from "../dom/collect";
+import { isFieldCandidateHidden, type CollectedSnapshot } from "../dom/collect";
+import type { FieldCandidateHandle } from "../dom/types";
 import {
   resolveProfileFieldValue,
   type ReviewPlanItem,
 } from "../review/review-plan";
 import { resolveValueBinding } from "../profile/value-binding";
+import { kindOfOptionText, sectionOfKind } from "../profile/education-row-kind";
+import { localWorkflowLog } from "../debug/local-workflow";
 import { datePartOf, matchDatePartOption } from "./date-part-options";
 import {
   gradeGenericField,
@@ -26,24 +32,15 @@ import {
   type GradeSibling,
 } from "./field-grading";
 import {
+  GENERIC_SECTION_FAILURE,
+  type GenericSectionFailure,
+} from "./section-failure";
+import {
   segmentGenericSections,
   type GenericSection,
 } from "./section-segments";
 
-/** Why every field of one section is BLOCKED. */
-export const GENERIC_SECTION_FAILURE = {
-  CLASSIFY_UNAVAILABLE: "CLASSIFY_UNAVAILABLE",
-  ANALYZE_UNAVAILABLE: "ANALYZE_UNAVAILABLE",
-  /** HTTP 404 from a backend without the generic endpoints. */
-  ENDPOINT_UNAVAILABLE: "ENDPOINT_UNAVAILABLE",
-  /** The backend returned the field with reason LLM_UNAVAILABLE. */
-  LLM_UNAVAILABLE: "LLM_UNAVAILABLE",
-  /** A local exception while preparing or converting this section. */
-  SECTION_PROCESSING_FAILED: "SECTION_PROCESSING_FAILED",
-} as const;
-
-export type GenericSectionFailure =
-  (typeof GENERIC_SECTION_FAILURE)[keyof typeof GENERIC_SECTION_FAILURE];
+export { GENERIC_SECTION_FAILURE, type GenericSectionFailure };
 
 /** Reason of a candidate field the model could not link to a profile key. */
 export const GENERIC_UNLINKED_REASON = "UNLINKED";
@@ -109,11 +106,13 @@ export function createGenericAnalysisCache(): GenericAnalysisCache {
 
 interface SegmentField {
   element: Element;
+  handle: FieldCandidateHandle;
   label?: string;
   control: string;
   candidate: FieldCandidate;
   itemIndex?: number;
   structureStage?: string;
+  containerId?: string;
 }
 
 interface SectionEntry {
@@ -132,22 +131,47 @@ const UNCONFIRMED_CATEGORIES = new Set(["MIXED", "ABSTAIN"]);
 export const GENERIC_BLOCKED_REASON =
   "자동으로 입력할 수 없는 항목입니다. 직접 확인해 주세요.";
 
+// The applicant still decides these in the review; every other REVIEW field
+// starts included and goes to the planned list.
+const APPLICANT_DECIDES: ReadonlySet<string> = new Set([
+  "MODERATE_CONFIDENCE",
+  "OPTION_VALUE_UNMATCHED",
+]);
+
 /**
- * AUTO keeps the plan's selection, REVIEW is never preselected, and BLOCKED
- * can be neither selected nor written.
+ * AUTO and most REVIEW grades keep the plan's selection, a REVIEW grade the
+ * applicant must decide is never preselected, and BLOCKED can be neither
+ * selected nor written.
  */
 export function applyGenericGrade(
   item: ReviewPlanItem,
   grade: GenericFieldGrade | undefined,
 ): ReviewPlanItem {
   if (!grade) return item;
+  const applicantDecides =
+    grade.grade === "REVIEW" && APPLICANT_DECIDES.has(grade.reason ?? "");
+  if (
+    item.genericGrade === "REVIEW" &&
+    item.genericReasonCode === "FIRST_ENTRY_SINGLE_ROW" &&
+    grade.grade !== "BLOCKED"
+  )
+    return applicantDecides || item.status !== "needs-review"
+      ? { ...item, selected: false }
+      : { ...item, status: "available", selected: true };
   const graded: ReviewPlanItem = {
     ...item,
     genericGrade: grade.grade,
     ...(grade.reason ? { genericReasonCode: grade.reason } : {}),
   };
-  if (grade.grade === "AUTO") return graded;
-  if (grade.grade === "REVIEW") return { ...graded, selected: false };
+  // A field held only for the page's condition (or a rule-matched choice) is
+  // included like any other field the applicant need not decide.
+  const included: ReviewPlanItem =
+    graded.status === "needs-review" && !graded.disabled
+      ? { ...graded, status: "available", selected: true }
+      : graded;
+  if (grade.grade === "AUTO") return included;
+  if (grade.grade === "REVIEW")
+    return applicantDecides ? { ...graded, selected: false } : included;
   return {
     ...graded,
     selected: false,
@@ -192,6 +216,84 @@ function controlKind(candidate: FieldCandidate): SectionControlKind {
   }
 }
 
+/** Send container evidence, not a local mapping or a borrowed write plan. */
+function withPairedContainers(
+  section: GenericSection<SegmentField>,
+): GenericSection<SegmentField> {
+  const containerIds = new Map<Element, string>();
+  const controlsByContainer = new Map<Element, NodeListOf<Element>>();
+  for (const [index, field] of section.fields.entries()) {
+    if (field.candidate.element !== "input" || field.candidate.control !== "text")
+      continue;
+    let container = field.element.parentElement;
+    while (container) {
+      let controls = controlsByContainer.get(container);
+      if (!controls) {
+        controls = container.querySelectorAll("input, select, textarea");
+        controlsByContainer.set(container, controls);
+      }
+      if (controls.length > 1) {
+        const partnerIndex = section.fields.findIndex(
+          (other) => other.element === controls[1],
+        );
+        const partner = section.fields[partnerIndex];
+        if (
+          controls.length === 2 &&
+          controls[0] === field.element &&
+          partnerIndex > index &&
+          partner?.candidate.element === "input" &&
+          partner.candidate.control === "text" &&
+          partner.itemIndex === field.itemIndex
+        ) {
+          const id = `pair-${index}`;
+          containerIds.set(field.element, id);
+          containerIds.set(partner.element, id);
+        }
+        break;
+      }
+      container = container.parentElement;
+    }
+  }
+  return {
+    ...section,
+    fields: section.fields.map((field) => ({
+      ...field,
+      ...(containerIds.has(field.element)
+        ? { containerId: containerIds.get(field.element)! }
+        : {}),
+    })),
+  };
+}
+
+/**
+ * The one education record (its sectionId) the profile resolves to: the only
+ * record, or the single record of the latest education type. Undefined when
+ * several records remain, so ambiguous rows keep abstaining.
+ */
+function singleEducationRecord(profile: Profile): string | undefined {
+  const records = profile.education;
+  if (records.length === 1) return records[0]!.sectionId;
+  const latest = records
+    .map((entry) => entry.values.latestEducationType)
+    .find(Boolean);
+  const kind = latest && kindOfOptionText(latest);
+  if (!kind) return undefined;
+  const sectionId = sectionOfKind(kind);
+  return records.filter((entry) => entry.sectionId === sectionId).length === 1
+    ? sectionId
+    : undefined;
+}
+
+/** One unbound row: no structure stage, no second row, no repeat beyond one. */
+function isSingleRow(section: GenericSection<SegmentField>): boolean {
+  return section.fields.every(
+    ({ itemIndex, structureStage, candidate }) =>
+      !structureStage &&
+      (itemIndex ?? 0) === 0 &&
+      (candidate.semanticContext?.repeat?.rowCount ?? 1) <= 1,
+  );
+}
+
 /** Structure and field state only; equal keys share one analysis result. */
 function cacheKey(section: GenericSection<SegmentField>): string {
   return JSON.stringify([
@@ -199,11 +301,12 @@ function cacheKey(section: GenericSection<SegmentField>): string {
     section.title ?? "",
     section.parentTitle ?? "",
     section.boundary === "repeat-row",
-    section.fields.map(({ candidate }) => [
+    section.fields.map(({ candidate, containerId }) => [
       candidate.visibility,
       candidate.disabled === true,
       candidate.readonly === true,
       candidate.inert === true,
+      containerId,
     ]),
     section.fields.map(({ structureStage }) => structureStage),
   ]);
@@ -288,19 +391,42 @@ function convertSection(
 ): { fields: FieldAnalysis[]; grades: [string, GenericFieldGrade][] } {
   const { section } = entry;
   const categoryOpen = !UNCONFIRMED_CATEGORIES.has(outcome.category);
-  const matched = section.fields.flatMap((field, index) => {
-    const response = outcome.fields[index];
+  const responses = outcome.fields;
+  const matched = section.fields.flatMap((_, index) => {
+    const response = responses[index];
     if (!response) throw new Error("Section result does not match its fields");
     return (response.profileFieldKey || compositeOf(response)) &&
       response.reason === undefined
       ? [{ index, response }]
       : [];
   });
+  const visibleRowMatches =
+    section.boundary === "repeat-row"
+      ? matched.filter(
+          ({ index }) => !isFieldCandidateHidden(section.fields[index]!.handle),
+        )
+      : undefined;
   const fields: FieldAnalysis[] = [];
   const grades: [string, GenericFieldGrade][] = [];
   section.fields.forEach(({ candidate, itemIndex, element }, index) => {
-    const response = outcome.fields[index]!;
+    const response = responses[index]!;
     const { candidateId } = candidate;
+    localWorkflowLog("field-analysis", {
+      section: entry.sectionId,
+      index,
+      docIndex: Array.prototype.indexOf.call(
+        element.ownerDocument.querySelectorAll("input, select, textarea"),
+        element,
+      ),
+      control: candidate.control,
+      category: outcome.category,
+      key: response.profileFieldKey ?? "none",
+      confidence: response.confidence,
+      reason: response.reason,
+      binding: response.binding?.type,
+      categoryConfirmed: response.categoryConfirmed,
+      hidden: isFieldCandidateHidden(section.fields[index]!.handle),
+    });
     if (response.reason === "LLM_UNAVAILABLE") {
       fields.push(noMatch(candidateId));
       grades.push([
@@ -309,7 +435,42 @@ function convertSection(
       ]);
       return;
     }
-    const profileFieldKey = response.profileFieldKey ?? undefined;
+    const fieldLabels = [
+      candidate.displayName,
+      element.getAttribute("placeholder") ?? undefined,
+      element.getAttribute("title") ?? undefined,
+      ...(candidate.semanticContext?.labels ?? []).map((label) => label.text),
+    ];
+    const neighborKeys = visibleRowMatches
+      ? [
+          visibleRowMatches.filter((sibling) => sibling.index < index).at(-1),
+          visibleRowMatches.find((sibling) => sibling.index > index),
+        ].map((sibling) => sibling?.response.profileFieldKey ?? undefined)
+      : undefined;
+    const profileFieldKey = response.profileFieldKey
+      ? careerKeyForProjectRole(
+          gpaScaleKeyForCredits(
+          majorNameKeyForText(
+            response.profileFieldKey,
+            candidate.control,
+            fieldLabels,
+          ),
+          fieldLabels,
+          matched.flatMap((sibling) =>
+            sibling.index !== index && sibling.response.profileFieldKey
+              ? [sibling.response.profileFieldKey]
+              : [],
+          ),
+          ),
+          neighborKeys ?? [],
+          fieldLabels,
+          matched.flatMap((sibling) =>
+            sibling.index !== index && sibling.response.profileFieldKey
+              ? [sibling.response.profileFieldKey]
+              : [],
+          ),
+        )
+      : undefined;
     const dateSource =
       response.binding?.type === "DATE_PART" && profileFieldKey
         ? resolveValueBinding(
@@ -325,16 +486,27 @@ function convertSection(
       fields.push(noMatch(candidateId));
       return;
     }
-    const rowSiblings: GradeSibling[] | undefined =
-      section.boundary === "repeat-row"
-        ? matched
-            .filter((sibling) => sibling.index !== index)
-            .map((sibling) => ({
-              profileFieldKey: sibling.response.profileFieldKey ?? undefined,
-              composite: compositeOf(sibling.response),
-              confidence: sibling.response.confidence,
-            }))
-        : undefined;
+    // The backend marks both a score input and a grade select of one language
+    // record; only the stored value's shape (local, never sent) picks one.
+    if (
+      response.inference === "LANGUAGE_SCORE" ||
+      response.inference === "LANGUAGE_GRADE"
+    ) {
+      const stored = resolveProfileFieldValue(profile, profileFieldKey!, itemIndex);
+      const numeric =
+        stored.status === "resolved" && /^\d+(?:\.\d+)?$/.test(stored.value.trim());
+      if (stored.status !== "resolved" || numeric !== (response.inference === "LANGUAGE_SCORE")) {
+        fields.push(noMatch(candidateId));
+        return;
+      }
+    }
+    const rowSiblings: GradeSibling[] | undefined = visibleRowMatches
+      ?.filter((sibling) => sibling.index !== index)
+      .map((sibling) => ({
+        profileFieldKey: sibling.response.profileFieldKey ?? undefined,
+        composite: compositeOf(sibling.response),
+        confidence: sibling.response.confidence,
+      }));
     const direct =
       composite || !profileFieldKey
         ? undefined
@@ -352,10 +524,16 @@ function convertSection(
     // Local only: the stored value is compared with the options, never sent.
     const choiceValue =
       choiceControl && direct?.status === "resolved" ? direct.value : undefined;
+    const choiceContext = {
+      militaryStatus: profile.military.militaryStatus,
+      militaryType: profile.military.militaryType,
+      militaryRank: profile.military.militaryRank,
+    };
     const choiceOption = matchProfileValueOption(
       profileFieldKey,
       choiceValue,
       candidate.options,
+      choiceContext,
     );
     const grade = gradeGenericField({
       profileFieldKey,
@@ -364,6 +542,7 @@ function convertSection(
       categoryConfirmed: response.categoryConfirmed && categoryOpen,
       hasProfileValue: resolution === "resolved" || resolution === "ambiguous",
       control: candidate.control,
+      element: candidate.element,
       inputType: candidate.semanticContext?.inputType,
       inputMode: candidate.semanticContext?.inputMode,
       autocomplete: candidate.semanticContext?.autocomplete,
@@ -374,15 +553,47 @@ function convertSection(
       placeholder: element.getAttribute("placeholder") ?? undefined,
       options: candidate.options,
       ...(choiceControl && !composite
-        ? { optionValueCheck: { profileValue: choiceValue } }
+        ? { optionValueCheck: { profileValue: choiceValue, context: choiceContext } }
         : {}),
       rowSiblings,
+      ...(neighborKeys ? { rowNeighborKeys: neighborKeys } : {}),
       sectionSiblingKeys: matched.flatMap((sibling) =>
         sibling.index !== index && sibling.response.profileFieldKey
           ? [sibling.response.profileFieldKey]
           : [],
       ),
     });
+    if (response.inference === "PAIRED_DATE" && grade.grade === "AUTO") {
+      grade.grade = "REVIEW";
+      grade.reason = "PAIRED_DATE_INFERRED";
+    }
+    if (
+      (response.inference === "LANGUAGE_SCORE" ||
+        response.inference === "LANGUAGE_GRADE") &&
+      grade.grade === "AUTO"
+    ) {
+      grade.grade = "REVIEW";
+      grade.reason = "LANGUAGE_RESULT_INFERRED";
+    }
+    localWorkflowLog("field-grade", {
+      section: entry.sectionId,
+      index,
+      key: profileFieldKey,
+      grade: grade.grade,
+      reason: grade.reason,
+      profileValue: resolution,
+    });
+    if (grade.reason === "OPTION_VALUE_UNMATCHED") {
+      const names = (candidate.options ?? []).map((option) => option.displayName);
+      localWorkflowLog("option-grade-unmatched", {
+        key: profileFieldKey,
+        control: candidate.control,
+        options: names.length,
+        repeatedNames: names.length - new Set(names).size,
+        confidence: response.confidence,
+        grade: grade.grade,
+      });
+    }
     grades.push([
       candidateId,
       !response.writePlan && grade.grade !== "BLOCKED"
@@ -408,7 +619,12 @@ function convertSection(
               ? {
                   type: "LOOKUP",
                   profileFieldKey: profileFieldKey!,
-                  optionMap: { [choiceValue]: choiceOption },
+                  // The binding reads the stored value through its own
+                  // normalization; key the same option under both forms.
+                  optionMap: {
+                    [choiceValue]: choiceOption,
+                    ...boundChoiceKey(profile, profileFieldKey!, itemIndex, choiceOption),
+                  },
                 }
               : { type: "DIRECT", profileFieldKey: profileFieldKey! },
       autofillPolicy: response.autofillPolicy!,
@@ -420,12 +636,27 @@ function convertSection(
   return { fields, grades };
 }
 
+function boundChoiceKey(
+  profile: Profile,
+  profileFieldKey: string,
+  itemIndex: number | undefined,
+  option: string,
+): Record<string, string> {
+  const bound = resolveValueBinding(
+    profile,
+    { type: "DIRECT", profileFieldKey },
+    itemIndex,
+  );
+  return bound.status === "resolved" ? { [bound.value]: option } : {};
+}
+
 /**
  * Generic-document field analysis: split sections, classify changed sections
  * once, match their fields by category once, grade each match locally, and
  * convert the result to the shared analysis shape. A failure blocks only the
  * sections it touches. Requests carry collected structure only: never profile
- * values, current input values or profile item counts.
+ * values, current input values or profile item counts. The only profile-derived
+ * field is the record kind (sectionId) of a single-row education section.
  */
 export async function analyzeGenericFields(
   snapshot: CollectedSnapshot<FieldsAnalyzeRequest>,
@@ -456,6 +687,7 @@ export async function analyzeGenericFields(
     else
       segmentFields.push({
         element,
+        handle,
         label: candidate.displayName,
         control: candidate.control,
         candidate,
@@ -463,14 +695,27 @@ export async function analyzeGenericFields(
         structureStage: handle.itemGroupId?.split(":stage:")[1],
       });
   }
+  const educationRecord = singleEducationRecord(profile);
+  const recordOf = (section: GenericSection<SegmentField>) => {
+    if (!educationRecord) return undefined;
+    // Unreadable fields get no hint here; the section's own local processing
+    // reads them again inside its failure isolation and blocks only it.
+    try {
+      return isSingleRow(section) ? educationRecord : undefined;
+    } catch {
+      return undefined;
+    }
+  };
   const entries: SectionEntry[] = segmentGenericSections(
     document,
     segmentFields,
-  ).map((section, index) => ({
-    section,
-    sectionId: `gs${index + 1}`,
-    key: cacheKey(section),
-  }));
+  )
+    .map(withPairedContainers)
+    .map((section, index) => ({
+      section,
+      sectionId: `gs${index + 1}`,
+      key: `${cacheKey(section)}${recordOf(section) ?? ""}`,
+    }));
 
   const outcomes = new Map<string, SectionOutcome>();
   const failures = new Map<string, GenericSectionFailure>();
@@ -527,6 +772,17 @@ export async function analyzeGenericFields(
   }
 
   const toAnalyze = toClassify.filter((entry) => categories.has(entry.key));
+  // The record hint is safe only when the page has one education section:
+  // with several, each may belong to a different record the profile lacks.
+  const educationSections = entries.filter(
+    (entry) =>
+      (categories.get(entry.key) ?? outcomes.get(entry.key)?.category) ===
+      "EDUCATION",
+  ).length;
+  const hintOf = (entry: SectionEntry) =>
+    educationSections === 1 && categories.get(entry.key) === "EDUCATION"
+      ? recordOf(entry.section)
+      : undefined;
   if (!blocked && toAnalyze.length > 0) {
     try {
       const response = await api.analyzeGenericFields({
@@ -546,8 +802,11 @@ export async function analyzeGenericFields(
                 ),
               }
             : {}),
-          fields: entry.section.fields.map(({ candidate }) => candidate),
+          fields: entry.section.fields.map(({ candidate, containerId }) =>
+            containerId ? { ...candidate, containerId } : candidate,
+          ),
           category: categories.get(entry.key)!,
+          ...(hintOf(entry) ? { recordSectionId: hintOf(entry) } : {}),
         })),
       });
       if (response.status !== "COMPLETE") blocked = true;
@@ -574,7 +833,14 @@ export async function analyzeGenericFields(
           fields: fields as ResponseField[],
         };
         outcomes.set(entry.key, outcome);
-        if (!outcome.fields.some((field) => field.reason))
+        // A hinted key analysed without its hint must not be reused as hinted.
+        if (
+          !outcome.fields.some((field) => field.reason) &&
+          hintOf(entry) ===
+            (categories.get(entry.key) === "EDUCATION"
+              ? recordOf(entry.section)
+              : undefined)
+        )
           cache.sections.set(entry.key, outcome);
       }
     } catch (error) {

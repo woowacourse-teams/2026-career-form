@@ -18,6 +18,7 @@ import { validateInteractionDecisionResponse } from "../api/validate-interaction
 import { SearchFailure, type SearchSession } from "./search-session";
 import type { SearchSurface } from "./search-surface";
 import { trustedLabels } from "../dom/trusted-id";
+import { isVisible } from "./readonly-search-helpers";
 import {
   elements,
   interactive,
@@ -35,6 +36,7 @@ import {
  */
 function layerQueryControl(
   surface: SearchSurface,
+  generic: boolean,
 ): HTMLInputElement | undefined {
   if (surface.kind !== "same-document-layer") return undefined;
   const heading = layerHeading(surface.container);
@@ -46,7 +48,7 @@ function layerQueryControl(
     label(surface.target);
   if (
     !/검색|조회|search|lookup/i.test(heading) ||
-    !sharesSearchSubject(fieldName, heading)
+    !sharesSearchSubject(fieldName, heading, generic)
   )
     return undefined;
   const inputs = elements<HTMLInputElement>(surface.container, "input").filter(
@@ -58,10 +60,13 @@ function layerQueryControl(
   return inputs.length === 1 ? inputs[0] : undefined;
 }
 
-export function queryControls(surface: SearchSurface): HTMLInputElement[] {
+export function queryControls(
+  surface: SearchSurface,
+  generic = false,
+): HTMLInputElement[] {
   const labelled = labelledQueryControls(surface);
   if (labelled.length > 0) return labelled;
-  const layerQuery = layerQueryControl(surface);
+  const layerQuery = layerQueryControl(surface, generic);
   return layerQuery ? [layerQuery] : [];
 }
 
@@ -86,6 +91,30 @@ function labelledQueryControls(surface: SearchSurface): HTMLInputElement[] {
       ),
   );
 }
+/**
+ * An unnamed icon submit that shares its wrapper with exactly one query input
+ * of the same form. The page must handle its submit; see the executor.
+ */
+export function isIconSearchSubmit(
+  control: Element,
+): control is HTMLButtonElement {
+  if (
+    control.tagName !== "BUTTON" ||
+    (control as HTMLButtonElement).type !== "submit" ||
+    label(control as HTMLButtonElement) !== "" ||
+    !control.querySelector("svg, img") ||
+    control.querySelector("input, select, textarea")
+  )
+    return false;
+  const form = (control as HTMLButtonElement).form;
+  const wrapper = control.parentElement;
+  if (!form || !wrapper) return false;
+  const queries = elements<HTMLInputElement>(wrapper, "input").filter((input) =>
+    ["text", "search"].includes(input.type),
+  );
+  return queries.length === 1 && queries[0]!.form === form;
+}
+
 export function submitControls(
   surface: SearchSurface,
 ): (HTMLButtonElement | HTMLInputElement)[] {
@@ -95,10 +124,34 @@ export function submitControls(
   ).filter(
     (control) =>
       interactive(control) &&
+      ((!surface.frame && isIconSearchSubmit(control)) ||
+        (!HIGH_RISK_ACTION.test(label(control)) &&
+          /검색|조회|찾기|search|find|lookup/i.test(label(control)) &&
+          (safeActivation(control) ||
+            (control.type === "submit" && !!surface.frame)))),
+  );
+}
+
+/**
+ * Generic route only: one named search button the site keeps disabled until a
+ * query is typed. It is never clicked while locked; the executor waits for the
+ * same element to unlock after typing.
+ */
+export function lockedSubmitControls(
+  surface: SearchSurface,
+): (HTMLButtonElement | HTMLInputElement)[] {
+  return elements<HTMLButtonElement | HTMLInputElement>(
+    surface.root,
+    "button, input[type='button']",
+  ).filter(
+    (control) =>
+      control.matches(":disabled") &&
+      control.type === "button" &&
+      !control.closest("[hidden], [inert], [aria-hidden='true']") &&
+      control.parentElement !== null &&
+      isVisible(control.parentElement) &&
       !HIGH_RISK_ACTION.test(label(control)) &&
-      /검색|조회|찾기|search|find|lookup/i.test(label(control)) &&
-      (safeActivation(control) ||
-        (control.type === "submit" && !!surface.frame)),
+      /검색|조회|찾기|search|find|lookup/i.test(label(control)),
   );
 }
 
@@ -144,6 +197,15 @@ export function searchDestination(
       throw new SearchFailure("unverified_search_form");
     return undefined;
   }
+  // The page's own submit handler runs this search; the executor cancels any
+  // submit the page leaves unhandled.
+  if (
+    !surface.frame &&
+    isIconSearchSubmit(submit) &&
+    submit.parentElement?.contains(query) &&
+    surface.contains(form)
+  )
+    return undefined;
   // A same-document search layer may sit inside the application's own form.
   // Its query and type=button search stay inside the owned layer; the button
   // is only clicked (never Enter or submit), and the executor cancels and

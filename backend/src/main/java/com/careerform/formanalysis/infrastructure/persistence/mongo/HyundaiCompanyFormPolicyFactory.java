@@ -27,11 +27,11 @@ import com.careerform.formanalysis.dto.PreparationAnalysisRequest;
 
 final class HyundaiCompanyFormPolicyFactory {
 
-    private static final long VERSION = 14;
+    private static final long VERSION = 15;
 
     static FormAnalysisPolicyDocument create() {
         return new FormAnalysisPolicyDocument(
-            "hyundai-policy-v14",
+            "hyundai-policy-v15",
             "hyundai",
             VERSION,
             new PreparationFingerprint(
@@ -229,8 +229,9 @@ final class HyundaiCompanyFormPolicyFactory {
                         Map.entry("기타", "9")
                     )
                 ),
-                derivedTextRule("tranStartDt", DerivedRecipe.YEAR_MONTH, "careers.career.startDate"),
-                derivedTextRule("tranEndDt", DerivedRecipe.YEAR_MONTH, "careers.career.endDate"),
+                // 입사·퇴사연월일은 YYYY-MM-DD(maxLength 10) 칸이다. 연월 recipe는 일자를 잃는다.
+                textRule("tranStartDt", "careers.career.startDate"),
+                textRule("tranEndDt", "careers.career.endDate"),
                 textRule("workDpt", "careers.career.department"),
                 buttonOptionRule(
                     "lastPosCd",
@@ -251,7 +252,23 @@ final class HyundaiCompanyFormPolicyFactory {
                     )
                 ),
                 textareaRule("ownWork", "careers.career.responsibilities"),
-                textRule("retResEtcCont", "careers.career.terminationReason"),
+                // 종료사유는 버튼형 선택지다. 선택지에 없는 사유는 매핑하지 않고 사람이 고른다.
+                // "기타" 자유입력(retResEtcCont)은 자동 기입하지 않는다.
+                verifiedButtonOptionRule(
+                    "retResCd",
+                    "careers.career.terminationReason",
+                    Map.ofEntries(
+                        Map.entry("계약만료", "G3"), Map.entry("그룹사전직", "A1"), Map.entry("자회사전직", "A2"),
+                        Map.entry("타사전직", "A3"), Map.entry("입대", "53"), Map.entry("고용조정", "62"),
+                        Map.entry("회사합병", "A7"), Map.entry("개인사업", "B1"), Map.entry("진학/유학", "B2"),
+                        Map.entry("정년퇴직", "G4"), Map.entry("명예퇴직", "I3"), Map.entry("회사폐업", "I1"),
+                        Map.entry("징계해고", "H1"), Map.entry("영업비밀 침해 관련 인사조치", "04"), Map.entry("개인사정", "B3"),
+                        Map.entry("기타", "I4")
+                    ),
+                    Map.ofEntries(
+                        Map.entry("계약기간 만료", "계약만료"), Map.entry("계약기간만료", "계약만료"), Map.entry("계약 만료", "계약만료")
+                    )
+                ),
                 verifiedButtonOptionRule(
                     "foreLang",
                     "languages.languageTest.language",
@@ -348,6 +365,45 @@ final class HyundaiCompanyFormPolicyFactory {
                     "acqDt",
                     "acqDt",
                     "certifications.certificate.acquisitionDate"
+                ),
+                // 자격 등급 trigger의 id는 grade_<n>, 외국어 등급은 gradeForeLang_<n>이다. 두 hidden 이름은
+                // 같지만 trigger에는 name이 없어 요청에 domName이 오지 않으므로 구조 이름(id)으로만 구분한다.
+                verifiedButtonOptionRule(
+                    "grade",
+                    "certifications.certificate.grade",
+                    Map.ofEntries(
+                        Map.entry("등급없음", "01"), Map.entry("기술사", "02"), Map.entry("진단사", "03"),
+                        Map.entry("기사", "05"), Map.entry("기사1급", "04"), Map.entry("기사2급", "06"),
+                        Map.entry("기능사", "07"), Map.entry("기능사1급", "10"), Map.entry("기능사2급", "12"),
+                        Map.entry("기능장", "08"), Map.entry("기능사보", "14"), Map.entry("산업기사", "11"),
+                        Map.entry("관리사", "13"), Map.entry("관리사2급", "21"), Map.entry("관리사보", "15"),
+                        Map.entry("장", "16"), Map.entry("명장", "17"), Map.entry("1급", "18"),
+                        Map.entry("2급", "20"), Map.entry("3급", "22"), Map.entry("4급", "24"),
+                        Map.entry("5급", "26"), Map.entry("6급", "28"), Map.entry("7급", "30"),
+                        Map.entry("8급", "31"), Map.entry("9급", "80"), Map.entry("10급", "81"),
+                        Map.entry("11급", "82"), Map.entry("1단", "32"), Map.entry("2단", "34"),
+                        Map.entry("3단", "36"), Map.entry("4단", "38"), Map.entry("5단", "40"),
+                        Map.entry("6단", "42"), Map.entry("7단", "44"), Map.entry("8단", "46"),
+                        Map.entry("9단", "48"), Map.entry("10단", "50"), Map.entry("11단", "52"),
+                        Map.entry("12단", "54"), Map.entry("LEVELⅠ", "60"), Map.entry("LEVELⅡ", "61"),
+                        Map.entry("LEVELⅢ", "62"), Map.entry("LEVEL Ⅳ", "66"), Map.entry("일반", "63"),
+                        Map.entry("감독", "64"), Map.entry("특수", "65"), Map.entry("중등준교사", "68"),
+                        Map.entry("중등학교2급정교사", "70"), Map.entry("1종", "71"), Map.entry("2종", "72"),
+                        Map.entry("MASTER", "73"), Map.entry("EXPERT", "74"), Map.entry("실기교사(자동차)", "75"),
+                        Map.entry("실기교사(체육)", "76"), Map.entry("실기교사(사진)", "77"), Map.entry("실기교사(치료교육)", "78"),
+                        Map.entry("CORE", "79"), Map.entry("A급", "83"), Map.entry("B급", "84"),
+                        Map.entry("C급", "96"), Map.entry("초급", "85"), Map.entry("평가장", "90"),
+                        Map.entry("평가사", "92"), Map.entry("분석사", "94"), Map.entry("사범", "95"),
+                        Map.entry("기능올림픽동", "97"), Map.entry("기능올림픽장려", "98"), Map.entry("블랙벨트", "A9"),
+                        Map.entry("그린벨트", "B9"), Map.entry("마스터블랙벨트", "C9"), Map.entry("기타", "99"),
+                        Map.entry("S급", "100"), Map.entry("Lv.1", "101"), Map.entry("Lv.2", "102"),
+                        Map.entry("Lv.3", "103"), Map.entry("Lv.4", "104"), Map.entry("Lv.5", "105"),
+                        Map.entry("심사원보", "106"), Map.entry("BASIC", "107"), Map.entry("ASSOCIATE", "108"),
+                        Map.entry("PROFESSIONAL", "109")
+                    ),
+                    Map.ofEntries(
+                        Map.entry("단일등급", "등급없음"), Map.entry("등급 없음", "등급없음")
+                    )
                 ),
                 textRule("regNo", "certifications.certificate.registrationNo"),
                 textRule("issueOrg", "certifications.certificate.issuer"),

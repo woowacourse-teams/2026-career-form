@@ -358,7 +358,7 @@ describe("AutofillOverlay review", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: "분석 서버가 아직 설정되지 않았습니다.",
+        name: "자동 기입을 시작하지 못했어요",
       }),
     ).toBeInTheDocument();
     expect(screen.queryByText("me@example.test")).not.toBeInTheDocument();

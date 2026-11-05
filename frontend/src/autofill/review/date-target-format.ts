@@ -3,6 +3,9 @@ import type { FieldCandidateHandle } from "../dom/types";
 const ATTRS = [
   "type",
   "placeholder",
+  "title",
+  "aria-label",
+  "aria-labelledby",
   "min",
   "max",
   "step",
@@ -12,7 +15,11 @@ const ATTRS = [
   "value",
 ] as const;
 type Target = HTMLInputElement;
-type Snapshot = { raw: Record<string, string | null>; effectiveType: string };
+type Snapshot = {
+  raw: Record<string, string | null>;
+  effectiveType: string;
+  clues: string[];
+};
 export interface DateTargetApproval {
   format: DateTargetFormat;
   element: Target;
@@ -35,24 +42,38 @@ function capture(el: Target): Snapshot {
   return {
     raw: Object.fromEntries(ATTRS.map((a) => [a, el.getAttribute(a)])),
     effectiveType: el.type,
+    clues: textClues(el),
   };
 }
 function sameSnapshot(el: Target, s: Snapshot): boolean {
   return (
     el.type === s.effectiveType &&
+    JSON.stringify(textClues(el)) === JSON.stringify(s.clues) &&
     ATTRS.every((a) => el.getAttribute(a) === s.raw[a])
   );
+}
+function textClues(el: Target): string[] {
+  return [
+    el.getAttribute("placeholder"),
+    el.getAttribute("title"),
+    el.getAttribute("aria-label"),
+    ...(el
+      .getAttribute("aria-labelledby")
+      ?.split(/\s+/)
+      .map((id) => el.ownerDocument.getElementById(id)?.textContent) ?? []),
+    ...Array.from(el.labels ?? [], (label) => label.textContent),
+  ].filter((clue): clue is string => Boolean(clue));
 }
 function textFormatResult(p: string | null): {
   format?: DateTargetFormat;
   reason: string;
 } {
   if (!p) return { reason: "Missing date format clue." };
-  const found = [...p.matchAll(/YYYY\.MM\.DD|YYYY\.MM/g)].map((m) => ({
+  const found = [...p.matchAll(/YYYY([./-]?)MM(?:\1DD)?/gi)].map((m) => ({
     text: m[0],
     i: m.index ?? 0,
   }));
-  if (found.length > 1) return { reason: "Repeated supported date clues." };
+  if (found.length > 1) return { reason: "Repeated or mixed supported date clues." };
   if (found.length === 0) return { reason: "Unsupported date format clue." };
   const x = found[0],
     left = p[x.i - 1],
@@ -101,7 +122,7 @@ function textFormatResult(p: string | null): {
     )
   )
     return { reason: "Mixed or unsupported date notation." };
-  return { format: x.text as DateTargetFormat, reason: "" };
+  return { format: x.text.toUpperCase() as DateTargetFormat, reason: "" };
 }
 function compilePattern(p: string): RegExp | undefined {
   try {
@@ -191,7 +212,8 @@ export function resolveDateTargetFormat(
   if (e.type === "date") f = "YYYY-MM-DD";
   else if (e.type === "month") f = "YYYY-MM";
   else if (e.type === "text") {
-    const clue = textFormatResult(e.getAttribute("placeholder"));
+    const clues = textClues(e);
+    const clue = textFormatResult([...new Set(clues)].join(" "));
     f = clue.format;
     if (!f) return unavailable(clue.reason);
   }
@@ -199,7 +221,7 @@ export function resolveDateTargetFormat(
   const issue = e.type === "text" ? textIssue(e) : nativeIssue(e);
   if (issue) return unavailable(issue);
   if (e.type === "text") {
-    const length = f === "YYYY.MM" ? 7 : 10,
+    const length = f.length,
       min = e.getAttribute("minlength"),
       max = e.getAttribute("maxlength");
     if (
@@ -217,15 +239,13 @@ export function resolveDateTargetFormat(
 function validate(a: DateTargetApproval, v: string): Check {
   const e = a.element,
     f = a.format,
-    mo = f === "YYYY-MM" || f === "YYYY.MM",
-    dot = f.startsWith("YYYY."),
-    len = mo ? 7 : 10,
-    sep = dot ? "\\." : "-",
-    pattern = mo
-      ? "\\d{4}" + sep + "\\d{2}"
-      : "\\d{4}" + sep + "\\d{2}" + (mo ? "" : "");
-  let src = pattern;
-  if (!mo) src += "" + sep + "\\d{2}";
+    mo = !f.endsWith("DD"),
+    len = f.length;
+  const src = f
+    .replaceAll(".", "\\.")
+    .replace("YYYY", "\\d{4}")
+    .replace("MM", "\\d{2}")
+    .replace("DD", "\\d{2}");
   let re: RegExp;
   try {
     re = new RegExp("^(?:" + src + ")$", "v");
@@ -234,7 +254,10 @@ function validate(a: DateTargetApproval, v: string): Check {
   }
   if (v.length !== len || !re.test(v))
     return invalid("Value does not exactly match approved format.");
-  const canon = dot ? v.replaceAll(".", "-") : v,
+  const digits = v.replace(/\D/g, "");
+  const canon =
+      `${digits.slice(0, 4)}-${digits.slice(4, 6)}` +
+      (mo ? "" : `-${digits.slice(6, 8)}`),
     n = mo ? monthNum(canon) : dateNum(canon);
   if (n === undefined) return invalid("Invalid calendar date.");
   if (e.type === "text") {

@@ -1,0 +1,129 @@
+.card {
+  padding: 18px 20px;
+  border-radius: 12px;
+  background: var(--color-surface);
+  margin-bottom: 20px;
+}
+/* The onboarding card sits under the choice cards; keep a gap between them. */
+.onboardingCard {
+  margin-top: 18px;
+}
+.card h3 {
+  margin: 0 0 6px;
+  font-size: 16px;
+  color: var(--color-text-strong);
+}
+.card p,
+.guidance p,
+.ask p {
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: var(--color-text-muted);
+  line-height: 1.6;
+}
+.eyebrow {
+  display: inline-block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-action);
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+/* Scoped twice so the public-site button reset cannot flatten these. */
+.card .actions button,
+.ask .actions button,
+.guidance .actions button {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+.card .actions button:disabled,
+.ask .actions button:disabled,
+.guidance .actions button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+/* Tinted fill: these cards never add a second filled primary to the screen. */
+.card .actions .primary,
+.ask .actions .primary,
+.guidance .actions .primary {
+  background: var(--color-accent-soft);
+  border-color: transparent;
+  color: var(--color-action-strong);
+}
+.onboardingCard .actions button:not(.primary) {
+  border-color: transparent;
+  background: transparent;
+  color: var(--color-text-muted);
+}
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin: 12px 0 0;
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+/* 알림 설정 dialog: same columns as the fact rows; the action uses the page pill. */
+.settingsRow {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr) auto;
+  column-gap: 15px;
+  align-items: center;
+  margin: 0;
+  padding: 8px 0;
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: -0.224px;
+}
+.settingsRow dt {
+  color: var(--color-text-muted);
+}
+.settingsRow dd {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-weight: 600;
+}
+@media (max-width: 640px) {
+  .settingsRow {
+    grid-template-columns: 110px minmax(0, 1fr);
+    row-gap: 8px;
+  }
+  .settingsRow .actions {
+    grid-column: 2;
+  }
+}
+.ask,
+.guidance {
+  margin-top: 12px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: var(--color-surface-muted);
+}
+.guidance ul {
+  margin: 0 0 12px;
+  padding-left: 18px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--color-text);
+}
+.guidance strong {
+  color: var(--color-text-strong);
+}

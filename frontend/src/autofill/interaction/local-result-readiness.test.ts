@@ -4,7 +4,11 @@ import {
   referenceObserveResults,
   referenceResultBaseline,
 } from "../workflow/test-utils/preservation-reference";
-import { LOCAL_RESULT_STABLE_MS } from "./local-result-readiness";
+import {
+  LOCAL_RESULT_STABLE_MS,
+  LocalMutationRecord,
+  localReadiness,
+} from "./local-result-readiness";
 import { observeResults, resultBaseline } from "./search-results";
 import { SearchSurface, type SearchSurfaceKind } from "./search-surface";
 import { SearchSession } from "./search-session";
@@ -18,6 +22,35 @@ const item = (text: string, attributes = "") => {
   li.innerHTML = `<button type="button"${attributes}>${text}</button>`;
   return li;
 };
+
+function readinessFixture() {
+  document.body.innerHTML = `<ul>${item("<이전1>").outerHTML}${item("<이전2>").outerHTML}${item("<이전3>").outerHTML}</ul>`;
+  const root = document.querySelector<HTMLUListElement>("ul")!;
+  const baselineEntry = { items: Array.from(root.children) };
+  return { root, baselineEntry, mutations: new LocalMutationRecord() };
+}
+
+function recordRemoval(
+  mutations: LocalMutationRecord,
+  root: Element,
+  removedNodes: readonly Node[],
+  now: number,
+) {
+  mutations.record(
+    {
+      type: "childList",
+      target: root,
+      addedNodes: [] as unknown as NodeList,
+      removedNodes: removedNodes as unknown as NodeList,
+      attributeName: null,
+      attributeNamespace: null,
+      nextSibling: null,
+      oldValue: null,
+      previousSibling: null,
+    } as MutationRecord,
+    now,
+  );
+}
 
 function setup({
   kind = "same-document-layer" as SearchSurfaceKind,
@@ -103,6 +136,86 @@ describe("local result stability (C12)", () => {
     expect(decide()).toBe("pending");
     vi.advanceTimersByTime(100);
     expect(decide()).toBe("selected");
+  });
+});
+
+describe("query-committed list filtering", () => {
+  it("accepts the same remaining baseline item after two observed removals settle", () => {
+    const { root, baselineEntry, mutations } = readinessFixture();
+    const originalItems = Array.from(root.children);
+    root.removeChild(originalItems[0]!);
+    root.removeChild(originalItems[1]!);
+    recordRemoval(mutations, root, originalItems.slice(0, 2), 0);
+
+    expect(
+      localReadiness(
+        root,
+        baselineEntry,
+        mutations,
+        LOCAL_RESULT_STABLE_MS,
+        true,
+      ),
+    ).toBe("ready");
+  });
+
+  it.each(["default", "false"] as const)(
+    "keeps a filtered baseline pending when queryCommitted is %s",
+    (queryCommitted) => {
+      const { root, baselineEntry, mutations } = readinessFixture();
+      const originalItems = Array.from(root.children);
+      root.removeChild(originalItems[0]!);
+      root.removeChild(originalItems[1]!);
+      recordRemoval(mutations, root, originalItems.slice(0, 2), 0);
+
+      const readiness =
+        queryCommitted === "default"
+          ? localReadiness(
+              root,
+              baselineEntry,
+              mutations,
+              LOCAL_RESULT_STABLE_MS,
+            )
+          : localReadiness(
+              root,
+              baselineEntry,
+              mutations,
+              LOCAL_RESULT_STABLE_MS,
+              false,
+            );
+
+      expect(readiness).toBe("pending");
+    },
+  );
+
+  it("keeps an unchanged baseline pending even when queryCommitted is true", () => {
+    const { root, baselineEntry, mutations } = readinessFixture();
+
+    expect(
+      localReadiness(
+        root,
+        baselineEntry,
+        mutations,
+        LOCAL_RESULT_STABLE_MS,
+        true,
+      ),
+    ).toBe("pending");
+  });
+
+  it("keeps a reduced list pending when no removal mutation was observed", () => {
+    const { root, baselineEntry, mutations } = readinessFixture();
+    const originalItems = Array.from(root.children);
+    root.removeChild(originalItems[0]!);
+    root.removeChild(originalItems[1]!);
+
+    expect(
+      localReadiness(
+        root,
+        baselineEntry,
+        mutations,
+        LOCAL_RESULT_STABLE_MS,
+        true,
+      ),
+    ).toBe("pending");
   });
 });
 

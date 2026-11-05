@@ -4,6 +4,7 @@ import type { FieldsAnalyzeRequest, PreparationAnalyzeRequest } from "./types";
 import {
   AnalysisServiceError,
   RuntimeAnalysisApiClient,
+  isTransientAnalysisError,
 } from "./runtime-client";
 import type { GenericFieldsRequest, SectionClassifyRequest } from "./types";
 import type { InteractionDecisionRequest } from "./interaction-types";
@@ -402,4 +403,40 @@ describe("RuntimeAnalysisApiClient generic endpoints", () => {
       '"targetKind":"MASTER"',
     );
   });
+});
+
+describe("transport failure classification", () => {
+  const decision: InteractionDecisionRequest = {
+    schemaVersion: 2,
+    snapshotId: "calendar-1",
+    site: { host: "example.test", pathPattern: "/" },
+    decisions: [],
+  };
+  it.each([
+    ["a background TIMEOUT", async () => ({ ok: false, code: "TIMEOUT" })],
+    ["a background NETWORK failure", async () => ({ ok: false, code: "NETWORK" })],
+    [
+      "an unreachable background",
+      async () => {
+        throw new Error("disconnected");
+      },
+    ],
+  ])("marks %s as transient", async (_case, sendMessage) => {
+    const client = new RuntimeAnalysisApiClient(sendMessage);
+    const error = await client.decideInteractions(decision).catch((e) => e);
+    expect(error).toBeInstanceOf(AnalysisServiceError);
+    expect(isTransientAnalysisError(error)).toBe(true);
+  });
+  it.each(["SERVER_ERROR", "RATE_LIMITED", "BAD_REQUEST", "INVALID_RESPONSE"])(
+    "does not mark %s as transient",
+    async (code) => {
+      const client = new RuntimeAnalysisApiClient(async () => ({
+        ok: false,
+        code,
+      }));
+      const error = await client.decideInteractions(decision).catch((e) => e);
+      expect(error).toBeInstanceOf(AnalysisServiceError);
+      expect(isTransientAnalysisError(error)).toBe(false);
+    },
+  );
 });

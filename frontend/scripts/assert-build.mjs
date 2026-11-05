@@ -21,6 +21,12 @@ if (manifest.action?.default_popup) {
 }
 
 if (
+  manifest.commands?._execute_action?.suggested_key?.default !== "Alt+Shift+C"
+) {
+  throw new Error("툴바 action과 같은 지원서 패널 열기 단축키가 필요합니다.");
+}
+
+if (
   manifest.options_ui?.page !== "options.html" ||
   manifest.options_ui?.open_in_tab !== true
 ) {

@@ -433,3 +433,40 @@ describe("native GET completion characterization", () => {
     session.stop();
   });
 });
+
+describe("an approved certificate listed under two approved names", () => {
+  const catalog: ApprovedCatalogMatch = {
+    kind: "certificate",
+    query: "가상자격",
+    labels: ["가상자격", "가상자격(별칭)"],
+  };
+  function twoNames(first: string, second: string) {
+    const { surface, session } = setup(
+      `<ul data-search-results data-search-query="가상자격" data-search-complete="true" data-result-count="2"><li><button type="button">${first}</button></li><li><button type="button">${second}</button></li></ul>`,
+    );
+    return { surface, session };
+  }
+
+  it("selects the result named exactly as the approved query", () => {
+    const { surface, session } = twoNames("가상자격(별칭)", "가상자격");
+    const match = observeResults(surface, session, [], undefined).exact(
+      ["가상자격"],
+      catalog,
+    );
+    expect(match?.element.textContent).toBe("가상자격");
+    session.stop();
+  });
+
+  it("stays ambiguous when two results carry the approved query name", () => {
+    const { surface, session } = twoNames("가상자격", "가상자격");
+    expect(() =>
+      observeResults(surface, session, [], undefined).exact(
+        ["가상자격"],
+        catalog,
+      ),
+    ).toThrowError(
+      expect.objectContaining({ reason: "multiple_matching_results" }),
+    );
+    session.stop();
+  });
+});

@@ -1,4 +1,4 @@
-import writingMascot from "./capybara-writing.png";
+import writingMascot from "../../public/capybara-writing.png";
 import { scenarioFields } from "./scenario";
 import type { Variant } from "./study";
 import styles from "./LoadingVariant.module.css";

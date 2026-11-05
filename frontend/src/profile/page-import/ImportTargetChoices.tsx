@@ -1,4 +1,5 @@
 import { useId, useState } from "react";
+import { optionLabel } from "../field-display";
 import type { ProfileEntry } from "../model";
 import type { ComparedField } from "./review-model";
 import review from "./ImportReview.module.css";
@@ -14,11 +15,10 @@ interface CompareProps {
 
 function display(value?: string, options?: ComparedField["options"]) {
   if (!value) return "없음";
-  const option = options?.find((item) =>
-    typeof item === "string" ? item === value : item.value === value,
+  return (
+    optionLabel(options, value) ??
+    value.replace(/^(\d{4})-(\d{2})-(\d{2})$/u, "$1.$2.$3")
   );
-  if (option && typeof option !== "string") return option.label;
-  return value.replace(/^(\d{4})-(\d{2})-(\d{2})$/u, "$1.$2.$3");
 }
 
 function period(entry: ProfileEntry) {

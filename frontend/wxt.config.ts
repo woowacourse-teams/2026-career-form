@@ -6,6 +6,8 @@ import {
   serializeBuildInfo,
 } from "./scripts/build-info";
 import type { BuildInfo } from "./scripts/build-info";
+import { PANEL_FONT_PATH } from "./src/extension/panel-font-path";
+import { PANEL_COMMANDS } from "./src/extension/panel-shortcut";
 
 let buildInfo: BuildInfo;
 
@@ -45,6 +47,20 @@ export default defineConfig({
       });
     },
     "vite:build:extendConfig": (entrypoints, config) => {
+      // The in-page panel fetches the font the extension pages already ship.
+      // Content scripts cannot import its hashed name: lib mode inlines assets.
+      const output = config.build?.rollupOptions?.output;
+      if (
+        output &&
+        !Array.isArray(output) &&
+        typeof output.assetFileNames === "string"
+      ) {
+        const assetFileNames = output.assetFileNames;
+        output.assetFileNames = (asset) =>
+          asset.names.includes("PretendardVariable.woff2")
+            ? PANEL_FONT_PATH
+            : assetFileNames;
+      }
       if (!entrypoints.some((entrypoint) => entrypoint.type === "background"))
         return;
       config.plugins ??= [];
@@ -66,9 +82,19 @@ export default defineConfig({
     },
   },
   manifest: {
+    // Opens the in-page panel exactly like a toolbar click.
+    commands: PANEL_COMMANDS,
     description: "채용 지원 정보를 안전하게 재사용하는 Chrome 확장 프로그램",
     name: "Career Form",
-    host_permissions: apiHostPermissions(configuredApiBaseUrl),
+    host_permissions: [
+      ...apiHostPermissions(configuredApiBaseUrl),
+      // The Kakao postcode widget renders inside a cross-origin frame; the
+      // frame content script can only run there with host access. Approved by
+      // the user for the generic address autofill prototype (2026-10-23).
+      "https://postcode.map.kakao.com/*",
+    ],
+    // Silent extension push (userVisibleOnly: false) needs Chrome 121+.
+    minimum_chrome_version: "121",
     optional_host_permissions: ["http://*/*", "https://*/*"],
     permissions: [
       "activeTab",
@@ -84,7 +110,12 @@ export default defineConfig({
     },
     web_accessible_resources: [
       {
-        resources: ["side-panel-launcher-logo.png", "unsupported-capybara.jpg"],
+        resources: [
+          "side-panel-launcher-logo.png",
+          "unsupported-capybara.jpg",
+          "capybara-writing.png",
+          PANEL_FONT_PATH,
+        ],
         matches: ["http://*/*", "https://*/*"],
       },
     ],

@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "snapshot": "framework-rerender",
+  "fields": [
+    {
+      "ordinal": 0,
+      "structurePath": [
+        "body > form:nth-child(2) > section:nth-child(1) > label:nth-child(2) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "text",
+      "profileFieldKey": "education.highSchool.schoolName",
+      "expectedDomState": { "value": "합성고등학교" },
+      "exercisable": true
+    },
+    {
+      "ordinal": 1,
+      "structurePath": [
+        "body > form:nth-child(2) > section:nth-child(1) > label:nth-child(3) > select:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "select",
+      "profileFieldKey": "education.highSchool.attendanceType",
+      "expectedDomState": { "value": "day" },
+      "exercisable": true
+    },
+    {
+      "ordinal": 2,
+      "structurePath": [
+        "body > form:nth-child(2) > fieldset:nth-child(2) > label:nth-child(2) > input:nth-child(1)",
+        "body > form:nth-child(2) > fieldset:nth-child(2) > label:nth-child(3) > input:nth-child(1)"
+      ],
+      "rowIndex": null,
+      "controlKind": "radio",
+      "profileFieldKey": "personal.personal.nationality",
+      "expectedDomState": { "checkedValues": ["대한민국"] },
+      "exercisable": true
+    }
+  ]
+}

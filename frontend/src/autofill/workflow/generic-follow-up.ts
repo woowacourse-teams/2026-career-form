@@ -1,4 +1,5 @@
 import type { FieldCandidateHandle } from "../dom/types";
+import { isVisibleWriteElement } from "../dom/write-target";
 import type { ReviewPlanItem } from "../review/review-plan";
 
 /** Only an explicit local control-to-region relation can trigger recollection. */
@@ -32,6 +33,53 @@ export function genericControlledRegions(
       ? [target]
       : [];
   });
+}
+
+type FillableControl = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+
+/** Visible, enabled form controls a user could fill, outside any open popup. */
+export function fillableControls(document: Document): Set<FillableControl> {
+  return new Set(
+    Array.from(
+      document.querySelectorAll<FillableControl>("input, select, textarea"),
+    ).filter(
+      (control) =>
+        !(
+          control instanceof HTMLInputElement &&
+          ["hidden", "button", "submit", "reset", "image", "file"].includes(
+            control.type,
+          )
+        ) &&
+        !control.disabled &&
+        !control.closest("dialog[open], [role='dialog'], [aria-modal='true']") &&
+        isVisibleWriteElement(control),
+    ),
+  );
+}
+
+function empty(control: FillableControl): boolean {
+  if (control instanceof HTMLSelectElement)
+    return control.selectedIndex <= 0 || !control.value.trim();
+  if (
+    control instanceof HTMLInputElement &&
+    (control.type === "radio" || control.type === "checkbox")
+  )
+    return !control.checked;
+  return !control.value.trim();
+}
+
+/**
+ * Controls a write made appear: present now, absent (or hidden) before, and
+ * still empty. Sites without an explicit aria-controls relation reveal
+ * follow-up fields this way, so the workflow can analyze them in a new pass.
+ */
+export function newlyRevealedControls(
+  document: Document,
+  before: ReadonlySet<Element>,
+): FillableControl[] {
+  return [...fillableControls(document)].filter(
+    (control) => !before.has(control) && empty(control),
+  );
 }
 
 export async function waitForGenericEffect(

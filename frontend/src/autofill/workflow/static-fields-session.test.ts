@@ -97,6 +97,27 @@ it("does not retry a failed first request", async () => {
   expect(run.analyzeFields).toHaveBeenCalledTimes(1);
 });
 
+it("names server matches that a later snapshot could not rebind", async () => {
+  const run = setup();
+  const first = await run.analyze(collectFieldsSnapshot(document));
+  expect(first.unresolvedFields).toBeUndefined();
+  // The page hides the whole form for a moment: identity changes for every field.
+  document.querySelector("input")!.hidden = true;
+  const hidden = await run.analyze(collectFieldsSnapshot(document));
+  expect(hidden.fields.map((field) => field.matchType)).toEqual(["NO_MATCH"]);
+  expect(hidden.warningCodes).toContain("UNRESOLVED_FIELD");
+  expect(hidden.unresolvedFields).toEqual([
+    { candidateId: first.fields[0]!.candidateId, displayName: "이름" },
+  ]);
+  expect(run.analyzeFields).toHaveBeenCalledTimes(1);
+  // Once the form shows again, the same first mapping binds without a request.
+  document.querySelector("input")!.hidden = false;
+  const visible = await run.analyze(collectFieldsSnapshot(document));
+  expect(visible.fields.map((field) => field.matchType)).toEqual(["MATCH"]);
+  expect(visible.unresolvedFields).toBeUndefined();
+  expect(run.analyzeFields).toHaveBeenCalledTimes(1);
+});
+
 it("refreshes changed fields only after a write pass and supports later changes", async () => {
   const run = setup();
   await run.analyze(collectFieldsSnapshot(document));

@@ -321,3 +321,32 @@ it("roundtrips canonical, legacy, unknown, and blank values for the five profile
   });
   expect(roundtripped.disability).toEqual({});
 });
+
+describe("structured address transfer", () => {
+  it("round-trips the stored selection through export and import", () => {
+    const profile = createEmptyProfile();
+    profile.contact = {
+      postalCode: "63309",
+      addressLine1: "제주특별자치도 제주시 첨단로 242",
+      jibunAddress: "제주특별자치도 제주시 영평동 2181",
+      buildingManagementNumber: "5011010400121810000000001",
+      addressVerified: "true",
+    };
+
+    expect(parseProfileImport(serializeProfileExport(profile)).contact).toEqual(
+      profile.contact,
+    );
+  });
+
+  it("imports a file exported before the selection fields existed", () => {
+    const contact = { postalCode: "12345", addressLine1: "기존 주소" };
+    const imported = parseProfileImport(
+      JSON.stringify({
+        schemaVersion: 1,
+        profile: { ...createEmptyProfile(), contact },
+      }),
+    );
+
+    expect(imported.contact).toEqual(contact);
+  });
+});

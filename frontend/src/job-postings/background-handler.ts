@@ -17,9 +17,11 @@ export function createPostingHandler(
   ): Promise<unknown> | undefined => {
     if (!isRecord(message)) return undefined;
     if (message.type === OPEN_POSTINGS) {
-      if (sender.id !== extensionId || typeof message.create !== "boolean")
-        return Promise.resolve({ ok: false });
-      return openPage(message.create ? "#postings/new" : "#postings")
+      if (sender.id !== extensionId) return Promise.resolve({ ok: false });
+      // The side panel may ask for the page with the 알림 설정 dialog open.
+      return openPage(
+        message.settings === true ? "#postings/settings" : "#postings",
+      )
         .then(() => ({ ok: true }))
         .catch(() => ({
           ok: false,
@@ -40,7 +42,7 @@ export function createPostingHandler(
         case "retry":
           return service.recover();
         case "save":
-          return service.save(command.input, command.id, command.version);
+          return service.save(command.input);
         case "remove":
           return service.remove(command.id, command.version);
         case "complete":
@@ -59,7 +61,7 @@ export function createPostingHandler(
 function publicError(error: unknown): string {
   if (
     error instanceof Error &&
-    /^(다른 화면에서|회사명과 직무|HTTP\(S\)|앞으로 남은|알림은 최대|시간대를 확인|저장된 공고 형식)/.test(
+    /^(다른 화면에서|회사명을 입력|HTTP\(S\)|앞으로 남은|알림은 최대|시간대를 확인|저장된 공고 형식)/.test(
       error.message,
     )
   )

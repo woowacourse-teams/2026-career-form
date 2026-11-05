@@ -1,0 +1,99 @@
+{
+  "personal": {
+    "koreanFamilyName": "합성",
+    "koreanGivenName": "지원자",
+    "englishFamilyName": "Synthetic",
+    "englishGivenName": "Applicant",
+    "hanjaFamilyName": "合",
+    "hanjaGivenName": "成",
+    "birthDate": "1998-03-14",
+    "nationality": "대한민국",
+    "gender": "남성"
+  },
+  "contact": {
+    "email": "synthetic@example.test",
+    "secondaryEmail": "secondary@example.test",
+    "phoneNumber": "01012345678",
+    "residenceCountry": "대한민국",
+    "postalCode": "12345",
+    "addressLine1": "합성시 합성로 100",
+    "addressLine2": "합성동 101호"
+  },
+  "education": [
+    {
+      "id": "synthetic-high-school",
+      "sectionId": "highSchool",
+      "values": {
+        "academicProcess": "고등학교",
+        "schoolName": "합성고등학교",
+        "startDate": "2014-03-01",
+        "endDate": "2017-02-01",
+        "completionStatus": "졸업",
+        "attendanceType": "주간"
+      }
+    },
+    {
+      "id": "synthetic-university",
+      "sectionId": "university",
+      "values": {
+        "schoolName": "합성대학교",
+        "majorName": "컴퓨터공학",
+        "startDate": "2017-03-01",
+        "endDate": "2021-02-01",
+        "completionStatus": "졸업",
+        "gpaScore": "3.5",
+        "gpaScale": "4.50",
+        "attendanceType": "주간",
+        "degreeLevel": "학사"
+      }
+    }
+  ],
+  "languages": [
+    {
+      "id": "synthetic-language",
+      "sectionId": "languageTest",
+      "values": {
+        "language": "영어",
+        "testName": "TOEIC",
+        "grade": "900",
+        "acquisitionDate": "2025-01-15",
+        "registrationNo": "SYNTHETIC-002"
+      }
+    }
+  ],
+  "certifications": [
+    {
+      "id": "synthetic-certificate",
+      "sectionId": "certificate",
+      "values": {
+        "name": "합성자격",
+        "registrationNo": "SYNTHETIC-001",
+        "acquisitionDate": "2025-02-15",
+        "issuer": "합성기관"
+      }
+    }
+  ],
+  "careers": [
+    {
+      "id": "synthetic-career",
+      "sectionId": "career",
+      "values": {
+        "companyName": "합성회사",
+        "department": "개발팀",
+        "position": "개발자",
+        "startDate": "2021-03-01",
+        "endDate": "2025-02-01",
+        "responsibilities": "합성 프로젝트 개발",
+        "employmentStatus": "퇴사",
+        "employmentType": "정규"
+      }
+    }
+  ],
+  "projects": [],
+  "publications": [],
+  "compensation": {},
+  "military": {},
+  "veteran": {},
+  "disability": {},
+  "health": []
+}

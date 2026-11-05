@@ -75,10 +75,18 @@ export async function openInPageProfilePanel(
   await runtime.sendMessage(OPEN_IN_PAGE_PROFILE_PANEL_MESSAGE);
 }
 
-export async function openPostingsPage(create = false): Promise<void> {
-  const response: unknown = await browser.runtime.sendMessage({
+export interface OpenPostingsOptions {
+  /** Open the page with the 알림 설정 dialog already showing. */
+  settings?: boolean;
+}
+
+export async function openPostingsPage(
+  options: OpenPostingsOptions = {},
+  runtime: RuntimeMessageApi = browser.runtime,
+): Promise<void> {
+  const response: unknown = await runtime.sendMessage({
     type: "careerForm.openPostings",
-    create,
+    ...(options.settings ? { settings: true } : {}),
   });
   if (
     !response ||

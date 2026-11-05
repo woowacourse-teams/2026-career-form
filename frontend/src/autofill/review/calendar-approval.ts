@@ -75,8 +75,16 @@ export function elementSignature(
     "value",
     ...extraIgnored,
   ]);
+  // Open/closed and interaction markers (an opener's aria-controls while
+  // open, data-*-state, data-open/active/focus/hover) and this extension's own
+  // data-careerform-* markers describe the moment, not the element's identity.
+  const transient = (name: string) =>
+    name === "aria-controls" ||
+    name.startsWith("data-careerform-") ||
+    /^data-(?:[\w-]*-)?state$/.test(name) ||
+    /^data-(?:open|active|focus|focus-visible|hover|pressed)$/.test(name);
   const attrs = Array.from(element.attributes)
-    .filter(({ name }) => !ignored.has(name))
+    .filter(({ name }) => !ignored.has(name) && !transient(name))
     .sort((a, b) => a.name.localeCompare(b.name))
     .map(({ name, value }) => `${name}=${value}`)
     .join(";");
@@ -133,7 +141,7 @@ function currentMonthClue(
   surface: NonNullable<ReturnType<typeof calendarSurfaceFor>>,
   targetYearMonth: string,
 ): string | undefined {
-  if (surface.rendering === "deferred-jquery") return "pending-month-structure";
+  if (surface.rendering !== "rendered") return "pending-month-structure";
   const popup = surface.popup;
   const year = Number(targetYearMonth.slice(0, 4));
   const month = Number(targetYearMonth.slice(5, 7));
@@ -185,9 +193,9 @@ export function createCalendarApproval({
     targetYearMonth,
     monthClue,
     confirmation:
-      surface.rendering === "deferred-jquery"
-        ? "pending-structure"
-        : "rendered-month-options",
+      surface.rendering === "rendered"
+        ? "rendered-month-options"
+        : "pending-structure",
     ...(profileFieldKey ? { profileFieldKey } : {}),
     ...(profileEntryId ? { profileEntryId } : {}),
     ...(itemIndex !== undefined ? { itemIndex } : {}),
@@ -262,9 +270,9 @@ export function revalidateCalendarApproval(
     currentMonthClue(surface, approval.targetYearMonth) !==
       approval.monthClue ||
     approval.confirmation !==
-      (surface.rendering === "deferred-jquery"
-        ? "pending-structure"
-        : "rendered-month-options")
+      (surface.rendering === "rendered"
+        ? "rendered-month-options"
+        : "pending-structure")
   ) {
     return { status: "invalid", reason: "month_clue_changed" };
   }

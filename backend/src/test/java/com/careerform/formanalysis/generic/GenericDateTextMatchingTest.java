@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import com.careerform.formanalysis.application.RawLabelMask;
 import com.careerform.formanalysis.application.FieldInteractionPolicy;
 import com.careerform.formanalysis.application.FormAnalysisRouter;
 import com.careerform.formanalysis.application.port.CompanyFormPolicyProvider;
@@ -107,7 +108,8 @@ class GenericDateTextMatchingTest {
                     var result = service().analyze(matchingRequest).fields().getFirst();
                     var matchingCall = http.calls().get(matchingCallIndex);
                     var observation = matchingCall.state().path("fields").path("field_0");
-                    assertThat(observation.path("label").asString()).isEqualTo("birth date");
+                    assertThat(observation.path("label").asString())
+                        .isEqualTo(RawLabelMask.mask(structure.candidate().displayName()));
                     assertThat(observation.path("element").asString()).isEqualTo("input");
                     assertThat(observation.path("control").asString()).isEqualTo("text");
                     assertThat(observation.path("visibility").asString()).isEqualTo("visible");

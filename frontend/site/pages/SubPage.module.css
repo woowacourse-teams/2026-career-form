@@ -1,0 +1,214 @@
+.page {
+  overflow-x: clip;
+  line-height: 1.75;
+}
+.hero {
+  padding: 64px var(--gutter) 40px;
+  background: radial-gradient(
+    50% 80% at 85% 60%,
+    rgb(177 229 253 / 70%),
+    transparent 70%
+  );
+}
+.heroInner {
+  max-width: 1120px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  gap: 24px;
+}
+.back {
+  font-size: 14px;
+  color: var(--sub);
+  font-weight: 600;
+  display: inline-flex;
+  margin-bottom: 18px;
+}
+.back:hover {
+  color: var(--strong);
+}
+.hero h1 {
+  font-size: clamp(34px, 4.6vw, 56px);
+  line-height: 1.15;
+  font-weight: 800;
+}
+.lead {
+  margin-top: 14px;
+  font-size: clamp(16px, 1.6vw, 19px);
+  color: var(--sub);
+  max-width: 52ch;
+}
+.art {
+  width: clamp(140px, 18vw, 220px);
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--warn-soft);
+  color: var(--warn);
+  font-size: 13px;
+  font-weight: 700;
+  margin-top: 18px;
+}
+.wrap {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 var(--gutter) 96px;
+}
+
+/* policy pages */
+.points {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 48px;
+}
+.point {
+  background: var(--surface);
+  border-radius: 26px;
+  box-shadow: var(--clay);
+  padding: 24px;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+.point img {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  margin-bottom: 4px;
+}
+.point h2 {
+  font-size: 17px;
+  font-weight: 800;
+}
+.point p {
+  font-size: 14.5px;
+  color: var(--sub);
+  line-height: 1.65;
+}
+.policy {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 40px;
+  align-items: start;
+}
+.toc {
+  position: sticky;
+  top: calc(var(--header-height) + 32px);
+  display: grid;
+  gap: 2px;
+  font-size: 14px;
+}
+.toc b {
+  font-size: 12px;
+  color: var(--sub);
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+.toc a {
+  padding: 7px 12px;
+  border-radius: 10px;
+  color: var(--sub);
+}
+.toc a:hover {
+  background: var(--brand);
+  color: var(--strong);
+}
+.sections {
+  display: grid;
+  gap: 16px;
+}
+.section {
+  background: var(--surface);
+  border-radius: 26px;
+  box-shadow: var(--clay);
+  padding: 28px clamp(22px, 3vw, 36px);
+  display: grid;
+  gap: 12px;
+  scroll-margin-top: calc(var(--header-height) + 24px);
+}
+.section h2 {
+  font-size: 20px;
+  font-weight: 800;
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+}
+.section h2 span {
+  font-size: 14px;
+  color: var(--action);
+  font-variant-numeric: tabular-nums;
+  min-width: 1.4em;
+}
+.section p,
+.section li {
+  font-size: 15.5px;
+  max-width: 68ch;
+}
+.section ul {
+  margin: 0;
+  padding-left: 1.2em;
+  display: grid;
+  gap: 6px;
+}
+.callout {
+  border-radius: 14px;
+  background: var(--warn-soft);
+  color: var(--warn);
+  padding: 12px 16px;
+  font-size: 14.5px;
+}
+.facts {
+  margin: 0;
+  display: grid;
+  gap: 8px;
+  font-size: 15px;
+}
+.facts div {
+  display: grid;
+  grid-template-columns: 9em 1fr;
+  gap: 20px;
+}
+.facts dt {
+  color: var(--sub);
+}
+.facts dd {
+  margin: 0;
+  color: var(--strong);
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .heroInner {
+    grid-template-columns: 1fr;
+  }
+  .art {
+    display: none;
+  }
+  .points,
+  .policy {
+    grid-template-columns: 1fr;
+  }
+  .toc {
+    position: static;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .toc b {
+    width: 100%;
+  }
+  .toc a {
+    background: var(--surface);
+    border: 1px solid var(--line);
+  }
+  .facts div {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}

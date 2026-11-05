@@ -99,8 +99,17 @@ public record GenericFieldsRequest(
         @Size(min = 1, max = 120) String displayName,
         @NotNull List<@NotNull @Valid FieldCandidate> fields,
         @Size(min = 1) List<@NotNull @Valid Item> items,
-        @Size(max = 32) String category
+        @Size(max = 32) String category,
+        /** 프로필 구조로 정해진 단일 기록의 sectionId(예: university). 값이 아니라 기록 종류만 담는다. */
+        @Size(min = 1, max = 64) @Pattern(regexp = "^[A-Za-z][A-Za-z0-9]*$") String recordSectionId
     ) {
+
+        public Section(
+            String sectionId, String parentSectionId, String displayName,
+            List<FieldCandidate> fields, List<Item> items, String category
+        ) {
+            this(sectionId, parentSectionId, displayName, fields, items, category, null);
+        }
     }
 
     public record Item(
@@ -127,8 +136,19 @@ public record GenericFieldsRequest(
         @AssertTrue Boolean readonly,
         @AssertTrue Boolean inert,
         @Size(min = 1) List<@NotNull @Valid Option> options,
-        @Valid SemanticContext semanticContext
+        @Valid SemanticContext semanticContext,
+        @Size(min = 1, max = 128) String containerId
     ) {
+
+        public FieldCandidate(
+            String candidateId, FormElement element, FormControl control, Visibility visibility,
+            String displayName, String domId, String domName, String placeholder,
+            Boolean disabled, Boolean readonly, Boolean inert, List<Option> options,
+            SemanticContext semanticContext
+        ) {
+            this(candidateId, element, control, visibility, displayName, domId, domName, placeholder,
+                disabled, readonly, inert, options, semanticContext, null);
+        }
 
         public FieldCandidate(
             String candidateId,
@@ -176,10 +196,20 @@ public record GenericFieldsRequest(
     ) {
     }
 
+    /** placeholder는 값이 빈 안내 선택지(예: select의 첫 "선택" 항목)일 때만 true로 온다. */
     public record Option(
         @NotBlank @Size(max = 128) String optionId,
-        @NotBlank @Size(max = 120) String displayName
+        @NotBlank @Size(max = 120) String displayName,
+        @AssertTrue Boolean placeholder
     ) {
+
+        public Option(String optionId, String displayName) {
+            this(optionId, displayName, null);
+        }
+
+        boolean isPlaceholder() {
+            return Boolean.TRUE.equals(placeholder);
+        }
     }
 
     public enum FormElement {

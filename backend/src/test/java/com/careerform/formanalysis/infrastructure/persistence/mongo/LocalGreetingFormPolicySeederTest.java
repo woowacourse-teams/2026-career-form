@@ -18,6 +18,6 @@ class LocalGreetingFormPolicySeederTest {
 
         verify(policies).insert(document.capture());
         assertThat(document.getValue().companyKey()).isEqualTo("greeting");
-        assertThat(document.getValue().version()).isEqualTo(8);
+        assertThat(document.getValue().version()).isEqualTo(9);
     }
 }

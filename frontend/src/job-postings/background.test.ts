@@ -48,10 +48,18 @@ it("관리 페이지에서만 공고를 읽고 쓰며 패널은 진입만 허용
   ).toMatchObject({ ok: true });
   expect(rows).toHaveLength(1);
   await handler(
+    { type: "careerForm.openPostings" },
+    { id: "own", url: "https://example.com" },
+  );
+  await handler(
     { type: "careerForm.openPostings", create: true },
     { id: "own", url: "https://example.com" },
   );
-  expect(pages).toEqual(["#postings/new"]);
+  await handler(
+    { type: "careerForm.openPostings", settings: true },
+    { id: "own", url: "https://example.com" },
+  );
+  expect(pages).toEqual(["#postings", "#postings", "#postings/settings"]);
   expect(handler({ type: "other" }, { id: "own" })).toBeUndefined();
 });
 it("완료 또는 수정된 알림 클릭으로 오래된 공고를 열지 않는다", async () => {
@@ -88,4 +96,36 @@ it("완료 또는 수정된 알림 클릭으로 오래된 공고를 열지 않�
   );
   await service.setCompleted("job", 1, true);
   expect(await service.notificationUrl("careerForm.job.job.1")).toBeUndefined();
+});
+
+it("회사명이 비면 관리 페이지에 회사명 오류를 그대로 전달한다", async () => {
+  const service = new PostingService(
+    { load: async () => [], save: async () => {} },
+    {
+      now: () => 0,
+      id: () => "job",
+      permission: async () => true,
+      schedule: async () => {},
+      notify: async () => {},
+      clearNotification: async () => {},
+    },
+  );
+  const handler = createPostingHandler(service, "own", async () => {});
+  expect(
+    await handler(
+      {
+        type: "careerForm.postings",
+        action: "save",
+        input: {
+          company: " ",
+          role: "",
+          url: "https://example.com",
+          deadline: 20000000,
+          timeZone: "Asia/Seoul",
+          minutes: [],
+        },
+      },
+      { id: "own", url: "chrome-extension://own/options.html" },
+    ),
+  ).toEqual({ ok: false, error: "회사명을 입력해 주세요." });
 });

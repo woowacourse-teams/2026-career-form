@@ -3,6 +3,8 @@ export function hasCalendarOwnershipConflict(
   target: HTMLInputElement,
   opener: HTMLElement,
   popup: HTMLElement,
+  /** An element the link may also name, e.g. a calendar this opener opened. */
+  alsoOwned?: (element: HTMLElement | null) => boolean,
 ): boolean {
   const controls = new Set<HTMLElement>([target, opener]);
   if (target.id) {
@@ -21,6 +23,9 @@ export function hasCalendarOwnershipConflict(
     (control.getAttribute("aria-controls") ?? "")
       .split(/\s+/)
       .filter(Boolean)
-      .some((id) => target.ownerDocument.getElementById(id) !== popup),
+      .some((id) => {
+        const element = target.ownerDocument.getElementById(id);
+        return element !== popup && !alsoOwned?.(element);
+      }),
   );
 }
