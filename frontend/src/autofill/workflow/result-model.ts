@@ -10,6 +10,11 @@ import { matchesResultValue } from "./result-value-match";
 import { resultFieldLabel } from "./result-label";
 import { nativeRetainedValueMatches } from "../policy/native-form-write";
 import { genericReasonText } from "../generic/grade-reason-text";
+import { GENERIC_SECTION_FAILURE } from "../generic/section-failure";
+import {
+  GENERIC_STRUCTURE_BLOCKED_REASON,
+  STAGE_KEY_MISMATCH,
+} from "../generic/structure-context";
 
 export interface ResultModelInput {
   reviewItems: readonly ReviewPlanItem[];
@@ -60,6 +65,22 @@ function pendingReason(item: ReviewPlanItem): string {
   )
     return "선택 필요";
   return "입력 못함";
+}
+
+const SECTION_FAILURE_CODES: ReadonlySet<string> = new Set(
+  Object.values(GENERIC_SECTION_FAILURE),
+);
+
+/**
+ * The analysis failed for this field, or the model linked it to a profile key
+ * of another row stage: a real failure, not "unsupported".
+ */
+function analysisFailed(item: ReviewPlanItem): boolean {
+  if (item.genericGrade !== "BLOCKED" || item.hiddenFromReview) return false;
+  const code = item.genericReasonCode;
+  if (code === GENERIC_STRUCTURE_BLOCKED_REASON)
+    return item.reason.includes(STAGE_KEY_MISMATCH);
+  return code !== undefined && SECTION_FAILURE_CODES.has(code);
 }
 
 function gradeDetail(item: ReviewPlanItem): string | undefined {
@@ -166,11 +187,7 @@ export function buildResultModel(input: ResultModelInput): ResultModel {
       skip("현재 표시되지 않는 항목");
     } else if (item.addressManualReason) {
       review("입력 결과 확인", undefined, item.addressManualReason);
-    } else if (
-      !saved.length &&
-      item.genericGrade === "BLOCKED" &&
-      !item.hiddenFromReview
-    ) {
+    } else if (analysisFailed(item)) {
       review("입력 못함", undefined, gradeDetail(item));
     } else if (!saved.length) {
       skip(
@@ -341,9 +358,12 @@ const NOT_UNFILLED_REASONS = new Set([
 export function unfilledCandidateIds(
   model: ResultModel,
   valueOf: (id: string) => string | undefined = () => undefined,
+  options: { pendingOnly?: boolean } = {},
 ): string[] {
+  const pending = model.pending.map(({ id }) => id);
+  if (options.pendingOnly) return pending;
   return [
-    ...model.pending.map(({ id }) => id),
+    ...pending,
     ...model.skipped
       .filter(
         ({ id, reason }) =>
@@ -351,4 +371,58 @@ export function unfilledCandidateIds(
       )
       .map(({ id }) => id),
   ];
+}
+
+export type SkippedEntry = ResultModel["skipped"][number];
+
+export interface ProfileGroups {
+  /** Fields the extension has no profile item for. */
+  notInProfile: SkippedEntry[];
+  /** Fields linked to a profile item the user has not filled in. */
+  profileUnset: SkippedEntry[];
+}
+
+/**
+ * Skipped fields without a saved value, split by why. A control already shown
+ * as pending or hidden from review is left out, and one control counts once.
+ */
+export function profileGroups(
+  model: ResultModel,
+  fieldStateFor?: ResultModelInput["fieldStateFor"],
+): ProfileGroups {
+  const controlOf = (id: string) => {
+    const handle = fieldStateFor?.(id)?.handle;
+    return handle?.elements[0] ?? handle?.customElements?.[0];
+  };
+  const taken = new Set<Element>();
+  for (const { id } of model.pending) {
+    const control = id.startsWith("progress:") ? undefined : controlOf(id);
+    if (control) taken.add(control);
+  }
+  for (const { candidateId } of model.completed) {
+    const control = candidateId ? controlOf(candidateId) : undefined;
+    if (control) taken.add(control);
+  }
+  for (const { id, reason } of model.skipped) {
+    const control = reason === "기존 값 유지" ? controlOf(id) : undefined;
+    if (control) taken.add(control);
+  }
+  const groups: ProfileGroups = { notInProfile: [], profileUnset: [] };
+  for (const entry of model.skipped) {
+    if (entry.item.hiddenFromReview) continue;
+    const group =
+      entry.reason === "자동 입력 미지원"
+        ? groups.notInProfile
+        : entry.reason === "등록된 정보 없음"
+          ? groups.profileUnset
+          : undefined;
+    if (!group) continue;
+    const control = controlOf(entry.id);
+    if (control) {
+      if (taken.has(control)) continue;
+      taken.add(control);
+    }
+    group.push(entry);
+  }
+  return groups;
 }

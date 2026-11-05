@@ -1014,6 +1014,13 @@
 - [확장 Web Push 구독과 공고 알림](topics/extension-push-notifications.md)의 Current를 CF-395로 바꾸고 CF-349를 History에 남겼다. [선택적 이용 계측](topics/usage-analytics.md)의 Current를 CF-395로 바꾸고 CF-361을 History에 남겼다. 다른 topic 문서는 바꾸지 않았다.
 - 실제 지원값·계정·세션·시크릿·VAPID 키·구독 endpoint·사용자의 직무 선택값·대화 전문은 저장하지 않았다.
 
+## [2026-11-05] ingest | CF-412 범용 결과 화면 분류와 민감 항목 문장 정정
+
+- Approval-Digest: eba6ba6cbb48683b950a554a698c63bb45e0c56442e5f1e0245e3e858f486e6e
+- Source-Revision: 08faae7f
+- 승인한 후보 4개를 [CF-412 bundle](../raw/issues/CF-412/manifest.md)에 payload 둘로 기록했다.
+- [범용 결과 화면 분류](topics/generic-result-classification.md)를 새로 만들었다. [구조 행동 자동 실행](topics/generic-autonomous-structural-actions.md)과 [실사이트 평가](topics/live-autofill-evaluation.md)의 민감 항목 문장을 고치고 Current를 CF-412로 바꿨다.
+- 실제 지원값·라벨·URL·계정·세션·시크릿·대화 전문은 저장하지 않았다.
 ## [2026-11-05] ingest | CF-413 공고 알림 직무 필터 전환 변수의 배포 전달
 
 - Approval-Digest: 058720dcf405d4c6c31bfaa925163a583a91843a28d3f459f0a5b1cc732c7aec

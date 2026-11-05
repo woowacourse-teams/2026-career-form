@@ -5,7 +5,7 @@ import styles from "./WorkflowResults.module.css";
 import resultCss from "./WorkflowResults.module.css?inline";
 import type { Profile } from "../../profile/model";
 import type { WriteProgress } from "./progress-model";
-import { buildResultModel } from "./result-model";
+import { buildResultModel, profileGroups } from "./result-model";
 import { CompletedReview } from "./CompletedReview";
 import { PendingResultRow } from "./PendingResultRow";
 import { pendingResultPresentation } from "./pending-result-presentation";
@@ -26,6 +26,9 @@ export interface WorkflowResultsProps {
   operatedCategories?: readonly string[];
   onLocateSection?(candidateIds: readonly string[], category?: string): boolean;
   copyText?(value: string): Promise<void>;
+  /** Generic path only: also list fields that have no saved value. */
+  profileGroupsVisible?: boolean;
+  onOpenProfile?(): void;
 }
 export function WorkflowResults({
   progress,
@@ -40,13 +43,15 @@ export function WorkflowResults({
   onLocate,
   onLocateSection,
   operatedCategories,
+  profileGroupsVisible = false,
+  onOpenProfile,
   copyText = (value) => navigator.clipboard.writeText(value),
 }: WorkflowResultsProps) {
   const tabsId = useId();
   const [selectedTab, setSelectedTab] = useState<
     "pending" | "completed" | null
   >(null);
-  const { completed, pending } = buildResultModel({
+  const model = buildResultModel({
     reviewItems,
     results,
     progress,
@@ -56,6 +61,10 @@ export function WorkflowResults({
     progressStateFor,
     fieldStateFor,
   });
+  const { completed, pending } = model;
+  const unlisted = profileGroupsVisible
+    ? profileGroups(model, fieldStateFor)
+    : undefined;
   const pendingGroups = new Map<string, typeof pending>();
   for (const entry of pending) {
     const category =
@@ -201,6 +210,41 @@ export function WorkflowResults({
           </p>
         )}
       </div>
+      {unlisted && (
+        <div className={styles.profileGroups}>
+          {(
+            [
+              ["프로필에 없는 항목", unlisted.notInProfile, false],
+              ["프로필 미입력", unlisted.profileUnset, true],
+            ] as const
+          ).map(
+            ([title, entries, canOpenProfile]) =>
+              entries.length > 0 && (
+                <details key={title} className={styles.profileGroup}>
+                  <summary>
+                    {title} <strong>{entries.length}</strong>
+                  </summary>
+                  <ul className={styles.profileGroupList}>
+                    {entries.map((entry) => (
+                      <li key={entry.id}>
+                        {pendingResultPresentation(entry.item).label}
+                      </li>
+                    ))}
+                  </ul>
+                  {canOpenProfile && onOpenProfile && (
+                    <button
+                      type="button"
+                      className={styles.profileGroupLink}
+                      onClick={onOpenProfile}
+                    >
+                      프로필 채우기
+                    </button>
+                  )}
+                </details>
+              ),
+          )}
+        </div>
+      )}
     </section>
   );
 }

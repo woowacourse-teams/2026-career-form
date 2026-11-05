@@ -32,24 +32,15 @@ import {
   type GradeSibling,
 } from "./field-grading";
 import {
+  GENERIC_SECTION_FAILURE,
+  type GenericSectionFailure,
+} from "./section-failure";
+import {
   segmentGenericSections,
   type GenericSection,
 } from "./section-segments";
 
-/** Why every field of one section is BLOCKED. */
-export const GENERIC_SECTION_FAILURE = {
-  CLASSIFY_UNAVAILABLE: "CLASSIFY_UNAVAILABLE",
-  ANALYZE_UNAVAILABLE: "ANALYZE_UNAVAILABLE",
-  /** HTTP 404 from a backend without the generic endpoints. */
-  ENDPOINT_UNAVAILABLE: "ENDPOINT_UNAVAILABLE",
-  /** The backend returned the field with reason LLM_UNAVAILABLE. */
-  LLM_UNAVAILABLE: "LLM_UNAVAILABLE",
-  /** A local exception while preparing or converting this section. */
-  SECTION_PROCESSING_FAILED: "SECTION_PROCESSING_FAILED",
-} as const;
-
-export type GenericSectionFailure =
-  (typeof GENERIC_SECTION_FAILURE)[keyof typeof GENERIC_SECTION_FAILURE];
+export { GENERIC_SECTION_FAILURE, type GenericSectionFailure };
 
 /** Reason of a candidate field the model could not link to a profile key. */
 export const GENERIC_UNLINKED_REASON = "UNLINKED";

@@ -29,7 +29,13 @@ import { useWriteProgress } from "./use-write-progress";
 import { useReviewDiagnostics } from "./use-review-diagnostics";
 import { useOperatedFields } from "./use-operated-fields";
 import { resultFieldOptions, resultFieldState } from "./result-field-state";
-import { buildResultModel, unfilledCandidateIds } from "./result-model";
+import { openOptionsPageFromContent } from "../../extension/navigation";
+import { emitResultDiagnostics } from "../generic/result-diagnostics";
+import {
+  buildResultModel,
+  profileGroups,
+  unfilledCandidateIds,
+} from "./result-model";
 import {
   captureComponentResultTargets,
   recollectComponentResultRegistry,
@@ -1356,24 +1362,30 @@ function PolicyReadyWorkflow({
     }
     const fieldStateFor = (id: string) =>
       resultFieldState(visibleRegistry, pageDocument, id);
+    const model = buildResultModel({
+      reviewItems,
+      results,
+      progress,
+      profile,
+      wasWritten: (id) => progressTracker.wasWritten(id, visibleRegistry),
+      progressIdFor: (id) => progressTracker.progressIdFor(id, visibleRegistry),
+      progressStateFor: progressTracker.progressStateFor,
+      fieldStateFor,
+    });
+    // On a generic page only fields to check get a red border; the ones with
+    // no saved value are listed in gray instead.
+    const generic = analysisSummary?.mode === "GENERIC";
     unfilledPresentation.mark(
       visibleRegistry,
       unfilledCandidateIds(
-        buildResultModel({
-          reviewItems,
-          results,
-          progress,
-          profile,
-          wasWritten: (id) => progressTracker.wasWritten(id, visibleRegistry),
-          progressIdFor: (id) =>
-            progressTracker.progressIdFor(id, visibleRegistry),
-          progressStateFor: progressTracker.progressStateFor,
-          fieldStateFor,
-        }),
+        model,
         (id) => fieldStateFor(id)?.value,
+        generic ? { pendingOnly: true } : undefined,
       ),
     );
-  }, [stage, results, progress, visibleRegistry]);
+    if (generic)
+      emitResultDiagnostics(model, profileGroups(model, fieldStateFor));
+  }, [stage, results, progress, visibleRegistry, analysisSummary?.mode]);
 
   return (
     <WorkflowScreens
@@ -1402,6 +1414,7 @@ function PolicyReadyWorkflow({
       }
       profile={profile}
       optionsFor={(id) => resultFieldOptions(visibleRegistry, id)}
+      onOpenProfile={() => void openOptionsPageFromContent()}
       stage={
         stage === "review" && analysisSummary?.mode === "GENERIC"
           ? "writing"

@@ -10,6 +10,8 @@ import { PROFILE_CATEGORIES } from "../../profile/field-definitions";
 
 /** Stable UI reason; detailed structural reasons stay in the local receipt. */
 export const GENERIC_STRUCTURE_BLOCKED_REASON = "STRUCTURE_BLOCKED";
+/** The model linked a field to a profile key of another row stage. */
+export const STAGE_KEY_MISMATCH = "STAGE_KEY_MISMATCH";
 
 /** Browser-local receipts. None of these nodes or profile indices is serialized. */
 export interface GenericStructureContext {
@@ -168,7 +170,7 @@ function structuralBlockReason(
     else if (element === binding.select || element === binding.kindControl)
       reason = "ROW_KIND_ALREADY_PREPARED";
     else if (key && !key.startsWith(`education.${binding.sectionId}.`))
-      reason = "STAGE_KEY_MISMATCH";
+      reason = STAGE_KEY_MISMATCH;
     else if (binding.select && binding.select.value !== binding.selectedValue)
       reason = "ROW_KIND_CHANGED";
   }

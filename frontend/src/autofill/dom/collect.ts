@@ -75,6 +75,7 @@ import {
   hiddenFromPage,
 } from "./generic-form-groups";
 import { genericRowFor, genericRows } from "./repeatable-rows";
+import { isPageChromeControl } from "./page-chrome";
 import {
   documentImplicitRepeatGroups,
   implicitRepeatGroupFor,
@@ -396,6 +397,7 @@ function collectFieldElements(
     >("input, select, textarea"),
   ).filter((element) => {
     if (isTemplateLike(element)) return false;
+    if (companyId === "generic" && isPageChromeControl(element)) return false;
     if (!(element instanceof HTMLInputElement)) return true;
     if (element.type === "button") {
       return adapter.collectsInputButtonFields;
@@ -464,7 +466,10 @@ function collectFieldsSnapshotInternal(
       const groups = groupBySection(
         [
           ...collectFieldElements(document, adapter, companyId),
-          ...dropdowns.keys(),
+          ...[...dropdowns.keys()].filter(
+            (trigger) =>
+              !(companyId === "generic" && isPageChromeControl(trigger)),
+          ),
         ],
         sectionSelector(adapter, document),
         adapter === collectionAdapterForHost(""),

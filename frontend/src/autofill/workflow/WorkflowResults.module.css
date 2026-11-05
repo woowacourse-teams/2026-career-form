@@ -603,3 +603,35 @@
 .summaryCategory[data-reviewed="true"] .categoryLocate > span {
   color: var(--color-success);
 }
+
+.profileGroups {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+.profileGroup {
+  border-radius: var(--radius-card);
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  padding: 8px 12px;
+}
+.profileGroup summary {
+  cursor: pointer;
+}
+.profileGroup strong {
+  color: var(--color-text-muted);
+}
+.profileGroupList {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: var(--color-text-muted);
+}
+.profileGroupLink {
+  margin-top: 8px;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--color-text-muted);
+  text-decoration: underline;
+  cursor: pointer;
+}

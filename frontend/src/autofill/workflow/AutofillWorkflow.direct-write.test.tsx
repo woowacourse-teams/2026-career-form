@@ -141,7 +141,7 @@ describe("generic autofill without a review screen", () => {
     ).toBeInTheDocument();
   });
 
-  it("lists a blocked field with its reason and writes nothing to it", async () => {
+  it("keeps an unlinked blocked field out of review and writes nothing to it", async () => {
     form();
     await runToResult();
     expect(input("memo").value).toBe("");
@@ -149,8 +149,9 @@ describe("generic autofill without a review screen", () => {
       screen.getByRole("region", { name: "확인 필요한 항목" }),
     );
     expect(
-      pending.getByLabelText("저장된 정보와 연결하지 못했습니다."),
-    ).toBeInTheDocument();
+      pending.queryByLabelText("저장된 정보와 연결하지 못했습니다."),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("프로필에 없는 항목")).toBeInTheDocument();
   });
 
   it("writes items to check too when the developer toggle is on", async () => {
@@ -194,11 +195,12 @@ describe("unfilled field borders after the result", () => {
     rects();
     await runToResult();
     expect(input("specialty").value).toBe("합성병과");
-    // memo (blocked), nationality (needs check), email (differs from page)
-    expect(document.querySelectorAll(OVERLAY)).toHaveLength(3);
-    input("memo").value = "직접 입력";
-    input("memo").dispatchEvent(new Event("input", { bubbles: true }));
+    // nationality (needs check), email (differs from page); memo has no
+    // saved value and is listed in gray instead of marked.
     expect(document.querySelectorAll(OVERLAY)).toHaveLength(2);
+    input("nationality").value = "직접 입력";
+    input("nationality").dispatchEvent(new Event("input", { bubbles: true }));
+    expect(document.querySelectorAll(OVERLAY)).toHaveLength(1);
     expect(input("specialty").getAttribute("style")).toBeNull();
   });
 
@@ -206,7 +208,7 @@ describe("unfilled field borders after the result", () => {
     form();
     rects();
     const { view } = await runToResult();
-    expect(document.querySelectorAll(OVERLAY)).toHaveLength(3);
+    expect(document.querySelectorAll(OVERLAY)).toHaveLength(2);
     view.unmount();
     expect(document.querySelectorAll(OVERLAY)).toHaveLength(0);
   });
