@@ -9,7 +9,7 @@ const PRICE_KEY = "cf-evaluation-model-prices-v1";
 const root = document.getElementById("cf-eval-preview");
 const $ = (selector) => root.querySelector(selector);
 const state = { runs: [], notes: {}, noteEditing: null, dataset: null, models: [], selected: [], group: null, stage: "total", page: "overview", cardSort: {}, confidenceMetric: "score",
-  fields: {}, catalog: null, fieldHidden: [], canDelete: false, compare: { before: "", after: "" }, fieldFilter: "diff", fieldScreen: "all", openField: null, itemKind: "GENERIC_FIELDS" };
+  fields: {}, catalog: null, fieldHidden: [], canDelete: false, deletePassword: false, compare: { before: "", after: "" }, fieldFilter: "diff", fieldScreen: "all", openField: null, itemKind: "GENERIC_FIELDS" };
 let prices = {};
 try { prices = JSON.parse(localStorage.getItem(PRICE_KEY) || "{}") ?? {}; } catch { prices = {}; }
 
@@ -20,10 +20,10 @@ function element(tag, text, className) {
   return node;
 }
 
-async function api(path, method = "GET", payload) {
+async function api(path, method = "GET", payload, extraHeaders = {}) {
   const response = await fetch("/api/v1/evaluations" + path, {
     method, credentials: "omit",
-    headers: { ...accessHeaders(), ...(payload === undefined ? {} : { "Content-Type": "application/json" }) },
+    headers: { ...accessHeaders(), ...extraHeaders, ...(payload === undefined ? {} : { "Content-Type": "application/json" }) },
     body: payload === undefined ? undefined : JSON.stringify(payload),
   });
   if (response.status === 401) { clearAccess(); location.reload(); throw new Error("로그인이 만료되었습니다."); }
@@ -35,6 +35,8 @@ async function api(path, method = "GET", payload) {
       UNKNOWN_DATASET: "검토를 마친 데이터셋이 아닙니다. 데이터셋 검토 상태 확인 필요.",
       INVALID_REPETITIONS: "반복 수는 1 이상 20 이하입니다.",
       NOTE_TOO_LONG: "변경 내용은 300자 이하입니다.",
+      PASSWORD_REQUIRED: "비밀번호를 입력해야 합니다.",
+      PASSWORD_MISMATCH: "비밀번호가 맞지 않습니다.",
       INVALID_PROMPT_VERSION: "실행 이름은 영문·숫자·.-_ 32자 이하입니다.",
       UNKNOWN_PROVIDER: "이 서버에 연결되지 않았거나 등록되지 않은 공급자입니다.",
       UNKNOWN_MODEL: "이 공급자가 허용하지 않은 모델입니다.",
@@ -1671,10 +1673,28 @@ function confirmDelete(key) {
   cancel.addEventListener("click", () => $("#cf-source").close());
   const remove = element("button", "삭제", "danger-action");
   remove.type = "button";
+  // 함께 쓰는 서버는 실수로 지우지 않도록 로그인 비밀번호를 다시 받는다. 서버가 로그인에 쓴 것과 같은지 확인한다.
+  let password = null;
+  if (state.deletePassword) {
+    password = element("input");
+    password.type = "password";
+    password.autocomplete = "off";
+    password.setAttribute("aria-label", "공용 비밀번호 다시 입력");
+    password.placeholder = "공용 비밀번호 다시 입력";
+    remove.disabled = true;
+    password.addEventListener("input", () => { remove.disabled = !password.value; });
+    password.addEventListener("keydown", (event) => { if (event.key === "Enter" && !remove.disabled) remove.click(); });
+    const field = element("label", undefined, "delete-password");
+    field.append(element("span", "삭제하려면 로그인 비밀번호를 다시 입력합니다.", "muted"), password);
+    box.append(field);
+  }
   remove.addEventListener("click", async () => {
     remove.disabled = true;
     try {
-      await api(`/records/${encodeURIComponent(key)}`, "DELETE");
+      // 한글 등도 헤더에 실리도록 UTF-8 Base64로 보낸다.
+      const confirmation = password
+        ? { "X-Evaluation-Delete-Password": btoa(String.fromCharCode(...new TextEncoder().encode(password.value))) } : {};
+      await api(`/records/${encodeURIComponent(key)}`, "DELETE", undefined, confirmation);
       $("#cf-source").close();
       runs.forEach((run) => { delete state.fields[run.id]; });
       if (state.compare.before === key) state.compare.before = "";
@@ -2562,6 +2582,7 @@ async function load() {
     const capabilities = await api("/capabilities");
     state.notes = await api("/notes") ?? {};
     state.canDelete = capabilities.recordDelete === true;
+    state.deletePassword = capabilities.recordDeletePassword === true;
     state.runs = baselineLast(runs, capabilities.baselineOrder ?? []);
   } catch (error) {
     state.runs = [];

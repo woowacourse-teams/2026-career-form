@@ -780,3 +780,5 @@
 #cf-eval-preview .note-form{display:flex;gap:8px;align-items:center;flex:1}
 #cf-eval-preview .note-form input{flex:1;min-width:0;font:inherit;font-size:13px;padding:5px 8px;border:1px solid #c8ccc9;border-radius:4px;background:#fff;cursor:text}
 #cf-eval-preview .note-form button[type=submit]{font-size:12px;padding:5px 10px;border:1px solid #475f78;border-radius:4px;background:#475f78;color:#fff}
+#cf-eval-preview .delete-password{display:flex;flex-direction:column;gap:6px;margin:12px 0 4px;font-size:13px}
+#cf-eval-preview .delete-password input{font:inherit;font-size:14px;padding:8px 10px;border:1px solid #c8ccc9;border-radius:4px;background:#fff;cursor:text}

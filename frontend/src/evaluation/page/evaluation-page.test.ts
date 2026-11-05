@@ -169,8 +169,9 @@ const dataset = {
 };
 
 // 서버가 기록 삭제를 허용하는지. 개발서버처럼 함께 쓰는 서버는 꺼져 있다.
-const capabilities: { recordDelete: boolean; baselineOrder: string[] } = {
+const capabilities: { recordDelete: boolean; recordDeletePassword: boolean; baselineOrder: string[] } = {
   recordDelete: false,
+  recordDeletePassword: false,
   baselineOrder: [],
 };
 
@@ -394,6 +395,59 @@ describe("AI 평가 화면의 단계 탭", () => {
     (document.querySelector("#refresh") as HTMLButtonElement).click();
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(button().hidden).toBe(true);
+  });
+
+  it("함께 쓰는 서버에서는 삭제 확인 창에 로그인 비밀번호를 다시 입력해야 삭제를 누를 수 있고, 입력한 값을 함께 보낸다", async () => {
+    const wait = () => new Promise((resolve) => setTimeout(resolve, 0));
+    const refresh = async () => {
+      (document.querySelector("#refresh") as HTMLButtonElement).click();
+      await wait();
+    };
+    const dialog = () => document.querySelector("#cf-source") as HTMLElement;
+    const remove = () => dialog().querySelector(".danger-action") as HTMLButtonElement;
+    const original = globalThis.fetch;
+    const sent: { url: string; headers: Record<string, string> }[] = [];
+    (globalThis as unknown as { fetch: unknown }).fetch = async (
+      url: string, options?: { method?: string; headers?: Record<string, string> }) => {
+      if (options?.method === "DELETE") {
+        sent.push({ url, headers: options.headers ?? {} });
+        return { ok: false, status: 403, headers: { get: () => "application/json" },
+          json: async () => ({ code: "PASSWORD_MISMATCH" }) };
+      }
+      return respond(url);
+    };
+    capabilities.recordDelete = true;
+    try {
+      // 로컬 실행기는 비밀번호를 묻지 않는다.
+      await refresh();
+      (document.querySelector("#record-delete") as HTMLButtonElement).click();
+      expect(dialog().querySelector('input[type="password"]')).toBeNull();
+      expect(remove().disabled).toBe(false);
+      (dialog().querySelector(".secondary-action") as HTMLButtonElement).click();
+
+      capabilities.recordDeletePassword = true;
+      await refresh();
+      (document.querySelector("#record-delete") as HTMLButtonElement).click();
+      const input = dialog().querySelector('input[type="password"]') as HTMLInputElement;
+      expect(input.autocomplete).toBe("off");
+      expect(remove().disabled).toBe(true);
+      input.value = "비밀 pw";
+      input.dispatchEvent(new Event("input"));
+      expect(remove().disabled).toBe(false);
+      remove().click();
+      await wait();
+      expect(sent).toHaveLength(1);
+      expect(sent[0].url).toBe("/api/v1/evaluations/records/run-1");
+      // 한글 비밀번호도 헤더에 실리도록 UTF-8 Base64로 보낸다.
+      expect(Buffer.from(sent[0].headers["X-Evaluation-Delete-Password"], "base64").toString("utf8")).toBe("비밀 pw");
+      expect(dialog().querySelector(".delete-message")?.textContent).toBe("비밀번호가 맞지 않습니다.");
+    } finally {
+      (dialog().querySelector(".secondary-action") as HTMLButtonElement | null)?.click();
+      (globalThis as unknown as { fetch: unknown }).fetch = original;
+      capabilities.recordDelete = false;
+      capabilities.recordDeletePassword = false;
+      await refresh();
+    }
   });
 
   it("자동기입 흐름 창은 네 참여자를 그리고 창 안의 단계 탭에 맞춰 다른 단계 줄을 흐린다", async () => {

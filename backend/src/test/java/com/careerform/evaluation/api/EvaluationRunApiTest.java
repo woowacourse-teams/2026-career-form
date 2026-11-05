@@ -194,18 +194,36 @@ class EvaluationRunApiTest {
     }
 
     @Test
-    @DisplayName("기록 삭제를 켜지 않은 서버(개발서버)는 끝난 기록도 지우지 않고 403이며, 화면에 꺼져 있다고 알린다")
-    void recordDeleteDisabledByDefaultOnSharedServers() throws Exception {
+    @DisplayName("함께 쓰는 서버(개발서버)는 로그인 비밀번호를 다시 받아 확인한 뒤에만 지우고, 화면에 비밀번호가 필요하다고 알린다")
+    void sharedServersDeleteOnlyAfterThePasswordIsEnteredAgain() throws Exception {
         String runId = runId(register());
         worker.runOnce();
         MockMvc shared = mvc(false);
+        java.util.function.Function<String, String> confirm = password -> Base64.getEncoder()
+            .encodeToString(password.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        String entered = new String(Base64.getDecoder().decode(PASSWORD.substring(6)), java.nio.charset.StandardCharsets.UTF_8)
+            .substring("quality:".length());
 
         shared.perform(delete("/api/v1/evaluations/records/" + runId).header("Authorization", PASSWORD))
-            .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("RECORD_DELETE_DISABLED"));
+            .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("PASSWORD_REQUIRED"));
+        shared.perform(delete("/api/v1/evaluations/records/" + runId).header("Authorization", PASSWORD)
+                .header("X-Evaluation-Delete-Password", confirm.apply(entered + "x")))
+            .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("PASSWORD_MISMATCH"));
+        shared.perform(delete("/api/v1/evaluations/records/" + runId).header("Authorization", PASSWORD)
+                .header("X-Evaluation-Delete-Password", "not base64 !!"))
+            .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("PASSWORD_MISMATCH"));
         authorized(get("/api/v1/evaluations/runs/" + runId)).andExpect(status().isOk());
+
+        shared.perform(delete("/api/v1/evaluations/records/" + runId).header("Authorization", PASSWORD)
+                .header("X-Evaluation-Delete-Password", confirm.apply(entered)))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.runIds[0]").value(runId));
+        authorized(get("/api/v1/evaluations/runs/" + runId)).andExpect(status().isNotFound());
+
         shared.perform(get("/api/v1/evaluations/capabilities").header("Authorization", PASSWORD))
-            .andExpect(jsonPath("$.recordDelete").value(false));
+            .andExpect(jsonPath("$.recordDelete").value(true)).andExpect(jsonPath("$.recordDeletePassword").value(true));
+        // 로컬 실행기는 비밀번호를 다시 묻지 않는다.
         authorized(get("/api/v1/evaluations/capabilities")).andExpect(jsonPath("$.recordDelete").value(true))
+            .andExpect(jsonPath("$.recordDeletePassword").value(false))
             // 기준 기록의 표시 순서는 저장소 파일 순서다.
             .andExpect(jsonPath("$.baselineOrder[0]").value("initial-openai"))
             .andExpect(jsonPath("$.baselineOrder[1]").value("token-limit"))

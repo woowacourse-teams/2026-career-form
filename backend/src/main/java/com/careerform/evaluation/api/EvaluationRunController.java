@@ -142,21 +142,45 @@ public final class EvaluationRunController {
     /** 화면이 켜고 끌 기능. 기록 삭제는 로컬에서만 켠다. */
     @GetMapping("/capabilities")
     public Map<String, Object> capabilities() {
-        return Map.of("recordDelete", recordDeleteEnabled,
+        return Map.of("recordDelete", true, "recordDeletePassword", !recordDeleteEnabled,
             "baselineOrder", com.careerform.evaluation.run.EvaluationSeedRecords.names());
     }
 
     /**
-     * 평가 기록 하나(비교 ID 또는 단독 실행 ID)를 지운다. 끝나지 않은 실행이 있으면 409다. 함께 쓰는 서버의 기록은 팀의 변경 이력이라
-     * 기록 삭제를 켠 서버(로컬)가 아니면 403이다.
+     * 평가 기록 하나(비교 ID 또는 단독 실행 ID)를 지운다. 끝나지 않은 실행이 있으면 409다. 함께 쓰는 서버의 기록은 팀의 변경 이력이라,
+     * 비밀번호 없이 지우기를 켠 서버(로컬)가 아니면 로그인 비밀번호를 다시 받아(Base64) 로그인에 쓴 것과 같을 때만 지운다.
+     * 로그인 비밀번호는 필터가 이미 확인했으므로 같은지만 본다.
      */
     @DeleteMapping("/records/{recordKey}")
     public ResponseEntity<?> deleteRecord(@PathVariable String recordKey,
-        @RequestHeader(value = "X-Evaluation-Requester", required = false) String requester) {
+        @RequestHeader(value = "X-Evaluation-Requester", required = false) String requester,
+        @RequestHeader(value = "Authorization", required = false) String authorization,
+        @RequestHeader(value = "X-Evaluation-Delete-Password", required = false) String confirmation) {
         if (!recordDeleteEnabled) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("code", "RECORD_DELETE_DISABLED"));
+            if (confirmation == null || confirmation.isBlank()) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("code", "PASSWORD_REQUIRED"));
+            }
+            if (!sameAsLogin(authorization, confirmation)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("code", "PASSWORD_MISMATCH"));
+            }
         }
         return ResponseEntity.ok(deletions.delete(recordKey, requester(requester)));
+    }
+
+    private static boolean sameAsLogin(String authorization, String confirmation) {
+        if (authorization == null || !authorization.startsWith("Basic ")) {
+            return false;
+        }
+        try {
+            java.util.Base64.Decoder decoder = java.util.Base64.getDecoder();
+            String login = new String(decoder.decode(authorization.substring(6)), java.nio.charset.StandardCharsets.UTF_8);
+            byte[] entered = decoder.decode(confirmation);
+            return login.startsWith("quality:") && java.security.MessageDigest.isEqual(
+                login.substring(8).getBytes(java.nio.charset.StandardCharsets.UTF_8), entered);
+        }
+        catch (IllegalArgumentException exception) {
+            return false;
+        }
     }
 
     @PostMapping("/runs/{runId}/cancel")

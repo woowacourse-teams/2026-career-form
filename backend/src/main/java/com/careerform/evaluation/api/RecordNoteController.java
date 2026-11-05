@@ -18,7 +18,7 @@ import com.careerform.evaluation.run.RunStore;
 
 /**
  * 평가 기록 메모 API. 품질 확인 비밀번호로 보호한다(QualityApiFilter). 기록마다 이전과 무엇이 달라졌는지 사람이 적어 두는
- * 글이며, 측정 결과는 바꾸지 않는다. 기록 삭제와 달리 함께 쓰는 서버에서도 적을 수 있다.
+ * 글이며, 측정 결과는 바꾸지 않는다. 기록 삭제와 달리 비밀번호를 다시 묻지 않는다.
  */
 @RestController
 @ConditionalOnProtectedEvaluation
