@@ -1,6 +1,7 @@
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { PushStateView } from "../../src/job-postings/push-messages";
-import { guidanceFor } from "./PostingsGuidance";
+import { guidanceFor, PostingsEmptyGuidance } from "./PostingsGuidance";
 
 const state = (patch: Partial<PushStateView> = {}): PushStateView => ({
   enabled: true,
@@ -28,5 +29,33 @@ describe("guidanceFor", () => {
         state({ status: { code: "failed", attempts: 3, updatedAt: 0 } }),
       ),
     ).toBe("failed");
+  });
+});
+
+describe("PostingsEmptyGuidance", () => {
+  const renderNone = (roles: string[]) =>
+    render(
+      <PostingsEmptyGuidance
+        guidance="none"
+        state={state({ roles })}
+        unread={0}
+        busy={false}
+        onEnable={() => {}}
+        onOpenSettings={() => {}}
+        onOpenPostings={() => {}}
+      />,
+    );
+  it("받을 직무를 고르지 않았으면 모든 공고를 받는 중이라고 알린다", () => {
+    renderNone([]);
+    expect(
+      screen.getByText(
+        "받을 직무를 고르지 않아 모든 공고의 알림을 받고 있어요.",
+      ),
+    ).toBeVisible();
+    expect(screen.queryByText(/받지 않아요/)).toBeNull();
+  });
+  it("직무를 골랐으면 그 안내를 보이지 않는다", () => {
+    renderNone(["IT.BACKEND"]);
+    expect(screen.queryByText(/모든 공고의 알림을 받고 있어요/)).toBeNull();
   });
 });

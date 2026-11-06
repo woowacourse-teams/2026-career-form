@@ -720,10 +720,6 @@
   background: var(--action);
   color: #fff;
 }
-li.chip {
-  min-height: 36px;
-  cursor: default;
-}
 .examples {
   display: flex;
   flex-wrap: wrap;

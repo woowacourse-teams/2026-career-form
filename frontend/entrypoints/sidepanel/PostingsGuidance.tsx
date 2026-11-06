@@ -103,6 +103,9 @@ export function PostingsEmptyGuidance({
         >
           <h2>아직 저장한 공고가 없어요</h2>
           <p>새 공고 탭에서 저장하면 마감이 가까운 순서로 여기 보여요.</p>
+          {state.roles.length === 0 && (
+            <p>받을 직무를 고르지 않아 모든 공고의 알림을 받고 있어요.</p>
+          )}
           <button
             className={`${styles.guideAction} ${styles.guideSecondary}`}
             type="button"
