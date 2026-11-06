@@ -6,6 +6,7 @@ import { UsageStep } from "./UsageStep";
 function renderStep() {
   const handlers = {
     onBack: vi.fn(),
+    onExtra: vi.fn(),
     onOpenProfile: vi.fn(),
     onOpenPostings: vi.fn(),
   };
@@ -44,6 +45,14 @@ it("반복 재생 장면을 멈추고 다시 재생할 수 있다", () => {
   expect(scene).toHaveAttribute("data-paused", "true");
   fireEvent.click(screen.getByRole("button", { name: "계속 재생" }));
   expect(scene).not.toHaveAttribute("data-paused");
+});
+
+it("추가 정보 더 등록하기가 가장 먼저 눈에 띄는 버튼으로 있다", () => {
+  const { onExtra } = renderStep();
+  fireEvent.click(
+    screen.getByRole("button", { name: "추가 정보 더 등록하기" }),
+  );
+  expect(onExtra).toHaveBeenCalledTimes(1);
 });
 
 it("전체 프로필 편집과 새 공고 보기로 넘어가고 이전으로 돌아간다", () => {

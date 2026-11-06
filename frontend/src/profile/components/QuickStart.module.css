@@ -87,49 +87,10 @@
 
 /* Step list */
 .grid {
-  display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  gap: 20px;
-  align-items: start;
+  max-width: 720px;
 }
 .grid > * {
   min-width: 0;
-}
-.grp {
-  margin: 0 0 8px;
-  padding: 0 11px;
-  color: var(--color-text-muted);
-  font-size: 14px;
-  line-height: 18px;
-  letter-spacing: -0.224px;
-  font-weight: 600;
-}
-.steps {
-  display: grid;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.steps li {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  min-height: 32px;
-  padding: 0 11px;
-  border-radius: 8px;
-  font-size: 14px;
-  line-height: 18px;
-  letter-spacing: -0.224px;
-}
-.steps li[aria-current] {
-  background: var(--color-surface);
-  font-weight: 600;
-}
-.steps small {
-  color: var(--color-text-muted);
-  font-size: 14px;
-  font-weight: 400;
 }
 
 /* Card */
@@ -564,19 +525,6 @@
 }
 
 /* Guide */
-.instructions {
-  margin: 0 0 20px;
-  padding-left: 20px;
-  font-size: 14px;
-  line-height: 18px;
-  letter-spacing: -0.224px;
-}
-.instructions li {
-  padding: 8px 0;
-}
-.instructions strong {
-  font-weight: 400;
-}
 .page .card figcaption,
 .page .card figcaption strong,
 .page .card figcaption span,
@@ -614,22 +562,6 @@
   .saved {
     flex: 1 0 100%;
     margin: 0;
-  }
-  .grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .grp {
-    display: none;
-  }
-  .steps {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-  }
-  .steps li {
-    flex-wrap: wrap;
-    justify-content: center;
-    min-height: 44px;
-    padding: 4px 8px;
   }
   .card {
     padding: 20px;

@@ -186,7 +186,7 @@ export function QuickStartFields({
           <Input
             label="국문 성"
             autoComplete="family-name"
-            placeholder="예: 김"
+            placeholder="예: 홍"
             value={profile.personal.koreanFamilyName ?? ""}
             onChange={(e) =>
               updateSingle("personal", "koreanFamilyName", e.target.value)
@@ -195,7 +195,7 @@ export function QuickStartFields({
           <Input
             label="국문 이름"
             autoComplete="given-name"
-            placeholder="예: 민지"
+            placeholder="예: 길동"
             value={profile.personal.koreanGivenName ?? ""}
             onChange={(e) =>
               updateSingle("personal", "koreanGivenName", e.target.value)
@@ -285,7 +285,7 @@ export function QuickStartFields({
         <div className={styles.nameFields}>
           <Input
             label="영문 성"
-            placeholder="Kim"
+            placeholder="Hong"
             value={profile.personal.englishFamilyName ?? ""}
             onChange={(event) =>
               updateSingle("personal", "englishFamilyName", event.target.value)

@@ -15,7 +15,21 @@ import {
   parseProfileImport,
   serializeProfileExport,
 } from "../profile-transfer";
+import { useState, type ComponentProps } from "react";
 import { QuickStart } from "./QuickStart";
+
+// Leaving the registration hands over to the caller's usage step; this stand-in
+// heading marks that the hand-over happened.
+const DONE = "사용법 단계";
+function Host(props: Omit<ComponentProps<typeof QuickStart>, "onDone">) {
+  const [done, setDone] = useState(false);
+  return (
+    <>
+      {done && <h2>{DONE}</h2>}
+      <QuickStart {...props} onDone={() => setDone(true)} />
+    </>
+  );
+}
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -27,7 +41,9 @@ async function click(element: HTMLElement) {
 
 async function next() {
   await click(
-    screen.getByRole("button", { name: /^(다음|확인하고 돌아가기)$/ }),
+    screen.getByRole("button", {
+      name: /^(다음|이 질문 건너뛰기|확인하고 돌아가기)$/,
+    }),
   );
   await waitFor(() =>
     expect(
@@ -64,11 +80,7 @@ async function renderForm(initial?: Profile) {
   const track = vi.fn();
   const open = vi.fn();
   const view = render(
-    <QuickStart
-      repository={memory.repository}
-      track={track}
-      onOpenProfile={open}
-    />,
+    <Host repository={memory.repository} track={track} onOpenProfile={open} />,
   );
   await screen.findByRole("heading", {
     level: 2,
@@ -117,7 +129,7 @@ describe("QuickStart", () => {
       endDate: "2025-03-02",
     });
   });
-  it("can skip an incomplete date without replacing a previously saved date", async () => {
+  it("stops on an incomplete date and keeps the previously saved date", async () => {
     const initial = createEmptyProfile();
     initial.education = [
       {
@@ -132,10 +144,19 @@ describe("QuickStart", () => {
       screen.getByRole("button", { name: "기존 항목 수정: 합성대학교" }),
     );
     await click(screen.getByRole("button", { name: "입학·졸업일 추가" }));
-    fireEvent.change(screen.getByLabelText("입학일"), {
-      target: { value: "2024" },
-    });
-    await click(screen.getByRole("button", { name: "이 질문 건너뛰기" }));
+    const start = screen.getByLabelText("입학일");
+    fireEvent.change(start, { target: { value: "2024" } });
+    expect(
+      screen.queryByRole("button", { name: "이 질문 건너뛰기" }),
+    ).toBeNull();
+    await click(screen.getByRole("button", { name: "확인하고 돌아가기" }));
+    expect(start).toBeVisible();
+    expect(screen.getByRole("alert")).toBeVisible();
+    expect((await repository.load()).education[0].values.startDate).toBe(
+      "2020-03-02",
+    );
+    fireEvent.change(start, { target: { value: "20200302" } });
+    await next();
     await screen.findByRole("heading", { name: "학력" });
     expect((await repository.load()).education[0].values.startDate).toBe(
       "2020-03-02",
@@ -199,7 +220,7 @@ describe("QuickStart", () => {
     fail(false);
     await click(exit);
     await screen.findByRole("heading", {
-      name: "지원서에서 자동 기입을 시작하세요",
+      name: DONE,
     });
   });
   it("focuses each new question without stealing focus while editing", async () => {
@@ -234,13 +255,7 @@ describe("QuickStart", () => {
     await click(
       screen.getByRole("button", { name: "지금 자동 기입 사용하기" }),
     );
-    await waitFor(() =>
-      expect(
-        screen.getByRole("heading", {
-          name: "지원서에서 자동 기입을 시작하세요",
-        }),
-      ).toHaveFocus(),
-    );
+    expect(await screen.findByRole("heading", { name: DONE })).toBeVisible();
   });
   it("starts with only optional name fields and allows leaving immediately", async () => {
     const { track } = await renderForm();
@@ -252,11 +267,7 @@ describe("QuickStart", () => {
       screen.getByRole("button", { name: "지금 자동 기입 사용하기" }),
     );
     await screen.findByRole("heading", {
-      name: "지원서에서 자동 기입을 시작하세요",
-    });
-    expect(screen.getByText("저장한 정보 없음")).toBeVisible();
-    expect(track).toHaveBeenCalledWith("quick_profile_skipped", {
-      surface: "extension_onboarding",
+      name: DONE,
     });
     expect(track).not.toHaveBeenCalledWith(
       "profile_first_saved",
@@ -282,7 +293,7 @@ describe("QuickStart", () => {
       screen.getByRole("button", { name: "지금 자동 기입 사용하기" }),
     );
     await screen.findByRole("heading", {
-      name: "지원서에서 자동 기입을 시작하세요",
+      name: DONE,
     });
     expect(await repository.load()).toEqual({
       ...initial,
@@ -307,7 +318,7 @@ describe("QuickStart", () => {
     expect(screen.getByLabelText("전화번호")).toHaveValue("01012345678");
     expect(
       screen.queryByRole("heading", {
-        name: "지원서에서 자동 기입을 시작하세요",
+        name: DONE,
       }),
     ).toBeNull();
     expect((await repository.load()).contact).toEqual({});
@@ -323,7 +334,7 @@ describe("QuickStart", () => {
       screen.getByRole("button", { name: "지금 자동 기입 사용하기" }),
     );
     await screen.findByRole("heading", {
-      name: "지원서에서 자동 기입을 시작하세요",
+      name: DONE,
     });
   });
   it("autosaves and restores values on reopening", async () => {
@@ -338,7 +349,7 @@ describe("QuickStart", () => {
       expect((await repository.load()).personal.koreanGivenName).toBe("테스트"),
     );
     unmount();
-    render(<QuickStart repository={repository} onOpenProfile={() => {}} />);
+    render(<Host repository={repository} onOpenProfile={() => {}} />);
     await screen.findByRole("heading", {
       name: "저장한 정보",
     });
@@ -373,9 +384,7 @@ describe("QuickStart", () => {
       });
       await original(profile);
     };
-    render(
-      <QuickStart repository={memory.repository} onOpenProfile={() => {}} />,
-    );
+    render(<Host repository={memory.repository} onOpenProfile={() => {}} />);
     await screen.findByLabelText("국문 성");
     await next();
     fireEvent.change(screen.getByLabelText("이메일"), {
@@ -388,12 +397,12 @@ describe("QuickStart", () => {
     expect(screen.getByLabelText("이메일")).toBeDisabled();
     expect(
       screen.queryByRole("heading", {
-        name: "지원서에서 자동 기입을 시작하세요",
+        name: DONE,
       }),
     ).toBeNull();
     await act(async () => finish?.());
     await screen.findByRole("heading", {
-      name: "지원서에서 자동 기입을 시작하세요",
+      name: DONE,
     });
   });
   it("flushes the latest edit even if an older autosave reports success", async () => {
@@ -410,9 +419,7 @@ describe("QuickStart", () => {
       }
       await save(profile);
     };
-    render(
-      <QuickStart repository={memory.repository} onOpenProfile={() => {}} />,
-    );
+    render(<Host repository={memory.repository} onOpenProfile={() => {}} />);
     await screen.findByLabelText("국문 성");
     await next();
     fireEvent.change(screen.getByLabelText("이메일"), {
@@ -427,7 +434,7 @@ describe("QuickStart", () => {
       screen.getByRole("button", { name: "지금 자동 기입 사용하기" }),
     );
     await screen.findByRole("heading", {
-      name: "지원서에서 자동 기입을 시작하세요",
+      name: DONE,
     });
     expect((await memory.repository.load()).contact.email).toBe(
       "latest@example.test",
@@ -438,7 +445,7 @@ describe("QuickStart", () => {
     repository.load = async () => {
       throw new Error("synthetic load failure");
     };
-    render(<QuickStart repository={repository} onOpenProfile={() => {}} />);
+    render(<Host repository={repository} onOpenProfile={() => {}} />);
     await screen.findByRole("alert");
     expect(screen.queryByRole("textbox")).toBeNull();
   });
@@ -454,7 +461,7 @@ it("does not count a pending empty save as the newer nonempty profile's first sa
   };
   const events: string[] = [];
   render(
-    <QuickStart
+    <Host
       repository={memory.repository}
       onOpenProfile={() => {}}
       track={(event) => events.push(event)}
@@ -484,7 +491,7 @@ it.each([false, true])(
   async (hasInput) => {
     const memory = memoryRepository();
     render(
-      <QuickStart
+      <Host
         repository={memory.repository}
         onOpenProfile={() => {}}
         track={() => {
@@ -501,7 +508,7 @@ it.each([false, true])(
       }),
     );
     await screen.findByRole("heading", {
-      name: "지원서에서 자동 기입을 시작하세요",
+      name: DONE,
     });
     expect(screen.queryByRole("alert")).toBeNull();
   },
@@ -608,7 +615,7 @@ it("saves a current career without asking an end date and keeps multiline Enter"
   expect(details).toBeVisible();
   await click(screen.getByRole("button", { name: "지금 자동 기입 사용하기" }));
   await screen.findByRole("heading", {
-    name: "지원서에서 자동 기입을 시작하세요",
+    name: DONE,
   });
   expect((await repository.load()).careers[0]).toMatchObject({
     sectionId: "career",
@@ -732,7 +739,7 @@ it("clearing the only new school field removes the empty new row", async () => {
   fireEvent.change(school, { target: { value: "" } });
   await click(screen.getByRole("button", { name: "지금 자동 기입 사용하기" }));
   await screen.findByRole("heading", {
-    name: "지원서에서 자동 기입을 시작하세요",
+    name: DONE,
   });
   expect((await repository.load()).education).toEqual([]);
 });
@@ -749,7 +756,7 @@ it("selects a catalog school with Enter without advancing and preserves identity
   expect(screen.queryByLabelText("전공")).toBeNull();
   await click(screen.getByRole("button", { name: "지금 자동 기입 사용하기" }));
   await screen.findByRole("heading", {
-    name: "지원서에서 자동 기입을 시작하세요",
+    name: DONE,
   });
   expect((await repository.load()).education[0].identity).toMatchObject({
     status: "selected",
@@ -771,9 +778,7 @@ it("flushes latest repeated input behind a pending initial save without duplicat
     }
     await original(profile);
   };
-  render(
-    <QuickStart repository={memory.repository} onOpenProfile={() => {}} />,
-  );
+  render(<Host repository={memory.repository} onOpenProfile={() => {}} />);
   await screen.findByLabelText("국문 성");
   await goToBasicSummary();
   await click(screen.getByRole("button", { name: "학력 추가하기" }));
@@ -786,12 +791,12 @@ it("flushes latest repeated input behind a pending initial save without duplicat
   expect(school).toBeDisabled();
   expect(
     screen.queryByRole("heading", {
-      name: "지원서에서 자동 기입을 시작하세요",
+      name: DONE,
     }),
   ).toBeNull();
   await act(async () => finish?.());
   await screen.findByRole("heading", {
-    name: "지원서에서 자동 기입을 시작하세요",
+    name: DONE,
   });
   const saved = await memory.repository.load();
   expect(saved.education).toHaveLength(1);
@@ -846,9 +851,7 @@ it("reopens saved information at an overview and returns directly after editing 
   const initial = createEmptyProfile();
   initial.contact.email = "before@example.test";
   const memory = memoryRepository(initial);
-  render(
-    <QuickStart repository={memory.repository} onOpenProfile={() => {}} />,
-  );
+  render(<Host repository={memory.repository} onOpenProfile={() => {}} />);
   await screen.findByRole("heading", {
     name: "저장한 정보",
   });
@@ -1243,16 +1246,19 @@ it("offers gender only as a catalog choice and protects an incomplete birth date
   const birthDate = screen.getByLabelText("생년월일", { exact: true });
   fireEvent.change(birthDate, { target: { value: "2000-02" } });
   await click(screen.getByRole("button", { name: "다음" }));
-  expect(birthDate).toHaveValue("2000-02");
+  expect(birthDate).toHaveValue("2000-02-");
   expect(screen.getByRole("alert")).toBeVisible();
   await click(screen.getByRole("button", { name: "지금 자동 기입 사용하기" }));
   expect(birthDate).toBeVisible();
+  fireEvent.change(birthDate, { target: { value: "" } });
   await click(screen.getByRole("button", { name: "이 질문 건너뛰기" }));
   expect(screen.getByRole("heading", { name: "기본 정보" })).toBeVisible();
   expect((await repository.load()).personal).toMatchObject({
     gender: "논바이너리",
   });
-  expect((await repository.load()).personal.birthDate).toBeUndefined();
+  expect((await repository.load()).personal.birthDate || undefined).toBe(
+    undefined,
+  );
 });
 
 it("edits saved gender and birth date from the overview without discarding other fields", async () => {
@@ -1269,7 +1275,11 @@ it("edits saved gender and birth date from the overview without discarding other
   await click(screen.getByRole("button", { name: "생년월일 수정" }));
   const birthDate = screen.getByLabelText("생년월일", { exact: true });
   fireEvent.change(birthDate, { target: { value: "2000-02" } });
-  await click(screen.getByRole("button", { name: "이 질문 건너뛰기" }));
+  await click(screen.getByRole("button", { name: "확인하고 돌아가기" }));
+  expect(birthDate).toBeVisible();
+  expect(screen.getByRole("alert")).toBeVisible();
+  fireEvent.change(birthDate, { target: { value: "19990302" } });
+  await next();
   expect(screen.getByText("1999-03-02")).toBeVisible();
   await click(screen.getByRole("button", { name: "성별 수정" }));
   await click(screen.getByRole("button", { name: "여성" }));
@@ -1420,31 +1430,60 @@ it("blocks edits while reloading and discards stale repeated-entry navigation on
   ]);
 });
 
-it("keeps the guide open while a confirmed conflict reload is pending", async () => {
-  const { repository } = await renderForm();
-  fireEvent.change(screen.getByLabelText("국문 이름"), {
-    target: { value: "시연" },
-  });
-  await click(screen.getByRole("button", { name: "지금 자동 기입 사용하기" }));
-  repository.save = async () => {
-    throw new ProfileWriteConflictError();
-  };
-  await click(screen.getByRole("button", { name: "전체 프로필 편집" }));
-  await screen.findByRole("alert");
-  vi.spyOn(globalThis, "confirm").mockReturnValue(true);
-  let resolveLoad!: (profile: Profile) => void;
-  repository.load = () =>
-    new Promise<Profile>((resolve) => {
-      resolveLoad = resolve;
-    });
-  await click(
-    screen.getByRole("button", { name: "최신 프로필 다시 불러오기" }),
+it("opens on saved information when asked, without the side list of chapters", async () => {
+  render(
+    <Host
+      repository={memoryRepository().repository}
+      startAtOverview
+      onOpenProfile={() => {}}
+    />,
   );
-  expect(screen.getByRole("button", { name: "입력 이어가기" })).toBeDisabled();
-  await click(screen.getByRole("button", { name: "입력 이어가기" }));
   expect(
-    screen.getByRole("heading", { name: "지원서에서 자동 기입을 시작하세요" }),
+    await screen.findByRole("heading", { name: "저장한 정보" }),
   ).toBeVisible();
-  await act(async () => resolveLoad(createEmptyProfile()));
-  expect(screen.getByRole("heading", { name: "저장한 정보" })).toBeVisible();
+  expect(screen.queryByText("등록 묶음")).toBeNull();
+  expect(screen.queryByRole("list", { name: "등록 묶음" })).toBeNull();
+  expect(screen.getByRole("button", { name: "학력 추가하기" })).toBeVisible();
+});
+
+it("shows one advance button that reads 건너뛰기 when empty and 다음 once answered", async () => {
+  await renderForm();
+  const family = screen.getByLabelText("국문 성");
+  expect(family).toHaveAttribute("placeholder", "예: 홍");
+  expect(screen.getByLabelText("국문 이름")).toHaveAttribute(
+    "placeholder",
+    "예: 길동",
+  );
+  const skip = screen.getByRole("button", { name: "이 질문 건너뛰기" });
+  expect(skip).toHaveTextContent("건너뛰기");
+  expect(screen.queryByRole("button", { name: "다음" })).toBeNull();
+  fireEvent.change(family, { target: { value: "홍" } });
+  expect(screen.getByRole("button", { name: "다음" })).toBeVisible();
+  expect(screen.queryByRole("button", { name: "이 질문 건너뛰기" })).toBeNull();
+  fireEvent.change(family, { target: { value: "" } });
+  expect(
+    screen.getByRole("button", { name: "이 질문 건너뛰기" }),
+  ).toBeVisible();
+  await next();
+  await next();
+  await next();
+  expect(
+    screen.getByRole("button", { name: "이 질문 건너뛰기" }),
+  ).toBeVisible();
+  await click(screen.getByRole("button", { name: "여성" }));
+  expect(screen.getByRole("button", { name: "다음" })).toBeVisible();
+});
+
+it("pairs the English name examples with the Korean ones", async () => {
+  await renderForm();
+  await goToBasicSummary();
+  await click(screen.getByRole("button", { name: "영문 이름 추가" }));
+  expect(screen.getByLabelText("영문 성")).toHaveAttribute(
+    "placeholder",
+    "Hong",
+  );
+  expect(screen.getByLabelText("영문 이름")).toHaveAttribute(
+    "placeholder",
+    "Gildong",
+  );
 });

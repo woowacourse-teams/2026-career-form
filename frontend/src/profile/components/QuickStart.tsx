@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { QuickStartGuide, QuickStartPicker } from "./QuickStartSections";
+import { QuickStartPicker } from "./QuickStartSections";
 import { QuickStartOverview } from "./QuickStartOverview";
 import type { TrackEvent } from "../../analytics/events";
 import { useProfileSaveTracking } from "../../analytics/use-profile-save-tracking";
@@ -19,6 +19,19 @@ import {
 } from "./QuickStartFields";
 import styles from "./QuickStart.module.css";
 const properties = { surface: "extension_onboarding" } as const;
+// A question counts as answered when any of its inputs holds text or one of
+// its choices is pressed; the hidden calendar mirror is not a separate answer.
+function hasAnswer(question: HTMLElement | null): boolean {
+  if (!question) return false;
+  return (
+    Array.from(
+      question.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+        'input:not([aria-hidden="true"]), textarea',
+      ),
+    ).some((field) => field.value.trim() !== "") ||
+    question.querySelector('[aria-pressed="true"]') !== null
+  );
+}
 const saveLabels = {
   idle: "자동 저장",
   saving: "저장 중",
@@ -50,11 +63,17 @@ const experienceSteps: Step[] = [
 export function QuickStart({
   repository,
   track: injectedTrack = trackExtensionEvent,
+  startAtOverview = false,
   onOpenProfile,
+  onDone,
 }: {
   repository: ProfileRepository;
   track?: TrackEvent;
+  /** Open on 저장한 정보 even when nothing is saved yet. */
+  startAtOverview?: boolean;
   onOpenProfile: () => void;
+  /** Leaves the registration; the caller shows how to use autofill. */
+  onDone: () => void;
 }) {
   const { repository: trackedRepository, track } = useProfileSaveTracking(
     repository,
@@ -72,8 +91,8 @@ export function QuickStart({
       returnTo: Step | null;
     }[]
   >([]);
-  const [guide, setGuide] = useState(false);
   const [pending, setPending] = useState(false);
+  const [answered, setAnswered] = useState(false);
   const [navigationFailed, setNavigationFailed] = useState(false);
   const [selection, setSelection] = useState<{
     chapter: Chapter;
@@ -192,10 +211,15 @@ export function QuickStart({
   const choosing = step === "educationType" || step === "experienceType";
   useEffect(() => {
     if (editor.loadStatus === "ready" && !initialized) {
-      setStep(hasValues ? "overview" : "name");
+      setStep(startAtOverview || hasValues ? "overview" : "name");
       setInitialized(true);
     }
-  }, [editor.loadStatus, initialized, hasValues]);
+  }, [editor.loadStatus, initialized, hasValues, startAtOverview]);
+  // Read after every render; typing inside a child field that keeps its own
+  // draft (the date input) reports through the form's change event instead.
+  useEffect(() => {
+    setAnswered(hasAnswer(question.current));
+  });
   useEffect(() => {
     if (!viewSent.current) {
       viewSent.current = true;
@@ -204,21 +228,17 @@ export function QuickStart({
   }, [track]);
   useEffect(() => {
     if (editor.loadStatus !== "ready" || !initialized || pending) return;
-    const screen = guide
-      ? "guide"
-      : `${step}:${selection.chapter}:${selection.entry.id}`;
+    const screen = `${step}:${selection.chapter}:${selection.entry.id}`;
     if (focusedScreen.current === screen) return;
-    const target =
-      !guide && !summary
-        ? question.current?.querySelector<HTMLElement>(
-            "input:not(:disabled), textarea:not(:disabled), button:not(:disabled)",
-          )
-        : null;
+    const target = !summary
+      ? question.current?.querySelector<HTMLElement>(
+          "input:not(:disabled), textarea:not(:disabled), button:not(:disabled)",
+        )
+      : null;
     (target ?? heading.current)?.focus();
     focusedScreen.current = screen;
   }, [
     step,
-    guide,
     summary,
     pending,
     editor.loadStatus,
@@ -239,18 +259,17 @@ export function QuickStart({
     setReturnTo(origin);
   }
   function editQuestion(target: Step) {
-    void proceed(target, false, step);
+    void proceed(target, step);
   }
   async function proceed(
-    destination: Step | "guide" | "profile" | "retry",
-    skipIncompleteDates = false,
+    destination: Step | "done" | "profile" | "retry",
     origin: Step | null = null,
   ) {
     if (transition.current || editor.isReloading) return false;
     const invalidDate = question.current?.querySelector<HTMLInputElement>(
       "input[data-date-input]:invalid",
     );
-    if (invalidDate && !skipIncompleteDates) {
+    if (invalidDate) {
       invalidDate.focus();
       invalidDate.reportValidity();
       return false;
@@ -265,10 +284,8 @@ export function QuickStart({
       )
         return false;
       if (destination === "profile") onOpenProfile();
-      else if (destination === "guide") {
-        if (!hasValues) track("quick_profile_skipped", properties);
-        setGuide(true);
-      } else if (destination === returnTo) {
+      else if (destination === "done") onDone();
+      else if (destination === returnTo) {
         setStep(destination);
         setReturnTo(null);
         setHistory((current) => current.slice(0, -1));
@@ -301,7 +318,6 @@ export function QuickStart({
       createdIds.current.clear();
       setHistory([]);
       setReturnTo(null);
-      setGuide(false);
       setNavigationFailed(false);
       setStep("overview");
     } finally {
@@ -309,9 +325,9 @@ export function QuickStart({
       setPending(false);
     }
   }
-  function next(skipIncompleteDates = false) {
+  function next() {
     const following = returnTo ?? steps[steps.indexOf(step) + 1];
-    if (following) void proceed(following, skipIncompleteDates);
+    if (following) void proceed(following);
   }
   async function selectEntry(
     chapter: Chapter,
@@ -393,14 +409,14 @@ export function QuickStart({
         type="button"
         disabled={busy}
         aria-label="지금 자동 기입 사용하기"
-        onClick={() => void proceed("guide")}
+        onClick={() => void proceed("done")}
       >
         지금 자동 기입 사용 <span aria-hidden="true">↗</span>
       </button>
       <span className={styles.tag}>이 브라우저에 저장</span>
     </div>
   );
-  const counting = !guide && step !== "overview" && !returnTo;
+  const counting = step !== "overview" && !returnTo;
   return (
     <main className={styles.page} id="main">
       <header className={styles.top}>
@@ -409,16 +425,14 @@ export function QuickStart({
             <img src="/side-panel-launcher-logo.png" alt="" />
             <span>Career Form</span>
           </div>
-          {!guide && (
-            <button
-              type="button"
-              className={styles.topLink}
-              disabled={busy}
-              onClick={() => void proceed("profile")}
-            >
-              전체 프로필 편집
-            </button>
-          )}
+          <button
+            type="button"
+            className={styles.topLink}
+            disabled={busy}
+            onClick={() => void proceed("profile")}
+          >
+            전체 프로필 편집
+          </button>
         </div>
       </header>
       <div className={styles.wrap}>
@@ -445,125 +459,143 @@ export function QuickStart({
         </div>
         <div className={styles.grid}>
           <div>
-            <p className={styles.grp} aria-hidden="true">
-              등록 묶음
-            </p>
-            <ol className={styles.steps} aria-label="등록 묶음">
-              {["기본 정보", "학력", "경력·활동"].map((label, index) => (
-                <li
-                  key={label}
-                  aria-current={
-                    !guide && step !== "overview" && index === chapter
-                      ? "step"
-                      : undefined
-                  }
-                >
-                  {label}
-                  <small>{index > 0 ? "선택" : "시작"}</small>
-                </li>
-              ))}
-            </ol>
-          </div>
-          <div>
             <section className={styles.card}>
               <h2 ref={heading} tabIndex={-1}>
-                {guide ? "지원서에서 자동 기입을 시작하세요" : titles[step]}
+                {titles[step]}
               </h2>
-              {guide ? (
-                <QuickStartGuide
-                  hasValues={hasValues}
-                  pending={busy}
-                  onBack={() => {
-                    if (!transition.current && !editor.isReloading)
-                      setGuide(false);
-                  }}
-                  onOpenProfile={() => void proceed("profile")}
-                />
-              ) : (
-                <form
-                  noValidate
-                  onSubmit={(event) => event.preventDefault()}
-                  onKeyDown={(event) => {
-                    const target = event.target as HTMLElement;
-                    if (
-                      event.key !== "Enter" ||
-                      event.defaultPrevented ||
-                      event.nativeEvent.isComposing ||
-                      event.keyCode === 229 ||
-                      target.tagName !== "INPUT" ||
-                      target.getAttribute("role") === "combobox"
-                    )
-                      return;
-                    event.preventDefault();
-                    const inputs = Array.from(
-                      question.current?.querySelectorAll<HTMLInputElement>(
-                        'input:not(:disabled):not([aria-hidden="true"])',
-                      ) ?? [],
-                    );
-                    const following =
-                      inputs[inputs.indexOf(target as HTMLInputElement) + 1];
-                    if (following) following.focus();
-                    else next();
-                  }}
+              <form
+                noValidate
+                onSubmit={(event) => event.preventDefault()}
+                onChange={() => setAnswered(hasAnswer(question.current))}
+                onKeyDown={(event) => {
+                  const target = event.target as HTMLElement;
+                  if (
+                    event.key !== "Enter" ||
+                    event.defaultPrevented ||
+                    event.nativeEvent.isComposing ||
+                    event.keyCode === 229 ||
+                    target.tagName !== "INPUT" ||
+                    target.getAttribute("role") === "combobox"
+                  )
+                    return;
+                  event.preventDefault();
+                  const inputs = Array.from(
+                    question.current?.querySelectorAll<HTMLInputElement>(
+                      'input:not(:disabled):not([aria-hidden="true"])',
+                    ) ?? [],
+                  );
+                  const following =
+                    inputs[inputs.indexOf(target as HTMLInputElement) + 1];
+                  if (following) following.focus();
+                  else next();
+                }}
+              >
+                <fieldset
+                  ref={question}
+                  disabled={busy}
+                  className={`${styles.question} ${step === "school" ? styles.schoolQuestion : ""}`}
+                  key={step}
                 >
-                  <fieldset
-                    ref={question}
-                    disabled={busy}
-                    className={`${styles.question} ${step === "school" ? styles.schoolQuestion : ""}`}
-                    key={step}
-                  >
-                    {choosing ? (
-                      <QuickStartPicker
-                        education={step === "educationType"}
-                        profile={editor.profile}
-                        selectEntry={selectEntry}
-                      />
-                    ) : summary ? (
-                      <>
-                        {summaryHasValues &&
-                          (editor.saveStatus === "idle" ||
-                            editor.saveStatus === "saved") && (
-                            <div className={styles.savedBadge}>
-                              ✓ 여기까지 저장했어요
-                            </div>
-                          )}
-                        {step === "overview" && autofillExit}
-                        {step === "overview" ? (
-                          <QuickStartOverview
-                            profile={editor.profile}
-                            onEditBasic={editQuestion}
-                            onSelectEntry={(chapter, row) =>
-                              selectEntry(chapter, row.sectionId, row)
-                            }
-                          />
-                        ) : (
-                          <Summary
-                            values={summaryValues}
-                            onEdit={editQuestion}
-                          />
-                        )}
-                        {(staleCareerDate || staleEducationDate) && (
-                          <div className={styles.note}>
-                            <p>
-                              {staleCareerDate
-                                ? "재직중인데 이전 퇴사일이 남아 있어요."
-                                : "현재 재학 상태와 함께 이전 졸업일이 남아 있어요."}
-                            </p>
-                            <button
-                              type="button"
-                              onClick={() => updateEntry("endDate", "")}
-                            >
-                              {staleCareerDate
-                                ? "퇴사일 지우기"
-                                : "졸업일 지우기"}
-                            </button>
+                  {choosing ? (
+                    <QuickStartPicker
+                      education={step === "educationType"}
+                      profile={editor.profile}
+                      selectEntry={selectEntry}
+                    />
+                  ) : summary ? (
+                    <>
+                      {summaryHasValues &&
+                        (editor.saveStatus === "idle" ||
+                          editor.saveStatus === "saved") && (
+                          <div className={styles.savedBadge}>
+                            ✓ 여기까지 저장했어요
                           </div>
                         )}
-                        {step !== "overview" && autofillExit}
-                        <p className={styles.continueLabel}>추가 항목</p>
+                      {step === "overview" && autofillExit}
+                      {step === "overview" ? (
+                        <QuickStartOverview
+                          profile={editor.profile}
+                          onEditBasic={editQuestion}
+                          onSelectEntry={(chapter, row) =>
+                            selectEntry(chapter, row.sectionId, row)
+                          }
+                        />
+                      ) : (
+                        <Summary values={summaryValues} onEdit={editQuestion} />
+                      )}
+                      {(staleCareerDate || staleEducationDate) && (
+                        <div className={styles.note}>
+                          <p>
+                            {staleCareerDate
+                              ? "재직중인데 이전 퇴사일이 남아 있어요."
+                              : "현재 재학 상태와 함께 이전 졸업일이 남아 있어요."}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => updateEntry("endDate", "")}
+                          >
+                            {staleCareerDate
+                              ? "퇴사일 지우기"
+                              : "졸업일 지우기"}
+                          </button>
+                        </div>
+                      )}
+                      {step !== "overview" && autofillExit}
+                      <p className={styles.continueLabel}>추가 항목</p>
+                      <div className={styles.supplementActions}>
+                        {missingFields
+                          .filter(([, value]) => !value.trim())
+                          .map(([label, , target]) => (
+                            <button
+                              key={label}
+                              type="button"
+                              onClick={() => target && editQuestion(target)}
+                            >
+                              {label} 추가
+                            </button>
+                          ))}
+                        {step === "educationSummary" && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => editQuestion("educationDates")}
+                            >
+                              입학·졸업일 추가
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => editQuestion("educationDetails")}
+                            >
+                              학위·학교 정보 추가
+                            </button>
+                          </>
+                        )}
+                        {step === "experienceSummary" && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => editQuestion("experienceDates")}
+                            >
+                              기간 추가
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => editQuestion("experienceDetails")}
+                            >
+                              활동 내용 추가
+                            </button>
+                          </>
+                        )}
+                      </div>
+                      {step === "basics" && (
                         <div className={styles.supplementActions}>
-                          {missingFields
-                            .filter(([, value]) => !value.trim())
+                          {summaryValues
+                            .filter(
+                              ([, value, target]) =>
+                                (target === "englishName" ||
+                                  target === "nationality") &&
+                                !value.trim(),
+                            )
                             .map(([label, , target]) => (
                               <button
                                 key={label}
@@ -573,187 +605,136 @@ export function QuickStart({
                                 {label} 추가
                               </button>
                             ))}
-                          {step === "educationSummary" && (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => editQuestion("educationDates")}
-                              >
-                                입학·졸업일 추가
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => editQuestion("educationDetails")}
-                              >
-                                학위·학교 정보 추가
-                              </button>
-                            </>
-                          )}
-                          {step === "experienceSummary" && (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => editQuestion("experienceDates")}
-                              >
-                                기간 추가
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  editQuestion("experienceDetails")
-                                }
-                              >
-                                활동 내용 추가
-                              </button>
-                            </>
-                          )}
                         </div>
-                        {step === "basics" && (
-                          <div className={styles.supplementActions}>
-                            {summaryValues
-                              .filter(
-                                ([, value, target]) =>
-                                  (target === "englishName" ||
-                                    target === "nationality") &&
-                                  !value.trim(),
-                              )
-                              .map(([label, , target]) => (
-                                <button
-                                  key={label}
-                                  type="button"
-                                  onClick={() => target && editQuestion(target)}
-                                >
-                                  {label} 추가
-                                </button>
-                              ))}
-                          </div>
-                        )}
-                        <div className={styles.chapterChoices}>
-                          <button
-                            type="button"
-                            aria-label="학력 추가하기"
-                            onClick={() => void proceed("educationType")}
-                          >
-                            <strong>학력 추가하기</strong>
-                            <span>학교·전공·재학 상태 →</span>
-                          </button>
-                          <button
-                            type="button"
-                            aria-label="경력·활동 추가하기"
-                            onClick={() => void proceed("experienceType")}
-                          >
-                            <strong>경력·활동 추가하기</strong>
-                            <span>직장경력 또는 프로젝트 →</span>
-                          </button>
-                        </div>
-                        {step !== "overview" && (
-                          <button
-                            type="button"
-                            className={styles.textButton}
-                            onClick={() => void proceed("overview")}
-                          >
-                            저장한 정보 보기
-                          </button>
-                        )}
-                      </>
-                    ) : (
-                      <QuickStartFields
-                        step={step}
-                        profile={editor.profile}
-                        entry={entry}
-                        chapter={selection.chapter}
-                        updateSingle={editor.updateSingle}
-                        updateEntry={updateEntry}
-                      />
-                    )}
-                  </fieldset>
-                  {editor.saveStatus === "error" && (
-                    <>
-                      <p role="alert" className={styles.error}>
-                        {saveLabels.error}
-                      </p>
+                      )}
+                      <div className={styles.chapterChoices}>
+                        <button
+                          type="button"
+                          aria-label="학력 추가하기"
+                          onClick={() => void proceed("educationType")}
+                        >
+                          <strong>학력 추가하기</strong>
+                          <span>학교·전공·재학 상태 →</span>
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="경력·활동 추가하기"
+                          onClick={() => void proceed("experienceType")}
+                        >
+                          <strong>경력·활동 추가하기</strong>
+                          <span>직장경력 또는 프로젝트 →</span>
+                        </button>
+                      </div>
+                      {step !== "overview" && (
+                        <button
+                          type="button"
+                          className={styles.textButton}
+                          onClick={() => void proceed("overview")}
+                        >
+                          저장한 정보 보기
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <QuickStartFields
+                      step={step}
+                      profile={editor.profile}
+                      entry={entry}
+                      chapter={selection.chapter}
+                      updateSingle={editor.updateSingle}
+                      updateEntry={updateEntry}
+                    />
+                  )}
+                </fieldset>
+                {editor.saveStatus === "error" && (
+                  <>
+                    <p role="alert" className={styles.error}>
+                      {saveLabels.error}
+                    </p>
+                    <button
+                      ref={retryButton}
+                      type="button"
+                      disabled={busy}
+                      onClick={async (event) => {
+                        const ownedFocus =
+                          event.currentTarget.matches(":focus");
+                        if (!(await proceed("retry")) && ownedFocus)
+                          setRestoreRetryFocus(true);
+                      }}
+                    >
+                      다시 저장하기
+                    </button>
+                  </>
+                )}
+                {(!summary || history.length > 0) && (
+                  <div className={styles.foot}>
+                    {choosing && (
                       <button
-                        ref={retryButton}
                         type="button"
+                        className={styles.quiet}
                         disabled={busy}
-                        onClick={async (event) => {
-                          const ownedFocus =
-                            event.currentTarget.matches(":focus");
-                          if (!(await proceed("retry")) && ownedFocus)
-                            setRestoreRetryFocus(true);
+                        aria-label="이 묶음 건너뛰기"
+                        onClick={async () => {
+                          if (step === "educationType") {
+                            void proceed("experienceType");
+                            return;
+                          }
+                          if (await proceed("experienceSummary"))
+                            setSelection({
+                              chapter: "projects",
+                              entry: {
+                                id: crypto.randomUUID(),
+                                sectionId: "project",
+                                values: {},
+                              },
+                            });
                         }}
                       >
-                        다시 저장하기
+                        건너뛰기
                       </button>
-                    </>
-                  )}
-                  {(!summary || history.length > 0) && (
-                    <div className={styles.foot}>
-                      {!summary && (
+                    )}
+                    <div className={styles.footEnd}>
+                      {history.length > 0 && (
                         <button
                           type="button"
                           className={styles.quiet}
                           disabled={busy}
-                          aria-label={
-                            choosing ? "이 묶음 건너뛰기" : "이 질문 건너뛰기"
-                          }
                           onClick={async () => {
-                            if (!choosing) {
-                              next(true);
-                              return;
-                            }
-                            if (step === "educationType") {
-                              void proceed("experienceType");
-                              return;
-                            }
-                            if (await proceed("experienceSummary"))
-                              setSelection({
-                                chapter: "projects",
-                                entry: {
-                                  id: crypto.randomUUID(),
-                                  sectionId: "project",
-                                  values: {},
-                                },
-                              });
+                            if (!(await proceed("retry"))) return;
+                            setStep(history[history.length - 1].step);
+                            setSelection(history[history.length - 1].selection);
+                            setReturnTo(history[history.length - 1].returnTo);
+                            setHistory(history.slice(0, -1));
                           }}
                         >
-                          건너뛰기
+                          이전
                         </button>
                       )}
-                      <div className={styles.footEnd}>
-                        {history.length > 0 && (
-                          <button
-                            type="button"
-                            className={styles.quiet}
-                            disabled={busy}
-                            onClick={async () => {
-                              if (!(await proceed("retry"))) return;
-                              setStep(history[history.length - 1].step);
-                              setSelection(
-                                history[history.length - 1].selection,
-                              );
-                              setReturnTo(history[history.length - 1].returnTo);
-                              setHistory(history.slice(0, -1));
-                            }}
-                          >
-                            이전
-                          </button>
-                        )}
-                        {!summary && !choosing && (
-                          <button
-                            type="button"
-                            className={styles.primary}
-                            disabled={busy}
-                            onClick={() => next()}
-                          >
-                            {returnTo ? "확인하고 돌아가기" : "다음"}
-                          </button>
-                        )}
-                      </div>
+                      {!summary && !choosing && (
+                        <button
+                          type="button"
+                          className={
+                            returnTo || answered ? styles.primary : undefined
+                          }
+                          disabled={busy}
+                          aria-label={
+                            returnTo || answered
+                              ? undefined
+                              : "이 질문 건너뛰기"
+                          }
+                          onClick={() => next()}
+                        >
+                          {returnTo
+                            ? "확인하고 돌아가기"
+                            : answered
+                              ? "다음"
+                              : "건너뛰기"}
+                        </button>
+                      )}
                     </div>
-                  )}
-                </form>
-              )}
+                  </div>
+                )}
+              </form>
               {editor.saveStatus === "conflict" && (
                 <div role="alert" className={styles.error}>
                   <p>
@@ -783,7 +764,7 @@ export function QuickStart({
                 </p>
               )}
             </section>
-            {!guide && !summary && autofillExit}
+            {!summary && autofillExit}
           </div>
         </div>
       </div>

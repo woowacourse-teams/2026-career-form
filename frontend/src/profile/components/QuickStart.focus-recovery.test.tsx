@@ -49,6 +49,7 @@ async function renderOverview(repository: ProfileRepository) {
         repository={repository}
         track={() => undefined}
         onOpenProfile={() => {}}
+        onDone={() => {}}
       />,
     );
   });

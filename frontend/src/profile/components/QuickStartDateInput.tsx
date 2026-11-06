@@ -11,7 +11,31 @@ function dateError(value: string) {
     )
       return "";
   }
-  return "날짜를 확인해 주세요. 예: 20240302 또는 2024-03-02. 모르면 비우거나 이 질문을 건너뛰세요.";
+  return "날짜를 확인해 주세요. 숫자 8자리를 입력하면 2024-03-02처럼 바뀌어요. 모르면 칸을 비워 주세요.";
+}
+
+/**
+ * Adds the dashes after the year and the month while digits are typed. A
+ * deletion never gets a trailing dash back, so backspace is not trapped, and
+ * anything that is not digits and dashes is kept as typed for the error.
+ */
+export function formatDateDraft(raw: string, previous: string): string {
+  const text = raw.trim();
+  const digits = text.replace(/-/g, "");
+  if (!/^\d{0,8}$/.test(digits)) return text;
+  const deleting = text.length < previous.length;
+  const [year, month, day] = [
+    digits.slice(0, 4),
+    digits.slice(4, 6),
+    digits.slice(6),
+  ];
+  const trailing = !deleting || text.endsWith("-");
+  if (digits.length < 4) return year;
+  if (digits.length === 4) return trailing ? `${year}-` : year;
+  if (digits.length < 6) return `${year}-${month}`;
+  if (digits.length === 6)
+    return trailing ? `${year}-${month}-` : `${year}-${month}`;
+  return `${year}-${month}-${day}`;
 }
 
 export function QuickStartDateInput({
@@ -33,10 +57,7 @@ export function QuickStartDateInput({
     input.current?.setCustomValidity(error);
   }, [error]);
   function change(raw: string) {
-    const text = raw.trim();
-    const next = /^\d{8}$/.test(text)
-      ? `${text.slice(0, 4)}-${text.slice(4, 6)}-${text.slice(6)}`
-      : text;
+    const next = formatDateDraft(raw, draft);
     const problem = dateError(next);
     setDraft(next);
     setShowError(false);

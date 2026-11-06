@@ -243,3 +243,38 @@ it("사용법 단계의 버튼이 전체 프로필 편집과 새 공고 탭을 �
   );
   await waitFor(() => expect(onOpenProfile).toHaveBeenCalledTimes(1));
 });
+
+it("사용법 단계에서 단계형 추가 등록을 저장한 정보 화면으로 열고, 마치면 사용법으로 돌아온다", async () => {
+  const { repository, track } = renderFlow({ step: "usage" });
+  await screen.findByRole("heading", {
+    level: 1,
+    name: "이제 지원서에서 써 보세요",
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: "추가 정보 더 등록하기" }),
+  );
+  expect(
+    await screen.findByRole("heading", { level: 2, name: "저장한 정보" }),
+  ).toBeVisible();
+  expect(screen.queryByText("등록 묶음")).toBeNull();
+  expect(track).toHaveBeenCalledWith("quick_profile_viewed", {
+    surface: "extension_onboarding",
+  });
+  fireEvent.click(screen.getByRole("button", { name: "학력 추가하기" }));
+  fireEvent.click(await screen.findByRole("button", { name: "대학교" }));
+  fireEvent.change(await screen.findByRole("combobox"), {
+    target: { value: "하늘대학교" },
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: "지금 자동 기입 사용하기" }),
+  );
+  expect(
+    await screen.findByRole("heading", {
+      level: 1,
+      name: "이제 지원서에서 써 보세요",
+    }),
+  ).toBeVisible();
+  expect((await repository.load()).education[0]?.values.schoolName).toBe(
+    "하늘대학교",
+  );
+});

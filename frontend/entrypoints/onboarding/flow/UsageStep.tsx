@@ -6,11 +6,14 @@ import styles from "./Flow.module.css";
 export function UsageStep({
   heading,
   onBack,
+  onExtra,
   onOpenProfile,
   onOpenPostings,
 }: {
   heading: RefObject<HTMLHeadingElement | null>;
   onBack: () => void;
+  /** Opens the one-question-at-a-time registration for the rest. */
+  onExtra: () => void;
   onOpenProfile: () => void;
   onOpenPostings: () => void;
 }) {
@@ -54,6 +57,13 @@ export function UsageStep({
             </ol>
             <div className={styles.foot}>
               <div className={`${styles.acts} ${styles.start}`}>
+                <button
+                  type="button"
+                  className={`${styles.btn} ${styles.pri}`}
+                  onClick={onExtra}
+                >
+                  추가 정보 더 등록하기
+                </button>
                 <button
                   type="button"
                   className={`${styles.btn} ${styles.soft}`}
