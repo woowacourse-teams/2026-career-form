@@ -14,7 +14,7 @@ import {
 import { SiteApp } from "../../site/SiteApp";
 import { SiteUrlContext } from "../../site/site-navigation";
 import { OnboardingFlow } from "./flow/OnboardingFlow";
-import { createStepStore, type StepStore } from "./flow/steps";
+import { browserStepStore, type StepStore } from "./flow/steps";
 import styles from "./App.module.css";
 
 export function extensionSiteUrl(path: string): string {
@@ -24,12 +24,6 @@ export function extensionSiteUrl(path: string): string {
     ? `/onboarding.html?page=${encodeURIComponent(path)}`
     : path;
 }
-
-// Reached lazily so a page without extension storage still renders the flow.
-const browserStepStore = createStepStore({
-  get: (key) => browser.storage.local.get(key),
-  set: (items) => browser.storage.local.set(items),
-});
 
 // Tells the Greeting step that an import saved the profile from another tab.
 function watchStoredProfile(listener: () => void): () => void {

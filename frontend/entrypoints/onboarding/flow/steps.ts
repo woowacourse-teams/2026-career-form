@@ -1,3 +1,4 @@
+import { browser } from "wxt/browser";
 import {
   ONBOARDING_STEPS,
   type OnboardingStep,
@@ -48,3 +49,9 @@ export function createStepStore(storage: StorageArea): StepStore {
     },
   };
 }
+
+// Reached lazily so a page without extension storage still renders.
+export const browserStepStore = createStepStore({
+  get: (key) => browser.storage.local.get(key),
+  set: (items) => browser.storage.local.set(items),
+});
