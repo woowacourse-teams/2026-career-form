@@ -187,8 +187,8 @@
   width: 100%;
   max-width: 1088px;
   margin: 0 auto;
-  /* The bottom leaves room for the pinned step bar. */
-  padding: 32px 24px 136px;
+  /* The bottom leaves room for the floating step bar. */
+  padding: 32px 24px 152px;
   display: flex;
   flex-direction: column;
   gap: 28px;
@@ -919,28 +919,34 @@
     border-color 0.25s ease,
     background-color 0.25s ease;
 }
-/* Step moves pinned to the bottom of the window (StepBar): 이전 and 다음 keep
-   one place on every step, on the edges of the content column. */
+/* Step moves in a white dock floating above the bottom of the window
+   (StepBar): 이전 and 다음 keep one place on every step, on the edges of the
+   content column, lifted off the window edge so they stay in sight. */
 .bar {
   position: fixed;
   right: 0;
-  bottom: 0;
+  bottom: calc(clamp(16px, 4vh, 40px) + env(safe-area-inset-bottom));
   left: 0;
   z-index: 10;
-  padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
-  border-top: 1px solid var(--line);
-  background: rgb(242 250 255 / 92%);
-  box-shadow: 0 -14px 28px -24px rgb(17 58 92 / 45%);
-  backdrop-filter: blur(12px);
+  padding: 0 24px;
+  /* Only the dock takes clicks, not the gutters beside it. */
+  pointer-events: none;
 }
 .barIn {
-  max-width: 1088px;
+  max-width: 1040px;
   margin: 0 auto;
-  padding: 0 24px;
+  padding: 12px;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: var(--surface);
+  box-shadow:
+    0 20px 44px -20px rgb(17 58 92 / 45%),
+    0 6px 14px -8px rgb(17 58 92 / 20%);
+  pointer-events: auto;
 }
 .back {
   margin-right: auto;
@@ -956,10 +962,12 @@
     grid-template-columns: minmax(0, 1fr);
   }
   .bar {
-    padding: 10px 0 calc(10px + env(safe-area-inset-bottom));
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    padding: 0 16px;
   }
   .barIn {
-    padding: 0 16px;
+    padding: 8px;
+    border-radius: 20px;
   }
 }
 /* Step 6 on a narrow window: its third move takes a row above, so 이전 and
