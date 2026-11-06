@@ -178,3 +178,26 @@ describe("PostHog role_count property", () => {
     });
   });
 });
+
+describe("PostHog onboarding step property", () => {
+  it("forwards the onboarding step name", async () => {
+    const bodies: { properties: Record<string, unknown> }[] = [];
+    const capture = createPosthogCapture({
+      key: "test-project",
+      getDistinctId: async () => "anonymous",
+      fetch: async (_input, init) => {
+        bodies.push(JSON.parse(String(init?.body)));
+        return new Response("1");
+      },
+    });
+    await capture("onboarding_step_viewed", {
+      surface: "extension_onboarding",
+      step: "roles",
+    });
+    expect(bodies[0].properties).toEqual({
+      surface: "extension_onboarding",
+      step: "roles",
+      $process_person_profile: false,
+    });
+  });
+});

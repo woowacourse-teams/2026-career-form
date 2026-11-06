@@ -530,3 +530,29 @@ describe("role count property", () => {
     },
   );
 });
+
+describe("onboarding step property", () => {
+  it.each([
+    [{ step: "name" }, { step: "name" }],
+    [{ step: "usage" }, { step: "usage" }],
+    [{ step: "phone" }, {}],
+    [{ step: 3 }, {}],
+  ])("keeps only a known onboarding step name: %j", async (input, expected) => {
+    const { handle, payloads } = collector();
+    await handle({
+      type: "ANALYTICS_TRACK",
+      event: "onboarding_step_viewed",
+      properties: { surface: "extension_onboarding", ...input },
+    });
+    expect(payloads).toEqual([
+      expect.objectContaining({
+        event: "onboarding_step_viewed",
+        properties: {
+          surface: "extension_onboarding",
+          ...expected,
+          $process_person_profile: false,
+        },
+      }),
+    ]);
+  });
+});
