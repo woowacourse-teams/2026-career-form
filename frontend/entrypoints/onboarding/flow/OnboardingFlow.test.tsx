@@ -208,51 +208,24 @@ it("Greeting 단계는 기다리지 않고 다음으로 사용법에 가며 완�
   });
 });
 
-it("사용법 단계의 버튼이 전체 프로필 편집과 새 공고 탭을 연다", async () => {
+it("사용법 단계의 버튼이 전체 프로필과 진행 중인 회사(새 공고 탭)를 열고 단계형 추가 등록은 열지 않는다", async () => {
   const { onOpenProfile, onOpenPostings } = renderFlow({ step: "usage" });
   await screen.findByRole("heading", {
     level: 1,
     name: "이제 지원서에서 써 보세요",
   });
-  fireEvent.click(screen.getByRole("button", { name: "새 공고 보기" }));
-  expect(onOpenPostings).toHaveBeenCalledTimes(1);
+  expect(
+    screen.queryByRole("button", { name: "추가 정보 더 등록하기" }),
+  ).toBeNull();
   fireEvent.click(
-    within(screen.getByRole("main")).getByRole("button", {
-      name: "전체 프로필 편집",
+    screen.getByRole("button", {
+      name: "현재 채용이 진행 중인 회사 보러 가기",
     }),
+  );
+  await waitFor(() => expect(onOpenPostings).toHaveBeenCalledTimes(1));
+  fireEvent.click(
+    screen.getByRole("button", { name: "전체 프로필 입력하러 가기" }),
   );
   await waitFor(() => expect(onOpenProfile).toHaveBeenCalledTimes(1));
-});
-
-it("사용법 단계에서 단계형 추가 등록을 저장한 정보 화면으로 열고, 마치면 사용법으로 돌아온다", async () => {
-  const { repository, track } = renderFlow({ step: "usage" });
-  await screen.findByRole("heading", {
-    level: 1,
-    name: "이제 지원서에서 써 보세요",
-  });
-  fireEvent.click(
-    screen.getByRole("button", { name: "추가 정보 더 등록하기" }),
-  );
-  expect(
-    await screen.findByRole("heading", { level: 2, name: "저장한 정보" }),
-  ).toBeVisible();
-  expect(screen.queryByText("등록 묶음")).toBeNull();
-  expect(track).toHaveBeenCalledWith("quick_profile_viewed", {
-    surface: "extension_onboarding",
-  });
-  fireEvent.click(screen.getByRole("button", { name: "학력 추가하기" }));
-  fireEvent.click(await screen.findByRole("button", { name: "대학교" }));
-  fireEvent.change(await screen.findByRole("combobox"), {
-    target: { value: "하늘대학교" },
-  });
-  fireEvent.click(screen.getByRole("button", { name: "사용법으로 돌아가기" }));
-  expect(
-    await screen.findByRole("heading", {
-      level: 1,
-      name: "이제 지원서에서 써 보세요",
-    }),
-  ).toBeVisible();
-  expect((await repository.load()).education[0]?.values.schoolName).toBe(
-    "하늘대학교",
-  );
+  expect(screen.queryByText("추가 정보 등록")).toBeNull();
 });

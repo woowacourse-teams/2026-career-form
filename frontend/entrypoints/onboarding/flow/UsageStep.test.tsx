@@ -6,7 +6,6 @@ import { UsageStep } from "./UsageStep";
 function renderStep() {
   const handlers = {
     onBack: vi.fn(),
-    onExtra: vi.fn(),
     onOpenProfile: vi.fn(),
     onOpenPostings: vi.fn(),
   };
@@ -63,29 +62,35 @@ it("반복 재생 장면을 멈추고 다시 재생할 수 있다", () => {
   expect(scene).not.toHaveAttribute("data-paused");
 });
 
-it("추가 정보 더 등록하기가 가장 먼저 눈에 띄는 버튼으로 있다", () => {
-  const { onExtra } = renderStep();
-  fireEvent.click(
-    screen.getByRole("button", { name: "추가 정보 더 등록하기" }),
-  );
-  expect(onExtra).toHaveBeenCalledTimes(1);
-});
-
-it("전체 프로필 편집과 새 공고 보기는 한 줄의 두 칸, 이전은 따로 둔다", () => {
+it("주 버튼은 전체 프로필 입력하러 가기이고, 공고 버튼과 이전만 함께 둔다", () => {
   renderStep();
-  const profile = screen.getByRole("button", { name: "전체 프로필 편집" });
-  const postings = screen.getByRole("button", { name: "새 공고 보기" });
-  expect(profile.parentElement).toBe(postings.parentElement);
-  expect(profile.parentElement).toHaveAttribute("data-layout", "pair");
-  expect(screen.getByRole("button", { name: "이전" }).parentElement).not.toBe(
-    profile.parentElement,
-  );
+  const actions = screen.getByRole("group", { name: "다음에 할 일" });
+  expect(
+    within(actions)
+      .getAllByRole("button")
+      .map((button) => button.textContent),
+  ).toEqual([
+    "이전",
+    "현재 채용이 진행 중인 회사 보러 가기",
+    "전체 프로필 입력하러 가기",
+  ]);
+  expect(
+    screen.queryByRole("button", { name: "추가 정보 더 등록하기" }),
+  ).toBeNull();
+  expect(screen.queryByRole("button", { name: "새 공고 보기" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "전체 프로필 편집" })).toBeNull();
 });
 
-it("전체 프로필 편집과 새 공고 보기로 넘어가고 이전으로 돌아간다", () => {
+it("전체 프로필 입력은 관리 페이지 프로필을, 진행 중인 회사는 새 공고 탭을 열고 이전으로 돌아간다", () => {
   const { onBack, onOpenProfile, onOpenPostings } = renderStep();
-  fireEvent.click(screen.getByRole("button", { name: "전체 프로필 편집" }));
-  fireEvent.click(screen.getByRole("button", { name: "새 공고 보기" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: "전체 프로필 입력하러 가기" }),
+  );
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "현재 채용이 진행 중인 회사 보러 가기",
+    }),
+  );
   fireEvent.click(screen.getByRole("button", { name: "이전" }));
   expect(onOpenProfile).toHaveBeenCalledTimes(1);
   expect(onOpenPostings).toHaveBeenCalledTimes(1);

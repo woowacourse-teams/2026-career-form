@@ -62,39 +62,6 @@
   border-radius: 8px;
 }
 
-/*
- * The existing stepwise registration, opened from the last step. Its own
- * styles read the shared --color-* tokens, so the sky values are set on this
- * wrapper instead of touching theme.css or extension-theme.css.
- */
-.extra {
-  --color-page: #f2faff;
-  --color-surface: #ffffff;
-  --color-surface-muted: #eaf6fd;
-  --color-accent-soft: #eaf6fd;
-  --color-accent-hover: #d6f0fd;
-  --color-accent: #1d6fa5;
-  --color-action: #1d6fa5;
-  --color-action-strong: #13527e;
-  --color-on-action: #ffffff;
-  --color-brand: #1d6fa5;
-  --color-brand-hover: #13527e;
-  --color-on-brand: #ffffff;
-  --color-text: #2e4a5d;
-  --color-text-strong: #13293a;
-  --color-text-muted: #5a7487;
-  --color-text-subtle: #5a7487;
-  --color-border: #d2e7f2;
-  --color-border-strong: #a6cde2;
-  --color-field-border: #6a98b2;
-  --color-focus: rgb(29 111 165 / 25%);
-  --color-info: #13527e;
-  --color-info-soft: #eaf6fd;
-  --color-info-border: #d2e7f2;
-  --radius-control: 14px;
-  --radius-card: 26px;
-}
-
 /* Header */
 .hd {
   flex: none;
@@ -604,6 +571,15 @@
   color: var(--text);
   cursor: pointer;
 }
+/* 전체 leads each category; partly picked categories show it outlined. */
+.whole {
+  font-weight: 800;
+}
+.whole[aria-pressed="mixed"] {
+  border-color: var(--action);
+  background: var(--soft);
+  color: var(--action-strong);
+}
 .chip.on {
   border-color: var(--action);
   background: var(--action);
@@ -933,7 +909,7 @@
     border-color 0.25s ease,
     background-color 0.25s ease;
 }
-/* Step 6 actions: back on the left, the two pages and the main action on
+/* Step 6 actions: back on the left, the postings page and the main action on
    the right; stacked with the main action first on narrow screens. */
 .endBar {
   display: flex;
@@ -943,10 +919,6 @@
 }
 .back {
   margin-right: auto;
-}
-.pair {
-  display: flex;
-  gap: 10px;
 }
 
 /* After the step 5 and 6 rules above, so these narrow overrides win. */
@@ -960,13 +932,6 @@
   }
   .endMain {
     order: -1;
-  }
-  .pair {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .pair .btn {
-    padding: 0 12px;
   }
   .back {
     order: 1;

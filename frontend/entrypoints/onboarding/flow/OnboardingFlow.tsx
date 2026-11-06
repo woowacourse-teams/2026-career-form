@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import type { TrackEvent } from "../../../src/analytics/events";
 import { useProfileSaveTracking } from "../../../src/analytics/use-profile-save-tracking";
 import type { PushClient } from "../../../src/job-postings/push-client";
-import { QuickStart } from "../../../src/profile/components/QuickStart";
 import { useProfileEditor } from "../../../src/profile/hooks/use-profile-editor";
 import type { ProfileRepository } from "../../../src/profile/profile-repository";
 import logo from "../../../site/landing/assets/logo.webp";
@@ -43,8 +42,6 @@ export function OnboardingFlow({
   const editor = useProfileEditor(trackedRepository);
   const [step, setStep] = useState<OnboardingStep>();
   const [pending, setPending] = useState(false);
-  // The one-question-at-a-time registration for everything past the basics.
-  const [extra, setExtra] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null);
   const content = useRef<HTMLDivElement>(null);
   const moved = useRef(false);
@@ -65,15 +62,14 @@ export function OnboardingFlow({
     viewed.current = step;
     track("onboarding_step_viewed", { surface, step });
   }, [step, track]);
-  const reloadLatest = editor.reloadLatest;
   const ready = editor.loadStatus === "ready" && step !== undefined;
   useEffect(() => {
-    if (!ready || !moved.current || extra) return;
+    if (!ready || !moved.current) return;
     (
       content.current?.querySelector<HTMLElement>("input:not(:disabled)") ??
       heading.current
     )?.focus();
-  }, [step, ready, extra]);
+  }, [step, ready]);
 
   function go(next: OnboardingStep) {
     moved.current = true;
@@ -112,23 +108,6 @@ export function OnboardingFlow({
             : "프로필을 불러오는 중이에요."}
         </p>
       </main>
-    );
-  if (extra)
-    return (
-      <div className={styles.extra}>
-        <QuickStart
-          repository={repository}
-          track={injectedTrack}
-          startAtOverview
-          onOpenProfile={onOpenProfile}
-          onDone={() => {
-            // It saved through its own editor; pick those values up here.
-            void reloadLatest();
-            moved.current = true;
-            setExtra(false);
-          }}
-        />
-      </div>
     );
   const index = ONBOARDING_STEPS.indexOf(step);
   const previous = index > 0 ? ONBOARDING_STEPS[index - 1] : undefined;
@@ -196,7 +175,6 @@ export function OnboardingFlow({
             <UsageStep
               heading={heading}
               onBack={() => back?.()}
-              onExtra={() => void leave(() => setExtra(true))}
               onOpenProfile={() => void leave(onOpenProfile)}
               onOpenPostings={() => void leave(onOpenPostings)}
             />

@@ -15,8 +15,9 @@ import styles from "./Flow.module.css";
 
 const surface = "extension_onboarding";
 
-/** Role chips by category; every toggle saves at once. Mounted only when the
- *  user chooses to pick, so the category list is not requested before that. */
+/** Role chips by category, each led by a 전체 chip for the whole category;
+ *  every toggle saves at once. Mounted only when the user chooses to pick, so
+ *  the category list is not requested before that. */
 function RolePicker({
   client,
   push,
@@ -53,42 +54,66 @@ function RolePicker({
       </div>
     );
   }
-  const toggle = async (code: string) => {
-    const next = selected.includes(code)
-      ? selected.filter((item) => item !== code)
-      : [...selected, code];
+  const save = async (next: string[]) => {
     const ok = await push.setRoles(next);
     setSaveFailed(!ok);
     if (ok) track("push_roles_saved", { surface, role_count: next.length });
   };
+  const toggle = (code: string) =>
+    save(
+      selected.includes(code)
+        ? selected.filter((item) => item !== code)
+        : [...selected, code],
+    );
+  // All of a category on, or all of it off; other categories stay as they are.
+  const toggleAll = (codes: string[]) =>
+    save(
+      codes.every((code) => selected.includes(code))
+        ? selected.filter((code) => !codes.includes(code))
+        : [...selected, ...codes.filter((code) => !selected.includes(code))],
+    );
   return (
     <div className={styles.picker}>
-      {list.map((category) => (
-        <div
-          key={category.code}
-          className={styles.grp}
-          role="group"
-          aria-label={category.label}
-        >
-          <span aria-hidden="true">{category.label}</span>
-          <div className={styles.chips}>
-            {category.roles.map((role) => {
-              const on = selected.includes(role.code);
-              return (
-                <button
-                  key={role.code}
-                  type="button"
-                  className={on ? `${styles.chip} ${styles.on}` : styles.chip}
-                  aria-pressed={on}
-                  onClick={() => void toggle(role.code)}
-                >
-                  {role.label}
-                </button>
-              );
-            })}
+      {list.map((category) => {
+        const codes = category.roles.map((role) => role.code);
+        const picked = codes.filter((code) => selected.includes(code)).length;
+        const whole = picked === codes.length;
+        return (
+          <div
+            key={category.code}
+            className={styles.grp}
+            role="group"
+            aria-label={category.label}
+          >
+            <span aria-hidden="true">{category.label}</span>
+            <div className={styles.chips}>
+              <button
+                type="button"
+                className={`${styles.chip} ${styles.whole} ${whole ? styles.on : ""}`}
+                aria-label={`${category.label} 전체`}
+                aria-pressed={whole ? true : picked > 0 ? "mixed" : false}
+                onClick={() => void toggleAll(codes)}
+              >
+                전체
+              </button>
+              {category.roles.map((role) => {
+                const on = selected.includes(role.code);
+                return (
+                  <button
+                    key={role.code}
+                    type="button"
+                    className={on ? `${styles.chip} ${styles.on}` : styles.chip}
+                    aria-pressed={on}
+                    onClick={() => void toggle(role.code)}
+                  >
+                    {role.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
       {saveFailed && (
         <p className={styles.error} role="alert">
           선택을 저장하지 못했어요

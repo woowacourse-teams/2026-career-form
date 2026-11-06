@@ -1,5 +1,11 @@
 import { createRef } from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 import type { PushStateView } from "../../../src/job-postings/push-messages";
 import { RolesStep } from "./RolesStep";
@@ -67,6 +73,60 @@ it("직무를 골라 받기를 누르면 분류를 불러와 고른 직무를 �
       "고른 직무가 없어요. 이대로 두면 모든 공고를 받아요.",
     ),
   );
+});
+
+it("대분류마다 맨 앞의 전체로 그 분류의 직무를 한 번에 고르고 해제한다", async () => {
+  const { client, track } = renderStep();
+  await screen.findByText("알림 켜짐");
+  fireEvent.click(pick());
+  const all = await screen.findByRole("button", { name: "IT/개발 전체" });
+  const group = screen.getByRole("group", { name: "IT/개발" });
+  expect(within(group).getAllByRole("button")[0]).toBe(all);
+  expect(all).toHaveTextContent("전체");
+  expect(all).toHaveAttribute("aria-pressed", "false");
+  expect(screen.getByRole("button", { name: "디자인 전체" })).toBeVisible();
+  fireEvent.click(all);
+  await waitFor(() =>
+    expect(client.setRoles).toHaveBeenLastCalledWith([
+      "IT.BACKEND",
+      "IT.FRONTEND",
+    ]),
+  );
+  await waitFor(() => expect(all).toHaveAttribute("aria-pressed", "true"));
+  expect(screen.getByRole("button", { name: "백엔드" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  expect(summary()).toHaveTextContent("고른 2개 직무의 공고만 받아요.");
+  expect(track).toHaveBeenCalledWith("push_roles_saved", {
+    surface: "extension_onboarding",
+    role_count: 2,
+  });
+  fireEvent.click(all);
+  await waitFor(() => expect(client.setRoles).toHaveBeenLastCalledWith([]));
+  await waitFor(() => expect(all).toHaveAttribute("aria-pressed", "false"));
+});
+
+it("분류의 직무를 일부만 고르면 전체가 일부 선택으로 보이고, 누르면 다른 분류 선택은 두고 나머지를 고른다", async () => {
+  const { client } = renderStep({
+    ...registeredState,
+    roles: ["DESIGN.UX_UI", "IT.BACKEND"],
+  });
+  const all = await screen.findByRole("button", { name: "IT/개발 전체" });
+  expect(all).toHaveAttribute("aria-pressed", "mixed");
+  expect(screen.getByRole("button", { name: "디자인 전체" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  fireEvent.click(all);
+  await waitFor(() =>
+    expect(client.setRoles).toHaveBeenLastCalledWith([
+      "DESIGN.UX_UI",
+      "IT.BACKEND",
+      "IT.FRONTEND",
+    ]),
+  );
+  await waitFor(() => expect(all).toHaveAttribute("aria-pressed", "true"));
 });
 
 it("이미 직무를 골랐으면 골라 받기로 열리고 모든 직무를 누르면 선택을 비운다", async () => {

@@ -26,15 +26,14 @@ const usage = [
 export function UsageStep({
   heading,
   onBack,
-  onExtra,
   onOpenProfile,
   onOpenPostings,
 }: {
   heading: RefObject<HTMLHeadingElement | null>;
   onBack: () => void;
-  /** Opens the one-question-at-a-time registration for the rest. */
-  onExtra: () => void;
+  /** The management page's full profile editor. */
   onOpenProfile: () => void;
+  /** The management page's 새 공고 tab: postings open for applications. */
   onOpenPostings: () => void;
 }) {
   const reduced = usePrefersReducedMotion();
@@ -97,7 +96,7 @@ export function UsageStep({
             </div>
           </div>
         </div>
-        <div className={styles.endBar}>
+        <div className={styles.endBar} role="group" aria-label="다음에 할 일">
           <button
             type="button"
             className={`${styles.btn} ${styles.ghost} ${styles.back}`}
@@ -105,28 +104,19 @@ export function UsageStep({
           >
             이전
           </button>
-          <div className={styles.pair} data-layout="pair">
-            <button
-              type="button"
-              className={`${styles.btn} ${styles.soft}`}
-              onClick={onOpenProfile}
-            >
-              전체 프로필 편집
-            </button>
-            <button
-              type="button"
-              className={`${styles.btn} ${styles.soft}`}
-              onClick={onOpenPostings}
-            >
-              새 공고 보기
-            </button>
-          </div>
+          <button
+            type="button"
+            className={`${styles.btn} ${styles.soft}`}
+            onClick={onOpenPostings}
+          >
+            현재 채용이 진행 중인 회사 보러 가기
+          </button>
           <button
             type="button"
             className={`${styles.btn} ${styles.pri} ${styles.endMain}`}
-            onClick={onExtra}
+            onClick={onOpenProfile}
           >
-            추가 정보 더 등록하기
+            전체 프로필 입력하러 가기
           </button>
         </div>
       </section>
