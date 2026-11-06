@@ -219,13 +219,11 @@ it("사용법 단계의 버튼이 전체 프로필과 진행 중인 회사(새 �
   ).toBeNull();
   fireEvent.click(
     screen.getByRole("button", {
-      name: "현재 채용이 진행 중인 회사 보러 가기",
+      name: "지금 채용 중인 회사 보기",
     }),
   );
   await waitFor(() => expect(onOpenPostings).toHaveBeenCalledTimes(1));
-  fireEvent.click(
-    screen.getByRole("button", { name: "전체 프로필 입력하러 가기" }),
-  );
+  fireEvent.click(screen.getByRole("button", { name: "전체 프로필 입력하기" }));
   await waitFor(() => expect(onOpenProfile).toHaveBeenCalledTimes(1));
   expect(screen.queryByText("추가 정보 등록")).toBeNull();
 });

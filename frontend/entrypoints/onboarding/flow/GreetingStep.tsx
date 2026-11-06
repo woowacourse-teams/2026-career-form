@@ -6,6 +6,7 @@ import {
   IMPORT_STILL,
   ImportScene,
   importChapter,
+  PauseButton,
   sceneStyles,
   useLoopTimeline,
 } from "./scenes";
@@ -85,19 +86,15 @@ export function GreetingStep({
                 예시 화면이에요. 가져올 항목은 저장 전에 직접 골라요.
               </p>
               {!reduced && (
-                <button
-                  type="button"
-                  className={sceneStyles.pause}
-                  aria-pressed={paused}
-                  onClick={() => setPaused((value) => !value)}
-                >
-                  {paused ? "계속 재생" : "일시정지"}
-                </button>
+                <PauseButton
+                  paused={paused}
+                  onToggle={() => setPaused((value) => !value)}
+                />
               )}
             </div>
           </div>
         </div>
-        <div className={styles.foot}>
+        <div className={`${styles.foot} ${styles.divided}`}>
           <div className={styles.acts}>
             <button
               type="button"

@@ -343,6 +343,15 @@
   background: var(--tint);
   color: var(--strong);
 }
+/* Secondary action next to a filled primary: same size, outlined. */
+.outline {
+  background: var(--surface);
+  color: var(--action-strong);
+  box-shadow: inset 0 0 0 1.5px var(--action);
+}
+.outline:hover {
+  background: var(--soft);
+}
 .ghost {
   padding: 0 14px;
   background: transparent;
@@ -919,6 +928,12 @@
 }
 .back {
   margin-right: auto;
+}
+/* Steps 5 and 6 end below a large scene; a rule keeps the actions apart. */
+.divided {
+  margin-top: 4px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
 }
 
 /* After the step 5 and 6 rules above, so these narrow overrides win. */

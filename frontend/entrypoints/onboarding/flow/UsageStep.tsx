@@ -5,6 +5,7 @@ import {
   FILL_STILL,
   FillScene,
   fillChapter,
+  PauseButton,
   sceneStyles,
   useLoopTimeline,
 } from "./scenes";
@@ -84,39 +85,42 @@ export function UsageStep({
                 동작을 설명하는 예시예요. 실제 화면은 지원서마다 달라요.
               </p>
               {!reduced && (
-                <button
-                  type="button"
-                  className={sceneStyles.pause}
-                  aria-pressed={paused}
-                  onClick={() => setPaused((value) => !value)}
-                >
-                  {paused ? "계속 재생" : "일시정지"}
-                </button>
+                <PauseButton
+                  paused={paused}
+                  onToggle={() => setPaused((value) => !value)}
+                />
               )}
             </div>
           </div>
         </div>
-        <div className={styles.endBar} role="group" aria-label="다음에 할 일">
+        <div
+          className={`${styles.endBar} ${styles.divided}`}
+          role="group"
+          aria-label="다음에 할 일"
+        >
           <button
             type="button"
             className={`${styles.btn} ${styles.ghost} ${styles.back}`}
+            data-variant="text"
             onClick={onBack}
           >
             이전
           </button>
           <button
             type="button"
-            className={`${styles.btn} ${styles.soft}`}
+            className={`${styles.btn} ${styles.outline}`}
+            data-variant="outline"
             onClick={onOpenPostings}
           >
-            현재 채용이 진행 중인 회사 보러 가기
+            지금 채용 중인 회사 보기
           </button>
           <button
             type="button"
             className={`${styles.btn} ${styles.pri} ${styles.endMain}`}
+            data-variant="primary"
             onClick={onOpenProfile}
           >
-            전체 프로필 입력하러 가기
+            전체 프로필 입력하기
           </button>
         </div>
       </section>

@@ -62,18 +62,23 @@ it("반복 재생 장면을 멈추고 다시 재생할 수 있다", () => {
   expect(scene).not.toHaveAttribute("data-paused");
 });
 
-it("주 버튼은 전체 프로필 입력하러 가기이고, 공고 버튼과 이전만 함께 둔다", () => {
+it("주 버튼은 채워진 전체 프로필 입력하기 하나이고 공고 보기는 테두리 버튼, 이전은 글자 버튼이다", () => {
+  renderStep();
+  const actions = screen.getByRole("group", { name: "다음에 할 일" });
+  const [back, postings, profile] = within(actions).getAllByRole("button");
+  expect(profile).toHaveAttribute("data-variant", "primary");
+  expect(postings).toHaveAttribute("data-variant", "outline");
+  expect(back).toHaveAttribute("data-variant", "text");
+});
+
+it("주 버튼은 전체 프로필 입력하기이고, 공고 버튼과 이전만 함께 둔다", () => {
   renderStep();
   const actions = screen.getByRole("group", { name: "다음에 할 일" });
   expect(
     within(actions)
       .getAllByRole("button")
       .map((button) => button.textContent),
-  ).toEqual([
-    "이전",
-    "현재 채용이 진행 중인 회사 보러 가기",
-    "전체 프로필 입력하러 가기",
-  ]);
+  ).toEqual(["이전", "지금 채용 중인 회사 보기", "전체 프로필 입력하기"]);
   expect(
     screen.queryByRole("button", { name: "추가 정보 더 등록하기" }),
   ).toBeNull();
@@ -83,12 +88,10 @@ it("주 버튼은 전체 프로필 입력하러 가기이고, 공고 버튼과 �
 
 it("전체 프로필 입력은 관리 페이지 프로필을, 진행 중인 회사는 새 공고 탭을 열고 이전으로 돌아간다", () => {
   const { onBack, onOpenProfile, onOpenPostings } = renderStep();
-  fireEvent.click(
-    screen.getByRole("button", { name: "전체 프로필 입력하러 가기" }),
-  );
+  fireEvent.click(screen.getByRole("button", { name: "전체 프로필 입력하기" }));
   fireEvent.click(
     screen.getByRole("button", {
-      name: "현재 채용이 진행 중인 회사 보러 가기",
+      name: "지금 채용 중인 회사 보기",
     }),
   );
   fireEvent.click(screen.getByRole("button", { name: "이전" }));

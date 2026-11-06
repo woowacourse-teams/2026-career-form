@@ -46,16 +46,27 @@
 }
 .pause {
   flex: none;
-  min-height: 36px;
-  padding: 0 14px;
+  min-height: 40px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   border: 0;
   border-radius: 999px;
-  background: #d6f0fd;
-  color: #13293a;
+  background: transparent;
+  color: var(--sub, #5a7487);
   font: inherit;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
+}
+.pause:hover {
+  background: rgb(19 41 58 / 6%);
+  color: var(--strong, #13293a);
+}
+.pause svg {
+  width: 13px;
+  height: 13px;
 }
 
 /* Greeting-style application page */
