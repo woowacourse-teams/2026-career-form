@@ -7,14 +7,11 @@ import type { ProfileRepository } from "../../../src/profile/profile-repository"
 import logo from "../../../site/landing/assets/logo.webp";
 import { AlertsGuideStep } from "./AlertsGuideStep";
 import { BasicStep } from "./BasicStep";
+import { GreetingStep } from "./GreetingStep";
 import { ProgressRail } from "./ProgressRail";
 import { RolesStep } from "./RolesStep";
-import {
-  ONBOARDING_STEPS,
-  STEP_LABELS,
-  type OnboardingStep,
-  type StepStore,
-} from "./steps";
+import { UsageStep } from "./UsageStep";
+import { ONBOARDING_STEPS, type OnboardingStep, type StepStore } from "./steps";
 import styles from "./Flow.module.css";
 
 const surface = "extension_onboarding";
@@ -36,7 +33,9 @@ export function OnboardingFlow({
   pushClient,
   track: injectedTrack,
   stepStore,
+  watchProfile,
   onOpenProfile,
+  onOpenPostings,
 }: OnboardingFlowProps) {
   const { repository: trackedRepository, track } = useProfileSaveTracking(
     repository,
@@ -46,6 +45,7 @@ export function OnboardingFlow({
   const editor = useProfileEditor(trackedRepository);
   const [step, setStep] = useState<OnboardingStep>();
   const [pending, setPending] = useState(false);
+  const [imported, setImported] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null);
   const content = useRef<HTMLDivElement>(null);
   const moved = useRef(false);
@@ -66,6 +66,16 @@ export function OnboardingFlow({
     viewed.current = step;
     track("onboarding_step_viewed", { surface, step });
   }, [step, track]);
+  // Only the Greeting step waits for an import saved from another tab; the
+  // editor then reloads so later saves do not conflict with it.
+  const reloadLatest = editor.reloadLatest;
+  useEffect(() => {
+    if (step !== "greeting") return;
+    return watchProfile(() => {
+      setImported(true);
+      void reloadLatest();
+    });
+  }, [step, watchProfile, reloadLatest]);
   const ready = editor.loadStatus === "ready" && step !== undefined;
   useEffect(() => {
     if (!ready || !moved.current) return;
@@ -119,7 +129,11 @@ export function OnboardingFlow({
   const busy = pending || editor.isReloading;
   const back = previous ? () => void leave(() => go(previous)) : undefined;
   const next = () => {
-    if (following) void leave(() => go(following));
+    if (!following) return;
+    void leave(() => {
+      if (following === "usage") track("onboarding_completed", { surface });
+      go(following);
+    });
   };
   return (
     <div className={styles.flow}>
@@ -165,12 +179,20 @@ export function OnboardingFlow({
               onBack={() => back?.()}
               onNext={next}
             />
+          ) : step === "greeting" ? (
+            <GreetingStep
+              heading={heading}
+              imported={imported}
+              onBack={() => back?.()}
+              onNext={next}
+            />
           ) : (
-            <section className={styles.card}>
-              <h1 ref={heading} tabIndex={-1}>
-                {STEP_LABELS[step]}
-              </h1>
-            </section>
+            <UsageStep
+              heading={heading}
+              onBack={() => back?.()}
+              onOpenProfile={() => void leave(onOpenProfile)}
+              onOpenPostings={() => void leave(onOpenPostings)}
+            />
           )}
           {editor.saveStatus === "error" && (
             <p role="alert" className={styles.error}>

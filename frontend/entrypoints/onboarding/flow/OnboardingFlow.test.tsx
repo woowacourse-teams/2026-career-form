@@ -1,4 +1,5 @@
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -28,18 +29,31 @@ function renderFlow(
   const track = options.track ?? vi.fn();
   const onOpenProfile = vi.fn();
   const onOpenPostings = vi.fn();
+  const profileListeners: (() => void)[] = [];
   render(
     <OnboardingFlow
       repository={repository}
       pushClient={createPushClient()}
       track={track}
       stepStore={steps.store}
-      watchProfile={() => () => {}}
+      watchProfile={(listener) => {
+        profileListeners.push(listener);
+        return () => {
+          profileListeners.splice(profileListeners.indexOf(listener), 1);
+        };
+      }}
       onOpenProfile={onOpenProfile}
       onOpenPostings={onOpenPostings}
     />,
   );
-  return { repository, steps, track, onOpenProfile, onOpenPostings };
+  return {
+    repository,
+    steps,
+    track,
+    onOpenProfile,
+    onOpenPostings,
+    profileListeners,
+  };
 }
 const rail = () => screen.getByRole("navigation", { name: "진행 상황" });
 const current = () =>
@@ -180,4 +194,52 @@ it("이메일 다음은 직무 선택, 그다음은 알림 안내로 이어진�
     }),
   ).toBeVisible();
   expect(current()).toHaveTextContent("알림 안내");
+});
+
+it("Greeting 단계에서만 프로필 변경을 지켜보다가 가져오기가 저장되면 이어서 진행한다", async () => {
+  const { profileListeners, steps, track } = renderFlow({ step: "alerts" });
+  await screen.findByRole("heading", { level: 1 });
+  expect(profileListeners).toHaveLength(0);
+  for (let i = 0; i < 3; i += 1)
+    fireEvent.click(screen.getByRole("button", { name: "다음" }));
+  expect(
+    await screen.findByRole("heading", {
+      level: 1,
+      name: "Greeting 지원서를 쓴 적이 있나요?",
+    }),
+  ).toBeVisible();
+  expect(profileListeners).toHaveLength(1);
+  expect(screen.getByRole("button", { name: "건너뛰기" })).toBeVisible();
+  await act(async () => profileListeners[0]());
+  expect(
+    await screen.findByText("가져왔어요. 프로필에 저장했어요."),
+  ).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "다음" }));
+  expect(
+    await screen.findByRole("heading", {
+      level: 1,
+      name: "이제 지원서에서 써 보세요",
+    }),
+  ).toBeVisible();
+  expect(profileListeners).toHaveLength(0);
+  expect(steps.written).toEqual(["greeting", "usage"]);
+  expect(track).toHaveBeenCalledWith("onboarding_completed", {
+    surface: "extension_onboarding",
+  });
+});
+
+it("사용법 단계의 버튼이 전체 프로필 편집과 새 공고 탭을 연다", async () => {
+  const { onOpenProfile, onOpenPostings } = renderFlow({ step: "usage" });
+  await screen.findByRole("heading", {
+    level: 1,
+    name: "이제 지원서에서 써 보세요",
+  });
+  fireEvent.click(screen.getByRole("button", { name: "새 공고 보기" }));
+  expect(onOpenPostings).toHaveBeenCalledTimes(1);
+  fireEvent.click(
+    within(screen.getByRole("main")).getByRole("button", {
+      name: "전체 프로필 편집",
+    }),
+  );
+  await waitFor(() => expect(onOpenProfile).toHaveBeenCalledTimes(1));
 });
