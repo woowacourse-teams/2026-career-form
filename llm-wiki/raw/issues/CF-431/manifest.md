@@ -2,8 +2,8 @@
 
 > Issue: CF-431
 > Collected: 2026-11-06
-> Approval-Digest: 85cc2205e1bd8d944112de84ef4e184451b0db59582f1e65b8c9442accc63cb7
-> Source-Revision: c9429500
+> Approval-Digest: 2b1c944c4eeec4e7481efa999e40d57f4709500cea784143009e2fdab1bbaae3
+> Source-Revision: cc7f723b
 
 승인 digest는 worktree 체크포인트가 계산한 [후보 세 개 스냅샷](documents/approved-candidates.md)의 후보 digest이며 사람이 2026-11-06 "승인"으로 확정했다. payload는 후보 2·3을 담은 온보딩 문서, 후보 1을 담은 확장 알림 문서, 후보 2의 계측 부분을 담은 계측 문서 셋이다. 실제 지원값, 계정, 세션, 시크릿, 구독 endpoint, 사용자의 직무 선택값, 대화 전문은 포함하지 않는다.
 

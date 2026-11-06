@@ -2,8 +2,8 @@
 
 > Issue: [CF-431](https://github.com/woowacourse-teams/2026-career-form/issues/431)
 > Collected: 2026-11-06
-> Approval-Digest: 85cc2205e1bd8d944112de84ef4e184451b0db59582f1e65b8c9442accc63cb7
-> Source-Revision: c9429500
+> Approval-Digest: 2b1c944c4eeec4e7481efa999e40d57f4709500cea784143009e2fdab1bbaae3
+> Source-Revision: cc7f723b
 
 공고 알림에서 받을 직무를 고르지 않은 사용자의 기본 동작을 바꾼 결정이다. [승인 후보 스냅샷](approved-candidates.md)의 후보 1을 적는다. 구독 수명주기, 푸시 검증, 공지함, 자가 진단, 배지, 자동 저장, 받을 직무 저장과 분류 캐시는 CF-349와 CF-395 payload의 내용이 그대로 유효하며 여기서는 바뀐 부분만 적는다. 구독 endpoint와 키, 사용자의 직무 선택값은 기록하지 않는다.
 

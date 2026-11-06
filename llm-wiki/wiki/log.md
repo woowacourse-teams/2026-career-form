@@ -1077,8 +1077,8 @@
 - 실제 지원값, 계정, 세션, 페이지 주소, 대화 전문은 저장하지 않았다.
 
 ## [2026-11-06] ingest | CF-431 확장 첫 설치 온보딩 여섯 단계와 직무 미선택 시 전체 수신
-- Approval-Digest: 85cc2205e1bd8d944112de84ef4e184451b0db59582f1e65b8c9442accc63cb7
-- Source-Revision: c9429500
+- Approval-Digest: 2b1c944c4eeec4e7481efa999e40d57f4709500cea784143009e2fdab1bbaae3
+- Source-Revision: cc7f723b
 - 승인한 후보 3개를 [CF-431 bundle](../raw/issues/CF-431/manifest.md)에 기록했다. 직무 미선택 구독의 전체 공고 수신, 확장 첫 설치 온보딩 여섯 단계의 구조, 온보딩 화면 검증 방법과 함정이다.
 - [랜딩,온보딩 웹 페이지](topics/landing-onboarding.md), [확장 Web Push 구독과 공고 알림](topics/extension-push-notifications.md), [선택적 이용 계측](topics/usage-analytics.md) topic의 현재 상태를 고쳤다.
 - 실제 지원값, 계정, 세션, 구독 endpoint, 사용자의 직무 선택값, 대화 전문은 저장하지 않았다.
