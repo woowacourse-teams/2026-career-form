@@ -3,7 +3,6 @@ const analyticsEvents = [
   "onboarding_first_viewed",
   "onboarding_step_viewed",
   "onboarding_completed",
-  "quick_profile_viewed",
   "profile_first_saved",
   "autofill_open_succeeded",
   "autofill_open_failed",
