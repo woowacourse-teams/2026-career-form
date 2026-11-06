@@ -437,7 +437,7 @@ export function QuickStart({
       </header>
       <div className={styles.wrap}>
         <div className={styles.head}>
-          <h1>첫 등록</h1>
+          <h1>추가 정보 등록</h1>
           {counting && (
             <>
               <span className={styles.count} aria-hidden="true">

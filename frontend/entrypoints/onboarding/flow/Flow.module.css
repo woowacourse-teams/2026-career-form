@@ -42,6 +42,8 @@
 .flow *::after {
   box-sizing: border-box;
 }
+/* Margins only: padding belongs to the component classes below, which a
+   reset with this specificity would otherwise override. */
 .flow h1,
 .flow h2,
 .flow p,
@@ -51,10 +53,10 @@
 .flow dd,
 .flow figure {
   margin: 0;
-  padding: 0;
 }
 .flow ol,
 .flow ul {
+  padding-left: 0;
   list-style: none;
 }
 .flow img {
@@ -983,8 +985,8 @@ li.chip {
   animation: press 9s linear infinite;
 }
 .loop .cur {
-  left: 104px;
-  top: 62px;
+  left: 140px;
+  top: 74px;
   animation: moveToFill 9s ease-in-out infinite;
 }
 .stbox {
@@ -1254,12 +1256,12 @@ li.chip {
   }
   48%,
   62% {
-    transform: translate(84px, 70px);
+    transform: translate(128px, 78px);
     opacity: 1;
   }
   68%,
   100% {
-    transform: translate(84px, 70px);
+    transform: translate(128px, 78px);
     opacity: 0;
   }
 }
