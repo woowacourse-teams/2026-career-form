@@ -25,6 +25,12 @@ export function extensionSiteUrl(path: string): string {
     : path;
 }
 
+// Reached lazily so a page without extension storage still renders the flow.
+const browserStepStore = createStepStore({
+  get: (key) => browser.storage.local.get(key),
+  set: (items) => browser.storage.local.set(items),
+});
+
 // Tells the Greeting step that an import saved the profile from another tab.
 function watchStoredProfile(listener: () => void): () => void {
   const onChanged = (changes: Record<string, unknown>, area: string) => {
@@ -51,10 +57,7 @@ export function App({
     () => injectedRepository ?? new ChromeProfileStorage(),
     [injectedRepository],
   );
-  const stepStore = useMemo(
-    () => injectedStepStore ?? createStepStore(browser.storage.local),
-    [injectedStepStore],
-  );
+  const stepStore = injectedStepStore ?? browserStepStore;
   const firstViewSent = useRef(false);
   const path =
     new URLSearchParams(window.location.search).get("page") ?? "/onboarding/";
@@ -62,6 +65,7 @@ export function App({
   useEffect(() => {
     if (!onboarding || firstViewSent.current) return;
     firstViewSent.current = true;
+    track("onboarding_viewed", { surface: "extension_onboarding" });
     track("onboarding_first_viewed", { surface: "extension_onboarding" });
   }, [onboarding, track]);
   const openProfile = useCallback(() => {

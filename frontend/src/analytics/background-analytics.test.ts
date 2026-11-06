@@ -257,10 +257,9 @@ it("keeps repeatable funnel events and ties first-event deduplication to the ins
   const handle = createAnalyticsMessageHandler(options);
   await handle(firstView);
   for (const event of [
-    "onboarding_autofill_selected",
-    "onboarding_postings_selected",
+    "onboarding_step_viewed",
+    "onboarding_completed",
     "quick_profile_viewed",
-    "quick_profile_skipped",
     "autofill_open_succeeded",
     "autofill_open_failed",
   ]) {
@@ -269,7 +268,7 @@ it("keeps repeatable funnel events and ties first-event deduplication to the ins
   }
   values.analyticsDistinctId = "installation-two";
   await handle(firstView);
-  expect(payloads).toHaveLength(14);
+  expect(payloads).toHaveLength(12);
   expect(
     payloads
       .filter((p) => p.event === "onboarding_first_viewed")
