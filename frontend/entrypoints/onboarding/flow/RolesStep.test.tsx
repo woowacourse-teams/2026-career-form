@@ -142,6 +142,16 @@ it("알림을 끄고 다시 켤 수 있다", async () => {
   });
 });
 
+it("알림이 설치 때 켜졌다고 알리고 테스트 알림이 어디에 뜨는지 안내한다", async () => {
+  renderStep();
+  expect(screen.getByText(/설치할 때 새 공고 알림이 켜졌어요/)).toBeVisible();
+  expect(
+    screen.getByText(
+      "테스트 알림은 이 컴퓨터 화면 구석에 Chrome 알림으로 떠요.",
+    ),
+  ).toBeVisible();
+});
+
 it("Chrome 종료, 절전, 꺼진 알림에 대한 안내를 옆에 둔다", async () => {
   renderStep();
   expect(

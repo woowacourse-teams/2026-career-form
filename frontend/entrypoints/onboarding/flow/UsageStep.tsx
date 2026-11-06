@@ -41,10 +41,10 @@ export function UsageStep({
               </li>
               <li>
                 <div>
-                  <b>Career Form 패널에서 ‘자동 기입’을 누르세요</b>
+                  <b>지원서 옆 Career Form 창에서 ‘자동 기입’을 누르세요</b>
                   <span>
-                    페이지의 Career Form 아이콘이나 Chrome 퍼즐 메뉴에서 패널을
-                    열 수 있어요.
+                    페이지에 뜨는 Career Form 아이콘이나 주소창 오른쪽의 퍼즐
+                    모양 메뉴로 창을 열 수 있어요.
                   </span>
                 </div>
               </li>
@@ -55,6 +55,10 @@ export function UsageStep({
                 </div>
               </li>
             </ol>
+            <p className={styles.sm}>
+              이름과 이메일만으로도 쓸 수 있어요. 전화번호, 학력, 경력을 더
+              넣으면 채워지는 칸이 늘어요. 이 탭은 닫아도 돼요.
+            </p>
             <div className={styles.foot}>
               <div className={`${styles.acts} ${styles.start}`}>
                 <button
@@ -102,8 +106,7 @@ export function UsageStep({
               <FillScene />
             </div>
             <p className={styles.sm}>
-              동작을 설명하는 예시예요. 실제 화면은 지원서마다 달라요. 동작
-              줄이기 설정에서는 멈춘 화면으로 보여요.
+              동작을 설명하는 예시예요. 실제 화면은 지원서마다 달라요.
             </p>
           </div>
         </div>

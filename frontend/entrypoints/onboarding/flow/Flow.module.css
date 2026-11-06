@@ -724,6 +724,21 @@ li.chip {
   min-height: 36px;
   cursor: default;
 }
+.examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  font-size: 14px;
+  color: var(--sub);
+}
+.examples::before {
+  content: "예:";
+  font-weight: 700;
+  color: var(--strong);
+}
+.examples li:not(:last-child)::after {
+  content: ",";
+}
 .note {
   padding: 12px 16px;
   border-radius: 14px;
@@ -926,14 +941,14 @@ li.chip {
   background: var(--accent);
   animation: pulse 1.6s ease-in-out infinite;
 }
-.wait.got {
+.wait.imported {
   border-style: solid;
   border-color: var(--ok-line);
   background: var(--ok-soft);
   font-weight: 700;
   color: var(--ok);
 }
-.wait.got::before {
+.wait.imported::before {
   background: var(--ok);
   animation: none;
 }
@@ -1355,10 +1370,14 @@ li.chip {
     padding-top: 0;
   }
   .nav {
-    flex-direction: row;
-    overflow-x: auto;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
   }
   .navb {
-    min-width: 150px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+    padding: 8px 10px;
+    font-size: 13px;
   }
 }

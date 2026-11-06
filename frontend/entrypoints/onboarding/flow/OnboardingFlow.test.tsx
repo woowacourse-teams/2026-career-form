@@ -212,7 +212,7 @@ it("Greeting 단계에서만 프로필 변경을 지켜보다가 가져오기가
   expect(screen.getByRole("button", { name: "건너뛰기" })).toBeVisible();
   await act(async () => profileListeners[0]());
   expect(
-    await screen.findByText("가져왔어요. 프로필에 저장했어요."),
+    await screen.findByText(/가져왔어요. 프로필에 저장했어요./),
   ).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: "다음" }));
   expect(
@@ -265,9 +265,7 @@ it("사용법 단계에서 단계형 추가 등록을 저장한 정보 화면으
   fireEvent.change(await screen.findByRole("combobox"), {
     target: { value: "하늘대학교" },
   });
-  fireEvent.click(
-    screen.getByRole("button", { name: "지금 자동 기입 사용하기" }),
-  );
+  fireEvent.click(screen.getByRole("button", { name: "사용법으로 돌아가기" }));
   expect(
     await screen.findByRole("heading", {
       level: 1,

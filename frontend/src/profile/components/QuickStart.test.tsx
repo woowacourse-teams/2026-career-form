@@ -47,7 +47,7 @@ async function next() {
   );
   await waitFor(() =>
     expect(
-      screen.getByRole("button", { name: "지금 자동 기입 사용하기" }),
+      screen.getByRole("button", { name: "사용법으로 돌아가기" }),
     ).toBeEnabled(),
   );
 }
@@ -106,9 +106,7 @@ describe("QuickStart", () => {
     const end = screen.getByLabelText("졸업일");
     expect(end).toHaveFocus();
     fireEvent.change(end, { target: { value: "20230229" } });
-    await click(
-      screen.getByRole("button", { name: "지금 자동 기입 사용하기" }),
-    );
+    await click(screen.getByRole("button", { name: "사용법으로 돌아가기" }));
     expect(end).toHaveFocus();
     expect(screen.getByRole("alert")).toBeVisible();
     await waitFor(async () =>
@@ -206,7 +204,7 @@ describe("QuickStart", () => {
     });
     await goToBasicSummary();
     const exit = screen.getByRole("button", {
-      name: "지금 자동 기입 사용하기",
+      name: "사용법으로 돌아가기",
     });
     const education = screen.getByRole("button", { name: "학력 추가하기" });
     expect(
@@ -252,9 +250,7 @@ describe("QuickStart", () => {
     );
     await click(screen.getByRole("button", { name: "대학교" }));
     await waitFor(() => expect(screen.getByRole("combobox")).toHaveFocus());
-    await click(
-      screen.getByRole("button", { name: "지금 자동 기입 사용하기" }),
-    );
+    await click(screen.getByRole("button", { name: "사용법으로 돌아가기" }));
     expect(await screen.findByRole("heading", { name: DONE })).toBeVisible();
   });
   it("starts with only optional name fields and allows leaving immediately", async () => {
@@ -263,9 +259,7 @@ describe("QuickStart", () => {
     for (const field of screen.getAllByRole("textbox"))
       expect(field).not.toBeRequired();
     expect(screen.queryByText(/13개 범주/)).toBeNull();
-    await click(
-      screen.getByRole("button", { name: "지금 자동 기입 사용하기" }),
-    );
+    await click(screen.getByRole("button", { name: "사용법으로 돌아가기" }));
     await screen.findByRole("heading", {
       name: DONE,
     });
@@ -289,9 +283,7 @@ describe("QuickStart", () => {
     fireEvent.change(screen.getByLabelText("이메일"), {
       target: { value: "learner@example.test" },
     });
-    await click(
-      screen.getByRole("button", { name: "지금 자동 기입 사용하기" }),
-    );
+    await click(screen.getByRole("button", { name: "사용법으로 돌아가기" }));
     await screen.findByRole("heading", {
       name: DONE,
     });
@@ -311,9 +303,7 @@ describe("QuickStart", () => {
     fireEvent.change(screen.getByLabelText("전화번호"), {
       target: { value: "01012345678" },
     });
-    await click(
-      screen.getByRole("button", { name: "지금 자동 기입 사용하기" }),
-    );
+    await click(screen.getByRole("button", { name: "사용법으로 돌아가기" }));
     await screen.findByRole("alert");
     expect(screen.getByLabelText("전화번호")).toHaveValue("01012345678");
     expect(
@@ -330,9 +320,7 @@ describe("QuickStart", () => {
     await click(screen.getByRole("button", { name: "다시 저장하기" }));
     await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
     expect((await repository.load()).contact.phoneNumber).toBe("01012345678");
-    await click(
-      screen.getByRole("button", { name: "지금 자동 기입 사용하기" }),
-    );
+    await click(screen.getByRole("button", { name: "사용법으로 돌아가기" }));
     await screen.findByRole("heading", {
       name: DONE,
     });
@@ -390,9 +378,7 @@ describe("QuickStart", () => {
     fireEvent.change(screen.getByLabelText("이메일"), {
       target: { value: "learner@example.test" },
     });
-    await click(
-      screen.getByRole("button", { name: "지금 자동 기입 사용하기" }),
-    );
+    await click(screen.getByRole("button", { name: "사용법으로 돌아가기" }));
     await waitFor(() => expect(finish).toBeDefined());
     expect(screen.getByLabelText("이메일")).toBeDisabled();
     expect(
@@ -430,9 +416,7 @@ describe("QuickStart", () => {
       target: { value: "latest@example.test" },
     });
     await act(async () => finishFirst?.());
-    await click(
-      screen.getByRole("button", { name: "지금 자동 기입 사용하기" }),
-    );
+    await click(screen.getByRole("button", { name: "사용법으로 돌아가기" }));
     await screen.findByRole("heading", {
       name: DONE,
     });
@@ -504,7 +488,7 @@ it.each([false, true])(
       fireEvent.change(email, { target: { value: "new@example.test" } });
     await click(
       screen.getByRole("button", {
-        name: hasInput ? "지금 자동 기입 사용하기" : "지금 자동 기입 사용하기",
+        name: hasInput ? "사용법으로 돌아가기" : "사용법으로 돌아가기",
       }),
     );
     await screen.findByRole("heading", {
@@ -537,7 +521,7 @@ it("does not create empty repeated entries when skipping chapters", async () => 
     await click(screen.getByRole("button", { name: "이 질문 건너뛰기" }));
     await waitFor(() =>
       expect(
-        screen.getByRole("button", { name: "지금 자동 기입 사용하기" }),
+        screen.getByRole("button", { name: "사용법으로 돌아가기" }),
       ).toBeEnabled(),
     );
   }
@@ -613,7 +597,7 @@ it("saves a current career without asking an end date and keeps multiline Enter"
   fireEvent.change(details, { target: { value: "테스트 업무" } });
   fireEvent.keyDown(details, { key: "Enter" });
   expect(details).toBeVisible();
-  await click(screen.getByRole("button", { name: "지금 자동 기입 사용하기" }));
+  await click(screen.getByRole("button", { name: "사용법으로 돌아가기" }));
   await screen.findByRole("heading", {
     name: DONE,
   });
@@ -737,7 +721,7 @@ it("clearing the only new school field removes the empty new row", async () => {
   const school = await screen.findByRole("combobox", { name: "학교명" });
   fireEvent.change(school, { target: { value: "합성학교" } });
   fireEvent.change(school, { target: { value: "" } });
-  await click(screen.getByRole("button", { name: "지금 자동 기입 사용하기" }));
+  await click(screen.getByRole("button", { name: "사용법으로 돌아가기" }));
   await screen.findByRole("heading", {
     name: DONE,
   });
@@ -754,7 +738,7 @@ it("selects a catalog school with Enter without advancing and preserves identity
   fireEvent.keyDown(school, { key: "Enter" });
   expect(school).toBeVisible();
   expect(screen.queryByLabelText("전공")).toBeNull();
-  await click(screen.getByRole("button", { name: "지금 자동 기입 사용하기" }));
+  await click(screen.getByRole("button", { name: "사용법으로 돌아가기" }));
   await screen.findByRole("heading", {
     name: DONE,
   });
@@ -787,7 +771,7 @@ it("flushes latest repeated input behind a pending initial save without duplicat
   fireEvent.change(school, { target: { value: "합" } });
   await waitFor(() => expect(finish).toBeDefined());
   fireEvent.change(school, { target: { value: "합성학교" } });
-  await click(screen.getByRole("button", { name: "지금 자동 기입 사용하기" }));
+  await click(screen.getByRole("button", { name: "사용법으로 돌아가기" }));
   expect(school).toBeDisabled();
   expect(
     screen.queryByRole("heading", {
@@ -1178,7 +1162,7 @@ it.each(["직장명 수정", "기간 추가", "학력 추가하기", "저장한 
     await click(screen.getByRole("button", { name: action }));
     await waitFor(() =>
       expect(
-        screen.getByRole("button", { name: "지금 자동 기입 사용하기" }),
+        screen.getByRole("button", { name: "사용법으로 돌아가기" }),
       ).toBeEnabled(),
     );
     expect(screen.getByRole("heading", { name: "경력·활동" })).toBeVisible();
@@ -1248,7 +1232,7 @@ it("offers gender only as a catalog choice and protects an incomplete birth date
   await click(screen.getByRole("button", { name: "다음" }));
   expect(birthDate).toHaveValue("2000-02-");
   expect(screen.getByRole("alert")).toBeVisible();
-  await click(screen.getByRole("button", { name: "지금 자동 기입 사용하기" }));
+  await click(screen.getByRole("button", { name: "사용법으로 돌아가기" }));
   expect(birthDate).toBeVisible();
   fireEvent.change(birthDate, { target: { value: "" } });
   await click(screen.getByRole("button", { name: "이 질문 건너뛰기" }));

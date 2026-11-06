@@ -28,12 +28,19 @@ it("지원서에서 쓰는 세 단계와 반복 재생 장면을 보인다", () 
       .map((item) => item.querySelector("b")?.textContent),
   ).toEqual([
     "작성 중인 지원서 탭을 여세요",
-    "Career Form 패널에서 ‘자동 기입’을 누르세요",
+    "지원서 옆 Career Form 창에서 ‘자동 기입’을 누르세요",
     "채워진 내용을 확인하고 직접 제출하세요",
   ]);
   expect(screen.getByText("사용법 미리보기 · 계속 반복돼요")).toBeVisible();
   expect(
     screen.getByText(/동작을 설명하는 예시예요. 실제 화면은 지원서마다 달라요/),
+  ).toBeVisible();
+});
+
+it("지금 상태로도 쓸 수 있고 탭을 닫아도 된다고 알린다", () => {
+  renderStep();
+  expect(
+    screen.getByText(/이름과 이메일만으로도 쓸 수 있어요.*이 탭은 닫아도 돼요/),
   ).toBeVisible();
 });
 

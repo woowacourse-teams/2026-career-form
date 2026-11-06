@@ -39,21 +39,31 @@ it("예시 회사와 세 줄 요약으로 Greeting 가져오기를 안내한다"
       .getAllByRole("listitem")
       .map((item) => item.textContent),
   ).toEqual([
-    "써 둔 지원서를 열어요",
-    "패널 톱니에서 ‘프로필 가져오기’",
-    "고르고 저장하면 끝",
+    "그 회사 채용 페이지에서 써 둔 지원서를 열어요",
+    "지원서 옆 Career Form 창의 톱니바퀴에서 ‘프로필 가져오기’",
+    "가져올 항목을 고르고 저장하면 끝",
   ]);
   expect(
     screen.getByText(
-      "예시 화면이에요. 목록에 없는 회사도 될 수 있고, 가져올 항목은 저장 전에 직접 골라요.",
+      "예시 화면이에요. 목록에 없는 회사도 될 수 있고, 가져올 항목은 저장 전에 직접 골라요. 나중에 지원서 화면에서도 할 수 있어요.",
     ),
   ).toBeVisible();
+});
+
+it("Greeting이 무엇인지 한 줄로 설명하고 회사 이름은 고르는 버튼이 아니다", () => {
+  renderStep();
+  expect(
+    screen.getByText(
+      /Greeting은 여러 회사가 지원서를 받을 때 쓰는 채용 시스템이에요/,
+    ),
+  ).toBeVisible();
+  expect(screen.queryByRole("button", { name: "카카오게임즈" })).toBeNull();
 });
 
 it("가져오기 전에는 기다린다고 알리고 건너뛸 수 있다", () => {
   const { onBack, onNext } = renderStep();
   expect(screen.getByRole("status")).toHaveTextContent(
-    "가져오면 이 화면이 알아서 이어져요.",
+    "지원서 탭에서 저장하면 여기에 알려 드려요.",
   );
   fireEvent.click(screen.getByRole("button", { name: "이전" }));
   fireEvent.click(screen.getByRole("button", { name: "건너뛰기" }));
@@ -65,7 +75,7 @@ it("가져오기 전에는 기다린다고 알리고 건너뛸 수 있다", () =
 it("다른 탭에서 가져오기를 저장하면 가져왔다고 알리고 다음으로 넘어가게 한다", () => {
   const { onNext } = renderStep(true);
   expect(screen.getByRole("status")).toHaveTextContent(
-    "가져왔어요. 프로필에 저장했어요.",
+    "가져왔어요. 프로필에 저장했어요. 다음으로 넘어가세요.",
   );
   fireEvent.click(screen.getByRole("button", { name: "다음" }));
   expect(onNext).toHaveBeenCalledTimes(1);

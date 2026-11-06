@@ -41,15 +41,15 @@ export function BasicStep({
       <section className={styles.card}>
         <div className={styles.hg}>
           <p className={styles.eye}>
-            {step === "name" ? "설치가 끝났어요" : "기본 정보 2 / 2"}
+            {step === "name" ? "설치가 끝났어요" : "기본 정보"}
           </p>
           <h1 ref={heading} tabIndex={-1}>
             {step === "name" ? "이름부터 알려 주세요" : "이메일"}
           </h1>
           <p className={styles.lead}>
             {step === "name"
-              ? "지원서의 이름 칸에 그대로 들어가요. 모르는 칸은 건너뛰어도 돼요."
-              : "합격 연락을 받을 주소를 적어 주세요."}
+              ? "지원서의 이름 칸에 그대로 들어가요. 나중에 입력해도 돼요."
+              : "지원서의 이메일 칸에 들어갈 주소예요."}
           </p>
         </div>
         <form
@@ -138,8 +138,8 @@ export function BasicStep({
       </section>
       {step === "name" ? (
         <Coach art={clipboardArt}>
-          <b>1분이면 끝나요</b>
-          <p>이름과 이메일만 먼저 등록해요. 나머지는 나중에 더할 수 있어요.</p>
+          <b>입력은 이름과 이메일뿐이에요</b>
+          <p>나머지 단계는 알림 설정과 사용법 안내예요. 1분이면 끝나요.</p>
         </Coach>
       ) : (
         <Coach art={pointerArt} flip label="입력 안내">
@@ -155,7 +155,7 @@ export function BasicStep({
             </div>
           </div>
           <p className={styles.sm}>
-            지원서 옆 패널에서 ‘자동 기입’을 누르면 채워져요.
+            지원서 옆에 뜨는 Career Form 창에서 ‘자동 기입’을 누르면 채워져요.
           </p>
         </Coach>
       )}

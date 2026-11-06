@@ -176,7 +176,8 @@ export function RolesStep({
             {status}
           </p>
           <p className={styles.lead}>
-            새 공고가 등록되면 Chrome 알림으로 알려드려요.
+            설치할 때 새 공고 알림이 켜졌어요. 새 공고가 등록되면 Chrome
+            알림으로 알려드려요.
           </p>
         </div>
         <div className={styles.opts}>
@@ -211,11 +212,11 @@ export function RolesStep({
         </p>
         {!off && asking && (
           <div className={styles.ask} role="group" aria-label="알림 표시 확인">
-            <span>방금 알림이 보였나요?</span>
+            <span>방금 화면 구석에 알림이 보였나요?</span>
             <div className={styles.acts}>
               <button
                 type="button"
-                className={`${styles.btn} ${styles.pri} ${styles.small}`}
+                className={`${styles.btn} ${styles.soft} ${styles.small}`}
                 disabled={busy}
                 onClick={() => void answer("seen")}
               >
@@ -251,38 +252,41 @@ export function RolesStep({
           </p>
         )}
         <div className={styles.foot}>
-          {off ? (
-            <button
-              type="button"
-              className={`${styles.btn} ${styles.soft}`}
-              disabled={busy}
-              onClick={() => void setEnabled(true)}
-            >
-              알림 켜기
-            </button>
-          ) : (
-            !asking && (
+          {/* Alert controls on the left, step navigation on the right. */}
+          <div className={`${styles.acts} ${styles.start}`}>
+            {off ? (
               <button
                 type="button"
                 className={`${styles.btn} ${styles.soft}`}
-                disabled={busy || !state}
-                onClick={() => void test()}
+                disabled={busy}
+                onClick={() => void setEnabled(true)}
               >
-                {needsGuidance ? "다시 테스트" : "테스트 알림 보내기"}
+                알림 켜기
               </button>
-            )
-          )}
-          <div className={styles.acts}>
-            {!off && (
-              <button
-                type="button"
-                className={`${styles.btn} ${styles.ghost}`}
-                disabled={busy || !state}
-                onClick={() => void setEnabled(false)}
-              >
-                알림 끄기
-              </button>
+            ) : (
+              <>
+                {!asking && (
+                  <button
+                    type="button"
+                    className={`${styles.btn} ${styles.soft}`}
+                    disabled={busy || !state}
+                    onClick={() => void test()}
+                  >
+                    {needsGuidance ? "다시 테스트" : "테스트 알림 보내기"}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className={`${styles.btn} ${styles.ghost}`}
+                  disabled={busy || !state}
+                  onClick={() => void setEnabled(false)}
+                >
+                  알림 끄기
+                </button>
+              </>
             )}
+          </div>
+          <div className={styles.acts}>
             <button
               type="button"
               className={`${styles.btn} ${styles.ghost}`}
@@ -303,10 +307,12 @@ export function RolesStep({
       <Coach art={bellArt}>
         <b>알아 두세요</b>
         <ul className={styles.dots}>
+          <li>테스트 알림은 이 컴퓨터 화면 구석에 Chrome 알림으로 떠요.</li>
           <li>Chrome이 완전히 꺼져 있으면 알림이 오지 않아요.</li>
           <li>절전이나 방해 금지 모드에서는 늦거나 막힐 수 있어요.</li>
           <li>
-            알림이 안 보여도 확장 아이콘의 숫자와 새 공고 탭에서 볼 수 있어요.
+            알림이 안 보여도 확장 아이콘의 숫자와 관리 페이지 ‘지원 공고’의 새
+            공고 목록에서 볼 수 있어요.
           </li>
         </ul>
       </Coach>

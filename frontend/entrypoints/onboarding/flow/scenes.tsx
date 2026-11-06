@@ -85,7 +85,7 @@ function SampleWindow({
 export function FillScene() {
   return (
     <SampleWindow
-      title="가상 지원서"
+      title="가상 지원서 (예시)"
       rows={
         <>
           {sampleRows.map(([label, value]) => (
@@ -122,7 +122,7 @@ export function FillScene() {
 export function ImportScene() {
   return (
     <SampleWindow
-      title="써 둔 지원서"
+      title="써 둔 지원서 (예시)"
       rows={[...sampleRows, ["전공", "컴퓨터공학"] as const].map(
         ([label, value]) => (
           <div key={label} className={`${styles.row} ${styles.ok}`}>

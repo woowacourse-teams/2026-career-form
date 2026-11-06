@@ -408,12 +408,12 @@ export function QuickStart({
         className={summary ? styles.primary : undefined}
         type="button"
         disabled={busy}
-        aria-label="지금 자동 기입 사용하기"
+        aria-label="사용법으로 돌아가기"
         onClick={() => void proceed("done")}
       >
-        지금 자동 기입 사용 <span aria-hidden="true">↗</span>
+        사용법으로 돌아가기
       </button>
-      <span className={styles.tag}>이 브라우저에 저장</span>
+      <span className={styles.tag}>입력한 내용은 이 브라우저에 저장돼요</span>
     </div>
   );
   const counting = step !== "overview" && !returnTo;
