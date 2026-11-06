@@ -1,4 +1,5 @@
 import { vi } from "vitest";
+import type { JobCategoriesView } from "../../../src/job-postings/job-roles";
 import type { PushClient } from "../../../src/job-postings/push-client";
 import type { PushStateView } from "../../../src/job-postings/push-messages";
 import { createEmptyProfile, type Profile } from "../../../src/profile/model";
@@ -42,7 +43,7 @@ export const registeredState: PushStateView = {
   roles: [],
 };
 
-export const categoriesView = {
+export const categoriesView: JobCategoriesView = {
   categories: {
     version: 1,
     categories: [
@@ -86,7 +87,7 @@ export function createPushClient(initial: PushStateView = registeredState) {
       return state;
     }),
     inbox: vi.fn(async () => []),
-    categories: vi.fn(async () => categoriesView),
+    categories: vi.fn(async (): Promise<JobCategoriesView> => categoriesView),
     subscribe: vi.fn(() => () => {}),
   } satisfies PushClient;
   return client;

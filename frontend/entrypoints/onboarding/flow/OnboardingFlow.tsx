@@ -5,8 +5,10 @@ import type { PushClient } from "../../../src/job-postings/push-client";
 import { useProfileEditor } from "../../../src/profile/hooks/use-profile-editor";
 import type { ProfileRepository } from "../../../src/profile/profile-repository";
 import logo from "../../../site/landing/assets/logo.webp";
+import { AlertsGuideStep } from "./AlertsGuideStep";
 import { BasicStep } from "./BasicStep";
 import { ProgressRail } from "./ProgressRail";
+import { RolesStep } from "./RolesStep";
 import {
   ONBOARDING_STEPS,
   STEP_LABELS,
@@ -31,6 +33,7 @@ export interface OnboardingFlowProps {
 /** The six first-install steps in one line, resumed from the stored step. */
 export function OnboardingFlow({
   repository,
+  pushClient,
   track: injectedTrack,
   stepStore,
   onOpenProfile,
@@ -146,6 +149,20 @@ export function OnboardingFlow({
               busy={busy}
               saved={editor.saveStatus === "saved"}
               onBack={back}
+              onNext={next}
+            />
+          ) : step === "roles" ? (
+            <RolesStep
+              client={pushClient}
+              track={track}
+              heading={heading}
+              onBack={() => back?.()}
+              onNext={next}
+            />
+          ) : step === "alerts" ? (
+            <AlertsGuideStep
+              heading={heading}
+              onBack={() => back?.()}
               onNext={next}
             />
           ) : (

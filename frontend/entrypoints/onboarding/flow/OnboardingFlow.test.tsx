@@ -161,3 +161,23 @@ it("프로필을 불러오지 못하면 알리고 입력 칸을 보이지 않는
   );
   expect(screen.queryByLabelText("성")).toBeNull();
 });
+
+it("이메일 다음은 직무 선택, 그다음은 알림 안내로 이어진다", async () => {
+  renderFlow({ step: "email" });
+  await screen.findByLabelText("이메일");
+  fireEvent.click(screen.getByRole("button", { name: "건너뛰기" }));
+  expect(
+    await screen.findByRole("heading", {
+      level: 1,
+      name: "어떤 공고를 받을까요?",
+    }),
+  ).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "다음" }));
+  expect(
+    await screen.findByRole("heading", {
+      level: 1,
+      name: "새 공고가 뜨면 알려드려요",
+    }),
+  ).toBeVisible();
+  expect(current()).toHaveTextContent("알림 안내");
+});
