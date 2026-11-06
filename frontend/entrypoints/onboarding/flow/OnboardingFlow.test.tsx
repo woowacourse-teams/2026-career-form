@@ -1,5 +1,4 @@
 import {
-  act,
   fireEvent,
   render,
   screen,
@@ -29,19 +28,12 @@ function renderFlow(
   const track = options.track ?? vi.fn();
   const onOpenProfile = vi.fn();
   const onOpenPostings = vi.fn();
-  const profileListeners: (() => void)[] = [];
   render(
     <OnboardingFlow
       repository={repository}
       pushClient={createPushClient()}
       track={track}
       stepStore={steps.store}
-      watchProfile={(listener) => {
-        profileListeners.push(listener);
-        return () => {
-          profileListeners.splice(profileListeners.indexOf(listener), 1);
-        };
-      }}
       onOpenProfile={onOpenProfile}
       onOpenPostings={onOpenPostings}
     />,
@@ -52,7 +44,6 @@ function renderFlow(
     track,
     onOpenProfile,
     onOpenPostings,
-    profileListeners,
   };
 }
 const rail = () => screen.getByRole("navigation", { name: "진행 상황" });
@@ -196,23 +187,13 @@ it("이메일 다음은 직무 선택, 그다음은 알림 안내로 이어진�
   expect(current()).toHaveTextContent("알림 안내");
 });
 
-it("Greeting 단계에서만 프로필 변경을 지켜보다가 가져오기가 저장되면 이어서 진행한다", async () => {
-  const { profileListeners, steps, track } = renderFlow({ step: "alerts" });
-  await screen.findByRole("heading", { level: 1 });
-  expect(profileListeners).toHaveLength(0);
-  for (let i = 0; i < 3; i += 1)
-    fireEvent.click(screen.getByRole("button", { name: "다음" }));
+it("Greeting 단계는 기다리지 않고 다음으로 사용법에 가며 완료를 기록한다", async () => {
+  const { steps, track } = renderFlow({ step: "greeting" });
   expect(
     await screen.findByRole("heading", {
       level: 1,
-      name: "Greeting 지원서를 쓴 적이 있나요?",
+      name: "혹시 모든 인적사항을 입력하기 번거로우신가요?",
     }),
-  ).toBeVisible();
-  expect(profileListeners).toHaveLength(1);
-  expect(screen.getByRole("button", { name: "건너뛰기" })).toBeVisible();
-  await act(async () => profileListeners[0]());
-  expect(
-    await screen.findByText(/가져왔어요. 프로필에 저장했어요./),
   ).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: "다음" }));
   expect(
@@ -221,8 +202,7 @@ it("Greeting 단계에서만 프로필 변경을 지켜보다가 가져오기가
       name: "이제 지원서에서 써 보세요",
     }),
   ).toBeVisible();
-  expect(profileListeners).toHaveLength(0);
-  expect(steps.written).toEqual(["greeting", "usage"]);
+  expect(steps.written).toEqual(["usage"]);
   expect(track).toHaveBeenCalledWith("onboarding_completed", {
     surface: "extension_onboarding",
   });

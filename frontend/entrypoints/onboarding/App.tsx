@@ -1,11 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { browser } from "wxt/browser";
 import type { TrackEvent } from "../../src/analytics/events";
 import type { ProfileRepository } from "../../src/profile/profile-repository";
-import {
-  ChromeProfileStorage,
-  PROFILE_STORAGE_KEY,
-} from "../../src/storage/chrome-profile-storage";
+import { ChromeProfileStorage } from "../../src/storage/chrome-profile-storage";
 import { trackExtensionEvent } from "../../src/analytics/extension-tracker";
 import {
   pushClient as defaultPushClient,
@@ -25,27 +21,16 @@ export function extensionSiteUrl(path: string): string {
     : path;
 }
 
-// Tells the Greeting step that an import saved the profile from another tab.
-function watchStoredProfile(listener: () => void): () => void {
-  const onChanged = (changes: Record<string, unknown>, area: string) => {
-    if (area === "local" && PROFILE_STORAGE_KEY in changes) listener();
-  };
-  browser.storage.onChanged.addListener(onChanged);
-  return () => browser.storage.onChanged.removeListener(onChanged);
-}
-
 export function App({
   repository: injectedRepository,
   track = trackExtensionEvent,
   pushClient = defaultPushClient,
   stepStore: injectedStepStore,
-  watchProfile = watchStoredProfile,
 }: {
   repository?: ProfileRepository;
   track?: TrackEvent;
   pushClient?: PushClient;
   stepStore?: StepStore;
-  watchProfile?: (listener: () => void) => () => void;
 } = {}) {
   const repository = useMemo(
     () => injectedRepository ?? new ChromeProfileStorage(),
@@ -77,7 +62,6 @@ export function App({
         pushClient={pushClient}
         track={track}
         stepStore={stepStore}
-        watchProfile={watchProfile}
         onOpenProfile={openProfile}
         onOpenPostings={openPostings}
       />

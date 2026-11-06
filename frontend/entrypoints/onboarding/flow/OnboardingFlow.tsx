@@ -22,8 +22,6 @@ export interface OnboardingFlowProps {
   pushClient: PushClient;
   track: TrackEvent;
   stepStore: StepStore;
-  /** Calls back when the stored profile changes; returns the unsubscribe. */
-  watchProfile(listener: () => void): () => void;
   onOpenProfile(): void;
   onOpenPostings(): void;
 }
@@ -34,7 +32,6 @@ export function OnboardingFlow({
   pushClient,
   track: injectedTrack,
   stepStore,
-  watchProfile,
   onOpenProfile,
   onOpenPostings,
 }: OnboardingFlowProps) {
@@ -46,7 +43,6 @@ export function OnboardingFlow({
   const editor = useProfileEditor(trackedRepository);
   const [step, setStep] = useState<OnboardingStep>();
   const [pending, setPending] = useState(false);
-  const [imported, setImported] = useState(false);
   // The one-question-at-a-time registration for everything past the basics.
   const [extra, setExtra] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null);
@@ -69,16 +65,7 @@ export function OnboardingFlow({
     viewed.current = step;
     track("onboarding_step_viewed", { surface, step });
   }, [step, track]);
-  // Only the Greeting step waits for an import saved from another tab; the
-  // editor then reloads so later saves do not conflict with it.
   const reloadLatest = editor.reloadLatest;
-  useEffect(() => {
-    if (step !== "greeting") return;
-    return watchProfile(() => {
-      setImported(true);
-      void reloadLatest();
-    });
-  }, [step, watchProfile, reloadLatest]);
   const ready = editor.loadStatus === "ready" && step !== undefined;
   useEffect(() => {
     if (!ready || !moved.current || extra) return;
@@ -202,7 +189,6 @@ export function OnboardingFlow({
           ) : step === "greeting" ? (
             <GreetingStep
               heading={heading}
-              imported={imported}
               onBack={() => back?.()}
               onNext={next}
             />

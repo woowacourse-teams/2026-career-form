@@ -1,15 +1,15 @@
 import { createRef } from "react";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
+import { GREETING_EXAMPLE_COMPANIES } from "./greeting-companies";
 import { GreetingStep } from "./GreetingStep";
 
-function renderStep(imported = false) {
+function renderStep() {
   const onBack = vi.fn();
   const onNext = vi.fn();
   render(
     <GreetingStep
       heading={createRef<HTMLHeadingElement>()}
-      imported={imported}
       onBack={onBack}
       onNext={onNext}
     />,
@@ -17,81 +17,76 @@ function renderStep(imported = false) {
   return { onBack, onNext };
 }
 
-it("예시 회사와 세 줄 요약으로 Greeting 가져오기를 안내한다", () => {
+it("인적사항 입력이 번거로우면 Greeting에서 가져올 수 있다고 묻는다", () => {
   renderStep();
   expect(
     screen.getByRole("heading", {
       level: 1,
-      name: "Greeting 지원서를 쓴 적이 있나요?",
+      name: "혹시 모든 인적사항을 입력하기 번거로우신가요?",
     }),
   ).toBeVisible();
   expect(
-    within(
-      screen.getByRole("list", {
-        name: "Greeting으로 지원서를 받는 회사 예시",
-      }),
-    )
-      .getAllByRole("listitem")
-      .map((item) => item.textContent),
-  ).toEqual(["카카오게임즈", "컬리", "그 밖의 Greeting 지원서"]);
-  expect(
-    within(screen.getByRole("list", { name: "가져오는 순서" }))
-      .getAllByRole("listitem")
-      .map((item) => item.textContent),
-  ).toEqual([
-    "그 회사 채용 페이지에서 써 둔 지원서를 열어요",
-    "지원서 옆 Career Form 창의 톱니바퀴에서 ‘프로필 가져오기’",
-    "가져올 항목을 고르고 저장하면 끝",
+    screen.getByText(
+      "과거에 Greeting에서 입력한 적이 있다면 한 번에 가져올 수 있어요!",
+    ),
+  ).toBeVisible();
+});
+
+it("Greeting 채용 솔루션을 쓰는 회사를 큰 회사부터 예시로 보이고 보장이 아니라고 알린다", () => {
+  renderStep();
+  const examples = screen.getByText(
+    /Greeting 채용 솔루션을 쓰는 회사 예:/,
+  ).parentElement!;
+  expect(examples).toHaveTextContent(
+    `Greeting 채용 솔루션을 쓰는 회사 예: ${GREETING_EXAMPLE_COMPANIES.join(", ")} 등`,
+  );
+  expect(GREETING_EXAMPLE_COMPANIES.slice(0, 4)).toEqual([
+    "한화오션",
+    "현대오토에버",
+    "CJ올리브영",
+    "하이브",
   ]);
+  expect(GREETING_EXAMPLE_COMPANIES).toHaveLength(16);
   expect(
-    screen.getByText(
-      "예시 화면이에요. 목록에 없는 회사도 될 수 있고, 가져올 항목은 저장 전에 직접 골라요. 나중에 지원서 화면에서도 할 수 있어요.",
-    ),
+    screen.getByText(/목록에 없는 회사도 Greeting 지원서라면 될 수 있어요/),
   ).toBeVisible();
 });
 
-it("Greeting이 무엇인지 한 줄로 설명하고 회사 이름은 고르는 버튼이 아니다", () => {
+it("가져오는 순서를 세 줄로 보이고 장면과 함께 지금 단계를 표시한다", () => {
   renderStep();
-  expect(
-    screen.getByText(
-      /Greeting은 여러 회사가 지원서를 받을 때 쓰는 채용 시스템이에요/,
-    ),
-  ).toBeVisible();
-  expect(screen.queryByRole("button", { name: "카카오게임즈" })).toBeNull();
+  const steps = within(
+    screen.getByRole("list", { name: "가져오는 순서" }),
+  ).getAllByRole("listitem");
+  expect(steps.map((item) => item.textContent)).toEqual([
+    "써 둔 Greeting 지원서에서 Career Form 창을 열어요",
+    "톱니바퀴에서 ‘프로필 가져오기’를 눌러요",
+    "가져올 항목을 확인하고 저장하면 끝",
+  ]);
+  expect(steps[0]).toHaveAttribute("aria-current", "step");
 });
 
-it("가져오기 전에는 기다린다고 알리고 건너뛸 수 있다", () => {
+it("기다리거나 확인하지 않고 다음으로 넘어가며 나중에 해도 된다고 알린다", () => {
   const { onBack, onNext } = renderStep();
-  expect(screen.getByRole("status")).toHaveTextContent(
-    "지원서 탭에서 저장하면 여기에 알려 드려요.",
-  );
-  fireEvent.click(screen.getByRole("button", { name: "이전" }));
-  fireEvent.click(screen.getByRole("button", { name: "건너뛰기" }));
-  expect(onBack).toHaveBeenCalledTimes(1);
-  expect(onNext).toHaveBeenCalledTimes(1);
-  expect(screen.queryByRole("button", { name: "다음" })).toBeNull();
-});
-
-it("다른 탭에서 가져오기를 저장하면 가져왔다고 알리고 다음으로 넘어가게 한다", () => {
-  const { onNext } = renderStep(true);
-  expect(screen.getByRole("status")).toHaveTextContent(
-    "가져왔어요. 프로필에 저장했어요. 다음으로 넘어가세요.",
-  );
-  fireEvent.click(screen.getByRole("button", { name: "다음" }));
-  expect(onNext).toHaveBeenCalledTimes(1);
+  expect(
+    screen.getByText(
+      /지금 하지 않아도 돼요. 나중에 지원서 화면에서 언제든 할 수 있어요./,
+    ),
+  ).toBeVisible();
   expect(screen.queryByRole("button", { name: "건너뛰기" })).toBeNull();
+  expect(screen.queryByText(/알려 드려요|가져왔어요/)).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "다음" }));
+  fireEvent.click(screen.getByRole("button", { name: "이전" }));
+  expect(onNext).toHaveBeenCalledTimes(1);
+  expect(onBack).toHaveBeenCalledTimes(1);
 });
 
-it("반복 재생 장면을 멈추고 다시 재생할 수 있다", () => {
+it("반복 장면을 멈추고 다시 재생할 수 있고 반복된다는 문구는 없다", () => {
   renderStep();
+  expect(screen.queryByText(/계속 반복돼요/)).toBeNull();
   const scene = screen.getByTestId("import-scene");
   expect(scene).not.toHaveAttribute("data-paused");
-  const pause = screen.getByRole("button", { name: "일시정지" });
-  expect(pause).toHaveAttribute("aria-pressed", "false");
-  fireEvent.click(pause);
+  fireEvent.click(screen.getByRole("button", { name: "일시정지" }));
   expect(scene).toHaveAttribute("data-paused", "true");
-  const resume = screen.getByRole("button", { name: "계속 재생" });
-  expect(resume).toHaveAttribute("aria-pressed", "true");
-  fireEvent.click(resume);
+  fireEvent.click(screen.getByRole("button", { name: "계속 재생" }));
   expect(scene).not.toHaveAttribute("data-paused");
 });

@@ -31,7 +31,7 @@ it("지원서에서 쓰는 세 단계와 반복 재생 장면을 보인다", () 
     "지원서 옆 Career Form 창에서 ‘자동 기입’을 누르세요",
     "채워진 내용을 확인하고 직접 제출하세요",
   ]);
-  expect(screen.getByText("사용법 미리보기 · 계속 반복돼요")).toBeVisible();
+  expect(screen.queryByText(/계속 반복돼요/)).toBeNull();
   expect(
     screen.getByText(/동작을 설명하는 예시예요. 실제 화면은 지원서마다 달라요/),
   ).toBeVisible();
@@ -42,6 +42,15 @@ it("지금 상태로도 쓸 수 있고 탭을 닫아도 된다고 알린다", ()
   expect(
     screen.getByText(/이름과 이메일만으로도 쓸 수 있어요.*이 탭은 닫아도 돼요/),
   ).toBeVisible();
+});
+
+it("장면이 처음에는 지원서 열기 단계를 표시한다", () => {
+  renderStep();
+  const steps = within(
+    screen.getByRole("list", { name: "사용 순서" }),
+  ).getAllByRole("listitem");
+  expect(steps[0]).toHaveAttribute("aria-current", "step");
+  expect(steps[1]).not.toHaveAttribute("aria-current");
 });
 
 it("반복 재생 장면을 멈추고 다시 재생할 수 있다", () => {
@@ -60,6 +69,17 @@ it("추가 정보 더 등록하기가 가장 먼저 눈에 띄는 버튼으로 �
     screen.getByRole("button", { name: "추가 정보 더 등록하기" }),
   );
   expect(onExtra).toHaveBeenCalledTimes(1);
+});
+
+it("전체 프로필 편집과 새 공고 보기는 한 줄의 두 칸, 이전은 따로 둔다", () => {
+  renderStep();
+  const profile = screen.getByRole("button", { name: "전체 프로필 편집" });
+  const postings = screen.getByRole("button", { name: "새 공고 보기" });
+  expect(profile.parentElement).toBe(postings.parentElement);
+  expect(profile.parentElement).toHaveAttribute("data-layout", "pair");
+  expect(screen.getByRole("button", { name: "이전" }).parentElement).not.toBe(
+    profile.parentElement,
+  );
 });
 
 it("전체 프로필 편집과 새 공고 보기로 넘어가고 이전으로 돌아간다", () => {

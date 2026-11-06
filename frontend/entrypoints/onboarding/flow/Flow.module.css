@@ -42,20 +42,11 @@
 .flow *::after {
   box-sizing: border-box;
 }
-/* Margins only: padding belongs to the component classes below, which a
-   reset with this specificity would otherwise override. */
-.flow h1,
-.flow h2,
-.flow p,
-.flow ol,
-.flow ul,
-.flow dl,
-.flow dd,
-.flow figure {
+/* Zero-specificity resets, so component classes always win over them. */
+:where(.flow) :is(h1, h2, p, ol, ul, dl, dd, figure) {
   margin: 0;
 }
-.flow ol,
-.flow ul {
+:where(.flow) :is(ol, ul) {
   padding-left: 0;
   list-style: none;
 }
@@ -506,108 +497,6 @@
   border-color: var(--action);
   box-shadow: 0 0 0 3px rgb(29 111 165 / 20%);
 }
-.win {
-  overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: 22px;
-  background: var(--surface);
-  box-shadow: var(--clay);
-}
-.winbar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--line);
-  font-size: 12px;
-  color: var(--sub);
-}
-.winbar i {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--line-strong);
-}
-.winbar span {
-  margin-left: 8px;
-}
-.winbody {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 190px;
-}
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-width: 0;
-  padding: 20px;
-}
-.ft {
-  font-size: 13px;
-  font-weight: 800;
-  color: var(--strong);
-}
-.pnl {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 16px;
-  border-left: 1px solid var(--line);
-  background: var(--page);
-  font-size: 12px;
-  color: var(--sub);
-}
-.ph {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 800;
-  color: var(--strong);
-}
-.ph img {
-  width: 24px;
-  height: 24px;
-  border-radius: 7px;
-}
-.ph svg {
-  width: 18px;
-  height: 18px;
-  margin-left: auto;
-  color: var(--action-strong);
-}
-.fill {
-  min-height: 40px;
-  display: grid;
-  place-items: center;
-  border-radius: 999px;
-  background: var(--action);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 700;
-}
-.menu {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 6px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--surface);
-  box-shadow: 0 12px 24px -14px rgb(17 58 92 / 45%);
-}
-.menu span {
-  padding: 8px 10px;
-  border-radius: 8px;
-  font-weight: 600;
-  color: var(--text);
-}
-.menu .hi {
-  background: var(--tint);
-  color: var(--strong);
-  box-shadow: 0 0 0 2px var(--action);
-}
 
 /* Role selection */
 .pill {
@@ -720,21 +609,7 @@
   background: var(--action);
   color: #fff;
 }
-.examples {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 6px;
-  font-size: 14px;
-  color: var(--sub);
-}
-.examples::before {
-  content: "예:";
-  font-weight: 700;
-  color: var(--strong);
-}
-.examples li:not(:last-child)::after {
-  content: ",";
-}
+
 .note {
   padding: 12px 16px;
   border-radius: 14px;
@@ -885,7 +760,7 @@
   text-decoration: line-through;
 }
 
-/* Numbered how-to and waiting line */
+/* Numbered how-to */
 .how {
   display: flex;
   flex-direction: column;
@@ -918,386 +793,6 @@
   display: block;
   font-size: 14px;
   color: var(--sub);
-}
-.wait {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
-  border: 1px dashed var(--line-strong);
-  border-radius: 14px;
-  font-size: 14px;
-}
-.wait::before {
-  content: "";
-  flex: none;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--accent);
-  animation: pulse 1.6s ease-in-out infinite;
-}
-.wait.imported {
-  border-style: solid;
-  border-color: var(--ok-line);
-  background: var(--ok-soft);
-  font-weight: 700;
-  color: var(--ok);
-}
-.wait.imported::before {
-  background: var(--ok);
-  animation: none;
-}
-@keyframes pulse {
-  50% {
-    opacity: 0.25;
-  }
-}
-
-/* Looping scenes: 9 seconds per cycle */
-.loopbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--sub);
-}
-.cur {
-  position: absolute;
-  z-index: 2;
-  width: 18px;
-  height: 24px;
-}
-.loop .row b {
-  animation: fillRow 9s linear infinite;
-}
-.loop .rev b {
-  animation-name: reviewRow;
-}
-.loop .row:nth-child(2) b {
-  animation-delay: 0.45s;
-}
-.loop .row:nth-child(3) b {
-  animation-delay: 0.9s;
-}
-.loop .row:nth-child(4) b {
-  animation-delay: 1.35s;
-}
-.loop .row:nth-child(5) b {
-  animation-delay: 1.8s;
-}
-.loop .row:nth-child(6) b {
-  animation-delay: 2.25s;
-}
-.loop .fill {
-  animation: press 9s linear infinite;
-}
-.loop .cur {
-  left: 140px;
-  top: 74px;
-  animation: moveToFill 9s ease-in-out infinite;
-}
-.stbox {
-  position: relative;
-  min-height: 38px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--strong);
-}
-.stbox span {
-  position: absolute;
-  inset: 0;
-}
-.loop .st1 {
-  animation: showFilling 9s linear infinite;
-}
-.loop .st2 {
-  color: var(--ok);
-  animation: showDone 9s linear infinite;
-}
-.paused * {
-  animation-play-state: paused !important;
-}
-@keyframes fillRow {
-  0%,
-  14% {
-    border-color: var(--line);
-    background: var(--surface);
-    color: transparent;
-  }
-  18%,
-  82% {
-    border-color: var(--ok-line);
-    background: var(--ok-soft);
-    color: var(--strong);
-  }
-  88%,
-  100% {
-    border-color: var(--line);
-    background: var(--surface);
-    color: transparent;
-  }
-}
-@keyframes reviewRow {
-  0%,
-  14% {
-    border-color: var(--line);
-    background: var(--surface);
-    color: transparent;
-  }
-  18%,
-  82% {
-    border-color: var(--action);
-    background: var(--tint);
-    color: var(--strong);
-  }
-  88%,
-  100% {
-    border-color: var(--line);
-    background: var(--surface);
-    color: transparent;
-  }
-}
-@keyframes moveToFill {
-  0% {
-    transform: translate(-150px, 130px);
-    opacity: 0;
-  }
-  3% {
-    opacity: 1;
-  }
-  10%,
-  84% {
-    transform: translate(0, 0);
-    opacity: 1;
-  }
-  90%,
-  100% {
-    transform: translate(0, 0);
-    opacity: 0;
-  }
-}
-@keyframes press {
-  0%,
-  10% {
-    transform: scale(1);
-  }
-  12% {
-    transform: scale(0.93);
-  }
-  14%,
-  100% {
-    transform: scale(1);
-  }
-}
-@keyframes showFilling {
-  0%,
-  13% {
-    opacity: 0;
-  }
-  15%,
-  52% {
-    opacity: 1;
-  }
-  54%,
-  100% {
-    opacity: 0;
-  }
-}
-@keyframes showDone {
-  0%,
-  54% {
-    opacity: 0;
-  }
-  56%,
-  84% {
-    opacity: 1;
-  }
-  88%,
-  100% {
-    opacity: 0;
-  }
-}
-
-/* Greeting import scene: gear, menu, saved — three seconds each */
-.caps {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  counter-reset: c;
-}
-.caps li {
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
-  gap: 12px;
-  align-items: center;
-  padding: 10px 14px;
-  border: 1.5px solid transparent;
-  border-radius: 14px;
-  font-weight: 700;
-  color: var(--sub);
-  counter-increment: c;
-}
-.caps li::before {
-  content: counter(c);
-  width: 28px;
-  height: 28px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--tint);
-  color: var(--action-strong);
-  font-size: 13px;
-  font-weight: 800;
-}
-.gloop .caps li {
-  animation: caption 9s linear infinite;
-}
-.gloop .caps li:nth-child(2) {
-  animation-delay: 3s;
-}
-.gloop .caps li:nth-child(3) {
-  animation-delay: 6s;
-}
-.gbox {
-  position: relative;
-  min-height: 132px;
-}
-.gbox > * {
-  position: absolute;
-  inset: 0 0 auto;
-}
-.got {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 10px 12px;
-  border: 1px solid var(--ok-line);
-  border-radius: 12px;
-  background: var(--ok-soft);
-  font-weight: 600;
-  color: var(--strong);
-}
-.got b {
-  color: var(--ok);
-}
-.gloop .menu {
-  animation: showMenu 9s linear infinite;
-}
-.gloop .got {
-  animation: showSaved 9s linear infinite;
-}
-.gloop .ph svg {
-  animation: gear 9s linear infinite;
-}
-.gloop .cur {
-  left: 0;
-  top: 0;
-  animation: moveToMenu 9s ease-in-out infinite;
-}
-@keyframes caption {
-  0%,
-  32% {
-    border-color: var(--action);
-    background: var(--soft);
-    color: var(--strong);
-  }
-  34%,
-  100% {
-    border-color: transparent;
-    background: transparent;
-    color: var(--sub);
-  }
-}
-@keyframes showMenu {
-  0%,
-  31% {
-    opacity: 0;
-  }
-  34%,
-  64% {
-    opacity: 1;
-  }
-  67%,
-  100% {
-    opacity: 0;
-  }
-}
-@keyframes showSaved {
-  0%,
-  66% {
-    opacity: 0;
-  }
-  69%,
-  96% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-  }
-}
-@keyframes gear {
-  0%,
-  20% {
-    transform: scale(1);
-  }
-  26% {
-    transform: scale(1.4);
-  }
-  32%,
-  100% {
-    transform: scale(1);
-  }
-}
-@keyframes moveToMenu {
-  0% {
-    transform: translate(40px, 150px);
-    opacity: 0;
-  }
-  4% {
-    opacity: 1;
-  }
-  22%,
-  34% {
-    transform: translate(158px, 24px);
-    opacity: 1;
-  }
-  48%,
-  62% {
-    transform: translate(128px, 78px);
-    opacity: 1;
-  }
-  68%,
-  100% {
-    transform: translate(128px, 78px);
-    opacity: 0;
-  }
-}
-
-/* Reduced motion: no playback, each scene rests on its last frame. */
-@media (prefers-reduced-motion: reduce) {
-  .loop *,
-  .gloop *,
-  .wait::before {
-    animation: none !important;
-  }
-  .loop .row b {
-    border-color: var(--ok-line);
-    background: var(--ok-soft);
-  }
-  .loop .rev b {
-    border-color: var(--action);
-    background: var(--tint);
-  }
-  .loop .st1,
-  .loop .cur,
-  .gloop .menu,
-  .gloop .cur {
-    display: none;
-  }
 }
 
 @media (max-width: 720px) {
@@ -1356,9 +851,7 @@
   .bub::before {
     display: none;
   }
-  .winbody {
-    grid-template-columns: minmax(0, 1fr);
-  }
+
   .grp {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -1375,5 +868,108 @@
     gap: 2px;
     padding: 8px 10px;
     font-size: 13px;
+  }
+}
+
+/* Steps 5 and 6: the scene column is wider than the text column. */
+.wideScene {
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.3fr);
+  align-items: start;
+}
+.examples {
+  display: grid;
+  gap: 4px;
+  font-size: 14px;
+}
+.examples b {
+  color: var(--strong);
+}
+/* Step list kept in step with the scene: the current one is outlined. */
+.caps {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  counter-reset: c;
+}
+.caps li {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 10px 14px;
+  border: 1.5px solid transparent;
+  border-radius: 14px;
+  font-weight: 700;
+  color: var(--sub);
+  counter-increment: c;
+  transition:
+    border-color 0.25s ease,
+    background-color 0.25s ease,
+    color 0.25s ease;
+}
+.caps li::before {
+  content: counter(c);
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--tint);
+  color: var(--action-strong);
+  font-size: 13px;
+  font-weight: 800;
+}
+.caps li[aria-current="step"],
+.how li[aria-current="step"] {
+  border-color: var(--action);
+  background: var(--soft);
+  color: var(--strong);
+}
+.how li {
+  padding: 8px 12px;
+  border: 1.5px solid transparent;
+  border-radius: 14px;
+  transition:
+    border-color 0.25s ease,
+    background-color 0.25s ease;
+}
+/* Step 6 actions: back on the left, the two pages and the main action on
+   the right; stacked with the main action first on narrow screens. */
+.endBar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.back {
+  margin-right: auto;
+}
+.pair {
+  display: flex;
+  gap: 10px;
+}
+
+/* After the step 5 and 6 rules above, so these narrow overrides win. */
+@media (max-width: 720px) {
+  .wideScene {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .endBar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .endMain {
+    order: -1;
+  }
+  .pair {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .pair .btn {
+    padding: 0 12px;
+  }
+  .back {
+    order: 1;
+    justify-self: start;
   }
 }
