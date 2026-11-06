@@ -187,7 +187,8 @@
   width: 100%;
   max-width: 1088px;
   margin: 0 auto;
-  padding: 32px 24px 56px;
+  /* The bottom leaves room for the pinned step bar. */
+  padding: 32px 24px 136px;
   display: flex;
   flex-direction: column;
   gap: 28px;
@@ -785,7 +786,7 @@
     height: 56px;
   }
   .wrap {
-    padding: 20px 16px 40px;
+    padding: 20px 16px 112px;
     gap: 20px;
   }
   .cap {
@@ -918,38 +919,61 @@
     border-color 0.25s ease,
     background-color 0.25s ease;
 }
-/* Step 6 actions: back on the left, the postings page and the main action on
-   the right; stacked with the main action first on narrow screens. */
-.endBar {
+/* Step moves pinned to the bottom of the window (StepBar): 이전 and 다음 keep
+   one place on every step, on the edges of the content column. */
+.bar {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 10;
+  padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line);
+  background: rgb(242 250 255 / 92%);
+  box-shadow: 0 -14px 28px -24px rgb(17 58 92 / 45%);
+  backdrop-filter: blur(12px);
+}
+.barIn {
+  max-width: 1088px;
+  margin: 0 auto;
+  padding: 0 24px;
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 10px;
 }
 .back {
   margin-right: auto;
 }
-/* Steps 5 and 6 end below a large scene; a rule keeps the actions apart. */
-.divided {
-  margin-top: 4px;
-  padding-top: 20px;
-  border-top: 1px solid var(--line);
+/* 다음 and 건너뛰기 share one width, so the main move keeps its size too. */
+.barIn > .btn:not(.back) {
+  min-width: 120px;
 }
 
-/* After the step 5 and 6 rules above, so these narrow overrides win. */
+/* After the rules above, so these narrow overrides win. */
 @media (max-width: 720px) {
   .wideScene {
     grid-template-columns: minmax(0, 1fr);
   }
-  .endBar {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
+  .bar {
+    padding: 10px 0 calc(10px + env(safe-area-inset-bottom));
   }
-  .endMain {
+  .barIn {
+    padding: 0 16px;
+  }
+}
+/* Step 6 on a narrow window: its third move takes a row above, so 이전 and
+   the main action stay where 이전 and 다음 are on the other steps. */
+@media (max-width: 600px) {
+  .wrap {
+    padding-bottom: 168px;
+  }
+  .barIn {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+  .alt {
     order: -1;
-  }
-  .back {
-    order: 1;
-    justify-self: start;
+    flex: 1 0 100%;
   }
 }

@@ -11,6 +11,7 @@ import {
 import { osGuidance } from "../../../src/job-postings/VisibilityCheck";
 import bellArt from "../../../site/landing/assets/C4.webp";
 import { Coach } from "./Coach";
+import { StepBar } from "./StepBar";
 import styles from "./Flow.module.css";
 
 const surface = "extension_onboarding";
@@ -277,7 +278,6 @@ export function RolesStep({
           </p>
         )}
         <div className={styles.foot}>
-          {/* Alert controls on the left, step navigation on the right. */}
           <div className={`${styles.acts} ${styles.start}`}>
             {off ? (
               <button
@@ -311,22 +311,6 @@ export function RolesStep({
               </>
             )}
           </div>
-          <div className={styles.acts}>
-            <button
-              type="button"
-              className={`${styles.btn} ${styles.ghost}`}
-              onClick={onBack}
-            >
-              이전
-            </button>
-            <button
-              type="button"
-              className={`${styles.btn} ${styles.pri}`}
-              onClick={onNext}
-            >
-              다음
-            </button>
-          </div>
         </div>
       </section>
       <Coach art={bellArt}>
@@ -341,6 +325,22 @@ export function RolesStep({
           </li>
         </ul>
       </Coach>
+      <StepBar>
+        <button
+          type="button"
+          className={`${styles.btn} ${styles.ghost} ${styles.back}`}
+          onClick={onBack}
+        >
+          이전
+        </button>
+        <button
+          type="button"
+          className={`${styles.btn} ${styles.pri}`}
+          onClick={onNext}
+        >
+          다음
+        </button>
+      </StepBar>
     </div>
   );
 }

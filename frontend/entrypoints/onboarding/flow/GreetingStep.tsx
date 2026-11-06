@@ -10,6 +10,7 @@ import {
   sceneStyles,
   useLoopTimeline,
 } from "./scenes";
+import { StepBar } from "./StepBar";
 import styles from "./Flow.module.css";
 
 const captions = [
@@ -94,25 +95,23 @@ export function GreetingStep({
             </div>
           </div>
         </div>
-        <div className={`${styles.foot} ${styles.divided}`}>
-          <div className={styles.acts}>
-            <button
-              type="button"
-              className={`${styles.btn} ${styles.ghost}`}
-              onClick={onBack}
-            >
-              이전
-            </button>
-            <button
-              type="button"
-              className={`${styles.btn} ${styles.pri}`}
-              onClick={onNext}
-            >
-              다음
-            </button>
-          </div>
-        </div>
       </section>
+      <StepBar>
+        <button
+          type="button"
+          className={`${styles.btn} ${styles.ghost} ${styles.back}`}
+          onClick={onBack}
+        >
+          이전
+        </button>
+        <button
+          type="button"
+          className={`${styles.btn} ${styles.pri}`}
+          onClick={onNext}
+        >
+          다음
+        </button>
+      </StepBar>
     </div>
   );
 }

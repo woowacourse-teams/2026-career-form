@@ -9,6 +9,7 @@ import {
   sceneStyles,
   useLoopTimeline,
 } from "./scenes";
+import { StepBar } from "./StepBar";
 import styles from "./Flow.module.css";
 
 const usage = [
@@ -93,37 +94,34 @@ export function UsageStep({
             </div>
           </div>
         </div>
-        <div
-          className={`${styles.endBar} ${styles.divided}`}
-          role="group"
-          aria-label="다음에 할 일"
-        >
-          <button
-            type="button"
-            className={`${styles.btn} ${styles.ghost} ${styles.back}`}
-            data-variant="text"
-            onClick={onBack}
-          >
-            이전
-          </button>
-          <button
-            type="button"
-            className={`${styles.btn} ${styles.outline}`}
-            data-variant="outline"
-            onClick={onOpenPostings}
-          >
-            지금 채용 중인 회사 보기
-          </button>
-          <button
-            type="button"
-            className={`${styles.btn} ${styles.pri} ${styles.endMain}`}
-            data-variant="primary"
-            onClick={onOpenProfile}
-          >
-            전체 프로필 입력하기
-          </button>
-        </div>
       </section>
+      {/* 이전 and the main action sit where 이전 and 다음 do on every step. */}
+      <StepBar label="다음에 할 일">
+        <button
+          type="button"
+          className={`${styles.btn} ${styles.ghost} ${styles.back}`}
+          data-variant="text"
+          onClick={onBack}
+        >
+          이전
+        </button>
+        <button
+          type="button"
+          className={`${styles.btn} ${styles.outline} ${styles.alt}`}
+          data-variant="outline"
+          onClick={onOpenPostings}
+        >
+          지금 채용 중인 회사 보기
+        </button>
+        <button
+          type="button"
+          className={`${styles.btn} ${styles.pri}`}
+          data-variant="primary"
+          onClick={onOpenProfile}
+        >
+          전체 프로필 입력하기
+        </button>
+      </StepBar>
     </div>
   );
 }

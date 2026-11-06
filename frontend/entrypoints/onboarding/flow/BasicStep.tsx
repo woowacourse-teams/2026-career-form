@@ -3,6 +3,7 @@ import type { Profile } from "../../../src/profile/model";
 import clipboardArt from "../../../site/landing/assets/C1.webp";
 import pointerArt from "../../../site/landing/assets/C3.webp";
 import { Coach } from "./Coach";
+import { StepBar } from "./StepBar";
 import styles from "./Flow.module.css";
 
 type UpdateSingle = (
@@ -110,30 +111,29 @@ export function BasicStep({
               </label>
             </div>
           )}
-          <div className={styles.foot}>
-            <p className={saved ? styles.saved : styles.sm} role="status">
-              {saved ? "저장됨" : "입력하면 이 브라우저에 자동 저장돼요."}
-            </p>
-            <div className={styles.acts}>
-              {onBack && (
-                <button
-                  type="button"
-                  className={`${styles.btn} ${styles.ghost}`}
-                  disabled={busy}
-                  onClick={onBack}
-                >
-                  이전
-                </button>
-              )}
+          <p className={saved ? styles.saved : styles.sm} role="status">
+            {saved ? "저장됨" : "입력하면 이 브라우저에 자동 저장돼요."}
+          </p>
+          {/* Inside the form, so Enter in a field still moves on. */}
+          <StepBar>
+            {onBack && (
               <button
-                type="submit"
-                className={`${styles.btn} ${filled ? styles.pri : styles.soft}`}
+                type="button"
+                className={`${styles.btn} ${styles.ghost} ${styles.back}`}
                 disabled={busy}
+                onClick={onBack}
               >
-                {filled ? "다음" : "건너뛰기"}
+                이전
               </button>
-            </div>
-          </div>
+            )}
+            <button
+              type="submit"
+              className={`${styles.btn} ${filled ? styles.pri : styles.soft}`}
+              disabled={busy}
+            >
+              {filled ? "다음" : "건너뛰기"}
+            </button>
+          </StepBar>
         </form>
       </section>
       {step === "name" ? (

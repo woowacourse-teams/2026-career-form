@@ -1,5 +1,6 @@
 import { useState, type RefObject } from "react";
 import logo from "../../../site/landing/assets/logo.webp";
+import { StepBar } from "./StepBar";
 import styles from "./Flow.module.css";
 
 const guides = [
@@ -107,32 +108,30 @@ export function AlertsGuideStep({
             <figure className={styles.fig} aria-hidden="true">
               <Figure index={index} />
             </figure>
-            <div className={styles.foot}>
-              <p className={styles.sm}>
-                예시 화면이에요. 번호나 글을 눌러도 그 단계로 이동해요.
-              </p>
-              <div className={styles.acts}>
-                <button
-                  type="button"
-                  className={`${styles.btn} ${styles.ghost}`}
-                  onClick={() => (index > 0 ? setIndex(index - 1) : onBack())}
-                >
-                  이전
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.btn} ${styles.pri}`}
-                  onClick={() =>
-                    index < guides.length - 1 ? setIndex(index + 1) : onNext()
-                  }
-                >
-                  다음
-                </button>
-              </div>
-            </div>
+            <p className={styles.sm}>
+              예시 화면이에요. 번호나 글을 눌러도 그 단계로 이동해요.
+            </p>
           </div>
         </div>
       </section>
+      <StepBar>
+        <button
+          type="button"
+          className={`${styles.btn} ${styles.ghost} ${styles.back}`}
+          onClick={() => (index > 0 ? setIndex(index - 1) : onBack())}
+        >
+          이전
+        </button>
+        <button
+          type="button"
+          className={`${styles.btn} ${styles.pri}`}
+          onClick={() =>
+            index < guides.length - 1 ? setIndex(index + 1) : onNext()
+          }
+        >
+          다음
+        </button>
+      </StepBar>
     </div>
   );
 }

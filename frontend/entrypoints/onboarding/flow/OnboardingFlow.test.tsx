@@ -208,6 +208,59 @@ it("Greeting 단계는 기다리지 않고 다음으로 사용법에 가며 완�
   });
 });
 
+// The bar is pinned by CSS (measured in a real browser); here every step must
+// put its moves in that one bar, and steps 1 and 2 keep 다음 in their form.
+it("모든 단계가 이전과 다음을 화면 아래의 같은 이동 막대에 둔다", async () => {
+  renderFlow();
+  const bar = () => {
+    const bars = document.querySelectorAll<HTMLElement>("[data-step-bar]");
+    expect(bars).toHaveLength(1);
+    return bars[0];
+  };
+  const moves = () =>
+    within(bar())
+      .getAllByRole("button")
+      .map((button) => button.textContent);
+  const press = (name: string) =>
+    fireEvent.click(within(bar()).getByRole("button", { name }));
+  const reach = (name: string) =>
+    screen.findByRole("heading", { level: 1, name });
+
+  await screen.findByLabelText("성");
+  expect(bar()).toHaveAccessibleName("단계 이동");
+  expect(moves()).toEqual(["건너뛰기"]);
+  expect(
+    within(bar()).getByRole<HTMLButtonElement>("button", { name: "건너뛰기" })
+      .form,
+  ).not.toBeNull();
+  press("건너뛰기");
+  await screen.findByLabelText("이메일");
+  expect(moves()).toEqual(["이전", "건너뛰기"]);
+  press("건너뛰기");
+  await reach("어떤 공고를 받을까요?");
+  expect(moves()).toEqual(["이전", "다음"]);
+  press("다음");
+  for (const title of [
+    "새 공고가 뜨면 알려드려요",
+    "마감 전에 다시 알려드려요",
+    "지원을 마치면 알림이 멈춰요",
+  ]) {
+    await reach(title);
+    expect(moves()).toEqual(["이전", "다음"]);
+    press("다음");
+  }
+  await reach("혹시 모든 인적사항을 입력하기 번거로우신가요?");
+  expect(moves()).toEqual(["이전", "다음"]);
+  press("다음");
+  await reach("이제 지원서에서 써 보세요");
+  expect(bar()).toHaveAccessibleName("다음에 할 일");
+  expect(moves()).toEqual([
+    "이전",
+    "지금 채용 중인 회사 보기",
+    "전체 프로필 입력하기",
+  ]);
+});
+
 it("사용법 단계의 버튼이 전체 프로필과 진행 중인 회사(새 공고 탭)를 열고 단계형 추가 등록은 열지 않는다", async () => {
   const { onOpenProfile, onOpenPostings } = renderFlow({ step: "usage" });
   await screen.findByRole("heading", {
