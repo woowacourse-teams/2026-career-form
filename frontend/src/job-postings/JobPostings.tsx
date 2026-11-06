@@ -18,7 +18,6 @@ import {
 import type { PushStateView } from "./push-messages";
 import { PostingTable, type PostingRow } from "./PostingTable";
 import { isUrgent } from "./saved-postings";
-import { CHOOSE_ROLES_TEXT } from "./RoleSelector";
 import { postingInput, reminderOutcome } from "./server-posting";
 import type { PostingSnapshot } from "./service";
 import {
@@ -267,9 +266,10 @@ export function JobPostings({
   const urgentCount = groups.planned.filter((p) =>
     isUrgent(p.deadline, time),
   ).length;
-  // Role-tagged postings need an overlap with the selection; legacy postings
-  // without roles reach everyone. Until the selection is known the inbox keeps
-  // loading, unless the background is unreachable, where nothing is hidden.
+  // With roles selected, tagged postings need an overlap; an empty selection
+  // and legacy postings without roles show everything. Until the selection is
+  // known the inbox keeps loading, unless the background is unreachable, where
+  // nothing is hidden.
   const selectedRoles = push.state?.roles;
   const visibleInbox =
     inbox.postings && (selectedRoles || push.failed)
@@ -277,24 +277,13 @@ export function JobPostings({
           matchesSelectedRoles(p.roles, selectedRoles ?? []),
         )
       : undefined;
-  const hiddenCount =
-    inbox.postings && visibleInbox
-      ? inbox.postings.length - visibleInbox.length
-      : 0;
-  // Ask for a selection only where one can be made: the server (or its
-  // cached list) offers categories, or it already tagged a posting.
-  const needsRoles =
-    selectedRoles !== undefined &&
-    selectedRoles.length === 0 &&
-    (!!categories.view?.categories || hiddenCount > 0);
   const counts: Record<View, number | undefined> = {
     inbox: visibleInbox?.length,
     planned: snapshot && groups.planned.length,
     expired: snapshot && groups.expired.length,
     completed: snapshot && groups.completed.length,
   };
-  const view: View =
-    chosenView ?? (visibleInbox?.length || needsRoles ? "inbox" : "planned");
+  const view: View = chosenView ?? (visibleInbox?.length ? "inbox" : "planned");
   const select = (next: View, focus = false) => {
     setChosenView(next);
     setFeedback("");
@@ -385,19 +374,6 @@ export function JobPostings({
     });
   const rows = view === "inbox" ? inboxRows : savedRows(view);
   const inboxBlocked = view === "inbox" && !!inbox.error;
-  const roleNotice = (asBanner: boolean) => (
-    <div
-      className={asBanner ? styles.panelNotice : styles.panelMessage}
-      role="status"
-    >
-      <span>
-        {CHOOSE_ROLES_TEXT}. 고르기 전에는 직무가 있는 새 공고를 받지 않아요.
-      </span>
-      <button type="button" onClick={() => setSettingsOpen(true)}>
-        받을 직무 고르기
-      </button>
-    </div>
-  );
   const panelBody = () => {
     if (view === "inbox") {
       if (inbox.error)
@@ -425,19 +401,9 @@ export function JobPostings({
     } else if (!snapshot) {
       return null;
     }
-    const askRoles = view === "inbox" && needsRoles;
     if (!rows.length)
-      return askRoles ? (
-        roleNotice(false)
-      ) : (
-        <p className={styles.panelMessage}>{EMPTY_LABELS[view]}</p>
-      );
-    return (
-      <>
-        {askRoles && roleNotice(true)}
-        <PostingTable rows={rows} now={time} />
-      </>
-    );
+      return <p className={styles.panelMessage}>{EMPTY_LABELS[view]}</p>;
+    return <PostingTable rows={rows} now={time} />;
   };
   return (
     <main className={styles.page}>

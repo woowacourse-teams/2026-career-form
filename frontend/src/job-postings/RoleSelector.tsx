@@ -20,7 +20,10 @@ const FAILURES: Partial<Record<PushApiErrorCode, string>> = {
 export function categoryFailureText(code: PushApiErrorCode): string {
   return FAILURES[code] ?? "직무 분류를 불러오지 못했어요";
 }
-export const CHOOSE_ROLES_TEXT = "받을 직무를 고르세요";
+// Shown wherever the selection is empty: choosing nothing means everything.
+export const ALL_ROLES_TEXT = "선택 없음 · 모든 공고 받는 중";
+export const ROLES_HINT_TEXT =
+  "직무를 고르면 그 직무의 공고만 받아요. 하나도 고르지 않으면 모든 공고를 받아요.";
 
 /** Two-column picker: category tabs on the left, role checkboxes on the right.
  *  Every toggle saves at once; the boxes show the pending selection meanwhile. */
@@ -127,12 +130,10 @@ export function RoleSelector({
       <div className={styles.rolesHeading}>
         <h3 id={`${id}-title`}>받을 직무</h3>
         <span className={styles.rolesCount} role="status">
-          {count ? `${count}개 선택` : CHOOSE_ROLES_TEXT}
+          {count ? `${count}개 선택` : ALL_ROLES_TEXT}
         </span>
       </div>
-      <p className={styles.rolesHint}>
-        고른 직무의 공고만 새 공고 탭과 알림으로 받아요.
-      </p>
+      <p className={styles.rolesHint}>{ROLES_HINT_TEXT}</p>
       {view.error && (
         <div className={styles.rolesNote}>
           <span>저장된 분류 사용 중 · {categoryFailureText(view.error)}</span>

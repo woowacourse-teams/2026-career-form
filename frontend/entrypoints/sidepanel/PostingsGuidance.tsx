@@ -9,19 +9,17 @@ import styles from "./App.module.css";
  * Why the 마감 공고 tab may stay empty, read from the push state:
  * off — the user switched new posting alerts off;
  * failed — alerts are on but the subscription is not registered;
- * roles — registered, but no 받을 직무 chosen while the server offers them;
- * none — alerts arrive, the user just has not saved a posting yet.
+ * none — alerts arrive, the user just has not saved a posting yet. An empty
+ * 받을 직무 selection receives every posting, so it needs no guidance.
  */
-export type GuidanceKind = "off" | "failed" | "roles" | "none";
+export type GuidanceKind = "off" | "failed" | "none";
 
 /**
  * undefined means nothing is known yet (or the state cannot be read), so the
- * tab keeps its plain empty line. rolesChoosable is undefined while the
- * server's job categories are still being looked up.
+ * tab keeps its plain empty line.
  */
 export function guidanceFor(
   state: PushStateView | undefined,
-  rolesChoosable: boolean | undefined,
 ): GuidanceKind | undefined {
   if (!state) return undefined;
   if (!state.enabled) return "off";
@@ -32,10 +30,6 @@ export function guidanceFor(
     case "endpoint_unavailable":
     case "unsupported":
       return "failed";
-    case "registered":
-      if (state.roles.length > 0) return "none";
-      if (rolesChoosable === undefined) return undefined;
-      return rolesChoosable ? "roles" : "none";
     default:
       // Registration is still being confirmed; nothing to warn about yet.
       return "none";
@@ -101,23 +95,6 @@ export function PostingsEmptyGuidance({
           </button>
         </section>
       );
-    case "roles":
-      return (
-        <section className={styles.postingsGuide} aria-label="받을 직무 안내">
-          <h2>받을 직무를 골라 주세요</h2>
-          <p>
-            고르기 전에는 직무가 있는 새 공고를 받지 않아요. 고른 직무의 공고만
-            알림으로 와요.
-          </p>
-          <button
-            className={styles.guideAction}
-            type="button"
-            onClick={onOpenSettings}
-          >
-            받을 직무 고르기
-          </button>
-        </section>
-      );
     case "none":
       return (
         <section
@@ -153,17 +130,7 @@ export function PostingsNotice({
   const [text, label, action] =
     guidance === "off"
       ? (["새 공고 알림이 꺼져 있어요", "켜기", onEnable] as const)
-      : guidance === "roles"
-        ? ([
-            "받을 직무를 고르면 새 공고를 받아요",
-            "고르기",
-            onOpenSettings,
-          ] as const)
-        : ([
-            "새 공고 알림이 아직 안 와요",
-            "알림 설정",
-            onOpenSettings,
-          ] as const);
+      : (["새 공고 알림이 아직 안 와요", "알림 설정", onOpenSettings] as const);
   return (
     <div className={styles.postingsNotice} role="status">
       <span>{text}</span>

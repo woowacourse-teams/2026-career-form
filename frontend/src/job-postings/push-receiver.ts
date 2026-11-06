@@ -164,8 +164,8 @@ export class PushReceiver {
     return this.serial(async () => {
       const posting = parseServerPosting(payload);
       if (!posting) return "invalid";
-      // Second check behind the server's targeting: covers the period before
-      // role filtering is enforced server-side. Nothing is shown or counted.
+      // Second check behind the server's targeting, for a selection changed
+      // after the push was queued. Nothing is shown or counted when it misses.
       if (!matchesSelectedRoles(posting.roles, await this.ports.roles()))
         return "filtered";
       const now = this.ports.now();

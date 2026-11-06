@@ -436,18 +436,6 @@
   border-radius: 8px;
   outline: none;
 }
-/* Inbox request to pick roles, shown above the rows that still apply. */
-.panelNotice {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px 15px;
-  padding: 11px 0;
-  border-bottom: 1px solid var(--color-border);
-  color: #515154;
-  font-size: 14px;
-  letter-spacing: -0.224px;
-}
 .panelMessage {
   display: flex;
   align-items: center;
