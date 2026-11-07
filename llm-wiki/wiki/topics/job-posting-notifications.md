@@ -2,9 +2,9 @@
 
 > Topic: job-posting-notifications
 > Status: Current
-> Current: [CF-394 공고 알림 직무 필터: 분류 정본, 공고 직무 필수, 구독별 받을 직무와 대상 발송](../../raw/issues/CF-394/documents/job-posting-role-filter.md)
-> History: [CF-348 채용 공고 구독 알림의 전달 경로와 발송 보장](../../raw/issues/CF-348/documents/adr/348-push-notification-delivery.md), [CF-394 공고 알림 직무 필터: 분류 정본, 공고 직무 필수, 구독별 받을 직무와 대상 발송](../../raw/issues/CF-394/documents/job-posting-role-filter.md)
-> Updated: 2026-11-04
+> Current: [CF-432 공고 알림 미선택 구독 상시 발송과 전환 설정 제거](../../raw/issues/CF-432/documents/unselected-always-delivered.md)
+> History: [CF-348 채용 공고 구독 알림의 전달 경로와 발송 보장](../../raw/issues/CF-348/documents/adr/348-push-notification-delivery.md), [CF-394 공고 알림 직무 필터: 분류 정본, 공고 직무 필수, 구독별 받을 직무와 대상 발송](../../raw/issues/CF-394/documents/job-posting-role-filter.md), [CF-432 공고 알림 미선택 구독 상시 발송과 전환 설정 제거](../../raw/issues/CF-432/documents/unselected-always-delivered.md)
+> Updated: 2026-11-07
 
 ## 현재 상태
 
@@ -23,11 +23,14 @@ CF-161 로컬 알림이 맡는다. 서버 책임은 FCM 수락 응답을 받을 
 120자 안에서 파생하고 분류 전체를 고른 공고는 "전체 직무"다. 관리 화면은 대분류 전체·전체 직무
 일괄 선택 버튼을 둔다. 구독 문서의 `roles`는 받을 소분류 코드
 배열(없으면 미선택)이며 구독 등록 요청에 실어 보낸다(값은 덮어쓰기, 빈 배열은 미선택, 필드
-없음은 유지). 등록 시 `roles`가 겹치는 구독에만 대기 발송을 만들고, 발송기는 선점 뒤 구독의
-현재 `roles`를 다시 봐 겹치지 않으면 FCM 호출 없이 `FILTER_MISMATCH`로 포기한다. `roles`
-없는 레거시 공고는 재분류하지 않고 전원에게 간다. 전환 설정
-`career-form.notification.role-filter.enforced`(기본 꺼짐)가 꺼진 동안은 미선택 구독도 받으므로
-백엔드를 먼저 배포하고, 확장 게시와 보급 확인(요약의 직무 선택 구독 수) 뒤 사람이 켠다.
+없음은 유지). 등록 시 `roles`가 겹치는 구독과 받을 직무를 고르지 않은(`roles`가 없거나 빈)
+구독에 대기 발송을 만들고, 발송기는 선점 뒤 직무를 고른 구독의 현재 `roles`를 다시 봐 겹치지
+않으면 FCM 호출 없이 `FILTER_MISMATCH`로 포기한다. 미선택 구독은 늘 보낸다. `roles` 없는
+레거시 공고는 재분류하지 않고 전원에게 간다. 미선택 구독을 빼던 전환 설정
+`career-form.notification.role-filter.enforced`와 기동 로그 `NOTIFICATION_ROLE_FILTER`는 CF-432에서
+없앴으므로 미선택 제외로 되돌리려면 코드 변경이 필요하다. 알림 저장소의 Mongo 계약 테스트는
+`NOTIFICATION_TEST_MONGO_URI`가 있을 때만 돌고 CI에서는 건너뛰므로, Mongo 조회 조건을 바꾸면
+로컬 Mongo로 직접 돌려 확인한다(테스트마다 무작위 DB를 만들고 지운다).
 
 작업 저장은 MongoDB 발송 문서(공고 × 구독 쌍, 상태 대기·발송 중·수락됨·포기)와 `@Scheduled`
 fixedDelay 1분 주기 발송기다. 발송기는 FCM 호출 전 `findOneAndUpdate` 조건부 갱신으로
@@ -56,6 +59,10 @@ fixedDelay 1분 주기 발송기다. 발송기는 FCM 호출 전 `findOneAndUpda
 직무가 자유 글자 선택 입력이라 거를 기준이 없었고 구독 문서에 사용자의 선호가 없었다. #386을
 서버 #394와 확장 #395로 나눴고, 서버 쪽(CF-394)이 분류 정본, 공고 직무 필수, 구독별 받을 직무,
 대상 산정과 발송기 재검사, 전환 설정을 더했다.
+
+2026-11-06 확장이 "직무를 고르지 않으면 모든 공고를 받는다"로 바뀌면서(CF-431) 전환 설정은 켜면
+미선택 구독의 알림을 막는 일만 남았다. 문서대로 켜면 정책과 어긋나므로 CF-432에서 설정과 켜는
+절차를 없애 실수로 켤 수 없게 했다.
 
 ## 관련 지식
 

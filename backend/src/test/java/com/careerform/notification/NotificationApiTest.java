@@ -32,7 +32,7 @@ class NotificationApiTest {
     private final VapidTestKeys keys = VapidTestKeys.generate();
     private final MemoryNotificationStore store = new MemoryNotificationStore();
     private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
-    private final JobPostingService postings = new JobPostingService(store, JobCategories.load(), RoleFilterPolicy.defaults(), clock);
+    private final JobPostingService postings = new JobPostingService(store, JobCategories.load(), clock);
     private final PushSubscriptionService subscriptions = new PushSubscriptionService(store, JobCategories.load(), clock, Set.of("fcm.googleapis.com"));
     private final MockMvc mvc = MockMvcBuilders.standaloneSetup(new NotificationController(
             VapidKeys.parse(keys.publicKey, keys.privateKey, "mailto:synthetic@example.test"), subscriptions, postings, JobCategories.load()))

@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
 class AdminSummaryTest {
     private static final Instant NOW = Instant.parse("2030-01-01T00:00:00Z");
     private final MemoryNotificationStore store = new MemoryNotificationStore();
-    private final JobPostingService service = new JobPostingService(store, JobCategories.load(), RoleFilterPolicy.defaults(), Clock.fixed(NOW, ZoneOffset.UTC));
+    private final JobPostingService service = new JobPostingService(store, JobCategories.load(), Clock.fixed(NOW, ZoneOffset.UTC));
 
     @Test
     @DisplayName("수락률·포기율은 끝난 발송 기준, 평균 시도는 전체 발송 기준이고 지연 백분위는 최근접 순위다")

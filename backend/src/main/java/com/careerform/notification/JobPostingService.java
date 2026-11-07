@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * 공고 등록·삭제와 발송 예약. 등록 응답은 저장과 예약 완료를 뜻하며 FCM 수락을 기다리지 않는다.
- * 대기 발송은 공고 직무와 겹치는 구독에만 만들고, 전환 설정이 꺼져 있으면 받을 직무를 고르지 않은 구독도 포함한다.
+ * 대기 발송은 공고 직무와 겹치는 직무를 고른 구독과 받을 직무를 고르지 않은 구독에 만든다.
  */
 public final class JobPostingService {
     static final int MAX_COMPANY_LENGTH = 80;
@@ -24,13 +24,11 @@ public final class JobPostingService {
     private static final Logger log = LoggerFactory.getLogger(JobPostingService.class);
     private final NotificationStore store;
     private final JobCategories categories;
-    private final RoleFilterPolicy roleFilter;
     private final Clock clock;
 
-    public JobPostingService(NotificationStore store, JobCategories categories, RoleFilterPolicy roleFilter, Clock clock) {
+    public JobPostingService(NotificationStore store, JobCategories categories, Clock clock) {
         this.store = Objects.requireNonNull(store);
         this.categories = Objects.requireNonNull(categories);
-        this.roleFilter = Objects.requireNonNull(roleFilter);
         this.clock = Objects.requireNonNull(clock);
     }
 
@@ -48,7 +46,7 @@ public final class JobPostingService {
 
     /**
      * 기간별 요약. 수락률·포기율은 끝난 발송(수락+포기) 기준, 평균 시도는 기간 안 전체 발송 기준이며 분모가 0이면 null이다.
-     * 구독 수와 직무 선택 구독 수(roles가 1개 이상)는 기간과 무관한 현재값이며, 후자는 전환 설정을 켤 시점을 판단하는 수치다.
+     * 구독 수와 직무 선택 구독 수(roles가 1개 이상)는 기간과 무관한 현재값이다.
      */
     public record Summary(Instant from, Instant to, long postings, DeliverySummary deliveries, Double acceptanceRate, Double abandonRate,
                           Double averageAttempts, long subscriptions, long roleSelectedSubscriptions) { }
@@ -76,7 +74,7 @@ public final class JobPostingService {
         if (!store.insertPosting(posting)) {
             return new Duplicate(store.findPostingByLink(posting.link()).map(JobPosting::id).orElse("UNKNOWN"));
         }
-        var deliveries = store.subscriptionIdsForRoles(posting.roles(), !roleFilter.enforced()).stream()
+        var deliveries = store.subscriptionIdsForRoles(posting.roles()).stream()
             .map(subscriptionId -> PushDelivery.pending(Identifiers.random(), posting.id(), subscriptionId, posting.scheduledAt())).toList();
         store.insertDeliveries(deliveries);
         log.info("POSTING_REGISTERED postingId={} roles={} deliveries={}", posting.id(), posting.roles().size(), deliveries.size());
