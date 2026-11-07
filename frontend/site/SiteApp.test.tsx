@@ -149,9 +149,8 @@ describe("website navigation", () => {
 });
 
 it("explains grouped results and copy after the application step", () => {
-  const { container } = render(
-    <SiteApp path="/onboarding/" installed profileHref="/options.html" />,
-  );
+  const { container } = render(<SiteApp path="/onboarding/" />);
+  fireEvent.click(screen.getByRole("button", { name: /프로필 등록 알아보기/ }));
   fireEvent.click(screen.getByRole("button", { name: /지원서에서 사용하기/ }));
   fireEvent.click(screen.getByRole("button", { name: /결과 확인 알아보기/ }));
   expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
@@ -196,18 +195,11 @@ it("랜딩에서 마감 알림과 지원 완료 시 남은 알림 취소를 소�
   ).toBeInTheDocument();
 });
 
-it("does not show the notification check card on the public site or without a push client", () => {
-  render(
-    <SiteApp
-      path="/onboarding/"
-      installed
-      profileHref="/options.html"
-      postingsHref="/options.html#postings"
-    />,
-  );
+it("shows the four-step usage guide at /onboarding, starting from installation", () => {
+  render(<SiteApp path="/onboarding/" />);
   expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
-    "무엇부터 시작할까요?",
+    "Chrome에 커리어폼을 추가하세요.",
   );
-  expect(screen.queryByText("새 공고 알림이 켜져 있어요")).toBeNull();
+  expect(screen.queryByText("무엇부터 시작할까요?")).toBeNull();
   expect(screen.queryByRole("button", { name: "알림 테스트" })).toBeNull();
 });

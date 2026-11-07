@@ -38,3 +38,29 @@ it("설정 해시는 알림 설정을 열라고 넘기고, 열리면 해시를 �
     await screen.findByRole("heading", { name: /지원 공고 화면/ }),
   ).toHaveAttribute("data-props", '{"openSettings":false}');
 });
+it.each([
+  ["roles", true],
+  ["name", true],
+  ["usage", false],
+  [undefined, false],
+] as const)(
+  "끝내지 않은 온보딩(%s)이 있을 때만 시작 안내로 돌아가는 링크를 보인다",
+  async (step, shown) => {
+    render(
+      <ManagementApp
+        stepStore={{ read: async () => step, write: async () => {} }}
+      />,
+    );
+    await screen.findByRole("heading", { name: "프로필 관리 화면" });
+    if (shown)
+      expect(
+        await screen.findByRole("link", { name: "시작 안내 이어하기" }),
+      ).toHaveAttribute("href", "/onboarding.html");
+    else {
+      await Promise.resolve();
+      expect(
+        screen.queryByRole("link", { name: "시작 안내 이어하기" }),
+      ).toBeNull();
+    }
+  },
+);

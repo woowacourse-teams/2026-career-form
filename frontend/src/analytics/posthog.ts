@@ -49,6 +49,7 @@ export function createPosthogCapture({
             ...(properties.role_count === undefined
               ? {}
               : { role_count: properties.role_count }),
+            ...(properties.step ? { step: properties.step } : {}),
             $process_person_profile: false,
           },
         }),

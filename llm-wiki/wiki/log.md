@@ -1075,3 +1075,10 @@
 - 승인한 후보 21개로 [CF-356 bundle](../raw/issues/CF-356/manifest.md)을 갱신했다(3개 갱신, 5개 추가). 칸 매핑만의 자동기입 점수와 점수 분리, 가중치 근거, 저장소 기준 기록 3건, 기록 삭제 비밀번호 재입력, OpenAI enum 한도와 선택지 공유, 평가 기준과 제품 등급 규칙의 차이, 섹션 범주로 선택지를 좁힐 때의 약점, 측정 사이 흔들림, 평가 화면의 기록 표시다.
 - [범용 매칭 모델 평가](topics/generic-matching-model-evaluation.md) topic의 현재 상태를 고쳤다.
 - 실제 지원값, 계정, 세션, 페이지 주소, 대화 전문은 저장하지 않았다.
+
+## [2026-11-06] ingest | CF-431 확장 첫 설치 온보딩 여섯 단계와 직무 미선택 시 전체 수신
+- Approval-Digest: 2b1c944c4eeec4e7481efa999e40d57f4709500cea784143009e2fdab1bbaae3
+- Source-Revision: cc7f723b
+- 승인한 후보 3개를 [CF-431 bundle](../raw/issues/CF-431/manifest.md)에 기록했다. 직무 미선택 구독의 전체 공고 수신, 확장 첫 설치 온보딩 여섯 단계의 구조, 온보딩 화면 검증 방법과 함정이다.
+- [랜딩,온보딩 웹 페이지](topics/landing-onboarding.md), [확장 Web Push 구독과 공고 알림](topics/extension-push-notifications.md), [선택적 이용 계측](topics/usage-analytics.md) topic의 현재 상태를 고쳤다.
+- 실제 지원값, 계정, 세션, 구독 endpoint, 사용자의 직무 선택값, 대화 전문은 저장하지 않았다.

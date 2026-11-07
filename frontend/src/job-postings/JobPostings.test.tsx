@@ -807,37 +807,33 @@ it("새 공고 탭은 선택한 직무와 겹치는 공고와 직무 없는 기�
   expect(panel()).not.toHaveTextContent("받을 직무를 고르세요");
 });
 
-it("받을 직무를 고르지 않았으면 직무 있는 공고 대신 안내를 보여 주고 기존 공고는 그대로 보여 준다", async () => {
+it("받을 직무를 고르지 않았으면 직무 있는 공고와 기존 공고를 모두 보여 주고 고르라는 안내가 없다", async () => {
   const env = setup({ categories: async () => categoriesView });
   env.inbox.push(
     taggedPosting("백엔드 회사", "a", ["IT.BACKEND"]),
     legacyPosting(),
   );
   renderPage(env);
-  await screen.findByRole("tab", { name: "새 공고 1" });
-  expect(panel()).toHaveTextContent("받을 직무를 고르세요");
+  await screen.findByRole("tab", { name: "새 공고 2" });
   expect(
     within(panel()).getByRole("link", { name: "기존 회사 열기" }),
   ).toBeVisible();
   expect(
-    within(panel()).queryByRole("link", { name: "백엔드 회사 열기" }),
+    within(panel()).getByRole("link", { name: "백엔드 회사 열기" }),
+  ).toBeVisible();
+  expect(panel()).not.toHaveTextContent("받을 직무");
+  expect(
+    within(panel()).queryByRole("button", { name: "받을 직무 고르기" }),
   ).toBeNull();
-  fireEvent.click(
-    within(panel()).getByRole("button", { name: "받을 직무 고르기" }),
-  );
-  expect(screen.getByRole("dialog", { name: "알림 설정" })).toBeVisible();
 });
 
-it("미선택이고 보여 줄 공고가 없으면 목록 대신 안내를 보여 주고 새 공고 탭에서 시작한다", async () => {
+it("미선택이고 새 공고가 없으면 고르라는 안내 없이 빈 상태를 보여 준다", async () => {
   const env = setup({ categories: async () => categoriesView });
-  env.inbox.push(taggedPosting("백엔드 회사", "a", ["IT.BACKEND"]));
   renderPage(env);
   await screen.findByRole("tab", { name: "새 공고 0" });
-  await waitFor(() =>
-    expect(tab("새 공고 0")).toHaveAttribute("aria-selected", "true"),
-  );
-  expect(panel()).toHaveTextContent("받을 직무를 고르세요");
-  expect(panel()).not.toHaveTextContent("새 공고 없음");
+  fireEvent.click(tab("새 공고 0"));
+  expect(panel()).toHaveTextContent("새 공고 없음");
+  expect(panel()).not.toHaveTextContent("받을 직무");
 });
 
 it("분류 API가 없는 구 백엔드와 조합하면 새 공고 탭과 설정이 지금처럼 동작한다", async () => {
@@ -860,11 +856,12 @@ it("알림 설정에서 직무를 고르면 바로 저장되고 새 공고 탭�
   const env = setup({ categories: async () => categoriesView });
   env.inbox.push(
     taggedPosting("백엔드 회사", "a", ["IT.BACKEND"]),
+    taggedPosting("디자인 회사", "b", ["DESIGN.UX_UI"]),
     legacyPosting(),
   );
   const track = vi.fn();
   renderPage(env, { track });
-  await screen.findByRole("tab", { name: "새 공고 1" });
+  await screen.findByRole("tab", { name: "새 공고 3" });
   fireEvent.click(screen.getByRole("button", { name: "알림 설정" }));
   const dialog = screen.getByRole("dialog", { name: "알림 설정" });
   const region = await within(dialog).findByRole("region", {
@@ -884,7 +881,7 @@ it("알림 설정에서 직무를 고르면 바로 저장되고 새 공고 탭�
   expect(within(region).getByText("1개 선택")).toBeInTheDocument();
   fireEvent.keyDown(dialog, { key: "Escape" });
   expect(screen.getByRole("link", { name: "백엔드 회사 열기" })).toBeVisible();
-  expect(panel()).not.toHaveTextContent("받을 직무를 고르세요");
+  expect(screen.queryByRole("link", { name: "디자인 회사 열기" })).toBeNull();
 });
 
 it("알림 설정 대화상자의 Tab 가두기는 직무 체크박스를 마지막 조작 요소로 셈한다", async () => {

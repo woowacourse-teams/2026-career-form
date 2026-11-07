@@ -2,13 +2,13 @@
 
 > Topic: usage-analytics
 > Status: Current
-> Current: [CF-395 받을 직무 저장 계측](../../raw/issues/CF-395/documents/usage-analytics.md)
-> History: [CF-147 선택적 이용 계측과 개인정보 경계](../../raw/issues/CF-147/documents/usage-analytics.md), [CF-193 첫 자동 기입 클릭률 계측](../../raw/issues/CF-193/documents/usage-analytics.md), [CF-271 Greeting 가져오기 진입과 저장 완료 계측](../../raw/issues/CF-271/documents/usage-analytics.md), [CF-349 공고 알림 구독·표시·공지함 계측](../../raw/issues/CF-349/documents/usage-analytics.md), [CF-361 Greeting 가져오기 노출 계측](../../raw/issues/CF-361/documents/usage-analytics.md), [CF-395 받을 직무 저장 계측](../../raw/issues/CF-395/documents/usage-analytics.md)
-> Updated: 2026-11-04
+> Current: [CF-431 온보딩 단계 진입과 완료 계측](../../raw/issues/CF-431/documents/usage-analytics.md)
+> History: [CF-147 선택적 이용 계측과 개인정보 경계](../../raw/issues/CF-147/documents/usage-analytics.md), [CF-193 첫 자동 기입 클릭률 계측](../../raw/issues/CF-193/documents/usage-analytics.md), [CF-271 Greeting 가져오기 진입과 저장 완료 계측](../../raw/issues/CF-271/documents/usage-analytics.md), [CF-349 공고 알림 구독·표시·공지함 계측](../../raw/issues/CF-349/documents/usage-analytics.md), [CF-361 Greeting 가져오기 노출 계측](../../raw/issues/CF-361/documents/usage-analytics.md), [CF-395 받을 직무 저장 계측](../../raw/issues/CF-395/documents/usage-analytics.md), [CF-431 온보딩 단계 진입과 완료 계측](../../raw/issues/CF-431/documents/usage-analytics.md)
+> Updated: 2026-11-06
 
 ## 현재 상태
 
-핵심 지표는 확장 온보딩 최초 진입 후 24시간 이내 익명 사용자별 자동 기입 클릭률이며 7일 클릭률은 보조 지표다. 시작 목적과 클릭·열기 결과를 구분한다. 첫 저장은 단계형 등록, 전체 편집과 Greeting 가져오기의 실제 비어 있지 않은 저장 성공 스냅샷에서 기록한다. 최초 진입·첫 저장은 백그라운드가 로컬 익명 ID별로 중복 방지하며 재전송 시 최초 발생 시각을 보존한다. 프로필 값·지원서 입력값·전체 URL은 계측하지 않는다.
+핵심 지표는 확장 온보딩 최초 진입 후 24시간 이내 익명 사용자별 자동 기입 클릭률이며 7일 클릭률은 보조 지표다. 클릭과 열기 결과를 구분한다. 확장 온보딩은 단계 진입을 `onboarding_step_viewed`(속성 `step`은 여섯 단계 이름 중 하나)로, 사용법 단계 도달을 `onboarding_completed`로 기록하며, 시작 목적 선택 화면과 단계형 등록이 없어져 `onboarding_autofill_selected`, `onboarding_postings_selected`, `quick_profile_skipped`, `quick_profile_viewed`는 더 기록하지 않는다(CF-431). 첫 저장은 온보딩 이름·이메일 단계, 전체 편집과 Greeting 가져오기의 실제 비어 있지 않은 저장 성공 스냅샷에서 기록한다. 최초 진입·첫 저장은 백그라운드가 로컬 익명 ID별로 중복 방지하며 재전송 시 최초 발생 시각을 보존한다. 프로필 값·지원서 입력값·전체 URL은 계측하지 않는다.
 
 지원서 안 패널이 열릴 때 설치된 정책이 Greeting 폼으로 인식하면 `greeting_import_offered`를 한 번 기록한다. 이 이벤트가 가져오기 깔때기의 분모이며, `greeting_import_viewed`와 `greeting_import_saved`는 그 아래 단계다. 노출은 마운트 시 실행 정책을 한 번 준비해 판단하고, 정책 로드 실패나 비인식 페이지에서는 기록하지 않으며 버튼 클릭 시 정책 요청과 겹치면 요청 하나를 공유한다. Greeting 가져오기는 검토 화면을 연 시점의 `greeting_import_viewed`와 저장 성공 시점의 `greeting_import_saved`를 기록한다. viewed는 읽기 성공을 뜻하지 않고, 취소, 실패, 충돌과 중복 클릭은 saved로 기록하지 않는다. 가져오기 저장은 `saveIfUnchanged` 비교 저장을 유지하도록 `useProfileSaveTracking`으로 감싸지 않고 `PageImport`가 저장 성공 스냅샷에서 직접 기록한다. reader가 지원서 안 패널에만 주입되어 가져오기 이벤트의 `surface`는 `in_page_panel`만 발생한다.
 
@@ -20,4 +20,4 @@
 
 ## 변경 이유
 
-CF-271 가져오기 이벤트가 배포 뒤에도 0건이라 "Greeting 페이지에 온 사람이 없었다"와 "보고도 누르지 않았다"를 구분하려고 노출 이벤트를 분모로 추가했다. 공고 알림 표시 → 클릭 → 저장 깔때기를 같은 익명 식별자로 측정하면서 회사명·링크가 계측으로 새지 않도록 `posting_id`만 허용했다. Greeting 가져오기 사용자와 미사용자의 클릭률, 가져오기 진입에서 저장 완료까지의 전환을 같은 익명 식별자로 비교하기 위해 가져오기 이벤트를 추가했다. 사용 흐름을 파악하되 프로필 및 지원서 내용이 계측으로 유출되지 않도록 수집 범위를 제한하고 설정되지 않은 빌드는 계측하지 않는다.
+확장 온보딩이 여섯 단계 한 줄 흐름으로 바뀌면서 어느 단계에서 그만두는지 보려고 단계 진입과 완료 이벤트를 추가하고, 없어진 시작 목적 선택, 값 없이 건너뛰기, 단계형 등록 열기 이벤트를 뺐다(CF-431). CF-271 가져오기 이벤트가 배포 뒤에도 0건이라 "Greeting 페이지에 온 사람이 없었다"와 "보고도 누르지 않았다"를 구분하려고 노출 이벤트를 분모로 추가했다. 공고 알림 표시 → 클릭 → 저장 깔때기를 같은 익명 식별자로 측정하면서 회사명·링크가 계측으로 새지 않도록 `posting_id`만 허용했다. Greeting 가져오기 사용자와 미사용자의 클릭률, 가져오기 진입에서 저장 완료까지의 전환을 같은 익명 식별자로 비교하기 위해 가져오기 이벤트를 추가했다. 사용 흐름을 파악하되 프로필 및 지원서 내용이 계측으로 유출되지 않도록 수집 범위를 제한하고 설정되지 않은 빌드는 계측하지 않는다.

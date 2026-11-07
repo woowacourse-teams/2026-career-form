@@ -265,9 +265,9 @@ describe("push background handler", () => {
       code: "UNAVAILABLE",
     });
   });
-  it("온보딩 페이지는 상태 조회, 끄기, 알림 테스트, 결과 기록만 보낼 수 있다", async () => {
+  it("온보딩 페이지는 상태 조회, 켜기, 끄기, 알림 테스트, 결과 기록, 분류 조회, 직무 저장을 보낼 수 있다", async () => {
     const { handler } = setup();
-    for (const action of ["status", "disable", "test"])
+    for (const action of ["status", "enable", "disable", "test", "categories"])
       expect(await handler(message(action), onboarding)).toMatchObject({
         ok: true,
       });
@@ -277,14 +277,17 @@ describe("push background handler", () => {
         onboarding,
       ),
     ).toMatchObject({ ok: true });
-    for (const action of ["enable", "inbox", "later", "categories"])
+    expect(
+      await handler(message("roles", { roles: ["IT.BACKEND"] }), onboarding),
+    ).toMatchObject({ ok: true });
+  });
+  it("온보딩 페이지는 공지함 조회, 나중에 보기, 자동 저장 설정을 보낼 수 없다", async () => {
+    const { handler } = setup();
+    for (const action of ["inbox", "later"])
       expect(await handler(message(action), onboarding)).toEqual({
         ok: false,
         code: "UNAVAILABLE",
       });
-    expect(
-      await handler(message("roles", { roles: ["IT.BACKEND"] }), onboarding),
-    ).toEqual({ ok: false, code: "UNAVAILABLE" });
     expect(
       await handler(message("autosave", { enabled: true }), onboarding),
     ).toEqual({ ok: false, code: "UNAVAILABLE" });

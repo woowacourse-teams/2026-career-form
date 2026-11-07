@@ -82,13 +82,13 @@ export function pruneRoles(
   return roles.filter((code) => known.has(code));
 }
 
-// Postings registered before the category list carry no roles and reach
-// everyone; tagged postings need an overlap with the selection, so a user who
-// has not chosen yet sees none of them.
+// An empty selection means "every role": a user who has not chosen receives
+// all postings. Postings registered before the category list carry no roles
+// and reach everyone; otherwise a tagged posting needs an overlap.
 export function matchesSelectedRoles(
   postingRoles: readonly string[] | undefined,
   selected: readonly string[],
 ): boolean {
-  if (postingRoles === undefined) return true;
+  if (postingRoles === undefined || selected.length === 0) return true;
   return postingRoles.some((code) => selected.includes(code));
 }

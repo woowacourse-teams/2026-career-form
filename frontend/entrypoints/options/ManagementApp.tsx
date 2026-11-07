@@ -1,9 +1,23 @@
 import { useCallback, useEffect, useState } from "react";
 import { App } from "./App";
 import { JobPostings } from "../../src/job-postings/JobPostings";
+import { browserStepStore, type StepStore } from "../onboarding/flow/steps";
 import styles from "./ManagementApp.module.css";
-export function ManagementApp() {
+export function ManagementApp({
+  stepStore = browserStepStore,
+}: { stepStore?: StepStore } = {}) {
   const [hash, setHash] = useState(() => window.location.hash);
+  // The first-install onboarding was left before its last step.
+  const [unfinished, setUnfinished] = useState(false);
+  useEffect(() => {
+    let active = true;
+    void stepStore.read().then((step) => {
+      if (active) setUnfinished(step !== undefined && step !== "usage");
+    });
+    return () => {
+      active = false;
+    };
+  }, [stepStore]);
   useEffect(() => {
     const changed = () => setHash(window.location.hash);
     window.addEventListener("hashchange", changed);
@@ -45,6 +59,7 @@ export function ManagementApp() {
             >
               지원 공고
             </button>
+            {unfinished && <a href="/onboarding.html">시작 안내 이어하기</a>}
           </nav>
         </div>
       </header>

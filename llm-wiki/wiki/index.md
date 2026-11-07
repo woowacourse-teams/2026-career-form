@@ -40,7 +40,7 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [확장 프로그램 프로필,지원서 패널 UI](topics/extension-ui.md) | 프로필,패널 탐색과 하늘색 중심 UI 계층, 선택형 값 라벨 표시·복사, 반복 항목 소제목, 패널 열기 단축키 | 2026-10-29 |
 | [지원서 패널 안 자동 기입 흐름](topics/autofill-panel-workflow.md) | 단일 패널 실행,범용 실제 값 판정과 드롭다운 값 보존 | 2026-10-02 |
 | [미지원 지원서 페이지 안내](topics/unsupported-application-pages.md) | 미지원 준비 분석의 중단과 수동 복사 유지 | 2026-10-02 |
-| [선택적 이용 계측](topics/usage-analytics.md) | 24시간 첫 클릭률, Greeting 가져오기 계측, 공고 알림 이벤트와 posting_id·answer·trigger·delay_ms, 받을 직무 저장 role_count, 최초 저장 중복 방지와 개인정보 경계 | 2026-11-04 |
+| [선택적 이용 계측](topics/usage-analytics.md) | 24시간 첫 클릭률, Greeting 가져오기 계측, 공고 알림 이벤트와 posting_id·answer·trigger·delay_ms, 받을 직무 저장 role_count, 최초 저장 중복 방지와 개인정보 경계 | 2026-11-06 |
 | [범용 결과 화면 분류](topics/generic-result-classification.md) | 확인 필요 범위, 회색 묶음, 빨간 테두리와 수집 제외 | 2026-11-05 |
 | [범용 버튼 드롭다운 안전성](topics/generic-button-dropdown-safety.md) | 입력 범위,목록 소유 관계,옵션 분석 전달과 실행 직전 재검증 | 2026-10-02 |
 | [범용 드롭다운의 구조 클릭 허용 경계](topics/generic-dropdown-click-gate.md) | accessible label 금지 판정 유지와 수집기의 클릭 정책 적용 | 2026-10-17 |
@@ -63,7 +63,7 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [CI/CD 설정](topics/cicd-setup.md) | 배포 변수 15개·시크릿 12개 전체, deploy.sh 계약, 알림 토글·직무 필터 전환 변수와 VAPID 시크릿 전달·compose 기본값, 운영 LLM 비활성 이력, HTTP 공개 상태 | 2026-11-05 |
 | [배포 Runbook](topics/deployment-runbook.md) | 릴리스 기준 커밋 선택, main 병합 분류, digest 재사용, tag·동기화 PR, 자동 rollback, 릴리스 점검표, 정책 활성 버전은 배포 커밋의 seed를 따름, 4값 대조와 policy-versions API, 운영 알림 토글 결정 점검 항목 | 2026-10-26 |
 | [확장 프로그램 릴리스](topics/extension-release.md) | 수동 ZIP 빌드, origin 주입, 버전 상향, Web Store 게시와 보급 확인 | 2026-10-23 |
-| [확장 Web Push 구독과 공고 알림](topics/extension-push-notifications.md) | 조용한 구독 수명주기와 상태·재시도, 푸시 검증과 중복 억제, 알림 클릭·저장 연결, 공지함과 push-api.ts 계약 정본, 알림 표시 자가 진단, 미확인 배지, 열기 자동 저장, 직무 선택 입력, 표시 지연 계측, 받을 직무 선택기와 분류 캐시, 직무별 새 공고·알림 거르기, 사이드 패널 마감 공고 탭 안내와 패널 발신자 허용, 안내 목록 접기 | 2026-11-04 |
+| [확장 Web Push 구독과 공고 알림](topics/extension-push-notifications.md) | 조용한 구독 수명주기와 상태·재시도, 푸시 검증과 중복 억제, 알림 클릭·저장 연결, 공지함과 push-api.ts 계약 정본, 알림 표시 자가 진단, 미확인 배지, 열기 자동 저장, 직무 선택 입력, 표시 지연 계측, 받을 직무 선택기와 분류 캐시, 직무별 새 공고·알림 거르기, 사이드 패널 마감 공고 탭 안내와 패널 발신자 허용, 안내 목록 접기, 직무 미선택 시 전체 수신 | 2026-11-06 |
 | [확장·백엔드 호환 배포](topics/release-compatibility.md) | 호환 장치, 응답 스키마 협상 규칙, 확장 먼저 게시 순서, 1.4.0 사례 | 2026-10-23 |
 | [공용 모니터링 시스템](topics/monitoring-system.md) | 중앙 수집, 환경별 알림, 호스트 디스크 감시와 검증 경계 | 2026-10-02 |
 | [자동 입력 품질 관측과 사람 확인 요청](topics/autofill-quality-observation.md) | 실제 경로 및 버전별 지표, 사람 참고 분모와 평일 확인 요청 | 2026-10-07 |
@@ -99,7 +99,7 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [범용 날짜 형식 변환과 로컬 승인](topics/generic-date-format.md) | 날짜 DIRECT 변환, 로컬 승인 재검증과 자동/실사이트 검증 구분 | 2026-09-24 |
 | [범용 연월 달력 선택과 로컬 실행 경계](topics/generic-calendar-selection.md) | DOM 소유권, 개별 승인, 역할 판별과 연월, 연월일 달력 실행의 안전 경계, 달력 기입의 최종 값 확인, 실행이 연 달력의 드롭다운 확인 제외, 다른 컨트롤이 연 층의 보류 판정 제외 | 2026-10-29 |
 | [발표 디자인 시스템](topics/presentation-design-system.md) | 독립 레이아웃, 교체 슬롯과 정적 HTML/CSS 재현 규칙 | 2026-08-26 |
-| [랜딩,온보딩 웹 페이지](topics/landing-onboarding.md) | 의사결정 AI(JEV)·마감 알림 장면의 단계별 끝까지 재생, 모바일 뷰와 공유하기 동선, 직접 체험 중심의 하늘색 랜딩, 단계형 온보딩과 웹 경계 | 2026-11-05 |
+| [랜딩,온보딩 웹 페이지](topics/landing-onboarding.md) | 의사결정 AI(JEV)·마감 알림 장면의 단계별 끝까지 재생, 모바일 뷰와 공유하기 동선, 직접 체험 중심의 하늘색 랜딩, 확장 첫 설치 온보딩 여섯 단계와 웹 경계 | 2026-11-06 |
 | [로컬 검증 환경 주의점](topics/verification-environment.md) | 한글 worktree 경로의 compose 계약 테스트 실패와 COMPOSE_PROJECT_NAME 우회 | 2026-11-05 |
 | [릴리스 브랜치 유지와 정리](topics/release-branch-lifecycle.md) | 배포,동기화 완료 후 정리와 SHA 보호, 관리자 설정 | 2026-10-03 |
 | [작업 브랜치 정리](topics/branch-cleanup.md) | 병합된 CF·hotfix·revert 브랜치 자동 삭제 대상, 건너뜀·실패 조건과 사람 정리 범위 | 2026-10-23 |

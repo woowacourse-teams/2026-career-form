@@ -1,240 +1,54 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { App } from "./App";
-import { createEmptyProfile } from "../../src/profile/model";
-import type { ProfileRepository } from "../../src/profile/profile-repository";
-import type { PushClient } from "../../src/job-postings/push-client";
-import type { PushStateView } from "../../src/job-postings/push-messages";
-function createRepository(): ProfileRepository {
-  let profile = createEmptyProfile();
-  return {
-    load: async () => structuredClone(profile),
-    save: async (next) => {
-      profile = structuredClone(next);
-    },
-    loadLayout: async () => "a",
-    saveLayout: async () => {},
-  };
-}
+import {
+  createPushClient,
+  createRepository,
+  createStepMemory,
+} from "./flow/test-support";
+
 beforeEach(() => vi.spyOn(window, "scrollTo").mockImplementation(() => {}));
-afterEach(() => vi.restoreAllMocks());
-
-it("첫 설치 선택 화면에서는 자동 기입 준비가 공고 저장보다 먼저 나온다", () => {
-  render(<App repository={createRepository()} />);
-  const choices = screen.getAllByRole("heading", { level: 2 });
-  expect(choices.map((heading) => heading.textContent)).toEqual([
-    "자동 기입",
-    "공고 저장",
-    "새 공고 알림",
-  ]);
+afterEach(() => {
+  vi.restoreAllMocks();
+  window.history.replaceState(null, "", "/");
 });
 
-it("설치 후 자동 기입을 선택하면 설치 안내 없이 기본 정보만 등록한다", async () => {
-  const repository = createRepository();
-  render(<App repository={repository} />);
-  fireEvent.click(screen.getByRole("button", { name: /자동 기입 준비하기/ }));
-  expect(await screen.findByLabelText("국문 성")).toBeVisible();
-  expect(screen.getByLabelText("국문 이름")).toBeVisible();
-  expect(screen.queryByLabelText("이메일")).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "다음" }));
-  await screen.findByLabelText("이메일");
-  expect(screen.queryByRole("link", { name: /Chrome에 추가/ })).toBeNull();
-  fireEvent.change(screen.getByLabelText("이메일"), {
-    target: { value: "learner@example.test" },
-  });
-  fireEvent.click(
-    screen.getByRole("button", { name: "지금 자동 기입 사용하기" }),
-  );
-  await screen.findByRole("heading", {
-    name: "지원서에서 자동 기입을 시작하세요",
-  });
-  expect((await repository.load()).contact.email).toBe("learner@example.test");
-});
-
-it("프로필 없이 공고 등록으로 시작하고 시작 방법을 다시 선택할 수 있다", () => {
-  render(<App repository={createRepository()} />);
-  expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
-    "설치 완료",
-  );
-  expect(screen.getByText("새 공고에서 저장")).toBeVisible();
-  expect(screen.getByText("Chrome 종료 중")).toBeVisible();
-  expect(screen.getByText("늦거나 차단될 수 있음")).toBeVisible();
-  expect(screen.getByText("공고와 프로필 모두 이 브라우저")).toBeVisible();
-  fireEvent.click(
-    screen.getByRole("button", { name: /공고 저장부터 시작하기/ }),
-  );
-  fireEvent.click(screen.getByRole("button", { name: /시작 방법 다시 선택/ }));
-  expect(
-    screen.getByRole("button", { name: /공고 저장부터 시작하기/ }),
-  ).toBeVisible();
-});
-
-it("공고 안내는 패널 열기, 정보 입력, 완료 단계를 제공하고 이전 안내와 선택 화면으로 돌아간다", async () => {
-  render(<App repository={createRepository()} />);
-  fireEvent.click(
-    screen.getByRole("button", { name: /공고 저장부터 시작하기/ }),
-  );
-  expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
-    "커리어폼 사이드패널을 여세요.",
-  );
-  expect(
-    screen.queryByRole("link", { name: /지원 공고 관리 열기/ }),
-  ).toBeNull();
-  expect(screen.queryByText(/실제 화면 캡처/)).toBeNull();
-  expect(
-    screen.queryByRole("link", { name: /실제 화면 크게 보기/ }),
-  ).toBeNull();
-  expect(screen.getByText("방법 1 · 페이지의 네모 아이콘")).toBeVisible();
-  expect(screen.getByText("방법 2 · Chrome 퍼즐 메뉴")).toBeVisible();
-  expect(screen.getByText("01 / 03")).toBeVisible();
-  fireEvent.click(
-    screen.getByRole("button", { name: /새 공고 저장 알아보기/ }),
-  );
-  expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
-    "새 공고를 저장하세요.",
-  );
-  expect(screen.getByText(/Chrome이 완전히 종료된 동안/)).toBeVisible();
-  expect(
-    screen.getByRole("region", { name: "마감 알림 동작 미리보기" }),
-  ).toBeVisible();
-  expect(screen.getByText("알림을 누르면 저장한 공고가 열려요.")).toBeVisible();
-  fireEvent.click(screen.getByRole("button", { name: "다시 보기" }));
-  fireEvent.click(screen.getByRole("button", { name: "일시정지" }));
-  expect(screen.getByRole("button", { name: "계속 재생" })).toBeVisible();
-  fireEvent.click(screen.getByRole("button", { name: /지원 완료 알아보기/ }));
-  expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
-    "지원했다면 완료로 표시하세요.",
-  );
-  expect(screen.getByRole("link", { name: /새 공고 열기/ })).toHaveAttribute(
-    "href",
-    "/options.html#postings",
-  );
-  expect(screen.queryByRole("link", { name: /공고 추가/ })).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: /이전 안내/ }));
-  expect(screen.getByText("02 / 03")).toBeVisible();
-  fireEvent.click(screen.getByRole("button", { name: /시작 방법 다시 선택/ }));
-  fireEvent.click(screen.getByRole("button", { name: /자동 기입 준비하기/ }));
-  expect(await screen.findByLabelText("국문 성")).toBeVisible();
-});
-
-it("저장한 프로필이 있으면 다시 질문하지 않고 보충할 정보를 고른다", async () => {
-  const repository = createRepository();
-  const profile = createEmptyProfile();
-  profile.contact.email = "saved@example.test";
-  await repository.save(profile);
-  render(<App repository={repository} />);
-  fireEvent.click(screen.getByRole("button", { name: /자동 기입 준비하기/ }));
-  await screen.findByRole("heading", {
-    name: "저장한 정보",
-  });
-  expect(screen.queryByLabelText("국문 성")).toBeNull();
-  expect(screen.getByText("saved@example.test")).toBeVisible();
-  fireEvent.click(screen.getByRole("button", { name: "이메일 수정" }));
-  expect(screen.getByLabelText("이메일")).toHaveValue("saved@example.test");
-});
-
-it("설치 선택 화면에 새 공고 알림 카드를 보여 주고 알림 끄기는 구독을 끈다", async () => {
-  let state: PushStateView = {
-    enabled: true,
-    supported: true,
-    status: { code: "registered", updatedAt: 1, attempts: 0 },
-    permission: "granted",
-    visibility: { result: "unknown" },
-    unread: 0,
-    roles: [],
-  };
-  const setEnabled = vi.fn(async (enabled: boolean) => {
-    state = { ...state, enabled };
-    return state;
-  });
-  const pushClient: PushClient = {
-    state: async () => state,
-    setEnabled,
-    test: async () => state,
-    record: async () => state,
-    later: async () => state,
-    setRoles: async () => state,
-    inbox: async () => [],
-    categories: async () => ({ categories: null, error: null }),
-    subscribe: () => () => {},
-  };
-  const track = vi.fn();
+function renderApp(track = vi.fn()) {
   render(
     <App
       repository={createRepository()}
       track={track}
-      pushClient={pushClient}
+      pushClient={createPushClient()}
+      stepStore={createStepMemory().store}
     />,
   );
-  await screen.findByText("켜짐");
-  expect(screen.getByText("확인 전")).toBeVisible();
-  expect(screen.getByText("아이콘 숫자와 새 공고 탭으로 확인")).toBeVisible();
+  return track;
+}
+
+it("설치 뒤 열린 온보딩은 선택 화면 없이 이름 입력으로 시작하고 최초 진입을 기록한다", async () => {
+  const track = renderApp();
   expect(
-    screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
-  ).toEqual(["자동 기입", "공고 저장", "새 공고 알림"]);
-  fireEvent.click(screen.getByRole("button", { name: "알림 끄기" }));
-  await waitFor(() => expect(setEnabled).toHaveBeenCalledWith(false));
-  await screen.findByText(/알림을 껐어요/);
-  expect(screen.getByText("꺼짐")).toBeVisible();
-  expect(track).toHaveBeenCalledWith("push_subscription_disabled", {
+    await screen.findByRole("heading", {
+      level: 1,
+      name: "이름부터 알려 주세요",
+    }),
+  ).toBeVisible();
+  expect(screen.queryByText("설치 완료")).toBeNull();
+  expect(screen.queryByRole("button", { name: /자동 기입 준비/ })).toBeNull();
+  expect(track).toHaveBeenCalledWith("onboarding_first_viewed", {
     surface: "extension_onboarding",
   });
 });
 
-it("설치 시작 화면의 선택과 알림 테스트 응답을 기록한다", async () => {
-  const state: PushStateView = {
-    enabled: true,
-    supported: true,
-    status: { code: "registered", updatedAt: 1, attempts: 0 },
-    permission: "granted",
-    visibility: { result: "unknown" },
-    unread: 0,
-    roles: [],
-  };
-  const test = vi.fn(async () => state);
-  const record = vi.fn(async () => state);
-  const pushClient: PushClient = {
-    state: async () => state,
-    setEnabled: async () => state,
-    test,
-    record,
-    later: async () => state,
-    setRoles: async () => state,
-    inbox: async () => [],
-    categories: async () => ({ categories: null, error: null }),
-    subscribe: () => () => {},
-  };
-  const track = vi.fn();
-  render(
-    <App
-      repository={createRepository()}
-      track={track}
-      pushClient={pushClient}
-    />,
+it("page 인자로 연 랜딩은 온보딩 흐름 대신 소개 페이지를 보인다", () => {
+  window.history.replaceState(null, "", "/onboarding.html?page=%2F");
+  const track = renderApp();
+  expect(screen.queryByRole("navigation", { name: "진행 상황" })).toBeNull();
+  expect(track).toHaveBeenCalledWith("landing_viewed", {
+    surface: "extension_onboarding",
+  });
+  expect(track).not.toHaveBeenCalledWith(
+    "onboarding_first_viewed",
+    expect.anything(),
   );
-  await screen.findByText("켜짐");
-  fireEvent.click(screen.getByRole("button", { name: "알림 테스트" }));
-  await waitFor(() => expect(test).toHaveBeenCalledOnce());
-  expect(screen.queryByRole("button", { name: "알림 끄기" })).toBeNull();
-  fireEvent.click(await screen.findByRole("button", { name: "보였어요" }));
-  await waitFor(() => expect(record).toHaveBeenCalledWith("seen", "test"));
-  expect(track).toHaveBeenCalledWith("notification_test_sent", {
-    surface: "extension_onboarding",
-  });
-  expect(track).toHaveBeenCalledWith("notification_visibility_answered", {
-    surface: "extension_onboarding",
-    answer: "seen",
-  });
-  fireEvent.click(
-    screen.getByRole("button", { name: "공고 저장부터 시작하기" }),
-  );
-  expect(track).toHaveBeenCalledWith("onboarding_postings_selected", {
-    surface: "extension_onboarding",
-  });
-  fireEvent.click(screen.getByRole("button", { name: /시작 방법 다시 선택/ }));
-  fireEvent.click(screen.getByRole("button", { name: "자동 기입 준비하기" }));
-  expect(track).toHaveBeenCalledWith("onboarding_autofill_selected", {
-    surface: "extension_onboarding",
-  });
-  expect(await screen.findByLabelText("국문 성")).toBeVisible();
 });
