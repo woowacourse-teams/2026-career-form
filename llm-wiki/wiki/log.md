@@ -1082,3 +1082,10 @@
 - 승인한 후보 3개를 [CF-431 bundle](../raw/issues/CF-431/manifest.md)에 기록했다. 직무 미선택 구독의 전체 공고 수신, 확장 첫 설치 온보딩 여섯 단계의 구조, 온보딩 화면 검증 방법과 함정이다.
 - [랜딩,온보딩 웹 페이지](topics/landing-onboarding.md), [확장 Web Push 구독과 공고 알림](topics/extension-push-notifications.md), [선택적 이용 계측](topics/usage-analytics.md) topic의 현재 상태를 고쳤다.
 - 실제 지원값, 계정, 세션, 구독 endpoint, 사용자의 직무 선택값, 대화 전문은 저장하지 않았다.
+
+## [2026-11-07] ingest | CF-432 공고 직무 필터 전환 설정 제거와 미선택 구독 상시 발송
+- Approval-Digest: 7fa81d649c3847946c61720c258533e9dd42172144711304010e08025c5d43df
+- Source-Revision: da17fde3
+- 승인한 후보 3개를 [CF-432 bundle](../raw/issues/CF-432/manifest.md)에 기록했다. 미선택 구독 상시 발송과 전환 설정 제거, 배포 경로에 남은 전환 변수, 알림 저장소 Mongo 계약 테스트의 실행 조건이다.
+- [공고 구독 알림](topics/job-posting-notifications.md), [CI/CD 설정](topics/cicd-setup.md), [확장 Web Push 구독과 공고 알림](topics/extension-push-notifications.md) topic의 현재 상태를 고쳤다.
+- 호스트 주소, 키 값, 계정, 구독 endpoint, 사용자의 직무 선택값, 대화 전문은 저장하지 않았다.
