@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { back, clamp, ease, lerp, segment, trackProgress } from "./scroll";
+import { back, clamp, ease, lerp, segment } from "./scroll";
 import { isHolding } from "./useScrollHold";
 import { fillSchedule } from "./trial-fill";
 import { sampleFields } from "./sample-form";
@@ -22,14 +22,6 @@ describe("scroll math", () => {
     expect(segment(0.4, 0.2, 0.3)).toBe(1);
     expect(segment(0.24, 0.2, 0.3, true)).toBe(0);
     expect(segment(0.26, 0.2, 0.3, true)).toBe(1);
-  });
-
-  it("measures how far a tall pinned track has scrolled past the viewport", () => {
-    expect(trackProgress({ top: 0, height: 4000 }, 1000)).toBe(0);
-    expect(trackProgress({ top: -1500, height: 4000 }, 1000)).toBe(0.5);
-    expect(trackProgress({ top: -9000, height: 4000 }, 1000)).toBe(1);
-    expect(trackProgress({ top: 300, height: 4000 }, 1000)).toBe(0);
-    expect(trackProgress({ top: -10, height: 800 }, 1000)).toBe(0);
   });
 
   it("holds only once the section reaches the top while still filling the screen", () => {

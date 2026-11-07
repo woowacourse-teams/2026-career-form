@@ -12,7 +12,7 @@ import com.careerform.formanalysis.application.port.InteractionDecisionProvider;
 import com.careerform.formanalysis.dto.InteractionDecisionRequest;
 
 @Component
-final class InteractionObservationProjector {
+public final class InteractionObservationProjector {
 
     Projection project(InteractionDecisionRequest request) {
         List<InteractionDecisionProvider.Decision> decisions = new ArrayList<>();

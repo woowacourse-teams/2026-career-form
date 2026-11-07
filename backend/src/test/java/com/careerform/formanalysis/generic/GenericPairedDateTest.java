@@ -21,7 +21,7 @@ import com.careerform.formanalysis.generic.GenericFieldsRequest.InputType;
 import com.careerform.formanalysis.generic.GenericFieldsRequest.SemanticContext;
 import com.careerform.formanalysis.generic.GenericFieldsRequest.Visibility;
 import com.careerform.formanalysis.generic.GenericFieldsRequest.WriteCommand;
-import com.careerform.formanalysis.generic.JevCategoryFieldResolver.Mapping;
+import com.careerform.formanalysis.generic.ChoiceFieldResolver.Mapping;
 
 class GenericPairedDateTest {
 
@@ -206,8 +206,8 @@ class GenericPairedDateTest {
             new GenericFieldsRequest.Site("example.test", "/apply"),
             List.of(GenericFieldsJevHttp.section("education", "EDUCATION", fields)),
             List.of(WriteCommand.SELECT_DATE));
-        var resolver = mock(JevCategoryFieldResolver.class);
-        when(resolver.resolve(request)).thenReturn(new JevCategoryFieldResolver.Resolution(mappings, 1));
+        var resolver = mock(ChoiceFieldResolver.class);
+        when(resolver.resolve(request)).thenReturn(new ChoiceFieldResolver.Resolution(mappings, 1));
         return new GenericFieldsService(Optional.of(resolver),
             new FormAnalysisRouter((host, path) -> new CompanyFormPolicyProvider.NotRegistered()),
             new FieldInteractionPolicy(), new SupportedProfileFields()).analyze(request);

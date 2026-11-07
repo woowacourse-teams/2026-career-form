@@ -61,10 +61,10 @@ public final class MemoryNotificationStore implements NotificationStore {
         return true;
     }
 
-    @Override public synchronized List<String> subscriptionIdsForRoles(Collection<String> roles, boolean includeUnselected) {
+    @Override public synchronized List<String> subscriptionIdsForRoles(Collection<String> roles) {
         var wanted = Set.copyOf(roles);
         return subscriptions.values().stream()
-            .filter(subscription -> unselected(subscription) ? includeUnselected : subscription.roles().stream().anyMatch(wanted::contains))
+            .filter(subscription -> unselected(subscription) || subscription.roles().stream().anyMatch(wanted::contains))
             .map(PushSubscription::id).toList();
     }
 

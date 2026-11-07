@@ -119,11 +119,14 @@ describe("matchesSelectedRoles", () => {
     expect(matchesSelectedRoles(undefined, [])).toBe(true);
     expect(matchesSelectedRoles(undefined, ["IT.BACKEND"])).toBe(true);
   });
-  it("선택값과 겹치는 공고만 통과하고 미선택이면 거른다", () => {
+  it("직무를 골랐으면 겹치는 공고만 통과한다", () => {
     expect(matchesSelectedRoles(["IT.BACKEND", "IT.QA"], ["IT.QA"])).toBe(true);
     expect(matchesSelectedRoles(["IT.BACKEND"], ["DESIGN.UX_UI"])).toBe(false);
-    expect(matchesSelectedRoles(["IT.BACKEND"], [])).toBe(false);
     expect(matchesSelectedRoles([], ["IT.BACKEND"])).toBe(false);
+  });
+  it("직무를 하나도 고르지 않았으면 모든 공고가 통과한다", () => {
+    expect(matchesSelectedRoles(["IT.BACKEND"], [])).toBe(true);
+    expect(matchesSelectedRoles([], [])).toBe(true);
   });
 });
 

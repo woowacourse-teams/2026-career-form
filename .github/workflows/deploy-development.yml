@@ -36,6 +36,9 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: 공급자 연결 코드 지문
+        id: adapter
+        run: echo "digest=$(git rev-parse HEAD:backend/src/main/java/com/careerform/formanalysis/infrastructure/adapter)" >> "$GITHUB_OUTPUT"
       - name: ARM64 이미지 빌드와 push
         id: image
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
@@ -44,6 +47,9 @@ jobs:
           platforms: linux/arm64
           push: true
           tags: ${{ vars.DOCKERHUB_IMAGE }}:${{ github.sha }}
+          build-args: |
+            CAREER_FORM_COMMIT=${{ github.sha }}
+            CAREER_FORM_ADAPTER_DIGEST=${{ steps.adapter.outputs.digest }}
           cache-from: type=gha,scope=backend-arm64
           cache-to: type=gha,mode=max,scope=backend-arm64
 
@@ -71,8 +77,11 @@ jobs:
       CAREER_FORM_QUALITY_DISCORD_WEBHOOK: ${{ secrets.CAREER_FORM_QUALITY_DISCORD_WEBHOOK }}
       CAREER_FORM_QUALITY_SELECTION_DAYS: ${{ vars.CAREER_FORM_QUALITY_SELECTION_DAYS }}
       CAREER_FORM_QUALITY_SELECTION_MINIMUM_SAMPLE: ${{ vars.CAREER_FORM_QUALITY_SELECTION_MINIMUM_SAMPLE }}
+      CAREER_FORM_EVALUATION_ENABLED: ${{ vars.CAREER_FORM_EVALUATION_ENABLED }}
+      CAREER_FORM_EVALUATION_AUTO_RUN_ENABLED: ${{ vars.CAREER_FORM_EVALUATION_AUTO_RUN_ENABLED }}
+      CAREER_FORM_EVALUATION_OPENAI_ENABLED: ${{ vars.CAREER_FORM_EVALUATION_OPENAI_ENABLED }}
+      CAREER_FORM_EVALUATION_PROVIDER_KEYS: ${{ secrets.CAREER_FORM_EVALUATION_PROVIDER_KEYS }}
       CAREER_FORM_NOTIFICATION_ENABLED: ${{ vars.CAREER_FORM_NOTIFICATION_ENABLED }}
-      CAREER_FORM_PUSH_ROLE_FILTER_ENFORCED: ${{ vars.CAREER_FORM_PUSH_ROLE_FILTER_ENFORCED }}
       CAREER_FORM_PUSH_DISPATCH_INTERVAL: ${{ vars.CAREER_FORM_PUSH_DISPATCH_INTERVAL }}
       CAREER_FORM_PUSH_CONCURRENCY: ${{ vars.CAREER_FORM_PUSH_CONCURRENCY }}
       CAREER_FORM_PUSH_VAPID_PUBLIC_KEY: ${{ secrets.CAREER_FORM_PUSH_VAPID_PUBLIC_KEY }}

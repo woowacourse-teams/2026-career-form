@@ -90,7 +90,7 @@ class GenericEnglishNameTest {
     private static GenericFieldsResponse analyze(String category, List<FieldCandidate> fields, String answer) {
         var http = new GenericFieldsJevHttp();
         http.respond(call -> answerAll(call, answer, 0.95));
-        var resolver = new JevCategoryFieldResolver(GenericFieldsJevHttp.client(http), FIELDS, CATEGORIES,
+        var resolver = new ChoiceFieldResolver(GenericFieldsJevHttp.client(http), FIELDS, CATEGORIES,
             3, 5, 10, 8000);
         var service = new GenericFieldsService(Optional.of(resolver),
             new FormAnalysisRouter((host, path) -> new CompanyFormPolicyProvider.NotRegistered()),

@@ -1,0 +1,219 @@
+{
+  "schemaVersion": 1,
+  "status": "HUMAN_REVIEWED",
+  "state": "nhn-initial",
+  "candidateSha256": "c82bb37cb4a22e3e27a8fd71a1035324ae82154f0e39f39b9c9ae27a62e4a098",
+  "rule": "정답은 칸이 뜻하는 지원 프로필 필드다. 프로필 값 유무와 무관하다. 지원 필드 목록에 없는 의미는 null(매핑 불가)이다.",
+  "sectionClassify": {
+    "gs1": "EDUCATION",
+    "gs2": "SENSITIVE",
+    "gs3": "SENSITIVE",
+    "gs4": "SENSITIVE",
+    "gs5": "MIXED",
+    "gs6": "MIXED",
+    "gs7": "NONE"
+  },
+  "fieldMapping": {
+    "field-1": {
+      "key": null,
+      "reviewed": "학력 구분(고등학교·대학교 …) 선택칸. 우아한형제들 구분 칸과 같이 넣을 항목 없음"
+    },
+    "field-2": {
+      "key": "education.university.attendanceType"
+    },
+    "field-3": {
+      "key": "education.university.schoolName",
+      "reviewed": "사람 결정: 구분을 고르지 않은 첫 학력 행은 최신순 안내에 따라 최종 학력(대학교) 기준"
+    },
+    "field-4": {
+      "key": "education.university.schoolRegion"
+    },
+    "field-5": {
+      "key": "education.university.startDate"
+    },
+    "field-6": {
+      "key": "education.university.endDate"
+    },
+    "field-7": {
+      "key": "education.university.majorName"
+    },
+    "field-8": {
+      "key": "education.university.minorName"
+    },
+    "field-9": {
+      "key": "education.university.gpaScore"
+    },
+    "field-10": {
+      "key": "education.university.gpaScale"
+    },
+    "field-11": {
+      "key": "education.university.transferStatus"
+    },
+    "field-12": {
+      "key": "education.university.completionStatus"
+    },
+    "field-13": {
+      "key": null,
+      "reviewed": "이수과목·연구내용은 대학교 기록에 없는 의미"
+    },
+    "field-14": {
+      "key": "military.military.militaryStatus"
+    },
+    "field-15": {
+      "key": null,
+      "reviewed": "민감정보 활용 동의 체크박스. 동의는 프로필 항목이 아님"
+    },
+    "field-16": {
+      "key": "disability.disability.disabilityStatus",
+      "reviewed": "사람 결정: 장애사항 선택칸. placeholder(사이트 기본값)가 정제에서 [비식별]로 가려졌지만 칸의 뜻대로 정답을 둔다"
+    },
+    "field-17": {
+      "key": "veteran.veteran.veteranStatus"
+    },
+    "field-18": {
+      "key": null,
+      "reviewed": "경력없음(신입) 체크박스. 프로필 항목이 아님"
+    },
+    "field-19": {
+      "key": null,
+      "reviewed": "포트폴리오 링크 URL. 프로필 항목이 아님"
+    },
+    "field-20": {
+      "key": null,
+      "reviewed": "스킬 4칸은 프로필 항목이 아님"
+    },
+    "field-21": {
+      "key": null
+    },
+    "field-22": {
+      "key": null
+    },
+    "field-23": {
+      "key": null
+    },
+    "field-24": {
+      "key": "certifications.certificate.name"
+    },
+    "field-25": {
+      "key": "certifications.certificate.grade"
+    },
+    "field-26": {
+      "key": "certifications.certificate.acquisitionDate"
+    },
+    "field-27": {
+      "key": "certifications.certificate.issuer"
+    },
+    "field-28": {
+      "key": "languages.languageTest.language"
+    },
+    "field-29": {
+      "key": "languages.languageTest.testName"
+    },
+    "field-30": {
+      "key": "languages.languageTest.grade"
+    },
+    "field-31": {
+      "key": "languages.languageTest.acquisitionDate"
+    },
+    "field-32": {
+      "key": null,
+      "reviewed": "어학 시험 주최기관은 지원 필드에 없음"
+    },
+    "field-33": {
+      "key": null,
+      "reviewed": "수상 5칸은 프로필 항목이 아님"
+    },
+    "field-34": {
+      "key": null
+    },
+    "field-35": {
+      "key": null
+    },
+    "field-36": {
+      "key": null
+    },
+    "field-37": {
+      "key": null
+    },
+    "field-38": {
+      "key": null,
+      "reviewed": "봉사활동 5칸은 프로필 항목이 아님"
+    },
+    "field-39": {
+      "key": null
+    },
+    "field-40": {
+      "key": null
+    },
+    "field-41": {
+      "key": null
+    },
+    "field-42": {
+      "key": null
+    },
+    "field-43": {
+      "key": "careers.career.companyName"
+    },
+    "field-44": {
+      "key": "careers.career.department",
+      "reviewed": "사람 결정: 부서명/직책 한 칸은 department"
+    },
+    "field-45": {
+      "key": "careers.career.employmentType"
+    },
+    "field-46": {
+      "key": "careers.career.startDate"
+    },
+    "field-47": {
+      "key": "careers.career.endDate"
+    },
+    "field-48": {
+      "key": "careers.career.employmentStatus"
+    },
+    "field-49": {
+      "key": "projects.project.projectName"
+    },
+    "field-50": {
+      "key": "projects.project.startDate"
+    },
+    "field-51": {
+      "key": "projects.project.endDate"
+    },
+    "field-52": {
+      "key": "projects.project.activityDetails",
+      "reviewed": "프로젝트의 주요 역할·담당 업무·성과 서술"
+    }
+  },
+  "observations": [
+    "제품이 섹션 제목을 거의 못 읽는다(제목 없음 또는 글자 수 표시 \"0\"). 링크·스킬·자격·어학·수상이 한 섹션(gs6)으로, 경력과 프로젝트가 한 섹션(gs5)으로 묶인다.",
+    "드롭다운이 읽기 전용 칸 + 목록 버튼이라 선택지가 없고, 학력 구분 선택 질문(준비 단계 결정)이 생기지 않는다.",
+    "gs4는 장애 선택칸, 보훈대상여부, 경력없음 체크박스가 섞여 있다. 칸 대부분이 민감정보라 SENSITIVE로 둔다."
+  ],
+  "review": {
+    "by": "user",
+    "on": "2026-11-03",
+    "scope": "섹션 분류 7개, 필드 매핑 52칸(에이전트 초안을 사람이 추천대로 승인)"
+  },
+  "preparation": {
+    "sectionClassify": {
+      "ls1": "EDUCATION",
+      "ls2": "SENSITIVE",
+      "ls3": "MIXED",
+      "ls4": "NONE"
+    },
+    "note": "준비 루프의 섹션 분류는 반복 행·학력 행 후보 섹션만 보낸다(ls1 학력, ls2 병역, ls3 경력·프로젝트, ls4 봉사활동).",
+    "interactionDecisions": {
+      "structure": {
+        "expected": "action-2",
+        "reviewed": "사람 승인: 학력 행 추가 결정의 유일한 후보인 + 버튼이 정답"
+      }
+    },
+    "interactionNote": "프로필에 학력이 여러 개라 준비 루프가 학력 행 추가(REPEAT_ADD) 결정을 한 번 묻는다. 드롭다운은 선택지가 DOM에 없어 학력 구분 선택 질문은 없다.",
+    "review": {
+      "status": "HUMAN_REVIEWED",
+      "by": "user",
+      "on": "2026-11-03",
+      "scope": "준비 섹션 분류 4개, 학력 행 추가 결정 1개"
+    }
+  }
+}

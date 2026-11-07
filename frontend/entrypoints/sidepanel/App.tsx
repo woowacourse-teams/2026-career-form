@@ -328,32 +328,7 @@ export function App({
   const activeTab =
     selectedTab === "postings" && !showPostings ? "autofill" : selectedTab;
 
-  // The 받을 직무 guidance only applies when the server offers categories;
-  // looked up once, and only for an unselected user viewing this tab.
-  const [rolesChoosable, setRolesChoosable] = useState<boolean>();
-  const unselected =
-    push.state?.enabled === true &&
-    push.state.status?.code === "registered" &&
-    push.state.roles.length === 0;
-  useEffect(() => {
-    if (!unselected || rolesChoosable !== undefined || activeTab !== "postings")
-      return;
-    let active = true;
-    pushClient.categories().then(
-      (view) => {
-        if (active) setRolesChoosable(view.categories !== null);
-      },
-      () => {
-        if (active) setRolesChoosable(false);
-      },
-    );
-    return () => {
-      active = false;
-    };
-  }, [unselected, rolesChoosable, activeTab, pushClient]);
-  const guidance = push.failed
-    ? undefined
-    : guidanceFor(push.state, rolesChoosable);
+  const guidance = push.failed ? undefined : guidanceFor(push.state);
   const enableAlerts = async () => {
     await push.setEnabled(true);
     track("push_subscription_enabled", analyticsProperties);

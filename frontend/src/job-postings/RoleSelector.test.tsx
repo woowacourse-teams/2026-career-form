@@ -79,7 +79,14 @@ describe("RoleSelector", () => {
       "aria-labelledby",
       tab("IT/개발").id,
     );
-    expect(screen.getByText("받을 직무를 고르세요")).toBeInTheDocument();
+    expect(
+      screen.getByText("선택 없음 · 모든 공고 받는 중"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "직무를 고르면 그 직무의 공고만 받아요. 하나도 고르지 않으면 모든 공고를 받아요.",
+      ),
+    ).toBeInTheDocument();
   });
   it("방향키와 Home·End로 대분류를 옮기면 소분류가 바뀐다", () => {
     renderSelector();
@@ -129,7 +136,7 @@ describe("RoleSelector", () => {
     await waitFor(() =>
       expect(onChange).toHaveBeenLastCalledWith(["DESIGN.UX_UI"]),
     );
-    expect(screen.queryByText("받을 직무를 고르세요")).toBeNull();
+    expect(screen.queryByText("선택 없음 · 모든 공고 받는 중")).toBeNull();
   });
   it("대분류 전체 체크박스로 소분류를 한 번에 고르고 해제하며 일부면 중간 상태다", async () => {
     const onChange = vi.fn(async () => true);
@@ -243,7 +250,7 @@ describe("RoleSelector", () => {
       });
       expect(screen.getByRole("status")).toHaveTextContent(text);
       expect(screen.queryByRole("tablist")).toBeNull();
-      expect(screen.queryByText("받을 직무를 고르세요")).toBeNull();
+      expect(screen.queryByText("선택 없음 · 모든 공고 받는 중")).toBeNull();
       const button = screen.queryByRole("button", { name: "다시 시도" });
       expect(button !== null).toBe(retry);
       if (button) {

@@ -30,8 +30,8 @@ public interface NotificationStore {
     /** 구독의 받을 직무와 갱신 시각을 바꾼다. roles가 null이면 미선택으로 저장하고, 없는 구독이면 false다. */
     boolean updateSubscriptionRoles(String id, List<String> roles, Instant updatedAt);
 
-    /** roles가 하나라도 겹치는 선택 구독의 id. includeUnselected면 roles가 없거나 빈 미선택 구독도 더하고, 겹치지 않는 선택 구독은 늘 뺀다. */
-    List<String> subscriptionIdsForRoles(Collection<String> roles, boolean includeUnselected);
+    /** roles가 하나라도 겹치는 선택 구독과 roles가 없거나 빈 미선택 구독의 id. 겹치지 않는 선택 구독은 뺀다. */
+    List<String> subscriptionIdsForRoles(Collection<String> roles);
 
     /** roles가 1개 이상인 구독 수. */
     long countSubscriptionsWithRoles();

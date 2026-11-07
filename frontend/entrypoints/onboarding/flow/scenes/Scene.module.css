@@ -1,0 +1,812 @@
+/*
+ * Onboarding scenes (#431): a Greeting-style application form and the
+ * Career Form panel, drawn on an 880×560 stage that Stage.tsx scales to the
+ * column. Sizes below are stage pixels. The company and values are made up;
+ * the panel follows the real in-page panel's look and wording.
+ */
+.viewport {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid #d2e7f2;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 18px 40px -24px rgb(17 58 92 / 45%);
+}
+.stage {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: hidden;
+  transform-origin: 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  letter-spacing: normal;
+  color: #1d1d1f;
+  text-align: left;
+}
+:where(.stage) p {
+  margin: 0;
+}
+/* The panel close-up: 1.3× with the panel's right edge near the stage's. */
+.camera {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 0;
+  transition: transform 0.8s cubic-bezier(0.45, 0.05, 0.25, 1);
+}
+.camera[data-camera="panel"] {
+  transform: translate(-269px, -57px) scale(1.3);
+}
+.sceneFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.pause {
+  flex: none;
+  min-height: 40px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--sub, #5a7487);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pause:hover {
+  background: rgb(19 41 58 / 6%);
+  color: var(--strong, #13293a);
+}
+.pause svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* Greeting-style application page */
+.page {
+  position: absolute;
+  inset: 0;
+  background: #ffffff;
+  color: #222222;
+}
+.gHeader {
+  height: 52px;
+  padding: 0 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #f1f1f1;
+}
+.gLogo {
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: #111111;
+}
+.gLogo b {
+  margin-left: 1px;
+  font-weight: 800;
+}
+.gMenu {
+  display: flex;
+  gap: 22px;
+  font-size: 12.5px;
+  color: #222222;
+}
+.gMain {
+  position: absolute;
+  left: 28px;
+  top: 64px;
+  width: 440px;
+}
+.gBack {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 20px;
+  line-height: 1;
+  color: #222222;
+}
+.gDeadline {
+  font-size: 12px;
+  color: #666666;
+}
+.gDeadline b {
+  font-weight: 500;
+  color: #333333;
+}
+.gDeadline em {
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: #f2f2f2;
+  font-size: 10.5px;
+  font-style: normal;
+  color: #555555;
+}
+.gTitle {
+  margin: 6px 0 4px;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #111111;
+}
+.gCrumb {
+  margin-bottom: 18px;
+  font-size: 12px;
+  color: #8a8a8a;
+}
+.gSection {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.gSection b {
+  font-size: 15px;
+  font-weight: 700;
+  color: #111111;
+}
+.gSection small {
+  font-size: 11px;
+  color: #444444;
+}
+.gSection i,
+.gLabel i {
+  font-style: normal;
+  color: #e5484d;
+}
+.gField {
+  margin-top: 11px;
+}
+.gLabel {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #222222;
+}
+.gInput {
+  height: 30px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  border: 1px solid #dcdcdc;
+  border-radius: 4px;
+  background: #ffffff;
+  font-size: 12.5px;
+  color: #111111;
+  transition:
+    border-color 0.25s ease,
+    box-shadow 0.25s ease,
+    background-color 0.25s ease;
+}
+.gInput[data-active="true"] {
+  border-color: #0071e3;
+  background: #f3f8ff;
+  box-shadow: 0 0 0 3px rgb(0 113 227 / 18%);
+}
+.gInput[data-empty="true"] .gValue {
+  color: #9a9a9a;
+}
+.gValue {
+  animation: valueIn 0.35s ease-out;
+}
+.gChevron {
+  width: 7px;
+  height: 7px;
+  margin-left: auto;
+  border: solid #888888;
+  border-width: 0 1.5px 1.5px 0;
+  transform: translateY(-2px) rotate(45deg);
+}
+.gPhotoRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+.gPhotoRow small {
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: #888888;
+}
+.gPhoto {
+  width: 58px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed #cfcfcf;
+  border-radius: 4px;
+}
+.gPhoto span {
+  width: 18px;
+  height: 14px;
+  border: 1.5px solid #b8b8b8;
+  border-radius: 2px;
+}
+.gPhoto[data-filled="true"] {
+  border: 1px solid #e2e2e2;
+  background:
+    radial-gradient(circle at 50% 38%, #c5cbd3 0 19%, transparent 20%),
+    radial-gradient(ellipse 60% 42% at 50% 100%, #c5cbd3 0 98%, transparent),
+    #eef0f3;
+}
+.gPhoto[data-filled="true"] span {
+  display: none;
+}
+.gNav {
+  position: absolute;
+  left: 488px;
+  top: 96px;
+  width: 150px;
+}
+.gNav ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-left: 1px solid #e6e6e6;
+}
+.gNav li {
+  padding: 4px 0 4px 14px;
+  font-size: 12px;
+  color: #8a8a8a;
+}
+.gNav li[data-current="true"] {
+  margin-left: -1px;
+  border-left: 2px solid #111111;
+  font-weight: 600;
+  color: #111111;
+}
+.gSubmit {
+  height: 34px;
+  margin-top: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+  background: #f7cb45;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #222222;
+}
+
+/* The Career Form launcher the extension adds to application pages */
+.launcher {
+  position: absolute;
+  left: 776px;
+  top: 180px;
+  width: 44px;
+  height: 44px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 25%);
+  transition:
+    opacity 0.25s ease,
+    transform 0.15s ease;
+}
+.launcher img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 58% 38%;
+}
+.launcher[data-visible="false"] {
+  opacity: 0;
+  transform: scale(0.8);
+}
+.launcher[data-pressed="true"] {
+  transform: scale(0.88);
+}
+.rest {
+  position: absolute;
+  left: 560px;
+  top: 470px;
+  width: 1px;
+  height: 1px;
+}
+
+/* The in-page Career Form panel */
+.panel {
+  position: absolute;
+  left: 612px;
+  top: 56px;
+  width: 256px;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow:
+    0 8px 28px rgb(0 0 0 / 16%),
+    0 1px 3px rgb(0 0 0 / 10%);
+  color: #1d1d1f;
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
+}
+.panel[data-open="false"] {
+  opacity: 0;
+  transform: translateX(14px) scale(0.98);
+}
+.pHead {
+  height: 44px;
+  padding: 0 12px 0 14px;
+  display: flex;
+  align-items: center;
+}
+.pHead img {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+}
+.pGear {
+  width: 24px;
+  height: 24px;
+  margin-left: auto;
+  padding: 3px;
+  border-radius: 6px;
+  color: #6e6e73;
+  transition:
+    background-color 0.2s ease,
+    transform 0.15s ease;
+}
+.pGear svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.pGear[data-on="true"] {
+  background: #f2f2f7;
+  color: #1d1d1f;
+}
+.pGear[data-pressed="true"] {
+  transform: scale(0.88);
+}
+.pClose {
+  margin-left: 12px;
+  font-size: 20px;
+  line-height: 1;
+  color: #6e6e73;
+}
+.pMenu {
+  position: absolute;
+  right: 34px;
+  top: 40px;
+  z-index: 3;
+  width: 140px;
+  padding: 5px;
+  display: grid;
+  border: 1px solid #e5e5ea;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 8px 20px rgb(0 0 0 / 14%);
+  animation: popIn 0.18s ease-out;
+}
+.pMenu span {
+  padding: 7px 10px;
+  border-radius: 7px;
+  font-size: 12px;
+}
+.pMenu [data-cursor="menu-import"] {
+  background: #f2f2f7;
+  font-weight: 600;
+  transition: transform 0.15s ease;
+}
+.pMenu [data-pressed="true"] {
+  transform: scale(0.95);
+}
+.pTabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-bottom: 1px solid #ececf0;
+}
+.pTabs span {
+  padding: 8px 0 9px;
+  font-size: 12.5px;
+  text-align: center;
+  color: #6e6e73;
+}
+.pTabs [data-current="true"] {
+  font-weight: 600;
+  color: #1d1d1f;
+  box-shadow: inset 0 -2px 0 #1d1d1f;
+}
+.pBody {
+  padding: 14px;
+  animation: fadeIn 0.3s ease-out;
+}
+.pHome {
+  padding: 26px 14px 30px;
+  display: grid;
+  place-items: center;
+}
+.pFill {
+  height: 36px;
+  padding: 0 26px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #0071e3;
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  transition:
+    transform 0.15s ease,
+    background-color 0.15s ease;
+}
+.pFill[data-pressed="true"] {
+  background: #0062c4;
+  transform: scale(0.93);
+}
+.pLoading {
+  padding: 16px 16px 18px;
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  text-align: center;
+}
+.pLoading img {
+  width: 54px;
+  height: 54px;
+  object-fit: contain;
+}
+.pLoading b {
+  font-size: 12.5px;
+}
+.pLoading small {
+  font-size: 10.5px;
+  color: #6e6e73;
+}
+.pLoading strong {
+  font-size: 24px;
+  line-height: 1.1;
+}
+.pLoading strong small {
+  font-size: 12px;
+  color: inherit;
+}
+.pTrack {
+  width: 100%;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: #ececf0;
+}
+.pTrack span {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: #0071e3;
+  transition: width 0.4s ease;
+}
+.pIndeterminate span {
+  width: 40%;
+  animation: slide 1.1s linear infinite;
+}
+.pTiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.pTiles > span {
+  padding: 8px 10px;
+  border: 1px solid #ececf0;
+  border-radius: 10px;
+  font-size: 11.5px;
+  color: #6e6e73;
+}
+.pTiles strong {
+  margin-left: 2px;
+  font-size: 15px;
+  color: #1d1d1f;
+}
+.pTiles [data-current="true"] {
+  border-color: #d2d2d7;
+  background: #f5f5f7;
+}
+.pHint {
+  display: block;
+  margin: 10px 0 8px;
+  font-size: 10.5px;
+  color: #6e6e73;
+}
+.pItem {
+  padding: 9px 10px;
+  border: 1px solid #ececf0;
+  border-radius: 10px;
+}
+.pItem b {
+  display: block;
+  font-size: 12px;
+}
+.pItem span {
+  font-size: 10.5px;
+  color: #6e6e73;
+}
+.pBack {
+  padding: 4px 14px 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-bottom: 1px solid #ececf0;
+}
+.pBack span {
+  font-size: 16px;
+  line-height: 1;
+  color: #6e6e73;
+}
+.pBack b {
+  font-size: 14px;
+}
+.pBack small {
+  margin-left: auto;
+  font-size: 10.5px;
+  color: #6e6e73;
+}
+.pCount {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.pCount strong {
+  font-size: 26px;
+  line-height: 1.1;
+}
+.pCount span {
+  font-size: 12.5px;
+  color: #3a3a3c;
+}
+.pChips {
+  margin: 4px 0 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pChips span {
+  font-size: 10.5px;
+  color: #3a3a3c;
+}
+.pChips span::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  margin-right: 4px;
+  display: inline-block;
+  border-radius: 50%;
+  vertical-align: 1px;
+}
+.pChips [data-tone="new"]::before {
+  background: #0071e3;
+}
+.pChips [data-tone="same"]::before {
+  background: #6e6e73;
+}
+.pAsk {
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.pAsk i {
+  margin-left: 2px;
+  font-style: normal;
+  color: #e5484d;
+}
+.pConfirm {
+  padding: 10px 11px;
+  display: grid;
+  gap: 6px;
+  border-radius: 12px;
+  background: #f5f5f7;
+}
+.pConfirm > small {
+  font-size: 10.5px;
+  color: #3a3a3c;
+}
+.pConfirm > b {
+  font-size: 13px;
+}
+.pSplit {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.pSplit > span {
+  padding: 5px 8px;
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+}
+.pSplit small {
+  display: block;
+  font-size: 9.5px;
+  font-weight: 400;
+  color: #6e6e73;
+}
+.pAnswers {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pYes {
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: #0071e3;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #ffffff;
+  transition: transform 0.15s ease;
+}
+.pYes[data-pressed="true"] {
+  transform: scale(0.9);
+}
+.pNo {
+  padding: 3px 11px;
+  border: 1px solid #0071e3;
+  border-radius: 999px;
+  font-size: 11.5px;
+  color: #0071e3;
+}
+.pAnswers em,
+.pRow em {
+  margin-left: auto;
+  font-size: 11px;
+  font-style: normal;
+  color: #0071e3;
+}
+.pRow {
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #ececf0;
+  border-radius: 10px;
+  animation: fadeIn 0.3s ease-out;
+}
+.pRow span {
+  font-size: 10.5px;
+  color: #6e6e73;
+}
+.pRow b {
+  font-size: 11.5px;
+}
+.pSave {
+  height: 34px;
+  margin-top: 12px;
+  display: grid;
+  grid-auto-flow: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  border-radius: 999px;
+  background: #a9c8f3;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  transition:
+    background-color 0.3s ease,
+    transform 0.15s ease;
+}
+.pSave[data-ready="true"] {
+  background: #0071e3;
+}
+.pSave[data-pressed="true"] {
+  transform: scale(0.95);
+}
+.pNote {
+  display: block;
+  margin-top: 6px;
+  font-size: 10.5px;
+  text-align: center;
+  color: #3a3a3c;
+}
+.pSaved {
+  padding: 22px 14px 24px;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  text-align: center;
+}
+.pSaved strong {
+  font-size: 14px;
+}
+.pSaved small {
+  font-size: 10.5px;
+  color: #6e6e73;
+}
+.pCheck {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #24724f;
+  animation: popIn 0.35s ease-out;
+}
+.pCheck::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  top: 8px;
+  width: 8px;
+  height: 14px;
+  border: solid #ffffff;
+  border-width: 0 3px 3px 0;
+  transform: rotate(45deg);
+}
+
+/* Pointer and click */
+.cursor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 5;
+  width: 20px;
+  height: 26px;
+  transition:
+    transform 0.75s cubic-bezier(0.45, 0.05, 0.25, 1),
+    opacity 0.3s ease;
+}
+.cursor[data-parked="true"] {
+  opacity: 0;
+}
+.ripple {
+  position: absolute;
+  z-index: 4;
+  width: 30px;
+  height: 30px;
+  margin: -15px 0 0 -15px;
+  border: 2px solid rgb(0 113 227 / 70%);
+  border-radius: 50%;
+  animation: ripple 0.45s ease-out forwards;
+}
+
+@keyframes valueIn {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+}
+@keyframes slide {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+@keyframes ripple {
+  from {
+    opacity: 1;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.4);
+  }
+}
+
+/* Reduced motion: a still frame with no pointer or transitions. */
+@media (prefers-reduced-motion: reduce) {
+  .cursor,
+  .ripple {
+    display: none;
+  }
+  .stage *,
+  .stage *::before,
+  .stage *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

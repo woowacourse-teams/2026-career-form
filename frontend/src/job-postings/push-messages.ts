@@ -60,13 +60,16 @@ export type PushResponse =
   | { ok: true; categories: JobCategoriesView }
   | { ok: false; code: PushApiErrorCode | "UNAVAILABLE" };
 
-// The onboarding page may check, test and switch off; everything else stays
-// with the management page.
+// The onboarding page sets alerts up end to end: switch on or off, test, and
+// choose roles. The inbox and "later" stay with the management page.
 export const ONBOARDING_PUSH_ACTIONS: readonly PushAction[] = [
   "status",
+  "enable",
   "disable",
   "test",
   "record",
+  "categories",
+  "roles",
 ];
 // The side panel and the in-page panel (a content script) read the state,
 // switch alerts back on and look up the categories; nothing else.

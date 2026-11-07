@@ -1,0 +1,987 @@
+/*
+ * First-install onboarding flow (#431). The sky palette and clay depth come
+ * from the landing (site/landing/brand.module.css) as literal values scoped
+ * to this root, so theme.css and extension-theme.css stay untouched.
+ */
+.flow {
+  --page: #f2faff;
+  --surface: #ffffff;
+  --soft: #eaf6fd;
+  --tint: #d6f0fd;
+  --line: #d2e7f2;
+  --line-strong: #a6cde2;
+  --field: #6a98b2;
+  --text: #2e4a5d;
+  --strong: #13293a;
+  --sub: #5a7487;
+  --action: #1d6fa5;
+  --action-strong: #13527e;
+  --accent: #3fa9e0;
+  --ok: #24724f;
+  --ok-soft: #eaf5ee;
+  --ok-line: #b9dcc7;
+  --danger: #b3261e;
+  --clay:
+    0 34px 60px -28px rgb(17 58 92 / 35%),
+    0 10px 22px -12px rgb(17 58 92 / 18%), inset 0 2px 0 rgb(255 255 255 / 90%),
+    inset 0 -8px 16px rgb(140 196 228 / 22%);
+
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--page);
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.6;
+  letter-spacing: normal;
+  word-break: keep-all;
+  -webkit-font-smoothing: antialiased;
+}
+.flow *,
+.flow *::before,
+.flow *::after {
+  box-sizing: border-box;
+}
+/* Zero-specificity resets, so component classes always win over them. */
+:where(.flow) :is(h1, h2, p, ol, ul, dl, dd, figure) {
+  margin: 0;
+}
+:where(.flow) :is(ol, ul) {
+  padding-left: 0;
+  list-style: none;
+}
+.flow img {
+  display: block;
+  max-width: 100%;
+}
+.flow :focus-visible {
+  outline: 3px solid rgb(29 111 165 / 55%);
+  outline-offset: 3px;
+}
+.flow h1:focus-visible {
+  border-radius: 8px;
+}
+
+/* Header */
+.hd {
+  flex: none;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 max(20px, calc((100% - 1120px) / 2));
+  background: rgb(242 250 255 / 92%);
+  border-bottom: 1px solid var(--line);
+}
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--strong);
+}
+.logo img {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+}
+.lnk {
+  min-height: 44px;
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--sub);
+  cursor: pointer;
+}
+
+/* Progress rail */
+.prog {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cap {
+  display: none;
+  font-size: 14px;
+  color: var(--sub);
+}
+.cap b {
+  margin-right: 8px;
+  color: var(--strong);
+}
+.rail {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+}
+.rail li {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sub);
+  text-align: center;
+}
+.rail li + li::before {
+  content: "";
+  position: absolute;
+  top: 14px;
+  right: 50%;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+}
+.rail li.done::before,
+.rail li.now::before {
+  background: var(--action);
+}
+.dot {
+  position: relative;
+  z-index: 1;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 2px solid var(--line-strong);
+  background: var(--surface);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--sub);
+}
+.rail li.now {
+  font-weight: 800;
+  color: var(--strong);
+}
+.now .dot {
+  border-color: var(--action);
+  color: var(--action-strong);
+  box-shadow: 0 0 0 5px rgb(29 111 165 / 18%);
+}
+.done .dot {
+  border-color: var(--action);
+  background: var(--action);
+  font-size: 0;
+}
+.done .dot::after {
+  content: "";
+  width: 7px;
+  height: 12px;
+  border: solid #fff;
+  border-width: 0 2.5px 2.5px 0;
+  transform: translateY(-1px) rotate(45deg);
+}
+
+/* Layout */
+.wrap {
+  flex: 1;
+  width: 100%;
+  max-width: 1088px;
+  margin: 0 auto;
+  /* The bottom leaves room for the floating step bar. */
+  padding: 32px 24px 152px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+.stage {
+  display: grid;
+  grid-template-columns: minmax(0, 600px) minmax(0, 1fr);
+  gap: 40px;
+  align-items: start;
+}
+.one {
+  grid-template-columns: minmax(0, 1fr);
+}
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.duo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 36px;
+  align-items: center;
+}
+
+/* Card and copy */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+  padding: 32px;
+  border-radius: 26px;
+  background: var(--surface);
+  box-shadow: var(--clay);
+}
+.hg {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.eye {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--action-strong);
+}
+.flow h1 {
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+  color: var(--strong);
+  text-wrap: balance;
+  outline-offset: 6px;
+}
+.flow h2 {
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.35;
+  letter-spacing: -0.02em;
+  color: var(--strong);
+}
+.lead {
+  color: var(--sub);
+}
+.sm {
+  font-size: 14px;
+  color: var(--sub);
+}
+.error {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--danger);
+}
+.message {
+  max-width: 1088px;
+  margin: 0 auto;
+  padding: 40px 24px;
+}
+
+/* Fields and buttons */
+.fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+.fld {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--strong);
+}
+.fld input {
+  width: 100%;
+  height: 52px;
+  padding: 0 16px;
+  border: 1.5px solid var(--field);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--strong);
+  font-size: 17px;
+}
+.fld input::placeholder {
+  color: #647a88;
+}
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
+}
+.start {
+  margin-left: 0;
+}
+.btn {
+  min-height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 24px;
+  border: 0;
+  border-radius: 999px;
+  font-size: 16px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.pri {
+  background: var(--action);
+  color: #fff;
+  box-shadow:
+    0 10px 20px -10px rgb(17 58 92 / 70%),
+    inset 0 -3px 0 rgb(0 0 0 / 15%);
+}
+.soft {
+  background: var(--tint);
+  color: var(--strong);
+}
+/* Secondary action next to a filled primary: same size, outlined. */
+.outline {
+  background: var(--surface);
+  color: var(--action-strong);
+  box-shadow: inset 0 0 0 1.5px var(--action);
+}
+.outline:hover {
+  background: var(--soft);
+}
+.ghost {
+  padding: 0 14px;
+  background: transparent;
+  color: var(--action-strong);
+}
+.small {
+  min-height: 44px;
+  padding: 0 16px;
+  font-size: 14px;
+}
+.saved {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ok);
+}
+
+/* Coach: character with a speech bubble */
+.coach {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+  padding-top: 8px;
+}
+.art {
+  width: 150px;
+  height: 160px;
+  margin-left: 16px;
+  object-fit: contain;
+  object-position: left bottom;
+}
+.flip {
+  transform: scaleX(-1);
+}
+.bub {
+  position: relative;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: var(--surface);
+  font-size: 15px;
+}
+.bub::before {
+  content: "";
+  position: absolute;
+  top: -9px;
+  left: 64px;
+  width: 16px;
+  height: 16px;
+  border: solid var(--line);
+  border-width: 1px 0 0 1px;
+  background: var(--surface);
+  transform: rotate(45deg);
+}
+.bub b {
+  color: var(--strong);
+}
+.dots {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+}
+.dots li {
+  position: relative;
+  padding-left: 14px;
+}
+.dots li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.65em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* Sample application rows and window */
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.row {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  font-size: 13px;
+  color: var(--sub);
+}
+.row b {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+  font-weight: 600;
+  color: var(--strong);
+  white-space: nowrap;
+}
+.ok b {
+  border-color: var(--ok-line);
+  background: var(--ok-soft);
+}
+.hot b {
+  border-color: var(--action);
+  box-shadow: 0 0 0 3px rgb(29 111 165 / 20%);
+}
+
+/* Role selection */
+.pill {
+  align-self: flex-start;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--ok-soft);
+  color: var(--ok);
+  font-size: 13px;
+  font-weight: 700;
+}
+.pill::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.pill.off {
+  background: var(--soft);
+  color: var(--sub);
+}
+.opts {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.opt {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 16px 18px;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 18px;
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.opt::before {
+  content: "";
+  width: 22px;
+  height: 22px;
+  margin-top: 2px;
+  border: 2px solid var(--field);
+  border-radius: 50%;
+  background: var(--surface);
+}
+.opt.on {
+  border-color: var(--action);
+  background: var(--soft);
+}
+.opt.on::before {
+  border-color: var(--action);
+  background: radial-gradient(circle, var(--action) 0 42%, var(--surface) 48%);
+}
+.opt b {
+  display: block;
+  font-size: 16px;
+  color: var(--strong);
+}
+.opt small {
+  display: block;
+  font-size: 14px;
+  color: var(--sub);
+}
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.grp {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: 8px 12px;
+  align-items: start;
+}
+.grp > span {
+  padding-top: 11px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--sub);
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.chip {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 14px;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+}
+/* 전체 leads each category; partly picked categories show it outlined. */
+.whole {
+  font-weight: 800;
+}
+.whole[aria-pressed="mixed"] {
+  border-color: var(--action);
+  background: var(--soft);
+  color: var(--action-strong);
+}
+.chip.on {
+  border-color: var(--action);
+  background: var(--action);
+  color: #fff;
+}
+
+.note {
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: var(--tint);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--strong);
+}
+.ask {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px 16px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 14px;
+  font-size: 14px;
+}
+
+/* Alerts guide */
+.tut {
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.navb {
+  width: 100%;
+  min-height: 52px;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 10px 14px;
+  border: 1.5px solid transparent;
+  border-radius: 16px;
+  background: transparent;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--sub);
+  text-align: left;
+  cursor: pointer;
+}
+.navb span {
+  font-size: 13px;
+  font-weight: 800;
+}
+.navb.on {
+  border-color: var(--action);
+  background: var(--soft);
+  color: var(--strong);
+}
+.navb.on span {
+  color: var(--action-strong);
+}
+.fig {
+  min-height: 230px;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--soft);
+}
+.toast {
+  width: min(100%, 340px);
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 14px 30px -14px rgb(17 58 92 / 45%);
+  font-size: 13px;
+}
+.toast img {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+}
+.toast b,
+.post b {
+  display: block;
+  color: var(--strong);
+}
+.toast b {
+  font-size: 14px;
+}
+.post {
+  width: min(100%, 460px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 14px;
+  align-items: center;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  font-size: 13px;
+}
+.post b {
+  font-size: 15px;
+}
+.tags {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.mark {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--action);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 0 0 4px rgb(29 111 165 / 22%);
+}
+.mark.ok {
+  background: var(--ok);
+  box-shadow: none;
+}
+.tg {
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: var(--tint);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--strong);
+}
+.tg.off {
+  border: 1px dashed var(--line-strong);
+  background: transparent;
+  color: var(--sub);
+  text-decoration: line-through;
+}
+
+/* Numbered how-to */
+.how {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  counter-reset: h;
+}
+.how li {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 14px;
+  counter-increment: h;
+}
+.how li::before {
+  content: counter(h);
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--tint);
+  color: var(--action-strong);
+  font-size: 14px;
+  font-weight: 800;
+}
+.how b {
+  display: block;
+  color: var(--strong);
+}
+.how span {
+  display: block;
+  font-size: 14px;
+  color: var(--sub);
+}
+
+@media (max-width: 720px) {
+  .hd {
+    height: 56px;
+  }
+  .wrap {
+    padding: 20px 16px 112px;
+    gap: 20px;
+  }
+  .cap {
+    display: block;
+  }
+  .rail li span + span {
+    display: none;
+  }
+  .dot {
+    width: 26px;
+    height: 26px;
+    font-size: 12px;
+  }
+  .rail li + li::before {
+    top: 11px;
+  }
+  .stage,
+  .duo,
+  .tut {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+  .card {
+    padding: 22px 18px;
+    gap: 16px;
+  }
+  .flow h1 {
+    font-size: 28px;
+  }
+  .foot .acts {
+    width: 100%;
+  }
+  .foot .btn {
+    flex: 1;
+  }
+  .coach {
+    flex-direction: row;
+    align-items: flex-end;
+    gap: 4px;
+    padding: 0;
+  }
+  .art {
+    flex: none;
+    width: 60px;
+    height: 70px;
+    margin: 0;
+  }
+  .bub::before {
+    display: none;
+  }
+
+  .grp {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .grp > span {
+    padding-top: 0;
+  }
+  .nav {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .navb {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+}
+
+/* Steps 5 and 6: the scene column is wider than the text column. */
+.wideScene {
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.3fr);
+  align-items: start;
+}
+.examples {
+  display: grid;
+  gap: 4px;
+  font-size: 14px;
+}
+.examples b {
+  color: var(--strong);
+}
+/* Step list kept in step with the scene: the current one is outlined. */
+.caps {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  counter-reset: c;
+}
+.caps li {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 10px 14px;
+  border: 1.5px solid transparent;
+  border-radius: 14px;
+  font-weight: 700;
+  color: var(--sub);
+  counter-increment: c;
+  transition:
+    border-color 0.25s ease,
+    background-color 0.25s ease,
+    color 0.25s ease;
+}
+.caps li::before {
+  content: counter(c);
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--tint);
+  color: var(--action-strong);
+  font-size: 13px;
+  font-weight: 800;
+}
+.caps li[aria-current="step"],
+.how li[aria-current="step"] {
+  border-color: var(--action);
+  background: var(--soft);
+  color: var(--strong);
+}
+.how li {
+  padding: 8px 12px;
+  border: 1.5px solid transparent;
+  border-radius: 14px;
+  transition:
+    border-color 0.25s ease,
+    background-color 0.25s ease;
+}
+/* Step moves in a white dock floating above the bottom of the window
+   (StepBar): 이전 and 다음 keep one place on every step, on the edges of the
+   content column, lifted off the window edge so they stay in sight. */
+.bar {
+  position: fixed;
+  right: 0;
+  bottom: calc(clamp(16px, 4vh, 40px) + env(safe-area-inset-bottom));
+  left: 0;
+  z-index: 10;
+  padding: 0 24px;
+  /* Only the dock takes clicks, not the gutters beside it. */
+  pointer-events: none;
+}
+.barIn {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: var(--surface);
+  box-shadow:
+    0 20px 44px -20px rgb(17 58 92 / 45%),
+    0 6px 14px -8px rgb(17 58 92 / 20%);
+  pointer-events: auto;
+}
+.back {
+  margin-right: auto;
+}
+/* 다음 and 건너뛰기 share one width, so the main move keeps its size too. */
+.barIn > .btn:not(.back) {
+  min-width: 120px;
+}
+
+/* After the rules above, so these narrow overrides win. */
+@media (max-width: 720px) {
+  .wideScene {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .bar {
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    padding: 0 16px;
+  }
+  .barIn {
+    padding: 8px;
+    border-radius: 20px;
+  }
+}
+/* Step 6 on a narrow window: its third move takes a row above, so 이전 and
+   the main action stay where 이전 and 다음 are on the other steps. */
+@media (max-width: 600px) {
+  .wrap {
+    padding-bottom: 168px;
+  }
+  .barIn {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+  .alt {
+    order: -1;
+    flex: 1 0 100%;
+  }
+}

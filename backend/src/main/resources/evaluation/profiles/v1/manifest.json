@@ -1,0 +1,23 @@
+{
+  "version": "v1",
+  "source": "SYNTHETIC",
+  "reviewStatus": "DRAFT",
+  "purpose": "TUNING_CANDIDATE",
+  "profiles": [
+    {
+      "id": "synthetic-01-basic",
+      "file": "synthetic-01-basic.json",
+      "sha256": "38deeb53fc6117add72009023343ef1eeb51f1c9393a03e808be1801304ae39a"
+    },
+    {
+      "id": "synthetic-02-multi-entry",
+      "file": "synthetic-02-multi-entry.json",
+      "sha256": "dd2d086ce258f8a95018cedc0d792ebd2476b1f5823a7c1187aa273aac6d4ac6"
+    },
+    {
+      "id": "synthetic-03-sparse",
+      "file": "synthetic-03-sparse.json",
+      "sha256": "fc083f71c88636c6327e0a395f046802de5e98b015fcccb3ae2ff6d3c601ece0"
+    }
+  ]
+}

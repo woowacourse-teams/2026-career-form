@@ -24,17 +24,17 @@ import com.careerform.formanalysis.generic.GenericFieldsRequest.Section;
 import com.careerform.formanalysis.generic.GenericFieldsResponse.Diagnostics;
 import com.careerform.formanalysis.generic.GenericFieldsResponse.Field;
 import com.careerform.formanalysis.generic.GenericFieldsResponse.Reason;
-import com.careerform.formanalysis.generic.JevCategoryFieldResolver.Mapping;
+import com.careerform.formanalysis.generic.ChoiceFieldResolver.Mapping;
 
 @Service
 public final class GenericFieldsService {
 
-    private final Optional<JevCategoryFieldResolver> resolver;
+    private final Optional<ChoiceFieldResolver> resolver;
     private final FormAnalysisRouter router;
     private final GenericFieldPolicy fieldPolicy;
     private final SupportedProfileFields supportedProfileFields;
 
-    public GenericFieldsService(Optional<JevCategoryFieldResolver> resolver, FormAnalysisRouter router,
+    public GenericFieldsService(Optional<ChoiceFieldResolver> resolver, FormAnalysisRouter router,
         FieldInteractionPolicy interactionPolicy, SupportedProfileFields supportedProfileFields) {
         this.resolver = resolver;
         this.router = router;
@@ -67,9 +67,9 @@ public final class GenericFieldsService {
         }
         int jevCalls = 0;
         if (resolver.isPresent()) {
-            JevCategoryFieldResolver.Resolution resolution = resolver.get().resolve(request);
+            ChoiceFieldResolver.Resolution resolution = resolver.get().resolve(request);
             resolution.mappings().forEach(mappings::putIfAbsent);
-            jevCalls = resolution.jevCalls();
+            jevCalls = resolution.modelCalls();
         }
         for (Section section : request.sections()) {
             List<FieldCandidate> candidates = new ArrayList<>(section.fields());

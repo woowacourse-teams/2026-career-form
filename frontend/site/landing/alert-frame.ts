@@ -1,11 +1,29 @@
 // Per-frame drawing for the deadline-alert scene (transform/opacity/class only).
 import { applyMotion, back, clamp, ease, lerp, segment } from "./scroll";
+import { evenTriggers, type Playback } from "./step-playback";
 import styles from "./AlertScene.module.css";
 
 const NARROW = 900;
 // Tick positions along the axis: one day before, two hours before, deadline.
 const WIDE_STOPS = [0.5, 0.8, 1];
 const NARROW_STOPS = [0.2, 0.55, 0.9];
+// Narrow vertical stack, in px: caption → posting → axis → alerts.
+const UNDER_CAPTION = 20;
+const POST_TO_AXIS = 32;
+const AXIS_TO_TOAST = 64;
+const BOTTOM_MARGIN = 12;
+
+/**
+ * Three beats: the posting and its deadline axis arrive, the day-before
+ * alert rings, then marking it applied cancels the 2-hour alert. The first
+ * starts while the section is still docking; AlertScene.module.css sizes the
+ * track to match.
+ */
+export const ALERT_PLAYBACK: Playback = {
+  rests: [0, 0.46, 0.61, 1],
+  triggers: evenTriggers(-0.3, 0.7, 3),
+  seconds: [1.4, 0.8, 1.2],
+};
 
 export type AlertElements = {
   stage?: HTMLDivElement | null;
@@ -24,11 +42,64 @@ export type AlertElements = {
 export type AlertLayout = { narrow: boolean; postStartX: number };
 type Seg = (start: number, end: number) => number;
 
+/**
+ * Places the posting, the axis and the alerts one under another below the
+ * caption, centring the stack in any spare height. `fits` is false when the
+ * screen is too short to hold it all.
+ */
+export function stackNarrow({
+  captionBottom,
+  postHeight,
+  toastHeight,
+  height,
+}: {
+  captionBottom: number;
+  postHeight: number;
+  toastHeight: number;
+  height: number;
+}) {
+  const stack =
+    UNDER_CAPTION + postHeight + POST_TO_AXIS + AXIS_TO_TOAST + toastHeight;
+  const spare = height - BOTTOM_MARGIN - captionBottom - stack;
+  const postTop = captionBottom + UNDER_CAPTION + Math.max(0, spare) / 2;
+  const axisY = postTop + postHeight + POST_TO_AXIS;
+  return { postTop, axisY, toastTop: axisY + AXIS_TO_TOAST, fits: spare >= 0 };
+}
+
+const STACK_VARS = ["--axis-y", "--post-top", "--toast-top"];
+
+/** Narrow screens: stack the scene, dropping the caption body if needed. */
+function placeNarrow(els: AlertElements, stage: HTMLElement) {
+  const { caption, post } = els;
+  if (!caption || !post) return;
+  const measure = () =>
+    stackNarrow({
+      captionBottom: caption.offsetTop + caption.offsetHeight,
+      postHeight: post.offsetHeight,
+      toastHeight: els.firstAlert?.offsetHeight ?? 80,
+      height: stage.clientHeight,
+    });
+  caption.dataset.fit = "full";
+  let at = measure();
+  if (!at.fits) {
+    caption.dataset.fit = "compact";
+    at = measure();
+  }
+  stage.style.setProperty("--axis-y", `${at.axisY}px`);
+  stage.style.setProperty("--post-top", `${at.postTop}px`);
+  stage.style.setProperty("--toast-top", `${at.toastTop}px`);
+}
+
 export function measureAlertLayout(els: AlertElements): AlertLayout | null {
   const { stage, axis, post } = els;
   if (!stage || !axis || !post) return null;
   const w = stage.clientWidth;
   const narrow = w <= NARROW;
+  if (narrow) placeNarrow(els, stage);
+  else {
+    STACK_VARS.forEach((v) => stage.style.removeProperty(v));
+    if (els.caption) els.caption.dataset.fit = "full";
+  }
   const left = axis.offsetLeft;
   const xs = (narrow ? NARROW_STOPS : WIDE_STOPS).map(
     (s) => left + axis.offsetWidth * s,

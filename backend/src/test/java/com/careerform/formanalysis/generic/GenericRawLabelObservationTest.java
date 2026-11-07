@@ -26,7 +26,7 @@ class GenericRawLabelObservationTest {
     void sendsMaskedRawLabelsInsteadOfVocabularyTerms() {
         var http = new GenericFieldsJevHttp();
         http.respond(call -> answerAll(call, "ABSTAIN", 0.9));
-        var resolver = new JevCategoryFieldResolver(GenericFieldsJevHttp.client(http), FIELDS, CATEGORIES,
+        var resolver = new ChoiceFieldResolver(GenericFieldsJevHttp.client(http), FIELDS, CATEGORIES,
             3, 5, 10, 8000);
         var school = new FieldCandidate("school", FormElement.INPUT, FormControl.TEXT, Visibility.VISIBLE, null,
             null, null, "학교명", null, null, null, null,

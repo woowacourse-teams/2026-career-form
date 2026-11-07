@@ -43,7 +43,7 @@ class JobPostingAdminApiTest {
     };
     private final QualityAccess access = new QualityAccess(Clock.fixed(NOW, ZoneOffset.UTC), HASH, "", sessionStore);
     private final MemoryNotificationStore store = new MemoryNotificationStore();
-    private final JobPostingService postings = new JobPostingService(store, JobCategories.load(), RoleFilterPolicy.defaults(), Clock.fixed(NOW, ZoneOffset.UTC));
+    private final JobPostingService postings = new JobPostingService(store, JobCategories.load(), Clock.fixed(NOW, ZoneOffset.UTC));
     private final MockMvc mvc = MockMvcBuilders.standaloneSetup(new JobPostingAdminController(postings), new Fixture())
         .setControllerAdvice(new NotificationInputErrors()).addFilters(new QualityApiFilter(access)).build();
 

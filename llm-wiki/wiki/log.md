@@ -975,6 +975,13 @@
 - [제품 기준](topics/product-concept.md)과 [범용 검토 화면의 3단계 표시](topics/generic-review-tiers.md)의 Current를 CF-370 근거로 바꿨다.
 - 실제 지원값, 계정, 세션, 페이지 주소, 대화 전문은 저장하지 않았다.
 
+## [2026-10-30] ingest | CF-356 범용 매칭 모델 평가
+- Approval-Digest: 6781bc8d23ebe68e7f5f6761bf2750f3ffb256efa1df043da66380eff938f546
+- Source-Revision: cce108f
+- 승인한 후보 7개를 [CF-356 bundle](../raw/issues/CF-356/manifest.md)에 기록했다. 채점 방식, 준비 단계 구조와 채점 범위, 수집 경계, 측정 범위, 프롬프트 버전, 실행 운영과 ADR이다.
+- [범용 매칭 모델 평가](topics/generic-matching-model-evaluation.md) topic을 새로 만들었다.
+- 실제 지원값, 계정, 세션, 페이지 주소, 대화 전문은 저장하지 않았다.
+
 ## [2026-11-02] ingest | CF-384 의사결정 AI(JEV) 스크롤 장면과 직접 체험 중심의 하늘색 랜딩
 
 - Approval-Digest: 7775d31086d0d715392cabd90c6f69e7e5d6d8cff7d76bf543855407873a990b
@@ -1040,3 +1047,52 @@
 - Source-Revision: 4fab9205
 - 사전 승인된 후보 2개를 [CF-417 bundle](../raw/issues/CF-417/manifest.md)에 기록했다. 삭제 파일 범위, 단독 커버리지 측정(38개 모두 고유 statement 0), 삭제 뒤 커버리지와 테스트 수, 잃은 회귀 시나리오, 그리고 현대 테스트 간헐 실패의 원인(afterEach 역순)과 `sequence.hooks: list` 수정이다.
 - [프론트 브라우저 테스트](topics/frontend-browser-testing.md)의 Current를 CF-417로 바꾸고 CF-304·CF-178을 History에 남겼다. 다른 topic 문서는 바꾸지 않았다.
+
+## [2026-11-05] ingest | CF-424 랜딩 화면 고정 장면의 단계별 끝까지 재생
+
+- Approval-Digest: 3b9b97a2d043c27abace35945afdfd658744d1f1284936d895a498b3409d7548
+- Source-Revision: 34b09299
+- 승인한 후보 3개를 [CF-424 bundle](../raw/issues/CF-424/manifest.md)에 기록했다. 랜딩 AI·마감 알림 장면의 단계 재생 결정과 이유, 멈춤 지점에서 완성 상태가 보이도록 퇴장 효과를 단계 경계 뒤에 두는 규칙, 한글 worktree 경로의 compose 계약 테스트 실패와 우회다.
+- [랜딩,온보딩 웹 페이지](topics/landing-onboarding.md)의 Current를 CF-424로 바꾸고 CF-384를 History에 남겼다. [로컬 검증 환경 주의점](topics/verification-environment.md)을 새로 만들었다.
+
+## [2026-11-05] ingest | CF-427 랜딩 모바일 뷰와 공유하기 동선
+
+- Approval-Digest: 5cc356045e04044b7e28ff956d5951b57ab16c7cadaed02bd7d838e481b61faf
+- Source-Revision: 10d7bf6
+- 승인한 후보 4개를 [CF-427 bundle](../raw/issues/CF-427/manifest.md)에 기록했다. 모바일 판정과 웹스토어 대신 공유하기 동선, AI 장면 좁은 화면 행 높이 맞춤, 알림 장면 실측 쌓기, `.brand img` 특이도로 숨김이 막히는 CSS 규약이다.
+- [랜딩,온보딩 웹 페이지](topics/landing-onboarding.md)의 Current를 CF-427로 바꾸고 CF-424를 History에 남겼다. 다른 topic 문서는 바꾸지 않았다.
+
+## [2026-11-05] ingest | CF-356 범용 매칭 모델 평가 갱신
+- Approval-Digest: c285e0e7eb9262fa98363b50cb41a353738772ee8c5712c751ea3ce0390118b1
+- Source-Revision: 11aff08
+- 승인한 후보 9개를 더해 [CF-356 bundle](../raw/issues/CF-356/manifest.md)을 갱신했다. 대표 채점식, 자동기입 1번과 측정 범위, 실행 사이 흔들림, 데이터셋 v4, 기준 측정, 목록 파일, 자동 평가 조건, 환경 운영, 수집 예외다.
+- [범용 매칭 모델 평가](topics/generic-matching-model-evaluation.md) topic의 현재 상태를 고쳤다.
+- 실제 지원값, 계정, 세션, 페이지 주소, 대화 전문은 저장하지 않았다.
+
+## [2026-11-05] ingest | CF-356 범용 매칭 모델 평가 채점·기준 기록 갱신
+- Approval-Digest: 92fbe1ea992d3e02d38ddbb113d54ee0fe5a4f36643d51ab6b1e4e1cbd2ed17a
+- Source-Revision: e93f9fe
+- 승인한 후보 21개로 [CF-356 bundle](../raw/issues/CF-356/manifest.md)을 갱신했다(3개 갱신, 5개 추가). 칸 매핑만의 자동기입 점수와 점수 분리, 가중치 근거, 저장소 기준 기록 3건, 기록 삭제 비밀번호 재입력, OpenAI enum 한도와 선택지 공유, 평가 기준과 제품 등급 규칙의 차이, 섹션 범주로 선택지를 좁힐 때의 약점, 측정 사이 흔들림, 평가 화면의 기록 표시다.
+- [범용 매칭 모델 평가](topics/generic-matching-model-evaluation.md) topic의 현재 상태를 고쳤다.
+- 실제 지원값, 계정, 세션, 페이지 주소, 대화 전문은 저장하지 않았다.
+
+## [2026-11-06] ingest | CF-431 확장 첫 설치 온보딩 여섯 단계와 직무 미선택 시 전체 수신
+- Approval-Digest: 2b1c944c4eeec4e7481efa999e40d57f4709500cea784143009e2fdab1bbaae3
+- Source-Revision: cc7f723b
+- 승인한 후보 3개를 [CF-431 bundle](../raw/issues/CF-431/manifest.md)에 기록했다. 직무 미선택 구독의 전체 공고 수신, 확장 첫 설치 온보딩 여섯 단계의 구조, 온보딩 화면 검증 방법과 함정이다.
+- [랜딩,온보딩 웹 페이지](topics/landing-onboarding.md), [확장 Web Push 구독과 공고 알림](topics/extension-push-notifications.md), [선택적 이용 계측](topics/usage-analytics.md) topic의 현재 상태를 고쳤다.
+- 실제 지원값, 계정, 세션, 구독 endpoint, 사용자의 직무 선택값, 대화 전문은 저장하지 않았다.
+
+## [2026-11-07] ingest | CF-432 공고 직무 필터 전환 설정 제거와 미선택 구독 상시 발송
+- Approval-Digest: 7fa81d649c3847946c61720c258533e9dd42172144711304010e08025c5d43df
+- Source-Revision: da17fde3
+- 승인한 후보 3개를 [CF-432 bundle](../raw/issues/CF-432/manifest.md)에 기록했다. 미선택 구독 상시 발송과 전환 설정 제거, 배포 경로에 남은 전환 변수, 알림 저장소 Mongo 계약 테스트의 실행 조건이다.
+- [공고 구독 알림](topics/job-posting-notifications.md), [CI/CD 설정](topics/cicd-setup.md), [확장 Web Push 구독과 공고 알림](topics/extension-push-notifications.md) topic의 현재 상태를 고쳤다.
+- 호스트 주소, 키 값, 계정, 구독 endpoint, 사용자의 직무 선택값, 대화 전문은 저장하지 않았다.
+
+## [2026-11-07] ingest | CF-435 공고 직무 필터 전환 변수의 배포 경로 정리
+- Approval-Digest: 00e55f273b4cb38bc64ae426fbb48bf19696a77a30aafcd81be17afe2097dc25
+- Source-Revision: dae7fc69
+- 승인한 후보 1개를 [CF-435 bundle](../raw/issues/CF-435/manifest.md)에 기록했다. 배포 경로에서 직무 필터 전환 변수를 지운 곳, 변수 14개·시크릿 12개 전체 목록, 재유입을 막는 계약 테스트다.
+- [CI/CD 설정](topics/cicd-setup.md) topic의 현재 상태를 고쳤다.
+- 호스트 주소, 키 값, 계정, 대화 전문은 저장하지 않았다.

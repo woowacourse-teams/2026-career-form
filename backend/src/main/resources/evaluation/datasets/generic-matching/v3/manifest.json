@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "datasetId": "generic-matching",
+  "version": 3,
+  "description": "범용 자동기입 AI 호출 평가. 우아한형제들 공고 R2605009 지원서 화면 4개(처음, 고등학교, 대학교, 검정고시) × 합성 프로필 1개. 처음 화면은 준비 단계(섹션 분류·학력 구분 선택)만 채점한다",
+  "createdOn": "2026-11-03",
+  "profiles": [
+    {
+      "profileId": "synthetic-01-basic",
+      "file": "evaluation/profiles/v1/synthetic-01-basic.json",
+      "sha256": "38deeb53fc6117add72009023343ef1eeb51f1c9393a03e808be1801304ae39a"
+    }
+  ],
+  "inputIdentity": {
+    "SOURCE_PIPELINE_VERIFIED": "frontend의 woowahan-dataset.test.ts가 현재 제품 코드로 fixture에서 요청을 다시 만들어 저장본과 같은지 확인한다",
+    "installedExtension": "UNVERIFIED. 설치 확장이 실사이트에서 보낸 요청과의 대조는 하지 않았다"
+  },
+  "cases": [
+    {
+      "caseId": "woowahan-r2605009-initial-synthetic-01",
+      "split": "tuning",
+      "siteId": "woowahan-recruitment",
+      "state": "initial",
+      "file": "evaluation/datasets/generic-matching/v3/cases/woowahan-r2605009-initial-synthetic-01.json",
+      "sha256": "01abaffe6c977fa28a32964d1ac6571cb2c36e9d5fbfc35366cfe83d87619900",
+      "groundTruth": {
+        "file": "evaluation/datasets/generic-matching/v3/ground-truth/woowahan-r2605009-initial.json",
+        "sha256": "b6d01de28b92d3d1dbd711e06d85539a22fdba22a44fc69941b44de269e52943"
+      },
+      "fixture": {
+        "id": "woowahan-r2605009-initial",
+        "sha256": "f496c0b7cfaea3d7595d807cbc2cf72a0c2191f738592c3fa08120437e726d2d"
+      },
+      "profileId": "synthetic-01-basic",
+      "review": {
+        "privacy": "PASSED",
+        "structure": "PASSED",
+        "mappingTruth": "HUMAN_REVIEWED",
+        "preparationTruth": "HUMAN_REVIEWED",
+        "inputIdentity": "SOURCE_PIPELINE_VERIFIED",
+        "reviewedOn": "2026-10-30"
+      }
+    },
+    {
+      "caseId": "woowahan-r2605009-high-school-synthetic-01",
+      "split": "final",
+      "siteId": "woowahan-recruitment",
+      "state": "high-school",
+      "file": "evaluation/datasets/generic-matching/v3/cases/woowahan-r2605009-high-school-synthetic-01.json",
+      "sha256": "431399c39d9f9e6c086ae681c7004d49c3d8776b4036acb8bf359eff735703bc",
+      "groundTruth": {
+        "file": "evaluation/datasets/generic-matching/v3/ground-truth/woowahan-r2605009-high-school.json",
+        "sha256": "faf1aacec8451cd00d0719d74a776cfb05a3ab80788bb134ef45deefb8efacf7"
+      },
+      "fixture": {
+        "id": "woowahan-r2605009-high-school",
+        "sha256": "c74c015e0a90903573d801ec28edaa1cab2bc2488dd26a43231e10264f9f0ce4"
+      },
+      "profileId": "synthetic-01-basic",
+      "review": {
+        "privacy": "PASSED",
+        "structure": "PASSED",
+        "mappingTruth": "HUMAN_REVIEWED",
+        "preparationTruth": "HUMAN_REVIEWED",
+        "inputIdentity": "SOURCE_PIPELINE_VERIFIED",
+        "reviewedOn": "2026-10-30"
+      }
+    },
+    {
+      "caseId": "woowahan-r2605009-university-synthetic-01",
+      "split": "final",
+      "siteId": "woowahan-recruitment",
+      "state": "university",
+      "file": "evaluation/datasets/generic-matching/v3/cases/woowahan-r2605009-university-synthetic-01.json",
+      "sha256": "d277c49f40211715f133964cac483946e0e52a57359544195d8791b9d9df783f",
+      "groundTruth": {
+        "file": "evaluation/datasets/generic-matching/v3/ground-truth/woowahan-r2605009-university.json",
+        "sha256": "54a7ddcbde0cc32e28236b1fe8cce419a77c7d3f2ba3a765e10ff49045f2b759"
+      },
+      "fixture": {
+        "id": "woowahan-r2605009-university",
+        "sha256": "613e76f2013f47d45787b9e565b675d705a49637614820aa1122e0e806d71595"
+      },
+      "profileId": "synthetic-01-basic",
+      "review": {
+        "privacy": "PASSED",
+        "structure": "PASSED",
+        "mappingTruth": "HUMAN_REVIEWED",
+        "preparationTruth": "HUMAN_REVIEWED",
+        "inputIdentity": "SOURCE_PIPELINE_VERIFIED",
+        "reviewedOn": "2026-10-30"
+      }
+    },
+    {
+      "caseId": "woowahan-r2605009-ged-synthetic-01",
+      "split": "final",
+      "siteId": "woowahan-recruitment",
+      "state": "ged",
+      "file": "evaluation/datasets/generic-matching/v3/cases/woowahan-r2605009-ged-synthetic-01.json",
+      "sha256": "9e5ccdc237b465fac4b763e95d0a4946cbac12e7eeb103e6fde5428f1247c35d",
+      "groundTruth": {
+        "file": "evaluation/datasets/generic-matching/v3/ground-truth/woowahan-r2605009-ged.json",
+        "sha256": "01170917106497b3620bd34bb3f1bda1af84e294cb34cd360aeb66fd0afbe253"
+      },
+      "fixture": {
+        "id": "woowahan-r2605009-ged",
+        "sha256": "075739e1d05af11bacb5ae7a49246640461ec317ea7aaba1139dd986f1c92704"
+      },
+      "profileId": "synthetic-01-basic",
+      "review": {
+        "privacy": "PASSED",
+        "structure": "PASSED",
+        "mappingTruth": "HUMAN_REVIEWED",
+        "preparationTruth": "HUMAN_REVIEWED",
+        "inputIdentity": "SOURCE_PIPELINE_VERIFIED",
+        "reviewedOn": "2026-11-02"
+      }
+    }
+  ],
+  "changesFromPrevious": {
+    "previousVersion": 1,
+    "added": "검정고시 화면(최종 평가용). 학력 구분 '검정고시'에서만 나타나는 합격연월 칸을 포함한다",
+    "unchanged": "처음·고등학교·대학교 화면의 요청과 정답은 v1과 같다"
+  }
+}

@@ -1,13 +1,12 @@
 # 공고 구독 알림
 
-CF-348은 팀이 등록한 채용 공고를 접수 가능 시점(등록 시각과 접수 시작 중 늦은 쪽)에 Web Push(FCM)로 한 번 알린다. CF-394부터 공고는 직무 분류의 소분류 코드를 필수로 가지며 알림은 그 직무를 받기로 한 구독자에게 간다. 받을 직무를 고르지 않은 구독은 전환 설정(`role-filter.enforced`)이 꺼진 동안만 대상에 포함한다. 서버 책임은 FCM 수락 응답을 받을 때까지 재시도하는 것이며 기기 도착과 열람은 확인하지 않는다. 그 빈틈은 확장의 새 공고 탭(진행 중 공고 목록 조회)이 메운다. 기능은 기본으로 꺼져 있고 VAPID 키 발급·배포 설정(#350)은 별도 작업이며, 확장 쪽 받을 직무 선택과 새 공고 탭 거르기는 #395가 맡는다.
+CF-348은 팀이 등록한 채용 공고를 접수 가능 시점(등록 시각과 접수 시작 중 늦은 쪽)에 Web Push(FCM)로 한 번 알린다. CF-394부터 공고는 직무 분류의 소분류 코드를 필수로 가지며 알림은 그 직무를 받기로 한 구독자에게 간다. 받을 직무를 고르지 않은 구독은 모든 공고를 받는다. 서버 책임은 FCM 수락 응답을 받을 때까지 재시도하는 것이며 기기 도착과 열람은 확인하지 않는다. 그 빈틈은 확장의 새 공고 탭(진행 중 공고 목록 조회)이 메운다. 기능은 기본으로 꺼져 있고 VAPID 키 발급·배포 설정(#350)은 별도 작업이며, 확장 쪽 받을 직무 선택과 새 공고 탭 거르기는 #395가 맡는다.
 
 ## 설정
 
 | Spring property (`career-form.notification.` 접두사) | 환경변수 | 기본값 | 범위와 의미 |
 |---|---|---|---|
 | `enabled` | `CAREER_FORM_NOTIFICATION_ENABLED` | `false` | 꺼지면 발송기와 확장용·관리용 API bean이 모두 없어 404로 응답한다 |
-| `role-filter.enforced` | `CAREER_FORM_PUSH_ROLE_FILTER_ENFORCED` | `false` | 켜면 받을 직무를 고르지 않은 구독을 발송 대상에서 뺀다. 꺼져 있으면 미선택 구독도 받는다. 기동 로그 `NOTIFICATION_ROLE_FILTER enforced=…`로 모드를 남긴다. 배포 순서는 백엔드(꺼짐) → 확장 게시 → 보급 확인(요약의 직무 선택 구독 수) → 켜기이며 compose·GitHub Environment 전달은 Infra 후속이다 |
 | `push.vapid.public-key` | `CAREER_FORM_PUSH_VAPID_PUBLIC_KEY` | 없음 | base64url 65바이트 비압축 P-256 공개키. 확장에 그대로 내려준다 |
 | `push.vapid.private-key` | `CAREER_FORM_PUSH_VAPID_PRIVATE_KEY` | 없음 | base64url 32바이트 스칼라 또는 PKCS#8. 공개키와 쌍인지 서명 자가검증으로 확인한다 |
 | `push.vapid.subject` | `CAREER_FORM_PUSH_VAPID_SUBJECT` | 없음 | `mailto:` 또는 `https://` URI |
@@ -58,15 +57,15 @@ CF-348은 팀이 등록한 채용 공고를 접수 가능 시점(등록 시각�
 | 요청 | 응답 |
 |---|---|
 | `GET /api/v1/notifications/admin/postings` | 200 `{"postings":[{id, company, role?, roles?:[{code, label}], link, opensAt, closesAt, registeredAt, scheduledAt, progress:{pending, sending, accepted, abandoned, lastAttemptAt}}]}` 최근 등록 순. `roles`는 저장된 소분류 코드에 현재 분류의 라벨을 붙인 목록이다. 레거시 공고는 `roles`를 생략하고 기존 자유 글자 `role`이 있으면 그대로 유지하며 `role`도 없을 때만 생략한다 |
-| `POST /api/v1/notifications/admin/postings` `{company, roles, link, opensAt, closesAt}` | 201 `{"id","scheduledAt","deliveries"}`. `roles`는 분류의 소분류 코드 배열로 필수이며 null 요소 제거·공백 제거·순서 유지 중복 제거 뒤 1개 이상이고(상한은 분류 전체, 분류의 소분류 총수는 30 이하) 분류에 없는 코드가 하나라도 있으면 거절한다. `role` 라벨은 서버가 소분류 라벨을 가운뎃점(`·`)으로 이어 만들고 120자를 넘으면 앞 라벨 몇 개에 ` 외 n개`를 붙여 줄이며, 분류 전체를 고른 공고는 길이와 무관하게 `전체 직무`다. 요청의 `role` 자유 글자는 무시된다. 검증 순서는 COMPANY → ROLE → LINK → PERIOD → CLOSED. 저장과 대상 구독(공고 직무와 겹치는 직무를 고른 구독, 전환 설정이 꺼져 있으면 미선택 구독 포함)의 대기 발송 생성이 끝났다는 뜻이며 `deliveries`는 그 건수다. FCM 수락을 기다리지 않는다. 409 `{"error":"DUPLICATE_LINK","postingId"}`, 400 `{"error":"INVALID_POSTING","reason": COMPANY·ROLE·LINK·PERIOD·CLOSED}` |
+| `POST /api/v1/notifications/admin/postings` `{company, roles, link, opensAt, closesAt}` | 201 `{"id","scheduledAt","deliveries"}`. `roles`는 분류의 소분류 코드 배열로 필수이며 null 요소 제거·공백 제거·순서 유지 중복 제거 뒤 1개 이상이고(상한은 분류 전체, 분류의 소분류 총수는 30 이하) 분류에 없는 코드가 하나라도 있으면 거절한다. `role` 라벨은 서버가 소분류 라벨을 가운뎃점(`·`)으로 이어 만들고 120자를 넘으면 앞 라벨 몇 개에 ` 외 n개`를 붙여 줄이며, 분류 전체를 고른 공고는 길이와 무관하게 `전체 직무`다. 요청의 `role` 자유 글자는 무시된다. 검증 순서는 COMPANY → ROLE → LINK → PERIOD → CLOSED. 저장과 대상 구독(공고 직무와 겹치는 직무를 고른 구독과 받을 직무를 고르지 않은 구독)의 대기 발송 생성이 끝났다는 뜻이며 `deliveries`는 그 건수다. FCM 수락을 기다리지 않는다. 409 `{"error":"DUPLICATE_LINK","postingId"}`, 400 `{"error":"INVALID_POSTING","reason": COMPANY·ROLE·LINK·PERIOD·CLOSED}` |
 | `DELETE /api/v1/notifications/admin/postings/{id}` | 204. 대기 발송만 삭제하고 수락·포기·발송 중 기록은 남긴다. 404 `POSTING_NOT_FOUND` |
-| `GET /api/v1/notifications/admin/summary?from=<ISO>&to=<ISO>` | 200 `{from, to, postings, deliveries:{pending, sending, accepted, abandoned, total, averageAttempts}, acceptanceRate, abandonRate, latencyMillis:{p50, p95}, subscriptions, roleSelectedSubscriptions}`. 예정 시각이 `[from, to)`인 발송 문서를 집계한다. `postings`는 기간 안 등록 공고 수, 수락률·포기율은 끝난 발송(수락+포기) 기준, 평균 시도는 기간 안 전체 발송 기준, 지연은 `lastAttemptAt - scheduledAt`(MongoDB `$percentile`, 7.0 이상)이며 분모가 없으면 null이다. `subscriptions`는 현재 구독 수, `roleSelectedSubscriptions`는 받을 직무를 1개 이상 고른 현재 구독 수(전환 설정을 켤 시점의 판단 기준). 400 `INVALID_RANGE`(시작 ≥ 끝, 400일 초과), 400 `INVALID_INPUT`(매개변수 누락). 집계값만 돌려주고 endpoint·키·링크는 내지 않는다 |
+| `GET /api/v1/notifications/admin/summary?from=<ISO>&to=<ISO>` | 200 `{from, to, postings, deliveries:{pending, sending, accepted, abandoned, total, averageAttempts}, acceptanceRate, abandonRate, latencyMillis:{p50, p95}, subscriptions, roleSelectedSubscriptions}`. 예정 시각이 `[from, to)`인 발송 문서를 집계한다. `postings`는 기간 안 등록 공고 수, 수락률·포기율은 끝난 발송(수락+포기) 기준, 평균 시도는 기간 안 전체 발송 기준, 지연은 `lastAttemptAt - scheduledAt`(MongoDB `$percentile`, 7.0 이상)이며 분모가 없으면 null이다. `subscriptions`는 현재 구독 수, `roleSelectedSubscriptions`는 받을 직무를 1개 이상 고른 현재 구독 수다. 400 `INVALID_RANGE`(시작 ≥ 끝, 400일 초과), 400 `INVALID_INPUT`(매개변수 누락). 집계값만 돌려주고 endpoint·키·링크는 내지 않는다 |
 
 수정 API는 없다. 삭제 후 재등록하면 대상 구독에 한 번 더 간다.
 
 ## 발송기
 
-대기 발송은 등록 시점에 대상 구독에만 만든다. 대상은 공고 `roles`와 겹치는 직무를 고른 구독이고, 전환 설정이 꺼져 있으면 받을 직무를 고르지 않은 구독도 포함한다(`roles` 멀티키 인덱스 조회). 발송기는 `@Scheduled` fixedDelay(설정 주기, 첫 실행은 기동 10초 뒤)로 한 주기에 다음을 한다.
+대기 발송은 등록 시점에 대상 구독에만 만든다. 대상은 공고 `roles`와 겹치는 직무를 고른 구독과 받을 직무를 고르지 않은(`roles`가 없거나 빈) 구독이다(`roles` 멀티키 인덱스 조회). 발송기는 `@Scheduled` fixedDelay(설정 주기, 첫 실행은 기동 10초 뒤)로 한 주기에 다음을 한다.
 
 1. 예정 시각이 지난 PENDING과 리스가 만료된 SENDING을 `nextAttemptAt` 순으로 조회한다.
 2. 건마다 `findAndModify`로 같은 상태와 기한 조건일 때만 SENDING, 시도 횟수 +1, 리스 만료 시각을 찍는다(선점). 실패한 건은 건너뛴다. 발송기가 둘이어도 같은 건의 FCM 호출은 한 번만 나간다.
@@ -82,7 +81,7 @@ CF-348은 팀이 등록한 채용 공고를 접수 가능 시점(등록 시각�
 | 그 밖의 상태, 시간 초과, IO 오류 | 1·2·4·8·16·32·64분 지수 백오프로 PENDING(`SERVER_ERROR`·`UNEXPECTED_STATUS`·`TIMEOUT`·`IO_ERROR`) |
 | 시도 횟수가 상한(기본 8)에 이른 실패 | ABANDONED(`MAX_ATTEMPTS`) |
 | 선점 시점에 마감 경과 / 공고 삭제됨 | 호출 없이 ABANDONED(`DEADLINE_PASSED` / `POSTING_MISSING`) |
-| 선점 뒤 구독의 현재 `roles`가 공고와 겹치지 않음(전환 설정이 켜져 있으면 미선택 구독 포함) | 호출 없이 ABANDONED(`FILTER_MISMATCH`). `roles`가 없는 레거시 공고와 전환 설정이 꺼진 상태의 미선택 구독은 재검사하지 않는다 |
+| 선점 뒤 직무를 고른 구독의 현재 `roles`가 공고와 겹치지 않음 | 호출 없이 ABANDONED(`FILTER_MISMATCH`). `roles`가 없는 레거시 공고와 받을 직무를 고르지 않은 구독은 재검사하지 않는다 |
 | 호출 중 인터럽트 | SENDING 유지. 리스 만료 뒤 다음 주기가 다시 보낸다 |
 
 백오프 합은 127분이라 8회째 시도는 첫 시도 뒤 약 2시간 7분에 일어난다. 장애당 중복 알림은 최대 1건이며 외부 표시까지의 exactly-once는 보장하지 않는다.
@@ -98,7 +97,6 @@ CF-348은 팀이 등록한 채용 공고를 접수 가능 시점(등록 시각�
 | `PUSH_INVALID_REQUEST` | 400·403·413으로 포기한 건(설정 점검 대상) |
 | `PUSH_DISPATCH_CYCLE` | 주기별 due·claimed·accepted·retried·abandoned·skipped·stale 건수와 소요 시간 |
 | `POSTING_REGISTERED` | 공고 등록 한 건의 공고 ID, 직무 코드 건수, 만든 대기 발송 건수 |
-| `NOTIFICATION_ROLE_FILTER` | 기동 시 전환 설정 모드(`enforced=true` 또는 `false`) |
 | `EXTERNAL_RESULT provider=fcm operation=push` | 기존 외부 호출 로그 계약 |
 
 | 메트릭 | 라벨 | 뜻 |
@@ -124,7 +122,7 @@ CF-348은 팀이 등록한 채용 공고를 접수 가능 시점(등록 시각�
 | 한 주기 처리 건수·소요 | `career.form.push.dispatch.claimed`, `career.form.push.dispatch.cycle`, `PUSH_DISPATCH_CYCLE` 로그 | 이용률(소요 ÷ 주기)이 70%를 넘으면 큐 검토 |
 | 백로그 | `career.form.push.backlog{status}` | 주기 끝에 남은 대기·발송 중 건수. 계속 늘면 처리량 부족 |
 | 결과별 건수, 수락률, 포기율, 평균 시도 | `career.form.push.delivery{outcome,reason}`, 요약 API | 포기 이유 분포는 메트릭, 기간 비율은 요약 API |
-| 구독 수, 직무 선택 구독 수 | `career.form.push.subscriptions`, 요약 API `subscriptions`·`roleSelectedSubscriptions` | 규모 가정(1,000명) 대비 실제. 직무 선택 구독 수가 전체의 대부분이 되면 전환 설정을 켤 후보다 |
+| 구독 수, 직무 선택 구독 수 | `career.form.push.subscriptions`, 요약 API `subscriptions`·`roleSelectedSubscriptions` | 규모 가정(1,000명) 대비 실제 |
 | 기기 표시 지연 | 확장이 payload `sentAt`으로 계측(PostHog) | 서버가 관측할 수 없는 구간 |
 
 조회 위치: 앱 컨테이너의 관리 포트 9091 `/actuator/prometheus`(외부 비공개, 호스트 안에서만), 중앙 Prometheus(보존 14일)·Loki(7일)·Grafana(`monitoring-system` topic), 그리고 보존 기간과 무관한 요약 API(MongoDB 발송 문서, 관리 로그인 필요).

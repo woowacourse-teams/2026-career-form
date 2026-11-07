@@ -266,11 +266,14 @@ describe("PushReceiver role filter", () => {
       [ID]: { roles: ["IT.BACKEND", "IT.QA"] },
     });
   });
-  it.each([
-    ["겹치지 않는 선택", ["DESIGN.UX_UI"]],
-    ["미선택", []],
-  ])("%s이면 알림도 배지도 계측도 없이 거른다", async (_name, selected) => {
-    const h = harness(selected);
+  it("직무를 고르지 않았으면 직무가 붙은 공고도 알림을 띄운다", async () => {
+    const h = harness([]);
+    expect(await h.receiver.receive(tagged)).toBe("notified");
+    expect(h.shown).toHaveLength(1);
+    expect(h.unreadLog).toEqual([`add:${ID}:${Date.parse(payload.closesAt)}`]);
+  });
+  it("겹치지 않는 선택이면 알림도 배지도 계측도 없이 거른다", async () => {
+    const h = harness(["DESIGN.UX_UI"]);
     expect(await h.receiver.receive(tagged)).toBe("filtered");
     expect(h.shown).toEqual([]);
     expect(h.unreadLog).toEqual([]);
