@@ -34,24 +34,22 @@ public final class PushDispatcher implements AutoCloseable {
     private final WebPushClient client;
     private final RetryPolicy policy;
     private final PushSettings settings;
-    private final RoleFilterPolicy roleFilter;
     private final Clock clock;
     private final Executor executor;
     private final ExecutorService owned;
     private final PushDispatchMetrics metrics;
 
-    public PushDispatcher(NotificationStore store, WebPushClient client, RetryPolicy policy, PushSettings settings, RoleFilterPolicy roleFilter, Clock clock,
-                          Executor executor, PushDispatchMetrics metrics) {
-        this(store, client, policy, settings, roleFilter, clock, executor, null, metrics);
+    public PushDispatcher(NotificationStore store, WebPushClient client, RetryPolicy policy, PushSettings settings, Clock clock, Executor executor,
+                          PushDispatchMetrics metrics) {
+        this(store, client, policy, settings, clock, executor, null, metrics);
     }
 
-    private PushDispatcher(NotificationStore store, WebPushClient client, RetryPolicy policy, PushSettings settings, RoleFilterPolicy roleFilter, Clock clock,
-                           Executor executor, ExecutorService owned, PushDispatchMetrics metrics) {
+    private PushDispatcher(NotificationStore store, WebPushClient client, RetryPolicy policy, PushSettings settings, Clock clock, Executor executor,
+                           ExecutorService owned, PushDispatchMetrics metrics) {
         this.store = store;
         this.client = client;
         this.policy = policy;
         this.settings = settings;
-        this.roleFilter = roleFilter;
         this.clock = clock;
         this.executor = executor;
         this.owned = owned;
@@ -60,9 +58,9 @@ public final class PushDispatcher implements AutoCloseable {
 
     /** 가상 스레드 실행기를 직접 소유하는 운영용 발송기. close()가 실행기를 닫는다. */
     public static PushDispatcher withVirtualThreads(NotificationStore store, WebPushClient client, RetryPolicy policy, PushSettings settings,
-                                                    RoleFilterPolicy roleFilter, Clock clock, PushDispatchMetrics metrics) {
+                                                    Clock clock, PushDispatchMetrics metrics) {
         var executor = Executors.newThreadPerTaskExecutor(Thread.ofVirtual().name("push-dispatch-", 0).factory());
-        return new PushDispatcher(store, client, policy, settings, roleFilter, clock, executor, executor, metrics);
+        return new PushDispatcher(store, client, policy, settings, clock, executor, executor, metrics);
     }
 
     public record Cycle(int due, int claimed, int accepted, int retried, int abandoned, int skipped, int stale, Duration duration) { }
@@ -156,11 +154,11 @@ public final class PushDispatcher implements AutoCloseable {
         }
     }
 
-    /** 선점 뒤 재검사. roles가 없는 레거시 공고는 검사하지 않고, 미선택 구독은 전환 설정이 꺼져 있을 때만 통과하며, 선택 구독은 공고와 겹쳐야 한다. */
+    /** 선점 뒤 재검사. roles가 없는 레거시 공고와 받을 직무를 고르지 않은 구독은 통과하고, 직무를 고른 구독은 공고와 겹쳐야 한다. */
     private boolean receives(JobPosting posting, PushSubscription subscription) {
         if (posting.roles() == null) { return true; }
         var selected = subscription.roles();
-        if (selected == null || selected.isEmpty()) { return !roleFilter.enforced(); }
+        if (selected == null || selected.isEmpty()) { return true; }
         return selected.stream().anyMatch(posting.roles()::contains);
     }
 

@@ -79,12 +79,10 @@ public final class MongoNotificationStore implements NotificationStore {
         return mongo.updateFirst(Query.query(Criteria.where("_id").is(id)), update, PushSubscription.class).getMatchedCount() > 0;
     }
 
-    /** roles 멀티키 인덱스를 타는 $in 조회. 미선택 포함이면 roles 필드가 없거나 빈 배열인 문서를 $or로 더한다. */
-    @Override public List<String> subscriptionIdsForRoles(Collection<String> roles, boolean includeUnselected) {
-        var overlapping = Criteria.where("roles").in(roles);
-        var criteria = includeUnselected
-            ? new Criteria().orOperator(overlapping, Criteria.where("roles").exists(false), Criteria.where("roles").size(0))
-            : overlapping;
+    /** roles 멀티키 인덱스를 타는 $in 조회에 roles 필드가 없거나 빈 배열인 미선택 구독을 $or로 더한다. */
+    @Override public List<String> subscriptionIdsForRoles(Collection<String> roles) {
+        var criteria = new Criteria().orOperator(Criteria.where("roles").in(roles), Criteria.where("roles").exists(false),
+            Criteria.where("roles").size(0));
         return List.copyOf(mongo.findDistinct(Query.query(criteria), "_id", PushSubscription.class, String.class));
     }
 

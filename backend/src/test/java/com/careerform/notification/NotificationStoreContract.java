@@ -226,7 +226,7 @@ abstract class NotificationStoreContract {
     }
 
     @Test
-    @DisplayName("직무별 대상 조회는 겹치는 선택 구독만 주고, 미선택 포함이면 roles가 없거나 빈 구독도 더하며, 겹치지 않는 선택 구독은 늘 뺀다")
+    @DisplayName("직무별 대상 조회는 겹치는 선택 구독과 roles가 없거나 빈 미선택 구독을 주고, 겹치지 않는 선택 구독은 뺀다")
     void findsSubscriptionIdsOverlappingRoles() {
         var store = store();
         store.insertSubscription(subscription("backend", "https://fcm.googleapis.com/fcm/send/synthetic-1", List.of("IT.BACKEND")));
@@ -234,11 +234,10 @@ abstract class NotificationStoreContract {
         store.insertSubscription(subscription("frontend", "https://fcm.googleapis.com/fcm/send/synthetic-3", List.of("IT.FRONTEND")));
         store.insertSubscription(subscription("unselected", "https://fcm.googleapis.com/fcm/send/synthetic-4"));
         store.insertSubscription(subscription("empty", "https://fcm.googleapis.com/fcm/send/synthetic-5", List.of()));
-        assertThat(store.subscriptionIdsForRoles(List.of("IT.BACKEND"), false)).containsExactlyInAnyOrder("backend", "both");
-        assertThat(store.subscriptionIdsForRoles(List.of("IT.BACKEND"), true)).containsExactlyInAnyOrder("backend", "both", "unselected", "empty");
-        assertThat(store.subscriptionIdsForRoles(List.of("IT.BACKEND", "IT.FRONTEND"), false)).containsExactlyInAnyOrder("backend", "both", "frontend");
-        assertThat(store.subscriptionIdsForRoles(List.of("IT.DATA"), false)).isEmpty();
-        assertThat(store.subscriptionIdsForRoles(List.of("IT.DATA"), true)).containsExactlyInAnyOrder("unselected", "empty");
+        assertThat(store.subscriptionIdsForRoles(List.of("IT.BACKEND"))).containsExactlyInAnyOrder("backend", "both", "unselected", "empty");
+        assertThat(store.subscriptionIdsForRoles(List.of("IT.BACKEND", "IT.FRONTEND")))
+            .containsExactlyInAnyOrder("backend", "both", "frontend", "unselected", "empty");
+        assertThat(store.subscriptionIdsForRoles(List.of("IT.DATA"))).containsExactlyInAnyOrder("unselected", "empty");
         assertThat(store.countSubscriptionsWithRoles()).as("roles가 1개 이상인 구독 수").isEqualTo(3);
         assertThat(store.countSubscriptions()).isEqualTo(5);
     }
