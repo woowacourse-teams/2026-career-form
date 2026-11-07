@@ -1089,3 +1089,10 @@
 - 승인한 후보 3개를 [CF-432 bundle](../raw/issues/CF-432/manifest.md)에 기록했다. 미선택 구독 상시 발송과 전환 설정 제거, 배포 경로에 남은 전환 변수, 알림 저장소 Mongo 계약 테스트의 실행 조건이다.
 - [공고 구독 알림](topics/job-posting-notifications.md), [CI/CD 설정](topics/cicd-setup.md), [확장 Web Push 구독과 공고 알림](topics/extension-push-notifications.md) topic의 현재 상태를 고쳤다.
 - 호스트 주소, 키 값, 계정, 구독 endpoint, 사용자의 직무 선택값, 대화 전문은 저장하지 않았다.
+
+## [2026-11-07] ingest | CF-435 공고 직무 필터 전환 변수의 배포 경로 정리
+- Approval-Digest: 00e55f273b4cb38bc64ae426fbb48bf19696a77a30aafcd81be17afe2097dc25
+- Source-Revision: dae7fc69
+- 승인한 후보 1개를 [CF-435 bundle](../raw/issues/CF-435/manifest.md)에 기록했다. 배포 경로에서 직무 필터 전환 변수를 지운 곳, 변수 14개·시크릿 12개 전체 목록, 재유입을 막는 계약 테스트다.
+- [CI/CD 설정](topics/cicd-setup.md) topic의 현재 상태를 고쳤다.
+- 호스트 주소, 키 값, 계정, 대화 전문은 저장하지 않았다.

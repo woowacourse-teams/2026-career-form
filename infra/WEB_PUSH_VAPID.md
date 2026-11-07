@@ -22,7 +22,6 @@ compose가 `${NAME:-기본값}`으로 backend `application.yml`과 같은 기본
 | 종류 | 이름 | 미설정 시 | 대응 Spring 설정 | 설명 |
 |---|---|---|---|---|
 | 변수 | `CAREER_FORM_NOTIFICATION_ENABLED` | `false` | `career-form.notification.enabled` | 알림 기능 토글. `true`일 때만 발송기와 `/api/v1/notifications/*`가 뜬다 |
-| 변수(선택) | `CAREER_FORM_PUSH_ROLE_FILTER_ENFORCED` | `false` | `career-form.notification.role-filter.enforced` | 공고 직무 필터 전환. `true`면 받을 직무를 고르지 않은 구독을 발송 대상에서 뺀다. 백엔드(꺼짐) → 확장 게시 → 보급 확인 뒤 사람이 켠다 |
 | 변수(선택) | `CAREER_FORM_PUSH_DISPATCH_INTERVAL` | `60s` | `career-form.notification.push.dispatch-interval` | 발송 주기, 10s 이상 1h 이하 |
 | 변수(선택) | `CAREER_FORM_PUSH_CONCURRENCY` | `20` | `career-form.notification.push.concurrency` | 동시 발송 수, 1 이상 200 이하 |
 | 시크릿 | `CAREER_FORM_PUSH_VAPID_PUBLIC_KEY` | 빈 값 | `career-form.notification.push.vapid.public-key` | base64url 공개키(65바이트 비압축 P-256, 87자) |
@@ -80,9 +79,6 @@ compose가 `${NAME:-기본값}`으로 backend `application.yml`과 같은 기본
 3. `CAREER_FORM_NOTIFICATION_ENABLED=true`로 다시 배포하고 health와 기동 로그를 확인한다.
 4. `[FE]` #349의 스테이징 빌드 확장으로 구독한 뒤 합성 공고 한 건으로 FCM 수락 로그와
    확장 수신을 종단 확인한다.
-5. `CAREER_FORM_PUSH_ROLE_FILTER_ENFORCED=true`로 다시 배포해 기동 로그
-   `NOTIFICATION_ROLE_FILTER enforced=true`와 받을 직무를 고르지 않은 구독의 제외를 확인한 뒤
-   변수를 `false`로 되돌린다.
 
 ## 운영 활성화와 릴리스 점검표
 
@@ -92,9 +88,6 @@ compose가 `${NAME:-기본값}`으로 backend `application.yml`과 같은 기본
   deploy workflow를 `main`과 diff).
 - 이번 릴리스에서 운영 알림 토글(`CAREER_FORM_NOTIFICATION_ENABLED`)을 켤지. 켠다면
   `production` 시크릿 세 개가 등록돼 있고 staging 종단 확인을 마쳤는지.
-- 직무 필터 전환(`CAREER_FORM_PUSH_ROLE_FILTER_ENFORCED`)은 릴리스와 함께 켜지 않는다. 새 확장이
-  게시되고 관리 요약 API의 `roleSelectedSubscriptions`가 전체 구독의 대부분이 된 뒤 사람이
-  변수를 `true`로 만들고 재배포한다. 켜면 받을 직무를 고르지 않은 구독은 알림을 받지 못한다.
 
 ## 공개키 배포
 
