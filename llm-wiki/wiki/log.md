@@ -1117,3 +1117,10 @@
 - 승인한 후보 3개를 [CF-448 bundle](../raw/issues/CF-448/manifest.md)에 기록했다. 가상 스레드 잠금 규칙, ADR "공고 알림 SQS 전환 보류", 공용 AWS 계정의 시험 자원 정리 절차다.
 - [공고 구독 알림](topics/job-posting-notifications.md)과 [공고 알림 발송 시험](topics/push-dispatch-load-test.md) topic을 갱신했다.
 - 호스트 주소, 계정 번호, 큐 주소, 인스턴스 ID, 키 값, 비밀번호, 구독 endpoint, 대화 전문은 저장하지 않았다.
+
+## [2026-11-09] ingest | CF-440 MongoDB 정기 백업 자동화와 임시 컨테이너 복구 리허설 추가
+- Approval-Digest: 8c7f1841fdf5df432222d370cf1a389172cd2239441fc921db99eb2a847bb538
+- Source-Revision: 9cec6cb4
+- 승인한 후보 5개를 [CF-440 bundle](../raw/issues/CF-440/manifest.md)에 기록했다. 논리 덤프 백업 ADR, 백업과 복구 운영 기준, 백업 누락 알림, 용량 실측과 합성 리허설 근거, MongoDB 8.0.26 실행 사실이다.
+- [MongoDB 백업과 복구](topics/mongodb-backup-recovery.md) topic을 새로 만들고 [공용 모니터링 시스템](topics/monitoring-system.md) topic의 현재 상태와 변경 이유를 고쳤다.
+- 계정 ID, 호스트 주소, 키 값, 계정, 구독 endpoint, 대화 전문은 저장하지 않았다.

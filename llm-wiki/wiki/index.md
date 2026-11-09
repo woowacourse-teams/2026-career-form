@@ -65,7 +65,8 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [확장 프로그램 릴리스](topics/extension-release.md) | 수동 ZIP 빌드, origin 주입, 버전 상향, Web Store 게시와 보급 확인 | 2026-10-23 |
 | [확장 Web Push 구독과 공고 알림](topics/extension-push-notifications.md) | 조용한 구독 수명주기와 상태·재시도, 푸시 검증과 중복 억제, 알림 클릭·저장 연결, 공지함과 push-api.ts 계약 정본, 알림 표시 자가 진단, 미확인 배지, 열기 자동 저장, 직무 선택 입력, 표시 지연 계측, 받을 직무 선택기와 분류 캐시, 직무별 새 공고·알림 거르기, 사이드 패널 마감 공고 탭 안내와 패널 발신자 허용, 안내 목록 접기, 직무 미선택 시 전체 수신과 서버 정책 일치 | 2026-11-07 |
 | [확장·백엔드 호환 배포](topics/release-compatibility.md) | 호환 장치, 응답 스키마 협상 규칙, 확장 먼저 게시 순서, 1.4.0 사례 | 2026-10-23 |
-| [공용 모니터링 시스템](topics/monitoring-system.md) | 중앙 수집, 환경별 알림, 호스트 디스크 감시와 검증 경계 | 2026-10-02 |
+| [공용 모니터링 시스템](topics/monitoring-system.md) | 중앙 수집, 환경별 알림, 호스트 디스크 감시와 검증 경계, MongoDB 백업 누락 알림 | 2026-11-09 |
+| [MongoDB 백업과 복구](topics/mongodb-backup-recovery.md) | 6시간 주기 암호화 논리 덤프, 공용 버킷 팀 경로 보관과 보호, 임시 컨테이너 복구 리허설과 정합 확인, 8.0.26 커널 우회 | 2026-11-09 |
 | [자동 입력 품질 관측과 사람 확인 요청](topics/autofill-quality-observation.md) | 실제 경로 및 버전별 지표, 사람 참고 분모와 평일 확인 요청 | 2026-10-07 |
 | [사이트별 자동 입력 결과와 일별 그래프](topics/autofill-quality-dashboard.md) | 관측 표본 비율, 회사별 사이트와 KST 일별 공백 처리 | 2026-10-14 |
 | [자동 기입 품질 report의 전송 시점](topics/quality-report-lifecycle.md) | 실행 중 누적, 종료 시 전송과 중복 방지 | 2026-10-13 |
