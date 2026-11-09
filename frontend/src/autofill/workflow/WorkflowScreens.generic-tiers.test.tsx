@@ -30,6 +30,10 @@ function base(candidateId: string, fieldLabel: string): ReviewPlanItem {
 const auto = applyGenericGrade(base("auto", "자동 칸"), { grade: "AUTO" });
 const review = applyGenericGrade(base("review", "확인 칸"), {
   grade: "REVIEW",
+  reason: "MODERATE_CONFIDENCE",
+});
+const included = applyGenericGrade(base("included", "포함된 확인 칸"), {
+  grade: "REVIEW",
   reason: "NO_FIELD_CONTEXT",
 });
 const blocked = applyGenericGrade(base("blocked", "막힌 칸"), {
@@ -94,7 +98,7 @@ describe("generic review screen tiers", () => {
       within(panel).queryByText("입력 불가", { selector: "small" }),
     ).toBeNull();
     expect(
-      within(panel).getByText(genericReasonText("NO_FIELD_CONTEXT")),
+      within(panel).getByText(genericReasonText("MODERATE_CONFIDENCE")),
     ).toBeVisible();
     fireEvent.click(screen.getByRole("tab", { name: "입력 불가 2" }));
     const blockedPanel = screen.getByRole("tabpanel", {
@@ -128,6 +132,17 @@ describe("generic review screen tiers", () => {
     fireEvent.click(screen.getByRole("tab", { name: "확인 필요 1" }));
     fireEvent.click(screen.getByRole("button", { name: "확인 칸 포함하기" }));
     expect(toggle).toHaveBeenCalledWith("review");
+  });
+
+  it("plans a review field the applicant need not decide, without a toggle", () => {
+    renderReview([auto, included, review]);
+    expect(screen.getByRole("tab", { name: "자동 기입 예정 2" })).toBeVisible();
+    expect(screen.getByRole("tab", { name: "확인 필요 1" })).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: /포함된 확인 칸 (포함|제외)하기/ }),
+    ).toBeNull();
+    fireEvent.click(screen.getByRole("tab", { name: "자동 기입 예정 2" }));
+    expect(screen.getByText("포함된 확인 칸")).toBeVisible();
   });
 });
 

@@ -34,6 +34,20 @@ const EMPLOYMENT_ALIASES: Readonly<Record<string, readonly string[]>> = {
   파견: ["파견직"],
 };
 
+/** Stored transfer status and the admission wording sites use for it. */
+const TRANSFER_ALIASES: Readonly<Record<string, readonly string[]>> = {
+  비해당: ["입학", "신입학"],
+  해당: ["편입", "편입학"],
+};
+
+/** A stored degree and the school-type option sites list for it. */
+const DEGREE_SCHOOL_ALIASES: Readonly<Record<string, readonly string[]>> = {
+  학사: ["대학교", "대학교(4년)", "4년제대학"],
+  전문학사: ["전문대학", "대학교(2,3년)", "2,3년제대학"],
+  석사: ["대학원(석사)", "석사과정"],
+  박사: ["대학원(박사)", "박사과정"],
+};
+
 /** Local-only meaning resolution shared by grading, binding and native writes. */
 export function resolveChoiceOption<T extends { displayName: string }>(
   key: string | undefined,
@@ -56,6 +70,13 @@ export function resolveChoiceOption<T extends { displayName: string }>(
   }
   if (key === "careers.career.employmentType")
     (EMPLOYMENT_ALIASES[value.trim()] ?? []).forEach((word) =>
+      aliases.add(normalizeOptionText(word)));
+  if (key?.endsWith(".transferStatus"))
+    for (const [stored, words] of Object.entries(TRANSFER_ALIASES))
+      if (aliases.has(normalizeOptionText(stored)))
+        words.forEach((word) => aliases.add(normalizeOptionText(word)));
+  if (fieldId === "degreeLevel")
+    (DEGREE_SCHOOL_ALIASES[value.trim()] ?? []).forEach((word) =>
       aliases.add(normalizeOptionText(word)));
   const pick = (matches: readonly T[], reason?: "GRADE_OTHER_OPTION"): ChoiceResolution<T> =>
     matches.length === 1

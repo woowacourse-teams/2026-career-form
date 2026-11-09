@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "profile": {
+    "personal": {
+      "koreanFamilyName": "김",
+      "koreanGivenName": "가온",
+      "englishFamilyName": "KIM",
+      "englishGivenName": "GAON",
+      "birthDate": "2001-04-17",
+      "nationality": "대한민국"
+    },
+    "contact": {
+      "email": "cf.synthetic.01@example.com",
+      "residenceCountry": "대한민국"
+    },
+    "compensation": {},
+    "military": {
+      "militaryStatus": "military-status:served",
+      "militaryType": "현역병",
+      "militaryBranch": "military-branch:army",
+      "militaryRank": "military-rank:byeongjang",
+      "serviceStartDate": "2021-07-05",
+      "serviceEndDate": "2023-01-04",
+      "dischargeType": "만기전역"
+    },
+    "veteran": {
+      "veteranStatus": "veteran-status:not-eligible"
+    },
+    "disability": {
+      "disabilityStatus": "disability-status:not-eligible"
+    },
+    "education": [
+      {
+        "id": "p01-high",
+        "sectionId": "highSchool",
+        "values": {
+          "academicProcess": "고등학교",
+          "schoolName": "대전고등학교",
+          "attendanceType": "attendance:day",
+          "completionStatus": "졸업",
+          "schoolRegion": "region:daejeon",
+          "startDate": "2017-03-02",
+          "endDate": "2020-02-07"
+        }
+      },
+      {
+        "id": "p01-univ",
+        "sectionId": "university",
+        "values": {
+          "schoolType": "대학교",
+          "degreeLevel": "학사",
+          "schoolName": "충남대학교",
+          "attendanceType": "attendance:day",
+          "startDate": "2020-03-02",
+          "endDate": "2026-02-20",
+          "completionStatus": "졸업",
+          "schoolRegion": "region:daejeon",
+          "gpaScore": "3.82",
+          "gpaScale": "4.50",
+          "totalCredits": "136",
+          "majorField": "공학계열",
+          "majorName": "컴퓨터공학과",
+          "transferStatus": "비해당",
+          "doubleMajorStatus": "없음",
+          "minorStatus": "없음"
+        }
+      }
+    ],
+    "languages": [
+      {
+        "id": "p01-toeic",
+        "sectionId": "languageTest",
+        "values": {
+          "language": "영어",
+          "testName": "TOEIC",
+          "acquisitionDate": "2026-03-15",
+          "grade": "870"
+        }
+      }
+    ],
+    "certifications": [
+      {
+        "id": "p01-cert",
+        "sectionId": "certificate",
+        "values": {
+          "name": "정보처리기사",
+          "issuer": "한국산업인력공단",
+          "acquisitionDate": "2025-09-12"
+        }
+      }
+    ],
+    "careers": [],
+    "projects": [
+      {
+        "id": "p01-project1",
+        "sectionId": "project",
+        "values": {
+          "startDate": "2025-03-01",
+          "endDate": "2025-06-30",
+          "projectName": "합성 도서 대여 서비스",
+          "role": "백엔드 개발",
+          "activityDetails": "평가용 가상 활동. 도서 검색과 대여 API를 구현하고 중복 대여 요청을 검증했다."
+        }
+      },
+      {
+        "id": "p01-project2",
+        "sectionId": "project",
+        "values": {
+          "startDate": "2025-09-01",
+          "endDate": "2025-12-20",
+          "projectName": "합성 교내 일정 알림",
+          "role": "팀장 및 백엔드 개발",
+          "activityDetails": "평가용 가상 활동. 일정 수집과 알림 예약을 구현했다.\n중복 알림 방지와 실패 재처리를 담당했다."
+        }
+      }
+    ],
+    "publications": [],
+    "health": []
+  }
+}

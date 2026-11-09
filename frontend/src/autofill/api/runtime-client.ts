@@ -71,9 +71,10 @@ export class AnalysisServiceError extends Error {
   constructor(
     message: string,
     readonly status?: 404,
-    readonly code?: "POLICY_INCOMPATIBLE",
+    readonly code?: "POLICY_INCOMPATIBLE" | "RATE_LIMITED",
     /** Set only when the request never got a server answer in time. */
     readonly transport?: "TIMEOUT" | "NETWORK",
+    readonly notice?: string,
   ) {
     super(message);
     this.name = "AnalysisServiceError";
@@ -220,16 +221,29 @@ export class RuntimeAnalysisApiClient implements AnalysisApiClient {
       throw new AnalysisServiceError(errorMessages.INVALID_RESPONSE);
     }
     if (!envelope.ok) {
-      throw new AnalysisServiceError(
+      const limited = [
+        "USER_LIMIT",
+        "INSTALL_LIMIT",
+        "GLOBAL_LIMIT",
+        "REGISTRATION_LIMIT",
+        "AI_BUSY",
+        "INSTALL_BUSY",
+      ].includes(envelope.code);
+      const message =
         errorMessages[envelope.code] +
-          (envelope.retryAt
-            ? ` 재시도 가능 시간: ${new Date(envelope.retryAt).toLocaleTimeString("ko-KR")}`
-            : ""),
+        (envelope.retryAt
+          ? ` 재시도 가능 시간: ${new Date(envelope.retryAt).toLocaleTimeString("ko-KR")}`
+          : "");
+      throw new AnalysisServiceError(
+        message,
         envelope.status,
-        undefined,
+        limited || envelope.code === "RATE_LIMITED"
+          ? "RATE_LIMITED"
+          : undefined,
         envelope.code === "TIMEOUT" || envelope.code === "NETWORK"
           ? envelope.code
           : undefined,
+        limited ? message : undefined,
       );
     }
     return envelope.data;

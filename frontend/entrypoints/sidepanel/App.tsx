@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
 
 import {
   openAutofillOverlay,
@@ -15,14 +22,35 @@ import {
   type ProfileSearchItem,
 } from "../../src/profile/profile-search";
 import { ChromeProfileStorage } from "../../src/storage/chrome-profile-storage";
+import {
+  PanelHeadingProvider,
+  type PanelHeading,
+} from "../../src/autofill/workflow/panel-heading";
 import { PageImport } from "../../src/profile/page-import/PageImport";
 import type { ImportCandidate } from "../../src/profile/page-import/reader";
+import {
+  savedPostingsReader,
+  type SavedPostingsReader,
+} from "../../src/job-postings/saved-postings";
+import {
+  pushClient as defaultPushClient,
+  type PushClient,
+} from "../../src/job-postings/push-client";
 import {
   unreadPostingsReader,
   type UnreadReader,
 } from "../../src/job-postings/unread-postings";
+import { usePushState } from "../../src/job-postings/use-push-state";
 import styles from "./App.module.css";
 import panelCss from "./App.module.css?inline";
+import { DeadlinePostingList, useDeadlinePostings } from "./DeadlinePostings";
+import { PanelSettingsMenu } from "./PanelSettingsMenu";
+import {
+  guidanceFor,
+  PostingsEmptyGuidance,
+  PostingsNotice,
+} from "./PostingsGuidance";
+import { ProfileValueList } from "./ProfileValueList";
 
 interface AppProps {
   track?: TrackEvent;
@@ -31,20 +59,35 @@ interface AppProps {
   closePanel?: () => void;
   openOptions?: () => Promise<void> | void;
   openPostings?: (create: boolean) => Promise<void>;
+  /** Opens posting management with the 알림 설정 dialog showing. */
+  openPostingSettings?: () => Promise<void>;
   openAutofill?: () => Promise<void>;
   inPage?: boolean;
   logoUrl?: string;
   autofillView?: ReactNode;
   returnToProfile?: () => void;
-  actionPosition?: "top" | "bottom";
   showPostings?: boolean;
   unreadPostings?: UnreadReader;
+  savedPostings?: SavedPostingsReader;
+  /** New posting alert state; the 마감 공고 tab explains why it may be empty. */
+  pushClient?: PushClient;
+  now?: () => number;
+  /** The in-page panel shrinks to its tabs' content; other surfaces keep their height. */
+  fitContent?: boolean;
   readImportCandidates?: () => Promise<readonly ImportCandidate[]>;
+  /** Only the in-page panel, which the shortcut opens, passes this. */
+  readPanelShortcut?: () => Promise<string | undefined>;
 }
 
 type LoadStatus = "loading" | "ready" | "error";
+type PanelTabId = "autofill" | "postings" | "profile";
 type PanelGroupId =
-  "personal" | "contact" | "education" | "credentials" | "additional";
+  | "personal"
+  | "contact"
+  | "education"
+  | "experience"
+  | "credentials"
+  | "additional";
 
 interface PanelGroup {
   id: PanelGroupId;
@@ -73,6 +116,11 @@ const PANEL_GROUPS: readonly PanelGroup[] = [
     label: "학력",
     categoryIds: ["education"],
     showRecordCount: true,
+  },
+  {
+    id: "experience",
+    label: "직장경력, 논문·특허, 처우",
+    categoryIds: ["careers", "publications", "compensation"],
   },
   {
     id: "credentials",
@@ -108,30 +156,41 @@ export function App({
   copyText = (value) => navigator.clipboard.writeText(value),
   closePanel = () => window.close(),
   openOptions = openOptionsPage,
-  openPostings = openPostingsPage,
+  openPostings = () => openPostingsPage(),
+  openPostingSettings = () => openPostingsPage({ settings: true }),
   openAutofill = openAutofillOverlay,
   inPage = false,
   logoUrl = "/side-panel-launcher-logo.png",
   autofillView,
   returnToProfile,
-  actionPosition = "top",
   showPostings = true,
   unreadPostings = unreadPostingsReader,
+  savedPostings = savedPostingsReader,
+  pushClient = defaultPushClient,
+  now = Date.now,
+  fitContent = false,
   readImportCandidates,
+  readPanelShortcut,
 }: AppProps) {
   const repository = useMemo(
     () => injectedRepository ?? new ChromeProfileStorage(),
     [injectedRepository],
   );
   const [profile, setProfile] = useState<Profile>();
+  const [selectedTab, setSelectedTab] = useState<PanelTabId>("autofill");
+  const tabButtons = useRef(new Map<PanelTabId, HTMLButtonElement>());
+  const deadlinePostings = useDeadlinePostings(savedPostings, now);
+  const push = usePushState(pushClient);
   const profileLoadGeneration = useRef(0);
   const [importActive, setImportActive] = useState(false);
+  const [heading, setHeading] = useState<PanelHeading>({});
   const [importSavedCount, setImportSavedCount] = useState<number>();
   const [loadStatus, setLoadStatus] = useState<LoadStatus>("loading");
   const [query, setQuery] = useState("");
   const [revealed, setRevealed] = useState<Set<string>>(() => new Set());
   const [copiedId, setCopiedId] = useState<string>();
   const [copyFailed, setCopyFailed] = useState(false);
+  const [copyCount, setCopyCount] = useState(0);
   const [navigationFailed, setNavigationFailed] = useState(false);
   const [postingsFailed, setPostingsFailed] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -156,7 +215,10 @@ export function App({
   const previouslyActive = useRef(autofillActive);
 
   useEffect(() => {
-    if (autofillActive) setImportActive(false);
+    if (!autofillActive) return;
+    setImportActive(false);
+    // Leaving the workflow returns focus to the start button on this tab.
+    setSelectedTab("autofill");
   }, [autofillActive]);
 
   useEffect(() => {
@@ -203,7 +265,9 @@ export function App({
       setCopyFailed(false);
       await copyText(value);
       setCopiedId(id);
+      setCopyCount((count) => count + 1);
     } catch {
+      setCopyCount(0);
       setCopyFailed(true);
     }
   };
@@ -227,6 +291,16 @@ export function App({
     }
   };
 
+  const openImport = () => {
+    setImportSavedCount(undefined);
+    setImportActive(true);
+    try {
+      track("greeting_import_viewed", analyticsProperties);
+    } catch {
+      // Reading and reviewing remain available without telemetry.
+    }
+  };
+
   const startAutofill = async () => {
     if (startPending.current) return;
     track("autofill_start_clicked", analyticsProperties);
@@ -245,168 +319,127 @@ export function App({
     }
   };
 
+  const homeView = !autofillActive && !importActive;
+  const tabs: readonly { id: PanelTabId; label: string }[] = [
+    { id: "autofill", label: "자동 기입" },
+    ...(showPostings ? [{ id: "postings" as const, label: "마감 공고" }] : []),
+    { id: "profile", label: "내 정보" },
+  ];
+  const activeTab =
+    selectedTab === "postings" && !showPostings ? "autofill" : selectedTab;
+
+  const guidance = push.failed ? undefined : guidanceFor(push.state);
+  const enableAlerts = async () => {
+    await push.setEnabled(true);
+    track("push_subscription_enabled", analyticsProperties);
+  };
+  const openManagement = (settings: boolean) => {
+    setPostingsFailed(false);
+    void (settings ? openPostingSettings() : openPostings(false)).catch(() =>
+      setPostingsFailed(true),
+    );
+  };
+
+  const moveTab = (event: KeyboardEvent, from: PanelTabId) => {
+    if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
+    event.preventDefault();
+    const step = event.key === "ArrowRight" ? 1 : -1;
+    const position = tabs.findIndex((tab) => tab.id === from);
+    const next = tabs[(position + step + tabs.length) % tabs.length].id;
+    setSelectedTab(next);
+    tabButtons.current.get(next)?.focus();
+  };
+
   return (
     <div
-      className={`${styles.panel} ${inPage ? styles.inPagePanel : ""} ${actionPosition === "bottom" ? styles.bottomActionPanel : ""}`}
+      className={`${styles.panel} ${inPage ? styles.inPagePanel : ""} ${styles.homePanel} ${fitContent ? styles.fitContent : ""}`}
+      data-panel-fit={fitContent ? "content" : undefined}
     >
       <style>{panelCss}</style>
-      <header className={styles.header}>
+      <header className={`${styles.header} ${styles.homeHeader}`}>
         <div className={styles.brandRow}>
           <div className={styles.brandIdentity}>
             <img
               className={styles.brandMark}
               src={logoUrl}
               alt="커리어폼"
-              width={42}
-              height={42}
+              width={28}
+              height={28}
             />
-            <div>
-              <p>CAREER FORM</p>
-              <span>지원서 패널</span>
-            </div>
           </div>
-          <button
-            className={styles.closeButton}
-            type="button"
-            aria-label="닫기"
-            onClick={closePanel}
-          >
-            <span aria-hidden="true">×</span>
-          </button>
-        </div>
-        <div className={styles.titleRow}>
-          {autofillActive && returnToProfile && (
-            <button
-              type="button"
-              className={styles.returnButton}
-              aria-label="수동 복사로 돌아가기"
-              title="수동 복사로 돌아가기"
-              onClick={returnToProfile}
-              onKeyDown={(event) => {
-                if (event.key !== "Escape") return;
-                event.preventDefault();
-                event.stopPropagation();
-                returnToProfile();
-              }}
-            >
-              <span aria-hidden="true">←</span>
-            </button>
-          )}
-          <h1>
-            {autofillActive
-              ? "자동 기입"
-              : importActive
-                ? "프로필 가져오기"
-                : "내 지원 정보"}
-          </h1>
-          <button
-            className={styles.profileButton}
-            data-profile-management
-            hidden={autofillActive || importActive}
-            type="button"
-            onClick={() => void openProfileManagement()}
-          >
-            프로필 관리 <span aria-hidden="true">↗</span>
-          </button>
-        </div>
-        {!autofillActive && !importActive && showPostings && (
-          <nav className={styles.postingsActions} aria-label="공고 관리">
-            <button
-              type="button"
-              onClick={() => {
-                setPostingsFailed(false);
-                void openPostings(false).catch(() => setPostingsFailed(true));
-              }}
-            >
-              지원 공고 관리 <span aria-hidden="true">↗</span>
-              {unreadCount > 0 && (
-                <span
-                  className={styles.unreadBadge}
-                  aria-label={`새 공고 ${unreadCount}건`}
-                >
-                  {unreadCount}
-                </span>
-              )}
-            </button>
-          </nav>
-        )}
-        {!autofillActive && !importActive && actionPosition === "top" && (
-          <section className={styles.autofillAction}>
-            <button
-              data-autofill-start
-              ref={startButton}
-              type="button"
-              disabled={autofillPending}
-              onClick={() => void startAutofill()}
-            >
-              자동 기입 <span aria-hidden="true">→</span>
-            </button>
-
-            {autofillFailed && (
-              <p className={styles.autofillError} role="alert">
-                현재 페이지에 자동 기입 화면을 열지 못했습니다. 지원서
-                페이지에서 다시 시도해 주세요.
-              </p>
+          <div className={styles.headerActions}>
+            {homeView && (
+              <PanelSettingsMenu
+                onImport={readImportCandidates ? openImport : undefined}
+                onManageProfile={() => void openProfileManagement()}
+                readPanelShortcut={readPanelShortcut}
+              />
             )}
-          </section>
-        )}
-        {postingsFailed && (
-          <p role="alert">
-            공고 관리 화면을 열지 못했습니다. 다시 시도해 주세요.
-          </p>
-        )}
-      </header>
-      {importActive && readImportCandidates ? (
-        <main className={styles.main} aria-label="프로필 가져오기 화면">
-          <PageImport
-            analytics={{ track, properties: analyticsProperties }}
-            repository={repository}
-            readCandidates={readImportCandidates}
-            onClose={() => setImportActive(false)}
-            onSaved={(saved, count) => {
-              ++profileLoadGeneration.current;
-              setProfile(saved);
-              setLoadStatus("ready");
-              setImportActive(false);
-              setImportSavedCount(count);
-            }}
-          />
-        </main>
-      ) : autofillActive ? (
-        <main className={styles.workflowMain} aria-label="지원서 작업 화면">
-          {autofillView}
-        </main>
-      ) : (
-        <>
-          <main
-            className={styles.main}
-            aria-label="지원 정보 목록"
-            data-panel-mode={inPage ? "in-page" : "side-panel"}
-          >
+            <button
+              className={styles.closeButton}
+              type="button"
+              aria-label="닫기"
+              onClick={closePanel}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                aria-hidden="true"
+              >
+                <path d="M6 6l12 12M18 6 6 18" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        {homeView ? (
+          <>
+            {/* Keeps a document title for assistive technology and focus fallbacks. */}
+            <h1 className={styles.visuallyHidden}>커리어폼 패널</h1>
+            <div className={styles.tabs} role="tablist">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  ref={(element) => {
+                    if (element) tabButtons.current.set(tab.id, element);
+                    else tabButtons.current.delete(tab.id);
+                  }}
+                  className={styles.tab}
+                  id={`panel-tab-${tab.id}`}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeTab === tab.id}
+                  aria-controls={
+                    activeTab === tab.id
+                      ? `panel-tabpanel-${tab.id}`
+                      : undefined
+                  }
+                  tabIndex={activeTab === tab.id ? 0 : -1}
+                  onClick={() => setSelectedTab(tab.id)}
+                  onKeyDown={(event) => moveTab(event, tab.id)}
+                >
+                  <span className={styles.tabLabel}>{tab.label}</span>
+                  {tab.id === "postings" &&
+                    deadlinePostings.urgentCount > 0 && (
+                      <>
+                        {" "}
+                        <span
+                          className={styles.tabCount}
+                          aria-label={`마감 임박 ${deadlinePostings.urgentCount}건`}
+                        >
+                          {deadlinePostings.urgentCount}
+                        </span>
+                      </>
+                    )}
+                </button>
+              ))}
+            </div>
             {navigationFailed && (
               <p className={styles.navigationError} role="alert">
                 프로필 관리 화면을 열지 못했습니다. 다시 시도해 주세요.
               </p>
-            )}
-
-            {readImportCandidates && (
-              <section className={styles.importAction}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setImportSavedCount(undefined);
-                    setImportActive(true);
-                    try {
-                      track("greeting_import_viewed", analyticsProperties);
-                    } catch {
-                      // Reading and reviewing remain available without telemetry.
-                    }
-                  }}
-                >
-                  지원서에서 가져오기
-                </button>
-                <p>이미 작성한 Greeting 지원서로 프로필을 채워보세요.</p>
-              </section>
             )}
             {importSavedCount !== undefined && (
               <section
@@ -421,164 +454,308 @@ export function App({
                 </p>
               </section>
             )}
-            <label className={styles.search}>
-              <span className={styles.visuallyHidden}>프로필 검색</span>
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                aria-hidden="true"
-              >
-                <circle cx="10.5" cy="10.5" r="6.5" />
-                <path d="m16 16 4.5 4.5" />
-              </svg>
-              <input
-                type="search"
-                value={query}
-                placeholder="이메일, 자격증, 학교 검색"
-                onChange={(event) => setQuery(event.target.value)}
-              />
-            </label>
-
-            <section className={styles.groups} aria-label="프로필 범주">
-              {loadStatus === "loading" && (
-                <p className={styles.empty}>프로필을 불러오는 중입니다.</p>
-              )}
-              {loadStatus === "error" && (
-                <p className={styles.empty} role="alert">
-                  프로필을 불러오지 못했습니다. 프로필 관리에서 다시 시도해
-                  주세요.
-                </p>
-              )}
-              {loadStatus === "ready" && hasQuery && results.length === 0 && (
-                <div className={styles.empty}>
-                  <strong>검색 결과가 없습니다.</strong>
-                  <span>
-                    검색어를 지우거나 프로필 관리에서 정보를 추가하세요.
-                  </span>
-                </div>
-              )}
-              {loadStatus === "ready" &&
-                visibleGroups.map((group) => {
-                  const groupItems = itemsForGroup(results, group);
-                  const isOpen = hasQuery || openGroups.has(group.id);
-                  const recordCount = profile
-                    ? countGroupRecords(profile, group)
-                    : 0;
-                  const countLabel = group.showRecordCount
-                    ? `${recordCount}건 `
-                    : "";
-                  const actionLabel = hasQuery
-                    ? "검색 결과"
-                    : isOpen
-                      ? "접기"
-                      : "펼치기";
-                  const regionId = `profile-group-${group.id}`;
-
-                  return (
-                    <section className={styles.group} key={group.id}>
-                      <button
-                        className={styles.groupToggle}
-                        type="button"
-                        aria-expanded={isOpen}
-                        aria-controls={regionId}
-                        aria-label={`${group.label} ${countLabel}${actionLabel}`}
-                        disabled={hasQuery}
-                        onClick={() => toggleGroup(group.id)}
-                      >
-                        <span>{group.label}</span>
-                        <small>
-                          {countLabel}
-                          {actionLabel}
-                        </small>
-                      </button>
-                      {isOpen && (
-                        <div className={styles.groupValues} id={regionId}>
-                          {groupItems.length === 0 && (
-                            <p className={styles.groupEmpty}>
-                              등록된 정보가 없습니다.
-                            </p>
-                          )}
-                          {groupItems.map((item) => {
-                            const isRevealed =
-                              !item.sensitive || revealed.has(item.id);
-                            return (
-                              <article
-                                className={styles.valueRow}
-                                key={item.id}
-                              >
-                                <div className={styles.valueMeta}>
-                                  {group.categoryIds.length > 1 && (
-                                    <span>{item.categoryLabel}</span>
-                                  )}
-                                  <strong>{item.fieldLabel}</strong>
-                                  <span
-                                    className={
-                                      isRevealed ? styles.value : styles.masked
-                                    }
-                                  >
-                                    {isRevealed
-                                      ? item.value
-                                      : "••••••••, 값 가림"}
-                                  </span>
-                                </div>
-                                {isRevealed ? (
-                                  <button
-                                    type="button"
-                                    data-copied={copiedId === item.id}
-                                    aria-label={`${item.fieldLabel} 복사`}
-                                    onClick={() =>
-                                      void copy(item.id, item.value)
-                                    }
-                                  >
-                                    {copiedId === item.id ? "복사됨" : "복사"}
-                                  </button>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    aria-label={`${item.fieldLabel} 펼치기`}
-                                    onClick={() =>
-                                      setRevealed((current) =>
-                                        new Set(current).add(item.id),
-                                      )
-                                    }
-                                  >
-                                    펼치기
-                                  </button>
-                                )}
-                              </article>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </section>
-                  );
-                })}
-              {copyFailed && (
-                <p className={styles.copyError} role="alert">
-                  클립보드에 복사하지 못했습니다. 브라우저 권한을 확인해 주세요.
-                </p>
-              )}
-            </section>
-          </main>
-          {actionPosition === "bottom" && (
-            <footer
-              className={`${styles.autofillAction} ${styles.previewFooter}`}
-            >
+          </>
+        ) : (
+          <div className={styles.titleRow}>
+            {autofillActive && returnToProfile && (
               <button
+                type="button"
+                className={styles.returnButton}
+                aria-label="수동 복사로 돌아가기"
+                title="수동 복사로 돌아가기"
+                onClick={returnToProfile}
+                onKeyDown={(event) => {
+                  if (event.key !== "Escape") return;
+                  event.preventDefault();
+                  event.stopPropagation();
+                  returnToProfile();
+                }}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  aria-hidden="true"
+                >
+                  <path d="m15 6-6 6 6 6" />
+                </svg>
+              </button>
+            )}
+            {importActive && !autofillActive && (
+              <button
+                type="button"
+                className={styles.returnButton}
+                aria-label="돌아가기"
+                onClick={() => setImportActive(false)}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  aria-hidden="true"
+                >
+                  <path d="m15 6-6 6 6 6" />
+                </svg>
+              </button>
+            )}
+            <h1 aria-label={heading.titleLabel}>
+              {heading.title ??
+                (autofillActive ? "자동 기입" : "프로필 가져오기")}
+            </h1>
+            {heading.step && (
+              <span className={styles.stepCount}>{heading.step}</span>
+            )}
+          </div>
+        )}
+      </header>
+      {importActive && readImportCandidates ? (
+        <main className={styles.main} aria-label="프로필 가져오기 화면">
+          <PanelHeadingProvider value={setHeading}>
+            <PageImport
+              analytics={{ track, properties: analyticsProperties }}
+              repository={repository}
+              readCandidates={readImportCandidates}
+              onClose={() => setImportActive(false)}
+              onSaved={(saved, count) => {
+                ++profileLoadGeneration.current;
+                setProfile(saved);
+                setLoadStatus("ready");
+                setImportActive(false);
+                setImportSavedCount(count);
+                setSelectedTab("profile");
+              }}
+            />
+          </PanelHeadingProvider>
+        </main>
+      ) : autofillActive ? (
+        <main className={styles.workflowMain} aria-label="지원서 작업 화면">
+          <PanelHeadingProvider value={setHeading}>
+            {autofillView}
+          </PanelHeadingProvider>
+        </main>
+      ) : (
+        <div
+          className={styles.tabPanel}
+          id={`panel-tabpanel-${activeTab}`}
+          role="tabpanel"
+          aria-labelledby={`panel-tab-${activeTab}`}
+        >
+          {activeTab === "autofill" && (
+            <div className={styles.autofillTab}>
+              <button
+                className={styles.startButton}
                 data-autofill-start
                 ref={startButton}
                 type="button"
                 disabled={autofillPending}
                 onClick={() => void startAutofill()}
               >
-                자동 기입 <span aria-hidden="true">→</span>
+                자동 기입
               </button>
-              <p>선택 후 분석과 검토를 시작합니다</p>
-            </footer>
+              {autofillFailed && (
+                <p className={styles.autofillError} role="alert">
+                  현재 페이지에 자동 기입 화면을 열지 못했습니다. 지원서
+                  페이지에서 다시 시도해 주세요.
+                </p>
+              )}
+            </div>
           )}
-        </>
+          {activeTab === "postings" && (
+            <div className={styles.postingsTab}>
+              {guidance &&
+                deadlinePostings.status === "ready" &&
+                deadlinePostings.postings.length > 0 && (
+                  <PostingsNotice
+                    guidance={guidance}
+                    busy={push.busy}
+                    onEnable={() => void enableAlerts()}
+                    onOpenSettings={() => openManagement(true)}
+                  />
+                )}
+              <DeadlinePostingList
+                status={deadlinePostings.status}
+                postings={deadlinePostings.postings}
+                time={deadlinePostings.time}
+                onRetry={deadlinePostings.retry}
+                empty={
+                  guidance && push.state ? (
+                    <PostingsEmptyGuidance
+                      guidance={guidance}
+                      state={push.state}
+                      unread={unreadCount}
+                      busy={push.busy}
+                      onEnable={() => void enableAlerts()}
+                      onOpenSettings={() => openManagement(true)}
+                      onOpenPostings={() => openManagement(false)}
+                    />
+                  ) : undefined
+                }
+              />
+              <div className={styles.postingsFooter}>
+                {postingsFailed && (
+                  <p className={styles.navigationError} role="alert">
+                    공고 관리 화면을 열지 못했습니다. 다시 시도해 주세요.
+                  </p>
+                )}
+                <button
+                  className={styles.postingsManage}
+                  type="button"
+                  onClick={() => openManagement(false)}
+                >
+                  공고 관리 <span aria-hidden="true">↗</span>
+                  {unreadCount > 0 && (
+                    <span
+                      className={styles.unreadBadge}
+                      aria-label={`새 공고 ${unreadCount}건`}
+                    >
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+          {activeTab === "profile" && (
+            <main
+              className={`${styles.main} ${styles.profileMain}`}
+              aria-label="지원 정보 목록"
+              data-panel-mode={inPage ? "in-page" : "side-panel"}
+            >
+              <label className={styles.search}>
+                <span className={styles.visuallyHidden}>프로필 검색</span>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="m20 20-3.5-3.5" />
+                </svg>
+                <input
+                  type="search"
+                  value={query}
+                  placeholder="이메일, 자격증, 학교 검색"
+                  onChange={(event) => setQuery(event.target.value)}
+                />
+              </label>
+
+              <section className={styles.groups} aria-label="프로필 범주">
+                {loadStatus === "loading" && (
+                  <p className={styles.empty}>프로필을 불러오는 중입니다.</p>
+                )}
+                {loadStatus === "error" && (
+                  <p className={styles.empty} role="alert">
+                    프로필을 불러오지 못했습니다. 프로필 관리에서 다시 시도해
+                    주세요.
+                  </p>
+                )}
+                {loadStatus === "ready" && hasQuery && results.length === 0 && (
+                  <div className={styles.empty}>
+                    <strong>검색 결과가 없습니다.</strong>
+                    <span>
+                      검색어를 지우거나 프로필 관리에서 정보를 추가하세요.
+                    </span>
+                  </div>
+                )}
+                {loadStatus === "ready" &&
+                  visibleGroups.map((group) => {
+                    const groupItems = itemsForGroup(results, group);
+                    const isOpen = hasQuery || openGroups.has(group.id);
+                    const recordCount = profile
+                      ? countGroupRecords(profile, group)
+                      : 0;
+                    const countLabel = group.showRecordCount
+                      ? `${recordCount}건 `
+                      : "";
+                    const actionLabel = hasQuery
+                      ? "검색 결과"
+                      : isOpen
+                        ? "접기"
+                        : "펼치기";
+                    const regionId = `profile-group-${group.id}`;
+
+                    return (
+                      <section className={styles.group} key={group.id}>
+                        <button
+                          className={styles.groupToggle}
+                          type="button"
+                          aria-expanded={isOpen}
+                          aria-controls={regionId}
+                          aria-label={`${group.label} ${countLabel}${actionLabel}`}
+                          disabled={hasQuery}
+                          onClick={() => toggleGroup(group.id)}
+                        >
+                          <span>{group.label}</span>
+                          <small>
+                            {group.showRecordCount
+                              ? recordCount
+                              : groupItems.length}
+                          </small>
+                          {!hasQuery && (
+                            <svg
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              aria-hidden="true"
+                            >
+                              <path
+                                d={isOpen ? "m6 15 6-6 6 6" : "m6 9 6 6 6-6"}
+                              />
+                            </svg>
+                          )}
+                        </button>
+                        {isOpen && (
+                          <div className={styles.groupValues} id={regionId}>
+                            {groupItems.length === 0 && (
+                              <p className={styles.groupEmpty}>
+                                등록된 정보가 없습니다.
+                              </p>
+                            )}
+                            <ProfileValueList
+                              items={groupItems}
+                              showCategory={group.categoryIds.length > 1}
+                              revealed={revealed}
+                              copiedId={copiedId}
+                              onCopy={(id, value) => void copy(id, value)}
+                              onReveal={(id) =>
+                                setRevealed((current) =>
+                                  new Set(current).add(id),
+                                )
+                              }
+                            />
+                          </div>
+                        )}
+                      </section>
+                    );
+                  })}
+                {copyFailed && (
+                  <p className={styles.copyError} role="alert">
+                    클립보드에 복사하지 못했습니다. 브라우저 권한을 확인해
+                    주세요.
+                  </p>
+                )}
+              </section>
+              <div
+                className={`${styles.visuallyHidden} ${styles.copyStatus}`}
+                role="status"
+                aria-label="복사 상태"
+              >
+                {copyCount > 0 && (
+                  <span key={copyCount}>클립보드에 복사했어요</span>
+                )}
+              </div>
+            </main>
+          )}
+        </div>
       )}
     </div>
   );

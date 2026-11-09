@@ -181,6 +181,7 @@ it("covers every snapshot directory with the initial route and review classifica
       "NO_SNAPSHOT",
       "ABORTED",
       "NOT_GENERIC_ROUTE",
+      "MODEL_EVALUATION_ONLY",
     ]).toContain(entry.status);
     if (!snapshots.includes(entry.snapshot))
       expect(["NO_SNAPSHOT", "ABORTED"]).toContain(entry.status);
@@ -191,7 +192,9 @@ it("covers every snapshot directory with the initial route and review classifica
   );
   expect(aggregate.missing).toEqual(aggregate.expected);
   expect(aggregate.excluded.map(({ snapshot }) => snapshot)).toEqual(
-    manifest.filter((entry) => !isMeasured(entry)).map(({ snapshot }) => snapshot),
+    manifest
+      .filter((entry) => !isMeasured(entry))
+      .map(({ snapshot }) => snapshot),
   );
   expect(
     manifest
@@ -203,11 +206,11 @@ it("covers every snapshot directory with the initial route and review classifica
       .filter(({ status }) => status === "RUNNABLE")
       .map(({ snapshot }) => snapshot),
   ).toEqual([
-      "ahnlab-write-resume-form",
-      "naver-step2-form",
-      "visible-control-row",
-      "framework-rerender",
-    ]);
+    "ahnlab-write-resume-form",
+    "naver-step2-form",
+    "visible-control-row",
+    "framework-rerender",
+  ]);
   expect(
     manifest
       .filter(({ status }) => status === "UNREVIEWED")
@@ -218,6 +221,22 @@ it("covers every snapshot directory with the initial route and review classifica
       .filter(({ status }) => status === "ABORTED")
       .map(({ snapshot }) => snapshot),
   ).toEqual(["naver-panel-loss"]);
+  expect(
+    manifest
+      .filter(({ status }) => status === "MODEL_EVALUATION_ONLY")
+      .map(({ snapshot }) => snapshot),
+  ).toEqual([
+    "woowahan-r2605009-initial",
+    "woowahan-r2605009-high-school",
+    "woowahan-r2605009-university",
+    "woowahan-r2605009-ged",
+    "nhn-presales-initial",
+  ]);
+  expect(
+    manifest
+      .filter(({ status }) => status === "MODEL_EVALUATION_ONLY")
+      .every((entry) => !isMeasured(entry)),
+  ).toBe(true);
 });
 
 it("aggregates only the current manifest set and separates unreviewed metrics by control", async () => {

@@ -17,7 +17,8 @@ type Render =
   | "missing"
   | "open"
   | "insert"
-  | "wrong-target";
+  | "wrong-target"
+  | "noop";
 
 async function runCalendar(render: Render) {
   const months = [
@@ -51,6 +52,10 @@ async function runCalendar(render: Render) {
   Array.from(popup.querySelectorAll("button"))
     .find((button) => button.textContent === "March")!
     .addEventListener("click", () => {
+      if (render === "noop") {
+        popup.hidden = true;
+        return;
+      }
       target.value = render === "wrong-target" ? "2026-04" : "2026-03";
       popup.hidden = render !== "open";
       replaceable.replaceChildren(
@@ -166,6 +171,18 @@ describe("calendar render safety", () => {
     const { results } = await runCalendar("insert");
     expect(results.map((result) => result.code)).toEqual(["WRITTEN", "WRITTEN", "WRITTEN"]);
     expect(document.querySelector<HTMLInputElement>("[name='new-field']")!.value).toBe("");
+  });
+
+  it("keeps writing later fields when a failed calendar changed nothing", async () => {
+    const { results, visited, popup } = await runCalendar("noop");
+    expect(results[0]).toMatchObject({
+      status: "skipped",
+      code: "RETAINED_VALUE_UNCONFIRMED",
+    });
+    expect(results.slice(1).map((result) => result.code)).toEqual(["WRITTEN", "WRITTEN"]);
+    expect(visited).toEqual(["start", "note", "other"]);
+    expect(document.querySelector<HTMLInputElement>("#start")!.value).toBe("");
+    expect(popup.hidden).toBe(true);
   });
 
   it.each(["value", "checked", "ambiguous", "missing", "open", "wrong-target"] as const)(

@@ -1,0 +1,88 @@
+{
+  "fixture_id": "woowahan-r2605009-ged",
+  "site_id": "woowahan-recruitment",
+  "issue_number": 356,
+  "collected_on": "2026-11-02",
+  "provenance": "SANITIZED_SNAPSHOT",
+  "installed_revision": "UNVERIFIED",
+  "revision_evidence": {
+    "method": "UNAVAILABLE",
+    "metadata": null,
+    "metadata_sha256": null,
+    "unverified_reason": "사용자가 승인한 예외로 에이전트가 사용자 Chrome에서 같은 정제 스크립트를 실행했고 설치 확장 빌드 정보는 조회하지 않았다"
+  },
+  "sanitized_sha256": "075739e1d05af11bacb5ae7a49246640461ec317ea7aaba1139dd986f1c92704",
+  "scope": {
+    "description": "공고 R2605009 지원서의 main 안 지원서 묶음 중 입력 칸이 있는 섹션 2개. 학력 구분 '검정고시'만 고른 화면(보훈·장애·병역은 처음 상태). 저장하지 않음",
+    "control_total": 35,
+    "options": 40,
+    "labels": 35,
+    "product_collector_candidates": 30,
+    "generic_sections": 8,
+    "excluded": [
+      "칸이 없는 머리말 영역",
+      "main 밖 위젯(shadow root, 칸 0개)",
+      "아이콘 i 요소"
+    ]
+  },
+  "failure": {
+    "stage": "NONE",
+    "expected": "평가 데이터셋 입력 화면. 특정 실패 재현용이 아니다",
+    "actual": null,
+    "conditions": []
+  },
+  "sanitization": {
+    "removed": [
+      "입력값",
+      "선택·체크 상태",
+      "textarea 본문",
+      "class",
+      "style",
+      "data-v-* 4종",
+      "아이콘 요소",
+      "숨김 input"
+    ],
+    "replaced": [
+      "id·for를 익명 번호로 치환",
+      "선택지 value를 opt-N으로 치환",
+      "URL 2개를 https://example.test로 치환",
+      "개인정보 패턴·현재 입력값과 같은 글자 5곳을 [비식별]로 치환"
+    ],
+    "preserved": [
+      "라벨, 안내 문구, placeholder, 선택지 표시명",
+      "원본의 중복 id 1개(첨부 영역)"
+    ],
+    "preserved_common_text": "에이전트가 남는 글자 목록 전체를 확인했고 사람이 승인했다. 검정고시 화면에서 새로 생긴 글자는 '합격연월', '합격연월 YYYYMM'뿐이다",
+    "extraction_code": "수집 지침(collection-skill.md) 2단계 스크립트. Console 전용 copy() 대신 페이지 안 변수에 담아 내려받았고 정제 규칙은 바꾸지 않았다"
+  },
+  "synthetic_behavior": [
+    "원본에서 CSS로 숨겨진 요소에 hidden 속성을 합성했다"
+  ],
+  "limitations": [
+    "기본정보 섹션 제목(인사말)이 [비식별]이다. 실제 제품은 원래 글자를 서버로 보내므로 이 부분은 설치 제품 입력과 다르다",
+    "주소·학교명·주전공 검색 팝업 화면은 수집하지 않았다. 기입 단계의 SEARCH_* 결정 호출은 이 fixture로 재현되지 않는다",
+    "페이지 스크립트가 만드는 조건부 노출(구분 선택, 대상 선택)은 재현하지 않고 상태별 fixture로 나눴다",
+    "설치 확장 revision과 실사이트 성공률의 근거가 아니다",
+    "사용자 승인 예외로 에이전트가 Claude in Chrome에서 선택을 바꾸고 스크립트를 실행했다(저장·제출·미리보기·스크린샷 없음, 끝난 뒤 선택을 처음대로 되돌림)"
+  ],
+  "review": {
+    "privacy": {
+      "result": "PASSED",
+      "human_reviewed": true,
+      "reviewed_on": "2026-11-02"
+    },
+    "structure": {
+      "result": "PASSED",
+      "human_reviewed": true,
+      "reviewed_on": "2026-11-02",
+      "note": "사람이 학력 행에 구분과 합격연월만 나타나는 구조를 승인했다"
+    }
+  },
+  "reproduction": {
+    "command": "cd frontend && npx vitest run --project unit src/autofill/workflow/dom-snapshot.woowahan-r2605009.test.ts",
+    "product_revision": "0d392b24607c0bb3ad0d2f93ef369841b5e441c2",
+    "observed": [
+      "칸 35개, 제품 수집기 후보 30개, 범용 섹션 8개"
+    ]
+  }
+}

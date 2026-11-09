@@ -22,13 +22,8 @@ export function ImportSummary({ rows, chosen }: Props) {
       <p className={styles.summaryLabel}>프로필에 가져올 정보</p>
       <p className={styles.summaryCount}>
         <span data-testid="import-count">{saving.length}</span>
-        <small>개</small>
+        <small>개 가져오기</small>
       </p>
-      <div className={styles.bar} aria-hidden="true">
-        {legend.map(({ label, count, tone }) => (
-          <span key={label} className={tone} style={{ flexGrow: count }} />
-        ))}
-      </div>
       <ul className={styles.legend}>
         {legend.map(({ label, count, tone }) => (
           <li key={label}>
@@ -38,10 +33,6 @@ export function ImportSummary({ rows, chosen }: Props) {
           </li>
         ))}
       </ul>
-      <p className={styles.summaryHint}>
-        비어 있던 칸을 채우는 값은 미리 골라 두었어요. 기존 값을 바꾸는 값과
-        민감 정보는 직접 켜야 저장돼요.
-      </p>
     </section>
   );
 }

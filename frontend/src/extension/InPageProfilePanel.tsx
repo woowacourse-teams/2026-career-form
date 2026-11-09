@@ -6,6 +6,8 @@ import {
   useSyncExternalStore,
 } from "react";
 
+import { browser } from "wxt/browser";
+
 import { trackExtensionEvent } from "../analytics/extension-tracker";
 import type { TrackEvent } from "../analytics/events";
 import { prepareImportPolicy } from "../profile/page-import/load-import-policy";
@@ -19,6 +21,7 @@ import type { AnalysisApiClient } from "../autofill/api/types";
 import { AutofillOverlay } from "../autofill-demo/AutofillOverlay";
 import type { ProfileRepository } from "../profile/profile-repository";
 import { ChromeProfileStorage } from "../storage/chrome-profile-storage";
+import { requestPanelShortcut } from "./panel-shortcut";
 import type { ProfilePanelController } from "./profile-panel-controller";
 
 interface InPageProfilePanelProps {
@@ -27,11 +30,18 @@ interface InPageProfilePanelProps {
   openOptions(): Promise<void> | void;
   logoUrl: string;
   unsupportedImageUrl?: string;
+  writingImageUrl?: string;
   pageDocument: Document;
   apiClient?: AnalysisApiClient;
   repository?: ProfileRepository;
   track?: TrackEvent;
+  readPanelShortcut?: () => Promise<string | undefined>;
 }
+
+// Stable identity so the hint reads the shortcut once per mount, not per render.
+// In jsdom `browser.runtime` is missing; the rejection only hides the hint.
+const readShortcutFromBackground = async () =>
+  requestPanelShortcut(browser.runtime);
 
 export function InPageProfilePanel({
   controller,
@@ -39,10 +49,12 @@ export function InPageProfilePanel({
   openOptions,
   logoUrl,
   unsupportedImageUrl,
+  writingImageUrl,
   pageDocument,
   apiClient: injectedApiClient,
   repository: injectedRepository,
   track = trackExtensionEvent,
+  readPanelShortcut = readShortcutFromBackground,
 }: InPageProfilePanelProps) {
   const mode = useSyncExternalStore(
     controller.subscribe,
@@ -95,8 +107,10 @@ export function InPageProfilePanel({
   return (
     <App
       inPage
+      fitContent
       track={track}
       readImportCandidates={readImportCandidates}
+      readPanelShortcut={readPanelShortcut}
       repository={repository}
       logoUrl={logoUrl}
       openOptions={openOptions}
@@ -114,6 +128,7 @@ export function InPageProfilePanel({
             repository={repository}
             pageDocument={pageDocument}
             unsupportedImageUrl={unsupportedImageUrl}
+            writingImageUrl={writingImageUrl}
             onClose={controller.showProfile}
           />
         ) : undefined

@@ -26,7 +26,7 @@ class GenericEducationRecordHintTest {
     private Set<String> criteriaFor(Section section) {
         var http = new GenericFieldsJevHttp();
         http.respond(call -> answerAll(call, null, 0.9));
-        new JevCategoryFieldResolver(GenericFieldsJevHttp.client(http), FIELDS, CATEGORIES, 3, 5, 10, 8000)
+        new ChoiceFieldResolver(GenericFieldsJevHttp.client(http), FIELDS, CATEGORIES, 3, 5, 10, 8000)
             .resolve(request("example.test", List.of(section)));
         var call = http.calls().getFirst();
         return new HashSet<>(call.criteria(call.questionIds().getFirst()));

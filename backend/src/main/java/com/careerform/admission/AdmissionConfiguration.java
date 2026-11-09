@@ -15,6 +15,16 @@ import io.micrometer.core.instrument.MeterRegistry;
 @EnableScheduling
 @org.springframework.context.annotation.Conditional(AdmissionAvailableCondition.class)
 public class AdmissionConfiguration {
+    @Bean
+    public static org.springframework.beans.factory.config.BeanFactoryPostProcessor admissionEnvironmentPolicy(Environment environment) {
+        return factory -> {
+            if (environment.getProperty("career-form.admission.enabled", Boolean.class, false)
+                && environment.getProperty("career-form.evaluation.enabled", Boolean.class, false)) {
+                throw new IllegalStateException("AI evaluation and installation protection cannot be enabled together");
+            }
+        };
+    }
+
     @Bean public AdmissionSettings admissionSettings(Environment environment) {
         return new AdmissionSettings(number(environment, "user-hourly", 100), number(environment, "install-minute", 60),
             number(environment, "global-hourly", 10000), number(environment, "concurrency", 20), number(environment, "waiting", 100),

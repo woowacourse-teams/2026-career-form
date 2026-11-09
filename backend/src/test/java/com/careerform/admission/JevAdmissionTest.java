@@ -8,6 +8,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpResponse;
 import java.time.Clock;
 import java.util.Map;
+import java.util.ArrayList;
+import com.careerform.monitoring.ModelCallRecording;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.Test;
@@ -36,20 +38,30 @@ class JevAdmissionTest {
             HttpResponse<String> response = mock(HttpResponse.class);
             when(response.statusCode()).thenReturn(200);
             when(response.body()).thenReturn("{\"model\":\"jev-test\",\"answers\":{\"q\":{\"type\":\"choice\",\"choice\":\"YES\",\"confidence\":0.9,\"probabilities\":{\"YES\":0.9,\"ABSTAIN\":0.1}}},\"usage\":{\"input_tokens\":1,\"output_tokens\":1}}");
-            when(http.sendAsync(any(), any(HttpResponse.BodyHandler.class))).thenReturn(CompletableFuture.completedFuture(response));
+            HttpResponse<String> limited = mock(HttpResponse.class);
+            when(limited.statusCode()).thenReturn(429);
+            when(limited.body()).thenReturn("{}");
+            when(http.sendAsync(any(), any(HttpResponse.BodyHandler.class))).thenReturn(
+                CompletableFuture.completedFuture(response), CompletableFuture.completedFuture(limited),
+                CompletableFuture.completedFuture(response));
             var transport = JevClient.class.getDeclaredField("http");
             transport.setAccessible(true);
             transport.set(jev, http);
             var question = Map.of("q", new JevClient.Choice("synthetic", Map.of("YES", "synthetic", "ABSTAIN", "synthetic")));
             AnalysisContext.begin("synthetic-install", settings.requestTimeout());
             try {
-                assertThat(jev.choose(Map.of(), question)).containsEntry("q", "YES");
-                assertThat(jev.answer(Map.of(), question).get("q").choice()).isEqualTo("YES");
-                assertThat(meters.counter("analysis.admission.transport.attempts").count()).isEqualTo(2);
+                var attempts = new ArrayList<ModelCallRecording.Attempt>();
+                ModelCallRecording.within(attempts::add, () -> {
+                    assertThat(jev.choose(Map.of(), question)).containsEntry("q", "YES");
+                    assertThat(jev.answer(Map.of(), question).get("q").choice()).isEqualTo("YES");
+                    return null;
+                });
+                assertThat(attempts).extracting(ModelCallRecording.Attempt::httpStatus).containsExactly(200, 429, 200);
+                assertThat(meters.counter("analysis.admission.transport.attempts").count()).isEqualTo(3);
                 assertThat(mongo.findAll(UsageBucket.class).stream().filter(row -> row.id().startsWith("user:")).mapToInt(UsageBucket::used).sum())
                     .isEqualTo(2);
                 assertThat(mongo.findAll(UsageBucket.class).stream().filter(row -> row.id().startsWith("global:")).mapToInt(UsageBucket::used).sum())
-                    .isEqualTo(2);
+                    .isEqualTo(3);
             } finally { AnalysisContext.clear(); }
         }
     }

@@ -2,9 +2,9 @@
 
 > Topic: adapter-field-inventory
 > Status: Current
-> Current: [CF-346 Greeting v19 직접 입력 지원 범위](../../raw/issues/CF-346/documents/greeting-v19-field-inventory.md)
-> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-field-inventory.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-field-inventory.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-field-inventory.md); [CF-94 근거](../../raw/issues/CF-94/documents/adapter-field-inventory.md); [CF-160 근거](../../raw/issues/CF-160/documents/adapter-field-inventory.md); [CF-168 근거](../../raw/issues/CF-168/documents/adapter-field-inventory.md); [CF-169 근거](../../raw/issues/CF-169/documents/adapter-field-inventory.md); [CF-177 근거](../../raw/issues/CF-177/documents/adapter-field-inventory.md); [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md); [CF-177 C12·C13·시연 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md); [CF-177 KDI·구조 미확인 근거](../../raw/issues/CF-177/documents/live-kdi-unverified.md); [CF-177 후속 보완 묶음 근거](../../raw/issues/CF-177/documents/live-followup-bundle.md); [CF-335 현대 v25 경력 날짜·종료사유·자격 등급 지원 현황](../../raw/issues/CF-335/documents/hyundai-v25-field-inventory.md); [CF-346 Greeting v19 직접 입력 지원 범위](../../raw/issues/CF-346/documents/greeting-v19-field-inventory.md)
-> Updated: 2026-10-25
+> Current: [CF-368 Greeting 고교·대학 학교명 확정 범위](../../raw/issues/CF-368/documents/greeting-school-name-field-inventory.md)
+> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-field-inventory.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-field-inventory.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-field-inventory.md); [CF-94 근거](../../raw/issues/CF-94/documents/adapter-field-inventory.md); [CF-160 근거](../../raw/issues/CF-160/documents/adapter-field-inventory.md); [CF-168 근거](../../raw/issues/CF-168/documents/adapter-field-inventory.md); [CF-169 근거](../../raw/issues/CF-169/documents/adapter-field-inventory.md); [CF-177 근거](../../raw/issues/CF-177/documents/adapter-field-inventory.md); [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md); [CF-177 C12·C13·시연 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md); [CF-177 KDI·구조 미확인 근거](../../raw/issues/CF-177/documents/live-kdi-unverified.md); [CF-177 후속 보완 묶음 근거](../../raw/issues/CF-177/documents/live-followup-bundle.md); [CF-335 현대 v25 경력 날짜·종료사유·자격 등급 지원 현황](../../raw/issues/CF-335/documents/hyundai-v25-field-inventory.md); [CF-346 Greeting v19 직접 입력 지원 범위](../../raw/issues/CF-346/documents/greeting-v19-field-inventory.md); [CF-368 Greeting 고교·대학 학교명 확정 범위](../../raw/issues/CF-368/documents/greeting-school-name-field-inventory.md)
+> Updated: 2026-10-29
 
 ## 현재 상태
 
@@ -28,6 +28,16 @@ CF-169는 현대 어학 언어·시험과 SK 어학 언어 상태 드라이버�
 | 현대 전과/편입 | 규칙 없음(코드 수집만) | 프로필 `해당`의 대응 선택지를 정할 수 없어 보류 |
 
 선택지에 없는 값은 매핑하지 않고 "확인 필요"로 남긴다. 근거는 [CF-335 근거](../../raw/issues/CF-335/documents/hyundai-v25-field-inventory.md)를 따른다.
+
+## Greeting 고교 동명 후보·폴리텍 번호 표기 (2026-10-29)
+
+| 항목 | 구현 | 검증 상태 |
+|---|---|---|
+| Greeting 고교 학교명, 같은 이름 정식 후보 2개 이상 | 정책 버전 변경 없이(v19 유지) FE 지역 동점 해소. 기준 지역은 카탈로그 `selected`면 카탈로그 시도, 아니면 같은 항목 `schoolRegion`. 모든 후보 설명이 보이고 기준 지역과 정확히 같은 후보가 하나일 때만 선택, 신원과 프로필 지역이 어긋나면 좁히지 않음. 그 밖에는 `SEARCH_AMBIGUOUS` | 회귀 테스트; 카카오게임즈 CF-368 빌드에서 기본·카탈로그 선택·직접 입력 프로필 모두 확정 |
+| Greeting 고교 학교명, 같은 이름 후보 1개 | 변경 없음. 다른 시도의 단일 후보 선택은 후속 후보 | 기존 회귀 |
+| Greeting 대학·대학원 학교명, 한국폴리텍 카탈로그 `selected` | 사이트 라벨의 캠퍼스군 번호가 한쪽에만 있고 번호를 뺀 키가 카탈로그 항목 하나만 가리킬 때만 같은 학교(2026-10-07 카탈로그 기준 충돌 0). 재실행 검토는 기존 값 충돌로 표시 | 회귀 테스트; 카카오게임즈 정식 항목 `한국폴리텍 I 대학 서울정수캠퍼스` 확정 |
+
+운영 1.4.0과 develop `dcee68dd`에서 비던 카카오게임즈 동명 고교(대진고 3곳)는 CF-368 빌드(develop 로컬 서버, Greeting 정책 v19)에서 세 프로필 모두 확정됐고, 이는 고교 선택지에 시도 설명이 있다는 간접 근거다. 직접 입력 프로필의 대학 학교명은 #347 동작대로 직접 입력 값이 들어갔다. 어학·자격 취득일, 어학 등급·점수, 회화수준의 기존 미해결 항목은 그대로다. 근거는 [CF-368 Greeting 고교·대학 학교명 확정 범위](../../raw/issues/CF-368/documents/greeting-school-name-field-inventory.md)를 따른다.
 
 ## Greeting v19 직접 입력 지원 범위 (2026-10-25)
 

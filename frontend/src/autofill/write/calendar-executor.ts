@@ -5,6 +5,13 @@ import { executeCalendarSelection } from "../interaction/calendar-executor";
 import { executeDayCalendarSelection } from "../interaction/day-calendar-executor";
 import { canonicalCalendarMonthValue } from "../interaction/calendar-unit";
 import { canonicalDayCalendarValue } from "../interaction/day-calendar-value";
+import {
+  dialogDateApprovalValid,
+  dialogDateButtonValue,
+  dialogDateParts,
+  dialogDateShown,
+  executeDialogDateSelection,
+} from "../interaction/dialog-date-picker";
 import { revalidateCalendarApproval } from "../review/calendar-approval";
 import { revalidateDayCalendarApproval } from "../review/day-calendar-approval";
 import type { ReviewPlanItem } from "../review/review-plan";
@@ -123,6 +130,107 @@ function approvedDayTarget(
   return approval.target;
 }
 
+function approvedDialogTarget(
+  item: ReviewPlanItem,
+  registry: CandidateRegistry,
+): HTMLButtonElement | undefined {
+  const approval = item.dialogDateApproval;
+  const direct = item.analysis?.valueBinding;
+  if (
+    !approval ||
+    item.calendarApproval ||
+    item.dayCalendarApproval ||
+    item.analysis?.candidateId !== item.candidateId ||
+    item.analysis.writePlan?.command !== "SELECT_DATE" ||
+    direct?.type !== "DIRECT" ||
+    direct.profileFieldKey !== approval.profileFieldKey ||
+    item.profileValue !== approval.originalDate ||
+    item.profileFieldKey !== approval.profileFieldKey ||
+    item.profileEntryId !== approval.profileEntryId ||
+    item.itemIndex !== approval.itemIndex ||
+    !dialogDateApprovalValid(approval)
+  )
+    return undefined;
+  const lookup = registry.lookupField(item.candidateId);
+  if (
+    lookup.status !== "ready" ||
+    lookup.handle.elements.length !== 0 ||
+    lookup.handle.customElements?.length !== 1 ||
+    lookup.handle.customElements[0] !== approval.target
+  )
+    return undefined;
+  return approval.target;
+}
+
+function dialogValueRetained(
+  item: ReviewPlanItem,
+  registry: CandidateRegistry,
+): boolean {
+  const target = approvedDialogTarget(item, registry);
+  const parts = dialogDateParts(item.dialogDateApproval!.originalDate);
+  return !!target && !!parts && !!dialogDateShown(target, parts);
+}
+
+async function executeApprovedDialogDateWrite(
+  args: ExecuteApprovedCalendarWriteArgs,
+): Promise<ApprovedCalendarWriteExecution> {
+  const { item, registry } = args;
+  const target = approvedDialogTarget(item, registry);
+  if (!target)
+    return stop(
+      item.candidateId,
+      "NOT_APPROVED",
+      "달력 버튼, 프로필 연결 또는 별도 승인을 확인할 수 없습니다.",
+    );
+  const approval = item.dialogDateApproval!;
+  const valid = () => approvedDialogTarget(item, registry) === target;
+  if (!current(args)) return stop(item.candidateId, "STALE_TARGET", STALE);
+  if (dialogDateButtonValue(target)) {
+    if (dialogValueRetained(item, registry))
+      return {
+        candidateId: item.candidateId,
+        status: "skipped",
+        outcome: "unchanged",
+        code: "ALREADY_MATCHED",
+        reason: "이미 같은 값이 입력되어 변경하지 않았습니다.",
+        effect: "continue",
+      };
+    return stop(item.candidateId, "CONFLICT", CONFLICT);
+  }
+  if (!(await mayMutate(args)) || !valid())
+    return stop(item.candidateId, "STALE_TARGET", STALE);
+  try {
+    const execution = await executeDialogDateSelection({
+      target,
+      targetDate: approval.originalDate,
+      ...(args.signal ? { signal: args.signal } : {}),
+      assertCurrent: () =>
+        current(args) && item.selected && !item.disabled && valid(),
+    });
+    if (execution.status !== "completed") {
+      traceTrigger(item.candidateId, { interactionReason: execution.reason });
+      return stop(
+        item.candidateId,
+        "RETAINED_VALUE_UNCONFIRMED",
+        `달력 선택 결과를 확인할 수 없어 후속 자동 기입을 중단했습니다. (${execution.reason})`,
+      );
+    }
+  } catch {
+    return stop(
+      item.candidateId,
+      "EXECUTION_FAILED",
+      "달력 선택 중 페이지 동작 오류가 발생했습니다.",
+    );
+  }
+  if (!current(args) || !dialogValueRetained(item, registry))
+    return stop(
+      item.candidateId,
+      "RETAINED_VALUE_UNCONFIRMED",
+      "달력 선택 후 값 또는 대상 상태를 확인할 수 없어 후속 자동 기입을 중단했습니다.",
+    );
+  return { ...written(item.candidateId), effect: "continue" };
+}
+
 function dayValueRetained(
   target: HTMLInputElement,
   approval: NonNullable<ReviewPlanItem["dayCalendarApproval"]>,
@@ -143,6 +251,7 @@ export function calendarValueSettled(
   item: ReviewPlanItem,
   registry: CandidateRegistry,
 ): boolean {
+  if (item.dialogDateApproval) return dialogValueRetained(item, registry);
   if (item.dayCalendarApproval) {
     const target = approvedDayTarget(item, registry);
     return (
@@ -248,6 +357,7 @@ export async function executeApprovedCalendarWrite(
       "달력 입력이 승인되지 않았습니다.",
     );
 
+  if (item.dialogDateApproval) return executeApprovedDialogDateWrite(args);
   if (item.dayCalendarApproval) return executeApprovedDayCalendarWrite(args);
 
   const target = approvedTarget(item, args.registry);

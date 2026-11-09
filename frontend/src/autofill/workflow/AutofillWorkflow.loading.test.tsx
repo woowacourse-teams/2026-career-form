@@ -125,7 +125,9 @@ it("removes busy status and shows the existing exception screen after preparatio
   );
 
   expect(
-    await screen.findByRole("heading", { name: "분석을 완료하지 못했습니다" }),
+    await screen.findByRole("heading", {
+      name: "자동 기입을 시작하지 못했어요",
+    }),
   ).toBeVisible();
   expect(screen.queryByRole("status")).not.toBeInTheDocument();
 });
@@ -168,7 +170,9 @@ it("shows the exception screen when automatic field analysis fails in StrictMode
     </StrictMode>,
   );
   expect(
-    await screen.findByRole("heading", { name: "분석을 완료하지 못했습니다" }),
+    await screen.findByRole("heading", {
+      name: "자동 기입을 시작하지 못했어요",
+    }),
   ).toBeVisible();
   expect(document.querySelector<HTMLInputElement>("input")!.value).toBe("");
 });

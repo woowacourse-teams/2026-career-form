@@ -199,6 +199,14 @@ final class GenericProfileSemantics {
             && options.stream().filter(NEGATIVE_STATUS::contains).count() == 1;
     }
 
+    /** 입학·편입 두 선택지는 편입유무와 뜻이 하나씩 대응한다. 의미 있는 선택지가 정확히 이 두 개일 때만 참이다. */
+    static boolean isAdmissionKindChoice(FieldCandidate candidate) {
+        List<String> options = meaningfulChoiceOptions(candidate);
+        return options != null && options.size() == 2
+            && options.stream().filter(option -> "입학".equals(option) || "신입학".equals(option)).count() == 1
+            && options.stream().filter(option -> "편입".equals(option) || "편입학".equals(option)).count() == 1;
+    }
+
     /** 항목의 있고 없음만 담는 예/아니오 상태 키. 종류를 고르는 칸에 붙으면 어느 선택지와도 뜻이 맞지 않는다. */
     static boolean isYesNoStatusKey(String key) {
         return key != null && key.startsWith("education.")

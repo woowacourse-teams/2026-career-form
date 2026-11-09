@@ -138,14 +138,19 @@ public final class FieldInteractionPolicy {
         FieldMappingResolver.Result mapping,
         List<WriteCommand> supportedWriteCommands
     ) {
+        boolean readonlyText = Boolean.TRUE.equals(candidate.readonly())
+            && candidate.element() == FormElement.INPUT
+            && candidate.control() == FormControl.TEXT
+            && candidate.semanticContext() != null
+            && candidate.semanticContext().inputType() == InputType.TEXT;
+        // 범용 수집기는 자기 대화상자를 여는 버튼만 custom 요소의 button 컨트롤로 보낸다.
+        boolean dialogButton = candidate.element() == FormElement.CUSTOM
+            && candidate.control() == FormControl.BUTTON
+            && !Boolean.TRUE.equals(candidate.readonly());
         if (supportedWriteCommands == null
             || !supportedWriteCommands.contains(WriteCommand.SELECT_DATE)
-            || !Boolean.TRUE.equals(candidate.readonly())
-            || candidate.element() != FormElement.INPUT
-            || candidate.control() != FormControl.TEXT
+            || !(readonlyText || dialogButton)
             || candidate.visibility() != Visibility.VISIBLE
-            || candidate.semanticContext() == null
-            || candidate.semanticContext().inputType() != InputType.TEXT
             || !(mapping instanceof FieldMappingResolver.Match match)
             || !(match.valueBinding() instanceof FieldMappingResolver.DirectBinding direct)) {
             return false;

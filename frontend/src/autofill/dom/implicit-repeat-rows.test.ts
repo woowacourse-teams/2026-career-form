@@ -55,6 +55,32 @@ describe("implicit repeat rows (C13)", () => {
     );
   });
 
+  it("keeps the rows while an open modal makes the page behind it inert", () => {
+    const list = mount(
+      ROW("NaN", '<button type="button">내용추가</button>') +
+        ROW("NaN", '<button type="button">삭제</button>'),
+    );
+    const page = document.querySelector("form")!;
+    page.setAttribute("inert", "");
+    page.setAttribute("aria-hidden", "true");
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      '<div role="dialog" aria-modal="true"><input name="query"></div>',
+    );
+    const input = list.children[1]!.querySelector("input")!;
+    expect(genericRowFor(input)).toBe(list.children[1]);
+  });
+
+  it("drops the rows of an inert page that no open modal explains", () => {
+    const list = mount(
+      ROW("NaN", '<button type="button">내용추가</button>') +
+        ROW("NaN", '<button type="button">삭제</button>'),
+    );
+    document.querySelector("form")!.setAttribute("inert", "");
+    expect(implicitRepeatGroupFor(addButton())).toBeUndefined();
+    expect(list).toBeTruthy();
+  });
+
   it("ignores per-row visibility differences in the signature", () => {
     const list = mount(
       ROW(

@@ -3,66 +3,87 @@
   border-bottom: 1px solid var(--color-border);
 }
 .shell {
-  max-width: 1080px;
-  padding: 16px 32px;
+  box-sizing: border-box;
+  max-width: 1016px;
+  min-height: 52px;
+  padding: 0 20px;
   margin: 0 auto;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 12px 24px;
+  gap: 8px;
 }
 .brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  margin-right: auto;
   color: var(--color-text-strong);
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.374px;
+  white-space: nowrap;
 }
 .brandMark {
-  width: 30px;
-  height: 30px;
-  border-radius: 9px;
-  display: grid;
-  place-items: center;
-  background: var(--color-brand);
-  color: var(--color-on-brand);
-  font-size: 22px;
-  letter-spacing: -0.1em;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
   object-fit: cover;
 }
 .navigation {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
 }
 .navigation button {
+  min-height: 32px;
   border: 0;
+  border-radius: 980px;
+  padding: 0 15px;
   background: transparent;
-  color: var(--color-text-muted);
-  padding: 10px 16px;
-  min-height: 40px;
-  border-radius: 8px;
+  color: #515154;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 14px;
+  letter-spacing: -0.224px;
+  white-space: nowrap;
   cursor: pointer;
 }
-.navigation button[aria-current="page"] {
-  background: var(--color-brand);
-  color: var(--color-on-brand);
-  font-weight: 700;
+.navigation a {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 15px;
+  border-radius: 980px;
+  color: var(--color-action);
+  font-size: 14px;
+  letter-spacing: -0.224px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.navigation a:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--color-surface),
+    0 0 0 4px var(--color-action);
 }
 .navigation button:hover {
-  background: var(--color-surface-muted);
+  color: var(--color-text-strong);
+}
+.navigation button[aria-current="page"] {
+  background: var(--color-page);
+  color: var(--color-text-strong);
+  font-weight: 600;
 }
 .navigation button:focus-visible {
-  outline: 3px solid var(--color-action);
-  outline-offset: 3px;
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--color-surface),
+    0 0 0 4px var(--color-action);
 }
 @media (max-width: 640px) {
   .shell {
-    padding: 14px 18px;
+    padding: 0 15px;
+    gap: 0;
+  }
+  .navigation button,
+  .navigation a {
+    min-height: 44px;
   }
 }

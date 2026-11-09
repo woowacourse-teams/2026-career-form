@@ -1,0 +1,69 @@
+{
+  "fixture_id": "nhn-presales-initial",
+  "site_id": "nhn-careers",
+  "issue_number": 356,
+  "collected_on": "2026-11-03",
+  "provenance": "SANITIZED_SNAPSHOT",
+  "installed_revision": "UNVERIFIED",
+  "revision_evidence": {
+    "method": "UNAVAILABLE",
+    "metadata": null,
+    "metadata_sha256": null,
+    "unverified_reason": "사용자 승인으로 에이전트가 사용자 Chrome에서 정제 스크립트를 실행했고 설치 확장 빌드 정보는 조회하지 않았다"
+  },
+  "sanitized_sha256": "c82bb37cb4a22e3e27a8fd71a1035324ae82154f0e39f39b9c9ae27a62e4a098",
+  "scope": {
+    "description": "NHN Careers 프리세일즈 공고 지원서 1단계(인적사항)의 지원서 묶음 중 입력 칸이 있는 섹션 10개. 아무것도 바꾸지 않은 최초 화면. 학력 구분·병역 미선택, 장애·보훈은 사이트 기본값(비대상)",
+    "control_total": 54,
+    "options": 0,
+    "product_collector_candidates": 52,
+    "generic_sections": 7,
+    "excluded": [
+      "지원서 묶음 밖의 공고 제목·지원자 이름·연락처 영역",
+      "칸이 없는 하단 버튼 영역(미리보기·저장·다음)",
+      "2단계 자기소개서(페이지 이동이 필요해 수집하지 않음)",
+      "rect·mask 아이콘 요소"
+    ]
+  },
+  "failure": {
+    "stage": "NONE",
+    "expected": "평가 데이터셋 입력 화면. 특정 실패 재현용이 아니다",
+    "actual": null,
+    "conditions": []
+  },
+  "sanitization": {
+    "removed": ["입력값", "선택·체크 상태", "textarea 본문", "class", "style", "data-*", "아이콘 요소", "숨김 input"],
+    "replaced": [
+      "id·for를 익명 번호로 치환",
+      "개인정보 패턴·현재 입력값과 같은 글자 6곳을 [비식별]로 치환(글자 수 표시 4곳, 장애·보훈 선택칸의 기본값 placeholder 2곳)"
+    ],
+    "preserved": ["라벨, 안내 문구, placeholder"],
+    "preserved_common_text": "사람과 에이전트가 남는 글자 목록 전체를 확인했다",
+    "extraction_code": "평가 화면 수집 지침(collection-skill.md) 2단계 스크립트, CONTAINER만 이 사이트의 지원서 묶음으로 바꿈"
+  },
+  "synthetic_behavior": [
+    "원본에서 CSS로 숨겨진 요소 17곳에 hidden 속성을 합성했다"
+  ],
+  "limitations": [
+    "드롭다운이 읽기 전용 칸 + 목록 버튼 형태라 선택지 목록이 DOM에 없다. 제품도 선택지 없이 글자 칸으로 읽는다",
+    "장애사항 선택칸의 placeholder(사이트 기본값 '비대상')가 현재 값과 같아 [비식별]로 바뀌어, 그 칸의 뜻이 정제본에서 사라졌다",
+    "자동 임시 저장이 있는 지원서라 선택을 바꾼 상태(학력 구분, 병역, 보훈 대상, 행 추가)는 수집하지 않았다",
+    "설치 확장 revision과 실사이트 성공률의 근거가 아니다"
+  ],
+  "review": {
+    "privacy": { "result": "PASSED", "human_reviewed": true, "reviewed_on": "2026-11-03" },
+    "structure": {
+      "result": "PASSED",
+      "human_reviewed": true,
+      "reviewed_on": "2026-11-03",
+      "note": "사람이 제품 수집기의 섹션·칸 목록과 정답 초안을 확인하고 승인했다"
+    }
+  },
+  "reproduction": {
+    "command": "cd frontend && npx vitest run --project unit src/autofill/workflow/dom-snapshot.nhn-presales.test.ts",
+    "observed": [
+      "칸 54개(파일 첨부 2개 포함), 제품 수집기 후보 52개, 범용 섹션 7개",
+      "외부 URL·이벤트 속성·금지 태그·입력 value·checked/selected·class/style/data 0건"
+    ]
+  }
+}

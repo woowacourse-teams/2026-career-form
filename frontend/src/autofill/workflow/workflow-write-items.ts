@@ -17,6 +17,17 @@ export function approvedReviewExecution(
   return { executableReviewItems, approvedCandidateIds };
 }
 
+/** Developer setting: selects an item the generic grades left to the applicant. */
+export function includeNeedsReviewItem(item: ReviewPlanItem): ReviewPlanItem {
+  return item.selected ||
+    item.disabled ||
+    item.hiddenFromReview ||
+    item.status === "unavailable" ||
+    item.genericGrade === "BLOCKED"
+    ? item
+    : { ...item, selected: true, includedByDeveloper: true };
+}
+
 export function belongsToFailedGroup(
   item: ReviewPlanItem,
   snapshot: ReturnType<typeof collectFieldsSnapshot>,

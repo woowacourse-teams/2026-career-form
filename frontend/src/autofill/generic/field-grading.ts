@@ -26,6 +26,8 @@ export type GradeReason =
   | "COUNTRY_CODE_OPTIONS"
   | "NON_DATE_FIELD"
   | "MIXED_EDUCATION_RECORD"
+  | "MIXED_RECORD_KIND"
+  | "SCALE_KEY_MISMATCH"
   | "LOW_CONFIDENCE"
   | "MODERATE_CONFIDENCE"
   | "CATEGORY_UNCONFIRMED"
@@ -68,6 +70,7 @@ export interface GradeFieldInput extends Pick<
   /** Whether a profile value exists. Evaluated locally; the value is never passed. */
   hasProfileValue: boolean;
   control: FieldCandidate["control"];
+  element?: FieldCandidate["element"];
   displayName?: string;
   /** Own DOM attributes, supplied locally by generic analysis, not sent to APIs. */
   title?: string;
@@ -80,6 +83,8 @@ export interface GradeFieldInput extends Pick<
   optionValueCheck?: { profileValue?: string; context?: ChoiceContext };
   /** Other matched fields in the same repeat row, excluding this field. */
   rowSiblings?: readonly GradeSibling[];
+  /** Keys of the nearest matched fields before and after this one in its row. */
+  rowNeighborKeys?: readonly (string | undefined)[];
   /**
    * Profile keys matched on the other fields of the same section (the same
    * row for a repeat section), whatever their kind.
@@ -198,6 +203,7 @@ function hasCountryCodeOptions(input: GradeFieldInput): boolean {
 
 function isNonDateField(input: GradeFieldInput): boolean {
   if (!isProfileFieldType(input.profileFieldKey, "date")) return false;
+  if (input.control === "button" && input.element === "custom") return false;
   if (input.control !== "text" && input.control !== "textarea") return true;
   return (
     input.inputType !== undefined &&
@@ -213,6 +219,42 @@ function hasMixedEducationRecords(input: GradeFieldInput): boolean {
     const other = educationRecordOf(sibling.profileFieldKey);
     return other !== undefined && other !== own;
   });
+}
+
+/** Repeated record kinds a single row describes one of. */
+const REPEATED_RECORD_KINDS = new Set([
+  "careers",
+  "projects",
+  "certifications",
+  "languages",
+]);
+
+function repeatedRecordKind(key: string | undefined): string | undefined {
+  const kind = key?.split(".")[0];
+  return kind && REPEATED_RECORD_KINDS.has(kind) ? kind : undefined;
+}
+
+/**
+ * A row whose other keys all name one other repeated record kind describes
+ * that record; a key of a different kind inside it was mismapped.
+ */
+function hasMixedRecordKind(input: GradeFieldInput): boolean {
+  const own = repeatedRecordKind(input.profileFieldKey);
+  if (!own) return false;
+  const kinds = (input.rowSiblings ?? [])
+    .map((sibling) => repeatedRecordKind(sibling.profileFieldKey))
+    .filter((kind): kind is string => kind !== undefined);
+  if (kinds.length >= 2 && !kinds.includes(own) && new Set(kinds).size === 1)
+    return true;
+  // Inside a row that mixes record kinds, a key whose nearest fields on both
+  // sides are one other kind sits in that record's run of fields.
+  const neighbors = (input.rowNeighborKeys ?? []).map(repeatedRecordKind);
+  return (
+    neighbors.length === 2 &&
+    neighbors[0] !== undefined &&
+    neighbors[0] === neighbors[1] &&
+    neighbors[0] !== own
+  );
 }
 
 function compositeSlot(composite: GradeComposite | undefined): string {
@@ -281,6 +323,24 @@ function hasUnpairedNamePart(input: GradeFieldInput): boolean {
   );
 }
 
+const SCALE_TEXT = /총점|만점|기준\s*점수|\bscale\b|out\s+of|\bmax(?:imum)?\b/i;
+const CREDIT_TEXT = /학점|이수|credit/i;
+
+/** A score scale field ("총점", "만점") is not a credit count. */
+function hasScaleKeyMismatch(input: GradeFieldInput): boolean {
+  if (fieldIdOf(input.profileFieldKey ?? "") !== "totalCredits") return false;
+  const texts = [
+    input.displayName,
+    input.title,
+    input.placeholder,
+    ...(input.labels ?? []).map((label) => label.text),
+  ];
+  return (
+    texts.some((text) => SCALE_TEXT.test(text ?? "")) &&
+    !texts.some((text) => CREDIT_TEXT.test(text ?? ""))
+  );
+}
+
 function hasFormatKeyMismatch(input: GradeFieldInput): boolean {
   if (input.inputType === "email" || input.inputType === "tel") {
     return !isProfileFieldType(input.profileFieldKey, input.inputType);
@@ -344,8 +404,14 @@ export function gradeGenericField(input: GradeFieldInput): FieldGradeResult {
   if (hasMixedEducationRecords(input)) {
     return { grade: "BLOCKED", reason: "MIXED_EDUCATION_RECORD" };
   }
+  if (hasMixedRecordKind(input)) {
+    return { grade: "BLOCKED", reason: "MIXED_RECORD_KIND" };
+  }
   if (hasOtherPersonContext(input)) {
     return { grade: "BLOCKED", reason: "OTHER_PERSON_CONTEXT" };
+  }
+  if (hasScaleKeyMismatch(input)) {
+    return { grade: "BLOCKED", reason: "SCALE_KEY_MISMATCH" };
   }
   if (hasFormatKeyMismatch(input)) {
     return { grade: "BLOCKED", reason: "FORMAT_KEY_MISMATCH" };

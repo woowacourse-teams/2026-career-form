@@ -257,10 +257,8 @@ it("keeps repeatable funnel events and ties first-event deduplication to the ins
   const handle = createAnalyticsMessageHandler(options);
   await handle(firstView);
   for (const event of [
-    "onboarding_autofill_selected",
-    "onboarding_postings_selected",
-    "quick_profile_viewed",
-    "quick_profile_skipped",
+    "onboarding_step_viewed",
+    "onboarding_completed",
     "autofill_open_succeeded",
     "autofill_open_failed",
   ]) {
@@ -269,7 +267,7 @@ it("keeps repeatable funnel events and ties first-event deduplication to the ins
   }
   values.analyticsDistinctId = "installation-two";
   await handle(firstView);
-  expect(payloads).toHaveLength(14);
+  expect(payloads).toHaveLength(10);
   expect(
     payloads
       .filter((p) => p.event === "onboarding_first_viewed")
@@ -388,8 +386,8 @@ describe("notification check and auto-save properties", () => {
     ],
     [
       "posting_inbox_saved",
-      { surface: "options", posting_id: "a".repeat(32), trigger: "open" },
-      { surface: "options", posting_id: "a".repeat(32), trigger: "open" },
+      { surface: "options", posting_id: "a".repeat(32), trigger: "button" },
+      { surface: "options", posting_id: "a".repeat(32), trigger: "button" },
     ],
     [
       "posting_notification_saved",
@@ -410,8 +408,8 @@ describe("notification check and auto-save properties", () => {
       { surface: "notification", posting_id: "a".repeat(32) },
     ],
     [
-      "posting_auto_save_cancelled",
-      { surface: "notification", posting_id: "a".repeat(32) },
+      "posting_notification_saved",
+      { surface: "notification", posting_id: "a".repeat(32), trigger: "open" },
       { surface: "notification", posting_id: "a".repeat(32) },
     ],
     [
@@ -497,5 +495,62 @@ describe("display delay property and key-less console record", () => {
     } finally {
       debug.mockRestore();
     }
+  });
+});
+
+describe("role count property", () => {
+  it.each([
+    [{ role_count: 0 }, { role_count: 0 }],
+    [{ role_count: 3 }, { role_count: 3 }],
+    [{ role_count: -1 }, {}],
+    [{ role_count: 1.5 }, {}],
+    [{ role_count: "3" }, {}],
+    [{ roles: ["IT.BACKEND"] }, {}],
+  ])(
+    "keeps only a non-negative integer role_count and never codes: %j",
+    async (input, expected) => {
+      const { handle, payloads } = collector();
+      await handle({
+        type: "ANALYTICS_TRACK",
+        event: "push_roles_saved",
+        properties: { surface: "options", ...input },
+      });
+      expect(payloads).toEqual([
+        expect.objectContaining({
+          event: "push_roles_saved",
+          properties: {
+            surface: "options",
+            ...expected,
+            $process_person_profile: false,
+          },
+        }),
+      ]);
+    },
+  );
+});
+
+describe("onboarding step property", () => {
+  it.each([
+    [{ step: "name" }, { step: "name" }],
+    [{ step: "usage" }, { step: "usage" }],
+    [{ step: "phone" }, {}],
+    [{ step: 3 }, {}],
+  ])("keeps only a known onboarding step name: %j", async (input, expected) => {
+    const { handle, payloads } = collector();
+    await handle({
+      type: "ANALYTICS_TRACK",
+      event: "onboarding_step_viewed",
+      properties: { surface: "extension_onboarding", ...input },
+    });
+    expect(payloads).toEqual([
+      expect.objectContaining({
+        event: "onboarding_step_viewed",
+        properties: {
+          surface: "extension_onboarding",
+          ...expected,
+          $process_person_profile: false,
+        },
+      }),
+    ]);
   });
 });

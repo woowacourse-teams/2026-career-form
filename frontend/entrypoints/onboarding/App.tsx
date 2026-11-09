@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { TrackEvent } from "../../src/analytics/events";
 import type { ProfileRepository } from "../../src/profile/profile-repository";
 import { ChromeProfileStorage } from "../../src/storage/chrome-profile-storage";
-import { QuickStart } from "../../src/profile/components/QuickStart";
 import { trackExtensionEvent } from "../../src/analytics/extension-tracker";
 import {
   pushClient as defaultPushClient,
@@ -10,6 +9,9 @@ import {
 } from "../../src/job-postings/push-client";
 import { SiteApp } from "../../site/SiteApp";
 import { SiteUrlContext } from "../../site/site-navigation";
+import { OnboardingFlow } from "./flow/OnboardingFlow";
+import { browserStepStore, type StepStore } from "./flow/steps";
+import styles from "./App.module.css";
 
 export function extensionSiteUrl(path: string): string {
   if (path.startsWith("/demo/"))
@@ -23,47 +25,52 @@ export function App({
   repository: injectedRepository,
   track = trackExtensionEvent,
   pushClient = defaultPushClient,
+  stepStore: injectedStepStore,
 }: {
   repository?: ProfileRepository;
   track?: TrackEvent;
   pushClient?: PushClient;
+  stepStore?: StepStore;
 } = {}) {
   const repository = useMemo(
     () => injectedRepository ?? new ChromeProfileStorage(),
     [injectedRepository],
   );
-  const [quickStart, setQuickStart] = useState(false);
+  const stepStore = injectedStepStore ?? browserStepStore;
   const firstViewSent = useRef(false);
   const path =
     new URLSearchParams(window.location.search).get("page") ?? "/onboarding/";
+  const onboarding = path.replace(/\/$/, "") === "/onboarding";
   useEffect(() => {
-    if (path.replace(/\/$/, "") !== "/onboarding" || firstViewSent.current)
-      return;
+    if (!onboarding || firstViewSent.current) return;
     firstViewSent.current = true;
+    track("onboarding_viewed", { surface: "extension_onboarding" });
     track("onboarding_first_viewed", { surface: "extension_onboarding" });
-  }, [path, track]);
+  }, [onboarding, track]);
+  const openProfile = useCallback(() => {
+    window.location.assign("/options.html");
+  }, []);
+  const openPostings = useCallback(() => {
+    window.location.assign("/options.html#postings");
+  }, []);
+  // The first-install flow replaces the site's usage guide at this path; the
+  // landing, trial, tech and policy pages still render through the site.
+  if (onboarding)
+    return (
+      <OnboardingFlow
+        repository={repository}
+        pushClient={pushClient}
+        track={track}
+        stepStore={stepStore}
+        onOpenProfile={openProfile}
+        onOpenPostings={openPostings}
+      />
+    );
   return (
     <SiteUrlContext value={extensionSiteUrl}>
-      {quickStart ? (
-        <QuickStart
-          repository={repository}
-          track={track}
-          onOpenProfile={() => {
-            window.location.assign("/options.html");
-          }}
-        />
-      ) : (
-        <SiteApp
-          path={path}
-          installed
-          profileHref="/options.html"
-          postingsHref="/options.html#postings/new"
-          pushClient={pushClient}
-          track={track}
-          onStartAutofill={() => setQuickStart(true)}
-          surface="extension_onboarding"
-        />
-      )}
+      <div className={styles.shell}>
+        <SiteApp path={path} track={track} surface="extension_onboarding" />
+      </div>
     </SiteUrlContext>
   );
 }

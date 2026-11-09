@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import type { Posting } from "./model";
 import {
   postingNotificationId,
-  PUSH_AUTOSAVED_NOTIFICATION_PREFIX,
   PUSH_NOTIFIED_KEY,
   PUSH_SAVED_NOTIFICATION_PREFIX,
   PushReceiver,
@@ -21,7 +20,7 @@ const payload = {
   closesAt: "2026-11-03T09:00:00Z",
 };
 
-function harness() {
+function harness(selectedRoles: string[] = []) {
   let now = NOW;
   const store: Record<string, unknown> = {};
   let rows: Posting[] = [];
@@ -31,7 +30,6 @@ function harness() {
   const tracked: [string, unknown][] = [];
   const unreadLog: string[] = [];
   const visibilityLog: string[] = [];
-  let autoSave = true;
   const postings = new PostingService(
     {
       load: async () => rows,
@@ -67,6 +65,7 @@ function harness() {
     },
     postings,
     track: (event, properties) => tracked.push([event, properties]),
+    roles: async () => selectedRoles,
     unread: {
       add: async (id, closesAt) => {
         unreadLog.push(`add:${id}:${closesAt}`);
@@ -83,7 +82,6 @@ function harness() {
         visibilityLog.push("seen");
       },
     },
-    autoSaveEnabled: async () => autoSave,
   });
   return {
     receiver,
@@ -95,9 +93,6 @@ function harness() {
     unreadLog,
     visibilityLog,
     rows: () => rows,
-    setAutoSave: (value: boolean) => {
-      autoSave = value;
-    },
     advance: (ms: number) => {
       now += ms;
     },
@@ -261,6 +256,45 @@ describe("PushReceiver", () => {
   });
 });
 
+describe("PushReceiver role filter", () => {
+  const tagged = { ...payload, roles: ["IT.BACKEND", "IT.QA"] };
+  it("선택한 직무와 겹치는 공고는 알림을 띄운다", async () => {
+    const h = harness(["IT.QA", "DESIGN.UX_UI"]);
+    expect(await h.receiver.receive(tagged)).toBe("notified");
+    expect(h.shown).toHaveLength(1);
+    expect(h.store[PUSH_NOTIFIED_KEY]).toMatchObject({
+      [ID]: { roles: ["IT.BACKEND", "IT.QA"] },
+    });
+  });
+  it("직무를 고르지 않았으면 직무가 붙은 공고도 알림을 띄운다", async () => {
+    const h = harness([]);
+    expect(await h.receiver.receive(tagged)).toBe("notified");
+    expect(h.shown).toHaveLength(1);
+    expect(h.unreadLog).toEqual([`add:${ID}:${Date.parse(payload.closesAt)}`]);
+  });
+  it("겹치지 않는 선택이면 알림도 배지도 계측도 없이 거른다", async () => {
+    const h = harness(["DESIGN.UX_UI"]);
+    expect(await h.receiver.receive(tagged)).toBe("filtered");
+    expect(h.shown).toEqual([]);
+    expect(h.unreadLog).toEqual([]);
+    expect(h.visibilityLog).toEqual([]);
+    expect(h.tracked).toEqual([]);
+    expect(h.store[PUSH_NOTIFIED_KEY]).toBeUndefined();
+  });
+  it("roles 없는 payload는 미선택이어도 기존처럼 띄운다", async () => {
+    const h = harness([]);
+    expect(await h.receiver.receive(payload)).toBe("notified");
+    expect(h.shown).toHaveLength(1);
+    expect(h.unreadLog).toEqual([`add:${ID}:${Date.parse(payload.closesAt)}`]);
+  });
+  it("roles가 빈 배열인 payload는 아무 직무와도 겹치지 않아 거른다", async () => {
+    const h = harness(["IT.BACKEND"]);
+    expect(await h.receiver.receive({ ...payload, roles: [] })).toBe(
+      "filtered",
+    );
+  });
+});
+
 describe("PushReceiver display delay", () => {
   it.each([
     ["30초 전 발송", -30_000, 30_000],
@@ -291,7 +325,7 @@ describe("PushReceiver display delay", () => {
   });
 });
 
-describe("PushReceiver badge, visibility and auto-save", () => {
+describe("PushReceiver badge, visibility and opening", () => {
   it("알림 표시는 미확인 목록과 표시 시각을 기록하고 클릭은 보임과 개별 제거로 이어진다", async () => {
     const h = harness();
     await h.receiver.receive(payload);
@@ -310,36 +344,9 @@ describe("PushReceiver badge, visibility and auto-save", () => {
       `remove:${ID}`,
     ]);
   });
-  it("자동 저장이 켜져 있으면 알림에서 공고를 열 때 저장하고 취소 버튼이 있는 후속 알림을 띄운다", async () => {
+  it("저장된 옛 자동 저장 값이 있어도 알림에서 공고를 열면 저장하지 않는다", async () => {
     const h = harness();
-    await h.receiver.receive(payload);
-    expect(h.rows()).toHaveLength(0);
-    expect(await h.receiver.open(postingNotificationId(ID))).toBe(true);
-    expect(h.rows()).toHaveLength(1);
-    expect(h.rows()[0].reminders.map((r) => r.minutes)).toEqual([1440, 120]);
-    expect(h.shown[1]).toMatchObject({
-      id: PUSH_AUTOSAVED_NOTIFICATION_PREFIX + ID,
-      title: expect.stringContaining("저장했어요"),
-      buttons: ["저장 취소"],
-    });
-    expect(h.tracked).toEqual([
-      [
-        "posting_notification_shown",
-        { surface: "notification", posting_id: ID },
-      ],
-      [
-        "posting_notification_opened",
-        { surface: "notification", posting_id: ID },
-      ],
-      [
-        "posting_notification_saved",
-        { surface: "notification", posting_id: ID, trigger: "open" },
-      ],
-    ]);
-  });
-  it("자동 저장이 꺼져 있으면 열어도 저장하지 않는다", async () => {
-    const h = harness();
-    h.setAutoSave(false);
+    h.store["careerForm.push.autoSave"] = true;
     await h.receiver.receive(payload);
     await h.receiver.open(postingNotificationId(ID));
     expect(h.rows()).toHaveLength(0);
@@ -359,24 +366,5 @@ describe("PushReceiver badge, visibility and auto-save", () => {
       postingNotificationId(ID),
       PUSH_SAVED_NOTIFICATION_PREFIX + ID,
     ]);
-  });
-  it("저장 취소 버튼은 저장 공고와 예약을 함께 지운다", async () => {
-    const h = harness();
-    await h.receiver.receive(payload);
-    await h.receiver.open(postingNotificationId(ID));
-    expect(h.rows()).toHaveLength(1);
-    expect(
-      await h.receiver.undoAutoSave(PUSH_AUTOSAVED_NOTIFICATION_PREFIX + ID),
-    ).toBe(true);
-    expect(h.rows()).toHaveLength(0);
-    expect(h.cleared).toContain(PUSH_AUTOSAVED_NOTIFICATION_PREFIX + ID);
-    expect(h.tracked.at(-1)).toEqual([
-      "posting_auto_save_cancelled",
-      { surface: "notification", posting_id: ID },
-    ]);
-    expect(
-      await h.receiver.undoAutoSave(PUSH_AUTOSAVED_NOTIFICATION_PREFIX + "x"),
-    ).toBe(false);
-    expect(await h.receiver.undoAutoSave("careerForm.job.other.1")).toBe(false);
   });
 });

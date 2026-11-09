@@ -27,6 +27,7 @@ describe("side panel workflow presentation", () => {
       openAutofill: vi.fn(),
     };
     const view = render(<App {...common} />);
+    fireEvent.click(screen.getByRole("tab", { name: "내 정보" }));
     await screen.findByText("me@example.test");
     fireEvent.change(screen.getByRole("searchbox", { name: "프로필 검색" }), {
       target: { value: "이메일" },
@@ -71,10 +72,11 @@ describe("side panel workflow presentation", () => {
       screen.getAllByRole("button", { name: "수동 복사로 돌아가기" }),
     ).toHaveLength(1);
     fireEvent.click(back);
+    expect(screen.getByRole("button", { name: "자동 기입" })).toHaveFocus();
+    fireEvent.click(screen.getByRole("tab", { name: "내 정보" }));
     expect(screen.getByRole("searchbox", { name: "프로필 검색" })).toHaveValue(
       "이메일",
     );
-    expect(screen.getByRole("button", { name: "자동 기입" })).toHaveFocus();
   });
 
   it("allows only one pending open request and releases the start button afterwards", async () => {

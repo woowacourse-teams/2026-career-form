@@ -8,6 +8,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -32,8 +33,9 @@ class PushDispatcherTest {
     private final SimpleMeterRegistry meters = new SimpleMeterRegistry();
     private final PushDispatchMetrics metrics = new PushDispatchMetrics(meters, new ExternalCallMetrics(meters));
     private final PushSettings settings = PushSettings.defaults();
-    private final PushDispatcher dispatcher = new PushDispatcher(store, client, new RetryPolicy(settings.maxAttempts()), settings, clock, Runnable::run, metrics);
-    private final JobPostingService postings = new JobPostingService(store, clock);
+    private final PushDispatcher dispatcher = new PushDispatcher(store, client, new RetryPolicy(settings.maxAttempts()), settings, clock, Runnable::run,
+        metrics);
+    private final JobPostingService postings = new JobPostingService(store, JobCategories.load(), clock);
     private final String p256dh = VapidTestKeys.generate().publicKey;
     private final String auth = randomAuth();
 
@@ -302,7 +304,7 @@ class PushDispatcherTest {
     @Test
     @DisplayName("로그와 메트릭에 endpoint와 키를 남기지 않고 결과별 건수와 호출 소요를 기록한다")
     void recordsObservabilityWithoutSecrets(CapturedOutput output) {
-        store.insertSubscription(new PushSubscription("s1", "https://fcm.googleapis.com/fcm/send/synthetic-endpoint-token-xyz", p256dh, auth, NOW));
+        store.insertSubscription(new PushSubscription("s1", "https://fcm.googleapis.com/fcm/send/synthetic-endpoint-token-xyz", p256dh, auth, NOW, null, null));
         subscribe("s2");
         register("https://careers.example.test/jobs/14", NOW.minusSeconds(60), NOW.plusSeconds(86400));
         var cycle = dispatcher.dispatch();
@@ -342,12 +344,70 @@ class PushDispatcherTest {
         assertThat(meters.get("career.form.push.subscriptions").gauge().value()).isEqualTo(1.0);
     }
 
-    private void subscribe(String id) {
-        store.insertSubscription(new PushSubscription(id, "https://fcm.googleapis.com/fcm/send/" + id, p256dh, auth, NOW));
+    @Test
+    @DisplayName("선점 뒤 구독의 현재 직무가 공고와 겹치지 않으면 FCM 호출 없이 FILTER_MISMATCH로 포기하고 로그와 메트릭에 이유만 남긴다")
+    void abandonsWhenRolesNoLongerOverlap(CapturedOutput output) {
+        subscribe("s1", List.of("IT.BACKEND"));
+        var postingId = register("https://careers.example.test/jobs/17", NOW.minusSeconds(60), NOW.plusSeconds(86400));
+        assertThat(store.updateSubscriptionRoles("s1", List.of("IT.FRONTEND"), NOW)).isTrue();
+        assertThat(meters.get("career.form.push.delivery").tags("outcome", "abandoned", "reason", "FILTER_MISMATCH").counter().count())
+            .as("이유가 미리 등록돼 있다").isZero();
+        assertThat(PushDispatcher.reasons()).contains("FILTER_MISMATCH");
+
+        var cycle = dispatcher.dispatch();
+        assertThat(cycle.claimed()).isEqualTo(1);
+        assertThat(cycle.abandoned()).isEqualTo(1);
+        assertThat(client.calls()).isEmpty();
+        var delivery = store.deliveries().getFirst();
+        assertThat(delivery.status()).isEqualTo(PushDelivery.Status.ABANDONED);
+        assertThat(delivery.lastReason()).isEqualTo("FILTER_MISMATCH");
+        assertThat(delivery.lastResponseCode()).isNull();
+        assertThat(delivery.attempts()).isEqualTo(1);
+        assertThat(store.subscriptionIds()).as("구독은 유지한다").containsExactly("s1");
+        assertThat(output.getAll()).contains("PUSH_RESULT postingId=" + postingId).contains("outcome=abandoned reason=FILTER_MISMATCH")
+            .doesNotContain("IT.FRONTEND", "IT.BACKEND", "careers.example.test");
+        assertThat(meters.get("career.form.push.delivery").tags("outcome", "abandoned", "reason", "FILTER_MISMATCH").counter().count()).isEqualTo(1);
+        assertThat(dispatcher.dispatch().due()).isZero();
+    }
+
+    @Test
+    @DisplayName("발송 시점에 받을 직무가 없거나 빈 배열이 된 구독은 재검사를 통과해 보낸다")
+    void unselectedSubscriptionAlwaysReceives() {
+        subscribe("s1", List.of("IT.BACKEND"));
+        register("https://careers.example.test/jobs/18", NOW.minusSeconds(60), NOW.plusSeconds(86400));
+        assertThat(store.updateSubscriptionRoles("s1", null, NOW)).isTrue();
+        assertThat(dispatcher.dispatch().accepted()).isEqualTo(1);
+        assertThat(client.calls()).hasSize(1);
+
+        register("https://careers.example.test/jobs/19", NOW.minusSeconds(60), NOW.plusSeconds(86400));
+        assertThat(store.updateSubscriptionRoles("s1", List.of(), NOW)).isTrue();
+        assertThat(dispatcher.dispatch().accepted()).isEqualTo(1);
+        assertThat(client.calls()).hasSize(2);
+        assertThat(store.deliveries()).extracting(PushDelivery::lastReason).containsExactly("ACCEPTED", "ACCEPTED");
+    }
+
+    @Test
+    @DisplayName("직무 코드가 없는 레거시 공고의 발송은 구독의 직무 선택에 상관없이 재검사 없이 나간다")
+    void legacyPostingSkipsRoleRecheck() {
+        subscribe("s1", List.of("IT.FRONTEND"));
+        subscribe("s2");
+        store.insertPosting(new JobPosting("legacy", "합성 회사", "합성 직무", null, "https://careers.example.test/jobs/legacy", NOW.minusSeconds(60),
+            NOW.plusSeconds(86400), NOW.minusSeconds(60)));
+        store.insertDeliveries(List.of(PushDelivery.pending("d1", "legacy", "s1", NOW.minusSeconds(60)),
+            PushDelivery.pending("d2", "legacy", "s2", NOW.minusSeconds(60))));
+        assertThat(dispatcher.dispatch().accepted()).isEqualTo(2);
+        assertThat(client.calls()).hasSize(2);
+        assertThat(store.deliveries()).allMatch(delivery -> delivery.status() == PushDelivery.Status.ACCEPTED && "ACCEPTED".equals(delivery.lastReason()));
+    }
+
+    private void subscribe(String id) { subscribe(id, null); }
+
+    private void subscribe(String id, List<String> roles) {
+        store.insertSubscription(new PushSubscription(id, "https://fcm.googleapis.com/fcm/send/" + id, p256dh, auth, NOW, roles, roles == null ? null : NOW));
     }
 
     private String register(String link, Instant opensAt, Instant closesAt) {
-        var registered = (JobPostingService.Registered) postings.register(new JobPostingService.Draft("합성 회사", "합성 직무", link, opensAt, closesAt));
+        var registered = (JobPostingService.Registered) postings.register(new JobPostingService.Draft("합성 회사", List.of("IT.BACKEND"), link, opensAt, closesAt));
         return registered.posting().id();
     }
 

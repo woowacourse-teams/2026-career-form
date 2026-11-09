@@ -1,3 +1,4 @@
+import { pruneRoles, type JobCategoryStore } from "./job-roles";
 import type { NotificationCheck } from "./notification-check";
 import { PushApiError, type PushApi } from "./push-api";
 import {
@@ -8,7 +9,6 @@ import {
   type PushResponse,
   type PushStateView,
 } from "./push-messages";
-import type { AutoSaveSetting } from "./push-settings";
 import type { PushSubscriptionService } from "./push-subscription";
 import { isRecord } from "./repository";
 import type { UnreadPostings } from "./unread-postings";
@@ -21,7 +21,7 @@ interface PushHandlerOptions {
     "state" | "permission" | "sendTest" | "record" | "askLater"
   >;
   unread: Pick<UnreadPostings, "count" | "clear">;
-  autoSave: AutoSaveSetting;
+  categories: Pick<JobCategoryStore, "load">;
   extensionId: string;
 }
 
@@ -30,7 +30,7 @@ export function createPushHandler({
   api,
   check,
   unread,
-  autoSave,
+  categories,
   extensionId,
 }: PushHandlerOptions) {
   const state = async (): Promise<PushStateView> => ({
@@ -39,9 +39,15 @@ export function createPushHandler({
     status: (await service.status()) ?? null,
     permission: await check.permission(),
     visibility: await check.state(),
-    autoSave: await autoSave.read(),
     unread: await unread.count(),
+    roles: await service.roles(),
   });
+  // The answer carries the stored selection right away; the re-registration
+  // that mirrors it to the server runs behind the subscription queue.
+  const saveRoles = async (roles: readonly string[]) => {
+    await service.storeRoles(roles);
+    void service.sync().catch(() => undefined);
+  };
   return (
     message: unknown,
     sender: { id?: string; url?: string },
@@ -68,15 +74,26 @@ export function createPushHandler({
         case "later":
           await check.askLater();
           break;
-        case "autosave":
-          await autoSave.write(command.enabled);
-          break;
         case "inbox": {
           const postings = await api.openPostings();
           // Viewing the inbox counts as reading every pending posting.
           await unread.clear();
           return { ok: true, postings };
         }
+        case "categories": {
+          const view = await categories.load();
+          // Only a fresh server list may drop selected codes; a cached list
+          // could predate the selection.
+          if (view.categories && view.error === null) {
+            const current = await service.roles();
+            const kept = pruneRoles(current, view.categories);
+            if (kept.length !== current.length) await saveRoles(kept);
+          }
+          return { ok: true, categories: view };
+        }
+        case "roles":
+          await saveRoles(command.roles);
+          break;
       }
       return { ok: true, state: await state() };
     };

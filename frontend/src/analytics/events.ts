@@ -1,11 +1,9 @@
 const analyticsEvents = [
   "autofill_start_clicked",
   "onboarding_first_viewed",
-  "onboarding_autofill_selected",
-  "onboarding_postings_selected",
-  "quick_profile_viewed",
+  "onboarding_step_viewed",
+  "onboarding_completed",
   "profile_first_saved",
-  "quick_profile_skipped",
   "autofill_open_succeeded",
   "autofill_open_failed",
   "profile_copy_clicked",
@@ -23,6 +21,7 @@ const analyticsEvents = [
   "trial_completed",
   "push_subscription_enabled",
   "push_subscription_disabled",
+  "push_roles_saved",
   "posting_notification_shown",
   "posting_notification_opened",
   "posting_notification_saved",
@@ -30,7 +29,6 @@ const analyticsEvents = [
   "posting_inbox_saved",
   "notification_test_sent",
   "notification_visibility_answered",
-  "posting_auto_save_cancelled",
 ] as const;
 
 const analyticsSurfaces = [
@@ -45,7 +43,17 @@ const analyticsSurfaces = [
 // Server posting identifiers only; never company names, links or profile values.
 const POSTING_ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 const visibilityAnswers = ["seen", "not_seen"] as const;
-const saveTriggers = ["button", "open"] as const;
+// The six steps of the extension's first-install onboarding, in order.
+export const ONBOARDING_STEPS = [
+  "name",
+  "email",
+  "roles",
+  "alerts",
+  "greeting",
+  "usage",
+] as const;
+export type OnboardingStep = (typeof ONBOARDING_STEPS)[number];
+const saveTriggers = ["button"] as const;
 
 export type AnalyticsEvent = (typeof analyticsEvents)[number];
 export interface AnalyticsProperties {
@@ -56,6 +64,10 @@ export interface AnalyticsProperties {
   readonly trigger?: (typeof saveTriggers)[number];
   // Notification display delay in milliseconds; a non-negative integer only.
   readonly delay_ms?: number;
+  // How many roles the user keeps selected; never the codes themselves.
+  readonly role_count?: number;
+  // Which onboarding step was entered; a fixed name, never what was typed.
+  readonly step?: OnboardingStep;
 }
 export type TrackEvent = (
   event: AnalyticsEvent,
@@ -112,6 +124,15 @@ export function parseAnalyticsMessage(message: unknown) {
     Number.isSafeInteger(input.delay_ms) &&
     input.delay_ms >= 0
       ? { delay_ms: input.delay_ms }
+      : {}),
+    ...("role_count" in input &&
+    typeof input.role_count === "number" &&
+    Number.isSafeInteger(input.role_count) &&
+    input.role_count >= 0
+      ? { role_count: input.role_count }
+      : {}),
+    ...("step" in input && ONBOARDING_STEPS.some((v) => v === input.step)
+      ? { step: input.step as OnboardingStep }
       : {}),
   };
   return { event, properties };

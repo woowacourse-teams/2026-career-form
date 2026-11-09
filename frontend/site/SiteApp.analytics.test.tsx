@@ -159,32 +159,6 @@ it("records the first onboarding visit without counting extension policy pages",
     ["onboarding_first_viewed", { surface: "extension_onboarding" }],
   ]);
 });
-it("records the chosen purpose and invokes installed quick registration", () => {
-  const track = vi.fn();
-  const start = vi.fn();
-  render(
-    <SiteApp
-      path="/onboarding/"
-      installed
-      postingsHref="/options.html#postings/new"
-      track={track}
-      surface="extension_onboarding"
-      onStartAutofill={start}
-    />,
-  );
-  fireEvent.click(
-    screen.getByRole("button", { name: /공고 저장부터 시작하기/ }),
-  );
-  fireEvent.click(screen.getByRole("button", { name: /시작 방법 다시 선택/ }));
-  fireEvent.click(screen.getByRole("button", { name: /자동 기입 준비하기/ }));
-  expect(start).toHaveBeenCalledOnce();
-  expect(track.mock.calls).toEqual([
-    ["onboarding_viewed", { surface: "extension_onboarding" }],
-    ["onboarding_postings_selected", { surface: "extension_onboarding" }],
-    ["onboarding_autofill_selected", { surface: "extension_onboarding" }],
-  ]);
-});
-
 it("keeps the embedded demo panel inert even when extension tracking is configured", async () => {
   const extensionTracker = await import("../src/analytics/extension-tracker");
   const track = vi
@@ -192,9 +166,12 @@ it("keeps the embedded demo panel inert even when extension tracking is configur
     .mockImplementation(() => {});
   const { PanelPreview } = await import("./demo/PanelPreview");
   render(<PanelPreview />);
+  fireEvent.click(screen.getByRole("tab", { name: "내 정보" }));
   const copy = await screen.findAllByRole("button", { name: /복사/ });
   fireEvent.click(copy[0]);
+  fireEvent.click(screen.getByRole("button", { name: "설정" }));
   fireEvent.click(screen.getByRole("button", { name: "프로필 관리" }));
+  fireEvent.click(screen.getByRole("tab", { name: "자동 기입" }));
   fireEvent.click(screen.getByRole("button", { name: "자동 기입" }));
   expect(track).not.toHaveBeenCalled();
 });

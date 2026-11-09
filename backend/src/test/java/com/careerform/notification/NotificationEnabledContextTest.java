@@ -1,6 +1,7 @@
 package com.careerform.notification;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.forwardedUrl;
@@ -10,13 +11,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Base64;
+import java.util.List;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -38,6 +44,9 @@ import com.careerform.formanalysis.infrastructure.persistence.mongo.FormAnalysis
     "management.health.mongodb.enabled=false",
     "career-form.notification.enabled=true",
     "career-form.notification.push.dispatch-interval=10s",
+    // 배포 경로가 없앤 직무 필터 전환 설정을 아직 넘겨도 아무 효과가 없어야 한다.
+    "career-form.notification.role-filter.enforced=true",
+    "CAREER_FORM_PUSH_ROLE_FILTER_ENFORCED=true",
     "career-form.quality.enabled=true",
     "career-form.quality.password-hash=pbkdf2-sha256$600000$cXVhbGl0eS10ZXN0LXNhbHQ=$/lpJNQ22MGBxyHPYyp6YAZCUPj5Wxy6qAUnA421bHCk="
 })
@@ -45,6 +54,7 @@ import com.careerform.formanalysis.infrastructure.persistence.mongo.FormAnalysis
 @MockitoBean(name = "startupPolicySeeder", types = org.springframework.boot.ApplicationRunner.class)
 @MockitoBean(name = "hplaceFormPolicySeeder", types = org.springframework.boot.ApplicationRunner.class)
 @Import(NotificationEnabledContextTest.Fakes.class)
+@ExtendWith(OutputCaptureExtension.class)
 @DisplayName("알림 기능 토글이 켜진 애플리케이션 컨텍스트")
 class NotificationEnabledContextTest {
     private static final VapidTestKeys KEYS = VapidTestKeys.generate();
@@ -83,6 +93,37 @@ class NotificationEnabledContextTest {
     }
 
     @Test
+    @DisplayName("직무 분류 조회는 인증 없이 번들된 분류 파일의 버전과 대분류를 돌려준다")
+    void servesBundledJobCategories() throws Exception {
+        mockMvc.perform(get("/api/v1/notifications/job-categories")).andExpect(status().isOk())
+            .andExpect(jsonPath("$.version").value(1))
+            .andExpect(jsonPath("$.categories[0].roles[0].code").value("IT.BACKEND"));
+        assertThat(context.getBean(JobCategories.class).roleCount()).isGreaterThan(7);
+    }
+
+    @Test
+    @DisplayName("남은 직무 필터 전환 설정을 무시하고 기동하며, 받을 직무를 고르지 않은 구독에도 대기 발송을 만든다")
+    void ignoresLeftoverRoleFilterSetting(CapturedOutput output) {
+        assertThat(context.containsBean("roleFilterPolicy")).isFalse();
+        assertThat(output.getAll()).doesNotContain("NOTIFICATION_ROLE_FILTER");
+        var store = (MemoryNotificationStore) context.getBean(NotificationStore.class);
+        var service = context.getBean(JobPostingService.class);
+        var now = Instant.now();
+        store.insertSubscription(new PushSubscription("leftover-unselected", "https://fcm.googleapis.com/fcm/send/leftover-unselected",
+            KEYS.publicKey, "synthetic-auth", now, null, null));
+        // 내일 열리는 공고라 예약 발송기가 건드리지 않고, 같은 컨텍스트를 쓰는 다른 테스트를 위해 끝에서 지운다.
+        var registered = assertInstanceOf(JobPostingService.Registered.class, service.register(new JobPostingService.Draft("합성 회사",
+            List.of("IT.BACKEND"), "https://careers.example.test/jobs/leftover-setting", now.plus(Duration.ofDays(1)), now.plus(Duration.ofDays(2)))));
+        try {
+            assertThat(store.deliveries()).filteredOn(delivery -> delivery.postingId().equals(registered.posting().id()))
+                .extracting(PushDelivery::subscriptionId).contains("leftover-unselected");
+        } finally {
+            service.delete(registered.posting().id());
+            store.deleteSubscription("leftover-unselected");
+        }
+    }
+
+    @Test
     @DisplayName("관리 API와 화면은 품질 로그인 뒤에 있고 /notifications는 정적 관리 화면으로 전달된다")
     void protectsAdminApiAndServesManagementPage() throws Exception {
         mockMvc.perform(get("/api/v1/notifications/admin/postings")).andExpect(status().isUnauthorized());
@@ -93,7 +134,7 @@ class NotificationEnabledContextTest {
         mockMvc.perform(get("/notifications/index.html")).andExpect(status().isOk())
             .andExpect(result -> assertThat(new String(result.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8)).contains("공고 알림 관리"));
         mockMvc.perform(get("/notifications/postings.js")).andExpect(status().isOk())
-            .andExpect(result -> assertThat(new String(result.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8)).contains("/api/v1/notifications/admin", "/summary?from="));
+            .andExpect(result -> assertThat(new String(result.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8)).contains("/api/v1/notifications/admin", "/summary?from=", "/job-categories"));
     }
 
     @Test

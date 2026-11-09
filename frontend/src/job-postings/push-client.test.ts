@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { PushApiError } from "./push-api";
+import { PushApiError, type JobCategories } from "./push-api";
 import { createPushClient } from "./push-client";
-import { PUSH_ENABLED_KEY, PUSH_STATUS_KEY } from "./push-subscription";
+import {
+  PUSH_ENABLED_KEY,
+  PUSH_ROLES_KEY,
+  PUSH_STATUS_KEY,
+} from "./push-subscription";
 
 const posting = {
   id: "0123456789abcdef0123456789abcdef",
@@ -47,8 +51,18 @@ const state = {
   status: { code: "registered", updatedAt: 1, attempts: 0 },
   permission: "granted",
   visibility: { result: "unknown" },
-  autoSave: true,
   unread: 0,
+  roles: ["IT.BACKEND"],
+};
+const categories: JobCategories = {
+  version: 1,
+  categories: [
+    {
+      code: "IT",
+      label: "IT/개발",
+      roles: [{ code: "IT.BACKEND", label: "백엔드" }],
+    },
+  ],
 };
 
 describe("push client", () => {
@@ -74,13 +88,27 @@ describe("push client", () => {
       state: { enabled: true, supported: true, status: null },
     }));
     expect(await code(partial.client.state())).toBe("INVALID_RESPONSE");
+    const noRoles = setup(() => ({
+      ok: true,
+      state: { ...state, roles: undefined },
+    }));
+    expect(await code(noRoles.client.state())).toBe("INVALID_RESPONSE");
+    const badRoles = setup(() => ({
+      ok: true,
+      state: { ...state, roles: ["IT.BACKEND", "bad code"] },
+    }));
+    expect(await badRoles.client.state()).toEqual(state);
+    const stale = setup(() => ({
+      ok: true,
+      state: { ...state, autoSave: false },
+    }));
+    expect(await stale.client.state()).toEqual(state);
   });
-  it("알림 테스트, 응답 기록, 나중에, 자동 저장 설정 메시지를 보낸다", async () => {
+  it("알림 테스트, 응답 기록, 나중에 메시지를 보낸다", async () => {
     const { client, sent } = setup(() => ({ ok: true, state }));
     await client.test();
     await client.record("not_seen", "card");
     await client.later();
-    await client.setAutoSave(false);
     expect(sent).toEqual([
       { type: "careerForm.push", action: "test" },
       {
@@ -90,7 +118,6 @@ describe("push client", () => {
         source: "card",
       },
       { type: "careerForm.push", action: "later" },
-      { type: "careerForm.push", action: "autosave", enabled: false },
     ]);
   });
   it("공지함 응답의 유효한 공고만 돌려주고 오류 코드를 그대로 전달한다", async () => {
@@ -116,10 +143,38 @@ describe("push client", () => {
     });
     listeners[0]({ [PUSH_STATUS_KEY]: {} }, "local");
     listeners[0]({ [PUSH_ENABLED_KEY]: {} }, "local");
+    listeners[0]({ [PUSH_ROLES_KEY]: {} }, "local");
     listeners[0]({ other: {} }, "local");
     listeners[0]({ [PUSH_STATUS_KEY]: {} }, "sync");
-    expect(count).toBe(2);
+    expect(count).toBe(3);
     unsubscribe();
     expect(listeners).toHaveLength(0);
+  });
+  it("받을 직무 저장 메시지는 코드 배열을 보내고 새 상태를 돌려준다", async () => {
+    const { client, sent } = setup(() => ({ ok: true, state }));
+    expect(await client.setRoles(["IT.BACKEND"])).toEqual(state);
+    expect(sent).toEqual([
+      { type: "careerForm.push", action: "roles", roles: ["IT.BACKEND"] },
+    ]);
+  });
+  it("분류 조회 응답을 검증해 돌려주고 오류 코드는 그대로 전달한다", async () => {
+    const { client, sent } = setup(() => ({
+      ok: true,
+      categories: { categories, error: null },
+    }));
+    expect(await client.categories()).toEqual({ categories, error: null });
+    expect(sent).toEqual([{ type: "careerForm.push", action: "categories" }]);
+    const cached = setup(() => ({
+      ok: true,
+      categories: { categories, error: "ENDPOINT_UNAVAILABLE" },
+    }));
+    expect(await cached.client.categories()).toEqual({
+      categories,
+      error: "ENDPOINT_UNAVAILABLE",
+    });
+    const broken = setup(() => ({ ok: true, categories: { categories: 1 } }));
+    expect(await code(broken.client.categories())).toBe("INVALID_RESPONSE");
+    const rejected = setup(() => ({ ok: false, code: "UNAVAILABLE" }));
+    expect(await code(rejected.client.categories())).toBe("NETWORK");
   });
 });

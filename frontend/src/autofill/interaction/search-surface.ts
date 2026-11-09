@@ -55,11 +55,13 @@ export class SearchSurface {
     return this.frame ? (this.root as Document) : this.container.ownerDocument;
   }
   get modal(): Element | undefined {
-    return this.container.matches(
-      "dialog[open], [role='dialog'][aria-modal='true']",
-    )
-      ? this.container
-      : undefined;
+    // The surface can be a panel inside the modal, or a layer that wraps
+    // exactly one modal.
+    const selector = "dialog[open], [role='dialog'][aria-modal='true']";
+    const owner = this.container.closest(selector);
+    if (owner) return owner;
+    const inner = this.container.querySelectorAll(selector);
+    return inner.length === 1 ? inner[0] : undefined;
   }
   contains(element: Element): boolean {
     if (this.root === element || this.root.contains(element)) return true;

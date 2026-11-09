@@ -1,3 +1,5 @@
+import type { PushClient } from "../../src/job-postings/push-client";
+import type { SavedPostingsReader } from "../../src/job-postings/saved-postings";
 import type { ProfileRepository } from "../../src/profile/profile-repository";
 import type { ReactNode } from "react";
 import { ReviewPreview } from "./ReviewPreview";
@@ -7,6 +9,26 @@ import { createDemoRepository } from "./fixtures";
 import styles from "./Simulation.module.css";
 export const demoRepository = createDemoRepository();
 const noop = () => {};
+// The web has no extension storage: the demo always starts with no saved postings.
+const noSavedPostings: SavedPostingsReader = {
+  list: async () => [],
+  subscribe: () => noop,
+};
+// Nor a background to ask about alerts: the tab keeps its plain empty line.
+const unavailable = async () => {
+  throw new Error("데모에서는 알림 상태를 읽지 않습니다.");
+};
+const noPush: PushClient = {
+  state: unavailable,
+  setEnabled: unavailable,
+  test: unavailable,
+  record: unavailable,
+  later: unavailable,
+  setRoles: unavailable,
+  inbox: unavailable,
+  categories: unavailable,
+  subscribe: () => noop,
+};
 export function PanelPreview({
   onAutofill = async () => {},
   autofillView,
@@ -33,6 +55,8 @@ export function PanelPreview({
       <App
         track={noop}
         showPostings={showPostings}
+        savedPostings={noSavedPostings}
+        pushClient={noPush}
         autofillView={autofillView}
         returnToProfile={onReturn}
         inPage

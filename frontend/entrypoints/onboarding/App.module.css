@@ -1,0 +1,146 @@
+/*
+ * Extension-onboarding-only restyle (#383). The public site renders the same
+ * header, footer and guide, so nothing here edits site/Site.module.css; the
+ * rules are scoped by this wrapper and reach the site's hashed class names
+ * through attribute selectors.
+ */
+.shell {
+  min-height: 100vh;
+  background: var(--color-page);
+}
+.shell > div a:focus-visible,
+.shell > div button:focus-visible,
+.shell > div summary:focus-visible,
+.shell > div h1:focus-visible {
+  outline: none;
+  border-radius: 4px;
+  box-shadow:
+    0 0 0 2px var(--color-surface),
+    0 0 0 4px var(--color-action);
+}
+.shell > div button[class]:focus-visible {
+  border-radius: 980px;
+}
+
+/* Header */
+.shell > div > header {
+  max-width: none;
+  min-height: 52px;
+  gap: 8px;
+  padding: 0 max(20px, calc((100% - 976px) / 2));
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+.shell > div > header a[class*="brand"] {
+  gap: 8px;
+  color: var(--color-text);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.374px;
+  white-space: nowrap;
+}
+.shell > div > header a[class*="brand"] img {
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  border-radius: 8px;
+}
+.shell > div > header a[class*="brand"] span {
+  font-weight: 600;
+}
+.shell > div > header a[class*="introductionLink"] {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 15px;
+  border: 0;
+  border-radius: 980px;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: -0.224px;
+}
+
+/* Footer */
+.shell > div > footer {
+  max-width: 1016px;
+  justify-content: flex-start;
+  gap: 8px 21px;
+  padding: 20px;
+  border-top: 1px solid var(--color-surface);
+  color: #515154;
+  font-size: 14px;
+  letter-spacing: -0.224px;
+}
+.shell > div > footer > span {
+  display: none;
+}
+.shell > div > footer nav {
+  flex-wrap: wrap;
+  gap: 8px 21px;
+  font-size: 14px;
+}
+.shell > div > footer a {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  color: var(--color-action-strong);
+  font-weight: 400;
+  text-decoration: none;
+}
+.shell > div > footer small {
+  margin-left: auto;
+  color: #515154;
+  font-size: 14px;
+}
+
+/* Guide steps that follow 공고 저장 시작 */
+.shell main[class*="onboarding"] {
+  max-width: 1016px;
+}
+.shell main[class*="onboarding"] aside li span,
+.shell [class*="stepCount"] {
+  font-size: 14px;
+}
+.shell [class*="guideContent"] h1 {
+  font-size: 40px;
+  line-height: 44px;
+  font-weight: 600;
+  letter-spacing: normal;
+}
+.shell [class*="guideContent"] a[class*="primary"],
+.shell [class*="guideContent"] button[class*="primary"] {
+  min-height: 44px;
+  border-radius: 980px;
+  font-size: 17px;
+  font-weight: 400;
+  letter-spacing: -0.374px;
+}
+.shell [class*="guideContent"] figcaption small {
+  font-size: 14px;
+}
+
+@media (max-width: 640px) {
+  .shell > div > header {
+    padding: 0 15px;
+  }
+  .shell > div > header a[class*="brand"] span {
+    display: none;
+  }
+  .shell > div > header a[class*="brand"],
+  .shell > div > header a[class*="introductionLink"],
+  .shell > div > footer a {
+    min-height: 44px;
+    height: 44px;
+  }
+  .shell > div > footer small {
+    margin-left: 0;
+  }
+
+  .shell [class*="guideContent"] {
+    padding: 24px 20px;
+  }
+  .shell main[class*="onboarding"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -6,11 +6,7 @@ import { POSTINGS_KEY, isRecord, parsePostings } from "./repository";
 import type { PostingSnapshot } from "./service";
 export interface PostingClient {
   list(): Promise<PostingSnapshot>;
-  save(
-    input: PostingInput,
-    id?: string,
-    version?: number,
-  ): Promise<PostingSnapshot>;
+  save(input: PostingInput): Promise<PostingSnapshot>;
   setCompleted(
     id: string,
     version: number,
@@ -49,14 +45,12 @@ async function request(command: PostingCommand): Promise<PostingSnapshot> {
 }
 export const postingClient: PostingClient = {
   list: () => request({ type: POSTING_MESSAGE, action: "list" }),
-  save: async (input, id, version) => {
+  save: async (input) => {
     const icon = captureSiteIcon(input.url);
     const snapshot = await request({
       type: POSTING_MESSAGE,
       action: "save",
       input,
-      id,
-      version,
     });
     await icon;
     return snapshot;

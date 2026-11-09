@@ -28,7 +28,7 @@ import com.careerform.formanalysis.generic.GenericFieldsRequest.SemanticLabel;
 import com.careerform.formanalysis.generic.GenericFieldsRequest.SemanticSource;
 import com.careerform.formanalysis.generic.GenericFieldsRequest.Visibility;
 import com.careerform.formanalysis.generic.GenericFieldsResponse.NameBinding;
-import com.careerform.formanalysis.generic.JevCategoryFieldResolver.Mapping;
+import com.careerform.formanalysis.generic.ChoiceFieldResolver.Mapping;
 
 @DisplayName("범용 영문 이름 선택 경계")
 class GenericEnglishNameBoundaryTest {
@@ -102,6 +102,47 @@ class GenericEnglishNameBoundaryTest {
         assertThat(result).isEqualTo(new Mapping(null, 0.87, true, null));
     }
 
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "Hong Gil Dong|FAMILY_FIRST|ENGLISH_FULL_NAME_FAMILY_FIRST",
+        "HONG GILDONG|FAMILY_FIRST|ENGLISH_FULL_NAME_FAMILY_FIRST",
+        "Hong, Gildong|FAMILY_FIRST|ENGLISH_FULL_NAME_FAMILY_FIRST",
+        "예) Hong Gil-dong|FAMILY_FIRST|ENGLISH_FULL_NAME_FAMILY_FIRST",
+        "Gildong Hong|GIVEN_FIRST|ENGLISH_FULL_NAME_GIVEN_FIRST",
+        "Gil-dong Hong|GIVEN_FIRST|ENGLISH_FULL_NAME_GIVEN_FIRST"
+    })
+    @DisplayName("순서 문구가 없으면 한 순서로만 나오는 홍길동 표준 예시의 순서를 따른다")
+    void standardExampleOrderIsEvidence(String example, String evidence, String recipe) {
+        respondToCapturedEvidence();
+
+        var result = resolve(candidate("영문이름", example, null));
+
+        assertThat(http.calls().getFirst().state().path("fields").path("field_0")
+            .path("englishNameOrderEvidence").asString()).isEqualTo(evidence);
+        assertThat(result.binding()).isEqualTo(new NameBinding(DerivedRecipe.valueOf(recipe)));
+    }
+
+    @Test
+    @DisplayName("명시적 순서 문구가 있으면 홍길동 예시보다 문구를 따른다")
+    void explicitStatementOutranksExample() {
+        respondToCapturedEvidence();
+
+        var result = resolve(candidate("Full name (given name then family name)", "Hong Gildong", null));
+
+        assertThat(result.binding()).isEqualTo(new NameBinding(DerivedRecipe.ENGLISH_FULL_NAME_GIVEN_FIRST));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"Hong Gildong / Gildong Hong", "John Smith", "Kim Minsu"})
+    @DisplayName("두 순서가 섞인 예시나 홍길동이 아닌 예시는 순서 근거가 아니다")
+    void mixedOrForeignExampleAbstains(String example) {
+        respondToCapturedEvidence();
+
+        var result = resolve(candidate("영문이름", example, null));
+
+        assertThat(result).isEqualTo(new Mapping(null, 0.87, true, null));
+    }
+
     @Test
     @DisplayName("전체 이름 관측이 있어도 공급자의 DIRECT 선택을 코드가 레시피로 치환하지 않는다")
     void directProviderChoiceIsNotRewritten() {
@@ -113,7 +154,7 @@ class GenericEnglishNameBoundaryTest {
     }
 
     private Mapping resolve(FieldCandidate candidate) {
-        return new JevCategoryFieldResolver(client(http), FIELDS, CATEGORIES, 1, 5, 10, 8000)
+        return new ChoiceFieldResolver(client(http), FIELDS, CATEGORIES, 1, 5, 10, 8000)
             .resolve(request("example.test", List.of(section("personal", "PERSONAL", List.of(candidate)))))
             .mappings().get("name");
     }

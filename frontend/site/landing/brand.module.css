@@ -1,0 +1,255 @@
+/* Shared surface for the redesigned pages (landing, 기술 소개, 정책): the
+   product palette from theme.css plus the clay depth used by the characters. */
+.brand {
+  /* Sky palette for the landing, 기술 소개 and policies. Literal values on
+     purpose: theme.css is shared with the extension, which keeps its colours. */
+  --sky: #b1e5fd;
+  --page: #f2faff;
+  --surface: #ffffff;
+  --cream: #eaf6fd;
+  --brand: #d6f0fd;
+  --brand-hover: #c2e7fb;
+  --line: #d2e7f2;
+  --line-strong: #a6cde2;
+  --text: #2e4a5d;
+  --strong: #13293a;
+  --sub: #5a7487;
+  --action: #1d6fa5;
+  --action-strong: #13527e;
+  --accent: #7cc6ee;
+  --scan: #3fa9e0;
+  --warn: #1b5c8f;
+  --warn-soft: #dcf0fd;
+  --review-stripe: #dff1fd;
+  --ok: #24724f;
+  --ok-check: #5bb784;
+  --ok-soft: #eaf5ee;
+  --problem: #34536b;
+  --problem-soft: #e3ebf2;
+  --clay:
+    0 34px 60px -28px rgb(17 58 92 / 35%),
+    0 10px 22px -12px rgb(17 58 92 / 18%), inset 0 2px 0 rgb(255 255 255 / 90%),
+    inset 0 -8px 16px rgb(140 196 228 / 22%);
+  --gutter: max(20px, env(safe-area-inset-left, 0px));
+  --header-height: 64px;
+
+  background: var(--page);
+  color: var(--text);
+  font:
+    16px/1.65 SitePretendard,
+    "Apple SD Gothic Neo",
+    sans-serif;
+  word-break: keep-all;
+  -webkit-font-smoothing: antialiased;
+}
+.brand *,
+.brand *::before,
+.brand *::after {
+  box-sizing: border-box;
+}
+/* Zero-specificity resets so button and link classes always win. */
+:where(.brand) a {
+  color: inherit;
+  text-decoration: none;
+}
+:where(.brand) button {
+  font: inherit;
+}
+.skipLink {
+  z-index: 30;
+}
+.brand h1,
+.brand h2,
+.brand h3,
+.brand h4 {
+  margin: 0;
+  color: var(--strong);
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+.brand p {
+  margin: 0;
+}
+.brand img {
+  max-width: 100%;
+  display: block;
+}
+.brand :focus-visible {
+  outline: 3px solid rgb(29 111 165 / 45%);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 52px;
+  padding: 0 24px;
+  border-radius: 999px;
+  border: 0;
+  font: inherit;
+  font-weight: 700;
+  font-size: 16px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    background-color 0.15s ease;
+}
+.button:active {
+  transform: scale(0.97);
+}
+.primary {
+  composes: button;
+  background: var(--action);
+  color: #fff;
+  box-shadow:
+    0 10px 20px -10px rgb(17 58 92 / 70%),
+    inset 0 -3px 0 rgb(0 0 0 / 15%);
+}
+.primary:hover {
+  background: var(--action-strong);
+}
+.soft {
+  composes: button;
+  background: var(--brand);
+  color: var(--strong);
+  box-shadow: inset 0 -3px 0 rgb(17 58 92 / 10%);
+}
+.soft:hover {
+  background: var(--brand-hover);
+}
+
+/* header */
+.header {
+  z-index: 20;
+  padding-top: env(safe-area-inset-top, 0px);
+  background: rgb(242 250 255 / 92%);
+  border-bottom: 1px solid rgb(210 231 242 / 70%);
+}
+.headerFixed {
+  composes: header;
+  position: fixed;
+  inset: 0 0 auto;
+}
+.headerSticky {
+  composes: header;
+  position: sticky;
+  top: 0;
+}
+.headerInner {
+  max-width: 1200px;
+  margin: 0 auto;
+  height: var(--header-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-inline: var(--gutter);
+}
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: -0.02em;
+  color: var(--strong);
+}
+.logo img {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+}
+.headerInstall {
+  composes: primary;
+  height: 40px;
+  padding: 0 18px;
+  font-size: 14px;
+}
+
+/* footer */
+.footer {
+  border-top: 1px solid var(--line);
+  padding: 28px var(--gutter) 40px;
+  background: var(--page);
+}
+.footerInner {
+  max-width: 1120px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--sub);
+}
+.footerInner nav {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.footerInner a:hover,
+.footerInner a[aria-current="page"] {
+  color: var(--strong);
+}
+.footerInner a[aria-current="page"] {
+  font-weight: 700;
+}
+
+/* closing call to action */
+.cta {
+  border-radius: 36px;
+  background: var(--sky);
+  color: var(--strong);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  overflow: hidden;
+  box-shadow: var(--clay);
+}
+.ctaText {
+  padding: 56px clamp(24px, 5vw, 64px);
+  display: grid;
+  gap: 22px;
+  align-self: center;
+}
+.brand .ctaText h2 {
+  color: var(--strong);
+  font-size: clamp(28px, 3.8vw, 48px);
+  font-weight: 800;
+  line-height: 1.2;
+}
+.ctaButton {
+  composes: button;
+  background: var(--action);
+  color: #fff;
+  justify-self: start;
+}
+.ctaButton:hover {
+  background: var(--action-strong);
+}
+.ctaArt {
+  height: 300px;
+  width: auto;
+  margin-right: clamp(10px, 4vw, 60px);
+}
+@media (max-width: 900px) {
+  .cta {
+    grid-template-columns: 1fr;
+  }
+  .ctaArt {
+    height: 220px;
+    justify-self: end;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .brand *,
+  .brand *::before,
+  .brand *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

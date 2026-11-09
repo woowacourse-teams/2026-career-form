@@ -473,6 +473,24 @@ describe("readonly search collection, response and review contract", () => {
       });
     });
 
+    it("keeps the other stored values of the same entry for the search layer", () => {
+      const { snapshot, response, profile } = setup(
+        "university",
+        "schoolName",
+        "학교명",
+      );
+      profile.education[0]!.values.schoolRegion = "region:seoul";
+      const { items } = buildReviewPlan({
+        analysis: validateFieldsResponse(snapshot.request, response),
+        registry: snapshot.registry,
+        profile,
+      });
+
+      expect(items[0]!.searchContextValues).toEqual([
+        { key: "education.university.schoolRegion", value: "region:seoul" },
+      ]);
+    });
+
     it("preselects a certificate search with only the original-exact form", () => {
       const item = certificateItem("synthetic certificate", "level 2");
 

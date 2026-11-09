@@ -268,7 +268,7 @@ export function observeResults(
         throw new SearchFailure("result_set_incomplete");
       const evidenceFor = (element: HTMLElement) =>
         catalogEvidenceForElement(element, root);
-      const matches = actions.filter((element) =>
+      const approved = actions.filter((element) =>
         catalogMatch
           ? matchesApprovedCatalog(catalogMatch, evidenceFor(element))
           : expected.some(
@@ -276,6 +276,17 @@ export function observeResults(
                 normalized(value) === normalized(element.textContent ?? ""),
             ),
       );
+      // Two approved names of one certificate: the one named exactly as the
+      // approved query is the applicant's own wording.
+      const queryNamed = catalogMatch
+        ? approved.filter(
+            (element) =>
+              normalized(evidenceFor(element).label) ===
+              normalized(catalogMatch.query),
+          )
+        : [];
+      const matches =
+        approved.length > 1 && queryNamed.length === 1 ? queryNamed : approved;
       if (matches.length > 1)
         throw new SearchFailure("multiple_matching_results");
       if (!matches.length) {

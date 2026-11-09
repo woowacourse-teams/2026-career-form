@@ -141,6 +141,7 @@ public final class SupportedProfileFields {
         entry("projects.project.startDate", AutofillPolicy.ALLOWED),
         entry("projects.project.endDate", AutofillPolicy.ALLOWED),
         entry("projects.project.projectName", AutofillPolicy.ALLOWED),
+        entry("projects.project.organization", AutofillPolicy.ALLOWED),
         entry("projects.project.role", AutofillPolicy.ALLOWED),
         entry("projects.project.activityDetails", AutofillPolicy.ALLOWED),
         entry("publications.publicationPatent.type", AutofillPolicy.CONDITIONAL),
@@ -217,6 +218,8 @@ public final class SupportedProfileFields {
             Language-test registration number and certificate registration number differ.
             Start and end dates belong to the record category named in the canonical key.
             Generic activity dates or details are projects only with explicit project context.
+            A project organization (the company or institution named inside a project record)
+            differs from a career company name; map it only with explicit project context.
             Unsupported volunteer, extracurricular, award, contest, and overseas-experience
             sections are not projects. Omit their candidates because the profile has no
             corresponding category.

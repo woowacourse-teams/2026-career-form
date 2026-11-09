@@ -77,7 +77,9 @@ function fieldResponse(
   };
 }
 
-function setupWorkflow(options: { grade?: string } = {}) {
+function setupWorkflow(
+  options: { grade?: string; mutation?: "target-value" | "moved-control" } = {},
+) {
   document.body.innerHTML = `
     <fieldset><legend>자격증·면허증</legend>
       <div data-repeater-item>
@@ -99,20 +101,35 @@ function setupWorkflow(options: { grade?: string } = {}) {
   });
   const analyzeRequests: Parameters<AnalysisApiClient["analyzeFields"]>[0][] =
     [];
+  const writeCalls: string[][] = [];
+  let searchWritten = false;
   let grade: HTMLSelectElement | undefined;
   let issuer: HTMLInputElement | undefined;
   let date: HTMLInputElement | undefined;
   executeWritesMock.mockImplementation(async (rawOptions) => {
     const writeOptions = rawOptions as SearchFollowUpOptions;
-    const searchItem = writeOptions.items.find(
-      (item) => item.analysis?.writePlan?.command === "SEARCH_SELECTION",
+    writeCalls.push(
+      writeOptions.items
+        .filter((item) =>
+          writeOptions.approvedCandidateIds.has(item.candidateId),
+        )
+        .map((item) => {
+          const binding = item.analysis?.valueBinding;
+          return binding?.type === "DIRECT" ? binding.profileFieldKey : "";
+        }),
     );
+    const searchItem = searchWritten
+      ? undefined
+      : writeOptions.items.find(
+          (item) => item.analysis?.writePlan?.command === "SEARCH_SELECTION",
+        );
     if (!searchItem)
       return writeOptions.items.map((item) => ({
         candidateId: item.candidateId,
         status: "written",
       }));
 
+    searchWritten = true;
     document.querySelector<HTMLInputElement>("#certificate-name")!.value =
       "AWS Certified Solutions Architect";
     const row = document.querySelector<HTMLElement>("[data-repeater-item]")!;
@@ -126,6 +143,16 @@ function setupWorkflow(options: { grade?: string } = {}) {
     date.name = "certificate-date";
     row.append(grade, issuer, date);
     writeOptions.onSearchFollowUp?.(searchItem, [grade]);
+    // The page changes after the follow-up was recorded and before the dependent pass.
+    if (options.mutation === "target-value") {
+      document.querySelector<HTMLInputElement>("#certificate-name")!.value =
+        "Changed synthetic certificate";
+    } else if (options.mutation === "moved-control") {
+      const otherRow = document.createElement("div");
+      otherRow.dataset.repeaterItem = "";
+      document.querySelector("fieldset")!.append(otherRow);
+      otherRow.append(grade);
+    }
     return writeOptions.items.map((item): ApprovedWriteResult =>
       item.candidateId === searchItem.candidateId
         ? { candidateId: item.candidateId, status: "written" }
@@ -161,6 +188,7 @@ function setupWorkflow(options: { grade?: string } = {}) {
 
   return {
     analyzeRequests,
+    writeCalls,
     grade: () => grade,
     issuer: () => issuer,
     date: () => date,
@@ -173,26 +201,12 @@ afterEach(() => {
 });
 
 describe("generic search follow-up review", () => {
-  it.each(["target-value", "moved-control"])(
-    "rejects stale %s after review before invoking dependent writes",
+  it.each(["target-value", "moved-control"] as const)(
+    "rejects stale %s before invoking dependent writes",
     async (mutation) => {
-      const setup = setupWorkflow({ grade: "Associate" });
-      await screen.findByRole("heading", { name: "자동 기입 확인" });
-      fireEvent.click(screen.getAllByRole("button", { name: /포함하기$/ })[0]!);
-      if (mutation === "target-value") {
-        document.querySelector<HTMLInputElement>("#certificate-name")!.value =
-          "Changed synthetic certificate";
-      } else {
-        const otherRow = document.createElement("div");
-        otherRow.dataset.repeaterItem = "";
-        document.querySelector("fieldset")!.append(otherRow);
-        otherRow.append(setup.grade()!);
-      }
-      fireEvent.click(
-        screen.getByRole("button", { name: /개 항목 기입하기$/ }),
-      );
+      const setup = setupWorkflow({ grade: "Associate", mutation });
       await screen.findByText(
-        "검색 후 입력 항목이 변경되어 다시 확인해야 합니다",
+        /^검색 후 입력 항목이 변경되어 다시 확인해야 합니다\.?$/,
       );
       expect(executeWritesMock).toHaveBeenCalledTimes(1);
       expect(setup.grade()?.value).toBe("");
@@ -201,10 +215,10 @@ describe("generic search follow-up review", () => {
     },
   );
 
-  it("reanalyzes newly revealed fields and requires a new review before dependent writes", async () => {
+  it("reanalyzes newly revealed fields and writes only the approved ones in a second pass without a review", async () => {
     const setup = setupWorkflow({ grade: "Associate" });
 
-    await screen.findByRole("heading", { name: "자동 기입 확인" });
+    await screen.findByRole("heading", { name: "기입 결과" });
 
     expect(setup.analyzeRequests).toHaveLength(2);
     expect(
@@ -219,25 +233,29 @@ describe("generic search follow-up review", () => {
         "certificate-date",
       ]),
     );
-    expect(executeWritesMock).toHaveBeenCalledTimes(1);
+    expect(executeWritesMock).toHaveBeenCalledTimes(2);
+    expect(setup.writeCalls[0]).toContain("certifications.certificate.name");
+    // Only the revealed field the pass may write is approved; the grade and
+    // the date the applicant still has to decide stay unwritten.
+    expect(setup.writeCalls[1]).toEqual(["certifications.certificate.issuer"]);
     expect(setup.grade()?.value).toBe("");
-    expect(setup.issuer()?.value).toBe("");
     expect(setup.date()?.value).toBe("");
-    expect(
-      screen.getAllByRole("button", { name: /포함하기$/ }),
-    ).not.toHaveLength(0);
+    expect(setup.writeCalls[1]).not.toContain(
+      "certifications.certificate.name",
+    );
   });
 
-  it("surfaces a missing profile grade for manual review without writing follow-up fields", async () => {
+  it("surfaces a missing profile grade for manual review without writing it", async () => {
     const setup = setupWorkflow();
 
-    await screen.findByRole("heading", { name: "자동 기입 확인" });
+    await screen.findByRole("heading", { name: "기입 결과" });
 
     expect(setup.analyzeRequests).toHaveLength(2);
     expect(screen.getByText(/급수.*직접 확인/)).toBeVisible();
     expect(setup.grade()?.value).toBe("");
-    expect(setup.issuer()?.value).toBe("");
-    expect(setup.date()?.value).toBe("");
-    expect(executeWritesMock).toHaveBeenCalledTimes(1);
+    expect(executeWritesMock).toHaveBeenCalledTimes(2);
+    expect(setup.writeCalls[1]).not.toContain(
+      "certifications.certificate.grade",
+    );
   });
 });

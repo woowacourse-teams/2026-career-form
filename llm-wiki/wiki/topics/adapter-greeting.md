@@ -2,11 +2,13 @@
 
 > Topic: adapter-greeting
 > Status: Current
-> Current: [CF-346 직접 입력 선택지와 검색 실패 사유 코드 근거](../../raw/issues/CF-346/documents/greeting-direct-input-and-search-failure-codes.md)
-> History: [CF-94 근거](../../raw/issues/CF-94/documents/adapter-greeting.md); [CF-160 근거](../../raw/issues/CF-160/documents/adapter-greeting.md); [CF-162 근거](../../raw/issues/CF-162/documents/adapter-greeting.md); [CF-168 근거](../../raw/issues/CF-168/documents/adapter-greeting.md); [CF-310 검색 서버 액션 근거](../../raw/issues/CF-310/documents/greeting-search-server-action.md); [CF-310 v18 장애 정도 별칭 근거](../../raw/issues/CF-310/documents/greeting-v18-disability-alias.md); [CF-334 열린 Ark UI 팝오버의 숨김 수집 근거](../../raw/issues/CF-334/documents/greeting-open-popover-hides-form.md); [CF-346 직접 입력 선택지와 검색 실패 사유 코드 근거](../../raw/issues/CF-346/documents/greeting-direct-input-and-search-failure-codes.md)
-> Updated: 2026-10-25
+> Current: [CF-368 동명 고교 지역 동점 해소와 한국폴리텍 대학 번호 표기 근거](../../raw/issues/CF-368/documents/greeting-school-name-tie-break-and-numbered-college.md)
+> History: [CF-94 근거](../../raw/issues/CF-94/documents/adapter-greeting.md); [CF-160 근거](../../raw/issues/CF-160/documents/adapter-greeting.md); [CF-162 근거](../../raw/issues/CF-162/documents/adapter-greeting.md); [CF-168 근거](../../raw/issues/CF-168/documents/adapter-greeting.md); [CF-310 검색 서버 액션 근거](../../raw/issues/CF-310/documents/greeting-search-server-action.md); [CF-310 v18 장애 정도 별칭 근거](../../raw/issues/CF-310/documents/greeting-v18-disability-alias.md); [CF-334 열린 Ark UI 팝오버의 숨김 수집 근거](../../raw/issues/CF-334/documents/greeting-open-popover-hides-form.md); [CF-346 직접 입력 선택지와 검색 실패 사유 코드 근거](../../raw/issues/CF-346/documents/greeting-direct-input-and-search-failure-codes.md); [CF-368 동명 고교 지역 동점 해소와 한국폴리텍 대학 번호 표기 근거](../../raw/issues/CF-368/documents/greeting-school-name-tie-break-and-numbered-college.md)
+> Updated: 2026-10-29
 
 ## 현재 상태
+
+CF-368부터 고교 학교명 검색은 같은 이름 정식 후보가 둘 이상일 때 정책 버전을 올리지 않고 FE에서 지역으로 동점을 해소한다(활성 정책은 v19 유지). 카탈로그 `selected` 신원이 있으면 카탈로그의 시도, 없으면 같은 고교 항목의 `schoolRegion`을 기준으로, 모든 후보 설명이 보이고 설명이 기준 지역과 정확히 같은 후보가 하나일 때만 고른다. 카탈로그 `selected` 한국폴리텍 대학·대학원은 사이트 라벨의 캠퍼스군 번호 차이를 엄격한 조건에서 같은 학교로 본다. 상세는 아래 2026-10-29 절을 따른다.
 
 CF-168부터 어학 등급과 회화 수준 버튼 선택은 선택지가 프로필 값과 하나도 일치하지 않으면 `OPTION_UNMATCHED`로 해당 필드만 건너뛰고 나머지 입력을 계속한다. 필드 루트의 `[name]`이 정확히 하나일 때만 격리하며, 드러내는 드라이버와 공유 루트는 기존처럼 전체 중단한다. 상세는 [CF-168 근거](../../raw/issues/CF-168/documents/adapter-greeting.md)를 따른다.
 
@@ -44,7 +46,17 @@ Greeting 검색 목록은 정확히 같은 정식 항목이 없으면 유사 이
 
 검색 함수가 사유 없이 실패하면 기본 코드 `SEARCH_UNCONFIRMED`가 붙는다. CF-346부터 옵션 대기 뒤 입력값이 그대로일 때 렌더된 목록에 고를 항목이 없으면 `SEARCH_NO_EXACT_MATCH`, 정확 항목이 여러 개면 `SEARCH_AMBIGUOUS`, 렌더된 목록이 필터로 비면 `SEARCH_NO_RESULTS`, 열린 목록에 항목이 끝내 없으면 `SEARCH_TIMEOUT`을 보고하고, 기본 코드는 팝업이 열리지 않은 경우에만 남는다. 결과 패널 집계는 같고 문구만 바뀐다.
 
-마지막 기입 뒤 페이지가 입력 노드를 다시 그려 재수집이 변경으로 판정되고, 재분석의 리뷰 계획이 현재값이 이미 프로필 값과 같은 칸도 다시 승인해 같은 값을 다시 쓴다(회차당 3~5회, 구조 서명이 반복되면 멈춤). 상태 드라이버는 완료 키가 있어 다시 돌지 않는다. 범용 재분석·리뷰 계획 흐름의 별도 후보다. 카카오게임즈 양식의 기존 미해결 항목(어학·자격 취득일 유지 실패 5, 등급/점수 1, 회화수준 2)은 검색 정확 일치와 무관하고, 동명 고교는 합성 프로필 한계로 "여러 개"로 표시된다. 근거는 [CF-346 직접 입력 선택지와 검색 실패 사유 코드 근거](../../raw/issues/CF-346/documents/greeting-direct-input-and-search-failure-codes.md)를 따른다.
+마지막 기입 뒤 페이지가 입력 노드를 다시 그려 재수집이 변경으로 판정되고, 재분석의 리뷰 계획이 현재값이 이미 프로필 값과 같은 칸도 다시 승인해 같은 값을 다시 쓴다(회차당 3~5회, 구조 서명이 반복되면 멈춤). 상태 드라이버는 완료 키가 있어 다시 돌지 않는다. 범용 재분석·리뷰 계획 흐름의 별도 후보다. 카카오게임즈 양식의 기존 미해결 항목(어학·자격 취득일 유지 실패 5, 등급/점수 1, 회화수준 2)은 검색 정확 일치와 무관하다. CF-346 시점에 "여러 개"로 남던 동명 고교는 CF-368 빌드 실측에서 지역 동점 해소로 확정됐다(조건은 아래 2026-10-29 절). 근거는 [CF-346 직접 입력 선택지와 검색 실패 사유 코드 근거](../../raw/issues/CF-346/documents/greeting-direct-input-and-search-failure-codes.md)를 따른다.
+
+## 동명 고교 지역 동점 해소와 한국폴리텍 대학 번호 표기 (2026-10-29)
+
+운영 정책의 고교 검색은 `matchMode: NAME_ONLY`라 같은 이름 정식 후보가 둘 이상이면 `SEARCH_AMBIGUOUS`로 끝나고 학교명이 비었다(1.4.0 QA, 카카오게임즈의 대진고 3곳). CF-368은 정책 v20(`highSchool` NAME_AND_DETAIL) 대신 FE 동점 해소를 택했다. 고교 검색 칸에서 같은 이름 정식 후보가 2개 이상일 때만, 기준 지역(카탈로그 `selected`면 카탈로그 detail 첫 조각의 시도, 아니면 같은 항목 `schoolRegion`의 표준 라벨)과 선택지 `item-description`이 정확히 같은 후보가 하나이고 모든 후보 설명이 보일 때 그 후보를 고른다. `selected` 신원과 프로필 지역이 어긋나면 좁히지 않고, 그 밖에는 `SEARCH_AMBIGUOUS`로 남는다. 후보 1개일 때의 동작은 바꾸지 않았고, 다른 시도의 단일 후보 선택은 후속 후보다.
+
+재실행에서 다시 연 목록에 같은 이름 정식 항목이 여럿이면 체크된 항목이 같은 동점 해소 결과와 같아야 성공이다. 지역 근거가 없거나 어긋나면 `SEARCH_AMBIGUOUS`를 보고하고 기존 값을 덮어쓰지 않는다. 동점 해소로 고른 영수증은 `detail`에 카탈로그 detail, `description`에 지역을 남긴다. `ReviewPlanItem.searchRegion`은 API로 보내지 않는 로컬 전용 필드다.
+
+카탈로그(KESS) 이름에는 캠퍼스군 번호가 없고(`한국폴리텍대학 서울정수캠퍼스`) 사이트 목록에는 있다(`한국폴리텍 I 대학 서울정수캠퍼스`). `matchesCatalogNumberedCollege`는 `university`·`graduateSchool`에서 번호가 한쪽에만 있고 번호를 뺀 키가 카탈로그 항목 하나만 가리킬 때만 같은 학교로 본다(2026-10-07 카탈로그 기준 충돌 0). `normalizedCatalogLabel`은 바꾸지 않았다. 이렇게 고른 사이트 라벨은 재실행 검토에서 프로필 값과 달라 기존 값 충돌로 표시되고 덮어쓰지 않는다.
+
+2026-10-29 카카오게임즈 실측(테스트 계정·합성 프로필)에서 운영 1.4.0과 develop `dcee68dd`는 동명 고교 학교명이 비었고 develop은 `SEARCH_AMBIGUOUS`로 보고했다. CF-368 빌드(develop 로컬 서버, Greeting 정책 v19)에서는 기본·카탈로그 선택·직접 입력 프로필 모두 고교가 확정됐다. 이는 고교 선택지에 시도 설명이 있다는 간접 근거다. 카탈로그 선택 폴리텍 대학은 정식 항목 `한국폴리텍 I 대학 서울정수캠퍼스`로 확정돼, 프로필 이름 검색 결과에 정식 항목이 나온다는 것도 확인했다. 직접 입력 프로필은 #347 동작대로 직접 입력 값이 들어갔다. 근거는 [CF-368 근거](../../raw/issues/CF-368/documents/greeting-school-name-tie-break-and-numbered-college.md)를 따른다.
 
 ## 검증과 제한
 
@@ -55,6 +67,8 @@ Greeting 검색 목록은 정확히 같은 정식 항목이 없으면 유사 이
 ## 변경 이유
 
 기업별 도메인 목록 대신 BE DNS 연결과 FE 공통 DOM 구조를 확인하며 기존 API로 Greeting 공통 정책을 재사용한다. 모호한 필드 추정과 범용 결과 실행을 차단한다.
+
+CF-368은 동명 고교를 정책 버전을 올리지 않고 화면에 이미 보이는 선택지 설명과 프로필의 지역 근거로 FE에서 좁힌다. 근거가 없거나 어긋나면 기존처럼 확인 필요로 남겨 Issue의 "다른 학교 오선택 0" 기준을 지킨다. 한국폴리텍 번호 표기도 같은 기준으로, 카탈로그 항목 하나만 가리킬 때만 같은 학교로 본다.
 
 이전 설치 확장 관측은 DNS/DOM 자동 판별 이전의 증거다. DNS/DOM 판별은 합성 회귀·정적 검사·빌드와 로컬 서버의 DNS/API 응답으로 검증했다. 이후 필드 확장의 카카오게임즈 설치 브라우저 관측은 별도이며 최신 수정본의 빈 지원서 전체 실행과 재실행은 아직 확정하지 못했다.
 

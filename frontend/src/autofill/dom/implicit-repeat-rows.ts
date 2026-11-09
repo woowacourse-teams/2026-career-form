@@ -5,6 +5,7 @@ import {
   actionLabel,
   genericFormGroupFor,
   genericFormGroups,
+  hiddenFromPage,
 } from "./generic-form-groups";
 import { isGenericRepeatableRow } from "./repeatable-rows";
 
@@ -34,7 +35,7 @@ export function isAddAction(element: Element): element is HTMLElement {
     ADD_LABEL.test(label) &&
     !FORBIDDEN_LABEL.test(label) &&
     !RESET_LABEL.test(label) &&
-    !element.closest("[hidden], [aria-hidden='true'], [inert]") &&
+    !hiddenFromPage(element) &&
     !element.closest("template, [data-template]")
   );
 }

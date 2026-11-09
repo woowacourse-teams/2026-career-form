@@ -1,16 +1,16 @@
 # 익명 설치 자격의 환경별 활성화와 API 이용 절차
 
-작성 기준: CF-359, 코드 0861dd1. 이 문서는 확정 요청된 환경 정책과 운영 절차 초안이다. 배포 설정 연결과 실제 환경 활성화를 완료했다는 기록이 아니다.
+작성 기준: CF-359. 2026-11-09 환경 정책과 최신 develop 호환성 보완을 반영한다. 이 문서는 확정 요청된 환경 정책과 운영 절차 초안이다. 배포 설정 연결과 실제 환경 활성화를 완료했다는 기록이 아니다.
 
 ## 목표 환경 정책
 
 | 서비스 환경 | GitHub Environment | 서버 enabled | registration-enabled | 확장 VITE_AI_ADMISSION_ENABLED |
 |---|---|---|---|---|
 | dev | development | false | false | false |
-| staging | staging | false | false | false |
+| staging | staging | true | true | true |
 | prod | production | true | true | true |
 
-dev와 staging은 이번 설치 자격 검사와 AI 호출 제한 및 등록 API를 비활성으로 유지한다. 기존의 다른 제한이나 검증까지 제거하지 않는다. prod만 전환 검증 후 활성화하는 최종 목표다. prod에서 등록 API만 선행 제공하는 동안은 registration-enabled=true, enabled=false다.
+dev는 설치 자격 검사, AI 호출 제한과 등록 API를 비활성으로 유지한다. staging은 production과 유사한 HTTPS, 신뢰 프록시와 확장 설정으로 보호 기능을 활성화해 사전 검증한다. prod는 클라이언트 전환 검증 후 활성화하는 최종 목표다. prod에서 등록 API만 선행 제공하는 동안은 registration-enabled=true, enabled=false다.
 
 ## 현재 구현과 남은 저장소 작업
 
@@ -19,7 +19,7 @@ dev와 staging은 이번 설치 자격 검사와 AI 호출 제한 및 등록 API
 다음 연결은 아직 구현하지 않았다.
 
 1. backend/src/main/resources/application.yml의 기존 career-form 아래에 admission 설정을 추가하고 환경 변수와 명시적으로 연결한다.
-2. 개발, 스테이징, 운영 배포 워크플로우에서 환경별 변수를 전달한다. dev와 staging의 두 활성화 값은 false로 유지한다.
+2. 개발, 스테이징, 운영 배포 워크플로우에서 환경별 변수를 전달한다. dev의 두 활성화 값은 false로, staging은 true로 전달한다. prod는 전환 단계에 맞춰 전달한다.
 3. infra/compose.deploy.yaml에서 해당 값을 백엔드 컨테이너로 전달한다.
 4. 확장 빌드에 환경별 API 주소와 활성화 플래그를 전달한다. 서버 설정이 확장 빌드 플래그를 자동으로 바꾸지는 않는다.
 
@@ -38,16 +38,16 @@ dev와 staging은 이번 설치 자격 검사와 AI 호출 제한 및 등록 API
 
 GitHub 저장소 Settings > Environments에서 development, staging, production을 구분한다.
 
-- development와 staging: enabled와 registration-enabled를 false로 유지한다. 이번 비활성화 정책을 적용하기 위해 암호화 키를 새로 등록할 필요는 없다. 이미 등록된 키를 이번 정책 변경을 이유로 삭제하거나 교체하지 않는다.
-- production Variables: 위 활성화 값과 신뢰 프록시의 실제 원격 IP 목록을 등록한다. 최초 전환에서는 enabled를 false로 둔다.
-- production Secrets: CAREER_FORM_ADMISSION_ENCRYPTION_KEY를 등록한다. 32바이트 무작위 값을 Base64로 표현한 값이다. 사람이 로컬에서 openssl rand -base64 32로 생성할 수 있다. 실제 값은 문서, 대화나 로그에 넣지 않는다.
+- development: enabled와 registration-enabled를 false로 유지한다. 이번 비활성화 정책을 적용하기 위해 암호화 키를 새로 등록할 필요는 없다. 이미 등록된 키를 이번 정책 변경을 이유로 삭제하거나 교체하지 않는다.
+- staging 및 production Variables: 위 활성화 값과 신뢰 프록시의 실제 원격 IP 목록을 등록한다. 최초 전환에서는 enabled를 false로 두고 등록과 확장 연동 확인 후 true로 바꾼다.
+- staging 및 production Secrets: CAREER_FORM_ADMISSION_ENCRYPTION_KEY를 등록한다. 32바이트 무작위 값을 Base64로 표현한 값이다. 사람이 로컬에서 openssl rand -base64 32로 생성할 수 있다. 실제 값은 문서, 대화나 로그에 넣지 않는다.
 - 검증 환경과 production의 자격 및 데이터 저장 환경을 분리한다. 실제 DB 분리는 배포 담당자가 확인한다. 같은 환경의 여러 서버는 같은 키를 사용하고 배포마다 새로 생성하지 않는다. 키 교체는 등록 결과 재전달과 IP 및 등록 키의 HMAC에 영향을 주므로 별도 절차 없이 바꾸지 않는다.
 - HTTPS 종단 프록시가 X-Real-IP와 X-Forwarded-Proto를 덮어쓰는지, 백엔드가 직접 외부에 노출되지 않는지 확인한다. trusted-proxies는 도메인이나 사용자 IP가 아니라 앱이 보는 실제 프록시 원격 주소다. 현재 서버에서 충족한 것으로 확인하지 않았다.
-- 환경별 확장을 빌드하고 배포 또는 테스트용으로 설치한다. 로컬 검증과 prod 자격은 환경을 넘어 재사용하지 않는다.
+- 환경별 확장을 빌드하고 배포 또는 테스트용으로 설치한다. 로컬 검증, staging과 prod 자격은 환경을 넘어 재사용하지 않는다.
 
 ## 활성화 순서
 
-인증 활성화 검증은 별도의 로컬 검증 환경에서 수행하고, 아래 전환 절차는 prod에 적용한다. dev와 staging은 서버의 두 활성화 값과 확장 플래그를 false로 유지한다.
+인증은 로컬 검증 후 staging에서 먼저 검증한다. 아래 전환 절차를 staging에 먼저 적용하고 prod에 적용한다. dev의 서버 활성화 값과 확장 플래그는 false로 유지한다. staging에는 별도 HTTPS 진입점, 신뢰 프록시, 테스트 DB와 환경별 확장이 필요하다.
 
 1. 위 저장소 설정 전달 경로를 구현하고 검증한다.
 2. 사람이 해당 환경의 키와 프록시 값을 제공한다. registration-enabled=true, enabled=false로 서버를 배포한다.
@@ -86,10 +86,10 @@ GitHub 저장소 Settings > Environments에서 development, staging, production�
 
 | 대상 | 확인 내용 |
 |---|---|
-| dev와 staging | 유효한 분석 본문을 자격 없이 전송해 기존 처리 유지 확인 |
-| 로컬 검증 환경 및 전환 후 prod | A UUID + A 토큰으로 정상 분석 확인 |
-| 로컬 검증 환경 및 전환 후 prod | 자격 누락, UUID만 전달, A UUID + B 토큰 및 B UUID + A 토큰의 401 확인 |
-| 로컬 검증 환경 및 전환 후 prod | 등록 실패와 자격 저장 실패가 분석 요청으로 이어지지 않는지 확인 |
+| dev | 유효한 분석 본문을 자격 없이 전송해 기존 처리 유지 확인 |
+| 로컬 검증 환경, 활성화 후 staging 및 전환 후 prod | A UUID + A 토큰으로 정상 분석 확인 |
+| 로컬 검증 환경, 활성화 후 staging 및 전환 후 prod | 자격 누락, UUID만 전달, A UUID + B 토큰 및 B UUID + A 토큰의 401 확인 |
+| 로컬 검증 환경, 활성화 후 staging 및 전환 후 prod | 등록 실패와 자격 저장 실패가 분석 요청으로 이어지지 않는지 확인 |
 | 확장 | 브라우저 재시작 후 자격 재사용, 다중 탭 초기 등록 경합 확인 |
 | 전환 | 구버전 확장의 자격 없는 분석이 활성화 뒤 거절됨을 확인 |
 
@@ -108,3 +108,11 @@ GitHub 저장소 Settings > Environments에서 development, staging, production�
 - frontend/src/autofill/api/background-handler.ts
 - .github/workflows/deploy-development.yml, deploy-staging.yml, deploy-production.yml
 - infra/compose.deploy.yaml
+
+## 관리자 AI 평가와 환경 분리
+
+AI 평가는 dev에서만 운영하고 staging과 prod에서는 비활성화한다. 설치 보호와 AI 평가를 함께 활성화하면 AdmissionConfiguration의 시작 시 검증이 DB 초기화 전에 오류로 거부한다. registration-enabled만 켠 단계는 분석 보호 활성화와 다르므로 평가와의 충돌 조건이 아니다. 평가 경로에는 사용자 설치 문맥을 만들거나 자격 누락을 이유로 공통 제어를 우회하는 기능을 추가하지 않는다.
+
+2026-11-09 확인한 GitHub Environment에서 development의 평가, 자동 평가와 평가용 OpenAI 활성화 값은 true이고 staging과 production에는 해당 변수가 없다. develop의 평가 변수 전달은 development 워크플로우에만 있으며 Compose의 기본값은 false다. 이는 배포 구성 확인이며 실행 중인 서버 컨테이너를 점검한 결과는 아니다.
+
+staging의 보호 설정 전달 경로, HTTPS와 프록시, 별도 확장 설치를 준비한 뒤 등록과 분석 성공, 자격 교차 거절, 한도 응답을 기록한다. GitHub 값만 변경해 활성화 완료로 기록하지 않는다. 기존 b1963ab에서 수행한 로컬 보안 실험과 이번 최신 코드 검증은 코드 버전을 구분한다.

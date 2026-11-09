@@ -92,10 +92,10 @@ it("shows a license search without results as no results, not as an unconfirmed 
   await screen.findByText("기입 결과", {}, { timeout: 120_000 });
   fireEvent.click(screen.getByRole("tab", { name: /확인 필요/ }));
   expect(
-    screen.getByText("검색 결과가 없어요. 다른 이름으로 찾아 주세요."),
+    screen.getByLabelText("검색 결과가 없어요. 다른 이름으로 찾아 주세요."),
   ).toBeVisible();
   expect(
-    screen.queryByText(
+    screen.queryByLabelText(
       "목록 선택을 확인하지 못했어요. 항목을 직접 골라 주세요.",
     ),
   ).not.toBeInTheDocument();

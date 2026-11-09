@@ -50,6 +50,15 @@ if (
   throw new Error("ZIP Manifest가 options와 side panel을 가리켜야 합니다.");
 }
 
+if (
+  manifest.action?.default_popup ||
+  manifest.commands?._execute_action?.suggested_key?.default !== "Alt+Shift+C"
+) {
+  throw new Error(
+    "ZIP Manifest에 툴바 action과 같은 지원서 패널 열기 단축키가 필요합니다.",
+  );
+}
+
 const autofillContentScript = manifest.content_scripts?.find((contentScript) =>
   contentScript.js?.includes("content-scripts/autofill.js"),
 );

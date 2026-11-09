@@ -1,0 +1,600 @@
+{
+  "schemaVersion": 1,
+  "caseId": "woowahan-r2605009-initial-synthetic-01",
+  "siteId": "woowahan-recruitment",
+  "state": "initial",
+  "split": "tuning",
+  "fixtureId": "woowahan-r2605009-initial",
+  "fixtureSha256": "f496c0b7cfaea3d7595d807cbc2cf72a0c2191f738592c3fa08120437e726d2d",
+  "profileId": "synthetic-01-basic",
+  "calls": [
+    {
+      "order": 1,
+      "phase": "PREPARATION",
+      "kind": "SECTION_CLASSIFY",
+      "endpoint": "/api/v1/generic/sections/classify",
+      "requestDigest": "29582cb841feabab177ab8d3cb91688dbe339f5a8eb1550d4883c44c6e3a4abc",
+      "request": {
+        "schemaVersion": 1,
+        "snapshotId": "fields-5cde3b7f-12b2-4c0d-a92c-245cd5ce06ed",
+        "site": {
+          "host": "career.woowahan.com",
+          "pathPattern": "/recruitment/R2605009/form"
+        },
+        "sections": [
+          {
+            "sectionId": "ls1",
+            "title": "병역필수",
+            "labels": [
+              "병역구분",
+              "면제사유를 입력하세요"
+            ],
+            "controlKinds": [
+              "SELECT",
+              "TEXT"
+            ],
+            "repeated": false
+          },
+          {
+            "sectionId": "ls2",
+            "labels": [
+              "학력필수"
+            ],
+            "controlKinds": [
+              "SELECT"
+            ],
+            "repeated": false
+          },
+          {
+            "sectionId": "ls3",
+            "title": "첨부자료필수",
+            "labels": [
+              "첨부파일선택",
+              "https://example.test",
+              "첨부파일선택",
+              "https://example.test"
+            ],
+            "controlKinds": [
+              "TEXT"
+            ],
+            "repeated": false
+          },
+          {
+            "sectionId": "ls4",
+            "labels": [
+              "지원경로 및 세부사항필수",
+              "위 사항은 모두 본인이 직접 작성하였으며, 사실과 다름없습니까?"
+            ],
+            "controlKinds": [
+              "SELECT",
+              "RADIO"
+            ],
+            "repeated": false
+          }
+        ]
+      },
+      "expected": {
+        "ls1": "SENSITIVE",
+        "ls2": "EDUCATION",
+        "ls3": "NONE",
+        "ls4": "NONE"
+      },
+      "estimatedModelCalls": 1
+    },
+    {
+      "order": 2,
+      "phase": "PREPARATION",
+      "kind": "INTERACTION_DECISION",
+      "endpoint": "/api/v1/generic/interaction-decisions",
+      "requestDigest": "c722b07a4549c5a3b80439166f05aa1eae9e8e36dd29fde774db46c3f50eea2a",
+      "request": {
+        "schemaVersion": 2,
+        "snapshotId": "fields-5cde3b7f-12b2-4c0d-a92c-245cd5ce06ed",
+        "site": {
+          "host": "career.woowahan.com",
+          "pathPattern": "/recruitment/R2605009/form"
+        },
+        "decisions": [
+          {
+            "decisionId": "rowKind0",
+            "role": "ROW_KIND_OPTION",
+            "targetKind": "HIGH_SCHOOL",
+            "canonicalFieldKey": "education.university.schoolName",
+            "candidates": [
+              {
+                "candidateId": "rowKind0-option0",
+                "element": "select",
+                "control": "option",
+                "visibility": "visible",
+                "relationToTarget": "SAME_CONTAINER",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "검정고시"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "rowKind0-option1",
+                "element": "select",
+                "control": "option",
+                "visibility": "visible",
+                "relationToTarget": "SAME_CONTAINER",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "고등학교"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "rowKind0-option2",
+                "element": "select",
+                "control": "option",
+                "visibility": "visible",
+                "relationToTarget": "SAME_CONTAINER",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "전문대학"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "rowKind0-option3",
+                "element": "select",
+                "control": "option",
+                "visibility": "visible",
+                "relationToTarget": "SAME_CONTAINER",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "대학교"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "rowKind0-option4",
+                "element": "select",
+                "control": "option",
+                "visibility": "visible",
+                "relationToTarget": "SAME_CONTAINER",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "대학원(석사)"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "rowKind0-option5",
+                "element": "select",
+                "control": "option",
+                "visibility": "visible",
+                "relationToTarget": "SAME_CONTAINER",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "대학원(박사)"
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "decisionId": "rowKind1",
+            "role": "ROW_KIND_OPTION",
+            "targetKind": "ASSOCIATE",
+            "canonicalFieldKey": "education.university.schoolName",
+            "candidates": [
+              {
+                "candidateId": "rowKind1-option0",
+                "element": "select",
+                "control": "option",
+                "visibility": "visible",
+                "relationToTarget": "SAME_CONTAINER",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "검정고시"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "rowKind1-option1",
+                "element": "select",
+                "control": "option",
+                "visibility": "visible",
+                "relationToTarget": "SAME_CONTAINER",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "고등학교"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "rowKind1-option2",
+                "element": "select",
+                "control": "option",
+                "visibility": "visible",
+                "relationToTarget": "SAME_CONTAINER",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "전문대학"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "rowKind1-option3",
+                "element": "select",
+                "control": "option",
+                "visibility": "visible",
+                "relationToTarget": "SAME_CONTAINER",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "대학교"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "rowKind1-option4",
+                "element": "select",
+                "control": "option",
+                "visibility": "visible",
+                "relationToTarget": "SAME_CONTAINER",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "대학원(석사)"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "rowKind1-option5",
+                "element": "select",
+                "control": "option",
+                "visibility": "visible",
+                "relationToTarget": "SAME_CONTAINER",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "대학원(박사)"
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "decisionId": "rowKind2",
+            "role": "ROW_KIND_OPTION",
+            "targetKind": "BACHELOR",
+            "canonicalFieldKey": "education.university.schoolName",
+            "candidates": [
+              {
+                "candidateId": "rowKind2-option0",
+                "element": "select",
+                "control": "option",
+                "visibility": "visible",
+                "relationToTarget": "SAME_CONTAINER",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "검정고시"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "rowKind2-option1",
+                "element": "select",
+                "control": "option",
+                "visibility": "visible",
+                "relationToTarget": "SAME_CONTAINER",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "고등학교"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "rowKind2-option2",
+                "element": "select",
+                "control": "option",
+                "visibility": "visible",
+                "relationToTarget": "SAME_CONTAINER",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "전문대학"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "rowKind2-option3",
+                "element": "select",
+                "control": "option",
+                "visibility": "visible",
+                "relationToTarget": "SAME_CONTAINER",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "대학교"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "rowKind2-option4",
+                "element": "select",
+                "control": "option",
+                "visibility": "visible",
+                "relationToTarget": "SAME_CONTAINER",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "대학원(석사)"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "rowKind2-option5",
+                "element": "select",
+                "control": "option",
+                "visibility": "visible",
+                "relationToTarget": "SAME_CONTAINER",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "대학원(박사)"
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "decisionId": "rowKind3",
+            "role": "ROW_KIND_OPTION",
+            "targetKind": "MASTER",
+            "canonicalFieldKey": "education.university.schoolName",
+            "candidates": [
+              {
+                "candidateId": "rowKind3-option0",
+                "element": "select",
+                "control": "option",
+                "visibility": "visible",
+                "relationToTarget": "SAME_CONTAINER",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "검정고시"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "rowKind3-option1",
+                "element": "select",
+                "control": "option",
+                "visibility": "visible",
+                "relationToTarget": "SAME_CONTAINER",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "고등학교"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "rowKind3-option2",
+                "element": "select",
+                "control": "option",
+                "visibility": "visible",
+                "relationToTarget": "SAME_CONTAINER",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "전문대학"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "rowKind3-option3",
+                "element": "select",
+                "control": "option",
+                "visibility": "visible",
+                "relationToTarget": "SAME_CONTAINER",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "대학교"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "rowKind3-option4",
+                "element": "select",
+                "control": "option",
+                "visibility": "visible",
+                "relationToTarget": "SAME_CONTAINER",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "대학원(석사)"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "rowKind3-option5",
+                "element": "select",
+                "control": "option",
+                "visibility": "visible",
+                "relationToTarget": "SAME_CONTAINER",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "대학원(박사)"
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "decisionId": "rowKind4",
+            "role": "ROW_KIND_OPTION",
+            "targetKind": "DOCTOR",
+            "canonicalFieldKey": "education.university.schoolName",
+            "candidates": [
+              {
+                "candidateId": "rowKind4-option0",
+                "element": "select",
+                "control": "option",
+                "visibility": "visible",
+                "relationToTarget": "SAME_CONTAINER",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "검정고시"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "rowKind4-option1",
+                "element": "select",
+                "control": "option",
+                "visibility": "visible",
+                "relationToTarget": "SAME_CONTAINER",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "고등학교"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "rowKind4-option2",
+                "element": "select",
+                "control": "option",
+                "visibility": "visible",
+                "relationToTarget": "SAME_CONTAINER",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "전문대학"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "rowKind4-option3",
+                "element": "select",
+                "control": "option",
+                "visibility": "visible",
+                "relationToTarget": "SAME_CONTAINER",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "대학교"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "rowKind4-option4",
+                "element": "select",
+                "control": "option",
+                "visibility": "visible",
+                "relationToTarget": "SAME_CONTAINER",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "대학원(석사)"
+                    }
+                  ]
+                }
+              },
+              {
+                "candidateId": "rowKind4-option5",
+                "element": "select",
+                "control": "option",
+                "visibility": "visible",
+                "relationToTarget": "SAME_CONTAINER",
+                "semanticContext": {
+                  "labels": [
+                    {
+                      "source": "label",
+                      "text": "대학원(박사)"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "rowKind0": "rowKind0-option1",
+        "rowKind1": "rowKind1-option2",
+        "rowKind2": "rowKind2-option3",
+        "rowKind3": "rowKind3-option4",
+        "rowKind4": "rowKind4-option5"
+      },
+      "estimatedModelCalls": 1
+    }
+  ]
+}

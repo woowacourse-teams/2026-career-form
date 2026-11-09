@@ -29,6 +29,7 @@ import com.careerform.formanalysis.infrastructure.InteractionProviderConditions;
 import com.careerform.formanalysis.exception.ResolverException;
 import com.careerform.formanalysis.exception.TokenLimitExceeded;
 import com.careerform.monitoring.ExternalCallMetrics;
+import com.careerform.monitoring.ModelCallRecording;
 import com.careerform.monitoring.tracing.LangSmithTraceRecorder;
 
 @Component
@@ -154,6 +155,8 @@ public final class JevClient {
         Integer httpStatus = null;
         var called = false;
         String observedModel = null;
+        Sent sent = null;
+        Response output = null;
         try {
             String json = mapper.writeValueAsString(new Request(state, model, questions));
             if (json.getBytes(StandardCharsets.UTF_8).length > 2_000_000) throw unavailable();
@@ -163,10 +166,11 @@ public final class JevClient {
                 .POST(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8)).build();
             if (localDiagnostics != null) localDiagnostics.start("jev", state.getClass().getSimpleName());
             called = true;
-            HttpResponse<String> response = sendOnce(request);
+            sent = send(request, "choose");
+            HttpResponse<String> response = sent.response();
             httpStatus = response.statusCode();
             if (response.statusCode() != 200 || response.body().length() > 2_000_000) throw unavailable();
-            Response output = mapper.readValue(response.body(), Response.class);
+            output = mapper.readValue(response.body(), Response.class);
             observedModel = output.model();
             if (output.model() == null || output.model().isBlank() || output.answers() == null ||
                 !output.answers().keySet().equals(questions.keySet()) || output.usage() == null ||
@@ -194,9 +198,11 @@ public final class JevClient {
             }
             completeTrace(trace, projection, output, selected, httpStatus, null);
             recordMetrics(startedAt, null, called, observedModel);
+            finishAttempt("choose", sent, output, true);
             return Map.copyOf(selected);
         } catch (RuntimeException exception) {
             if (exception instanceof com.careerform.admission.AdmissionFailure failure) throw failure;
+            finishAttempt("choose", sent, output, false);
             completeTrace(trace, projection, null, Map.of(), httpStatus, exception);
             recordMetrics(startedAt, exception, called, observedModel);
             throw unavailable();
@@ -220,6 +226,8 @@ public final class JevClient {
         long startedAt = System.nanoTime();
         var called = false;
         String observedModel = null;
+        Sent sent = null;
+        Response output = null;
         try {
             String json = mapper.writeValueAsString(new Request(state, model, questions));
             if (json.getBytes(StandardCharsets.UTF_8).length > 2_000_000) throw unavailable();
@@ -229,9 +237,10 @@ public final class JevClient {
                 .POST(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8)).build();
             if (localDiagnostics != null) localDiagnostics.start("jev", state.getClass().getSimpleName());
             called = true;
-            HttpResponse<String> response = sendWithRateLimitRetries(request);
+            sent = sendWithRateLimitRetries(request);
+            HttpResponse<String> response = sent.response();
             if (response.body().length() > 2_000_000) throw unavailable();
-            Response output = mapper.readValue(response.body(), Response.class);
+            output = mapper.readValue(response.body(), Response.class);
             observedModel = output.model();
             if (output.model() == null || output.model().isBlank() || output.answers() == null ||
                 !output.answers().keySet().equals(questions.keySet()) || output.usage() == null ||
@@ -254,31 +263,22 @@ public final class JevClient {
                     new Judgement(answer.choice(), answer.confidence(), answer.probabilities()));
             }
             recordMetrics(startedAt, null, called, observedModel);
+            finishAttempt("answer", sent, output, true);
             return Map.copyOf(judgements);
         } catch (RuntimeException exception) {
             if (exception instanceof com.careerform.admission.AdmissionFailure failure) throw failure;
+            finishAttempt("answer", sent, output, false);
             recordMetrics(startedAt, exception, called, observedModel);
             if (exception instanceof TokenLimitExceeded tokenLimit) throw tokenLimit;
             throw unavailable();
         }
     }
 
-    private HttpResponse<String> sendOnce(HttpRequest request) {
-        return admission == null ? sendHttp(request) : admission.transmit(() -> sendHttp(request));
-    }
-
-    private HttpResponse<String> sendHttp(HttpRequest request) {
-        var timeout = admission == null ? timeoutMs : admission.timeoutMillis(timeoutMs);
-        if (admission != null) admission.sent();
-        var pending = http.sendAsync(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-        try { return pending.copy().orTimeout(timeout, TimeUnit.MILLISECONDS).join(); }
-        finally { if (!pending.isDone()) pending.cancel(true); }
-    }
-
-    private HttpResponse<String> sendWithRateLimitRetries(HttpRequest request) {
+    private Sent sendWithRateLimitRetries(HttpRequest request) {
         for (int attempt = 0; ; attempt++) {
-            HttpResponse<String> response = sendOnce(request);
-            if (response.statusCode() == 200) return response;
+            Sent sent = send(request, "answer");
+            HttpResponse<String> response = sent.response();
+            if (response.statusCode() == 200) return sent;
             String errorType = errorType(response.body());
             log.warn("JEV_UNAVAILABLE status={} errorType={} attempt={}", response.statusCode(), errorType, attempt + 1);
             if (response.statusCode() == 400 && "max_tokens_exceeded".equals(errorType)) throw new TokenLimitExceeded();
@@ -293,6 +293,54 @@ public final class JevClient {
         }
     }
 
+    /**
+     * HTTP 시도 하나를 보내고 전송 직전부터 전체 응답 수신까지의 시간을 잰다.
+     * 200이 아닌 응답과 전송 실패는 여기서 기록하고, 200 응답은 해석 뒤 {@link #finishAttempt}가 기록한다.
+     */
+    private Sent send(HttpRequest request, String operation) {
+        return admission == null ? sendHttp(request, operation) : admission.transmit(() -> sendHttp(request, operation));
+    }
+
+    private Sent sendHttp(HttpRequest request, String operation) {
+        var timeout = admission == null ? timeoutMs : admission.timeoutMillis(timeoutMs);
+        long started = System.nanoTime();
+        if (admission != null) admission.sent();
+        var pending = http.sendAsync(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        HttpResponse<String> response;
+        try {
+            response = pending.copy().orTimeout(timeout, TimeUnit.MILLISECONDS).join();
+        } catch (RuntimeException exception) {
+            ModelCallRecording.record(new ModelCallRecording.Attempt("jev", operation, System.nanoTime() - started,
+                null, ExternalCallMetrics.isTimeout(exception) ? ModelCallRecording.Outcome.TIMEOUT
+                    : ModelCallRecording.Outcome.NETWORK_ERROR, null, null, null));
+            throw exception;
+        } finally {
+            if (!pending.isDone()) pending.cancel(true);
+        }
+        Sent sent = new Sent(response, System.nanoTime() - started);
+        if (response.statusCode() != 200) {
+            ModelCallRecording.Outcome outcome = response.statusCode() == 400 && "max_tokens_exceeded".equals(errorType(response.body()))
+                ? ModelCallRecording.Outcome.TOKEN_LIMIT : ModelCallRecording.Outcome.HTTP_ERROR;
+            ModelCallRecording.record(new ModelCallRecording.Attempt("jev", operation, sent.durationNanos(),
+                response.statusCode(), outcome, null, null, null));
+        }
+        return sent;
+    }
+
+    /** 200 응답의 기록. 응답이 쓸 수 없어도 공급자가 알려 준 사용량은 남긴다. */
+    private static void finishAttempt(String operation, Sent sent, Response output, boolean success) {
+        if (sent == null || sent.response().statusCode() != 200) return;
+        Usage usage = output == null ? null : output.usage();
+        Long input = usage == null || usage.inputTokens() == null || usage.inputTokens() < 0 ? null : usage.inputTokens();
+        Long outputTokens = usage == null || usage.outputTokens() == null || usage.outputTokens() < 0
+            ? null : usage.outputTokens();
+        ModelCallRecording.record(new ModelCallRecording.Attempt("jev", operation, sent.durationNanos(), 200,
+            success ? ModelCallRecording.Outcome.SUCCESS : ModelCallRecording.Outcome.INVALID_RESPONSE,
+            input, outputTokens, output == null ? null : output.model()));
+    }
+
+    private record Sent(HttpResponse<String> response, long durationNanos) {}
+
     /** 응답 본문은 기록하지 않고 닫힌 문자 집합의 error_type만 진단에 사용한다. */
     private static String errorType(String body) {
         if (body == null) return "NONE";
@@ -306,6 +354,11 @@ public final class JevClient {
     }
 
     private String traceModel() {
+        return model;
+    }
+
+    /** 요청에 쓰는 모델 이름. */
+    public String model() {
         return model;
     }
 

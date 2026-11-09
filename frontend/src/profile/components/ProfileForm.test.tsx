@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import {
   PROFILE_CATEGORIES,
@@ -318,6 +318,160 @@ it("renders a legacy military status as a preserved select option", () => {
   expect(status.tagName).toBe("SELECT");
   expect(status).toHaveValue("legacy-status");
   expect(
-    screen.getByRole("option", { name: "기존 값: legacy-status" }),
+    screen.getByRole("option", { name: "legacy-status" }),
   ).toBeInTheDocument();
+});
+
+describe("ProfileForm name table", () => {
+  const NAME_FIELDS = [
+    ["국문 성", "koreanFamilyName"],
+    ["국문 이름", "koreanGivenName"],
+    ["영문 성", "englishFamilyName"],
+    ["영문 이름", "englishGivenName"],
+    ["한자 성", "hanjaFamilyName"],
+    ["한자 이름", "hanjaGivenName"],
+  ] as const;
+
+  function renderPersonal(personal: Record<string, string> = {}) {
+    const profile = createEmptyProfile();
+    profile.personal = personal;
+    const onUpdateSingle = vi.fn();
+    render(
+      <ProfileForm
+        category={getCategoryDefinition("personal")}
+        profile={profile}
+        onAddEntry={vi.fn()}
+        onRemoveEntry={vi.fn()}
+        onUpdateEntry={vi.fn()}
+        onUpdateSingle={onUpdateSingle}
+        confirmDelete={() => true}
+      />,
+    );
+    return onUpdateSingle;
+  }
+
+  it("renders the three name pairs as one table with column and row heads", () => {
+    renderPersonal();
+    const table = screen.getByRole("table", { name: "이름" });
+
+    expect(
+      within(table)
+        .getAllByRole("columnheader")
+        .map((head) => head.textContent),
+    ).toEqual(["성", "이름"]);
+    expect(
+      within(table)
+        .getAllByRole("rowheader")
+        .map((head) => head.textContent),
+    ).toEqual(["국문", "영문", "한자"]);
+    for (const [label] of NAME_FIELDS) {
+      expect(within(table).getByRole("textbox", { name: label })).toBeVisible();
+    }
+  });
+
+  it("keeps keyboard order across each row and no positive tabindex", () => {
+    renderPersonal();
+    const inputs = within(
+      screen.getByRole("table", { name: "이름" }),
+    ).getAllByRole("textbox");
+
+    expect(inputs.map((input) => input.getAttribute("aria-label"))).toEqual(
+      NAME_FIELDS.map(([label]) => label),
+    );
+    for (const input of inputs) {
+      expect(input).not.toHaveAttribute("tabindex");
+    }
+  });
+
+  it("shows and saves each name cell through its existing stored field", () => {
+    const stored = Object.fromEntries(
+      NAME_FIELDS.map(([, fieldId]) => [fieldId, `저장-${fieldId}`]),
+    );
+    const onUpdateSingle = renderPersonal(stored);
+
+    for (const [label, fieldId] of NAME_FIELDS) {
+      const input = screen.getByLabelText(label);
+      expect(input).toHaveValue(`저장-${fieldId}`);
+      fireEvent.change(input, { target: { value: `새-${fieldId}` } });
+      expect(onUpdateSingle).toHaveBeenLastCalledWith(
+        "personal",
+        fieldId,
+        `새-${fieldId}`,
+      );
+    }
+  });
+
+  it("keeps birth date, gender and nationality in one group outside the table", () => {
+    renderPersonal();
+    const table = screen.getByRole("table", { name: "이름" });
+    const details = screen.getByRole("group", { name: "기본 정보" });
+
+    for (const label of ["생년월일", "성별", "국적"]) {
+      expect(within(details).getByLabelText(label)).toBeInTheDocument();
+      expect(within(table).queryByLabelText(label)).toBeNull();
+    }
+  });
+
+  it("shows 선택 for an empty gender without a stored-value option", () => {
+    renderPersonal();
+    const gender = screen.getByLabelText("성별");
+
+    expect(gender).toHaveValue("");
+    expect(gender).toHaveDisplayValue("선택");
+    expect(
+      within(gender).queryByRole("option", { name: /기존 값/ }),
+    ).toBeNull();
+  });
+
+  it("keeps an unknown stored gender as a preserved option", () => {
+    const onUpdateSingle = renderPersonal({ gender: "미지정" });
+    const gender = screen.getByLabelText("성별");
+
+    expect(gender).toHaveValue("미지정");
+    expect(gender).toHaveDisplayValue("미지정");
+    expect(onUpdateSingle).not.toHaveBeenCalled();
+  });
+});
+
+describe("ProfileForm address search", () => {
+  const renderForm = (categoryId: "contact" | "personal", contact = {}) => {
+    const profile = createEmptyProfile();
+    profile.contact = contact;
+    render(
+      <ProfileForm
+        category={getCategoryDefinition(categoryId)}
+        profile={profile}
+        onAddEntry={vi.fn()}
+        onRemoveEntry={vi.fn()}
+        onUpdateEntry={vi.fn()}
+        onUpdateSingle={vi.fn()}
+        onSelectAddress={vi.fn()}
+        confirmDelete={() => true}
+      />,
+    );
+  };
+
+  it("offers the search inside the address group with direct inputs intact", () => {
+    renderForm("contact", { addressLine1: "직접 입력" });
+
+    const group = screen.getByRole("group", { name: "주소" });
+    expect(
+      within(group).getByRole("button", { name: "주소 검색" }),
+    ).toBeInTheDocument();
+    expect(within(group).getByText("검증 안 된 주소")).toBeInTheDocument();
+    expect(within(group).getByLabelText("기본주소")).toHaveValue("직접 입력");
+    expect(within(group).getByLabelText("우편번호")).toBeEnabled();
+    expect(within(group).getByLabelText("상세주소")).toBeEnabled();
+    expect(
+      within(screen.getByRole("group", { name: "연락받을 곳" })).queryByRole(
+        "button",
+        { name: "주소 검색" },
+      ),
+    ).toBeNull();
+  });
+
+  it("does not offer it on other categories", () => {
+    renderForm("personal");
+    expect(screen.queryByRole("button", { name: "주소 검색" })).toBeNull();
+  });
 });

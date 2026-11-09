@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationRunner;
@@ -23,6 +24,8 @@ import io.micrometer.core.instrument.MeterRegistry;
 @EnableScheduling
 @ConditionalOnProperty(prefix = "career-form.notification", name = "enabled", havingValue = "true")
 public class NotificationConfiguration {
+    private static final Logger log = LoggerFactory.getLogger(NotificationConfiguration.class);
+
     @Bean public PushSettings pushSettings(
         @Value("${career-form.notification.push.dispatch-interval:60s}") Duration dispatchInterval,
         @Value("${career-form.notification.push.concurrency:20}") int concurrency,
@@ -45,10 +48,15 @@ public class NotificationConfiguration {
 
     @Bean public MongoNotificationStore notificationStore(MongoTemplate mongo) { return new MongoNotificationStore(mongo); }
 
-    @Bean public JobPostingService jobPostingService(NotificationStore store) { return new JobPostingService(store, Clock.systemUTC()); }
+    /** 분류 파일이 깨져 있으면 예외가 그대로 올라가 기동이 멈춘다. */
+    @Bean public JobCategories jobCategories() { return JobCategories.load(); }
 
-    @Bean public PushSubscriptionService pushSubscriptionService(NotificationStore store, PushSettings settings) {
-        return new PushSubscriptionService(store, Clock.systemUTC(), settings.allowedEndpointHosts());
+    @Bean public JobPostingService jobPostingService(NotificationStore store, JobCategories categories) {
+        return new JobPostingService(store, categories, Clock.systemUTC());
+    }
+
+    @Bean public PushSubscriptionService pushSubscriptionService(NotificationStore store, JobCategories categories, PushSettings settings) {
+        return new PushSubscriptionService(store, categories, Clock.systemUTC(), settings.allowedEndpointHosts());
     }
 
     @Bean public WebPushClient webPushClient(VapidKeys keys, PushSettings settings) {
@@ -71,7 +79,7 @@ public class NotificationConfiguration {
     @Bean public ApplicationRunner notificationIndexes(MongoNotificationStore store) {
         return arguments -> {
             try { store.ensureIndexes(); }
-            catch (RuntimeException exception) { LoggerFactory.getLogger(NotificationConfiguration.class).warn("NOTIFICATION_INDEXES_UNAVAILABLE"); }
+            catch (RuntimeException exception) { log.warn("NOTIFICATION_INDEXES_UNAVAILABLE"); }
         };
     }
 }

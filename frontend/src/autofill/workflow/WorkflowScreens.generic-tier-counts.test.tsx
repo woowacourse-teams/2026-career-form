@@ -27,7 +27,7 @@ const autos = [1, 2].map((n) =>
 const reviews = [1, 2, 3].map((n) =>
   applyGenericGrade(base(`review-${n}`, `확인 칸 ${n}`), {
     grade: "REVIEW",
-    reason: "NO_FIELD_CONTEXT",
+    reason: "MODERATE_CONFIDENCE",
   }),
 );
 const blocks = [1, 2, 3, 4].map((n) =>

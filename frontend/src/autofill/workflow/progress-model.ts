@@ -23,7 +23,8 @@ export interface WriteProgress {
   retryRecovered?: boolean;
   failureCode?: WriteFailureCode;
 }
-export type WorkflowActivity = "matching" | "preparing" | "address";
+export type WorkflowActivity =
+  "matching" | "preparing" | "address" | "rechecking";
 function uniqueDomId(element: Element): string | undefined {
   return element.id &&
     Array.from(element.ownerDocument.querySelectorAll("[id]")).filter(
@@ -298,4 +299,9 @@ export function createProgressTracker() {
       return [...entries.values()];
     },
   };
+}
+
+/** 현재 기입 묶음에서 처리한 항목 비율(0..100). */
+export function batchPercent(done: number, total: number): number {
+  return Math.min(100, Math.max(0, Math.round((done / total) * 100)));
 }

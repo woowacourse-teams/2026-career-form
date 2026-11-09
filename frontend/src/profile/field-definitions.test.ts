@@ -291,3 +291,47 @@ describe("personal profile fields", () => {
     expect(gender?.options).toEqual(["남성", "여성", "논바이너리"]);
   });
 });
+
+describe("registration number labels", () => {
+  function section(categoryId: string, sectionId: string) {
+    return PROFILE_CATEGORIES.find(
+      (category) => category.id === categoryId,
+    )?.sections.find((candidate) => candidate.id === sectionId);
+  }
+
+  it("labels the certificate registration number 등록번호 및 자격번호 and keeps the language label", () => {
+    const certificate = section("certifications", "certificate");
+    const languageTest = section("languages", "languageTest");
+
+    expect(
+      certificate?.fields.find((field) => field.id === "registrationNo")?.label,
+    ).toBe("등록번호 및 자격번호");
+    expect(
+      languageTest?.fields.find((field) => field.id === "registrationNo")
+        ?.label,
+    ).toBe("등록번호");
+    expect(certificate?.fields.map((field) => field.id)).toEqual([
+      "name",
+      "grade",
+      "registrationNo",
+      "issuer",
+      "acquisitionDate",
+      "evidenceDocumentPath",
+    ]);
+  });
+});
+
+describe("project profile fields", () => {
+  it("places the optional organization right after the project name", () => {
+    const project = PROFILE_CATEGORIES.find(
+      (category) => category.id === "projects",
+    )?.sections.find((section) => section.id === "project");
+    const ids = project?.fields.map((field) => field.id) ?? [];
+    expect(
+      project?.fields.find((field) => field.id === "organization"),
+    ).toMatchObject({
+      label: "수행 기관",
+    });
+    expect(ids.indexOf("organization")).toBe(ids.indexOf("projectName") + 1);
+  });
+});

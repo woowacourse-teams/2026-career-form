@@ -150,6 +150,9 @@ jobs:
       CAREER_FORM_PUSH_VAPID_PRIVATE_KEY: ${{ secrets.CAREER_FORM_PUSH_VAPID_PRIVATE_KEY }}
       CAREER_FORM_PUSH_VAPID_SUBJECT: ${{ secrets.CAREER_FORM_PUSH_VAPID_SUBJECT }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      JUSO_API_KEY: ${{ secrets.JUSO_API_KEY }}
+      TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
+      CAREER_FORM_JEV_DATA_POLICY_REVIEWED: ${{ vars.CAREER_FORM_JEV_DATA_POLICY_REVIEWED }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

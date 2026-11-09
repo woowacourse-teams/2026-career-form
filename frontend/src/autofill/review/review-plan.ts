@@ -45,6 +45,7 @@ import { PROFILE_CATEGORIES } from "../../profile/field-definitions";
 import type {
   FieldValues,
   Profile,
+  ProfileEntry,
   ProfileIdentity,
   ProfileCategoryId,
   RepeatedProfileCategoryId,
@@ -60,9 +61,11 @@ import {
   type ApprovedCatalogMatch,
 } from "../profile/catalog-match";
 import { catalogEvidenceForElement } from "../profile/catalog-evidence";
+import { highSchoolSearchRegion } from "../profile/search-region";
 import { resolveChoiceOption } from "../profile/choice-option";
 import { matchStandardOption } from "../profile/standard-option-match";
 import { schoolRegionSearchValues } from "../../profile/standard-values";
+import type { SearchContextValue } from "../interaction/search-gate";
 import { formatProfileDate } from "../profile/date-format";
 import {
   buildLocalSearchValuePlan,
@@ -81,6 +84,12 @@ import {
   createDayCalendarApproval,
   type DayCalendarApproval,
 } from "./day-calendar-approval";
+import {
+  createDialogDateApproval,
+  dialogDateButtonValue,
+  isDialogDateButton,
+  type DialogDateApproval,
+} from "../interaction/dialog-date-picker";
 import { assignMixedRows } from "../dom/mixed-section-rows";
 import { genericFormGroupFor } from "../dom/generic-form-groups";
 import { genericReasonText } from "../generic/grade-reason-text";
@@ -119,20 +128,30 @@ export interface ReviewPlanItem {
   genericReasonCode?: string;
   /** Generic-path only: the control is hidden on the page; display filter only. */
   hiddenFromReview?: boolean;
+  /** Generic-path only: selected by the developer "확인 필요 포함" setting. */
+  includedByDeveloper?: boolean;
+  /** Generic-path only: why the address search left this field to the user. */
+  addressManualReason?: string;
   failureCode?: WriteFailureCode;
   analysis?: MatchedFieldAnalysis;
   dateApproval?: DateTargetApproval;
   calendarApproval?: CalendarApproval;
   /** Separate approval for readonly year-month-day calendars. */
   dayCalendarApproval?: DayCalendarApproval;
+  /** Separate approval for date buttons that open their own dialog. */
+  dialogDateApproval?: DialogDateApproval;
   componentGpaApproval?: ComponentGpaApproval;
   verifiedFreshDefaultValue?: string;
   /** Local-only approved search forms; never include these values in API requests. */
   searchValuePlan?: LocalSearchValuePlan;
+  /** Local-only same-entry high-school region label; never include in API requests. */
+  searchRegion?: string;
   /** Explicit local profile selection; never serialize to the backend. */
   searchIdentity?: ProfileIdentity;
   /** Approved local evidence for one catalog entry; never part of API requests. */
   catalogMatch?: ApprovedCatalogMatch;
+  /** Generic search only: other stored values of the same entry; local only. */
+  searchContextValues?: readonly SearchContextValue[];
 }
 
 export interface ReviewPlan {
@@ -198,6 +217,23 @@ function profileFieldParts(value: string): ProfileFieldParts | undefined {
       ) === true,
     inputType: field.inputType,
   };
+}
+
+/** The other stored values of the repeatable entry a search field belongs to. */
+function entryContextValues(
+  profile: Profile,
+  profileFieldKey: string,
+  profileEntryId: string | undefined,
+): SearchContextValue[] {
+  const [categoryId, , fieldId] = profileFieldKey.split(".");
+  const entries = (profile as unknown as Record<string, unknown>)[categoryId ?? ""];
+  if (!profileEntryId || !Array.isArray(entries)) return [];
+  const entry = (entries as ProfileEntry[]).find(({ id }) => id === profileEntryId);
+  return Object.entries(entry?.values ?? {}).flatMap(([id, value]) =>
+    id !== fieldId && value?.trim()
+      ? [{ key: `${categoryId}.${entry!.sectionId}.${id}`, value }]
+      : [],
+  );
 }
 
 function valueAt(values: FieldValues, fieldId: string): string | undefined {
@@ -304,7 +340,22 @@ function sameNativeDecimal(
   );
 }
 
+function dialogDateButtonOf(
+  handle: FieldCandidateHandle,
+): HTMLButtonElement | undefined {
+  const button =
+    handle.candidate.element === "custom" &&
+    handle.candidate.control === "button" &&
+    handle.elements.length === 0 &&
+    handle.customElements?.length === 1
+      ? handle.customElements[0]
+      : undefined;
+  return button && isDialogDateButton(button) ? button : undefined;
+}
+
 function currentValue(handle: FieldCandidateHandle): string {
+  const dialogButton = dialogDateButtonOf(handle);
+  if (dialogButton) return dialogDateButtonValue(dialogButton);
   const customValue = customFieldValue(handle);
   if (customValue !== undefined) return customValue;
   const nativeRadio = nativeRadioValue(handle);
@@ -527,6 +578,7 @@ function itemForAnalysis(
   generic = true,
   components = false,
   ungroupedRows: ReadonlySet<string> = new Set(),
+  singleRowEntryOffsets?: ReadonlyMap<string, number>,
 ): ReviewPlanItem {
   return itemForResolvedAnalysis(
     withYearMonthWritePlan(analysis, registry, generic),
@@ -538,6 +590,7 @@ function itemForAnalysis(
     generic,
     components,
     ungroupedRows,
+    singleRowEntryOffsets,
   );
 }
 
@@ -584,6 +637,7 @@ function itemForResolvedAnalysis(
   generic = true,
   components = false,
   ungroupedRows: ReadonlySet<string> = new Set(),
+  singleRowEntryOffsets?: ReadonlyMap<string, number>,
 ): ReviewPlanItem {
   const fieldLabel = labelFor(analysis.candidateId, registry);
   const local = registry.lookupField(analysis.candidateId);
@@ -797,6 +851,10 @@ function itemForResolvedAnalysis(
       parts.categoryId as RepeatedProfileCategoryId
     ].filter((entry) => entry.sectionId === parts.sectionId);
     const formItemCount = registry.fieldItemCount(analysis.candidateId);
+    // A single box refilled after each saved entry binds the next entry.
+    const entryOffset = generic
+      ? singleRowEntryOffsets?.get(`${parts.categoryId}.${parts.sectionId}`)
+      : undefined;
     // Structure preparation has finished. A remaining single row without an
     // available add control can offer entry zero, but only with user approval.
     // Section direct fields that form one implicit row are that single row too.
@@ -831,12 +889,25 @@ function itemForResolvedAnalysis(
       formItemCount !== undefined &&
       formItemCount > profileEntries.length &&
       profileEntries.length > 0;
+    if (
+      entryOffset !== undefined &&
+      (firstEntrySingleRow ||
+        (profileEntries.length === 1 && !unindexedRepeatRow)) &&
+      entryOffset >= profileEntries.length
+    ) {
+      return unavailableItem(
+        analysis.candidateId,
+        fieldLabel,
+        "입력할 프로필 값이 없습니다.",
+        analysis,
+      );
+    }
     if (firstEntrySingleRow) {
-      itemIndex = 0;
+      itemIndex = entryOffset ?? 0;
     } else if (spareRows) {
       itemIndex = lookup.handle.itemIndex;
     } else if (profileEntries.length === 1 && !unindexedRepeatRow) {
-      itemIndex = 0;
+      itemIndex = entryOffset ?? 0;
     }
     const soleUngroupedProfileEntry =
       itemIndex === 0 &&
@@ -935,7 +1006,8 @@ function itemForResolvedAnalysis(
       key: binding.profileFieldKey,
       itemIndex: itemIndex ?? -1,
       source: catalogSource?.status ?? "none",
-      hasEntryId: catalogSource?.status === "resolved" && !!catalogSource.profileEntryId,
+      hasEntryId:
+        catalogSource?.status === "resolved" && !!catalogSource.profileEntryId,
       entriesWithIdentity: pool.filter((entry) => !!entry.identity).length,
       entries: pool.length,
       identity: searchIdentity?.status ?? "none",
@@ -954,8 +1026,44 @@ function itemForResolvedAnalysis(
   let dateApproval: DateTargetApproval | undefined;
   let calendarApproval: CalendarApproval | undefined;
   let dayCalendarApproval: DayCalendarApproval | undefined;
+  let dialogDateApproval: DialogDateApproval | undefined;
   let finalizedProfileValue = boundProfileValue;
-  if (generic && analysis.writePlan.command === "SELECT_DATE") {
+  const dialogButton =
+    generic && analysis.writePlan.command === "SELECT_DATE"
+      ? dialogDateButtonOf(lookup.handle)
+      : undefined;
+  if (dialogButton) {
+    if (binding.type !== "DIRECT" || parts?.inputType !== "date")
+      return unavailableItem(
+        analysis.candidateId,
+        fieldLabel,
+        "달력 버튼과 프로필 날짜 연결을 확인할 수 없습니다.",
+        analysis,
+      );
+    try {
+      dialogDateApproval = createDialogDateApproval({
+        target: dialogButton,
+        originalDate: boundProfileValue.value,
+        profileFieldKey: binding.profileFieldKey,
+        ...(boundProfileValue.profileEntryId
+          ? { profileEntryId: boundProfileValue.profileEntryId }
+          : {}),
+        ...(itemIndex !== undefined ? { itemIndex } : {}),
+      });
+    } catch {
+      return unavailableItem(
+        analysis.candidateId,
+        fieldLabel,
+        "달력 버튼의 대상이나 저장된 날짜를 확인할 수 없습니다.",
+        analysis,
+      );
+    }
+  }
+  if (
+    generic &&
+    analysis.writePlan.command === "SELECT_DATE" &&
+    !dialogButton
+  ) {
     if (
       binding.type !== "DIRECT" ||
       parts?.inputType !== "date" ||
@@ -1091,7 +1199,8 @@ function itemForResolvedAnalysis(
     binding.type === "DIRECT" &&
     normalizeDirectValue &&
     !dateApproval &&
-    !dayCalendarApproval
+    !dayCalendarApproval &&
+    !dialogDateApproval
       ? {
           ...finalizedProfileValue,
           value: normalizeDirectValue(
@@ -1145,10 +1254,13 @@ function itemForResolvedAnalysis(
     liveOptionMatch?.status === "unique"
       ? { ...profileValue, value: liveOptionMatch.option.displayName }
       : profileValue;
-  const choiceReview = genericOptionMatch?.status === "unique" &&
+  const choiceReview =
+    genericOptionMatch?.status === "unique" &&
     (genericOptionMatch.reason === "GRADE_OTHER_OPTION" ||
-      (binding.type === "DIRECT" && binding.profileFieldKey.startsWith("military.military.") &&
-        normalizeDisplayName(profileValue.value) !== normalizeDisplayName(genericOptionMatch.option.displayName)));
+      (binding.type === "DIRECT" &&
+        binding.profileFieldKey.startsWith("military.military.") &&
+        normalizeDisplayName(profileValue.value) !==
+          normalizeDisplayName(genericOptionMatch.option.displayName)));
   const catalogChoices =
     catalogMatch &&
     !(lookup.handle.buttonDropdown && catalogMatch.requiredDetail) &&
@@ -1208,6 +1320,14 @@ function itemForResolvedAnalysis(
         value: option.displayName,
       };
   }
+  const searchContextValues =
+    searchCommand && binding.type === "DIRECT"
+      ? entryContextValues(
+          profile,
+          binding.profileFieldKey,
+          resolvedProfileValue.profileEntryId,
+        )
+      : [];
   const searchValuePlan =
     searchCommand && binding.type === "DIRECT"
       ? certificateSearchValuePlan(
@@ -1215,6 +1335,14 @@ function itemForResolvedAnalysis(
           binding.profileFieldKey,
           resolvedProfileValue.profileEntryId,
           resolvedProfileValue.value,
+        )
+      : undefined;
+  const searchRegion =
+    binding.type === "DIRECT"
+      ? highSchoolSearchRegion(
+          profile,
+          binding.profileFieldKey,
+          resolvedProfileValue.profileEntryId,
         )
       : undefined;
 
@@ -1282,7 +1410,10 @@ function itemForResolvedAnalysis(
       ...(dateApproval ? { dateApproval } : {}),
       ...(calendarApproval ? { calendarApproval } : {}),
       ...(dayCalendarApproval ? { dayCalendarApproval } : {}),
+      ...(dialogDateApproval ? { dialogDateApproval } : {}),
       ...(searchValuePlan ? { searchValuePlan } : {}),
+      ...(searchContextValues.length ? { searchContextValues } : {}),
+      ...(searchRegion ? { searchRegion } : {}),
       ...(searchIdentity
         ? { searchIdentity, ...(catalogMatch ? { catalogMatch } : {}) }
         : {}),
@@ -1362,7 +1493,10 @@ function itemForResolvedAnalysis(
       ...(dateApproval ? { dateApproval } : {}),
       ...(calendarApproval ? { calendarApproval } : {}),
       ...(dayCalendarApproval ? { dayCalendarApproval } : {}),
+      ...(dialogDateApproval ? { dialogDateApproval } : {}),
       ...(searchValuePlan ? { searchValuePlan } : {}),
+      ...(searchContextValues.length ? { searchContextValues } : {}),
+      ...(searchRegion ? { searchRegion } : {}),
       ...(searchIdentity
         ? { searchIdentity, ...(catalogMatch ? { catalogMatch } : {}) }
         : {}),
@@ -1386,25 +1520,25 @@ function itemForResolvedAnalysis(
     // A calendar target whose approval was built from a complete profile date
     // (format resolved by the calendar surface) is a format difference, not an
     // ambiguity, so it is auto-selected. Conflicts returned earlier.
-    selected:
-      choiceReview
-        ? false
-        : analysis.writePlan.command === "SELECT_DATE"
-          ? generic && !!(calendarApproval || dayCalendarApproval)
-          : true,
+    selected: choiceReview
+      ? false
+      : analysis.writePlan.command === "SELECT_DATE"
+        ? generic &&
+          !!(calendarApproval || dayCalendarApproval || dialogDateApproval)
+        : true,
     disabled: false,
     revealed: true,
-    reason:
-      choiceReview
-        ? genericOptionMatch?.status === "unique" && genericOptionMatch.reason === "GRADE_OTHER_OPTION"
-          ? genericReasonText("GRADE_OTHER_OPTION")
-          : "프로필 병역 정보에 맞는 지원서 선택지예요. 맞는지 확인한 뒤 포함해 주세요."
-        : analysis.writePlan.command === "SELECT_DATE"
+    reason: choiceReview
+      ? genericOptionMatch?.status === "unique" &&
+        genericOptionMatch.reason === "GRADE_OTHER_OPTION"
+        ? genericReasonText("GRADE_OTHER_OPTION")
+        : "프로필 병역 정보에 맞는 지원서 선택지예요. 맞는지 확인한 뒤 포함해 주세요."
+      : analysis.writePlan.command === "SELECT_DATE"
         ? currentValue(lookup.handle).trim() === finalizedProfileValue.value
           ? dayCalendarApproval
             ? "지원서에 같은 날짜가 이미 입력되어 있습니다."
             : "지원서에 같은 연월이 이미 입력되어 있습니다."
-          : dayCalendarApproval
+          : dayCalendarApproval || dialogDateApproval
             ? "달력을 열어 저장된 날짜를 선택해 입력합니다."
             : calendarApproval
               ? "달력을 열어 저장된 연월을 선택해 입력합니다."
@@ -1418,7 +1552,10 @@ function itemForResolvedAnalysis(
     ...(dateApproval ? { dateApproval } : {}),
     ...(calendarApproval ? { calendarApproval } : {}),
     ...(dayCalendarApproval ? { dayCalendarApproval } : {}),
+    ...(dialogDateApproval ? { dialogDateApproval } : {}),
     ...(searchValuePlan ? { searchValuePlan } : {}),
+    ...(searchContextValues.length ? { searchContextValues } : {}),
+    ...(searchRegion ? { searchRegion } : {}),
     ...(searchIdentity
       ? { searchIdentity, ...(catalogMatch ? { catalogMatch } : {}) }
       : {}),
@@ -1481,6 +1618,7 @@ export function buildReviewPlan({
   ignoreCurrentValueCandidateIds = new Set<string>(),
   freshDefaultCandidateIds = new Set<string>(),
   normalizeDirectValue,
+  singleRowEntryOffsets,
 }: {
   analysis: FieldsAnalyzeResponse;
   profile: Profile;
@@ -1488,6 +1626,8 @@ export function buildReviewPlan({
   ignoreCurrentValueCandidateIds?: ReadonlySet<string>;
   freshDefaultCandidateIds?: ReadonlySet<string>;
   normalizeDirectValue?: (profileFieldKey: string, value: string) => string;
+  /** Generic single entry boxes: next stored entry per "category.section". */
+  singleRowEntryOffsets?: ReadonlyMap<string, number>;
 }): ReviewPlan {
   if (analysis.analysisStatus === "BLOCKED") {
     return { status: "blocked", items: [] };
@@ -1523,6 +1663,7 @@ export function buildReviewPlan({
       analysis.mode === "GENERIC",
       components && analysis.mode === "ADAPTER",
       ungroupedRows,
+      singleRowEntryOffsets,
     );
     if (analysis.mode !== "GENERIC") return item;
     const lookup = registry.lookupField(field.candidateId);

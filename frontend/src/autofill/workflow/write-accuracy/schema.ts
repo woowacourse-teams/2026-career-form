@@ -2,7 +2,13 @@ import type { CompanyId } from "../../adapters/company";
 import type { FieldCandidate, GenericFieldsResponse } from "../../api/types";
 
 export type SnapshotStatus =
-  "RUNNABLE" | "UNREVIEWED" | "NO_SNAPSHOT" | "ABORTED" | "NOT_GENERIC_ROUTE";
+  | "RUNNABLE"
+  | "UNREVIEWED"
+  | "NO_SNAPSHOT"
+  | "ABORTED"
+  | "NOT_GENERIC_ROUTE"
+  /** AI 모델 평가 입력 전용(CF-356). 기입 정답이 없어 기입 정확도에서 뺀다. */
+  | "MODEL_EVALUATION_ONLY";
 
 export interface SnapshotManifestEntry {
   snapshot: string;

@@ -2,6 +2,7 @@ package com.careerform.notification;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -30,6 +31,7 @@ public final class MongoNotificationStore implements NotificationStore {
         mongo.indexOps(JobPosting.class).createIndex(new Index().on("link", Sort.Direction.ASC).unique());
         mongo.indexOps(JobPosting.class).createIndex(new Index().on("opensAt", Sort.Direction.ASC).on("closesAt", Sort.Direction.ASC));
         mongo.indexOps(PushSubscription.class).createIndex(new Index().on("endpoint", Sort.Direction.ASC).unique());
+        mongo.indexOps(PushSubscription.class).createIndex(new Index().on("roles", Sort.Direction.ASC));
         mongo.indexOps(PushDelivery.class).createIndex(new Index().on("postingId", Sort.Direction.ASC).on("subscriptionId", Sort.Direction.ASC).unique());
         mongo.indexOps(PushDelivery.class).createIndex(new Index().on("status", Sort.Direction.ASC).on("nextAttemptAt", Sort.Direction.ASC));
         mongo.indexOps(PushDelivery.class).createIndex(new Index().on("status", Sort.Direction.ASC).on("leaseUntil", Sort.Direction.ASC));
@@ -69,6 +71,23 @@ public final class MongoNotificationStore implements NotificationStore {
 
     @Override public List<String> subscriptionIds() {
         return List.copyOf(mongo.findDistinct(new Query(), "_id", PushSubscription.class, String.class));
+    }
+
+    @Override public boolean updateSubscriptionRoles(String id, List<String> roles, Instant updatedAt) {
+        var update = new Update().set("rolesUpdatedAt", updatedAt);
+        if (roles == null) { update.unset("roles"); } else { update.set("roles", roles); }
+        return mongo.updateFirst(Query.query(Criteria.where("_id").is(id)), update, PushSubscription.class).getMatchedCount() > 0;
+    }
+
+    /** roles 멀티키 인덱스를 타는 $in 조회에 roles 필드가 없거나 빈 배열인 미선택 구독을 $or로 더한다. */
+    @Override public List<String> subscriptionIdsForRoles(Collection<String> roles) {
+        var criteria = new Criteria().orOperator(Criteria.where("roles").in(roles), Criteria.where("roles").exists(false),
+            Criteria.where("roles").size(0));
+        return List.copyOf(mongo.findDistinct(Query.query(criteria), "_id", PushSubscription.class, String.class));
+    }
+
+    @Override public long countSubscriptionsWithRoles() {
+        return mongo.count(Query.query(Criteria.where("roles").exists(true).not().size(0)), PushSubscription.class);
     }
 
     @Override public boolean deleteSubscription(String id) {

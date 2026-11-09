@@ -6,6 +6,7 @@ import { SearchSurface } from "./search-surface";
 import { SearchFailure, type SearchSession } from "./search-session";
 import {
   accessibleDocument,
+  displayedControl,
   elements,
   isRolelessLayerCandidate,
   label,
@@ -121,12 +122,13 @@ export function observeSearchSurfaces(
       element.getAttribute("title") ??
       layerHeading(element);
     if (!surfaceName && session.args.genericPopupRecovery) {
+      // A query the layer keeps disabled until another control is chosen
+      // still names the layer; it is never typed into while disabled.
       const queries = elements<HTMLInputElement>(element, "input").filter(
         (input) =>
           ["text", "search"].includes(input.type) &&
           !input.readOnly &&
-          !input.disabled &&
-          shown(input),
+          (shown(input) || displayedControl(input)),
       );
       if (queries.length === 1) {
         const query = queries[0]!;

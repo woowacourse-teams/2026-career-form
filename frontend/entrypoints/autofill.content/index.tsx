@@ -8,6 +8,7 @@ import { createProfilePanelController } from "../../src/extension/profile-panel-
 import {
   isOpenAutofillOverlayMessage,
   isOpenInPageProfilePanelMessage,
+  isToggleInPageProfilePanelMessage,
 } from "../../src/autofill-demo/messages";
 import {
   mountFloatingSidePanelLauncher,
@@ -15,6 +16,8 @@ import {
 } from "../../src/extension/floating-side-panel-launcher";
 import { shouldShowSidePanelLauncher } from "../../src/extension/side-panel-launcher-visibility";
 import { openOptionsPageFromContent } from "../../src/extension/navigation";
+import { loadPanelFont } from "../../src/extension/panel-font";
+import { syncAutofillDebugWithDeveloperMode } from "../../src/autofill/debug/developer-mode";
 import "./style.css";
 
 export default defineContentScript({
@@ -25,10 +28,13 @@ export default defineContentScript({
     let profilePanelPromise:
       ReturnType<typeof createShadowRootUi<Root>> | undefined;
     const controller = createProfilePanelController();
+    ctx.onInvalidated(syncAutofillDebugWithDeveloperMode());
     let openGeneration = 0;
     let invalidated = false;
+    let panelOpen = false;
 
     const closeProfilePanel = () => {
+      panelOpen = false;
       const closingGeneration = ++openGeneration;
       controller.showProfile();
       void profilePanelPromise?.then((ui) =>
@@ -46,6 +52,7 @@ export default defineContentScript({
         zIndex: 2_147_483_646,
         isolateEvents: true,
         onMount(container) {
+          void loadPanelFont();
           const root = createRoot(container);
           root.render(
             <div className="career-form-in-page-panel">
@@ -54,6 +61,7 @@ export default defineContentScript({
                 pageDocument={document}
                 logoUrl={`chrome-extension://${browser.runtime.id}/side-panel-launcher-logo.png`}
                 unsupportedImageUrl={`chrome-extension://${browser.runtime.id}/unsupported-capybara.jpg`}
+                writingImageUrl={`chrome-extension://${browser.runtime.id}/capybara-writing.png`}
                 closePanel={closeProfilePanel}
                 openOptions={openOptionsPageFromContent}
               />
@@ -84,6 +92,14 @@ export default defineContentScript({
         host.showPopover();
       }
       setFloatingSidePanelLauncherVisibility(document, false);
+      panelOpen = true;
+    };
+    // Toolbar icon and panel shortcut close an open panel like its close button.
+    // Answers with a settled promise like an open request; the background
+    // re-sends only when no content script receives the message.
+    const toggleProfilePanel = async () => {
+      if (panelOpen) closeProfilePanel();
+      else await openProfilePanel();
     };
     const openAutofill = async () => {
       controller.startAutofill();
@@ -100,6 +116,8 @@ export default defineContentScript({
     const receiveMessage = (message: unknown) => {
       if (isOpenAutofillOverlayMessage(message)) return openAutofill();
       if (isOpenInPageProfilePanelMessage(message)) return openProfilePanel();
+      if (isToggleInPageProfilePanelMessage(message))
+        return toggleProfilePanel();
       return undefined;
     };
 

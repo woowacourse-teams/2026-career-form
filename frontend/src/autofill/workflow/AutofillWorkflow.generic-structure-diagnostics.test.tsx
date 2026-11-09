@@ -123,11 +123,18 @@ async function reachResult(client: AnalysisApiClient, profile: Profile) {
       onExit={() => undefined}
     />,
   );
-  const proceed = await screen.findByRole("button", {
-    name: /항목 기입하기|선택하지 않고 계속/,
-  });
-  fireEvent.click(proceed);
   await screen.findByRole("heading", { name: "기입 결과" });
+  // A run that starts before the policy settles can reach a first result and
+  // is replaced by the final run, which carries the structure section.
+  const diagnostics = await screen.findByRole("region", {
+    name: "구조 자동 준비",
+    hidden: true,
+  });
+  const details = diagnostics.closest("details");
+  expect(details).not.toHaveAttribute("open");
+  const summary = details?.querySelector("summary");
+  if (!summary) throw new Error("Structure disclosure summary is missing");
+  fireEvent.click(summary);
   return container;
 }
 

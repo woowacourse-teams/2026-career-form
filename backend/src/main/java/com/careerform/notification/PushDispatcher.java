@@ -25,7 +25,8 @@ import com.careerform.monitoring.ExternalCallMetrics;
 
 /**
  * 한 주기: 예정 시각이 지난 대기 건과 리스가 만료된 발송 중 건을 찾아 조건부 갱신으로 선점한 뒤,
- * 동시성 한도 안에서 Web Push를 보내고 재시도 표에 따라 상태를 바꾼다. 로그에는 발송 ID·공고 ID·응답 코드·소요 시간만 남긴다.
+ * 구독의 현재 받을 직무를 공고와 재검사하고, 동시성 한도 안에서 Web Push를 보내고 재시도 표에 따라 상태를 바꾼다.
+ * 로그에는 발송 ID·공고 ID·응답 코드·소요 시간만 남긴다.
  */
 public final class PushDispatcher implements AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(PushDispatcher.class);
@@ -56,8 +57,8 @@ public final class PushDispatcher implements AutoCloseable {
     }
 
     /** 가상 스레드 실행기를 직접 소유하는 운영용 발송기. close()가 실행기를 닫는다. */
-    public static PushDispatcher withVirtualThreads(NotificationStore store, WebPushClient client, RetryPolicy policy, PushSettings settings, Clock clock,
-                                                    PushDispatchMetrics metrics) {
+    public static PushDispatcher withVirtualThreads(NotificationStore store, WebPushClient client, RetryPolicy policy, PushSettings settings,
+                                                    Clock clock, PushDispatchMetrics metrics) {
         var executor = Executors.newThreadPerTaskExecutor(Thread.ofVirtual().name("push-dispatch-", 0).factory());
         return new PushDispatcher(store, client, policy, settings, clock, executor, executor, metrics);
     }
@@ -126,6 +127,7 @@ public final class PushDispatcher implements AutoCloseable {
             if (!now.isBefore(posting.get().closesAt())) { finish(claimed, claimed.abandoned(claimed.lastResponseCode(), "DEADLINE_PASSED"), counters, 0); return; }
             var subscription = store.findSubscription(claimed.subscriptionId());
             if (subscription.isEmpty()) { finish(claimed, claimed.abandoned(claimed.lastResponseCode(), "SUBSCRIPTION_MISSING"), counters, 0); return; }
+            if (!receives(posting.get(), subscription.get())) { finish(claimed, claimed.abandoned(claimed.lastResponseCode(), "FILTER_MISMATCH"), counters, 0); return; }
             var ttl = Duration.between(now, posting.get().closesAt());
             var payload = PushPayload.of(posting.get(), clock.instant());
             var callStarted = System.nanoTime();
@@ -150,6 +152,14 @@ public final class PushDispatcher implements AutoCloseable {
                 exception.getClass().getSimpleName());
             apply(claimed, decision, counters, 0);
         }
+    }
+
+    /** 선점 뒤 재검사. roles가 없는 레거시 공고와 받을 직무를 고르지 않은 구독은 통과하고, 직무를 고른 구독은 공고와 겹쳐야 한다. */
+    private boolean receives(JobPosting posting, PushSubscription subscription) {
+        if (posting.roles() == null) { return true; }
+        var selected = subscription.roles();
+        if (selected == null || selected.isEmpty()) { return true; }
+        return selected.stream().anyMatch(posting.roles()::contains);
     }
 
     private void apply(PushDelivery claimed, RetryPolicy.Decision decision, Counters counters, long durationMs) {
@@ -217,6 +227,6 @@ public final class PushDispatcher implements AutoCloseable {
 
     static List<String> reasons() {
         return List.of("ACCEPTED", "RETRY_AFTER", "SERVER_ERROR", "TIMEOUT", "IO_ERROR", "UNEXPECTED_STATUS", "INTERNAL_ERROR", "GONE", "INVALID_REQUEST",
-            "MAX_ATTEMPTS", "DEADLINE_PASSED", "SUBSCRIPTION_MISSING", "POSTING_MISSING");
+            "MAX_ATTEMPTS", "DEADLINE_PASSED", "SUBSCRIPTION_MISSING", "POSTING_MISSING", "FILTER_MISMATCH");
     }
 }

@@ -34,6 +34,8 @@ SYNTHETIC = {
     "CAREER_FORM_PUSH_VAPID_PRIVATE_KEY": "synthetic-vapid_private-key_" + "b" * 15,
     "CAREER_FORM_PUSH_VAPID_SUBJECT": "mailto:synthetic@example.invalid",
 }
+# #432에서 backend가 읽지 않게 된 옛 직무 필터 전환 변수. 배포 경로로 다시 전달하지 않는다.
+REMOVED = "CAREER_FORM_PUSH_ROLE_FILTER_ENFORCED"
 DEPLOY_SCRIPT_REQUIRED = (
     "DEPLOY_ENVIRONMENT",
     "BACKEND_IMAGE",
@@ -89,6 +91,15 @@ class NotificationDeploymentTest(unittest.TestCase):
                     for name, job in workflow["jobs"].items():
                         if name != "deploy":
                             self.assertNotIn(key, str(job))
+
+    def test_removed_role_filter_setting_is_not_passed_to_backend(self):
+        for filename in WORKFLOWS:
+            with self.subTest(filename=filename):
+                self.assertNotIn(REMOVED, (ROOT / ".github/workflows" / filename).read_text(encoding="utf-8"))
+        self.assertNotIn(REMOVED, (ROOT / "infra/compose.deploy.yaml").read_text(encoding="utf-8"))
+        for profile in ("dev", "staging", "prod"):
+            with self.subTest(profile=profile):
+                self.assertNotIn(REMOVED, self.render(profile, {REMOVED: "true"}))
 
     def test_deploy_script_required_values_exclude_notification_settings(self):
         script = (ROOT / "infra/scripts/deploy.sh").read_text(encoding="utf-8")

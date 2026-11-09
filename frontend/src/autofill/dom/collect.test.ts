@@ -258,6 +258,38 @@ describe("application form DOM collection", () => {
     expect(collected.registry.fieldItemCount(firstCandidateId)).toBe(2);
   });
 
+  it("keeps a repeat-row field current while an open modal hides the page behind it", () => {
+    const row = (id: string, action: string) =>
+      `<div class="r"><select name="eduKind"><option value="">학력구분 선택</option><option value="u">대학</option></select><input id="${id}" name="schoolName" type="text" /><button type="button">${action}</button></div>`;
+    document.body.innerHTML = `<div id="root"><section><h3>학력</h3><div id="list">${row("s0", "내용추가")}${row("s1", "삭제")}</div></section></div>`;
+    const collected = collectFieldsSnapshot(document);
+    const candidate = collected.request.sections
+      .flatMap((section) => [
+        ...section.fields,
+        ...(section.items ?? []).flatMap((item) => item.fields),
+      ])
+      .find((field) => field.domId === "s1")!;
+    expect(collected.registry.lookupField(candidate.candidateId).status).toBe(
+      "ready",
+    );
+
+    const root = document.querySelector("#root")!;
+    root.setAttribute("inert", "");
+    root.setAttribute("aria-hidden", "true");
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      '<div role="dialog" aria-modal="true"><input name="query" /></div>',
+    );
+    expect(
+      collected.registry.lookupField(candidate.candidateId).status,
+    ).not.toBe("stale");
+
+    document.querySelector("[role='dialog']")!.remove();
+    expect(collected.registry.lookupField(candidate.candidateId).status).toBe(
+      "stale",
+    );
+  });
+
   it("indexes different repeated field groups independently within one section", () => {
     document.body.innerHTML = `
       <div role="group" class="apply-form-box education-root">

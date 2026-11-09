@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
+import writingMascot from "../../public/capybara-writing.png";
 import { AutofillOverlay } from "../../src/autofill-demo/AutofillOverlay";
 import { exampleFields, demoAnalysisClient } from "./fixtures";
 import { PanelPreview, demoRepository } from "./PanelPreview";
@@ -128,6 +129,7 @@ export function Simulation() {
                   onClose={() => setStarted(false)}
                   apiClient={demoAnalysisClient}
                   repository={demoRepository}
+                  writingImageUrl={writingMascot}
                 />
               ) : undefined
             }

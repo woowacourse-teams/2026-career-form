@@ -1,4 +1,5 @@
 import type { AnalyticsEvent, TrackEvent } from "../analytics/events";
+import { matchesSelectedRoles } from "./job-roles";
 import { isHttpUrl, remainingTime, type PostingInput } from "./model";
 import {
   isServerPosting,
@@ -16,7 +17,6 @@ import type { PostingSnapshot } from "./service";
 export const PUSH_NOTIFIED_KEY = "careerForm.push.notified";
 export const PUSH_NOTIFICATION_PREFIX = "careerForm.push.posting.";
 export const PUSH_SAVED_NOTIFICATION_PREFIX = "careerForm.push.saved.";
-export const PUSH_AUTOSAVED_NOTIFICATION_PREFIX = "careerForm.push.autosaved.";
 export const PUSH_NOTIFICATION_BUTTONS = [
   "공고 열기",
   "마감 알림 저장",
@@ -43,9 +43,10 @@ export interface PushReceiverPorts {
   postings: {
     list(): Promise<PostingSnapshot>;
     save(input: PostingInput): Promise<PostingSnapshot>;
-    remove(id: string, version: number): Promise<PostingSnapshot>;
   };
   track: TrackEvent;
+  // The user's selected role codes; empty when none are chosen.
+  roles(): Promise<string[]>;
   unread: {
     add(postingId: string, closesAt: number): Promise<unknown>;
     remove(postingId: string): Promise<unknown>;
@@ -54,9 +55,9 @@ export interface PushReceiverPorts {
     markShown(): Promise<unknown>;
     markSeenByClick(): Promise<unknown>;
   };
-  autoSaveEnabled(): Promise<boolean>;
 }
-export type ReceiveOutcome = "notified" | "duplicate" | "expired" | "invalid";
+export type ReceiveOutcome =
+  "notified" | "filtered" | "duplicate" | "expired" | "invalid";
 export type SaveOutcome =
   "saved" | "no_future_reminders" | "already_saved" | "expired";
 
@@ -104,7 +105,6 @@ function savedNotification(
   posting: ServerPosting,
   outcome: SaveOutcome,
   pendingMinutes: number[],
-  auto = false,
 ): PushNotification {
   const messages: Record<SaveOutcome, string> = {
     saved: `마감 ${pendingMinutes.map(reminderLabel).join(", ")}에 알려드려요.`,
@@ -115,13 +115,9 @@ function savedNotification(
   };
   const saved = outcome === "saved" || outcome === "no_future_reminders";
   return {
-    title: saved
-      ? `${posting.company} ${auto ? "마감 알림에 저장했어요" : "공고를 저장했어요"}`
-      : posting.company,
-    message: auto
-      ? `${messages[outcome]} 원치 않으면 저장 취소를 누르세요.`
-      : messages[outcome],
-    buttons: auto ? ["저장 취소"] : [],
+    title: saved ? `${posting.company} 공고를 저장했어요` : posting.company,
+    message: messages[outcome],
+    buttons: [],
   };
 }
 
@@ -147,7 +143,7 @@ export class PushReceiver {
   private track(
     event: AnalyticsEvent,
     postingId: string,
-    extra: { trigger?: "button" | "open"; delay_ms?: number } = {},
+    extra: { trigger?: "button"; delay_ms?: number } = {},
   ): void {
     this.ports.track(event, {
       surface: "notification",
@@ -168,6 +164,10 @@ export class PushReceiver {
     return this.serial(async () => {
       const posting = parseServerPosting(payload);
       if (!posting) return "invalid";
+      // Second check behind the server's targeting, for a selection changed
+      // after the push was queued. Nothing is shown or counted when it misses.
+      if (!matchesSelectedRoles(posting.roles, await this.ports.roles()))
+        return "filtered";
       const now = this.ports.now();
       const notified = Object.fromEntries(
         Object.entries(await this.load()).filter(([, p]) => p.closesAt > now),
@@ -213,37 +213,6 @@ export class PushReceiver {
       // A click proves notifications are visible and reads this posting.
       await this.quietly(() => this.ports.visibility.markSeenByClick());
       await this.quietly(() => this.ports.unread.remove(posting.id));
-      if (await this.ports.autoSaveEnabled()) await this.autoSave(posting);
-      return true;
-    });
-  }
-  // Opening a posting saves its deadline reminder; the follow-up offers undo.
-  private async autoSave(posting: NotifiedPosting): Promise<void> {
-    const { outcome, pendingMinutes } = await this.saveLocally(posting);
-    if (outcome !== "saved" && outcome !== "no_future_reminders") return;
-    await this.ports.notify(
-      PUSH_AUTOSAVED_NOTIFICATION_PREFIX + posting.id,
-      savedNotification(posting, outcome, pendingMinutes, true),
-    );
-    this.track("posting_notification_saved", posting.id, { trigger: "open" });
-  }
-  undoAutoSave(notificationId: string): Promise<boolean> {
-    return this.serial(async () => {
-      if (!notificationId.startsWith(PUSH_AUTOSAVED_NOTIFICATION_PREFIX))
-        return false;
-      const id = notificationId.slice(
-        PUSH_AUTOSAVED_NOTIFICATION_PREFIX.length,
-      );
-      const posting = (await this.load())[id];
-      if (!posting) return false;
-      const { postings } = await this.ports.postings.list();
-      const saved = postings.find(
-        (p) => p.url === posting.link && p.status === "planned",
-      );
-      if (!saved) return false;
-      await this.ports.postings.remove(saved.id, saved.version);
-      await this.ports.clearNotification(notificationId);
-      this.track("posting_auto_save_cancelled", posting.id);
       return true;
     });
   }
