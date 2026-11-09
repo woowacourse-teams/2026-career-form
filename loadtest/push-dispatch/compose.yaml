@@ -1,0 +1,79 @@
+# 공고 알림 발송 시험 스택. loadtest/push-dispatch/에서 실행한다.
+#   python make-test-env.py
+#   LOADTEST_RUN_DIR=runs/<실행 id> docker compose --env-file .env.loadtest up -d --build --wait
+# 포트는 모두 127.0.0.1에만 연다. 시험 트래픽은 모의 푸시 서버로만 가고 전용 MongoDB만 쓴다.
+# 후 측정에 필요한 발송 워커와 실제 SQS 연결은 전환 Issue가 이 파일에 더한다.
+name: cf-push-loadtest
+
+services:
+  mongodb:
+    # 운영과 같은 단일 노드(standalone)로 띄운다. replica set으로 바꾸지 않는다.
+    # 기본 이미지는 운영 고정 이미지다. 리눅스 커널 6.19 이상에서는 기동을 거부하므로 그때는 LOADTEST_MONGODB_IMAGE로 바꾼다.
+    image: ${LOADTEST_MONGODB_IMAGE:-mongo:8.0.26-noble@sha256:b49841837cd7688885d7479d14a71733bacae4c99faaae615622384eaee045a0}
+    ports:
+      - "127.0.0.1:${LOADTEST_MONGODB_PORT:-27018}:27017"
+    volumes:
+      - mongodb-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "quit(db.adminCommand({ ping: 1 }).ok ? 0 : 1)"]
+      start_period: 20s
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  mock-push:
+    image: ${LOADTEST_MOCK_IMAGE:-python:3.12-slim@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b}
+    init: true
+    command: ["python", "-u", "/app/mock-push-server.py", "--host", "0.0.0.0", "--port", "8080", "--log", "/data/requests.jsonl"]
+    environment:
+      MOCK_DELAY_MS: ${MOCK_DELAY_MS:-100}
+      MOCK_STATUSES: ${MOCK_STATUSES:-201=1}
+      MOCK_RETRY_AFTER_SECONDS: ${MOCK_RETRY_AFTER_SECONDS:-60}
+    volumes:
+      # 모의 서버 코드만 읽기 전용으로 넣는다. .env.loadtest와 실행 기록의 키 파일은 넣지 않는다.
+      - ./mock-push-server.py:/app/mock-push-server.py:ro
+      - ./pushload:/app/pushload:ro
+      - type: bind
+        source: ${LOADTEST_RUN_DIR:?LOADTEST_RUN_DIR must be the run folder, e.g. runs/<run id>}
+        target: /data
+        bind:
+          create_host_path: true
+    ports:
+      - "127.0.0.1:${LOADTEST_MOCK_PORT:-18081}:8080"
+
+  backend:
+    build:
+      context: ${LOADTEST_BACKEND_CONTEXT:-../../backend}
+    image: cf-push-loadtest-backend:${LOADTEST_BACKEND_TAG:-local}
+    # 운영 compose와 같게 init과 종료 유예 시간을 둔다. 운영에는 자원 제한이 없으므로 제한값은 운영 앱 호스트 사양에 맞춘다.
+    init: true
+    stop_grace_period: 30s
+    cpus: ${LOADTEST_BACKEND_CPUS:-2}
+    mem_limit: ${LOADTEST_BACKEND_MEMORY:-2g}
+    # 발송기 설정(주기, 동시성 20, 한 주기 상한)은 앱 기본값을 그대로 쓴다.
+    environment:
+      SPRING_MONGODB_URI: mongodb://mongodb:27017/career_form_loadtest
+      CAREER_FORM_NOTIFICATION_ENABLED: "true"
+      CAREER_FORM_QUALITY_ENABLED: "true"
+      CAREER_FORM_OTEL_ENABLED: "false"
+      CAREER_FORM_PUSH_VAPID_PUBLIC_KEY: ${CAREER_FORM_PUSH_VAPID_PUBLIC_KEY:?run make-test-env.py and pass --env-file .env.loadtest}
+      CAREER_FORM_PUSH_VAPID_PRIVATE_KEY: ${CAREER_FORM_PUSH_VAPID_PRIVATE_KEY:?run make-test-env.py and pass --env-file .env.loadtest}
+      CAREER_FORM_PUSH_VAPID_SUBJECT: ${CAREER_FORM_PUSH_VAPID_SUBJECT:?run make-test-env.py and pass --env-file .env.loadtest}
+      CAREER_FORM_QUALITY_PASSWORD_HASH: ${CAREER_FORM_QUALITY_PASSWORD_HASH:?run make-test-env.py and pass --env-file .env.loadtest}
+    ports:
+      - "127.0.0.1:${LOADTEST_BACKEND_PORT:-18080}:8080"
+      - "127.0.0.1:${LOADTEST_MANAGEMENT_PORT:-19091}:9091"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--show-error", "http://127.0.0.1:9091/actuator/health"]
+      start_period: 30s
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      mock-push:
+        condition: service_started
+
+volumes:
+  mongodb-data:
