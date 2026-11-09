@@ -94,9 +94,13 @@ def inspect(home: Path, scenario: dict, args: list) -> int:
         return 1
     if "Labels" in template:
         print(json.dumps(container.get("labels", {})))
-    else:
-        print(json.dumps({"image": container["image"], "image_id": container["image_id"],
-                          "running": container.get("running", True)}))
+        return 0
+    health = container.get("health", "healthy")
+    sequence = container.get("health_sequence")
+    if sequence:
+        health = sequence[min(bump(home, f"health:{name}"), len(sequence)) - 1]
+    print(json.dumps({"image": container["image"], "image_id": container["image_id"],
+                      "running": container.get("running", True), "health": health}))
     return 0
 
 

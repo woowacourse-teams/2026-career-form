@@ -54,7 +54,8 @@ REGION = re.compile(r"^[a-z]{2}(-[a-z]+)+-\d$")
 DUMP_DONE = re.compile(r"done dumping `([^`]+)` \((\d+) documents?\)")
 URI_TEXT = re.compile(r"mongodb(?:\+srv)?://\S+")
 
-INSPECT_TEMPLATE = '{"image":{{json .Config.Image}},"image_id":{{json .Image}},"running":{{json .State.Running}}}'
+INSPECT_TEMPLATE = ('{"image":{{json .Config.Image}},"image_id":{{json .Image}},"running":{{json .State.Running}},'
+                    '"health":{{if .State.Health}}{{json .State.Health.Status}}{{else}}null{{end}}}')
 
 QUERY_SCRIPT = r"""
 const fs = require('fs');
@@ -336,6 +337,9 @@ class SecretFiles:
 
 
 class Backup:
+    READY_TIMEOUT = 120
+    READY_INTERVAL = 5
+
     def __init__(self, config: Config, clock):
         self.config = config
         self.clock = clock
@@ -345,15 +349,30 @@ class Backup:
         return ["docker", "run", "--rm", "--network", f"container:{self.config.container}", "-v", files.mount(),
                 "--entrypoint", entrypoint, image_id, *arguments]
 
-    def inspect(self) -> tuple:
+    def inspect_once(self) -> dict:
         output = run_command(["docker", "inspect", "--format", INSPECT_TEMPLATE, self.config.container],
                              "inspect", self.secrets)
         try:
             data = json.loads(output)
         except ValueError:
             raise BackupError("inspect", "unexpected docker inspect output") from None
+        if not isinstance(data, dict) or not data.get("image") or not data.get("image_id"):
+            raise BackupError("inspect", "unexpected docker inspect output")
+        return data
+
+    def inspect(self, wait: bool = False) -> tuple:
+        """운영 컨테이너의 이미지를 읽는다. wait면 재부팅 직후 따라잡기 실행처럼 healthy가 될 때까지 기다린다."""
+        deadline = time.monotonic() + (self.READY_TIMEOUT if wait else 0)
+        while True:
+            data = self.inspect_once()
+            ready = data.get("running") is True and data.get("health") in (None, "healthy")
+            if ready or time.monotonic() >= deadline:
+                break
+            time.sleep(self.READY_INTERVAL)
         if data.get("running") is not True:
             raise BackupError("inspect", "MongoDB container is not running")
+        if not ready:
+            raise BackupError("inspect", f"MongoDB container is not healthy ({data.get('health')})")
         return data["image"], data["image_id"]
 
     def tool_versions(self, image_id: str) -> dict:
@@ -478,7 +497,7 @@ class Backup:
     def dump(self, run: str, started: float) -> tuple:
         run_dir = self.create_run_dir(run)
         with SecretFiles(self.config) as files:
-            image, image_id = self.inspect()
+            image, image_id = self.inspect(wait=True)
             tools = self.tool_versions(image_id)
             targets = {}
             for target, database in self.config.databases.items():
