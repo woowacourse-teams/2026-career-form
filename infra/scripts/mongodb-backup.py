@@ -344,6 +344,7 @@ class Backup:
         self.config = config
         self.clock = clock
         self.secrets = config.secrets()
+        self.stage = "prepare"
 
     def helper(self, files: SecretFiles, image_id: str, entrypoint: str, *arguments) -> list:
         return ["docker", "run", "--rm", "--network", f"container:{self.config.container}", "-v", files.mount(),
@@ -495,10 +496,13 @@ class Backup:
         return run_dir
 
     def dump(self, run: str, started: float) -> tuple:
+        self.stage = "prepare"
         run_dir = self.create_run_dir(run)
         with SecretFiles(self.config) as files:
+            self.stage = "inspect"
             image, image_id = self.inspect(wait=True)
             tools = self.tool_versions(image_id)
+            self.stage = "dump"
             targets = {}
             for target, database in self.config.databases.items():
                 targets[target] = self.dump_target(files, image_id, target, database, run_dir)
@@ -506,6 +510,7 @@ class Backup:
                 log("target_dumped", run=run, target=target, collections=len(entry["collections"]),
                     documents=sum(item["documents"] for item in entry["collections"].values()),
                     size_bytes=entry["size_bytes"], duration_seconds=entry["duration_seconds"])
+        self.stage = "manifest"
         manifest = {
             "format": 1,
             "run": run,
@@ -529,6 +534,7 @@ class Backup:
 
     def upload(self, run_dir: Path, run: str) -> list:
         """age 파일만 archive 먼저, manifest 마지막 순서로 올리고 원격 크기를 대조한다. 원격 삭제는 없다."""
+        self.stage = "upload"
         archives = sorted(path for path in run_dir.iterdir()
                           if path.name.endswith(".age") and path.name != "manifest.json.age")
         files = archives + [run_dir / "manifest.json.age"]
@@ -664,6 +670,10 @@ def backup(env_file: Path, clock) -> int:
             log("retention_removed", run=run, removed=removed)
     except BackupError as error:
         return finish(config.state_dir, state, started, clock, error, run, config.secrets())
+    except (OSError, KeyError, TypeError, ValueError) as error:
+        detail = error.strerror if isinstance(error, OSError) and error.strerror else str(error)
+        failure = BackupError(job.stage, f"unexpected {type(error).__name__}: {detail}")
+        return finish(config.state_dir, state, started, clock, failure, run, config.secrets())
     return finish(config.state_dir, state, started, clock, None, run)
 
 

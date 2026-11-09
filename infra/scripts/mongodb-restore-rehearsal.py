@@ -291,11 +291,15 @@ class Rehearsal:
         outcome = "pass"
         try:
             function()
-        except StageError as error:
+        except (StageError, OSError, KeyError, TypeError, ValueError, subprocess.SubprocessError) as error:
             outcome = "fail"
             self.report["failed_stage"] = name
-            self.report["error"] = str(error)
-            raise
+            if isinstance(error, StageError):
+                self.report["error"] = str(error)
+            else:
+                detail = error.strerror if isinstance(error, OSError) and error.strerror else str(error)
+                self.report["error"] = f"unexpected {type(error).__name__}: {detail}"
+            raise StageError(self.report["error"]) from error
         finally:
             finished = self.clock()
             self.report["stages"].append({"name": name, "started_at": iso(started), "finished_at": iso(finished),
@@ -375,9 +379,14 @@ class Rehearsal:
                     tempfile.TemporaryFile(dir=self.work) as restore_errors:
                 decrypt = subprocess.Popen(["age", "-d", "-i", str(self.identity), str(archive)],
                                            stdout=subprocess.PIPE, stderr=decrypt_errors, env=environment)
-                load = subprocess.Popen(["docker", "exec", "-i", self.name, "mongorestore", "--archive", "--gzip",
-                                         "--stopOnError"], stdin=decrypt.stdout, stdout=subprocess.DEVNULL,
-                                        stderr=restore_errors, env=environment)
+                try:
+                    load = subprocess.Popen(["docker", "exec", "-i", self.name, "mongorestore", "--archive", "--gzip",
+                                             "--stopOnError"], stdin=decrypt.stdout, stdout=subprocess.DEVNULL,
+                                            stderr=restore_errors, env=environment)
+                except OSError:
+                    decrypt.kill()
+                    decrypt.wait()
+                    raise
                 decrypt.stdout.close()
                 load_code = load.wait(timeout=COMMAND_TIMEOUT)
                 decrypt_code = decrypt.wait(timeout=COMMAND_TIMEOUT)
@@ -501,6 +510,9 @@ def main(argv=None, clock=time.time) -> int:
     except Refused as error:
         print(f"refused: {error}", file=sys.stderr)
         return 2
+    except (StageError, OSError) as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":

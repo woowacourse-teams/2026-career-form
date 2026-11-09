@@ -181,6 +181,26 @@ class MongoDBRestoreRehearsalTest(unittest.TestCase):
         self.assertEqual(["ap-northeast-2"], fakes.option(download, "--region"))
         self.assertEqual("success", rehearsal.report()["result"])
 
+    def test_unexpected_file_error_is_reported_as_failed_stage_with_report(self):
+        rehearsal = Rehearsal(self)
+        with mock.patch.object(REHEARSAL, "sha256", side_effect=PermissionError(13, "Permission denied")):
+            code, output, errors = rehearsal.run(rehearsal.argv())
+        self.assertEqual(1, code)
+        report = rehearsal.report()
+        self.assertEqual("fetch", report["failed_stage"])
+        self.assertIn("Permission denied", report["error"])
+        self.assertEqual([], rehearsal.started())
+
+    def test_missing_docker_before_start_is_an_error_not_a_traceback(self):
+        rehearsal = Rehearsal(self)
+        (rehearsal.backup.bin / "docker").unlink()
+        rehearsal.backup.environment = lambda: {"PATH": str(rehearsal.backup.bin),
+                                                "RUNTIME_DIRECTORY": str(rehearsal.backup.runtime)}
+        code, output, errors = rehearsal.run(rehearsal.argv())
+        self.assertEqual(1, code)
+        self.assertIn("docker command is not installed", errors)
+        self.assertFalse(rehearsal.work.exists())
+
     def test_kernel_compat_sets_glibc_rseq_tunable_only_when_requested(self):
         rehearsal = Rehearsal(self)
         code, output, errors = rehearsal.run(rehearsal.argv("--kernel-compat"))

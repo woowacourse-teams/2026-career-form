@@ -196,6 +196,17 @@ class MongoDBBackupMetricsTest(unittest.TestCase):
                     self.assertEqual([], workspace.calls("docker"))
                 self.assertEqual([], list(workspace.runtime.iterdir()))
 
+    def test_unexpected_file_error_still_records_failed_stage(self):
+        workspace = fakes.BackupWorkspace(self, state=PREVIOUS)
+        with mock.patch.object(BACKUP, "sha256", side_effect=PermissionError(13, "Permission denied")):
+            code, output, errors = workspace.run(BACKUP)
+        self.assertEqual(1, code)
+        metrics = workspace.metrics()
+        self.assertEqual(1, metrics['career_mongo_backup_failure_stage{stage="dump"}'])
+        self.assertEqual(1000, metrics["career_mongo_backup_last_success_timestamp_seconds"])
+        self.assertIn("Permission denied", output)
+        self.assertEqual([], list(workspace.runtime.iterdir()))
+
     def test_never_succeeded_reports_zero_last_success(self):
         data = fakes.scenario()
         data["fail"]["mongodump"] = True
@@ -434,6 +445,7 @@ class MongoDBBackupCheckTest(unittest.TestCase):
     def test_check_names_each_failed_item(self):
         def missing_age(workspace):
             (workspace.bin / "age").unlink()
+            workspace.environment = lambda: {"PATH": str(workspace.bin), "RUNTIME_DIRECTORY": str(workspace.runtime)}
 
         def empty_recipients(workspace):
             workspace.recipients.write_text("")
