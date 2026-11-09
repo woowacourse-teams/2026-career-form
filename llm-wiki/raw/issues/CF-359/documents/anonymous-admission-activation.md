@@ -1,6 +1,6 @@
 # 익명 설치 자격의 환경별 활성화와 API 이용 절차
 
-작성 기준: CF-359. 2026-11-09 환경 정책과 최신 develop 호환성 보완을 반영한다. 이 문서는 확정 요청된 환경 정책과 운영 절차 초안이다. 배포 설정 연결과 실제 환경 활성화를 완료했다는 기록이 아니다.
+작성 기준: CF-359. 2026-11-09 환경 정책과 최신 develop 호환성 보완을 반영한다. 이 문서는 확정된 환경 정책, 구현한 설정 전달 코드와 운영 절차를 설명한다. 실제 환경값 변경과 서버 활성화 완료를 뜻하지 않는다.
 
 ## 목표 환경 정책
 
@@ -12,27 +12,20 @@
 
 dev는 설치 자격 검사, AI 호출 제한과 등록 API를 비활성으로 유지한다. staging은 production과 유사한 HTTPS, 신뢰 프록시와 확장 설정으로 보호 기능을 활성화해 사전 검증한다. prod는 클라이언트 전환 검증 후 활성화하는 최종 목표다. prod에서 등록 API만 선행 제공하는 동안은 registration-enabled=true, enabled=false다.
 
-## 현재 구현과 남은 저장소 작업
+## 구현된 설정 전달 경로
 
-서버는 career-form.admission.enabled와 registration-enabled를 읽는다. 확장은 빌드 시 VITE_AI_ADMISSION_ENABLED를 읽는다. 기본값은 비활성이며 현재 배포 워크플로우와 Compose에 이 설정의 전달 경로가 없다. GitHub에 값만 등록해도 자동 적용되는 상태는 아니다.
+GitHub Environment의 설정을 배포 workflow의 deploy job이 읽고 infra/compose.deploy.yaml을 통해 컨테이너로 전달한다. backend/src/main/resources/application.yml은 이를 admission 속성에 명시적으로 연결한다. 미설정 또는 빈 Compose 활성화 값은 false로 처리한다. dev와 staging 및 prod의 실제 활성화 여부는 각 환경 설정과 재배포에 따라 결정된다.
 
-다음 연결은 아직 구현하지 않았다.
+| GitHub 설정 | 종류 | Spring 속성 |
+|---|---|---|
+| CAREER_FORM_ADMISSION_ENABLED | Variable | career-form.admission.enabled |
+| CAREER_FORM_ADMISSION_REGISTRATION_ENABLED | Variable | career-form.admission.registration-enabled |
+| CAREER_FORM_ADMISSION_TRUSTED_PROXIES | Variable | career-form.admission.trusted-proxies |
+| CAREER_FORM_ADMISSION_ENCRYPTION_KEY | Secret | career-form.admission.encryption-key |
 
-1. backend/src/main/resources/application.yml의 기존 career-form 아래에 admission 설정을 추가하고 환경 변수와 명시적으로 연결한다.
-2. 개발, 스테이징, 운영 배포 워크플로우에서 환경별 변수를 전달한다. dev의 두 활성화 값은 false로, staging은 true로 전달한다. prod는 전환 단계에 맞춰 전달한다.
-3. infra/compose.deploy.yaml에서 해당 값을 백엔드 컨테이너로 전달한다.
-4. 확장 빌드에 환경별 API 주소와 활성화 플래그를 전달한다. 서버 설정이 확장 빌드 플래그를 자동으로 바꾸지는 않는다.
+암호화 키는 세 환경의 deploy job에만 전달하고 build job과 이미지 빌드에는 전달하지 않는다. 배포 스크립트는 실제 설정을 출력하지 않는 Compose config --quiet를 유지한다. 설정이 없는 dev 배포에 키나 프록시 값을 새 필수 입력으로 요구하지 않는다. 보호 또는 등록을 활성화하면 서버의 기존 키 및 프록시 검증을 통과해야 시작한다.
 
-환경 변수와 Spring 속성의 제안 연결은 다음과 같다. 새 전달 경로이며 적용 완료한 사실로 해석하지 않는다.
-
-| 환경 변수 | Spring 속성 |
-|---|---|
-| CAREER_FORM_ADMISSION_ENABLED | career-form.admission.enabled |
-| CAREER_FORM_ADMISSION_REGISTRATION_ENABLED | career-form.admission.registration-enabled |
-| CAREER_FORM_ADMISSION_TRUSTED_PROXIES | career-form.admission.trusted-proxies |
-| CAREER_FORM_ADMISSION_ENCRYPTION_KEY | career-form.admission.encryption-key |
-
-배포 설정은 Infra 변경이다. 저장소가 요구하는 별도 Issue 계약과 보호 영역 규칙을 확인하고 구현한다. 이 문서 작성으로 워크플로우, 인프라 또는 운영 설정을 변경하지 않는다.
+설정 전달 코드는 연결했지만 GitHub 값 변경, HTTPS와 프록시 점검, 확장 빌드 및 서버 배포는 별도다. 합성 입력으로 Compose와 실제 Spring YAML 속성 해석을 검증한 결과이며 실제 운영 컨테이너에서 검증한 기록이 아니다.
 
 ## 사람이 입력하거나 확인할 것
 
@@ -49,7 +42,7 @@ GitHub 저장소 Settings > Environments에서 development, staging, production�
 
 인증은 로컬 검증 후 staging에서 먼저 검증한다. 아래 전환 절차를 staging에 먼저 적용하고 prod에 적용한다. dev의 서버 활성화 값과 확장 플래그는 false로 유지한다. staging에는 별도 HTTPS 진입점, 신뢰 프록시, 테스트 DB와 환경별 확장이 필요하다.
 
-1. 위 저장소 설정 전달 경로를 구현하고 검증한다.
+1. 설정 전달 변경이 포함된 서버 버전을 배포 대상으로 선택하고 해당 환경의 현재 설정을 확인한다.
 2. 사람이 해당 환경의 키와 프록시 값을 제공한다. registration-enabled=true, enabled=false로 서버를 배포한다.
 3. HTTPS 등록 API가 자격을 발급하는지 확인한다.
 4. 해당 환경의 HTTPS API 주소와 VITE_AI_ADMISSION_ENABLED=true로 빌드한 확장을 배포한다. 자격 발급과 저장 및 재사용을 확인한다.
@@ -116,3 +109,11 @@ AI 평가는 dev에서만 운영하고 staging과 prod에서는 비활성화한�
 2026-11-09 확인한 GitHub Environment에서 development의 평가, 자동 평가와 평가용 OpenAI 활성화 값은 true이고 staging과 production에는 해당 변수가 없다. develop의 평가 변수 전달은 development 워크플로우에만 있으며 Compose의 기본값은 false다. 이는 배포 구성 확인이며 실행 중인 서버 컨테이너를 점검한 결과는 아니다.
 
 staging의 보호 설정 전달 경로, HTTPS와 프록시, 별도 확장 설치를 준비한 뒤 등록과 분석 성공, 자격 교차 거절, 한도 응답을 기록한다. GitHub 값만 변경해 활성화 완료로 기록하지 않는다. 기존 b1963ab에서 수행한 로컬 보안 실험과 이번 최신 코드 검증은 코드 버전을 구분한다.
+
+## 연결 적용 전 확인 사항
+
+2026-11-09 GitHub Variable 확인 시 dev와 staging의 enabled와 registration-enabled는 모두 false다. production은 enabled=false, registration-enabled=true이며 세 환경에 TRUSTED_PROXIES Variable은 없다. 암호화 Secret의 실제 값은 읽거나 검증하지 않았다.
+
+이전에는 전달 경로가 없어 무시되던 production의 registration-enabled=true도 이번 변경 배포부터 실제 적용된다. production 배포 전 사람이 키, 프록시와 HTTPS를 준비하거나 준비 전에는 registration-enabled도 false로 설정한다. 값의 존재와 실제 네트워크 경계가 확인되지 않은 상태에서 true만 설정하지 않는다. 환경값과 실제 배포는 이 코드 수정에서 변경하지 않았다.
+
+자동 검증 근거는 infra/tests/test_admission_deployment.py와 AdmissionDeploymentPropertiesTest다. 설정 누락과 빈 값, staging 및 prod 전달, 등록만 선행 활성화, 키의 build job 배제와 실제 Spring 속성 해석을 검증한다.

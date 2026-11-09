@@ -1127,3 +1127,10 @@
 - 배포 전달과 HTTPS 등 수동 준비는 미완료로 구분하며 기존 로컬 실험의 대상 커밋을 변경하지 않는다.
 - Approval-Digest: bbba907e66c7d5a37e30e5365d9915bbf881be93d822f1e2c7145e526ed96d41
 - Source-Revision: 6e422813f69f97ff48b53ddc92afd715e2c39daa
+
+## 2026-11-09 CF-359 배포 설정 전달 연결
+
+- 승인된 누락 보완 범위에서 세 배포 workflow, Compose와 Spring의 네 admission 설정을 연결했다.
+- 기본 OFF와 deploy job만의 키 전달, 운영 활성화 미수행 및 production 등록 선행 설정의 준비 조건을 명시했다.
+- Approval-Digest: 578d62f23cdd40497b39c96f88410cde0353872ac4e0c1ea798eddd3453dbd1d
+- Source-Revision: b2cbad317971de3aac433c8f868e645f2fb30706
