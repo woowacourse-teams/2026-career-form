@@ -123,15 +123,18 @@ db.getSiblingDB("admin").createUser({
 1. S3 콘솔 → `techcourse-project-2026` → 권한 → 버킷 정책 → 편집. 바꾸기 전 정책 JSON 전체를 공개되지 않는 곳에 날짜를 붙여 보관한다. Issue, PR, 저장소에는 올리지 않는다.
 2. `Statement` 배열 끝에 `infra/mongodb/backup-bucket-policy-statement.json`을 붙이고, `<AWS_ACCOUNT_ID>`를 같은 정책의 다른 문에 적힌 12자리 계정 ID로 바꾼다. 다른 문은 고치지 않는다. 저장한 뒤 다시 열어 문이 하나만 늘었고 Sid `CareerFormMongoBackupDenyRead`가 있는지 본다. 자리표시자를 그대로 두면 `ec2-project`도 읽기가 막혀 업로드 뒤 크기 확인이 실패하고, 마지막 시도 실패 알림이 간다.
 3. 관리 → 수명 주기 규칙 생성. 이름 `career-form-mongodb-backups-expire-30d`, 접두사 `career-form/mongodb-backups/`, 현재 버전 만료 30일, 이전 버전 영구 삭제 1일. 값은 `infra/mongodb/backup-lifecycle-rule.json`과 같아야 한다. 다른 규칙은 고치지 않는다. 만료로 생긴 삭제 마커는 남지만 비용이 거의 없다.
-4. EC2 콘솔 → `career-form-db` → 작업 → 보안 → IAM 역할 수정 → `ec2-project`.
-5. 같은 인스턴스의 메타데이터 옵션에서 IMDSv2 "필수"와 응답 홉 제한 1을 확인한다. 홉 제한 1이면 Docker 브리지 네트워크의 컨테이너는 인스턴스 자격 증명을 받지 못한다. 백업 도구 컨테이너는 운영 컨테이너의 브리지 네트워크를 쓰고 AWS 호출은 호스트의 AWS CLI만 한다.
+4. EC2 콘솔 → `career-form-db` → 작업 → 인스턴스 설정 → 인스턴스 메타데이터 옵션 수정에서 IMDSv2를 "필수"로 바꾼다. 역할을 붙이기 전에 한다. 응답 홉 제한은 기본값 2로 둔다(2026-11-10 결정, 혹시 모를 기존 연결을 깨지 않으려는 선택). 홉 제한 2에서는 Docker 브리지 네트워크의 컨테이너도 IMDSv2로 `ec2-project` 자격 증명을 받을 수 있다. 줄이려면 홉 제한을 1로 낮춘다. AWS 호출은 호스트의 AWS CLI만 하므로 낮춰도 백업은 그대로 돈다.
+5. 같은 인스턴스에서 작업 → 보안 → IAM 역할 수정 → `ec2-project`.
 6. 저장이나 연결이 권한 문제로 거부되면 Slack `#8기-기술-검토`에 요청한다.
+
+적용 상태: 2026-11-10에 1~5를 적용했다. 적용 전후 값과 확인 결과는 PR #443의 "AWS 콘솔 적용 기록" 댓글에 있다.
 
 되돌리기:
 
 - 정책 문: 버킷 정책 편집에서 Sid `CareerFormMongoBackupDenyRead` 문만 지우고, 보관한 원본과 나머지가 같은지 비교한다.
-- 수명 주기 규칙: 규칙을 지운다. 삭제 권한이 없으면 `#8기-기술-검토`에 요청한다.
-- 역할: IAM 역할 수정에서 역할을 뗀다.
+- 수명 주기 규칙: 규칙을 비활성화하거나 지운다. 삭제 권한이 없으면 비활성화로 충분하다.
+- 역할: IAM 역할 수정에서 "IAM 역할 없음"을 고른다.
+- 메타데이터 옵션: IMDSv2를 "선택 사항"으로 돌린다.
 - 백업 중지: `sudo systemctl disable --now mongodb-backup.timer`. 이미 올린 원격 객체는 30일 뒤 만료되고, 더 빨리 지워야 하면 운영진에 요청한다.
 
 원격 백업본은 `ec2-project`가 붙은 EC2에서만 받을 수 있다. DB 호스트를 잃었으면 같은 역할을 붙인 새 EC2에서 받는다.
