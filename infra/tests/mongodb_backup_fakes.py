@@ -79,11 +79,11 @@ def scenario() -> dict:
     }
 
 
-def install(directory: Path, data: dict) -> Path:
+def install(directory: Path, data: dict, tools=("docker", "age", "aws")) -> Path:
     home = directory / "fakebin"
     home.mkdir()
     (home / "scenario.json").write_text(json.dumps(data))
-    for name in ("docker", "age", "aws"):
+    for name in tools:
         launcher = home / name
         launcher.write_text(
             "#!/bin/sh\n"
