@@ -81,7 +81,7 @@ def _record(path: Path, containers, run_docker, fetch, args, sleep, clock) -> in
     with path.open("a", encoding="utf-8") as output:
         try:
             while True:
-                output.write(json.dumps(collect_sample(run_docker, fetch, containers, round(clock(), 3))) + "\n")
+                output.write(json.dumps(collect_sample(run_docker, fetch, containers, round(clock(), 3), clock=clock)) + "\n")
                 output.flush()
                 count += 1
                 if args.duration_seconds and clock() - started >= args.duration_seconds:

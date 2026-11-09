@@ -146,6 +146,19 @@ class SummarizeResourcesTest(unittest.TestCase):
         self.assertEqual((2, {"accepted/ACCEPTED": 1000}), (summary["backend"]["dispatchCycles"], summary["backend"]["deliveries"]))
         self.assertEqual({"from": 6.0, "to": 12.0}, summary["window"])
 
+    def test_container_values_use_docker_measurement_time(self):
+        def timed(at, docker_from, cpu):
+            return {**sample(at, cpu, 100, 1, 0.0, 0.0, 0, 0.0, 1.0, 0), "dockerFrom": docker_from, "dockerTo": docker_from + 2.0}
+
+        samples = [timed(0, 1, 1.0), timed(4.6, 5.6, 127.0), timed(9.6, 10.6, 0.3), timed(14.6, 15.6, 0.7)]
+        summary = summarize_resources(samples, {"from": 5.0, "to": 10.4})
+        self.assertEqual((127.0, 1), (summary["containers"]["backend"]["cpuPercentMax"], summary["containers"]["backend"]["samples"]))
+
+    def test_records_docker_measurement_interval(self):
+        ticks = iter([10.0, 11.5])
+        recorded = collect_sample(lambda containers: DOCKER_LINE, lambda: PROMETHEUS, ["x"], 9.9, clock=lambda: next(ticks))
+        self.assertEqual((10.0, 11.5), (recorded["dockerFrom"], recorded["dockerTo"]))
+
     def test_window_bounds_are_inclusive(self):
         samples = [sample(at, 10.0, 100, 1, 0.0, 0.0, 0, 0.0, 1.0, 0) for at in (0, 5, 10, 15)]
         self.assertEqual(3, summarize_resources(samples, {"from": 5.0, "to": 10.0})["samples"])
