@@ -166,8 +166,9 @@ def mongodump(scenario: dict, args: list) -> int:
     name = option_values(args, "--db")[0]
     excluded = set(option_values(args, "--excludeCollection"))
     database = scenario["databases"][name]
+    vanished = set(database.get("missing_from_dump", []))
     included = {collection: count for collection, count in database["collections"].items()
-                if collection not in excluded}
+                if collection not in excluded and collection not in vanished}
     for collection, count in sorted(included.items()):
         noun = "document" if count == 1 else "documents"
         sys.stderr.write(f"2026-11-09T19:00:00.000+0000\twriting `{name}.{collection}` to `archive on stdout`\n")

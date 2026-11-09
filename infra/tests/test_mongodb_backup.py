@@ -134,6 +134,17 @@ class MongoDBBackupFilesTest(unittest.TestCase):
         self.assertEqual(1, workspace.metrics()['career_mongo_backup_failure_stage{stage="dump"}'])
         self.assertIn("job_postings", output)
 
+    def test_listed_collection_missing_from_dump_is_recorded_apart_from_dumped_collections(self):
+        data = fakes.scenario()
+        data["databases"][fakes.PROD]["missing_from_dump"] = ["quality_sessions"]
+        workspace = fakes.BackupWorkspace(self, data)
+        code, output, errors = workspace.run(BACKUP)
+        self.assertEqual(0, code, output + errors)
+        prod = workspace.manifest()["targets"]["prod"]
+        self.assertNotIn("quality_sessions", prod["collections"])
+        self.assertEqual(["quality_sessions"], prod["not_dumped"])
+        self.assertNotIn("not_dumped", workspace.manifest()["targets"]["dev"])
+
     def test_prod_collection_created_after_listing_is_kept_as_changed(self):
         data = fakes.scenario()
         data["databases"][fakes.PROD]["hidden_from_listing"] = ["quality_sessions"]

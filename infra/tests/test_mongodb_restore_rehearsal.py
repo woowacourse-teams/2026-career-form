@@ -287,6 +287,13 @@ class MongoDBRestoreRehearsalGuardTest(unittest.TestCase):
 
 
 class MongoDBRestoreCompareTest(unittest.TestCase):
+    def test_prod_check_query_is_identical_in_backup_and_rehearsal(self):
+        def checks_branch(script: str) -> str:
+            start = script.index("} else if (request.action === 'checks') {")
+            return script[start:script.index("} else {", start)]
+
+        self.assertEqual(checks_branch(BACKUP.QUERY_SCRIPT), checks_branch(REHEARSAL.RESTORED_QUERY))
+
     def test_compare_target_reports_pass_fail_and_skip_per_check(self):
         expected = {"collections": {
             "a": {"documents": 2, "hash_before": "h1", "hash_after": "h1", "changed_during_dump": False},

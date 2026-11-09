@@ -459,21 +459,24 @@ class Backup:
             stray = sorted(name for name in counts if not name.startswith(EVALUATION_PREFIX))
             if stray:
                 raise BackupError("dump", "dev dump contains collections outside evaluation_: " + ", ".join(stray))
-        dumped = sorted(set(included) | set(counts))
+        dumped = sorted(counts)
         after = self.hashes(files, image_id, database, dumped)
         collections = {}
         for name in dumped:
             hash_before, hash_after = before.get(name), after.get(name)
             collections[name] = {
-                "documents": counts.get(name, 0),
+                "documents": counts[name],
                 "hash_before": hash_before,
                 "hash_after": hash_after,
-                "changed_during_dump": name not in counts or hash_before is None or hash_before != hash_after,
+                "changed_during_dump": hash_before is None or hash_before != hash_after,
             }
         archive = run_dir / filename
         entry = {"database": database, "file": filename, "size_bytes": archive.stat().st_size,
                  "sha256": sha256(archive), "duration_seconds": round(self.clock() - started, 3),
                  "collections": collections}
+        not_dumped = sorted(set(included) - set(counts))
+        if not_dumped:
+            entry["not_dumped"] = not_dumped
         if target == "dev":
             entry["excluded_collections"] = excluded
         if checks_before is not None:
@@ -703,6 +706,11 @@ def check(env_file: Path) -> int:
         checklist.report("settings", False, error.reason)
         return 1
     checklist.report("settings", True)
+    check_installation(config, checklist)
+    return 0 if checklist.passed else 1
+
+
+def check_installation(config: Config, checklist: Checklist) -> None:
     secrets = config.secrets()
     search_path = child_environment()["PATH"]
     commands = {command: shutil.which(command, path=search_path) is not None for command in ("docker", "age", "aws")}
@@ -727,17 +735,20 @@ def check(env_file: Path) -> int:
     checklist.report("backup_root", root_ok, "must be a real folder with mode 700")
     state_ok = config.state_dir.is_dir() and os.access(config.state_dir, os.W_OK)
     checklist.report("state_dir", state_ok, "must be a writable folder")
-    if commands["aws"]:
-        try:
-            output = run_command(["aws", "sts", "get-caller-identity", "--region", config.region, "--output", "json"],
-                                 "check", secrets)
-            arn = json.loads(output).get("Arn", "")
-            checklist.report("aws_role", bool(BACKUP_ROLE.search(arn)), "credentials are not the ec2-project role")
-        except (BackupError, ValueError, AttributeError):
-            checklist.report("aws_role", False, "cannot read instance role credentials")
-    else:
+    check_role(config, secrets, checklist, commands["aws"])
+
+
+def check_role(config: Config, secrets, checklist: Checklist, aws_found: bool) -> None:
+    if not aws_found:
         checklist.report("aws_role", False, "aws command not found")
-    return 0 if checklist.passed else 1
+        return
+    try:
+        output = run_command(["aws", "sts", "get-caller-identity", "--region", config.region, "--output", "json"],
+                             "check", secrets)
+        arn = json.loads(output).get("Arn", "")
+        checklist.report("aws_role", bool(BACKUP_ROLE.search(arn)), "credentials are not the ec2-project role")
+    except (BackupError, ValueError, AttributeError):
+        checklist.report("aws_role", False, "cannot read instance role credentials")
 
 
 def parse_arguments(argv) -> argparse.Namespace:
