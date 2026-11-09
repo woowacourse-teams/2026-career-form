@@ -1,7 +1,9 @@
 import hashlib
 import json
 import os
+import shutil
 import unittest
+from pathlib import Path
 from unittest import mock
 
 from infra.tests import mongodb_backup_fakes as fakes
@@ -280,6 +282,182 @@ class MongoDBBackupConfigTest(unittest.TestCase):
     def test_run_name_is_utc_timestamp(self):
         self.assertEqual(fakes.RUN, BACKUP.run_name(fakes.NOW))
         self.assertRegex(fakes.RUN, r"^\d{8}T\d{6}Z$")
+
+
+def backup_job(workspace):
+    return BACKUP.Backup(BACKUP.load_config(workspace.env), lambda: fakes.NOW)
+
+
+def remote_dir(workspace, run=fakes.RUN):
+    return workspace.bucket() / "techcourse-project-2026/career-form/mongodb-backups" / run
+
+
+class MongoDBBackupUploadTest(unittest.TestCase):
+    def test_uploads_only_encrypted_files_with_manifest_last_and_verifies_remote_size(self):
+        workspace = fakes.BackupWorkspace(self)
+        code, output, errors = workspace.run(BACKUP)
+        self.assertEqual(0, code, output + errors)
+        calls = [call["args"] for call in workspace.calls("aws")]
+        copies = [args for args in calls if args[:2] == ["s3", "cp"]]
+        sources = [os.path.basename(args[2]) for args in copies]
+        self.assertEqual(["dev.archive.gz.age", "prod.archive.gz.age", "manifest.json.age"], sources)
+        self.assertEqual([f"{fakes.REMOTE}/{fakes.RUN}/{name}" for name in sources], [args[3] for args in copies])
+        heads = [fakes.option(args, "--key")[0] for args in calls if args[:2] == ["s3api", "head-object"]]
+        self.assertEqual([f"career-form/mongodb-backups/{fakes.RUN}/{name}" for name in sources], heads)
+        for args in calls:
+            self.assertEqual(["ap-northeast-2"], fakes.option(args, "--region"))
+        uploaded = sorted(path.name for path in remote_dir(workspace).iterdir())
+        self.assertEqual(sorted(sources), uploaded)
+        for name in uploaded:
+            self.assertEqual((workspace.run_dir() / name).read_bytes(), (remote_dir(workspace) / name).read_bytes())
+        self.assertIn('"event": "upload_verified"', output)
+
+    def test_refuses_plaintext_even_when_named_like_encrypted_file(self):
+        workspace = fakes.BackupWorkspace(self)
+        run_dir = workspace.root / fakes.RUN
+        run_dir.mkdir(mode=0o700)
+        (run_dir / "prod.archive.gz.age").write_bytes(b"FAKE-ARCHIVE plaintext")
+        (run_dir / "manifest.json.age").write_bytes(fakes.HEADER + b"e30=")
+        with mock.patch.dict(os.environ, workspace.environment()):
+            with self.assertRaises(BACKUP.BackupError) as raised:
+                backup_job(workspace).upload(run_dir, fakes.RUN)
+        self.assertEqual("upload", raised.exception.stage)
+        self.assertEqual([], workspace.calls("aws"))
+
+    def test_upload_failure_or_size_mismatch_fails_upload_stage_and_keeps_local_backup(self):
+        for change in ({"head_size_delta": 1}, {"fail": {"aws_cp": True}}):
+            with self.subTest(change=change):
+                data = fakes.scenario()
+                data.update(change)
+                workspace = fakes.BackupWorkspace(self, data, state=PREVIOUS)
+                code, output, errors = workspace.run(BACKUP)
+                self.assertEqual(1, code)
+                metrics = workspace.metrics()
+                self.assertEqual(1, metrics['career_mongo_backup_failure_stage{stage="upload"}'])
+                self.assertEqual(1000, metrics["career_mongo_backup_last_success_timestamp_seconds"])
+                self.assertEqual(4, len(list(workspace.run_dir().iterdir())))
+
+    def test_script_has_no_remote_delete_path(self):
+        source = (fakes.ROOT / "infra/scripts/mongodb-backup.py").read_text()
+        for token in ('"rm"', '"mv"', '"sync"', '"delete-object"', '"delete-objects"', '"--delete"', "s3api delete"):
+            self.assertNotIn(token, source)
+        workspace = fakes.BackupWorkspace(self)
+        code, output, errors = workspace.run(BACKUP)
+        self.assertEqual(0, code, output + errors)
+        commands = {tuple(call["args"][:2]) for call in workspace.calls("aws")}
+        self.assertEqual({("s3", "cp"), ("s3api", "head-object")}, commands)
+
+
+def make_run(root, name):
+    path = root / name
+    path.mkdir(mode=0o700)
+    (path / "prod.archive.gz.age").write_bytes(fakes.HEADER)
+    return path
+
+
+class MongoDBBackupRetentionTest(unittest.TestCase):
+    def test_prunes_only_expired_timestamp_folders_directly_under_root(self):
+        workspace = fakes.BackupWorkspace(self)
+        root = workspace.root
+        expired = [make_run(root, "20261101T040000Z"), make_run(root, "20261102T185959Z")]
+        kept = [make_run(root, "20261102T190000Z"), make_run(root, "20261105T040000Z"),
+                make_run(root, "manual-copy"), make_run(root, "20261341T990000Z")]
+        make_run(root / "manual-copy", "20261101T040000Z")
+        (root / "20261101T100000Z").write_text("not a folder")
+        outside = workspace.base / "outside"
+        outside.mkdir()
+        (outside / "keep.txt").write_text("outside root")
+        (root / "20261101T160000Z").symlink_to(outside, target_is_directory=True)
+        code, output, errors = workspace.run(BACKUP)
+        self.assertEqual(0, code, output + errors)
+        for path in expired:
+            self.assertFalse(path.exists(), path)
+        for path in kept + [root / "manual-copy/20261101T040000Z", root / "20261101T100000Z",
+                            root / "20261101T160000Z", workspace.run_dir()]:
+            self.assertTrue(path.exists() or path.is_symlink(), path)
+        self.assertTrue((outside / "keep.txt").exists())
+        self.assertIn('"removed": ["20261101T040000Z", "20261102T185959Z"]', output)
+
+    def test_last_success_run_is_never_expired(self):
+        workspace = fakes.BackupWorkspace(self)
+        old = make_run(workspace.root, "20261101T040000Z")
+        expired = BACKUP.expired_runs(workspace.root, fakes.NOW, 7, keep={"20261101T040000Z"})
+        self.assertEqual([], expired)
+        self.assertTrue(old.exists())
+
+    def test_failed_backup_does_not_prune(self):
+        data = fakes.scenario()
+        data["fail"]["mongodump"] = True
+        workspace = fakes.BackupWorkspace(self, data)
+        old = make_run(workspace.root, "20261101T040000Z")
+        code, output, errors = workspace.run(BACKUP)
+        self.assertEqual(1, code)
+        self.assertTrue(old.exists())
+
+    def test_retention_failure_is_recorded_but_backup_success_time_advances(self):
+        workspace = fakes.BackupWorkspace(self)
+        old = make_run(workspace.root, "20261101T040000Z")
+        real_rmtree = shutil.rmtree
+
+        def refuse_old(path, *args, **kwargs):
+            if Path(path) == old:
+                raise PermissionError(13, "Permission denied")
+            return real_rmtree(path, *args, **kwargs)
+
+        with mock.patch.object(BACKUP.shutil, "rmtree", side_effect=refuse_old):
+            code, output, errors = workspace.run(BACKUP)
+        self.assertEqual(1, code)
+        self.assertTrue(old.exists())
+        metrics = workspace.metrics()
+        self.assertEqual(1, metrics['career_mongo_backup_failure_stage{stage="retention"}'])
+        self.assertEqual(fakes.NOW, metrics["career_mongo_backup_last_success_timestamp_seconds"])
+        self.assertEqual(0, metrics["career_mongo_backup_success"])
+
+
+class MongoDBBackupCheckTest(unittest.TestCase):
+    def check(self, workspace):
+        return workspace.run(BACKUP, ["--check", "--env-file", str(workspace.env)])
+
+    def test_check_reports_installation_without_dumping_or_printing_secrets(self):
+        workspace = fakes.BackupWorkspace(self)
+        code, output, errors = self.check(workspace)
+        self.assertEqual(0, code, output + errors)
+        for item in ("env_file", "settings", "docker", "age", "aws", "container", "recipients", "backup_root",
+                     "state_dir", "aws_role"):
+            self.assertIn(f"ok {item}\n", output)
+        self.assertEqual([], [call for call in workspace.calls("docker") if call["args"][0] == "run"])
+        self.assertEqual([], list(workspace.root.iterdir()))
+        self.assertEqual([], list(workspace.state.iterdir()))
+        self.assertNotIn(fakes.PASSWORD, output + errors)
+        self.assertNotIn("000000000000", output)
+
+    def test_check_names_each_failed_item(self):
+        def missing_age(workspace):
+            (workspace.bin / "age").unlink()
+
+        def empty_recipients(workspace):
+            workspace.recipients.write_text("")
+
+        def open_root(workspace):
+            workspace.root.chmod(0o755)
+
+        def other_role(workspace):
+            fakes.update(workspace.bin, lambda data: data.update(arn="arn:aws:sts::000000000000:assumed-role/other/i-0"))
+
+        def stopped(workspace):
+            fakes.update(workspace.bin, lambda data: data["containers"][fakes.CONTAINER].update(running=False))
+
+        cases = (("env_file", {"env_mode": 0o644}, None), ("age", {}, missing_age),
+                 ("recipients", {}, empty_recipients), ("backup_root", {}, open_root),
+                 ("aws_role", {}, other_role), ("container", {}, stopped))
+        for item, options, change in cases:
+            with self.subTest(item=item):
+                workspace = fakes.BackupWorkspace(self, **options)
+                if change:
+                    change(workspace)
+                code, output, errors = self.check(workspace)
+                self.assertEqual(1, code)
+                self.assertIn(f"fail {item}", output)
 
 
 if __name__ == "__main__":

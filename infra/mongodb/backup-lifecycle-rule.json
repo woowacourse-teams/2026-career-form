@@ -1,0 +1,13 @@
+{
+  "ID": "career-form-mongodb-backups-expire-30d",
+  "Status": "Enabled",
+  "Filter": {
+    "Prefix": "career-form/mongodb-backups/"
+  },
+  "Expiration": {
+    "Days": 30
+  },
+  "NoncurrentVersionExpiration": {
+    "NoncurrentDays": 1
+  }
+}

@@ -43,6 +43,9 @@ REQUIRED = (
     "MONGODB_STATE_DIR",
 )
 STAGES = ("config", "prepare", "inspect", "dump", "manifest", "upload", "retention", "state")
+AGE_HEADER = b"age-encryption.org/v1\n"
+RUN_PATTERN = re.compile(r"^\d{8}T\d{6}Z$")
+BACKUP_ROLE = re.compile(r":assumed-role/ec2-project/")
 IDENTIFIER = re.compile(r"^[A-Za-z0-9_]+$")
 CONTAINER_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 BUCKET = re.compile(r"^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$")
@@ -505,6 +508,67 @@ class Backup:
         self.encrypt_bytes(data, run_dir / "manifest.json.age", "manifest")
         return run_dir, manifest
 
+    def upload(self, run_dir: Path, run: str) -> list:
+        """age 파일만 archive 먼저, manifest 마지막 순서로 올리고 원격 크기를 대조한다. 원격 삭제는 없다."""
+        archives = sorted(path for path in run_dir.iterdir()
+                          if path.name.endswith(".age") and path.name != "manifest.json.age")
+        files = archives + [run_dir / "manifest.json.age"]
+        for path in files:
+            if path.is_symlink() or not path.is_file():
+                raise BackupError("upload", f"{path.name} is not a regular file")
+            with path.open("rb") as handle:
+                if handle.read(len(AGE_HEADER)) != AGE_HEADER:
+                    raise BackupError("upload", f"{path.name} is not an age encrypted file")
+        uploaded = []
+        for path in files:
+            key = f"{self.config.prefix}/{run}/{path.name}"
+            run_command(["aws", "s3", "cp", str(path), f"s3://{self.config.bucket}/{key}",
+                         "--region", self.config.region, "--only-show-errors"], "upload", self.secrets)
+            output = run_command(["aws", "s3api", "head-object", "--bucket", self.config.bucket, "--key", key,
+                                  "--region", self.config.region, "--output", "json"], "upload", self.secrets)
+            try:
+                remote_size = json.loads(output)["ContentLength"]
+            except (ValueError, KeyError, TypeError):
+                raise BackupError("upload", f"unexpected head-object output for {path.name}") from None
+            local_size = path.stat().st_size
+            if remote_size != local_size:
+                raise BackupError("upload", f"{path.name} remote size {remote_size} differs from local {local_size}")
+            uploaded.append({"file": path.name, "size_bytes": local_size})
+        log("upload_verified", run=run, files=len(uploaded), size_bytes=sum(item["size_bytes"] for item in uploaded))
+        return uploaded
+
+
+def run_time(name: str):
+    if not RUN_PATTERN.fullmatch(name):
+        return None
+    try:
+        return datetime.strptime(name, "%Y%m%dT%H%M%SZ").replace(tzinfo=timezone.utc).timestamp()
+    except ValueError:
+        return None
+
+
+def expired_runs(root: Path, now: float, retention_days: int, keep) -> list:
+    """백업 루트 바로 아래의 시각 형식 실제 폴더 가운데 보관 일수가 지났고 keep에 없는 것."""
+    cutoff = now - retention_days * 86400
+    resolved_root = root.resolve()
+    expired = []
+    for path in sorted(root.iterdir()):
+        stamp = run_time(path.name)
+        if stamp is None or stamp >= cutoff or path.name in keep:
+            continue
+        if path.is_symlink() or not path.is_dir() or path.resolve().parent != resolved_root:
+            continue
+        expired.append(path)
+    return expired
+
+
+def prune(root: Path, now: float, retention_days: int, keep) -> list:
+    removed = []
+    for path in expired_runs(root, now, retention_days, keep):
+        shutil.rmtree(path)
+        removed.append(path.name)
+    return removed
+
 
 def read_state(state_dir: Path) -> dict:
     try:
@@ -565,26 +629,99 @@ def backup(env_file: Path, clock) -> int:
     job = Backup(config, clock)
     try:
         run_dir, manifest = job.dump(run, started)
+        uploaded = job.upload(run_dir, run)
         sizes = {target: entry["size_bytes"] for target, entry in manifest["targets"].items()}
         state = {"last_success_run": run, "last_success_timestamp": int(started),
-                 "size_bytes": sum(path.stat().st_size for path in run_dir.glob("*.age")), "target_sizes": sizes}
+                 "size_bytes": sum(item["size_bytes"] for item in uploaded), "target_sizes": sizes}
         try:
             atomic_write(config.state_dir / STATE_FILE, json.dumps(state, sort_keys=True) + "\n", 0o600)
         except OSError as error:
             raise BackupError("state", f"cannot write state: {error.strerror}") from None
+        try:
+            removed = prune(config.root, started, config.retention_days, {run})
+        except OSError as error:
+            raise BackupError("retention", f"cannot remove expired run folder: {error.strerror}") from None
+        if removed:
+            log("retention_removed", run=run, removed=removed)
     except BackupError as error:
         return finish(config.state_dir, state, started, clock, error, run, config.secrets())
     return finish(config.state_dir, state, started, clock, None, run)
 
 
+class Checklist:
+    def __init__(self):
+        self.passed = True
+
+    def report(self, item: str, passed: bool, reason: str = "") -> bool:
+        self.passed = self.passed and passed
+        print(f"ok {item}" if passed else f"fail {item}: {reason}", flush=True)
+        return passed
+
+
+def check(env_file: Path) -> int:
+    """덤프 없이 설치 상태를 점검한다. 비밀값과 계정 식별자는 출력하지 않는다."""
+    checklist = Checklist()
+    try:
+        mode = Path(env_file).stat().st_mode & 0o777
+    except OSError:
+        checklist.report("env_file", False, "missing or unreadable")
+        return 1
+    if not checklist.report("env_file", mode == 0o600, f"mode must be 600, found {mode:o}"):
+        return 1
+    try:
+        config = load_config(env_file)
+    except BackupError as error:
+        checklist.report("settings", False, error.reason)
+        return 1
+    checklist.report("settings", True)
+    secrets = config.secrets()
+    search_path = child_environment()["PATH"]
+    commands = {command: shutil.which(command, path=search_path) is not None for command in ("docker", "age", "aws")}
+    for command, found in commands.items():
+        checklist.report(command, found, "command not found")
+    if commands["docker"]:
+        try:
+            Backup(config, time.time).inspect()
+            checklist.report("container", True)
+        except BackupError as error:
+            checklist.report("container", False, redact(error.reason, secrets))
+    else:
+        checklist.report("container", False, "docker command not found")
+    try:
+        lines = config.recipients.read_text(encoding="utf-8").splitlines()
+        checklist.report("recipients", any(line.strip().startswith("age1") for line in lines),
+                         "no age1 recipient public key")
+    except (OSError, UnicodeDecodeError):
+        checklist.report("recipients", False, "missing or unreadable")
+    root = config.root
+    root_ok = root.is_dir() and not root.is_symlink() and root.stat().st_mode & 0o777 == 0o700
+    checklist.report("backup_root", root_ok, "must be a real folder with mode 700")
+    state_ok = config.state_dir.is_dir() and os.access(config.state_dir, os.W_OK)
+    checklist.report("state_dir", state_ok, "must be a writable folder")
+    if commands["aws"]:
+        try:
+            output = run_command(["aws", "sts", "get-caller-identity", "--region", config.region, "--output", "json"],
+                                 "check", secrets)
+            arn = json.loads(output).get("Arn", "")
+            checklist.report("aws_role", bool(BACKUP_ROLE.search(arn)), "credentials are not the ec2-project role")
+        except (BackupError, ValueError, AttributeError):
+            checklist.report("aws_role", False, "cannot read instance role credentials")
+    else:
+        checklist.report("aws_role", False, "aws command not found")
+    return 0 if checklist.passed else 1
+
+
 def parse_arguments(argv) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Career Form MongoDB encrypted backup")
     parser.add_argument("--env-file", type=Path, default=DEFAULT_ENV_FILE)
+    parser.add_argument("--check", action="store_true", help="check the installation without dumping")
     return parser.parse_args(argv)
 
 
 def main(argv=None, clock=time.time) -> int:
     arguments = parse_arguments(argv)
+    if arguments.check:
+        return check(arguments.env_file)
     return backup(arguments.env_file, clock)
 
 
