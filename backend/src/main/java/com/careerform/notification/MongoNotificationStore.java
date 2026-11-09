@@ -81,9 +81,18 @@ public final class MongoNotificationStore implements NotificationStore {
 
     /** roles 멀티키 인덱스를 타는 $in 조회에 roles 필드가 없거나 빈 배열인 미선택 구독을 $or로 더한다. */
     @Override public List<String> subscriptionIdsForRoles(Collection<String> roles) {
-        var criteria = new Criteria().orOperator(Criteria.where("roles").in(roles), Criteria.where("roles").exists(false),
-            Criteria.where("roles").size(0));
+        return List.copyOf(mongo.findDistinct(Query.query(targetRoles(roles)), "_id", PushSubscription.class, String.class));
+    }
+
+    /** 가입 시각 상한을 $and로 더한다. roles가 null이면 가입 시각 조건만 쓴다. */
+    @Override public List<String> subscriptionIdsForRolesRegisteredBy(Collection<String> roles, Instant registeredBy) {
+        var registered = Criteria.where("registeredAt").lte(registeredBy);
+        var criteria = roles == null ? registered : new Criteria().andOperator(registered, targetRoles(roles));
         return List.copyOf(mongo.findDistinct(Query.query(criteria), "_id", PushSubscription.class, String.class));
+    }
+
+    private static Criteria targetRoles(Collection<String> roles) {
+        return new Criteria().orOperator(Criteria.where("roles").in(roles), Criteria.where("roles").exists(false), Criteria.where("roles").size(0));
     }
 
     @Override public long countSubscriptionsWithRoles() {

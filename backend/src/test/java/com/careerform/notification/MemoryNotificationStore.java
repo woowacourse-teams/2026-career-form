@@ -68,6 +68,13 @@ public final class MemoryNotificationStore implements NotificationStore {
             .map(PushSubscription::id).toList();
     }
 
+    @Override public synchronized List<String> subscriptionIdsForRolesRegisteredBy(Collection<String> roles, Instant registeredBy) {
+        var wanted = roles == null ? null : Set.copyOf(roles);
+        return subscriptions.values().stream().filter(subscription -> !subscription.registeredAt().isAfter(registeredBy))
+            .filter(subscription -> wanted == null || unselected(subscription) || subscription.roles().stream().anyMatch(wanted::contains))
+            .map(PushSubscription::id).toList();
+    }
+
     @Override public synchronized long countSubscriptionsWithRoles() {
         return subscriptions.values().stream().filter(subscription -> !unselected(subscription)).count();
     }

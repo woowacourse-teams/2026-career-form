@@ -51,6 +51,23 @@ abstract class NotificationStoreContract {
     }
 
     @Test
+    @DisplayName("이미 저장된 쌍과 새 쌍이 섞인 묶음은 새 쌍만 넣고 저장된 발송의 상태와 시도 횟수는 바꾸지 않는다")
+    void insertsOnlyNewPairsFromMixedBatch() {
+        var store = store();
+        store.insertDeliveries(List.of(PushDelivery.pending("d1", "p1", "s1", NOW)));
+        var claimed = store.claimDelivery(store.findDelivery("d1").orElseThrow(), NOW, NOW.plusSeconds(120)).orElseThrow();
+        store.insertDeliveries(List.of(PushDelivery.pending("d2", "p1", "s1", NOW.plusSeconds(60)), PushDelivery.pending("d3", "p1", "s2", NOW.plusSeconds(60))));
+        assertThat(store.findDelivery("d2")).isEmpty();
+        assertThat(store.findDelivery("d1")).contains(claimed);
+        assertThat(store.findDelivery("d3")).hasValueSatisfying(delivery -> {
+            assertThat(delivery.status()).isEqualTo(PushDelivery.Status.PENDING);
+            assertThat(delivery.subscriptionId()).isEqualTo("s2");
+            assertThat(delivery.scheduledAt()).isEqualTo(NOW.plusSeconds(60));
+        });
+        assertThat(store.deliveryProgress("p1")).isEqualTo(new DeliveryProgress(1, 1, 0, 0, NOW));
+    }
+
+    @Test
     @DisplayName("예정 시각이 지난 대기 건과 리스가 만료된 발송 중 건만 찾는다")
     void findsDueDeliveriesAtBoundaries() {
         var store = store();
@@ -242,11 +259,32 @@ abstract class NotificationStoreContract {
         assertThat(store.countSubscriptions()).isEqualTo(5);
     }
 
+    @Test
+    @DisplayName("가입 시각 상한 조회는 직무별 대상 조회 조건에 상한과 같거나 앞서 가입한 구독만 남기고, roles가 null이면 직무와 상관없이 그 시각까지 가입한 모든 구독을 준다")
+    void findsTargetSubscriptionsRegisteredBy() {
+        var store = store();
+        store.insertSubscription(subscription("early-backend", "https://fcm.googleapis.com/fcm/send/synthetic-1", List.of("IT.BACKEND"), NOW.minusSeconds(60)));
+        store.insertSubscription(subscription("early-frontend", "https://fcm.googleapis.com/fcm/send/synthetic-2", List.of("IT.FRONTEND"), NOW.minusSeconds(60)));
+        store.insertSubscription(subscription("same-unselected", "https://fcm.googleapis.com/fcm/send/synthetic-3", null, NOW));
+        store.insertSubscription(subscription("same-empty", "https://fcm.googleapis.com/fcm/send/synthetic-4", List.of(), NOW));
+        store.insertSubscription(subscription("late-backend", "https://fcm.googleapis.com/fcm/send/synthetic-5", List.of("IT.BACKEND"), NOW.plusSeconds(1)));
+        store.insertSubscription(subscription("late-unselected", "https://fcm.googleapis.com/fcm/send/synthetic-6", null, NOW.plusSeconds(1)));
+        assertThat(store.subscriptionIdsForRolesRegisteredBy(List.of("IT.BACKEND"), NOW))
+            .containsExactlyInAnyOrder("early-backend", "same-unselected", "same-empty");
+        assertThat(store.subscriptionIdsForRolesRegisteredBy(null, NOW))
+            .containsExactlyInAnyOrder("early-backend", "early-frontend", "same-unselected", "same-empty");
+        assertThat(store.subscriptionIdsForRolesRegisteredBy(List.of("IT.BACKEND"), NOW.minusSeconds(61))).isEmpty();
+    }
+
     static PushSubscription subscription(String id, String endpoint) {
         return new PushSubscription(id, endpoint, "synthetic-p256dh", "synthetic-auth", NOW, null, null);
     }
 
     static PushSubscription subscription(String id, String endpoint, List<String> roles) {
         return new PushSubscription(id, endpoint, "synthetic-p256dh", "synthetic-auth", NOW, roles, NOW);
+    }
+
+    static PushSubscription subscription(String id, String endpoint, List<String> roles, Instant registeredAt) {
+        return new PushSubscription(id, endpoint, "synthetic-p256dh", "synthetic-auth", registeredAt, roles, roles == null ? null : registeredAt);
     }
 }
