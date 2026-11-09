@@ -28,7 +28,7 @@ def parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="공고 알림 시험 자원 기록")
     parser.add_argument("--run-dir", required=True)
     parser.add_argument("--containers", default=DEFAULT_CONTAINERS, help="쉼표로 구분한 컨테이너 이름")
-    parser.add_argument("--metrics-url", default="http://127.0.0.1:19091/actuator/prometheus")
+    parser.add_argument("--metrics-url", default="http://127.0.0.1:29091/actuator/prometheus")
     parser.add_argument("--interval-seconds", type=float, default=5.0)
     parser.add_argument("--duration-seconds", type=float, default=900.0, help="0이면 멈출 때까지")
     return parser.parse_args(argv)

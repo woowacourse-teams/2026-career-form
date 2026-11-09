@@ -1,5 +1,6 @@
 # 공고 알림 발송 시험 스택. loadtest/push-dispatch/에서 실행한다.
 #   python make-test-env.py
+#   mkdir -p runs/<실행 id>/mock
 #   LOADTEST_RUN_DIR=runs/<실행 id> docker compose --env-file .env.loadtest up -d --build --wait
 # 포트는 모두 127.0.0.1에만 연다. 시험 트래픽은 모의 푸시 서버로만 가고 전용 MongoDB만 쓴다.
 # 후 측정에 필요한 발송 워커와 실제 SQS 연결은 전환 Issue가 이 파일에 더한다.
@@ -24,28 +25,33 @@ services:
   mock-push:
     image: ${LOADTEST_MOCK_IMAGE:-python:3.12-slim@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b}
     init: true
-    command: ["python", "-u", "/app/mock-push-server.py", "--host", "0.0.0.0", "--port", "8080", "--log", "/data/requests.jsonl"]
+    # 상태 추첨 시드를 고정해 전과 후가 같은 순서의 응답 상태를 받게 한다.
+    command: ["python", "-u", "/app/mock-push-server.py", "--host", "0.0.0.0", "--port", "8080", "--log", "/data/requests.jsonl",
+              "--seed", "${MOCK_SEED:-441}"]
     environment:
       MOCK_DELAY_MS: ${MOCK_DELAY_MS:-100}
       MOCK_STATUSES: ${MOCK_STATUSES:-201=1}
       MOCK_RETRY_AFTER_SECONDS: ${MOCK_RETRY_AFTER_SECONDS:-60}
     volumes:
-      # 모의 서버 코드만 읽기 전용으로 넣는다. .env.loadtest와 실행 기록의 키 파일은 넣지 않는다.
+      # 모의 서버 코드만 읽기 전용으로 넣는다. 기록은 실행 폴더의 mock/ 하위 폴더에만 쓴다.
+      # 실행 폴더의 키 파일(subscriber-keys.jsonl)과 .env.loadtest는 컨테이너에 넣지 않는다.
       - ./mock-push-server.py:/app/mock-push-server.py:ro
       - ./pushload:/app/pushload:ro
       - type: bind
-        source: ${LOADTEST_RUN_DIR:?LOADTEST_RUN_DIR must be the run folder, e.g. runs/<run id>}
+        source: ${LOADTEST_RUN_DIR:?LOADTEST_RUN_DIR must be the run folder, e.g. runs/<run id>}/mock
         target: /data
         bind:
           create_host_path: true
     ports:
-      - "127.0.0.1:${LOADTEST_MOCK_PORT:-18081}:8080"
+      - "127.0.0.1:${LOADTEST_MOCK_PORT:-28081}:8080"
 
   backend:
     build:
       context: ${LOADTEST_BACKEND_CONTEXT:-../../backend}
     image: cf-push-loadtest-backend:${LOADTEST_BACKEND_TAG:-local}
-    # 운영 compose와 같게 init과 종료 유예 시간을 둔다. 운영에는 자원 제한이 없으므로 제한값은 운영 앱 호스트 사양에 맞춘다.
+    # 운영 배포(infra/scripts/deploy.sh)는 루트 compose.yaml과 infra/compose.deploy.yaml을 합쳐 쓰고,
+    # 루트 compose.yaml의 init과 종료 유예 30초가 그대로 적용된다. S3 재시작 조건을 맞추려고 같은 값을 둔다.
+    # 운영에는 자원 제한이 없으므로 제한값은 운영 앱 호스트 사양에 맞춘다.
     init: true
     stop_grace_period: 30s
     cpus: ${LOADTEST_BACKEND_CPUS:-2}
@@ -61,8 +67,9 @@ services:
       CAREER_FORM_PUSH_VAPID_SUBJECT: ${CAREER_FORM_PUSH_VAPID_SUBJECT:?run make-test-env.py and pass --env-file .env.loadtest}
       CAREER_FORM_QUALITY_PASSWORD_HASH: ${CAREER_FORM_QUALITY_PASSWORD_HASH:?run make-test-env.py and pass --env-file .env.loadtest}
     ports:
-      - "127.0.0.1:${LOADTEST_BACKEND_PORT:-18080}:8080"
-      - "127.0.0.1:${LOADTEST_MANAGEMENT_PORT:-19091}:9091"
+      # 18080·18081은 팀 관리 터널(dev·staging)이 쓰는 로컬 포트라 피한다.
+      - "127.0.0.1:${LOADTEST_BACKEND_PORT:-28080}:8080"
+      - "127.0.0.1:${LOADTEST_MANAGEMENT_PORT:-29091}:9091"
     healthcheck:
       test: ["CMD", "curl", "--fail", "--silent", "--show-error", "http://127.0.0.1:9091/actuator/health"]
       start_period: 30s

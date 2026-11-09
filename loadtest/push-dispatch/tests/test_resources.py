@@ -113,7 +113,7 @@ class SummarizeResourcesTest(unittest.TestCase):
         self.assertEqual((2, 1.1, 2.0), (backend["dispatchCycles"], backend["dispatchCycleSecondsAvg"], backend["dispatchCycleSecondsMax"]))
         self.assertEqual((3, 0.05, 80.0), (backend["gcPauses"], backend["gcPauseSecondsTotal"], backend["heapBytesMax"]))
         self.assertEqual({"accepted/ACCEPTED": 1000}, backend["deliveries"])
-        self.assertEqual((3, 0, 10.0), (summary["samples"], summary["errors"], summary["seconds"]))
+        self.assertEqual((3, 0, 10.0, None), (summary["samples"], summary["errors"], summary["seconds"], summary["window"]))
 
     def test_counter_increase_survives_backend_restart(self):
         samples = [sample(at, 1.0, 1, cycles, 0.0, 0.0, 0, 0.0, 1.0, accepted)
@@ -122,7 +122,15 @@ class SummarizeResourcesTest(unittest.TestCase):
         self.assertEqual((9, {"accepted/ACCEPTED": 950}), (backend["dispatchCycles"], backend["deliveries"]))
 
     def test_handles_no_samples(self):
-        self.assertEqual({"containers": {}, "backend": None, "samples": 0, "errors": 0, "seconds": None}, summarize_resources([]))
+        self.assertEqual({"containers": {}, "backend": None, "samples": 0, "errors": 0, "seconds": None, "window": None}, summarize_resources([]))
+
+    def test_window_keeps_sending_period_and_counts_increase_from_previous_sample(self):
+        samples = [sample(at, cpu, 100, cycles, 0.0, 0.0, 0, 0.0, 1.0, accepted)
+                   for at, cpu, cycles, accepted in ((0, 90.0, 1, 0), (5, 1.0, 2, 0), (10, 40.0, 3, 600), (15, 20.0, 4, 1000), (20, 1.0, 5, 1000))]
+        summary = summarize_resources(samples, {"from": 6.0, "to": 12.0})
+        self.assertEqual((2, 30.0, 40.0), (summary["samples"], summary["containers"]["backend"]["cpuPercentAvg"], summary["containers"]["backend"]["cpuPercentMax"]))
+        self.assertEqual((2, {"accepted/ACCEPTED": 1000}), (summary["backend"]["dispatchCycles"], summary["backend"]["deliveries"]))
+        self.assertEqual({"from": 6.0, "to": 12.0}, summary["window"])
 
 
 if __name__ == "__main__":

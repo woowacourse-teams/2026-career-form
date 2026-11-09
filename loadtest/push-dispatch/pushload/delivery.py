@@ -14,6 +14,16 @@ from dataclasses import dataclass
 
 GONE_STATUSES = frozenset((404, 410))
 INVALID_STATUSES = frozenset((400, 403, 413))
+MIN_GAP_SECONDS = 2.0
+MAX_GAPS = 5
+
+
+@dataclass(frozen=True)
+class Subscriber:
+    """요청 경로로 찾는 시험 구독. keys는 복호화 함수에 그대로 넘긴다."""
+
+    id: str
+    keys: object
 
 
 @dataclass(frozen=True)
@@ -27,30 +37,44 @@ class Request:
     retry_after: int | None
 
 
-def decode_requests(records: Iterable[Mapping], keys_by_path: Mapping[str, tuple[str, object]],
+def decode_requests(records: Iterable[object], subscribers: Mapping[str, Subscriber],
                     decrypt: Callable[[object, bytes], bytes]) -> tuple[list[Request], dict]:
     """이번 실행의 시험 구독으로 온 요청만 남기고, 암호문을 풀어 공고 id를 붙인다. 풀리지 않으면 posting은 None."""
     requests: list[Request] = []
-    stats = {"records": 0, "matched": 0, "undecryptable": 0, "unknownPath": 0}
+    stats = {"records": 0, "matched": 0, "undecryptable": 0, "unknownPath": 0, "invalid": 0}
     for record in records:
         stats["records"] += 1
-        subscriber = keys_by_path.get(record.get("path"))
+        fields = _record_fields(record)
+        if fields is None:
+            stats["invalid"] += 1
+            continue
+        subscriber = subscribers.get(fields[0])
         if subscriber is None:
             stats["unknownPath"] += 1
             continue
-        subscription, keys = subscriber
-        posting = _posting_id(decrypt, keys, record.get("body", ""))
+        posting = _posting_id(decrypt, subscriber.keys, record.get("body", ""))
         stats["matched"] += 1
         stats["undecryptable"] += posting is None
-        requests.append(Request(subscription, posting, float(record["receivedAt"]), float(record["respondedAt"]), int(record["status"]),
-                                int(record["concurrency"]), record.get("retryAfter")))
+        requests.append(Request(subscriber.id, posting, *fields[1:]))
     return requests, stats
 
 
-def _posting_id(decrypt, keys, body_base64: str) -> str | None:
+def _record_fields(record: object) -> tuple | None:
+    """모의 서버 기록 한 줄의 필드. 모양이 틀리면 None."""
+    if not isinstance(record, Mapping):
+        return None
+    try:
+        retry_after = record.get("retryAfter")
+        return (str(record["path"]), float(record["receivedAt"]), float(record["respondedAt"]), int(record["status"]),
+                int(record["concurrency"]), None if retry_after is None else int(retry_after))
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def _posting_id(decrypt, keys, body_base64: object) -> str | None:
     try:
         payload = json.loads(decrypt(keys, base64.b64decode(body_base64, validate=True)))
-    except ValueError:
+    except (TypeError, ValueError):
         return None
     posting = payload.get("id") if isinstance(payload, dict) else None
     return posting if isinstance(posting, str) else None
@@ -76,10 +100,12 @@ def delivery_metrics(requests: Iterable[Request], scheduled_at: Mapping[str, flo
         "accepted": len(accepted),
         "duplicates": _duplicates(accepted),
         "burst": _burst(relevant, accepted, scheduled_at),
+        "window": _window(relevant, accepted),
         "latencyMs": _latency(accepted, scheduled_at),
         "maxAcceptedPerSecond": max(Counter(int(item.responded) for item in accepted).values(), default=0),
         "maxConcurrency": max((item.concurrency for item in relevant), default=0),
         "longestAcceptanceGap": _longest_gap(accepted),
+        "acceptanceGaps": _gaps(accepted),
         "retry": _retry_correctness(relevant),
         "goneSubscriptionIds": sorted({item.subscription for item in relevant if item.status in GONE_STATUSES}),
     }
@@ -99,6 +125,13 @@ def _burst(relevant: Sequence[Request], accepted: Sequence[Request], scheduled_a
             "firstRequestToLastAcceptedSeconds": round(last - min(item.received for item in relevant), 3)}
 
 
+def _window(relevant: Sequence[Request], accepted: Sequence[Request]) -> dict | None:
+    """발송이 실제로 일어난 구간(첫 요청부터 마지막 수락까지). 자원 요약을 이 구간으로 자른다."""
+    if not accepted:
+        return None
+    return {"from": min(item.received for item in relevant), "to": max(item.responded for item in accepted)}
+
+
 def _latency(accepted: Sequence[Request], scheduled_at: Mapping[str, float]) -> dict:
     first: dict[tuple[str, str], float] = {}
     for item in accepted:
@@ -108,12 +141,24 @@ def _latency(accepted: Sequence[Request], scheduled_at: Mapping[str, float]) -> 
     return {"p50": percentile(values, 50), "p95": percentile(values, 95), "p99": percentile(values, 99), "count": len(values)}
 
 
-def _longest_gap(accepted: Sequence[Request]) -> dict:
+def _acceptance_intervals(accepted: Sequence[Request]) -> list[tuple[float, float]]:
     times = sorted(item.responded for item in accepted)
-    if len(times) < 2:
+    return list(zip(times, times[1:]))
+
+
+def _longest_gap(accepted: Sequence[Request]) -> dict:
+    intervals = _acceptance_intervals(accepted)
+    if not intervals:
         return {"seconds": None, "from": None, "to": None}
-    start, end = max(zip(times, times[1:]), key=lambda pair: pair[1] - pair[0])
+    start, end = max(intervals, key=lambda pair: pair[1] - pair[0])
     return {"seconds": round(end - start, 3), "from": start, "to": end}
+
+
+def _gaps(accepted: Sequence[Request]) -> list[dict]:
+    """2초 이상 수락이 끊긴 구간 가운데 긴 것 최대 5개를 시작 시각 순으로. 재시작 시각과 맞춰 읽는다."""
+    longest = sorted((pair for pair in _acceptance_intervals(accepted) if pair[1] - pair[0] >= MIN_GAP_SECONDS),
+                     key=lambda pair: pair[1] - pair[0], reverse=True)[:MAX_GAPS]
+    return [{"seconds": round(end - start, 3), "from": start, "to": end} for start, end in sorted(longest)]
 
 
 def _retry_correctness(relevant: Sequence[Request]) -> dict:

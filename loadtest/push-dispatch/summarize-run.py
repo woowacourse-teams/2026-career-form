@@ -20,6 +20,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from pushload import cli, runfiles  # noqa: E402
+from pushload.delivery import Subscriber  # noqa: E402
 from pushload.report import build_summary, render_table  # noqa: E402
 from pushload.webpush import SubscriberKeys  # noqa: E402
 
@@ -27,7 +28,7 @@ from pushload.webpush import SubscriberKeys  # noqa: E402
 def parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="공고 알림 시험 결과 집계")
     parser.add_argument("--run-dir", required=True)
-    parser.add_argument("--requests", help="모의 서버 기록. 기본은 <run-dir>/requests.jsonl")
+    parser.add_argument("--requests", help="모의 서버 기록. 기본은 <run-dir>/mock/requests.jsonl")
     parser.add_argument("--resources", help="자원 기록. 기본은 <run-dir>/resources.jsonl")
     parser.add_argument("--without-mongo", action="store_true", help="MongoDB를 읽지 않는다(시험 스택을 내린 뒤 다시 집계할 때)")
     return parser.parse_args(argv)
@@ -46,15 +47,33 @@ def main(argv: Sequence[str] | None = None, environ: Mapping[str, str] = os.envi
         print(f"입력 오류: {error}", file=sys.stderr)
         return cli.EXIT_USAGE
     key_records, skipped_keys = read_jsonl(run_dir / runfiles.KEYS_FILE)
-    records, skipped_requests = read_jsonl(Path(args.requests) if args.requests else run_dir / runfiles.REQUESTS_FILE)
+    records, skipped_requests = read_jsonl(Path(args.requests) if args.requests else run_dir / runfiles.MOCK_DIR / runfiles.REQUESTS_FILE)
     samples, skipped_samples = read_jsonl(Path(args.resources) if args.resources else run_dir / runfiles.RESOURCES_FILE)
-    keys_by_path = {record["path"]: (record["id"], SubscriberKeys.from_record(record)) for record in key_records}
-    summary = build_summary(run, keys_by_path, records, samples, database, skipped_keys + skipped_requests + skipped_samples,
-                            dt.datetime.now(dt.timezone.utc))
+    subscribers, invalid_keys = load_subscribers(key_records)
+    valid_samples = [sample for sample in samples if _valid_sample(sample)]
+    skipped = skipped_keys + invalid_keys + skipped_requests + skipped_samples + len(samples) - len(valid_samples)
+    summary = build_summary(run, subscribers, records, valid_samples, database, skipped, dt.datetime.now(dt.timezone.utc))
     (run_dir / runfiles.SUMMARY_FILE).write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(render_table(summary))
     print(f"\n요약 파일: {run_dir / runfiles.SUMMARY_FILE}")
     return cli.EXIT_OK
+
+
+def load_subscribers(key_records: Sequence[object]) -> tuple[dict[str, Subscriber], int]:
+    """키 기록을 요청 경로로 찾는 구독으로 바꾼다. 모양이 틀린 기록은 건너뛰고 수를 센다."""
+    subscribers: dict[str, Subscriber] = {}
+    invalid = 0
+    for record in key_records:
+        try:
+            subscribers[record["path"]] = Subscriber(record["id"], SubscriberKeys.from_record(record))
+        except (KeyError, TypeError, ValueError):
+            invalid += 1
+    return subscribers, invalid
+
+
+def _valid_sample(sample: object) -> bool:
+    return (isinstance(sample, dict) and isinstance(sample.get("at"), (int, float)) and isinstance(sample.get("containers", {}), dict)
+            and isinstance(sample.get("metrics", []), list) and all(isinstance(series, list) and len(series) == 3 for series in sample.get("metrics", [])))
 
 
 def read_jsonl(path: Path) -> tuple[list[dict], int]:

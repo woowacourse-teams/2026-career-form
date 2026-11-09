@@ -87,17 +87,30 @@ def collect_sample(run_docker: Callable[[Sequence[str]], str], fetch_metrics: Ca
     return sample
 
 
-def summarize_resources(samples: Sequence[Mapping]) -> dict:
+def summarize_resources(samples: Sequence[Mapping], window: Mapping | None = None) -> dict:
+    """window({"from", "to"} epoch 초)가 있으면 그 구간과 바로 다음 표본만 쓴다. 카운터 증가는 구간 직전 표본부터 센다."""
     if not samples:
-        return {"containers": {}, "backend": None, "samples": 0, "errors": 0, "seconds": None}
-    with_metrics = [sample for sample in samples if sample.get("metrics")]
+        return {"containers": {}, "backend": None, "samples": 0, "errors": 0, "seconds": None, "window": window}
+    selected, baseline = _select(samples, window)
+    with_metrics = [sample for sample in [*baseline, *selected] if sample.get("metrics")]
     return {
-        "containers": _container_summary(samples),
+        "containers": _container_summary(selected),
         "backend": _backend_summary(with_metrics) if with_metrics else None,
-        "samples": len(samples),
-        "errors": sum(len(sample.get("errors", ())) for sample in samples),
-        "seconds": round(samples[-1]["at"] - samples[0]["at"], 3),
+        "samples": len(selected),
+        "errors": sum(len(sample.get("errors", ())) for sample in selected),
+        "seconds": round(selected[-1]["at"] - selected[0]["at"], 3) if selected else None,
+        "window": window,
     }
+
+
+def _select(samples: Sequence[Mapping], window: Mapping | None) -> tuple[list[Mapping], list[Mapping]]:
+    ordered = sorted(samples, key=lambda sample: sample["at"])
+    if window is None:
+        return ordered, []
+    inside = [sample for sample in ordered if window["from"] <= sample["at"] <= window["to"]]
+    after = [sample for sample in ordered if sample["at"] > window["to"]][:1]
+    before = [sample for sample in ordered if sample["at"] < window["from"] and sample.get("metrics")][-1:]
+    return inside + after, before
 
 
 def _container_summary(samples: Sequence[Mapping]) -> dict:

@@ -42,9 +42,10 @@ def parse_notes(notes: Iterable[str]) -> dict[str, str]:
     parsed: dict[str, str] = {}
     for note in notes:
         key, separator, value = note.partition("=")
-        if not separator or not key.strip():
+        key = key.strip()
+        if not separator or not key:
             raise UsageError(f"메모는 key=value 형식이어야 합니다: {note}")
         if key in parsed:
             raise UsageError(f"메모 키가 중복됩니다: {key}")
-        parsed[key.strip()] = value.strip()
+        parsed[key] = value.strip()
     return parsed

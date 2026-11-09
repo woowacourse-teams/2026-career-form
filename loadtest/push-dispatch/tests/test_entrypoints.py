@@ -1,5 +1,4 @@
 import contextlib
-import importlib.util
 import io
 import json
 import stat
@@ -8,19 +7,12 @@ import unittest
 from pathlib import Path
 
 from tests.fakes import FakeDatabase
+from tests.scripts import load_script
 from tests.test_postings import FakeAdminApi
 
-ROOT = Path(__file__).resolve().parents[1]
 URI = "mongodb://user:db-password@127.0.0.1:27018/career_form_loadtest"
 TEST_SUBSCRIPTION = {"_id": "t1", "endpoint": "http://mock-push:8080/fcm/send/loadtest-old-a"}
 REAL_SUBSCRIPTION = {"_id": "s1", "endpoint": "https://fcm.googleapis.com/fcm/send/real"}
-
-
-def load_script(name):
-    spec = importlib.util.spec_from_file_location(name.replace("-", "_"), ROOT / f"{name}.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 def run(script, argv, environ, database):
@@ -60,6 +52,15 @@ class GenerateSubscriptionsScriptTest(unittest.TestCase):
         self.assertIn("1개", output)
         self.assertNotIn("fcm.googleapis.com", output)
 
+    def test_invalid_arguments_stop_before_any_file_or_write(self):
+        for extra in (["--endpoint-length", "50"], ["--unselected-ratio", "1.5"], ["--mock-base", "https://mock-push"]):
+            with self.subTest(extra=extra):
+                database = FakeDatabase()
+                code, output = run(self.script, ["--run-dir", str(self.run_dir), "--count", "3", *extra], {"LOADTEST_MONGODB_URI": URI}, database)
+                self.assertEqual(2, code, output)
+                self.assertEqual([], database.writes())
+                self.assertFalse(self.run_dir.exists())
+
     def test_requires_mongodb_uri_from_environment(self):
         code, output = run(self.script, ["--run-dir", str(self.run_dir), "--count", "3"], {}, FakeDatabase())
         self.assertEqual(2, code)
@@ -69,7 +70,7 @@ class GenerateSubscriptionsScriptTest(unittest.TestCase):
 class RegisterPostingsScriptTest(unittest.TestCase):
     def setUp(self):
         self.script = load_script("register-postings")
-        self.api = FakeAdminApi()
+        self.api = FakeAdminApi(subscriptions=1)
         self.directory = tempfile.TemporaryDirectory()
         self.run_dir = Path(self.directory.name) / "r1"
         self.environ = {"LOADTEST_MONGODB_URI": URI, "LOADTEST_ADMIN_PASSWORD": "secret"}
@@ -85,13 +86,15 @@ class RegisterPostingsScriptTest(unittest.TestCase):
         postings = json.loads((self.run_dir / "run.json").read_text())["postings"]
         self.assertEqual(2, len(postings["items"]))
         self.assertEqual({"commit": "abc123", "concurrency": "20"}, postings["notes"])
-        self.assertEqual(23, len(self.api.requests[0]["body"]["roles"]))
+        posts = [request for request in self.api.requests if request["body"] is not None]
+        self.assertEqual(23, len(posts[0]["body"]["roles"]))
+        self.assertEqual({"commit", "dirty"}, set(postings["repository"]))
         self.assertNotIn("secret", output)
         self.assertNotIn("secret", (self.run_dir / "run.json").read_text())
 
     def test_warns_when_registration_ends_after_scheduled_time(self):
         argv = ["--run-dir", str(self.run_dir), "--api", self.api.url, "--opens-in-seconds", "0"]
-        code, output = run(self.script, argv, self.environ, FakeDatabase())
+        code, output = run(self.script, argv, self.environ, FakeDatabase(push_subscriptions=[TEST_SUBSCRIPTION]))
         self.assertEqual(0, code, output)
         self.assertIn("늦게", output)
         self.assertEqual(1, len(json.loads((self.run_dir / "run.json").read_text())["postings"]["warnings"]))
@@ -103,12 +106,31 @@ class RegisterPostingsScriptTest(unittest.TestCase):
         self.assertEqual([], self.api.requests)
         self.assertFalse((self.run_dir / "run.json").exists())
 
-    def test_records_partial_results_when_registration_fails(self):
+    def test_stops_when_api_sees_a_different_database(self):
         argv = ["--run-dir", str(self.run_dir), "--api", self.api.url]
-        code, output = run(self.script, argv, {**self.environ, "LOADTEST_ADMIN_PASSWORD": "wrong"}, FakeDatabase())
+        code, output = run(self.script, argv, self.environ, FakeDatabase(push_subscriptions=[TEST_SUBSCRIPTION, dict(TEST_SUBSCRIPTION, _id="t2")]))
+        self.assertEqual(3, code, output)
+        self.assertIn("구독 수(1)", output)
+        self.assertEqual([], [request for request in self.api.requests if request["body"] is not None])
+        self.assertFalse((self.run_dir / "run.json").exists())
+
+    def test_wrong_password_stops_at_target_check_without_registering(self):
+        argv = ["--run-dir", str(self.run_dir), "--api", self.api.url]
+        code, output = run(self.script, argv, {**self.environ, "LOADTEST_ADMIN_PASSWORD": "wrong"}, FakeDatabase(push_subscriptions=[TEST_SUBSCRIPTION]))
         self.assertEqual(1, code)
         self.assertIn("401", output)
-        self.assertEqual(401, json.loads((self.run_dir / "run.json").read_text())["postings"]["error"]["status"])
+        self.assertNotIn("wrong", output)
+        self.assertEqual([], [request for request in self.api.requests if request["body"] is not None])
+        self.assertFalse((self.run_dir / "run.json").exists())
+
+    def test_records_partial_results_when_registration_fails(self):
+        self.api.links["https://loadtest.invalid/r1/2"] = "f" * 32
+        argv = ["--run-dir", str(self.run_dir), "--api", self.api.url, "--count", "2"]
+        code, output = run(self.script, argv, self.environ, FakeDatabase(push_subscriptions=[TEST_SUBSCRIPTION]))
+        self.assertEqual(1, code)
+        self.assertIn("409", output)
+        postings = json.loads((self.run_dir / "run.json").read_text())["postings"]
+        self.assertEqual((409, "DUPLICATE_LINK", 1), (postings["error"]["status"], postings["error"]["code"], len(postings["items"])))
 
     def test_requires_admin_password(self):
         code, output = run(self.script, ["--run-dir", str(self.run_dir), "--api", self.api.url], {"LOADTEST_MONGODB_URI": URI}, FakeDatabase())

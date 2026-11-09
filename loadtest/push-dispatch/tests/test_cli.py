@@ -35,7 +35,7 @@ class NotesTest(unittest.TestCase):
         self.assertEqual({"commit": "abc", "concurrency": "20", "empty": ""}, parse_notes(["commit=abc", "concurrency=20", "empty="]))
 
     def test_rejects_malformed_or_duplicate_notes(self):
-        for notes in (["novalue"], ["=x"], ["a=1", "a=2"]):
+        for notes in (["novalue"], ["=x"], ["a=1", "a=2"], ["a=1", " a=2"], ["  =x"]):
             with self.subTest(notes=notes), self.assertRaises(UsageError):
                 parse_notes(notes)
 

@@ -2,7 +2,6 @@ import base64
 import contextlib
 import io
 import http.client
-import importlib.util
 import json
 import random
 import tempfile
@@ -20,15 +19,7 @@ from pushload.mock_server import (
     parse_status_mix,
     pick_status,
 )
-
-ROOT = Path(__file__).resolve().parents[1]
-
-
-def load_script(name):
-    spec = importlib.util.spec_from_file_location(name.replace("-", "_"), ROOT / f"{name}.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+from tests.scripts import load_script
 
 
 class StatusMixTest(unittest.TestCase):
@@ -231,6 +222,12 @@ class EntryPointTest(unittest.TestCase):
             code = script.main(["--log", str(Path(directory) / "log.jsonl"), "--statuses", "201=0.5"])
         self.assertEqual(2, code)
         self.assertIn("상태 비율의 합", errors.getvalue())
+
+    def test_invalid_environment_default_is_usage_error(self):
+        script = load_script("mock-push-server")
+        with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as raised:
+            script.parse_args(["--log", "x.jsonl"], {"MOCK_DELAY_MS": "fast"})
+        self.assertEqual(2, raised.exception.code)
 
     def test_reads_defaults_from_environment(self):
         script = load_script("mock-push-server")

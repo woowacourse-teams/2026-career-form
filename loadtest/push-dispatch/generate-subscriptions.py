@@ -48,6 +48,9 @@ def main(argv: Sequence[str] | None = None, environ: Mapping[str, str] = os.envi
         run_id = runfiles.validate_run_id(run_dir.name)
         if args.count < 1:
             raise cli.UsageError("--count는 1 이상이어야 합니다")
+        if not 0.0 <= args.unselected_ratio <= 1.0:
+            raise cli.UsageError("--unselected-ratio는 0 이상 1 이하여야 합니다")
+        subscriptions.marked_endpoint(args.mock_base, run_id, token_source=lambda length: "x" * length, length=args.endpoint_length)
         if (run_dir / runfiles.KEYS_FILE).exists():
             raise cli.UsageError("이 실행 폴더에는 이미 키 파일이 있습니다. 새 실행 폴더를 쓰세요")
         codes = role_codes()
@@ -72,8 +75,7 @@ def _generate(args: argparse.Namespace, run_dir: Path, run_id: str, codes: Seque
     section = {"count": args.count, "selected": selected, "unselected": args.count - selected, "unselectedRatio": args.unselected_ratio,
                "seed": args.seed, "mockBase": args.mock_base, "endpointLength": args.endpoint_length, "registeredAt": runfiles.iso(now),
                "durationMs": round((time.monotonic() - started) * 1000, 1)}
-    run = runfiles.with_section({**runfiles.read_run(run_dir), "runId": run_id}, "subscriptions", section)
-    runfiles.write_run(run_dir, run)
+    runfiles.update_run(run_dir, run_id, "subscriptions", section)
     print(f"시험 구독 {args.count}개를 넣었습니다(직무 선택 {selected}, 미선택 {args.count - selected}). 키 파일: {run_dir / runfiles.KEYS_FILE}")
     return cli.EXIT_OK
 

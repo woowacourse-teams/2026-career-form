@@ -1,7 +1,7 @@
 import json
 import unittest
 
-from pushload.summary import Request, decode_requests, delivery_metrics, percentile
+from pushload.delivery import Request, Subscriber, decode_requests, delivery_metrics, percentile
 
 
 def request(subscription, posting, received, status, responded=None, concurrency=1, retry_after=None):
@@ -60,19 +60,32 @@ class DeliveryMetricsTest(unittest.TestCase):
         self.assertEqual(2, self.metrics["maxConcurrency"])
         self.assertEqual({"seconds": 200.0, "from": 1100.1, "to": 1300.1}, self.metrics["longestAcceptanceGap"])
 
+    def test_lists_gaps_of_two_seconds_or_more_in_time_order(self):
+        self.assertEqual([39.9, 50.0, 200.0], [gap["seconds"] for gap in self.metrics["acceptanceGaps"]])
+        self.assertEqual([1010.2, 1050.1, 1100.1], [gap["from"] for gap in self.metrics["acceptanceGaps"]])
+
+    def test_keeps_only_five_longest_gaps(self):
+        requests = [request("s1", "p1", 1000.0 + offset, 201, 1000.0 + offset) for offset in (0, 3, 7, 12, 18, 25, 33)]
+        gaps = delivery_metrics(requests, SCHEDULED)["acceptanceGaps"]
+        self.assertEqual([4.0, 5.0, 6.0, 7.0, 8.0], [gap["seconds"] for gap in gaps])
+
+    def test_reports_sending_window_for_resource_summary(self):
+        self.assertEqual({"from": 1010.0, "to": 1300.1}, self.metrics["window"])
+
     def test_reports_retry_correctness(self):
         self.assertEqual({"beforeRetryAfter": 1, "afterGone": 1, "afterInvalid": 1}, self.metrics["retry"])
         self.assertEqual(["s4"], self.metrics["goneSubscriptionIds"])
 
     def test_handles_runs_without_acceptance(self):
         metrics = delivery_metrics([request("s1", "p1", 1010.0, 503)], SCHEDULED)
-        self.assertEqual((0, None, None, None), (metrics["accepted"], metrics["burst"]["scheduledToLastAcceptedSeconds"],
-                                                 metrics["latencyMs"]["p50"], metrics["longestAcceptanceGap"]["seconds"]))
+        self.assertEqual((0, None, None, None, None, []), (metrics["accepted"], metrics["burst"]["scheduledToLastAcceptedSeconds"],
+                                                           metrics["latencyMs"]["p50"], metrics["longestAcceptanceGap"]["seconds"],
+                                                           metrics["window"], metrics["acceptanceGaps"]))
 
 
 class DecodeRequestsTest(unittest.TestCase):
     def test_maps_paths_to_subscriptions_and_reads_posting_ids(self):
-        keys = {"/fcm/send/loadtest-r1-a": ("s1", "key-a")}
+        keys = {"/fcm/send/loadtest-r1-a": Subscriber("s1", "key-a")}
         bodies = {"ok": json.dumps({"id": "p1"}).encode(), "bad": b"not decryptable"}
 
         def decrypt(key, body):
@@ -84,9 +97,12 @@ class DecodeRequestsTest(unittest.TestCase):
             {"path": "/fcm/send/loadtest-r1-a", "body": "b2s=", "receivedAt": 1.0, "respondedAt": 1.1, "status": 201, "concurrency": 1, "retryAfter": None},
             {"path": "/fcm/send/loadtest-r1-a", "body": "YmFk", "receivedAt": 2.0, "respondedAt": 2.1, "status": 201, "concurrency": 1, "retryAfter": None},
             {"path": "/fcm/send/loadtest-other-z", "body": "b2s=", "receivedAt": 3.0, "respondedAt": 3.1, "status": 201, "concurrency": 1, "retryAfter": None},
+            {"path": "/fcm/send/loadtest-r1-a", "body": "b2s=", "receivedAt": "late", "respondedAt": 3.1, "status": 201, "concurrency": 1},
+            {"path": "/fcm/send/loadtest-r1-a", "receivedAt": 4.0, "respondedAt": 4.1, "concurrency": 1},
+            ["not", "a", "record"],
         ]
         decoded, stats = decode_requests(records, keys, lambda key, body: json.dumps({"id": "p1"}).encode() if body == b"ok" else decrypt(key, body))
-        self.assertEqual({"records": 3, "matched": 2, "undecryptable": 1, "unknownPath": 1}, stats)
+        self.assertEqual({"records": 6, "matched": 2, "undecryptable": 1, "unknownPath": 1, "invalid": 3}, stats)
         self.assertEqual([("s1", "p1"), ("s1", None)], [(item.subscription, item.posting) for item in decoded])
 
 

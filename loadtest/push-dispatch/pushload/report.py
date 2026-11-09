@@ -6,20 +6,21 @@ import datetime as dt
 from collections.abc import Mapping, Sequence
 
 from pushload import mongo_report
+from pushload.delivery import decode_requests, delivery_metrics
 from pushload.resources import summarize_resources
 from pushload.runfiles import iso, parse_iso
-from pushload.summary import decode_requests, delivery_metrics
 from pushload.webpush import decrypt_aes128gcm
 
 
-def build_summary(run: Mapping, keys_by_path: Mapping, records: Sequence[Mapping], samples: Sequence[Mapping], database,
+def build_summary(run: Mapping, subscribers: Mapping, records: Sequence[Mapping], samples: Sequence[Mapping], database,
                   skipped_lines: int, now: dt.datetime) -> dict:
     postings = run["postings"]
     items = postings["items"]
     scheduled_at = {item["id"]: parse_iso(item["scheduledAt"]).timestamp() for item in items}
-    requests, request_stats = decode_requests(records, keys_by_path, decrypt_aes128gcm)
-    delivery = delivery_metrics(requests, scheduled_at)
-    gone = delivery.pop("goneSubscriptionIds")
+    requests, request_stats = decode_requests(records, subscribers, decrypt_aes128gcm)
+    metrics = delivery_metrics(requests, scheduled_at)
+    gone = metrics["goneSubscriptionIds"]
+    delivery = {key: value for key, value in metrics.items() if key != "goneSubscriptionIds"}
     return {
         "runId": run.get("runId"),
         "generatedAt": iso(now),
@@ -31,7 +32,8 @@ def build_summary(run: Mapping, keys_by_path: Mapping, records: Sequence[Mapping
         "skippedLines": skipped_lines,
         "delivery": {**delivery, "goneSubscriptions": len(gone)},
         "mongo": _mongo(database, list(scheduled_at), sum(item["deliveries"] for item in items), gone) if database is not None else None,
-        "resources": summarize_resources(samples),
+        "resources": {"burst": summarize_resources(samples, delivery["window"]) if delivery["window"] else None,
+                      "wholeRun": summarize_resources(samples)},
     }
 
 
@@ -42,7 +44,7 @@ def _mongo(database, posting_ids: Sequence[str], expected: int, gone: Sequence[s
 
 def render_table(summary: Mapping) -> str:
     rows = [("항목", "값"), ("---", "---")] + _run_rows(summary) + _delivery_rows(summary["delivery"]) + _mongo_rows(summary["mongo"]) \
-        + _resource_rows(summary["resources"]) + _input_rows(summary)
+        + _resource_rows(summary["resources"]["burst"] or summary["resources"]["wholeRun"]) + _input_rows(summary)
     return "\n".join(f"| {label} | {value} |" for label, value in rows)
 
 
@@ -56,7 +58,9 @@ def _run_rows(summary: Mapping) -> list[tuple[str, str]]:
 
 def _delivery_rows(delivery: Mapping) -> list[tuple[str, str]]:
     latency, burst, gap, retry = delivery["latencyMs"], delivery["burst"], delivery["longestAcceptanceGap"], delivery["retry"]
+    window = delivery["window"]
     return [
+        ("발송 구간(첫 요청→마지막 수락)", f"{_moment(window['from'])} → {_moment(window['to'])}" if window else "-"),
         ("모의 서버가 받은 요청", _text(delivery["requests"])),
         ("응답 상태별 요청", _counts(delivery["byStatus"])),
         ("수락", _text(delivery["accepted"])),
@@ -67,6 +71,7 @@ def _delivery_rows(delivery: Mapping) -> list[tuple[str, str]]:
         ("초당 수락 최댓값", _text(delivery["maxAcceptedPerSecond"])),
         ("최대 동시 요청", _text(delivery["maxConcurrency"])),
         ("수락이 끊긴 가장 긴 구간(초)", _text(gap["seconds"])),
+        ("수락이 끊긴 구간(2초 이상, 긴 것 최대 5개)", _gap_list(delivery["acceptanceGaps"])),
         ("Retry-After 전 재요청", _text(retry["beforeRetryAfter"])),
         ("404·410 뒤 같은 구독 재요청", _text(retry["afterGone"])),
         ("400·403·413 뒤 같은 쌍 재요청", _text(retry["afterInvalid"])),
@@ -100,13 +105,23 @@ def _resource_rows(resources: Mapping) -> list[tuple[str, str]]:
         rows += [("발송기 주기 수 / 평균 / 최대(초)", f"{backend['dispatchCycles']} / {_text(backend['dispatchCycleSecondsAvg'])} / {_text(backend['dispatchCycleSecondsMax'])}"),
                  ("GC 정지 횟수 / 합(초)", f"{backend['gcPauses']} / {_text(backend['gcPauseSecondsTotal'])}"),
                  ("힙 최대(바이트)", _text(backend["heapBytesMax"])), ("지표상 발송 결과 증가", _counts(backend["deliveries"]))]
-    return rows + [("자원 기록 수 / 오류 / 기간(초)", f"{resources['samples']} / {resources['errors']} / {_text(resources['seconds'])}")]
+    scope = "발송 구간" if resources.get("window") else "실행 전체"
+    return rows + [(f"자원 기록 수 / 오류 / 기간(초) ({scope})", f"{resources['samples']} / {resources['errors']} / {_text(resources['seconds'])}")]
 
 
 def _input_rows(summary: Mapping) -> list[tuple[str, str]]:
     stats = summary["requests"]
-    return [("기록 줄 / 이번 실행 구독 / 복호화 실패 / 다른 경로", f"{stats['records']} / {stats['matched']} / {stats['undecryptable']} / {stats['unknownPath']}"),
+    return [("기록 줄 / 이번 실행 구독 / 복호화 실패 / 다른 경로 / 모양이 틀린 줄",
+             f"{stats['records']} / {stats['matched']} / {stats['undecryptable']} / {stats['unknownPath']} / {stats['invalid']}"),
             ("건너뛴 깨진 줄", _text(summary["skippedLines"]))]
+
+
+def _gap_list(gaps: Sequence[Mapping]) -> str:
+    return ", ".join(f"{_text(gap['seconds'])}초({_moment(gap['from'])}→{_moment(gap['to'])})" for gap in gaps) or "-"
+
+
+def _moment(epoch: float) -> str:
+    return iso(dt.datetime.fromtimestamp(epoch, dt.timezone.utc))
 
 
 def _counts(values: Mapping) -> str:

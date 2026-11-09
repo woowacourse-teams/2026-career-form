@@ -5,7 +5,9 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable
 
-TEST_ENDPOINT_PATTERN = re.compile(r"^http://[^/?#]+/fcm/send/loadtest-")
+from pushload.markers import TEST_ENDPOINT_PATTERN
+
+_TEST_ENDPOINT = re.compile(TEST_ENDPOINT_PATTERN)
 
 
 class ForeignSubscriptionsError(RuntimeError):
@@ -14,8 +16,23 @@ class ForeignSubscriptionsError(RuntimeError):
         self.count = count
 
 
+class TargetMismatchError(RuntimeError):
+    """관리 API가 보는 DB와 안전장치가 확인한 DB가 다를 때."""
+
+    def __init__(self, api_count: object, database_count: int):
+        super().__init__(f"관리 API가 보는 구독 수({api_count})와 안전장치가 확인한 DB의 구독 수({database_count})가 달라 멈춥니다. "
+                         "--api와 LOADTEST_MONGODB_URI가 같은 시험 스택을 가리키는지 확인하세요")
+        self.api_count = api_count
+        self.database_count = database_count
+
+
+def ensure_same_target(api_count: object, database_count: int) -> None:
+    if api_count != database_count:
+        raise TargetMismatchError(api_count, database_count)
+
+
 def is_test_endpoint(value: object) -> bool:
-    return isinstance(value, str) and TEST_ENDPOINT_PATTERN.match(value) is not None
+    return isinstance(value, str) and _TEST_ENDPOINT.match(value) is not None
 
 
 def count_foreign(endpoints: Iterable[object]) -> int:

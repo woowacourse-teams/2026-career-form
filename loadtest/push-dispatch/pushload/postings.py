@@ -7,14 +7,16 @@ import datetime as dt
 import json
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 
+from pushload.markers import TEST_LINK_PREFIX
 from pushload.runfiles import iso, validate_run_id
 
-TEST_LINK_PREFIX = "https://loadtest.invalid/"
 ADMIN_POSTINGS_PATH = "/api/v1/notifications/admin/postings"
+ADMIN_SUMMARY_PATH = "/api/v1/notifications/admin/summary"
 COMPANY = "loadtest"
 
 
@@ -32,7 +34,7 @@ def basic_authorization(password: str) -> str:
 
 
 @dataclass(frozen=True)
-class RegisterResult:
+class ApiResult:
     status: int
     body: dict
     elapsed_ms: float
@@ -58,16 +60,26 @@ class AdminClient:
     def __repr__(self) -> str:
         return f"AdminClient(base_url={self.base_url!r})"
 
-    def register(self, payload: Mapping) -> RegisterResult:
+    def register(self, payload: Mapping) -> ApiResult:
         request = urllib.request.Request(self.base_url + ADMIN_POSTINGS_PATH, data=json.dumps(payload).encode(), method="POST",
                                          headers={"Content-Type": "application/json", "Authorization": self._authorization})
+        return self._send(request)
+
+    def summary(self, start: dt.datetime, end: dt.datetime) -> ApiResult:
+        """관리 API의 기간 요약. 구독 수(subscriptions)는 기간과 무관한 현재값이다."""
+        query = urllib.parse.urlencode({"from": iso(start), "to": iso(end)})
+        request = urllib.request.Request(f"{self.base_url}{ADMIN_SUMMARY_PATH}?{query}", method="GET",
+                                         headers={"Authorization": self._authorization})
+        return self._send(request)
+
+    def _send(self, request: urllib.request.Request) -> ApiResult:
         started = time.monotonic()
         try:
             with self._opener.open(request, timeout=self._timeout) as response:
                 status, raw = response.status, response.read()
         except urllib.error.HTTPError as error:
             status, raw = error.code, error.read()
-        return RegisterResult(status, _json_object(raw), (time.monotonic() - started) * 1000)
+        return ApiResult(status, _json_object(raw), (time.monotonic() - started) * 1000)
 
 
 def _json_object(raw: bytes) -> dict:
@@ -86,11 +98,20 @@ def register_all(client: AdminClient, payloads: Sequence[Mapping], clock: Callab
         result = client.register(payload)
         if result.status != 201:
             raise RegistrationError(result.status, result.body.get("error"), postings)
+        if not _registered_body(result.body):
+            raise RegistrationError(result.status, "UNEXPECTED_RESPONSE", postings)
         postings.append({"number": number, "id": result.body["id"], "link": payload["link"], "scheduledAt": result.body["scheduledAt"],
                          "deliveries": result.body["deliveries"], "registerMs": round(result.elapsed_ms, 1)})
     finished = clock()
     return {"startedAt": _iso_epoch(started), "finishedAt": _iso_epoch(finished), "durationMs": round((finished - started) * 1000, 1),
             "postings": postings}
+
+
+def _registered_body(body: Mapping) -> bool:
+    """201 본문에 공고 id, 예정 시각, 발송 문서 수가 있는지. 없으면 등록은 됐을 수 있으므로 관리 화면에서 확인하게 한다."""
+    deliveries = body.get("deliveries")
+    return (isinstance(body.get("id"), str) and bool(body["id"]) and isinstance(body.get("scheduledAt"), str)
+            and isinstance(deliveries, int) and not isinstance(deliveries, bool) and deliveries >= 0)
 
 
 def _iso_epoch(seconds: float) -> str:

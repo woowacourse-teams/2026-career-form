@@ -23,14 +23,24 @@ CLOSES = OPENS + dt.timedelta(days=7)
 class FakeAdminApi:
     """공고 관리 API 흉내. 비밀번호 secret만 받고 같은 링크는 409로 거절한다."""
 
-    def __init__(self):
+    def __init__(self, subscriptions=0, registered_body=None):
         self.requests = []
         self.links = {}
+        self.subscriptions = subscriptions
+        self.registered_body = registered_body
         api = self
 
         class Handler(BaseHTTPRequestHandler):
             def log_message(self, format, *args):
                 return
+
+            def do_GET(self):
+                api.requests.append({"path": self.path, "headers": dict(self.headers), "body": None})
+                if self.headers.get("Authorization") != basic_authorization("secret"):
+                    return self.reply(401, {"error": "UNAUTHORIZED"})
+                if not self.path.startswith("/api/v1/notifications/admin/summary?from="):
+                    return self.reply(404, {"error": "NOT_FOUND"})
+                self.reply(200, {"postings": 0, "subscriptions": api.subscriptions, "roleSelectedSubscriptions": 0})
 
             def do_POST(self):
                 body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
@@ -40,6 +50,8 @@ class FakeAdminApi:
                 if body["link"] in api.links:
                     return self.reply(409, {"error": "DUPLICATE_LINK", "postingId": api.links[body["link"]]})
                 api.links[body["link"]] = f"{len(api.links) + 1:032x}"
+                if api.registered_body is not None:
+                    return self.reply(201, api.registered_body)
                 self.reply(201, {"id": api.links[body["link"]], "scheduledAt": body["opensAt"], "deliveries": 3})
 
             def reply(self, status, payload):
@@ -105,6 +117,19 @@ class RegisterTest(unittest.TestCase):
             register_all(AdminClient(self.api.url, "wrong-password"), [registration_payload("r1", 1, ("a1",), OPENS, CLOSES)])
         self.assertEqual(401, raised.exception.status)
         self.assertNotIn("wrong-password", str(raised.exception))
+
+    def test_unexpected_created_body_is_an_error(self):
+        self.api.registered_body = {"id": "abc"}
+        with self.assertRaises(RegistrationError) as raised:
+            register_all(AdminClient(self.api.url, "secret"), [registration_payload("r1", 1, ("a1",), OPENS, CLOSES)])
+        self.assertEqual((201, "UNEXPECTED_RESPONSE", 0), (raised.exception.status, raised.exception.code, len(raised.exception.registered)))
+
+    def test_summary_reads_subscription_count_with_same_authorization(self):
+        self.api.subscriptions = 7
+        result = AdminClient(self.api.url, "secret").summary(OPENS - dt.timedelta(hours=1), OPENS)
+        self.assertEqual((200, 7), (result.status, result.body["subscriptions"]))
+        self.assertIn("from=2026-11-09T09%3A02%3A00.000Z", self.api.requests[0]["path"])
+        self.assertEqual(401, AdminClient(self.api.url, "wrong").summary(OPENS - dt.timedelta(hours=1), OPENS).status)
 
     def test_client_repr_hides_password(self):
         self.assertNotIn("secret", repr(AdminClient(self.api.url, "secret")))

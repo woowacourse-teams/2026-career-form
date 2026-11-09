@@ -1,6 +1,14 @@
 import unittest
 
-from pushload.safety import ForeignSubscriptionsError, count_foreign, ensure_only_test_subscriptions, is_test_endpoint
+from pushload.markers import ENDPOINT_MARKER, TEST_ENDPOINT_PATTERN
+from pushload.safety import (
+    ForeignSubscriptionsError,
+    TargetMismatchError,
+    count_foreign,
+    ensure_only_test_subscriptions,
+    ensure_same_target,
+    is_test_endpoint,
+)
 from tests.fakes import FakeDatabase
 
 TEST_ENDPOINT = "http://mock-push:8080/fcm/send/loadtest-r1-abc"
@@ -44,6 +52,21 @@ class GuardTest(unittest.TestCase):
         database = FakeDatabase(push_subscriptions=[{"_id": "a", "endpoint": TEST_ENDPOINT}])
         ensure_only_test_subscriptions(database.push_subscriptions)
         self.assertEqual([("push_subscriptions", "find", {}, {"endpoint": 1, "_id": 0})], database.log)
+
+
+class TargetTest(unittest.TestCase):
+    def test_same_counts_pass(self):
+        ensure_same_target(3, 3)
+
+    def test_different_or_missing_counts_stop(self):
+        for api_count in (4, None, "3"):
+            with self.subTest(api_count=api_count), self.assertRaises(TargetMismatchError):
+                ensure_same_target(api_count, 3)
+
+
+class MarkerTest(unittest.TestCase):
+    def test_endpoint_pattern_matches_marker(self):
+        self.assertTrue(TEST_ENDPOINT_PATTERN.endswith(ENDPOINT_MARKER))
 
 
 if __name__ == "__main__":

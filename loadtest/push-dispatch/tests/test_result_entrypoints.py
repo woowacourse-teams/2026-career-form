@@ -9,7 +9,8 @@ from pathlib import Path
 from pushload.runfiles import parse_iso
 from pushload.webpush import new_subscriber_keys
 from tests.fakes import FakeDatabase
-from tests.test_entrypoints import URI, load_script
+from tests.scripts import load_script
+from tests.test_entrypoints import URI
 from tests.test_resources import DOCKER_LINE, PROMETHEUS
 from tests.webpush_sender import encrypt_for
 
@@ -36,7 +37,8 @@ class SummarizeRunScriptTest(unittest.TestCase):
         write_lines(self.run_dir / "subscriber-keys.jsonl", [{"id": identifier, "path": path, **subscriber.to_record()}
                                                              for path, (identifier, subscriber) in keys.items()])
         payload = json.dumps({"id": "p1", "company": "loadtest 1"}).encode()
-        write_lines(self.run_dir / "requests.jsonl", [
+        (self.run_dir / "mock").mkdir()
+        write_lines(self.run_dir / "mock" / "requests.jsonl", [
             {"receivedAt": SCHEDULED_EPOCH + 30 + offset, "respondedAt": SCHEDULED_EPOCH + 30.1 + offset, "path": path, "status": 201,
              "concurrency": 1 + offset, "retryAfter": None, "bodyBytes": 0, "body": base64.b64encode(encrypt_for(subscriber, payload)).decode()}
             for offset, (path, (_, subscriber)) in enumerate(keys.items())
@@ -65,10 +67,12 @@ class SummarizeRunScriptTest(unittest.TestCase):
         self.assertEqual(0, code, output)
         summary = json.loads((self.run_dir / "summary.json").read_text())
         self.assertEqual(("r1", "abc123"), (summary["runId"], summary["notes"]["commit"]))
-        self.assertEqual({"records": 3, "matched": 2, "undecryptable": 0, "unknownPath": 1}, summary["requests"])
+        self.assertEqual({"records": 3, "matched": 2, "undecryptable": 0, "unknownPath": 1, "invalid": 0}, summary["requests"])
         self.assertEqual((2, 0, 2), (summary["delivery"]["accepted"], summary["delivery"]["duplicates"]["extra"], summary["delivery"]["maxConcurrency"]))
         self.assertEqual((2, 0, 0), (summary["mongo"]["deliveries"]["found"], summary["mongo"]["deliveries"]["lost"], summary["mongo"]["remainingGoneSubscriptions"]))
-        self.assertEqual(2, summary["resources"]["samples"])
+        self.assertEqual((2, 1), (summary["resources"]["wholeRun"]["samples"], summary["resources"]["burst"]["samples"]))
+        self.assertEqual(summary["delivery"]["window"], summary["resources"]["burst"]["window"])
+        self.assertNotIn("goneSubscriptionIds", summary["delivery"])
         self.assertIn("| 항목 | 값 |", output)
         self.assertIn("| 수락 | 2 |", output)
         self.assertNotIn("db-password", output)
@@ -85,11 +89,17 @@ class SummarizeRunScriptTest(unittest.TestCase):
         self.assertIn("postings", output)
 
     def test_skips_malformed_lines(self):
-        with (self.run_dir / "requests.jsonl").open("a") as requests:
+        with (self.run_dir / "mock" / "requests.jsonl").open("a") as requests:
             requests.write("{broken\n")
+            requests.write(json.dumps({"path": "/fcm/send/loadtest-r1-a"}) + "\n")
+        with (self.run_dir / "resources.jsonl").open("a") as resources:
+            resources.write(json.dumps({"at": "soon"}) + "\n")
+        with (self.run_dir / "subscriber-keys.jsonl").open("a") as keys:
+            keys.write(json.dumps({"path": "/fcm/send/loadtest-r1-c"}) + "\n")
         code, output = self.run_script(["--run-dir", str(self.run_dir), "--without-mongo"], {})
         self.assertEqual(0, code, output)
-        self.assertEqual(1, json.loads((self.run_dir / "summary.json").read_text())["skippedLines"])
+        summary = json.loads((self.run_dir / "summary.json").read_text())
+        self.assertEqual((3, 1), (summary["skippedLines"], summary["requests"]["invalid"]))
 
 
 class RecordResourcesScriptTest(unittest.TestCase):

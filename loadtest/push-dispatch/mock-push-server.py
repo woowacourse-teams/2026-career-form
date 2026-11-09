@@ -24,9 +24,10 @@ def parse_args(argv: Sequence[str] | None, environ: Mapping[str, str] = os.envir
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8080)
     parser.add_argument("--log", required=True, help="요청 기록 JSONL 경로")
-    parser.add_argument("--delay-ms", type=int, default=int(environ.get("MOCK_DELAY_MS", "100")))
+    # 기본값을 문자열로 두면 argparse가 type으로 바꾸며 검사한다. 잘못된 환경변수는 사용법 오류(종료 코드 2)가 된다.
+    parser.add_argument("--delay-ms", type=int, default=environ.get("MOCK_DELAY_MS", "100"))
     parser.add_argument("--statuses", default=environ.get("MOCK_STATUSES", "201=1"))
-    parser.add_argument("--retry-after-seconds", type=int, default=int(environ.get("MOCK_RETRY_AFTER_SECONDS", "60")))
+    parser.add_argument("--retry-after-seconds", type=int, default=environ.get("MOCK_RETRY_AFTER_SECONDS", "60"))
     parser.add_argument("--seed", type=int, default=None, help="상태 선택 난수 시드")
     return parser.parse_args(argv)
 

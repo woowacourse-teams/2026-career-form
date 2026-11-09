@@ -54,6 +54,10 @@ class ComposeStaticTest(unittest.TestCase):
             with self.subTest(entry=entry):
                 self.assertTrue(entry.startswith("127.0.0.1:"))
 
+    def test_default_ports_avoid_team_admin_tunnel_ports(self):
+        defaults = [entry.split(":-")[1].split("}")[0] for entry in port_entries(text())]
+        self.assertEqual(["27018", "28081", "28080", "29091"], defaults)
+
     def test_mongodb_is_standalone_production_image_by_default(self):
         content = text()
         self.assertNotIn("replSet", content)
@@ -66,8 +70,9 @@ class ComposeStaticTest(unittest.TestCase):
         self.assertIn(f"image: ${{LOADTEST_MOCK_IMAGE:-{MOCK_IMAGE}}}", block)
         self.assertIn("- ./mock-push-server.py:/app/mock-push-server.py:ro", block)
         self.assertIn("- ./pushload:/app/pushload:ro", block)
-        self.assertRegex(block, r"source: \$\{LOADTEST_RUN_DIR:\?")
-        self.assertNotIn(".env", block.replace("# 모의 서버 코드만 읽기 전용으로 넣는다. .env.loadtest와", ""))
+        self.assertRegex(block, r"source: \$\{LOADTEST_RUN_DIR:\?[^}]*\}/mock\n")
+        self.assertIn('"--seed", "${MOCK_SEED:-441}"', block)
+        self.assertNotRegex(block, r"(?m)^\s+- \S*\.env")
         self.assertNotRegex(block, r"- \./?:")
 
     def test_backend_resources_and_build_are_variables(self):
@@ -121,7 +126,7 @@ class ComposeConfigTest(unittest.TestCase):
             with self.subTest(name=name):
                 self.assertTrue(environment.get(name) == values[name].replace("$", "$$"), f"{name} 값이 그대로 전달되지 않았습니다")
         run_mount = [volume for volume in config["services"]["mock-push"]["volumes"] if volume["target"] == "/data"][0]
-        self.assertEqual(str(ROOT / "runs" / "check"), run_mount["source"])
+        self.assertEqual(str(ROOT / "runs" / "check" / "mock"), run_mount["source"])
         self.assertEqual("2", str(config["services"]["backend"]["cpus"]).removesuffix(".0"))
 
 
