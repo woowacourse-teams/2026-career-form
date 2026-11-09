@@ -4,22 +4,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from pushload.runfiles import iso, new_run_id, parse_iso, read_run, validate_run_id, with_section, write_run
+from pushload.runfiles import iso, parse_iso, read_run, update_run, validate_run_id, with_section, write_run
 
 UTC = dt.timezone.utc
 
 
 class RunIdTest(unittest.TestCase):
-    def test_formats_utc_time_and_label(self):
-        moment = dt.datetime(2026, 11, 9, 1, 2, 3, tzinfo=UTC)
-        self.assertEqual("20261109T010203Z-s1", new_run_id(moment, "s1"))
-        self.assertEqual("20261109T010203Z-s3-restart", new_run_id(moment, " S3 restart "))
-        self.assertEqual("20261109T010203Z", new_run_id(moment))
-
-    def test_converts_local_time_to_utc(self):
-        moment = dt.datetime(2026, 11, 9, 10, 2, 3, tzinfo=dt.timezone(dt.timedelta(hours=9)))
-        self.assertEqual("20261109T010203Z", new_run_id(moment))
-
     def test_validates_run_id_characters(self):
         self.assertEqual("ok-1", validate_run_id("ok-1"))
         for value in ("", "bad/1", "bad 1", "a" * 41, None):
@@ -46,6 +36,14 @@ class RunFileTest(unittest.TestCase):
             self.assertEqual(["run.json"], sorted(item.name for item in path.iterdir()))
             self.assertIn("한글", (path / "run.json").read_text(encoding="utf-8"))
             self.assertEqual("r1", json.loads((path / "run.json").read_text())["runId"])
+
+    def test_update_run_replaces_one_section_and_keeps_others(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "r1"
+            update_run(path, "r1", "subscriptions", {"count": 3})
+            update_run(path, "r1", "postings", {"count": 1})
+            update_run(path, "r1", "postings", {"count": 2})
+            self.assertEqual({"runId": "r1", "subscriptions": {"count": 3}, "postings": {"count": 2}}, read_run(path))
 
 
 class IsoTest(unittest.TestCase):

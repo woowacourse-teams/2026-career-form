@@ -1,7 +1,7 @@
 import unittest
 from unittest import mock
 
-from pushload import mongo_report
+from pushload import batches, mongo_report
 from tests.fakes import FakeDatabase
 
 
@@ -55,7 +55,7 @@ class StorageReportTest(unittest.TestCase):
 class RemainingGoneTest(unittest.TestCase):
     def test_counts_gone_subscriptions_still_stored(self):
         database = FakeDatabase(push_subscriptions=[{"_id": "s1"}, {"_id": "s2"}, {"_id": "s3"}])
-        with mock.patch.object(mongo_report, "BATCH_SIZE", 1):
+        with mock.patch.object(batches, "BATCH_SIZE", 1):
             self.assertEqual(2, mongo_report.remaining_gone(database, ["s1", "s3", "s9"]))
         self.assertEqual(0, mongo_report.remaining_gone(database, []))
 

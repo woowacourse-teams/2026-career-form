@@ -7,13 +7,7 @@ _MISSING = object()
 
 
 def matches(document, query):
-    for key, condition in (query or {}).items():
-        if key == "$or":
-            if not any(matches(document, part) for part in condition):
-                return False
-        elif not _match_value(document.get(key, _MISSING), condition):
-            return False
-    return True
+    return all(_match_value(document.get(key, _MISSING), condition) for key, condition in (query or {}).items())
 
 
 def _match_value(value, condition):
@@ -29,8 +23,6 @@ _OPERATORS = {
     "$regex": lambda value, pattern: isinstance(value, str) and re.search(pattern, value) is not None,
     "$in": lambda value, values: value in values,
     "$nin": lambda value, values: value not in values,
-    "$exists": lambda value, expected: (value is not _MISSING) == expected,
-    "$ne": lambda value, other: value != other,
 }
 
 
@@ -55,10 +47,6 @@ class FakeCollection:
     def find(self, query=None, projection=None):
         self.log.append((self.name, "find", query, projection))
         return [self._project(document, projection) for document in self.documents if matches(document, query)]
-
-    def find_one(self, query=None, projection=None):
-        found = self.find(query, projection)
-        return found[0] if found else None
 
     def count_documents(self, query):
         self.log.append((self.name, "count", query, None))

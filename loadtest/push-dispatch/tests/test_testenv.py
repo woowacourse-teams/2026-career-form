@@ -1,7 +1,6 @@
 import base64
 import contextlib
 import hashlib
-import importlib.util
 import io
 import os
 import stat
@@ -15,15 +14,9 @@ from cryptography.hazmat.primitives.asymmetric import ec
 
 from pushload import testenv
 from pushload.webpush import b64url_decode
+from tests.scripts import load_script
 
 ROOT = Path(__file__).resolve().parents[1]
-
-
-def load_script(name):
-    spec = importlib.util.spec_from_file_location(name.replace("-", "_"), ROOT / f"{name}.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 def read_env(path):

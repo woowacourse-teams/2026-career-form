@@ -11,6 +11,7 @@ from pathlib import Path
 
 RUN_FILE = "run.json"
 KEYS_FILE = "subscriber-keys.jsonl"
+MOCK_DIR = "mock"
 REQUESTS_FILE = "requests.jsonl"
 RESOURCES_FILE = "resources.jsonl"
 SUMMARY_FILE = "summary.json"
@@ -23,12 +24,6 @@ def validate_run_id(value: object) -> str:
     if not isinstance(value, str) or RUN_ID_PATTERN.match(value) is None:
         raise ValueError("실행 id는 영문, 숫자, 하이픈으로 된 40자 이내여야 합니다")
     return value
-
-
-def new_run_id(now: dt.datetime, label: str = "") -> str:
-    stamp = now.astimezone(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    slug = re.sub(r"[^a-z0-9]+", "-", label.strip().lower()).strip("-")
-    return validate_run_id(f"{stamp}-{slug}" if slug else stamp)
 
 
 def read_run(run_dir: Path) -> dict:
@@ -46,6 +41,11 @@ def write_run(run_dir: Path, run: Mapping) -> None:
     temporary = run_dir / f".{RUN_FILE}.tmp"
     temporary.write_text(json.dumps(run, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     os.replace(temporary, run_dir / RUN_FILE)
+
+
+def update_run(run_dir: Path, run_id: str, name: str, value: object) -> None:
+    """run.json의 한 섹션만 바꾼다. 다른 섹션은 그대로 둔다."""
+    write_run(run_dir, with_section({**read_run(run_dir), "runId": run_id}, name, value))
 
 
 def iso(moment: dt.datetime) -> str:

@@ -5,8 +5,9 @@ from __future__ import annotations
 from collections import Counter
 from collections.abc import Sequence
 
+from pushload.batches import chunks
+
 FINISHED_STATUSES = frozenset(("ACCEPTED", "ABANDONED"))
-BATCH_SIZE = 10_000
 STORAGE_FIELDS = ("count", "size", "avgObjSize", "storageSize", "totalIndexSize")
 
 
@@ -45,6 +46,4 @@ def storage_report(db) -> dict:
 
 def remaining_gone(db, subscription_ids: Sequence[str]) -> int:
     """404·410을 받았는데 아직 남아 있는 구독 수. 백엔드는 이 구독을 지워야 한다."""
-    ids = list(subscription_ids)
-    return sum(db.push_subscriptions.count_documents({"_id": {"$in": ids[start:start + BATCH_SIZE]}})
-               for start in range(0, len(ids), BATCH_SIZE))
+    return sum(db.push_subscriptions.count_documents({"_id": {"$in": chunk}}) for chunk in chunks(subscription_ids))

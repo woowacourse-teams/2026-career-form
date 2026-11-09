@@ -1,7 +1,7 @@
 import unittest
 from unittest import mock
 
-from pushload import cleanup
+from pushload import batches, cleanup
 from tests.fakes import FakeDatabase
 
 TEST_A = {"_id": "t1", "endpoint": "http://mock-push:8080/fcm/send/loadtest-r1-a"}
@@ -45,7 +45,7 @@ class CleanupTest(unittest.TestCase):
         self.assertEqual(["push_deliveries", "job_postings", "push_subscriptions"], sorted(set(order), key=order.index))
 
     def test_handles_identifier_lists_in_batches(self):
-        with mock.patch.object(cleanup, "BATCH_SIZE", 1):
+        with mock.patch.object(batches, "BATCH_SIZE", 1):
             db = database()
             target = cleanup.plan(db)
             self.assertEqual(3, target.deliveries)

@@ -10,10 +10,10 @@ import string
 from collections.abc import Callable, Iterator, Sequence
 from urllib.parse import urlsplit
 
+from pushload.markers import ENDPOINT_MARKER
 from pushload.runfiles import validate_run_id
 from pushload.webpush import SubscriberKeys, b64url_encode, new_subscriber_keys
 
-ENDPOINT_MARKER = "/fcm/send/loadtest-"
 SUBSCRIPTION_CLASS = "com.careerform.notification.PushSubscription"
 DEFAULT_ENDPOINT_LENGTH = 190
 MIN_TOKEN_LENGTH = 16
@@ -71,12 +71,11 @@ def build_subscription(subscription_id: str, endpoint: str, keys: SubscriberKeys
 
 
 def generate(count: int, *, mock_base: str, run_id: str, codes: Sequence[str], unselected_ratio: float, endpoint_length: int,
-             rng: random.Random, now: dt.datetime, id_factory: Callable[[], str] = new_subscription_id,
-             key_factory: Callable[[], SubscriberKeys] = new_subscriber_keys) -> Iterator[tuple[dict, dict]]:
+             rng: random.Random, now: dt.datetime, id_factory: Callable[[], str] = new_subscription_id) -> Iterator[tuple[dict, dict]]:
     """(구독 문서, 키 기록) 쌍을 만든다. 직무 배정은 rng만 쓰므로 같은 시드면 실행 id와 상관없이 같다."""
     for _ in range(count):
         subscription_id = id_factory()
-        keys = key_factory()
+        keys = new_subscriber_keys()
         endpoint = marked_endpoint(mock_base, run_id, length=endpoint_length)
         document = build_subscription(subscription_id, endpoint, keys, choose_roles(rng, codes, unselected_ratio), now)
         yield document, {"id": subscription_id, "path": urlsplit(endpoint).path, **keys.to_record()}
