@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 /**
  * 공고 등록·삭제와 발송 예약. 등록 응답은 저장과 예약 완료를 뜻하며 FCM 수락을 기다리지 않는다.
  * 대기 발송은 공고 직무와 겹치는 직무를 고른 구독과 받을 직무를 고르지 않은 구독에 만든다.
+ * 같은 링크 재등록은 409로 거절하되 마감 전인 기존 공고의 빠진 발송을 채운다.
  */
 public final class JobPostingService {
     static final int MAX_COMPANY_LENGTH = 80;
@@ -70,15 +71,33 @@ public final class JobPostingService {
         var now = clock.instant();
         var posting = validate(draft, now);
         var existing = store.findPostingByLink(posting.link());
-        if (existing.isPresent()) { return new Duplicate(existing.get().id()); }
+        if (existing.isPresent()) {
+            refill(existing.get(), now);
+            return new Duplicate(existing.get().id());
+        }
         if (!store.insertPosting(posting)) {
             return new Duplicate(store.findPostingByLink(posting.link()).map(JobPosting::id).orElse("UNKNOWN"));
         }
-        var deliveries = store.subscriptionIdsForRoles(posting.roles()).stream()
-            .map(subscriptionId -> PushDelivery.pending(Identifiers.random(), posting.id(), subscriptionId, posting.scheduledAt())).toList();
+        var deliveries = pending(posting, store.subscriptionIdsForRoles(posting.roles()));
         store.insertDeliveries(deliveries);
         log.info("POSTING_REGISTERED postingId={} roles={} deliveries={}", posting.id(), posting.roles().size(), deliveries.size());
         return new Registered(posting, deliveries.size());
+    }
+
+    /**
+     * 같은 링크 재등록: 마감 전인 기존 공고에 첫 등록 시각까지 가입한 대상 구독의 빠진 대기 발송을 기존 예정 시각으로 채운다.
+     * 대상은 기존 공고 직무로 정하고(레거시는 전원) 요청의 회사·직무·기간은 쓰지 않으며, 이미 있는 공고 × 구독 쌍은 저장소가 건너뛴다.
+     */
+    private void refill(JobPosting existing, Instant now) {
+        if (!now.isBefore(existing.closesAt())) { return; }
+        var targets = store.subscriptionIdsForRolesRegisteredBy(existing.roles(), existing.registeredAt());
+        store.insertDeliveries(pending(existing, targets));
+        log.info("POSTING_DUPLICATE_REFILL postingId={} targets={}", existing.id(), targets.size());
+    }
+
+    private static List<PushDelivery> pending(JobPosting posting, List<String> subscriptionIds) {
+        return subscriptionIds.stream()
+            .map(subscriptionId -> PushDelivery.pending(Identifiers.random(), posting.id(), subscriptionId, posting.scheduledAt())).toList();
     }
 
     /** 공고를 지우고 아직 대기인 발송만 취소한다. 수락·포기·발송 중 기록은 남는다. */
