@@ -44,6 +44,13 @@ class FakeCollection:
         self.name = name
         self.documents = [dict(document) for document in documents]
         self.log = log
+        self.storage_stats = None
+
+    def aggregate(self, pipeline):
+        self.log.append((self.name, "aggregate", pipeline, None))
+        if pipeline == [{"$collStats": {"storageStats": {}}}]:
+            return iter([{"storageStats": self.storage_stats or {"count": len(self.documents), "size": 0, "storageSize": 0, "totalIndexSize": 0}}])
+        raise NotImplementedError(pipeline)
 
     def find(self, query=None, projection=None):
         self.log.append((self.name, "find", query, projection))
