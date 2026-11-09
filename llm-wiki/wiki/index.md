@@ -115,4 +115,5 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [범용 범주 안 JEV 매칭 누락 원인과 의미 근거 보강](topics/generic-category-semantic-matching.md) | 라벨 손실 보강, 등급·점수 계약 보존과 합성 반례 출처 | 2026-10-19 |
 | [분석 응답과 품질 관측의 비동기 분리](topics/async-quality-observation.md) | 메모리 등록, 제한 큐, 약 1분 집계와 유실 허용 경계 | 2026-10-20 |
 | [공고 구독 알림](topics/job-posting-notifications.md) | 접수 가능 시점 1회 Web Push, FCM 수락까지 재시도하는 선점 발송기, 큐를 두지 않은 근거와 재검토 조건, 직무 분류 정본과 공고 직무 필수, 구독별 받을 직무와 대상 발송·재검사, 미선택 구독 상시 발송과 전환 설정 제거, Mongo 계약 테스트 실행 조건, 같은 링크 재등록의 빠진 발송 채우기와 등록 복구 절차 | 2026-11-09 |
+| [공고 알림 발송 시험](topics/push-dispatch-load-test.md) | SQS 전환 전후 비교 측정 방식, 시험 표지와 안전장치, 발송 경로의 endpoint 검사 범위, 전 구조의 재시작 동작, 팀 측정 계획 대비 조정 | 2026-11-09 |
 | [도로명주소 검색 프록시](topics/road-address-proxy.md) | 승인키 서버 보관, 검색어 개인정보 처리와 POST 프록시, 제안됨 ADR | 2026-11-04 |
