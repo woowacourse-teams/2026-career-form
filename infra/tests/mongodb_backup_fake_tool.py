@@ -55,6 +55,8 @@ def failing(scenario: dict, name: str) -> bool:
 
 
 def docker(home: Path, scenario: dict, args: list) -> int:
+    if args[0] == "container":
+        args = args[1:]
     command = args[0]
     if command == "inspect":
         return inspect(home, scenario, args)
@@ -184,6 +186,9 @@ def mongodump(scenario: dict, args: list) -> int:
 
 def start_temporary(home: Path, scenario: dict, args: list) -> int:
     name = option_values(args, "--name")[0]
+    if name in containers(home, scenario):
+        sys.stderr.write(f"Error: Conflict. The container name \"/{name}\" is already in use.\n")
+        return 125
     labels = dict(value.split("=", 1) for value in option_values(args, "--label"))
     save_container(home, name, {"image": args[-1], "image_id": "sha256:temporary", "running": True,
                                 "labels": labels, "restored": {}})
@@ -215,7 +220,8 @@ def execute(home: Path, scenario: dict, args: list) -> int:
             "checks": override.get("checks", scenario["databases"].get(payload["database"], {}).get("checks")),
         }
         save_container(home, name, container)
-        sys.stderr.write(f"{sum(payload['collections'].values())} document(s) restored successfully.\n")
+        sys.stderr.write(f"{sum(payload['collections'].values())} document(s) restored successfully. "
+                         "0 document(s) failed to restore.\n")
         return 0
     if command[0] == "mongosh":
         script = command[command.index("--eval") + 1]
