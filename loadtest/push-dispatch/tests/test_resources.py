@@ -85,7 +85,21 @@ class CollectSampleTest(unittest.TestCase):
 
         sample = collect_sample(failing_docker, failing_metrics, ["x"], 5.0)
         self.assertEqual(({}, []), (sample["containers"], sample["metrics"]))
-        self.assertEqual(["docker: CalledProcessError", "metrics: OSError"], sample["errors"])
+        self.assertEqual(["metrics: OSError", "docker: CalledProcessError"], sample["errors"])
+
+    def test_reads_metrics_before_slow_docker_stats(self):
+        calls = []
+
+        def docker(containers):
+            calls.append("docker")
+            return DOCKER_LINE
+
+        def metrics():
+            calls.append("metrics")
+            return PROMETHEUS
+
+        collect_sample(docker, metrics, ["cf-push-loadtest-backend-1"], 1.0)
+        self.assertEqual(["metrics", "docker"], calls)
 
 
 def sample(at, cpu, memory, cycles, cycle_sum, cycle_max, gc_count, gc_sum, heap, accepted):

@@ -73,17 +73,20 @@ def _parse_sample(line: str) -> tuple[str, dict, float]:
 
 
 def collect_sample(run_docker: Callable[[Sequence[str]], str], fetch_metrics: Callable[[], str], containers: Sequence[str], now: float) -> dict:
-    """한 시점의 기록. 한쪽이 실패해도 멈추지 않고 errors에 종류만 남긴다."""
+    """한 시점의 기록. 한쪽이 실패해도 멈추지 않고 errors에 종류만 남긴다.
+
+    지표는 바로 읽혀 at과 시각이 맞으므로 먼저 읽는다. docker stats는 1~2초 걸려 그만큼 늦은 값이다.
+    """
     sample = {"at": now, "containers": {}, "metrics": [], "errors": []}
+    try:
+        sample["metrics"] = parse_prometheus(fetch_metrics(), DEFAULT_FAMILIES)
+    except (OSError, ValueError) as error:
+        sample["errors"].append(f"metrics: {type(error).__name__}")
     try:
         stats = [parse_docker_stats(line) for line in run_docker(containers).splitlines() if line.strip()]
         sample["containers"] = {item["name"]: item for item in stats}
     except (OSError, subprocess.SubprocessError, ValueError, KeyError) as error:
         sample["errors"].append(f"docker: {type(error).__name__}")
-    try:
-        sample["metrics"] = parse_prometheus(fetch_metrics(), DEFAULT_FAMILIES)
-    except (OSError, ValueError) as error:
-        sample["errors"].append(f"metrics: {type(error).__name__}")
     return sample
 
 
