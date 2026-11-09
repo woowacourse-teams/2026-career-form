@@ -1,6 +1,6 @@
 """실행 하나의 결과를 집계해 summary.json과 Markdown 표로 낸다.
 
-입력: 실행 폴더의 run.json, subscriber-keys.jsonl, requests.jsonl(모의 서버 기록), resources.jsonl(자원 기록)과 MongoDB.
+입력: 실행 폴더의 run.json, subscriber-keys.jsonl, mock/requests.jsonl(모의 서버 기록), resources.jsonl(자원 기록)과 MongoDB.
 모의 서버가 받은 암호문을 시험 구독의 비공개키로 풀어 공고 id를 읽는다. 다른 실행의 요청은 경로로 걸러낸다.
 
 환경변수: LOADTEST_MONGODB_URI(--without-mongo면 필요 없음)
@@ -20,9 +20,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from pushload import cli, runfiles  # noqa: E402
-from pushload.delivery import Subscriber  # noqa: E402
+from pushload.records import load_subscribers, read_jsonl, valid_samples  # noqa: E402
 from pushload.report import build_summary, render_table  # noqa: E402
-from pushload.webpush import SubscriberKeys  # noqa: E402
 
 
 def parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
@@ -50,45 +49,13 @@ def main(argv: Sequence[str] | None = None, environ: Mapping[str, str] = os.envi
     records, skipped_requests = read_jsonl(Path(args.requests) if args.requests else run_dir / runfiles.MOCK_DIR / runfiles.REQUESTS_FILE)
     samples, skipped_samples = read_jsonl(Path(args.resources) if args.resources else run_dir / runfiles.RESOURCES_FILE)
     subscribers, invalid_keys = load_subscribers(key_records)
-    valid_samples = [sample for sample in samples if _valid_sample(sample)]
-    skipped = skipped_keys + invalid_keys + skipped_requests + skipped_samples + len(samples) - len(valid_samples)
-    summary = build_summary(run, subscribers, records, valid_samples, database, skipped, dt.datetime.now(dt.timezone.utc))
+    usable_samples, invalid_samples = valid_samples(samples)
+    skipped = skipped_keys + invalid_keys + skipped_requests + skipped_samples + invalid_samples
+    summary = build_summary(run, subscribers, records, usable_samples, database, skipped, dt.datetime.now(dt.timezone.utc))
     (run_dir / runfiles.SUMMARY_FILE).write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(render_table(summary))
     print(f"\n요약 파일: {run_dir / runfiles.SUMMARY_FILE}")
     return cli.EXIT_OK
-
-
-def load_subscribers(key_records: Sequence[object]) -> tuple[dict[str, Subscriber], int]:
-    """키 기록을 요청 경로로 찾는 구독으로 바꾼다. 모양이 틀린 기록은 건너뛰고 수를 센다."""
-    subscribers: dict[str, Subscriber] = {}
-    invalid = 0
-    for record in key_records:
-        try:
-            subscribers[record["path"]] = Subscriber(record["id"], SubscriberKeys.from_record(record))
-        except (KeyError, TypeError, ValueError):
-            invalid += 1
-    return subscribers, invalid
-
-
-def _valid_sample(sample: object) -> bool:
-    return (isinstance(sample, dict) and isinstance(sample.get("at"), (int, float)) and isinstance(sample.get("containers", {}), dict)
-            and isinstance(sample.get("metrics", []), list) and all(isinstance(series, list) and len(series) == 3 for series in sample.get("metrics", [])))
-
-
-def read_jsonl(path: Path) -> tuple[list[dict], int]:
-    """JSONL을 읽는다. 파일이 없으면 빈 목록, 깨진 줄(쓰는 중 끊긴 마지막 줄 등)은 건너뛰고 수를 센다."""
-    if not path.exists():
-        return [], 0
-    records, skipped = [], 0
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if not line.strip():
-            continue
-        try:
-            records.append(json.loads(line))
-        except ValueError:
-            skipped += 1
-    return records, skipped
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 """공고 알림 시험용 모의 푸시 서버를 띄운다. 표준 라이브러리만 쓴다.
 
-예: python mock-push-server.py --host 0.0.0.0 --port 8080 --log runs/<id>/requests.jsonl
+예: python mock-push-server.py --host 0.0.0.0 --port 8080 --log runs/<id>/mock/requests.jsonl
 기본값은 환경변수 MOCK_DELAY_MS(100), MOCK_STATUSES(201=1), MOCK_RETRY_AFTER_SECONDS(60)에서 읽는다.
 """
 
@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import argparse
 import os
-import random
 import signal
 import sys
 from collections.abc import Mapping, Sequence
@@ -44,7 +43,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"설정 오류: {error}", file=sys.stderr)
         return 2
     log = RequestLog(args.log)
-    server = build_server(args.host, args.port, MockState(config), log, random.Random(args.seed))
+    server = build_server(args.host, args.port, MockState(config), log, args.seed)
     signal.signal(signal.SIGTERM, _stop)
     print(f"모의 푸시 서버 시작: {args.host}:{server.server_address[1]} 지연 {config.delay_ms}ms 상태 {config.statuses.text}", flush=True)
     try:

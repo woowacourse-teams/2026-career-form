@@ -1,6 +1,10 @@
 import unittest
 
-from pushload.markers import ENDPOINT_MARKER, TEST_ENDPOINT_PATTERN
+import re
+
+from pushload.markers import TEST_ENDPOINT_PATTERN, TEST_LINK_PATTERN
+from pushload.postings import posting_link
+from pushload.subscriptions import marked_endpoint
 from pushload.safety import (
     ForeignSubscriptionsError,
     TargetMismatchError,
@@ -8,6 +12,7 @@ from pushload.safety import (
     ensure_only_test_subscriptions,
     ensure_same_target,
     is_test_endpoint,
+    subscription_counts,
 )
 from tests.fakes import FakeDatabase
 
@@ -56,17 +61,29 @@ class GuardTest(unittest.TestCase):
 
 class TargetTest(unittest.TestCase):
     def test_same_counts_pass(self):
-        ensure_same_target(3, 3)
+        ensure_same_target((3, 1), (3, 1))
 
-    def test_different_or_missing_counts_stop(self):
-        for api_count in (4, None, "3"):
-            with self.subTest(api_count=api_count), self.assertRaises(TargetMismatchError):
-                ensure_same_target(api_count, 3)
+    def test_different_counts_stop_with_both_pairs_in_message(self):
+        for api_counts in ((4, 1), (3, 0)):
+            with self.subTest(api_counts=api_counts), self.assertRaises(TargetMismatchError) as raised:
+                ensure_same_target(api_counts, (3, 1))
+            self.assertIn("전체 3, 직무 선택 1", str(raised.exception))
+
+    def test_counts_all_and_role_selected_subscriptions(self):
+        database = FakeDatabase(push_subscriptions=[{"_id": "a", "roles": ["x"]}, {"_id": "b", "roles": []}, {"_id": "c"}])
+        self.assertEqual((3, 1), subscription_counts(database.push_subscriptions))
 
 
 class MarkerTest(unittest.TestCase):
-    def test_endpoint_pattern_matches_marker(self):
-        self.assertTrue(TEST_ENDPOINT_PATTERN.endswith(ENDPOINT_MARKER))
+    def test_endpoint_pattern_matches_generated_endpoints_only(self):
+        self.assertIsNotNone(re.match(TEST_ENDPOINT_PATTERN, marked_endpoint("http://mock-push:8080", "r1")))
+        self.assertIsNone(re.match(TEST_ENDPOINT_PATTERN, "http://mock-push:8080/fcm/send/real-token"))
+
+    def test_link_pattern_matches_generated_links_only(self):
+        self.assertIsNotNone(re.match(TEST_LINK_PATTERN, posting_link("r1", 1)))
+        for link in ("https://loadtest.invalid.example.com/r1/1", "https://careers.example.com/loadtest.invalid/1"):
+            with self.subTest(link=link):
+                self.assertIsNone(re.match(TEST_LINK_PATTERN, link))
 
 
 if __name__ == "__main__":

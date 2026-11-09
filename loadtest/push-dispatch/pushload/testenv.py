@@ -1,6 +1,7 @@
 """시험 스택 설정 파일(.env.loadtest). 시험용 VAPID 키 쌍, 임시 관리 비밀번호와 그 PBKDF2 검증 문자열을 만든다.
 
-값은 작은따옴표로 감싸 `docker compose --env-file`과 셸(`set -a; . ./.env.loadtest`)이 모두 글자 그대로 읽게 한다.
+값은 작은따옴표로 감싸 `docker compose --env-file`과 셸이 모두 글자 그대로 읽게 한다. 셸에는 스크립트가 쓰는
+`LOADTEST_*` 값만 내보낸다(`set -a; . <(grep '^LOADTEST_' .env.loadtest); set +a`).
 검증 문자열에 `$`가 들어 있어 따옴표 없이 두면 compose가 변수로 해석한다.
 """
 

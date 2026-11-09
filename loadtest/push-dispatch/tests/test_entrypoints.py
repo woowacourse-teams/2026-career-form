@@ -3,8 +3,12 @@ import io
 import json
 import stat
 import tempfile
+import threading
 import unittest
 from pathlib import Path
+from unittest import mock
+
+from pushload.mock_server import MockState, RequestLog, build_server, make_config
 
 from tests.fakes import FakeDatabase
 from tests.scripts import load_script
@@ -93,10 +97,11 @@ class RegisterPostingsScriptTest(unittest.TestCase):
         self.assertNotIn("secret", (self.run_dir / "run.json").read_text())
 
     def test_warns_when_registration_ends_after_scheduled_time(self):
-        argv = ["--run-dir", str(self.run_dir), "--api", self.api.url, "--opens-in-seconds", "0"]
+        argv = ["--run-dir", str(self.run_dir), "--api", self.api.url, "--opens-in-seconds", "0", "--mock-url", "http://127.0.0.1:9"]
         code, output = run(self.script, argv, self.environ, FakeDatabase(push_subscriptions=[TEST_SUBSCRIPTION]))
         self.assertEqual(0, code, output)
         self.assertIn("늦게", output)
+        self.assertIn("모의 서버 설정을 읽지 못해", output)
         self.assertEqual(1, len(json.loads((self.run_dir / "run.json").read_text())["postings"]["warnings"]))
 
     def test_stops_before_any_request_when_foreign_subscriptions_exist(self):
@@ -110,9 +115,45 @@ class RegisterPostingsScriptTest(unittest.TestCase):
         argv = ["--run-dir", str(self.run_dir), "--api", self.api.url]
         code, output = run(self.script, argv, self.environ, FakeDatabase(push_subscriptions=[TEST_SUBSCRIPTION, dict(TEST_SUBSCRIPTION, _id="t2")]))
         self.assertEqual(3, code, output)
-        self.assertIn("구독 수(1)", output)
+        self.assertIn("전체 1, 직무 선택 0", output)
         self.assertEqual([], [request for request in self.api.requests if request["body"] is not None])
         self.assertFalse((self.run_dir / "run.json").exists())
+
+    def test_summary_without_counts_is_reported_as_unexpected_response(self):
+        self.api.summary_body = {"subscriptions": 1}
+        argv = ["--run-dir", str(self.run_dir), "--api", self.api.url]
+        code, output = run(self.script, argv, self.environ, FakeDatabase(push_subscriptions=[TEST_SUBSCRIPTION]))
+        self.assertEqual(1, code)
+        self.assertIn("구독 수 없음", output)
+        self.assertEqual([], [request for request in self.api.requests if request["body"] is not None])
+
+    def test_unreachable_api_stops_without_registering(self):
+        argv = ["--run-dir", str(self.run_dir), "--api", "http://127.0.0.1:9"]
+        code, output = run(self.script, argv, self.environ, FakeDatabase(push_subscriptions=[TEST_SUBSCRIPTION]))
+        self.assertEqual(1, code)
+        self.assertIn("연결하지 못했습니다", output)
+        self.assertFalse((self.run_dir / "run.json").exists())
+
+    def test_records_mock_settings_and_warns_when_unreadable(self):
+        with tempfile.TemporaryDirectory() as directory:
+            log = RequestLog(str(Path(directory) / "requests.jsonl"))
+            server = build_server("127.0.0.1", 0, MockState(make_config(0, "201=1", 60)), log, seed=7)
+            threading.Thread(target=server.serve_forever, daemon=True).start()
+            try:
+                argv = ["--run-dir", str(self.run_dir), "--api", self.api.url, "--mock-url", f"http://127.0.0.1:{server.server_address[1]}"]
+                code, output = run(self.script, argv, self.environ, FakeDatabase(push_subscriptions=[TEST_SUBSCRIPTION]))
+            finally:
+                server.shutdown()
+                server.server_close()
+                log.close()
+        self.assertEqual(0, code, output)
+        postings = json.loads((self.run_dir / "run.json").read_text())["postings"]
+        self.assertEqual({"delayMs": 0, "statuses": "201=1", "retryAfterSeconds": 60, "seed": 7}, postings["mock"])
+        self.assertNotIn("모의 서버 설정을 읽지 못해", output)
+
+    def test_missing_git_records_null_commit(self):
+        with mock.patch.object(self.script.subprocess, "run", side_effect=OSError("git missing")):
+            self.assertEqual({"commit": None, "dirty": None}, self.script._repository())
 
     def test_wrong_password_stops_at_target_check_without_registering(self):
         argv = ["--run-dir", str(self.run_dir), "--api", self.api.url]

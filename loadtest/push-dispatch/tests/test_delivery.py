@@ -72,15 +72,26 @@ class DeliveryMetricsTest(unittest.TestCase):
     def test_reports_sending_window_for_resource_summary(self):
         self.assertEqual({"from": 1010.0, "to": 1300.1}, self.metrics["window"])
 
+    def test_window_ends_at_last_response_even_if_it_failed(self):
+        requests = [request("s1", "p1", 1010.0, 201, 1010.1), request("s1", "p1", 1100.0, 503, 1100.2)]
+        self.assertEqual({"from": 1010.0, "to": 1100.2}, delivery_metrics(requests, SCHEDULED)["window"])
+
+    def test_gap_of_exactly_two_seconds_is_listed_and_shorter_is_not(self):
+        requests = [request("s1", "p1", 1000.0, 201, 1000.0), request("s2", "p1", 1002.0, 201, 1002.0),
+                    request("s3", "p1", 1003.999, 201, 1003.999)]
+        self.assertEqual([2.0], [gap["seconds"] for gap in delivery_metrics(requests, SCHEDULED)["acceptanceGaps"]])
+
     def test_reports_retry_correctness(self):
         self.assertEqual({"beforeRetryAfter": 1, "afterGone": 1, "afterInvalid": 1}, self.metrics["retry"])
         self.assertEqual(["s4"], self.metrics["goneSubscriptionIds"])
 
     def test_handles_runs_without_acceptance(self):
         metrics = delivery_metrics([request("s1", "p1", 1010.0, 503)], SCHEDULED)
-        self.assertEqual((0, None, None, None, None, []), (metrics["accepted"], metrics["burst"]["scheduledToLastAcceptedSeconds"],
-                                                           metrics["latencyMs"]["p50"], metrics["longestAcceptanceGap"]["seconds"],
-                                                           metrics["window"], metrics["acceptanceGaps"]))
+        self.assertEqual((0, None, None, None, []), (metrics["accepted"], metrics["burst"]["scheduledToLastAcceptedSeconds"],
+                                                     metrics["latencyMs"]["p50"], metrics["longestAcceptanceGap"]["seconds"],
+                                                     metrics["acceptanceGaps"]))
+        self.assertEqual({"from": 1010.0, "to": 1010.1}, metrics["window"])
+        self.assertIsNone(delivery_metrics([], SCHEDULED)["window"])
 
 
 class DecodeRequestsTest(unittest.TestCase):

@@ -6,7 +6,7 @@
 쓰는 법(loadtest/push-dispatch/에서):
   python make-test-env.py
   LOADTEST_RUN_DIR=runs/<실행 id> docker compose --env-file .env.loadtest up -d --build --wait
-  set -a; . ./.env.loadtest; set +a    # 시험 스크립트가 LOADTEST_* 환경변수를 읽도록
+  set -a; . <(grep '^LOADTEST_' .env.loadtest); set +a    # 시험 스크립트에 필요한 LOADTEST_* 값만 셸에 내보낸다
 """
 
 from __future__ import annotations

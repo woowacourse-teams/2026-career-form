@@ -6,14 +6,14 @@ import datetime as dt
 from collections.abc import Mapping, Sequence
 
 from pushload import mongo_report
-from pushload.delivery import decode_requests, delivery_metrics
+from pushload.delivery import MAX_GAPS, MIN_GAP_SECONDS, decode_requests, delivery_metrics
 from pushload.resources import summarize_resources
-from pushload.runfiles import iso, parse_iso
+from pushload.runfiles import iso_epoch, parse_iso
 from pushload.webpush import decrypt_aes128gcm
 
 
 def build_summary(run: Mapping, subscribers: Mapping, records: Sequence[Mapping], samples: Sequence[Mapping], database,
-                  skipped_lines: int, now: dt.datetime) -> dict:
+                  skipped_records: int, now: dt.datetime) -> dict:
     postings = run["postings"]
     items = postings["items"]
     scheduled_at = {item["id"]: parse_iso(item["scheduledAt"]).timestamp() for item in items}
@@ -23,16 +23,18 @@ def build_summary(run: Mapping, subscribers: Mapping, records: Sequence[Mapping]
     delivery = {key: value for key, value in metrics.items() if key != "goneSubscriptionIds"}
     return {
         "runId": run.get("runId"),
-        "generatedAt": iso(now),
+        "generatedAt": iso_epoch(now.timestamp()),
+        "repository": postings.get("repository"),
+        "mock": postings.get("mock"),
         "notes": postings.get("notes", {}),
         "subscriptions": run.get("subscriptions"),
         "postings": {"count": len(items), "scheduledAt": items[0]["scheduledAt"], "expectedDeliveries": sum(item["deliveries"] for item in items),
                      "registration": postings.get("registration"), "warnings": postings.get("warnings", [])},
         "requests": request_stats,
-        "skippedLines": skipped_lines,
+        "skippedRecords": skipped_records,
         "delivery": {**delivery, "goneSubscriptions": len(gone)},
         "mongo": _mongo(database, list(scheduled_at), sum(item["deliveries"] for item in items), gone) if database is not None else None,
-        "resources": {"burst": summarize_resources(samples, delivery["window"]) if delivery["window"] else None,
+        "resources": {"sending": summarize_resources(samples, delivery["window"]) if delivery["window"] else None,
                       "wholeRun": summarize_resources(samples)},
     }
 
@@ -44,7 +46,7 @@ def _mongo(database, posting_ids: Sequence[str], expected: int, gone: Sequence[s
 
 def render_table(summary: Mapping) -> str:
     rows = [("항목", "값"), ("---", "---")] + _run_rows(summary) + _delivery_rows(summary["delivery"]) + _mongo_rows(summary["mongo"]) \
-        + _resource_rows(summary["resources"]["burst"] or summary["resources"]["wholeRun"]) + _input_rows(summary)
+        + _resource_rows(summary["resources"]["sending"] or summary["resources"]["wholeRun"]) + _input_rows(summary)
     return "\n".join(f"| {label} | {value} |" for label, value in rows)
 
 
@@ -52,15 +54,29 @@ def _run_rows(summary: Mapping) -> list[tuple[str, str]]:
     notes = ", ".join(f"{key}={value}" for key, value in summary["notes"].items()) or "-"
     subscriptions = (summary.get("subscriptions") or {}).get("count")
     postings = summary["postings"]
-    return [("실행 id", _text(summary["runId"])), ("메모", notes), ("구독 수", _text(subscriptions)), ("공고 수", _text(postings["count"])),
+    return [("실행 id", _text(summary["runId"])), ("커밋", _commit(summary.get("repository"))), ("모의 서버 설정", _mock(summary.get("mock"))),
+            ("메모", notes), ("구독 수", _text(subscriptions)), ("공고 수", _text(postings["count"])),
             ("예정 시각", postings["scheduledAt"]), ("등록 때 만든 발송 문서", _text(postings["expectedDeliveries"]))]
+
+
+def _commit(repository: Mapping | None) -> str:
+    if not repository or not repository.get("commit"):
+        return "-"
+    return repository["commit"][:12] + (" (커밋하지 않은 변경 있음)" if repository.get("dirty") else "")
+
+
+def _mock(settings: Mapping | None) -> str:
+    if not settings:
+        return "-"
+    return (f"지연 {_text(settings.get('delayMs'))}ms, 상태 {_text(settings.get('statuses'))}, "
+            f"Retry-After {_text(settings.get('retryAfterSeconds'))}초, 시드 {_text(settings.get('seed'))}")
 
 
 def _delivery_rows(delivery: Mapping) -> list[tuple[str, str]]:
     latency, burst, gap, retry = delivery["latencyMs"], delivery["burst"], delivery["longestAcceptanceGap"], delivery["retry"]
     window = delivery["window"]
     return [
-        ("발송 구간(첫 요청→마지막 수락)", f"{_moment(window['from'])} → {_moment(window['to'])}" if window else "-"),
+        ("발송 구간(첫 요청→마지막 응답)", f"{iso_epoch(window['from'])} → {iso_epoch(window['to'])}" if window else "-"),
         ("모의 서버가 받은 요청", _text(delivery["requests"])),
         ("응답 상태별 요청", _counts(delivery["byStatus"])),
         ("수락", _text(delivery["accepted"])),
@@ -71,7 +87,7 @@ def _delivery_rows(delivery: Mapping) -> list[tuple[str, str]]:
         ("초당 수락 최댓값", _text(delivery["maxAcceptedPerSecond"])),
         ("최대 동시 요청", _text(delivery["maxConcurrency"])),
         ("수락이 끊긴 가장 긴 구간(초)", _text(gap["seconds"])),
-        ("수락이 끊긴 구간(2초 이상, 긴 것 최대 5개)", _gap_list(delivery["acceptanceGaps"])),
+        (f"수락이 끊긴 구간({MIN_GAP_SECONDS:g}초 이상 가운데 긴 것 최대 {MAX_GAPS}개, 시각 순)", _gap_list(delivery["acceptanceGaps"])),
         ("Retry-After 전 재요청", _text(retry["beforeRetryAfter"])),
         ("404·410 뒤 같은 구독 재요청", _text(retry["afterGone"])),
         ("400·403·413 뒤 같은 쌍 재요청", _text(retry["afterInvalid"])),
@@ -113,15 +129,11 @@ def _input_rows(summary: Mapping) -> list[tuple[str, str]]:
     stats = summary["requests"]
     return [("기록 줄 / 이번 실행 구독 / 복호화 실패 / 다른 경로 / 모양이 틀린 줄",
              f"{stats['records']} / {stats['matched']} / {stats['undecryptable']} / {stats['unknownPath']} / {stats['invalid']}"),
-            ("건너뛴 깨진 줄", _text(summary["skippedLines"]))]
+            ("건너뛴 기록(깨진 줄, 모양이 틀린 키·자원 기록)", _text(summary["skippedRecords"]))]
 
 
 def _gap_list(gaps: Sequence[Mapping]) -> str:
-    return ", ".join(f"{_text(gap['seconds'])}초({_moment(gap['from'])}→{_moment(gap['to'])})" for gap in gaps) or "-"
-
-
-def _moment(epoch: float) -> str:
-    return iso(dt.datetime.fromtimestamp(epoch, dt.timezone.utc))
+    return ", ".join(f"{_text(gap['seconds'])}초({iso_epoch(gap['from'])}→{iso_epoch(gap['to'])})" for gap in gaps) or "-"
 
 
 def _counts(values: Mapping) -> str:

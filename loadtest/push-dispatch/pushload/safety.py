@@ -17,18 +17,29 @@ class ForeignSubscriptionsError(RuntimeError):
 
 
 class TargetMismatchError(RuntimeError):
-    """관리 API가 보는 DB와 안전장치가 확인한 DB가 다를 때."""
+    """관리 API가 보는 DB와 안전장치가 확인한 DB가 다를 때. counts는 (전체 구독 수, 직무를 고른 구독 수)다."""
 
-    def __init__(self, api_count: object, database_count: int):
-        super().__init__(f"관리 API가 보는 구독 수({api_count})와 안전장치가 확인한 DB의 구독 수({database_count})가 달라 멈춥니다. "
+    def __init__(self, api_counts: tuple[int, int], database_counts: tuple[int, int]):
+        super().__init__(f"관리 API가 보는 구독 수(전체 {api_counts[0]}, 직무 선택 {api_counts[1]})와 안전장치가 확인한 DB의 구독 수"
+                         f"(전체 {database_counts[0]}, 직무 선택 {database_counts[1]})가 달라 멈춥니다. "
                          "--api와 LOADTEST_MONGODB_URI가 같은 시험 스택을 가리키는지 확인하세요")
-        self.api_count = api_count
-        self.database_count = database_count
+        self.api_counts = api_counts
+        self.database_counts = database_counts
 
 
-def ensure_same_target(api_count: object, database_count: int) -> None:
-    if api_count != database_count:
-        raise TargetMismatchError(api_count, database_count)
+def subscription_counts(collection) -> tuple[int, int]:
+    """(전체 구독 수, 직무를 하나 이상 고른 구독 수). 관리 API 요약의 subscriptions, roleSelectedSubscriptions와 같은 뜻이다."""
+    total = selected = 0
+    for document in collection.find({}, {"roles": 1, "_id": 0}):
+        total += 1
+        roles = document.get("roles")
+        selected += isinstance(roles, list) and len(roles) > 0
+    return total, selected
+
+
+def ensure_same_target(api_counts: tuple[int, int], database_counts: tuple[int, int]) -> None:
+    if tuple(api_counts) != tuple(database_counts):
+        raise TargetMismatchError(api_counts, database_counts)
 
 
 def is_test_endpoint(value: object) -> bool:

@@ -52,6 +52,10 @@ def iso(moment: dt.datetime) -> str:
     return moment.astimezone(dt.timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 
+def iso_epoch(seconds: float) -> str:
+    return iso(dt.datetime.fromtimestamp(seconds, dt.timezone.utc))
+
+
 def parse_iso(text: object) -> dt.datetime:
     """Java Instant 문자열(소수점 9자리까지)을 마이크로초 단위 UTC 시각으로 읽는다."""
     match = _ISO_PATTERN.match(text) if isinstance(text, str) else None

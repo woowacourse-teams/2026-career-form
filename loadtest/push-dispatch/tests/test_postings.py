@@ -23,11 +23,12 @@ CLOSES = OPENS + dt.timedelta(days=7)
 class FakeAdminApi:
     """공고 관리 API 흉내. 비밀번호 secret만 받고 같은 링크는 409로 거절한다."""
 
-    def __init__(self, subscriptions=0, registered_body=None):
+    def __init__(self, subscriptions=0, registered_body=None, summary_body=None):
         self.requests = []
         self.links = {}
         self.subscriptions = subscriptions
         self.registered_body = registered_body
+        self.summary_body = summary_body
         api = self
 
         class Handler(BaseHTTPRequestHandler):
@@ -40,7 +41,8 @@ class FakeAdminApi:
                     return self.reply(401, {"error": "UNAUTHORIZED"})
                 if not self.path.startswith("/api/v1/notifications/admin/summary?from="):
                     return self.reply(404, {"error": "NOT_FOUND"})
-                self.reply(200, {"postings": 0, "subscriptions": api.subscriptions, "roleSelectedSubscriptions": 0})
+                self.reply(200, api.summary_body if api.summary_body is not None
+                           else {"postings": 0, "subscriptions": api.subscriptions, "roleSelectedSubscriptions": 0})
 
             def do_POST(self):
                 body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
@@ -123,6 +125,7 @@ class RegisterTest(unittest.TestCase):
         with self.assertRaises(RegistrationError) as raised:
             register_all(AdminClient(self.api.url, "secret"), [registration_payload("r1", 1, ("a1",), OPENS, CLOSES)])
         self.assertEqual((201, "UNEXPECTED_RESPONSE", 0), (raised.exception.status, raised.exception.code, len(raised.exception.registered)))
+        self.assertIn("관리 화면", str(raised.exception))
 
     def test_summary_reads_subscription_count_with_same_authorization(self):
         self.api.subscriptions = 7

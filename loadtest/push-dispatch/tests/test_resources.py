@@ -146,6 +146,10 @@ class SummarizeResourcesTest(unittest.TestCase):
         self.assertEqual((2, {"accepted/ACCEPTED": 1000}), (summary["backend"]["dispatchCycles"], summary["backend"]["deliveries"]))
         self.assertEqual({"from": 6.0, "to": 12.0}, summary["window"])
 
+    def test_window_bounds_are_inclusive(self):
+        samples = [sample(at, 10.0, 100, 1, 0.0, 0.0, 0, 0.0, 1.0, 0) for at in (0, 5, 10, 15)]
+        self.assertEqual(3, summarize_resources(samples, {"from": 5.0, "to": 10.0})["samples"])
+
 
 if __name__ == "__main__":
     unittest.main()

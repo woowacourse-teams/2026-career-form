@@ -11,6 +11,7 @@ import math
 from collections import Counter, defaultdict
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
+from typing import NamedTuple
 
 GONE_STATUSES = frozenset((404, 410))
 INVALID_STATUSES = frozenset((400, 403, 413))
@@ -24,6 +25,15 @@ class Subscriber:
 
     id: str
     keys: object
+
+
+class RecordFields(NamedTuple):
+    path: str
+    received: float
+    responded: float
+    status: int
+    concurrency: int
+    retry_after: int | None
 
 
 @dataclass(frozen=True)
@@ -48,25 +58,26 @@ def decode_requests(records: Iterable[object], subscribers: Mapping[str, Subscri
         if fields is None:
             stats["invalid"] += 1
             continue
-        subscriber = subscribers.get(fields[0])
+        subscriber = subscribers.get(fields.path)
         if subscriber is None:
             stats["unknownPath"] += 1
             continue
         posting = _posting_id(decrypt, subscriber.keys, record.get("body", ""))
         stats["matched"] += 1
         stats["undecryptable"] += posting is None
-        requests.append(Request(subscriber.id, posting, *fields[1:]))
+        requests.append(Request(subscriber.id, posting, fields.received, fields.responded, fields.status, fields.concurrency,
+                                fields.retry_after))
     return requests, stats
 
 
-def _record_fields(record: object) -> tuple | None:
+def _record_fields(record: object) -> RecordFields | None:
     """모의 서버 기록 한 줄의 필드. 모양이 틀리면 None."""
     if not isinstance(record, Mapping):
         return None
     try:
         retry_after = record.get("retryAfter")
-        return (str(record["path"]), float(record["receivedAt"]), float(record["respondedAt"]), int(record["status"]),
-                int(record["concurrency"]), None if retry_after is None else int(retry_after))
+        return RecordFields(str(record["path"]), float(record["receivedAt"]), float(record["respondedAt"]), int(record["status"]),
+                            int(record["concurrency"]), None if retry_after is None else int(retry_after))
     except (KeyError, TypeError, ValueError):
         return None
 
@@ -100,7 +111,7 @@ def delivery_metrics(requests: Iterable[Request], scheduled_at: Mapping[str, flo
         "accepted": len(accepted),
         "duplicates": _duplicates(accepted),
         "burst": _burst(relevant, accepted, scheduled_at),
-        "window": _window(relevant, accepted),
+        "window": _window(relevant),
         "latencyMs": _latency(accepted, scheduled_at),
         "maxAcceptedPerSecond": max(Counter(int(item.responded) for item in accepted).values(), default=0),
         "maxConcurrency": max((item.concurrency for item in relevant), default=0),
@@ -125,11 +136,11 @@ def _burst(relevant: Sequence[Request], accepted: Sequence[Request], scheduled_a
             "firstRequestToLastAcceptedSeconds": round(last - min(item.received for item in relevant), 3)}
 
 
-def _window(relevant: Sequence[Request], accepted: Sequence[Request]) -> dict | None:
-    """발송이 실제로 일어난 구간(첫 요청부터 마지막 수락까지). 자원 요약을 이 구간으로 자른다."""
-    if not accepted:
+def _window(relevant: Sequence[Request]) -> dict | None:
+    """발송이 실제로 일어난 구간(첫 요청부터 마지막 응답까지, 실패 응답 포함). 자원 요약을 이 구간으로 자른다."""
+    if not relevant:
         return None
-    return {"from": min(item.received for item in relevant), "to": max(item.responded for item in accepted)}
+    return {"from": min(item.received for item in relevant), "to": max(item.responded for item in relevant)}
 
 
 def _latency(accepted: Sequence[Request], scheduled_at: Mapping[str, float]) -> dict:

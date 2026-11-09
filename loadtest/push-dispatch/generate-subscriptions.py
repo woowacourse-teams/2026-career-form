@@ -48,9 +48,7 @@ def main(argv: Sequence[str] | None = None, environ: Mapping[str, str] = os.envi
         run_id = runfiles.validate_run_id(run_dir.name)
         if args.count < 1:
             raise cli.UsageError("--count는 1 이상이어야 합니다")
-        if not 0.0 <= args.unselected_ratio <= 1.0:
-            raise cli.UsageError("--unselected-ratio는 0 이상 1 이하여야 합니다")
-        subscriptions.marked_endpoint(args.mock_base, run_id, token_source=lambda length: "x" * length, length=args.endpoint_length)
+        subscriptions.validate_options(args.mock_base, run_id, args.endpoint_length, args.unselected_ratio)
         if (run_dir / runfiles.KEYS_FILE).exists():
             raise cli.UsageError("이 실행 폴더에는 이미 키 파일이 있습니다. 새 실행 폴더를 쓰세요")
         codes = role_codes()

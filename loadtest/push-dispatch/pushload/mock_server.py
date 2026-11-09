@@ -193,15 +193,17 @@ class MockServer(ThreadingHTTPServer):
     allow_reuse_address = True
     request_queue_size = 1024
 
-    def __init__(self, address, state: MockState, log: RequestLog, draw):
+    def __init__(self, address, state: MockState, log: RequestLog, draw, seed: int | None):
         self.state = state
         self.log = log
         self.draw = draw
+        self.seed = seed
         super().__init__(address, PushHandler)
 
 
-def build_server(host: str, port: int, state: MockState, log: RequestLog, rng: random.Random) -> MockServer:
-    return MockServer((host, port), state, log, _locked_draw(rng))
+def build_server(host: str, port: int, state: MockState, log: RequestLog, seed: int | None = None) -> MockServer:
+    """seed가 같으면 상태 추첨 순서가 같다. 설정 조회(GET /__mock/config)에 seed도 돌려준다."""
+    return MockServer((host, port), state, log, _locked_draw(random.Random(seed)), seed)
 
 
 def _locked_draw(rng: random.Random):
@@ -226,7 +228,7 @@ class PushHandler(BaseHTTPRequestHandler):
         if self.path == STATS_PATH:
             self._send_json(200, self.server.state.stats())
         elif self.path == CONFIG_PATH:
-            self._send_json(200, self.server.state.config().to_json())
+            self._send_json(200, {**self.server.state.config().to_json(), "seed": self.server.seed})
         else:
             self._send_json(404, {"error": "NOT_FOUND"})
 

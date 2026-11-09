@@ -49,6 +49,13 @@ def _plain_http_origin(mock_base: str) -> str:
     return base
 
 
+def validate_options(mock_base: str, run_id: str, endpoint_length: int, unselected_ratio: float) -> None:
+    """생성 전에 인자를 검사한다. 키 파일이나 문서를 만들기 전에 실패해야 실행 폴더를 다시 쓸 수 있다."""
+    if not 0.0 <= unselected_ratio <= 1.0:
+        raise ValueError("미선택 비율은 0 이상 1 이하여야 합니다")
+    marked_endpoint(mock_base, run_id, token_source=lambda length: "x" * length, length=endpoint_length)
+
+
 def choose_roles(rng: random.Random, codes: Sequence[str], unselected_ratio: float, max_roles: int = MAX_ROLES) -> tuple[str, ...] | None:
     """미선택 비율만큼 None(모든 공고 수신), 나머지는 소분류 1~max_roles개를 고른다."""
     if not 0.0 <= unselected_ratio <= 1.0:

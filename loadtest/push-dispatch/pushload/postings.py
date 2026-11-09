@@ -13,7 +13,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 
 from pushload.markers import TEST_LINK_PREFIX
-from pushload.runfiles import iso, validate_run_id
+from pushload.runfiles import iso, iso_epoch, validate_run_id
 
 ADMIN_POSTINGS_PATH = "/api/v1/notifications/admin/postings"
 ADMIN_SUMMARY_PATH = "/api/v1/notifications/admin/summary"
@@ -40,12 +40,24 @@ class ApiResult:
     elapsed_ms: float
 
 
-class RegistrationError(RuntimeError):
-    def __init__(self, status: int, code: object, registered: Sequence[Mapping]):
-        super().__init__(f"공고 등록이 HTTP {status}({code or '본문 없음'})로 실패했습니다")
+UNEXPECTED_RESPONSE = "UNEXPECTED_RESPONSE"
+
+
+class AdminApiError(RuntimeError):
+    """관리 API가 기대한 응답을 주지 않았다. 메시지에 비밀번호를 넣지 않는다."""
+
+    def __init__(self, status: int, code: object, action: str = "관리 API 호출"):
+        super().__init__(f"{action}이 HTTP {status}({code or '본문 없음'})로 실패했습니다")
         self.status = status
         self.code = code
+
+
+class RegistrationError(AdminApiError):
+    def __init__(self, status: int, code: object, registered: Sequence[Mapping]):
+        super().__init__(status, code, "공고 등록")
         self.registered = tuple(registered)
+        if code == UNEXPECTED_RESPONSE:
+            self.args = (f"{self.args[0]}. 공고가 이미 등록됐을 수 있으니 관리 화면 목록에서 확인하세요",)
 
 
 class AdminClient:
@@ -99,12 +111,23 @@ def register_all(client: AdminClient, payloads: Sequence[Mapping], clock: Callab
         if result.status != 201:
             raise RegistrationError(result.status, result.body.get("error"), postings)
         if not _registered_body(result.body):
-            raise RegistrationError(result.status, "UNEXPECTED_RESPONSE", postings)
+            raise RegistrationError(result.status, UNEXPECTED_RESPONSE, postings)
         postings.append({"number": number, "id": result.body["id"], "link": payload["link"], "scheduledAt": result.body["scheduledAt"],
                          "deliveries": result.body["deliveries"], "registerMs": round(result.elapsed_ms, 1)})
     finished = clock()
-    return {"startedAt": _iso_epoch(started), "finishedAt": _iso_epoch(finished), "durationMs": round((finished - started) * 1000, 1),
+    return {"startedAt": iso_epoch(started), "finishedAt": iso_epoch(finished), "durationMs": round((finished - started) * 1000, 1),
             "postings": postings}
+
+
+def mock_settings(mock_url: str, timeout: float) -> dict | None:
+    """모의 서버의 현재 설정(지연, 상태 비율, Retry-After, 시드). 읽지 못하면 None."""
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    try:
+        with opener.open(mock_url.rstrip("/") + "/__mock/config", timeout=timeout) as response:
+            settings = json.loads(response.read())
+    except (OSError, ValueError):
+        return None
+    return settings if isinstance(settings, dict) else None
 
 
 def _registered_body(body: Mapping) -> bool:
@@ -112,10 +135,6 @@ def _registered_body(body: Mapping) -> bool:
     deliveries = body.get("deliveries")
     return (isinstance(body.get("id"), str) and bool(body["id"]) and isinstance(body.get("scheduledAt"), str)
             and isinstance(deliveries, int) and not isinstance(deliveries, bool) and deliveries >= 0)
-
-
-def _iso_epoch(seconds: float) -> str:
-    return iso(dt.datetime.fromtimestamp(seconds, dt.timezone.utc))
 
 
 def late_warning(finished_at: dt.datetime, opens_at: dt.datetime) -> str | None:

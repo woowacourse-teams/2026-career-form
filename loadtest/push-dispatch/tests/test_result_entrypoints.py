@@ -32,6 +32,8 @@ class SummarizeRunScriptTest(unittest.TestCase):
         (self.run_dir / "run.json").write_text(json.dumps({
             "runId": "r1", "subscriptions": {"count": 2},
             "postings": {"count": 1, "opensAt": SCHEDULED, "notes": {"commit": "abc123"},
+                         "repository": {"commit": "0123456789abcdef0123", "dirty": True},
+                         "mock": {"delayMs": 100, "statuses": "201=1", "retryAfterSeconds": 60, "seed": 441},
                          "items": [{"number": 1, "id": "p1", "scheduledAt": SCHEDULED, "deliveries": 2, "registerMs": 300.0}]},
         }))
         write_lines(self.run_dir / "subscriber-keys.jsonl", [{"id": identifier, "path": path, **subscriber.to_record()}
@@ -70,8 +72,11 @@ class SummarizeRunScriptTest(unittest.TestCase):
         self.assertEqual({"records": 3, "matched": 2, "undecryptable": 0, "unknownPath": 1, "invalid": 0}, summary["requests"])
         self.assertEqual((2, 0, 2), (summary["delivery"]["accepted"], summary["delivery"]["duplicates"]["extra"], summary["delivery"]["maxConcurrency"]))
         self.assertEqual((2, 0, 0), (summary["mongo"]["deliveries"]["found"], summary["mongo"]["deliveries"]["lost"], summary["mongo"]["remainingGoneSubscriptions"]))
-        self.assertEqual((2, 1), (summary["resources"]["wholeRun"]["samples"], summary["resources"]["burst"]["samples"]))
-        self.assertEqual(summary["delivery"]["window"], summary["resources"]["burst"]["window"])
+        self.assertEqual((2, 1), (summary["resources"]["wholeRun"]["samples"], summary["resources"]["sending"]["samples"]))
+        self.assertEqual(summary["delivery"]["window"], summary["resources"]["sending"]["window"])
+        self.assertEqual(("0123456789abcdef0123", 441), (summary["repository"]["commit"], summary["mock"]["seed"]))
+        self.assertIn("| 커밋 | 0123456789ab (커밋하지 않은 변경 있음) |", output)
+        self.assertIn("시드 441", output)
         self.assertNotIn("goneSubscriptionIds", summary["delivery"])
         self.assertIn("| 항목 | 값 |", output)
         self.assertIn("| 수락 | 2 |", output)
@@ -99,7 +104,7 @@ class SummarizeRunScriptTest(unittest.TestCase):
         code, output = self.run_script(["--run-dir", str(self.run_dir), "--without-mongo"], {})
         self.assertEqual(0, code, output)
         summary = json.loads((self.run_dir / "summary.json").read_text())
-        self.assertEqual((3, 1), (summary["skippedLines"], summary["requests"]["invalid"]))
+        self.assertEqual((3, 1), (summary["skippedRecords"], summary["requests"]["invalid"]))
 
 
 class RecordResourcesScriptTest(unittest.TestCase):

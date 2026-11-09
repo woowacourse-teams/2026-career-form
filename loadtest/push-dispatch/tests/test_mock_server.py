@@ -126,7 +126,7 @@ class ServerTest(unittest.TestCase):
         self.log_path = Path(self.directory.name) / "requests.jsonl"
         self.log = RequestLog(str(self.log_path))
         self.state = MockState(make_config(0, "201=1", 60))
-        self.server = build_server("127.0.0.1", 0, self.state, self.log, random.Random(1))
+        self.server = build_server("127.0.0.1", 0, self.state, self.log, seed=1)
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
 
@@ -196,7 +196,7 @@ class ServerTest(unittest.TestCase):
         status, _, body = self.request("POST", "/__mock/config", json.dumps({"statuses": "503=1"}).encode())
         self.assertEqual((200, "503=1"), (status, json.loads(body)["statuses"]))
         self.assertEqual(503, self.request("POST", "/fcm/send/loadtest-f", b"x")[0])
-        self.assertEqual("503=1", json.loads(self.request("GET", "/__mock/config")[2])["statuses"])
+        self.assertEqual({"delayMs": 0, "statuses": "503=1", "retryAfterSeconds": 60, "seed": 1}, json.loads(self.request("GET", "/__mock/config")[2]))
 
     def test_config_endpoint_rejects_invalid_values(self):
         for body in (json.dumps({"delayMs": -1}).encode(), b"not json"):

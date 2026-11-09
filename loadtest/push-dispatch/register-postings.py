@@ -25,8 +25,23 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from pushload import cli, runfiles  # noqa: E402
 from pushload.categories import role_codes  # noqa: E402
-from pushload.postings import AdminClient, RegistrationError, late_warning, register_all, registration_payload  # noqa: E402
-from pushload.safety import ForeignSubscriptionsError, TargetMismatchError, ensure_only_test_subscriptions, ensure_same_target  # noqa: E402
+from pushload.postings import (  # noqa: E402
+    UNEXPECTED_RESPONSE,
+    AdminApiError,
+    AdminClient,
+    RegistrationError,
+    late_warning,
+    mock_settings,
+    register_all,
+    registration_payload,
+)
+from pushload.safety import (  # noqa: E402
+    ForeignSubscriptionsError,
+    TargetMismatchError,
+    ensure_only_test_subscriptions,
+    ensure_same_target,
+    subscription_counts,
+)
 
 
 def parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
@@ -34,6 +49,7 @@ def parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     parser.add_argument("--run-dir", required=True)
     parser.add_argument("--count", type=int, default=1)
     parser.add_argument("--api", default="http://127.0.0.1:28080", help="시험 스택 백엔드 주소")
+    parser.add_argument("--mock-url", default="http://127.0.0.1:28081", help="모의 서버 주소. 설정(지연, 상태 비율, 시드)을 실행 기록에 남긴다")
     parser.add_argument("--opens-in-seconds", type=int, default=120, help="지금부터 예정 시각까지(초)")
     parser.add_argument("--closes-in-days", type=int, default=7)
     parser.add_argument("--roles", default="", help="쉼표로 구분한 소분류 코드. 비우면 분류 전체")
@@ -64,8 +80,8 @@ def main(argv: Sequence[str] | None = None, environ: Mapping[str, str] = os.envi
     except (ForeignSubscriptionsError, TargetMismatchError) as error:
         print(error, file=sys.stderr)
         return cli.EXIT_UNSAFE
-    except RegistrationError as error:
-        print(f"관리 API 확인이 HTTP {error.status}({error.code or '본문 없음'})로 실패해 등록하지 않았습니다", file=sys.stderr)
+    except AdminApiError as error:
+        print(f"{error}. 등록하지 않았습니다", file=sys.stderr)
         return cli.EXIT_FAILURE
     except OSError as error:
         print(f"관리 API에 연결하지 못했습니다: {type(error).__name__}", file=sys.stderr)
@@ -74,12 +90,15 @@ def main(argv: Sequence[str] | None = None, environ: Mapping[str, str] = os.envi
 
 
 def _ensure_api_uses_database(client: AdminClient, database, clock) -> None:
-    """관리 API의 요약이 보는 구독 수와 안전장치가 본 DB의 구독 수가 같아야 등록한다."""
+    """관리 API의 요약이 보는 구독 수(전체, 직무 선택)와 안전장치가 본 DB의 구독 수가 같아야 등록한다."""
     now = dt.datetime.fromtimestamp(clock(), dt.timezone.utc)
     result = client.summary(now - dt.timedelta(hours=1), now)
     if result.status != 200:
-        raise RegistrationError(result.status, result.body.get("error"), ())
-    ensure_same_target(result.body.get("subscriptions"), database.push_subscriptions.count_documents({}))
+        raise AdminApiError(result.status, result.body.get("error"), "관리 API 요약 확인")
+    api_counts = (result.body.get("subscriptions"), result.body.get("roleSelectedSubscriptions"))
+    if not all(isinstance(count, int) and not isinstance(count, bool) for count in api_counts):
+        raise AdminApiError(result.status, UNEXPECTED_RESPONSE, "관리 API 요약 확인(구독 수 없음)")
+    ensure_same_target(api_counts, subscription_counts(database.push_subscriptions))
 
 
 def _repository() -> dict:
@@ -110,7 +129,10 @@ def _register(args, run_dir: Path, run_id: str, roles: Sequence[str], notes: Map
     closes_at = opens_at + dt.timedelta(days=args.closes_in_days)
     payloads = [registration_payload(run_id, number, roles, opens_at, closes_at) for number in range(1, args.count + 1)]
     section = {"api": args.api, "count": args.count, "opensAt": runfiles.iso(opens_at), "closesAt": runfiles.iso(closes_at),
-               "roles": "all" if tuple(roles) == role_codes() else list(roles), "notes": dict(notes), "repository": _repository()}
+               "roles": "all" if tuple(roles) == role_codes() else list(roles), "notes": dict(notes), "repository": _repository(),
+               "mock": mock_settings(args.mock_url, args.timeout)}
+    if section["mock"] is None:
+        print("경고: 모의 서버 설정을 읽지 못해 실행 기록에 남기지 않았습니다(--mock-url 확인)", file=sys.stderr)
     try:
         report = register_all(client, payloads, clock)
     except RegistrationError as error:
