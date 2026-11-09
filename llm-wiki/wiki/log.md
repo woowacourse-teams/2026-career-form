@@ -1105,8 +1105,8 @@
 - 호스트 주소, 공고 링크, 키 값, 계정, 구독 endpoint, 사용자의 직무 선택값, 대화 전문은 저장하지 않았다.
 
 ## [2026-11-09] ingest | CF-441 공고 알림 SQS 전환 전후 비교용 발송 시험 도구
-- Approval-Digest: 2bc654b666a32be9f4635fd5d2b51f5cf6674c4306d8dc3cf7a14654ecafa71c
-- Source-Revision: 8d5d348b
+- Approval-Digest: 69abe134e0fe90cce8e69994cd3aaebdd978528009b5d669d419281ed5b9678f
+- Source-Revision: 0c1a9000
 - 승인한 후보 4개를 [CF-441 bundle](../raw/issues/CF-441/manifest.md)에 기록했다. 전후 비교 측정 방식, 발송 경로의 endpoint 검사 범위, 전 구조의 재시작 동작, 팀 측정 계획 대비 조정이다.
 - [공고 알림 발송 시험](topics/push-dispatch-load-test.md) topic을 새로 만들었다.
 - 호스트 주소, 키 값, 비밀번호, 구독 endpoint, 대화 전문은 저장하지 않았다.
