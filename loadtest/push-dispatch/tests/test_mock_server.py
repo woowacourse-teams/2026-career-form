@@ -179,8 +179,14 @@ class ServerTest(unittest.TestCase):
         self.assertGreaterEqual(time.monotonic() - started, 0.15)
 
     def test_counts_concurrent_requests(self):
-        self.state.replace_config(make_config(300, "201=1", 60))
-        threads = [threading.Thread(target=self.request, args=("POST", f"/fcm/send/loadtest-{n}", b"x")) for n in range(5)]
+        self.state.replace_config(make_config(1000, "201=1", 60))
+        start = threading.Barrier(5)
+
+        def send(number):
+            start.wait()
+            self.request("POST", f"/fcm/send/loadtest-{number}", b"x")
+
+        threads = [threading.Thread(target=send, args=(number,)) for number in range(5)]
         for thread in threads:
             thread.start()
         for thread in threads:
