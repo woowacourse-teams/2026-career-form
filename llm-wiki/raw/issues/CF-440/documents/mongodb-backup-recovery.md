@@ -2,8 +2,8 @@
 
 > Issue: [CF-440](https://github.com/woowacourse-teams/2026-career-form/issues/440)
 > Collected: 2026-11-09
-> Approval-Digest: 8c7f1841fdf5df432222d370cf1a389172cd2239441fc921db99eb2a847bb538
-> Source-Revision: 9cec6cb4
+> Approval-Digest: f68fe8803fbce18f779131ee3c4662ffff971c5d652498fe5957105ab6048582
+> Source-Revision: ba6e178b
 
 [승인 후보 스냅샷](approved-candidates.md)의 후보 2와 5를 적는다. 결정과 검토한 대안은 [ADR 440](adr/440-mongodb-logical-backup.md), 용량과 합성 리허설 수치는 [근거 기록](backup-evidence.md)을 따른다. 설치, 확인, 복구 명령의 정본은 `infra/mongodb/BACKUP.md`다.
 
@@ -19,7 +19,7 @@
 ## 공용 AWS에서의 보호 (후보 2)
 
 - 공용 버킷은 객체 공개 읽기가 허용돼 있고 모든 팀 EC2가 공용 역할 `ec2-project`를 쓴다. 그래서 우리 경로에 `ec2-project` 외 주체의 GetObject·GetObjectVersion을 거부하는 정책 문과 30일 수명 주기 규칙을 더하고, 암호화와 버킷 버전 관리로 노출과 덮어쓰기에 대비한다.
-- DB 호스트는 IMDSv2 필수, 홉 제한 1로 둬 컨테이너가 역할 자격 증명을 받지 못하게 한다.
+- DB 호스트는 IMDSv2를 필수로 두고 홉 제한은 기본값 2로 둔다(2026-11-10 사용자 결정, 혹시 모를 기존 연결을 깨지 않으려는 선택). 그래서 브리지 네트워크 컨테이너도 IMDSv2로 역할 자격 증명을 받을 수 있고, 줄이려면 홉 제한을 1로 낮춘다.
 
 ## 복구 (후보 2)
 

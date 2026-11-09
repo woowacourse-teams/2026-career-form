@@ -1119,8 +1119,9 @@
 - 호스트 주소, 계정 번호, 큐 주소, 인스턴스 ID, 키 값, 비밀번호, 구독 endpoint, 대화 전문은 저장하지 않았다.
 
 ## [2026-11-09] ingest | CF-440 MongoDB 정기 백업 자동화와 임시 컨테이너 복구 리허설 추가
-- Approval-Digest: 8c7f1841fdf5df432222d370cf1a389172cd2239441fc921db99eb2a847bb538
-- Source-Revision: 9cec6cb4
+- Approval-Digest: f68fe8803fbce18f779131ee3c4662ffff971c5d652498fe5957105ab6048582
+- Source-Revision: ba6e178b
 - 승인한 후보 5개를 [CF-440 bundle](../raw/issues/CF-440/manifest.md)에 기록했다. 논리 덤프 백업 ADR, 백업과 복구 운영 기준, 백업 누락 알림, 용량 실측과 합성 리허설 근거, MongoDB 8.0.26 실행 사실이다.
 - [MongoDB 백업과 복구](topics/mongodb-backup-recovery.md) topic을 새로 만들고 [공용 모니터링 시스템](topics/monitoring-system.md) topic의 현재 상태와 변경 이유를 고쳤다.
+- 2026-11-10 후보 2의 메타데이터 옵션 문장을 "홉 제한 1"에서 "IMDSv2 필수, 홉 제한 2"로 고쳐 다시 승인받았다. 위 digest는 고친 후보의 것이다.
 - 계정 ID, 호스트 주소, 키 값, 계정, 구독 endpoint, 대화 전문은 저장하지 않았다.

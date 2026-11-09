@@ -2,8 +2,8 @@
 
 > Issue: [CF-440](https://github.com/woowacourse-teams/2026-career-form/issues/440)
 > Collected: 2026-11-09
-> Approval-Digest: 8c7f1841fdf5df432222d370cf1a389172cd2239441fc921db99eb2a847bb538
-> Source-Revision: 9cec6cb4
+> Approval-Digest: f68fe8803fbce18f779131ee3c4662ffff971c5d652498fe5957105ab6048582
+> Source-Revision: ba6e178b
 
 [승인 후보 스냅샷](approved-candidates.md)의 후보 4다. 주기와 보관 기간을 정한 용량 근거와, 복구 스크립트를 합성 데이터로 처음 돌린 결과를 적는다. 운영 백업본으로 한 복구 리허설은 사람이 `infra/mongodb/BACKUP.md`의 기록 양식에 적는다.
 

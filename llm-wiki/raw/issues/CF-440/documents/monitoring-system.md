@@ -2,8 +2,8 @@
 
 > Issue: [CF-440](https://github.com/woowacourse-teams/2026-career-form/issues/440)
 > Collected: 2026-11-09
-> Approval-Digest: 8c7f1841fdf5df432222d370cf1a389172cd2239441fc921db99eb2a847bb538
-> Source-Revision: 9cec6cb4
+> Approval-Digest: f68fe8803fbce18f779131ee3c4662ffff971c5d652498fe5957105ab6048582
+> Source-Revision: ba6e178b
 
 [승인 후보 스냅샷](approved-candidates.md)의 후보 3이다. CF-207의 공용 MongoDB 관측, 수집 신뢰성, 알림 경로는 그대로 유효하고 이 문서는 백업 알림만 더한다.
 
