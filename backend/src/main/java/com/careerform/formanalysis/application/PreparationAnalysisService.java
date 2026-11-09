@@ -38,6 +38,9 @@ public final class PreparationAnalysisService {
     private static final String INVALID_RESOLUTION_MESSAGE =
         "Resolver 출력 계약을 확인할 수 없습니다";
 
+    @Autowired(required = false)
+    private com.careerform.admission.AiAdmission admission;
+
     private final Optional<ActionResolver> resolver;
     private final FormAnalysisRouter router;
     private final boolean analysisEnabled;
@@ -87,18 +90,21 @@ public final class PreparationAnalysisService {
             );
         }
         try {
-            ActionResolver.Resolution resolution = selectedResolver.orElseThrow()
-                .resolve(request);
-            validateResolution(request, resolution);
-            return PreparationAnalysisResponse.complete(
-                request.snapshotId(),
-                mode,
-                mapPlansInRequestOrder(
-                    request,
-                    resolution,
-                    addressSearch && mode == Mode.ADAPTER
-                )
-            );
+            java.util.function.Supplier<PreparationAnalysisResponse> analysis = () -> {
+                ActionResolver.Resolution resolution = selectedResolver.orElseThrow()
+                    .resolve(request);
+                validateResolution(request, resolution);
+                return PreparationAnalysisResponse.complete(
+                    request.snapshotId(),
+                    mode,
+                    mapPlansInRequestOrder(
+                        request,
+                        resolution,
+                        addressSearch && mode == Mode.ADAPTER
+                    )
+                );
+            };
+            return admission == null ? analysis.get() : admission.validatedResults(analysis);
         }
         catch (ResolverException exception) {
             return mode == Mode.ADAPTER

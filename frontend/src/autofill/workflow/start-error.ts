@@ -24,3 +24,7 @@ export function errorDetail(error: unknown): string {
     ? `${error.name}: ${error.message}`
     : String(error);
 }
+
+export function errorNotice(error: unknown): string | undefined {
+  return error instanceof AnalysisServiceError ? error.notice : undefined;
+}

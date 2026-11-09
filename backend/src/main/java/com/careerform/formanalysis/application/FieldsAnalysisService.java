@@ -43,6 +43,9 @@ public final class FieldsAnalysisService {
     private static final String INVALID_RESOLUTION_MESSAGE =
         "Resolver 출력 계약을 확인할 수 없습니다";
 
+    @Autowired(required = false)
+    private com.careerform.admission.AiAdmission admission;
+
     private final Optional<FieldMappingResolver> resolver;
     private final FormAnalysisRouter router;
     private final FieldInteractionPolicy interactionPolicy;
@@ -100,14 +103,17 @@ public final class FieldsAnalysisService {
             return FieldsAnalysisResponse.complete(request.snapshotId(), mode, List.of()).withExecutionPolicy(route.executionPolicy());
         }
         try {
-            FieldMappingResolver.Resolution resolution =
-                selectedResolver.orElseThrow().resolve(request);
-            validateResolution(request, resolution);
-            return FieldsAnalysisResponse.complete(
-                request.snapshotId(),
-                mode,
-                mapFieldsInRequestOrder(request, resolution, mappingStatus, route.greeting())
-            ).withExecutionPolicy(route.executionPolicy());
+            java.util.function.Supplier<FieldsAnalysisResponse> analysis = () -> {
+                FieldMappingResolver.Resolution resolution =
+                    selectedResolver.orElseThrow().resolve(request);
+                validateResolution(request, resolution);
+                return FieldsAnalysisResponse.complete(
+                    request.snapshotId(),
+                    mode,
+                    mapFieldsInRequestOrder(request, resolution, mappingStatus, route.greeting())
+                ).withExecutionPolicy(route.executionPolicy());
+            };
+            return admission == null ? analysis.get() : admission.validatedResults(analysis);
         }
         catch (ResolverException exception) {
             return mode == Mode.ADAPTER

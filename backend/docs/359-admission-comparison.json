@@ -1,0 +1,36 @@
+{
+  "results": [
+    {
+      "policy": "unlimited",
+      "normalJobs": 12,
+      "normalCompleted": 12,
+      "normalExternalAttempts": 60,
+      "normalElapsedNanos": 3514667,
+      "floodRequests": 180,
+      "floodExternalAttempts": 180,
+      "queueWaitNanos": 0.0
+    },
+    {
+      "policy": "simple-api-minute-60",
+      "normalJobs": 12,
+      "normalCompleted": 7,
+      "normalExternalAttempts": 35,
+      "normalElapsedNanos": 67637292,
+      "floodRequests": 180,
+      "floodExternalAttempts": 60,
+      "queueWaitNanos": 0.0
+    },
+    {
+      "policy": "designed",
+      "normalJobs": 12,
+      "normalCompleted": 12,
+      "normalExternalAttempts": 60,
+      "normalElapsedNanos": 3396353375,
+      "floodRequests": 180,
+      "floodExternalAttempts": 60,
+      "queueWaitNanos": 9446923.0
+    }
+  ],
+  "scenario": "synthetic-12-jobs-4-policy-4-ai-1-internal-retry-and-180-flood",
+  "limitations": "Sequential admission-component experiment with real local Mongo and synthetic provider. Not observed product traffic, real latency, billing, or concurrency capacity evidence."
+}

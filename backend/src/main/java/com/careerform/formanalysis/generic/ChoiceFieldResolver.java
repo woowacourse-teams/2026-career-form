@@ -78,6 +78,9 @@ public final class ChoiceFieldResolver implements PromptSource {
         List.of("KOREAN_FULL_NAME", "ENGLISH_FULL_NAME_GIVEN_FIRST", "ENGLISH_FULL_NAME_FAMILY_FIRST");
     private static final Logger log = LoggerFactory.getLogger(ChoiceFieldResolver.class);
 
+    @Autowired(required = false)
+    private com.careerform.admission.AiAdmission admission;
+
     private final ChoiceModel client;
     private final SupportedProfileFields fields;
     private final SectionCategories categories;
@@ -254,6 +257,10 @@ public final class ChoiceFieldResolver implements PromptSource {
         Map<String, ChoiceModel.Question> questions = new LinkedHashMap<>();
         batch.forEach(question -> questions.put(question.id(),
             new ChoiceModel.Question(instructions(question.id()), work.criteria())));
+        if (admission != null) {
+            modelCalls.incrementAndGet();
+            return client.answer(state, questions);
+        }
         try {
             if (!permits.tryAcquire(permitTimeoutMs, TimeUnit.MILLISECONDS)) {
                 throw new PermitUnavailable();

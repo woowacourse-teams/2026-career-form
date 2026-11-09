@@ -76,7 +76,7 @@ import {
 import { WorkflowScreens } from "./WorkflowScreens";
 import { WorkflowError, type WorkflowErrorKind } from "./WorkflowError";
 import loadingStyles from "./WorkflowLoading.module.css";
-import { errorDetail, startErrorKind } from "./start-error";
+import { errorDetail, startErrorKind, errorNotice } from "./start-error";
 import { observeQuality } from "../quality/safe-observation";
 import {
   createAnalyzeFields,
@@ -146,6 +146,7 @@ export function AutofillWorkflow(props: WorkflowProps) {
   const [error, setError] = useState<{
     kind: WorkflowErrorKind;
     detail: string;
+    notice?: string;
   }>();
   // Retry only runs from the user's click and reloads the policy afresh.
   const [attempt, setAttempt] = useState(0);
@@ -171,7 +172,11 @@ export function AutofillWorkflow(props: WorkflowProps) {
       })
       .catch((error: unknown) => {
         if (!active) return;
-        setError({ kind: startErrorKind(error), detail: errorDetail(error) });
+        setError({
+          kind: startErrorKind(error),
+          detail: errorDetail(error),
+          notice: errorNotice(error),
+        });
       });
     return () => {
       active = false;
@@ -184,6 +189,7 @@ export function AutofillWorkflow(props: WorkflowProps) {
         kind={error.kind}
         developerMode={developerMode}
         detail={error.detail}
+        reason={error.notice}
         onRetry={() => setAttempt((count) => count + 1)}
         onBack={props.onExit}
       />
@@ -397,6 +403,7 @@ function PolicyReadyWorkflow({
   const [startError, setStartError] = useState<{
     kind: WorkflowErrorKind;
     detail: string;
+    notice?: string;
   }>();
   const [results, setResults] = useState<ApprovedWriteResult[]>([]);
   const [analysisSummary, setAnalysisSummary] = useState<{
@@ -725,6 +732,7 @@ function PolicyReadyWorkflow({
         setStartError({
           kind: startErrorKind(error),
           detail: errorDetail(error),
+          notice: errorNotice(error),
         });
         setStage("exception");
       }
@@ -1440,6 +1448,7 @@ function PolicyReadyWorkflow({
       exceptionTitle={caughtText === undefined ? exceptionTitle : ""}
       exceptionKind={startError?.kind ?? "interrupted"}
       exceptionDetail={startError?.detail ?? caughtText}
+      exceptionNotice={startError?.notice}
       onRetry={onRetry}
       unsupportedImageUrl={unsupportedImageUrl}
       writingImageUrl={writingImageUrl}

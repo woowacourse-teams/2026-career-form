@@ -928,6 +928,22 @@
 - [CI/CD 설정](topics/cicd-setup.md)과 [배포 Runbook](topics/deployment-runbook.md)의 Current를 CF-350으로 바꾸고 앞선 근거를 History에 남겼다. 절차의 Wiki 밖 정본은 `infra/WEB_PUSH_VAPID.md`다.
 - VAPID 키 값, 호스트 주소, 계정, 대화 전문은 저장하지 않았다.
 
+## [2026-10-29] ingest | CF-359 비회원 설치 식별과 AI 호출 제어
+
+- Approval-Digest: bc7b00b7ec787f72dc24dc050a77e1e0377227aff984376b29bee54847d3adc7
+- Source-Revision: ec983c749ee312b182eea0e06ab716858123f6f2
+- 승인된 후보 세 개를 [CF-359 bundle](../raw/issues/CF-359/manifest.md)에 기록했다. 승인된 ADR, 등록 결과와 자격의 수명 구분, 성공 정산의 검증 경계 및 합성 비교의 해석을 보존했다.
+- [비회원 설치 식별과 AI 호출 제어](topics/anonymous-analysis-admission.md)를 신규 색인에 연결했다. 운영 활성화와 실제 사용자 효과는 미확인으로 남겼다.
+- 대화 전문, 실제 자격과 키, IP, 지원 정보는 저장하지 않았다.
+
+## [2026-10-29] ingest | CF-359 환경별 활성화와 API 이용 절차 추가
+
+- Approval-Digest: 3804dd648ff58d670588121aa7a4f0b928cfc8b2bd8c0ea08fd81c59e45513e5
+- Source-Revision: 0861dd18725b44ffcbc4e626cd16fbef9955b31f
+- 기존 후보 세 개를 유지하고 승인된 환경별 운영 절차 한 개를 같은 미병합 CF-359 bundle에 추가했다.
+- [환경별 활성화와 API 이용](topics/anonymous-admission-activation.md)에 dev 비활성, staging과 prod 활성 목표 및 전환 순서, 설정 연결의 미구현 상태, UUID와 토큰 필수 API를 기록했다.
+- 실제 운영 자격, 키와 IP는 저장하지 않았다. 운영 활성화와 배포 및 배포 연결 코드를 변경하지 않았다.
+
 ## [2026-10-29] ingest | CF-355 줄 하나 반복 영역과 달력 뒤 드롭다운 확인
 
 - Approval-Digest: 8a784b1b386ac3a3142c61d713ef9c8b6d3741cebc93ca8fb80e228f58c890b3
@@ -943,6 +959,13 @@
 - [랜딩,온보딩 웹 페이지](topics/landing-onboarding.md)의 Current를 CF-363으로 바꾸고 CF-193을 History에 남겼다.
 - 실제 지원 정보, 계정, 대화 전문은 저장하지 않았다.
 
+## [2026-10-29] ingest | CF-359 staging 비활성 정책 정정
+
+- Approval-Digest: b9291100ae2965ecbe63a6a382411e33abd8f3c8c8a61bdd7bb0f2ff07f313ea
+- Source-Revision: b1963ab8e883c4406a4022c853a2213e56d0a4ea
+- 사용자가 확정한 dev와 staging 비활성, prod만 전환 후 활성 정책으로 기존 미병합 운영 절차 후보를 정정했다. 기존 세 구현 후보는 유지했다.
+- [환경별 활성화와 API 이용](topics/anonymous-admission-activation.md)의 목표 표, 수동 설정 대상과 검증 및 전환 순서를 같은 정책으로 맞췄다.
+- GitHub staging의 두 활성화 값 false를 조회해 확인했다. 이번 작업에서는 환경 변수 변경, 시크릿 접근이나 배포를 수행하지 않았다. 로컬 실험 결과를 운영 적용 결과로 기록하지 않았다.
 ## [2026-10-29] ingest | CF-358 미리 승인한 새 칸의 자동 기입
 
 - Approval-Digest: 3bc4195c391a49504b3b613d44f889b4a6a9e4eae7fbe459f44b367dc3df589c
@@ -1096,3 +1119,18 @@
 - 승인한 후보 1개를 [CF-435 bundle](../raw/issues/CF-435/manifest.md)에 기록했다. 배포 경로에서 직무 필터 전환 변수를 지운 곳, 변수 14개·시크릿 12개 전체 목록, 재유입을 막는 계약 테스트다.
 - [CI/CD 설정](topics/cicd-setup.md) topic의 현재 상태를 고쳤다.
 - 호스트 주소, 키 값, 계정, 대화 전문은 저장하지 않았다.
+
+## 2026-11-09 CF-359 환경 분리와 develop 호환성 보완
+
+- dev 보호 비활성, staging 보호 활성, prod 전환 후 활성과 dev 전용 AI 평가 정책을 반영했다.
+- 설치 보호와 AI 평가 동시 활성화를 시작 시 거부하고 기존 호출 제어를 새 resolver와 전송 계측 구조에 통합한다.
+- 배포 전달과 HTTPS 등 수동 준비는 미완료로 구분하며 기존 로컬 실험의 대상 커밋을 변경하지 않는다.
+- Approval-Digest: bbba907e66c7d5a37e30e5365d9915bbf881be93d822f1e2c7145e526ed96d41
+- Source-Revision: 6e422813f69f97ff48b53ddc92afd715e2c39daa
+
+## 2026-11-09 CF-359 배포 설정 전달 연결
+
+- 승인된 누락 보완 범위에서 세 배포 workflow, Compose와 Spring의 네 admission 설정을 연결했다.
+- 기본 OFF와 deploy job만의 키 전달, 운영 활성화 미수행 및 production 등록 선행 설정의 준비 조건을 명시했다.
+- Approval-Digest: 578d62f23cdd40497b39c96f88410cde0353872ac4e0c1ea798eddd3453dbd1d
+- Source-Revision: b2cbad317971de3aac433c8f868e645f2fb30706

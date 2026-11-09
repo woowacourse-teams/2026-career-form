@@ -32,6 +32,11 @@ spring:
       enabled: true
 
 career-form:
+  admission:
+    enabled: ${CAREER_FORM_ADMISSION_ENABLED:false}
+    registration-enabled: ${CAREER_FORM_ADMISSION_REGISTRATION_ENABLED:false}
+    trusted-proxies: ${CAREER_FORM_ADMISSION_TRUSTED_PROXIES:}
+    encryption-key: ${CAREER_FORM_ADMISSION_ENCRYPTION_KEY:}
   quality:
     enabled: ${CAREER_FORM_QUALITY_ENABLED:false}
     version: ${CAREER_FORM_QUALITY_VERSION:UNKNOWN}

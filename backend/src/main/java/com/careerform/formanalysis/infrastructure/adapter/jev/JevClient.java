@@ -35,6 +35,9 @@ import com.careerform.monitoring.tracing.LangSmithTraceRecorder;
 @Component
 @Conditional(InteractionProviderConditions.JevClient.class)
 public final class JevClient {
+    @Autowired(required = false)
+    private com.careerform.admission.AiAdmission admission;
+
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.careerform.formanalysis.infrastructure.LocalLlmDiagnostics localDiagnostics;
 
@@ -130,6 +133,11 @@ public final class JevClient {
 
     public Map<String, String> choose(Object state, Map<String, Choice> questions) {
         if (questions.isEmpty()) return Map.of();
+        return admission == null ? chooseResult(state, questions) : admission.logical(() -> chooseResult(state, questions));
+    }
+
+    private Map<String, String> chooseResult(Object state, Map<String, Choice> questions) {
+        if (questions.isEmpty()) return Map.of();
         if (!dataPolicyReviewed || questions.size() > 128 ||
             questions.values().stream().anyMatch(q -> q.criteria().size() > 255 || !q.criteria().containsKey(ABSTAIN)))
             throw unavailable();
@@ -193,6 +201,7 @@ public final class JevClient {
             finishAttempt("choose", sent, output, true);
             return Map.copyOf(selected);
         } catch (RuntimeException exception) {
+            if (exception instanceof com.careerform.admission.AdmissionFailure failure) throw failure;
             finishAttempt("choose", sent, output, false);
             completeTrace(trace, projection, null, Map.of(), httpStatus, exception);
             recordMetrics(startedAt, exception, called, observedModel);
@@ -205,6 +214,11 @@ public final class JevClient {
      * 확률 합 허용 오차 0.05, 429 지수 백오프 재시도, 토큰 한도 예외는 이 경로에만 적용한다.
      */
     public Map<String, Judgement> answer(Object state, Map<String, Choice> questions) {
+        if (questions.isEmpty()) return Map.of();
+        return admission == null ? answerResult(state, questions) : admission.logical(() -> answerResult(state, questions));
+    }
+
+    private Map<String, Judgement> answerResult(Object state, Map<String, Choice> questions) {
         if (questions.isEmpty()) return Map.of();
         if (!dataPolicyReviewed || questions.size() > 128 ||
             questions.values().stream().anyMatch(q -> q.criteria().size() > 255 || !q.criteria().containsKey(ABSTAIN)))
@@ -252,6 +266,7 @@ public final class JevClient {
             finishAttempt("answer", sent, output, true);
             return Map.copyOf(judgements);
         } catch (RuntimeException exception) {
+            if (exception instanceof com.careerform.admission.AdmissionFailure failure) throw failure;
             finishAttempt("answer", sent, output, false);
             recordMetrics(startedAt, exception, called, observedModel);
             if (exception instanceof TokenLimitExceeded tokenLimit) throw tokenLimit;
@@ -269,7 +284,8 @@ public final class JevClient {
             if (response.statusCode() == 400 && "max_tokens_exceeded".equals(errorType)) throw new TokenLimitExceeded();
             if (response.statusCode() != 429 || attempt >= rateLimitRetries) throw unavailable();
             try {
-                sleeper.sleep(RATE_LIMIT_BACKOFF.multipliedBy(1L << attempt));
+                var delay = RATE_LIMIT_BACKOFF.multipliedBy(1L << attempt);
+                sleeper.sleep(admission == null ? delay : Duration.ofMillis(admission.timeoutMillis(delay.toMillis())));
             } catch (InterruptedException exception) {
                 Thread.currentThread().interrupt();
                 throw unavailable();
@@ -282,11 +298,17 @@ public final class JevClient {
      * 200이 아닌 응답과 전송 실패는 여기서 기록하고, 200 응답은 해석 뒤 {@link #finishAttempt}가 기록한다.
      */
     private Sent send(HttpRequest request, String operation) {
+        return admission == null ? sendHttp(request, operation) : admission.transmit(() -> sendHttp(request, operation));
+    }
+
+    private Sent sendHttp(HttpRequest request, String operation) {
+        var timeout = admission == null ? timeoutMs : admission.timeoutMillis(timeoutMs);
         long started = System.nanoTime();
+        if (admission != null) admission.sent();
         var pending = http.sendAsync(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         HttpResponse<String> response;
         try {
-            response = pending.copy().orTimeout(timeoutMs, TimeUnit.MILLISECONDS).join();
+            response = pending.copy().orTimeout(timeout, TimeUnit.MILLISECONDS).join();
         } catch (RuntimeException exception) {
             ModelCallRecording.record(new ModelCallRecording.Attempt("jev", operation, System.nanoTime() - started,
                 null, ExternalCallMetrics.isTimeout(exception) ? ModelCallRecording.Outcome.TIMEOUT

@@ -1,0 +1,119 @@
+# 익명 설치 자격의 환경별 활성화와 API 이용 절차
+
+작성 기준: CF-359. 2026-11-09 환경 정책과 최신 develop 호환성 보완을 반영한다. 이 문서는 확정된 환경 정책, 구현한 설정 전달 코드와 운영 절차를 설명한다. 실제 환경값 변경과 서버 활성화 완료를 뜻하지 않는다.
+
+## 목표 환경 정책
+
+| 서비스 환경 | GitHub Environment | 서버 enabled | registration-enabled | 확장 VITE_AI_ADMISSION_ENABLED |
+|---|---|---|---|---|
+| dev | development | false | false | false |
+| staging | staging | true | true | true |
+| prod | production | true | true | true |
+
+dev는 설치 자격 검사, AI 호출 제한과 등록 API를 비활성으로 유지한다. staging은 production과 유사한 HTTPS, 신뢰 프록시와 확장 설정으로 보호 기능을 활성화해 사전 검증한다. prod는 클라이언트 전환 검증 후 활성화하는 최종 목표다. prod에서 등록 API만 선행 제공하는 동안은 registration-enabled=true, enabled=false다.
+
+## 구현된 설정 전달 경로
+
+GitHub Environment의 설정을 배포 workflow의 deploy job이 읽고 infra/compose.deploy.yaml을 통해 컨테이너로 전달한다. backend/src/main/resources/application.yml은 이를 admission 속성에 명시적으로 연결한다. 미설정 또는 빈 Compose 활성화 값은 false로 처리한다. dev와 staging 및 prod의 실제 활성화 여부는 각 환경 설정과 재배포에 따라 결정된다.
+
+| GitHub 설정 | 종류 | Spring 속성 |
+|---|---|---|
+| CAREER_FORM_ADMISSION_ENABLED | Variable | career-form.admission.enabled |
+| CAREER_FORM_ADMISSION_REGISTRATION_ENABLED | Variable | career-form.admission.registration-enabled |
+| CAREER_FORM_ADMISSION_TRUSTED_PROXIES | Variable | career-form.admission.trusted-proxies |
+| CAREER_FORM_ADMISSION_ENCRYPTION_KEY | Secret | career-form.admission.encryption-key |
+
+암호화 키는 세 환경의 deploy job에만 전달하고 build job과 이미지 빌드에는 전달하지 않는다. 배포 스크립트는 실제 설정을 출력하지 않는 Compose config --quiet를 유지한다. 설정이 없는 dev 배포에 키나 프록시 값을 새 필수 입력으로 요구하지 않는다. 보호 또는 등록을 활성화하면 서버의 기존 키 및 프록시 검증을 통과해야 시작한다.
+
+설정 전달 코드는 연결했지만 GitHub 값 변경, HTTPS와 프록시 점검, 확장 빌드 및 서버 배포는 별도다. 합성 입력으로 Compose와 실제 Spring YAML 속성 해석을 검증한 결과이며 실제 운영 컨테이너에서 검증한 기록이 아니다.
+
+## 사람이 입력하거나 확인할 것
+
+GitHub 저장소 Settings > Environments에서 development, staging, production을 구분한다.
+
+- development: enabled와 registration-enabled를 false로 유지한다. 이번 비활성화 정책을 적용하기 위해 암호화 키를 새로 등록할 필요는 없다. 이미 등록된 키를 이번 정책 변경을 이유로 삭제하거나 교체하지 않는다.
+- staging 및 production Variables: 위 활성화 값과 신뢰 프록시의 실제 원격 IP 목록을 등록한다. 최초 전환에서는 enabled를 false로 두고 등록과 확장 연동 확인 후 true로 바꾼다.
+- staging 및 production Secrets: CAREER_FORM_ADMISSION_ENCRYPTION_KEY를 등록한다. 32바이트 무작위 값을 Base64로 표현한 값이다. 사람이 로컬에서 openssl rand -base64 32로 생성할 수 있다. 실제 값은 문서, 대화나 로그에 넣지 않는다.
+- 검증 환경과 production의 자격 및 데이터 저장 환경을 분리한다. 실제 DB 분리는 배포 담당자가 확인한다. 같은 환경의 여러 서버는 같은 키를 사용하고 배포마다 새로 생성하지 않는다. 키 교체는 등록 결과 재전달과 IP 및 등록 키의 HMAC에 영향을 주므로 별도 절차 없이 바꾸지 않는다.
+- HTTPS 종단 프록시가 X-Real-IP와 X-Forwarded-Proto를 덮어쓰는지, 백엔드가 직접 외부에 노출되지 않는지 확인한다. trusted-proxies는 도메인이나 사용자 IP가 아니라 앱이 보는 실제 프록시 원격 주소다. 현재 서버에서 충족한 것으로 확인하지 않았다.
+- 환경별 확장을 빌드하고 배포 또는 테스트용으로 설치한다. 로컬 검증, staging과 prod 자격은 환경을 넘어 재사용하지 않는다.
+
+## 활성화 순서
+
+인증은 로컬 검증 후 staging에서 먼저 검증한다. 아래 전환 절차를 staging에 먼저 적용하고 prod에 적용한다. dev의 서버 활성화 값과 확장 플래그는 false로 유지한다. staging에는 별도 HTTPS 진입점, 신뢰 프록시, 테스트 DB와 환경별 확장이 필요하다.
+
+1. 설정 전달 변경이 포함된 서버 버전을 배포 대상으로 선택하고 해당 환경의 현재 설정을 확인한다.
+2. 사람이 해당 환경의 키와 프록시 값을 제공한다. registration-enabled=true, enabled=false로 서버를 배포한다.
+3. HTTPS 등록 API가 자격을 발급하는지 확인한다.
+4. 해당 환경의 HTTPS API 주소와 VITE_AI_ADMISSION_ENABLED=true로 빌드한 확장을 배포한다. 자격 발급과 저장 및 재사용을 확인한다.
+5. 정상 사용자 전환을 확인한 뒤 enabled=true로 서버를 다시 배포한다. 값 수정만으로 이미 실행 중인 컨테이너 설정이 갱신되지는 않는다.
+6. 아래 인증 거절 요청과 정상 분석, 한도 안내를 확인해 시각과 코드 버전 및 비식별 응답을 기록한다.
+
+확장의 자격 저장 키는 현재 analysisInstallation 하나이며 서버 주소별로 나뉘어 있지 않다. 같은 확장 설치의 API 주소를 로컬 검증 환경에서 prod로 바꿔도 자격이 자동 교체되지 않는다. 환경별 테스트는 별도 브라우저 프로필을 사용한다. 기존 프로필 전체 초기화는 민감한 로컬 지원 정보를 잃을 수 있으므로 전환 방법으로 사용하지 않는다.
+
+## 토큰 발급과 분석 요청
+
+확장 설치 시점이 아니라 첫 분석 요청 직전에 발급한다. 로컬에 자격이 있으면 재사용한다. 없으면 임시 등록 키를 로컬에 먼저 저장하고 POST /api/v1/analysis-installations로 요청한다. 서버는 installationId와 token을 반환한다. 토큰에는 정기 만료가 없으며 서버 폐기 상태를 확인한다. 등록 결과 재전달의 10분은 토큰 만료가 아니다.
+
+분석 API를 직접 테스트할 때도 해당 환경의 HTTPS 등록 API에 임의 생성 UUID를 key로 보내고 응답 자격을 사용한다. 등록 재시도에는 같은 key를 사용한다. 등록 API 자체에는 아직 발급받지 않은 설치 자격을 요구하지 않으며 신뢰 프록시, HTTPS와 발급 제한을 검사한다.
+
+분석 요청에는 X-Career-Form-Installation: <installationId> 및 Authorization: Bearer <token> 헤더를 보낸다. UUID만으로는 인증되지 않는다. 쿠키 로그인은 요구하지 않는다.
+
+## UUID와 토큰을 요구하는 API
+
+아래는 모두 POST이며 서버 enabled=true일 때 공통 경계에서 검사한다.
+
+| 작업 | API |
+|---|---|
+| 준비 분석 | /api/v1/preparation/analyze |
+| 필드 분석 | /api/v1/fields/analyze |
+| 범용 섹션 분류 | /api/v1/generic/sections/classify |
+| 범용 필드 분석 | /api/v1/generic/fields/analyze |
+| 범용 상호작용 판단 | /api/v1/generic/interaction-decisions |
+
+정상 프록시 및 HTTPS 조건을 만족한 요청에서 자격 누락, 잘못된 조합, 미등록 또는 폐기 자격은 401 INVALID_INSTALLATION으로 거절한다. 프록시나 HTTPS 조건이 먼저 실패하면 403이 발생할 수 있다. 올바른 자격도 요청 본문 오류나 이용량 제한으로 거절될 수 있으므로 인증 성공이 무조건 HTTP 200을 뜻하지 않는다.
+
+분석 API 자격 검사와 AI 이용량 차감은 별개다. 정책만으로 처리한 경로는 자격을 검사해도 AI 이용량을 차감하지 않는다. 알림의 기존 구독 검증, 로컬 프로필 편집과 브라우저의 실제 필드 입력은 이번 분석 자격 검사에 연결하지 않는다.
+
+## 검증하고 남길 기록
+
+| 대상 | 확인 내용 |
+|---|---|
+| dev | 유효한 분석 본문을 자격 없이 전송해 기존 처리 유지 확인 |
+| 로컬 검증 환경, 활성화 후 staging 및 전환 후 prod | A UUID + A 토큰으로 정상 분석 확인 |
+| 로컬 검증 환경, 활성화 후 staging 및 전환 후 prod | 자격 누락, UUID만 전달, A UUID + B 토큰 및 B UUID + A 토큰의 401 확인 |
+| 로컬 검증 환경, 활성화 후 staging 및 전환 후 prod | 등록 실패와 자격 저장 실패가 분석 요청으로 이어지지 않는지 확인 |
+| 확장 | 브라우저 재시작 후 자격 재사용, 다중 탭 초기 등록 경합 확인 |
+| 전환 | 구버전 확장의 자격 없는 분석이 활성화 뒤 거절됨을 확인 |
+
+실행 일시, 환경, 배포 커밋과 확장 빌드 버전, 테스트 구분, HTTP 상태와 비식별 결과를 기록한다. 실제 토큰과 인증 헤더 원문은 기록하지 않는다. Actions 성공은 배포 성공의 근거이며 활성화 자체는 정상 및 거절 요청으로 확인한다. 현재 위 운영 검증 결과는 미수집이다.
+
+## 코드 근거
+
+- backend/src/main/java/com/careerform/admission/AdmissionAvailableCondition.java
+- backend/src/main/java/com/careerform/admission/AdmissionConfiguration.java
+- backend/src/main/java/com/careerform/admission/AdmissionFilter.java
+- backend/src/main/java/com/careerform/admission/InstallController.java
+- backend/src/main/java/com/careerform/admission/InstallService.java
+- backend/src/main/java/com/careerform/admission/TrustedClientAddress.java
+- frontend/entrypoints/background.ts
+- frontend/src/autofill/api/installation-client.ts
+- frontend/src/autofill/api/background-handler.ts
+- .github/workflows/deploy-development.yml, deploy-staging.yml, deploy-production.yml
+- infra/compose.deploy.yaml
+
+## 관리자 AI 평가와 환경 분리
+
+AI 평가는 dev에서만 운영하고 staging과 prod에서는 비활성화한다. 설치 보호와 AI 평가를 함께 활성화하면 AdmissionConfiguration의 시작 시 검증이 DB 초기화 전에 오류로 거부한다. registration-enabled만 켠 단계는 분석 보호 활성화와 다르므로 평가와의 충돌 조건이 아니다. 평가 경로에는 사용자 설치 문맥을 만들거나 자격 누락을 이유로 공통 제어를 우회하는 기능을 추가하지 않는다.
+
+2026-11-09 확인한 GitHub Environment에서 development의 평가, 자동 평가와 평가용 OpenAI 활성화 값은 true이고 staging과 production에는 해당 변수가 없다. develop의 평가 변수 전달은 development 워크플로우에만 있으며 Compose의 기본값은 false다. 이는 배포 구성 확인이며 실행 중인 서버 컨테이너를 점검한 결과는 아니다.
+
+staging의 보호 설정 전달 경로, HTTPS와 프록시, 별도 확장 설치를 준비한 뒤 등록과 분석 성공, 자격 교차 거절, 한도 응답을 기록한다. GitHub 값만 변경해 활성화 완료로 기록하지 않는다. 기존 b1963ab에서 수행한 로컬 보안 실험과 이번 최신 코드 검증은 코드 버전을 구분한다.
+
+## 연결 적용 전 확인 사항
+
+2026-11-09 GitHub Variable 확인 시 dev와 staging의 enabled와 registration-enabled는 모두 false다. production은 enabled=false, registration-enabled=true이며 세 환경에 TRUSTED_PROXIES Variable은 없다. 암호화 Secret의 실제 값은 읽거나 검증하지 않았다.
+
+이전에는 전달 경로가 없어 무시되던 production의 registration-enabled=true도 이번 변경 배포부터 실제 적용된다. production 배포 전 사람이 키, 프록시와 HTTPS를 준비하거나 준비 전에는 registration-enabled도 false로 설정한다. 값의 존재와 실제 네트워크 경계가 확인되지 않은 상태에서 true만 설정하지 않는다. 환경값과 실제 배포는 이 코드 수정에서 변경하지 않았다.
+
+자동 검증 근거는 infra/tests/test_admission_deployment.py와 AdmissionDeploymentPropertiesTest다. 설정 누락과 빈 값, staging 및 prod 전달, 등록만 선행 활성화, 키의 build job 배제와 실제 Spring 속성 해석을 검증한다.

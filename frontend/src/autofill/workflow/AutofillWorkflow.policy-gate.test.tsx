@@ -115,3 +115,25 @@ it("shows the raw error only in developer mode, inside a collapsed block", async
   expect(details.querySelector("summary")).toHaveTextContent("오류 정보");
   expect(details).toHaveTextContent(RAW);
 });
+
+it("shows the installation limit and retry time without developer mode", async () => {
+  const client = new RuntimeAnalysisApiClient(async () => ({
+    ok: false,
+    code: "GLOBAL_LIMIT",
+    retryAt: "2030-01-01T01:00:00Z",
+  }));
+  const error = await client
+    .analyzeFields({
+      schemaVersion: 2,
+      snapshotId: "synthetic",
+      site: { host: "example.test", pathPattern: "/apply" },
+      sections: [],
+    })
+    .catch((error: unknown) => error);
+  const { alert } = await failWith(error);
+  expect(
+    screen.getByRole("heading", { name: "잠시 후 다시 시도해 주세요" }),
+  ).toBeVisible();
+  expect(alert).toHaveTextContent("서비스의 분석 이용량이 소진되었습니다");
+  expect(alert).toHaveTextContent("재시도 가능 시간:");
+});

@@ -291,7 +291,7 @@ describe("generic analysis background routes", () => {
     },
   );
 
-  it("keeps the 8 second cap for interaction decisions", async () => {
+  it("uses the same 60 second response budget for interaction decisions", async () => {
     vi.useFakeTimers();
     try {
       const { fetcher, state } = hangingFetcher();
@@ -301,7 +301,7 @@ describe("generic analysis background routes", () => {
       });
 
       const result = handleMessage(interactionMessage);
-      await vi.advanceTimersByTimeAsync(7_999);
+      await vi.advanceTimersByTimeAsync(59_999);
       expect(state.aborted).toBe(false);
 
       await vi.advanceTimersByTimeAsync(1);

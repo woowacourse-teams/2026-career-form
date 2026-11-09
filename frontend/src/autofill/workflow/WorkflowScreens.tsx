@@ -94,6 +94,7 @@ interface WorkflowScreensProps {
   exceptionKind?: WorkflowErrorKind;
   /** Raw text for developer mode only. */
   exceptionDetail?: string;
+  exceptionNotice?: string;
   onRetry?(): void;
   unsupportedImageUrl?: string;
   writingImageUrl?: string;
@@ -208,6 +209,7 @@ export function WorkflowScreens({
   exceptionTitle,
   exceptionKind = "interrupted",
   exceptionDetail,
+  exceptionNotice,
   onRetry,
   unsupportedImageUrl,
   writingImageUrl,
@@ -788,7 +790,9 @@ export function WorkflowScreens({
     <WorkflowError
       kind={exceptionKind}
       developerMode={developerMode}
-      reason={exceptionKind === "interrupted" ? exceptionTitle : undefined}
+      reason={
+        exceptionKind === "interrupted" ? exceptionTitle : exceptionNotice
+      }
       detail={exceptionDetail}
       completedCount={completed.length}
       manualCount={pending.length}

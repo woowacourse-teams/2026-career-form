@@ -100,6 +100,7 @@ function describe(
   reason: string | undefined,
   completedCount: number,
 ): string[] {
+  if (kind === "rateLimited" && reason) return [reason];
   if (kind !== "interrupted") return [ERROR_COPY[kind].description];
   const cause = reason?.trim()
     ? /[.!?]$/.test(reason.trim())
