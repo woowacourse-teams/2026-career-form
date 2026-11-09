@@ -6,14 +6,14 @@
 
 ## 비교 원칙
 
-전과 후에서 달라지는 것은 발송 구조와 거기에 딸린 실제 SQS 왕복뿐이어야 한다. 공식 측정은 운영과 같은 리전의 임시 EC2 한 대에서, 전환 직전 커밋과 전환 커밋을 같은 날 같은 시험 스택으로 연달아 잰다. 후는 실제 SQS를 쓴다. 노트북은 SQS까지의 거리가 운영과 달라 도구 개발과 리허설에만 쓴다.
+전과 후는 발송 구조와 거기에 딸린 실제 SQS 왕복만 달라야 한다. 공식 측정은 운영과 같은 리전의 임시 EC2 한 대에서, 전환 직전 커밋과 전환 커밋을 같은 날 같은 시험 스택으로 연달아 잰다. 후는 실제 SQS를 쓴다. 노트북은 SQS까지의 거리가 운영과 달라 도구 개발과 리허설에만 쓴다.
 
 같게 두는 것:
 
 - 기계: 같은 EC2 인스턴스 하나
 - 백엔드 자원 제한: `LOADTEST_BACKEND_CPUS`, `LOADTEST_BACKEND_MEMORY`(운영 앱 호스트 사양에 맞춘다)
 - MongoDB: 같은 이미지, 운영과 같은 단일 노드(replica set 아님), 시험 전용
-- 모의 서버 설정: 응답 지연(`MOCK_DELAY_MS`), 상태 비율(`MOCK_STATUSES`), `Retry-After`
+- 모의 서버 설정: 응답 지연(`MOCK_DELAY_MS`), 상태 비율(`MOCK_STATUSES`), `Retry-After`, 상태 추첨 시드(`MOCK_SEED`, 기본 441)
 - 시험 데이터: 구독 수, 공고 수, 미선택 비율, 직무 배정 시드(`--seed`), endpoint 길이
 - 동시 발송 수 20(전 발송기 기본값. 후는 모든 발송 워커를 합쳐 20)
 - tracing 끔(`CAREER_FORM_OTEL_ENABLED=false`)
@@ -39,22 +39,24 @@
 |---|---|
 | `run.json` | 구독 생성과 공고 등록 결과, 메모(커밋 SHA, 발송 설정값) |
 | `subscriber-keys.jsonl` | 시험 구독의 비공개키(권한 600) |
-| `requests.jsonl` | 모의 서버가 받은 요청 |
+| `mock/requests.jsonl` | 모의 서버가 받은 요청. 모의 서버 컨테이너에는 이 `mock/` 폴더만 마운트한다 |
 | `resources.jsonl` | 자원 기록 |
 | `summary.json` | 요약 |
 
 `runs/`와 `.env.loadtest`는 Git이 무시한다. 시험용 값이지만 저장소, Issue, PR, 공유 문서에 옮기지 않는다.
 
-종료 코드는 모든 스크립트가 같다: 0 성공, 1 실행 실패(등록 실패 등), 2 입력 오류, 3 안전장치로 멈춤.
+종료 코드는 모든 스크립트에서 같다. 0은 성공, 1은 실행 실패(등록 실패 등), 2는 입력 오류, 3은 안전장치로 멈춘 경우다.
 
 ## 안전장치
 
 - 시험 표지: 구독 endpoint는 `http://<모의 서버>/fcm/send/loadtest-<실행 id>-…`, 공고 링크는 `https://loadtest.invalid/<실행 id>/<번호>`다.
 - `generate-subscriptions.py`와 `register-postings.py`는 대상 DB에 시험 표지가 없는 구독(https endpoint 전부 포함)이 하나라도 있으면 아무것도 쓰지 않고 종료 코드 3으로 멈춘다. 건수만 출력한다.
 - 이 안전장치는 실제 구독이 있는 DB만 막는다. 대상 DB는 사람이 고른다. dev, staging, prod가 함께 쓰는 MongoDB 호스트를 대상으로 돌리지 않는다.
+- `register-postings.py`는 등록 전에 관리 API 요약이 보는 구독 수와 안전장치가 확인한 DB의 구독 수를 대조한다. 다르면 `--api`와 `LOADTEST_MONGODB_URI`가 다른 곳을 가리키는 것이므로 등록하지 않고 종료 코드 3으로 멈춘다. 시험용 비밀번호로 인증하므로 운영·dev·staging API는 401에서 멈춘다.
+- 기본 포트는 28080(백엔드), 28081(모의 서버), 29091(관리 포트), 27018(MongoDB)이다. 18080·18081은 팀 관리 터널(dev·staging)의 로컬 포트라 쓰지 않는다.
 - MongoDB URI(`LOADTEST_MONGODB_URI`)와 관리 비밀번호(`LOADTEST_ADMIN_PASSWORD`)는 환경변수로만 받는다.
 
-`allowed-endpoint-hosts`는 바꾸지 않는다. 이 값은 구독 등록 API(`PushSubscriptionService`)에서만 검사하고, 발송기는 저장된 endpoint로 그대로 POST한다. 시험 구독은 MongoDB에 직접 넣으므로 이 값과 상관없이 모의 서버로 간다. 반대로 말하면 시험 DB에 실제 구독이 남아 있으면 시험 공고가 실제 FCM으로 나간다(안전장치가 막는 경우). prod의 `allowed-endpoint-hosts`에는 모의 서버 주소를 넣지 않는다.
+`allowed-endpoint-hosts`는 바꾸지 않는다. 이 값은 구독 등록 API(`PushSubscriptionService`)에서만 검사하고, 발송기는 저장된 endpoint로 그대로 POST한다. 시험 구독은 MongoDB에 직접 넣으므로 이 값과 상관없이 모의 서버로 간다. 반대로 시험 DB에 실제 구독이 남아 있으면 시험 공고가 실제 FCM으로 나가므로, 안전장치가 이 경우를 막는다. prod의 `allowed-endpoint-hosts`에는 모의 서버 주소를 넣지 않는다.
 
 ## EC2 준비 (사람)
 
@@ -77,27 +79,29 @@
 모든 명령은 `loadtest/push-dispatch/`에서 실행한다.
 
 ```bash
-set -a; . ./.env.loadtest; set +a           # 스크립트가 LOADTEST_* 값을 읽도록
+set -a; . <(grep '^LOADTEST_' .env.loadtest); set +a   # 스크립트에 필요한 LOADTEST_* 두 값만 셸에 내보낸다
 (cd ../../backend && ./gradlew bootJar)      # 재려는 커밋의 jar (이미지는 build/libs/*.jar를 복사한다)
 
 export LOADTEST_RUN_DIR=runs/$(date -u +%Y%m%dT%H%M%SZ)-s1-3
-mkdir -p "$LOADTEST_RUN_DIR"                 # compose보다 먼저 만든다(리눅스에서 root 소유가 되지 않게)
+mkdir -p "$LOADTEST_RUN_DIR/mock"            # compose보다 먼저 만든다(리눅스에서 root 소유가 되지 않게)
 docker compose --env-file .env.loadtest up -d --build --wait
 
 .venv/bin/python generate-subscriptions.py --run-dir "$LOADTEST_RUN_DIR" --count 1000
 .venv/bin/python record-resources.py --run-dir "$LOADTEST_RUN_DIR" --duration-seconds 0 &
 .venv/bin/python register-postings.py --run-dir "$LOADTEST_RUN_DIR" --count 30 \
-  --note commit=$(git rev-parse --short HEAD) --note host=<인스턴스 유형> \
+  --note host=<인스턴스 유형> \
   --note dispatch-interval=60s --note concurrency=20 --note max-per-cycle=20000 --note lease=120s --note timeout=10s \
-  --note mock=${MOCK_DELAY_MS:-100}ms/${MOCK_STATUSES:-201=1}
+  --note mock=${MOCK_DELAY_MS:-100}ms/${MOCK_STATUSES:-201=1}/seed${MOCK_SEED:-441}
 ```
+
+저장소 커밋(`git rev-parse HEAD`)과 변경 여부는 `register-postings.py`가 실행 기록에 자동으로 남긴다. 발송 설정값 메모는 재는 커밋의 `backend/src/main/resources/application.yml` 기본값(compose가 바꾸지 않는다)을 보고 적는다.
 
 `register-postings.py`는 기본으로 지금부터 2분 뒤를 예정 시각으로 잡는다. 공고를 등록할 때마다 관리 API가 PBKDF2(60만 회)로 비밀번호를 검사하므로 등록 CPU가 버스트에 섞이지 않게 여유를 둔다. 등록이 예정 시각 전에 끝나지 않으면 경고하고 실행 기록에 남긴다.
 
 끝났는지는 모의 서버 집계와 발송기 로그로 본다.
 
 ```bash
-curl -s http://127.0.0.1:18081/__mock/stats
+curl -s http://127.0.0.1:28081/__mock/stats
 docker compose --env-file .env.loadtest logs backend | grep PUSH_DISPATCH_CYCLE | tail -3
 ```
 
@@ -114,14 +118,14 @@ kill -INT %1
 .venv/bin/python cleanup-test-data.py          # 지울 건수 확인
 .venv/bin/python cleanup-test-data.py --yes
 export LOADTEST_RUN_DIR=runs/$(date -u +%Y%m%dT%H%M%SZ)-s3
-mkdir -p "$LOADTEST_RUN_DIR"
+mkdir -p "$LOADTEST_RUN_DIR/mock"
 docker compose --env-file .env.loadtest up -d mock-push
 ```
 
 모의 서버 설정은 실행 중에도 바꿀 수 있다.
 
 ```bash
-curl -s -X POST http://127.0.0.1:18081/__mock/config -d '{"delayMs": 300, "statuses": "201=1"}'
+curl -s -X POST http://127.0.0.1:28081/__mock/config -d '{"delayMs": 300, "statuses": "201=1"}'
 ```
 
 ## 측정 순서
@@ -130,19 +134,21 @@ curl -s -X POST http://127.0.0.1:18081/__mock/config -d '{"delayMs": 300, "statu
 
 1. 시험 스택을 띄우고 워밍업으로 구독 1,000개 × 공고 1건을 한 번 보낸다. 결과는 버리고 시험 데이터를 지운다.
 2. 아래 시나리오를 차례로 돌린다. 실행 사이마다 시험 데이터를 지운다.
-3. S9는 새 스택(`docker compose --env-file .env.loadtest down -v` 뒤 다시 `up`)에서 S1③을 한 번 돌린 요약의 저장 용량 행을 쓴다. 지운 문서의 공간이 남아 있으면 크기가 부풀기 때문이다.
+3. S9는 새 스택(`docker compose --env-file .env.loadtest down -v` 뒤 다시 `up`)에서 S1③을 돌린 요약의 저장 용량 행을 쓴다. 지운 문서의 공간이 남아 있으면 크기가 부풀기 때문이다. 이것도 세 번(실행마다 새 스택) 하고 가운데 값을 쓴다.
 
 | 시나리오 | 데이터 | 절차 | 볼 값 |
 |---|---|---|---|
 | S1③ 버스트 | 구독 1,000 × 공고 30 = 30,000건 | 위 "실행 한 번" 그대로 | 버스트 완료 시간, 전파 지연, 초당 수락 최댓값, 발송기 주기, 자원 |
-| S3 발송 중 재시작 | S1③과 같음 | 첫 요청 30초 뒤 `docker compose --env-file .env.loadtest restart backend`(전) 또는 발송 워커 재시작(후) | 유실, 중복, 수락이 끊긴 가장 긴 구간, 전파 지연 |
-| S4 강제 종료 | S1③과 같음 | 발송 중 `docker compose --env-file .env.loadtest kill -s SIGKILL backend` 뒤 `up -d backend`(전) 또는 발송 워커 강제 종료(후) | 유실, 중복, 수락이 끊긴 가장 긴 구간 |
-| S5 오류 응답 | 구독 1,000 × 공고 1 | `MOCK_STATUSES=201=0.9,429=0.05,503=0.03,410=0.01,400=0.01`, `MOCK_RETRY_AFTER_SECONDS=30`으로 모의 서버를 띄운다. 재시도가 끝날 때까지 기다린다 | 재시도 정확성, 상태·사유별 건수, 404·410을 받고도 남은 구독 |
-| S9 저장 용량 | S1③ | 새 스택에서 S1③ 한 번 | `push_deliveries` 크기, 인덱스 크기, 공고 1건당 바이트 |
+| S3 발송 중 재시작 | S1③과 같음 | 첫 요청 30초 뒤 `docker compose --env-file .env.loadtest restart backend`(전) 또는 발송 워커 재시작(후). 재시작 시각(`date -u`)을 적어 둔다 | 유실, 중복, 수락이 끊긴 구간, 전파 지연 |
+| S4 강제 종료 | S1③과 같음 | 발송 중 `docker compose --env-file .env.loadtest kill -s SIGKILL backend` 뒤 `up -d backend`(전) 또는 발송 워커 강제 종료(후). 종료 시각을 적어 둔다 | 유실, 중복, 수락이 끊긴 구간 |
+| S5 오류 응답 | 구독 1,000 × 공고 1 | `MOCK_STATUSES=201=0.9,429=0.05,503=0.03,410=0.01,400=0.01`, `MOCK_RETRY_AFTER_SECONDS=90`으로 모의 서버를 띄운다. 재시도가 끝날 때까지 기다린다 | 재시도 정확성, 상태·사유별 건수, 404·410을 받고도 남은 구독 |
+| S9 저장 용량 | S1③ | 새 스택에서 S1③, 세 번 | `push_deliveries` 크기, 인덱스 크기, 공고 1건당 바이트 |
 
-S3을 팀 측정 계획의 "S1② 5,000건 시작 30초 뒤"로 하지 않는 이유: 5,000건은 동시성 20, 응답 100ms에서 약 25초에 끝나서 30초 뒤에는 보낼 것이 없다.
+S3은 팀 측정 계획의 "S1② 5,000건 시작 30초 뒤" 대신 30,000건으로 한다. 5,000건은 동시성 20, 응답 100ms에서 약 25초에 끝나서 30초 뒤에는 보낼 것이 없다.
 
-S5의 재시도는 다음 주기에 나간다. 429와 `Retry-After`가 있는 503은 그 시각 뒤, 나머지 오류는 1·2·4분… 백오프라서 분 단위로 걸린다.
+전 구조의 백엔드는 종료 신호(SIGTERM)를 받으면 진행 중인 발송 주기를 끝까지 보낸 뒤 내려간다. 주기가 종료 유예(운영과 같은 30초) 안에 끝나면 재시작해도 발송이 끊기지 않고, 넘으면 30초 뒤 강제 종료된다. 강제 종료 때 보내던 발송 문서(동시성만큼)는 lease 120초가 지난 뒤 다음 주기에 다시 나가고, 그중 모의 서버가 이미 수락한 건이 중복이 된다. 아직 집지 않은 발송 문서는 새 백엔드의 첫 주기(기동 10초 뒤)가 보낸다. 2026-11-09 로컬 리허설에서 1,000건(약 25초 주기)은 끊기지 않았고, 2,000건(약 50초 주기)은 중복 20건, 가장 긴 공백 60.5초, 유실 0이었다.
+
+S5의 재시도는 다음 주기에 나간다. 429와 `Retry-After`가 있는 503은 그 시각 뒤, 나머지 오류는 1·2·4분… 백오프라서 분 단위로 걸린다. 팀 측정 계획은 `Retry-After` 30초를 적었지만, 전 구조는 주기가 60초라 30초로는 "Retry-After 전 재요청"이 늘 0이 된다. 90초로 주면 한 주기를 건너뛰어야 하므로 위반을 잡을 수 있다. 모의 서버의 상태 추첨은 시드가 같으면 같은 순서로 나오므로, 전과 후의 사유별 건수를 비교할 수 있다.
 
 S8(등록 중 종료)은 장애 주입 장치가 필요해 이 도구에 넣지 않았다. 나중에 잴 때는 기준선 커밋에 등록 빈틈 수정(같은 링크로 다시 등록하면 빠진 발송 문서를 채움)이 들어 있는지 함께 적는다. 들어 있는지에 따라 전의 결과가 달라진다. 팀 측정 계획의 S2(느린 FCM)는 S1③을 `MOCK_DELAY_MS=300`으로 다시 돌리면 된다.
 
@@ -167,12 +173,12 @@ S8(등록 중 종료)은 장애 주입 장치가 필요해 이 도구에 넣지 
 | 첫 요청→마지막 수락 | 발송 구조의 처리 시간. 주기 위상이 빠진다 |
 | 전파 지연 p50 / p95 / p99 | 공고 예정 시각부터 쌍별 첫 수락까지 |
 | 최대 동시 요청 | 모의 서버가 동시에 처리한 요청 수의 최댓값. 동시성 20을 넘으면 안 된다 |
-| 수락이 끊긴 가장 긴 구간 | S3·S4에서 멈춘 발송이 다시 수락될 때까지 걸린 시간 |
+| 수락이 끊긴 구간 | 2초 이상 수락이 없던 구간을 시각과 함께 긴 순서로 최대 5개 보여 준다. S3·S4는 적어 둔 재시작·종료 시각 뒤의 구간을 읽는다. 전 구조는 주기 사이(한 주기 상한 20,000건)와 lease 만료를 기다리는 동안에도 공백이 생기므로 가장 긴 구간만 보고 판단하지 않는다 |
 | Retry-After 전 재요청 | 429의 `Retry-After`보다 먼저 다시 보낸 요청 수. 0이어야 한다 |
 | 404·410 뒤 같은 구독 재요청 | 구독이 없어졌다는 응답 뒤에도 그 구독으로 보낸 요청 수 |
 | 400·403·413 뒤 같은 쌍 재요청 | 포기해야 하는 응답 뒤에도 다시 보낸 요청 수. 0이어야 한다 |
 | 공고 1건당 바이트 | `push_deliveries`의 (데이터 + 인덱스) ÷ 시험 DB의 공고 수 |
-| CPU 평균 / 최대 | `docker stats` 기준. 100%가 CPU 한 개다 |
+| CPU 평균 / 최대 | `docker stats` 기준. 100%가 CPU 한 개다. 표는 발송 구간(첫 요청부터 마지막 수락까지와 바로 다음 표본)만 쓰고, 실행 전체 값은 `summary.json`의 `resources.wholeRun`에 있다 |
 
 팀 측정 계획의 합격 기준(30,000건 5분 이하, 모든 시나리오 유실 0, S3·S4 장애 한 번에 구독 하나당 중복 1건 이하, S5 사유별 건수 전후 같음)에 이 값을 대어 본다.
 
