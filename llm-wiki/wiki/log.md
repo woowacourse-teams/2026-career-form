@@ -1103,3 +1103,10 @@
 - 승인한 후보 4개를 [CF-439 bundle](../raw/issues/CF-439/manifest.md)에 기록했다. 같은 링크 재등록 때 빠진 발송을 채우는 규칙, 대상을 첫 등록 시각까지 가입한 구독으로 좁힌 이유와 한계, 등록 복구 절차, 재등록 로그와 수락 지연 지표의 의미다.
 - [공고 구독 알림](topics/job-posting-notifications.md) topic의 현재 상태와 변경 이유를 고쳤다.
 - 호스트 주소, 공고 링크, 키 값, 계정, 구독 endpoint, 사용자의 직무 선택값, 대화 전문은 저장하지 않았다.
+
+## [2026-11-09] ingest | CF-441 공고 알림 SQS 전환 전후 비교용 발송 시험 도구
+- Approval-Digest: 69abe134e0fe90cce8e69994cd3aaebdd978528009b5d669d419281ed5b9678f
+- Source-Revision: 0c1a9000
+- 승인한 후보 4개를 [CF-441 bundle](../raw/issues/CF-441/manifest.md)에 기록했다. 전후 비교 측정 방식, 발송 경로의 endpoint 검사 범위, 전 구조의 재시작 동작, 팀 측정 계획 대비 조정이다.
+- [공고 알림 발송 시험](topics/push-dispatch-load-test.md) topic을 새로 만들었다.
+- 호스트 주소, 키 값, 비밀번호, 구독 endpoint, 대화 전문은 저장하지 않았다.
