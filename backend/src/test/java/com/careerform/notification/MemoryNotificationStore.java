@@ -108,6 +108,27 @@ public final class MemoryNotificationStore implements NotificationStore {
         return Optional.of(claimed);
     }
 
+    @Override public synchronized boolean markQueued(PushDelivery observed, Instant leaseUntil) {
+        var current = deliveries.get(observed.id());
+        if (current == null || current.status() != observed.status()) { return false; }
+        var unchanged = switch (observed.status()) {
+            case PENDING -> current.nextAttemptAt().equals(observed.nextAttemptAt()) && current.attempts() == observed.attempts();
+            case QUEUED, SENDING -> Objects.equals(current.leaseUntil(), observed.leaseUntil());
+            default -> false;
+        };
+        if (!unchanged) { return false; }
+        deliveries.put(current.id(), current.queued(leaseUntil));
+        return true;
+    }
+
+    @Override public synchronized Optional<PushDelivery> claimQueuedDelivery(String id, Instant now, Instant leaseUntil) {
+        var current = deliveries.get(id);
+        if (current == null || !(current.status() == PushDelivery.Status.QUEUED || claimableWithoutQueue(current, now))) { return Optional.empty(); }
+        var claimed = current.claimed(now, leaseUntil);
+        deliveries.put(claimed.id(), claimed);
+        return Optional.of(claimed);
+    }
+
     @Override public synchronized boolean completeDelivery(PushDelivery claimed, PushDelivery next) {
         var current = deliveries.get(claimed.id());
         if (current == null || !next.id().equals(claimed.id()) || current.status() != PushDelivery.Status.SENDING
@@ -118,14 +139,14 @@ public final class MemoryNotificationStore implements NotificationStore {
 
     @Override public synchronized long deletePendingDeliveries(String postingId) {
         var before = deliveries.size();
-        deliveries.values().removeIf(delivery -> delivery.postingId().equals(postingId) && delivery.status() == PushDelivery.Status.PENDING);
+        deliveries.values().removeIf(delivery -> delivery.postingId().equals(postingId) && waiting(delivery));
         return before - deliveries.size();
     }
 
     @Override public synchronized DeliveryProgress deliveryProgress(String postingId) {
         var rows = deliveries.values().stream().filter(delivery -> delivery.postingId().equals(postingId)).toList();
         return new DeliveryProgress(
-            rows.stream().filter(delivery -> delivery.status() == PushDelivery.Status.PENDING).count(),
+            rows.stream().filter(MemoryNotificationStore::waiting).count(),
             rows.stream().filter(delivery -> delivery.status() == PushDelivery.Status.SENDING).count(),
             rows.stream().filter(delivery -> delivery.status() == PushDelivery.Status.ACCEPTED).count(),
             rows.stream().filter(delivery -> delivery.status() == PushDelivery.Status.ABANDONED).count(),
@@ -137,7 +158,7 @@ public final class MemoryNotificationStore implements NotificationStore {
         var latencies = rows.stream().filter(d -> d.status() == PushDelivery.Status.ACCEPTED && d.lastAttemptAt() != null)
             .map(d -> Math.max(0, d.lastAttemptAt().toEpochMilli() - d.scheduledAt().toEpochMilli())).sorted().toList();
         return new DeliverySummary(
-            rows.stream().filter(d -> d.status() == PushDelivery.Status.PENDING).count(),
+            rows.stream().filter(MemoryNotificationStore::waiting).count(),
             rows.stream().filter(d -> d.status() == PushDelivery.Status.SENDING).count(),
             rows.stream().filter(d -> d.status() == PushDelivery.Status.ACCEPTED).count(),
             rows.stream().filter(d -> d.status() == PushDelivery.Status.ABANDONED).count(),
@@ -168,7 +189,17 @@ public final class MemoryNotificationStore implements NotificationStore {
     private static boolean unselected(PushSubscription subscription) { return subscription.roles() == null || subscription.roles().isEmpty(); }
 
     private static boolean due(PushDelivery delivery, Instant now) {
+        return claimableWithoutQueue(delivery, now)
+            || (delivery.status() == PushDelivery.Status.QUEUED && delivery.leaseUntil() != null && !delivery.leaseUntil().isAfter(now));
+    }
+
+    private static boolean claimableWithoutQueue(PushDelivery delivery, Instant now) {
         return (delivery.status() == PushDelivery.Status.PENDING && !delivery.nextAttemptAt().isAfter(now))
             || (delivery.status() == PushDelivery.Status.SENDING && delivery.leaseUntil() != null && !delivery.leaseUntil().isAfter(now));
+    }
+
+    /** 대기와 큐 대기는 진행 집계에서 함께 대기로 센다. */
+    private static boolean waiting(PushDelivery delivery) {
+        return delivery.status() == PushDelivery.Status.PENDING || delivery.status() == PushDelivery.Status.QUEUED;
     }
 }

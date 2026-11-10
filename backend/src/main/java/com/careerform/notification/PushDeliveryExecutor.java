@@ -106,7 +106,7 @@ public final class PushDeliveryExecutor {
             }
             case PENDING -> Outcome.RETRIED;
             case ABANDONED -> Outcome.ABANDONED;
-            case SENDING -> throw new IllegalStateException("Delivery cannot finish as SENDING");
+            case SENDING, QUEUED -> throw new IllegalStateException("Delivery cannot finish as " + next.status());
         };
         var label = switch (outcome) {
             case ACCEPTED -> "accepted";

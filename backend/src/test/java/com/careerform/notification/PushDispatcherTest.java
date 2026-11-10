@@ -400,6 +400,22 @@ class PushDispatcherTest {
         assertThat(store.deliveries()).allMatch(delivery -> delivery.status() == PushDelivery.Status.ACCEPTED && "ACCEPTED".equals(delivery.lastReason()));
     }
 
+    @Test
+    @DisplayName("큐에 넣은 채 남은 건은 큐 리스가 지난 뒤 발송기가 집어 보낸다")
+    void sendsQueuedDeliveriesAfterQueueLease() {
+        subscribe("s1");
+        register("https://careers.example.test/jobs/queued", NOW.minusSeconds(60), NOW.plusSeconds(86400));
+        var pending = store.deliveries().getFirst();
+        assertThat(store.markQueued(pending, NOW.plusSeconds(900))).isTrue();
+        assertThat(dispatcher.dispatch().due()).isZero();
+        assertThat(client.calls()).isEmpty();
+        clock.set(NOW.plusSeconds(900));
+        var cycle = dispatcher.dispatch();
+        assertThat(cycle.accepted()).isEqualTo(1);
+        assertThat(store.deliveries().getFirst().attempts()).isEqualTo(1);
+        assertThat(client.calls()).hasSize(1);
+    }
+
     private void subscribe(String id) { subscribe(id, null); }
 
     private void subscribe(String id, List<String> roles) {

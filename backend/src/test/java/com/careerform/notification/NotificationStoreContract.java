@@ -276,6 +276,120 @@ abstract class NotificationStoreContract {
         assertThat(store.subscriptionIdsForRolesRegisteredBy(List.of("IT.BACKEND"), NOW.minusSeconds(61))).isEmpty();
     }
 
+    @Test
+    @DisplayName("큐 표시는 관측한 상태가 그대로일 때만 반영되고 시도 횟수와 다음 시도 시각은 바꾸지 않는다")
+    void marksQueuedOnlyWhenObservedStateHolds() {
+        var store = store();
+        store.insertDeliveries(List.of(PushDelivery.pending("d1", "p1", "s1", NOW), PushDelivery.pending("d2", "p1", "s2", NOW)));
+        var observed = store.findDelivery("d1").orElseThrow();
+        assertThat(store.markQueued(observed, NOW.plusSeconds(900))).isTrue();
+        var queued = store.findDelivery("d1").orElseThrow();
+        assertThat(queued.status()).isEqualTo(PushDelivery.Status.QUEUED);
+        assertThat(queued.leaseUntil()).isEqualTo(NOW.plusSeconds(900));
+        assertThat(queued.attempts()).isZero();
+        assertThat(queued.nextAttemptAt()).isEqualTo(NOW);
+        assertThat(store.markQueued(observed, NOW.plusSeconds(900))).as("이미 큐 대기인 건을 대기 관측으로 다시 표시할 수 없다").isFalse();
+        var other = store.findDelivery("d2").orElseThrow();
+        store.claimDelivery(other, NOW, NOW.plusSeconds(120)).orElseThrow();
+        assertThat(store.markQueued(other, NOW.plusSeconds(900))).as("그 사이 선점된 건은 표시하지 않는다").isFalse();
+        assertThat(store.findDelivery("d2").orElseThrow().status()).isEqualTo(PushDelivery.Status.SENDING);
+    }
+
+    @Test
+    @DisplayName("큐 리스가 지난 큐 대기 건과 리스가 지난 발송 중 건은 다시 큐 대기로 표시할 수 있고 시도 횟수는 그대로다")
+    void remarksExpiredQueuedAndExpiredSending() {
+        var store = store();
+        var expiredQueued = PushDelivery.pending("queued", "p1", "s1", NOW.minusSeconds(1200)).queued(NOW.minusSeconds(1));
+        var expiredSending = PushDelivery.pending("sending", "p1", "s2", NOW.minusSeconds(600)).claimed(NOW.minusSeconds(300), NOW.minusSeconds(180));
+        store.insertDeliveries(List.of(expiredQueued, expiredSending));
+        assertThat(store.markQueued(expiredQueued, NOW.plusSeconds(900))).isTrue();
+        assertThat(store.markQueued(expiredQueued, NOW.plusSeconds(1800))).as("리스가 바뀐 뒤의 옛 관측은 반영하지 않는다").isFalse();
+        assertThat(store.markQueued(expiredSending, NOW.plusSeconds(900))).isTrue();
+        var requeued = store.findDelivery("sending").orElseThrow();
+        assertThat(requeued.status()).isEqualTo(PushDelivery.Status.QUEUED);
+        assertThat(requeued.attempts()).isEqualTo(1);
+        assertThat(requeued.leaseUntil()).isEqualTo(NOW.plusSeconds(900));
+    }
+
+    @Test
+    @DisplayName("큐 대기 건은 큐 리스가 지난 뒤에만 보낼 대상으로 찾고 그때만 발송기가 선점한다")
+    void findsAndClaimsQueuedOnlyAfterQueueLease() {
+        var store = store();
+        store.insertDeliveries(List.of(PushDelivery.pending("d1", "p1", "s1", NOW.minusSeconds(60)).queued(NOW.plusSeconds(900))));
+        var queued = store.findDelivery("d1").orElseThrow();
+        assertThat(store.findDueDeliveries(NOW.plusSeconds(899), 10)).isEmpty();
+        assertThat(store.claimDelivery(queued, NOW.plusSeconds(899), NOW.plusSeconds(1019))).isEmpty();
+        assertThat(store.findDueDeliveries(NOW.plusSeconds(900), 10)).extracting(PushDelivery::id).containsExactly("d1");
+        var claimed = store.claimDelivery(queued, NOW.plusSeconds(900), NOW.plusSeconds(1020)).orElseThrow();
+        assertThat(claimed.status()).isEqualTo(PushDelivery.Status.SENDING);
+        assertThat(claimed.attempts()).isEqualTo(1);
+        assertThat(claimed.leaseUntil()).isEqualTo(NOW.plusSeconds(1020));
+    }
+
+    @Test
+    @DisplayName("워커 선점은 큐 대기, 때가 된 대기, 리스가 지난 발송 중 건만 한 번씩 성공한다")
+    void claimsQueuedDeliveryForWorker() {
+        var store = store();
+        store.insertDeliveries(List.of(
+            PushDelivery.pending("queued", "p1", "s1", NOW.minusSeconds(60)).queued(NOW.plusSeconds(900)),
+            PushDelivery.pending("pending-due", "p1", "s2", NOW),
+            PushDelivery.pending("pending-future", "p1", "s3", NOW.plusSeconds(1)),
+            PushDelivery.pending("sending-expired", "p1", "s4", NOW.minusSeconds(600)).claimed(NOW.minusSeconds(300), NOW),
+            PushDelivery.pending("sending-live", "p1", "s5", NOW.minusSeconds(600)).claimed(NOW.minusSeconds(10), NOW.plusSeconds(1)),
+            PushDelivery.pending("accepted", "p1", "s6", NOW.minusSeconds(600)).claimed(NOW.minusSeconds(10), NOW.plusSeconds(60)).accepted(201)));
+        var claimed = store.claimQueuedDelivery("queued", NOW, NOW.plusSeconds(120)).orElseThrow();
+        assertThat(claimed.status()).isEqualTo(PushDelivery.Status.SENDING);
+        assertThat(claimed.attempts()).isEqualTo(1);
+        assertThat(claimed.leaseUntil()).isEqualTo(NOW.plusSeconds(120));
+        assertThat(claimed.lastAttemptAt()).isEqualTo(NOW);
+        assertThat(store.claimQueuedDelivery("queued", NOW, NOW.plusSeconds(120))).as("같은 건을 두 번 선점할 수 없다").isEmpty();
+        assertThat(store.claimQueuedDelivery("pending-due", NOW, NOW.plusSeconds(120))).isPresent();
+        assertThat(store.claimQueuedDelivery("pending-future", NOW, NOW.plusSeconds(120))).isEmpty();
+        assertThat(store.claimQueuedDelivery("sending-expired", NOW, NOW.plusSeconds(120))).map(PushDelivery::attempts).contains(2);
+        assertThat(store.claimQueuedDelivery("sending-live", NOW, NOW.plusSeconds(120))).isEmpty();
+        assertThat(store.claimQueuedDelivery("accepted", NOW, NOW.plusSeconds(120))).isEmpty();
+        assertThat(store.claimQueuedDelivery("missing", NOW, NOW.plusSeconds(120))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("같은 큐 대기 건을 여러 워커가 선점해도 하나만 성공한다")
+    void claimsQueuedDeliveryOnceAcrossWorkers() throws Exception {
+        var store = store();
+        store.insertDeliveries(List.of(PushDelivery.pending("d1", "p1", "s1", NOW).queued(NOW.plusSeconds(900))));
+        var winners = new AtomicInteger();
+        var start = new CountDownLatch(1);
+        try (var executor = Executors.newFixedThreadPool(8)) {
+            for (var index = 0; index < 8; index++) {
+                executor.submit(() -> {
+                    start.await();
+                    if (store.claimQueuedDelivery("d1", NOW, NOW.plusSeconds(120)).isPresent()) { winners.incrementAndGet(); }
+                    return null;
+                });
+            }
+            start.countDown();
+        }
+        assertThat(winners.get()).isEqualTo(1);
+        assertThat(store.findDelivery("d1").orElseThrow().attempts()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("큐 대기 건은 진행 집계와 기간 요약에서 대기로 세고 공고를 지울 때 함께 취소된다")
+    void countsQueuedAsPendingAndCancelsWithPosting() {
+        var store = store();
+        store.insertDeliveries(List.of(PushDelivery.pending("pending", "p1", "s1", NOW),
+            PushDelivery.pending("queued", "p1", "s2", NOW).queued(NOW.plusSeconds(900)),
+            PushDelivery.pending("sending", "p1", "s3", NOW.minusSeconds(60)).claimed(NOW.minusSeconds(5), NOW.plusSeconds(115))));
+        assertThat(store.deliveryProgress("p1")).isEqualTo(new DeliveryProgress(2, 1, 0, 0, NOW.minusSeconds(5)));
+        var summary = store.summarizeDeliveries(NOW.minusSeconds(3600), NOW.plusSeconds(3600));
+        assertThat(summary.pending()).isEqualTo(2);
+        assertThat(summary.sending()).isEqualTo(1);
+        assertThat(summary.total()).isEqualTo(3);
+        assertThat(store.countDeliveries(PushDelivery.Status.QUEUED)).isEqualTo(1);
+        assertThat(store.deletePendingDeliveries("p1")).isEqualTo(2);
+        assertThat(store.findDelivery("queued")).isEmpty();
+        assertThat(store.findDelivery("sending")).isPresent();
+    }
+
     static PushSubscription subscription(String id, String endpoint) {
         return new PushSubscription(id, endpoint, "synthetic-p256dh", "synthetic-auth", NOW, null, null);
     }

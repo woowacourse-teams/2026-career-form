@@ -125,7 +125,7 @@ public final class MongoNotificationStore implements NotificationStore {
     @Override public List<PushDelivery> findDueDeliveries(Instant now, int limit) {
         var due = new Criteria().orOperator(
             Criteria.where("status").is(PushDelivery.Status.PENDING).and("nextAttemptAt").lte(now),
-            Criteria.where("status").is(PushDelivery.Status.SENDING).and("leaseUntil").lte(now));
+            Criteria.where("status").in(PushDelivery.Status.SENDING, PushDelivery.Status.QUEUED).and("leaseUntil").lte(now));
         var query = new Query(due).with(Sort.by(Sort.Direction.ASC, "nextAttemptAt").and(Sort.by(Sort.Direction.ASC, "_id"))).limit(limit);
         return List.copyOf(mongo.find(query, PushDelivery.class));
     }
@@ -134,12 +134,33 @@ public final class MongoNotificationStore implements NotificationStore {
         var identity = Criteria.where("_id").is(observed.id()).and("status").is(observed.status());
         var due = switch (observed.status()) {
             case PENDING -> identity.and("nextAttemptAt").lte(now);
-            case SENDING -> identity.and("leaseUntil").lte(now);
+            case SENDING, QUEUED -> identity.and("leaseUntil").lte(now);
             default -> null;
         };
         if (due == null) { return Optional.empty(); }
         var update = new Update().set("status", PushDelivery.Status.SENDING).set("leaseUntil", leaseUntil).set("lastAttemptAt", now).inc("attempts", 1);
         return Optional.ofNullable(mongo.findAndModify(Query.query(due), update, FindAndModifyOptions.options().returnNew(true), PushDelivery.class));
+    }
+
+    @Override public boolean markQueued(PushDelivery observed, Instant leaseUntil) {
+        var identity = Criteria.where("_id").is(observed.id()).and("status").is(observed.status());
+        var unchanged = switch (observed.status()) {
+            case PENDING -> identity.and("nextAttemptAt").is(observed.nextAttemptAt()).and("attempts").is(observed.attempts());
+            case QUEUED, SENDING -> identity.and("leaseUntil").is(observed.leaseUntil());
+            default -> null;
+        };
+        if (unchanged == null) { return false; }
+        var update = new Update().set("status", PushDelivery.Status.QUEUED).set("leaseUntil", leaseUntil);
+        return mongo.updateFirst(Query.query(unchanged), update, PushDelivery.class).getModifiedCount() > 0;
+    }
+
+    @Override public Optional<PushDelivery> claimQueuedDelivery(String id, Instant now, Instant leaseUntil) {
+        var claimable = new Criteria().andOperator(Criteria.where("_id").is(id), new Criteria().orOperator(
+            Criteria.where("status").is(PushDelivery.Status.QUEUED),
+            Criteria.where("status").is(PushDelivery.Status.PENDING).and("nextAttemptAt").lte(now),
+            Criteria.where("status").is(PushDelivery.Status.SENDING).and("leaseUntil").lte(now)));
+        var update = new Update().set("status", PushDelivery.Status.SENDING).set("leaseUntil", leaseUntil).set("lastAttemptAt", now).inc("attempts", 1);
+        return Optional.ofNullable(mongo.findAndModify(Query.query(claimable), update, FindAndModifyOptions.options().returnNew(true), PushDelivery.class));
     }
 
     @Override public boolean completeDelivery(PushDelivery claimed, PushDelivery next) {
@@ -150,8 +171,8 @@ public final class MongoNotificationStore implements NotificationStore {
     }
 
     @Override public long deletePendingDeliveries(String postingId) {
-        return mongo.remove(Query.query(Criteria.where("postingId").is(postingId).and("status").is(PushDelivery.Status.PENDING)), PushDelivery.class)
-            .getDeletedCount();
+        var waiting = Criteria.where("postingId").is(postingId).and("status").in(PushDelivery.Status.PENDING, PushDelivery.Status.QUEUED);
+        return mongo.remove(Query.query(waiting), PushDelivery.class).getDeletedCount();
     }
 
     @Override public DeliveryProgress deliveryProgress(String postingId) {
@@ -165,7 +186,7 @@ public final class MongoNotificationStore implements NotificationStore {
         for (var row : mongo.aggregate(aggregation, PushDelivery.class, Document.class).getMappedResults()) {
             var count = ((Number) row.get("count")).longValue();
             switch (PushDelivery.Status.valueOf(row.getString("_id"))) {
-                case PENDING -> pending = count;
+                case PENDING, QUEUED -> pending += count;
                 case SENDING -> sending = count;
                 case ACCEPTED -> accepted = count;
                 case ABANDONED -> abandoned = count;
@@ -191,7 +212,7 @@ public final class MongoNotificationStore implements NotificationStore {
             var count = ((Number) row.get("count")).longValue();
             attempts += ((Number) row.get("attempts")).longValue();
             switch (PushDelivery.Status.valueOf(row.getString("_id"))) {
-                case PENDING -> pending = count;
+                case PENDING, QUEUED -> pending += count;
                 case SENDING -> sending = count;
                 case ACCEPTED -> accepted = count;
                 case ABANDONED -> abandoned = count;
