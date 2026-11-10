@@ -32,6 +32,14 @@ class DeliveryReportTest(unittest.TestCase):
             "perPosting": {"p1": 3, "p2": 2},
         }, report)
 
+    def test_queued_deliveries_are_unfinished(self):
+        """SQS 방식에서 큐에 넣은 채 남은 발송 문서(QUEUED)는 상태별 건수에 나오고 유실로 센다."""
+        database = FakeDatabase(push_deliveries=[delivery(1, "p1", "ACCEPTED", "ACCEPTED", 1), delivery(2, "p1", "QUEUED", None, 0),
+                                                 delivery(3, "p1", "QUEUED", "RETRY_AFTER", 1)])
+        report = mongo_report.delivery_report(database, ["p1"], expected=3)
+        self.assertEqual((2, {"ACCEPTED": 1, "QUEUED": 2}), (report["lost"], report["byStatus"]))
+        self.assertEqual({"ACCEPTED/ACCEPTED": 1, "QUEUED/-": 1, "QUEUED/RETRY_AFTER": 1}, report["byStatusReason"])
+
     def test_reads_only_needed_fields(self):
         mongo_report.delivery_report(self.database, ["p1"], expected=None)
         name, operation, query, projection = self.database.log[0]

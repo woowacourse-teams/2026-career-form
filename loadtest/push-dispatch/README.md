@@ -12,24 +12,26 @@
 
 - 기계: 같은 EC2 인스턴스 하나
 - 백엔드 자원 제한: `LOADTEST_BACKEND_CPUS`, `LOADTEST_BACKEND_MEMORY`(운영 앱 호스트 사양에 맞춘다)
+- 릴레이 주기와 한 주기 상한: 전 발송기와 같은 설정(`dispatch-interval` 60초, `max-per-cycle` 20,000)을 릴레이가 그대로 쓴다
 - MongoDB: 같은 이미지, 운영과 같은 단일 노드(replica set 아님), 시험 전용
 - 모의 서버 설정: 응답 지연(`MOCK_DELAY_MS`), 상태 비율(`MOCK_STATUSES`), `Retry-After`, 상태 추첨 시드(`MOCK_SEED`, 기본 441)
 - 시험 데이터: 구독 수, 공고 수, 미선택 비율, 직무 배정 시드(`--seed`), endpoint 길이
 - 동시 발송 수 20(전 발송기 기본값. 후는 모든 발송 워커를 합쳐 20)
 - tracing 끔(`CAREER_FORM_OTEL_ENABLED=false`)
 
-다른 것: 발송 구조(전: 백엔드 안의 발송기, 후: 릴레이와 발송 워커)와 실제 SQS 왕복. 후 측정에 필요한 워커와 SQS 연결은 전환 Issue가 `compose.yaml`에 더한다.
+다른 것: 발송 구조(전: 백엔드 안의 발송기, 후: 릴레이와 발송 워커)와 실제 SQS 왕복. 후에는 발송 워커가 별도 컨테이너(`worker`)로 뜨고 자기 자원 제한(`LOADTEST_WORKER_CPUS`, `LOADTEST_WORKER_MEMORY`)을 갖는다. 이 제한은 전에 없던 것이므로 둔 값을 `--note`로 남기고, 결과를 비교할 때 백엔드와 워커의 CPU를 함께 본다.
 
 ## 구성
 
 | 파일 | 하는 일 |
 |---|---|
-| `compose.yaml` | 시험 스택: 백엔드(재려는 커밋의 jar), MongoDB, 모의 푸시 서버. 포트는 모두 `127.0.0.1`에만 연다 |
+| `compose.yaml` | 시험 스택: 백엔드(재려는 커밋의 jar), MongoDB, 모의 푸시 서버. `--profile sqs`면 발송 워커(`worker`), `--profile local-sqs`면 노트북 리허설용 SQS 대체물(`elasticmq`)이 더 뜬다. 포트는 모두 `127.0.0.1`에만 연다 |
+| `elasticmq.conf` | 노트북 리허설용 SQS 대체물의 큐 설정(표준 큐와 DLQ). 공식 측정에는 쓰지 않는다 |
 | `make-test-env.py` | 시험용 VAPID 키 쌍, 임시 관리 비밀번호와 그 PBKDF2 검증 문자열을 `.env.loadtest`(권한 600)에 쓴다. 값은 출력하지 않는다 |
 | `mock-push-server.py` | 정한 지연 뒤 비율로 고른 상태 코드를 돌려주고 요청마다 시각, 경로, 상태, 동시 요청 수, 암호문을 JSONL로 남긴다. 표준 라이브러리만 쓴다 |
 | `generate-subscriptions.py` | 구독마다 P-256 키 쌍과 auth를 만들어 `push_subscriptions`에 넣는다. 비공개키는 실행 폴더에만 남긴다 |
 | `register-postings.py` | 같은 예정 시각의 공고 N건을 관리 API로 등록하고 실행 기록에 남긴다 |
-| `record-resources.py` | 컨테이너별 CPU·메모리(`docker stats`)와 백엔드 actuator 지표를 일정 간격으로 남긴다 |
+| `record-resources.py` | 컨테이너별 CPU·메모리(`docker stats`)와 백엔드 actuator 지표를 일정 간격으로 남긴다. SQS 방식에서는 백엔드와 워커의 지표를 따로 읽는다 |
 | `summarize-run.py` | 암호문을 풀어 공고 id를 읽고, 유실·중복·버스트·지연·재시도·저장 용량·자원을 요약한다 |
 | `cleanup-test-data.py` | 시험 표지가 있는 구독·공고와 그 발송 문서만 지운다. `--yes`가 없으면 건수만 보여 준다 |
 
@@ -53,7 +55,7 @@
 - `generate-subscriptions.py`와 `register-postings.py`는 대상 DB에 시험 표지가 없는 구독(https endpoint 전부 포함)이 하나라도 있으면 아무것도 쓰지 않고 종료 코드 3으로 멈춘다. 건수만 출력한다.
 - 이 안전장치는 실제 구독이 있는 DB만 막는다. 대상 DB는 사람이 고른다. dev, staging, prod가 함께 쓰는 MongoDB 호스트를 대상으로 돌리지 않는다.
 - `register-postings.py`는 등록 전에 관리 API 요약이 보는 구독 수와 안전장치가 확인한 DB의 구독 수를 대조한다. 다르면 `--api`와 `LOADTEST_MONGODB_URI`가 다른 곳을 가리키는 것이므로 등록하지 않고 종료 코드 3으로 멈춘다. 시험용 비밀번호로 인증하므로 운영·dev·staging API는 401에서 멈춘다.
-- 기본 포트는 28080(백엔드), 28081(모의 서버), 29091(관리 포트), 27018(MongoDB)이다. 18080·18081은 팀 관리 터널(dev·staging)의 로컬 포트라 쓰지 않는다.
+- 기본 포트는 28080(백엔드), 28081(모의 서버), 29091(관리 포트), 27018(MongoDB), 29092(워커 관리 포트), 29324(리허설용 SQS 대체물)이다. 18080·18081은 팀 관리 터널(dev·staging)의 로컬 포트라 쓰지 않는다.
 - MongoDB URI(`LOADTEST_MONGODB_URI`)와 관리 비밀번호(`LOADTEST_ADMIN_PASSWORD`)는 환경변수로만 받는다.
 
 `allowed-endpoint-hosts`는 바꾸지 않는다. 이 값은 구독 등록 API(`PushSubscriptionService`)에서만 검사하고, 발송기는 저장된 endpoint로 그대로 POST한다. 시험 구독은 MongoDB에 직접 넣으므로 이 값과 상관없이 모의 서버로 간다. 반대로 시험 DB에 실제 구독이 남아 있으면 시험 공고가 실제 FCM으로 나가므로, 안전장치가 이 경우를 막는다. prod의 `allowed-endpoint-hosts`에는 모의 서버 주소를 넣지 않는다.
@@ -78,7 +80,19 @@
    ```
 
 4. 운영 앱 호스트 사양에 맞춰 `LOADTEST_BACKEND_CPUS`, `LOADTEST_BACKEND_MEMORY`를 정한다(기본 2, `2g`). 운영 compose에는 자원 제한이 없다.
-5. 후 측정용 SQS 큐 생성과 삭제, EC2 삭제와 비용(unlimited 크레딧 추가 요금 포함)은 사람이 맡는다. 공용 계정에서 직접 지울 수 없으면 운영진에게 삭제를 요청한다.
+5. 후 측정용 SQS 큐를 준비한다.
+   - 큐 두 개를 만든다. 측정용 큐와 DLQ(여러 번 받고도 처리되지 않은 메시지가 옮겨지는 큐)다. DLQ를 먼저 만들고 측정용 큐에 연결한다. 둘 다 표준 큐이고 개발·운영 큐와 이름이 겹치지 않게 한다(예: `career-form-loadtest-push`, `career-form-loadtest-push-dlq`). 같은 큐를 함께 쓰면 서로의 메시지를 가져간다.
+   - 측정용 큐 설정: 가시성 타임아웃 60초, 메시지 보관 기본값(4일), DLQ 연결과 최대 수신 횟수 10. DLQ는 보관 14일.
+   - 두 큐에 태그 3개를 단다.
+   - EC2에 공용 역할 `ec2-project`를 연결하고(Actions > Security > Modify IAM role), 인스턴스 메타데이터의 홉 제한을 2로 둔다. 컨테이너 안의 앱이 인스턴스 자격 증명을 받으려면 홉 2가 필요하다.
+   - 역할이 이 큐를 부를 수 있는지 EC2에서 먼저 확인한다. 거부되면 Slack `#8기-기술-검토`에 팀 큐 범위의 `sqs:SendMessage`, `sqs:ReceiveMessage`, `sqs:DeleteMessage`, `sqs:GetQueueAttributes` 권한을 요청한다.
+
+     ```bash
+     aws sqs get-queue-attributes --region ap-northeast-2 --queue-url <측정용 큐 주소> --attribute-names ApproximateNumberOfMessages
+     ```
+
+   - 액세스 키를 만들지 않는다. 셸에 `AWS_ACCESS_KEY_ID`를 두지 않으면 컨테이너는 인스턴스 역할을 쓴다.
+6. 측정이 끝나면 큐 두 개와 EC2를 바로 지운다. 비용(unlimited 크레딧 추가 요금 포함)을 확인한다. 공용 계정에서 직접 지울 수 없으면 운영진에게 삭제를 요청한다.
 
 ## 실행 한 번
 
@@ -103,7 +117,24 @@ docker compose --env-file .env.loadtest up -d --build --wait
 
 `register-postings.py`는 기본으로 지금부터 2분 뒤를 예정 시각으로 잡는다. 공고를 등록할 때마다 관리 API가 PBKDF2(60만 회)로 비밀번호를 검사하므로 등록 CPU가 버스트에 섞이지 않게 여유를 둔다. 등록이 예정 시각 전에 끝나지 않으면 경고하고 실행 기록에 남긴다.
 
-끝났는지는 모의 서버 집계와 발송기 로그로 본다.
+후 측정(SQS 방식)은 같은 순서에서 세 곳만 다르다. 큐 주소를 주고 `--profile sqs`로 워커를 함께 띄우며, 자원 기록이 백엔드와 워커의 지표를 따로 읽게 한다. 백엔드는 릴레이만 돌리고 발송은 워커가 한다.
+
+```bash
+export LOADTEST_PUSH_TRANSPORT=sqs
+export LOADTEST_SQS_QUEUE_URL=<측정용 큐 주소>
+docker compose --env-file .env.loadtest --profile sqs up -d --build --wait
+
+.venv/bin/python generate-subscriptions.py --run-dir "$LOADTEST_RUN_DIR" --count 1000
+.venv/bin/python record-resources.py --run-dir "$LOADTEST_RUN_DIR" --duration-seconds 0 \
+  --metrics-url backend=http://127.0.0.1:29091/actuator/prometheus,worker=http://127.0.0.1:29092/actuator/prometheus &
+.venv/bin/python register-postings.py --run-dir "$LOADTEST_RUN_DIR" --count 30 \
+  --note host=<인스턴스 유형> --note transport=sqs --note worker-cpus=2 --note worker-memory=2g \
+  --note dispatch-interval=60s --note concurrency=20 --note max-per-cycle=20000 --note lease=120s --note timeout=10s --note queue-lease=15m
+```
+
+후 측정의 `docker compose` 명령에는 모두 `--profile sqs`를 붙인다(`down -v`, `restart worker`, `logs worker` 등). 실행 전에 큐가 비어 있는지 확인한다. 앞 실행의 메시지가 남아 있어도 중복 발송은 없지만 워커가 그 메시지를 받아 지우는 일이 결과에 섞인다.
+
+끝났는지는 모의 서버 집계와 발송기 로그로 본다. 후 측정은 `backend`의 `PUSH_RELAY_CYCLE`과 `worker`의 `PUSH_RESULT`를 본다.
 
 ```bash
 curl -s http://127.0.0.1:28081/__mock/stats
@@ -144,12 +175,14 @@ curl -s -X POST http://127.0.0.1:28081/__mock/config -d '{"delayMs": 300, "statu
 | 시나리오 | 데이터 | 절차 | 볼 값 |
 |---|---|---|---|
 | S1③ 버스트 | 구독 1,000 × 공고 30 = 30,000건 | 위 "실행 한 번" 그대로 | 버스트 완료 시간, 전파 지연, 초당 수락 최댓값, 발송기 주기, 자원 |
-| S3 발송 중 재시작 | S1③과 같음 | 첫 요청 30초 뒤 `docker compose --env-file .env.loadtest restart backend`(전) 또는 발송 워커 재시작(후). 재시작 시각(`date -u`)을 적어 둔다 | 유실, 중복, 수락이 끊긴 구간, 전파 지연 |
-| S4 강제 종료 | S1③과 같음 | 발송 중 `docker compose --env-file .env.loadtest kill -s SIGKILL backend` 뒤 `up -d backend`(전) 또는 발송 워커 강제 종료(후). 종료 시각을 적어 둔다 | 유실, 중복, 수락이 끊긴 구간 |
+| S3 발송 중 재시작 | S1③과 같음 | 첫 요청 30초 뒤 `docker compose --env-file .env.loadtest restart backend`(전과 후 모두. 후에는 릴레이가 든 백엔드를 재시작해도 워커가 큐에 있는 건을 계속 보내는지 본다). 재시작 시각(`date -u`)을 적어 둔다 | 유실, 중복, 수락이 끊긴 구간, 전파 지연 |
+| S4 강제 종료 | S1③과 같음 | 발송 중 `docker compose --env-file .env.loadtest kill -s SIGKILL backend` 뒤 `up -d backend`(전). 후에는 `--profile sqs`를 붙여 `kill -s SIGKILL worker` 뒤 `up -d worker`. 종료 시각을 적어 둔다 | 유실, 중복, 수락이 끊긴 구간 |
 | S5 오류 응답 | 구독 1,000 × 공고 1 | `MOCK_STATUSES=201=0.9,429=0.05,503=0.03,410=0.01,400=0.01`, `MOCK_RETRY_AFTER_SECONDS=90`으로 모의 서버를 띄운다. 재시도가 끝날 때까지 기다린다 | 재시도 정확성, 상태·사유별 건수, 404·410을 받고도 남은 구독 |
 | S9 저장 용량 | S1③ | 새 스택에서 S1③, 세 번 | `push_deliveries` 크기, 인덱스 크기, 공고 1건당 바이트 |
 
 S3은 팀 측정 계획의 "S1② 5,000건 시작 30초 뒤" 대신 30,000건으로 한다. 5,000건은 동시성 20, 응답 100ms에서 약 25초에 끝나서 30초 뒤에는 보낼 것이 없다.
+
+후 구조에서 S3은 두 경우를 나눠 적는다. 백엔드(릴레이)를 재시작하면 이미 큐에 들어간 건은 워커가 계속 보내고, 아직 큐에 넣지 못한 건은 릴레이가 다시 뜬 뒤 첫 주기(기동 10초 뒤)에 들어간다. 워커를 재시작하면 받기를 멈추고 진행 중인 건을 25초 안에 끝낸 뒤 내려가며, 큐에 남은 메시지는 새 워커가 이어 받는다. S4에서 워커를 강제 종료하면 보내던 건(동시성만큼)은 lease 120초가 지난 뒤 릴레이가 다시 큐에 넣는다. 그 전에 가시성 타임아웃(60초)이 지나 다시 온 메시지는 워커가 선점하지 못해 지운다.
 
 전 구조의 백엔드는 종료 신호(SIGTERM)를 받으면 진행 중인 발송 주기를 끝까지 보낸 뒤 내려간다. 주기가 종료 유예(운영과 같은 30초) 안에 끝나면 재시작해도 발송이 끊기지 않고, 넘으면 30초 뒤 강제 종료된다. 강제 종료 때 보내던 발송 문서(동시성만큼)는 lease 120초가 지난 뒤 다음 주기에 다시 나가고, 그중 모의 서버가 이미 수락한 건이 중복이 된다. 아직 집지 않은 발송 문서는 새 백엔드의 첫 주기(기동 10초 뒤)가 보낸다. 2026-11-09 로컬 리허설(모의 서버 지연 500ms라 동시성 20에서 초당 40건)에서 1,000건(약 25초 주기)은 끊기지 않았고, 2,000건(약 50초 주기)은 중복 20건, 가장 긴 공백 60.5초, 유실 0이었다.
 
@@ -183,6 +216,12 @@ S8(등록 중 종료)은 장애 주입 장치가 필요해 이 도구에 넣지 
 | 404·410 뒤 같은 구독 재요청 | 구독이 없어졌다는 응답 뒤에도 그 구독으로 보낸 요청 수 |
 | 400·403·413 뒤 같은 쌍 재요청 | 포기해야 하는 응답 뒤에도 다시 보낸 요청 수. 0이어야 한다 |
 | 공고 1건당 바이트 | `push_deliveries`의 (데이터 + 인덱스) ÷ 시험 DB의 공고 수 |
+| 발송기(SQS 방식은 릴레이) 주기 수 / 평균 / 최대 | 전은 발송까지 포함한 한 주기, 후는 큐에 넣기까지의 한 주기다. 뜻이 달라 서로 직접 비교하지 않는다 |
+| 릴레이가 큐에 넣은 결과 | (후) `queued`는 큐에 넣고 큐 대기로 표시한 건수, `failed`는 큐가 거절했거나 호출이 실패한 건수 |
+| 릴레이 지연 평균 / 최대 | (후) 예정 시각(재시도는 다음 시도 시각)부터 큐에 넣을 때까지. 릴레이 주기 위상이 들어간다 |
+| 큐 대기 평균 / 최대 | (후) 큐에 들어간 시각부터 워커가 선점할 때까지. 실제 SQS 왕복과 워커 처리 속도가 들어간다 |
+| 워커가 받은 메시지 결과 | (후) `processed`는 보낸 건, `skipped`는 이미 처리됐거나 다른 쪽이 선점해 보내지 않고 지운 메시지다. 중복 메시지가 있었는지 여기서 본다 |
+| `<이름>` GC 정지 횟수 / 합, 힙 최대 | (후) 백엔드와 워커를 따로 적는다. 전은 한 줄이다 |
 | CPU 평균 / 최대 | `docker stats` 기준. 100%가 CPU 한 개다. 표는 발송 구간(첫 요청부터 마지막 응답까지)과 겹치는 표본만 쓴다. 컨테이너 값은 docker stats가 잰 구간, 카운터는 지표를 읽은 시각으로 고른다. 실행 전체 값은 `summary.json`의 `resources.wholeRun`에 있다 |
 
 팀 측정 계획의 합격 기준(30,000건 5분 이하, 모든 시나리오 유실 0, S3·S4 장애 한 번에 구독 하나당 중복 1건 이하, S5 사유별 건수 전후 같음)에 이 값을 대어 본다.
@@ -205,7 +244,10 @@ docker compose --env-file .env.loadtest down -v
 - 세 번 반복으로는 작은 차이를 가리지 못한다. 전과 후의 세 값 범위(최솟값~최댓값)가 겹치면 차이가 있다고 쓰지 않는다.
 - MongoDB가 백엔드와 같은 기계에 있다. 운영의 DB 왕복과 별도 DB 호스트가 빠지고, CPU를 함께 쓴다.
 - 자원 기록은 기본 5초 간격 표본이고 docker stats 한 번이 1~2초 걸린다. 발송 구간이 몇 초인 실행(1,000건 등)은 겹치는 표본이 한두 개라 CPU 값은 참고용이다. 자원 비교는 몇 분 걸리는 S1③에서 한다.
-- 노트북에서는 SQS까지 거리가 운영과 달라 공식 측정을 하지 않는다.
+- 노트북에서는 SQS까지 거리가 운영과 달라 공식 측정을 하지 않는다. 리허설용 SQS 대체물(ElasticMQ)은 같은 기계 안에서 답하므로 실제 SQS 왕복이 빠진다.
+- 후 구조도 릴레이는 60초 주기로 돈다. 큐에 넣는 일은 주기마다 한 번이므로 "예정 시각→마지막 수락"의 주기 위상은 전과 같이 남는다. 한 주기 상한 20,000건도 같아서 30,000건은 두 주기에 걸쳐 큐에 들어간다.
+- 후 구조에서 큐에 넣은 메시지가 사라지면 큐 리스(기본 15분) 뒤에야 다시 들어간다. 이 도구는 그 경우를 만들지 않는다.
+- 큐 지표(큐 깊이, DLQ 깊이, 요청 수)는 CloudWatch에서 따로 본다. 이 도구는 앱이 내는 지표만 모은다.
 
 ## 후속 후보
 
@@ -220,3 +262,13 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 ```
 
 로직은 `pushload/`에, 인자 해석과 입출력은 진입 스크립트에 둔다. 모의 서버 경로(`mock-push-server.py`, `pushload/mock_server.py`)는 표준 라이브러리만 import한다. 로컬 리허설은 이 맥 Docker 커널에서 운영 고정 MongoDB 이미지가 뜨지 않으므로 `LOADTEST_MONGODB_IMAGE=mongo:8.0.4-noble`로 한다.
+
+SQS 방식의 로컬 리허설은 SQS 대체물을 함께 띄운다. 대체물은 자격 증명을 검사하지 않지만 SDK가 서명에 쓸 값이 필요해서, 가짜 값을 셸에만 둔다. 이 값은 compose 파일과 `.env.loadtest`에 적지 않는다.
+
+```bash
+export LOADTEST_PUSH_TRANSPORT=sqs
+export LOADTEST_SQS_QUEUE_URL=http://elasticmq:9324/000000000000/loadtest-push
+export LOADTEST_SQS_ENDPOINT=http://elasticmq:9324
+export AWS_ACCESS_KEY_ID=local AWS_SECRET_ACCESS_KEY=local
+docker compose --env-file .env.loadtest --profile sqs --profile local-sqs up -d --build --wait
+```

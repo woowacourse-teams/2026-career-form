@@ -127,6 +127,28 @@ class RecordResourcesScriptTest(unittest.TestCase):
         self.assertEqual([1000.0, 1005.0, 1010.0], [json.loads(line)["at"] for line in lines])
         self.assertIn("3", out.getvalue())
 
+    def test_reads_named_metric_sources(self):
+        script = load_script("record-resources")
+        self.assertEqual({"backend": "http://127.0.0.1:29091/actuator/prometheus", "worker": "http://127.0.0.1:29092/actuator/prometheus"},
+                         script.metric_sources("backend=http://127.0.0.1:29091/actuator/prometheus, worker=http://127.0.0.1:29092/actuator/prometheus"))
+        self.assertEqual("http://127.0.0.1:29091/actuator/prometheus", script.metric_sources("http://127.0.0.1:29091/actuator/prometheus"))
+        for invalid in ("", "backend=", "=http://x", "backend=http://a,http://b", "backend=http://a,backend=http://b"):
+            with self.subTest(value=invalid):
+                with self.assertRaises(ValueError):
+                    script.metric_sources(invalid)
+
+    def test_default_containers_include_worker(self):
+        script = load_script("record-resources")
+        self.assertIn("cf-push-loadtest-worker-1", script.DEFAULT_CONTAINERS.split(","))
+
+    def test_rejects_malformed_metric_sources(self):
+        script = load_script("record-resources")
+        err = io.StringIO()
+        with tempfile.TemporaryDirectory() as directory, contextlib.redirect_stderr(err):
+            code = script.main(["--run-dir", str(Path(directory) / "r1"), "--metrics-url", "backend=http://a,http://b"], install_signals=False)
+        self.assertEqual(2, code)
+        self.assertIn("--metrics-url", err.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()

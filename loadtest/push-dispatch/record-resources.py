@@ -2,6 +2,9 @@
 
 Ctrl+C(SIGINT)나 SIGTERM, 또는 --duration-seconds가 지나면 끝난다. 0이면 멈출 때까지 기록한다.
 예: python record-resources.py --run-dir runs/20261109T101500Z-s1 --duration-seconds 900 &
+SQS 방식(백엔드와 워커가 따로 뜸):
+    python record-resources.py --run-dir runs/<실행 id> \
+      --metrics-url backend=http://127.0.0.1:29091/actuator/prometheus,worker=http://127.0.0.1:29092/actuator/prometheus &
 """
 
 from __future__ import annotations
@@ -21,14 +24,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from pushload import cli, runfiles  # noqa: E402
 from pushload.resources import collect_sample  # noqa: E402
 
-DEFAULT_CONTAINERS = "cf-push-loadtest-backend-1,cf-push-loadtest-mongodb-1,cf-push-loadtest-mock-push-1"
+# 워커 컨테이너는 SQS 방식에서만 뜬다. 없는 컨테이너는 docker stats가 건너뛴다.
+DEFAULT_CONTAINERS = "cf-push-loadtest-backend-1,cf-push-loadtest-worker-1,cf-push-loadtest-mongodb-1,cf-push-loadtest-mock-push-1"
 
 
 def parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="공고 알림 시험 자원 기록")
     parser.add_argument("--run-dir", required=True)
     parser.add_argument("--containers", default=DEFAULT_CONTAINERS, help="쉼표로 구분한 컨테이너 이름")
-    parser.add_argument("--metrics-url", default="http://127.0.0.1:29091/actuator/prometheus")
+    parser.add_argument("--metrics-url", default="http://127.0.0.1:29091/actuator/prometheus",
+                        help="주소 하나, 또는 SQS 방식에서 프로세스별로 읽을 때 이름=주소를 쉼표로 이은 것(backend=...,worker=...)")
     parser.add_argument("--interval-seconds", type=float, default=5.0)
     parser.add_argument("--duration-seconds", type=float, default=900.0, help="0이면 멈출 때까지")
     return parser.parse_args(argv)
@@ -53,6 +58,22 @@ def metrics_fetcher(url: str):
     return fetch
 
 
+def metric_sources(value: str) -> str | dict[str, str]:
+    """주소 하나면 그대로, `이름=주소,이름=주소`면 {이름: 주소}를 돌려준다. 섞어 쓰거나 이름이 겹치면 ValueError다."""
+    parts = [part.strip() for part in value.split(",") if part.strip()]
+    if not parts:
+        raise ValueError("주소가 없습니다")
+    if len(parts) == 1 and "=" not in parts[0].split("://", 1)[0]:
+        return parts[0]
+    sources: dict[str, str] = {}
+    for part in parts:
+        name, separator, url = part.partition("=")
+        if not separator or not name.strip() or not url.strip() or "://" in name or name.strip() in sources:
+            raise ValueError("이름=주소 형식이 아니거나 이름이 겹칩니다")
+        sources[name.strip()] = url.strip()
+    return sources
+
+
 def _stop(signum, frame):
     raise KeyboardInterrupt
 
@@ -64,7 +85,17 @@ def main(argv: Sequence[str] | None = None, run_docker=docker_stats, fetch_metri
         print("입력 오류: --interval-seconds는 0보다 크고 --duration-seconds는 0 이상이어야 합니다", file=sys.stderr)
         return cli.EXIT_USAGE
     containers = [name.strip() for name in args.containers.split(",") if name.strip()]
-    fetch = fetch_metrics or metrics_fetcher(args.metrics_url)
+    try:
+        sources = metric_sources(args.metrics_url)
+    except ValueError as error:
+        print(f"입력 오류: --metrics-url {error}", file=sys.stderr)
+        return cli.EXIT_USAGE
+    if fetch_metrics is not None:
+        fetch = fetch_metrics
+    elif isinstance(sources, dict):
+        fetch = {name: metrics_fetcher(url) for name, url in sources.items()}
+    else:
+        fetch = metrics_fetcher(sources)
     run_dir = Path(args.run_dir)
     run_dir.mkdir(parents=True, exist_ok=True)
     if install_signals:

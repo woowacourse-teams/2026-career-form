@@ -3,7 +3,10 @@
 #   mkdir -p runs/<실행 id>/mock
 #   LOADTEST_RUN_DIR=runs/<실행 id> docker compose --env-file .env.loadtest up -d --build --wait
 # 포트는 모두 127.0.0.1에만 연다. 시험 트래픽은 모의 푸시 서버로만 가고 전용 MongoDB만 쓴다.
-# 후 측정에 필요한 발송 워커와 실제 SQS 연결은 전환 Issue가 이 파일에 더한다.
+# 후 측정(SQS 방식)은 큐 주소를 주고 worker 서비스를 함께 띄운다. 백엔드는 릴레이만, worker는 발송만 한다.
+#   LOADTEST_PUSH_TRANSPORT=sqs LOADTEST_SQS_QUEUE_URL=<측정용 큐 주소> LOADTEST_RUN_DIR=runs/<실행 id> \
+#     docker compose --env-file .env.loadtest --profile sqs up -d --build --wait
+# 노트북 리허설은 --profile local-sqs로 SQS 대체물(ElasticMQ)을 함께 띄운다. 공식 측정에는 쓰지 않는다. 자세한 순서는 README를 본다.
 name: cf-push-loadtest
 
 services:
@@ -66,6 +69,17 @@ services:
       CAREER_FORM_PUSH_VAPID_PRIVATE_KEY: ${CAREER_FORM_PUSH_VAPID_PRIVATE_KEY:?run make-test-env.py and pass --env-file .env.loadtest}
       CAREER_FORM_PUSH_VAPID_SUBJECT: ${CAREER_FORM_PUSH_VAPID_SUBJECT:?run make-test-env.py and pass --env-file .env.loadtest}
       CAREER_FORM_QUALITY_PASSWORD_HASH: ${CAREER_FORM_QUALITY_PASSWORD_HASH:?run make-test-env.py and pass --env-file .env.loadtest}
+      # 발송 방식. 기본은 지금 방식(direct)이고 그때 아래 SQS 값은 쓰이지 않는다. 전환 직전 커밋의 jar는 이 변수들을 읽지 않는다.
+      # SQS 방식에서 백엔드는 릴레이만 돌린다. 발송은 worker 서비스가 맡아 동시 발송 수 합계가 20으로 유지된다.
+      CAREER_FORM_PUSH_TRANSPORT: ${LOADTEST_PUSH_TRANSPORT:-direct}
+      CAREER_FORM_PUSH_SQS_QUEUE_URL: ${LOADTEST_SQS_QUEUE_URL:-}
+      CAREER_FORM_PUSH_SQS_REGION: ${LOADTEST_SQS_REGION:-ap-northeast-2}
+      CAREER_FORM_PUSH_SQS_ENDPOINT: ${LOADTEST_SQS_ENDPOINT:-}
+      CAREER_FORM_PUSH_WORKER_ENABLED: "false"
+      # 값을 여기 적지 않는다. 셸에 있을 때만 그대로 넘어간다. EC2에서는 셸에 두지 않아 인스턴스 역할을 쓰고,
+      # 노트북 리허설에서만 SQS 대체물용 가짜 값을 셸에 준다.
+      AWS_ACCESS_KEY_ID:
+      AWS_SECRET_ACCESS_KEY:
     ports:
       # 18080·18081은 팀 관리 터널(dev·staging)이 쓰는 로컬 포트라 피한다.
       - "127.0.0.1:${LOADTEST_BACKEND_PORT:-28080}:8080"
@@ -81,6 +95,61 @@ services:
         condition: service_healthy
       mock-push:
         condition: service_started
+
+  worker:
+    # SQS 방식의 발송 워커. --profile sqs일 때만 뜬다. 백엔드가 빌드한 것과 같은 이미지에서 워커만 켠다.
+    profiles: ["sqs"]
+    image: cf-push-loadtest-backend:${LOADTEST_BACKEND_TAG:-local}
+    init: true
+    stop_grace_period: 30s
+    # 전 측정에는 없는 컨테이너다. 제한값을 어떻게 두었는지 실행 메모에 적는다.
+    cpus: ${LOADTEST_WORKER_CPUS:-2}
+    mem_limit: ${LOADTEST_WORKER_MEMORY:-2g}
+    # 발송 설정(동시성 20, lease)은 앱 기본값을 그대로 쓴다.
+    environment:
+      SPRING_MONGODB_URI: mongodb://mongodb:27017/career_form_loadtest
+      CAREER_FORM_NOTIFICATION_ENABLED: "true"
+      CAREER_FORM_QUALITY_ENABLED: "true"
+      CAREER_FORM_OTEL_ENABLED: "false"
+      CAREER_FORM_PUSH_VAPID_PUBLIC_KEY: ${CAREER_FORM_PUSH_VAPID_PUBLIC_KEY:?run make-test-env.py and pass --env-file .env.loadtest}
+      CAREER_FORM_PUSH_VAPID_PRIVATE_KEY: ${CAREER_FORM_PUSH_VAPID_PRIVATE_KEY:?run make-test-env.py and pass --env-file .env.loadtest}
+      CAREER_FORM_PUSH_VAPID_SUBJECT: ${CAREER_FORM_PUSH_VAPID_SUBJECT:?run make-test-env.py and pass --env-file .env.loadtest}
+      CAREER_FORM_QUALITY_PASSWORD_HASH: ${CAREER_FORM_QUALITY_PASSWORD_HASH:?run make-test-env.py and pass --env-file .env.loadtest}
+      CAREER_FORM_PUSH_TRANSPORT: sqs
+      # 필수 변수(:?)로 두지 않는다. compose는 꺼진 profile의 서비스도 변수를 풀어서, 지금 방식 실행까지 막는다.
+      # 큐 주소가 비면 앱이 기동을 멈춘다.
+      CAREER_FORM_PUSH_SQS_QUEUE_URL: ${LOADTEST_SQS_QUEUE_URL:-}
+      CAREER_FORM_PUSH_SQS_REGION: ${LOADTEST_SQS_REGION:-ap-northeast-2}
+      CAREER_FORM_PUSH_SQS_ENDPOINT: ${LOADTEST_SQS_ENDPOINT:-}
+      CAREER_FORM_PUSH_RELAY_ENABLED: "false"
+      CAREER_FORM_PUSH_WORKER_ENABLED: "true"
+      AWS_ACCESS_KEY_ID:
+      AWS_SECRET_ACCESS_KEY:
+    ports:
+      # 지표와 상태 확인용 관리 포트만 연다. API 포트는 열지 않는다.
+      - "127.0.0.1:${LOADTEST_WORKER_MANAGEMENT_PORT:-29092}:9091"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--show-error", "http://127.0.0.1:9091/actuator/health"]
+      start_period: 30s
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      mock-push:
+        condition: service_started
+      backend:
+        condition: service_started
+
+  elasticmq:
+    # 노트북 리허설 전용 SQS 대체물. --profile local-sqs일 때만 뜬다. 실제 SQS 왕복이 빠지므로 공식 측정에는 쓰지 않는다.
+    profiles: ["local-sqs"]
+    image: ${LOADTEST_ELASTICMQ_IMAGE:-softwaremill/elasticmq-native:1.7.1@sha256:e4580ab9ad1bd5cd37b4ba04911bc5ccc8cd2d9ab4de56ece65acee71c24e05c}
+    volumes:
+      - ./elasticmq.conf:/opt/elasticmq.conf:ro
+    ports:
+      - "127.0.0.1:${LOADTEST_ELASTICMQ_PORT:-29324}:9324"
 
 volumes:
   mongodb-data:

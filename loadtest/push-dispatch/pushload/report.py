@@ -118,11 +118,30 @@ def _resource_rows(resources: Mapping) -> list[tuple[str, str]]:
             for name, item in resources["containers"].items()]
     backend = resources["backend"]
     if backend:
-        rows += [("발송기 주기 수 / 평균 / 최대(초)", f"{backend['dispatchCycles']} / {_text(backend['dispatchCycleSecondsAvg'])} / {_text(backend['dispatchCycleSecondsMax'])}"),
-                 ("GC 정지 횟수 / 합(초)", f"{backend['gcPauses']} / {_text(backend['gcPauseSecondsTotal'])}"),
-                 ("힙 최대(바이트)", _text(backend["heapBytesMax"])), ("지표상 발송 결과 증가", _counts(backend["deliveries"]))]
+        rows += [("발송기(SQS 방식은 릴레이) 주기 수 / 평균 / 최대(초)",
+                  f"{backend['dispatchCycles']} / {_text(backend['dispatchCycleSecondsAvg'])} / {_text(backend['dispatchCycleSecondsMax'])}")]
+        rows += _jvm_rows(backend) + [("지표상 발송 결과 증가", _counts(backend["deliveries"]))] + _queue_rows(backend.get("queue"))
     scope = "발송 구간" if resources.get("window") else "실행 전체"
     return rows + [(f"자원 기록 수 / 오류 / 기간(초) ({scope})", f"{resources['samples']} / {resources['errors']} / {_text(resources['seconds'])}")]
+
+
+def _jvm_rows(backend: Mapping) -> list[tuple[str, str]]:
+    """프로세스가 여럿이면(SQS 방식의 백엔드와 워커) 프로세스마다 따로 적는다."""
+    processes = backend.get("processes")
+    if not processes:
+        return [("GC 정지 횟수 / 합(초)", f"{backend['gcPauses']} / {_text(backend['gcPauseSecondsTotal'])}"),
+                ("힙 최대(바이트)", _text(backend["heapBytesMax"]))]
+    return [(f"{name} GC 정지 횟수 / 합(초), 힙 최대(바이트)",
+             f"{item['gcPauses']} / {_text(item['gcPauseSecondsTotal'])}, {_text(item['heapBytesMax'])}") for name, item in processes.items()]
+
+
+def _queue_rows(queue: Mapping | None) -> list[tuple[str, str]]:
+    if not queue:
+        return []
+    return [("릴레이가 큐에 넣은 결과", _counts(queue["enqueued"])),
+            ("릴레이 지연 평균 / 최대(초)", f"{_text(queue['relayDelaySecondsAvg'])} / {_text(queue['relayDelaySecondsMax'])}"),
+            ("큐 대기 평균 / 최대(초)", f"{_text(queue['queueWaitSecondsAvg'])} / {_text(queue['queueWaitSecondsMax'])}"),
+            ("워커가 받은 메시지 결과", _counts(queue["workerMessages"]))]
 
 
 def _input_rows(summary: Mapping) -> list[tuple[str, str]]:

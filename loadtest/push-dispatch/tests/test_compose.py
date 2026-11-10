@@ -13,6 +13,8 @@ ROOT = Path(__file__).resolve().parents[1]
 COMPOSE = ROOT / "compose.yaml"
 PRODUCTION_MONGODB_IMAGE = "mongo:8.0.26-noble@sha256:b49841837cd7688885d7479d14a71733bacae4c99faaae615622384eaee045a0"
 MOCK_IMAGE = "python:3.12-slim@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b"
+ELASTICMQ_IMAGE = "softwaremill/elasticmq-native:1.7.1@sha256:e4580ab9ad1bd5cd37b4ba04911bc5ccc8cd2d9ab4de56ece65acee71c24e05c"
+ELASTICMQ_CONFIG = ROOT / "elasticmq.conf"
 
 
 def text():
@@ -49,14 +51,14 @@ class ComposeStaticTest(unittest.TestCase):
 
     def test_every_port_binds_to_loopback_only(self):
         entries = port_entries(text())
-        self.assertEqual(4, len(entries))
+        self.assertEqual(6, len(entries))
         for entry in entries:
             with self.subTest(entry=entry):
                 self.assertTrue(entry.startswith("127.0.0.1:"))
 
     def test_default_ports_avoid_team_admin_tunnel_ports(self):
         defaults = [entry.split(":-")[1].split("}")[0] for entry in port_entries(text())]
-        self.assertEqual(["27018", "28081", "28080", "29091"], defaults)
+        self.assertEqual(["27018", "28081", "28080", "29091", "29092", "29324"], defaults)
 
     def test_mongodb_is_standalone_production_image_by_default(self):
         content = text()
@@ -96,6 +98,64 @@ class ComposeStaticTest(unittest.TestCase):
         self.assertIn('CAREER_FORM_OTEL_ENABLED: "false"', block)
 
 
+class SqsTransportStaticTest(unittest.TestCase):
+    """후 측정용 구성: 백엔드는 릴레이만, worker 서비스는 워커만 돈다. 기본값은 지금 방식(direct)이다."""
+
+    def test_backend_defaults_to_direct_and_never_runs_the_worker(self):
+        block = service_block(text(), "backend")
+        for expected in ("CAREER_FORM_PUSH_TRANSPORT: ${LOADTEST_PUSH_TRANSPORT:-direct}", "CAREER_FORM_PUSH_SQS_QUEUE_URL: ${LOADTEST_SQS_QUEUE_URL:-}",
+                         "CAREER_FORM_PUSH_SQS_REGION: ${LOADTEST_SQS_REGION:-ap-northeast-2}", "CAREER_FORM_PUSH_SQS_ENDPOINT: ${LOADTEST_SQS_ENDPOINT:-}",
+                         'CAREER_FORM_PUSH_WORKER_ENABLED: "false"'):
+            with self.subTest(expected=expected):
+                self.assertIn(expected, block)
+        self.assertNotIn("CAREER_FORM_PUSH_RELAY_ENABLED", block)
+        self.assertNotRegex(block, r"(?m)^\s+profiles:")
+
+    def test_worker_runs_only_in_sqs_profile_from_the_same_image(self):
+        block = service_block(text(), "worker")
+        for expected in ('profiles: ["sqs"]', "image: cf-push-loadtest-backend:${LOADTEST_BACKEND_TAG:-local}", "stop_grace_period: 30s", "init: true",
+                         "cpus: ${LOADTEST_WORKER_CPUS:-2}", "mem_limit: ${LOADTEST_WORKER_MEMORY:-2g}",
+                         "CAREER_FORM_PUSH_TRANSPORT: sqs", 'CAREER_FORM_PUSH_RELAY_ENABLED: "false"', 'CAREER_FORM_PUSH_WORKER_ENABLED: "true"',
+                         "CAREER_FORM_PUSH_SQS_QUEUE_URL: ${LOADTEST_SQS_QUEUE_URL:-}", "SPRING_MONGODB_URI: mongodb://mongodb:27017/career_form_loadtest",
+                         'CAREER_FORM_NOTIFICATION_ENABLED: "true"', 'CAREER_FORM_OTEL_ENABLED: "false"'):
+            with self.subTest(expected=expected):
+                self.assertIn(expected, block)
+        self.assertNotRegex(block, r"(?m)^\s+build:")
+        self.assertNotRegex(block, r":8080\b")
+
+    def test_worker_gets_the_same_test_secrets_and_keeps_app_dispatch_defaults(self):
+        block = service_block(text(), "worker")
+        for name in (name for name in testenv.ENV_VARIABLES if name.startswith("CAREER_FORM_")):
+            with self.subTest(name=name):
+                self.assertRegex(block, rf"(?m)^\s+{name}: \$\{{{name}:\?")
+        for name in ("CAREER_FORM_PUSH_CONCURRENCY", "CAREER_FORM_PUSH_DISPATCH_INTERVAL", "MAX_PER_CYCLE", "CAREER_FORM_PUSH_LEASE"):
+            with self.subTest(name=name):
+                self.assertNotIn(name, block)
+
+    def test_aws_credentials_are_only_passed_through_from_the_shell(self):
+        """값을 compose 파일에 적지 않는다. 셸에 없으면 컨테이너에도 없어 EC2 인스턴스 역할을 쓴다."""
+        for service in ("backend", "worker"):
+            block = service_block(text(), service)
+            for name in ("AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"):
+                with self.subTest(service=service, name=name):
+                    self.assertRegex(block, rf"(?m)^\s+{name}:\s*$")
+        self.assertNotIn("AWS_SESSION_TOKEN", text())
+
+    def test_local_queue_substitute_is_a_pinned_optional_profile(self):
+        block = service_block(text(), "elasticmq")
+        self.assertIn('profiles: ["local-sqs"]', block)
+        self.assertIn(f"image: ${{LOADTEST_ELASTICMQ_IMAGE:-{ELASTICMQ_IMAGE}}}", block)
+        self.assertIn("- ./elasticmq.conf:/opt/elasticmq.conf:ro", block)
+
+    def test_local_queue_config_defines_queue_and_dead_letter_queue(self):
+        config = ELASTICMQ_CONFIG.read_text(encoding="utf-8")
+        self.assertRegex(config, r"(?m)^\s+loadtest-push \{")
+        self.assertRegex(config, r"(?m)^\s+loadtest-push-dlq \{")
+        self.assertIn('name = "loadtest-push-dlq"', config)
+        self.assertIn("maxReceiveCount = 10", config)
+        self.assertNotIn("fifo = true", config)
+
+
 def compose_available():
     if shutil.which("docker") is None:
         return False
@@ -128,6 +188,40 @@ class ComposeConfigTest(unittest.TestCase):
         run_mount = [volume for volume in config["services"]["mock-push"]["volumes"] if volume["target"] == "/data"][0]
         self.assertEqual(str(ROOT / "runs" / "check" / "mock"), run_mount["source"])
         self.assertEqual("2", str(config["services"]["backend"]["cpus"]).removesuffix(".0"))
+
+    def generated_env(self, directory):
+        env_path = Path(directory) / ".env.loadtest"
+        testenv.write_env_file(env_path, testenv.loadtest_env_values())
+        return env_path
+
+    def test_default_stack_has_no_worker_or_queue_substitute(self):
+        with tempfile.TemporaryDirectory() as directory:
+            config = self.config(self.generated_env(directory), "runs/check")
+        self.assertEqual({"backend", "mock-push", "mongodb"}, set(config["services"]))
+        environment = config["services"]["backend"]["environment"]
+        self.assertEqual("direct", environment["CAREER_FORM_PUSH_TRANSPORT"])
+        # 셸에 없는 넘겨주기 변수는 값이 없는(null) 항목으로 남고 컨테이너에는 만들어지지 않는다. 실패해도 환경 값은 출력하지 않는다.
+        for name in ("AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"):
+            with self.subTest(name=name):
+                self.assertTrue(environment.get(name) is None, f"{name}가 셸에 없는데도 값이 들어갔습니다")
+
+    def test_sqs_profile_adds_worker_with_relay_off(self):
+        with tempfile.TemporaryDirectory() as directory:
+            env_path = self.generated_env(directory)
+            result = subprocess.run(["docker", "compose", "--env-file", str(env_path), "-f", str(COMPOSE), "--profile", "sqs", "config", "--format", "json"],
+                                    cwd=ROOT, capture_output=True, text=True,
+                                    env={"PATH": os.environ["PATH"], "HOME": os.environ.get("HOME", ""), "LOADTEST_RUN_DIR": "runs/check",
+                                         "LOADTEST_PUSH_TRANSPORT": "sqs",
+                                         "LOADTEST_SQS_QUEUE_URL": "https://sqs.ap-northeast-2.amazonaws.com/000000000000/synthetic-push"})
+        self.assertEqual(0, result.returncode, "docker compose config가 실패했습니다")
+        services = json.loads(result.stdout)["services"]
+        self.assertEqual({"backend", "mock-push", "mongodb", "worker"}, set(services))
+        worker, backend = services["worker"]["environment"], services["backend"]["environment"]
+        self.assertEqual(("sqs", "false", "true"), (worker["CAREER_FORM_PUSH_TRANSPORT"], worker["CAREER_FORM_PUSH_RELAY_ENABLED"],
+                                                    worker["CAREER_FORM_PUSH_WORKER_ENABLED"]))
+        self.assertEqual(("sqs", "false"), (backend["CAREER_FORM_PUSH_TRANSPORT"], backend["CAREER_FORM_PUSH_WORKER_ENABLED"]))
+        self.assertTrue(worker["CAREER_FORM_PUSH_SQS_QUEUE_URL"] == backend["CAREER_FORM_PUSH_SQS_QUEUE_URL"], "큐 주소가 서로 다릅니다")
+        self.assertTrue(services["backend"]["image"] == services["worker"]["image"], "백엔드와 워커의 이미지가 다릅니다")
 
 
 if __name__ == "__main__":

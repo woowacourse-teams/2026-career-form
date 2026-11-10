@@ -164,5 +164,121 @@ class SummarizeResourcesTest(unittest.TestCase):
         self.assertEqual(3, summarize_resources(samples, {"from": 5.0, "to": 10.0})["samples"])
 
 
+def process_sample(at, sources):
+    """프로세스별 지표를 가진 표본. sources는 {이름: (주기 수, GC 횟수, 힙, 수락 수)}다. 빠진 프로세스는 그 시점에 지표를 읽지 못한 것이다."""
+    metrics = []
+    for name, (cycles, gc_count, heap, accepted) in sources.items():
+        labels = {"source": name}
+        metrics += [["career_form_push_dispatch_cycle_seconds_count", dict(labels), cycles],
+                    ["career_form_push_dispatch_cycle_seconds_sum", dict(labels), cycles * 0.5],
+                    ["career_form_push_dispatch_cycle_seconds_max", dict(labels), 0.5 if cycles else 0.0],
+                    ["jvm_gc_pause_seconds_count", {**labels, "cause": "a"}, gc_count],
+                    ["jvm_gc_pause_seconds_sum", {**labels, "cause": "a"}, gc_count * 0.01],
+                    ["jvm_memory_used_bytes", {**labels, "area": "heap", "id": "eden"}, heap],
+                    ["career_form_push_delivery_total", {**labels, "outcome": "accepted", "reason": "ACCEPTED"}, accepted]]
+    return {"at": at, "containers": {}, "metrics": metrics, "errors": []}
+
+
+class MultiProcessTest(unittest.TestCase):
+    def test_collects_each_source_with_a_source_label(self):
+        sample = collect_sample(lambda containers: DOCKER_LINE, {"backend": lambda: PROMETHEUS, "worker": lambda: PROMETHEUS}, ["x"], 1.0)
+        sources = {labels.get("source") for _, labels, _ in sample["metrics"]}
+        self.assertEqual({"backend", "worker"}, sources)
+        self.assertEqual([], sample["errors"])
+
+    def test_one_failing_source_keeps_the_other(self):
+        def failing():
+            raise OSError("connection refused")
+
+        sample = collect_sample(lambda containers: DOCKER_LINE, {"backend": lambda: PROMETHEUS, "worker": failing}, ["x"], 1.0)
+        self.assertEqual({"backend"}, {labels.get("source") for _, labels, _ in sample["metrics"]})
+        self.assertEqual(["metrics[worker]: OSError"], sample["errors"])
+
+    def test_sums_counters_per_process_and_reports_jvm_per_process(self):
+        samples = [process_sample(0, {"backend": (1, 1, 50.0, 0), "worker": (0, 2, 70.0, 0)}),
+                   process_sample(5, {"backend": (2, 2, 60.0, 0), "worker": (0, 5, 90.0, 600)}),
+                   process_sample(10, {"backend": (3, 2, 55.0, 0), "worker": (0, 6, 80.0, 1000)})]
+        backend = summarize_resources(samples)["backend"]
+        self.assertEqual((2, 0.5, {"accepted/ACCEPTED": 1000}), (backend["dispatchCycles"], backend["dispatchCycleSecondsAvg"], backend["deliveries"]))
+        self.assertEqual(5, backend["gcPauses"])
+        self.assertEqual({"backend": {"gcPauses": 1, "gcPauseSecondsTotal": 0.01, "heapBytesMax": 60.0},
+                          "worker": {"gcPauses": 4, "gcPauseSecondsTotal": 0.04, "heapBytesMax": 90.0}}, backend["processes"])
+        self.assertEqual(90.0, backend["heapBytesMax"])
+
+    def test_worker_restart_does_not_recount_the_other_process(self):
+        samples = [process_sample(0, {"backend": (10, 0, 1.0, 0), "worker": (0, 0, 1.0, 100)}),
+                   process_sample(5, {"backend": (11, 0, 1.0, 0), "worker": (0, 0, 1.0, 600)}),
+                   process_sample(10, {"backend": (12, 0, 1.0, 0), "worker": (0, 0, 1.0, 50)}),
+                   process_sample(15, {"backend": (13, 0, 1.0, 0), "worker": (0, 0, 1.0, 450)})]
+        backend = summarize_resources(samples)["backend"]
+        self.assertEqual((3, {"accepted/ACCEPTED": 950}), (backend["dispatchCycles"], backend["deliveries"]))
+
+    def test_missing_process_sample_is_skipped_not_counted_as_restart(self):
+        samples = [process_sample(0, {"backend": (1, 0, 1.0, 0), "worker": (0, 0, 1.0, 100)}),
+                   process_sample(5, {"backend": (2, 0, 1.0, 0)}),
+                   process_sample(10, {"backend": (3, 0, 1.0, 0), "worker": (0, 0, 1.0, 120)})]
+        backend = summarize_resources(samples)["backend"]
+        self.assertEqual({"accepted/ACCEPTED": 20}, backend["deliveries"])
+
+    def test_single_process_summary_has_no_process_breakdown(self):
+        samples = [sample(0, 1.0, 1, 1, 0.0, 0.0, 0, 0.0, 1.0, 0), sample(5, 1.0, 1, 2, 0.0, 0.0, 0, 0.0, 1.0, 10)]
+        self.assertNotIn("processes", summarize_resources(samples)["backend"])
+
+    def test_reports_relay_and_queue_metrics_when_present(self):
+        def queued(at, enqueued, failed, wait_count, wait_sum, processed, skipped):
+            base = process_sample(at, {"backend": (at, 0, 1.0, 0), "worker": (0, 0, 1.0, processed)})
+            base["metrics"] += [["career_form_push_relay_enqueued_total", {"source": "backend", "result": "queued"}, enqueued],
+                                ["career_form_push_relay_enqueued_total", {"source": "backend", "result": "failed"}, failed],
+                                ["career_form_push_relay_delay_seconds_count", {"source": "backend"}, enqueued],
+                                ["career_form_push_relay_delay_seconds_sum", {"source": "backend"}, enqueued * 2.0],
+                                ["career_form_push_relay_delay_seconds_max", {"source": "backend"}, 3.0 if enqueued else 0.0],
+                                ["career_form_push_queue_wait_seconds_count", {"source": "worker"}, wait_count],
+                                ["career_form_push_queue_wait_seconds_sum", {"source": "worker"}, wait_sum],
+                                ["career_form_push_queue_wait_seconds_max", {"source": "worker"}, 4.0 if wait_count else 0.0],
+                                ["career_form_push_worker_messages_total", {"source": "worker", "result": "processed"}, processed],
+                                ["career_form_push_worker_messages_total", {"source": "worker", "result": "skipped"}, skipped]]
+            return base
+
+        queue = summarize_resources([queued(0, 0, 0, 0, 0.0, 0, 0), queued(5, 1000, 2, 1000, 1500.0, 1000, 3)])["backend"]["queue"]
+        self.assertEqual({"queued": 1000, "failed": 2}, queue["enqueued"])
+        self.assertEqual((2.0, 3.0), (queue["relayDelaySecondsAvg"], queue["relayDelaySecondsMax"]))
+        self.assertEqual((1.5, 4.0), (queue["queueWaitSecondsAvg"], queue["queueWaitSecondsMax"]))
+        self.assertEqual({"processed": 1000, "skipped": 3}, queue["workerMessages"])
+
+    def test_direct_run_has_no_queue_section(self):
+        samples = [sample(0, 1.0, 1, 1, 0.0, 0.0, 0, 0.0, 1.0, 0), sample(5, 1.0, 1, 2, 0.0, 0.0, 0, 0.0, 1.0, 10)]
+        self.assertIsNone(summarize_resources(samples)["backend"]["queue"])
+
+
+class ResourceRowsTest(unittest.TestCase):
+    """요약 표의 자원 행. 프로세스가 여럿이면 프로세스별로, SQS 방식이면 릴레이·큐 행을 더 보여 준다."""
+
+    def rows(self, backend):
+        from pushload.report import _resource_rows
+        return dict(_resource_rows({"containers": {}, "backend": backend, "samples": 2, "errors": 0, "seconds": 5.0, "window": None}))
+
+    def test_single_process_keeps_one_jvm_line_and_no_queue_rows(self):
+        rows = self.rows({"dispatchCycles": 2, "dispatchCycleSecondsAvg": 1.0, "dispatchCycleSecondsMax": 2.0, "gcPauses": 3,
+                          "gcPauseSecondsTotal": 0.05, "heapBytesMax": 80.0, "deliveries": {"accepted/ACCEPTED": 1000}, "queue": None})
+        self.assertEqual("3 / 0.05", rows["GC 정지 횟수 / 합(초)"])
+        self.assertEqual("80", rows["힙 최대(바이트)"])
+        self.assertFalse(any("큐" in label for label in rows))
+
+    def test_sqs_run_shows_processes_and_queue_rows(self):
+        rows = self.rows({"dispatchCycles": 2, "dispatchCycleSecondsAvg": 0.5, "dispatchCycleSecondsMax": 0.5, "gcPauses": 5,
+                          "gcPauseSecondsTotal": 0.05, "heapBytesMax": 90.0, "deliveries": {"accepted/ACCEPTED": 1000},
+                          "processes": {"backend": {"gcPauses": 1, "gcPauseSecondsTotal": 0.01, "heapBytesMax": 60.0},
+                                        "worker": {"gcPauses": 4, "gcPauseSecondsTotal": 0.04, "heapBytesMax": 90.0}},
+                          "queue": {"enqueued": {"queued": 1000, "failed": 2}, "relayDelaySecondsAvg": 2.0, "relayDelaySecondsMax": 3.0,
+                                    "queueWaitSecondsAvg": 1.5, "queueWaitSecondsMax": 4.0, "workerMessages": {"processed": 1000, "skipped": 3}}})
+        self.assertEqual("1 / 0.01, 60", rows["backend GC 정지 횟수 / 합(초), 힙 최대(바이트)"])
+        self.assertEqual("4 / 0.04, 90", rows["worker GC 정지 횟수 / 합(초), 힙 최대(바이트)"])
+        self.assertNotIn("힙 최대(바이트)", rows)
+        self.assertEqual("queued 1000, failed 2", rows["릴레이가 큐에 넣은 결과"])
+        self.assertEqual("2 / 3", rows["릴레이 지연 평균 / 최대(초)"])
+        self.assertEqual("1.5 / 4", rows["큐 대기 평균 / 최대(초)"])
+        self.assertEqual("processed 1000, skipped 3", rows["워커가 받은 메시지 결과"])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1,6 +1,7 @@
 """컨테이너 자원(docker stats)과 백엔드 actuator 지표를 기록하고 요약한다.
 
 임시 EC2에는 Grafana가 없으므로 이 기록으로 CPU, 메모리, GC, 발송기 주기를 비교한다.
+SQS 방식에서는 백엔드(릴레이)와 워커가 다른 프로세스라 지표를 프로세스별로 읽고, 카운터 증가도 프로세스별로 센 뒤 더한다.
 """
 
 from __future__ import annotations
@@ -18,10 +19,15 @@ DEFAULT_FAMILIES = (
     "career_form_push_dispatch_cycle_seconds",
     "career_form_push_send_seconds",
     "career_form_push_backlog",
+    "career_form_push_relay_enqueued",
+    "career_form_push_relay_delay_seconds",
+    "career_form_push_queue_wait_seconds",
+    "career_form_push_worker_messages",
     "jvm_gc_pause_seconds",
     "jvm_memory_used_bytes",
 )
 FAMILY_SUFFIXES = ("", "_count", "_sum", "_max", "_bucket", "_total", "_created")
+SOURCE_LABEL = "source"
 SIZE_UNITS = {"b": 1, "kb": 1000, "kib": 1024, "mb": 1000 ** 2, "mib": 1024 ** 2, "gb": 1000 ** 3, "gib": 1024 ** 3,
               "tb": 1000 ** 4, "tib": 1024 ** 4}
 _SIZE_PATTERN = re.compile(r"^\s*([0-9]+(?:\.[0-9]+)?)\s*([A-Za-z]+)\s*$")
@@ -73,17 +79,26 @@ def _parse_sample(line: str) -> tuple[str, dict, float]:
     return name.strip(), labels, float(value_text.split()[0])
 
 
-def collect_sample(run_docker: Callable[[Sequence[str]], str], fetch_metrics: Callable[[], str], containers: Sequence[str], now: float,
-                   clock: Callable[[], float] = time.time) -> dict:
+def collect_sample(run_docker: Callable[[Sequence[str]], str], fetch_metrics: Callable[[], str] | Mapping[str, Callable[[], str]],
+                   containers: Sequence[str], now: float, clock: Callable[[], float] = time.time) -> dict:
     """한 시점의 기록. 한쪽이 실패해도 멈추지 않고 errors에 종류만 남긴다.
 
     지표는 바로 읽혀 at과 시각이 맞으므로 먼저 읽는다. docker stats는 1~2초 걸리므로 잰 구간을 dockerFrom·dockerTo로 남긴다.
+    fetch_metrics가 {이름: 읽는 함수}면 프로세스마다 따로 읽고 모든 계열에 source 라벨을 붙인다.
     """
     sample = {"at": now, "containers": {}, "metrics": [], "errors": []}
-    try:
-        sample["metrics"] = parse_prometheus(fetch_metrics(), DEFAULT_FAMILIES)
-    except (OSError, ValueError) as error:
-        sample["errors"].append(f"metrics: {type(error).__name__}")
+    if isinstance(fetch_metrics, Mapping):
+        for source, fetch in fetch_metrics.items():
+            try:
+                sample["metrics"] += [[name, {**labels, SOURCE_LABEL: source}, value]
+                                      for name, labels, value in parse_prometheus(fetch(), DEFAULT_FAMILIES)]
+            except (OSError, ValueError) as error:
+                sample["errors"].append(f"metrics[{source}]: {type(error).__name__}")
+    else:
+        try:
+            sample["metrics"] = parse_prometheus(fetch_metrics(), DEFAULT_FAMILIES)
+        except (OSError, ValueError) as error:
+            sample["errors"].append(f"metrics: {type(error).__name__}")
     sample["dockerFrom"] = round(clock(), 3)
     try:
         stats = [parse_docker_stats(line) for line in run_docker(containers).splitlines() if line.strip()]
@@ -143,17 +158,77 @@ def _container_summary(samples: Sequence[Mapping]) -> dict:
 
 
 def _backend_summary(samples: Sequence[Mapping]) -> dict:
-    cycles = _increase([_sum(sample, "career_form_push_dispatch_cycle_seconds_count") for sample in samples])
-    cycle_seconds = _increase([_sum(sample, "career_form_push_dispatch_cycle_seconds_sum") for sample in samples])
-    return {
+    """발송 지표 요약. 카운터 증가는 프로세스별로 센 뒤 더한다. 한 프로세스가 다시 떠도 다른 프로세스의 값을 다시 세지 않는다."""
+    groups = _by_source(samples)
+    cycles = _total_increase(groups, "career_form_push_dispatch_cycle_seconds_count")
+    cycle_seconds = _total_increase(groups, "career_form_push_dispatch_cycle_seconds_sum")
+    jvm = {source: _jvm_summary(group) for source, group in groups.items()}
+    summary = {
         "dispatchCycles": round(cycles),
         "dispatchCycleSecondsAvg": round(cycle_seconds / cycles, 6) if cycles else None,
-        "dispatchCycleSecondsMax": max((_max(sample, "career_form_push_dispatch_cycle_seconds_max") for sample in samples), default=None),
-        "gcPauses": round(_increase([_sum(sample, "jvm_gc_pause_seconds_count") for sample in samples])),
-        "gcPauseSecondsTotal": round(_increase([_sum(sample, "jvm_gc_pause_seconds_sum") for sample in samples]), 6),
-        "heapBytesMax": max(_sum(sample, "jvm_memory_used_bytes", area="heap") for sample in samples),
-        "deliveries": _delivery_increase(samples),
+        "dispatchCycleSecondsMax": _group_max(groups, "career_form_push_dispatch_cycle_seconds_max"),
+        "gcPauses": sum(item["gcPauses"] for item in jvm.values()),
+        "gcPauseSecondsTotal": round(sum(item["gcPauseSecondsTotal"] for item in jvm.values()), 6),
+        "heapBytesMax": max(item["heapBytesMax"] for item in jvm.values()),
+        "deliveries": _labelled_increase(groups, "career_form_push_delivery_total", ("outcome", "reason")),
+        "queue": _queue_summary(groups),
     }
+    if any(source for source in groups):
+        summary["processes"] = jvm
+    return summary
+
+
+def _by_source(samples: Sequence[Mapping]) -> dict[str, list[Mapping]]:
+    """source 라벨별 표본 목록. 그 시점에 지표를 읽지 못한 프로세스의 표본은 뺀다(0으로 보면 재시작으로 잘못 센다)."""
+    sources = sorted({labels.get(SOURCE_LABEL, "") for sample in samples for _, labels, _ in sample["metrics"]})
+    groups = {}
+    for source in sources:
+        own = [[series for series in sample["metrics"] if series[1].get(SOURCE_LABEL, "") == source] for sample in samples]
+        groups[source] = [{"metrics": metrics} for metrics in own if metrics]
+    return groups
+
+
+def _jvm_summary(group: Sequence[Mapping]) -> dict:
+    return {"gcPauses": round(_increase([_sum(sample, "jvm_gc_pause_seconds_count") for sample in group])),
+            "gcPauseSecondsTotal": round(_increase([_sum(sample, "jvm_gc_pause_seconds_sum") for sample in group]), 6),
+            "heapBytesMax": max(_sum(sample, "jvm_memory_used_bytes", area="heap") for sample in group)}
+
+
+def _queue_summary(groups: Mapping[str, Sequence[Mapping]]) -> dict | None:
+    """SQS 방식의 릴레이·큐 지표. 그 지표가 한 번도 보이지 않으면(지금 방식) None이다."""
+    names = {name for group in groups.values() for sample in group for name, _, _ in sample["metrics"]}
+    if not any(name.startswith(("career_form_push_relay_", "career_form_push_queue_", "career_form_push_worker_")) for name in names):
+        return None
+    relay_count = _total_increase(groups, "career_form_push_relay_delay_seconds_count")
+    wait_count = _total_increase(groups, "career_form_push_queue_wait_seconds_count")
+    return {
+        "enqueued": _labelled_increase(groups, "career_form_push_relay_enqueued_total", ("result",)),
+        "relayDelaySecondsAvg": _average(_total_increase(groups, "career_form_push_relay_delay_seconds_sum"), relay_count),
+        "relayDelaySecondsMax": _group_max(groups, "career_form_push_relay_delay_seconds_max"),
+        "queueWaitSecondsAvg": _average(_total_increase(groups, "career_form_push_queue_wait_seconds_sum"), wait_count),
+        "queueWaitSecondsMax": _group_max(groups, "career_form_push_queue_wait_seconds_max"),
+        "workerMessages": _labelled_increase(groups, "career_form_push_worker_messages_total", ("result",)),
+    }
+
+
+def _average(total: float, count: float) -> float | None:
+    return round(total / count, 6) if count else None
+
+
+def _total_increase(groups: Mapping[str, Sequence[Mapping]], name: str, **labels: str) -> float:
+    return sum(_increase([_sum(sample, name, **labels) for sample in group]) for group in groups.values())
+
+
+def _group_max(groups: Mapping[str, Sequence[Mapping]], name: str) -> float | None:
+    return max((_max(sample, name) for group in groups.values() for sample in group), default=None)
+
+
+def _labelled_increase(groups: Mapping[str, Sequence[Mapping]], name: str, keys: Sequence[str]) -> dict:
+    """라벨 값 조합별 증가. 키는 라벨 값을 /로 이은 것이다."""
+    combos = sorted({tuple(labels.get(key, "-") for key in keys) for group in groups.values() for sample in group
+                     for series_name, labels, _ in sample["metrics"] if series_name == name})
+    increases = {"/".join(combo): _total_increase(groups, name, **dict(zip(keys, combo))) for combo in combos}
+    return {key: round(value) for key, value in increases.items() if value}
 
 
 def _sum(sample: Mapping, name: str, **labels: str) -> float:
@@ -168,11 +243,3 @@ def _max(sample: Mapping, name: str) -> float:
 def _increase(values: Sequence[float]) -> float:
     """Prometheus increase처럼 센다. 값이 줄면 백엔드가 다시 뜬 것으로 보고 새 값부터 더한다."""
     return sum(current - previous if current >= previous else current for previous, current in zip(values, values[1:]))
-
-
-def _delivery_increase(samples: Sequence[Mapping]) -> dict:
-    keys = sorted({(labels.get("outcome", "-"), labels.get("reason", "-")) for sample in samples
-                   for name, labels, _ in sample["metrics"] if name == "career_form_push_delivery_total"})
-    increases = {f"{outcome}/{reason}": _increase([_sum(sample, "career_form_push_delivery_total", outcome=outcome, reason=reason)
-                                                   for sample in samples]) for outcome, reason in keys}
-    return {key: round(value) for key, value in increases.items() if value}
