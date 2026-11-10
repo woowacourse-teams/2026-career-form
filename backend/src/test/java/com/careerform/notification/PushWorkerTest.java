@@ -294,6 +294,60 @@ class PushWorkerTest {
         assertThat(sqs.meters.get("career.form.push.delivery.latency").timer().count()).isEqualTo(1);
     }
 
+    @Test
+    @DisplayName("큐 메시지 본문은 발송 ID뿐이고 로그와 지표 라벨에 endpoint, 구독 키, 공고 링크가 없다")
+    void keepsSensitiveValuesOutOfQueueLogsAndMetrics(CapturedOutput output) throws Exception {
+        sqs.subscribe("s1"); sqs.subscribe("s2");
+        sqs.register("https://careers.example.test/jobs/private-link");
+        sqs.client.respond((subscription, call) -> new WebPushClient.Response(call == 1 ? 410 : 201, null));
+        sqs.relay.relay();
+        assertThat(sqs.queue.visibleBodies()).hasSize(2).allMatch(body -> body.matches("[0-9a-f]{32}"));
+        sqs.worker.poll(Duration.ZERO);
+        var labels = sqs.meters.getMeters().stream().flatMap(meter -> meter.getId().getTags().stream()).map(tag -> tag.getValue()).toList();
+        for (var secret : List.of("fcm.googleapis.com", "/fcm/send/", sqs.p256dh, sqs.auth, "careers.example.test", "private-link")) {
+            assertThat(output.getAll()).as("로그").doesNotContain(secret);
+            assertThat(labels).as("지표 라벨").noneMatch(value -> value.contains(secret));
+        }
+    }
+
+    @Test
+    @DisplayName("닫는 동안 뒤늦게 돌아온 받기 결과는 보내지 않고 큐에 남긴다")
+    void doesNotStartDeliveriesReceivedWhileClosing() throws Exception {
+        sqs.subscribe("s1");
+        sqs.register("https://careers.example.test/jobs/closing");
+        sqs.relay.relay();
+        var receiving = new java.util.concurrent.CountDownLatch(1);
+        var release = new java.util.concurrent.CountDownLatch(1);
+        var slow = new PushQueue() {
+            @Override public List<String> send(List<String> deliveryIds) { return List.of(); }
+            @Override public List<Message> receive(int max, Duration wait) {
+                receiving.countDown();
+                // 실제 SQS long polling처럼 인터럽트로 풀리지 않는 받기를 흉내 낸다.
+                var interrupted = false;
+                while (true) {
+                    try { if (release.await(5, java.util.concurrent.TimeUnit.SECONDS)) { break; } }
+                    catch (InterruptedException exception) { interrupted = true; }
+                }
+                if (interrupted) { Thread.currentThread().interrupt(); }
+                return sqs.queue.receive(max, Duration.ZERO);
+            }
+            @Override public void delete(Message message) { sqs.queue.delete(message); }
+        };
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            var worker = new PushWorker(sqs.store, slow, sqs.deliveries, sqs.settings, sqs.clock, executor, sqs.metrics);
+            worker.start();
+            assertThat(receiving.await(5, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            var closing = Thread.ofPlatform().start(worker::close);
+            Thread.sleep(100);
+            release.countDown();
+            closing.join(10_000);
+            assertThat(closing.isAlive()).isFalse();
+        }
+        assertThat(sqs.client.calls()).isEmpty();
+        assertThat(sqs.store.deliveries().getFirst().status()).isEqualTo(PushDelivery.Status.QUEUED);
+        assertThat(sqs.queue.receivedBodies()).as("지우지 않아 가시성 타임아웃 뒤 다시 받을 수 있다").hasSize(1);
+    }
+
     /** 발송기(direct)와 릴레이·워커(sqs)를 같은 저장소 위에 조립한 한 벌. */
     private static final class Fixture {
         final MemoryNotificationStore store = new MemoryNotificationStore();

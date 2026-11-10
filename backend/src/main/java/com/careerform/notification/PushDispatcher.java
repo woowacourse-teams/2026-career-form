@@ -99,7 +99,8 @@ public final class PushDispatcher implements AutoCloseable {
 
     private void refreshGauges() {
         try {
-            metrics.backlog(store.countDeliveries(PushDelivery.Status.PENDING), store.countDeliveries(PushDelivery.Status.SENDING));
+            metrics.backlog(store.countDeliveries(PushDelivery.Status.PENDING), store.countDeliveries(PushDelivery.Status.QUEUED),
+                store.countDeliveries(PushDelivery.Status.SENDING));
             metrics.subscriptions(store.countSubscriptions());
         } catch (RuntimeException exception) {
             log.warn("PUSH_GAUGE_REFRESH_FAILED failure={}", exception.getClass().getSimpleName());

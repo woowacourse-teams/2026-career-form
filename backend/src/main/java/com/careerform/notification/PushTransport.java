@@ -42,6 +42,13 @@ public record PushTransport(Mode mode, String queueUrl, String region, String en
         };
     }
 
+    /** 조건부 조립(@ConditionalOnProperty)은 true만 켜짐으로 본다. 1·yes처럼 다르게 읽힐 수 있는 값은 릴레이나 워커가 조용히 빠지지 않도록 받지 않는다. */
+    public static boolean parseFlag(String value, String name) {
+        if ("true".equalsIgnoreCase(value)) { return true; }
+        if ("false".equalsIgnoreCase(value)) { return false; }
+        throw new IllegalArgumentException("Invalid push " + name);
+    }
+
     private static String blankToNull(String value) { return value == null || value.isBlank() ? null : value.strip(); }
 
     private static boolean httpUrl(String value) {

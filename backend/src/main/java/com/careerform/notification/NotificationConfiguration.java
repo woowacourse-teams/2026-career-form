@@ -9,7 +9,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationRunner;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -81,10 +80,11 @@ public class NotificationConfiguration {
         @Value("${career-form.notification.push.sqs.queue-url:}") String queueUrl,
         @Value("${career-form.notification.push.sqs.region:ap-northeast-2}") String region,
         @Value("${career-form.notification.push.sqs.endpoint:}") String endpoint,
-        @Value("${career-form.notification.push.relay.enabled:true}") boolean relayEnabled,
-        @Value("${career-form.notification.push.worker.enabled:true}") boolean workerEnabled,
+        @Value("${career-form.notification.push.relay.enabled:true}") String relayEnabled,
+        @Value("${career-form.notification.push.worker.enabled:true}") String workerEnabled,
         @Value("${career-form.notification.push.queue-lease:15m}") Duration queueLease) {
-        return new PushTransport(PushTransport.parseMode(transport), queueUrl, region, endpoint, relayEnabled, workerEnabled, queueLease);
+        return new PushTransport(PushTransport.parseMode(transport), queueUrl, region, endpoint, PushTransport.parseFlag(relayEnabled, "relay.enabled"),
+            PushTransport.parseFlag(workerEnabled, "worker.enabled"), queueLease);
     }
 
     /**
@@ -110,7 +110,8 @@ public class NotificationConfiguration {
             return new PushRelay(store, queue, settings, transport.queueLease(), Clock.systemUTC(), metrics);
         }
 
-        @Bean @ConditionalOnBean(PushRelay.class) PushRelaySchedule pushRelaySchedule(PushRelay relay) { return new PushRelaySchedule(relay); }
+        @Bean @ConditionalOnProperty(prefix = "career-form.notification.push.relay", name = "enabled", havingValue = "true", matchIfMissing = true)
+        PushRelaySchedule pushRelaySchedule(PushRelay relay) { return new PushRelaySchedule(relay); }
 
         @Bean @ConditionalOnProperty(prefix = "career-form.notification.push.worker", name = "enabled", havingValue = "true", matchIfMissing = true)
         PushWorker pushWorker(NotificationStore store, PushQueue queue, PushDeliveryExecutor deliveries, PushSettings settings, PushDispatchMetrics metrics) {
@@ -118,7 +119,8 @@ public class NotificationConfiguration {
         }
 
         /** 애플리케이션이 다 뜬 뒤에 받기를 시작한다. 컨텍스트가 닫힐 때 워커의 close()가 받기를 멈춘다. */
-        @Bean @ConditionalOnBean(PushWorker.class) ApplicationRunner pushWorkerStart(PushWorker worker) { return arguments -> worker.start(); }
+        @Bean @ConditionalOnProperty(prefix = "career-form.notification.push.worker", name = "enabled", havingValue = "true", matchIfMissing = true)
+        ApplicationRunner pushWorkerStart(PushWorker worker) { return arguments -> worker.start(); }
     }
 
     @Bean public ApplicationRunner notificationIndexes(MongoNotificationStore store) {

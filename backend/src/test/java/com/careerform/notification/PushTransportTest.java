@@ -49,6 +49,16 @@ class PushTransportTest {
     }
 
     @Test
+    @DisplayName("켜고 끄는 값은 대소문자를 가리지 않는 true와 false만 받는다")
+    void parsesFlagsStrictly() {
+        assertThat(PushTransport.parseFlag("true", "relay.enabled")).isTrue();
+        assertThat(PushTransport.parseFlag("FALSE", "relay.enabled")).isFalse();
+        for (var invalid : new String[] {null, "", "1", "0", "yes", "on", " true"}) {
+            assertThatThrownBy(() -> PushTransport.parseFlag(invalid, "worker.enabled")).hasMessage("Invalid push worker.enabled");
+        }
+    }
+
+    @Test
     @DisplayName("방식 값은 대소문자를 가리지 않는 direct와 sqs만 받는다")
     void parsesMode() {
         assertThat(PushTransport.parseMode("direct")).isEqualTo(PushTransport.Mode.DIRECT);

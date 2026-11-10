@@ -20,8 +20,8 @@ CF-348은 팀이 등록한 채용 공고를 접수 가능 시점(등록 시각�
 | `push.sqs.queue-url` | `CAREER_FORM_PUSH_SQS_QUEUE_URL` | 없음 | `sqs`일 때 필수인 표준 큐 주소. 없으면 기동을 멈춘다 |
 | `push.sqs.region` | `CAREER_FORM_PUSH_SQS_REGION` | `ap-northeast-2` | 큐가 있는 리전 |
 | `push.sqs.endpoint` | `CAREER_FORM_PUSH_SQS_ENDPOINT` | 없음 | 로컬 리허설에서 SQS 대체물을 가리킬 때만 쓴다. 비우면 AWS를 부른다 |
-| `push.relay.enabled` | `CAREER_FORM_PUSH_RELAY_ENABLED` | `true` | `sqs`에서 이 프로세스가 릴레이를 돌릴지 |
-| `push.worker.enabled` | `CAREER_FORM_PUSH_WORKER_ENABLED` | `true` | `sqs`에서 이 프로세스가 워커를 돌릴지. 릴레이와 워커를 둘 다 끄면 기동을 멈춘다 |
+| `push.relay.enabled` | `CAREER_FORM_PUSH_RELAY_ENABLED` | `true` | `sqs`에서 이 프로세스가 릴레이를 돌릴지. `true`와 `false`만 받고 `1`·`yes` 같은 값은 기동을 멈춘다 |
+| `push.worker.enabled` | `CAREER_FORM_PUSH_WORKER_ENABLED` | `true` | `sqs`에서 이 프로세스가 워커를 돌릴지. 값 규칙은 위와 같다. 릴레이와 워커를 둘 다 끄면 기동을 멈춘다 |
 | `push.queue-lease` | `CAREER_FORM_PUSH_QUEUE_LEASE` | `15m` | 큐에 넣은 건이 처리되지 않은 채 남았을 때 다시 넣기까지 기다리는 시간(1분~12시간). 큐가 가장 밀릴 때의 대기보다 길게 둔다 |
 | `push.batch-size`, `push.max-per-cycle` | 없음 | `500`, `20000` | 한 조회의 대기 건 수와 한 주기의 처리 상한 |
 
@@ -122,11 +122,11 @@ flowchart LR
 
 워커는 한 프로세스 안에서 다음을 반복한다.
 
-1. 남은 동시 발송 수만큼(최대 10건) long polling(20초)으로 받는다. 동시 발송 수는 `push.concurrency`를 넘지 않는다.
+1. 남은 동시 발송 수만큼(최대 10건) long polling(10초)으로 받는다. 동시 발송 수는 `push.concurrency`를 넘지 않는다.
 2. 건마다 조건부 갱신으로 선점한다(SENDING, 시도 횟수 +1, 리스). 선점 조건은 QUEUED, 예정 시각이 지난 PENDING, 리스가 지난 SENDING이다.
 3. 선점하지 못한 메시지(이미 처리됐거나 다른 워커가 잡은 건, 없는 발송)는 보내지 않고 지운다.
 4. 선점한 건은 발송기와 같은 순서로 재검사하고 보낸 뒤 결과를 기록하고 메시지를 지운다. 재시도는 PENDING과 `nextAttemptAt`으로 남기고, 그 시각이 지나면 릴레이가 다시 넣는다.
-5. 본문이 발송 ID 형식(32자 hex)이 아닌 메시지는 지우지 않는다. 큐의 재전달 한도를 넘으면 DLQ로 간다.
+5. 본문이 발송 ID 형식(32자 hex)이 아닌 메시지는 지우지 않는다. 큐의 재전달 한도를 넘으면 DLQ로 간다. 선점이나 실행이 저장소 오류로 실패한 메시지도 지우지 않아 다시 받는다. 저장소 장애가 재전달 한도보다 길어지면 이 메시지도 DLQ로 가지만, 발송 문서는 큐 리스가 지난 뒤 릴레이가 다시 넣으므로 잃지 않는다.
 
 | 상황 | 동작 |
 |---|---|
@@ -134,7 +134,8 @@ flowchart LR
 | 워커가 선점한 뒤 죽음 | 리스(기본 120초)가 지나면 릴레이가 다시 넣는다. 그 전에 다시 온 메시지는 선점하지 못해 지워진다 |
 | 큐의 메시지가 사라짐 | 큐 리스(기본 15분)가 지나면 릴레이가 다시 넣는다 |
 | 릴레이가 멈춤 | 이미 큐에 들어간 건은 워커가 계속 보낸다. 새 발송과 재시도 발송은 릴레이가 다시 뜰 때까지 큐에 들어가지 않는다 |
-| 종료 신호 | 워커는 받기를 멈추고 진행 중인 건을 25초 안에 끝낸다. 남은 건은 리스가 지난 뒤 다시 큐에 들어간다 |
+| 종료 신호 | 워커는 받기를 멈추고 진행 중인 건을 25초 안에 끝낸다. 그동안 뒤늦게 돌아온 받기 결과는 보내지 않고 큐에 남긴다. 남은 건은 리스가 지난 뒤 다시 큐에 들어간다 |
+| 릴레이와 워커의 시계가 어긋남 | 워커 시계가 늦어 아직 때가 아닌 PENDING으로 보이면 선점하지 못하고 메시지를 지운다. 그 건은 큐 리스가 지난 뒤 다시 들어간다. 두 프로세스를 다른 호스트에 둘 때는 시계를 맞춘다 |
 
 릴레이와 워커를 다른 프로세스로 띄우려면 같은 이미지에 `CAREER_FORM_PUSH_TRANSPORT=sqs`와 같은 큐 주소를 주고, 한쪽은 `CAREER_FORM_PUSH_WORKER_ENABLED=false`(릴레이만), 다른 쪽은 `CAREER_FORM_PUSH_RELAY_ENABLED=false`(워커만)로 둔다. 릴레이는 한 프로세스에서만 돌린다. 둘이 돌아도 중복 발송은 없지만 큐에 같은 메시지가 두 번씩 들어간다.
 
@@ -157,6 +158,7 @@ flowchart LR
 | `PUSH_WORKER_MESSAGE_INVALID` | (`sqs`) 발송 ID 형식이 아닌 메시지. 본문은 남기지 않고 길이만 남긴다 |
 | `PUSH_WORKER_FAILED`, `PUSH_WORKER_DELETE_FAILED`, `PUSH_WORKER_POLL_FAILED` | (`sqs`) 선점·실행, 메시지 삭제, 받기 호출의 실패 |
 | `PUSH_WORKER_STARTED`, `PUSH_WORKER_CLOSE_TIMEOUT` | (`sqs`) 받기 시작과, 종료 유예 안에 끝나지 않은 진행 중 건수 |
+| `PUSH_WORKER_POLLER_DIED` | (`sqs`) 받기 스레드가 복구할 수 없는 오류로 죽음. 프로세스는 떠 있어도 더 받지 않으므로 다시 띄운다 |
 | `POSTING_REGISTERED` | 공고 등록 한 건의 공고 ID, 직무 코드 건수, 만든 대기 발송 건수 |
 | `POSTING_DUPLICATE_REFILL` | 같은 링크 재등록 한 건의 기존 공고 ID와 다시 확인한 대상 구독 수(새로 만든 발송 수가 아니다) |
 | `EXTERNAL_RESULT provider=fcm operation=push` | 기존 외부 호출 로그 계약 |
@@ -167,8 +169,8 @@ flowchart LR
 | `career.form.push.delivery` (counter) | `outcome`=accepted·retry·abandoned, `reason`(포기 이유에 `FILTER_MISMATCH` 포함) | 전이 결과별 건수(수락률·포기율) |
 | `career.form.push.dispatch.cycle` (timer), `career.form.push.dispatch.claimed` (summary) | 없음 | 한 주기 소요와 처리 건수. `sqs`에서는 릴레이 주기의 소요와 큐 대기로 표시한 건수 |
 | `career.form.push.delivery.latency` (timer, p50·p95·p99·히스토그램) | 없음 | 수락된 발송의 예정 시각→FCM 수락 지연 |
-| `career.form.push.backlog` (gauge) | `status`=pending·queued·sending | 주기 끝마다 갱신하는 대기·큐 대기·발송 중 건수. `direct`에서 queued는 0이다 |
-| `career.form.push.relay.enqueued` (counter) | `result`=queued·failed | (`sqs`) 릴레이가 큐 대기로 표시한 건수와 큐에 넣지 못한 건수 |
+| `career.form.push.backlog` (gauge) | `status`=pending·queued·sending | 주기 끝마다 갱신하는 대기·큐 대기·발송 중 건수. `direct`에서 queued는 `sqs`에서 되돌린 뒤 남은 건수다 |
+| `career.form.push.relay.enqueued` (counter) | `result`=queued·skipped·failed | (`sqs`) 릴레이가 큐에 넣고 큐 대기로 표시한 건수, 넣었지만 표시 전에 워커가 선점한 건수, 큐에 넣지 못한 건수. 큐에 넣은 메시지 수는 queued와 skipped의 합이다 |
 | `career.form.push.relay.delay` (timer, p50·p95·p99) | 없음 | (`sqs`) 예정 시각(재시도는 다음 시도 시각)에서 큐에 넣을 때까지 |
 | `career.form.push.queue.wait` (timer, p50·p95·p99) | 없음 | (`sqs`) 큐에 들어간 시각에서 워커가 선점할 때까지 |
 | `career.form.push.worker.messages` (counter) | `result`=processed·skipped·invalid·failed·interrupted | (`sqs`) 워커가 받은 메시지의 처리 결과. skipped는 이미 처리됐거나 다른 쪽이 선점해 보내지 않은 건 |

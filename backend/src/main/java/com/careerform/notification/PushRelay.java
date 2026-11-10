@@ -14,8 +14,6 @@ import org.slf4j.LoggerFactory;
  * 넣은 건만 조건부 갱신으로 큐 대기로 표시한다. 큐에 먼저 넣으므로 표시 전에 멈춰도 메시지는 남고, 다시 넣은 중복은 워커의 선점이 거른다.
  */
 public final class PushRelay {
-    /** SQS SendMessageBatch 한 번의 상한. */
-    static final int SEND_BATCH = 10;
     private static final Logger log = LoggerFactory.getLogger(PushRelay.class);
     private final NotificationStore store;
     private final PushQueue queue;
@@ -48,8 +46,8 @@ public final class PushRelay {
         while (processed.size() < settings.maxPerCycle()) {
             var found = store.findDueDeliveries(now, settings.batchSize()).stream().filter(delivery -> !processed.contains(delivery.id())).toList();
             if (found.isEmpty()) { break; }
-            for (var from = 0; from < found.size(); from += SEND_BATCH) {
-                var chunk = found.subList(from, Math.min(from + SEND_BATCH, found.size()));
+            for (var from = 0; from < found.size(); from += PushQueue.MAX_BATCH) {
+                var chunk = found.subList(from, Math.min(from + PushQueue.MAX_BATCH, found.size()));
                 var ids = chunk.stream().map(PushDelivery::id).toList();
                 processed.addAll(ids);
                 due += chunk.size();

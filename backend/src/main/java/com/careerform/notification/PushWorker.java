@@ -22,9 +22,8 @@ import org.slf4j.LoggerFactory;
  * 재시도는 발송 문서의 다음 시도 시각으로 남고 릴레이가 때가 되면 다시 넣는다.
  */
 public final class PushWorker implements AutoCloseable {
-    /** SQS ReceiveMessage 한 번의 상한. */
-    static final int RECEIVE_MAX = 10;
-    static final Duration LONG_POLL = Duration.ofSeconds(20);
+    /** 받기 호출은 인터럽트로 끊기지 않을 수 있다. 종료 유예(30초) 안에 받기와 진행 중인 발송이 모두 끝나도록 SQS 상한(20초)보다 짧게 둔다. */
+    static final Duration LONG_POLL = Duration.ofSeconds(10);
     private static final Duration CLOSE_GRACE = Duration.ofSeconds(25);
     private static final Duration POLLER_JOIN = Duration.ofSeconds(3);
     private static final Duration FAILURE_PAUSE = Duration.ofSeconds(1);
@@ -40,6 +39,7 @@ public final class PushWorker implements AutoCloseable {
     private final PushDispatchMetrics metrics;
     private final Semaphore permits;
     private volatile boolean running;
+    private volatile boolean closed;
     private Thread poller;
 
     public PushWorker(NotificationStore store, PushQueue queue, PushDeliveryExecutor deliveries, PushSettings settings, Clock clock, Executor executor,
@@ -71,7 +71,9 @@ public final class PushWorker implements AutoCloseable {
     public synchronized void start() {
         if (poller != null) { return; }
         running = true;
-        poller = Thread.ofPlatform().name("push-worker-poll").daemon(true).start(this::loop);
+        poller = Thread.ofPlatform().name("push-worker-poll").daemon(true)
+            .uncaughtExceptionHandler((thread, failure) -> log.error("PUSH_WORKER_POLLER_DIED failure={}", failure.getClass().getSimpleName()))
+            .start(this::loop);
         log.info("PUSH_WORKER_STARTED concurrency={}", settings.concurrency());
     }
 
@@ -99,10 +101,12 @@ public final class PushWorker implements AutoCloseable {
     int poll(Duration wait) throws InterruptedException {
         permits.acquire();
         var acquired = 1;
-        while (acquired < RECEIVE_MAX && permits.tryAcquire()) { acquired++; }
+        while (acquired < PushQueue.MAX_BATCH && permits.tryAcquire()) { acquired++; }
         var handed = 0;
         try {
             var messages = queue.receive(acquired, wait);
+            // 닫는 동안 돌아온 메시지는 보내기 시작하지 않는다. 지우지 않았으므로 가시성 타임아웃 뒤 다시 받는다.
+            if (closed) { return 0; }
             var postings = new ConcurrentHashMap<String, Optional<JobPosting>>();
             for (var message : messages) {
                 executor.execute(() -> handle(message, postings));
@@ -156,11 +160,15 @@ public final class PushWorker implements AutoCloseable {
         return outcome != PushDeliveryExecutor.Outcome.INTERRUPTED;
     }
 
-    /** 받기를 멈추고 진행 중인 건이 끝나기를 종료 유예 안에서 기다린다. 남은 건은 리스가 지난 뒤 릴레이가 다시 넣는다. */
+    /**
+     * 받기를 멈추고 진행 중인 건이 끝나기를 종료 유예 안에서 기다린다. 받기 호출이 인터럽트로 끊기지 않으면 그 호출이 돌아올 때까지(최대 long polling 시간)
+     * 자리를 쥐고 있으므로 함께 기다린다. 남은 건은 리스가 지난 뒤 릴레이가 다시 넣는다. 닫은 워커는 다시 시작하지 않는다.
+     */
     @Override
     public void close() {
         Thread stopping;
         synchronized (this) {
+            closed = true;
             running = false;
             stopping = poller;
             poller = null;

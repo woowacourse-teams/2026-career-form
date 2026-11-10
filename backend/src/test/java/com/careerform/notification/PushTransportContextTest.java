@@ -46,7 +46,7 @@ class PushTransportContextTest {
             assertThat(context).hasNotFailed();
             assertThat(context).hasSingleBean(PushDispatcher.class).hasSingleBean(PushDispatchSchedule.class);
             assertThat(context).doesNotHaveBean(PushQueue.class).doesNotHaveBean(PushRelay.class).doesNotHaveBean(PushRelaySchedule.class)
-                .doesNotHaveBean(PushWorker.class);
+                .doesNotHaveBean(PushWorker.class).doesNotHaveBean("pushWorkerStart");
             assertThat(context.getBean(PushTransport.class).mode()).isEqualTo(PushTransport.Mode.DIRECT);
         });
     }
@@ -65,7 +65,7 @@ class PushTransportContextTest {
         runner.withPropertyValues("career-form.notification.push.transport=sqs", QUEUE_URL).run(context -> {
             assertThat(context).hasNotFailed();
             assertThat(context).hasSingleBean(SqsPushQueue.class).hasSingleBean(PushRelay.class).hasSingleBean(PushRelaySchedule.class)
-                .hasSingleBean(PushWorker.class);
+                .hasSingleBean(PushWorker.class).hasBean("pushWorkerStart");
             assertThat(context).doesNotHaveBean(PushDispatcher.class).doesNotHaveBean(PushDispatchSchedule.class);
             var transport = context.getBean(PushTransport.class);
             assertThat(transport.mode()).isEqualTo(PushTransport.Mode.SQS);
@@ -79,10 +79,10 @@ class PushTransportContextTest {
     void splitsRelayAndWorker() {
         runner.withPropertyValues("career-form.notification.push.transport=sqs", QUEUE_URL, "career-form.notification.push.worker.enabled=false")
             .run(context -> assertThat(context).hasNotFailed().hasSingleBean(PushRelay.class).hasSingleBean(PushRelaySchedule.class)
-                .doesNotHaveBean(PushWorker.class));
+                .doesNotHaveBean(PushWorker.class).doesNotHaveBean("pushWorkerStart"));
         runner.withPropertyValues("career-form.notification.push.transport=sqs", QUEUE_URL, "career-form.notification.push.relay.enabled=false")
-            .run(context -> assertThat(context).hasNotFailed().hasSingleBean(PushWorker.class).doesNotHaveBean(PushRelay.class)
-                .doesNotHaveBean(PushRelaySchedule.class));
+            .run(context -> assertThat(context).hasNotFailed().hasSingleBean(PushWorker.class).hasBean("pushWorkerStart")
+                .doesNotHaveBean(PushRelay.class).doesNotHaveBean(PushRelaySchedule.class));
     }
 
     @Test
@@ -97,6 +97,11 @@ class PushTransportContextTest {
             .run(context -> assertThat(context).hasFailed().getFailure().rootCause().hasMessage("Invalid push transport"));
         runner.withPropertyValues("career-form.notification.push.transport=")
             .run(context -> assertThat(context).hasFailed().getFailure().rootCause().hasMessage("Invalid push transport"));
+        // 조건부 조립은 true만 켜짐으로 본다. 1·yes처럼 다르게 읽힐 수 있는 값은 릴레이와 워커가 조용히 빠지지 않도록 기동을 멈춘다.
+        runner.withPropertyValues("career-form.notification.push.transport=sqs", QUEUE_URL, "career-form.notification.push.relay.enabled=1")
+            .run(context -> assertThat(context).hasFailed().getFailure().rootCause().hasMessage("Invalid push relay.enabled"));
+        runner.withPropertyValues("career-form.notification.push.transport=sqs", QUEUE_URL, "career-form.notification.push.worker.enabled=yes")
+            .run(context -> assertThat(context).hasFailed().getFailure().rootCause().hasMessage("Invalid push worker.enabled"));
     }
 
     @Test

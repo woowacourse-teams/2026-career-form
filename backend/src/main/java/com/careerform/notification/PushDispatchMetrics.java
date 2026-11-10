@@ -48,9 +48,7 @@ public final class PushDispatchMetrics {
             .register(registry).record(latency.isNegative() ? Duration.ZERO : latency);
     }
 
-    /** 주기마다 갱신하는 대기·발송 중 백로그와 구독 수. 큐 대기는 SQS 방식에서만 0이 아니다. */
-    public void backlog(long pending, long sending) { backlog(pending, 0, sending); }
-
+    /** 주기마다 갱신하는 대기·큐 대기·발송 중 백로그. 큐 대기는 SQS 방식이거나 SQS 방식에서 되돌린 직후에만 0이 아니다. */
     public void backlog(long pending, long queued, long sending) {
         pendingBacklog.set(pending);
         queuedBacklog.set(queued);
@@ -77,6 +75,7 @@ public final class PushDispatchMetrics {
         Timer.builder("career.form.push.dispatch.cycle").publishPercentiles(0.5, 0.99).register(registry).record(cycle.duration());
         DistributionSummary.builder("career.form.push.dispatch.claimed").register(registry).record(cycle.queued());
         registry.counter("career.form.push.relay.enqueued", "result", "queued").increment(cycle.queued());
+        registry.counter("career.form.push.relay.enqueued", "result", "skipped").increment(cycle.skipped());
         registry.counter("career.form.push.relay.enqueued", "result", "failed").increment(cycle.failed());
     }
 

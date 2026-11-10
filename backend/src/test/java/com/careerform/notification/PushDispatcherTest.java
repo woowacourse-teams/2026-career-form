@@ -416,6 +416,16 @@ class PushDispatcherTest {
         assertThat(client.calls()).hasSize(1);
     }
 
+    @Test
+    @DisplayName("큐 대기로 남은 건수를 백로그 지표에 낸다")
+    void reportsQueuedBacklog() {
+        subscribe("s1"); subscribe("s2");
+        register("https://careers.example.test/jobs/backlog", NOW.minusSeconds(60), NOW.plusSeconds(86400));
+        assertThat(store.markQueued(store.deliveries().getFirst(), NOW.plusSeconds(900))).isTrue();
+        dispatcher.dispatch();
+        assertThat(meters.get("career.form.push.backlog").tag("status", "queued").gauge().value()).isEqualTo(1);
+    }
+
     private void subscribe(String id) { subscribe(id, null); }
 
     private void subscribe(String id, List<String> roles) {

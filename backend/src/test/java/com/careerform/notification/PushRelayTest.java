@@ -123,6 +123,23 @@ class PushRelayTest {
     }
 
     @Test
+    @DisplayName("큐에 넣었지만 표시 전에 선점된 건은 넣은 결과 지표에 skipped로 나온다")
+    void recordsSkippedEnqueues() {
+        store.insertDeliveries(List.of(PushDelivery.pending("d1", "p1", "s1", NOW)));
+        var racing = new PushQueue() {
+            @Override public List<String> send(List<String> deliveryIds) {
+                deliveryIds.forEach(id -> store.claimQueuedDelivery(id, NOW, NOW.plusSeconds(120)));
+                return List.of();
+            }
+            @Override public List<Message> receive(int max, Duration wait) { return List.of(); }
+            @Override public void delete(Message message) { }
+        };
+        new PushRelay(store, racing, settings, QUEUE_LEASE, clock, metrics).relay();
+        assertThat(meters.get("career.form.push.relay.enqueued").tag("result", "skipped").counter().count()).isEqualTo(1);
+        assertThat(meters.get("career.form.push.relay.enqueued").tag("result", "queued").counter().count()).isZero();
+    }
+
+    @Test
     @DisplayName("한 주기에 넣는 건수는 설정한 상한을 넘지 않고 큐에는 10건씩 나눠 넣는다")
     void respectsMaxPerCycleAndBatchesOfTen() {
         for (var index = 0; index < 60; index++) { store.insertDeliveries(List.of(PushDelivery.pending("d" + index, "p1", "s" + index, NOW))); }

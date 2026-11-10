@@ -6,6 +6,9 @@ import java.util.List;
 
 /** 발송 큐 포트. 메시지 본문은 발송 문서 ID만 담는다. 같은 ID가 두 번 들어가도 워커의 선점이 한 번만 보내게 막는다. */
 public interface PushQueue {
+    /** SQS가 한 번에 넣거나 받게 해 주는 메시지 수의 상한. */
+    int MAX_BATCH = 10;
+
     /** 받은 메시지. receipt는 지울 때 쓰는 손잡이, sentAt은 큐에 들어간 시각이다(모르면 null). */
     record Message(String body, String receipt, Instant sentAt) { }
 

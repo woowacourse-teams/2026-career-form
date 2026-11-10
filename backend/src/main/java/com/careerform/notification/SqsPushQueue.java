@@ -20,7 +20,6 @@ import software.amazon.awssdk.services.sqs.model.SendMessageBatchRequestEntry;
  * 본문에는 발송 문서 ID만 담는다. 표준 큐라 같은 메시지가 두 번 올 수 있고 순서도 보장되지 않는다.
  */
 public final class SqsPushQueue implements PushQueue, AutoCloseable {
-    static final int BATCH = 10;
     static final int MAX_WAIT_SECONDS = 20;
     private static final Duration SHORT_CALL = Duration.ofSeconds(10);
     private static final Duration SHORT_ATTEMPT = Duration.ofSeconds(5);
@@ -44,8 +43,8 @@ public final class SqsPushQueue implements PushQueue, AutoCloseable {
 
     @Override public List<String> send(List<String> deliveryIds) {
         var failed = new ArrayList<String>();
-        for (var from = 0; from < deliveryIds.size(); from += BATCH) {
-            var chunk = deliveryIds.subList(from, Math.min(from + BATCH, deliveryIds.size()));
+        for (var from = 0; from < deliveryIds.size(); from += MAX_BATCH) {
+            var chunk = deliveryIds.subList(from, Math.min(from + MAX_BATCH, deliveryIds.size()));
             var entries = new ArrayList<SendMessageBatchRequestEntry>();
             for (var index = 0; index < chunk.size(); index++) {
                 entries.add(SendMessageBatchRequestEntry.builder().id(Integer.toString(index)).messageBody(chunk.get(index)).build());
@@ -63,7 +62,7 @@ public final class SqsPushQueue implements PushQueue, AutoCloseable {
     }
 
     @Override public List<Message> receive(int max, Duration wait) {
-        var count = Math.clamp(max, 1, BATCH);
+        var count = Math.clamp(max, 1, MAX_BATCH);
         var seconds = (int) Math.clamp(wait.toSeconds(), 0, MAX_WAIT_SECONDS);
         var response = client.receiveMessage(request -> request.queueUrl(queueUrl).maxNumberOfMessages(count).waitTimeSeconds(seconds)
             .messageSystemAttributeNames(MessageSystemAttributeName.SENT_TIMESTAMP)
