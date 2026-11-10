@@ -2,9 +2,9 @@
 
 > Topic: push-dispatch-load-test
 > Status: Current
-> Current: [CF-441 공고 알림 발송 비교 측정 방식과 전 구조 재시작 동작](../../raw/issues/CF-441/documents/push-dispatch-load-test.md)
-> History: [CF-441 공고 알림 발송 비교 측정 방식과 전 구조 재시작 동작](../../raw/issues/CF-441/documents/push-dispatch-load-test.md)
-> Updated: 2026-11-09
+> Current: [CF-448 발송 시험 스택의 고정 기록 확인과 시험 자원 정리 절차](../../raw/issues/CF-448/documents/push-dispatch-load-test-pinning-and-cleanup.md)
+> History: [CF-441 공고 알림 발송 비교 측정 방식과 전 구조 재시작 동작](../../raw/issues/CF-441/documents/push-dispatch-load-test.md), [CF-448 발송 시험 스택의 고정 기록 확인과 시험 자원 정리 절차](../../raw/issues/CF-448/documents/push-dispatch-load-test-pinning-and-cleanup.md)
+> Updated: 2026-11-10
 
 ## 현재 상태
 
@@ -30,6 +30,19 @@ SQS 전환 전후 발송 비교는 운영 리전 임시 EC2 한 대에서 전환
 - S9는 새 스택에서 세 번 잰다.
 - 기본 포트는 팀 관리 터널을 피한다.
 
+SQS 전환은 CF-448에서 보류했다. 위 전후 비교 측정은 전환을 다시 볼 때 쓴다.
+
+가상 스레드의 고정(pinned)은 시험 스택의 백엔드를 `-Djdk.tracePinnedThreads=full`로 띄워 확인한다. compose override 파일로 백엔드 서비스에 `JAVA_TOOL_OPTIONS`를 넣고, 발송이 끝난 뒤 백엔드 로그의 `reason:MONITOR` 줄 수와 `<== monitors`가 붙은 줄을 본다. 2026-11-10 로컬 리허설(CPU 2개, 구독 1,000개 × 공고 1건)에서 수정 전 발송기는 고정 기록 2건, 수정 후 발송기는 0건이었다.
+
+공용 AWS 계정에서 임시 EC2와 큐를 쓰면 정리 절차를 계획에 넣는다.
+
+- 팀 계정으로 SQS 큐 생성, EC2 실행과 중지, 탄력적 IP 릴리스는 된다.
+- EC2 종료와 SQS 큐 삭제는 권한이 없어 운영진 Slack 채널에 자원 ID와 이름을 적어 요청한다.
+- 측정이 끝나면 EC2를 먼저 중지해 요금을 멈추고 삭제를 요청한다. 쉬는 큐는 요금이 없다.
+- 처리 표시를 받은 뒤에도 콘솔에서 실제로 사라졌는지 확인한다.
+
 ## 변경 이유
 
 CF-441에서 SQS 전환 전후를 같은 숫자로 비교할 측정 방식과 시험 도구의 조건을 정했다. 근거와 수치는 연결된 raw를 따른다.
+
+CF-448에서 발송기의 고정 문제를 같은 시험 스택으로 수정 전후에 확인했다. CF-445 실측에 쓴 임시 자원을 지우면서 공용 계정의 삭제 절차도 확인했다.
