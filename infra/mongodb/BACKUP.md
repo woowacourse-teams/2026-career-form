@@ -30,8 +30,11 @@ dev는 덤프 직전에 컬렉션 목록을 읽어 `evaluation_`이 아닌 컬�
 백업은 admin DB의 전용 계정으로 하고 root 계정(`career_form_admin`)은 쓰지 않는다.
 
 ```bash
-infra/scripts/mongodb-compose.sh --shell
+sudo docker exec -it mongodb-mongodb-1 mongosh --host 127.0.0.1 \
+  --authenticationDatabase admin --username career_form_admin --password
 ```
+
+운영 컨테이너 이름은 `mongodb-mongodb-1`이다(2026-11-10 호스트에서 확인). compose 프로젝트 `mongodb`로 떠 있어서, 호스트의 도우미 `/usr/local/sbin/career-form-mongodb`(`infra/scripts/mongodb-compose.sh`)가 기본으로 쓰는 프로젝트 이름 `career-form-mongodb`와 다르다. 도우미를 쓸 때는 `MONGODB_PROJECT_NAME=mongodb`를 준다. 주지 않고 `--up`을 하면 이름이 다른 컨테이너를 새로 만들고, 모니터링과 백업 설정이 가리키는 이름과 어긋난다. 그래서 이 문서는 `docker` 명령을 직접 쓴다.
 
 ```javascript
 db.getSiblingDB("admin").createUser({
@@ -62,10 +65,10 @@ db.getSiblingDB("admin").createUser({
 
 사람이 DB 호스트(Ubuntu 24.04 arm64)에서 한다. 공용 버킷 설정과 역할 연결(다음 절)을 먼저 끝낸다.
 
-1. 도구를 설치한다. `sudo apt-get install -y age`, AWS CLI v2는 AWS 공식 설치 파일(arm64)로 설치한다.
+1. 도구를 설치한다. `sudo env NEEDRESTART_SUSPEND=1 apt-get install -y age unzip`(설치 중 서비스 자동 재시작을 막는다), AWS CLI v2는 AWS 공식 설치 파일(arm64)로 설치한다.
 2. age 키 쌍은 DB 호스트 밖에서 만든다. `age-keygen -o mongodb-backup-identity.txt`로 만들고 `age-keygen -y mongodb-backup-identity.txt > mongodb-backup-recipients.txt`로 공개키를 뽑는다. identity는 팀 비밀 저장소에 넣은 뒤 로컬 사본을 지운다. 공개키 파일만 호스트로 옮긴다.
 3. 위 "계정과 권한"의 명령으로 백업 계정을 만든다.
-4. 파일과 폴더를 둔다.
+4. 파일과 폴더를 둔다. 스크립트 둘과 단위 둘은 작업 PC의 저장소에서 `scp`로 호스트에 올리고, 아래 명령의 저장소 경로는 올린 위치로 바꿔 읽는다.
 
    ```bash
    sudo install -d -m 0755 /opt/career-form/mongodb-backup
@@ -80,7 +83,7 @@ db.getSiblingDB("admin").createUser({
 
    ```bash
    MONGODB_BACKUP_URI=mongodb://career_form_backup:<비밀번호>@127.0.0.1:27017/?authSource=admin
-   MONGODB_BACKUP_CONTAINER=career-form-mongodb-mongodb-1
+   MONGODB_BACKUP_CONTAINER=mongodb-mongodb-1
    MONGODB_BACKUP_PROD_DATABASE=career_form_production
    MONGODB_BACKUP_DEV_DATABASE=career_form_development
    MONGODB_BACKUP_RECIPIENTS_FILE=/etc/career-form/mongodb-backup-recipients.txt
@@ -143,7 +146,7 @@ db.getSiblingDB("admin").createUser({
 
 | 상황 | 판단 | 할 일 |
 |---|---|---|
-| 컨테이너만 멈춤, 데이터 폴더 정상 | 복구하지 않는다 | `infra/scripts/mongodb-compose.sh --up`, host-state 알림 확인 |
+| 컨테이너만 멈춤, 데이터 폴더 정상 | 복구하지 않는다 | `sudo docker start mongodb-mongodb-1`, host-state 알림 확인 |
 | 잘못된 수동 작업이나 코드 변경으로 일부 문서가 바뀌거나 지워짐 | 운영 DB 전체를 되돌리면 그 뒤의 쓰기를 잃는다. 사람이 정한다 | 최신 백업을 리허설로 임시 컨테이너에 복원해 차이를 확인한다. 컬렉션 단위 부분 복구 도구는 없다 |
 | dev 평가 기록만 잃음 | dev 대상만 다룬다 | 임시 컨테이너에 복원해 확인한 뒤, 사람이 `mongorestore --nsInclude 'career_form_development.evaluation_*'`로 빠진 문서만 다시 넣을지 정한다. `--drop`은 쓰지 않는다 |
 | 데이터 폴더나 볼륨 손상, 디스크 고장, 볼륨 삭제 | 전체 복구 | 아래 "운영 복구 절차" |
@@ -167,23 +170,23 @@ db.getSiblingDB("admin").createUser({
 4. 운영 컨테이너를 멈추고 기존 폴더는 이름만 바꿔 보존한 뒤, 검증한 데이터 폴더를 그 자리로 옮긴다. 리허설 컨테이너는 스크립트가 끝에서 이미 멈춰 둔다.
 
    ```bash
-   docker stop career-form-mongodb-mongodb-1
+   sudo docker stop mongodb-mongodb-1
    sudo mv /var/lib/career-form/mongodb /var/lib/career-form/mongodb.before-restore-<KST 시각>
    sudo mv /var/lib/career-form/restore-<KST 시각>/data /var/lib/career-form/mongodb
-   infra/scripts/mongodb-compose.sh --up
+   sudo docker start mongodb-mongodb-1
    ```
 
-5. 계정을 다시 만든다. admin DB와 계정은 백업하지 않으므로 복원한 폴더에는 사용자가 없다. 그래서 compose healthcheck가 실패하고 `--up`이 대기 시간 초과로 끝날 수 있지만 컨테이너는 떠 있다. 사용자가 없을 때만 열리는 localhost 예외로 root 계정부터 만든다. 비밀번호는 `/etc/career-form/mongodb.env`의 값을 쓴다.
+5. 계정을 다시 만든다. admin DB와 계정은 백업하지 않으므로 복원한 폴더에는 사용자가 없다. 그래서 healthcheck가 실패해 `unhealthy`로 보이지만 컨테이너는 떠 있다. 사용자가 없을 때만 열리는 localhost 예외로 root 계정부터 만든다. 비밀번호는 `/etc/career-form/mongodb.env`의 값을 쓴다.
 
    ```bash
-   docker exec -it career-form-mongodb-mongodb-1 mongosh --quiet
+   sudo docker exec -it mongodb-mongodb-1 mongosh --quiet
    ```
 
    ```javascript
    db.getSiblingDB("admin").createUser({ user: "career_form_admin", pwd: passwordPrompt(), roles: ["root"] })
    ```
 
-   그다음 `infra/scripts/mongodb-compose.sh --shell`로 root 접속해 모니터링 계정과 백업 계정을 이전 비밀번호 그대로 다시 만든다. 비밀번호는 각각 모니터링 URI 파일과 백업 env 파일에 있다. 모니터링 계정에는 admin의 `clusterMonitor`와 local의 `read`를 준다(`infra/monitoring/mongodb/README.md`). 백업 계정은 위 "계정과 권한"대로 만든다. 끝나면 healthcheck가 healthy가 되는지 본다.
+   그다음 위 "계정과 권한"의 명령으로 root 접속해 모니터링 계정과 백업 계정을 이전 비밀번호 그대로 다시 만든다. 비밀번호는 각각 모니터링 URI 파일과 백업 env 파일에 있다. 모니터링 계정에는 admin의 `clusterMonitor`와 local의 `read`를 준다(`infra/monitoring/mongodb/README.md`). 백업 계정은 위 "계정과 권한"대로 만든다. 끝나면 healthcheck가 healthy가 되는지 본다.
 6. 백엔드를 다시 띄우고 API 상태, 공고 목록, 관리 화면, 발송 로그를 확인한다.
 7. `sudo systemctl start mongodb-backup.service`로 복구 직후의 기준 백업을 남긴다.
 8. 보존한 이전 폴더와 리허설 작업 폴더(`--teardown`)는 원인 확인이 끝난 뒤 사람이 정리한다.

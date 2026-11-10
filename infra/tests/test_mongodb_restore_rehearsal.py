@@ -14,6 +14,7 @@ from infra.tests import mongodb_backup_fakes as fakes
 BACKUP = fakes.load_script("mongodb-backup.py", "mongodb_backup_for_rehearsal")
 REHEARSAL = fakes.load_script("mongodb-restore-rehearsal.py", "mongodb_restore_rehearsal")
 PROTECTED_CONTAINER = "career-form-mongodb-mongodb-1"
+HOST_CONTAINER = "mongodb-mongodb-1"
 STAGES = ["fetch", "start", "restore", "verify"]
 
 
@@ -230,6 +231,7 @@ class MongoDBRestoreRehearsalGuardTest(unittest.TestCase):
             ("non-empty folder", rehearsal.argv(work=busy)),
             ("inside source", rehearsal.argv(work=rehearsal.backup.run_dir() / "rehearsal")),
             ("operational container", rehearsal.argv("--name", PROTECTED_CONTAINER)),
+            ("operational container on the host", rehearsal.argv("--name", HOST_CONTAINER)),
             ("existing container", rehearsal.argv("--name", fakes.CONTAINER)),
             ("source in protected path", rehearsal.argv(source=rehearsal.protected)),
         )
@@ -241,7 +243,7 @@ class MongoDBRestoreRehearsalGuardTest(unittest.TestCase):
 
     def test_default_protection_covers_operational_data_folder_and_container(self):
         self.assertIn(Path("/var/lib/career-form/mongodb"), REHEARSAL.DEFAULT_PROTECTED_PATHS)
-        self.assertIn(PROTECTED_CONTAINER, REHEARSAL.DEFAULT_PROTECTED_CONTAINERS)
+        self.assertEqual((HOST_CONTAINER, PROTECTED_CONTAINER), REHEARSAL.DEFAULT_PROTECTED_CONTAINERS)
 
     def test_source_has_no_operational_write_or_network_path(self):
         source = (fakes.ROOT / "infra/scripts/mongodb-restore-rehearsal.py").read_text()

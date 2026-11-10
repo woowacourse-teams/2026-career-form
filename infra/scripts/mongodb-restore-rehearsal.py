@@ -24,7 +24,8 @@ from pathlib import Path
 
 
 DEFAULT_PROTECTED_PATHS = (Path("/var/lib/career-form/mongodb"),)
-DEFAULT_PROTECTED_CONTAINERS = ("career-form-mongodb-mongodb-1",)
+# 운영 호스트의 실제 이름(compose 프로젝트 mongodb)과 compose 도우미 기본 프로젝트의 이름.
+DEFAULT_PROTECTED_CONTAINERS = ("mongodb-mongodb-1", "career-form-mongodb-mongodb-1")
 LABEL = "career-form.rehearsal"
 MARKER = ".career-form-rehearsal.json"
 COMMAND_TIMEOUT = 1800
