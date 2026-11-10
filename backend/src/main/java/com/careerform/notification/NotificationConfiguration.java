@@ -69,9 +69,12 @@ public class NotificationConfiguration {
         return new PushDispatchMetrics(meters, external);
     }
 
-    @Bean public PushDispatcher pushDispatcher(NotificationStore store, WebPushClient client, RetryPolicy policy, PushSettings settings,
-                                              PushDispatchMetrics metrics) {
-        return PushDispatcher.withVirtualThreads(store, client, policy, settings, Clock.systemUTC(), metrics);
+    @Bean public PushDeliveryExecutor pushDeliveryExecutor(NotificationStore store, WebPushClient client, RetryPolicy policy, PushDispatchMetrics metrics) {
+        return new PushDeliveryExecutor(store, client, policy, Clock.systemUTC(), metrics);
+    }
+
+    @Bean public PushDispatcher pushDispatcher(NotificationStore store, PushDeliveryExecutor deliveries, PushSettings settings, PushDispatchMetrics metrics) {
+        return PushDispatcher.withVirtualThreads(store, deliveries, settings, Clock.systemUTC(), metrics);
     }
 
     @Bean public PushDispatchSchedule pushDispatchSchedule(PushDispatcher dispatcher) { return new PushDispatchSchedule(dispatcher); }

@@ -33,8 +33,8 @@ class PushDispatcherTest {
     private final SimpleMeterRegistry meters = new SimpleMeterRegistry();
     private final PushDispatchMetrics metrics = new PushDispatchMetrics(meters, new ExternalCallMetrics(meters));
     private final PushSettings settings = PushSettings.defaults();
-    private final PushDispatcher dispatcher = new PushDispatcher(store, client, new RetryPolicy(settings.maxAttempts()), settings, clock, Runnable::run,
-        metrics);
+    private final PushDeliveryExecutor deliveries = new PushDeliveryExecutor(store, client, new RetryPolicy(settings.maxAttempts()), clock, metrics);
+    private final PushDispatcher dispatcher = new PushDispatcher(store, deliveries, settings, clock, Runnable::run, metrics);
     private final JobPostingService postings = new JobPostingService(store, JobCategories.load(), clock);
     private final String p256dh = VapidTestKeys.generate().publicKey;
     private final String auth = randomAuth();
@@ -86,8 +86,8 @@ class PushDispatcherTest {
         var start = new CountDownLatch(1);
         try (var first = Executors.newVirtualThreadPerTaskExecutor(); var second = Executors.newVirtualThreadPerTaskExecutor()) {
             var dispatchers = new PushDispatcher[] {
-                new PushDispatcher(store, client, new RetryPolicy(8), settings, clock, first, metrics),
-                new PushDispatcher(store, client, new RetryPolicy(8), settings, clock, second, metrics)};
+                new PushDispatcher(store, deliveries, settings, clock, first, metrics),
+                new PushDispatcher(store, deliveries, settings, clock, second, metrics)};
             var cycles = new PushDispatcher.Cycle[2];
             var threads = new Thread[2];
             for (var index = 0; index < 2; index++) {
@@ -294,7 +294,7 @@ class PushDispatcherTest {
         var narrow = new PushSettings(Duration.ofSeconds(60), 3, 8, Duration.ofSeconds(120), Duration.ofSeconds(10), 500, 20000, Set.of("fcm.googleapis.com"));
         client.latency = Duration.ofMillis(30);
         try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
-            var bounded = new PushDispatcher(store, client, new RetryPolicy(8), narrow, clock, executor, metrics);
+            var bounded = new PushDispatcher(store, deliveries, narrow, clock, executor, metrics);
             assertThat(bounded.dispatch().accepted()).isEqualTo(12);
         }
         assertThat(client.calls()).hasSize(12);
