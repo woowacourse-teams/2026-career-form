@@ -25,6 +25,7 @@ public final class PushDispatchMetrics {
     private final MeterRegistry registry;
     private final ExternalCallMetrics external;
     private final AtomicLong pendingBacklog = new AtomicLong();
+    private final AtomicLong queuedBacklog = new AtomicLong();
     private final AtomicLong sendingBacklog = new AtomicLong();
     private final AtomicLong subscriptionCount = new AtomicLong();
 
@@ -34,6 +35,7 @@ public final class PushDispatchMetrics {
         for (var outcome : KNOWN_OUTCOMES) { registry.counter("career.form.push.delivery", "outcome", outcome[0], "reason", outcome[1]); }
         registry.counter("career.form.external.timeouts", "provider", PROVIDER, "operation", OPERATION);
         Gauge.builder("career.form.push.backlog", pendingBacklog, AtomicLong::get).tag("status", "pending").register(registry);
+        Gauge.builder("career.form.push.backlog", queuedBacklog, AtomicLong::get).tag("status", "queued").register(registry);
         Gauge.builder("career.form.push.backlog", sendingBacklog, AtomicLong::get).tag("status", "sending").register(registry);
         Gauge.builder("career.form.push.subscriptions", subscriptionCount, AtomicLong::get).register(registry);
     }
@@ -46,9 +48,12 @@ public final class PushDispatchMetrics {
             .register(registry).record(latency.isNegative() ? Duration.ZERO : latency);
     }
 
-    /** 주기마다 갱신하는 대기·발송 중 백로그와 구독 수. */
-    public void backlog(long pending, long sending) {
+    /** 주기마다 갱신하는 대기·발송 중 백로그와 구독 수. 큐 대기는 SQS 방식에서만 0이 아니다. */
+    public void backlog(long pending, long sending) { backlog(pending, 0, sending); }
+
+    public void backlog(long pending, long queued, long sending) {
         pendingBacklog.set(pending);
+        queuedBacklog.set(queued);
         sendingBacklog.set(sending);
     }
 
@@ -65,6 +70,26 @@ public final class PushDispatchMetrics {
 
     public void delivery(String outcome, String reason) {
         registry.counter("career.form.push.delivery", "outcome", outcome, "reason", reason).increment();
+    }
+
+    /** 릴레이 한 주기. 주기 시간과 처리 건수는 발송기와 같은 이름으로 내 전후를 같은 지표로 비교한다. */
+    public void relay(PushRelay.Cycle cycle) {
+        Timer.builder("career.form.push.dispatch.cycle").publishPercentiles(0.5, 0.99).register(registry).record(cycle.duration());
+        DistributionSummary.builder("career.form.push.dispatch.claimed").register(registry).record(cycle.queued());
+        registry.counter("career.form.push.relay.enqueued", "result", "queued").increment(cycle.queued());
+        registry.counter("career.form.push.relay.enqueued", "result", "failed").increment(cycle.failed());
+    }
+
+    /** 예정 시각(재시도는 다음 시도 시각)에서 큐에 넣을 때까지의 지연. */
+    public void relayDelay(Duration delay) {
+        Timer.builder("career.form.push.relay.delay").publishPercentiles(0.5, 0.95, 0.99)
+            .register(registry).record(delay.isNegative() ? Duration.ZERO : delay);
+    }
+
+    /** 큐에 들어간 시각에서 워커가 선점할 때까지의 대기. */
+    public void queueWait(Duration wait) {
+        Timer.builder("career.form.push.queue.wait").publishPercentiles(0.5, 0.95, 0.99)
+            .register(registry).record(wait.isNegative() ? Duration.ZERO : wait);
     }
 
     public void cycle(PushDispatcher.Cycle cycle) {
