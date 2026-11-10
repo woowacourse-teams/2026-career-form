@@ -32,6 +32,9 @@ final class MemoryPushQueue implements PushQueue {
 
     @Override public synchronized List<Message> receive(int max, Duration wait) {
         receiveSizes.add(max);
+        if (visible.isEmpty() && !wait.isZero()) {
+            try { wait(10); } catch (InterruptedException exception) { Thread.currentThread().interrupt(); }
+        }
         var batch = new ArrayList<Message>();
         while (batch.size() < max && !visible.isEmpty()) { batch.add(visible.poll()); }
         received.addAll(batch);

@@ -92,6 +92,9 @@ public final class PushDispatchMetrics {
             .register(registry).record(wait.isNegative() ? Duration.ZERO : wait);
     }
 
+    /** 워커가 받은 메시지 한 건의 처리 결과: processed·skipped(이미 처리됐거나 다른 쪽이 선점)·invalid·failed·interrupted. */
+    public void workerMessage(String result) { registry.counter("career.form.push.worker.messages", "result", result).increment(); }
+
     public void cycle(PushDispatcher.Cycle cycle) {
         Timer.builder("career.form.push.dispatch.cycle").publishPercentiles(0.5, 0.99).register(registry).record(cycle.duration());
         DistributionSummary.builder("career.form.push.dispatch.claimed").register(registry).record(cycle.claimed());
