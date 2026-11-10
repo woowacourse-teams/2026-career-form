@@ -16,6 +16,13 @@ CF-348은 팀이 등록한 채용 공고를 접수 가능 시점(등록 시각�
 | `push.lease` | `CAREER_FORM_PUSH_LEASE` | `120s` | 선점 리스. 호출 시간 초과보다 길어야 하며 만료되면 다른 주기가 이어 보낸다 |
 | `push.timeout` | `CAREER_FORM_PUSH_TIMEOUT` | `10s` | FCM 요청 시간 초과(1~60초) |
 | `push.allowed-endpoint-hosts` | `CAREER_FORM_PUSH_ALLOWED_ENDPOINT_HOSTS` | `fcm.googleapis.com,jmt17.google.com` | 구독 endpoint로 허용하는 푸시 서비스 호스트(쉼표 구분). Chrome 계열은 구독마다 두 FCM 호스트 중 하나를 돌려주므로 둘 다 기본값이다. 다른 호스트의 endpoint는 400으로 거절한다 |
+| `push.transport` | `CAREER_FORM_PUSH_TRANSPORT` | `direct` | 발송 방식. `direct`는 API 서버 안의 발송기가 직접 보내고 `sqs`는 릴레이와 워커가 SQS를 거쳐 보낸다. 그 밖의 값과 빈 값은 기동을 멈춘다 |
+| `push.sqs.queue-url` | `CAREER_FORM_PUSH_SQS_QUEUE_URL` | 없음 | `sqs`일 때 필수인 표준 큐 주소. 없으면 기동을 멈춘다 |
+| `push.sqs.region` | `CAREER_FORM_PUSH_SQS_REGION` | `ap-northeast-2` | 큐가 있는 리전 |
+| `push.sqs.endpoint` | `CAREER_FORM_PUSH_SQS_ENDPOINT` | 없음 | 로컬 리허설에서 SQS 대체물을 가리킬 때만 쓴다. 비우면 AWS를 부른다 |
+| `push.relay.enabled` | `CAREER_FORM_PUSH_RELAY_ENABLED` | `true` | `sqs`에서 이 프로세스가 릴레이를 돌릴지 |
+| `push.worker.enabled` | `CAREER_FORM_PUSH_WORKER_ENABLED` | `true` | `sqs`에서 이 프로세스가 워커를 돌릴지. 릴레이와 워커를 둘 다 끄면 기동을 멈춘다 |
+| `push.queue-lease` | `CAREER_FORM_PUSH_QUEUE_LEASE` | `15m` | 큐에 넣은 건이 처리되지 않은 채 남았을 때 다시 넣기까지 기다리는 시간(1분~12시간). 큐가 가장 밀릴 때의 대기보다 길게 둔다 |
 | `push.batch-size`, `push.max-per-cycle` | 없음 | `500`, `20000` | 한 조회의 대기 건 수와 한 주기의 처리 상한 |
 
 토글이 켜졌는데 VAPID 값이 비어 있거나 쌍이 맞지 않으면 기동에 실패한다. 미설정 환경은 토글 기본값으로 안전하게 뜬다. 관리 API와 화면은 품질 관리(`career-form.quality.*`)의 공용 비밀번호 로그인이 설정돼 있어야 열린다.
@@ -26,7 +33,7 @@ CF-348은 팀이 등록한 채용 공고를 접수 가능 시점(등록 시각�
 |---|---|---|
 | `job_postings` | 회사, 직무 코드 배열 `roles`(소분류 코드 1개 이상, 상한은 분류 전체), 직무 라벨 `role`(소분류 라벨을 가운뎃점으로 이은 문자열, 120자 이하), 링크, 접수 시작, 마감, 등록 시각. `roles` 도입 전 레거시 문서는 `roles`가 없고 `role`도 없을 수 있으며 재분류하지 않는다 | `link` 유일, `(opensAt, closesAt)` |
 | `push_subscriptions` | endpoint, p256dh, auth, 등록 시각, 받을 직무 코드 배열 `roles`(없으면 미선택), `rolesUpdatedAt`(마지막으로 `roles`를 받은 시각, 없을 수 있음) | `endpoint` 유일, `roles`(멀티키) |
-| `push_deliveries` | 공고 ID × 구독 ID, 상태(PENDING·SENDING·ACCEPTED·ABANDONED), 예정 시각, 시도 횟수, 다음 시도 시각, 리스 만료 시각, 마지막 시도 시각·응답 코드·이유 | `(postingId, subscriptionId)` 유일, `(status, nextAttemptAt)`, `(status, leaseUntil)`, `(postingId, status)`, `scheduledAt` |
+| `push_deliveries` | 공고 ID × 구독 ID, 상태(PENDING·QUEUED·SENDING·ACCEPTED·ABANDONED. QUEUED는 `sqs` 방식에서 큐에 넣은 건), 예정 시각, 시도 횟수, 다음 시도 시각, 리스 만료 시각(QUEUED에서는 큐 리스 만료 시각), 마지막 시도 시각·응답 코드·이유 | `(postingId, subscriptionId)` 유일, `(status, nextAttemptAt)`, `(status, leaseUntil)`, `(postingId, status)`, `scheduledAt` |
 
 인덱스는 기동 시 `createIndex`로 보장하며 기존 컬렉션은 건드리지 않는다. 발송 문서 보존 정리는 후속 범위다.
 
@@ -58,7 +65,7 @@ CF-348은 팀이 등록한 채용 공고를 접수 가능 시점(등록 시각�
 |---|---|
 | `GET /api/v1/notifications/admin/postings` | 200 `{"postings":[{id, company, role?, roles?:[{code, label}], link, opensAt, closesAt, registeredAt, scheduledAt, progress:{pending, sending, accepted, abandoned, lastAttemptAt}}]}` 최근 등록 순. `roles`는 저장된 소분류 코드에 현재 분류의 라벨을 붙인 목록이다. 레거시 공고는 `roles`를 생략하고 기존 자유 글자 `role`이 있으면 그대로 유지하며 `role`도 없을 때만 생략한다 |
 | `POST /api/v1/notifications/admin/postings` `{company, roles, link, opensAt, closesAt}` | 201 `{"id","scheduledAt","deliveries"}`. `roles`는 분류의 소분류 코드 배열로 필수이며 null 요소 제거·공백 제거·순서 유지 중복 제거 뒤 1개 이상이고(상한은 분류 전체, 분류의 소분류 총수는 30 이하) 분류에 없는 코드가 하나라도 있으면 거절한다. `role` 라벨은 서버가 소분류 라벨을 가운뎃점(`·`)으로 이어 만들고 120자를 넘으면 앞 라벨 몇 개에 ` 외 n개`를 붙여 줄이며, 분류 전체를 고른 공고는 길이와 무관하게 `전체 직무`다. 요청의 `role` 자유 글자는 무시된다. 검증 순서는 COMPANY → ROLE → LINK → PERIOD → CLOSED. 저장과 대상 구독(공고 직무와 겹치는 직무를 고른 구독과 받을 직무를 고르지 않은 구독)의 대기 발송 생성이 끝났다는 뜻이며 `deliveries`는 그 건수다. FCM 수락을 기다리지 않는다. 409 `{"error":"DUPLICATE_LINK","postingId"}`(같은 링크의 공고가 이미 있다. 표 아래 "같은 링크 재등록과 등록 복구"), 400 `{"error":"INVALID_POSTING","reason": COMPANY·ROLE·LINK·PERIOD·CLOSED}` |
-| `DELETE /api/v1/notifications/admin/postings/{id}` | 204. 대기 발송만 삭제하고 수락·포기·발송 중 기록은 남긴다. 404 `POSTING_NOT_FOUND` |
+| `DELETE /api/v1/notifications/admin/postings/{id}` | 204. 대기 발송(PENDING과 QUEUED)만 삭제하고 수락·포기·발송 중 기록은 남긴다. 큐에 남은 메시지는 워커가 선점하지 못해 지운다. 404 `POSTING_NOT_FOUND` |
 | `GET /api/v1/notifications/admin/summary?from=<ISO>&to=<ISO>` | 200 `{from, to, postings, deliveries:{pending, sending, accepted, abandoned, total, averageAttempts}, acceptanceRate, abandonRate, latencyMillis:{p50, p95}, subscriptions, roleSelectedSubscriptions}`. 예정 시각이 `[from, to)`인 발송 문서를 집계한다. `postings`는 기간 안 등록 공고 수, 수락률·포기율은 끝난 발송(수락+포기) 기준, 평균 시도는 기간 안 전체 발송 기준, 지연은 `lastAttemptAt - scheduledAt`(MongoDB `$percentile`, 7.0 이상)이며 분모가 없으면 null이다. `subscriptions`는 현재 구독 수, `roleSelectedSubscriptions`는 받을 직무를 1개 이상 고른 현재 구독 수다. 400 `INVALID_RANGE`(시작 ≥ 끝, 400일 초과), 400 `INVALID_INPUT`(매개변수 누락). 집계값만 돌려주고 endpoint·키·링크는 내지 않는다 |
 
 수정 API는 없다. 삭제 후 재등록하면 새 공고 ID로 대상 구독에 한 번 더 간다.
@@ -71,7 +78,7 @@ CF-348은 팀이 등록한 채용 공고를 접수 가능 시점(등록 시각�
 
 대기 발송은 등록 시점에 대상 구독에만 만든다. 대상은 공고 `roles`와 겹치는 직무를 고른 구독과 받을 직무를 고르지 않은(`roles`가 없거나 빈) 구독이다(`roles` 멀티키 인덱스 조회). 발송기는 `@Scheduled` fixedDelay(설정 주기, 첫 실행은 기동 10초 뒤)로 한 주기에 다음을 한다.
 
-1. 예정 시각이 지난 PENDING과 리스가 만료된 SENDING을 `nextAttemptAt` 순으로 조회한다.
+1. 예정 시각이 지난 PENDING과 리스가 만료된 SENDING을 `nextAttemptAt` 순으로 조회한다. `sqs`에서 되돌린 뒤 남은 QUEUED도 큐 리스가 지나면 함께 집는다.
 2. 건마다 `findAndModify`로 같은 상태와 기한 조건일 때만 SENDING, 시도 횟수 +1, 리스 만료 시각을 찍는다(선점). 실패한 건은 건너뛴다. 발송기가 둘이어도 같은 건의 FCM 호출은 한 번만 나간다.
 3. 공고와 구독을 다시 읽어 삭제·마감·직무 필터를 재검사한 뒤 가상 스레드와 Semaphore로 동시성 한도 안에서 Web Push를 보낸다. 요청은 VAPID 서명(JWT 12시간), aes128gcm 암호화, `TTL`=마감까지 남은 초, `Urgency: normal`이다.
 4. 응답에 따라 선점한 리스와 시도 횟수가 그대로일 때만 상태를 바꾼다(`findAndReplace`). 다른 발송기가 리스 만료 뒤 가져간 건은 `stale`로 세고 덮어쓰지 않는다.
@@ -90,6 +97,51 @@ CF-348은 팀이 등록한 채용 공고를 접수 가능 시점(등록 시각�
 
 백오프 합은 127분이라 8회째 시도는 첫 시도 뒤 약 2시간 7분에 일어난다. 장애당 중복 알림은 최대 1건이며 외부 표시까지의 exactly-once는 보장하지 않는다.
 
+## 발송 방식: direct와 sqs
+
+`push.transport`로 고른다. 기본값 `direct`는 위 발송기 그대로다. `sqs`는 발송기 대신 릴레이와 워커가 뜬다. 발송 상태의 정본은 두 방식 모두 `push_deliveries`이고, 재검사·Web Push·응답별 전이는 같은 코드(`PushDeliveryExecutor`, `RetryPolicy`)를 쓴다.
+
+```mermaid
+flowchart LR
+  A[공고 등록 API] -->|PENDING| M[(push_deliveries)]
+  R[릴레이] -->|때가 된 건 조회, QUEUED 표시| M
+  R -->|발송 ID| Q[[SQS 표준 큐]]
+  Q -->|long polling| W[워커]
+  W -->|선점 SENDING, 결과 기록| M
+  W -->|Web Push| F[FCM]
+  Q -.->|재전달 한도 초과| D[[DLQ]]
+```
+
+릴레이는 발송기와 같은 주기(`push.dispatch-interval`)로 한 주기에 다음을 한다.
+
+1. 예정 시각이 지난 PENDING, 큐 리스가 지난 QUEUED, 리스가 지난 SENDING을 조회한다(한 주기 상한은 발송기와 같다).
+2. 발송 ID만 본문에 담아 10건씩 큐에 넣는다.
+3. 넣은 건만 조건부 갱신으로 QUEUED와 큐 리스 만료 시각(넣은 시각 + `push.queue-lease`)을 찍는다. 시도 횟수는 올리지 않는다. 큐가 거절했거나 호출이 실패한 건은 그대로 두어 다음 주기에 다시 넣는다.
+
+큐에 먼저 넣고 나중에 표시하므로, 릴레이가 그 사이에 멈춰도 메시지는 큐에 남는다. 다시 뜬 릴레이가 같은 건을 한 번 더 넣어도 워커의 선점이 한 번만 보내게 막는다.
+
+워커는 한 프로세스 안에서 다음을 반복한다.
+
+1. 남은 동시 발송 수만큼(최대 10건) long polling(20초)으로 받는다. 동시 발송 수는 `push.concurrency`를 넘지 않는다.
+2. 건마다 조건부 갱신으로 선점한다(SENDING, 시도 횟수 +1, 리스). 선점 조건은 QUEUED, 예정 시각이 지난 PENDING, 리스가 지난 SENDING이다.
+3. 선점하지 못한 메시지(이미 처리됐거나 다른 워커가 잡은 건, 없는 발송)는 보내지 않고 지운다.
+4. 선점한 건은 발송기와 같은 순서로 재검사하고 보낸 뒤 결과를 기록하고 메시지를 지운다. 재시도는 PENDING과 `nextAttemptAt`으로 남기고, 그 시각이 지나면 릴레이가 다시 넣는다.
+5. 본문이 발송 ID 형식(32자 hex)이 아닌 메시지는 지우지 않는다. 큐의 재전달 한도를 넘으면 DLQ로 간다.
+
+| 상황 | 동작 |
+|---|---|
+| 같은 발송 ID가 큐에 두 번 들어감 | 선점은 한 번만 성공해 Web Push는 한 번 나간다 |
+| 워커가 선점한 뒤 죽음 | 리스(기본 120초)가 지나면 릴레이가 다시 넣는다. 그 전에 다시 온 메시지는 선점하지 못해 지워진다 |
+| 큐의 메시지가 사라짐 | 큐 리스(기본 15분)가 지나면 릴레이가 다시 넣는다 |
+| 릴레이가 멈춤 | 이미 큐에 들어간 건은 워커가 계속 보낸다. 새 발송과 재시도 발송은 릴레이가 다시 뜰 때까지 큐에 들어가지 않는다 |
+| 종료 신호 | 워커는 받기를 멈추고 진행 중인 건을 25초 안에 끝낸다. 남은 건은 리스가 지난 뒤 다시 큐에 들어간다 |
+
+릴레이와 워커를 다른 프로세스로 띄우려면 같은 이미지에 `CAREER_FORM_PUSH_TRANSPORT=sqs`와 같은 큐 주소를 주고, 한쪽은 `CAREER_FORM_PUSH_WORKER_ENABLED=false`(릴레이만), 다른 쪽은 `CAREER_FORM_PUSH_RELAY_ENABLED=false`(워커만)로 둔다. 릴레이는 한 프로세스에서만 돌린다. 둘이 돌아도 중복 발송은 없지만 큐에 같은 메시지가 두 번씩 들어간다.
+
+자격 증명은 AWS SDK 기본 공급자(EC2 인스턴스 역할)를 쓴다. 액세스 키 설정 항목은 없다. 필요한 권한은 릴레이에 `sqs:SendMessage`, 워커에 `sqs:ReceiveMessage`·`sqs:DeleteMessage`다. 컨테이너에서 인스턴스 자격 증명을 받으려면 인스턴스 메타데이터의 홉 제한이 2 이상이어야 한다.
+
+되돌리기: `sqs`에서 `direct`로 바꿔 다시 띄우면 발송기가 PENDING을 바로 이어 보내고, QUEUED로 남은 건은 큐 리스가 지난 뒤 집어 보낸다. 큐에 남은 메시지는 쓰이지 않는다.
+
 ## 관측
 
 로그에는 공고 ID, 발송 ID, 시도 횟수, 결과, 이유, 응답 코드, 소요 시간만 남긴다. endpoint, p256dh, auth, 공고 링크는 어디에도 기록하지 않고, 공고의 직무 코드와 사용자의 직무 선택(구독 `roles`)은 건수만 남긴다.
@@ -100,6 +152,11 @@ CF-348은 팀이 등록한 채용 공고를 접수 가능 시점(등록 시각�
 | `PUSH_RESULT_STALE` | 리스를 잃어 반영하지 않은 완료 |
 | `PUSH_INVALID_REQUEST` | 400·403·413으로 포기한 건(설정 점검 대상) |
 | `PUSH_DISPATCH_CYCLE` | 주기별 due·claimed·accepted·retried·abandoned·skipped·stale 건수와 소요 시간 |
+| `PUSH_RELAY_CYCLE` | (`sqs`) 릴레이 주기별 due·queued·failed·skipped 건수와 소요 시간. failed는 큐에 넣지 못한 건, skipped는 넣었지만 그 사이 선점된 건 |
+| `PUSH_RELAY_SEND_FAILED`, `PUSH_QUEUE_SEND_FAILED` | (`sqs`) 큐에 넣는 호출이 실패한 묶음의 예외 이름과 건수 |
+| `PUSH_WORKER_MESSAGE_INVALID` | (`sqs`) 발송 ID 형식이 아닌 메시지. 본문은 남기지 않고 길이만 남긴다 |
+| `PUSH_WORKER_FAILED`, `PUSH_WORKER_DELETE_FAILED`, `PUSH_WORKER_POLL_FAILED` | (`sqs`) 선점·실행, 메시지 삭제, 받기 호출의 실패 |
+| `PUSH_WORKER_STARTED`, `PUSH_WORKER_CLOSE_TIMEOUT` | (`sqs`) 받기 시작과, 종료 유예 안에 끝나지 않은 진행 중 건수 |
 | `POSTING_REGISTERED` | 공고 등록 한 건의 공고 ID, 직무 코드 건수, 만든 대기 발송 건수 |
 | `POSTING_DUPLICATE_REFILL` | 같은 링크 재등록 한 건의 기존 공고 ID와 다시 확인한 대상 구독 수(새로 만든 발송 수가 아니다) |
 | `EXTERNAL_RESULT provider=fcm operation=push` | 기존 외부 호출 로그 계약 |
@@ -108,9 +165,13 @@ CF-348은 팀이 등록한 채용 공고를 접수 가능 시점(등록 시각�
 |---|---|---|
 | `career.form.push.send` (timer, p50·p99·히스토그램) | `outcome`=accepted·gone·retry_after·invalid·failure·timeout·error | FCM 호출 소요 시간 |
 | `career.form.push.delivery` (counter) | `outcome`=accepted·retry·abandoned, `reason`(포기 이유에 `FILTER_MISMATCH` 포함) | 전이 결과별 건수(수락률·포기율) |
-| `career.form.push.dispatch.cycle` (timer), `career.form.push.dispatch.claimed` (summary) | 없음 | 한 주기 소요와 처리 건수 |
+| `career.form.push.dispatch.cycle` (timer), `career.form.push.dispatch.claimed` (summary) | 없음 | 한 주기 소요와 처리 건수. `sqs`에서는 릴레이 주기의 소요와 큐 대기로 표시한 건수 |
 | `career.form.push.delivery.latency` (timer, p50·p95·p99·히스토그램) | 없음 | 수락된 발송의 예정 시각→FCM 수락 지연 |
-| `career.form.push.backlog` (gauge) | `status`=pending·sending | 주기 끝마다 갱신하는 대기·발송 중 건수 |
+| `career.form.push.backlog` (gauge) | `status`=pending·queued·sending | 주기 끝마다 갱신하는 대기·큐 대기·발송 중 건수. `direct`에서 queued는 0이다 |
+| `career.form.push.relay.enqueued` (counter) | `result`=queued·failed | (`sqs`) 릴레이가 큐 대기로 표시한 건수와 큐에 넣지 못한 건수 |
+| `career.form.push.relay.delay` (timer, p50·p95·p99) | 없음 | (`sqs`) 예정 시각(재시도는 다음 시도 시각)에서 큐에 넣을 때까지 |
+| `career.form.push.queue.wait` (timer, p50·p95·p99) | 없음 | (`sqs`) 큐에 들어간 시각에서 워커가 선점할 때까지 |
+| `career.form.push.worker.messages` (counter) | `result`=processed·skipped·invalid·failed·interrupted | (`sqs`) 워커가 받은 메시지의 처리 결과. skipped는 이미 처리됐거나 다른 쪽이 선점해 보내지 않은 건 |
 | `career.form.push.subscriptions` (gauge) | 없음 | 주기 끝마다 갱신하는 현재 구독 수 |
 | `career.form.external.call`, `career.form.external.timeouts` | `provider=fcm`, `operation=push` | 기존 외부 호출 대시보드에 함께 표시 |
 
@@ -157,4 +218,4 @@ max_over_time(career_form_push_backlog{status="pending"}[7d])
 
 ## 범위 밖과 한계
 
-공고 수정·재알림, 수신 확인, 계정, 메시지 큐·별도 워커·2중화, 다른 채널, 자동 수집은 범위 밖이다. 직무 필터는 변경 뒤 등록되는 공고부터 적용되며(예외: 같은 링크 재등록으로 빠진 발송을 채울 때는 첫 등록 전에 가입한 구독의 지금 받을 직무를 본다), 필터 변경 전 등록된 공고의 발송 보충, 관심 기업 필터, 구독을 식별하는 서버 쪽 공지함 필터(목록은 익명 조회이고 거르기는 확장이 한다)는 후속이다. 기존 공고의 재분류는 하지 않으며 필요하면 팀이 삭제 후 재등록한다. 서버 한 대라 배포마다 발송이 최대 2분 멈추고, Chrome 종료 중이거나 OS 알림이 차단되면 표시되지 않는다. 발송 문서 보존 정리와 Grafana 대시보드·포기율 알림은 후속 Infra 범위다.
+공고 수정·재알림, 수신 확인, 계정, 2중화, 다른 채널, 자동 수집은 범위 밖이다. SQS 방식은 코드와 설정까지만 있고, 개발·운영의 큐와 워커 컨테이너 배포, 큐 지표 대시보드는 후속 Infra 범위다. 관리 화면의 발송 진행과 요약 API는 QUEUED를 대기(pending)에 합쳐 센다. 직무 필터는 변경 뒤 등록되는 공고부터 적용되며(예외: 같은 링크 재등록으로 빠진 발송을 채울 때는 첫 등록 전에 가입한 구독의 지금 받을 직무를 본다), 필터 변경 전 등록된 공고의 발송 보충, 관심 기업 필터, 구독을 식별하는 서버 쪽 공지함 필터(목록은 익명 조회이고 거르기는 확장이 한다)는 후속이다. 기존 공고의 재분류는 하지 않으며 필요하면 팀이 삭제 후 재등록한다. 서버 한 대라 배포마다 발송이 최대 2분 멈추고, Chrome 종료 중이거나 OS 알림이 차단되면 표시되지 않는다. 발송 문서 보존 정리와 Grafana 대시보드·포기율 알림은 후속 Infra 범위다.
