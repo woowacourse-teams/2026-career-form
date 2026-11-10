@@ -2,9 +2,9 @@
 
 > Topic: push-dispatch-load-test
 > Status: Current
-> Current: [CF-441 공고 알림 발송 비교 측정 방식과 전 구조 재시작 동작](../../raw/issues/CF-441/documents/push-dispatch-load-test.md)
-> History: [CF-441 공고 알림 발송 비교 측정 방식과 전 구조 재시작 동작](../../raw/issues/CF-441/documents/push-dispatch-load-test.md)
-> Updated: 2026-11-09
+> Current: [CF-445 공고 알림 발송 시험 스택의 SQS 방식과 로컬 리허설 결과](../../raw/issues/CF-445/documents/push-dispatch-load-test-sqs.md)
+> History: [CF-441 공고 알림 발송 비교 측정 방식과 전 구조 재시작 동작](../../raw/issues/CF-441/documents/push-dispatch-load-test.md), [CF-445 공고 알림 발송 시험 스택의 SQS 방식과 로컬 리허설 결과](../../raw/issues/CF-445/documents/push-dispatch-load-test-sqs.md)
+> Updated: 2026-11-10
 
 ## 현재 상태
 
@@ -22,6 +22,14 @@ SQS 전환 전후 발송 비교는 운영 리전 임시 EC2 한 대에서 전환
 
 전 구조의 백엔드는 SIGTERM을 받으면 진행 중인 주기를 끝까지 보낸다. 종료 유예 30초를 넘기면 강제 종료되고, 보내던 발송 문서는 lease 120초 뒤 다시 나가며 중복이 생긴다. S3은 첫 주기가 유예보다 긴 30,000건으로 잰다.
 
+후 측정(SQS 방식)은 같은 시험 스택에 `worker` 서비스(profile `sqs`)를 함께 띄운다(CF-445). 백엔드는 릴레이만,
+워커는 발송만 해서 동시 발송 수 합계 20을 유지한다. AWS 자격 증명은 compose 파일에 적지 않아 EC2에서는
+인스턴스 역할을 쓴다. 자원 기록은 백엔드와 워커의 지표를 따로 읽고 카운터 증가도 프로세스별로 센 뒤 더한다.
+노트북 리허설은 SQS 대체물(profile `local-sqs`)로 하고 공식 측정에는 쓰지 않는다.
+
+후 구조에서 워커를 강제 종료하면 보내던 발송 문서는 lease 120초와 그 뒤 릴레이 주기를 기다린 뒤 다시
+나간다. 로컬 리허설(2,000건)에서 유실 0, 중복 20, 수락 공백 8.9초와 120.6초였다.
+
 팀 측정 계획과는 다음을 다르게 한다.
 
 - S5의 Retry-After는 90초로 준다.
@@ -33,3 +41,5 @@ SQS 전환 전후 발송 비교는 운영 리전 임시 EC2 한 대에서 전환
 ## 변경 이유
 
 CF-441에서 SQS 전환 전후를 같은 숫자로 비교할 측정 방식과 시험 도구의 조건을 정했다. 근거와 수치는 연결된 raw를 따른다.
+
+CF-445에서 발송 구조에 SQS 방식을 더하면서 시험 스택이 후 구조를 띄울 수 있게 했다. 워커가 별도 프로세스가 되어 자원 기록과 요약을 프로세스별로 나눴다.

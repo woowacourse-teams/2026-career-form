@@ -1110,3 +1110,10 @@
 - 승인한 후보 4개를 [CF-441 bundle](../raw/issues/CF-441/manifest.md)에 기록했다. 전후 비교 측정 방식, 발송 경로의 endpoint 검사 범위, 전 구조의 재시작 동작, 팀 측정 계획 대비 조정이다.
 - [공고 알림 발송 시험](topics/push-dispatch-load-test.md) topic을 새로 만들었다.
 - 호스트 주소, 키 값, 비밀번호, 구독 endpoint, 대화 전문은 저장하지 않았다.
+
+## [2026-11-10] ingest | CF-445 공고 알림 발송의 SQS 릴레이·워커 방식 추가
+- Approval-Digest: ea356ce89986bea6f83cd3530e98d1cf7daa81dd5362d312f9f617af633bc226
+- Source-Revision: 1abf5c5c
+- 승인한 후보 7개를 [CF-445 bundle](../raw/issues/CF-445/manifest.md)에 기록했다. 구조 결정(ADR), SQS 방식의 동작 규칙, 가상 스레드와 맵 잠금, 알림 조립과 테스트 규칙, 시험 스택의 SQS 방식, 공용 AWS 계정의 SQS 사정, 로컬 리허설 결과다.
+- [공고 구독 알림](topics/job-posting-notifications.md)과 [공고 알림 발송 시험](topics/push-dispatch-load-test.md) topic을 갱신했다.
+- 호스트 주소, 계정 번호, 큐 주소, 키 값, 비밀번호, 구독 endpoint, 대화 전문은 저장하지 않았다.

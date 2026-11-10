@@ -2,9 +2,9 @@
 
 > Topic: job-posting-notifications
 > Status: Current
-> Current: [CF-439 같은 링크 재등록의 빠진 발송 채우기와 등록 복구 절차](../../raw/issues/CF-439/documents/duplicate-link-refill.md)
-> History: [CF-348 채용 공고 구독 알림의 전달 경로와 발송 보장](../../raw/issues/CF-348/documents/adr/348-push-notification-delivery.md), [CF-394 공고 알림 직무 필터: 분류 정본, 공고 직무 필수, 구독별 받을 직무와 대상 발송](../../raw/issues/CF-394/documents/job-posting-role-filter.md), [CF-432 공고 알림 미선택 구독 상시 발송과 전환 설정 제거](../../raw/issues/CF-432/documents/unselected-always-delivered.md), [CF-439 같은 링크 재등록의 빠진 발송 채우기와 등록 복구 절차](../../raw/issues/CF-439/documents/duplicate-link-refill.md)
-> Updated: 2026-11-09
+> Current: [CF-445 공고 알림 발송의 SQS 방식: 구조 결정과 동작 규칙](../../raw/issues/CF-445/documents/push-sqs-transport.md)
+> History: [CF-348 채용 공고 구독 알림의 전달 경로와 발송 보장](../../raw/issues/CF-348/documents/adr/348-push-notification-delivery.md), [CF-394 공고 알림 직무 필터: 분류 정본, 공고 직무 필수, 구독별 받을 직무와 대상 발송](../../raw/issues/CF-394/documents/job-posting-role-filter.md), [CF-432 공고 알림 미선택 구독 상시 발송과 전환 설정 제거](../../raw/issues/CF-432/documents/unselected-always-delivered.md), [CF-439 같은 링크 재등록의 빠진 발송 채우기와 등록 복구 절차](../../raw/issues/CF-439/documents/duplicate-link-refill.md), [CF-445 공고 알림 발송의 SQS 방식: 구조 결정과 동작 규칙](../../raw/issues/CF-445/documents/push-sqs-transport.md)
+> Updated: 2026-11-10
 
 ## 현재 상태
 
@@ -54,9 +54,20 @@ MongoDB가 단일 노드라 공고 저장과 발송 문서 저장은 한 트랜�
 채운 발송은 예정 시각이 과거라 수락 지연 p50·p95가 실제로 늦은 만큼 크게 잡힌다. 원자성
 (트랜잭션·Outbox)과 빠진 발송의 자동 감지·복구는 SQS 전환 설계로 미뤘다.
 
+발송 방식은 설정 `push.transport`로 고른다(CF-445). 기본값 `direct`는 위 발송기 그대로다. `sqs`는
+릴레이가 때가 된 발송 문서의 id를 SQS 표준 큐에 넣고 QUEUED로 표시하며, 워커가 꺼내 조건부 갱신으로
+선점한 건만 보낸다. 발송 문서가 두 방식 모두 상태 정본이고 재시도 대기도 `nextAttemptAt`에 적는다.
+큐에 같은 id가 두 번 들어가도 선점은 한 번만 성공한다. 워커가 죽은 건은 lease 120초 뒤, 큐에서
+사라진 건은 큐 리스(기본 15분) 뒤 릴레이가 다시 넣는다. `sqs`에서 `direct`로 되돌리면 발송기가 남은
+QUEUED까지 집어 보낸다. 팀원 제안의 Outbox 트랜잭션, FIFO 큐, 가시성 타임아웃 재시도는 넣지 않았고
+등록 빈틈은 여전히 재등록 보충으로 메운다. 개발·운영은 `direct`로 돌고, `sqs` 적용과 릴레이·워커
+배치는 전후 측정 뒤 후속 Infra Issue에서 정한다. 가상 스레드에서 도는 발송 코드는 `synchronized`나
+`computeIfAbsent` 안에서 I/O를 하지 않는다. 공고 조회가 맵 잠금 안에 있어 CPU 2개 컨테이너에서
+발송이 멈춘 것을 리허설에서 확인하고 고쳤다.
+
 규모 가정은 구독자 1,000명(실측 피크 500명의 2배), 하루 등록 5건 이하, 공고당 푸시 1,000건이며
 최악 5,000건이 동시성 20에서 25초라 큐가 풀 병목이 없다는 것이 메시지 큐를 두지 않은 근거다.
-직무 필터는 대상 수를 줄일 뿐 이 가정을 바꾸지 않는다. SQS·별도 워커·2중화·관심 기업 필터·
+직무 필터는 대상 수를 줄일 뿐 이 가정을 바꾸지 않는다. SQS 방식의 개발·운영 적용·2중화·관심 기업 필터·
 필터 변경 뒤 기존 공고의 발송 보충(같은 링크 재등록으로 빠진 발송을 채울 때만 첫 등록 전에 가입한
 구독의 바뀐 직무가 반영된다)·공고 수정·수신 확인·계정은 범위 밖이고, 공고당 푸시 1만 건
 초과나 한 주기 이용률 70% 초과(약 8,400건)에서 큐와 워커 분리를, 서버 발송 채널 확장이 없으면
@@ -92,3 +103,8 @@ MongoDB가 단일 노드라 공고 저장과 발송 문서 저장은 한 트랜�
 - [CI/CD 설정](cicd-setup.md)
 - [공용 모니터링 시스템](monitoring-system.md)
 - [자동 입력 품질 관측과 사람 확인 요청](autofill-quality-observation.md)
+
+2026-11-10 팀은 장애 격리와 채널 확장을 이유로 발송을 큐와 별도 워커로 옮기기로 했다. CF-445가
+팀원 제안(Outbox 트랜잭션, FIFO, 가시성 타임아웃 재시도)과 발송 문서를 상태 정본으로 유지하는 안을
+비교해 뒤쪽을 택하고 ADR로 기록했다. 운영 DB 구성을 바꾸지 않고, 관리 화면과 시험 도구가 그대로
+동작하며, 설정으로 되돌릴 수 있기 때문이다. 코드와 시험 스택까지 넣었고 운영 적용은 측정 뒤로 미뤘다.
