@@ -192,6 +192,16 @@ class MongoDBRestoreRehearsalTest(unittest.TestCase):
         self.assertIn("Permission denied", report["error"])
         self.assertEqual([], rehearsal.started())
 
+    def test_restore_killed_by_memory_limit_names_exit_code_and_memory_option(self):
+        rehearsal = Rehearsal(self)
+        fakes.update(rehearsal.backup.bin, lambda data: data.setdefault("fail", {}).update({"mongorestore": 137}))
+        code, output, errors = rehearsal.run(rehearsal.argv())
+        self.assertEqual(1, code)
+        report = rehearsal.report()
+        self.assertEqual("restore", report["failed_stage"])
+        self.assertIn("exit 137", report["error"])
+        self.assertIn("--memory", report["error"])
+
     def test_missing_docker_before_start_is_an_error_not_a_traceback(self):
         rehearsal = Rehearsal(self)
         (rehearsal.backup.bin / "docker").unlink()

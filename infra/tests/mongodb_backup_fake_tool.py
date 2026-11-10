@@ -209,6 +209,10 @@ def execute(home: Path, scenario: dict, args: list) -> int:
         return 1
     if command[0] == "mongorestore":
         data = sys.stdin.buffer.read()
+        killed = scenario.get("fail", {}).get("mongorestore")
+        if killed:
+            sys.stderr.write("restoring `db.collection` from `archive on stdin`\n")
+            return int(killed)
         if not data.startswith(b"FAKE-ARCHIVE "):
             sys.stderr.write("Failed: archive header is invalid\n")
             return 1

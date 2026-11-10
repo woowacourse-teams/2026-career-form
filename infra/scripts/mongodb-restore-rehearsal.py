@@ -397,7 +397,8 @@ class Rehearsal:
             if decrypt_code != 0:
                 raise StageError(f"age could not decrypt {entry['file']}: {tail(decrypt_report)}")
             if load_code != 0:
-                raise StageError(f"mongorestore failed for {target}: {tail(restore_report)}")
+                killed = " (killed, most likely by the container memory limit: raise --memory)" if load_code == 137 else ""
+                raise StageError(f"mongorestore failed for {target} with exit {load_code}{killed}: {tail(restore_report)}")
             summary = RESTORE_SUMMARY.search(restore_report.decode("utf-8", "replace"))
             restored[target] = {"documents": int(summary.group(1)) if summary else None,
                                 "failed": int(summary.group(2)) if summary else 0}
