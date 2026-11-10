@@ -34,6 +34,11 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.0")
     implementation("com.zerodeplibs:zerodep-web-push-java:2.1.5")
+    implementation(platform("software.amazon.awssdk:bom:2.57.12"))
+    implementation("software.amazon.awssdk:sqs") {
+        // 동기 클라이언트만 쓴다. 비동기용 Netty 전송은 싣지 않는다.
+        exclude(group = "software.amazon.awssdk", module = "netty-nio-client")
+    }
 
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")

@@ -9,6 +9,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,7 +21,7 @@ import com.careerform.monitoring.ExternalCallMetrics;
 
 import io.micrometer.core.instrument.MeterRegistry;
 
-/** 공고 구독 알림 조립. career-form.notification.enabled=true일 때만 발송기와 API가 뜬다. */
+/** 공고 구독 알림 조립. career-form.notification.enabled=true일 때만 발송과 API가 뜬다. 발송 방식은 push.transport(direct 기본, sqs)로 고른다. */
 @Configuration(proxyBeanMethods = false)
 @EnableScheduling
 @ConditionalOnProperty(prefix = "career-form.notification", name = "enabled", havingValue = "true")
@@ -73,11 +75,51 @@ public class NotificationConfiguration {
         return new PushDeliveryExecutor(store, client, policy, Clock.systemUTC(), metrics);
     }
 
-    @Bean public PushDispatcher pushDispatcher(NotificationStore store, PushDeliveryExecutor deliveries, PushSettings settings, PushDispatchMetrics metrics) {
-        return PushDispatcher.withVirtualThreads(store, deliveries, settings, Clock.systemUTC(), metrics);
+    /** 방식 값이 direct·sqs가 아니거나 sqs인데 큐 설정이 모자라면 여기서 기동이 멈춘다. */
+    @Bean public PushTransport pushTransport(
+        @Value("${career-form.notification.push.transport:direct}") String transport,
+        @Value("${career-form.notification.push.sqs.queue-url:}") String queueUrl,
+        @Value("${career-form.notification.push.sqs.region:ap-northeast-2}") String region,
+        @Value("${career-form.notification.push.sqs.endpoint:}") String endpoint,
+        @Value("${career-form.notification.push.relay.enabled:true}") boolean relayEnabled,
+        @Value("${career-form.notification.push.worker.enabled:true}") boolean workerEnabled,
+        @Value("${career-form.notification.push.queue-lease:15m}") Duration queueLease) {
+        return new PushTransport(PushTransport.parseMode(transport), queueUrl, region, endpoint, relayEnabled, workerEnabled, queueLease);
     }
 
-    @Bean public PushDispatchSchedule pushDispatchSchedule(PushDispatcher dispatcher) { return new PushDispatchSchedule(dispatcher); }
+    /**
+     * 지금 방식: API 서버 안의 발송기가 주기마다 직접 보낸다.
+     * 안쪽 조립 클래스에는 @Configuration을 붙이지 않는다. 붙이면 컴포넌트 스캔이 바깥 조건(알림 켜짐)과 무관하게 따로 읽는다.
+     */
+    @ConditionalOnProperty(prefix = "career-form.notification.push", name = "transport", havingValue = "direct", matchIfMissing = true)
+    static class DirectTransport {
+        @Bean PushDispatcher pushDispatcher(NotificationStore store, PushDeliveryExecutor deliveries, PushSettings settings, PushDispatchMetrics metrics) {
+            return PushDispatcher.withVirtualThreads(store, deliveries, settings, Clock.systemUTC(), metrics);
+        }
+
+        @Bean PushDispatchSchedule pushDispatchSchedule(PushDispatcher dispatcher) { return new PushDispatchSchedule(dispatcher); }
+    }
+
+    /** SQS 방식: 릴레이가 큐에 넣고 워커가 꺼내 보낸다. 릴레이와 워커는 설정으로 따로 켜고 끈다. */
+    @ConditionalOnProperty(prefix = "career-form.notification.push", name = "transport", havingValue = "sqs")
+    static class SqsTransport {
+        @Bean @ConditionalOnMissingBean(PushQueue.class) SqsPushQueue pushQueue(PushTransport transport) { return SqsPushQueue.create(transport); }
+
+        @Bean @ConditionalOnProperty(prefix = "career-form.notification.push.relay", name = "enabled", havingValue = "true", matchIfMissing = true)
+        PushRelay pushRelay(NotificationStore store, PushQueue queue, PushSettings settings, PushTransport transport, PushDispatchMetrics metrics) {
+            return new PushRelay(store, queue, settings, transport.queueLease(), Clock.systemUTC(), metrics);
+        }
+
+        @Bean @ConditionalOnBean(PushRelay.class) PushRelaySchedule pushRelaySchedule(PushRelay relay) { return new PushRelaySchedule(relay); }
+
+        @Bean @ConditionalOnProperty(prefix = "career-form.notification.push.worker", name = "enabled", havingValue = "true", matchIfMissing = true)
+        PushWorker pushWorker(NotificationStore store, PushQueue queue, PushDeliveryExecutor deliveries, PushSettings settings, PushDispatchMetrics metrics) {
+            return PushWorker.withVirtualThreads(store, queue, deliveries, settings, Clock.systemUTC(), metrics);
+        }
+
+        /** 애플리케이션이 다 뜬 뒤에 받기를 시작한다. 컨텍스트가 닫힐 때 워커의 close()가 받기를 멈춘다. */
+        @Bean @ConditionalOnBean(PushWorker.class) ApplicationRunner pushWorkerStart(PushWorker worker) { return arguments -> worker.start(); }
+    }
 
     @Bean public ApplicationRunner notificationIndexes(MongoNotificationStore store) {
         return arguments -> {

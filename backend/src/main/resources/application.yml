@@ -54,6 +54,16 @@ career-form:
       lease: ${CAREER_FORM_PUSH_LEASE:120s}
       timeout: ${CAREER_FORM_PUSH_TIMEOUT:10s}
       allowed-endpoint-hosts: ${CAREER_FORM_PUSH_ALLOWED_ENDPOINT_HOSTS:fcm.googleapis.com,jmt17.google.com}
+      transport: ${CAREER_FORM_PUSH_TRANSPORT:direct}
+      queue-lease: ${CAREER_FORM_PUSH_QUEUE_LEASE:15m}
+      sqs:
+        queue-url: ${CAREER_FORM_PUSH_SQS_QUEUE_URL:}
+        region: ${CAREER_FORM_PUSH_SQS_REGION:ap-northeast-2}
+        endpoint: ${CAREER_FORM_PUSH_SQS_ENDPOINT:}
+      relay:
+        enabled: ${CAREER_FORM_PUSH_RELAY_ENABLED:true}
+      worker:
+        enabled: ${CAREER_FORM_PUSH_WORKER_ENABLED:true}
       vapid:
         public-key: ${CAREER_FORM_PUSH_VAPID_PUBLIC_KEY:}
         private-key: ${CAREER_FORM_PUSH_VAPID_PRIVATE_KEY:}
