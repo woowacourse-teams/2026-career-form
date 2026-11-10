@@ -70,6 +70,11 @@
    - 리눅스 커널은 6.19 미만이어야 한다(`uname -r`). 운영 고정 MongoDB 이미지(8.0.26)가 6.19 이상에서 기동을 거부한다. 6.19 이상이면 커널이 낮은 AMI로 다시 만든다. `GLIBC_TUNABLES=glibc.pthread.rseq=1`로 띄우는 우회는 메모리 할당기 성능이 떨어져 측정에 쓰지 않는다.
    - 태그 3개를 단다: `Service=techcourse`, `Role=techcourse-etc`, `ProjectTeam=<팀 서비스 영문 이름>`. 태그가 없으면 운영진이 자원을 종료하거나 삭제한다. SQS 큐(후 측정용)에도 같은 태그를 단다.
 2. Docker와 Compose v2 이상, Python 3.12, Git, JDK 21을 설치한다. `.env.loadtest`의 작은따옴표 값은 Compose v2 규칙으로 읽는다.
+   - 우테코 표준 AMI(Amazon Linux 2023, arm64)에는 Docker와 AWS CLI만 있다(2026-11-10 확인). 나머지는 따로 넣는다.
+   - JDK, Git, Python: `sudo dnf install -y java-21-amazon-corretto-devel git python3.12 python3.12-pip`. 가상환경은 `python3.12 -m venv .venv`로 만든다.
+   - Compose: 표준 AMI에는 `docker compose`가 없다. docker/compose 릴리스의 `docker-compose-linux-aarch64`를 `~/.docker/cli-plugins/docker-compose`로 받아 실행 권한을 주고, 같은 릴리스의 `.sha256` 파일로 확인한다.
+   - buildx: 표준 AMI의 buildx는 0.12라 최신 Compose가 이미지 빌드를 거부한다(`compose build requires buildx 0.17.0 or later`). docker/buildx 릴리스의 `buildx-<버전>.linux-arm64`를 `~/.docker/cli-plugins/docker-buildx`로 받고 `checksums.txt`로 확인한다.
+   - 표준 AMI가 띄워 둔 모니터링 컨테이너(`prometheus-discovery`)는 건드리지 않는다.
 3. 저장소를 clone하고 이 폴더에서 가상환경을 만든다.
 
    ```bash
@@ -248,6 +253,7 @@ docker compose --env-file .env.loadtest down -v
 - 후 구조도 릴레이는 60초 주기로 돈다. 큐에 넣는 일은 주기마다 한 번이므로 "예정 시각→마지막 수락"의 주기 위상은 전과 같이 남는다. 한 주기 상한 20,000건도 같아서 30,000건은 두 주기에 걸쳐 큐에 들어간다.
 - 후 구조에서 큐에 넣은 메시지가 사라지면 큐 리스(기본 15분) 뒤에야 다시 들어간다. 이 도구는 그 경우를 만들지 않는다.
 - 큐 지표(큐 깊이, DLQ 깊이, 요청 수)는 CloudWatch에서 따로 본다. 이 도구는 앱이 내는 지표만 모은다.
+- 한 기계(t4g.medium, vCPU 2개)에 백엔드, 워커, MongoDB, 모의 서버가 함께 올라간다. 후 구조는 워커가 CPU를 더 쓰므로 운영에서 워커를 다른 호스트에 둘 계획이면 이 측정은 후 구조에 불리하게 나온다. 요약의 컨테이너별 CPU 합계를 함께 본다.
 - 프로세스를 재시작하거나 죽이는 실행(S3, S4)에서는 "지표상 발송 결과 증가"가 실제보다 적게 나온다. 마지막 표본과 종료 사이의 증가분이 프로세스와 함께 사라지기 때문이다. 수락 수는 모의 서버 기록("수락" 행)을 본다.
 
 ## 후속 후보
