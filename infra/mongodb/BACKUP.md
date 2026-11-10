@@ -117,6 +117,8 @@ db.getSiblingDB("admin").createUser({
 
    마지막 익명 요청은 403이어야 한다. Grafana 패널에서 마지막 성공 시각, 첫 실행 소요 시간, 파일 크기를 보고, 업무 시간 회차의 DB 명령 P95가 크게 늘지 않았는지 본다.
 
+적용 상태: 2026-11-10에 1~7을 적용했다. 첫 실행은 11:57 KST에 성공했고(20.4초, prod 1.27MB, dev 83KB, 익명 요청 403), timer는 11:59 KST에 켰다. 알림 규칙과 대시보드 패널은 12:00 KST에 모니터링 서버에 반영했다. 누가 무엇을 했는지는 PR #443의 "호스트 설치와 Grafana 반영 기록" 댓글에 있다.
+
 재부팅 직후의 따라잡기 실행은 운영 컨테이너가 healthy가 될 때까지 최대 2분 기다린 뒤 덤프한다. 그 안에 healthy가 되지 않으면 그 회차는 `inspect` 단계 실패로 남는다.
 
 ## 공용 버킷과 역할 설정
@@ -206,7 +208,8 @@ db.getSiblingDB("admin").createUser({
 
 DB 호스트에서 리허설할 때:
 
-- 임시 mongod가 운영 mongod와 메모리, 디스크를 나눠 쓴다. `free -m`의 available이 600MB 이상인지 보고 `--memory 384m`으로 띄운다. 모자라면 `ec2-project`를 붙인 임시 EC2에서 원격 백업본으로 한다.
+- 임시 mongod가 운영 mongod와 메모리, 디스크를 나눠 쓴다. DB 호스트는 t4g.micro라 메모리가 906MB이고 평소 available은 380~480MB다. `free -m`의 available이 400MB 이상일 때 `--memory 384m`으로 띄운다. 모자라면 `ec2-project`를 붙인 임시 EC2에서 원격 백업본으로 한다.
+- `--memory`는 임시 컨테이너의 상한이고 swap을 쓰지 못하게 고정한다. 상한 안에서 mongod와 `mongorestore`가 함께 돌고, 넘으면 임시 컨테이너 안의 프로세스만 종료된다. 256m에서는 `mongorestore`가 상한에 걸려 restore 단계가 실패했고 384m에서 성공했다(2026-11-10). 384m로 돌린 약 14초 동안 호스트의 available은 439MB에서 185MB까지 내려갔다.
 - 백업 회차(04, 10, 16, 22시)와 부하 시험을 피하고 Grafana 가용 메모리 알림을 본다.
 - identity는 팀 비밀 저장소에서 `/root` 아래로 0600으로 잠시 가져오고, 끝나면 `shred -u`로 지운다.
 - 호스트 커널이 6.19 이상이면 고정 이미지 mongod가 기동을 거부한다(SERVER-121912). 리허설은 `--kernel-compat`로 glibc rseq를 켜 띄울 수 있다. 할당기 성능은 떨어지지만 확인에는 충분하다. 운영 mongod도 같은 영향을 받으므로 커널을 올리기 전에 `uname -r`과 MongoDB의 수정 버전을 확인한다.
@@ -219,7 +222,7 @@ DB 호스트에서 리허설할 때:
 | 측정 | 일시 | 데이터 | 받기 | 기동 | 복원 | 확인 | 합계 |
 |---|---|---|---|---|---|---|---|
 | 합성 리허설(AI, 로컬 Docker, 고정 이미지 8.0.26) | 2026-11-09 | 합성 DB 세 개 중 prod 126건, dev 평가 컬렉션 28건 | 0.008초 | 1.53초 | 0.379초 | 1.235초 | 3.152초 |
-| 운영 리허설(사람, DB 호스트) | | | | | | | |
+| 운영 리허설(DB 호스트, picetea44의 지시로 AI가 실행) | 2026-11-10 12:24 KST | 같은 날 11:57 KST 운영 백업본. prod 684건, dev 평가 컬렉션 373건 | 0.045초 | 3.15초 | 3.008초 | 7.253초 | 13.456초 |
 
 합성 리허설은 `RUN_MONGODB_INTEGRATION=1 .venv/bin/python -m unittest infra.tests.test_mongodb_backup_runtime`의 결과다. 로컬 Docker 커널이 6.19 이상이라 `--kernel-compat`를 썼다.
 
@@ -229,18 +232,18 @@ DB 호스트에서 리허설할 때:
 
 | 항목 | 값 |
 |---|---|
-| 일시(KST), 수행자 | |
-| 원본 실행 폴더와 위치(호스트 폴더 또는 원격) | |
-| 명령 | |
-| fetch 시작, 종료, 소요 | |
-| start 시작, 종료, 소요 | |
-| restore 시작, 종료, 소요 | |
-| verify 시작, 종료, 소요 | |
-| 합계 | |
-| 확인 결과(확인, 실패, 건너뜀 건수와 건너뛴 이유) | |
-| 리허설 중 가용 메모리 최저값, DB 명령 P95 | |
-| 문제와 조치 | |
-| `report.json` 보관 위치 | |
+| 일시(KST), 수행자 | 2026-11-10 12:24. picetea44가 결정하고 복호화 키를 호스트에 올렸고, 명령은 그 지시로 AI가 실행했다 |
+| 원본 실행 폴더와 위치(호스트 폴더 또는 원격) | `20261110T025708Z`(2026-11-10 11:57 KST 회차), 호스트 폴더 `/var/lib/career-form/mongodb-backups/` |
+| 명령 | `sudo python3 /opt/career-form/mongodb-backup/mongodb-restore-rehearsal.py --source /var/lib/career-form/mongodb-backups/20261110T025708Z --identity /root/mongodb-backup-identity.txt --work-dir /var/lib/career-form/restore-20261110-1224 --memory 384m` |
+| fetch 시작, 종료, 소요 | 03:24:29Z, 03:24:29Z, 0.045초 |
+| start 시작, 종료, 소요 | 03:24:29Z, 03:24:32Z, 3.15초 |
+| restore 시작, 종료, 소요 | 03:24:32Z, 03:24:35Z, 3.008초 |
+| verify 시작, 종료, 소요 | 03:24:35Z, 03:24:42Z, 7.253초 |
+| 합계 | 13.456초 |
+| 확인 결과(확인, 실패, 건너뜀 건수와 건너뛴 이유) | 확인 38건, 실패 0건, 건너뜀 0건. prod 23건: 파일 크기와 sha256, 컬렉션 8개의 건수와 `dbHash`, 예상 밖 컬렉션 없음, 활성 정책 버전, 활성 정책 문서, 구독 수, 만료 없는 품질 기록 수. dev 15건: 파일 크기와 sha256, 평가 컬렉션 6개의 건수와 `dbHash`, 예상 밖 컬렉션 없음. 복원된 문서는 prod 684건, dev 373건이고 실패는 없었다 |
+| 리허설 중 가용 메모리 최저값, DB 명령 P95 | available은 시작 전 439MB, 최저 185MB(0.2초 간격으로 `/proc/meminfo` 측정). swap 사용은 316MB에서 377MB로 늘었다. prod DB 명령 P95는 4.5~4.6ms로 직전 14분(3.7~4.7ms)과 같았다. 운영 컨테이너는 계속 healthy였다 |
+| 문제와 조치 | 12:05의 1차 시도(`--memory 256m`)는 restore 단계에서 실패했다. 임시 컨테이너 안의 `mongorestore`가 메모리 상한에 걸려 종료됐고(커널 로그의 cgroup OOM), 운영 컨테이너에는 영향이 없었다. `--teardown`으로 임시 자원을 지우고 384m로 다시 실행해 성공했다. 스크립트는 이 경우를 종료 코드와 함께 알리도록 고쳤다. 끝난 뒤 호스트의 identity 사본은 `shred -u`로 지웠고 임시 컨테이너와 작업 폴더도 `--teardown`으로 지웠다 |
+| `report.json` 보관 위치 | DB 호스트 `/var/lib/career-form/mongodb-rehearsals/20261110-1224-report.json`(0600). 실패한 1차 시도는 같은 폴더의 `20261110-1205-failed-report.json` |
 
 ## 완료 조건 근거
 
