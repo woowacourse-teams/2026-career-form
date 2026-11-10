@@ -3,6 +3,8 @@ package com.careerform.notification;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
 import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
@@ -12,6 +14,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -398,6 +402,51 @@ class PushDispatcherTest {
         assertThat(dispatcher.dispatch().accepted()).isEqualTo(2);
         assertThat(client.calls()).hasSize(2);
         assertThat(store.deliveries()).allMatch(delivery -> delivery.status() == PushDelivery.Status.ACCEPTED && "ACCEPTED".equals(delivery.lastReason()));
+    }
+
+    /**
+     * 공고 조회가 캐시 맵의 잠금 안에서 일어나면, 같은 공고를 동시에 처리하는 두 번째 발송은 첫 조회가 끝날 때까지 맵 잠금에서 기다린다.
+     * 가상 스레드는 그 잠금을 쥐거나 기다리는 동안 운반 스레드를 놓지 못해, CPU가 적은 컨테이너에서 발송 전체가 멈춘다(CF-445 리허설에서 확인).
+     */
+    @Test
+    @DisplayName("같은 공고의 발송을 동시에 처리해도 공고 조회가 캐시 잠금 안에서 서로를 막지 않는다")
+    void lookupDoesNotHoldCacheLock() {
+        subscribe("s1"); subscribe("s2");
+        register("https://careers.example.test/jobs/20", NOW.minusSeconds(60), NOW.plusSeconds(86400));
+        var bothLookingUp = new CountDownLatch(2);
+        var blocking = intercepting("findPosting", () -> {
+            bothLookingUp.countDown();
+            try { bothLookingUp.await(2, TimeUnit.SECONDS); } catch (InterruptedException exception) { Thread.currentThread().interrupt(); }
+        });
+        try (var threads = Executors.newFixedThreadPool(2)) {
+            var concurrent = new PushDispatcher(blocking, client, new RetryPolicy(settings.maxAttempts()), settings, clock, threads, metrics);
+            assertThat(concurrent.dispatch().accepted()).isEqualTo(2);
+        }
+        assertThat(bothLookingUp.getCount()).as("두 발송이 동시에 공고를 조회했어야 한다").isZero();
+        assertThat(client.calls()).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("한 주기 안에서 한 번 조회한 공고는 다시 조회하지 않는다")
+    void reusesCachedPosting() {
+        subscribe("s1"); subscribe("s2");
+        register("https://careers.example.test/jobs/21", NOW.minusSeconds(60), NOW.plusSeconds(86400));
+        var lookups = new AtomicInteger();
+        var counting = new PushDispatcher(intercepting("findPosting", lookups::incrementAndGet), client, new RetryPolicy(settings.maxAttempts()), settings,
+            clock, Runnable::run, metrics);
+        assertThat(counting.dispatch().accepted()).isEqualTo(2);
+        assertThat(lookups.get()).isEqualTo(1);
+        assertThat(client.calls()).hasSize(2);
+    }
+
+    /** 지정한 저장소 메서드가 불릴 때마다 before를 먼저 실행하고 실제 저장소에 넘기는 프록시. */
+    private NotificationStore intercepting(String methodName, Runnable before) {
+        return (NotificationStore) Proxy.newProxyInstance(NotificationStore.class.getClassLoader(), new Class<?>[] {NotificationStore.class},
+            (proxy, method, arguments) -> {
+                if (method.getName().equals(methodName)) { before.run(); }
+                try { return method.invoke(store, arguments); }
+                catch (InvocationTargetException exception) { throw exception.getCause(); }
+            });
     }
 
     private void subscribe(String id) { subscribe(id, null); }
