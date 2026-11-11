@@ -50,13 +50,13 @@ db.getSiblingDB("admin").createUser({
 
 ## 복구에 필요한 키와 비밀값
 
-설치 담당자가 보관 위치와 책임자를 아래 표에 채운다. 값 자체는 적지 않는다.
+보관 위치와 책임자만 적고 값은 적지 않는다. 위치나 책임자가 바뀌면 이 표를 고친다. 이 문서에서 팀 비밀 저장소는 팀 전용 Notion을 가리킨다.
 
 | 이름 | 쓰임 | 보관 위치 | 보관 책임자 |
 |---|---|---|---|
-| age identity(복호화 키) | 모든 백업 파일 복호화. 잃으면 어떤 백업도 읽을 수 없다 | 팀 비밀 저장소. DB 호스트에 두지 않는다 | (설치 때 채움) |
-| age 수신자 공개키 | 백업 암호화. 공개값이다 | DB 호스트 `/etc/career-form/mongodb-backup-recipients.txt`, 팀 비밀 저장소 | (설치 때 채움) |
-| 백업 계정 비밀번호 | 덤프 | DB 호스트 `/etc/career-form/mongodb-backup.env`(0600), 팀 비밀 저장소 | (설치 때 채움) |
+| age identity(복호화 키) | 모든 백업 파일 복호화. 잃으면 어떤 백업도 읽을 수 없다 | 팀 전용 Notion 참조. DB 호스트에 두지 않는다 | picetea44 |
+| age 수신자 공개키 | 백업 암호화. 공개값이다 | DB 호스트 `/etc/career-form/mongodb-backup-recipients.txt`. 잃으면 복호화 키에서 `age-keygen -y`로 다시 뽑는다 | picetea44 |
+| 백업 계정 비밀번호 | 덤프 | DB 호스트 `/etc/career-form/mongodb-backup.env`(0600)에만 둔다. 잃으면 root 계정으로 비밀번호를 다시 정하고 이 파일을 고친다 | picetea44 |
 | root 계정 비밀번호 | 복구 뒤 계정 재생성, 운영 접속 | DB 호스트 `/etc/career-form/mongodb.env`(0600) | 기존 운영 담당 |
 | 모니터링 계정 URI | 복구 뒤 계정 재생성 | DB 호스트 `/etc/career-form-monitoring-db/secrets/mongodb-uri` | 기존 운영 담당 |
 | VAPID 키 | 푸시 발송 서명 | GitHub Environment 시크릿(`infra/WEB_PUSH_VAPID.md`). DB에 없다 | 기존 운영 담당 |
@@ -106,7 +106,7 @@ db.getSiblingDB("admin").createUser({
    systemctl list-timers mongodb-backup.timer
    ```
 
-7. 첫 실행이 성공한 뒤 모니터링 서버에 `rules-mongodb-backup.json`과 대시보드를 반영한다. 메트릭이 한 번도 없으면 규칙이 기대 시작 시각부터 누락으로 세므로, 먼저 반영하면 바로 누락 알림이 간다.
+7. 첫 실행이 성공한 뒤 모니터링 서버에 `rules-mongodb-backup.json`과 대시보드를 반영한다. 메트릭이 한 번도 없으면 규칙이 기대 시작 시각부터 누락으로 세므로, 먼저 반영하면 바로 누락 알림이 간다. 규칙을 내릴 때는 파일만 지워서는 Grafana(13.2.3)에 규칙이 남는다. 지울 규칙의 uid를 `deleteRules`에 적은 파일을 같은 폴더에 두고 Grafana를 재시작한 뒤 그 파일을 치운다.
 8. 사람 손을 대지 않은 자동 실행이 두 번 이상 끝나면 확인한다.
 
    ```bash
@@ -117,7 +117,9 @@ db.getSiblingDB("admin").createUser({
 
    마지막 익명 요청은 403이어야 한다. Grafana 패널에서 마지막 성공 시각, 첫 실행 소요 시간, 파일 크기를 보고, 업무 시간 회차의 DB 명령 P95가 크게 늘지 않았는지 본다.
 
-적용 상태: 2026-11-10에 1~7을 적용했다. 첫 실행은 11:57 KST에 성공했고(20.4초, prod 1.27MB, dev 83KB, 익명 요청 403), timer는 11:59 KST에 켰다. 알림 규칙과 대시보드 패널은 12:00 KST에 모니터링 서버에 반영했다. 누가 무엇을 했는지는 PR #443의 "호스트 설치와 Grafana 반영 기록" 댓글에 있다.
+적용 상태: 2026-11-10에 1~7을 적용했다. 첫 실행은 11:57 KST에 성공했고(20.4초, prod 1.27MB, dev 83KB, 익명 요청 403), timer는 11:59 KST에 켰다. 알림 규칙과 대시보드 패널은 12:00 KST에 모니터링 서버에 반영했다. 14:05 KST에는 기준을 60초로 낮춘 시험 규칙으로 알림이 팀 Discord에 도착하는 것을 확인하고 시험 규칙을 지웠다. 누가 무엇을 했는지는 PR #443의 "호스트 설치와 Grafana 반영 기록" 댓글에 있다.
+
+8단계 확인(2026-11-11): 사람 손을 대지 않은 자동 실행이 11-10 16:00과 22:00, 11-11 04:00과 10:00 KST에 네 번 모두 성공했다. 소요는 20.1~21.5초였고, 회차마다 호스트에 실행 폴더가 생기고 원격에 암호화 파일 3개(합계 약 1.36MB)가 올라갔다. 네 회차의 manifest와 22:00 회차의 prod archive는 익명 요청에 403을 돌려줬다. 실행 전 10분과 실행 뒤 5분의 prod DB 명령 P95는 네 회차 모두 7ms 아래였고 크게 늘지 않았다.
 
 재부팅 직후의 따라잡기 실행은 운영 컨테이너가 healthy가 될 때까지 최대 2분 기다린 뒤 덤프한다. 그 안에 healthy가 되지 않으면 그 회차는 `inspect` 단계 실패로 남는다.
 
