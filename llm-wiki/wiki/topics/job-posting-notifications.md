@@ -2,9 +2,9 @@
 
 > Topic: job-posting-notifications
 > Status: Current
-> Current: [CF-439 같은 링크 재등록의 빠진 발송 채우기와 등록 복구 절차](../../raw/issues/CF-439/documents/duplicate-link-refill.md)
-> History: [CF-348 채용 공고 구독 알림의 전달 경로와 발송 보장](../../raw/issues/CF-348/documents/adr/348-push-notification-delivery.md), [CF-394 공고 알림 직무 필터: 분류 정본, 공고 직무 필수, 구독별 받을 직무와 대상 발송](../../raw/issues/CF-394/documents/job-posting-role-filter.md), [CF-432 공고 알림 미선택 구독 상시 발송과 전환 설정 제거](../../raw/issues/CF-432/documents/unselected-always-delivered.md), [CF-439 같은 링크 재등록의 빠진 발송 채우기와 등록 복구 절차](../../raw/issues/CF-439/documents/duplicate-link-refill.md)
-> Updated: 2026-11-09
+> Current: [CF-448 공고 조회 잠금 수정과 SQS 전환 보류](../../raw/issues/CF-448/documents/push-dispatcher-lock-and-sqs-deferral.md)
+> History: [CF-348 채용 공고 구독 알림의 전달 경로와 발송 보장](../../raw/issues/CF-348/documents/adr/348-push-notification-delivery.md), [CF-394 공고 알림 직무 필터: 분류 정본, 공고 직무 필수, 구독별 받을 직무와 대상 발송](../../raw/issues/CF-394/documents/job-posting-role-filter.md), [CF-432 공고 알림 미선택 구독 상시 발송과 전환 설정 제거](../../raw/issues/CF-432/documents/unselected-always-delivered.md), [CF-439 같은 링크 재등록의 빠진 발송 채우기와 등록 복구 절차](../../raw/issues/CF-439/documents/duplicate-link-refill.md), [CF-448 공고 조회 잠금 수정과 SQS 전환 보류](../../raw/issues/CF-448/documents/push-dispatcher-lock-and-sqs-deferral.md)
+> Updated: 2026-11-10
 
 ## 현재 상태
 
@@ -38,7 +38,10 @@ fixedDelay 1분 주기 발송기다. 발송기는 FCM 호출 전 `findOneAndUpda
 재시작해도 리스가 만료된 건을 다음 주기가 이어 보낸다. 재시도 표는 2xx 수락됨, 404·410 포기와
 구독 삭제, 429와 Retry-After 있는 503은 응답이 준 시각 뒤, 그 밖의 오류와 시간 초과는
 1·2·4·8·16·32·64분 지수 백오프, 400·403·413 포기이며 포기 기준은 시도 8회 또는 공고 마감
-경과 중 먼저 오는 것이다. 동시성은 20(가상 스레드)이고 장애당 중복 알림 최대 1건을 허용한다.
+경과 중 먼저 오는 것이다. 동시성은 20(가상 스레드)이고 장애당 중복 알림 최대 1건을 허용한다. 가상 스레드에서 도는 코드는
+잠금을 쥔 채 I/O를 하지 않는다. 발송기는 한 주기의 공고 캐시를 `get`, 잠금 밖 조회, `putIfAbsent`
+순서로 채우고 동시에 처음 조회할 때의 중복 조회를 받아들인다. `computeIfAbsent` 안에서 MongoDB를
+읽던 때에는 가상 스레드가 운반 스레드에 고정돼 CPU 2개 컨테이너에서 발송이 멈출 수 있었다(CF-448).
 
 MongoDB가 단일 노드라 공고 저장과 발송 문서 저장은 한 트랜잭션이 아니어서, 그 사이에 등록이
 끊기면 공고만 남고 알림이 가지 않는다(CF-439). 같은 링크로 다시 등록하면 409 `DUPLICATE_LINK`와
@@ -52,7 +55,8 @@ MongoDB가 단일 노드라 공고 저장과 발송 문서 저장은 한 트랜�
 공고 ID를 바꾸고 이미 받은 구독에 한 번 더 보내는 삭제 후 재등록은 복구에 쓰지 않는다. 로그
 `POSTING_DUPLICATE_REFILL`의 `targets`는 다시 확인한 대상 구독 수이지 새로 만든 발송 수가 아니고,
 채운 발송은 예정 시각이 과거라 수락 지연 p50·p95가 실제로 늦은 만큼 크게 잡힌다. 원자성
-(트랜잭션·Outbox)과 빠진 발송의 자동 감지·복구는 SQS 전환 설계로 미뤘다.
+(트랜잭션·Outbox)과 빠진 발송의 자동 감지·복구는 SQS 전환 설계로 미뤘고, 그 전환은 CF-448에서
+보류했다.
 
 규모 가정은 구독자 1,000명(실측 피크 500명의 2배), 하루 등록 5건 이하, 공고당 푸시 1,000건이며
 최악 5,000건이 동시성 20에서 25초라 큐가 풀 병목이 없다는 것이 메시지 큐를 두지 않은 근거다.
@@ -60,8 +64,14 @@ MongoDB가 단일 노드라 공고 저장과 발송 문서 저장은 한 트랜�
 필터 변경 뒤 기존 공고의 발송 보충(같은 링크 재등록으로 빠진 발송을 채울 때만 첫 등록 전에 가입한
 구독의 바뀐 직무가 반영된다)·공고 수정·수신 확인·계정은 범위 밖이고, 공고당 푸시 1만 건
 초과나 한 주기 이용률 70% 초과(약 8,400건)에서 큐와 워커 분리를, 서버 발송 채널 확장이 없으면
-확장 폴링으로의 축소를, 가용성 목표 상향에서 2중화를 재검토한다. 1차 실측 뒤 2차에서 장애 격리와
-채널 확장을 이유로 SQS 도입을 같은 숫자로 비교한다. 설정 키, API 경로, 상태 전이 표와 관측
+확장 폴링으로의 축소를, 가용성 목표 상향에서 2중화를 재검토한다.
+
+CF-348이 2차로 미룬 SQS 검토는 끝났다. 시험 도구(CF-441)와 SQS 방식의 구현·실측(CF-445)을 거쳐
+SQS는 켜지 않기로 했다(CF-448 ADR). SQS로 새로 얻는 것은 API 서버를 배포하거나 재시작하는
+동안에도 발송이 계속되는 것 하나인데, 지금은 그 지연이 최대 2분이고 목표가 10분이다. 구현과
+측정 기록은 닫은 PR #446과 브랜치 `CF-445`에 있다. CF-448 ADR은 다시 볼 조건으로 네 가지를
+든다. 1~2분 지연이 문제가 되는 알림이 생길 때, 한 번에 몰리는 발송이 5,000건을 넘게 될 때, 다른
+발송 채널을 붙일 때, API 서버 장애가 발송에 자주 영향을 줄 때다. 설정 키, API 경로, 상태 전이 표와 관측
 지표는 `backend/docs/job-posting-notifications.md`를 따르고 VAPID 시크릿과 배포 설정은
 #350, 확장의 구독·수신·공지함과 받을 직무 선택기는 #349·#395가 맡는다.
 
@@ -85,10 +95,16 @@ MongoDB가 단일 노드라 공고 저장과 발송 문서 저장은 한 트랜�
 원래 없던 쌍을 구별할 수 없어 대상을 넓게 잡으면 정상 공고를 실수로 다시 등록해도 그 사이 가입한
 구독에 알림이 간다는 점을 찾았다. 그래서 대상을 첫 등록 시각까지 가입한 구독으로 좁혔다.
 
+2026-11-10 CF-348 ADR이 2차로 미뤄 둔 큐와 워커 검토를 마쳤다. CF-441의 시험 도구와 CF-445의 SQS
+방식 구현으로 실제 SQS까지 확인했고, 얻는 것이 새로 운영할 것들과 바꿀 만하지 않아 켜지 않기로
+했다(CF-448). 그 리허설에서 발송기의 공고 조회가 맵 잠금 안에서 MongoDB를 읽어 가상 스레드를
+고정시키는 문제를 찾았다. 기존 발송기에도 같은 코드가 있어 CF-448에서 고쳤다.
+
 ## 관련 지식
 
 - [확장 Web Push 구독과 공고 알림](extension-push-notifications.md)
 - [확장·백엔드 호환 배포](release-compatibility.md)
 - [CI/CD 설정](cicd-setup.md)
 - [공용 모니터링 시스템](monitoring-system.md)
+- [공고 알림 발송 시험](push-dispatch-load-test.md)
 - [자동 입력 품질 관측과 사람 확인 요청](autofill-quality-observation.md)

@@ -1110,3 +1110,10 @@
 - 승인한 후보 4개를 [CF-441 bundle](../raw/issues/CF-441/manifest.md)에 기록했다. 전후 비교 측정 방식, 발송 경로의 endpoint 검사 범위, 전 구조의 재시작 동작, 팀 측정 계획 대비 조정이다.
 - [공고 알림 발송 시험](topics/push-dispatch-load-test.md) topic을 새로 만들었다.
 - 호스트 주소, 키 값, 비밀번호, 구독 endpoint, 대화 전문은 저장하지 않았다.
+
+## [2026-11-10] ingest | CF-448 공고 알림 발송 중 공고 조회 잠금으로 발송이 멈추는 문제 수정
+- Approval-Digest: 87630dbbfefb64b4398c8a30206ee7ca5d3852e7698afa2644c9a045f1f5bf67
+- Source-Revision: 324a016c
+- 승인한 후보 3개를 [CF-448 bundle](../raw/issues/CF-448/manifest.md)에 기록했다. 가상 스레드 잠금 규칙, ADR "공고 알림 SQS 전환 보류", 공용 AWS 계정의 시험 자원 정리 절차다.
+- [공고 구독 알림](topics/job-posting-notifications.md)과 [공고 알림 발송 시험](topics/push-dispatch-load-test.md) topic을 갱신했다.
+- 호스트 주소, 계정 번호, 큐 주소, 인스턴스 ID, 키 값, 비밀번호, 구독 endpoint, 대화 전문은 저장하지 않았다.
