@@ -1,0 +1,223 @@
+{
+  "apiVersion": 1,
+  "groups": [
+    {
+      "orgId": 1,
+      "name": "rules-mongodb-backup",
+      "folder": "Career Form",
+      "interval": "1m",
+      "rules": [
+        {
+          "uid": "cf-db-backup-age-warning",
+          "title": "[공용 DB] MongoDB 백업 마지막 성공 경과 (초) (warning)",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "max(time() - last_over_time(career_mongo_backup_last_success_timestamp_seconds{job=\"mongodb-host\",instance=\"career-db\"}[24h])) or max(time() - career:mongodb:expected_start_timestamp_seconds)",
+                "instant": true,
+                "range": false,
+                "intervalMs": 60000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        28800
+                      ]
+                    }
+                  }
+                ],
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "intervalMs": 60000,
+                "maxDataPoints": 43200
+              }
+            }
+          ],
+          "noDataState": "KeepLast",
+          "execErrState": "KeepLast",
+          "for": "0s",
+          "keepFiringFor": "0s",
+          "missing_series_evals_to_resolve": 1051200,
+          "isPaused": false,
+          "labels": {
+            "service": "mongodb-observation",
+            "kind": "db-backup",
+            "severity": "warning",
+            "instance": "career-db"
+          },
+          "annotations": {
+            "summary": "MongoDB 백업 마지막 성공 경과 (초) | 현재 값 {{ if $values.A }}{{ printf \"%.3f\" $values.A.Value }}{{ else }}측정 불가{{ end }}",
+            "description": "초기 기준 gt 28800(6시간 주기 + 2시간), 0s 지속. 메트릭이 한 번도 없으면 기대 시작 시각부터 누락으로 셉니다. 새 백업이 성공하면 복구합니다. 확인과 재실행은 runbook infra/mongodb/BACKUP.md를 따르세요.",
+            "__dashboardUid__": "career-form-mongodb",
+            "__panelId__": "25"
+          }
+        },
+        {
+          "uid": "cf-db-backup-age-critical",
+          "title": "[공용 DB] MongoDB 백업 마지막 성공 경과 (초) (critical)",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "max(time() - last_over_time(career_mongo_backup_last_success_timestamp_seconds{job=\"mongodb-host\",instance=\"career-db\"}[24h])) or max(time() - career:mongodb:expected_start_timestamp_seconds)",
+                "instant": true,
+                "range": false,
+                "intervalMs": 60000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        50400
+                      ]
+                    }
+                  }
+                ],
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "intervalMs": 60000,
+                "maxDataPoints": 43200
+              }
+            }
+          ],
+          "noDataState": "KeepLast",
+          "execErrState": "KeepLast",
+          "for": "0s",
+          "keepFiringFor": "0s",
+          "missing_series_evals_to_resolve": 1051200,
+          "isPaused": false,
+          "labels": {
+            "service": "mongodb-observation",
+            "kind": "db-backup",
+            "severity": "critical",
+            "instance": "career-db"
+          },
+          "annotations": {
+            "summary": "MongoDB 백업 마지막 성공 경과 (초) | 현재 값 {{ if $values.A }}{{ printf \"%.3f\" $values.A.Value }}{{ else }}측정 불가{{ end }}",
+            "description": "초기 기준 gt 50400(2 x 6시간 주기 + 2시간), 0s 지속. 메트릭이 한 번도 없으면 기대 시작 시각부터 누락으로 셉니다. 새 백업이 성공하면 복구합니다. 확인과 재실행은 runbook infra/mongodb/BACKUP.md를 따르세요.",
+            "__dashboardUid__": "career-form-mongodb",
+            "__panelId__": "25"
+          }
+        },
+        {
+          "uid": "cf-db-backup-failed-warning",
+          "title": "[공용 DB] MongoDB 백업 마지막 시도 실패 (warning)",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "max(career_mongo_backup_success{job=\"mongodb-host\",instance=\"career-db\"})",
+                "instant": true,
+                "range": false,
+                "intervalMs": 60000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "lt",
+                      "params": [
+                        1
+                      ]
+                    }
+                  }
+                ],
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "intervalMs": 60000,
+                "maxDataPoints": 43200
+              }
+            }
+          ],
+          "noDataState": "KeepLast",
+          "execErrState": "KeepLast",
+          "for": "0s",
+          "keepFiringFor": "0s",
+          "missing_series_evals_to_resolve": 1051200,
+          "isPaused": false,
+          "labels": {
+            "service": "mongodb-observation",
+            "kind": "db-backup",
+            "severity": "warning",
+            "instance": "career-db"
+          },
+          "annotations": {
+            "summary": "MongoDB 백업 마지막 시도 결과 (성공 1, 실패 0) | 현재 값 {{ if $values.A }}{{ printf \"%.3f\" $values.A.Value }}{{ else }}측정 불가{{ end }}",
+            "description": "초기 기준 lt 1, 0s 지속. 다음 시도가 성공하면 복구합니다. 실패 단계는 패널과 journalctl -u mongodb-backup.service에서 확인하고 runbook infra/mongodb/BACKUP.md를 따르세요.",
+            "__dashboardUid__": "career-form-mongodb",
+            "__panelId__": "25"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Career Form MongoDB backup at 04, 10, 16 and 22 KST
+
+[Timer]
+OnCalendar=*-*-* 04,10,16,22:00:00 Asia/Seoul
+Persistent=true
+AccuracySec=1min
+Unit=mongodb-backup.service
+
+[Install]
+WantedBy=timers.target

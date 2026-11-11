@@ -1137,6 +1137,146 @@
           "placement": "bottom"
         }
       }
+    },
+    {
+      "id": 25,
+      "title": "MongoDB 백업 상태",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 128,
+        "w": 24,
+        "h": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "6시간 주기(04, 10, 16, 22시 KST) 백업의 마지막 성공 경과, 마지막 시도 결과, 소요 시간, 크기입니다. 실패 단계는 실패한 시도에서만 나타납니다. 설치와 복구는 infra/mongodb/BACKUP.md를 따릅니다.",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(time() - max(career_mongo_backup_last_success_timestamp_seconds{job=\"mongodb-host\",instance=\"career-db\"})) / 3600",
+          "legendFormat": "마지막 성공 경과(시간)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "max(career_mongo_backup_success{job=\"mongodb-host\",instance=\"career-db\"})",
+          "legendFormat": "마지막 시도 결과(1 성공, 0 실패)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        },
+        {
+          "refId": "C",
+          "expr": "max(career_mongo_backup_duration_seconds{job=\"mongodb-host\",instance=\"career-db\"})",
+          "legendFormat": "마지막 시도 소요(초)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        },
+        {
+          "refId": "D",
+          "expr": "max(career_mongo_backup_size_bytes{job=\"mongodb-host\",instance=\"career-db\"})",
+          "legendFormat": "마지막 성공 크기",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        },
+        {
+          "refId": "E",
+          "expr": "max by(stage) (career_mongo_backup_failure_stage{job=\"mongodb-host\",instance=\"career-db\"})",
+          "legendFormat": "실패 단계 {{stage}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 1
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "h"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 8
+                    },
+                    {
+                      "color": "red",
+                      "value": 14
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "C"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "D"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      }
     }
   ]
 }

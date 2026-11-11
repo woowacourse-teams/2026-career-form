@@ -2,9 +2,9 @@
 
 > Topic: monitoring-system
 > Status: Current
-> Current: [CF-207 공용 MongoDB 관측과 수집 신뢰성](../../raw/issues/CF-207/documents/monitoring-system.md)
-> History: [CF-207 공용 MongoDB 관측과 수집 신뢰성](../../raw/issues/CF-207/documents/monitoring-system.md); [CF-158 장애 분석 로그와 외부 호출 P95](../../raw/issues/CF-158/documents/monitoring-system.md); [CF-131 공용 모니터링 구성과 관측 경계](../../raw/issues/CF-131/documents/monitoring-system.md); [CF-144 공용 모니터링과 호스트 디스크 알림](../../raw/issues/CF-144/documents/monitoring-system.md); [CF-151 dev 호스트 루트 디스크 임계값 95%](../../raw/issues/CF-151/documents/monitoring-system.md); [CF-154 Grafana HTTP 접속과 수동 반영](../../raw/issues/CF-154/documents/monitoring-system.md)
-> Updated: 2026-10-13
+> Current: [CF-440 MongoDB 백업 누락 알림](../../raw/issues/CF-440/documents/monitoring-system.md)
+> History: [CF-440 MongoDB 백업 누락 알림](../../raw/issues/CF-440/documents/monitoring-system.md); [CF-207 공용 MongoDB 관측과 수집 신뢰성](../../raw/issues/CF-207/documents/monitoring-system.md); [CF-158 장애 분석 로그와 외부 호출 P95](../../raw/issues/CF-158/documents/monitoring-system.md); [CF-131 공용 모니터링 구성과 관측 경계](../../raw/issues/CF-131/documents/monitoring-system.md); [CF-144 공용 모니터링과 호스트 디스크 알림](../../raw/issues/CF-144/documents/monitoring-system.md); [CF-151 dev 호스트 루트 디스크 임계값 95%](../../raw/issues/CF-151/documents/monitoring-system.md); [CF-154 Grafana HTTP 접속과 수동 반영](../../raw/issues/CF-154/documents/monitoring-system.md)
+> Updated: 2026-11-09
 
 ## 현재 상태
 
@@ -60,6 +60,8 @@ DB 관측에서 수집 누락과 낮은 표본은 복구 근거가 아니다. �
 실제 배포와 Discord 수신, 운영 부하 및 보존 검증은 사람 담당이다.
 중앙 모니터링 중단에 대비한 독립 외부 감시는 이번 변경에 포함하지 않는다.
 
+CF-440에서 DB 호스트의 MongoDB 백업 결과 `career_mongo_backup_*`를 host-state textfile 폴더로 내보낸다. 마지막 성공 8시간 초과는 warning, 14시간 초과는 critical, 마지막 시도 실패는 warning으로 `career-db-discord`에 알린다. 경과는 24시간 안의 마지막 보고값으로 계산하고, 메트릭이 한 번도 없으면 기대 시작 시각부터 누락으로 세므로 첫 백업 뒤 규칙을 반영한다. 백업과 복구 자체는 [MongoDB 백업과 복구](mongodb-backup-recovery.md)를 따른다.
+
 ## 변경 이유
 
 기존 health와 Docker 로그 회전만으로 제공되지 않았던 중앙 관측 경로를 추가했다.
@@ -79,3 +81,5 @@ P95 표본과 수집 상태의 해석 한계를 함께 기록했다.
 
 CF-207에서 공용 DB와 환경별 앱의 관측 범위를 분리하고, 로그 정제와 요청
 문맥 전파 및 수집 단절의 유실 경계를 기록했다. 기존 알림과 보존 정책은 유지한다.
+
+CF-440에서 백업이 주기를 넘겨 없거나 마지막 시도가 실패한 상태를 사람이 보지 않아도 알 수 있도록 백업 알림을 기존 DB 알림 경로에 더했다. 주기 6시간에 2시간 여유를 둔 기준과 첫 반영 순서를 함께 기록했다.
