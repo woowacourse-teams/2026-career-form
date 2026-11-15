@@ -132,11 +132,13 @@ export class QualityObservation {
       items.map((item) => {
         const bound =
           !!item.analysis &&
-          item.profileValue !== undefined &&
-          item.profileValue !== "";
+          (!!item.qualityReason ||
+            (item.profileValue !== undefined && item.profileValue !== ""));
         const reason: QualityReason = !item.analysis
           ? "NOT_MAPPED"
-          : !bound
+          : item.qualityReason
+            ? item.qualityReason
+            : !bound
             ? "PROFILE_VALUE_MISSING"
             : item.status === "conflict"
               ? "EXISTING_VALUE_PROTECTED"

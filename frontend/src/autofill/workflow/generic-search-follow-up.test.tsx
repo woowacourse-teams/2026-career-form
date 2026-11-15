@@ -245,13 +245,13 @@ describe("generic search follow-up review", () => {
     );
   });
 
-  it("surfaces a missing profile grade for manual review without writing it", async () => {
+  it("leaves a missing profile grade unwritten without an analysis notice", async () => {
     const setup = setupWorkflow();
 
     await screen.findByRole("heading", { name: "기입 결과" });
 
     expect(setup.analyzeRequests).toHaveLength(2);
-    expect(screen.getByText(/급수.*직접 확인/)).toBeVisible();
+    expect(screen.queryByText(/분석 경고/)).toBeNull();
     expect(setup.grade()?.value).toBe("");
     expect(executeWritesMock).toHaveBeenCalledTimes(2);
     expect(setup.writeCalls[1]).not.toContain(

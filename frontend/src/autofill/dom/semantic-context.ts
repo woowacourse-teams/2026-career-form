@@ -119,6 +119,9 @@ const FORM_TERMS = [
   "군별",
   "계급",
   "복무",
+  "입대일자",
+  "전역일자",
+  "전역예정일자",
   "보훈",
   "장애",
   "건강",
@@ -227,23 +230,47 @@ const vocabulary = [
   .filter(Boolean)
   .sort((a, b) => b.length - a.length);
 
+/**
+ * English terms and one-syllable Korean terms ("예", "성") must not be glued
+ * to a longer word of the same script, e.g. "예" inside "예정".
+ */
+function standaloneIndexOf(text: string, term: string): number {
+  const glued = /^[a-z ]+$/.test(term)
+    ? /[a-z]/
+    : /^[가-힣]$/.test(term)
+      ? /[가-힣]/
+      : undefined;
+  for (
+    let index = text.indexOf(term);
+    index >= 0;
+    index = text.indexOf(term, index + 1)
+  ) {
+    if (
+      !glued ||
+      !(glued.test(text[index - 1] ?? "") ||
+        glued.test(text[index + term.length] ?? ""))
+    )
+      return index;
+  }
+  return -1;
+}
+
 /** Return dictionary terms only: never forward arbitrary page prose or values. */
 export function semanticText(
   value: string | null | undefined,
 ): string | undefined {
-  const input = value?.normalize("NFKC").replace(/\s+/g, " ").trim();
+  const input = value
+    ?.normalize("NFKC")
+    // "전역(예정)일자": an inline qualifier belongs to the surrounding word.
+    .replace(/(?<=[가-힣])\(([가-힣]+)\)(?=[가-힣])/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
   if (!input || input.length > 512) return undefined;
   let remaining = input.toLowerCase();
   const matches: Array<{ index: number; term: string }> = [];
   for (const term of vocabulary) {
-    const index = remaining.indexOf(term.toLowerCase());
+    const index = standaloneIndexOf(remaining, term.toLowerCase());
     if (index < 0) continue;
-    if (
-      /^[a-z ]+$/i.test(term) &&
-      (/[a-z]/i.test(remaining[index - 1] ?? "") ||
-        /[a-z]/i.test(remaining[index + term.length] ?? ""))
-    )
-      continue;
     matches.push({ index, term });
     remaining =
       remaining.slice(0, index) +

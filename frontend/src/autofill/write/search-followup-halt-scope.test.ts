@@ -29,6 +29,8 @@ describe("search follow-up hold scope", () => {
     "unverified-selection",
     "no-later-entry",
     "later-conflict",
+    "same-entry",
+    "result-pending",
   ] as const)(
     "continues fifteen unrelated approved controls after an unsupported search is safely closed: %s",
     async (scenario) => {
@@ -93,9 +95,12 @@ describe("search follow-up hold scope", () => {
           candidateId,
           fieldLabel: `Neutral field ${index}`,
           // Singleton controls do not necessarily have a repeated profile entry.
-          ...(index && scenario !== "no-later-entry"
-            ? { profileEntryId: `independent-entry-${index}` }
-            : {}),
+          // The trigger and the next control share one profile entry (one row).
+          ...(scenario === "same-entry" && index < 2
+            ? { profileEntryId: "shared-entry" }
+            : index && scenario !== "no-later-entry"
+              ? { profileEntryId: `independent-entry-${index}` }
+              : {}),
           currentValue: "",
           profileValue: `synthetic-${index}`,
           previewValue: `synthetic-${index}`,
@@ -144,7 +149,9 @@ describe("search follow-up hold scope", () => {
           reason:
             scenario === "unverified-selection"
               ? "selection_effect_unverified"
-              : "search_query_not_found",
+              : scenario === "result-pending"
+                ? "result_pending"
+                : "search_query_not_found",
           effect:
             scenario === "unknown-effect"
               ? undefined
@@ -175,7 +182,6 @@ describe("search follow-up hold scope", () => {
           "open",
           "unknown-effect",
           "value-observed",
-          "unknown-boundary",
           "changed-boundary",
           "unverified-selection",
         ].includes(scenario)
@@ -208,17 +214,8 @@ describe("search follow-up hold scope", () => {
         );
         return;
       }
-      if (scenario === "same-group" || scenario === "same-row") {
-        expect(results[1]).toMatchObject({
-          code: "STALE_TARGET",
-          failureCode: "SEARCH_FOLLOWUP_HALTED",
-        });
-        expect(inputs[1]!.value).toBe("");
-        expect(results.slice(2).map((result) => result.code)).toEqual(
-          Array(14).fill("WRITTEN"),
-        );
-        return;
-      }
+      // A search that selected nothing and closed again leaves every later
+      // control to its own pre-write checks, even in the trigger's own row.
       const failureCodes = results
         .slice(1)
         .map((result) =>

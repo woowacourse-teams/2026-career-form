@@ -144,8 +144,9 @@ describe("row save of a single entry box", () => {
       ).toEqual(["합성자격0", "합성자격1", "합성자격2"]);
       expect(input("certName")?.value).toBe("");
       expect(input("certIssuer")?.value).toBe("");
-      const saved = screen.getByRole("region", { name: "확장이 저장한 줄" });
-      expect(saved).toHaveTextContent("3개 줄");
+      expect(
+        screen.queryByRole("region", { name: "확장이 저장한 줄" }),
+      ).toBeNull();
     },
   );
 });

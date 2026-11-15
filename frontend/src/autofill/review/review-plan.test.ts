@@ -970,6 +970,48 @@ describe("review plan", () => {
     });
   });
 
+  it("marks a stored date whose target format is unknown as a format failure, not a missing value", () => {
+    const profile = createEmptyProfile();
+    profile.military.serviceStartDate = "2018-03-04";
+    const { registry } = registryWithDateInput({});
+    const [item] = buildReviewPlan({
+      analysis: directDateAnalysis("military.military.serviceStartDate"),
+      profile,
+      registry,
+    }).items;
+    expect(item).toMatchObject({
+      status: "unavailable",
+      qualityReason: "UNSUPPORTED_FORMAT",
+    });
+  });
+
+  it("keeps a missing stored date classified as a missing value", () => {
+    const { registry } = registryWithDateInput({ placeholder: "YYYY.MM.DD" });
+    const [item] = buildReviewPlan({
+      analysis: directDateAnalysis("military.military.serviceStartDate"),
+      profile: createEmptyProfile(),
+      registry,
+    }).items;
+    expect(item.status).toBe("unavailable");
+    expect(item.qualityReason).toBeUndefined();
+  });
+
+  it("treats a date the site reformatted after writing as the same value, not a conflict", () => {
+    const profile = createEmptyProfile();
+    profile.military.serviceStartDate = "2018-03-04";
+    // The field asks for YYYY.MM.DD but the site redisplays it as 2018-03-04.
+    const { registry } = registryWithDateInput({
+      placeholder: "YYYY.MM.DD",
+      currentValue: "2018-03-04",
+    });
+    const [item] = buildReviewPlan({
+      analysis: directDateAnalysis("military.military.serviceStartDate"),
+      profile,
+      registry,
+    }).items;
+    expect(item!.status).not.toBe("conflict");
+  });
+
   it("keeps a confirmed date visible and retains its approval", () => {
     const profile: Profile = {
       ...createEmptyProfile(),
@@ -1372,7 +1414,7 @@ describe("calendar review plan", () => {
     it("keeps a year-month-only profile date unselected", () => {
       const item = planMonth("2026-03");
       expect(item.selected).toBe(false);
-      expect(item.status).toBe("unavailable");
+      expect(item.status).toBe("unavailable");      expect(item.qualityReason).toBe("UNSUPPORTED_FORMAT");
     });
 
     it.each([
@@ -1388,6 +1430,7 @@ describe("calendar review plan", () => {
       const item = planMonth("2026-03-15", { widget: false });
       expect(item.selected).toBe(false);
       expect(item.status).toBe("unavailable");
+      expect(item.qualityReason).toBe("UNSUPPORTED_CONTROL");
     });
 
     it("keeps a different existing page value as a conflict", () => {

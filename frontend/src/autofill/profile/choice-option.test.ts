@@ -311,3 +311,16 @@ describe("transfer status admission wording", () => {
     ).toBe("none");
   });
 });
+
+describe("disability grade wording", () => {
+  const grades = options("경증", "중증", "기타");
+  it.each([
+    ["심한장애", "중증"],
+    ["장애의 정도가 심한 장애인", "중증"],
+    ["심하지 않은 장애", "경증"],
+  ])("maps %s to %s", (stored, shown) => {
+    expect(
+      resolveChoiceOption("disability.disability.disabilityGrade", stored, grades),
+    ).toMatchObject({ status: "unique", option: { displayName: shown } });
+  });
+});

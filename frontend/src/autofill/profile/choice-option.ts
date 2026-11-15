@@ -61,11 +61,22 @@ export function resolveChoiceOption<T extends { displayName: string }>(
     ?.sections.find((section) => section.id === sectionId)
     ?.fields.find((field) => field.id === fieldId)?.options ?? [];
   const aliases = new Set([value, ...standardValueAliases(value)].map(normalizeOptionText));
-  for (const entry of fixed) {
+  // A stored fixed choice (veteran-relation:son) means only itself; shared
+  // aliases (자녀) must not pull in a sibling choice (딸).
+  // Its label (아들) names it as surely as its id does.
+  const chosen = fixed.find((entry) => typeof entry !== "string" &&
+    (entry.value === value || normalizeOptionText(entry.label) === normalizeOptionText(value)));
+  if (chosen && typeof chosen !== "string")
+    [chosen.value, chosen.label, ...standardValueAliases(chosen.value)]
+      .forEach((word) => aliases.add(normalizeOptionText(word)));
+  // Expand only from the stored value itself, so one shared alias never chains
+  // into another choice (아들 → 자녀 → 딸).
+  const stored = new Set(aliases);
+  for (const entry of chosen ? [] : fixed) {
     const words = typeof entry === "string"
       ? [entry]
       : [entry.value, entry.label, ...standardValueAliases(entry.value)];
-    if (words.some((word) => aliases.has(normalizeOptionText(word))))
+    if (words.some((word) => stored.has(normalizeOptionText(word))))
       words.forEach((word) => aliases.add(normalizeOptionText(word)));
   }
   if (key === "careers.career.employmentType")

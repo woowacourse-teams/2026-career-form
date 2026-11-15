@@ -12,6 +12,8 @@ import { pendingResultPresentation } from "./pending-result-presentation";
 
 export interface WorkflowResultsProps {
   progress?: readonly WriteProgress[];
+  /** Rows the extension registered with the site's row save button. */
+  savedRowKeys?: ReadonlySet<string>;
   wasWritten?(candidateId: string): boolean;
   progressIdFor?(candidateId: string): string | undefined;
   progressStateFor?(progressId: string): boolean;
@@ -46,6 +48,7 @@ export function WorkflowResults({
   profileGroupsVisible = false,
   onOpenProfile,
   copyText = (value) => navigator.clipboard.writeText(value),
+  savedRowKeys,
 }: WorkflowResultsProps) {
   const tabsId = useId();
   const [selectedTab, setSelectedTab] = useState<
@@ -60,6 +63,7 @@ export function WorkflowResults({
     progressIdFor,
     progressStateFor,
     fieldStateFor,
+    ...(savedRowKeys ? { savedRowKeys } : {}),
   });
   const { completed, pending } = model;
   const unlisted = profileGroupsVisible

@@ -1,3 +1,4 @@
+import { recordOf } from "./row-save-fields";
 import type { FieldCandidateHandle } from "../dom/types";
 import type { Profile } from "../../profile/model";
 import type { ReviewPlanItem } from "../review/review-plan";
@@ -29,6 +30,8 @@ export interface ResultModelInput {
   ):
     | { visible: boolean; value: string; handle?: FieldCandidateHandle }
     | undefined;
+  /** Rows the extension registered with the site's row save button. */
+  savedRowKeys?: ReadonlySet<string>;
 }
 export interface ResultModel {
   completed: WriteProgress[];
@@ -90,6 +93,17 @@ function gradeDetail(item: ReviewPlanItem): string | undefined {
     : item.reason || undefined;
 }
 
+/** A row of this item's repeated section was registered by the extension. */
+function inSavedSection(
+  item: ReviewPlanItem,
+  savedRowKeys: ReadonlySet<string> | undefined,
+): boolean {
+  const key = recordOf(item)?.key;
+  if (!key || !savedRowKeys?.size) return false;
+  const section = key.slice(0, key.lastIndexOf("#") + 1);
+  return [...savedRowKeys].some((saved) => saved.startsWith(section));
+}
+
 export function buildResultModel(input: ResultModelInput): ResultModel {
   const {
     reviewItems,
@@ -100,6 +114,7 @@ export function buildResultModel(input: ResultModelInput): ResultModel {
     progressIdFor,
     progressStateFor,
     fieldStateFor,
+    savedRowKeys,
   } = input;
   const items = new Map(reviewItems.map((item) => [item.candidateId, item]));
   const resultsById = new Map(
@@ -233,6 +248,10 @@ export function buildResultModel(input: ResultModelInput): ResultModel {
       !recoveredRetry
     ) {
       review("입력 못함", result.failureCode ?? entry?.failureCode);
+    } else if (written && inSavedSection(item, savedRowKeys)) {
+      // The site moved this saved row into its list and emptied the entry
+      // fields; the written value now lives in the registered row. A later
+      // pass may number the emptied area as the next row, so the section counts.
     } else if (written) {
       const uncertain =
         item.status === "needs-review" ||
@@ -275,6 +294,14 @@ export function buildResultModel(input: ResultModelInput): ResultModel {
   for (const entry of entries.values()) {
     if (handled.has(entry.id)) continue;
     if (entry.status === "written" && progressStateFor?.(entry.id) !== false)
+      continue;
+    // An earlier pass filled this row and the extension saved it; the site
+    // then emptied the entry fields, so the value lives in the saved row.
+    if (
+      entry.status === "written" &&
+      entry.recordKey &&
+      savedRowKeys?.has(entry.recordKey)
+    )
       continue;
     completed.delete(entry.id);
     const id = `progress:${entry.id}`;

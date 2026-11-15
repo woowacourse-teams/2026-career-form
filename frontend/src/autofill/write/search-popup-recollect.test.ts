@@ -336,7 +336,7 @@ describe.each(["table", "dialog"] as const)("%s search popup", (kind) => {
     expect(test.forbidden).not.toHaveBeenCalled();
   });
 
-  it("closes an empty confirmation-only popup and holds only the dependent row", async () => {
+  it("closes an empty confirmation-only popup and keeps writing the same row", async () => {
     vi.useFakeTimers();
     const test = fixture(kind);
     test.setMode("empty");
@@ -352,7 +352,7 @@ describe.each(["table", "dialog"] as const)("%s search popup", (kind) => {
     batch.setMode("empty");
     const results = await batch.batch("row");
     expect(results[0]).not.toHaveProperty("surfaceLeftOpen");
-    expect(results[1]).toMatchObject({ failureCode: "SEARCH_FOLLOWUP_HALTED" });
+    expect(results[1]).toMatchObject({ status: "written" });
     expect(results[2]).toMatchObject({ status: "written" });
     expect(batch.surface.closure()).toBe("closed");
     expect(batch.target.value).toBe("");
