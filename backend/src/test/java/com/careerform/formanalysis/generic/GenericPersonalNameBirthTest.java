@@ -66,6 +66,43 @@ class GenericPersonalNameBirthTest {
         assertThat(field(response, "name").binding()).isNull();
     }
 
+    @Test
+    void confirmsAnUnsureFullNameAnswerOnASingleNameField() {
+        Mapping unsure = new Mapping(null, 0.77, true, null, new NameBinding(DerivedRecipe.KOREAN_FULL_NAME));
+        GenericFieldsResponse response = analyze(List.of(text("name", "이름")), Map.of("name", unsure));
+
+        assertThat(field(response, "name").binding()).isEqualTo(new NameBinding(DerivedRecipe.KOREAN_FULL_NAME));
+        assertThat(field(response, "name").confidence()).isEqualTo(1.0);
+    }
+
+    @Test
+    void replacesAnUnsureNamePartAnswerOnASingleNameField() {
+        Mapping unsure = new Mapping("personal.personal.koreanGivenName", 0.6, true, null);
+        GenericFieldsResponse response = analyze(List.of(text("name", "성명")), Map.of("name", unsure));
+
+        assertThat(field(response, "name").binding()).isEqualTo(new NameBinding(DerivedRecipe.KOREAN_FULL_NAME));
+        assertThat(field(response, "name").profileFieldKey()).isNull();
+        assertThat(field(response, "name").confidence()).isEqualTo(1.0);
+    }
+
+    @Test
+    void keepsAConfidentOtherAnswerOnASingleNameField() {
+        GenericFieldsResponse response = analyze(List.of(text("name", "이름")),
+            Map.of("name", mapped("contact.contact.email")));
+
+        assertThat(field(response, "name").profileFieldKey()).isEqualTo("contact.contact.email");
+        assertThat(field(response, "name").binding()).isNull();
+    }
+
+    @Test
+    void leavesAnUnsureAnswerNextToASeparateFamilyNameField() {
+        Mapping unsure = new Mapping(null, 0.77, true, null, new NameBinding(DerivedRecipe.KOREAN_FULL_NAME));
+        GenericFieldsResponse response = analyze(List.of(text("family", "성"), text("name", "이름")),
+            Map.of("family", ABSTAIN, "name", unsure));
+
+        assertThat(field(response, "name").confidence()).isEqualTo(0.77);
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"영문 이름", "보호자 이름", "학교 이름"})
     void doesNotCombineOtherNameLabels(String label) {
