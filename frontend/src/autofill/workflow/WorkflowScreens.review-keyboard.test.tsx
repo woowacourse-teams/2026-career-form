@@ -172,52 +172,37 @@ describe("review tabs", () => {
   });
 });
 
-describe("result priority", () => {
-  function resultScreen() {
-    return reviewScreen([], {
-      stage: "result",
-      structureDiagnostics: { status: "ran-no-actions", actions: [] },
-      rowSave: {
-        saved: 0,
-        manual: [
-          {
-            recordKey: "careers.career#0",
-            recordLabel: "합성 경력",
-            reason: "row-incomplete",
-          },
-        ],
-        stopped: [],
-      },
-    });
-  }
-
-  it("puts results and manual row actions before secondary diagnostics", () => {
-    render(resultScreen());
-    const results = screen.getByRole("tablist", { name: "기입 결과 구분" });
-    const manual = screen.getByRole("region", { name: "직접 저장할 줄" });
-    const diagnostics = screen.getByLabelText("구조 자동 준비");
-    for (const primary of [results, manual]) {
-      expect(
-        primary.compareDocumentPosition(diagnostics) &
-          Node.DOCUMENT_POSITION_FOLLOWING,
-      ).toBeTruthy();
-    }
-    expect(manual).toBeVisible();
-  });
-
-  it("discloses diagnostics without hiding manual row-save warnings", () => {
-    render(resultScreen());
-    const diagnostics = screen.getByLabelText("구조 자동 준비");
-    const details = diagnostics.closest("details");
-    expect(details).not.toBeNull();
-    if (!details) throw new Error("Diagnostics must have a disclosure");
-    expect(details).not.toHaveAttribute("open");
-    const manual = screen.getByRole("region", { name: "직접 저장할 줄" });
-    expect(manual.closest("details")).toBeNull();
-    const summary = details.querySelector("summary");
-    if (!summary) throw new Error("Disclosure summary is missing");
-    fireEvent.click(summary);
-    expect(diagnostics).toBeVisible();
-    expect(manual).toBeVisible();
+describe("result screen", () => {
+  it("shows results and manual row actions without internal diagnostics", () => {
+    render(
+      reviewScreen([], {
+        stage: "result",
+        warnings: ["UNRESOLVED_FIELD"],
+        partial: true,
+        rowSave: {
+          saved: 2,
+          manual: [
+            {
+              recordKey: "careers.career#0",
+              recordLabel: "합성 경력",
+              reason: "row-incomplete",
+            },
+          ],
+          stopped: [],
+        },
+      }),
+    );
+    expect(
+      screen.getByRole("tablist", { name: "기입 결과 구분" }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("region", { name: "직접 저장할 줄" }),
+    ).toBeVisible();
+    expect(screen.queryByText(/분석 경고/)).toBeNull();
+    expect(screen.queryByText(/일부 필드는 분석하지 못해/)).toBeNull();
+    expect(screen.queryByText("구조 자동 준비 내역")).toBeNull();
+    expect(
+      screen.queryByRole("region", { name: "확장이 저장한 줄" }),
+    ).toBeNull();
   });
 });

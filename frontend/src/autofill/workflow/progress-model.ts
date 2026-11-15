@@ -12,6 +12,7 @@ import type { WriteFailureCode } from "../write/failure";
 import { PROFILE_CATEGORIES } from "../../profile/field-definitions";
 import { matchesResultValue } from "./result-value-match";
 import { resultFieldLabel } from "./result-label";
+import { recordOf } from "./row-save-fields";
 
 export interface WriteProgress {
   id: string;
@@ -19,6 +20,8 @@ export interface WriteProgress {
   category: string;
   status: "written" | "skipped";
   candidateId?: string;
+  /** The repeated profile row this write filled, for rows the extension saved. */
+  recordKey?: string;
   unchanged?: boolean;
   retryRecovered?: boolean;
   failureCode?: WriteFailureCode;
@@ -277,11 +280,13 @@ export function createProgressTracker() {
         ? previous.unchanged === true &&
           (result.status !== "written" || currentlyEqual)
         : currentlyEqual;
+      const recordKey = recordOf(item)?.key;
       entries.set(id, {
         id,
         candidateId: item.candidateId,
         label: resultFieldLabel(item),
         category: progressCategory(item),
+        ...(recordKey ? { recordKey } : {}),
         status,
         unchanged,
         ...(retryRecovered ? { retryRecovered: true } : {}),

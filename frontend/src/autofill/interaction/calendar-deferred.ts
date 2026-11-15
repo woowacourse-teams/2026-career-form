@@ -261,6 +261,35 @@ export async function awaitDeferredCalendarRoot(args: {
     : undefined;
 }
 
+/**
+ * Waits for the one root the opening gesture showed and reports its kind; used
+ * when the field itself names no unit. Several new roots, or one that holds the
+ * target, are never adopted.
+ */
+export async function awaitDeferredCalendarKind(args: {
+  target: HTMLInputElement;
+  known: ReadonlySet<HTMLElement>;
+  timeoutMs: number;
+  now: () => number;
+  running: () => boolean;
+}): Promise<DeferredCalendarKind | undefined> {
+  const document = args.target.ownerDocument;
+  const fresh = () =>
+    displayedRoots(document).filter(({ root }) => !args.known.has(root));
+  const sleep = () =>
+    new Promise<void>((resolve) => setTimeout(resolve, POLL_MS));
+  const until = args.now() + args.timeoutMs;
+  while (args.running() && fresh().length === 0 && args.now() < until)
+    await sleep();
+  if (args.running() && fresh().length) await sleep();
+  if (!args.running()) return undefined;
+  const roots = fresh();
+  const root = roots[0];
+  return roots.length === 1 && root && !root.root.contains(args.target)
+    ? root.kind
+    : undefined;
+}
+
 /** Every new root shown after the gesture, for closing on failure. */
 export function newDeferredRoots(
   document: Document,

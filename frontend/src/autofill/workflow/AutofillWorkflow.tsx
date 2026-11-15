@@ -76,7 +76,11 @@ import {
 import { WorkflowScreens } from "./WorkflowScreens";
 import { WorkflowError, type WorkflowErrorKind } from "./WorkflowError";
 import loadingStyles from "./WorkflowLoading.module.css";
-import { errorDetail, startErrorKind } from "./start-error";
+import {
+  errorDetail,
+  interruptedStopReason,
+  startErrorKind,
+} from "./start-error";
 import { observeQuality } from "../quality/safe-observation";
 import {
   createAnalyzeFields,
@@ -888,12 +892,14 @@ function PolicyReadyWorkflow({
       } catch (error) {
         if (mounted.current) {
           setCaughtText(safeErrorTitle(error));
+          setExceptionTitle(interruptedStopReason(error));
           setStage("exception");
         }
       }
     } catch (error) {
       if (mounted.current) {
         setCaughtText(safeErrorTitle(error));
+        setExceptionTitle(interruptedStopReason(error));
         setStage("exception");
       }
     } finally {
@@ -1199,6 +1205,7 @@ function PolicyReadyWorkflow({
     } catch (error) {
       if (mounted.current) {
         setCaughtText(safeErrorTitle(error));
+        setExceptionTitle(interruptedStopReason(error));
         setStage("exception");
       }
     } finally {
@@ -1371,6 +1378,7 @@ function PolicyReadyWorkflow({
       progressIdFor: (id) => progressTracker.progressIdFor(id, visibleRegistry),
       progressStateFor: progressTracker.progressStateFor,
       fieldStateFor,
+      savedRowKeys: savedRowKeys.current,
     });
     // On a generic page only fields to check get a red border; the ones with
     // no saved value are listed in gray instead.
@@ -1433,11 +1441,10 @@ function PolicyReadyWorkflow({
       executeWrites={executeWrites}
       results={results}
       analysisSummary={analysisSummary}
-      structureDiagnostics={structureDiagnostics.current}
       addressResult={addressResult}
       adapter={adapter}
       workflowDiagnostics={workflowDiagnostics}
-      exceptionTitle={caughtText === undefined ? exceptionTitle : ""}
+      exceptionTitle={exceptionTitle}
       exceptionKind={startError?.kind ?? "interrupted"}
       exceptionDetail={startError?.detail ?? caughtText}
       onRetry={onRetry}
@@ -1463,9 +1470,9 @@ function PolicyReadyWorkflow({
       onLocate={(candidateId) =>
         !!visibleRegistry && presentation.show(visibleRegistry, candidateId)
       }
-      autoWrittenLabels={autoWrittenLabels}
       manualRevealedLabels={manualRevealedLabels}
       rowSave={rowSave}
+      savedRowKeys={savedRowKeys.current}
     />
   );
 }

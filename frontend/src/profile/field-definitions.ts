@@ -2,6 +2,8 @@ import type { ProfileCategoryId } from "./model";
 import {
   ATTENDANCE_TYPE_OPTIONS,
   DISABILITY_STATUS_OPTIONS,
+  DISABILITY_GRADE_OPTIONS,
+  VETERAN_RELATION_OPTIONS,
   MILITARY_BRANCH_OPTIONS,
   MILITARY_RANK_OPTIONS,
   MILITARY_STATUS_OPTIONS,
@@ -374,7 +376,7 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
           ]),
           date("startDate", "입사일"),
           date("endDate", "퇴사일"),
-          select("employmentStatus", "재직 여부", ["재직중", "퇴사"]),
+          select("employmentStatus", "재직 여부", ["재직중", "퇴직"]),
           text("department", "근무부서"),
           text("position", "최종직위"),
           { id: "responsibilities", label: "담당업무", inputType: "textarea" },
@@ -482,7 +484,7 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
         fields: [
           select("veteranStatus", "보훈 대상 여부", VETERAN_STATUS_OPTIONS),
           text("veteranType", "보훈구분"),
-          text("veteranRelation", "보훈 대상자와의 관계"),
+          select("veteranRelation", "보훈 대상자와의 관계", VETERAN_RELATION_OPTIONS),
           text("veteranNumber", "보훈번호"),
         ],
       },
@@ -500,7 +502,7 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
         fields: [
           select("disabilityStatus", "장애 여부", DISABILITY_STATUS_OPTIONS),
           text("disabilityType", "장애 유형"),
-          text("disabilityGrade", "장애 정도·등급"),
+          select("disabilityGrade", "장애 정도", DISABILITY_GRADE_OPTIONS),
           text("disabilityRegistrationNumber", "장애등록번호"),
           date("disabilityRegistrationDate", "장애 등록일"),
         ],

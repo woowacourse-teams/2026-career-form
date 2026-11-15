@@ -121,7 +121,7 @@ export const DISABILITY_STATUS_OPTIONS: readonly StandardValueOption[] = [
   },
 ];
 /**
- * Synonym groups for the two fixed employmentStatus choices ("재직중", "퇴사").
+ * Synonym groups for the two fixed employmentStatus choices ("재직중", "퇴직").
  * These are profile-field vocabulary, compared without spaces.
  */
 export const EMPLOYMENT_STATUS_SYNONYMS: Readonly<
@@ -137,7 +137,7 @@ export const EMPLOYMENT_STATUS_SYNONYMS: Readonly<
     "현직",
     "재직자",
   ],
-  퇴사: ["퇴사", "퇴직", "퇴사함", "퇴직함", "퇴사자", "퇴직자", "퇴사완료"],
+  퇴직: ["퇴직", "퇴사", "퇴직함", "퇴사함", "퇴직자", "퇴사자", "퇴사완료"],
 };
 
 const SCHOOL_REGION_ALIASES: Readonly<Record<string, readonly string[]>> = {
@@ -173,6 +173,41 @@ const OPIC_GRADE_OPTIONS: readonly StandardValueOption[] = [
   { value: "opic:ah", label: "Advanced High", aliases: ["AH"] },
 ];
 
+// Labels are the words company adapters already map (중증/경증).
+export const DISABILITY_GRADE_OPTIONS: readonly StandardValueOption[] = [
+  {
+    value: "disability-grade:severe",
+    label: "중증",
+    aliases: [
+      "심한 장애", "심한장애", "심한 장애인", "장애의 정도가 심한 장애인",
+      "중증(심한장애)", "중증(기존1급~3급)", "1급", "2급", "3급",
+    ],
+  },
+  {
+    value: "disability-grade:mild",
+    label: "경증",
+    aliases: [
+      "심하지 않은 장애", "심하지않은장애", "심하지 않은 장애인",
+      "장애의 정도가 심하지 않은 장애인", "경증(심하지 않은 장애)",
+      "경증(기존4급~6급)", "4급", "5급", "6급",
+    ],
+  },
+];
+
+// Sites split relations by kin (아들/딸); both still count as 자녀 for sites that do not.
+export const VETERAN_RELATION_OPTIONS: readonly StandardValueOption[] = [
+  { value: "veteran-relation:self", label: "본인", aliases: ["당사자"] },
+  { value: "veteran-relation:spouse", label: "배우자", aliases: ["남편", "아내", "처"] },
+  { value: "veteran-relation:son", label: "아들", aliases: ["자녀", "장남", "차남"] },
+  { value: "veteran-relation:daughter", label: "딸", aliases: ["자녀", "장녀", "차녀"] },
+  { value: "veteran-relation:father", label: "부", aliases: ["아버지", "부친"] },
+  { value: "veteran-relation:mother", label: "모", aliases: ["어머니", "모친"] },
+  { value: "veteran-relation:grandfather", label: "조부", aliases: ["할아버지"] },
+  { value: "veteran-relation:grandmother", label: "조모", aliases: ["할머니"] },
+  { value: "veteran-relation:sibling", label: "형제·자매", aliases: ["형제자매"] },
+  { value: "veteran-relation:other", label: "기타" },
+];
+
 const STANDARD_VALUES: readonly StandardValueOption[] = [
   ...LANGUAGE_OPTIONS,
   ...LANGUAGE_TEST_OPTIONS,
@@ -184,6 +219,8 @@ const STANDARD_VALUES: readonly StandardValueOption[] = [
   ...MILITARY_RANK_OPTIONS,
   ...VETERAN_STATUS_OPTIONS,
   ...DISABILITY_STATUS_OPTIONS,
+  ...DISABILITY_GRADE_OPTIONS,
+  ...VETERAN_RELATION_OPTIONS,
 ];
 
 export function languageGradeOptions(

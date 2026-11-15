@@ -1,0 +1,236 @@
+{
+  "schemaVersion": 1,
+  "status": "HUMAN_REVIEWED",
+  "state": "initial",
+  "candidateSha256": "f496c0b7cfaea3d7595d807cbc2cf72a0c2191f738592c3fa08120437e726d2d",
+  "rule": "정답은 칸이 뜻하는 지원 프로필 필드다. 프로필 값 유무와 무관하다. 지원 필드 목록에 없는 의미는 null(매핑 불가)이다.",
+  "sectionClassify": {
+    "gs1": {
+      "category": "PERSONAL",
+      "fields": [
+        "field-1",
+        "field-2",
+        "field-3",
+        "field-4",
+        "field-5",
+        "field-6",
+        "field-7",
+        "field-8",
+        "field-9"
+      ]
+    },
+    "gs2": {
+      "category": "SENSITIVE",
+      "fields": [
+        "field-10",
+        "field-11"
+      ]
+    },
+    "gs3": {
+      "category": "SENSITIVE",
+      "fields": [
+        "field-12",
+        "field-13"
+      ]
+    },
+    "gs4": {
+      "category": "EDUCATION",
+      "fields": [
+        "field-14"
+      ]
+    },
+    "gs5": {
+      "category": "CAREER",
+      "fields": [
+        "field-15",
+        "field-16",
+        "field-17",
+        "field-18",
+        "field-19",
+        "field-20",
+        "field-21",
+        "field-22"
+      ]
+    },
+    "gs6": {
+      "category": "NONE",
+      "fields": [
+        "field-23",
+        "field-24",
+        "field-25",
+        "field-26"
+      ]
+    },
+    "gs7": {
+      "category": "NONE",
+      "fields": [
+        "field-27"
+      ]
+    },
+    "gs8": {
+      "category": "NONE",
+      "fields": [
+        "field-28",
+        "field-29"
+      ]
+    }
+  },
+  "fieldMapping": {
+    "field-1": {
+      "key": "personal.personal.englishFamilyName"
+    },
+    "field-2": {
+      "key": "personal.personal.englishGivenName"
+    },
+    "field-3": {
+      "key": "personal.personal.nationality",
+      "reviewed": "Q1 사람 승인: 내국인 라디오 = 국적"
+    },
+    "field-4": {
+      "key": "personal.personal.nationality",
+      "reviewed": "Q1 사람 승인: 외국인 라디오 = 국적"
+    },
+    "field-5": {
+      "key": "contact.contact.addressLine1",
+      "reviewed": "Q3: 지원 필드에 있음(에이전트 정정). 칸은 읽기 전용이고 검색 팝업으로 채운다"
+    },
+    "field-6": {
+      "key": "contact.contact.residenceCountry",
+      "reviewed": "Q2 사람 승인"
+    },
+    "field-7": {
+      "key": "contact.contact.addressLine2",
+      "reviewed": "Q3: 지원 필드에 있음(에이전트 정정)"
+    },
+    "field-8": {
+      "key": "contact.contact.emergencyPhoneNumber"
+    },
+    "field-9": {
+      "key": null,
+      "reason": "비상연락처 대상과의 관계. 지원 필드 없음"
+    },
+    "field-10": {
+      "key": "veteran.veteran.veteranStatus"
+    },
+    "field-11": {
+      "key": "disability.disability.disabilityStatus"
+    },
+    "field-12": {
+      "key": "military.military.militaryStatus",
+      "reason": "선택지에 병역필·미필·면제가 함께 있음"
+    },
+    "field-13": {
+      "key": "military.military.exemptionReason"
+    },
+    "field-14": {
+      "key": null,
+      "reviewed": "Q4 사람 승인: 행 종류 선택은 준비 단계에서 채점"
+    },
+    "field-15": {
+      "key": "careers.career.companyName"
+    },
+    "field-16": {
+      "key": "careers.career.department"
+    },
+    "field-17": {
+      "key": "careers.career.position"
+    },
+    "field-18": {
+      "key": "careers.career.employmentStatus"
+    },
+    "field-19": {
+      "key": "careers.career.employmentType"
+    },
+    "field-20": {
+      "key": "careers.career.startDate"
+    },
+    "field-21": {
+      "key": "careers.career.endDate"
+    },
+    "field-22": {
+      "key": "careers.career.responsibilities"
+    },
+    "field-23": {
+      "key": null,
+      "reason": "첨부파일 이름 표시 칸"
+    },
+    "field-24": {
+      "key": null,
+      "reason": "경력기술서 URL. 지원 필드 없음"
+    },
+    "field-25": {
+      "key": null,
+      "reason": "첨부파일 이름 표시 칸"
+    },
+    "field-26": {
+      "key": null,
+      "reason": "포트폴리오 URL. 지원 필드 없음"
+    },
+    "field-27": {
+      "key": null,
+      "reason": "자기소개서 서술형 답변"
+    },
+    "field-28": {
+      "key": null,
+      "reason": "지원경로. 지원 필드 없음"
+    },
+    "field-29": {
+      "key": null,
+      "reason": "제출 전 사실 확인 동의"
+    }
+  },
+  "questions": {},
+  "observations": [
+    "gs4(학력)와 gs8(지원경로)은 제품 수집기가 섹션 제목을 찾지 못했다(title 없음). 분류 정확도에 영향을 줄 수 있다.",
+    "내국인/외국인 라디오는 name 속성이 없어 한 질문으로 묶이지 않고 칸 2개가 됐다.",
+    "주소·학교명처럼 읽기 전용 칸은 기입 단계에서 검색 팝업을 여는 interaction-decisions(SEARCH_*) 호출로 채운다. 팝업 화면은 수집하지 않았으므로 이 호출은 첫 사례 범위 밖이다."
+  ],
+  "review": {
+    "by": "user",
+    "on": "2026-10-30",
+    "scope": "섹션 분류 8개, 필드 매핑 29칸"
+  },
+  "preparation": {
+    "sectionClassify": {
+      "ls1": "SENSITIVE",
+      "ls2": "EDUCATION",
+      "ls3": "NONE",
+      "ls4": "NONE"
+    },
+    "note": "준비 루프의 섹션 분류는 반복 행·학력 행 후보 섹션만 보낸다(ls1 병역, ls2 학력, ls3 첨부자료, ls4 지원경로·확인).",
+    "interactionDecisions": {
+      "rowKind0": {
+        "targetKind": "HIGH_SCHOOL",
+        "expected": "rowKind0-option1",
+        "label": "고등학교"
+      },
+      "rowKind1": {
+        "targetKind": "ASSOCIATE",
+        "expected": "rowKind1-option2",
+        "label": "전문대학"
+      },
+      "rowKind2": {
+        "targetKind": "BACHELOR",
+        "expected": "rowKind2-option3",
+        "label": "대학교"
+      },
+      "rowKind3": {
+        "targetKind": "MASTER",
+        "expected": "rowKind3-option4",
+        "label": "대학원(석사)"
+      },
+      "rowKind4": {
+        "targetKind": "DOCTOR",
+        "expected": "rowKind4-option5",
+        "label": "대학원(박사)"
+      }
+    },
+    "interactionNote": "선택지 6개: 검정고시, 고등학교, 전문대학, 대학교, 대학원(석사), 대학원(박사). 검정고시는 HIGH_SCHOOL 행 종류가 아니다.",
+    "review": {
+      "status": "HUMAN_REVIEWED",
+      "by": "user",
+      "on": "2026-10-30",
+      "scope": "준비 섹션 분류 4개(병역 SENSITIVE 포함), 학력 단계별 선택지 5개(검정고시 제외)"
+    }
+  }
+}

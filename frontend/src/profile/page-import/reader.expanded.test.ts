@@ -590,7 +590,7 @@ it.each([
     "militaryServicePreferentialEmploymentStatus.disability.degreeOfDisability",
     "disability.disability.disabilityGrade",
     "경증(심하지 않은 장애)",
-    "경증(심하지 않은 장애)",
+    "disability-grade:mild",
     false,
   ],
 ] as const)(
@@ -623,7 +623,7 @@ it("reads long text and unchecked employment state without triggering page event
   expect(result).toContainEqual(
     expect.objectContaining({
       profileFieldKey: "careers.career.employmentStatus",
-      value: "퇴사",
+      value: "퇴직",
     }),
   );
   expect(result).toContainEqual(

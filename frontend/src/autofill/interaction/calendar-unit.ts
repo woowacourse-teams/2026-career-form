@@ -12,6 +12,20 @@ type CalendarUnitObservation =
   | { readonly unit: "month" | "day"; readonly unitEvidence: "unconfirmed" }
   | { readonly unit: "conflict" };
 
+/**
+ * Units seen on the page itself: a field whose label, notation and length name
+ * no unit is opened once at execution, and the calendar it mounted (a day grid
+ * or a month list) decides the unit for the rest of that run.
+ */
+const observedUnits = new WeakMap<HTMLInputElement, "month" | "day">();
+
+export function recordObservedCalendarUnit(
+  target: HTMLInputElement,
+  unit: "month" | "day",
+): void {
+  observedUnits.set(target, unit);
+}
+
 function labelsOf(target: HTMLInputElement): string[] {
   return [
     target.getAttribute("aria-label") ?? "",
@@ -131,7 +145,8 @@ export function calendarUnitEvidence(
     return { unit: "conflict" };
   const units = new Set(
     labels.flatMap((label) => {
-      const day = /년\s*월\s*일|일(?:[^가-힣]|$)|\bdate\b/iu.test(label);
+      // "입대일자" and "전역(예정)일자" name a day just as "입대일" does.
+      const day = /년\s*월\s*일|일자?(?:[^가-힣]|$)|\bdate\b/iu.test(label);
       const month = /년\s*월(?!\s*일)|월(?:[^가-힣]|$)|\bmonth\b/iu.test(label);
       return [...(day ? ["day"] : []), ...(month ? ["month"] : [])];
     }),
@@ -150,7 +165,10 @@ export function calendarUnitEvidence(
     units.add(length === "7" ? "month" : "day");
   }
   if (units.size > 1) return { unit: "conflict" };
-  if (units.size === 0) return;
+  if (units.size === 0) {
+    const observed = observedUnits.get(target);
+    return observed ? { unit: observed, unitEvidence: "unconfirmed" } : undefined;
+  }
   const unit = units.has("day") ? "day" : "month";
   if (!hasUnitLabel || (!day && !month && length === null))
     return { unit, unitEvidence: "unconfirmed" };

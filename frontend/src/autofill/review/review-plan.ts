@@ -81,6 +81,12 @@ import { createCalendarApproval } from "./calendar-approval";
 import { calendarSurfaceFor } from "../interaction/calendar-surface";
 import { dayCalendarSurfaceFor } from "../interaction/day-calendar-surface";
 import {
+  calendarUnitProbeSurfaceFor,
+  type CalendarUnitProbeSurface,
+} from "../interaction/calendar-unit-probe";
+import { calendarUnitEvidence } from "../interaction/calendar-unit";
+import type { CalendarRepeatRowIdentity } from "./calendar-approval";
+import {
   createDayCalendarApproval,
   type DayCalendarApproval,
 } from "./day-calendar-approval";
@@ -94,6 +100,13 @@ import { assignMixedRows } from "../dom/mixed-section-rows";
 import { genericFormGroupFor } from "../dom/generic-form-groups";
 import { genericReasonText } from "../generic/grade-reason-text";
 
+
+/** Choice controls whose current choice the site may have picked by default. */
+const SITE_CHOICE_COMMANDS: ReadonlySet<string> = new Set([
+  "CHECK_RADIO",
+  "CHECK_CHECKBOX",
+  "SELECT_OPTION",
+]);
 export type ProfileValueResolution =
   | {
       status: "resolved";
@@ -104,6 +117,21 @@ export type ProfileValueResolution =
   | { status: "missing"; sensitive: boolean }
   | { status: "ambiguous"; sensitive: boolean }
   | { status: "unknown"; sensitive: false };
+
+/**
+ * A readonly calendar whose page names no date unit. The stored full date is
+ * approved; the calendar opened at execution decides month or day.
+ */
+export interface CalendarUnitProbe extends CalendarUnitProbeSurface {
+  originalDate: string;
+  profileFieldKey?: string;
+  profileEntryId?: string;
+  itemIndex?: number;
+  repeatRow: CalendarRepeatRowIdentity;
+}
+
+export type UnavailableQualityReason =
+  "UNSUPPORTED_FORMAT" | "UNSUPPORTED_CONTROL";
 
 export type ReviewItemStatus =
   "available" | "needs-review" | "conflict" | "unavailable";
@@ -133,11 +161,18 @@ export interface ReviewPlanItem {
   /** Generic-path only: why the address search left this field to the user. */
   addressManualReason?: string;
   failureCode?: WriteFailureCode;
+  /**
+   * Why an unavailable item with a stored profile value cannot be written.
+   * Absent means the profile value itself is missing.
+   */
+  qualityReason?: UnavailableQualityReason;
   analysis?: MatchedFieldAnalysis;
   dateApproval?: DateTargetApproval;
   calendarApproval?: CalendarApproval;
   /** Separate approval for readonly year-month-day calendars. */
   dayCalendarApproval?: DayCalendarApproval;
+  /** Readonly calendar whose month or day unit is read after opening. */
+  calendarUnitProbe?: CalendarUnitProbe;
   /** Separate approval for date buttons that open their own dialog. */
   dialogDateApproval?: DialogDateApproval;
   componentGpaApproval?: ComponentGpaApproval;
@@ -459,6 +494,7 @@ function unavailableItem(
   fieldLabel: string,
   reason: string,
   analysis?: MatchedFieldAnalysis,
+  qualityReason?: UnavailableQualityReason,
 ): ReviewPlanItem {
   localWorkflowLog("review-unavailable", {
     key:
@@ -479,6 +515,7 @@ function unavailableItem(
     revealed: false,
     reason,
     ...(analysis ? { analysis } : {}),
+    ...(qualityReason ? { qualityReason } : {}),
   };
 }
 
@@ -1026,6 +1063,7 @@ function itemForResolvedAnalysis(
   let dateApproval: DateTargetApproval | undefined;
   let calendarApproval: CalendarApproval | undefined;
   let dayCalendarApproval: DayCalendarApproval | undefined;
+  let calendarUnitProbe: CalendarUnitProbe | undefined;
   let dialogDateApproval: DialogDateApproval | undefined;
   let finalizedProfileValue = boundProfileValue;
   const dialogButton =
@@ -1039,6 +1077,7 @@ function itemForResolvedAnalysis(
         fieldLabel,
         "달력 버튼과 프로필 날짜 연결을 확인할 수 없습니다.",
         analysis,
+        "UNSUPPORTED_CONTROL",
       );
     try {
       dialogDateApproval = createDialogDateApproval({
@@ -1056,6 +1095,7 @@ function itemForResolvedAnalysis(
         fieldLabel,
         "달력 버튼의 대상이나 저장된 날짜를 확인할 수 없습니다.",
         analysis,
+        "UNSUPPORTED_CONTROL",
       );
     }
   }
@@ -1075,6 +1115,7 @@ function itemForResolvedAnalysis(
         fieldLabel,
         "월 달력 대상과 프로필 날짜 연결을 확인할 수 없습니다.",
         analysis,
+        "UNSUPPORTED_CONTROL",
       );
     }
     const calendarTarget = lookup.handle.elements[0];
@@ -1090,6 +1131,7 @@ function itemForResolvedAnalysis(
         fieldLabel,
         "월 달력과 연월일 달력이 함께 연결되어 있어 날짜 단위를 하나로 확인할 수 없습니다.",
         analysis,
+        "UNSUPPORTED_CONTROL",
       );
     }
     if (daySurface) {
@@ -1108,18 +1150,53 @@ function itemForResolvedAnalysis(
           fieldLabel,
           "읽기 전용 연월일 달력의 대상, 날짜 형식 또는 소유권을 확인할 수 없습니다.",
           analysis,
+          "UNSUPPORTED_CONTROL",
         );
       }
       finalizedProfileValue = {
         ...boundProfileValue,
         value: dayCalendarApproval.displayValue,
       };
+    } else if (!calendarSurfaceFor(calendarTarget)) {
+      const probeSurface = calendarUnitProbeSurfaceFor(calendarTarget);
+      if (probeSurface) {
+        if (
+          formatProfileDate(boundProfileValue.value, "YYYY-MM-DD").status !==
+          "resolved"
+        )
+          return unavailableItem(
+            analysis.candidateId,
+            fieldLabel,
+            "달력에 사용할 저장된 날짜를 확인할 수 없습니다.",
+            analysis,
+            "UNSUPPORTED_FORMAT",
+          );
+        calendarUnitProbe = {
+          ...probeSurface,
+          originalDate: boundProfileValue.value,
+          profileFieldKey: binding.profileFieldKey,
+          ...(boundProfileValue.profileEntryId
+            ? { profileEntryId: boundProfileValue.profileEntryId }
+            : {}),
+          ...(itemIndex !== undefined ? { itemIndex } : {}),
+          repeatRow,
+        };
+      } else if (calendarUnitEvidence(calendarTarget) === undefined) {
+        return unavailableItem(
+          analysis.candidateId,
+          fieldLabel,
+          "읽기 전용 달력의 날짜 단위(연월 또는 연월일)와 여는 버튼을 확인할 수 없습니다.",
+          analysis,
+          "UNSUPPORTED_CONTROL",
+        );
+      }
     }
   }
   if (
     generic &&
     analysis.writePlan.command === "SELECT_DATE" &&
     !dayCalendarApproval &&
+    !calendarUnitProbe &&
     binding.type === "DIRECT" &&
     lookup.handle.elements[0] instanceof HTMLInputElement
   ) {
@@ -1130,6 +1207,7 @@ function itemForResolvedAnalysis(
         fieldLabel,
         `달력에 사용할 원본 날짜를 확인할 수 없습니다: ${source.reason}`,
         analysis,
+        "UNSUPPORTED_FORMAT",
       );
     }
     try {
@@ -1150,8 +1228,12 @@ function itemForResolvedAnalysis(
       return unavailableItem(
         analysis.candidateId,
         fieldLabel,
-        "읽기 전용 월 달력의 대상과 소유권을 확인할 수 없습니다.",
+        // A day-unit field reaches here only when its day calendar was not found.
+        calendarUnitEvidence(lookup.handle.elements[0])?.unit === "day"
+          ? "읽기 전용 연월일 달력의 대상과 여는 버튼을 확인할 수 없습니다."
+          : "읽기 전용 월 달력의 대상과 소유권을 확인할 수 없습니다.",
         analysis,
+        "UNSUPPORTED_CONTROL",
       );
     }
     finalizedProfileValue = { ...boundProfileValue, value: source.value };
@@ -1169,6 +1251,7 @@ function itemForResolvedAnalysis(
         fieldLabel,
         `날짜 입력 형식을 확인할 수 없습니다: ${target.reason}`,
         analysis,
+        "UNSUPPORTED_FORMAT",
       );
     }
     const converted = formatProfileDate(boundProfileValue.value, target.format);
@@ -1178,6 +1261,7 @@ function itemForResolvedAnalysis(
         fieldLabel,
         `저장된 날짜를 변환할 수 없습니다: ${converted.reason}`,
         analysis,
+        "UNSUPPORTED_FORMAT",
       );
     }
     const validation = validateDateTargetValue(
@@ -1190,6 +1274,7 @@ function itemForResolvedAnalysis(
         fieldLabel,
         `날짜 입력값이 대상 조건과 맞지 않습니다: ${validation.reason}`,
         analysis,
+        "UNSUPPORTED_FORMAT",
       );
     }
     dateApproval = target.approval;
@@ -1200,6 +1285,7 @@ function itemForResolvedAnalysis(
     normalizeDirectValue &&
     !dateApproval &&
     !dayCalendarApproval &&
+    !calendarUnitProbe &&
     !dialogDateApproval
       ? {
           ...finalizedProfileValue,
@@ -1374,6 +1460,13 @@ function itemForResolvedAnalysis(
             : [resolvedProfileValue.value]
         ).some((value) => normalized(pageValue) === normalized(value))
       : pageValue.trim() !== resolvedProfileValue.value.trim() &&
+        // Sites often redisplay a written date (202003 → 2020-03); the same
+        // year, month and day is the same value, not a conflicting one.
+        !(
+          dateApproval &&
+          pageValue.replace(/\D/g, "") ===
+            resolvedProfileValue.value.replace(/\D/g, "")
+        ) &&
         !sameNativeDecimal(
           lookup.handle,
           pageValue,
@@ -1385,6 +1478,15 @@ function itemForResolvedAnalysis(
           resolvedProfileValue.value,
         ));
   if (hasConflict) {
+    // A site default is one of the control's own choices; a value that is no
+    // choice of the dropdown came from elsewhere and stays protected.
+    const replacesSiteChoice =
+      generic &&
+      SITE_CHOICE_COMMANDS.has(analysis.writePlan.command) &&
+      (analysis.writePlan.command !== "SELECT_OPTION" ||
+        (lookup.handle.candidate.options ?? []).some(
+          (option) => option.displayName.trim() === pageValue.trim(),
+        ));
     return {
       candidateId: analysis.candidateId,
       fieldLabel,
@@ -1400,16 +1502,22 @@ function itemForResolvedAnalysis(
       profileValue: resolvedProfileValue.value,
       previewValue: resolvedProfileValue.value,
       status: "conflict",
-      selected: false,
+      // A choice control (radio, dropdown, checkbox) often shows a choice the
+      // site picked before the applicant arrived. The profile choice replaces
+      // it; the writer still stops if the page changes away from this choice.
+      selected: replacesSiteChoice,
       disabled: false,
       revealed: true,
-      reason: "지원서에 기존 값이 있습니다.",
+      reason: replacesSiteChoice
+        ? "지원서에 선택된 값을 프로필 값으로 바꿉니다."
+        : "지원서에 기존 값이 있습니다.",
       ...singleRowReview,
       ...(firstEntrySingleRow ? { status: "conflict" as const } : {}),
       analysis,
       ...(dateApproval ? { dateApproval } : {}),
       ...(calendarApproval ? { calendarApproval } : {}),
       ...(dayCalendarApproval ? { dayCalendarApproval } : {}),
+      ...(calendarUnitProbe ? { calendarUnitProbe } : {}),
       ...(dialogDateApproval ? { dialogDateApproval } : {}),
       ...(searchValuePlan ? { searchValuePlan } : {}),
       ...(searchContextValues.length ? { searchContextValues } : {}),
@@ -1493,6 +1601,7 @@ function itemForResolvedAnalysis(
       ...(dateApproval ? { dateApproval } : {}),
       ...(calendarApproval ? { calendarApproval } : {}),
       ...(dayCalendarApproval ? { dayCalendarApproval } : {}),
+      ...(calendarUnitProbe ? { calendarUnitProbe } : {}),
       ...(dialogDateApproval ? { dialogDateApproval } : {}),
       ...(searchValuePlan ? { searchValuePlan } : {}),
       ...(searchContextValues.length ? { searchContextValues } : {}),
@@ -1524,7 +1633,12 @@ function itemForResolvedAnalysis(
       ? false
       : analysis.writePlan.command === "SELECT_DATE"
         ? generic &&
-          !!(calendarApproval || dayCalendarApproval || dialogDateApproval)
+          !!(
+            calendarApproval ||
+            dayCalendarApproval ||
+            calendarUnitProbe ||
+            dialogDateApproval
+          )
         : true,
     disabled: false,
     revealed: true,
@@ -1538,7 +1652,9 @@ function itemForResolvedAnalysis(
           ? dayCalendarApproval
             ? "지원서에 같은 날짜가 이미 입력되어 있습니다."
             : "지원서에 같은 연월이 이미 입력되어 있습니다."
-          : dayCalendarApproval || dialogDateApproval
+          : calendarUnitProbe
+            ? "달력을 열어 연월 또는 연월일 단위를 확인한 뒤 저장된 날짜를 선택해 입력합니다."
+            : dayCalendarApproval || dialogDateApproval
             ? "달력을 열어 저장된 날짜를 선택해 입력합니다."
             : calendarApproval
               ? "달력을 열어 저장된 연월을 선택해 입력합니다."
@@ -1552,6 +1668,7 @@ function itemForResolvedAnalysis(
     ...(dateApproval ? { dateApproval } : {}),
     ...(calendarApproval ? { calendarApproval } : {}),
     ...(dayCalendarApproval ? { dayCalendarApproval } : {}),
+    ...(calendarUnitProbe ? { calendarUnitProbe } : {}),
     ...(dialogDateApproval ? { dialogDateApproval } : {}),
     ...(searchValuePlan ? { searchValuePlan } : {}),
     ...(searchContextValues.length ? { searchContextValues } : {}),

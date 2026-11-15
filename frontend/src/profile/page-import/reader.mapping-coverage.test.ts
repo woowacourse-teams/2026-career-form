@@ -42,12 +42,12 @@ militaryService.militaryOccupationalSpecialty|military.military.militarySpecialt
 militaryService.militaryServiceClassification|military.military.militaryType|현역병
 militaryService.dischargeType|military.military.dischargeType|만기제대
 disability.disabilityStatus|disability.disability.disabilityStatus|대상|disability-status:eligible
-disability.degreeOfDisability|disability.disability.disabilityGrade|경증(심하지 않은 장애)
+disability.degreeOfDisability|disability.disability.disabilityGrade|경증(심하지 않은 장애)|disability-grade:mild
 disability.descriptionOfDisability|disability.disability.disabilityType|지체장애
 disability.disabilityRegistrationNumber|disability.disability.disabilityRegistrationNumber|SYNTHETIC-D
 veteran.veteranStatus|veteran.veteran.veteranStatus|대상|veteran-status:eligible
 veteranStatus.veteransRegistrationNumber|veteran.veteran.veteranNumber|SYNTHETIC-V
-veteranStatus.veteranRelationship|veteran.veteran.veteranRelation|본인`,
+veteranStatus.veteranRelationship|veteran.veteran.veteranRelation|본인|veteran-relation:self`,
   ],
   [
     "educationalBackground.highSchool",
@@ -64,7 +64,7 @@ enrollmentPeriod.endDate|endDate|2016-02-02`,
 companyName|companyName|합성회사
 employmentPeriod.startDate|startDate|2020-03-02
 employmentPeriod.endDate|endDate|2025-02-02
-employmentStatus|employmentStatus|퇴사
+employmentStatus|employmentStatus|퇴직
 department|department|개발팀
 positionRank|position|연구원
 dutiesResponsibility|responsibilities|합성 업무

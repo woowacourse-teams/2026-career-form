@@ -1,4 +1,6 @@
-import { afterEach, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import type { FieldCandidateHandle } from "../dom/types";
+import { matchesResultValue } from "../workflow/result-value-match";
 import { CATALOG_VERSION } from "../../profile/catalog";
 import type { ReviewPlanItem } from "../review/review-plan";
 import { approveCatalogMatch } from "./catalog-identity";
@@ -43,6 +45,7 @@ function fixture() {
     element: input,
     evidence: { label: "OPIC" },
     verify: () => input.getAttribute("data-code") === "SITE-1",
+    readback: () => input.isConnected,
   });
   expect(remembered).toBe(true);
   return { item, input };
@@ -57,4 +60,45 @@ it("rejects a post-selection display edit even when it is another approved alias
   const { item, input } = fixture();
   input.value = "OPIC";
   expect(retainedCatalogSelection(item, input)).toBeUndefined();
+});
+
+describe("the result readback after the write pass ended", () => {
+  function endedPass() {
+    const { item, input } = fixture();
+    // The write pass ended; its approval no longer vouches for the site code.
+    input.setAttribute("data-code", "PASS-ENDED");
+    const handle = {
+      candidateId: item.candidateId,
+      elements: [input],
+      candidate: { candidateId: item.candidateId, control: "text" },
+    } as unknown as FieldCandidateHandle;
+    return {
+      item: {
+        ...item,
+        analysis: {
+          candidateId: item.candidateId,
+          matchType: "MATCH" as const,
+          mappingStatus: "LLM_SUGGESTED" as const,
+          interactionStatus: "READY" as const,
+          autofillPolicy: "ALLOWED" as const,
+          valueBinding: { type: "DIRECT" as const, profileFieldKey: item.profileFieldKey! },
+          writePlan: { command: "SEARCH_SELECTION" as const },
+        },
+      },
+      input,
+      handle,
+    };
+  }
+
+  it("still reads our own unchanged selection as entered", () => {
+    const { item, handle } = endedPass();
+    expect(retainedCatalogSelection(item, handle.elements[0] as HTMLElement)).toBeUndefined();
+    expect(matchesResultValue(item, "opic", "OPIc", handle)).toBe(true);
+  });
+
+  it("does not read a selection edited after the pass as entered", () => {
+    const { item, input, handle } = endedPass();
+    input.value = "OPIC";
+    expect(matchesResultValue(item, "OPIC", "OPIc", handle)).toBe(false);
+  });
 });

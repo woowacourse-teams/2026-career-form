@@ -9,6 +9,8 @@ interface SelectionReceipt {
   /** Actual committed text of an input; display labels may be differently formatted. */
   readonly value?: string;
   readonly verify: (element: HTMLElement) => boolean;
+  /** Pass-independent result check; only consumers whose proof is the field itself set it. */
+  readonly readback?: (element: HTMLElement) => boolean;
 }
 
 const selections = new WeakMap<HTMLElement, SelectionReceipt>();
@@ -29,6 +31,7 @@ export function rememberCatalogSelection(
     readonly evidence: CatalogEvidence;
     readonly matchesEvidence?: (approval: import("./catalog-match").ApprovedCatalogMatch, evidence: CatalogEvidence) => boolean;
     readonly verify: (element: HTMLElement) => boolean;
+    readonly readback?: (element: HTMLElement) => boolean;
   },
 ): boolean {
   const approval = catalogApprovalForItem(item);
@@ -53,6 +56,7 @@ export function rememberCatalogSelection(
       ? { value: selection.element.value }
       : {}),
     verify: selection.verify,
+    ...(selection.readback ? { readback: selection.readback } : {}),
   };
   selections.set(selection.element, receipt);
   itemSelections.set(item, { element: selection.element, receipt });
@@ -66,6 +70,7 @@ export function retainedCatalogSelection(
 ): string | undefined {
   const receipt = selections.get(element);
   const approval = catalogApprovalForItem(item);
+
   return receipt &&
     element.isConnected &&
     approval.status === "selected" &&
@@ -82,6 +87,38 @@ export function retainedCatalogSelection(
         element.value === receipt.value)) &&
     receipt.verify(element)
     ? (receipt.value ?? receipt.label)
+    : undefined;
+}
+
+/**
+ * Result readback only: our own selection is still what the input shows.
+ * The write pass's verify fails once that pass ends; a consumer whose proof is
+ * the field itself (no hidden site code) leaves a pass-independent readback.
+ * It never proves a later write.
+ */
+export function displayedCatalogSelection(
+  item: ReviewPlanItem,
+  element: HTMLElement,
+): string | undefined {
+  const receipt = selections.get(element);
+  const approval = catalogApprovalForItem(item);
+  return receipt &&
+    receipt.readback !== undefined &&
+    receipt.value !== undefined &&
+    element instanceof HTMLInputElement &&
+    element.isConnected &&
+    element.value === receipt.value &&
+    approval.status === "selected" &&
+    receipt.binding ===
+      JSON.stringify([
+        item.profileFieldKey,
+        item.profileEntryId,
+        item.itemIndex,
+        item.profileValue,
+      ]) &&
+    receipt.approval === JSON.stringify(approval.match) &&
+    receipt.readback(element)
+    ? receipt.value
     : undefined;
 }
 
