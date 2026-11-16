@@ -137,6 +137,7 @@ import {
   type StructureDiagnostics,
 } from "../generic/structure-diagnostics";
 import { debugWarn } from "../debug/autofill-debug";
+import { AttachmentSection } from "../attachments/AttachmentSection";
 import { useDeveloperMode } from "../debug/developer-mode";
 import { localWorkflowLog } from "../debug/local-workflow";
 
@@ -214,6 +215,7 @@ function PolicyReadyWorkflow({
   followFields = false,
   apiClient,
   repository,
+  attachmentStore,
   pageDocument,
   onExit,
   unsupportedImageUrl,
@@ -1473,6 +1475,15 @@ function PolicyReadyWorkflow({
       manualRevealedLabels={manualRevealedLabels}
       rowSave={rowSave}
       savedRowKeys={savedRowKeys.current}
+      attachmentSection={
+        attachmentStore ? (
+          <AttachmentSection
+            pageDocument={pageDocument}
+            store={attachmentStore}
+            profile={profile}
+          />
+        ) : undefined
+      }
     />
   );
 }

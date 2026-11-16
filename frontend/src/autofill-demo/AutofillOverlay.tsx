@@ -5,6 +5,8 @@ import type { AnalysisApiClient } from "../autofill/api/types";
 import { AutofillWorkflow } from "../autofill/workflow/AutofillWorkflow";
 import type { ProfileRepository } from "../profile/profile-repository";
 import { ChromeProfileStorage } from "../storage/chrome-profile-storage";
+import { ChromeAttachmentStorage } from "../attachments/attachment-storage";
+import type { AttachmentStore } from "../attachments/model";
 import styles from "./AutofillOverlay.module.css";
 
 interface AutofillOverlayProps {
@@ -13,6 +15,7 @@ interface AutofillOverlayProps {
   onClose(): void;
   apiClient?: AnalysisApiClient;
   repository?: Pick<ProfileRepository, "load">;
+  attachmentStore?: AttachmentStore;
   pageDocument?: Document;
   unsupportedImageUrl?: string;
   writingImageUrl?: string;
@@ -24,6 +27,7 @@ export function AutofillOverlay({
   onClose,
   apiClient: injectedApiClient,
   repository: injectedRepository,
+  attachmentStore: injectedAttachmentStore,
   pageDocument = document,
   unsupportedImageUrl,
   writingImageUrl,
@@ -35,6 +39,10 @@ export function AutofillOverlay({
   const repository = useMemo(
     () => injectedRepository ?? new ChromeProfileStorage(),
     [injectedRepository],
+  );
+  const attachmentStore = useMemo(
+    () => injectedAttachmentStore ?? new ChromeAttachmentStorage(),
+    [injectedAttachmentStore],
   );
   const region = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -68,6 +76,7 @@ export function AutofillOverlay({
           exitInToolbar
           apiClient={apiClient}
           repository={repository}
+          attachmentStore={attachmentStore}
           pageDocument={pageDocument}
           unsupportedImageUrl={unsupportedImageUrl}
           writingImageUrl={writingImageUrl}

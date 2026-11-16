@@ -3,6 +3,7 @@ import {
   useState,
   type Dispatch,
   type KeyboardEvent,
+  type ReactNode,
   type SetStateAction,
 } from "react";
 import type { AddressResult } from "../address/types";
@@ -45,6 +46,8 @@ function reasonFor(item: ReviewPlanItem): string {
 
 interface WorkflowScreensProps {
   exitInToolbar?: boolean;
+  /** Local profile-file attachment step shown under the fill results. */
+  attachmentSection?: ReactNode;
   wasWritten?: WorkflowResultsProps["wasWritten"];
   progressIdFor?: WorkflowResultsProps["progressIdFor"];
   progressStateFor?: WorkflowResultsProps["progressStateFor"];
@@ -252,6 +255,7 @@ export function WorkflowScreens({
   manualRevealedLabels = [],
   rowSave,
   savedRowKeys,
+  attachmentSection,
 }: WorkflowScreensProps) {
   const reviewTabsId = useId();
   // A run that stopped after it started keeps the fill result screen and says
@@ -680,6 +684,7 @@ export function WorkflowScreens({
           onOpenProfile={onOpenProfile}
           {...(savedRowKeys ? { savedRowKeys } : {})}
         />
+        {attachmentSection}
         {manualRevealedLabels.length > 0 && (
           <section aria-label="직접 확인할 새 칸">
             <h3>직접 확인할 새 칸</h3>
