@@ -1097,6 +1097,13 @@
 - [CI/CD 설정](topics/cicd-setup.md) topic의 현재 상태를 고쳤다.
 - 호스트 주소, 키 값, 계정, 대화 전문은 저장하지 않았다.
 
+## [2026-11-09] ingest | CF-429 서버 HTTPS 도메인과 확장 HTTPS 전환 준비
+
+- Approval-Digest: 3de776138edcbbd38fb265a268b202b1c658876fb218ac4c59ffe022a3604c74
+- Source-Revision: b0cb4e1
+- 승인한 후보 1개를 [CF-429 bundle](../raw/issues/CF-429/manifest.md)에 기록했다. 세 환경의 HTTPS 도메인과 연결 대상, 인증서 만료일과 자동 갱신, Amazon Linux 2023 타이머 함정, 리다이렉트 보류 이유, HTTPS 전환 배포 때 할 일이다.
+- [서버 HTTPS 도메인과 인증서](topics/https-domains.md) topic을 새로 만들었다. 다른 topic 문서는 바꾸지 않았다.
+- IP, 계정, 시크릿, 인증서 키, 대화 전문은 저장하지 않았다.
 ## [2026-11-09] ingest | CF-439 공고 등록이 발송 예약 전에 끊기면 재등록해도 알림이 가지 않는 문제 수정
 - Approval-Digest: 8d3d3182997c5e2cc19745160385f379a4fbe223975f30f529b9a2fb94e2c395
 - Source-Revision: 19b3e7de
