@@ -246,7 +246,7 @@ export function JobPostings({
   const saveFromInbox = (posting: ServerPosting) => {
     if (savedUrls.has(posting.link)) return;
     // Closed since the last clock tick: hide the row rather than show the
-    // saved-posting form's deadline error.
+    // model's deadline validation error.
     const current = now();
     if (posting.closesAt <= current) {
       setTime(current);
