@@ -33,7 +33,7 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [기존 docs baseline](topics/docs-baseline.md) | 기존 docs 65개와 자산의 CF-41 현재본 | 2026-08-22 |
 | [제품 기준](topics/product-concept.md) | 사용자 통제, 제출 금지와 로컬 우선 | 2026-08-22 |
 | [프로필 필드](topics/profile-fields.md) | 지원 정보 구조와 필드 계약, 자격증 등록번호 라벨 | 2026-10-29 |
-| [프로필 카탈로그 선택과 식별 연결](topics/profile-catalog-identity.md) | 학교, 자격, 시험명의 오프라인 카탈로그 선택과 식별자 저장, 빈 자격증 발급기관 채움, TOEIC Speaking, 한국폴리텍 번호 표기 대조 | 2026-10-29 |
+| [프로필 카탈로그 선택과 식별 연결](topics/profile-catalog-identity.md) | 학교, 자격, 시험명의 오프라인 카탈로그 선택과 식별자 저장, 자격증 발급기관 채움과 재선택 때 채운 값 교체(세션 한정 기억), TOEIC Speaking, 한국폴리텍 번호 표기 대조 | 2026-11-16 |
 | [프로필 JSON 전송](topics/profile-json-transfer.md) | 로컬 프로필의 versioned JSON 백업,전체 복원 계약 | 2026-09-07 |
 | [Greeting 지원서에서 프로필 가져오기](topics/greeting-profile-import.md) | 합성 fixture의 읽기 전용 후보 생성, 한 화면 검토와 확인 카드, 병합과 실사이트 검증 경계 | 2026-10-16 |
 | [프로필 입력과 안전한 어학 선택](topics/profile-input-and-language-matching.md) | 자유 텍스트 어학과 유일 후보만 허용하는 회사 옵션 선택 | 2026-09-09 |
@@ -54,7 +54,7 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [검토된 DOM 스냅샷 fixture의 공백 정규화](topics/dom-snapshot-fixture-whitespace.md) | pre-commit 공백 검사 통과를 위한 승인된 공백만 정규화 기록 | 2026-10-18 |
 | [입력 위치 표시와 설치 안내](topics/autofill-follow-and-install.md) | 기본 필드 추적, 확인 필요 결과와 첫 설치 안내 | 2026-09-22 |
 | [프로젝트 컨벤션](topics/project-conventions.md) | 공통, Git과 스택별 규약 | 2026-08-22 |
-| [프론트 브라우저 테스트](topics/frontend-browser-testing.md) | jsdom/Chromium 계층, 합성 상호작용 검증과 CI shard 병합 검증 경계, frontend 변경에만 도는 CI 경로 필터와 2026-11 실행 시간 측정, 2026-11 느린 fixture 통합 테스트 38개 삭제와 잃은 회귀 범위 | 2026-11-05 |
+| [프론트 브라우저 테스트](topics/frontend-browser-testing.md) | jsdom/Chromium 계층, 합성 상호작용 검증과 CI shard 병합 검증 경계, frontend 변경에만 도는 CI 경로 필터와 2026-11 실행 시간 측정, 2026-11 느린 fixture 통합 테스트 38개 삭제와 잃은 회귀 범위, 단위 파일 실행 명령과 확장 옵션 페이지 수동 확인 | 2026-11-16 |
 | [프론트 정적 검사 범위](topics/frontend-static-checks.md) | lint의 TS 소스 제외, 기존 typecheck 실패와 CI·verify.py 미실행 관찰 | 2026-10-29 |
 | [Issue 개발 흐름](topics/issue-development-workflow.md) | Issue, 체크포인트와 사람 승인 경계 | 2026-08-22 |
 | [ADR 작성 규약](topics/adr-authoring.md) | ADR 판단과 Issue raw 기록 | 2026-08-22 |
@@ -102,7 +102,7 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [범용 연월 달력 선택과 로컬 실행 경계](topics/generic-calendar-selection.md) | DOM 소유권, 개별 승인, 역할 판별과 연월, 연월일 달력 실행의 안전 경계, 달력 기입의 최종 값 확인, 실행이 연 달력의 드롭다운 확인 제외, 다른 컨트롤이 연 층의 보류 판정 제외 | 2026-10-29 |
 | [발표 디자인 시스템](topics/presentation-design-system.md) | 독립 레이아웃, 교체 슬롯과 정적 HTML/CSS 재현 규칙 | 2026-08-26 |
 | [랜딩,온보딩 웹 페이지](topics/landing-onboarding.md) | 의사결정 AI(JEV)·마감 알림 장면의 단계별 끝까지 재생, 모바일 뷰와 공유하기 동선, 직접 체험 중심의 하늘색 랜딩, 확장 첫 설치 온보딩 여섯 단계와 웹 경계 | 2026-11-06 |
-| [로컬 검증 환경 주의점](topics/verification-environment.md) | 한글 worktree 경로의 compose 계약 테스트 실패와 COMPOSE_PROJECT_NAME 우회 | 2026-11-05 |
+| [로컬 검증 환경 주의점](topics/verification-environment.md) | 한글 worktree 경로의 compose 계약 테스트 실패와 COMPOSE_PROJECT_NAME 우회, infra 알림 규칙 테스트의 Docker 의존 | 2026-11-16 |
 | [릴리스 브랜치 유지와 정리](topics/release-branch-lifecycle.md) | 배포,동기화 완료 후 정리와 SHA 보호, 관리자 설정 | 2026-10-03 |
 | [작업 브랜치 정리](topics/branch-cleanup.md) | 병합된 CF·hotfix·revert 브랜치 자동 삭제 대상, 건너뜀·실패 조건과 사람 정리 범위 | 2026-10-23 |
 | [확장 품질 보고의 fetch 호출 문맥](topics/extension-fetch-context.md) | 브라우저 전역 수신자, 보고 요청 계약과 검증 경계 | 2026-10-12 |
