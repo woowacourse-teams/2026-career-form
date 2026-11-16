@@ -298,11 +298,13 @@ export function JobPostings({
     completed: snapshot && groups.completed.length,
   };
   // The starting tab is picked once, when the inbox is first known, so rows
-  // closing later do not move the selection.
+  // closing later do not move the selection. The effect may run after a tab
+  // click already queued its choice, so it never replaces one.
   const startView: View = visibleInbox?.length ? "inbox" : "planned";
   const inboxKnown = visibleInbox !== undefined;
   useEffect(() => {
-    if (chosenView === undefined && inboxKnown) setChosenView(startView);
+    if (chosenView === undefined && inboxKnown)
+      setChosenView((current) => current ?? startView);
   }, [chosenView, inboxKnown, startView]);
   const view: View = chosenView ?? startView;
   const select = (next: View, focus = false) => {
