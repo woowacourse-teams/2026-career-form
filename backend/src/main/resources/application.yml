@@ -90,6 +90,12 @@ career-form:
       section-concurrency: ${CAREER_FORM_JEV_SECTION_CONCURRENCY:3}
       field-batch-size: ${CAREER_FORM_JEV_FIELD_BATCH_SIZE:5}
       max-concurrent: ${CAREER_FORM_JEV_MAX_CONCURRENT:10}
+      # 범용 칸 분석에서 공급자에 보낼 내용이 같은 섹션의 답을 프로세스 안에 둔다. 배포하면 비워진다.
+      # 배포 구성은 이 변수들을 전달하지 않으므로 서버에서는 아래 기본값으로 돈다.
+      section-cache:
+        enabled: ${CAREER_FORM_JEV_SECTION_CACHE_ENABLED:true}
+        max-sections: ${CAREER_FORM_JEV_SECTION_CACHE_MAX_SECTIONS:5000}
+        ttl: ${CAREER_FORM_JEV_SECTION_CACHE_TTL:7d}
   llm:
     enabled: ${CAREER_FORM_LLM_ENABLED:}
   evaluation:
