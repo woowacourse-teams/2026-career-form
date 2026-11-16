@@ -27,6 +27,9 @@ export interface WorkflowResultsProps {
   onLocate?(candidateId: string): boolean;
   operatedCategories?: readonly string[];
   onLocateSection?(candidateIds: readonly string[], category?: string): boolean;
+  /** Files attached to the site's upload fields (names and field labels only). */
+  attachments?: readonly { fileName: string; fieldLabel: string }[];
+  onLocateAttachments?(): boolean;
   copyText?(value: string): Promise<void>;
   /** Generic path only: also list fields that have no saved value. */
   profileGroupsVisible?: boolean;
@@ -44,6 +47,8 @@ export function WorkflowResults({
   optionsFor,
   onLocate,
   onLocateSection,
+  attachments,
+  onLocateAttachments,
   operatedCategories,
   profileGroupsVisible = false,
   onOpenProfile,
@@ -197,7 +202,9 @@ export function WorkflowResults({
         tabIndex={0}
         hidden={activeTab !== "completed"}
       >
-        {completed.length > 0 || !!operatedCategories?.length ? (
+        {completed.length > 0 ||
+        !!operatedCategories?.length ||
+        !!attachments?.length ? (
           <CompletedReview
             entries={completed}
             reviewItems={reviewItems}
@@ -205,6 +212,8 @@ export function WorkflowResults({
             progressIdFor={progressIdFor}
             onLocateSection={onLocateSection}
             operatedCategories={operatedCategories}
+            attachments={attachments}
+            onLocateAttachments={onLocateAttachments}
           />
         ) : (
           <p className={styles.empty}>

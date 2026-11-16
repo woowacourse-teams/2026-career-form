@@ -96,6 +96,8 @@ interface WorkflowScreensProps {
   onLocate?(candidateId: string): boolean;
   operatedCategories?: readonly string[];
   onLocateSection?(candidateIds: readonly string[], category?: string): boolean;
+  attachments?: readonly { fileName: string; fieldLabel: string }[];
+  onLocateAttachments?(): boolean;
   onExit(): void;
   manualRevealedLabels?: readonly string[];
   /** Generic path only: rows the extension saved with their own save button. */
@@ -250,6 +252,8 @@ export function WorkflowScreens({
   onExit,
   onLocate,
   onLocateSection,
+  attachments,
+  onLocateAttachments,
   operatedCategories,
   currentCategory,
   manualRevealedLabels = [],
@@ -679,6 +683,8 @@ export function WorkflowScreens({
           reviewItems={reviewItems}
           onLocate={onLocate}
           onLocateSection={onLocateSection}
+          attachments={attachments}
+          onLocateAttachments={onLocateAttachments}
           operatedCategories={operatedCategories}
           profileGroupsVisible={analysisSummary?.mode === "GENERIC"}
           onOpenProfile={onOpenProfile}
