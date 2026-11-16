@@ -255,6 +255,13 @@ describe("마감 지난 지원 예정 공고 정리", () => {
     expect(save).not.toHaveBeenCalled();
     expect(schedule).not.toHaveBeenCalled();
   });
+  it("지울 공고도 보낼 알림도 없으면 점검은 저장소에 쓰지 않는다", async () => {
+    const s = setup();
+    await s.service.save(s.input);
+    const save = vi.spyOn(s.repository, "save");
+    await s.service.recover();
+    expect(save).not.toHaveBeenCalled();
+  });
   it("이전 버전에서 마감 지남에 쌓인 공고는 새 워커의 첫 점검에서 지우고 지원 완료와 마감 전 공고는 남긴다", async () => {
     const s = setup();
     const [stale] = (await s.service.save(s.input)).postings;
