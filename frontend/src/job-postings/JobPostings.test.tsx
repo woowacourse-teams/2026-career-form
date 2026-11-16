@@ -8,164 +8,21 @@ import {
 } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 import { JobPostings } from "./JobPostings";
-import type { JobCategoriesView } from "./job-roles";
-import { PostingService } from "./service";
+import {
+  NOW,
+  basePosting,
+  categoriesView,
+  inboxPosting,
+  kst,
+  panel,
+  renderPage,
+  savedInput,
+  seenState,
+  setup,
+  tab,
+} from "./JobPostings.test-fixtures";
 import type { Posting } from "./model";
-import { PushApiError, type ServerPosting } from "./push-api";
-import type { PushClient } from "./push-client";
-import type { PushStateView } from "./push-messages";
-
-const NOW = Date.parse("2026-10-06T06:00Z");
-const kst = (value: string) => Date.parse(`${value}+09:00`);
-const seenState: PushStateView = {
-  enabled: true,
-  supported: true,
-  status: { code: "registered", updatedAt: NOW, attempts: 0 },
-  permission: "granted",
-  visibility: { result: "seen", checkedAt: NOW, source: "test" },
-  unread: 0,
-  roles: [],
-};
-const categoriesView: JobCategoriesView = {
-  categories: {
-    version: 1,
-    categories: [
-      {
-        code: "IT",
-        label: "IT/개발",
-        roles: [
-          { code: "IT.BACKEND", label: "백엔드" },
-          { code: "IT.FRONTEND", label: "프론트엔드" },
-        ],
-      },
-      {
-        code: "DESIGN",
-        label: "디자인",
-        roles: [{ code: "DESIGN.UX_UI", label: "UX/UI" }],
-      },
-    ],
-  },
-  error: null,
-};
-function setup(
-  options: {
-    inbox?: () => Promise<ServerPosting[]>;
-    pushState?: PushStateView;
-    categories?: () => Promise<JobCategoriesView>;
-  } = {},
-) {
-  let rows: Posting[] = [];
-  let failure: Error | undefined;
-  const service = new PostingService(
-    {
-      load: async () => rows,
-      save: async (next) => {
-        if (failure) throw failure;
-        rows = next;
-      },
-    },
-    {
-      now: () => NOW,
-      id: () => `id-${rows.length}`,
-      permission: async () => true,
-      schedule: async () => {},
-      notify: async () => {},
-      clearNotification: async () => {},
-    },
-  );
-  const client = {
-    list: () => service.list(),
-    save: service.save.bind(service),
-    setCompleted: service.setCompleted.bind(service),
-    remove: service.remove.bind(service),
-    retry: () => service.recover(),
-    subscribe: () => () => {},
-  };
-  const inbox: ServerPosting[] = [];
-  let pushState = options.pushState ?? seenState;
-  // Default: a backend without the category API (older than CF-394).
-  const categories: () => Promise<JobCategoriesView> =
-    options.categories ??
-    (async () => ({ categories: null, error: "ENDPOINT_UNAVAILABLE" }));
-  const pushClient = {
-    state: vi.fn(async () => pushState),
-    setEnabled: vi.fn(async (enabled: boolean) => ({ ...pushState, enabled })),
-    test: vi.fn(async () => pushState),
-    record: vi.fn(async () => pushState),
-    later: vi.fn(async () => pushState),
-    setRoles: vi.fn(async (roles: readonly string[]) => {
-      pushState = { ...pushState, roles: [...roles] };
-      return pushState;
-    }),
-    inbox: vi.fn(options.inbox ?? (async () => [...inbox])),
-    categories: vi.fn(categories),
-    subscribe: () => () => {},
-  } satisfies PushClient;
-  return {
-    client,
-    pushClient,
-    inbox,
-    failWith: (error?: Error) => {
-      failure = error;
-    },
-  };
-}
-function inboxPosting(
-  company = "공지 회사",
-  extra: Partial<ServerPosting> = {},
-): ServerPosting {
-  return {
-    id: "a".repeat(32),
-    company,
-    role: "데이터",
-    link: "https://careers.example.test/jobs/notice",
-    opensAt: NOW - 3600000,
-    closesAt: NOW + 3 * 86400000,
-    ...extra,
-  };
-}
-const savedInput = (company: string, extra: { deadline?: number } = {}) => ({
-  company,
-  role: "개발",
-  url: `https://example.test/jobs/${encodeURIComponent(company)}`,
-  deadline: extra.deadline ?? Date.parse("2026-10-08T18:00Z"),
-  timeZone: "Asia/Seoul",
-  minutes: [],
-});
-const basePosting: Posting = {
-  id: "future",
-  version: 1,
-  company: "다가올 회사",
-  role: "개발",
-  url: "https://example.com/jobs",
-  deadline: NOW + 3600000,
-  timeZone: "Asia/Seoul",
-  status: "planned",
-  updatedAt: NOW,
-  reminders: [{ minutes: 30, at: NOW + 1800000, state: "pending" }],
-};
-function renderPage(
-  env: ReturnType<typeof setup>,
-  props: {
-    track?: (...args: unknown[]) => void;
-    now?: number;
-    openSettings?: boolean;
-    onSettingsOpened?: () => void;
-  } = {},
-) {
-  return render(
-    <JobPostings
-      client={env.client}
-      pushClient={env.pushClient}
-      now={() => props.now ?? NOW}
-      track={props.track ?? (() => undefined)}
-      openSettings={props.openSettings}
-      onSettingsOpened={props.onSettingsOpened}
-    />,
-  );
-}
-const tab = (name: RegExp | string) => screen.getByRole("tab", { name });
-const panel = () => screen.getByRole("tabpanel");
+import { PushApiError } from "./push-api";
 
 it.each([
   "SYNTHETIC_WRITE_FAILURE: quota exceeded",
@@ -299,7 +156,6 @@ it("목록이 비면 탭마다 짧은 이름만 보여 주고 설명 문장과 �
   expect(within(panel()).queryByRole("button")).toBeNull();
   const cases = [
     [/^새 공고/, "새 공고 없음"],
-    [/^마감 지남/, "마감 지난 공고 없음"],
     [/^지원 완료/, "지원 완료 없음"],
     [/^지원 예정/, "저장한 공고 없음"],
   ] as const;
@@ -335,7 +191,7 @@ it("설명 문장과 하단 안내를 페이지에 두지 않는다", async () =
   );
 });
 
-it("네 개의 탭에 개수를 보여 주고 새 공고가 있으면 새 공고 탭에서 시작한다", async () => {
+it("세 개의 탭에 개수를 보여 주고 새 공고가 있으면 새 공고 탭에서 시작한다", async () => {
   const env = setup();
   env.inbox.push(
     inboxPosting("나중 회사", {
@@ -344,6 +200,12 @@ it("네 개의 탭에 개수를 보여 주고 새 공고가 있으면 새 공고
       closesAt: NOW + 5 * 86400000,
     }),
     inboxPosting("먼저 회사"),
+    // Closing exactly now counts as closed, like the saved postings.
+    inboxPosting("방금 마감 회사", {
+      id: "c".repeat(32),
+      link: "https://careers.example.test/jobs/closed",
+      closesAt: NOW,
+    }),
   );
   const rows: Posting[] = [
     basePosting,
@@ -369,7 +231,7 @@ it("네 개의 탭에 개수를 보여 주고 새 공고가 있으면 새 공고
   await screen.findByRole("tab", { name: "새 공고 2" });
   expect(
     screen.getAllByRole("tab").map((t) => t.textContent?.replace(/\s+/g, " ")),
-  ).toEqual(["새 공고 2", "지원 예정 1", "마감 지남 1", "지원 완료 1"]);
+  ).toEqual(["새 공고 2", "지원 예정 1", "지원 완료 1"]);
   await waitFor(() =>
     expect(tab("새 공고 2")).toHaveAttribute("aria-selected", "true"),
   );
@@ -380,30 +242,39 @@ it("네 개의 탭에 개수를 보여 주고 새 공고가 있으면 새 공고
       .map((l) => l.textContent),
   ).toEqual(["먼저 회사 열기 ↗", "나중 회사 열기 ↗"]);
   expect(screen.getByText("마감순")).toBeInTheDocument();
+  // A stale snapshot may still carry an expired plan; no tab shows it.
+  for (const name of [/^새 공고/, /^지원 예정/, /^지원 완료/]) {
+    fireEvent.click(tab(name));
+    expect(tab(name)).toHaveAttribute("aria-selected", "true");
+    expect(
+      within(panel()).queryByRole("link", { name: "지난 회사 열기" }),
+    ).toBeNull();
+  }
 });
 
-it("새 공고가 없으면 지원 예정 탭에서 시작하고 방향키로 탭을 옮긴다", async () => {
+it("새 공고가 없으면 지원 예정 탭에서 시작하고 방향키로 세 탭을 오간다", async () => {
   const env = setup();
   await env.client.save(savedInput("예정 회사"));
   renderPage(env);
   await screen.findByRole("link", { name: "예정 회사 열기" });
+  expect(screen.getAllByRole("tab")).toHaveLength(3);
   const planned = tab("지원 예정 1");
   expect(planned).toHaveAttribute("aria-selected", "true");
   expect(planned).toHaveAttribute("tabindex", "0");
   expect(tab("새 공고 0")).toHaveAttribute("tabindex", "-1");
   planned.focus();
-  fireEvent.keyDown(planned, { key: "ArrowRight" });
-  expect(tab(/^마감 지남/)).toHaveAttribute("aria-selected", "true");
-  expect(tab(/^마감 지남/)).toHaveFocus();
-  fireEvent.keyDown(tab(/^마감 지남/), { key: "End" });
-  expect(tab(/^지원 완료/)).toHaveFocus();
-  fireEvent.keyDown(tab(/^지원 완료/), { key: "ArrowRight" });
-  expect(tab(/^새 공고/)).toHaveAttribute("aria-selected", "true");
-  fireEvent.keyDown(tab(/^새 공고/), { key: "ArrowLeft" });
-  expect(tab(/^지원 완료/)).toHaveFocus();
-  fireEvent.keyDown(tab(/^지원 완료/), { key: "Home" });
-  expect(tab(/^새 공고/)).toHaveFocus();
+  const move = (key: string, to: RegExp) => {
+    fireEvent.keyDown(document.activeElement as HTMLElement, { key });
+    expect(tab(to)).toHaveAttribute("aria-selected", "true");
+    expect(tab(to)).toHaveFocus();
+  };
+  move("ArrowRight", /^지원 완료/);
+  move("ArrowRight", /^새 공고/);
+  move("ArrowLeft", /^지원 완료/);
+  move("Home", /^새 공고/);
   expect(panel()).toHaveTextContent("새 공고 없음");
+  move("End", /^지원 완료/);
+  move("ArrowLeft", /^지원 예정/);
 });
 
 it("3일 내 마감은 저장한 진행 중 공고 중 D-3까지만 센다", async () => {
@@ -449,13 +320,20 @@ it("D-4 이후 공고만 있으면 3일 내 마감 표시를 두지 않고 오�
   expect(screen.getByText("3일 내 마감 1")).toBeInTheDocument();
 });
 
-it("탭마다 맞는 동작을 둔다: 새 공고 저장, 지원 예정·마감 지남 지원 완료, 지원 완료 되돌리기", async () => {
+it("탭마다 맞는 동작을 둔다: 새 공고 저장, 지원 예정 지원 완료, 지원 완료 되돌리기, 마감 지난 지원 완료는 삭제만", async () => {
   const env = setup();
   env.inbox.push(inboxPosting());
   const rows: Posting[] = [
     basePosting,
-    { ...basePosting, id: "past", company: "지난 회사", deadline: NOW - 1 },
     { ...basePosting, id: "done", company: "완료 회사", status: "completed" },
+    {
+      ...basePosting,
+      id: "past-done",
+      company: "지난 완료 회사",
+      // Closing exactly now already counts as closed.
+      deadline: NOW,
+      status: "completed",
+    },
   ];
   render(
     <JobPostings
@@ -476,13 +354,16 @@ it("탭마다 맞는 동작을 둔다: 새 공고 저장, 지원 예정·마감 
   expect(rowButtons()).toEqual(["공지 회사 저장"]);
   fireEvent.click(tab(/^지원 예정/));
   expect(rowButtons()).toEqual(["다가올 회사 지원 완료", "다가올 회사 삭제"]);
-  fireEvent.click(tab(/^마감 지남/));
-  expect(rowButtons()).toEqual(["지난 회사 지원 완료", "지난 회사 삭제"]);
+  fireEvent.click(tab(/^지원 완료/));
+  // Reverting a completed posting past its deadline would delete it.
+  expect(rowButtons()).toEqual([
+    "지난 완료 회사 삭제",
+    "완료 회사 되돌리기",
+    "완료 회사 삭제",
+  ]);
   expect(
     within(panel()).getAllByRole("row")[1].querySelector("td")?.textContent,
   ).toBe("마감");
-  fireEvent.click(tab(/^지원 완료/));
-  expect(rowButtons()).toEqual(["완료 회사 되돌리기", "완료 회사 삭제"]);
   expect(
     within(panel()).getByRole("button", { name: "완료 회사 되돌리기" }),
   ).toHaveTextContent(/^되돌리기$/);
@@ -505,39 +386,6 @@ it("저장한 공고를 지원 완료로 옮기고 되돌린다", async () => {
   expect(
     screen.getByRole("link", { name: "예시 회사 열기" }),
   ).toBeInTheDocument();
-});
-
-it("마감 지난 공고는 늦은 알림 기록 문장 없이 마감 지남 탭에 둔다", async () => {
-  const env = setup();
-  await env.client.save({
-    company: "늦은 알림 예시",
-    role: "개발",
-    url: "https://example.com",
-    deadline: Date.parse("2026-10-06T18:00Z"),
-    timeZone: "Asia/Seoul",
-    minutes: [120],
-  });
-  const snapshot = await env.client.list();
-  snapshot.postings[0].reminders[0] = {
-    ...snapshot.postings[0].reminders[0],
-    state: "sent",
-    deliveredAt: Date.parse("2026-10-06T17:00Z"),
-  };
-  render(
-    <JobPostings
-      client={{ ...env.client, list: async () => snapshot }}
-      pushClient={env.pushClient}
-      now={() => Date.parse("2026-10-06T19:00Z")}
-      track={() => undefined}
-    />,
-  );
-  fireEvent.click(await screen.findByRole("tab", { name: "마감 지남 1" }));
-  expect(
-    within(panel()).getByRole("link", { name: "늦은 알림 예시 열기" }),
-  ).toBeInTheDocument();
-  expect(screen.queryByText(/놓친 알림/)).toBeNull();
-  expect(screen.queryByText(/마감이 지나도/)).toBeNull();
-  expect(screen.getByText("최근 마감순")).toBeInTheDocument();
 });
 
 it("삭제 버튼 한 번으로 확인창 없이 저장소에서 삭제한다", async () => {

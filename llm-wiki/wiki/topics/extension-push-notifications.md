@@ -33,3 +33,4 @@ OS 알림 허용은 확장이 감지할 수 없으므로 사용자 응답으로 
 - [공고 구독 알림](job-posting-notifications.md)
 - [범용 endpoint 부재의 frontend 오류 전달](generic-endpoint-unavailable.md)
 - [확장 프로그램 릴리스](extension-release.md)
+- [확장 저장 공고와 마감 알림](saved-job-postings.md)

@@ -1125,3 +1125,10 @@
 - [MongoDB 백업과 복구](topics/mongodb-backup-recovery.md) topic을 새로 만들고 [공용 모니터링 시스템](topics/monitoring-system.md) topic의 현재 상태와 변경 이유를 고쳤다.
 - 2026-11-10 후보 2의 메타데이터 옵션 문장을 "홉 제한 1"에서 "IMDSv2 필수, 홉 제한 2"로 고쳐 다시 승인받았다. 위 digest는 고친 후보의 것이다.
 - 계정 ID, 호스트 주소, 키 값, 계정, 구독 endpoint, 대화 전문은 저장하지 않았다.
+
+## [2026-11-16] ingest | CF-453 지원 공고 화면에서 마감 지난 저장 공고 자동 삭제
+- Approval-Digest: 6cb4d5596bfdff6146303f2c7287eee610fa49effaf21b17b7a155be7e39bef4
+- Source-Revision: 57497a95
+- 승인한 후보 6개를 [CF-453 bundle](../raw/issues/CF-453/manifest.md)에 기록했다. 저장 공고 수명, 점검 예약, 쓰기와 실패 처리, 되돌리기 제한과 이미 뜬 알림, 화면 시각 규칙, 변경 이유와 남은 위험이다.
+- [확장 저장 공고와 마감 알림](topics/saved-job-postings.md) topic을 새로 만들고 [확장 Web Push 구독과 공고 알림](topics/extension-push-notifications.md)의 관련 지식에 연결했다.
+- 실제 공고와 지원 정보, 계정, 구독 endpoint, 대화 전문은 저장하지 않았다.

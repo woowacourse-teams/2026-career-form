@@ -61,7 +61,7 @@ export function createPostingHandler(
 function publicError(error: unknown): string {
   if (
     error instanceof Error &&
-    /^(다른 화면에서|회사명을 입력|HTTP\(S\)|앞으로 남은|알림은 최대|시간대를 확인|저장된 공고 형식)/.test(
+    /^(다른 화면에서|회사명을 입력|HTTP\(S\)|앞으로 남은|알림은 최대|시간대를 확인|저장된 공고 형식|마감이 지난 공고는)/.test(
       error.message,
     )
   )

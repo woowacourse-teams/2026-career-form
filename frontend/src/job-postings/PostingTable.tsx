@@ -8,7 +8,7 @@ export interface PostingRow {
   role: string;
   url: string;
   deadline: number;
-  /** Closed rows (expired or completed) never draw the urgent color. */
+  /** Closed rows (completed postings) never draw the urgent color. */
   closed: boolean;
   action: ReactNode;
   remove?: ReactNode;
