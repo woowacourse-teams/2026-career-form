@@ -70,6 +70,16 @@ describe("trial guide", () => {
     },
   );
 
+  it("공고 관리 안내는 공고를 직접 입력하지 않고 새 공고에서 저장한다고 말한다", async () => {
+    await renderTrial();
+    await open("postings");
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveTextContent(
+      "새 공고 알림이나 지원 공고 화면의 새 공고 탭에서 공고를 저장하면",
+    );
+    expect(dialog).not.toHaveTextContent("회사명·직무·마감 시각을 저장하면");
+  });
+
   describe.each(["button", "escape"] as const)("closing by %s", (how) => {
     it.each(openers)(
       "%s guide returns focus to its opener after inert is removed",

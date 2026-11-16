@@ -184,6 +184,26 @@ it("leads with 의사결정 AI(JEV) reading and filling the application", () => 
   );
 });
 
+it("기술 소개는 버튼으로만 저장하고 알림 시점이 정해져 있다고 설명한다", () => {
+  render(<SiteApp path="/tech/" />);
+  const page = document.body.textContent ?? "";
+  expect(page).toContain("새 공고 탭에서 ‘저장’을 누르면");
+  expect(page).toContain("공고를 열기만 해서는 저장하지 않아요");
+  expect(page).toContain("알림 버튼 · 새 공고 탭");
+  for (const stale of [
+    "공고를 열면",
+    "알림 버튼 · 공고 열기",
+    "두 개까지 바꿀 수",
+    "직접 저장한 공고",
+  ])
+    expect(page).not.toContain(stale);
+});
+
+it("랜딩 마감 알림 장면은 알림 시간을 바꿀 수 있다고 말하지 않는다", () => {
+  render(<SiteApp path="/" />);
+  expect(screen.queryByText(/알림 시간은 바꿀 수 있어요/)).toBeNull();
+});
+
 it("랜딩에서 마감 알림과 지원 완료 시 남은 알림 취소를 소개한다", () => {
   render(<SiteApp path="/" />);
   expect(
