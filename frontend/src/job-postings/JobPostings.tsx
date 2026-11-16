@@ -19,7 +19,7 @@ import type { PushStateView } from "./push-messages";
 import { PostingTable, type PostingRow } from "./PostingTable";
 import { isUrgent } from "./saved-postings";
 import { postingInput, reminderOutcome } from "./server-posting";
-import type { PostingSnapshot } from "./service";
+import { EXPIRED_REVERT_MESSAGE, type PostingSnapshot } from "./service";
 import {
   SubscriptionSettings,
   SubscriptionSwitch,
@@ -55,6 +55,7 @@ const VALIDATION_MESSAGES: ReadonlySet<string> = new Set([
   "앞으로 남은 마감 날짜·시간을 입력해 주세요.",
   "알림은 최대 2개이며 마감 전 1분 이상의 간격이어야 합니다.",
   "시간대를 확인해 주세요.",
+  EXPIRED_REVERT_MESSAGE,
   "공고 저장소에 연결하지 못했습니다. 다시 시도해 주세요.",
   "공고 요청에 실패했습니다.",
   "공고 응답을 읽지 못했습니다.",
@@ -70,18 +71,18 @@ function writeFailure(error: unknown, fallback: string): Failure {
   if (VALIDATION_MESSAGES.has(message)) return { message, reload: false };
   return { message: fallback, reload: false };
 }
-type View = "inbox" | "planned" | "expired" | "completed";
-const VIEWS: readonly View[] = ["inbox", "planned", "expired", "completed"];
+// Planned postings past their deadline are removed (CF-453), so there is no
+// tab for them.
+type View = "inbox" | "planned" | "completed";
+const VIEWS: readonly View[] = ["inbox", "planned", "completed"];
 const TAB_LABELS: Record<View, string> = {
   inbox: "새 공고",
   planned: "지원 예정",
-  expired: "마감 지남",
   completed: "지원 완료",
 };
 const EMPTY_LABELS: Record<View, string> = {
   inbox: "새 공고 없음",
   planned: "저장한 공고 없음",
-  expired: "마감 지난 공고 없음",
   completed: "지원 완료 없음",
 };
 const INBOX_FAILURES: Partial<Record<PushApiErrorCode, string>> = {
@@ -132,14 +133,17 @@ export function JobPostings({
   const settingsButton = useRef<HTMLButtonElement>(null);
   const settingsDialog = useRef<HTMLDivElement>(null);
   const [time, setTime] = useState(now);
+  // Every fresh read also moves the clock, so rows removed in the background
+  // and rows that closed meanwhile disappear together.
   const load = useCallback(async () => {
     try {
       setSnapshot(await client.list());
+      setTime(now());
       setError(undefined);
     } catch {
       setError(LIST_FAILURE);
     }
-  }, [client]);
+  }, [client, now]);
   useEffect(() => {
     let active = true;
     const refresh = () => {
@@ -148,6 +152,7 @@ export function JobPostings({
         .then((s) => {
           if (active) {
             setSnapshot(s);
+            setTime(now());
             setError(undefined);
           }
         })
@@ -187,6 +192,7 @@ export function JobPostings({
     } catch (e) {
       setError(writeFailure(e, failureMessage));
     } finally {
+      setTime(now());
       setBusy(false);
     }
   };
@@ -239,6 +245,13 @@ export function JobPostings({
   // The saved posting stays in the inbox tab, marked as saved.
   const saveFromInbox = (posting: ServerPosting) => {
     if (savedUrls.has(posting.link)) return;
+    // Closed since the last clock tick: hide the row rather than show the
+    // saved-posting form's deadline error.
+    const current = now();
+    if (posting.closesAt <= current) {
+      setTime(current);
+      return;
+    }
     void mutate(
       async () => {
         const next = await client.save(postingInput(posting));
@@ -256,11 +269,10 @@ export function JobPostings({
   const sorted = [...(snapshot?.postings ?? [])].sort(
     (a, b) => a.deadline - b.deadline,
   );
+  // Expired plans may linger in a snapshot until the next read; they show
+  // nowhere. Completed postings stay past their deadline.
   const groups = {
     planned: sorted.filter((p) => p.status === "planned" && p.deadline > time),
-    expired: sorted
-      .filter((p) => p.status === "planned" && p.deadline <= time)
-      .reverse(),
     completed: sorted.filter((p) => p.status === "completed"),
   };
   const urgentCount = groups.planned.filter((p) =>
@@ -269,21 +281,30 @@ export function JobPostings({
   // With roles selected, tagged postings need an overlap; an empty selection
   // and legacy postings without roles show everything. Until the selection is
   // known the inbox keeps loading, unless the background is unreachable, where
-  // nothing is hidden.
+  // nothing is hidden. Postings closed since the list was fetched drop out on
+  // the clock tick.
   const selectedRoles = push.state?.roles;
   const visibleInbox =
     inbox.postings && (selectedRoles || push.failed)
-      ? inbox.postings.filter((p) =>
-          matchesSelectedRoles(p.roles, selectedRoles ?? []),
+      ? inbox.postings.filter(
+          (p) =>
+            p.closesAt > time &&
+            matchesSelectedRoles(p.roles, selectedRoles ?? []),
         )
       : undefined;
   const counts: Record<View, number | undefined> = {
     inbox: visibleInbox?.length,
     planned: snapshot && groups.planned.length,
-    expired: snapshot && groups.expired.length,
     completed: snapshot && groups.completed.length,
   };
-  const view: View = chosenView ?? (visibleInbox?.length ? "inbox" : "planned");
+  // The starting tab is picked once, when the inbox is first known, so rows
+  // closing later do not move the selection.
+  const startView: View = visibleInbox?.length ? "inbox" : "planned";
+  const inboxKnown = visibleInbox !== undefined;
+  useEffect(() => {
+    if (chosenView === undefined && inboxKnown) setChosenView(startView);
+  }, [chosenView, inboxKnown, startView]);
+  const view: View = chosenView ?? startView;
   const select = (next: View, focus = false) => {
     setChosenView(next);
     setFeedback("");
@@ -343,6 +364,9 @@ export function JobPostings({
     groups[key].map((p) => {
       const done = p.status === "completed";
       const label = done ? "되돌리기" : "지원 완료";
+      // Reverting past the deadline would delete the posting, so a completed
+      // posting that has closed keeps only 삭제.
+      const toggleable = !done || p.deadline > time;
       return {
         key: p.id,
         company: p.company,
@@ -350,7 +374,7 @@ export function JobPostings({
         url: p.url,
         deadline: p.deadline,
         closed: key !== "planned",
-        action: (
+        action: toggleable ? (
           <button
             className={styles.outline}
             aria-label={`${p.company} ${label}`}
@@ -359,7 +383,7 @@ export function JobPostings({
           >
             {label}
           </button>
-        ),
+        ) : null,
         remove: (
           <button
             className={styles.quiet}
@@ -567,11 +591,7 @@ export function JobPostings({
               </button>
             ))}
           </div>
-          {!inboxBlocked && (
-            <span className={styles.sort}>
-              {view === "expired" ? "최근 마감순" : "마감순"}
-            </span>
-          )}
+          {!inboxBlocked && <span className={styles.sort}>마감순</span>}
         </div>
         <div
           ref={panel}
