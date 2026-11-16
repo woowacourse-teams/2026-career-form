@@ -1,3 +1,4 @@
+import { controlIdentity } from "../dom/write-target";
 import { newlyRevealedControls } from "./generic-follow-up";
 
 interface RevealWatchOptions {
@@ -16,7 +17,7 @@ const USER_EVENTS = ["input", "keydown", "pointerdown"] as const;
 
 /**
  * Watches for empty fields the page reveals after the run, for example after
- * the user saves a section. It never presses anything itself. It reports once
+ * the user saves a section. Fields rebuilt in the same place are not new. It never presses anything itself. It reports once
  * the user is idle and no revealed field holds focus, then stops; a changed
  * page address stops it without a report.
  */
@@ -32,6 +33,21 @@ export function watchRevealedFields({
   const view = document.defaultView;
   if (!view?.MutationObserver) return () => undefined;
   const startUrl = currentUrl();
+  // Sites may rebuild the same form with fresh nodes (e.g. declining a draft
+  // restore); those are the run's own fields, not newly revealed ones.
+  const baselineIdentities = new Set(
+    [...baseline]
+      .filter(
+        (
+          control,
+        ): control is
+          HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement =>
+          control instanceof HTMLInputElement ||
+          control instanceof HTMLSelectElement ||
+          control instanceof HTMLTextAreaElement,
+      )
+      .map(controlIdentity),
+  );
   let lastUserEvent = Number.NEGATIVE_INFINITY;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let stopped = false;
@@ -58,7 +74,14 @@ export function watchRevealedFields({
       stop();
       return;
     }
-    const revealed = newlyRevealedControls(document, baseline);
+    // Only a broad rebuild (most of the run's controls replaced at once) is
+    // read as the same form; a remounted row after a save still counts.
+    const replaced = [...baseline].filter((control) => !control.isConnected);
+    const rebuilt = baseline.size > 0 && replaced.length * 2 >= baseline.size;
+    const revealed = newlyRevealedControls(document, baseline).filter(
+      (control) =>
+        !rebuilt || !baselineIdentities.has(controlIdentity(control)),
+    );
     if (revealed.length === 0) return;
     const focused = document.activeElement;
     if (
