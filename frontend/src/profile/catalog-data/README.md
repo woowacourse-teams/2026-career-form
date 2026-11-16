@@ -152,10 +152,15 @@ possible credentials. Missing entries must remain usable as manual input.
 ## Certificate selection
 
 Choosing a certificate fills `issuer` with the first segment of its detail
-(the text before the first `·`) only when issuer is blank; whitespace counts as
-blank. It never overwrites a non-blank issuer, and editing the name keeps the
-issuer while releasing the link. Typing a name, direct input and imports never
-fill it.
+(the text before the first `·` with a space on each side) when issuer is
+blank, where whitespace counts as blank, or when it still holds exactly the
+text the previous certificate choice filled in. Any other issuer stays,
+including one typed before the first choice. Editing the name keeps the issuer
+while releasing the link, so a later choice still replaces an unchanged filled
+issuer. Typing a name, direct input and imports never fill it. Which issuer
+was filled is not saved: the editor remembers it only for the profile it holds
+in memory, so once the profile is loaded, imported or reloaded again, a filled
+issuer counts as typed and stays.
 
 ## Language-test search
 
