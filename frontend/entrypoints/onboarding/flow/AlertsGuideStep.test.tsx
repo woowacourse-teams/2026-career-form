@@ -30,6 +30,26 @@ it("새 공고 알림 안내로 시작하고 세 단계를 옆에 보인다", ()
   expect(item(/새 공고 알림/)).toHaveAttribute("aria-current", "step");
 });
 
+it("안내와 그림이 실제 알림과 버튼 이름을 쓴다", () => {
+  renderStep();
+  // Step 1 pictures a new-posting notification, not a deadline reminder.
+  expect(screen.getByText("하늘상사 · 백엔드 개발자")).toBeInTheDocument();
+  expect(screen.getByText(/^접수 /)).toBeInTheDocument();
+  expect(screen.queryByText(/지금 바로 지원하기/)).toBeNull();
+  fireEvent.click(item(/마감 알림/));
+  expect(
+    screen.getByText(/새 공고 목록의 ‘저장’이나 알림의 ‘마감 알림 저장’/),
+  ).toBeInTheDocument();
+  expect(screen.getByText("✓ 저장됨")).toBeInTheDocument();
+  fireEvent.click(item(/지원 완료/));
+  expect(
+    screen.getByText(
+      /‘지원 완료’를 누르면 남은 알림이 취소되고 지원 완료 탭으로/,
+    ),
+  ).toBeInTheDocument();
+  expect(screen.queryByText(/지원 완료로 표시/)).toBeNull();
+});
+
 it("옆의 번호나 글을 누르면 그 단계로 바로 이동한다", () => {
   renderStep();
   fireEvent.click(item(/지원 완료/));

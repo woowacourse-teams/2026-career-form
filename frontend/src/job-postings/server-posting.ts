@@ -1,7 +1,7 @@
 import { POSTING_TIME_ZONE, type Posting, type PostingInput } from "./model";
 import type { ServerPosting } from "./push-api";
 
-// Same defaults as the posting form: 24 hours and 2 hours before the deadline.
+// Reminders for every saved posting: 24 hours and 2 hours before the deadline.
 export const DEFAULT_REMINDER_MINUTES = [1440, 120] as const;
 
 export function postingInput(posting: ServerPosting): PostingInput {

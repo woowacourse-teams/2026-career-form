@@ -1139,3 +1139,10 @@
 - 승인한 후보 5개를 [CF-458 bundle](../raw/issues/CF-458/manifest.md)에 기록했다. 자격증 재선택 때 채운 발급기관 교체 규칙, 세션 한정 채움 기억과 그 이유, StrictMode 갱신 함수 순수성, 프론트 단위 파일 실행 명령과 확장 옵션 페이지 수동 확인, verify.py infra 테스트의 Docker 의존이다.
 - [프로필 카탈로그 선택과 식별 연결](topics/profile-catalog-identity.md), [프론트 브라우저 테스트](topics/frontend-browser-testing.md), [로컬 검증 환경 주의점](topics/verification-environment.md) topic을 갱신했다.
 - 실제 지원값, 계정, 세션, 브라우저 프로필 내용, 대화 전문은 저장하지 않았다.
+
+## [2026-11-16] ingest | CF-463 공고 열기 자동 저장 제거 뒤 남은 안내 문구와 문서 정리
+- Approval-Digest: 1de0e43eadcffe548c06a76dbea8f80ce34e8e357c2b5bef50ffde3399ff8d68
+- Source-Revision: 5c43a4e7
+- 승인한 후보 6개를 [CF-463 bundle](../raw/issues/CF-463/manifest.md)에 기록했다. 공고 저장 경로 정정, 확장 화면 위치 정정, 저장 계기 계측 정정, 저장 공고 정리 시점 보완과 안내 결정, 기술 소개의 서버 저장 항목 불일치, #387 이후 문서가 낡은 이유다.
+- [확장 Web Push 구독과 공고 알림](topics/extension-push-notifications.md), [선택적 이용 계측](topics/usage-analytics.md), [확장 저장 공고와 마감 알림](topics/saved-job-postings.md) topic과 색인을 갱신했다.
+- 구독 endpoint, 키 값, 실제 공고, 계정, 대화 전문은 저장하지 않았다.
