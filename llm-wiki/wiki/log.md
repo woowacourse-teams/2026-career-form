@@ -1132,3 +1132,10 @@
 - 승인한 후보 6개를 [CF-453 bundle](../raw/issues/CF-453/manifest.md)에 기록했다. 저장 공고 수명, 점검 예약, 쓰기와 실패 처리, 되돌리기 제한과 이미 뜬 알림, 화면 시각 규칙, 변경 이유와 남은 위험이다.
 - [확장 저장 공고와 마감 알림](topics/saved-job-postings.md) topic을 새로 만들고 [확장 Web Push 구독과 공고 알림](topics/extension-push-notifications.md)의 관련 지식에 연결했다.
 - 실제 공고와 지원 정보, 계정, 구독 endpoint, 대화 전문은 저장하지 않았다.
+
+## [2026-11-16] ingest | CF-458 자격증을 다시 고를 때 이전 자격증의 발급기관이 남는 문제 수정
+- Approval-Digest: ea16894743540db9ef77644ebd4820e6b4fc14638c151f241aa10967d90036ff
+- Source-Revision: aaffd610
+- 승인한 후보 5개를 [CF-458 bundle](../raw/issues/CF-458/manifest.md)에 기록했다. 자격증 재선택 때 채운 발급기관 교체 규칙, 세션 한정 채움 기억과 그 이유, StrictMode 갱신 함수 순수성, 프론트 단위 파일 실행 명령과 확장 옵션 페이지 수동 확인, verify.py infra 테스트의 Docker 의존이다.
+- [프로필 카탈로그 선택과 식별 연결](topics/profile-catalog-identity.md), [프론트 브라우저 테스트](topics/frontend-browser-testing.md), [로컬 검증 환경 주의점](topics/verification-environment.md) topic을 갱신했다.
+- 실제 지원값, 계정, 세션, 브라우저 프로필 내용, 대화 전문은 저장하지 않았다.
