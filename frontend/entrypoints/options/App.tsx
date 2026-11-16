@@ -5,8 +5,10 @@ import { trackExtensionEvent } from "../../src/analytics/extension-tracker";
 import type { LayoutPreference } from "../../src/profile/model";
 import type { ProfileRepository } from "../../src/profile/profile-repository";
 import { useProfileSaveTracking } from "../../src/analytics/use-profile-save-tracking";
+import { AttachmentManager, AttachmentSlotControl } from "./AttachmentManager";
 import { DeveloperSettings } from "./DeveloperSettings";
 import { ProfileWorkspace } from "./ProfileWorkspace";
+import type { FieldAccessoryTarget } from "../../src/profile/components/ProfileForm";
 import { useProfileEditor } from "../../src/profile/hooks/use-profile-editor";
 import {
   parseProfileImport,
@@ -15,11 +17,21 @@ import {
 import { PROFILE_CATEGORIES } from "../../src/profile/field-definitions";
 import { categoryFilledCount } from "../../src/profile/editor-presentation";
 import { ChromeProfileStorage } from "../../src/storage/chrome-profile-storage";
+import { ChromeAttachmentStorage } from "../../src/attachments/attachment-storage";
+import {
+  evidenceSlot,
+  type AttachmentStore,
+} from "../../src/attachments/model";
+import {
+  evidenceEntries,
+  hasEvidence,
+} from "../../src/attachments/evidence-entries";
 import styles from "./App.module.css";
 
 interface AppProps {
   track?: TrackEvent;
   repository?: ProfileRepository;
+  attachmentStore?: AttachmentStore;
   confirmDelete?: (message: string) => boolean;
   confirmImport?: (message: string) => boolean;
   confirmReload?: (message: string) => boolean;
@@ -48,6 +60,7 @@ function downloadProfile(fileName: string, contents: string) {
 export function App({
   track: injectedTrack = trackExtensionEvent,
   repository: injectedRepository,
+  attachmentStore: injectedAttachmentStore,
   confirmDelete = (message) => globalThis.confirm(message),
   confirmImport = (message) => globalThis.confirm(message),
   confirmReload = (message) => globalThis.confirm(message),
@@ -57,12 +70,29 @@ export function App({
     () => injectedRepository ?? new ChromeProfileStorage(),
     [injectedRepository],
   );
+  const attachmentStore = useMemo(
+    () => injectedAttachmentStore ?? new ChromeAttachmentStorage(),
+    [injectedAttachmentStore],
+  );
   const { repository: trackedRepository, track } = useProfileSaveTracking(
     repository,
     injectedTrack,
     "options",
   );
   const editor = useProfileEditor(trackedRepository);
+  const evidenceIds =
+    editor.loadStatus === "ready"
+      ? evidenceEntries(editor.profile)
+          .map((entry) => entry.entryId)
+          .join("\n")
+      : undefined;
+  useEffect(() => {
+    // Evidence files follow their profile entry; drop them once it is gone.
+    if (evidenceIds === undefined) return;
+    void attachmentStore
+      .pruneEvidence(evidenceIds ? evidenceIds.split("\n") : [])
+      .catch(() => undefined);
+  }, [attachmentStore, evidenceIds]);
   const [layout, setLayout] = useState<LayoutPreference | null>(null);
   const [layoutSaveFailed, setLayoutSaveFailed] = useState(false);
   const [transferFeedback, setTransferFeedback] = useState<{
@@ -111,7 +141,11 @@ export function App({
       "career-form-profile-v1.json",
       serializeProfileExport(editor.profile),
     );
-    setTransferFeedback({ kind: "status", message: "프로필을 내보냈습니다." });
+    setTransferFeedback({
+      kind: "status",
+      message:
+        "프로필을 내보냈습니다. 첨부 파일은 내보내기에 포함되지 않습니다.",
+    });
   };
   const importProfile = async (file: File) => {
     try {
@@ -148,6 +182,21 @@ export function App({
     onUpdateSingle: editor.updateSingle,
     onSelectAddress: editor.selectAddress,
     confirmDelete,
+    fieldAccessory: ({ sectionId, entryId, fieldId }: FieldAccessoryTarget) =>
+      hasEvidence(sectionId, fieldId)
+        ? {
+            label: "증빙 첨부",
+            content: (
+              <AttachmentSlotControl
+                key={`evidence-${entryId}`}
+                store={attachmentStore}
+                slot={evidenceSlot(entryId)}
+                label="증빙"
+                confirmDelete={confirmDelete}
+              />
+            ),
+          }
+        : null,
   };
 
   return (
@@ -281,6 +330,12 @@ export function App({
         layout={layout}
         formProps={formProps}
         sidebarFooter={<DeveloperSettings />}
+        attachmentPanel={
+          <AttachmentManager
+            store={attachmentStore}
+            confirmDelete={confirmDelete}
+          />
+        }
       />
     </div>
   );
