@@ -1153,3 +1153,10 @@
 - 승인한 후보 6개를 [CF-463 bundle](../raw/issues/CF-463/manifest.md)에 기록했다. 공고 저장 경로 정정, 확장 화면 위치 정정, 저장 계기 계측 정정, 저장 공고 정리 시점 보완과 안내 결정, 기술 소개의 서버 저장 항목 불일치, #387 이후 문서가 낡은 이유다.
 - [확장 Web Push 구독과 공고 알림](topics/extension-push-notifications.md), [선택적 이용 계측](topics/usage-analytics.md), [확장 저장 공고와 마감 알림](topics/saved-job-postings.md) topic과 색인을 갱신했다.
 - 구독 endpoint, 키 값, 실제 공고, 계정, 대화 전문은 저장하지 않았다.
+
+## [2026-11-17] ingest | CF-467 범용 칸 분석의 섹션 단위 결과 캐시
+- Approval-Digest: a7717c1500566292916e09452820d384d28846d331414b2b0f719012e50a8362
+- Source-Revision: 9114a7ef
+- 승인한 후보 4개를 [CF-467 bundle](../raw/issues/CF-467/manifest.md)에 기록했다. 섹션 결과 캐시 ADR(저장 단위, 키, 무효화, 저장 위치, 동시 요청, 켜고 끄기의 대안과 결정), 확장 쪽과 서버 쪽 캐시의 현재 상태, 구현 중 확인한 사실, 캐시가 켜진 뒤의 테스트 주의다.
+- [범용 섹션 분석 캐시: 확장 쪽과 서버 쪽](topics/generic-section-analysis-cache.md) topic과 색인을 갱신했다.
+- 실제 지원값, 계정, 세션, 키 값, 대화 전문은 저장하지 않았다.
