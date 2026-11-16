@@ -319,6 +319,29 @@ function validTextValue(
   return element.type !== "number" || validNumberInput(element, value);
 }
 
+const EMAIL_VALUE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Some email boxes are comboboxes only to suggest domains (Toss links its
+ * popup with aria-owns). With no controlled selection listbox, the typed
+ * email is the value; every other combobox still needs an exact option.
+ */
+function isFreeEntryEmailCombobox(
+  item: ReviewPlanItem,
+  element: Element | undefined,
+): boolean {
+  return (
+    element instanceof HTMLInputElement &&
+    element.getAttribute("role") === "combobox" &&
+    !element.readOnly &&
+    !element.hasAttribute("aria-controls") &&
+    (item.analysis?.valueBinding?.profileFieldKey ??
+      item.analysis?.profileFieldKey ??
+      item.profileFieldKey) === "contact.contact.email" &&
+    EMAIL_VALUE.test(item.profileValue ?? "")
+  );
+}
+
 function comboboxParts(input: HTMLInputElement): HTMLElement | undefined {
   const ids = input.getAttribute("aria-controls")?.trim().split(/\s+/) ?? [];
   if (input.getAttribute("role") !== "combobox" || ids.length !== 1)
@@ -590,14 +613,33 @@ function settleElement(handle: FieldCandidateHandle) {
   return readbackWriteElement(handle, writtenTargets.get(handle));
 }
 
+const PHONE_KEYS = new Set([
+  "contact.contact.phoneNumber",
+  "contact.contact.emergencyPhoneNumber",
+]);
+const PHONE_SHAPE = /^(?:0\d{8,10}|0\d{1,2}([ -])\d{3,4}\1\d{4})$/;
+
+function phoneDigits(value: string): string | undefined {
+  return PHONE_SHAPE.test(value) ? value.replace(/[ -]/g, "") : undefined;
+}
+
 function sameTextValue(
   item: ReviewPlanItem,
   actual: string,
   expected: string,
 ): boolean {
-  return item.dateApproval
-    ? actual.replace(/\D/g, "") === expected.replace(/\D/g, "")
-    : actual === expected;
+  if (item.dateApproval)
+    return actual.replace(/\D/g, "") === expected.replace(/\D/g, "");
+  if (actual === expected) return true;
+  // Sites often hyphenate phone numbers as they are typed (Toss); the same
+  // digits in a phone shape are the value that was written.
+  const key =
+    item.analysis?.valueBinding?.profileFieldKey ??
+    item.analysis?.profileFieldKey ??
+    item.profileFieldKey;
+  if (!key || !PHONE_KEYS.has(key)) return false;
+  const digits = phoneDigits(actual);
+  return digits !== undefined && digits === phoneDigits(expected);
 }
 
 function writeGeneric(
@@ -627,7 +669,8 @@ function writeGeneric(
     traceWrite(item.candidateId, { targetFound: element !== undefined });
     if (
       element instanceof HTMLInputElement &&
-      element.getAttribute("role") === "combobox"
+      element.getAttribute("role") === "combobox" &&
+      !isFreeEntryEmailCombobox(item, element)
     )
       return writeCombobox(handle, value, generic);
     if (
@@ -1143,7 +1186,8 @@ function retainedGenericValue(
     const input = settleElement(handle);
     if (!input?.isConnected) return false;
     return input instanceof HTMLInputElement &&
-      input.getAttribute("role") === "combobox"
+      input.getAttribute("role") === "combobox" &&
+      !isFreeEntryEmailCombobox(item, input)
       ? retainedComboboxValue(handle, value)
       : sameTextValue(item, input.value, value);
   }

@@ -99,6 +99,8 @@ export default defineConfig({
     permissions: [
       "activeTab",
       "storage",
+      // Profile attachments (resume/portfolio PDFs) live in storage.local.
+      "unlimitedStorage",
       "sidePanel",
       "scripting",
       "alarms",
