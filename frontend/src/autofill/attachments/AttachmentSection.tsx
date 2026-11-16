@@ -30,9 +30,15 @@ import {
 type RowState =
   | { status: "idle" }
   | { status: "working" }
-  | { status: "attached"; message: string }
+  | { status: "attached"; message: string; fileName: string }
   | { status: "linked"; message: string }
   | { status: "failed"; message: string };
+
+export interface AttachedFile {
+  fileName: string;
+  fieldLabel: string;
+  element: HTMLInputElement;
+}
 
 export interface AttachmentSectionProps {
   pageDocument: Document;
@@ -40,6 +46,8 @@ export interface AttachmentSectionProps {
   profile?: Profile;
   attach?: typeof defaultAttachFile;
   fill?: typeof defaultFillUrl;
+  /** Called with the successfully attached files, in field order, when they change. */
+  onAttachedChange?(files: readonly AttachedFile[]): void;
 }
 
 const LINKED_MESSAGE =
@@ -84,6 +92,7 @@ export function AttachmentSection({
   profile,
   attach = defaultAttachFile,
   fill = defaultFillUrl,
+  onAttachedChange,
 }: AttachmentSectionProps) {
   const [fields] = useState<AttachmentField[]>(() =>
     findAttachmentFields(pageDocument),
@@ -219,6 +228,7 @@ export function AttachmentSection({
         result.status === "attached"
           ? {
               status: "attached",
+              fileName: file.name,
               message: `첨부했어요: ${file.name}. 사이트의 업로드·저장 버튼은 직접 눌러 주세요.`,
             }
           : { status: "failed", message: result.reason },
@@ -267,6 +277,28 @@ export function AttachmentSection({
     })();
     // Runs once, when the stored files are first known.
   }, [stored]);
+
+  const notifiedAttached = useRef("[]");
+  useEffect(() => {
+    const files = fields.flatMap((field, index) => {
+      const row = rows[index];
+      return row?.status === "attached"
+        ? [
+            {
+              fileName: row.fileName,
+              fieldLabel: field.label,
+              element: currentElement(field),
+            },
+          ]
+        : [];
+    });
+    const key = JSON.stringify(
+      files.map(({ fileName, fieldLabel }) => [fileName, fieldLabel]),
+    );
+    if (key === notifiedAttached.current) return;
+    notifiedAttached.current = key;
+    onAttachedChange?.(files);
+  }, [rows]);
 
   // Successful and pending attachments stay silent; only fields that need
   // the user (unclear meaning, wrong format, a failure, an evidence choice).

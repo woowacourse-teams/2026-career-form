@@ -137,7 +137,10 @@ import {
   type StructureDiagnostics,
 } from "../generic/structure-diagnostics";
 import { debugWarn } from "../debug/autofill-debug";
-import { AttachmentSection } from "../attachments/AttachmentSection";
+import {
+  AttachmentSection,
+  type AttachedFile,
+} from "../attachments/AttachmentSection";
 import { useDeveloperMode } from "../debug/developer-mode";
 import { localWorkflowLog } from "../debug/local-workflow";
 
@@ -315,6 +318,9 @@ function PolicyReadyWorkflow({
   const mounted = useRef(true);
   const [stage, setStage] = useState<Stage>("analyzing");
   const [profile, setProfile] = useState<Profile>();
+  const [attachedFiles, setAttachedFiles] = useState<readonly AttachedFile[]>(
+    [],
+  );
   const [preparationSnapshot, setPreparationSnapshot] =
     useState<ReturnType<typeof collectPreparationSnapshot>>();
   const [preparationItems, setPreparationItems] = useState<PreparationItem[]>(
@@ -1475,12 +1481,30 @@ function PolicyReadyWorkflow({
       manualRevealedLabels={manualRevealedLabels}
       rowSave={rowSave}
       savedRowKeys={savedRowKeys.current}
+      attachments={attachedFiles.map(({ fileName, fieldLabel }) => ({
+        fileName,
+        fieldLabel,
+      }))}
+      onLocateAttachments={() => {
+        const target = attachedFiles.find(
+          ({ element }) => element.isConnected,
+        )?.element;
+        if (!target) return false;
+        const rect = target.getBoundingClientRect();
+        const scrollTarget =
+          rect.width === 0 && rect.height === 0
+            ? (target.parentElement ?? target)
+            : target;
+        scrollTarget.scrollIntoView({ block: "center" });
+        return true;
+      }}
       attachmentSection={
         attachmentStore ? (
           <AttachmentSection
             pageDocument={pageDocument}
             store={attachmentStore}
             profile={profile}
+            onAttachedChange={setAttachedFiles}
           />
         ) : undefined
       }
