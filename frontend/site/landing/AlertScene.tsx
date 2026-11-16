@@ -74,7 +74,7 @@ export function AlertScene() {
             <br />
             마감 전에 다시 알려드려요.
           </h2>
-          <p>하루 전, 2시간 전. 알림 시간은 바꿀 수 있어요.</p>
+          <p>하루 전, 2시간 전에 알림이 와요.</p>
         </div>
         <div ref={put("axis")} className={styles.axis} aria-hidden="true" />
         {TICKS.map((tick, i) => (

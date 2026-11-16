@@ -34,9 +34,23 @@ function sanitizeValues(values: FieldValues): FieldValues {
   );
 }
 
+/** Values a fixed choice was saved under before it was renamed. */
+const RENAMED_CHOICES: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  employmentStatus: { 퇴사: "퇴직" },
+};
+
+function renameChoices(values: FieldValues): FieldValues {
+  return Object.fromEntries(
+    Object.entries(values).map(([key, value]) => [
+      key,
+      RENAMED_CHOICES[key]?.[value] ?? value,
+    ]),
+  );
+}
+
 function sanitizeEntries(entries: ProfileEntry[]): ProfileEntry[] {
   return entries.flatMap((entry) => {
-    const values = sanitizeValues(entry.values);
+    const values = renameChoices(sanitizeValues(entry.values));
     return Object.keys(values).length === 0 ? [] : [{ ...entry, values }];
   });
 }

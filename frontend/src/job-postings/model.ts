@@ -87,6 +87,10 @@ export function createPosting(
       }),
   };
 }
+/** The only postings removed without the user: still planned, deadline passed. */
+export function isExpiredPlan(posting: Posting, now: number): boolean {
+  return posting.status === "planned" && posting.deadline <= now;
+}
 export function pendingReminders(posting: Posting): Reminder[] {
   return posting.status === "completed"
     ? []

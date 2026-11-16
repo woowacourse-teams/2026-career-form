@@ -14,9 +14,13 @@ import { componentRules } from "../policy/runtime-rules";
 import { componentSelector } from "../policy/component-dom";
 import { executionPolicy } from "./execution-policy";
 import type { FieldCandidateHandle } from "../dom/types";
+import { loneCheckboxOfOtherChoice } from "../write/lone-checkbox";
 import type { ReviewPlanItem } from "../review/review-plan";
 import { catalogApprovalForItem } from "../profile/catalog-identity";
-import { retainedCatalogSelection } from "../profile/catalog-receipt";
+import {
+  displayedCatalogSelection,
+  retainedCatalogSelection,
+} from "../profile/catalog-receipt";
 import {
   PROFILE_CATEGORIES,
   type ProfileInputType,
@@ -145,6 +149,10 @@ export function matchesResultValue(
         ? current.trim() === expected
         : current.trim() === (nativeTarget(handle, expected) ?? expected))
     );
+  // A lone box named after another stored choice (야간 for a day attendance)
+  // matches the profile while it stays unchecked.
+  const lone = handle && loneCheckboxOfOtherChoice(item, handle, expected);
+  if (lone) return lone.isConnected && !lone.checked;
   const left = current.trim();
   const right = expected.trim();
   if (!left || !right) return false;
@@ -161,7 +169,9 @@ export function matchesResultValue(
       handle.isCurrentContext?.() === false
     )
       return false;
-    const retained = retainedCatalogSelection(item, element);
+    const retained =
+      retainedCatalogSelection(item, element) ??
+      displayedCatalogSelection(item, element);
     if (retained !== undefined)
       return (
         current === retained &&
@@ -176,6 +186,13 @@ export function matchesResultValue(
     );
   }
   if (left === right) return true;
+  // A written date the site redisplays (202003 → 2020-03) is still the same date.
+  if (
+    item.dateApproval &&
+    left.replace(/\D/g, "") !== "" &&
+    left.replace(/\D/g, "") === right.replace(/\D/g, "")
+  )
+    return true;
   const element = handle?.elements[0];
   const policyBinding = item.analysis?.valueBinding;
   if (

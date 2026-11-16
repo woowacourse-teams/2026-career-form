@@ -122,7 +122,7 @@ public final class PushDispatcher implements AutoCloseable {
 
     private void deliver(PushDelivery claimed, Instant now, Map<String, Optional<JobPosting>> postings, Counters counters) {
         try {
-            var posting = postings.computeIfAbsent(claimed.postingId(), store::findPosting);
+            var posting = posting(claimed.postingId(), postings);
             if (posting.isEmpty()) { finish(claimed, claimed.abandoned(claimed.lastResponseCode(), "POSTING_MISSING"), counters, 0); return; }
             if (!now.isBefore(posting.get().closesAt())) { finish(claimed, claimed.abandoned(claimed.lastResponseCode(), "DEADLINE_PASSED"), counters, 0); return; }
             var subscription = store.findSubscription(claimed.subscriptionId());
@@ -152,6 +152,18 @@ public final class PushDispatcher implements AutoCloseable {
                 exception.getClass().getSimpleName());
             apply(claimed, decision, counters, 0);
         }
+    }
+
+    /**
+     * 공고를 캐시에서 찾고 없으면 저장소에서 읽어 넣는다. computeIfAbsent를 쓰지 않는다. 그 안에서 저장소를 부르면 맵 잠금을 쥔 채 I/O를 하게 되고,
+     * 가상 스레드는 그동안 운반 스레드를 놓지 못해 CPU가 적은 컨테이너에서 발송 전체가 멈춘다. 동시에 처음 조회하면 저장소를 여러 번 읽을 수 있지만 결과는 같다.
+     */
+    private Optional<JobPosting> posting(String id, Map<String, Optional<JobPosting>> postings) {
+        var cached = postings.get(id);
+        if (cached != null) { return cached; }
+        var found = store.findPosting(id);
+        var raced = postings.putIfAbsent(id, found);
+        return raced != null ? raced : found;
     }
 
     /** 선점 뒤 재검사. roles가 없는 레거시 공고와 받을 직무를 고르지 않은 구독은 통과하고, 직무를 고른 구독은 공고와 겹쳐야 한다. */

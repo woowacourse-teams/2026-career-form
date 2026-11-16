@@ -6,7 +6,7 @@ dev, staging, prod가 공유하는 MongoDB 호스트는 `instance=career-db`라�
 
 | 위치 | 변경 | 적용 후 수집 범위 |
 |---|---|---|
-| DB 호스트 | 전용 Alloy, host-state timer | 서버 자원, MongoDB 내부 지표, DB별 용량, 정제 서버 로그 |
+| DB 호스트 | 전용 Alloy, host-state timer, 백업 timer | 서버 자원, MongoDB 내부 지표, DB별 용량, 정제 서버 로그, 백업 결과 |
 | 백엔드 | 드라이버 listener, MongoTemplate 관측 | connection pool, 연결 대기, 명령 왕복, 전체 호출과 안전한 앱 로그 |
 | 중앙 모니터링 | recording rules, Grafana dashboard와 alert provisioning | 조회, 경고, 긴급, 복구와 Discord 메시지 |
 
@@ -76,6 +76,9 @@ Discord에서 장애 시간 전 10분부터 후 20분까지 선택한 DB dashboa
 | 지표/호스트 상태/앱 계측 수집 | 3분 중단 | 10분 중단 |
 | 로그 전송/파싱 오류 | 오류 발생률 >0이 3분 지속 | 10분 지속 |
 | OOM | 없음 | 사건 관찰 즉시 |
+| 백업 | 마지막 성공 8시간 초과 또는 마지막 시도 실패 | 마지막 성공 14시간 초과 |
+
+백업 알림은 `grafana/provisioning/alerting/rules-mongodb-backup.json`에 있다. DB 호스트의 백업 timer가 6시간마다(04, 10, 16, 22시 KST) 쓰는 `career_mongo_backup_*`를 host-state와 같은 textfile 폴더에서 읽는다. 경고와 긴급은 한 주기와 두 주기에 2시간씩 여유를 둔 값이다. 메트릭이 한 번도 없으면 기대 시작 시각부터 누락으로 세므로, 백업 timer의 첫 실행이 끝난 뒤 규칙을 반영한다. 설치, 확인, 복구는 `infra/mongodb/BACKUP.md`를 따른다.
 
 자원과 연결 사용률은 임계값보다 5%p 낮아지고 5분 유지되면 해제한다. 가용 메모리는 5%p 높아져야 한다. 지연과 실패는 기준 아래에서 5분, 접속과 수집은 정상 확인 2분 후 복구한다. OOM은 DB 컨테이너 healthcheck 정상과 가용 메모리 10% 이상이 5분 연속 유지되어야 한다. host-state 성공 샘플이 45초 넘게 끊기거나 호스트가 재부팅되면 정상 유지 시간을 다시 센다.
 

@@ -335,3 +335,10 @@ describe("project profile fields", () => {
     expect(ids.indexOf("organization")).toBe(ids.indexOf("projectName") + 1);
   });
 });
+
+it("stores the left-company choice as 퇴직", () => {
+  const field = PROFILE_CATEGORIES.find(({ id }) => id === "careers")
+    ?.sections.find(({ id }) => id === "career")
+    ?.fields.find(({ id }) => id === "employmentStatus");
+  expect(field?.options).toEqual(["재직중", "퇴직"]);
+});

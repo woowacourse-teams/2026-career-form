@@ -3,6 +3,7 @@ import {
   useState,
   type Dispatch,
   type KeyboardEvent,
+  type ReactNode,
   type SetStateAction,
 } from "react";
 import type { AddressResult } from "../address/types";
@@ -16,17 +17,11 @@ import styles from "../../autofill-demo/AutofillDemo.module.css";
 import { WorkflowResults, type WorkflowResultsProps } from "./WorkflowResults";
 import type { RowSaveManual, RowSaveManualReason } from "../generic/row-save";
 import { genericItemReason } from "../generic/grade-reason-text";
-import {
-  structureActionLine,
-  structureStatusText,
-  type StructureDiagnostics,
-} from "../generic/structure-diagnostics";
 import { resultFieldLabel } from "./result-label";
 import resultStyles from "./WorkflowResults.module.css";
 import resultCss from "./WorkflowResults.module.css?inline";
 import { WorkflowLoading, type WriteProgress } from "./WorkflowLoading";
 import { WorkflowError, type WorkflowErrorKind } from "./WorkflowError";
-import { buildResultModel } from "./result-model";
 import type { WorkflowActivity } from "./progress-model";
 import type { Profile } from "../../profile/model";
 import { usePanelHeading, type PanelHeading } from "./panel-heading";
@@ -51,6 +46,8 @@ function reasonFor(item: ReviewPlanItem): string {
 
 interface WorkflowScreensProps {
   exitInToolbar?: boolean;
+  /** Local profile-file attachment step shown under the fill results. */
+  attachmentSection?: ReactNode;
   wasWritten?: WorkflowResultsProps["wasWritten"];
   progressIdFor?: WorkflowResultsProps["progressIdFor"];
   progressStateFor?: WorkflowResultsProps["progressStateFor"];
@@ -70,8 +67,6 @@ interface WorkflowScreensProps {
     fieldCount: number;
     matchedCount: number;
   };
-  /** Present only for generic documents; static paths never set it. */
-  structureDiagnostics?: StructureDiagnostics;
   stage: Stage;
   preparationItems: readonly PreparationItem[];
   warnings: readonly string[];
@@ -101,11 +96,13 @@ interface WorkflowScreensProps {
   onLocate?(candidateId: string): boolean;
   operatedCategories?: readonly string[];
   onLocateSection?(candidateIds: readonly string[], category?: string): boolean;
+  attachments?: readonly { fileName: string; fieldLabel: string }[];
+  onLocateAttachments?(): boolean;
   onExit(): void;
-  /** Revealed fields written without a second review. */
-  autoWrittenLabels?: readonly string[];
   manualRevealedLabels?: readonly string[];
   /** Generic path only: rows the extension saved with their own save button. */
+  /** Rows the extension registered with the site's row save button. */
+  savedRowKeys?: ReadonlySet<string>;
   rowSave?: {
     saved: number;
     manual: readonly RowSaveManual[];
@@ -121,13 +118,13 @@ const ROW_SAVE_REASON: Record<RowSaveManualReason, string> = {
   stopped: "같은 영역 앞 줄의 등록을 확인하지 못해 누르지 않았어요.",
 };
 
-function stageHeading(stage: Stage): PanelHeading {
+function stageHeading(stage: Stage, interrupted: boolean): PanelHeading {
   if (stage === "preparation-review")
     return { title: "입력 항목 준비", step: "1 / 2" };
   if (stage === "review")
     return { title: "기입 확인", titleLabel: "자동 기입 확인", step: "2 / 2" };
   if (stage === "writing") return { title: "기입 중", step: "2 / 2" };
-  if (stage === "result") return { title: "기입 결과" };
+  if (stage === "result" || interrupted) return { title: "기입 결과" };
   return {};
 }
 
@@ -156,6 +153,47 @@ function AnalysisNotices({
         </aside>
       ))}
     </>
+  );
+}
+
+const GENERIC_STOP_REASON = "문제가 생겨 안전하게 멈췄어요.";
+
+/**
+ * Why the run stopped, shown above the fill results. Only our own fixed
+ * wording reaches the page; raw error text stays in developer-mode details.
+ */
+function StopNotice({
+  reason,
+  detail,
+  developerMode,
+}: {
+  reason?: string;
+  detail?: string;
+  developerMode: boolean;
+}) {
+  const trimmed = reason?.trim();
+  const cause = trimmed
+    ? /[.!?]$/.test(trimmed)
+      ? trimmed
+      : `${trimmed}.`
+    : GENERIC_STOP_REASON;
+  return (
+    <aside className={styles.safety} role="alert">
+      <h3>자동 기입을 멈췄어요</h3>
+      <p>
+        <span>{cause}</span>{" "}
+        <span>
+          이미 입력한 값은 그대로 있어요. 남은 항목은 아래 결과에서 확인해
+          주세요.
+        </span>
+      </p>
+      {developerMode && detail && (
+        <details className={styles.errorDetails}>
+          <summary>오류 정보</summary>
+          <pre>{detail}</pre>
+        </details>
+      )}
+    </aside>
   );
 }
 
@@ -204,7 +242,6 @@ export function WorkflowScreens({
   results,
   addressResult,
   analysisSummary,
-  structureDiagnostics,
   exceptionTitle,
   exceptionKind = "interrupted",
   exceptionDetail,
@@ -215,14 +252,20 @@ export function WorkflowScreens({
   onExit,
   onLocate,
   onLocateSection,
+  attachments,
+  onLocateAttachments,
   operatedCategories,
   currentCategory,
-  autoWrittenLabels = [],
   manualRevealedLabels = [],
   rowSave,
+  savedRowKeys,
+  attachmentSection,
 }: WorkflowScreensProps) {
   const reviewTabsId = useId();
-  const inPanel = usePanelHeading(stageHeading(stage));
+  // A run that stopped after it started keeps the fill result screen and says
+  // why it stopped there; only start failures use the separate error screen.
+  const interrupted = stage === "exception" && exceptionKind === "interrupted";
+  const inPanel = usePanelHeading(stageHeading(stage, interrupted));
   const [pickedReviewTab, setPickedReviewTab] = useState<ReviewTab | null>(
     null,
   );
@@ -617,12 +660,16 @@ export function WorkflowScreens({
     );
   }
 
-  if (stage === "result") {
+  if (stage === "result" || interrupted) {
     return (
       <div className={`${styles.screen} ${styles.resultScreen}`}>
         {!inPanel && <h2 className={styles.resultTitle}>기입 결과</h2>}
-        {analysisSummary?.mode === "GENERIC" && (
-          <AnalysisNotices partial={partial} warnings={warnings} />
+        {interrupted && (
+          <StopNotice
+            reason={exceptionTitle}
+            detail={exceptionDetail}
+            developerMode={developerMode}
+          />
         )}
         <WorkflowResults
           wasWritten={wasWritten}
@@ -636,10 +683,14 @@ export function WorkflowScreens({
           reviewItems={reviewItems}
           onLocate={onLocate}
           onLocateSection={onLocateSection}
+          attachments={attachments}
+          onLocateAttachments={onLocateAttachments}
           operatedCategories={operatedCategories}
           profileGroupsVisible={analysisSummary?.mode === "GENERIC"}
           onOpenProfile={onOpenProfile}
+          {...(savedRowKeys ? { savedRowKeys } : {})}
         />
+        {attachmentSection}
         {manualRevealedLabels.length > 0 && (
           <section aria-label="직접 확인할 새 칸">
             <h3>직접 확인할 새 칸</h3>
@@ -670,59 +721,6 @@ export function WorkflowScreens({
             <summary>주소 확인 필요</summary>
             <p>주소 직접 확인 필요: {addressResult.reason}</p>
           </details>
-        )}
-        {structureDiagnostics && (
-          <details>
-            <summary>구조 자동 준비 내역</summary>
-            <section aria-label="구조 자동 준비">
-              <h3>구조 자동 준비</h3>
-              <p className={resultStyles.guidance}>
-                {structureStatusText(structureDiagnostics.status)}
-              </p>
-              {structureDiagnostics.actions.length > 0 && (
-                <>
-                  <h4>자동으로 한 일</h4>
-                  <ul aria-label="자동으로 한 일">
-                    {structureDiagnostics.actions.map((action, index) => {
-                      const line = structureActionLine(action);
-                      return (
-                        <li key={index}>
-                          <span>{line.kindText}</span>{" "}
-                          {line.sectionTitle && (
-                            <span>{line.sectionTitle}</span>
-                          )}{" "}
-                          <small className={resultStyles.writtenTag}>
-                            {line.resultText}
-                          </small>
-                          {line.reasonText && (
-                            <p className={resultStyles.guidance}>
-                              {line.reasonText}
-                            </p>
-                          )}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </>
-              )}
-            </section>
-          </details>
-        )}
-        {autoWrittenLabels.length > 0 && (
-          <section aria-label="다시 묻지 않고 기입한 새 칸">
-            <h3>다시 묻지 않고 기입한 새 칸</h3>
-            <ul>
-              {autoWrittenLabels.map((label, index) => (
-                <li key={index}>{label}</li>
-              ))}
-            </ul>
-          </section>
-        )}
-        {rowSave && rowSave.saved > 0 && (
-          <section aria-label="확장이 저장한 줄">
-            <h3>확장이 저장한 줄</h3>
-            <p>줄 저장 버튼을 눌러 {rowSave.saved}개 줄을 등록했어요.</p>
-          </section>
         )}
         {(inPanel || !exitInToolbar) && (
           <div className={styles.act}>
@@ -771,27 +769,11 @@ export function WorkflowScreens({
     );
   }
 
-  const { completed, pending } =
-    exceptionKind === "interrupted"
-      ? buildResultModel({
-          reviewItems,
-          results,
-          progress,
-          profile,
-          wasWritten,
-          progressIdFor,
-          progressStateFor,
-          fieldStateFor,
-        })
-      : { completed: [], pending: [] };
   return (
     <WorkflowError
       kind={exceptionKind}
       developerMode={developerMode}
-      reason={exceptionKind === "interrupted" ? exceptionTitle : undefined}
       detail={exceptionDetail}
-      completedCount={completed.length}
-      manualCount={pending.length}
       onRetry={onRetry}
       onBack={exitInToolbar ? undefined : onExit}
     />

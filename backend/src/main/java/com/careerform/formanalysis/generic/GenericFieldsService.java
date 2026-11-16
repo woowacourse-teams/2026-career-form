@@ -194,10 +194,12 @@ public final class GenericFieldsService {
             List<FieldCandidate> names = candidates.stream()
                 .filter(GenericProfileSemantics::isSingleKoreanNameLabel).toList();
             boolean separateParts = candidates.stream().anyMatch(GenericProfileSemantics::isFamilyNameLabel)
-                || candidates.stream().map(field -> mappings.get(field.candidateId())).filter(Objects::nonNull)
+                // 이름 칸 자신의 모델 답은 다른 칸이 따로 있다는 근거가 아니다.
+                || candidates.stream().filter(field -> !names.contains(field))
+                    .map(field -> mappings.get(field.candidateId())).filter(Objects::nonNull)
                     .map(Mapping::profileFieldKey).anyMatch(key -> "personal.personal.koreanFamilyName".equals(key)
                         || "personal.personal.koreanGivenName".equals(key));
-            if (names.size() == 1 && !separateParts && abstained(mappings.get(names.getFirst().candidateId()))) {
+            if (names.size() == 1 && !separateParts && nameRuleApplies(mappings.get(names.getFirst().candidateId()))) {
                 Mapping current = mappings.get(names.getFirst().candidateId());
                 mappings.put(names.getFirst().candidateId(), new Mapping(null, 1.0,
                     current == null || current.categoryConfirmed(), null,
@@ -471,6 +473,25 @@ public final class GenericFieldsService {
             return null;
         }
         return university ? "education.university.transferStatus" : "education.graduateSchool.admissionType";
+    }
+
+    /** 모델 판단이 자동 기입 기준보다 낮으면 칸 구조로 정한 규칙이 대신 정한다. */
+    private static final double MODEL_SURE_CONFIDENCE = 0.8;
+
+    /**
+     * 이름 한 칸 규칙은 모델이 기권했거나, 같은 전체 이름을 골랐거나, 자동 기입 기준보다 낮게 답했을 때 적용한다.
+     * 모델이 다른 답을 기준 이상으로 고른 칸은 그대로 둔다.
+     */
+    private static boolean nameRuleApplies(Mapping mapping) {
+        if (mapping == null || abstained(mapping)) {
+            return true;
+        }
+        if (mapping.reason() != null) {
+            return false;
+        }
+        boolean sameAnswer = mapping.binding() instanceof GenericFieldsResponse.NameBinding name
+            && name.recipe() == com.careerform.formanalysis.application.port.FieldMappingResolver.DerivedRecipe.KOREAN_FULL_NAME;
+        return sameAnswer || mapping.confidence() < MODEL_SURE_CONFIDENCE;
     }
 
     private static boolean abstained(Mapping mapping) {

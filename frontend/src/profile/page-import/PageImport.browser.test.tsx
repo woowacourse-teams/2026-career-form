@@ -255,7 +255,7 @@ it("skips blank default rows and unknown controls", async () => {
       sectionId: "career",
       values: {
         companyName: "합성회사",
-        employmentStatus: "퇴사",
+        employmentStatus: "퇴직",
         responsibilities: "합성 업무",
       },
     },

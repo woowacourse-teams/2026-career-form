@@ -155,11 +155,9 @@ describe("fields a reviewed area reveals after a write", () => {
     // never asked again.
     expect(input("nationality")?.value).toBe("다른국적");
     noFillButton();
-    const shown = screen.getByRole("region", {
-      name: "다시 묻지 않고 기입한 새 칸",
-    });
-    expect(shown).toHaveTextContent("병과");
-    expect(shown).not.toHaveTextContent("국적");
+    expect(
+      screen.queryByRole("region", { name: "다시 묻지 않고 기입한 새 칸" }),
+    ).toBeNull();
     const manual = screen.getByRole("region", { name: "직접 확인할 새 칸" });
     expect(manual).toHaveTextContent("국적");
     expect(manual).not.toHaveTextContent("병과");

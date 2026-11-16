@@ -1,5 +1,6 @@
 import { universityAdditionalMajors } from "./university-additional-majors";
 import { PROFILE_CATEGORIES } from "../../profile/field-definitions";
+import { EMPLOYMENT_STATUS_SYNONYMS } from "../../profile/standard-values";
 import type {
   FieldValues,
   Profile,
@@ -11,6 +12,7 @@ import type { ValueBinding } from "../api/types";
 import { normalizeProfileOptionValue } from "./standard-profile-option";
 import {
   isStandardValueId,
+  standardValueAliases,
   standardValueLabel,
 } from "../../profile/standard-values";
 
@@ -234,6 +236,21 @@ function derivedValue(
     : { status: "missing", sensitive: false };
 }
 
+const ALIAS_LOOKUP_FIELDS: ReadonlySet<string> = new Set([
+  "veteran.veteran.veteranRelation",
+  "disability.disability.disabilityGrade",
+]);
+
+/** The fixed choice of this field shown under this label, if any. */
+function standardValueIdForLabel(key: string, label: string): string | undefined {
+  const [categoryId, sectionId, fieldId] = key.split(".");
+  const choice = PROFILE_CATEGORIES.find(({ id }) => id === categoryId)
+    ?.sections.find(({ id }) => id === sectionId)
+    ?.fields.find(({ id }) => id === fieldId)
+    ?.options?.find((option) => typeof option !== "string" && option.label === label);
+  return choice && typeof choice !== "string" ? choice.value : undefined;
+}
+
 function lookupValue(
   profile: Profile,
   binding: Extract<ValueBinding, { type: "LOOKUP" | "BUTTON_OPTION" }>,
@@ -251,10 +268,31 @@ function lookupValue(
           ? "여성"
           : ""
       : "";
+  // A choice also reaches a site that names it differently: 아들 → 자녀,
+  // 중증 → 심한 장애인. Only these former free-text fields fall back to aliases.
+  const choiceId = ALIAS_LOOKUP_FIELDS.has(binding.profileFieldKey)
+    ? (source.standardValueId ??
+      standardValueIdForLabel(binding.profileFieldKey, source.value))
+    : undefined;
+  const relationAlias = choiceId
+    ? standardValueAliases(choiceId)
+        .map((alias) => binding.optionMap[alias])
+        .find((option): option is string => Boolean(option))
+    : undefined;
+  // 퇴직 was saved as 퇴사 before; site maps may name either one.
+  const employmentAlias =
+    binding.profileFieldKey === "careers.career.employmentStatus"
+      ? Object.values(EMPLOYMENT_STATUS_SYNONYMS)
+          .find((words) => words.includes(source.value.replace(/\s+/g, "")))
+          ?.map((word) => binding.optionMap[word])
+          .find((option): option is string => Boolean(option))
+      : undefined;
   const value =
     binding.optionMap[source.value] ??
     binding.optionMap[standardValueLabel(source.value) ?? ""] ??
-    (genderAlias ? binding.optionMap[genderAlias] : undefined);
+    (genderAlias ? binding.optionMap[genderAlias] : undefined) ??
+    relationAlias ??
+    employmentAlias;
   return value
     ? {
         status: "resolved",

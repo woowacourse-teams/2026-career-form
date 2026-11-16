@@ -1,11 +1,14 @@
 import {
   createPosting,
+  isExpiredPlan,
   pendingReminders,
   type Posting,
   type PostingInput,
 } from "./model";
 import type { PostingRepository } from "./repository";
 export type PostingProblem = "schedule" | "permission" | "notification";
+export const EXPIRED_REVERT_MESSAGE =
+  "마감이 지난 공고는 지원 예정으로 되돌릴 수 없습니다.";
 export interface PostingSnapshot {
   postings: Posting[];
   problems: PostingProblem[];
@@ -49,8 +52,34 @@ export class PostingService {
     else this.problems.add("permission");
     return { postings, problems: [...this.problems] };
   }
+  // Opening the page removes expired plans too. With nothing to remove it
+  // stays read-only, so the storage change it would cause cannot loop back.
   list(): Promise<PostingSnapshot> {
-    return this.serial(async () => this.snapshot(await this.repository.load()));
+    return this.serial(async () => {
+      const loaded = await this.repository.load();
+      const now = this.ports.now();
+      if (!loaded.some((p) => isExpiredPlan(p, now)))
+        return this.snapshot(loaded);
+      const postings = await this.removeExpired(loaded, now);
+      await this.reschedule(postings);
+      return this.snapshot(postings);
+    });
+  }
+  // Permanent: planned postings past their deadline leave storage, completed
+  // ones stay. A failed write keeps what storage still holds; its past
+  // deadline makes reschedule() check again a minute later.
+  private async removeExpired(
+    postings: Posting[],
+    now: number,
+  ): Promise<Posting[]> {
+    const kept = postings.filter((p) => !isExpiredPlan(p, now));
+    if (kept.length === postings.length) return postings;
+    try {
+      await this.repository.save(kept);
+      return kept;
+    } catch {
+      return postings;
+    }
   }
   private find(postings: Posting[], id: string, version: number): Posting {
     const posting = postings.find((p) => p.id === id);
@@ -60,8 +89,13 @@ export class PostingService {
       );
     return posting;
   }
+  // Wake for the next reminder and for every planned deadline (past ones
+  // included), so expired plans leave storage without the page being opened.
   private async reschedule(postings: Posting[]): Promise<void> {
-    const times = postings.flatMap((p) => pendingReminders(p).map((r) => r.at));
+    const times = postings.flatMap((p) => [
+      ...pendingReminders(p).map((r) => r.at),
+      ...(p.status === "planned" ? [p.deadline] : []),
+    ]);
     const earliest = times.length ? Math.min(...times) : undefined;
     const next =
       earliest === undefined
@@ -109,6 +143,9 @@ export class PostingService {
       const postings = await this.repository.load();
       const previous = this.find(postings, id, version);
       const now = this.ports.now();
+      // Reverted past its deadline it would be an expired plan, removed for good.
+      if (!completed && previous.deadline <= now)
+        throw new Error(EXPIRED_REVERT_MESSAGE);
       const next: Posting = {
         ...previous,
         version: version + 1,
@@ -151,7 +188,12 @@ export class PostingService {
     });
   }
   private async reconcile(): Promise<PostingSnapshot> {
-    let postings = await this.repository.load();
+    // Remove first so no reminder goes out for an expired plan. The loop
+    // still skips postings whose deadline passes while it runs.
+    let postings = await this.removeExpired(
+      await this.repository.load(),
+      this.ports.now(),
+    );
     const initial = await this.snapshot(postings);
     const allowed = !initial.problems.includes("permission");
     this.problems.delete("notification");

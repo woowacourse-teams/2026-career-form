@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createEmptyProfile } from "../../profile/model";
 import type { FieldCandidateHandle } from "../dom/types";
 import type { ReviewPlanItem } from "../review/review-plan";
 import { GENERIC_SECTION_FAILURE } from "../generic/generic-analysis";
@@ -772,5 +773,99 @@ describe("profile groups leave out controls already handled", () => {
     };
     const groups = profileGroups(model, stateFor);
     expect(groups.notInProfile.map(({ id }) => id)).toEqual(["free"]);
+  });
+});
+
+describe("fields of a row the extension saved", () => {
+  const profile = {
+    ...createEmptyProfile(),
+    education: [
+      {
+        id: "edu-1",
+        sectionId: "university",
+        values: { degreeLevel: "학사" },
+      },
+    ],
+  };
+  const saved = { ...item, itemIndex: 0 } as ReviewPlanItem;
+  const emptied = () => ({ visible: true, value: "" });
+
+  it("counts a written field as completed after the site emptied its row on save", () => {
+    const result = buildResultModel({
+      reviewItems: [saved],
+      results: written,
+      profile,
+      wasWritten: () => true,
+      fieldStateFor: emptied,
+      savedRowKeys: new Set(["education.university#0"]),
+    });
+    expect(result.pending).toEqual([]);
+    expect(result.completed).toHaveLength(1);
+  });
+
+  it("still asks to check an emptied field whose row was not saved", () => {
+    const result = buildResultModel({
+      reviewItems: [saved],
+      results: written,
+      profile,
+      wasWritten: () => true,
+      fieldStateFor: emptied,
+      savedRowKeys: new Set(),
+    });
+    expect(result.pending).toHaveLength(1);
+  });
+
+  it("counts an earlier pass's write in a saved row as completed", () => {
+    const earlier = {
+      id: "earlier-school",
+      candidateId: "earlier-school",
+      label: "대학교 / 학교명 (1)",
+      category: "학력",
+      status: "written" as const,
+      recordKey: "education.university#0",
+    };
+    const result = buildResultModel({
+      reviewItems: [],
+      results: [],
+      progress: [earlier],
+      profile,
+      progressStateFor: () => false,
+      savedRowKeys: new Set(["education.university#0"]),
+    });
+    expect(result.pending).toEqual([]);
+    expect(result.completed).toHaveLength(1);
+  });
+
+  it("still asks to check an earlier pass's emptied write whose row was not saved", () => {
+    const result = buildResultModel({
+      reviewItems: [],
+      results: [],
+      progress: [
+        {
+          id: "earlier-school",
+          candidateId: "earlier-school",
+          label: "대학교 / 학교명 (1)",
+          category: "학력",
+          status: "written",
+          recordKey: "education.university#0",
+        },
+      ],
+      profile,
+      progressStateFor: () => false,
+      savedRowKeys: new Set(["careers.career#0"]),
+    });
+    expect(result.pending).toHaveLength(1);
+  });
+
+  it("counts the shared entry area as completed after reanalysis moved it to the next row", () => {
+    const result = buildResultModel({
+      reviewItems: [{ ...saved, itemIndex: 1 }],
+      results: written,
+      profile,
+      wasWritten: () => true,
+      fieldStateFor: emptied,
+      savedRowKeys: new Set(["education.university#0"]),
+    });
+    expect(result.pending).toEqual([]);
   });
 });

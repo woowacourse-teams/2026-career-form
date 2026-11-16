@@ -254,7 +254,7 @@ export function readGreetingImport(
         candidate.value === "주전공") ||
       (path?.kind === "workExperiences" &&
         path.suffix === "employmentStatus" &&
-        candidate.value === "퇴사" &&
+        candidate.value === "퇴직" &&
         sources.get(candidate.source)?.[0] instanceof HTMLInputElement &&
         (sources.get(candidate.source)![0] as HTMLInputElement).type ===
           "checkbox")
@@ -402,7 +402,7 @@ function readField(
       element.type === "checkbox" &&
       field.profileFieldKey === "careers.career.employmentStatus"
     )
-      value = element.checked ? "재직중" : "퇴사";
+      value = element.checked ? "재직중" : "퇴직";
     else if (["text", "email", "tel", "number", "date"].includes(element.type))
       value = element.value;
     else return unsupported(field, "unsupported_control");

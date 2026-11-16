@@ -31,6 +31,7 @@ import { type ApprovedWriteResult } from "../write/executor";
 import { PROFILE_CATEGORIES } from "../../profile/field-definitions";
 import type { Profile, RepeatedProfileCategoryId } from "../../profile/model";
 import type { ProfileRepository } from "../../profile/profile-repository";
+import type { AttachmentStore } from "../../attachments/model";
 import styles from "../../autofill-demo/AutofillDemo.module.css";
 
 export type Stage =
@@ -128,6 +129,8 @@ export interface WorkflowProps {
   addressSearch?: AddressSearch;
   apiClient: AnalysisApiClient;
   repository: Pick<ProfileRepository, "load">;
+  /** Profile files for resume/portfolio fields; omitted means no attachment step. */
+  attachmentStore?: AttachmentStore;
   pageDocument: Document;
   unsupportedImageUrl?: string;
   writingImageUrl?: string;

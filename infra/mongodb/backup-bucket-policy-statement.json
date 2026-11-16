@@ -1,0 +1,15 @@
+{
+  "Sid": "CareerFormMongoBackupDenyRead",
+  "Effect": "Deny",
+  "Principal": "*",
+  "Action": [
+    "s3:GetObject",
+    "s3:GetObjectVersion"
+  ],
+  "Resource": "arn:aws:s3:::techcourse-project-2026/career-form/mongodb-backups/*",
+  "Condition": {
+    "ArnNotEquals": {
+      "aws:PrincipalArn": "arn:aws:iam::<AWS_ACCOUNT_ID>:role/ec2-project"
+    }
+  }
+}

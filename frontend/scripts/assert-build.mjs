@@ -54,11 +54,12 @@ const permissions = new Set(manifest.permissions);
 if (
   !permissions.has("activeTab") ||
   !permissions.has("storage") ||
+  !permissions.has("unlimitedStorage") ||
   !permissions.has("sidePanel") ||
   !permissions.has("scripting")
 ) {
   throw new Error(
-    "현재 탭, 프로필 저장, side panel, 지원서 패널 주입 권한이 필요합니다.",
+    "현재 탭, 프로필 저장, 첨부 파일 저장, side panel, 지원서 패널 주입 권한이 필요합니다.",
   );
 }
 

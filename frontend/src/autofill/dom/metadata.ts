@@ -134,6 +134,35 @@ export function structuralLabelOf(controls: readonly HTMLElement[]): StructuralL
 }
 
 /** No name means no group unless a bounded block has its own question. */
+/**
+ * Sites often hide the real radio (display: none) and show only its label.
+ * Such a radio is still a choice when its own label is shown and nothing
+ * between it and the group is hidden; a hidden label or wrapper still excludes it.
+ */
+function shownThroughLabel(control: Element, scope: Element): boolean {
+  if (
+    !(control instanceof HTMLInputElement) ||
+    control.type !== "radio" ||
+    control.name ||
+    control.hasAttribute("hidden")
+  )
+    return false;
+  for (let node = control.parentElement; node && node !== scope; node = node.parentElement)
+    if (node.hasAttribute("hidden") || displayState(node).display === "none") return false;
+  return Array.from(control.labels ?? []).some((label) => {
+    for (let node: Element | null = label; node && node !== scope; node = node.parentElement)
+      if (hiddenTextNode(node)) return false;
+    return true;
+  });
+}
+
+function radioGroupControls(scope: Element, target: Element): HTMLElement[] {
+  return Array.from(scope.querySelectorAll<HTMLElement>(FIELD_CONTROLS)).filter(
+    (control) =>
+      !inExcludedBranch(control, scope, target) || shownThroughLabel(control, scope),
+  );
+}
+
 export function unnamedRadioGroupOf(radio: HTMLInputElement): HTMLInputElement[] {
   const row = structuralRow(radio);
   let node: Element = radio;
@@ -141,14 +170,37 @@ export function unnamedRadioGroupOf(radio: HTMLInputElement): HTMLInputElement[]
     if (node === row || node.matches(ROW_STOP)) break;
     const parent: Element | null = node.parentElement;
     if (!parent || parent.matches(STRUCTURAL_STOP)) break;
-    const controls = activeControls(parent, radio);
+    const controls = radioGroupControls(parent, radio);
     if (!controls.every((control): control is HTMLInputElement =>
       control instanceof HTMLInputElement && control.type === "radio" &&
       !control.name && structuralRow(control) === row)) break;
-    if (controls.length > 1 && structuralLabelOf(controls)) return controls;
+    if (controls.length > 1 &&
+      (structuralLabelOf(controls) || distinctlyLabelled(controls))) return controls;
     node = parent;
   }
   return [radio];
+}
+
+/** Choice pairs that only ever answer one question together. */
+const OPPOSITE_CHOICES: readonly (readonly string[])[] = [
+  ["내국인", "외국인"], ["남", "여"], ["남자", "여자"], ["남성", "여성"],
+  ["대상", "비대상"], ["해당", "비해당"], ["예", "아니오"], ["예", "아니요"],
+  ["네", "아니오"], ["네", "아니요"], ["주간", "야간"], ["있음", "없음"],
+  ["yes", "no"],
+];
+
+/**
+ * A box holding only these radios is one question even with no title (내국인 /
+ * 외국인 at the end of a name row) when its choices are a known opposite pair.
+ * Arbitrary option text alone never forms a group.
+ */
+function distinctlyLabelled(radios: readonly HTMLInputElement[]): boolean {
+  const names = radios.map((radio) =>
+    radio.labels?.length === 1
+      ? (formText(radio.labels[0]!.textContent ?? "") ?? "").toLowerCase()
+      : "");
+  return OPPOSITE_CHOICES.some((pair) =>
+    pair.length === names.length && pair.every((choice) => names.includes(choice)));
 }
 
 /** The nearest single-choice wrapper owns the option, not the group question. */

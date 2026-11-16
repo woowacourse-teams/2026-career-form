@@ -5,6 +5,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { createEmptyProfile } from "../../profile/model";
 import { AnalysisServiceError } from "../api/runtime-client";
+import { AnalysisContractError } from "../api/validate-response";
 import type { AnalysisApiClient } from "../api/types";
 import { AutofillWorkflow } from "./AutofillWorkflow";
 
@@ -34,7 +35,9 @@ afterEach(() => {
 // The first analysis asks for one preparation action; the analysis that follows
 // it fails with a server-style message, which ends the run in the workflow's
 // catch block rather than at a hand-written stop reason.
-function renderRunThatFailsAfterPreparation() {
+function renderRunThatFailsAfterPreparation(
+  failure: unknown = new AnalysisServiceError(RAW),
+) {
   setUrl("https://www.skcareers.com/Application/Index/synthetic");
   document.body.innerHTML = `<section aria-label="보훈">
     <label><input type="radio" name="prsVeteranBenefitYN" value="0">비대상</label>
@@ -93,7 +96,7 @@ function renderRunThatFailsAfterPreparation() {
       };
     },
     analyzeFields: async () => {
-      throw new AnalysisServiceError(RAW);
+      throw failure;
     },
   };
   render(
@@ -111,8 +114,13 @@ it("keeps a service message out of the interrupted screen in normal mode", async
 
   await screen.findByRole("heading", { name: "자동 기입을 멈췄어요" });
 
+  // The stop is told on the fill result screen, not on a separate error page.
+  expect(screen.getByRole("heading", { name: "기입 결과" })).toBeVisible();
   expect(screen.getByRole("alert")).toHaveTextContent(
-    "문제가 생겨 안전하게 멈췄어요.",
+    "서버가 지원서 분석을 완료하지 못해 멈췄어요.",
+  );
+  expect(screen.getByRole("alert")).toHaveTextContent(
+    "이미 입력한 값은 그대로 있어요.",
   );
   expect(document.body.textContent).not.toContain(RAW);
   expect(document.querySelector("details")).toBeNull();
@@ -130,3 +138,47 @@ it("shows that service message only in the developer-mode details", async () => 
   expect(details.querySelector("summary")).toHaveTextContent("오류 정보");
   expect(details).toHaveTextContent(RAW);
 });
+
+it.each([
+  [
+    "a network failure",
+    new AnalysisServiceError(RAW, undefined, undefined, "NETWORK"),
+    "서버에 연결하지 못해 멈췄어요.",
+  ],
+  [
+    "a timeout",
+    new AnalysisServiceError(RAW, undefined, undefined, "TIMEOUT"),
+    "서버 응답이 늦어 멈췄어요.",
+  ],
+  [
+    "a rate limit",
+    new AnalysisServiceError(RAW, undefined, "RATE_LIMITED"),
+    "요청이 많아 멈췄어요. 잠시 후 다시 시도해 주세요.",
+  ],
+  [
+    "an incompatible policy",
+    new AnalysisServiceError(RAW, 404, "POLICY_INCOMPATIBLE"),
+    "확장 프로그램 업데이트가 필요해 멈췄어요.",
+  ],
+  [
+    "a malformed analysis response",
+    new AnalysisContractError(RAW),
+    "서버 응답 형식을 확인할 수 없어 멈췄어요.",
+  ],
+  [
+    "an unexpected local error",
+    new Error(RAW),
+    "문제가 생겨 안전하게 멈췄어요.",
+  ],
+])(
+  "names %s as the stop reason after values were written",
+  async (_name, failure, reason) => {
+    renderRunThatFailsAfterPreparation(failure);
+
+    await screen.findByRole("heading", { name: "자동 기입을 멈췄어요" });
+
+    expect(screen.getByRole("heading", { name: "기입 결과" })).toBeVisible();
+    expect(screen.getByRole("alert")).toHaveTextContent(reason);
+    expect(document.body.textContent).not.toContain(RAW);
+  },
+);

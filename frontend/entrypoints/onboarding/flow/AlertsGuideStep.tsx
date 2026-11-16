@@ -12,12 +12,12 @@ const guides = [
   {
     label: "마감 알림",
     title: "마감 전에 다시 알려드려요",
-    body: "새 공고 목록에서 ‘마감 알림 저장’을 눌러 둔 공고는 마감 24시간 전과 2시간 전에 다시 알려드려요.",
+    body: "새 공고 목록의 ‘저장’이나 알림의 ‘마감 알림 저장’을 눌러 둔 공고는 마감 24시간 전과 2시간 전에 다시 알려드려요.",
   },
   {
     label: "지원 완료",
     title: "지원을 마치면 알림이 멈춰요",
-    body: "지원한 공고에서 ‘지원 완료로 표시’를 누르면 남은 알림이 취소되고 완료한 공고로 옮겨져요.",
+    body: "지원한 공고에서 ‘지원 완료’를 누르면 남은 알림이 취소되고 지원 완료 탭으로 옮겨져요.",
   },
 ] as const;
 
@@ -29,8 +29,8 @@ function Figure({ index }: { index: number }) {
         <img src={logo} alt="" />
         <div>
           <small>Career Form · 지금</small>
-          <b>하늘상사 (~11/20 18:00)</b>
-          <span>백엔드 개발자 · 지금 바로 지원하기</span>
+          <b>하늘상사 · 백엔드 개발자</b>
+          <span>접수 11/13 10:00 ~ 11/20 18:00 (한국 시간)</span>
         </div>
       </div>
     );
@@ -46,7 +46,7 @@ function Figure({ index }: { index: number }) {
         </span>
       </div>
       <span className={done ? `${styles.mark} ${styles.ok}` : styles.mark}>
-        {done ? "지원 완료" : "마감 알림 저장"}
+        {done ? "지원 완료" : "✓ 저장됨"}
       </span>
       <div className={styles.tags}>
         {["24시간 전 알림", "2시간 전 알림"].map((tag) => (

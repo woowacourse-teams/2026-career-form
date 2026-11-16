@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 import type {
   Profile,
   ProfileEntry,
@@ -46,6 +46,19 @@ interface ProfileFormProps {
   ): void;
   onSelectAddress?(address: StructuredAddress): void;
   confirmDelete(message: string): boolean;
+  /** Extra labelled row rendered under one entry field (e.g. evidence files). */
+  fieldAccessory?(target: FieldAccessoryTarget): FieldAccessory | null;
+}
+
+export interface FieldAccessory {
+  label: string;
+  content: ReactNode;
+}
+
+export interface FieldAccessoryTarget {
+  sectionId: string;
+  entryId: string;
+  fieldId: string;
 }
 
 interface FieldsProps {
@@ -55,6 +68,8 @@ interface FieldsProps {
   identity?: ProfileIdentity;
   onChange(fieldId: string, value: string, identity?: ProfileIdentity): void;
   onSelectAddress?(address: StructuredAddress): void;
+  entryId?: string;
+  fieldAccessory?: ProfileFormProps["fieldAccessory"];
 }
 
 function optionsForField(
@@ -126,6 +141,8 @@ function Fields({
   identity,
   onChange,
   onSelectAddress,
+  entryId,
+  fieldAccessory,
 }: FieldsProps) {
   const personal = section.id === "personal";
   return (
@@ -192,7 +209,14 @@ function Fields({
                   const hasLegacyValue =
                     value.length > 0 &&
                     !options.some((option) => option.value === value);
-                  return (
+                  const accessory = entryId
+                    ? fieldAccessory?.({
+                        sectionId: section.id,
+                        entryId,
+                        fieldId: field.id,
+                      })
+                    : undefined;
+                  const control = (
                     <label
                       className={`${styles.field} ${field.inputType === "textarea" ? styles.fieldTop : ""} ${field.inputType === "textarea" || FULL_WIDTH_FIELDS.has(field.id) ? styles.fullWidth : ""}`}
                       htmlFor={id}
@@ -263,6 +287,22 @@ function Fields({
                       )}
                     </label>
                   );
+                  if (!accessory) return control;
+                  return (
+                    <Fragment key={field.id}>
+                      {control}
+                      <div
+                        className={`${styles.field} ${styles.fullWidth}`}
+                        role="group"
+                        aria-label={accessory.label}
+                      >
+                        <span className={styles.fieldLabel}>
+                          {accessory.label}
+                        </span>
+                        <div>{accessory.content}</div>
+                      </div>
+                    </Fragment>
+                  );
                 })}
             </div>
           </fieldset>
@@ -289,7 +329,9 @@ function EntryCard({
   section,
   onChange,
   onDelete,
+  fieldAccessory,
 }: {
+  fieldAccessory?: ProfileFormProps["fieldAccessory"];
   categoryId: RepeatedProfileCategoryId;
   title: string;
   entry: ProfileEntry;
@@ -336,6 +378,8 @@ function EntryCard({
           idPrefix={`${categoryId}-entry-${entry.id}`}
           identity={entry.identity}
           onChange={onChange}
+          entryId={entry.id}
+          fieldAccessory={fieldAccessory}
         />
       </div>
     </article>
@@ -351,6 +395,7 @@ export function ProfileForm({
   onUpdateSingle,
   onSelectAddress,
   confirmDelete,
+  fieldAccessory,
 }: ProfileFormProps) {
   const formRef = useRef<HTMLDivElement>(null);
   const pendingAdd = useRef(false);
@@ -439,6 +484,7 @@ export function ProfileForm({
             title={title}
             entry={entry}
             section={section}
+            fieldAccessory={fieldAccessory}
             onChange={(fieldId, value, identity) =>
               identity
                 ? onUpdateEntry(categoryId, entry.id, fieldId, value, identity)

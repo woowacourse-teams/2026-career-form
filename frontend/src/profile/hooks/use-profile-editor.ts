@@ -41,18 +41,39 @@ function isIdentityField(
   );
 }
 
-/** Fill a blank certificate issuer from the catalog selection; never overwrite one. */
-function selectedIssuer(
+/**
+ * Issuer text that a catalog selection filled into a certificate entry object.
+ * React StrictMode calls state updaters twice, so a note is written only on
+ * the entry object an updater has just created, never on one it read. Profile
+ * state is never changed in place, so a lookup gives the same answer on every
+ * call. Updaters must hand back unchanged entries as the same objects; a copy
+ * loses its note. Load, import and reload create new objects without notes,
+ * so their issuers never count as filled. Nothing here is saved.
+ */
+const filledIssuers = new WeakMap<ProfileEntry, string>();
+
+/**
+ * Issuer to write for a certificate edit, and the filled issuer the edited
+ * entry keeps. A catalog selection fills a blank issuer or replaces one that
+ * still holds exactly the text an earlier selection filled; a selection that
+ * keeps the user's issuer forgets the earlier fill. Other edits keep the note.
+ */
+function certificateIssuerEdit(
   categoryId: RepeatedProfileCategoryId,
   fieldId: string,
   entry: ProfileEntry,
   name: string,
   identity: ProfileIdentity | undefined,
-): { issuer?: string } {
-  if (categoryId !== "certifications" || fieldId !== "name") return {};
-  if (entry.values.issuer?.trim()) return {};
-  const issuer = catalogCertificateIssuer(identity, name);
-  return issuer ? { issuer } : {};
+): { issuer?: string; filled?: string } {
+  if (categoryId !== "certifications") return {};
+  const filled = filledIssuers.get(entry);
+  const selected =
+    fieldId === "name" ? catalogCertificateIssuer(identity, name) : undefined;
+  if (!selected) return { filled };
+  const current = entry.values.issuer ?? "";
+  return !current.trim() || current === filled
+    ? { issuer: selected, filled: selected }
+    : {};
 }
 
 export function useProfileEditor(
@@ -201,32 +222,36 @@ export function useProfileEditor(
     ) => {
       changeProfile((current) => ({
         ...current,
-        [categoryId]: current[categoryId].map((entry) =>
-          entry.id === entryId
-            ? {
-                ...entry,
-                values: {
-                  ...entry.values,
-                  [fieldId]: value,
-                  ...selectedIssuer(
-                    categoryId,
-                    fieldId,
-                    entry,
-                    value,
-                    identity,
-                  ),
-                },
-                ...(isIdentityField(categoryId, entry, fieldId)
-                  ? {
-                      identity: identity ?? {
-                        status: "manual" as const,
-                        originalText: value,
-                      },
-                    }
-                  : {}),
-              }
-            : entry,
-        ),
+        [categoryId]: current[categoryId].map((entry) => {
+          if (entry.id !== entryId) return entry;
+          const { issuer, filled } = certificateIssuerEdit(
+            categoryId,
+            fieldId,
+            entry,
+            value,
+            identity,
+          );
+          const next: ProfileEntry = {
+            ...entry,
+            values: {
+              ...entry.values,
+              [fieldId]: value,
+              ...(issuer ? { issuer } : {}),
+            },
+            ...(isIdentityField(categoryId, entry, fieldId)
+              ? {
+                  identity: identity ?? {
+                    status: "manual" as const,
+                    originalText: value,
+                  },
+                }
+              : {}),
+          };
+          // Only the object made here gets the note, so another call with the
+          // same state still reads the same notes.
+          if (filled) filledIssuers.set(next, filled);
+          return next;
+        }),
       }));
     },
     [changeProfile],

@@ -126,3 +126,23 @@ describe("a lone checkbox named after one choice of the profile field", () => {
     expect(box.checked).toBe(false);
   });
 });
+
+describe("a lone checkbox for a field stored as a standard choice", () => {
+  it("leaves a 야간 box unchecked for a profile stored as attendance:day", () => {
+    const { box, registry } = loneCheckbox("야간");
+    const base = item("attendance:day");
+    const key = "education.university.attendanceType";
+    const entry: ReviewPlanItem = {
+      ...base,
+      profileFieldKey: key,
+      analysis: { ...base.analysis!, profileFieldKey: key } as MatchedFieldAnalysis,
+    };
+    const [result] = executeApprovedWrites({
+      items: [entry],
+      approvedCandidateIds: new Set(["field-1"]),
+      registry,
+    });
+    expect(result).toMatchObject({ code: "ALREADY_MATCHED" });
+    expect(box.checked).toBe(false);
+  });
+});

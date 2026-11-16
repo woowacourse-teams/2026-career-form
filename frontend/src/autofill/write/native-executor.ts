@@ -29,6 +29,7 @@ import type { ReviewPlanItem } from "../review/review-plan";
 import { revalidateDateTarget } from "../review/date-target-format";
 import { getWriteAdapter } from "../adapters/write";
 import { normalizeDisplayName } from "./display-name";
+import { loneCheckboxOfOtherChoice } from "./lone-checkbox";
 import type { WriteFailureCode } from "./failure";
 import { bindingKey, isSelectableApproved } from "./search-executor";
 import { dropdownValue } from "../dom/button-dropdown";
@@ -318,6 +319,29 @@ function validTextValue(
   return element.type !== "number" || validNumberInput(element, value);
 }
 
+const EMAIL_VALUE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Some email boxes are comboboxes only to suggest domains (Toss links its
+ * popup with aria-owns). With no controlled selection listbox, the typed
+ * email is the value; every other combobox still needs an exact option.
+ */
+function isFreeEntryEmailCombobox(
+  item: ReviewPlanItem,
+  element: Element | undefined,
+): boolean {
+  return (
+    element instanceof HTMLInputElement &&
+    element.getAttribute("role") === "combobox" &&
+    !element.readOnly &&
+    !element.hasAttribute("aria-controls") &&
+    (item.analysis?.valueBinding?.profileFieldKey ??
+      item.analysis?.profileFieldKey ??
+      item.profileFieldKey) === "contact.contact.email" &&
+    EMAIL_VALUE.test(item.profileValue ?? "")
+  );
+}
+
 function comboboxParts(input: HTMLInputElement): HTMLElement | undefined {
   const ids = input.getAttribute("aria-controls")?.trim().split(/\s+/) ?? [];
   if (input.getAttribute("role") !== "combobox" || ids.length !== 1)
@@ -564,47 +588,6 @@ function hasGenericConflict(
   );
 }
 
-/** Labels of the stored choices of a select-type profile field. */
-function profileFieldChoices(key: string | undefined): string[] {
-  const [categoryId, sectionId, fieldId] = key?.split(".") ?? [];
-  const field = PROFILE_CATEGORIES.find(({ id }) => id === categoryId)
-    ?.sections.find(({ id }) => id === sectionId)
-    ?.fields.find(({ id }) => id === fieldId);
-  return (field?.options ?? []).map((choice) =>
-    typeof choice === "string" ? choice : choice.label,
-  );
-}
-
-/**
- * A lone checkbox named after one choice of the profile field, while the
- * stored value is another choice of that field: the box should stay unchecked.
- */
-function loneCheckboxOfOtherChoice(
-  item: ReviewPlanItem,
-  handle: FieldCandidateHandle,
-  value: string,
-): HTMLInputElement | undefined {
-  const [box] = handle.elements;
-  if (
-    handle.elements.length !== 1 ||
-    !(box instanceof HTMLInputElement) ||
-    box.type !== "checkbox"
-  )
-    return undefined;
-  const label =
-    box.labels?.length === 1
-      ? box.labels[0]?.textContent
-      : box.getAttribute("aria-label");
-  const choices = profileFieldChoices(
-    item.analysis?.valueBinding?.profileFieldKey ?? item.profileFieldKey,
-  );
-  const named = choices.filter((choice) => sameOptionName(label ?? "", choice));
-  const stored = choices.filter((choice) => sameOptionName(value, choice));
-  return label && named.length === 1 && stored.length === 1 && named[0] !== stored[0]
-    ? box
-    : undefined;
-}
-
 function nativeChoiceValue(item: ReviewPlanItem, handle: FieldCandidateHandle): string {
   const value = item.profileValue ?? "";
   if (
@@ -630,14 +613,33 @@ function settleElement(handle: FieldCandidateHandle) {
   return readbackWriteElement(handle, writtenTargets.get(handle));
 }
 
+const PHONE_KEYS = new Set([
+  "contact.contact.phoneNumber",
+  "contact.contact.emergencyPhoneNumber",
+]);
+const PHONE_SHAPE = /^(?:0\d{8,10}|0\d{1,2}([ -])\d{3,4}\1\d{4})$/;
+
+function phoneDigits(value: string): string | undefined {
+  return PHONE_SHAPE.test(value) ? value.replace(/[ -]/g, "") : undefined;
+}
+
 function sameTextValue(
   item: ReviewPlanItem,
   actual: string,
   expected: string,
 ): boolean {
-  return item.dateApproval
-    ? actual.replace(/\D/g, "") === expected.replace(/\D/g, "")
-    : actual === expected;
+  if (item.dateApproval)
+    return actual.replace(/\D/g, "") === expected.replace(/\D/g, "");
+  if (actual === expected) return true;
+  // Sites often hyphenate phone numbers as they are typed (Toss); the same
+  // digits in a phone shape are the value that was written.
+  const key =
+    item.analysis?.valueBinding?.profileFieldKey ??
+    item.analysis?.profileFieldKey ??
+    item.profileFieldKey;
+  if (!key || !PHONE_KEYS.has(key)) return false;
+  const digits = phoneDigits(actual);
+  return digits !== undefined && digits === phoneDigits(expected);
 }
 
 function writeGeneric(
@@ -654,8 +656,9 @@ function writeGeneric(
       written: false, reason: UNSAFE, code: "UNSUPPORTED_CONTROL",
       ...(command === "SELECT_OPTION" ? { failureCode: "OPTION_UNMATCHED" as const } : {}),
     };
-  if (strict && hasGenericConflict(item, handle))
+  if (strict && hasGenericConflict(item, handle)) {
     return { written: false, reason: CONFLICT, code: "CONFLICT" };
+  }
   traceWrite(item.candidateId, {
     targetFound: false,
     setterCalled: false,
@@ -666,7 +669,8 @@ function writeGeneric(
     traceWrite(item.candidateId, { targetFound: element !== undefined });
     if (
       element instanceof HTMLInputElement &&
-      element.getAttribute("role") === "combobox"
+      element.getAttribute("role") === "combobox" &&
+      !isFreeEntryEmailCombobox(item, element)
     )
       return writeCombobox(handle, value, generic);
     if (
@@ -743,8 +747,9 @@ function writeGeneric(
     if (
       !setNativeValue(select, option.value) ||
       select.selectedOptions[0] !== option
-    )
+    ) {
       return { written: false, reason: UNSAFE, code: "EXECUTION_FAILED" };
+    }
     dispatchValueEvents(select);
     traceWrite(item.candidateId, {
       valueAfterWrite: select.selectedOptions[0] === option,
@@ -1181,7 +1186,8 @@ function retainedGenericValue(
     const input = settleElement(handle);
     if (!input?.isConnected) return false;
     return input instanceof HTMLInputElement &&
-      input.getAttribute("role") === "combobox"
+      input.getAttribute("role") === "combobox" &&
+      !isFreeEntryEmailCombobox(item, input)
       ? retainedComboboxValue(handle, value)
       : sameTextValue(item, input.value, value);
   }
