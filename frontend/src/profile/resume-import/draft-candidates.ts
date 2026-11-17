@@ -26,6 +26,8 @@ export interface DraftStats {
   draftCounts: Record<ProfileCategoryId, number>;
   catalogMatched: number;
   catalogEmptied: number;
+  /** Dates given as YYYY-MM and stored as YYYY-MM-01. */
+  monthDates: number;
 }
 export interface DraftConversion {
   candidates: ImportCandidate[];
@@ -37,6 +39,12 @@ export interface DraftConversion {
  * The same formats the import save (merge.ts) accepts, checked up front so one
  * odd value cannot make the whole selection unsavable.
  */
+/** A YYYY-MM date becomes YYYY-MM-01; anything else is returned unchanged. */
+function dayFilledDate(field: ProfileFieldDefinition, value: string) {
+  const month = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(value);
+  return field.inputType === "date" && month ? `${value}-01` : undefined;
+}
+
 function storable(field: ProfileFieldDefinition, value: string): boolean {
   if (field.inputType === "date")
     return (
@@ -82,6 +90,7 @@ export function draftToCandidates(
     ) as Record<ProfileCategoryId, number>,
     catalogMatched: 0,
     catalogEmptied: 0,
+    monthDates: 0,
   };
 
   const add = (
@@ -95,6 +104,8 @@ export function draftToCandidates(
       let value = raw.trim();
       if (!value) continue;
       const field = fields.find((item) => item.id === fieldId);
+      const filled = field && dayFilledDate(field, value);
+      if (filled) value = filled;
       if (!field || !storable(field, value)) {
         skip("invalid_value");
         continue;
@@ -118,7 +129,9 @@ export function draftToCandidates(
         reason: "resume",
         value,
         ...(field.inputType === "date" ? { precision: "day" as const } : {}),
+        ...(filled ? { dayFilled: true } : {}),
       });
+      if (filled) stats.monthDates += 1;
     }
   };
 

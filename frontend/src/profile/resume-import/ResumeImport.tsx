@@ -343,6 +343,7 @@ export function ResumeImport({
       catalogEmptied: conversion.stats.catalogEmptied,
       invalid: conversion.skipped.invalid_value ?? 0,
       rows: conversion.candidates.length,
+      monthDates: conversion.stats.monthDates,
     });
     let profile: Profile;
     try {

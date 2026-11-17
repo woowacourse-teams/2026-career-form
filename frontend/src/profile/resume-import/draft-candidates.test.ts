@@ -171,7 +171,8 @@ describe("draftToCandidates", () => {
     const { candidates, skipped } = draftToCandidates(
       draft({
         personal: {
-          birthDate: "1999-02",
+          // Year only: still invalid after the month-date rule.
+          birthDate: "1999",
           nationality: "  ",
           unknownField: "x",
         },
@@ -195,6 +196,59 @@ describe("draftToCandidates", () => {
     ]);
     expect(skipped).toEqual({ invalid_value: 6 });
   });
+
+  it("fills a month-only date with day 01 and marks it", () => {
+    const { candidates, stats } = draftToCandidates(
+      draft({
+        careers: [
+          {
+            sectionId: "career",
+            values: {
+              companyName: "합성상사",
+              startDate: "2019-07",
+              endDate: "2021-02-15",
+            },
+          },
+        ],
+      }),
+      CATALOG,
+    );
+    expect(
+      candidates.map((c) => [
+        c.profileFieldKey,
+        c.value,
+        c.precision,
+        c.dayFilled,
+      ]),
+    ).toEqual([
+      ["careers.career.companyName", "합성상사", undefined, undefined],
+      ["careers.career.startDate", "2019-07-01", "day", true],
+      ["careers.career.endDate", "2021-02-15", "day", undefined],
+    ]);
+    expect(stats.monthDates).toBe(1);
+  });
+
+  it.each(["2019", "2019-13", "2019-7", "19-07", "2019-07-1", "2019/07"])(
+    "leaves a malformed date %s empty",
+    (value) => {
+      const { candidates, skipped, stats } = draftToCandidates(
+        draft({
+          careers: [
+            {
+              sectionId: "career",
+              values: { companyName: "합성상사", startDate: value },
+            },
+          ],
+        }),
+        CATALOG,
+      );
+      expect(candidates.map((c) => c.profileFieldKey)).toEqual([
+        "careers.career.companyName",
+      ]);
+      expect(skipped).toEqual({ invalid_value: 1 });
+      expect(stats.monthDates).toBe(0);
+    },
+  );
 
   it("tolerates a draft missing categories", () => {
     const { candidates, stats } = draftToCandidates(

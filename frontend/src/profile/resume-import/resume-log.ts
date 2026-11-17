@@ -34,6 +34,7 @@ const COUNTS = [
   "catalogEmptied",
   "invalid",
   "rows",
+  "monthDates",
   "saved",
 ] as const;
 
@@ -49,6 +50,8 @@ export interface ResumeImportRecord {
   catalogEmptied?: number;
   invalid?: number;
   rows?: number;
+  /** Dates given as YYYY-MM whose day was filled with 01. */
+  monthDates?: number;
   saved?: number;
 }
 

@@ -253,6 +253,56 @@ describe("ResumeImport", () => {
     expect(memory.stored().certifications).toEqual([]);
   });
 
+  it("stores a month-only date as day 01 and tags it on the review screen", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    const memory = memoryRepository();
+    const state = setup({
+      repository: memory.repository,
+      replies: [
+        {
+          ok: true,
+          profile: draft({
+            careers: [
+              {
+                sectionId: "career",
+                values: {
+                  companyName: "합성상사",
+                  startDate: "2019-07",
+                  endDate: "2021-02-15",
+                },
+              },
+            ],
+          }),
+        },
+      ],
+    });
+    await proceed();
+    await reviewReady();
+    fireEvent.click(screen.getByRole("button", { name: /^직장경력/ }));
+    const start = screen
+      .getByRole("checkbox", { name: /입사일 가져오기$/ })
+      .closest("div")!;
+    expect(within(start).getByText("일 확인")).toBeVisible();
+    expect(within(start).getByText("2019.07.01")).toBeVisible();
+    const end = screen
+      .getByRole("checkbox", { name: /퇴사일 가져오기$/ })
+      .closest("div")!;
+    expect(within(end).queryByText("일 확인")).toBeNull();
+    expect(screen.getAllByText("일 확인")).toHaveLength(1);
+    save();
+    await waitFor(() => expect(state.onSaved).toHaveBeenCalledOnce());
+    expect(memory.stored().careers[0]!.values).toMatchObject({
+      startDate: "2019-07-01",
+      endDate: "2021-02-15",
+    });
+    const record = info.mock.calls.find(
+      (call) =>
+        call[0] === RESUME_IMPORT_LOG_PREFIX && call[1] === "catalog_match",
+    )!;
+    expect(record[2]).toMatchObject({ monthDates: 1 });
+    expect(JSON.stringify(info.mock.calls)).not.toMatch(/2019|2021/);
+  });
+
   it("offers retry after a server failure and leaves the profile unchanged", async () => {
     const memory = memoryRepository();
     const state = setup({

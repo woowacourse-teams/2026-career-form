@@ -19,7 +19,11 @@ export interface ResumeDraftEntry {
   sectionId: string;
   values: Record<string, string>;
 }
-/** The #469 response profile: no entry ids or identities; dates only when complete. */
+/**
+ * The #469 response profile: no entry ids or identities. Date fields are
+ * "YYYY-MM-DD", or "YYYY-MM" when the resume gave no day (draft-candidates
+ * stores those as "YYYY-MM-01" and marks them); other date text is dropped.
+ */
 export type ResumeDraft = Record<
   SingleProfileCategoryId,
   Record<string, string>
