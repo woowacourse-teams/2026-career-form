@@ -1,4 +1,6 @@
 import { browser } from "wxt/browser";
+// Both files ship inside the extension, so no code is fetched from outside it.
+import { PDFJS_LIBRARY_PATH, PDFJS_WORKER_PATH } from "./pdfjs-paths";
 
 interface TextItem {
   str?: string;
@@ -22,13 +24,6 @@ export interface PdfjsModule {
   }): { promise: Promise<PdfDocument>; destroy(): Promise<void> };
   GlobalWorkerOptions?: { workerSrc: string };
 }
-
-/**
- * Both files are copied from pdfjs-dist into the build (wxt.config.ts) and
- * listed as web-accessible, so no code is fetched from outside the extension.
- */
-export const PDFJS_LIBRARY_PATH = "/pdfjs/pdf.min.mjs";
-export const PDFJS_WORKER_PATH = "/pdfjs/pdf.worker.min.mjs";
 
 // Same form the in-page panel uses for its other packaged files.
 const extensionUrl = (path: string) =>

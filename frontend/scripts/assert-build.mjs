@@ -109,6 +109,26 @@ if (
   );
 }
 
+// Resume PDF import (#470) ships pdf.js as separate files; the content script
+// imports them on demand instead of carrying the library on every page.
+const pdfjsFiles = ["pdfjs/pdf.min.mjs", "pdfjs/pdf.worker.min.mjs"];
+await Promise.all(
+  pdfjsFiles.map((fileName) => readFile(resolve(outputDirectory, fileName))),
+);
+const accessible = new Set(
+  (manifest.web_accessible_resources ?? []).flatMap(
+    (entry) => entry.resources ?? [],
+  ),
+);
+if (pdfjsFiles.some((fileName) => !accessible.has(fileName))) {
+  throw new Error(
+    "이력서 PDF 글자 추출 파일이 web_accessible_resources에 필요합니다.",
+  );
+}
+if (autofillArtifact.includes("Invalid PDF structure")) {
+  throw new Error("autofill content script에 pdf.js가 들어가서는 안 됩니다.");
+}
+
 const assetNames = await readdir(resolve(outputDirectory, "assets"));
 const fontAssets = assetNames.filter((fileName) => fileName.endsWith(".woff2"));
 
