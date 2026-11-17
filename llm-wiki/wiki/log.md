@@ -1160,3 +1160,10 @@
 - 승인한 후보 4개를 [CF-467 bundle](../raw/issues/CF-467/manifest.md)에 기록했다. 섹션 결과 캐시 ADR(저장 단위, 키, 무효화, 저장 위치, 동시 요청, 켜고 끄기의 대안과 결정), 확장 쪽과 서버 쪽 캐시의 현재 상태, 구현 중 확인한 사실, 캐시가 켜진 뒤의 테스트 주의다.
 - [범용 섹션 분석 캐시: 확장 쪽과 서버 쪽](topics/generic-section-analysis-cache.md) topic과 색인을 갱신했다.
 - 실제 지원값, 계정, 세션, 키 값, 대화 전문은 저장하지 않았다.
+
+## [2026-11-17] ingest | CF-469 이력서 글자 프로필 초안 API
+- Approval-Digest: 4e0c1ca17fa53e0b15073a5e1d795bcbb356e7747a5df457e365af943975e3e3
+- Source-Revision: 76961167
+- 승인한 후보 3개를 [CF-469 bundle](../raw/issues/CF-469/manifest.md)에 기록했다. API 계약, 키·형식·원문 근거 검증 규칙과 YYYY-MM 날짜, 로컬·스테이징 전용 값 트레이스와 기록 경계다.
+- [이력서 글자 프로필 초안 API](topics/resume-profile-import.md) topic과 색인을 새로 만들었다.
+- 실제 이력서, 지원값, 계정, 세션, 키 값, 대화 전문은 저장하지 않았다.
