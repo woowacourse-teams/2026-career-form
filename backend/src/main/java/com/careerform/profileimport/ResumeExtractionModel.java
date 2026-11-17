@@ -30,7 +30,8 @@ final class ResumeExtractionModel {
         - Extract only facts explicitly written in the text. Never guess, infer, translate, or fill defaults.
         - Copy text values exactly as written (same spelling and language). Omit a field when it is not written.
         - For a choice field output the listed value id only when the text clearly states that choice; otherwise omit it.
-        - Dates must be YYYY-MM-DD and only when the year, month and day are all written; otherwise omit the date.
+        - Dates: YYYY-MM-DD when the year, month and day are written; YYYY-MM when only the year and month are
+          written; omit the date when only the year is written. Never add a month or day that is not written.
         - Phone numbers are digits only.
         - Split each school, job, certificate, language test and project into its own array element.
         - Split Korean names into family name and given name only when the split is unambiguous.

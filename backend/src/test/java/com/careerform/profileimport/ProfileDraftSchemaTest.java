@@ -156,6 +156,96 @@ class ProfileDraftSchemaTest {
         assertThat(schema.isDraftShape(JSON.readTree("{}"))).isTrue();
     }
 
+    private static final String DATED = """
+        합성상사 2020.03 ~ 2021년 6월
+        합성전자 03/2022 입사, 2023-01-15 퇴사
+        합성학교 2018 졸업, 경력 3년, 사번 2019-0731
+        """;
+
+    private ProfileDraftSchema.Draft validateDated(String json) {
+        return schema.validate(JSON.readTree(json), DATED);
+    }
+
+    @Test
+    @DisplayName("원문에 연월만 있으면 YYYY-MM을 받는다(점, 년월, 월/연 표기)")
+    void keepsMonthOnlyDates() {
+        var draft = validateDated("""
+            {"careers":[
+              {"sectionId":"career","values":{"companyName":"합성상사","startDate":"2020-03","endDate":"2021-06"}},
+              {"sectionId":"career","values":{"companyName":"합성전자","startDate":"2022-03"}}]}
+            """);
+
+        assertThat(draft.profile().get("careers")).isEqualTo(List.of(
+            Map.of("sectionId", "career", "values",
+                Map.of("companyName", "합성상사", "startDate", "2020-03", "endDate", "2021-06")),
+            Map.of("sectionId", "career", "values", Map.of("companyName", "합성전자", "startDate", "2022-03"))));
+        assertThat(draft.droppedValues()).isZero();
+    }
+
+    @Test
+    @DisplayName("원문에 연월일이 있으면 YYYY-MM-DD를 그대로 받는다")
+    void keepsFullDates() {
+        var draft = validateDated("""
+            {"careers":[{"sectionId":"career","values":{"companyName":"합성전자","endDate":"2023-01-15"}}]}
+            """);
+
+        assertThat(draft.profile().get("careers")).isEqualTo(List.of(
+            Map.of("sectionId", "career", "values", Map.of("companyName", "합성전자", "endDate", "2023-01-15"))));
+        assertThat(draft.droppedValues()).isZero();
+    }
+
+    @Test
+    @DisplayName("원문에 연도만 있으면 날짜를 비우고 일이나 월을 지어낸 값은 버린다")
+    void dropsYearOnlyDates() {
+        var draft = validateDated("""
+            {"education":[{"sectionId":"university","values":{"schoolName":"합성학교","endDate":"2018"}},
+                          {"sectionId":"highSchool","values":{"schoolName":"합성학교","endDate":"2018-01"}},
+                          {"sectionId":"graduateSchool","values":{"schoolName":"합성학교","endDate":"2018-01-01"}}]}
+            """);
+
+        assertThat(draft.profile().get("education")).isEqualTo(List.of(
+            Map.of("sectionId", "university", "values", Map.of("schoolName", "합성학교")),
+            Map.of("sectionId", "highSchool", "values", Map.of("schoolName", "합성학교")),
+            Map.of("sectionId", "graduateSchool", "values", Map.of("schoolName", "합성학교"))));
+        assertThat(draft.droppedValues()).isEqualTo(3);
+    }
+
+    @Test
+    @DisplayName("연도는 있지만 그 연도의 월이 원문에 없으면 버리고 관계없는 숫자는 월 근거로 보지 않는다")
+    void dropsUngroundedMonths() {
+        var draft = validateDated("""
+            {"careers":[{"sectionId":"career","values":{"companyName":"합성상사","startDate":"2020-05-01",
+                         "endDate":"2019-07-31"}}],
+             "projects":[{"sectionId":"project","values":{"projectName":"합성상사","startDate":"2021-03",
+                          "endDate":"2018-03-01"}}]}
+            """);
+
+        assertThat(draft.profile().get("careers")).isEqualTo(List.of(
+            Map.of("sectionId", "career", "values", Map.of("companyName", "합성상사"))));
+        assertThat(draft.profile().get("projects")).isEqualTo(List.of(
+            Map.of("sectionId", "project", "values", Map.of("projectName", "합성상사"))));
+        // 2020-05-01(원문은 2020.03), 2019-07-31(사번 2019-0731의 일부), 2021-03(원문은 2021년 6월), 2018-03-01(2018 다음은 졸업)
+        assertThat(draft.droppedValues()).isEqualTo(4);
+    }
+
+    @Test
+    @DisplayName("월이 01~12가 아니거나 두 자리가 아니면 버린다")
+    void dropsInvalidMonths() {
+        var draft = validateDated("""
+            {"careers":[{"sectionId":"career","values":{"companyName":"합성상사","startDate":"2020-03",
+                         "endDate":"2020-13"}},
+                        {"sectionId":"career","values":{"companyName":"합성상사","startDate":"2020-00",
+                         "endDate":"2020-3"}},
+                        {"sectionId":"career","values":{"companyName":"합성상사","startDate":"2020.03"}}]}
+            """);
+
+        assertThat(draft.profile().get("careers")).isEqualTo(List.of(
+            Map.of("sectionId", "career", "values", Map.of("companyName", "합성상사", "startDate", "2020-03")),
+            Map.of("sectionId", "career", "values", Map.of("companyName", "합성상사")),
+            Map.of("sectionId", "career", "values", Map.of("companyName", "합성상사"))));
+        assertThat(draft.droppedValues()).isEqualTo(4);
+    }
+
     @Test
     @DisplayName("프롬프트 목록은 프로필 모델의 범주, 섹션, 필드 키와 선택값을 담는다")
     void promptCatalogListsModelKeys() {
@@ -165,5 +255,6 @@ class ProfileDraftSchemaTest {
             "languages.languageTest.testName", "certifications.certificate.registrationNo",
             "region:seoul", "attendance:day", "재직중");
         assertThat(catalog).doesNotContain("evidenceDocumentPath", "latestEducationType");
+        assertThat(catalog).contains("date YYYY-MM-DD or YYYY-MM");
     }
 }

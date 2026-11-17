@@ -22,7 +22,8 @@ final class ProfileDraftSchema {
     static final int MAX_ENTRIES = 20;
     private static final int MAX_TEXT = 200;
     private static final int MAX_TEXTAREA = 4000;
-    private static final Pattern DATE = Pattern.compile("(\\d{4})-(\\d{2})-(\\d{2})");
+    /** YYYY-MM-DD(연월일) 또는 YYYY-MM(연월). 일은 원문에 있을 때만 받고 서버가 채우지 않는다. */
+    private static final Pattern DATE = Pattern.compile("(\\d{4})-(\\d{2})(?:-(\\d{2}))?");
     private static final Pattern EMAIL = Pattern.compile("[^\\s@]{1,64}@[^\\s@]{1,190}\\.[^\\s@]{2,63}");
     private static final Pattern TEL = Pattern.compile("\\d{9,11}");
     private static final Pattern TEL_SEPARATORS = Pattern.compile("[\\s().-]");
@@ -241,7 +242,8 @@ final class ProfileDraftSchema {
         if (value.isEmpty()) return null;
         return switch (field.kind()) {
             case SELECT -> field.options().containsKey(value) ? value : null;
-            case DATE -> validDate(value) && ground.hasYear(value.substring(0, 4)) ? value : null;
+            case DATE -> validDate(value)
+                && ground.hasYearMonth(value.substring(0, 4), Integer.parseInt(value.substring(5, 7))) ? value : null;
             case TEL -> {
                 var digits = TEL_SEPARATORS.matcher(value).replaceAll("");
                 yield TEL.matcher(digits).matches() && ground.hasPhone(digits) ? digits : null;
@@ -255,6 +257,8 @@ final class ProfileDraftSchema {
     private static boolean validDate(String value) {
         var matcher = DATE.matcher(value);
         if (!matcher.matches()) return false;
+        int month = Integer.parseInt(matcher.group(2));
+        if (matcher.group(3) == null) return month >= 1 && month <= 12;
         try {
             LocalDate.of(Integer.parseInt(matcher.group(1)), Integer.parseInt(matcher.group(2)),
                 Integer.parseInt(matcher.group(3)));
@@ -297,7 +301,8 @@ final class ProfileDraftSchema {
         return switch (field.kind()) {
             case TEXT -> "text";
             case TEXTAREA -> "long text";
-            case DATE -> "date YYYY-MM-DD (omit unless year, month and day are all written)";
+            case DATE -> "date YYYY-MM-DD or YYYY-MM (YYYY-MM-DD when year, month and day are written; "
+                + "YYYY-MM when only year and month are written; omit when only the year is written)";
             case EMAIL -> "email address";
             case TEL -> "phone number";
             case SELECT -> "one of " + String.join(", ", field.options().entrySet().stream()
@@ -308,8 +313,10 @@ final class ProfileDraftSchema {
     }
 
     /**
-     * 원문 대조. 공백, 대소문자, 전각 차이는 같은 글자로 본다. 전화번호는 원문에서 구분자를 뺀 글자에서 찾고,
-     * 날짜는 연도가 원문에 네 자리 숫자로 따로 있어야 한다(일과 월 표기는 원문마다 달라 형식으로만 검증한다).
+     * 원문 대조. 공백, 대소문자, 전각 차이는 같은 글자로 본다. 전화번호는 원문에서 구분자를 뺀 글자에서 찾는다.
+     * 날짜는 연도와 월이 원문에서 한 날짜 표기로 붙어 있어야 한다. 연-월(2020.03, 2020-3, 2020/03, 2020년 3월)이나
+     * 월-연(03/2020, 03.2020) 순서를 받고, 앞뒤에 다른 숫자가 붙은 수(사번 2019-0731의 07 등)는 근거로 보지 않는다.
+     * 일은 표기가 원문마다 달라 형식으로만 검증한다.
      */
     private static final class Ground {
         private final String normalized;
@@ -331,8 +338,11 @@ final class ProfileDraftSchema {
             return phones.contains(digits);
         }
 
-        boolean hasYear(String year) {
-            return Pattern.compile("(?<!\\d)" + year + "(?!\\d)").matcher(normalized).find();
+        boolean hasYearMonth(String year, int month) {
+            var monthDigits = "0?" + month;
+            var yearFirst = "(?<!\\d)" + year + "\\s*(?:[./-]|년)\\s*" + monthDigits + "(?!\\d)";
+            var monthFirst = "(?<!\\d)" + monthDigits + "\\s*[./-]\\s*" + year + "(?!\\d)";
+            return Pattern.compile(yearFirst + "|" + monthFirst).matcher(normalized).find();
         }
 
         private static String compact(String value) {
