@@ -1160,3 +1160,10 @@
 - 승인한 후보 4개를 [CF-467 bundle](../raw/issues/CF-467/manifest.md)에 기록했다. 섹션 결과 캐시 ADR(저장 단위, 키, 무효화, 저장 위치, 동시 요청, 켜고 끄기의 대안과 결정), 확장 쪽과 서버 쪽 캐시의 현재 상태, 구현 중 확인한 사실, 캐시가 켜진 뒤의 테스트 주의다.
 - [범용 섹션 분석 캐시: 확장 쪽과 서버 쪽](topics/generic-section-analysis-cache.md) topic과 색인을 갱신했다.
 - 실제 지원값, 계정, 세션, 키 값, 대화 전문은 저장하지 않았다.
+
+## [2026-11-17] ingest | CF-470 이력서 문서(PDF·MD·TXT)로 프로필 가져오기 추가
+- Approval-Digest: 102f649b7554e03c10a1f9639801231e7738df4302b109d0015a44049c931c54
+- Source-Revision: ddb3ee8f
+- 승인한 후보 4개를 [CF-470 bundle](../raw/issues/CF-470/manifest.md)에 기록했다. 출처 고르기와 온보딩 진입을 포함한 이력서 가져오기 흐름, 연월 날짜 규칙, pdf.js와 CMap 포함 방식, 값 없는 Console 기록과 계측 이벤트다.
+- [이력서 파일로 프로필 가져오기](topics/resume-file-import.md) topic을 새로 만들고 [선택적 이용 계측](topics/usage-analytics.md) topic과 색인을 갱신했다.
+- 실제 지원값, 이력서 내용, 계정, 세션, 대화 전문은 저장하지 않았다.
