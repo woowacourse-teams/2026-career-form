@@ -243,8 +243,8 @@ export function pageTitleHeadingMatcher(
 ): (text: string | null | undefined) => boolean {
   const namesPage = pageTitleMatcher(document);
   return (text) => {
-    const term = text?.normalize("NFKC").replace(/\s+/g, " ").trim();
-    return Boolean(term) && !formTerms.has(term!.toLowerCase()) && namesPage(term);
+    const term = formText(text);
+    return term !== undefined && !formTerms.has(term.toLowerCase()) && namesPage(term);
   };
 }
 
@@ -471,6 +471,7 @@ function genericContextLabels(
   add("legend", textOf(element.closest("fieldset")?.querySelector(":scope > legend") ?? null));
   const row = structuralRow(element);
   // A job posting title above the form names the page, not a section.
+  // Read the page once per collection pass, not once per field.
   const namesPage = cachedDomRead(element.ownerDocument, "page-title-heading", () =>
     pageTitleHeadingMatcher(element.ownerDocument));
   let current = element.parentElement;
@@ -478,10 +479,10 @@ function genericContextLabels(
     const headings = [...current.querySelectorAll(`${DIRECT_HEADING}, ${WRAPPED_HEADING}`)]
       .filter((heading) => heading.parentElement === current ||
         !heading.parentElement?.querySelector("input, select, textarea"));
-    const texts = [...new Set(headings.map(textOf).filter(Boolean))]
-      .filter((text) => !namesPage(text));
+    const texts = [...new Set(headings.map(textOf).filter(Boolean))];
     if (texts.length === 1) {
-      add("section-heading", texts[0]);
+      // Nothing above the page's own name is a narrower section.
+      if (!namesPage(texts[0])) add("section-heading", texts[0]);
       break;
     }
     if (current === section || current === row) break;
