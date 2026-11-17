@@ -6,6 +6,8 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 
 import com.careerform.formanalysis.infrastructure.adapter.openai.OpenAiChoiceModel;
 import com.careerform.monitoring.ExternalCallMetrics;
@@ -14,9 +16,12 @@ import com.careerform.monitoring.tracing.LangSmithTraceRecorder;
 /**
  * 폼 분석 공급자 선택(career-form.analysis.*)과 무관하게 OpenAI 키가 있으면 켜진다. 키가 없으면 API는
  * PROFILE_IMPORT_NOT_CONFIGURED를 돌려준다. 키와 모델은 기존 OPENAI_API_KEY, CAREER_FORM_LLM_MODEL을 쓴다.
+ * 값 트레이스(career-form.profile-import.trace-values)는 기본 끔이고 application-local.yml,
+ * application-staging.yml에서만 켠다. prod 프로필이 활성이면 설정 값과 관계없이 끈다.
  */
 @Configuration(proxyBeanMethods = false)
 class ProfileImportConfiguration {
+    static final String PRODUCTION_PROFILE = "prod";
 
     @Bean
     ProfileImportService profileImportService(
@@ -27,6 +32,8 @@ class ProfileImportConfiguration {
         @Value("${career-form.profile-import.openai.timeout-ms:60000}") int timeoutMs,
         @Value("${career-form.profile-import.openai.max-output-tokens:8192}") int maxOutputTokens,
         @Value("${career-form.profile-import.max-chars:20000}") int maxChars,
+        @Value("${career-form.profile-import.trace-values:false}") boolean traceValues,
+        Environment environment,
         ObjectProvider<ExternalCallMetrics> metrics,
         ObjectProvider<LangSmithTraceRecorder> traces
     ) {
@@ -34,6 +41,6 @@ class ProfileImportConfiguration {
         var extraction = apiKey == null || apiKey.isBlank() ? null : new ResumeExtractionModel(
             OpenAiChoiceModel.http(endpoint, apiKey, timeoutMs), model, reasoningEffort, maxOutputTokens, schema);
         return new ProfileImportService(extraction, schema, maxChars, model, metrics.getIfAvailable(),
-            traces.getIfAvailable());
+            traces.getIfAvailable(), traceValues && !environment.acceptsProfiles(Profiles.of(PRODUCTION_PROFILE)));
     }
 }

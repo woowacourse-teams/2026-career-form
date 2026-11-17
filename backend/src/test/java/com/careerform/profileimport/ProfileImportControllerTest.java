@@ -28,7 +28,7 @@ class ProfileImportControllerTest {
         var schema = new ProfileDraftSchema();
         var model = transport == null ? null
             : new ResumeExtractionModel(transport, "gpt-synthetic-469", "none", 1024, schema);
-        return new ProfileImportService(model, schema, 20_000, "gpt-synthetic-469", null, null);
+        return new ProfileImportService(model, schema, 20_000, "gpt-synthetic-469", null, null, false);
     }
 
     private static MockHttpServletRequest client(String address) {

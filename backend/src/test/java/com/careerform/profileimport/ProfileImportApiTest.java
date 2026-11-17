@@ -281,6 +281,8 @@ class ProfileImportApiTest {
         assertThat(trace.path("extra").path("metadata").path("duration_ms").isNumber()).isTrue();
         assertThat(trace.path("extra").path("metadata").path("ls_model_name").asString()).isEqualTo(MODEL);
         assertThat(trace.has("error")).isFalse();
+        assertThat(trace.path("inputs").has("text")).isFalse();
+        assertThat(trace.path("outputs").has("profile")).isFalse();
         assertThat(output.getAll()).contains("provider=openai operation=profile-import outcome=success");
         assertNoPrivateValue(response, output, trace);
     }

@@ -8,3 +8,8 @@ springdoc:
     enabled: true
   swagger-ui:
     enabled: true
+
+# 이력서 초안 품질 확인용. 이 환경에서는 합성 이력서만 쓴다.
+career-form:
+  profile-import:
+    trace-values: true

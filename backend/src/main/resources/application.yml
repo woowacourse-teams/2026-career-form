@@ -71,6 +71,8 @@ career-form:
   # 원문과 추출 값은 저장하거나 기록하지 않는다. 새 필수 환경 변수는 없다.
   profile-import:
     max-chars: 20000
+    # LangSmith run에 입력 글자와 추출 값을 더한다. 로컬과 스테이징 프로필 파일에서만 켜고 prod 프로필에서는 코드가 끈다.
+    trace-values: false
     openai:
       api-key: ${OPENAI_API_KEY:}
       model: ${CAREER_FORM_LLM_MODEL:gpt-5.6-luna}
