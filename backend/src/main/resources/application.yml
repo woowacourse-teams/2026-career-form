@@ -67,6 +67,21 @@ career-form:
       max-requests: ${CAREER_FORM_ADDRESS_RATE_LIMIT_MAX_REQUESTS:30}
       window: ${CAREER_FORM_ADDRESS_RATE_LIMIT_WINDOW:60s}
       max-clients: ${CAREER_FORM_ADDRESS_RATE_LIMIT_MAX_CLIENTS:10000}
+  # 이력서 글자 -> 프로필 초안(POST /api/v1/profile-import/resume). 폼 분석 공급자 선택과 무관하게 OpenAI 키로 켜진다.
+  # 원문과 추출 값은 저장하거나 기록하지 않는다. 새 필수 환경 변수는 없다.
+  profile-import:
+    max-chars: 20000
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+      model: ${CAREER_FORM_LLM_MODEL:gpt-5.6-luna}
+      endpoint: https://api.openai.com/v1/chat/completions
+      reasoning-effort: none
+      timeout-ms: 60000
+      max-output-tokens: ${CAREER_FORM_LLM_MAX_OUTPUT_TOKENS:8192}
+    rate-limit:
+      max-requests: 10
+      window: 60s
+      max-clients: 10000
   tracing:
     langsmith:
       enabled: ${CAREER_FORM_LANGSMITH_ENABLED:false}
