@@ -810,3 +810,39 @@
     transition: none !important;
   }
 }
+
+/* Source choice (#470): mirrors ImportSourceChoice in the real panel. */
+.pSources {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid #ececf0;
+  border-radius: 10px;
+}
+.pSources > span {
+  min-height: 44px;
+  padding: 7px 11px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  transition: transform 0.15s ease;
+}
+.pSources > span + span {
+  border-top: 1px solid #ececf0;
+}
+.pSources b {
+  display: block;
+  font-size: 12px;
+}
+.pSources small {
+  font-size: 10.5px;
+  color: #6e6e73;
+}
+.pSources i {
+  font-style: normal;
+  color: #6e6e73;
+}
+.pSources [data-pressed="true"] {
+  background: #f2f2f7;
+  transform: scale(0.97);
+}
