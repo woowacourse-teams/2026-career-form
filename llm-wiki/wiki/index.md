@@ -44,7 +44,8 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [범용 결과 화면 분류](topics/generic-result-classification.md) | 확인 필요 범위, 회색 묶음, 빨간 테두리와 수집 제외 | 2026-11-05 |
 | [범용 버튼 드롭다운 안전성](topics/generic-button-dropdown-safety.md) | 입력 범위,목록 소유 관계,옵션 분석 전달과 실행 직전 재검증 | 2026-10-02 |
 | [범용 드롭다운의 구조 클릭 허용 경계](topics/generic-dropdown-click-gate.md) | accessible label 금지 판정 유지와 수집기의 클릭 정책 적용 | 2026-10-17 |
-| [범용 섹션 분석 캐시: 확장 쪽과 서버 쪽](topics/generic-section-analysis-cache.md) | 확장의 실행·URL 캐시와 서버의 섹션 결과 캐시(키, 저장 조건, Caffeine을 고르고 Redis를 쓰지 않은 까닭) | 2026-11-17 |
+| [범용 섹션 분석 캐시: 확장 쪽과 서버 쪽](topics/generic-section-analysis-cache.md) | 확장의 실행·URL 캐시와 서버의 섹션 결과 캐시(키, 저장 조건, Caffeine을 고르고 Redis를 쓰지 않은 까닭), 2026-11-17 실측과 같은 플랫폼 공유 기대의 정정 | 2026-11-17 |
+| [범용 수집의 페이지 이름 제외](topics/generic-page-title-exclusion.md) | 공고 제목 같은 페이지 이름을 섹션 제목과 섹션 머리 라벨에서 빼는 규칙, 보호 조건과 한계 | 2026-11-17 |
 | [범용 endpoint 부재의 frontend 오류 전달](topics/generic-endpoint-unavailable.md) | 범용 분석 404의 ENDPOINT_UNAVAILABLE 전달과 공유 오류 계약 보존 | 2026-10-17 |
 | [범용 칸 매칭 응답의 합성 값 표현](topics/generic-synthetic-binding-response.md) | schemaVersion 3 binding, 이름 레시피와 코드 확정 날짜 부분 | 2026-10-18 |
 | [범용 합성 값 표현의 frontend 검증 경계](topics/generic-binding-frontend-validation.md) | v3 binding 검증, 이름 레시피·날짜 부분 select 소비와 등급, BE·FE 동시 배포 | 2026-10-18 |
