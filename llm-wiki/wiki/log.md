@@ -1160,3 +1160,10 @@
 - 승인한 후보 4개를 [CF-467 bundle](../raw/issues/CF-467/manifest.md)에 기록했다. 섹션 결과 캐시 ADR(저장 단위, 키, 무효화, 저장 위치, 동시 요청, 켜고 끄기의 대안과 결정), 확장 쪽과 서버 쪽 캐시의 현재 상태, 구현 중 확인한 사실, 캐시가 켜진 뒤의 테스트 주의다.
 - [범용 섹션 분석 캐시: 확장 쪽과 서버 쪽](topics/generic-section-analysis-cache.md) topic과 색인을 갱신했다.
 - 실제 지원값, 계정, 세션, 키 값, 대화 전문은 저장하지 않았다.
+
+## [2026-11-17] ingest | CF-472 범용 수집의 공고 제목 제외
+- Approval-Digest: e9f2d655d212b195599e50e1d814da78a9c8eb9e98efeb602478f48816ec6f67
+- Source-Revision: a8a59f31
+- 승인한 후보 3개를 [CF-472 bundle](../raw/issues/CF-472/manifest.md)에 기록했다. 페이지 이름을 섹션 제목과 섹션 머리 라벨에서 빼는 규칙과 버린 대안, 코드로 확인한 사실, 서버 섹션 결과 캐시의 2026-11-17 실측 보고와 CF-467 ADR 기대의 정정이다.
+- [범용 수집의 페이지 이름 제외](topics/generic-page-title-exclusion.md) topic을 만들고 [범용 섹션 분석 캐시: 확장 쪽과 서버 쪽](topics/generic-section-analysis-cache.md) topic과 색인을 갱신했다.
+- 실제 지원값, 계정, 세션, 키 값, 대화 전문, 공고 식별자와 주소는 저장하지 않았다.
