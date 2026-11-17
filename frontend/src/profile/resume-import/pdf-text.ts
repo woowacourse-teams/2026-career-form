@@ -1,6 +1,10 @@
 import { browser } from "wxt/browser";
 // Both files ship inside the extension, so no code is fetched from outside it.
-import { PDFJS_LIBRARY_PATH, PDFJS_WORKER_PATH } from "./pdfjs-paths";
+import {
+  PDFJS_CMAP_PATH,
+  PDFJS_LIBRARY_PATH,
+  PDFJS_WORKER_PATH,
+} from "./pdfjs-paths";
 
 interface TextItem {
   str?: string;
@@ -21,6 +25,8 @@ export interface PdfjsModule {
     disableFontFace: boolean;
     useWorkerFetch: boolean;
     verbosity: number;
+    cMapUrl?: string;
+    cMapPacked?: boolean;
   }): { promise: Promise<PdfDocument>; destroy(): Promise<void> };
   GlobalWorkerOptions?: { workerSrc: string };
 }
@@ -50,7 +56,10 @@ async function loadBundledPdfjs(): Promise<PdfjsModule> {
 }
 
 /** Text items keep their order; a line end becomes "\n" and pages are split by a blank line. */
-export function createPdfTextReader(load: () => Promise<PdfjsModule>) {
+export function createPdfTextReader(
+  load: () => Promise<PdfjsModule>,
+  { cMapUrl }: { cMapUrl?: string } = {},
+) {
   let library: Promise<PdfjsModule> | undefined;
   return async (data: ArrayBuffer): Promise<string> => {
     library ??= load().catch((error: unknown) => {
@@ -65,6 +74,8 @@ export function createPdfTextReader(load: () => Promise<PdfjsModule>) {
       useWorkerFetch: false,
       // Errors only: font warnings would otherwise reach the page console.
       verbosity: 0,
+      // Fetched by this thread (useWorkerFetch: false) from the extension's own files.
+      ...(cMapUrl ? { cMapUrl, cMapPacked: true } : {}),
     });
     try {
       const document = await task.promise;
@@ -87,4 +98,9 @@ export function createPdfTextReader(load: () => Promise<PdfjsModule>) {
   };
 }
 
-export const readPdfText = createPdfTextReader(loadBundledPdfjs);
+let bundledReader: ((data: ArrayBuffer) => Promise<string>) | undefined;
+/** Built on first use, so importing this module needs no extension runtime. */
+export const readPdfText = (data: ArrayBuffer) =>
+  (bundledReader ??= createPdfTextReader(loadBundledPdfjs, {
+    cMapUrl: extensionUrl(PDFJS_CMAP_PATH),
+  }))(data);

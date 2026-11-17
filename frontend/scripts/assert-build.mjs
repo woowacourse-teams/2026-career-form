@@ -120,6 +120,25 @@ const accessible = new Set(
     (entry) => entry.resources ?? [],
   ),
 );
+// Korean PDFs that name a predefined CMap need the packed set (#470).
+const packageCMaps = (
+  await readdir(resolve("node_modules/pdfjs-dist/cmaps"))
+).filter((fileName) => fileName.endsWith(".bcmap"));
+const builtCMaps = new Set(
+  await readdir(resolve(outputDirectory, "pdfjs", "cmaps")),
+);
+if (
+  packageCMaps.length === 0 ||
+  packageCMaps.some((fileName) => !builtCMaps.has(fileName)) ||
+  !["UniKS-UCS2-H.bcmap", "KSCms-UHC-H.bcmap", "Adobe-Korea1-UCS2.bcmap"].every(
+    (fileName) => builtCMaps.has(fileName),
+  )
+) {
+  throw new Error("pdf.js CMap 묶음 전체가 빌드에 포함되어야 합니다.");
+}
+if (!accessible.has("pdfjs/cmaps/*")) {
+  throw new Error("pdf.js CMap 파일이 web_accessible_resources에 필요합니다.");
+}
 if (pdfjsFiles.some((fileName) => !accessible.has(fileName))) {
   throw new Error(
     "이력서 PDF 글자 추출 파일이 web_accessible_resources에 필요합니다.",
