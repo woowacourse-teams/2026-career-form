@@ -5,7 +5,19 @@
 # 2026 Career Form
 
 지원서 입력, 이제 한 번만.<br>
-내 정보를 등록해 두면 채용 지원서를 자동으로 채워 주는 Chrome 확장 프로그램이에요.
+내 정보를 등록해 두면 채용 지원서를 자동으로 채워 주는 [Chrome 확장 프로그램](https://chromewebstore.google.com/detail/career-form/lneeceajpkjfffibjoajdkfelhoojbam)이에요.
+
+| [사용 방법](#사용-방법) | [주요 기능](#주요-기능) | [기술 스택](#기술-스택) | [인프라 구성도](#인프라-구성도) | [팀원](#팀원) |
+| :---: | :---: | :---: | :---: | :---: |
+
+## 사용 방법
+
+| 1. 설치 | 2. 프로필 등록 | 3. 자동 기입 | 4. 확인·제출 |
+| :---: | :---: | :---: | :---: |
+| [Chrome 웹스토어](https://chromewebstore.google.com/detail/career-form/lneeceajpkjfffibjoajdkfelhoojbam)에서<br>Career Form 추가 | **프로필 관리**에서<br>내 정보 입력 | 지원서에서 패널을 열고<br>**자동 기입** 클릭 | **확인 필요** 칸을 채우고<br>저장·제출은 직접 |
+
+패널은 툴바의 Career Form 아이콘이나 `Alt+Shift+C`(Mac `⌥⇧C`)로 열어요.<br>
+시작 안내에서 관심 직무를 고르면 새 공고 알림도 받을 수 있어요.
 
 ## 주요 기능
 
@@ -29,7 +41,11 @@
 
 ![커리어폼 인프라 구성도](.github/images/infra-architecture.webp)
 
+</div>
+
 ## 팀원
+
+<div align="center">
 
 | <img src="https://avatars.githubusercontent.com/u/114290378?v=4&s=120" width="120" height="120" alt="티모"> | <img src="https://avatars.githubusercontent.com/u/116935748?v=4&s=120" width="120" height="120" alt="영기"> | <img src="https://avatars.githubusercontent.com/u/137779014?v=4&s=120" width="120" height="120" alt="모아"> | <img src="https://avatars.githubusercontent.com/u/71001678?v=4&s=120" width="120" height="120" alt="레서"> |
 | :---: | :---: | :---: | :---: |
