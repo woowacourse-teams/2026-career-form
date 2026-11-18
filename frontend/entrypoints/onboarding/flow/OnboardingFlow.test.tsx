@@ -9,7 +9,12 @@ import { expect, it, vi } from "vitest";
 import type { TrackEvent } from "../../../src/analytics/events";
 import type { ProfileRepository } from "../../../src/profile/profile-repository";
 import { OnboardingFlow } from "./OnboardingFlow";
-import type { OnboardingStep } from "./steps";
+import {
+  createStepStore,
+  ONBOARDING_STEP_KEY,
+  type OnboardingStep,
+  type StepStore,
+} from "./steps";
 import {
   createPushClient,
   createRepository,
@@ -20,6 +25,7 @@ function renderFlow(
   options: {
     repository?: ProfileRepository;
     step?: OnboardingStep;
+    stepStore?: StepStore;
     track?: TrackEvent;
   } = {},
 ) {
@@ -33,7 +39,7 @@ function renderFlow(
       repository={repository}
       pushClient={createPushClient()}
       track={track}
-      stepStore={steps.store}
+      stepStore={options.stepStore ?? steps.store}
       onOpenProfile={onOpenProfile}
       onOpenPostings={onOpenPostings}
     />,
@@ -52,7 +58,7 @@ const current = () =>
     .getAllByRole("listitem")
     .find((item) => item.getAttribute("aria-current") === "step");
 
-it("선택 화면 없이 이름 입력으로 시작하고 여섯 단계를 진행 바에 보인다", async () => {
+it("선택 화면 없이 이름 입력으로 시작하고 다섯 단계를 진행 바에 보인다", async () => {
   renderFlow();
   expect(
     await screen.findByRole("heading", {
@@ -64,16 +70,9 @@ it("선택 화면 없이 이름 입력으로 시작하고 여섯 단계를 진�
     within(rail())
       .getAllByRole("listitem")
       .map((item) => item.textContent),
-  ).toEqual([
-    "1이름",
-    "2이메일",
-    "3직무 선택",
-    "4알림 안내",
-    "5Greeting",
-    "6사용법",
-  ]);
+  ).toEqual(["1이름", "2이메일", "3직무 선택", "4알림 안내", "5사용법"]);
   expect(current()).toHaveTextContent("이름");
-  expect(within(rail()).getByText("1 / 6")).toBeInTheDocument();
+  expect(within(rail()).getByText("1 / 5")).toBeInTheDocument();
   expect(screen.queryByText("등록 묶음")).toBeNull();
   expect(screen.queryByText("설치 완료")).toBeNull();
 });
@@ -129,7 +128,7 @@ it("저장해 둔 단계에서 다시 시작한다", async () => {
   renderFlow({ step: "alerts" });
   await waitFor(() => expect(current()).toHaveTextContent("알림 안내"));
   expect(screen.queryByLabelText("성")).toBeNull();
-  expect(within(rail()).getByText("4 / 6")).toBeInTheDocument();
+  expect(within(rail()).getByText("4 / 5")).toBeInTheDocument();
 });
 
 it("단계에 들어갈 때마다 단계 이름을 기록한다", async () => {
@@ -187,15 +186,16 @@ it("이메일 다음은 직무 선택, 그다음은 알림 안내로 이어진�
   expect(current()).toHaveTextContent("알림 안내");
 });
 
-it("Greeting 단계는 기다리지 않고 다음으로 사용법에 가며 완료를 기록한다", async () => {
-  const { steps, track } = renderFlow({ step: "greeting" });
-  expect(
-    await screen.findByRole("heading", {
-      level: 1,
-      name: "혹시 모든 인적사항을 입력하기 번거로우신가요?",
-    }),
-  ).toBeVisible();
-  fireEvent.click(screen.getByRole("button", { name: "다음" }));
+it("알림 안내를 마치면 사용법으로 가며 완료를 기록한다", async () => {
+  const { steps, track } = renderFlow({ step: "alerts" });
+  for (const title of [
+    "새 공고가 뜨면 알려드려요",
+    "마감 전에 다시 알려드려요",
+    "지원을 마치면 알림이 멈춰요",
+  ]) {
+    await screen.findByRole("heading", { level: 1, name: title });
+    fireEvent.click(screen.getByRole("button", { name: "다음" }));
+  }
   expect(
     await screen.findByRole("heading", {
       level: 1,
@@ -206,6 +206,28 @@ it("Greeting 단계는 기다리지 않고 다음으로 사용법에 가며 완�
   expect(track).toHaveBeenCalledWith("onboarding_completed", {
     surface: "extension_onboarding",
   });
+});
+
+it("없어진 Greeting 단계에 머물던 사용자는 사용법에서 이어 간다", async () => {
+  const stored: Record<string, unknown> = {
+    [ONBOARDING_STEP_KEY]: "greeting",
+  };
+  renderFlow({
+    stepStore: createStepStore({
+      get: async (key) => ({ [key]: stored[key] }),
+      set: async (items) => {
+        Object.assign(stored, items);
+      },
+    }),
+  });
+  expect(
+    await screen.findByRole("heading", {
+      level: 1,
+      name: "이제 지원서에서 써 보세요",
+    }),
+  ).toBeVisible();
+  expect(current()).toHaveTextContent("사용법");
+  expect(within(rail()).getByText("5 / 5")).toBeInTheDocument();
 });
 
 // The bar is pinned by CSS (measured in a real browser); here every step must
@@ -249,9 +271,6 @@ it("모든 단계가 이전과 다음을 화면 아래의 같은 이동 막대�
     expect(moves()).toEqual(["이전", "다음"]);
     press("다음");
   }
-  await reach("혹시 모든 인적사항을 입력하기 번거로우신가요?");
-  expect(moves()).toEqual(["이전", "다음"]);
-  press("다음");
   await reach("이제 지원서에서 써 보세요");
   expect(bar()).toHaveAccessibleName("다음에 할 일");
   expect(moves()).toEqual([

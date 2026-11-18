@@ -61,12 +61,10 @@ const pick = (file: File) =>
 
 afterEach(() => vi.restoreAllMocks());
 
-it("shows 프로필 가져오기 on every page and offers the two sources", () => {
+it("shows 프로필 가져오기 on every page and offers only the resume file", () => {
   setup();
   openChoice();
-  const page = screen.getByRole("button", { name: /^지원서 화면/ });
-  expect(page).toBeDisabled();
-  expect(page).toHaveTextContent("Greeting 지원서에서만");
+  expect(screen.queryByRole("button", { name: /^지원서 화면/ })).toBeNull();
   const resume = screen.getByRole("button", { name: /^이력서 파일/ });
   expect(resume).toBeEnabled();
   expect(resume).toHaveTextContent("PDF · MD · TXT");
