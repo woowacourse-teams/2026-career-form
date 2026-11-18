@@ -215,7 +215,12 @@ export function observeResults(
       expected: readonly string[],
       catalogMatch?: ApprovedCatalogMatch,
     ):
-      | { element: SearchResult; signature: string; evidence: CatalogEvidence }
+      | {
+          element: SearchResult;
+          signature: string;
+          evidence: CatalogEvidence;
+          labelOnly?: true;
+        }
       | undefined {
       const ready = readyRoot();
       if (!ready) return undefined;
@@ -268,9 +273,25 @@ export function observeResults(
         throw new SearchFailure("result_set_incomplete");
       const evidenceFor = (element: HTMLElement) =>
         catalogEvidenceForElement(element, root);
+      // Generic route only: when no result in the list exposes any detail, a
+      // school is identified by its approved name alone, never among equals.
+      const labelOnly =
+        session.args.genericPopupRecovery === true &&
+        catalogMatch?.requiredDetail !== undefined &&
+        actions.length > 0 &&
+        actions.every((element) => evidenceFor(element).detail === undefined);
       const approved = actions.filter((element) =>
         catalogMatch
-          ? matchesApprovedCatalog(catalogMatch, evidenceFor(element))
+          ? matchesApprovedCatalog(
+              labelOnly
+                ? {
+                    kind: catalogMatch.kind,
+                    query: catalogMatch.query,
+                    labels: catalogMatch.labels,
+                  }
+                : catalogMatch,
+              evidenceFor(element),
+            )
           : expected.some(
               (value) =>
                 normalized(value) === normalized(element.textContent ?? ""),
@@ -286,7 +307,9 @@ export function observeResults(
           )
         : [];
       const matches =
-        approved.length > 1 && queryNamed.length === 1 ? queryNamed : approved;
+        approved.length > 1 && queryNamed.length === 1 && !labelOnly
+          ? queryNamed
+          : approved;
       if (matches.length > 1)
         throw new SearchFailure("multiple_matching_results");
       if (!matches.length) {
@@ -323,7 +346,12 @@ export function observeResults(
         })
       )
         throw new SearchFailure("result_activation_unsafe");
-      return { element, signature: controlSignature(element), evidence };
+      return {
+        element,
+        signature: controlSignature(element),
+        evidence,
+        ...(labelOnly ? { labelOnly: true as const } : {}),
+      };
     },
   };
 }

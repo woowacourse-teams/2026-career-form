@@ -470,3 +470,108 @@ describe("an approved certificate listed under two approved names", () => {
     session.stop();
   });
 });
+
+describe("generic school results that expose no detail at all", () => {
+  const school: ApprovedCatalogMatch = {
+    kind: "university",
+    query: "Canonical",
+    labels: ["Site alias"],
+    requiredDetail: "Campus A",
+  };
+  function generic(markup: string, count: number) {
+    const test = setup(
+      `<ul data-search-results data-search-complete="true" data-result-count="${count}">${markup}</ul>`,
+    );
+    test.session.args.genericPopupRecovery = true;
+    return test;
+  }
+  const link = (name: string, extra = "") =>
+    `<li><a href="javascript:;" ${extra}>${name}</a></li>`;
+
+  it("selects the one result named as an approved label", () => {
+    const { surface, session } = generic(
+      link("Other school") + link("Site alias"),
+      2,
+    );
+    const match = observeResults(surface, session, [], undefined).exact(
+      [school.query],
+      school,
+    );
+    expect(match?.element.textContent).toBe("Site alias");
+    expect(match?.evidence).toEqual({ label: "Site alias" });
+    session.stop();
+  });
+
+  it("stays ambiguous when two results carry the approved label", () => {
+    const { surface, session } = generic(
+      link("Site alias") + link("Site alias"),
+      2,
+    );
+    expect(() =>
+      observeResults(surface, session, [], undefined).exact(
+        [school.query],
+        school,
+      ),
+    ).toThrowError(
+      expect.objectContaining({ reason: "multiple_matching_results" }),
+    );
+    session.stop();
+  });
+
+  it("keeps requiring name and detail once any result exposes a detail", () => {
+    const { surface, session } = generic(
+      link("Site alias") +
+        `<li><a href="javascript:;" aria-describedby="campus">Other school</a><span id="campus">Campus A</span></li>`,
+      2,
+    );
+    expect(() =>
+      observeResults(surface, session, [], undefined).exact(
+        [school.query],
+        school,
+      ),
+    ).toThrowError(
+      expect.objectContaining({ reason: "search_results_not_found" }),
+    );
+    session.stop();
+  });
+
+  it("still rejects a detail-less school result outside the generic path", () => {
+    const { surface, session } = generic(link("Site alias"), 1);
+    delete session.args.genericPopupRecovery;
+    expect(() =>
+      observeResults(surface, session, [], undefined).exact(
+        [school.query],
+        school,
+      ),
+    ).toThrowError(
+      expect.objectContaining({ reason: "search_results_not_found" }),
+    );
+    session.stop();
+  });
+
+  it("keeps certificate matching unchanged on the generic path", () => {
+    const certificate: ApprovedCatalogMatch = {
+      kind: "certificate",
+      query: "가상자격",
+      labels: ["가상자격", "가상자격(별칭)"],
+    };
+    const named = generic(link("가상자격(별칭)") + link("가상자격"), 2);
+    expect(
+      observeResults(named.surface, named.session, [], undefined).exact(
+        [certificate.query],
+        certificate,
+      )?.element.textContent,
+    ).toBe("가상자격");
+    named.session.stop();
+    const duplicate = generic(link("가상자격") + link("가상자격"), 2);
+    expect(() =>
+      observeResults(duplicate.surface, duplicate.session, [], undefined).exact(
+        [certificate.query],
+        certificate,
+      ),
+    ).toThrowError(
+      expect.objectContaining({ reason: "multiple_matching_results" }),
+    );
+    duplicate.session.stop();
+  });
+});

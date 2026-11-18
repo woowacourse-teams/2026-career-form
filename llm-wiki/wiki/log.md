@@ -1161,6 +1161,12 @@
 - [범용 섹션 분석 캐시: 확장 쪽과 서버 쪽](topics/generic-section-analysis-cache.md) topic과 색인을 갱신했다.
 - 실제 지원값, 계정, 세션, 키 값, 대화 전문은 저장하지 않았다.
 
+## [2026-11-18] ingest | CF-477 세부 정보 없는 결과 목록의 카탈로그 학교명 선택
+- Approval-Digest: 4382b5a1036e0cfaab6a7bb0a8f7b1cddb4318779acf61795da2638bc5e4a05f
+- Source-Revision: ec4e0604
+- 승인한 후보 2개를 [CF-477 bundle](../raw/issues/CF-477/manifest.md)에 payload 하나로 기록했다. 범용 경로의 카탈로그 학교명 단일 이름 일치 선택 결정과 이름만으로 승인된 선택의 유지 확인이다.
+- [범용 자동 기입 검색 표면](topics/generic-autofill-search.md)의 Current를 CF-477로 바꾸고 CF-307 근거를 History에 남겼으며 색인을 갱신했다.
+- 실제 지원값, 계정, 세션, 필드 라벨, 선택지, 주소, 선택자, 대화 전문은 저장하지 않았다.
 ## [2026-11-17] ingest | CF-469 이력서 글자 프로필 초안 API
 - Approval-Digest: 4e0c1ca17fa53e0b15073a5e1d795bcbb356e7747a5df457e365af943975e3e3
 - Source-Revision: 76961167
