@@ -65,6 +65,7 @@ it("shows 프로필 가져오기 on every page and offers only the resume file",
   const resume = screen.getByRole("button", { name: /^이력서 파일/ });
   expect(resume).toBeEnabled();
   expect(resume).toHaveTextContent("PDF · MD · TXT");
+  expect(resume).toHaveTextContent("스캔 PDF 불가");
   expect(
     screen.getByRole("heading", { name: "프로필 가져오기" }),
   ).toBeVisible();
@@ -85,16 +86,15 @@ it("opens the OS file dialog directly from 이력서 파일", () => {
   );
 });
 
-it("imports a picked resume after the notice and returns to the profile tab", async () => {
+it("imports a picked resume without a notice and returns to the profile tab", async () => {
   vi.spyOn(HTMLInputElement.prototype, "click").mockImplementation(() => {});
   const state = setup();
   openChoice();
   fireEvent.click(screen.getByRole("button", { name: /^이력서 파일/ }));
   pick(new File([RESUME_TEXT], "합성.md"));
-  await screen.findByText("문서 글자를 서버로 보내요");
-  expect(state.requestResumeDraft).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole("button", { name: "계속" }));
   await screen.findByText("프로필에 가져올 정보");
+  expect(screen.queryByText("문서 글자를 서버로 보내요")).toBeNull();
+  expect(screen.queryByRole("button", { name: "계속" })).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: /프로필에 저장하기/ }));
   const notice = await screen.findByRole("status", { name: "가져오기 결과" });
   expect(notice).toHaveTextContent("프로필에 1개를 저장했어요");
@@ -112,4 +112,24 @@ it("imports a picked resume after the notice and returns to the profile tab", as
   expect(
     state.track.mock.calls.filter(([event]) => event === "resume_import_saved"),
   ).toHaveLength(1);
+});
+
+it("shows the side panel failure screen with the bundled capybara image", async () => {
+  vi.spyOn(HTMLInputElement.prototype, "click").mockImplementation(() => {});
+  const state = setup();
+  openChoice();
+  fireEvent.click(screen.getByRole("button", { name: /^이력서 파일/ }));
+  pick(new File(["synthetic"], "합성.docx"));
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "PDF · MD · TXT만 가져올 수 있어요",
+  );
+  const region = screen.getByRole("region", {
+    name: "이력서에서 프로필 가져오기",
+  });
+  expect(region.querySelector("img")).toHaveAttribute(
+    "src",
+    "/unsupported-capybara.jpg",
+  );
+  expect(within(region).getByRole("button", { name: "닫기" })).toBeVisible();
+  expect(state.requestResumeDraft).not.toHaveBeenCalled();
 });

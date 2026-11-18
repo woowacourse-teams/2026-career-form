@@ -77,10 +77,9 @@ it("고른 이력서를 같은 카드 자리에서 가져오고 저장 뒤 다�
   fireEvent.change(fileInput(), {
     target: { files: [new File(["합성 이력서 본문"], "합성.txt")] },
   });
-  await screen.findByText("문서 글자를 서버로 보내요");
-  expect(state.requestResumeDraft).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole("button", { name: "계속" }));
   await screen.findByText("프로필에 가져올 정보");
+  expect(state.requestResumeDraft).toHaveBeenCalledOnce();
+  expect(screen.queryByText("문서 글자를 서버로 보내요")).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: /프로필에 저장하기/ }));
   expect(
     await screen.findByRole("heading", { level: 1, name: "이메일" }),
@@ -98,9 +97,10 @@ it("고른 이력서를 같은 카드 자리에서 가져오고 저장 뒤 다�
   });
 });
 
-it("전송 안내에서 취소하면 요청 없이 이름 단계로 돌아온다", async () => {
+it("초안을 만드는 중에 취소하면 이름 단계로 돌아온다", async () => {
   vi.spyOn(HTMLInputElement.prototype, "click").mockImplementation(() => {});
   const state = setup();
+  state.requestResumeDraft.mockImplementation(() => new Promise(() => {}));
   await screen.findByRole("heading", {
     level: 1,
     name: "이름부터 알려 주세요",
@@ -111,12 +111,13 @@ it("전송 안내에서 취소하면 요청 없이 이름 단계로 돌아온다
   fireEvent.change(fileInput(), {
     target: { files: [new File(["합성"], "합성.md")] },
   });
-  await screen.findByText("문서 글자를 서버로 보내요");
+  await screen.findByText("이력서를 정리하고 있어요");
+  expect(screen.getByText("글자만 전송 · 저장 안 함")).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: "취소" }));
   await waitFor(() =>
     expect(
       screen.getByRole("heading", { level: 1, name: "이름부터 알려 주세요" }),
     ).toBeVisible(),
   );
-  expect(state.requestResumeDraft).not.toHaveBeenCalled();
+  expect(state.requestResumeDraft).toHaveBeenCalledOnce();
 });
