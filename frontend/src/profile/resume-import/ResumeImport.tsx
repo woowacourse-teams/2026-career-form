@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import type {
   AnalyticsEvent,
   AnalyticsProperties,
@@ -56,6 +63,8 @@ interface Props {
   analytics?: { track: TrackEvent; properties: AnalyticsProperties };
   readText?: (file: File) => Promise<ResumeText>;
   requestDraft?: (text: string) => Promise<ResumeDraftResult>;
+  /** Failure screen image; the in-page panel passes its chrome-extension:// URL. */
+  unsupportedImageUrl?: string;
   /** Opens the OS file dialog again ("바꾸기", "다른 파일"). */
   onPickFile(): void;
   onSaved(profile: Profile, savedCount: number): void;
@@ -75,7 +84,6 @@ type Phase =
       fileType?: ResumeFileType;
       chars?: number;
     }
-  | ({ kind: "notice" } & Extracted)
   | ({ kind: "converting" } & Extracted)
   | ({
       kind: "failed";
@@ -104,7 +112,7 @@ function rejectionMessage(reason: ResumeRejection, fileType?: ResumeFileType) {
       return "5MB까지 가져올 수 있어요";
     case "no_text":
       return fileType === "pdf"
-        ? "글자를 읽을 수 없는 PDF예요"
+        ? "분석하지 못했어요"
         : "글자가 없는 파일이에요";
     case "too_long":
       return `${LIMIT}자까지 가져올 수 있어요`;
@@ -136,24 +144,25 @@ function fileLabel(file: File, fileType?: ResumeFileType) {
   return dot > 0 ? file.name.slice(dot + 1, dot + 6).toUpperCase() : "파일";
 }
 
+const SCANNED_PDF_HINT = [
+  "글자를 선택할 수 있는 PDF인지 확인해 주세요.",
+  "스캔한 PDF(OCR)는 추후 지원할 예정이에요.",
+];
+
 function FileRow({
   file,
   fileType,
   chars,
-  bad = false,
   onChange,
 }: {
   file: File;
   fileType?: ResumeFileType;
   chars?: number;
-  bad?: boolean;
   onChange?: () => void;
 }) {
   return (
     <div className={styles.fileRow}>
-      <span className={styles.fileType} data-bad={bad}>
-        {fileLabel(file, fileType)}
-      </span>
+      <span className={styles.fileType}>{fileLabel(file, fileType)}</span>
       <span className={styles.fileName}>
         <b>{file.name}</b>
         <small>
@@ -172,6 +181,51 @@ function FileRow({
       ) : (
         <span />
       )}
+    </div>
+  );
+}
+
+/** One layout for every failure, like the unsupported-site screen. */
+function FailureScreen({
+  imageUrl,
+  file,
+  chars,
+  title,
+  body = [],
+  note,
+  action,
+  onClose,
+}: {
+  imageUrl: string;
+  file: File;
+  chars?: number;
+  title: string;
+  body?: readonly string[];
+  note: string;
+  action: ReactNode;
+  onClose(): void;
+}) {
+  return (
+    <div className={styles.failure}>
+      <img className={styles.failureImage} src={imageUrl} alt="" />
+      <p role="alert" className={styles.failureTitle}>
+        {title}
+      </p>
+      {body.map((line) => (
+        <p key={line} className={styles.failureBody}>
+          {line}
+        </p>
+      ))}
+      <p className={styles.failureFile}>
+        {`${file.name} · ${chars ? `${count(chars)}자` : fileSize(file.size)}`}
+      </p>
+      <p className={styles.noSend}>{note}</p>
+      <div className={styles.failureActions}>
+        {action}
+        <button type="button" className={styles.closeButton} onClick={onClose}>
+          닫기
+        </button>
+      </div>
     </div>
   );
 }
@@ -222,8 +276,9 @@ async function readAndLog(
 }
 
 /**
- * Resume file -> local text -> send notice -> server draft -> the existing import
- * review and merge. The file and its text stay in memory only.
+ * Resume file -> local text -> server draft (started on its own once the text is
+ * read) -> the existing import review and merge. The file and its text stay in
+ * memory only.
  */
 export function ResumeImport({
   file,
@@ -231,6 +286,7 @@ export function ResumeImport({
   analytics,
   readText = defaultReadText,
   requestDraft = requestResumeDraft,
+  unsupportedImageUrl = "/unsupported-capybara.jpg",
   onPickFile,
   onSaved,
   onClose,
@@ -263,6 +319,9 @@ export function ResumeImport({
   // Callers may pass new functions each render; only a new file restarts the read.
   const latest = useRef({ readText, track });
   latest.current = { readText, track };
+  // Same StrictMode guarantee as the read: one file starts one conversion.
+  const converted = useRef<File>(undefined);
+  const startConversion = useRef<(extracted: Extracted) => void>(() => {});
   useEffect(() => {
     alive.current = true;
     let active = true;
@@ -277,16 +336,18 @@ export function ResumeImport({
     }
     void reading.current.result.then((read) => {
       if (!active) return;
-      setPhase(
-        read.ok
-          ? { kind: "notice", ...read }
-          : {
-              kind: "rejected",
-              reason: read.reason,
-              fileType: read.fileType,
-              chars: read.chars,
-            },
-      );
+      if (read.ok) {
+        if (converted.current === file) return;
+        converted.current = file;
+        startConversion.current(read);
+        return;
+      }
+      setPhase({
+        kind: "rejected",
+        reason: read.reason,
+        fileType: read.fileType,
+        chars: read.chars,
+      });
     });
     return () => {
       active = false;
@@ -372,6 +433,8 @@ export function ResumeImport({
       skipped: conversion.skipped,
     });
   };
+
+  startConversion.current = (extracted) => void convert(extracted);
 
   const candidates = phase.kind === "review" ? phase.candidates : undefined;
   const model = useMemo(
@@ -494,75 +557,28 @@ export function ResumeImport({
       )}
 
       {phase.kind === "rejected" && (
-        <>
-          <FileRow
-            file={file}
-            fileType={phase.fileType}
-            chars={phase.chars}
-            bad
-          />
-          <p role="alert" className={pageStyles.error}>
-            {rejectionMessage(phase.reason, phase.fileType)}
-          </p>
-          <p className={styles.noSend}>서버로 보내지 않았어요</p>
-          <div className={styles.actions}>
+        <FailureScreen
+          imageUrl={unsupportedImageUrl}
+          file={file}
+          chars={phase.chars}
+          title={rejectionMessage(phase.reason, phase.fileType)}
+          body={
+            phase.reason === "no_text" && phase.fileType === "pdf"
+              ? SCANNED_PDF_HINT
+              : undefined
+          }
+          note="서버로 보내지 않았어요"
+          action={
             <button
               type="button"
-              className={reviewStyles.secondaryButton}
+              className={reviewStyles.primaryButton}
               onClick={onPickFile}
             >
               다른 파일
             </button>
-            <div className={`${pageStyles.exitActions} ${styles.exit}`}>
-              <button type="button" onClick={onClose}>
-                닫기
-              </button>
-            </div>
-          </div>
-        </>
-      )}
-
-      {phase.kind === "notice" && (
-        <>
-          <FileRow
-            file={file}
-            fileType={phase.fileType}
-            chars={phase.chars}
-            onChange={onPickFile}
-          />
-          <section className={reviewStyles.card} aria-label="전송 안내">
-            <p className={reviewStyles.kicker}>전송 안내</p>
-            <h4 className={reviewStyles.cardTitle}>
-              문서 글자를 서버로 보내요
-            </h4>
-            <div className={reviewStyles.split}>
-              <div>
-                <small>보내는 것</small>
-                <b>글자 {count(phase.chars)}자</b>
-              </div>
-              <div>
-                <small>브라우저 보관</small>
-                <b>안 함</b>
-              </div>
-            </div>
-            <div className={reviewStyles.cardActions}>
-              <button
-                type="button"
-                className={reviewStyles.primaryButton}
-                onClick={() => void convert(phase)}
-              >
-                계속
-              </button>
-              <button
-                type="button"
-                className={reviewStyles.secondaryButton}
-                onClick={onClose}
-              >
-                취소
-              </button>
-            </div>
-          </section>
-        </>
+          }
+          onClose={onClose}
+        />
       )}
 
       {phase.kind === "converting" && (
@@ -588,6 +604,7 @@ export function ResumeImport({
               <small />
             </li>
           </ol>
+          <p className={styles.noSend}>글자만 전송 · 저장 안 함</p>
           <div className={pageStyles.exitActions}>
             <button type="button" onClick={onClose}>
               취소
@@ -597,14 +614,14 @@ export function ResumeImport({
       )}
 
       {phase.kind === "failed" && (
-        <>
-          <FileRow file={file} fileType={phase.fileType} chars={phase.chars} />
-          <p role="alert" className={pageStyles.error}>
-            {failureMessage(phase.code)}
-          </p>
-          <p className={styles.noSend}>프로필은 그대로예요</p>
-          <div className={styles.actions}>
-            {retryable(phase.code) ? (
+        <FailureScreen
+          imageUrl={unsupportedImageUrl}
+          file={file}
+          chars={phase.chars}
+          title={failureMessage(phase.code)}
+          note="프로필은 그대로예요"
+          action={
+            retryable(phase.code) ? (
               <button
                 type="button"
                 className={reviewStyles.primaryButton}
@@ -616,19 +633,15 @@ export function ResumeImport({
             ) : (
               <button
                 type="button"
-                className={reviewStyles.secondaryButton}
+                className={reviewStyles.primaryButton}
                 onClick={onPickFile}
               >
                 다른 파일
               </button>
-            )}
-            <div className={`${pageStyles.exitActions} ${styles.exit}`}>
-              <button type="button" onClick={onClose}>
-                닫기
-              </button>
-            </div>
-          </div>
-        </>
+            )
+          }
+          onClose={onClose}
+        />
       )}
 
       {phase.kind === "review" && (

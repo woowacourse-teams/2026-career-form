@@ -37,7 +37,7 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [프로필 카탈로그 선택과 식별 연결](topics/profile-catalog-identity.md) | 학교, 자격, 시험명의 오프라인 카탈로그 선택과 식별자 저장, 자격증 발급기관 채움과 재선택 때 채운 값 교체(세션 한정 기억), TOEIC Speaking, 한국폴리텍 번호 표기 대조 | 2026-11-16 |
 | [프로필 JSON 전송](topics/profile-json-transfer.md) | 로컬 프로필의 versioned JSON 백업,전체 복원 계약 | 2026-09-07 |
 | [Greeting 지원서에서 프로필 가져오기](topics/greeting-profile-import.md) | 합성 fixture의 읽기 전용 후보 생성, 한 화면 검토와 확인 카드, 병합과 실사이트 검증 경계, CF-479에서 기능 제거 | 2026-11-18 |
-| [이력서 파일로 프로필 가져오기](topics/resume-file-import.md) | 패널의 출처 고르기와 온보딩 진입, 확장 안 PDF·MD·TXT 글자 추출과 거절, 전송 안내, 연월 날짜 1일 채움 표시, pdf.js와 CMap 포함 방식, 값 없는 Console 기록 | 2026-11-17 |
+| [이력서 파일로 프로필 가져오기](topics/resume-file-import.md) | 패널의 출처 고르기와 온보딩 진입, 확장 안 PDF·MD·TXT 글자 추출과 거절, 전송 안내, 연월 날짜 1일 채움 표시, pdf.js와 CMap 포함 방식, 값 없는 Console 기록, CF-480의 PDF 조건 안내와 전송 안내 단계 제거, 실패 화면 통일 | 2026-11-18 |
 | [프로필 입력과 안전한 어학 선택](topics/profile-input-and-language-matching.md) | 자유 텍스트 어학과 유일 후보만 허용하는 회사 옵션 선택 | 2026-09-09 |
 | [확장 프로그램 프로필,지원서 패널 UI](topics/extension-ui.md) | 프로필,패널 탐색과 하늘색 중심 UI 계층, 선택형 값 라벨 표시·복사, 반복 항목 소제목, 패널 열기 단축키 | 2026-10-29 |
 | [지원서 패널 안 자동 기입 흐름](topics/autofill-panel-workflow.md) | 단일 패널 실행,범용 실제 값 판정과 드롭다운 값 보존 | 2026-10-02 |
@@ -57,7 +57,7 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [검토된 DOM 스냅샷 fixture의 공백 정규화](topics/dom-snapshot-fixture-whitespace.md) | pre-commit 공백 검사 통과를 위한 승인된 공백만 정규화 기록 | 2026-10-18 |
 | [입력 위치 표시와 설치 안내](topics/autofill-follow-and-install.md) | 기본 필드 추적, 확인 필요 결과와 첫 설치 안내 | 2026-09-22 |
 | [프로젝트 컨벤션](topics/project-conventions.md) | 공통, Git과 스택별 규약 | 2026-08-22 |
-| [프론트 브라우저 테스트](topics/frontend-browser-testing.md) | jsdom/Chromium 계층, 합성 상호작용 검증과 CI shard 병합 검증 경계, frontend 변경에만 도는 CI 경로 필터와 2026-11 실행 시간 측정, 2026-11 느린 fixture 통합 테스트 38개 삭제와 잃은 회귀 범위, 단위 파일 실행 명령과 확장 옵션 페이지 수동 확인 | 2026-11-16 |
+| [프론트 브라우저 테스트](topics/frontend-browser-testing.md) | jsdom/Chromium 계층, 합성 상호작용 검증과 CI shard 병합 검증 경계, frontend 변경에만 도는 CI 경로 필터와 2026-11 실행 시간 측정, 2026-11 느린 fixture 통합 테스트 38개 삭제와 잃은 회귀 범위, 단위 파일 실행 명령과 확장 옵션 페이지 수동 확인, develop에서도 실패하는 native-form 정책 테스트 두 파일 | 2026-11-18 |
 | [프론트 정적 검사 범위](topics/frontend-static-checks.md) | lint의 TS 소스 제외, 기존 typecheck 실패와 CI·verify.py 미실행 관찰 | 2026-10-29 |
 | [Issue 개발 흐름](topics/issue-development-workflow.md) | Issue, 체크포인트와 사람 승인 경계 | 2026-08-22 |
 | [ADR 작성 규약](topics/adr-authoring.md) | ADR 판단과 Issue raw 기록 | 2026-08-22 |
