@@ -102,6 +102,8 @@ export type ReadonlySearchExecutionResult = (
       selectedValue?: string;
       catalogSelection?: {
         evidence: import("../profile/catalog-match").CatalogEvidence;
+        /** Generic route: approved by name because no result exposed a detail. */
+        labelOnly?: true;
         verify: () => boolean;
       };
     }

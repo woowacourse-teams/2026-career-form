@@ -600,7 +600,12 @@ export async function executeReadonlySearch(
         ? searchDestination(currentSurface, query, submit)
         : undefined;
     let candidate:
-      | { element: HTMLElement; signature: string; evidence?: CatalogEvidence }
+      | {
+          element: HTMLElement;
+          signature: string;
+          evidence?: CatalogEvidence;
+          labelOnly?: true;
+        }
       | undefined;
     let selectedResults: ReturnType<typeof observeResults> | undefined;
     let structuredResults:
@@ -1191,6 +1196,7 @@ export async function executeReadonlySearch(
             selectedValue: candidate.evidence!.label,
             catalogSelection: {
               evidence: candidate.evidence!,
+              ...(candidate.labelOnly ? { labelOnly: true as const } : {}),
               verify: () => {
                 try {
                   if (

@@ -205,7 +205,8 @@ describe("catalog search approval and receipts", () => {
         throw new Error("school approval absent");
       test.item.catalogMatch = approval.match;
       const lookup = test.registry.lookupField(test.item.candidateId);
-      if (lookup.status !== "blocked") throw new Error("readonly target absent");
+      if (lookup.status !== "blocked")
+        throw new Error("readonly target absent");
       const eligibility = observeReadonlySearch(lookup.handle);
       if (eligibility.status !== "eligible")
         throw new Error("target not eligible");
