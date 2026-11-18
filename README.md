@@ -1,50 +1,69 @@
+<div align="center">
+
+**한국어** · [English](README.en.md)
+
+<img src=".github/images/logo.png" width="120" height="120" alt="커리어폼 로고">
+
 # 2026 Career Form
 
-채용 지원서 입력을 안전하게 보조하는 프로젝트다. 현재 저장소에는 팀의 Issue 기반 Codex 개발 하네스가 먼저 구성되어 있다.
+지원서 입력, 이제 한 번만.<br>
+내 정보를 등록해 두면 채용 지원서를 자동으로 채워 주는 <a href="https://chromewebstore.google.com/detail/career-form/lneeceajpkjfffibjoajdkfelhoojbam"><img src="https://cdn.simpleicons.org/googlechrome" height="16" alt=""> <b>Chrome 확장 프로그램</b></a>이에요.
 
-## 시작하기
+[![Chrome 웹스토어에서 설치하기](https://img.shields.io/badge/Add_to_Chrome-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/career-form/lneeceajpkjfffibjoajdkfelhoojbam)
 
-```bash
-# Windows PowerShell
-python harness/scripts/bootstrap.py
-.venv/Scripts/python.exe harness/scripts/verify.py
+<br>
 
-# POSIX shell
-python3 harness/scripts/bootstrap.py
-.venv/bin/python harness/scripts/verify.py
-```
+| [사용 방법](#사용-방법) | [주요 기능](#주요-기능) | [기술 스택](#기술-스택) | [인프라 구성도](#인프라-구성도) | [팀원](#팀원) |
+| :---: | :---: | :---: | :---: | :---: |
 
-Codex를 시작한 뒤 프로젝트 훅이 검토 대상으로 표시되면 `/hooks`에서 `.codex/hooks.json`의 내용을 확인하고 신뢰한다.
+<br>
 
-## 로컬 백엔드 실행
+## 사용 방법
 
-팀 내부의 승인된 비공개 채널에서 공유받은 `.env.local`을 저장소 루트에 둔 뒤 로컬 Spring과 MongoDB를 함께 실행한다. 이 파일은 Git에 포함하지 않는다.
+| 1. 설치 | 2. 프로필 등록 | 3. 자동 기입 | 4. 확인·제출 |
+| :---: | :---: | :---: | :---: |
+| [웹스토어](https://chromewebstore.google.com/detail/career-form/lneeceajpkjfffibjoajdkfelhoojbam)에서<br>Career Form 추가 | 프로필 관리에서<br>내 정보 입력 | 지원서에서 패널 열고<br>자동 기입 클릭 | 확인 필요 칸 채우고<br>저장·제출은 직접 |
 
-```bash
-# macOS
-python3 scripts/local.py
+<sub>패널은 툴바 아이콘이나 <code>Alt+Shift+C</code>(Mac <code>⌥⇧C</code>)로 열어요 · 관심 직무를 고르면 새 공고 알림도 받아요</sub>
 
-# Windows PowerShell
-py scripts/local.py
-```
+<br>
 
-인자 없는 실행은 `up`과 같다. 같은 스크립트에서 다음 명령을 사용할 수 있다.
+## 주요 기능
 
-```bash
-python3 scripts/local.py status
-python3 scripts/local.py logs
-python3 scripts/local.py down
-```
+<picture><source media="(prefers-color-scheme: dark)" srcset=".github/images/feature-1-profile-dark.png"><img src=".github/images/feature-1-profile.png" width="48%" alt="내 정보는 한 번만 등록. 자주 쓰는 지원 정보를 프로필에 모아 둬요"></picture> <picture><source media="(prefers-color-scheme: dark)" srcset=".github/images/feature-2-import-dark.png"><img src=".github/images/feature-2-import.png" width="48%" alt="써 둔 지원서에서 가져오기. 예전에 쓴 지원서의 내용을 프로필로 옮겨요"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset=".github/images/feature-3-autofill-dark.png"><img src=".github/images/feature-3-autofill.png" width="48%" alt="지원서는 버튼 한 번으로. AI가 지원서 칸을 읽고 내 정보로 채워요"></picture> <picture><source media="(prefers-color-scheme: dark)" srcset=".github/images/feature-4-result-dark.png"><img src=".github/images/feature-4-result.png" width="48%" alt="결과는 한눈에. 확실하지 않은 칸은 채우지 않고 따로 알려요"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset=".github/images/feature-5-submit-dark.png"><img src=".github/images/feature-5-submit.png" width="48%" alt="저장·제출은 내가 직접. 확장은 저장·제출 버튼을 누르지 않아요"></picture> <picture><source media="(prefers-color-scheme: dark)" srcset=".github/images/feature-6-alert-dark.png"><img src=".github/images/feature-6-alert.png" width="48%" alt="새 공고가 뜨면 바로 알림. 저장한 공고는 마감 전에 다시 알려요"></picture>
 
-Windows에서는 `python3` 대신 `py`를 사용한다. `up`은 Compose 설정을 검증한 뒤 Gradle wrapper로 최신 백엔드 JAR를 만들고 Docker 이미지를 빌드한다. JDK 21이 필요하다. `down`은 MongoDB named volume을 삭제하지 않는다. 자세한 프로파일, Docker, MongoDB 계약은 [백엔드 안내](backend/README.md)를 참고한다.
+<br>
 
-## 작업 흐름
+## 기술 스택
 
-1. 사람이 GitHub Project draft를 만든다.
-2. Codex에서 `$cf-issue-lifecycle <draft 제목>`을 실행한다.
-3. Codex가 `cf-project-issue-planning`으로 Issue 계약을 제안하고 사람 승인에서 멈춘다.
-4. 승인 뒤 `cf-issue-workflow`가 구현, 검증, 리뷰와 Draft PR을 진행한다.
-5. 사람이 최종 리뷰하고 머지한다.
-6. Codex가 `cf-post-merge-cleanup`으로 검증된 로컬 작업 자원을 정리한다.
+| 영역 | 기술 |
+| :---: | :--- |
+| **Extension** | ![Chrome MV3](https://img.shields.io/badge/Chrome_MV3-30363D?style=flat&logo=googlechrome&logoColor=4285F4) ![WXT](https://img.shields.io/badge/WXT-30363D?style=flat&logo=wxt&logoColor=67D55E) ![React](https://img.shields.io/badge/React-30363D?style=flat&logo=react&logoColor=61DAFB) ![TypeScript](https://img.shields.io/badge/TypeScript-30363D?style=flat&logo=typescript&logoColor=3178C6) ![Vite](https://img.shields.io/badge/Vite-30363D?style=flat&logo=vite&logoColor=646CFF) ![PostHog](https://img.shields.io/badge/PostHog-30363D?style=flat&logo=posthog&logoColor=F9BD2B) |
+| **Backend** | ![Java 21](https://img.shields.io/badge/Java_21-30363D?style=flat&logo=openjdk&logoColor=F89820) ![Spring Boot](https://img.shields.io/badge/Spring_Boot-30363D?style=flat&logo=springboot&logoColor=6DB33F) ![MongoDB](https://img.shields.io/badge/MongoDB-30363D?style=flat&logo=mongodb&logoColor=47A248) ![Gradle](https://img.shields.io/badge/Gradle-30363D?style=flat&logo=gradle&logoColor=white) |
+| **AI** | ![Jev](https://img.shields.io/badge/Jev-30363D?style=flat&logo=data%3Aimage%2Fpng%3Bbase64%2CiVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAYAAAByDd%2BUAAAAAXNSR0IArs4c6QAAAIplWElmTU0AKgAAAAgABQEaAAUAAAABAAAASgEbAAUAAAABAAAAUgEoAAMAAAABAAIAAAExAAIAAAAGAAAAWodpAAQAAAABAAAAYAAAAAAAAABIAAAAAQAAAEgAAAABRmlnbWEAAAOgAQADAAAAAQABAACgAgAEAAAAAQAAABygAwAEAAAAAQAAABwAAAAAJ2zPfQAAAAlwSFlzAAALEwAACxMBAJqcGAAAAVlpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IlhNUCBDb3JlIDYuMC4wIj4KICAgPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4KICAgICAgPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIKICAgICAgICAgICAgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIj4KICAgICAgICAgPHhtcDpDcmVhdG9yVG9vbD5GaWdtYTwveG1wOkNyZWF0b3JUb29sPgogICAgICA8L3JkZjpEZXNjcmlwdGlvbj4KICAgPC9yZGY6UkRGPgo8L3g6eG1wbWV0YT4KBP9cyAAABjJJREFUSA29Vn1MlVUY%2F53zvnC5gCJ%2Bi6j5sUzBj1AsXc2aX6WhoWJrmgzNQqf9UYka6oykzNS1tYYsP6abm4mmkyyH1qy1XFFoIGql8o2oGaLCvRfej57nXO%2FlcgXn%2FKPn3Xnve99z3t%2FvPN9H4CHl2pyTgwzLHiEhRkHY6bYNSSNHE9pZ6Fpx77yJZQ8DJR60qDYpP1wPdaZYNlJtIDFE6JFSCHisZvWZQ4bCIlbDNu4AotAW9l672ZUXk5%2FU1BFuh4TVs0%2FMCBHaRhqjLdhosVoUOAMJulhsulh4EyEyBKQ9WmzzrAUjs8%2Bhqd%2BoyaDbfYQHUg5ozxhdsjSprZaQspmIAiWUgO8aXgUi9XC0N2%2FBskzL3PSTfmv9vLx5ZuD3bQhtIqs1onLCdecSl%2BHxa8AfSCHhECH4taEUm8r2KIzVA1ORGBWHZpu1t%2Fy4rGmY7kCT4foiRm9YKgJIdf8qeqghzSL0MCJz3zOWd5Z91WDcxbaqfdhb02qp1JL3kdp3Bt6ITUaEFgY2PQv%2FMgZvvMYQN%2BhVppqgm1%2FDquTjLxDw14Zlaj7faKQVBQp%2BrD%2BLDy7vxI3meqwdvAjf3SxU30%2FqloisSzswvssIfDZ8JWzS0kvphWdf61JaHtN4qd%2BRad%2FyW8m32qTfwjXIzbTAT8YmrG%2B5g3WXcrGoJAuDnDHIT9iGBTEvwmV61FgcOxMLY2ag0n2tjUkZk4U3LigOKKY2c8TzO2VSodfPdWiOEQzEImgFP6eXbkIVgW0eugKv9J6CcvdVpBF5YcN5te71c9mgjYIDyRu5gfqpJSqowrWweA%2FkXHqzV9IuBI20QGPwx5xrle46vDtwvtLqy7qTmH1mFSpcdciNW6PGX40VOHTte1LFJr9ZyvxemrZ3xjZhL9qwYYOUdS%2BfGmALJHKeBQqT%2BnzYZLqxp%2BYYqogsMWoYjeFqPNn5CWW2i0S8rHQzLrmq4ZSOQBj1zNgULInppeMH6JZsGekQoRG%2B6hG8ujWABJ7qEo8T%2F%2FyCotsXiQi42dyABCK9TsF0s6UBKWfW4B2yCJvf9x3jcTWigAz3WJ54Sf8S2KsPEvYRVRBM7jYO%2BWO2kblblG8OJ3yCZ6NHIzqkE%2FaP2ojpPSbg0%2FL9uG00qrwNxFQcpkygHBVLO9KOP%2BBoPX7jNK401aCAtHOTb4dHDsLjEf0xJDyWiA2YlA6RulOlR4jUAnn8z8xBeqXr5KvWEuGf9j6wZrmVh1HtuY5p3Z9W4Z9clEF1U8OYzsOoaLdWLTZbi20EIbT9S2aW3GK2cyUJFg4aBrzYWI7MQWnIiVulzDYheiT%2BbKxUBZvXeK%2FWgh6M4%2FuvOGw7R4dmFfHuAoXrYmcqzGuoVm4p34ed1UeVn9isp%2F79XWnL5Yw9zyZms7Loon1z8pzikKJI1yTOeYzmJnJqeCAx587MnhMxllJga9k%2BrLiwBZGaE8v7p4ArDJNkX96NA3UnVBC9dWGr8imnUrBwwHjs5kZphRTL7XGnK0i%2FQu5nweK2POgZGo1NQ5djMAXIq32mUSFYQB3jPBWBDOyqOYq3H5uPHfGZqgp9XplHWss2KcGYjE3VpbD3kecqJGW%2FpUHs4pbSnpjkRx6h1Jq4AKz%2FOxcLitejB23k0OiPsaTfLDzfdSzm9HoeLtpgH0c3zrk2pIxN124atqqltuE%2B2ARrJS2MD26ovk2wf%2FZfLUD30C7IGvImUnpPAtVICqAKfHRlj%2FJtWt8kLOs%2FF07N4S%2FmHOlu01MCo%2BtBxlIG5zMIxU0GVUSL9xIsnIu9HF2pJzZiFvn1NeoYLBxMyWTaMlctmXUtNgxZooLL14wZi1LBNGFlxOSPVceENujVyQXZ1IDfC27AbJK7pksR7K7Jxzjq8iw%2F3yrGotgkpPebgyg90n%2B44jkGduphaDTcH8Yennp%2FA%2BZFgUcMNx0xAjsIa%2Bk9YpynZryDl2Pd4MWK3BN0xGDNnB0cMdpoyCD%2F6yGKCX1ydU7BdAk9%2B1GOiVTo18Z%2BNeWYDyvw9z4NAyf5WCDoICxssZAMnqgLvZNKYqouLBz%2B92roXQIqlAJ7jEc9CAcS83Ndyg8DYZgjKSdHU%2BFYSoNcLLbT7Q9dipJehyZfCf6mvf%2F%2FARlk60sAvdXqAAAAAElFTkSuQmCC) ![OpenAI](https://img.shields.io/badge/OpenAI-30363D?style=flat&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyByb2xlPSJpbWciIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBmaWxsPSIjRkZGRkZGIiBkPSJNMjIuMjgxOSA5LjgyMTFhNS45ODQ3IDUuOTg0NyAwIDAgMC0uNTE1Ny00LjkxMDggNi4wNDYyIDYuMDQ2MiAwIDAgMC02LjUwOTgtMi45QTYuMDY1MSA2LjA2NTEgMCAwIDAgNC45ODA3IDQuMTgxOGE1Ljk4NDcgNS45ODQ3IDAgMCAwLTMuOTk3NyAyLjkgNi4wNDYyIDYuMDQ2MiAwIDAgMCAuNzQyNyA3LjA5NjYgNS45OCA1Ljk4IDAgMCAwIC41MTEgNC45MTA3IDYuMDUxIDYuMDUxIDAgMCAwIDYuNTE0NiAyLjkwMDFBNS45ODQ3IDUuOTg0NyAwIDAgMCAxMy4yNTk5IDI0YTYuMDU1NyA2LjA1NTcgMCAwIDAgNS43NzE4LTQuMjA1OCA1Ljk4OTQgNS45ODk0IDAgMCAwIDMuOTk3Ny0yLjkwMDEgNi4wNTU3IDYuMDU1NyAwIDAgMC0uNzQ3NS03LjA3Mjl6bS05LjAyMiAxMi42MDgxYTQuNDc1NSA0LjQ3NTUgMCAwIDEtMi44NzY0LTEuMDQwOGwuMTQxOS0uMDgwNCA0Ljc3ODMtMi43NTgyYS43OTQ4Ljc5NDggMCAwIDAgLjM5MjctLjY4MTN2LTYuNzM2OWwyLjAyIDEuMTY4NmEuMDcxLjA3MSAwIDAgMSAuMDM4LjA1MnY1LjU4MjZhNC41MDQgNC41MDQgMCAwIDEtNC40OTQ1IDQuNDk0NHptLTkuNjYwNy00LjEyNTRhNC40NzA4IDQuNDcwOCAwIDAgMS0uNTM0Ni0zLjAxMzdsLjE0Mi4wODUyIDQuNzgzIDIuNzU4MmEuNzcxMi43NzEyIDAgMCAwIC43ODA2IDBsNS44NDI4LTMuMzY4NXYyLjMzMjRhLjA4MDQuMDgwNCAwIDAgMS0uMDMzMi4wNjE1TDkuNzQgMTkuOTUwMmE0LjQ5OTIgNC40OTkyIDAgMCAxLTYuMTQwOC0xLjY0NjR6TTIuMzQwOCA3Ljg5NTZhNC40ODUgNC40ODUgMCAwIDEgMi4zNjU1LTEuOTcyOFYxMS42YS43NjY0Ljc2NjQgMCAwIDAgLjM4NzkuNjc2NWw1LjgxNDQgMy4zNTQzLTIuMDIwMSAxLjE2ODVhLjA3NTcuMDc1NyAwIDAgMS0uMDcxIDBsLTQuODMwMy0yLjc4NjVBNC41MDQgNC41MDQgMCAwIDEgMi4zNDA4IDcuODcyem0xNi41OTYzIDMuODU1OEwxMy4xMDM4IDguMzY0IDE1LjExOTIgNy4yYS4wNzU3LjA3NTcgMCAwIDEgLjA3MSAwbDQuODMwMyAyLjc5MTNhNC40OTQ0IDQuNDk0NCAwIDAgMS0uNjc2NSA4LjEwNDJ2LTUuNjc3MmEuNzkuNzkgMCAwIDAtLjQwNy0uNjY3em0yLjAxMDctMy4wMjMxbC0uMTQyLS4wODUyLTQuNzczNS0yLjc4MThhLjc3NTkuNzc1OSAwIDAgMC0uNzg1NCAwTDkuNDA5IDkuMjI5N1Y2Ljg5NzRhLjA2NjIuMDY2MiAwIDAgMSAuMDI4NC0uMDYxNWw0LjgzMDMtMi43ODY2YTQuNDk5MiA0LjQ5OTIgMCAwIDEgNi42ODAyIDQuNjZ6TTguMzA2NSAxMi44NjNsLTIuMDItMS4xNjM4YS4wODA0LjA4MDQgMCAwIDEtLjAzOC0uMDU2N1Y2LjA3NDJhNC40OTkyIDQuNDk5MiAwIDAgMSA3LjM3NTctMy40NTM3bC0uMTQyLjA4MDVMOC43MDQgNS40NTlhLjc5NDguNzk0OCAwIDAgMC0uMzkyNy42ODEzem0xLjA5NzYtMi4zNjU0bDIuNjAyLTEuNDk5OCAyLjYwNjkgMS40OTk4djIuOTk5NGwtMi41OTc0IDEuNDk5Ny0yLjYwNjctMS40OTk3WiIvPjwvc3ZnPg%3D%3D) ![Spring AI](https://img.shields.io/badge/Spring_AI-30363D?style=flat&logo=spring&logoColor=6DB33F) ![LangSmith](https://img.shields.io/badge/LangSmith-30363D?style=flat&logo=langchain&logoColor=white) |
+| **Infra** | ![AWS EC2](https://img.shields.io/badge/AWS_EC2-30363D?style=flat&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyByb2xlPSJpbWciIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBmaWxsPSIjRkY5OTAwIiBkPSJNNi40MjkgMTcuNTcxaDEwLjcxNFY2Ljg1N0g2LjQyOXYxMC43MTRaTTE4IDYuODU3aDEuNzE0di44NTdIMThWOS40M2gxLjcxNHYuODU3SDE4djEuMjg1aDEuNzE0di44NThIMTh2MS43MTRoMS43MTRWMTVIMTh2MS43MTRoMS43MTR2Ljg1N0gxOHYuMDU5YS44LjggMCAwIDEtLjc5OS43OTloLS4wNTh2MS43MTRoLS44NTd2LTEuNzE0SDE0LjU3djEuNzE0aC0uODU3di0xLjcxNEgxMi40M3YxLjcxNGgtLjg1OHYtMS43MTRIOS44NTd2MS43MTRIOXYtMS43MTRINy4yODZ2MS43MTRoLS44NTd2LTEuNzE0SDYuMzdhLjguOCAwIDAgMS0uNzk5LS44di0uMDU4SDQuMjg2di0uODU3SDUuNTdWMTVINC4yODZ2LS44NTdINS41N3YtMS43MTRINC4yODZ2LS44NThINS41N3YtMS4yODVINC4yODZ2LS44NTdINS41N1Y3LjcxNEg0LjI4NnYtLjg1N0g1LjU3VjYuOGEuOC44IDAgMCAxIC44LS43OTloLjA1OFY0LjI4NmguODU3VjZIOVY0LjI4NmguODU3VjZoMS43MTRWNC4yODZoLjg1OFY2aDEuMjg1VjQuMjg2aC44NTdWNmgxLjcxNVY0LjI4NmguODU3VjZoLjA1OGEuOC44IDAgMCAxIC43OTkuNzk5di4wNThaTTEyLjQyOSAyMy4wOWEuMDU0LjA1NCAwIDAgMS0uMDU0LjA1M0guOTFhLjA1My4wNTMgMCAwIDEtLjA1My0uMDUzVjExLjYyNWMwLS4wMy4wMjQtLjA1NC4wNTMtLjA1NGgyLjUydi0uODU3SC45MWEuOTExLjkxMSAwIDAgMC0uOTEuOTFWMjMuMDljMCAuNTAyLjQwOC45MS45MS45MWgxMS40NjVhLjkxLjkxIDAgMCAwIC45MS0uOTFWMjFoLS44NTZaTTI0IC45MXYxMS40NjVhLjkxLjkxIDAgMCAxLS45MS45MWgtMi41MnYtLjg1NmgyLjUxOWEuMDU0LjA1NCAwIDAgMCAuMDUzLS4wNTRWLjkxYS4wNTMuMDUzIDAgMCAwLS4wNTMtLjA1M0gxMS42MjVhLjA1My4wNTMgMCAwIDAtLjA1NC4wNTN2Mi41MmgtLjg1N1YuOTFjMC0uNTAyLjQwOS0uOTEuOTEtLjkxSDIzLjA5YS45MS45MSAwIDAgMSAuOTEuOTFaIi8%2BPC9zdmc%2B) ![AWS S3](https://img.shields.io/badge/AWS_S3-30363D?style=flat&logo=data%3Aimage%2Fpng%3Bbase64%2CiVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAYAAAByDd%2BUAAAEcUlEQVR4nKxWW2xUVRTd%2B9xpS8OjmBhiKhj7IrGl47T9UEIq1C%2BMMQZwxgLRRqQPQUmIJsYv8E%2BiJEJC2s5YNGLQdiw12tAPPlCjQU3aaae1EuzUCVVIabAYKX3NPZt1B2Y6bWfaKZ31cc%2B5%2B%2Bx71r77dY6N4qCmsSxtlEJPCXO5Et4sRAXMsoGIV8bqQW7ieR2TIDF1ipYfzczJH9qqLt%2BkBODYl5c8jm0sdIiEtxPLCix3MclFLTKgmIKaeTJWX2lhyLIxfcwyDONW7LgGBnRplqaxidtNHYcGJucR7mpwFCjmemxeAas7RKQ1Xetvzh7oHaUlwNlChvznKIchO7D1K0I8yUxvttT4WqOETo89h7XRbRGZynznXLX%2Fb0oBnC2F6TyaUScsHxLzAW%2B1r8mSKxausCZF1317UkVmwevqn2qp9Z2EC0%2BRptcjciXCw5bf%2B7NLzjs9xWWUIjg%2FLXzE6X7yfTjxDSTWvxG5TZMZMMhGiNtKEuNnZ6PjKlzwC5NuN0X7W2t7LydDsPeL%2FDWT46tKleZn4cZneJq3Ikx%2BEbrFzINRwtXp%2FwfHptdiTd5TyriptbyI%2BXYR5TZYZbncJZYxN%2BCFPxJwZTGxY%2FoO3EXhUrmK9w4hfcJb09PmdDv6tNAM4WevBSfwV9eglNdc3fUTZNbGH1iLlac3bQiZtjxFsg6lUhiPTRPdEiWHRevx1lr%2Fr%2FMUhHMRuL%2BihPdHCDhvru5X%2B%2FqGMAzRA6KyqSRbm5SpKTSbEJkUgCk5yWzianQchNueI2Ue8Vb3di6ki4aRY%2B0%2BpTMGIjJ1b%2BCAxPnD%2BODDSILnkWDHd3rs6xcm5DwhGfmutvPOLEIIA%2BiVuZQEkAwf43keXhkzxAi63I6zuzyb7PF00XFyKSZhwuZaj5c99qdFjEsZK8xVZ171j1GSqKx3PG4a%2FDYMqEJy%2FIbdThZd87UfPWrlEmrRXfI5CHejZR6Rh7qPeV1khgl31NvXpRnGMCuzuHm%2Fv4%2BWCGfL%2BkwZfXgvXP0WhctEmlHD51BWx63GgvdSGPPPjYLubdHTAq65jTju8db4vqVlwNlQspkV1SFMlSi1dIzdILloxR6%2FvVtFNYUHUOBJxXEheOt8l3A6VBm2UL71zuGEpFJMj5kZ4xdsM3wSVEL5lCKIVlnWaPD0wS%2Br%2B4Yj8pk%2FtCxhXvYfRmCKsspsIpZsFiGLDFIKXBrdGCWBxv3nXHnUpbgqDCK4KXNpuFWyDM4zJDIxSAdAaCzWPZLFvfBwICGhXtsTXkT3SLLFLcYoueEwJSK0ugC6whCOmdTEkTlfxxy8EdhmGUV0RSkuoGXCugVa4cGNKXHShAmZPsHjDI6gKUnjU959vhFaAtBDVf%2BjDtwWqBEd5oJ3v29grg7PFbga7C%2BQUu9iaQs%2Bsg5OP252flTyFW3wvFudMvVqMlQp0rwMzaMcBk9AfGJko%2B%2Bj7ysotChhBDtPF%2BcaIbWFSW3E6xMgzwNxEb5Im6M6gTUYRb%2FjwG3%2FuranDTqSaN%2B7AAAA%2F%2F9GtoZjAAAABklEQVQDAC754fMvS5o3AAAAAElFTkSuQmCC) ![Docker](https://img.shields.io/badge/Docker-30363D?style=flat&logo=docker&logoColor=2496ED) ![Nginx](https://img.shields.io/badge/Nginx-30363D?style=flat&logo=nginx&logoColor=009639) ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-30363D?style=flat&logo=githubactions&logoColor=2088FF) ![Cloudflare Tunnel](https://img.shields.io/badge/Cloudflare_Tunnel-30363D?style=flat&logo=cloudflare&logoColor=F38020) |
+| **Monitoring** | ![Grafana](https://img.shields.io/badge/Grafana-30363D?style=flat&logo=grafana&logoColor=F46800) ![Loki](https://img.shields.io/badge/Loki-30363D?style=flat) ![Prometheus](https://img.shields.io/badge/Prometheus-30363D?style=flat&logo=prometheus&logoColor=E6522C) ![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-30363D?style=flat&logo=opentelemetry&logoColor=F5A800) |
+| **Test** | ![Vitest](https://img.shields.io/badge/Vitest-30363D?style=flat&logo=vitest&logoColor=6E9F18) ![Playwright](https://img.shields.io/badge/Playwright-30363D?style=flat) ![JUnit](https://img.shields.io/badge/JUnit-30363D?style=flat&logo=junit5&logoColor=25A162) |
+| **External** | ![FCM Web Push](https://img.shields.io/badge/FCM_Web_Push-30363D?style=flat&logo=firebase&logoColor=FFCA28) ![도로명주소 API](https://img.shields.io/badge/%EB%8F%84%EB%A1%9C%EB%AA%85%EC%A3%BC%EC%86%8C_API-30363D?style=flat) |
 
-세부 정책은 [하네스 안내](harness/README.md)와 [Issue 개발 흐름 Wiki](llm-wiki/wiki/topics/issue-development-workflow.md)를 참고한다.
+<br>
+
+## 인프라 구성도
+
+![커리어폼 인프라 구성도](.github/images/infra-architecture.webp)
+
+</div>
+
+<br>
+
+## 팀원
+
+<div align="center">
+
+| <img src="https://avatars.githubusercontent.com/u/114290378?v=4&s=120" width="120" height="120" alt="티모"> | <img src="https://avatars.githubusercontent.com/u/116935748?v=4&s=120" width="120" height="120" alt="영기"> | <img src="https://avatars.githubusercontent.com/u/137779014?v=4&s=120" width="120" height="120" alt="모아"> | <img src="https://avatars.githubusercontent.com/u/71001678?v=4&s=120" width="120" height="120" alt="레서"> |
+| :---: | :---: | :---: | :---: |
+| [티모(윤호준)](https://github.com/Yoonhojoon) | [영기(김기영)](https://github.com/Giyoul) | [모아(정회창)](https://github.com/picetea44) | [레서(한승규)](https://github.com/win9-tech) |
+
+</div>

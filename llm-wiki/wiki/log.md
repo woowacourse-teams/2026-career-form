@@ -1167,3 +1167,9 @@
 - 승인한 후보 4개를 [CF-470 bundle](../raw/issues/CF-470/manifest.md)에 기록했다. 출처 고르기와 온보딩 진입을 포함한 이력서 가져오기 흐름, 연월 날짜 규칙, pdf.js와 CMap 포함 방식, 값 없는 Console 기록과 계측 이벤트다.
 - [이력서 파일로 프로필 가져오기](topics/resume-file-import.md) topic을 새로 만들고 [선택적 이용 계측](topics/usage-analytics.md) topic과 색인을 갱신했다.
 - 실제 지원값, 이력서 내용, 계정, 세션, 대화 전문은 저장하지 않았다.
+## [2026-11-17] ingest | CF-472 범용 수집의 공고 제목 제외
+- Approval-Digest: e9f2d655d212b195599e50e1d814da78a9c8eb9e98efeb602478f48816ec6f67
+- Source-Revision: a8a59f31
+- 승인한 후보 3개를 [CF-472 bundle](../raw/issues/CF-472/manifest.md)에 기록했다. 페이지 이름을 섹션 제목과 섹션 머리 라벨에서 빼는 규칙과 버린 대안, 코드로 확인한 사실, 서버 섹션 결과 캐시의 2026-11-17 실측 보고와 CF-467 ADR 기대의 정정이다.
+- [범용 수집의 페이지 이름 제외](topics/generic-page-title-exclusion.md) topic을 만들고 [범용 섹션 분석 캐시: 확장 쪽과 서버 쪽](topics/generic-section-analysis-cache.md) topic과 색인을 갱신했다.
+- 실제 지원값, 계정, 세션, 키 값, 대화 전문, 공고 식별자와 주소는 저장하지 않았다.
