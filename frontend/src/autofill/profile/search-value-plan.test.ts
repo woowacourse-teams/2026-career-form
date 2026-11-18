@@ -44,7 +44,7 @@ describe("local search value plan", () => {
     });
   });
 
-  it("keeps a unique same-entry grade as provenance when it cannot split the original name", () => {
+  it("adds a name-with-grade form when the original name does not end with the same-entry grade", () => {
     expect(
       buildLocalSearchValuePlan({
         profileEntryId: "certificate-1",
@@ -55,8 +55,36 @@ describe("local search value plan", () => {
       }),
     ).toMatchObject({
       grade: "level 2",
-      forms: [{ kind: "original-exact", name: "synthetic certificate" }],
+      forms: [
+        { kind: "original-exact", name: "synthetic certificate" },
+        { kind: "name-with-grade", name: "synthetic certificate level 2" },
+      ],
     });
+  });
+
+  it("normalizes whitespace into a single space for the name-with-grade form", () => {
+    expect(
+      buildLocalSearchValuePlan({
+        profileEntryId: "certificate-1",
+        originalName: "  synthetic   certificate ",
+        gradeCandidates: [
+          { profileEntryId: "certificate-1", grade: " level   2 " },
+        ],
+      }).forms,
+    ).toEqual([
+      { kind: "original-exact", name: "  synthetic   certificate " },
+      { kind: "name-with-grade", name: "synthetic certificate level 2" },
+    ]);
+  });
+
+  it("keeps only the original form when the grade is empty", () => {
+    expect(
+      buildLocalSearchValuePlan({
+        profileEntryId: "certificate-1",
+        originalName: "synthetic certificate",
+        gradeCandidates: [{ profileEntryId: "certificate-1", grade: "  " }],
+      }).forms,
+    ).toEqual([{ kind: "original-exact", name: "synthetic certificate" }]);
   });
 
   it("permits reversible whitespace normalization without rewriting either profile value", () => {
@@ -82,10 +110,6 @@ describe("local search value plan", () => {
   });
 
   it.each([
-    [
-      "a mismatched grade",
-      [{ profileEntryId: "certificate-1", grade: "level 3" }],
-    ],
     [
       "a grade from another entry",
       [{ profileEntryId: "certificate-2", grade: "level 2" }],
@@ -114,6 +138,18 @@ describe("local search value plan", () => {
       ]);
     },
   );
+
+  it("never splits a name that ends with a different grade", () => {
+    expect(
+      buildLocalSearchValuePlan({
+        profileEntryId: "certificate-1",
+        originalName: "synthetic certificate level 2",
+        gradeCandidates: [
+          { profileEntryId: "certificate-1", grade: "level 3" },
+        ],
+      }).forms.map((form) => form.kind),
+    ).toEqual(["original-exact", "name-with-grade"]);
+  });
 
   it("returns frozen local provenance so later execution cannot mutate an approved plan", () => {
     const plan = buildLocalSearchValuePlan({
