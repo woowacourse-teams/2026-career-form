@@ -111,6 +111,12 @@ function searchAttempts(
     new Set(args.searchValues.map(normalized)).size !== args.searchValues.length
   )
     throw new SearchFailure("stale_target");
+  if (
+    args.gradeAppendedValue !== undefined &&
+    normalized(args.searchValues[1] ?? "") !==
+      normalized(args.gradeAppendedValue)
+  )
+    throw new SearchFailure("stale_target");
   return args.searchValues;
 }
 /**
@@ -419,6 +425,31 @@ export async function executeReadonlySearch(
     const attempts = searchAttempts(args, values[0]!);
     trace("검색 대상 확인", { initialValue, values, attempts, target });
     const matchingValues = args.searchValues ? attempts : values;
+    const gradeValue = args.searchValues ? args.gradeAppendedValue : undefined;
+    // Result text the last exact lookup matched; set by pickExact.
+    let matchedText = "";
+    const pickExact = <T>(
+      find: (expected: readonly string[]) => T | undefined,
+      searchText: string,
+    ): T | undefined => {
+      matchedText = searchText;
+      if (gradeValue && normalized(gradeValue) !== normalized(searchText)) {
+        try {
+          const hit = find([gradeValue]);
+          if (hit) {
+            matchedText = gradeValue;
+            return hit;
+          }
+        } catch (error) {
+          if (!(
+            error instanceof SearchFailure &&
+            error.reason === "search_results_not_found"
+          ))
+            throw error;
+        }
+      }
+      return find([searchText]);
+    };
     const matches = (value: string) =>
       matchingValues.some(
         (candidate) => normalized(candidate) === normalized(value),
@@ -762,9 +793,12 @@ export async function executeReadonlySearch(
                 canonicalFieldKey,
                 attemptValues,
               )
-            : results.exact(attemptValues, catalogMatch);
+            : pickExact(
+                (expected) => results.exact(expected, catalogMatch),
+                searchText,
+              );
         }, "result_pending");
-        selectedSearchText = searchText;
+        selectedSearchText = candidate ? matchedText : searchText;
         trace("일치 결과 발견", candidate?.element);
         break;
       } catch (error) {
@@ -810,8 +844,12 @@ export async function executeReadonlySearch(
           surfaceGuard();
           structuredResults = await results.interpret();
           surfaceGuard();
-          candidate = structuredResults.exact(attemptValues, catalogMatch);
-          selectedSearchText = searchText;
+          const structured = structuredResults;
+          candidate = pickExact(
+            (expected) => structured.exact(expected, catalogMatch),
+            searchText,
+          );
+          selectedSearchText = matchedText;
           break;
         }
         if (

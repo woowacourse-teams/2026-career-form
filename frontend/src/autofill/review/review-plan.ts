@@ -100,7 +100,6 @@ import { assignMixedRows } from "../dom/mixed-section-rows";
 import { genericFormGroupFor } from "../dom/generic-form-groups";
 import { genericReasonText } from "../generic/grade-reason-text";
 
-
 /** Choice controls whose current choice the site may have picked by default. */
 const SITE_CHOICE_COMMANDS: ReadonlySet<string> = new Set([
   "CHECK_RADIO",
@@ -261,9 +260,13 @@ function entryContextValues(
   profileEntryId: string | undefined,
 ): SearchContextValue[] {
   const [categoryId, , fieldId] = profileFieldKey.split(".");
-  const entries = (profile as unknown as Record<string, unknown>)[categoryId ?? ""];
+  const entries = (profile as unknown as Record<string, unknown>)[
+    categoryId ?? ""
+  ];
   if (!profileEntryId || !Array.isArray(entries)) return [];
-  const entry = (entries as ProfileEntry[]).find(({ id }) => id === profileEntryId);
+  const entry = (entries as ProfileEntry[]).find(
+    ({ id }) => id === profileEntryId,
+  );
   return Object.entries(entry?.values ?? {}).flatMap(([id, value]) =>
     id !== fieldId && value?.trim()
       ? [{ key: `${categoryId}.${entry!.sectionId}.${id}`, value }]
@@ -1528,8 +1531,9 @@ function itemForResolvedAnalysis(
     };
   }
   // Preselect only when the write-time search compares results with the stored
-  // name alone. Alternative query forms (certificate name+grade splits, region
-  // aliases, approved catalog queries) can select a different name.
+  // name or its exact grade-appended form. Alternative query forms (certificate
+  // name+grade splits, region aliases, approved catalog queries) can select a
+  // different name.
   const selectsOriginalSearchName =
     generic &&
     searchCommand &&
@@ -1537,8 +1541,10 @@ function itemForResolvedAnalysis(
     !catalogMatch &&
     !binding.profileFieldKey.endsWith(".schoolRegion") &&
     (!searchValuePlan ||
-      (searchValuePlan.forms.length === 1 &&
-        searchValuePlan.forms[0]?.kind === "original-exact"));
+      searchValuePlan.forms.every(
+        (form) =>
+          form.kind === "original-exact" || form.kind === "name-with-grade",
+      ));
   const optionPresence = nativeChoicePresence(
     lookup.handle,
     resolvedProfileValue.value,
@@ -1655,10 +1661,10 @@ function itemForResolvedAnalysis(
           : calendarUnitProbe
             ? "달력을 열어 연월 또는 연월일 단위를 확인한 뒤 저장된 날짜를 선택해 입력합니다."
             : dayCalendarApproval || dialogDateApproval
-            ? "달력을 열어 저장된 날짜를 선택해 입력합니다."
-            : calendarApproval
-              ? "달력을 열어 저장된 연월을 선택해 입력합니다."
-              : "달력 연월을 확인한 뒤 선택해 주세요."
+              ? "달력을 열어 저장된 날짜를 선택해 입력합니다."
+              : calendarApproval
+                ? "달력을 열어 저장된 연월을 선택해 입력합니다."
+                : "달력 연월을 확인한 뒤 선택해 주세요."
         : "저장된 값과 지원서 필드가 명확히 연결되었습니다.",
     ...singleRowReview,
     analysis,

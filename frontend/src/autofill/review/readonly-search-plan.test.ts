@@ -491,11 +491,12 @@ describe("readonly search collection, response and review contract", () => {
       ]);
     });
 
-    it("preselects a certificate search with only the original-exact form", () => {
+    it("preselects a certificate search that adds only the grade-appended name", () => {
       const item = certificateItem("synthetic certificate", "level 2");
 
       expect(item.searchValuePlan?.forms).toEqual([
         { kind: "original-exact", name: "synthetic certificate" },
+        { kind: "name-with-grade", name: "synthetic certificate level 2" },
       ]);
       expect(item).toMatchObject({ status: "available", selected: true });
     });

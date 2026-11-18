@@ -186,6 +186,11 @@ export interface ExecuteReadonlySearchArgs {
   contextValues?: readonly import("./search-gate").SearchContextValue[];
   /** Local-only exact search forms. The original expected value is always first. */
   searchValues?: readonly string[];
+  /**
+   * The grade-appended name, which must be the second search value. The first
+   * attempt also accepts its exact result and prefers it over the plain name.
+   */
+  gradeAppendedValue?: string;
   /** Local approval only; never serialized in role requests. */
   catalogMatch?: import("../profile/catalog-match").ApprovedCatalogMatch;
   decisionProvider?: InteractionDecisionProvider;

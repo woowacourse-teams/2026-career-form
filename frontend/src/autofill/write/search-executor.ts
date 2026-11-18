@@ -428,8 +428,9 @@ export async function executeApprovedSearchWrites({
     ),
   );
   if (
-    items.some((item) =>
-      approvedCandidateIds.has(item.candidateId) && genericItems.has(item),
+    items.some(
+      (item) =>
+        approvedCandidateIds.has(item.candidateId) && genericItems.has(item),
     )
   )
     registry.captureReplacementState();
@@ -511,7 +512,8 @@ export async function executeApprovedSearchWrites({
     if (item.analysis?.writePlan?.command !== "SEARCH_SELECTION") {
       if (writeOrdinary) {
         const lookup = registry.lookupField(item.candidateId);
-        const target = "handle" in lookup ? lookup.handle.elements[0] : undefined;
+        const target =
+          "handle" in lookup ? lookup.handle.elements[0] : undefined;
         const document = (target ?? item.dialogDateApproval?.target)
           ?.ownerDocument;
         const popup =
@@ -555,7 +557,7 @@ export async function executeApprovedSearchWrites({
             : [];
         const overlaysBefore = new Set(
           genericItems.has(item) &&
-          item.analysis?.writePlan?.command === "SELECT_DATE"
+            item.analysis?.writePlan?.command === "SELECT_DATE"
             ? overlays()
             : [],
         );
@@ -582,7 +584,8 @@ export async function executeApprovedSearchWrites({
         };
         const newOverlays = () =>
           overlays().filter(
-            (overlay) => !overlaysBefore.has(overlay) && !ownedElsewhere(overlay),
+            (overlay) =>
+              !overlaysBefore.has(overlay) && !ownedElsewhere(overlay),
           );
         const execution = await writeOrdinary(item);
         const result = "result" in execution ? execution.result : execution;
@@ -624,27 +627,46 @@ export async function executeApprovedSearchWrites({
             overlays: document ? newOverlays().length : -1,
             overlaysBefore: overlaysBefore.size,
             // Value-free shape of each surface this write left open.
-            overlayShapes: JSON.stringify(document
-              ? newOverlays().map((overlay) => {
-                  const opener = openerOf(overlay) ?? null;
-                  const style = overlay.ownerDocument.defaultView?.getComputedStyle(overlay);
-                  return {
-                    tag: overlay.tagName,
-                    role: overlay.getAttribute("role"),
-                    attrs: overlay.getAttributeNames().filter((name) => name !== "style" && name !== "id" && name !== "class"),
-                    buttons: overlay.querySelectorAll("button").length,
-                    opacity: style?.opacity,
-                    openerIsTarget: !!opener && opener === target,
-                    openerExpanded: opener?.getAttribute("aria-expanded") ?? null,
-                    openerEmpty: opener ? !/\d/.test(opener.textContent ?? "") : null,
-                    containsTarget: !!target && overlay.contains(target),
-                  };
-                })
-              : []),
+            overlayShapes: JSON.stringify(
+              document
+                ? newOverlays().map((overlay) => {
+                    const opener = openerOf(overlay) ?? null;
+                    const style =
+                      overlay.ownerDocument.defaultView?.getComputedStyle(
+                        overlay,
+                      );
+                    return {
+                      tag: overlay.tagName,
+                      role: overlay.getAttribute("role"),
+                      attrs: overlay
+                        .getAttributeNames()
+                        .filter(
+                          (name) =>
+                            name !== "style" &&
+                            name !== "id" &&
+                            name !== "class",
+                        ),
+                      buttons: overlay.querySelectorAll("button").length,
+                      opacity: style?.opacity,
+                      openerIsTarget: !!opener && opener === target,
+                      openerExpanded:
+                        opener?.getAttribute("aria-expanded") ?? null,
+                      openerEmpty: opener
+                        ? !/\d/.test(opener.textContent ?? "")
+                        : null,
+                      containsTarget: !!target && overlay.contains(target),
+                    };
+                  })
+                : [],
+            ),
             code: result.code ?? "",
           });
           if (effect !== "stop" && closed) continue;
-          const correspondence = correspondingControls(before, controls(), target);
+          const correspondence = correspondingControls(
+            before,
+            controls(),
+            target,
+          );
           // Relax only when every pre-existing control kept its identity and
           // state. An ordinary stop also needs a proven re-render, since its
           // cause is otherwise unknown; a calendar acts only on its own target
@@ -657,7 +679,8 @@ export async function executeApprovedSearchWrites({
             (result.code === "STALE_TARGET" ||
               result.code === "RETAINED_VALUE_UNCONFIRMED") &&
             target &&
-            (target.value === item.profileValue || target.value === targetBefore) &&
+            (target.value === item.profileValue ||
+              target.value === targetBefore) &&
             closed &&
             correspondence &&
             (item.analysis?.writePlan?.command === "SELECT_DATE" ||
@@ -723,7 +746,8 @@ export async function executeApprovedSearchWrites({
     const catalogMatch =
       catalogApproval.status === "selected" ? catalogApproval.match : undefined;
     if (
-      searchCount >= (followUpHaltScope === "row" ? MAX_GENERIC_SEARCHES : MAX_SEARCHES) &&
+      searchCount >=
+        (followUpHaltScope === "row" ? MAX_GENERIC_SEARCHES : MAX_SEARCHES) &&
       !normalized(item.currentValue)
     ) {
       results[index] = skipped(
@@ -823,6 +847,9 @@ export async function executeApprovedSearchWrites({
           )
         : undefined;
     if (!normalized(input.value)) searchCount++;
+    const gradeAppendedValue = localSearchPlan?.forms.find(
+      (form) => form.kind === "name-with-grade",
+    )?.name;
     const result = await executeReadonlySearch({
       document: input.ownerDocument,
       registry,
@@ -837,6 +864,7 @@ export async function executeApprovedSearchWrites({
       ...(localSearchPlan
         ? { searchValues: localSearchPlan.forms.map((form) => form.name) }
         : {}),
+      ...(gradeAppendedValue ? { gradeAppendedValue } : {}),
       expectedCurrentValue,
       decisionProvider: decisionSession,
       assertCurrent: currentApproval,
@@ -994,18 +1022,18 @@ export async function executeApprovedSearchWrites({
         (untouchedPage ||
           (failedResult.effect === "interaction-started" &&
             [
-          "search_query_not_found",
-          "multiple_search_query_inputs",
-          "search_submit_not_found",
-          "multiple_search_submits",
-          "unverified_search_form",
-          "search_results_not_found",
-          "multiple_matching_results",
-          "result_set_incomplete",
-          "surface_unobservable",
-          "surface_ambiguous",
-          "inaccessible_popup_frame",
-        ].includes(failedResult.reason))) &&
+              "search_query_not_found",
+              "multiple_search_query_inputs",
+              "search_submit_not_found",
+              "multiple_search_submits",
+              "unverified_search_form",
+              "search_results_not_found",
+              "multiple_matching_results",
+              "result_set_incomplete",
+              "surface_unobservable",
+              "surface_ambiguous",
+              "inaccessible_popup_frame",
+            ].includes(failedResult.reason))) &&
         failedResult.surfaceLeftOpen !== true &&
         [
           "search_query_not_found",
