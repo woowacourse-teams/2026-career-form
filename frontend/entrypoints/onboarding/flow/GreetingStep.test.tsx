@@ -1,6 +1,6 @@
 import { createRef } from "react";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { GREETING_EXAMPLE_COMPANIES } from "./greeting-companies";
 import { GreetingStep } from "./GreetingStep";
 
@@ -59,7 +59,7 @@ it("가져오는 순서를 세 줄로 보이고 장면과 함께 지금 단계�
   ).getAllByRole("listitem");
   expect(steps.map((item) => item.textContent)).toEqual([
     "써 둔 Greeting 지원서에서 Career Form 창을 열어요",
-    "톱니바퀴에서 ‘프로필 가져오기’를 눌러요",
+    "톱니바퀴에서 ‘프로필 가져오기’, ‘지원서 화면’을 눌러요",
     "가져올 항목을 확인하고 저장하면 끝",
   ]);
   expect(steps[0]).toHaveAttribute("aria-current", "step");
@@ -90,3 +90,25 @@ it("반복 장면을 멈추고 다시 재생할 수 있고 반복된다는 문�
   fireEvent.click(screen.getByRole("button", { name: "계속 재생" }));
   expect(scene).not.toHaveAttribute("data-paused");
 });
+
+it("움직임 줄이기에서는 확인을 마친 가져오기 화면을 멈춘 채 보이고 마지막 단계를 표시한다", () => {
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn((query: string) => ({
+      matches: query.includes("prefers-reduced-motion"),
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    })),
+  );
+  renderStep();
+  const scene = screen.getByTestId("import-scene");
+  expect(scene).toHaveTextContent("6개 가져오기");
+  expect(scene.querySelector("[data-source]")).toBeNull();
+  const steps = within(
+    screen.getByRole("list", { name: "가져오는 순서" }),
+  ).getAllByRole("listitem");
+  expect(steps[2]).toHaveAttribute("aria-current", "step");
+  expect(screen.queryByRole("button", { name: "일시정지" })).toBeNull();
+});
+
+afterEach(() => vi.unstubAllGlobals());

@@ -58,6 +58,8 @@ export interface ReviewRow {
   field?: ProfileFieldDefinition;
   /** A repeated row whose section already has entries the user may link to. */
   linkable?: boolean;
+  /** The day of this date was filled in, so the review marks it. */
+  dayFilled?: boolean;
 }
 export type Confirmation =
   | {
@@ -319,6 +321,7 @@ function fieldRow(
     value: date.value,
     sensitive: IMPORT_SENSITIVE_CATEGORIES.has(category.id),
     field,
+    ...(candidate.dayFilled ? { dayFilled: true } : {}),
   };
   if (!category.repeatable) {
     const current =

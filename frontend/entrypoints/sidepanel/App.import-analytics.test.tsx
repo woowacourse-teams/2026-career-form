@@ -103,6 +103,8 @@ function setup({ inPage = false, failure = "", alreadySaved = false } = {}) {
 const enter = () => {
   fireEvent.click(screen.getByRole("button", { name: "설정" }));
   fireEvent.click(screen.getByRole("button", { name: "프로필 가져오기" }));
+  // #470: the menu opens a source choice first.
+  fireEvent.click(screen.getByRole("button", { name: /^지원서 화면/ }));
 };
 const save = () =>
   fireEvent.click(screen.getByRole("button", { name: /프로필에 저장하기/ }));

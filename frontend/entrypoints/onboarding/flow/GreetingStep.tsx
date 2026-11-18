@@ -15,7 +15,7 @@ import styles from "./Flow.module.css";
 
 const captions = [
   "써 둔 Greeting 지원서에서 Career Form 창을 열어요",
-  "톱니바퀴에서 ‘프로필 가져오기’를 눌러요",
+  "톱니바퀴에서 ‘프로필 가져오기’, ‘지원서 화면’을 눌러요",
   "가져올 항목을 확인하고 저장하면 끝",
 ];
 

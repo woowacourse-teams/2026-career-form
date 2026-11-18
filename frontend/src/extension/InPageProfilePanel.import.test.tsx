@@ -21,6 +21,8 @@ const openSettings = async () =>
 const openImport = async () => {
   await openSettings();
   fireEvent.click(screen.getByRole("button", { name: "프로필 가져오기" }));
+  // #470: the menu opens a source choice first.
+  fireEvent.click(screen.getByRole("button", { name: /^지원서 화면/ }));
 };
 
 afterEach(() => {
