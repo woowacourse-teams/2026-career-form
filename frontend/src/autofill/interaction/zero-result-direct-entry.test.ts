@@ -20,6 +20,8 @@ type LayerOptions = {
   resultsFor?: (query: string) => string;
   /** Expected profile value; defaults to VALUE. */
   expected?: string;
+  /** Canonical profile field key; defaults to the certificate name. */
+  key?: string;
   /** Profile grade of a catalog-approved certificate. */
   catalogGrade?: string;
   /** Grade-appended exact label also accepted on the name search. */
@@ -151,7 +153,7 @@ async function zeroResultLayer(options: LayerOptions = {}) {
     document,
     registry: snapshot.registry,
     targetCandidateId: targetId,
-    canonicalFieldKey: "certifications.certificate.name",
+    canonicalFieldKey: options.key ?? "certifications.certificate.name",
     expectedValue: options.expected ?? VALUE,
     expectedCurrentValue: "",
     ...(options.catalogMatch ? { catalogMatch: options.catalogMatch } : {}),
@@ -421,6 +423,25 @@ describe("generic zero-result layer answered by direct entry", () => {
         status: "selected",
       });
       expect(qa.target.value).toBe(NAME);
+    });
+  });
+
+  describe("accepted values without planned search values", () => {
+    const row = (label: string) =>
+      `<li><a href="javascript:;">${label}</a></li>`;
+
+    it("accepts every accepted value of the field, not only the typed query", async () => {
+      // The query is the first accepted value ("서울"); the site lists only
+      // the second one ("서울특별시").
+      const qa = await zeroResultLayer({
+        key: "education.university.schoolRegion",
+        expected: "서울",
+        results: row("서울특별시"),
+      });
+      expect(qa.result, JSON.stringify(qa.result)).toMatchObject({
+        status: "selected",
+      });
+      expect(qa.target.value).toBe("서울특별시");
     });
   });
 });
