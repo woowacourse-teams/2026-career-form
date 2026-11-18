@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+import { CATALOG_VERSION } from "../catalog";
 import { createEmptyProfile } from "../model";
 import {
   ProfileWriteConflictError,
@@ -317,6 +318,13 @@ describe("useProfileEditor certificate issuer", () => {
     originalText: "SQLD",
     catalogVersion: "2026-10-07",
   } as const;
+  const informationProcessing = {
+    status: "selected",
+    catalogId: "certificate:hrdk:e91f006b5973e103",
+    displayName: "정보처리기사",
+    originalText: "정보처리기사",
+    catalogVersion: CATALOG_VERSION,
+  } as const;
 
   async function editorWith(values: Record<string, string>) {
     const profile = createEmptyProfile();
@@ -446,6 +454,79 @@ describe("useProfileEditor certificate issuer", () => {
       values: { name: "SQL", issuer: "한국데이터산업진흥원" },
       identity: { status: "manual", originalText: "SQL" },
     });
+  });
+
+  it("replaces the issuer it filled when another certificate is selected after the link is released", async () => {
+    const result = await editorWith({});
+    act(() =>
+      result.current.updateEntry(
+        "certifications",
+        "certificate-1",
+        "name",
+        "SQL 개발자",
+        sqld,
+      ),
+    );
+    act(() =>
+      result.current.updateEntry("certifications", "certificate-1", "name", ""),
+    );
+
+    act(() =>
+      result.current.updateEntry(
+        "certifications",
+        "certificate-1",
+        "name",
+        "정보처리기사",
+        informationProcessing,
+      ),
+    );
+
+    expect(result.current.profile.certifications[0]).toMatchObject({
+      values: { name: "정보처리기사", issuer: "한국산업인력공단" },
+      identity: informationProcessing,
+    });
+  });
+
+  it("does not count an imported issuer as filled by a selection", async () => {
+    const result = await editorWith({});
+    act(() =>
+      result.current.updateEntry(
+        "certifications",
+        "certificate-1",
+        "name",
+        "SQL 개발자",
+        sqld,
+      ),
+    );
+    const imported = createEmptyProfile();
+    imported.certifications = [
+      {
+        id: "certificate-1",
+        sectionId: "certificate",
+        values: { name: "SQL 개발자", issuer: "한국데이터산업진흥원" },
+        identity: sqld,
+      },
+    ];
+    await act(async () => {
+      await result.current.replaceProfile(imported);
+    });
+    act(() =>
+      result.current.updateEntry("certifications", "certificate-1", "name", ""),
+    );
+
+    act(() =>
+      result.current.updateEntry(
+        "certifications",
+        "certificate-1",
+        "name",
+        "정보처리기사",
+        informationProcessing,
+      ),
+    );
+
+    expect(result.current.profile.certifications[0].values.issuer).toBe(
+      "한국데이터산업진흥원",
+    );
   });
 });
 

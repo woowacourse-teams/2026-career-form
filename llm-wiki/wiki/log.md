@@ -1096,3 +1096,60 @@
 - 승인한 후보 1개를 [CF-435 bundle](../raw/issues/CF-435/manifest.md)에 기록했다. 배포 경로에서 직무 필터 전환 변수를 지운 곳, 변수 14개·시크릿 12개 전체 목록, 재유입을 막는 계약 테스트다.
 - [CI/CD 설정](topics/cicd-setup.md) topic의 현재 상태를 고쳤다.
 - 호스트 주소, 키 값, 계정, 대화 전문은 저장하지 않았다.
+
+## [2026-11-09] ingest | CF-429 서버 HTTPS 도메인과 확장 HTTPS 전환 준비
+
+- Approval-Digest: 3de776138edcbbd38fb265a268b202b1c658876fb218ac4c59ffe022a3604c74
+- Source-Revision: b0cb4e1
+- 승인한 후보 1개를 [CF-429 bundle](../raw/issues/CF-429/manifest.md)에 기록했다. 세 환경의 HTTPS 도메인과 연결 대상, 인증서 만료일과 자동 갱신, Amazon Linux 2023 타이머 함정, 리다이렉트 보류 이유, HTTPS 전환 배포 때 할 일이다.
+- [서버 HTTPS 도메인과 인증서](topics/https-domains.md) topic을 새로 만들었다. 다른 topic 문서는 바꾸지 않았다.
+- IP, 계정, 시크릿, 인증서 키, 대화 전문은 저장하지 않았다.
+## [2026-11-09] ingest | CF-439 공고 등록이 발송 예약 전에 끊기면 재등록해도 알림이 가지 않는 문제 수정
+- Approval-Digest: 8d3d3182997c5e2cc19745160385f379a4fbe223975f30f529b9a2fb94e2c395
+- Source-Revision: 19b3e7de
+- 승인한 후보 4개를 [CF-439 bundle](../raw/issues/CF-439/manifest.md)에 기록했다. 같은 링크 재등록 때 빠진 발송을 채우는 규칙, 대상을 첫 등록 시각까지 가입한 구독으로 좁힌 이유와 한계, 등록 복구 절차, 재등록 로그와 수락 지연 지표의 의미다.
+- [공고 구독 알림](topics/job-posting-notifications.md) topic의 현재 상태와 변경 이유를 고쳤다.
+- 호스트 주소, 공고 링크, 키 값, 계정, 구독 endpoint, 사용자의 직무 선택값, 대화 전문은 저장하지 않았다.
+
+## [2026-11-09] ingest | CF-441 공고 알림 SQS 전환 전후 비교용 발송 시험 도구
+- Approval-Digest: 69abe134e0fe90cce8e69994cd3aaebdd978528009b5d669d419281ed5b9678f
+- Source-Revision: 0c1a9000
+- 승인한 후보 4개를 [CF-441 bundle](../raw/issues/CF-441/manifest.md)에 기록했다. 전후 비교 측정 방식, 발송 경로의 endpoint 검사 범위, 전 구조의 재시작 동작, 팀 측정 계획 대비 조정이다.
+- [공고 알림 발송 시험](topics/push-dispatch-load-test.md) topic을 새로 만들었다.
+- 호스트 주소, 키 값, 비밀번호, 구독 endpoint, 대화 전문은 저장하지 않았다.
+
+## [2026-11-10] ingest | CF-448 공고 알림 발송 중 공고 조회 잠금으로 발송이 멈추는 문제 수정
+- Approval-Digest: 87630dbbfefb64b4398c8a30206ee7ca5d3852e7698afa2644c9a045f1f5bf67
+- Source-Revision: 324a016c
+- 승인한 후보 3개를 [CF-448 bundle](../raw/issues/CF-448/manifest.md)에 기록했다. 가상 스레드 잠금 규칙, ADR "공고 알림 SQS 전환 보류", 공용 AWS 계정의 시험 자원 정리 절차다.
+- [공고 구독 알림](topics/job-posting-notifications.md)과 [공고 알림 발송 시험](topics/push-dispatch-load-test.md) topic을 갱신했다.
+- 호스트 주소, 계정 번호, 큐 주소, 인스턴스 ID, 키 값, 비밀번호, 구독 endpoint, 대화 전문은 저장하지 않았다.
+
+## [2026-11-09] ingest | CF-440 MongoDB 정기 백업 자동화와 임시 컨테이너 복구 리허설 추가
+- Approval-Digest: f68fe8803fbce18f779131ee3c4662ffff971c5d652498fe5957105ab6048582
+- Source-Revision: ba6e178b
+- 승인한 후보 5개를 [CF-440 bundle](../raw/issues/CF-440/manifest.md)에 기록했다. 논리 덤프 백업 ADR, 백업과 복구 운영 기준, 백업 누락 알림, 용량 실측과 합성 리허설 근거, MongoDB 8.0.26 실행 사실이다.
+- [MongoDB 백업과 복구](topics/mongodb-backup-recovery.md) topic을 새로 만들고 [공용 모니터링 시스템](topics/monitoring-system.md) topic의 현재 상태와 변경 이유를 고쳤다.
+- 2026-11-10 후보 2의 메타데이터 옵션 문장을 "홉 제한 1"에서 "IMDSv2 필수, 홉 제한 2"로 고쳐 다시 승인받았다. 위 digest는 고친 후보의 것이다.
+- 계정 ID, 호스트 주소, 키 값, 계정, 구독 endpoint, 대화 전문은 저장하지 않았다.
+
+## [2026-11-16] ingest | CF-453 지원 공고 화면에서 마감 지난 저장 공고 자동 삭제
+- Approval-Digest: 6cb4d5596bfdff6146303f2c7287eee610fa49effaf21b17b7a155be7e39bef4
+- Source-Revision: 57497a95
+- 승인한 후보 6개를 [CF-453 bundle](../raw/issues/CF-453/manifest.md)에 기록했다. 저장 공고 수명, 점검 예약, 쓰기와 실패 처리, 되돌리기 제한과 이미 뜬 알림, 화면 시각 규칙, 변경 이유와 남은 위험이다.
+- [확장 저장 공고와 마감 알림](topics/saved-job-postings.md) topic을 새로 만들고 [확장 Web Push 구독과 공고 알림](topics/extension-push-notifications.md)의 관련 지식에 연결했다.
+- 실제 공고와 지원 정보, 계정, 구독 endpoint, 대화 전문은 저장하지 않았다.
+
+## [2026-11-16] ingest | CF-458 자격증을 다시 고를 때 이전 자격증의 발급기관이 남는 문제 수정
+- Approval-Digest: ea16894743540db9ef77644ebd4820e6b4fc14638c151f241aa10967d90036ff
+- Source-Revision: aaffd610
+- 승인한 후보 5개를 [CF-458 bundle](../raw/issues/CF-458/manifest.md)에 기록했다. 자격증 재선택 때 채운 발급기관 교체 규칙, 세션 한정 채움 기억과 그 이유, StrictMode 갱신 함수 순수성, 프론트 단위 파일 실행 명령과 확장 옵션 페이지 수동 확인, verify.py infra 테스트의 Docker 의존이다.
+- [프로필 카탈로그 선택과 식별 연결](topics/profile-catalog-identity.md), [프론트 브라우저 테스트](topics/frontend-browser-testing.md), [로컬 검증 환경 주의점](topics/verification-environment.md) topic을 갱신했다.
+- 실제 지원값, 계정, 세션, 브라우저 프로필 내용, 대화 전문은 저장하지 않았다.
+
+## [2026-11-16] ingest | CF-463 공고 열기 자동 저장 제거 뒤 남은 안내 문구와 문서 정리
+- Approval-Digest: 1de0e43eadcffe548c06a76dbea8f80ce34e8e357c2b5bef50ffde3399ff8d68
+- Source-Revision: 5c43a4e7
+- 승인한 후보 6개를 [CF-463 bundle](../raw/issues/CF-463/manifest.md)에 기록했다. 공고 저장 경로 정정, 확장 화면 위치 정정, 저장 계기 계측 정정, 저장 공고 정리 시점 보완과 안내 결정, 기술 소개의 서버 저장 항목 불일치, #387 이후 문서가 낡은 이유다.
+- [확장 Web Push 구독과 공고 알림](topics/extension-push-notifications.md), [선택적 이용 계측](topics/usage-analytics.md), [확장 저장 공고와 마감 알림](topics/saved-job-postings.md) topic과 색인을 갱신했다.
+- 구독 endpoint, 키 값, 실제 공고, 계정, 대화 전문은 저장하지 않았다.

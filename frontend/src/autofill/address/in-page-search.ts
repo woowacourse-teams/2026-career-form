@@ -123,7 +123,19 @@ export async function selectInPageAddress(
           postal.test(rowText(row)) &&
           compact(rowText(row)).includes(compact(road)),
       );
-      return found.length > 0 ? found : undefined;
+      if (found.length <= 1) return found.length ? found : undefined;
+      // Other buildings of one complex share the postcode and extend the
+      // road number (242-1); keep the row whose road line is exactly ours.
+      const exact = found.filter((row) =>
+        Array.from(row.querySelectorAll("*"))
+          .filter((element) => element.children.length === 0)
+          .some(
+            (element) =>
+              compact(addressWithoutRoadReference(element.textContent ?? "")) ===
+              compact(road),
+          ),
+      );
+      return exact.length === 1 ? exact : found;
     },
     RESULT_WAIT_MS,
     signal,

@@ -10,12 +10,12 @@ import {
   sha256,
 } from "./dataset-case";
 
-// 평가 데이터셋 generic-matching v4의 NHN Careers 사례를 현재 제품 코드로 다시 만들어 저장본과 비교한다.
-// v4는 v3의 우아한형제들 사례·정답을 바이트 그대로 두고 NHN 지원서 1단계 최초 화면 하나를 더한다.
+// 평가 데이터셋 generic-matching v5의 NHN Careers 사례를 현재 제품 코드로 다시 만들어 저장본과 비교한다.
+// NHN 사례는 v4에서 처음 더했고, v5는 v4의 NHN 사례·정답을 바이트 그대로 둔다.
 // 저장본을 새로 만들 때만 CF356_WRITE_DATASET=1로 실행한다.
 const RESOURCES = join(process.cwd(), "../backend/src/main/resources");
-const DATASET = join(RESOURCES, "evaluation/datasets/generic-matching/v4");
-const PREVIOUS = join(RESOURCES, "evaluation/datasets/generic-matching/v3");
+const DATASET = join(RESOURCES, "evaluation/datasets/generic-matching/v5");
+const PREVIOUS = join(RESOURCES, "evaluation/datasets/generic-matching/v4");
 const PROFILE = join(
   RESOURCES,
   "evaluation/profiles/v1/synthetic-01-basic.json",
@@ -58,7 +58,7 @@ const BUILD_TIMEOUT_MS = 90_000;
 let cached: ReturnType<typeof build> | undefined;
 const builtOnce = () => (cached ??= build());
 
-describe("평가 데이터셋 generic-matching v4", () => {
+describe("평가 데이터셋 generic-matching v5", () => {
   it(
     "NHN 사례는 현재 제품 코드가 만드는 요청과 같다",
     async () => {
@@ -97,23 +97,18 @@ describe("평가 데이터셋 generic-matching v4", () => {
     BUILD_TIMEOUT_MS,
   );
 
-  it("우아한형제들 사례·정답은 v3와 바이트까지 같다", () => {
-    for (const dir of ["cases", "ground-truth"]) {
-      const names = ["initial", "high-school", "university", "ged"].map(
-        (state) =>
-          dir === "cases"
-            ? `woowahan-r2605009-${state}-synthetic-01.json`
-            : `woowahan-r2605009-${state}.json`,
+  it("NHN 사례·정답은 v4와 바이트까지 같다", () => {
+    for (const name of [
+      `cases/${FIXTURE}-synthetic-01.json`,
+      `ground-truth/${FIXTURE}.json`,
+    ])
+      expect(readFileSync(join(DATASET, name), "utf8")).toBe(
+        readFileSync(join(PREVIOUS, name), "utf8"),
       );
-      for (const name of names)
-        expect(readFileSync(join(DATASET, dir, name), "utf8")).toBe(
-          readFileSync(join(PREVIOUS, dir, name), "utf8"),
-        );
-    }
   });
 
   it("manifest의 파일 해시가 저장본과 같다(쓰기 모드에서는 다시 계산한다)", () => {
-    const path = "evaluation/datasets/generic-matching/v4/manifest.json";
+    const path = "evaluation/datasets/generic-matching/v5/manifest.json";
     if (write) refreshManifestDigests(RESOURCES, path);
     const manifest = JSON.parse(
       readFileSync(join(RESOURCES, path), "utf8"),

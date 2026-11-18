@@ -10,6 +10,8 @@ type Props = Pick<
   | "onLocateSection"
   | "progressIdFor"
   | "operatedCategories"
+  | "attachments"
+  | "onLocateAttachments"
 > & { entries: readonly WriteProgress[] };
 interface SummaryCategory {
   label: string;
@@ -17,7 +19,11 @@ interface SummaryCategory {
   count: number;
   signature: string;
   operated?: boolean;
+  /** Attached files listed in the category body (names and labels only). */
+  files?: NonNullable<Props["attachments"]>;
 }
+
+const ATTACHMENT_CATEGORY = "첨부 파일";
 
 function summarize({
   entries,
@@ -25,6 +31,7 @@ function summarize({
   fieldStateFor,
   progressIdFor,
   operatedCategories,
+  attachments,
 }: Props): SummaryCategory[] {
   const groups = new Map<string, SummaryCategory>();
   for (const entry of entries) {
@@ -66,6 +73,17 @@ function summarize({
     group.operated = true;
     groups.set(label, group);
   }
+  if (attachments?.length)
+    groups.set(ATTACHMENT_CATEGORY, {
+      label: ATTACHMENT_CATEGORY,
+      targets: [],
+      count: attachments.length,
+      // Only names and labels invalidate a check; nothing else is rendered.
+      signature: JSON.stringify(
+        attachments.map(({ fileName, fieldLabel }) => [fileName, fieldLabel]),
+      ),
+      files: attachments,
+    });
   return [...groups.values()];
 }
 
@@ -74,11 +92,13 @@ function CategorySummary({
   confirmed,
   onConfirm,
   onLocateSection,
+  onLocateAttachments,
 }: {
   category: SummaryCategory;
   confirmed: boolean;
   onConfirm(): void;
   onLocateSection?: Props["onLocateSection"];
+  onLocateAttachments?: Props["onLocateAttachments"];
 }) {
   const contentId = useId();
   const heading = useRef<HTMLButtonElement>(null);
@@ -92,8 +112,9 @@ function CategorySummary({
   }
   const targets = category.targets;
   const canLocate =
-    !!onLocateSection &&
-    (targets.length > 0 || category.operated) &&
+    (category.files
+      ? !!onLocateAttachments
+      : !!onLocateSection && (targets.length > 0 || category.operated)) &&
     !unavailable;
   return (
     <li className={styles.summaryCategory} data-reviewed={confirmed}>
@@ -111,7 +132,11 @@ function CategorySummary({
             disabled={!collapsed && !canLocate}
             onClick={() => {
               if (collapsed) setCollapsed(false);
-              else if (!onLocateSection?.(targets, category.label))
+              else if (
+                !(category.files
+                  ? onLocateAttachments?.()
+                  : onLocateSection?.(targets, category.label))
+              )
                 setUnavailable(true);
             }}
           >
@@ -133,7 +158,7 @@ function CategorySummary({
           {confirmed
             ? "확인 완료"
             : category.count
-              ? `${category.count}개 입력`
+              ? `${category.count}개 ${category.files ? "첨부" : "입력"}`
               : "선택·검색 확인"}{" "}
           <span aria-hidden="true">{collapsed ? "⌄" : "⌃"}</span>
         </button>
@@ -143,6 +168,21 @@ function CategorySummary({
           <p className={styles.completedUnavailable} role="status">
             이 구역으로 이동할 수 없어요. 지원서에서 직접 확인해 주세요.
           </p>
+        )}
+        {category.files && (
+          <ul className={styles.attachedFiles}>
+            {category.files.map((file, index) => (
+              <li key={index}>
+                <span className={styles.attachedFileName}>
+                  <span aria-hidden="true">✓ </span>
+                  {file.fileName}
+                </span>
+                <span className={styles.attachedFieldLabel}>
+                  {file.fieldLabel}
+                </span>
+              </li>
+            ))}
+          </ul>
         )}
         <button
           type="button"
@@ -232,6 +272,7 @@ export function CompletedReview(props: Props) {
               category={category}
               confirmed={confirmed}
               onLocateSection={props.onLocateSection}
+              onLocateAttachments={props.onLocateAttachments}
               onConfirm={() =>
                 setReview({
                   snapshot,

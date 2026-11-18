@@ -57,11 +57,15 @@ CF-348은 팀이 등록한 채용 공고를 접수 가능 시점(등록 시각�
 | 요청 | 응답 |
 |---|---|
 | `GET /api/v1/notifications/admin/postings` | 200 `{"postings":[{id, company, role?, roles?:[{code, label}], link, opensAt, closesAt, registeredAt, scheduledAt, progress:{pending, sending, accepted, abandoned, lastAttemptAt}}]}` 최근 등록 순. `roles`는 저장된 소분류 코드에 현재 분류의 라벨을 붙인 목록이다. 레거시 공고는 `roles`를 생략하고 기존 자유 글자 `role`이 있으면 그대로 유지하며 `role`도 없을 때만 생략한다 |
-| `POST /api/v1/notifications/admin/postings` `{company, roles, link, opensAt, closesAt}` | 201 `{"id","scheduledAt","deliveries"}`. `roles`는 분류의 소분류 코드 배열로 필수이며 null 요소 제거·공백 제거·순서 유지 중복 제거 뒤 1개 이상이고(상한은 분류 전체, 분류의 소분류 총수는 30 이하) 분류에 없는 코드가 하나라도 있으면 거절한다. `role` 라벨은 서버가 소분류 라벨을 가운뎃점(`·`)으로 이어 만들고 120자를 넘으면 앞 라벨 몇 개에 ` 외 n개`를 붙여 줄이며, 분류 전체를 고른 공고는 길이와 무관하게 `전체 직무`다. 요청의 `role` 자유 글자는 무시된다. 검증 순서는 COMPANY → ROLE → LINK → PERIOD → CLOSED. 저장과 대상 구독(공고 직무와 겹치는 직무를 고른 구독과 받을 직무를 고르지 않은 구독)의 대기 발송 생성이 끝났다는 뜻이며 `deliveries`는 그 건수다. FCM 수락을 기다리지 않는다. 409 `{"error":"DUPLICATE_LINK","postingId"}`, 400 `{"error":"INVALID_POSTING","reason": COMPANY·ROLE·LINK·PERIOD·CLOSED}` |
+| `POST /api/v1/notifications/admin/postings` `{company, roles, link, opensAt, closesAt}` | 201 `{"id","scheduledAt","deliveries"}`. `roles`는 분류의 소분류 코드 배열로 필수이며 null 요소 제거·공백 제거·순서 유지 중복 제거 뒤 1개 이상이고(상한은 분류 전체, 분류의 소분류 총수는 30 이하) 분류에 없는 코드가 하나라도 있으면 거절한다. `role` 라벨은 서버가 소분류 라벨을 가운뎃점(`·`)으로 이어 만들고 120자를 넘으면 앞 라벨 몇 개에 ` 외 n개`를 붙여 줄이며, 분류 전체를 고른 공고는 길이와 무관하게 `전체 직무`다. 요청의 `role` 자유 글자는 무시된다. 검증 순서는 COMPANY → ROLE → LINK → PERIOD → CLOSED. 저장과 대상 구독(공고 직무와 겹치는 직무를 고른 구독과 받을 직무를 고르지 않은 구독)의 대기 발송 생성이 끝났다는 뜻이며 `deliveries`는 그 건수다. FCM 수락을 기다리지 않는다. 409 `{"error":"DUPLICATE_LINK","postingId"}`(같은 링크의 공고가 이미 있다. 표 아래 "같은 링크 재등록과 등록 복구"), 400 `{"error":"INVALID_POSTING","reason": COMPANY·ROLE·LINK·PERIOD·CLOSED}` |
 | `DELETE /api/v1/notifications/admin/postings/{id}` | 204. 대기 발송만 삭제하고 수락·포기·발송 중 기록은 남긴다. 404 `POSTING_NOT_FOUND` |
 | `GET /api/v1/notifications/admin/summary?from=<ISO>&to=<ISO>` | 200 `{from, to, postings, deliveries:{pending, sending, accepted, abandoned, total, averageAttempts}, acceptanceRate, abandonRate, latencyMillis:{p50, p95}, subscriptions, roleSelectedSubscriptions}`. 예정 시각이 `[from, to)`인 발송 문서를 집계한다. `postings`는 기간 안 등록 공고 수, 수락률·포기율은 끝난 발송(수락+포기) 기준, 평균 시도는 기간 안 전체 발송 기준, 지연은 `lastAttemptAt - scheduledAt`(MongoDB `$percentile`, 7.0 이상)이며 분모가 없으면 null이다. `subscriptions`는 현재 구독 수, `roleSelectedSubscriptions`는 받을 직무를 1개 이상 고른 현재 구독 수다. 400 `INVALID_RANGE`(시작 ≥ 끝, 400일 초과), 400 `INVALID_INPUT`(매개변수 누락). 집계값만 돌려주고 endpoint·키·링크는 내지 않는다 |
 
-수정 API는 없다. 삭제 후 재등록하면 대상 구독에 한 번 더 간다.
+수정 API는 없다. 삭제 후 재등록하면 새 공고 ID로 대상 구독에 한 번 더 간다.
+
+같은 링크 재등록과 등록 복구: 같은 링크로 다시 등록하면 409와 기존 공고 ID를 돌려준다. 기존 공고가 마감 전이면 그 전에 빠진 대기 발송을 채운다. 대상은 기존 공고 직무로 정한 대상 구독(레거시 공고는 전체 구독) 가운데 가입 시각이 기존 공고 등록 시각과 같거나 앞선 구독이고, 이미 있는 공고 × 구독 쌍은 건너뛰며, 예정 시각은 기존 공고의 예정 시각이다. 요청의 회사·직무·기간은 쓰지 않는다. 그래서 첫 등록 뒤 가입한 구독은 받지 않는다. 다만 첫 등록 전에 가입했고 그 뒤 받을 직무를 바꿔 새로 대상이 된 구독은 받는다(`rolesUpdatedAt`은 확장이 켜질 때마다 갱신돼 바꾼 시각을 알 수 없다). 마감이 지난 기존 공고는 채우지 않는다.
+
+공고 저장과 발송 문서 저장은 한 트랜잭션이 아니다. 등록 응답이 500이거나 연결이 끊기면 공고만 저장되고 발송 문서는 없거나 일부만 생겼을 수 있다. 이때 같은 내용으로 다시 등록해 409를 받으면 빠진 발송이 채워진 것이고, 관리 목록의 발송 진행에서 대기 건수로 확인한다. 삭제 후 재등록은 공고 ID를 바꾸고 이미 받은 구독에 한 번 더 보내므로 복구에 쓰지 않는다.
 
 ## 발송기
 
@@ -97,6 +101,7 @@ CF-348은 팀이 등록한 채용 공고를 접수 가능 시점(등록 시각�
 | `PUSH_INVALID_REQUEST` | 400·403·413으로 포기한 건(설정 점검 대상) |
 | `PUSH_DISPATCH_CYCLE` | 주기별 due·claimed·accepted·retried·abandoned·skipped·stale 건수와 소요 시간 |
 | `POSTING_REGISTERED` | 공고 등록 한 건의 공고 ID, 직무 코드 건수, 만든 대기 발송 건수 |
+| `POSTING_DUPLICATE_REFILL` | 같은 링크 재등록 한 건의 기존 공고 ID와 다시 확인한 대상 구독 수(새로 만든 발송 수가 아니다) |
 | `EXTERNAL_RESULT provider=fcm operation=push` | 기존 외부 호출 로그 계약 |
 
 | 메트릭 | 라벨 | 뜻 |
@@ -152,4 +157,4 @@ max_over_time(career_form_push_backlog{status="pending"}[7d])
 
 ## 범위 밖과 한계
 
-공고 수정·재알림, 수신 확인, 계정, 메시지 큐·별도 워커·2중화, 다른 채널, 자동 수집은 범위 밖이다. 직무 필터는 변경 뒤 등록되는 공고부터 적용되며, 필터 변경 전 등록된 공고의 발송 보충, 관심 기업 필터, 구독을 식별하는 서버 쪽 공지함 필터(목록은 익명 조회이고 거르기는 확장이 한다)는 후속이다. 기존 공고의 재분류는 하지 않으며 필요하면 팀이 삭제 후 재등록한다. 서버 한 대라 배포마다 발송이 최대 2분 멈추고, Chrome 종료 중이거나 OS 알림이 차단되면 표시되지 않는다. 발송 문서 보존 정리와 Grafana 대시보드·포기율 알림은 후속 Infra 범위다.
+공고 수정·재알림, 수신 확인, 계정, 메시지 큐·별도 워커·2중화, 다른 채널, 자동 수집은 범위 밖이다. 직무 필터는 변경 뒤 등록되는 공고부터 적용되며(예외: 같은 링크 재등록으로 빠진 발송을 채울 때는 첫 등록 전에 가입한 구독의 지금 받을 직무를 본다), 필터 변경 전 등록된 공고의 발송 보충, 관심 기업 필터, 구독을 식별하는 서버 쪽 공지함 필터(목록은 익명 조회이고 거르기는 확장이 한다)는 후속이다. 기존 공고의 재분류는 하지 않으며 필요하면 팀이 삭제 후 재등록한다. 서버 한 대라 배포마다 발송이 최대 2분 멈추고, Chrome 종료 중이거나 OS 알림이 차단되면 표시되지 않는다. 발송 문서 보존 정리와 Grafana 대시보드·포기율 알림은 후속 Infra 범위다.

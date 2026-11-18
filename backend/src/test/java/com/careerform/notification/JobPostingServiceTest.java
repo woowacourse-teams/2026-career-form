@@ -62,16 +62,115 @@ class JobPostingServiceTest {
     }
 
     @Test
-    @DisplayName("같은 링크의 재등록은 기존 공고 ID와 함께 거절되고 발송을 추가하지 않는다")
-    void rejectsDuplicateLinkAndKeepsExistingDeliveries() {
+    @DisplayName("정상 등록된 공고를 같은 링크로 다시 등록하면 기존 공고 ID와 함께 거절되고 기존 공고 내용과 발송은 그대로이며 첫 등록 뒤 가입한 구독에도 발송을 만들지 않는다")
+    void rejectsDuplicateLinkWithoutChangingRegisteredPosting(CapturedOutput output) {
         subscribe("s1");
         var first = assertInstanceOf(JobPostingService.Registered.class,
             service.register(draft("https://careers.example.test/jobs/3", NOW.minusSeconds(60), NOW.plusSeconds(86400))));
+        subscribe("later", null, NOW.plusSeconds(30));
+        clock.advance(Duration.ofSeconds(60));
         var duplicate = assertInstanceOf(JobPostingService.Duplicate.class, service.register(new JobPostingService.Draft("다른 회사", List.of("IT.FRONTEND"),
             "https://careers.example.test/jobs/3", NOW.minusSeconds(60), NOW.plusSeconds(172800))));
         assertThat(duplicate.existingId()).isEqualTo(first.posting().id());
-        assertThat(store.deliveries()).hasSize(1);
-        assertThat(store.listPostings()).hasSize(1);
+        assertThat(store.deliveries()).singleElement().satisfies(delivery -> assertThat(delivery.subscriptionId()).isEqualTo("s1"));
+        assertThat(store.listPostings()).containsExactly(first.posting());
+        assertThat(output.getAll()).contains("POSTING_DUPLICATE_REFILL postingId=" + first.posting().id() + " targets=1");
+    }
+
+    @Test
+    @DisplayName("발송 문서 저장 전에 끊긴 공고를 같은 링크로 다시 등록하면 409와 기존 공고 ID를 주고 첫 등록 때의 대상 구독마다 기존 예정 시각의 대기 발송을 채운다")
+    void refillsMissingDeliveriesOnDuplicateLink(CapturedOutput output) {
+        subscribe("s1"); subscribe("s2"); subscribe("s3");
+        var stranded = strandedPosting("https://careers.example.test/jobs/stranded", List.of("IT.BACKEND"), NOW.plusSeconds(86400));
+        clock.advance(Duration.ofMinutes(5));
+        var duplicate = assertInstanceOf(JobPostingService.Duplicate.class, service.register(new JobPostingService.Draft("다른 회사", List.of("IT.FRONTEND"),
+            "https://careers.example.test/jobs/stranded", NOW.plusSeconds(600), NOW.plusSeconds(172800))));
+        assertThat(duplicate.existingId()).isEqualTo(stranded.id());
+        assertThat(store.deliveries()).hasSize(3).allSatisfy(delivery -> {
+            assertThat(delivery.postingId()).isEqualTo(stranded.id());
+            assertThat(delivery.status()).isEqualTo(PushDelivery.Status.PENDING);
+            assertThat(delivery.scheduledAt()).isEqualTo(stranded.scheduledAt());
+            assertThat(delivery.nextAttemptAt()).isEqualTo(stranded.scheduledAt());
+            assertThat(delivery.attempts()).isZero();
+        });
+        assertThat(store.deliveries()).extracting(PushDelivery::subscriptionId).containsExactlyInAnyOrder("s1", "s2", "s3");
+        assertThat(store.findDueDeliveries(clock.instant(), 10)).hasSize(3);
+        assertThat(store.listPostings()).containsExactly(stranded);
+        assertThat(output.getAll()).contains("POSTING_DUPLICATE_REFILL postingId=" + stranded.id() + " targets=3")
+            .doesNotContain("careers.example.test", "IT.BACKEND");
+    }
+
+    @Test
+    @DisplayName("일부 발송만 저장된 공고를 다시 등록하면 빠진 구독만 채우고 이미 있는 발송의 상태와 시도 횟수는 그대로 둔다")
+    void refillKeepsExistingDeliveries() {
+        subscribe("s1"); subscribe("s2");
+        var stranded = strandedPosting("https://careers.example.test/jobs/partial", List.of("IT.BACKEND"), NOW.plusSeconds(86400));
+        store.insertDeliveries(List.of(PushDelivery.pending("kept", stranded.id(), "s1", stranded.scheduledAt())));
+        var claimed = store.claimDelivery(store.findDelivery("kept").orElseThrow(), NOW, NOW.plusSeconds(120)).orElseThrow();
+        assertThat(store.completeDelivery(claimed, claimed.accepted(201))).isTrue();
+
+        assertInstanceOf(JobPostingService.Duplicate.class,
+            service.register(draft("https://careers.example.test/jobs/partial", NOW.minusSeconds(60), NOW.plusSeconds(86400))));
+        assertThat(store.findDelivery("kept")).hasValueSatisfying(delivery -> {
+            assertThat(delivery.status()).isEqualTo(PushDelivery.Status.ACCEPTED);
+            assertThat(delivery.attempts()).isEqualTo(1);
+        });
+        assertThat(store.deliveries()).hasSize(2).filteredOn(delivery -> delivery.subscriptionId().equals("s2")).singleElement()
+            .satisfies(delivery -> assertThat(delivery.status()).isEqualTo(PushDelivery.Status.PENDING));
+    }
+
+    @Test
+    @DisplayName("다시 등록할 때 기존 공고 등록 시각 뒤에 가입한 구독은 직무와 상관없이 채우지 않고 등록 시각과 같은 시각에 가입한 구독은 채운다")
+    void refillSkipsSubscriptionsRegisteredAfterPosting() {
+        subscribe("before", null, NOW.minusSeconds(1));
+        subscribe("same", null, NOW);
+        strandedPosting("https://careers.example.test/jobs/late", List.of("IT.BACKEND"), NOW.plusSeconds(86400));
+        subscribe("after", null, NOW.plusSeconds(1));
+        subscribe("after-backend", List.of("IT.BACKEND"), NOW.plusSeconds(1));
+        clock.advance(Duration.ofSeconds(1));
+        assertInstanceOf(JobPostingService.Duplicate.class,
+            service.register(draft("https://careers.example.test/jobs/late", NOW.minusSeconds(60), NOW.plusSeconds(86400))));
+        assertThat(store.deliveries()).extracting(PushDelivery::subscriptionId).containsExactlyInAnyOrder("before", "same");
+    }
+
+    @Test
+    @DisplayName("다시 등록할 때 대상은 기존 공고 직무로 정하므로 기존 공고 직무와 겹치지 않는 선택 구독은 요청 직무와 상관없이 채우지 않는다")
+    void refillTargetsExistingPostingRoles() {
+        subscribe("backend", List.of("IT.BACKEND"));
+        subscribe("frontend", List.of("IT.FRONTEND"));
+        subscribe("unselected");
+        strandedPosting("https://careers.example.test/jobs/roles", List.of("IT.BACKEND"), NOW.plusSeconds(86400));
+        assertInstanceOf(JobPostingService.Duplicate.class, service.register(new JobPostingService.Draft("합성 회사", List.of("IT.FRONTEND"),
+            "https://careers.example.test/jobs/roles", NOW.minusSeconds(60), NOW.plusSeconds(86400))));
+        assertThat(store.deliveries()).extracting(PushDelivery::subscriptionId).containsExactlyInAnyOrder("backend", "unselected");
+    }
+
+    @Test
+    @DisplayName("roles가 없는 레거시 공고를 다시 등록하면 그 공고 등록 시각까지 가입한 모든 구독의 빠진 발송을 채운다")
+    void refillsLegacyPostingForSubscriptionsRegisteredBy() {
+        subscribe("backend", List.of("IT.BACKEND"));
+        subscribe("frontend", List.of("IT.FRONTEND"));
+        subscribe("unselected");
+        strandedPosting("https://careers.example.test/jobs/legacy-refill", null, NOW.plusSeconds(86400));
+        subscribe("later", null, NOW.plusSeconds(1));
+        assertInstanceOf(JobPostingService.Duplicate.class,
+            service.register(draft("https://careers.example.test/jobs/legacy-refill", NOW.minusSeconds(60), NOW.plusSeconds(86400))));
+        assertThat(store.deliveries()).extracting(PushDelivery::subscriptionId).containsExactlyInAnyOrder("backend", "frontend", "unselected");
+    }
+
+    @Test
+    @DisplayName("마감이 지난 기존 공고는 요청 마감이 남아 있어도 409만 주고 채우지 않으며 요청 마감도 지났으면 지금처럼 CLOSED로 거절한다")
+    void doesNotRefillClosedPosting(CapturedOutput output) {
+        subscribe("s1");
+        var closed = strandedPosting("https://careers.example.test/jobs/closed", List.of("IT.BACKEND"), NOW.plusSeconds(60));
+        clock.advance(Duration.ofSeconds(60));
+        var duplicate = assertInstanceOf(JobPostingService.Duplicate.class,
+            service.register(draft("https://careers.example.test/jobs/closed", NOW.minusSeconds(60), NOW.plusSeconds(86400))));
+        assertThat(duplicate.existingId()).isEqualTo(closed.id());
+        assertThat(store.deliveries()).isEmpty();
+        assertThat(output.getAll()).doesNotContain("POSTING_DUPLICATE_REFILL");
+        assertReason(draft("https://careers.example.test/jobs/closed", NOW.minusSeconds(60), NOW.plusSeconds(30)), "CLOSED");
+        assertThat(store.deliveries()).isEmpty();
     }
 
     @Test
@@ -256,9 +355,18 @@ class JobPostingServiceTest {
 
     private void subscribe(String id) { subscribe(id, null); }
 
-    private void subscribe(String id, List<String> roles) {
-        store.insertSubscription(new PushSubscription(id, "https://fcm.googleapis.com/fcm/send/" + id, "synthetic-p256dh", "synthetic-auth", NOW, roles,
-            roles == null ? null : NOW));
+    private void subscribe(String id, List<String> roles) { subscribe(id, roles, NOW); }
+
+    private void subscribe(String id, List<String> roles, Instant registeredAt) {
+        store.insertSubscription(new PushSubscription(id, "https://fcm.googleapis.com/fcm/send/" + id, "synthetic-p256dh", "synthetic-auth", registeredAt,
+            roles, roles == null ? null : registeredAt));
+    }
+
+    /** 발송 문서 저장 전에 끊긴 등록: 등록 시각 NOW의 공고 문서만 저장하고 발송 문서는 만들지 않는다. */
+    private JobPosting strandedPosting(String link, List<String> roles, Instant closesAt) {
+        var posting = new JobPosting(Identifiers.random(), "합성 회사", "합성 직무", roles, link, NOW.minusSeconds(60), closesAt, NOW);
+        assertThat(store.insertPosting(posting)).isTrue();
+        return posting;
     }
 
     private static JobPosting register(JobPostingService target, List<String> roles, String link) {

@@ -16,7 +16,8 @@ function page() {
 }
 
 const reveal = () => {
-  document.querySelector("#more")!.innerHTML = `<label>병과<input name="specialty"></label>`;
+  document.querySelector("#more")!.innerHTML =
+    `<label>병과<input name="specialty"></label>`;
 };
 
 async function settle(ms: number) {
@@ -24,10 +25,55 @@ async function settle(ms: number) {
 }
 
 describe("watching for fields the page reveals after the run", () => {
+  it("ignores the same fields re-rendered empty, as after a site's draft-restore cancel", async () => {
+    const baseline = page();
+    const onReveal = vi.fn();
+    watchRevealedFields({
+      document,
+      baseline,
+      onReveal,
+      debounceMs: 100,
+      idleMs: 300,
+    });
+    // The site rebuilds the whole form with fresh, empty nodes.
+    document.body.innerHTML = document.body.innerHTML;
+    await settle(500);
+    expect(onReveal).not.toHaveBeenCalled();
+
+    reveal();
+    await settle(500);
+    expect(onReveal).toHaveBeenCalledTimes(1);
+  });
+
+  it("still reports a single row the page remounts empty after a save", async () => {
+    document.body.innerHTML = `<section>
+      <div id="row"><label>학교명<input name="school"></label></div>
+      <label>전공<input name="major"></label><label>학점<input name="gpa"></label></section>`;
+    const baseline = fillableControls(document);
+    const onReveal = vi.fn();
+    watchRevealedFields({
+      document,
+      baseline,
+      onReveal,
+      debounceMs: 100,
+      idleMs: 300,
+    });
+    const row = document.querySelector("#row")!;
+    row.innerHTML = row.innerHTML;
+    await settle(500);
+    expect(onReveal).toHaveBeenCalledTimes(1);
+  });
+
   it("reports once after new empty fields appear and the page goes quiet", async () => {
     const baseline = page();
     const onReveal = vi.fn();
-    watchRevealedFields({ document, baseline, onReveal, debounceMs: 100, idleMs: 300 });
+    watchRevealedFields({
+      document,
+      baseline,
+      onReveal,
+      debounceMs: 100,
+      idleMs: 300,
+    });
     reveal();
     await settle(500);
     expect(onReveal).toHaveBeenCalledTimes(1);
@@ -63,8 +109,15 @@ describe("watching for fields the page reveals after the run", () => {
   it("ignores fields that already hold a value", async () => {
     const baseline = page();
     const onReveal = vi.fn();
-    watchRevealedFields({ document, baseline, onReveal, debounceMs: 100, idleMs: 300 });
-    document.querySelector("#more")!.innerHTML = `<input name="kept" value="x">`;
+    watchRevealedFields({
+      document,
+      baseline,
+      onReveal,
+      debounceMs: 100,
+      idleMs: 300,
+    });
+    document.querySelector("#more")!.innerHTML =
+      `<input name="kept" value="x">`;
     await settle(1_000);
     expect(onReveal).not.toHaveBeenCalled();
   });
@@ -72,7 +125,13 @@ describe("watching for fields the page reveals after the run", () => {
   it("reports nothing after it is stopped", async () => {
     const baseline = page();
     const onReveal = vi.fn();
-    const stop = watchRevealedFields({ document, baseline, onReveal, debounceMs: 100, idleMs: 300 });
+    const stop = watchRevealedFields({
+      document,
+      baseline,
+      onReveal,
+      debounceMs: 100,
+      idleMs: 300,
+    });
     stop();
     reveal();
     await settle(1_000);

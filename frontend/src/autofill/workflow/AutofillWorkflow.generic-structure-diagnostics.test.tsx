@@ -1,7 +1,6 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { fixturePolicy } from "../../test/fixtures/execution-policy";
 import { createEmptyProfile, type Profile } from "../../profile/model";
 import type { AnalysisApiClient } from "../api/types";
 import { setAutofillDebugEnabled } from "../debug/autofill-debug";
@@ -32,10 +31,6 @@ function mountCareerForm(withAddButton = true) {
       row(rows.querySelectorAll("[ismultirow]").length),
     );
   });
-}
-
-function mountPlainForm() {
-  document.body.innerHTML = `<label>이름<input name="name" /></label>`;
 }
 
 function profileWithCareers(count: number): Profile {
@@ -124,43 +119,27 @@ async function reachResult(client: AnalysisApiClient, profile: Profile) {
     />,
   );
   await screen.findByRole("heading", { name: "기입 결과" });
-  // A run that starts before the policy settles can reach a first result and
-  // is replaced by the final run, which carries the structure section.
-  const diagnostics = await screen.findByRole("region", {
-    name: "구조 자동 준비",
-    hidden: true,
-  });
-  const details = diagnostics.closest("details");
-  expect(details).not.toHaveAttribute("open");
-  const summary = details?.querySelector("summary");
-  if (!summary) throw new Error("Structure disclosure summary is missing");
-  fireEvent.click(summary);
   return container;
 }
 
-describe("generic structure diagnostics on the result screen", () => {
-  it("reports not-run for a document with an installed policy", async () => {
-    mountPlainForm();
-    const client = createClient();
-    client.loadExecutionPolicy = async () => fixturePolicy("sk");
+function structureLines(warn: { mock: { calls: unknown[][] } }) {
+  return warn.mock.calls
+    .map((call: unknown[]) => String(call[0]))
+    .filter((message: string) => message.includes("구조 자동 준비"));
+}
 
-    await reachResult(client, profileWithCareers(0));
+describe("generic structure diagnostics", () => {
+  it("keeps structure preparation out of the result screen", async () => {
+    mountCareerForm(false);
 
-    expect(screen.getByText(/구조 자동 준비 미실행/)).toBeVisible();
+    await reachResult(createClient(), profileWithCareers(3));
+
+    expect(screen.queryByText(/구조 자동 준비/)).toBeNull();
     expect(screen.queryByText("자동으로 한 일")).toBeNull();
+    expect(document.body.textContent).not.toContain("NO_ADD_CONTROL");
   });
 
-  it("reports a run with no actions when nothing remains", async () => {
-    mountPlainForm();
-
-    await reachResult(createClient(), profileWithCareers(0));
-
-    expect(screen.getByText(/실행했고 필요한 행동 없음/)).toBeVisible();
-    expect(screen.queryByText("구조 자동 준비 미실행")).toBeNull();
-    expect(screen.queryByText("자동으로 한 일")).toBeNull();
-  });
-
-  it("lists the rows added by the loop and logs status and counts only", async () => {
+  it("logs status and counts only for the rows added by the loop", async () => {
     mountCareerForm();
     const inputSentinel = "SYNTHETIC_INPUT_SENTINEL_274";
     const profileSentinel = "SYNTHETIC_PROFILE_SENTINEL_274";
@@ -171,32 +150,18 @@ describe("generic structure diagnostics on the result screen", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
     const result = await reachResult(createClient(), profile);
+    // A run that starts before the policy settles can reach a first result and
+    // is replaced by the final run, which logs the structure line.
+    await vi.waitFor(() =>
+      expect(structureLines(warn).at(-1)).toContain("ran-with-actions"),
+    );
 
-    expect(screen.getByText("자동으로 한 일")).toBeVisible();
-    expect(screen.getAllByText("행 추가")).toHaveLength(2);
-    expect(screen.queryByText(/미실행/)).toBeNull();
-    const lines = warn.mock.calls
-      .map((call) => String(call[0]))
-      .filter((message) => message.includes("구조 자동 준비"));
-    expect(lines).toHaveLength(1);
-    expect(lines[0]).toContain("ran-with-actions");
-    expect(lines[0]).toContain("완료 2");
-    expect(lines[0]).not.toContain("경력");
+    const lines = structureLines(warn);
+    expect(lines.at(-1)).toContain("완료 2");
+    expect(lines.at(-1)).not.toContain("경력");
     for (const sentinel of [inputSentinel, profileSentinel]) {
       expect(result).not.toHaveTextContent(sentinel);
       expect(JSON.stringify(lines)).not.toContain(sentinel);
     }
-  });
-
-  it("shows the section title and a fixed reason for a blocked action", async () => {
-    mountCareerForm(false);
-
-    await reachResult(createClient(), profileWithCareers(3));
-
-    const list = screen.getByRole("list", { name: "자동으로 한 일" });
-    expect(list).toHaveTextContent("경력");
-    expect(list).toHaveTextContent("막힘");
-    expect(list).toHaveTextContent("행을 추가하는 버튼을 찾지 못했습니다.");
-    expect(document.body.textContent).not.toContain("NO_ADD_CONTROL");
   });
 });

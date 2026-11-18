@@ -109,6 +109,31 @@ describe("generic same-origin address search dialog", () => {
     expect(document.querySelector("[role='dialog']")).toBeNull();
   });
 
+  it("picks the row whose road address is exactly the stored one among same-postcode rows", async () => {
+    const { zip, road, button } = setup([
+      ["63309", "제주특별자치도 제주시 첨단로 242 (영평동)"],
+      ["63309", "제주특별자치도 제주시 첨단로 242-1 (영평동)"],
+      ["63309", "제주특별자치도 제주시 첨단로 242-2 (영평동)"],
+    ]);
+
+    const result = await run(button, zip, road);
+
+    expect(result.status).toBe("written");
+    expect(road.value).toBe("제주특별자치도 제주시 첨단로 242 (영평동)");
+  });
+
+  it("stays manual when two same-postcode rows carry the same road address", async () => {
+    const { zip, road, button } = setup([
+      ["63309", "제주특별자치도 제주시 첨단로 242 (영평동)"],
+      ["63309", "제주특별자치도 제주시 첨단로 242 (영평동, 다른 건물)"],
+    ]);
+
+    const result = await run(button, zip, road);
+
+    expect(result.status).toBe("manual");
+    expect([zip.value, road.value]).toEqual(["", ""]);
+  });
+
   it("closes the dialog and stays manual when no row matches", async () => {
     const { zip, road, button } = setup([
       ["63310", "제주특별자치도 제주시 첨단로 213-4"],

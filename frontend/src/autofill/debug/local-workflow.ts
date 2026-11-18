@@ -8,7 +8,8 @@ export function localWorkflowLog(
     import.meta.env.VITE_API_BASE_URL !== "http://localhost:8080"
   )
     return;
-  console.debug("[CareerForm local workflow]", phase, detail);
+  // 객체 대신 글자로 남겨, 접힌 콘솔이나 외부 도구에서도 그대로 읽히게 한다.
+  console.debug("[CareerForm local workflow]", phase, JSON.stringify(detail));
   // Local QA bridge: the isolated content-script console is not always
   // observable from tooling, so mirror the same value-free phase to the page.
   try {

@@ -153,8 +153,9 @@ describe("row save on the generic path", () => {
     expect(submit()).toBe(0);
     expect(document.querySelectorAll("#registered li")).toHaveLength(1);
     expect(input("testName")?.value).toBe("합성시험");
-    const saved = screen.getByRole("region", { name: "확장이 저장한 줄" });
-    expect(saved).toHaveTextContent("1개 줄");
+    expect(
+      screen.queryByRole("region", { name: "확장이 저장한 줄" }),
+    ).toBeNull();
   });
 
   it("stops and names the row when the page does not register it", async () => {

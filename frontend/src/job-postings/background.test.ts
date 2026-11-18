@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import { createPostingHandler } from "./background-handler";
-import { PostingService } from "./service";
+import { EXPIRED_REVERT_MESSAGE, PostingService } from "./service";
 import type { Posting } from "./model";
 it("관리 페이지에서만 공고를 읽고 쓰며 패널은 진입만 허용한다", async () => {
   let rows: Posting[] = [];
@@ -96,6 +96,88 @@ it("완료 또는 수정된 알림 클릭으로 오래된 공고를 열지 않�
   );
   await service.setCompleted("job", 1, true);
   expect(await service.notificationUrl("careerForm.job.job.1")).toBeUndefined();
+});
+it("마감이 지나 지운 공고의 이미 뜬 알림을 눌러도 공고를 열지 않는다", async () => {
+  let rows: Posting[] = [];
+  let now = 0;
+  const service = new PostingService(
+    {
+      load: async () => rows,
+      save: async (next) => {
+        rows = next;
+      },
+    },
+    {
+      now: () => now,
+      id: () => "job",
+      permission: async () => true,
+      schedule: async () => {},
+      notify: async () => {},
+      clearNotification: async () => {},
+    },
+  );
+  await service.save({
+    company: "예시",
+    role: "개발",
+    url: "https://example.com",
+    deadline: 7200000,
+    timeZone: "Asia/Seoul",
+    minutes: [60],
+  });
+  now = 3600000;
+  await service.recover();
+  expect(await service.notificationUrl("careerForm.job.job.1")).toBe(
+    "https://example.com",
+  );
+  now = 7200000;
+  await service.recover();
+  expect(rows).toEqual([]);
+  expect(await service.notificationUrl("careerForm.job.job.1")).toBeUndefined();
+});
+it("마감이 지난 지원 완료 공고를 되돌리지 못한 이유를 관리 페이지에 그대로 전달한다", async () => {
+  let rows: Posting[] = [];
+  let now = 0;
+  const service = new PostingService(
+    {
+      load: async () => rows,
+      save: async (next) => {
+        rows = next;
+      },
+    },
+    {
+      now: () => now,
+      id: () => "job",
+      permission: async () => true,
+      schedule: async () => {},
+      notify: async () => {},
+      clearNotification: async () => {},
+    },
+  );
+  const handler = createPostingHandler(service, "own", async () => {});
+  const page = { id: "own", url: "chrome-extension://own/options.html" };
+  await service.save({
+    company: "예시",
+    role: "개발",
+    url: "https://example.com",
+    deadline: 7200000,
+    timeZone: "Asia/Seoul",
+    minutes: [],
+  });
+  await service.setCompleted("job", 1, true);
+  now = 7200000;
+  expect(
+    await handler(
+      {
+        type: "careerForm.postings",
+        action: "complete",
+        id: "job",
+        version: 2,
+        completed: false,
+      },
+      page,
+    ),
+  ).toEqual({ ok: false, error: EXPIRED_REVERT_MESSAGE });
+  expect(rows).toMatchObject([{ status: "completed", version: 2 }]);
 });
 
 it("회사명이 비면 관리 페이지에 회사명 오류를 그대로 전달한다", async () => {

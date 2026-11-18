@@ -547,3 +547,105 @@
     padding: 20px;
   }
 }
+.attachmentsGuide {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.224px;
+}
+.attachmentInfo p {
+  margin: 4px 0 0;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: -0.224px;
+}
+.attachmentItems {
+  display: grid;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.attachmentItems > li {
+  padding: 16px 0;
+  border-top: 1px solid var(--color-border);
+}
+.attachmentItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+.attachmentInfo {
+  min-width: 0;
+}
+.attachmentInfo > p:first-child {
+  margin-top: 0;
+}
+.attachmentInfo h3 {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-size: 15px;
+  line-height: 20px;
+}
+.attachmentName {
+  display: block;
+  color: var(--color-text-strong);
+  overflow-wrap: anywhere;
+}
+.attachmentInfo p.attachmentError,
+.attachmentError {
+  color: var(--color-danger-text);
+}
+.attachmentActions {
+  display: flex;
+  gap: 8px;
+}
+.attachmentLink {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+.attachmentLink label {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 435px);
+  align-items: center;
+  gap: 15px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+.attachmentLink input {
+  min-height: 40px;
+  box-sizing: border-box;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font: inherit;
+  color: var(--color-text-strong);
+}
+.attachmentLink .attachmentActions {
+  margin-left: 111px;
+}
+.attachmentLinkHint,
+.attachmentLink p {
+  margin: 0 0 0 111px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  line-height: 18px;
+}
+@media (max-width: 640px) {
+  .attachmentLink label {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .attachmentLink .attachmentActions,
+  .attachmentLinkHint,
+  .attachmentLink p {
+    margin-left: 0;
+  }
+}
+.attachmentLink p.attachmentError {
+  color: var(--color-danger-text);
+}

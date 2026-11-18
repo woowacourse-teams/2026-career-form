@@ -602,7 +602,7 @@ describe("approved university major search boundary", () => {
     ]);
   });
 
-  it("halts the next approved search after interaction-started failure and distinguishes both reasons", async () => {
+  it("still runs the next approved search after a closed search that selected nothing", async () => {
     const test = setup(2);
     test.items.forEach((item) => {
       item.currentValue = "";
@@ -619,8 +619,8 @@ describe("approved university major search boundary", () => {
 
     const stopped = await executeApprovedSearchWrites(test);
 
-    expect(stopped).toBe(true);
-    expect(executeReadonlySearch).toHaveBeenCalledTimes(1);
+    expect(stopped).toBe(false);
+    expect(executeReadonlySearch).toHaveBeenCalledTimes(2);
     expect(vi.mocked(executeReadonlySearch).mock.calls[0]![0]).toMatchObject({
       targetCandidateId: "field-0",
       canonicalFieldKey: "education.university.majorName",
@@ -636,7 +636,7 @@ describe("approved university major search boundary", () => {
         candidateId: "field-1",
         status: "skipped",
         outcome: "needs-verification",
-        failureCode: "SEARCH_FOLLOWUP_HALTED",
+        failureCode: "SEARCH_RESULTS_INCOMPLETE",
       },
     ]);
   });

@@ -376,6 +376,24 @@ function searchFailureMessage(reason: SearchFailureReason): string {
   );
 }
 
+/** Failures that end before any result is activated, with nothing selected. */
+const CLOSED_WITHOUT_SELECTION_REASONS: ReadonlySet<string> = new Set([
+  "search_query_not_found",
+  "multiple_search_query_inputs",
+  "search_submit_not_found",
+  "multiple_search_submits",
+  "unverified_search_form",
+  "search_results_not_found",
+  "multiple_matching_results",
+  "result_set_incomplete",
+  "surface_unobservable",
+  "surface_ambiguous",
+  "inaccessible_popup_frame",
+  // The results never settled (a company the site's list does not have):
+  // nothing was selected, and the closed popup changed no other field.
+  "result_pending",
+]);
+
 export async function executeApprovedSearchWrites({
   items,
   approvedCandidateIds,
@@ -467,6 +485,7 @@ export async function executeApprovedSearchWrites({
         command !== "SEARCH_SELECTION" &&
         !item.calendarApproval &&
         !item.dayCalendarApproval &&
+        !item.calendarUnitProbe &&
         item.analysis?.valueBinding?.type === "DIRECT";
       const bindingSame = approvedBindings.get(item) === approvedBinding(item);
       if (
@@ -494,7 +513,10 @@ export async function executeApprovedSearchWrites({
         const target = "handle" in lookup ? lookup.handle.elements[0] : undefined;
         const document = (target ?? item.dialogDateApproval?.target)
           ?.ownerDocument;
-        const popup = item.calendarApproval?.popup ?? item.dayCalendarApproval?.popup;
+        const popup =
+          item.calendarApproval?.popup ??
+          item.dayCalendarApproval?.popup ??
+          item.calendarUnitProbe?.popup;
         // Calendar widgets' own year/month selects are not form fields; an
         // earlier field's calendar may unmount while this one runs.
         const controls = () => {
@@ -836,12 +858,24 @@ export async function executeApprovedSearchWrites({
               currentApproval,
               [result.catalogSelection!.evidence.label],
             );
+
             return (
               input.value === result.catalogSelection!.evidence.label &&
               typeof current !== "string" &&
               result.catalogSelection!.verify()
             );
           },
+          // After the pass ends: the same field still shows our selection.
+          readback: () =>
+            input.value === result.catalogSelection!.evidence.label &&
+            typeof targetIsCurrent(
+              input.ownerDocument,
+              registry,
+              item.candidateId,
+              result.identity,
+              undefined,
+              [result.catalogSelection!.evidence.label],
+            ) !== "string",
         }));
     if (
       (result.status === "selected" || result.status === "unchanged") &&
@@ -974,14 +1008,38 @@ export async function executeApprovedSearchWrites({
         ].includes(failedResult.reason) &&
         structuralGroups !== undefined &&
         [...structuralGroups.values()].every((group) => group?.isCurrent());
+      // A search that selected nothing and closed again changed no other
+      // field. Later controls keep their own pre-write checks (same target,
+      // structure, empty value), so nothing is held for it, even in its row.
+      // A popup left open or a page change seen in the structure still holds.
+      const closedWithoutSelection =
+        failedResult !== undefined &&
+        failedResult.surfaceLeftOpen !== true &&
+        (failedResult.effect === "none" ||
+          failedResult.effect === "interaction-started") &&
+        CLOSED_WITHOUT_SELECTION_REASONS.has(failedResult.reason) &&
+        // An unreadable boundary is no evidence of change; a moved one is.
+        (structuralGroups === undefined ||
+          [...structuralGroups.values()].every(
+            (group) => !group || group.isCurrent(),
+          ));
       const triggerGroup = structuralGroups?.get(item.candidateId);
       localWorkflowLog("search-halt", {
         reason: failedResult?.reason ?? "",
         effect: failedResult?.effect ?? "",
         structuralOnly,
         rowOnly,
+        closedWithoutSelection,
         groups: structuralGroups !== undefined,
       });
+      if (closedWithoutSelection) {
+        traceTrigger(item.candidateId, {
+          interactionReason: failedResult?.reason ?? "",
+          surfaceLeftOpen: false,
+          triggerHasProfileEntryId: item.profileEntryId !== undefined,
+        });
+        continue;
+      }
       traceTrigger(item.candidateId, {
         interactionReason: failedResult?.reason ?? "",
         surfaceLeftOpen: failedResult?.surfaceLeftOpen === true,

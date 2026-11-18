@@ -144,6 +144,33 @@ describe("품질 관측의 로컬 값 검증과 비식별 보고", () => {
     },
   );
 
+  it.each([
+    ["UNSUPPORTED_FORMAT" as const],
+    ["UNSUPPORTED_CONTROL" as const],
+  ])(
+    "프로필 값이 있지만 입력 컨트롤 검증에 실패한 항목은 %s로 기록한다",
+    async (qualityReason) => {
+      const reports: unknown[] = [];
+      const quality = new QualityObservation(async (message) => {
+        reports.push(message);
+      });
+      quality.review("snapshot", [
+        {
+          ...item,
+          profileValue: undefined,
+          status: "unavailable",
+          disabled: true,
+          qualityReason,
+        },
+      ]);
+      await quality.finish("COMPLETED");
+      expect(JSON.stringify(reports)).toContain(
+        `"bound":true,"attempted":false,"written":false,"retained":false,"reason":"${qualityReason}"`,
+      );
+      expect(JSON.stringify(reports)).not.toContain("PROFILE_VALUE_MISSING");
+    },
+  );
+
   it("randomUUID가 없는 문서에서도 관측 초기화가 입력을 막지 않는다", () => {
     const uuid = vi.spyOn(crypto, "randomUUID").mockImplementation(() => {
       throw new Error("unavailable");

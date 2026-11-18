@@ -76,7 +76,11 @@ import {
 import { WorkflowScreens } from "./WorkflowScreens";
 import { WorkflowError, type WorkflowErrorKind } from "./WorkflowError";
 import loadingStyles from "./WorkflowLoading.module.css";
-import { errorDetail, startErrorKind } from "./start-error";
+import {
+  errorDetail,
+  interruptedStopReason,
+  startErrorKind,
+} from "./start-error";
 import { observeQuality } from "../quality/safe-observation";
 import {
   createAnalyzeFields,
@@ -133,6 +137,10 @@ import {
   type StructureDiagnostics,
 } from "../generic/structure-diagnostics";
 import { debugWarn } from "../debug/autofill-debug";
+import {
+  AttachmentSection,
+  type AttachedFile,
+} from "../attachments/AttachmentSection";
 import { useDeveloperMode } from "../debug/developer-mode";
 import { localWorkflowLog } from "../debug/local-workflow";
 
@@ -210,6 +218,7 @@ function PolicyReadyWorkflow({
   followFields = false,
   apiClient,
   repository,
+  attachmentStore,
   pageDocument,
   onExit,
   unsupportedImageUrl,
@@ -309,6 +318,9 @@ function PolicyReadyWorkflow({
   const mounted = useRef(true);
   const [stage, setStage] = useState<Stage>("analyzing");
   const [profile, setProfile] = useState<Profile>();
+  const [attachedFiles, setAttachedFiles] = useState<readonly AttachedFile[]>(
+    [],
+  );
   const [preparationSnapshot, setPreparationSnapshot] =
     useState<ReturnType<typeof collectPreparationSnapshot>>();
   const [preparationItems, setPreparationItems] = useState<PreparationItem[]>(
@@ -888,12 +900,14 @@ function PolicyReadyWorkflow({
       } catch (error) {
         if (mounted.current) {
           setCaughtText(safeErrorTitle(error));
+          setExceptionTitle(interruptedStopReason(error));
           setStage("exception");
         }
       }
     } catch (error) {
       if (mounted.current) {
         setCaughtText(safeErrorTitle(error));
+        setExceptionTitle(interruptedStopReason(error));
         setStage("exception");
       }
     } finally {
@@ -1199,6 +1213,7 @@ function PolicyReadyWorkflow({
     } catch (error) {
       if (mounted.current) {
         setCaughtText(safeErrorTitle(error));
+        setExceptionTitle(interruptedStopReason(error));
         setStage("exception");
       }
     } finally {
@@ -1371,6 +1386,7 @@ function PolicyReadyWorkflow({
       progressIdFor: (id) => progressTracker.progressIdFor(id, visibleRegistry),
       progressStateFor: progressTracker.progressStateFor,
       fieldStateFor,
+      savedRowKeys: savedRowKeys.current,
     });
     // On a generic page only fields to check get a red border; the ones with
     // no saved value are listed in gray instead.
@@ -1433,11 +1449,10 @@ function PolicyReadyWorkflow({
       executeWrites={executeWrites}
       results={results}
       analysisSummary={analysisSummary}
-      structureDiagnostics={structureDiagnostics.current}
       addressResult={addressResult}
       adapter={adapter}
       workflowDiagnostics={workflowDiagnostics}
-      exceptionTitle={caughtText === undefined ? exceptionTitle : ""}
+      exceptionTitle={exceptionTitle}
       exceptionKind={startError?.kind ?? "interrupted"}
       exceptionDetail={startError?.detail ?? caughtText}
       onRetry={onRetry}
@@ -1463,9 +1478,36 @@ function PolicyReadyWorkflow({
       onLocate={(candidateId) =>
         !!visibleRegistry && presentation.show(visibleRegistry, candidateId)
       }
-      autoWrittenLabels={autoWrittenLabels}
       manualRevealedLabels={manualRevealedLabels}
       rowSave={rowSave}
+      savedRowKeys={savedRowKeys.current}
+      attachments={attachedFiles.map(({ fileName, fieldLabel }) => ({
+        fileName,
+        fieldLabel,
+      }))}
+      onLocateAttachments={() => {
+        const target = attachedFiles.find(
+          ({ element }) => element.isConnected,
+        )?.element;
+        if (!target) return false;
+        const rect = target.getBoundingClientRect();
+        const scrollTarget =
+          rect.width === 0 && rect.height === 0
+            ? (target.parentElement ?? target)
+            : target;
+        scrollTarget.scrollIntoView({ block: "center" });
+        return true;
+      }}
+      attachmentSection={
+        attachmentStore ? (
+          <AttachmentSection
+            pageDocument={pageDocument}
+            store={attachmentStore}
+            profile={profile}
+            onAttachedChange={setAttachedFiles}
+          />
+        ) : undefined
+      }
     />
   );
 }

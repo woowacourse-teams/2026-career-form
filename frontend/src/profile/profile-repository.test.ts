@@ -21,6 +21,20 @@ describe("sanitizeProfile", () => {
     });
   });
 
+  it("saves an employment status stored as 퇴사 as 퇴직", () => {
+    const profile = createEmptyProfile();
+    profile.careers = [
+      { id: "career-1", sectionId: "career", values: { employmentStatus: "퇴사" } },
+      { id: "career-2", sectionId: "career", values: { employmentStatus: "재직중" } },
+    ];
+
+    expect(
+      sanitizeProfile(profile).careers.map(
+        (entry) => entry.values.employmentStatus,
+      ),
+    ).toEqual(["퇴직", "재직중"]);
+  });
+
   it("omits repeated entries whose values are all empty and preserves stable ids", () => {
     const profile = createEmptyProfile();
     profile.certifications = [

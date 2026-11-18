@@ -160,6 +160,32 @@ describe("resolveValueBinding", () => {
     ).toMatchObject({ status: "resolved", value: "대학(학사)" });
   });
 
+  it.each([
+    ["퇴직", { 재직중: "WORK", 퇴사: "LEAVE" }],
+    ["퇴사", { 재직중: "WORK", 퇴직: "LEAVE" }],
+  ])(
+    "finds a site code for the employment status %s under its other name",
+    (stored, optionMap) => {
+      const profile = createEmptyProfile();
+      profile.careers.push({
+        id: "career-1",
+        sectionId: "career",
+        values: { employmentStatus: stored },
+      });
+      expect(
+        resolveValueBinding(
+          profile,
+          {
+            type: "LOOKUP",
+            profileFieldKey: "careers.career.employmentStatus",
+            optionMap,
+          },
+          0,
+        ),
+      ).toMatchObject({ status: "resolved", value: "LEAVE" });
+    },
+  );
+
   it("resolves latest education saved on a high-school entry", () => {
     const profile = createEmptyProfile();
     profile.education.push({

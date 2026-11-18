@@ -59,29 +59,49 @@ function Accordion({
   );
 }
 
+const ATTACHMENTS = "attachments";
+const ATTACHMENTS_LABEL = "첨부 파일";
+const ATTACHMENT_SEARCH_TERMS =
+  "첨부 파일 이력서 경력기술서 포트폴리오 증명사진";
+
+function attachmentsMatch(query: string): boolean {
+  const terms = query.trim().split(/\s+/).filter(Boolean);
+  return terms.every((term) => ATTACHMENT_SEARCH_TERMS.includes(term));
+}
+
 export function ProfileWorkspace({
   layout,
   formProps,
   sidebarFooter,
+  attachmentPanel,
 }: {
   layout: LayoutPreference;
   formProps: FormProps;
   sidebarFooter?: ReactNode;
+  /** Profile files (resume, portfolio, photo) shown as their own item. */
+  attachmentPanel?: ReactNode;
 }) {
-  const [activeCategory, setActiveCategory] =
-    useState<ProfileCategoryId>("personal");
+  const [activeCategory, setActiveCategory] = useState<
+    ProfileCategoryId | typeof ATTACHMENTS
+  >("personal");
   const [query, setQuery] = useState("");
+  const showAttachments = !!attachmentPanel && attachmentsMatch(query);
   const heading = useRef<HTMLHeadingElement>(null);
   const visibleCategories = PROFILE_CATEGORIES.filter((category) =>
     categoryMatches(category, query),
   );
-  const activeIndex = PROFILE_CATEGORIES.findIndex(
-    (category) => category.id === activeCategory,
-  );
+  const attachmentsActive = activeCategory === ATTACHMENTS;
+  const activeIndex = attachmentsActive
+    ? PROFILE_CATEGORIES.length
+    : PROFILE_CATEGORIES.findIndex(
+        (category) => category.id === activeCategory,
+      );
   const activeDefinition = PROFILE_CATEGORIES[activeIndex];
-  const activeCount = categoryCount(activeDefinition, formProps.profile);
+  const activeCount = activeDefinition
+    ? categoryCount(activeDefinition, formProps.profile)
+    : undefined;
 
-  const navigate = (id: ProfileCategoryId) => {
+  const navigate = (id: ProfileCategoryId | typeof ATTACHMENTS) => {
     setActiveCategory(id);
     setQuery("");
     heading.current?.focus({ preventScroll: true });
@@ -124,7 +144,7 @@ export function ProfileWorkspace({
     return (
       <main className={styles.layoutB}>
         <div className={styles.overviewHeader}>{search}</div>
-        {!visibleCategories.length && noResults}
+        {!visibleCategories.length && !showAttachments && noResults}
         {visibleCategories.map((category) => (
           <Accordion
             key={`${category.id}-${query.trim() ? "search" : "browse"}`}
@@ -135,6 +155,18 @@ export function ProfileWorkspace({
             <ProfileForm category={category} {...formProps} />
           </Accordion>
         ))}
+        {showAttachments && (
+          <details
+            className={styles.accordion}
+            aria-label={ATTACHMENTS_LABEL}
+            open={attachmentsActive || !!query.trim()}
+          >
+            <summary>
+              <strong>{ATTACHMENTS_LABEL}</strong>
+            </summary>
+            <div className={styles.accordionBody}>{attachmentPanel}</div>
+          </details>
+        )}
         {sidebarFooter}
       </main>
     );
@@ -172,7 +204,20 @@ export function ProfileWorkspace({
               </div>
             );
           })}
-          {!visibleCategories.length && noResults}
+          {showAttachments && (
+            <div className={styles.navGroup}>
+              <p>첨부</p>
+              <button
+                type="button"
+                aria-label={ATTACHMENTS_LABEL}
+                aria-current={attachmentsActive ? "page" : undefined}
+                onClick={() => navigate(ATTACHMENTS)}
+              >
+                <span className={styles.navLabel}>{ATTACHMENTS_LABEL}</span>
+              </button>
+            </div>
+          )}
+          {!visibleCategories.length && !showAttachments && noResults}
         </nav>
         {sidebarFooter}
       </aside>
@@ -182,21 +227,27 @@ export function ProfileWorkspace({
       >
         <div className={styles.sectionHeading}>
           <h2 id="profile-category-heading" tabIndex={-1} ref={heading}>
-            {activeDefinition.label}
+            {activeDefinition?.label ?? ATTACHMENTS_LABEL}
           </h2>
-          <span
-            className={styles.categoryCount}
-            data-empty={activeCount === "미입력"}
-          >
-            {activeCount}
-          </span>
+          {activeCount && (
+            <span
+              className={styles.categoryCount}
+              data-empty={activeCount === "미입력"}
+            >
+              {activeCount}
+            </span>
+          )}
         </div>
         <div className={styles.formBody}>
-          <ProfileForm
-            key={activeCategory}
-            category={activeDefinition}
-            {...formProps}
-          />
+          {activeDefinition ? (
+            <ProfileForm
+              key={activeCategory}
+              category={activeDefinition}
+              {...formProps}
+            />
+          ) : (
+            attachmentPanel
+          )}
         </div>
         <footer className={styles.formFooter}>
           {activeIndex > 0 ? (
@@ -216,6 +267,14 @@ export function ProfileWorkspace({
               onClick={() => navigate(PROFILE_CATEGORIES[activeIndex + 1].id)}
             >
               다음: {PROFILE_CATEGORIES[activeIndex + 1].label}
+            </button>
+          ) : activeDefinition && attachmentPanel ? (
+            <button
+              className={styles.nextButton}
+              type="button"
+              onClick={() => navigate(ATTACHMENTS)}
+            >
+              다음: {ATTACHMENTS_LABEL}
             </button>
           ) : (
             <span />

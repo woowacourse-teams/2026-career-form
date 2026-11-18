@@ -33,8 +33,10 @@ status/help text. Its states are untouched legacy text, searching, no results,
 selected catalog record and unverified direct input. The result list includes
 an explicit direct-input option. A separate reset action clears the name.
 The same control serves certificate, school and language-test names, with
-kind-specific results. Selecting a certificate fills a blank issuer only;
-selecting an exam does not change its language or grade.
+kind-specific results. Selecting a certificate fills a blank issuer or
+replaces one that still holds exactly the text the previous certificate
+selection filled in; any other issuer stays. Selecting an exam does not change
+its language or grade.
 
 `AddressSearchPanel` sits in the 주소 group above the direct inputs. Its states
 are closed, searching, no results, error, results, verified address and

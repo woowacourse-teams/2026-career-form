@@ -180,6 +180,26 @@ class DatasetLoaderTest {
     }
 
     @Test
+    @DisplayName("저장소의 generic-matching v5는 v4의 NHN 화면을 그대로 두고 우아한형제들 화면만 라디오 묶기에 맞춰 다시 만든다")
+    void repositoryDatasetV5RebuildsWoowahanForGroupedRadios() {
+        DatasetLoader loader = new DatasetLoader(DatasetLoader.classpath(getClass().getClassLoader()));
+
+        LoadedDataset dataset = loader.load("generic-matching", 5);
+        LoadedDataset previous = loader.load("generic-matching", 4);
+
+        assertThat(dataset.cases()).extracting(EvaluationCase::caseId)
+            .containsExactlyInAnyOrderElementsOf(previous.cases().stream().map(EvaluationCase::caseId).toList());
+        EvaluationCase nhn = dataset.cases().stream().filter(c -> c.siteId().equals("nhn-careers")).findFirst().orElseThrow();
+        assertThat(nhn.calls()).isEqualTo(previous.cases().stream()
+            .filter(c -> c.caseId().equals(nhn.caseId())).findFirst().orElseThrow().calls());
+        EvaluationCase university = dataset.cases().stream()
+            .filter(c -> c.state().equals("university")).findFirst().orElseThrow();
+        assertThat(university.calls()).isNotEqualTo(previous.cases().stream()
+            .filter(c -> c.caseId().equals(university.caseId())).findFirst().orElseThrow().calls());
+        assertThat(dataset.casesIn("all")).hasSize(5);
+    }
+
+    @Test
     @DisplayName("목록 파일은 현재 버전을 가리키고, 모든 버전의 공고·화면에 이름이 있다. 화면을 추가하고 이름을 빠뜨리면 실패한다")
     void catalogCoversEveryVersion() {
         DatasetLoader loader = new DatasetLoader(DatasetLoader.classpath(getClass().getClassLoader()));

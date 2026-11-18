@@ -33,6 +33,9 @@ public interface NotificationStore {
     /** roles가 하나라도 겹치는 선택 구독과 roles가 없거나 빈 미선택 구독의 id. 겹치지 않는 선택 구독은 뺀다. */
     List<String> subscriptionIdsForRoles(Collection<String> roles);
 
+    /** subscriptionIdsForRoles 조건에 가입 시각(registeredAt)이 registeredBy와 같거나 앞선 조건을 더한 id. roles가 null이면 직무와 상관없이 그 시각까지 가입한 모든 구독이다. */
+    List<String> subscriptionIdsForRolesRegisteredBy(Collection<String> roles, Instant registeredBy);
+
     /** roles가 1개 이상인 구독 수. */
     long countSubscriptionsWithRoles();
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ValueBinding } from "../api/types";
+import type { FieldCandidateHandle } from "../dom/types";
 import type { ReviewPlanItem } from "../review/review-plan";
 import { matchesResultValue } from "./result-value-match";
 
@@ -144,5 +145,51 @@ describe("result value equivalence", () => {
     ]) {
       expect(matchesResultValue(target, "20240115", "2024-01-15")).toBe(false);
     }
+  });
+});
+
+describe("result date values the site redisplays", () => {
+  it("counts a date shown with separators as the written date", () => {
+    const dated = {
+      ...item("education.university.startDate"),
+      dateApproval: { format: "YYYYMM" },
+    } as ReviewPlanItem;
+    expect(matchesResultValue(dated, "2020-03", "202003")).toBe(true);
+    expect(matchesResultValue(dated, "2020-04", "202003")).toBe(false);
+  });
+
+  it("keeps exact comparison for a field that is not a date", () => {
+    expect(
+      matchesResultValue(item("contact.contact.phoneNumber"), "010-1234", "0101234"),
+    ).toBe(false);
+  });
+});
+
+describe("a lone checkbox named after another stored choice", () => {
+  function nightBox(checked: boolean) {
+    document.body.innerHTML = `<input type="checkbox" id="night"><label for="night">야간</label>`;
+    const box = document.querySelector<HTMLInputElement>("#night")!;
+    box.checked = checked;
+    return {
+      candidateId: "fixture-field",
+      elements: [box],
+      candidate: { candidateId: "fixture-field", control: "checkbox" },
+    } as unknown as FieldCandidateHandle;
+  }
+  const attendance = {
+    ...item("education.university.attendanceType"),
+    profileValue: "attendance:day",
+  };
+
+  it("matches a day attendance when the night box stays unchecked", () => {
+    expect(
+      matchesResultValue(attendance, "", "attendance:day", nightBox(false)),
+    ).toBe(true);
+  });
+
+  it("does not match a day attendance when the night box is checked", () => {
+    expect(
+      matchesResultValue(attendance, "", "attendance:day", nightBox(true)),
+    ).toBe(false);
   });
 });

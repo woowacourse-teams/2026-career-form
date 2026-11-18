@@ -730,3 +730,39 @@
 .resultScreen > section ul {
   padding-left: 18px;
 }
+
+.attachmentList {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.attachmentRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.attachmentRow p {
+  margin: 4px 0 0;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+}
+
+.attachmentRow button {
+  flex: none;
+}
+
+.attachmentChoice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}

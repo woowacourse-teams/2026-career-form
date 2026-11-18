@@ -12,8 +12,19 @@ import {
   dialogDateShown,
   executeDialogDateSelection,
 } from "../interaction/dialog-date-picker";
-import { revalidateCalendarApproval } from "../review/calendar-approval";
-import { revalidateDayCalendarApproval } from "../review/day-calendar-approval";
+import {
+  createCalendarApproval,
+  revalidateCalendarApproval,
+} from "../review/calendar-approval";
+import {
+  createDayCalendarApproval,
+  revalidateDayCalendarApproval,
+} from "../review/day-calendar-approval";
+import { recordObservedCalendarUnit } from "../interaction/calendar-unit";
+import {
+  calendarUnitProbeSurfaceFor,
+  probeCalendarUnit,
+} from "../interaction/calendar-unit-probe";
 import type { ReviewPlanItem } from "../review/review-plan";
 import { skipped, written, type ApprovedWriteResult } from "./write-result";
 
@@ -252,6 +263,10 @@ export function calendarValueSettled(
   registry: CandidateRegistry,
 ): boolean {
   if (item.dialogDateApproval) return dialogValueRetained(item, registry);
+  if (item.calendarUnitProbe) {
+    const resolved = resolvedProbes.get(item);
+    return !!resolved && calendarValueSettled(resolved, registry);
+  }
   if (item.dayCalendarApproval) {
     const target = approvedDayTarget(item, registry);
     return (
@@ -346,6 +361,151 @@ async function executeApprovedDayCalendarWrite(
   return { ...written(item.candidateId), effect: "continue" };
 }
 
+/** The month or day item a probed calendar resolved to, for settle checks. */
+const resolvedProbes = new WeakMap<ReviewPlanItem, ReviewPlanItem>();
+
+function approvedProbeTarget(
+  item: ReviewPlanItem,
+  registry: CandidateRegistry,
+): HTMLInputElement | undefined {
+  const probe = item.calendarUnitProbe;
+  const direct = item.analysis?.valueBinding;
+  if (
+    !probe ||
+    item.calendarApproval ||
+    item.dayCalendarApproval ||
+    item.dialogDateApproval ||
+    item.analysis?.candidateId !== item.candidateId ||
+    item.analysis.writePlan?.command !== "SELECT_DATE" ||
+    direct?.type !== "DIRECT" ||
+    direct.profileFieldKey !== probe.profileFieldKey ||
+    item.profileValue !== probe.originalDate ||
+    item.profileFieldKey !== probe.profileFieldKey ||
+    item.profileEntryId !== probe.profileEntryId ||
+    item.itemIndex !== probe.itemIndex
+  )
+    return undefined;
+  const lookup = registry.lookupField(item.candidateId);
+  if (
+    lookup.status !== "blocked" ||
+    lookup.reason !== "readonly" ||
+    lookup.handle.kind !== "field" ||
+    lookup.handle.elements.length !== 1 ||
+    lookup.handle.elements[0] !== probe.target
+  )
+    return undefined;
+  // The opener and field group approved at review must still be the ones shown.
+  const surface = calendarUnitProbeSurfaceFor(probe.target);
+  return surface?.opener === probe.opener && surface.popup === probe.popup
+    ? probe.target
+    : undefined;
+}
+
+/**
+ * Opens the calendar once to read whether it is a month list or a day grid,
+ * closes it, then runs the matching approved month or day selection. Nothing
+ * is selected while the unit is unknown.
+ */
+async function executeProbedCalendarWrite(
+  args: ExecuteApprovedCalendarWriteArgs,
+): Promise<ApprovedCalendarWriteExecution> {
+  const { item, registry } = args;
+  const target = approvedProbeTarget(item, registry);
+  if (!target)
+    return stop(
+      item.candidateId,
+      "NOT_APPROVED",
+      "달력 대상, 프로필 연결 또는 별도 승인을 확인할 수 없습니다.",
+    );
+  const probe = item.calendarUnitProbe!;
+  if (!current(args)) return stop(item.candidateId, "STALE_TARGET", STALE);
+  if (target.value) {
+    const sameDay =
+      canonicalDayCalendarValue(target.value, undefined) === probe.originalDate;
+    const sameMonth =
+      canonicalCalendarMonthValue(target, target.value) ===
+      probe.originalDate.slice(0, 7);
+    if (sameDay || sameMonth)
+      return {
+        candidateId: item.candidateId,
+        status: "skipped",
+        outcome: "unchanged",
+        code: "ALREADY_MATCHED",
+        reason: "이미 같은 값이 입력되어 변경하지 않았습니다.",
+        effect: "continue",
+      };
+    return stop(item.candidateId, "CONFLICT", CONFLICT);
+  }
+  if (!(await mayMutate(args)) || approvedProbeTarget(item, registry) !== target)
+    return stop(item.candidateId, "STALE_TARGET", STALE);
+
+  let unit: "month" | "day" | undefined;
+  try {
+    unit = await probeCalendarUnit({
+      surface: { target, opener: probe.opener, popup: probe.popup },
+      running: () => current(args) && item.selected && !item.disabled,
+    });
+  } catch {
+    return stop(
+      item.candidateId,
+      "EXECUTION_FAILED",
+      "달력을 여는 중 페이지 동작 오류가 발생했습니다.",
+    );
+  }
+  if (!current(args)) return stop(item.candidateId, "STALE_TARGET", STALE);
+  if (!unit || target.value)
+    return stop(
+      item.candidateId,
+      "UNSUPPORTED_CONTROL",
+      "달력을 열어 연월 또는 연월일 단위를 확인할 수 없어 후속 자동 기입을 중단했습니다.",
+    );
+
+  recordObservedCalendarUnit(target, unit);
+  let resolved: ReviewPlanItem;
+  try {
+    const identity = {
+      target,
+      originalDate: probe.originalDate,
+      ...(probe.profileFieldKey ? { profileFieldKey: probe.profileFieldKey } : {}),
+      ...(probe.profileEntryId ? { profileEntryId: probe.profileEntryId } : {}),
+      ...(probe.itemIndex !== undefined ? { itemIndex: probe.itemIndex } : {}),
+      repeatRow: probe.repeatRow,
+    };
+    if (unit === "day") {
+      const dayCalendarApproval = createDayCalendarApproval(identity);
+      resolved = {
+        ...item,
+        calendarUnitProbe: undefined,
+        dayCalendarApproval,
+        profileValue: dayCalendarApproval.displayValue,
+      };
+    } else {
+      const targetYearMonth = probe.originalDate.slice(0, 7);
+      const calendarApproval = createCalendarApproval({
+        ...identity,
+        targetYearMonth,
+      });
+      resolved = {
+        ...item,
+        calendarUnitProbe: undefined,
+        calendarApproval,
+        profileValue: targetYearMonth,
+      };
+    }
+  } catch {
+    return stop(
+      item.candidateId,
+      "UNSUPPORTED_CONTROL",
+      unit === "day"
+        ? "연월일 달력을 확인했지만 대상과 소유권을 확인할 수 없어 후속 자동 기입을 중단했습니다."
+        : "월 달력을 확인했지만 대상과 소유권을 확인할 수 없어 후속 자동 기입을 중단했습니다.",
+    );
+  }
+  delete resolved.calendarUnitProbe;
+  resolvedProbes.set(item, resolved);
+  return executeApprovedCalendarWrite({ ...args, item: resolved });
+}
+
 export async function executeApprovedCalendarWrite(
   args: ExecuteApprovedCalendarWriteArgs,
 ): Promise<ApprovedCalendarWriteExecution> {
@@ -358,6 +518,7 @@ export async function executeApprovedCalendarWrite(
     );
 
   if (item.dialogDateApproval) return executeApprovedDialogDateWrite(args);
+  if (item.calendarUnitProbe) return executeProbedCalendarWrite(args);
   if (item.dayCalendarApproval) return executeApprovedDayCalendarWrite(args);
 
   const target = approvedTarget(item, args.registry);

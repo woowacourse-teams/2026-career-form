@@ -4,10 +4,11 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { collectFieldsSnapshot } from "../dom/collect";
 
 const STATES = {
-  initial: { candidates: 29, controls: 34 },
-  "high-school": { candidates: 43, controls: 46 },
-  university: { candidates: 45, controls: 48 },
-  ged: { candidates: 30, controls: 35 },
+  // Opposite radio pairs (내국인/외국인, 남/여, 대상/비대상) are one question each.
+  initial: { candidates: 28, controls: 34 },
+  "high-school": { candidates: 40, controls: 46 },
+  university: { candidates: 42, controls: 48 },
+  ged: { candidates: 29, controls: 35 },
 } as const;
 type State = keyof typeof STATES;
 
@@ -82,10 +83,17 @@ describe("우아한형제들 R2605009 지원서 평가 fixture", () => {
     expect(university).not.toContain("계열 (예: 문과)");
   });
 
-  it("보훈·장애 대상 선택 화면은 대상과 비대상 라디오를 칸 두 개로 읽는다", () => {
-    const labels = collect("university").map((field) => field.displayName);
-    expect(labels.filter((label) => label === "대상")).toHaveLength(2);
-    expect(labels.filter((label) => label === "비대상")).toHaveLength(2);
+  it("보훈·장애 대상 선택 화면은 대상과 비대상 라디오를 질문마다 한 칸으로 읽는다", () => {
+    const fields = collect("university");
+    const labels = fields.map((field) => field.displayName);
+    expect(
+      fields.filter(
+        (field) =>
+          field.control === "radio" &&
+          (field.options ?? []).map((option) => option.displayName).join("/") ===
+            "대상/비대상",
+      ),
+    ).toHaveLength(2);
     expect(labels).toEqual(
       expect.arrayContaining([
         "보훈번호를 입력하세요",
