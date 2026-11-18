@@ -1,5 +1,6 @@
 import { loadPolicyForSender } from "../src/autofill/policy/background";
 import { createAddressSearchHandler } from "../src/profile/address-search-background";
+import { createResumeImportHandler } from "../src/profile/resume-import/resume-import-background";
 import { createProfileWriteHandler } from "../src/storage/profile-write-handler";
 import { installPostingBackground } from "../src/job-postings/background";
 import { installPushBackground } from "../src/job-postings/push-background";
@@ -46,6 +47,10 @@ export default defineBackground(() => {
     browser.runtime.id,
   );
   const handleAddressSearch = createAddressSearchHandler({
+    baseUrl: import.meta.env.VITE_API_BASE_URL,
+    extensionId: browser.runtime.id,
+  });
+  const handleResumeImport = createResumeImportHandler({
     baseUrl: import.meta.env.VITE_API_BASE_URL,
     extensionId: browser.runtime.id,
   });
@@ -96,6 +101,8 @@ export default defineBackground(() => {
     if (profileResponse !== undefined) return profileResponse;
     const addressSearchResponse = handleAddressSearch(message, sender);
     if (addressSearchResponse !== undefined) return addressSearchResponse;
+    const resumeImportResponse = handleResumeImport(message, sender);
+    if (resumeImportResponse !== undefined) return resumeImportResponse;
     const postingResponse = postings.handleMessage(message, sender);
     if (postingResponse !== undefined) return postingResponse;
     const pushResponse = push.handleMessage(message, sender);

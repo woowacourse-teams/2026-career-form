@@ -36,11 +36,12 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [프로필 카탈로그 선택과 식별 연결](topics/profile-catalog-identity.md) | 학교, 자격, 시험명의 오프라인 카탈로그 선택과 식별자 저장, 자격증 발급기관 채움과 재선택 때 채운 값 교체(세션 한정 기억), TOEIC Speaking, 한국폴리텍 번호 표기 대조 | 2026-11-16 |
 | [프로필 JSON 전송](topics/profile-json-transfer.md) | 로컬 프로필의 versioned JSON 백업,전체 복원 계약 | 2026-09-07 |
 | [Greeting 지원서에서 프로필 가져오기](topics/greeting-profile-import.md) | 합성 fixture의 읽기 전용 후보 생성, 한 화면 검토와 확인 카드, 병합과 실사이트 검증 경계 | 2026-10-16 |
+| [이력서 파일로 프로필 가져오기](topics/resume-file-import.md) | 패널의 출처 고르기와 온보딩 진입, 확장 안 PDF·MD·TXT 글자 추출과 거절, 전송 안내, 연월 날짜 1일 채움 표시, pdf.js와 CMap 포함 방식, 값 없는 Console 기록 | 2026-11-17 |
 | [프로필 입력과 안전한 어학 선택](topics/profile-input-and-language-matching.md) | 자유 텍스트 어학과 유일 후보만 허용하는 회사 옵션 선택 | 2026-09-09 |
 | [확장 프로그램 프로필,지원서 패널 UI](topics/extension-ui.md) | 프로필,패널 탐색과 하늘색 중심 UI 계층, 선택형 값 라벨 표시·복사, 반복 항목 소제목, 패널 열기 단축키 | 2026-10-29 |
 | [지원서 패널 안 자동 기입 흐름](topics/autofill-panel-workflow.md) | 단일 패널 실행,범용 실제 값 판정과 드롭다운 값 보존 | 2026-10-02 |
 | [미지원 지원서 페이지 안내](topics/unsupported-application-pages.md) | 미지원 준비 분석의 중단과 수동 복사 유지 | 2026-10-02 |
-| [선택적 이용 계측](topics/usage-analytics.md) | 24시간 첫 클릭률, Greeting 가져오기 계측, 공고 알림 이벤트와 posting_id·answer·trigger·delay_ms, 받을 직무 저장 role_count, 최초 저장 중복 방지와 개인정보 경계 | 2026-11-16 |
+| [선택적 이용 계측](topics/usage-analytics.md) | 24시간 첫 클릭률, Greeting과 이력서 파일 가져오기 계측, 공고 알림 이벤트와 posting_id·answer·trigger·delay_ms, 받을 직무 저장 role_count, 최초 저장 중복 방지와 개인정보 경계 | 2026-11-17 |
 | [범용 결과 화면 분류](topics/generic-result-classification.md) | 확인 필요 범위, 회색 묶음, 빨간 테두리와 수집 제외 | 2026-11-05 |
 | [범용 버튼 드롭다운 안전성](topics/generic-button-dropdown-safety.md) | 입력 범위,목록 소유 관계,옵션 분석 전달과 실행 직전 재검증 | 2026-10-02 |
 | [범용 드롭다운의 구조 클릭 허용 경계](topics/generic-dropdown-click-gate.md) | accessible label 금지 판정 유지와 수집기의 클릭 정책 적용 | 2026-10-17 |

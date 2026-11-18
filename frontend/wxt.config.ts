@@ -6,7 +6,13 @@ import {
   serializeBuildInfo,
 } from "./scripts/build-info";
 import type { BuildInfo } from "./scripts/build-info";
+import { readdirSync } from "node:fs";
+import { resolve } from "node:path";
 import { PANEL_FONT_PATH } from "./src/extension/panel-font-path";
+import {
+  PDFJS_CMAPS,
+  PDFJS_FILES,
+} from "./src/profile/resume-import/pdfjs-paths";
 import { PANEL_COMMANDS } from "./src/extension/panel-shortcut";
 
 let buildInfo: BuildInfo;
@@ -40,11 +46,24 @@ export default defineConfig({
     "build:before": (wxt) => {
       buildInfo = generateBuildInfo(wxt.config.root);
     },
-    "build:publicAssets": (_wxt, files) => {
+    "build:publicAssets": (wxt, files) => {
       files.push({
         relativeDest: "build-info.json",
         contents: serializeBuildInfo(buildInfo),
       });
+      // Resume PDF text extraction (#470): the pinned pdfjs-dist build, copied as is.
+      for (const file of PDFJS_FILES)
+        files.push({
+          absoluteSrc: resolve(wxt.config.root, file.source),
+          relativeDest: file.path,
+        });
+      // Packed CMaps (and their license) for CJK fonts without ToUnicode maps.
+      const cmaps = resolve(wxt.config.root, PDFJS_CMAPS.source);
+      for (const name of readdirSync(cmaps))
+        files.push({
+          absoluteSrc: resolve(cmaps, name),
+          relativeDest: `${PDFJS_CMAPS.path}/${name}`,
+        });
     },
     "vite:build:extendConfig": (entrypoints, config) => {
       // The in-page panel fetches the font the extension pages already ship.
@@ -117,6 +136,9 @@ export default defineConfig({
           "unsupported-capybara.jpg",
           "capybara-writing.png",
           PANEL_FONT_PATH,
+          // The in-page panel (a content script) imports these for resume PDFs.
+          ...PDFJS_FILES.map((file) => file.path),
+          `${PDFJS_CMAPS.path}/*`,
         ],
         matches: ["http://*/*", "https://*/*"],
       },

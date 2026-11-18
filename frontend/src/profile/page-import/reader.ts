@@ -31,6 +31,8 @@ export interface ImportCandidate {
   readonly categoryId?: ProfileCategoryId;
   readonly sensitive?: boolean;
   readonly reviewKind?: "koreanName" | "englishName";
+  /** The source gave only a year and month; the day was filled with 01 (resume import). */
+  readonly dayFilled?: boolean;
 }
 interface ImportField {
   source: string;
