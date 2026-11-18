@@ -4,6 +4,9 @@ import {
   runGenericCatalogQa,
   type GenericCatalogQaMode,
 } from "./catalog-qa.test-fixtures";
+import { collectFieldsSnapshot } from "../dom/collect";
+import type { ApprovedCatalogMatch } from "../profile/catalog-match";
+import { executeReadonlySearch } from "./readonly-search-executor";
 
 describe("generic catalog execution", () => {
   beforeEach(() => vi.useFakeTimers());
@@ -266,5 +269,167 @@ describe("generic catalog execution", () => {
     expect(qa.directActions.confirm).toBe(0);
     expect(qa.target.value).toBe("");
     expect(qa.peer.value).toBe("protected");
+  });
+});
+
+describe("generic school search whose results expose only the name", () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => {
+    vi.useRealTimers();
+    document.body.innerHTML = "";
+  });
+  const catalogMatch: ApprovedCatalogMatch = {
+    kind: "university",
+    query: "Canonical QA",
+    labels: ["Site QA", "Another alias"],
+    requiredDetail: "Campus QA",
+  };
+  /**
+   * A same-document layer: one select unlocks the disabled query, an icon
+   * search button unlocks on typing, the query becomes a chip after submit,
+   * plain result links render later, and a disabled confirm button follows.
+   */
+  async function nameOnlyLayer(
+    resultMarkup: string,
+    genericPopupRecovery = true,
+  ) {
+    document.body.innerHTML = `
+      <section><h3>학력</h3><div data-repeater-item>
+        <label>학교명<input placeholder="학교명" readonly data-target></label>
+        <button type="button" aria-label="검색" data-open></button>
+      </div></section>
+      <div data-app><div id="layer" style="display:none; position:fixed">
+        <div><div>학교 검색</div></div>
+        <select data-region><option value="">지역 선택</option>
+          <option value="11">서울특별시</option><option value="41">경기도</option></select>
+        <div data-query-box><input type="text" placeholder="학교명을 검색하세요" disabled data-query>
+        <button type="button" aria-label="검색" disabled data-search><svg></svg></button></div>
+        <ul></ul>
+        <div><button type="button" data-direct>직접입력</button></div>
+        <button type="button" disabled data-confirm>확인</button>
+      </div></div>`;
+    const layer = document.querySelector<HTMLElement>("#layer")!;
+    const target = document.querySelector<HTMLInputElement>("[data-target]")!;
+    const region = layer.querySelector<HTMLSelectElement>("[data-region]")!;
+    const query = layer.querySelector<HTMLInputElement>("[data-query]")!;
+    const search = layer.querySelector<HTMLButtonElement>("[data-search]")!;
+    const results = layer.querySelector<HTMLElement>("ul")!;
+    const confirm = layer.querySelector<HTMLButtonElement>("[data-confirm]")!;
+    const actions = { select: 0, confirm: 0, direct: 0 };
+    let chosen = "";
+    layer
+      .querySelector("[data-direct]")!
+      .addEventListener("click", () => actions.direct++);
+    document.querySelector("[data-open]")!.addEventListener("click", () => {
+      layer.style.display = "block";
+    });
+    region.addEventListener("change", () => {
+      query.disabled = region.value === "";
+    });
+    query.addEventListener("input", () => {
+      search.disabled = query.value === "";
+    });
+    search.addEventListener("click", () => {
+      const chip = document.createElement("span");
+      chip.textContent = query.value;
+      query.replaceWith(chip);
+      setTimeout(() => {
+        results.innerHTML = resultMarkup;
+        results.querySelectorAll("a").forEach((link) =>
+          link.addEventListener("click", (event) => {
+            event.preventDefault();
+            actions.select++;
+            chosen = link.textContent ?? "";
+            confirm.disabled = false;
+          }),
+        );
+      }, 150);
+    });
+    confirm.addEventListener("click", () => {
+      actions.confirm++;
+      target.value = chosen;
+      layer.style.display = "none";
+    });
+    const snapshot = collectFieldsSnapshot(document);
+    const targetId = snapshot.request.sections
+      .flatMap((section) => [
+        ...section.fields,
+        ...(section.items?.flatMap((item) => item.fields) ?? []),
+      ])
+      .find((field) => {
+        const lookup = snapshot.registry.lookupField(field.candidateId);
+        return (
+          (lookup.status === "ready" || lookup.status === "blocked") &&
+          lookup.handle.elements[0] === target
+        );
+      })!.candidateId;
+    const pending = executeReadonlySearch({
+      document,
+      registry: snapshot.registry,
+      targetCandidateId: targetId,
+      canonicalFieldKey: "education.university.schoolName",
+      expectedValue: catalogMatch.query,
+      expectedCurrentValue: "",
+      catalogMatch,
+      decisionProvider: async (request) => ({
+        schemaVersion: 2,
+        snapshotId: request.snapshotId,
+        status: "COMPLETE",
+        mode: "GENERIC",
+        decisions: request.decisions.map((decision) => ({
+          decisionId: decision.decisionId,
+          role: decision.role,
+          selection: "SELECTED",
+          candidateId: decision.candidates[0]!.candidateId,
+        })),
+      }),
+      contextValues: [
+        { key: "education.university.schoolRegion", value: "region:seoul" },
+      ],
+      ...(genericPopupRecovery ? { genericPopupRecovery: true } : {}),
+    });
+    // Time itself is tested: results render late and production requires
+    // 500ms of retained effects.
+    await vi.runAllTimersAsync();
+    return { result: await pending, target, actions };
+  }
+  const link = (name: string, extra = "") =>
+    `<li><a href="javascript:;" ${extra}>${name}</a></li>`;
+
+  it("selects the one result named as an approved label and confirms it", async () => {
+    const qa = await nameOnlyLayer(link("Other school") + link("Site QA"));
+    expect(qa.result, JSON.stringify(qa.result)).toMatchObject({
+      status: "selected",
+      selectedValue: "Site QA",
+      catalogSelection: { evidence: { label: "Site QA" }, labelOnly: true },
+    });
+    expect(qa.actions).toEqual({ select: 1, confirm: 1, direct: 0 });
+    expect(qa.target.value).toBe("Site QA");
+    if (qa.result.status !== "selected") throw new Error("selection absent");
+    expect(qa.result.catalogSelection!.evidence.detail).toBeUndefined();
+    expect(qa.result.catalogSelection!.verify()).toBe(true);
+    qa.target.value = "Other school";
+    expect(qa.result.catalogSelection!.verify()).toBe(false);
+  });
+
+  it("does not select between two results with the approved label", async () => {
+    const qa = await nameOnlyLayer(link("Site QA") + link("Site QA"));
+    expect(qa.result).toMatchObject({
+      status: "failed",
+      reason: "multiple_matching_results",
+    });
+    expect(qa.actions.select).toBe(0);
+    expect(qa.target.value).toBe("");
+  });
+
+  it("keeps requiring the campus once a result in the list exposes one", async () => {
+    const qa = await nameOnlyLayer(
+      link("Site QA") +
+        link("Other school", 'aria-describedby="other-campus"') +
+        '<li><span id="other-campus">Campus QA</span></li>',
+    );
+    expect(qa.result.status).not.toBe("selected");
+    expect(qa.actions.select).toBe(0);
+    expect(qa.target.value).toBe("");
   });
 });

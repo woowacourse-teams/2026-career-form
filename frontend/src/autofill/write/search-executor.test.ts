@@ -177,6 +177,61 @@ describe("catalog search approval and receipts", () => {
       settledSearchSelectionResult(test.item, test.registry, test.results[0]!),
     ).toMatchObject({ failureCode: "VALUE_NOT_RETAINED" });
   });
+  it.each([true, false])(
+    "retains a generic school selection without campus evidence only when it was approved by label alone (%s)",
+    async (labelOnly) => {
+      const test = catalogSetup();
+      const entry = CATALOG.find((entry) => entry.kind === "university")!;
+      const key = "education.university.schoolName";
+      test.item.profileFieldKey = key;
+      test.item.profileValue = entry.name;
+      test.item.analysis!.valueBinding = {
+        type: "DIRECT",
+        profileFieldKey: key,
+      };
+      test.item.searchIdentity = {
+        status: "selected",
+        catalogId: entry.id,
+        catalogVersion: CATALOG_VERSION,
+        displayName: entry.name,
+        originalText: entry.name,
+      };
+      const approval = approveCatalogMatch(
+        test.item.searchIdentity,
+        key,
+        entry.name,
+      );
+      if (approval.status !== "selected" || !approval.match.requiredDetail)
+        throw new Error("school approval absent");
+      test.item.catalogMatch = approval.match;
+      const lookup = test.registry.lookupField(test.item.candidateId);
+      if (lookup.status !== "blocked") throw new Error("readonly target absent");
+      const eligibility = observeReadonlySearch(lookup.handle);
+      if (eligibility.status !== "eligible")
+        throw new Error("target not eligible");
+      const label = approval.match.labels[0]!;
+      vi.mocked(executeReadonlySearch).mockImplementation(async () => {
+        test.target.value = label;
+        return {
+          status: "selected",
+          targetCandidateId: test.item.candidateId,
+          identity: eligibility.identity,
+          selectedValue: label,
+          catalogSelection: {
+            evidence: { label },
+            ...(labelOnly ? { labelOnly: true as const } : {}),
+            verify: () => test.target.value === label,
+          },
+        };
+      });
+      await executeApprovedSearchWrites({ ...test, followUpHaltScope: "row" });
+      expect(test.results[0]).toMatchObject(
+        labelOnly
+          ? { status: "written" }
+          : { status: "skipped", failureCode: "VALUE_NOT_RETAINED" },
+      );
+    },
+  );
 });
 
 describe("approved search batch boundaries", () => {
