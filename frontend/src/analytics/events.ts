@@ -43,13 +43,12 @@ const analyticsSurfaces = [
 // Server posting identifiers only; never company names, links or profile values.
 const POSTING_ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 const visibilityAnswers = ["seen", "not_seen"] as const;
-// The six steps of the extension's first-install onboarding, in order.
+// The five steps of the extension's first-install onboarding, in order.
 export const ONBOARDING_STEPS = [
   "name",
   "email",
   "roles",
   "alerts",
-  "greeting",
   "usage",
 ] as const;
 export type OnboardingStep = (typeof ONBOARDING_STEPS)[number];

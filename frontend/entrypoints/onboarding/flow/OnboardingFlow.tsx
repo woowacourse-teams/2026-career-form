@@ -13,7 +13,6 @@ import type { ProfileRepository } from "../../../src/profile/profile-repository"
 import logo from "../../../site/landing/assets/logo.webp";
 import { AlertsGuideStep } from "./AlertsGuideStep";
 import { BasicStep } from "./BasicStep";
-import { GreetingStep } from "./GreetingStep";
 import { ProgressRail } from "./ProgressRail";
 import { RolesStep } from "./RolesStep";
 import { UsageStep } from "./UsageStep";
@@ -34,7 +33,7 @@ export interface OnboardingFlowProps {
   requestResumeDraft?: (text: string) => Promise<ResumeDraftResult>;
 }
 
-/** The six first-install steps in one line, resumed from the stored step. */
+/** The five first-install steps in one line, resumed from the stored step. */
 export function OnboardingFlow({
   repository,
   pushClient,
@@ -215,12 +214,6 @@ export function OnboardingFlow({
             />
           ) : step === "alerts" ? (
             <AlertsGuideStep
-              heading={heading}
-              onBack={() => back?.()}
-              onNext={next}
-            />
-          ) : step === "greeting" ? (
-            <GreetingStep
               heading={heading}
               onBack={() => back?.()}
               onNext={next}
