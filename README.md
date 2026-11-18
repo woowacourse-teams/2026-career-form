@@ -1,5 +1,7 @@
 <div align="center">
 
+**한국어** · [English](README.en.md)
+
 <img src=".github/images/logo.png" width="120" height="120" alt="커리어폼 로고">
 
 # 2026 Career Form
