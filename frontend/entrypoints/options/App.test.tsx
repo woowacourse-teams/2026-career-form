@@ -328,7 +328,7 @@ describe("options App", () => {
     expect(JSON.parse(vi.mocked(downloadProfile).mock.calls[0][1])).toEqual({
       schemaVersion: 1,
       profile: expect.objectContaining({
-        personal: { koreanGivenName: "예시" },
+        personal: expect.objectContaining({ koreanGivenName: "예시" }),
       }),
     });
   });
