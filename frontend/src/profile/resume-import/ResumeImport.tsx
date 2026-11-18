@@ -75,7 +75,6 @@ type Phase =
       fileType?: ResumeFileType;
       chars?: number;
     }
-  | ({ kind: "notice" } & Extracted)
   | ({ kind: "converting" } & Extracted)
   | ({
       kind: "failed";
@@ -222,8 +221,9 @@ async function readAndLog(
 }
 
 /**
- * Resume file -> local text -> send notice -> server draft -> the existing import
- * review and merge. The file and its text stay in memory only.
+ * Resume file -> local text -> server draft (started on its own once the text is
+ * read) -> the existing import review and merge. The file and its text stay in
+ * memory only.
  */
 export function ResumeImport({
   file,
@@ -263,6 +263,9 @@ export function ResumeImport({
   // Callers may pass new functions each render; only a new file restarts the read.
   const latest = useRef({ readText, track });
   latest.current = { readText, track };
+  // Same StrictMode guarantee as the read: one file starts one conversion.
+  const converted = useRef<File>(undefined);
+  const startConversion = useRef<(extracted: Extracted) => void>(() => {});
   useEffect(() => {
     alive.current = true;
     let active = true;
@@ -277,16 +280,18 @@ export function ResumeImport({
     }
     void reading.current.result.then((read) => {
       if (!active) return;
-      setPhase(
-        read.ok
-          ? { kind: "notice", ...read }
-          : {
-              kind: "rejected",
-              reason: read.reason,
-              fileType: read.fileType,
-              chars: read.chars,
-            },
-      );
+      if (read.ok) {
+        if (converted.current === file) return;
+        converted.current = file;
+        startConversion.current(read);
+        return;
+      }
+      setPhase({
+        kind: "rejected",
+        reason: read.reason,
+        fileType: read.fileType,
+        chars: read.chars,
+      });
     });
     return () => {
       active = false;
@@ -372,6 +377,8 @@ export function ResumeImport({
       skipped: conversion.skipped,
     });
   };
+
+  startConversion.current = (extracted) => void convert(extracted);
 
   const candidates = phase.kind === "review" ? phase.candidates : undefined;
   const model = useMemo(
@@ -522,49 +529,6 @@ export function ResumeImport({
         </>
       )}
 
-      {phase.kind === "notice" && (
-        <>
-          <FileRow
-            file={file}
-            fileType={phase.fileType}
-            chars={phase.chars}
-            onChange={onPickFile}
-          />
-          <section className={reviewStyles.card} aria-label="전송 안내">
-            <p className={reviewStyles.kicker}>전송 안내</p>
-            <h4 className={reviewStyles.cardTitle}>
-              문서 글자를 서버로 보내요
-            </h4>
-            <div className={reviewStyles.split}>
-              <div>
-                <small>보내는 것</small>
-                <b>글자 {count(phase.chars)}자</b>
-              </div>
-              <div>
-                <small>브라우저 보관</small>
-                <b>안 함</b>
-              </div>
-            </div>
-            <div className={reviewStyles.cardActions}>
-              <button
-                type="button"
-                className={reviewStyles.primaryButton}
-                onClick={() => void convert(phase)}
-              >
-                계속
-              </button>
-              <button
-                type="button"
-                className={reviewStyles.secondaryButton}
-                onClick={onClose}
-              >
-                취소
-              </button>
-            </div>
-          </section>
-        </>
-      )}
-
       {phase.kind === "converting" && (
         <>
           <FileRow file={file} fileType={phase.fileType} chars={phase.chars} />
@@ -588,6 +552,7 @@ export function ResumeImport({
               <small />
             </li>
           </ol>
+          <p className={styles.noSend}>글자만 전송 · 저장 안 함</p>
           <div className={pageStyles.exitActions}>
             <button type="button" onClick={onClose}>
               취소
