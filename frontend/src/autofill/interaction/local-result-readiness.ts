@@ -1,6 +1,6 @@
 import { normalized } from "./readonly-search";
 import type { SearchSurface } from "./search-surface";
-import { elements, shown } from "./search-surface-dom";
+import { elements, interactive, shown } from "./search-surface-dom";
 
 /**
  * Quiet time after the last list mutation before a role-less layer's result
@@ -141,6 +141,31 @@ export function localReadiness(
     return "pending";
   if (current.some((item) => !added.has(item))) return "pending";
   return "ready";
+}
+
+/** A page-offered way to type the value when the search found nothing. */
+export const DIRECT_ENTRY_LABEL =
+  /^(직접\s*입력|manual entry|enter manually)$/i;
+
+/** Visible, enabled direct-entry buttons of the surface. */
+export function directEntryControls(
+  surface: SearchSurface,
+): (HTMLButtonElement | HTMLInputElement)[] {
+  return elements<HTMLButtonElement | HTMLInputElement>(
+    surface.root,
+    "button, input[type=button]",
+  ).filter(
+    (control) =>
+      control.type === "button" &&
+      interactive(control) &&
+      DIRECT_ENTRY_LABEL.test(
+        normalized(
+          control instanceof HTMLInputElement
+            ? control.value
+            : (control.textContent ?? ""),
+        ),
+      ),
+  );
 }
 
 const ZERO_NOTICE = [
