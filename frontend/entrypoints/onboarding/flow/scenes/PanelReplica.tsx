@@ -7,6 +7,7 @@ export type PanelView =
   | { kind: "matching" }
   | { kind: "writing"; percent: number }
   | { kind: "results"; done: number }
+  | { kind: "source" }
   | { kind: "import"; confirmed: boolean }
   | { kind: "saved"; count: number };
 
@@ -113,6 +114,40 @@ function ImportBody({
   );
 }
 
+/** Same labels and order as ImportSourceChoice in the real panel. */
+function SourceBody({ pressed }: { pressed?: string }) {
+  return (
+    <>
+      <div className={styles.pBack}>
+        <span>‹</span>
+        <b>프로필 가져오기</b>
+      </div>
+      <div className={styles.pBody}>
+        <div className={styles.pSources}>
+          <span
+            data-source
+            data-cursor="source-page"
+            data-pressed={pressed === "source-page"}
+          >
+            <span>
+              <b>지원서 화면</b>
+              <small>Greeting 지원서</small>
+            </span>
+            <i>›</i>
+          </span>
+          <span data-source>
+            <span>
+              <b>이력서 파일</b>
+              <small>PDF · MD · TXT</small>
+            </span>
+            <i>›</i>
+          </span>
+        </div>
+      </div>
+    </>
+  );
+}
+
 /** The Career Form panel as it opens beside an application form. */
 export function PanelReplica({
   open,
@@ -123,7 +158,8 @@ export function PanelReplica({
   view: PanelView;
   pressed?: string;
 }) {
-  const importing = view.kind === "import" || view.kind === "saved";
+  const importing =
+    view.kind === "source" || view.kind === "import" || view.kind === "saved";
   return (
     <div className={styles.panel} data-panel data-open={open}>
       <div className={styles.pHead}>
@@ -206,6 +242,7 @@ export function PanelReplica({
           </p>
         </div>
       )}
+      {view.kind === "source" && <SourceBody pressed={pressed} />}
       {view.kind === "import" && (
         <ImportBody confirmed={view.confirmed} pressed={pressed} />
       )}

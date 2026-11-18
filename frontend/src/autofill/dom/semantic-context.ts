@@ -2,6 +2,7 @@ import { cachedDomRead } from "./read-pass";
 import {
   definitionListLabelOf, unassociatedLabelOf, fixedTextChunks, formText, structuralLabelOf, structuralRow,
 } from "./metadata";
+import { pageTitleMatcher } from "./page-title";
 import { isTrustedId, trustedLabels } from "./trusted-id";
 import type { SemanticContext } from "../api/types";
 import { PROFILE_CATEGORIES } from "../../profile/field-definitions";
@@ -230,6 +231,23 @@ const vocabulary = [
   .filter(Boolean)
   .sort((a, b) => b.length - a.length);
 
+const formTerms = new Set(vocabulary.map((term) => term.toLowerCase()));
+
+/**
+ * Matches text that names the page (a job posting title), so it must not be
+ * collected as a section title. A form term stays a section title even when
+ * the page title repeats it ("학력 | 회사").
+ */
+export function pageTitleHeadingMatcher(
+  document: Document,
+): (text: string | null | undefined) => boolean {
+  const namesPage = pageTitleMatcher(document);
+  return (text) => {
+    const term = formText(text);
+    return term !== undefined && !formTerms.has(term.toLowerCase()) && namesPage(term);
+  };
+}
+
 /**
  * English terms and one-syllable Korean terms ("예", "성") must not be glued
  * to a longer word of the same script, e.g. "예" inside "예정".
@@ -452,6 +470,10 @@ function genericContextLabels(
     add("label", element.getAttribute("title"));
   add("legend", textOf(element.closest("fieldset")?.querySelector(":scope > legend") ?? null));
   const row = structuralRow(element);
+  // A job posting title above the form names the page, not a section.
+  // Read the page once per collection pass, not once per field.
+  const namesPage = cachedDomRead(element.ownerDocument, "page-title-heading", () =>
+    pageTitleHeadingMatcher(element.ownerDocument));
   let current = element.parentElement;
   for (let depth = 0; current && depth < 8; depth += 1) {
     const headings = [...current.querySelectorAll(`${DIRECT_HEADING}, ${WRAPPED_HEADING}`)]
@@ -459,7 +481,8 @@ function genericContextLabels(
         !heading.parentElement?.querySelector("input, select, textarea"));
     const texts = [...new Set(headings.map(textOf).filter(Boolean))];
     if (texts.length === 1) {
-      add("section-heading", texts[0]);
+      // Nothing above the page's own name is a narrower section.
+      if (!namesPage(texts[0])) add("section-heading", texts[0]);
       break;
     }
     if (current === section || current === row) break;

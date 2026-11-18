@@ -985,3 +985,23 @@
     flex: 1 0 100%;
   }
 }
+
+/* Name step: "또는" divider before the resume import button (#470). */
+.or {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: var(--sub);
+  font-size: 14px;
+}
+.or::before,
+.or::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+.fromFile {
+  align-self: flex-start;
+}

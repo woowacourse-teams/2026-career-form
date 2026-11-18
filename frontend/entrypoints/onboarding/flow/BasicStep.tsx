@@ -22,6 +22,7 @@ export function BasicStep({
   saved,
   onBack,
   onNext,
+  onImportResume,
 }: {
   step: "name" | "email";
   profile: Profile;
@@ -31,6 +32,8 @@ export function BasicStep({
   saved: boolean;
   onBack?: () => void;
   onNext: () => void;
+  /** Name step only: opens the OS file dialog for a resume (#470). */
+  onImportResume?: () => void;
 }) {
   const family = profile.personal.koreanFamilyName ?? "";
   const given = profile.personal.koreanGivenName ?? "";
@@ -110,6 +113,19 @@ export function BasicStep({
                 />
               </label>
             </div>
+          )}
+          {step === "name" && onImportResume && (
+            <>
+              <p className={styles.or}>또는</p>
+              <button
+                type="button"
+                className={`${styles.btn} ${styles.outline} ${styles.small} ${styles.fromFile}`}
+                disabled={busy}
+                onClick={onImportResume}
+              >
+                이력서 파일로 가져오기
+              </button>
+            </>
           )}
           <p className={saved ? styles.saved : styles.sm} role="status">
             {saved ? "저장됨" : "입력하면 이 브라우저에 자동 저장돼요."}

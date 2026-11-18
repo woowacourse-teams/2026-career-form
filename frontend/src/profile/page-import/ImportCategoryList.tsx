@@ -89,7 +89,10 @@ function Row({
       onFocus={() => onPresent(row.source)}
     >
       <label className={styles.rowMeta} htmlFor={id}>
-        <span className={styles.rowLabel}>{row.label}</span>
+        <span className={styles.rowLabel}>
+          {row.label}
+          {row.dayFilled && <span className={styles.tag}>일 확인</span>}
+        </span>
         <span className={styles.rowValue}>{value}</span>
         {row.status === "changed" && (
           <span className={styles.rowOld}>

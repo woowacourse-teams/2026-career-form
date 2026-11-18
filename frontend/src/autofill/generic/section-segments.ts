@@ -1,4 +1,5 @@
 import { genericRowFor } from "../dom/repeatable-rows";
+import { pageTitleHeadingMatcher } from "../dom/semantic-context";
 
 /**
  * Generic-flow sections: runs of fields that are contiguous in document order.
@@ -113,6 +114,7 @@ function headingsBetweenFields(
       (field.element.getAttribute("aria-labelledby") ?? "").split(/\s+/),
     ),
   );
+  const namesPage = pageTitleHeadingMatcher(document);
   const headings: Element[] = [];
   let next = 0;
   for (const element of Array.from(document.querySelectorAll("body *"))) {
@@ -134,7 +136,9 @@ function headingsBetweenFields(
       text.length > MAX_HEADING_LENGTH ||
       !/[\p{L}\p{N}]/u.test(text) ||
       labels.has(text) ||
-      (element.id && labelledBy.has(element.id))
+      (element.id && labelledBy.has(element.id)) ||
+      // A job posting title above the fields names the page, not a section.
+      namesPage(text)
     )
       continue;
     if (element.matches(TAG_HEADING_SELECTOR) || isFullRowHeader(element)) {

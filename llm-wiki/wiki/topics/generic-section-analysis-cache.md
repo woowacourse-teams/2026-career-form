@@ -2,8 +2,8 @@
 
 > Topic: generic-section-analysis-cache
 > Status: Current
-> Current: [CF-467 범용 섹션 분석 캐시: 확장 쪽과 서버 쪽](../../raw/issues/CF-467/documents/generic-section-answer-cache.md)
-> History: [CF-244 섹션 분석 캐시](../../raw/issues/CF-244/documents/generic-section-analysis-cache.md), [CF-467 범용 섹션 분석 캐시: 확장 쪽과 서버 쪽](../../raw/issues/CF-467/documents/generic-section-answer-cache.md)
+> Current: [CF-472 범용 섹션 분석 캐시: 실측과 공고 제목 문제](../../raw/issues/CF-472/documents/generic-section-answer-cache.md)
+> History: [CF-244 섹션 분석 캐시](../../raw/issues/CF-244/documents/generic-section-analysis-cache.md), [CF-467 범용 섹션 분석 캐시: 확장 쪽과 서버 쪽](../../raw/issues/CF-467/documents/generic-section-answer-cache.md), [CF-472 범용 섹션 분석 캐시: 실측과 공고 제목 문제](../../raw/issues/CF-472/documents/generic-section-answer-cache.md)
 > Updated: 2026-11-17
 
 ## 현재 상태
@@ -30,8 +30,12 @@
 
 한계: 배포할 때마다 처음부터 쌓는다. 글자는 그대로인데 칸의 뜻만 바뀌는 변화는 키가 잡지 못하고 기한이 그 영향을 묶는다. 공급자의 답이 흔들린 경우 처음 저장된 답이 기한까지 모든 사이트에 쓰인다. 서버가 두 대 이상이 되거나 배포 뒤 적중률이 떨어지는 것이 지표로 확인되면 서버 밖 저장(MongoDB, Redis)을 검토한다.
 
+개발 서버 실측(2026-11-17, 실제 공급자, 분석 단계만 실행)에서 측정 전에 고정한 합격 기준 7개를 모두 통과했다. 칸 분석의 공급자 호출은 같은 회사의 다른 공고에서 한 회사는 80회가 9회(섹션 적중 55/62), 다른 한 회사는 14회가 6회(8/14)였고, 같은 공고의 다른 사용자와 재실행은 101회가 0회였다. 전부 적중한 요청의 서버 분석 시간은 중앙값 8ms다.
+
+ADR이 키에서 host를 뺀 이유로 든 "같은 채용 플랫폼을 쓰는 회사들이 답을 나눠 쓴다"는 이 실측에서 확인되지 않았다(같은 플랫폼의 다른 회사 적중 0/4). 확장이 공고 제목을 섹션 제목이나 섹션 머리 라벨로 보내 키가 공고마다 달라졌기 때문이다. CF-472가 [확장의 범용 수집에서 공고 제목을 뺐고](generic-page-title-exclusion.md), 수정 뒤 실측은 이 기록에 없다.
+
 결정의 이유와 버린 대안은 [ADR](../../raw/issues/CF-467/documents/adr/467-generic-section-answer-cache.md)에 있다.
 
 ## 변경 이유
 
-CF-244는 검토나 재분석 진입 때 페이지 전체를 다시 보내지 않으면서 구조 또는 칸 상태가 바뀐 섹션은 다시 분석하려고 확장 쪽 캐시를 두었다. CF-467은 같은 양식을 여는 사용자들이 같은 내용을 공급자에 보내고 같은 답을 받는데도 매번 공급자를 불러 호출 비용과 대기 시간이 들던 것을 줄이려고 서버 쪽 캐시를 더했다.
+CF-244는 검토나 재분석 진입 때 페이지 전체를 다시 보내지 않으면서 구조 또는 칸 상태가 바뀐 섹션은 다시 분석하려고 확장 쪽 캐시를 두었다. CF-467은 같은 양식을 여는 사용자들이 같은 내용을 공급자에 보내고 같은 답을 받는데도 매번 공급자를 불러 호출 비용과 대기 시간이 들던 것을 줄이려고 서버 쪽 캐시를 더했다. CF-472는 실측에서 ADR의 기대 하나가 확인되지 않은 것과 그 원인을 기록하고, 원인인 공고 제목 수집을 확장에서 없앴다.

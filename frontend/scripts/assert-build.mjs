@@ -109,6 +109,45 @@ if (
   );
 }
 
+// Resume PDF import (#470) ships pdf.js as separate files; the content script
+// imports them on demand instead of carrying the library on every page.
+const pdfjsFiles = ["pdfjs/pdf.min.mjs", "pdfjs/pdf.worker.min.mjs"];
+await Promise.all(
+  pdfjsFiles.map((fileName) => readFile(resolve(outputDirectory, fileName))),
+);
+const accessible = new Set(
+  (manifest.web_accessible_resources ?? []).flatMap(
+    (entry) => entry.resources ?? [],
+  ),
+);
+// Korean PDFs that name a predefined CMap need the packed set (#470).
+const packageCMaps = (
+  await readdir(resolve("node_modules/pdfjs-dist/cmaps"))
+).filter((fileName) => fileName.endsWith(".bcmap"));
+const builtCMaps = new Set(
+  await readdir(resolve(outputDirectory, "pdfjs", "cmaps")),
+);
+if (
+  packageCMaps.length === 0 ||
+  packageCMaps.some((fileName) => !builtCMaps.has(fileName)) ||
+  !["UniKS-UCS2-H.bcmap", "KSCms-UHC-H.bcmap", "Adobe-Korea1-UCS2.bcmap"].every(
+    (fileName) => builtCMaps.has(fileName),
+  )
+) {
+  throw new Error("pdf.js CMap 묶음 전체가 빌드에 포함되어야 합니다.");
+}
+if (!accessible.has("pdfjs/cmaps/*")) {
+  throw new Error("pdf.js CMap 파일이 web_accessible_resources에 필요합니다.");
+}
+if (pdfjsFiles.some((fileName) => !accessible.has(fileName))) {
+  throw new Error(
+    "이력서 PDF 글자 추출 파일이 web_accessible_resources에 필요합니다.",
+  );
+}
+if (autofillArtifact.includes("Invalid PDF structure")) {
+  throw new Error("autofill content script에 pdf.js가 들어가서는 안 됩니다.");
+}
+
 const assetNames = await readdir(resolve(outputDirectory, "assets"));
 const fontAssets = assetNames.filter((fileName) => fileName.endsWith(".woff2"));
 
