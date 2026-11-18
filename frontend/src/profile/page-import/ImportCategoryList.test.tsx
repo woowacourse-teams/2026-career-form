@@ -3,7 +3,7 @@ import { expect, it, vi } from "vitest";
 import { createEmptyProfile } from "../model";
 import { ImportCategoryList } from "./ImportCategoryList";
 import { ImportSummary } from "./ImportSummary";
-import type { ImportCandidate } from "./reader";
+import type { ImportCandidate } from "./import-candidate";
 import {
   buildReviewModel,
   initialDecisions,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createEmptyProfile, type Profile } from "../model";
-import type { ImportCandidate } from "./reader";
+import type { ImportCandidate } from "./import-candidate";
 import {
   buildReviewModel,
   defaultSelection,

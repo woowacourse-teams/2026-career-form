@@ -857,55 +857,11 @@
   }
 }
 
-/* Steps 5 and 6: the scene column is wider than the text column. */
+/* Step 5: the scene column is wider than the text column. */
 .wideScene {
   grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.3fr);
   align-items: start;
 }
-.examples {
-  display: grid;
-  gap: 4px;
-  font-size: 14px;
-}
-.examples b {
-  color: var(--strong);
-}
-/* Step list kept in step with the scene: the current one is outlined. */
-.caps {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  counter-reset: c;
-}
-.caps li {
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
-  gap: 12px;
-  align-items: center;
-  padding: 10px 14px;
-  border: 1.5px solid transparent;
-  border-radius: 14px;
-  font-weight: 700;
-  color: var(--sub);
-  counter-increment: c;
-  transition:
-    border-color 0.25s ease,
-    background-color 0.25s ease,
-    color 0.25s ease;
-}
-.caps li::before {
-  content: counter(c);
-  width: 28px;
-  height: 28px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--tint);
-  color: var(--action-strong);
-  font-size: 13px;
-  font-weight: 800;
-}
-.caps li[aria-current="step"],
 .how li[aria-current="step"] {
   border-color: var(--action);
   background: var(--soft);

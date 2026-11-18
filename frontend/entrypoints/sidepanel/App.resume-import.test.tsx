@@ -15,9 +15,7 @@ import { App } from "./App";
 
 const RESUME_TEXT = "합성 이력서\nsynthetic.panel@example.test";
 
-function setup({
-  readImportCandidates,
-}: { readImportCandidates?: () => Promise<never[]> } = {}) {
+function setup() {
   let stored: Profile = createEmptyProfile();
   const repository: ProfileRepository = {
     load: async () => structuredClone(stored),
@@ -41,7 +39,6 @@ function setup({
       <App
         repository={repository}
         track={track}
-        readImportCandidates={readImportCandidates}
         readResumeText={(file) => readResumeText(file, async () => "")}
         requestResumeDraft={requestResumeDraft}
       />
@@ -61,12 +58,10 @@ const pick = (file: File) =>
 
 afterEach(() => vi.restoreAllMocks());
 
-it("shows 프로필 가져오기 on every page and offers the two sources", () => {
+it("shows 프로필 가져오기 on every page and offers only the resume file", () => {
   setup();
   openChoice();
-  const page = screen.getByRole("button", { name: /^지원서 화면/ });
-  expect(page).toBeDisabled();
-  expect(page).toHaveTextContent("Greeting 지원서에서만");
+  expect(screen.queryByRole("button", { name: /^지원서 화면/ })).toBeNull();
   const resume = screen.getByRole("button", { name: /^이력서 파일/ });
   expect(resume).toBeEnabled();
   expect(resume).toHaveTextContent("PDF · MD · TXT");
@@ -117,29 +112,4 @@ it("imports a picked resume after the notice and returns to the profile tab", as
   expect(
     state.track.mock.calls.filter(([event]) => event === "resume_import_saved"),
   ).toHaveLength(1);
-});
-
-it("keeps the application-page import behind the 지원서 화면 choice", async () => {
-  const read = vi.fn(async () => []);
-  const state = setup({ readImportCandidates: read });
-  openChoice();
-  expect(read).not.toHaveBeenCalled();
-  expect(state.track).not.toHaveBeenCalledWith(
-    "greeting_import_viewed",
-    expect.anything(),
-  );
-  const page = screen.getByRole("button", { name: /^지원서 화면/ });
-  expect(page).toBeEnabled();
-  fireEvent.click(page);
-  const region = await screen.findByRole("region", {
-    name: "지원서에서 프로필 가져오기",
-  });
-  await waitFor(() => expect(read).toHaveBeenCalled());
-  expect(state.track).toHaveBeenCalledWith("greeting_import_viewed", {
-    surface: "side_panel",
-  });
-  fireEvent.click(within(region).getByRole("button", { name: "닫기" }));
-  expect(
-    screen.queryByRole("region", { name: "지원서에서 프로필 가져오기" }),
-  ).toBeNull();
 });

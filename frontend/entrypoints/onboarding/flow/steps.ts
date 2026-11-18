@@ -11,12 +11,15 @@ export const STEP_LABELS: Record<OnboardingStep, string> = {
   email: "이메일",
   roles: "직무 선택",
   alerts: "알림 안내",
-  greeting: "Greeting",
   usage: "사용법",
 };
 
 // Only the step name is kept; what the user typed lives in the profile.
 export const ONBOARDING_STEP_KEY = "careerForm.onboarding.step";
+// Removed steps stored by an earlier version, mapped to the step that followed them.
+const RETIRED_STEPS: Readonly<Record<string, OnboardingStep>> = {
+  greeting: "usage",
+};
 
 export interface StepStore {
   read(): Promise<OnboardingStep | undefined>;
@@ -35,6 +38,8 @@ export function createStepStore(storage: StorageArea): StepStore {
         const stored = (await storage.get(ONBOARDING_STEP_KEY))[
           ONBOARDING_STEP_KEY
         ];
+        if (typeof stored === "string" && Object.hasOwn(RETIRED_STEPS, stored))
+          return RETIRED_STEPS[stored];
         return ONBOARDING_STEPS.find((step) => step === stored);
       } catch {
         return undefined;
