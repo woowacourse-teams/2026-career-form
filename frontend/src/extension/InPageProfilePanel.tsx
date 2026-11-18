@@ -68,6 +68,7 @@ export function InPageProfilePanel({
       readPanelShortcut={readPanelShortcut}
       repository={repository}
       logoUrl={logoUrl}
+      unsupportedImageUrl={unsupportedImageUrl}
       openOptions={openOptions}
       closePanel={() => {
         controller.showProfile();

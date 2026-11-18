@@ -69,6 +69,8 @@ interface AppProps {
   openAutofill?: () => Promise<void>;
   inPage?: boolean;
   logoUrl?: string;
+  /** Resume import failure image; the in-page panel needs its extension URL. */
+  unsupportedImageUrl?: string;
   autofillView?: ReactNode;
   returnToProfile?: () => void;
   showPostings?: boolean;
@@ -168,6 +170,7 @@ export function App({
   openAutofill = openAutofillOverlay,
   inPage = false,
   logoUrl = "/side-panel-launcher-logo.png",
+  unsupportedImageUrl,
   autofillView,
   returnToProfile,
   showPostings = true,
@@ -563,6 +566,7 @@ export function App({
                 repository={repository}
                 readText={readResumeText}
                 requestDraft={requestResumeDraft}
+                unsupportedImageUrl={unsupportedImageUrl}
                 onPickFile={pickResume}
                 onClose={() => setImportActive(false)}
                 onSaved={finishImport}

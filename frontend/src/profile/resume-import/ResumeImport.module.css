@@ -22,11 +22,6 @@
   font-weight: 700;
   letter-spacing: 0;
 }
-.fileType[data-bad="true"] {
-  border: 1px solid var(--color-danger-border);
-  color: var(--color-danger-text);
-  background: var(--color-danger-soft);
-}
 .fileName {
   display: grid;
   min-width: 0;
@@ -184,12 +179,61 @@ li[data-state="now"] .dot {
   border-radius: 50%;
   background: var(--color-border-strong);
 }
-.actions {
+/* Every failure: same layout values as the unsupported-site screen (AutofillDemo). */
+.failure {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 12px;
+  text-align: center;
+}
+.failureImage {
+  width: 168px;
+  height: 168px;
+  object-fit: contain;
+}
+.failureTitle {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-size: 17px;
+  line-height: 25px;
+  letter-spacing: -0.374px;
+  font-weight: 600;
+}
+.failureBody {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.failureBody + .failureBody {
+  margin-top: -12px;
+}
+.failureFile {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.failureActions {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  justify-content: center;
   gap: 8px;
 }
-.actions .exit {
-  margin-left: auto;
+.closeButton {
+  display: inline-grid;
+  place-items: center;
+  min-height: 36px;
+  padding: 8px 15px;
+  border: 0;
+  border-radius: 980px;
+  color: var(--color-text-strong);
+  background: var(--color-surface-muted);
+  font: inherit;
+  font-size: 14px;
+  letter-spacing: -0.224px;
+  line-height: 1;
+  cursor: pointer;
 }

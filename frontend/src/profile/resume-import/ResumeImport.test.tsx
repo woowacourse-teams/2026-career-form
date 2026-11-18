@@ -424,7 +424,13 @@ describe("ResumeImport", () => {
     vi.mocked(memory.repository.load).mockRejectedValueOnce(
       new Error("synthetic load failure"),
     );
-    setup({ repository: memory.repository });
+    setup({
+      repository: memory.repository,
+      replies: [
+        { ok: true, profile: draft() },
+        { ok: true, profile: draft() },
+      ],
+    });
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "프로필을 불러오지 못했어요",
     );
@@ -562,7 +568,8 @@ describe("ResumeImport", () => {
         onClose={() => {}}
       />,
     );
-    expect(await screen.findByRole("status")).toHaveTextContent(
+    await converting();
+    expect(screen.getByRole("status")).toHaveTextContent(
       "이력서를 정리하고 있어요",
     );
     const steps = screen.getByRole("list", { name: "진행 단계" });

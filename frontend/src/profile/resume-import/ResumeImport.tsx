@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import type {
   AnalyticsEvent,
   AnalyticsProperties,
@@ -56,6 +63,8 @@ interface Props {
   analytics?: { track: TrackEvent; properties: AnalyticsProperties };
   readText?: (file: File) => Promise<ResumeText>;
   requestDraft?: (text: string) => Promise<ResumeDraftResult>;
+  /** Failure screen image; the in-page panel passes its chrome-extension:// URL. */
+  unsupportedImageUrl?: string;
   /** Opens the OS file dialog again ("바꾸기", "다른 파일"). */
   onPickFile(): void;
   onSaved(profile: Profile, savedCount: number): void;
@@ -103,7 +112,7 @@ function rejectionMessage(reason: ResumeRejection, fileType?: ResumeFileType) {
       return "5MB까지 가져올 수 있어요";
     case "no_text":
       return fileType === "pdf"
-        ? "글자를 읽을 수 없는 PDF예요"
+        ? "분석하지 못했어요"
         : "글자가 없는 파일이에요";
     case "too_long":
       return `${LIMIT}자까지 가져올 수 있어요`;
@@ -135,24 +144,25 @@ function fileLabel(file: File, fileType?: ResumeFileType) {
   return dot > 0 ? file.name.slice(dot + 1, dot + 6).toUpperCase() : "파일";
 }
 
+const SCANNED_PDF_HINT = [
+  "글자를 선택할 수 있는 PDF인지 확인해 주세요.",
+  "스캔한 PDF(OCR)는 추후 지원할 예정이에요.",
+];
+
 function FileRow({
   file,
   fileType,
   chars,
-  bad = false,
   onChange,
 }: {
   file: File;
   fileType?: ResumeFileType;
   chars?: number;
-  bad?: boolean;
   onChange?: () => void;
 }) {
   return (
     <div className={styles.fileRow}>
-      <span className={styles.fileType} data-bad={bad}>
-        {fileLabel(file, fileType)}
-      </span>
+      <span className={styles.fileType}>{fileLabel(file, fileType)}</span>
       <span className={styles.fileName}>
         <b>{file.name}</b>
         <small>
@@ -171,6 +181,51 @@ function FileRow({
       ) : (
         <span />
       )}
+    </div>
+  );
+}
+
+/** One layout for every failure, like the unsupported-site screen. */
+function FailureScreen({
+  imageUrl,
+  file,
+  chars,
+  title,
+  body = [],
+  note,
+  action,
+  onClose,
+}: {
+  imageUrl: string;
+  file: File;
+  chars?: number;
+  title: string;
+  body?: readonly string[];
+  note: string;
+  action: ReactNode;
+  onClose(): void;
+}) {
+  return (
+    <div className={styles.failure}>
+      <img className={styles.failureImage} src={imageUrl} alt="" />
+      <p role="alert" className={styles.failureTitle}>
+        {title}
+      </p>
+      {body.map((line) => (
+        <p key={line} className={styles.failureBody}>
+          {line}
+        </p>
+      ))}
+      <p className={styles.failureFile}>
+        {`${file.name} · ${chars ? `${count(chars)}자` : fileSize(file.size)}`}
+      </p>
+      <p className={styles.noSend}>{note}</p>
+      <div className={styles.failureActions}>
+        {action}
+        <button type="button" className={styles.closeButton} onClick={onClose}>
+          닫기
+        </button>
+      </div>
     </div>
   );
 }
@@ -231,6 +286,7 @@ export function ResumeImport({
   analytics,
   readText = defaultReadText,
   requestDraft = requestResumeDraft,
+  unsupportedImageUrl = "/unsupported-capybara.jpg",
   onPickFile,
   onSaved,
   onClose,
@@ -501,32 +557,28 @@ export function ResumeImport({
       )}
 
       {phase.kind === "rejected" && (
-        <>
-          <FileRow
-            file={file}
-            fileType={phase.fileType}
-            chars={phase.chars}
-            bad
-          />
-          <p role="alert" className={pageStyles.error}>
-            {rejectionMessage(phase.reason, phase.fileType)}
-          </p>
-          <p className={styles.noSend}>서버로 보내지 않았어요</p>
-          <div className={styles.actions}>
+        <FailureScreen
+          imageUrl={unsupportedImageUrl}
+          file={file}
+          chars={phase.chars}
+          title={rejectionMessage(phase.reason, phase.fileType)}
+          body={
+            phase.reason === "no_text" && phase.fileType === "pdf"
+              ? SCANNED_PDF_HINT
+              : undefined
+          }
+          note="서버로 보내지 않았어요"
+          action={
             <button
               type="button"
-              className={reviewStyles.secondaryButton}
+              className={reviewStyles.primaryButton}
               onClick={onPickFile}
             >
               다른 파일
             </button>
-            <div className={`${pageStyles.exitActions} ${styles.exit}`}>
-              <button type="button" onClick={onClose}>
-                닫기
-              </button>
-            </div>
-          </div>
-        </>
+          }
+          onClose={onClose}
+        />
       )}
 
       {phase.kind === "converting" && (
@@ -562,14 +614,14 @@ export function ResumeImport({
       )}
 
       {phase.kind === "failed" && (
-        <>
-          <FileRow file={file} fileType={phase.fileType} chars={phase.chars} />
-          <p role="alert" className={pageStyles.error}>
-            {failureMessage(phase.code)}
-          </p>
-          <p className={styles.noSend}>프로필은 그대로예요</p>
-          <div className={styles.actions}>
-            {retryable(phase.code) ? (
+        <FailureScreen
+          imageUrl={unsupportedImageUrl}
+          file={file}
+          chars={phase.chars}
+          title={failureMessage(phase.code)}
+          note="프로필은 그대로예요"
+          action={
+            retryable(phase.code) ? (
               <button
                 type="button"
                 className={reviewStyles.primaryButton}
@@ -581,19 +633,15 @@ export function ResumeImport({
             ) : (
               <button
                 type="button"
-                className={reviewStyles.secondaryButton}
+                className={reviewStyles.primaryButton}
                 onClick={onPickFile}
               >
                 다른 파일
               </button>
-            )}
-            <div className={`${pageStyles.exitActions} ${styles.exit}`}>
-              <button type="button" onClick={onClose}>
-                닫기
-              </button>
-            </div>
-          </div>
-        </>
+            )
+          }
+          onClose={onClose}
+        />
       )}
 
       {phase.kind === "review" && (
