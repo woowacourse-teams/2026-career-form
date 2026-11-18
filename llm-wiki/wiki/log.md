@@ -1185,3 +1185,10 @@
 - 승인한 후보 3개를 [CF-472 bundle](../raw/issues/CF-472/manifest.md)에 기록했다. 페이지 이름을 섹션 제목과 섹션 머리 라벨에서 빼는 규칙과 버린 대안, 코드로 확인한 사실, 서버 섹션 결과 캐시의 2026-11-17 실측 보고와 CF-467 ADR 기대의 정정이다.
 - [범용 수집의 페이지 이름 제외](topics/generic-page-title-exclusion.md) topic을 만들고 [범용 섹션 분석 캐시: 확장 쪽과 서버 쪽](topics/generic-section-analysis-cache.md) topic과 색인을 갱신했다.
 - 실제 지원값, 계정, 세션, 키 값, 대화 전문, 공고 식별자와 주소는 저장하지 않았다.
+
+## [2026-11-18] ingest | CF-479 Greeting 지원서 화면 가져오기 제거
+- Approval-Digest: 19cb50157f3f038d01ca9b60eda98210dd0cde6a6a45a6527355f5a539945986
+- Source-Revision: fd15cf2
+- 승인한 후보 2개를 [CF-479 bundle](../raw/issues/CF-479/manifest.md)에 payload 세 개로 기록했다. Greeting 지원서 화면 가져오기 제거와 남긴 공유 모듈, 온보딩 다섯 단계와 제거된 단계의 저장 위치 처리, Greeting 가져오기 이벤트 제거다.
+- [Greeting 프로필 가져오기](topics/greeting-profile-import.md), [랜딩과 온보딩](topics/landing-onboarding.md), [사용 통계](topics/usage-analytics.md)의 Current를 CF-479로 바꾸고 앞선 근거를 History에 남겼으며 색인을 갱신했다.
+- 실제 지원값, 계정, 세션, 대화 전문은 저장하지 않았다.
