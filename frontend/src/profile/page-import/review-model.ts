@@ -10,7 +10,7 @@ import type {
 } from "../model";
 import { IMPORT_ENTRY_KEYS, type ImportSelection } from "./merge";
 import { initialNameParts } from "./NameSplitEditor";
-import type { ImportCandidate } from "./reader";
+import type { ImportCandidate } from "./import-candidate";
 import {
   destination,
   fieldLabel,

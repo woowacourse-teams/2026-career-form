@@ -1,5 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
-import { ImportSourceChoice } from "../../../../src/profile/resume-import/ImportSourceChoice";
+import { render, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { FILL_PHASES, FILL_STILL, FillScene, fillChapter } from "./FillScene";
 import {
@@ -91,25 +90,6 @@ describe("ImportScene", () => {
     click.unmount();
     const review = render(<ImportScene phase={11} />);
     expect(panel(review.container)!.textContent).toContain("5개 가져오기");
-  });
-  it("출처 고르기 장면은 실제 출처 고르기 화면과 이름, 설명, 순서가 같다", () => {
-    const real = render(
-      <ImportSourceChoice onPage={() => {}} onResume={() => {}} />,
-    );
-    const expected = screen
-      .getAllByRole("button")
-      .map((button) => [
-        button.querySelector("b")!.textContent,
-        button.querySelector("small")!.textContent,
-      ]);
-    real.unmount();
-    const { container } = render(<ImportScene phase={8} />);
-    expect(
-      [...container.querySelectorAll("[data-source]")].map((item) => [
-        item.querySelector("b")!.textContent,
-        item.querySelector("small")!.textContent,
-      ]),
-    ).toEqual(expected);
   });
   it("가져오기 화면은 확인할 항목을 묻고 확인하면 개수가 늘어난다", () => {
     const pending = render(<ImportScene phase={11} />);

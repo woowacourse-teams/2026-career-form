@@ -26,8 +26,6 @@ import {
   PanelHeadingProvider,
   type PanelHeading,
 } from "../../src/autofill/workflow/panel-heading";
-import { PageImport } from "../../src/profile/page-import/PageImport";
-import type { ImportCandidate } from "../../src/profile/page-import/reader";
 import { ImportSourceChoice } from "../../src/profile/resume-import/ImportSourceChoice";
 import { ResumeImport } from "../../src/profile/resume-import/ResumeImport";
 import {
@@ -81,7 +79,6 @@ interface AppProps {
   now?: () => number;
   /** The in-page panel shrinks to its tabs' content; other surfaces keep their height. */
   fitContent?: boolean;
-  readImportCandidates?: () => Promise<readonly ImportCandidate[]>;
   /** Resume import seams for tests; production uses the bundled reader and API relay. */
   readResumeText?: (file: File) => Promise<ResumeText>;
   requestResumeDraft?: (text: string) => Promise<ResumeDraftResult>;
@@ -179,7 +176,6 @@ export function App({
   pushClient = defaultPushClient,
   now = Date.now,
   fitContent = false,
-  readImportCandidates,
   readResumeText,
   requestResumeDraft,
   readPanelShortcut,
@@ -195,9 +191,9 @@ export function App({
   const push = usePushState(pushClient);
   const profileLoadGeneration = useRef(0);
   const [importActive, setImportActive] = useState(false);
-  const [importSource, setImportSource] = useState<
-    "choice" | "page" | "resume"
-  >("choice");
+  const [importSource, setImportSource] = useState<"choice" | "resume">(
+    "choice",
+  );
   const [resumeFile, setResumeFile] = useState<{ file: File; id: number }>();
   const resumeInput = useRef<HTMLInputElement>(null);
   const [heading, setHeading] = useState<PanelHeading>({});
@@ -312,14 +308,6 @@ export function App({
     setImportSavedCount(undefined);
     setImportSource("choice");
     setImportActive(true);
-  };
-  const openPageImport = () => {
-    setImportSource("page");
-    try {
-      track("greeting_import_viewed", analyticsProperties);
-    } catch {
-      // Reading and reviewing remain available without telemetry.
-    }
   };
   // Opens the OS file dialog straight from the click; there is no in-panel picker.
   const pickResume = () => resumeInput.current?.click();
@@ -567,15 +555,7 @@ export function App({
       {importActive && !autofillActive ? (
         <main className={styles.main} aria-label="프로필 가져오기 화면">
           <PanelHeadingProvider value={setHeading}>
-            {importSource === "page" && readImportCandidates ? (
-              <PageImport
-                analytics={{ track, properties: analyticsProperties }}
-                repository={repository}
-                readCandidates={readImportCandidates}
-                onClose={() => setImportActive(false)}
-                onSaved={finishImport}
-              />
-            ) : importSource === "resume" && resumeFile ? (
+            {importSource === "resume" && resumeFile ? (
               <ResumeImport
                 key={resumeFile.id}
                 file={resumeFile.file}
@@ -588,10 +568,7 @@ export function App({
                 onSaved={finishImport}
               />
             ) : (
-              <ImportSourceChoice
-                onPage={readImportCandidates ? openPageImport : undefined}
-                onResume={pickResume}
-              />
+              <ImportSourceChoice onResume={pickResume} />
             )}
           </PanelHeadingProvider>
         </main>

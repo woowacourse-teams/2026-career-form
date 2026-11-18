@@ -1,5 +1,5 @@
 import { PROFILE_CATEGORIES } from "../field-definitions";
-import type { ImportCandidate } from "./reader";
+import type { ImportCandidate } from "./import-candidate";
 
 export function destination(candidate: ImportCandidate) {
   const [categoryId, sectionId, fieldId, extra] =
@@ -80,8 +80,6 @@ export function skippedReason(reason: string) {
   if (reason === "empty") return "비어 있어 제외";
   if (reason === "hidden_or_inert")
     return "숨겨져 있거나 비활성 영역에 있어 제외";
-  if (reason === "unrecognized_document")
-    return "Greeting 지원서 구조를 확인할 수 없어 제외";
   if (
     reason.includes("ambiguous") ||
     reason.includes("invalid_rows") ||

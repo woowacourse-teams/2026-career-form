@@ -17,7 +17,7 @@ import {
   ImportSelectionError,
   saveImportSelection,
 } from "../page-import/merge";
-import type { ImportCandidate } from "../page-import/reader";
+import type { ImportCandidate } from "../page-import/import-candidate";
 import {
   buildReviewModel,
   defaultSelection,

@@ -12,7 +12,7 @@ import {
   type ProfileFieldDefinition,
 } from "../field-definitions";
 import type { ProfileCategoryId } from "../model";
-import type { ImportCandidate } from "../page-import/reader";
+import type { ImportCandidate } from "../page-import/import-candidate";
 import {
   REPEATED_DRAFT_CATEGORIES,
   SINGLE_DRAFT_CATEGORIES,
