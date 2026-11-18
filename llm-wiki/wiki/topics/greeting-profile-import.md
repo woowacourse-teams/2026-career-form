@@ -2,11 +2,13 @@
 
 > Topic: greeting-profile-import
 > Status: Current
-> Current: [CF-192 전체 필드 가져오기, 부분 실패 격리와 한 화면 검토](../../raw/issues/CF-192/documents/greeting-profile-import.md)
-> History: [CF-192 근거](../../raw/issues/CF-192/documents/greeting-profile-import.md)
-> Updated: 2026-10-16
+> Current: [CF-479 Greeting 지원서 화면 가져오기 제거](../../raw/issues/CF-479/documents/greeting-import-removal.md)
+> History: [CF-192 근거](../../raw/issues/CF-192/documents/greeting-profile-import.md); [CF-479 Greeting 지원서 화면 가져오기 제거](../../raw/issues/CF-479/documents/greeting-import-removal.md)
+> Updated: 2026-11-18
 
 ## 현재 상태
+
+CF-479에서 Greeting 지원서 화면 가져오기를 제거했다(사람 결정 2026-11-18). 프로필 가져오기의 출처는 이력서 파일 하나다. 아래 내용은 제거 전 기능의 기록이며 현재 코드에는 없다. 검토·병합 모듈은 이력서 가져오기가 계속 쓰고 `ImportCandidate` 타입은 `import-candidate.ts`에 있다. 근거는 [CF-479 Greeting 지원서 화면 가져오기 제거](../../raw/issues/CF-479/documents/greeting-import-removal.md)를 따른다.
 
 Greeting 가져오기는 기본 인적사항·연락처·주소, 고등학교·대학교·대학원, 경력·프로젝트, 어학·자격증, 처우·병역·보훈·장애에서 정확한 경로와 기존 프로필 목적지가 확인된 필드 전반을 지원한다. 한 화면에서 범주별 기존값을 비교하고 범주, 항목, 값 단위로 고른 뒤 저장 버튼 한 번으로 선택한 필드만 로컬에 저장한다.
 
@@ -23,6 +25,8 @@ Greeting 가져오기는 기본 인적사항·연락처·주소, 고등학교·�
 합성 Chromium의 다중 범주·부분 실패 흐름과 Aside 실사이트를 구분해 검증했다. 최신 LF 빌드에서 56개 원본 후보를 이름 확인 후 58개 프로필 필드로 저장·대조했고 대응 목적지가 없는 21개 제어는 제외했다. HLB에서도 기본정보 3종과 이메일만 저장 시 다른 정보 보존을 확인했다. 실제 지원서 제출·동의·인증·업로드는 실행하지 않았고 모든 Greeting 사이트 호환성이나 클릭률 개선을 입증한 것은 아니다.
 
 ## 변경 이유
+
+CF-479는 가져오기 출처를 이력서 파일로 통일하려는 사람 결정에 따라 이 기능을 제거했다.
 
 실사이트에서 확인한 6종 제한을 제거하고 기존 프로필 목적지가 확인되는 범주 전반으로 확장했다. 회사별 커스텀 필드가 정상 항목 수집을 막지 않도록 읽기 실패를 격리하며, 합성 테스트와 관측한 두 실사이트의 검증 범위를 구분한다.
 

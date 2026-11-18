@@ -2,17 +2,21 @@
 
 > Topic: landing-onboarding
 > Status: Current
-> Current: [CF-431 확장 첫 설치 온보딩 여섯 단계](../../raw/issues/CF-431/documents/landing-onboarding.md)
-> History: [CF-96 근거](../../raw/issues/CF-96/documents/landing-onboarding.md), [CF-193 단계형 프로필 등록 온보딩](../../raw/issues/CF-193/documents/landing-onboarding.md), [CF-363 설치 없이 체험하기와 기술 소개](../../raw/issues/CF-363/documents/landing-onboarding.md), [CF-384 의사결정 AI(JEV) 스크롤 장면과 직접 체험 중심의 하늘색 랜딩](../../raw/issues/CF-384/documents/landing-onboarding.md), [CF-424 랜딩 화면 고정 장면의 단계별 끝까지 재생](../../raw/issues/CF-424/documents/landing-onboarding.md), [CF-427 랜딩 모바일 뷰와 공유하기 동선](../../raw/issues/CF-427/documents/landing-onboarding.md), [CF-431 확장 첫 설치 온보딩 여섯 단계](../../raw/issues/CF-431/documents/landing-onboarding.md)
-> Updated: 2026-11-06
+> Current: [CF-479 온보딩 다섯 단계와 제거된 단계의 저장 위치 처리](../../raw/issues/CF-479/documents/onboarding-five-steps.md)
+> History: [CF-96 근거](../../raw/issues/CF-96/documents/landing-onboarding.md), [CF-193 단계형 프로필 등록 온보딩](../../raw/issues/CF-193/documents/landing-onboarding.md), [CF-363 설치 없이 체험하기와 기술 소개](../../raw/issues/CF-363/documents/landing-onboarding.md), [CF-384 의사결정 AI(JEV) 스크롤 장면과 직접 체험 중심의 하늘색 랜딩](../../raw/issues/CF-384/documents/landing-onboarding.md), [CF-424 랜딩 화면 고정 장면의 단계별 끝까지 재생](../../raw/issues/CF-424/documents/landing-onboarding.md), [CF-427 랜딩 모바일 뷰와 공유하기 동선](../../raw/issues/CF-427/documents/landing-onboarding.md), [CF-431 확장 첫 설치 온보딩 여섯 단계](../../raw/issues/CF-431/documents/landing-onboarding.md); [CF-479 온보딩 다섯 단계와 제거된 단계의 저장 위치 처리](../../raw/issues/CF-479/documents/onboarding-five-steps.md)
+> Updated: 2026-11-18
 
 ## 현재 상태
+
+CF-479부터 온보딩은 이름, 이메일, 직무 선택, 알림 안내, 사용법의 다섯 단계다. Greeting 가져오기 안내 단계는 제거했고, 저장된 진행 위치가 그 단계면 사용법으로 읽는다(`RETIRED_STEPS`). 완료 이벤트는 알림 안내에서 사용법으로 넘어갈 때 기록된다. 근거는 [CF-479 온보딩 다섯 단계와 제거된 단계의 저장 위치 처리](../../raw/issues/CF-479/documents/onboarding-five-steps.md)를 따른다. 아래의 여섯 단계 설명 가운데 Greeting 단계는 더 유효하지 않다.
 
 랜딩은 히어로 뒤에 의사결정 AI(JEV)가 지원서를 채우는 과정을 7단계 화면 고정 스크롤 장면(자동 기입 누르기와 콘솔 전환, 묶음 나누기, 종류 판단, 후보 좁히기, 확신 재기, 채우기, 확인 요청)으로 보여주고, 바로 아래 10칸 가상 지원서와 간이 패널로 된 직접 체험, 마감 알림 장면(하루 전 알림, 지원 완료 시 남은 알림 취소), 안심 포인트·설치 버튼·FAQ 순서로 둔다. 신뢰도는 확실·애매·모름과 퍼센트로 보인다. 체험은 자동 기입을 누르기 전까지 아래 스크롤을 붙잡고 건너뛰기를 둔다. 700px 이하이거나 터치 전용 기기면 모바일로 보고 웹스토어 링크 대신 헤더·히어로·마무리에 `공유하기`를 두며, 체험 자리는 `공유하기`·`링크 복사` 두 버튼 카드로 바꾸고 스크롤을 붙잡지 않는다. 공유는 공유 시트, 거부되면 링크 복사 순이고 링크는 `/#try`다. 좁은 화면의 AI 장면은 상태 칩을 하단에 두고 행 높이를 화면 높이에 맞추며, 알림 장면은 캡션·공고·시간축·알림을 실측해 쌓는다. 모자라면 머리글·캡션 본문을 숨긴다. AI 장면과 마감 알림 장면(공고·타임라인 등장, 하루 전 알림, 지원 완료와 알림 취소의 3단계)은 스크롤이 단계만 고르고 장면은 시간 기준으로 그 단계 끝까지 재생된다. 위로 올리면 1.5배로 역재생하고, 재생 중 다음 구간에 들어가면 남은 부분을 3배로 끝내고 중간 단계를 건너뛴다. 멈춤 지점에서 단계가 완성돼 보이도록 퇴장 효과는 단계 경계 직후에 둔다. 연출은 미리 렌더한 클레이 webp와 transform/opacity만 쓰고 동작 줄이기 설정에서는 재생 없이 단계가 바로 바뀐다. 랜딩·기술 소개·정책은 `#B1E5FD` 기반 하늘색 전용 토큰을 쓰고 확장의 `theme.css`는 바꾸지 않는다. 정책의 문의 이메일은 `개설 후 기재`이며, 모든 사이트 페이지는 앵커가 없으면 맨 위에서 열린다.
 
 `/try/`는 CF-363대로 실제 사이드패널 UI로 체험하는 페이지로 남고, 확장을 처음 설치하면 열리는 `onboarding.html`은 선택 화면 없이 이름, 이메일, 직무 선택, 알림 안내, Greeting, 사용법의 여섯 단계를 한 줄로 진행하고 입력 영역 위 진행 바에 전체 단계와 현재 위치를, 창 아래 고정 막대에 단계마다 같은 자리의 이전·다음을 보인다(CF-431). 현재 단계 이름만 `careerForm.onboarding.step`에 저장해 다시 열면 이어지고, 끝내지 않았으면 관리 페이지에 "시작 안내 이어하기" 링크가 보인다. 직무 선택 단계는 대분류마다 맨 앞의 "전체"로 분류를 한 번에 고른다. Greeting 단계는 가져오는 방법과 예시 회사를 보여 주는 선택 안내로, 가져오기를 실행하거나 기다리지 않고 다음으로 넘어간다. 사용법 단계는 "전체 프로필 입력하기"와 "지금 채용 중인 회사 보기"로 끝난다. Greeting과 사용법의 장면은 Greeting 형식의 가상 지원서와 패널을 그린 컴포넌트 애니메이션으로 페이지의 Career Form 버튼에서 시작해 반복하고, 일시정지할 수 있으며 동작 줄이기 설정에서는 결과 화면에 멈춘다. CF-193의 단계형 프로필 등록은 온보딩에서 쓰지 않게 되어 지웠다. 여섯 단계는 랜딩의 하늘색 값을 흐름 범위 안에서만 쓰고, `?page=`로 여는 소개·체험·정책 페이지와 웹 `/onboarding/` 4단계 사용 안내는 그대로다. 화면 검증은 빌드한 확장을 Chromium에 설치해 조작하고 설계를 모르는 검토자의 사용자 역할 점검을 함께 한다. 체험 시작·완료는 `trial_*` 이벤트로 `surface`만 기록한다. 장면의 분석 시간 수치는 출처 확인이 남아 있다. 독립 웹 빌드와 가상 데이터 경계를 유지하고, 정책 문서는 미시행 초안이며 사이트 공개 배포는 아직 없다.
 
 ## 변경 이유
+
+CF-479는 Greeting 지원서 화면 가져오기 제거에 맞춰 안내 단계를 없앴다.
 
 문구와 장식 요소가 많아 핵심이 묻혔고, 의사결정 AI로 빠르고 정확하게 채운다는 점과 체험이 소개 흐름에 드러나지 않았다. 스크롤 장면으로 JEV의 동작을 단계별로 보여준 뒤 같은 지원서에서 바로 눌러보게 해 설치 결정으로 잇는다.
 

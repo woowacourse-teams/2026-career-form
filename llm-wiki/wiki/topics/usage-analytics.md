@@ -2,11 +2,13 @@
 
 > Topic: usage-analytics
 > Status: Current
-> Current: [CF-470 이력서 가져오기 계측과 Greeting 가져오기 진입 시점](../../raw/issues/CF-470/documents/usage-analytics.md)
-> History: [CF-147 선택적 이용 계측과 개인정보 경계](../../raw/issues/CF-147/documents/usage-analytics.md), [CF-193 첫 자동 기입 클릭률 계측](../../raw/issues/CF-193/documents/usage-analytics.md), [CF-271 Greeting 가져오기 진입과 저장 완료 계측](../../raw/issues/CF-271/documents/usage-analytics.md), [CF-349 공고 알림 구독·표시·공지함 계측](../../raw/issues/CF-349/documents/usage-analytics.md), [CF-361 Greeting 가져오기 노출 계측](../../raw/issues/CF-361/documents/usage-analytics.md), [CF-395 받을 직무 저장 계측](../../raw/issues/CF-395/documents/usage-analytics.md), [CF-431 온보딩 단계 진입과 완료 계측](../../raw/issues/CF-431/documents/usage-analytics.md), [CF-463 공고 저장 계기 계측 정정](../../raw/issues/CF-463/documents/usage-analytics.md), [CF-470 이력서 가져오기 계측과 Greeting 가져오기 진입 시점](../../raw/issues/CF-470/documents/usage-analytics.md)
-> Updated: 2026-11-17
+> Current: [CF-479 Greeting 가져오기 이벤트 제거](../../raw/issues/CF-479/documents/usage-analytics-greeting-import-events-removed.md)
+> History: [CF-147 선택적 이용 계측과 개인정보 경계](../../raw/issues/CF-147/documents/usage-analytics.md), [CF-193 첫 자동 기입 클릭률 계측](../../raw/issues/CF-193/documents/usage-analytics.md), [CF-271 Greeting 가져오기 진입과 저장 완료 계측](../../raw/issues/CF-271/documents/usage-analytics.md), [CF-349 공고 알림 구독·표시·공지함 계측](../../raw/issues/CF-349/documents/usage-analytics.md), [CF-361 Greeting 가져오기 노출 계측](../../raw/issues/CF-361/documents/usage-analytics.md), [CF-395 받을 직무 저장 계측](../../raw/issues/CF-395/documents/usage-analytics.md), [CF-431 온보딩 단계 진입과 완료 계측](../../raw/issues/CF-431/documents/usage-analytics.md), [CF-463 공고 저장 계기 계측 정정](../../raw/issues/CF-463/documents/usage-analytics.md), [CF-470 이력서 가져오기 계측과 Greeting 가져오기 진입 시점](../../raw/issues/CF-470/documents/usage-analytics.md); [CF-479 Greeting 가져오기 이벤트 제거](../../raw/issues/CF-479/documents/usage-analytics-greeting-import-events-removed.md)
+> Updated: 2026-11-18
 
 ## 현재 상태
+
+CF-479에서 `greeting_import_offered`, `greeting_import_viewed`, `greeting_import_saved` 이벤트와 온보딩 단계 값 `greeting`을 제거했다. 기존 대시보드의 해당 지표는 제거 시점부터 끊긴다. 근거는 [CF-479 Greeting 가져오기 이벤트 제거](../../raw/issues/CF-479/documents/usage-analytics-greeting-import-events-removed.md)를 따른다. 아래의 Greeting 가져오기 계측 설명은 더 유효하지 않다.
 
 핵심 지표는 확장 온보딩 최초 진입 후 24시간 이내 익명 사용자별 자동 기입 클릭률이며 7일 클릭률은 보조 지표다. 클릭과 열기 결과를 구분한다. 확장 온보딩은 단계 진입을 `onboarding_step_viewed`(속성 `step`은 여섯 단계 이름 중 하나)로, 사용법 단계 도달을 `onboarding_completed`로 기록하며, 시작 목적 선택 화면과 단계형 등록이 없어져 `onboarding_autofill_selected`, `onboarding_postings_selected`, `quick_profile_skipped`, `quick_profile_viewed`는 더 기록하지 않는다(CF-431). 첫 저장은 온보딩 이름·이메일 단계, 전체 편집과 Greeting 가져오기의 실제 비어 있지 않은 저장 성공 스냅샷에서 기록한다. 최초 진입·첫 저장은 백그라운드가 로컬 익명 ID별로 중복 방지하며 재전송 시 최초 발생 시각을 보존한다. 프로필 값·지원서 입력값·전체 URL은 계측하지 않는다.
 
@@ -21,6 +23,8 @@
 확장은 runtime 메시지 경계를 거쳐 백그라운드에서 허용 속성만 전송한다. SDK와 계측용 host permission은 추가하지 않는다. 개인정보 고지는 초안이며 운영 수집 설정과 접속 정보 처리, 보유 기간, 국외 이전은 사람이 검토한 뒤 확정한다.
 
 ## 변경 이유
+
+CF-479는 Greeting 지원서 화면 가져오기 기능을 제거하면서 그 계측도 함께 없앴다.
 
 확장 온보딩이 여섯 단계 한 줄 흐름으로 바뀌면서 어느 단계에서 그만두는지 보려고 단계 진입과 완료 이벤트를 추가하고, 없어진 시작 목적 선택, 값 없이 건너뛰기, 단계형 등록 열기 이벤트를 뺐다(CF-431). CF-271 가져오기 이벤트가 배포 뒤에도 0건이라 "Greeting 페이지에 온 사람이 없었다"와 "보고도 누르지 않았다"를 구분하려고 노출 이벤트를 분모로 추가했다. 공고 알림 표시 → 클릭 → 저장 깔때기를 같은 익명 식별자로 측정하면서 회사명·링크가 계측으로 새지 않도록 `posting_id`만 허용했다. Greeting 가져오기 사용자와 미사용자의 클릭률, 가져오기 진입에서 저장 완료까지의 전환을 같은 익명 식별자로 비교하기 위해 가져오기 이벤트를 추가했다. 사용 흐름을 파악하되 프로필 및 지원서 내용이 계측으로 유출되지 않도록 수집 범위를 제한하고 설정되지 않은 빌드는 계측하지 않는다.
 
