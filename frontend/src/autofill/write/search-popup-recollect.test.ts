@@ -29,7 +29,11 @@ const decisionProvider: InteractionDecisionProvider = async (request) => ({
   })),
 });
 
-function fixture(kind: "table" | "dialog", delayed = false, lockedSubmit = false) {
+function fixture(
+  kind: "table" | "dialog",
+  delayed = false,
+  lockedSubmit = false,
+) {
   const content =
     kind === "table"
       ? `<h2>전공 검색</h2><p>항목명을 입력하세요.</p>
@@ -262,12 +266,13 @@ describe.each(["table", "dialog"] as const)("%s search popup", (kind) => {
     vi.useFakeTimers();
     const test = fixture(kind, true);
     const pause = SearchSession.prototype.pause;
-    vi.spyOn(SearchSession.prototype, "pause").mockImplementation(
-      function (this: SearchSession, ms) {
-        test.query.style.display = "block";
-        return pause.call(this, ms);
-      },
-    );
+    vi.spyOn(SearchSession.prototype, "pause").mockImplementation(function (
+      this: SearchSession,
+      ms,
+    ) {
+      test.query.style.display = "block";
+      return pause.call(this, ms);
+    });
     const result = await test.run(true);
     expect(result, JSON.stringify(result)).toMatchObject({
       status: "selected",
@@ -283,12 +288,13 @@ describe.each(["table", "dialog"] as const)("%s search popup", (kind) => {
     vi.useFakeTimers();
     const test = fixture(kind, true);
     const pause = SearchSession.prototype.pause;
-    vi.spyOn(SearchSession.prototype, "pause").mockImplementation(
-      function (this: SearchSession, ms) {
-        test.query.style.display = "block";
-        return pause.call(this, ms);
-      },
-    );
+    vi.spyOn(SearchSession.prototype, "pause").mockImplementation(function (
+      this: SearchSession,
+      ms,
+    ) {
+      test.query.style.display = "block";
+      return pause.call(this, ms);
+    });
     const results = await test.batch("row");
     expect(
       results.map(({ status }) => status),
@@ -437,23 +443,85 @@ describe.each(["table", "dialog"] as const)("%s search popup", (kind) => {
   });
 });
 
-describe.each(["table", "dialog"] as const)("%s popup with a query-locked submit", (kind) => {
-  it("types the query first and then uses the unlocked search button on the generic route", async () => {
+describe.each(["table", "dialog"] as const)(
+  "%s popup with a query-locked submit",
+  (kind) => {
+    it("types the query first and then uses the unlocked search button on the generic route", async () => {
+      vi.useFakeTimers();
+      const test = fixture(kind, false, true);
+      const result = await test.run(true);
+      expect(result, JSON.stringify(result)).toMatchObject({
+        status: "selected",
+      });
+      expect(test.target.value).toBe(VALUE);
+      expect(test.direct).not.toHaveBeenCalled();
+      expect(test.forbidden).not.toHaveBeenCalled();
+    });
+
+    it("keeps the legacy route stopping before any query is typed", async () => {
+      vi.useFakeTimers();
+      const test = fixture(kind, false, true);
+      const result = await test.run(false);
+      expect(result).toMatchObject({
+        status: "failed",
+        reason: "search_submit_not_found",
+      });
+      expect(test.query.value).toBe("");
+      expect(test.forbidden).not.toHaveBeenCalled();
+    });
+  },
+);
+
+describe("generic search layer without a labeled close control", () => {
+  function layerFixture(closes: boolean) {
+    const test = fixture("dialog");
+    // A plain layer: no role, no aria-modal, only an icon close button.
+    test.popup.removeAttribute("role");
+    test.confirm.remove();
+    test.popup.insertAdjacentHTML(
+      "beforeend",
+      '<button type="button" class="btn-clear"></button><button type="button" class="btn-close"></button>',
+    );
+    const close = test.popup.querySelector<HTMLElement>(".btn-close")!;
+    const clicked = vi.fn(() => {
+      if (closes) test.popup.style.display = "none";
+    });
+    close.addEventListener("click", clicked);
+    // Partial matches only: no exact result for the profile value.
+    test.search.addEventListener("click", () => {
+      const results = test.popup.querySelector("[data-search-results]")!;
+      results.innerHTML = `<li><button type="button">${VALUE}학과</button></li>`;
+    });
+    return { ...test, clicked };
+  }
+
+  it("closes the layer by its icon close button and keeps writing later items", async () => {
     vi.useFakeTimers();
-    const test = fixture(kind, false, true);
-    const result = await test.run(true);
-    expect(result, JSON.stringify(result)).toMatchObject({ status: "selected" });
-    expect(test.target.value).toBe(VALUE);
-    expect(test.direct).not.toHaveBeenCalled();
+    const test = layerFixture(true);
+    const results = await test.batch("row");
+    expect(results[0]).not.toHaveProperty("surfaceLeftOpen");
+    expect(results[1]).toMatchObject({ status: "written" });
+    expect(results[2]).toMatchObject({ status: "written" });
+    expect(test.clicked).toHaveBeenCalledTimes(1);
+    expect(test.surface.closure()).toBe("closed");
+    expect(test.target.value).toBe("");
     expect(test.forbidden).not.toHaveBeenCalled();
   });
 
-  it("keeps the legacy route stopping before any query is typed", async () => {
+  it("holds every later item when the icon close does not close the layer", async () => {
     vi.useFakeTimers();
-    const test = fixture(kind, false, true);
-    const result = await test.run(false);
-    expect(result).toMatchObject({ status: "failed", reason: "search_submit_not_found" });
-    expect(test.query.value).toBe("");
+    const test = layerFixture(false);
+    const results = await test.batch("row");
+    expect(test.clicked).toHaveBeenCalledTimes(1);
+    expect(results[0]).toMatchObject({
+      surfaceLeftOpen: true,
+      surfaceLeftOpenReason: "close_not_confirmed",
+    });
+    expect(results.slice(1)).toEqual([
+      expect.objectContaining({ failureCode: "SEARCH_FOLLOWUP_HALTED" }),
+      expect.objectContaining({ failureCode: "SEARCH_FOLLOWUP_HALTED" }),
+    ]);
+    expect(test.surface.closure()).toBe("open");
     expect(test.forbidden).not.toHaveBeenCalled();
   });
 });

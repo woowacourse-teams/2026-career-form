@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { isSafeStructuralClick, isSafeSurfaceCloseClick } from "./click-policy";
+import {
+  isSafeStructuralClick,
+  isSafeSurfaceCloseClick,
+  isSafeSurfaceIconCloseClick,
+} from "./click-policy";
 
 function mount(html: string): { scope: Element; target: Element } {
   document.body.innerHTML = `<div data-scope>${html}</div>`;
@@ -438,5 +442,82 @@ describe("isSafeSurfaceCloseClick", () => {
 
     expect(clicks).toBe(0);
     expect(document.body.innerHTML).toBe(before);
+  });
+});
+
+describe("isSafeSurfaceIconCloseClick", () => {
+  it.each([
+    "close",
+    "btn-close",
+    "modal-close",
+    "layer_close",
+    "btn btn-close",
+  ])("allows an empty control with the class %s", (className) => {
+    const { scope, target } = mount(
+      `<button type="button" class="${className}" data-target></button>`,
+    );
+
+    expect(isSafeSurfaceIconCloseClick(target, scope)).toEqual({
+      allowed: true,
+    });
+  });
+
+  it.each(["btn-clear", "closed", "enclose", "close-btn", "btn"])(
+    "rejects an empty control with the class %s",
+    (className) => {
+      const { scope, target } = mount(
+        `<button type="button" class="${className}" data-target></button>`,
+      );
+
+      expect(isSafeSurfaceIconCloseClick(target, scope)).toEqual({
+        allowed: false,
+        reason: "forbidden-label",
+      });
+    },
+  );
+
+  it.each([
+    ["text", '<button type="button" class="btn-close" data-target>x</button>'],
+    [
+      "aria-label",
+      '<button type="button" class="btn-close" aria-label="닫기" data-target></button>',
+    ],
+    [
+      "title",
+      '<button type="button" class="btn-close" title="닫기" data-target></button>',
+    ],
+    [
+      "value",
+      '<input type="button" class="btn-close" value="닫기" data-target>',
+    ],
+  ])("rejects a close class that has a %s label", (_name, html) => {
+    const { scope, target } = mount(html);
+
+    expect(isSafeSurfaceIconCloseClick(target, scope)).toEqual({
+      allowed: false,
+      reason: "forbidden-label",
+    });
+  });
+
+  it("keeps the structural checks", () => {
+    const submit = mount(
+      '<form><button class="btn-close" data-target></button></form>',
+    );
+    expect(isSafeSurfaceIconCloseClick(submit.target, submit.scope)).toEqual({
+      allowed: false,
+      reason: "implicit-submit-button",
+    });
+    const link = mount('<a href="/next" class="btn-close" data-target></a>');
+    expect(isSafeSurfaceIconCloseClick(link.target, link.scope)).toEqual({
+      allowed: false,
+      reason: "navigating-link",
+    });
+    const hidden = mount(
+      '<button type="button" class="btn-close" hidden data-target></button>',
+    );
+    expect(isSafeSurfaceIconCloseClick(hidden.target, hidden.scope)).toEqual({
+      allowed: false,
+      reason: "hidden",
+    });
   });
 });
