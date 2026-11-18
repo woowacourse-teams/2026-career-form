@@ -31,6 +31,7 @@ import type { ApprovedWriteResult } from "./executor";
 import type { SearchFollowUpControl } from "../interaction/search-follow-up";
 import type { WriteFailureCode } from "./failure";
 import { catalogApprovalForItem } from "../profile/catalog-identity";
+import { matchesApprovedCatalog } from "../profile/catalog-match";
 import {
   rememberCatalogSelection,
   retainedCatalogSelection,
@@ -849,6 +850,21 @@ export async function executeApprovedSearchWrites({
         rememberCatalogSelection(item, {
           element: input,
           evidence: result.catalogSelection.evidence,
+          // The search saw no detail on any result; the name alone identified it.
+          ...(result.catalogSelection.labelOnly
+            ? {
+                matchesEvidence: (match, evidence) =>
+                  evidence.detail === undefined &&
+                  matchesApprovedCatalog(
+                    {
+                      kind: match.kind,
+                      query: match.query,
+                      labels: match.labels,
+                    },
+                    evidence,
+                  ),
+              }
+            : {}),
           verify: () => {
             const current = targetIsCurrent(
               input.ownerDocument,

@@ -3,11 +3,16 @@ import type { TrackEvent } from "../../../src/analytics/events";
 import { useProfileSaveTracking } from "../../../src/analytics/use-profile-save-tracking";
 import type { PushClient } from "../../../src/job-postings/push-client";
 import { useProfileEditor } from "../../../src/profile/hooks/use-profile-editor";
+import { ResumeImport } from "../../../src/profile/resume-import/ResumeImport";
+import {
+  RESUME_FILE_ACCEPT,
+  type ResumeText,
+} from "../../../src/profile/resume-import/resume-file";
+import type { ResumeDraftResult } from "../../../src/profile/resume-import/resume-import-client";
 import type { ProfileRepository } from "../../../src/profile/profile-repository";
 import logo from "../../../site/landing/assets/logo.webp";
 import { AlertsGuideStep } from "./AlertsGuideStep";
 import { BasicStep } from "./BasicStep";
-import { GreetingStep } from "./GreetingStep";
 import { ProgressRail } from "./ProgressRail";
 import { RolesStep } from "./RolesStep";
 import { UsageStep } from "./UsageStep";
@@ -23,9 +28,12 @@ export interface OnboardingFlowProps {
   stepStore: StepStore;
   onOpenProfile(): void;
   onOpenPostings(): void;
+  /** Resume import seams for tests; production uses the bundled reader and API relay. */
+  readResumeText?: (file: File) => Promise<ResumeText>;
+  requestResumeDraft?: (text: string) => Promise<ResumeDraftResult>;
 }
 
-/** The six first-install steps in one line, resumed from the stored step. */
+/** The five first-install steps in one line, resumed from the stored step. */
 export function OnboardingFlow({
   repository,
   pushClient,
@@ -33,6 +41,8 @@ export function OnboardingFlow({
   stepStore,
   onOpenProfile,
   onOpenPostings,
+  readResumeText,
+  requestResumeDraft,
 }: OnboardingFlowProps) {
   const { repository: trackedRepository, track } = useProfileSaveTracking(
     repository,
@@ -47,6 +57,8 @@ export function OnboardingFlow({
   const moved = useRef(false);
   const viewed = useRef<OnboardingStep | undefined>(undefined);
   const transition = useRef(false);
+  const resumeInput = useRef<HTMLInputElement>(null);
+  const [resume, setResume] = useState<{ file: File; id: number }>();
 
   useEffect(() => {
     let active = true;
@@ -121,8 +133,27 @@ export function OnboardingFlow({
       go(following);
     });
   };
+  const pickResume = () => resumeInput.current?.click();
   return (
     <div className={styles.flow}>
+      <input
+        ref={resumeInput}
+        type="file"
+        accept={RESUME_FILE_ACCEPT}
+        hidden
+        tabIndex={-1}
+        aria-label="이력서 파일 선택"
+        onChange={(event) => {
+          const input = event.currentTarget;
+          const file = input.files?.[0];
+          input.value = "";
+          // A name typed just before is saved first, so the import reads the latest profile.
+          if (file)
+            void leave(() =>
+              setResume((current) => ({ file, id: (current?.id ?? 0) + 1 })),
+            );
+        }}
+      />
       <header className={styles.hd}>
         <span className={styles.logo}>
           <img src={logo} alt="" />
@@ -140,7 +171,28 @@ export function OnboardingFlow({
       <main id="main" className={styles.wrap}>
         <ProgressRail step={step} />
         <div ref={content}>
-          {step === "name" || step === "email" ? (
+          {step === "name" && resume ? (
+            <div className={styles.stage}>
+              <section className={styles.card}>
+                <ResumeImport
+                  key={resume.id}
+                  file={resume.file}
+                  repository={repository}
+                  analytics={{ track, properties: { surface } }}
+                  readText={readResumeText}
+                  requestDraft={requestResumeDraft}
+                  onPickFile={pickResume}
+                  onClose={() => setResume(undefined)}
+                  onSaved={() => {
+                    void editor.reloadLatest().then(() => {
+                      setResume(undefined);
+                      next();
+                    });
+                  }}
+                />
+              </section>
+            </div>
+          ) : step === "name" || step === "email" ? (
             <BasicStep
               step={step}
               profile={editor.profile}
@@ -150,6 +202,7 @@ export function OnboardingFlow({
               saved={editor.saveStatus === "saved"}
               onBack={back}
               onNext={next}
+              onImportResume={pickResume}
             />
           ) : step === "roles" ? (
             <RolesStep
@@ -161,12 +214,6 @@ export function OnboardingFlow({
             />
           ) : step === "alerts" ? (
             <AlertsGuideStep
-              heading={heading}
-              onBack={() => back?.()}
-              onNext={next}
-            />
-          ) : step === "greeting" ? (
-            <GreetingStep
               heading={heading}
               onBack={() => back?.()}
               onNext={next}

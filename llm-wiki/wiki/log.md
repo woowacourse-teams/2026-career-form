@@ -1153,3 +1153,49 @@
 - 승인한 후보 6개를 [CF-463 bundle](../raw/issues/CF-463/manifest.md)에 기록했다. 공고 저장 경로 정정, 확장 화면 위치 정정, 저장 계기 계측 정정, 저장 공고 정리 시점 보완과 안내 결정, 기술 소개의 서버 저장 항목 불일치, #387 이후 문서가 낡은 이유다.
 - [확장 Web Push 구독과 공고 알림](topics/extension-push-notifications.md), [선택적 이용 계측](topics/usage-analytics.md), [확장 저장 공고와 마감 알림](topics/saved-job-postings.md) topic과 색인을 갱신했다.
 - 구독 endpoint, 키 값, 실제 공고, 계정, 대화 전문은 저장하지 않았다.
+
+## [2026-11-17] ingest | CF-467 범용 칸 분석의 섹션 단위 결과 캐시
+- Approval-Digest: a7717c1500566292916e09452820d384d28846d331414b2b0f719012e50a8362
+- Source-Revision: 9114a7ef
+- 승인한 후보 4개를 [CF-467 bundle](../raw/issues/CF-467/manifest.md)에 기록했다. 섹션 결과 캐시 ADR(저장 단위, 키, 무효화, 저장 위치, 동시 요청, 켜고 끄기의 대안과 결정), 확장 쪽과 서버 쪽 캐시의 현재 상태, 구현 중 확인한 사실, 캐시가 켜진 뒤의 테스트 주의다.
+- [범용 섹션 분석 캐시: 확장 쪽과 서버 쪽](topics/generic-section-analysis-cache.md) topic과 색인을 갱신했다.
+- 실제 지원값, 계정, 세션, 키 값, 대화 전문은 저장하지 않았다.
+
+## [2026-11-18] ingest | CF-477 세부 정보 없는 결과 목록의 카탈로그 학교명 선택
+- Approval-Digest: 4382b5a1036e0cfaab6a7bb0a8f7b1cddb4318779acf61795da2638bc5e4a05f
+- Source-Revision: ec4e0604
+- 승인한 후보 2개를 [CF-477 bundle](../raw/issues/CF-477/manifest.md)에 payload 하나로 기록했다. 범용 경로의 카탈로그 학교명 단일 이름 일치 선택 결정과 이름만으로 승인된 선택의 유지 확인이다.
+- [범용 자동 기입 검색 표면](topics/generic-autofill-search.md)의 Current를 CF-477로 바꾸고 CF-307 근거를 History에 남겼으며 색인을 갱신했다.
+- 실제 지원값, 계정, 세션, 필드 라벨, 선택지, 주소, 선택자, 대화 전문은 저장하지 않았다.
+## [2026-11-17] ingest | CF-469 이력서 글자 프로필 초안 API
+- Approval-Digest: 4e0c1ca17fa53e0b15073a5e1d795bcbb356e7747a5df457e365af943975e3e3
+- Source-Revision: 76961167
+- 승인한 후보 3개를 [CF-469 bundle](../raw/issues/CF-469/manifest.md)에 기록했다. API 계약, 키·형식·원문 근거 검증 규칙과 YYYY-MM 날짜, 로컬·스테이징 전용 값 트레이스와 기록 경계다.
+- [이력서 글자 프로필 초안 API](topics/resume-profile-import.md) topic과 색인을 새로 만들었다.
+- 실제 이력서, 지원값, 계정, 세션, 키 값, 대화 전문은 저장하지 않았다.
+## [2026-11-17] ingest | CF-470 이력서 문서(PDF·MD·TXT)로 프로필 가져오기 추가
+- Approval-Digest: 102f649b7554e03c10a1f9639801231e7738df4302b109d0015a44049c931c54
+- Source-Revision: ddb3ee8f
+- 승인한 후보 4개를 [CF-470 bundle](../raw/issues/CF-470/manifest.md)에 기록했다. 출처 고르기와 온보딩 진입을 포함한 이력서 가져오기 흐름, 연월 날짜 규칙, pdf.js와 CMap 포함 방식, 값 없는 Console 기록과 계측 이벤트다.
+- [이력서 파일로 프로필 가져오기](topics/resume-file-import.md) topic을 새로 만들고 [선택적 이용 계측](topics/usage-analytics.md) topic과 색인을 갱신했다.
+- 실제 지원값, 이력서 내용, 계정, 세션, 대화 전문은 저장하지 않았다.
+## [2026-11-17] ingest | CF-472 범용 수집의 공고 제목 제외
+- Approval-Digest: e9f2d655d212b195599e50e1d814da78a9c8eb9e98efeb602478f48816ec6f67
+- Source-Revision: a8a59f31
+- 승인한 후보 3개를 [CF-472 bundle](../raw/issues/CF-472/manifest.md)에 기록했다. 페이지 이름을 섹션 제목과 섹션 머리 라벨에서 빼는 규칙과 버린 대안, 코드로 확인한 사실, 서버 섹션 결과 캐시의 2026-11-17 실측 보고와 CF-467 ADR 기대의 정정이다.
+- [범용 수집의 페이지 이름 제외](topics/generic-page-title-exclusion.md) topic을 만들고 [범용 섹션 분석 캐시: 확장 쪽과 서버 쪽](topics/generic-section-analysis-cache.md) topic과 색인을 갱신했다.
+- 실제 지원값, 계정, 세션, 키 값, 대화 전문, 공고 식별자와 주소는 저장하지 않았다.
+
+## [2026-11-18] ingest | CF-479 Greeting 지원서 화면 가져오기 제거
+- Approval-Digest: 19cb50157f3f038d01ca9b60eda98210dd0cde6a6a45a6527355f5a539945986
+- Source-Revision: fd15cf2
+- 승인한 후보 2개를 [CF-479 bundle](../raw/issues/CF-479/manifest.md)에 payload 세 개로 기록했다. Greeting 지원서 화면 가져오기 제거와 남긴 공유 모듈, 온보딩 다섯 단계와 제거된 단계의 저장 위치 처리, Greeting 가져오기 이벤트 제거다.
+- [Greeting 프로필 가져오기](topics/greeting-profile-import.md), [랜딩과 온보딩](topics/landing-onboarding.md), [사용 통계](topics/usage-analytics.md)의 Current를 CF-479로 바꾸고 앞선 근거를 History에 남겼으며 색인을 갱신했다.
+- 실제 지원값, 계정, 세션, 대화 전문은 저장하지 않았다.
+
+## [2026-11-18] ingest | CF-480 이력서 가져오기 화면 변경
+- Approval-Digest: b9ff638175d31eb6327967418852c23a9ebbcfaf808d26d479d77e6d4cab9f47
+- Source-Revision: 7bdc957
+- 승인한 후보 3개를 [CF-480 bundle](../raw/issues/CF-480/manifest.md)에 payload 두 개로 기록했다. PDF 조건 안내와 전송 안내 단계 제거, 실패 화면 통일과 그림 주소 전달, develop에서도 실패하는 native-form 정책 테스트 관찰이다.
+- [이력서 파일로 프로필 가져오기](topics/resume-file-import.md)와 [프론트 브라우저 테스트](topics/frontend-browser-testing.md)의 Current를 CF-480으로 바꾸고 앞선 근거를 History에 남겼으며 색인을 갱신했다.
+- 실제 지원값, 계정, 세션, 대화 전문은 저장하지 않았다.

@@ -1,0 +1,239 @@
+/* New pieces for the resume import (#470); everything else reuses PageImport and ImportReview styles. */
+.fileRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  padding: 8px 15px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+}
+.fileType {
+  display: grid;
+  place-items: center;
+  min-width: 42px;
+  height: 36px;
+  padding: 0 6px;
+  border-radius: 8px;
+  color: var(--color-on-brand);
+  background: var(--color-brand);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+.fileName {
+  display: grid;
+  min-width: 0;
+}
+.fileName b {
+  overflow: hidden;
+  color: var(--color-text-strong);
+  font-size: 14px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fileName small {
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.sourceList {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  list-style: none;
+}
+.sourceList li + li {
+  border-top: 1px solid var(--color-border);
+}
+.sourceItem {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 15px;
+  border: 0;
+  color: inherit;
+  background: var(--color-surface);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.sourceItem:hover:not(:disabled) {
+  background: var(--color-accent-hover);
+}
+.sourceItem:disabled {
+  cursor: default;
+}
+.sourceItem b {
+  display: block;
+  color: var(--color-text-strong);
+  font-size: 14px;
+  font-weight: 600;
+}
+.sourceItem small {
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+.sourceItem .sourceNote {
+  display: block;
+  font-size: 13px;
+}
+.sourceItem:disabled b,
+.sourceItem:disabled small {
+  color: var(--color-text-subtle);
+}
+.chevron {
+  color: var(--color-text-muted);
+  font-size: 18px;
+}
+.steps {
+  display: grid;
+  margin: 0;
+  padding: 4px 15px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  list-style: none;
+}
+.steps li {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+.steps li + li {
+  border-top: 1px solid var(--color-border);
+}
+.steps li[data-state="done"] {
+  color: var(--color-text);
+}
+.steps li[data-state="now"] {
+  color: var(--color-text-strong);
+  font-weight: 600;
+}
+.steps small {
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+.dot {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--color-border-strong);
+  border-radius: 50%;
+}
+li[data-state="done"] .dot {
+  border: 0;
+  background: var(--color-success);
+}
+li[data-state="done"] .dot::after {
+  content: "";
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  width: 8px;
+  height: 4px;
+  border-bottom: 2px solid #fff;
+  border-left: 2px solid #fff;
+  transform: rotate(-45deg);
+}
+li[data-state="now"] .dot {
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-action);
+  animation: resume-spin 0.9s linear infinite;
+}
+@keyframes resume-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  li[data-state="now"] .dot {
+    animation: none;
+  }
+}
+.noSend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+.noSend::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-border-strong);
+}
+/* Every failure: same layout values as the unsupported-site screen (AutofillDemo). */
+.failure {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 12px;
+  text-align: center;
+}
+.failureImage {
+  width: 168px;
+  height: 168px;
+  object-fit: contain;
+}
+.failureTitle {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-size: 17px;
+  line-height: 25px;
+  letter-spacing: -0.374px;
+  font-weight: 600;
+}
+.failureBody {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.failureBody + .failureBody {
+  margin-top: -12px;
+}
+.failureFile {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.failureActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.closeButton {
+  display: inline-grid;
+  place-items: center;
+  min-height: 36px;
+  padding: 8px 15px;
+  border: 0;
+  border-radius: 980px;
+  color: var(--color-text-strong);
+  background: var(--color-surface-muted);
+  font: inherit;
+  font-size: 14px;
+  letter-spacing: -0.224px;
+  line-height: 1;
+  cursor: pointer;
+}

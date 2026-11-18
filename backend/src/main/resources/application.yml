@@ -67,6 +67,23 @@ career-form:
       max-requests: ${CAREER_FORM_ADDRESS_RATE_LIMIT_MAX_REQUESTS:30}
       window: ${CAREER_FORM_ADDRESS_RATE_LIMIT_WINDOW:60s}
       max-clients: ${CAREER_FORM_ADDRESS_RATE_LIMIT_MAX_CLIENTS:10000}
+  # 이력서 글자 -> 프로필 초안(POST /api/v1/profile-import/resume). 폼 분석 공급자 선택과 무관하게 OpenAI 키로 켜진다.
+  # 원문과 추출 값은 저장하거나 기록하지 않는다. 새 필수 환경 변수는 없다.
+  profile-import:
+    max-chars: 20000
+    # LangSmith run에 입력 글자와 추출 값을 더한다. 로컬과 스테이징 프로필 파일에서만 켜고 prod 프로필에서는 코드가 끈다.
+    trace-values: false
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+      model: ${CAREER_FORM_LLM_MODEL:gpt-5.6-luna}
+      endpoint: https://api.openai.com/v1/chat/completions
+      reasoning-effort: none
+      timeout-ms: 60000
+      max-output-tokens: ${CAREER_FORM_LLM_MAX_OUTPUT_TOKENS:8192}
+    rate-limit:
+      max-requests: 10
+      window: 60s
+      max-clients: 10000
   tracing:
     langsmith:
       enabled: ${CAREER_FORM_LANGSMITH_ENABLED:false}
@@ -90,6 +107,12 @@ career-form:
       section-concurrency: ${CAREER_FORM_JEV_SECTION_CONCURRENCY:3}
       field-batch-size: ${CAREER_FORM_JEV_FIELD_BATCH_SIZE:5}
       max-concurrent: ${CAREER_FORM_JEV_MAX_CONCURRENT:10}
+      # 범용 칸 분석에서 공급자에 보낼 내용이 같은 섹션의 답을 프로세스 안에 둔다. 배포하면 비워진다.
+      # 배포 구성은 이 변수들을 전달하지 않으므로 서버에서는 아래 기본값으로 돈다.
+      section-cache:
+        enabled: ${CAREER_FORM_JEV_SECTION_CACHE_ENABLED:true}
+        max-sections: ${CAREER_FORM_JEV_SECTION_CACHE_MAX_SECTIONS:5000}
+        ttl: ${CAREER_FORM_JEV_SECTION_CACHE_TTL:7d}
   llm:
     enabled: ${CAREER_FORM_LLM_ENABLED:}
   evaluation:

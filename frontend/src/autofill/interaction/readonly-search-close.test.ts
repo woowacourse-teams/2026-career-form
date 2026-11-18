@@ -114,3 +114,83 @@ describe("closing a modal the opener click opened without a detected surface", (
     expect(escapes()).toBe(0);
   });
 });
+
+describe("closing a non-ARIA layer through an icon-only close control", () => {
+  function iconLayer(controls: string): SearchSurface {
+    document.body.innerHTML = `<div id="page"><input id="target" readonly><button id="opener" type="button">검색</button></div><div id="layer"><div id="box"><input type="text">${controls}</div></div>`;
+    const container = document.querySelector<HTMLElement>("#layer")!;
+    return new SearchSurface(
+      "same-document-layer",
+      container,
+      container,
+      document.querySelector<HTMLElement>("#opener")!,
+      document.querySelector<HTMLInputElement>("#target")!,
+    );
+  }
+
+  function clicksOn(selector: string, removeLayer: boolean): () => number {
+    let clicks = 0;
+    for (const element of document.querySelectorAll(selector))
+      element.addEventListener("click", () => {
+        clicks++;
+        if (removeLayer) document.querySelector("#layer")?.remove();
+      });
+    return () => clicks;
+  }
+
+  it("clicks the single icon-only close button and confirms closure", async () => {
+    const surface = iconLayer(
+      '<button type="button" class="btn-clear"></button><button type="button" class="btn-close"></button>',
+    );
+    const clicks = clicksOn(".btn-close", true);
+    expect(await closeOwnedSurface(surface, true)).toBeUndefined();
+    expect(clicks()).toBe(1);
+    expect(surface.closure()).toBe("closed");
+  });
+
+  it("leaves the layer alone when confirmation cleanup is not allowed", async () => {
+    const surface = iconLayer(
+      '<button type="button" class="btn-close"></button>',
+    );
+    const clicks = clicksOn(".btn-close", true);
+    expect(await closeOwnedSurface(surface, false)).toBe(
+      "no_safe_close_control",
+    );
+    expect(clicks()).toBe(0);
+    expect(surface.closure()).toBe("open");
+  });
+
+  it("refuses to guess between two icon-only close buttons", async () => {
+    const surface = iconLayer(
+      '<button type="button" class="btn-close"></button><button type="button" class="layer_close"></button>',
+    );
+    const clicks = clicksOn("button", true);
+    expect(await closeOwnedSurface(surface, true)).toBe(
+      "no_safe_close_control",
+    );
+    expect(clicks()).toBe(0);
+    expect(surface.closure()).toBe("open");
+  });
+
+  it("never clicks an icon-only clear button", async () => {
+    const surface = iconLayer(
+      '<button type="button" class="btn-clear"></button>',
+    );
+    const clicks = clicksOn("button", true);
+    expect(await closeOwnedSurface(surface, true)).toBe(
+      "no_safe_close_control",
+    );
+    expect(clicks()).toBe(0);
+    expect(surface.closure()).toBe("open");
+  });
+
+  it("reports an icon close click that leaves the layer open", async () => {
+    const surface = iconLayer(
+      '<button type="button" class="btn-close"></button>',
+    );
+    const clicks = clicksOn(".btn-close", false);
+    expect(await closeOwnedSurface(surface, true)).toBe("close_not_confirmed");
+    expect(clicks()).toBe(1);
+    expect(surface.closure()).toBe("open");
+  });
+});

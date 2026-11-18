@@ -2,11 +2,13 @@
 
 > Topic: frontend-browser-testing
 > Status: Current
-> Current: [CF-458 프론트 단위 파일 실행 명령과 확장 옵션 페이지 수동 확인](../../raw/issues/CF-458/documents/frontend-unit-run-and-extension-manual-check.md)
-> History: [CF-304 shard 실행과 병합 검증 경계](../../raw/issues/CF-304/documents/frontend-test-sharding.md); [CF-178 실행 경계](../../raw/issues/CF-178/documents/browser-testing.md); [CF-415 프론트엔드 CI의 frontend 경로 필터와 실행 시간 측정](../../raw/issues/CF-415/documents/frontend-ci-path-filter.md); [CF-417 20초 넘는 fixture 통합 테스트 38개 삭제 결정과 측정](../../raw/issues/CF-417/documents/slow-fixture-test-removal.md); [CF-458 프론트 단위 파일 실행 명령과 확장 옵션 페이지 수동 확인](../../raw/issues/CF-458/documents/frontend-unit-run-and-extension-manual-check.md)
-> Updated: 2026-11-16
+> Current: [CF-480 develop에서도 실패하는 native-form 정책 테스트 두 파일](../../raw/issues/CF-480/documents/native-form-policy-test-failures-on-develop.md)
+> History: [CF-304 shard 실행과 병합 검증 경계](../../raw/issues/CF-304/documents/frontend-test-sharding.md); [CF-178 실행 경계](../../raw/issues/CF-178/documents/browser-testing.md); [CF-415 프론트엔드 CI의 frontend 경로 필터와 실행 시간 측정](../../raw/issues/CF-415/documents/frontend-ci-path-filter.md); [CF-417 20초 넘는 fixture 통합 테스트 38개 삭제 결정과 측정](../../raw/issues/CF-417/documents/slow-fixture-test-removal.md); [CF-458 프론트 단위 파일 실행 명령과 확장 옵션 페이지 수동 확인](../../raw/issues/CF-458/documents/frontend-unit-run-and-extension-manual-check.md); [CF-480 develop에서도 실패하는 native-form 정책 테스트 두 파일](../../raw/issues/CF-480/documents/native-form-policy-test-failures-on-develop.md)
+> Updated: 2026-11-18
 
 ## 현재 상태
+
+2026-11-18 기준 `npm run test:unit -- src/autofill/policy`의 `native-form-exam.test.ts`와 `native-form-gpa.test.ts`는 develop에서도 실패한다. 다른 변경의 회귀로 읽기 전에 develop 기준에서 같은 명령으로 비교한다. 실패 원인은 확인되지 않았다. 근거는 [CF-480 develop에서도 실패하는 native-form 정책 테스트 두 파일](../../raw/issues/CF-480/documents/native-form-policy-test-failures-on-develop.md)를 따른다.
 
 기존 jsdom 단위 테스트와 Playwright Chromium 상호작용 테스트를 Vitest의 별도 프로젝트로 실행한다. 합성 달력, 실제 같은 출처 iframe 탐색, Shadow CSS 클릭 전달은 브라우저에서 확인하고, 기존 단위 회귀와 네 지표 80% 커버리지 기준을 유지한다.
 
@@ -15,5 +17,7 @@
 단위 테스트 파일만 돌릴 때는 `npm run test:unit -- <파일>`을 쓴다. `npx vitest run <단위 파일>`은 브라우저 테스트가 하나도 수집되지 않으면 `frontend/tests/vitest/run-policy.ts`가 `Browser tests were not collected`로 실패시킨다. 확장 옵션 페이지 수동 확인은 production 빌드(`.output/chrome-mv3`)를 Playwright가 설치한 Chrome for Testing에 임시 프로필로 `--load-extension` 해서 `channel: "chromium"`으로 띄운다. 채널을 지정하지 않은 기본 headless shell에서는 확장 서비스 워커가 뜨지 않는다. 외부 요청은 `--host-resolver-rules`로 localhost만 남겨 막는다. 저장은 500ms 디바운스라 저장됨 표시(`[data-status="saved"]`)를 본 뒤 `chrome.storage.local`의 `careerForm.profile`을 읽고, 확인한 빌드는 `build-info.json`의 revision과 source_state로 남긴다. 이 수동 확인도 설치 확장 E2E 자동화가 아니다([CF-458 근거](../../raw/issues/CF-458/documents/frontend-unit-run-and-extension-manual-check.md)).
 
 ## 변경 이유
+
+CF-480은 합친 브랜치 검증에서 이 두 파일의 실패를 만났고, develop 기준 비교로 변경과 무관함을 확인해 기록했다.
 
 CF-458은 단위 파일 하나를 `npx vitest run`으로 돌리면 실패하는 이유와, 옵션 페이지 수정을 실제 확장으로 확인하는 반복 절차를 기록했다. CF-417은 frontend PR CI 14~16분의 73%를 차지하던 느린 fixture 통합 테스트를 사용자 결정으로 지우고, 잃은 회귀 범위를 기록했다. CF-415는 frontend를 바꾸지 않은 BE·Infra PR에서도 shard 8개가 14~16분씩 돌던 낭비를 경로 필터로 없앴다. jsdom의 문서 속성 재정의와 CSS 모사만으로는 실제 포커스, iframe 문서 수명과 클릭 전달을 입증할 수 없어 브라우저가 필요한 경계만 분리했다(CF-178). 단일 워커, 단일 job 실행은 테스트 시간 총합이 CI 시간이 되어 러너 편차만으로 제한 시간을 넘었기 때문에 shard 분할과 병합 검증으로 바꿨다(CF-304). 세부 대안은 연결된 raw의 ADR에서 확인한다.

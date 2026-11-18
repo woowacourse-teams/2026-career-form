@@ -22,6 +22,9 @@ const FORBIDDEN_LABELS = [
 ];
 
 const BARE_CLOSE_LABEL = /^(닫기|close|[x×✕])$/i;
+// An icon-only close control names itself through its class: exactly `close`
+// or a token ending in `-close` / `_close`.
+const CLOSE_CLASS_TOKEN = /^(close|.+[-_]close)$/i;
 const BARE_CONFIRMATION_LABEL = /^(확인|confirm|ok)$/i;
 const SUBMIT_INPUT_TYPES = new Set(["submit", "reset", "image"]);
 const NON_NAVIGATING_HREF = /^(#|javascript:\s*void\s*\(\s*0\s*\)\s*;?)$/i;
@@ -59,7 +62,7 @@ export function isSafeSurfaceCloseClick(
   scope: Element,
   { allowConfirmation = false }: { allowConfirmation?: boolean } = {},
 ): ClickDecision {
-  const reason = blockReason(element, scope, true);
+  const reason = blockReason(element, scope, "close");
   if (!reason) return { allowed: true };
   if (!allowConfirmation || reason !== "forbidden-label")
     return { allowed: false, reason };
@@ -75,10 +78,24 @@ export function isSafeSurfaceCloseClick(
   return { allowed: true };
 }
 
+/**
+ * Whether an unlabeled control in a search surface the extension opened may be
+ * clicked to close it. Same structural checks as isSafeSurfaceCloseClick, but
+ * the accessible label must be empty and a class token must name a close
+ * control.
+ */
+export function isSafeSurfaceIconCloseClick(
+  element: Element,
+  scope: Element,
+): ClickDecision {
+  const reason = blockReason(element, scope, "icon-close");
+  return reason ? { allowed: false, reason } : { allowed: true };
+}
+
 function blockReason(
   element: Element,
   scope: Element,
-  closeOnly = false,
+  labelMode: "click" | "close" | "icon-close" = "click",
 ): ClickBlockReason | undefined {
   if (!scope.contains(element)) return "outside-scope";
   if (isInvisible(element)) return "hidden";
@@ -105,7 +122,15 @@ function blockReason(
   if (element.hasAttribute("formaction") || element.hasAttribute("form"))
     return "form-override-attribute";
   const label = labelOf(element);
-  if (closeOnly) {
+  if (labelMode === "icon-close") {
+    return label === "" &&
+      Array.from(element.classList).some((token) =>
+        CLOSE_CLASS_TOKEN.test(token),
+      )
+      ? undefined
+      : "forbidden-label";
+  }
+  if (labelMode === "close") {
     return BARE_CLOSE_LABEL.test(label) &&
       !CLOSE_LABEL_BLOCKING_PATTERNS.some((pattern) => pattern.test(label))
       ? undefined

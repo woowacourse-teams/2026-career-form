@@ -18,15 +18,21 @@ function memory(initial: Record<string, unknown> = {}) {
 }
 
 describe("온보딩 단계", () => {
-  it("이름, 이메일, 직무 선택, 알림 안내, Greeting, 사용법 순서다", () => {
+  it("이름, 이메일, 직무 선택, 알림 안내, 사용법 순서다", () => {
     expect(ONBOARDING_STEPS.map((step) => STEP_LABELS[step])).toEqual([
       "이름",
       "이메일",
       "직무 선택",
       "알림 안내",
-      "Greeting",
       "사용법",
     ]);
+  });
+  it("없어진 Greeting 단계에 머물던 위치는 그다음 단계인 사용법으로 읽는다", async () => {
+    expect(
+      await createStepStore(
+        memory({ [ONBOARDING_STEP_KEY]: "greeting" }),
+      ).read(),
+    ).toBe("usage");
   });
   it("저장한 단계 이름을 다시 읽는다", async () => {
     const storage = memory();

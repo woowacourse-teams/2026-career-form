@@ -3,12 +3,10 @@ import styles from "./Scene.module.css";
 
 // What the in-page Career Form panel shows; wording follows the real panel.
 export type PanelView =
-  | { kind: "home"; menu?: boolean }
+  | { kind: "home" }
   | { kind: "matching" }
   | { kind: "writing"; percent: number }
-  | { kind: "results"; done: number }
-  | { kind: "import"; confirmed: boolean }
-  | { kind: "saved"; count: number };
+  | { kind: "results"; done: number };
 
 const Gear = () => (
   <svg
@@ -34,85 +32,6 @@ function Tabs() {
   );
 }
 
-function ImportBody({
-  confirmed,
-  pressed,
-}: {
-  confirmed: boolean;
-  pressed?: string;
-}) {
-  const count = confirmed ? 6 : 5;
-  return (
-    <>
-      <div className={styles.pBack}>
-        <span>‹</span>
-        <b>프로필 가져오기</b>
-        {!confirmed && <small>확인 1 / 1</small>}
-      </div>
-      <div className={styles.pBody}>
-        <p className={styles.pCount}>
-          <strong>{count}</strong>
-          <span>개 가져오기</span>
-        </p>
-        <p className={styles.pChips}>
-          <span data-tone="new">새로 추가 {count}</span>
-          <span data-tone="new">기존 값 변경 0</span>
-          <span data-tone="same">이미 같음 2</span>
-        </p>
-        {confirmed ? (
-          <p className={styles.pRow}>
-            <span>영문 이름</span>
-            <b>성 Kim, 이름 Haneul</b>
-            <em>수정</em>
-          </p>
-        ) : (
-          <>
-            <p className={styles.pAsk}>
-              확인해 주세요 <i>1</i>
-            </p>
-            <div className={styles.pConfirm}>
-              <small>영문 이름: Kim Haneul</small>
-              <b>이렇게 나눌까요?</b>
-              <span className={styles.pSplit}>
-                <span>
-                  <small>성</small>Kim
-                </span>
-                <span>
-                  <small>이름</small>Haneul
-                </span>
-              </span>
-              <span className={styles.pAnswers}>
-                <span
-                  className={styles.pYes}
-                  data-cursor="confirm-yes"
-                  data-pressed={pressed === "confirm-yes"}
-                >
-                  맞아요
-                </span>
-                <span className={styles.pNo}>아니에요</span>
-                <em>나중에</em>
-              </span>
-            </div>
-          </>
-        )}
-        <span
-          className={styles.pSave}
-          data-ready={confirmed}
-          data-cursor="save"
-          data-pressed={pressed === "save"}
-        >
-          프로필에 저장 <b>{count}</b>
-        </span>
-        {!confirmed && (
-          <small className={styles.pNote}>
-            확인하지 않은 1개는 빼고 저장해요
-          </small>
-        )}
-      </div>
-    </>
-  );
-}
-
 /** The Career Form panel as it opens beside an application form. */
 export function PanelReplica({
   open,
@@ -123,33 +42,16 @@ export function PanelReplica({
   view: PanelView;
   pressed?: string;
 }) {
-  const importing = view.kind === "import" || view.kind === "saved";
   return (
     <div className={styles.panel} data-panel data-open={open}>
       <div className={styles.pHead}>
         <img src={logo} alt="" />
-        <span
-          className={styles.pGear}
-          data-cursor="gear"
-          data-pressed={pressed === "gear"}
-          data-on={view.kind === "home" && view.menu === true}
-        >
+        <span className={styles.pGear}>
           <Gear />
         </span>
         <span className={styles.pClose}>×</span>
       </div>
-      {view.kind === "home" && view.menu && (
-        <div className={styles.pMenu}>
-          <span
-            data-cursor="menu-import"
-            data-pressed={pressed === "menu-import"}
-          >
-            프로필 가져오기
-          </span>
-          <span>프로필 관리</span>
-        </div>
-      )}
-      {!importing && <Tabs />}
+      <Tabs />
       {view.kind === "home" && (
         <div className={`${styles.pBody} ${styles.pHome}`}>
           <span
@@ -205,22 +107,6 @@ export function PanelReplica({
             <span>파일은 직접 올려 주세요</span>
           </p>
         </div>
-      )}
-      {view.kind === "import" && (
-        <ImportBody confirmed={view.confirmed} pressed={pressed} />
-      )}
-      {view.kind === "saved" && (
-        <>
-          <div className={styles.pBack}>
-            <span>‹</span>
-            <b>프로필 가져오기</b>
-          </div>
-          <div className={`${styles.pBody} ${styles.pSaved}`}>
-            <span className={styles.pCheck} />
-            <strong>프로필에 {view.count}개를 저장했어요</strong>
-            <small>이제 다른 지원서에서도 자동 기입에 쓰여요</small>
-          </div>
-        </>
       )}
     </div>
   );

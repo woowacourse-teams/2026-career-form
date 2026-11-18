@@ -290,7 +290,7 @@ it("recovers from an unavailable local store on a later first event", async () =
   expect(payloads).toHaveLength(1);
 });
 
-it.each(["greeting_import_viewed", "greeting_import_saved"])(
+it.each(["resume_import_viewed", "resume_import_saved"])(
   "allows repeatable %s while stripping imported data",
   async (event) => {
     const { handle, payloads } = collector();

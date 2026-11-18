@@ -26,8 +26,13 @@ import {
   PanelHeadingProvider,
   type PanelHeading,
 } from "../../src/autofill/workflow/panel-heading";
-import { PageImport } from "../../src/profile/page-import/PageImport";
-import type { ImportCandidate } from "../../src/profile/page-import/reader";
+import { ImportSourceChoice } from "../../src/profile/resume-import/ImportSourceChoice";
+import { ResumeImport } from "../../src/profile/resume-import/ResumeImport";
+import {
+  RESUME_FILE_ACCEPT,
+  type ResumeText,
+} from "../../src/profile/resume-import/resume-file";
+import type { ResumeDraftResult } from "../../src/profile/resume-import/resume-import-client";
 import {
   savedPostingsReader,
   type SavedPostingsReader,
@@ -64,6 +69,8 @@ interface AppProps {
   openAutofill?: () => Promise<void>;
   inPage?: boolean;
   logoUrl?: string;
+  /** Resume import failure image; the in-page panel needs its extension URL. */
+  unsupportedImageUrl?: string;
   autofillView?: ReactNode;
   returnToProfile?: () => void;
   showPostings?: boolean;
@@ -74,7 +81,9 @@ interface AppProps {
   now?: () => number;
   /** The in-page panel shrinks to its tabs' content; other surfaces keep their height. */
   fitContent?: boolean;
-  readImportCandidates?: () => Promise<readonly ImportCandidate[]>;
+  /** Resume import seams for tests; production uses the bundled reader and API relay. */
+  readResumeText?: (file: File) => Promise<ResumeText>;
+  requestResumeDraft?: (text: string) => Promise<ResumeDraftResult>;
   /** Only the in-page panel, which the shortcut opens, passes this. */
   readPanelShortcut?: () => Promise<string | undefined>;
 }
@@ -161,6 +170,7 @@ export function App({
   openAutofill = openAutofillOverlay,
   inPage = false,
   logoUrl = "/side-panel-launcher-logo.png",
+  unsupportedImageUrl,
   autofillView,
   returnToProfile,
   showPostings = true,
@@ -169,7 +179,8 @@ export function App({
   pushClient = defaultPushClient,
   now = Date.now,
   fitContent = false,
-  readImportCandidates,
+  readResumeText,
+  requestResumeDraft,
   readPanelShortcut,
 }: AppProps) {
   const repository = useMemo(
@@ -183,6 +194,11 @@ export function App({
   const push = usePushState(pushClient);
   const profileLoadGeneration = useRef(0);
   const [importActive, setImportActive] = useState(false);
+  const [importSource, setImportSource] = useState<"choice" | "resume">(
+    "choice",
+  );
+  const [resumeFile, setResumeFile] = useState<{ file: File; id: number }>();
+  const resumeInput = useRef<HTMLInputElement>(null);
   const [heading, setHeading] = useState<PanelHeading>({});
   const [importSavedCount, setImportSavedCount] = useState<number>();
   const [loadStatus, setLoadStatus] = useState<LoadStatus>("loading");
@@ -293,12 +309,25 @@ export function App({
 
   const openImport = () => {
     setImportSavedCount(undefined);
+    setImportSource("choice");
     setImportActive(true);
-    try {
-      track("greeting_import_viewed", analyticsProperties);
-    } catch {
-      // Reading and reviewing remain available without telemetry.
-    }
+  };
+  // Opens the OS file dialog straight from the click; there is no in-panel picker.
+  const pickResume = () => resumeInput.current?.click();
+  const startResumeImport = (file: File | undefined) => {
+    if (!file) return;
+    setImportSavedCount(undefined);
+    setResumeFile((current) => ({ file, id: (current?.id ?? 0) + 1 }));
+    setImportSource("resume");
+    setImportActive(true);
+  };
+  const finishImport = (saved: Profile, count: number) => {
+    ++profileLoadGeneration.current;
+    setProfile(saved);
+    setLoadStatus("ready");
+    setImportActive(false);
+    setImportSavedCount(count);
+    setSelectedTab("profile");
   };
 
   const startAutofill = async () => {
@@ -356,6 +385,20 @@ export function App({
       data-panel-fit={fitContent ? "content" : undefined}
     >
       <style>{panelCss}</style>
+      <input
+        ref={resumeInput}
+        type="file"
+        accept={RESUME_FILE_ACCEPT}
+        hidden
+        tabIndex={-1}
+        aria-label="이력서 파일 선택"
+        onChange={(event) => {
+          const input = event.currentTarget;
+          startResumeImport(input.files?.[0]);
+          // The same file can be picked again after a failure.
+          input.value = "";
+        }}
+      />
       <header className={`${styles.header} ${styles.homeHeader}`}>
         <div className={styles.brandRow}>
           <div className={styles.brandIdentity}>
@@ -370,7 +413,7 @@ export function App({
           <div className={styles.headerActions}>
             {homeView && (
               <PanelSettingsMenu
-                onImport={readImportCandidates ? openImport : undefined}
+                onImport={openImport}
                 onManageProfile={() => void openProfileManagement()}
                 readPanelShortcut={readPanelShortcut}
               />
@@ -512,23 +555,25 @@ export function App({
           </div>
         )}
       </header>
-      {importActive && readImportCandidates ? (
+      {importActive && !autofillActive ? (
         <main className={styles.main} aria-label="프로필 가져오기 화면">
           <PanelHeadingProvider value={setHeading}>
-            <PageImport
-              analytics={{ track, properties: analyticsProperties }}
-              repository={repository}
-              readCandidates={readImportCandidates}
-              onClose={() => setImportActive(false)}
-              onSaved={(saved, count) => {
-                ++profileLoadGeneration.current;
-                setProfile(saved);
-                setLoadStatus("ready");
-                setImportActive(false);
-                setImportSavedCount(count);
-                setSelectedTab("profile");
-              }}
-            />
+            {importSource === "resume" && resumeFile ? (
+              <ResumeImport
+                key={resumeFile.id}
+                file={resumeFile.file}
+                analytics={{ track, properties: analyticsProperties }}
+                repository={repository}
+                readText={readResumeText}
+                requestDraft={requestResumeDraft}
+                unsupportedImageUrl={unsupportedImageUrl}
+                onPickFile={pickResume}
+                onClose={() => setImportActive(false)}
+                onSaved={finishImport}
+              />
+            ) : (
+              <ImportSourceChoice onResume={pickResume} />
+            )}
           </PanelHeadingProvider>
         </main>
       ) : autofillActive ? (

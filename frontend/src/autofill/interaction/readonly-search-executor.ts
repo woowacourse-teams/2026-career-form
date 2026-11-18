@@ -51,7 +51,10 @@ import {
   label,
 } from "./search-surface-dom";
 import type { SearchSurface } from "./search-surface";
-import { isSafeSurfaceCloseClick } from "../generic/click-policy";
+import {
+  isSafeSurfaceCloseClick,
+  isSafeSurfaceIconCloseClick,
+} from "../generic/click-policy";
 import { queryCandidates } from "./readonly-search-popup";
 
 import { resultActivation } from "./search-result-structure";
@@ -265,6 +268,18 @@ export async function closeModalOpenedBy(
     : "close_not_confirmed";
 }
 
+/** The only unlabeled close-classed control of the surface, if there is exactly one. */
+function singleIconCloseControl(
+  controls: readonly HTMLElement[],
+  surface: SearchSurface,
+): HTMLElement | undefined {
+  const candidates = controls.filter(
+    (element) =>
+      isSafeSurfaceIconCloseClick(element, surface.container).allowed,
+  );
+  return candidates.length === 1 ? candidates[0] : undefined;
+}
+
 export async function closeOwnedSurface(
   surface: SearchSurface,
   allowConfirmation: boolean,
@@ -287,7 +302,8 @@ export async function closeOwnedSurface(
               allowConfirmation: true,
             }).allowed,
         )
-      : undefined);
+      : undefined) ??
+    (allowConfirmation ? singleIconCloseControl(controls, surface) : undefined);
   if (!control) {
     // A modal without a close control is dismissed the standard way.
     const modal = surface.modal;
@@ -600,7 +616,12 @@ export async function executeReadonlySearch(
         ? searchDestination(currentSurface, query, submit)
         : undefined;
     let candidate:
-      | { element: HTMLElement; signature: string; evidence?: CatalogEvidence }
+      | {
+          element: HTMLElement;
+          signature: string;
+          evidence?: CatalogEvidence;
+          labelOnly?: true;
+        }
       | undefined;
     let selectedResults: ReturnType<typeof observeResults> | undefined;
     let structuredResults:
@@ -1191,6 +1212,7 @@ export async function executeReadonlySearch(
             selectedValue: candidate.evidence!.label,
             catalogSelection: {
               evidence: candidate.evidence!,
+              ...(candidate.labelOnly ? { labelOnly: true as const } : {}),
               verify: () => {
                 try {
                   if (

@@ -2,11 +2,13 @@
 
 > Topic: generic-autofill-search
 > Status: Current
-> Current: [CF-307 원래 이름 검색의 자동 선택 경계](../../raw/issues/CF-307/documents/generic-autofill-search.md)
-> History: [CF-98 실행과 실측 경계](../../raw/issues/CF-98/documents/generic-autofill-search.md); [CF-108 진단 보완](../../raw/issues/CF-108/documents/generic-autofill-search.md); [CF-110 제한된 CJ 주전공 계약](../../raw/issues/CF-110/documents/adr/110-verified-major-search.md); [CF-112 첫 대학교 학교명·국가 묶음](../../raw/issues/CF-112/documents/adr/112-verified-school-search.md); [CF-114 범용 자격증 검색](../../raw/issues/CF-114/documents/generic-certificate-search.md); [CF-129 혼합 학력 행과 레이어 검색](../../raw/issues/CF-129/documents/generic-autofill-search.md); [CF-117 공급자 중립 검색 결과 구조 해석](../../raw/issues/CF-117/documents/generic-search-result-interpretation.md); [CF-307 원래 이름 검색의 자동 선택 경계](../../raw/issues/CF-307/documents/generic-autofill-search.md)
-> Updated: 2026-10-21
+> Current: [CF-477 세부 정보 없는 결과 목록의 카탈로그 학교명 단일 일치 선택](../../raw/issues/CF-477/documents/generic-detailless-school-result.md)
+> History: [CF-98 실행과 실측 경계](../../raw/issues/CF-98/documents/generic-autofill-search.md); [CF-108 진단 보완](../../raw/issues/CF-108/documents/generic-autofill-search.md); [CF-110 제한된 CJ 주전공 계약](../../raw/issues/CF-110/documents/adr/110-verified-major-search.md); [CF-112 첫 대학교 학교명·국가 묶음](../../raw/issues/CF-112/documents/adr/112-verified-school-search.md); [CF-114 범용 자격증 검색](../../raw/issues/CF-114/documents/generic-certificate-search.md); [CF-129 혼합 학력 행과 레이어 검색](../../raw/issues/CF-129/documents/generic-autofill-search.md); [CF-117 공급자 중립 검색 결과 구조 해석](../../raw/issues/CF-117/documents/generic-search-result-interpretation.md); [CF-307 원래 이름 검색의 자동 선택 경계](../../raw/issues/CF-307/documents/generic-autofill-search.md); [CF-477 세부 정보 없는 결과 목록의 카탈로그 학교명 단일 일치 선택](../../raw/issues/CF-477/documents/generic-detailless-school-result.md)
+> Updated: 2026-11-18
 
 ## 현재 상태
+
+CF-477부터 범용 경로의 카탈로그 학교명 검색은 결과 목록의 어느 항목에도 세부 정보가 없으면 승인된 이름과 같은 결과가 정확히 1건일 때 이름만으로 선택한다. 2건 이상이면 선택하지 않고, 세부 정보가 하나라도 보이는 목록은 기존처럼 이름과 세부 정보를 모두 비교한다. 이름만으로 승인된 선택은 `labelOnly` 표시로 기입 계층의 유지 확인까지 전달한다. 정적 어댑터, committed-search, hidden-code 경로와 자격증·어학 시험 판정은 그대로다. 근거는 [CF-477 세부 정보 없는 결과 목록의 카탈로그 학교명 단일 일치 선택](../../raw/issues/CF-477/documents/generic-detailless-school-result.md)를 따른다. 아래 CF-307의 원래 이름 검색 경계는 그대로 유효하다.
 
 CF-307은 실행 시 프로필의 원래 이름만 비교하는 범용 DIRECT 검색에 한해 기본 선택한다. 실제 선택은 완결된 결과에서 정규화한 정확 일치가 하나일 때만 허용하고, 일치 없음·중복은 선택하지 않는다. 자격증 이름+등급 분리 재검색, catalog-match 검색어와 학교 소재지 별칭은 다른 이름을 선택할 수 있어 확인 필요에 남긴다. 기본 선택과 검색 성공은 별개이며 [현재 근거](../../raw/issues/CF-307/documents/generic-autofill-search.md)의 실행·검증 경계를 따른다.
 
@@ -35,5 +37,7 @@ CF-112는 승인된 CJ 첫 대학교 학교명에 한하여 최소 `school_name`
 설치 확장 실제 화면에서 주전공 표시값과 공개 결과 코드의 일치, 팝업 닫힘, 578ms 유지는 읽기 전용으로 관측했다. 결과 UI는 `입력 결과 확인`, 입력 완료 0개였고 내부 매핑·실행기 반환값은 직접 수집하지 않았다. 기존 `LLM_SUGGESTED`의 확인 필요 판정은 유지한다. 전공만 실행한 것도, 다른 입력값이 모두 불변인 것도 아니다. 서버 저장·제출과 전체 패널 성공은 검증하지 않았다.
 
 ## 변경 이유
+
+CF-477은 결과에 이름만 보여 주는 지원서에서 카탈로그로 고른 학교가 세부 정보를 비교할 방법이 없어 항상 실패하던 문제를, 사람 결정(2026-11-18)에 따라 범용 경로의 단일 이름 일치로 한정해 풀었다.
 
 CF-307은 원래 이름의 유일 정확 일치와 검토된 대체 검색 형태를 구분해 기본 선택 범위를 제한한다. CF-108의 진단과 미지원 범위는 [이전 근거](../../raw/issues/CF-108/documents/generic-autofill-search.md)로 보존한다. CJ 전공의 확인된 POST·결과 callback 구조를 별도 계약으로 제한한 [CF-110 ADR](../../raw/issues/CF-110/documents/adr/110-verified-major-search.md)은 유지한다. 학교 검색의 국가 결합 효과는 그 전공 계약의 자동 확장이 아니라 [승인된 CF-112 ADR](../../raw/issues/CF-112/documents/adr/112-verified-school-search.md)에 따라 독립적으로 검증한다. 이를 현재 topic 근거로 연결하되 일반 검색의 기본 거부 정책은 그대로다.

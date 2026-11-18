@@ -85,7 +85,9 @@ public final class ChoiceFieldResolver implements PromptSource {
     private final int fieldBatchSize;
     private final Semaphore permits;
     private final long permitTimeoutMs;
+    private final SectionAnswerCache answerCache;
 
+    /** Spring이 만드는 운영 분석기. 섹션 답 캐시는 여기에서만 붙는다. */
     @Autowired
     public ChoiceFieldResolver(
         ChoiceModel client,
@@ -94,7 +96,22 @@ public final class ChoiceFieldResolver implements PromptSource {
         @Value("${career-form.analysis.jev.section-concurrency:3}") int sectionConcurrency,
         @Value("${career-form.analysis.jev.field-batch-size:5}") int fieldBatchSize,
         @Value("${career-form.analysis.jev.max-concurrent:10}") int maxConcurrent,
-        @Value("${career-form.analysis.jev.timeout-ms:8000}") long permitTimeoutMs
+        @Value("${career-form.analysis.jev.timeout-ms:8000}") long permitTimeoutMs,
+        SectionAnswerCache answerCache
+    ) {
+        this(client, fields, categories, sectionConcurrency, fieldBatchSize, permits(maxConcurrent), permitTimeoutMs,
+            answerCache);
+    }
+
+    /** 캐시 없이 만든다. 평가 조립과 테스트가 쓴다. */
+    public ChoiceFieldResolver(
+        ChoiceModel client,
+        SupportedProfileFields fields,
+        SectionCategories categories,
+        int sectionConcurrency,
+        int fieldBatchSize,
+        int maxConcurrent,
+        long permitTimeoutMs
     ) {
         this(client, fields, categories, sectionConcurrency, fieldBatchSize, permits(maxConcurrent), permitTimeoutMs);
     }
@@ -108,6 +125,20 @@ public final class ChoiceFieldResolver implements PromptSource {
         Semaphore permits,
         long permitTimeoutMs
     ) {
+        this(client, fields, categories, sectionConcurrency, fieldBatchSize, permits, permitTimeoutMs,
+            SectionAnswerCache.disabled());
+    }
+
+    ChoiceFieldResolver(
+        ChoiceModel client,
+        SupportedProfileFields fields,
+        SectionCategories categories,
+        int sectionConcurrency,
+        int fieldBatchSize,
+        Semaphore permits,
+        long permitTimeoutMs,
+        SectionAnswerCache answerCache
+    ) {
         if (sectionConcurrency < 1 || fieldBatchSize < 1 || fieldBatchSize > 128 || permitTimeoutMs < 0) {
             throw new IllegalStateException("Invalid generic field analysis configuration");
         }
@@ -118,11 +149,13 @@ public final class ChoiceFieldResolver implements PromptSource {
         this.fieldBatchSize = fieldBatchSize;
         this.permits = permits;
         this.permitTimeoutMs = permitTimeoutMs;
+        this.answerCache = answerCache;
     }
 
     /**
      * 평가 실행용 배치 설정 사본. 클라이언트, 선택지, 서버 전체 동시 호출 상한(같은 Semaphore)과
-     * 대기 시간은 원본과 공유하고 섹션 병렬 수와 배치 크기만 바꾼다.
+     * 대기 시간은 원본과 공유하고 섹션 병렬 수와 배치 크기만 바꾼다. 섹션 답 캐시는 넘기지 않는다.
+     * 평가는 같은 입력을 되풀이해 공급자의 흔들림을 재므로 저장한 답이 나오면 안 된다.
      */
     public ChoiceFieldResolver withBatching(int sectionConcurrency, int fieldBatchSize) {
         return new ChoiceFieldResolver(client, fields, categories, sectionConcurrency, fieldBatchSize, permits,
@@ -131,7 +164,7 @@ public final class ChoiceFieldResolver implements PromptSource {
 
     /**
      * 평가 실행용 공급자 사본. 질문 구성, 배치, 동시 호출 상한(같은 Semaphore)과 대기 시간은 원본과 같고
-     * 모델 호출만 {@code model}로 보낸다.
+     * 모델 호출만 {@code model}로 보낸다. 섹션 답 캐시는 넘기지 않는다.
      */
     public ChoiceFieldResolver withModel(ChoiceModel model, int sectionConcurrency, int fieldBatchSize) {
         return new ChoiceFieldResolver(model, fields, categories, sectionConcurrency, fieldBatchSize, permits,
@@ -183,22 +216,35 @@ public final class ChoiceFieldResolver implements PromptSource {
         return new Resolution(mappings, modelCalls.get());
     }
 
+    /**
+     * 섹션 하나를 공급자에 묻는다. 캐시가 붙어 있으면 공급자에 보낼 내용의 키로 먼저 찾고, 모든 질문에 답을 받았을 때만
+     * 넣는다. 공급자 실패, 허가 대기 초과, 토큰 한도로 답이 빠진 섹션을 넣으면 그 빈 결과가 기한까지 굳는다.
+     */
     private Map<String, Mapping> resolveSection(SectionWork work, AtomicInteger modelCalls) {
-        Map<String, ChoiceModel.Judgement> answers = new HashMap<>();
-        try {
-            for (int start = 0; start < work.questions().size(); start += fieldBatchSize) {
-                List<Question> batch = List.copyOf(work.questions()
-                    .subList(start, Math.min(start + fieldBatchSize, work.questions().size())));
-                ask(work, batch, answers, modelCalls);
+        String cacheKey = answerCache.enabled()
+            ? answerCache.key(client.model(), state(work, work.questions(), false), work.criteria())
+            : null;
+        Map<String, ChoiceModel.Judgement> cached = answerCache.find(cacheKey);
+        Map<String, ChoiceModel.Judgement> answers = cached == null ? new HashMap<>() : cached;
+        if (cached == null) {
+            try {
+                for (int start = 0; start < work.questions().size(); start += fieldBatchSize) {
+                    List<Question> batch = List.copyOf(work.questions()
+                        .subList(start, Math.min(start + fieldBatchSize, work.questions().size())));
+                    ask(work, batch, answers, modelCalls);
+                }
             }
-        }
-        catch (ResolverException | PermitUnavailable exception) {
-            log.warn("GENERIC_FIELDS_SECTION_UNAVAILABLE reason={} fields={}",
-                exception.getClass().getSimpleName(), work.assignment().size());
-            Map<String, Mapping> unavailable = new LinkedHashMap<>();
-            work.assignment().keySet().forEach(candidateId -> unavailable.put(candidateId,
-                new Mapping(null, 0.0, work.confirmed(), Reason.LLM_UNAVAILABLE)));
-            return unavailable;
+            catch (ResolverException | PermitUnavailable exception) {
+                log.warn("GENERIC_FIELDS_SECTION_UNAVAILABLE reason={} fields={}",
+                    exception.getClass().getSimpleName(), work.assignment().size());
+                Map<String, Mapping> unavailable = new LinkedHashMap<>();
+                work.assignment().keySet().forEach(candidateId -> unavailable.put(candidateId,
+                    new Mapping(null, 0.0, work.confirmed(), Reason.LLM_UNAVAILABLE)));
+                return unavailable;
+            }
+            if (work.questions().stream().allMatch(question -> answers.containsKey(question.id()))) {
+                answerCache.store(cacheKey, answers);
+            }
         }
         Map<String, Mapping> mappings = new LinkedHashMap<>();
         work.assignment().forEach((candidateId, questionId) -> {
