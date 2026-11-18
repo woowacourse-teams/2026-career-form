@@ -12,6 +12,10 @@ type LayerOptions = {
   commit?: boolean;
   twoDirect?: boolean;
   twoConfirm?: boolean;
+  /** Ordered search values; the first equals the expected value. */
+  searchValues?: readonly string[];
+  /** A visible zero-result notice beside the list. */
+  notice?: boolean;
   /** Mark the confirmation as new after the direct input opens. */
   catalogMatch?: ApprovedCatalogMatch;
 };
@@ -46,6 +50,7 @@ async function zeroResultLayer(options: LayerOptions = {}) {
           </div>
           <div class="search-box">
             <ul class="search-list"></ul>
+            ${options.notice ? "<p>검색 결과가 없습니다.</p>" : ""}
             <div data-entry-host>
               <div class="search-empty">찾으시는 결과가 없나요?
                 <button type="button" data-direct>직접입력</button>
@@ -134,6 +139,7 @@ async function zeroResultLayer(options: LayerOptions = {}) {
     expectedValue: VALUE,
     expectedCurrentValue: "",
     ...(options.catalogMatch ? { catalogMatch: options.catalogMatch } : {}),
+    ...(options.searchValues ? { searchValues: options.searchValues } : {}),
     decisionProvider: async (request) => ({
       schemaVersion: 2,
       snapshotId: request.snapshotId,
@@ -181,6 +187,33 @@ describe("generic zero-result layer answered by direct entry", () => {
       status: "selected",
     });
     expect(qa.actions).toEqual({ search: 1, direct: 1, confirm: 1 });
+    expect(qa.target.value).toBe(VALUE);
+  });
+
+  it("writes through direct entry when the page replaced the query before a second attempt", async () => {
+    const qa = await zeroResultLayer({ searchValues: [VALUE, "테스트자격"] });
+    expect(qa.result, JSON.stringify(qa.result)).toMatchObject({
+      status: "selected",
+    });
+    expect(qa.actions).toEqual({ search: 1, direct: 1, confirm: 1 });
+    expect(qa.target.value).toBe(VALUE);
+  });
+
+  it("runs the second attempt before direct entry while the query stays connected", async () => {
+    // An approved catalog value searches its query, then its plain alias.
+    const qa = await zeroResultLayer({
+      commit: false,
+      notice: true,
+      catalogMatch: {
+        kind: "certificate",
+        query: VALUE,
+        labels: [VALUE, "테스트자격"],
+      },
+    });
+    expect(qa.result, JSON.stringify(qa.result)).toMatchObject({
+      status: "selected",
+    });
+    expect(qa.actions).toEqual({ search: 2, direct: 1, confirm: 1 });
     expect(qa.target.value).toBe(VALUE);
   });
 

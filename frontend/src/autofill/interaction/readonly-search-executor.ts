@@ -866,7 +866,10 @@ export async function executeReadonlySearch(
           args.genericPopupRecovery &&
           error instanceof SearchFailure &&
           error.reason === "search_results_not_found" &&
-          attemptIndex + 1 === attempts.length &&
+          // The last attempt, or one the retry branch above cannot follow
+          // with another search because the page replaced the query input.
+          (attemptIndex + 1 === attempts.length ||
+            !(nativeFormBinding || query?.isConnected)) &&
           // A zero-result notice still needs an approved catalog value; a
           // list the page left untouched beside one direct-entry control is
           // the page's own answer for any value.
