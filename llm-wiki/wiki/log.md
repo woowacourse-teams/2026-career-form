@@ -1192,3 +1192,10 @@
 - 승인한 후보 2개를 [CF-479 bundle](../raw/issues/CF-479/manifest.md)에 payload 세 개로 기록했다. Greeting 지원서 화면 가져오기 제거와 남긴 공유 모듈, 온보딩 다섯 단계와 제거된 단계의 저장 위치 처리, Greeting 가져오기 이벤트 제거다.
 - [Greeting 프로필 가져오기](topics/greeting-profile-import.md), [랜딩과 온보딩](topics/landing-onboarding.md), [사용 통계](topics/usage-analytics.md)의 Current를 CF-479로 바꾸고 앞선 근거를 History에 남겼으며 색인을 갱신했다.
 - 실제 지원값, 계정, 세션, 대화 전문은 저장하지 않았다.
+
+## [2026-11-18] ingest | CF-480 이력서 가져오기 화면 변경
+- Approval-Digest: b9ff638175d31eb6327967418852c23a9ebbcfaf808d26d479d77e6d4cab9f47
+- Source-Revision: 7bdc957
+- 승인한 후보 3개를 [CF-480 bundle](../raw/issues/CF-480/manifest.md)에 payload 두 개로 기록했다. PDF 조건 안내와 전송 안내 단계 제거, 실패 화면 통일과 그림 주소 전달, develop에서도 실패하는 native-form 정책 테스트 관찰이다.
+- [이력서 파일로 프로필 가져오기](topics/resume-file-import.md)와 [프론트 브라우저 테스트](topics/frontend-browser-testing.md)의 Current를 CF-480으로 바꾸고 앞선 근거를 History에 남겼으며 색인을 갱신했다.
+- 실제 지원값, 계정, 세션, 대화 전문은 저장하지 않았다.

@@ -2,11 +2,13 @@
 
 > Topic: resume-file-import
 > Status: Current
-> Current: [CF-470 이력서 파일로 프로필 가져오기](../../raw/issues/CF-470/documents/resume-file-import.md)
-> History: [CF-470 이력서 파일로 프로필 가져오기](../../raw/issues/CF-470/documents/resume-file-import.md)
-> Updated: 2026-11-17
+> Current: [CF-480 PDF 조건 안내, 전송 안내 단계 제거, 실패 화면 통일](../../raw/issues/CF-480/documents/resume-import-screens.md)
+> History: [CF-470 이력서 파일로 프로필 가져오기](../../raw/issues/CF-470/documents/resume-file-import.md); [CF-480 PDF 조건 안내, 전송 안내 단계 제거, 실패 화면 통일](../../raw/issues/CF-480/documents/resume-import-screens.md)
+> Updated: 2026-11-18
 
 ## 현재 상태
+
+CF-480부터 진입 화면의 이력서 파일 줄에 "스캔 PDF 불가"가 보이고, 전송 안내 단계가 없다. 글자를 읽으면 바로 서버 변환을 시작하고 진행 화면에 "글자만 전송 · 저장 안 함"을 보인다. 모든 실패는 카피바라 그림을 쓰는 한 화면으로 보이며, 글자를 못 읽은 PDF만 "분석하지 못했어요"와 안내 두 줄을 쓴다. 가져오기 출처는 CF-479부터 이력서 파일 하나다. 근거는 [CF-480 PDF 조건 안내, 전송 안내 단계 제거, 실패 화면 통일](../../raw/issues/CF-480/documents/resume-import-screens.md)를 따른다. 아래의 출처 고르기와 전송 안내 설명은 더 유효하지 않다.
 
 패널의 `프로필 가져오기`는 출처 고르기(지원서 화면, 이력서 파일)로 시작하고, 이력서 파일은 OS 파일 창을 바로 연다. 온보딩 이름 단계 카드에도 같은 버튼이 있고, 온보딩 Greeting 단계 장면은 출처 고르기에서 지원서 화면을 누르는 흐름을 보여 준다.
 
@@ -19,5 +21,7 @@ pdf.js는 pdfjs-dist legacy 빌드 두 파일과 packed CMap 전체를 확장에
 서버 쪽 변환 계약과 검증 규칙은 #469에서 정한다.
 
 ## 변경 이유
+
+CF-480은 사람 결정(2026-11-18)에 따라 PDF 조건을 고르기 전에 알리고, 값어치가 작은 확인 클릭을 없애고, 실패 화면에서 다음 행동을 알 수 있게 했다.
 
 첫 사용자가 이미 가진 이력서 문서로 프로필 초안을 만들어 첫 등록을 빠르게 하려고 더했다(CF-470). 표준 CMap 이름만 가진 한글 PDF도 읽도록 CMap 전체를 넣었고, 일 없이 연월만 적은 이력서가 많아 연월 날짜를 1일로 채우고 표시하기로 2026-11-17 사용자가 결정했다.
