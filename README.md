@@ -5,25 +5,34 @@
 # 2026 Career Form
 
 지원서 입력, 이제 한 번만.<br>
-내 정보를 등록해 두면 채용 지원서를 자동으로 채워 주는 [Chrome 확장 프로그램](https://chromewebstore.google.com/detail/career-form/lneeceajpkjfffibjoajdkfelhoojbam)이에요.
+내 정보를 등록해 두면 채용 지원서를 자동으로 채워 주는 <a href="https://chromewebstore.google.com/detail/career-form/lneeceajpkjfffibjoajdkfelhoojbam"><img src="https://cdn.simpleicons.org/googlechrome" height="16" alt=""> <b>Chrome 확장 프로그램</b></a>이에요.
+
+[![Chrome 웹스토어에서 설치하기](https://img.shields.io/badge/Add_to_Chrome-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/career-form/lneeceajpkjfffibjoajdkfelhoojbam)
+
+<br>
 
 | [사용 방법](#사용-방법) | [주요 기능](#주요-기능) | [기술 스택](#기술-스택) | [인프라 구성도](#인프라-구성도) | [팀원](#팀원) |
 | :---: | :---: | :---: | :---: | :---: |
+
+<br>
 
 ## 사용 방법
 
 | 1. 설치 | 2. 프로필 등록 | 3. 자동 기입 | 4. 확인·제출 |
 | :---: | :---: | :---: | :---: |
-| [Chrome 웹스토어](https://chromewebstore.google.com/detail/career-form/lneeceajpkjfffibjoajdkfelhoojbam)에서<br>Career Form 추가 | **프로필 관리**에서<br>내 정보 입력 | 지원서에서 패널을 열고<br>**자동 기입** 클릭 | **확인 필요** 칸을 채우고<br>저장·제출은 직접 |
+| [웹스토어](https://chromewebstore.google.com/detail/career-form/lneeceajpkjfffibjoajdkfelhoojbam)에서<br>Career Form 추가 | 프로필 관리에서<br>내 정보 입력 | 지원서에서 패널 열고<br>자동 기입 클릭 | 확인 필요 칸 채우고<br>저장·제출은 직접 |
 
-패널은 툴바의 Career Form 아이콘이나 `Alt+Shift+C`(Mac `⌥⇧C`)로 열어요.<br>
-시작 안내에서 관심 직무를 고르면 새 공고 알림도 받을 수 있어요.
+<sub>패널은 툴바 아이콘이나 <code>Alt+Shift+C</code>(Mac <code>⌥⇧C</code>)로 열어요 · 관심 직무를 고르면 새 공고 알림도 받아요</sub>
+
+<br>
 
 ## 주요 기능
 
 <picture><source media="(prefers-color-scheme: dark)" srcset=".github/images/feature-1-profile-dark.png"><img src=".github/images/feature-1-profile.png" width="48%" alt="내 정보는 한 번만 등록. 자주 쓰는 지원 정보를 프로필에 모아 둬요"></picture> <picture><source media="(prefers-color-scheme: dark)" srcset=".github/images/feature-2-import-dark.png"><img src=".github/images/feature-2-import.png" width="48%" alt="써 둔 지원서에서 가져오기. 예전에 쓴 지원서의 내용을 프로필로 옮겨요"></picture>
 <picture><source media="(prefers-color-scheme: dark)" srcset=".github/images/feature-3-autofill-dark.png"><img src=".github/images/feature-3-autofill.png" width="48%" alt="지원서는 버튼 한 번으로. AI가 지원서 칸을 읽고 내 정보로 채워요"></picture> <picture><source media="(prefers-color-scheme: dark)" srcset=".github/images/feature-4-result-dark.png"><img src=".github/images/feature-4-result.png" width="48%" alt="결과는 한눈에. 확실하지 않은 칸은 채우지 않고 따로 알려요"></picture>
 <picture><source media="(prefers-color-scheme: dark)" srcset=".github/images/feature-5-submit-dark.png"><img src=".github/images/feature-5-submit.png" width="48%" alt="저장·제출은 내가 직접. 확장은 저장·제출 버튼을 누르지 않아요"></picture> <picture><source media="(prefers-color-scheme: dark)" srcset=".github/images/feature-6-alert-dark.png"><img src=".github/images/feature-6-alert.png" width="48%" alt="새 공고가 뜨면 바로 알림. 저장한 공고는 마감 전에 다시 알려요"></picture>
+
+<br>
 
 ## 기술 스택
 
@@ -37,11 +46,15 @@
 | **Test** | ![Vitest](https://img.shields.io/badge/Vitest-30363D?style=flat&logo=vitest&logoColor=6E9F18) ![Playwright](https://img.shields.io/badge/Playwright-30363D?style=flat) ![JUnit](https://img.shields.io/badge/JUnit-30363D?style=flat&logo=junit5&logoColor=25A162) |
 | **External** | ![FCM Web Push](https://img.shields.io/badge/FCM_Web_Push-30363D?style=flat&logo=firebase&logoColor=FFCA28) ![도로명주소 API](https://img.shields.io/badge/%EB%8F%84%EB%A1%9C%EB%AA%85%EC%A3%BC%EC%86%8C_API-30363D?style=flat) |
 
+<br>
+
 ## 인프라 구성도
 
 ![커리어폼 인프라 구성도](.github/images/infra-architecture.webp)
 
 </div>
+
+<br>
 
 ## 팀원
 
