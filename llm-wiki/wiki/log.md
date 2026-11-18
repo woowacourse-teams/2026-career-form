@@ -1199,3 +1199,10 @@
 - 승인한 후보 3개를 [CF-480 bundle](../raw/issues/CF-480/manifest.md)에 payload 두 개로 기록했다. PDF 조건 안내와 전송 안내 단계 제거, 실패 화면 통일과 그림 주소 전달, develop에서도 실패하는 native-form 정책 테스트 관찰이다.
 - [이력서 파일로 프로필 가져오기](topics/resume-file-import.md)와 [프론트 브라우저 테스트](topics/frontend-browser-testing.md)의 Current를 CF-480으로 바꾸고 앞선 근거를 History에 남겼으며 색인을 갱신했다.
 - 실제 지원값, 계정, 세션, 대화 전문은 저장하지 않았다.
+
+## [2026-11-19] ingest | CF-488 범용 검색 0건의 직접입력 신호 인식
+- Approval-Digest: b84a92a81f7c8d86c9e4a216a3c2242b701e35850f4759e9d84193e52a0bab0c
+- Source-Revision: c32b32b
+- 사람이 2026-11-19 "llm wiki는 자동승인으로 해"라고 말해 자동 승인으로 확정한 후보 6개를 [CF-488 bundle](../raw/issues/CF-488/manifest.md)에 payload 하나로 기록했다. 직접입력 신호의 0건 인식, 직접입력 확인 버튼 범위, 카탈로그 조건, 마지막 시도 판정, 행 저장 연쇄 관찰과 진단 방법이다.
+- [범용 자동 기입 검색 표면](topics/generic-autofill-search.md)의 Current를 CF-488로 바꾸고 앞선 근거를 History에 남겼으며 색인을 갱신했다.
+- 실제 지원값, 계정, 세션, 주소, 회사 이름, 대화 전문은 저장하지 않았다.
