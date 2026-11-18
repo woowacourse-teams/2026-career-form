@@ -178,6 +178,46 @@ describe("catalog search approval and receipts", () => {
     ).toMatchObject({ failureCode: "VALUE_NOT_RETAINED" });
   });
   it.each([true, false])(
+    "retains a grade-appended certificate selection only when the entry has that grade (%s)",
+    async (hasGrade) => {
+      const test = catalogSetup();
+      const lookup = test.registry.lookupField(test.item.candidateId);
+      if (lookup.status !== "blocked")
+        throw new Error("readonly target absent");
+      const eligibility = observeReadonlySearch(lookup.handle);
+      if (eligibility.status !== "eligible")
+        throw new Error("target not eligible");
+      test.item.searchValuePlan = {
+        profileEntryId: test.item.profileEntryId!,
+        originalName: test.item.profileValue!,
+        ...(hasGrade ? { grade: "1급" } : {}),
+        forms: [{ kind: "original-exact", name: test.item.profileValue! }],
+      };
+      const label = `${test.item.catalogMatch!.labels[0]!} 1급`;
+      vi.mocked(executeReadonlySearch).mockImplementation(async () => {
+        test.target.value = label;
+        return {
+          status: "selected",
+          targetCandidateId: test.item.candidateId,
+          identity: eligibility.identity,
+          selectedValue: label,
+          catalogSelection: {
+            evidence: { label },
+            verify: () => test.target.value === label,
+          },
+        };
+      });
+      await executeApprovedSearchWrites(test);
+      const args = vi.mocked(executeReadonlySearch).mock.calls[0]![0];
+      expect(args.catalogGrade).toBe(hasGrade ? "1급" : undefined);
+      expect(test.results[0]).toMatchObject(
+        hasGrade
+          ? { status: "written" }
+          : { status: "skipped", failureCode: "VALUE_NOT_RETAINED" },
+      );
+    },
+  );
+  it.each([true, false])(
     "retains a generic school selection without campus evidence only when it was approved by label alone (%s)",
     async (labelOnly) => {
       const test = catalogSetup();
@@ -382,7 +422,10 @@ describe("approved search batch boundaries", () => {
     });
 
     expect(stopped).toBe(false);
-    expect(test.results[1]).toMatchObject({ candidateId: "field-1", status: "written" });
+    expect(test.results[1]).toMatchObject({
+      candidateId: "field-1",
+      status: "written",
+    });
   });
 
   it("continues after a generic date failure when only an earlier calendar widget unmounted", async () => {
@@ -396,8 +439,14 @@ describe("approved search batch boundaries", () => {
     const years = Array.from({ length: 10 }, (_, i) => 2016 + i)
       .map((year) => `<option value="${year}">${year}</option>`)
       .join("");
-    const months = Array.from({ length: 12 }, (_, i) => `<option value="${i}">${i + 1}월</option>`).join("");
-    const days = Array.from({ length: 30 }, (_, i) => `<button type="button">${i + 1}</button>`).join("");
+    const months = Array.from(
+      { length: 12 },
+      (_, i) => `<option value="${i}">${i + 1}월</option>`,
+    ).join("");
+    const days = Array.from(
+      { length: 30 },
+      (_, i) => `<button type="button">${i + 1}</button>`,
+    ).join("");
     document.body.insertAdjacentHTML(
       "beforeend",
       `<div id="old-calendar"><select>${years}</select><select>${months}</select><div>${days}</div></div>`,
@@ -422,7 +471,10 @@ describe("approved search batch boundaries", () => {
     });
 
     expect(stopped).toBe(false);
-    expect(test.results[1]).toMatchObject({ candidateId: "field-1", status: "written" });
+    expect(test.results[1]).toMatchObject({
+      candidateId: "field-1",
+      status: "written",
+    });
   });
 
   it("stops later ordinary writes after a search changes the page without a confirmed result", async () => {

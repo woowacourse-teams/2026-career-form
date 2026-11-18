@@ -191,6 +191,11 @@ export interface ExecuteReadonlySearchArgs {
    * attempt also accepts its exact result and prefers it over the plain name.
    */
   gradeAppendedValue?: string;
+  /**
+   * Profile grade of a catalog-approved certificate. Results named exactly as
+   * an approved label plus this grade are also accepted and preferred.
+   */
+  catalogGrade?: string;
   /** Local approval only; never serialized in role requests. */
   catalogMatch?: import("../profile/catalog-match").ApprovedCatalogMatch;
   decisionProvider?: InteractionDecisionProvider;

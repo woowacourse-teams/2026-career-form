@@ -20,6 +20,8 @@ type LayerOptions = {
   resultsFor?: (query: string) => string;
   /** Expected profile value; defaults to VALUE. */
   expected?: string;
+  /** Profile grade of a catalog-approved certificate. */
+  catalogGrade?: string;
   /** Grade-appended exact label also accepted on the name search. */
   gradeAppendedValue?: string;
   /** Mark the confirmation as new after the direct input opens. */
@@ -154,6 +156,7 @@ async function zeroResultLayer(options: LayerOptions = {}) {
     expectedCurrentValue: "",
     ...(options.catalogMatch ? { catalogMatch: options.catalogMatch } : {}),
     ...(options.searchValues ? { searchValues: options.searchValues } : {}),
+    ...(options.catalogGrade ? { catalogGrade: options.catalogGrade } : {}),
     ...(options.gradeAppendedValue
       ? { gradeAppendedValue: options.gradeAppendedValue }
       : {}),
@@ -341,6 +344,82 @@ describe("generic zero-result layer answered by direct entry", () => {
         status: "selected",
       });
       expect(qa.actions).toEqual({ search: 1, direct: 1, confirm: 1 });
+      expect(qa.target.value).toBe(NAME);
+    });
+  });
+
+  describe("catalog-approved grade-appended name", () => {
+    const NAME = "테스트자격";
+    const row = (label: string) =>
+      `<li><a href="javascript:;">${label}</a></li>`;
+    const approved = (grade?: string) => ({
+      expected: NAME,
+      catalogMatch: {
+        kind: "certificate" as const,
+        query: NAME,
+        labels: [NAME],
+      },
+      ...(grade ? { catalogGrade: grade } : {}),
+    });
+
+    it("selects the exact grade-appended result among grade variants", async () => {
+      const qa = await zeroResultLayer({
+        ...approved("1급"),
+        results: row("테스트자격 1급") + row("테스트자격 2급"),
+      });
+      expect(qa.result, JSON.stringify(qa.result)).toMatchObject({
+        status: "selected",
+        selectedValue: "테스트자격 1급",
+        catalogSelection: { evidence: { label: "테스트자격 1급" } },
+      });
+      expect(qa.target.value).toBe("테스트자격 1급");
+      expect(qa.actions.direct).toBe(0);
+    });
+
+    it("prefers the grade-appended result over the plain label result", async () => {
+      const qa = await zeroResultLayer({
+        ...approved("1급"),
+        results: row("테스트자격") + row("테스트자격 1급"),
+      });
+      expect(qa.result, JSON.stringify(qa.result)).toMatchObject({
+        status: "selected",
+      });
+      expect(qa.target.value).toBe("테스트자격 1급");
+    });
+
+    it("leaves the field for review when no variant has the profile grade", async () => {
+      const qa = await zeroResultLayer({
+        ...approved("3급"),
+        results: row("테스트자격 1급") + row("테스트자격 2급"),
+      });
+      expect(qa.result).toMatchObject({
+        status: "failed",
+        reason: "search_results_not_found",
+      });
+      expect(qa.actions.direct).toBe(0);
+      expect(qa.target.value).toBe("");
+    });
+
+    it("does not accept graded variants when the profile has no grade", async () => {
+      const qa = await zeroResultLayer({
+        ...approved(),
+        results: row("테스트자격 1급") + row("테스트자격 2급"),
+      });
+      expect(qa.result).toMatchObject({
+        status: "failed",
+        reason: "search_results_not_found",
+      });
+      expect(qa.target.value).toBe("");
+    });
+
+    it("still selects the plain approved label when the profile has no grade", async () => {
+      const qa = await zeroResultLayer({
+        ...approved(),
+        results: row("테스트자격") + row("테스트자격 1급"),
+      });
+      expect(qa.result, JSON.stringify(qa.result)).toMatchObject({
+        status: "selected",
+      });
       expect(qa.target.value).toBe(NAME);
     });
   });

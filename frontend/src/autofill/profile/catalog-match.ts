@@ -63,6 +63,39 @@ export function isApprovedCatalogMatch(
     : !("requiredDetail" in value);
 }
 
+/**
+ * Exact labels that append the profile grade to an approved certificate name:
+ * the query and its plain (no parenthesis) aliases that do not already end with
+ * the grade. Empty for any other kind or an empty grade.
+ */
+export function gradeAppendedCatalogLabels(
+  match: ApprovedCatalogMatch,
+  grade: string,
+): readonly string[] {
+  const suffix = grade.normalize("NFKC").replace(/\s+/g, " ").trim();
+  if (match.kind !== "certificate" || !suffix) return [];
+  const bases = [
+    match.query,
+    ...match.labels.filter((label) => !/[()]/.test(label)),
+  ];
+  const labels = bases
+    .filter(
+      (base) =>
+        !normalizedCatalogLabel(base).endsWith(normalizedCatalogLabel(suffix)),
+    )
+    .map(
+      (base) =>
+        `${base.normalize("NFKC").replace(/\s+/g, " ").trim()} ${suffix}`,
+    );
+  return labels.filter(
+    (label, index) =>
+      labels.findIndex(
+        (other) =>
+          normalizedCatalogLabel(other) === normalizedCatalogLabel(label),
+      ) === index,
+  );
+}
+
 export function matchesApprovedCatalog(
   match: ApprovedCatalogMatch,
   evidence: CatalogEvidence,

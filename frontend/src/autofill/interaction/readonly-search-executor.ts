@@ -64,7 +64,9 @@ import { queryCandidates } from "./readonly-search-popup";
 import { resultActivation } from "./search-result-structure";
 import { bindStructuredEffects } from "./search-result-effects";
 import {
+  gradeAppendedCatalogLabels,
   isApprovedCatalogMatch,
+  type ApprovedCatalogMatch,
   type CatalogEvidence,
 } from "../profile/catalog-match";
 
@@ -426,18 +428,45 @@ export async function executeReadonlySearch(
     trace("검색 대상 확인", { initialValue, values, attempts, target });
     const matchingValues = args.searchValues ? attempts : values;
     const gradeValue = args.searchValues ? args.gradeAppendedValue : undefined;
-    // Result text the last exact lookup matched; set by pickExact.
+    // Approved labels plus the profile grade, only for a catalog certificate.
+    const gradedCatalog: ApprovedCatalogMatch | undefined =
+      catalogMatch && args.catalogGrade
+        ? (() => {
+            const labels = gradeAppendedCatalogLabels(
+              catalogMatch,
+              args.catalogGrade,
+            );
+            return labels.length
+              ? { ...catalogMatch, query: labels[0]!, labels }
+              : undefined;
+          })()
+        : undefined;
+    // Result text and approval the last exact lookup matched; set by pickExact.
     let matchedText = "";
+    let matchedCatalog = catalogMatch;
+    // The approval the selected result matched; revalidation must use the same.
+    let selectionCatalog = catalogMatch;
     const pickExact = <T>(
-      find: (expected: readonly string[]) => T | undefined,
+      find: (
+        expected: readonly string[],
+        catalog: ApprovedCatalogMatch | undefined,
+      ) => T | undefined,
+      plain: readonly string[],
       searchText: string,
     ): T | undefined => {
       matchedText = searchText;
-      if (gradeValue && normalized(gradeValue) !== normalized(searchText)) {
+      matchedCatalog = catalogMatch;
+      const preferred = gradedCatalog
+        ? { expected: [searchText], catalog: gradedCatalog, text: searchText }
+        : gradeValue && normalized(gradeValue) !== normalized(searchText)
+          ? { expected: [gradeValue], catalog: catalogMatch, text: gradeValue }
+          : undefined;
+      if (preferred) {
         try {
-          const hit = find([gradeValue]);
+          const hit = find(preferred.expected, preferred.catalog);
           if (hit) {
-            matchedText = gradeValue;
+            matchedText = preferred.text;
+            matchedCatalog = preferred.catalog;
             return hit;
           }
         } catch (error) {
@@ -448,7 +477,7 @@ export async function executeReadonlySearch(
             throw error;
         }
       }
-      return find([searchText]);
+      return find(plain, catalogMatch);
     };
     const matches = (value: string) =>
       matchingValues.some(
@@ -794,11 +823,13 @@ export async function executeReadonlySearch(
                 attemptValues,
               )
             : pickExact(
-                (expected) => results.exact(expected, catalogMatch),
+                (expected, catalog) => results.exact(expected, catalog),
+                attemptValues,
                 searchText,
               );
         }, "result_pending");
         selectedSearchText = candidate ? matchedText : searchText;
+        if (candidate) selectionCatalog = matchedCatalog;
         trace("일치 결과 발견", candidate?.element);
         break;
       } catch (error) {
@@ -846,10 +877,12 @@ export async function executeReadonlySearch(
           surfaceGuard();
           const structured = structuredResults;
           candidate = pickExact(
-            (expected) => structured.exact(expected, catalogMatch),
+            (expected, catalog) => structured.exact(expected, catalog),
+            attemptValues,
             searchText,
           );
           selectedSearchText = matchedText;
+          selectionCatalog = matchedCatalog;
           break;
         }
         if (
@@ -1084,8 +1117,8 @@ export async function executeReadonlySearch(
       : querylessRegion
         ? regionListSelection(currentSurface, canonicalFieldKey, selectedValues)
         : structuredResults
-          ? structuredResults.exact(selectedValues, catalogMatch)
-          : selectedResults?.exact(selectedValues, catalogMatch);
+          ? structuredResults.exact(selectedValues, selectionCatalog)
+          : selectedResults?.exact(selectedValues, selectionCatalog);
     if (
       !latest ||
       latest.element !== candidate.element ||
@@ -1109,7 +1142,7 @@ export async function executeReadonlySearch(
       throw new SearchFailure("result_stale");
     const structuredMatch = structuredResults?.exact(
       selectedValues,
-      catalogMatch,
+      selectionCatalog,
     );
     const structuredEffects = structuredMatch
       ? bindStructuredEffects(

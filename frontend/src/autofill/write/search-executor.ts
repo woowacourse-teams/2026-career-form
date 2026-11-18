@@ -31,7 +31,10 @@ import type { ApprovedWriteResult } from "./executor";
 import type { SearchFollowUpControl } from "../interaction/search-follow-up";
 import type { WriteFailureCode } from "./failure";
 import { catalogApprovalForItem } from "../profile/catalog-identity";
-import { matchesApprovedCatalog } from "../profile/catalog-match";
+import {
+  gradeAppendedCatalogLabels,
+  matchesApprovedCatalog,
+} from "../profile/catalog-match";
 import {
   rememberCatalogSelection,
   retainedCatalogSelection,
@@ -850,6 +853,14 @@ export async function executeApprovedSearchWrites({
     const gradeAppendedValue = localSearchPlan?.forms.find(
       (form) => form.kind === "name-with-grade",
     )?.name;
+    const catalogGrade = catalogMatch
+      ? gradeAppendedCatalogLabels(
+          catalogMatch,
+          item.searchValuePlan?.grade ?? "",
+        ).length
+        ? item.searchValuePlan?.grade
+        : undefined
+      : undefined;
     const result = await executeReadonlySearch({
       document: input.ownerDocument,
       registry,
@@ -865,6 +876,7 @@ export async function executeApprovedSearchWrites({
         ? { searchValues: localSearchPlan.forms.map((form) => form.name) }
         : {}),
       ...(gradeAppendedValue ? { gradeAppendedValue } : {}),
+      ...(catalogGrade ? { catalogGrade } : {}),
       expectedCurrentValue,
       decisionProvider: decisionSession,
       assertCurrent: currentApproval,
@@ -892,7 +904,20 @@ export async function executeApprovedSearchWrites({
                     evidence,
                   ),
               }
-            : {}),
+            : catalogGrade
+              ? {
+                  // A grade-appended label of the approved name is also valid.
+                  matchesEvidence: (match, evidence) =>
+                    matchesApprovedCatalog(match, evidence) ||
+                    matchesApprovedCatalog(
+                      {
+                        ...match,
+                        labels: gradeAppendedCatalogLabels(match, catalogGrade),
+                      },
+                      evidence,
+                    ),
+                }
+              : {}),
           verify: () => {
             const current = targetIsCurrent(
               input.ownerDocument,
