@@ -36,7 +36,11 @@ import {
   isIconSearchSubmit,
 } from "./search-controls";
 import { observeResults, resultBaseline } from "./search-results";
-import { observeQueryCommit } from "./search-query-commit";
+import {
+  observeQueryCommit,
+  observeQueryReflection,
+} from "./search-query-commit";
+import { directEntryControls } from "./local-result-readiness";
 import {
   bindSelectionEffects,
   verifyRetainedSelectionEffects,
@@ -659,6 +663,9 @@ export async function executeReadonlySearch(
         args.genericPopupRecovery === true && query
           ? observeQueryCommit(currentSurface, query, searchText)
           : undefined,
+        args.genericPopupRecovery === true && query
+          ? observeQueryReflection(currentSurface, query, searchText)
+          : undefined,
       );
       selectedResults = results;
       if (query) {
@@ -857,10 +864,16 @@ export async function executeReadonlySearch(
         }
         if (
           args.genericPopupRecovery &&
-          catalogMatch &&
           error instanceof SearchFailure &&
           error.reason === "search_results_not_found" &&
-          attemptIndex + 1 === attempts.length &&
+          // The last attempt, or one the retry branch above cannot follow
+          // with another search because the page replaced the query input.
+          (attemptIndex + 1 === attempts.length ||
+            !(nativeFormBinding || query?.isConnected)) &&
+          // A zero-result notice still needs an approved catalog value; a
+          // list the page left untouched beside one direct-entry control is
+          // the page's own answer for any value.
+          (catalogMatch || results.zeroByDirectEntry()) &&
           results.empty()
         ) {
           const buttons = () =>
@@ -876,9 +889,7 @@ export async function executeReadonlySearch(
                 ? control.value
                 : (control.textContent ?? ""),
             );
-          const directButtons = buttons().filter((control) =>
-            /^(직접\s*입력|manual entry|enter manually)$/i.test(label(control)),
-          );
+          const directButtons = directEntryControls(currentSurface);
           if (directButtons.length !== 1) throw error;
           const directButton = directButtons[0]!;
           const priorInputs = new Set(
@@ -886,7 +897,6 @@ export async function executeReadonlySearch(
               interactive,
             ),
           );
-          const priorButtons = new Set(buttons());
           const binding = bindSelectionEffects(
             identity,
             directButton,
@@ -921,14 +931,40 @@ export async function executeReadonlySearch(
           await session.prepareMutation();
           surfaceGuard();
           nativeQueryValue(manual, expectedValue, surfaceGuard);
-          const confirmations = buttons().filter(
-            (control) =>
-              !priorButtons.has(control) &&
-              /^(확인|적용|confirm|apply)$/i.test(label(control)),
-          );
-          if (confirmations.length !== 1)
+          // The confirmation may exist from the start and stay disabled until
+          // the typed value is accepted, so judge it by visibility alone and
+          // wait for the one match to become enabled.
+          const confirmations = () =>
+            elements<HTMLButtonElement | HTMLInputElement>(
+              currentSurface.root,
+              "button, input[type=button]",
+            ).filter((control) => {
+              const style =
+                control.ownerDocument.defaultView?.getComputedStyle(control);
+              return (
+                control.type === "button" &&
+                control.isConnected &&
+                !control.hidden &&
+                control.parentElement !== null &&
+                shown(control.parentElement) &&
+                !control.closest("[inert], [aria-hidden='true']") &&
+                style?.display !== "none" &&
+                style?.visibility !== "hidden" &&
+                /^(확인|적용|등록|confirm|apply|register)$/i.test(
+                  label(control),
+                )
+              );
+            });
+          if (confirmations().length !== 1)
             throw new SearchFailure("unverified_search_form");
-          const confirmation = confirmations[0]!;
+          const confirmation = confirmations()[0]!;
+          await session.wait(() => {
+            surfaceGuard();
+            const live = confirmations();
+            if (live.length !== 1 || live[0] !== confirmation)
+              throw new SearchFailure("unverified_search_form");
+            return interactive(confirmation) ? true : undefined;
+          }, "unverified_search_form");
           candidate = {
             element: confirmation,
             signature: controlSignature(confirmation),

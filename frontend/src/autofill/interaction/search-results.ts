@@ -15,6 +15,7 @@ import {
   zeroNotices,
   localReadiness,
   zeroNoticeConsistency,
+  directEntryControls,
 } from "./local-result-readiness";
 
 import { interpretResultStructure } from "./search-result-structure";
@@ -45,6 +46,7 @@ export function observeResults(
   baseline: RootState[],
   query: string | undefined,
   queryCommitted: () => boolean = () => false,
+  queryReflected: () => boolean = () => false,
 ) {
   const generation = surface.queryGeneration;
   let busySeen = false;
@@ -109,6 +111,16 @@ export function observeResults(
           !element.querySelector("[role='option'], a, button"),
       );
     // Role-less layer without explicit signals: judge by observed list replacement (C12).
+    // Generic route only: the page answers zero results by leaving the list
+    // untouched and offering one direct-entry control, with no notice at all.
+    const directEntryZero = (actions: readonly Element[]) =>
+      session.args.genericPopupRecovery === true &&
+      actions.length === 0 &&
+      listItems(root).length === 0 &&
+      mutations.addedItems(root).size === 0 &&
+      now() - startedAt >= LOCAL_ZERO_RESULT_SETTLE_MS &&
+      queryReflected() &&
+      directEntryControls(surface).length === 1;
     const localMode =
       surface.kind === "same-document-layer" &&
       query !== undefined &&
@@ -137,7 +149,8 @@ export function observeResults(
         current.length === 0 &&
         added.size === 0 &&
         now() - startedAt >= LOCAL_ZERO_RESULT_SETTLE_MS &&
-        zeroNotices(surface, root).some(shown);
+        (zeroNotices(surface, root).some(shown) ||
+          directEntryZero(resultActions()));
       if (!settledEmpty) {
         pendingReason = JSON.stringify({
           local: true,
@@ -184,13 +197,17 @@ export function observeResults(
     )
       throw new SearchFailure("result_set_incomplete");
     const actions = resultActions();
+    let zeroByDirectEntry = false;
     if (localMode) {
       const notice = zeroNoticeConsistency(surface, root, actions);
       if (notice === "incomplete")
         throw new SearchFailure("result_set_incomplete");
-      if (notice === "pending") return pend("zero-notice-pending");
+      if (notice === "pending") {
+        if (!directEntryZero(actions)) return pend("zero-notice-pending");
+        zeroByDirectEntry = true;
+      }
     }
-    return { root, localMode, actions };
+    return { root, localMode, actions, zeroByDirectEntry };
   };
   return {
     pendingReason: () => pendingReason,
@@ -200,10 +217,13 @@ export function observeResults(
         ready &&
         ready.actions.length === 0 &&
         listItems(ready.root).length === 0 &&
-        (ready.root.getAttribute("data-result-count") === "0" ||
+        (ready.zeroByDirectEntry ||
+          ready.root.getAttribute("data-result-count") === "0" ||
           zeroNotices(surface, ready.root).some(shown)),
       );
     },
+    /** Zero results established only by the direct-entry signal, not a notice. */
+    zeroByDirectEntry: () => readyRoot()?.zeroByDirectEntry === true,
     async interpret() {
       const root = readyRoot()?.root;
       if (!root) throw new SearchFailure("result_pending");
