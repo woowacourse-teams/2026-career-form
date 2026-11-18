@@ -4,7 +4,7 @@ export interface SearchGradeCandidate {
 }
 
 export interface LocalSearchValueForm {
-  kind: "original-exact" | "name-and-grade";
+  kind: "original-exact" | "name-and-grade" | "name-with-grade";
   name: string;
   grade?: string;
 }
@@ -53,16 +53,26 @@ function splitForm(
   return { kind: "name-and-grade", name: splitName, grade };
 }
 
+function withGradeForm(
+  originalName: string,
+  grade: string | undefined,
+): LocalSearchValueForm | undefined {
+  const name = normalized(originalName);
+  if (!grade || !name || name.endsWith(grade)) return undefined;
+  return { kind: "name-with-grade", name: `${name} ${grade}` };
+}
+
 export function buildLocalSearchValuePlan({
   profileEntryId,
   originalName,
   gradeCandidates,
 }: BuildLocalSearchValuePlanInput): LocalSearchValuePlan {
   const grade = uniqueSameEntryGrade(gradeCandidates, profileEntryId);
-  const split = splitForm(originalName, grade);
+  const extra =
+    splitForm(originalName, grade) ?? withGradeForm(originalName, grade);
   const forms = Object.freeze([
     Object.freeze({ kind: "original-exact" as const, name: originalName }),
-    ...(split ? [Object.freeze(split)] : []),
+    ...(extra ? [Object.freeze(extra)] : []),
   ]);
   return Object.freeze({
     profileEntryId,
