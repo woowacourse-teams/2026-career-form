@@ -1161,6 +1161,12 @@
 - [범용 섹션 분석 캐시: 확장 쪽과 서버 쪽](topics/generic-section-analysis-cache.md) topic과 색인을 갱신했다.
 - 실제 지원값, 계정, 세션, 키 값, 대화 전문은 저장하지 않았다.
 
+## [2026-11-17] ingest | CF-469 이력서 글자 프로필 초안 API
+- Approval-Digest: 4e0c1ca17fa53e0b15073a5e1d795bcbb356e7747a5df457e365af943975e3e3
+- Source-Revision: 76961167
+- 승인한 후보 3개를 [CF-469 bundle](../raw/issues/CF-469/manifest.md)에 기록했다. API 계약, 키·형식·원문 근거 검증 규칙과 YYYY-MM 날짜, 로컬·스테이징 전용 값 트레이스와 기록 경계다.
+- [이력서 글자 프로필 초안 API](topics/resume-profile-import.md) topic과 색인을 새로 만들었다.
+- 실제 이력서, 지원값, 계정, 세션, 키 값, 대화 전문은 저장하지 않았다.
 ## [2026-11-17] ingest | CF-470 이력서 문서(PDF·MD·TXT)로 프로필 가져오기 추가
 - Approval-Digest: 102f649b7554e03c10a1f9639801231e7738df4302b109d0015a44049c931c54
 - Source-Revision: ddb3ee8f
