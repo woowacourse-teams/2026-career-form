@@ -1213,3 +1213,10 @@
 - 사람이 2026-11-19 "llm wiki는 자동승인으로 해"라고 말해 자동 승인으로 확정한 후보 5개를 [CF-490 bundle](../raw/issues/CF-490/manifest.md)에 payload 하나로 기록했다. 등급 분리 저장 자격증의 이름+등급 정확 일치 결정, 비카탈로그 경로, 카탈로그 경로, 합성 프로필 실측과 `catalog` 로그 필드 교훈이다.
 - [범용 자동 기입 검색 표면](topics/generic-autofill-search.md)의 Current를 CF-490으로 바꾸고 CF-488 이하를 History에 남겼으며 색인 설명을 갱신했다.
 - 실제 지원값, 자격증 이름, 계정, 세션, 주소, 회사 이름, 대화 전문은 저장하지 않았다.
+
+## [2026-11-19] ingest | CF-495 0건 안내 문구 레이어의 직접 쓴 값 직접입력
+- Approval-Digest: d6888a107e5e6ef2ecf7c77b402fd6e1405528ac36adbf46fa1a87ea83b6825c
+- Source-Revision: 3cd3d3c
+- 사람이 2026-11-19 질문 도구에서 승인한 후보 1개를 [CF-495 bundle](../raw/issues/CF-495/manifest.md)에 payload 하나로 기록했다. 0건 안내 문구로 확인한 0건에서도 직접 쓴 값을 유일한 직접입력 경로로 기입하는 결정과 유지한 안전 조건이다.
+- [범용 자동 기입 검색 표면](topics/generic-autofill-search.md)의 Current를 CF-495로 바꾸고 CF-490을 History에 남겼으며 색인 설명을 갱신했다.
+- 실제 지원값, 학교·자격증 이름, 계정, 세션, 주소, 회사 이름, 대화 전문은 저장하지 않았다.

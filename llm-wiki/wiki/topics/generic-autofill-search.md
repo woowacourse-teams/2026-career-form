@@ -2,11 +2,13 @@
 
 > Topic: generic-autofill-search
 > Status: Current
-> Current: [CF-490 자격증 이름+등급 정확 일치와 카탈로그 경로](../../raw/issues/CF-490/documents/grade-appended-certificate-match.md)
-> History: [CF-98 실행과 실측 경계](../../raw/issues/CF-98/documents/generic-autofill-search.md); [CF-108 진단 보완](../../raw/issues/CF-108/documents/generic-autofill-search.md); [CF-110 제한된 CJ 주전공 계약](../../raw/issues/CF-110/documents/adr/110-verified-major-search.md); [CF-112 첫 대학교 학교명·국가 묶음](../../raw/issues/CF-112/documents/adr/112-verified-school-search.md); [CF-114 범용 자격증 검색](../../raw/issues/CF-114/documents/generic-certificate-search.md); [CF-129 혼합 학력 행과 레이어 검색](../../raw/issues/CF-129/documents/generic-autofill-search.md); [CF-117 공급자 중립 검색 결과 구조 해석](../../raw/issues/CF-117/documents/generic-search-result-interpretation.md); [CF-307 원래 이름 검색의 자동 선택 경계](../../raw/issues/CF-307/documents/generic-autofill-search.md); [CF-477 세부 정보 없는 결과 목록의 카탈로그 학교명 단일 일치 선택](../../raw/issues/CF-477/documents/generic-detailless-school-result.md); [CF-488 범용 검색 0건의 직접입력 신호 인식과 행 저장 연쇄](../../raw/issues/CF-488/documents/generic-search-zero-by-direct-entry.md); [CF-490 자격증 이름+등급 정확 일치와 카탈로그 경로](../../raw/issues/CF-490/documents/grade-appended-certificate-match.md)
+> Current: [CF-495 0건 안내 문구 레이어의 직접 쓴 값 직접입력](../../raw/issues/CF-495/documents/zero-notice-manual-direct-entry.md)
+> History: [CF-98 실행과 실측 경계](../../raw/issues/CF-98/documents/generic-autofill-search.md); [CF-108 진단 보완](../../raw/issues/CF-108/documents/generic-autofill-search.md); [CF-110 제한된 CJ 주전공 계약](../../raw/issues/CF-110/documents/adr/110-verified-major-search.md); [CF-112 첫 대학교 학교명·국가 묶음](../../raw/issues/CF-112/documents/adr/112-verified-school-search.md); [CF-114 범용 자격증 검색](../../raw/issues/CF-114/documents/generic-certificate-search.md); [CF-129 혼합 학력 행과 레이어 검색](../../raw/issues/CF-129/documents/generic-autofill-search.md); [CF-117 공급자 중립 검색 결과 구조 해석](../../raw/issues/CF-117/documents/generic-search-result-interpretation.md); [CF-307 원래 이름 검색의 자동 선택 경계](../../raw/issues/CF-307/documents/generic-autofill-search.md); [CF-477 세부 정보 없는 결과 목록의 카탈로그 학교명 단일 일치 선택](../../raw/issues/CF-477/documents/generic-detailless-school-result.md); [CF-488 범용 검색 0건의 직접입력 신호 인식과 행 저장 연쇄](../../raw/issues/CF-488/documents/generic-search-zero-by-direct-entry.md); [CF-490 자격증 이름+등급 정확 일치와 카탈로그 경로](../../raw/issues/CF-490/documents/grade-appended-certificate-match.md); [CF-495 0건 안내 문구 레이어의 직접 쓴 값 직접입력](../../raw/issues/CF-495/documents/zero-notice-manual-direct-entry.md)
 > Updated: 2026-11-19
 
 ## 현재 상태
+
+CF-495부터 범용 검색의 직접입력은 결과 0건을 0건 안내 문구로 확인했는지 직접입력 신호로 확인했는지와 상관없이, 프로필 값을 카탈로그에서 골랐는지와도 상관없이 레이어의 유일한 직접입력 경로로 원문을 기입하고 확인한다. 아래 CF-488 문단의 "안내 문구 기반 0건의 수동 값은 쓰지 않는다"는 이 규칙으로 바뀌었다. 마지막 시도, 직접입력 버튼·새 입력칸·확인 버튼 각 1개, 결과 1건 이상이면 사용 안 함, legacy 경로 제외는 그대로이고, 버튼을 눌러도 입력칸이 생기지 않으면 `unverified_search_form`으로 기입하지 않고 레이어가 열린 채 남는다. 근거는 [CF-495 0건 안내 문구 레이어의 직접 쓴 값 직접입력](../../raw/issues/CF-495/documents/zero-notice-manual-direct-entry.md)를 따른다.
 
 CF-490부터 자격증은 프로필의 이름과 등급을 붙인 `<이름> <등급>`도 정확 일치로 인정한다(이름이 이미 등급으로 끝나면 추가하지 않음). 비카탈로그 경로는 `name-with-grade` 검색어와 `gradeAppendedValue`로, 카탈로그 승인 경로는 자격증 종류에 한한 등급 붙인 라벨을 먼저 시도하고 일반 라벨로 되돌아가는 방식으로 적용하며 선택 뒤 재확인도 그 라벨을 받아들인다. 검토 미리 선택은 `name-with-grade`(정확 일치만)를 허용하고 분리형은 허용하지 않는다. 결과 0건은 직접입력(CF-488), 결과가 있으나 일치가 없거나 같은 결과가 둘 이상이면(`multiple_matching_results`) 수동 확인에 남긴다. 합성 프로필 실측에서 자격증 1~5번 행이 저장됐고 6번은 중복 결과로 수동 확인에 남았다. 근거는 [CF-490 근거](../../raw/issues/CF-490/documents/grade-appended-certificate-match.md)를 따르고, 아래 CF-488 이하 경계는 그대로 유효하다. CF-488 문단의 둘째 자격증 이름+등급 변형 후속 Issue #490이 이것이다.
 
@@ -41,6 +43,8 @@ CF-112는 승인된 CJ 첫 대학교 학교명에 한하여 최소 `school_name`
 설치 확장 실제 화면에서 주전공 표시값과 공개 결과 코드의 일치, 팝업 닫힘, 578ms 유지는 읽기 전용으로 관측했다. 결과 UI는 `입력 결과 확인`, 입력 완료 0개였고 내부 매핑·실행기 반환값은 직접 수집하지 않았다. 기존 `LLM_SUGGESTED`의 확인 필요 판정은 유지한다. 전공만 실행한 것도, 다른 입력값이 모두 불변인 것도 아니다. 서버 저장·제출과 전체 패널 성공은 검증하지 않았다.
 
 ## 변경 이유
+
+CF-495는 0건일 때 안내 문구를 보이는 지원서에서 직접 쓴 학교명·자격증명이 직접입력되지 않고 레이어가 닫히던 문제를, 사람 결정(결과 0건이면 원문 직접입력)에 맞춰 직접입력 진입 조건의 카탈로그 요구를 없애 풀었다.
 
 CF-490은 이름과 등급을 따로 저장한 자격증이 등급이 붙은 변형만 보여 주는 지원서에서 정확 일치를 얻지 못하던 문제를, 사람 결정(2026-11-19)에 따라 등급을 붙인 이름 일치로 풀었다. 비카탈로그 경로만 고친 첫 수정은 카탈로그 경로를 놓쳐 실측에서 실패했고, 로그의 `catalog` 필드로 구분해 두 경로를 모두 고쳤다. 근거는 [CF-490 근거](../../raw/issues/CF-490/documents/grade-appended-certificate-match.md)에 남겼다.
 
