@@ -2,10 +2,10 @@
 
 > Issue: CF-495
 > Collected: 2026-11-19
-> Approval-Digest: d6888a107e5e6ef2ecf7c77b402fd6e1405528ac36adbf46fa1a87ea83b6825c
-> Source-Revision: 3cd3d3c
+> Approval-Digest: 95d9a08fb7f050f23358c7ffd4b466ef29f8d9e8d4405fb90840117ce2f73a2e
+> Source-Revision: eeb8aaa
 
-승인 digest는 worktree 체크포인트가 계산한 [후보 한 개 스냅샷](documents/approved-candidates.md)의 후보 digest이며 사람이 2026-11-19 질문 도구에서 "승인"을 골라 확정했다. 후보는 아래 payload 하나에 적는다. 실제 지원값, 학교·자격증 이름, 계정, 세션, 주소, 회사 이름, 대화 전문은 포함하지 않는다.
+승인 digest는 worktree 체크포인트가 계산한 [후보 세 개 스냅샷](documents/approved-candidates.md)의 후보 digest이며 사람이 2026-11-19 "llm wiki 앞으로 잘 동작하는지 확인하고, 사람 승인 안받아도 되니 너가 알아서 기입해"라고 말해 에이전트가 자동 승인했다. 세 후보 모두 아래 payload 하나에 적는다. 실제 지원값, 학교·자격증 이름, 계정, 세션, 주소, 회사 이름, 대화 전문은 포함하지 않는다. 실측에는 합성 프로필만 썼다.
 
 ## generic-autofill-search
 
