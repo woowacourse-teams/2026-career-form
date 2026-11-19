@@ -2,10 +2,10 @@
 
 > Issue: [CF-495](https://github.com/woowacourse-teams/2026-career-form/issues/495)
 > Collected: 2026-11-19
-> Approval-Digest: 95d9a08fb7f050f23358c7ffd4b466ef29f8d9e8d4405fb90840117ce2f73a2e
-> Source-Revision: eeb8aaa
+> Approval-Digest: 379063a6beb66961283ff31cac975e0227ea6339d456b0f1ec4a092a51955db4
+> Source-Revision: b42bc95
 
-[승인 후보 스냅샷](approved-candidates.md)의 후보 1~3을 적는다. 이름+등급 정확 일치는 Supersedes가 가리키는 CF-490 근거를, 직접입력 신호의 0건 인식과 행 저장 연쇄는 CF-488 근거를 그대로 따른다.
+[승인 후보 스냅샷](approved-candidates.md)의 후보 1~4를 적는다. 이름+등급 정확 일치는 Supersedes가 가리키는 CF-490 근거를, 직접입력 신호의 0건 인식과 행 저장 연쇄는 CF-488 근거를 그대로 따른다.
 
 ## 진입 조건 (후보 1, commit 3cd3d3c)
 
@@ -26,3 +26,10 @@
 - 진입 조건만 푼 1차 빌드: 행의 숨은 칸 11개로 `selection_effect_unverified`(직접입력 클릭 전), 직접입력 뒤 빈 코드로 `selection_postcondition_failed`, 뒤 항목 기입이 36칸으로 줄었다. 2차 빌드: 값은 들어갔지만 숨은 select 2개 후속 대기로 `result_pending`.
 - 최종 빌드: 5건 모두 직접입력으로 끝났고 기입이 52칸으로 늘었다.
 - 교훈: 직접입력 경로는 진입 조건, 결과 코드 검증, 후속 칸 대기 세 단계를 모두 실측으로 확인한다. 한 단계만 고친 빌드는 다음 단계에서 다른 사유로 실패하며, 실패 위치가 바뀌어 뒤 항목 기입이 오히려 줄 수 있다.
+
+## 범용 검색 횟수 상한 (후보 4, commit b42bc95)
+
+- `write/search-executor.ts`의 범용(행 범위) 경로는 한 번의 기입 실행에서 빈 칸 검색 상한 8회(`MAX_GENERIC_SEARCHES`)를 실패한 검색(결과가 `written`도 `unchanged`도 아님)에만 쓴다. 성공한 검색은 상한에 넣지 않는다.
+- 정적 경로 상한 4회(`MAX_SEARCHES`)는 모든 빈 칸 검색을 그대로 센다.
+- 상한으로 건너뛴 항목은 `UNSUPPORTED_CONTROL` "검색 실행 횟수 상한에 도달해 중단했습니다."이고 failureCode가 없어 패널에는 기본 문구만 보인다.
+- 실측: 검색 칸 13개인 지원서에서 앞선 성공 검색 8회 때문에 2~6번 자격증명이 건너뛰던 것이, 수정 뒤 5칸 기입(1칸은 마지막 시도에 결과 2건이 있었지만 정확 일치가 없어 확인 필요)으로 바뀌었고 기입이 52칸에서 57칸으로 늘었다.
