@@ -194,6 +194,8 @@ function fixture(
     targetId,
     setMode(mode: typeof resultMode) {
       resultMode = mode;
+      // An empty confirmation-only popup offers no direct entry.
+      if (mode === "empty") popup.querySelector("[data-direct]")?.remove();
     },
     async run(genericPopupRecovery = false) {
       const pending = executeReadonlySearch({

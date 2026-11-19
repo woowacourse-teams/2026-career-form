@@ -12,6 +12,16 @@ type LayerOptions = {
   commit?: boolean;
   twoDirect?: boolean;
   twoConfirm?: boolean;
+  /** The direct-entry button reveals no new input. */
+  directRevealsNothing?: boolean;
+  /** Run the legacy route instead of generic popup recovery. */
+  legacy?: boolean;
+  /**
+   * The direct input exists from the start inside a hidden wrapper that the
+   * direct-entry button only reveals; the zero notice appears after the search
+   * and the confirmation is enabled from the start.
+   */
+  hiddenEntry?: boolean;
   /** Ordered search values; the first equals the expected value. */
   searchValues?: readonly string[];
   /** A visible zero-result notice beside the list. */
@@ -28,6 +38,10 @@ type LayerOptions = {
   gradeAppendedValue?: string;
   /** Mark the confirmation as new after the direct input opens. */
   catalogMatch?: ApprovedCatalogMatch;
+  /** Extra markup inside the repeat row, e.g. site-managed hidden inputs. */
+  rowExtra?: string;
+  /** Extra effect the confirmation has on the repeat row. */
+  onConfirm?: (row: HTMLElement) => void;
 };
 
 /**
@@ -43,6 +57,7 @@ async function zeroResultLayer(options: LayerOptions = {}) {
         <div class="cell"><input id="licenseName" type="text" placeholder="자격증명" readonly>
         <button type="button" class="btn-search-layer"><svg></svg></button></div>
         <input type="text" placeholder="발행처">
+        ${options.rowExtra ?? ""}
         <button type="button">저장</button>
       </div>
     </section>
@@ -61,7 +76,9 @@ async function zeroResultLayer(options: LayerOptions = {}) {
           <div class="search-box">
             <ul class="search-list"></ul>
             ${options.notice ? "<p>검색 결과가 없습니다.</p>" : ""}
+            <p data-late-notice style="display:none">${options.hiddenEntry ? "조회된 결과가 없습니다." : ""}</p>
             <div data-entry-host>
+              ${options.hiddenEntry ? '<div data-hidden-entry style="display:none"><input id="searchInputLicenseName" type="text" placeholder="직접 입력하세요"></div>' : ""}
               <div class="search-empty">찾으시는 결과가 없나요?
                 <button type="button" data-direct>직접입력</button>
                 ${options.twoDirect ? '<button type="button" data-direct>직접입력</button>' : ""}
@@ -69,7 +86,7 @@ async function zeroResultLayer(options: LayerOptions = {}) {
             </div>
           </div>
           <div class="wrap-btn">
-            <button type="button" class="btn-primary" data-confirm>등록</button>
+            <button type="button" class="btn-primary" data-confirm>${options.hiddenEntry ? "확인" : "등록"}</button>
             ${options.twoConfirm ? '<button type="button" class="btn-primary" data-confirm>확인</button>' : ""}
           </div>
         </div>
@@ -87,6 +104,7 @@ async function zeroResultLayer(options: LayerOptions = {}) {
   )!;
   const list = layer.querySelector<HTMLElement>("ul.search-list")!;
   const host = layer.querySelector<HTMLElement>("[data-entry-host]")!;
+  const hiddenEntry = layer.querySelector<HTMLElement>("[data-hidden-entry]");
   const confirms = Array.from(
     layer.querySelectorAll<HTMLButtonElement>("[data-confirm]"),
   );
@@ -97,6 +115,9 @@ async function zeroResultLayer(options: LayerOptions = {}) {
   });
   search.addEventListener("click", () => {
     actions.search++;
+    if (hiddenEntry)
+      layer.querySelector<HTMLElement>("[data-late-notice]")!.style.display =
+        "block";
     if (options.resultsFor) list.innerHTML = options.resultsFor(query.value);
     else if (options.results !== undefined) list.innerHTML = options.results;
     if (options.commit === false) return;
@@ -115,7 +136,12 @@ async function zeroResultLayer(options: LayerOptions = {}) {
   layer.querySelectorAll("[data-direct]").forEach((direct) =>
     direct.addEventListener("click", () => {
       actions.direct++;
-      if (manual) return;
+      if (manual || options.directRevealsNothing) return;
+      if (hiddenEntry) {
+        hiddenEntry.style.display = "block";
+        manual = hiddenEntry.querySelector("input")!;
+        return;
+      }
       const form = document.createElement("div");
       form.className = "search-form";
       form.innerHTML = `<div class="input-search"><div class="form-input form-full"><label class="invisible" for="searchInputLicenseName">자격증 입력</label><input id="searchInputLicenseName" type="text" placeholder="직접 입력하세요"></div></div>`;
@@ -131,11 +157,12 @@ async function zeroResultLayer(options: LayerOptions = {}) {
     button.addEventListener("click", () => {
       actions.confirm++;
       target.value = manual?.value ?? "";
+      options.onConfirm?.(document.querySelector<HTMLElement>(".row")!);
       layer.style.display = "none";
     }),
   );
   // The confirmation exists from the start and is disabled until a value exists.
-  confirms.forEach((button) => (button.disabled = true));
+  if (!hiddenEntry) confirms.forEach((button) => (button.disabled = true));
   const snapshot = collectFieldsSnapshot(document);
   const targetId = snapshot.request.sections
     .flatMap((section) => [
@@ -174,11 +201,11 @@ async function zeroResultLayer(options: LayerOptions = {}) {
         candidateId: decision.candidates[0]!.candidateId,
       })),
     }),
-    genericPopupRecovery: true,
+    genericPopupRecovery: !options.legacy,
   });
   // Time itself is tested: the zero-result answer settles after a bounded wait.
   await vi.runAllTimersAsync();
-  return { result: await pending, target, actions };
+  return { result: await pending, target, actions, layer };
 }
 
 describe("generic zero-result layer answered by direct entry", () => {
@@ -443,5 +470,153 @@ describe("generic zero-result layer answered by direct entry", () => {
       });
       expect(qa.target.value).toBe("서울특별시");
     });
+  });
+});
+
+describe("direct entry in a row with site-managed hidden inputs", () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => {
+    vi.useRealTimers();
+    document.body.innerHTML = "";
+  });
+
+  const setHidden = (row: HTMLElement, name: string, value: string) => {
+    row.querySelector<HTMLInputElement>(`input[name="${name}"]`)!.value = value;
+  };
+
+  it("selects a typed value when the site sets only a kind flag and leaves the code blank", async () => {
+    const qa = await zeroResultLayer({
+      notice: true,
+      rowExtra:
+        '<input type="hidden" name="code"><input type="hidden" name="kind"><input type="hidden" name="seq" value="1">',
+      onConfirm: (row) => setHidden(row, "kind", "DIRECT"),
+    });
+    expect(qa.result, JSON.stringify(qa.result)).toMatchObject({
+      status: "selected",
+    });
+    expect(qa.target.value).toBe(VALUE);
+  });
+
+  it("selects a typed value when the only hidden code input stays blank", async () => {
+    const qa = await zeroResultLayer({
+      notice: true,
+      rowExtra: '<input type="hidden" name="code">',
+    });
+    expect(qa.result, JSON.stringify(qa.result)).toMatchObject({
+      status: "selected",
+    });
+    expect(qa.target.value).toBe(VALUE);
+  });
+
+  it("does not select when the confirmation also changes a visible input in the row", async () => {
+    const qa = await zeroResultLayer({
+      notice: true,
+      rowExtra:
+        '<input type="hidden" name="code"><input type="hidden" name="kind">',
+      onConfirm: (row) => {
+        setHidden(row, "kind", "DIRECT");
+        row.querySelector<HTMLInputElement>(
+          'input[placeholder="발행처"]',
+        )!.value = "변경됨";
+      },
+    });
+    expect(qa.result, JSON.stringify(qa.result)).toMatchObject({
+      status: "failed",
+      reason: "selection_postcondition_failed",
+    });
+  });
+});
+
+describe("generic layer whose zero results are announced by a visible notice", () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => {
+    vi.useRealTimers();
+    document.body.innerHTML = "";
+  });
+
+  it("writes a manually typed profile value through direct entry", async () => {
+    const qa = await zeroResultLayer({ notice: true });
+    expect(qa.result, JSON.stringify(qa.result)).toMatchObject({
+      status: "selected",
+    });
+    expect(qa.actions).toEqual({ search: 1, direct: 1, confirm: 1 });
+    expect(qa.target.value).toBe(VALUE);
+  });
+
+  it("still writes a catalog-approved value through direct entry", async () => {
+    const qa = await zeroResultLayer({
+      notice: true,
+      catalogMatch: { kind: "certificate", query: VALUE, labels: [VALUE] },
+    });
+    expect(qa.result, JSON.stringify(qa.result)).toMatchObject({
+      status: "selected",
+    });
+    expect(qa.actions).toEqual({ search: 1, direct: 1, confirm: 1 });
+    expect(qa.target.value).toBe(VALUE);
+  });
+
+  it("does not use direct entry when the list has results without an exact match", async () => {
+    const qa = await zeroResultLayer({
+      results: '<li><a href="javascript:;">다른자격증</a></li>',
+    });
+    expect(qa.result.status).not.toBe("selected");
+    expect(qa.actions.direct).toBe(0);
+    expect(qa.actions.confirm).toBe(0);
+    expect(qa.target.value).toBe("");
+  });
+
+  it("does not write when two direct-entry buttons are offered", async () => {
+    const qa = await zeroResultLayer({ notice: true, twoDirect: true });
+    expect(qa.result.status).not.toBe("selected");
+    expect(qa.actions.direct).toBe(0);
+    expect(qa.actions.confirm).toBe(0);
+    expect(qa.target.value).toBe("");
+  });
+
+  it("does not write when the direct-entry button reveals no new input", async () => {
+    const qa = await zeroResultLayer({
+      notice: true,
+      directRevealsNothing: true,
+    });
+    expect(qa.result, JSON.stringify(qa.result)).toMatchObject({
+      status: "failed",
+      reason: "unverified_search_form",
+      surfaceLeftOpen: true,
+    });
+    expect(qa.actions.direct).toBe(1);
+    expect(qa.actions.confirm).toBe(0);
+    expect(qa.target.value).toBe("");
+    expect(qa.layer.style.display).toBe("block");
+  });
+
+  it("writes a manually typed value through a hidden direct input that the button reveals", async () => {
+    const qa = await zeroResultLayer({ hiddenEntry: true });
+    expect(qa.result, JSON.stringify(qa.result)).toMatchObject({
+      status: "selected",
+    });
+    expect(qa.actions).toEqual({ search: 1, direct: 1, confirm: 1 });
+    expect(qa.target.value).toBe(VALUE);
+    expect(qa.layer.style.display).toBe("none");
+  });
+
+  it("selects a typed value while hidden dormant selects in the row stay untouched", async () => {
+    const qa = await zeroResultLayer({
+      notice: true,
+      rowExtra:
+        '<select style="display:none"><option value="">선택</option><option value="a">A</option><option value="b">B</option></select><select style="display:none"><option value="">선택</option><option value="c">C</option></select>',
+    });
+    expect(qa.result, JSON.stringify(qa.result)).toMatchObject({
+      status: "selected",
+    });
+    expect(qa.actions).toEqual({ search: 1, direct: 1, confirm: 1 });
+    expect(qa.target.value).toBe(VALUE);
+  });
+
+  it("does not use direct entry on the legacy route", async () => {
+    const qa = await zeroResultLayer({ notice: true, legacy: true });
+    expect(qa.result.status).not.toBe("selected");
+    expect(qa.actions.direct).toBe(0);
+    expect(qa.actions.confirm).toBe(0);
+    expect(qa.target.value).toBe("");
   });
 });

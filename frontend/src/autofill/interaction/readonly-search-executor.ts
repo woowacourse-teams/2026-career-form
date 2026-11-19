@@ -941,10 +941,9 @@ export async function executeReadonlySearch(
           // with another search because the page replaced the query input.
           (attemptIndex + 1 === attempts.length ||
             !(nativeFormBinding || query?.isConnected)) &&
-          // A zero-result notice still needs an approved catalog value; a
-          // list the page left untouched beside one direct-entry control is
-          // the page's own answer for any value.
-          (catalogMatch || results.zeroByDirectEntry()) &&
+          // Zero results are answered through the page's one direct-entry
+          // control with the original profile value, whether or not the value
+          // was picked from the catalog.
           results.empty()
         ) {
           const buttons = () =>
@@ -974,11 +973,13 @@ export async function executeReadonlySearch(
             [expectedValue],
             currentSurface,
             true,
+            { directEntry: true },
           );
           followUpObservation = captureSearchFollowUp(
             binding.scope,
             identity.target,
             true,
+            { directEntry: true },
           );
           await session.prepareMutation();
           surfaceGuard();
