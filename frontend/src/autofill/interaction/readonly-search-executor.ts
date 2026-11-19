@@ -36,7 +36,11 @@ import {
   isIconSearchSubmit,
 } from "./search-controls";
 import { observeResults, resultBaseline } from "./search-results";
-import { observeQueryCommit } from "./search-query-commit";
+import {
+  observeQueryCommit,
+  observeQueryReflection,
+} from "./search-query-commit";
+import { directEntryControls } from "./local-result-readiness";
 import {
   bindSelectionEffects,
   verifyRetainedSelectionEffects,
@@ -60,7 +64,9 @@ import { queryCandidates } from "./readonly-search-popup";
 import { resultActivation } from "./search-result-structure";
 import { bindStructuredEffects } from "./search-result-effects";
 import {
+  gradeAppendedCatalogLabels,
   isApprovedCatalogMatch,
+  type ApprovedCatalogMatch,
   type CatalogEvidence,
 } from "../profile/catalog-match";
 
@@ -105,6 +111,12 @@ function searchAttempts(
     normalized(args.searchValues[0] ?? "") !== normalized(args.expectedValue) ||
     args.searchValues.some((value) => !normalized(value)) ||
     new Set(args.searchValues.map(normalized)).size !== args.searchValues.length
+  )
+    throw new SearchFailure("stale_target");
+  if (
+    args.gradeAppendedValue !== undefined &&
+    normalized(args.searchValues[1] ?? "") !==
+      normalized(args.gradeAppendedValue)
   )
     throw new SearchFailure("stale_target");
   return args.searchValues;
@@ -415,6 +427,58 @@ export async function executeReadonlySearch(
     const attempts = searchAttempts(args, values[0]!);
     trace("검색 대상 확인", { initialValue, values, attempts, target });
     const matchingValues = args.searchValues ? attempts : values;
+    const gradeValue = args.searchValues ? args.gradeAppendedValue : undefined;
+    // Approved labels plus the profile grade, only for a catalog certificate.
+    const gradedCatalog: ApprovedCatalogMatch | undefined =
+      catalogMatch && args.catalogGrade
+        ? (() => {
+            const labels = gradeAppendedCatalogLabels(
+              catalogMatch,
+              args.catalogGrade,
+            );
+            return labels.length
+              ? { ...catalogMatch, query: labels[0]!, labels }
+              : undefined;
+          })()
+        : undefined;
+    // Result text and approval the last exact lookup matched; set by pickExact.
+    let matchedText = "";
+    let matchedCatalog = catalogMatch;
+    // The approval the selected result matched; revalidation must use the same.
+    let selectionCatalog = catalogMatch;
+    const pickExact = <T>(
+      find: (
+        expected: readonly string[],
+        catalog: ApprovedCatalogMatch | undefined,
+      ) => T | undefined,
+      plain: readonly string[],
+      searchText: string,
+    ): T | undefined => {
+      matchedText = searchText;
+      matchedCatalog = catalogMatch;
+      const preferred = gradedCatalog
+        ? { expected: [searchText], catalog: gradedCatalog, text: searchText }
+        : gradeValue && normalized(gradeValue) !== normalized(searchText)
+          ? { expected: [gradeValue], catalog: catalogMatch, text: gradeValue }
+          : undefined;
+      if (preferred) {
+        try {
+          const hit = find(preferred.expected, preferred.catalog);
+          if (hit) {
+            matchedText = preferred.text;
+            matchedCatalog = preferred.catalog;
+            return hit;
+          }
+        } catch (error) {
+          if (!(
+            error instanceof SearchFailure &&
+            error.reason === "search_results_not_found"
+          ))
+            throw error;
+        }
+      }
+      return find(plain, catalogMatch);
+    };
     const matches = (value: string) =>
       matchingValues.some(
         (candidate) => normalized(candidate) === normalized(value),
@@ -659,6 +723,9 @@ export async function executeReadonlySearch(
         args.genericPopupRecovery === true && query
           ? observeQueryCommit(currentSurface, query, searchText)
           : undefined,
+        args.genericPopupRecovery === true && query
+          ? observeQueryReflection(currentSurface, query, searchText)
+          : undefined,
       );
       selectedResults = results;
       if (query) {
@@ -755,9 +822,14 @@ export async function executeReadonlySearch(
                 canonicalFieldKey,
                 attemptValues,
               )
-            : results.exact(attemptValues, catalogMatch);
+            : pickExact(
+                (expected, catalog) => results.exact(expected, catalog),
+                attemptValues,
+                searchText,
+              );
         }, "result_pending");
-        selectedSearchText = searchText;
+        selectedSearchText = candidate ? matchedText : searchText;
+        if (candidate) selectionCatalog = matchedCatalog;
         trace("일치 결과 발견", candidate?.element);
         break;
       } catch (error) {
@@ -803,8 +875,14 @@ export async function executeReadonlySearch(
           surfaceGuard();
           structuredResults = await results.interpret();
           surfaceGuard();
-          candidate = structuredResults.exact(attemptValues, catalogMatch);
-          selectedSearchText = searchText;
+          const structured = structuredResults;
+          candidate = pickExact(
+            (expected, catalog) => structured.exact(expected, catalog),
+            attemptValues,
+            searchText,
+          );
+          selectedSearchText = matchedText;
+          selectionCatalog = matchedCatalog;
           break;
         }
         if (
@@ -857,10 +935,16 @@ export async function executeReadonlySearch(
         }
         if (
           args.genericPopupRecovery &&
-          catalogMatch &&
           error instanceof SearchFailure &&
           error.reason === "search_results_not_found" &&
-          attemptIndex + 1 === attempts.length &&
+          // The last attempt, or one the retry branch above cannot follow
+          // with another search because the page replaced the query input.
+          (attemptIndex + 1 === attempts.length ||
+            !(nativeFormBinding || query?.isConnected)) &&
+          // A zero-result notice still needs an approved catalog value; a
+          // list the page left untouched beside one direct-entry control is
+          // the page's own answer for any value.
+          (catalogMatch || results.zeroByDirectEntry()) &&
           results.empty()
         ) {
           const buttons = () =>
@@ -876,9 +960,7 @@ export async function executeReadonlySearch(
                 ? control.value
                 : (control.textContent ?? ""),
             );
-          const directButtons = buttons().filter((control) =>
-            /^(직접\s*입력|manual entry|enter manually)$/i.test(label(control)),
-          );
+          const directButtons = directEntryControls(currentSurface);
           if (directButtons.length !== 1) throw error;
           const directButton = directButtons[0]!;
           const priorInputs = new Set(
@@ -886,7 +968,6 @@ export async function executeReadonlySearch(
               interactive,
             ),
           );
-          const priorButtons = new Set(buttons());
           const binding = bindSelectionEffects(
             identity,
             directButton,
@@ -921,14 +1002,40 @@ export async function executeReadonlySearch(
           await session.prepareMutation();
           surfaceGuard();
           nativeQueryValue(manual, expectedValue, surfaceGuard);
-          const confirmations = buttons().filter(
-            (control) =>
-              !priorButtons.has(control) &&
-              /^(확인|적용|confirm|apply)$/i.test(label(control)),
-          );
-          if (confirmations.length !== 1)
+          // The confirmation may exist from the start and stay disabled until
+          // the typed value is accepted, so judge it by visibility alone and
+          // wait for the one match to become enabled.
+          const confirmations = () =>
+            elements<HTMLButtonElement | HTMLInputElement>(
+              currentSurface.root,
+              "button, input[type=button]",
+            ).filter((control) => {
+              const style =
+                control.ownerDocument.defaultView?.getComputedStyle(control);
+              return (
+                control.type === "button" &&
+                control.isConnected &&
+                !control.hidden &&
+                control.parentElement !== null &&
+                shown(control.parentElement) &&
+                !control.closest("[inert], [aria-hidden='true']") &&
+                style?.display !== "none" &&
+                style?.visibility !== "hidden" &&
+                /^(확인|적용|등록|confirm|apply|register)$/i.test(
+                  label(control),
+                )
+              );
+            });
+          if (confirmations().length !== 1)
             throw new SearchFailure("unverified_search_form");
-          const confirmation = confirmations[0]!;
+          const confirmation = confirmations()[0]!;
+          await session.wait(() => {
+            surfaceGuard();
+            const live = confirmations();
+            if (live.length !== 1 || live[0] !== confirmation)
+              throw new SearchFailure("unverified_search_form");
+            return interactive(confirmation) ? true : undefined;
+          }, "unverified_search_form");
           candidate = {
             element: confirmation,
             signature: controlSignature(confirmation),
@@ -1010,8 +1117,8 @@ export async function executeReadonlySearch(
       : querylessRegion
         ? regionListSelection(currentSurface, canonicalFieldKey, selectedValues)
         : structuredResults
-          ? structuredResults.exact(selectedValues, catalogMatch)
-          : selectedResults?.exact(selectedValues, catalogMatch);
+          ? structuredResults.exact(selectedValues, selectionCatalog)
+          : selectedResults?.exact(selectedValues, selectionCatalog);
     if (
       !latest ||
       latest.element !== candidate.element ||
@@ -1035,7 +1142,7 @@ export async function executeReadonlySearch(
       throw new SearchFailure("result_stale");
     const structuredMatch = structuredResults?.exact(
       selectedValues,
-      catalogMatch,
+      selectionCatalog,
     );
     const structuredEffects = structuredMatch
       ? bindStructuredEffects(
