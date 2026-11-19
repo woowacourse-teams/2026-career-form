@@ -131,20 +131,30 @@ export function bindSelectionEffects(
   expectedNames: readonly string[],
   surface?: SearchSurface,
   allowObservedCode = false,
+  /**
+   * A directly typed value has no site code: no hidden code relation is bound
+   * and the row's hidden inputs are site-managed, not unchanged peers.
+   */
+  { directEntry = false }: { directEntry?: boolean } = {},
 ): SelectionEffectBinding {
   const scope = identity.repeatRow ?? identity.fieldGroup;
   if (!scope.isConnected || !scope.contains(identity.target)) {
     throw new SearchFailure("selection_effect_unverified");
   }
-  const relation = relationControl(scope, identity.target, candidate);
-  const relationValue = explicitRelationValue(candidate);
+  const relation = directEntry
+    ? undefined
+    : relationControl(scope, identity.target, candidate);
+  const relationValue = directEntry
+    ? undefined
+    : explicitRelationValue(candidate);
   if (
-    (!relation &&
+    !directEntry &&
+    ((!relation &&
       (!allowObservedCode ||
         relationValue !== undefined ||
         candidate.hasAttribute("data-code-target") ||
         candidate.hasAttribute("data-result-target"))) ||
-    (relationValue === undefined && !allowObservedCode)
+      (relationValue === undefined && !allowObservedCode))
   ) {
     throw new SearchFailure("selection_effect_unverified");
   }
@@ -153,6 +163,11 @@ export function bindSelectionEffects(
       (control) =>
         control !== identity.target &&
         control !== relation &&
+        !(
+          directEntry &&
+          control instanceof HTMLInputElement &&
+          control.type === "hidden"
+        ) &&
         !dormantFollowUp(control) &&
         !surface?.contains(control),
     )

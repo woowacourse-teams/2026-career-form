@@ -982,3 +982,64 @@ describe("safe continuation after a search rejection", () => {
     );
   });
 });
+
+describe("approved search budget", () => {
+  afterEach(() => {
+    vi.mocked(executeReadonlySearch).mockReset();
+    document.body.innerHTML = "";
+  });
+
+  function budgetSetup(count: number, outcome: "selected" | "failed") {
+    vi.mocked(executeReadonlySearch).mockClear();
+    const test = setup(count);
+    test.items.forEach((item) => {
+      item.currentValue = "";
+      item.profileValue = `합성전공-${item.candidateId}`;
+    });
+    document.querySelectorAll<HTMLInputElement>("input").forEach((input) => {
+      input.value = "";
+    });
+    vi.mocked(executeReadonlySearch).mockImplementation(async (args) => {
+      if (outcome === "failed")
+        return {
+          status: "failed",
+          targetCandidateId: args.targetCandidateId,
+          reason: "execution_failed",
+          effect: "none",
+        };
+      const input =
+        document.querySelectorAll<HTMLInputElement>("input")[
+          Number(args.targetCandidateId.replace("field-", ""))
+        ]!;
+      input.value = args.expectedValue;
+      return {
+        status: "selected",
+        targetCandidateId: args.targetCandidateId,
+        identity: {} as never,
+      };
+    });
+    return test;
+  }
+
+  it("does not spend the generic search budget on searches that succeed", async () => {
+    const test = budgetSetup(12, "selected");
+    await executeApprovedSearchWrites({ ...test, followUpHaltScope: "row" });
+    expect(executeReadonlySearch).toHaveBeenCalledTimes(12);
+    expect(test.results.map((result) => result.status)).toEqual(
+      Array(12).fill("written"),
+    );
+  });
+
+  it("keeps counting every search on the default route", async () => {
+    const test = budgetSetup(5, "selected");
+    await executeApprovedSearchWrites(test);
+    expect(executeReadonlySearch).toHaveBeenCalledTimes(4);
+    expect(test.results.slice(0, 4).map((result) => result.status)).toEqual(
+      Array(4).fill("written"),
+    );
+    expect(test.results[4]).toMatchObject({
+      status: "skipped",
+      code: "UNSUPPORTED_CONTROL",
+    });
+  });
+});

@@ -849,7 +849,11 @@ export async function executeApprovedSearchWrites({
               ]),
           )
         : undefined;
-    if (!normalized(input.value)) searchCount++;
+    // A search into an empty field uses the budget. The generic route spends
+    // it only on searches that did not write, so later fields are not skipped
+    // because earlier ones succeeded.
+    const usesSearchBudget = !normalized(input.value);
+    if (usesSearchBudget && followUpHaltScope !== "row") searchCount++;
     const gradeAppendedValue = localSearchPlan?.forms.find(
       (form) => form.kind === "name-with-grade",
     )?.name;
@@ -994,6 +998,13 @@ export async function executeApprovedSearchWrites({
                 searchFailureMessage(failedResult!.reason),
                 searchDiagnosticCode(failedResult!.reason),
               );
+    if (
+      usesSearchBudget &&
+      followUpHaltScope === "row" &&
+      results[index]!.status !== "written" &&
+      results[index]!.outcome !== "unchanged"
+    )
+      searchCount++;
     if (failedResult?.surfaceLeftOpen && results[index]!.status === "skipped")
       results[index] = {
         ...results[index]!,
