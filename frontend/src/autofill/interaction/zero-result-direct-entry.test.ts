@@ -38,6 +38,10 @@ type LayerOptions = {
   gradeAppendedValue?: string;
   /** Mark the confirmation as new after the direct input opens. */
   catalogMatch?: ApprovedCatalogMatch;
+  /** Extra markup inside the repeat row, e.g. site-managed hidden inputs. */
+  rowExtra?: string;
+  /** Extra effect the confirmation has on the repeat row. */
+  onConfirm?: (row: HTMLElement) => void;
 };
 
 /**
@@ -53,6 +57,7 @@ async function zeroResultLayer(options: LayerOptions = {}) {
         <div class="cell"><input id="licenseName" type="text" placeholder="자격증명" readonly>
         <button type="button" class="btn-search-layer"><svg></svg></button></div>
         <input type="text" placeholder="발행처">
+        ${options.rowExtra ?? ""}
         <button type="button">저장</button>
       </div>
     </section>
@@ -152,6 +157,7 @@ async function zeroResultLayer(options: LayerOptions = {}) {
     button.addEventListener("click", () => {
       actions.confirm++;
       target.value = manual?.value ?? "";
+      options.onConfirm?.(document.querySelector<HTMLElement>(".row")!);
       layer.style.display = "none";
     }),
   );
@@ -463,6 +469,60 @@ describe("generic zero-result layer answered by direct entry", () => {
         status: "selected",
       });
       expect(qa.target.value).toBe("서울특별시");
+    });
+  });
+});
+
+describe("direct entry in a row with site-managed hidden inputs", () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => {
+    vi.useRealTimers();
+    document.body.innerHTML = "";
+  });
+
+  const setHidden = (row: HTMLElement, name: string, value: string) => {
+    row.querySelector<HTMLInputElement>(`input[name="${name}"]`)!.value = value;
+  };
+
+  it("selects a typed value when the site sets only a kind flag and leaves the code blank", async () => {
+    const qa = await zeroResultLayer({
+      notice: true,
+      rowExtra:
+        '<input type="hidden" name="code"><input type="hidden" name="kind"><input type="hidden" name="seq" value="1">',
+      onConfirm: (row) => setHidden(row, "kind", "DIRECT"),
+    });
+    expect(qa.result, JSON.stringify(qa.result)).toMatchObject({
+      status: "selected",
+    });
+    expect(qa.target.value).toBe(VALUE);
+  });
+
+  it("selects a typed value when the only hidden code input stays blank", async () => {
+    const qa = await zeroResultLayer({
+      notice: true,
+      rowExtra: '<input type="hidden" name="code">',
+    });
+    expect(qa.result, JSON.stringify(qa.result)).toMatchObject({
+      status: "selected",
+    });
+    expect(qa.target.value).toBe(VALUE);
+  });
+
+  it("does not select when the confirmation also changes a visible input in the row", async () => {
+    const qa = await zeroResultLayer({
+      notice: true,
+      rowExtra:
+        '<input type="hidden" name="code"><input type="hidden" name="kind">',
+      onConfirm: (row) => {
+        setHidden(row, "kind", "DIRECT");
+        row.querySelector<HTMLInputElement>(
+          'input[placeholder="발행처"]',
+        )!.value = "변경됨";
+      },
+    });
+    expect(qa.result, JSON.stringify(qa.result)).toMatchObject({
+      status: "failed",
+      reason: "selection_postcondition_failed",
     });
   });
 });

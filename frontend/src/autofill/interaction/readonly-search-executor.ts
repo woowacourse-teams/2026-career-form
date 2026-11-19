@@ -973,6 +973,7 @@ export async function executeReadonlySearch(
             [expectedValue],
             currentSurface,
             true,
+            { directEntry: true },
           );
           followUpObservation = captureSearchFollowUp(
             binding.scope,
