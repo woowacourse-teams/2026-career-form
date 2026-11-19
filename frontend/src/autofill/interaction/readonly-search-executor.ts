@@ -979,6 +979,7 @@ export async function executeReadonlySearch(
             binding.scope,
             identity.target,
             true,
+            { directEntry: true },
           );
           await session.prepareMutation();
           surfaceGuard();

@@ -599,6 +599,19 @@ describe("generic layer whose zero results are announced by a visible notice", (
     expect(qa.layer.style.display).toBe("none");
   });
 
+  it("selects a typed value while hidden dormant selects in the row stay untouched", async () => {
+    const qa = await zeroResultLayer({
+      notice: true,
+      rowExtra:
+        '<select style="display:none"><option value="">선택</option><option value="a">A</option><option value="b">B</option></select><select style="display:none"><option value="">선택</option><option value="c">C</option></select>',
+    });
+    expect(qa.result, JSON.stringify(qa.result)).toMatchObject({
+      status: "selected",
+    });
+    expect(qa.actions).toEqual({ search: 1, direct: 1, confirm: 1 });
+    expect(qa.target.value).toBe(VALUE);
+  });
+
   it("does not use direct entry on the legacy route", async () => {
     const qa = await zeroResultLayer({ notice: true, legacy: true });
     expect(qa.result.status).not.toBe("selected");

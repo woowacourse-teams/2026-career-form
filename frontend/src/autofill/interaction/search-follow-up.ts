@@ -88,15 +88,23 @@ export function captureSearchFollowUp(
   target: HTMLInputElement,
   /** Generic recovery: a control the selection hid is settled, not pending. */
   settleHidden = false,
+  /**
+   * A directly typed value carries no site code, so the site has no reason to
+   * fill the row's dormant selects; only controls that actually change are
+   * awaited.
+   */
+  { directEntry = false }: { directEntry?: boolean } = {},
 ): SearchFollowUpObservation | undefined {
   if (!scope.isConnected || !scope.contains(target)) return undefined;
   const parent = scope.parentElement;
   const baseline = new Map(
     controls(scope).map((control) => [control, state(control)]),
   );
-  const expected = [...baseline.keys()].filter(
-    (control) => control instanceof HTMLSelectElement && !ready(control),
-  );
+  const expected = directEntry
+    ? []
+    : [...baseline.keys()].filter(
+        (control) => control instanceof HTMLSelectElement && !ready(control),
+      );
   let disposed = false;
   let userChanged = false;
   const onInput = (event: Event) => {
