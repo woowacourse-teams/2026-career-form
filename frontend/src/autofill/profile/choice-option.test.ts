@@ -320,49 +320,7 @@ describe("disability grade wording", () => {
     ["심하지 않은 장애", "경증"],
   ])("maps %s to %s", (stored, shown) => {
     expect(
-      resolveChoiceOption(
-        "disability.disability.disabilityGrade",
-        stored,
-        grades,
-      ),
+      resolveChoiceOption("disability.disability.disabilityGrade", stored, grades),
     ).toMatchObject({ status: "unique", option: { displayName: shown } });
-  });
-});
-
-describe("language test grade options", () => {
-  const key = "languages.languageTest.grade";
-  it("picks the abbreviated site option for a grade ID", () => {
-    expect(
-      resolveChoiceOption(key, "opic:ih", options("NH", "IL", "IH", "AL")),
-    ).toMatchObject({ status: "unique", option: { displayName: "IH" } });
-  });
-  it("picks the full-name site option for a grade ID", () => {
-    expect(
-      resolveChoiceOption(
-        key,
-        "opic:ih",
-        options("Novice High", "Intermediate High", "Advanced Low"),
-      ),
-    ).toMatchObject({
-      status: "unique",
-      option: { displayName: "Intermediate High" },
-    });
-  });
-  it("picks a grade only TOEIC Speaking has", () => {
-    expect(
-      resolveChoiceOption(
-        key,
-        "toeic-speaking:am",
-        options("AL", "Advanced Mid", "AH"),
-      ),
-    ).toMatchObject({
-      status: "unique",
-      option: { displayName: "Advanced Mid" },
-    });
-  });
-  it("picks nothing when no option matches", () => {
-    expect(
-      resolveChoiceOption(key, "opic:ih", options("NL", "AL", "800")).status,
-    ).toBe("none");
   });
 });

@@ -161,81 +161,17 @@ const SCHOOL_REGION_ALIASES: Readonly<Record<string, readonly string[]>> = {
   "region:overseas": ["해외"],
 };
 
-type GradeEntry = readonly [id: string, label: string, fullName?: string];
-
-const gradeOptions = (
-  testId: string,
-  grades: readonly GradeEntry[],
-): readonly StandardValueOption[] =>
-  grades.map(([id, label, fullName]) => ({
-    value: `${testId}:${id}`,
-    label,
-    ...(fullName ? { aliases: [fullName] } : {}),
-  }));
-
-const codeGrades = (testId: string, labels: readonly string[]) =>
-  gradeOptions(
-    testId,
-    labels.map((label): GradeEntry => [label.toLowerCase(), label]),
-  );
-
-const numberedGrades = (testId: string, count: number) =>
-  gradeOptions(
-    testId,
-    Array.from({ length: count }, (_, index): GradeEntry => [
-      String(index + 1),
-      `${index + 1}급`,
-    ]),
-  );
-
-const SPEAKING_GRADES: readonly GradeEntry[] = [
-  ["nl", "NL", "Novice Low"],
-  ["nm", "NM", "Novice Mid"],
-  ["nh", "NH", "Novice High"],
-  ["il", "IL", "Intermediate Low"],
-  ["im1", "IM1", "Intermediate Mid 1"],
-  ["im2", "IM2", "Intermediate Mid 2"],
-  ["im3", "IM3", "Intermediate Mid 3"],
-  ["ih", "IH", "Intermediate High"],
-  ["al", "AL", "Advanced Low"],
+const OPIC_GRADE_OPTIONS: readonly StandardValueOption[] = [
+  { value: "opic:nh", label: "Novice High", aliases: ["NH"] },
+  { value: "opic:nm", label: "Novice Mid", aliases: ["NM"] },
+  { value: "opic:nl", label: "Novice Low", aliases: ["NL"] },
+  { value: "opic:ih", label: "Intermediate High", aliases: ["IH"] },
+  { value: "opic:im1", label: "Intermediate Mid 1", aliases: ["IM1"] },
+  { value: "opic:im2", label: "Intermediate Mid 2", aliases: ["IM2"] },
+  { value: "opic:im3", label: "Intermediate Mid 3", aliases: ["IM3"] },
+  { value: "opic:al", label: "Advanced Low", aliases: ["AL"] },
+  { value: "opic:ah", label: "Advanced High", aliases: ["AH"] },
 ];
-
-const CEFR_GRADES = ["A1", "A2", "B1", "B2", "C1", "C2"];
-
-/** Official grade tables, lowest to highest, for exams that award levels. */
-const LANGUAGE_GRADE_OPTIONS_BY_TEST: ReadonlyMap<
-  string,
-  readonly StandardValueOption[]
-> = new Map([
-  ["opic", gradeOptions("opic", SPEAKING_GRADES)],
-  [
-    "toeic-speaking",
-    gradeOptions("toeic-speaking", [
-      ...SPEAKING_GRADES,
-      ["am", "AM", "Advanced Mid"],
-      ["ah", "AH", "Advanced High"],
-    ]),
-  ],
-  ["jlpt", codeGrades("jlpt", ["N5", "N4", "N3", "N2", "N1"])],
-  ["topik", numberedGrades("topik", 6)],
-  ["hsk", numberedGrades("hsk", 9)],
-  [
-    "hskk",
-    gradeOptions("hskk", [
-      ["beginner", "초급"],
-      ["intermediate", "중급"],
-      ["advanced", "고급"],
-    ]),
-  ],
-  ["delf", codeGrades("delf", ["A1", "A2", "B1", "B2"])],
-  ["dalf", codeGrades("dalf", ["C1", "C2"])],
-  ["dele", codeGrades("dele", CEFR_GRADES)],
-  ["goethe-zertifikat", codeGrades("goethe-zertifikat", CEFR_GRADES)],
-]);
-
-export const LANGUAGE_GRADE_OPTIONS: readonly StandardValueOption[] = [
-  ...LANGUAGE_GRADE_OPTIONS_BY_TEST.values(),
-].flat();
 
 // Labels are the words company adapters already map (중증/경증).
 export const DISABILITY_GRADE_OPTIONS: readonly StandardValueOption[] = [
@@ -243,30 +179,17 @@ export const DISABILITY_GRADE_OPTIONS: readonly StandardValueOption[] = [
     value: "disability-grade:severe",
     label: "중증",
     aliases: [
-      "심한 장애",
-      "심한장애",
-      "심한 장애인",
-      "장애의 정도가 심한 장애인",
-      "중증(심한장애)",
-      "중증(기존1급~3급)",
-      "1급",
-      "2급",
-      "3급",
+      "심한 장애", "심한장애", "심한 장애인", "장애의 정도가 심한 장애인",
+      "중증(심한장애)", "중증(기존1급~3급)", "1급", "2급", "3급",
     ],
   },
   {
     value: "disability-grade:mild",
     label: "경증",
     aliases: [
-      "심하지 않은 장애",
-      "심하지않은장애",
-      "심하지 않은 장애인",
-      "장애의 정도가 심하지 않은 장애인",
-      "경증(심하지 않은 장애)",
-      "경증(기존4급~6급)",
-      "4급",
-      "5급",
-      "6급",
+      "심하지 않은 장애", "심하지않은장애", "심하지 않은 장애인",
+      "장애의 정도가 심하지 않은 장애인", "경증(심하지 않은 장애)",
+      "경증(기존4급~6급)", "4급", "5급", "6급",
     ],
   },
 ];
@@ -274,42 +197,14 @@ export const DISABILITY_GRADE_OPTIONS: readonly StandardValueOption[] = [
 // Sites split relations by kin (아들/딸); both still count as 자녀 for sites that do not.
 export const VETERAN_RELATION_OPTIONS: readonly StandardValueOption[] = [
   { value: "veteran-relation:self", label: "본인", aliases: ["당사자"] },
-  {
-    value: "veteran-relation:spouse",
-    label: "배우자",
-    aliases: ["남편", "아내", "처"],
-  },
-  {
-    value: "veteran-relation:son",
-    label: "아들",
-    aliases: ["자녀", "장남", "차남"],
-  },
-  {
-    value: "veteran-relation:daughter",
-    label: "딸",
-    aliases: ["자녀", "장녀", "차녀"],
-  },
-  {
-    value: "veteran-relation:father",
-    label: "부",
-    aliases: ["아버지", "부친"],
-  },
-  {
-    value: "veteran-relation:mother",
-    label: "모",
-    aliases: ["어머니", "모친"],
-  },
-  {
-    value: "veteran-relation:grandfather",
-    label: "조부",
-    aliases: ["할아버지"],
-  },
+  { value: "veteran-relation:spouse", label: "배우자", aliases: ["남편", "아내", "처"] },
+  { value: "veteran-relation:son", label: "아들", aliases: ["자녀", "장남", "차남"] },
+  { value: "veteran-relation:daughter", label: "딸", aliases: ["자녀", "장녀", "차녀"] },
+  { value: "veteran-relation:father", label: "부", aliases: ["아버지", "부친"] },
+  { value: "veteran-relation:mother", label: "모", aliases: ["어머니", "모친"] },
+  { value: "veteran-relation:grandfather", label: "조부", aliases: ["할아버지"] },
   { value: "veteran-relation:grandmother", label: "조모", aliases: ["할머니"] },
-  {
-    value: "veteran-relation:sibling",
-    label: "형제·자매",
-    aliases: ["형제자매"],
-  },
+  { value: "veteran-relation:sibling", label: "형제·자매", aliases: ["형제자매"] },
   { value: "veteran-relation:other", label: "기타" },
 ];
 
@@ -318,7 +213,7 @@ const STANDARD_VALUES: readonly StandardValueOption[] = [
   ...LANGUAGE_TEST_OPTIONS,
   ...SCHOOL_REGION_OPTIONS,
   ...ATTENDANCE_TYPE_OPTIONS,
-  ...LANGUAGE_GRADE_OPTIONS,
+  ...OPIC_GRADE_OPTIONS,
   ...MILITARY_STATUS_OPTIONS,
   ...MILITARY_BRANCH_OPTIONS,
   ...MILITARY_RANK_OPTIONS,
@@ -331,7 +226,7 @@ const STANDARD_VALUES: readonly StandardValueOption[] = [
 export function languageGradeOptions(
   testId: string,
 ): readonly StandardValueOption[] {
-  return LANGUAGE_GRADE_OPTIONS_BY_TEST.get(testId) ?? [];
+  return testId === "opic" ? OPIC_GRADE_OPTIONS : [];
 }
 
 export function standardValueLabel(value: string): string | undefined {

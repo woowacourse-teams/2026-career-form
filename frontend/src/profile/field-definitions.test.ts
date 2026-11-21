@@ -146,10 +146,7 @@ describe("language profile fields", () => {
     expect(
       languageTest?.fields.find((field) => field.id === "grade"),
     ).toMatchObject({
-      label: "등급·점수",
       inputType: "text",
-      choiceLabel: "등급",
-      optionsFor: expect.any(Function),
     });
     expect(
       languageSkill?.fields.find((field) => field.id === "language"),

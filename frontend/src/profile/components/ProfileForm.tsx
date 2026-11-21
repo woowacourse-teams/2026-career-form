@@ -18,10 +18,6 @@ import { CatalogNameInput } from "./CatalogNameInput";
 import { catalogCertificateIssuer } from "../catalog";
 import { catalogKindForField } from "../catalog-search";
 import {
-  standardValueLabel,
-  type StandardValueOption,
-} from "../standard-values";
-import {
   ADDRESS_GROUP_TITLE,
   editorFieldGroups,
   entrySummary,
@@ -80,33 +76,12 @@ interface FieldsProps {
 function optionsForField(
   field: ProfileFieldDefinition,
   values: Record<string, string>,
-  identity?: ProfileIdentity,
-): StandardValueOption[] {
-  return [...(field.optionsFor?.(values, identity) ?? field.options ?? [])].map(
+): Array<{ value: string; label: string }> {
+  return [...(field.optionsFor?.(values) ?? field.options ?? [])].map(
     (option) =>
       typeof option === "string" ? { value: option, label: option } : option,
   );
 }
-
-const normalizeChoice = (value: string) =>
-  value.normalize("NFKC").trim().toLowerCase();
-
-/** The option a stored value names by id, label or alias. */
-function matchingChoice(
-  options: readonly StandardValueOption[],
-  value: string,
-): StandardValueOption | undefined {
-  const source = normalizeChoice(value);
-  if (!source) return undefined;
-  return options.find((option) =>
-    [option.value, option.label, ...(option.aliases ?? [])].some(
-      (word) => normalizeChoice(word) === source,
-    ),
-  );
-}
-
-const choiceText = (option: StandardValueOption) =>
-  option.aliases?.[0] ? `${option.aliases[0]} (${option.label})` : option.label;
 
 function fieldValue(field: ProfileFieldDefinition, value: string): string {
   return field.inputType === "tel"
@@ -207,7 +182,7 @@ function Fields({
                 )
                 .map((field) => {
                   const id = `${idPrefix}-${field.id}`;
-                  const options = optionsForField(field, values, identity);
+                  const options = optionsForField(field, values);
                   const value = values[field.id] ?? "";
                   const disabled = field.disabledWhen?.(values) === true;
                   const catalogKind = catalogKindForField(section.id, field.id);
@@ -233,20 +208,9 @@ function Fields({
                       </div>
                     );
                   }
-                  // A free text field with a list for this exam is chosen from it.
-                  const choice =
-                    field.inputType === "text" && options.length > 0;
-                  const choiceMatch = choice
-                    ? matchingChoice(options, value)
-                    : undefined;
-                  const controlLabel = choice
-                    ? (field.choiceLabel ?? field.label)
-                    : field.label;
                   const hasLegacyValue =
                     value.length > 0 &&
-                    !(choice
-                      ? choiceMatch
-                      : options.some((option) => option.value === value));
+                    !options.some((option) => option.value === value);
                   const accessory = entryId
                     ? fieldAccessory?.({
                         sectionId: section.id,
@@ -267,7 +231,7 @@ function Fields({
                       key={field.id}
                     >
                       <span className={styles.fieldLabel}>
-                        <span>{controlLabel}</span>
+                        <span>{field.label}</span>
                         {lockedIssuer !== undefined && (
                           <span className={styles.catalogHint}>카탈로그</span>
                         )}
@@ -283,12 +247,12 @@ function Fields({
                           }
                           rows={5}
                         />
-                      ) : field.inputType === "select" || choice ? (
+                      ) : field.inputType === "select" ? (
                         <select
                           id={id}
-                          aria-label={controlLabel}
+                          aria-label={field.label}
                           disabled={disabled}
-                          value={choiceMatch?.value ?? value}
+                          value={value}
                           onChange={(event) =>
                             onChange(field.id, event.target.value)
                           }
@@ -299,7 +263,7 @@ function Fields({
                           )}
                           {options.map((option) => (
                             <option key={option.value} value={option.value}>
-                              {choice ? choiceText(option) : option.label}
+                              {option.label}
                             </option>
                           ))}
                         </select>
@@ -315,12 +279,7 @@ function Fields({
                                 ? "9999-12-31"
                                 : undefined
                             }
-                            value={
-                              lockedIssuer ??
-                              (field.inputType === "text"
-                                ? (standardValueLabel(value) ?? value)
-                                : value)
-                            }
+                            value={lockedIssuer ?? values[field.id] ?? ""}
                             readOnly={lockedIssuer !== undefined}
                             className={
                               lockedIssuer !== undefined

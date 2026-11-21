@@ -1,7 +1,6 @@
 import {
   DISABILITY_GRADE_OPTIONS,
   DISABILITY_STATUS_OPTIONS,
-  LANGUAGE_GRADE_OPTIONS,
   MILITARY_BRANCH_OPTIONS,
   MILITARY_RANK_OPTIONS,
   MILITARY_STATUS_OPTIONS,
@@ -26,14 +25,12 @@ const PROFILE_OPTIONS: Readonly<
   "education.highSchool.schoolRegion": SCHOOL_REGION_OPTIONS,
   "education.university.schoolRegion": SCHOOL_REGION_OPTIONS,
   "education.graduateSchool.schoolRegion": SCHOOL_REGION_OPTIONS,
-  "languages.languageTest.grade": LANGUAGE_GRADE_OPTIONS,
 };
 
 /** Fields that were free text before; their old text is still a value. */
 const LEGACY_TEXT_FIELDS: ReadonlySet<string> = new Set([
   "disability.disability.disabilityGrade",
   "veteran.veteran.veteranRelation",
-  "languages.languageTest.grade",
 ]);
 
 const normalized = (value: string) =>
