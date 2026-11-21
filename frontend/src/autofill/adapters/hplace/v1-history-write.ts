@@ -504,24 +504,40 @@ const REGISTER_MS = 1000;
  * The structure of the page's own "register '<query>' as a new entry" row
  * (measured: `li > button > span > div > [svg, span]`, the span text-only).
  */
-function isRegisterShape(li: Element): HTMLButtonElement | undefined {
+export function isRegisterShape(li: Element): HTMLButtonElement | undefined {
   const button = li.children.length === 1 ? li.children[0] : undefined;
-  const span = button?.children.length === 1 ? button.children[0] : undefined;
-  const box = span?.children.length === 1 ? span.children[0] : undefined;
+  const wrapper =
+    button?.children.length === 1 ? button.children[0] : undefined;
+  const box = wrapper?.children.length === 1 ? wrapper.children[0] : undefined;
   const [icon, label] = Array.from(box?.children ?? []);
+  // Measured (step2-probe-regtext.json): the label span holds only the
+  // quoted name; 등록하기 is a text node outside it (in the div, or in the
+  // span wrapping the div). Text anywhere else is not the register row.
+  const outside = [...(wrapper?.childNodes ?? []), ...(box?.childNodes ?? [])]
+    .filter((n) => n.nodeType === Node.TEXT_NODE && n.textContent?.trim())
+    .map((n) => normalize(n.textContent ?? ""));
+  const quoted = normalize(label?.textContent ?? "");
   return button instanceof HTMLButtonElement &&
-    span instanceof HTMLSpanElement &&
+    Array.from(button.childNodes).every(
+      (n) => n === wrapper || !n.textContent?.trim(),
+    ) &&
+    wrapper instanceof HTMLSpanElement &&
     box instanceof HTMLDivElement &&
     box.children.length === 2 &&
     icon?.tagName.toLowerCase() === "svg" &&
     label instanceof HTMLSpanElement &&
     label.children.length === 0 &&
-    normalize(label.textContent ?? "").endsWith("등록하기")
+    quoted.length > 2 &&
+    quoted.startsWith("'") &&
+    quoted.endsWith("'") &&
+    outside.length === 1 &&
+    outside[0] === "등록하기" &&
+    normalize(li.textContent ?? "").endsWith("등록하기")
     ? button
     : undefined;
 }
 
-/** The register row for exactly this name: `'` + name + `'등록하기`. */
+/** The register row for exactly the typed name: `'` + name + `'등록하기`. */
 export function isRegisterRow(li: Element, query: string): boolean {
   return (
     !!isRegisterShape(li) &&

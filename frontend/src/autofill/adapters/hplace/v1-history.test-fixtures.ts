@@ -243,7 +243,7 @@ const debouncedLevels = new Set(["고등학교", "대학교", "대학원"]);
 /** The page's "register '<query>' as a new entry" row (never pressed). */
 let registerQuotes: [string, string] = ["'", "'"];
 const registerRow = (query: string) =>
-  `<li><button type="button" class="x-register"><span><div><svg><path></path><path></path></svg><span>${registerQuotes[0]}${query}${registerQuotes[1]}등록하기</span></div></span></button></li>`;
+  `<li><button type="button" class="x-register"><span><div><svg><path></path><path></path></svg><span>${registerQuotes[0]}${query}${registerQuotes[1]}</span>등록하기</div></span></button></li>`;
 const resultRows = (query: string, names: string[]) =>
   names
     .map((n) =>

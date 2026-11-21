@@ -20,7 +20,12 @@ import {
   v1HistoryControls,
   v1HistoryLevels,
 } from "./v1-history-controls";
-import { v1HistoryGpaBlocked, writeV1History } from "./v1-history-write";
+import {
+  isRegisterRow,
+  isRegisterShape,
+  v1HistoryGpaBlocked,
+  writeV1History,
+} from "./v1-history-write";
 import { hplaceUnverifiedRows } from "./unverified-structure";
 import { executeApprovedWritesAfterPageSettles } from "../../write/executor";
 import { createProgressTracker } from "../../workflow/progress-model";
@@ -1168,7 +1173,7 @@ describe("v1 step 2 search with a slow catalog", () => {
     15_000,
   );
 
-  it("never judges a register-structured row by the result-row check (other quotes)", async () => {
+  it("never presses a register-like row quoted with other characters (fails closed)", async () => {
     setAutofillDebugEnabled(true);
     const log = vi.spyOn(console, "info").mockImplementation(() => {});
     try {
@@ -1195,7 +1200,7 @@ describe("v1 step 2 search with a slow catalog", () => {
       expect(lines).toEqual(
         expect.arrayContaining([
           expect.stringMatching(
-            /^\[CareerForm\] skip stage=write key=hplace\.v1\.college\.0\.academyName reason=control-shape detail=v1-history-search-register-other-name-ms\d+-li1-regyes-textno-branch-register-other-name failureCode=SEARCH_FORM_UNVERIFIED$/,
+            /^\[CareerForm\] skip stage=write key=hplace\.v1\.college\.0\.academyName reason=control-shape detail=v1-history-search-rows-\S+-ms\d+-li1-regno-textno-branch-rows failureCode=SEARCH_FORM_UNVERIFIED$/,
           ),
         ]),
       );
@@ -1204,5 +1209,26 @@ describe("v1 step 2 search with a slow catalog", () => {
       setAutofillDebugEnabled(false);
       log.mockRestore();
     }
+  });
+});
+
+describe("v1 step 2 register row, live DOM", () => {
+  it("recognises 등록하기 outside the quoted-name span (three text nodes)", () => {
+    mountV1Step2();
+    const li = document.createElement("li");
+    li.innerHTML =
+      '<button type="button"><span><div><svg><path></path><path></path></svg><span></span></div></span></button>';
+    const label = li.querySelector("div > span")!;
+    for (const part of ["'", "합성이름", "'"])
+      label.append(document.createTextNode(part));
+    label.after(document.createTextNode("등록하기"));
+    expect(label.childNodes).toHaveLength(3);
+    expect(label.textContent).not.toContain("등록하기");
+    expect(isRegisterShape(li)).toBeTruthy();
+    expect(isRegisterRow(li, "합성이름")).toBe(true);
+    expect(isRegisterRow(li, "다른이름")).toBe(false);
+    // 등록하기 anywhere else (here: a second button text) is not the register row.
+    li.querySelector("button")!.append(document.createTextNode("x"));
+    expect(isRegisterShape(li)).toBeFalsy();
   });
 });
