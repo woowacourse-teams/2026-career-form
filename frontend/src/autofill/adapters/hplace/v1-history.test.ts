@@ -23,6 +23,8 @@ import {
 import { v1HistoryGpaBlocked, writeV1History } from "./v1-history-write";
 import { hplaceUnverifiedRows } from "./unverified-structure";
 import { executeApprovedWritesAfterPageSettles } from "../../write/executor";
+import { createProgressTracker } from "../../workflow/progress-model";
+import { written } from "../../write/write-result";
 import {
   addControl,
   levelContainer,
@@ -953,5 +955,73 @@ describe("v1 step 2 with the real backend analyses", () => {
       setAutofillDebugEnabled(false);
       log.mockRestore();
     }
+  });
+});
+
+describe("v1 step 2 university and major search widgets", () => {
+  it("waits past the pre-query list for the query's own long, scroll-wrapped results", async () => {
+    const page = mountV1Step2();
+    const u0 = appendCard("대학교");
+    const r = await drive("hplace.v1.college.0.academyName", "합성대학교");
+    expect(r).toEqual({ ok: true, settled: true, codes: [] });
+    expect(chipText(u0, "학교정보")).toEqual(["합성대학교"]);
+    expect(page.searchQueries()).toEqual(["합성대학교"]);
+    expect(document.querySelector("#dropdown-body")).toBeNull();
+  });
+
+  it("does the same for the major sub-row next to its disabled inputs", async () => {
+    mountV1Step2();
+    const u0 = appendCard("대학교");
+    appendMajor(u0);
+    const r = await drive("hplace.v1.college.0.major0.majorName", "합성공학");
+    expect(r).toEqual({ ok: true, settled: true, codes: [] });
+    expect(chipText(u0, "전공")).toEqual(["합성공학"]);
+  });
+
+  it("names the row shape it could not verify, value-free", async () => {
+    setAutofillDebugEnabled(true);
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      const page = mountV1Step2();
+      const u0 = appendCard("대학교");
+      const r = await drive("hplace.v1.college.0.academyName", "구조다름");
+      expect(r).toEqual({
+        ok: false,
+        settled: false,
+        codes: ["SEARCH_FORM_UNVERIFIED"],
+      });
+      expect(log.mock.calls.map(([l]) => String(l))).toContain(
+        "[CareerForm] skip stage=write key=hplace.v1.college.0.academyName reason=control-shape detail=v1-history-search-rows-li1-button2-span0-span0-answered-yes failureCode=SEARCH_FORM_UNVERIFIED",
+      );
+      expect(searchInput(u0, "학교정보")!.value).toBe("");
+      expect(document.querySelector("#dropdown-body")).toBeNull();
+      expect(page.forbiddenClicks()).toEqual([]);
+    } finally {
+      setAutofillDebugEnabled(false);
+      log.mockRestore();
+    }
+  });
+
+  it("confirms a written search field by the chip that replaced its input", async () => {
+    mountV1Step2();
+    appendCard("대학교");
+    const { registry, items } = itemsFor([
+      ["hplace.v1.college.0.academyName", "합성대학교"],
+    ]);
+    const [item] = items;
+    const lookup = registry.lookupField(item.candidateId);
+    if (!("handle" in lookup)) throw new Error("no handle");
+    const signal = new AbortController().signal;
+    expect(
+      await getWorkflowAdapter(document).executeStateDriver!(
+        document,
+        lookup.handle,
+        item,
+        signal,
+      ),
+    ).toBe(true);
+    const tracker = createProgressTracker();
+    const [entry] = tracker.record(item, written(item.candidateId), registry);
+    expect(tracker.progressStateFor(entry.id)).toBe(true);
   });
 });

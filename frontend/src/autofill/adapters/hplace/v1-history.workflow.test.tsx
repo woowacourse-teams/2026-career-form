@@ -168,3 +168,24 @@ it("adds only missing cards, keeps existing values and skips a level with extra 
   expect(analyzeFields.mock.calls.length).toBeLessThanOrEqual(3);
   expect(page.forbiddenClicks()).toEqual([]);
 });
+
+it("keeps the stage-1 pass running past failed searches: 퇴사일 still lands, within two analyses", async () => {
+  const page = mountV1Step2();
+  const profile = v1HistoryProfile();
+  // Three school searches that cannot pick a single exact row.
+  profile.education[0].values.schoolName = "없는학교";
+  profile.education[1].values.schoolName = "없는학교";
+  profile.education[2].values.schoolName = "동명학교";
+  const { fields } = run(profile);
+  expect(await resultScreen()).toBeVisible();
+  expect(fields.length).toBe(2);
+  const [c0] = cards("직장경력");
+  expect(cardInput(c0, "퇴사일").value).toBe("2020.12.31");
+  expect(chipText(card("대학원", 0), "학교정보")).toEqual(["합성대학원"]);
+  expect(chipText(card("대학교", 0), "전공")).toEqual(["합성공학"]);
+  expect(cardInput(card("고등학교", 0), "입학일").value).toBe("2006.03.02");
+  for (const level of ["고등학교", "대학교"] as const)
+    for (const c of cards(level)) expect(chipText(c, "학교정보")).toEqual([]);
+  expect(document.querySelector("#dropdown-body")).toBeNull();
+  expect(page.forbiddenClicks()).toEqual([]);
+});

@@ -221,6 +221,16 @@ export function isV1HistoryStateDriver(
   );
 }
 
+/** A step-2 school or major search handle: a failed search ends only
+ * itself, so the other stage-1 drivers still run in the same pass. */
+export function isV1HistorySearchHandle(handle: FieldCandidateHandle): boolean {
+  const parsed = parseV1HistoryName(handle.candidate.domName);
+  return (
+    isV1HistoryHandle(handle) &&
+    (parsed?.field === "academyName" || parsed?.field === "major0.majorName")
+  );
+}
+
 /** A step-2 handle, by name (its search input may be gone after a pick). */
 export function isV1HistoryHandle(handle: FieldCandidateHandle): boolean {
   return (
@@ -488,14 +498,32 @@ export async function writeV1History(
 const SEARCH_MS = 5000;
 const STABLE_MS = 300;
 
-/** The rows of a result list as (click target, name). Measured shape
+/** Value-free structure of a row: tag and child count, level by level. */
+function rowShape(li: Element): string {
+  const parts = [`li${li.children.length}`];
+  let level = Array.from(li.children);
+  while (level.length && parts.length < 8) {
+    parts.push(
+      ...level.map((e) => `${e.tagName.toLowerCase()}${e.children.length}`),
+    );
+    level = level.flatMap((e) => Array.from(e.children));
+  }
+  return parts.slice(0, 8).join("-");
+}
+
+/**
+ * The rows of a result list as (click target, name). Measured shape
  * (step2-probe-fail.json): `li > button > span "<name>"`, the span holding
- * only text. Undefined when any row differs. */
-function resultRows(
-  body: Element,
-): { target: HTMLElement; name: string }[] | undefined {
+ * only text; the list may sit in a scroll wrapper whose track divs are not
+ * rows. Empty spacer `li`s are skipped. Any other row: its shape, no rows.
+ */
+function resultRows(body: Element): {
+  rows?: { target: HTMLElement; name: string }[];
+  shape?: string;
+} {
   const rows: { target: HTMLElement; name: string }[] = [];
   for (const li of Array.from(body.querySelectorAll<HTMLElement>("ul > li"))) {
+    if (li.children.length === 0 && !text(li)) continue;
     const button = li.children[0];
     const label = button?.children[0];
     if (
@@ -505,10 +533,10 @@ function resultRows(
       !(label instanceof HTMLSpanElement) ||
       label.children.length !== 0
     )
-      return undefined;
+      return { shape: rowShape(li) };
     rows.push({ target: button, name: text(label) });
   }
-  return rows;
+  return { rows };
 }
 
 /**
@@ -569,8 +597,8 @@ export async function writeV1HistorySearch(
     SEARCH_SELECTION_UNVERIFIED: "result-click-no-effect",
   };
   const open = () => bodies().length > 0;
-  const cleanup = async (code: WriteFailureCode) => {
-    skipV1History(control.name, reasons[code] ?? "blocked", "search", code);
+  const cleanup = async (code: WriteFailureCode, detail = "search") => {
+    skipV1History(control.name, reasons[code] ?? "blocked", detail, code);
     if (input.isConnected) {
       setValue(input, "");
       input.dispatchEvent(new Event("input", { bubbles: true }));
@@ -592,31 +620,57 @@ export async function writeV1HistorySearch(
   input.dispatchEvent(new Event("input", { bubbles: true }));
   let shown = "";
   let since = 0;
+  const listed = () => {
+    const [body, extra] = bodies();
+    return body && !extra ? Array.from(body.querySelectorAll("ul > li")) : [];
+  };
+  // Settled: this widget's own list is stable and answers the query (a row
+  // contains the name). A list shown on focus before the debounced search
+  // (대학교/대학원 widgets) is not taken for the result.
   const settled = await waitFor(
     () => {
-      const [body, extra] = bodies();
-      const items = body && !extra ? body.querySelectorAll("ul > li") : [];
+      const items = listed();
       if (!items.length) {
         shown = "";
         return false;
       }
-      const now = Array.from(items).map(text).join("\n");
+      const now = items.map(text).join("\n");
       if (now !== shown) {
         shown = now;
         since = Date.now();
         return false;
       }
-      return Date.now() - since >= STABLE_MS;
+      return (
+        Date.now() - since >= STABLE_MS &&
+        items.some((li) => normalize(text(li)).includes(name))
+      );
     },
     () => live() && input.isConnected,
     SEARCH_MS,
   );
-  if (!settled)
+  if (!live() || !input.isConnected) return cleanup("SEARCH_UNCONFIRMED");
+  // At the deadline a stable list that never answered is still judged below.
+  if (!settled && !listed().length)
     return cleanup(
-      bodies().length === 1 && !shown ? "SEARCH_NO_RESULTS" : "SEARCH_TIMEOUT",
+      bodies().length === 1 ? "SEARCH_NO_RESULTS" : "SEARCH_TIMEOUT",
     );
-  const rows = resultRows(bodies()[0]);
-  if (!rows) return cleanup("SEARCH_FORM_UNVERIFIED");
+  const body = bodies()[0];
+  const answered = listed().some((li) => normalize(text(li)).includes(name))
+    ? "yes"
+    : "no";
+  // Exactly one list (measured: one `ul`, scroll wrapper and track divs aside).
+  const lists = body.querySelectorAll("ul").length;
+  if (lists !== 1)
+    return cleanup(
+      "SEARCH_FORM_UNVERIFIED",
+      `search-lists-${lists}-answered-${answered}`,
+    );
+  const { rows, shape } = resultRows(body);
+  if (!rows)
+    return cleanup(
+      "SEARCH_FORM_UNVERIFIED",
+      `search-rows-${shape ?? "none"}-answered-${answered}`,
+    );
   const exact = rows.filter((r) => normalize(r.name) === name);
   if (exact.length === 0) return cleanup("SEARCH_NO_EXACT_MATCH");
   if (exact.length > 1) return cleanup("SEARCH_AMBIGUOUS");

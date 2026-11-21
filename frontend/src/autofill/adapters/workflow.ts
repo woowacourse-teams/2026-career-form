@@ -14,6 +14,7 @@ import {
 } from "./hplace/v1-history-collection";
 import {
   isV1HistoryHandle,
+  isV1HistorySearchHandle,
   isV1HistoryStateDriver,
   prefersV1HistoryProfileValue,
   settleV1HistoryStateDriver,
@@ -122,6 +123,12 @@ export interface WorkflowAdapter {
     profile: Profile,
   ): number | null | undefined;
   followUpRepeatableAction?(actionDomId: string | undefined): boolean;
+  /** Opt-in: a failed non-native driver ends only itself; later drivers of
+   * the same stage still run (the failed one is deferred as usual). */
+  continueAfterDriverFailure?(
+    item: ReviewPlanItem,
+    handle: FieldCandidateHandle,
+  ): boolean;
   /** Bounded wait for the page's reaction to a preparation click, before the refresh. */
   settlePreparationAction?(document: Document): Promise<void>;
   freshDefaultAfterAdd?(handle: ActionCandidateHandle): Element | undefined;
@@ -272,6 +279,9 @@ const hplaceWorkflowAdapter: WorkflowAdapter = {
   // v1 step 2: one card per profile entry of the level (CF-509).
   repeatableProfileCount: v1HistoryProfileCount,
   settlePreparationAction: settleV1HistoryAdd,
+  // A failed v1 step-2 search defers only its own field (CF-509).
+  continueAfterDriverFailure: (_item, handle) =>
+    isV1HistorySearchHandle(handle),
   // The per-card major add runs in the follow-up preparation, after the
   // cards it belongs to exist.
   followUpRepeatableAction: isV1HistoryMajorAdd,

@@ -943,8 +943,15 @@ export function v1HistoryValue(
   handle: FieldCandidateHandle,
 ): string | undefined {
   const control = ownedV1HistoryControl(handle);
-  if (control) return v1HistoryControlValue(control);
-  // A picked search field reads as its chip.
+  return control
+    ? v1HistoryControlValue(control)
+    : v1HistoryPickedValue(handle);
+}
+
+/** A picked search field (its input replaced): the chip text of the same card row. */
+export function v1HistoryPickedValue(
+  handle: FieldCandidateHandle,
+): string | undefined {
   const parsed = parseV1HistoryName(handle.candidate.domName);
   const document = handle.elements[0]?.ownerDocument;
   return parsed &&

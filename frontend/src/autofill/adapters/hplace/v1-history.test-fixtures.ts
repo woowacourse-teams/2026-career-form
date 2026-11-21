@@ -220,14 +220,27 @@ function majorHtml(level: HistoryLevel, k: number, m: number): string {
 /** Synthetic search catalog keyed by the exact typed query. */
 export const searchCatalog: Record<string, string[]> = {
   합성고등학교: ["합성고등학교", "합성고등학교 부설"],
-  합성대학교: ["합성대학교", "합성대학교 분교"],
+  // A long university result list (the live page shows 19+ rows, scroll-wrapped).
+  합성대학교: [
+    "합성대학교",
+    "합성대학교 분교",
+    ...Array.from({ length: 18 }, (_, i) => `합성대학교 제${i + 1}캠퍼스`),
+  ],
   합성전문대학: ["합성전문대학"],
   합성대학원: ["합성대학원", "합성대학원대학교"],
   합성공학: ["합성공학", "합성공학과", "응용합성공학"],
   합성경영: ["합성경영"],
   없는학교: ["없는학교분교", "새없는학교"],
   동명학교: ["동명학교", "동명학교"],
+  // Rows with a second span (not the measured shape): never picked.
+  구조다름: ["구조다름"],
 };
+
+/** Card levels whose search widgets show a pre-query list on focus and
+ * search only after a debounce (the HS widget searched at once live). */
+const debouncedLevels = new Set(["대학교", "대학원"]);
+const scrollList = (rows: string) =>
+  `<div id="dropdown-body" class="x-results"><div><div role="scrollbar"><div id="design-system-scroll-contain"><div><ul>${rows}</ul></div></div><div><div></div></div><div><div></div></div></div></div></div>`;
 
 /** The chip a picked row leaves in place of the search input (afterPick). */
 const chipHtml = (name: string) =>
@@ -506,16 +519,29 @@ function installShims(): V1HistoryPage {
       queries.push(query);
       const box = field.parentElement!;
       const names = query ? searchCatalog[query] : undefined;
-      // The site searches after a short delay; unknown queries show nothing.
+      const level = field.closest<HTMLElement>("[data-level]")?.dataset.level;
+      // The site searches after a delay (debounced for 대학교/대학원);
+      // unknown queries show nothing.
       if (names)
-        setTimeout(() => {
-          if (!field.isConnected || field.value !== query) return;
-          box.querySelector(":scope > .x-results")?.remove();
-          box.insertAdjacentHTML(
-            "beforeend",
-            `<div id="dropdown-body" class="x-results"><div><div role="scrollbar"><div id="design-system-scroll-contain"><div><ul>${names.map((n) => `<li><button type="button"><span>${n}</span></button></li>`).join("")}</ul></div></div></div></div></div>`,
-          );
-        }, 40);
+        setTimeout(
+          () => {
+            if (!field.isConnected || field.value !== query) return;
+            box.querySelector(":scope > .x-results")?.remove();
+            box.insertAdjacentHTML(
+              "beforeend",
+              scrollList(
+                names
+                  .map((n) =>
+                    query === "구조다름"
+                      ? `<li><button type="button"><span>${n}</span><span>1</span></button></li>`
+                      : `<li><button type="button"><span>${n}</span></button></li>`,
+                  )
+                  .join(""),
+              ),
+            );
+          },
+          debouncedLevels.has(level ?? "") ? 600 : 40,
+        );
       return;
     }
     if (
@@ -537,6 +563,31 @@ function installShims(): V1HistoryPage {
           );
       }, suggestDelay);
     }
+  });
+  // 대학교/대학원 widgets open a pre-query list on focus (other shape, no
+  // relation to the query) before the debounced search answers.
+  root.addEventListener("focusin", (event) => {
+    const field = event.target;
+    if (!(field instanceof HTMLInputElement) || !field.matches(SEARCH_INPUT))
+      return;
+    const level = field.closest<HTMLElement>("[data-level]")?.dataset.level;
+    if (!debouncedLevels.has(level ?? "")) return;
+    later(() => {
+      const box = field.parentElement!;
+      if (!field.isConnected || box.querySelector(":scope > .x-results"))
+        return;
+      box.insertAdjacentHTML(
+        "beforeend",
+        scrollList(
+          ["인기항목가", "인기항목나"]
+            .map(
+              (n, i) =>
+                `<li><button type="button"><span>${n}</span><span>${i + 1}</span></button></li>`,
+            )
+            .join(""),
+        ),
+      );
+    });
   });
   root.addEventListener("focusout", (event) => {
     const field = event.target;
