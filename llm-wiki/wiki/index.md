@@ -38,7 +38,7 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [프로필 JSON 전송](topics/profile-json-transfer.md) | 로컬 프로필의 versioned JSON 백업,전체 복원 계약 | 2026-09-07 |
 | [Greeting 지원서에서 프로필 가져오기](topics/greeting-profile-import.md) | 합성 fixture의 읽기 전용 후보 생성, 한 화면 검토와 확인 카드, 병합과 실사이트 검증 경계, CF-479에서 기능 제거 | 2026-11-18 |
 | [이력서 파일로 프로필 가져오기](topics/resume-file-import.md) | 패널의 출처 고르기와 온보딩 진입, 확장 안 PDF·MD·TXT 글자 추출과 거절, 전송 안내, 연월 날짜 1일 채움 표시, pdf.js와 CMap 포함 방식, 값 없는 Console 기록, CF-480의 PDF 조건 안내와 전송 안내 단계 제거, 실패 화면 통일 | 2026-11-18 |
-| [프로필 입력과 안전한 어학 선택](topics/profile-input-and-language-matching.md) | 자유 텍스트 어학과 유일 후보만 허용하는 회사 옵션 선택 | 2026-09-09 |
+| [프로필 입력과 안전한 어학 선택](topics/profile-input-and-language-matching.md) | 자유 텍스트 어학, 등급표 시험 10종의 등급 표준값 선택(ADR 500)과 유일 후보만 허용하는 회사 옵션 선택 | 2026-11-21 |
 | [확장 프로그램 프로필,지원서 패널 UI](topics/extension-ui.md) | 프로필,패널 탐색과 하늘색 중심 UI 계층, 선택형 값 라벨 표시·복사, 반복 항목 소제목, 패널 열기 단축키 | 2026-10-29 |
 | [지원서 패널 안 자동 기입 흐름](topics/autofill-panel-workflow.md) | 단일 패널 실행,범용 실제 값 판정과 드롭다운 값 보존 | 2026-10-02 |
 | [미지원 지원서 페이지 안내](topics/unsupported-application-pages.md) | 미지원 준비 분석의 중단과 수동 복사 유지 | 2026-10-02 |

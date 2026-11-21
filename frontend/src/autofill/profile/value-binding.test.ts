@@ -311,6 +311,36 @@ describe("status-locked fields", () => {
   });
 });
 
+describe("language test grade", () => {
+  const binding = {
+    type: "DIRECT" as const,
+    profileFieldKey: "languages.languageTest.grade",
+  };
+  const resolveGrade = (grade: string) => {
+    const profile = createEmptyProfile();
+    profile.languages.push({
+      id: "language-1",
+      sectionId: "languageTest",
+      values: { testName: "OPIc", grade },
+    });
+    return resolveValueBinding(profile, binding, 0);
+  };
+
+  it("resolves a grade ID to its short code and keeps the ID", () => {
+    expect(resolveGrade("opic:ih")).toMatchObject({
+      status: "resolved",
+      value: "IH",
+      standardValueId: "opic:ih",
+    });
+  });
+
+  it.each(["900", "AL"])("keeps the free text %s as written", (grade) => {
+    const resolved = resolveGrade(grade);
+    expect(resolved).toMatchObject({ status: "resolved", value: grade });
+    expect(resolved).not.toHaveProperty("standardValueId");
+  });
+});
+
 describe("certificate issuer binding", () => {
   const binding = {
     type: "DIRECT" as const,

@@ -1,5 +1,8 @@
 import type { ProfileFieldDefinition } from "./field-definitions";
-import type { StandardValueOption } from "./standard-values";
+import {
+  standardValueLabel,
+  type StandardValueOption,
+} from "./standard-values";
 
 type FieldOptions = readonly (string | StandardValueOption)[];
 
@@ -21,5 +24,5 @@ export function fieldDisplayValue(
   values: Readonly<Record<string, string>>,
 ): string {
   const options = field.optionsFor?.({ ...values }) ?? field.options;
-  return optionLabel(options, value) ?? value;
+  return optionLabel(options, value) ?? standardValueLabel(value) ?? value;
 }

@@ -45,6 +45,18 @@ describe("field display", () => {
     expect(fieldDisplayValue(field, "grade:static", {})).toBe("grade:static");
     expect(fieldDisplayValue(region, "region:busan", {})).toBe("부산");
     expect(fieldDisplayValue(region, "서울", {})).toBe("서울");
-    expect(fieldDisplayValue(name, "region:busan", {})).toBe("region:busan");
+    expect(fieldDisplayValue(name, "region:busan", {})).toBe("부산");
+  });
+
+  it("shows the label of a standard value ID that no option names", () => {
+    const grade: ProfileFieldDefinition = {
+      id: "grade",
+      label: "등급·점수",
+      inputType: "text",
+    };
+
+    expect(fieldDisplayValue(grade, "opic:ih", {})).toBe("IH");
+    expect(fieldDisplayValue(grade, "topik:4", {})).toBe("4급");
+    expect(fieldDisplayValue(grade, "900", {})).toBe("900");
   });
 });

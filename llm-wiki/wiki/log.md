@@ -1234,3 +1234,10 @@
 - 사람이 2026-11-19 "llm wiki 앞으로 잘 동작하는지 확인하고, 사람 승인 안받아도 되니 너가 알아서 기입해"라고 말해 에이전트가 자동 승인한 후보 3개를 [CF-499 bundle](../raw/issues/CF-499/manifest.md)에 payload 하나로 기록했다. 상태별 잠금 규칙, 병역 규칙의 근거와 한계, 확장 options 실화면 검증 방법이다.
 - [프로필 필드](topics/profile-fields.md)의 Current를 CF-499로 바꾸고 CF-368 이하를 History에 남겼으며 색인 설명을 갱신했다.
 - 실제 지원값, 계정, 세션, 회사 화면 원문, 대화 전문은 저장하지 않았다.
+
+## [2026-11-21] ingest | CF-500 등급표가 있는 어학 시험의 등급 표준값 선택
+- Approval-Digest: c8fd55bf553deb117c7bbb02ee6a35471d8aea2a5e364c52a5c67df0a9cb9956
+- Source-Revision: e4d8992
+- 사람이 2026-11-19 "llm wiki 앞으로 잘 동작하는지 확인하고, 사람 승인 안받아도 되니 너가 알아서 기입해"라고 말해 에이전트가 자동 승인한 후보 4개를 [CF-500 bundle](../raw/issues/CF-500/manifest.md)에 ADR payload 하나로 기록했다. 등급 표준값 표, 등급 선택 화면 조건, 자동 기입 값, ADR 500 전문이다.
+- [프로필 입력과 안전한 어학 선택](topics/profile-input-and-language-matching.md)의 Current를 ADR 500으로 바꾸고 CF-82를 History에 남겼으며 색인 설명을 갱신했다.
+- 실제 지원값, 시험 성적, 계정, 세션, 회사 화면 원문, 대화 전문은 저장하지 않았다.

@@ -100,7 +100,9 @@ function validateValues(
       throw new ImportSelectionError();
     if (field.inputType === "tel" && !/^0\d{9,10}$/.test(value))
       throw new ImportSelectionError();
-    const options = field.optionsFor?.(combined) ?? field.options;
+    // An empty list from optionsFor means the field offers no fixed choices.
+    const listed = field.optionsFor?.(combined);
+    const options = listed?.length ? listed : field.options;
     if (
       options &&
       !options.some(
