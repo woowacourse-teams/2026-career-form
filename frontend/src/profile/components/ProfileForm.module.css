@@ -164,6 +164,17 @@
     no-repeat right 15px center;
   padding-right: 42px;
 }
+/* A locked field stays readable but looks inactive. Placed after the hover and
+   select rules so it wins at equal specificity. */
+.field input:disabled,
+.field textarea:disabled,
+.field select:disabled,
+.nameTable input:disabled {
+  border-color: var(--color-border);
+  color: var(--color-text-muted);
+  background-color: var(--color-surface-muted);
+  cursor: not-allowed;
+}
 .repeatedSection {
   display: grid;
   gap: 20px;

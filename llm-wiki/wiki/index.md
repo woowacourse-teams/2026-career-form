@@ -32,7 +32,7 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | --- | --- | --- |
 | [기존 docs baseline](topics/docs-baseline.md) | 기존 docs 65개와 자산의 CF-41 현재본 | 2026-08-22 |
 | [제품 기준](topics/product-concept.md) | 사용자 통제, 제출 금지와 로컬 우선 | 2026-08-22 |
-| [프로필 필드](topics/profile-fields.md) | 지원 정보 구조와 필드 계약, 자격증 등록번호 라벨 | 2026-10-29 |
+| [프로필 필드](topics/profile-fields.md) | 지원 정보 구조와 필드 계약, 자격증 등록번호 라벨, 장애·보훈·병역 상태에 따른 입력 잠금 | 2026-11-21 |
 | [이력서 글자 프로필 초안 API](topics/resume-profile-import.md) | 이력서 글자를 프로필 초안으로 바꾸는 API 계약, 키·형식·원문 근거 검증과 YYYY-MM 날짜, 로컬·스테이징 전용 값 트레이스 | 2026-11-17 |
 | [프로필 카탈로그 선택과 식별 연결](topics/profile-catalog-identity.md) | 학교, 자격, 시험명의 오프라인 카탈로그 선택과 식별자 저장, 자격증 발급기관 정규명 고정과 사이트 표기 차이 일치(ADR 501), TOEIC Speaking, 한국폴리텍 번호 표기 대조 | 2026-11-21 |
 | [프로필 JSON 전송](topics/profile-json-transfer.md) | 로컬 프로필의 versioned JSON 백업,전체 복원 계약 | 2026-09-07 |

@@ -479,6 +479,7 @@ function ready(
   combined[row.fieldId] = row.value;
   if (candidateField.visibleWhen && !candidateField.visibleWhen(combined))
     return false;
+  if (candidateField.disabledWhen?.(combined)) return false;
   const options =
     candidateField.optionsFor?.(combined) ?? candidateField.options;
   return (

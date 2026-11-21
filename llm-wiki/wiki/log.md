@@ -1227,3 +1227,10 @@
 - 사람이 2026-11-19 "llm wiki 앞으로 잘 동작하는지 확인하고, 사람 승인 안받아도 되니 너가 알아서 기입해"라고 말해 에이전트가 자동 승인한 후보 3개를 [CF-501 bundle](../raw/issues/CF-501/manifest.md)에 ADR payload 하나로 기록했다. 발급기관 정규명과 잠금, 같은 기관 판정과 범용 자동 기입, ADR 501 전문이다.
 - [프로필 카탈로그 선택과 식별 연결](topics/profile-catalog-identity.md)의 Current를 ADR 501로 바꾸고 CF-458 이하를 History에 남겼으며 색인 설명을 갱신했다.
 - 실제 지원값, 자격증 이름, 계정, 세션, 회사 화면 원문, 대화 전문은 저장하지 않았다.
+
+## [2026-11-21] ingest | CF-499 장애·보훈·병역 상태에 따른 입력 잠금
+- Approval-Digest: 43bd06f26f90e1df0244bb18e7c50840f0d5e59564315c15406a45236d5f86c7
+- Source-Revision: cffc88a
+- 사람이 2026-11-19 "llm wiki 앞으로 잘 동작하는지 확인하고, 사람 승인 안받아도 되니 너가 알아서 기입해"라고 말해 에이전트가 자동 승인한 후보 3개를 [CF-499 bundle](../raw/issues/CF-499/manifest.md)에 payload 하나로 기록했다. 상태별 잠금 규칙, 병역 규칙의 근거와 한계, 확장 options 실화면 검증 방법이다.
+- [프로필 필드](topics/profile-fields.md)의 Current를 CF-499로 바꾸고 CF-368 이하를 History에 남겼으며 색인 설명을 갱신했다.
+- 실제 지원값, 계정, 세션, 회사 화면 원문, 대화 전문은 저장하지 않았다.
