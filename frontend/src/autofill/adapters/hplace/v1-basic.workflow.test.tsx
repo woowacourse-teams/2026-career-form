@@ -49,8 +49,8 @@ it("runs the status drivers, then their dependents, within the Hplace budget", a
     "hplace.v1.serviceStartDate",
   );
   expect(selectedToggle("병역")).toEqual(["군필"]);
-  expect(selectedToggle("장애")).toEqual(["대상"]);
-  expect(selectedToggle("보훈")).toEqual(["대상"]);
+  expect(selectedToggle("장애여부")).toEqual(["대상"]);
+  expect(selectedToggle("보훈여부")).toEqual(["대상"]);
   expect(dateInput("입대일").value).toBe("2010.03");
   expect(dateInput("YYYY.MM.DD").value).toBe("1990.01.31");
   expect(dropdownTrigger("rank").textContent).toBe("병장");

@@ -243,7 +243,7 @@ describe("collection", () => {
         domName: name("disabilityStatus"),
         element: "input",
         control: "radio",
-        displayName: "장애",
+        displayName: "장애여부",
         visibility: "visible",
         options: statusOptions(["비대상", "대상"]),
       },
@@ -253,7 +253,7 @@ describe("collection", () => {
         domName: name("veteranStatus"),
         element: "input",
         control: "radio",
-        displayName: "보훈",
+        displayName: "보훈여부",
         visibility: "visible",
         options: statusOptions(["비대상", "대상"]),
       },
@@ -339,7 +339,7 @@ describe("collection", () => {
     [
       "veteranStatus",
       () =>
-        toggleButton("보훈", "대상")
+        toggleButton("보훈여부", "대상")
           .closest("li")!
           .insertAdjacentHTML(
             "afterend",
@@ -533,7 +533,7 @@ describe("writing", () => {
     expect(resultOf("militaryStatus")?.status).toBe("skipped");
     expect(selectedToggle("병역")).toEqual(["미필"]);
     expect(resultOf("veteranStatus")?.status).toBe("written");
-    expect(selectedToggle("보훈")).toEqual(["대상"]);
+    expect(selectedToggle("보훈여부")).toEqual(["대상"]);
   });
 });
 
@@ -568,8 +568,8 @@ describe("state drivers", () => {
       );
     }
     expect(selectedToggle("병역")).toEqual(["군필"]);
-    expect(selectedToggle("장애")).toEqual(["대상"]);
-    expect(selectedToggle("보훈")).toEqual(["대상"]);
+    expect(selectedToggle("장애여부")).toEqual(["대상"]);
+    expect(selectedToggle("보훈여부")).toEqual(["대상"]);
     // The settle waited for the page to unlock the dependents.
     expect(dateInput("입대일").disabled).toBe(false);
     const second = analyzePass(profile);

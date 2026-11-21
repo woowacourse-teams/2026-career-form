@@ -132,8 +132,8 @@ export interface V1Page {
 /** Labels that unlock a status row's dependents (measured: 군필, 대상). */
 const unlocking: Record<string, string> = {
   병역: "군필",
-  장애: "대상",
-  보훈: "대상",
+  장애여부: "대상",
+  보훈여부: "대상",
 };
 
 export function mountV1Step1(step = "1", path?: string): V1Page {
@@ -160,8 +160,8 @@ ${row("사진", wrap('<input type="file" accept="image/*">'))}
 <div class="x-section"><div><h5>병역/취업우대</h5></div>
 <div id="5002"><div class="x-group">
 ${row("병역", toggle(["비대상", "군필", "미필", "면제", "복무중"]) + `<div class="x-sub">${text('placeholder="입대일" disabled')}${text('placeholder="제대일" disabled')}${wrap('<div><button type="button" class="x-duration" disabled>18개월</button><button type="button" class="x-duration" disabled>21개월</button><button type="button" class="x-duration" disabled>24개월</button></div>')}${text('name="militaryGroupAnswers.militaryItemAnswer.militaryRole" maxlength="100" disabled')}${dropdown("계급을 선택해주세요.", "rank", locked)}${dropdown("제대구분을 선택해주세요.", "discharge", locked)}${dropdown("군별을 선택해주세요.", "branch", locked)}</div>`)}
-${row("장애", toggle(["비대상", "대상"]) + text('name="preferentialEmploymentGroupResumeItemAnswers.handicapAnswer.handicapRegistrationNumber" maxlength="15" disabled') + dropdown("장애 정도", "grade", locked) + dropdown("장애 유형", "type", locked) + dropdown("편의 제공 여부 선택", "convenience", locked))}
-${row("보훈", toggle(["비대상", "대상"]) + text('name="preferentialEmploymentGroupResumeItemAnswers.patriotAnswer.patriotNumber" maxlength="13" disabled') + dropdown("관계를 선택해주세요.", "relation", locked) + dropdown("보훈비율을 선택해주세요.", "rate", locked))}
+${row("장애여부", toggle(["비대상", "대상"]) + text('name="preferentialEmploymentGroupResumeItemAnswers.handicapAnswer.handicapRegistrationNumber" maxlength="15" disabled') + dropdown("장애 정도", "grade", locked) + dropdown("장애 유형", "type", locked) + dropdown("편의 제공 여부 선택", "convenience", locked))}
+${row("보훈여부", toggle(["비대상", "대상"]) + text('name="preferentialEmploymentGroupResumeItemAnswers.patriotAnswer.patriotNumber" maxlength="13" disabled') + dropdown("관계를 선택해주세요.", "relation", locked) + dropdown("보훈비율을 선택해주세요.", "rate", locked))}
 </div></div></div>
 <div class="x-section"><div><h5>인적사항</h5></div>
 <div id="5003"><div class="x-group">
@@ -339,8 +339,8 @@ export async function until(check: () => boolean, ms = 2000): Promise<void> {
 /** Clicks status toggles the way a user would and waits for the unlock. */
 export async function unlockDependents(): Promise<void> {
   toggleButton("병역", "군필").click();
-  toggleButton("장애", "대상").click();
-  toggleButton("보훈", "대상").click();
+  toggleButton("장애여부", "대상").click();
+  toggleButton("보훈여부", "대상").click();
   await until(
     () =>
       !dateInput("입대일").disabled &&

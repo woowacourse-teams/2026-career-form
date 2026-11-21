@@ -202,8 +202,8 @@ export const v1Specs = {
   },
   disabilityStatus: {
     kind: "toggle",
-    label: "장애",
-    row: "장애",
+    label: "장애여부",
+    row: "장애여부",
     options: same(["비대상", "대상"]),
     profile: "disability.disability.disabilityStatus",
     unlocks: "대상",
@@ -218,7 +218,7 @@ export const v1Specs = {
   disabilityGrade: {
     kind: "dropdown",
     label: "장애 정도",
-    row: "장애",
+    row: "장애여부",
     index: 0,
     placeholder: "장애 정도",
     options: { "100": "심한 장애인", "200": "심하지 않은 장애인" },
@@ -228,7 +228,7 @@ export const v1Specs = {
   disabilityType: {
     kind: "dropdown",
     label: "장애 유형",
-    row: "장애",
+    row: "장애여부",
     index: 1,
     placeholder: "장애 유형",
     options: {
@@ -254,8 +254,8 @@ export const v1Specs = {
   },
   veteranStatus: {
     kind: "toggle",
-    label: "보훈",
-    row: "보훈",
+    label: "보훈여부",
+    row: "보훈여부",
     options: same(["비대상", "대상"]),
     profile: "veteran.veteran.veteranStatus",
     unlocks: "대상",
@@ -270,7 +270,7 @@ export const v1Specs = {
   veteranRelation: {
     kind: "dropdown",
     label: "보훈 관계",
-    row: "보훈",
+    row: "보훈여부",
     index: 0,
     placeholder: "관계를 선택해주세요.",
     options: same([
