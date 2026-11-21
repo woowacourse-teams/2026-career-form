@@ -261,7 +261,9 @@ async function writeAddress(
   };
   const listed = () =>
     Array.from(
-      box.querySelectorAll("#design-system-scroll-contain ul > li"),
+      // The scroll wrapper is not always rendered; a result row is any list
+      // row with a "도로명" label (the help list has none).
+      box.querySelectorAll("ul > li"),
     ).filter((li) => roadOf(li) !== undefined);
   // The result list replaces the help list; accept it once it stops changing.
   let shown: Element[] = [];
