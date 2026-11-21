@@ -1221,6 +1221,13 @@
 - [범용 자동 기입 검색 표면](topics/generic-autofill-search.md)의 Current를 CF-495로 바꾸고 CF-490을 History에 남겼으며 색인 설명을 갱신했다.
 - 실제 지원값, 학교·자격증 이름, 계정, 세션, 주소, 회사 이름, 대화 전문은 저장하지 않았다.
 
+## [2026-11-21] ingest | CF-501 카탈로그 자격증 발급기관 정규명 고정과 사이트 표기 차이 일치
+- Approval-Digest: 7613b6cc5d044cf4167f7c767160f91ebd77252b5421bd2f7dc5dcf3c2d22166
+- Source-Revision: 3b346f5
+- 사람이 2026-11-19 "llm wiki 앞으로 잘 동작하는지 확인하고, 사람 승인 안받아도 되니 너가 알아서 기입해"라고 말해 에이전트가 자동 승인한 후보 3개를 [CF-501 bundle](../raw/issues/CF-501/manifest.md)에 ADR payload 하나로 기록했다. 발급기관 정규명과 잠금, 같은 기관 판정과 범용 자동 기입, ADR 501 전문이다.
+- [프로필 카탈로그 선택과 식별 연결](topics/profile-catalog-identity.md)의 Current를 ADR 501로 바꾸고 CF-458 이하를 History에 남겼으며 색인 설명을 갱신했다.
+- 실제 지원값, 자격증 이름, 계정, 세션, 회사 화면 원문, 대화 전문은 저장하지 않았다.
+
 ## [2026-11-21] ingest | CF-500 등급표가 있는 어학 시험의 등급 표준값 선택
 - Approval-Digest: c8fd55bf553deb117c7bbb02ee6a35471d8aea2a5e364c52a5c67df0a9cb9956
 - Source-Revision: e4d8992

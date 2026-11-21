@@ -1,3 +1,7 @@
+import {
+  CERTIFICATE_ISSUER_KEY,
+  sameIssuer,
+} from "../../profile/certificate-issuer";
 import { PROFILE_CATEGORIES } from "../../profile/field-definitions";
 import {
   EMPLOYMENT_STATUS_SYNONYMS,
@@ -118,6 +122,14 @@ export function resolveChoiceOption<T extends { displayName: string }>(
   const displayMatches = options.filter((option) =>
     displayAliases.has(normalizeDisplayName(normalizeOptionText(option.displayName))));
   if (displayMatches.length) return pick(displayMatches);
+  // A site may spell the issuer its own way; one option for the same body is
+  // that issuer, several are ambiguous.
+  if (key === CERTIFICATE_ISSUER_KEY) {
+    const sameBody = options.filter((option) =>
+      sameIssuer(option.displayName, value),
+    );
+    if (sameBody.length) return pick(sameBody);
+  }
 
   if (key === "military.military.militaryStatus" || key === "military.military.militaryType") {
     const statusValue = key.endsWith("militaryStatus") ? value : context.militaryStatus;

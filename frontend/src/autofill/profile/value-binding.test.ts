@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { CATALOG_VERSION } from "../../profile/catalog";
 import { createEmptyProfile } from "../../profile/model";
 import { resolveValueBinding } from "./value-binding";
 
@@ -263,5 +264,47 @@ describe("language test grade", () => {
     const resolved = resolveGrade(grade);
     expect(resolved).toMatchObject({ status: "resolved", value: grade });
     expect(resolved).not.toHaveProperty("standardValueId");
+  });
+});
+
+describe("certificate issuer binding", () => {
+  const binding = {
+    type: "DIRECT" as const,
+    profileFieldKey: "certifications.certificate.issuer",
+  };
+
+  it("resolves a selected catalog certificate to the canonical catalog issuer", () => {
+    const profile = createEmptyProfile();
+    profile.certifications.push({
+      id: "certificate-1",
+      sectionId: "certificate",
+      values: { name: "SQL 개발자", issuer: "사용자 기관" },
+      identity: {
+        status: "selected",
+        catalogId: "certificate:kdata:sqld",
+        displayName: "SQL 개발자",
+        originalText: "SQLD",
+        catalogVersion: CATALOG_VERSION,
+      },
+    });
+    expect(resolveValueBinding(profile, binding, 0)).toMatchObject({
+      status: "resolved",
+      value: "한국데이터산업진흥원",
+    });
+    expect(profile.certifications[0]?.values.issuer).toBe("사용자 기관");
+  });
+
+  it("resolves a manual certificate to its stored issuer", () => {
+    const profile = createEmptyProfile();
+    profile.certifications.push({
+      id: "certificate-1",
+      sectionId: "certificate",
+      values: { name: "사내 인증", issuer: "사용자 기관" },
+      identity: { status: "manual", originalText: "사내 인증" },
+    });
+    expect(resolveValueBinding(profile, binding, 0)).toMatchObject({
+      status: "resolved",
+      value: "사용자 기관",
+    });
   });
 });

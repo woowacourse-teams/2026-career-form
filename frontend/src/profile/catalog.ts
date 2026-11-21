@@ -1,5 +1,6 @@
 import entries from "./catalog-data/entries.json";
 import type { CatalogEntry } from "./catalog-search";
+import { canonicalIssuerName } from "./certificate-issuer";
 import type { ProfileIdentity } from "./model";
 import { LANGUAGE_TEST_OPTIONS } from "./standard-values";
 
@@ -54,7 +55,8 @@ export function getCatalogEntry(id: string): CatalogEntry | undefined {
 }
 
 /**
- * Issuer of a catalog-selected certificate: the first ` · ` segment of its detail.
+ * Issuer of a catalog-selected certificate: the canonical name of the first
+ * ` · ` segment of its detail.
  * Only a current selection whose stored and displayed names both match counts.
  */
 export function catalogCertificateIssuer(
@@ -69,5 +71,5 @@ export function catalogCertificateIssuer(
     return undefined;
   const entry = getCatalogEntry(identity.catalogId);
   if (entry?.kind !== "certificate" || entry.name !== name) return undefined;
-  return entry.detail.split(" · ")[0]?.trim() || undefined;
+  return canonicalIssuerName(entry.detail.split(" · ")[0] ?? "") || undefined;
 }
