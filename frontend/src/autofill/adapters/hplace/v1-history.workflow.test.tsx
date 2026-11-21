@@ -163,7 +163,7 @@ it("adds only missing cards, keeps existing values and skips a level with extra 
   // 3 career cards for 2 entries: that level is not written.
   for (const c of cards("직장경력")) {
     expect(cardNamed(c, "department").value).toBe("");
-    expect(cardSelected(c, "근무기간")).toEqual([]);
+    expect(cardSelected(c, "근무기간")).toEqual(["재직중"]);
   }
   expect(analyzeFields.mock.calls.length).toBeLessThanOrEqual(3);
   expect(page.forbiddenClicks()).toEqual([]);

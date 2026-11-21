@@ -15,6 +15,7 @@ import {
 import {
   isV1HistoryHandle,
   isV1HistoryStateDriver,
+  prefersV1HistoryProfileValue,
   settleV1HistoryStateDriver,
   v1HistoryDriverRow,
   writeV1History,
@@ -191,7 +192,8 @@ const hplaceWorkflowAdapter: WorkflowAdapter = {
   ...genericWorkflowAdapter,
   prefersProfileValue: (handle, analysis) =>
     prefersBasicProfileValue(handle, analysis) ||
-    prefersV1ProfileValue(handle, analysis),
+    prefersV1ProfileValue(handle, analysis) ||
+    prefersV1HistoryProfileValue(handle, analysis),
   isStateDriver: (item, name) =>
     isRegistrationItem(item, name) ||
     isBasicStateDriver(item, name) ||

@@ -89,6 +89,9 @@ export type HistorySpec =
       profile: string;
       /** The label that unlocks this row's dependents (measured: 퇴사). */
       unlocks?: string;
+      /** The page's own selection on a fresh card (step2-probe-fail.json
+       * defaults): replaced by a different profile value. */
+      default?: string;
     }
   | {
       kind: "dropdown";
@@ -155,6 +158,7 @@ export type HistoryField =
   | "position"
   | "assignedTask";
 
+/** HS 소재지 options after 선택안함, as measured (step2-probe-fail.json hsRegion). */
 const regionLabels = [
   "서울",
   "부산",
@@ -163,7 +167,6 @@ const regionLabels = [
   "광주",
   "대전",
   "울산",
-  "세종",
   "경기",
   "강원",
   "충북",
@@ -173,6 +176,35 @@ const regionLabels = [
   "경북",
   "경남",
   "제주",
+  "세종",
+  "미국",
+  "일본",
+  "프랑스",
+  "호주",
+  "중국",
+  "영국",
+  "독일",
+  "캐나다",
+  "스웨덴",
+  "핀란드",
+  "이탈리아",
+  "러시아",
+  "대만",
+  "인도네시아",
+  "말레이시아",
+  "방글라데시",
+  "싱가폴",
+  "인도",
+  "필리핀",
+  "홍콩",
+  "베트남",
+  "뉴질랜드",
+  "오세아니아",
+  "중남미",
+  "아프리카",
+  "기타 아시아",
+  "기타 유럽",
+  "기타 지역",
 ];
 export const scaleLabels = [
   "3.0",
@@ -240,6 +272,7 @@ export function historySpecs(
           options: ["재직중", "퇴사"],
           profile: `${p}.employmentStatus`,
           unlocks: "퇴사",
+          default: "재직중",
         },
       ],
       ["entranceDate", date("근무기간", "입사일", "startDate")],
@@ -298,6 +331,7 @@ export function historySpecs(
         ? ["졸업", "졸업예정", "중퇴", "휴학", "재학"]
         : ["졸업", "졸업예정", "수료", "중퇴", "휴학", "재학"],
     profile: `${p}.completionStatus`,
+    default: "졸업",
   };
   const entrance = date("재학기간", "입학일", "startDate");
   const graduationDate = date("재학기간", "졸업일", "endDate", {
@@ -322,7 +356,11 @@ export function historySpecs(
           row: "학교정보",
           index: 0,
           count: 2,
-          placeholders: ["학교 소재지를 선택해주세요."],
+          // Measured without a period (step2-probe-close.json triggerText).
+          placeholders: [
+            "학교 소재지를 선택해주세요",
+            "학교 소재지를 선택해주세요.",
+          ],
           options: regionLabels,
           profile: `${p}.schoolRegion`,
         },
@@ -335,6 +373,7 @@ export function historySpecs(
           row: "학교정보",
           options: ["주간", "야간"],
           profile: `${p}.attendanceType`,
+          default: "주간",
         },
       ],
       ["entranceDate", entrance],
@@ -350,6 +389,7 @@ export function historySpecs(
         row: "학위구분",
         options: degreeLabels[group]!,
         profile: `${p}.degreeLevel`,
+        default: group === "college" ? "학사" : "석사",
       },
     ],
     ["entranceDate", entrance],
@@ -363,6 +403,7 @@ export function historySpecs(
         row: "입학구분",
         options: ["입학", "편입"],
         profile: `${p}.${group === "college" ? "transferStatus" : "admissionType"}`,
+        default: "입학",
       },
     ],
     // The score is written before its scale: a typed score can be cleared

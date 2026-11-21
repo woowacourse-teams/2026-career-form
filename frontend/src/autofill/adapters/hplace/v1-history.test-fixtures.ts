@@ -43,6 +43,7 @@ const prefixes: Partial<Record<HistoryLevel, string>> = {
 };
 
 export const historyOptions: Record<string, [string, string][]> = {
+  // Measured order (step2-probe-fail.json hsRegion), after 선택안함.
   region: [
     "서울",
     "부산",
@@ -51,7 +52,6 @@ export const historyOptions: Record<string, [string, string][]> = {
     "광주",
     "대전",
     "울산",
-    "세종",
     "경기",
     "강원",
     "충북",
@@ -61,6 +61,10 @@ export const historyOptions: Record<string, [string, string][]> = {
     "경북",
     "경남",
     "제주",
+    "세종",
+    "미국",
+    "일본",
+    "기타 지역",
   ].map((l, i) => [String(i + 1).padStart(2, "0"), l] as [string, string]),
   hsCategory: [["01", "합성계열"]],
   dept: [["01", "공학"]],
@@ -91,12 +95,13 @@ const dropdown = (placeholder: string, list: string, disabled = false) =>
   wrap(
     `<div class="ats-inline-flex ats-flex-col ats-relative x-dd"><button type="button" data-list="${list}" data-placeholder="${placeholder}"${disabled ? " disabled" : ""}>${placeholder}</button></div>`,
   );
-const toggle = (labels: string[]) =>
+/** A toggle group; `selected` is the page's own default selection. */
+const toggle = (labels: string[], selected?: string) =>
   wrap(
     `<div class="x-toggle">${labels
       .map(
         (label) =>
-          `<li class="ats-list-none"><button type="button" class="ats-bg-gray-80 ats-text-gray-600 x-btn">${label}</button></li>`,
+          `<li class="ats-list-none"><button type="button" class="${label === selected ? "ats-bg-white ats-text-gray-800" : "ats-bg-gray-80 ats-text-gray-600"} x-btn">${label}</button></li>`,
       )
       .join("")}</div>`,
   );
@@ -111,6 +116,7 @@ const graduation = (withCompletion: boolean) =>
     withCompletion
       ? ["졸업", "졸업예정", "수료", "중퇴", "휴학", "재학"]
       : ["졸업", "졸업예정", "중퇴", "휴학", "재학"],
+    "졸업",
   );
 const period = (labels: string[]) =>
   input('type="text" placeholder="입학일"') +
@@ -125,9 +131,9 @@ function cardBody(level: HistoryLevel, k: number): string {
       row(
         "학교정보",
         search() +
-          dropdown("학교 소재지를 선택해주세요.", "region") +
+          dropdown("학교 소재지를 선택해주세요", "region") +
           dropdown("계열을 선택해주세요.", "hsCategory") +
-          toggle(["주간", "야간"]),
+          toggle(["주간", "야간"], "주간"),
       ),
       row("재학기간", period(["2 년", "3 년"])),
     ].join("");
@@ -136,7 +142,7 @@ function cardBody(level: HistoryLevel, k: number): string {
       row("고용형태", dropdown("고용형태를 선택해주세요", "employment"), true),
       row(
         "근무기간",
-        toggle(["재직중", "퇴사"]) +
+        toggle(["재직중", "퇴사"], "재직중") +
           input('type="text" placeholder="입사일"') +
           input('type="text" placeholder="퇴사일" disabled'),
         true,
@@ -166,18 +172,21 @@ function cardBody(level: HistoryLevel, k: number): string {
   return [
     row(
       "학위구분",
-      toggle(college ? ["학사", "전문학사"] : ["석사", "박사"]),
+      toggle(
+        college ? ["학사", "전문학사"] : ["석사", "박사"],
+        college ? "학사" : "석사",
+      ),
       true,
     ),
     row(
       "학교정보",
       search() +
-        dropdown("학교 소재지를 선택해주세요.", "region", true) +
-        toggle(["본교", "분교"]),
+        dropdown("학교 소재지를 선택해주세요", "region", true) +
+        toggle(["본교", "분교"], "본교"),
     ),
     row("재학기간", period(["1 학기", "1 년", "2 년"])),
     row("졸업구분", graduation(true), true),
-    row("입학구분", toggle(["입학", "편입"])),
+    row("입학구분", toggle(["입학", "편입"], "입학")),
     ...(college
       ? [row("학과계열", dropdown("학과계열을 선택해주세요", "dept"))]
       : []),
@@ -246,16 +255,16 @@ export interface V1HistoryPage {
   searchQueries(): string[];
   /** Removes a label from a dropdown list the next time it opens. */
   dropOption(list: string, label: string): void;
-  /** Search lists stay open on blur. */
-  stickySearch(): void;
   /** Level names of the add controls clicked, in order. */
   addClicks(): string[];
   /** The add control of `level` stops adding cards after `n`. */
   limit(level: HistoryLevel, n: number): void;
   /** The next add click of `level` adds nothing. */
   stall(level: HistoryLevel): void;
-  /** The 회사명 suggestion list stays open on blur (closes on an outside click). */
-  stickySuggestions(): void;
+  /** 회사명 suggestion lists opened so far. */
+  suggestionLists(): number;
+  /** 회사명 suggestions open only 1 s after typing (a slow site request). */
+  lateSuggestions(): void;
 }
 
 export const levelContainer = (level: HistoryLevel) =>
@@ -360,12 +369,11 @@ function installShims(): V1HistoryPage {
   const majorAdds: string[] = [];
   const queries: string[] = [];
   const removed = new Map<string, Set<string>>();
-  let stickySearch = false;
   const limits = new Map<HistoryLevel, number>();
   const stalled = new Set<HistoryLevel>();
-  let sticky = false;
+  let suggestDelay = 60;
+  let suggestionLists = 0;
   const later = (run: () => void) => setTimeout(run, 0);
-  const suggestions = () => Array.from(root.querySelectorAll(".x-suggest"));
   root.addEventListener(
     "click",
     (event) => {
@@ -391,9 +399,14 @@ function installShims(): V1HistoryPage {
       const trigger = target.closest(".x-dd > button") as HTMLElement | null;
       if (trigger && ["hsCategory", "dept"].includes(trigger.dataset.list!))
         forbidden.push(`dropdown:${trigger.dataset.list}`);
-      // Any click outside a suggestion list closes it (the page's outside click).
-      if (!target.closest(".x-suggest"))
-        for (const body of suggestions()) later(() => body.remove());
+      // Only the row title closes an open search or suggestion list
+      // (measured: Escape, blur and clearing the input do not).
+      const title = target.closest('span[aria-hidden="true"]');
+      if (title)
+        for (const body of title.parentElement!.querySelectorAll(
+          ".x-results, .x-suggest",
+        ))
+          later(() => body.remove());
     },
     true,
   );
@@ -481,7 +494,7 @@ function installShims(): V1HistoryPage {
       later(() =>
         box.insertAdjacentHTML(
           "beforeend",
-          `<div id="dropdown-body" class="x-body"><ul><li><button type="button" value="선택안함_옵션">선택안함</button></li>${list.map(([code, label]) => `<li><button type="button" value="${code}">${label}</button></li>`).join("")}</ul></div>`,
+          `<div id="dropdown-body" class="x-body"><ul><li><button type="button" value="선택안함_옵션"><span><p>선택안함</p></span></button></li>${list.map(([code, label]) => `<li><button type="button" value="${code}"><span><p>${label}</p></span></button></li>`).join("")}</ul></div>`,
         ),
       );
     }
@@ -492,7 +505,6 @@ function installShims(): V1HistoryPage {
       const query = field.value;
       queries.push(query);
       const box = field.parentElement!;
-      box.querySelector(":scope > .x-results")?.remove();
       const names = query ? searchCatalog[query] : undefined;
       // The site searches after a short delay; unknown queries show nothing.
       if (names)
@@ -501,7 +513,7 @@ function installShims(): V1HistoryPage {
           box.querySelector(":scope > .x-results")?.remove();
           box.insertAdjacentHTML(
             "beforeend",
-            `<div id="dropdown-body" class="x-results"><div><div role="scrollbar"><div id="design-system-scroll-contain"><div><ul>${names.map((n) => `<li><button type="button">${n}</button></li>`).join("")}</ul></div></div></div></div></div>`,
+            `<div id="dropdown-body" class="x-results"><div><div role="scrollbar"><div id="design-system-scroll-contain"><div><ul>${names.map((n) => `<li><button type="button"><span>${n}</span></button></li>`).join("")}</ul></div></div></div></div></div>`,
           );
         }, 40);
       return;
@@ -510,29 +522,25 @@ function installShims(): V1HistoryPage {
       field instanceof HTMLInputElement &&
       field.placeholder === "회사명을 입력해주세요." &&
       field.value
-    )
-      later(() => {
+    ) {
+      const typed = field.value;
+      // Suggestions come from a site request: they open a moment later.
+      setTimeout(() => {
         const box = field.parentElement!;
-        if (!box.querySelector(":scope > .x-suggest"))
+        if (field.value !== typed || box.querySelector(":scope > .x-suggest"))
+          return;
+        suggestionLists++;
+        if (true)
           box.insertAdjacentHTML(
             "beforeend",
-            `<div id="dropdown-body" class="x-suggest"><ul><li><button type="button">${field.value}(주)</button></li><li><button type="button">${field.value} 합성</button></li></ul></div>`,
+            `<div id="dropdown-body" class="x-suggest"><ul><li><button type="button"><span>${field.value}(주)</span></button></li><li><button type="button"><span>${field.value} 합성</span></button></li></ul></div>`,
           );
-      });
+      }, suggestDelay);
+    }
   });
   root.addEventListener("focusout", (event) => {
     const field = event.target;
     if (!(field instanceof HTMLInputElement)) return;
-    if (field.matches(SEARCH_INPUT) && !stickySearch)
-      setTimeout(
-        () => field.parentElement?.querySelector(".x-results")?.remove(),
-        5,
-      );
-    if (field.placeholder === "회사명을 입력해주세요." && !sticky)
-      setTimeout(
-        () => field.parentElement?.querySelector(".x-suggest")?.remove(),
-        5,
-      );
     if (["입학일", "졸업일", "입사일", "퇴사일"].includes(field.placeholder)) {
       // The page keeps only a full day; 8 digits are reformatted.
       const value = field.value;
@@ -552,14 +560,12 @@ function installShims(): V1HistoryPage {
     searchQueries: () => [...queries],
     dropOption: (list, label) =>
       removed.set(list, (removed.get(list) ?? new Set()).add(label)),
-    stickySearch: () => {
-      stickySearch = true;
-    },
     addClicks: () => [...adds],
     limit: (level, n) => limits.set(level, n),
     stall: (level) => stalled.add(level),
-    stickySuggestions: () => {
-      sticky = true;
+    suggestionLists: () => suggestionLists,
+    lateSuggestions: () => {
+      suggestDelay = 1000;
     },
   };
 }

@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { setAutofillDebugEnabled } from "../../debug/autofill-debug";
 import type { PreparationPlan } from "../../api/types";
 import {
   collectFieldsSnapshot,
@@ -485,7 +486,7 @@ describe("v1 step 2 writes", () => {
     expect(
       await write("hplace.v1.highschool.0.graduationTypeCode", "수료"),
     ).toBe("option-unmatched");
-    expect(cardSelected(hs, "졸업구분")).toEqual([]);
+    expect(cardSelected(hs, "졸업구분")).toEqual(["졸업"]);
     expect(await write("hplace.v1.college.0.perfectScore", "4.5")).toBe(
       "written",
     );
@@ -532,11 +533,13 @@ describe("v1 step 2 writes", () => {
     );
     expect(cardInput(c, "회사명을 입력해주세요.").value).toBe("합성회사");
     await until(() => !c.querySelector("#dropdown-body"));
-    page.stickySuggestions();
+    page.lateSuggestions();
     const next = appendCard("직장경력");
     expect(await write("hplace.v1.career.1.company", "두번째회사")).toBe(
       "written",
     );
+    // The late list was waited for and closed without a pick.
+    expect(page.suggestionLists()).toBe(2);
     expect(next.querySelector("#dropdown-body")).toBeNull();
     expect(cardInput(next, "회사명을 입력해주세요.").value).toBe("두번째회사");
     expect(page.forbiddenClicks()).toEqual([]);
@@ -554,11 +557,12 @@ describe("v1 step 2 writes", () => {
       await write("hplace.v1.career.0.assignedTask", "가".repeat(101)),
     ).toBe("failed");
     expect(cardNamed(c, "assignedTask").value).toBe("");
-    cardToggle(c, "근무기간", "재직중").click();
-    expect(await write("hplace.v1.career.0.workingStatus", "퇴사")).toBe(
+    // The applicant's own non-default choice is an existing value.
+    cardToggle(c, "근무기간", "퇴사").click();
+    expect(await write("hplace.v1.career.0.workingStatus", "재직중")).toBe(
       "failed",
     );
-    expect(cardSelected(c, "근무기간")).toEqual(["재직중"]);
+    expect(cardSelected(c, "근무기간")).toEqual(["퇴사"]);
   });
 
   it("runs 재직중/퇴사 as a stage-1 driver that unlocks 퇴사일", async () => {
@@ -708,14 +712,13 @@ describe("v1 step 2 school and major search", () => {
   });
 
   it.each([
-    ["없는학교", "SEARCH_NO_EXACT_MATCH", false],
-    ["동명학교", "SEARCH_AMBIGUOUS", true],
-    ["목록없음", "SEARCH_TIMEOUT", false],
+    ["없는학교", "SEARCH_NO_EXACT_MATCH"],
+    ["동명학교", "SEARCH_AMBIGUOUS"],
+    ["목록없음", "SEARCH_TIMEOUT"],
   ])(
     "leaves %s unpicked, cleared and closed (%s)",
-    async (query, code, sticky) => {
+    async (query, code) => {
       const page = mountV1Step2();
-      if (sticky) page.stickySearch();
       const hs = appendCard("고등학교");
       const r = await drive("hplace.v1.highschool.0.academyName", query);
       expect(r).toEqual({ ok: false, settled: false, codes: [code] });
@@ -731,7 +734,6 @@ describe("v1 step 2 school and major search", () => {
 
   it("searches a major in its own card while another card's list is open", async () => {
     const page = mountV1Step2();
-    page.stickySearch();
     const u0 = appendCard("대학교");
     const u1 = appendCard("대학교");
     appendMajor(u0);
@@ -825,5 +827,64 @@ describe("v1 step 2 pair and status rules", () => {
       "failed",
     );
     expect(cardInput(c, "퇴사일").value).toBe("");
+  });
+});
+
+describe("v1 step 2 page defaults and diagnostics", () => {
+  it("replaces only the measured fresh-card defaults", async () => {
+    mountV1Step2();
+    const u0 = appendCard("대학교");
+    const c = appendCard("직장경력");
+    expect(cardSelected(u0, "학위구분")).toEqual(["학사"]);
+    expect(cardSelected(u0, "졸업구분")).toEqual(["졸업"]);
+    expect(cardSelected(u0, "입학구분")).toEqual(["입학"]);
+    expect(cardSelected(c, "근무기간")).toEqual(["재직중"]);
+    const adapter = getWorkflowAdapter(document);
+    const degree = itemFor("hplace.v1.college.0.degreeTypeCode", "전문학사");
+    expect(
+      adapter.prefersProfileValue?.(degree.handle, degree.item.analysis!),
+    ).toBe(true);
+    expect(await writeV1History(degree.handle, degree.item, () => true)).toBe(
+      "written",
+    );
+    expect(cardSelected(u0, "학위구분")).toEqual(["전문학사"]);
+    // 전문학사 is not the page default: now it is an existing value.
+    const back = itemFor("hplace.v1.college.0.degreeTypeCode", "학사");
+    expect(
+      adapter.prefersProfileValue?.(back.handle, back.item.analysis!),
+    ).toBe(false);
+    expect(await writeV1History(back.handle, back.item, () => true)).toBe(
+      "failed",
+    );
+    expect(cardSelected(u0, "학위구분")).toEqual(["전문학사"]);
+    // The same value as the default is kept, not a conflict.
+    expect(await write("hplace.v1.college.0.entranceTypeCode", "입학")).toBe(
+      "written",
+    );
+  });
+
+  it("logs every step-2 write that is not written, value-free", async () => {
+    setAutofillDebugEnabled(true);
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      mountV1Step2();
+      appendCard("고등학교");
+      appendCard("대학교");
+      await write("hplace.v1.college.0.entranceDate", "2009-03");
+      await write("hplace.v1.highschool.0.graduationTypeCode", "수료");
+      await drive("hplace.v1.highschool.0.academyName", "없는학교");
+      const lines = log.mock.calls.map(([line]) => String(line));
+      expect(lines).toEqual(
+        expect.arrayContaining([
+          "[CareerForm] skip stage=write key=hplace.v1.college.0.entranceDate reason=unit-mismatch detail=v1-history-date-not-full-day",
+          "[CareerForm] skip stage=write key=hplace.v1.highschool.0.graduationTypeCode reason=option-mismatch detail=v1-history-option-unmatched",
+          "[CareerForm] skip stage=write key=hplace.v1.highschool.0.academyName reason=result-not-unique detail=v1-history-search failureCode=SEARCH_NO_EXACT_MATCH",
+        ]),
+      );
+      for (const line of lines) expect(line).not.toMatch(/없는학교|2009|수료/);
+    } finally {
+      setAutofillDebugEnabled(false);
+      log.mockRestore();
+    }
   });
 });
