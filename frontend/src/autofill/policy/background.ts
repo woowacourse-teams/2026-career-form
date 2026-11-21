@@ -27,6 +27,8 @@ export async function loadPolicyForSender(
     return { ok: false, code: "BAD_REQUEST" };
   const url = new URL(sender.url);
   const payload = "payload" in message ? message.payload : null;
+  // sender.url은 문서가 처음 열린 URL이라 같은 문서 내 이동(SPA 라우팅)을 따라가지 않는다.
+  // 경로는 형식만 검사하고, 요청은 host 일치로 보낸 페이지에 묶는다.
   if (
     !["http:", "https:"].includes(url.protocol) ||
     !payload ||
@@ -34,7 +36,8 @@ export async function loadPolicyForSender(
     !("host" in payload) ||
     !("pathPattern" in payload) ||
     payload.host !== url.host ||
-    payload.pathPattern !== url.pathname
+    typeof payload.pathPattern !== "string" ||
+    !/^\/[^?#]*$/.test(payload.pathPattern)
   )
     return { ok: false, code: "BAD_REQUEST" };
   const base = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/$/, "");
@@ -43,7 +46,10 @@ export async function loadPolicyForSender(
     const response = await fetch(base + "/api/v1/execution-policy", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ host: url.host, pathPattern: url.pathname }),
+      body: JSON.stringify({
+        host: url.host,
+        pathPattern: payload.pathPattern,
+      }),
       signal: AbortSignal.timeout(10000),
     });
     if (!response.ok) return { ok: false, code: "SERVER_ERROR" };

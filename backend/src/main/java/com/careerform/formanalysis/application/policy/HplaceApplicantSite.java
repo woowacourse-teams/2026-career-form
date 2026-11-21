@@ -7,6 +7,7 @@ import java.util.regex.Pattern;
 public final class HplaceApplicantSite {
     public static final String DETAIL_PATH = "/mrs2/applicant/resume/writeResume";
     public static final String REGISTRATION_PATH = "/app/applicant/registResume";
+    public static final String V1_RESUME_FORM_PATH = "/v1/applicant/resume-form/*";
     private static final Pattern HOST = Pattern.compile("^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.(?:recruiter\\.co\\.kr|recruiter\\.im)$");
     private HplaceApplicantSite() { }
     public static boolean supplierHost(String host) {

@@ -425,7 +425,7 @@ function currentValue(handle: FieldCandidateHandle): string {
   return select?.value ?? "";
 }
 
-const NATIVE_OPTION_ABSENT_REASON =
+export const NATIVE_OPTION_ABSENT_REASON =
   "지원서 선택지에 프로필 값과 같은 항목이 없어 자동 기입하지 않았습니다.";
 const NATIVE_UNOFFERED_ROW_REASON =
   "지원서 선택지에 없는 항목이라 행을 추가하지 않았습니다.";

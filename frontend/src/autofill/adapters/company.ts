@@ -6,6 +6,7 @@ import {
 import { detailControls } from "./hplace/detail";
 import { hplaceDocumentKind, isHplaceDocument } from "./hplace/fingerprint";
 import { registrationControls } from "./hplace/registration";
+import { v1BasicControls } from "./hplace/v1-basic-controls";
 
 export type CompanyId = "policy" | "generic" | "components" | "hplace";
 
@@ -23,7 +24,9 @@ export function isUnsupportedHplace(document: Document): boolean {
   return (
     resolveDocumentCompany(document) === "hplace" &&
     !registrationControls(document) &&
-    !detailControls(document)
+    !detailControls(document) &&
+    // v1 resume form step 1 only; other v1 screens stay unsupported.
+    v1BasicControls(document).length === 0
   );
 }
 

@@ -106,7 +106,7 @@ final class HplaceCompanyFormPolicyFactory {
             control, binding, false, name);
     }
 
-    private static Map<String, String> identity(String... values) {
+    static Map<String, String> identity(String... values) {
         return java.util.Arrays.stream(values).collect(java.util.stream.Collectors.toUnmodifiableMap(value -> value, value -> value));
     }
 }

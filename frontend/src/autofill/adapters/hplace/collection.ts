@@ -25,6 +25,12 @@ import type {
   CollectedSnapshot,
   PreparationCollectedSnapshot,
 } from "../../dom/collect";
+import { collectV1Fields } from "./v1-basic-collection";
+import {
+  isV1BasicPage,
+  v1BasicControls,
+  v1SectionId,
+} from "./v1-basic-controls";
 import {
   registrationControls,
   registrationNames,
@@ -40,6 +46,8 @@ export function collectHplaceFields(
 ): CollectedSnapshot<FieldsAnalyzeRequest> {
   if (detailControls(document))
     return collectDetailFields(document, snapshotId, site);
+  if (isV1BasicPage(document))
+    return collectV1Fields(document, snapshotId, site);
   const registry = new CandidateRegistry();
   const controls = registrationControls(document);
   const fields = controls
@@ -112,15 +120,21 @@ export function collectHplacePreparation(
     site,
     sections: detailControls(document)
       ? [{ sectionId: detailSectionId, actionCandidates: [] }]
-      : registrationControls(document)
-        ? [{ sectionId: registrationSectionId, actionCandidates: [] }]
-        : [],
+      : v1BasicControls(document).length
+        ? [{ sectionId: v1SectionId, actionCandidates: [] }]
+        : registrationControls(document)
+          ? [{ sectionId: registrationSectionId, actionCandidates: [] }]
+          : [],
   };
   return {
     request,
     registry: new CandidateRegistry(),
     isSectionVisible: () =>
-      Boolean(registrationControls(document) || detailControls(document)),
+      Boolean(
+        registrationControls(document) ||
+        detailControls(document) ||
+        v1BasicControls(document).length,
+      ),
     countRepeatableGroups: () => undefined,
     repeatableGroupState: () => undefined,
     repeatableGroupLimit: () => undefined,

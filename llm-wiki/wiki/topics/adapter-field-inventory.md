@@ -2,9 +2,9 @@
 
 > Topic: adapter-field-inventory
 > Status: Current
-> Current: [CF-368 Greeting 고교·대학 학교명 확정 범위](../../raw/issues/CF-368/documents/greeting-school-name-field-inventory.md)
-> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-field-inventory.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-field-inventory.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-field-inventory.md); [CF-94 근거](../../raw/issues/CF-94/documents/adapter-field-inventory.md); [CF-160 근거](../../raw/issues/CF-160/documents/adapter-field-inventory.md); [CF-168 근거](../../raw/issues/CF-168/documents/adapter-field-inventory.md); [CF-169 근거](../../raw/issues/CF-169/documents/adapter-field-inventory.md); [CF-177 근거](../../raw/issues/CF-177/documents/adapter-field-inventory.md); [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md); [CF-177 C12·C13·시연 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md); [CF-177 KDI·구조 미확인 근거](../../raw/issues/CF-177/documents/live-kdi-unverified.md); [CF-177 후속 보완 묶음 근거](../../raw/issues/CF-177/documents/live-followup-bundle.md); [CF-335 현대 v25 경력 날짜·종료사유·자격 등급 지원 현황](../../raw/issues/CF-335/documents/hyundai-v25-field-inventory.md); [CF-346 Greeting v19 직접 입력 지원 범위](../../raw/issues/CF-346/documents/greeting-v19-field-inventory.md); [CF-368 Greeting 고교·대학 학교명 확정 범위](../../raw/issues/CF-368/documents/greeting-school-name-field-inventory.md)
-> Updated: 2026-10-29
+> Current: [CF-505 Hplace v1 1단계 필드 현황](../../raw/issues/CF-505/documents/hplace-v1-field-inventory.md)
+> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-field-inventory.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-field-inventory.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-field-inventory.md); [CF-94 근거](../../raw/issues/CF-94/documents/adapter-field-inventory.md); [CF-160 근거](../../raw/issues/CF-160/documents/adapter-field-inventory.md); [CF-168 근거](../../raw/issues/CF-168/documents/adapter-field-inventory.md); [CF-169 근거](../../raw/issues/CF-169/documents/adapter-field-inventory.md); [CF-177 근거](../../raw/issues/CF-177/documents/adapter-field-inventory.md); [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md); [CF-177 C12·C13·시연 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md); [CF-177 KDI·구조 미확인 근거](../../raw/issues/CF-177/documents/live-kdi-unverified.md); [CF-177 후속 보완 묶음 근거](../../raw/issues/CF-177/documents/live-followup-bundle.md); [CF-335 현대 v25 경력 날짜·종료사유·자격 등급 지원 현황](../../raw/issues/CF-335/documents/hyundai-v25-field-inventory.md); [CF-346 Greeting v19 직접 입력 지원 범위](../../raw/issues/CF-346/documents/greeting-v19-field-inventory.md); [CF-368 Greeting 고교·대학 학교명 확정 범위](../../raw/issues/CF-368/documents/greeting-school-name-field-inventory.md); [CF-505 Hplace v1 1단계 필드 현황](../../raw/issues/CF-505/documents/hplace-v1-field-inventory.md)
+> Updated: 2026-11-21
 
 ## 현재 상태
 
@@ -464,3 +464,17 @@ BE 정적 규칙과 FE 수집·반복행 준비·검색·날짜·선택 실행�
 | 프로필 127키 / 명시 제외 | 0 | 키 단위, 사이트 전용 항목 제외 |
 
 사이트 전용 27행: 프로필 키 없음 23, 명시 제외 2, 사용자 처리(인증·파일) 2。
+
+## Hplace v1 지원자 앱 1단계 현황 (CF-505, 2026-11-21)
+
+위의 Hplace 공통 정책 현황은 MRS2 화면의 것이며 그대로 유지한다. 그 표의 "v1/JOBDA 입력은 구조 미확인"은 v1 1단계의 아래 19칸에 한해 이 절로 바뀐다. v1 2단계 이후와 JOBDA는 계속 구조 미확인이다. 전체 표와 다루지 않는 칸의 분류는 [CF-505 근거](../../raw/issues/CF-505/documents/hplace-v1-field-inventory.md)를 따른다.
+
+| 범주 | 구현 키 (`hplace.v1.<key>`) | 조건 |
+| --- | --- | --- |
+| 기본 인적사항 | `englishName.familyFirst`, `birthday`, `gender`, `nationality` | 영문이름은 성 이름 순서, 국적은 대한민국만 |
+| 연락처 | `emergencyPhone` | 실화면 기입 미확인 |
+| 병역 | `militaryStatus`, `serviceStartDate`, `serviceEndDate`, `militarySpecialty`, `militaryRank`, `dischargeType`, `militaryBranch` | 상태 선택 뒤 열린 칸만 |
+| 장애 | `disabilityStatus`, `disabilityRegistrationNumber`, `disabilityGrade`, `disabilityType` | 대상일 때만 하위 칸 |
+| 보훈 | `veteranStatus`, `veteranNumber`, `veteranRelation` | 대상일 때만 하위 칸 |
+
+읽기 전용 칸, 사진, 지원 분야 묶음, 지원경로, 복무 기간, 편의 제공 여부, 보훈비율, 현주소, 취미는 다루지 않는다.

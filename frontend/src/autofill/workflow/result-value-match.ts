@@ -8,6 +8,7 @@ import {
   basicSpecs,
 } from "../adapters/hplace/basic-controls";
 import { basicTarget } from "../adapters/hplace/basic-write";
+import { v1ResultMatches } from "../adapters/hplace/v1-basic-write";
 import { ownedDetailControl } from "../adapters/hplace/detail";
 import { detailTargetValue } from "../adapters/hplace/detail-write";
 import { componentRules } from "../policy/runtime-rules";
@@ -230,6 +231,9 @@ export function matchesResultValue(
   );
   if (componentDisplayMatch !== undefined) return componentDisplayMatch;
   const binding = item.analysis?.valueBinding;
+  // v1 dates: the page keeps YYYY.MM.DD, or YYYY.MM for service dates.
+  const v1 = handle && v1ResultMatches(handle, item, left, right);
+  if (v1 !== undefined) return v1;
   const basic = handle && ownedBasicControl(handle);
   if (
     basic &&
