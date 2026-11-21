@@ -1243,8 +1243,8 @@
 - 실제 지원값, 시험 성적, 계정, 세션, 회사 화면 원문, 대화 전문은 저장하지 않았다.
 
 ## [2026-11-21] ingest | CF-505 에이치닷 v1 지원자 앱 1단계 정적 자동 기입
-- Approval-Digest: 607bd2fdc8373d293a90e0a76a448adc5d049217ae91c472fe4bd79a1c515751
-- Source-Revision: 2575172
-- 사람이 2026-11-19 "llm wiki 앞으로 잘 동작하는지 확인하고, 사람 승인 안받아도 되니 너가 알아서 기입해"라고 말해 에이전트가 자동 승인한 후보 4개를 [CF-505 bundle](../raw/issues/CF-505/manifest.md)에 payload 두 개로 기록했다. v1 1단계의 지원 범위, 화면 구조와 식별 기준, 정책 분리와 전송 계약, 실측과 한계를 적었다.
+- Approval-Digest: 7036bd66de1e2c36d356b4a4084f8db93503281327322fad00b94f87deb3661b
+- Source-Revision: 75cd91b
+- 사람이 2026-11-19 "llm wiki 앞으로 잘 동작하는지 확인하고, 사람 승인 안받아도 되니 너가 알아서 기입해"라고 말해 에이전트가 자동 승인한 후보 5개를 [CF-505 bundle](../raw/issues/CF-505/manifest.md)에 payload 두 개로 기록했다. v1 1단계의 지원 범위, 화면 구조와 식별 기준, 정책 분리와 전송 계약, 실측과 한계, 실행 정책 조회의 경로 검사를 적었다.
 - [Hplace 공통 어댑터](topics/adapter-hplace.md)의 Current를 CF-505로 바꾸고 v1 절을 추가했으며, [어댑터 필드 현황](topics/adapter-field-inventory.md)의 Current를 CF-505로 바꾸고 v1 1단계 현황 절을 추가했다. 색인 설명을 갱신했다.
 - 실제 지원값, 계정, 세션, 회사 화면 원문, 공고 제목, 대화 전문은 저장하지 않았다.

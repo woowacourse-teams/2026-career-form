@@ -2,8 +2,8 @@
 
 > Issue: [CF-505](https://github.com/woowacourse-teams/2026-career-form/issues/505)
 > Collected: 2026-11-21
-> Approval-Digest: 607bd2fdc8373d293a90e0a76a448adc5d049217ae91c472fe4bd79a1c515751
-> Source-Revision: 2575172
+> Approval-Digest: 7036bd66de1e2c36d356b4a4084f8db93503281327322fad00b94f87deb3661b
+> Source-Revision: 75cd91b
 
 [승인 후보 스냅샷](approved-candidates.md)의 후보 1과 3을 필드 표로 적는다. 다른 회사와 MRS2의 현황은 Supersedes가 가리키는 CF-368 근거와 그 이전 근거를 그대로 따른다. 구조와 정책의 설명은 [v1 1단계 근거](hplace-v1-step1.md)에 있다.
 
