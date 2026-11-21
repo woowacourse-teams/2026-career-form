@@ -43,27 +43,62 @@ const command = (spec: HistorySpec) =>
       ? "SELECT_OPTION"
       : "SET_TEXT";
 
-/** The backend's exact binding for this card field (LOOKUP targets are page labels). */
+/**
+ * The first condition the backend's analysis fails for this card field, or
+ * undefined when it is the exact binding. The backend sends ALLOWED or
+ * CONDITIONAL per profile key (SupportedProfileFields: e.g. schoolName,
+ * completionStatus, companyName are CONDITIONAL); both are approved.
+ */
+function approvalIssue(
+  spec: HistorySpec,
+  item: Pick<ReviewPlanItem, "analysis">,
+): string | undefined {
+  const a = item.analysis,
+    b = a?.valueBinding;
+  if (a?.mappingStatus !== "ADAPTER_VERIFIED")
+    return `mapping-${a?.mappingStatus ?? "none"}`;
+  if (a.interactionStatus !== "READY")
+    return `interaction-${a.interactionStatus}`;
+  if (a.autofillPolicy !== "ALLOWED" && a.autofillPolicy !== "CONDITIONAL")
+    return "policy";
+  if (a.writePlan?.command !== command(spec))
+    return `command-${a.writePlan?.command ?? "none"}`;
+  if (b?.profileFieldKey !== spec.profile) return "profile-key";
+  if (spec.kind === "text" || spec.kind === "date" || spec.kind === "search")
+    return b.type === "DIRECT" ? undefined : "binding";
+  if (b.type !== "LOOKUP") return "binding";
+  const targets = Object.values(b.optionMap);
+  return targets.length > 0 && targets.every((t) => spec.options.includes(t))
+    ? undefined
+    : "lookup-target";
+}
+
 function approved(
   spec: HistorySpec,
   item: Pick<ReviewPlanItem, "analysis">,
 ): boolean {
-  const a = item.analysis,
-    b = a?.valueBinding;
-  if (
-    a?.mappingStatus !== "ADAPTER_VERIFIED" ||
-    a.interactionStatus !== "READY" ||
-    a.autofillPolicy !== "ALLOWED" ||
-    a.writePlan?.command !== command(spec) ||
-    b?.profileFieldKey !== spec.profile
-  )
-    return false;
-  if (spec.kind === "text" || spec.kind === "date" || spec.kind === "search")
-    return b.type === "DIRECT";
-  if (b.type !== "LOOKUP") return false;
-  const targets = Object.values(b.optionMap);
-  return targets.length > 0 && targets.every((t) => spec.options.includes(t));
+  return approvalIssue(spec, item) === undefined;
 }
+
+/** Value-free: the failing condition plus the analysis and review state. */
+function notApproved(spec: HistorySpec, item: ReviewPlanItem): string {
+  const a = item.analysis;
+  return [
+    "not-approved",
+    approvalIssue(spec, item) ?? "none",
+    `policy-${a?.autofillPolicy ?? "none"}`,
+    `binding-${a?.valueBinding?.type ?? "none"}`,
+    `status-${item.status}`,
+    `value-${item.profileValue?.trim() ? "yes" : "no"}`,
+  ].join("-");
+}
+
+/** Review status of an item the run may write: a CONDITIONAL field is
+ * `needs-review` (the automatic run selects it), as in step 1. */
+const writableStatus = (item: ReviewPlanItem) =>
+  item.status === "available" ||
+  (item.status === "needs-review" &&
+    item.analysis?.autofillPolicy === "CONDITIONAL");
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const today = () => {
@@ -326,7 +361,7 @@ export async function writeV1History(
   const value = item.profileValue;
   const original = v1HistoryControlValue(control);
   if (original === undefined) return fail("control-shape", "value-unreadable");
-  if (!approved(spec, item)) return fail("blocked", "not-approved");
+  if (!approved(spec, item)) return fail("blocked", notApproved(spec, item));
   const target = v1HistoryTarget(control, value ?? "");
   if (control.field === "workingStatus" && target)
     appliedStatus.set(control.row, target);
@@ -351,7 +386,7 @@ export async function writeV1History(
       item.profileValue === value &&
       item.selected &&
       !item.disabled &&
-      item.status === "available" &&
+      writableStatus(item) &&
       item.candidateId === handle.candidateId &&
       item.analysis?.candidateId === handle.candidateId &&
       approved(spec, item) &&
@@ -499,7 +534,7 @@ export async function writeV1HistorySearch(
     return { written: false };
   }
   if (!approved(control.spec, item)) {
-    skipV1History(key, "blocked", "not-approved");
+    skipV1History(key, "blocked", notApproved(control.spec, item));
     return { written: false };
   }
   if (!name) {
@@ -522,7 +557,7 @@ export async function writeV1HistorySearch(
     item.profileValue === value &&
     item.selected &&
     !item.disabled &&
-    item.status === "available" &&
+    writableStatus(item) &&
     approved(control.spec, item);
   const bodies = () => Array.from(widget.querySelectorAll("#dropdown-body"));
   const reasons: Partial<Record<WriteFailureCode, StructuralSkipReason>> = {

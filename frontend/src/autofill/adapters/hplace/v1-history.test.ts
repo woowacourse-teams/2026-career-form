@@ -461,7 +461,13 @@ function itemFor(
       profileValue,
       currentValue: "",
       previewValue: profileValue,
-      status: "available",
+      // As review and the automatic run shape it: CONDITIONAL needs review
+      // and the automatic run selects it.
+      status:
+        "autofillPolicy" in analysis &&
+        analysis.autofillPolicy === "CONDITIONAL"
+          ? "needs-review"
+          : "available",
       selected: true,
       disabled: false,
       revealed: false,
@@ -637,7 +643,11 @@ function itemsFor(entries: [string, string][]) {
       profileValue: value,
       currentValue: "",
       previewValue: value,
-      status: "available",
+      status:
+        "autofillPolicy" in analysis &&
+        analysis.autofillPolicy === "CONDITIONAL"
+          ? "needs-review"
+          : "available",
       selected: true,
       disabled: false,
       revealed: false,
@@ -882,6 +892,63 @@ describe("v1 step 2 page defaults and diagnostics", () => {
         ]),
       );
       for (const line of lines) expect(line).not.toMatch(/없는학교|2009|수료/);
+    } finally {
+      setAutofillDebugEnabled(false);
+      log.mockRestore();
+    }
+  });
+});
+
+describe("v1 step 2 with the real backend analyses", () => {
+  it.each([
+    ["hplace.v1.career.0.company", "합성회사"],
+    ["hplace.v1.highschool.0.locationCode", "서울"],
+    ["hplace.v1.highschool.0.dayOrNight", "야간"],
+    ["hplace.v1.highschool.0.graduationTypeCode", "졸업예정"],
+    ["hplace.v1.college.0.degreeTypeCode", "전문학사"],
+    ["hplace.v1.college.0.graduationTypeCode", "졸업예정"],
+    ["hplace.v1.college.0.entranceTypeCode", "편입"],
+  ])("writes the CONDITIONAL field %s", async (name, value) => {
+    mountV1Step2();
+    appendCard("고등학교");
+    appendCard("대학교");
+    appendCard("직장경력");
+    const { item } = itemFor(name, value);
+    expect(item.analysis?.autofillPolicy).toBe("CONDITIONAL");
+    expect(item.status).toBe("needs-review");
+    expect(await write(name, value)).toBe("written");
+  });
+
+  it("keeps a CONDITIONAL default that equals the profile as written", async () => {
+    mountV1Step2();
+    const hs = appendCard("고등학교");
+    expect(
+      await write("hplace.v1.highschool.0.graduationTypeCode", "졸업"),
+    ).toBe("written");
+    expect(await write("hplace.v1.highschool.0.dayOrNight", "주간")).toBe(
+      "written",
+    );
+    expect(cardSelected(hs, "졸업구분")).toEqual(["졸업"]);
+  });
+
+  it("names the failing approval condition in the diagnostic, value-free", async () => {
+    setAutofillDebugEnabled(true);
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      mountV1Step2();
+      appendCard("대학교");
+      const { handle, item } = itemFor(
+        "hplace.v1.college.0.degreeTypeCode",
+        "전문학사",
+      );
+      const blocked = {
+        ...item,
+        analysis: { ...item.analysis!, interactionStatus: "BLOCKED" },
+      } as ReviewPlanItem;
+      expect(await writeV1History(handle, blocked, () => true)).toBe("failed");
+      expect(log.mock.calls.map(([l]) => String(l))).toContain(
+        "[CareerForm] skip stage=write key=hplace.v1.college.0.degreeTypeCode reason=blocked detail=v1-history-not-approved-interaction-BLOCKED-policy-CONDITIONAL-binding-LOOKUP-status-needs-review-value-yes",
+      );
     } finally {
       setAutofillDebugEnabled(false);
       log.mockRestore();

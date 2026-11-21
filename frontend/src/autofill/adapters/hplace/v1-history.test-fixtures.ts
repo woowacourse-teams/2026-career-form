@@ -8,10 +8,10 @@ import type {
   FieldsAnalyzeResponse,
   PreparationAnalyzeRequest,
   PreparationAnalyzeResponse,
-  ValueBinding,
 } from "../../api/types";
 import { createEmptyProfile, type Profile } from "../../../profile/model";
 import { v1Url } from "./v1-basic.test-fixtures";
+import backendResponse from "./__fixtures__/v1-history-fields-response.json";
 
 /**
  * Synthetic Hplace v1 applicant app, step 2 ("학력 및 연구/경력"), rebuilt
@@ -673,152 +673,20 @@ export function v1HistoryProfile(): Profile {
   return profile;
 }
 
-const identity = (labels: string[]) =>
-  Object.fromEntries(labels.map((l) => [l, l]));
-// The maps of the backend deliverable (be509/deliverable.md).
-const schoolGraduation = (completion: boolean) => ({
-  ...identity(
-    completion
-      ? ["졸업", "졸업예정", "수료", "중퇴", "휴학", "재학"]
-      : ["졸업", "졸업예정", "중퇴", "휴학", "재학"],
-  ),
-  재학중: "재학",
-});
-const scales = ["3.0", "3.5", "4.0", "4.3", "4.5", "5.0", "7.0", "20", "100"];
-const scaleMap = {
-  ...identity(scales),
-  ...Object.fromEntries(
-    scales.map((l) => [l.includes(".") ? `${l}0` : `${l}.00`, l]),
-  ),
-};
-const regions = [
-  "seoul:서울",
-  "busan:부산",
-  "daegu:대구",
-  "incheon:인천",
-  "gwangju:광주",
-  "daejeon:대전",
-  "ulsan:울산",
-  "sejong:세종",
-  "gyeonggi:경기",
-  "gangwon:강원",
-  "chungbuk:충북",
-  "chungnam:충남",
-  "jeonbuk:전북",
-  "jeonnam:전남",
-  "gyeongbuk:경북",
-  "gyeongnam:경남",
-  "jeju:제주",
-].map((pair) => pair.split(":"));
-const profileSection: Record<string, string> = {
-  highschool: "education.highSchool",
-  college: "education.university",
-  graduateSchool: "education.graduateSchool",
-  career: "careers.career",
-};
-const lookup = (
-  key: string,
-  optionMap: Record<string, string>,
-): ValueBinding => ({ type: "LOOKUP", profileFieldKey: key, optionMap });
-const direct = (key: string): ValueBinding => ({
-  type: "DIRECT",
-  profileFieldKey: key,
-});
-
-/** What the backend returns for `hplace.v1.<group>.<i>.<field>` (wire contract). */
-export function historyBinding(
-  group: string,
-  field: string,
-): ValueBinding | undefined {
-  const p = profileSection[group];
-  if (!p) return undefined;
-  const college = group === "college";
-  const school = group !== "career";
-  const table: Record<string, ValueBinding | undefined> = {
-    academyName: school ? direct(`${p}.schoolName`) : undefined,
-    "major0.majorName":
-      college || group === "graduateSchool"
-        ? direct(`${p}.majorName`)
-        : undefined,
-    graduationTypeCode: school
-      ? lookup(
-          `${p}.completionStatus`,
-          schoolGraduation(group !== "highschool"),
-        )
-      : undefined,
-    locationCode:
-      group === "highschool"
-        ? lookup(
-            `${p}.schoolRegion`,
-            // The frontend resolves a stored `region:<x>` to its label before
-            // the LOOKUP, so the map needs the label keys too (be509 sends
-            // only `region:<x>` keys: reconcile).
-            Object.fromEntries(
-              regions.flatMap(([c, l]) => [
-                [`region:${c}`, l],
-                [l, l],
-              ]),
-            ),
-          )
-        : undefined,
-    dayOrNight:
-      group === "highschool"
-        ? lookup(`${p}.attendanceType`, {
-            "attendance:day": "주간",
-            "attendance:night": "야간",
-          })
-        : undefined,
-    entranceDate: direct(`${p}.startDate`),
-    graduationDate: school ? direct(`${p}.endDate`) : undefined,
-    degreeTypeCode:
-      college || group === "graduateSchool"
-        ? lookup(
-            `${p}.degreeLevel`,
-            identity(college ? ["학사", "전문학사"] : ["석사", "박사"]),
-          )
-        : undefined,
-    entranceTypeCode: college
-      ? lookup(`${p}.transferStatus`, { 비해당: "입학", 해당: "편입" })
-      : group === "graduateSchool"
-        ? lookup(`${p}.admissionType`, identity(["입학", "편입"]))
-        : undefined,
-    score:
-      college || group === "graduateSchool"
-        ? direct(`${p}.gpaScore`)
-        : undefined,
-    perfectScore:
-      college || group === "graduateSchool"
-        ? lookup(`${p}.gpaScale`, scaleMap)
-        : undefined,
-    employmentType: !school
-      ? lookup(`${p}.employmentType`, {
-          정규: "정규직",
-          계약: "계약직",
-          파견: "파견직",
-          인턴: "인턴",
-          프리랜서: "프리랜서",
-          아르바이트: "아르바이트",
-          개인사업: "개인사업",
-          병역특례: "병역특례",
-          기타: "기타",
-        })
-      : undefined,
-    workingStatus: !school
-      ? lookup(`${p}.employmentStatus`, { 재직중: "재직중", 퇴직: "퇴사" })
-      : undefined,
-    leavingDate: !school ? direct(`${p}.endDate`) : undefined,
-    company: !school ? direct(`${p}.companyName`) : undefined,
-    department: !school ? direct(`${p}.department`) : undefined,
-    position: !school ? direct(`${p}.position`) : undefined,
-    assignedTask: !school ? direct(`${p}.responsibilities`) : undefined,
-  };
-  return table[field];
-}
+/** Real backend analyses per `<group>.<field>` (captured, synthetic request). */
+const backendFields = backendResponse.fields as Record<
+  string,
+  Omit<FieldAnalysis, "candidateId">
+>;
 
 const historyName =
   /^hplace\.v1\.(highschool|college|graduateSchool|career)\.(\d+)\.([A-Za-z]+|major0\.majorName)$/;
 
-/** Fake backend fields analysis for `hplace-v1-history`. */
+/**
+ * Fake backend fields analysis for `hplace-v1-history`: each field gets the
+ * real backend's analysis of the same group and field (binding, autofill
+ * policy, write command), captured from the local backend.
+ */
 export function v1HistoryAnalysis(
   request: FieldsAnalyzeRequest,
 ): FieldsAnalyzeResponse {
@@ -830,8 +698,12 @@ export function v1HistoryAnalysis(
       .flatMap((s) => s.fields)
       .map((f): FieldAnalysis => {
         const m = historyName.exec(f.domName ?? "");
-        const valueBinding = m && historyBinding(m[1], m[3]);
-        if (!valueBinding || f.domName !== f.domId)
+        const real = m && backendFields[`${m[1]}.${m[3]}`];
+        if (
+          !real ||
+          f.domName !== f.domId ||
+          (m[1] === "highschool" && m[2] !== "0")
+        )
           return {
             candidateId: f.candidateId,
             matchType: "NO_MATCH",
@@ -840,20 +712,8 @@ export function v1HistoryAnalysis(
             reasonCodes: ["NO_MATCH"],
           } as FieldAnalysis;
         return {
+          ...structuredClone(real),
           candidateId: f.candidateId,
-          matchType: "MATCH",
-          mappingStatus: "ADAPTER_VERIFIED",
-          interactionStatus: "READY",
-          autofillPolicy: "ALLOWED",
-          writePlan: {
-            command:
-              f.control === "radio"
-                ? "CHECK_RADIO"
-                : f.control === "select"
-                  ? "SELECT_OPTION"
-                  : "SET_TEXT",
-          },
-          valueBinding,
         } as FieldAnalysis;
       }),
   };
