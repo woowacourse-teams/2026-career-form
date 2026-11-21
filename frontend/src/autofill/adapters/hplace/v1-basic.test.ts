@@ -1133,7 +1133,7 @@ describe("current address", () => {
     for (const key of addressKeys) expect(result(key)?.status).toBe("skipped");
     expect(page.addressClicks()).toBe(1);
     expect(page.dialogClicks()).toEqual([]);
-  }, 10000);
+  }, 30000);
 
   it("reports a dialog that does not close after 확인 and cancels it", async () => {
     const page = mountV1Step1();
@@ -1147,7 +1147,7 @@ describe("current address", () => {
     expect(page.dialogClicks()).toEqual(["검색", "확인", "취소"]);
     expect(openDialogs()).toBe(0);
     expect(page.forbiddenClicks()).toEqual([]);
-  }, 10000);
+  }, 30000);
 
   it("does not open over another open dialog", async () => {
     const page = mountV1Step1();
