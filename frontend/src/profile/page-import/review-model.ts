@@ -479,6 +479,7 @@ function ready(
   combined[row.fieldId] = row.value;
   if (candidateField.visibleWhen && !candidateField.visibleWhen(combined))
     return false;
+  if (candidateField.disabledWhen?.(combined)) return false;
   // An empty list from optionsFor means the field offers no fixed choices.
   const listed = candidateField.optionsFor?.(combined);
   const options = listed?.length ? listed : candidateField.options;

@@ -82,7 +82,11 @@ function validateValues(
   const combined = { ...existing, ...values };
   for (const [key, value] of Object.entries(values)) {
     const field = definitions.find((item) => item.id === key);
-    if (!field || (field.visibleWhen && !field.visibleWhen(combined)))
+    if (
+      !field ||
+      (field.visibleWhen && !field.visibleWhen(combined)) ||
+      field.disabledWhen?.(combined)
+    )
       throw new ImportSelectionError();
     if (
       field.inputType === "date" &&

@@ -49,6 +49,7 @@ function partsOf(key: string) {
     sectionId: section.id,
     fieldId: field.id,
     visibleWhen: field.visibleWhen,
+    disabledWhen: field.disabledWhen,
     sensitive: category.sensitive,
     repeatable: category.repeatable,
     topLevel:
@@ -66,9 +67,10 @@ function directValue(
   const parts = partsOf(key);
   if (!parts) return { status: "unknown", sensitive: false };
   if (!parts.repeatable) {
-    const source = (profile[parts.categoryId] as FieldValues)[
-      parts.fieldId
-    ]?.trim();
+    const values = profile[parts.categoryId] as FieldValues;
+    if (parts.disabledWhen?.(values))
+      return { status: "missing", sensitive: parts.sensitive };
+    const source = values[parts.fieldId]?.trim();
     const value = source ? normalizeProfileOptionValue(key, source) : "";
     return value
       ? {
@@ -90,6 +92,8 @@ function directValue(
       educationEntries.find(
         (candidate) => candidate.sectionId === "university",
       ) ?? educationEntries[0];
+    if (entry && parts.disabledWhen?.(entry.values))
+      return { status: "missing", sensitive: parts.sensitive };
     const source = entry?.values[parts.fieldId]?.trim();
     const value = source ? normalizeProfileOptionValue(key, source) : "";
     return value
@@ -118,6 +122,8 @@ function directValue(
   ) {
     return { status: "missing", sensitive: parts.sensitive };
   }
+  if (entry && parts.disabledWhen?.(entry.values))
+    return { status: "missing", sensitive: parts.sensitive };
   // A catalog-selected certificate has the catalog's issuer; the stored text
   // is never rewritten.
   const source =

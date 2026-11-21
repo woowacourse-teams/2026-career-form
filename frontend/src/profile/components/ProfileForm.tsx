@@ -209,6 +209,7 @@ function Fields({
                   const id = `${idPrefix}-${field.id}`;
                   const options = optionsForField(field, values, identity);
                   const value = values[field.id] ?? "";
+                  const disabled = field.disabledWhen?.(values) === true;
                   const catalogKind = catalogKindForField(section.id, field.id);
                   if (catalogKind) {
                     return (
@@ -275,6 +276,7 @@ function Fields({
                         <textarea
                           id={id}
                           aria-label={field.label}
+                          disabled={disabled}
                           value={values[field.id] ?? ""}
                           onChange={(event) =>
                             onChange(field.id, event.target.value)
@@ -285,6 +287,7 @@ function Fields({
                         <select
                           id={id}
                           aria-label={controlLabel}
+                          disabled={disabled}
                           value={choiceMatch?.value ?? value}
                           onChange={(event) =>
                             onChange(field.id, event.target.value)
@@ -305,6 +308,7 @@ function Fields({
                           <input
                             id={id}
                             aria-label={field.label}
+                            disabled={disabled}
                             type={field.inputType}
                             max={
                               field.inputType === "date"
