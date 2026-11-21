@@ -17,6 +17,10 @@ import styles from "./ProfileForm.module.css";
 import { CatalogNameInput } from "./CatalogNameInput";
 import { catalogKindForField } from "../catalog-search";
 import {
+  standardValueLabel,
+  type StandardValueOption,
+} from "../standard-values";
+import {
   ADDRESS_GROUP_TITLE,
   editorFieldGroups,
   entrySummary,
@@ -75,12 +79,33 @@ interface FieldsProps {
 function optionsForField(
   field: ProfileFieldDefinition,
   values: Record<string, string>,
-): Array<{ value: string; label: string }> {
-  return [...(field.optionsFor?.(values) ?? field.options ?? [])].map(
+  identity?: ProfileIdentity,
+): StandardValueOption[] {
+  return [...(field.optionsFor?.(values, identity) ?? field.options ?? [])].map(
     (option) =>
       typeof option === "string" ? { value: option, label: option } : option,
   );
 }
+
+const normalizeChoice = (value: string) =>
+  value.normalize("NFKC").trim().toLowerCase();
+
+/** The option a stored value names by id, label or alias. */
+function matchingChoice(
+  options: readonly StandardValueOption[],
+  value: string,
+): StandardValueOption | undefined {
+  const source = normalizeChoice(value);
+  if (!source) return undefined;
+  return options.find((option) =>
+    [option.value, option.label, ...(option.aliases ?? [])].some(
+      (word) => normalizeChoice(word) === source,
+    ),
+  );
+}
+
+const choiceText = (option: StandardValueOption) =>
+  option.aliases?.[0] ? `${option.aliases[0]} (${option.label})` : option.label;
 
 function fieldValue(field: ProfileFieldDefinition, value: string): string {
   return field.inputType === "tel"
@@ -181,7 +206,7 @@ function Fields({
                 )
                 .map((field) => {
                   const id = `${idPrefix}-${field.id}`;
-                  const options = optionsForField(field, values);
+                  const options = optionsForField(field, values, identity);
                   const value = values[field.id] ?? "";
                   const catalogKind = catalogKindForField(section.id, field.id);
                   if (catalogKind) {
@@ -206,9 +231,20 @@ function Fields({
                       </div>
                     );
                   }
+                  // A free text field with a list for this exam is chosen from it.
+                  const choice =
+                    field.inputType === "text" && options.length > 0;
+                  const choiceMatch = choice
+                    ? matchingChoice(options, value)
+                    : undefined;
+                  const controlLabel = choice
+                    ? (field.choiceLabel ?? field.label)
+                    : field.label;
                   const hasLegacyValue =
                     value.length > 0 &&
-                    !options.some((option) => option.value === value);
+                    !(choice
+                      ? choiceMatch
+                      : options.some((option) => option.value === value));
                   const accessory = entryId
                     ? fieldAccessory?.({
                         sectionId: section.id,
@@ -223,7 +259,7 @@ function Fields({
                       key={field.id}
                     >
                       <span className={styles.fieldLabel}>
-                        <span>{field.label}</span>
+                        <span>{controlLabel}</span>
                       </span>
                       {field.inputType === "textarea" ? (
                         <textarea
@@ -235,11 +271,11 @@ function Fields({
                           }
                           rows={5}
                         />
-                      ) : field.inputType === "select" ? (
+                      ) : field.inputType === "select" || choice ? (
                         <select
                           id={id}
-                          aria-label={field.label}
-                          value={value}
+                          aria-label={controlLabel}
+                          value={choiceMatch?.value ?? value}
                           onChange={(event) =>
                             onChange(field.id, event.target.value)
                           }
@@ -250,7 +286,7 @@ function Fields({
                           )}
                           {options.map((option) => (
                             <option key={option.value} value={option.value}>
-                              {option.label}
+                              {choice ? choiceText(option) : option.label}
                             </option>
                           ))}
                         </select>
@@ -265,7 +301,11 @@ function Fields({
                                 ? "9999-12-31"
                                 : undefined
                             }
-                            value={values[field.id] ?? ""}
+                            value={
+                              field.inputType === "text"
+                                ? (standardValueLabel(value) ?? value)
+                                : value
+                            }
                             placeholder={
                               field.placeholder ??
                               (field.id === "grade" &&

@@ -1,4 +1,4 @@
-import type { ProfileCategoryId } from "./model";
+import type { ProfileCategoryId, ProfileIdentity } from "./model";
 import {
   ATTENDANCE_TYPE_OPTIONS,
   DISABILITY_STATUS_OPTIONS,
@@ -9,6 +9,7 @@ import {
   MILITARY_STATUS_OPTIONS,
   SCHOOL_REGION_OPTIONS,
   VETERAN_STATUS_OPTIONS,
+  languageGradeOptions,
   type StandardValueOption,
 } from "./standard-values";
 
@@ -21,8 +22,11 @@ export interface ProfileFieldDefinition {
   placeholder?: string;
   inputType: ProfileInputType;
   options?: readonly (string | StandardValueOption)[];
+  /** Label used when the free text field is offered as a list of choices. */
+  choiceLabel?: string;
   optionsFor?: (
     values: Record<string, string>,
+    identity?: ProfileIdentity,
   ) => readonly StandardValueOption[];
   visibleWhen?: (values: Record<string, string>) => boolean;
 }
@@ -52,6 +56,24 @@ const date = (id: string, label: string): ProfileFieldDefinition => ({
   label,
   inputType: "date",
 });
+const LANGUAGE_TEST_CATALOG_PREFIX = "languageTest:";
+
+/** Grades of the exam picked from the catalog; none for manual or edited names. */
+function languageGradeChoices(
+  values: Record<string, string>,
+  identity?: ProfileIdentity,
+): readonly StandardValueOption[] {
+  if (
+    identity?.status !== "selected" ||
+    !identity.catalogId.startsWith(LANGUAGE_TEST_CATALOG_PREFIX) ||
+    identity.displayName !== values.testName
+  )
+    return [];
+  return languageGradeOptions(
+    identity.catalogId.slice(LANGUAGE_TEST_CATALOG_PREFIX.length),
+  );
+}
+
 const select = (
   id: string,
   label: string,
@@ -318,7 +340,11 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
           text("testName", "시험명"),
           text("registrationNo", "등록번호"),
           date("acquisitionDate", "취득일"),
-          text("grade", "등급·점수"),
+          {
+            ...text("grade", "등급·점수"),
+            choiceLabel: "등급",
+            optionsFor: languageGradeChoices,
+          },
           text("evidenceDocumentPath", "증빙 서류 위치"),
         ],
       },
@@ -484,7 +510,11 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
         fields: [
           select("veteranStatus", "보훈 대상 여부", VETERAN_STATUS_OPTIONS),
           text("veteranType", "보훈구분"),
-          select("veteranRelation", "보훈 대상자와의 관계", VETERAN_RELATION_OPTIONS),
+          select(
+            "veteranRelation",
+            "보훈 대상자와의 관계",
+            VETERAN_RELATION_OPTIONS,
+          ),
           text("veteranNumber", "보훈번호"),
         ],
       },

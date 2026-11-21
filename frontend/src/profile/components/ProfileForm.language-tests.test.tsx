@@ -1,8 +1,12 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { expect, it } from "vitest";
 import { getCategoryDefinition } from "../field-definitions";
 import { useProfileEditor } from "../hooks/use-profile-editor";
-import { createEmptyProfile, type Profile } from "../model";
+import {
+  createEmptyProfile,
+  type Profile,
+  type ProfileIdentity,
+} from "../model";
 import type { ProfileRepository } from "../profile-repository";
 import {
   parseProfileImport,
@@ -73,6 +77,46 @@ async function setup(selected = false) {
   return profile;
 }
 
+const selectedTest = (id: string, displayName: string) =>
+  ({
+    status: "selected",
+    catalogId: `languageTest:${id}`,
+    displayName,
+    originalText: displayName,
+    catalogVersion: "2026-10-07",
+  }) as const;
+
+async function setupEntry(
+  values: Record<string, string>,
+  identity?: ProfileIdentity,
+) {
+  const profile: Profile = {
+    ...createEmptyProfile(),
+    languages: [
+      {
+        id: "language-1",
+        sectionId: "languageTest",
+        values,
+        ...(identity ? { identity } : {}),
+      },
+    ],
+  };
+  const repository: ProfileRepository = {
+    load: async () => profile,
+    save: async () => undefined,
+    loadLayout: async () => "a",
+    saveLayout: async () => undefined,
+  };
+  await act(async () => {
+    render(<Editor repository={repository} />);
+  });
+}
+
+const optionTexts = (select: HTMLElement) =>
+  within(select)
+    .getAllByRole("option")
+    .map((option) => option.textContent);
+
 function exportedProfile() {
   return parseProfileImport(screen.getByTestId("profile").textContent ?? "");
 }
@@ -122,12 +166,100 @@ it("removes the selected exam identity when its name is edited", async () => {
 
 it("retains the selected exam identity when only its grade is edited", async () => {
   await setup(true);
-  fireEvent.change(screen.getAllByLabelText("등급·점수")[0], {
-    target: { value: "AL" },
+  fireEvent.change(screen.getByRole("combobox", { name: "등급" }), {
+    target: { value: "opic:al" },
   });
 
   expect(exportedProfile().languages[0]).toMatchObject({
-    values: { ...related, testName: "OPIc", grade: "AL" },
+    values: { ...related, testName: "OPIc", grade: "opic:al" },
     identity: selection,
   });
+});
+
+it("turns the grade into a select of the nine OPIc levels once OPIc is chosen from the catalog", async () => {
+  await setup();
+  expect(screen.getAllByLabelText("등급·점수")).toHaveLength(2);
+  const input = screen.getAllByRole("combobox", { name: "시험명" })[0];
+  fireEvent.change(input, { target: { value: "오픽" } });
+  fireEvent.keyDown(input, { key: "ArrowDown" });
+  fireEvent.keyDown(input, { key: "Enter" });
+
+  expect(screen.getAllByLabelText("등급·점수")).toHaveLength(1);
+  expect(optionTexts(screen.getByRole("combobox", { name: "등급" }))).toEqual([
+    "선택",
+    "Novice Low (NL)",
+    "Novice Mid (NM)",
+    "Novice High (NH)",
+    "Intermediate Low (IL)",
+    "Intermediate Mid 1 (IM1)",
+    "Intermediate Mid 2 (IM2)",
+    "Intermediate Mid 3 (IM3)",
+    "Intermediate High (IH)",
+    "Advanced Low (AL)",
+  ]);
+});
+
+it("offers the eleven TOEIC Speaking levels", async () => {
+  await setupEntry(
+    { testName: "TOEIC Speaking" },
+    selectedTest("toeic-speaking", "TOEIC Speaking"),
+  );
+  const texts = optionTexts(screen.getByRole("combobox", { name: "등급" }));
+
+  expect(texts).toHaveLength(12);
+  expect(texts.slice(-3)).toEqual([
+    "Advanced Low (AL)",
+    "Advanced Mid (AM)",
+    "Advanced High (AH)",
+  ]);
+});
+
+it("keeps the grade and score text input for a score-based exam", async () => {
+  await setupEntry(
+    { testName: "TOEIC", grade: "900" },
+    selectedTest("toeic", "TOEIC"),
+  );
+
+  expect(screen.getByLabelText("등급·점수")).toHaveValue("900");
+  expect(screen.queryByRole("combobox", { name: "등급" })).toBeNull();
+});
+
+it("keeps the text input for a manually typed exam name", async () => {
+  await setupEntry(
+    { testName: "OPIc", grade: "IH" },
+    { status: "manual", originalText: "OPIc" },
+  );
+
+  expect(screen.getByLabelText("등급·점수")).toHaveValue("IH");
+  expect(screen.queryByRole("combobox", { name: "등급" })).toBeNull();
+});
+
+it("shows the matching level as selected for a stored full grade name", async () => {
+  await setupEntry(
+    { testName: "OPIc", grade: "Advanced Low" },
+    selectedTest("opic", "OPIc"),
+  );
+
+  expect(screen.getByRole("combobox", { name: "등급" })).toHaveValue("opic:al");
+  expect(exportedProfile().languages[0].values.grade).toBe("Advanced Low");
+});
+
+it("keeps an unknown stored grade as a legacy option", async () => {
+  await setupEntry(
+    { testName: "OPIc", grade: "800" },
+    selectedTest("opic", "OPIc"),
+  );
+  const select = screen.getByRole("combobox", { name: "등급" });
+
+  expect(select).toHaveValue("800");
+  expect(optionTexts(select)).toContain("800");
+});
+
+it("shows the label, not the raw ID, when a stored grade ID no longer has a list", async () => {
+  await setupEntry(
+    { testName: "TOEIC", grade: "opic:al" },
+    selectedTest("toeic", "TOEIC"),
+  );
+
+  expect(screen.getByLabelText("등급·점수")).toHaveValue("AL");
 });
