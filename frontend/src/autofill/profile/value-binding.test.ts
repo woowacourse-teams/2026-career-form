@@ -235,3 +235,77 @@ describe("HANJA_FULL_NAME", () => {
     },
   );
 });
+
+describe("status-locked fields", () => {
+  const direct = (profileFieldKey: string) => ({
+    type: "DIRECT" as const,
+    profileFieldKey,
+  });
+
+  it("treats a leftover disability detail as missing for a non-eligible status", () => {
+    const profile = createEmptyProfile();
+    profile.disability = {
+      disabilityStatus: "disability-status:not-eligible",
+      disabilityType: "남아있는 값",
+    };
+
+    expect(
+      resolveValueBinding(
+        profile,
+        direct("disability.disability.disabilityType"),
+      ),
+    ).toMatchObject({ status: "missing" });
+    expect(
+      resolveValueBinding(
+        profile,
+        direct("disability.disability.disabilityStatus"),
+      ),
+    ).toMatchObject({
+      status: "resolved",
+      standardValueId: "disability-status:not-eligible",
+    });
+  });
+
+  it("resolves the disability detail for an eligible status", () => {
+    const profile = createEmptyProfile();
+    profile.disability = {
+      disabilityStatus: "disability-status:eligible",
+      disabilityType: "가상 유형",
+    };
+
+    expect(
+      resolveValueBinding(
+        profile,
+        direct("disability.disability.disabilityType"),
+      ),
+    ).toMatchObject({ status: "resolved", value: "가상 유형" });
+  });
+
+  it("separates the military service fields from the exemption reason", () => {
+    const profile = createEmptyProfile();
+    profile.military = {
+      militaryStatus: "military-status:exempt",
+      militaryRank: "military-rank:byeongjang",
+      exemptionReason: "가상 사유",
+    };
+
+    expect(
+      resolveValueBinding(profile, direct("military.military.militaryRank")),
+    ).toMatchObject({ status: "missing" });
+    expect(
+      resolveValueBinding(profile, direct("military.military.exemptionReason")),
+    ).toMatchObject({ status: "resolved", value: "가상 사유" });
+  });
+
+  it("treats a leftover exemption reason as missing for a served status", () => {
+    const profile = createEmptyProfile();
+    profile.military = {
+      militaryStatus: "military-status:served",
+      exemptionReason: "남아있는 사유",
+    };
+
+    expect(
+      resolveValueBinding(profile, direct("military.military.exemptionReason")),
+    ).toMatchObject({ status: "missing" });
+  });
+});

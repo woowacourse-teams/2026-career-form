@@ -475,3 +475,69 @@ describe("ProfileForm address search", () => {
     expect(screen.queryByRole("button", { name: "주소 검색" })).toBeNull();
   });
 });
+
+describe("ProfileForm status locks", () => {
+  const renderSingle = (
+    categoryId: "disability" | "military",
+    values: Record<string, string>,
+  ) => {
+    const profile = createEmptyProfile();
+    profile[categoryId] = values;
+    const props = {
+      category: getCategoryDefinition(categoryId),
+      onAddEntry: vi.fn(),
+      onRemoveEntry: vi.fn(),
+      onUpdateEntry: vi.fn(),
+      onUpdateSingle: vi.fn(),
+      confirmDelete: () => true,
+    };
+    const view = render(<ProfileForm {...props} profile={profile} />);
+    return { view, props };
+  };
+  const DISABILITY_LABELS = [
+    "장애 유형",
+    "장애 정도",
+    "장애등록번호",
+    "장애 등록일",
+  ];
+
+  it("disables the disability details but keeps their stored value", () => {
+    renderSingle("disability", {
+      disabilityStatus: "disability-status:not-eligible",
+      disabilityType: "남아있는 값",
+    });
+
+    for (const label of DISABILITY_LABELS) {
+      expect(screen.getByLabelText(label)).toBeDisabled();
+    }
+    expect(screen.getByLabelText("장애 유형")).toHaveValue("남아있는 값");
+    expect(screen.getByLabelText("장애 여부")).toBeEnabled();
+  });
+
+  it("enables the disability details again once the status is eligible", () => {
+    const { view, props } = renderSingle("disability", {
+      disabilityStatus: "disability-status:not-eligible",
+      disabilityType: "남아있는 값",
+    });
+    expect(screen.getByLabelText("장애 유형")).toBeDisabled();
+    const profile = createEmptyProfile();
+    profile.disability = {
+      disabilityStatus: "disability-status:eligible",
+      disabilityType: "남아있는 값",
+    };
+
+    view.rerender(<ProfileForm {...props} profile={profile} />);
+
+    for (const label of DISABILITY_LABELS) {
+      expect(screen.getByLabelText(label)).toBeEnabled();
+    }
+  });
+
+  it("locks the service fields but not the exemption reason for an exempt status", () => {
+    renderSingle("military", { militaryStatus: "military-status:exempt" });
+
+    expect(screen.getByLabelText("병역구분")).toBeDisabled();
+    expect(screen.getByLabelText("면제·비대상 사유")).toBeEnabled();
+    expect(screen.getByLabelText("병역 상태")).toBeEnabled();
+  });
+});
