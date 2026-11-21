@@ -177,16 +177,34 @@ class HplaceV1PolicyTest {
     }
 
     @Test
-    void preparationWithActionsOrOtherSectionIsAStructureMismatch() {
+    void basicPreparationAcceptsNoActionsAndOnlyHistoryAddsAreAccepted() {
         var site = new PreparationAnalysisRequest.Site(HOST, PATH);
         var action = new PreparationAnalysisRequest.ActionCandidate("next", PreparationAnalysisRequest.FormElement.BUTTON,
             PreparationAnalysisRequest.FormControl.BUTTON, PreparationAnalysisRequest.Visibility.VISIBLE,
             null, null, null, null, null, null);
+        var add = new PreparationAnalysisRequest.ActionCandidate("add", PreparationAnalysisRequest.FormElement.BUTTON,
+            PreparationAnalysisRequest.FormControl.BUTTON, PreparationAnalysisRequest.Visibility.VISIBLE,
+            null, "hplace.v1.career.add", "hplace.v1.career.add", null, null, null);
+        // Step 1 still accepts no action at all, not even a history add.
         assertThat(router.route(new PreparationAnalysisRequest(2, "prep", site, List.of(
             new PreparationAnalysisRequest.Section("hplace-v1-basic", null, null, List.of(action), null)))).kind())
             .isEqualTo(RouteKind.STRUCTURE_MISMATCH);
         assertThat(router.route(new PreparationAnalysisRequest(2, "prep", site, List.of(
+            new PreparationAnalysisRequest.Section("hplace-v1-basic", null, null, List.of(add), null)))).kind())
+            .isEqualTo(RouteKind.STRUCTURE_MISMATCH);
+        assertThat(router.route(new PreparationAnalysisRequest(2, "prep", site, List.of(
             new PreparationAnalysisRequest.Section("hplace-detail-basic", null, null, List.of(), null)))).kind())
+            .isEqualTo(RouteKind.STRUCTURE_MISMATCH);
+        // Step 2: exact add names are accepted, anything else is not.
+        assertThat(router.route(new PreparationAnalysisRequest(2, "prep", site, List.of(
+            new PreparationAnalysisRequest.Section("hplace-v1-history", null, null, List.of(add), null)))).kind())
+            .isEqualTo(RouteKind.ADAPTER);
+        assertThat(router.route(new PreparationAnalysisRequest(2, "prep", site, List.of(
+            new PreparationAnalysisRequest.Section("hplace-v1-history", null, null, List.of(action), null)))).kind())
+            .isEqualTo(RouteKind.STRUCTURE_MISMATCH);
+        assertThat(router.route(new PreparationAnalysisRequest(2, "prep", site, List.of(
+            new PreparationAnalysisRequest.Section("hplace-v1-history", null, null, List.of(add), null),
+            new PreparationAnalysisRequest.Section("hplace-v1-basic", null, null, List.of(), null)))).kind())
             .isEqualTo(RouteKind.STRUCTURE_MISMATCH);
     }
 
@@ -222,6 +240,8 @@ class HplaceV1PolicyTest {
         assertThat(HplaceCompanyFormPolicyFactory.create().fieldRules()).noneMatch(HplaceV1PolicyTest::isV1Rule);
         assertThat(HplaceCompanyFormPolicyFactory.createNative().fieldRules()).noneMatch(HplaceV1PolicyTest::isV1Rule);
         assertThat(HplaceCompanyFormPolicyFactory.create().fieldRules()).hasSize(20);
+        assertThat(HplaceCompanyFormPolicyFactory.createNative().actionRules())
+            .noneMatch(rule -> rule.structuralNames().stream().anyMatch(name -> name.startsWith("hplace.v1.")));
     }
 
     @Test
