@@ -6,6 +6,17 @@ import {
 } from "./hplace/basic-write";
 import { ownedBasicControl } from "./hplace/basic-controls";
 import { ownedV1Control } from "./hplace/v1-basic-controls";
+import { ownedV1HistoryControl } from "./hplace/v1-history-controls";
+import {
+  settleV1HistoryAdd,
+  v1HistoryProfileCount,
+} from "./hplace/v1-history-collection";
+import {
+  isV1HistoryStateDriver,
+  settleV1HistoryStateDriver,
+  v1HistoryDriverRow,
+  writeV1History,
+} from "./hplace/v1-history-write";
 import {
   isV1StateDriver,
   prefersV1ProfileValue,
@@ -107,6 +118,8 @@ export interface WorkflowAdapter {
     profile: Profile,
   ): number | null | undefined;
   followUpRepeatableAction?(actionDomId: string | undefined): boolean;
+  /** Bounded wait for the page's reaction to a preparation click, before the refresh. */
+  settlePreparationAction?(document: Document): Promise<void>;
   freshDefaultAfterAdd?(handle: ActionCandidateHandle): Element | undefined;
   educationSectionHint?(
     matchLabel: string,
@@ -179,26 +192,32 @@ const hplaceWorkflowAdapter: WorkflowAdapter = {
   isStateDriver: (item, name) =>
     isRegistrationItem(item, name) ||
     isBasicStateDriver(item, name) ||
-    isV1StateDriver(item, name),
+    isV1StateDriver(item, name) ||
+    isV1HistoryStateDriver(item, name),
   stateDriverStage: (item, handle) =>
     (ownedBasicControl(handle) &&
       isBasicStateDriver(item, handle.candidate.domName)) ||
-    (ownedV1Control(handle) && isV1StateDriver(item, handle.candidate.domName))
+    (ownedV1Control(handle) &&
+      isV1StateDriver(item, handle.candidate.domName)) ||
+    (ownedV1HistoryControl(handle) &&
+      isV1HistoryStateDriver(item, handle.candidate.domName))
       ? 1
       : undefined,
   settleStateDriver: (_document, handle, _report, context) =>
     handle.candidate.domName?.startsWith("hplace.detail.")
       ? settleBasicStateDriver(handle, context?.signal, context?.item)
-      : handle.candidate.domName?.startsWith("hplace.v1.")
-        ? settleV1StateDriver(handle, context?.signal, context?.item)
-        : Promise.resolve(
-            !!context &&
-              settleRegistration(handle, context.item, context.signal),
-          ),
+      : ownedV1HistoryControl(handle)
+        ? settleV1HistoryStateDriver(handle, context?.signal, context?.item)
+        : handle.candidate.domName?.startsWith("hplace.v1.")
+          ? settleV1StateDriver(handle, context?.signal, context?.item)
+          : Promise.resolve(
+              !!context &&
+                settleRegistration(handle, context.item, context.signal),
+            ),
   stateDriverFailureGroup: (item, handle) =>
     isBasicStateDriver(item, handle.candidate.domName)
       ? (handle.elements[0]?.closest(".subject") ?? undefined)
-      : v1DriverRow(item, handle),
+      : (v1DriverRow(item, handle) ?? v1HistoryDriverRow(item, handle)),
   executeStateDriver: (
     document,
     handle,
@@ -209,21 +228,37 @@ const hplaceWorkflowAdapter: WorkflowAdapter = {
   ) =>
     ownedBasicControl(handle)
       ? writeBasic(handle, item, () => !signal.aborted, beforeMutation)
-      : ownedV1Control(handle)
-        ? writeV1(handle, item, () => !signal.aborted, beforeMutation).then(
-            (result) => {
-              if (result === "option-unmatched") report?.("OPTION_UNMATCHED");
-              return result === "written";
-            },
-          )
-        : writeRegistration(
-            document,
+      : ownedV1HistoryControl(handle)
+        ? writeV1History(
             handle,
             item,
-            signal,
-            report,
+            () => !signal.aborted,
             beforeMutation,
-          ),
+          ).then((result) => {
+            if (result === "option-unmatched") report?.("OPTION_UNMATCHED");
+            return result === "written";
+          })
+        : ownedV1Control(handle)
+          ? writeV1(handle, item, () => !signal.aborted, beforeMutation).then(
+              (result) => {
+                if (result === "option-unmatched") report?.("OPTION_UNMATCHED");
+                return result === "written";
+              },
+            )
+          : writeRegistration(
+              document,
+              handle,
+              item,
+              signal,
+              report,
+              beforeMutation,
+            ),
+  // v1 step 2: one card per profile entry of the level (CF-509).
+  repeatableProfileCount: v1HistoryProfileCount,
+  settlePreparationAction: settleV1HistoryAdd,
+  // Seam: the per-card major add (`hplace.v1.<group>.<i>.major.add`) needs
+  // the major search writer and is not opted in yet.
+  followUpRepeatableAction: () => false,
 };
 
 function resolveWorkflowAdapter(source: string | Document): WorkflowAdapter {

@@ -10,6 +10,16 @@ import {
   v1PresentControls,
   v1Spec,
 } from "./v1-basic-controls";
+import {
+  historyLevelLabel,
+  historyProfileSection,
+  historySpec,
+  isV1HistoryPage,
+  v1HistoryLevels,
+  v1HistoryMalformed,
+  v1HistoryName,
+  type HistoryGroup,
+} from "./v1-history-controls";
 
 export const STRUCTURE_UNVERIFIED_REASON = "입력 불가(화면 구조 확인 불가)";
 
@@ -82,8 +92,10 @@ export function hplaceUnverifiedRows(
 ): ReviewPlanItem[] {
   // Detached documents (overlay/demo pages) have no location.
   const v1 = isV1BasicPage(document);
+  const history = isV1HistoryPage(document);
   if (
     !v1 &&
+    !history &&
     (document.location?.pathname !== "/mrs2/applicant/resume/writeResume" ||
       !isHplaceDocument(document))
   )
@@ -118,6 +130,7 @@ export function hplaceUnverifiedRows(
     failureCode: "STRUCTURE_UNVERIFIED",
   });
   const rows: ReviewPlanItem[] = [];
+  if (history) return v1HistoryRows(document, profile, isCollected, row);
   if (v1)
     return v1PresentControls(document).flatMap(({ key, enabled }) => {
       const spec = v1Spec(key);
@@ -183,6 +196,76 @@ export function hplaceUnverifiedRows(
       !isCollected(basicName(key))
     )
       rows.push(row(key, spec.label, spec.profile));
+  }
+  return rows;
+}
+
+/**
+ * Step 2 (CF-509): a level whose cards cannot be told apart, a card control
+ * that fails its contract, and the school and major search inputs (phase 2:
+ * never typed into) are reported as 입력 불가 when the paired profile entry
+ * holds a value.
+ */
+function v1HistoryRows(
+  document: Document,
+  profile: Profile,
+  isCollected: (name: string) => boolean,
+  row: (key: string, label: string, profileFieldKey?: string) => ReviewPlanItem,
+): ReviewPlanItem[] {
+  const entries = (group: HistoryGroup) => {
+    const { categoryId, sectionId } = historyProfileSection[group];
+    return profile[categoryId].filter((e) => e.sectionId === sectionId);
+  };
+  const prefix = (group: HistoryGroup) =>
+    `${historyProfileSection[group].categoryId}.${historyProfileSection[group].sectionId}`;
+  const rows: ReviewPlanItem[] = [];
+  for (const level of v1HistoryLevels(document)) {
+    const list = entries(level.group);
+    if (level.status !== "ok") {
+      if (list.length)
+        rows.push(row(`v1-${level.group}`, historyLevelLabel[level.group]));
+      continue;
+    }
+    if (level.group === "career") continue;
+    level.cards.forEach((card, index) => {
+      const values = list[index]?.values;
+      if (!values) return;
+      const school = card.rows
+        ?.get("학교정보")
+        ?.querySelector<HTMLInputElement>(
+          'input[placeholder="학교명을 검색해주세요."]',
+        );
+      if (
+        school &&
+        !school.disabled &&
+        school.value === "" &&
+        values.schoolName?.trim()
+      )
+        rows.push(
+          row(
+            `v1-${level.group}-${index}-academyName`,
+            "학교명",
+            `${prefix(level.group)}.schoolName`,
+          ),
+        );
+      if (level.group !== "highschool" && values.majorName?.trim())
+        rows.push(
+          row(
+            `v1-${level.group}-${index}-majorName`,
+            "전공명",
+            `${prefix(level.group)}.majorName`,
+          ),
+        );
+    });
+  }
+  for (const { group, index, field } of v1HistoryMalformed(document)) {
+    const spec = historySpec(group, field)!;
+    const fieldId = spec.profile.split(".")[2];
+    if (
+      entries(group)[index]?.values[fieldId]?.trim() &&
+      !isCollected(v1HistoryName(group, index, field))
+    )
+      rows.push(row(`v1-${group}-${index}-${field}`, spec.label, spec.profile));
   }
   return rows;
 }

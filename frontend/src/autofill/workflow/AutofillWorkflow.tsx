@@ -142,6 +142,10 @@ import {
   type AttachedFile,
 } from "../attachments/AttachmentSection";
 import { v1PhotoAttachFollowUp } from "../adapters/hplace/v1-photo-dialog";
+import {
+  isV1HistoryPage,
+  ownedV1HistoryAddAction,
+} from "../adapters/hplace/v1-history-controls";
 import { useDeveloperMode } from "../debug/developer-mode";
 import { localWorkflowLog } from "../debug/local-workflow";
 
@@ -610,7 +614,21 @@ function PolicyReadyWorkflow({
           throw new Error("Unexpected generic response for registered adapter");
         if (
           resolveDocumentCompany(pageDocument) === "hplace" &&
-          analysis.preparationPlans.length > 0
+          analysis.preparationPlans.length > 0 &&
+          // v1 step 2 (CF-509): only its verified card add actions.
+          !(
+            isV1HistoryPage(pageDocument) &&
+            analysis.preparationPlans.every((plan) => {
+              const action = snapshot.registry.lookupAction(
+                plan.actionCandidateId,
+              );
+              return (
+                plan.command === "ADD_REPEATABLE_GROUP" &&
+                action.status === "ready" &&
+                ownedV1HistoryAddAction(action.handle) !== undefined
+              );
+            })
+          )
         )
           throw new Error(
             "Unexpected preparation action for Hplace registration",

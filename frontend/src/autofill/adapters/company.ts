@@ -7,6 +7,7 @@ import { detailControls } from "./hplace/detail";
 import { hplaceDocumentKind, isHplaceDocument } from "./hplace/fingerprint";
 import { registrationControls } from "./hplace/registration";
 import { v1BasicControls } from "./hplace/v1-basic-controls";
+import { isV1HistoryPage } from "./hplace/v1-history-controls";
 
 export type CompanyId = "policy" | "generic" | "components" | "hplace";
 
@@ -25,8 +26,10 @@ export function isUnsupportedHplace(document: Document): boolean {
     resolveDocumentCompany(document) === "hplace" &&
     !registrationControls(document) &&
     !detailControls(document) &&
-    // v1 resume form step 1 only; other v1 screens stay unsupported.
-    v1BasicControls(document).length === 0
+    // v1 resume form steps 1 and 2 only; other v1 screens stay unsupported.
+    v1BasicControls(document).length === 0 &&
+    // Step 2 starts without cards: its sections and add controls decide.
+    !isV1HistoryPage(document)
   );
 }
 

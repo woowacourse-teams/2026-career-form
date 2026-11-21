@@ -9,6 +9,7 @@ import {
 } from "../adapters/hplace/basic-controls";
 import { basicTarget } from "../adapters/hplace/basic-write";
 import { v1ResultMatches } from "../adapters/hplace/v1-basic-write";
+import { v1HistoryResultMatches } from "../adapters/hplace/v1-history-write";
 import { ownedDetailControl } from "../adapters/hplace/detail";
 import { detailTargetValue } from "../adapters/hplace/detail-write";
 import { componentRules } from "../policy/runtime-rules";
@@ -234,6 +235,9 @@ export function matchesResultValue(
   // v1 dates: the page keeps YYYY.MM.DD, or YYYY.MM for service dates.
   const v1 = handle && v1ResultMatches(handle, item, left, right);
   if (v1 !== undefined) return v1;
+  // v1 step-2 dates: the page keeps only a full YYYY.MM.DD.
+  const history = handle && v1HistoryResultMatches(handle, item, left, right);
+  if (history !== undefined) return history;
   const basic = handle && ownedBasicControl(handle);
   if (
     basic &&

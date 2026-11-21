@@ -17,6 +17,14 @@ import {
   type V1WriteResult,
 } from "../adapters/hplace/v1-basic-write";
 import { v1AddressBatch } from "../adapters/hplace/v1-address";
+import { ownedV1HistoryControl } from "../adapters/hplace/v1-history-controls";
+import {
+  V1_HISTORY_GPA_REASON,
+  v1HistoryFailureReason,
+  v1HistoryGpaBlocked,
+  v1HistoryRetained,
+  writeV1History,
+} from "../adapters/hplace/v1-history-write";
 import type { AddressIdentity } from "../address/match";
 import { resolveDocumentCompany } from "../adapters/company";
 import { runtimeRules } from "../policy/runtime-rules";
@@ -66,6 +74,10 @@ function legacyValueRetained(
 ): boolean {
   if (ownedV1Control(handle))
     return item.profileValue === initialValue && v1Retained(handle, item);
+  if (ownedV1HistoryControl(handle))
+    return (
+      item.profileValue === initialValue && v1HistoryRetained(handle, item)
+    );
   const basic = ownedBasicControl(handle);
   const target = basic
     ? basicTarget(
@@ -321,6 +333,12 @@ export async function executeApprovedWritesAfterPageSettles({
         current,
         beforeMutation,
       );
+      // v1 step 2: a score and its scale are written only together.
+      const gpaBlocked = v1HistoryGpaBlocked(
+        items,
+        registry,
+        approvedCandidateIds,
+      );
       for (const item of items) {
         if (beforeWrite) await beforeWrite(item);
         const lookup = registry.lookupField(item.candidateId);
@@ -331,13 +349,27 @@ export async function executeApprovedWritesAfterPageSettles({
         const address = eligible
           ? await v1Address(item, lookup.handle)
           : undefined;
+        const history =
+          !address &&
+          eligible &&
+          !ownedBasicControl(lookup.handle) &&
+          !!ownedV1HistoryControl(lookup.handle);
         const v1 = address
           ? address.result
-          : eligible &&
-              !ownedBasicControl(lookup.handle) &&
-              ownedV1Control(lookup.handle)
-            ? await writeV1(lookup.handle, item, current, beforeMutation)
-            : undefined;
+          : history
+            ? gpaBlocked.has(item.candidateId)
+              ? ("failed" as const)
+              : await writeV1History(
+                  lookup.handle,
+                  item,
+                  current,
+                  beforeMutation,
+                )
+            : eligible &&
+                !ownedBasicControl(lookup.handle) &&
+                ownedV1Control(lookup.handle)
+              ? await writeV1(lookup.handle, item, current, beforeMutation)
+              : undefined;
         const success =
           v1 === undefined &&
           eligible &&
@@ -356,7 +388,15 @@ export async function executeApprovedWritesAfterPageSettles({
               item.candidateId,
               v1,
               address?.reason ??
-                "검증된 상세 지원서 필드만 입력할 수 있습니다.",
+                (history && "handle" in lookup
+                  ? gpaBlocked.has(item.candidateId)
+                    ? V1_HISTORY_GPA_REASON
+                    : v1HistoryFailureReason(
+                        lookup.handle,
+                        item,
+                        "검증된 지원서 필드만 입력할 수 있습니다.",
+                      )
+                  : "검증된 상세 지원서 필드만 입력할 수 있습니다."),
             )
           : success
             ? written(item.candidateId)

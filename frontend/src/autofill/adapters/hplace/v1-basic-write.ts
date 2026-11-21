@@ -398,9 +398,34 @@ async function writeDropdown(
   allow: (values: string[]) => void,
 ): Promise<V1WriteResult> {
   const spec = v1Specs[control.key] as { options: Record<string, string> };
-  const trigger = control.custom[0];
   const code = Object.entries(spec.options).find(([, l]) => l === target)?.[0];
-  const original = v1ControlValue(control) ?? "";
+  return writeV1Dropdown(
+    control.custom[0],
+    target,
+    code,
+    v1Name(control.key),
+    v1ControlValue(control) ?? "",
+    owned,
+    shows,
+    allow,
+  );
+}
+
+/**
+ * One v1 button dropdown write: open the trigger, require exactly one option
+ * button whose text is `target` (and whose value is `code` when known), click
+ * it and verify the label; the body is closed on any failure.
+ */
+export async function writeV1Dropdown(
+  trigger: HTMLButtonElement,
+  target: string,
+  code: string | undefined,
+  diagnosticName: string,
+  original: string,
+  owned: () => boolean,
+  shows: () => boolean,
+  allow: (values: string[]) => void,
+): Promise<V1WriteResult> {
   /** Closes the open body; false (with a diagnostic) when the page keeps it open. */
   const close = async () => {
     if (!dropdownBody(trigger) || !trigger.isConnected) return true;
@@ -413,11 +438,7 @@ async function writeDropdown(
       !trigger.isConnected
     )
       return true;
-    debugRuntimeSkip(
-      v1Name(control.key),
-      "cleanup-failed",
-      "v1-dropdown-close",
-    );
+    debugRuntimeSkip(diagnosticName, "cleanup-failed", "v1-dropdown-close");
     return false;
   };
   allow([original]);
