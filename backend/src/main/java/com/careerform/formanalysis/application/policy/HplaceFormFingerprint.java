@@ -39,6 +39,15 @@ public final class HplaceFormFingerprint {
     private static final Set<String> DETAIL_FIELDS = java.util.stream.Stream.of(DETAIL_TEXTS, DETAIL_RADIOS, DETAIL_SELECTS)
         .flatMap(Set::stream).collect(java.util.stream.Collectors.toUnmodifiableSet());
     private static final Set<String> FIELD_NAMES = Set.of(NAME, MOBILE, EMAIL);
+    // v1 applicant app (resume-form step 1): a separate section with its own allow-list.
+    public static final String V1_SECTION = "hplace-v1-basic";
+    private static final Set<String> V1_RADIOS = v1Names("gender", "militaryStatus", "disabilityStatus", "veteranStatus");
+    private static final Set<String> V1_SELECTS = v1Names("militaryRank", "dischargeType", "militaryBranch",
+        "disabilityGrade", "disabilityType", "veteranRelation", "nationality");
+    private static final Set<String> V1_TEXTS = v1Names("englishName.familyFirst", "birthday", "emergencyPhone",
+        "serviceStartDate", "serviceEndDate", "militarySpecialty", "disabilityRegistrationNumber", "veteranNumber");
+    public static final Set<String> V1_FIELDS = java.util.stream.Stream.of(V1_TEXTS, V1_RADIOS, V1_SELECTS)
+        .flatMap(Set::stream).collect(java.util.stream.Collectors.toUnmodifiableSet());
 
     public boolean matches(CompanyFormPolicy policy, PreparationAnalysisRequest request) {
         if (policy.sectionContracts().isEmpty() || !HplaceApplicantSite.DETAIL_PATH.equals(request.site().pathPattern())) return matches(request);
@@ -90,8 +99,9 @@ public final class HplaceFormFingerprint {
         if (!matchesSection(request.site().pathPattern(), section.sectionId()) || section.parentSectionId() != null
             || !empty(section.items())) return false;
         boolean detail = DETAIL_SECTION.equals(section.sectionId());
-        Set<String> required = detail ? DETAIL_REQUIRED : FIELD_NAMES;
-        Set<String> allowed = detail ? DETAIL_FIELDS : FIELD_NAMES;
+        boolean v1 = V1_SECTION.equals(section.sectionId());
+        Set<String> required = detail || v1 ? DETAIL_REQUIRED : FIELD_NAMES;
+        Set<String> allowed = v1 ? V1_FIELDS : detail ? DETAIL_FIELDS : FIELD_NAMES;
         if (section.fields().size() < Math.max(1, required.size()) || section.fields().size() > allowed.size()) return false;
         Set<String> names = new HashSet<>();
         Set<String> ids = new HashSet<>();
@@ -105,14 +115,19 @@ public final class HplaceFormFingerprint {
     }
 
     private static boolean matchesControl(String name, FormElement element, FormControl control) {
-        if (DETAIL_SELECTS.contains(name)) return element == FormElement.SELECT && control == FormControl.SELECT;
-        if (DETAIL_RADIOS.contains(name)) return element == FormElement.INPUT && control == FormControl.RADIO;
+        if (DETAIL_SELECTS.contains(name) || V1_SELECTS.contains(name)) return element == FormElement.SELECT && control == FormControl.SELECT;
+        if (DETAIL_RADIOS.contains(name) || V1_RADIOS.contains(name)) return element == FormElement.INPUT && control == FormControl.RADIO;
         return element == FormElement.INPUT && control == FormControl.TEXT;
     }
 
     private static boolean matchesSection(String path, String section) {
         return "/app/applicant/registResume".equals(path) && SECTION.equals(section)
-            || "/mrs2/applicant/resume/writeResume".equals(path) && DETAIL_SECTION.equals(section);
+            || "/mrs2/applicant/resume/writeResume".equals(path) && DETAIL_SECTION.equals(section)
+            || HplaceApplicantSite.V1_RESUME_FORM_PATH.equals(path) && V1_SECTION.equals(section);
+    }
+
+    private static Set<String> v1Names(String... keys) {
+        return java.util.Arrays.stream(keys).map(key -> "hplace.v1." + key).collect(java.util.stream.Collectors.toUnmodifiableSet());
     }
 
     private static boolean empty(List<?> values) {
