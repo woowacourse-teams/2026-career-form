@@ -101,7 +101,12 @@ final class HplaceV1CompanyFormPolicyFactory {
             {"daejeon", "대전"}, {"ulsan", "울산"}, {"sejong", "세종"}, {"gyeonggi", "경기"}, {"gangwon", "강원"},
             {"chungbuk", "충북"}, {"chungnam", "충남"}, {"jeonbuk", "전북"}, {"jeonnam", "전남"}, {"gyeongbuk", "경북"},
             {"gyeongnam", "경남"}, {"jeju", "제주"}};
-        for (String[] pair : pairs) regions.put("region:" + pair[0], pair[1]);
+        // The frontend hands the LOOKUP the region label (a stored code is normalized to it first);
+        // the stored code is kept as a key too. 해외 has no page option.
+        for (String[] pair : pairs) {
+            regions.put("region:" + pair[0], pair[1]);
+            regions.put(pair[1], pair[1]);
+        }
         var bindings = new LinkedHashMap<String, ValueBinding>();
         bindings.put("highschool.graduationTypeCode", nativeBinding(mrs2, "highschool.graduationTypeCode"));
         bindings.put("highschool.academyName", new DirectBinding("education.highSchool.schoolName"));

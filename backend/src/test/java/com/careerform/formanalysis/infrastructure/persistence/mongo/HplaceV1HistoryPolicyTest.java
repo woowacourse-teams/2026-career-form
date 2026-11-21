@@ -108,7 +108,10 @@ class HplaceV1HistoryPolicyTest {
             {"daejeon", "대전"}, {"ulsan", "울산"}, {"sejong", "세종"}, {"gyeonggi", "경기"}, {"gangwon", "강원"},
             {"chungbuk", "충북"}, {"chungnam", "충남"}, {"jeonbuk", "전북"}, {"jeonnam", "전남"}, {"gyeongbuk", "경북"},
             {"gyeongnam", "경남"}, {"jeju", "제주"}};
-        for (String[] pair : pairs) regions.put("region:" + pair[0], pair[1]);
+        for (String[] pair : pairs) {
+            regions.put("region:" + pair[0], pair[1]);
+            regions.put(pair[1], pair[1]);
+        }
         var expected = new LinkedHashMap<String, ValueBinding>();
         expected.put("highschool.graduationTypeCode", mrs2("highschool.graduationTypeCode"));
         expected.put("highschool.academyName", new DirectBinding("education.highSchool.schoolName"));
@@ -198,8 +201,25 @@ class HplaceV1HistoryPolicyTest {
         var employment = ((LookupBinding) expected.get("career.employmentType")).optionMap();
         assertThat(employment).containsEntry("정규", "정규직").containsEntry("계약", "계약직").containsEntry("파견", "파견직");
         assertThat(EMPLOYMENT_TYPE_LABELS).containsAll(employment.values());
-        assertThat(((LookupBinding) expected.get("highschool.locationCode")).optionMap()).hasSize(17)
-            .doesNotContainKey("region:overseas");
+        assertThat(((LookupBinding) expected.get("highschool.locationCode")).optionMap()).hasSize(34)
+            .doesNotContainKey("region:overseas").doesNotContainKey("해외");
+    }
+
+    @Test
+    void highschoolLocationResolvesTheLabelThatReachesTheLookupAndTheStoredCode() {
+        // The frontend turns a stored region code into its label before the LOOKUP
+        // (normalizeProfileOptionValue), so the label must be a key; the code stays a key too.
+        var policy = HplaceV1CompanyFormPolicyFactory.create(new SupportedProfileFields()::contains);
+        var map = ((LookupBinding) policy.fieldRules().stream()
+            .filter(rule -> rule.structuralName().equals("hplace.v1.highschool.0.locationCode"))
+            .findFirst().orElseThrow().valueBinding()).optionMap();
+        var labels = List.of("서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종", "경기", "강원",
+            "충북", "충남", "전북", "전남", "경북", "경남", "제주");
+        for (String label : labels) assertThat(map).as(label).containsEntry(label, label);
+        assertThat(map).containsEntry("region:seoul", "서울").containsEntry("region:jeju", "제주")
+            .containsEntry("region:gyeonggi", "경기");
+        assertThat(map.values()).containsOnly(labels.toArray(String[]::new));
+        assertThat(map).doesNotContainKey("해외").doesNotContainKey("region:overseas");
     }
 
     @Test
