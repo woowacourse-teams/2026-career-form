@@ -496,6 +496,51 @@ export async function writeV1History(
 }
 
 const SEARCH_MS = 5000;
+/** The register row is judged only this long after typing: the page shows it
+ * once before the search answers (~100-300 ms, step2-probe-noresult.json). */
+const REGISTER_MS = 1000;
+
+/**
+ * The structure of the page's own "register '<query>' as a new entry" row
+ * (measured: `li > button > span > div > [svg, span]`, the span text-only).
+ */
+function isRegisterShape(li: Element): HTMLButtonElement | undefined {
+  const button = li.children.length === 1 ? li.children[0] : undefined;
+  const span = button?.children.length === 1 ? button.children[0] : undefined;
+  const box = span?.children.length === 1 ? span.children[0] : undefined;
+  const [icon, label] = Array.from(box?.children ?? []);
+  return button instanceof HTMLButtonElement &&
+    span instanceof HTMLSpanElement &&
+    box instanceof HTMLDivElement &&
+    box.children.length === 2 &&
+    icon?.tagName.toLowerCase() === "svg" &&
+    label instanceof HTMLSpanElement &&
+    label.children.length === 0 &&
+    /^'.*'등록하기$/.test(normalize(label.textContent ?? ""))
+    ? button
+    : undefined;
+}
+
+/** The register row for exactly this name: `'` + name + `'등록하기`. */
+export function isRegisterRow(li: Element, query: string): boolean {
+  return (
+    !!isRegisterShape(li) &&
+    normalize(li.textContent ?? "") === `'${normalize(query)}'등록하기`
+  );
+}
+
+const registerOnly = (items: readonly Element[], query: string) =>
+  items.length === 1 && isRegisterRow(items[0], query);
+
+/**
+ * The one decision for a list that holds only the register row for the
+ * profile name (no catalog match). Decided 2026-11-22: press it, which
+ * registers the name as a free-text entry; the page then shows the same chip
+ * as a picked row (step2-probe-register.json), verified like a pick.
+ */
+function onRegisterRowOnly(): "register" {
+  return "register";
+}
 const STABLE_MS = 300;
 
 /** Value-free structure of a row: tag and child count, level by level. */
@@ -592,7 +637,7 @@ export async function writeV1HistorySearch(
     SEARCH_NO_EXACT_MATCH: "result-not-unique",
     SEARCH_AMBIGUOUS: "result-not-unique",
     SEARCH_TIMEOUT: "disabled-timeout",
-    SEARCH_NO_RESULTS: "disabled-timeout",
+    SEARCH_NO_RESULTS: "control-missing",
     SEARCH_FORM_UNVERIFIED: "control-shape",
     SEARCH_SELECTION_UNVERIFIED: "result-click-no-effect",
   };
@@ -618,6 +663,7 @@ export async function writeV1HistorySearch(
   input.focus();
   setValue(input, name);
   input.dispatchEvent(new Event("input", { bubbles: true }));
+  const typedAt = Date.now();
   let shown = "";
   let since = 0;
   const listed = () => {
@@ -640,9 +686,11 @@ export async function writeV1HistorySearch(
         since = Date.now();
         return false;
       }
+      // Result rows are judged once stable; the register row only after
+      // REGISTER_MS, so its transient showing is never taken for the answer.
       return (
         Date.now() - since >= STABLE_MS &&
-        items.some((li) => normalize(text(li)).includes(name))
+        (!registerOnly(items, name) || Date.now() - typedAt >= REGISTER_MS)
       );
     },
     () => live() && input.isConnected,
@@ -654,6 +702,44 @@ export async function writeV1HistorySearch(
     return cleanup(
       bodies().length === 1 ? "SEARCH_NO_RESULTS" : "SEARCH_TIMEOUT",
     );
+  const pickRow = async (target: HTMLElement) => {
+    if (!live()) return cleanup("SEARCH_UNCONFIRMED");
+    target.click();
+    const picked = await waitFor(
+      () => !row.contains(input) && pickedChip(handle) === name,
+      () => live(),
+    );
+    if (picked) return { written: true };
+    if (row.contains(input)) return cleanup("SEARCH_SELECTION_UNVERIFIED");
+    skipV1History(
+      control.name,
+      "result-click-no-effect",
+      "search",
+      "SEARCH_SELECTION_UNVERIFIED",
+    );
+    return { written: false, code: "SEARCH_SELECTION_UNVERIFIED" as const };
+  };
+  const finalRows = listed();
+  // A register row is pressed only alone, for exactly this name, stable and
+  // judged no earlier than REGISTER_MS after typing.
+  if (finalRows.length > 1 && finalRows.some((li) => isRegisterShape(li)))
+    return cleanup("SEARCH_FORM_UNVERIFIED", "search-register-mixed");
+  if (
+    finalRows.length === 1 &&
+    isRegisterShape(finalRows[0]) &&
+    !isRegisterRow(finalRows[0], name)
+  )
+    return cleanup("SEARCH_FORM_UNVERIFIED", "search-register-other-name");
+  if (registerOnly(finalRows, name)) {
+    if (Date.now() - since < STABLE_MS || Date.now() - typedAt < REGISTER_MS)
+      return cleanup("SEARCH_TIMEOUT");
+    if (onRegisterRowOnly() === "register") {
+      const result = await pickRow(isRegisterShape(finalRows[0])!);
+      if (result.written)
+        skipV1History(control.name, "unselected", "search-registered");
+      return result;
+    }
+  }
   const body = bodies()[0];
   const answered = listed().some((li) => normalize(text(li)).includes(name))
     ? "yes"
@@ -674,21 +760,7 @@ export async function writeV1HistorySearch(
   const exact = rows.filter((r) => normalize(r.name) === name);
   if (exact.length === 0) return cleanup("SEARCH_NO_EXACT_MATCH");
   if (exact.length > 1) return cleanup("SEARCH_AMBIGUOUS");
-  if (!live()) return cleanup("SEARCH_UNCONFIRMED");
-  exact[0].target.click();
-  const picked = await waitFor(
-    () => !row.contains(input) && pickedChip(handle) === name,
-    () => live(),
-  );
-  if (picked) return { written: true };
-  if (row.contains(input)) return cleanup("SEARCH_SELECTION_UNVERIFIED");
-  skipV1History(
-    control.name,
-    "result-click-no-effect",
-    "search",
-    "SEARCH_SELECTION_UNVERIFIED",
-  );
-  return { written: false, code: "SEARCH_SELECTION_UNVERIFIED" };
+  return pickRow(exact[0].target);
 }
 
 /** After a driver: 퇴사 has unlocked 퇴사일, or a search left its exact chip. */

@@ -959,13 +959,16 @@ describe("v1 step 2 with the real backend analyses", () => {
 });
 
 describe("v1 step 2 university and major search widgets", () => {
-  it("waits past the pre-query list for the query's own long, scroll-wrapped results", async () => {
+  it("waits past a transient register row (held 600 ms) for the long, scroll-wrapped results", async () => {
     const page = mountV1Step2();
+    page.slowCatalog();
+    // The transient register row (held 600 ms) is never pressed.
     const u0 = appendCard("대학교");
     const r = await drive("hplace.v1.college.0.academyName", "합성대학교");
     expect(r).toEqual({ ok: true, settled: true, codes: [] });
     expect(chipText(u0, "학교정보")).toEqual(["합성대학교"]);
     expect(page.searchQueries()).toEqual(["합성대학교"]);
+    expect(page.registerClicks()).toBe(0);
     expect(document.querySelector("#dropdown-body")).toBeNull();
   });
 
@@ -1023,5 +1026,80 @@ describe("v1 step 2 university and major search widgets", () => {
     const tracker = createProgressTracker();
     const [entry] = tracker.record(item, written(item.candidateId), registry);
     expect(tracker.progressStateFor(entry.id)).toBe(true);
+  });
+});
+
+describe("v1 step 2 register row (no catalog match: pressed by decision)", () => {
+  it.each([
+    ["hplace.v1.college.0.academyName", "학교정보"],
+    ["hplace.v1.college.0.major0.majorName", "전공"],
+  ])(
+    "presses 등록하기 once for %s and verifies the chip",
+    async (name, title) => {
+      setAutofillDebugEnabled(true);
+      const log = vi.spyOn(console, "info").mockImplementation(() => {});
+      try {
+        const page = mountV1Step2();
+        const u0 = appendCard("대학교");
+        appendMajor(u0);
+        const started = Date.now();
+        const r = await drive(name, "목록에없는이름");
+        expect(r).toEqual({ ok: true, settled: true, codes: [] });
+        expect(Date.now() - started).toBeGreaterThanOrEqual(1000);
+        expect(page.registerClicks()).toBe(1);
+        expect(chipText(u0, title)).toEqual(["목록에없는이름"]);
+        expect(searchInput(u0, title)).toBeNull();
+        expect(page.searchQueries()).toEqual(["목록에없는이름"]);
+        expect(page.forbiddenClicks()).toEqual([]);
+        const lines = log.mock.calls.map(([l]) => String(l));
+        expect(lines).toContain(
+          `[CareerForm] skip stage=write key=${name} reason=unselected detail=v1-history-search-registered`,
+        );
+        for (const line of lines) expect(line).not.toMatch(/목록에없는이름/);
+      } finally {
+        setAutofillDebugEnabled(false);
+        log.mockRestore();
+      }
+    },
+  );
+
+  it.each([
+    ["다른등록", "search-register-other-name"],
+    ["섞인목록", "search-register-mixed"],
+  ])("never presses a register row for %s", async (query, detail) => {
+    setAutofillDebugEnabled(true);
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      const page = mountV1Step2();
+      const u0 = appendCard("대학교");
+      const r = await drive("hplace.v1.college.0.academyName", query);
+      expect(r).toEqual({
+        ok: false,
+        settled: false,
+        codes: ["SEARCH_FORM_UNVERIFIED"],
+      });
+      expect(page.registerClicks()).toBe(0);
+      expect(searchInput(u0, "학교정보")!.value).toBe("");
+      expect(document.querySelector("#dropdown-body")).toBeNull();
+      expect(log.mock.calls.map(([l]) => String(l))).toContain(
+        `[CareerForm] skip stage=write key=hplace.v1.college.0.academyName reason=control-shape detail=v1-history-${detail} failureCode=SEARCH_FORM_UNVERIFIED`,
+      );
+    } finally {
+      setAutofillDebugEnabled(false);
+      log.mockRestore();
+    }
+  });
+
+  it("reports a register press whose chip shows another name as unverified", async () => {
+    const page = mountV1Step2();
+    appendCard("대학교");
+    page.registerChip("엉뚱한이름");
+    const r = await drive("hplace.v1.college.0.academyName", "목록에없는이름");
+    expect(r).toEqual({
+      ok: false,
+      settled: false,
+      codes: ["SEARCH_SELECTION_UNVERIFIED"],
+    });
+    expect(page.registerClicks()).toBe(1);
   });
 });

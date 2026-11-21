@@ -236,9 +236,21 @@ export const searchCatalog: Record<string, string[]> = {
   구조다름: ["구조다름"],
 };
 
-/** Card levels whose search widgets show a pre-query list on focus and
- * search only after a debounce (the HS widget searched at once live). */
+/** Card levels whose search widgets follow the measured 대학교/전공 timeline
+ * (step2-probe-noresult.json): the register row at ~100 ms, an empty list at
+ * ~300 ms, the final list at ~420 ms (the HS widget answered at once). */
 const debouncedLevels = new Set(["대학교", "대학원"]);
+/** The page's "register '<query>' as a new entry" row (never pressed). */
+const registerRow = (query: string) =>
+  `<li><button type="button" class="x-register"><span><div><svg><path></path><path></path></svg><span>'${query}'등록하기</span></div></span></button></li>`;
+const resultRows = (query: string, names: string[]) =>
+  names
+    .map((n) =>
+      query === "구조다름"
+        ? `<li><button type="button"><span>${n}</span><span>1</span></button></li>`
+        : `<li><button type="button"><span>${n}</span></button></li>`,
+    )
+    .join("");
 const scrollList = (rows: string) =>
   `<div id="dropdown-body" class="x-results"><div><div role="scrollbar"><div id="design-system-scroll-contain"><div><ul>${rows}</ul></div></div><div><div></div></div><div><div></div></div></div></div></div>`;
 
@@ -278,6 +290,12 @@ export interface V1HistoryPage {
   suggestionLists(): number;
   /** 회사명 suggestions open only 1 s after typing (a slow site request). */
   lateSuggestions(): void;
+  /** The 대학교/대학원 transient register row stays 600 ms before the results. */
+  slowCatalog(): void;
+  /** Times a register row was pressed. */
+  registerClicks(): number;
+  /** The chip a register press shows instead of the typed name. */
+  registerChip(name: string): void;
 }
 
 export const levelContainer = (level: HistoryLevel) =>
@@ -385,6 +403,9 @@ function installShims(): V1HistoryPage {
   const limits = new Map<HistoryLevel, number>();
   const stalled = new Set<HistoryLevel>();
   let suggestDelay = 60;
+  let slowCatalog = false;
+  let registerClicks = 0;
+  let registerChip: string | undefined;
   let suggestionLists = 0;
   const later = (run: () => void) => setTimeout(run, 0);
   root.addEventListener(
@@ -432,6 +453,19 @@ function installShims(): V1HistoryPage {
         .level as HistoryLevel;
       majorAdds.push(`${level} ${cards(level).indexOf(c)}`);
       later(() => appendMajor(c));
+      return;
+    }
+    // The register row (measured: step2-probe-register.json): the input
+    // leaves the row and a chip shows the typed name ~110 ms later.
+    const register = target.closest(".x-register");
+    if (register) {
+      registerClicks++;
+      const widget = register.closest("[data-review-key]")!;
+      const typed =
+        /^'(.*)'등록하기$/.exec(register.textContent ?? "")?.[1] ?? "";
+      setTimeout(() => {
+        widget.innerHTML = chipHtml(registerChip ?? typed);
+      }, 110);
       return;
     }
     const pick = target.closest(".x-results li > button");
@@ -520,28 +554,31 @@ function installShims(): V1HistoryPage {
       const box = field.parentElement!;
       const names = query ? searchCatalog[query] : undefined;
       const level = field.closest<HTMLElement>("[data-level]")?.dataset.level;
-      // The site searches after a delay (debounced for 대학교/대학원);
-      // unknown queries show nothing.
-      if (names)
-        setTimeout(
-          () => {
-            if (!field.isConnected || field.value !== query) return;
-            box.querySelector(":scope > .x-results")?.remove();
-            box.insertAdjacentHTML(
-              "beforeend",
-              scrollList(
-                names
-                  .map((n) =>
-                    query === "구조다름"
-                      ? `<li><button type="button"><span>${n}</span><span>1</span></button></li>`
-                      : `<li><button type="button"><span>${n}</span></button></li>`,
-                  )
-                  .join(""),
-              ),
-            );
-          },
-          debouncedLevels.has(level ?? "") ? 600 : 40,
+      const show = (ms: number, rows: string) =>
+        setTimeout(() => {
+          if (!field.isConnected || field.value !== query) return;
+          box.querySelector(":scope > .x-results")?.remove();
+          box.insertAdjacentHTML("beforeend", scrollList(rows));
+        }, ms);
+      if (query && debouncedLevels.has(level ?? "")) {
+        // Measured timeline; a slow catalog holds the transient row longer.
+        const [empty, final] = slowCatalog ? [700, 800] : [300, 420];
+        show(100, registerRow(query));
+        show(empty, "");
+        show(
+          final,
+          names
+            ? resultRows(query, names)
+            : query === "섞인목록"
+              ? registerRow(query) + resultRows(query, ["섞인목록 분교"])
+              : query === "다른등록"
+                ? registerRow("다른이름")
+                : registerRow(query),
         );
+        return;
+      }
+      // The HS widget answers at once; unknown queries show nothing.
+      if (names) show(40, resultRows(query, names));
       return;
     }
     if (
@@ -563,31 +600,6 @@ function installShims(): V1HistoryPage {
           );
       }, suggestDelay);
     }
-  });
-  // 대학교/대학원 widgets open a pre-query list on focus (other shape, no
-  // relation to the query) before the debounced search answers.
-  root.addEventListener("focusin", (event) => {
-    const field = event.target;
-    if (!(field instanceof HTMLInputElement) || !field.matches(SEARCH_INPUT))
-      return;
-    const level = field.closest<HTMLElement>("[data-level]")?.dataset.level;
-    if (!debouncedLevels.has(level ?? "")) return;
-    later(() => {
-      const box = field.parentElement!;
-      if (!field.isConnected || box.querySelector(":scope > .x-results"))
-        return;
-      box.insertAdjacentHTML(
-        "beforeend",
-        scrollList(
-          ["인기항목가", "인기항목나"]
-            .map(
-              (n, i) =>
-                `<li><button type="button"><span>${n}</span><span>${i + 1}</span></button></li>`,
-            )
-            .join(""),
-        ),
-      );
-    });
   });
   root.addEventListener("focusout", (event) => {
     const field = event.target;
@@ -617,6 +629,13 @@ function installShims(): V1HistoryPage {
     suggestionLists: () => suggestionLists,
     lateSuggestions: () => {
       suggestDelay = 1000;
+    },
+    slowCatalog: () => {
+      slowCatalog = true;
+    },
+    registerClicks: () => registerClicks,
+    registerChip: (name) => {
+      registerChip = name;
     },
   };
 }
