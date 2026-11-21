@@ -468,7 +468,13 @@ function installShims(): V1HistoryPage {
       const typed =
         /^'(.*)'등록하기$/.exec(register.textContent ?? "")?.[1] ?? "";
       setTimeout(() => {
-        widget.innerHTML = chipHtml(registerChip ?? typed);
+        const chip = chipHtml(registerChip ?? typed);
+        // Measured live (build 0e54270): a major press re-renders the whole
+        // sub-row; its disabled named inputs are gone (7 inputs -> 3).
+        const sub = widget.closest(".x-major");
+        if (sub)
+          sub.outerHTML = `<div class="x-major"><span data-review-key="${widget.getAttribute("data-review-key") ?? ""}">${chip}</span><input type="text"><input type="text"><input type="text"></div>`;
+        else widget.innerHTML = chip;
       }, 110);
       return;
     }

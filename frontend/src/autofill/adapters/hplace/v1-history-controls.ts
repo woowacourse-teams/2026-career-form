@@ -1013,23 +1013,37 @@ function chipTexts(row: Element): string[] {
  * The chip a search row shows instead of its input: its text when the row
  * holds exactly one chip and no search input, else undefined.
  */
+/** The current row of a card's school or major search, located again by
+ * card and row title (the page may have re-rendered it). */
+export function v1HistorySearchRow(
+  document: Document,
+  group: HistoryGroup,
+  index: number,
+  field: "academyName" | "major0.majorName",
+): Element | undefined {
+  if (!isV1HistoryPage(document)) return undefined;
+  const spec = historySpec(group, field);
+  const level = v1HistoryLevels(document).find((l) => l.group === group);
+  return level?.status === "ok" && spec?.kind === "search"
+    ? level.cards[index]?.rows?.get(spec.row)
+    : undefined;
+}
+
 export function v1HistoryChip(
   document: Document,
   group: HistoryGroup,
   index: number,
   field: "academyName" | "major0.majorName",
 ): string | undefined {
-  if (!isV1HistoryPage(document)) return undefined;
   const spec = historySpec(group, field);
-  const level = v1HistoryLevels(document).find((l) => l.group === group);
-  const row =
-    level?.status === "ok" && spec?.kind === "search"
-      ? level.cards[index]?.rows?.get(spec.row)
-      : undefined;
+  const row = v1HistorySearchRow(document, group, index, field);
   if (!row || !spec || spec.kind !== "search") return undefined;
   if (row.querySelector(`input[placeholder="${spec.placeholder}"]`))
     return undefined;
-  if (spec.major && majorSubRowCount(group, row, index) !== 1) return undefined;
+  // A major press re-renders the sub-row and its named inputs may go
+  // (live, build 0e54270): only a second sub-row rules the chip out.
+  if (spec.major && (majorSubRowCount(group, row, index) ?? 1) > 1)
+    return undefined;
   const chips = chipTexts(row);
   return chips.length === 1 ? chips[0] : undefined;
 }

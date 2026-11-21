@@ -20,6 +20,7 @@ import {
   parseV1HistoryName,
   scaleLabels,
   v1HistoryChip,
+  v1HistorySearchRow,
   v1HistoryControl,
   v1HistoryControlValue,
   v1HistorySectionId,
@@ -229,6 +230,33 @@ export function isV1HistorySearchHandle(handle: FieldCandidateHandle): boolean {
     isV1HistoryHandle(handle) &&
     (parsed?.field === "academyName" || parsed?.field === "major0.majorName")
   );
+}
+
+/**
+ * A failed search whose input the page already removed (a pick or press
+ * re-rendered the row): its card row, located again, is deferred so the run
+ * goes on and nothing more is written into that widget. Undefined while the
+ * input is still in the page (the field itself is deferred as before).
+ */
+export function v1HistorySearchFailureTargets(
+  handle: FieldCandidateHandle,
+): Element[] | undefined {
+  if (
+    !isV1HistorySearchHandle(handle) ||
+    handle.elements.every((element) => element.isConnected)
+  )
+    return undefined;
+  const parsed = parseV1HistoryName(handle.candidate.domName)!;
+  const document = handle.elements[0]?.ownerDocument;
+  const row =
+    document &&
+    v1HistorySearchRow(
+      document,
+      parsed.group,
+      parsed.index,
+      parsed.field as "academyName" | "major0.majorName",
+    );
+  return row ? [row] : undefined;
 }
 
 /** A step-2 handle, by name (its search input may be gone after a pick). */
@@ -755,7 +783,8 @@ export async function writeV1HistorySearch(
       () => live(),
     );
     if (picked) return { written: true };
-    if (row.contains(input)) return cleanup("SEARCH_SELECTION_UNVERIFIED");
+    if (input.isConnected && row.contains(input))
+      return cleanup("SEARCH_SELECTION_UNVERIFIED");
     skipV1History(
       control.name,
       "result-click-no-effect",

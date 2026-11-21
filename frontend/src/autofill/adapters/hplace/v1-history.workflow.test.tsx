@@ -189,3 +189,24 @@ it("keeps the stage-1 pass running past failed searches: 퇴사일 still lands, 
   expect(document.querySelector("#dropdown-body")).toBeNull();
   expect(page.forbiddenClicks()).toEqual([]);
 });
+
+it("ends only a search whose press did not verify: pass 2 still writes the ordinary fields and 퇴사일", async () => {
+  const page = mountV1Step2();
+  // The register press shows another name: SEARCH_SELECTION_UNVERIFIED with
+  // the search input already gone from the row.
+  page.registerChip("엉뚱한이름");
+  const profile = v1HistoryProfile();
+  profile.education[1].values.schoolName = "목록에없는이름";
+  const { fields } = run(profile);
+  expect(await resultScreen()).toBeVisible();
+  expect(fields.length).toBeLessThanOrEqual(2);
+  expect(page.registerClicks()).toBe(1);
+  const [c0] = cards("직장경력");
+  expect(cardInput(c0, "퇴사일").value).toBe("2020.12.31");
+  expect(cardInput(card("고등학교", 0), "입학일").value).toBe("2006.03.02");
+  expect(cardInput(card("대학교", 0), "입학일").value).not.toBe("");
+  expect(chipText(card("대학원", 0), "학교정보")).toEqual(["합성대학원"]);
+  expect(chipText(card("대학교", 0), "전공")).toEqual(["합성공학"]);
+  expect(document.querySelector("#dropdown-body")).toBeNull();
+  expect(page.forbiddenClicks()).toEqual([]);
+});

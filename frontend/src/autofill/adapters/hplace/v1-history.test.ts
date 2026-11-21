@@ -1232,3 +1232,32 @@ describe("v1 step 2 register row, live DOM", () => {
     expect(isRegisterShape(li)).toBeFalsy();
   });
 });
+
+describe("v1 step 2 major register press re-renders its sub-row", () => {
+  it("verifies the chip in the 전공 row located again and counts the item written", async () => {
+    const page = mountV1Step2();
+    const u0 = appendCard("대학교");
+    appendMajor(u0);
+    const old = u0.querySelector(".x-major")!;
+    const { registry, items } = itemsFor([
+      ["hplace.v1.college.0.major0.majorName", "목록에없는이름"],
+    ]);
+    const [item] = items;
+    const lookup = registry.lookupField(item.candidateId);
+    if (!("handle" in lookup)) throw new Error("no handle");
+    expect(
+      await getWorkflowAdapter(document).executeStateDriver!(
+        document,
+        lookup.handle,
+        item,
+        new AbortController().signal,
+      ),
+    ).toBe(true);
+    expect(old.isConnected).toBe(false);
+    expect(page.registerClicks()).toBe(1);
+    expect(chipText(u0, "전공")).toEqual(["목록에없는이름"]);
+    const tracker = createProgressTracker();
+    const [entry] = tracker.record(item, written(item.candidateId), registry);
+    expect(tracker.progressStateFor(entry.id)).toBe(true);
+  });
+});

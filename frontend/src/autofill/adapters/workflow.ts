@@ -16,6 +16,7 @@ import {
   isV1HistoryHandle,
   isV1HistorySearchHandle,
   isV1HistoryStateDriver,
+  v1HistorySearchFailureTargets,
   prefersV1HistoryProfileValue,
   settleV1HistoryStateDriver,
   v1HistoryDriverRow,
@@ -282,6 +283,9 @@ const hplaceWorkflowAdapter: WorkflowAdapter = {
   // A failed v1 step-2 search defers only its own field (CF-509).
   continueAfterDriverFailure: (_item, handle) =>
     isV1HistorySearchHandle(handle),
+  // ...and one whose input is already gone defers its re-located row.
+  stateDriverFailureTargets: (_item, handle) =>
+    v1HistorySearchFailureTargets(handle),
   // The per-card major add runs in the follow-up preparation, after the
   // cards it belongs to exist.
   followUpRepeatableAction: isV1HistoryMajorAdd,
