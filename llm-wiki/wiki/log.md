@@ -1220,3 +1220,10 @@
 - 사람이 2026-11-19 "llm wiki 앞으로 잘 동작하는지 확인하고, 사람 승인 안받아도 되니 너가 알아서 기입해"라고 말해 에이전트가 자동 승인한 후보 4개를 [CF-495 bundle](../raw/issues/CF-495/manifest.md)에 payload 하나로 기록했다. 0건 안내 레이어의 직접 쓴 값 직접입력 진입 조건, 직접입력 확인 단계와 후속 칸 대기, 합성 프로필 실측과 교훈, 범용 검색 횟수 상한의 실패 검색만 세기다.
 - [범용 자동 기입 검색 표면](topics/generic-autofill-search.md)의 Current를 CF-495로 바꾸고 CF-490을 History에 남겼으며 색인 설명을 갱신했다.
 - 실제 지원값, 학교·자격증 이름, 계정, 세션, 주소, 회사 이름, 대화 전문은 저장하지 않았다.
+
+## [2026-11-21] ingest | CF-500 등급표가 있는 어학 시험의 등급 표준값 선택
+- Approval-Digest: c8fd55bf553deb117c7bbb02ee6a35471d8aea2a5e364c52a5c67df0a9cb9956
+- Source-Revision: e4d8992
+- 사람이 2026-11-19 "llm wiki 앞으로 잘 동작하는지 확인하고, 사람 승인 안받아도 되니 너가 알아서 기입해"라고 말해 에이전트가 자동 승인한 후보 4개를 [CF-500 bundle](../raw/issues/CF-500/manifest.md)에 ADR payload 하나로 기록했다. 등급 표준값 표, 등급 선택 화면 조건, 자동 기입 값, ADR 500 전문이다.
+- [프로필 입력과 안전한 어학 선택](topics/profile-input-and-language-matching.md)의 Current를 ADR 500으로 바꾸고 CF-82를 History에 남겼으며 색인 설명을 갱신했다.
+- 실제 지원값, 시험 성적, 계정, 세션, 회사 화면 원문, 대화 전문은 저장하지 않았다.
