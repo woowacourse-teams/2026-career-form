@@ -179,6 +179,10 @@ public final class FormAnalysisRouter {
 
     private CompanyFormPolicyProvider.LookupResult sharedLookup(String host, String pathPattern) {
         if (isHplaceApplicant(host, pathPattern)) {
+            if (com.careerform.formanalysis.application.policy.HplaceApplicantSite.V1_RESUME_FORM_PATH.equals(pathPattern)) {
+                var lookup = hplacePolicyProvider.findV1ResumeForm();
+                return lookup instanceof Available ? lookup : new CompanyFormPolicyProvider.Unavailable();
+            }
             if (!"/app/applicant/registResume".equals(pathPattern)
                 && !"/mrs2/applicant/resume/writeResume".equals(pathPattern)) {
                 return new CompanyFormPolicyProvider.Unavailable();

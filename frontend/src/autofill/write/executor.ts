@@ -10,6 +10,12 @@ import {
   writeDetail,
 } from "../adapters/hplace/detail-write";
 import { ownedDetailControl } from "../adapters/hplace/detail";
+import { ownedV1Control } from "../adapters/hplace/v1-basic-controls";
+import {
+  v1Retained,
+  writeV1,
+  type V1WriteResult,
+} from "../adapters/hplace/v1-basic-write";
 import type { AddressIdentity } from "../address/match";
 import { resolveDocumentCompany } from "../adapters/company";
 import { runtimeRules } from "../policy/runtime-rules";
@@ -23,7 +29,10 @@ import type { InteractionDecisionProvider } from "../api/interaction-types";
 import type { FieldCandidateHandle } from "../dom/types";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import type { SearchFollowUpControl } from "../interaction/search-follow-up";
-import type { ReviewPlanItem } from "../review/review-plan";
+import {
+  NATIVE_OPTION_ABSENT_REASON,
+  type ReviewPlanItem,
+} from "../review/review-plan";
 import { componentGpaSafe } from "../policy/components/gpa";
 import { matchesResultValue } from "../workflow/result-value-match";
 import {
@@ -54,6 +63,8 @@ function legacyValueRetained(
   initialValue: string | undefined,
   address?: AddressIdentity,
 ): boolean {
+  if (ownedV1Control(handle))
+    return item.profileValue === initialValue && v1Retained(handle, item);
   const basic = ownedBasicControl(handle);
   const target = basic
     ? basicTarget(
@@ -77,6 +88,26 @@ function legacyValueRetained(
           handle,
         ))
   );
+}
+
+/** A v1 step-1 write result in the executor's terms (CF-505). */
+function v1Result(
+  candidateId: string,
+  result: V1WriteResult,
+  reason: string,
+): ApprovedWriteResult {
+  if (result === "written") return written(candidateId);
+  const failure = skipped(
+    candidateId,
+    result === "option-unmatched" ? "unsupported" : "needs-verification",
+    result === "option-unmatched"
+      ? "UNSUPPORTED_CONTROL"
+      : "REVIEW_UNAVAILABLE",
+    result === "option-unmatched" ? NATIVE_OPTION_ABSENT_REASON : reason,
+  );
+  return result === "option-unmatched" && failure.status === "skipped"
+    ? { ...failure, failureCode: "OPTION_UNMATCHED" }
+    : failure;
 }
 
 /** Verify retained state without dispatching events or invoking a writer. */
@@ -284,10 +315,19 @@ export async function executeApprovedWritesAfterPageSettles({
       for (const item of items) {
         if (beforeWrite) await beforeWrite(item);
         const lookup = registry.lookupField(item.candidateId);
-        const success =
+        const eligible =
           approvedCandidateIds.has(item.candidateId) &&
           !seen.has(item.candidateId) &&
-          lookup.status === "ready" &&
+          lookup.status === "ready";
+        const v1 =
+          eligible &&
+          !ownedBasicControl(lookup.handle) &&
+          ownedV1Control(lookup.handle)
+            ? await writeV1(lookup.handle, item, current, beforeMutation)
+            : undefined;
+        const success =
+          v1 === undefined &&
+          eligible &&
           (ownedBasicControl(lookup.handle)
             ? await writeBasic(lookup.handle, item, current, beforeMutation)
             : await writeDetail(
@@ -298,14 +338,20 @@ export async function executeApprovedWritesAfterPageSettles({
                 hplaceAddress,
               ));
         seen.add(item.candidateId);
-        const result = success
-          ? written(item.candidateId)
-          : skipped(
+        const result = v1
+          ? v1Result(
               item.candidateId,
-              "needs-verification",
-              "REVIEW_UNAVAILABLE",
+              v1,
               "검증된 상세 지원서 필드만 입력할 수 있습니다.",
-            );
+            )
+          : success
+            ? written(item.candidateId)
+            : skipped(
+                item.candidateId,
+                "needs-verification",
+                "REVIEW_UNAVAILABLE",
+                "검증된 상세 지원서 필드만 입력할 수 있습니다.",
+              );
         results.push(result);
       }
       const profileRetained = beforeMutation ? await beforeMutation() : true;
@@ -453,6 +499,20 @@ export async function executeApprovedWritesAfterPageSettles({
             };
         }
         const lookup = registry.lookupField(item.candidateId);
+        if (
+          lookup.status === "ready" &&
+          lookup.handle.owner === "legacy" &&
+          !ownedBasicControl(lookup.handle) &&
+          ownedV1Control(lookup.handle)
+        )
+          return {
+            result: v1Result(
+              item.candidateId,
+              await writeV1(lookup.handle, item, runCurrent, beforeMutation),
+              "검증된 기존 필드만 입력할 수 있습니다.",
+            ),
+            effect: "continue",
+          };
         if (lookup.status === "ready" && lookup.handle.owner === "legacy") {
           const success = ownedBasicControl(lookup.handle)
             ? await writeBasic(lookup.handle, item, runCurrent, beforeMutation)
