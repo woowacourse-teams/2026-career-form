@@ -15,6 +15,7 @@ import type { StructuredAddress } from "../address";
 import { AddressSearchPanel } from "./AddressSearchPanel";
 import styles from "./ProfileForm.module.css";
 import { CatalogNameInput } from "./CatalogNameInput";
+import { catalogCertificateIssuer } from "../catalog";
 import { catalogKindForField } from "../catalog-search";
 import {
   ADDRESS_GROUP_TITLE,
@@ -216,6 +217,12 @@ function Fields({
                         fieldId: field.id,
                       })
                     : undefined;
+                  // The issuer of a catalog-selected certificate is the catalog's
+                  // own name; it is shown locked until the link is released.
+                  const lockedIssuer =
+                    section.id === "certificate" && field.id === "issuer"
+                      ? catalogCertificateIssuer(identity, values.name ?? "")
+                      : undefined;
                   const control = (
                     <label
                       className={`${styles.field} ${field.inputType === "textarea" ? styles.fieldTop : ""} ${field.inputType === "textarea" || FULL_WIDTH_FIELDS.has(field.id) ? styles.fullWidth : ""}`}
@@ -224,6 +231,9 @@ function Fields({
                     >
                       <span className={styles.fieldLabel}>
                         <span>{field.label}</span>
+                        {lockedIssuer !== undefined && (
+                          <span className={styles.catalogHint}>카탈로그</span>
+                        )}
                       </span>
                       {field.inputType === "textarea" ? (
                         <textarea
@@ -265,7 +275,13 @@ function Fields({
                                 ? "9999-12-31"
                                 : undefined
                             }
-                            value={values[field.id] ?? ""}
+                            value={lockedIssuer ?? values[field.id] ?? ""}
+                            readOnly={lockedIssuer !== undefined}
+                            className={
+                              lockedIssuer !== undefined
+                                ? styles.catalogLocked
+                                : undefined
+                            }
                             placeholder={
                               field.placeholder ??
                               (field.id === "grade" &&
@@ -276,11 +292,14 @@ function Fields({
                             inputMode={
                               field.inputType === "tel" ? "numeric" : undefined
                             }
-                            onChange={(event) =>
-                              onChange(
-                                field.id,
-                                fieldValue(field, event.target.value),
-                              )
+                            onChange={
+                              lockedIssuer !== undefined
+                                ? undefined
+                                : (event) =>
+                                    onChange(
+                                      field.id,
+                                      fieldValue(field, event.target.value),
+                                    )
                             }
                           />
                         </>

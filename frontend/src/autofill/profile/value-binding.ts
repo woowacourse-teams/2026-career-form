@@ -1,4 +1,6 @@
 import { universityAdditionalMajors } from "./university-additional-majors";
+import { catalogCertificateIssuer } from "../../profile/catalog";
+import { CERTIFICATE_ISSUER_KEY } from "../../profile/certificate-issuer";
 import { PROFILE_CATEGORIES } from "../../profile/field-definitions";
 import { EMPLOYMENT_STATUS_SYNONYMS } from "../../profile/standard-values";
 import type {
@@ -116,7 +118,12 @@ function directValue(
   ) {
     return { status: "missing", sensitive: parts.sensitive };
   }
-  const source = entry?.values[parts.fieldId]?.trim();
+  // A catalog-selected certificate has the catalog's issuer; the stored text
+  // is never rewritten.
+  const source =
+    (key === CERTIFICATE_ISSUER_KEY && entry
+      ? catalogCertificateIssuer(entry.identity, entry.values.name ?? "")
+      : undefined) ?? entry?.values[parts.fieldId]?.trim();
   const value = source ? normalizeProfileOptionValue(key, source) : "";
   return value
     ? {
