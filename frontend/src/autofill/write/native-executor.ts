@@ -1,5 +1,9 @@
 import { traceWrite } from "../debug/write-trace";
 import { PROFILE_CATEGORIES } from "../../profile/field-definitions";
+import {
+  CERTIFICATE_ISSUER_KEY,
+  sameIssuer,
+} from "../../profile/certificate-issuer";
 import { resolveChoiceOption } from "../profile/choice-option";
 import { localWorkflowLog } from "../debug/local-workflow";
 import {
@@ -539,6 +543,16 @@ function radioEscapesCapturedRow(
   return group.some((entry) => !handle.elements.includes(entry));
 }
 
+/** The generic certificate issuer text field, where a site may spell the body its own way. */
+function isGenericIssuer(item: ReviewPlanItem): boolean {
+  return (
+    item.analysis?.mappingStatus === "LLM_SUGGESTED" &&
+    (item.analysis.valueBinding?.profileFieldKey ??
+      item.analysis.profileFieldKey ??
+      item.profileFieldKey) === CERTIFICATE_ISSUER_KEY
+  );
+}
+
 function hasGenericConflict(
   item: ReviewPlanItem,
   handle: FieldCandidateHandle,
@@ -548,7 +562,12 @@ function hasGenericConflict(
     generic = item.analysis?.mappingStatus === "LLM_SUGGESTED";
   if (command === "SET_TEXT") {
     const current = readbackWriteElement(handle)?.value ?? "";
-    return current !== "" && current !== value && current !== item.currentValue;
+    return (
+      current !== "" &&
+      current !== value &&
+      current !== item.currentValue &&
+      !(isGenericIssuer(item) && sameIssuer(current, value))
+    );
   }
   if (command === "SELECT_OPTION") {
     const select = readbackWriteElement(handle);
@@ -673,6 +692,15 @@ function writeGeneric(
       !isFreeEntryEmailCombobox(item, element)
     )
       return writeCombobox(handle, value, generic);
+    if (
+      (element instanceof HTMLInputElement ||
+        element instanceof HTMLTextAreaElement) &&
+      isGenericIssuer(item) &&
+      element.value.trim() !== "" &&
+      element.value !== value &&
+      sameIssuer(element.value, value)
+    )
+      return { written: false, reason: ALREADY, code: "ALREADY_MATCHED" };
     if (
       !(
         element instanceof HTMLInputElement ||
