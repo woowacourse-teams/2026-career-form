@@ -10,6 +10,7 @@ import { resetHplacePage } from "../../workflow/test-utils/hplace.fixture";
 import {
   appendCard,
   card,
+  chipText,
   cardDropdown,
   cardInput,
   cardNamed,
@@ -121,11 +122,25 @@ it("adds one card per profile entry and writes every in-scope control within the
   // 퇴사일 is sent only after its driver ran.
   expect(sentNames(fields[0])).not.toContain("hplace.v1.career.0.leavingDate");
   expect(sentNames(fields.at(-1)!)).toContain("hplace.v1.career.0.leavingDate");
-  // Phase 2 (school/major search) inputs are never typed into.
-  for (const input of document.querySelectorAll<HTMLInputElement>(
-    'input[placeholder="학교명을 검색해주세요."]',
-  ))
-    expect(input.value).toBe("");
+  // One major sub-row per entry with a major, then one search per name.
+  expect(page.majorAdds()).toEqual(["대학교 0", "대학교 1"]);
+  expect(chipText(hs, "학교정보")).toEqual(["합성고등학교"]);
+  expect(chipText(u0, "학교정보")).toEqual(["합성대학교"]);
+  expect(chipText(u1, "학교정보")).toEqual(["합성전문대학"]);
+  expect(chipText(grad, "학교정보")).toEqual(["합성대학원"]);
+  expect(chipText(u0, "전공")).toEqual(["합성공학"]);
+  expect(chipText(u1, "전공")).toEqual(["합성경영"]);
+  expect(chipText(grad, "전공")).toEqual([]);
+  expect([...page.searchQueries()].sort()).toEqual(
+    [
+      "합성고등학교",
+      "합성대학교",
+      "합성전문대학",
+      "합성대학원",
+      "합성공학",
+      "합성경영",
+    ].sort(),
+  );
   expect(document.querySelector("#dropdown-body")).toBeNull();
   expect(page.forbiddenClicks()).toEqual([]);
 });

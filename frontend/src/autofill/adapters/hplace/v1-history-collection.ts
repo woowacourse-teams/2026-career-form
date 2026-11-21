@@ -20,20 +20,18 @@ import type {
 import type { Profile } from "../../../profile/model";
 import { waitFor } from "./v1-basic-write";
 import {
-  cardState,
   historyGroups,
   historyLevelLabel,
   historyProfileSection,
   isV1HistoryPage,
   ownedV1HistoryAddAction,
   ownedV1HistoryControl,
+  parseV1HistoryMajorAdd,
   v1HistoryAddActions,
   v1HistoryAddName,
-  v1HistoryCards,
   v1HistoryControls,
   v1HistoryLevels,
   v1HistorySectionId,
-  type HistoryGroup,
 } from "./v1-history-controls";
 
 /**
@@ -116,13 +114,15 @@ export function collectV1HistoryFields(
   };
 }
 
-/** Card counts last read per level: the executor reads one right before each click. */
-const lastCounts = new WeakMap<Document, Map<HistoryGroup, number>>();
+/** Counts last read per add action: the executor reads one right before each click. */
+const lastCounts = new WeakMap<Document, Map<string, number>>();
+const liveCount = (document: Document, name: string) =>
+  v1HistoryAddActions(document).find((a) => a.name === name)?.count;
 
 /**
- * After an add click, wait (bounded) until a level's card count differs from
- * its last read count, so the refreshed snapshot sees the re-rendered page
- * (new card and the add control's new shape). Returns at once elsewhere.
+ * After an add click, wait (bounded) until an action's count (cards of a
+ * level, or major sub-rows of a card) differs from its last read value, so
+ * the refreshed snapshot sees the re-rendered page. Returns at once elsewhere.
  */
 export async function settleV1HistoryAdd(document: Document): Promise<void> {
   const seen = lastCounts.get(document);
@@ -130,30 +130,34 @@ export async function settleV1HistoryAdd(document: Document): Promise<void> {
   await waitFor(
     () =>
       [...seen].some(
-        ([group, count]) =>
-          (v1HistoryCards(document, group)?.length ?? count) !== count,
+        ([name, count]) => (liveCount(document, name) ?? count) !== count,
       ),
     () => isV1HistoryPage(document),
   );
 }
 
 /**
- * Profile entries one add action needs cards for (`needed = entries -
- * existing cards` is the executor's). undefined: not a step-2 action;
- * null: a step-2 name this phase does not add (major sub-rows).
+ * Groups one add action needs (`needed = profile − existing` is the
+ * executor's). Card adds: profile entries of the level (a 대입 검정고시 entry
+ * has no high-school card). Major adds: 1 when the paired entry holds a
+ * major name. undefined: not a step-2 action; null: an unknown step-2 name.
  */
 export function v1HistoryProfileCount(
   actionDomId: string | undefined,
   profile: Profile,
 ): number | null | undefined {
   if (!actionDomId?.startsWith("hplace.v1.")) return undefined;
+  const entries = (group: (typeof historyGroups)[number]) => {
+    const { categoryId, sectionId } = historyProfileSection[group];
+    return profile[categoryId].filter((entry) => entry.sectionId === sectionId);
+  };
+  const major = parseV1HistoryMajorAdd(actionDomId);
+  if (major)
+    return entries(major.group)[major.index]?.values.majorName?.trim() ? 1 : 0;
   const group = historyGroups.find((g) => v1HistoryAddName(g) === actionDomId);
   if (!group) return null;
-  const { categoryId, sectionId } = historyProfileSection[group];
-  return profile[categoryId].filter(
+  return entries(group).filter(
     (entry) =>
-      entry.sectionId === sectionId &&
-      // A 대입 검정고시 entry has no high-school card.
       !(
         group === "highschool" &&
         entry.values.academicProcess === "대입 검정고시"
@@ -161,11 +165,16 @@ export function v1HistoryProfileCount(
   ).length;
 }
 
+/** A per-card major add, run only by the follow-up preparation. */
+export const isV1HistoryMajorAdd = (actionDomId: string | undefined) =>
+  parseV1HistoryMajorAdd(actionDomId) !== undefined;
+
 /**
- * The step-2 preparation section: one add action per sound level that shows
- * its add control. Both measured shapes (`button` with zero cards,
- * `div[tabindex="0"]` after) are sent as button/button. Card counts and the
- * per-card state digest are read from the live page.
+ * The step-2 preparation section. Card adds: one per sound level showing its
+ * add control (`button` with zero cards, `div[tabindex="0"]` after; both
+ * sent as button/button). Major adds: the 전공 row's `추가하기` of a card
+ * with no major sub-row yet. Every add stays registered after it ran, so the
+ * executor can re-identify it; counts and state digests are read live.
  */
 export function collectV1HistoryPreparation(
   document: Document,
@@ -173,41 +182,49 @@ export function collectV1HistoryPreparation(
   site: SiteDescriptor,
 ): PreparationCollectedSnapshot {
   const registry = new CandidateRegistry();
-  const groups = new Map<string, HistoryGroup>();
-  const actionCandidates: ActionCandidate[] = v1HistoryAddActions(document).map(
-    ({ group, element }, index) => {
-      const candidate: ActionCandidate = {
-        candidateId: `action-${index + 1}`,
-        domId: v1HistoryAddName(group),
-        domName: v1HistoryAddName(group),
-        element: "button",
-        control: "button",
-        displayName: historyLevelLabel[group],
-        visibility: "visible",
-      };
-      const handle: ActionCandidateHandle = {
-        kind: "action",
-        candidateId: candidate.candidateId,
-        candidate,
-        sectionId: v1HistorySectionId,
-        element,
-        signature: createStructuralSignature([element]),
-        isCurrentContext: () => ownedV1HistoryAddAction(handle) === group,
-      };
-      registry.registerAction(handle);
-      groups.set(candidate.candidateId, group);
-      return candidate;
-    },
-  );
+  // Counts are remembered per snapshot: a count read by an earlier run (or
+  // snapshot) must not end the next post-click wait early.
+  lastCounts.set(document, new Map());
+  const names = new Map<string, string>();
+  const actionCandidates: ActionCandidate[] = [];
+  v1HistoryAddActions(document).forEach((action, index) => {
+    const candidate: ActionCandidate = {
+      candidateId: `action-${index + 1}`,
+      domId: action.name,
+      domName: action.name,
+      element: "button",
+      control: "button",
+      displayName:
+        action.index === undefined
+          ? historyLevelLabel[action.group]
+          : "전공 추가하기",
+      visibility: "visible",
+    };
+    const handle: ActionCandidateHandle = {
+      kind: "action",
+      candidateId: candidate.candidateId,
+      candidate,
+      sectionId: v1HistorySectionId,
+      element: action.element,
+      signature: createStructuralSignature([action.element]),
+      isCurrentContext: () => ownedV1HistoryAddAction(handle) === action.name,
+    };
+    registry.registerAction(handle);
+    names.set(candidate.candidateId, action.name);
+    if (action.index === undefined || action.count === 0)
+      actionCandidates.push(candidate);
+  });
   const request: PreparationAnalyzeRequest = {
     schemaVersion: 2,
     snapshotId,
     site,
     sections: [{ sectionId: v1HistorySectionId, actionCandidates }],
   };
-  const cardsOf = (id: string) => {
-    const group = groups.get(id);
-    return group ? v1HistoryCards(document, group) : undefined;
+  const live = (id: string) => {
+    const name = names.get(id);
+    return name
+      ? v1HistoryAddActions(document).find((a) => a.name === name)
+      : undefined;
   };
   return {
     request,
@@ -215,18 +232,22 @@ export function collectV1HistoryPreparation(
     isSectionVisible: (sectionId) =>
       sectionId === v1HistorySectionId && isV1HistoryPage(document),
     countRepeatableGroups: (id) => {
-      const count = cardsOf(id)?.length;
-      const group = groups.get(id);
-      if (group && count !== undefined) {
-        const seen = lastCounts.get(document) ?? new Map();
-        lastCounts.set(document, seen.set(group, count));
+      const action = live(id);
+      if (action?.count !== undefined) {
+        const seen = lastCounts.get(document) ?? new Map<string, number>();
+        lastCounts.set(document, seen.set(action.name, action.count));
       }
-      return count;
+      return action?.count;
     },
-    repeatableGroupState: (id) => cardsOf(id)?.map(cardState),
-    // One high-school card per application (MRS2 maxRows 1); other limits
-    // are not measured.
-    repeatableGroupLimit: (id) =>
-      groups.get(id) === "highschool" ? 1 : undefined,
+    repeatableGroupState: (id) => live(id)?.state(),
+    // One high-school card per application (MRS2 maxRows 1) and one major
+    // sub-row per card in scope; other limits are not measured.
+    repeatableGroupLimit: (id) => {
+      const name = names.get(id);
+      return name === v1HistoryAddName("highschool") ||
+        parseV1HistoryMajorAdd(name)
+        ? 1
+        : undefined;
+    },
   };
 }

@@ -123,9 +123,21 @@ export type HistorySpec =
       numeric?: true;
       /** Typing opens an optional suggestion list that is never picked. */
       suggestions?: true;
+    }
+  | {
+      /** A search input the page replaces with a chip once a row is picked. */
+      kind: "search";
+      label: string;
+      row: string;
+      placeholder: string;
+      profile: string;
+      /** The first major sub-row of the 전공 row. */
+      major?: true;
     };
 
 export type HistoryField =
+  | "academyName"
+  | "major0.majorName"
   | "graduationTypeCode"
   | "locationCode"
   | "dayOrNight"
@@ -291,8 +303,16 @@ export function historySpecs(
   const graduationDate = date("재학기간", "졸업일", "endDate", {
     future: true,
   });
+  const school: HistorySpec = {
+    kind: "search",
+    label: "학교명",
+    row: "학교정보",
+    placeholder: "학교명을 검색해주세요.",
+    profile: `${p}.schoolName`,
+  };
   if (group === "highschool")
     return [
+      ["academyName", school],
       ["graduationTypeCode", graduation],
       [
         "locationCode",
@@ -321,6 +341,7 @@ export function historySpecs(
       ["graduationDate", graduationDate],
     ];
   return [
+    ["academyName", school],
     [
       "degreeTypeCode",
       {
@@ -344,7 +365,19 @@ export function historySpecs(
         profile: `${p}.${group === "college" ? "transferStatus" : "admissionType"}`,
       },
     ],
-    // The scale is written before its score: the pair rule reads it back.
+    // The score is written before its scale: a typed score can be cleared
+    // again when the scale then fails, a chosen scale only by 선택안함.
+    [
+      "score",
+      {
+        kind: "text",
+        label: "평점",
+        row: "학업성적",
+        name: `${group === "college" ? "collegeGrade" : "graduateSchoolGrade"}.score`,
+        profile: `${p}.gpaScore`,
+        numeric: true,
+      },
+    ],
     [
       "perfectScore",
       {
@@ -359,14 +392,14 @@ export function historySpecs(
       },
     ],
     [
-      "score",
+      "major0.majorName",
       {
-        kind: "text",
-        label: "평점",
-        row: "학업성적",
-        name: `${group === "college" ? "collegeGrade" : "graduateSchoolGrade"}.score`,
-        profile: `${p}.gpaScore`,
-        numeric: true,
+        kind: "search",
+        label: "전공명",
+        row: "전공",
+        placeholder: "전공명을 검색해주세요.",
+        profile: `${p}.majorName`,
+        major: true,
       },
     ],
   ];
@@ -386,7 +419,7 @@ export const v1HistoryName = (
 ) => `hplace.v1.${group}.${index}.${field}`;
 
 const fieldName =
-  /^hplace\.v1\.(highschool|college|graduateSchool|career)\.(0|[1-9]\d*)\.([A-Za-z]+)$/;
+  /^hplace\.v1\.(highschool|college|graduateSchool|career)\.(0|[1-9]\d*)\.([A-Za-z]+|major0\.majorName)$/;
 export function parseV1HistoryName(
   name: string | undefined,
 ): { group: HistoryGroup; index: number; field: HistoryField } | undefined {
@@ -462,55 +495,65 @@ function namesMatch(group: HistoryGroup, card: Element, index: number) {
 interface ContainerShape {
   container: Element;
   cards: HistoryCard[];
-  /** False when a row sits outside the measured card shape. */
+  /** False when a direct child holds controls but is neither a card nor the add. */
   sound: boolean;
   adds: { group: HistoryGroup; element: AddControl }[];
 }
 
+const CONTROLS = "input, button, select, textarea";
+/** A body child that holds nothing: a layout spacer. */
+const isSpacer = (e: Element) =>
+  !e.querySelector(`${CONTROLS}, span[aria-hidden="true"]`);
+
+/**
+ * A card (step2-skeleton.json `afterCareer`/`afterCollege`): a direct child
+ * of its level container with exactly [head, body], where the body holds
+ * row blocks and only empty spacers besides them.
+ */
+function asCard(element: Element): HistoryCard | undefined {
+  if (element.children.length !== 2) return undefined;
+  const body = Array.from(element.children[1].children);
+  return body.some(isRow) && body.every((e) => isRow(e) || isSpacer(e))
+    ? { element, rows: cardRows(element) }
+    : undefined;
+}
+
+/** The add control: a direct child, `button` or `div[tabindex="0"]`, whose only `p` is a level name. */
+function asAdd(
+  element: Element,
+): { group: HistoryGroup; element: AddControl } | undefined {
+  if (!(
+    (element instanceof HTMLButtonElement && element.type === "button") ||
+    (element instanceof HTMLDivElement &&
+      element.getAttribute("tabindex") === "0")
+  ))
+    return undefined;
+  const labels = element.querySelectorAll("p");
+  const group = historyGroups.find(
+    (g) => labels.length === 1 && text(labels[0]) === historyLevelLabel[g],
+  );
+  return group ? { group, element } : undefined;
+}
+
+/**
+ * A level container's direct children: cards, the add control, and empty
+ * spacers. There is no card-list wrapper on the live page.
+ */
 function containerShape(container: Element): ContainerShape {
-  const rows = Array.from(container.querySelectorAll("div")).filter(isRow);
-  const outer = rows.filter((r) => !rows.some((o) => o !== r && o.contains(r)));
+  const adds: ContainerShape["adds"] = [];
+  const cards: HistoryCard[] = [];
   let sound = true;
-  let wrapper: Element | undefined;
-  const found = new Set<Element>();
-  // container > list wrapper > card > (head, body) > row
-  for (const row of outer) {
-    const body = row.parentElement;
-    const card = body?.parentElement;
-    const list = card?.parentElement;
-    if (
-      !body ||
-      !card ||
-      !list ||
-      list.parentElement !== container ||
-      card.children.length !== 2 ||
-      card.children[1] !== body ||
-      (wrapper && wrapper !== list)
-    ) {
-      sound = false;
+  for (const child of Array.from(container.children)) {
+    const add = asAdd(child);
+    if (add) {
+      adds.push(add);
       continue;
     }
-    wrapper = list;
-    found.add(card);
+    const card = asCard(child);
+    if (card) cards.push(card);
+    else if (child.querySelector(`${CONTROLS}, span[aria-hidden="true"]`))
+      sound = false;
   }
-  const elements = wrapper ? Array.from(wrapper.children) : [];
-  if (elements.some((e) => !found.has(e))) sound = false;
-  const cards = elements
-    .filter((e) => found.has(e))
-    .map((element) => ({ element, rows: cardRows(element) }));
-  const inCard = (e: Element) => cards.some((c) => c.element.contains(e));
-  const adds = Array.from(
-    container.querySelectorAll<AddControl>(
-      'button[type="button"], div[tabindex="0"]',
-    ),
-  ).flatMap((element) => {
-    if (inCard(element)) return [];
-    const labels = element.querySelectorAll("p");
-    const group = historyGroups.find(
-      (g) => labels.length === 1 && text(labels[0]) === historyLevelLabel[g],
-    );
-    return group ? [{ group, element }] : [];
-  });
   return { container, cards, sound, adds };
 }
 
@@ -524,8 +567,8 @@ function levelContainers(document: Document): Element[] {
 
 /**
  * Every level container the page shows. A container is claimed by the level
- * of its add control and of its cards; one that claims no level (the
- * attachment blocks) is ignored. A level is malformed when a card matches no
+ * name of its add control (or, without one, by its cards' level); one that
+ * claims no level (the attachment blocks) is ignored. A level is malformed when a card matches no
  * level or another one, a page index disagrees with the card order, the add
  * control is not the measured shape, or two containers claim it.
  */
@@ -676,6 +719,27 @@ function locate(
       trigger.disabled,
     );
   }
+  if (spec.kind === "search") {
+    const inputs = Array.from(row.querySelectorAll("input")).filter(
+      (i) => !i.hasAttribute("name") && i.placeholder === spec.placeholder,
+    );
+    // Absent: the page shows the chosen row as a chip instead (or nothing).
+    if (!inputs.length) return { status: "absent" };
+    const subRows = spec.major
+      ? majorSubRowCount(level.group, row, index)
+      : undefined;
+    if (
+      inputs.length !== 1 ||
+      inputs[0].type !== "text" ||
+      inputs[0].readOnly ||
+      (spec.major && subRows !== 1)
+    )
+      return malformed(inputs);
+    return ok(
+      { elements: [inputs[0]], custom: [], options: new Map() },
+      inputs[0].disabled,
+    );
+  }
   const name =
     spec.kind === "text" && spec.name
       ? `${namePrefix[level.group]}.${index}.${spec.name}`
@@ -705,19 +769,33 @@ function locate(
   );
 }
 
+/**
+ * Write order: career first, so its 재직중/퇴사 drivers run before the school
+ * searches (a failed search ends its driver pass).
+ */
+const collectionOrder: readonly HistoryGroup[] = [
+  "career",
+  "highschool",
+  "college",
+  "graduateSchool",
+];
+
 function allLocated(document: Document) {
-  return v1HistoryLevels(document).flatMap((level) =>
-    level.status !== "ok"
-      ? []
-      : level.cards.flatMap((_, index) =>
-          historySpecs(level.group).map(([field]) => ({
-            level,
-            index,
-            field,
-            found: locate(level, index, field),
-          })),
-        ),
-  );
+  const levels = v1HistoryLevels(document);
+  return collectionOrder
+    .flatMap((group) => levels.filter((level) => level.group === group))
+    .flatMap((level) =>
+      level.status !== "ok"
+        ? []
+        : level.cards.flatMap((_, index) =>
+            historySpecs(level.group).map(([field]) => ({
+              level,
+              index,
+              field,
+              found: locate(level, index, field),
+            })),
+          ),
+    );
 }
 
 /** Located controls of sound cards, including locked ones. */
@@ -824,38 +902,206 @@ export function v1HistoryValue(
   handle: FieldCandidateHandle,
 ): string | undefined {
   const control = ownedV1HistoryControl(handle);
-  return control ? v1HistoryControlValue(control) : undefined;
+  if (control) return v1HistoryControlValue(control);
+  // A picked search field reads as its chip.
+  const parsed = parseV1HistoryName(handle.candidate.domName);
+  const document = handle.elements[0]?.ownerDocument;
+  return parsed &&
+    document &&
+    handle.sectionId === v1HistorySectionId &&
+    (parsed.field === "academyName" || parsed.field === "major0.majorName")
+    ? v1HistoryChip(document, parsed.group, parsed.index, parsed.field)
+    : undefined;
 }
 
 export const v1HistoryAddName = (group: HistoryGroup) =>
   `hplace.v1.${group}.add`;
+export const v1HistoryMajorAddName = (group: HistoryGroup, index: number) =>
+  `hplace.v1.${group}.${index}.major.add`;
+const majorAddName =
+  /^hplace\.v1\.(college|graduateSchool)\.(0|[1-9]\d*)\.major\.add$/;
+export function parseV1HistoryMajorAdd(
+  name: string | undefined,
+): { group: HistoryGroup; index: number } | undefined {
+  const m = majorAddName.exec(name ?? "");
+  return m ? { group: m[1] as HistoryGroup, index: Number(m[2]) } : undefined;
+}
 
-/** Add controls of sound levels, in level order. */
-export function v1HistoryAddActions(
+/**
+ * Major sub-rows of one card's 전공 row, counted by their page-indexed named
+ * inputs (`<prefix>.<i>.<x>MajorList.<m>.`). Undefined when the indexes are
+ * not 0..n-1 or the row shows a major control without them.
+ */
+export function majorSubRowCount(
+  group: HistoryGroup,
+  row: Element,
+  index: number,
+): number | undefined {
+  const prefix = namePrefix[group];
+  if (!prefix) return undefined;
+  const pattern = new RegExp(
+    `^${prefix}\\.${index}\\.[A-Za-z]+MajorList\\.(0|[1-9]\\d*)\\.`,
+  );
+  const named = Array.from(row.querySelectorAll("input[name]")).map(
+    (i) => (i as HTMLInputElement).name,
+  );
+  if (named.some((n) => !pattern.test(n))) return undefined;
+  const subRows = new Set(named.map((n) => Number(pattern.exec(n)![1])));
+  if ([...subRows].some((m) => m >= subRows.size)) return undefined;
+  const majorShown =
+    row.querySelector('input[placeholder="전공명을 검색해주세요."]') !== null ||
+    chipTexts(row).length > 0;
+  return subRows.size === 0 && majorShown ? undefined : subRows.size;
+}
+
+/** Texts of the picked-row chips of a row (`span[data-review-key] p`). */
+function chipTexts(row: Element): string[] {
+  return Array.from(row.querySelectorAll("span[data-review-key] p"))
+    .filter((p) => !p.closest("button, li, #dropdown-body"))
+    .map(text);
+}
+
+/**
+ * The chip a search row shows instead of its input: its text when the row
+ * holds exactly one chip and no search input, else undefined.
+ */
+export function v1HistoryChip(
   document: Document,
-): { group: HistoryGroup; element: AddControl }[] {
-  if (!isV1HistoryPage(document)) return [];
-  return v1HistoryLevels(document).flatMap((level) =>
-    level.status === "ok" && level.add
-      ? [{ group: level.group, element: level.add }]
-      : [],
+  group: HistoryGroup,
+  index: number,
+  field: "academyName" | "major0.majorName",
+): string | undefined {
+  if (!isV1HistoryPage(document)) return undefined;
+  const spec = historySpec(group, field);
+  const level = v1HistoryLevels(document).find((l) => l.group === group);
+  const row =
+    level?.status === "ok" && spec?.kind === "search"
+      ? level.cards[index]?.rows?.get(spec.row)
+      : undefined;
+  if (!row || !spec || spec.kind !== "search") return undefined;
+  if (row.querySelector(`input[placeholder="${spec.placeholder}"]`))
+    return undefined;
+  if (spec.major && majorSubRowCount(group, row, index) !== 1) return undefined;
+  const chips = chipTexts(row);
+  return chips.length === 1 ? chips[0] : undefined;
+}
+
+export interface HistoryAddAction {
+  name: string;
+  group: HistoryGroup;
+  /** Card order of a major add. */
+  index?: number;
+  element: AddControl;
+  /** Cards of the level, or major sub-rows of the card. */
+  count: number | undefined;
+  /** The digest the add must leave unchanged (plus the new group at the end). */
+  state: () => string[] | undefined;
+}
+
+/** Text of the row's own `추가하기` button: the major add of a 전공 row. */
+function majorAddButton(row: Element): HTMLButtonElement | undefined {
+  const buttons = Array.from(
+    row.querySelectorAll<HTMLButtonElement>('button[type="button"]'),
+  ).filter((b) => text(b) === "추가하기");
+  return buttons.length === 1 && !buttons[0].disabled ? buttons[0] : undefined;
+}
+
+/** A card's state without its 전공 row (a major add only changes that row). */
+function cardStateWithoutMajor(card: HistoryCard): string {
+  const major = card.rows?.get("전공");
+  return JSON.stringify(
+    Array.from(card.rows?.values() ?? [])
+      .filter((row) => row !== major)
+      .map(cardState),
   );
 }
 
-/** An add action handle that is still its sound level's live add control. */
+/**
+ * Card adds of sound levels, then the major add of every card of a sound
+ * 대학교/대학원 level, in level order.
+ */
+export function v1HistoryAddActions(document: Document): HistoryAddAction[] {
+  if (!isV1HistoryPage(document)) return [];
+  const levels = v1HistoryLevels(document);
+  const sound = levels.filter((level) => level.status === "ok");
+  const cards = (level: HistoryLevel) => level.cards;
+  const cardAdds = sound.flatMap((level) =>
+    level.add
+      ? [
+          {
+            name: v1HistoryAddName(level.group),
+            group: level.group,
+            element: level.add,
+            count: level.cards.length,
+            state: () => cards(level).map((c) => cardState(c.element)),
+          },
+        ]
+      : [],
+  );
+  const majorAdds = sound
+    .filter((l) => l.group === "college" || l.group === "graduateSchool")
+    .flatMap((level) =>
+      level.cards.flatMap((card, index) => {
+        const row = card.rows?.get("전공");
+        const button = row && majorAddButton(row);
+        if (!row || !button) return [];
+        const count = majorSubRowCount(level.group, row, index);
+        return [
+          {
+            name: v1HistoryMajorAddName(level.group, index),
+            group: level.group,
+            index,
+            element: button,
+            count,
+            state: () => {
+              const subRows = majorSubRows(row);
+              return [
+                ...sound.flatMap((l) => l.cards.map(cardStateWithoutMajor)),
+                ...subRows.map(cardState),
+              ];
+            },
+          },
+        ];
+      }),
+    );
+  return [...cardAdds, ...majorAdds];
+}
+
+/** The sub-row elements of a 전공 row: the outermost holders of each index. */
+function majorSubRows(row: Element): Element[] {
+  const named = Array.from(
+    row.querySelectorAll<HTMLInputElement>("input[name]"),
+  );
+  const holders: Element[] = [];
+  for (const input of named) {
+    let holder: Element = input;
+    while (
+      holder.parentElement &&
+      holder.parentElement !== row &&
+      Array.from(holder.parentElement.querySelectorAll("input[name]")).every(
+        (other) =>
+          /MajorList\.(\d+)\./.exec((other as HTMLInputElement).name)?.[1] ===
+          /MajorList\.(\d+)\./.exec(input.name)?.[1],
+      )
+    )
+      holder = holder.parentElement;
+    if (!holders.includes(holder)) holders.push(holder);
+  }
+  return holders;
+}
+
+/** An add action handle that is still its live add control; its name. */
 export function ownedV1HistoryAddAction(
   handle: Pick<ActionCandidateHandle, "sectionId" | "candidate" | "element">,
-): HistoryGroup | undefined {
-  const group = historyGroups.find(
-    (g) => handle.candidate.domName === v1HistoryAddName(g),
-  );
-  return group &&
+): string | undefined {
+  const name = handle.candidate.domName;
+  return name &&
     handle.sectionId === v1HistorySectionId &&
-    handle.candidate.domId === handle.candidate.domName &&
+    handle.candidate.domId === name &&
     v1HistoryAddActions(handle.element.ownerDocument).some(
-      (a) => a.group === group && a.element === handle.element,
+      (a) => a.name === name && a.element === handle.element,
     )
-    ? group
+    ? name
     : undefined;
 }
 

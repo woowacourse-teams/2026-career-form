@@ -16,6 +16,7 @@ import {
   historySpec,
   isV1HistoryPage,
   v1HistoryLevels,
+  v1HistoryChip,
   v1HistoryMalformed,
   v1HistoryName,
   type HistoryGroup,
@@ -219,6 +220,7 @@ function v1HistoryRows(
   const prefix = (group: HistoryGroup) =>
     `${historyProfileSection[group].categoryId}.${historyProfileSection[group].sectionId}`;
   const rows: ReviewPlanItem[] = [];
+  const malformed = v1HistoryMalformed(document);
   for (const level of v1HistoryLevels(document)) {
     const list = entries(level.group);
     if (level.status !== "ok") {
@@ -227,38 +229,58 @@ function v1HistoryRows(
       continue;
     }
     if (level.group === "career") continue;
-    level.cards.forEach((card, index) => {
+    level.cards.forEach((_, index) => {
       const values = list[index]?.values;
       if (!values) return;
-      const school = card.rows
-        ?.get("학교정보")
-        ?.querySelector<HTMLInputElement>(
-          'input[placeholder="학교명을 검색해주세요."]',
-        );
-      if (
-        school &&
-        !school.disabled &&
-        school.value === "" &&
-        values.schoolName?.trim()
-      )
-        rows.push(
-          row(
-            `v1-${level.group}-${index}-academyName`,
-            "학교명",
-            `${prefix(level.group)}.schoolName`,
-          ),
-        );
-      if (level.group !== "highschool" && values.majorName?.trim())
-        rows.push(
-          row(
-            `v1-${level.group}-${index}-majorName`,
-            "전공명",
-            `${prefix(level.group)}.majorName`,
-          ),
-        );
+      for (const field of ["academyName", "major0.majorName"] as const) {
+        const spec = historySpec(level.group, field);
+        const fieldId = spec?.profile.split(".")[2];
+        const name = fieldId
+          ? values[fieldId]?.replace(/\s+/g, " ").trim()
+          : "";
+        if (
+          !spec ||
+          !name ||
+          isCollected(v1HistoryName(level.group, index, field))
+        )
+          continue;
+        const chip = v1HistoryChip(document, level.group, index, field);
+        if (chip !== undefined) {
+          // Same name: the page already holds it (kept). Another: a conflict.
+          if (chip !== name)
+            rows.push({
+              ...row(
+                `v1-${level.group}-${index}-${field}`,
+                spec.label,
+                spec.profile,
+              ),
+              currentValue: chip,
+              profileValue: name,
+              previewValue: name,
+              status: "conflict",
+              revealed: true,
+              reason: "지원서에 기존 값이 있습니다.",
+              failureCode: undefined,
+            });
+          continue;
+        }
+        if (
+          !malformed.some(
+            (m) =>
+              m.group === level.group && m.index === index && m.field === field,
+          )
+        )
+          rows.push(
+            row(
+              `v1-${level.group}-${index}-${field}`,
+              spec.label,
+              spec.profile,
+            ),
+          );
+      }
     });
   }
-  for (const { group, index, field } of v1HistoryMalformed(document)) {
+  for (const { group, index, field } of malformed) {
     const spec = historySpec(group, field)!;
     const fieldId = spec.profile.split(".")[2];
     if (

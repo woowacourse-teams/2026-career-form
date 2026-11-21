@@ -20,9 +20,17 @@ import {
   v1HistoryLevels,
 } from "./v1-history-controls";
 import { v1HistoryGpaBlocked, writeV1History } from "./v1-history-write";
+import { hplaceUnverifiedRows } from "./unverified-structure";
+import { executeApprovedWritesAfterPageSettles } from "../../write/executor";
 import {
   addControl,
+  levelContainer,
   appendCard,
+  appendMajor,
+  chipText,
+  pickChip,
+  searchInput,
+  v1HistoryProfile,
   card,
   cardDropdown,
   cardInput,
@@ -197,6 +205,84 @@ describe("v1 step 2 preparation", () => {
     });
     expect(page.addClicks()).toEqual(["직장경력"]);
   });
+
+  it("adds cards as direct children of each level container (fresh, first, second)", async () => {
+    const page = mountV1Step2();
+    const result = await prepare({
+      "hplace.v1.highschool.add": 1,
+      "hplace.v1.college.add": 2,
+      "hplace.v1.graduateSchool.add": 2,
+      "hplace.v1.career.add": 2,
+    });
+    expect(result.status).toBe("completed");
+    expect(page.addClicks()).toEqual([
+      "고등학교",
+      "대학교",
+      "대학교",
+      "대학원",
+      "대학원",
+      "직장경력",
+      "직장경력",
+    ]);
+    for (const [level, count] of [
+      ["고등학교", 1],
+      ["대학교", 2],
+      ["대학원", 2],
+      ["직장경력", 2],
+    ] as const) {
+      const box = levelContainer(level);
+      expect(cards(level)).toHaveLength(count);
+      for (const c of cards(level)) expect(c.parentElement).toBe(box);
+      // The add control is a direct child and has become the div shape.
+      expect(addControl(level).parentElement).toBe(box);
+      expect(addControl(level).matches('div[tabindex="0"]')).toBe(true);
+    }
+    expect(cardNamed(card("직장경력", 1), "position").name).toBe(
+      "careerGroupAnswers.1.position",
+    );
+    const levels = v1HistoryLevels(document);
+    expect(levels.map((l) => [l.group, l.status, l.cards.length])).toEqual([
+      ["highschool", "ok", 1],
+      ["college", "ok", 2],
+      ["graduateSchool", "ok", 2],
+      ["career", "ok", 2],
+    ]);
+    expect(page.forbiddenClicks()).toEqual([]);
+  });
+
+  it("adds one major sub-row only to the card that has none", async () => {
+    const page = mountV1Step2();
+    const u0 = appendCard("대학교");
+    const u1 = appendCard("대학교");
+    appendMajor(u0);
+    const snapshot = collectPreparationSnapshot(document);
+    const sent = snapshot.request.sections[0].actionCandidates;
+    expect(sent.map((a) => a.domName)).toEqual([
+      "hplace.v1.highschool.add",
+      "hplace.v1.college.add",
+      "hplace.v1.graduateSchool.add",
+      "hplace.v1.career.add",
+      "hplace.v1.college.1.major.add",
+    ]);
+    const major = sent.at(-1)!;
+    expect(major).toMatchObject({
+      domId: "hplace.v1.college.1.major.add",
+      element: "button",
+      control: "button",
+    });
+    expect(snapshot.countRepeatableGroups(major.candidateId)).toBe(0);
+    expect(snapshot.repeatableGroupLimit(major.candidateId)).toBe(1);
+    const before = u0.innerHTML;
+    const result = await prepare({ "hplace.v1.college.1.major.add": 1 });
+    expect(result.status).toBe("completed");
+    expect(page.majorAdds()).toEqual(["대학교 1"]);
+    expect(cardRow(u1, "전공").querySelectorAll(".x-major")).toHaveLength(1);
+    expect(cardNamed(u1, "majorGrade.score").name).toBe(
+      "collegeGroupAnswers.1.collegeMajorList.0.majorGrade.score",
+    );
+    expect(u0.innerHTML).toBe(before);
+    expect(page.forbiddenClicks()).toEqual([]);
+  });
 });
 
 describe("v1 step 2 card levels", () => {
@@ -259,32 +345,8 @@ describe("v1 step 2 collection", () => {
     expect(section.sectionId).toBe("hplace-v1-history");
     expect(section.items).toBeUndefined();
     const sent = section.fields.map((f) => f.domName);
+    // Career first: its drivers run before the school searches.
     expect(sent).toEqual([
-      ...[
-        "graduationTypeCode",
-        "locationCode",
-        "dayOrNight",
-        "entranceDate",
-        "graduationDate",
-      ].map((f) => `hplace.v1.highschool.0.${f}`),
-      ...[
-        "degreeTypeCode",
-        "entranceDate",
-        "graduationTypeCode",
-        "graduationDate",
-        "entranceTypeCode",
-        "perfectScore",
-        "score",
-      ].map((f) => `hplace.v1.college.0.${f}`),
-      ...[
-        "degreeTypeCode",
-        "entranceDate",
-        "graduationTypeCode",
-        "graduationDate",
-        "entranceTypeCode",
-        "perfectScore",
-        "score",
-      ].map((f) => `hplace.v1.graduateSchool.0.${f}`),
       ...[0, 1].flatMap((i) =>
         [
           "employmentType",
@@ -296,6 +358,34 @@ describe("v1 step 2 collection", () => {
           "assignedTask",
         ].map((f) => `hplace.v1.career.${i}.${f}`),
       ),
+      ...[
+        "academyName",
+        "graduationTypeCode",
+        "locationCode",
+        "dayOrNight",
+        "entranceDate",
+        "graduationDate",
+      ].map((f) => `hplace.v1.highschool.0.${f}`),
+      ...[
+        "academyName",
+        "degreeTypeCode",
+        "entranceDate",
+        "graduationTypeCode",
+        "graduationDate",
+        "entranceTypeCode",
+        "score",
+        "perfectScore",
+      ].map((f) => `hplace.v1.college.0.${f}`),
+      ...[
+        "academyName",
+        "degreeTypeCode",
+        "entranceDate",
+        "graduationTypeCode",
+        "graduationDate",
+        "entranceTypeCode",
+        "score",
+        "perfectScore",
+      ].map((f) => `hplace.v1.graduateSchool.0.${f}`),
     ]);
     for (const f of section.fields) expect(f.domId).toBe(f.domName);
     const byName = (n: string) => section.fields.find((f) => f.domName === n)!;
@@ -335,9 +425,7 @@ describe("v1 step 2 collection", () => {
       ),
     ).toBe(1);
     // Out of scope or not yet supported: never sent.
-    expect(
-      sent.some((n) => /academyName|majorName|퇴사|leavingDate/.test(n!)),
-    ).toBe(false);
+    expect(sent.some((n) => /majorName|leavingDate/.test(n!))).toBe(false);
   });
 
   it("collects 퇴사일 once 퇴사 unlocks it", async () => {
@@ -526,5 +614,216 @@ describe("v1 step 2 writes", () => {
         ids([scale.item, high]),
       ),
     ).toEqual(new Set([scale.item.candidateId, high.candidateId]));
+  });
+});
+
+function itemsFor(entries: [string, string][]) {
+  const snapshot = collectFieldsSnapshot(document);
+  const fields = snapshot.request.sections.flatMap((s) => s.fields);
+  const items = entries.map(([name, value]) => {
+    const field = fields.find((f) => f.domName === name);
+    if (!field) throw new Error(`not collected: ${name}`);
+    const analysis = v1HistoryAnalysis({
+      ...snapshot.request,
+      sections: [{ sectionId: "hplace-v1-history", fields: [field] }],
+    }).fields[0];
+    return {
+      candidateId: field.candidateId,
+      fieldLabel: field.displayName ?? name,
+      profileValue: value,
+      currentValue: "",
+      previewValue: value,
+      status: "available",
+      selected: true,
+      disabled: false,
+      revealed: false,
+      analysis,
+    } as unknown as ReviewPlanItem;
+  });
+  return { registry: snapshot.registry, items };
+}
+
+/** Runs a search field as the workflow does: stage-1 driver, then its settle. */
+async function drive(name: string, value: string) {
+  const { handle, item } = itemFor(name, value);
+  const adapter = getWorkflowAdapter(document);
+  const signal = new AbortController().signal;
+  const codes: string[] = [];
+  expect(adapter.isStateDriver(item, name)).toBe(true);
+  expect(adapter.stateDriverStage?.(item, handle)).toBe(1);
+  const ok = await adapter.executeStateDriver!(
+    document,
+    handle,
+    item,
+    signal,
+    (code) => codes.push(code),
+  );
+  const settled =
+    ok &&
+    (await adapter.settleStateDriver!(document, handle, undefined, {
+      item,
+      signal,
+    }));
+  return { ok, settled, codes };
+}
+
+describe("v1 step 2 school and major search", () => {
+  it("sends open search inputs and keeps the rest of a row after a pick", () => {
+    mountV1Step2();
+    const hs = appendCard("고등학교");
+    const u0 = appendCard("대학교");
+    expect(names()).toEqual(
+      expect.arrayContaining([
+        "hplace.v1.highschool.0.academyName",
+        "hplace.v1.college.0.academyName",
+      ]),
+    );
+    expect(names()).not.toContain("hplace.v1.college.0.major0.majorName");
+    appendMajor(u0);
+    expect(names()).toContain("hplace.v1.college.0.major0.majorName");
+    pickChip(hs, "학교정보", "합성고등학교");
+    pickChip(u0, "전공", "합성공학");
+    const after = names();
+    expect(after).not.toContain("hplace.v1.highschool.0.academyName");
+    expect(after).not.toContain("hplace.v1.college.0.major0.majorName");
+    expect(after).toEqual(
+      expect.arrayContaining([
+        "hplace.v1.highschool.0.locationCode",
+        "hplace.v1.highschool.0.dayOrNight",
+        "hplace.v1.college.0.academyName",
+      ]),
+    );
+  });
+
+  it("picks the single exact row and verifies the chip", async () => {
+    const page = mountV1Step2();
+    const u0 = appendCard("대학교");
+    const r = await drive("hplace.v1.college.0.academyName", "합성대학교");
+    expect(r).toEqual({ ok: true, settled: true, codes: [] });
+    expect(chipText(u0, "학교정보")).toEqual(["합성대학교"]);
+    expect(searchInput(u0, "학교정보")).toBeNull();
+    expect(page.searchQueries()).toEqual(["합성대학교"]);
+    expect(document.querySelector("#dropdown-body")).toBeNull();
+    expect(page.forbiddenClicks()).toEqual([]);
+  });
+
+  it.each([
+    ["없는학교", "SEARCH_NO_EXACT_MATCH", false],
+    ["동명학교", "SEARCH_AMBIGUOUS", true],
+    ["목록없음", "SEARCH_TIMEOUT", false],
+  ])(
+    "leaves %s unpicked, cleared and closed (%s)",
+    async (query, code, sticky) => {
+      const page = mountV1Step2();
+      if (sticky) page.stickySearch();
+      const hs = appendCard("고등학교");
+      const r = await drive("hplace.v1.highschool.0.academyName", query);
+      expect(r).toEqual({ ok: false, settled: false, codes: [code] });
+      expect(searchInput(hs, "학교정보")!.value).toBe("");
+      expect(chipText(hs, "학교정보")).toEqual([]);
+      expect(document.querySelector("#dropdown-body")).toBeNull();
+      // One search, then the clear: never a second query.
+      expect(page.searchQueries()).toEqual([query, ""]);
+      expect(page.forbiddenClicks()).toEqual([]);
+    },
+    15_000,
+  );
+
+  it("searches a major in its own card while another card's list is open", async () => {
+    const page = mountV1Step2();
+    page.stickySearch();
+    const u0 = appendCard("대학교");
+    const u1 = appendCard("대학교");
+    appendMajor(u0);
+    appendMajor(u1);
+    const other = searchInput(u0, "전공")!;
+    other.value = "합성공학";
+    other.dispatchEvent(new Event("input", { bubbles: true }));
+    await until(() => !!cardRow(u0, "전공").querySelector("#dropdown-body li"));
+    const r = await drive("hplace.v1.college.1.major0.majorName", "합성경영");
+    expect(r).toEqual({ ok: true, settled: true, codes: [] });
+    expect(chipText(u1, "전공")).toEqual(["합성경영"]);
+    expect(searchInput(u1, "전공")).toBeNull();
+    expect(other.value).toBe("합성공학");
+    expect(page.searchQueries()).toEqual(["합성공학", "합성경영"]);
+    expect(page.forbiddenClicks()).toEqual([]);
+  });
+
+  it("reports an existing chip: same name kept, a different one as a conflict", () => {
+    const page = mountV1Step2();
+    const u0 = appendCard("대학교");
+    const u1 = appendCard("대학교");
+    pickChip(u0, "학교정보", "합성대학교");
+    pickChip(u1, "학교정보", "다른대학교");
+    const snapshot = collectFieldsSnapshot(document);
+    const sent = snapshot.request.sections.flatMap((s) =>
+      s.fields.map((f) => f.domName),
+    );
+    expect(sent.some((n) => n?.endsWith("academyName"))).toBe(false);
+    const rows = hplaceUnverifiedRows(
+      document,
+      snapshot.request,
+      v1HistoryProfile(),
+    ).filter((row) => row.fieldLabel === "학교명");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      status: "conflict",
+      currentValue: "다른대학교",
+      profileValue: "합성전문대학",
+      selected: false,
+    });
+    expect(page.searchQueries()).toEqual([]);
+  });
+});
+
+describe("v1 step 2 pair and status rules", () => {
+  it("clears a typed score when its scale cannot be chosen", async () => {
+    const page = mountV1Step2();
+    const u0 = appendCard("대학교");
+    page.dropOption("scale", "4.5");
+    const { registry, items } = itemsFor([
+      ["hplace.v1.college.0.score", "3.8"],
+      ["hplace.v1.college.0.perfectScore", "4.5"],
+    ]);
+    const results = await executeApprovedWritesAfterPageSettles({
+      items,
+      approvedCandidateIds: new Set(items.map((i) => i.candidateId)),
+      registry,
+      document,
+    });
+    expect(results.map((r) => r.status)).toEqual(["skipped", "skipped"]);
+    expect(cardNamed(u0, "collegeGrade.score").value).toBe("");
+    expect(cardDropdown(u0, "scale").textContent).toBe("만점기준");
+    expect(document.querySelector("#dropdown-body")).toBeNull();
+  });
+
+  it("writes the score and the scale together", async () => {
+    mountV1Step2();
+    const u0 = appendCard("대학교");
+    const { registry, items } = itemsFor([
+      ["hplace.v1.college.0.score", "3.8"],
+      ["hplace.v1.college.0.perfectScore", "4.5"],
+    ]);
+    const results = await executeApprovedWritesAfterPageSettles({
+      items,
+      approvedCandidateIds: new Set(items.map((i) => i.candidateId)),
+      registry,
+      document,
+    });
+    expect(results.map((r) => r.status)).toEqual(["written", "written"]);
+    expect(cardNamed(u0, "collegeGrade.score").value).toBe("3.8");
+    expect(cardDropdown(u0, "scale").textContent).toBe("4.5");
+  });
+
+  it("does not write 퇴사일 unless the profile status is 퇴사", async () => {
+    mountV1Step2();
+    const c = appendCard("직장경력");
+    // The applicant chose 퇴사; no profile status was applied this run.
+    cardToggle(c, "근무기간", "퇴사").click();
+    await until(() => !cardInput(c, "퇴사일").disabled);
+    expect(await write("hplace.v1.career.0.leavingDate", "2020-12-31")).toBe(
+      "failed",
+    );
+    expect(cardInput(c, "퇴사일").value).toBe("");
   });
 });

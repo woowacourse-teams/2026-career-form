@@ -8,14 +8,17 @@ import { ownedBasicControl } from "./hplace/basic-controls";
 import { ownedV1Control } from "./hplace/v1-basic-controls";
 import { ownedV1HistoryControl } from "./hplace/v1-history-controls";
 import {
+  isV1HistoryMajorAdd,
   settleV1HistoryAdd,
   v1HistoryProfileCount,
 } from "./hplace/v1-history-collection";
 import {
+  isV1HistoryHandle,
   isV1HistoryStateDriver,
   settleV1HistoryStateDriver,
   v1HistoryDriverRow,
   writeV1History,
+  writeV1HistorySearch,
 } from "./hplace/v1-history-write";
 import {
   isV1StateDriver,
@@ -206,7 +209,7 @@ const hplaceWorkflowAdapter: WorkflowAdapter = {
   settleStateDriver: (_document, handle, _report, context) =>
     handle.candidate.domName?.startsWith("hplace.detail.")
       ? settleBasicStateDriver(handle, context?.signal, context?.item)
-      : ownedV1HistoryControl(handle)
+      : isV1HistoryHandle(handle)
         ? settleV1HistoryStateDriver(handle, context?.signal, context?.item)
         : handle.candidate.domName?.startsWith("hplace.v1.")
           ? settleV1StateDriver(handle, context?.signal, context?.item)
@@ -228,37 +231,48 @@ const hplaceWorkflowAdapter: WorkflowAdapter = {
   ) =>
     ownedBasicControl(handle)
       ? writeBasic(handle, item, () => !signal.aborted, beforeMutation)
-      : ownedV1HistoryControl(handle)
-        ? writeV1History(
+      : ownedV1HistoryControl(handle)?.spec.kind === "search"
+        ? writeV1HistorySearch(
             handle,
             item,
             () => !signal.aborted,
             beforeMutation,
-          ).then((result) => {
-            if (result === "option-unmatched") report?.("OPTION_UNMATCHED");
-            return result === "written";
+          ).then(({ written, code }) => {
+            if (!written && code) report?.(code);
+            return written;
           })
-        : ownedV1Control(handle)
-          ? writeV1(handle, item, () => !signal.aborted, beforeMutation).then(
-              (result) => {
-                if (result === "option-unmatched") report?.("OPTION_UNMATCHED");
-                return result === "written";
-              },
-            )
-          : writeRegistration(
-              document,
+        : ownedV1HistoryControl(handle)
+          ? writeV1History(
               handle,
               item,
-              signal,
-              report,
+              () => !signal.aborted,
               beforeMutation,
-            ),
+            ).then((result) => {
+              if (result === "option-unmatched") report?.("OPTION_UNMATCHED");
+              return result === "written";
+            })
+          : ownedV1Control(handle)
+            ? writeV1(handle, item, () => !signal.aborted, beforeMutation).then(
+                (result) => {
+                  if (result === "option-unmatched")
+                    report?.("OPTION_UNMATCHED");
+                  return result === "written";
+                },
+              )
+            : writeRegistration(
+                document,
+                handle,
+                item,
+                signal,
+                report,
+                beforeMutation,
+              ),
   // v1 step 2: one card per profile entry of the level (CF-509).
   repeatableProfileCount: v1HistoryProfileCount,
   settlePreparationAction: settleV1HistoryAdd,
-  // Seam: the per-card major add (`hplace.v1.<group>.<i>.major.add`) needs
-  // the major search writer and is not opted in yet.
-  followUpRepeatableAction: () => false,
+  // The per-card major add runs in the follow-up preparation, after the
+  // cards it belongs to exist.
+  followUpRepeatableAction: isV1HistoryMajorAdd,
 };
 
 function resolveWorkflowAdapter(source: string | Document): WorkflowAdapter {

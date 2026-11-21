@@ -102,6 +102,8 @@ const toggle = (labels: string[]) =>
   );
 const durations = (labels: string[]) =>
   `<div class="x-durations">${labels.map((l) => `<button type="button" class="x-duration">${l}</button>`).join("")}</div>`;
+export const SEARCH_INPUT =
+  'input[placeholder="학교명을 검색해주세요."], input[placeholder="전공명을 검색해주세요."]';
 const search = () =>
   input('type="text" placeholder="학교명을 검색해주세요." class="x-search"');
 const graduation = (withCompletion: boolean) =>
@@ -190,24 +192,62 @@ function cardBody(level: HistoryLevel, k: number): string {
       : []),
     row(
       "전공",
-      wrap('<button type="button" class="x-major-add">추가하기</button>'),
+      wrap('<button type="button" class="x-major-add">추가하기</button>') +
+        '<div class="x-majors"></div>',
     ),
   ].join("");
 }
 
+/**
+ * One major sub-row (step2-probe.json majorAdded, live addendum item 8): an
+ * unnamed search input, the role toggles and three disabled named inputs
+ * indexed by card and sub-row. The 대학원 list name is assumed.
+ */
+function majorHtml(level: HistoryLevel, k: number, m: number): string {
+  const list = `${prefixes[level]}.${k}.${level === "대학교" ? "collegeMajorList" : "graduateSchoolMajorList"}.${m}`;
+  return `<div class="x-major">${input('type="text" placeholder="전공명을 검색해주세요." class="x-search"')}${toggle(["주전공", "복수전공", "부전공", "연계전공", "융합전공"])}${input(`type="number" name="${list}.majorGrade.score" placeholder="평점" disabled`)}${input(`type="text" name="${list}.rankingAndHeadCount.ranking" disabled`)}${input(`type="text" name="${list}.rankingAndHeadCount.headcount" placeholder="전체인원" disabled`)}</div>`;
+}
+
+/** Synthetic search catalog keyed by the exact typed query. */
+export const searchCatalog: Record<string, string[]> = {
+  합성고등학교: ["합성고등학교", "합성고등학교 부설"],
+  합성대학교: ["합성대학교", "합성대학교 분교"],
+  합성전문대학: ["합성전문대학"],
+  합성대학원: ["합성대학원", "합성대학원대학교"],
+  합성공학: ["합성공학", "합성공학과", "응용합성공학"],
+  합성경영: ["합성경영"],
+  없는학교: ["없는학교분교", "새없는학교"],
+  동명학교: ["동명학교", "동명학교"],
+};
+
+/** The chip a picked row leaves in place of the search input (afterPick). */
+const chipHtml = (name: string) =>
+  `<div><div><p>${name}</p><svg class="x-chip-x"></svg></div></div>`;
+
 /** One card: head (level label + three icon buttons) and body (rows). */
 export function cardHtml(level: HistoryLevel, k: number): string {
-  return `<div class="x-card"><div class="x-head"><p>- ${level} ${k + 1}</p><div><button type="button" class="x-icon" disabled><svg></svg></button><button type="button" class="x-icon"><svg></svg></button><button type="button" class="x-icon" aria-label="닫기"><svg></svg></button></div></div><div class="x-body">${cardBody(level, k)}</div></div>`;
+  return `<div class="x-card"><div class="x-head"><p>- ${level} ${k + 1}</p><div><button type="button" class="x-icon" disabled><svg></svg></button><button type="button" class="x-icon"><svg></svg></button><button type="button" class="x-icon" aria-label="닫기"><svg></svg></button></div></div><div class="x-body">${cardBody(level, k)}<div class="x-spacer"></div></div></div>`;
 }
 const addButton = (level: HistoryLevel) =>
   `<button type="button" class="x-addbtn"><svg></svg><p>${level}</p></button>`;
 const addDiv = (level: HistoryLevel) =>
   `<div tabindex="0" class="x-adddiv"><div><p>${level}</p></div></div>`;
+/** A fresh level container (step2-skeleton.json `fresh`): the add button is
+ * a direct child next to empty spacers; cards are inserted as direct
+ * children before them, and the button becomes a `div[tabindex="0"]`. */
 const container = (level: HistoryLevel) =>
-  `<div id="${containerIds[level]}" data-level="${level}"><div class="x-list"></div><div class="x-gap"></div><div class="x-add">${addButton(level)}</div></div>`;
+  `<div id="${containerIds[level]}" data-level="${level}">${addButton(level)}<div class="x-gap"></div><div class="x-gap"></div></div>`;
 
 export interface V1HistoryPage {
   forbiddenClicks(): string[];
+  /** Cards whose 전공 추가하기 was clicked ("대학교 0", ...). */
+  majorAdds(): string[];
+  /** Every query a search input received, in order ("" when cleared). */
+  searchQueries(): string[];
+  /** Removes a label from a dropdown list the next time it opens. */
+  dropOption(list: string, label: string): void;
+  /** Search lists stay open on blur. */
+  stickySearch(): void;
   /** Level names of the add controls clicked, in order. */
   addClicks(): string[];
   /** The add control of `level` stops adding cards after `n`. */
@@ -221,18 +261,22 @@ export interface V1HistoryPage {
 export const levelContainer = (level: HistoryLevel) =>
   document.getElementById(containerIds[level])!;
 export const cards = (level: HistoryLevel) =>
-  Array.from(levelContainer(level).querySelector(".x-list")!.children);
+  Array.from(levelContainer(level).children).filter((c) =>
+    c.matches(".x-card"),
+  );
 export const card = (level: HistoryLevel, k: number) => cards(level)[k]!;
 export const addControl = (level: HistoryLevel) =>
   levelContainer(level).querySelector<HTMLElement>(".x-addbtn, .x-adddiv")!;
 
 /** Appends a card synchronously, as a restored draft or the user would. */
 export function appendCard(level: HistoryLevel): Element {
-  const list = levelContainer(level).querySelector(".x-list")!;
-  list.insertAdjacentHTML("beforeend", cardHtml(level, list.children.length));
-  const add = levelContainer(level).querySelector(".x-add")!;
-  if (add.querySelector(".x-addbtn")) add.innerHTML = addDiv(level);
-  return list.lastElementChild!;
+  const box = levelContainer(level);
+  const k = cards(level).length;
+  const anchor = Array.from(box.children).find((c) => !c.matches(".x-card"))!;
+  anchor.insertAdjacentHTML("beforebegin", cardHtml(level, k));
+  const button = box.querySelector(":scope > .x-addbtn");
+  if (button) button.outerHTML = addDiv(level);
+  return cards(level)[k];
 }
 
 export const cardRow = (c: Element, title: string) =>
@@ -261,6 +305,28 @@ export const cardInput = (c: Element, placeholder: string) =>
   c.querySelector<HTMLInputElement>(`input[placeholder="${placeholder}"]`)!;
 export const cardNamed = (c: Element, suffix: string) =>
   c.querySelector<HTMLInputElement>(`input[name$=".${suffix}"]`)!;
+/** Adds a major sub-row synchronously (a restored draft). */
+export function appendMajor(c: Element): Element {
+  const level = c.closest<HTMLElement>("[data-level]")!.dataset
+    .level as HistoryLevel;
+  const k = cards(level).indexOf(c);
+  const box = cardRow(c, "전공").querySelector(".x-majors")!;
+  box.insertAdjacentHTML("beforeend", majorHtml(level, k, box.children.length));
+  return box.lastElementChild!;
+}
+/** Replaces a row's search input with a chip, as a pick (or a draft) does. */
+export function pickChip(c: Element, title: string, name: string): void {
+  const search = cardRow(c, title).querySelector<HTMLInputElement>(
+    SEARCH_INPUT,
+  )!;
+  search.closest("[data-review-key]")!.innerHTML = chipHtml(name);
+}
+export const chipText = (c: Element, title: string) =>
+  Array.from(cardRow(c, title).querySelectorAll("span[data-review-key] p")).map(
+    (p) => p.textContent,
+  );
+export const searchInput = (c: Element, title: string) =>
+  cardRow(c, title).querySelector<HTMLInputElement>(SEARCH_INPUT);
 export const cardDropdown = (c: Element, list: string) =>
   c.querySelector<HTMLButtonElement>(`.x-dd > button[data-list="${list}"]`)!;
 
@@ -276,11 +342,11 @@ export function mountV1Step2(step = "2"): V1HistoryPage {
 ${container("고등학교")}
 ${container("대학교")}
 ${container("대학원")}
-<div id="7004"><div class="x-list"><div class="x-card"><div class="x-head"><p>졸업증명서 첨부</p></div><div class="x-body">${row("졸업증명서 첨부('27년 2월 졸업자)", wrap('<input type="file">') + wrap('<button type="button" class="x-attach">첨부파일 추가</button>'))}</div></div></div></div>
+<div id="7004"><div>${row("졸업증명서 첨부('27년 2월 졸업자)", wrap('<input type="file">') + wrap('<button type="button" class="x-attach">첨부파일 추가</button>'))}</div></div>
 </div>
 <div class="x-section"><div><h5>경력사항</h5></div>
 ${container("직장경력")}
-<div id="7006"><div class="x-list"><div class="x-card"><div class="x-head"><p>추가 자료</p></div><div class="x-body">${row("경력기술서", wrap('<button type="button" class="x-attach">추가하기</button>'))}${row("포트폴리오", wrap('<button type="button" class="x-attach">추가하기</button>'))}</div></div></div></div>
+<div id="7006"><div>${row("경력기술서", wrap('<button type="button" class="x-attach">추가하기</button>'))}${row("포트폴리오", wrap('<button type="button" class="x-attach">추가하기</button>'))}<div></div></div></div>
 </div>
 <div class="x-footer"><button type="button" class="x-prev">이전</button><button type="button" data-testid="resume-form-save">임시저장</button><button type="button" data-testid="resume-form-save-and-leave">저장 후 나가기</button><button type="button" class="x-next">다음</button></div>
 </div></div><div id="tooltip-root"></div><div id="overlay-root"></div>`;
@@ -291,6 +357,10 @@ function installShims(): V1HistoryPage {
   const root = document.getElementById("root")!;
   const forbidden: string[] = [];
   const adds: string[] = [];
+  const majorAdds: string[] = [];
+  const queries: string[] = [];
+  const removed = new Map<string, Set<string>>();
+  let stickySearch = false;
   const limits = new Map<HistoryLevel, number>();
   const stalled = new Set<HistoryLevel>();
   let sticky = false;
@@ -301,11 +371,22 @@ function installShims(): V1HistoryPage {
     (event) => {
       const target = event.target as Element;
       const hit = target.closest(
-        '[data-testid="resume-form-save"],[data-testid="resume-form-save-and-leave"],[data-testid="resume-form-stepper-item"],[data-testid^="resume-parsing-"],.x-prev,.x-next,.x-extend,.x-duration,.x-attach,.x-icon,.x-major-add,input[type="file"],.x-suggest li',
+        '[data-testid="resume-form-save"],[data-testid="resume-form-save-and-leave"],[data-testid="resume-form-stepper-item"],[data-testid^="resume-parsing-"],.x-prev,.x-next,.x-extend,.x-duration,.x-attach,.x-icon,.x-chip-x,input[type="file"],.x-suggest li',
       );
       if (hit) forbidden.push(hit.textContent?.trim() || hit.className);
       const choice = target.closest("li.ats-list-none > button");
-      if (choice && ["본교", "분교"].includes(choice.textContent ?? ""))
+      if (
+        choice &&
+        [
+          "본교",
+          "분교",
+          "주전공",
+          "복수전공",
+          "부전공",
+          "연계전공",
+          "융합전공",
+        ].includes(choice.textContent ?? "")
+      )
         forbidden.push(choice.textContent!);
       const trigger = target.closest(".x-dd > button") as HTMLElement | null;
       if (trigger && ["hsCategory", "dept"].includes(trigger.dataset.list!))
@@ -318,6 +399,30 @@ function installShims(): V1HistoryPage {
   );
   root.addEventListener("click", (event) => {
     const target = event.target as Element;
+    const majorAdd = target.closest(".x-major-add");
+    if (majorAdd) {
+      const c = majorAdd.closest(".x-card")!;
+      const level = c.closest<HTMLElement>("[data-level]")!.dataset
+        .level as HistoryLevel;
+      majorAdds.push(`${level} ${cards(level).indexOf(c)}`);
+      later(() => appendMajor(c));
+      return;
+    }
+    const pick = target.closest(".x-results li > button");
+    if (pick) {
+      const name = pick.textContent!;
+      const widget = pick.closest("[data-review-key]")!;
+      const rowElement = pick.closest(".x-row")!;
+      later(() => {
+        widget.innerHTML = chipHtml(name);
+        // A school pick fills the row's 소재지 (the site's own choice).
+        if (rowElement.firstElementChild!.textContent === "학교정보")
+          rowElement.querySelector<HTMLButtonElement>(
+            '.x-dd > button[data-list="region"]',
+          )!.textContent = "서울";
+      });
+      return;
+    }
     const add = target.closest(".x-addbtn, .x-adddiv");
     if (add) {
       const box = add.closest<HTMLElement>("[data-level]")!;
@@ -370,7 +475,9 @@ function installShims(): V1HistoryPage {
         later(() => body.remove());
         return;
       }
-      const list = historyOptions[trigger.dataset.list!];
+      const list = historyOptions[trigger.dataset.list!].filter(
+        ([, label]) => !removed.get(trigger.dataset.list!)?.has(label),
+      );
       later(() =>
         box.insertAdjacentHTML(
           "beforeend",
@@ -381,6 +488,24 @@ function installShims(): V1HistoryPage {
   });
   root.addEventListener("input", (event) => {
     const field = event.target;
+    if (field instanceof HTMLInputElement && field.matches(SEARCH_INPUT)) {
+      const query = field.value;
+      queries.push(query);
+      const box = field.parentElement!;
+      box.querySelector(":scope > .x-results")?.remove();
+      const names = query ? searchCatalog[query] : undefined;
+      // The site searches after a short delay; unknown queries show nothing.
+      if (names)
+        setTimeout(() => {
+          if (!field.isConnected || field.value !== query) return;
+          box.querySelector(":scope > .x-results")?.remove();
+          box.insertAdjacentHTML(
+            "beforeend",
+            `<div id="dropdown-body" class="x-results"><div><div role="scrollbar"><div id="design-system-scroll-contain"><div><ul>${names.map((n) => `<li><button type="button">${n}</button></li>`).join("")}</ul></div></div></div></div></div>`,
+          );
+        }, 40);
+      return;
+    }
     if (
       field instanceof HTMLInputElement &&
       field.placeholder === "회사명을 입력해주세요." &&
@@ -398,6 +523,11 @@ function installShims(): V1HistoryPage {
   root.addEventListener("focusout", (event) => {
     const field = event.target;
     if (!(field instanceof HTMLInputElement)) return;
+    if (field.matches(SEARCH_INPUT) && !stickySearch)
+      setTimeout(
+        () => field.parentElement?.querySelector(".x-results")?.remove(),
+        5,
+      );
     if (field.placeholder === "회사명을 입력해주세요." && !sticky)
       setTimeout(
         () => field.parentElement?.querySelector(".x-suggest")?.remove(),
@@ -418,6 +548,13 @@ function installShims(): V1HistoryPage {
   });
   return {
     forbiddenClicks: () => [...forbidden],
+    majorAdds: () => [...majorAdds],
+    searchQueries: () => [...queries],
+    dropOption: (list, label) =>
+      removed.set(list, (removed.get(list) ?? new Set()).add(label)),
+    stickySearch: () => {
+      stickySearch = true;
+    },
     addClicks: () => [...adds],
     limit: (level, n) => limits.set(level, n),
     stall: (level) => stalled.add(level),
@@ -480,6 +617,7 @@ export function v1HistoryProfile(): Profile {
         endDate: `${nextYear()}-02-20`,
         completionStatus: "졸업예정",
         transferStatus: "해당",
+        majorName: "합성경영",
       },
     },
     {
@@ -591,6 +729,11 @@ export function historyBinding(
   const college = group === "college";
   const school = group !== "career";
   const table: Record<string, ValueBinding | undefined> = {
+    academyName: school ? direct(`${p}.schoolName`) : undefined,
+    "major0.majorName":
+      college || group === "graduateSchool"
+        ? direct(`${p}.majorName`)
+        : undefined,
     graduationTypeCode: school
       ? lookup(
           `${p}.completionStatus`,
@@ -667,7 +810,7 @@ export function historyBinding(
 }
 
 const historyName =
-  /^hplace\.v1\.(highschool|college|graduateSchool|career)\.(\d+)\.([A-Za-z]+)$/;
+  /^hplace\.v1\.(highschool|college|graduateSchool|career)\.(\d+)\.([A-Za-z]+|major0\.majorName)$/;
 
 /** Fake backend fields analysis for `hplace-v1-history`. */
 export function v1HistoryAnalysis(
