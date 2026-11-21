@@ -62,6 +62,10 @@ import {
 } from "../profile/catalog-match";
 import { catalogEvidenceForElement } from "../profile/catalog-evidence";
 import { highSchoolSearchRegion } from "../profile/search-region";
+import {
+  CERTIFICATE_ISSUER_KEY,
+  sameIssuer,
+} from "../../profile/certificate-issuer";
 import { resolveChoiceOption } from "../profile/choice-option";
 import { matchStandardOption } from "../profile/standard-option-match";
 import { schoolRegionSearchValues } from "../../profile/standard-values";
@@ -1463,6 +1467,14 @@ function itemForResolvedAnalysis(
             : [resolvedProfileValue.value]
         ).some((value) => normalized(pageValue) === normalized(value))
       : pageValue.trim() !== resolvedProfileValue.value.trim() &&
+        // A site's own spelling of the same issuer is not a different value.
+        !(
+          generic &&
+          analysis.mappingStatus === "LLM_SUGGESTED" &&
+          binding.type === "DIRECT" &&
+          binding.profileFieldKey === CERTIFICATE_ISSUER_KEY &&
+          sameIssuer(pageValue, resolvedProfileValue.value)
+        ) &&
         // Sites often redisplay a written date (202003 → 2020-03); the same
         // year, month and day is the same value, not a conflicting one.
         !(
