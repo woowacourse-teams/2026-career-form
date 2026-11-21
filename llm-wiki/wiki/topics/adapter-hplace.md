@@ -2,13 +2,13 @@
 
 > Topic: adapter-hplace
 > Status: Current
-> Current: [CF-327 활성 정책 버전 설정값 근거](../../raw/issues/CF-327/documents/hplace-active-policy-version.md)
-> History: [CF-177 근거](../../raw/issues/CF-177/documents/adapter-hplace.md); [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md); [CF-177 C12·C13·시연 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md); [CF-177 KDI·구조 미확인 근거](../../raw/issues/CF-177/documents/live-kdi-unverified.md); [CF-177 후속 보완 묶음 근거](../../raw/issues/CF-177/documents/live-followup-bundle.md); [CF-310 요청 구조 근거](../../raw/issues/CF-310/documents/hplace-mrs2-requests.md); [CF-310 4단계 분석·패널 근거](../../raw/issues/CF-310/documents/hplace-step4-analyze-and-panel.md); [CF-310 빈 단계 분석 생략 근거](../../raw/issues/CF-310/documents/hplace-empty-step-analysis-skip.md); [CF-327 활성 정책 버전 설정값 근거](../../raw/issues/CF-327/documents/hplace-active-policy-version.md)
-> Updated: 2026-10-23
+> Current: [CF-505 v1 지원자 앱 1단계 근거](../../raw/issues/CF-505/documents/hplace-v1-step1.md)
+> History: [CF-177 근거](../../raw/issues/CF-177/documents/adapter-hplace.md); [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md); [CF-177 C12·C13·시연 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md); [CF-177 KDI·구조 미확인 근거](../../raw/issues/CF-177/documents/live-kdi-unverified.md); [CF-177 후속 보완 묶음 근거](../../raw/issues/CF-177/documents/live-followup-bundle.md); [CF-310 요청 구조 근거](../../raw/issues/CF-310/documents/hplace-mrs2-requests.md); [CF-310 4단계 분석·패널 근거](../../raw/issues/CF-310/documents/hplace-step4-analyze-and-panel.md); [CF-310 빈 단계 분석 생략 근거](../../raw/issues/CF-310/documents/hplace-empty-step-analysis-skip.md); [CF-327 활성 정책 버전 설정값 근거](../../raw/issues/CF-327/documents/hplace-active-policy-version.md); [CF-505 v1 지원자 앱 1단계 근거](../../raw/issues/CF-505/documents/hplace-v1-step1.md)
+> Updated: 2026-11-21
 
 ## 현재 상태
 
-MRS2 등록의 이름·휴대전화·이메일과 기존 기본정보 계약을 유지하고 새 범주를 v4 실행 정책과 공통 native 실행기로 연결한다. 학력·중첩 전공·숫자 GPA·경력·프로젝트·비인증 어학·자격증·현주소는 검증된 소유 구조와 활성 정책에서만 실행한다. v1/JOBDA의 인증 이후 입력 구조는 지원하지 않는다.
+MRS2 등록의 이름·휴대전화·이메일과 기존 기본정보 계약을 유지하고 새 범주를 v4 실행 정책과 공통 native 실행기로 연결한다. 학력·중첩 전공·숫자 GPA·경력·프로젝트·비인증 어학·자격증·현주소는 검증된 소유 구조와 활성 정책에서만 실행한다. v1 지원자 앱은 1단계 기본정보만 별도 정책으로 지원한다(아래 v1 절). v1의 2단계 이후와 JOBDA의 입력 구조는 지원하지 않는다.
 
 13범주 127키 중 활성 구현 또는 간접 소비는 95키다. 나머지는 의미 불일치13·구조 미확인16·지정 화면 부재1·파일 사용자 처리2로 구분한다. 사이트 전용27행은 별도 집계하며 required라는 이유로 대응 값을 추정하지 않는다. 전체 표는 [필드 현황](adapter-field-inventory.md)과 raw를 따른다.
 
@@ -61,6 +61,17 @@ MRS2 등록의 이름·휴대전화·이메일과 기존 기본정보 계약을 
 
 확장 워크플로는 수집 요청의 필드 수가 0이면 `AUTOFILL_ANALYZE_FIELDS`를 부르지 않고 `ADAPTER/COMPLETE`, 필드 없음, 설치된 `executionPolicy`를 그대로 넣은 분석으로 진행해 결과 화면으로 끝난다. 정책을 넣지 않으면 네이티브 정책 digest 대조에서 "페이지 실행 정책이 변경되었습니다" 예외가 난다. 수정 빌드로 GS건설 4단계를 재측정하면 예외 없이 입력 완료 0·확인 필요 0이다. 근거는 [CF-310 빈 단계 분석 생략 근거](../../raw/issues/CF-310/documents/hplace-empty-step-analysis-skip.md)를 따른다.
 
+## v1 지원자 앱 1단계 (2026-11-21)
+
+- **범위:** 경로 `/v1/applicant/resume-form/<숫자>`, 쿼리 `step=1`, v1 플랫폼 지문, 검증된 칸 1개 이상일 때만 지원 화면이다. 대상은 영문이름·생년월일·성별·비상연락처, 병역 상태와 하위 6칸, 장애 여부와 하위 3칸, 보훈 여부와 하위 2칸, 국적의 19칸이다. v1 로그인·마이페이지·2단계 이후는 미지원 안내를 유지한다.
+- **식별:** 빌드 해시 클래스는 쓰지 않는다. 고정 `name`, 행 제목(행의 첫 자식 `span[aria-hidden="true"]`), placeholder, 선택지 글자와 구조로 찾는다. 상태 행 제목은 `병역`, `장애여부`, `보훈여부`다. 칸 단위로 검증해 다르면 그 칸만 제외한다.
+- **위젯:** 성별 라디오는 감싼 `label`을 눌러야 선택된다. 상태 선택은 `li > button` 묶음이고 선택 표시는 클래스 두 개뿐이다. 드롭다운은 버튼과, 열렸을 때만 있는 `#dropdown-body`의 `ul > li > button[value]`이며 Escape로 닫히지 않는다. 입대일은 포커스를 잃으면 월 정밀도로 바뀐다.
+- **전송 계약:** 섹션 `hplace-v1-basic`, 칸 이름 `hplace.v1.<key>`. 버튼형 위젯은 `input`/`radio`와 `select`/`select`로 보내고 실제 조작은 프론트 v1 writer가 한다.
+- **정책 분리:** 백엔드 v1 규칙은 저장하지 않는 v1 전용 정책 객체에 있다. MRS2 저장 문서(v3, v4), `hplace-mrs2-v4.json`, 활성 정책 버전 기본값은 바꾸지 않는다. 백엔드는 단계를 알 수 없어 섹션 ID와 칸 이름 허용 목록으로만 판정하고 `step=1`은 프론트가 확인한다.
+- **실행 순서:** 병역·장애·보훈 상태는 stage 1 driver다. 하위 칸은 잠금이 풀린 뒤 다음 분석에서 기입하며 분석 한도 3회 안에서 끝난다. 선택지 불일치는 기입 단계에서 `OPTION_UNMATCHED`로 보고한다. 기존 값은 덮어쓰지 않고, 기본값 비대상만 같은 행 하위 칸이 비어 있을 때 프로필 값으로 바꾼다.
+- **실측:** v1 테넌트 1곳에서 분석 ADAPTER·COMPLETE 2회, 18칸 기입, 사이트로 가는 GET 이외 요청 0건이었다. 같은 화면의 범용 실험은 2칸 기입이었다. 미필·면제·복무중이 여는 칸은 측정하지 않았다.
+- 필드별 현황은 [필드 현황](adapter-field-inventory.md), 근거는 [CF-505 v1 지원자 앱 1단계 근거](../../raw/issues/CF-505/documents/hplace-v1-step1.md)를 따른다.
+
 ## 검증과 배포 경계
 
 10월18/19 두 테넌트의 구조 관측과 P4 자동 검증은 로컬 구현의 근거다. 10월12/13 설치 관측은 과거 revision의 제한된 증거이며 소실된 임시 원본을 복구·재검증한 것으로 취급하지 않는다.
@@ -74,5 +85,7 @@ MRS2 등록의 이름·휴대전화·이메일과 기존 기본정보 계약을 
 활성 정책 버전은 DB 포인터가 아니라 Spring 속성 `careerform.hplace.active-policy-version`이며 기본값이 4다. `HplaceFormPolicySeeder`는 v3·v4 문서를 없을 때만 insert하고 `MongoHplacePolicyProvider`는 설정값으로 문서를 고른다(4가 없으면 3). `application-prod.yml`, `infra/compose.deploy.yaml`, deploy workflow 어디서도 이 값을 전달하지 않아 백엔드 배포 즉시 v4가 활성화되고 운영에서 끌 레버가 없다. 끄거나 v3로 되돌리려면 설정 전달 경로를 추가하는 infra 변경이 필요하다. 이전 raw의 "DB 활성 포인터를 사람이 올린다"는 서술은 이 내용으로 정정하며, 그 결과 [확장·백엔드 호환 배포](release-compatibility.md)의 순서가 v4 활성화를 제어하는 유일한 수단이다. 근거는 [CF-327 활성 정책 버전 설정값 근거](../../raw/issues/CF-327/documents/hplace-active-policy-version.md)를 따른다.
 
 ## 변경 이유
+
+2026-11-21에는 v1 지원자 앱을 범용 경로로 보낸 실험이 2칸 기입에 그쳐, 사용자 결정으로 v1 1단계를 정적 어댑터로 추가했다(CF-505).
 
 2026-10-20 후반에는 실화면 정제 fixture로 합성 builder를 대조하고(C12), 프로젝트154를 활성화했으며(C13), 처음 보는 테넌트 시연에서 드러난 현주소 앵커·병역 날짜 정밀도·영문 이름 순서 문제를 고쳤다. v3의 등록·기본정보 범위에 후속 단계 구조와 정책 계약을 추가했다. 2026-10-20에는 실화면에서 드러난 분석 루프 정체와 학교·전공·자격·시험 검색 미실행의 원인(격리 world의 Enter 속성, 첫 실패 driver 정지와 예산 소진, hidden 검색 의존, 라디오 코드/라벨 비교 등)을 수정하고 3사 실화면으로 확인했다. 과거 주소 모달 저장 제외 판단은 원래 주소로 복사하는 로컬 확정 근거로 정정했다. 상세한 현재 계약·역사·검증 제한은 연결된 raw를 따른다.
