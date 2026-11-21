@@ -46,7 +46,7 @@ import com.careerform.formanalysis.dto.PreparationAnalysisRequest;
 import com.careerform.formanalysis.dto.PreparationAnalysisResponse;
 
 class HplaceV1PolicyTest {
-    private static final String HOST = "bbq.recruiter.co.kr";
+    private static final String HOST = "synthetic.recruiter.co.kr";
     private static final String PATH = "/v1/applicant/resume-form/*";
     private static final List<String> TEXTS = List.of("englishName.familyFirst", "birthday", "emergencyPhone",
         "serviceStartDate", "serviceEndDate", "militarySpecialty", "disabilityRegistrationNumber", "veteranNumber");
@@ -196,7 +196,7 @@ class HplaceV1PolicyTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"bbq.recruiter.co.kr.attacker.test", "recruiter.co.kr", "nested.bbq.recruiter.co.kr"})
+    @ValueSource(strings = {"synthetic.recruiter.co.kr.attacker.test", "recruiter.co.kr", "nested.synthetic.recruiter.co.kr"})
     void nonSupplierHostsNeverReceiveV1Bindings(String host) {
         var fields = new FieldsAnalysisRequest(2, "fields", new Site(host, PATH), request(allFields()).sections());
         assertThat(router.route(fields).kind()).isEqualTo(RouteKind.GENERIC);

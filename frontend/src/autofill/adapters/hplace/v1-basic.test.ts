@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { setAutofillDebugEnabled } from "../../debug/autofill-debug";
 import {
   collectFieldsSnapshot,
   collectPreparationSnapshot,
@@ -19,6 +20,7 @@ import {
 } from "../../workflow/test-utils/hplace.fixture";
 import { mountDetail } from "./detail.test-fixtures";
 import { hplaceUnverifiedRows } from "./unverified-structure";
+import { writeV1 } from "./v1-basic-write";
 import {
   dateInput,
   dropdownTrigger,
@@ -32,7 +34,18 @@ import {
   v1Profile,
 } from "./v1-basic.test-fixtures";
 
-afterEach(resetHplacePage);
+afterEach(() => {
+  setAutofillDebugEnabled(false);
+  vi.restoreAllMocks();
+  resetHplacePage();
+});
+
+const unverifiedIds = () =>
+  hplaceUnverifiedRows(
+    document,
+    collectFieldsSnapshot(document).request,
+    v1Profile(),
+  ).map((r) => r.candidateId);
 
 const name = (key: string) => `hplace.v1.${key}`;
 const lockedNames = [
@@ -372,6 +385,45 @@ describe("collection", () => {
     );
   });
 
+  it("treats a duplicated row title as malformed and reports the field as unverified", () => {
+    setAutofillDebugEnabled(true);
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    mountV1Step1();
+    rowOf("국적").after(rowOf("국적").cloneNode(true));
+    expect(fieldNames()).toEqual(
+      lockedNames.filter((n) => n !== name("nationality")),
+    );
+    expect(
+      log.mock.calls.some(([line]) =>
+        String(line).includes(`key=${name("nationality")} reason=row-identity`),
+      ),
+    ).toBe(true);
+    expect(unverifiedIds()).toEqual(["hplace-unverified-v1-nationality"]);
+  });
+
+  it.each([
+    [
+      "militaryRank",
+      () => (dropdownTrigger("rank").textContent = "알 수 없는 값"),
+    ],
+    ["serviceStartDate", () => (dateInput("입대일").readOnly = true)],
+  ])(
+    "does not report a malformed %s as unverified while its row is locked",
+    async (key, fault) => {
+      mountV1Step1();
+      fault();
+      expect(unverifiedIds()).toEqual([]);
+      // Its own element open, but the row's status is still 비대상.
+      for (const control of rowOf("병역").querySelectorAll<
+        HTMLInputElement | HTMLButtonElement
+      >(".x-input, .x-dd > button"))
+        control.disabled = false;
+      expect(unverifiedIds()).toEqual([]);
+      await unlockDependents();
+      expect(unverifiedIds()).toEqual([`hplace-unverified-v1-${key}`]);
+    },
+  );
+
   it("does not guess a control whose row title is missing", () => {
     mountV1Step1();
     // The same rows without their aria-hidden titles: nothing is guessed.
@@ -470,6 +522,90 @@ describe("writing", () => {
     expect(results.filter((r) => r.status === "written")).toHaveLength(18);
     expect(page.forbiddenClicks()).toEqual([]);
   });
+
+  it("gives an option-unmatched dropdown its own reason", async () => {
+    const page = mountV1Step1();
+    page.dropOption("rank", "병장");
+    await unlockDependents();
+    const { resultOf } = await writeAll(analyzePass(v1Profile()));
+    const result = resultOf("militaryRank");
+    expect(result).toMatchObject({
+      status: "skipped",
+      failureCode: "OPTION_UNMATCHED",
+    });
+    expect(result?.status === "skipped" && result.reason).not.toMatch(
+      /검증된 .*필드만/,
+    );
+  });
+
+  it("reports an approved label outside the v1 catalog as option-unmatched without opening it", async () => {
+    mountV1Step1();
+    await unlockDependents();
+    const pass = analyzePass(v1Profile());
+    const item = pass.item("disabilityType");
+    // A label the MRS2 map produces but the v1 catalog lacks.
+    const unoffered = { ...item, profileValue: "췌장장애", selected: true };
+    let clicks = 0;
+    dropdownTrigger("type").addEventListener("click", () => clicks++);
+    expect(await writeV1(pass.handleOf(item)!, unoffered, () => true)).toBe(
+      "option-unmatched",
+    );
+    expect(clicks).toBe(0);
+    expect(document.querySelector("#dropdown-body")).toBeNull();
+    expect(dropdownTrigger("type").textContent).toBe("장애 유형");
+  });
+
+  it("fails a dropdown the page keeps open and reports it", async () => {
+    setAutofillDebugEnabled(true);
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    const page = mountV1Step1();
+    page.dropOption("rank", "병장");
+    page.ignoreClose("rank");
+    await unlockDependents();
+    const pass = analyzePass(v1Profile());
+    const item = pass.item("militaryRank");
+    item.selected = true;
+    expect(await writeV1(pass.handleOf(item)!, item, () => true)).toBe(
+      "failed",
+    );
+    expect(
+      log.mock.calls.some(([line]) =>
+        String(line).includes(
+          `key=${name("militaryRank")} reason=cleanup-failed`,
+        ),
+      ),
+    ).toBe(true);
+    expect(dropdownTrigger("rank").textContent).toBe("계급을 선택해주세요.");
+    expect(page.forbiddenClicks()).toEqual([]);
+  });
+
+  it.each([
+    [
+      "an out-of-scope dropdown",
+      () => (dropdownTrigger("rate").textContent = "10%"),
+    ],
+    [
+      "an unverified input",
+      () => {
+        const input = named(
+          "preferentialEmploymentGroupResumeItemAnswers.patriotAnswer.patriotNumber",
+        );
+        input.type = "password";
+        input.value = "00-000000";
+      },
+    ],
+  ])(
+    "keeps the 비대상 default when %s of its row holds a value",
+    async (_, fault) => {
+      mountV1Step1();
+      fault();
+      const pass = analyzePass(v1Profile());
+      expect(pass.item("veteranStatus").status).toBe("conflict");
+      const { resultOf } = await writeAll(pass);
+      expect(resultOf("veteranStatus")?.status).toBe("skipped");
+      expect(selectedToggle("보훈여부")).toEqual(["비대상"]);
+    },
+  );
 
   it("does not overwrite existing page values", async () => {
     const page = mountV1Step1();

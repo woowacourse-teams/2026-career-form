@@ -346,20 +346,19 @@ export function isV1BasicPage(document: Document): boolean {
 const text = (e: Element | null | undefined) =>
   e?.textContent?.replace(/\s+/g, " ").trim() ?? "";
 
-/** The unique field row whose first child is the `aria-hidden` title span. */
-export function v1Row(document: Document, title: string): Element | undefined {
+/** Field rows whose first child is the `aria-hidden` title span; unique when sound. */
+function v1Rows(document: Document, title: string): Element[] {
   const root = document.getElementById("root");
-  const rows = Array.from(
-    root?.querySelectorAll('span[aria-hidden="true"]') ?? [],
-  ).filter(
-    (span) =>
-      span.parentElement?.firstElementChild === span && text(span) === title,
-  );
-  return rows.length === 1 ? rows[0].parentElement! : undefined;
+  return Array.from(root?.querySelectorAll('span[aria-hidden="true"]') ?? [])
+    .filter(
+      (span) =>
+        span.parentElement?.firstElementChild === span && text(span) === title,
+    )
+    .map((span) => span.parentElement!);
 }
 
 /** Dropdown triggers of a row, in document order. */
-function rowDropdowns(row: Element): HTMLButtonElement[] {
+export function rowDropdowns(row: Element): HTMLButtonElement[] {
   return Array.from(
     row.querySelectorAll<HTMLButtonElement>(
       "div.ats-inline-flex.ats-flex-col.ats-relative > button[type=button]",
@@ -409,15 +408,43 @@ export function dropdownBody(trigger: HTMLButtonElement): Element | undefined {
 
 type Located =
   | { status: "absent" }
-  | { status: "malformed"; reason: Parameters<typeof debugCollectionSkip>[1] }
+  | {
+      status: "malformed";
+      reason: Parameters<typeof debugCollectionSkip>[1];
+      /** The row-identified nodes that were found (text/radio: by name). */
+      nodes?: HTMLElement[];
+    }
   | { status: "ok"; control: V1Control };
+
+/** The nodes a row-identified control would use in `row`. */
+function rowNodes(
+  spec: Extract<Spec, { row: string }>,
+  row: Element,
+): HTMLElement[] {
+  if (spec.kind === "date") {
+    const unnamed = Array.from(row.querySelectorAll("input")).filter(
+      (i) => !i.hasAttribute("name") && i.type !== "file",
+    );
+    const byPlaceholder = unnamed.filter(
+      (i) => i.placeholder === spec.placeholder,
+    );
+    return byPlaceholder.length || !spec.sole ? byPlaceholder : unnamed;
+  }
+  if (spec.kind === "toggle")
+    return Array.from(
+      row.querySelectorAll<HTMLButtonElement>("li.ats-list-none > button"),
+    );
+  const trigger = rowDropdowns(row)[spec.index];
+  return trigger ? [trigger] : [];
+}
 
 function locate(document: Document, key: V1Key): Located {
   const spec = v1Spec(key);
   const root = document.getElementById("root");
   const malformed = (
     reason: Parameters<typeof debugCollectionSkip>[1] = "control-shape",
-  ): Located => ({ status: "malformed", reason });
+    nodes?: HTMLElement[],
+  ): Located => ({ status: "malformed", reason, ...(nodes ? { nodes } : {}) });
   const ok = (
     control: Omit<V1Control, "key" | "disabled">,
     disabled: boolean,
@@ -465,17 +492,17 @@ function locate(document: Document, key: V1Key): Located {
       inputs.some((i) => i.disabled),
     );
   }
-  const row = v1Row(document, spec.row);
-  if (!row) return { status: "absent" };
+  const rows = v1Rows(document, spec.row);
+  if (!rows.length) return { status: "absent" };
+  if (rows.length > 1) {
+    const nodes = rows.flatMap((r) => rowNodes(spec, r));
+    return nodes.length
+      ? malformed("row-identity", nodes)
+      : { status: "absent" };
+  }
+  const row = rows[0];
   if (spec.kind === "date") {
-    const unnamed = Array.from(row.querySelectorAll("input")).filter(
-      (i) => !i.hasAttribute("name") && i.type !== "file",
-    );
-    const byPlaceholder = unnamed.filter(
-      (i) => i.placeholder === spec.placeholder,
-    );
-    const candidates =
-      byPlaceholder.length || !spec.sole ? byPlaceholder : unnamed;
+    const candidates = rowNodes(spec, row) as HTMLInputElement[];
     if (!candidates.length) return { status: "absent" };
     const input = candidates[0];
     if (
@@ -484,18 +511,19 @@ function locate(document: Document, key: V1Key): Located {
       input.placeholder !== spec.placeholder ||
       input.readOnly
     )
-      return malformed();
+      return malformed("control-shape", candidates);
     return ok(
       { elements: [input], custom: [], options: new Map(), row },
       input.disabled,
     );
   }
   if (spec.kind === "toggle") {
-    if (!row.querySelector("li.ats-list-none > button"))
-      return { status: "absent" };
+    const all = rowNodes(spec, row);
+    if (!all.length) return { status: "absent" };
     const buttons = toggleGroup(row, Object.values(spec.options));
-    if (!buttons) return malformed("label-mismatch");
-    if (buttons.filter(isSelectedToggle).length > 1) return malformed();
+    if (!buttons) return malformed("label-mismatch", all);
+    if (buttons.filter(isSelectedToggle).length > 1)
+      return malformed("control-shape", all);
     return ok(
       {
         elements: [],
@@ -506,14 +534,14 @@ function locate(document: Document, key: V1Key): Located {
       buttons.some((b) => b.disabled),
     );
   }
-  const trigger = rowDropdowns(row)[spec.index];
+  const [trigger] = rowNodes(spec, row) as HTMLButtonElement[];
   if (!trigger) return { status: "absent" };
   const shown = text(trigger);
   if (
     shown !== spec.placeholder &&
     !Object.values(spec.options).includes(shown)
   )
-    return malformed("option-mismatch");
+    return malformed("option-mismatch", [trigger]);
   return ok(
     { elements: [], custom: [trigger], options: new Map(), row },
     trigger.disabled,
@@ -530,21 +558,36 @@ export function v1PresentControls(
     if (found.status === "absent") return [];
     if (found.status === "ok")
       return [{ key, enabled: !found.control.disabled }];
-    // Malformed: report it only when its nodes are open for input.
+    // Malformed: report it only when its nodes are open for input and its
+    // row's status is on the label that unlocks it.
     const spec = v1Spec(key);
     const nodes =
       spec.kind === "text" || spec.kind === "radio"
         ? Array.from(document.querySelectorAll(`[name="${spec.name}"]`))
-        : [];
+        : (found.nodes ?? []);
     return [
       {
         key,
-        enabled: nodes.length
-          ? nodes.every((n) => !n.matches(":disabled"))
-          : true,
+        enabled:
+          nodes.length > 0 &&
+          nodes.every((n) => !n.matches(":disabled")) &&
+          (!("parent" in spec) ||
+            !spec.parent ||
+            unlocked(document, spec.parent)),
       },
     ];
   });
+}
+
+/** Whether a status row's toggle is on the label that unlocks its dependents. */
+function unlocked(document: Document, driver: V1Driver): boolean {
+  const spec = v1Spec(driver);
+  const found = locate(document, driver);
+  return (
+    spec.kind === "toggle" &&
+    found.status === "ok" &&
+    v1ControlValue(found.control) === spec.unlocks
+  );
 }
 
 /** Located controls, including locked ones (for default checks and settling). */

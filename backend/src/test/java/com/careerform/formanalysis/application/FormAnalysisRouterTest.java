@@ -30,7 +30,7 @@ class FormAnalysisRouterTest {
     }
 
     @Test
-    void resumeFormWithoutTheV1SectionIsNeverAnAdapterOrGenericRoute() {
+    void resumeFormWithTheV1PolicyRoutesOnlyTheV1SectionToTheAdapter() {
         var router = new FormAnalysisRouter((host, route) -> new CompanyFormPolicyProvider.NotRegistered(),
             (host, route) -> com.careerform.formanalysis.application.port.GreetingDomainEvidence.Decision.NO_POSITIVE_EVIDENCE,
             CompanyFormPolicyProvider.Unavailable::new,

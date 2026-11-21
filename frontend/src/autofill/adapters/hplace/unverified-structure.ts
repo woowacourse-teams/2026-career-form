@@ -124,7 +124,16 @@ export function hplaceUnverifiedRows(
       const profileFieldKey = "profile" in spec ? spec.profile : undefined;
       const hasValue = profileFieldKey
         ? resolved(profile, profileFieldKey)
-        : detailFields[0].hasValue(profile);
+        : detailFields
+            .find(
+              (
+                f,
+              ): f is Extract<
+                (typeof detailFields)[number],
+                { key: "englishName" }
+              > => f.key === "englishName",
+            )!
+            .hasValue(profile);
       return enabled && hasValue && !isCollected(v1Name(key))
         ? [
             row(

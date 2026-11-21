@@ -127,6 +127,8 @@ export interface V1Page {
   forbiddenClicks(): string[];
   /** Removes an option from a dropdown list the next time it opens. */
   dropOption(list: string, label: string): void;
+  /** Makes a dropdown ignore the click that would close its open body. */
+  ignoreClose(list: string): void;
 }
 
 /** Labels that unlock a status row's dependents (measured: 군필, 대상). */
@@ -178,6 +180,7 @@ function installShims(): V1Page {
   const root = document.getElementById("root")!;
   const forbidden: string[] = [];
   const removed = new Map<string, Set<string>>();
+  const stuck = new Set<string>();
   const later = (run: () => void) => setTimeout(run, 0);
   const isForbidden = (target: Element) =>
     target.closest(
@@ -250,7 +253,7 @@ function installShims(): V1Page {
       const container = trigger.parentElement!;
       const body = container.querySelector(":scope > #dropdown-body");
       if (body) {
-        later(() => body.remove());
+        if (!stuck.has(trigger.dataset.list!)) later(() => body.remove());
         return;
       }
       const list = fixtureOptions[trigger.dataset.list!].filter(
@@ -291,6 +294,7 @@ function installShims(): V1Page {
     forbiddenClicks: () => [...forbidden],
     dropOption: (list, label) =>
       removed.set(list, (removed.get(list) ?? new Set()).add(label)),
+    ignoreClose: (list) => stuck.add(list),
   };
 }
 

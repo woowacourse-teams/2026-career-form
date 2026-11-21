@@ -28,6 +28,7 @@ public final class HplaceFormFingerprint {
     // Every detail field is verified on its own by the extension; the section needs at least one
     // allowed field but no particular one (tenants omit address, birthday or even the English name).
     private static final Set<String> DETAIL_REQUIRED = Set.of();
+    private static final Set<String> V1_REQUIRED = Set.of();
     private static final Set<String> DETAIL_RADIOS = Set.of(
         "hplace.detail.gender", "hplace.detail.veteranStatus", "hplace.detail.disabilityStatus", "hplace.detail.militaryStatus");
     private static final Set<String> DETAIL_SELECTS = Set.of(
@@ -100,7 +101,7 @@ public final class HplaceFormFingerprint {
             || !empty(section.items())) return false;
         boolean detail = DETAIL_SECTION.equals(section.sectionId());
         boolean v1 = V1_SECTION.equals(section.sectionId());
-        Set<String> required = detail || v1 ? DETAIL_REQUIRED : FIELD_NAMES;
+        Set<String> required = v1 ? V1_REQUIRED : detail ? DETAIL_REQUIRED : FIELD_NAMES;
         Set<String> allowed = v1 ? V1_FIELDS : detail ? DETAIL_FIELDS : FIELD_NAMES;
         if (section.fields().size() < Math.max(1, required.size()) || section.fields().size() > allowed.size()) return false;
         Set<String> names = new HashSet<>();

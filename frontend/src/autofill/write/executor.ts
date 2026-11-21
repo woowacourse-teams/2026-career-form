@@ -29,7 +29,10 @@ import type { InteractionDecisionProvider } from "../api/interaction-types";
 import type { FieldCandidateHandle } from "../dom/types";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import type { SearchFollowUpControl } from "../interaction/search-follow-up";
-import type { ReviewPlanItem } from "../review/review-plan";
+import {
+  NATIVE_OPTION_ABSENT_REASON,
+  type ReviewPlanItem,
+} from "../review/review-plan";
 import { componentGpaSafe } from "../policy/components/gpa";
 import { matchesResultValue } from "../workflow/result-value-match";
 import {
@@ -100,7 +103,7 @@ function v1Result(
     result === "option-unmatched"
       ? "UNSUPPORTED_CONTROL"
       : "REVIEW_UNAVAILABLE",
-    reason,
+    result === "option-unmatched" ? NATIVE_OPTION_ABSENT_REASON : reason,
   );
   return result === "option-unmatched" && failure.status === "skipped"
     ? { ...failure, failureCode: "OPTION_UNMATCHED" }

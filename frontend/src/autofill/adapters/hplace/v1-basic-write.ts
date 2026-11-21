@@ -7,6 +7,7 @@ import { detailTargetValue } from "./detail-write";
 import {
   dropdownBody,
   isSelectedToggle,
+  rowDropdowns,
   ownedV1Control,
   v1AllControls,
   v1BasicControls,
@@ -143,11 +144,42 @@ export function v1ResultMatches(
   return target !== undefined && v1Shows(control.key, current, target);
 }
 
+/** Measured placeholders of the out-of-scope dropdowns in the status rows. */
+const outOfScopePlaceholders = [
+  "편의 제공 여부 선택",
+  "보훈비율을 선택해주세요.",
+];
+const dropdownPlaceholders = new Set<string>([
+  ...outOfScopePlaceholders,
+  ...Object.values(v1Specs).flatMap((s) =>
+    s.kind === "dropdown" ? [s.placeholder] : [],
+  ),
+]);
+
+/** Any input or dropdown of the row holds a value, verified or not. */
+function rowHoldsValue(row: Element): boolean {
+  return (
+    Array.from(row.querySelectorAll("input")).some((i) =>
+      i.type === "radio" || i.type === "checkbox" ? i.checked : i.value !== "",
+    ) ||
+    rowDropdowns(row).some(
+      (t) =>
+        !dropdownPlaceholders.has(
+          t.textContent?.replace(/\s+/g, " ").trim() ?? "",
+        ),
+    )
+  );
+}
+
 /** The status toggles start on 비대상: a page default the profile may replace,
- * but only while every dependent of the row is still empty. */
+ * but only while every input and dropdown of the row is still empty. */
 function defaultToggle(control: V1Control): boolean {
   const spec = v1Spec(control.key);
-  if (spec.kind !== "toggle" || v1ControlValue(control) !== "비대상")
+  if (
+    spec.kind !== "toggle" ||
+    v1ControlValue(control) !== "비대상" ||
+    rowHoldsValue(control.row)
+  )
     return false;
   return v1AllControls(control.row.ownerDocument).every((other) => {
     const otherSpec = v1Spec(other.key);
@@ -218,8 +250,10 @@ export async function writeV1(
   const value = item.profileValue;
   const target = v1Target(key, value ?? "");
   const original = v1ControlValue(control);
-  if (!target || original === undefined || !approved(key, item))
-    return "failed";
+  if (original === undefined || !approved(key, item)) return "failed";
+  // An approved label the v1 catalog does not offer (e.g. an MRS2-only one).
+  if (!target)
+    return "options" in spec && value?.trim() ? "option-unmatched" : "failed";
   const override =
     original !== "" && original !== target && defaultToggle(control);
   const url = document.URL;
@@ -327,13 +361,24 @@ async function writeDropdown(
   const trigger = control.custom[0];
   const code = Object.entries(spec.options).find(([, l]) => l === target)?.[0];
   const original = v1ControlValue(control) ?? "";
+  /** Closes the open body; false (with a diagnostic) when the page keeps it open. */
   const close = async () => {
-    if (!dropdownBody(trigger) || !trigger.isConnected) return;
+    if (!dropdownBody(trigger) || !trigger.isConnected) return true;
     trigger.click();
-    await waitFor(
-      () => !dropdownBody(trigger),
-      () => trigger.isConnected,
+    if (
+      (await waitFor(
+        () => !dropdownBody(trigger),
+        () => trigger.isConnected,
+      )) ||
+      !trigger.isConnected
+    )
+      return true;
+    debugRuntimeSkip(
+      v1Name(control.key),
+      "cleanup-failed",
+      "v1-dropdown-close",
     );
+    return false;
   };
   allow([original]);
   trigger.click();
@@ -345,10 +390,8 @@ async function writeDropdown(
   const matches = Array.from(
     body.querySelectorAll<HTMLButtonElement>("ul > li > button"),
   ).filter((b) => b.textContent?.trim() === target);
-  if (matches.length === 0) {
-    await close();
-    return "option-unmatched";
-  }
+  if (matches.length === 0)
+    return (await close()) ? "option-unmatched" : "failed";
   if (
     matches.length !== 1 ||
     (code !== undefined && matches[0].value !== code)

@@ -154,7 +154,7 @@ class HplaceFormFingerprintTest {
 
     @Test
     void v1ResumeFormPreparationNeedsOneEmptyBasicSection() {
-        var site = new PreparationAnalysisRequest.Site("bbq.recruiter.co.kr", "/v1/applicant/resume-form/*");
+        var site = new PreparationAnalysisRequest.Site("synthetic.recruiter.co.kr", "/v1/applicant/resume-form/*");
         assertThat(fingerprint.matches(new PreparationAnalysisRequest(2, "prep", site, List.of(
             new PreparationAnalysisRequest.Section("hplace-v1-basic", null, null, List.of(), null))))).isTrue();
         assertThat(fingerprint.matches(new PreparationAnalysisRequest(2, "prep", site, List.of(
@@ -162,7 +162,7 @@ class HplaceFormFingerprintTest {
     }
 
     private static FieldsAnalysisRequest v1Request(String section, List<FieldCandidate> fields, String path) {
-        return new FieldsAnalysisRequest(2, "fields", new Site("bbq.recruiter.co.kr", path),
+        return new FieldsAnalysisRequest(2, "fields", new Site("synthetic.recruiter.co.kr", path),
             List.of(new Section(section, null, null, fields, null)));
     }
 
