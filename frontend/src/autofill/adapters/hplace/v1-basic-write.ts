@@ -167,6 +167,21 @@ export function v1ResultMatches(
   return target !== undefined && v1Shows(control.key, current, target);
 }
 
+/** Existing-value check: the page writes the chosen road with its legal-dong
+ * reference, which is the profile road, not a conflicting value. */
+export function v1SameExistingValue(
+  handle: FieldCandidateHandle,
+  item: Pick<ReviewPlanItem, "analysis">,
+  page: string,
+  profile: string,
+): boolean {
+  return (
+    ownedV1Control(handle)?.key === "addressLine1" &&
+    approved("addressLine1", item) &&
+    sameV1Road(page, profile)
+  );
+}
+
 /** Measured placeholders of the out-of-scope dropdowns in the status rows. */
 const outOfScopePlaceholders = [
   "편의 제공 여부 선택",

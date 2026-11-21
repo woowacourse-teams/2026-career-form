@@ -449,8 +449,16 @@ export function v1AddressRow(
   const buttons = Array.from(row.querySelectorAll("button")).filter(
     (b) => text(b) === "주소입력",
   );
+  // Empty row: all three inputs are disabled. After the dialog confirms, the
+  // page re-renders zip and address as read-only and unlocks the detail input.
+  const empty = inputs.every((i) => i?.disabled);
+  const confirmed =
+    inputs.every((i) => i && !i.disabled) &&
+    !!inputs[0]?.readOnly &&
+    !!inputs[1]?.readOnly;
   return all.length === 3 &&
-    inputs.every((i) => i?.type === "text" && i.disabled) &&
+    inputs.every((i) => i?.type === "text") &&
+    (empty || confirmed) &&
     buttons.length === 1 &&
     buttons[0].type === "button" &&
     !buttons[0].disabled

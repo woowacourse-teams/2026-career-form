@@ -188,6 +188,18 @@ async function writeAddress(
       )
     );
   };
+  const ownedShape = () => {
+    const now = v1AddressRow(document);
+    return [
+      `run=${current()}`,
+      `url=${document.URL === url}`,
+      `row=${!!now}`,
+      `button=${now?.button === row.button}`,
+      `inputs=${!!now && now.inputs.every((input, i) => input === page[i])}`,
+      `controls=${members.every((m) => !!ownedV1Control(m.handle))}`,
+      `profile=${members.every((m, i) => m.item.profileValue === snapshot[i][0] && m.item.selected === snapshot[i][1])}`,
+    ].join(",");
+  };
   const untouched = () => page.every((input) => input.value === "");
   try {
     if (beforeMutation && !(await beforeMutation()))
@@ -250,6 +262,7 @@ async function writeAddress(
   if (!inDialog() || query.value !== roadValue)
     return cancel(V1_ADDRESS_MANUAL_REASON, "v1-search-input");
   search.click();
+  const searched = Date.now();
   const roadOf = (li: Element) => {
     const labels = Array.from(li.querySelectorAll("span")).filter(
       (span) => v1Text(span) === "도로명",
@@ -265,6 +278,24 @@ async function writeAddress(
       // row with a "도로명" label (the help list has none).
       box.querySelectorAll("ul > li"),
     ).filter((li) => roadOf(li) !== undefined);
+  /** Counts and flags of the search state for debug lines; never any text. */
+  const searchShape = () => {
+    const rows = Array.from(box.querySelectorAll("ul > li"));
+    const roads = rows.flatMap((li) => roadOf(li) ?? []);
+    return [
+      `rows=${rows.length}`,
+      `parsed=${roads.length}`,
+      `matched=${roads.filter((r) => sameV1Road(r, roadValue)).length}`,
+      `ms=${Date.now() - searched}`,
+      `open=${box.isConnected}`,
+      `only=${titledDialog(document, "주소입력") === box}`,
+      `owned=${owned()}`,
+      `kept=${query.value === roadValue}`,
+      `len=${roadValue.length}`,
+      `paren=${/[()]/.test(roadValue)}`,
+      `tokens=${roadValue.trim().split(/\s+/).length}`,
+    ].join(",");
+  };
   // The result list replaces the help list; accept it once it stops changing.
   let shown: Element[] = [];
   let since = 0;
@@ -284,10 +315,17 @@ async function writeAddress(
     inDialog,
     RESULTS_MS,
   );
-  if (!settled) return cancel(V1_ADDRESS_MANUAL_REASON, "v1-search-results");
+  if (!settled)
+    return cancel(
+      V1_ADDRESS_MANUAL_REASON,
+      `v1-search-results:${searchShape()}`,
+    );
   const matches = shown.filter((li) => sameV1Road(roadOf(li)!, roadValue));
   if (matches.length !== 1)
-    return cancel(V1_ADDRESS_MANUAL_REASON, "v1-result-unique");
+    return cancel(
+      V1_ADDRESS_MANUAL_REASON,
+      `v1-result-unique:${searchShape()}`,
+    );
   (matches[0] as HTMLElement).click();
   const base = () => {
     const labels = Array.from(box.querySelectorAll("span")).filter(
@@ -330,10 +368,18 @@ async function writeAddress(
   if (!(await waitFor(() => !box.isConnected, owned, OPEN_MS)))
     return box.isConnected
       ? cancel(V1_ADDRESS_MANUAL_REASON, "v1-dialog-confirm")
-      : fail(V1_ADDRESS_CHANGED_REASON, "readback-mismatch", "v1-readback");
+      : fail(
+          V1_ADDRESS_CHANGED_REASON,
+          "readback-mismatch",
+          `v1-readback:at=close,${ownedShape()}`,
+        );
   await waitFor(() => page[1].value !== "", owned, OPEN_MS);
   if (!owned())
-    return fail(V1_ADDRESS_CHANGED_REASON, "readback-mismatch", "v1-readback");
+    return fail(
+      V1_ADDRESS_CHANGED_REASON,
+      "readback-mismatch",
+      `v1-readback:at=fill,${ownedShape()}`,
+    );
   // Each input is verified on its own; nothing reopens or clears the dialog.
   results.set(
     zip.item.candidateId,
@@ -354,11 +400,23 @@ async function writeAddress(
         ? { result: "written" }
         : { result: "failed", reason: V1_ADDRESS_CHANGED_REASON },
     );
-  if ([...results.values()].some((r) => r.result !== "written"))
+  if ([...results.values()].some((r) => r.result !== "written")) {
+    const ok = (m: Member | undefined) =>
+      m ? results.get(m.item.candidateId)?.result === "written" : "none";
+    const shown = page[1].value;
     debugRuntimeSkip(
       v1Name("addressLine1"),
       "readback-mismatch",
-      "v1-readback",
+      [
+        "v1-readback:at=compare",
+        `zip=${ok(zip)}`,
+        `road=${ok(road)}`,
+        `detail=${ok(detail)}`,
+        `len=${shown.length}`,
+        `paren=${/[()]/.test(shown)}`,
+        `tokens=${shown.trim().split(/\s+/).length}`,
+      ].join(","),
     );
+  }
   return results;
 }

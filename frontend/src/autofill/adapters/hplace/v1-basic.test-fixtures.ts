@@ -127,6 +127,8 @@ export interface AddressResult {
   road: string;
   jibun: string;
   zip: string;
+  /** What 확인 writes into the page input when it differs from `road`. */
+  page?: string;
 }
 /** Synthetic search catalog keyed by the exact query typed into the dialog. */
 export const addressCatalog: Record<string, AddressResult[]> = {
@@ -180,6 +182,13 @@ export interface PhotoDialogOptions {
   neverOpens?: boolean;
   /** 저장 keeps the dialog open. */
   stuck?: boolean;
+  /**
+   * When the crop picture and crop area render (measured: ~30 ms after the
+   * dialog): "auto" (default), on `showCrop()` ("manual"), or "never".
+   */
+  crop?: "auto" | "manual" | "never";
+  /** 저장 after the picture loaded closes the dialog, but the site keeps no photo. */
+  dropsUpload?: boolean;
 }
 export const addressNames = {
   zip: "addressGroupResumeItemAnswers.currentAddress.zipCode",
@@ -197,6 +206,8 @@ export interface V1Page {
   addressDialog(options?: AddressDialogOptions): void;
   /** Installs the photo dialog that opens after a file is set on the photo input. */
   photoDialog(options?: PhotoDialogOptions): void;
+  /** Renders the crop picture into the open photo dialog (`crop: "manual"`). */
+  showCrop(): void;
   /** Opens a dialog shell with `title` (e.g. a dialog the extension did not open). */
   openDialog(title: string, primary?: string): Element;
   /** Removes an option from a dropdown list the next time it opens. */
@@ -260,6 +271,7 @@ function installShims(): V1Page {
   const dialogClicks: string[] = [];
   let address: AddressDialogOptions | undefined;
   let photo: PhotoDialogOptions | undefined;
+  let photoShell: Element | undefined;
   let addressClicks = 0;
   let results: AddressResult[] = [];
   let selected: AddressResult | undefined;
@@ -281,6 +293,30 @@ function installShims(): V1Page {
   };
   const photoInput = () =>
     root.querySelector<HTMLInputElement>('input[type="file"]')!;
+  const clearPhoto = () =>
+    Object.defineProperty(photoInput(), "files", {
+      value: [],
+      configurable: true,
+    });
+  /** The crop picture (a data: URL) and its crop area, rendered together. */
+  const showCrop = () => {
+    const body = photoShell?.isConnected && photoShell.querySelector(".x-body");
+    if (!body || body.querySelector("img")) return;
+    body.insertAdjacentHTML(
+      "beforeend",
+      '<div class="x-crop"><img src="data:image/jpeg;base64,c3ludGhldGlj" alt=""><div role="group" tabindex="0" aria-label="Use the arrow keys to move the crop area"></div></div>',
+    );
+    // jsdom decodes no image: report the picture as loaded.
+    const picture = body.querySelector("img")!;
+    Object.defineProperty(picture, "complete", {
+      value: true,
+      configurable: true,
+    });
+    Object.defineProperty(picture, "naturalWidth", {
+      value: 120,
+      configurable: true,
+    });
+  };
   const isForbidden = (target: Element) =>
     target.closest(
       '[data-testid="resume-form-save"],[data-testid="resume-form-save-and-leave"],[data-testid="resume-form-stepper-item"],[data-testid^="resume-parsing-"],.x-prev,.x-next,.x-address,.x-duration,input[type="file"]',
@@ -403,15 +439,15 @@ function installShims(): V1Page {
       input.type === "file" &&
       input.files?.length
     )
-      setTimeout(
-        () =>
-          openDialog(
-            photo!.title ?? "사진 등록",
-            '<svg></svg><div role="group" tabindex="0" aria-label="Use the arrow keys to move the crop area"></div>',
-            photo!.primary ?? "저장",
-          ),
-        30,
-      );
+      // The dialog opens at once; its crop picture renders a moment later.
+      later(() => {
+        photoShell = openDialog(
+          photo!.title ?? "사진 등록",
+          "<svg></svg>",
+          photo!.primary ?? "저장",
+        );
+        if ((photo!.crop ?? "auto") === "auto") setTimeout(showCrop, 30);
+      });
   });
   overlay.addEventListener("click", (event) => {
     const target = event.target as Element;
@@ -428,17 +464,33 @@ function installShims(): V1Page {
       later(() => {
         shell.remove();
         // The site's 취소 also clears the chosen picture.
-        if (title === "사진 등록")
-          Object.defineProperty(photoInput(), "files", {
-            value: [],
-            configurable: true,
-          });
+        if (title === "사진 등록") clearPhoto();
       });
       return;
     }
     if (title === "사진 등록") {
-      if (button?.matches(".x-primary") && !photo?.stuck)
-        later(() => shell.remove());
+      if (button?.matches(".x-primary") && !photo?.stuck) {
+        // 저장 keeps the picture only once it has loaded (measured); the site
+        // then uploads it and the card shows it in place of the file input.
+        const kept = !!shell.querySelector("img") && !photo?.dropsUpload;
+        later(() => {
+          shell.remove();
+          if (!kept) {
+            clearPhoto();
+            return;
+          }
+          setTimeout(
+            () =>
+              photoInput().replaceWith(
+                Object.assign(document.createElement("img"), {
+                  src: "data:image/jpeg;base64,c3ludGhldGlj",
+                  alt: "",
+                }),
+              ),
+            300,
+          );
+        });
+      }
       return;
     }
     if (title !== "주소입력" || !address) return;
@@ -468,9 +520,13 @@ function installShims(): V1Page {
       const detail = shell.querySelector<HTMLInputElement>(".x-detail")!.value;
       later(() => {
         named(addressNames.zip).value = address!.zip ?? chosen.zip;
-        named(addressNames.address).value = chosen.road;
+        named(addressNames.address).value = chosen.page ?? chosen.road;
         named(addressNames.detail).value = detail;
         shell.remove();
+        // The page re-renders the row in its confirmed shape on a later
+        // commit than the one that removes the dialog (unless it was unmounted).
+        const row = named(addressNames.zip).closest(".x-row")!;
+        setTimeout(() => row.isConnected && confirmAddressRow(), 50);
       });
     }
   });
@@ -483,6 +539,7 @@ function installShims(): V1Page {
     photoDialog: (options = {}) => {
       photo = options;
     },
+    showCrop,
     openDialog: (title, primary = "확인") =>
       openDialog(title, "<p>합성 안내</p>", primary),
     forbiddenClicks: () => [...forbidden],
@@ -524,6 +581,25 @@ export const dateInput = (placeholder: string) =>
   )!;
 export const named = (name: string) =>
   document.querySelector<HTMLInputElement>(`[name="${name}"]`)!;
+
+/**
+ * Re-renders the 현주소 row the way the page does after the dialog's 확인
+ * (measured): new zip and address inputs that are read-only and not disabled,
+ * a new editable detail input, and the same 주소입력 button. Values default
+ * to the current ones.
+ */
+export function confirmAddressRow(values?: string[]): void {
+  [addressNames.zip, addressNames.address, addressNames.detail].forEach(
+    (name, i) => {
+      const old = named(name);
+      const input = old.cloneNode() as HTMLInputElement;
+      input.disabled = false;
+      input.readOnly = i < 2;
+      input.value = values?.[i] ?? old.value;
+      old.replaceWith(input);
+    },
+  );
+}
 
 /** Bounded wait for a page state; fails instead of passing by timing luck. */
 export async function until(check: () => boolean, ms = 2000): Promise<void> {
