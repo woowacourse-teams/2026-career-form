@@ -2,13 +2,13 @@
 
 > Topic: adapter-hplace
 > Status: Current
-> Current: [CF-505 v1 지원자 앱 1단계 근거](../../raw/issues/CF-505/documents/hplace-v1-step1.md)
-> History: [CF-177 근거](../../raw/issues/CF-177/documents/adapter-hplace.md); [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md); [CF-177 C12·C13·시연 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md); [CF-177 KDI·구조 미확인 근거](../../raw/issues/CF-177/documents/live-kdi-unverified.md); [CF-177 후속 보완 묶음 근거](../../raw/issues/CF-177/documents/live-followup-bundle.md); [CF-310 요청 구조 근거](../../raw/issues/CF-310/documents/hplace-mrs2-requests.md); [CF-310 4단계 분석·패널 근거](../../raw/issues/CF-310/documents/hplace-step4-analyze-and-panel.md); [CF-310 빈 단계 분석 생략 근거](../../raw/issues/CF-310/documents/hplace-empty-step-analysis-skip.md); [CF-327 활성 정책 버전 설정값 근거](../../raw/issues/CF-327/documents/hplace-active-policy-version.md); [CF-505 v1 지원자 앱 1단계 근거](../../raw/issues/CF-505/documents/hplace-v1-step1.md)
+> Current: [CF-507 v1 현주소·사진 등록 근거](../../raw/issues/CF-507/documents/hplace-v1-address-photo.md)
+> History: [CF-177 근거](../../raw/issues/CF-177/documents/adapter-hplace.md); [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md); [CF-177 C12·C13·시연 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md); [CF-177 KDI·구조 미확인 근거](../../raw/issues/CF-177/documents/live-kdi-unverified.md); [CF-177 후속 보완 묶음 근거](../../raw/issues/CF-177/documents/live-followup-bundle.md); [CF-310 요청 구조 근거](../../raw/issues/CF-310/documents/hplace-mrs2-requests.md); [CF-310 4단계 분석·패널 근거](../../raw/issues/CF-310/documents/hplace-step4-analyze-and-panel.md); [CF-310 빈 단계 분석 생략 근거](../../raw/issues/CF-310/documents/hplace-empty-step-analysis-skip.md); [CF-327 활성 정책 버전 설정값 근거](../../raw/issues/CF-327/documents/hplace-active-policy-version.md); [CF-505 v1 지원자 앱 1단계 근거](../../raw/issues/CF-505/documents/hplace-v1-step1.md); [CF-507 v1 현주소·사진 등록 근거](../../raw/issues/CF-507/documents/hplace-v1-address-photo.md)
 > Updated: 2026-11-21
 
 ## 현재 상태
 
-MRS2 등록의 이름·휴대전화·이메일과 기존 기본정보 계약을 유지하고 새 범주를 v4 실행 정책과 공통 native 실행기로 연결한다. 학력·중첩 전공·숫자 GPA·경력·프로젝트·비인증 어학·자격증·현주소는 검증된 소유 구조와 활성 정책에서만 실행한다. v1 지원자 앱은 1단계 기본정보만 별도 정책으로 지원한다(아래 v1 절). v1의 2단계 이후와 JOBDA의 입력 구조는 지원하지 않는다.
+MRS2 등록의 이름·휴대전화·이메일과 기존 기본정보 계약을 유지하고 새 범주를 v4 실행 정책과 공통 native 실행기로 연결한다. 학력·중첩 전공·숫자 GPA·경력·프로젝트·비인증 어학·자격증·현주소는 검증된 소유 구조와 활성 정책에서만 실행한다. v1 지원자 앱은 1단계 기본정보만 별도 정책으로 지원한다(아래 v1 절). v1 1단계의 현주소와 사진은 사이트 창을 거쳐 기입한다. v1의 2단계 이후와 JOBDA의 입력 구조는 지원하지 않는다.
 
 13범주 127키 중 활성 구현 또는 간접 소비는 95키다. 나머지는 의미 불일치13·구조 미확인16·지정 화면 부재1·파일 사용자 처리2로 구분한다. 사이트 전용27행은 별도 집계하며 required라는 이유로 대응 값을 추정하지 않는다. 전체 표는 [필드 현황](adapter-field-inventory.md)과 raw를 따른다.
 
@@ -71,7 +71,14 @@ MRS2 등록의 이름·휴대전화·이메일과 기존 기본정보 계약을 
 - **실행 순서:** 병역·장애·보훈 상태는 stage 1 driver다. 하위 칸은 잠금이 풀린 뒤 다음 분석에서 기입하며 분석 한도 3회 안에서 끝난다. 선택지 불일치는 기입 단계에서 `OPTION_UNMATCHED`로 보고한다. 기존 값은 덮어쓰지 않고, 기본값 비대상만 같은 행 하위 칸이 비어 있을 때 프로필 값으로 바꾼다.
 - **실측:** v1 테넌트 1곳에서 분석 ADAPTER·COMPLETE 2회, 18칸 기입, 사이트로 가는 GET 이외 요청 0건이었다. 같은 화면의 범용 실험은 2칸 기입이었다. 미필·면제·복무중이 여는 칸은 측정하지 않았다.
 - **정책 조회:** 확장 백그라운드의 정책 조회는 호스트 일치와 경로 형식만 검사한다. 이전의 경로 일치 검사는 같은 문서 안에서 경로가 바뀌는 화면(v1의 로그인 → 지원서)에서 조회를 거절해 자동 기입이 시작되지 않았다.
-- 필드별 현황은 [필드 현황](adapter-field-inventory.md), 근거는 [CF-505 v1 지원자 앱 1단계 근거](../../raw/issues/CF-505/documents/hplace-v1-step1.md)를 따른다.
+- **현주소 창:** 현주소 3칸(`hplace.v1.postalCode`, `addressLine1`, `addressLine2`)은 잠겨 있고 사이트 자체 검색 창(제목 `주소입력`, iframe 없음)으로만 채워진다. 잠긴 칸이지만 창을 거쳐 쓰는 대상이라 보이는 후보로 수집한다. 백엔드 v1 정책에 세 칸의 규칙과 허용 목록이 있다.
+- **결과 선택:** 프로필 기본주소로 한 번 검색하고, 도로명이 일치하는 결과가 정확히 한 줄일 때만 고른다. 상세주소를 넣고 창의 `확인`을 누른다. 일치가 없거나 여럿이면 `취소`로 닫고 확인 필요로 남긴다. 결과 줄에는 우편번호가 없다. 결과 목록을 감싼 스크롤 상자는 항상 그려지지 않으므로 결과 줄은 `도로명` 라벨이 있는 목록 줄로 찾는다.
+- **확정 뒤 모양:** 확인 뒤 사이트가 현주소 행을 다시 그린다. 우편번호와 주소 칸은 읽기 전용(잠김 아님), 상세주소 칸은 편집 가능이 된다. 행 검증은 빈 모양(세 칸 잠김)과 확정 모양을 모두 인정한다. 주소 칸에는 도로명 뒤에 괄호 부분(법정동, 건물명)이 붙으므로 재확인과 기존값 비교는 끝의 괄호 부분을 뗀 도로명으로 한다. 우편번호와 상세주소는 정확히 일치해야 한다.
+- **기존 주소:** 본문에 값이 이미 있으면 창을 열지 않는다. 같은 주소면 유지로, 다른 도로명이면 충돌로 보고한다.
+- **사진 등록 창:** 공용 첨부 기능이 사진 파일을 넣으면 제목 `사진 등록` 창이 뜬다. 자르기 그림이 준비되기 전에 `저장`을 누르면 창만 닫히고 사진은 남지 않는다. 확장은 그림 준비를 기다려 `저장`을 한 번 누른다. 사이트가 사진 파일을 서버로 올리며 지원서 임시저장은 아니다. 사진 카드의 파일 칸이 사라지면 성공, 그대로면 실패로 보고한다. 확장이 넣기 전에 떠 있던 창과 제목이 다른 창은 누르지 않는다.
+- **공용 첨부 경계:** 공용 첨부 구역에는 사이트 지식 없는 선택적 후속 단계(`attachFollowUp`) 하나만 있다. v1 동작은 어댑터 쪽에 있고, 다른 화면과 다른 사이트의 첨부 동작은 바뀌지 않는다.
+- **사용자 결정:** `주소입력` 창의 `확인`과 `사진 등록` 창의 `저장`을 확장이 누르는 것은 2026-11-21 사용자 결정이다. `직접입력`(해외 주소)과 사진 자르기 영역 조정은 다루지 않는다.
+- 필드별 현황은 [필드 현황](adapter-field-inventory.md), 근거는 [CF-505 v1 지원자 앱 1단계 근거](../../raw/issues/CF-505/documents/hplace-v1-step1.md)와 [CF-507 v1 현주소·사진 등록 근거](../../raw/issues/CF-507/documents/hplace-v1-address-photo.md)를 따른다.
 
 ## 검증과 배포 경계
 
@@ -87,6 +94,6 @@ MRS2 등록의 이름·휴대전화·이메일과 기존 기본정보 계약을 
 
 ## 변경 이유
 
-2026-11-21에는 v1 지원자 앱을 범용 경로로 보낸 실험이 2칸 기입에 그쳐, 사용자 결정으로 v1 1단계를 정적 어댑터로 추가했다(CF-505).
+2026-11-21에는 v1 지원자 앱을 범용 경로로 보낸 실험이 2칸 기입에 그쳐, 사용자 결정으로 v1 1단계를 정적 어댑터로 추가했다(CF-505). 같은 날 v1 1단계의 현주소 창 기입과 사진 등록 창 저장을 더했다(CF-507).
 
 2026-10-20 후반에는 실화면 정제 fixture로 합성 builder를 대조하고(C12), 프로젝트154를 활성화했으며(C13), 처음 보는 테넌트 시연에서 드러난 현주소 앵커·병역 날짜 정밀도·영문 이름 순서 문제를 고쳤다. v3의 등록·기본정보 범위에 후속 단계 구조와 정책 계약을 추가했다. 2026-10-20에는 실화면에서 드러난 분석 루프 정체와 학교·전공·자격·시험 검색 미실행의 원인(격리 world의 Enter 속성, 첫 실패 driver 정지와 예산 소진, hidden 검색 의존, 라디오 코드/라벨 비교 등)을 수정하고 3사 실화면으로 확인했다. 과거 주소 모달 저장 제외 판단은 원래 주소로 복사하는 로컬 확정 근거로 정정했다. 상세한 현재 계약·역사·검증 제한은 연결된 raw를 따른다.
