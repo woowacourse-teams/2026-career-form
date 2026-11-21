@@ -56,6 +56,14 @@ type Spec =
       unlocks: string;
     }
   | {
+      /** A `현주소` input: disabled on the page, written only through the
+       * site's 주소입력 dialog (v1-address.ts). */
+      kind: "address";
+      label: string;
+      name: string;
+      profile: string;
+    }
+  | {
       kind: "dropdown";
       label: string;
       row: string;
@@ -298,6 +306,24 @@ export const v1Specs = {
     options: { KR: "대한민국" },
     profile: "personal.personal.nationality",
   },
+  postalCode: {
+    kind: "address",
+    label: "우편번호",
+    name: "addressGroupResumeItemAnswers.currentAddress.zipCode",
+    profile: "contact.contact.postalCode",
+  },
+  addressLine1: {
+    kind: "address",
+    label: "기본주소",
+    name: "addressGroupResumeItemAnswers.currentAddress.address",
+    profile: "contact.contact.addressLine1",
+  },
+  addressLine2: {
+    kind: "address",
+    label: "상세주소",
+    name: "addressGroupResumeItemAnswers.currentAddress.detailAddress",
+    profile: "contact.contact.addressLine2",
+  },
 } as const satisfies Record<string, Spec>;
 
 export type V1Key = keyof typeof v1Specs;
@@ -394,6 +420,44 @@ function toggleGroup(
     : undefined;
 }
 
+export const v1AddressKeys = [
+  "postalCode",
+  "addressLine1",
+  "addressLine2",
+] as const satisfies readonly V1Key[];
+
+/**
+ * The `현주소` row: exactly the three named, disabled text inputs (zip,
+ * address, detail; each unique in the document) and one enabled
+ * `button[type=button]` 주소입력. Anything else is malformed.
+ */
+export function v1AddressRow(
+  document: Document,
+):
+  | { row: Element; inputs: HTMLInputElement[]; button: HTMLButtonElement }
+  | undefined {
+  const rows = v1Rows(document, "현주소");
+  if (rows.length !== 1) return undefined;
+  const row = rows[0];
+  const all = Array.from(row.querySelectorAll("input"));
+  const inputs = v1AddressKeys.map((key) => {
+    const found = document.querySelectorAll(`[name="${v1Specs[key].name}"]`);
+    return found.length === 1 && all.includes(found[0] as HTMLInputElement)
+      ? (found[0] as HTMLInputElement)
+      : undefined;
+  });
+  const buttons = Array.from(row.querySelectorAll("button")).filter(
+    (b) => text(b) === "주소입력",
+  );
+  return all.length === 3 &&
+    inputs.every((i) => i?.type === "text" && i.disabled) &&
+    buttons.length === 1 &&
+    buttons[0].type === "button" &&
+    !buttons[0].disabled
+    ? { row, inputs: inputs as HTMLInputElement[], button: buttons[0] }
+    : undefined;
+}
+
 export const isSelectedToggle = (button: Element) =>
   button.classList.contains("ats-bg-white") &&
   button.classList.contains("ats-text-gray-800");
@@ -450,6 +514,27 @@ function locate(document: Document, key: V1Key): Located {
     disabled: boolean,
   ): Located => ({ status: "ok", control: { key, ...control, disabled } });
   if (!root) return { status: "absent" };
+  if (spec.kind === "address") {
+    const nodes = Array.from(
+      document.querySelectorAll(`[name="${spec.name}"]`),
+    );
+    if (!nodes.length) return { status: "absent" };
+    const found = v1AddressRow(document);
+    const index = (v1AddressKeys as readonly V1Key[]).indexOf(key);
+    if (!found || found.inputs[index] !== nodes[0])
+      return malformed("control-shape");
+    // The page keeps these inputs disabled; the 주소입력 button is the
+    // control the user (and the writer) operates.
+    return ok(
+      {
+        elements: [found.inputs[index]],
+        custom: [found.button],
+        options: new Map(),
+        row: found.row,
+      },
+      false,
+    );
+  }
   if (spec.kind === "text" || spec.kind === "radio") {
     const nodes = Array.from(
       document.querySelectorAll(`[name="${spec.name}"]`),
@@ -562,7 +647,7 @@ export function v1PresentControls(
     // row's status is on the label that unlocks it.
     const spec = v1Spec(key);
     const nodes =
-      spec.kind === "text" || spec.kind === "radio"
+      spec.kind === "text" || spec.kind === "radio" || spec.kind === "address"
         ? Array.from(document.querySelectorAll(`[name="${spec.name}"]`))
         : (found.nodes ?? []);
     return [
@@ -570,7 +655,9 @@ export function v1PresentControls(
         key,
         enabled:
           nodes.length > 0 &&
-          nodes.every((n) => !n.matches(":disabled")) &&
+          // Address inputs are always disabled: their row is open for input.
+          (spec.kind === "address" ||
+            nodes.every((n) => !n.matches(":disabled"))) &&
           (!("parent" in spec) ||
             !spec.parent ||
             unlocked(document, spec.parent)),
@@ -647,7 +734,7 @@ export function ownedV1Control(
 /** The page value in profile terms: a label, a text value, or "" when empty. */
 export function v1ControlValue(control: V1Control): string | undefined {
   const spec = v1Spec(control.key);
-  if (spec.kind === "text" || spec.kind === "date")
+  if (spec.kind === "text" || spec.kind === "date" || spec.kind === "address")
     return control.elements[0].value;
   if (spec.kind === "radio") {
     const checked = control.elements.filter((e) => e.checked);

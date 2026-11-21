@@ -38,6 +38,10 @@ export function collectV1Fields(
         control:
           spec.kind === "dropdown" ? "select" : choice ? "radio" : "text",
         displayName: spec.label,
+        // Always visible and never `disabled`, including the 현주소 inputs:
+        // the page keeps those disabled, but they are logical targets that
+        // only the address dialog writes (the backend fingerprint rejects
+        // disabled candidates).
         visibility: "visible",
         ...("options" in spec
           ? {

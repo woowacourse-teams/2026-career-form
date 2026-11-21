@@ -48,6 +48,15 @@ export interface AttachmentSectionProps {
   fill?: typeof defaultFillUrl;
   /** Called with the successfully attached files, in field order, when they change. */
   onAttachedChange?(files: readonly AttachedFile[]): void;
+  /**
+   * Optional page step around one attach, supplied by the caller for the
+   * current page: called just before the file is set; the returned function
+   * runs after a successful attach and resolves to a failure reason, if any.
+   * Absent (or returning undefined): attaching is unchanged.
+   */
+  attachFollowUp?(
+    input: HTMLInputElement,
+  ): (() => Promise<string | undefined>) | undefined;
 }
 
 const LINKED_MESSAGE =
@@ -93,6 +102,7 @@ export function AttachmentSection({
   attach = defaultAttachFile,
   fill = defaultFillUrl,
   onAttachedChange,
+  attachFollowUp,
 }: AttachmentSectionProps) {
   const [fields] = useState<AttachmentField[]>(() =>
     findAttachmentFields(pageDocument),
@@ -222,16 +232,20 @@ export function AttachmentSection({
         setRow(index, { status: "failed", message: UNREADABLE_FILE });
         return;
       }
-      const result = attach(currentElement(field), file);
+      const element = currentElement(field);
+      const followUp = attachFollowUp?.(element);
+      const result = attach(element, file);
+      const failure =
+        result.status === "attached" ? await followUp?.() : result.reason;
       setRow(
         index,
-        result.status === "attached"
+        failure === undefined
           ? {
               status: "attached",
               fileName: file.name,
               message: `첨부했어요: ${file.name}. 사이트의 업로드·저장 버튼은 직접 눌러 주세요.`,
             }
-          : { status: "failed", message: result.reason },
+          : { status: "failed", message: failure },
       );
     } catch {
       setRow(index, { status: "failed", message: UNREADABLE_FILE });

@@ -2,6 +2,8 @@ import { debugRuntimeSkip } from "../../debug/structural-diagnostics";
 import type { MatchedFieldAnalysis } from "../../api/types";
 import type { FieldCandidateHandle } from "../../dom/types";
 import type { ReviewPlanItem } from "../../review/review-plan";
+import { addressWithoutRoadReference } from "../../address/match";
+import { normalizeStagedRoad } from "../../policy/staged-address-road";
 import { basicSpecs } from "./basic-controls";
 import { detailTargetValue } from "./detail-write";
 import {
@@ -27,7 +29,25 @@ const conditionalKeys: readonly V1Key[] = [
   "gender",
   "nationality",
   "emergencyPhone",
+  "postalCode",
+  "addressLine1",
+  "addressLine2",
 ];
+
+/** Road addresses compared without a trailing legal-dong reference and with
+ * the province alias folded (the existing staged-address normalization). */
+export function sameV1Road(shown: string, target: string): boolean {
+  const road = (value: string) =>
+    normalizeStagedRoad(addressWithoutRoadReference(value));
+  return road(shown) !== "" && road(shown) === road(target);
+}
+
+export function v1Approved(
+  key: V1Key,
+  item: Pick<ReviewPlanItem, "analysis">,
+): boolean {
+  return approved(key, item);
+}
 
 function approved(key: V1Key, item: Pick<ReviewPlanItem, "analysis">): boolean {
   const spec = v1Spec(key),
@@ -61,7 +81,8 @@ function approved(key: V1Key, item: Pick<ReviewPlanItem, "analysis">): boolean {
       b.trueLabel === "대상" &&
       b.falseLabel === "비대상"
     );
-  if (spec.kind === "text" || spec.kind === "date") return b?.type === "DIRECT";
+  if (spec.kind === "text" || spec.kind === "date" || spec.kind === "address")
+    return b?.type === "DIRECT";
   if (b?.type !== "LOOKUP") return false;
   // The plan reuses the MRS2 maps; their labels are accepted in the map,
   // but only a label the v1 catalog offers is ever written (v1Target).
@@ -109,7 +130,7 @@ export function v1Target(key: V1Key, value: string): string | undefined {
   if (spec.kind === "date") return dateTarget(key, value);
   if (key === "emergencyPhone")
     return detailTargetValue("emergencyPhone", value);
-  if (spec.kind === "text") return value;
+  if (spec.kind === "text" || spec.kind === "address") return value;
   return (Object.values(spec.options) as string[]).includes(value)
     ? value
     : undefined;
@@ -119,6 +140,7 @@ export function v1Target(key: V1Key, value: string): string | undefined {
 export function v1Shows(key: V1Key, shown: string, target: string): boolean {
   return (
     shown === target ||
+    (key === "addressLine1" && sameV1Road(shown, target)) ||
     ((key === "serviceStartDate" || key === "serviceEndDate") &&
       /^\d{4}\.\d{2}\.\d{2}$/.test(target) &&
       shown === target.slice(0, 7))
@@ -135,7 +157,8 @@ export function v1ResultMatches(
   const control = ownedV1Control(handle);
   if (
     !control ||
-    v1Spec(control.key).kind !== "date" ||
+    (v1Spec(control.key).kind !== "date" &&
+      v1Spec(control.key).kind !== "address") ||
     handle.candidateId !== item.candidateId ||
     !approved(control.key, item)
   )
@@ -216,7 +239,7 @@ export function v1Retained(
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 25));
 /** Bounded wait for a page reaction; false on timeout or a stale context. */
-async function waitFor(
+export async function waitFor(
   done: () => boolean,
   current: () => boolean,
   ms = 1500,
@@ -230,7 +253,7 @@ async function waitFor(
   }
 }
 
-const setValue = (input: HTMLInputElement, value: string) =>
+export const setValue = (input: HTMLInputElement, value: string) =>
   Object.getOwnPropertyDescriptor(
     HTMLInputElement.prototype,
     "value",
@@ -246,6 +269,8 @@ export async function writeV1(
   if (!control) return "failed";
   const { key } = control;
   const spec = v1Spec(key);
+  // The address triplet is written only as one dialog run (v1-address.ts).
+  if (spec.kind === "address") return "failed";
   const document = control.row.ownerDocument;
   const value = item.profileValue;
   const target = v1Target(key, value ?? "");

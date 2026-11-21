@@ -42,6 +42,11 @@ final class HplaceV1CompanyFormPolicyFactory {
         rules.add(rule("militarySpecialty", FormControl.TEXT, new DirectBinding("military.military.militarySpecialty")));
         rules.add(rule("disabilityRegistrationNumber", FormControl.TEXT,
             new DirectBinding("disability.disability.disabilityRegistrationNumber")));
+        // Current address: the extension writes the three page inputs only through the site's address dialog.
+        // Same profile keys as the MRS2 current-address triplet.
+        rules.add(rule("postalCode", FormControl.TEXT, new DirectBinding("contact.contact.postalCode")));
+        rules.add(rule("addressLine1", FormControl.TEXT, new DirectBinding("contact.contact.addressLine1")));
+        rules.add(rule("addressLine2", FormControl.TEXT, new DirectBinding("contact.contact.addressLine2")));
         for (String key : List.of("gender", "militaryStatus", "disabilityStatus", "veteranStatus")) {
             rules.add(rule(key, FormControl.RADIO, mrs2Binding(mrs2, key)));
         }

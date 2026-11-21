@@ -46,7 +46,8 @@ public final class HplaceFormFingerprint {
     private static final Set<String> V1_SELECTS = v1Names("militaryRank", "dischargeType", "militaryBranch",
         "disabilityGrade", "disabilityType", "veteranRelation", "nationality");
     private static final Set<String> V1_TEXTS = v1Names("englishName.familyFirst", "birthday", "emergencyPhone",
-        "serviceStartDate", "serviceEndDate", "militarySpecialty", "disabilityRegistrationNumber", "veteranNumber");
+        "serviceStartDate", "serviceEndDate", "militarySpecialty", "disabilityRegistrationNumber", "veteranNumber",
+        "postalCode", "addressLine1", "addressLine2");
     public static final Set<String> V1_FIELDS = java.util.stream.Stream.of(V1_TEXTS, V1_RADIOS, V1_SELECTS)
         .flatMap(Set::stream).collect(java.util.stream.Collectors.toUnmodifiableSet());
 

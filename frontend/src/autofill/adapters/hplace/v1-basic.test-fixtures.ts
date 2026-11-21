@@ -123,8 +123,82 @@ const toggle = (labels: string[]) =>
       .join("")}</div>`,
   );
 
+export interface AddressResult {
+  road: string;
+  jibun: string;
+  zip: string;
+}
+/** Synthetic search catalog keyed by the exact query typed into the dialog. */
+export const addressCatalog: Record<string, AddressResult[]> = {
+  "서울특별시 중구 세종대로 110": [
+    {
+      road: "서울특별시 중구 세종대로 110 (태평로1가)",
+      jibun: "서울특별시 중구 태평로1가 31 합성청사",
+      zip: "04524",
+    },
+    {
+      road: "서울특별시 중구 세종대로 110-1 (태평로1가)",
+      jibun: "서울특별시 중구 태평로1가 32",
+      zip: "04525",
+    },
+  ],
+  // Two results with the same road address (different buildings).
+  "서울특별시 중구 합성로 2": [
+    {
+      road: "서울특별시 중구 합성로 2 (합성동)",
+      jibun: "서울특별시 중구 합성동 1 합성빌딩",
+      zip: "04500",
+    },
+    {
+      road: "서울특별시 중구 합성로 2 (합성동)",
+      jibun: "서울특별시 중구 합성동 2 합성타워",
+      zip: "04500",
+    },
+  ],
+  // Only a different building number.
+  "서울특별시 중구 합성로 9": [
+    {
+      road: "서울특별시 중구 합성로 90 (합성동)",
+      jibun: "서울특별시 중구 합성동 9",
+      zip: "04501",
+    },
+  ],
+};
+export interface AddressDialogOptions {
+  catalog?: Record<string, AddressResult[]>;
+  /** 주소입력 is clicked but no dialog appears. */
+  neverOpens?: boolean;
+  /** 확인 keeps the dialog open and fills nothing. */
+  stuck?: boolean;
+  /** The zip the page writes instead of the result's own. */
+  zip?: string;
+}
+export interface PhotoDialogOptions {
+  title?: string;
+  /** The primary button's label (the site's is 저장). */
+  primary?: string;
+  neverOpens?: boolean;
+  /** 저장 keeps the dialog open. */
+  stuck?: boolean;
+}
+export const addressNames = {
+  zip: "addressGroupResumeItemAnswers.currentAddress.zipCode",
+  address: "addressGroupResumeItemAnswers.currentAddress.address",
+  detail: "addressGroupResumeItemAnswers.currentAddress.detailAddress",
+};
+
 export interface V1Page {
   forbiddenClicks(): string[];
+  /** Buttons pressed inside `#overlay-root` dialogs, by trimmed text ("X" for the icon). */
+  dialogClicks(): string[];
+  /** Times the 주소입력 button was clicked. */
+  addressClicks(): number;
+  /** Installs the address dialog; from then on 주소입력 is an allowed click. */
+  addressDialog(options?: AddressDialogOptions): void;
+  /** Installs the photo dialog that opens after a file is set on the photo input. */
+  photoDialog(options?: PhotoDialogOptions): void;
+  /** Opens a dialog shell with `title` (e.g. a dialog the extension did not open). */
+  openDialog(title: string, primary?: string): Element;
   /** Removes an option from a dropdown list the next time it opens. */
   dropOption(list: string, label: string): void;
   /** Makes a dropdown ignore the click that would close its open body. */
@@ -182,6 +256,31 @@ function installShims(): V1Page {
   const removed = new Map<string, Set<string>>();
   const stuck = new Set<string>();
   const later = (run: () => void) => setTimeout(run, 0);
+  const overlay = document.getElementById("overlay-root")!;
+  const dialogClicks: string[] = [];
+  let address: AddressDialogOptions | undefined;
+  let photo: PhotoDialogOptions | undefined;
+  let addressClicks = 0;
+  let results: AddressResult[] = [];
+  let selected: AddressResult | undefined;
+  const openDialog = (title: string, body: string, primary: string) => {
+    overlay.insertAdjacentHTML(
+      "beforeend",
+      `<div><div role="presentation"><div role="dialog" aria-modal="true"><div role="document" tabindex="-1"><div><div><h2 id="modal-title">${title}</h2><button type="button" class="x-close"><svg></svg></button></div></div><div class="x-body">${body}</div><div><div><button type="button" class="x-cancel">취소</button><button type="button" mainbrandcolor="" class="x-primary">${primary}</button></div></div></div></div></div></div>`,
+    );
+    return overlay.lastElementChild!;
+  };
+  const openAddress = () => {
+    results = [];
+    selected = undefined;
+    openDialog(
+      "주소입력",
+      `<div><input type="text" class="x-query" placeholder="예: 반포대로 201, 서초동 1-1, 합성빌딩"><button type="button" class="x-search">검색</button></div><div role="scrollbar"><div id="design-system-scroll-contain"><div class="x-list"><ul><li><span>도로명 주소</span><span>반포대로 201</span></li><li><span>지번 주소</span><span>서초동 1-1</span></li><li><span>건물명</span><span>합성빌딩</span></li></ul></div></div></div><div><p>해외 주소</p><button type="button" class="x-manual">직접입력</button></div><div><div><span>기본주소</span><span class="x-base"></span></div><div><span>상세주소</span><span><span><input type="text" class="x-detail" placeholder="상세주소를 입력하세요." maxlength="100"></span></span></div></div>`,
+      "확인",
+    );
+  };
+  const photoInput = () =>
+    root.querySelector<HTMLInputElement>('input[type="file"]')!;
   const isForbidden = (target: Element) =>
     target.closest(
       '[data-testid="resume-form-save"],[data-testid="resume-form-save-and-leave"],[data-testid="resume-form-stepper-item"],[data-testid^="resume-parsing-"],.x-prev,.x-next,.x-address,.x-duration,input[type="file"]',
@@ -191,7 +290,12 @@ function installShims(): V1Page {
     (event) => {
       const target = event.target as Element;
       const hit = isForbidden(target);
-      if (hit) forbidden.push(hit.textContent?.trim() || hit.tagName);
+      if (hit && !(address && hit.matches(".x-address")))
+        forbidden.push(hit.textContent?.trim() || hit.tagName);
+      if (target.closest(".x-address")) {
+        addressClicks++;
+        if (address && !address.neverOpens) later(openAddress);
+      }
       const trigger = target.closest(
         ".x-dd > button",
       ) as HTMLButtonElement | null;
@@ -290,7 +394,97 @@ function installShims(): V1Page {
       if (m) later(() => (input.value = `${m[1]}.${m[2]}`));
     }
   });
+  root.addEventListener("change", (event) => {
+    const input = event.target;
+    if (
+      photo &&
+      !photo.neverOpens &&
+      input instanceof HTMLInputElement &&
+      input.type === "file" &&
+      input.files?.length
+    )
+      setTimeout(
+        () =>
+          openDialog(
+            photo!.title ?? "사진 등록",
+            '<svg></svg><div role="group" tabindex="0" aria-label="Use the arrow keys to move the crop area"></div>',
+            photo!.primary ?? "저장",
+          ),
+        30,
+      );
+  });
+  overlay.addEventListener("click", (event) => {
+    const target = event.target as Element;
+    const shell = target.closest("#overlay-root > div");
+    if (!shell) return;
+    const button = target.closest("button");
+    if (button) dialogClicks.push(button.textContent?.trim() || "X");
+    if (button?.matches(".x-close, .x-manual")) {
+      forbidden.push(`dialog:${button.textContent?.trim() || "X"}`);
+      return;
+    }
+    const title = shell.querySelector("h2")!.textContent;
+    if (button?.matches(".x-cancel")) {
+      later(() => {
+        shell.remove();
+        // The site's 취소 also clears the chosen picture.
+        if (title === "사진 등록")
+          Object.defineProperty(photoInput(), "files", {
+            value: [],
+            configurable: true,
+          });
+      });
+      return;
+    }
+    if (title === "사진 등록") {
+      if (button?.matches(".x-primary") && !photo?.stuck)
+        later(() => shell.remove());
+      return;
+    }
+    if (title !== "주소입력" || !address) return;
+    if (button?.matches(".x-search")) {
+      const query = shell.querySelector<HTMLInputElement>(".x-query")!.value;
+      const found = (address.catalog ?? addressCatalog)[query] ?? [];
+      setTimeout(() => {
+        results = found;
+        shell.querySelector(".x-list")!.innerHTML =
+          `<ul>${found.map((r, i) => `<li data-index="${i}"><div><span>도로명</span><p>${r.road}</p></div><div><span>지번</span><p>${r.jibun}</p></div></li>`).join("")}</ul>`;
+      }, 40);
+      return;
+    }
+    const li = target.closest<HTMLElement>(
+      "#design-system-scroll-contain li[data-index]",
+    );
+    if (li) {
+      const chosen = results[Number(li.dataset.index)];
+      later(() => {
+        selected = chosen;
+        shell.querySelector(".x-base")!.textContent = chosen.road;
+      });
+      return;
+    }
+    if (button?.matches(".x-primary") && selected && !address.stuck) {
+      const chosen = selected;
+      const detail = shell.querySelector<HTMLInputElement>(".x-detail")!.value;
+      later(() => {
+        named(addressNames.zip).value = address!.zip ?? chosen.zip;
+        named(addressNames.address).value = chosen.road;
+        named(addressNames.detail).value = detail;
+        shell.remove();
+      });
+    }
+  });
   return {
+    dialogClicks: () => [...dialogClicks],
+    addressClicks: () => addressClicks,
+    addressDialog: (options = {}) => {
+      address = options;
+    },
+    photoDialog: (options = {}) => {
+      photo = options;
+    },
+    openDialog: (title, primary = "확인") =>
+      openDialog(title, "<p>합성 안내</p>", primary),
     forbiddenClicks: () => [...forbidden],
     dropOption: (list, label) =>
       removed.set(list, (removed.get(list) ?? new Set()).add(label)),
@@ -351,6 +545,30 @@ export async function unlockDependents(): Promise<void> {
       !dropdownTrigger("grade").disabled &&
       !dropdownTrigger("relation").disabled,
   );
+}
+
+export const v1Address = {
+  postalCode: "04524",
+  addressLine1: "서울특별시 중구 세종대로 110",
+  addressLine2: "합성동 101호",
+};
+/** The v1 profile with a current address (the default profile has none). */
+export function v1AddressProfile(
+  overrides: Partial<typeof v1Address> = {},
+): Profile {
+  const profile = v1Profile();
+  Object.assign(profile.contact, v1Address, overrides);
+  return profile;
+}
+
+/** Sets a synthetic file the way attach-file.ts does (jsdom has no DataTransfer). */
+export function setSyntheticFile(input: HTMLInputElement): void {
+  const file = new File(["synthetic"], "synthetic-photo.jpg", {
+    type: "image/jpeg",
+  });
+  Object.defineProperty(input, "files", { value: [file], configurable: true });
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  input.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
 export function v1Profile(): Profile {
@@ -509,8 +727,24 @@ const bindings: Record<string, ValueBinding> = {
     profileFieldKey: "personal.personal.nationality",
     optionMap: { 대한민국: "대한민국" },
   },
+  postalCode: { type: "DIRECT", profileFieldKey: "contact.contact.postalCode" },
+  addressLine1: {
+    type: "DIRECT",
+    profileFieldKey: "contact.contact.addressLine1",
+  },
+  addressLine2: {
+    type: "DIRECT",
+    profileFieldKey: "contact.contact.addressLine2",
+  },
 };
-const conditional = new Set(["gender", "nationality", "emergencyPhone"]);
+// SupportedProfileFields: postal code and road address are CONDITIONAL.
+const conditional = new Set([
+  "gender",
+  "nationality",
+  "emergencyPhone",
+  "postalCode",
+  "addressLine1",
+]);
 
 export function v1Analysis(
   request: FieldsAnalyzeRequest,
