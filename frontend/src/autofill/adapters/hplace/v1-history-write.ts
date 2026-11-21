@@ -516,7 +516,7 @@ function isRegisterShape(li: Element): HTMLButtonElement | undefined {
     icon?.tagName.toLowerCase() === "svg" &&
     label instanceof HTMLSpanElement &&
     label.children.length === 0 &&
-    /^'.*'등록하기$/.test(normalize(label.textContent ?? ""))
+    normalize(label.textContent ?? "").endsWith("등록하기")
     ? button
     : undefined;
 }
@@ -642,8 +642,40 @@ export async function writeV1HistorySearch(
     SEARCH_SELECTION_UNVERIFIED: "result-click-no-effect",
   };
   const open = () => bodies().length > 0;
+  const listed = () => {
+    const [body, extra] = bodies();
+    return body && !extra ? Array.from(body.querySelectorAll("ul > li")) : [];
+  };
+  let typedAt = 0;
+  /** Value-free search state: elapsed ms, rows, register structure, text. */
+  const state = (branch: string) => {
+    const items = listed();
+    const lone = items.length === 1 ? items[0] : undefined;
+    return [
+      `ms${Math.round((Date.now() - typedAt) / 100) * 100}`,
+      `li${items.length}`,
+      `reg${lone && isRegisterShape(lone) ? "yes" : "no"}`,
+      `text${lone && isRegisterRow(lone, name) ? "yes" : "no"}`,
+      `branch-${branch}`,
+    ].join("-");
+  };
+  const branchOf = (code: WriteFailureCode, detail: string) =>
+    detail === "search"
+      ? code
+          .replace(/^SEARCH_/, "")
+          .toLowerCase()
+          .replaceAll("_", "-")
+      : detail
+          .replace(/^search-/, "")
+          .replace(/-answered-.*$/, "")
+          .replace(/^(rows|lists)-.*$/, "$1");
   const cleanup = async (code: WriteFailureCode, detail = "search") => {
-    skipV1History(control.name, reasons[code] ?? "blocked", detail, code);
+    skipV1History(
+      control.name,
+      reasons[code] ?? "blocked",
+      `${detail}-${state(branchOf(code, detail))}`,
+      code,
+    );
     if (input.isConnected) {
       setValue(input, "");
       input.dispatchEvent(new Event("input", { bubbles: true }));
@@ -663,13 +695,9 @@ export async function writeV1HistorySearch(
   input.focus();
   setValue(input, name);
   input.dispatchEvent(new Event("input", { bubbles: true }));
-  const typedAt = Date.now();
+  typedAt = Date.now();
   let shown = "";
   let since = 0;
-  const listed = () => {
-    const [body, extra] = bodies();
-    return body && !extra ? Array.from(body.querySelectorAll("ul > li")) : [];
-  };
   // Settled: this widget's own list is stable and answers the query (a row
   // contains the name). A list shown on focus before the debounced search
   // (대학교/대학원 widgets) is not taken for the result.
@@ -689,8 +717,9 @@ export async function writeV1HistorySearch(
       // Result rows are judged once stable; the register row only after
       // REGISTER_MS, so its transient showing is never taken for the answer.
       return (
-        Date.now() - since >= STABLE_MS &&
-        (!registerOnly(items, name) || Date.now() - typedAt >= REGISTER_MS)
+        (Date.now() - since >= STABLE_MS &&
+          !(items.length === 1 && isRegisterShape(items[0]))) ||
+        Date.now() - typedAt >= REGISTER_MS
       );
     },
     () => live() && input.isConnected,
@@ -722,6 +751,14 @@ export async function writeV1HistorySearch(
   const finalRows = listed();
   // A register row is pressed only alone, for exactly this name, stable and
   // judged no earlier than REGISTER_MS after typing.
+  // Only at the deadline: a settled list already passed this test.
+  if (
+    !settled &&
+    finalRows.length === 1 &&
+    isRegisterShape(finalRows[0]) &&
+    (Date.now() - since < STABLE_MS || Date.now() - typedAt < REGISTER_MS)
+  )
+    return cleanup("SEARCH_TIMEOUT", "search-register-unsettled");
   if (finalRows.length > 1 && finalRows.some((li) => isRegisterShape(li)))
     return cleanup("SEARCH_FORM_UNVERIFIED", "search-register-mixed");
   if (
@@ -731,8 +768,6 @@ export async function writeV1HistorySearch(
   )
     return cleanup("SEARCH_FORM_UNVERIFIED", "search-register-other-name");
   if (registerOnly(finalRows, name)) {
-    if (Date.now() - since < STABLE_MS || Date.now() - typedAt < REGISTER_MS)
-      return cleanup("SEARCH_TIMEOUT");
     if (onRegisterRowOnly() === "register") {
       const result = await pickRow(isRegisterShape(finalRows[0])!);
       if (result.written)

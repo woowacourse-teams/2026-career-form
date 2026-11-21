@@ -239,10 +239,11 @@ export const searchCatalog: Record<string, string[]> = {
 /** Card levels whose search widgets follow the measured 대학교/전공 timeline
  * (step2-probe-noresult.json): the register row at ~100 ms, an empty list at
  * ~300 ms, the final list at ~420 ms (the HS widget answered at once). */
-const debouncedLevels = new Set(["대학교", "대학원"]);
+const debouncedLevels = new Set(["고등학교", "대학교", "대학원"]);
 /** The page's "register '<query>' as a new entry" row (never pressed). */
+let registerQuotes: [string, string] = ["'", "'"];
 const registerRow = (query: string) =>
-  `<li><button type="button" class="x-register"><span><div><svg><path></path><path></path></svg><span>'${query}'등록하기</span></div></span></button></li>`;
+  `<li><button type="button" class="x-register"><span><div><svg><path></path><path></path></svg><span>${registerQuotes[0]}${query}${registerQuotes[1]}등록하기</span></div></span></button></li>`;
 const resultRows = (query: string, names: string[]) =>
   names
     .map((n) =>
@@ -290,8 +291,10 @@ export interface V1HistoryPage {
   suggestionLists(): number;
   /** 회사명 suggestions open only 1 s after typing (a slow site request). */
   lateSuggestions(): void;
-  /** The 대학교/대학원 transient register row stays 600 ms before the results. */
-  slowCatalog(): void;
+  /** The transient register row stays `ms` (default 600) before the results. */
+  slowCatalog(ms?: number): void;
+  /** The register row quotes the query with ‘…’ instead of '…'. */
+  curlyRegisterQuotes(): void;
   /** Times a register row was pressed. */
   registerClicks(): number;
   /** The chip a register press shows instead of the typed name. */
@@ -372,6 +375,7 @@ export const cardDropdown = (c: Element, list: string) =>
 
 export function mountV1Step2(step = "2"): V1HistoryPage {
   resetHplacePage();
+  registerQuotes = ["'", "'"];
   setHplacePage(v1Url(step));
   document.head.innerHTML = `<script type="module" src="/v1/applicant/index-Synth02a.js"></script><link rel="stylesheet" href="/v1/applicant/index-Synth02b.css">`;
   document.body.innerHTML = `<div id="root"><div class="x-app">
@@ -403,7 +407,7 @@ function installShims(): V1HistoryPage {
   const limits = new Map<HistoryLevel, number>();
   const stalled = new Set<HistoryLevel>();
   let suggestDelay = 60;
-  let slowCatalog = false;
+  let slowCatalog = 0;
   let registerClicks = 0;
   let registerChip: string | undefined;
   let suggestionLists = 0;
@@ -560,9 +564,13 @@ function installShims(): V1HistoryPage {
           box.querySelector(":scope > .x-results")?.remove();
           box.insertAdjacentHTML("beforeend", scrollList(rows));
         }, ms);
+      // A query the site never answers (no list at all).
+      if (query === "목록없음") return;
       if (query && debouncedLevels.has(level ?? "")) {
         // Measured timeline; a slow catalog holds the transient row longer.
-        const [empty, final] = slowCatalog ? [700, 800] : [300, 420];
+        const [empty, final] = slowCatalog
+          ? [slowCatalog, slowCatalog + 100]
+          : [300, 420];
         show(100, registerRow(query));
         show(empty, "");
         show(
@@ -630,8 +638,11 @@ function installShims(): V1HistoryPage {
     lateSuggestions: () => {
       suggestDelay = 1000;
     },
-    slowCatalog: () => {
-      slowCatalog = true;
+    slowCatalog: (ms = 600) => {
+      slowCatalog = ms;
+    },
+    curlyRegisterQuotes: () => {
+      registerQuotes = ["\u2018", "\u2019"];
     },
     registerClicks: () => registerClicks,
     registerChip: (name) => {

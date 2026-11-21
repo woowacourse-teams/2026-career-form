@@ -890,7 +890,9 @@ describe("v1 step 2 page defaults and diagnostics", () => {
         expect.arrayContaining([
           "[CareerForm] skip stage=write key=hplace.v1.college.0.entranceDate reason=unit-mismatch detail=v1-history-date-not-full-day",
           "[CareerForm] skip stage=write key=hplace.v1.highschool.0.graduationTypeCode reason=option-mismatch detail=v1-history-option-unmatched",
-          "[CareerForm] skip stage=write key=hplace.v1.highschool.0.academyName reason=result-not-unique detail=v1-history-search failureCode=SEARCH_NO_EXACT_MATCH",
+          expect.stringMatching(
+            /^\[CareerForm\] skip stage=write key=hplace\.v1\.highschool\.0\.academyName reason=result-not-unique detail=v1-history-search-ms\d+-li\d+-regno-textno-branch-no-exact-match failureCode=SEARCH_NO_EXACT_MATCH$/,
+          ),
         ]),
       );
       for (const line of lines) expect(line).not.toMatch(/없는학교|2009|수료/);
@@ -993,8 +995,12 @@ describe("v1 step 2 university and major search widgets", () => {
         settled: false,
         codes: ["SEARCH_FORM_UNVERIFIED"],
       });
-      expect(log.mock.calls.map(([l]) => String(l))).toContain(
-        "[CareerForm] skip stage=write key=hplace.v1.college.0.academyName reason=control-shape detail=v1-history-search-rows-li1-button2-span0-span0-answered-yes failureCode=SEARCH_FORM_UNVERIFIED",
+      expect(log.mock.calls.map(([l]) => String(l))).toEqual(
+        expect.arrayContaining([
+          expect.stringMatching(
+            /^\[CareerForm\] skip stage=write key=hplace\.v1\.college\.0\.academyName reason=control-shape detail=v1-history-search-rows-li1-button2-span0-span0-answered-yes-ms\d+-li1-regno-textno-branch-rows failureCode=SEARCH_FORM_UNVERIFIED$/,
+          ),
+        ]),
       );
       expect(searchInput(u0, "학교정보")!.value).toBe("");
       expect(document.querySelector("#dropdown-body")).toBeNull();
@@ -1081,8 +1087,14 @@ describe("v1 step 2 register row (no catalog match: pressed by decision)", () =>
       expect(page.registerClicks()).toBe(0);
       expect(searchInput(u0, "학교정보")!.value).toBe("");
       expect(document.querySelector("#dropdown-body")).toBeNull();
-      expect(log.mock.calls.map(([l]) => String(l))).toContain(
-        `[CareerForm] skip stage=write key=hplace.v1.college.0.academyName reason=control-shape detail=v1-history-${detail} failureCode=SEARCH_FORM_UNVERIFIED`,
+      expect(log.mock.calls.map(([l]) => String(l))).toEqual(
+        expect.arrayContaining([
+          expect.stringMatching(
+            new RegExp(
+              `^\\[CareerForm\\] skip stage=write key=hplace\\.v1\\.college\\.0\\.academyName reason=control-shape detail=v1-history-${detail}-ms\\d+-li\\d+-reg(yes|no)-text(yes|no)-branch-[a-z-]+ failureCode=SEARCH_FORM_UNVERIFIED$`,
+            ),
+          ),
+        ]),
       );
     } finally {
       setAutofillDebugEnabled(false);
@@ -1101,5 +1113,96 @@ describe("v1 step 2 register row (no catalog match: pressed by decision)", () =>
       codes: ["SEARCH_SELECTION_UNVERIFIED"],
     });
     expect(page.registerClicks()).toBe(1);
+  });
+});
+
+const searchLevels = [
+  [
+    "고등학교",
+    "hplace.v1.highschool.0.academyName",
+    "학교정보",
+    "합성고등학교",
+  ],
+  ["대학교", "hplace.v1.college.0.academyName", "학교정보", "합성대학교"],
+  [
+    "대학원",
+    "hplace.v1.graduateSchool.0.academyName",
+    "학교정보",
+    "합성대학원",
+  ],
+  ["대학교", "hplace.v1.college.0.major0.majorName", "전공", "합성공학"],
+] as const;
+
+describe("v1 step 2 search with a slow catalog", () => {
+  it.each(
+    searchLevels.flatMap((l) => [600, 900].map((ms) => [...l, ms] as const)),
+  )(
+    "%s %s: picks the real row after a transient register row held %s/%s ms (%i)",
+    async (level, name, title, value, ms) => {
+      const page = mountV1Step2();
+      page.slowCatalog(ms);
+      const c = appendCard(level);
+      if (title === "전공") appendMajor(c);
+      const r = await drive(name, value);
+      expect(r).toEqual({ ok: true, settled: true, codes: [] });
+      expect(chipText(c, title)).toEqual([value]);
+      expect(page.registerClicks()).toBe(0);
+    },
+    15_000,
+  );
+
+  it.each(searchLevels)(
+    "%s %s: presses the final register row only after 1000 ms",
+    async (level, name, title) => {
+      const page = mountV1Step2();
+      page.slowCatalog(900);
+      const c = appendCard(level);
+      if (title === "전공") appendMajor(c);
+      const started = Date.now();
+      const r = await drive(name, "목록에없는이름");
+      expect(r).toEqual({ ok: true, settled: true, codes: [] });
+      expect(Date.now() - started).toBeGreaterThanOrEqual(1000);
+      expect(page.registerClicks()).toBe(1);
+      expect(chipText(c, title)).toEqual(["목록에없는이름"]);
+    },
+    15_000,
+  );
+
+  it("never judges a register-structured row by the result-row check (other quotes)", async () => {
+    setAutofillDebugEnabled(true);
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      const page = mountV1Step2();
+      page.curlyRegisterQuotes();
+      const hs = appendCard("고등학교");
+      // The catalog answers after the transient row: the real row is picked.
+      expect(
+        await drive("hplace.v1.highschool.0.academyName", "합성고등학교"),
+      ).toEqual({ ok: true, settled: true, codes: [] });
+      expect(chipText(hs, "학교정보")).toEqual(["합성고등학교"]);
+      // No catalog match: a register row whose text differs is not pressed.
+      const u0 = appendCard("대학교");
+      expect(
+        await drive("hplace.v1.college.0.academyName", "목록에없는이름"),
+      ).toEqual({
+        ok: false,
+        settled: false,
+        codes: ["SEARCH_FORM_UNVERIFIED"],
+      });
+      expect(page.registerClicks()).toBe(0);
+      expect(searchInput(u0, "학교정보")!.value).toBe("");
+      const lines = log.mock.calls.map(([l]) => String(l));
+      expect(lines).toEqual(
+        expect.arrayContaining([
+          expect.stringMatching(
+            /^\[CareerForm\] skip stage=write key=hplace\.v1\.college\.0\.academyName reason=control-shape detail=v1-history-search-register-other-name-ms\d+-li1-regyes-textno-branch-register-other-name failureCode=SEARCH_FORM_UNVERIFIED$/,
+          ),
+        ]),
+      );
+      for (const line of lines) expect(line).not.toMatch(/목록에없는이름|합성/);
+    } finally {
+      setAutofillDebugEnabled(false);
+      log.mockRestore();
+    }
   });
 });
