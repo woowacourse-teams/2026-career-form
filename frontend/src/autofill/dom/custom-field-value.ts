@@ -4,6 +4,7 @@ import { runtimeRules } from "../policy/runtime-rules";
 import type { FieldCandidateHandle } from "./types";
 import { dropdownValue } from "./button-dropdown";
 import { registrationValue } from "../adapters/hplace/registration";
+import { v1Value } from "../adapters/hplace/v1-basic-controls";
 
 /** Reads only custom controls already bound by the collector. */
 export function customFieldValue(
@@ -13,6 +14,8 @@ export function customFieldValue(
   if (search !== undefined) return search;
   const basic = basicValue(handle);
   if (basic !== undefined) return basic;
+  const v1 = v1Value(handle);
+  if (v1 !== undefined) return v1;
   const registration = registrationValue(handle);
   if (registration !== undefined) return registration;
   if (handle.buttonDropdown) return dropdownValue(handle.buttonDropdown);

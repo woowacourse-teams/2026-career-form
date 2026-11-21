@@ -5,6 +5,14 @@ import {
   prefersBasicProfileValue,
 } from "./hplace/basic-write";
 import { ownedBasicControl } from "./hplace/basic-controls";
+import { ownedV1Control } from "./hplace/v1-basic-controls";
+import {
+  isV1StateDriver,
+  prefersV1ProfileValue,
+  settleV1StateDriver,
+  v1DriverRow,
+  writeV1,
+} from "./hplace/v1-basic-write";
 import {
   isRegistrationItem,
   settleRegistration,
@@ -165,24 +173,32 @@ const genericWorkflowAdapter: WorkflowAdapter = {
 
 const hplaceWorkflowAdapter: WorkflowAdapter = {
   ...genericWorkflowAdapter,
-  prefersProfileValue: prefersBasicProfileValue,
+  prefersProfileValue: (handle, analysis) =>
+    prefersBasicProfileValue(handle, analysis) ||
+    prefersV1ProfileValue(handle, analysis),
   isStateDriver: (item, name) =>
-    isRegistrationItem(item, name) || isBasicStateDriver(item, name),
+    isRegistrationItem(item, name) ||
+    isBasicStateDriver(item, name) ||
+    isV1StateDriver(item, name),
   stateDriverStage: (item, handle) =>
-    ownedBasicControl(handle) &&
-    isBasicStateDriver(item, handle.candidate.domName)
+    (ownedBasicControl(handle) &&
+      isBasicStateDriver(item, handle.candidate.domName)) ||
+    (ownedV1Control(handle) && isV1StateDriver(item, handle.candidate.domName))
       ? 1
       : undefined,
   settleStateDriver: (_document, handle, _report, context) =>
     handle.candidate.domName?.startsWith("hplace.detail.")
       ? settleBasicStateDriver(handle, context?.signal, context?.item)
-      : Promise.resolve(
-          !!context && settleRegistration(handle, context.item, context.signal),
-        ),
+      : handle.candidate.domName?.startsWith("hplace.v1.")
+        ? settleV1StateDriver(handle, context?.signal, context?.item)
+        : Promise.resolve(
+            !!context &&
+              settleRegistration(handle, context.item, context.signal),
+          ),
   stateDriverFailureGroup: (item, handle) =>
     isBasicStateDriver(item, handle.candidate.domName)
       ? (handle.elements[0]?.closest(".subject") ?? undefined)
-      : undefined,
+      : v1DriverRow(item, handle),
   executeStateDriver: (
     document,
     handle,
@@ -193,14 +209,21 @@ const hplaceWorkflowAdapter: WorkflowAdapter = {
   ) =>
     ownedBasicControl(handle)
       ? writeBasic(handle, item, () => !signal.aborted, beforeMutation)
-      : writeRegistration(
-          document,
-          handle,
-          item,
-          signal,
-          report,
-          beforeMutation,
-        ),
+      : ownedV1Control(handle)
+        ? writeV1(handle, item, () => !signal.aborted, beforeMutation).then(
+            (result) => {
+              if (result === "option-unmatched") report?.("OPTION_UNMATCHED");
+              return result === "written";
+            },
+          )
+        : writeRegistration(
+            document,
+            handle,
+            item,
+            signal,
+            report,
+            beforeMutation,
+          ),
 };
 
 function resolveWorkflowAdapter(source: string | Document): WorkflowAdapter {

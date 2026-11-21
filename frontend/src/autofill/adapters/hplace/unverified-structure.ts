@@ -4,6 +4,12 @@ import { resolveValueBinding } from "../../profile/value-binding";
 import type { ReviewPlanItem } from "../../review/review-plan";
 import { basicName, basicSpecs, type BasicKey } from "./basic-controls";
 import { isHplaceDocument } from "./fingerprint";
+import {
+  isV1BasicPage,
+  v1Name,
+  v1PresentControls,
+  v1Spec,
+} from "./v1-basic-controls";
 
 export const STRUCTURE_UNVERIFIED_REASON = "입력 불가(화면 구조 확인 불가)";
 
@@ -75,9 +81,11 @@ export function hplaceUnverifiedRows(
   profile: Profile,
 ): ReviewPlanItem[] {
   // Detached documents (overlay/demo pages) have no location.
+  const v1 = isV1BasicPage(document);
   if (
-    document.location?.pathname !== "/mrs2/applicant/resume/writeResume" ||
-    !isHplaceDocument(document)
+    !v1 &&
+    (document.location?.pathname !== "/mrs2/applicant/resume/writeResume" ||
+      !isHplaceDocument(document))
   )
     return [];
   const collected = new Set(
@@ -110,6 +118,26 @@ export function hplaceUnverifiedRows(
     failureCode: "STRUCTURE_UNVERIFIED",
   });
   const rows: ReviewPlanItem[] = [];
+  if (v1)
+    return v1PresentControls(document).flatMap(({ key, enabled }) => {
+      const spec = v1Spec(key);
+      const profileFieldKey = "profile" in spec ? spec.profile : undefined;
+      const hasValue = profileFieldKey
+        ? resolved(profile, profileFieldKey)
+        : detailFields[0].hasValue(profile);
+      return enabled && hasValue && !isCollected(v1Name(key))
+        ? [
+            row(
+              `v1-${key}`,
+              spec.label,
+              profileFieldKey,
+              key === "englishName"
+                ? `${profile.personal.englishFamilyName.trim()} ${profile.personal.englishGivenName.trim()}`
+                : "",
+            ),
+          ]
+        : [];
+    });
   for (const field of detailFields) {
     const elements = Array.from(document.querySelectorAll(field.selector));
     const hasValue =
