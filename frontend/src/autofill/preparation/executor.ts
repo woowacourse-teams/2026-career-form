@@ -12,6 +12,10 @@ import {
   isV1HistoryPage,
   ownedV1HistoryAddAction,
 } from "../adapters/hplace/v1-history-controls";
+import {
+  isV1ExtraPage,
+  ownedV1ExtraAddAction,
+} from "../adapters/hplace/v1-extra-controls";
 import type { PreparationPlan } from "../api/types";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import type { ActionCandidateHandle } from "../dom/types";
@@ -263,7 +267,8 @@ async function executeApprovedPreparationPlansInternal(
       return (
         plan.command === "ADD_REPEATABLE_GROUP" &&
         action.status === "ready" &&
-        ownedV1HistoryAddAction(action.handle) !== undefined
+        (ownedV1HistoryAddAction(action.handle) !== undefined ||
+          ownedV1ExtraAddAction(action.handle) !== undefined)
       );
     });
   try {
@@ -278,7 +283,8 @@ async function executeApprovedPreparationPlansInternal(
             nativeDigest) &&
         (!document ||
           resolveDocumentCompany(document) !== "hplace" ||
-          (historyAdds && isV1HistoryPage(document))),
+          (historyAdds &&
+            (isV1HistoryPage(document) || isV1ExtraPage(document)))),
     });
   } finally {
     release?.();

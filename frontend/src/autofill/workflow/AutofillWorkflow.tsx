@@ -147,6 +147,10 @@ import {
   isV1HistoryPage,
   ownedV1HistoryAddAction,
 } from "../adapters/hplace/v1-history-controls";
+import {
+  isV1ExtraPage,
+  ownedV1ExtraAddAction,
+} from "../adapters/hplace/v1-extra-controls";
 import { useDeveloperMode } from "../debug/developer-mode";
 import { localWorkflowLog } from "../debug/local-workflow";
 
@@ -616,9 +620,9 @@ function PolicyReadyWorkflow({
         if (
           resolveDocumentCompany(pageDocument) === "hplace" &&
           analysis.preparationPlans.length > 0 &&
-          // v1 step 2 (CF-509): only its verified card add actions.
+          // v1 steps 2 and 3 (CF-509, CF-510): only their verified add actions.
           !(
-            isV1HistoryPage(pageDocument) &&
+            (isV1HistoryPage(pageDocument) || isV1ExtraPage(pageDocument)) &&
             analysis.preparationPlans.every((plan) => {
               const action = snapshot.registry.lookupAction(
                 plan.actionCandidateId,
@@ -626,7 +630,8 @@ function PolicyReadyWorkflow({
               return (
                 plan.command === "ADD_REPEATABLE_GROUP" &&
                 action.status === "ready" &&
-                ownedV1HistoryAddAction(action.handle) !== undefined
+                (ownedV1HistoryAddAction(action.handle) !== undefined ||
+                  ownedV1ExtraAddAction(action.handle) !== undefined)
               );
             })
           )

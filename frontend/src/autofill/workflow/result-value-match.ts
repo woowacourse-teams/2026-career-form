@@ -1,4 +1,5 @@
 import { nativeGpaComplete } from "../policy/native-form-gpa";
+import { v1ExtraResultMatches } from "../adapters/hplace/v1-extra-write";
 import { normalizeStagedRoad } from "../policy/staged-address-road";
 import { stagedAddressReceipt } from "../policy/staged-address-receipt";
 import { nativeOwnership } from "../policy/native-form-collection";
@@ -238,6 +239,9 @@ export function matchesResultValue(
   // v1 step-2 dates: the page keeps only a full YYYY.MM.DD.
   const history = handle && v1HistoryResultMatches(handle, item, left, right);
   if (history !== undefined) return history;
+  // v1 step-3 취득일: the same full YYYY.MM.DD.
+  const extra = handle && v1ExtraResultMatches(handle, item, left, right);
+  if (extra !== undefined) return extra;
   const basic = handle && ownedBasicControl(handle);
   if (
     basic &&

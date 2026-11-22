@@ -29,6 +29,12 @@ import {
   v1HistoryRetained,
   writeV1History,
 } from "../adapters/hplace/v1-history-write";
+import { ownedV1ExtraControl } from "../adapters/hplace/v1-extra-controls";
+import {
+  v1ExtraFailureReason,
+  v1ExtraRetained,
+  writeV1Extra,
+} from "../adapters/hplace/v1-extra-write";
 import type { AddressIdentity } from "../address/match";
 import { resolveDocumentCompany } from "../adapters/company";
 import { runtimeRules } from "../policy/runtime-rules";
@@ -82,6 +88,8 @@ function legacyValueRetained(
     return (
       item.profileValue === initialValue && v1HistoryRetained(handle, item)
     );
+  if (ownedV1ExtraControl(handle))
+    return item.profileValue === initialValue && v1ExtraRetained(handle, item);
   const basic = ownedBasicControl(handle);
   const target = basic
     ? basicTarget(
@@ -349,8 +357,15 @@ export async function executeApprovedWritesAfterPageSettles({
         const address = eligible
           ? await v1Address(item, lookup.handle)
           : undefined;
+        // v1 step 3 (CF-510): 자격증 text/date and the language dropdown.
+        const extra =
+          !address &&
+          eligible &&
+          !ownedBasicControl(lookup.handle) &&
+          !!ownedV1ExtraControl(lookup.handle);
         const history =
           !address &&
+          !extra &&
           eligible &&
           !ownedBasicControl(lookup.handle) &&
           !!ownedV1HistoryControl(lookup.handle);
@@ -358,20 +373,22 @@ export async function executeApprovedWritesAfterPageSettles({
         const typed = history && v1HistoryValue(lookup.handle) === "";
         const v1 = address
           ? address.result
-          : history
-            ? gpaHeld
-              ? ("failed" as const)
-              : await writeV1History(
-                  lookup.handle,
-                  item,
-                  current,
-                  beforeMutation,
-                )
-            : eligible &&
-                !ownedBasicControl(lookup.handle) &&
-                ownedV1Control(lookup.handle)
-              ? await writeV1(lookup.handle, item, current, beforeMutation)
-              : undefined;
+          : extra
+            ? await writeV1Extra(lookup.handle, item, current, beforeMutation)
+            : history
+              ? gpaHeld
+                ? ("failed" as const)
+                : await writeV1History(
+                    lookup.handle,
+                    item,
+                    current,
+                    beforeMutation,
+                  )
+              : eligible &&
+                  !ownedBasicControl(lookup.handle) &&
+                  ownedV1Control(lookup.handle)
+                ? await writeV1(lookup.handle, item, current, beforeMutation)
+                : undefined;
         const success =
           v1 === undefined &&
           eligible &&
@@ -390,15 +407,21 @@ export async function executeApprovedWritesAfterPageSettles({
               item.candidateId,
               v1,
               address?.reason ??
-                (history && "handle" in lookup
-                  ? gpaHeld
-                    ? V1_HISTORY_GPA_REASON
-                    : v1HistoryFailureReason(
-                        lookup.handle,
-                        item,
-                        "검증된 지원서 필드만 입력할 수 있습니다.",
-                      )
-                  : "검증된 상세 지원서 필드만 입력할 수 있습니다."),
+                (extra && "handle" in lookup
+                  ? v1ExtraFailureReason(
+                      lookup.handle,
+                      item,
+                      "검증된 지원서 필드만 입력할 수 있습니다.",
+                    )
+                  : history && "handle" in lookup
+                    ? gpaHeld
+                      ? V1_HISTORY_GPA_REASON
+                      : v1HistoryFailureReason(
+                          lookup.handle,
+                          item,
+                          "검증된 지원서 필드만 입력할 수 있습니다.",
+                        )
+                    : "검증된 상세 지원서 필드만 입력할 수 있습니다."),
             )
           : success
             ? written(item.candidateId)

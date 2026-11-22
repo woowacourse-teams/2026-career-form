@@ -235,10 +235,14 @@ class HplaceV1HistoryPolicyTest {
             .filter(name -> name.matches("hplace\\.v1\\.(highschool|college|graduateSchool|career)\\..*"))
             .collect(Collectors.toSet());
         assertThat(historyRules).isEqualTo(expectedNames);
-        assertThat(policy.fieldRules()).hasSize(22 + 266);
+        // 22 step-1 rules, 266 step-2 rules and the 50 step-3 rules (HplaceV1ExtraPolicyTest).
+        assertThat(policy.fieldRules()).hasSize(22 + 266 + 50);
         assertThat(policy.fieldRules()).allMatch(rule -> rule.structuralName().equals(rule.requiredDomName()));
-        assertThat(policy.fieldsFingerprint().requiredSectionIds()).containsExactlyInAnyOrder("hplace-v1-basic", SECTION);
-        var actionNames = policy.actionRules().stream().flatMap(rule -> rule.structuralNames().stream()).collect(Collectors.toSet());
+        assertThat(policy.fieldsFingerprint().requiredSectionIds()).containsExactlyInAnyOrder("hplace-v1-basic", SECTION,
+            "hplace-v1-extra");
+        var actionNames = policy.actionRules().stream().flatMap(rule -> rule.structuralNames().stream())
+            .filter(name -> !name.equals("hplace.v1.certificate.add") && !name.equals("hplace.v1.languageSkill.add"))
+            .collect(Collectors.toSet());
         assertThat(actionNames).isEqualTo(Set.copyOf(allActionNames()));
         assertThat(policy.actionRules()).allMatch(rule -> rule.kind() == ActionKind.ADD && rule.targetSectionId() == null
             && rule.expectedFieldNames() == null);

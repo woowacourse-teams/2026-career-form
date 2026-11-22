@@ -1014,7 +1014,7 @@ function chipTexts(row: Element): string[] {
  * is `div > div > p` (+ the X svg) and that holds no input, list item or
  * button (measured: step2-major-after-register.json).
  */
-function chipWidgets(row: Element): string[] {
+export function chipWidgets(row: Element): string[] {
   return Array.from(row.querySelectorAll("span[data-review-key]")).flatMap(
     (span) => {
       if (span.querySelector("input, li, button, #dropdown-body")) return [];
