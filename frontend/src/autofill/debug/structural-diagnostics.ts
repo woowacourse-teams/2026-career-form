@@ -30,6 +30,7 @@ export type StructuralSkipReason =
   | "build-unavailable"
   | "result-click-no-effect"
   | "result-not-unique"
+  | "picked-unread"
   | "staging-mismatch"
   | "submit-disabled-timeout"
   | "submit-no-effect"

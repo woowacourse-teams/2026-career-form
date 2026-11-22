@@ -728,3 +728,97 @@ describe("v1 step 3 picked 자격증명 on the result screen (k-step3-after.txt)
     expect(v1ExtraChip(document, 0)).toBeUndefined();
   });
 });
+
+describe("v1 step 3 picked-unread diagnostic (phase 8)", () => {
+  const unreadLine =
+    /^\[CareerForm\] skip stage=result key=hplace\.v1\.certificate\.0\.licenseName reason=picked-unread detail=status-[a-z-]+-leaves\d+-nameblock(?:\d+|x)-parentInputs\d+-parentButtons\d+-svg\d+-blocks(?:\d+|x)-depth\d+-search\d+-rk\d+$/;
+
+  it("names the shape when the picked 자격증명 cannot be read, value-free", () => {
+    setAutofillDebugEnabled(true);
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      mountV1Step3("3", "k");
+      appendSubRow("자격증");
+      const { registry, items } = itemsFor([
+        ["hplace.v1.certificate.0.licenseName", "정보처리기사"],
+      ]);
+      const [item] = items;
+      pickCertificate(0, "정보처리기사");
+      // A second text leaf: the name block can no longer be told apart.
+      subRowAt("자격증", 0).firstElementChild!.insertAdjacentHTML(
+        "beforeend",
+        "<div><p>합성추가문구</p></div>",
+      );
+      const tracker = createProgressTracker();
+      const [entry] = tracker.record(item, written(item.candidateId), registry);
+      expect(tracker.progressStateFor(entry.id)).toBe(false);
+      expect(
+        resultFieldState(registry, document, item.candidateId),
+      ).toBeUndefined();
+      const lines = log.mock.calls.map(([l]) => String(l));
+      const unread = lines.filter((l) => unreadLine.test(l));
+      // Logged once per shape, however often the result screen reads it.
+      expect(unread).toHaveLength(1);
+      expect(unread[0]).toContain("-leaves2-");
+      for (const line of lines)
+        expect(line).not.toMatch(/정보처리기사|합성추가문구/);
+    } finally {
+      setAutofillDebugEnabled(false);
+      log.mockRestore();
+    }
+  });
+
+  it("logs nothing when the picked name is read", () => {
+    setAutofillDebugEnabled(true);
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      mountV1Step3("3", "k");
+      appendSubRow("자격증");
+      const { registry, items } = itemsFor([
+        ["hplace.v1.certificate.0.licenseName", "정보처리기사"],
+      ]);
+      pickCertificate(0, "정보처리기사");
+      const tracker = createProgressTracker();
+      const [entry] = tracker.record(
+        items[0],
+        written(items[0].candidateId),
+        registry,
+      );
+      expect(tracker.progressStateFor(entry.id)).toBe(true);
+      expect(
+        log.mock.calls.map(([l]) => String(l)).filter((l) => /picked-/.test(l)),
+      ).toEqual([]);
+    } finally {
+      setAutofillDebugEnabled(false);
+      log.mockRestore();
+    }
+  });
+
+  it("says when a read name differs from the profile, by length only", () => {
+    setAutofillDebugEnabled(true);
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      mountV1Step3("3", "k");
+      appendSubRow("자격증");
+      const { registry, items } = itemsFor([
+        ["hplace.v1.certificate.0.licenseName", "정보처리기사"],
+      ]);
+      pickCertificate(0, "정보처리기사(필기)");
+      const tracker = createProgressTracker();
+      const [entry] = tracker.record(
+        items[0],
+        written(items[0].candidateId),
+        registry,
+      );
+      expect(tracker.progressStateFor(entry.id)).toBe(false);
+      const lines = log.mock.calls.map(([l]) => String(l));
+      expect(lines).toContain(
+        "[CareerForm] skip stage=result key=hplace.v1.certificate.0.licenseName reason=label-mismatch detail=v1-picked-mismatch-len10-len6",
+      );
+      for (const line of lines) expect(line).not.toMatch(/정보처리기사/);
+    } finally {
+      setAutofillDebugEnabled(false);
+      log.mockRestore();
+    }
+  });
+});

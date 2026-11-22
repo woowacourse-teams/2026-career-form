@@ -1,6 +1,10 @@
 import { stagedAddressReceipt } from "../policy/staged-address-receipt";
 import { v1HistoryPickedValue } from "../adapters/hplace/v1-history-controls";
-import { v1ExtraPickedValue } from "../adapters/hplace/v1-extra-controls";
+import {
+  debugV1PickedMismatch,
+  debugV1PickedUnread,
+  v1ExtraPickedValue,
+} from "../adapters/hplace/v1-extra-controls";
 import { componentEmploymentStatusValue } from "../policy/components/write";
 import { customFieldValue } from "../dom/custom-field-value";
 import {
@@ -21,6 +25,8 @@ export function resultFieldState(
     const picked = registry?.registeredField(id);
     const chip =
       picked && (v1HistoryPickedValue(picked) ?? v1ExtraPickedValue(picked));
+    if (picked && chip === undefined)
+      debugV1PickedUnread(picked, lookup?.status ?? "none");
     return chip !== undefined && picked
       ? { visible: true, value: chip, handle: picked }
       : undefined;

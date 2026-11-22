@@ -1,6 +1,10 @@
 import { componentEmploymentStatusValue } from "../policy/components/write";
 import { v1HistoryPickedValue } from "../adapters/hplace/v1-history-controls";
-import { v1ExtraPickedValue } from "../adapters/hplace/v1-extra-controls";
+import {
+  debugV1PickedMismatch,
+  debugV1PickedUnread,
+  v1ExtraPickedValue,
+} from "../adapters/hplace/v1-extra-controls";
 import { customFieldValue } from "../dom/custom-field-value";
 import {
   hasVisibleWriteElement,
@@ -68,10 +72,14 @@ function stillReflected(
     const picked = registry.registeredField(item.candidateId);
     const chip =
       picked && (v1HistoryPickedValue(picked) ?? v1ExtraPickedValue(picked));
-    return (
+    if (picked && chip === undefined)
+      debugV1PickedUnread(picked, lookup.status);
+    const matches =
       chip !== undefined &&
-      matchesResultValue(item, chip, item.profileValue ?? "", picked)
-    );
+      matchesResultValue(item, chip, item.profileValue ?? "", picked);
+    if (picked && chip !== undefined && !matches)
+      debugV1PickedMismatch(picked, chip, item.profileValue ?? "");
+    return matches;
   }
   const handle = lookup.handle;
   const visible = hasVisibleWriteElement(handle);

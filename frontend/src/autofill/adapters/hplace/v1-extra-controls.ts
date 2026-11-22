@@ -1,11 +1,20 @@
-import { debugCollectionSkip } from "../../debug/structural-diagnostics";
+import {
+  debugCollectionSkip,
+  debugRuntimeSkip,
+} from "../../debug/structural-diagnostics";
 import type {
   ActionCandidateHandle,
   FieldCandidateHandle,
 } from "../../dom/types";
 import { hplaceDocumentKind } from "./fingerprint";
 import { rowDropdowns } from "./v1-basic-controls";
-import { cardState, chipWidgets } from "./v1-history-controls";
+import {
+  cardState,
+  chipWidgets,
+  historySpec,
+  parseV1HistoryName,
+  v1HistorySearchRow,
+} from "./v1-history-controls";
 import { showsOnlyName } from "./v1-search";
 
 /**
@@ -531,6 +540,115 @@ export function v1ExtraPickedValue(
     handle.candidate.domId === handle.candidate.domName
     ? v1ExtraChip(document, parsed.index)
     : undefined;
+}
+
+/**
+ * Value-free shape of a picked search row (tags and counts, never text):
+ * the text leaves, the name block's index among its siblings, the inputs and
+ * buttons beside the first leaf, svgs, sibling blocks, the leaf's depth, the
+ * search inputs left and the review-key spans.
+ */
+function pickedShape(
+  row: Element,
+  placeholder: string,
+  skipTitle: boolean,
+): string {
+  const [titleSpan, titleBox] = skipTitle ? Array.from(row.children) : [];
+  const leaves = Array.from(row.querySelectorAll("*")).filter(
+    (e) =>
+      e.children.length === 0 &&
+      !(e instanceof HTMLInputElement) &&
+      e !== titleSpan &&
+      !titleBox?.contains(e) &&
+      !e.closest("button, li, #dropdown-body, svg") &&
+      text(e) !== "",
+  );
+  const [leaf] = leaves;
+  let block: Element | undefined = leaf;
+  while (
+    block?.parentElement &&
+    block.parentElement !== row &&
+    !block.parentElement.querySelector("input, button")
+  )
+    block = block.parentElement;
+  let depth = 0;
+  for (
+    let e: Element | null = leaf ?? null;
+    e && e !== row;
+    e = e.parentElement
+  )
+    depth++;
+  const parent = leaf?.parentElement;
+  return [
+    `leaves${leaves.length}`,
+    `nameblock${block?.parentElement ? Array.from(block.parentElement.children).indexOf(block) : "x"}`,
+    `parentInputs${parent?.querySelectorAll("input").length ?? 0}`,
+    `parentButtons${parent?.querySelectorAll("button").length ?? 0}`,
+    `svg${row.querySelectorAll("svg").length}`,
+    `blocks${block?.parentElement?.children.length ?? "x"}`,
+    `depth${depth}`,
+    `search${row.querySelectorAll(`input[placeholder="${placeholder}"]`).length}`,
+    `rk${row.querySelectorAll("span[data-review-key]").length}`,
+  ].join("-");
+}
+
+/** Last detail logged per wire key: the result screen reads values often. */
+const loggedPicked = new Map<string, string>();
+
+/**
+ * One value-free line when the result screen cannot read a picked v1 search
+ * value (step-2 school/major, step-3 자격증명), with the registry status
+ * and the row shape. Logged once per key and shape.
+ */
+export function debugV1PickedUnread(
+  handle: FieldCandidateHandle,
+  status: string,
+): void {
+  const name = handle.candidate.domName;
+  const document = (handle.elements[0] ?? handle.customElements?.[0])
+    ?.ownerDocument;
+  if (!name || !document) return;
+  let shape: string | undefined;
+  const extra = parseV1ExtraName(name);
+  const history = extra ? undefined : parseV1HistoryName(name);
+  if (extra?.field === "licenseName") {
+    const sub = v1ExtraSubRow(document, "certificate", extra.index);
+    shape = sub ? pickedShape(sub, "자격증명을 검색해주세요.", false) : "norow";
+  } else if (
+    history &&
+    (history.field === "academyName" || history.field === "major0.majorName")
+  ) {
+    const spec = historySpec(history.group, history.field);
+    const row = v1HistorySearchRow(
+      document,
+      history.group,
+      history.index,
+      history.field,
+    );
+    shape =
+      row && spec?.kind === "search"
+        ? pickedShape(row, spec.placeholder, true)
+        : "norow";
+  }
+  if (shape === undefined) return;
+  const detail = `status-${status}-${shape}`;
+  if (loggedPicked.get(name) === detail) return;
+  loggedPicked.set(name, detail);
+  debugRuntimeSkip(name, "picked-unread", detail, "result");
+}
+
+/** One value-free line when a read picked value differs from the profile. */
+export function debugV1PickedMismatch(
+  handle: FieldCandidateHandle,
+  shown: string,
+  expected: string,
+): void {
+  const name = handle.candidate.domName;
+  if (!name || !(parseV1ExtraName(name) || parseV1HistoryName(name))) return;
+  const detail = `v1-picked-mismatch-len${shown.length}-len${expected.length}`;
+  if (loggedPicked.get(name) === detail) return;
+  loggedPicked.set(name, detail);
+  debugRuntimeSkip(name, "label-mismatch", detail, "result");
 }
 
 export function v1ExtraValue(handle: FieldCandidateHandle): string | undefined {

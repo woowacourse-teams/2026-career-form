@@ -1976,3 +1976,41 @@ describe("v1 step 2 second tenant, run 6 (k2-rows.txt)", () => {
     expect(cardInput(u0, "입학일").value).toBe("");
   });
 });
+
+describe("v1 step 2 picked-unread diagnostic (phase 8)", () => {
+  it("names the shape when a picked 학교명 cannot be read, value-free", async () => {
+    setAutofillDebugEnabled(true);
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      mountV1Step2("2", "k");
+      const u0 = appendCard("대학교");
+      const { registry, items } = itemsFor([
+        ["hplace.v1.college.0.academyName", "합성대학교"],
+      ]);
+      const [item] = items;
+      pickChip(u0, "학교정보", "합성대학교");
+      cardRow(u0, "학교정보").children[2].insertAdjacentHTML(
+        "beforeend",
+        "<p>합성다른값</p>",
+      );
+      const { resultFieldState } =
+        await import("../../workflow/result-field-state");
+      expect(
+        resultFieldState(registry, document, item.candidateId),
+      ).toBeUndefined();
+      const lines = log.mock.calls.map(([l]) => String(l));
+      expect(lines).toEqual(
+        expect.arrayContaining([
+          expect.stringMatching(
+            /^\[CareerForm\] skip stage=result key=hplace\.v1\.college\.0\.academyName reason=picked-unread detail=status-[a-z-]+-leaves\d+-nameblock(?:\d+|x)-parentInputs\d+-parentButtons\d+-svg\d+-blocks(?:\d+|x)-depth\d+-search\d+-rk\d+$/,
+          ),
+        ]),
+      );
+      for (const line of lines)
+        expect(line).not.toMatch(/합성대학교|합성다른값/);
+    } finally {
+      setAutofillDebugEnabled(false);
+      log.mockRestore();
+    }
+  });
+});
