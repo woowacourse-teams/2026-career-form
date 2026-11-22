@@ -2,13 +2,13 @@
 
 > Topic: adapter-hplace
 > Status: Current
-> Current: [CF-509 v1 지원자 앱 2단계 근거](../../raw/issues/CF-509/documents/hplace-v1-step2.md)
-> History: [CF-177 근거](../../raw/issues/CF-177/documents/adapter-hplace.md); [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md); [CF-177 C12·C13·시연 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md); [CF-177 KDI·구조 미확인 근거](../../raw/issues/CF-177/documents/live-kdi-unverified.md); [CF-177 후속 보완 묶음 근거](../../raw/issues/CF-177/documents/live-followup-bundle.md); [CF-310 요청 구조 근거](../../raw/issues/CF-310/documents/hplace-mrs2-requests.md); [CF-310 4단계 분석·패널 근거](../../raw/issues/CF-310/documents/hplace-step4-analyze-and-panel.md); [CF-310 빈 단계 분석 생략 근거](../../raw/issues/CF-310/documents/hplace-empty-step-analysis-skip.md); [CF-327 활성 정책 버전 설정값 근거](../../raw/issues/CF-327/documents/hplace-active-policy-version.md); [CF-505 v1 지원자 앱 1단계 근거](../../raw/issues/CF-505/documents/hplace-v1-step1.md); [CF-507 v1 현주소·사진 등록 근거](../../raw/issues/CF-507/documents/hplace-v1-address-photo.md); [CF-509 v1 지원자 앱 2단계 근거](../../raw/issues/CF-509/documents/hplace-v1-step2.md)
+> Current: [CF-510 v1 지원자 앱 3단계 근거](../../raw/issues/CF-510/documents/hplace-v1-step3.md)
+> History: [CF-177 근거](../../raw/issues/CF-177/documents/adapter-hplace.md); [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md); [CF-177 C12·C13·시연 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md); [CF-177 KDI·구조 미확인 근거](../../raw/issues/CF-177/documents/live-kdi-unverified.md); [CF-177 후속 보완 묶음 근거](../../raw/issues/CF-177/documents/live-followup-bundle.md); [CF-310 요청 구조 근거](../../raw/issues/CF-310/documents/hplace-mrs2-requests.md); [CF-310 4단계 분석·패널 근거](../../raw/issues/CF-310/documents/hplace-step4-analyze-and-panel.md); [CF-310 빈 단계 분석 생략 근거](../../raw/issues/CF-310/documents/hplace-empty-step-analysis-skip.md); [CF-327 활성 정책 버전 설정값 근거](../../raw/issues/CF-327/documents/hplace-active-policy-version.md); [CF-505 v1 지원자 앱 1단계 근거](../../raw/issues/CF-505/documents/hplace-v1-step1.md); [CF-507 v1 현주소·사진 등록 근거](../../raw/issues/CF-507/documents/hplace-v1-address-photo.md); [CF-509 v1 지원자 앱 2단계 근거](../../raw/issues/CF-509/documents/hplace-v1-step2.md); [CF-510 v1 지원자 앱 3단계 근거](../../raw/issues/CF-510/documents/hplace-v1-step3.md)
 > Updated: 2026-11-22
 
 ## 현재 상태
 
-MRS2 등록의 이름·휴대전화·이메일과 기존 기본정보 계약을 유지하고 새 범주를 v4 실행 정책과 공통 native 실행기로 연결한다. 학력·중첩 전공·숫자 GPA·경력·프로젝트·비인증 어학·자격증·현주소는 검증된 소유 구조와 활성 정책에서만 실행한다. v1 지원자 앱은 1단계 기본정보와 2단계 학력·경력을 별도 정책으로 지원한다(아래 v1 절). v1 1단계의 현주소와 사진은 사이트 창을 거쳐 기입한다. v1의 3단계 이후와 JOBDA의 입력 구조는 지원하지 않는다.
+MRS2 등록의 이름·휴대전화·이메일과 기존 기본정보 계약을 유지하고 새 범주를 v4 실행 정책과 공통 native 실행기로 연결한다. 학력·중첩 전공·숫자 GPA·경력·프로젝트·비인증 어학·자격증·현주소는 검증된 소유 구조와 활성 정책에서만 실행한다. v1 지원자 앱은 1단계 기본정보, 2단계 학력·경력, 3단계 자격증·외국어활용능력을 별도 정책으로 지원한다(아래 v1 절). v1 1단계의 현주소와 사진은 사이트 창을 거쳐 기입한다. v1 3단계의 나머지 블록, 4단계 이후와 JOBDA의 입력 구조는 지원하지 않는다.
 
 13범주 127키 중 활성 구현 또는 간접 소비는 95키다. 나머지는 의미 불일치13·구조 미확인16·지정 화면 부재1·파일 사용자 처리2로 구분한다. 사이트 전용27행은 별도 집계하며 required라는 이유로 대응 값을 추정하지 않는다. 전체 표는 [필드 현황](adapter-field-inventory.md)과 raw를 따른다.
 
@@ -63,7 +63,7 @@ MRS2 등록의 이름·휴대전화·이메일과 기존 기본정보 계약을 
 
 ## v1 지원자 앱 1단계 (2026-11-21)
 
-- **범위:** 경로 `/v1/applicant/resume-form/<숫자>`, 쿼리 `step=1`, v1 플랫폼 지문, 검증된 칸 1개 이상일 때만 지원 화면이다. 대상은 영문이름·생년월일·성별·비상연락처, 병역 상태와 하위 6칸, 장애 여부와 하위 3칸, 보훈 여부와 하위 2칸, 국적의 19칸이다. v1 로그인·마이페이지·3단계 이후는 미지원 안내를 유지한다. 2단계는 아래 2단계 절을 따른다(CF-509).
+- **범위:** 경로 `/v1/applicant/resume-form/<숫자>`, 쿼리 `step=1`, v1 플랫폼 지문, 검증된 칸 1개 이상일 때만 지원 화면이다. 대상은 영문이름·생년월일·성별·비상연락처, 병역 상태와 하위 6칸, 장애 여부와 하위 3칸, 보훈 여부와 하위 2칸, 국적의 19칸이다. v1 로그인·마이페이지·4단계 이후는 미지원 안내를 유지한다. 2단계와 3단계는 아래 각 절을 따른다(CF-509, CF-510).
 - **식별:** 빌드 해시 클래스는 쓰지 않는다. 고정 `name`, 행 제목(행의 첫 자식 `span[aria-hidden="true"]`), placeholder, 선택지 글자와 구조로 찾는다. 상태 행 제목은 `병역`, `장애여부`, `보훈여부`다. 칸 단위로 검증해 다르면 그 칸만 제외한다.
 - **위젯:** 성별 라디오는 감싼 `label`을 눌러야 선택된다. 상태 선택은 `li > button` 묶음이고 선택 표시는 클래스 두 개뿐이다. 드롭다운은 버튼과, 열렸을 때만 있는 `#dropdown-body`의 `ul > li > button[value]`이며 Escape로 닫히지 않는다. 입대일은 포커스를 잃으면 월 정밀도로 바뀐다.
 - **전송 계약:** 섹션 `hplace-v1-basic`, 칸 이름 `hplace.v1.<key>`. 버튼형 위젯은 `input`/`radio`와 `select`/`select`로 보내고 실제 조작은 프론트 v1 writer가 한다.
@@ -97,6 +97,18 @@ MRS2 등록의 이름·휴대전화·이메일과 기존 기본정보 계약을 
 - **실측:** v1 테넌트 1곳에서 구조, 기본 선택, 날짜 형식, 추천 목록 모양과 닫기 동작을 측정했다. 빌드 aaa814f의 실행에서 고등학교·대학교(전공 포함)·직장경력의 대상 칸이 모두 채워졌고, 분석 2회, 패널 확인 필요 0건, 사이트로 보낸 GET 외 요청은 검색 POST뿐이었으며 임시저장·다음 단계·제출은 누르지 않았다. 대학원 카드, 종류별 카드 상한, 새 첨부 항목이 파일을 받는지는 실측하지 않았다.
 - 필드별 현황은 [필드 현황](adapter-field-inventory.md), 근거는 [CF-509 v1 지원자 앱 2단계 근거](../../raw/issues/CF-509/documents/hplace-v1-step2.md)를 따른다.
 
+## v1 지원자 앱 3단계 (2026-11-22)
+
+- **범위:** 경로 `/v1/applicant/resume-form/<숫자>`, 쿼리 `step=3`, v1 플랫폼 지문, `어학`·`자격/지식/기술`·`경험` 구역 제목(`h5`)이 하나씩 있고 대상 블록이 하나 이상일 때 지원 화면이다. 대상은 `자격증` 하위 줄 4칸(자격증명, 발급기관, 취득일, 등록번호)과 `외국어활용능력` 하위 줄의 언어 1칸이다.
+- **블록과 하위 줄:** `어학` 아래 `공인외국어시험`·`외국어활용능력`, `자격/지식/기술` 아래 `자격증`·`컴퓨터활용능력` 블록이 있다. 블록마다 자기 `추가하기`가 블록 안에 하위 줄을 붙인다. 블록 모양은 본문 > 감싸개 > [목록, `추가하기`], 하위 줄은 [내용 `div`, 아이콘 버튼]이다. `경험` 구역(수상경력 등 5개)은 구역 이름의 버튼으로 카드를 붙인다. 처음에는 입력 칸이 없다.
+- **공인외국어시험 제외:** 시험을 고르면 새 탭으로 외부 성적 확인 페이지가 열리고 성적 칸은 잠긴 채로 남는다. 어댑터는 이 블록에서 아무것도 찾거나 수집하거나 누르지 않는다.
+- **자격증:** 이름 없는 검색 입력에서 `POST …/search-filter/license`로 검색하고 정확히 일치하는 줄만 고른다. 고르면 창 없이 선택 표시(`span[data-review-key] > div > div > p`), 발급기관, 이름 없는 취득일 칸(`YYYY.MM.DD`, 과거 전체 날짜만), 등록번호 칸이 나타난다. 검색 확정·등록하기·목록 안정 규칙은 2단계와 같고 공용 모듈 `v1-search.ts`를 함께 쓴다.
+- **외국어활용능력:** 언어 드롭다운에서 정확히 같은 선택지만 고른다. 기존 값과 다른 이름의 선택 표시는 덮어쓰지 않는다.
+- **전송 계약:** 섹션 `hplace-v1-extra`, 칸 이름 `hplace.v1.certificate.<i>.{licenseName,organization,acquireDate,registNumber}`와 `hplace.v1.languageSkill.<i>.language`(i=0~9, 정확한 이름 50개)다. 추가 동작 `hplace.v1.certificate.add`, `hplace.v1.languageSkill.add`는 준비 요청의 `ADD_REPEATABLE_GROUP`이고 프론트가 프로필 항목 수에서 이미 있는 하위 줄 수를 뺀 만큼 누른다. 자격증명·발급기관·언어는 CONDITIONAL, 취득일·등록번호는 ALLOWED다.
+- **범위 밖:** `경험` 구역, `컴퓨터활용능력`(프로필 범주 없음), 회화수준, 자격증 등급, 파일 칸. 백엔드는 이 이름을 거절한다.
+- **실측:** 구조와 칸 모양은 v1 테넌트 1곳에서 측정했다. 그 공고가 2026-11-22에 마감돼 구현한 3단계 흐름은 실화면에서 돌리지 않았다. 근거는 측정한 모양으로 만든 합성 fixture와 단위·workflow 테스트(26파일 522개)다. 자격증 검색 시간 흐름, 취득일 유지, 처음 30개 이후의 언어 선택지는 실측하지 않았고 안전 쪽으로 실패한다.
+- 필드별 현황은 [필드 현황](adapter-field-inventory.md), 근거는 [CF-510 v1 지원자 앱 3단계 근거](../../raw/issues/CF-510/documents/hplace-v1-step3.md)를 따른다.
+
 ## 검증과 배포 경계
 
 10월18/19 두 테넌트의 구조 관측과 P4 자동 검증은 로컬 구현의 근거다. 10월12/13 설치 관측은 과거 revision의 제한된 증거이며 소실된 임시 원본을 복구·재검증한 것으로 취급하지 않는다.
@@ -111,6 +123,6 @@ MRS2 등록의 이름·휴대전화·이메일과 기존 기본정보 계약을 
 
 ## 변경 이유
 
-2026-11-21에는 v1 지원자 앱을 범용 경로로 보낸 실험이 2칸 기입에 그쳐, 사용자 결정으로 v1 1단계를 정적 어댑터로 추가했다(CF-505). 같은 날 v1 1단계의 현주소 창 기입과 사진 등록 창 저장을 더했다(CF-507). 2026-11-22에는 사용자 결정(2026-11-21)에 따라 v1 2단계의 학력·경력 카드 추가와 기입을 더했고, 같은 날 사용자 결정으로 검색 등록하기 줄 누르기와 경력기술서·포트폴리오 항목 추가를 더했다(CF-509).
+2026-11-21에는 v1 지원자 앱을 범용 경로로 보낸 실험이 2칸 기입에 그쳐, 사용자 결정으로 v1 1단계를 정적 어댑터로 추가했다(CF-505). 같은 날 v1 1단계의 현주소 창 기입과 사진 등록 창 저장을 더했다(CF-507). 2026-11-22에는 사용자 결정(2026-11-21)에 따라 v1 2단계의 학력·경력 카드 추가와 기입을 더했고, 같은 날 사용자 결정으로 검색 등록하기 줄 누르기와 경력기술서·포트폴리오 항목 추가를 더했다(CF-509). 같은 날 v1 3단계의 자격증·외국어활용능력 하위 줄 추가와 기입을 더하고 외부 성적 확인 탭을 여는 공인외국어시험은 뺐다(CF-510).
 
 2026-10-20 후반에는 실화면 정제 fixture로 합성 builder를 대조하고(C12), 프로젝트154를 활성화했으며(C13), 처음 보는 테넌트 시연에서 드러난 현주소 앵커·병역 날짜 정밀도·영문 이름 순서 문제를 고쳤다. v3의 등록·기본정보 범위에 후속 단계 구조와 정책 계약을 추가했다. 2026-10-20에는 실화면에서 드러난 분석 루프 정체와 학교·전공·자격·시험 검색 미실행의 원인(격리 world의 Enter 속성, 첫 실패 driver 정지와 예산 소진, hidden 검색 의존, 라디오 코드/라벨 비교 등)을 수정하고 3사 실화면으로 확인했다. 과거 주소 모달 저장 제외 판단은 원래 주소로 복사하는 로컬 확정 근거로 정정했다. 상세한 현재 계약·역사·검증 제한은 연결된 raw를 따른다.

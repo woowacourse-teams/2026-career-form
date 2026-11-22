@@ -2,8 +2,8 @@
 
 > Topic: adapter-field-inventory
 > Status: Current
-> Current: [CF-509 Hplace v1 2단계 필드 현황](../../raw/issues/CF-509/documents/hplace-v1-step2-field-inventory.md)
-> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-field-inventory.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-field-inventory.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-field-inventory.md); [CF-94 근거](../../raw/issues/CF-94/documents/adapter-field-inventory.md); [CF-160 근거](../../raw/issues/CF-160/documents/adapter-field-inventory.md); [CF-168 근거](../../raw/issues/CF-168/documents/adapter-field-inventory.md); [CF-169 근거](../../raw/issues/CF-169/documents/adapter-field-inventory.md); [CF-177 근거](../../raw/issues/CF-177/documents/adapter-field-inventory.md); [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md); [CF-177 C12·C13·시연 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md); [CF-177 KDI·구조 미확인 근거](../../raw/issues/CF-177/documents/live-kdi-unverified.md); [CF-177 후속 보완 묶음 근거](../../raw/issues/CF-177/documents/live-followup-bundle.md); [CF-335 현대 v25 경력 날짜·종료사유·자격 등급 지원 현황](../../raw/issues/CF-335/documents/hyundai-v25-field-inventory.md); [CF-346 Greeting v19 직접 입력 지원 범위](../../raw/issues/CF-346/documents/greeting-v19-field-inventory.md); [CF-368 Greeting 고교·대학 학교명 확정 범위](../../raw/issues/CF-368/documents/greeting-school-name-field-inventory.md); [CF-505 Hplace v1 1단계 필드 현황](../../raw/issues/CF-505/documents/hplace-v1-field-inventory.md); [CF-507 Hplace v1 1단계 현주소·사진 필드 현황](../../raw/issues/CF-507/documents/hplace-v1-address-photo-field-inventory.md); [CF-509 Hplace v1 2단계 필드 현황](../../raw/issues/CF-509/documents/hplace-v1-step2-field-inventory.md)
+> Current: [CF-510 Hplace v1 3단계 필드 현황](../../raw/issues/CF-510/documents/hplace-v1-step3-field-inventory.md)
+> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-field-inventory.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-field-inventory.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-field-inventory.md); [CF-94 근거](../../raw/issues/CF-94/documents/adapter-field-inventory.md); [CF-160 근거](../../raw/issues/CF-160/documents/adapter-field-inventory.md); [CF-168 근거](../../raw/issues/CF-168/documents/adapter-field-inventory.md); [CF-169 근거](../../raw/issues/CF-169/documents/adapter-field-inventory.md); [CF-177 근거](../../raw/issues/CF-177/documents/adapter-field-inventory.md); [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md); [CF-177 C12·C13·시연 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md); [CF-177 KDI·구조 미확인 근거](../../raw/issues/CF-177/documents/live-kdi-unverified.md); [CF-177 후속 보완 묶음 근거](../../raw/issues/CF-177/documents/live-followup-bundle.md); [CF-335 현대 v25 경력 날짜·종료사유·자격 등급 지원 현황](../../raw/issues/CF-335/documents/hyundai-v25-field-inventory.md); [CF-346 Greeting v19 직접 입력 지원 범위](../../raw/issues/CF-346/documents/greeting-v19-field-inventory.md); [CF-368 Greeting 고교·대학 학교명 확정 범위](../../raw/issues/CF-368/documents/greeting-school-name-field-inventory.md); [CF-505 Hplace v1 1단계 필드 현황](../../raw/issues/CF-505/documents/hplace-v1-field-inventory.md); [CF-507 Hplace v1 1단계 현주소·사진 필드 현황](../../raw/issues/CF-507/documents/hplace-v1-address-photo-field-inventory.md); [CF-509 Hplace v1 2단계 필드 현황](../../raw/issues/CF-509/documents/hplace-v1-step2-field-inventory.md); [CF-510 Hplace v1 3단계 필드 현황](../../raw/issues/CF-510/documents/hplace-v1-step3-field-inventory.md)
 > Updated: 2026-11-22
 
 ## 현재 상태
@@ -467,7 +467,7 @@ BE 정적 규칙과 FE 수집·반복행 준비·검색·날짜·선택 실행�
 
 ## Hplace v1 지원자 앱 1단계 현황 (CF-505, 2026-11-21)
 
-위의 Hplace 공통 정책 현황은 MRS2 화면의 것이며 그대로 유지한다. 그 표의 "v1/JOBDA 입력은 구조 미확인"은 v1 1단계의 아래 19칸에 한해 이 절로 바뀐다. v1 2단계는 아래 2단계 절을 따르고, v1 3단계 이후와 JOBDA는 계속 구조 미확인이다. 전체 표와 다루지 않는 칸의 분류는 [CF-505 근거](../../raw/issues/CF-505/documents/hplace-v1-field-inventory.md)를 따른다.
+위의 Hplace 공통 정책 현황은 MRS2 화면의 것이며 그대로 유지한다. 그 표의 "v1/JOBDA 입력은 구조 미확인"은 v1 1단계의 아래 19칸에 한해 이 절로 바뀐다. v1 2단계와 3단계는 아래 각 절을 따르고, v1 4단계 이후와 JOBDA는 계속 구조 미확인이다. 전체 표와 다루지 않는 칸의 분류는 [CF-505 근거](../../raw/issues/CF-505/documents/hplace-v1-field-inventory.md)를 따른다.
 
 | 범주 | 구현 키 (`hplace.v1.<key>`) | 조건 |
 | --- | --- | --- |
@@ -506,3 +506,16 @@ v1 2단계(`step=2`, 학력 및 연구/경력)는 카드가 0장이어도 지원
 | 포트폴리오 | `hplace.v1.portfolio.add` | 프로필에 `portfolio` 종류 파일이나 링크가 있고 행에 항목이 없을 때 `추가하기` 1번. 파일과 URL은 공용 첨부 구역이 처리 |
 
 졸업증명서 첨부, 계열·학과계열, 본교/분교, 기간 버튼, 이수학점, 전공 평점·석차·전체인원, 두 번째 이후 전공, 대학교·대학원 소재지 쓰기, 카드 이동·삭제는 다루지 않는다.
+
+## Hplace v1 지원자 앱 3단계 현황 (CF-510, 2026-11-22)
+
+v1 3단계(`step=3`, 어학/자격/기타)는 처음에 입력 칸이 없고 블록마다 `추가하기`로 하위 줄을 붙인다. 섹션은 `hplace-v1-extra`, i는 블록 안의 하위 줄 순서(0~9)다. 전체 표와 다루지 않는 칸의 분류는 [CF-510 근거](../../raw/issues/CF-510/documents/hplace-v1-step3-field-inventory.md)를 따른다.
+
+| 블록 (`<group>`) | 구현 키 (`<field>`) | 조건 |
+| --- | --- | --- |
+| 자격증 (`certificate`) | `licenseName`, `organization`, `acquireDate`, `registNumber` | 자격증명은 검색 드라이버, 정확히 일치하는 줄만 선택. 취득일은 `YYYY.MM.DD` 과거 전체 날짜만. 자격증명·발급기관 CONDITIONAL, 취득일·등록번호 ALLOWED |
+| 외국어활용능력 (`languageSkill`) | `language` | 드롭다운에서 정확히 같은 선택지만. CONDITIONAL |
+
+- 추가 동작 `hplace.v1.certificate.add`, `hplace.v1.languageSkill.add`는 프로필 항목 수에서 이미 있는 하위 줄 수를 뺀 만큼 누른다.
+- 공인외국어시험 블록 전체(외부 성적 확인 탭), 컴퓨터활용능력, 경험 구역 5개, 회화수준, 자격증 등급, 파일 칸은 다루지 않는다.
+- 측정한 테넌트의 공고가 마감돼 실화면 기입은 확인하지 않았다. 합성 fixture와 단위·workflow 테스트로만 확인했다.
