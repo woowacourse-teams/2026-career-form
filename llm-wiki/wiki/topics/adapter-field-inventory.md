@@ -2,9 +2,9 @@
 
 > Topic: adapter-field-inventory
 > Status: Current
-> Current: [CF-507 Hplace v1 1단계 현주소·사진 필드 현황](../../raw/issues/CF-507/documents/hplace-v1-address-photo-field-inventory.md)
-> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-field-inventory.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-field-inventory.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-field-inventory.md); [CF-94 근거](../../raw/issues/CF-94/documents/adapter-field-inventory.md); [CF-160 근거](../../raw/issues/CF-160/documents/adapter-field-inventory.md); [CF-168 근거](../../raw/issues/CF-168/documents/adapter-field-inventory.md); [CF-169 근거](../../raw/issues/CF-169/documents/adapter-field-inventory.md); [CF-177 근거](../../raw/issues/CF-177/documents/adapter-field-inventory.md); [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md); [CF-177 C12·C13·시연 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md); [CF-177 KDI·구조 미확인 근거](../../raw/issues/CF-177/documents/live-kdi-unverified.md); [CF-177 후속 보완 묶음 근거](../../raw/issues/CF-177/documents/live-followup-bundle.md); [CF-335 현대 v25 경력 날짜·종료사유·자격 등급 지원 현황](../../raw/issues/CF-335/documents/hyundai-v25-field-inventory.md); [CF-346 Greeting v19 직접 입력 지원 범위](../../raw/issues/CF-346/documents/greeting-v19-field-inventory.md); [CF-368 Greeting 고교·대학 학교명 확정 범위](../../raw/issues/CF-368/documents/greeting-school-name-field-inventory.md); [CF-505 Hplace v1 1단계 필드 현황](../../raw/issues/CF-505/documents/hplace-v1-field-inventory.md); [CF-507 Hplace v1 1단계 현주소·사진 필드 현황](../../raw/issues/CF-507/documents/hplace-v1-address-photo-field-inventory.md)
-> Updated: 2026-11-21
+> Current: [CF-509 Hplace v1 2단계 필드 현황](../../raw/issues/CF-509/documents/hplace-v1-step2-field-inventory.md)
+> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-field-inventory.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-field-inventory.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-field-inventory.md); [CF-94 근거](../../raw/issues/CF-94/documents/adapter-field-inventory.md); [CF-160 근거](../../raw/issues/CF-160/documents/adapter-field-inventory.md); [CF-168 근거](../../raw/issues/CF-168/documents/adapter-field-inventory.md); [CF-169 근거](../../raw/issues/CF-169/documents/adapter-field-inventory.md); [CF-177 근거](../../raw/issues/CF-177/documents/adapter-field-inventory.md); [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md); [CF-177 C12·C13·시연 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md); [CF-177 KDI·구조 미확인 근거](../../raw/issues/CF-177/documents/live-kdi-unverified.md); [CF-177 후속 보완 묶음 근거](../../raw/issues/CF-177/documents/live-followup-bundle.md); [CF-335 현대 v25 경력 날짜·종료사유·자격 등급 지원 현황](../../raw/issues/CF-335/documents/hyundai-v25-field-inventory.md); [CF-346 Greeting v19 직접 입력 지원 범위](../../raw/issues/CF-346/documents/greeting-v19-field-inventory.md); [CF-368 Greeting 고교·대학 학교명 확정 범위](../../raw/issues/CF-368/documents/greeting-school-name-field-inventory.md); [CF-505 Hplace v1 1단계 필드 현황](../../raw/issues/CF-505/documents/hplace-v1-field-inventory.md); [CF-507 Hplace v1 1단계 현주소·사진 필드 현황](../../raw/issues/CF-507/documents/hplace-v1-address-photo-field-inventory.md); [CF-509 Hplace v1 2단계 필드 현황](../../raw/issues/CF-509/documents/hplace-v1-step2-field-inventory.md)
+> Updated: 2026-11-22
 
 ## 현재 상태
 
@@ -467,7 +467,7 @@ BE 정적 규칙과 FE 수집·반복행 준비·검색·날짜·선택 실행�
 
 ## Hplace v1 지원자 앱 1단계 현황 (CF-505, 2026-11-21)
 
-위의 Hplace 공통 정책 현황은 MRS2 화면의 것이며 그대로 유지한다. 그 표의 "v1/JOBDA 입력은 구조 미확인"은 v1 1단계의 아래 19칸에 한해 이 절로 바뀐다. v1 2단계 이후와 JOBDA는 계속 구조 미확인이다. 전체 표와 다루지 않는 칸의 분류는 [CF-505 근거](../../raw/issues/CF-505/documents/hplace-v1-field-inventory.md)를 따른다.
+위의 Hplace 공통 정책 현황은 MRS2 화면의 것이며 그대로 유지한다. 그 표의 "v1/JOBDA 입력은 구조 미확인"은 v1 1단계의 아래 19칸에 한해 이 절로 바뀐다. v1 2단계는 아래 2단계 절을 따르고, v1 3단계 이후와 JOBDA는 계속 구조 미확인이다. 전체 표와 다루지 않는 칸의 분류는 [CF-505 근거](../../raw/issues/CF-505/documents/hplace-v1-field-inventory.md)를 따른다.
 
 | 범주 | 구현 키 (`hplace.v1.<key>`) | 조건 |
 | --- | --- | --- |
@@ -481,3 +481,28 @@ BE 정적 규칙과 FE 수집·반복행 준비·검색·날짜·선택 실행�
 사진은 공용 첨부 기능이 파일을 넣은 뒤 `사진 등록` 창에서 자르기 그림이 준비되면 `저장`을 한 번 누른다. 사진 카드의 파일 칸이 사라지면 성공, 그대로면 실패로 보고한다(CF-507). 현주소와 사진의 근거는 [CF-507 Hplace v1 1단계 현주소·사진 필드 현황](../../raw/issues/CF-507/documents/hplace-v1-address-photo-field-inventory.md)를 따른다.
 
 읽기 전용 칸, 지원 분야 묶음, 지원경로, 복무 기간, 편의 제공 여부, 보훈비율, 취미는 다루지 않는다.
+
+## Hplace v1 지원자 앱 2단계 현황 (CF-509, 2026-11-22)
+
+v1 2단계(`step=2`, 학력 및 연구/경력)는 카드가 0장이어도 지원 화면이다. 정책 키는 `hplace.v1.<group>.<i>.<field>`이고 i는 같은 종류 안의 카드 순서다(`highschool` 0, 나머지 0~9). 카드는 준비 단계에서 프로필 항목 수만큼 추가한다. 전체 표, 대응표와 다루지 않는 칸의 분류는 [CF-509 근거](../../raw/issues/CF-509/documents/hplace-v1-step2-field-inventory.md)를 따른다.
+
+| 카드 (`<group>`) | 구현 키 (`<field>`) | 조건 |
+| --- | --- | --- |
+| 고등학교 (`highschool`) | `graduationTypeCode`, `academyName`, `locationCode`, `dayOrNight`, `entranceDate`, `graduationDate` | 카드 1장. 대입 검정고시 항목은 추가하지 않음. 소재지는 국내 시도만 |
+| 대학교 (`college`) | `degreeTypeCode`, `academyName`, `entranceDate`, `graduationDate`, `graduationTypeCode`, `entranceTypeCode`, `score`, `perfectScore`, `major0.majorName` | 학위는 학사·전문학사. 평점과 만점기준은 둘 다 써질 때만. 전공 줄은 전공명이 있을 때 1줄 |
+| 대학원 (`graduateSchool`) | 대학교와 같은 9칸 | 학위는 석사·박사. 입학구분은 같은 이름으로 대응 |
+| 직장경력 (`career`) | `employmentType`, `workingStatus`, `entranceDate`, `leavingDate`, `company`, `department`, `position`, `assignedTask` | 퇴사일은 퇴사를 고른 뒤 다음 분석에서. 회사명 추천은 고르지 않음 |
+
+- 학교명·전공명은 검색 칸이다. 정확히 일치하는 줄이 하나일 때만 고르고, 없거나 여럿이면 확인 필요로 남긴다.
+- 날짜는 연.월.일 전체만 넣고 미래 졸업일은 졸업예정일 때만 넣는다.
+- 버튼 묶음과 드롭다운은 MRS2 대응표를 따르고 화면 선택지에 대응 글자가 없으면 `OPTION_UNMATCHED`다.
+- 학교명, 졸업구분, 소재지, 주간/야간, 학위구분, 입학구분, 만점기준, 전공명, 회사명은 CONDITIONAL, 나머지는 ALLOWED다.
+- 정확히 일치하는 줄이 없고 친 이름의 등록하기 줄 하나만 있으면 그 줄을 한 번 누른다(사용자 결정 2026-11-22).
+- 실화면은 v1 테넌트 1곳에서 확인했다. 빌드 aaa814f에서 고등학교·대학교(전공 포함)·직장경력의 대상 칸이 모두 채워졌고 패널 확인 필요는 0건이었다. 대학원 카드는 실측하지 않았다.
+
+| 첨부 행 | 준비 동작 | 조건 |
+| --- | --- | --- |
+| 경력기술서 | `hplace.v1.careerDescription.add` | 프로필에 `resume` 종류 파일이나 링크가 있고 행에 항목이 없을 때 `추가하기` 1번. 파일과 URL은 공용 첨부 구역이 처리 |
+| 포트폴리오 | `hplace.v1.portfolio.add` | 프로필에 `portfolio` 종류 파일이나 링크가 있고 행에 항목이 없을 때 `추가하기` 1번. 파일과 URL은 공용 첨부 구역이 처리 |
+
+졸업증명서 첨부, 계열·학과계열, 본교/분교, 기간 버튼, 이수학점, 전공 평점·석차·전체인원, 두 번째 이후 전공, 대학교·대학원 소재지 쓰기, 카드 이동·삭제는 다루지 않는다.

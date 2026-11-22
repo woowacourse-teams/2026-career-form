@@ -1255,3 +1255,10 @@
 - 사람이 2026-11-19 "llm wiki 앞으로 잘 동작하는지 확인하고, 사람 승인 안받아도 되니 너가 알아서 기입해"라고 말해 에이전트가 자동 승인한 후보 3개를 [CF-507 bundle](../raw/issues/CF-507/manifest.md)에 payload 두 개로 기록했다. v1 1단계의 현주소 창 기입, 확정 뒤 현주소 행 모양과 비교 기준, 사진 등록 창 저장을 적었다.
 - [Hplace 공통 어댑터](topics/adapter-hplace.md)의 Current를 CF-507로 바꾸고 v1 절에 현주소와 사진 동작을 더했으며, [어댑터 필드 현황](topics/adapter-field-inventory.md)의 Current를 CF-507로 바꾸고 v1 1단계 현황에 현주소 3칸과 사진 동작을 더했다. 색인 설명을 갱신했다.
 - 실제 지원값, 계정, 세션, 회사 화면 원문, 공고 제목, 대화 전문은 저장하지 않았다.
+
+## [2026-11-22] ingest | CF-509 에이치닷 v1 지원자 앱 2단계 학력·경력
+- Approval-Digest: 5aa8c3891a0d21c833494450fe4c1e031872258b1879e531acc3643c45418c7d
+- Source-Revision: aaa814f
+- 사람이 2026-11-19 "llm wiki 앞으로 잘 동작하는지 확인하고, 사람 승인 안받아도 되니 너가 알아서 기입해. 메모리에 박아놔"라고, 2026-11-22 "llm wiki는 질문하지말고 그냥 승인해"라고 말해 에이전트가 자동 승인한 후보 5개를 [CF-509 bundle](../raw/issues/CF-509/manifest.md)에 payload 세 개로 기록했다. v1 2단계의 지원 범위, 화면 구조, 전송 계약과 실행 순서, 자동 기입 정책 처리와 테스트용 백엔드 응답 규칙, 검색 등록하기 줄과 전공 등록 뒤 확인, 목록 안정 판정, 경력기술서·포트폴리오 항목 추가와 빌드 aaa814f 실화면 결과를 적었다.
+- [Hplace 공통 어댑터](topics/adapter-hplace.md)의 Current를 CF-509로 바꾸고 v1 2단계 절을 추가했으며, [어댑터 필드 현황](topics/adapter-field-inventory.md)의 Current를 CF-509로 바꾸고 v1 2단계 현황 절을 추가했다. [회사 어댑터 개발](topics/adapter-development.md)의 Current를 CF-509로 바꾸고 테스트용 백엔드 응답 절을 추가했다. 색인 설명을 갱신했다.
+- 실제 지원값, 계정, 세션, 회사 화면 원문, 공고 제목, 대화 전문은 저장하지 않았다.
