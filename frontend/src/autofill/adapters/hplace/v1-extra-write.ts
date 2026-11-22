@@ -24,8 +24,12 @@ import {
 import {
   V1_HISTORY_DATE_REASON,
   approvalIssue,
+  MONTH_SETTLE_MS,
   fullDay,
+  fullMonth,
+  isMonthValue,
   notApproved,
+  showsDate,
   today,
   writableStatus,
 } from "./v1-history-write";
@@ -36,46 +40,6 @@ const approved = (
   spec: Parameters<typeof approvalIssue>[0],
   item: Pick<ReviewPlanItem, "analysis">,
 ) => approvalIssue(spec, item) === undefined;
-
-/** The digit groups of a date value, in any separator style. */
-const dateParts = (value: string) => {
-  const parts = value.trim().split(/\D+/).filter(Boolean);
-  const [only] = parts;
-  if (parts.length === 1 && /^\d{8}$/.test(only))
-    return [only.slice(0, 4), only.slice(4, 6), only.slice(6)];
-  if (parts.length === 1 && /^\d{6}$/.test(only))
-    return [only.slice(0, 4), only.slice(4)];
-  return parts;
-};
-/** YYYYMMDD of a full-day value, or undefined. */
-const dayKey = (value: string) => {
-  const p = dateParts(value);
-  return p.length === 3 &&
-    p[0].length === 4 &&
-    p[1].length <= 2 &&
-    p[2].length <= 2
-    ? `${p[0]}${p[1].padStart(2, "0")}${p[2].padStart(2, "0")}`
-    : undefined;
-};
-/** YYYYMM of a year-and-month value, or undefined. */
-const monthKey = (value: string) => {
-  const p = dateParts(value);
-  return p.length === 2 && p[0].length === 4 && p[1].length <= 2
-    ? `${p[0]}${p[1].padStart(2, "0")}`
-    : undefined;
-};
-
-/** How long a written YYYY.MM must stay before it counts as kept. */
-const MONTH_SETTLE_MS = 300;
-
-/** A month-only profile date as YYYY.MM. */
-function fullMonth(value: string): string | undefined {
-  const m = /^(\d{4})[-.](\d{2})$/.exec(value.trim());
-  const month = m ? Number(m[2]) : 0;
-  return m && Number(m[1]) >= 1900 && month >= 1 && month <= 12
-    ? `${m[1]}.${m[2]}`
-    : undefined;
-}
 
 /**
  * The page shows `target`: exactly, or for 취득일 the same date in the page's
@@ -89,15 +53,7 @@ function showsTarget(
   target: string,
 ): boolean {
   if (shown === target) return true;
-  if (control.spec.kind !== "date") return false;
-  const shownDay = dayKey(shown);
-  const targetDay = dayKey(target);
-  if (shownDay !== undefined) return shownDay === targetDay;
-  const shownMonth = monthKey(shown);
-  return (
-    shownMonth !== undefined &&
-    shownMonth === (targetDay?.slice(0, 6) ?? monthKey(target))
-  );
+  return control.spec.kind === "date" && showsDate(shown, target);
 }
 
 /** Value-free form of a page value: digits as 9, letters as x. */
@@ -257,8 +213,13 @@ export function v1ExtraFailureReason(
   fallback: string,
 ): string {
   const control = ownedV1ExtraControl(handle);
+  const target =
+    control?.spec.kind === "date"
+      ? v1ExtraTarget(control, item.profileValue ?? "")
+      : "";
+  // No date target, or a month-only one a full-day page did not keep.
   return control?.spec.kind === "date" &&
-    v1ExtraTarget(control, item.profileValue ?? "") === undefined
+    (target === undefined || isMonthValue(target))
     ? V1_HISTORY_DATE_REASON
     : fallback;
 }
@@ -350,7 +311,7 @@ export async function writeV1Extra(
     // that reaction before confirming; a page keeping months holds it.
     if (
       spec.kind === "date" &&
-      monthKey(target) !== undefined &&
+      isMonthValue(target) &&
       (await waitFor(() => !shows(), owned, MONTH_SETTLE_MS))
     )
       return fail("control-shape", "value-not-kept");

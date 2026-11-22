@@ -132,6 +132,72 @@ export function fullDay(value: string): string | undefined {
     : undefined;
 }
 
+/** The digit groups of a date value, in any separator style. */
+const dateParts = (value: string) => {
+  const parts = value.trim().split(/\D+/).filter(Boolean);
+  const [only] = parts;
+  if (parts.length === 1 && /^\d{8}$/.test(only))
+    return [only.slice(0, 4), only.slice(4, 6), only.slice(6)];
+  if (parts.length === 1 && /^\d{6}$/.test(only))
+    return [only.slice(0, 4), only.slice(4)];
+  return parts;
+};
+/** YYYYMMDD of a full-day value, or undefined. */
+const dayKey = (value: string) => {
+  const p = dateParts(value);
+  return p.length === 3 &&
+    p[0].length === 4 &&
+    p[1].length <= 2 &&
+    p[2].length <= 2
+    ? `${p[0]}${p[1].padStart(2, "0")}${p[2].padStart(2, "0")}`
+    : undefined;
+};
+/** YYYYMM of a year-and-month value, or undefined. */
+const monthKey = (value: string) => {
+  const p = dateParts(value);
+  return p.length === 2 && p[0].length === 4 && p[1].length <= 2
+    ? `${p[0]}${p[1].padStart(2, "0")}`
+    : undefined;
+};
+
+/** How long a written YYYY.MM must stay before it counts as kept: a page
+ * keeping full days drops it after blur, asynchronously (measured, step 2). */
+export const MONTH_SETTLE_MS = 300;
+
+/** A month-only profile date as YYYY.MM (a page keeping months holds it). */
+export function fullMonth(value: string): string | undefined {
+  const m = /^(\d{4})[-.](\d{2})$/.exec(value.trim());
+  const month = m ? Number(m[2]) : 0;
+  return m && Number(m[1]) >= 1900 && month >= 1 && month <= 12
+    ? `${m[1]}.${m[2]}`
+    : undefined;
+}
+
+/** A year-and-month value (YYYY.MM). */
+export const isMonthValue = (value: string) => monthKey(value) !== undefined;
+
+/**
+ * The page shows the date `target`: the same full day in any separator
+ * style, or, on a page that keeps only the year and month (the second
+ * tenant's 재학기간 and 취득일), the same year and month. Another year or
+ * month never counts.
+ */
+export function showsDate(shown: string, target: string): boolean {
+  if (shown === target) return true;
+  const shownDay = dayKey(shown);
+  const targetDay = dayKey(target);
+  if (shownDay !== undefined) return shownDay === targetDay;
+  const shownMonth = monthKey(shown);
+  return (
+    shownMonth !== undefined &&
+    shownMonth === (targetDay?.slice(0, 6) ?? monthKey(target))
+  );
+}
+
+/** A control shows `target`: exactly, or for a date by `showsDate`. */
+const shownAs = (spec: HistorySpec, shown: string, target: string) =>
+  shown === target || (spec.kind === "date" && showsDate(shown, target));
+
 /** The card's own 졸업구분 label as the page shows it now. */
 const cardStatus = (control: HistoryControl) => {
   const status = v1HistoryControl(
@@ -178,7 +244,9 @@ function targetIssue(control: HistoryControl, value: string): string {
   const { spec } = control;
   if (!value.trim()) return "value-missing";
   if (spec.kind === "date")
-    return fullDay(value) ? "date-future" : "date-not-full-day";
+    return fullDay(value) || fullMonth(value)
+      ? "date-future"
+      : "date-unreadable";
   if (spec.kind === "text" && spec.numeric) return "score-not-number";
   return "option-unmatched";
 }
@@ -191,9 +259,12 @@ export function v1HistoryTarget(
   if (!value.trim()) return undefined;
   const { spec } = control;
   if (spec.kind === "date") {
-    const day = fullDay(value);
+    // A full day, or a month-only profile date as YYYY.MM: the second
+    // tenant's 재학기간 keeps months; a full-day page drops it, which the
+    // writer reports.
+    const day = fullDay(value) ?? fullMonth(value);
     if (!day) return undefined;
-    if (day <= today()) return day;
+    if (day <= today().slice(0, day.length)) return day;
     // A future 졸업일 only for 졸업예정, at most six years ahead.
     return spec.future &&
       cardStatus(control) === "졸업예정" &&
@@ -296,7 +367,12 @@ export function v1HistoryRetained(
   const control = ownedV1HistoryControl(handle);
   if (!control || !approved(control.spec, item)) return false;
   const target = v1HistoryTarget(control, item.profileValue ?? "");
-  return target !== undefined && v1HistoryControlValue(control) === target;
+  const shown = v1HistoryControlValue(control);
+  return (
+    target !== undefined &&
+    shown !== undefined &&
+    shownAs(control.spec, shown, target)
+  );
 }
 
 /** Result comparison for a step-2 date against the profile's stored form. */
@@ -315,7 +391,7 @@ export function v1HistoryResultMatches(
   )
     return undefined;
   const target = v1HistoryTarget(control, expected);
-  return target !== undefined && current === target;
+  return target !== undefined && shownAs(control.spec, current, target);
 }
 
 /** Why a step-2 write was refused, for the result screen. */
@@ -330,8 +406,13 @@ export function v1HistoryFailureReason(
     appliedStatus.get(control.row) !== "퇴사"
   )
     return V1_HISTORY_LEAVING_REASON;
+  const target =
+    control?.spec.kind === "date"
+      ? v1HistoryTarget(control, item.profileValue ?? "")
+      : "";
+  // No date target, or a month-only one a full-day page did not keep.
   return control?.spec.kind === "date" &&
-    v1HistoryTarget(control, item.profileValue ?? "") === undefined
+    (target === undefined || isMonthValue(target))
     ? V1_HISTORY_DATE_REASON
     : fallback;
 }
@@ -428,11 +509,11 @@ export async function writeV1History(
       item.analysis?.candidateId === handle.candidateId &&
       approved(spec, item) &&
       shown !== undefined &&
-      allowed.includes(shown)
+      allowed.some((value) => shownAs(spec, shown, value))
     );
   };
   if (!owned()) return fail("blocked", "not-current");
-  if (original === target) return "written";
+  if (shownAs(spec, original, target)) return "written";
   // A control that already holds a value is never overwritten.
   if (original !== "" && !replacesDefault)
     return fail("existing-value", "existing-value");
@@ -459,7 +540,8 @@ export async function writeV1History(
   if (!owned()) return fail("blocked", "not-current");
   const shows = () => {
     const now = ownedV1HistoryControl(handle);
-    return !!now && v1HistoryControlValue(now) === target;
+    const shown = now && v1HistoryControlValue(now);
+    return shown !== undefined && shownAs(spec, shown, target);
   };
   if (spec.kind === "text" || spec.kind === "date") {
     input.focus();
@@ -472,6 +554,13 @@ export async function writeV1History(
     }
     input.blur();
     if (!(await waitFor(shows, owned)))
+      return fail("control-shape", "value-not-kept");
+    // A month-only date (YYYY.MM): wait (bounded) for a full-day page to drop it.
+    if (
+      spec.kind === "date" &&
+      isMonthValue(target) &&
+      (await waitFor(() => !shows(), owned, MONTH_SETTLE_MS))
+    )
       return fail("control-shape", "value-not-kept");
     if (!(input.checkValidity() || numericStepOnly(spec, input.validity)))
       return fail("control-shape", "value-invalid");

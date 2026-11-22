@@ -1204,6 +1204,24 @@ export function v1HistoryChip(
   if (!row || !spec || spec.kind !== "search") return undefined;
   if (row.querySelector(`input[placeholder="${spec.placeholder}"]`))
     return undefined;
+  if (!row.querySelector("span[data-review-key]")) {
+    // No review-key spans (second tenant, k2-rows.txt): the picked name is
+    // the row content's one text leaf; dropdown triggers and toggles are
+    // buttons and list items. None or several: unknown.
+    const [titleSpan, titleBox] = Array.from(row.children);
+    const texts = Array.from(row.querySelectorAll("*"))
+      .filter(
+        (e) =>
+          e.children.length === 0 &&
+          !(e instanceof HTMLInputElement) &&
+          e !== titleSpan &&
+          !titleBox?.contains(e) &&
+          !e.closest("button, li, #dropdown-body, svg"),
+      )
+      .map(text)
+      .filter(Boolean);
+    return texts.length === 1 ? texts[0] : undefined;
+  }
   // A picked major re-renders its sub-row into toggle and score widgets that
   // hold `p`s too: one sub-row = one chip widget (sub-row inputs not counted).
   const chips = spec.major ? chipWidgets(row) : chipTexts(row);

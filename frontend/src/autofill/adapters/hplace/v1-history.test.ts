@@ -988,7 +988,8 @@ describe("v1 step 2 page defaults and diagnostics", () => {
       const lines = log.mock.calls.map(([line]) => String(line));
       expect(lines).toEqual(
         expect.arrayContaining([
-          "[CareerForm] skip stage=write key=hplace.v1.college.0.entranceDate reason=unit-mismatch detail=v1-history-date-not-full-day",
+          // A month-only date is typed as YYYY.MM; this full-day page drops it.
+          "[CareerForm] skip stage=write key=hplace.v1.college.0.entranceDate reason=control-shape detail=v1-history-value-not-kept",
           "[CareerForm] skip stage=write key=hplace.v1.highschool.0.graduationTypeCode reason=option-mismatch detail=v1-history-option-unmatched",
           expect.stringMatching(
             /^\[CareerForm\] skip stage=write key=hplace\.v1\.highschool\.0\.academyName reason=result-not-unique detail=v1-history-search-ms\d+-li\d+-regno-textno-branch-no-exact-match failureCode=SEARCH_NO_EXACT_MATCH$/,
@@ -1866,5 +1867,112 @@ describe("v1 step 2 second tenant, run 4 (live-step2-k-run4.out)", () => {
       setAutofillDebugEnabled(false);
       log.mockRestore();
     }
+  });
+});
+
+describe("v1 step 2 second tenant, run 6 (k2-rows.txt)", () => {
+  it("reads a picked school without review-key spans and reports no structure row", () => {
+    mountV1Step2("2", "k");
+    const hs = appendCard("고등학교");
+    const u0 = appendCard("대학교");
+    pickChip(hs, "학교정보", "합성고등학교");
+    pickChip(u0, "학교정보", "합성대학교");
+    expect(
+      cardRow(u0, "학교정보").querySelector("span[data-review-key]"),
+    ).toBeNull();
+    expect(v1HistoryChip(document, "highschool", 0, "academyName")).toBe(
+      "합성고등학교",
+    );
+    expect(v1HistoryChip(document, "college", 0, "academyName")).toBe(
+      "합성대학교",
+    );
+    const rows = hplaceUnverifiedRows(
+      document,
+      collectFieldsSnapshot(document).request,
+      v1HistoryProfile(),
+    );
+    expect(rows.filter((r) => r.fieldLabel === "학교명")).toEqual([]);
+  });
+
+  it("reads a picked major the same way", () => {
+    mountV1Step2("2", "k");
+    const u0 = appendCard("대학교");
+    appendMajor(u0);
+    pickChip(u0, "전공", "합성공학");
+    expect(v1HistoryChip(document, "college", 0, "major0.majorName")).toBe(
+      "합성공학",
+    );
+  });
+
+  it("reads no chip while two texts remain in the row", () => {
+    mountV1Step2("2", "k");
+    const u0 = appendCard("대학교");
+    pickChip(u0, "학교정보", "합성대학교");
+    cardRow(u0, "학교정보").children[2].insertAdjacentHTML(
+      "beforeend",
+      "<p>합성다른값</p>",
+    );
+    expect(
+      v1HistoryChip(document, "college", 0, "academyName"),
+    ).toBeUndefined();
+  });
+
+  const writeBatch = (entries: [string, string][]) => {
+    const { registry, items } = itemsFor(entries);
+    return executeApprovedWritesAfterPageSettles({
+      items,
+      approvedCandidateIds: new Set(items.map((i) => i.candidateId)),
+      registry,
+      document,
+    });
+  };
+
+  it("keeps an 입학일 the page cuts to its year and month as one written outcome", async () => {
+    mountV1Step2("2", "k");
+    const u0 = appendCard("대학교");
+    const results = await writeBatch([
+      ["hplace.v1.college.0.entranceDate", "2009-03-02"],
+      ["hplace.v1.college.0.graduationDate", "2013-02-20"],
+    ]);
+    expect(results.map((r) => r.status)).toEqual(["written", "written"]);
+    expect(cardInput(u0, "입학일").value).toBe("2009.03");
+    expect(cardInput(u0, "졸업일").value).toBe("2013.02");
+  });
+
+  it("writes a month-only profile date as YYYY.MM where the page keeps months", async () => {
+    mountV1Step2("2", "k");
+    const u0 = appendCard("대학교");
+    const results = await writeBatch([
+      ["hplace.v1.college.0.entranceDate", "2009-03"],
+    ]);
+    expect(results.map((r) => r.status)).toEqual(["written"]);
+    expect(cardInput(u0, "입학일").value).toBe("2009.03");
+  });
+
+  it("never accepts a different year or month", async () => {
+    mountV1Step2("2", "k");
+    const u0 = appendCard("대학교");
+    const date = cardInput(u0, "입학일");
+    date.addEventListener("blur", () =>
+      queueMicrotask(() =>
+        queueMicrotask(() => {
+          date.value = "2009.04";
+        }),
+      ),
+    );
+    const results = await writeBatch([
+      ["hplace.v1.college.0.entranceDate", "2009-03-02"],
+    ]);
+    expect(results.map((r) => r.status)).toEqual(["skipped"]);
+  });
+
+  it("reports a month-only date a full-day page drops", async () => {
+    mountV1Step2();
+    const u0 = appendCard("대학교");
+    const results = await writeBatch([
+      ["hplace.v1.college.0.entranceDate", "2009-03"],
+    ]);
+    expect(results.map((r) => r.status)).toEqual(["skipped"]);
+    expect(cardInput(u0, "입학일").value).toBe("");
   });
 });

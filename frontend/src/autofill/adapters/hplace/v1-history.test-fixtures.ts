@@ -87,8 +87,11 @@ export const historyOptions: Record<string, [string, string][]> = {
 const row = (title: string, content: string, required = false) =>
   `<div class="x-row"><span aria-hidden="true">${title}</span><div class="x-title"><p>${title}${required ? "*" : ""}</p></div><div class="x-content">${content}</div></div>`;
 let reviewKey = 900;
+/** A control widget; the second tenant has no review-key spans (k2-rows.txt). */
 const wrap = (control: string) =>
-  `<span data-review-key="${reviewKey++}@0">${control}</span>`;
+  tenant === "k"
+    ? `<div class="x-w">${control}</div>`
+    : `<span data-review-key="${reviewKey++}@0">${control}</span>`;
 const input = (attrs: string) =>
   wrap(`<div class="x-field"><input class="x-input" ${attrs}></div>`);
 const dropdown = (placeholder: string, list: string, disabled = false) =>
@@ -482,12 +485,12 @@ export function pickChip(c: Element, title: string, name: string): void {
   const search = cardRow(c, title).querySelector<HTMLInputElement>(
     SEARCH_INPUT,
   )!;
-  search.closest("[data-review-key]")!.innerHTML = chipHtml(name);
+  search.closest("[data-review-key], .x-w")!.innerHTML = chipHtml(name);
 }
 /** Chip texts of a card row: the `p` next to a chip's X (chipHtml), not the
  * labels of toggle or score widgets. */
 export const chipText = (c: Element, title: string) =>
-  Array.from(cardRow(c, title).querySelectorAll("span[data-review-key] p"))
+  Array.from(cardRow(c, title).querySelectorAll("p"))
     .filter((p) => p.nextElementSibling?.matches("svg.x-chip-x"))
     .map((p) => p.textContent);
 export const searchInput = (c: Element, title: string) =>
@@ -610,7 +613,7 @@ function installShims(): V1HistoryPage {
     const register = target.closest(".x-register");
     if (register) {
       registerClicks++;
-      const widget = register.closest("[data-review-key]")!;
+      const widget = register.closest("[data-review-key], .x-w")!;
       const typed =
         /^'(.*)'등록하기$/.exec(register.textContent ?? "")?.[1] ?? "";
       setTimeout(() => {
@@ -618,7 +621,9 @@ function installShims(): V1HistoryPage {
         // Measured live (step2-major-after-register.json): a major press
         // re-renders the whole sub-row: the chip span, a 전공 구분 toggle
         // group, then score and rank/headcount widgets, many holding `p`s.
-        const sub = widget.closest(".x-major");
+        // The second tenant's register re-render is not measured: the
+        // chip replaces the search widget, as a pick does.
+        const sub = tenant === "k" ? null : widget.closest(".x-major");
         if (sub)
           sub.outerHTML = `<div class="x-major"><span data-review-key="${widget.getAttribute("data-review-key") ?? ""}">${chip}</span><span data-review-key="kind"><div>${["주전공", "복수전공", "부전공", "연계전공", "융합전공"].map((k) => `<li><button type="button" class="x-kind"><p>${k}</p></button></li>`).join("")}</div></span><div><div><span data-review-key="score"><div><p>평점</p><input type="text"></div></span></div><div><span data-review-key="scale"><div><div><p>만점</p><input type="text"></div></div></span></div></div><div><div><div><span data-review-key="rank"><div><p>석차</p><input type="text"></div></span><div><p>/</p></div><span data-review-key="count"><div><p>명</p></div></span></div></div><div><div><span data-review-key="extra"><div><p>표시</p></div></span><div></div><span data-review-key="extra2"><div></div></span></div></div></div></div>`;
         else widget.innerHTML = chip;
@@ -628,7 +633,7 @@ function installShims(): V1HistoryPage {
     const pick = target.closest(".x-results li > button");
     if (pick) {
       const name = pick.textContent!;
-      const widget = pick.closest("[data-review-key]")!;
+      const widget = pick.closest("[data-review-key], .x-w")!;
       const rowElement = pick.closest(".x-row")!;
       later(() => {
         widget.innerHTML = chipHtml(name);
@@ -777,6 +782,16 @@ function installShims(): V1HistoryPage {
     if (["입학일", "졸업일", "입사일", "퇴사일"].includes(field.placeholder)) {
       // The page keeps only a full day; 8 digits are reformatted.
       const value = field.value;
+      if (tenant === "k" && ["입학일", "졸업일"].includes(field.placeholder)) {
+        // Second tenant (k2-rows.txt: 재학기간 holds 9999.99): 입학일 and
+        // 졸업일 keep only the year and month, right after the write.
+        queueMicrotask(() => {
+          field.value = /^\d{4}\.\d{2}(\.\d{2})?$/.test(value)
+            ? value.slice(0, 7)
+            : "";
+        });
+        return;
+      }
       later(() => {
         const digits = /^(\d{4})(\d{2})(\d{2})$/.exec(value);
         field.value = /^\d{4}\.\d{2}\.\d{2}$/.test(value)
