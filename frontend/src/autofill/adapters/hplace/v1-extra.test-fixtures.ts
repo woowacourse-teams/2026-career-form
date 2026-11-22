@@ -382,12 +382,11 @@ function installShims(): V1ExtraPage {
     const value = input.value;
     const kept = /^\d{4}\.\d{2}\.\d{2}$/.test(value);
     if (tenant3 === "k") {
-      // Second tenant (format assumed, neither the typed YYYY.MM.DD nor the
-      // profile's YYYY-MM-DD): the page rewrites a kept date right
-      // after the write, before any later read (live: the input is filled but
-      // the read-back failed).
+      // Second tenant (live, baa3384: retained-value mask `####.99`): the
+      // 취득일 widget keeps only the year and month, right after the write.
       queueMicrotask(() => {
-        input.value = kept ? value.replace(/\./g, ". ") : "";
+        input.value =
+          kept || /^\d{4}\.\d{2}$/.test(value) ? value.slice(0, 7) : "";
       });
       return;
     }

@@ -1759,3 +1759,112 @@ describe("v1 step 2 second tenant, run 3 (live-step2-k-run3.out)", () => {
     }
   });
 });
+
+describe("v1 step 2 second tenant, run 4 (live-step2-k-run4.out)", () => {
+  it("counts a 전공 sub-row that carries no page-indexed name", () => {
+    mountV1Step2("2", "k");
+    const u0 = appendCard("대학교");
+    const major = () =>
+      v1HistoryAddActions(document).find(
+        (a) => a.name === "hplace.v1.college.0.major.add",
+      );
+    expect(major()?.count).toBe(0);
+    appendMajor(u0);
+    expect(major()?.count).toBe(1);
+    expect(names()).toContain("hplace.v1.college.0.major0.majorName");
+  });
+
+  it("never counts an unnamed 전공 row once a major shows as picked", () => {
+    mountV1Step2("2", "k");
+    const u0 = appendCard("대학교");
+    appendMajor(u0);
+    pickChip(u0, "전공", "합성공학");
+    expect(
+      v1HistoryAddActions(document).find(
+        (a) => a.name === "hplace.v1.college.0.major.add",
+      )?.count,
+    ).toBeUndefined();
+  });
+
+  it("counts the measured 경력기술서 and 포트폴리오 entries", () => {
+    mountV1Step2("2", "k");
+    addAttachmentEntries({ 경력기술서: true, 포트폴리오: true });
+    const counts = v1HistoryAddActions(document)
+      .filter((a) => a.label)
+      .map((a) => [a.name, a.count]);
+    expect(counts).toEqual([
+      ["hplace.v1.careerDescription.add", 1],
+      ["hplace.v1.portfolio.add", 1],
+    ]);
+  });
+
+  it("names every preparation stop in one value-free line", async () => {
+    setAutofillDebugEnabled(true);
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      const page = mountV1Step2();
+      page.stall("직장경력");
+      const snapshot = collectPreparationSnapshot(document);
+      const plans = v1HistoryPreparation(snapshot.request).preparationPlans;
+      const career = snapshot.request.sections[0].actionCandidates.find(
+        (a) => a.domName === "hplace.v1.career.add",
+      )!;
+      const view = (s: ReturnType<typeof collectPreparationSnapshot>) => ({
+        registry: s.registry,
+        isTargetSectionVisible: (id: string) => s.isSectionVisible(id),
+        countRepeatableGroups: (plan: { actionCandidateId: string }) =>
+          s.countRepeatableGroups(plan.actionCandidateId),
+        repeatableGroupState: (plan: { actionCandidateId: string }) =>
+          s.repeatableGroupState(plan.actionCandidateId),
+      });
+      const result = await executeApprovedPreparationPlans({
+        document,
+        approvedPlans: plans
+          .filter((p) => p.actionCandidateId === career.candidateId)
+          .map((plan) => ({ plan, approved: true, localItemCount: 1 })),
+        initialSnapshot: view(snapshot),
+        refreshSnapshot: async () => {
+          await new Promise((resolve) => setTimeout(resolve, 0));
+          return view(collectPreparationSnapshot(document));
+        },
+        countRepeatableGroups: (s, plan) =>
+          s.countRepeatableGroups?.(plan) ?? -1,
+      });
+      expect(result).toMatchObject({
+        status: "failed",
+        reason: "group-count-not-incremented",
+      });
+      expect(log.mock.calls.map(([l]) => String(l))).toContain(
+        "[CareerForm] stop stage=preparation key=hplace.v1.career.add reason=group-count-not-incremented detail=before0-after0",
+      );
+    } finally {
+      setAutofillDebugEnabled(false);
+      log.mockRestore();
+    }
+  });
+
+  it("says why an add's count cannot be read, value-free", () => {
+    setAutofillDebugEnabled(true);
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      mountV1Step2("2", "k");
+      const u0 = appendCard("대학교");
+      appendMajor(u0);
+      cardRow(u0, "전공").insertAdjacentHTML(
+        "beforeend",
+        '<input type="text" name="collegeGroupAnswers.0.otherMajor.0.name" value="합성값">',
+      );
+      const snapshot = collectPreparationSnapshot(document);
+      // Registered in add order: 4 card adds, 2 attachment rows, then majors.
+      expect(snapshot.countRepeatableGroups("action-7")).toBeUndefined();
+      const lines = log.mock.calls.map(([l]) => String(l));
+      expect(lines).toContain(
+        "[CareerForm] skip stage=prepare key=hplace.v1.college.0.major.add reason=control-shape detail=v1-history-count-undefined-major",
+      );
+      expect(lines.join("\n")).not.toMatch(/합성값/);
+    } finally {
+      setAutofillDebugEnabled(false);
+      log.mockRestore();
+    }
+  });
+});

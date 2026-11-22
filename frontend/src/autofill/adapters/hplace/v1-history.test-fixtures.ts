@@ -259,6 +259,11 @@ function cardBody(level: HistoryLevel, k: number): string {
  * indexed by card and sub-row. The 대학원 list name is assumed.
  */
 function majorHtml(level: HistoryLevel, k: number, m: number): string {
+  // Second tenant (live-step2-k-run4.out: 전공 `t2/7 i:e`): no page-indexed
+  // name, seven toggles with two selected and one empty input. The second
+  // toggle group's labels and the input's placeholder are assumed.
+  if (tenant === "k")
+    return `<div class="x-major">${input('type="text" placeholder="전공명을 검색해주세요." class="x-search"')}${toggle(["주전공", "복수전공", "부전공", "연계전공", "융합전공"], "주전공")}${toggle(["합성구분1", "합성구분2"], "합성구분1")}</div>`;
   const list = `${prefixes[level]}.${k}.${level === "대학교" ? "collegeMajorList" : "graduateSchoolMajorList"}.${m}`;
   return `<div class="x-major">${input('type="text" placeholder="전공명을 검색해주세요." class="x-search"')}${toggle(["주전공", "복수전공", "부전공", "연계전공", "융합전공"])}${input(`type="number" name="${list}.majorGrade.score" placeholder="평점" disabled`)}${input(`type="text" name="${list}.rankingAndHeadCount.ranking" disabled`)}${input(`type="text" name="${list}.rankingAndHeadCount.headcount" placeholder="전체인원" disabled`)}</div>`;
 }
@@ -352,13 +357,16 @@ const attachmentNames: Record<AttachmentRowTitle, string> = {
 const attachmentEntry = (title: AttachmentRowTitle, n: number) =>
   // Second tenant (live-step2-k-run3.out after: 포트폴리오 row shows no
   // non-file input): the entry is a file widget only.
-  tenant === "k" && title === "포트폴리오"
-    ? `<div><div><div><span data-review-key="f${n}"><div><div></div><input type="file"></div></span></div><button class="x-entry-del"><svg></svg></button></div></div>`
+  tenant === "k"
+    ? // Second tenant (k-step2-attach-after.json): no review-key spans; the
+      // 경력기술서 entry is [file widget, URL widget], the 포트폴리오 entry the
+      // file widget only. The URL name after "careerFileAns" is assumed.
+      `<div><div><div><div><div><button type="button" class="x-attach">첨부파일 추가</button></div><input type="file"></div></div>${title === "경력기술서" ? `<div><div><input type="text" maxlength="200" placeholder="첨부파일을 추가하거나 URL을 입력해주세요." name="portfolioGroupAnswer.careerFileAnswers.${n}.url"></div></div>` : ""}</div><button class="x-entry-del"><svg></svg></button></div>`
     : `<div><div><div><span data-review-key="f${n}"><div><div></div><input type="file"></div></span><span data-review-key="u${n}"><div><div><input type="text" maxlength="200" placeholder="첨부파일을 추가하거나 URL을 입력해주세요." name="${attachmentNames[title]}.${n}.url"></div></div></span></div><button class="x-entry-del"><svg></svg></button></div></div>`;
 /** A 경력기술서/포트폴리오 row below the cards, with its own 추가하기
  * (probe-attach-step3.json). */
 const attachmentRow = (title: AttachmentRowTitle, entry: boolean) =>
-  `<div class="x-attachrow"><span aria-hidden="true">${title}</span><div><p>${title}</p><div></div></div><div><div><div class="x-entries">${entry ? attachmentEntry(title, 0) : ""}</div><button type="button" class="x-fileadd">추가하기</button></div></div></div>`;
+  `<div class="x-attachrow"><span aria-hidden="true">${title}</span><div><p>${title}</p><div>${tenant === "k" && title === "포트폴리오" ? "<span>*</span>" : ""}</div></div><div><div><div class="x-entries">${entry ? attachmentEntry(title, 0) : ""}</div><button type="button" class="x-fileadd">추가하기</button></div></div></div>`;
 
 /** Gives the page's 경력기술서/포트폴리오 rows one entry where asked. */
 export function addAttachmentEntries(

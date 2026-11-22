@@ -351,5 +351,18 @@ it("runs on a second tenant that keeps empty cards and adds a 포트폴리오 en
   expect(cardInput(cards("직장경력")[0], "회사명을 입력해주세요.").value).toBe(
     "합성회사",
   );
+  // The pre-existing 대학교 card's 전공 add (run 4's last planned action) and
+  // the added card's one both ran, and both majors were picked.
+  expect(page.majorAdds()).toEqual(["대학교 0", "대학교 1"]);
+  expect(chipText(u0, "전공")).toEqual(["합성공학"]);
+  expect(chipText(cards("대학교")[1], "전공")).toEqual(["합성경영"]);
+  // The measured entries: 경력기술서 file + URL, 포트폴리오 file only.
+  const [careerRow, portfolioRow] = Array.from(
+    document.querySelectorAll(".x-attachrow"),
+  );
+  expect(careerRow.querySelectorAll('input[type="file"]')).toHaveLength(1);
+  expect(careerRow.querySelectorAll('input[type="text"]')).toHaveLength(1);
+  expect(portfolioRow.querySelectorAll('input[type="file"]')).toHaveLength(1);
+  expect(portfolioRow.querySelectorAll('input[type="text"]')).toHaveLength(0);
   expect(page.forbiddenClicks()).toEqual([]);
 });

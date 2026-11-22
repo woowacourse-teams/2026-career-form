@@ -589,7 +589,7 @@ describe("v1 step 3 second tenant, run 4 (k-step3-after.txt)", () => {
     expect(v1ExtraChip(document, 0)).toBe("정보처리기사");
   });
 
-  it("keeps a 취득일 the page rewrites after the write as one written outcome", async () => {
+  it("keeps a 취득일 the page cuts to its year and month as one written outcome", async () => {
     mountV1Step3("3", "k");
     pickCertificate(0, "정보처리기사");
     const results = await writeBatch([
@@ -597,7 +597,7 @@ describe("v1 step 3 second tenant, run 4 (k-step3-after.txt)", () => {
       ["hplace.v1.certificate.0.registNumber", "A-1234"],
     ]);
     expect(results.map((r) => r.status)).toEqual(["written", "written"]);
-    expect(certInput(0, "취득일")!.value).toBe("2020. 05. 01");
+    expect(certInput(0, "취득일")!.value).toBe("2020.05");
   });
 
   it("logs a value-free skip line when a written value is not kept", async () => {
@@ -629,5 +629,47 @@ describe("v1 step 3 second tenant, run 4 (k-step3-after.txt)", () => {
       setAutofillDebugEnabled(false);
       log.mockRestore();
     }
+  });
+});
+
+describe("v1 step 3 second tenant, month-level 취득일 (baa3384)", () => {
+  it("writes a month-only profile date as YYYY.MM where the page keeps months", async () => {
+    mountV1Step3("3", "k");
+    pickCertificate(0, "정보처리기사");
+    const results = await writeBatch([
+      ["hplace.v1.certificate.0.acquireDate", "2021-07"],
+    ]);
+    expect(results.map((r) => r.status)).toEqual(["written"]);
+    expect(certInput(0, "취득일")!.value).toBe("2021.07");
+  });
+
+  it("never accepts a different year or month", async () => {
+    mountV1Step3("3", "k");
+    pickCertificate(0, "정보처리기사");
+    const date = certInput(0, "취득일")!;
+    date.addEventListener("blur", () =>
+      queueMicrotask(() =>
+        queueMicrotask(() => {
+          date.value = "2020.06";
+        }),
+      ),
+    );
+    const results = await writeBatch([
+      ["hplace.v1.certificate.0.acquireDate", "2020-05-01"],
+    ]);
+    expect(results.map((r) => r.status)).toEqual(["skipped"]);
+  });
+
+  it("never writes a month-only date in the future", async () => {
+    mountV1Step3("3", "k");
+    pickCertificate(0, "정보처리기사");
+    const results = await writeBatch([
+      [
+        "hplace.v1.certificate.0.acquireDate",
+        `${new Date().getFullYear() + 1}-01`,
+      ],
+    ]);
+    expect(results.map((r) => r.status)).toEqual(["skipped"]);
+    expect(certInput(0, "취득일")!.value).toBe("");
   });
 });

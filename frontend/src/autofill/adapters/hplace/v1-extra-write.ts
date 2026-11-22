@@ -37,24 +37,67 @@ const approved = (
   item: Pick<ReviewPlanItem, "analysis">,
 ) => approvalIssue(spec, item) === undefined;
 
-/** Y/M/D digits of a full-day value in any separator style. */
+/** The digit groups of a date value, in any separator style. */
+const dateParts = (value: string) => {
+  const parts = value.trim().split(/\D+/).filter(Boolean);
+  const [only] = parts;
+  if (parts.length === 1 && /^\d{8}$/.test(only))
+    return [only.slice(0, 4), only.slice(4, 6), only.slice(6)];
+  if (parts.length === 1 && /^\d{6}$/.test(only))
+    return [only.slice(0, 4), only.slice(4)];
+  return parts;
+};
+/** YYYYMMDD of a full-day value, or undefined. */
 const dayKey = (value: string) => {
-  const m = /^(\d{4})\D{0,2}(\d{1,2})\D{0,2}(\d{1,2})\D?$/.exec(value.trim());
-  return m
-    ? `${m[1]}${m[2].padStart(2, "0")}${m[3].padStart(2, "0")}`
+  const p = dateParts(value);
+  return p.length === 3 &&
+    p[0].length === 4 &&
+    p[1].length <= 2 &&
+    p[2].length <= 2
+    ? `${p[0]}${p[1].padStart(2, "0")}${p[2].padStart(2, "0")}`
+    : undefined;
+};
+/** YYYYMM of a year-and-month value, or undefined. */
+const monthKey = (value: string) => {
+  const p = dateParts(value);
+  return p.length === 2 && p[0].length === 4 && p[1].length <= 2
+    ? `${p[0]}${p[1].padStart(2, "0")}`
     : undefined;
 };
 
-/** The page shows `target`: exactly, or for 취득일 the same day in the page's
- * own date form (a second tenant rewrites the kept date after the write). */
+/** How long a written YYYY.MM must stay before it counts as kept. */
+const MONTH_SETTLE_MS = 300;
+
+/** A month-only profile date as YYYY.MM. */
+function fullMonth(value: string): string | undefined {
+  const m = /^(\d{4})[-.](\d{2})$/.exec(value.trim());
+  const month = m ? Number(m[2]) : 0;
+  return m && Number(m[1]) >= 1900 && month >= 1 && month <= 12
+    ? `${m[1]}.${m[2]}`
+    : undefined;
+}
+
+/**
+ * The page shows `target`: exactly, or for 취득일 the same date in the page's
+ * own form. A page that keeps only the year and month (a second tenant,
+ * baa3384) shows the same year and month; another year or month never
+ * counts.
+ */
 function showsTarget(
   control: ExtraControl,
   shown: string,
   target: string,
 ): boolean {
   if (shown === target) return true;
-  const day = control.spec.kind === "date" ? dayKey(shown) : undefined;
-  return day !== undefined && day === dayKey(target);
+  if (control.spec.kind !== "date") return false;
+  const shownDay = dayKey(shown);
+  const targetDay = dayKey(target);
+  if (shownDay !== undefined) return shownDay === targetDay;
+  const shownMonth = monthKey(shown);
+  return (
+    shownMonth !== undefined &&
+    shownMonth === (targetDay?.slice(0, 6) ?? monthKey(target))
+  );
 }
 
 /** Value-free form of a page value: digits as 9, letters as x. */
@@ -82,9 +125,13 @@ export function v1ExtraTarget(
   if (!value.trim()) return undefined;
   const { spec } = control;
   if (spec.kind === "date") {
-    // 취득일: a full past day only (the step-2 date rule).
+    // 취득일: a full past day; a month-only profile date as YYYY.MM, which a
+    // page keeping months (second tenant) holds and a full-day page drops
+    // (the read-back then reports it). Never in the future.
     const day = fullDay(value);
-    return day && day <= today() ? day : undefined;
+    if (day) return day <= today() ? day : undefined;
+    const month = fullMonth(value);
+    return month && month <= today().slice(0, 7) ? month : undefined;
   }
   if (spec.kind === "search") return normalize(value);
   if (spec.kind === "text") return value;
@@ -245,7 +292,7 @@ export async function writeV1Extra(
     }
     return fail(
       "unit-mismatch",
-      fullDay(value) ? "date-future" : "date-not-full-day",
+      fullDay(value) || fullMonth(value) ? "date-future" : "date-unreadable",
     );
   }
   const document = control.row.ownerDocument;
@@ -297,6 +344,15 @@ export async function writeV1Extra(
     input.blur();
     // The page keeps or drops the value after blur; read it back.
     if (!(await waitFor(shows, owned)))
+      return fail("control-shape", "value-not-kept");
+    // A month-only 취득일 (YYYY.MM): a page that keeps full days drops it
+    // after blur, asynchronously (measured on step 2). Wait (bounded) for
+    // that reaction before confirming; a page keeping months holds it.
+    if (
+      spec.kind === "date" &&
+      monthKey(target) !== undefined &&
+      (await waitFor(() => !shows(), owned, MONTH_SETTLE_MS))
+    )
       return fail("control-shape", "value-not-kept");
     if (!input.checkValidity()) return fail("control-shape", "value-invalid");
     return "written";

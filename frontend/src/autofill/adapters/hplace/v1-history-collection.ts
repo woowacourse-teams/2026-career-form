@@ -19,6 +19,7 @@ import type {
   FieldCandidateHandle,
 } from "../../dom/types";
 import type { Profile } from "../../../profile/model";
+import { debugRuntimeSkip } from "../../debug/structural-diagnostics";
 import { waitFor } from "./v1-basic-write";
 import {
   historyGroups,
@@ -249,7 +250,20 @@ export function collectV1HistoryPreparation(
       if (action?.count !== undefined) {
         const seen = lastCounts.get(document) ?? new Map<string, number>();
         lastCounts.set(document, seen.set(action.name, action.count));
-      }
+      } else if (action)
+        // The executor stops on an unreadable count: say which kind, value-free.
+        debugRuntimeSkip(
+          action.name,
+          "control-shape",
+          `v1-history-count-undefined-${
+            action.index !== undefined
+              ? "major"
+              : action.label
+                ? "attachment"
+                : "card"
+          }`,
+          "prepare",
+        );
       return action?.count;
     },
     repeatableGroupState: (id) => live(id)?.state(),

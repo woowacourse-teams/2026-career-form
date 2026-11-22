@@ -84,6 +84,16 @@ export function debugRuntimeSkip(
     `skip stage=${stage} key=${id} reason=${reason} detail=${detail}${failureCode ? ` failureCode=${failureCode}` : ""}`,
   );
 }
+/** One value-free line naming a preparation stop: the action key and why. */
+export function debugPreparationStop(
+  key: string,
+  reason: string,
+  detail: string,
+) {
+  line(
+    `stop stage=preparation key=${key} reason=${reason} detail=${detail || "none"}`,
+  );
+}
 type Candidates = {
   fields?: readonly unknown[];
   actionCandidates?: readonly unknown[];

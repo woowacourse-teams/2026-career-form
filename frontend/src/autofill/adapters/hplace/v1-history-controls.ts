@@ -1110,6 +1110,28 @@ export function majorSubRowCount(
   const named = Array.from(row.querySelectorAll("input[name]")).map(
     (i) => (i as HTMLInputElement).name,
   );
+  if (!named.length) {
+    // A 전공 row without page-indexed names (second tenant,
+    // live-step2-k-run4.out: toggles and one empty input): its sub-rows are
+    // counted by their search inputs, only while nothing shows as picked (a
+    // picked major leaves no input behind and would not be counted).
+    const searches = row.querySelectorAll(
+      'input[placeholder="전공명을 검색해주세요."]',
+    ).length;
+    const [titleSpan, titleBox] = Array.from(row.children);
+    const texts = Array.from(row.querySelectorAll("*")).filter(
+      (e) =>
+        e.children.length === 0 &&
+        !(e instanceof HTMLInputElement) &&
+        e !== titleSpan &&
+        !titleBox?.contains(e) &&
+        !e.closest("button, li, #dropdown-body, svg") &&
+        text(e) !== "",
+    );
+    return texts.length === 0 && chipTexts(row).length === 0
+      ? searches
+      : undefined;
+  }
   if (named.some((n) => !pattern.test(n))) return undefined;
   const subRows = new Set(named.map((n) => Number(pattern.exec(n)![1])));
   if ([...subRows].some((m) => m >= subRows.size)) return undefined;
