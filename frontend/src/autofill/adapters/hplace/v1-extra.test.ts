@@ -18,6 +18,9 @@ import { isV1HistoryPage } from "./v1-history-controls";
 import { mountV1Step2 } from "./v1-history.test-fixtures";
 import { isV1ExtraPage, v1ExtraChip } from "./v1-extra-controls";
 import { setAutofillDebugEnabled } from "../../debug/autofill-debug";
+import { createProgressTracker } from "../../workflow/progress-model";
+import { resultFieldState } from "../../workflow/result-field-state";
+import { written } from "../../write/write-result";
 import {
   appendSubRow,
   blockRow,
@@ -671,5 +674,57 @@ describe("v1 step 3 second tenant, month-level 취득일 (baa3384)", () => {
     ]);
     expect(results.map((r) => r.status)).toEqual(["skipped"]);
     expect(certInput(0, "취득일")!.value).toBe("");
+  });
+});
+
+describe("v1 step 3 picked 자격증명 on the result screen (k-step3-after.txt)", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it.each([
+    ["the second tenant, no review-key spans", "k" as const],
+    ["the first tenant, review-key chip", "bbq" as const],
+  ])("confirms the picked name on %s", async (_label, variant) => {
+    mountV1Step3("3", variant);
+    appendSubRow("자격증");
+    const { registry, items } = itemsFor([
+      ["hplace.v1.certificate.0.licenseName", "정보처리기사"],
+    ]);
+    const [item] = items;
+    const lookup = registry.lookupField(item.candidateId);
+    if (!("handle" in lookup)) throw new Error("no handle");
+    const run = getWorkflowAdapter(document).executeStateDriver!(
+      document,
+      lookup.handle,
+      item,
+      new AbortController().signal,
+    );
+    await vi.runAllTimersAsync();
+    expect(await run).toBe(true);
+    // Measured: the name block, then 발급기관 and 취득일, then 등록번호.
+    expect(certChip(0)).toEqual(["정보처리기사"]);
+    const tracker = createProgressTracker();
+    const [entry] = tracker.record(item, written(item.candidateId), registry);
+    expect(tracker.progressStateFor(entry.id)).toBe(true);
+    expect(resultFieldState(registry, document, item.candidateId)?.value).toBe(
+      "정보처리기사",
+    );
+  });
+
+  it("reads nothing when the name block also holds an input", () => {
+    mountV1Step3("3", "k");
+    pickCertificate(0, "정보처리기사");
+    const name = Array.from(subRowAt("자격증", 0).querySelectorAll("p")).find(
+      (p) => p.textContent === "정보처리기사",
+    )!;
+    name.parentElement!.insertAdjacentHTML(
+      "beforeend",
+      '<input type="text" name="other">',
+    );
+    expect(v1ExtraChip(document, 0)).toBeUndefined();
   });
 });

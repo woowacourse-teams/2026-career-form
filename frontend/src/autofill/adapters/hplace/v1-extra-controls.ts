@@ -472,17 +472,32 @@ export function v1ExtraChip(
     return undefined;
   if (!sub.querySelector("span[data-review-key]")) {
     // No review-key spans (second tenant, k-step3-after.txt): the picked name
-    // is the sub-row's one text leaf (`div > div > div > p`).
-    const texts = Array.from(sub.querySelectorAll("*"))
-      .filter(
-        (e) =>
-          e.children.length === 0 &&
-          !(e instanceof HTMLInputElement) &&
-          !e.closest("button, li, #dropdown-body, svg"),
-      )
-      .map(text)
-      .filter(Boolean);
-    return texts.length === 1 ? texts[0] : undefined;
+    // is the sub-row's one text leaf, in the name block (`div > div > div >
+    // p`): the outermost element around it that holds no input or button,
+    // and the first content block of its parent. Otherwise: unknown.
+    const leaves = Array.from(sub.querySelectorAll("*")).filter(
+      (e) =>
+        e.children.length === 0 &&
+        !(e instanceof HTMLInputElement) &&
+        !e.closest("button, li, #dropdown-body, svg") &&
+        text(e) !== "",
+    );
+    const [leaf] = leaves;
+    if (
+      leaves.length !== 1 ||
+      leaf.parentElement?.querySelector("input, button")
+    )
+      return undefined;
+    let block: Element = leaf;
+    while (
+      block.parentElement &&
+      block.parentElement !== sub &&
+      !block.parentElement.querySelector("input, button")
+    )
+      block = block.parentElement;
+    return block.parentElement?.firstElementChild === block
+      ? text(leaf)
+      : undefined;
   }
   const chips = chipWidgets(sub);
   return chips.length === 1 ? chips[0] : undefined;

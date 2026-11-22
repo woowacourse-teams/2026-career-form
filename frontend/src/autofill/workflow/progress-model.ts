@@ -1,5 +1,6 @@
 import { componentEmploymentStatusValue } from "../policy/components/write";
 import { v1HistoryPickedValue } from "../adapters/hplace/v1-history-controls";
+import { v1ExtraPickedValue } from "../adapters/hplace/v1-extra-controls";
 import { customFieldValue } from "../dom/custom-field-value";
 import {
   hasVisibleWriteElement,
@@ -63,9 +64,10 @@ function stillReflected(
     return false;
   const lookup = registry.lookupField(item.candidateId);
   if (lookup.status !== "ready" && lookup.status !== "blocked") {
-    // v1 step 2: a picked search input is replaced by the chip showing it.
+    // v1 steps 2 and 3: a picked search input is replaced by the chip showing it.
     const picked = registry.registeredField(item.candidateId);
-    const chip = picked && v1HistoryPickedValue(picked);
+    const chip =
+      picked && (v1HistoryPickedValue(picked) ?? v1ExtraPickedValue(picked));
     return (
       chip !== undefined &&
       matchesResultValue(item, chip, item.profileValue ?? "", picked)
