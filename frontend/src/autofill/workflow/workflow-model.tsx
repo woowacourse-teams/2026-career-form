@@ -1,4 +1,5 @@
 import { browser } from "wxt/browser";
+import type { LinkKind } from "../../attachments/model";
 import { localWorkflowLog } from "../debug/local-workflow";
 import { createAddressSearch } from "../address/runtime";
 import type {
@@ -234,6 +235,7 @@ export function localItemCount(
   >,
   profile: Profile,
   adapter?: WorkflowAdapter,
+  attachments?: ReadonlySet<LinkKind>,
 ): number | undefined {
   if (plan.command !== "ADD_REPEATABLE_GROUP") return undefined;
   const lookup = snapshot.registry.lookupAction(plan.actionCandidateId);
@@ -259,6 +261,7 @@ export function localItemCount(
   const adapterCount = selectedAdapter.repeatableProfileCount?.(
     action?.domId,
     profile,
+    attachments,
   );
   if (adapterCount !== undefined) return adapterCount ?? undefined;
   const matchLabel = [
@@ -373,8 +376,15 @@ export function preparationItem(
   snapshot: ReturnType<typeof collectPreparationSnapshot>,
   profile: Profile,
   adapter: WorkflowAdapter,
+  attachments?: ReadonlySet<LinkKind>,
 ): PreparationItem {
-  const localCount = localItemCount(plan, snapshot, profile, adapter);
+  const localCount = localItemCount(
+    plan,
+    snapshot,
+    profile,
+    adapter,
+    attachments,
+  );
   if (plan.command !== "ADD_REPEATABLE_GROUP") {
     const value =
       plan.command === "SELECT_OPTION_TO_REVEAL"

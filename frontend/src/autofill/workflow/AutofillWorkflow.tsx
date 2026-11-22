@@ -1,4 +1,5 @@
 import { browser } from "wxt/browser";
+import { storedAttachmentKinds } from "../../attachments/model";
 import {
   debugRunBuild,
   debugStageCounts,
@@ -715,9 +716,18 @@ function PolicyReadyWorkflow({
           await analyzeFields(loadedProfile);
           return;
         }
+        // Stored files and links decide attachment-row adds.
+        const attachmentKinds = await storedAttachmentKinds(attachmentStore);
+        if (!active) return;
         setPreparationSnapshot(snapshot);
         const items = preparationPlans.map((plan) =>
-          preparationItem(plan, snapshot, loadedProfile, adapter),
+          preparationItem(
+            plan,
+            snapshot,
+            loadedProfile,
+            adapter,
+            attachmentKinds,
+          ),
         );
         // Parent additions precede nested additions; the follow-up recollects
         // children with guards captured against the final parent topology.

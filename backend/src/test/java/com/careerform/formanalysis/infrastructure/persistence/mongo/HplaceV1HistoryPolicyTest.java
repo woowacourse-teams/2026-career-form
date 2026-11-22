@@ -415,6 +415,8 @@ class HplaceV1HistoryPolicyTest {
         for (String group : List.of("college", "graduateSchool")) {
             for (int i = 0; i <= 9; i++) names.add("hplace.v1." + group + "." + i + ".major.add");
         }
+        // The 경력기술서 and 포트폴리오 rows' own 추가하기 (CF-509).
+        names.addAll(List.of("hplace.v1.careerDescription.add", "hplace.v1.portfolio.add"));
         return names;
     }
 

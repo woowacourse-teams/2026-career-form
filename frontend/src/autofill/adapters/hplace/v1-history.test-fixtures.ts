@@ -273,6 +273,32 @@ const addDiv = (level: HistoryLevel) =>
 const container = (level: HistoryLevel) =>
   `<div id="${containerIds[level]}" data-level="${level}">${addButton(level)}<div class="x-gap"></div><div class="x-gap"></div></div>`;
 
+type AttachmentRowTitle = "경력기술서" | "포트폴리오";
+const attachmentNames: Record<AttachmentRowTitle, string> = {
+  경력기술서: "portfolioGroupAnswer.careerFile",
+  포트폴리오: "portfolioGroupAnswer.portfolio",
+};
+/** One added entry (measured): a file widget and a URL widget, plus a delete button. */
+const attachmentEntry = (title: AttachmentRowTitle, n: number) =>
+  `<div><div><div><span data-review-key="f${n}"><div><div></div><input type="file"></div></span><span data-review-key="u${n}"><div><div><input type="text" maxlength="200" placeholder="첨부파일을 추가하거나 URL을 입력해주세요." name="${attachmentNames[title]}.${n}.url"></div></div></span></div><button class="x-entry-del"><svg></svg></button></div></div>`;
+/** A 경력기술서/포트폴리오 row below the cards, with its own 추가하기
+ * (probe-attach-step3.json). */
+const attachmentRow = (title: AttachmentRowTitle, entry: boolean) =>
+  `<div class="x-attachrow"><span aria-hidden="true">${title}</span><div><p>${title}</p><div></div></div><div><div><div class="x-entries">${entry ? attachmentEntry(title, 0) : ""}</div><button type="button" class="x-fileadd">추가하기</button></div></div></div>`;
+
+/** Gives the page's 경력기술서/포트폴리오 rows one entry where asked. */
+export function addAttachmentEntries(
+  entries: Partial<Record<AttachmentRowTitle, boolean>>,
+): void {
+  for (const row of document.querySelectorAll(".x-attachrow")) {
+    const title = row.firstElementChild!.textContent as AttachmentRowTitle;
+    if (entries[title])
+      row
+        .querySelector(".x-entries")!
+        .insertAdjacentHTML("beforeend", attachmentEntry(title, 0));
+  }
+}
+
 export interface V1HistoryPage {
   forbiddenClicks(): string[];
   /** Cards whose 전공 추가하기 was clicked ("대학교 0", ...). */
@@ -297,6 +323,10 @@ export interface V1HistoryPage {
   curlyRegisterQuotes(): void;
   /** Times a register row was pressed. */
   registerClicks(): number;
+  /** Runs once right after the transient register row appears. */
+  afterTransientRegister(hook: () => void): void;
+  /** Titles of the 경력기술서/포트폴리오 rows whose 추가하기 was pressed. */
+  attachmentAdds(): string[];
   /** The chip a register press shows instead of the typed name. */
   registerChip(name: string): void;
 }
@@ -364,10 +394,12 @@ export function pickChip(c: Element, title: string, name: string): void {
   )!;
   search.closest("[data-review-key]")!.innerHTML = chipHtml(name);
 }
+/** Chip texts of a card row: the `p` next to a chip's X (chipHtml), not the
+ * labels of toggle or score widgets. */
 export const chipText = (c: Element, title: string) =>
-  Array.from(cardRow(c, title).querySelectorAll("span[data-review-key] p")).map(
-    (p) => p.textContent,
-  );
+  Array.from(cardRow(c, title).querySelectorAll("span[data-review-key] p"))
+    .filter((p) => p.nextElementSibling?.matches("svg.x-chip-x"))
+    .map((p) => p.textContent);
 export const searchInput = (c: Element, title: string) =>
   cardRow(c, title).querySelector<HTMLInputElement>(SEARCH_INPUT);
 export const cardDropdown = (c: Element, list: string) =>
@@ -390,7 +422,7 @@ ${container("대학원")}
 </div>
 <div class="x-section"><div><h5>경력사항</h5></div>
 ${container("직장경력")}
-<div id="7006"><div>${row("경력기술서", wrap('<button type="button" class="x-attach">추가하기</button>'))}${row("포트폴리오", wrap('<button type="button" class="x-attach">추가하기</button>'))}<div></div></div></div>
+<div id="7006"><div>${attachmentRow("경력기술서", false)}${attachmentRow("포트폴리오", false)}<div></div></div></div>
 </div>
 <div class="x-footer"><button type="button" class="x-prev">이전</button><button type="button" data-testid="resume-form-save">임시저장</button><button type="button" data-testid="resume-form-save-and-leave">저장 후 나가기</button><button type="button" class="x-next">다음</button></div>
 </div></div><div id="tooltip-root"></div><div id="overlay-root"></div>`;
@@ -409,6 +441,8 @@ function installShims(): V1HistoryPage {
   let suggestDelay = 60;
   let slowCatalog = 0;
   let registerClicks = 0;
+  let afterTransientRegister: (() => void) | undefined;
+  const attachmentAdds: string[] = [];
   let registerChip: string | undefined;
   let suggestionLists = 0;
   const later = (run: () => void) => setTimeout(run, 0);
@@ -417,7 +451,7 @@ function installShims(): V1HistoryPage {
     (event) => {
       const target = event.target as Element;
       const hit = target.closest(
-        '[data-testid="resume-form-save"],[data-testid="resume-form-save-and-leave"],[data-testid="resume-form-stepper-item"],[data-testid^="resume-parsing-"],.x-prev,.x-next,.x-extend,.x-duration,.x-attach,.x-icon,.x-chip-x,input[type="file"],.x-suggest li',
+        '[data-testid="resume-form-save"],[data-testid="resume-form-save-and-leave"],[data-testid="resume-form-stepper-item"],[data-testid^="resume-parsing-"],.x-prev,.x-next,.x-extend,.x-duration,.x-attach,.x-icon,.x-chip-x,.x-kind,input[type="file"],.x-suggest li',
       );
       if (hit) forbidden.push(hit.textContent?.trim() || hit.className);
       const choice = target.closest("li.ats-list-none > button");
@@ -461,6 +495,22 @@ function installShims(): V1HistoryPage {
     }
     // The register row (measured: step2-probe-register.json): the input
     // leaves the row and a chip shows the typed name ~110 ms later.
+    // 추가하기 of an attachment row: one entry inline (no dialog, no request).
+    const fileAdd = target.closest(".x-fileadd");
+    if (fileAdd) {
+      const row = fileAdd.closest(".x-attachrow")!;
+      const title = row.firstElementChild!.textContent as AttachmentRowTitle;
+      attachmentAdds.push(title);
+      const list = row.querySelector(".x-entries")!;
+      list.insertAdjacentHTML(
+        "beforeend",
+        attachmentEntry(
+          title,
+          list.querySelectorAll('input[type="file"]').length,
+        ),
+      );
+      return;
+    }
     const register = target.closest(".x-register");
     if (register) {
       registerClicks++;
@@ -469,11 +519,12 @@ function installShims(): V1HistoryPage {
         /^'(.*)'등록하기$/.exec(register.textContent ?? "")?.[1] ?? "";
       setTimeout(() => {
         const chip = chipHtml(registerChip ?? typed);
-        // Measured live (build 0e54270): a major press re-renders the whole
-        // sub-row; its disabled named inputs are gone (7 inputs -> 3).
+        // Measured live (step2-major-after-register.json): a major press
+        // re-renders the whole sub-row: the chip span, a 전공 구분 toggle
+        // group, then score and rank/headcount widgets, many holding `p`s.
         const sub = widget.closest(".x-major");
         if (sub)
-          sub.outerHTML = `<div class="x-major"><span data-review-key="${widget.getAttribute("data-review-key") ?? ""}">${chip}</span><input type="text"><input type="text"><input type="text"></div>`;
+          sub.outerHTML = `<div class="x-major"><span data-review-key="${widget.getAttribute("data-review-key") ?? ""}">${chip}</span><span data-review-key="kind"><div>${["주전공", "복수전공", "부전공", "연계전공", "융합전공"].map((k) => `<li><button type="button" class="x-kind"><p>${k}</p></button></li>`).join("")}</div></span><div><div><span data-review-key="score"><div><p>평점</p><input type="text"></div></span></div><div><span data-review-key="scale"><div><div><p>만점</p><input type="text"></div></div></span></div></div><div><div><div><span data-review-key="rank"><div><p>석차</p><input type="text"></div></span><div><p>/</p></div><span data-review-key="count"><div><p>명</p></div></span></div></div><div><div><span data-review-key="extra"><div><p>표시</p></div></span><div></div><span data-review-key="extra2"><div></div></span></div></div></div></div>`;
         else widget.innerHTML = chip;
       }, 110);
       return;
@@ -564,11 +615,12 @@ function installShims(): V1HistoryPage {
       const box = field.parentElement!;
       const names = query ? searchCatalog[query] : undefined;
       const level = field.closest<HTMLElement>("[data-level]")?.dataset.level;
-      const show = (ms: number, rows: string) =>
+      const show = (ms: number, rows: string, after?: () => void) =>
         setTimeout(() => {
           if (!field.isConnected || field.value !== query) return;
           box.querySelector(":scope > .x-results")?.remove();
           box.insertAdjacentHTML("beforeend", scrollList(rows));
+          after?.();
         }, ms);
       // A query the site never answers (no list at all).
       if (query === "목록없음") return;
@@ -577,7 +629,11 @@ function installShims(): V1HistoryPage {
         const [empty, final] = slowCatalog
           ? [slowCatalog, slowCatalog + 100]
           : [300, 420];
-        show(100, registerRow(query));
+        show(100, registerRow(query), () => {
+          const hook = afterTransientRegister;
+          afterTransientRegister = undefined;
+          hook?.();
+        });
         show(empty, "");
         show(
           final,
@@ -651,6 +707,10 @@ function installShims(): V1HistoryPage {
       registerQuotes = ["\u2018", "\u2019"];
     },
     registerClicks: () => registerClicks,
+    afterTransientRegister: (hook) => {
+      afterTransientRegister = hook;
+    },
+    attachmentAdds: () => [...attachmentAdds],
     registerChip: (name) => {
       registerChip = name;
     },
@@ -807,7 +867,7 @@ export function v1HistoryAnalysis(
 }
 
 const addName =
-  /^hplace\.v1\.(?:(?:highschool|college|graduateSchool|career)|(?:college|graduateSchool)\.\d+\.major)\.add$/;
+  /^hplace\.v1\.(?:(?:highschool|college|graduateSchool|career|careerDescription|portfolio)|(?:college|graduateSchool)\.\d+\.major)\.add$/;
 
 /** Fake backend preparation analysis: ADD for every exact add action. */
 export function v1HistoryPreparation(

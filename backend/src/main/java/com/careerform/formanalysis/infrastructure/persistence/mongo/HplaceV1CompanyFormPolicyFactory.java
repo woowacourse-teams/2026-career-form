@@ -69,10 +69,12 @@ final class HplaceV1CompanyFormPolicyFactory {
         // Step 1 accepts no action and step 2 accepts any subset of the add actions, including none: the Hplace
         // fingerprint enforces both. The structures below only feed the action resolver lookup.
         var preparation = new PreparationFingerprint(Set.of(HplaceFormFingerprint.V1_HISTORY_SECTION),
-            List.of(button(HplaceFormFingerprint.V1_HISTORY_CARD_ADDS)), List.of(button(HplaceFormFingerprint.V1_HISTORY_MAJOR_ADDS)));
+            List.of(button(HplaceFormFingerprint.V1_HISTORY_CARD_ADDS), button(HplaceFormFingerprint.V1_ATTACHMENT_ADDS)),
+            List.of(button(HplaceFormFingerprint.V1_HISTORY_MAJOR_ADDS)));
         var actions = new ArrayList<ActionRule>();
         for (String name : HplaceFormFingerprint.V1_HISTORY_CARD_ADDS) actions.add(new ActionRule(name, ActionKind.ADD, null));
         for (String name : HplaceFormFingerprint.V1_HISTORY_MAJOR_ADDS) actions.add(new ActionRule(name, ActionKind.ADD, null));
+        for (String name : HplaceFormFingerprint.V1_ATTACHMENT_ADDS) actions.add(new ActionRule(name, ActionKind.ADD, null));
         return CompanyFormPolicy.create("hplace", VERSION, preparation,
             new FieldsFingerprint(Set.of(HplaceFormFingerprint.V1_SECTION, HplaceFormFingerprint.V1_HISTORY_SECTION), structures),
             actions, rules, isSupportedProfileKey);

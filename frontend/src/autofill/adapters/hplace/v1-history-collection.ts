@@ -5,6 +5,7 @@ import type {
   PreparationAnalyzeRequest,
   SiteDescriptor,
 } from "../../api/types";
+import type { LinkKind } from "../../../attachments/model";
 import {
   CandidateRegistry,
   createStructuralSignature,
@@ -27,6 +28,7 @@ import {
   ownedV1HistoryAddAction,
   ownedV1HistoryControl,
   parseV1HistoryMajorAdd,
+  v1AttachmentAddNames,
   v1HistoryAddActions,
   v1HistoryAddName,
   v1HistoryControls,
@@ -114,6 +116,11 @@ export function collectV1HistoryFields(
   };
 }
 
+const attachmentKinds: Record<string, LinkKind> = {
+  "hplace.v1.careerDescription.add": "resume",
+  "hplace.v1.portfolio.add": "portfolio",
+};
+
 /** Counts last read per add action: the executor reads one right before each click. */
 const lastCounts = new WeakMap<Document, Map<string, number>>();
 const liveCount = (document: Document, name: string) =>
@@ -145,8 +152,13 @@ export async function settleV1HistoryAdd(document: Document): Promise<void> {
 export function v1HistoryProfileCount(
   actionDomId: string | undefined,
   profile: Profile,
+  attachments?: ReadonlySet<LinkKind>,
 ): number | null | undefined {
   if (!actionDomId?.startsWith("hplace.v1.")) return undefined;
+  // An attachment row: one entry when the profile stores that kind (file or
+  // link); 경력기술서 is the profile's 이력서·경력기술서 document.
+  const kind = attachmentKinds[actionDomId];
+  if (kind) return attachments?.has(kind) ? 1 : 0;
   const entries = (group: (typeof historyGroups)[number]) => {
     const { categoryId, sectionId } = historyProfileSection[group];
     return profile[categoryId].filter((entry) => entry.sectionId === sectionId);
@@ -196,7 +208,7 @@ export function collectV1HistoryPreparation(
       control: "button",
       displayName:
         action.index === undefined
-          ? historyLevelLabel[action.group]
+          ? (action.label ?? historyLevelLabel[action.group!])
           : "전공 추가하기",
       visibility: "visible",
     };
@@ -211,7 +223,8 @@ export function collectV1HistoryPreparation(
     };
     registry.registerAction(handle);
     names.set(candidate.candidateId, action.name);
-    if (action.index === undefined || action.count === 0)
+    // Card adds always; a major or attachment add only while it has none.
+    if ((action.index === undefined && !action.label) || action.count === 0)
       actionCandidates.push(candidate);
   });
   const request: PreparationAnalyzeRequest = {
@@ -245,7 +258,8 @@ export function collectV1HistoryPreparation(
     repeatableGroupLimit: (id) => {
       const name = names.get(id);
       return name === v1HistoryAddName("highschool") ||
-        parseV1HistoryMajorAdd(name)
+        parseV1HistoryMajorAdd(name) ||
+        (name !== undefined && v1AttachmentAddNames.includes(name))
         ? 1
         : undefined;
     },

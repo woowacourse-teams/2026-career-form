@@ -184,3 +184,18 @@ export function attachmentTypeLabel(type: string): string {
   if (type === PNG_TYPE) return "PNG";
   return "이 형식의";
 }
+
+/**
+ * Resume/portfolio kinds with a stored file or a saved link, read once before
+ * a run's preparation. A failed read counts as nothing stored.
+ */
+export async function storedAttachmentKinds(
+  store: AttachmentStore | undefined,
+): Promise<ReadonlySet<LinkKind>> {
+  if (!store) return new Set();
+  const [files, links] = await Promise.all([
+    store.list().catch((): AttachmentList => ({})),
+    store.loadLinks().catch((): AttachmentLinks => ({})),
+  ]);
+  return new Set(LINK_KINDS.filter((kind) => files[kind] || links[kind]));
+}

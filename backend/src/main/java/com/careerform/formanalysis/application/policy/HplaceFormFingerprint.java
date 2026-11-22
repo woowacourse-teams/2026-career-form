@@ -64,8 +64,11 @@ public final class HplaceFormFingerprint {
     public static final List<String> V1_HISTORY_CARD_ADDS = List.of("hplace.v1.highschool.add", "hplace.v1.college.add",
         "hplace.v1.graduateSchool.add", "hplace.v1.career.add");
     public static final List<String> V1_HISTORY_MAJOR_ADDS = majorAdds();
-    private static final Set<String> V1_HISTORY_ACTIONS = java.util.stream.Stream.concat(
-        V1_HISTORY_CARD_ADDS.stream(), V1_HISTORY_MAJOR_ADDS.stream()).collect(java.util.stream.Collectors.toUnmodifiableSet());
+    /** The 추가하기 of the step-2 경력기술서 and 포트폴리오 rows: one inline entry each. */
+    public static final List<String> V1_ATTACHMENT_ADDS = List.of("hplace.v1.careerDescription.add", "hplace.v1.portfolio.add");
+    private static final Set<String> V1_HISTORY_ACTIONS = java.util.stream.Stream.of(
+        V1_HISTORY_CARD_ADDS, V1_HISTORY_MAJOR_ADDS, V1_ATTACHMENT_ADDS).flatMap(List::stream)
+        .collect(java.util.stream.Collectors.toUnmodifiableSet());
 
     public boolean matches(CompanyFormPolicy policy, PreparationAnalysisRequest request) {
         if (policy.sectionContracts().isEmpty() || !HplaceApplicantSite.DETAIL_PATH.equals(request.site().pathPattern())) return matches(request);

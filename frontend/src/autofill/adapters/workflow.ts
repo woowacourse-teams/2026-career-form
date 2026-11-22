@@ -4,6 +4,9 @@ import {
   settleBasicStateDriver,
   prefersBasicProfileValue,
 } from "./hplace/basic-write";
+import { v1AttachmentFieldHint } from "./hplace/v1-history-controls";
+import type { AttachmentFieldHint } from "../attachments/file-fields";
+import type { LinkKind } from "../../attachments/model";
 import { ownedBasicControl } from "./hplace/basic-controls";
 import { ownedV1Control } from "./hplace/v1-basic-controls";
 import { ownedV1HistoryControl } from "./hplace/v1-history-controls";
@@ -122,7 +125,11 @@ export interface WorkflowAdapter {
   repeatableProfileCount?(
     actionDomId: string | undefined,
     profile: Profile,
+    /** Kinds with a stored file or link (an attachment row's add). */
+    attachments?: ReadonlySet<LinkKind>,
   ): number | null | undefined;
+  /** Kind and label of file inputs the generic attachment walk cannot place. */
+  attachmentFieldHint?: AttachmentFieldHint;
   followUpRepeatableAction?(actionDomId: string | undefined): boolean;
   /** Opt-in: a failed non-native driver ends only itself; later drivers of
    * the same stage still run (the failed one is deferred as usual). */
@@ -280,6 +287,7 @@ const hplaceWorkflowAdapter: WorkflowAdapter = {
   // v1 step 2: one card per profile entry of the level (CF-509).
   repeatableProfileCount: v1HistoryProfileCount,
   settlePreparationAction: settleV1HistoryAdd,
+  attachmentFieldHint: v1AttachmentFieldHint,
   // A failed v1 step-2 search defers only its own field (CF-509).
   continueAfterDriverFailure: (_item, handle) =>
     isV1HistorySearchHandle(handle),

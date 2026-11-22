@@ -1010,6 +1010,31 @@ function chipTexts(row: Element): string[] {
 }
 
 /**
+ * Texts of the chip widgets of a row: a `span[data-review-key]` whose content
+ * is `div > div > p` (+ the X svg) and that holds no input, list item or
+ * button (measured: step2-major-after-register.json).
+ */
+function chipWidgets(row: Element): string[] {
+  return Array.from(row.querySelectorAll("span[data-review-key]")).flatMap(
+    (span) => {
+      if (span.querySelector("input, li, button, #dropdown-body")) return [];
+      const outer = span.children.length === 1 ? span.children[0] : undefined;
+      const inner =
+        outer instanceof HTMLDivElement && outer.children.length === 1
+          ? outer.children[0]
+          : undefined;
+      if (!(inner instanceof HTMLDivElement)) return [];
+      const kids = Array.from(inner.children);
+      const ps = kids.filter((k) => k instanceof HTMLParagraphElement);
+      return ps.length === 1 &&
+        kids.every((k) => k === ps[0] || k.tagName.toLowerCase() === "svg")
+        ? [text(ps[0])]
+        : [];
+    },
+  );
+}
+
+/**
  * The chip a search row shows instead of its input: its text when the row
  * holds exactly one chip and no search input, else undefined.
  */
@@ -1040,17 +1065,18 @@ export function v1HistoryChip(
   if (!row || !spec || spec.kind !== "search") return undefined;
   if (row.querySelector(`input[placeholder="${spec.placeholder}"]`))
     return undefined;
-  // A major press re-renders the sub-row and its named inputs may go
-  // (live, build 0e54270): only a second sub-row rules the chip out.
-  if (spec.major && (majorSubRowCount(group, row, index) ?? 1) > 1)
-    return undefined;
-  const chips = chipTexts(row);
+  // A picked major re-renders its sub-row into toggle and score widgets that
+  // hold `p`s too: one sub-row = one chip widget (sub-row inputs not counted).
+  const chips = spec.major ? chipWidgets(row) : chipTexts(row);
   return chips.length === 1 ? chips[0] : undefined;
 }
 
 export interface HistoryAddAction {
   name: string;
-  group: HistoryGroup;
+  /** The card level; none for an attachment row's add. */
+  group?: HistoryGroup;
+  /** Display name of an attachment row's add (its row title). */
+  label?: string;
   /** Card order of a major add. */
   index?: number;
   element: AddControl;
@@ -1126,7 +1152,92 @@ export function v1HistoryAddActions(document: Document): HistoryAddAction[] {
         ];
       }),
     );
-  return [...cardAdds, ...majorAdds];
+  return [...cardAdds, ...attachmentAdds(document), ...majorAdds];
+}
+
+/**
+ * The step-2 attachment rows below the cards and the URL-input name each
+ * entry carries (probe-attach-step3.json). Their 추가하기 adds one entry
+ * inline: a file widget and a URL widget, then left to the attachment feature.
+ */
+const attachmentRows = [
+  {
+    name: "hplace.v1.careerDescription.add",
+    title: "경력기술서",
+    prefix: "portfolioGroupAnswer.careerFile",
+    // The profile's 이력서·경력기술서 document.
+    kind: "resume",
+  },
+  {
+    name: "hplace.v1.portfolio.add",
+    title: "포트폴리오",
+    prefix: "portfolioGroupAnswer.portfolio",
+    kind: "portfolio",
+  },
+] as const;
+export const v1AttachmentAddNames: readonly string[] = attachmentRows.map(
+  (r) => r.name,
+);
+
+/** The attachment row with this title, when it is on the page exactly once. */
+function attachmentRow(document: Document, title: string): Element | undefined {
+  const rows = Array.from(document.querySelectorAll("div")).filter(
+    (e) => isRow(e) && text(e.firstElementChild).replace(/\s/g, "") === title,
+  );
+  return rows.length === 1 ? rows[0] : undefined;
+}
+
+/**
+ * The attachment feature's reading of an entry's file input in a
+ * 경력기술서/포트폴리오 row: the row title is beyond its 8-level label walk.
+ * Only an entry whose one URL input carries the row's name answers.
+ */
+export function v1AttachmentFieldHint(
+  input: HTMLInputElement,
+): { kind: "resume" | "portfolio"; label: string } | undefined {
+  if (!isV1HistoryPage(input.ownerDocument)) return undefined;
+  for (const { title, prefix, kind } of attachmentRows) {
+    const row = attachmentRow(input.ownerDocument, title);
+    if (!row?.contains(input)) continue;
+    const entry = input.closest("span[data-review-key]")?.parentElement;
+    const urls = Array.from(
+      entry?.querySelectorAll<HTMLInputElement>('input[type="text"]') ?? [],
+    );
+    return urls.length === 1 && urls[0].name.startsWith(prefix)
+      ? { kind, label: title }
+      : undefined;
+  }
+  return undefined;
+}
+
+/** The row's own 추가하기 when its title is on the page exactly once; the
+ * count only when every entry is one file input with its named URL input. */
+function attachmentAdds(document: Document): HistoryAddAction[] {
+  return attachmentRows.flatMap(({ name, title, prefix }) => {
+    const row = attachmentRow(document, title);
+    const button = row && majorAddButton(row);
+    if (!row || !button) return [];
+    const entries = () =>
+      Array.from(row.querySelectorAll('input[type="file"]')).map(
+        (f) => f.closest("span[data-review-key]")?.parentElement ?? f,
+      );
+    const urls = Array.from(
+      row.querySelectorAll<HTMLInputElement>('input[type="text"]'),
+    );
+    const count = entries().length;
+    return [
+      {
+        name,
+        label: title,
+        element: button,
+        count:
+          urls.length === count && urls.every((u) => u.name.startsWith(prefix))
+            ? count
+            : undefined,
+        state: () => entries().map(cardState),
+      },
+    ];
+  });
 }
 
 /** The sub-row elements of a 전공 row: the outermost holders of each index. */

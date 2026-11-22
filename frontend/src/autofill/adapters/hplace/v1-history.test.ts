@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setAutofillDebugEnabled } from "../../debug/autofill-debug";
 import type { PreparationPlan } from "../../api/types";
 import {
@@ -28,6 +28,10 @@ import {
 } from "./v1-history-write";
 import { hplaceUnverifiedRows } from "./unverified-structure";
 import { executeApprovedWritesAfterPageSettles } from "../../write/executor";
+import { v1HistoryAddActions, v1HistoryChip } from "./v1-history-controls";
+import { v1HistoryProfileCount } from "./v1-history-collection";
+import { findAttachmentFields } from "../../attachments/file-fields";
+import { addAttachmentEntries } from "./v1-history.test-fixtures";
 import { createProgressTracker } from "../../workflow/progress-model";
 import { written } from "../../write/write-result";
 import {
@@ -90,7 +94,7 @@ describe("v1 step 2 page gate", () => {
 });
 
 describe("v1 step 2 preparation", () => {
-  it("offers the four exact add actions with their card counts", () => {
+  it("offers the exact add actions (cards, 경력기술서, 포트폴리오) with their counts", () => {
     mountV1Step2();
     const snapshot = collectPreparationSnapshot(document);
     expect(snapshot.request.sections).toHaveLength(1);
@@ -112,24 +116,61 @@ describe("v1 step 2 preparation", () => {
           ["graduateSchool", "대학원"],
           ["career", "직장경력"],
         ] as const
-      ).map(([group, label]) => [
-        `hplace.v1.${group}.add`,
-        `hplace.v1.${group}.add`,
-        "button",
-        "button",
-        label,
-      ]),
+      )
+        .map(([group, label]) => [
+          `hplace.v1.${group}.add`,
+          `hplace.v1.${group}.add`,
+          "button",
+          "button",
+          label,
+        ])
+        .concat([
+          [
+            "hplace.v1.careerDescription.add",
+            "hplace.v1.careerDescription.add",
+            "button",
+            "button",
+            "경력기술서",
+          ],
+          [
+            "hplace.v1.portfolio.add",
+            "hplace.v1.portfolio.add",
+            "button",
+            "button",
+            "포트폴리오",
+          ],
+        ]),
     );
     const ids = section.actionCandidates.map((a) => a.candidateId);
     expect(ids.map((id) => snapshot.countRepeatableGroups(id))).toEqual([
-      0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0,
     ]);
     expect(ids.map((id) => snapshot.repeatableGroupLimit(id))).toEqual([
       1,
       undefined,
       undefined,
       undefined,
+      1,
+      1,
     ]);
+  });
+
+  it("presses a row's 추가하기 once for the needed entry, never twice", async () => {
+    const page = mountV1Step2();
+    expect(
+      (await prepare({ "hplace.v1.careerDescription.add": 1 })).status,
+    ).toBe("completed");
+    // With its entry in place the row's add is no longer offered at all.
+    expect(
+      collectPreparationSnapshot(
+        document,
+      ).request.sections[0].actionCandidates.map((a) => a.domName),
+    ).not.toContain("hplace.v1.careerDescription.add");
+    expect(page.attachmentAdds()).toEqual(["경력기술서"]);
+    expect(
+      document.querySelectorAll('.x-attachrow input[type="file"]'),
+    ).toHaveLength(1);
+    expect(page.forbiddenClicks()).toEqual([]);
   });
 
   it("finds the add control in both shapes", () => {
@@ -270,6 +311,8 @@ describe("v1 step 2 preparation", () => {
       "hplace.v1.college.add",
       "hplace.v1.graduateSchool.add",
       "hplace.v1.career.add",
+      "hplace.v1.careerDescription.add",
+      "hplace.v1.portfolio.add",
       "hplace.v1.college.1.major.add",
     ]);
     const major = sent.at(-1)!;
@@ -719,7 +762,10 @@ describe("v1 step 2 school and major search", () => {
   it("picks the single exact row and verifies the chip", async () => {
     const page = mountV1Step2();
     const u0 = appendCard("대학교");
-    const r = await drive("hplace.v1.college.0.academyName", "합성대학교");
+    const r = await driveOnFakeTimers(
+      "hplace.v1.college.0.academyName",
+      "합성대학교",
+    );
     expect(r).toEqual({ ok: true, settled: true, codes: [] });
     expect(chipText(u0, "학교정보")).toEqual(["합성대학교"]);
     expect(searchInput(u0, "학교정보")).toBeNull();
@@ -737,7 +783,10 @@ describe("v1 step 2 school and major search", () => {
     async (query, code) => {
       const page = mountV1Step2();
       const hs = appendCard("고등학교");
-      const r = await drive("hplace.v1.highschool.0.academyName", query);
+      const r = await driveOnFakeTimers(
+        "hplace.v1.highschool.0.academyName",
+        query,
+      );
       expect(r).toEqual({ ok: false, settled: false, codes: [code] });
       expect(searchInput(hs, "학교정보")!.value).toBe("");
       expect(chipText(hs, "학교정보")).toEqual([]);
@@ -759,7 +808,10 @@ describe("v1 step 2 school and major search", () => {
     other.value = "합성공학";
     other.dispatchEvent(new Event("input", { bubbles: true }));
     await until(() => !!cardRow(u0, "전공").querySelector("#dropdown-body li"));
-    const r = await drive("hplace.v1.college.1.major0.majorName", "합성경영");
+    const r = await driveOnFakeTimers(
+      "hplace.v1.college.1.major0.majorName",
+      "합성경영",
+    );
     expect(r).toEqual({ ok: true, settled: true, codes: [] });
     expect(chipText(u1, "전공")).toEqual(["합성경영"]);
     expect(searchInput(u1, "전공")).toBeNull();
@@ -889,7 +941,7 @@ describe("v1 step 2 page defaults and diagnostics", () => {
       appendCard("대학교");
       await write("hplace.v1.college.0.entranceDate", "2009-03");
       await write("hplace.v1.highschool.0.graduationTypeCode", "수료");
-      await drive("hplace.v1.highschool.0.academyName", "없는학교");
+      await driveOnFakeTimers("hplace.v1.highschool.0.academyName", "없는학교");
       const lines = log.mock.calls.map(([line]) => String(line));
       expect(lines).toEqual(
         expect.arrayContaining([
@@ -971,7 +1023,10 @@ describe("v1 step 2 university and major search widgets", () => {
     page.slowCatalog();
     // The transient register row (held 600 ms) is never pressed.
     const u0 = appendCard("대학교");
-    const r = await drive("hplace.v1.college.0.academyName", "합성대학교");
+    const r = await driveOnFakeTimers(
+      "hplace.v1.college.0.academyName",
+      "합성대학교",
+    );
     expect(r).toEqual({ ok: true, settled: true, codes: [] });
     expect(chipText(u0, "학교정보")).toEqual(["합성대학교"]);
     expect(page.searchQueries()).toEqual(["합성대학교"]);
@@ -983,7 +1038,10 @@ describe("v1 step 2 university and major search widgets", () => {
     mountV1Step2();
     const u0 = appendCard("대학교");
     appendMajor(u0);
-    const r = await drive("hplace.v1.college.0.major0.majorName", "합성공학");
+    const r = await driveOnFakeTimers(
+      "hplace.v1.college.0.major0.majorName",
+      "합성공학",
+    );
     expect(r).toEqual({ ok: true, settled: true, codes: [] });
     expect(chipText(u0, "전공")).toEqual(["합성공학"]);
   });
@@ -994,7 +1052,10 @@ describe("v1 step 2 university and major search widgets", () => {
     try {
       const page = mountV1Step2();
       const u0 = appendCard("대학교");
-      const r = await drive("hplace.v1.college.0.academyName", "구조다름");
+      const r = await driveOnFakeTimers(
+        "hplace.v1.college.0.academyName",
+        "구조다름",
+      );
       expect(r).toEqual({
         ok: false,
         settled: false,
@@ -1041,6 +1102,13 @@ describe("v1 step 2 university and major search widgets", () => {
 });
 
 describe("v1 step 2 register row (no catalog match: pressed by decision)", () => {
+  // Its elapsed-time assertions read the same fake clock as the writer.
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
   it.each([
     ["hplace.v1.college.0.academyName", "학교정보"],
     ["hplace.v1.college.0.major0.majorName", "전공"],
@@ -1054,7 +1122,7 @@ describe("v1 step 2 register row (no catalog match: pressed by decision)", () =>
         const u0 = appendCard("대학교");
         appendMajor(u0);
         const started = Date.now();
-        const r = await drive(name, "목록에없는이름");
+        const r = await driveOnFakeTimers(name, "목록에없는이름");
         expect(r).toEqual({ ok: true, settled: true, codes: [] });
         expect(Date.now() - started).toBeGreaterThanOrEqual(1000);
         expect(page.registerClicks()).toBe(1);
@@ -1083,7 +1151,10 @@ describe("v1 step 2 register row (no catalog match: pressed by decision)", () =>
     try {
       const page = mountV1Step2();
       const u0 = appendCard("대학교");
-      const r = await drive("hplace.v1.college.0.academyName", query);
+      const r = await driveOnFakeTimers(
+        "hplace.v1.college.0.academyName",
+        query,
+      );
       expect(r).toEqual({
         ok: false,
         settled: false,
@@ -1111,7 +1182,10 @@ describe("v1 step 2 register row (no catalog match: pressed by decision)", () =>
     const page = mountV1Step2();
     appendCard("대학교");
     page.registerChip("엉뚱한이름");
-    const r = await drive("hplace.v1.college.0.academyName", "목록에없는이름");
+    const r = await driveOnFakeTimers(
+      "hplace.v1.college.0.academyName",
+      "목록에없는이름",
+    );
     expect(r).toEqual({
       ok: false,
       settled: false,
@@ -1138,7 +1212,32 @@ const searchLevels = [
   ["대학교", "hplace.v1.college.0.major0.majorName", "전공", "합성공학"],
 ] as const;
 
+/**
+ * drive() on fake timers: the page's search timeline and the writer's polls
+ * run in exact order, never by load margins (uses the caller's fake timers
+ * when they are already on).
+ */
+async function driveOnFakeTimers(name: string, value: string) {
+  const own = !vi.isFakeTimers();
+  if (own) vi.useFakeTimers();
+  try {
+    const run = drive(name, value);
+    await vi.runAllTimersAsync();
+    return await run;
+  } finally {
+    if (own) vi.useRealTimers();
+  }
+}
+
 describe("v1 step 2 search with a slow catalog", () => {
+  // Fake timers: the page's timeline (transient row, empty list, final
+  // list) and the writer's polls run in exact order, never by load margins.
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
   it.each(
     searchLevels.flatMap((l) => [600, 900].map((ms) => [...l, ms] as const)),
   )(
@@ -1148,13 +1247,33 @@ describe("v1 step 2 search with a slow catalog", () => {
       page.slowCatalog(ms);
       const c = appendCard(level);
       if (title === "전공") appendMajor(c);
-      const r = await drive(name, value);
+      const r = await driveOnFakeTimers(name, value);
       expect(r).toEqual({ ok: true, settled: true, codes: [] });
       expect(chipText(c, title)).toEqual([value]);
       expect(page.registerClicks()).toBe(0);
     },
     15_000,
   );
+
+  it("never presses the transient register row across a main-thread pause", async () => {
+    const page = mountV1Step2();
+    // A 1.5 s pause while the transient row shows: no page update runs
+    // during it, the clock jumps past both time thresholds.
+    page.afterTransientRegister(() => {
+      // After the writer has seen the row once: the next reading is the
+      // first after the pause.
+      setTimeout(() => vi.setSystemTime(Date.now() + 1500), 30);
+    });
+    const hs = appendCard("고등학교");
+    expect(
+      await driveOnFakeTimers(
+        "hplace.v1.highschool.0.academyName",
+        "합성고등학교",
+      ),
+    ).toEqual({ ok: true, settled: true, codes: [] });
+    expect(page.registerClicks()).toBe(0);
+    expect(chipText(hs, "학교정보")).toEqual(["합성고등학교"]);
+  });
 
   it.each(searchLevels)(
     "%s %s: presses the final register row only after 1000 ms",
@@ -1164,7 +1283,7 @@ describe("v1 step 2 search with a slow catalog", () => {
       const c = appendCard(level);
       if (title === "전공") appendMajor(c);
       const started = Date.now();
-      const r = await drive(name, "목록에없는이름");
+      const r = await driveOnFakeTimers(name, "목록에없는이름");
       expect(r).toEqual({ ok: true, settled: true, codes: [] });
       expect(Date.now() - started).toBeGreaterThanOrEqual(1000);
       expect(page.registerClicks()).toBe(1);
@@ -1182,13 +1301,19 @@ describe("v1 step 2 search with a slow catalog", () => {
       const hs = appendCard("고등학교");
       // The catalog answers after the transient row: the real row is picked.
       expect(
-        await drive("hplace.v1.highschool.0.academyName", "합성고등학교"),
+        await driveOnFakeTimers(
+          "hplace.v1.highschool.0.academyName",
+          "합성고등학교",
+        ),
       ).toEqual({ ok: true, settled: true, codes: [] });
       expect(chipText(hs, "학교정보")).toEqual(["합성고등학교"]);
       // No catalog match: a register row whose text differs is not pressed.
       const u0 = appendCard("대학교");
       expect(
-        await drive("hplace.v1.college.0.academyName", "목록에없는이름"),
+        await driveOnFakeTimers(
+          "hplace.v1.college.0.academyName",
+          "목록에없는이름",
+        ),
       ).toEqual({
         ok: false,
         settled: false,
@@ -1256,8 +1381,99 @@ describe("v1 step 2 major register press re-renders its sub-row", () => {
     expect(old.isConnected).toBe(false);
     expect(page.registerClicks()).toBe(1);
     expect(chipText(u0, "전공")).toEqual(["목록에없는이름"]);
+    // The next pass reads the same chip (kept, not "화면 구조 확인 불가").
+    expect(v1HistoryChip(document, "college", 0, "major0.majorName")).toBe(
+      "목록에없는이름",
+    );
+    expect(page.forbiddenClicks()).toEqual([]);
     const tracker = createProgressTracker();
     const [entry] = tracker.record(item, written(item.candidateId), registry);
     expect(tracker.progressStateFor(entry.id)).toBe(true);
+  });
+});
+
+it("reads a major chip only as one chip widget in the 전공 row", async () => {
+  mountV1Step2();
+  const u0 = appendCard("대학교");
+  appendMajor(u0);
+  expect(
+    await driveOnFakeTimers(
+      "hplace.v1.college.0.major0.majorName",
+      "목록에없는이름",
+    ),
+  ).toEqual({ ok: true, settled: true, codes: [] });
+  const sub = u0.querySelector(".x-major")!;
+  // Toggle labels and score/rank `p`s are not chips.
+  expect(v1HistoryChip(document, "college", 0, "major0.majorName")).toBe(
+    "목록에없는이름",
+  );
+  // A second chip widget (a second sub-row) rules the reading out.
+  sub.insertAdjacentHTML(
+    "beforeend",
+    '<span data-review-key="second"><div><div><p>또하나</p><svg></svg></div></div></span>',
+  );
+  expect(v1HistoryChip(document, "college", 0, "major0.majorName")).toBe(
+    undefined,
+  );
+});
+
+describe("v1 step 2 경력기술서 / 포트폴리오 rows", () => {
+  it("offers each row's 추가하기 with its entry count", () => {
+    mountV1Step2();
+    addAttachmentEntries({ 포트폴리오: true });
+    const adds = v1HistoryAddActions(document).filter((a) =>
+      /careerDescription|portfolio/.test(a.name),
+    );
+    expect(adds.map((a) => [a.name, a.count, a.element.textContent])).toEqual([
+      ["hplace.v1.careerDescription.add", 0, "추가하기"],
+      ["hplace.v1.portfolio.add", 1, "추가하기"],
+    ]);
+  });
+
+  it("needs one entry exactly when a matching file or link is stored", () => {
+    const profile = v1HistoryProfile();
+    const career = "hplace.v1.careerDescription.add";
+    const portfolio = "hplace.v1.portfolio.add";
+    expect(v1HistoryProfileCount(career, profile, new Set(["resume"]))).toBe(1);
+    expect(v1HistoryProfileCount(career, profile, new Set(["portfolio"]))).toBe(
+      0,
+    );
+    expect(
+      v1HistoryProfileCount(portfolio, profile, new Set(["portfolio"])),
+    ).toBe(1);
+    expect(v1HistoryProfileCount(portfolio, profile, new Set())).toBe(0);
+    expect(v1HistoryProfileCount(portfolio, profile)).toBe(0);
+  });
+
+  it("leaves an added entry to the attachment feature: kind and URL box", () => {
+    mountV1Step2();
+    addAttachmentEntries({ 경력기술서: true, 포트폴리오: true });
+    const fields = findAttachmentFields(
+      document,
+      getWorkflowAdapter(document).attachmentFieldHint,
+    ).filter((f) => f.element.closest(".x-attachrow"));
+    expect(
+      fields.map((f) => [f.kind, f.label, f.urlInput?.name, f.blockedReason]),
+    ).toEqual([
+      [
+        "resume",
+        "경력기술서",
+        "portfolioGroupAnswer.careerFile.0.url",
+        undefined,
+      ],
+      [
+        "portfolio",
+        "포트폴리오",
+        "portfolioGroupAnswer.portfolio.0.url",
+        undefined,
+      ],
+    ]);
+    // Without the adapter hint the generic walk cannot place them (the row
+    // title is 9 levels above the file input, live and here).
+    expect(
+      findAttachmentFields(document)
+        .filter((f) => f.element.closest(".x-attachrow"))
+        .map((f) => f.kind),
+    ).toEqual([undefined, undefined]);
   });
 });

@@ -6,8 +6,14 @@ import type {
   PreparationAnalyzeRequest,
 } from "../../api/types";
 import type { Profile } from "../../../profile/model";
+import type {
+  AttachmentList,
+  AttachmentLinks,
+  AttachmentStore,
+} from "../../../attachments/model";
 import { resetHplacePage } from "../../workflow/test-utils/hplace.fixture";
 import {
+  addAttachmentEntries,
   appendCard,
   card,
   chipText,
@@ -26,7 +32,30 @@ import {
 
 afterEach(resetHplacePage);
 
-function run(profile: Profile) {
+/** Synthetic attachment store: metadata of stored kinds and saved links. */
+function attachmentStore(
+  files: readonly ("resume" | "portfolio")[],
+  links: AttachmentLinks,
+): AttachmentStore {
+  const list = Object.fromEntries(
+    files.map((kind) => [
+      kind,
+      { name: "synthetic.pdf", type: "application/pdf", size: 1 },
+    ]),
+  ) as unknown as AttachmentList;
+  return {
+    list: async () => list,
+    save: vi.fn(),
+    remove: vi.fn(),
+    loadFile: async () => undefined,
+    pruneEvidence: async () => undefined,
+    loadLinks: async () => links,
+    saveLink: vi.fn(),
+    removeLink: vi.fn(),
+  };
+}
+
+function run(profile: Profile, store?: AttachmentStore) {
   const fields: FieldsAnalyzeRequest[] = [];
   const preparations: PreparationAnalyzeRequest[] = [];
   const analyzeFields = vi.fn(async (request: FieldsAnalyzeRequest) => {
@@ -38,6 +67,7 @@ function run(profile: Profile) {
       pageDocument={document}
       onExit={() => undefined}
       repository={{ load: async () => profile }}
+      attachmentStore={store}
       apiClient={{
         loadExecutionPolicy: async () => undefined,
         analyzePreparation: async (request) => {
@@ -208,5 +238,30 @@ it("ends only a search whose press did not verify: pass 2 still writes the ordin
   expect(chipText(card("대학원", 0), "학교정보")).toEqual(["합성대학원"]);
   expect(chipText(card("대학교", 0), "전공")).toEqual(["합성공학"]);
   expect(document.querySelector("#dropdown-body")).toBeNull();
+  expect(page.forbiddenClicks()).toEqual([]);
+});
+
+it("adds one 경력기술서 and one 포트폴리오 entry when a file or link is stored", async () => {
+  const page = mountV1Step2();
+  run(
+    v1HistoryProfile(),
+    attachmentStore(["resume"], { portfolio: "https://example.com/p" }),
+  );
+  expect(await resultScreen()).toBeVisible();
+  expect(page.attachmentAdds()).toEqual(["경력기술서", "포트폴리오"]);
+  for (const row of document.querySelectorAll(".x-attachrow"))
+    expect(row.querySelectorAll('input[type="file"]')).toHaveLength(1);
+  expect(page.forbiddenClicks()).toEqual([]);
+});
+
+it("adds no entry without a stored file or link, or when the row already has one", async () => {
+  const page = mountV1Step2();
+  addAttachmentEntries({ 포트폴리오: true });
+  run(
+    v1HistoryProfile(),
+    attachmentStore([], { portfolio: "https://example.com/p" }),
+  );
+  expect(await resultScreen()).toBeVisible();
+  expect(page.attachmentAdds()).toEqual([]);
   expect(page.forbiddenClicks()).toEqual([]);
 });

@@ -527,6 +527,10 @@ const SEARCH_MS = 5000;
 /** The register row is judged only this long after typing: the page shows it
  * once before the search answers (~100-300 ms, step2-probe-noresult.json). */
 const REGISTER_MS = 1000;
+/** Consecutive unchanged readings a settled list also needs (one per 25 ms
+ * poll, STABLE_MS in all): after a main-thread pause the page's pending
+ * update runs before the next poll, so a pause alone never settles a list. */
+const STABLE_POLLS = 12;
 
 /**
  * The structure of the page's own "register '<query>' as a new entry" row
@@ -742,6 +746,7 @@ export async function writeV1HistorySearch(
   typedAt = Date.now();
   let shown = "";
   let since = 0;
+  let polls = 0;
   // Settled: this widget's own list is stable and answers the query (a row
   // contains the name). A list shown on focus before the debounced search
   // (대학교/대학원 widgets) is not taken for the result.
@@ -750,20 +755,25 @@ export async function writeV1HistorySearch(
       const items = listed();
       if (!items.length) {
         shown = "";
+        polls = 0;
         return false;
       }
       const now = items.map(text).join("\n");
       if (now !== shown) {
         shown = now;
         since = Date.now();
+        polls = 0;
         return false;
       }
-      // Result rows are judged once stable; the register row only after
-      // REGISTER_MS, so its transient showing is never taken for the answer.
+      polls++;
+      // Settled: unchanged for STABLE_MS over STABLE_POLLS readings; a
+      // lone register-shaped row also only REGISTER_MS after typing, so its
+      // transient showing is never taken for the answer.
       return (
-        (Date.now() - since >= STABLE_MS &&
-          !(items.length === 1 && isRegisterShape(items[0]))) ||
-        Date.now() - typedAt >= REGISTER_MS
+        Date.now() - since >= STABLE_MS &&
+        polls >= STABLE_POLLS &&
+        (!(items.length === 1 && isRegisterShape(items[0])) ||
+          Date.now() - typedAt >= REGISTER_MS)
       );
     },
     () => live() && input.isConnected,
