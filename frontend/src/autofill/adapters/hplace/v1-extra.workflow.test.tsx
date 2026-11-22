@@ -120,3 +120,15 @@ it("keeps going past a certificate search that cannot pick", async () => {
   expect(page.forbiddenClicks()).toEqual([]);
   expect(vi.isFakeTimers()).toBe(false);
 });
+
+it("runs on a second tenant without a 어학 section: only 자격증 rows", async () => {
+  const page = mountV1Step3("3", "k");
+  run(v1ExtraProfile());
+  expect(await resultScreen()).toBeVisible();
+  expect(page.addClicks()).toEqual(["자격증", "자격증"]);
+  expect(certChip(0)).toEqual(["정보처리기사"]);
+  expect(certChip(1)).toEqual(["목록에없는자격"]);
+  expect(certInput(0, "발급기관을 입력해주세요.")!.value).toBe("합성기관");
+  expect(certInput(1, "등록번호를 입력해주세요.")!.value).toBe("B-5678");
+  expect(page.forbiddenClicks()).toEqual([]);
+});

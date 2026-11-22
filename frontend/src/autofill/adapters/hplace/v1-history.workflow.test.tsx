@@ -265,3 +265,25 @@ it("adds no entry without a stored file or link, or when the row already has one
   expect(page.attachmentAdds()).toEqual([]);
   expect(page.forbiddenClicks()).toEqual([]);
 });
+
+it("runs on a second tenant: marked add label, other child order, fewer 대학교 rows", async () => {
+  const page = mountV1Step2("2", "k");
+  run(v1HistoryProfile());
+  expect(await resultScreen()).toBeVisible();
+  expect(screen.queryByText("자동 기입을 멈췄어요")).toBeNull();
+  expect(page.addClicks()).toEqual([
+    "고등학교",
+    "대학교",
+    "대학교",
+    "대학원",
+    "직장경력",
+    "직장경력",
+  ]);
+  const [u0, u1] = cards("대학교");
+  expect(chipText(u0, "학교정보")).toEqual(["합성대학교"]);
+  expect(cardInput(u0, "입학일").value).toBe("2009.03.02");
+  expect(cardSelected(u1, "졸업구분")).toEqual(["졸업예정"]);
+  expect(chipText(card("고등학교", 0), "학교정보")).toEqual(["합성고등학교"]);
+  expect(cardNamed(cards("직장경력")[0], "department").value).toBe("합성부서");
+  expect(page.forbiddenClicks()).toEqual([]);
+});

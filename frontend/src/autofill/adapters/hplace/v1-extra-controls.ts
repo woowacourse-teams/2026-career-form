@@ -275,10 +275,16 @@ export function isV1ExtraPage(document: Document): boolean {
   const headers = Array.from(
     document.getElementById("root")?.querySelectorAll("h5") ?? [],
   ).map(text);
+  // Tenants choose their sections (a second tenant has no 어학): one known
+  // header is enough, none repeated; each in-scope block is independent and
+  // the page is supported only while at least one of them is present.
+  const counts = ["어학", "자격/지식/기술", "경험"].map(
+    (h) => headers.filter((x) => x === h).length,
+  );
   return (
-    ["어학", "자격/지식/기술", "경험"].every(
-      (h) => headers.filter((x) => x === h).length === 1,
-    ) && v1ExtraBlocks(document).length > 0
+    counts.some((n) => n === 1) &&
+    counts.every((n) => n <= 1) &&
+    v1ExtraBlocks(document).length > 0
   );
 }
 

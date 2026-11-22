@@ -124,6 +124,20 @@ const period = (labels: string[]) =>
   durations(labels);
 
 function cardBody(level: HistoryLevel, k: number): string {
+  if (tenant === "k" && level === "대학교")
+    // Second tenant (live-step2-k-result.json): a subset of the rows, in this order.
+    return [
+      row("학위구분", toggle(["학사", "전문학사"], "학사"), true),
+      row("학교정보", search() + toggle(["본교", "분교"], "본교")),
+      row("재학기간", period(["1 학기", "1 년", "2 년"])),
+      row("입학구분", toggle(["입학", "편입"], "입학")),
+      row("졸업구분", graduation(true), true),
+      row(
+        "전공",
+        wrap('<button type="button" class="x-major-add">추가하기</button>') +
+          '<div class="x-majors"></div>',
+      ),
+    ].join("");
   const p = prefixes[level];
   if (level === "고등학교")
     return [
@@ -263,15 +277,29 @@ const chipHtml = (name: string) =>
 export function cardHtml(level: HistoryLevel, k: number): string {
   return `<div class="x-card"><div class="x-head"><p>- ${level} ${k + 1}</p><div><button type="button" class="x-icon" disabled><svg></svg></button><button type="button" class="x-icon"><svg></svg></button><button type="button" class="x-icon" aria-label="닫기"><svg></svg></button></div></div><div class="x-body">${cardBody(level, k)}<div class="x-spacer"></div></div></div>`;
 }
+/** Tenant variant: "k" is the second v1 tenant (k-step2-skeleton.json). */
+let tenant: "bbq" | "k" = "bbq";
+/** The add label; the second tenant marks 고등학교 as required ("고등학교 *"). */
+const addLabel = (level: HistoryLevel) =>
+  tenant === "k" && level === "고등학교" ? `${level} *` : level;
 const addButton = (level: HistoryLevel) =>
-  `<button type="button" class="x-addbtn"><svg></svg><p>${level}</p></button>`;
+  `<button type="button" class="x-addbtn"><svg></svg><p>${addLabel(level)}</p></button>`;
 const addDiv = (level: HistoryLevel) =>
-  `<div tabindex="0" class="x-adddiv"><div><p>${level}</p></div></div>`;
+  `<div tabindex="0" class="x-adddiv"><div><p>${addLabel(level)}</p></div></div>`;
 /** A fresh level container (step2-skeleton.json `fresh`): the add button is
  * a direct child next to empty spacers; cards are inserted as direct
  * children before them, and the button becomes a `div[tabindex="0"]`. */
 const container = (level: HistoryLevel) =>
-  `<div id="${containerIds[level]}" data-level="${level}">${addButton(level)}<div class="x-gap"></div><div class="x-gap"></div></div>`;
+  `<div id="${containerIds[level]}" data-level="${level}">${tenant === "k" ? kChildren[level](addButton(level)) : `${addButton(level)}<div class="x-gap"></div><div class="x-gap"></div>`}</div>`;
+const gap = '<div class="x-gap"></div>';
+/** The second tenant's child order per level (k-step2-skeleton.json secs). */
+const kChildren: Record<HistoryLevel, (add: string) => string> = {
+  고등학교: (add) => gap + add + gap,
+  대학교: (add) =>
+    add + gap + '<div class="x-notice"><p>합성 안내 문구입니다.</p></div>',
+  대학원: (add) => add + gap,
+  직장경력: (add) => gap + add + gap,
+};
 
 type AttachmentRowTitle = "경력기술서" | "포트폴리오";
 const attachmentNames: Record<AttachmentRowTitle, string> = {
@@ -405,14 +433,18 @@ export const searchInput = (c: Element, title: string) =>
 export const cardDropdown = (c: Element, list: string) =>
   c.querySelector<HTMLButtonElement>(`.x-dd > button[data-list="${list}"]`)!;
 
-export function mountV1Step2(step = "2"): V1HistoryPage {
+export function mountV1Step2(
+  step = "2",
+  variant: "bbq" | "k" = "bbq",
+): V1HistoryPage {
   resetHplacePage();
+  tenant = variant;
   registerQuotes = ["'", "'"];
   setHplacePage(v1Url(step));
   document.head.innerHTML = `<script type="module" src="/v1/applicant/index-Synth02a.js"></script><link rel="stylesheet" href="/v1/applicant/index-Synth02b.css">`;
   document.body.innerHTML = `<div id="root"><div class="x-app">
 <div class="x-top"><h5>지원서 작성</h5><button type="button" class="x-extend">연장</button><div>D-1</div></div>
-<nav>${["기본정보", "학력 및 연구/경력", "어학/자격/기타", "자기소개서/역량기술서", "최종 점검"].map((l, i) => `<button type="button" data-testid="resume-form-stepper-item" data-step-sn="${i + 1}">${l}</button>`).join("")}</nav>
+<nav>${(variant === "k" ? ["기본정보", "학력 및 경력", "자격/기타", "자기소개서", "최종 점검"] : ["기본정보", "학력 및 연구/경력", "어학/자격/기타", "자기소개서/역량기술서", "최종 점검"]).map((l, i) => `<button type="button" data-testid="resume-form-stepper-item" data-step-sn="${i + 1}">${variant === "k" ? `<h5>${l}</h5>` : l}</button>`).join("")}</nav>${variant === "k" ? "<div><h5>학력 및 경력</h5></div>" : ""}
 <button type="button" data-testid="resume-parsing-upload">AI로 지원서 채우기</button>
 <div class="x-section"><div><h5>학력사항</h5></div>
 ${container("고등학교")}
@@ -422,7 +454,7 @@ ${container("대학원")}
 </div>
 <div class="x-section"><div><h5>경력사항</h5></div>
 ${container("직장경력")}
-<div id="7006"><div>${attachmentRow("경력기술서", false)}${attachmentRow("포트폴리오", false)}<div></div></div></div>
+${variant === "k" ? `<div id="7006"><div class="x-attachhead"><span aria-hidden="true">경험 및 경력기술서</span><div><p>경험 및 경력기술서</p><p>합성 안내</p></div></div><div>${attachmentRow("경력기술서", false)}${attachmentRow("포트폴리오", false)}</div></div>` : `<div id="7006"><div>${attachmentRow("경력기술서", false)}${attachmentRow("포트폴리오", false)}<div></div></div></div>`}
 </div>
 <div class="x-footer"><button type="button" class="x-prev">이전</button><button type="button" data-testid="resume-form-save">임시저장</button><button type="button" data-testid="resume-form-save-and-leave">저장 후 나가기</button><button type="button" class="x-next">다음</button></div>
 </div></div><div id="tooltip-root"></div><div id="overlay-root"></div>`;
@@ -536,11 +568,15 @@ function installShims(): V1HistoryPage {
       const rowElement = pick.closest(".x-row")!;
       later(() => {
         widget.innerHTML = chipHtml(name);
-        // A school pick fills the row's 소재지 (the site's own choice).
-        if (rowElement.firstElementChild!.textContent === "학교정보")
-          rowElement.querySelector<HTMLButtonElement>(
-            '.x-dd > button[data-list="region"]',
-          )!.textContent = "서울";
+        // A school pick fills the row's 소재지 (the site's own choice), when
+        // the row has one (the second tenant's 대학교 row has none).
+        const region =
+          rowElement.firstElementChild!.textContent === "학교정보"
+            ? rowElement.querySelector<HTMLButtonElement>(
+                '.x-dd > button[data-list="region"]',
+              )
+            : null;
+        if (region) region.textContent = "서울";
       });
       return;
     }

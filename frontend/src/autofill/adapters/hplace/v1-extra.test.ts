@@ -56,9 +56,24 @@ describe("v1 step 3 page gate", () => {
     expect(isV1HistoryPage(document)).toBe(true);
   });
 
-  it("requires the three section headers", () => {
+  it("needs one known step-3 header, none repeated, and one in-scope block", () => {
+    const header = (t: string) =>
+      Array.from(document.querySelectorAll("h5")).find(
+        (h) => h.textContent === t,
+      )!;
     mountV1Step3();
-    document.querySelectorAll("h5")[3].textContent = "기타";
+    header("경험").textContent = "기타";
+    expect(isV1ExtraPage(document)).toBe(true);
+    header("어학").textContent = "기타";
+    header("자격/지식/기술").textContent = "기타";
+    expect(isV1ExtraPage(document)).toBe(false);
+    expect(isUnsupportedHplace(document)).toBe(true);
+    mountV1Step3();
+    header("경험").insertAdjacentHTML("afterend", "<h5>경험</h5>");
+    expect(isV1ExtraPage(document)).toBe(false);
+    mountV1Step3();
+    blockRow("자격증").remove();
+    blockRow("외국어활용능력").remove();
     expect(isV1ExtraPage(document)).toBe(false);
     expect(isUnsupportedHplace(document)).toBe(true);
   });
@@ -495,5 +510,25 @@ describe("v1 step 3 unverified structure", () => {
       ["자격증명", "conflict", undefined],
       ["외국어활용능력", "unavailable", "STRUCTURE_UNVERIFIED"],
     ]);
+  });
+});
+
+describe("v1 step 3 on a second tenant (k-step3-skeleton.json)", () => {
+  it("supports a step 3 with only 자격/지식/기술 and 경험, whatever the nav reads", () => {
+    mountV1Step3("3", "k");
+    expect(isV1ExtraPage(document)).toBe(true);
+    expect(isUnsupportedHplace(document)).toBe(false);
+    const [section] = collectPreparationSnapshot(document).request.sections;
+    expect(section.actionCandidates.map((a) => a.domName)).toEqual([
+      "hplace.v1.certificate.add",
+    ]);
+    appendSubRow("자격증");
+    expect(names()).toEqual(["hplace.v1.certificate.0.licenseName"]);
+    expect(
+      getWorkflowAdapter(document).repeatableProfileCount?.(
+        "hplace.v1.certificate.add",
+        v1ExtraProfile(),
+      ),
+    ).toBe(2);
   });
 });

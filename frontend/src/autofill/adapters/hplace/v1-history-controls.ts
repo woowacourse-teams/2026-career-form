@@ -505,19 +505,21 @@ function cardRows(card: Element): Map<string, Element> | undefined {
   return rows;
 }
 
-/** The single level whose measured row set equals the card's own rows. */
+/**
+ * The single level whose measured row set holds every row of the card.
+ * Tenants show a subset of the rows (a second tenant's 대학교 card has no
+ * 학과계열/학업성적/이수학점); a row no level measures matches none.
+ */
 function cardLevel(card: HistoryCard): HistoryGroup | undefined {
   if (!card.rows) return undefined;
   const titles = [...card.rows.keys()];
   const matches = historyGroups.filter((group) => {
     const expected = levelRows[group];
-    if (
-      titles.length !== expected.length ||
-      !titles.every((t) => expected.includes(t))
-    )
+    if (!titles.length || !titles.every((t) => expected.includes(t)))
       return false;
     const degree = degreeLabels[group];
-    return !degree || !!toggleGroup(card.rows!.get("학위구분")!, degree);
+    const degreeRow = card.rows!.get("학위구분");
+    return !degree || (!!degreeRow && !!toggleGroup(degreeRow, degree));
   });
   return matches.length === 1 ? matches[0] : undefined;
 }
@@ -559,6 +561,12 @@ function asCard(element: Element): HistoryCard | undefined {
     : undefined;
 }
 
+/** A level name, or the name and the page's required marker ("고등학교 *",
+ * measured on a second tenant); nothing else. */
+const levelLabelMatches = (shown: string, label: string) =>
+  shown === label ||
+  (shown.endsWith("*") && shown.slice(0, -1).trimEnd() === label);
+
 /** The add control: a direct child, `button` or `div[tabindex="0"]`, whose only `p` is a level name. */
 function asAdd(
   element: Element,
@@ -571,7 +579,9 @@ function asAdd(
     return undefined;
   const labels = element.querySelectorAll("p");
   const group = historyGroups.find(
-    (g) => labels.length === 1 && text(labels[0]) === historyLevelLabel[g],
+    (g) =>
+      labels.length === 1 &&
+      levelLabelMatches(text(labels[0]), historyLevelLabel[g]),
   );
   return group ? { group, element } : undefined;
 }
@@ -621,7 +631,23 @@ export function v1HistoryLevels(document: Document): HistoryLevel[] {
       ...shape.adds.map((a) => a.group),
       ...cardGroups.filter((g): g is HistoryGroup => !!g),
     ]);
-    if (!claimed.size) continue;
+    if (!claimed.size) {
+      // An add-shaped control that names no level: that kind is skipped.
+      if (
+        Array.from(shape.container.children).some(
+          (c) =>
+            (c instanceof HTMLButtonElement ||
+              c.matches('div[tabindex="0"]')) &&
+            c.querySelectorAll("p").length === 1,
+        )
+      )
+        debugCollectionSkip(
+          "hplace.v1.add",
+          "control-shape",
+          "v1-history-add-unmatched",
+        );
+      continue;
+    }
     const [group] = [...claimed];
     const add = shape.adds.length === 1 ? shape.adds[0].element : undefined;
     const addShape =
@@ -670,9 +696,14 @@ export function isV1HistoryPage(document: Document): boolean {
   const headers = Array.from(
     document.getElementById("root")?.querySelectorAll("h5") ?? [],
   ).map(text);
+  // Tenants choose their sections: one known header is enough; a repeated
+  // one is not a step-2 page we know.
+  const counts = ["학력사항", "경력사항"].map(
+    (h) => headers.filter((x) => x === h).length,
+  );
   return (
-    headers.filter((h) => h === "학력사항").length === 1 &&
-    headers.filter((h) => h === "경력사항").length === 1 &&
+    counts.some((n) => n === 1) &&
+    counts.every((n) => n <= 1) &&
     v1HistoryLevels(document).length > 0
   );
 }

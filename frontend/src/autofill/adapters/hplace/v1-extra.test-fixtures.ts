@@ -173,13 +173,10 @@ export interface V1ExtraPage {
   stall(title: ExtraBlockTitle): void;
 }
 
-export function mountV1Step3(step = "3"): V1ExtraPage {
-  resetHplacePage();
-  setHplacePage(v1Url(step));
-  document.head.innerHTML = `<script type="module" src="/v1/applicant/index-Synth03a.js"></script><link rel="stylesheet" href="/v1/applicant/index-Synth03b.css">`;
-  document.body.innerHTML = `<div id="root"><div class="x-app">
-<div class="x-top"><h5>지원서 작성</h5><button type="button" class="x-extend">연장</button></div>
-<nav>${["기본정보", "학력 및 연구/경력", "어학/자격/기타", "자기소개서/역량기술서", "최종 점검"].map((l, i) => `<button type="button" data-testid="resume-form-stepper-item" data-step-sn="${i + 1}">${l}</button>`).join("")}</nav>
+/** The second tenant's step 3 (k-step3-skeleton.json): no 어학 section,
+ * one 자격증 block, one 경험 add, other step nav labels. */
+const bbqStep3Body =
+  () => `<nav>${["기본정보", "학력 및 연구/경력", "어학/자격/기타", "자기소개서/역량기술서", "최종 점검"].map((l, i) => `<button type="button" data-testid="resume-form-stepper-item" data-step-sn="${i + 1}">${l}</button>`).join("")}</nav>
 <div class="x-section"><div><h5>어학</h5></div>
 <div id="8001">${block("공인외국어시험")}${block("외국어활용능력")}</div>
 </div>
@@ -190,7 +187,27 @@ export function mountV1Step3(step = "3"): V1ExtraPage {
 <div class="x-section"><div><h5>경험</h5></div>
 ${experience.map((label, i) => `<div id="${8004 + i}">${experienceAdd(label)}<div></div></div>`).join("")}
 </div>
-<div class="x-footer"><button type="button" class="x-prev">이전</button><button type="button" data-testid="resume-form-save">임시저장</button><button type="button" data-testid="resume-form-save-and-leave">저장 후 나가기</button><button type="button" class="x-next">다음</button></div>
+`;
+const kStep3Body =
+  () => `<nav>${["기본정보", "학력 및 경력", "자기소개서", "최종 점검"].map((l, i) => `<button type="button" data-testid="resume-form-stepper-item" data-step-sn="${i + 1}">${l}</button>`).join("")}</nav>
+<div class="x-section"><div><h5>자격/지식/기술</h5></div>
+<div id="8002">${block("자격증")}<div></div></div>
+</div>
+<div class="x-section"><div><h5>경험</h5></div>
+<div id="8004">${experienceAdd("학내외활동 *")}<div></div></div>
+</div>
+`;
+
+export function mountV1Step3(
+  step = "3",
+  variant: "bbq" | "k" = "bbq",
+): V1ExtraPage {
+  resetHplacePage();
+  setHplacePage(v1Url(step));
+  document.head.innerHTML = `<script type="module" src="/v1/applicant/index-Synth03a.js"></script><link rel="stylesheet" href="/v1/applicant/index-Synth03b.css">`;
+  document.body.innerHTML = `<div id="root"><div class="x-app">
+<div class="x-top"><h5>지원서 작성</h5><button type="button" class="x-extend">연장</button></div>
+${variant === "k" ? kStep3Body() : bbqStep3Body()}<div class="x-footer"><button type="button" class="x-prev">이전</button><button type="button" data-testid="resume-form-save">임시저장</button><button type="button" data-testid="resume-form-save-and-leave">저장 후 나가기</button><button type="button" class="x-next">다음</button></div>
 </div></div><div id="tooltip-root"></div><div id="overlay-root"></div>`;
   return installShims();
 }

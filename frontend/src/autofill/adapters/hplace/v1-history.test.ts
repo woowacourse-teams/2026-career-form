@@ -53,7 +53,6 @@ import {
   cards,
   mountV1Step2,
   nextYear,
-  until,
   v1HistoryAnalysis,
   v1HistoryPreparation,
 } from "./v1-history.test-fixtures";
@@ -83,13 +82,21 @@ describe("v1 step 2 page gate", () => {
     expect(isUnsupportedHplace(document)).toBe(false);
   });
 
-  it("requires both section headers", () => {
+  it("needs one 학력사항 or 경력사항 header and never a repeated one (tenant sections vary)", () => {
+    const header = (t: string) =>
+      Array.from(document.querySelectorAll("h5")).find(
+        (h) => h.textContent === t,
+      )!;
     mountV1Step2();
-    Array.from(document.querySelectorAll("h5"))
-      .find((h) => h.textContent === "경력사항")!
-      .remove();
+    header("경력사항").remove();
+    expect(isV1HistoryPage(document)).toBe(true);
+    expect(isUnsupportedHplace(document)).toBe(false);
+    header("학력사항").remove();
     expect(isV1HistoryPage(document)).toBe(false);
     expect(isUnsupportedHplace(document)).toBe(true);
+    mountV1Step2();
+    header("학력사항").insertAdjacentHTML("afterend", "<h5>학력사항</h5>");
+    expect(isV1HistoryPage(document)).toBe(false);
   });
 });
 
@@ -480,11 +487,18 @@ describe("v1 step 2 collection", () => {
   });
 
   it("collects 퇴사일 once 퇴사 unlocks it", async () => {
-    mountV1Step2();
-    const c = appendCard("직장경력");
-    cardToggle(c, "근무기간", "퇴사").click();
-    await until(() => !cardInput(c, "퇴사일").disabled);
-    expect(names()).toContain("hplace.v1.career.0.leavingDate");
+    // Fake timers: the page's unlock runs before the check, never by a margin.
+    vi.useFakeTimers();
+    try {
+      mountV1Step2();
+      const c = appendCard("직장경력");
+      cardToggle(c, "근무기간", "퇴사").click();
+      await vi.runAllTimersAsync();
+      expect(cardInput(c, "퇴사일").disabled).toBe(false);
+      expect(names()).toContain("hplace.v1.career.0.leavingDate");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
@@ -582,23 +596,32 @@ describe("v1 step 2 writes", () => {
   });
 
   it("keeps a typed 회사명 and closes its suggestions without picking", async () => {
-    const page = mountV1Step2();
-    const c = appendCard("직장경력");
-    expect(await write("hplace.v1.career.0.company", "합성회사")).toBe(
-      "written",
-    );
-    expect(cardInput(c, "회사명을 입력해주세요.").value).toBe("합성회사");
-    await until(() => !c.querySelector("#dropdown-body"));
-    page.lateSuggestions();
-    const next = appendCard("직장경력");
-    expect(await write("hplace.v1.career.1.company", "두번째회사")).toBe(
-      "written",
-    );
-    // The late list was waited for and closed without a pick.
-    expect(page.suggestionLists()).toBe(2);
-    expect(next.querySelector("#dropdown-body")).toBeNull();
-    expect(cardInput(next, "회사명을 입력해주세요.").value).toBe("두번째회사");
-    expect(page.forbiddenClicks()).toEqual([]);
+    // Fake timers: the late list (1 s after typing) and the writer's quiet
+    // wait (1.5 s) run in their exact order, never by wall-clock margins.
+    vi.useFakeTimers();
+    try {
+      const page = mountV1Step2();
+      const c = appendCard("직장경력");
+      const first = write("hplace.v1.career.0.company", "합성회사");
+      await vi.runAllTimersAsync();
+      expect(await first).toBe("written");
+      expect(cardInput(c, "회사명을 입력해주세요.").value).toBe("합성회사");
+      expect(c.querySelector("#dropdown-body")).toBeNull();
+      page.lateSuggestions();
+      const next = appendCard("직장경력");
+      const second = write("hplace.v1.career.1.company", "두번째회사");
+      await vi.runAllTimersAsync();
+      expect(await second).toBe("written");
+      // The late list was waited for and closed without a pick.
+      expect(page.suggestionLists()).toBe(2);
+      expect(next.querySelector("#dropdown-body")).toBeNull();
+      expect(cardInput(next, "회사명을 입력해주세요.").value).toBe(
+        "두번째회사",
+      );
+      expect(page.forbiddenClicks()).toEqual([]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("never overwrites a value and checks the page maxLength", async () => {
@@ -799,25 +822,34 @@ describe("v1 step 2 school and major search", () => {
   );
 
   it("searches a major in its own card while another card's list is open", async () => {
-    const page = mountV1Step2();
-    const u0 = appendCard("대학교");
-    const u1 = appendCard("대학교");
-    appendMajor(u0);
-    appendMajor(u1);
-    const other = searchInput(u0, "전공")!;
-    other.value = "합성공학";
-    other.dispatchEvent(new Event("input", { bubbles: true }));
-    await until(() => !!cardRow(u0, "전공").querySelector("#dropdown-body li"));
-    const r = await driveOnFakeTimers(
-      "hplace.v1.college.1.major0.majorName",
-      "합성경영",
-    );
-    expect(r).toEqual({ ok: true, settled: true, codes: [] });
-    expect(chipText(u1, "전공")).toEqual(["합성경영"]);
-    expect(searchInput(u1, "전공")).toBeNull();
-    expect(other.value).toBe("합성공학");
-    expect(page.searchQueries()).toEqual(["합성공학", "합성경영"]);
-    expect(page.forbiddenClicks()).toEqual([]);
+    // Fake timers: the other card's list is shown on the page's own timeline.
+    vi.useFakeTimers();
+    try {
+      const page = mountV1Step2();
+      const u0 = appendCard("대학교");
+      const u1 = appendCard("대학교");
+      appendMajor(u0);
+      appendMajor(u1);
+      const other = searchInput(u0, "전공")!;
+      other.value = "합성공학";
+      other.dispatchEvent(new Event("input", { bubbles: true }));
+      await vi.advanceTimersByTimeAsync(500);
+      expect(
+        cardRow(u0, "전공").querySelector("#dropdown-body li"),
+      ).not.toBeNull();
+      const r = await driveOnFakeTimers(
+        "hplace.v1.college.1.major0.majorName",
+        "합성경영",
+      );
+      expect(r).toEqual({ ok: true, settled: true, codes: [] });
+      expect(chipText(u1, "전공")).toEqual(["합성경영"]);
+      expect(searchInput(u1, "전공")).toBeNull();
+      expect(other.value).toBe("합성공학");
+      expect(page.searchQueries()).toEqual(["합성공학", "합성경영"]);
+      expect(page.forbiddenClicks()).toEqual([]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("reports an existing chip: same name kept, a different one as a conflict", () => {
@@ -887,15 +919,21 @@ describe("v1 step 2 pair and status rules", () => {
   });
 
   it("does not write 퇴사일 unless the profile status is 퇴사", async () => {
-    mountV1Step2();
-    const c = appendCard("직장경력");
-    // The applicant chose 퇴사; no profile status was applied this run.
-    cardToggle(c, "근무기간", "퇴사").click();
-    await until(() => !cardInput(c, "퇴사일").disabled);
-    expect(await write("hplace.v1.career.0.leavingDate", "2020-12-31")).toBe(
-      "failed",
-    );
-    expect(cardInput(c, "퇴사일").value).toBe("");
+    vi.useFakeTimers();
+    try {
+      mountV1Step2();
+      const c = appendCard("직장경력");
+      // The applicant chose 퇴사; no profile status was applied this run.
+      cardToggle(c, "근무기간", "퇴사").click();
+      await vi.runAllTimersAsync();
+      expect(cardInput(c, "퇴사일").disabled).toBe(false);
+      const result = write("hplace.v1.career.0.leavingDate", "2020-12-31");
+      await vi.runAllTimersAsync();
+      expect(await result).toBe("failed");
+      expect(cardInput(c, "퇴사일").value).toBe("");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
@@ -1475,5 +1513,72 @@ describe("v1 step 2 경력기술서 / 포트폴리오 rows", () => {
         .filter((f) => f.element.closest(".x-attachrow"))
         .map((f) => f.kind),
     ).toEqual([undefined, undefined]);
+  });
+});
+
+describe("v1 step 2 on a second tenant (k-step2-skeleton.json)", () => {
+  it("recognises the page whatever the step nav labels read", () => {
+    mountV1Step2("2", "k");
+    expect(isV1HistoryPage(document)).toBe(true);
+    expect(isUnsupportedHplace(document)).toBe(false);
+  });
+
+  it("accepts an add label with a required marker, in any child position", () => {
+    mountV1Step2("2", "k");
+    const [section] = collectPreparationSnapshot(document).request.sections;
+    expect(section.actionCandidates.map((a) => a.domName)).toEqual([
+      "hplace.v1.highschool.add",
+      "hplace.v1.college.add",
+      "hplace.v1.graduateSchool.add",
+      "hplace.v1.career.add",
+      "hplace.v1.careerDescription.add",
+      "hplace.v1.portfolio.add",
+    ]);
+    appendCard("고등학교");
+    expect(addControl("고등학교").matches('div[tabindex="0"]')).toBe(true);
+    const hs = v1HistoryLevels(document).find((l) => l.group === "highschool");
+    expect(hs?.status).toBe("ok");
+    expect(hs?.cards).toHaveLength(1);
+  });
+
+  it("claims no level for a label with anything else after the name", () => {
+    mountV1Step2();
+    levelContainer("고등학교").querySelector(".x-addbtn p")!.textContent =
+      "고등학교 (선택)";
+    levelContainer("대학교").querySelector(".x-addbtn p")!.textContent =
+      "대학교 **";
+    const groups = v1HistoryLevels(document).map((l) => l.group);
+    expect(groups).not.toContain("highschool");
+    expect(groups).not.toContain("college");
+    expect(groups).toContain("career");
+  });
+
+  it("recognises a 대학교 card that shows only some of the measured rows", () => {
+    mountV1Step2("2", "k");
+    appendCard("대학교");
+    expect(
+      v1HistoryLevels(document).find((l) => l.group === "college")?.status,
+    ).toBe("ok");
+    expect(names()).toEqual(
+      expect.arrayContaining([
+        "hplace.v1.college.0.academyName",
+        "hplace.v1.college.0.degreeTypeCode",
+        "hplace.v1.college.0.entranceDate",
+        "hplace.v1.college.0.graduationTypeCode",
+      ]),
+    );
+    expect(names()).not.toContain("hplace.v1.college.0.score");
+  });
+
+  it("keeps a card with a row no level measures malformed", () => {
+    mountV1Step2();
+    const u0 = appendCard("대학교");
+    u0.querySelector(".x-body")!.insertAdjacentHTML(
+      "afterbegin",
+      '<div class="x-row"><span aria-hidden="true">합성항목</span><div><p>합성항목</p></div><div></div></div>',
+    );
+    expect(
+      v1HistoryLevels(document).find((l) => l.group === "college")?.status,
+    ).toBe("malformed");
   });
 });
