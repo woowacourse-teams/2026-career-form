@@ -320,3 +320,36 @@ it("runs on a second tenant whose 학위구분 labels differ: the container name
   expect(cardSelected(u0, "학위구분")).toEqual(["4년제"]);
   expect(page.forbiddenClicks()).toEqual([]);
 });
+
+it("runs on a second tenant that keeps empty cards and adds a 포트폴리오 entry without a URL input", async () => {
+  const page = mountV1Step2("2", "k");
+  // Persisted across reloads on this tenant: one empty card each.
+  const hs = appendCard("고등학교");
+  const u0 = appendCard("대학교");
+  run(
+    v1HistoryProfile(),
+    attachmentStore(["resume"], { portfolio: "https://example.com/p" }),
+  );
+  expect(await resultScreen()).toBeVisible();
+  expect(screen.queryByText("자동 기입을 멈췄어요")).toBeNull();
+  // Existing cards count toward the profile entries: never a duplicate.
+  expect(page.addClicks()).toEqual([
+    "대학교",
+    "대학원",
+    "직장경력",
+    "직장경력",
+  ]);
+  expect(page.attachmentAdds()).toEqual(["경력기술서", "포트폴리오"]);
+  expect(cards("고등학교")).toHaveLength(1);
+  expect(cards("대학교")).toHaveLength(2);
+  // The pre-existing empty cards are filled.
+  expect(chipText(hs, "학교정보")).toEqual(["합성고등학교"]);
+  expect(cardInput(hs, "입학일").value).toBe("2006.03.02");
+  expect(chipText(u0, "학교정보")).toEqual(["합성대학교"]);
+  expect(cardInput(u0, "입학일").value).toBe("2009.03.02");
+  expect(chipText(cards("대학교")[1], "학교정보")).toEqual(["합성전문대학"]);
+  expect(cardInput(cards("직장경력")[0], "회사명을 입력해주세요.").value).toBe(
+    "합성회사",
+  );
+  expect(page.forbiddenClicks()).toEqual([]);
+});

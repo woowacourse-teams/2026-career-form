@@ -37,6 +37,33 @@ const approved = (
   item: Pick<ReviewPlanItem, "analysis">,
 ) => approvalIssue(spec, item) === undefined;
 
+/** Y/M/D digits of a full-day value in any separator style. */
+const dayKey = (value: string) => {
+  const m = /^(\d{4})\D{0,2}(\d{1,2})\D{0,2}(\d{1,2})\D?$/.exec(value.trim());
+  return m
+    ? `${m[1]}${m[2].padStart(2, "0")}${m[3].padStart(2, "0")}`
+    : undefined;
+};
+
+/** The page shows `target`: exactly, or for 취득일 the same day in the page's
+ * own date form (a second tenant rewrites the kept date after the write). */
+function showsTarget(
+  control: ExtraControl,
+  shown: string,
+  target: string,
+): boolean {
+  if (shown === target) return true;
+  const day = control.spec.kind === "date" ? dayKey(shown) : undefined;
+  return day !== undefined && day === dayKey(target);
+}
+
+/** Value-free form of a page value: digits as 9, letters as x. */
+const valueMask = (value: string) =>
+  value
+    .slice(0, 20)
+    .replace(/\d/g, "9")
+    .replace(/[^9.\-/ ]/g, "x") || "empty";
+
 /** One value-free diagnostic line for a step-3 write that is not written. */
 export function skipV1Extra(
   key: string,
@@ -134,14 +161,27 @@ export async function settleV1ExtraStateDriver(
   );
 }
 
+/** Why a written step-3 value is not confirmed (value-free), or undefined. */
+export function v1ExtraRetainedIssue(
+  handle: FieldCandidateHandle,
+  item: ReviewPlanItem,
+): string | undefined {
+  const control = ownedV1ExtraControl(handle);
+  if (!control) return "not-owned";
+  if (!approved(control.spec, item)) return "not-approved";
+  const target = v1ExtraTarget(control, item.profileValue ?? "");
+  if (target === undefined) return "no-target";
+  const shown = v1ExtraControlValue(control);
+  return showsTarget(control, shown, target)
+    ? undefined
+    : `value-${valueMask(shown)}`;
+}
+
 export function v1ExtraRetained(
   handle: FieldCandidateHandle,
   item: ReviewPlanItem,
 ): boolean {
-  const control = ownedV1ExtraControl(handle);
-  if (!control || !approved(control.spec, item)) return false;
-  const target = v1ExtraTarget(control, item.profileValue ?? "");
-  return target !== undefined && v1ExtraControlValue(control) === target;
+  return v1ExtraRetainedIssue(handle, item) === undefined;
 }
 
 /** Result comparison for 취득일 against the profile's stored form. */
@@ -160,7 +200,7 @@ export function v1ExtraResultMatches(
   )
     return undefined;
   const target = v1ExtraTarget(control, expected);
-  return target !== undefined && current === target;
+  return target !== undefined && showsTarget(control, current, target);
 }
 
 /** Why a step-3 write was refused, for the result screen. */
@@ -224,11 +264,11 @@ export async function writeV1Extra(
       item.analysis?.candidateId === handle.candidateId &&
       approved(spec, item) &&
       !!now &&
-      allowed.includes(v1ExtraControlValue(now))
+      allowed.some((value) => showsTarget(now, v1ExtraControlValue(now), value))
     );
   };
   if (!owned()) return fail("blocked", "not-current");
-  if (original === target) return "written";
+  if (showsTarget(control, original, target)) return "written";
   // A control that already holds a value is never overwritten.
   if (original !== "") return fail("existing-value", "existing-value");
   const input = control.elements[0];
@@ -243,7 +283,7 @@ export async function writeV1Extra(
   if (!owned()) return fail("blocked", "not-current");
   const shows = () => {
     const now = ownedV1ExtraControl(handle);
-    return !!now && v1ExtraControlValue(now) === target;
+    return !!now && showsTarget(now, v1ExtraControlValue(now), target);
   };
   if (spec.kind === "text" || spec.kind === "date") {
     input.focus();

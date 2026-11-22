@@ -470,6 +470,20 @@ export function v1ExtraChip(
   if (!sub || spec?.kind !== "search") return undefined;
   if (sub.querySelector(`input[placeholder="${spec.placeholder}"]`))
     return undefined;
+  if (!sub.querySelector("span[data-review-key]")) {
+    // No review-key spans (second tenant, k-step3-after.txt): the picked name
+    // is the sub-row's one text leaf (`div > div > div > p`).
+    const texts = Array.from(sub.querySelectorAll("*"))
+      .filter(
+        (e) =>
+          e.children.length === 0 &&
+          !(e instanceof HTMLInputElement) &&
+          !e.closest("button, li, #dropdown-body, svg"),
+      )
+      .map(text)
+      .filter(Boolean);
+    return texts.length === 1 ? texts[0] : undefined;
+  }
   const chips = chipWidgets(sub);
   return chips.length === 1 ? chips[0] : undefined;
 }

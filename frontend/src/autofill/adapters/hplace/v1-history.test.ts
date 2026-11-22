@@ -1673,3 +1673,89 @@ describe("v1 step 2 on a second tenant (k-step2-skeleton.json)", () => {
     ).toEqual([["unavailable", "STRUCTURE_UNVERIFIED"]]);
   });
 });
+
+describe("v1 step 2 second tenant, run 3 (live-step2-k-run3.out)", () => {
+  it("counts a 포트폴리오 entry that has no URL input", () => {
+    mountV1Step2("2", "k");
+    addAttachmentEntries({ 포트폴리오: true });
+    const portfolio = v1HistoryAddActions(document).find(
+      (a) => a.name === "hplace.v1.portfolio.add",
+    );
+    expect(portfolio?.count).toBe(1);
+  });
+
+  it("never counts an entry whose text input carries another name", () => {
+    mountV1Step2("2", "k");
+    addAttachmentEntries({ 포트폴리오: true });
+    document
+      .querySelectorAll(".x-attachrow")[1]
+      .querySelector(".x-entries")!
+      .insertAdjacentHTML("beforeend", '<input type="text" name="other.url">');
+    expect(
+      v1HistoryAddActions(document).find(
+        (a) => a.name === "hplace.v1.portfolio.add",
+      )?.count,
+    ).toBeUndefined();
+  });
+
+  it("takes a card whose rows sit in a wrapper, next to a button outside the rows", () => {
+    // Assumed card internals (not measured): the live 대학교 card fails the
+    // [head, body of rows] reading while its container is otherwise measured.
+    mountV1Step2();
+    const u0 = appendCard("대학교");
+    const body = u0.querySelector(".x-body")!;
+    const wrapper = document.createElement("div");
+    for (const r of Array.from(body.children).filter((c) =>
+      c.matches(".x-row"),
+    ))
+      wrapper.append(r);
+    body.prepend(wrapper);
+    body.insertAdjacentHTML(
+      "beforeend",
+      '<div class="x-help"><button type="button">합성도움말</button></div>',
+    );
+    expect(
+      v1HistoryLevels(document).find((l) => l.group === "college")?.status,
+    ).toBe("ok");
+    expect(names()).toContain("hplace.v1.college.0.academyName");
+  });
+
+  it("still rejects a card with a data control outside its rows", () => {
+    mountV1Step2();
+    const u0 = appendCard("대학교");
+    u0.querySelector(".x-body")!.insertAdjacentHTML(
+      "beforeend",
+      '<div><input type="text" name="collegeGroupAnswers.0.extra"></div>',
+    );
+    expect(
+      v1HistoryLevels(document).find((l) => l.group === "college")?.status,
+    ).toBe("malformed");
+  });
+
+  it("names the container child that fails, value-free", () => {
+    setAutofillDebugEnabled(true);
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      mountV1Step2();
+      appendCard("대학교");
+      levelContainer("대학교").insertAdjacentHTML(
+        "afterbegin",
+        '<div class="x-odd"><input type="text" value="합성값"></div>',
+      );
+      // Diagnostics print inside a collection, as the live run does.
+      collectPreparationSnapshot(document);
+      const lines = log.mock.calls.map(([l]) => String(l));
+      expect(lines).toEqual(
+        expect.arrayContaining([
+          expect.stringMatching(
+            /^\[CareerForm\] skip stage=\w+ key=hplace\.v1\.college reason=control-shape detail=v1-history-level-container-child0-div1-in1-bt0-row0$/,
+          ),
+        ]),
+      );
+      for (const line of lines) expect(line).not.toMatch(/합성값/);
+    } finally {
+      setAutofillDebugEnabled(false);
+      log.mockRestore();
+    }
+  });
+});

@@ -350,7 +350,11 @@ const attachmentNames: Record<AttachmentRowTitle, string> = {
 };
 /** One added entry (measured): a file widget and a URL widget, plus a delete button. */
 const attachmentEntry = (title: AttachmentRowTitle, n: number) =>
-  `<div><div><div><span data-review-key="f${n}"><div><div></div><input type="file"></div></span><span data-review-key="u${n}"><div><div><input type="text" maxlength="200" placeholder="첨부파일을 추가하거나 URL을 입력해주세요." name="${attachmentNames[title]}.${n}.url"></div></div></span></div><button class="x-entry-del"><svg></svg></button></div></div>`;
+  // Second tenant (live-step2-k-run3.out after: 포트폴리오 row shows no
+  // non-file input): the entry is a file widget only.
+  tenant === "k" && title === "포트폴리오"
+    ? `<div><div><div><span data-review-key="f${n}"><div><div></div><input type="file"></div></span></div><button class="x-entry-del"><svg></svg></button></div></div>`
+    : `<div><div><div><span data-review-key="f${n}"><div><div></div><input type="file"></div></span><span data-review-key="u${n}"><div><div><input type="text" maxlength="200" placeholder="첨부파일을 추가하거나 URL을 입력해주세요." name="${attachmentNames[title]}.${n}.url"></div></div></span></div><button class="x-entry-del"><svg></svg></button></div></div>`;
 /** A 경력기술서/포트폴리오 row below the cards, with its own 추가하기
  * (probe-attach-step3.json). */
 const attachmentRow = (title: AttachmentRowTitle, entry: boolean) =>

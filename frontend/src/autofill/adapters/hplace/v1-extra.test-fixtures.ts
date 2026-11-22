@@ -380,8 +380,19 @@ function installShims(): V1ExtraPage {
     if (!(input instanceof HTMLInputElement) || input.placeholder !== "취득일")
       return;
     const value = input.value;
+    const kept = /^\d{4}\.\d{2}\.\d{2}$/.test(value);
+    if (tenant3 === "k") {
+      // Second tenant (format assumed, neither the typed YYYY.MM.DD nor the
+      // profile's YYYY-MM-DD): the page rewrites a kept date right
+      // after the write, before any later read (live: the input is filled but
+      // the read-back failed).
+      queueMicrotask(() => {
+        input.value = kept ? value.replace(/\./g, ". ") : "";
+      });
+      return;
+    }
     later(() => {
-      input.value = /^\d{4}\.\d{2}\.\d{2}$/.test(value) ? value : "";
+      input.value = kept ? value : "";
     });
   });
   return {

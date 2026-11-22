@@ -16,7 +16,8 @@ import { getWorkflowAdapter } from "../workflow";
 import { hplaceUnverifiedRows } from "./unverified-structure";
 import { isV1HistoryPage } from "./v1-history-controls";
 import { mountV1Step2 } from "./v1-history.test-fixtures";
-import { isV1ExtraPage } from "./v1-extra-controls";
+import { isV1ExtraPage, v1ExtraChip } from "./v1-extra-controls";
+import { setAutofillDebugEnabled } from "../../debug/autofill-debug";
 import {
   appendSubRow,
   blockRow,
@@ -577,5 +578,56 @@ describe("v1 step 3 certificate search on the second tenant (k-step3-cert-list.j
     expect(certInput(0, "자격증명을 검색해주세요.")!.value).toBe("");
     expect(document.querySelector("#dropdown-body")).toBeNull();
     expect(page.forbiddenClicks()).toEqual([]);
+  });
+});
+
+describe("v1 step 3 second tenant, run 4 (k-step3-after.txt)", () => {
+  it("reads the picked name from a sub-row without review-key spans", () => {
+    mountV1Step3("3", "k");
+    pickCertificate(0, "정보처리기사");
+    expect(document.querySelector("span[data-review-key]")).toBeNull();
+    expect(v1ExtraChip(document, 0)).toBe("정보처리기사");
+  });
+
+  it("keeps a 취득일 the page rewrites after the write as one written outcome", async () => {
+    mountV1Step3("3", "k");
+    pickCertificate(0, "정보처리기사");
+    const results = await writeBatch([
+      ["hplace.v1.certificate.0.acquireDate", "2020-05-01"],
+      ["hplace.v1.certificate.0.registNumber", "A-1234"],
+    ]);
+    expect(results.map((r) => r.status)).toEqual(["written", "written"]);
+    expect(certInput(0, "취득일")!.value).toBe("2020. 05. 01");
+  });
+
+  it("logs a value-free skip line when a written value is not kept", async () => {
+    setAutofillDebugEnabled(true);
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      mountV1Step3("3", "k");
+      pickCertificate(0, "정보처리기사");
+      const number = certInput(0, "등록번호를 입력해주세요.")!;
+      number.addEventListener("blur", () =>
+        queueMicrotask(() => {
+          number.value = "Z-0000";
+        }),
+      );
+      const results = await writeBatch([
+        ["hplace.v1.certificate.0.registNumber", "A-1234"],
+      ]);
+      expect(results.map((r) => r.status)).toEqual(["skipped"]);
+      const lines = log.mock.calls.map(([l]) => String(l));
+      expect(lines).toEqual(
+        expect.arrayContaining([
+          expect.stringMatching(
+            /^\[CareerForm\] skip stage=write key=hplace\.v1\.certificate\.0\.registNumber reason=control-shape detail=v1-extra-retained-value-x-9999$/,
+          ),
+        ]),
+      );
+      for (const line of lines) expect(line).not.toMatch(/A-1234|Z-0000/);
+    } finally {
+      setAutofillDebugEnabled(false);
+      log.mockRestore();
+    }
   });
 });

@@ -495,10 +495,11 @@ export interface HistoryLevel {
   cards: HistoryCard[];
 }
 
-function cardRows(card: Element): Map<string, Element> | undefined {
-  const body = card.children[1];
+function cardRows(
+  rowList: readonly Element[],
+): Map<string, Element> | undefined {
   const rows = new Map<string, Element>();
-  for (const row of Array.from(body?.children ?? []).filter(isRow)) {
+  for (const row of rowList) {
     const title = text(row.firstElementChild);
     if (rows.has(title)) return undefined;
     rows.set(title, row);
@@ -559,6 +560,8 @@ interface ContainerShape {
   cards: HistoryCard[];
   /** False when a direct child holds controls but is neither a card nor the add. */
   sound: boolean;
+  /** Value-free shape of the first such child (diagnostics only). */
+  unsound?: string;
   adds: { group: HistoryGroup; element: AddControl }[];
 }
 
@@ -567,18 +570,36 @@ const CONTROLS = "input, button, select, textarea";
 const isSpacer = (e: Element) =>
   !e.querySelector(`${CONTROLS}, span[aria-hidden="true"]`);
 
+/** The outermost row blocks inside an element. */
+function topRows(element: Element): Element[] {
+  const all = Array.from(element.querySelectorAll("div")).filter(isRow);
+  return all.filter((r) => !all.some((o) => o !== r && o.contains(r)));
+}
+
 /**
- * A card (step2-skeleton.json `afterCareer`/`afterCollege`): a direct child
- * of its level container with exactly [head, body], where the body holds
- * row blocks and only empty spacers besides them.
+ * A card: a direct child of its level container, not itself a row, holding
+ * row blocks with every data control (input, select, textarea) inside one of
+ * them. The first tenant's card is [head, body of rows]
+ * (step2-skeleton.json); a second tenant's 대학교 card fails that reading
+ * (live-step2-k-run3.out `v1-history-level-container`) while its internals
+ * are not measured, so wrappers, notices and buttons outside the rows (never
+ * clicked) are accepted. A data control outside the rows is not.
  */
 function asCard(element: Element): HistoryCard | undefined {
-  if (element.children.length !== 2) return undefined;
-  const body = Array.from(element.children[1].children);
-  return body.some(isRow) && body.every((e) => isRow(e) || isSpacer(e))
-    ? { element, rows: cardRows(element) }
-    : undefined;
+  if (isRow(element)) return undefined;
+  const rows = topRows(element);
+  if (!rows.length) return undefined;
+  const stray = Array.from(
+    element.querySelectorAll("input, select, textarea"),
+  ).some((control) => !rows.some((row) => row.contains(control)));
+  return stray ? undefined : { element, rows: cardRows(rows) };
 }
+
+/** Value-free shape of a container child: tag, children, controls, rows. */
+const childShape = (child: Element, index: number) =>
+  `child${index}-${child.tagName.toLowerCase()}${child.children.length}-in${
+    child.querySelectorAll("input, select, textarea").length
+  }-bt${child.querySelectorAll("button").length}-row${topRows(child).length}`;
 
 /** A level name, or the name and the page's required marker ("고등학교 *",
  * measured on a second tenant); nothing else. */
@@ -613,18 +634,21 @@ function containerShape(container: Element): ContainerShape {
   const adds: ContainerShape["adds"] = [];
   const cards: HistoryCard[] = [];
   let sound = true;
-  for (const child of Array.from(container.children)) {
+  let unsound: string | undefined;
+  Array.from(container.children).forEach((child, index) => {
     const add = asAdd(child);
     if (add) {
       adds.push(add);
-      continue;
+      return;
     }
     const card = asCard(child);
     if (card) cards.push(card);
-    else if (child.querySelector(`${CONTROLS}, span[aria-hidden="true"]`))
+    else if (child.querySelector(`${CONTROLS}, span[aria-hidden="true"]`)) {
       sound = false;
-  }
-  return { container, cards, sound, adds };
+      unsound ??= childShape(child, index);
+    }
+  });
+  return { container, cards, sound, adds, ...(unsound ? { unsound } : {}) };
 }
 
 function levelContainers(document: Document): Element[] {
@@ -695,7 +719,7 @@ export function v1HistoryLevels(document: Document): HistoryLevel[] {
           claimed.size !== 1
             ? "claims"
             : !shape.sound
-              ? "container"
+              ? `container-${shape.unsound ?? "unknown"}`
               : shape.adds.length > 1
                 ? "adds"
                 : !addShape
@@ -1345,7 +1369,10 @@ function attachmentAdds(document: Document): HistoryAddAction[] {
         label: title,
         element: button,
         count:
-          urls.length === count && urls.every((u) => u.name.startsWith(prefix))
+          // An entry is a file widget plus an optional URL widget: the
+          // second tenant's 포트폴리오 entry has no URL input
+          // (live-step2-k-run3.out). Any URL input carries the row's name.
+          urls.length <= count && urls.every((u) => u.name.startsWith(prefix))
             ? count
             : undefined,
         state: () => entries().map(cardState),

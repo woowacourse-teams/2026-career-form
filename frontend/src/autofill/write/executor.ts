@@ -31,8 +31,11 @@ import {
 } from "../adapters/hplace/v1-history-write";
 import { ownedV1ExtraControl } from "../adapters/hplace/v1-extra-controls";
 import {
+  isV1ExtraHandle,
+  skipV1Extra,
   v1ExtraFailureReason,
   v1ExtraRetained,
+  v1ExtraRetainedIssue,
   writeV1Extra,
 } from "../adapters/hplace/v1-extra-write";
 import type { AddressIdentity } from "../address/match";
@@ -465,6 +468,27 @@ export async function executeApprovedWritesAfterPageSettles({
             item,
             initialValues[index],
             hplaceAddress,
+          );
+        // v1 step 3 (CF-510): a written value not confirmed names its key and
+        // why, value-free, so a live run shows which field it was.
+        if (
+          result.status === "written" &&
+          !retained &&
+          "handle" in lookup &&
+          isV1ExtraHandle(lookup.handle)
+        )
+          skipV1Extra(
+            lookup.handle.candidate.domName ?? item.candidateId,
+            "control-shape",
+            `retained-${
+              lookup.status !== "ready"
+                ? "stale"
+                : !profileRetained
+                  ? "profile-changed"
+                  : !current()
+                    ? "not-current"
+                    : (v1ExtraRetainedIssue(lookup.handle, item) ?? "unknown")
+            }`,
           );
         const finalResult =
           result.status === "written" && !retained

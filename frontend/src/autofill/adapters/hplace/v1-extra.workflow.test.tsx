@@ -130,5 +130,23 @@ it("runs on a second tenant without a 어학 section: only 자격증 rows", asyn
   expect(certChip(1)).toEqual(["목록에없는자격"]);
   expect(certInput(0, "발급기관을 입력해주세요.")!.value).toBe("합성기관");
   expect(certInput(1, "등록번호를 입력해주세요.")!.value).toBe("B-5678");
+  // The page rewrites the kept 취득일; it is the same day, written once.
+  expect(certInput(0, "취득일")!.value).toBe("2020. 05. 01");
+  expect(page.forbiddenClicks()).toEqual([]);
+});
+
+it("runs on a second tenant with one certificate: every field confirmed once, none listed as 입력 못함", async () => {
+  const page = mountV1Step3("3", "k");
+  const profile = v1ExtraProfile();
+  profile.certifications = profile.certifications.slice(0, 1);
+  run(profile);
+  expect(await resultScreen()).toBeVisible();
+  expect(certChip(0)).toEqual(["정보처리기사"]);
+  expect(certInput(0, "발급기관을 입력해주세요.")!.value).toBe("합성기관");
+  expect(certInput(0, "취득일")!.value).toBe("2020. 05. 01");
+  expect(certInput(0, "등록번호를 입력해주세요.")!.value).toBe("A-1234");
+  // One outcome per field, each confirmed: no item is listed as 입력 못함
+  // (live: 취득일 was listed although the page showed the date).
+  expect(screen.queryAllByText("입력 못함")).toHaveLength(0);
   expect(page.forbiddenClicks()).toEqual([]);
 });
