@@ -6,6 +6,7 @@ import type {
 import { hplaceDocumentKind } from "./fingerprint";
 import { rowDropdowns } from "./v1-basic-controls";
 import { cardState, chipWidgets } from "./v1-history-controls";
+import { showsOnlyName } from "./v1-search";
 
 /**
  * Hplace v1 applicant app, step 3 ("어학/자격/기타", CF-510). The step starts
@@ -471,6 +472,22 @@ export function v1ExtraChip(
     return undefined;
   const chips = chipWidgets(sub);
   return chips.length === 1 ? chips[0] : undefined;
+}
+
+/** The certificate sub-row shows exactly `name` as its pick: the strict chip
+ * reading, or without review-key spans the measure-free fallback. */
+export function v1ExtraChipShows(
+  document: Document,
+  index: number,
+  name: string,
+): boolean {
+  const spec = extraSpec("certificate", "licenseName");
+  const sub = v1ExtraSubRow(document, "certificate", index);
+  if (!sub || spec?.kind !== "search") return false;
+  return (
+    showsOnlyName(sub, spec.placeholder, name) ??
+    v1ExtraChip(document, index) === name
+  );
 }
 
 /** A picked certificate field (its input replaced): the chip of its sub-row. */

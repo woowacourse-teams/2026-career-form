@@ -68,8 +68,13 @@ export const LANGUAGE_PLACEHOLDER = "활용가능한 외국어를 선택해주�
 const LICENSE_NAME = "licenseGroupAnswer.licenseAnsw";
 
 let reviewKey = 500;
+/** "k": the second tenant, whose controls have no review-key span
+ * (k-step3-cert-list.json; chips and pick re-render assumed alike). */
+let tenant3: "bbq" | "k" = "bbq";
 const wrap = (control: string) =>
-  `<span data-review-key="${reviewKey++}@0">${control}</span>`;
+  tenant3 === "k"
+    ? `<div class="x-w">${control}</div>`
+    : `<span data-review-key="${reviewKey++}@0">${control}</span>`;
 const field = (input: string) => wrap(`<div><div>${input}</div></div>`);
 
 /** A block: title span, title, body > [list, 추가하기] (f1_certAfter). */
@@ -139,7 +144,7 @@ export const certInput = (k: number, placeholder: string) =>
     `input[placeholder="${placeholder}"]`,
   );
 export const certChip = (k: number) =>
-  Array.from(subRowAt("자격증", k).querySelectorAll("span[data-review-key] p"))
+  Array.from(subRowAt("자격증", k).querySelectorAll("p"))
     .filter((p) => p.nextElementSibling?.matches("svg.x-chip-x"))
     .map((p) => p.textContent);
 export const languageTrigger = (k: number) =>
@@ -159,8 +164,10 @@ const resultRows = (names: string[]) =>
   names
     .map((n) => `<li><button type="button"><span>${n}</span></button></li>`)
     .join("");
-const list = (rows: string) =>
-  `<div id="dropdown-body" class="x-results"><div><ul>${rows}</ul></div></div>`;
+/** A result list; on the second tenant it sits outside the input's row and
+ * carries the sub-row it answers (measured: one body, li > button > span). */
+const list = (rows: string, sub?: number) =>
+  `<div id="dropdown-body" class="x-results"${sub === undefined ? "" : ` data-sub="${sub}"`}><div><div><div role="scrollbar"><div id="design-system-scroll-container"><div><ul>${rows}</ul></div></div><div><div></div></div><div><div></div></div></div></div></div></div>`;
 
 export interface V1ExtraPage {
   forbiddenClicks(): string[];
@@ -191,7 +198,7 @@ ${experience.map((label, i) => `<div id="${8004 + i}">${experienceAdd(label)}<di
 const kStep3Body =
   () => `<nav>${["기본정보", "학력 및 경력", "자기소개서", "최종 점검"].map((l, i) => `<button type="button" data-testid="resume-form-stepper-item" data-step-sn="${i + 1}">${l}</button>`).join("")}</nav>
 <div class="x-section"><div><h5>자격/지식/기술</h5></div>
-<div id="8002">${block("자격증")}<div></div></div>
+<div id="8002"><div class="x-wrap">${block("자격증")}<div class="x-portal"></div></div></div>
 </div>
 <div class="x-section"><div><h5>경험</h5></div>
 <div id="8004">${experienceAdd("학내외활동 *")}<div></div></div>
@@ -203,6 +210,7 @@ export function mountV1Step3(
   variant: "bbq" | "k" = "bbq",
 ): V1ExtraPage {
   resetHplacePage();
+  tenant3 = variant;
   setHplacePage(v1Url(step));
   document.head.innerHTML = `<script type="module" src="/v1/applicant/index-Synth03a.js"></script><link rel="stylesheet" href="/v1/applicant/index-Synth03b.css">`;
   document.body.innerHTML = `<div id="root"><div class="x-app">
@@ -220,6 +228,19 @@ function installShims(): V1ExtraPage {
   const stalled = new Set<ExtraBlockTitle>();
   let registerClicks = 0;
   const later = (run: () => void) => setTimeout(run, 0);
+  /** The sub-row a list answers: its own (second tenant) or the enclosing one. */
+  const subIndex = (e: Element) => {
+    const own = e.closest<HTMLElement>(".x-results")?.dataset.sub;
+    return own !== undefined
+      ? Number(own)
+      : subRows("자격증").indexOf(e.closest(".x-sub")!);
+  };
+  /** Second tenant: lists outside the row (assumed: the title closes them). */
+  const dropOutside = () => {
+    if (tenant3 === "k")
+      for (const body of document.querySelectorAll(".x-wrap .x-results"))
+        body.remove();
+  };
   const blockOf = (e: Element) =>
     e.closest<HTMLElement>("[data-block]")?.dataset.block as
       ExtraBlockTitle | undefined;
@@ -237,9 +258,11 @@ function installShims(): V1ExtraPage {
       if (owner === "공인외국어시험" || owner === "컴퓨터활용능력")
         forbidden.push(`${owner}:${target.tagName.toLowerCase()}`);
       const title = target.closest('span[aria-hidden="true"]');
-      if (title)
+      if (title) {
         for (const body of title.parentElement!.querySelectorAll(".x-results"))
           later(() => body.remove());
+        later(dropOutside);
+      }
     },
     true,
   );
@@ -258,18 +281,22 @@ function installShims(): V1ExtraPage {
       registerClicks++;
       const typed =
         /^'(.*)'등록하기$/.exec(register.textContent ?? "")?.[1] ?? "";
-      const sub = register.closest(".x-sub")!;
-      const k = subRows("자격증").indexOf(sub);
-      setTimeout(() => pickCertificate(k, typed), 110);
+      const k = subIndex(register);
+      setTimeout(() => {
+        pickCertificate(k, typed);
+        dropOutside();
+      }, 110);
       return;
     }
     const pick = target.closest(".x-results li > button");
     if (pick) {
-      const sub = pick.closest(".x-sub")!;
-      const k = subRows("자격증").indexOf(sub);
+      const k = subIndex(pick);
       const name = pick.textContent!;
       // The pick re-renders the whole sub-row (chip, 발급기관, 취득일, 등록번호).
-      later(() => pickCertificate(k, name));
+      later(() => {
+        pickCertificate(k, name);
+        dropOutside();
+      });
       return;
     }
     const option = target.closest("#dropdown-body ul > li > button");
@@ -307,14 +334,34 @@ function installShims(): V1ExtraPage {
     if (!input.matches(".x-search")) return;
     const query = input.value;
     queries.push(query);
-    const box = input.parentElement!;
+    const k = subRows("자격증").indexOf(input.closest(".x-sub")!);
+    const outside = tenant3 === "k";
+    // Second tenant: the one list appears outside the row, in the section.
+    const box = outside
+      ? input.closest(".x-wrap")!.querySelector(".x-portal")!
+      : input.parentElement!;
     const show = (ms: number, rows: string) =>
       setTimeout(() => {
         if (!input.isConnected || input.value !== query) return;
         box.querySelector(":scope > .x-results")?.remove();
-        box.insertAdjacentHTML("beforeend", list(rows));
+        box.insertAdjacentHTML(
+          "beforeend",
+          list(rows, outside ? k : undefined),
+        );
       }, ms);
     if (!query) return;
+    if (outside && query === "두목록") {
+      // Two lists in the section at once: neither is taken.
+      show(420, resultRows([query]));
+      setTimeout(
+        () =>
+          input
+            .closest(".x-wrap")!
+            .insertAdjacentHTML("beforeend", list(resultRows([query]), k)),
+        430,
+      );
+      return;
+    }
     const names = certificateCatalog[query];
     // The step-2 timeline: a transient register row, an empty list, the answer.
     show(100, registerRow(query));

@@ -266,7 +266,7 @@ it("adds no entry without a stored file or link, or when the row already has one
   expect(page.forbiddenClicks()).toEqual([]);
 });
 
-it("runs on a second tenant: marked add label, other child order, fewer 대학교 rows", async () => {
+it("runs on a second tenant: cards by container, the 퇴직사유 row skipped", async () => {
   const page = mountV1Step2("2", "k");
   run(v1HistoryProfile());
   expect(await resultScreen()).toBeVisible();
@@ -284,6 +284,39 @@ it("runs on a second tenant: marked add label, other child order, fewer 대학�
   expect(cardInput(u0, "입학일").value).toBe("2009.03.02");
   expect(cardSelected(u1, "졸업구분")).toEqual(["졸업예정"]);
   expect(chipText(card("고등학교", 0), "학교정보")).toEqual(["합성고등학교"]);
-  expect(cardNamed(cards("직장경력")[0], "department").value).toBe("합성부서");
+  const grad = card("대학원", 0);
+  expect(chipText(grad, "학교정보")).toEqual(["합성대학원"]);
+  expect(cardSelected(grad, "학위구분")).toEqual(["석사"]);
+  const c0 = cards("직장경력")[0];
+  expect(cardDropdown(c0, "employment").textContent).toBe("정규직");
+  expect(cardInput(c0, "회사명을 입력해주세요.").value).toBe("합성회사");
+  expect(cardSelected(c0, "근무기간")).toEqual(["퇴사"]);
+  expect(cardInput(c0, "퇴사일").value).toBe("2020.12.31");
+  expect(cardNamed(c0, "assignedTask").value).toBe("합성 업무");
+  // The unmeasured 퇴직사유 row is never written.
+  expect(cardNamed(c0, "retireReason").value).toBe("");
+  expect(page.forbiddenClicks()).toEqual([]);
+});
+
+it("runs on a second tenant whose 학위구분 labels differ: the container names the level", async () => {
+  const page = mountV1Step2("2", "k", {
+    collegeDegreeLabels: ["4년제", "2·3년제"],
+  });
+  run(v1HistoryProfile());
+  expect(await resultScreen()).toBeVisible();
+  expect(screen.queryByText("자동 기입을 멈췄어요")).toBeNull();
+  expect(page.addClicks()).toEqual([
+    "고등학교",
+    "대학교",
+    "대학교",
+    "대학원",
+    "직장경력",
+    "직장경력",
+  ]);
+  const [u0] = cards("대학교");
+  expect(chipText(u0, "학교정보")).toEqual(["합성대학교"]);
+  expect(cardInput(u0, "입학일").value).toBe("2009.03.02");
+  // The unmatched 학위구분 is left as the page shows it.
+  expect(cardSelected(u0, "학위구분")).toEqual(["4년제"]);
   expect(page.forbiddenClicks()).toEqual([]);
 });

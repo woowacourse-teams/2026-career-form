@@ -19,7 +19,7 @@ import {
   ownedV1HistoryControl,
   parseV1HistoryName,
   scaleLabels,
-  v1HistoryChip,
+  v1HistoryChipShows,
   v1HistorySearchRow,
   v1HistoryControl,
   v1HistoryControlValue,
@@ -277,15 +277,16 @@ export function isV1HistoryHandle(handle: FieldCandidateHandle): boolean {
   );
 }
 
-/** The chip of a picked search field, when its handle names one. */
-function pickedChip(handle: FieldCandidateHandle): string | undefined {
+/** The picked search field shows exactly `name` (strict chip or fallback). */
+function pickedShows(handle: FieldCandidateHandle, name: string): boolean {
   const parsed = parseV1HistoryName(handle.candidate.domName);
   const document = handle.elements[0]?.ownerDocument;
-  return parsed &&
-    document &&
-    (parsed.field === "academyName" || parsed.field === "major0.majorName")
-    ? v1HistoryChip(document, parsed.group, parsed.index, parsed.field)
-    : undefined;
+  return (
+    !!parsed &&
+    !!document &&
+    (parsed.field === "academyName" || parsed.field === "major0.majorName") &&
+    v1HistoryChipShows(document, parsed.group, parsed.index, parsed.field, name)
+  );
 }
 
 export function v1HistoryRetained(
@@ -578,7 +579,7 @@ export async function writeV1HistorySearch(
       row,
       titleRow: row,
       live,
-      picked: () => pickedChip(handle) === name,
+      picked: () => pickedShows(handle, name),
       skip: skipV1History,
     },
     name,
@@ -604,7 +605,7 @@ export async function settleV1HistoryStateDriver(
   )
     return false;
   if (spec.kind === "search")
-    return pickedChip(handle) === normalize(item.profileValue ?? "");
+    return pickedShows(handle, normalize(item.profileValue ?? ""));
   const control = ownedV1HistoryControl(handle);
   if (!control || spec.kind !== "toggle" || !v1HistoryRetained(handle, item))
     return false;

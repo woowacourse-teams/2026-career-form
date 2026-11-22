@@ -28,7 +28,12 @@ import {
 } from "./v1-history-write";
 import { hplaceUnverifiedRows } from "./unverified-structure";
 import { executeApprovedWritesAfterPageSettles } from "../../write/executor";
-import { v1HistoryAddActions, v1HistoryChip } from "./v1-history-controls";
+import {
+  v1HistoryAddActions,
+  v1HistoryChip,
+  v1HistoryMalformed,
+  v1HistoryUnknownRows,
+} from "./v1-history-controls";
 import { v1HistoryProfileCount } from "./v1-history-collection";
 import { findAttachmentFields } from "../../attachments/file-fields";
 import { addAttachmentEntries } from "./v1-history.test-fixtures";
@@ -344,14 +349,14 @@ describe("v1 step 2 preparation", () => {
 });
 
 describe("v1 step 2 card levels", () => {
-  it("decides each level from the card's own rows", () => {
+  it("never takes a card that holds another level's row", () => {
     mountV1Step2();
     appendCard("대학교");
     appendCard("직장경력");
-    // A level whose card shows an unknown row is not entered at all.
+    // A 직장경력 row in a 대학교 card: the level is not entered at all.
     cardRow(card("대학교", 0), "이수학점").insertAdjacentHTML(
       "afterend",
-      '<div class="x-row"><span aria-hidden="true">합성행</span><div></div><div></div></div>',
+      '<div class="x-row"><span aria-hidden="true">고용형태</span><div></div><div></div></div>',
     );
     const levels = v1HistoryLevels(document);
     expect(levels.find((l) => l.group === "college")?.status).toBe("malformed");
@@ -1570,15 +1575,101 @@ describe("v1 step 2 on a second tenant (k-step2-skeleton.json)", () => {
     expect(names()).not.toContain("hplace.v1.college.0.score");
   });
 
-  it("keeps a card with a row no level measures malformed", () => {
+  it("skips a row no level measures and reports it as 입력 불가", () => {
     mountV1Step2();
     const u0 = appendCard("대학교");
     u0.querySelector(".x-body")!.insertAdjacentHTML(
       "afterbegin",
-      '<div class="x-row"><span aria-hidden="true">합성항목</span><div><p>합성항목</p></div><div></div></div>',
+      '<div class="x-row"><span aria-hidden="true">합성항목</span><div><p>합성항목</p></div><div><input type="text" name="collegeGroupAnswers.0.synth"></div></div>',
     );
     expect(
       v1HistoryLevels(document).find((l) => l.group === "college")?.status,
-    ).toBe("malformed");
+    ).toBe("ok");
+    expect(names()).toContain("hplace.v1.college.0.academyName");
+    expect(names().some((n) => n?.includes("synth"))).toBe(false);
+    expect(v1HistoryUnknownRows(document)).toEqual([
+      { group: "college", index: 0, title: "합성항목" },
+    ]);
+    const rows = hplaceUnverifiedRows(
+      document,
+      collectFieldsSnapshot(document).request,
+      v1HistoryProfile(),
+    );
+    expect(
+      rows
+        .filter((r) => r.fieldLabel === "합성항목")
+        .map((r) => [r.status, r.failureCode]),
+    ).toEqual([["unavailable", "STRUCTURE_UNVERIFIED"]]);
+  });
+
+  it("takes a card's level from its container, whatever the 학위구분 labels read", () => {
+    mountV1Step2("2", "k", { collegeDegreeLabels: ["4년제", "2·3년제"] });
+    appendCard("대학교");
+    expect(
+      v1HistoryLevels(document).find((l) => l.group === "college")?.status,
+    ).toBe("ok");
+    expect(names()).toContain("hplace.v1.college.0.academyName");
+    // The unmatched toggle labels exclude that field only.
+    expect(names()).not.toContain("hplace.v1.college.0.degreeTypeCode");
+    expect(v1HistoryMalformed(document)).toContainEqual({
+      group: "college",
+      index: 0,
+      field: "degreeTypeCode",
+    });
+  });
+
+  it("takes a 대학원 card showing the 대학교 rows as 대학원 from its container", () => {
+    mountV1Step2("2", "k");
+    appendCard("대학원");
+    expect(
+      v1HistoryLevels(document).find((l) => l.group === "graduateSchool")
+        ?.status,
+    ).toBe("ok");
+    expect(names()).toContain("hplace.v1.graduateSchool.0.degreeTypeCode");
+    expect(
+      v1HistoryLevels(document).find((l) => l.group === "college")?.cards,
+    ).toHaveLength(0);
+  });
+
+  it("re-identifies the add after the first card: last, div[tabindex], no marker", () => {
+    mountV1Step2("2", "k");
+    appendCard("고등학교");
+    const box = levelContainer("고등학교");
+    expect(box.lastElementChild!.matches('div[tabindex="0"]')).toBe(true);
+    expect(box.lastElementChild!.textContent).toBe("고등학교");
+    const snapshot = collectPreparationSnapshot(document);
+    const hs = snapshot.request.sections[0].actionCandidates.find(
+      (a) => a.domName === "hplace.v1.highschool.add",
+    )!;
+    expect(snapshot.countRepeatableGroups(hs.candidateId)).toBe(1);
+  });
+
+  it("skips the 퇴직사유 row of a 직장경력 card and reports it as 입력 불가", () => {
+    mountV1Step2("2", "k");
+    appendCard("직장경력");
+    expect(
+      v1HistoryLevels(document).find((l) => l.group === "career")?.status,
+    ).toBe("ok");
+    expect(names()).toEqual(
+      expect.arrayContaining([
+        "hplace.v1.career.0.employmentType",
+        "hplace.v1.career.0.company",
+        "hplace.v1.career.0.assignedTask",
+      ]),
+    );
+    expect(names().some((n) => /retire/i.test(n ?? ""))).toBe(false);
+    expect(v1HistoryUnknownRows(document)).toEqual([
+      { group: "career", index: 0, title: "퇴직사유" },
+    ]);
+    const rows = hplaceUnverifiedRows(
+      document,
+      collectFieldsSnapshot(document).request,
+      v1HistoryProfile(),
+    );
+    expect(
+      rows
+        .filter((r) => r.fieldLabel === "퇴직사유")
+        .map((r) => [r.status, r.failureCode]),
+    ).toEqual([["unavailable", "STRUCTURE_UNVERIFIED"]]);
   });
 });

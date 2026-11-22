@@ -532,3 +532,50 @@ describe("v1 step 3 on a second tenant (k-step3-skeleton.json)", () => {
     ).toBe(2);
   });
 });
+
+describe("v1 step 3 certificate search on the second tenant (k-step3-cert-list.json)", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("takes the one list outside the input's row, without review-key spans, and verifies the pick", async () => {
+    const page = mountV1Step3("3", "k");
+    appendSubRow("자격증");
+    expect(document.querySelector("span[data-review-key]")).toBeNull();
+    const r = await drive(
+      "hplace.v1.certificate.0.licenseName",
+      "정보처리기사",
+    );
+    expect(r).toEqual({ ok: true, settled: true, codes: [] });
+    expect(certChip(0)).toEqual(["정보처리기사"]);
+    expect(page.searchQueries()).toEqual(["정보처리기사"]);
+    expect(document.querySelector("#dropdown-body")).toBeNull();
+    expect(page.forbiddenClicks()).toEqual([]);
+  });
+
+  it("presses the lone register row there too", async () => {
+    const page = mountV1Step3("3", "k");
+    appendSubRow("자격증");
+    const r = await drive(
+      "hplace.v1.certificate.0.licenseName",
+      "목록에없는자격",
+    );
+    expect(r).toEqual({ ok: true, settled: true, codes: [] });
+    expect(page.registerClicks()).toBe(1);
+    expect(certChip(0)).toEqual(["목록에없는자격"]);
+  });
+
+  it("fails closed when two new lists appear in the section", async () => {
+    const page = mountV1Step3("3", "k");
+    appendSubRow("자격증");
+    const r = await drive("hplace.v1.certificate.0.licenseName", "두목록");
+    expect(r).toEqual({ ok: false, settled: false, codes: ["SEARCH_TIMEOUT"] });
+    expect(certChip(0)).toEqual([]);
+    expect(certInput(0, "자격증명을 검색해주세요.")!.value).toBe("");
+    expect(document.querySelector("#dropdown-body")).toBeNull();
+    expect(page.forbiddenClicks()).toEqual([]);
+  });
+});

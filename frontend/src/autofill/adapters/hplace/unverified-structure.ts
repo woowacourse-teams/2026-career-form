@@ -19,6 +19,7 @@ import {
   v1HistoryChip,
   v1HistoryMalformed,
   v1HistoryName,
+  v1HistoryUnknownRows,
   type HistoryGroup,
 } from "./v1-history-controls";
 import {
@@ -303,6 +304,11 @@ function v1HistoryRows(
     )
       rows.push(row(`v1-${group}-${index}-${field}`, spec.label, spec.profile));
   }
+  // Rows of a card no spec reads (CF-510: a second tenant's 퇴직사유): never
+  // written; reported when the paired profile entry exists.
+  for (const { group, index, title } of v1HistoryUnknownRows(document))
+    if (entries(group)[index])
+      rows.push(row(`v1-${group}-${index}-row-${title}`, title));
   return rows;
 }
 

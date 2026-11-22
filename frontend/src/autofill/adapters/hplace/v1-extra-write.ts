@@ -15,7 +15,7 @@ import {
   extraSpec,
   ownedV1ExtraControl,
   parseV1ExtraName,
-  v1ExtraChip,
+  v1ExtraChipShows,
   v1ExtraControlValue,
   v1ExtraSectionId,
   v1ExtraSubRow,
@@ -105,12 +105,15 @@ export function v1ExtraSearchFailureTargets(
   return sub ? [sub] : undefined;
 }
 
-const pickedChip = (handle: FieldCandidateHandle) => {
+/** The certificate sub-row shows exactly `name` (strict chip or fallback). */
+const pickedShows = (handle: FieldCandidateHandle, name: string) => {
   const parsed = parseV1ExtraName(handle.candidate.domName);
   const document = handle.elements[0]?.ownerDocument;
-  return parsed?.field === "licenseName" && document
-    ? v1ExtraChip(document, parsed.index)
-    : undefined;
+  return (
+    parsed?.field === "licenseName" &&
+    !!document &&
+    v1ExtraChipShows(document, parsed.index, name)
+  );
 };
 
 /** After the certificate search: the sub-row shows exactly the profile name. */
@@ -127,7 +130,7 @@ export async function settleV1ExtraStateDriver(
     item.selected &&
     !item.disabled &&
     approved(spec, item) &&
-    pickedChip(handle) === normalize(item.profileValue ?? "")
+    pickedShows(handle, normalize(item.profileValue ?? ""))
   );
 }
 
@@ -336,7 +339,7 @@ export async function writeV1ExtraSearch(
       row: control.block,
       titleRow: control.block,
       live,
-      picked: () => pickedChip(handle) === name,
+      picked: () => pickedShows(handle, name),
       skip: skipV1Extra,
     },
     name,

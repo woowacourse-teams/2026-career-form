@@ -124,10 +124,15 @@ const period = (labels: string[]) =>
   durations(labels);
 
 function cardBody(level: HistoryLevel, k: number): string {
-  if (tenant === "k" && level === "대학교")
-    // Second tenant (live-step2-k-result.json): a subset of the rows, in this order.
+  if (tenant === "k" && (level === "대학교" || level === "대학원")) {
+    // Second tenant (k-step2-cards.json): 대학교 and 대학원 show the same six
+    // rows, in this order. The 학위구분 labels are not measured.
+    const degree =
+      level === "대학교"
+        ? (collegeDegree ?? ["학사", "전문학사"])
+        : ["석사", "박사"];
     return [
-      row("학위구분", toggle(["학사", "전문학사"], "학사"), true),
+      row("학위구분", toggle(degree, degree[0]), true),
       row("학교정보", search() + toggle(["본교", "분교"], "본교")),
       row("재학기간", period(["1 학기", "1 년", "2 년"])),
       row("입학구분", toggle(["입학", "편입"], "입학")),
@@ -138,7 +143,34 @@ function cardBody(level: HistoryLevel, k: number): string {
           '<div class="x-majors"></div>',
       ),
     ].join("");
+  }
   const p = prefixes[level];
+  if (tenant === "k" && level === "직장경력")
+    // Second tenant (k-step2-cards.json): 고용형태|근무기간|회사명|퇴직사유|담당업무.
+    // The 퇴직사유 control is not measured: an assumed named text input.
+    return [
+      row("고용형태", dropdown("고용형태를 선택해주세요", "employment"), true),
+      row(
+        "근무기간",
+        toggle(["재직중", "퇴사"], "재직중") +
+          input('type="text" placeholder="입사일"') +
+          input('type="text" placeholder="퇴사일" disabled'),
+        true,
+      ),
+      row("회사명", input('type="text" placeholder="회사명을 입력해주세요."')),
+      row(
+        "퇴직사유",
+        input(
+          `type="text" name="${p}.${k}.retireReason" placeholder="퇴직사유를 입력해주세요." maxlength="100"`,
+        ),
+      ),
+      row(
+        "담당업무",
+        input(
+          `type="text" name="${p}.${k}.assignedTask" placeholder="담당업무를 입력해주세요." maxlength="100"`,
+        ),
+      ),
+    ].join("");
   if (level === "고등학교")
     return [
       row("졸업구분", graduation(false), true),
@@ -279,13 +311,15 @@ export function cardHtml(level: HistoryLevel, k: number): string {
 }
 /** Tenant variant: "k" is the second v1 tenant (k-step2-skeleton.json). */
 let tenant: "bbq" | "k" = "bbq";
+/** Unmeasured 대학교 학위구분 labels for a second-tenant variant. */
+let collegeDegree: string[] | undefined;
 /** The add label; the second tenant marks 고등학교 as required ("고등학교 *"). */
 const addLabel = (level: HistoryLevel) =>
   tenant === "k" && level === "고등학교" ? `${level} *` : level;
 const addButton = (level: HistoryLevel) =>
   `<button type="button" class="x-addbtn"><svg></svg><p>${addLabel(level)}</p></button>`;
 const addDiv = (level: HistoryLevel) =>
-  `<div tabindex="0" class="x-adddiv"><div><p>${addLabel(level)}</p></div></div>`;
+  `<div tabindex="0" class="x-adddiv"><div><p>${level}</p></div></div>`;
 /** A fresh level container (step2-skeleton.json `fresh`): the add button is
  * a direct child next to empty spacers; cards are inserted as direct
  * children before them, and the button becomes a `div[tabindex="0"]`. */
@@ -299,6 +333,14 @@ const kChildren: Record<HistoryLevel, (add: string) => string> = {
     add + gap + '<div class="x-notice"><p>합성 안내 문구입니다.</p></div>',
   대학원: (add) => add + gap,
   직장경력: (add) => gap + add + gap,
+};
+/** The second tenant's children after the first card (k-step2-cards.json):
+ * the add control is a `div[tabindex="0"]` named without the marker, last. */
+const kAfterFirst: Record<HistoryLevel, (card: string) => string> = {
+  고등학교: (c) => gap + c + gap + addDiv("고등학교"),
+  대학교: (c) => c + gap + addDiv("대학교"),
+  대학원: (c) => c + gap + addDiv("대학원"),
+  직장경력: (c) => gap + c + gap + addDiv("직장경력"),
 };
 
 type AttachmentRowTitle = "경력기술서" | "포트폴리오";
@@ -373,6 +415,14 @@ export const addControl = (level: HistoryLevel) =>
 export function appendCard(level: HistoryLevel): Element {
   const box = levelContainer(level);
   const k = cards(level).length;
+  if (tenant === "k") {
+    const existing = cards(level);
+    // Later cards are not measured: assumed right after the last card.
+    if (existing.length)
+      existing.at(-1)!.insertAdjacentHTML("afterend", cardHtml(level, k));
+    else box.innerHTML = kAfterFirst[level](cardHtml(level, 0));
+    return cards(level)[k];
+  }
   const anchor = Array.from(box.children).find((c) => !c.matches(".x-card"))!;
   anchor.insertAdjacentHTML("beforebegin", cardHtml(level, k));
   const button = box.querySelector(":scope > .x-addbtn");
@@ -436,9 +486,11 @@ export const cardDropdown = (c: Element, list: string) =>
 export function mountV1Step2(
   step = "2",
   variant: "bbq" | "k" = "bbq",
+  options: { collegeDegreeLabels?: string[] } = {},
 ): V1HistoryPage {
   resetHplacePage();
   tenant = variant;
+  collegeDegree = options.collegeDegreeLabels;
   registerQuotes = ["'", "'"];
   setHplacePage(v1Url(step));
   document.head.innerHTML = `<script type="module" src="/v1/applicant/index-Synth02a.js"></script><link rel="stylesheet" href="/v1/applicant/index-Synth02b.css">`;

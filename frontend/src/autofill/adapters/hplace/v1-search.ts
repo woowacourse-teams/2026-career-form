@@ -132,6 +132,36 @@ function resultRows(body: Element): {
   return { rows };
 }
 
+/** The nearest `div[id=<digits>]` holding the element: a v1 section container. */
+function sectionOf(e: Element): Element | undefined {
+  for (let p = e.parentElement; p; p = p.parentElement)
+    if (p.tagName === "DIV" && /^\d+$/.test(p.id)) return p;
+  return undefined;
+}
+
+/**
+ * The measure-free pick check for a row without review-key spans (a second
+ * tenant): the search input is gone and exactly one leaf element outside
+ * buttons, list items and lists shows exactly the name. Undefined when the
+ * row has review-key spans: the caller's strict chip reading applies.
+ */
+export function showsOnlyName(
+  row: Element,
+  placeholder: string,
+  name: string,
+): boolean | undefined {
+  if (row.querySelector("span[data-review-key]")) return undefined;
+  if (row.querySelector(`input[placeholder="${placeholder}"]`)) return false;
+  const leaves = Array.from(row.querySelectorAll("*")).filter(
+    (e) =>
+      e.children.length === 0 &&
+      !(e instanceof HTMLInputElement) &&
+      !e.closest("button, li, #dropdown-body, svg") &&
+      normalize(e.textContent ?? "") === name,
+  );
+  return leaves.length === 1;
+}
+
 export interface V1SearchTarget {
   /** Diagnostics key: the wire name of the search field. */
   key: string;
@@ -165,8 +195,20 @@ export async function runV1Search(
   name: string,
 ): Promise<{ written: boolean; code?: WriteFailureCode }> {
   const { key, input, row, titleRow, live, picked, skip } = target;
-  const widget = input.closest("[data-review-key]") ?? input.parentElement!;
-  const bodies = () => Array.from(widget.querySelectorAll("#dropdown-body"));
+  // The widget's own list: inside the input's review-key span (first
+  // tenant). A page without that span (second tenant,
+  // k-step3-cert-list.json) shows the list outside the row: the lists that
+  // appeared after typing inside the input's section container count, and
+  // only exactly one of them is ever read.
+  const widget = input.closest("[data-review-key]");
+  const section = sectionOf(input);
+  const sectionBodies = () =>
+    Array.from(section?.querySelectorAll("#dropdown-body") ?? []);
+  const before = widget ? [] : sectionBodies();
+  const bodies = () =>
+    widget
+      ? Array.from(widget.querySelectorAll("#dropdown-body"))
+      : sectionBodies().filter((b) => !before.includes(b));
   const reasons: Partial<Record<WriteFailureCode, StructuralSkipReason>> = {
     SEARCH_NO_EXACT_MATCH: "result-not-unique",
     SEARCH_AMBIGUOUS: "result-not-unique",

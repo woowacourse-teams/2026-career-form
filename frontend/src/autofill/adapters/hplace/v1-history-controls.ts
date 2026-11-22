@@ -4,6 +4,7 @@ import type {
   FieldCandidateHandle,
 } from "../../dom/types";
 import { hplaceDocumentKind } from "./fingerprint";
+import { showsOnlyName } from "./v1-search";
 import {
   isSelectedToggle,
   rowDropdowns,
@@ -505,6 +506,24 @@ function cardRows(card: Element): Map<string, Element> | undefined {
   return rows;
 }
 
+/** Every row title some level measures. */
+const knownRows = new Set(historyGroups.flatMap((g) => levelRows[g]));
+
+/**
+ * A card in a container whose add control names `group`: its rows are the
+ * level's own rows plus rows no level measures (skipped, reported); at least
+ * one is the level's own. A row of another level is not this level's card.
+ */
+function cardFits(card: HistoryCard, group: HistoryGroup): boolean {
+  if (!card.rows) return false;
+  const titles = [...card.rows.keys()];
+  const own = levelRows[group];
+  return (
+    titles.some((t) => own.includes(t)) &&
+    titles.every((t) => own.includes(t) || !knownRows.has(t))
+  );
+}
+
 /**
  * The single level whose measured row set holds every row of the card.
  * Tenants show a subset of the rows (a second tenant's 대학교 card has no
@@ -626,7 +645,13 @@ function levelContainers(document: Document): Element[] {
 export function v1HistoryLevels(document: Document): HistoryLevel[] {
   const levels: HistoryLevel[] = [];
   for (const shape of levelContainers(document).map(containerShape)) {
-    const cardGroups = shape.cards.map(cardLevel);
+    // The container's one add control names the level (CF-510: a second
+    // tenant's 대학교 and 대학원 cards show the same rows); without one, the
+    // cards' own rows decide.
+    const named = shape.adds.length === 1 ? shape.adds[0].group : undefined;
+    const cardGroups = shape.cards.map((c) =>
+      named ? (cardFits(c, named) ? named : undefined) : cardLevel(c),
+    );
     const claimed = new Set<HistoryGroup>([
       ...shape.adds.map((a) => a.group),
       ...cardGroups.filter((g): g is HistoryGroup => !!g),
@@ -662,6 +687,24 @@ export function v1HistoryLevels(document: Document): HistoryLevel[] {
       addShape &&
       cardGroups.every((g) => g === group) &&
       shape.cards.every((c, i) => namesMatch(group, c.element, i));
+    if (!ok)
+      debugCollectionSkip(
+        `hplace.v1.${group}`,
+        "control-shape",
+        `v1-history-level-${
+          claimed.size !== 1
+            ? "claims"
+            : !shape.sound
+              ? "container"
+              : shape.adds.length > 1
+                ? "adds"
+                : !addShape
+                  ? "add-shape"
+                  : !cardGroups.every((g) => g === group)
+                    ? "card-rows"
+                    : "card-names"
+        }`,
+      );
     for (const g of claimed)
       levels.push({
         group: g,
@@ -681,6 +724,25 @@ export function v1HistoryLevels(document: Document): HistoryLevel[] {
         }))
       : mine;
   });
+}
+
+/**
+ * Rows of sound cards that no spec of their level reads (a second tenant's
+ * 퇴직사유): skipped, never written or clicked, reported as 입력 불가.
+ */
+export function v1HistoryUnknownRows(
+  document: Document,
+): { group: HistoryGroup; index: number; title: string }[] {
+  if (!isV1HistoryPage(document)) return [];
+  return v1HistoryLevels(document).flatMap((level) =>
+    level.status !== "ok"
+      ? []
+      : level.cards.flatMap((card, index) =>
+          [...(card.rows?.keys() ?? [])]
+            .filter((t) => !levelRows[level.group].includes(t))
+            .map((title) => ({ group: level.group, index, title })),
+        ),
+  );
 }
 
 /** v1 resume form step 2 with its 학력사항/경력사항 sections and level containers. */
@@ -1100,6 +1162,27 @@ export function v1HistoryChip(
   // hold `p`s too: one sub-row = one chip widget (sub-row inputs not counted).
   const chips = spec.major ? chipWidgets(row) : chipTexts(row);
   return chips.length === 1 ? chips[0] : undefined;
+}
+
+/**
+ * A school or major search shows exactly `name` as its pick: the strict chip
+ * reading, or on a page without review-key spans the measure-free fallback
+ * (input gone, one leaf text equal to the name).
+ */
+export function v1HistoryChipShows(
+  document: Document,
+  group: HistoryGroup,
+  index: number,
+  field: "academyName" | "major0.majorName",
+  name: string,
+): boolean {
+  const spec = historySpec(group, field);
+  const row = v1HistorySearchRow(document, group, index, field);
+  if (!row || spec?.kind !== "search") return false;
+  return (
+    showsOnlyName(row, spec.placeholder, name) ??
+    v1HistoryChip(document, group, index, field) === name
+  );
 }
 
 export interface HistoryAddAction {
