@@ -26,8 +26,9 @@ import com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement;
 import com.careerform.formanalysis.dto.PreparationAnalysisRequest;
 
 /**
- * In-code policy for the Hplace v1 applicant app resume form: step 1 (section {@code hplace-v1-basic}) and
- * step 2 education and career cards (section {@code hplace-v1-history}). It is never stored, so the
+ * In-code policy for the Hplace v1 applicant app resume form: step 1 (section {@code hplace-v1-basic}),
+ * step 2 education and career cards (section {@code hplace-v1-history}) and step 3 자격증 and 외국어활용능력 rows
+ * (section {@code hplace-v1-extra}). It is never stored, so the
  * versioned MRS2 documents (v3, v4) and their active-version pointer stay untouched.
  * Choices shared with MRS2 reuse the MRS2 bindings.
  */
@@ -65,18 +66,22 @@ final class HplaceV1CompanyFormPolicyFactory {
         rules.add(rule("veteranRelation", FormControl.SELECT, new LookupBinding("veteran.veteran.veteranRelation",
             HplaceCompanyFormPolicyFactory.identity("부", "모", "조부", "조모", "외조부", "외조모", "형제", "자매", "남매", "배우자", "자녀"))));
         rules.addAll(historyRules());
+        rules.addAll(extraRules());
         var structures = rules.stream().map(rule -> new FieldStructure(rule.structuralName(), rule.element(), rule.control())).toList();
         // Step 1 accepts no action and step 2 accepts any subset of the add actions, including none: the Hplace
         // fingerprint enforces both. The structures below only feed the action resolver lookup.
-        var preparation = new PreparationFingerprint(Set.of(HplaceFormFingerprint.V1_HISTORY_SECTION),
-            List.of(button(HplaceFormFingerprint.V1_HISTORY_CARD_ADDS), button(HplaceFormFingerprint.V1_ATTACHMENT_ADDS)),
+        var preparation = new PreparationFingerprint(Set.of(HplaceFormFingerprint.V1_HISTORY_SECTION, HplaceFormFingerprint.V1_EXTRA_SECTION),
+            List.of(button(HplaceFormFingerprint.V1_HISTORY_CARD_ADDS), button(HplaceFormFingerprint.V1_ATTACHMENT_ADDS),
+                button(HplaceFormFingerprint.V1_EXTRA_ADDS)),
             List.of(button(HplaceFormFingerprint.V1_HISTORY_MAJOR_ADDS)));
         var actions = new ArrayList<ActionRule>();
         for (String name : HplaceFormFingerprint.V1_HISTORY_CARD_ADDS) actions.add(new ActionRule(name, ActionKind.ADD, null));
         for (String name : HplaceFormFingerprint.V1_HISTORY_MAJOR_ADDS) actions.add(new ActionRule(name, ActionKind.ADD, null));
         for (String name : HplaceFormFingerprint.V1_ATTACHMENT_ADDS) actions.add(new ActionRule(name, ActionKind.ADD, null));
+        for (String name : HplaceFormFingerprint.V1_EXTRA_ADDS) actions.add(new ActionRule(name, ActionKind.ADD, null));
         return CompanyFormPolicy.create("hplace", VERSION, preparation,
-            new FieldsFingerprint(Set.of(HplaceFormFingerprint.V1_SECTION, HplaceFormFingerprint.V1_HISTORY_SECTION), structures),
+            new FieldsFingerprint(Set.of(HplaceFormFingerprint.V1_SECTION, HplaceFormFingerprint.V1_HISTORY_SECTION,
+                HplaceFormFingerprint.V1_EXTRA_SECTION), structures),
             actions, rules, isSupportedProfileKey);
     }
 
@@ -120,6 +125,7 @@ final class HplaceV1CompanyFormPolicyFactory {
         for (String group : List.of("college", "graduateSchool")) {
             String profile = "college".equals(group) ? "education.university." : "education.graduateSchool.";
             bindings.put(group + ".academyName", new DirectBinding(profile + "schoolName"));
+            bindings.put(group + ".campusType", new DirectBinding(profile + "schoolName"));
             bindings.put(group + ".entranceDate", new DirectBinding(profile + "startDate"));
             bindings.put(group + ".graduationDate", new DirectBinding(profile + "endDate"));
             bindings.put(group + ".graduationTypeCode", nativeBinding(mrs2, group + ".graduationTypeCode"));
@@ -144,6 +150,29 @@ final class HplaceV1CompanyFormPolicyFactory {
         bindings.put("career.position", new DirectBinding("careers.career.position"));
         bindings.put("career.assignedTask", new DirectBinding("careers.career.responsibilities"));
         return bindings;
+    }
+
+    /** One rule per allowed step-3 name. The language options are the measured page labels (exact match only). */
+    private static List<FieldRule> extraRules() {
+        var bindings = new LinkedHashMap<String, ValueBinding>();
+        bindings.put("certificate.licenseName", new DirectBinding("certifications.certificate.name"));
+        bindings.put("certificate.organization", new DirectBinding("certifications.certificate.issuer"));
+        bindings.put("certificate.acquireDate", new DirectBinding("certifications.certificate.acquisitionDate"));
+        bindings.put("certificate.registNumber", new DirectBinding("certifications.certificate.registrationNo"));
+        bindings.put("languageSkill.language", new LookupBinding("languages.languageSkill.language",
+            HplaceCompanyFormPolicyFactory.identity("영어", "일본어", "중국어", "프랑스어", "독일어", "스페인어",
+                "포르투갈어", "이탈리아어", "네덜란드어", "아랍어", "말레이시아어", "인도네시아어", "베트남어", "인도어",
+                "태국어", "러시아어", "이란어", "터키어", "핀란드어", "노르웨이어", "헝가리어", "덴마크어", "미얀마어",
+                "불가리아어", "폴란드어", "방글라데시어", "타직어", "스와힐리어", "키르키즈어")));
+        var rules = new ArrayList<FieldRule>();
+        HplaceFormFingerprint.V1_EXTRA_FIELDS.forEach((name, control) -> {
+            String key = name.substring("hplace.v1.".length());
+            String[] parts = key.split("\\.");
+            var binding = bindings.get(parts[0] + "." + parts[2]);
+            if (binding == null) throw new IllegalStateException("Missing Hplace v1 extra binding");
+            rules.add(rule(key, control, binding));
+        });
+        return rules;
     }
 
     private static ActionStructure button(List<String> names) {

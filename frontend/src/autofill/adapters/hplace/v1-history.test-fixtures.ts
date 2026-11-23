@@ -87,8 +87,11 @@ export const historyOptions: Record<string, [string, string][]> = {
 const row = (title: string, content: string, required = false) =>
   `<div class="x-row"><span aria-hidden="true">${title}</span><div class="x-title"><p>${title}${required ? "*" : ""}</p></div><div class="x-content">${content}</div></div>`;
 let reviewKey = 900;
+/** A control widget; the second tenant has no review-key spans (k2-rows.txt). */
 const wrap = (control: string) =>
-  `<span data-review-key="${reviewKey++}@0">${control}</span>`;
+  tenant === "k"
+    ? `<div class="x-w">${control}</div>`
+    : `<span data-review-key="${reviewKey++}@0">${control}</span>`;
 const input = (attrs: string) =>
   wrap(`<div class="x-field"><input class="x-input" ${attrs}></div>`);
 const dropdown = (placeholder: string, list: string, disabled = false) =>
@@ -124,7 +127,53 @@ const period = (labels: string[]) =>
   durations(labels);
 
 function cardBody(level: HistoryLevel, k: number): string {
+  if (tenant === "k" && (level === "대학교" || level === "대학원")) {
+    // Second tenant (k-step2-cards.json): 대학교 and 대학원 show the same six
+    // rows, in this order. The 학위구분 labels are not measured.
+    const degree =
+      level === "대학교"
+        ? (collegeDegree ?? ["학사", "전문학사"])
+        : ["석사", "박사"];
+    return [
+      row("학위구분", toggle(degree, degree[0]), true),
+      row("학교정보", search() + toggle(["본교", "분교"], "본교")),
+      row("재학기간", period(["1 학기", "1 년", "2 년"])),
+      row("입학구분", toggle(["입학", "편입"], "입학")),
+      row("졸업구분", graduation(true), true),
+      row(
+        "전공",
+        wrap('<button type="button" class="x-major-add">추가하기</button>') +
+          '<div class="x-majors"></div>',
+      ),
+    ].join("");
+  }
   const p = prefixes[level];
+  if (tenant === "k" && level === "직장경력")
+    // Second tenant (k-step2-cards.json): 고용형태|근무기간|회사명|퇴직사유|담당업무.
+    // The 퇴직사유 control is not measured: an assumed named text input.
+    return [
+      row("고용형태", dropdown("고용형태를 선택해주세요", "employment"), true),
+      row(
+        "근무기간",
+        toggle(["재직중", "퇴사"], "재직중") +
+          input('type="text" placeholder="입사일"') +
+          input('type="text" placeholder="퇴사일" disabled'),
+        true,
+      ),
+      row("회사명", input('type="text" placeholder="회사명을 입력해주세요."')),
+      row(
+        "퇴직사유",
+        input(
+          `type="text" name="${p}.${k}.retireReason" placeholder="퇴직사유를 입력해주세요." maxlength="100"`,
+        ),
+      ),
+      row(
+        "담당업무",
+        input(
+          `type="text" name="${p}.${k}.assignedTask" placeholder="담당업무를 입력해주세요." maxlength="100"`,
+        ),
+      ),
+    ].join("");
   if (level === "고등학교")
     return [
       row("졸업구분", graduation(false), true),
@@ -213,6 +262,11 @@ function cardBody(level: HistoryLevel, k: number): string {
  * indexed by card and sub-row. The 대학원 list name is assumed.
  */
 function majorHtml(level: HistoryLevel, k: number, m: number): string {
+  // Second tenant (live-step2-k-run4.out: 전공 `t2/7 i:e`): no page-indexed
+  // name, seven toggles with two selected and one empty input. The second
+  // toggle group's labels and the input's placeholder are assumed.
+  if (tenant === "k")
+    return `<div class="x-major">${input('type="text" placeholder="전공명을 검색해주세요." class="x-search"')}${toggle(["주전공", "복수전공", "부전공", "연계전공", "융합전공"], "주전공")}${toggle(["합성구분1", "합성구분2"], "합성구분1")}</div>`;
   const list = `${prefixes[level]}.${k}.${level === "대학교" ? "collegeMajorList" : "graduateSchoolMajorList"}.${m}`;
   return `<div class="x-major">${input('type="text" placeholder="전공명을 검색해주세요." class="x-search"')}${toggle(["주전공", "복수전공", "부전공", "연계전공", "융합전공"])}${input(`type="number" name="${list}.majorGrade.score" placeholder="평점" disabled`)}${input(`type="text" name="${list}.rankingAndHeadCount.ranking" disabled`)}${input(`type="text" name="${list}.rankingAndHeadCount.headcount" placeholder="전체인원" disabled`)}</div>`;
 }
@@ -263,15 +317,39 @@ const chipHtml = (name: string) =>
 export function cardHtml(level: HistoryLevel, k: number): string {
   return `<div class="x-card"><div class="x-head"><p>- ${level} ${k + 1}</p><div><button type="button" class="x-icon" disabled><svg></svg></button><button type="button" class="x-icon"><svg></svg></button><button type="button" class="x-icon" aria-label="닫기"><svg></svg></button></div></div><div class="x-body">${cardBody(level, k)}<div class="x-spacer"></div></div></div>`;
 }
+/** Tenant variant: "k" is the second v1 tenant (k-step2-skeleton.json). */
+let tenant: "bbq" | "k" = "bbq";
+/** Unmeasured 대학교 학위구분 labels for a second-tenant variant. */
+let collegeDegree: string[] | undefined;
+/** The add label; the second tenant marks 고등학교 as required ("고등학교 *"). */
+const addLabel = (level: HistoryLevel) =>
+  tenant === "k" && level === "고등학교" ? `${level} *` : level;
 const addButton = (level: HistoryLevel) =>
-  `<button type="button" class="x-addbtn"><svg></svg><p>${level}</p></button>`;
+  `<button type="button" class="x-addbtn"><svg></svg><p>${addLabel(level)}</p></button>`;
 const addDiv = (level: HistoryLevel) =>
   `<div tabindex="0" class="x-adddiv"><div><p>${level}</p></div></div>`;
 /** A fresh level container (step2-skeleton.json `fresh`): the add button is
  * a direct child next to empty spacers; cards are inserted as direct
  * children before them, and the button becomes a `div[tabindex="0"]`. */
 const container = (level: HistoryLevel) =>
-  `<div id="${containerIds[level]}" data-level="${level}">${addButton(level)}<div class="x-gap"></div><div class="x-gap"></div></div>`;
+  `<div id="${containerIds[level]}" data-level="${level}">${tenant === "k" ? kChildren[level](addButton(level)) : `${addButton(level)}<div class="x-gap"></div><div class="x-gap"></div>`}</div>`;
+const gap = '<div class="x-gap"></div>';
+/** The second tenant's child order per level (k-step2-skeleton.json secs). */
+const kChildren: Record<HistoryLevel, (add: string) => string> = {
+  고등학교: (add) => gap + add + gap,
+  대학교: (add) =>
+    add + gap + '<div class="x-notice"><p>합성 안내 문구입니다.</p></div>',
+  대학원: (add) => add + gap,
+  직장경력: (add) => gap + add + gap,
+};
+/** The second tenant's children after the first card (k-step2-cards.json):
+ * the add control is a `div[tabindex="0"]` named without the marker, last. */
+const kAfterFirst: Record<HistoryLevel, (card: string) => string> = {
+  고등학교: (c) => gap + c + gap + addDiv("고등학교"),
+  대학교: (c) => c + gap + addDiv("대학교"),
+  대학원: (c) => c + gap + addDiv("대학원"),
+  직장경력: (c) => gap + c + gap + addDiv("직장경력"),
+};
 
 type AttachmentRowTitle = "경력기술서" | "포트폴리오";
 const attachmentNames: Record<AttachmentRowTitle, string> = {
@@ -280,11 +358,18 @@ const attachmentNames: Record<AttachmentRowTitle, string> = {
 };
 /** One added entry (measured): a file widget and a URL widget, plus a delete button. */
 const attachmentEntry = (title: AttachmentRowTitle, n: number) =>
-  `<div><div><div><span data-review-key="f${n}"><div><div></div><input type="file"></div></span><span data-review-key="u${n}"><div><div><input type="text" maxlength="200" placeholder="첨부파일을 추가하거나 URL을 입력해주세요." name="${attachmentNames[title]}.${n}.url"></div></div></span></div><button class="x-entry-del"><svg></svg></button></div></div>`;
+  // Second tenant (live-step2-k-run3.out after: 포트폴리오 row shows no
+  // non-file input): the entry is a file widget only.
+  tenant === "k"
+    ? // Second tenant (k-step2-attach-after.json): no review-key spans; the
+      // 경력기술서 entry is [file widget, URL widget], the 포트폴리오 entry the
+      // file widget only. The URL name after "careerFileAns" is assumed.
+      `<div><div><div><div><div><button type="button" class="x-attach">첨부파일 추가</button></div><input type="file"></div></div>${title === "경력기술서" ? `<div><div><input type="text" maxlength="200" placeholder="첨부파일을 추가하거나 URL을 입력해주세요." name="portfolioGroupAnswer.careerFileAnswers.${n}.url"></div></div>` : ""}</div><button class="x-entry-del"><svg></svg></button></div>`
+    : `<div><div><div><span data-review-key="f${n}"><div><div></div><input type="file"></div></span><span data-review-key="u${n}"><div><div><input type="text" maxlength="200" placeholder="첨부파일을 추가하거나 URL을 입력해주세요." name="${attachmentNames[title]}.${n}.url"></div></div></span></div><button class="x-entry-del"><svg></svg></button></div></div>`;
 /** A 경력기술서/포트폴리오 row below the cards, with its own 추가하기
  * (probe-attach-step3.json). */
 const attachmentRow = (title: AttachmentRowTitle, entry: boolean) =>
-  `<div class="x-attachrow"><span aria-hidden="true">${title}</span><div><p>${title}</p><div></div></div><div><div><div class="x-entries">${entry ? attachmentEntry(title, 0) : ""}</div><button type="button" class="x-fileadd">추가하기</button></div></div></div>`;
+  `<div class="x-attachrow"><span aria-hidden="true">${title}</span><div><p>${title}</p><div>${tenant === "k" && title === "포트폴리오" ? "<span>*</span>" : ""}</div></div><div><div><div class="x-entries">${entry ? attachmentEntry(title, 0) : ""}</div><button type="button" class="x-fileadd">추가하기</button></div></div></div>`;
 
 /** Gives the page's 경력기술서/포트폴리오 rows one entry where asked. */
 export function addAttachmentEntries(
@@ -345,6 +430,14 @@ export const addControl = (level: HistoryLevel) =>
 export function appendCard(level: HistoryLevel): Element {
   const box = levelContainer(level);
   const k = cards(level).length;
+  if (tenant === "k") {
+    const existing = cards(level);
+    // Later cards are not measured: assumed right after the last card.
+    if (existing.length)
+      existing.at(-1)!.insertAdjacentHTML("afterend", cardHtml(level, k));
+    else box.innerHTML = kAfterFirst[level](cardHtml(level, 0));
+    return cards(level)[k];
+  }
   const anchor = Array.from(box.children).find((c) => !c.matches(".x-card"))!;
   anchor.insertAdjacentHTML("beforebegin", cardHtml(level, k));
   const button = box.querySelector(":scope > .x-addbtn");
@@ -392,12 +485,12 @@ export function pickChip(c: Element, title: string, name: string): void {
   const search = cardRow(c, title).querySelector<HTMLInputElement>(
     SEARCH_INPUT,
   )!;
-  search.closest("[data-review-key]")!.innerHTML = chipHtml(name);
+  search.closest("[data-review-key], .x-w")!.innerHTML = chipHtml(name);
 }
 /** Chip texts of a card row: the `p` next to a chip's X (chipHtml), not the
  * labels of toggle or score widgets. */
 export const chipText = (c: Element, title: string) =>
-  Array.from(cardRow(c, title).querySelectorAll("span[data-review-key] p"))
+  Array.from(cardRow(c, title).querySelectorAll("p"))
     .filter((p) => p.nextElementSibling?.matches("svg.x-chip-x"))
     .map((p) => p.textContent);
 export const searchInput = (c: Element, title: string) =>
@@ -405,14 +498,20 @@ export const searchInput = (c: Element, title: string) =>
 export const cardDropdown = (c: Element, list: string) =>
   c.querySelector<HTMLButtonElement>(`.x-dd > button[data-list="${list}"]`)!;
 
-export function mountV1Step2(step = "2"): V1HistoryPage {
+export function mountV1Step2(
+  step = "2",
+  variant: "bbq" | "k" = "bbq",
+  options: { collegeDegreeLabels?: string[] } = {},
+): V1HistoryPage {
   resetHplacePage();
+  tenant = variant;
+  collegeDegree = options.collegeDegreeLabels;
   registerQuotes = ["'", "'"];
   setHplacePage(v1Url(step));
   document.head.innerHTML = `<script type="module" src="/v1/applicant/index-Synth02a.js"></script><link rel="stylesheet" href="/v1/applicant/index-Synth02b.css">`;
   document.body.innerHTML = `<div id="root"><div class="x-app">
 <div class="x-top"><h5>지원서 작성</h5><button type="button" class="x-extend">연장</button><div>D-1</div></div>
-<nav>${["기본정보", "학력 및 연구/경력", "어학/자격/기타", "자기소개서/역량기술서", "최종 점검"].map((l, i) => `<button type="button" data-testid="resume-form-stepper-item" data-step-sn="${i + 1}">${l}</button>`).join("")}</nav>
+<nav>${(variant === "k" ? ["기본정보", "학력 및 경력", "자격/기타", "자기소개서", "최종 점검"] : ["기본정보", "학력 및 연구/경력", "어학/자격/기타", "자기소개서/역량기술서", "최종 점검"]).map((l, i) => `<button type="button" data-testid="resume-form-stepper-item" data-step-sn="${i + 1}">${variant === "k" ? `<h5>${l}</h5>` : l}</button>`).join("")}</nav>${variant === "k" ? "<div><h5>학력 및 경력</h5></div>" : ""}
 <button type="button" data-testid="resume-parsing-upload">AI로 지원서 채우기</button>
 <div class="x-section"><div><h5>학력사항</h5></div>
 ${container("고등학교")}
@@ -422,7 +521,7 @@ ${container("대학원")}
 </div>
 <div class="x-section"><div><h5>경력사항</h5></div>
 ${container("직장경력")}
-<div id="7006"><div>${attachmentRow("경력기술서", false)}${attachmentRow("포트폴리오", false)}<div></div></div></div>
+${variant === "k" ? `<div id="7006"><div class="x-attachhead"><span aria-hidden="true">경험 및 경력기술서</span><div><p>경험 및 경력기술서</p><p>합성 안내</p></div></div><div>${attachmentRow("경력기술서", false)}${attachmentRow("포트폴리오", false)}</div></div>` : `<div id="7006"><div>${attachmentRow("경력기술서", false)}${attachmentRow("포트폴리오", false)}<div></div></div></div>`}
 </div>
 <div class="x-footer"><button type="button" class="x-prev">이전</button><button type="button" data-testid="resume-form-save">임시저장</button><button type="button" data-testid="resume-form-save-and-leave">저장 후 나가기</button><button type="button" class="x-next">다음</button></div>
 </div></div><div id="tooltip-root"></div><div id="overlay-root"></div>`;
@@ -514,7 +613,7 @@ function installShims(): V1HistoryPage {
     const register = target.closest(".x-register");
     if (register) {
       registerClicks++;
-      const widget = register.closest("[data-review-key]")!;
+      const widget = register.closest("[data-review-key], .x-w")!;
       const typed =
         /^'(.*)'등록하기$/.exec(register.textContent ?? "")?.[1] ?? "";
       setTimeout(() => {
@@ -522,7 +621,9 @@ function installShims(): V1HistoryPage {
         // Measured live (step2-major-after-register.json): a major press
         // re-renders the whole sub-row: the chip span, a 전공 구분 toggle
         // group, then score and rank/headcount widgets, many holding `p`s.
-        const sub = widget.closest(".x-major");
+        // The second tenant's register re-render is not measured: the
+        // chip replaces the search widget, as a pick does.
+        const sub = tenant === "k" ? null : widget.closest(".x-major");
         if (sub)
           sub.outerHTML = `<div class="x-major"><span data-review-key="${widget.getAttribute("data-review-key") ?? ""}">${chip}</span><span data-review-key="kind"><div>${["주전공", "복수전공", "부전공", "연계전공", "융합전공"].map((k) => `<li><button type="button" class="x-kind"><p>${k}</p></button></li>`).join("")}</div></span><div><div><span data-review-key="score"><div><p>평점</p><input type="text"></div></span></div><div><span data-review-key="scale"><div><div><p>만점</p><input type="text"></div></div></span></div></div><div><div><div><span data-review-key="rank"><div><p>석차</p><input type="text"></div></span><div><p>/</p></div><span data-review-key="count"><div><p>명</p></div></span></div></div><div><div><span data-review-key="extra"><div><p>표시</p></div></span><div></div><span data-review-key="extra2"><div></div></span></div></div></div></div>`;
         else widget.innerHTML = chip;
@@ -532,15 +633,19 @@ function installShims(): V1HistoryPage {
     const pick = target.closest(".x-results li > button");
     if (pick) {
       const name = pick.textContent!;
-      const widget = pick.closest("[data-review-key]")!;
+      const widget = pick.closest("[data-review-key], .x-w")!;
       const rowElement = pick.closest(".x-row")!;
       later(() => {
         widget.innerHTML = chipHtml(name);
-        // A school pick fills the row's 소재지 (the site's own choice).
-        if (rowElement.firstElementChild!.textContent === "학교정보")
-          rowElement.querySelector<HTMLButtonElement>(
-            '.x-dd > button[data-list="region"]',
-          )!.textContent = "서울";
+        // A school pick fills the row's 소재지 (the site's own choice), when
+        // the row has one (the second tenant's 대학교 row has none).
+        const region =
+          rowElement.firstElementChild!.textContent === "학교정보"
+            ? rowElement.querySelector<HTMLButtonElement>(
+                '.x-dd > button[data-list="region"]',
+              )
+            : null;
+        if (region) region.textContent = "서울";
       });
       return;
     }
@@ -677,6 +782,16 @@ function installShims(): V1HistoryPage {
     if (["입학일", "졸업일", "입사일", "퇴사일"].includes(field.placeholder)) {
       // The page keeps only a full day; 8 digits are reformatted.
       const value = field.value;
+      if (tenant === "k" && ["입학일", "졸업일"].includes(field.placeholder)) {
+        // Second tenant (k2-rows.txt: 재학기간 holds 9999.99): 입학일 and
+        // 졸업일 keep only the year and month, right after the write.
+        queueMicrotask(() => {
+          field.value = /^\d{4}\.\d{2}(\.\d{2})?$/.test(value)
+            ? value.slice(0, 7)
+            : "";
+        });
+        return;
+      }
       later(() => {
         const digits = /^(\d{4})(\d{2})(\d{2})$/.exec(value);
         field.value = /^\d{4}\.\d{2}\.\d{2}$/.test(value)

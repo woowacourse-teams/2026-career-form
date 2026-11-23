@@ -7,6 +7,7 @@ import type { CandidateRegistry } from "../../dom/candidate-registry";
 import type { FieldCandidateHandle } from "../../dom/types";
 import type { ReviewPlanItem } from "../../review/review-plan";
 import type { WriteFailureCode } from "../../write/failure";
+import { CATALOG } from "../../../profile/catalog";
 import { isSelectedToggle } from "./v1-basic-controls";
 import {
   setValue,
@@ -19,14 +20,18 @@ import {
   ownedV1HistoryControl,
   parseV1HistoryName,
   scaleLabels,
-  v1HistoryChip,
+  v1HistoryChipShows,
   v1HistorySearchRow,
   v1HistoryControl,
   v1HistoryControlValue,
   v1HistorySectionId,
   type HistoryControl,
+  type HistoryGroup,
   type HistorySpec,
 } from "./v1-history-controls";
+import { closeThroughTitle, runV1Search } from "./v1-search";
+
+export { isRegisterRow, isRegisterShape } from "./v1-search";
 
 export const V1_HISTORY_DATE_REASON =
   "연·월·일이 모두 있는 지난 날짜만 입력할 수 있습니다.";
@@ -37,7 +42,18 @@ export const V1_HISTORY_GPA_ROLLBACK_REASON =
 export const V1_HISTORY_LEAVING_REASON =
   "프로필의 재직 여부가 퇴직일 때만 퇴사일을 입력합니다.";
 
-const command = (spec: HistorySpec) =>
+/** What the approval reads of a spec (the step-2 and step-3 specs alike). */
+export type ApprovalSpec =
+  | {
+      kind: "toggle" | "dropdown";
+      profile: string;
+      options: readonly string[];
+      /** 본교/분교: bound to the school name (DIRECT), not to a lookup. */
+      campus?: true;
+    }
+  | { kind: "text" | "date" | "search"; profile: string };
+
+const command = (spec: ApprovalSpec) =>
   spec.kind === "toggle"
     ? "CHECK_RADIO"
     : spec.kind === "dropdown"
@@ -50,8 +66,8 @@ const command = (spec: HistorySpec) =>
  * CONDITIONAL per profile key (SupportedProfileFields: e.g. schoolName,
  * completionStatus, companyName are CONDITIONAL); both are approved.
  */
-function approvalIssue(
-  spec: HistorySpec,
+export function approvalIssue(
+  spec: ApprovalSpec,
   item: Pick<ReviewPlanItem, "analysis">,
 ): string | undefined {
   const a = item.analysis,
@@ -67,9 +83,12 @@ function approvalIssue(
   if (b?.profileFieldKey !== spec.profile) return "profile-key";
   if (spec.kind === "text" || spec.kind === "date" || spec.kind === "search")
     return b.type === "DIRECT" ? undefined : "binding";
+  if ("campus" in spec && spec.campus)
+    return b.type === "DIRECT" ? undefined : "binding";
   if (b.type !== "LOOKUP") return "binding";
+  const options = "options" in spec ? spec.options : [];
   const targets = Object.values(b.optionMap);
-  return targets.length > 0 && targets.every((t) => spec.options.includes(t))
+  return targets.length > 0 && targets.every((t) => options.includes(t))
     ? undefined
     : "lookup-target";
 }
@@ -82,7 +101,7 @@ function approved(
 }
 
 /** Value-free: the failing condition plus the analysis and review state. */
-function notApproved(spec: HistorySpec, item: ReviewPlanItem): string {
+export function notApproved(spec: ApprovalSpec, item: ReviewPlanItem): string {
   const a = item.analysis;
   return [
     "not-approved",
@@ -96,13 +115,13 @@ function notApproved(spec: HistorySpec, item: ReviewPlanItem): string {
 
 /** Review status of an item the run may write: a CONDITIONAL field is
  * `needs-review` (the automatic run selects it), as in step 1. */
-const writableStatus = (item: ReviewPlanItem) =>
+export const writableStatus = (item: ReviewPlanItem) =>
   item.status === "available" ||
   (item.status === "needs-review" &&
     item.analysis?.autofillPolicy === "CONDITIONAL");
 
 const pad = (n: number) => String(n).padStart(2, "0");
-const today = () => {
+export const today = () => {
   const now = new Date();
   return `${now.getFullYear()}.${pad(now.getMonth() + 1)}.${pad(now.getDate())}`;
 };
@@ -110,7 +129,7 @@ const normalize = (value: string) => value.replace(/\s+/g, " ").trim();
 const text = (e: Element | null | undefined) => normalize(e?.textContent ?? "");
 
 /** A profile date as the page's full YYYY.MM.DD (the page keeps nothing else). */
-function fullDay(value: string): string | undefined {
+export function fullDay(value: string): string | undefined {
   const m = /^(\d{4})[-.](\d{2})[-.](\d{2})$/.exec(value.trim());
   if (!m) return undefined;
   const [y, month, day] = [Number(m[1]), Number(m[2]), Number(m[3])];
@@ -123,16 +142,103 @@ function fullDay(value: string): string | undefined {
     : undefined;
 }
 
-/** The card's own 졸업구분 label as the page shows it now. */
-const cardStatus = (control: HistoryControl) => {
-  const status = v1HistoryControl(
-    control.row.ownerDocument,
-    control.group,
-    control.index,
-    "graduationTypeCode",
-  );
-  return status && v1HistoryControlValue(status);
+/** The digit groups of a date value, in any separator style. */
+const dateParts = (value: string) => {
+  const parts = value.trim().split(/\D+/).filter(Boolean);
+  const [only] = parts;
+  if (parts.length === 1 && /^\d{8}$/.test(only))
+    return [only.slice(0, 4), only.slice(4, 6), only.slice(6)];
+  if (parts.length === 1 && /^\d{6}$/.test(only))
+    return [only.slice(0, 4), only.slice(4)];
+  return parts;
 };
+/** YYYYMMDD of a full-day value, or undefined. */
+const dayKey = (value: string) => {
+  const p = dateParts(value);
+  return p.length === 3 &&
+    p[0].length === 4 &&
+    p[1].length <= 2 &&
+    p[2].length <= 2
+    ? `${p[0]}${p[1].padStart(2, "0")}${p[2].padStart(2, "0")}`
+    : undefined;
+};
+/** YYYYMM of a year-and-month value, or undefined. */
+const monthKey = (value: string) => {
+  const p = dateParts(value);
+  return p.length === 2 && p[0].length === 4 && p[1].length <= 2
+    ? `${p[0]}${p[1].padStart(2, "0")}`
+    : undefined;
+};
+
+/** How long a written YYYY.MM must stay before it counts as kept: a page
+ * keeping full days drops it after blur, asynchronously (measured, step 2). */
+export const MONTH_SETTLE_MS = 300;
+
+/** A month-only profile date as YYYY.MM (a page keeping months holds it). */
+export function fullMonth(value: string): string | undefined {
+  const m = /^(\d{4})[-.](\d{2})$/.exec(value.trim());
+  const month = m ? Number(m[2]) : 0;
+  return m && Number(m[1]) >= 1900 && month >= 1 && month <= 12
+    ? `${m[1]}.${m[2]}`
+    : undefined;
+}
+
+/** A year-and-month value (YYYY.MM). */
+export const isMonthValue = (value: string) => monthKey(value) !== undefined;
+
+/**
+ * The page shows the date `target`: the same full day in any separator
+ * style, or, on a page that keeps only the year and month (the second
+ * tenant's 재학기간 and 취득일), the same year and month. Another year or
+ * month never counts.
+ */
+export function showsDate(shown: string, target: string): boolean {
+  if (shown === target) return true;
+  const shownDay = dayKey(shown);
+  const targetDay = dayKey(target);
+  if (shownDay !== undefined) return shownDay === targetDay;
+  const shownMonth = monthKey(shown);
+  return (
+    shownMonth !== undefined &&
+    shownMonth === (targetDay?.slice(0, 6) ?? monthKey(target))
+  );
+}
+
+/** A control shows `target`: exactly, or for a date by `showsDate`. */
+const shownAs = (spec: HistorySpec, shown: string, target: string) =>
+  shown === target || (spec.kind === "date" && showsDate(shown, target));
+
+const campusKinds = {
+  college: "university",
+  graduateSchool: "graduateSchool",
+} as const;
+const campusLabels = ["본교", "분교"] as const;
+let campusIndex: Map<string, Set<string>> | undefined;
+
+/**
+ * The page's 본교/분교 label of a school: read from the bundled catalog's
+ * ` · `-separated detail of the entries named exactly like the school. A
+ * name with no entry, no campus segment or both labels is unknown.
+ */
+function campusLabel(group: HistoryGroup, value: string): string | undefined {
+  const kind = campusKinds[group as keyof typeof campusKinds];
+  if (!kind) return undefined;
+  if (!campusIndex) {
+    campusIndex = new Map();
+    for (const entry of CATALOG) {
+      if (entry.kind !== "university" && entry.kind !== "graduateSchool")
+        continue;
+      const key = `${entry.kind}:${entry.name}`;
+      const labels = campusIndex.get(key) ?? new Set<string>();
+      for (const segment of entry.detail.split(" · "))
+        for (const label of campusLabels)
+          if (segment.startsWith(label)) labels.add(label);
+      campusIndex.set(key, labels);
+    }
+  }
+  const labels = campusIndex.get(`${kind}:${normalize(value)}`);
+  return labels?.size === 1 ? [...labels][0] : undefined;
+}
 
 const numeric = (value: string) =>
   /^\d+(?:\.\d+)?$/.test(value.trim()) ? Number(value) : NaN;
@@ -169,8 +275,11 @@ function targetIssue(control: HistoryControl, value: string): string {
   const { spec } = control;
   if (!value.trim()) return "value-missing";
   if (spec.kind === "date")
-    return fullDay(value) ? "date-future" : "date-not-full-day";
+    return fullDay(value) || fullMonth(value)
+      ? "date-future"
+      : "date-unreadable";
   if (spec.kind === "text" && spec.numeric) return "score-not-number";
+  if (spec.kind === "toggle" && spec.campus) return "campus-unknown";
   return "option-unmatched";
 }
 
@@ -182,12 +291,14 @@ export function v1HistoryTarget(
   if (!value.trim()) return undefined;
   const { spec } = control;
   if (spec.kind === "date") {
-    const day = fullDay(value);
+    // A full day, or a month-only profile date as YYYY.MM: the second
+    // tenant's 재학기간 keeps months; a full-day page drops it, which the
+    // writer reports.
+    const day = fullDay(value) ?? fullMonth(value);
     if (!day) return undefined;
-    if (day <= today()) return day;
-    // A future 졸업일 only for 졸업예정, at most six years ahead.
+    if (day <= today().slice(0, day.length)) return day;
+    // A future 졸업일 for any card status, at most six years ahead.
     return spec.future &&
-      cardStatus(control) === "졸업예정" &&
       Number(day.slice(0, 4)) <= new Date().getFullYear() + 6
       ? day
       : undefined;
@@ -200,6 +311,8 @@ export function v1HistoryTarget(
       : numeric(value) >= 0
         ? value.trim()
         : undefined;
+  if (spec.kind === "toggle" && spec.campus)
+    return campusLabel(control.group, value);
   return spec.options.includes(value) ? value : undefined;
 }
 
@@ -268,15 +381,16 @@ export function isV1HistoryHandle(handle: FieldCandidateHandle): boolean {
   );
 }
 
-/** The chip of a picked search field, when its handle names one. */
-function pickedChip(handle: FieldCandidateHandle): string | undefined {
+/** The picked search field shows exactly `name` (strict chip or fallback). */
+function pickedShows(handle: FieldCandidateHandle, name: string): boolean {
   const parsed = parseV1HistoryName(handle.candidate.domName);
   const document = handle.elements[0]?.ownerDocument;
-  return parsed &&
-    document &&
-    (parsed.field === "academyName" || parsed.field === "major0.majorName")
-    ? v1HistoryChip(document, parsed.group, parsed.index, parsed.field)
-    : undefined;
+  return (
+    !!parsed &&
+    !!document &&
+    (parsed.field === "academyName" || parsed.field === "major0.majorName") &&
+    v1HistoryChipShows(document, parsed.group, parsed.index, parsed.field, name)
+  );
 }
 
 export function v1HistoryRetained(
@@ -286,7 +400,12 @@ export function v1HistoryRetained(
   const control = ownedV1HistoryControl(handle);
   if (!control || !approved(control.spec, item)) return false;
   const target = v1HistoryTarget(control, item.profileValue ?? "");
-  return target !== undefined && v1HistoryControlValue(control) === target;
+  const shown = v1HistoryControlValue(control);
+  return (
+    target !== undefined &&
+    shown !== undefined &&
+    shownAs(control.spec, shown, target)
+  );
 }
 
 /** Result comparison for a step-2 date against the profile's stored form. */
@@ -299,13 +418,52 @@ export function v1HistoryResultMatches(
   const control = ownedV1HistoryControl(handle);
   if (
     !control ||
-    control.spec.kind !== "date" ||
+    !(
+      control.spec.kind === "date" ||
+      (control.spec.kind === "toggle" && control.spec.campus)
+    ) ||
     handle.candidateId !== item.candidateId ||
     !approved(control.spec, item)
   )
     return undefined;
   const target = v1HistoryTarget(control, expected);
-  return target !== undefined && current === target;
+  return target !== undefined && shownAs(control.spec, current, target);
+}
+
+/** A 본교/분교 toggle whose school has no single catalog campus: the page
+ * keeps its own choice and the item is left out of the run. */
+export function v1HistoryCampusUnknown(
+  handle: FieldCandidateHandle,
+  profileValue: string | undefined,
+): boolean {
+  const control = ownedV1HistoryControl(handle);
+  return (
+    control?.spec.kind === "toggle" &&
+    !!control.spec.campus &&
+    campusLabel(control.group, profileValue ?? "") === undefined
+  );
+}
+
+/** A step-2 본교/분교 toggle handle (its result is the campus label). */
+export function isV1HistoryCampusHandle(handle: FieldCandidateHandle): boolean {
+  const control = ownedV1HistoryControl(handle);
+  return control?.spec.kind === "toggle" && !!control.spec.campus;
+}
+
+/** Review: the page's 본교/분교 already is the campus of the profile school. */
+export function v1HistorySameExistingValue(
+  handle: FieldCandidateHandle,
+  item: Pick<ReviewPlanItem, "analysis">,
+  page: string,
+  profile: string,
+): boolean {
+  const control = ownedV1HistoryControl(handle);
+  return (
+    control?.spec.kind === "toggle" &&
+    !!control.spec.campus &&
+    approved(control.spec, item) &&
+    v1HistoryTarget(control, profile) === page.trim()
+  );
 }
 
 /** Why a step-2 write was refused, for the result screen. */
@@ -320,8 +478,13 @@ export function v1HistoryFailureReason(
     appliedStatus.get(control.row) !== "퇴사"
   )
     return V1_HISTORY_LEAVING_REASON;
+  const target =
+    control?.spec.kind === "date"
+      ? v1HistoryTarget(control, item.profileValue ?? "")
+      : "";
+  // No date target, or a month-only one a full-day page did not keep.
   return control?.spec.kind === "date" &&
-    v1HistoryTarget(control, item.profileValue ?? "") === undefined
+    (target === undefined || isMonthValue(target))
     ? V1_HISTORY_DATE_REASON
     : fallback;
 }
@@ -341,17 +504,6 @@ const numericStepOnly = (spec: HistorySpec, v: ValidityState) =>
   !v.rangeUnderflow &&
   !v.customError &&
   !v.valueMissing;
-
-/** The row title span: clicking it closes a row's open list (measured; Escape,
- * blur and clearing the input do not) and keeps the typed value. */
-async function closeThroughTitle(
-  row: Element,
-  open: () => boolean,
-  current: () => boolean,
-): Promise<boolean> {
-  (row.firstElementChild as HTMLElement).click();
-  return waitFor(() => !open(), current);
-}
 
 /**
  * 회사명 keeps the typed text; its optional suggestion list comes from a site
@@ -429,11 +581,11 @@ export async function writeV1History(
       item.analysis?.candidateId === handle.candidateId &&
       approved(spec, item) &&
       shown !== undefined &&
-      allowed.includes(shown)
+      allowed.some((value) => shownAs(spec, shown, value))
     );
   };
   if (!owned()) return fail("blocked", "not-current");
-  if (original === target) return "written";
+  if (shownAs(spec, original, target)) return "written";
   // A control that already holds a value is never overwritten.
   if (original !== "" && !replacesDefault)
     return fail("existing-value", "existing-value");
@@ -460,7 +612,8 @@ export async function writeV1History(
   if (!owned()) return fail("blocked", "not-current");
   const shows = () => {
     const now = ownedV1HistoryControl(handle);
-    return !!now && v1HistoryControlValue(now) === target;
+    const shown = now && v1HistoryControlValue(now);
+    return shown !== undefined && shownAs(spec, shown, target);
   };
   if (spec.kind === "text" || spec.kind === "date") {
     input.focus();
@@ -473,6 +626,13 @@ export async function writeV1History(
     }
     input.blur();
     if (!(await waitFor(shows, owned)))
+      return fail("control-shape", "value-not-kept");
+    // A month-only date (YYYY.MM): wait (bounded) for a full-day page to drop it.
+    if (
+      spec.kind === "date" &&
+      isMonthValue(target) &&
+      (await waitFor(() => !shows(), owned, MONTH_SETTLE_MS))
+    )
       return fail("control-shape", "value-not-kept");
     if (!(input.checkValidity() || numericStepOnly(spec, input.validity)))
       return fail("control-shape", "value-invalid");
@@ -523,122 +683,10 @@ export async function writeV1History(
   return result;
 }
 
-const SEARCH_MS = 5000;
-/** The register row is judged only this long after typing: the page shows it
- * once before the search answers (~100-300 ms, step2-probe-noresult.json). */
-const REGISTER_MS = 1000;
-/** Consecutive unchanged readings a settled list also needs (one per 25 ms
- * poll, STABLE_MS in all): after a main-thread pause the page's pending
- * update runs before the next poll, so a pause alone never settles a list. */
-const STABLE_POLLS = 12;
-
 /**
- * The structure of the page's own "register '<query>' as a new entry" row
- * (measured: `li > button > span > div > [svg, span]`, the span text-only).
- */
-export function isRegisterShape(li: Element): HTMLButtonElement | undefined {
-  const button = li.children.length === 1 ? li.children[0] : undefined;
-  const wrapper =
-    button?.children.length === 1 ? button.children[0] : undefined;
-  const box = wrapper?.children.length === 1 ? wrapper.children[0] : undefined;
-  const [icon, label] = Array.from(box?.children ?? []);
-  // Measured (step2-probe-regtext.json): the label span holds only the
-  // quoted name; 등록하기 is a text node outside it (in the div, or in the
-  // span wrapping the div). Text anywhere else is not the register row.
-  const outside = [...(wrapper?.childNodes ?? []), ...(box?.childNodes ?? [])]
-    .filter((n) => n.nodeType === Node.TEXT_NODE && n.textContent?.trim())
-    .map((n) => normalize(n.textContent ?? ""));
-  const quoted = normalize(label?.textContent ?? "");
-  return button instanceof HTMLButtonElement &&
-    Array.from(button.childNodes).every(
-      (n) => n === wrapper || !n.textContent?.trim(),
-    ) &&
-    wrapper instanceof HTMLSpanElement &&
-    box instanceof HTMLDivElement &&
-    box.children.length === 2 &&
-    icon?.tagName.toLowerCase() === "svg" &&
-    label instanceof HTMLSpanElement &&
-    label.children.length === 0 &&
-    quoted.length > 2 &&
-    quoted.startsWith("'") &&
-    quoted.endsWith("'") &&
-    outside.length === 1 &&
-    outside[0] === "등록하기" &&
-    normalize(li.textContent ?? "").endsWith("등록하기")
-    ? button
-    : undefined;
-}
-
-/** The register row for exactly the typed name: `'` + name + `'등록하기`. */
-export function isRegisterRow(li: Element, query: string): boolean {
-  return (
-    !!isRegisterShape(li) &&
-    normalize(li.textContent ?? "") === `'${normalize(query)}'등록하기`
-  );
-}
-
-const registerOnly = (items: readonly Element[], query: string) =>
-  items.length === 1 && isRegisterRow(items[0], query);
-
-/**
- * The one decision for a list that holds only the register row for the
- * profile name (no catalog match). Decided 2026-11-22: press it, which
- * registers the name as a free-text entry; the page then shows the same chip
- * as a picked row (step2-probe-register.json), verified like a pick.
- */
-function onRegisterRowOnly(): "register" {
-  return "register";
-}
-const STABLE_MS = 300;
-
-/** Value-free structure of a row: tag and child count, level by level. */
-function rowShape(li: Element): string {
-  const parts = [`li${li.children.length}`];
-  let level = Array.from(li.children);
-  while (level.length && parts.length < 8) {
-    parts.push(
-      ...level.map((e) => `${e.tagName.toLowerCase()}${e.children.length}`),
-    );
-    level = level.flatMap((e) => Array.from(e.children));
-  }
-  return parts.slice(0, 8).join("-");
-}
-
-/**
- * The rows of a result list as (click target, name). Measured shape
- * (step2-probe-fail.json): `li > button > span "<name>"`, the span holding
- * only text; the list may sit in a scroll wrapper whose track divs are not
- * rows. Empty spacer `li`s are skipped. Any other row: its shape, no rows.
- */
-function resultRows(body: Element): {
-  rows?: { target: HTMLElement; name: string }[];
-  shape?: string;
-} {
-  const rows: { target: HTMLElement; name: string }[] = [];
-  for (const li of Array.from(body.querySelectorAll<HTMLElement>("ul > li"))) {
-    if (li.children.length === 0 && !text(li)) continue;
-    const button = li.children[0];
-    const label = button?.children[0];
-    if (
-      li.children.length !== 1 ||
-      !(button instanceof HTMLButtonElement) ||
-      button.children.length !== 1 ||
-      !(label instanceof HTMLSpanElement) ||
-      label.children.length !== 0
-    )
-      return { shape: rowShape(li) };
-    rows.push({ target: button, name: text(label) });
-  }
-  return { rows };
-}
-
-/**
- * One search of a school or major name (stage-1 driver). Types the profile
- * name once into this card's own input, waits (≤ 5 s) for the widget's own
- * `#dropdown-body` list to settle, and clicks a row only when exactly one
- * row's text equals the name. The pick is verified by the input leaving the
- * row and the chip showing exactly the name. Anything else clears the typed
- * text, closes the list without picking and reports a search code.
+ * One search of a school or major name (stage-1 driver): the shared engine
+ * (v1-search.ts) on this card's own input. The pick is verified by the input
+ * leaving the row and the chip showing exactly the name.
  */
 export async function writeV1HistorySearch(
   handle: FieldCandidateHandle,
@@ -669,7 +717,6 @@ export async function writeV1HistorySearch(
     return { written: false };
   }
   const { row } = control;
-  const widget = input.closest("[data-review-key]") ?? input.parentElement!;
   const document = row.ownerDocument;
   const url = document.URL;
   const live = () =>
@@ -680,177 +727,24 @@ export async function writeV1HistorySearch(
     !item.disabled &&
     writableStatus(item) &&
     approved(control.spec, item);
-  const bodies = () => Array.from(widget.querySelectorAll("#dropdown-body"));
-  const reasons: Partial<Record<WriteFailureCode, StructuralSkipReason>> = {
-    SEARCH_NO_EXACT_MATCH: "result-not-unique",
-    SEARCH_AMBIGUOUS: "result-not-unique",
-    SEARCH_TIMEOUT: "disabled-timeout",
-    SEARCH_NO_RESULTS: "control-missing",
-    SEARCH_FORM_UNVERIFIED: "control-shape",
-    SEARCH_SELECTION_UNVERIFIED: "result-click-no-effect",
-  };
-  const open = () => bodies().length > 0;
-  const listed = () => {
-    const [body, extra] = bodies();
-    return body && !extra ? Array.from(body.querySelectorAll("ul > li")) : [];
-  };
-  let typedAt = 0;
-  /** Value-free search state: elapsed ms, rows, register structure, text. */
-  const state = (branch: string) => {
-    const items = listed();
-    const lone = items.length === 1 ? items[0] : undefined;
-    return [
-      `ms${Math.round((Date.now() - typedAt) / 100) * 100}`,
-      `li${items.length}`,
-      `reg${lone && isRegisterShape(lone) ? "yes" : "no"}`,
-      `text${lone && isRegisterRow(lone, name) ? "yes" : "no"}`,
-      `branch-${branch}`,
-    ].join("-");
-  };
-  const branchOf = (code: WriteFailureCode, detail: string) =>
-    detail === "search"
-      ? code
-          .replace(/^SEARCH_/, "")
-          .toLowerCase()
-          .replaceAll("_", "-")
-      : detail
-          .replace(/^search-/, "")
-          .replace(/-answered-.*$/, "")
-          .replace(/^(rows|lists)-.*$/, "$1");
-  const cleanup = async (code: WriteFailureCode, detail = "search") => {
-    skipV1History(
-      control.name,
-      reasons[code] ?? "blocked",
-      `${detail}-${state(branchOf(code, detail))}`,
-      code,
-    );
-    if (input.isConnected) {
-      setValue(input, "");
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-    }
-    // Blur and clearing do not close the list; the row title does.
-    if (open()) await closeThroughTitle(row, open, () => true);
-    if (open() || (input.isConnected && input.value !== ""))
-      skipV1History(control.name, "cleanup-failed", "search-cleanup");
-    return { written: false, code };
-  };
   try {
     if (beforeMutation && !(await beforeMutation())) return { written: false };
   } catch {
     return { written: false };
   }
   if (!live() || !ownedV1HistoryControl(handle)) return { written: false };
-  input.focus();
-  setValue(input, name);
-  input.dispatchEvent(new Event("input", { bubbles: true }));
-  typedAt = Date.now();
-  let shown = "";
-  let since = 0;
-  let polls = 0;
-  // Settled: this widget's own list is stable and answers the query (a row
-  // contains the name). A list shown on focus before the debounced search
-  // (대학교/대학원 widgets) is not taken for the result.
-  const settled = await waitFor(
-    () => {
-      const items = listed();
-      if (!items.length) {
-        shown = "";
-        polls = 0;
-        return false;
-      }
-      const now = items.map(text).join("\n");
-      if (now !== shown) {
-        shown = now;
-        since = Date.now();
-        polls = 0;
-        return false;
-      }
-      polls++;
-      // Settled: unchanged for STABLE_MS over STABLE_POLLS readings; a
-      // lone register-shaped row also only REGISTER_MS after typing, so its
-      // transient showing is never taken for the answer.
-      return (
-        Date.now() - since >= STABLE_MS &&
-        polls >= STABLE_POLLS &&
-        (!(items.length === 1 && isRegisterShape(items[0])) ||
-          Date.now() - typedAt >= REGISTER_MS)
-      );
+  return runV1Search(
+    {
+      key: control.name,
+      input,
+      row,
+      titleRow: row,
+      live,
+      picked: () => pickedShows(handle, name),
+      skip: skipV1History,
     },
-    () => live() && input.isConnected,
-    SEARCH_MS,
+    name,
   );
-  if (!live() || !input.isConnected) return cleanup("SEARCH_UNCONFIRMED");
-  // At the deadline a stable list that never answered is still judged below.
-  if (!settled && !listed().length)
-    return cleanup(
-      bodies().length === 1 ? "SEARCH_NO_RESULTS" : "SEARCH_TIMEOUT",
-    );
-  const pickRow = async (target: HTMLElement) => {
-    if (!live()) return cleanup("SEARCH_UNCONFIRMED");
-    target.click();
-    const picked = await waitFor(
-      () => !row.contains(input) && pickedChip(handle) === name,
-      () => live(),
-    );
-    if (picked) return { written: true };
-    if (input.isConnected && row.contains(input))
-      return cleanup("SEARCH_SELECTION_UNVERIFIED");
-    skipV1History(
-      control.name,
-      "result-click-no-effect",
-      "search",
-      "SEARCH_SELECTION_UNVERIFIED",
-    );
-    return { written: false, code: "SEARCH_SELECTION_UNVERIFIED" as const };
-  };
-  const finalRows = listed();
-  // A register row is pressed only alone, for exactly this name, stable and
-  // judged no earlier than REGISTER_MS after typing.
-  // Only at the deadline: a settled list already passed this test.
-  if (
-    !settled &&
-    finalRows.length === 1 &&
-    isRegisterShape(finalRows[0]) &&
-    (Date.now() - since < STABLE_MS || Date.now() - typedAt < REGISTER_MS)
-  )
-    return cleanup("SEARCH_TIMEOUT", "search-register-unsettled");
-  if (finalRows.length > 1 && finalRows.some((li) => isRegisterShape(li)))
-    return cleanup("SEARCH_FORM_UNVERIFIED", "search-register-mixed");
-  if (
-    finalRows.length === 1 &&
-    isRegisterShape(finalRows[0]) &&
-    !isRegisterRow(finalRows[0], name)
-  )
-    return cleanup("SEARCH_FORM_UNVERIFIED", "search-register-other-name");
-  if (registerOnly(finalRows, name)) {
-    if (onRegisterRowOnly() === "register") {
-      const result = await pickRow(isRegisterShape(finalRows[0])!);
-      if (result.written)
-        skipV1History(control.name, "unselected", "search-registered");
-      return result;
-    }
-  }
-  const body = bodies()[0];
-  const answered = listed().some((li) => normalize(text(li)).includes(name))
-    ? "yes"
-    : "no";
-  // Exactly one list (measured: one `ul`, scroll wrapper and track divs aside).
-  const lists = body.querySelectorAll("ul").length;
-  if (lists !== 1)
-    return cleanup(
-      "SEARCH_FORM_UNVERIFIED",
-      `search-lists-${lists}-answered-${answered}`,
-    );
-  const { rows, shape } = resultRows(body);
-  if (!rows)
-    return cleanup(
-      "SEARCH_FORM_UNVERIFIED",
-      `search-rows-${shape ?? "none"}-answered-${answered}`,
-    );
-  const exact = rows.filter((r) => normalize(r.name) === name);
-  if (exact.length === 0) return cleanup("SEARCH_NO_EXACT_MATCH");
-  if (exact.length > 1) return cleanup("SEARCH_AMBIGUOUS");
-  return pickRow(exact[0].target);
 }
 
 /** After a driver: 퇴사 has unlocked 퇴사일, or a search left its exact chip. */
@@ -872,7 +766,7 @@ export async function settleV1HistoryStateDriver(
   )
     return false;
   if (spec.kind === "search")
-    return pickedChip(handle) === normalize(item.profileValue ?? "");
+    return pickedShows(handle, normalize(item.profileValue ?? ""));
   const control = ownedV1HistoryControl(handle);
   if (!control || spec.kind !== "toggle" || !v1HistoryRetained(handle, item))
     return false;

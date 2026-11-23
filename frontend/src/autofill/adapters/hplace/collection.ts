@@ -32,6 +32,11 @@ import {
 } from "./v1-history-collection";
 import { isV1HistoryPage } from "./v1-history-controls";
 import {
+  collectV1ExtraFields,
+  collectV1ExtraPreparation,
+} from "./v1-extra-collection";
+import { isV1ExtraPage } from "./v1-extra-controls";
+import {
   isV1BasicPage,
   v1BasicControls,
   v1SectionId,
@@ -55,6 +60,8 @@ export function collectHplaceFields(
     return collectV1Fields(document, snapshotId, site);
   if (isV1HistoryPage(document))
     return collectV1HistoryFields(document, snapshotId, site);
+  if (isV1ExtraPage(document))
+    return collectV1ExtraFields(document, snapshotId, site);
   const registry = new CandidateRegistry();
   const controls = registrationControls(document);
   const fields = controls
@@ -123,6 +130,8 @@ export function collectHplacePreparation(
 ): PreparationCollectedSnapshot {
   if (isV1HistoryPage(document))
     return collectV1HistoryPreparation(document, snapshotId, site);
+  if (isV1ExtraPage(document))
+    return collectV1ExtraPreparation(document, snapshotId, site);
   const request: PreparationAnalyzeRequest = {
     schemaVersion: 2,
     snapshotId,

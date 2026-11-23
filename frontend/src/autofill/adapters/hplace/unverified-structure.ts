@@ -19,8 +19,20 @@ import {
   v1HistoryChip,
   v1HistoryMalformed,
   v1HistoryName,
+  v1HistoryUnknownRows,
   type HistoryGroup,
 } from "./v1-history-controls";
+import {
+  extraBlockTitle,
+  extraProfileSection,
+  extraSpec,
+  isV1ExtraPage,
+  v1ExtraBlocks,
+  v1ExtraChip,
+  v1ExtraMalformed,
+  v1ExtraName,
+  type ExtraGroup,
+} from "./v1-extra-controls";
 
 export const STRUCTURE_UNVERIFIED_REASON = "입력 불가(화면 구조 확인 불가)";
 
@@ -94,9 +106,11 @@ export function hplaceUnverifiedRows(
   // Detached documents (overlay/demo pages) have no location.
   const v1 = isV1BasicPage(document);
   const history = isV1HistoryPage(document);
+  const extra = isV1ExtraPage(document);
   if (
     !v1 &&
     !history &&
+    !extra &&
     (document.location?.pathname !== "/mrs2/applicant/resume/writeResume" ||
       !isHplaceDocument(document))
   )
@@ -132,6 +146,7 @@ export function hplaceUnverifiedRows(
   });
   const rows: ReviewPlanItem[] = [];
   if (history) return v1HistoryRows(document, profile, isCollected, row);
+  if (extra) return v1ExtraRows(document, profile, isCollected, row);
   if (v1)
     return v1PresentControls(document).flatMap(({ key, enabled }) => {
       const spec = v1Spec(key);
@@ -286,6 +301,74 @@ function v1HistoryRows(
     if (
       entries(group)[index]?.values[fieldId]?.trim() &&
       !isCollected(v1HistoryName(group, index, field))
+    )
+      rows.push(row(`v1-${group}-${index}-${field}`, spec.label, spec.profile));
+  }
+  // Rows of a card no spec reads (CF-510: a second tenant's 퇴직사유): never
+  // written; reported when the paired profile entry exists.
+  for (const { group, index, title } of v1HistoryUnknownRows(document))
+    if (entries(group)[index])
+      rows.push(row(`v1-${group}-${index}-row-${title}`, title));
+  return rows;
+}
+
+/**
+ * Step 3 (CF-510): a 자격증 / 외국어활용능력 block that fails its contract and a
+ * sub-row control that fails its own are reported as 입력 불가 when the paired
+ * profile entry holds a value; a certificate chip with another name than the
+ * profile is a conflict (never replaced).
+ */
+function v1ExtraRows(
+  document: Document,
+  profile: Profile,
+  isCollected: (name: string) => boolean,
+  row: (key: string, label: string, profileFieldKey?: string) => ReviewPlanItem,
+): ReviewPlanItem[] {
+  const entries = (group: ExtraGroup) => {
+    const { categoryId, sectionId } = extraProfileSection[group];
+    return profile[categoryId].filter((e) => e.sectionId === sectionId);
+  };
+  const rows: ReviewPlanItem[] = [];
+  for (const block of v1ExtraBlocks(document)) {
+    const list = entries(block.group);
+    if (block.status !== "ok") {
+      if (list.length)
+        rows.push(row(`v1-${block.group}`, extraBlockTitle[block.group]));
+      continue;
+    }
+    if (block.group !== "certificate") continue;
+    const spec = extraSpec("certificate", "licenseName")!;
+    block.subRows.forEach((_, index) => {
+      const name = list[index]?.values.name?.replace(/\s+/g, " ").trim();
+      if (
+        !name ||
+        isCollected(v1ExtraName("certificate", index, "licenseName"))
+      )
+        return;
+      const chip = v1ExtraChip(document, index);
+      if (chip !== undefined && chip !== name)
+        rows.push({
+          ...row(
+            `v1-certificate-${index}-licenseName`,
+            spec.label,
+            spec.profile,
+          ),
+          currentValue: chip,
+          profileValue: name,
+          previewValue: name,
+          status: "conflict",
+          revealed: true,
+          reason: "지원서에 기존 값이 있습니다.",
+          failureCode: undefined,
+        });
+    });
+  }
+  for (const { group, index, field } of v1ExtraMalformed(document)) {
+    const spec = extraSpec(group, field)!;
+    const fieldId = spec.profile.split(".")[2];
+    if (
+      entries(group)[index]?.values[fieldId]?.trim() &&
+      !isCollected(v1ExtraName(group, index, field))
     )
       rows.push(row(`v1-${group}-${index}-${field}`, spec.label, spec.profile));
   }

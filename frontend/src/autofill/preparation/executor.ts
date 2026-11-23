@@ -1,4 +1,5 @@
 import {
+  debugPreparationStop,
   debugStageCounts,
   type DebugStageName,
 } from "../debug/structural-diagnostics";
@@ -12,6 +13,10 @@ import {
   isV1HistoryPage,
   ownedV1HistoryAddAction,
 } from "../adapters/hplace/v1-history-controls";
+import {
+  isV1ExtraPage,
+  ownedV1ExtraAddAction,
+} from "../adapters/hplace/v1-extra-controls";
 import type { PreparationPlan } from "../api/types";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import type { ActionCandidateHandle } from "../dom/types";
@@ -216,6 +221,35 @@ function failure(
   };
 }
 
+/** The action's key for the stop line: its structural name or id (value-free). */
+function stopKey(
+  snapshot: PreparationSnapshot,
+  id: string | undefined,
+): string {
+  if (!id) return "none";
+  const lookup = snapshot.registry.lookupAction(id);
+  return "handle" in lookup
+    ? (lookup.handle.candidate.domName ?? lookup.handle.candidate.domId ?? id)
+    : id;
+}
+
+/** A failure that also names itself in one value-free line (debug only). */
+function stopped(
+  snapshot: PreparationSnapshot,
+  id: string | undefined,
+  reason: PreparationFailureReason,
+  executedPlanCount: number,
+  failedActionCandidateId?: string,
+  detail = "",
+): PreparationExecutionResult {
+  debugPreparationStop(
+    stopKey(snapshot, failedActionCandidateId ?? id),
+    reason,
+    detail,
+  );
+  return failure(reason, executedPlanCount, failedActionCandidateId);
+}
+
 async function executeApprovedPreparationPlansInternal(
   options: PreparationExecutionOptions,
 ): Promise<PreparationExecutionResult> {
@@ -229,7 +263,13 @@ async function executeApprovedPreparationPlansInternal(
       ? lookup.handle.element.ownerDocument
       : undefined);
   const release = document ? acquireDocumentRun(document) : undefined;
-  if (document && !release) return failure("run-in-progress", 0);
+  if (document && !release)
+    return stopped(
+      options.initialSnapshot,
+      first?.plan.actionCandidateId,
+      "run-in-progress",
+      0,
+    );
   const url = document?.URL;
   const nativeDigest =
     document && nativePolicyRequired(document)
@@ -250,7 +290,12 @@ async function executeApprovedPreparationPlansInternal(
     })
   ) {
     release?.();
-    return failure("action-not-executable", 0);
+    return stopped(
+      options.initialSnapshot,
+      first?.plan.actionCandidateId,
+      "action-not-executable",
+      0,
+    );
   }
   // Hplace pages run no preparation, except the v1 step-2 card adds (CF-509).
   const historyAdds =
@@ -263,7 +308,8 @@ async function executeApprovedPreparationPlansInternal(
       return (
         plan.command === "ADD_REPEATABLE_GROUP" &&
         action.status === "ready" &&
-        ownedV1HistoryAddAction(action.handle) !== undefined
+        (ownedV1HistoryAddAction(action.handle) !== undefined ||
+          ownedV1ExtraAddAction(action.handle) !== undefined)
       );
     });
   try {
@@ -278,7 +324,8 @@ async function executeApprovedPreparationPlansInternal(
             nativeDigest) &&
         (!document ||
           resolveDocumentCompany(document) !== "hplace" ||
-          (historyAdds && isV1HistoryPage(document))),
+          (historyAdds &&
+            (isV1HistoryPage(document) || isV1ExtraPage(document)))),
     });
   } finally {
     release?.();
@@ -316,15 +363,31 @@ async function executePreparation({
   }
 
   let snapshot = initialSnapshot;
+  let currentId: string | undefined;
+  const stop = (
+    reason: PreparationFailureReason,
+    executed: number,
+    failedActionCandidateId?: string,
+    detail = "",
+  ) =>
+    stopped(
+      initialSnapshot,
+      currentId,
+      reason,
+      executed,
+      failedActionCandidateId,
+      detail,
+    );
   let executedPlanCount = 0;
   const unavailableActionCandidateIds = new Set<string>();
 
   for (const approvedPlan of selectedPlans) {
+    currentId = approvedPlan.plan.actionCandidateId;
     if (!(await permitted()))
-      return failure("execution-cancelled", executedPlanCount);
+      return stop("execution-cancelled", executedPlanCount);
     const { plan } = approvedPlan;
     if (plan.command === "SEARCH_ADDRESS") {
-      return failure("action-not-executable", executedPlanCount);
+      return stop("action-not-executable", executedPlanCount);
     }
 
     if (plan.command === "REVEAL_SECTION") {
@@ -335,17 +398,17 @@ async function executePreparation({
         identity,
       );
       if (!action) {
-        return failure("action-not-executable", executedPlanCount);
+        return stop("action-not-executable", executedPlanCount);
       }
       action.element.click();
       onAction?.(action.element);
       executedPlanCount += 1;
       const refreshed = await refresh(refreshSnapshot);
       if (!refreshed) {
-        return failure("refresh-failed", executedPlanCount);
+        return stop("refresh-failed", executedPlanCount);
       }
       if (!refreshed.isTargetSectionVisible(plan.targetSectionId)) {
-        return failure("target-not-visible", executedPlanCount);
+        return stop("target-not-visible", executedPlanCount);
       }
       snapshot = refreshed;
       continue;
@@ -358,7 +421,7 @@ async function executePreparation({
         plan.actionCandidateId,
         identity,
       );
-      if (!action) return failure("action-not-ready", executedPlanCount);
+      if (!action) return stop("action-not-ready", executedPlanCount);
       const selectedPlan = {
         ...plan,
         actionCandidateId: action.candidate.candidateId,
@@ -366,7 +429,7 @@ async function executePreparation({
       const selected =
         selectProfileOption?.(selectedPlan, snapshot) ??
         "unsupported-option-action";
-      if (selected !== "selected") return failure(selected, executedPlanCount);
+      if (selected !== "selected") return stop(selected, executedPlanCount);
       executedPlanCount += 1;
       if (plan.expectedFieldNames && plan.expectedFieldNames.length > 0) {
         const expectedFieldsVisible =
@@ -376,12 +439,12 @@ async function executePreparation({
         }
       }
       const refreshed = await refresh(refreshSnapshot);
-      if (!refreshed) return failure("refresh-failed", executedPlanCount);
+      if (!refreshed) return stop("refresh-failed", executedPlanCount);
       if (
         (!plan.expectedFieldNames || plan.expectedFieldNames.length === 0) &&
         !refreshed.isTargetSectionVisible(plan.targetSectionId)
       ) {
-        return failure("target-not-visible", executedPlanCount);
+        return stop("target-not-visible", executedPlanCount);
       }
       snapshot = refreshed;
       continue;
@@ -389,7 +452,7 @@ async function executePreparation({
 
     const { localItemCount } = approvedPlan;
     if (localItemCount === undefined || !isNonNegativeInteger(localItemCount)) {
-      return failure("invalid-local-item-count", executedPlanCount);
+      return stop("invalid-local-item-count", executedPlanCount);
     }
 
     const identity = actionIdentity(initialSnapshot, plan.actionCandidateId);
@@ -406,23 +469,28 @@ async function executePreparation({
         : plan,
     );
     if (currentGroupCount === undefined) {
-      return failure("invalid-group-count", executedPlanCount);
+      return stop(
+        "invalid-group-count",
+        executedPlanCount,
+        undefined,
+        "count-initial",
+      );
     }
     const requiredAdditions = Math.max(0, localItemCount - currentGroupCount);
     if (requiredAdditions > 0 && !initialAction) {
-      return failure("action-not-executable", executedPlanCount);
+      return stop("action-not-executable", executedPlanCount);
     }
 
     for (let addition = 0; addition < requiredAdditions; addition += 1) {
       if (!(await permitted()))
-        return failure("execution-cancelled", executedPlanCount);
+        return stop("execution-cancelled", executedPlanCount);
       const currentAction = actionIsReadyWithIdentity(
         snapshot,
         plan.actionCandidateId,
         identity,
       );
       if (!currentAction) {
-        return failure("action-not-executable", executedPlanCount);
+        return stop("action-not-executable", executedPlanCount);
       }
       const currentPlan = planWithActionCandidateId(
         plan,
@@ -435,7 +503,12 @@ async function executePreparation({
       );
       const stateBefore = snapshot.repeatableGroupState?.(currentPlan);
       if (countBefore === undefined) {
-        return failure("invalid-group-count", executedPlanCount);
+        return stop(
+          "invalid-group-count",
+          executedPlanCount,
+          undefined,
+          "count-before",
+        );
       }
 
       currentAction.element.click();
@@ -454,7 +527,7 @@ async function executePreparation({
       }
       const refreshed = await refresh(refreshSnapshot);
       if (!refreshed) {
-        return failure("refresh-failed", executedPlanCount);
+        return stop("refresh-failed", executedPlanCount);
       }
       const refreshedAction = actionIsReadyWithIdentity(
         refreshed,
@@ -462,7 +535,7 @@ async function executePreparation({
         identity,
       );
       if (!refreshedAction) {
-        return failure(
+        return stop(
           "action-not-reidentified",
           executedPlanCount,
           plan.actionCandidateId,
@@ -474,10 +547,20 @@ async function executePreparation({
         planWithActionCandidateId(plan, refreshedAction.candidate.candidateId),
       );
       if (countAfter === undefined) {
-        return failure("invalid-group-count", executedPlanCount);
+        return stop(
+          "invalid-group-count",
+          executedPlanCount,
+          undefined,
+          "count-after",
+        );
       }
       if (countAfter !== countBefore + 1) {
-        return failure("group-count-not-incremented", executedPlanCount);
+        return stop(
+          "group-count-not-incremented",
+          executedPlanCount,
+          undefined,
+          `before${countBefore}-after${countAfter}`,
+        );
       }
       const refreshedPlan = planWithActionCandidateId(
         plan,
@@ -490,7 +573,12 @@ async function executePreparation({
           stateAfter.length < stateBefore.length ||
           stateBefore.some((state, index) => stateAfter[index] !== state))
       ) {
-        return failure("existing-group-value-changed", executedPlanCount);
+        return stop(
+          "existing-group-value-changed",
+          executedPlanCount,
+          undefined,
+          `state${stateBefore.length}-${stateAfter?.length ?? "none"}`,
+        );
       }
       onVerifiedAddition?.(refreshedAction, countBefore, countAfter);
       snapshot = refreshed;

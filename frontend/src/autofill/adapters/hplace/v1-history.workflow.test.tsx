@@ -265,3 +265,108 @@ it("adds no entry without a stored file or link, or when the row already has one
   expect(page.attachmentAdds()).toEqual([]);
   expect(page.forbiddenClicks()).toEqual([]);
 });
+
+it("runs on a second tenant: cards by container, the 퇴직사유 row skipped", async () => {
+  const page = mountV1Step2("2", "k");
+  run(v1HistoryProfile());
+  expect(await resultScreen()).toBeVisible();
+  expect(screen.queryByText("자동 기입을 멈췄어요")).toBeNull();
+  expect(page.addClicks()).toEqual([
+    "고등학교",
+    "대학교",
+    "대학교",
+    "대학원",
+    "직장경력",
+    "직장경력",
+  ]);
+  const [u0, u1] = cards("대학교");
+  expect(chipText(u0, "학교정보")).toEqual(["합성대학교"]);
+  expect(cardInput(u0, "입학일").value).toBe("2009.03");
+  expect(cardSelected(u1, "졸업구분")).toEqual(["졸업예정"]);
+  expect(chipText(card("고등학교", 0), "학교정보")).toEqual(["합성고등학교"]);
+  const grad = card("대학원", 0);
+  expect(chipText(grad, "학교정보")).toEqual(["합성대학원"]);
+  expect(cardSelected(grad, "학위구분")).toEqual(["석사"]);
+  const c0 = cards("직장경력")[0];
+  expect(cardDropdown(c0, "employment").textContent).toBe("정규직");
+  expect(cardInput(c0, "회사명을 입력해주세요.").value).toBe("합성회사");
+  expect(cardSelected(c0, "근무기간")).toEqual(["퇴사"]);
+  expect(cardInput(c0, "퇴사일").value).toBe("2020.12.31");
+  expect(cardNamed(c0, "assignedTask").value).toBe("합성 업무");
+  // The unmeasured 퇴직사유 row is never written.
+  expect(cardNamed(c0, "retireReason").value).toBe("");
+  expect(page.forbiddenClicks()).toEqual([]);
+});
+
+it("runs on a second tenant whose 학위구분 labels differ: the container names the level", async () => {
+  const page = mountV1Step2("2", "k", {
+    collegeDegreeLabels: ["4년제", "2·3년제"],
+  });
+  run(v1HistoryProfile());
+  expect(await resultScreen()).toBeVisible();
+  expect(screen.queryByText("자동 기입을 멈췄어요")).toBeNull();
+  expect(page.addClicks()).toEqual([
+    "고등학교",
+    "대학교",
+    "대학교",
+    "대학원",
+    "직장경력",
+    "직장경력",
+  ]);
+  const [u0] = cards("대학교");
+  expect(chipText(u0, "학교정보")).toEqual(["합성대학교"]);
+  expect(cardInput(u0, "입학일").value).toBe("2009.03");
+  // The unmatched 학위구분 is left as the page shows it.
+  expect(cardSelected(u0, "학위구분")).toEqual(["4년제"]);
+  expect(page.forbiddenClicks()).toEqual([]);
+});
+
+it("runs on a second tenant that keeps empty cards and adds a 포트폴리오 entry without a URL input", async () => {
+  const page = mountV1Step2("2", "k");
+  // Persisted across reloads on this tenant: one empty card each.
+  const hs = appendCard("고등학교");
+  const u0 = appendCard("대학교");
+  run(
+    v1HistoryProfile(),
+    attachmentStore(["resume"], { portfolio: "https://example.com/p" }),
+  );
+  expect(await resultScreen()).toBeVisible();
+  expect(screen.queryByText("자동 기입을 멈췄어요")).toBeNull();
+  // Existing cards count toward the profile entries: never a duplicate.
+  expect(page.addClicks()).toEqual([
+    "대학교",
+    "대학원",
+    "직장경력",
+    "직장경력",
+  ]);
+  expect(page.attachmentAdds()).toEqual(["경력기술서", "포트폴리오"]);
+  expect(cards("고등학교")).toHaveLength(1);
+  expect(cards("대학교")).toHaveLength(2);
+  // The pre-existing empty cards are filled.
+  expect(chipText(hs, "학교정보")).toEqual(["합성고등학교"]);
+  expect(cardInput(hs, "입학일").value).toBe("2006.03");
+  expect(chipText(u0, "학교정보")).toEqual(["합성대학교"]);
+  expect(cardInput(u0, "입학일").value).toBe("2009.03");
+  expect(chipText(cards("대학교")[1], "학교정보")).toEqual(["합성전문대학"]);
+  expect(cardInput(cards("직장경력")[0], "회사명을 입력해주세요.").value).toBe(
+    "합성회사",
+  );
+  // The pre-existing 대학교 card's 전공 add (run 4's last planned action) and
+  // the added card's one both ran, and both majors were picked.
+  expect(page.majorAdds()).toEqual(["대학교 0", "대학교 1"]);
+  expect(chipText(u0, "전공")).toEqual(["합성공학"]);
+  expect(chipText(cards("대학교")[1], "전공")).toEqual(["합성경영"]);
+  // The measured entries: 경력기술서 file + URL, 포트폴리오 file only.
+  const [careerRow, portfolioRow] = Array.from(
+    document.querySelectorAll(".x-attachrow"),
+  );
+  expect(careerRow.querySelectorAll('input[type="file"]')).toHaveLength(1);
+  expect(careerRow.querySelectorAll('input[type="text"]')).toHaveLength(1);
+  expect(portfolioRow.querySelectorAll('input[type="file"]')).toHaveLength(1);
+  expect(portfolioRow.querySelectorAll('input[type="text"]')).toHaveLength(0);
+  // Run 6: month-level 재학기간 and picked names without review-key spans
+  // leave no item listed as 입력 못함.
+  expect(cardInput(cards("대학교")[1], "졸업일").value).toMatch(/^\d{4}\.02$/);
+  expect(screen.queryAllByText("입력 못함")).toHaveLength(0);
+  expect(page.forbiddenClicks()).toEqual([]);
+});

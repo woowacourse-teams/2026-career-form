@@ -58,7 +58,7 @@ public final class HplaceFormFingerprint {
     public static final int V1_HISTORY_MAX_CARDS = 10;
     /** group -> field -> control. The high-school group has one card only. */
     public static final Map<String, Map<String, FormControl>> V1_HISTORY_TEMPLATES = historyTemplates();
-    /** Exact name -> control for every allowed history field (266 names). */
+    /** Exact name -> control for every allowed history field (286 names). */
     public static final Map<String, FormControl> V1_HISTORY_FIELDS = historyFields();
     /** Exact add-action names: one per card level, plus the first major add of each school card. */
     public static final List<String> V1_HISTORY_CARD_ADDS = List.of("hplace.v1.highschool.add", "hplace.v1.college.add",
@@ -69,6 +69,16 @@ public final class HplaceFormFingerprint {
     private static final Set<String> V1_HISTORY_ACTIONS = java.util.stream.Stream.of(
         V1_HISTORY_CARD_ADDS, V1_HISTORY_MAJOR_ADDS, V1_ATTACHMENT_ADDS).flatMap(List::stream)
         .collect(java.util.stream.Collectors.toUnmodifiableSet());
+    // v1 resume-form step 3 (어학/자격/기타): the 자격증 and 외국어활용능력 rows, sent as flat names
+    // hplace.v1.<group>.<i>.<field> like step 2. 공인외국어시험, 컴퓨터활용능력 and the 경험 cards are not accepted.
+    public static final String V1_EXTRA_SECTION = "hplace-v1-extra";
+    /** group -> field -> control: only the controls measured on the live page. */
+    public static final Map<String, Map<String, FormControl>> V1_EXTRA_TEMPLATES = extraTemplates();
+    /** Exact name -> control for every allowed step-3 field (50 names). */
+    public static final Map<String, FormControl> V1_EXTRA_FIELDS = indexedFields(V1_EXTRA_TEMPLATES);
+    /** The 추가하기 of the 자격증 and 외국어활용능력 rows. */
+    public static final List<String> V1_EXTRA_ADDS = List.of("hplace.v1.certificate.add", "hplace.v1.languageSkill.add");
+    private static final Set<String> V1_EXTRA_ACTIONS = Set.copyOf(V1_EXTRA_ADDS);
 
     public boolean matches(CompanyFormPolicy policy, PreparationAnalysisRequest request) {
         if (policy.sectionContracts().isEmpty() || !HplaceApplicantSite.DETAIL_PATH.equals(request.site().pathPattern())) return matches(request);
@@ -112,10 +122,12 @@ public final class HplaceFormFingerprint {
         var section = request.sections().getFirst();
         if (!matchesSection(request.site().pathPattern(), section.sectionId()) || section.parentSectionId() != null
             || !empty(section.items())) return false;
-        if (!V1_HISTORY_SECTION.equals(section.sectionId())) return section.actionCandidates().isEmpty();
+        boolean extra = V1_EXTRA_SECTION.equals(section.sectionId());
+        if (!V1_HISTORY_SECTION.equals(section.sectionId()) && !extra) return section.actionCandidates().isEmpty();
+        Set<String> allowedActions = extra ? V1_EXTRA_ACTIONS : V1_HISTORY_ACTIONS;
         Set<String> names = new HashSet<>();
         return section.actionCandidates().stream().allMatch(action -> action.domName() != null
-            && V1_HISTORY_ACTIONS.contains(action.domName()) && action.domName().equals(action.domId())
+            && allowedActions.contains(action.domName()) && action.domName().equals(action.domId())
             && names.add(action.domName())
             && action.element() == PreparationAnalysisRequest.FormElement.BUTTON
             && action.control() == PreparationAnalysisRequest.FormControl.BUTTON
@@ -132,8 +144,10 @@ public final class HplaceFormFingerprint {
         boolean detail = DETAIL_SECTION.equals(section.sectionId());
         boolean v1 = V1_SECTION.equals(section.sectionId());
         boolean history = V1_HISTORY_SECTION.equals(section.sectionId());
-        Set<String> required = v1 || history ? V1_REQUIRED : detail ? DETAIL_REQUIRED : FIELD_NAMES;
-        Set<String> allowed = history ? V1_HISTORY_FIELDS.keySet() : v1 ? V1_FIELDS : detail ? DETAIL_FIELDS : FIELD_NAMES;
+        boolean extra = V1_EXTRA_SECTION.equals(section.sectionId());
+        Set<String> required = v1 || history || extra ? V1_REQUIRED : detail ? DETAIL_REQUIRED : FIELD_NAMES;
+        Set<String> allowed = extra ? V1_EXTRA_FIELDS.keySet() : history ? V1_HISTORY_FIELDS.keySet() : v1 ? V1_FIELDS
+            : detail ? DETAIL_FIELDS : FIELD_NAMES;
         if (section.fields().size() < Math.max(1, required.size()) || section.fields().size() > allowed.size()) return false;
         Set<String> names = new HashSet<>();
         Set<String> ids = new HashSet<>();
@@ -147,7 +161,7 @@ public final class HplaceFormFingerprint {
     }
 
     private static boolean matchesControl(String name, FormElement element, FormControl control) {
-        var history = V1_HISTORY_FIELDS.get(name);
+        var history = V1_HISTORY_FIELDS.containsKey(name) ? V1_HISTORY_FIELDS.get(name) : V1_EXTRA_FIELDS.get(name);
         if (history != null) return control == history
             && element == (history == FormControl.SELECT ? FormElement.SELECT : FormElement.INPUT);
         if (DETAIL_SELECTS.contains(name) || V1_SELECTS.contains(name)) return element == FormElement.SELECT && control == FormControl.SELECT;
@@ -159,13 +173,14 @@ public final class HplaceFormFingerprint {
         return "/app/applicant/registResume".equals(path) && SECTION.equals(section)
             || "/mrs2/applicant/resume/writeResume".equals(path) && DETAIL_SECTION.equals(section)
             || HplaceApplicantSite.V1_RESUME_FORM_PATH.equals(path)
-                && (V1_SECTION.equals(section) || V1_HISTORY_SECTION.equals(section));
+                && (V1_SECTION.equals(section) || V1_HISTORY_SECTION.equals(section) || V1_EXTRA_SECTION.equals(section));
     }
 
     private static Map<String, Map<String, FormControl>> historyTemplates() {
         var school = new LinkedHashMap<String, FormControl>();
         school.put("degreeTypeCode", FormControl.RADIO);
         school.put("academyName", FormControl.TEXT);
+        school.put("campusType", FormControl.RADIO);
         school.put("entranceDate", FormControl.TEXT);
         school.put("graduationDate", FormControl.TEXT);
         school.put("graduationTypeCode", FormControl.RADIO);
@@ -204,6 +219,31 @@ public final class HplaceFormFingerprint {
         V1_HISTORY_TEMPLATES.forEach((group, templates) -> {
             for (int i = 0; i < historyCards(group); i++) {
                 for (var template : templates.entrySet()) {
+                    fields.put("hplace.v1." + group + "." + i + "." + template.getKey(), template.getValue());
+                }
+            }
+        });
+        return java.util.Collections.unmodifiableMap(fields);
+    }
+
+    private static Map<String, Map<String, FormControl>> extraTemplates() {
+        var certificate = new LinkedHashMap<String, FormControl>();
+        certificate.put("licenseName", FormControl.TEXT);
+        certificate.put("organization", FormControl.TEXT);
+        certificate.put("acquireDate", FormControl.TEXT);
+        certificate.put("registNumber", FormControl.TEXT);
+        var groups = new LinkedHashMap<String, Map<String, FormControl>>();
+        groups.put("certificate", java.util.Collections.unmodifiableMap(certificate));
+        groups.put("languageSkill", Map.of("language", FormControl.SELECT));
+        return java.util.Collections.unmodifiableMap(groups);
+    }
+
+    /** Step-3 names for rows 0..{@link #V1_HISTORY_MAX_CARDS}-1 of every group. */
+    private static Map<String, FormControl> indexedFields(Map<String, Map<String, FormControl>> templates) {
+        var fields = new LinkedHashMap<String, FormControl>();
+        templates.forEach((group, controls) -> {
+            for (int i = 0; i < V1_HISTORY_MAX_CARDS; i++) {
+                for (var template : controls.entrySet()) {
                     fields.put("hplace.v1." + group + "." + i + "." + template.getKey(), template.getValue());
                 }
             }

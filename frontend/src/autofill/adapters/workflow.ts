@@ -10,6 +10,20 @@ import type { LinkKind } from "../../attachments/model";
 import { ownedBasicControl } from "./hplace/basic-controls";
 import { ownedV1Control } from "./hplace/v1-basic-controls";
 import { ownedV1HistoryControl } from "./hplace/v1-history-controls";
+import { ownedV1ExtraControl } from "./hplace/v1-extra-controls";
+import {
+  settleV1ExtraAdd,
+  v1ExtraProfileCount,
+} from "./hplace/v1-extra-collection";
+import {
+  isV1ExtraHandle,
+  isV1ExtraSearchHandle,
+  isV1ExtraStateDriver,
+  settleV1ExtraStateDriver,
+  v1ExtraSearchFailureTargets,
+  writeV1Extra,
+  writeV1ExtraSearch,
+} from "./hplace/v1-extra-write";
 import {
   isV1HistoryMajorAdd,
   settleV1HistoryAdd,
@@ -213,14 +227,17 @@ const hplaceWorkflowAdapter: WorkflowAdapter = {
     isRegistrationItem(item, name) ||
     isBasicStateDriver(item, name) ||
     isV1StateDriver(item, name) ||
-    isV1HistoryStateDriver(item, name),
+    isV1HistoryStateDriver(item, name) ||
+    isV1ExtraStateDriver(item, name),
   stateDriverStage: (item, handle) =>
     (ownedBasicControl(handle) &&
       isBasicStateDriver(item, handle.candidate.domName)) ||
     (ownedV1Control(handle) &&
       isV1StateDriver(item, handle.candidate.domName)) ||
     (ownedV1HistoryControl(handle) &&
-      isV1HistoryStateDriver(item, handle.candidate.domName))
+      isV1HistoryStateDriver(item, handle.candidate.domName)) ||
+    (ownedV1ExtraControl(handle) &&
+      isV1ExtraStateDriver(item, handle.candidate.domName))
       ? 1
       : undefined,
   settleStateDriver: (_document, handle, _report, context) =>
@@ -228,12 +245,14 @@ const hplaceWorkflowAdapter: WorkflowAdapter = {
       ? settleBasicStateDriver(handle, context?.signal, context?.item)
       : isV1HistoryHandle(handle)
         ? settleV1HistoryStateDriver(handle, context?.signal, context?.item)
-        : handle.candidate.domName?.startsWith("hplace.v1.")
-          ? settleV1StateDriver(handle, context?.signal, context?.item)
-          : Promise.resolve(
-              !!context &&
-                settleRegistration(handle, context.item, context.signal),
-            ),
+        : isV1ExtraHandle(handle)
+          ? settleV1ExtraStateDriver(handle, context?.item)
+          : handle.candidate.domName?.startsWith("hplace.v1.")
+            ? settleV1StateDriver(handle, context?.signal, context?.item)
+            : Promise.resolve(
+                !!context &&
+                  settleRegistration(handle, context.item, context.signal),
+              ),
   stateDriverFailureGroup: (item, handle) =>
     isBasicStateDriver(item, handle.candidate.domName)
       ? (handle.elements[0]?.closest(".subject") ?? undefined)
@@ -248,18 +267,18 @@ const hplaceWorkflowAdapter: WorkflowAdapter = {
   ) =>
     ownedBasicControl(handle)
       ? writeBasic(handle, item, () => !signal.aborted, beforeMutation)
-      : ownedV1HistoryControl(handle)?.spec.kind === "search"
-        ? writeV1HistorySearch(
-            handle,
-            item,
-            () => !signal.aborted,
-            beforeMutation,
-          ).then(({ written, code }) => {
-            if (!written && code) report?.(code);
-            return written;
-          })
-        : ownedV1HistoryControl(handle)
-          ? writeV1History(
+      : ownedV1ExtraControl(handle)
+        ? ownedV1ExtraControl(handle)?.spec.kind === "search"
+          ? writeV1ExtraSearch(
+              handle,
+              item,
+              () => !signal.aborted,
+              beforeMutation,
+            ).then(({ written, code }) => {
+              if (!written && code) report?.(code);
+              return written;
+            })
+          : writeV1Extra(
               handle,
               item,
               () => !signal.aborted,
@@ -268,32 +287,62 @@ const hplaceWorkflowAdapter: WorkflowAdapter = {
               if (result === "option-unmatched") report?.("OPTION_UNMATCHED");
               return result === "written";
             })
-          : ownedV1Control(handle)
-            ? writeV1(handle, item, () => !signal.aborted, beforeMutation).then(
-                (result) => {
+        : ownedV1HistoryControl(handle)?.spec.kind === "search"
+          ? writeV1HistorySearch(
+              handle,
+              item,
+              () => !signal.aborted,
+              beforeMutation,
+            ).then(({ written, code }) => {
+              if (!written && code) report?.(code);
+              return written;
+            })
+          : ownedV1HistoryControl(handle)
+            ? writeV1History(
+                handle,
+                item,
+                () => !signal.aborted,
+                beforeMutation,
+              ).then((result) => {
+                if (result === "option-unmatched") report?.("OPTION_UNMATCHED");
+                return result === "written";
+              })
+            : ownedV1Control(handle)
+              ? writeV1(
+                  handle,
+                  item,
+                  () => !signal.aborted,
+                  beforeMutation,
+                ).then((result) => {
                   if (result === "option-unmatched")
                     report?.("OPTION_UNMATCHED");
                   return result === "written";
-                },
-              )
-            : writeRegistration(
-                document,
-                handle,
-                item,
-                signal,
-                report,
-                beforeMutation,
-              ),
-  // v1 step 2: one card per profile entry of the level (CF-509).
-  repeatableProfileCount: v1HistoryProfileCount,
-  settlePreparationAction: settleV1HistoryAdd,
+                })
+              : writeRegistration(
+                  document,
+                  handle,
+                  item,
+                  signal,
+                  report,
+                  beforeMutation,
+                ),
+  // v1 step 2: one card per profile entry of the level (CF-509); step 3:
+  // one 자격증 / 외국어활용능력 row per profile entry (CF-510).
+  repeatableProfileCount: (actionDomId, profile, attachments) =>
+    v1ExtraProfileCount(actionDomId, profile) ??
+    v1HistoryProfileCount(actionDomId, profile, attachments),
+  settlePreparationAction: async (document) => {
+    await settleV1HistoryAdd(document);
+    await settleV1ExtraAdd(document);
+  },
   attachmentFieldHint: v1AttachmentFieldHint,
   // A failed v1 step-2 search defers only its own field (CF-509).
   continueAfterDriverFailure: (_item, handle) =>
-    isV1HistorySearchHandle(handle),
+    isV1HistorySearchHandle(handle) || isV1ExtraSearchHandle(handle),
   // ...and one whose input is already gone defers its re-located row.
   stateDriverFailureTargets: (_item, handle) =>
-    v1HistorySearchFailureTargets(handle),
+    v1HistorySearchFailureTargets(handle) ??
+    v1ExtraSearchFailureTargets(handle),
   // The per-card major add runs in the follow-up preparation, after the
   // cards it belongs to exist.
   followUpRepeatableAction: isV1HistoryMajorAdd,

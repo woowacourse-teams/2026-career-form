@@ -12,6 +12,9 @@ import {
 } from "../../preparation/executor";
 import type { ReviewPlanItem } from "../../review/review-plan";
 import { resetHplacePage } from "../../workflow/test-utils/hplace.fixture";
+import { CATALOG, CATALOG_VERSION } from "../../../profile/catalog";
+import { approveCatalogMatch } from "../../profile/catalog-identity";
+import { matchesResultValue } from "../../workflow/result-value-match";
 import { isUnsupportedHplace } from "../company";
 import { getWorkflowAdapter } from "../workflow";
 import { mountV1Step1 } from "./v1-basic.test-fixtures";
@@ -28,7 +31,12 @@ import {
 } from "./v1-history-write";
 import { hplaceUnverifiedRows } from "./unverified-structure";
 import { executeApprovedWritesAfterPageSettles } from "../../write/executor";
-import { v1HistoryAddActions, v1HistoryChip } from "./v1-history-controls";
+import {
+  v1HistoryAddActions,
+  v1HistoryChip,
+  v1HistoryMalformed,
+  v1HistoryUnknownRows,
+} from "./v1-history-controls";
 import { v1HistoryProfileCount } from "./v1-history-collection";
 import { findAttachmentFields } from "../../attachments/file-fields";
 import { addAttachmentEntries } from "./v1-history.test-fixtures";
@@ -53,7 +61,6 @@ import {
   cards,
   mountV1Step2,
   nextYear,
-  until,
   v1HistoryAnalysis,
   v1HistoryPreparation,
 } from "./v1-history.test-fixtures";
@@ -83,13 +90,21 @@ describe("v1 step 2 page gate", () => {
     expect(isUnsupportedHplace(document)).toBe(false);
   });
 
-  it("requires both section headers", () => {
+  it("needs one 학력사항 or 경력사항 header and never a repeated one (tenant sections vary)", () => {
+    const header = (t: string) =>
+      Array.from(document.querySelectorAll("h5")).find(
+        (h) => h.textContent === t,
+      )!;
     mountV1Step2();
-    Array.from(document.querySelectorAll("h5"))
-      .find((h) => h.textContent === "경력사항")!
-      .remove();
+    header("경력사항").remove();
+    expect(isV1HistoryPage(document)).toBe(true);
+    expect(isUnsupportedHplace(document)).toBe(false);
+    header("학력사항").remove();
     expect(isV1HistoryPage(document)).toBe(false);
     expect(isUnsupportedHplace(document)).toBe(true);
+    mountV1Step2();
+    header("학력사항").insertAdjacentHTML("afterend", "<h5>학력사항</h5>");
+    expect(isV1HistoryPage(document)).toBe(false);
   });
 });
 
@@ -337,14 +352,14 @@ describe("v1 step 2 preparation", () => {
 });
 
 describe("v1 step 2 card levels", () => {
-  it("decides each level from the card's own rows", () => {
+  it("never takes a card that holds another level's row", () => {
     mountV1Step2();
     appendCard("대학교");
     appendCard("직장경력");
-    // A level whose card shows an unknown row is not entered at all.
+    // A 직장경력 row in a 대학교 card: the level is not entered at all.
     cardRow(card("대학교", 0), "이수학점").insertAdjacentHTML(
       "afterend",
-      '<div class="x-row"><span aria-hidden="true">합성행</span><div></div><div></div></div>',
+      '<div class="x-row"><span aria-hidden="true">고용형태</span><div></div><div></div></div>',
     );
     const levels = v1HistoryLevels(document);
     expect(levels.find((l) => l.group === "college")?.status).toBe("malformed");
@@ -419,6 +434,7 @@ describe("v1 step 2 collection", () => {
       ].map((f) => `hplace.v1.highschool.0.${f}`),
       ...[
         "academyName",
+        "campusType",
         "degreeTypeCode",
         "entranceDate",
         "graduationTypeCode",
@@ -429,6 +445,7 @@ describe("v1 step 2 collection", () => {
       ].map((f) => `hplace.v1.college.0.${f}`),
       ...[
         "academyName",
+        "campusType",
         "degreeTypeCode",
         "entranceDate",
         "graduationTypeCode",
@@ -480,11 +497,18 @@ describe("v1 step 2 collection", () => {
   });
 
   it("collects 퇴사일 once 퇴사 unlocks it", async () => {
-    mountV1Step2();
-    const c = appendCard("직장경력");
-    cardToggle(c, "근무기간", "퇴사").click();
-    await until(() => !cardInput(c, "퇴사일").disabled);
-    expect(names()).toContain("hplace.v1.career.0.leavingDate");
+    // Fake timers: the page's unlock runs before the check, never by a margin.
+    vi.useFakeTimers();
+    try {
+      mountV1Step2();
+      const c = appendCard("직장경력");
+      cardToggle(c, "근무기간", "퇴사").click();
+      await vi.runAllTimersAsync();
+      expect(cardInput(c, "퇴사일").disabled).toBe(false);
+      expect(names()).toContain("hplace.v1.career.0.leavingDate");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
@@ -554,7 +578,7 @@ describe("v1 step 2 writes", () => {
     expect(document.querySelector("#dropdown-body")).toBeNull();
   });
 
-  it("writes only full past days, and a future 졸업일 only for 졸업예정", async () => {
+  it("writes only full past days, and a future 졸업일 for any card status", async () => {
     mountV1Step2();
     const univ = appendCard("대학교");
     const career = appendCard("직장경력");
@@ -570,35 +594,165 @@ describe("v1 step 2 writes", () => {
       await write("hplace.v1.career.0.entranceDate", `${nextYear()}-01-02`),
     ).toBe("failed");
     expect(cardInput(career, "입사일").value).toBe("");
-    const future = `${nextYear()}-02-20`;
-    expect(await write("hplace.v1.college.0.graduationDate", future)).toBe(
-      "failed",
-    );
-    cardToggle(univ, "졸업구분", "졸업예정").click();
-    expect(await write("hplace.v1.college.0.graduationDate", future)).toBe(
-      "written",
-    );
+    // The card says 졸업 (the page default), not 졸업예정.
+    expect(cardSelected(univ, "졸업구분")).toEqual(["졸업"]);
+    expect(
+      await write("hplace.v1.college.0.graduationDate", `${nextYear()}-02-20`),
+    ).toBe("written");
     expect(cardInput(univ, "졸업일").value).toBe(`${nextYear()}.02.20`);
   });
 
+  it("refuses a 졸업일 beyond six years and a future 입학일", async () => {
+    mountV1Step2();
+    const univ = appendCard("대학교");
+    const year = new Date().getFullYear();
+    expect(
+      await write("hplace.v1.college.0.graduationDate", `${year + 7}-02-20`),
+    ).toBe("failed");
+    expect(cardInput(univ, "졸업일").value).toBe("");
+    expect(
+      await write("hplace.v1.college.0.entranceDate", `${nextYear()}-03-02`),
+    ).toBe("failed");
+    expect(cardInput(univ, "입학일").value).toBe("");
+  });
+
+  describe("본교/분교", () => {
+    type CampusKind = "university" | "graduateSchool";
+    const campusLabels = (kind: CampusKind) => {
+      const byName = new Map<string, Set<string>>();
+      for (const entry of CATALOG) {
+        if (entry.kind !== kind) continue;
+        const labels = byName.get(entry.name) ?? new Set<string>();
+        for (const segment of entry.detail.split(" · "))
+          for (const label of ["본교", "분교"])
+            if (segment.startsWith(label)) labels.add(label);
+        byName.set(entry.name, labels);
+      }
+      return byName;
+    };
+    const school = (kind: CampusKind, only: "본교" | "분교" | "mixed") =>
+      [...campusLabels(kind)].find(([, labels]) =>
+        only === "mixed"
+          ? labels.size === 2
+          : labels.size === 1 && labels.has(only),
+      )![0];
+    const clicks = (c: Element) => {
+      const seen: (string | null)[] = [];
+      for (const label of ["본교", "분교"])
+        cardToggle(c, "학교정보", label).addEventListener("click", () =>
+          seen.push(label),
+        );
+      return seen;
+    };
+
+    it.each([
+      ["college", "대학교", "university"],
+      ["graduateSchool", "대학원", "graduateSchool"],
+    ] as const)("clicks 분교 for a 분교 %s", async (group, level, kind) => {
+      mountV1Step2();
+      const c = appendCard(level);
+      const seen = clicks(c);
+      expect(
+        await write(`hplace.v1.${group}.0.campusType`, school(kind, "분교")),
+      ).toBe("written");
+      expect(cardSelected(c, "학교정보")).toEqual(["분교"]);
+      expect(seen).toEqual(["분교"]);
+    });
+
+    it("keeps 본교 for a 본교 school", async () => {
+      mountV1Step2();
+      const c = appendCard("대학교");
+      expect(
+        await write(
+          "hplace.v1.college.0.campusType",
+          school("university", "본교"),
+        ),
+      ).toBe("written");
+      expect(cardSelected(c, "학교정보")).toEqual(["본교"]);
+    });
+
+    it("compares the toggle label, not the school name, for a catalog-selected school", () => {
+      mountV1Step2();
+      const c = appendCard("대학교");
+      const name = school("university", "분교");
+      const key = "education.university.schoolName";
+      const { handle, item } = itemFor("hplace.v1.college.0.campusType", name);
+      const entry = CATALOG.find(
+        (e) => e.kind === "university" && e.name === name,
+      )!;
+      item.profileFieldKey = key;
+      item.searchIdentity = {
+        status: "selected",
+        catalogId: entry.id,
+        catalogVersion: CATALOG_VERSION,
+        displayName: name,
+        originalText: name,
+      };
+      const approval = approveCatalogMatch(item.searchIdentity, key, name);
+      if (approval.status !== "selected") throw new Error("no approval");
+      item.catalogMatch = approval.match;
+      cardToggle(c, "학교정보", "분교").click();
+      expect(cardSelected(c, "학교정보")).toEqual(["분교"]);
+      expect(matchesResultValue(item, "분교", name, handle)).toBe(true);
+      expect(matchesResultValue(item, "본교", name, handle)).toBe(false);
+    });
+
+    it("sets 본교 back from 분교 only over the page default", async () => {
+      mountV1Step2();
+      const c = appendCard("대학교");
+      cardToggle(c, "학교정보", "분교").click();
+      // The applicant's own 분교 is an existing value, never replaced.
+      expect(
+        await write(
+          "hplace.v1.college.0.campusType",
+          school("university", "본교"),
+        ),
+      ).toBe("failed");
+      expect(cardSelected(c, "학교정보")).toEqual(["분교"]);
+    });
+
+    it.each([
+      ["a name with both campuses", () => school("university", "mixed")],
+      ["a name without a catalog match", () => "합성대학교"],
+    ])("writes nothing for %s", async (_label, name) => {
+      mountV1Step2();
+      const c = appendCard("대학교");
+      const seen = clicks(c);
+      expect(await write("hplace.v1.college.0.campusType", name())).toBe(
+        "failed",
+      );
+      expect(seen).toEqual([]);
+      expect(cardSelected(c, "학교정보")).toEqual(["본교"]);
+    });
+  });
+
   it("keeps a typed 회사명 and closes its suggestions without picking", async () => {
-    const page = mountV1Step2();
-    const c = appendCard("직장경력");
-    expect(await write("hplace.v1.career.0.company", "합성회사")).toBe(
-      "written",
-    );
-    expect(cardInput(c, "회사명을 입력해주세요.").value).toBe("합성회사");
-    await until(() => !c.querySelector("#dropdown-body"));
-    page.lateSuggestions();
-    const next = appendCard("직장경력");
-    expect(await write("hplace.v1.career.1.company", "두번째회사")).toBe(
-      "written",
-    );
-    // The late list was waited for and closed without a pick.
-    expect(page.suggestionLists()).toBe(2);
-    expect(next.querySelector("#dropdown-body")).toBeNull();
-    expect(cardInput(next, "회사명을 입력해주세요.").value).toBe("두번째회사");
-    expect(page.forbiddenClicks()).toEqual([]);
+    // Fake timers: the late list (1 s after typing) and the writer's quiet
+    // wait (1.5 s) run in their exact order, never by wall-clock margins.
+    vi.useFakeTimers();
+    try {
+      const page = mountV1Step2();
+      const c = appendCard("직장경력");
+      const first = write("hplace.v1.career.0.company", "합성회사");
+      await vi.runAllTimersAsync();
+      expect(await first).toBe("written");
+      expect(cardInput(c, "회사명을 입력해주세요.").value).toBe("합성회사");
+      expect(c.querySelector("#dropdown-body")).toBeNull();
+      page.lateSuggestions();
+      const next = appendCard("직장경력");
+      const second = write("hplace.v1.career.1.company", "두번째회사");
+      await vi.runAllTimersAsync();
+      expect(await second).toBe("written");
+      // The late list was waited for and closed without a pick.
+      expect(page.suggestionLists()).toBe(2);
+      expect(next.querySelector("#dropdown-body")).toBeNull();
+      expect(cardInput(next, "회사명을 입력해주세요.").value).toBe(
+        "두번째회사",
+      );
+      expect(page.forbiddenClicks()).toEqual([]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("never overwrites a value and checks the page maxLength", async () => {
@@ -799,25 +953,34 @@ describe("v1 step 2 school and major search", () => {
   );
 
   it("searches a major in its own card while another card's list is open", async () => {
-    const page = mountV1Step2();
-    const u0 = appendCard("대학교");
-    const u1 = appendCard("대학교");
-    appendMajor(u0);
-    appendMajor(u1);
-    const other = searchInput(u0, "전공")!;
-    other.value = "합성공학";
-    other.dispatchEvent(new Event("input", { bubbles: true }));
-    await until(() => !!cardRow(u0, "전공").querySelector("#dropdown-body li"));
-    const r = await driveOnFakeTimers(
-      "hplace.v1.college.1.major0.majorName",
-      "합성경영",
-    );
-    expect(r).toEqual({ ok: true, settled: true, codes: [] });
-    expect(chipText(u1, "전공")).toEqual(["합성경영"]);
-    expect(searchInput(u1, "전공")).toBeNull();
-    expect(other.value).toBe("합성공학");
-    expect(page.searchQueries()).toEqual(["합성공학", "합성경영"]);
-    expect(page.forbiddenClicks()).toEqual([]);
+    // Fake timers: the other card's list is shown on the page's own timeline.
+    vi.useFakeTimers();
+    try {
+      const page = mountV1Step2();
+      const u0 = appendCard("대학교");
+      const u1 = appendCard("대학교");
+      appendMajor(u0);
+      appendMajor(u1);
+      const other = searchInput(u0, "전공")!;
+      other.value = "합성공학";
+      other.dispatchEvent(new Event("input", { bubbles: true }));
+      await vi.advanceTimersByTimeAsync(500);
+      expect(
+        cardRow(u0, "전공").querySelector("#dropdown-body li"),
+      ).not.toBeNull();
+      const r = await driveOnFakeTimers(
+        "hplace.v1.college.1.major0.majorName",
+        "합성경영",
+      );
+      expect(r).toEqual({ ok: true, settled: true, codes: [] });
+      expect(chipText(u1, "전공")).toEqual(["합성경영"]);
+      expect(searchInput(u1, "전공")).toBeNull();
+      expect(other.value).toBe("합성공학");
+      expect(page.searchQueries()).toEqual(["합성공학", "합성경영"]);
+      expect(page.forbiddenClicks()).toEqual([]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("reports an existing chip: same name kept, a different one as a conflict", () => {
@@ -887,15 +1050,21 @@ describe("v1 step 2 pair and status rules", () => {
   });
 
   it("does not write 퇴사일 unless the profile status is 퇴사", async () => {
-    mountV1Step2();
-    const c = appendCard("직장경력");
-    // The applicant chose 퇴사; no profile status was applied this run.
-    cardToggle(c, "근무기간", "퇴사").click();
-    await until(() => !cardInput(c, "퇴사일").disabled);
-    expect(await write("hplace.v1.career.0.leavingDate", "2020-12-31")).toBe(
-      "failed",
-    );
-    expect(cardInput(c, "퇴사일").value).toBe("");
+    vi.useFakeTimers();
+    try {
+      mountV1Step2();
+      const c = appendCard("직장경력");
+      // The applicant chose 퇴사; no profile status was applied this run.
+      cardToggle(c, "근무기간", "퇴사").click();
+      await vi.runAllTimersAsync();
+      expect(cardInput(c, "퇴사일").disabled).toBe(false);
+      const result = write("hplace.v1.career.0.leavingDate", "2020-12-31");
+      await vi.runAllTimersAsync();
+      expect(await result).toBe("failed");
+      expect(cardInput(c, "퇴사일").value).toBe("");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
@@ -945,7 +1114,8 @@ describe("v1 step 2 page defaults and diagnostics", () => {
       const lines = log.mock.calls.map(([line]) => String(line));
       expect(lines).toEqual(
         expect.arrayContaining([
-          "[CareerForm] skip stage=write key=hplace.v1.college.0.entranceDate reason=unit-mismatch detail=v1-history-date-not-full-day",
+          // A month-only date is typed as YYYY.MM; this full-day page drops it.
+          "[CareerForm] skip stage=write key=hplace.v1.college.0.entranceDate reason=control-shape detail=v1-history-value-not-kept",
           "[CareerForm] skip stage=write key=hplace.v1.highschool.0.graduationTypeCode reason=option-mismatch detail=v1-history-option-unmatched",
           expect.stringMatching(
             /^\[CareerForm\] skip stage=write key=hplace\.v1\.highschool\.0\.academyName reason=result-not-unique detail=v1-history-search-ms\d+-li\d+-regno-textno-branch-no-exact-match failureCode=SEARCH_NO_EXACT_MATCH$/,
@@ -1475,5 +1645,498 @@ describe("v1 step 2 경력기술서 / 포트폴리오 rows", () => {
         .filter((f) => f.element.closest(".x-attachrow"))
         .map((f) => f.kind),
     ).toEqual([undefined, undefined]);
+  });
+});
+
+describe("v1 step 2 on a second tenant (k-step2-skeleton.json)", () => {
+  it("recognises the page whatever the step nav labels read", () => {
+    mountV1Step2("2", "k");
+    expect(isV1HistoryPage(document)).toBe(true);
+    expect(isUnsupportedHplace(document)).toBe(false);
+  });
+
+  it("accepts an add label with a required marker, in any child position", () => {
+    mountV1Step2("2", "k");
+    const [section] = collectPreparationSnapshot(document).request.sections;
+    expect(section.actionCandidates.map((a) => a.domName)).toEqual([
+      "hplace.v1.highschool.add",
+      "hplace.v1.college.add",
+      "hplace.v1.graduateSchool.add",
+      "hplace.v1.career.add",
+      "hplace.v1.careerDescription.add",
+      "hplace.v1.portfolio.add",
+    ]);
+    appendCard("고등학교");
+    expect(addControl("고등학교").matches('div[tabindex="0"]')).toBe(true);
+    const hs = v1HistoryLevels(document).find((l) => l.group === "highschool");
+    expect(hs?.status).toBe("ok");
+    expect(hs?.cards).toHaveLength(1);
+  });
+
+  it("claims no level for a label with anything else after the name", () => {
+    mountV1Step2();
+    levelContainer("고등학교").querySelector(".x-addbtn p")!.textContent =
+      "고등학교 (선택)";
+    levelContainer("대학교").querySelector(".x-addbtn p")!.textContent =
+      "대학교 **";
+    const groups = v1HistoryLevels(document).map((l) => l.group);
+    expect(groups).not.toContain("highschool");
+    expect(groups).not.toContain("college");
+    expect(groups).toContain("career");
+  });
+
+  it("recognises a 대학교 card that shows only some of the measured rows", () => {
+    mountV1Step2("2", "k");
+    appendCard("대학교");
+    expect(
+      v1HistoryLevels(document).find((l) => l.group === "college")?.status,
+    ).toBe("ok");
+    expect(names()).toEqual(
+      expect.arrayContaining([
+        "hplace.v1.college.0.academyName",
+        "hplace.v1.college.0.degreeTypeCode",
+        "hplace.v1.college.0.entranceDate",
+        "hplace.v1.college.0.graduationTypeCode",
+      ]),
+    );
+    expect(names()).not.toContain("hplace.v1.college.0.score");
+  });
+
+  it("skips a row no level measures and reports it as 입력 불가", () => {
+    mountV1Step2();
+    const u0 = appendCard("대학교");
+    u0.querySelector(".x-body")!.insertAdjacentHTML(
+      "afterbegin",
+      '<div class="x-row"><span aria-hidden="true">합성항목</span><div><p>합성항목</p></div><div><input type="text" name="collegeGroupAnswers.0.synth"></div></div>',
+    );
+    expect(
+      v1HistoryLevels(document).find((l) => l.group === "college")?.status,
+    ).toBe("ok");
+    expect(names()).toContain("hplace.v1.college.0.academyName");
+    expect(names().some((n) => n?.includes("synth"))).toBe(false);
+    expect(v1HistoryUnknownRows(document)).toEqual([
+      { group: "college", index: 0, title: "합성항목" },
+    ]);
+    const rows = hplaceUnverifiedRows(
+      document,
+      collectFieldsSnapshot(document).request,
+      v1HistoryProfile(),
+    );
+    expect(
+      rows
+        .filter((r) => r.fieldLabel === "합성항목")
+        .map((r) => [r.status, r.failureCode]),
+    ).toEqual([["unavailable", "STRUCTURE_UNVERIFIED"]]);
+  });
+
+  it("takes a card's level from its container, whatever the 학위구분 labels read", () => {
+    mountV1Step2("2", "k", { collegeDegreeLabels: ["4년제", "2·3년제"] });
+    appendCard("대학교");
+    expect(
+      v1HistoryLevels(document).find((l) => l.group === "college")?.status,
+    ).toBe("ok");
+    expect(names()).toContain("hplace.v1.college.0.academyName");
+    // The unmatched toggle labels exclude that field only.
+    expect(names()).not.toContain("hplace.v1.college.0.degreeTypeCode");
+    expect(v1HistoryMalformed(document)).toContainEqual({
+      group: "college",
+      index: 0,
+      field: "degreeTypeCode",
+    });
+  });
+
+  it("takes a 대학원 card showing the 대학교 rows as 대학원 from its container", () => {
+    mountV1Step2("2", "k");
+    appendCard("대학원");
+    expect(
+      v1HistoryLevels(document).find((l) => l.group === "graduateSchool")
+        ?.status,
+    ).toBe("ok");
+    expect(names()).toContain("hplace.v1.graduateSchool.0.degreeTypeCode");
+    expect(
+      v1HistoryLevels(document).find((l) => l.group === "college")?.cards,
+    ).toHaveLength(0);
+  });
+
+  it("re-identifies the add after the first card: last, div[tabindex], no marker", () => {
+    mountV1Step2("2", "k");
+    appendCard("고등학교");
+    const box = levelContainer("고등학교");
+    expect(box.lastElementChild!.matches('div[tabindex="0"]')).toBe(true);
+    expect(box.lastElementChild!.textContent).toBe("고등학교");
+    const snapshot = collectPreparationSnapshot(document);
+    const hs = snapshot.request.sections[0].actionCandidates.find(
+      (a) => a.domName === "hplace.v1.highschool.add",
+    )!;
+    expect(snapshot.countRepeatableGroups(hs.candidateId)).toBe(1);
+  });
+
+  it("skips the 퇴직사유 row of a 직장경력 card and reports it as 입력 불가", () => {
+    mountV1Step2("2", "k");
+    appendCard("직장경력");
+    expect(
+      v1HistoryLevels(document).find((l) => l.group === "career")?.status,
+    ).toBe("ok");
+    expect(names()).toEqual(
+      expect.arrayContaining([
+        "hplace.v1.career.0.employmentType",
+        "hplace.v1.career.0.company",
+        "hplace.v1.career.0.assignedTask",
+      ]),
+    );
+    expect(names().some((n) => /retire/i.test(n ?? ""))).toBe(false);
+    expect(v1HistoryUnknownRows(document)).toEqual([
+      { group: "career", index: 0, title: "퇴직사유" },
+    ]);
+    const rows = hplaceUnverifiedRows(
+      document,
+      collectFieldsSnapshot(document).request,
+      v1HistoryProfile(),
+    );
+    expect(
+      rows
+        .filter((r) => r.fieldLabel === "퇴직사유")
+        .map((r) => [r.status, r.failureCode]),
+    ).toEqual([["unavailable", "STRUCTURE_UNVERIFIED"]]);
+  });
+});
+
+describe("v1 step 2 second tenant, run 3 (live-step2-k-run3.out)", () => {
+  it("counts a 포트폴리오 entry that has no URL input", () => {
+    mountV1Step2("2", "k");
+    addAttachmentEntries({ 포트폴리오: true });
+    const portfolio = v1HistoryAddActions(document).find(
+      (a) => a.name === "hplace.v1.portfolio.add",
+    );
+    expect(portfolio?.count).toBe(1);
+  });
+
+  it("never counts an entry whose text input carries another name", () => {
+    mountV1Step2("2", "k");
+    addAttachmentEntries({ 포트폴리오: true });
+    document
+      .querySelectorAll(".x-attachrow")[1]
+      .querySelector(".x-entries")!
+      .insertAdjacentHTML("beforeend", '<input type="text" name="other.url">');
+    expect(
+      v1HistoryAddActions(document).find(
+        (a) => a.name === "hplace.v1.portfolio.add",
+      )?.count,
+    ).toBeUndefined();
+  });
+
+  it("takes a card whose rows sit in a wrapper, next to a button outside the rows", () => {
+    // Assumed card internals (not measured): the live 대학교 card fails the
+    // [head, body of rows] reading while its container is otherwise measured.
+    mountV1Step2();
+    const u0 = appendCard("대학교");
+    const body = u0.querySelector(".x-body")!;
+    const wrapper = document.createElement("div");
+    for (const r of Array.from(body.children).filter((c) =>
+      c.matches(".x-row"),
+    ))
+      wrapper.append(r);
+    body.prepend(wrapper);
+    body.insertAdjacentHTML(
+      "beforeend",
+      '<div class="x-help"><button type="button">합성도움말</button></div>',
+    );
+    expect(
+      v1HistoryLevels(document).find((l) => l.group === "college")?.status,
+    ).toBe("ok");
+    expect(names()).toContain("hplace.v1.college.0.academyName");
+  });
+
+  it("still rejects a card with a data control outside its rows", () => {
+    mountV1Step2();
+    const u0 = appendCard("대학교");
+    u0.querySelector(".x-body")!.insertAdjacentHTML(
+      "beforeend",
+      '<div><input type="text" name="collegeGroupAnswers.0.extra"></div>',
+    );
+    expect(
+      v1HistoryLevels(document).find((l) => l.group === "college")?.status,
+    ).toBe("malformed");
+  });
+
+  it("names the container child that fails, value-free", () => {
+    setAutofillDebugEnabled(true);
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      mountV1Step2();
+      appendCard("대학교");
+      levelContainer("대학교").insertAdjacentHTML(
+        "afterbegin",
+        '<div class="x-odd"><input type="text" value="합성값"></div>',
+      );
+      // Diagnostics print inside a collection, as the live run does.
+      collectPreparationSnapshot(document);
+      const lines = log.mock.calls.map(([l]) => String(l));
+      expect(lines).toEqual(
+        expect.arrayContaining([
+          expect.stringMatching(
+            /^\[CareerForm\] skip stage=\w+ key=hplace\.v1\.college reason=control-shape detail=v1-history-level-container-child0-div1-in1-bt0-row0$/,
+          ),
+        ]),
+      );
+      for (const line of lines) expect(line).not.toMatch(/합성값/);
+    } finally {
+      setAutofillDebugEnabled(false);
+      log.mockRestore();
+    }
+  });
+});
+
+describe("v1 step 2 second tenant, run 4 (live-step2-k-run4.out)", () => {
+  it("counts a 전공 sub-row that carries no page-indexed name", () => {
+    mountV1Step2("2", "k");
+    const u0 = appendCard("대학교");
+    const major = () =>
+      v1HistoryAddActions(document).find(
+        (a) => a.name === "hplace.v1.college.0.major.add",
+      );
+    expect(major()?.count).toBe(0);
+    appendMajor(u0);
+    expect(major()?.count).toBe(1);
+    expect(names()).toContain("hplace.v1.college.0.major0.majorName");
+  });
+
+  it("never counts an unnamed 전공 row once a major shows as picked", () => {
+    mountV1Step2("2", "k");
+    const u0 = appendCard("대학교");
+    appendMajor(u0);
+    pickChip(u0, "전공", "합성공학");
+    expect(
+      v1HistoryAddActions(document).find(
+        (a) => a.name === "hplace.v1.college.0.major.add",
+      )?.count,
+    ).toBeUndefined();
+  });
+
+  it("counts the measured 경력기술서 and 포트폴리오 entries", () => {
+    mountV1Step2("2", "k");
+    addAttachmentEntries({ 경력기술서: true, 포트폴리오: true });
+    const counts = v1HistoryAddActions(document)
+      .filter((a) => a.label)
+      .map((a) => [a.name, a.count]);
+    expect(counts).toEqual([
+      ["hplace.v1.careerDescription.add", 1],
+      ["hplace.v1.portfolio.add", 1],
+    ]);
+  });
+
+  it("names every preparation stop in one value-free line", async () => {
+    setAutofillDebugEnabled(true);
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      const page = mountV1Step2();
+      page.stall("직장경력");
+      const snapshot = collectPreparationSnapshot(document);
+      const plans = v1HistoryPreparation(snapshot.request).preparationPlans;
+      const career = snapshot.request.sections[0].actionCandidates.find(
+        (a) => a.domName === "hplace.v1.career.add",
+      )!;
+      const view = (s: ReturnType<typeof collectPreparationSnapshot>) => ({
+        registry: s.registry,
+        isTargetSectionVisible: (id: string) => s.isSectionVisible(id),
+        countRepeatableGroups: (plan: { actionCandidateId: string }) =>
+          s.countRepeatableGroups(plan.actionCandidateId),
+        repeatableGroupState: (plan: { actionCandidateId: string }) =>
+          s.repeatableGroupState(plan.actionCandidateId),
+      });
+      const result = await executeApprovedPreparationPlans({
+        document,
+        approvedPlans: plans
+          .filter((p) => p.actionCandidateId === career.candidateId)
+          .map((plan) => ({ plan, approved: true, localItemCount: 1 })),
+        initialSnapshot: view(snapshot),
+        refreshSnapshot: async () => {
+          await new Promise((resolve) => setTimeout(resolve, 0));
+          return view(collectPreparationSnapshot(document));
+        },
+        countRepeatableGroups: (s, plan) =>
+          s.countRepeatableGroups?.(plan) ?? -1,
+      });
+      expect(result).toMatchObject({
+        status: "failed",
+        reason: "group-count-not-incremented",
+      });
+      expect(log.mock.calls.map(([l]) => String(l))).toContain(
+        "[CareerForm] stop stage=preparation key=hplace.v1.career.add reason=group-count-not-incremented detail=before0-after0",
+      );
+    } finally {
+      setAutofillDebugEnabled(false);
+      log.mockRestore();
+    }
+  });
+
+  it("says why an add's count cannot be read, value-free", () => {
+    setAutofillDebugEnabled(true);
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      mountV1Step2("2", "k");
+      const u0 = appendCard("대학교");
+      appendMajor(u0);
+      cardRow(u0, "전공").insertAdjacentHTML(
+        "beforeend",
+        '<input type="text" name="collegeGroupAnswers.0.otherMajor.0.name" value="합성값">',
+      );
+      const snapshot = collectPreparationSnapshot(document);
+      // Registered in add order: 4 card adds, 2 attachment rows, then majors.
+      expect(snapshot.countRepeatableGroups("action-7")).toBeUndefined();
+      const lines = log.mock.calls.map(([l]) => String(l));
+      expect(lines).toContain(
+        "[CareerForm] skip stage=prepare key=hplace.v1.college.0.major.add reason=control-shape detail=v1-history-count-undefined-major",
+      );
+      expect(lines.join("\n")).not.toMatch(/합성값/);
+    } finally {
+      setAutofillDebugEnabled(false);
+      log.mockRestore();
+    }
+  });
+});
+
+describe("v1 step 2 second tenant, run 6 (k2-rows.txt)", () => {
+  it("reads a picked school without review-key spans and reports no structure row", () => {
+    mountV1Step2("2", "k");
+    const hs = appendCard("고등학교");
+    const u0 = appendCard("대학교");
+    pickChip(hs, "학교정보", "합성고등학교");
+    pickChip(u0, "학교정보", "합성대학교");
+    expect(
+      cardRow(u0, "학교정보").querySelector("span[data-review-key]"),
+    ).toBeNull();
+    expect(v1HistoryChip(document, "highschool", 0, "academyName")).toBe(
+      "합성고등학교",
+    );
+    expect(v1HistoryChip(document, "college", 0, "academyName")).toBe(
+      "합성대학교",
+    );
+    const rows = hplaceUnverifiedRows(
+      document,
+      collectFieldsSnapshot(document).request,
+      v1HistoryProfile(),
+    );
+    expect(rows.filter((r) => r.fieldLabel === "학교명")).toEqual([]);
+  });
+
+  it("reads a picked major the same way", () => {
+    mountV1Step2("2", "k");
+    const u0 = appendCard("대학교");
+    appendMajor(u0);
+    pickChip(u0, "전공", "합성공학");
+    expect(v1HistoryChip(document, "college", 0, "major0.majorName")).toBe(
+      "합성공학",
+    );
+  });
+
+  it("reads no chip while two texts remain in the row", () => {
+    mountV1Step2("2", "k");
+    const u0 = appendCard("대학교");
+    pickChip(u0, "학교정보", "합성대학교");
+    cardRow(u0, "학교정보").children[2].insertAdjacentHTML(
+      "beforeend",
+      "<p>합성다른값</p>",
+    );
+    expect(
+      v1HistoryChip(document, "college", 0, "academyName"),
+    ).toBeUndefined();
+  });
+
+  const writeBatch = (entries: [string, string][]) => {
+    const { registry, items } = itemsFor(entries);
+    return executeApprovedWritesAfterPageSettles({
+      items,
+      approvedCandidateIds: new Set(items.map((i) => i.candidateId)),
+      registry,
+      document,
+    });
+  };
+
+  it("keeps an 입학일 the page cuts to its year and month as one written outcome", async () => {
+    mountV1Step2("2", "k");
+    const u0 = appendCard("대학교");
+    const results = await writeBatch([
+      ["hplace.v1.college.0.entranceDate", "2009-03-02"],
+      ["hplace.v1.college.0.graduationDate", "2013-02-20"],
+    ]);
+    expect(results.map((r) => r.status)).toEqual(["written", "written"]);
+    expect(cardInput(u0, "입학일").value).toBe("2009.03");
+    expect(cardInput(u0, "졸업일").value).toBe("2013.02");
+  });
+
+  it("writes a month-only profile date as YYYY.MM where the page keeps months", async () => {
+    mountV1Step2("2", "k");
+    const u0 = appendCard("대학교");
+    const results = await writeBatch([
+      ["hplace.v1.college.0.entranceDate", "2009-03"],
+    ]);
+    expect(results.map((r) => r.status)).toEqual(["written"]);
+    expect(cardInput(u0, "입학일").value).toBe("2009.03");
+  });
+
+  it("never accepts a different year or month", async () => {
+    mountV1Step2("2", "k");
+    const u0 = appendCard("대학교");
+    const date = cardInput(u0, "입학일");
+    date.addEventListener("blur", () =>
+      queueMicrotask(() =>
+        queueMicrotask(() => {
+          date.value = "2009.04";
+        }),
+      ),
+    );
+    const results = await writeBatch([
+      ["hplace.v1.college.0.entranceDate", "2009-03-02"],
+    ]);
+    expect(results.map((r) => r.status)).toEqual(["skipped"]);
+  });
+
+  it("reports a month-only date a full-day page drops", async () => {
+    mountV1Step2();
+    const u0 = appendCard("대학교");
+    const results = await writeBatch([
+      ["hplace.v1.college.0.entranceDate", "2009-03"],
+    ]);
+    expect(results.map((r) => r.status)).toEqual(["skipped"]);
+    expect(cardInput(u0, "입학일").value).toBe("");
+  });
+});
+
+describe("v1 step 2 picked-unread diagnostic (phase 8)", () => {
+  it("names the shape when a picked 학교명 cannot be read, value-free", async () => {
+    setAutofillDebugEnabled(true);
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      mountV1Step2("2", "k");
+      const u0 = appendCard("대학교");
+      const { registry, items } = itemsFor([
+        ["hplace.v1.college.0.academyName", "합성대학교"],
+      ]);
+      const [item] = items;
+      pickChip(u0, "학교정보", "합성대학교");
+      cardRow(u0, "학교정보").children[2].insertAdjacentHTML(
+        "beforeend",
+        "<p>합성다른값</p>",
+      );
+      const { resultFieldState } =
+        await import("../../workflow/result-field-state");
+      expect(
+        resultFieldState(registry, document, item.candidateId),
+      ).toBeUndefined();
+      const lines = log.mock.calls.map(([l]) => String(l));
+      expect(lines).toEqual(
+        expect.arrayContaining([
+          expect.stringMatching(
+            /^\[CareerForm\] skip stage=result key=hplace\.v1\.college\.0\.academyName reason=picked-unread detail=status-[a-z-]+-leaves\d+-nameblock(?:\d+|x)-parentInputs\d+-parentButtons\d+-svg\d+-blocks(?:\d+|x)-depth\d+-search\d+-rk\d+$/,
+          ),
+        ]),
+      );
+      for (const line of lines)
+        expect(line).not.toMatch(/합성대학교|합성다른값/);
+    } finally {
+      setAutofillDebugEnabled(false);
+      log.mockRestore();
+    }
   });
 });

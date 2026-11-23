@@ -1,5 +1,5 @@
 {
-  "source": "POST /api/v1/fields/analyze on the local backend (da8c2ac), synthetic request: fe509/real-response-sample.json",
+  "source": "POST /api/v1/fields/analyze on the local backend (da8c2ac), synthetic request: fe509/real-response-sample.json; campusType entries re-captured on the rebuilt local backend (CF-510)",
   "mode": "ADAPTER",
   "analysisStatus": "COMPLETE",
   "fields": {
@@ -140,6 +140,19 @@
       "interactionStatus": "READY",
       "writePlan": {
         "command": "SET_TEXT"
+      }
+    },
+    "college.campusType": {
+      "matchType": "MATCH",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "education.university.schoolName"
+      },
+      "autofillPolicy": "CONDITIONAL",
+      "mappingStatus": "ADAPTER_VERIFIED",
+      "interactionStatus": "READY",
+      "writePlan": {
+        "command": "CHECK_RADIO"
       }
     },
     "college.degreeTypeCode": {
@@ -294,6 +307,19 @@
       "interactionStatus": "READY",
       "writePlan": {
         "command": "SET_TEXT"
+      }
+    },
+    "graduateSchool.campusType": {
+      "matchType": "MATCH",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "education.graduateSchool.schoolName"
+      },
+      "autofillPolicy": "CONDITIONAL",
+      "mappingStatus": "ADAPTER_VERIFIED",
+      "interactionStatus": "READY",
+      "writePlan": {
+        "command": "CHECK_RADIO"
       }
     },
     "graduateSchool.degreeTypeCode": {

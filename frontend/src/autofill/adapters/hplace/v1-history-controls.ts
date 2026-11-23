@@ -4,6 +4,7 @@ import type {
   FieldCandidateHandle,
 } from "../../dom/types";
 import { hplaceDocumentKind } from "./fingerprint";
+import { showsOnlyName } from "./v1-search";
 import {
   isSelectedToggle,
   rowDropdowns,
@@ -92,6 +93,9 @@ export type HistorySpec =
       /** The page's own selection on a fresh card (step2-probe-fail.json
        * defaults): replaced by a different profile value. */
       default?: string;
+      /** 본교/분교: the profile value is the school name; the catalog maps it
+       * to the label (v1HistoryTarget). */
+      campus?: true;
     }
   | {
       kind: "dropdown";
@@ -111,7 +115,7 @@ export type HistorySpec =
       placeholder: string;
       profile: string;
       parent?: HistoryField;
-      /** 졸업일: a future day is allowed while the card says 졸업예정. */
+      /** 졸업일: a future day (at most six years ahead) is allowed. */
       future?: true;
     }
   | {
@@ -140,6 +144,7 @@ export type HistorySpec =
 
 export type HistoryField =
   | "academyName"
+  | "campusType"
   | "major0.majorName"
   | "graduationTypeCode"
   | "locationCode"
@@ -382,6 +387,18 @@ export function historySpecs(
   return [
     ["academyName", school],
     [
+      "campusType",
+      {
+        kind: "toggle",
+        label: "본교/분교",
+        row: "학교정보",
+        options: ["본교", "분교"],
+        profile: `${p}.schoolName`,
+        default: "본교",
+        campus: true,
+      },
+    ],
+    [
       "degreeTypeCode",
       {
         kind: "toggle",
@@ -494,10 +511,11 @@ export interface HistoryLevel {
   cards: HistoryCard[];
 }
 
-function cardRows(card: Element): Map<string, Element> | undefined {
-  const body = card.children[1];
+function cardRows(
+  rowList: readonly Element[],
+): Map<string, Element> | undefined {
   const rows = new Map<string, Element>();
-  for (const row of Array.from(body?.children ?? []).filter(isRow)) {
+  for (const row of rowList) {
     const title = text(row.firstElementChild);
     if (rows.has(title)) return undefined;
     rows.set(title, row);
@@ -505,19 +523,39 @@ function cardRows(card: Element): Map<string, Element> | undefined {
   return rows;
 }
 
-/** The single level whose measured row set equals the card's own rows. */
+/** Every row title some level measures. */
+const knownRows = new Set(historyGroups.flatMap((g) => levelRows[g]));
+
+/**
+ * A card in a container whose add control names `group`: its rows are the
+ * level's own rows plus rows no level measures (skipped, reported); at least
+ * one is the level's own. A row of another level is not this level's card.
+ */
+function cardFits(card: HistoryCard, group: HistoryGroup): boolean {
+  if (!card.rows) return false;
+  const titles = [...card.rows.keys()];
+  const own = levelRows[group];
+  return (
+    titles.some((t) => own.includes(t)) &&
+    titles.every((t) => own.includes(t) || !knownRows.has(t))
+  );
+}
+
+/**
+ * The single level whose measured row set holds every row of the card.
+ * Tenants show a subset of the rows (a second tenant's 대학교 card has no
+ * 학과계열/학업성적/이수학점); a row no level measures matches none.
+ */
 function cardLevel(card: HistoryCard): HistoryGroup | undefined {
   if (!card.rows) return undefined;
   const titles = [...card.rows.keys()];
   const matches = historyGroups.filter((group) => {
     const expected = levelRows[group];
-    if (
-      titles.length !== expected.length ||
-      !titles.every((t) => expected.includes(t))
-    )
+    if (!titles.length || !titles.every((t) => expected.includes(t)))
       return false;
     const degree = degreeLabels[group];
-    return !degree || !!toggleGroup(card.rows!.get("학위구분")!, degree);
+    const degreeRow = card.rows!.get("학위구분");
+    return !degree || (!!degreeRow && !!toggleGroup(degreeRow, degree));
   });
   return matches.length === 1 ? matches[0] : undefined;
 }
@@ -538,6 +576,8 @@ interface ContainerShape {
   cards: HistoryCard[];
   /** False when a direct child holds controls but is neither a card nor the add. */
   sound: boolean;
+  /** Value-free shape of the first such child (diagnostics only). */
+  unsound?: string;
   adds: { group: HistoryGroup; element: AddControl }[];
 }
 
@@ -546,18 +586,42 @@ const CONTROLS = "input, button, select, textarea";
 const isSpacer = (e: Element) =>
   !e.querySelector(`${CONTROLS}, span[aria-hidden="true"]`);
 
+/** The outermost row blocks inside an element. */
+function topRows(element: Element): Element[] {
+  const all = Array.from(element.querySelectorAll("div")).filter(isRow);
+  return all.filter((r) => !all.some((o) => o !== r && o.contains(r)));
+}
+
 /**
- * A card (step2-skeleton.json `afterCareer`/`afterCollege`): a direct child
- * of its level container with exactly [head, body], where the body holds
- * row blocks and only empty spacers besides them.
+ * A card: a direct child of its level container, not itself a row, holding
+ * row blocks with every data control (input, select, textarea) inside one of
+ * them. The first tenant's card is [head, body of rows]
+ * (step2-skeleton.json); a second tenant's 대학교 card fails that reading
+ * (live-step2-k-run3.out `v1-history-level-container`) while its internals
+ * are not measured, so wrappers, notices and buttons outside the rows (never
+ * clicked) are accepted. A data control outside the rows is not.
  */
 function asCard(element: Element): HistoryCard | undefined {
-  if (element.children.length !== 2) return undefined;
-  const body = Array.from(element.children[1].children);
-  return body.some(isRow) && body.every((e) => isRow(e) || isSpacer(e))
-    ? { element, rows: cardRows(element) }
-    : undefined;
+  if (isRow(element)) return undefined;
+  const rows = topRows(element);
+  if (!rows.length) return undefined;
+  const stray = Array.from(
+    element.querySelectorAll("input, select, textarea"),
+  ).some((control) => !rows.some((row) => row.contains(control)));
+  return stray ? undefined : { element, rows: cardRows(rows) };
 }
+
+/** Value-free shape of a container child: tag, children, controls, rows. */
+const childShape = (child: Element, index: number) =>
+  `child${index}-${child.tagName.toLowerCase()}${child.children.length}-in${
+    child.querySelectorAll("input, select, textarea").length
+  }-bt${child.querySelectorAll("button").length}-row${topRows(child).length}`;
+
+/** A level name, or the name and the page's required marker ("고등학교 *",
+ * measured on a second tenant); nothing else. */
+const levelLabelMatches = (shown: string, label: string) =>
+  shown === label ||
+  (shown.endsWith("*") && shown.slice(0, -1).trimEnd() === label);
 
 /** The add control: a direct child, `button` or `div[tabindex="0"]`, whose only `p` is a level name. */
 function asAdd(
@@ -571,7 +635,9 @@ function asAdd(
     return undefined;
   const labels = element.querySelectorAll("p");
   const group = historyGroups.find(
-    (g) => labels.length === 1 && text(labels[0]) === historyLevelLabel[g],
+    (g) =>
+      labels.length === 1 &&
+      levelLabelMatches(text(labels[0]), historyLevelLabel[g]),
   );
   return group ? { group, element } : undefined;
 }
@@ -584,18 +650,21 @@ function containerShape(container: Element): ContainerShape {
   const adds: ContainerShape["adds"] = [];
   const cards: HistoryCard[] = [];
   let sound = true;
-  for (const child of Array.from(container.children)) {
+  let unsound: string | undefined;
+  Array.from(container.children).forEach((child, index) => {
     const add = asAdd(child);
     if (add) {
       adds.push(add);
-      continue;
+      return;
     }
     const card = asCard(child);
     if (card) cards.push(card);
-    else if (child.querySelector(`${CONTROLS}, span[aria-hidden="true"]`))
+    else if (child.querySelector(`${CONTROLS}, span[aria-hidden="true"]`)) {
       sound = false;
-  }
-  return { container, cards, sound, adds };
+      unsound ??= childShape(child, index);
+    }
+  });
+  return { container, cards, sound, adds, ...(unsound ? { unsound } : {}) };
 }
 
 function levelContainers(document: Document): Element[] {
@@ -616,12 +685,34 @@ function levelContainers(document: Document): Element[] {
 export function v1HistoryLevels(document: Document): HistoryLevel[] {
   const levels: HistoryLevel[] = [];
   for (const shape of levelContainers(document).map(containerShape)) {
-    const cardGroups = shape.cards.map(cardLevel);
+    // The container's one add control names the level (CF-510: a second
+    // tenant's 대학교 and 대학원 cards show the same rows); without one, the
+    // cards' own rows decide.
+    const named = shape.adds.length === 1 ? shape.adds[0].group : undefined;
+    const cardGroups = shape.cards.map((c) =>
+      named ? (cardFits(c, named) ? named : undefined) : cardLevel(c),
+    );
     const claimed = new Set<HistoryGroup>([
       ...shape.adds.map((a) => a.group),
       ...cardGroups.filter((g): g is HistoryGroup => !!g),
     ]);
-    if (!claimed.size) continue;
+    if (!claimed.size) {
+      // An add-shaped control that names no level: that kind is skipped.
+      if (
+        Array.from(shape.container.children).some(
+          (c) =>
+            (c instanceof HTMLButtonElement ||
+              c.matches('div[tabindex="0"]')) &&
+            c.querySelectorAll("p").length === 1,
+        )
+      )
+        debugCollectionSkip(
+          "hplace.v1.add",
+          "control-shape",
+          "v1-history-add-unmatched",
+        );
+      continue;
+    }
     const [group] = [...claimed];
     const add = shape.adds.length === 1 ? shape.adds[0].element : undefined;
     const addShape =
@@ -636,6 +727,24 @@ export function v1HistoryLevels(document: Document): HistoryLevel[] {
       addShape &&
       cardGroups.every((g) => g === group) &&
       shape.cards.every((c, i) => namesMatch(group, c.element, i));
+    if (!ok)
+      debugCollectionSkip(
+        `hplace.v1.${group}`,
+        "control-shape",
+        `v1-history-level-${
+          claimed.size !== 1
+            ? "claims"
+            : !shape.sound
+              ? `container-${shape.unsound ?? "unknown"}`
+              : shape.adds.length > 1
+                ? "adds"
+                : !addShape
+                  ? "add-shape"
+                  : !cardGroups.every((g) => g === group)
+                    ? "card-rows"
+                    : "card-names"
+        }`,
+      );
     for (const g of claimed)
       levels.push({
         group: g,
@@ -657,6 +766,25 @@ export function v1HistoryLevels(document: Document): HistoryLevel[] {
   });
 }
 
+/**
+ * Rows of sound cards that no spec of their level reads (a second tenant's
+ * 퇴직사유): skipped, never written or clicked, reported as 입력 불가.
+ */
+export function v1HistoryUnknownRows(
+  document: Document,
+): { group: HistoryGroup; index: number; title: string }[] {
+  if (!isV1HistoryPage(document)) return [];
+  return v1HistoryLevels(document).flatMap((level) =>
+    level.status !== "ok"
+      ? []
+      : level.cards.flatMap((card, index) =>
+          [...(card.rows?.keys() ?? [])]
+            .filter((t) => !levelRows[level.group].includes(t))
+            .map((title) => ({ group: level.group, index, title })),
+        ),
+  );
+}
+
 /** v1 resume form step 2 with its 학력사항/경력사항 sections and level containers. */
 export function isV1HistoryPage(document: Document): boolean {
   const location = document.location;
@@ -670,9 +798,14 @@ export function isV1HistoryPage(document: Document): boolean {
   const headers = Array.from(
     document.getElementById("root")?.querySelectorAll("h5") ?? [],
   ).map(text);
+  // Tenants choose their sections: one known header is enough; a repeated
+  // one is not a step-2 page we know.
+  const counts = ["학력사항", "경력사항"].map(
+    (h) => headers.filter((x) => x === h).length,
+  );
   return (
-    headers.filter((h) => h === "학력사항").length === 1 &&
-    headers.filter((h) => h === "경력사항").length === 1 &&
+    counts.some((n) => n === 1) &&
+    counts.every((n) => n <= 1) &&
     v1HistoryLevels(document).length > 0
   );
 }
@@ -952,8 +1085,10 @@ export function v1HistoryValue(
 export function v1HistoryPickedValue(
   handle: FieldCandidateHandle,
 ): string | undefined {
+  // Shared value readers also pass handles of other owners, some with no
+  // native elements at all.
   const parsed = parseV1HistoryName(handle.candidate.domName);
-  const document = handle.elements[0]?.ownerDocument;
+  const document = handle.elements?.[0]?.ownerDocument;
   return parsed &&
     document &&
     handle.sectionId === v1HistorySectionId &&
@@ -993,6 +1128,28 @@ export function majorSubRowCount(
   const named = Array.from(row.querySelectorAll("input[name]")).map(
     (i) => (i as HTMLInputElement).name,
   );
+  if (!named.length) {
+    // A 전공 row without page-indexed names (second tenant,
+    // live-step2-k-run4.out: toggles and one empty input): its sub-rows are
+    // counted by their search inputs, only while nothing shows as picked (a
+    // picked major leaves no input behind and would not be counted).
+    const searches = row.querySelectorAll(
+      'input[placeholder="전공명을 검색해주세요."]',
+    ).length;
+    const [titleSpan, titleBox] = Array.from(row.children);
+    const texts = Array.from(row.querySelectorAll("*")).filter(
+      (e) =>
+        e.children.length === 0 &&
+        !(e instanceof HTMLInputElement) &&
+        e !== titleSpan &&
+        !titleBox?.contains(e) &&
+        !e.closest("button, li, #dropdown-body, svg") &&
+        text(e) !== "",
+    );
+    return texts.length === 0 && chipTexts(row).length === 0
+      ? searches
+      : undefined;
+  }
   if (named.some((n) => !pattern.test(n))) return undefined;
   const subRows = new Set(named.map((n) => Number(pattern.exec(n)![1])));
   if ([...subRows].some((m) => m >= subRows.size)) return undefined;
@@ -1014,7 +1171,7 @@ function chipTexts(row: Element): string[] {
  * is `div > div > p` (+ the X svg) and that holds no input, list item or
  * button (measured: step2-major-after-register.json).
  */
-function chipWidgets(row: Element): string[] {
+export function chipWidgets(row: Element): string[] {
   return Array.from(row.querySelectorAll("span[data-review-key]")).flatMap(
     (span) => {
       if (span.querySelector("input, li, button, #dropdown-body")) return [];
@@ -1065,10 +1222,49 @@ export function v1HistoryChip(
   if (!row || !spec || spec.kind !== "search") return undefined;
   if (row.querySelector(`input[placeholder="${spec.placeholder}"]`))
     return undefined;
+  if (!row.querySelector("span[data-review-key]")) {
+    // No review-key spans (second tenant, k2-rows.txt): the picked name is
+    // the row content's one text leaf; dropdown triggers and toggles are
+    // buttons and list items. None or several: unknown.
+    const [titleSpan, titleBox] = Array.from(row.children);
+    const texts = Array.from(row.querySelectorAll("*"))
+      .filter(
+        (e) =>
+          e.children.length === 0 &&
+          !(e instanceof HTMLInputElement) &&
+          e !== titleSpan &&
+          !titleBox?.contains(e) &&
+          !e.closest("button, li, #dropdown-body, svg"),
+      )
+      .map(text)
+      .filter(Boolean);
+    return texts.length === 1 ? texts[0] : undefined;
+  }
   // A picked major re-renders its sub-row into toggle and score widgets that
   // hold `p`s too: one sub-row = one chip widget (sub-row inputs not counted).
   const chips = spec.major ? chipWidgets(row) : chipTexts(row);
   return chips.length === 1 ? chips[0] : undefined;
+}
+
+/**
+ * A school or major search shows exactly `name` as its pick: the strict chip
+ * reading, or on a page without review-key spans the measure-free fallback
+ * (input gone, one leaf text equal to the name).
+ */
+export function v1HistoryChipShows(
+  document: Document,
+  group: HistoryGroup,
+  index: number,
+  field: "academyName" | "major0.majorName",
+  name: string,
+): boolean {
+  const spec = historySpec(group, field);
+  const row = v1HistorySearchRow(document, group, index, field);
+  if (!row || spec?.kind !== "search") return false;
+  return (
+    showsOnlyName(row, spec.placeholder, name) ??
+    v1HistoryChip(document, group, index, field) === name
+  );
 }
 
 export interface HistoryAddAction {
@@ -1231,7 +1427,10 @@ function attachmentAdds(document: Document): HistoryAddAction[] {
         label: title,
         element: button,
         count:
-          urls.length === count && urls.every((u) => u.name.startsWith(prefix))
+          // An entry is a file widget plus an optional URL widget: the
+          // second tenant's 포트폴리오 entry has no URL input
+          // (live-step2-k-run3.out). Any URL input carries the row's name.
+          urls.length <= count && urls.every((u) => u.name.startsWith(prefix))
             ? count
             : undefined,
         state: () => entries().map(cardState),
