@@ -17,6 +17,18 @@ import {
   type V1WriteResult,
 } from "../adapters/hplace/v1-basic-write";
 import { v1AddressBatch } from "../adapters/hplace/v1-address";
+import {
+  ownedV1HistoryControl,
+  v1HistoryValue,
+} from "../adapters/hplace/v1-history-controls";
+import {
+  V1_HISTORY_GPA_REASON,
+  V1_HISTORY_GPA_ROLLBACK_REASON,
+  v1HistoryFailureReason,
+  v1HistoryGpaRun,
+  v1HistoryRetained,
+  writeV1History,
+} from "../adapters/hplace/v1-history-write";
 import type { AddressIdentity } from "../address/match";
 import { resolveDocumentCompany } from "../adapters/company";
 import { runtimeRules } from "../policy/runtime-rules";
@@ -66,6 +78,10 @@ function legacyValueRetained(
 ): boolean {
   if (ownedV1Control(handle))
     return item.profileValue === initialValue && v1Retained(handle, item);
+  if (ownedV1HistoryControl(handle))
+    return (
+      item.profileValue === initialValue && v1HistoryRetained(handle, item)
+    );
   const basic = ownedBasicControl(handle);
   const target = basic
     ? basicTarget(
@@ -321,6 +337,8 @@ export async function executeApprovedWritesAfterPageSettles({
         current,
         beforeMutation,
       );
+      // v1 step 2: a score and its scale are written only together.
+      const gpa = v1HistoryGpaRun(items, registry, approvedCandidateIds);
       for (const item of items) {
         if (beforeWrite) await beforeWrite(item);
         const lookup = registry.lookupField(item.candidateId);
@@ -331,13 +349,29 @@ export async function executeApprovedWritesAfterPageSettles({
         const address = eligible
           ? await v1Address(item, lookup.handle)
           : undefined;
+        const history =
+          !address &&
+          eligible &&
+          !ownedBasicControl(lookup.handle) &&
+          !!ownedV1HistoryControl(lookup.handle);
+        const gpaHeld = history && gpa.held(item, lookup.handle);
+        const typed = history && v1HistoryValue(lookup.handle) === "";
         const v1 = address
           ? address.result
-          : eligible &&
-              !ownedBasicControl(lookup.handle) &&
-              ownedV1Control(lookup.handle)
-            ? await writeV1(lookup.handle, item, current, beforeMutation)
-            : undefined;
+          : history
+            ? gpaHeld
+              ? ("failed" as const)
+              : await writeV1History(
+                  lookup.handle,
+                  item,
+                  current,
+                  beforeMutation,
+                )
+            : eligible &&
+                !ownedBasicControl(lookup.handle) &&
+                ownedV1Control(lookup.handle)
+              ? await writeV1(lookup.handle, item, current, beforeMutation)
+              : undefined;
         const success =
           v1 === undefined &&
           eligible &&
@@ -356,7 +390,15 @@ export async function executeApprovedWritesAfterPageSettles({
               item.candidateId,
               v1,
               address?.reason ??
-                "검증된 상세 지원서 필드만 입력할 수 있습니다.",
+                (history && "handle" in lookup
+                  ? gpaHeld
+                    ? V1_HISTORY_GPA_REASON
+                    : v1HistoryFailureReason(
+                        lookup.handle,
+                        item,
+                        "검증된 지원서 필드만 입력할 수 있습니다.",
+                      )
+                  : "검증된 상세 지원서 필드만 입력할 수 있습니다."),
             )
           : success
             ? written(item.candidateId)
@@ -367,6 +409,25 @@ export async function executeApprovedWritesAfterPageSettles({
                 "검증된 상세 지원서 필드만 입력할 수 있습니다.",
               );
         results.push(result);
+        // A scale that failed after its typed score: clear the score again.
+        const rollback =
+          history && v1 && "handle" in lookup
+            ? await gpa.after(item, lookup.handle, v1, typed)
+            : undefined;
+        if (rollback) {
+          const index = items.findIndex(
+            (i) => i.candidateId === rollback.candidateId,
+          );
+          if (index >= 0 && index < results.length)
+            results[index] = skipped(
+              rollback.candidateId,
+              "needs-verification",
+              "REVIEW_UNAVAILABLE",
+              rollback.cleared
+                ? V1_HISTORY_GPA_REASON
+                : V1_HISTORY_GPA_ROLLBACK_REASON,
+            );
+        }
       }
       const profileRetained = beforeMutation ? await beforeMutation() : true;
       return results.map((result, index) => {

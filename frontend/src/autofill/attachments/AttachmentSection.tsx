@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { getWorkflowAdapter } from "../adapters/workflow";
 import {
   evidenceEntries,
   type EvidenceEntry,
@@ -105,7 +106,10 @@ export function AttachmentSection({
   attachFollowUp,
 }: AttachmentSectionProps) {
   const [fields] = useState<AttachmentField[]>(() =>
-    findAttachmentFields(pageDocument),
+    findAttachmentFields(
+      pageDocument,
+      getWorkflowAdapter(pageDocument).attachmentFieldHint,
+    ),
   );
   const entries = useMemo(
     () => (profile ? evidenceEntries(profile) : []),
@@ -256,7 +260,10 @@ export function AttachmentSection({
   // same field (same kind and label) instead of failing on the old node.
   const currentElement = (field: AttachmentField): HTMLInputElement => {
     if (field.element.isConnected) return field.element;
-    const same = findAttachmentFields(pageDocument).filter(
+    const same = findAttachmentFields(
+      pageDocument,
+      getWorkflowAdapter(pageDocument).attachmentFieldHint,
+    ).filter(
       (candidate) =>
         candidate.kind === field.kind && candidate.label === field.label,
     );

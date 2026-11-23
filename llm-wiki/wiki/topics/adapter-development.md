@@ -2,9 +2,9 @@
 
 > Topic: adapter-development
 > Status: Current
-> Current: [CF-177 후속 보완 묶음 근거](../../raw/issues/CF-177/documents/live-followup-bundle.md)
-> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-development.md); [CF-94 근거](../../raw/issues/CF-94/documents/adapter-development.md); [CF-177 근거](../../raw/issues/CF-177/documents/adapter-development.md); [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md); [CF-177 C12·C13·시연 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md); [CF-177 KDI·구조 미확인 근거](../../raw/issues/CF-177/documents/live-kdi-unverified.md); [CF-177 후속 보완 묶음 근거](../../raw/issues/CF-177/documents/live-followup-bundle.md)
-> Updated: 2026-10-20
+> Current: [CF-509 테스트용 백엔드 응답 표본 규칙](../../raw/issues/CF-509/documents/backend-response-fixture-rule.md)
+> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-development.md); [CF-94 근거](../../raw/issues/CF-94/documents/adapter-development.md); [CF-177 근거](../../raw/issues/CF-177/documents/adapter-development.md); [CF-177 step 2·3 근거](../../raw/issues/CF-177/documents/live-step23.md); [CF-177 C12·C13·시연 근거](../../raw/issues/CF-177/documents/live-c12-c13-demo.md); [CF-177 KDI·구조 미확인 근거](../../raw/issues/CF-177/documents/live-kdi-unverified.md); [CF-177 후속 보완 묶음 근거](../../raw/issues/CF-177/documents/live-followup-bundle.md); [CF-509 테스트용 백엔드 응답 표본 규칙](../../raw/issues/CF-509/documents/backend-response-fixture-rule.md)
+> Updated: 2026-11-22
 
 ## 현재 상태
 
@@ -63,3 +63,7 @@ C12는 페이지 함수로 원본 섹션을 새 비활성 문서에 허용 목�
 live-eval 하네스는 하네스가 소유하지 않는 상주 Chromium에 CDP로 붙고 브라우저·context·지원서 탭·전용 프로필을 닫거나 지우지 않는다. 평가 round 밖에서만 저장 핸들러 없는 단계 이동 요청을 보내며 다음·임시저장·제출 버튼과 단계 탭은 누르지 않는다. 로컬 BE가 내보내는 정책의 canonical nativeForm이 대상 HEAD 정책과 다르거나 확인되지 않으면 명시 허용 없이 실행하지 않는다. seeder가 insert-only라 정책을 고친 뒤에는 사람이 승인한 로컬 DB 재설정으로 재시드하고 지문 match를 확인한다. 보고에는 키·상태·개수만 남기고 값·URL·쿼리·쿠키·HTML은 남기지 않는다.
 
 현재 계약·결정·과거 관측·단계별 검증의 상세는 [Hplace 어댑터](adapter-hplace.md)와 Current raw를 따른다.
+
+## 테스트용 백엔드 응답 (CF-509, 2026-11-22)
+
+테스트용 백엔드 응답은 손으로 만들지 않고 실제 백엔드 응답 표본에서 만든다. 백엔드의 `autofillPolicy`는 프로필 칸마다 정해져 한 어댑터 안에서도 ALLOWED와 CONDITIONAL이 섞인다. CONDITIONAL 항목은 `needs-review`로 자동 실행에 선택되므로 어댑터의 쓰기 승인 조건은 두 정책을 모두 받아야 한다. 모든 칸을 ALLOWED로 돌려주는 가짜 응답은 이 차이를 숨겨 실화면에서만 실패한다(에이치닷 v1 2단계). 근거는 [CF-509 테스트용 백엔드 응답 표본 규칙](../../raw/issues/CF-509/documents/backend-response-fixture-rule.md)을 따른다.

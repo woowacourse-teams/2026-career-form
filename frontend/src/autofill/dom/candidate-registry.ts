@@ -142,11 +142,14 @@ export class CandidateRegistry {
               element.isConnected &&
               element.parentElement === parent &&
               parent?.children.length === siblings.length &&
-              siblings.every((sibling, index) => parent.children[index] === sibling),
+              siblings.every(
+                (sibling, index) => parent.children[index] === sibling,
+              ),
           ) &&
           (kinds?.every(
             ({ select, value }) => select.isConnected && select.value === value,
-          ) ?? true) &&
+          ) ??
+            true) &&
           correspondingControls(choicesBefore, rowChoices()) !== undefined,
       });
     }
@@ -173,7 +176,8 @@ export class CandidateRegistry {
         (element, index) =>
           controlIdentity(element) === snapshot.before[index]?.identity,
       );
-      if (!same) localWorkflowLog("rebind-deny", { reason: "identity-changed" });
+      if (!same)
+        localWorkflowLog("rebind-deny", { reason: "identity-changed" });
       return same;
     }
     if (!allowReplacement) return deny("not-allowed");
@@ -312,6 +316,11 @@ export class CandidateRegistry {
     } finally {
       this.readCache = previous;
     }
+  }
+
+  /** The registered handle without liveness checks (read-only result checks). */
+  registeredField(candidateId: string): FieldCandidateHandle | undefined {
+    return this.fields.get(candidateId)?.handle;
   }
 
   lookupField(candidateId: string): CandidateLookup<FieldCandidateHandle> {

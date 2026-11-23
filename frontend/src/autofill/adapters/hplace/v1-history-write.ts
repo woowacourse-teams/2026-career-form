@@ -1,0 +1,1050 @@
+import {
+  debugRuntimeSkip,
+  type StructuralSkipReason,
+} from "../../debug/structural-diagnostics";
+import type { MatchedFieldAnalysis } from "../../api/types";
+import type { CandidateRegistry } from "../../dom/candidate-registry";
+import type { FieldCandidateHandle } from "../../dom/types";
+import type { ReviewPlanItem } from "../../review/review-plan";
+import type { WriteFailureCode } from "../../write/failure";
+import { isSelectedToggle } from "./v1-basic-controls";
+import {
+  setValue,
+  waitFor,
+  writeV1Dropdown,
+  type V1WriteResult,
+} from "./v1-basic-write";
+import {
+  historySpec,
+  ownedV1HistoryControl,
+  parseV1HistoryName,
+  scaleLabels,
+  v1HistoryChip,
+  v1HistorySearchRow,
+  v1HistoryControl,
+  v1HistoryControlValue,
+  v1HistorySectionId,
+  type HistoryControl,
+  type HistorySpec,
+} from "./v1-history-controls";
+
+export const V1_HISTORY_DATE_REASON =
+  "연·월·일이 모두 있는 지난 날짜만 입력할 수 있습니다.";
+export const V1_HISTORY_GPA_REASON =
+  "평점과 만점기준을 함께 입력할 수 있을 때만 입력합니다.";
+export const V1_HISTORY_GPA_ROLLBACK_REASON =
+  "만점기준을 선택하지 못했고 입력한 평점을 지우지 못했습니다. 평점과 만점기준을 직접 확인해 주세요.";
+export const V1_HISTORY_LEAVING_REASON =
+  "프로필의 재직 여부가 퇴직일 때만 퇴사일을 입력합니다.";
+
+const command = (spec: HistorySpec) =>
+  spec.kind === "toggle"
+    ? "CHECK_RADIO"
+    : spec.kind === "dropdown"
+      ? "SELECT_OPTION"
+      : "SET_TEXT";
+
+/**
+ * The first condition the backend's analysis fails for this card field, or
+ * undefined when it is the exact binding. The backend sends ALLOWED or
+ * CONDITIONAL per profile key (SupportedProfileFields: e.g. schoolName,
+ * completionStatus, companyName are CONDITIONAL); both are approved.
+ */
+function approvalIssue(
+  spec: HistorySpec,
+  item: Pick<ReviewPlanItem, "analysis">,
+): string | undefined {
+  const a = item.analysis,
+    b = a?.valueBinding;
+  if (a?.mappingStatus !== "ADAPTER_VERIFIED")
+    return `mapping-${a?.mappingStatus ?? "none"}`;
+  if (a.interactionStatus !== "READY")
+    return `interaction-${a.interactionStatus}`;
+  if (a.autofillPolicy !== "ALLOWED" && a.autofillPolicy !== "CONDITIONAL")
+    return "policy";
+  if (a.writePlan?.command !== command(spec))
+    return `command-${a.writePlan?.command ?? "none"}`;
+  if (b?.profileFieldKey !== spec.profile) return "profile-key";
+  if (spec.kind === "text" || spec.kind === "date" || spec.kind === "search")
+    return b.type === "DIRECT" ? undefined : "binding";
+  if (b.type !== "LOOKUP") return "binding";
+  const targets = Object.values(b.optionMap);
+  return targets.length > 0 && targets.every((t) => spec.options.includes(t))
+    ? undefined
+    : "lookup-target";
+}
+
+function approved(
+  spec: HistorySpec,
+  item: Pick<ReviewPlanItem, "analysis">,
+): boolean {
+  return approvalIssue(spec, item) === undefined;
+}
+
+/** Value-free: the failing condition plus the analysis and review state. */
+function notApproved(spec: HistorySpec, item: ReviewPlanItem): string {
+  const a = item.analysis;
+  return [
+    "not-approved",
+    approvalIssue(spec, item) ?? "none",
+    `policy-${a?.autofillPolicy ?? "none"}`,
+    `binding-${a?.valueBinding?.type ?? "none"}`,
+    `status-${item.status}`,
+    `value-${item.profileValue?.trim() ? "yes" : "no"}`,
+  ].join("-");
+}
+
+/** Review status of an item the run may write: a CONDITIONAL field is
+ * `needs-review` (the automatic run selects it), as in step 1. */
+const writableStatus = (item: ReviewPlanItem) =>
+  item.status === "available" ||
+  (item.status === "needs-review" &&
+    item.analysis?.autofillPolicy === "CONDITIONAL");
+
+const pad = (n: number) => String(n).padStart(2, "0");
+const today = () => {
+  const now = new Date();
+  return `${now.getFullYear()}.${pad(now.getMonth() + 1)}.${pad(now.getDate())}`;
+};
+const normalize = (value: string) => value.replace(/\s+/g, " ").trim();
+const text = (e: Element | null | undefined) => normalize(e?.textContent ?? "");
+
+/** A profile date as the page's full YYYY.MM.DD (the page keeps nothing else). */
+function fullDay(value: string): string | undefined {
+  const m = /^(\d{4})[-.](\d{2})[-.](\d{2})$/.exec(value.trim());
+  if (!m) return undefined;
+  const [y, month, day] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const date = new Date(Date.UTC(y, month - 1, day));
+  return y >= 1900 &&
+    date.getUTCFullYear() === y &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+    ? `${m[1]}.${m[2]}.${m[3]}`
+    : undefined;
+}
+
+/** The card's own 졸업구분 label as the page shows it now. */
+const cardStatus = (control: HistoryControl) => {
+  const status = v1HistoryControl(
+    control.row.ownerDocument,
+    control.group,
+    control.index,
+    "graduationTypeCode",
+  );
+  return status && v1HistoryControlValue(status);
+};
+
+const numeric = (value: string) =>
+  /^\d+(?:\.\d+)?$/.test(value.trim()) ? Number(value) : NaN;
+
+/** One value-free diagnostic line for a step-2 write that is not written. */
+export function skipV1History(
+  key: string,
+  reason: StructuralSkipReason,
+  code: string,
+  failureCode?: WriteFailureCode,
+): void {
+  debugRuntimeSkip(key, reason, `v1-history-${code}`, "write", failureCode);
+}
+
+/** A toggle showing its measured fresh-card default (replaceable). */
+const showsDefault = (control: HistoryControl) =>
+  control.spec.kind === "toggle" &&
+  control.spec.default !== undefined &&
+  v1HistoryControlValue(control) === control.spec.default;
+
+/** Review: the measured page default does not count as an existing value. */
+export function prefersV1HistoryProfileValue(
+  handle: FieldCandidateHandle,
+  analysis: MatchedFieldAnalysis,
+): boolean {
+  const control = ownedV1HistoryControl(handle);
+  return (
+    !!control && approved(control.spec, { analysis }) && showsDefault(control)
+  );
+}
+
+/** Why `v1HistoryTarget` refused a value (diagnostics only). */
+function targetIssue(control: HistoryControl, value: string): string {
+  const { spec } = control;
+  if (!value.trim()) return "value-missing";
+  if (spec.kind === "date")
+    return fullDay(value) ? "date-future" : "date-not-full-day";
+  if (spec.kind === "text" && spec.numeric) return "score-not-number";
+  return "option-unmatched";
+}
+
+/** The value to write in page terms, or undefined when it cannot be written. */
+export function v1HistoryTarget(
+  control: HistoryControl,
+  value: string,
+): string | undefined {
+  if (!value.trim()) return undefined;
+  const { spec } = control;
+  if (spec.kind === "date") {
+    const day = fullDay(value);
+    if (!day) return undefined;
+    if (day <= today()) return day;
+    // A future 졸업일 only for 졸업예정, at most six years ahead.
+    return spec.future &&
+      cardStatus(control) === "졸업예정" &&
+      Number(day.slice(0, 4)) <= new Date().getFullYear() + 6
+      ? day
+      : undefined;
+  }
+  if (spec.kind === "search") return normalize(value);
+  if (spec.kind === "text")
+    // The pair rule (score within its scale) is checked for the batch.
+    return !spec.numeric
+      ? value
+      : numeric(value) >= 0
+        ? value.trim()
+        : undefined;
+  return spec.options.includes(value) ? value : undefined;
+}
+
+/**
+ * The profile status each card's 재직중/퇴사 driver applied this session
+ * (browser-local): 퇴사일 is written only under a profile 퇴사.
+ */
+const appliedStatus = new WeakMap<Element, string>();
+
+export function isV1HistoryStateDriver(
+  item: ReviewPlanItem,
+  name: string | undefined,
+): boolean {
+  const parsed = parseV1HistoryName(name);
+  const spec = parsed && historySpec(parsed.group, parsed.field);
+  return (
+    !!spec &&
+    ((spec.kind === "toggle" && !!spec.unlocks) || spec.kind === "search") &&
+    approved(spec, item)
+  );
+}
+
+/** A step-2 school or major search handle: a failed search ends only
+ * itself, so the other stage-1 drivers still run in the same pass. */
+export function isV1HistorySearchHandle(handle: FieldCandidateHandle): boolean {
+  const parsed = parseV1HistoryName(handle.candidate.domName);
+  return (
+    isV1HistoryHandle(handle) &&
+    (parsed?.field === "academyName" || parsed?.field === "major0.majorName")
+  );
+}
+
+/**
+ * A failed search whose input the page already removed (a pick or press
+ * re-rendered the row): its card row, located again, is deferred so the run
+ * goes on and nothing more is written into that widget. Undefined while the
+ * input is still in the page (the field itself is deferred as before).
+ */
+export function v1HistorySearchFailureTargets(
+  handle: FieldCandidateHandle,
+): Element[] | undefined {
+  if (
+    !isV1HistorySearchHandle(handle) ||
+    handle.elements.every((element) => element.isConnected)
+  )
+    return undefined;
+  const parsed = parseV1HistoryName(handle.candidate.domName)!;
+  const document = handle.elements[0]?.ownerDocument;
+  const row =
+    document &&
+    v1HistorySearchRow(
+      document,
+      parsed.group,
+      parsed.index,
+      parsed.field as "academyName" | "major0.majorName",
+    );
+  return row ? [row] : undefined;
+}
+
+/** A step-2 handle, by name (its search input may be gone after a pick). */
+export function isV1HistoryHandle(handle: FieldCandidateHandle): boolean {
+  return (
+    handle.sectionId === v1HistorySectionId &&
+    handle.candidate.domId === handle.candidate.domName &&
+    parseV1HistoryName(handle.candidate.domName) !== undefined
+  );
+}
+
+/** The chip of a picked search field, when its handle names one. */
+function pickedChip(handle: FieldCandidateHandle): string | undefined {
+  const parsed = parseV1HistoryName(handle.candidate.domName);
+  const document = handle.elements[0]?.ownerDocument;
+  return parsed &&
+    document &&
+    (parsed.field === "academyName" || parsed.field === "major0.majorName")
+    ? v1HistoryChip(document, parsed.group, parsed.index, parsed.field)
+    : undefined;
+}
+
+export function v1HistoryRetained(
+  handle: FieldCandidateHandle,
+  item: ReviewPlanItem,
+): boolean {
+  const control = ownedV1HistoryControl(handle);
+  if (!control || !approved(control.spec, item)) return false;
+  const target = v1HistoryTarget(control, item.profileValue ?? "");
+  return target !== undefined && v1HistoryControlValue(control) === target;
+}
+
+/** Result comparison for a step-2 date against the profile's stored form. */
+export function v1HistoryResultMatches(
+  handle: FieldCandidateHandle,
+  item: ReviewPlanItem,
+  current: string,
+  expected: string,
+): boolean | undefined {
+  const control = ownedV1HistoryControl(handle);
+  if (
+    !control ||
+    control.spec.kind !== "date" ||
+    handle.candidateId !== item.candidateId ||
+    !approved(control.spec, item)
+  )
+    return undefined;
+  const target = v1HistoryTarget(control, expected);
+  return target !== undefined && current === target;
+}
+
+/** Why a step-2 write was refused, for the result screen. */
+export function v1HistoryFailureReason(
+  handle: FieldCandidateHandle,
+  item: ReviewPlanItem,
+  fallback: string,
+): string {
+  const control = ownedV1HistoryControl(handle);
+  if (
+    control?.field === "leavingDate" &&
+    appliedStatus.get(control.row) !== "퇴사"
+  )
+    return V1_HISTORY_LEAVING_REASON;
+  return control?.spec.kind === "date" &&
+    v1HistoryTarget(control, item.profileValue ?? "") === undefined
+    ? V1_HISTORY_DATE_REASON
+    : fallback;
+}
+
+const SUGGESTION_MS = 1500;
+const QUIET_MS = 500;
+const tick = () => new Promise((resolve) => setTimeout(resolve, 25));
+
+/** The page's step for 평점 is not measured: a decimal score may only
+ * mismatch the native default step, which the page does not enforce. */
+const numericStepOnly = (spec: HistorySpec, v: ValidityState) =>
+  spec.kind === "text" &&
+  !!spec.numeric &&
+  v.stepMismatch &&
+  !v.badInput &&
+  !v.rangeOverflow &&
+  !v.rangeUnderflow &&
+  !v.customError &&
+  !v.valueMissing;
+
+/** The row title span: clicking it closes a row's open list (measured; Escape,
+ * blur and clearing the input do not) and keeps the typed value. */
+async function closeThroughTitle(
+  row: Element,
+  open: () => boolean,
+  current: () => boolean,
+): Promise<boolean> {
+  (row.firstElementChild as HTMLElement).click();
+  return waitFor(() => !open(), current);
+}
+
+/**
+ * 회사명 keeps the typed text; its optional suggestion list comes from a site
+ * request and must not stay open. Waits (≤ 1.5 s) for a list, closes any
+ * list through the row title without picking, and returns once the row
+ * stayed closed for a quiet period. A list that keeps reopening fails.
+ */
+async function closeSuggestions(
+  row: Element,
+  owned: () => boolean,
+): Promise<boolean> {
+  const open = () => row.querySelector("#dropdown-body") !== null;
+  let quietUntil = Date.now() + SUGGESTION_MS;
+  let closes = 0;
+  while (true) {
+    if (!owned()) return false;
+    if (open()) {
+      if (closes++ >= 3) return false;
+      if (!(await closeThroughTitle(row, open, owned))) return false;
+      quietUntil = Date.now() + QUIET_MS;
+      continue;
+    }
+    if (Date.now() >= quietUntil) return true;
+    await tick();
+  }
+}
+
+export async function writeV1History(
+  handle: FieldCandidateHandle,
+  item: ReviewPlanItem,
+  currentRun: () => boolean,
+  beforeMutation?: () => Promise<boolean>,
+): Promise<V1WriteResult> {
+  const control = ownedV1HistoryControl(handle);
+  const key = handle.candidate.domName ?? handle.candidateId;
+  const fail = (reason: StructuralSkipReason, code: string) => {
+    skipV1History(key, reason, code);
+    return "failed" as const;
+  };
+  if (!control) return fail("owner-mismatch", "not-owned");
+  const { spec } = control;
+  // A search runs only as its stage-1 driver (writeV1HistorySearch).
+  if (spec.kind === "search") return fail("blocked", "search-not-driver");
+  const document = control.row.ownerDocument;
+  const value = item.profileValue;
+  const original = v1HistoryControlValue(control);
+  if (original === undefined) return fail("control-shape", "value-unreadable");
+  if (!approved(spec, item)) return fail("blocked", notApproved(spec, item));
+  const target = v1HistoryTarget(control, value ?? "");
+  if (control.field === "workingStatus" && target)
+    appliedStatus.set(control.row, target);
+  if (!target) {
+    const issue = targetIssue(control, value ?? "");
+    if (issue === "option-unmatched") {
+      skipV1History(key, "option-mismatch", issue);
+      return "option-unmatched";
+    }
+    return fail(issue === "value-missing" ? "blocked" : "unit-mismatch", issue);
+  }
+  // The measured fresh-card default is the page's, not the applicant's.
+  const replacesDefault = original !== target && showsDefault(control);
+  const url = document.URL;
+  let allowed = [original];
+  const owned = () => {
+    const now = ownedV1HistoryControl(handle);
+    const shown = now && v1HistoryControlValue(now);
+    return (
+      currentRun() &&
+      document.URL === url &&
+      item.profileValue === value &&
+      item.selected &&
+      !item.disabled &&
+      writableStatus(item) &&
+      item.candidateId === handle.candidateId &&
+      item.analysis?.candidateId === handle.candidateId &&
+      approved(spec, item) &&
+      shown !== undefined &&
+      allowed.includes(shown)
+    );
+  };
+  if (!owned()) return fail("blocked", "not-current");
+  if (original === target) return "written";
+  // A control that already holds a value is never overwritten.
+  if (original !== "" && !replacesDefault)
+    return fail("existing-value", "existing-value");
+  // 퇴사일: only after this run applied a profile 퇴사 to the card (an
+  // applicant's own 퇴사 under a profile 재직중 does not unlock it for us).
+  if (
+    control.field === "leavingDate" &&
+    appliedStatus.get(control.row) !== "퇴사"
+  )
+    return fail("dependency-inactive", "leaving-without-profile-retire");
+  const input = control.elements[0];
+  if (
+    (spec.kind === "text" || spec.kind === "date") &&
+    input.maxLength >= 0 &&
+    target.length > input.maxLength
+  )
+    return fail("blocked", "max-length");
+  try {
+    if (beforeMutation && !(await beforeMutation()))
+      return fail("blocked", "profile-changed");
+  } catch {
+    return fail("blocked", "profile-changed");
+  }
+  if (!owned()) return fail("blocked", "not-current");
+  const shows = () => {
+    const now = ownedV1HistoryControl(handle);
+    return !!now && v1HistoryControlValue(now) === target;
+  };
+  if (spec.kind === "text" || spec.kind === "date") {
+    input.focus();
+    if (!owned()) return fail("blocked", "not-current");
+    setValue(input, target);
+    allowed = [original, target];
+    for (const type of ["input", "change"]) {
+      input.dispatchEvent(new Event(type, { bubbles: true }));
+      if (!owned()) return fail("blocked", "not-current");
+    }
+    input.blur();
+    if (!(await waitFor(shows, owned)))
+      return fail("control-shape", "value-not-kept");
+    if (!(input.checkValidity() || numericStepOnly(spec, input.validity)))
+      return fail("control-shape", "value-invalid");
+    if (spec.kind === "text" && spec.suggestions) {
+      if (!(await closeSuggestions(control.row, owned)))
+        return fail("cleanup-failed", "suggestions-open");
+      return shows() ? "written" : fail("control-shape", "value-not-kept");
+    }
+    // Only a full YYYY.MM.DD is typed, which the page keeps; the batch's
+    // retained-value check reads it back after every write.
+    return "written";
+  }
+  if (spec.kind === "toggle") {
+    const button = control.options.get(target);
+    if (
+      !(button instanceof HTMLButtonElement) ||
+      button.textContent?.trim() !== target
+    )
+      return fail("label-mismatch", "toggle-missing");
+    allowed = [original, target];
+    button.click();
+    return (await waitFor(
+      () =>
+        isSelectedToggle(button) &&
+        control.custom.filter(isSelectedToggle).length === 1 &&
+        shows(),
+      owned,
+    ))
+      ? "written"
+      : fail("result-click-no-effect", "toggle-not-selected");
+  }
+  const result = await writeV1Dropdown(
+    control.custom[0],
+    target,
+    undefined,
+    control.name,
+    original,
+    owned,
+    shows,
+    (next) => {
+      allowed = next;
+    },
+  );
+  if (result === "option-unmatched")
+    skipV1History(key, "option-mismatch", "option-unmatched");
+  else if (result === "failed")
+    skipV1History(key, "result-click-no-effect", "dropdown-failed");
+  return result;
+}
+
+const SEARCH_MS = 5000;
+/** The register row is judged only this long after typing: the page shows it
+ * once before the search answers (~100-300 ms, step2-probe-noresult.json). */
+const REGISTER_MS = 1000;
+/** Consecutive unchanged readings a settled list also needs (one per 25 ms
+ * poll, STABLE_MS in all): after a main-thread pause the page's pending
+ * update runs before the next poll, so a pause alone never settles a list. */
+const STABLE_POLLS = 12;
+
+/**
+ * The structure of the page's own "register '<query>' as a new entry" row
+ * (measured: `li > button > span > div > [svg, span]`, the span text-only).
+ */
+export function isRegisterShape(li: Element): HTMLButtonElement | undefined {
+  const button = li.children.length === 1 ? li.children[0] : undefined;
+  const wrapper =
+    button?.children.length === 1 ? button.children[0] : undefined;
+  const box = wrapper?.children.length === 1 ? wrapper.children[0] : undefined;
+  const [icon, label] = Array.from(box?.children ?? []);
+  // Measured (step2-probe-regtext.json): the label span holds only the
+  // quoted name; 등록하기 is a text node outside it (in the div, or in the
+  // span wrapping the div). Text anywhere else is not the register row.
+  const outside = [...(wrapper?.childNodes ?? []), ...(box?.childNodes ?? [])]
+    .filter((n) => n.nodeType === Node.TEXT_NODE && n.textContent?.trim())
+    .map((n) => normalize(n.textContent ?? ""));
+  const quoted = normalize(label?.textContent ?? "");
+  return button instanceof HTMLButtonElement &&
+    Array.from(button.childNodes).every(
+      (n) => n === wrapper || !n.textContent?.trim(),
+    ) &&
+    wrapper instanceof HTMLSpanElement &&
+    box instanceof HTMLDivElement &&
+    box.children.length === 2 &&
+    icon?.tagName.toLowerCase() === "svg" &&
+    label instanceof HTMLSpanElement &&
+    label.children.length === 0 &&
+    quoted.length > 2 &&
+    quoted.startsWith("'") &&
+    quoted.endsWith("'") &&
+    outside.length === 1 &&
+    outside[0] === "등록하기" &&
+    normalize(li.textContent ?? "").endsWith("등록하기")
+    ? button
+    : undefined;
+}
+
+/** The register row for exactly the typed name: `'` + name + `'등록하기`. */
+export function isRegisterRow(li: Element, query: string): boolean {
+  return (
+    !!isRegisterShape(li) &&
+    normalize(li.textContent ?? "") === `'${normalize(query)}'등록하기`
+  );
+}
+
+const registerOnly = (items: readonly Element[], query: string) =>
+  items.length === 1 && isRegisterRow(items[0], query);
+
+/**
+ * The one decision for a list that holds only the register row for the
+ * profile name (no catalog match). Decided 2026-11-22: press it, which
+ * registers the name as a free-text entry; the page then shows the same chip
+ * as a picked row (step2-probe-register.json), verified like a pick.
+ */
+function onRegisterRowOnly(): "register" {
+  return "register";
+}
+const STABLE_MS = 300;
+
+/** Value-free structure of a row: tag and child count, level by level. */
+function rowShape(li: Element): string {
+  const parts = [`li${li.children.length}`];
+  let level = Array.from(li.children);
+  while (level.length && parts.length < 8) {
+    parts.push(
+      ...level.map((e) => `${e.tagName.toLowerCase()}${e.children.length}`),
+    );
+    level = level.flatMap((e) => Array.from(e.children));
+  }
+  return parts.slice(0, 8).join("-");
+}
+
+/**
+ * The rows of a result list as (click target, name). Measured shape
+ * (step2-probe-fail.json): `li > button > span "<name>"`, the span holding
+ * only text; the list may sit in a scroll wrapper whose track divs are not
+ * rows. Empty spacer `li`s are skipped. Any other row: its shape, no rows.
+ */
+function resultRows(body: Element): {
+  rows?: { target: HTMLElement; name: string }[];
+  shape?: string;
+} {
+  const rows: { target: HTMLElement; name: string }[] = [];
+  for (const li of Array.from(body.querySelectorAll<HTMLElement>("ul > li"))) {
+    if (li.children.length === 0 && !text(li)) continue;
+    const button = li.children[0];
+    const label = button?.children[0];
+    if (
+      li.children.length !== 1 ||
+      !(button instanceof HTMLButtonElement) ||
+      button.children.length !== 1 ||
+      !(label instanceof HTMLSpanElement) ||
+      label.children.length !== 0
+    )
+      return { shape: rowShape(li) };
+    rows.push({ target: button, name: text(label) });
+  }
+  return { rows };
+}
+
+/**
+ * One search of a school or major name (stage-1 driver). Types the profile
+ * name once into this card's own input, waits (≤ 5 s) for the widget's own
+ * `#dropdown-body` list to settle, and clicks a row only when exactly one
+ * row's text equals the name. The pick is verified by the input leaving the
+ * row and the chip showing exactly the name. Anything else clears the typed
+ * text, closes the list without picking and reports a search code.
+ */
+export async function writeV1HistorySearch(
+  handle: FieldCandidateHandle,
+  item: ReviewPlanItem,
+  currentRun: () => boolean,
+  beforeMutation?: () => Promise<boolean>,
+): Promise<{ written: boolean; code?: WriteFailureCode }> {
+  const control = ownedV1HistoryControl(handle);
+  const value = item.profileValue;
+  const name = normalize(value ?? "");
+  const key = handle.candidate.domName ?? handle.candidateId;
+  if (!control || control.spec.kind !== "search") {
+    skipV1History(key, "owner-mismatch", "not-owned");
+    return { written: false };
+  }
+  if (!approved(control.spec, item)) {
+    skipV1History(key, "blocked", notApproved(control.spec, item));
+    return { written: false };
+  }
+  if (!name) {
+    skipV1History(key, "blocked", "value-missing");
+    return { written: false };
+  }
+  const input = control.elements[0];
+  // Text the applicant typed is an existing value: never replaced.
+  if (input.value !== "") {
+    skipV1History(key, "existing-value", "existing-value");
+    return { written: false };
+  }
+  const { row } = control;
+  const widget = input.closest("[data-review-key]") ?? input.parentElement!;
+  const document = row.ownerDocument;
+  const url = document.URL;
+  const live = () =>
+    currentRun() &&
+    document.URL === url &&
+    item.profileValue === value &&
+    item.selected &&
+    !item.disabled &&
+    writableStatus(item) &&
+    approved(control.spec, item);
+  const bodies = () => Array.from(widget.querySelectorAll("#dropdown-body"));
+  const reasons: Partial<Record<WriteFailureCode, StructuralSkipReason>> = {
+    SEARCH_NO_EXACT_MATCH: "result-not-unique",
+    SEARCH_AMBIGUOUS: "result-not-unique",
+    SEARCH_TIMEOUT: "disabled-timeout",
+    SEARCH_NO_RESULTS: "control-missing",
+    SEARCH_FORM_UNVERIFIED: "control-shape",
+    SEARCH_SELECTION_UNVERIFIED: "result-click-no-effect",
+  };
+  const open = () => bodies().length > 0;
+  const listed = () => {
+    const [body, extra] = bodies();
+    return body && !extra ? Array.from(body.querySelectorAll("ul > li")) : [];
+  };
+  let typedAt = 0;
+  /** Value-free search state: elapsed ms, rows, register structure, text. */
+  const state = (branch: string) => {
+    const items = listed();
+    const lone = items.length === 1 ? items[0] : undefined;
+    return [
+      `ms${Math.round((Date.now() - typedAt) / 100) * 100}`,
+      `li${items.length}`,
+      `reg${lone && isRegisterShape(lone) ? "yes" : "no"}`,
+      `text${lone && isRegisterRow(lone, name) ? "yes" : "no"}`,
+      `branch-${branch}`,
+    ].join("-");
+  };
+  const branchOf = (code: WriteFailureCode, detail: string) =>
+    detail === "search"
+      ? code
+          .replace(/^SEARCH_/, "")
+          .toLowerCase()
+          .replaceAll("_", "-")
+      : detail
+          .replace(/^search-/, "")
+          .replace(/-answered-.*$/, "")
+          .replace(/^(rows|lists)-.*$/, "$1");
+  const cleanup = async (code: WriteFailureCode, detail = "search") => {
+    skipV1History(
+      control.name,
+      reasons[code] ?? "blocked",
+      `${detail}-${state(branchOf(code, detail))}`,
+      code,
+    );
+    if (input.isConnected) {
+      setValue(input, "");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    // Blur and clearing do not close the list; the row title does.
+    if (open()) await closeThroughTitle(row, open, () => true);
+    if (open() || (input.isConnected && input.value !== ""))
+      skipV1History(control.name, "cleanup-failed", "search-cleanup");
+    return { written: false, code };
+  };
+  try {
+    if (beforeMutation && !(await beforeMutation())) return { written: false };
+  } catch {
+    return { written: false };
+  }
+  if (!live() || !ownedV1HistoryControl(handle)) return { written: false };
+  input.focus();
+  setValue(input, name);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  typedAt = Date.now();
+  let shown = "";
+  let since = 0;
+  let polls = 0;
+  // Settled: this widget's own list is stable and answers the query (a row
+  // contains the name). A list shown on focus before the debounced search
+  // (대학교/대학원 widgets) is not taken for the result.
+  const settled = await waitFor(
+    () => {
+      const items = listed();
+      if (!items.length) {
+        shown = "";
+        polls = 0;
+        return false;
+      }
+      const now = items.map(text).join("\n");
+      if (now !== shown) {
+        shown = now;
+        since = Date.now();
+        polls = 0;
+        return false;
+      }
+      polls++;
+      // Settled: unchanged for STABLE_MS over STABLE_POLLS readings; a
+      // lone register-shaped row also only REGISTER_MS after typing, so its
+      // transient showing is never taken for the answer.
+      return (
+        Date.now() - since >= STABLE_MS &&
+        polls >= STABLE_POLLS &&
+        (!(items.length === 1 && isRegisterShape(items[0])) ||
+          Date.now() - typedAt >= REGISTER_MS)
+      );
+    },
+    () => live() && input.isConnected,
+    SEARCH_MS,
+  );
+  if (!live() || !input.isConnected) return cleanup("SEARCH_UNCONFIRMED");
+  // At the deadline a stable list that never answered is still judged below.
+  if (!settled && !listed().length)
+    return cleanup(
+      bodies().length === 1 ? "SEARCH_NO_RESULTS" : "SEARCH_TIMEOUT",
+    );
+  const pickRow = async (target: HTMLElement) => {
+    if (!live()) return cleanup("SEARCH_UNCONFIRMED");
+    target.click();
+    const picked = await waitFor(
+      () => !row.contains(input) && pickedChip(handle) === name,
+      () => live(),
+    );
+    if (picked) return { written: true };
+    if (input.isConnected && row.contains(input))
+      return cleanup("SEARCH_SELECTION_UNVERIFIED");
+    skipV1History(
+      control.name,
+      "result-click-no-effect",
+      "search",
+      "SEARCH_SELECTION_UNVERIFIED",
+    );
+    return { written: false, code: "SEARCH_SELECTION_UNVERIFIED" as const };
+  };
+  const finalRows = listed();
+  // A register row is pressed only alone, for exactly this name, stable and
+  // judged no earlier than REGISTER_MS after typing.
+  // Only at the deadline: a settled list already passed this test.
+  if (
+    !settled &&
+    finalRows.length === 1 &&
+    isRegisterShape(finalRows[0]) &&
+    (Date.now() - since < STABLE_MS || Date.now() - typedAt < REGISTER_MS)
+  )
+    return cleanup("SEARCH_TIMEOUT", "search-register-unsettled");
+  if (finalRows.length > 1 && finalRows.some((li) => isRegisterShape(li)))
+    return cleanup("SEARCH_FORM_UNVERIFIED", "search-register-mixed");
+  if (
+    finalRows.length === 1 &&
+    isRegisterShape(finalRows[0]) &&
+    !isRegisterRow(finalRows[0], name)
+  )
+    return cleanup("SEARCH_FORM_UNVERIFIED", "search-register-other-name");
+  if (registerOnly(finalRows, name)) {
+    if (onRegisterRowOnly() === "register") {
+      const result = await pickRow(isRegisterShape(finalRows[0])!);
+      if (result.written)
+        skipV1History(control.name, "unselected", "search-registered");
+      return result;
+    }
+  }
+  const body = bodies()[0];
+  const answered = listed().some((li) => normalize(text(li)).includes(name))
+    ? "yes"
+    : "no";
+  // Exactly one list (measured: one `ul`, scroll wrapper and track divs aside).
+  const lists = body.querySelectorAll("ul").length;
+  if (lists !== 1)
+    return cleanup(
+      "SEARCH_FORM_UNVERIFIED",
+      `search-lists-${lists}-answered-${answered}`,
+    );
+  const { rows, shape } = resultRows(body);
+  if (!rows)
+    return cleanup(
+      "SEARCH_FORM_UNVERIFIED",
+      `search-rows-${shape ?? "none"}-answered-${answered}`,
+    );
+  const exact = rows.filter((r) => normalize(r.name) === name);
+  if (exact.length === 0) return cleanup("SEARCH_NO_EXACT_MATCH");
+  if (exact.length > 1) return cleanup("SEARCH_AMBIGUOUS");
+  return pickRow(exact[0].target);
+}
+
+/** After a driver: 퇴사 has unlocked 퇴사일, or a search left its exact chip. */
+export async function settleV1HistoryStateDriver(
+  handle: FieldCandidateHandle,
+  signal?: AbortSignal,
+  item?: ReviewPlanItem,
+): Promise<boolean> {
+  const parsed = parseV1HistoryName(handle.candidate.domName);
+  const spec = parsed && historySpec(parsed.group, parsed.field);
+  if (
+    !parsed ||
+    !spec ||
+    !item ||
+    item.candidateId !== handle.candidateId ||
+    !item.selected ||
+    item.disabled ||
+    !approved(spec, item)
+  )
+    return false;
+  if (spec.kind === "search")
+    return pickedChip(handle) === normalize(item.profileValue ?? "");
+  const control = ownedV1HistoryControl(handle);
+  if (!control || spec.kind !== "toggle" || !v1HistoryRetained(handle, item))
+    return false;
+  if (v1HistoryControlValue(control) !== spec.unlocks) return true;
+  const document = control.row.ownerDocument;
+  const url = document.URL;
+  const settled = await waitFor(
+    () => {
+      const end = v1HistoryControl(
+        document,
+        control.group,
+        control.index,
+        "leavingDate",
+      );
+      return !!end && !end.disabled;
+    },
+    () =>
+      !signal?.aborted &&
+      document.URL === url &&
+      item.selected &&
+      !item.disabled &&
+      v1HistoryRetained(handle, item),
+  );
+  if (!settled)
+    debugRuntimeSkip(control.name, "disabled-timeout", "v1-linked-controls");
+  return settled;
+}
+
+/** A failed 재직중/퇴사 driver defers its own row; a failed search only itself. */
+export function v1HistoryDriverRow(
+  item: ReviewPlanItem,
+  handle: FieldCandidateHandle,
+): Element | undefined {
+  const control = ownedV1HistoryControl(handle);
+  return control?.spec.kind === "toggle" &&
+    isV1HistoryStateDriver(item, handle.candidate.domName)
+    ? control.row
+    : undefined;
+}
+
+/**
+ * GPA pair rule: a card's score and scale are written only together. Both
+ * must be approved in this batch, the scale must be a page label and the
+ * score a number within it; otherwise neither is written.
+ */
+export function v1HistoryGpaBlocked(
+  items: readonly ReviewPlanItem[],
+  registry: CandidateRegistry,
+  approvedCandidateIds: ReadonlySet<string>,
+): Set<string> {
+  const pairs = new Map<
+    string,
+    { score?: ReviewPlanItem; scale?: ReviewPlanItem }
+  >();
+  for (const item of items) {
+    const lookup = registry.lookupField(item.candidateId);
+    const parsed =
+      "handle" in lookup
+        ? parseV1HistoryName(lookup.handle.candidate.domName)
+        : undefined;
+    if (
+      !parsed ||
+      (parsed.field !== "score" && parsed.field !== "perfectScore")
+    )
+      continue;
+    const key = `${parsed.group}.${parsed.index}`;
+    pairs.set(key, {
+      ...pairs.get(key),
+      [parsed.field === "score" ? "score" : "scale"]: item,
+    });
+  }
+  const blocked = new Set<string>();
+  for (const { score, scale } of pairs.values()) {
+    const scaleValue = scale?.profileValue ?? "";
+    const scoreValue = numeric(score?.profileValue ?? "");
+    const valid =
+      !!score &&
+      !!scale &&
+      approvedCandidateIds.has(score.candidateId) &&
+      approvedCandidateIds.has(scale.candidateId) &&
+      scaleLabels.includes(scaleValue) &&
+      scoreValue >= 0 &&
+      scoreValue <= Number(scaleValue);
+    if (!valid)
+      for (const item of [score, scale])
+        if (item) blocked.add(item.candidateId);
+  }
+  return blocked;
+}
+
+/** Clears a score this run typed (its scale could not be chosen). */
+async function clearScore(handle: FieldCandidateHandle): Promise<boolean> {
+  const control = ownedV1HistoryControl(handle);
+  const input = control?.elements[0];
+  if (!control || !input) return false;
+  input.focus();
+  setValue(input, "");
+  for (const type of ["input", "change"])
+    input.dispatchEvent(new Event(type, { bubbles: true }));
+  input.blur();
+  return waitFor(
+    () => ownedV1HistoryControl(handle)?.elements[0].value === "",
+    () => input.isConnected,
+  );
+}
+
+/**
+ * One batch's GPA pairs. The score is written first; its scale only after
+ * the score was written (or was already shown). When the scale then fails,
+ * a score this batch typed is cleared again so neither half stays alone.
+ */
+export function v1HistoryGpaRun(
+  items: readonly ReviewPlanItem[],
+  registry: CandidateRegistry,
+  approvedCandidateIds: ReadonlySet<string>,
+) {
+  const blocked = v1HistoryGpaBlocked(items, registry, approvedCandidateIds);
+  const scores = new Map<
+    string,
+    { handle: FieldCandidateHandle; candidateId: string; typed: boolean }
+  >();
+  const pairOf = (handle: FieldCandidateHandle) => {
+    const parsed = parseV1HistoryName(handle.candidate.domName);
+    return parsed &&
+      (parsed.field === "score" || parsed.field === "perfectScore")
+      ? { key: `${parsed.group}.${parsed.index}`, field: parsed.field }
+      : undefined;
+  };
+  return {
+    /** Not written in this batch, with the pair reason. */
+    held(item: ReviewPlanItem, handle: FieldCandidateHandle): boolean {
+      const pair = pairOf(handle);
+      const held =
+        blocked.has(item.candidateId) ||
+        (pair?.field === "perfectScore" && !scores.has(pair.key));
+      if (held)
+        skipV1History(
+          handle.candidate.domName ?? item.candidateId,
+          "dependency-inactive",
+          blocked.has(item.candidateId)
+            ? "gpa-pair-incomplete"
+            : "gpa-score-not-written",
+        );
+      return held;
+    },
+    /** After a write; the score to report as cleared (or not clearable). */
+    async after(
+      item: ReviewPlanItem,
+      handle: FieldCandidateHandle,
+      result: V1WriteResult,
+      typed: boolean,
+    ): Promise<{ candidateId: string; cleared: boolean } | undefined> {
+      const pair = pairOf(handle);
+      if (!pair) return undefined;
+      if (pair.field === "score") {
+        if (result === "written")
+          scores.set(pair.key, {
+            handle,
+            candidateId: item.candidateId,
+            typed,
+          });
+        return undefined;
+      }
+      const score = scores.get(pair.key);
+      if (result === "written" || !score?.typed) return undefined;
+      const cleared = await clearScore(score.handle);
+      skipV1History(
+        score.handle.candidate.domName ?? score.candidateId,
+        cleared ? "dependency-inactive" : "cleanup-failed",
+        cleared ? "gpa-score-cleared" : "gpa-score-not-cleared",
+      );
+      return { candidateId: score.candidateId, cleared };
+    },
+  };
+}

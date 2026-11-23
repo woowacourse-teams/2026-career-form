@@ -27,6 +27,11 @@ import type {
 } from "../../dom/collect";
 import { collectV1Fields } from "./v1-basic-collection";
 import {
+  collectV1HistoryFields,
+  collectV1HistoryPreparation,
+} from "./v1-history-collection";
+import { isV1HistoryPage } from "./v1-history-controls";
+import {
   isV1BasicPage,
   v1BasicControls,
   v1SectionId,
@@ -48,6 +53,8 @@ export function collectHplaceFields(
     return collectDetailFields(document, snapshotId, site);
   if (isV1BasicPage(document))
     return collectV1Fields(document, snapshotId, site);
+  if (isV1HistoryPage(document))
+    return collectV1HistoryFields(document, snapshotId, site);
   const registry = new CandidateRegistry();
   const controls = registrationControls(document);
   const fields = controls
@@ -114,6 +121,8 @@ export function collectHplacePreparation(
   snapshotId: string,
   site: SiteDescriptor,
 ): PreparationCollectedSnapshot {
+  if (isV1HistoryPage(document))
+    return collectV1HistoryPreparation(document, snapshotId, site);
   const request: PreparationAnalyzeRequest = {
     schemaVersion: 2,
     snapshotId,

@@ -79,6 +79,7 @@ export function createPreparationOptions({
         snapshot.repeatableGroupState(plan.actionCandidateId),
     },
     refreshSnapshot: async () => {
+      await adapter.settlePreparationAction?.(pageDocument);
       const refreshed = collectPreparationSnapshot(pageDocument);
       return {
         registry: refreshed.registry,

@@ -393,7 +393,7 @@ export function rowDropdowns(row: Element): HTMLButtonElement[] {
 }
 
 /** The one toggle group of a row whose option labels are exactly `labels`. */
-function toggleGroup(
+export function toggleGroup(
   row: Element,
   labels: string[],
 ): HTMLButtonElement[] | undefined {

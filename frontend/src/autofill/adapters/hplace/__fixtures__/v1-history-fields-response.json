@@ -1,0 +1,560 @@
+{
+  "source": "POST /api/v1/fields/analyze on the local backend (da8c2ac), synthetic request: fe509/real-response-sample.json",
+  "mode": "ADAPTER",
+  "analysisStatus": "COMPLETE",
+  "fields": {
+    "highschool.academyName": {
+      "matchType": "MATCH",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "education.highSchool.schoolName"
+      },
+      "autofillPolicy": "CONDITIONAL",
+      "mappingStatus": "ADAPTER_VERIFIED",
+      "interactionStatus": "READY",
+      "writePlan": {
+        "command": "SET_TEXT"
+      }
+    },
+    "highschool.graduationTypeCode": {
+      "matchType": "MATCH",
+      "valueBinding": {
+        "type": "LOOKUP",
+        "profileFieldKey": "education.highSchool.completionStatus",
+        "optionMap": {
+          "휴학": "휴학",
+          "재학": "재학",
+          "재학중": "재학",
+          "중퇴": "중퇴",
+          "졸업예정": "졸업예정",
+          "졸업": "졸업"
+        }
+      },
+      "autofillPolicy": "CONDITIONAL",
+      "mappingStatus": "ADAPTER_VERIFIED",
+      "interactionStatus": "READY",
+      "writePlan": {
+        "command": "CHECK_RADIO"
+      }
+    },
+    "highschool.locationCode": {
+      "matchType": "MATCH",
+      "valueBinding": {
+        "type": "LOOKUP",
+        "profileFieldKey": "education.highSchool.schoolRegion",
+        "optionMap": {
+          "region:daegu": "대구",
+          "region:gyeongnam": "경남",
+          "세종": "세종",
+          "경남": "경남",
+          "region:chungnam": "충남",
+          "region:seoul": "서울",
+          "제주": "제주",
+          "region:jeonnam": "전남",
+          "region:sejong": "세종",
+          "광주": "광주",
+          "강원": "강원",
+          "region:gwangju": "광주",
+          "인천": "인천",
+          "region:busan": "부산",
+          "전북": "전북",
+          "대전": "대전",
+          "경기": "경기",
+          "region:gyeongbuk": "경북",
+          "region:incheon": "인천",
+          "대구": "대구",
+          "region:jeju": "제주",
+          "충북": "충북",
+          "부산": "부산",
+          "region:ulsan": "울산",
+          "region:chungbuk": "충북",
+          "region:gangwon": "강원",
+          "서울": "서울",
+          "전남": "전남",
+          "region:jeonbuk": "전북",
+          "울산": "울산",
+          "경북": "경북",
+          "region:daejeon": "대전",
+          "region:gyeonggi": "경기",
+          "충남": "충남"
+        }
+      },
+      "autofillPolicy": "CONDITIONAL",
+      "mappingStatus": "ADAPTER_VERIFIED",
+      "interactionStatus": "READY",
+      "writePlan": {
+        "command": "SELECT_OPTION"
+      }
+    },
+    "highschool.dayOrNight": {
+      "matchType": "MATCH",
+      "valueBinding": {
+        "type": "LOOKUP",
+        "profileFieldKey": "education.highSchool.attendanceType",
+        "optionMap": {
+          "attendance:night": "야간",
+          "attendance:day": "주간"
+        }
+      },
+      "autofillPolicy": "CONDITIONAL",
+      "mappingStatus": "ADAPTER_VERIFIED",
+      "interactionStatus": "READY",
+      "writePlan": {
+        "command": "CHECK_RADIO"
+      }
+    },
+    "highschool.entranceDate": {
+      "matchType": "MATCH",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "education.highSchool.startDate"
+      },
+      "autofillPolicy": "ALLOWED",
+      "mappingStatus": "ADAPTER_VERIFIED",
+      "interactionStatus": "READY",
+      "writePlan": {
+        "command": "SET_TEXT"
+      }
+    },
+    "highschool.graduationDate": {
+      "matchType": "MATCH",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "education.highSchool.endDate"
+      },
+      "autofillPolicy": "ALLOWED",
+      "mappingStatus": "ADAPTER_VERIFIED",
+      "interactionStatus": "READY",
+      "writePlan": {
+        "command": "SET_TEXT"
+      }
+    },
+    "college.academyName": {
+      "matchType": "MATCH",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "education.university.schoolName"
+      },
+      "autofillPolicy": "CONDITIONAL",
+      "mappingStatus": "ADAPTER_VERIFIED",
+      "interactionStatus": "READY",
+      "writePlan": {
+        "command": "SET_TEXT"
+      }
+    },
+    "college.degreeTypeCode": {
+      "matchType": "MATCH",
+      "valueBinding": {
+        "type": "LOOKUP",
+        "profileFieldKey": "education.university.degreeLevel",
+        "optionMap": {
+          "학사": "학사",
+          "전문학사": "전문학사"
+        }
+      },
+      "autofillPolicy": "CONDITIONAL",
+      "mappingStatus": "ADAPTER_VERIFIED",
+      "interactionStatus": "READY",
+      "writePlan": {
+        "command": "CHECK_RADIO"
+      }
+    },
+    "college.entranceDate": {
+      "matchType": "MATCH",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "education.university.startDate"
+      },
+      "autofillPolicy": "ALLOWED",
+      "mappingStatus": "ADAPTER_VERIFIED",
+      "interactionStatus": "READY",
+      "writePlan": {
+        "command": "SET_TEXT"
+      }
+    },
+    "college.graduationTypeCode": {
+      "matchType": "MATCH",
+      "valueBinding": {
+        "type": "LOOKUP",
+        "profileFieldKey": "education.university.completionStatus",
+        "optionMap": {
+          "휴학": "휴학",
+          "수료": "수료",
+          "졸업예정": "졸업예정",
+          "졸업": "졸업",
+          "중퇴": "중퇴",
+          "재학중": "재학",
+          "재학": "재학"
+        }
+      },
+      "autofillPolicy": "CONDITIONAL",
+      "mappingStatus": "ADAPTER_VERIFIED",
+      "interactionStatus": "READY",
+      "writePlan": {
+        "command": "CHECK_RADIO"
+      }
+    },
+    "college.graduationDate": {
+      "matchType": "MATCH",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "education.university.endDate"
+      },
+      "autofillPolicy": "ALLOWED",
+      "mappingStatus": "ADAPTER_VERIFIED",
+      "interactionStatus": "READY",
+      "writePlan": {
+        "command": "SET_TEXT"
+      }
+    },
+    "college.entranceTypeCode": {
+      "matchType": "MATCH",
+      "valueBinding": {
+        "type": "LOOKUP",
+        "profileFieldKey": "education.university.transferStatus",
+        "optionMap": {
+          "해당": "편입",
+          "비해당": "입학"
+        }
+      },
+      "autofillPolicy": "CONDITIONAL",
+      "mappingStatus": "ADAPTER_VERIFIED",
+      "interactionStatus": "READY",
+      "writePlan": {
+        "command": "CHECK_RADIO"
+      }
+    },
+    "college.score": {
+      "matchType": "MATCH",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "education.university.gpaScore"
+      },
+      "autofillPolicy": "ALLOWED",
+      "mappingStatus": "ADAPTER_VERIFIED",
+      "interactionStatus": "READY",
+      "writePlan": {
+        "command": "SET_TEXT"
+      }
+    },
+    "college.perfectScore": {
+      "matchType": "MATCH",
+      "valueBinding": {
+        "type": "LOOKUP",
+        "profileFieldKey": "education.university.gpaScale",
+        "optionMap": {
+          "5.0": "5.0",
+          "100": "100",
+          "7.00": "7.0",
+          "4.30": "4.3",
+          "5.00": "5.0",
+          "3.00": "3.0",
+          "3.5": "3.5",
+          "4.50": "4.5",
+          "20": "20",
+          "3.0": "3.0",
+          "4.5": "4.5",
+          "7.0": "7.0",
+          "4.3": "4.3",
+          "4.00": "4.0",
+          "4.0": "4.0",
+          "20.00": "20",
+          "3.50": "3.5",
+          "100.00": "100"
+        }
+      },
+      "autofillPolicy": "CONDITIONAL",
+      "mappingStatus": "ADAPTER_VERIFIED",
+      "interactionStatus": "READY",
+      "writePlan": {
+        "command": "SELECT_OPTION"
+      }
+    },
+    "college.major0.majorName": {
+      "matchType": "MATCH",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "education.university.majorName"
+      },
+      "autofillPolicy": "CONDITIONAL",
+      "mappingStatus": "ADAPTER_VERIFIED",
+      "interactionStatus": "READY",
+      "writePlan": {
+        "command": "SET_TEXT"
+      }
+    },
+    "graduateSchool.academyName": {
+      "matchType": "MATCH",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "education.graduateSchool.schoolName"
+      },
+      "autofillPolicy": "CONDITIONAL",
+      "mappingStatus": "ADAPTER_VERIFIED",
+      "interactionStatus": "READY",
+      "writePlan": {
+        "command": "SET_TEXT"
+      }
+    },
+    "graduateSchool.degreeTypeCode": {
+      "matchType": "MATCH",
+      "valueBinding": {
+        "type": "LOOKUP",
+        "profileFieldKey": "education.graduateSchool.degreeLevel",
+        "optionMap": {
+          "석사": "석사",
+          "박사": "박사"
+        }
+      },
+      "autofillPolicy": "CONDITIONAL",
+      "mappingStatus": "ADAPTER_VERIFIED",
+      "interactionStatus": "READY",
+      "writePlan": {
+        "command": "CHECK_RADIO"
+      }
+    },
+    "graduateSchool.entranceDate": {
+      "matchType": "MATCH",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "education.graduateSchool.startDate"
+      },
+      "autofillPolicy": "ALLOWED",
+      "mappingStatus": "ADAPTER_VERIFIED",
+      "interactionStatus": "READY",
+      "writePlan": {
+        "command": "SET_TEXT"
+      }
+    },
+    "graduateSchool.graduationTypeCode": {
+      "matchType": "MATCH",
+      "valueBinding": {
+        "type": "LOOKUP",
+        "profileFieldKey": "education.graduateSchool.completionStatus",
+        "optionMap": {
+          "휴학": "휴학",
+          "수료": "수료",
+          "졸업예정": "졸업예정",
+          "졸업": "졸업",
+          "중퇴": "중퇴",
+          "재학중": "재학",
+          "재학": "재학"
+        }
+      },
+      "autofillPolicy": "CONDITIONAL",
+      "mappingStatus": "ADAPTER_VERIFIED",
+      "interactionStatus": "READY",
+      "writePlan": {
+        "command": "CHECK_RADIO"
+      }
+    },
+    "graduateSchool.graduationDate": {
+      "matchType": "MATCH",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "education.graduateSchool.endDate"
+      },
+      "autofillPolicy": "ALLOWED",
+      "mappingStatus": "ADAPTER_VERIFIED",
+      "interactionStatus": "READY",
+      "writePlan": {
+        "command": "SET_TEXT"
+      }
+    },
+    "graduateSchool.entranceTypeCode": {
+      "matchType": "MATCH",
+      "valueBinding": {
+        "type": "LOOKUP",
+        "profileFieldKey": "education.graduateSchool.admissionType",
+        "optionMap": {
+          "편입": "편입",
+          "입학": "입학"
+        }
+      },
+      "autofillPolicy": "CONDITIONAL",
+      "mappingStatus": "ADAPTER_VERIFIED",
+      "interactionStatus": "READY",
+      "writePlan": {
+        "command": "CHECK_RADIO"
+      }
+    },
+    "graduateSchool.score": {
+      "matchType": "MATCH",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "education.graduateSchool.gpaScore"
+      },
+      "autofillPolicy": "ALLOWED",
+      "mappingStatus": "ADAPTER_VERIFIED",
+      "interactionStatus": "READY",
+      "writePlan": {
+        "command": "SET_TEXT"
+      }
+    },
+    "graduateSchool.perfectScore": {
+      "matchType": "MATCH",
+      "valueBinding": {
+        "type": "LOOKUP",
+        "profileFieldKey": "education.graduateSchool.gpaScale",
+        "optionMap": {
+          "5.0": "5.0",
+          "100": "100",
+          "7.00": "7.0",
+          "4.30": "4.3",
+          "5.00": "5.0",
+          "3.00": "3.0",
+          "3.5": "3.5",
+          "4.50": "4.5",
+          "20": "20",
+          "3.0": "3.0",
+          "4.5": "4.5",
+          "7.0": "7.0",
+          "4.3": "4.3",
+          "4.00": "4.0",
+          "4.0": "4.0",
+          "20.00": "20",
+          "3.50": "3.5",
+          "100.00": "100"
+        }
+      },
+      "autofillPolicy": "CONDITIONAL",
+      "mappingStatus": "ADAPTER_VERIFIED",
+      "interactionStatus": "READY",
+      "writePlan": {
+        "command": "SELECT_OPTION"
+      }
+    },
+    "graduateSchool.major0.majorName": {
+      "matchType": "MATCH",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "education.graduateSchool.majorName"
+      },
+      "autofillPolicy": "CONDITIONAL",
+      "mappingStatus": "ADAPTER_VERIFIED",
+      "interactionStatus": "READY",
+      "writePlan": {
+        "command": "SET_TEXT"
+      }
+    },
+    "career.employmentType": {
+      "matchType": "MATCH",
+      "valueBinding": {
+        "type": "LOOKUP",
+        "profileFieldKey": "careers.career.employmentType",
+        "optionMap": {
+          "병역특례": "병역특례",
+          "개인사업": "개인사업",
+          "정규": "정규직",
+          "기타": "기타",
+          "계약": "계약직",
+          "아르바이트": "아르바이트",
+          "프리랜서": "프리랜서",
+          "파견": "파견직",
+          "인턴": "인턴"
+        }
+      },
+      "autofillPolicy": "ALLOWED",
+      "mappingStatus": "ADAPTER_VERIFIED",
+      "interactionStatus": "READY",
+      "writePlan": {
+        "command": "SELECT_OPTION"
+      }
+    },
+    "career.workingStatus": {
+      "matchType": "MATCH",
+      "valueBinding": {
+        "type": "LOOKUP",
+        "profileFieldKey": "careers.career.employmentStatus",
+        "optionMap": {
+          "퇴직": "퇴사",
+          "재직중": "재직중"
+        }
+      },
+      "autofillPolicy": "ALLOWED",
+      "mappingStatus": "ADAPTER_VERIFIED",
+      "interactionStatus": "READY",
+      "writePlan": {
+        "command": "CHECK_RADIO"
+      }
+    },
+    "career.entranceDate": {
+      "matchType": "MATCH",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "careers.career.startDate"
+      },
+      "autofillPolicy": "ALLOWED",
+      "mappingStatus": "ADAPTER_VERIFIED",
+      "interactionStatus": "READY",
+      "writePlan": {
+        "command": "SET_TEXT"
+      }
+    },
+    "career.leavingDate": {
+      "matchType": "MATCH",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "careers.career.endDate"
+      },
+      "autofillPolicy": "ALLOWED",
+      "mappingStatus": "ADAPTER_VERIFIED",
+      "interactionStatus": "READY",
+      "writePlan": {
+        "command": "SET_TEXT"
+      }
+    },
+    "career.company": {
+      "matchType": "MATCH",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "careers.career.companyName"
+      },
+      "autofillPolicy": "CONDITIONAL",
+      "mappingStatus": "ADAPTER_VERIFIED",
+      "interactionStatus": "READY",
+      "writePlan": {
+        "command": "SET_TEXT"
+      }
+    },
+    "career.department": {
+      "matchType": "MATCH",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "careers.career.department"
+      },
+      "autofillPolicy": "ALLOWED",
+      "mappingStatus": "ADAPTER_VERIFIED",
+      "interactionStatus": "READY",
+      "writePlan": {
+        "command": "SET_TEXT"
+      }
+    },
+    "career.position": {
+      "matchType": "MATCH",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "careers.career.position"
+      },
+      "autofillPolicy": "ALLOWED",
+      "mappingStatus": "ADAPTER_VERIFIED",
+      "interactionStatus": "READY",
+      "writePlan": {
+        "command": "SET_TEXT"
+      }
+    },
+    "career.assignedTask": {
+      "matchType": "MATCH",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "careers.career.responsibilities"
+      },
+      "autofillPolicy": "ALLOWED",
+      "mappingStatus": "ADAPTER_VERIFIED",
+      "interactionStatus": "READY",
+      "writePlan": {
+        "command": "SET_TEXT"
+      }
+    }
+  }
+}

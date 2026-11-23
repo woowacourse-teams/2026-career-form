@@ -8,6 +8,10 @@ import {
 } from "../workflow/execution-policy";
 import { acquireDocumentRun } from "../interaction/document-run";
 import { resolveDocumentCompany } from "../adapters/company";
+import {
+  isV1HistoryPage,
+  ownedV1HistoryAddAction,
+} from "../adapters/hplace/v1-history-controls";
 import type { PreparationPlan } from "../api/types";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import type { ActionCandidateHandle } from "../dom/types";
@@ -248,6 +252,20 @@ async function executeApprovedPreparationPlansInternal(
     release?.();
     return failure("action-not-executable", 0);
   }
+  // Hplace pages run no preparation, except the v1 step-2 card adds (CF-509).
+  const historyAdds =
+    !!document &&
+    options.approvedPlans.every(({ approved, plan }) => {
+      if (!approved) return true;
+      const action = options.initialSnapshot.registry.lookupAction(
+        plan.actionCandidateId,
+      );
+      return (
+        plan.command === "ADD_REPEATABLE_GROUP" &&
+        action.status === "ready" &&
+        ownedV1HistoryAddAction(action.handle) !== undefined
+      );
+    });
   try {
     return await executePreparation({
       ...options,
@@ -258,7 +276,9 @@ async function executeApprovedPreparationPlansInternal(
         (nativeDigest === undefined ||
           JSON.stringify(executionPolicy(document!)?.browserPolicy) ===
             nativeDigest) &&
-        (!document || resolveDocumentCompany(document) !== "hplace"),
+        (!document ||
+          resolveDocumentCompany(document) !== "hplace" ||
+          (historyAdds && isV1HistoryPage(document))),
     });
   } finally {
     release?.();

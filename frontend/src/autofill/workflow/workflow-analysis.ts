@@ -558,19 +558,19 @@ export function createAnalyzeFields({
     // site-independent, and runAddressAnalysis already fails closed when the
     // generic preconditions do not hold.
     const addressAnalysis = await runAddressAnalysis({
-          analysis,
-          snapshot,
-          adapter,
-          run,
-          pageDocument,
-          profile: loadedProfile,
-          repository,
-          addressSearch,
-          onActivity,
-          onAddressOperation,
-          onWriteResult,
-          setAddressResult,
-        });
+      analysis,
+      snapshot,
+      adapter,
+      run,
+      pageDocument,
+      profile: loadedProfile,
+      repository,
+      addressSearch,
+      onActivity,
+      onAddressOperation,
+      onWriteResult,
+      setAddressResult,
+    });
     if (!addressAnalysis) return;
     analysis = addressAnalysis;
 
@@ -1591,6 +1591,9 @@ export function createAnalyzeFields({
             }
             continue;
           }
+          // An adapter may let a failed driver end only itself.
+          if (adapter.continueAfterDriverFailure?.(item, lookup.handle))
+            continue;
           currentStateDriverItems.splice(stateSelectionResults.length);
           break;
         }

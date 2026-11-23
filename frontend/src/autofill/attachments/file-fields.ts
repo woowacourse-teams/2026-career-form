@@ -177,7 +177,18 @@ export function fieldBlockReason(input: HTMLInputElement): string | undefined {
   return undefined;
 }
 
-export function findAttachmentFields(root: Document): AttachmentField[] {
+/**
+ * A site adapter's reading of a file input it owns whose kind the generic
+ * walk cannot reach: its kind and display label; undefined for other inputs.
+ */
+export type AttachmentFieldHint = (
+  input: HTMLInputElement,
+) => { kind: AttachmentKind; label: string } | undefined;
+
+export function findAttachmentFields(
+  root: Document,
+  hint?: AttachmentFieldHint,
+): AttachmentField[] {
   const fields: AttachmentField[] = [];
   for (const element of root.querySelectorAll<HTMLInputElement>(
     "input[type='file' i]",
@@ -192,7 +203,10 @@ export function findAttachmentFields(root: Document): AttachmentField[] {
     // then the nearest enclosing text, and only then name/id (NHN names a
     // per-project file input "portfolio"). Reading the nearest group first
     // keeps a row's file away from a later section's title.
-    let classification = classify(label ?? "");
+    const hinted = hint?.(element);
+    let classification: Classification = hinted
+      ? { result: "kind", kind: hinted.kind }
+      : classify(label ?? "");
     let deciding: Element | undefined;
     if (classification.result === "unknown")
       for (const candidate of groups) {
@@ -209,13 +223,15 @@ export function findAttachmentFields(root: Document): AttachmentField[] {
     if (classification.result === "other") continue;
     // A generic label ("첨부파일추가") is replaced by the group's title.
     const labelNamesKind = !!label && classify(label).result !== "unknown";
-    const displayLabel = withoutRequiredMark(
-      (!labelNamesKind && (deciding ?? group)
-        ? firstText((deciding ?? group)!)
-        : undefined) ??
-        label ??
-        (name || element.id || "파일 첨부 칸"),
-    );
+    const displayLabel =
+      hinted?.label ??
+      withoutRequiredMark(
+        (!labelNamesKind && (deciding ?? group)
+          ? firstText((deciding ?? group)!)
+          : undefined) ??
+          label ??
+          (name || element.id || "파일 첨부 칸"),
+      );
     if (classification.result !== "kind") {
       fields.push({
         element,
