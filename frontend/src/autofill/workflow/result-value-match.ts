@@ -10,7 +10,10 @@ import {
 } from "../adapters/hplace/basic-controls";
 import { basicTarget } from "../adapters/hplace/basic-write";
 import { v1ResultMatches } from "../adapters/hplace/v1-basic-write";
-import { v1HistoryResultMatches } from "../adapters/hplace/v1-history-write";
+import {
+  isV1HistoryCampusHandle,
+  v1HistoryResultMatches,
+} from "../adapters/hplace/v1-history-write";
 import { ownedDetailControl } from "../adapters/hplace/detail";
 import { detailTargetValue } from "../adapters/hplace/detail-write";
 import { componentRules } from "../policy/runtime-rules";
@@ -159,6 +162,10 @@ export function matchesResultValue(
   const left = current.trim();
   const right = expected.trim();
   if (!left || !right) return false;
+  // v1 step-2 본교/분교: bound to the school name but compared as the
+  // campus label, before the school's catalog selection is consulted.
+  if (handle && isV1HistoryCampusHandle(handle))
+    return v1HistoryResultMatches(handle, item, left, right) ?? false;
   const approval = catalogApprovalForItem(item);
   if (approval.status === "invalid") return false;
   if (approval.status === "selected") {

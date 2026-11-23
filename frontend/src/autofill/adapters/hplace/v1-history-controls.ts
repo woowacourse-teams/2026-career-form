@@ -93,6 +93,9 @@ export type HistorySpec =
       /** The page's own selection on a fresh card (step2-probe-fail.json
        * defaults): replaced by a different profile value. */
       default?: string;
+      /** 본교/분교: the profile value is the school name; the catalog maps it
+       * to the label (v1HistoryTarget). */
+      campus?: true;
     }
   | {
       kind: "dropdown";
@@ -112,7 +115,7 @@ export type HistorySpec =
       placeholder: string;
       profile: string;
       parent?: HistoryField;
-      /** 졸업일: a future day is allowed while the card says 졸업예정. */
+      /** 졸업일: a future day (at most six years ahead) is allowed. */
       future?: true;
     }
   | {
@@ -141,6 +144,7 @@ export type HistorySpec =
 
 export type HistoryField =
   | "academyName"
+  | "campusType"
   | "major0.majorName"
   | "graduationTypeCode"
   | "locationCode"
@@ -382,6 +386,18 @@ export function historySpecs(
     ];
   return [
     ["academyName", school],
+    [
+      "campusType",
+      {
+        kind: "toggle",
+        label: "본교/분교",
+        row: "학교정보",
+        options: ["본교", "분교"],
+        profile: `${p}.schoolName`,
+        default: "본교",
+        campus: true,
+      },
+    ],
     [
       "degreeTypeCode",
       {
@@ -1069,8 +1085,10 @@ export function v1HistoryValue(
 export function v1HistoryPickedValue(
   handle: FieldCandidateHandle,
 ): string | undefined {
+  // Shared value readers also pass handles of other owners, some with no
+  // native elements at all.
   const parsed = parseV1HistoryName(handle.candidate.domName);
-  const document = handle.elements[0]?.ownerDocument;
+  const document = handle.elements?.[0]?.ownerDocument;
   return parsed &&
     document &&
     handle.sectionId === v1HistorySectionId &&

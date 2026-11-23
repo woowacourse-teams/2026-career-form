@@ -125,6 +125,7 @@ final class HplaceV1CompanyFormPolicyFactory {
         for (String group : List.of("college", "graduateSchool")) {
             String profile = "college".equals(group) ? "education.university." : "education.graduateSchool.";
             bindings.put(group + ".academyName", new DirectBinding(profile + "schoolName"));
+            bindings.put(group + ".campusType", new DirectBinding(profile + "schoolName"));
             bindings.put(group + ".entranceDate", new DirectBinding(profile + "startDate"));
             bindings.put(group + ".graduationDate", new DirectBinding(profile + "endDate"));
             bindings.put(group + ".graduationTypeCode", nativeBinding(mrs2, group + ".graduationTypeCode"));

@@ -19,6 +19,10 @@ import type { WriteFailureCode } from "../write/failure";
 import { resolveDocumentCompany } from "../adapters/company";
 import { v1SameExistingValue } from "../adapters/hplace/v1-basic-write";
 import {
+  v1HistoryCampusUnknown,
+  v1HistorySameExistingValue,
+} from "../adapters/hplace/v1-history-write";
+import {
   approveComponentGpaPairs,
   type ComponentGpaApproval,
 } from "../policy/components/gpa";
@@ -1498,6 +1502,12 @@ function itemForResolvedAnalysis(
           { analysis },
           pageValue,
           resolvedProfileValue.value,
+        ) &&
+        !v1HistorySameExistingValue(
+          lookup.handle,
+          { analysis },
+          pageValue,
+          resolvedProfileValue.value,
         ));
   if (hasConflict) {
     // A site default is one of the control's own choices; a value that is no
@@ -1813,6 +1823,15 @@ export function buildReviewPlan({
       ? { ...item, hiddenFromReview: true }
       : item;
   });
+  // hplace v1 본교/분교 of a school the catalog cannot place: the page keeps
+  // its own choice and the field is not part of the run.
+  const offered = items.filter((item) => {
+    const lookup = registry.lookupField(item.candidateId);
+    return !(
+      (lookup.status === "ready" || lookup.status === "blocked") &&
+      v1HistoryCampusUnknown(lookup.handle, item.profileValue)
+    );
+  });
   const unoffered =
     analysis.mode === "ADAPTER"
       ? nativeUnofferedItems(analysis, profile, registry)
@@ -1822,10 +1841,10 @@ export function buildReviewPlan({
     items: [
       ...(components && analysis.mode === "ADAPTER"
         ? approveComponentGpaPairs(
-            rejectDuplicateRepeatedBindings(items),
+            rejectDuplicateRepeatedBindings(offered),
             registry,
           )
-        : rejectDuplicateRepeatedBindings(items)),
+        : rejectDuplicateRepeatedBindings(offered)),
       ...unoffered,
     ],
   };

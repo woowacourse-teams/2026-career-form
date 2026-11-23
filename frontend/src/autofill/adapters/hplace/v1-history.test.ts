@@ -12,6 +12,9 @@ import {
 } from "../../preparation/executor";
 import type { ReviewPlanItem } from "../../review/review-plan";
 import { resetHplacePage } from "../../workflow/test-utils/hplace.fixture";
+import { CATALOG, CATALOG_VERSION } from "../../../profile/catalog";
+import { approveCatalogMatch } from "../../profile/catalog-identity";
+import { matchesResultValue } from "../../workflow/result-value-match";
 import { isUnsupportedHplace } from "../company";
 import { getWorkflowAdapter } from "../workflow";
 import { mountV1Step1 } from "./v1-basic.test-fixtures";
@@ -431,6 +434,7 @@ describe("v1 step 2 collection", () => {
       ].map((f) => `hplace.v1.highschool.0.${f}`),
       ...[
         "academyName",
+        "campusType",
         "degreeTypeCode",
         "entranceDate",
         "graduationTypeCode",
@@ -441,6 +445,7 @@ describe("v1 step 2 collection", () => {
       ].map((f) => `hplace.v1.college.0.${f}`),
       ...[
         "academyName",
+        "campusType",
         "degreeTypeCode",
         "entranceDate",
         "graduationTypeCode",
@@ -573,7 +578,7 @@ describe("v1 step 2 writes", () => {
     expect(document.querySelector("#dropdown-body")).toBeNull();
   });
 
-  it("writes only full past days, and a future 졸업일 only for 졸업예정", async () => {
+  it("writes only full past days, and a future 졸업일 for any card status", async () => {
     mountV1Step2();
     const univ = appendCard("대학교");
     const career = appendCard("직장경력");
@@ -589,15 +594,136 @@ describe("v1 step 2 writes", () => {
       await write("hplace.v1.career.0.entranceDate", `${nextYear()}-01-02`),
     ).toBe("failed");
     expect(cardInput(career, "입사일").value).toBe("");
-    const future = `${nextYear()}-02-20`;
-    expect(await write("hplace.v1.college.0.graduationDate", future)).toBe(
-      "failed",
-    );
-    cardToggle(univ, "졸업구분", "졸업예정").click();
-    expect(await write("hplace.v1.college.0.graduationDate", future)).toBe(
-      "written",
-    );
+    // The card says 졸업 (the page default), not 졸업예정.
+    expect(cardSelected(univ, "졸업구분")).toEqual(["졸업"]);
+    expect(
+      await write("hplace.v1.college.0.graduationDate", `${nextYear()}-02-20`),
+    ).toBe("written");
     expect(cardInput(univ, "졸업일").value).toBe(`${nextYear()}.02.20`);
+  });
+
+  it("refuses a 졸업일 beyond six years and a future 입학일", async () => {
+    mountV1Step2();
+    const univ = appendCard("대학교");
+    const year = new Date().getFullYear();
+    expect(
+      await write("hplace.v1.college.0.graduationDate", `${year + 7}-02-20`),
+    ).toBe("failed");
+    expect(cardInput(univ, "졸업일").value).toBe("");
+    expect(
+      await write("hplace.v1.college.0.entranceDate", `${nextYear()}-03-02`),
+    ).toBe("failed");
+    expect(cardInput(univ, "입학일").value).toBe("");
+  });
+
+  describe("본교/분교", () => {
+    type CampusKind = "university" | "graduateSchool";
+    const campusLabels = (kind: CampusKind) => {
+      const byName = new Map<string, Set<string>>();
+      for (const entry of CATALOG) {
+        if (entry.kind !== kind) continue;
+        const labels = byName.get(entry.name) ?? new Set<string>();
+        for (const segment of entry.detail.split(" · "))
+          for (const label of ["본교", "분교"])
+            if (segment.startsWith(label)) labels.add(label);
+        byName.set(entry.name, labels);
+      }
+      return byName;
+    };
+    const school = (kind: CampusKind, only: "본교" | "분교" | "mixed") =>
+      [...campusLabels(kind)].find(([, labels]) =>
+        only === "mixed"
+          ? labels.size === 2
+          : labels.size === 1 && labels.has(only),
+      )![0];
+    const clicks = (c: Element) => {
+      const seen: (string | null)[] = [];
+      for (const label of ["본교", "분교"])
+        cardToggle(c, "학교정보", label).addEventListener("click", () =>
+          seen.push(label),
+        );
+      return seen;
+    };
+
+    it.each([
+      ["college", "대학교", "university"],
+      ["graduateSchool", "대학원", "graduateSchool"],
+    ] as const)("clicks 분교 for a 분교 %s", async (group, level, kind) => {
+      mountV1Step2();
+      const c = appendCard(level);
+      const seen = clicks(c);
+      expect(
+        await write(`hplace.v1.${group}.0.campusType`, school(kind, "분교")),
+      ).toBe("written");
+      expect(cardSelected(c, "학교정보")).toEqual(["분교"]);
+      expect(seen).toEqual(["분교"]);
+    });
+
+    it("keeps 본교 for a 본교 school", async () => {
+      mountV1Step2();
+      const c = appendCard("대학교");
+      expect(
+        await write(
+          "hplace.v1.college.0.campusType",
+          school("university", "본교"),
+        ),
+      ).toBe("written");
+      expect(cardSelected(c, "학교정보")).toEqual(["본교"]);
+    });
+
+    it("compares the toggle label, not the school name, for a catalog-selected school", () => {
+      mountV1Step2();
+      const c = appendCard("대학교");
+      const name = school("university", "분교");
+      const key = "education.university.schoolName";
+      const { handle, item } = itemFor("hplace.v1.college.0.campusType", name);
+      const entry = CATALOG.find(
+        (e) => e.kind === "university" && e.name === name,
+      )!;
+      item.profileFieldKey = key;
+      item.searchIdentity = {
+        status: "selected",
+        catalogId: entry.id,
+        catalogVersion: CATALOG_VERSION,
+        displayName: name,
+        originalText: name,
+      };
+      const approval = approveCatalogMatch(item.searchIdentity, key, name);
+      if (approval.status !== "selected") throw new Error("no approval");
+      item.catalogMatch = approval.match;
+      cardToggle(c, "학교정보", "분교").click();
+      expect(cardSelected(c, "학교정보")).toEqual(["분교"]);
+      expect(matchesResultValue(item, "분교", name, handle)).toBe(true);
+      expect(matchesResultValue(item, "본교", name, handle)).toBe(false);
+    });
+
+    it("sets 본교 back from 분교 only over the page default", async () => {
+      mountV1Step2();
+      const c = appendCard("대학교");
+      cardToggle(c, "학교정보", "분교").click();
+      // The applicant's own 분교 is an existing value, never replaced.
+      expect(
+        await write(
+          "hplace.v1.college.0.campusType",
+          school("university", "본교"),
+        ),
+      ).toBe("failed");
+      expect(cardSelected(c, "학교정보")).toEqual(["분교"]);
+    });
+
+    it.each([
+      ["a name with both campuses", () => school("university", "mixed")],
+      ["a name without a catalog match", () => "합성대학교"],
+    ])("writes nothing for %s", async (_label, name) => {
+      mountV1Step2();
+      const c = appendCard("대학교");
+      const seen = clicks(c);
+      expect(await write("hplace.v1.college.0.campusType", name())).toBe(
+        "failed",
+      );
+      expect(seen).toEqual([]);
+      expect(cardSelected(c, "학교정보")).toEqual(["본교"]);
+    });
   });
 
   it("keeps a typed 회사명 and closes its suggestions without picking", async () => {

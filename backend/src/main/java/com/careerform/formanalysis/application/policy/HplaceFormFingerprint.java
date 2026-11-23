@@ -58,7 +58,7 @@ public final class HplaceFormFingerprint {
     public static final int V1_HISTORY_MAX_CARDS = 10;
     /** group -> field -> control. The high-school group has one card only. */
     public static final Map<String, Map<String, FormControl>> V1_HISTORY_TEMPLATES = historyTemplates();
-    /** Exact name -> control for every allowed history field (266 names). */
+    /** Exact name -> control for every allowed history field (286 names). */
     public static final Map<String, FormControl> V1_HISTORY_FIELDS = historyFields();
     /** Exact add-action names: one per card level, plus the first major add of each school card. */
     public static final List<String> V1_HISTORY_CARD_ADDS = List.of("hplace.v1.highschool.add", "hplace.v1.college.add",
@@ -180,6 +180,7 @@ public final class HplaceFormFingerprint {
         var school = new LinkedHashMap<String, FormControl>();
         school.put("degreeTypeCode", FormControl.RADIO);
         school.put("academyName", FormControl.TEXT);
+        school.put("campusType", FormControl.RADIO);
         school.put("entranceDate", FormControl.TEXT);
         school.put("graduationDate", FormControl.TEXT);
         school.put("graduationTypeCode", FormControl.RADIO);

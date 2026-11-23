@@ -533,7 +533,8 @@ export function v1ExtraPickedValue(
   handle: FieldCandidateHandle,
 ): string | undefined {
   const parsed = parseV1ExtraName(handle.candidate.domName);
-  const document = handle.elements[0]?.ownerDocument;
+  // Shared value readers also pass handles with no native elements.
+  const document = handle.elements?.[0]?.ownerDocument;
   return parsed?.field === "licenseName" &&
     document &&
     handle.sectionId === v1ExtraSectionId &&

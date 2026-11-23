@@ -66,11 +66,12 @@ class HplaceV1HistoryPolicyTest {
     private final FormAnalysisRouter router = new FormAnalysisRouter((host, path) -> new NotRegistered(),
         (host, path) -> Decision.NO_POSITIVE_EVIDENCE, Unavailable::new, provider);
 
-    /** group -> field -> control, in design order (32 templates). */
+    /** group -> field -> control, in design order (34 templates). */
     private static Map<String, Map<String, FormControl>> templates() {
         var education = new LinkedHashMap<String, FormControl>();
         education.put("degreeTypeCode", RADIO);
         education.put("academyName", TEXT);
+        education.put("campusType", RADIO);
         education.put("entranceDate", TEXT);
         education.put("graduationDate", TEXT);
         education.put("graduationTypeCode", RADIO);
@@ -123,6 +124,7 @@ class HplaceV1HistoryPolicyTest {
         for (String group : List.of("college", "graduateSchool")) {
             String profile = group.equals("college") ? "education.university." : "education.graduateSchool.";
             expected.put(group + ".academyName", new DirectBinding(profile + "schoolName"));
+            expected.put(group + ".campusType", new DirectBinding(profile + "schoolName"));
             expected.put(group + ".entranceDate", new DirectBinding(profile + "startDate"));
             expected.put(group + ".graduationDate", new DirectBinding(profile + "endDate"));
             expected.put(group + ".graduationTypeCode", mrs2(group + ".graduationTypeCode"));
@@ -152,9 +154,9 @@ class HplaceV1HistoryPolicyTest {
     @Test
     void everyHistoryTemplateHasItsExactBindingAndWriteCommandAtFirstAndLaterOrdinals() {
         var templates = templates();
-        assertThat(templates.values().stream().mapToInt(Map::size).sum()).isEqualTo(32);
+        assertThat(templates.values().stream().mapToInt(Map::size).sum()).isEqualTo(34);
         var expected = expectedBindings();
-        assertThat(expected).hasSize(32);
+        assertThat(expected).hasSize(34);
         var fields = new ArrayList<FieldCandidate>();
         var bindingByName = new LinkedHashMap<String, ValueBinding>();
         var controlByName = new LinkedHashMap<String, FormControl>();
@@ -186,6 +188,21 @@ class HplaceV1HistoryPolicyTest {
         assertThat(mapped.values()).allMatch(field -> field.mappingStatus() == MappingStatus.ADAPTER_VERIFIED
             && field.interactionStatus() == FieldsAnalysisResponse.InteractionStatus.READY);
         verifyNoInteractions(policies);
+    }
+
+    @Test
+    void campusTypeIsAcceptedForCollegeAndGraduateSchoolAndBoundToTheSchoolName() {
+        var response = new FieldsAnalysisService(Optional.empty(), router, new FieldInteractionPolicy(),
+            new SupportedProfileFields()).analyze(request(List.of(
+                candidate("college.0.campusType", RADIO), candidate("graduateSchool.0.campusType", RADIO))));
+        assertThat(response.analysisStatus()).isEqualTo(FieldsAnalysisResponse.AnalysisStatus.COMPLETE);
+        var mapped = response.fields().stream().filter(MatchedFieldAnalysis.class::isInstance)
+            .map(MatchedFieldAnalysis.class::cast).collect(Collectors.toMap(MatchedFieldAnalysis::candidateId, x -> x));
+        assertThat(mapped.get("college.0.campusType").valueBinding())
+            .isEqualTo(new DirectBinding("education.university.schoolName"));
+        assertThat(mapped.get("graduateSchool.0.campusType").valueBinding())
+            .isEqualTo(new DirectBinding("education.graduateSchool.schoolName"));
+        assertThat(mapped.values()).allMatch(field -> field.writePlan().command() == WriteCommand.CHECK_RADIO);
     }
 
     @Test
@@ -230,13 +247,13 @@ class HplaceV1HistoryPolicyTest {
             int max = group.equals("highschool") ? 0 : 9;
             for (int i = 0; i <= max; i++) for (String field : fieldControls.keySet()) expectedNames.add("hplace.v1." + group + "." + i + "." + field);
         });
-        assertThat(expectedNames).hasSize(266);
+        assertThat(expectedNames).hasSize(286);
         Set<String> historyRules = policy.fieldRules().stream().map(FieldRule::structuralName)
             .filter(name -> name.matches("hplace\\.v1\\.(highschool|college|graduateSchool|career)\\..*"))
             .collect(Collectors.toSet());
         assertThat(historyRules).isEqualTo(expectedNames);
-        // 22 step-1 rules, 266 step-2 rules and the 50 step-3 rules (HplaceV1ExtraPolicyTest).
-        assertThat(policy.fieldRules()).hasSize(22 + 266 + 50);
+        // 22 step-1 rules, 286 step-2 rules and the 50 step-3 rules (HplaceV1ExtraPolicyTest).
+        assertThat(policy.fieldRules()).hasSize(22 + 286 + 50);
         assertThat(policy.fieldRules()).allMatch(rule -> rule.structuralName().equals(rule.requiredDomName()));
         assertThat(policy.fieldsFingerprint().requiredSectionIds()).containsExactlyInAnyOrder("hplace-v1-basic", SECTION,
             "hplace-v1-extra");

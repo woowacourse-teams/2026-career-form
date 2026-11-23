@@ -7,6 +7,7 @@ import type { CandidateRegistry } from "../../dom/candidate-registry";
 import type { FieldCandidateHandle } from "../../dom/types";
 import type { ReviewPlanItem } from "../../review/review-plan";
 import type { WriteFailureCode } from "../../write/failure";
+import { CATALOG } from "../../../profile/catalog";
 import { isSelectedToggle } from "./v1-basic-controls";
 import {
   setValue,
@@ -25,6 +26,7 @@ import {
   v1HistoryControlValue,
   v1HistorySectionId,
   type HistoryControl,
+  type HistoryGroup,
   type HistorySpec,
 } from "./v1-history-controls";
 import { closeThroughTitle, runV1Search } from "./v1-search";
@@ -42,7 +44,13 @@ export const V1_HISTORY_LEAVING_REASON =
 
 /** What the approval reads of a spec (the step-2 and step-3 specs alike). */
 export type ApprovalSpec =
-  | { kind: "toggle" | "dropdown"; profile: string; options: readonly string[] }
+  | {
+      kind: "toggle" | "dropdown";
+      profile: string;
+      options: readonly string[];
+      /** 본교/분교: bound to the school name (DIRECT), not to a lookup. */
+      campus?: true;
+    }
   | { kind: "text" | "date" | "search"; profile: string };
 
 const command = (spec: ApprovalSpec) =>
@@ -74,6 +82,8 @@ export function approvalIssue(
     return `command-${a.writePlan?.command ?? "none"}`;
   if (b?.profileFieldKey !== spec.profile) return "profile-key";
   if (spec.kind === "text" || spec.kind === "date" || spec.kind === "search")
+    return b.type === "DIRECT" ? undefined : "binding";
+  if ("campus" in spec && spec.campus)
     return b.type === "DIRECT" ? undefined : "binding";
   if (b.type !== "LOOKUP") return "binding";
   const options = "options" in spec ? spec.options : [];
@@ -198,16 +208,37 @@ export function showsDate(shown: string, target: string): boolean {
 const shownAs = (spec: HistorySpec, shown: string, target: string) =>
   shown === target || (spec.kind === "date" && showsDate(shown, target));
 
-/** The card's own 졸업구분 label as the page shows it now. */
-const cardStatus = (control: HistoryControl) => {
-  const status = v1HistoryControl(
-    control.row.ownerDocument,
-    control.group,
-    control.index,
-    "graduationTypeCode",
-  );
-  return status && v1HistoryControlValue(status);
-};
+const campusKinds = {
+  college: "university",
+  graduateSchool: "graduateSchool",
+} as const;
+const campusLabels = ["본교", "분교"] as const;
+let campusIndex: Map<string, Set<string>> | undefined;
+
+/**
+ * The page's 본교/분교 label of a school: read from the bundled catalog's
+ * ` · `-separated detail of the entries named exactly like the school. A
+ * name with no entry, no campus segment or both labels is unknown.
+ */
+function campusLabel(group: HistoryGroup, value: string): string | undefined {
+  const kind = campusKinds[group as keyof typeof campusKinds];
+  if (!kind) return undefined;
+  if (!campusIndex) {
+    campusIndex = new Map();
+    for (const entry of CATALOG) {
+      if (entry.kind !== "university" && entry.kind !== "graduateSchool")
+        continue;
+      const key = `${entry.kind}:${entry.name}`;
+      const labels = campusIndex.get(key) ?? new Set<string>();
+      for (const segment of entry.detail.split(" · "))
+        for (const label of campusLabels)
+          if (segment.startsWith(label)) labels.add(label);
+      campusIndex.set(key, labels);
+    }
+  }
+  const labels = campusIndex.get(`${kind}:${normalize(value)}`);
+  return labels?.size === 1 ? [...labels][0] : undefined;
+}
 
 const numeric = (value: string) =>
   /^\d+(?:\.\d+)?$/.test(value.trim()) ? Number(value) : NaN;
@@ -248,6 +279,7 @@ function targetIssue(control: HistoryControl, value: string): string {
       ? "date-future"
       : "date-unreadable";
   if (spec.kind === "text" && spec.numeric) return "score-not-number";
+  if (spec.kind === "toggle" && spec.campus) return "campus-unknown";
   return "option-unmatched";
 }
 
@@ -265,9 +297,8 @@ export function v1HistoryTarget(
     const day = fullDay(value) ?? fullMonth(value);
     if (!day) return undefined;
     if (day <= today().slice(0, day.length)) return day;
-    // A future 졸업일 only for 졸업예정, at most six years ahead.
+    // A future 졸업일 for any card status, at most six years ahead.
     return spec.future &&
-      cardStatus(control) === "졸업예정" &&
       Number(day.slice(0, 4)) <= new Date().getFullYear() + 6
       ? day
       : undefined;
@@ -280,6 +311,8 @@ export function v1HistoryTarget(
       : numeric(value) >= 0
         ? value.trim()
         : undefined;
+  if (spec.kind === "toggle" && spec.campus)
+    return campusLabel(control.group, value);
   return spec.options.includes(value) ? value : undefined;
 }
 
@@ -385,13 +418,52 @@ export function v1HistoryResultMatches(
   const control = ownedV1HistoryControl(handle);
   if (
     !control ||
-    control.spec.kind !== "date" ||
+    !(
+      control.spec.kind === "date" ||
+      (control.spec.kind === "toggle" && control.spec.campus)
+    ) ||
     handle.candidateId !== item.candidateId ||
     !approved(control.spec, item)
   )
     return undefined;
   const target = v1HistoryTarget(control, expected);
   return target !== undefined && shownAs(control.spec, current, target);
+}
+
+/** A 본교/분교 toggle whose school has no single catalog campus: the page
+ * keeps its own choice and the item is left out of the run. */
+export function v1HistoryCampusUnknown(
+  handle: FieldCandidateHandle,
+  profileValue: string | undefined,
+): boolean {
+  const control = ownedV1HistoryControl(handle);
+  return (
+    control?.spec.kind === "toggle" &&
+    !!control.spec.campus &&
+    campusLabel(control.group, profileValue ?? "") === undefined
+  );
+}
+
+/** A step-2 본교/분교 toggle handle (its result is the campus label). */
+export function isV1HistoryCampusHandle(handle: FieldCandidateHandle): boolean {
+  const control = ownedV1HistoryControl(handle);
+  return control?.spec.kind === "toggle" && !!control.spec.campus;
+}
+
+/** Review: the page's 본교/분교 already is the campus of the profile school. */
+export function v1HistorySameExistingValue(
+  handle: FieldCandidateHandle,
+  item: Pick<ReviewPlanItem, "analysis">,
+  page: string,
+  profile: string,
+): boolean {
+  const control = ownedV1HistoryControl(handle);
+  return (
+    control?.spec.kind === "toggle" &&
+    !!control.spec.campus &&
+    approved(control.spec, item) &&
+    v1HistoryTarget(control, profile) === page.trim()
+  );
 }
 
 /** Why a step-2 write was refused, for the result screen. */
