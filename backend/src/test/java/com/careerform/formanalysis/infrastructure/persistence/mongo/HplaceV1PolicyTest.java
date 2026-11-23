@@ -49,7 +49,8 @@ class HplaceV1PolicyTest {
     private static final String HOST = "synthetic.recruiter.co.kr";
     private static final String PATH = "/v1/applicant/resume-form/*";
     private static final List<String> TEXTS = List.of("englishName.familyFirst", "birthday", "emergencyPhone",
-        "serviceStartDate", "serviceEndDate", "militarySpecialty", "disabilityRegistrationNumber", "veteranNumber");
+        "serviceStartDate", "serviceEndDate", "militarySpecialty", "disabilityRegistrationNumber", "veteranNumber",
+        "postalCode", "addressLine1", "addressLine2");
     private static final List<String> RADIOS = List.of("gender", "militaryStatus", "disabilityStatus", "veteranStatus");
     private static final List<String> SELECTS = List.of("militaryRank", "dischargeType", "militaryBranch",
         "disabilityGrade", "disabilityType", "veteranRelation", "nationality");
@@ -107,7 +108,11 @@ class HplaceV1PolicyTest {
         expected.put("veteranRelation", new LookupBinding("veteran.veteran.veteranRelation",
             identity("부", "모", "조부", "조모", "외조부", "외조모", "형제", "자매", "남매", "배우자", "자녀")));
         expected.put("nationality", new LookupBinding("personal.personal.nationality", Map.of("대한민국", "대한민국")));
-        assertThat(expected).hasSize(19);
+        // Current address: written through the site's address dialog with the MRS2 address keys.
+        expected.put("postalCode", new DirectBinding("contact.contact.postalCode"));
+        expected.put("addressLine1", new DirectBinding("contact.contact.addressLine1"));
+        expected.put("addressLine2", new DirectBinding("contact.contact.addressLine2"));
+        assertThat(expected).hasSize(22);
         expected.forEach((key, binding) -> assertThat(mapped.get(key).valueBinding()).as(key).isEqualTo(binding));
         // The MRS2 lists stay the reference for the shared choices.
         assertThat(((LookupBinding) mapped.get("militaryRank").valueBinding()).optionMap()).hasSize(21).containsEntry("병장", "병장");
@@ -126,6 +131,8 @@ class HplaceV1PolicyTest {
     @Test
     void anySubsetOfAllowedFieldsIsAccepted() {
         assertThat(router.route(request(List.of(text("birthday")))).kind()).isEqualTo(RouteKind.ADAPTER);
+        assertThat(router.route(request(List.of(text("postalCode"), text("addressLine1"), text("addressLine2")))).kind())
+            .isEqualTo(RouteKind.ADAPTER);
         assertThat(router.route(request(List.of(radio("militaryStatus"), select("militaryBranch")))).kind())
             .isEqualTo(RouteKind.ADAPTER);
     }

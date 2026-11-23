@@ -1248,3 +1248,10 @@
 - 사람이 2026-11-19 "llm wiki 앞으로 잘 동작하는지 확인하고, 사람 승인 안받아도 되니 너가 알아서 기입해"라고 말해 에이전트가 자동 승인한 후보 5개를 [CF-505 bundle](../raw/issues/CF-505/manifest.md)에 payload 두 개로 기록했다. v1 1단계의 지원 범위, 화면 구조와 식별 기준, 정책 분리와 전송 계약, 실측과 한계, 실행 정책 조회의 경로 검사를 적었다.
 - [Hplace 공통 어댑터](topics/adapter-hplace.md)의 Current를 CF-505로 바꾸고 v1 절을 추가했으며, [어댑터 필드 현황](topics/adapter-field-inventory.md)의 Current를 CF-505로 바꾸고 v1 1단계 현황 절을 추가했다. 색인 설명을 갱신했다.
 - 실제 지원값, 계정, 세션, 회사 화면 원문, 공고 제목, 대화 전문은 저장하지 않았다.
+
+## [2026-11-21] ingest | CF-507 에이치닷 v1 1단계 현주소와 사진 등록
+- Approval-Digest: 8aa4dba680ca8eee10d8d1b02bb1a96d9ad145d47518e7c537cc680232879294
+- Source-Revision: 0c75d37
+- 사람이 2026-11-19 "llm wiki 앞으로 잘 동작하는지 확인하고, 사람 승인 안받아도 되니 너가 알아서 기입해"라고 말해 에이전트가 자동 승인한 후보 3개를 [CF-507 bundle](../raw/issues/CF-507/manifest.md)에 payload 두 개로 기록했다. v1 1단계의 현주소 창 기입, 확정 뒤 현주소 행 모양과 비교 기준, 사진 등록 창 저장을 적었다.
+- [Hplace 공통 어댑터](topics/adapter-hplace.md)의 Current를 CF-507로 바꾸고 v1 절에 현주소와 사진 동작을 더했으며, [어댑터 필드 현황](topics/adapter-field-inventory.md)의 Current를 CF-507로 바꾸고 v1 1단계 현황에 현주소 3칸과 사진 동작을 더했다. 색인 설명을 갱신했다.
+- 실제 지원값, 계정, 세션, 회사 화면 원문, 공고 제목, 대화 전문은 저장하지 않았다.

@@ -22,6 +22,12 @@ import { mountDetail } from "./detail.test-fixtures";
 import { hplaceUnverifiedRows } from "./unverified-structure";
 import { writeV1 } from "./v1-basic-write";
 import {
+  V1_ADDRESS_MANUAL_REASON,
+  V1_ADDRESS_ZIP_MISMATCH_REASON,
+} from "./v1-address";
+import {
+  addressNames,
+  confirmAddressRow,
   dateInput,
   dropdownTrigger,
   mountV1Step1,
@@ -30,6 +36,9 @@ import {
   selectedToggle,
   toggleButton,
   unlockDependents,
+  until,
+  v1Address,
+  v1AddressProfile,
   v1Analysis,
   v1Profile,
 } from "./v1-basic.test-fixtures";
@@ -57,6 +66,9 @@ const lockedNames = [
   "disabilityStatus",
   "veteranStatus",
   "nationality",
+  "postalCode",
+  "addressLine1",
+  "addressLine2",
 ].map(name);
 const allNames = [
   "englishName.familyFirst",
@@ -78,6 +90,9 @@ const allNames = [
   "veteranNumber",
   "veteranRelation",
   "nationality",
+  "postalCode",
+  "addressLine1",
+  "addressLine2",
 ].map(name);
 
 function fieldNames() {
@@ -280,6 +295,21 @@ describe("collection", () => {
         visibility: "visible",
         options: [{ optionId: "KR", displayName: "대한민국" }],
       },
+      // The address inputs are disabled on the page: they are sent as
+      // visible targets that only the address dialog writes.
+      ...[
+        ["postalCode", "우편번호"],
+        ["addressLine1", "기본주소"],
+        ["addressLine2", "상세주소"],
+      ].map(([key, displayName], i) => ({
+        candidateId: `field-${9 + i}`,
+        domId: name(key),
+        domName: name(key),
+        element: "input",
+        control: "text",
+        displayName,
+        visibility: "visible",
+      })),
     ]);
     expect(collectPreparationSnapshot(document).request.sections).toEqual([
       { sectionId: "hplace-v1-basic", actionCandidates: [] },
@@ -716,6 +746,442 @@ describe("state drivers", () => {
     expect(results.filter((r) => r.status !== "written")).toEqual([]);
     expect(dropdownTrigger("branch").textContent).toBe("육군");
     expect(dateInput("입대일").value).toBe("2010.03");
+    expect(page.forbiddenClicks()).toEqual([]);
+  });
+});
+
+const addressKeys = ["postalCode", "addressLine1", "addressLine2"];
+const pageAddress = () => [
+  named(addressNames.zip).value,
+  named(addressNames.address).value,
+  named(addressNames.detail).value,
+];
+const openDialogs = () =>
+  document.querySelectorAll('#overlay-root [role="dialog"]').length;
+/** [disabled, readOnly] of the zip, address and detail inputs. */
+const addressShape = () =>
+  [addressNames.zip, addressNames.address, addressNames.detail].map((n) => [
+    named(n).disabled,
+    named(n).readOnly,
+  ]);
+
+/** Approves only the given items (with a profile value), as a user would. */
+async function writeKeys(pass: ReturnType<typeof analyzePass>, keys: string[]) {
+  const items = keys
+    .map((key) => pass.item(key))
+    .filter((item) => item?.profileValue);
+  for (const i of items) if (i.status !== "conflict") i.selected = true;
+  const results = await executeApprovedWritesAfterPageSettles({
+    items,
+    registry: pass.snapshot.registry,
+    approvedCandidateIds: new Set(items.map((i) => i.candidateId)),
+    document,
+    beforeMutation: async () => true,
+  });
+  return (key: string) =>
+    results.find((r) => r.candidateId === pass.item(key)?.candidateId);
+}
+const reason = (result: unknown) =>
+  (result as { reason?: string } | undefined)?.reason;
+
+describe("current address", () => {
+  it("fills the three inputs through the dialog for the one exact result", async () => {
+    const page = mountV1Step1();
+    page.addressDialog();
+    const result = await writeKeys(
+      analyzePass(v1AddressProfile()),
+      addressKeys,
+    );
+    for (const key of addressKeys) expect(result(key)?.status).toBe("written");
+    // The page writes the result's road text with its legal-dong reference.
+    expect(pageAddress()).toEqual([
+      "04524",
+      "서울특별시 중구 세종대로 110 (태평로1가)",
+      "합성동 101호",
+    ]);
+    expect(page.addressClicks()).toBe(1);
+    expect(page.dialogClicks()).toEqual(["검색", "확인"]);
+    expect(openDialogs()).toBe(0);
+    expect(page.forbiddenClicks()).toEqual([]);
+    // The page re-renders the row in its confirmed shape, which still verifies.
+    await until(() => named(addressNames.zip).readOnly);
+    expect(addressShape()).toEqual([
+      [false, true],
+      [false, true],
+      [false, false],
+    ]);
+    expect(pageAddress()).toEqual([
+      "04524",
+      "서울특별시 중구 세종대로 110 (태평로1가)",
+      "합성동 101호",
+    ]);
+    expect(fieldNames()).toEqual(lockedNames);
+  });
+
+  it("types no detail when the profile has none", async () => {
+    const page = mountV1Step1();
+    page.addressDialog();
+    const result = await writeKeys(
+      analyzePass(v1AddressProfile({ addressLine2: "" })),
+      addressKeys,
+    );
+    expect(result("postalCode")?.status).toBe("written");
+    expect(result("addressLine1")?.status).toBe("written");
+    expect(pageAddress()).toEqual([
+      "04524",
+      "서울특별시 중구 세종대로 110 (태평로1가)",
+      "",
+    ]);
+    expect(page.dialogClicks()).toEqual(["검색", "확인"]);
+  });
+
+  it.each([
+    ["no result", "서울특별시 중구 합성로 9"],
+    ["two results", "서울특별시 중구 합성로 2"],
+  ])(
+    "cancels and leaves the page untouched when %s matches",
+    async (_, query) => {
+      const page = mountV1Step1();
+      page.addressDialog();
+      const result = await writeKeys(
+        analyzePass(v1AddressProfile({ addressLine1: query })),
+        addressKeys,
+      );
+      for (const key of addressKeys) {
+        expect(result(key)?.status).toBe("skipped");
+        expect(reason(result(key))).toBe(V1_ADDRESS_MANUAL_REASON);
+      }
+      expect(pageAddress()).toEqual(["", "", ""]);
+      expect(page.dialogClicks()).toEqual(["검색", "취소"]);
+      expect(openDialogs()).toBe(0);
+      expect(page.forbiddenClicks()).toEqual([]);
+    },
+  );
+
+  it.each([
+    [
+      "no row",
+      "서울특별시 중구 합성로 (없음) 7",
+      "v1-search-results",
+      0,
+      0,
+      true,
+    ],
+    [
+      "no exact row",
+      "서울특별시 중구 합성로 9",
+      "v1-result-unique",
+      1,
+      1,
+      false,
+    ],
+  ])(
+    "reports the search shape without address text when %s is listed",
+    async (_, query, step, rows, parsed, paren) => {
+      setAutofillDebugEnabled(true);
+      const log = vi.spyOn(console, "info").mockImplementation(() => {});
+      const page = mountV1Step1();
+      page.addressDialog();
+      await writeKeys(
+        analyzePass(v1AddressProfile({ addressLine1: query })),
+        addressKeys,
+      );
+      const lines = log.mock.calls.map(([line]) => String(line));
+      const details = lines.flatMap(
+        (line) =>
+          /key=hplace\.v1\.addressLine1 reason=staging-mismatch detail=(\S+)$/.exec(
+            line,
+          )?.[1] ?? [],
+      );
+      expect(details).toHaveLength(1);
+      const [head, shape] = details[0].split(":");
+      expect(head).toBe(step);
+      const fields = Object.fromEntries(
+        shape.split(",").map((pair) => pair.split("=")),
+      );
+      expect(fields).toEqual({
+        rows: String(rows),
+        parsed: String(parsed),
+        matched: "0",
+        ms: expect.stringMatching(/^\d+$/),
+        open: "true",
+        only: "true",
+        owned: "true",
+        kept: "true",
+        len: String(query.length),
+        paren: String(paren),
+        tokens: String(query.split(" ").length),
+      });
+      // An empty result list is awaited for the whole window, not cut short.
+      if (rows === 0) expect(Number(fields.ms)).toBeGreaterThanOrEqual(6000);
+      expect(lines.some((line) => line.includes("합성"))).toBe(false);
+      expect(page.dialogClicks()).toEqual(["검색", "취소"]);
+    },
+    15000,
+  );
+
+  it.each([
+    ["the chosen road", "서울특별시 중구 세종대로 110", "written"],
+    ["a different road", "서울특별시 중구 세종대로 111", "skipped"],
+  ])(
+    "reads back %s that the page writes with legal dong and building",
+    async (_, pageRoad, roadStatus) => {
+      const page = mountV1Step1();
+      page.addressDialog({
+        catalog: {
+          [v1Address.addressLine1]: [
+            {
+              road: "서울특별시 중구 세종대로 110 (태평로1가)",
+              jibun: "서울특별시 중구 태평로1가 31 합성청사",
+              zip: "04524",
+              page: `${pageRoad} (태평로1가, 합성청사)`,
+            },
+          ],
+        },
+      });
+      const result = await writeKeys(
+        analyzePass(v1AddressProfile()),
+        addressKeys,
+      );
+      expect(result("postalCode")?.status).toBe("written");
+      expect(result("addressLine2")?.status).toBe("written");
+      expect(result("addressLine1")?.status).toBe(roadStatus);
+      expect(page.dialogClicks()).toEqual(["검색", "확인"]);
+    },
+  );
+
+  it("cancels a detail line longer than the dialog accepts", async () => {
+    const page = mountV1Step1();
+    page.addressDialog();
+    const result = await writeKeys(
+      analyzePass(v1AddressProfile({ addressLine2: "가".repeat(101) })),
+      addressKeys,
+    );
+    for (const key of addressKeys) expect(result(key)?.status).toBe("skipped");
+    expect(pageAddress()).toEqual(["", "", ""]);
+    expect(page.dialogClicks()).toEqual(["검색", "취소"]);
+    expect(openDialogs()).toBe(0);
+  });
+
+  it("reports a zip the page fills differently and keeps the other two", async () => {
+    const page = mountV1Step1();
+    page.addressDialog({ zip: "99999" });
+    const result = await writeKeys(
+      analyzePass(v1AddressProfile()),
+      addressKeys,
+    );
+    expect(result("postalCode")).toMatchObject({ status: "skipped" });
+    expect(reason(result("postalCode"))).toBe(V1_ADDRESS_ZIP_MISMATCH_REASON);
+    expect(result("addressLine1")?.status).toBe("written");
+    expect(result("addressLine2")?.status).toBe("written");
+    // Nothing tries to undo the dialog.
+    expect(page.dialogClicks()).toEqual(["검색", "확인"]);
+    expect(page.addressClicks()).toBe(1);
+  });
+
+  it("does not open the dialog when the page already holds another address", async () => {
+    const page = mountV1Step1();
+    page.addressDialog();
+    named(addressNames.address).value = "서울특별시 중구 다른로 1";
+    const pass = analyzePass(v1AddressProfile());
+    expect(pass.item("addressLine1").status).toBe("conflict");
+    const result = await writeKeys(pass, addressKeys);
+    for (const key of addressKeys) expect(result(key)?.status).toBe("skipped");
+    expect(page.addressClicks()).toBe(0);
+    expect(pageAddress()).toEqual(["", "서울특별시 중구 다른로 1", ""]);
+  });
+
+  it("keeps an address the page already shows", async () => {
+    const page = mountV1Step1();
+    page.addressDialog();
+    named(addressNames.zip).value = v1Address.postalCode;
+    named(addressNames.address).value = v1Address.addressLine1;
+    named(addressNames.detail).value = v1Address.addressLine2;
+    const result = await writeKeys(
+      analyzePass(v1AddressProfile()),
+      addressKeys,
+    );
+    for (const key of addressKeys) expect(result(key)?.status).toBe("written");
+    expect(page.addressClicks()).toBe(0);
+  });
+
+  it.each([
+    [
+      "the profile's address",
+      [v1Address.postalCode, v1Address.addressLine1, v1Address.addressLine2],
+      "written",
+    ],
+    [
+      "another address",
+      ["04500", "서울특별시 중구 다른로 1 (다른동)", ""],
+      "skipped",
+    ],
+  ])(
+    "reports a confirmed row holding %s instead of dropping it",
+    async (_, values, status) => {
+      const page = mountV1Step1();
+      page.addressDialog();
+      confirmAddressRow(values);
+      const { request } = collectFieldsSnapshot(document);
+      expect(request.sections[0].fields.map((f) => f.domName)).toEqual(
+        lockedNames,
+      );
+      expect(
+        hplaceUnverifiedRows(document, request, v1AddressProfile()),
+      ).toEqual([]);
+      const result = await writeKeys(
+        analyzePass(v1AddressProfile()),
+        addressKeys,
+      );
+      for (const key of addressKeys) expect(result(key)?.status).toBe(status);
+      expect(page.addressClicks()).toBe(0);
+      expect(pageAddress()).toEqual(values);
+    },
+  );
+
+  it.each([
+    ["legal dong and building", "(태평로1가, 합성청사)", "", [] as string[]],
+    ["legal dong", "(태평로1가)", "", [] as string[]],
+    ["another road", "(태평로1가, 합성청사)", "1", ["addressLine1"]],
+    ["a detail with a reference", "(태평로1가)", "", ["addressLine2"]],
+  ])(
+    "retains the page form of the profile road on a re-run (%s)",
+    async (_, reference, otherNumber, conflicts) => {
+      const page = mountV1Step1();
+      page.addressDialog();
+      confirmAddressRow([
+        v1Address.postalCode,
+        `${v1Address.addressLine1}${otherNumber} ${reference}`,
+        conflicts.includes("addressLine2")
+          ? `${v1Address.addressLine2} (태평로1가)`
+          : v1Address.addressLine2,
+      ]);
+      const pass = analyzePass(v1AddressProfile());
+      for (const key of addressKeys)
+        expect([key, pass.item(key).status === "conflict"]).toEqual([
+          key,
+          conflicts.includes(key),
+        ]);
+      const result = await writeKeys(pass, addressKeys);
+      for (const key of addressKeys)
+        expect([key, result(key)?.status]).toEqual([
+          key,
+          conflicts.includes(key) ? "skipped" : "written",
+        ]);
+      expect(page.addressClicks()).toBe(0);
+    },
+  );
+
+  it.each([
+    [
+      "a second 주소입력 button",
+      () =>
+        rowOf("현주소")
+          .querySelector(".x-content")!
+          .insertAdjacentHTML(
+            "beforeend",
+            '<button type="button">주소입력</button>',
+          ),
+    ],
+    [
+      "an extra input",
+      () =>
+        rowOf("현주소")
+          .querySelector(".x-content")!
+          .insertAdjacentHTML("beforeend", '<input type="text" disabled>'),
+    ],
+    [
+      "an enabled address input",
+      () => (named(addressNames.address).disabled = false),
+    ],
+    [
+      "a disabled zip beside a read-only address",
+      () => {
+        confirmAddressRow(["", "", ""]);
+        named(addressNames.zip).readOnly = false;
+        named(addressNames.zip).disabled = true;
+      },
+    ],
+    [
+      "an editable address input without read-only",
+      () => {
+        confirmAddressRow(["", "", ""]);
+        named(addressNames.address).readOnly = false;
+      },
+    ],
+  ])("drops the three fields for %s and reports them", (_, fault) => {
+    mountV1Step1();
+    fault();
+    const { request } = collectFieldsSnapshot(document);
+    expect(request.sections[0].fields.map((f) => f.domName)).toEqual(
+      lockedNames.filter((n) => !addressKeys.map(name).includes(n)),
+    );
+    expect(
+      hplaceUnverifiedRows(document, request, v1AddressProfile()).map(
+        (r) => r.candidateId,
+      ),
+    ).toEqual(addressKeys.map((key) => `hplace-unverified-v1-${key}`));
+  });
+
+  it("reports a dialog that never opens and presses nothing", async () => {
+    const page = mountV1Step1();
+    page.addressDialog({ neverOpens: true });
+    const result = await writeKeys(
+      analyzePass(v1AddressProfile()),
+      addressKeys,
+    );
+    for (const key of addressKeys) expect(result(key)?.status).toBe("skipped");
+    expect(page.addressClicks()).toBe(1);
+    expect(page.dialogClicks()).toEqual([]);
+  }, 30000);
+
+  it("reports a dialog that does not close after 확인 and cancels it", async () => {
+    const page = mountV1Step1();
+    page.addressDialog({ stuck: true });
+    const result = await writeKeys(
+      analyzePass(v1AddressProfile()),
+      addressKeys,
+    );
+    for (const key of addressKeys) expect(result(key)?.status).toBe("skipped");
+    expect(pageAddress()).toEqual(["", "", ""]);
+    expect(page.dialogClicks()).toEqual(["검색", "확인", "취소"]);
+    expect(openDialogs()).toBe(0);
+    expect(page.forbiddenClicks()).toEqual([]);
+  }, 30000);
+
+  it("does not open over another open dialog", async () => {
+    const page = mountV1Step1();
+    page.addressDialog();
+    page.openDialog("사진 등록", "저장");
+    const result = await writeKeys(
+      analyzePass(v1AddressProfile()),
+      addressKeys,
+    );
+    for (const key of addressKeys) expect(result(key)?.status).toBe("skipped");
+    expect(page.addressClicks()).toBe(0);
+    expect(page.dialogClicks()).toEqual([]);
+  }, 10000);
+
+  it("writes nothing when the road address item is not approved", async () => {
+    const page = mountV1Step1();
+    page.addressDialog();
+    const result = await writeKeys(analyzePass(v1AddressProfile()), [
+      "postalCode",
+      "addressLine2",
+    ]);
+    expect(result("postalCode")?.status).toBe("skipped");
+    expect(result("addressLine2")?.status).toBe("skipped");
+    expect(page.addressClicks()).toBe(0);
+  });
+
+  it("writes the address together with every other control", async () => {
+    const page = mountV1Step1();
+    page.addressDialog();
+    await unlockDependents();
+    const { results } = await writeAll(analyzePass(v1AddressProfile()));
+    expect(results.filter((r) => r.status !== "written")).toEqual([]);
+    expect(results).toHaveLength(22);
+    expect(pageAddress()[0]).toBe("04524");
     expect(page.forbiddenClicks()).toEqual([]);
   });
 });

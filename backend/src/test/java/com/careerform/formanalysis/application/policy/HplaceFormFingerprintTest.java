@@ -131,6 +131,12 @@ class HplaceFormFingerprintTest {
             v1("veteranRelation", FormElement.SELECT, FormControl.SELECT), v1("disabilityRegistrationNumber", FormElement.INPUT, FormControl.TEXT));
         assertThat(fingerprint.matches(v1Request("hplace-v1-basic", fields, "/v1/applicant/resume-form/*"))).isTrue();
         assertThat(fingerprint.matches(v1Request("hplace-v1-basic", fields.subList(0, 1), "/v1/applicant/resume-form/*"))).isTrue();
+        // The current-address triplet is sent as visible text targets (the page inputs are dialog-filled).
+        var address = List.of(v1("postalCode", FormElement.INPUT, FormControl.TEXT),
+            v1("addressLine1", FormElement.INPUT, FormControl.TEXT), v1("addressLine2", FormElement.INPUT, FormControl.TEXT));
+        assertThat(fingerprint.matches(v1Request("hplace-v1-basic", address, "/v1/applicant/resume-form/*"))).isTrue();
+        assertThat(fingerprint.matches(v1Request("hplace-v1-basic", List.of(v1("postalCode", FormElement.SELECT, FormControl.SELECT)),
+            "/v1/applicant/resume-form/*"))).isFalse();
         assertThat(fingerprint.matches(v1Request("hplace-v1-basic", List.of(), "/v1/applicant/resume-form/*"))).isFalse();
         assertThat(fingerprint.matches(v1Request("hplace-v1-other", fields, "/v1/applicant/resume-form/*"))).isFalse();
         assertThat(fingerprint.matches(v1Request("hplace-detail-basic", fields, "/v1/applicant/resume-form/*"))).isFalse();

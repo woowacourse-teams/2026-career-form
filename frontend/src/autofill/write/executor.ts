@@ -16,6 +16,7 @@ import {
   writeV1,
   type V1WriteResult,
 } from "../adapters/hplace/v1-basic-write";
+import { v1AddressBatch } from "../adapters/hplace/v1-address";
 import type { AddressIdentity } from "../address/match";
 import { resolveDocumentCompany } from "../adapters/company";
 import { runtimeRules } from "../policy/runtime-rules";
@@ -312,6 +313,14 @@ export async function executeApprovedWritesAfterPageSettles({
         assertCurrent?.() !== false &&
         sameRunUrl(url, document?.URL) &&
         resolveDocumentCompany(document!) === "hplace";
+      // v1 현주소: one dialog run writes the batch's three address items.
+      const v1Address = v1AddressBatch(
+        items,
+        registry,
+        approvedCandidateIds,
+        current,
+        beforeMutation,
+      );
       for (const item of items) {
         if (beforeWrite) await beforeWrite(item);
         const lookup = registry.lookupField(item.candidateId);
@@ -319,10 +328,14 @@ export async function executeApprovedWritesAfterPageSettles({
           approvedCandidateIds.has(item.candidateId) &&
           !seen.has(item.candidateId) &&
           lookup.status === "ready";
-        const v1 =
-          eligible &&
-          !ownedBasicControl(lookup.handle) &&
-          ownedV1Control(lookup.handle)
+        const address = eligible
+          ? await v1Address(item, lookup.handle)
+          : undefined;
+        const v1 = address
+          ? address.result
+          : eligible &&
+              !ownedBasicControl(lookup.handle) &&
+              ownedV1Control(lookup.handle)
             ? await writeV1(lookup.handle, item, current, beforeMutation)
             : undefined;
         const success =
@@ -342,7 +355,8 @@ export async function executeApprovedWritesAfterPageSettles({
           ? v1Result(
               item.candidateId,
               v1,
-              "검증된 상세 지원서 필드만 입력할 수 있습니다.",
+              address?.reason ??
+                "검증된 상세 지원서 필드만 입력할 수 있습니다.",
             )
           : success
             ? written(item.candidateId)

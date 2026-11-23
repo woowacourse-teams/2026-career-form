@@ -17,6 +17,7 @@ import { executionPolicy } from "../workflow/execution-policy";
 import { isSplitEmailMember } from "../dom/split-email";
 import type { WriteFailureCode } from "../write/failure";
 import { resolveDocumentCompany } from "../adapters/company";
+import { v1SameExistingValue } from "../adapters/hplace/v1-basic-write";
 import {
   approveComponentGpaPairs,
   type ComponentGpaApproval,
@@ -1489,6 +1490,12 @@ function itemForResolvedAnalysis(
         ) &&
         !sameNativeTarget(
           lookup.handle,
+          pageValue,
+          resolvedProfileValue.value,
+        ) &&
+        !v1SameExistingValue(
+          lookup.handle,
+          { analysis },
           pageValue,
           resolvedProfileValue.value,
         ));

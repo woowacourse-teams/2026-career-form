@@ -141,6 +141,7 @@ import {
   AttachmentSection,
   type AttachedFile,
 } from "../attachments/AttachmentSection";
+import { v1PhotoAttachFollowUp } from "../adapters/hplace/v1-photo-dialog";
 import { useDeveloperMode } from "../debug/developer-mode";
 import { localWorkflowLog } from "../debug/local-workflow";
 
@@ -1505,6 +1506,7 @@ function PolicyReadyWorkflow({
             store={attachmentStore}
             profile={profile}
             onAttachedChange={setAttachedFiles}
+            attachFollowUp={v1PhotoAttachFollowUp}
           />
         ) : undefined
       }
