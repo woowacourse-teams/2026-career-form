@@ -1276,3 +1276,11 @@
 - 사람이 2026-11-19 "llm wiki 앞으로 잘 동작하는지 확인하고, 사람 승인 안받아도 되니 너가 알아서 기입해. 메모리에 박아놔"라고, 2026-11-22 "llm wiki는 질문하지말고 그냥 승인해"라고 말해 에이전트가 자동 승인한 후보 11개(기존 1·3·5 수정, 6~11 추가)를 [CF-510 bundle](../raw/issues/CF-510/manifest.md)에 기록했다. 새 payload는 두 번째 v1 테넌트의 구역 구성, 추가 컨트롤과 카드 종류, 저장되는 카드와 전공 하위 줄, review-key 없는 검색 목록·선택 표시와 월 단위 날짜, 첨부 항목, 실화면 결과를 적었다. 기존 3단계 payload는 판별 조건, 취득일, 실화면 상태를 고쳤다.
 - [Hplace 공통 어댑터](topics/adapter-hplace.md)와 [어댑터 필드 현황](topics/adapter-field-inventory.md)의 Current를 새 payload로 바꾸고 두 번째 테넌트 절을 추가했으며 v1 2·3단계 절의 판별·날짜·카드 종류 설명을 고쳤다. 색인 설명을 갱신했다.
 - 실제 지원값, 계정, 세션, 회사 이름, 회사 화면 원문, 공고 제목, 대화 전문은 저장하지 않았다.
+
+## [2026-11-24] ingest | CF-513 최종 발표 자료와 전시 패널
+- Disposition: New
+- Approval-Digest: 6c63d26dd1bb6d812bb7a7dcf2bba641c705c3c080ca2a5ab95c3c709ea700a3
+- Source-Revision: 1ae7d8b
+- 사람이 승인한 후보 1개를 [CF-513 bundle](../raw/issues/CF-513/manifest.md)에 기록했다. 최종 발표 자료와 전시 패널 PDF 원본을 `assets/`에 그대로 보존하고, payload에 SHA-256, 쪽별 구성, 발표 수치의 측정 조건과 비식별 확인 결과를 적었다.
+- 새 topic [최종 발표 자료와 전시 패널](topics/final-presentation.md)을 만들고 색인에 추가했다.
+- 실제 지원값, 계정, 세션, 대화 전문은 저장하지 않았다.
