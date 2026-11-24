@@ -39,6 +39,18 @@ public final class MemoryNotificationStore implements NotificationStore {
 
     @Override public synchronized boolean deletePosting(String id) { return postings.remove(id) != null; }
 
+    @Override public synchronized List<JobPosting> findIncompletePostings(Instant now, int limit) {
+        return postings.values().stream().filter(posting -> Boolean.FALSE.equals(posting.deliveriesReady()) && now.isBefore(posting.closesAt()))
+            .sorted(Comparator.comparing(JobPosting::registeredAt).thenComparing(JobPosting::id)).limit(limit).toList();
+    }
+
+    @Override public synchronized boolean markDeliveriesReady(String id) {
+        JobPosting current = postings.get(id);
+        if (current == null || !Boolean.FALSE.equals(current.deliveriesReady())) { return false; }
+        postings.put(id, current.ready());
+        return true;
+    }
+
     @Override public synchronized boolean insertSubscription(PushSubscription subscription) {
         if (subscriptions.containsKey(subscription.id())
             || subscriptions.values().stream().anyMatch(existing -> existing.endpoint().equals(subscription.endpoint()))) { return false; }

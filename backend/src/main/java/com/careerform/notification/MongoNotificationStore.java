@@ -30,6 +30,7 @@ public final class MongoNotificationStore implements NotificationStore {
     public void ensureIndexes() {
         mongo.indexOps(JobPosting.class).createIndex(new Index().on("link", Sort.Direction.ASC).unique());
         mongo.indexOps(JobPosting.class).createIndex(new Index().on("opensAt", Sort.Direction.ASC).on("closesAt", Sort.Direction.ASC));
+        mongo.indexOps(JobPosting.class).createIndex(new Index().on("deliveriesReady", Sort.Direction.ASC).on("closesAt", Sort.Direction.ASC));
         mongo.indexOps(PushSubscription.class).createIndex(new Index().on("endpoint", Sort.Direction.ASC).unique());
         mongo.indexOps(PushSubscription.class).createIndex(new Index().on("roles", Sort.Direction.ASC));
         mongo.indexOps(PushDelivery.class).createIndex(new Index().on("postingId", Sort.Direction.ASC).on("subscriptionId", Sort.Direction.ASC).unique());
@@ -59,6 +60,18 @@ public final class MongoNotificationStore implements NotificationStore {
 
     @Override public boolean deletePosting(String id) {
         return mongo.remove(Query.query(Criteria.where("_id").is(id)), JobPosting.class).getDeletedCount() > 0;
+    }
+
+    /** false와 같은지 비교하므로 필드가 없는 기존 공고는 걸리지 않는다. */
+    @Override public List<JobPosting> findIncompletePostings(Instant now, int limit) {
+        Query query = Query.query(Criteria.where("deliveriesReady").is(false).and("closesAt").gt(now))
+            .with(Sort.by(Sort.Direction.ASC, "registeredAt").and(Sort.by(Sort.Direction.ASC, "_id"))).limit(limit);
+        return List.copyOf(mongo.find(query, JobPosting.class));
+    }
+
+    @Override public boolean markDeliveriesReady(String id) {
+        Query query = Query.query(Criteria.where("_id").is(id).and("deliveriesReady").is(false));
+        return mongo.updateFirst(query, new Update().set("deliveriesReady", true), JobPosting.class).getModifiedCount() > 0;
     }
 
     @Override public boolean insertSubscription(PushSubscription subscription) { return insert(subscription); }
