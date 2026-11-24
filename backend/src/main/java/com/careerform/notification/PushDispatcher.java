@@ -24,7 +24,7 @@ import org.slf4j.LoggerFactory;
 import com.careerform.monitoring.ExternalCallMetrics;
 
 /**
- * 한 주기: 예정 시각이 지난 대기 건과 리스가 만료된 발송 중 건을 찾아 조건부 갱신으로 선점한 뒤,
+ * 한 주기: 먼저 등록이 끊겨 미완료로 남은 마감 전 공고의 빠진 발송 문서를 채운다. 이어서 예정 시각이 지난 대기 건과 리스가 만료된 발송 중 건을 찾아 조건부 갱신으로 선점한 뒤,
  * 구독의 현재 받을 직무를 공고와 재검사하고, 동시성 한도 안에서 Web Push를 보내고 재시도 표에 따라 상태를 바꾼다.
  * 로그에는 발송 ID·공고 ID·응답 코드·소요 시간만 남긴다.
  */
@@ -68,6 +68,7 @@ public final class PushDispatcher implements AutoCloseable {
     public Cycle dispatch() {
         var started = System.nanoTime();
         var now = clock.instant();
+        recoverRegistrations(now);
         var counters = new Counters();
         var processed = new HashSet<String>();
         var postings = new ConcurrentHashMap<String, Optional<JobPosting>>();
@@ -104,6 +105,25 @@ public final class PushDispatcher implements AutoCloseable {
         log.info("PUSH_DISPATCH_CYCLE due={} claimed={} accepted={} retried={} abandoned={} skipped={} stale={} durationMs={}",
             cycle.due(), cycle.claimed(), cycle.accepted(), cycle.retried(), cycle.abandoned(), cycle.skipped(), cycle.stale(), cycle.duration().toMillis());
         return cycle;
+    }
+
+    /** 미완료 공고 보충. 실패는 로그만 남기고 그 주기의 발송을 막지 않으며, 완료로 바뀌지 않은 공고는 다음 주기에 다시 채운다. */
+    private void recoverRegistrations(Instant now) {
+        List<JobPosting> incomplete;
+        try {
+            incomplete = store.findIncompletePostings(now, settings.batchSize());
+        } catch (RuntimeException exception) {
+            log.warn("POSTING_REGISTRATION_RECOVERY_FAILED failure={}", exception.getClass().getSimpleName());
+            return;
+        }
+        for (JobPosting posting : incomplete) {
+            try {
+                int targets = PostingDeliveries.refill(store, posting);
+                log.info("POSTING_REGISTRATION_RECOVERED postingId={} targets={}", posting.id(), targets);
+            } catch (RuntimeException exception) {
+                log.warn("POSTING_REGISTRATION_RECOVERY_FAILED postingId={} failure={}", posting.id(), exception.getClass().getSimpleName());
+            }
+        }
     }
 
     private void refreshGauges() {
