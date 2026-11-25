@@ -59,6 +59,195 @@ class JevClientTest {
     private static final String FIELD = "contact.contact.addressLine1";
 
     @Test
+    void answerTracesBothGenericStagesWithoutApplyingTheChooseThreshold() throws Exception {
+        for (boolean classification : List.of(true, false)) {
+            String choice = classification ? "PERSONAL" : FIELD;
+            var recorder = recorder();
+            var client = tracedClient(response(SECRET, 0.6, Map.of(choice, 0.6, "ABSTAIN", 0.4), choice),
+                recorder, true);
+            var fields = new SupportedProfileFields();
+            var categories = new com.careerform.formanalysis.generic.SectionCategories(fields);
+            var model = new JevChoiceModel(client);
+            var parts = classification
+                ? new com.careerform.formanalysis.generic.ChoiceSectionClassifier(model, categories).promptParts()
+                : new com.careerform.formanalysis.generic.ChoiceFieldResolver(model, fields, categories,
+                    1, 5, 10, 8000).promptParts();
+            var questions = Map.of(SECRET, new JevClient.Choice(
+                parts.get("instructions").replace("{questionId}", SECRET),
+                Map.of(choice, parts.get("criterion." + choice), "ABSTAIN", parts.get("criterion.ABSTAIN"))));
+            Map<String, Object> state = classification
+                ? Map.of("sections", Map.of(SECRET, Map.of("title", "email", "labels", List.of("email", SECRET),
+                    "controlKinds", List.of("text"), "repeated", false)))
+                : Map.of("section", Map.of("label", "email", "category", "PERSONAL"),
+                    "fields", Map.of(SECRET, Map.of("label", "email", "placeholder", SECRET, "control", "text")));
+
+            assertThat(client.answer(state, questions)).containsEntry(SECRET,
+                new JevClient.Judgement(choice, 0.6, Map.of(choice, 0.6, "ABSTAIN", 0.4)));
+
+            ArgumentCaptor<Map<String, Object>> inputs = ArgumentCaptor.captor();
+            verify(recorder).begin(eq("jev"), eq(classification ? "section-classification" : "generic-fields"),
+                eq("jev-test"), inputs.capture());
+            ArgumentCaptor<Map<String, Object>> outputs = ArgumentCaptor.captor();
+            verify(recorder).complete(any(), outputs.capture(),
+                eq(Map.of("input_tokens", 7L, "output_tokens", 3L)), isNull(), eq(200));
+            assertThat(firstAnswer(outputs.getValue())).containsEntry("providerChoice", choice)
+                .containsEntry("confidence", 0.6).containsEntry("probabilities", Map.of(choice, 0.6, "ABSTAIN", 0.4))
+                .doesNotContainKeys("clientSelection", "minConfidence", "resolverOutcome");
+            assertThat(inputs.getValue().toString() + outputs.getValue()).doesNotContain(SECRET)
+                .doesNotContain("UNRECOGNIZED_INSTRUCTION", "UNRECOGNIZED_CRITERION")
+                .contains("email");
+        }
+    }
+
+    @Test
+    void answerTracesProviderFailuresWithoutExportingBodies() throws Exception {
+        for (int status : List.of(200, 400, 503)) {
+            var recorder = recorder();
+            var client = tracedClient("", recorder, true);
+            String body = status == 400
+                ? "{\"error_type\":\"max_tokens_exceeded\",\"detail\":\"" + SECRET + "\"}" : SECRET;
+            setHttp(client, new FixedResponseHttpClient(body, status));
+
+            assertThatThrownBy(() -> client.answer(Map.of("sections", Map.of()), questions()))
+                .isInstanceOf(status == 400 ? TokenLimitExceeded.class : ResolverException.class);
+
+            verify(recorder).complete(any(), eq(Map.of("outcome", "UNAVAILABLE")), eq(Map.of()),
+                eq(status == 400 ? "TOKEN_LIMIT" : status == 200 ? "INVALID_RESPONSE_DATA" : "HTTP_ERROR"),
+                eq(status));
+        }
+    }
+
+    @Test
+    void answerTracingFaultsCannotChangeProviderResults() throws Exception {
+        for (boolean failBegin : List.of(true, false)) {
+            var recorder = recorder();
+            if (failBegin) {
+                when(recorder.begin(any(), any(), any(), any())).thenThrow(new IllegalStateException(SECRET));
+            } else {
+                org.mockito.Mockito.doThrow(new IllegalStateException(SECRET)).when(recorder)
+                    .complete(any(), any(), any(), any(), any());
+            }
+            var client = tracedClient(choiceBody(0.6, 0.6, 0.4), recorder, true);
+            assertThat(client.answer(Map.of("fields", Map.of(), "section", Map.of()), questions()))
+                .containsEntry("decision", new JevClient.Judgement("candidate", 0.6,
+                    Map.of("candidate", 0.6, "ABSTAIN", 0.4)));
+        }
+    }
+
+    @Test
+    void answerTracingDisabledDoesNotBuildProjection() throws Exception {
+        var recorder = recorder();
+        var client = tracedClient(choiceBody(0.6, 0.6, 0.4), recorder, false);
+        var reads = new AtomicInteger();
+
+        assertThat(client.answer(new CountedState(reads), questions()).get("decision").confidence()).isEqualTo(0.6);
+
+        assertThat(reads.get()).isEqualTo(1);
+        verifyNoInteractions(recorder);
+    }
+
+    @Test
+    void answerTracesTimeoutWithoutTransportMessage() throws Exception {
+        var recorder = recorder();
+        var client = tracedClient("", recorder, true);
+        var http = mock(HttpClient.class);
+        when(http.sendAsync(any(HttpRequest.class),
+            org.mockito.ArgumentMatchers.<HttpResponse.BodyHandler<String>>any()))
+            .thenReturn(CompletableFuture.failedFuture(new java.net.http.HttpTimeoutException(SECRET)));
+        setHttp(client, http);
+
+        assertThatThrownBy(() -> client.answer(Map.of("sections", Map.of()), questions()))
+            .isInstanceOf(ResolverException.class);
+
+        verify(recorder).complete(any(), eq(Map.of("outcome", "UNAVAILABLE")), eq(Map.of()),
+            eq("TIMEOUT"), isNull());
+    }
+
+    @Test
+    void answerTracesNetworkFailureWithoutTransportMessage() throws Exception {
+        var recorder = recorder();
+        var client = tracedClient("", recorder, true);
+        var http = mock(HttpClient.class);
+        when(http.sendAsync(any(HttpRequest.class),
+            org.mockito.ArgumentMatchers.<HttpResponse.BodyHandler<String>>any()))
+            .thenReturn(CompletableFuture.failedFuture(new java.net.ConnectException(SECRET)));
+        setHttp(client, http);
+
+        assertThatThrownBy(() -> client.answer(Map.of("sections", Map.of()), questions()))
+            .isInstanceOf(ResolverException.class);
+
+        verify(recorder).complete(any(), eq(Map.of("outcome", "UNAVAILABLE")), eq(Map.of()),
+            eq("CONNECTION_NETWORK"), isNull());
+    }
+
+    @Test
+    void answerCompletesOneTraceAfterRateLimitRetryWithTheFinalStatus() throws Exception {
+        for (int status : List.of(200, 503)) {
+            var recorder = recorder();
+            var client = tracedClient("", recorder, true);
+            var http = new FixedResponseHttpClient(List.of(Map.entry(429, "{}"),
+                Map.entry(status, status == 200 ? choiceBody(0.6, 0.6, 0.4) : SECRET)));
+            var backoffs = new ArrayList<Duration>();
+            setHttp(client, http);
+            setField(client, "sleeper", (JevClient.Sleeper) backoffs::add);
+
+            if (status == 200) {
+                assertThat(client.answer(Map.of("sections", Map.of()), questions()).get("decision").confidence())
+                    .isEqualTo(0.6);
+            } else {
+                assertThatThrownBy(() -> client.answer(Map.of("sections", Map.of()), questions()))
+                    .isInstanceOf(ResolverException.class);
+            }
+
+            assertThat(http.calls()).isEqualTo(2);
+            assertThat(backoffs).containsExactly(Duration.ofMillis(500));
+            verify(recorder).begin(eq("jev"), eq("section-classification"), eq("jev-test"), any());
+            verify(recorder).complete(any(), any(), any(), eq(status == 200 ? null : "HTTP_ERROR"), eq(status));
+        }
+    }
+
+    @Test
+    void answerReachesTheRealLangSmithTransportWithCorrelatedSafeData() throws Exception {
+        var received = new CompletableFuture<tools.jackson.databind.JsonNode>();
+        var server = com.sun.net.httpserver.HttpServer.create(new java.net.InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/api/v1/runs", exchange -> {
+            try {
+                received.complete(JsonMapper.builder().build().readTree(exchange.getRequestBody().readAllBytes()));
+                byte[] body = "{}".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                exchange.sendResponseHeaders(200, body.length);
+                exchange.getResponseBody().write(body);
+            }
+            finally {
+                exchange.close();
+            }
+        });
+        server.start();
+        try (var recorder = new LangSmithTraceRecorder(true, "synthetic-trace-key",
+                 "http://127.0.0.1:" + server.getAddress().getPort(), "cf498-test", 1000, 4);
+             var context = org.slf4j.MDC.putCloseable("requestId", "6afac74c-268d-4d78-b52b-bfdd034bd2eb")) {
+            var client = tracedClient(response(SECRET, 0.6, Map.of(FIELD, 0.6, "ABSTAIN", 0.4)), recorder, true);
+            var prompts = com.careerform.formanalysis.generic.ChoiceFieldResolver.promptParts(new SupportedProfileFields());
+            var questions = Map.of(SECRET, new JevClient.Choice(
+                prompts.get("instructions").replace("{questionId}", SECRET),
+                Map.of(FIELD, prompts.get("criterion." + FIELD), "ABSTAIN", prompts.get("criterion.ABSTAIN"))));
+
+            client.answer(Map.of("section", Map.of("label", "email"),
+                "fields", Map.of(SECRET, Map.of("label", "email"))), questions);
+
+            var run = received.get(5, java.util.concurrent.TimeUnit.SECONDS);
+            assertThat(run.path("name").asString()).isEqualTo("jev.generic-fields");
+            assertThat(run.path("extra").path("metadata").path("request_id").asString())
+                .isEqualTo("6afac74c-268d-4d78-b52b-bfdd034bd2eb");
+            assertThat(run.path("outputs").path("answers").get(0).path("confidence").asDouble()).isEqualTo(0.6);
+            assertThat(run.path("outputs").path("usage_metadata").path("input_tokens").asLong()).isEqualTo(7L);
+            assertThat(run.toString()).doesNotContain(SECRET, "synthetic-trace-key", "clientSelection", "minConfidence");
+        }
+        finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
     void recordsRawProviderAnswerAndThresholdedClientSelection() throws Exception {
         for (double confidence : List.of(0.79, 0.9)) {
             var recorder = recorder();

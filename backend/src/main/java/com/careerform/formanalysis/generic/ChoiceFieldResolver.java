@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Conditional;
@@ -199,13 +200,23 @@ public final class ChoiceFieldResolver implements PromptSource {
         Map<String, Mapping> mappings = new ConcurrentHashMap<>();
         AtomicInteger modelCalls = new AtomicInteger();
         int workers = Math.min(sectionConcurrency, queue.size());
+        String requestId = MDC.get("requestId");
         try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
             List<Future<?>> running = new ArrayList<>();
             for (int worker = 0; worker < workers; worker++) {
                 running.add(executor.submit(() -> {
-                    SectionWork next;
-                    while ((next = queue.poll()) != null) {
-                        mappings.putAll(resolveSection(next, modelCalls));
+                    String previous = MDC.get("requestId");
+                    try {
+                        if (requestId == null) MDC.remove("requestId");
+                        else MDC.put("requestId", requestId);
+                        SectionWork next;
+                        while ((next = queue.poll()) != null) {
+                            mappings.putAll(resolveSection(next, modelCalls));
+                        }
+                    }
+                    finally {
+                        if (previous == null) MDC.remove("requestId");
+                        else MDC.put("requestId", previous);
                     }
                 }));
             }
@@ -333,6 +344,11 @@ public final class ChoiceFieldResolver implements PromptSource {
 
     @Override
     public Map<String, String> promptParts() {
+        return promptParts(fields);
+    }
+
+    /** 평가와 호출 추적이 실제 질문에 쓰는 고정 문구를 함께 읽는다. */
+    public static Map<String, String> promptParts(SupportedProfileFields fields) {
         Map<String, String> parts = new java.util.TreeMap<>();
         parts.put("instructions", instructions(QUESTION_ID_PLACEHOLDER));
         parts.put("confusionBoundaries", fields.promptGuidance());
