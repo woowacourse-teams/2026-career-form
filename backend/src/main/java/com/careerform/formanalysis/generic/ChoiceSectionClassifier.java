@@ -48,9 +48,14 @@ public final class ChoiceSectionClassifier implements SectionClassifier, PromptS
 
     @Override
     public Map<String, String> promptParts() {
+        return promptParts(categories);
+    }
+
+    /** 평가와 호출 추적이 실제 질문에 쓰는 고정 문구를 함께 읽는다. */
+    public static Map<String, String> promptParts(SectionCategories categories) {
         Map<String, String> parts = new java.util.TreeMap<>();
         parts.put("instructions", instructions(QUESTION_ID_PLACEHOLDER));
-        criteria().forEach((category, text) -> parts.put("criterion." + category, text));
+        categories.names().forEach(category -> parts.put("criterion." + category, criterion(category, categories)));
         return parts;
     }
 
@@ -100,12 +105,12 @@ public final class ChoiceSectionClassifier implements SectionClassifier, PromptS
     private Map<String, String> criteria() {
         Map<String, String> criteria = new LinkedHashMap<>();
         for (String category : categories.names()) {
-            criteria.put(category, criterion(category));
+            criteria.put(category, criterion(category, categories));
         }
         return criteria;
     }
 
-    private String criterion(String category) {
+    private static String criterion(String category, SectionCategories categories) {
         return switch (category) {
             case SectionCategories.MIXED ->
                 "The section clearly combines items from two or more applicant profile categories.";
@@ -114,13 +119,13 @@ public final class ChoiceSectionClassifier implements SectionClassifier, PromptS
             case SectionCategories.NONE ->
                 "Not an applicant profile category: references, guardians, self-introduction or essays, consent, "
                     + "application route, file uploads, overseas experience, awards, health information or "
-                    + "anything else. Health items: " + leaves(category);
+                    + "anything else. Health items: " + leaves(category, categories);
             default -> "The applicant's own " + category + " profile section with items such as: "
-                + leaves(category);
+                + leaves(category, categories);
         };
     }
 
-    private String leaves(String category) {
+    private static String leaves(String category, SectionCategories categories) {
         return categories.keysOf(category).stream()
             .map(key -> key.substring(key.indexOf('.') + 1))
             .collect(Collectors.joining(", "));

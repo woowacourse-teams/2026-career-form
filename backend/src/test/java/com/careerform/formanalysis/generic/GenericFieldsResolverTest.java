@@ -44,6 +44,38 @@ class GenericFieldsResolverTest {
     private final GenericFieldsJevHttp http = new GenericFieldsJevHttp();
 
     @Test
+    void propagatesOnlyRequestIdToSectionWorkersAndPreservesCallerContext() {
+        var contexts = new java.util.concurrent.ConcurrentLinkedQueue<Map<String, String>>();
+        http.respond(call -> {
+            var context = org.slf4j.MDC.getCopyOfContextMap();
+            contexts.add(context == null ? Map.of() : Map.copyOf(context));
+            return answerAll(call, SCHOOL, 0.9);
+        });
+        Map<String, String> previous = org.slf4j.MDC.getCopyOfContextMap();
+        try {
+            org.slf4j.MDC.clear();
+            org.slf4j.MDC.put("requestId", "6afac74c-268d-4d78-b52b-bfdd034bd2eb");
+            org.slf4j.MDC.put("unrelated", SYNTHETIC_VALUE);
+            resolver(2, 5, 10).resolve(request("example.test", List.of(
+                section("s1", "EDUCATION", List.of(field("c1", "학교명"))),
+                section("s2", "EDUCATION", List.of(field("c2", "학교명"))))));
+
+            assertThat(contexts).hasSize(2).allSatisfy(context -> assertThat(context)
+                .containsExactlyEntriesOf(Map.of("requestId", "6afac74c-268d-4d78-b52b-bfdd034bd2eb")));
+            assertThat(org.slf4j.MDC.get("unrelated")).isEqualTo(SYNTHETIC_VALUE);
+            org.slf4j.MDC.remove("requestId");
+            contexts.clear();
+            resolver(1, 5, 10).resolve(request("example.test", List.of(
+                section("s3", "EDUCATION", List.of(field("c3", "학교명"))))));
+            assertThat(contexts).singleElement().satisfies(context -> assertThat(context).isEmpty());
+        }
+        finally {
+            org.slf4j.MDC.clear();
+            if (previous != null) org.slf4j.MDC.setContextMap(previous);
+        }
+    }
+
+    @Test
     @DisplayName("확정 범주 섹션은 그 범주 키와 ABSTAIN만, MIXED·ABSTAIN·미확정 범주는 NONE을 뺀 전체 키로 묻는다")
     void narrowsCriteriaToSectionCategory() {
         var resolution = resolver(3, 5, 10).resolve(request("example.test", List.of(
