@@ -146,7 +146,10 @@ describe("language profile fields", () => {
     expect(
       languageTest?.fields.find((field) => field.id === "grade"),
     ).toMatchObject({
+      label: "등급·점수",
       inputType: "text",
+      choiceLabel: "등급",
+      optionsFor: expect.any(Function),
     });
     expect(
       languageSkill?.fields.find((field) => field.id === "language"),
@@ -185,11 +188,11 @@ describe("contact and disability profile fields", () => {
     });
     expect(disability?.fields).toEqual(
       expect.arrayContaining([
-        {
+        expect.objectContaining({
           id: "disabilityRegistrationNumber",
           label: "장애등록번호",
           inputType: "text",
-        },
+        }),
       ]),
     );
   });
@@ -341,4 +344,73 @@ it("stores the left-company choice as 퇴직", () => {
     ?.sections.find(({ id }) => id === "career")
     ?.fields.find(({ id }) => id === "employmentStatus");
   expect(field?.options).toEqual(["재직중", "퇴직"]);
+});
+
+describe("input locks from status fields", () => {
+  const lockedIds = (categoryId: string, values: Record<string, string>) =>
+    PROFILE_CATEGORIES.find((category) => category.id === categoryId)!
+      .sections.flatMap((section) => section.fields)
+      .filter((field) => field.disabledWhen?.(values) === true)
+      .map((field) => field.id);
+  const DISABILITY_DETAILS = [
+    "disabilityType",
+    "disabilityGrade",
+    "disabilityRegistrationNumber",
+    "disabilityRegistrationDate",
+  ];
+  const VETERAN_DETAILS = ["veteranType", "veteranRelation", "veteranNumber"];
+  const SERVICE_FIELDS = [
+    "militaryType",
+    "militaryBranch",
+    "militarySpecialty",
+    "militaryRank",
+    "serviceStartDate",
+    "serviceEndDate",
+    "dischargeType",
+  ];
+
+  it.each(["disability-status:not-eligible", "비대상"])(
+    "locks the disability details when the status is %s",
+    (disabilityStatus) => {
+      expect(lockedIds("disability", { disabilityStatus })).toEqual(
+        DISABILITY_DETAILS,
+      );
+    },
+  );
+
+  it.each(["disability-status:eligible", "대상", ""])(
+    "keeps the disability details open when the status is %j",
+    (disabilityStatus) => {
+      expect(lockedIds("disability", { disabilityStatus })).toEqual([]);
+    },
+  );
+
+  it.each(["veteran-status:not-eligible", "비대상"])(
+    "locks the veteran details when the status is %s",
+    (veteranStatus) => {
+      expect(lockedIds("veteran", { veteranStatus })).toEqual(VETERAN_DETAILS);
+    },
+  );
+
+  it.each(["veteran-status:eligible", "대상", ""])(
+    "keeps the veteran details open when the status is %j",
+    (veteranStatus) => {
+      expect(lockedIds("veteran", { veteranStatus })).toEqual([]);
+    },
+  );
+
+  it.each([
+    ["military-status:served", ["exemptionReason"]],
+    ["military-status:serving", ["exemptionReason"]],
+    ["military-status:not-served", [...SERVICE_FIELDS, "exemptionReason"]],
+    ["military-status:exempt", SERVICE_FIELDS],
+    ["military-status:not-applicable", SERVICE_FIELDS],
+    ["면제", SERVICE_FIELDS],
+    ["", []],
+  ])(
+    "locks the military fields for the status %j",
+    (militaryStatus, locked) => {
+      expect(lockedIds("military", { militaryStatus })).toEqual(locked);
+    },
+  );
 });

@@ -363,7 +363,7 @@ describe("useProfileEditor certificate issuer", () => {
     });
   });
 
-  it("keeps a user-entered issuer when a catalog certificate is selected", async () => {
+  it("replaces a user-entered issuer with the canonical catalog issuer on selection", async () => {
     const result = await editorWith({ issuer: "사용자 기관" });
 
     act(() =>
@@ -378,7 +378,7 @@ describe("useProfileEditor certificate issuer", () => {
 
     expect(result.current.profile.certifications[0].values).toEqual({
       name: "SQL 개발자",
-      issuer: "사용자 기관",
+      issuer: "한국데이터산업진흥원",
     });
   });
 
@@ -487,23 +487,14 @@ describe("useProfileEditor certificate issuer", () => {
     });
   });
 
-  it("does not count an imported issuer as filled by a selection", async () => {
+  it("replaces an imported issuer with the canonical issuer when another certificate is selected", async () => {
     const result = await editorWith({});
-    act(() =>
-      result.current.updateEntry(
-        "certifications",
-        "certificate-1",
-        "name",
-        "SQL 개발자",
-        sqld,
-      ),
-    );
     const imported = createEmptyProfile();
     imported.certifications = [
       {
         id: "certificate-1",
         sectionId: "certificate",
-        values: { name: "SQL 개발자", issuer: "한국데이터산업진흥원" },
+        values: { name: "SQL 개발자", issuer: "사용자 기관" },
         identity: sqld,
       },
     ];
@@ -512,6 +503,9 @@ describe("useProfileEditor certificate issuer", () => {
     });
     act(() =>
       result.current.updateEntry("certifications", "certificate-1", "name", ""),
+    );
+    expect(result.current.profile.certifications[0].values.issuer).toBe(
+      "사용자 기관",
     );
 
     act(() =>
@@ -525,8 +519,36 @@ describe("useProfileEditor certificate issuer", () => {
     );
 
     expect(result.current.profile.certifications[0].values.issuer).toBe(
-      "한국데이터산업진흥원",
+      "한국산업인력공단",
     );
+  });
+
+  it("keeps the issuer when the name becomes direct input", async () => {
+    const result = await editorWith({});
+    act(() =>
+      result.current.updateEntry(
+        "certifications",
+        "certificate-1",
+        "name",
+        "SQL 개발자",
+        sqld,
+      ),
+    );
+
+    act(() =>
+      result.current.updateEntry(
+        "certifications",
+        "certificate-1",
+        "name",
+        "SQL 개발자",
+        { status: "manual", originalText: "SQL 개발자" },
+      ),
+    );
+
+    expect(result.current.profile.certifications[0]).toMatchObject({
+      values: { issuer: "한국데이터산업진흥원" },
+      identity: { status: "manual" },
+    });
   });
 });
 

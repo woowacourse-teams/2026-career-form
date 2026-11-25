@@ -20,7 +20,9 @@ export interface ActionCandidateHandle extends CandidateHandleBase {
   kind: "action";
   isCurrentContext?: () => boolean;
   candidate: ActionCandidate;
-  element: HTMLButtonElement | HTMLInputElement | HTMLSelectElement;
+  /** `div`: the Hplace v1 step-2 add area (`div[tabindex="0"]`, CF-509). */
+  element:
+    HTMLButtonElement | HTMLInputElement | HTMLSelectElement | HTMLDivElement;
 }
 
 /** Position of a field inside a mixed-section repeat group (C5). */

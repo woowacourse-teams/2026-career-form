@@ -82,7 +82,11 @@ function validateValues(
   const combined = { ...existing, ...values };
   for (const [key, value] of Object.entries(values)) {
     const field = definitions.find((item) => item.id === key);
-    if (!field || (field.visibleWhen && !field.visibleWhen(combined)))
+    if (
+      !field ||
+      (field.visibleWhen && !field.visibleWhen(combined)) ||
+      field.disabledWhen?.(combined)
+    )
       throw new ImportSelectionError();
     if (
       field.inputType === "date" &&
@@ -96,7 +100,9 @@ function validateValues(
       throw new ImportSelectionError();
     if (field.inputType === "tel" && !/^0\d{9,10}$/.test(value))
       throw new ImportSelectionError();
-    const options = field.optionsFor?.(combined) ?? field.options;
+    // An empty list from optionsFor means the field offers no fixed choices.
+    const listed = field.optionsFor?.(combined);
+    const options = listed?.length ? listed : field.options;
     if (
       options &&
       !options.some(

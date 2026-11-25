@@ -17,6 +17,11 @@ import { executionPolicy } from "../workflow/execution-policy";
 import { isSplitEmailMember } from "../dom/split-email";
 import type { WriteFailureCode } from "../write/failure";
 import { resolveDocumentCompany } from "../adapters/company";
+import { v1SameExistingValue } from "../adapters/hplace/v1-basic-write";
+import {
+  v1HistoryCampusUnknown,
+  v1HistorySameExistingValue,
+} from "../adapters/hplace/v1-history-write";
 import {
   approveComponentGpaPairs,
   type ComponentGpaApproval,
@@ -62,6 +67,10 @@ import {
 } from "../profile/catalog-match";
 import { catalogEvidenceForElement } from "../profile/catalog-evidence";
 import { highSchoolSearchRegion } from "../profile/search-region";
+import {
+  CERTIFICATE_ISSUER_KEY,
+  sameIssuer,
+} from "../../profile/certificate-issuer";
 import { resolveChoiceOption } from "../profile/choice-option";
 import { matchStandardOption } from "../profile/standard-option-match";
 import { schoolRegionSearchValues } from "../../profile/standard-values";
@@ -421,7 +430,7 @@ function currentValue(handle: FieldCandidateHandle): string {
   return select?.value ?? "";
 }
 
-const NATIVE_OPTION_ABSENT_REASON =
+export const NATIVE_OPTION_ABSENT_REASON =
   "지원서 선택지에 프로필 값과 같은 항목이 없어 자동 기입하지 않았습니다.";
 const NATIVE_UNOFFERED_ROW_REASON =
   "지원서 선택지에 없는 항목이라 행을 추가하지 않았습니다.";
@@ -1463,6 +1472,14 @@ function itemForResolvedAnalysis(
             : [resolvedProfileValue.value]
         ).some((value) => normalized(pageValue) === normalized(value))
       : pageValue.trim() !== resolvedProfileValue.value.trim() &&
+        // A site's own spelling of the same issuer is not a different value.
+        !(
+          generic &&
+          analysis.mappingStatus === "LLM_SUGGESTED" &&
+          binding.type === "DIRECT" &&
+          binding.profileFieldKey === CERTIFICATE_ISSUER_KEY &&
+          sameIssuer(pageValue, resolvedProfileValue.value)
+        ) &&
         // Sites often redisplay a written date (202003 → 2020-03); the same
         // year, month and day is the same value, not a conflicting one.
         !(
@@ -1477,6 +1494,18 @@ function itemForResolvedAnalysis(
         ) &&
         !sameNativeTarget(
           lookup.handle,
+          pageValue,
+          resolvedProfileValue.value,
+        ) &&
+        !v1SameExistingValue(
+          lookup.handle,
+          { analysis },
+          pageValue,
+          resolvedProfileValue.value,
+        ) &&
+        !v1HistorySameExistingValue(
+          lookup.handle,
+          { analysis },
           pageValue,
           resolvedProfileValue.value,
         ));
@@ -1794,6 +1823,15 @@ export function buildReviewPlan({
       ? { ...item, hiddenFromReview: true }
       : item;
   });
+  // hplace v1 본교/분교 of a school the catalog cannot place: the page keeps
+  // its own choice and the field is not part of the run.
+  const offered = items.filter((item) => {
+    const lookup = registry.lookupField(item.candidateId);
+    return !(
+      (lookup.status === "ready" || lookup.status === "blocked") &&
+      v1HistoryCampusUnknown(lookup.handle, item.profileValue)
+    );
+  });
   const unoffered =
     analysis.mode === "ADAPTER"
       ? nativeUnofferedItems(analysis, profile, registry)
@@ -1803,10 +1841,10 @@ export function buildReviewPlan({
     items: [
       ...(components && analysis.mode === "ADAPTER"
         ? approveComponentGpaPairs(
-            rejectDuplicateRepeatedBindings(items),
+            rejectDuplicateRepeatedBindings(offered),
             registry,
           )
-        : rejectDuplicateRepeatedBindings(items)),
+        : rejectDuplicateRepeatedBindings(offered)),
       ...unoffered,
     ],
   };

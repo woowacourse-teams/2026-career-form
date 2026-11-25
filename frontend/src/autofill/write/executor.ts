@@ -10,6 +10,34 @@ import {
   writeDetail,
 } from "../adapters/hplace/detail-write";
 import { ownedDetailControl } from "../adapters/hplace/detail";
+import { ownedV1Control } from "../adapters/hplace/v1-basic-controls";
+import {
+  v1Retained,
+  writeV1,
+  type V1WriteResult,
+} from "../adapters/hplace/v1-basic-write";
+import { v1AddressBatch } from "../adapters/hplace/v1-address";
+import {
+  ownedV1HistoryControl,
+  v1HistoryValue,
+} from "../adapters/hplace/v1-history-controls";
+import {
+  V1_HISTORY_GPA_REASON,
+  V1_HISTORY_GPA_ROLLBACK_REASON,
+  v1HistoryFailureReason,
+  v1HistoryGpaRun,
+  v1HistoryRetained,
+  writeV1History,
+} from "../adapters/hplace/v1-history-write";
+import { ownedV1ExtraControl } from "../adapters/hplace/v1-extra-controls";
+import {
+  isV1ExtraHandle,
+  skipV1Extra,
+  v1ExtraFailureReason,
+  v1ExtraRetained,
+  v1ExtraRetainedIssue,
+  writeV1Extra,
+} from "../adapters/hplace/v1-extra-write";
 import type { AddressIdentity } from "../address/match";
 import { resolveDocumentCompany } from "../adapters/company";
 import { runtimeRules } from "../policy/runtime-rules";
@@ -23,7 +51,10 @@ import type { InteractionDecisionProvider } from "../api/interaction-types";
 import type { FieldCandidateHandle } from "../dom/types";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import type { SearchFollowUpControl } from "../interaction/search-follow-up";
-import type { ReviewPlanItem } from "../review/review-plan";
+import {
+  NATIVE_OPTION_ABSENT_REASON,
+  type ReviewPlanItem,
+} from "../review/review-plan";
 import { componentGpaSafe } from "../policy/components/gpa";
 import { matchesResultValue } from "../workflow/result-value-match";
 import {
@@ -54,6 +85,14 @@ function legacyValueRetained(
   initialValue: string | undefined,
   address?: AddressIdentity,
 ): boolean {
+  if (ownedV1Control(handle))
+    return item.profileValue === initialValue && v1Retained(handle, item);
+  if (ownedV1HistoryControl(handle))
+    return (
+      item.profileValue === initialValue && v1HistoryRetained(handle, item)
+    );
+  if (ownedV1ExtraControl(handle))
+    return item.profileValue === initialValue && v1ExtraRetained(handle, item);
   const basic = ownedBasicControl(handle);
   const target = basic
     ? basicTarget(
@@ -77,6 +116,26 @@ function legacyValueRetained(
           handle,
         ))
   );
+}
+
+/** A v1 step-1 write result in the executor's terms (CF-505). */
+function v1Result(
+  candidateId: string,
+  result: V1WriteResult,
+  reason: string,
+): ApprovedWriteResult {
+  if (result === "written") return written(candidateId);
+  const failure = skipped(
+    candidateId,
+    result === "option-unmatched" ? "unsupported" : "needs-verification",
+    result === "option-unmatched"
+      ? "UNSUPPORTED_CONTROL"
+      : "REVIEW_UNAVAILABLE",
+    result === "option-unmatched" ? NATIVE_OPTION_ABSENT_REASON : reason,
+  );
+  return result === "option-unmatched" && failure.status === "skipped"
+    ? { ...failure, failureCode: "OPTION_UNMATCHED" }
+    : failure;
 }
 
 /** Verify retained state without dispatching events or invoking a writer. */
@@ -281,13 +340,61 @@ export async function executeApprovedWritesAfterPageSettles({
         assertCurrent?.() !== false &&
         sameRunUrl(url, document?.URL) &&
         resolveDocumentCompany(document!) === "hplace";
+      // v1 현주소: one dialog run writes the batch's three address items.
+      const v1Address = v1AddressBatch(
+        items,
+        registry,
+        approvedCandidateIds,
+        current,
+        beforeMutation,
+      );
+      // v1 step 2: a score and its scale are written only together.
+      const gpa = v1HistoryGpaRun(items, registry, approvedCandidateIds);
       for (const item of items) {
         if (beforeWrite) await beforeWrite(item);
         const lookup = registry.lookupField(item.candidateId);
-        const success =
+        const eligible =
           approvedCandidateIds.has(item.candidateId) &&
           !seen.has(item.candidateId) &&
-          lookup.status === "ready" &&
+          lookup.status === "ready";
+        const address = eligible
+          ? await v1Address(item, lookup.handle)
+          : undefined;
+        // v1 step 3 (CF-510): 자격증 text/date and the language dropdown.
+        const extra =
+          !address &&
+          eligible &&
+          !ownedBasicControl(lookup.handle) &&
+          !!ownedV1ExtraControl(lookup.handle);
+        const history =
+          !address &&
+          !extra &&
+          eligible &&
+          !ownedBasicControl(lookup.handle) &&
+          !!ownedV1HistoryControl(lookup.handle);
+        const gpaHeld = history && gpa.held(item, lookup.handle);
+        const typed = history && v1HistoryValue(lookup.handle) === "";
+        const v1 = address
+          ? address.result
+          : extra
+            ? await writeV1Extra(lookup.handle, item, current, beforeMutation)
+            : history
+              ? gpaHeld
+                ? ("failed" as const)
+                : await writeV1History(
+                    lookup.handle,
+                    item,
+                    current,
+                    beforeMutation,
+                  )
+              : eligible &&
+                  !ownedBasicControl(lookup.handle) &&
+                  ownedV1Control(lookup.handle)
+                ? await writeV1(lookup.handle, item, current, beforeMutation)
+                : undefined;
+        const success =
+          v1 === undefined &&
+          eligible &&
           (ownedBasicControl(lookup.handle)
             ? await writeBasic(lookup.handle, item, current, beforeMutation)
             : await writeDetail(
@@ -298,15 +405,55 @@ export async function executeApprovedWritesAfterPageSettles({
                 hplaceAddress,
               ));
         seen.add(item.candidateId);
-        const result = success
-          ? written(item.candidateId)
-          : skipped(
+        const result = v1
+          ? v1Result(
               item.candidateId,
+              v1,
+              address?.reason ??
+                (extra && "handle" in lookup
+                  ? v1ExtraFailureReason(
+                      lookup.handle,
+                      item,
+                      "검증된 지원서 필드만 입력할 수 있습니다.",
+                    )
+                  : history && "handle" in lookup
+                    ? gpaHeld
+                      ? V1_HISTORY_GPA_REASON
+                      : v1HistoryFailureReason(
+                          lookup.handle,
+                          item,
+                          "검증된 지원서 필드만 입력할 수 있습니다.",
+                        )
+                    : "검증된 상세 지원서 필드만 입력할 수 있습니다."),
+            )
+          : success
+            ? written(item.candidateId)
+            : skipped(
+                item.candidateId,
+                "needs-verification",
+                "REVIEW_UNAVAILABLE",
+                "검증된 상세 지원서 필드만 입력할 수 있습니다.",
+              );
+        results.push(result);
+        // A scale that failed after its typed score: clear the score again.
+        const rollback =
+          history && v1 && "handle" in lookup
+            ? await gpa.after(item, lookup.handle, v1, typed)
+            : undefined;
+        if (rollback) {
+          const index = items.findIndex(
+            (i) => i.candidateId === rollback.candidateId,
+          );
+          if (index >= 0 && index < results.length)
+            results[index] = skipped(
+              rollback.candidateId,
               "needs-verification",
               "REVIEW_UNAVAILABLE",
-              "검증된 상세 지원서 필드만 입력할 수 있습니다.",
+              rollback.cleared
+                ? V1_HISTORY_GPA_REASON
+                : V1_HISTORY_GPA_ROLLBACK_REASON,
             );
-        results.push(result);
+        }
       }
       const profileRetained = beforeMutation ? await beforeMutation() : true;
       return results.map((result, index) => {
@@ -321,6 +468,27 @@ export async function executeApprovedWritesAfterPageSettles({
             item,
             initialValues[index],
             hplaceAddress,
+          );
+        // v1 step 3 (CF-510): a written value not confirmed names its key and
+        // why, value-free, so a live run shows which field it was.
+        if (
+          result.status === "written" &&
+          !retained &&
+          "handle" in lookup &&
+          isV1ExtraHandle(lookup.handle)
+        )
+          skipV1Extra(
+            lookup.handle.candidate.domName ?? item.candidateId,
+            "control-shape",
+            `retained-${
+              lookup.status !== "ready"
+                ? "stale"
+                : !profileRetained
+                  ? "profile-changed"
+                  : !current()
+                    ? "not-current"
+                    : (v1ExtraRetainedIssue(lookup.handle, item) ?? "unknown")
+            }`,
           );
         const finalResult =
           result.status === "written" && !retained
@@ -453,6 +621,20 @@ export async function executeApprovedWritesAfterPageSettles({
             };
         }
         const lookup = registry.lookupField(item.candidateId);
+        if (
+          lookup.status === "ready" &&
+          lookup.handle.owner === "legacy" &&
+          !ownedBasicControl(lookup.handle) &&
+          ownedV1Control(lookup.handle)
+        )
+          return {
+            result: v1Result(
+              item.candidateId,
+              await writeV1(lookup.handle, item, runCurrent, beforeMutation),
+              "검증된 기존 필드만 입력할 수 있습니다.",
+            ),
+            effect: "continue",
+          };
         if (lookup.status === "ready" && lookup.handle.owner === "legacy") {
           const success = ownedBasicControl(lookup.handle)
             ? await writeBasic(lookup.handle, item, runCurrent, beforeMutation)

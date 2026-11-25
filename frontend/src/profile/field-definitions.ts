@@ -1,4 +1,4 @@
-import type { ProfileCategoryId } from "./model";
+import type { ProfileCategoryId, ProfileIdentity } from "./model";
 import {
   ATTENDANCE_TYPE_OPTIONS,
   DISABILITY_STATUS_OPTIONS,
@@ -9,6 +9,8 @@ import {
   MILITARY_STATUS_OPTIONS,
   SCHOOL_REGION_OPTIONS,
   VETERAN_STATUS_OPTIONS,
+  standardValueAliases,
+  languageGradeOptions,
   type StandardValueOption,
 } from "./standard-values";
 
@@ -21,10 +23,15 @@ export interface ProfileFieldDefinition {
   placeholder?: string;
   inputType: ProfileInputType;
   options?: readonly (string | StandardValueOption)[];
+  /** Label used when the free text field is offered as a list of choices. */
+  choiceLabel?: string;
   optionsFor?: (
     values: Record<string, string>,
+    identity?: ProfileIdentity,
   ) => readonly StandardValueOption[];
   visibleWhen?: (values: Record<string, string>) => boolean;
+  /** The field stays visible and keeps its value, but cannot be edited. */
+  disabledWhen?: (values: Record<string, string>) => boolean;
 }
 
 export interface ProfileSectionDefinition {
@@ -52,6 +59,24 @@ const date = (id: string, label: string): ProfileFieldDefinition => ({
   label,
   inputType: "date",
 });
+const LANGUAGE_TEST_CATALOG_PREFIX = "languageTest:";
+
+/** Grades of the exam picked from the catalog; none for manual or edited names. */
+function languageGradeChoices(
+  values: Record<string, string>,
+  identity?: ProfileIdentity,
+): readonly StandardValueOption[] {
+  if (
+    identity?.status !== "selected" ||
+    !identity.catalogId.startsWith(LANGUAGE_TEST_CATALOG_PREFIX) ||
+    identity.displayName !== values.testName
+  )
+    return [];
+  return languageGradeOptions(
+    identity.catalogId.slice(LANGUAGE_TEST_CATALOG_PREFIX.length),
+  );
+}
+
 const select = (
   id: string,
   label: string,
@@ -62,6 +87,49 @@ const select = (
   inputType: "select",
   options,
 });
+
+const normalizedChoice = (value: string) =>
+  value.normalize("NFKC").trim().toLowerCase();
+
+/** True when the stored value is one of these choices, by ID or legacy label. */
+function isChoiceOf(stored: string | undefined, ids: readonly string[]) {
+  const value = normalizedChoice(stored ?? "");
+  return (
+    value !== "" &&
+    ids.some(
+      (id) =>
+        value === id ||
+        standardValueAliases(id).some(
+          (alias) => normalizedChoice(alias) === value,
+        ),
+    )
+  );
+}
+
+const lockedBy =
+  (statusFieldId: string, ids: readonly string[]) =>
+  (values: Record<string, string>) =>
+    isChoiceOf(values[statusFieldId], ids);
+
+const withLock = (
+  disabledWhen: (values: Record<string, string>) => boolean,
+  field: ProfileFieldDefinition,
+): ProfileFieldDefinition => ({ ...field, disabledWhen });
+
+const noDisability = lockedBy("disabilityStatus", [
+  "disability-status:not-eligible",
+]);
+const noVeteran = lockedBy("veteranStatus", ["veteran-status:not-eligible"]);
+const noMilitaryService = lockedBy("militaryStatus", [
+  "military-status:not-served",
+  "military-status:exempt",
+  "military-status:not-applicable",
+]);
+const noExemptionReason = lockedBy("militaryStatus", [
+  "military-status:served",
+  "military-status:serving",
+  "military-status:not-served",
+]);
 
 /** 성별은 지원서 선택지와 맞출 수 있도록 정해진 표기 중에서만 고른다. */
 const GENDER_OPTIONS = ["남성", "여성", "논바이너리"];
@@ -318,7 +386,11 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
           text("testName", "시험명"),
           text("registrationNo", "등록번호"),
           date("acquisitionDate", "취득일"),
-          text("grade", "등급·점수"),
+          {
+            ...text("grade", "등급·점수"),
+            choiceLabel: "등급",
+            optionsFor: languageGradeChoices,
+          },
           text("evidenceDocumentPath", "증빙 서류 위치"),
         ],
       },
@@ -454,20 +526,32 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
         label: "병역",
         fields: [
           select("militaryStatus", "병역 상태", MILITARY_STATUS_OPTIONS),
-          select("militaryType", "병역구분", [
-            "현역병",
-            "상근예비역",
-            "공익근무요원",
-            "전문연구요원",
-            "산업기능요원",
-          ]),
-          select("militaryBranch", "군별", MILITARY_BRANCH_OPTIONS),
-          text("militarySpecialty", "병과"),
-          select("militaryRank", "계급", MILITARY_RANK_OPTIONS),
-          date("serviceStartDate", "복무 시작일"),
-          date("serviceEndDate", "복무 종료일"),
-          text("dischargeType", "전역구분"),
-          text("exemptionReason", "면제·비대상 사유"),
+          withLock(
+            noMilitaryService,
+            select("militaryType", "병역구분", [
+              "현역병",
+              "상근예비역",
+              "공익근무요원",
+              "전문연구요원",
+              "산업기능요원",
+            ]),
+          ),
+          withLock(
+            noMilitaryService,
+            select("militaryBranch", "군별", MILITARY_BRANCH_OPTIONS),
+          ),
+          withLock(noMilitaryService, text("militarySpecialty", "병과")),
+          withLock(
+            noMilitaryService,
+            select("militaryRank", "계급", MILITARY_RANK_OPTIONS),
+          ),
+          withLock(noMilitaryService, date("serviceStartDate", "복무 시작일")),
+          withLock(noMilitaryService, date("serviceEndDate", "복무 종료일")),
+          withLock(noMilitaryService, text("dischargeType", "전역구분")),
+          withLock(
+            noExemptionReason,
+            text("exemptionReason", "면제·비대상 사유"),
+          ),
         ],
       },
     ],
@@ -483,9 +567,16 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
         label: "보훈",
         fields: [
           select("veteranStatus", "보훈 대상 여부", VETERAN_STATUS_OPTIONS),
-          text("veteranType", "보훈구분"),
-          select("veteranRelation", "보훈 대상자와의 관계", VETERAN_RELATION_OPTIONS),
-          text("veteranNumber", "보훈번호"),
+          withLock(noVeteran, text("veteranType", "보훈구분")),
+          withLock(
+            noVeteran,
+            select(
+              "veteranRelation",
+              "보훈 대상자와의 관계",
+              VETERAN_RELATION_OPTIONS,
+            ),
+          ),
+          withLock(noVeteran, text("veteranNumber", "보훈번호")),
         ],
       },
     ],
@@ -501,10 +592,19 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
         label: "장애",
         fields: [
           select("disabilityStatus", "장애 여부", DISABILITY_STATUS_OPTIONS),
-          text("disabilityType", "장애 유형"),
-          select("disabilityGrade", "장애 정도", DISABILITY_GRADE_OPTIONS),
-          text("disabilityRegistrationNumber", "장애등록번호"),
-          date("disabilityRegistrationDate", "장애 등록일"),
+          withLock(noDisability, text("disabilityType", "장애 유형")),
+          withLock(
+            noDisability,
+            select("disabilityGrade", "장애 정도", DISABILITY_GRADE_OPTIONS),
+          ),
+          withLock(
+            noDisability,
+            text("disabilityRegistrationNumber", "장애등록번호"),
+          ),
+          withLock(
+            noDisability,
+            date("disabilityRegistrationDate", "장애 등록일"),
+          ),
         ],
       },
     ],

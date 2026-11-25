@@ -210,6 +210,17 @@ public final class JevClient {
             questions.values().stream().anyMatch(q -> q.criteria().size() > 255 || !q.criteria().containsKey(ABSTAIN)))
             throw unavailable();
         long startedAt = System.nanoTime();
+        JevAnswerTraceProjection projection = null;
+        LangSmithTraceRecorder.Trace trace = null;
+        if (tracingEnabled && traces != null) {
+            try {
+                projection = new JevAnswerTraceProjection(state, questions);
+                trace = traces.begin("jev", projection.stage(), traceModel(), projection.inputs());
+            } catch (RuntimeException exception) {
+                log.warn("JEV_TRACE_DROPPED reason=input_projection");
+            }
+        }
+        Integer[] httpStatus = {null};
         var called = false;
         String observedModel = null;
         Sent sent = null;
@@ -223,7 +234,7 @@ public final class JevClient {
                 .POST(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8)).build();
             if (localDiagnostics != null) localDiagnostics.start("jev", state.getClass().getSimpleName());
             called = true;
-            sent = sendWithRateLimitRetries(request);
+            sent = sendWithRateLimitRetries(request, status -> httpStatus[0] = status);
             HttpResponse<String> response = sent.response();
             if (response.body().length() > 2_000_000) throw unavailable();
             output = mapper.readValue(response.body(), Response.class);
@@ -250,19 +261,23 @@ public final class JevClient {
             }
             recordMetrics(startedAt, null, called, observedModel);
             finishAttempt("answer", sent, output, true);
+            completeAnswerTrace(trace, projection, output, judgements, httpStatus[0], null);
             return Map.copyOf(judgements);
         } catch (RuntimeException exception) {
             finishAttempt("answer", sent, output, false);
             recordMetrics(startedAt, exception, called, observedModel);
+            completeAnswerTrace(trace, projection, output, Map.of(), httpStatus[0], exception);
             if (exception instanceof TokenLimitExceeded tokenLimit) throw tokenLimit;
             throw unavailable();
         }
     }
 
-    private Sent sendWithRateLimitRetries(HttpRequest request) {
+    private Sent sendWithRateLimitRetries(HttpRequest request, java.util.function.Consumer<Integer> observeStatus) {
         for (int attempt = 0; ; attempt++) {
+            observeStatus.accept(null);
             Sent sent = send(request, "answer");
             HttpResponse<String> response = sent.response();
+            observeStatus.accept(response.statusCode());
             if (response.statusCode() == 200) return sent;
             String errorType = errorType(response.body());
             log.warn("JEV_UNAVAILABLE status={} errorType={} attempt={}", response.statusCode(), errorType, attempt + 1);
@@ -338,6 +353,36 @@ public final class JevClient {
     /** 요청에 쓰는 모델 이름. */
     public String model() {
         return model;
+    }
+
+    private void completeAnswerTrace(LangSmithTraceRecorder.Trace trace, JevAnswerTraceProjection projection,
+                                     Response output, Map<String, Judgement> judgements, Integer httpStatus,
+                                     RuntimeException failure) {
+        if (trace == null) return;
+        try {
+            Map<String, Number> usage = new LinkedHashMap<>();
+            if (output != null && output.usage() != null) {
+                if (output.usage().inputTokens() != null && output.usage().inputTokens() >= 0)
+                    usage.put("input_tokens", output.usage().inputTokens());
+                if (output.usage().outputTokens() != null && output.usage().outputTokens() >= 0)
+                    usage.put("output_tokens", output.usage().outputTokens());
+            }
+            if (failure != null) {
+                String diagnostic = failure instanceof TokenLimitExceeded ? "TOKEN_LIMIT"
+                    : ExternalCallMetrics.isTimeout(failure) ? "TIMEOUT"
+                    : httpStatus == null ? "CONNECTION_NETWORK"
+                    : httpStatus != 200 ? "HTTP_ERROR" : "INVALID_RESPONSE_DATA";
+                traces.complete(trace, Map.of("outcome", "UNAVAILABLE"), usage, diagnostic, httpStatus);
+            } else {
+                var answers = new java.util.ArrayList<Map<String, Object>>();
+                judgements.forEach((id, judgement) -> answers.add(projection.answer(id, judgement)));
+                traces.complete(trace, Map.of("answers", java.util.List.copyOf(answers),
+                    "model", model.equals(output.model()) ? traceModel() : "UNRECOGNIZED_MODEL"),
+                    usage, null, httpStatus);
+            }
+        } catch (RuntimeException exception) {
+            log.warn("JEV_TRACE_DROPPED reason=output_projection");
+        }
     }
 
     private void completeTrace(LangSmithTraceRecorder.Trace trace, JevTraceProjection projection,

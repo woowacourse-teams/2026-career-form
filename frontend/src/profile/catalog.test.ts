@@ -170,3 +170,15 @@ it.each([
   );
   expect(found).toHaveLength(1);
 });
+
+it("derives the canonical issuer name for an entry written with a legal marker", () => {
+  const entry = CATALOG.find(
+    (candidate) =>
+      candidate.kind === "certificate" &&
+      candidate.detail.startsWith("(재)한국데이터산업진흥원"),
+  );
+  expect(entry).toBeDefined();
+  expect(
+    catalogCertificateIssuer(selected(entry!.id, entry!.name), entry!.name),
+  ).toBe("한국데이터산업진흥원");
+});

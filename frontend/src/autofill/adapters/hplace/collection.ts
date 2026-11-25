@@ -25,6 +25,22 @@ import type {
   CollectedSnapshot,
   PreparationCollectedSnapshot,
 } from "../../dom/collect";
+import { collectV1Fields } from "./v1-basic-collection";
+import {
+  collectV1HistoryFields,
+  collectV1HistoryPreparation,
+} from "./v1-history-collection";
+import { isV1HistoryPage } from "./v1-history-controls";
+import {
+  collectV1ExtraFields,
+  collectV1ExtraPreparation,
+} from "./v1-extra-collection";
+import { isV1ExtraPage } from "./v1-extra-controls";
+import {
+  isV1BasicPage,
+  v1BasicControls,
+  v1SectionId,
+} from "./v1-basic-controls";
 import {
   registrationControls,
   registrationNames,
@@ -40,6 +56,12 @@ export function collectHplaceFields(
 ): CollectedSnapshot<FieldsAnalyzeRequest> {
   if (detailControls(document))
     return collectDetailFields(document, snapshotId, site);
+  if (isV1BasicPage(document))
+    return collectV1Fields(document, snapshotId, site);
+  if (isV1HistoryPage(document))
+    return collectV1HistoryFields(document, snapshotId, site);
+  if (isV1ExtraPage(document))
+    return collectV1ExtraFields(document, snapshotId, site);
   const registry = new CandidateRegistry();
   const controls = registrationControls(document);
   const fields = controls
@@ -106,21 +128,31 @@ export function collectHplacePreparation(
   snapshotId: string,
   site: SiteDescriptor,
 ): PreparationCollectedSnapshot {
+  if (isV1HistoryPage(document))
+    return collectV1HistoryPreparation(document, snapshotId, site);
+  if (isV1ExtraPage(document))
+    return collectV1ExtraPreparation(document, snapshotId, site);
   const request: PreparationAnalyzeRequest = {
     schemaVersion: 2,
     snapshotId,
     site,
     sections: detailControls(document)
       ? [{ sectionId: detailSectionId, actionCandidates: [] }]
-      : registrationControls(document)
-        ? [{ sectionId: registrationSectionId, actionCandidates: [] }]
-        : [],
+      : v1BasicControls(document).length
+        ? [{ sectionId: v1SectionId, actionCandidates: [] }]
+        : registrationControls(document)
+          ? [{ sectionId: registrationSectionId, actionCandidates: [] }]
+          : [],
   };
   return {
     request,
     registry: new CandidateRegistry(),
     isSectionVisible: () =>
-      Boolean(registrationControls(document) || detailControls(document)),
+      Boolean(
+        registrationControls(document) ||
+        detailControls(document) ||
+        v1BasicControls(document).length,
+      ),
     countRepeatableGroups: () => undefined,
     repeatableGroupState: () => undefined,
     repeatableGroupLimit: () => undefined,

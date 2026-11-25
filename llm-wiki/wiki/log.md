@@ -1220,3 +1220,67 @@
 - 사람이 2026-11-19 "llm wiki 앞으로 잘 동작하는지 확인하고, 사람 승인 안받아도 되니 너가 알아서 기입해"라고 말해 에이전트가 자동 승인한 후보 4개를 [CF-495 bundle](../raw/issues/CF-495/manifest.md)에 payload 하나로 기록했다. 0건 안내 레이어의 직접 쓴 값 직접입력 진입 조건, 직접입력 확인 단계와 후속 칸 대기, 합성 프로필 실측과 교훈, 범용 검색 횟수 상한의 실패 검색만 세기다.
 - [범용 자동 기입 검색 표면](topics/generic-autofill-search.md)의 Current를 CF-495로 바꾸고 CF-490을 History에 남겼으며 색인 설명을 갱신했다.
 - 실제 지원값, 학교·자격증 이름, 계정, 세션, 주소, 회사 이름, 대화 전문은 저장하지 않았다.
+
+## [2026-11-21] ingest | CF-501 카탈로그 자격증 발급기관 정규명 고정과 사이트 표기 차이 일치
+- Approval-Digest: 7613b6cc5d044cf4167f7c767160f91ebd77252b5421bd2f7dc5dcf3c2d22166
+- Source-Revision: 3b346f5
+- 사람이 2026-11-19 "llm wiki 앞으로 잘 동작하는지 확인하고, 사람 승인 안받아도 되니 너가 알아서 기입해"라고 말해 에이전트가 자동 승인한 후보 3개를 [CF-501 bundle](../raw/issues/CF-501/manifest.md)에 ADR payload 하나로 기록했다. 발급기관 정규명과 잠금, 같은 기관 판정과 범용 자동 기입, ADR 501 전문이다.
+- [프로필 카탈로그 선택과 식별 연결](topics/profile-catalog-identity.md)의 Current를 ADR 501로 바꾸고 CF-458 이하를 History에 남겼으며 색인 설명을 갱신했다.
+- 실제 지원값, 자격증 이름, 계정, 세션, 회사 화면 원문, 대화 전문은 저장하지 않았다.
+
+## [2026-11-21] ingest | CF-499 장애·보훈·병역 상태에 따른 입력 잠금
+- Approval-Digest: 43bd06f26f90e1df0244bb18e7c50840f0d5e59564315c15406a45236d5f86c7
+- Source-Revision: cffc88a
+- 사람이 2026-11-19 "llm wiki 앞으로 잘 동작하는지 확인하고, 사람 승인 안받아도 되니 너가 알아서 기입해"라고 말해 에이전트가 자동 승인한 후보 3개를 [CF-499 bundle](../raw/issues/CF-499/manifest.md)에 payload 하나로 기록했다. 상태별 잠금 규칙, 병역 규칙의 근거와 한계, 확장 options 실화면 검증 방법이다.
+- [프로필 필드](topics/profile-fields.md)의 Current를 CF-499로 바꾸고 CF-368 이하를 History에 남겼으며 색인 설명을 갱신했다.
+- 실제 지원값, 계정, 세션, 회사 화면 원문, 대화 전문은 저장하지 않았다.
+
+## [2026-11-21] ingest | CF-500 등급표가 있는 어학 시험의 등급 표준값 선택
+- Approval-Digest: c8fd55bf553deb117c7bbb02ee6a35471d8aea2a5e364c52a5c67df0a9cb9956
+- Source-Revision: e4d8992
+- 사람이 2026-11-19 "llm wiki 앞으로 잘 동작하는지 확인하고, 사람 승인 안받아도 되니 너가 알아서 기입해"라고 말해 에이전트가 자동 승인한 후보 4개를 [CF-500 bundle](../raw/issues/CF-500/manifest.md)에 ADR payload 하나로 기록했다. 등급 표준값 표, 등급 선택 화면 조건, 자동 기입 값, ADR 500 전문이다.
+- [프로필 입력과 안전한 어학 선택](topics/profile-input-and-language-matching.md)의 Current를 ADR 500으로 바꾸고 CF-82를 History에 남겼으며 색인 설명을 갱신했다.
+- 실제 지원값, 시험 성적, 계정, 세션, 회사 화면 원문, 대화 전문은 저장하지 않았다.
+
+## [2026-11-21] ingest | CF-505 에이치닷 v1 지원자 앱 1단계 정적 자동 기입
+- Approval-Digest: 7036bd66de1e2c36d356b4a4084f8db93503281327322fad00b94f87deb3661b
+- Source-Revision: 75cd91b
+- 사람이 2026-11-19 "llm wiki 앞으로 잘 동작하는지 확인하고, 사람 승인 안받아도 되니 너가 알아서 기입해"라고 말해 에이전트가 자동 승인한 후보 5개를 [CF-505 bundle](../raw/issues/CF-505/manifest.md)에 payload 두 개로 기록했다. v1 1단계의 지원 범위, 화면 구조와 식별 기준, 정책 분리와 전송 계약, 실측과 한계, 실행 정책 조회의 경로 검사를 적었다.
+- [Hplace 공통 어댑터](topics/adapter-hplace.md)의 Current를 CF-505로 바꾸고 v1 절을 추가했으며, [어댑터 필드 현황](topics/adapter-field-inventory.md)의 Current를 CF-505로 바꾸고 v1 1단계 현황 절을 추가했다. 색인 설명을 갱신했다.
+- 실제 지원값, 계정, 세션, 회사 화면 원문, 공고 제목, 대화 전문은 저장하지 않았다.
+
+## [2026-11-21] ingest | CF-507 에이치닷 v1 1단계 현주소와 사진 등록
+- Approval-Digest: 8aa4dba680ca8eee10d8d1b02bb1a96d9ad145d47518e7c537cc680232879294
+- Source-Revision: 0c75d37
+- 사람이 2026-11-19 "llm wiki 앞으로 잘 동작하는지 확인하고, 사람 승인 안받아도 되니 너가 알아서 기입해"라고 말해 에이전트가 자동 승인한 후보 3개를 [CF-507 bundle](../raw/issues/CF-507/manifest.md)에 payload 두 개로 기록했다. v1 1단계의 현주소 창 기입, 확정 뒤 현주소 행 모양과 비교 기준, 사진 등록 창 저장을 적었다.
+- [Hplace 공통 어댑터](topics/adapter-hplace.md)의 Current를 CF-507로 바꾸고 v1 절에 현주소와 사진 동작을 더했으며, [어댑터 필드 현황](topics/adapter-field-inventory.md)의 Current를 CF-507로 바꾸고 v1 1단계 현황에 현주소 3칸과 사진 동작을 더했다. 색인 설명을 갱신했다.
+- 실제 지원값, 계정, 세션, 회사 화면 원문, 공고 제목, 대화 전문은 저장하지 않았다.
+
+## [2026-11-22] ingest | CF-509 에이치닷 v1 지원자 앱 2단계 학력·경력
+- Approval-Digest: 5aa8c3891a0d21c833494450fe4c1e031872258b1879e531acc3643c45418c7d
+- Source-Revision: aaa814f
+- 사람이 2026-11-19 "llm wiki 앞으로 잘 동작하는지 확인하고, 사람 승인 안받아도 되니 너가 알아서 기입해. 메모리에 박아놔"라고, 2026-11-22 "llm wiki는 질문하지말고 그냥 승인해"라고 말해 에이전트가 자동 승인한 후보 5개를 [CF-509 bundle](../raw/issues/CF-509/manifest.md)에 payload 세 개로 기록했다. v1 2단계의 지원 범위, 화면 구조, 전송 계약과 실행 순서, 자동 기입 정책 처리와 테스트용 백엔드 응답 규칙, 검색 등록하기 줄과 전공 등록 뒤 확인, 목록 안정 판정, 경력기술서·포트폴리오 항목 추가와 빌드 aaa814f 실화면 결과를 적었다.
+- [Hplace 공통 어댑터](topics/adapter-hplace.md)의 Current를 CF-509로 바꾸고 v1 2단계 절을 추가했으며, [어댑터 필드 현황](topics/adapter-field-inventory.md)의 Current를 CF-509로 바꾸고 v1 2단계 현황 절을 추가했다. [회사 어댑터 개발](topics/adapter-development.md)의 Current를 CF-509로 바꾸고 테스트용 백엔드 응답 절을 추가했다. 색인 설명을 갱신했다.
+- 실제 지원값, 계정, 세션, 회사 화면 원문, 공고 제목, 대화 전문은 저장하지 않았다.
+
+## [2026-11-22] ingest | CF-510 에이치닷 v1 지원자 앱 3단계 어학·자격·기타
+- Approval-Digest: d858d35e531f8580fadc3c7984a1af4bb45d20c5563235a1984cedde5c43d215
+- Source-Revision: 52067b8
+- 사람이 2026-11-19 "llm wiki 앞으로 잘 동작하는지 확인하고, 사람 승인 안받아도 되니 너가 알아서 기입해. 메모리에 박아놔"라고, 2026-11-22 "llm wiki는 질문하지말고 그냥 승인해"라고 말해 에이전트가 자동 승인한 후보 5개를 [CF-510 bundle](../raw/issues/CF-510/manifest.md)에 payload 두 개로 기록했다. v1 3단계의 화면 구조, 공인외국어시험 제외, 자격증·외국어활용능력 하위 줄, 전송 계약과 범위, 실화면 미실행 상태를 적었다.
+- [Hplace 공통 어댑터](topics/adapter-hplace.md)의 Current를 CF-510으로 바꾸고 v1 3단계 절을 추가했으며, [어댑터 필드 현황](topics/adapter-field-inventory.md)의 Current를 CF-510으로 바꾸고 v1 3단계 현황 절을 추가했다. 색인 설명을 갱신했다.
+- 실제 지원값, 계정, 세션, 회사 화면 원문, 공고 제목, 대화 전문은 저장하지 않았다.
+
+## [2026-11-23] ingest | CF-510 에이치닷 v1 두 번째 테넌트 실측
+- Approval-Digest: fb169cce8e40f21e49fc3432af9f7dd5df938a5fb0097ad54dd5401cb313b839
+- Source-Revision: 0eb8030
+- 사람이 2026-11-19 "llm wiki 앞으로 잘 동작하는지 확인하고, 사람 승인 안받아도 되니 너가 알아서 기입해. 메모리에 박아놔"라고, 2026-11-22 "llm wiki는 질문하지말고 그냥 승인해"라고 말해 에이전트가 자동 승인한 후보 11개(기존 1·3·5 수정, 6~11 추가)를 [CF-510 bundle](../raw/issues/CF-510/manifest.md)에 기록했다. 새 payload는 두 번째 v1 테넌트의 구역 구성, 추가 컨트롤과 카드 종류, 저장되는 카드와 전공 하위 줄, review-key 없는 검색 목록·선택 표시와 월 단위 날짜, 첨부 항목, 실화면 결과를 적었다. 기존 3단계 payload는 판별 조건, 취득일, 실화면 상태를 고쳤다.
+- [Hplace 공통 어댑터](topics/adapter-hplace.md)와 [어댑터 필드 현황](topics/adapter-field-inventory.md)의 Current를 새 payload로 바꾸고 두 번째 테넌트 절을 추가했으며 v1 2·3단계 절의 판별·날짜·카드 종류 설명을 고쳤다. 색인 설명을 갱신했다.
+- 실제 지원값, 계정, 세션, 회사 이름, 회사 화면 원문, 공고 제목, 대화 전문은 저장하지 않았다.
+
+## [2026-11-24] ingest | CF-513 최종 발표 자료와 전시 패널
+- Disposition: New
+- Approval-Digest: 6c63d26dd1bb6d812bb7a7dcf2bba641c705c3c080ca2a5ab95c3c709ea700a3
+- Source-Revision: 1ae7d8b
+- 사람이 승인한 후보 1개를 [CF-513 bundle](../raw/issues/CF-513/manifest.md)에 기록했다. 최종 발표 자료와 전시 패널 PDF 원본을 `assets/`에 그대로 보존하고, payload에 SHA-256, 쪽별 구성, 발표 수치의 측정 조건과 비식별 확인 결과를 적었다.
+- 새 topic [최종 발표 자료와 전시 패널](topics/final-presentation.md)을 만들고 색인에 추가했다.
+- 실제 지원값, 계정, 세션, 대화 전문은 저장하지 않았다.

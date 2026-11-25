@@ -15,7 +15,12 @@ import type { StructuredAddress } from "../address";
 import { AddressSearchPanel } from "./AddressSearchPanel";
 import styles from "./ProfileForm.module.css";
 import { CatalogNameInput } from "./CatalogNameInput";
+import { catalogCertificateIssuer } from "../catalog";
 import { catalogKindForField } from "../catalog-search";
+import {
+  standardValueLabel,
+  type StandardValueOption,
+} from "../standard-values";
 import {
   ADDRESS_GROUP_TITLE,
   editorFieldGroups,
@@ -75,12 +80,33 @@ interface FieldsProps {
 function optionsForField(
   field: ProfileFieldDefinition,
   values: Record<string, string>,
-): Array<{ value: string; label: string }> {
-  return [...(field.optionsFor?.(values) ?? field.options ?? [])].map(
+  identity?: ProfileIdentity,
+): StandardValueOption[] {
+  return [...(field.optionsFor?.(values, identity) ?? field.options ?? [])].map(
     (option) =>
       typeof option === "string" ? { value: option, label: option } : option,
   );
 }
+
+const normalizeChoice = (value: string) =>
+  value.normalize("NFKC").trim().toLowerCase();
+
+/** The option a stored value names by id, label or alias. */
+function matchingChoice(
+  options: readonly StandardValueOption[],
+  value: string,
+): StandardValueOption | undefined {
+  const source = normalizeChoice(value);
+  if (!source) return undefined;
+  return options.find((option) =>
+    [option.value, option.label, ...(option.aliases ?? [])].some(
+      (word) => normalizeChoice(word) === source,
+    ),
+  );
+}
+
+const choiceText = (option: StandardValueOption) =>
+  option.aliases?.[0] ? `${option.aliases[0]} (${option.label})` : option.label;
 
 function fieldValue(field: ProfileFieldDefinition, value: string): string {
   return field.inputType === "tel"
@@ -181,8 +207,9 @@ function Fields({
                 )
                 .map((field) => {
                   const id = `${idPrefix}-${field.id}`;
-                  const options = optionsForField(field, values);
+                  const options = optionsForField(field, values, identity);
                   const value = values[field.id] ?? "";
+                  const disabled = field.disabledWhen?.(values) === true;
                   const catalogKind = catalogKindForField(section.id, field.id);
                   if (catalogKind) {
                     return (
@@ -206,9 +233,20 @@ function Fields({
                       </div>
                     );
                   }
+                  // A free text field with a list for this exam is chosen from it.
+                  const choice =
+                    field.inputType === "text" && options.length > 0;
+                  const choiceMatch = choice
+                    ? matchingChoice(options, value)
+                    : undefined;
+                  const controlLabel = choice
+                    ? (field.choiceLabel ?? field.label)
+                    : field.label;
                   const hasLegacyValue =
                     value.length > 0 &&
-                    !options.some((option) => option.value === value);
+                    !(choice
+                      ? choiceMatch
+                      : options.some((option) => option.value === value));
                   const accessory = entryId
                     ? fieldAccessory?.({
                         sectionId: section.id,
@@ -216,6 +254,12 @@ function Fields({
                         fieldId: field.id,
                       })
                     : undefined;
+                  // The issuer of a catalog-selected certificate is the catalog's
+                  // own name; it is shown locked until the link is released.
+                  const lockedIssuer =
+                    section.id === "certificate" && field.id === "issuer"
+                      ? catalogCertificateIssuer(identity, values.name ?? "")
+                      : undefined;
                   const control = (
                     <label
                       className={`${styles.field} ${field.inputType === "textarea" ? styles.fieldTop : ""} ${field.inputType === "textarea" || FULL_WIDTH_FIELDS.has(field.id) ? styles.fullWidth : ""}`}
@@ -223,23 +267,28 @@ function Fields({
                       key={field.id}
                     >
                       <span className={styles.fieldLabel}>
-                        <span>{field.label}</span>
+                        <span>{controlLabel}</span>
+                        {lockedIssuer !== undefined && (
+                          <span className={styles.catalogHint}>카탈로그</span>
+                        )}
                       </span>
                       {field.inputType === "textarea" ? (
                         <textarea
                           id={id}
                           aria-label={field.label}
+                          disabled={disabled}
                           value={values[field.id] ?? ""}
                           onChange={(event) =>
                             onChange(field.id, event.target.value)
                           }
                           rows={5}
                         />
-                      ) : field.inputType === "select" ? (
+                      ) : field.inputType === "select" || choice ? (
                         <select
                           id={id}
-                          aria-label={field.label}
-                          value={value}
+                          aria-label={controlLabel}
+                          disabled={disabled}
+                          value={choiceMatch?.value ?? value}
                           onChange={(event) =>
                             onChange(field.id, event.target.value)
                           }
@@ -250,7 +299,7 @@ function Fields({
                           )}
                           {options.map((option) => (
                             <option key={option.value} value={option.value}>
-                              {option.label}
+                              {choice ? choiceText(option) : option.label}
                             </option>
                           ))}
                         </select>
@@ -259,13 +308,25 @@ function Fields({
                           <input
                             id={id}
                             aria-label={field.label}
+                            disabled={disabled}
                             type={field.inputType}
                             max={
                               field.inputType === "date"
                                 ? "9999-12-31"
                                 : undefined
                             }
-                            value={values[field.id] ?? ""}
+                            value={
+                              lockedIssuer ??
+                              (field.inputType === "text"
+                                ? (standardValueLabel(value) ?? value)
+                                : value)
+                            }
+                            readOnly={lockedIssuer !== undefined}
+                            className={
+                              lockedIssuer !== undefined
+                                ? styles.catalogLocked
+                                : undefined
+                            }
                             placeholder={
                               field.placeholder ??
                               (field.id === "grade" &&
@@ -276,11 +337,14 @@ function Fields({
                             inputMode={
                               field.inputType === "tel" ? "numeric" : undefined
                             }
-                            onChange={(event) =>
-                              onChange(
-                                field.id,
-                                fieldValue(field, event.target.value),
-                              )
+                            onChange={
+                              lockedIssuer !== undefined
+                                ? undefined
+                                : (event) =>
+                                    onChange(
+                                      field.id,
+                                      fieldValue(field, event.target.value),
+                                    )
                             }
                           />
                         </>

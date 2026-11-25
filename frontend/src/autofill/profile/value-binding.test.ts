@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { CATALOG_VERSION } from "../../profile/catalog";
 import { createEmptyProfile } from "../../profile/model";
 import { resolveValueBinding } from "./value-binding";
 
@@ -234,4 +235,150 @@ describe("HANJA_FULL_NAME", () => {
       ).toMatchObject({ status: "missing" });
     },
   );
+});
+
+describe("status-locked fields", () => {
+  const direct = (profileFieldKey: string) => ({
+    type: "DIRECT" as const,
+    profileFieldKey,
+  });
+
+  it("treats a leftover disability detail as missing for a non-eligible status", () => {
+    const profile = createEmptyProfile();
+    profile.disability = {
+      disabilityStatus: "disability-status:not-eligible",
+      disabilityType: "남아있는 값",
+    };
+
+    expect(
+      resolveValueBinding(
+        profile,
+        direct("disability.disability.disabilityType"),
+      ),
+    ).toMatchObject({ status: "missing" });
+    expect(
+      resolveValueBinding(
+        profile,
+        direct("disability.disability.disabilityStatus"),
+      ),
+    ).toMatchObject({
+      status: "resolved",
+      standardValueId: "disability-status:not-eligible",
+    });
+  });
+
+  it("resolves the disability detail for an eligible status", () => {
+    const profile = createEmptyProfile();
+    profile.disability = {
+      disabilityStatus: "disability-status:eligible",
+      disabilityType: "가상 유형",
+    };
+
+    expect(
+      resolveValueBinding(
+        profile,
+        direct("disability.disability.disabilityType"),
+      ),
+    ).toMatchObject({ status: "resolved", value: "가상 유형" });
+  });
+
+  it("separates the military service fields from the exemption reason", () => {
+    const profile = createEmptyProfile();
+    profile.military = {
+      militaryStatus: "military-status:exempt",
+      militaryRank: "military-rank:byeongjang",
+      exemptionReason: "가상 사유",
+    };
+
+    expect(
+      resolveValueBinding(profile, direct("military.military.militaryRank")),
+    ).toMatchObject({ status: "missing" });
+    expect(
+      resolveValueBinding(profile, direct("military.military.exemptionReason")),
+    ).toMatchObject({ status: "resolved", value: "가상 사유" });
+  });
+
+  it("treats a leftover exemption reason as missing for a served status", () => {
+    const profile = createEmptyProfile();
+    profile.military = {
+      militaryStatus: "military-status:served",
+      exemptionReason: "남아있는 사유",
+    };
+
+    expect(
+      resolveValueBinding(profile, direct("military.military.exemptionReason")),
+    ).toMatchObject({ status: "missing" });
+  });
+});
+
+describe("language test grade", () => {
+  const binding = {
+    type: "DIRECT" as const,
+    profileFieldKey: "languages.languageTest.grade",
+  };
+  const resolveGrade = (grade: string) => {
+    const profile = createEmptyProfile();
+    profile.languages.push({
+      id: "language-1",
+      sectionId: "languageTest",
+      values: { testName: "OPIc", grade },
+    });
+    return resolveValueBinding(profile, binding, 0);
+  };
+
+  it("resolves a grade ID to its short code and keeps the ID", () => {
+    expect(resolveGrade("opic:ih")).toMatchObject({
+      status: "resolved",
+      value: "IH",
+      standardValueId: "opic:ih",
+    });
+  });
+
+  it.each(["900", "AL"])("keeps the free text %s as written", (grade) => {
+    const resolved = resolveGrade(grade);
+    expect(resolved).toMatchObject({ status: "resolved", value: grade });
+    expect(resolved).not.toHaveProperty("standardValueId");
+  });
+});
+
+describe("certificate issuer binding", () => {
+  const binding = {
+    type: "DIRECT" as const,
+    profileFieldKey: "certifications.certificate.issuer",
+  };
+
+  it("resolves a selected catalog certificate to the canonical catalog issuer", () => {
+    const profile = createEmptyProfile();
+    profile.certifications.push({
+      id: "certificate-1",
+      sectionId: "certificate",
+      values: { name: "SQL 개발자", issuer: "사용자 기관" },
+      identity: {
+        status: "selected",
+        catalogId: "certificate:kdata:sqld",
+        displayName: "SQL 개발자",
+        originalText: "SQLD",
+        catalogVersion: CATALOG_VERSION,
+      },
+    });
+    expect(resolveValueBinding(profile, binding, 0)).toMatchObject({
+      status: "resolved",
+      value: "한국데이터산업진흥원",
+    });
+    expect(profile.certifications[0]?.values.issuer).toBe("사용자 기관");
+  });
+
+  it("resolves a manual certificate to its stored issuer", () => {
+    const profile = createEmptyProfile();
+    profile.certifications.push({
+      id: "certificate-1",
+      sectionId: "certificate",
+      values: { name: "사내 인증", issuer: "사용자 기관" },
+      identity: { status: "manual", originalText: "사내 인증" },
+    });
+    expect(resolveValueBinding(profile, binding, 0)).toMatchObject({
+      status: "resolved",
+      value: "사용자 기관",
+    });
+  });
 });

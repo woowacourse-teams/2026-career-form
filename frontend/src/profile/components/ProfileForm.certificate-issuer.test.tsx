@@ -144,16 +144,76 @@ it("fills the blank issuer when a certificate is chosen from the catalog", async
   });
 });
 
-it("does not overwrite an issuer the user already entered", async () => {
+it("replaces an issuer the user already entered with the canonical catalog issuer", async () => {
   await setup({ ...related, issuer: "사용자 기관" });
 
   chooseFirstResult("SQLD");
 
-  expect(screen.getByLabelText("발급기관")).toHaveValue("사용자 기관");
+  expect(screen.getByLabelText("발급기관")).toHaveValue("한국데이터산업진흥원");
   expect(exportedCertificate()).toMatchObject({
-    values: { ...related, name: "SQL 개발자", issuer: "사용자 기관" },
+    values: { ...related, name: "SQL 개발자", issuer: "한국데이터산업진흥원" },
     identity: { status: "selected", catalogId: "certificate:kdata:sqld" },
   });
+});
+
+it("locks the issuer to the catalog name with a hint while a certificate is selected", async () => {
+  await setup({ ...related });
+  expect(screen.getByLabelText("발급기관")).not.toHaveAttribute("readonly");
+  expect(screen.queryByText("카탈로그")).not.toBeInTheDocument();
+
+  chooseFirstResult("SQLD");
+  const issuer = screen.getByLabelText("발급기관");
+  fireEvent.change(issuer, { target: { value: "사용자 기관" } });
+
+  expect(issuer).toHaveAttribute("readonly");
+  expect(issuer).toHaveValue("한국데이터산업진흥원");
+  expect(screen.getByText("카탈로그")).toBeInTheDocument();
+  expect(exportedCertificate().values.issuer).toBe("한국데이터산업진흥원");
+});
+
+it("shows the canonical catalog issuer for a saved selection without rewriting the stored text", async () => {
+  await setup(
+    { name: "SQL 개발자", issuer: "(재)한국데이터산업진흥원" },
+    {
+      identity: {
+        status: "selected",
+        catalogId: "certificate:kdata:sqld",
+        displayName: "SQL 개발자",
+        originalText: "SQLD",
+        catalogVersion: CATALOG_VERSION,
+      },
+    },
+  );
+
+  expect(screen.getByLabelText("발급기관")).toHaveValue("한국데이터산업진흥원");
+  expect(screen.getByLabelText("발급기관")).toHaveAttribute("readonly");
+  expect(exportedCertificate().values.issuer).toBe("(재)한국데이터산업진흥원");
+});
+
+it("unlocks the issuer and keeps its value when the name is edited", async () => {
+  await setup({ ...related });
+  const input = chooseFirstResult("SQLD");
+
+  fireEvent.change(input, { target: { value: "SQL" } });
+  const issuer = screen.getByLabelText("발급기관");
+
+  expect(issuer).not.toHaveAttribute("readonly");
+  expect(issuer).toHaveValue("한국데이터산업진흥원");
+  expect(screen.queryByText("카탈로그")).not.toBeInTheDocument();
+  fireEvent.change(issuer, { target: { value: "사용자 기관" } });
+  expect(issuer).toHaveValue("사용자 기관");
+});
+
+it("unlocks the issuer and keeps its value when direct input is chosen", async () => {
+  await setup({ ...related });
+  const input = chooseFirstResult("SQLD");
+  fireEvent.change(input, { target: { value: "SQL" } });
+  fireEvent.click(screen.getByRole("option", { name: /직접 입력/ }));
+  const issuer = screen.getByLabelText("발급기관");
+
+  expect(issuer).not.toHaveAttribute("readonly");
+  expect(issuer).toHaveValue("한국데이터산업진흥원");
+  expect(exportedCertificate().identity).toMatchObject({ status: "manual" });
 });
 
 it("does not fill the issuer for direct input", async () => {
@@ -253,14 +313,12 @@ it("replaces the filled issuer after another field is edited", async () => {
   expect(exportedCertificate().values).toMatchObject({ grade: "1급" });
 });
 
-it("replaces an issuer edited back to the filled text", async () => {
+it("replaces an issuer edited after the link was released when another certificate is chosen", async () => {
   const save = await setup({}, { saveDelay: 0 });
-  chooseFirstResult("SQLD");
+  const input = chooseFirstResult("SQLD");
+  fireEvent.change(input, { target: { value: "SQL" } });
   fireEvent.change(screen.getByLabelText("발급기관"), {
-    target: { value: "한국데이터산업" },
-  });
-  fireEvent.change(screen.getByLabelText("발급기관"), {
-    target: { value: "한국데이터산업진흥원" },
+    target: { value: "사용자 기관" },
   });
 
   chooseFirstResult("정보처리기사");
@@ -271,41 +329,7 @@ it("replaces an issuer edited back to the filled text", async () => {
   });
 });
 
-it("keeps an issuer the user edited after a selection", async () => {
-  const save = await setup({}, { saveDelay: 0 });
-  chooseFirstResult("SQLD");
-
-  fireEvent.change(screen.getByLabelText("발급기관"), {
-    target: { value: "사용자 기관" },
-  });
-  chooseFirstResult("정보처리기사");
-
-  await expectCertificate(save, {
-    name: "정보처리기사",
-    issuer: "사용자 기관",
-  });
-});
-
-it("forgets the filled issuer once a selection keeps the user's issuer", async () => {
-  const save = await setup({}, { saveDelay: 0 });
-  chooseFirstResult("SQLD");
-  fireEvent.change(screen.getByLabelText("발급기관"), {
-    target: { value: "사용자 기관" },
-  });
-  chooseFirstResult("정보처리기사");
-
-  fireEvent.change(screen.getByLabelText("발급기관"), {
-    target: { value: "한국데이터산업진흥원" },
-  });
-  chooseFirstResult("한국사");
-
-  await expectCertificate(save, {
-    name: "한국사능력검정시험",
-    issuer: "한국데이터산업진흥원",
-  });
-});
-
-it("keeps an issuer typed before the first selection even when it matches", async () => {
+it("sets the canonical issuer on every selection even when a matching issuer was typed first", async () => {
   const save = await setup(
     { issuer: "한국데이터산업진흥원" },
     { saveDelay: 0 },
@@ -316,11 +340,11 @@ it("keeps an issuer typed before the first selection even when it matches", asyn
 
   await expectCertificate(save, {
     name: "정보처리기사",
-    issuer: "한국데이터산업진흥원",
+    issuer: "한국산업인력공단",
   });
 });
 
-it("keeps a saved issuer because whether a selection filled it is not saved", async () => {
+it("replaces a saved issuer with the canonical one when another certificate is chosen", async () => {
   const save = await setup(
     { name: "SQL 개발자", issuer: "한국데이터산업진흥원" },
     {
@@ -340,6 +364,6 @@ it("keeps a saved issuer because whether a selection filled it is not saved", as
 
   await expectCertificate(save, {
     name: "정보처리기사",
-    issuer: "한국데이터산업진흥원",
+    issuer: "한국산업인력공단",
   });
 });

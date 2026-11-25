@@ -164,6 +164,17 @@
     no-repeat right 15px center;
   padding-right: 42px;
 }
+/* A locked field stays readable but looks inactive. Placed after the hover and
+   select rules so it wins at equal specificity. */
+.field input:disabled,
+.field textarea:disabled,
+.field select:disabled,
+.nameTable input:disabled {
+  border-color: var(--color-border);
+  color: var(--color-text-muted);
+  background-color: var(--color-surface-muted);
+  cursor: not-allowed;
+}
 .repeatedSection {
   display: grid;
   gap: 20px;
@@ -344,4 +355,19 @@
   .nameTable input {
     transition: none;
   }
+}
+
+.catalogHint {
+  margin-left: 6px;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
+.field input.catalogLocked,
+.field input.catalogLocked:hover,
+.field input.catalogLocked:focus {
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  cursor: default;
 }

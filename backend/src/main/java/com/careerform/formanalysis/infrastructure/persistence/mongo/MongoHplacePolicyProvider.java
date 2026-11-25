@@ -23,6 +23,7 @@ public final class MongoHplacePolicyProvider implements HplacePolicyProvider {
     private final FormAnalysisPolicyMongoRepository policies;
     private final SupportedProfileFields supportedProfileFields;
     private final long activeVersion;
+    private final LookupResult v1ResumeForm;
 
     public MongoHplacePolicyProvider(
         FormAnalysisPolicyMongoRepository policies,
@@ -32,6 +33,12 @@ public final class MongoHplacePolicyProvider implements HplacePolicyProvider {
         this.policies = policies;
         this.supportedProfileFields = supportedProfileFields;
         this.activeVersion = activeVersion;
+        this.v1ResumeForm = new Available(HplaceV1CompanyFormPolicyFactory.create(supportedProfileFields::contains));
+    }
+
+    @Override
+    public LookupResult findV1ResumeForm() {
+        return v1ResumeForm;
     }
 
     public com.careerform.formanalysis.dto.ExecutionPolicy executionPolicy() {

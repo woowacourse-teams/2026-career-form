@@ -30,6 +30,7 @@ export type StructuralSkipReason =
   | "build-unavailable"
   | "result-click-no-effect"
   | "result-not-unique"
+  | "picked-unread"
   | "staging-mismatch"
   | "submit-disabled-timeout"
   | "submit-no-effect"
@@ -82,6 +83,16 @@ export function debugRuntimeSkip(
 ) {
   line(
     `skip stage=${stage} key=${id} reason=${reason} detail=${detail}${failureCode ? ` failureCode=${failureCode}` : ""}`,
+  );
+}
+/** One value-free line naming a preparation stop: the action key and why. */
+export function debugPreparationStop(
+  key: string,
+  reason: string,
+  detail: string,
+) {
+  line(
+    `stop stage=preparation key=${key} reason=${reason} detail=${detail || "none"}`,
   );
 }
 type Candidates = {

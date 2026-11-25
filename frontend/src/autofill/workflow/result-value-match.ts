@@ -1,4 +1,5 @@
 import { nativeGpaComplete } from "../policy/native-form-gpa";
+import { v1ExtraResultMatches } from "../adapters/hplace/v1-extra-write";
 import { normalizeStagedRoad } from "../policy/staged-address-road";
 import { stagedAddressReceipt } from "../policy/staged-address-receipt";
 import { nativeOwnership } from "../policy/native-form-collection";
@@ -8,6 +9,11 @@ import {
   basicSpecs,
 } from "../adapters/hplace/basic-controls";
 import { basicTarget } from "../adapters/hplace/basic-write";
+import { v1ResultMatches } from "../adapters/hplace/v1-basic-write";
+import {
+  isV1HistoryCampusHandle,
+  v1HistoryResultMatches,
+} from "../adapters/hplace/v1-history-write";
 import { ownedDetailControl } from "../adapters/hplace/detail";
 import { detailTargetValue } from "../adapters/hplace/detail-write";
 import { componentRules } from "../policy/runtime-rules";
@@ -156,6 +162,10 @@ export function matchesResultValue(
   const left = current.trim();
   const right = expected.trim();
   if (!left || !right) return false;
+  // v1 step-2 본교/분교: bound to the school name but compared as the
+  // campus label, before the school's catalog selection is consulted.
+  if (handle && isV1HistoryCampusHandle(handle))
+    return v1HistoryResultMatches(handle, item, left, right) ?? false;
   const approval = catalogApprovalForItem(item);
   if (approval.status === "invalid") return false;
   if (approval.status === "selected") {
@@ -230,6 +240,15 @@ export function matchesResultValue(
   );
   if (componentDisplayMatch !== undefined) return componentDisplayMatch;
   const binding = item.analysis?.valueBinding;
+  // v1 dates: the page keeps YYYY.MM.DD, or YYYY.MM for service dates.
+  const v1 = handle && v1ResultMatches(handle, item, left, right);
+  if (v1 !== undefined) return v1;
+  // v1 step-2 dates: the page keeps only a full YYYY.MM.DD.
+  const history = handle && v1HistoryResultMatches(handle, item, left, right);
+  if (history !== undefined) return history;
+  // v1 step-3 취득일: the same full YYYY.MM.DD.
+  const extra = handle && v1ExtraResultMatches(handle, item, left, right);
+  if (extra !== undefined) return extra;
   const basic = handle && ownedBasicControl(handle);
   if (
     basic &&

@@ -3,6 +3,7 @@ import { createEmptyProfile, type Profile } from "../model";
 import type { ProfileRepository } from "../profile-repository";
 import {
   ImportConflictError,
+  ImportSelectionError,
   mergeImportSelection,
   saveImportSelection,
   type ImportSelection,
@@ -329,5 +330,32 @@ describe("page import over a selected address", () => {
         single: { contact: { addressVerified: "true" } },
       }),
     ).toThrow();
+  });
+});
+
+describe("mergeImportSelection status locks", () => {
+  const withStatus = (disabilityStatus: string) => {
+    const profile = base();
+    profile.disability = { disabilityStatus };
+    return profile;
+  };
+  const selection = {
+    single: { disability: { disabilityType: "가상 유형" } },
+  } as unknown as ImportSelection;
+
+  it("rejects a value for a field locked by the stored status", () => {
+    expect(() =>
+      mergeImportSelection(
+        withStatus("disability-status:not-eligible"),
+        selection,
+      ),
+    ).toThrow(ImportSelectionError);
+  });
+
+  it("accepts the same value once the stored status is eligible", () => {
+    expect(
+      mergeImportSelection(withStatus("disability-status:eligible"), selection)
+        .disability.disabilityType,
+    ).toBe("가상 유형");
   });
 });

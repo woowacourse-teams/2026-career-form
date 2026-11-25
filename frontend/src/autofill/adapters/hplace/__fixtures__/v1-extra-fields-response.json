@@ -1,0 +1,93 @@
+{
+  "source": "Bindings, autofill policies and write commands asserted by backend HplaceV1ExtraPolicyTest (FieldsAnalysisService over HplaceV1CompanyFormPolicyFactory and SupportedProfileFields), synthetic request",
+  "mode": "ADAPTER",
+  "analysisStatus": "COMPLETE",
+  "fields": {
+    "certificate.licenseName": {
+      "matchType": "MATCH",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "certifications.certificate.name"
+      },
+      "autofillPolicy": "CONDITIONAL",
+      "mappingStatus": "ADAPTER_VERIFIED",
+      "interactionStatus": "READY",
+      "writePlan": { "command": "SET_TEXT" }
+    },
+    "certificate.organization": {
+      "matchType": "MATCH",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "certifications.certificate.issuer"
+      },
+      "autofillPolicy": "CONDITIONAL",
+      "mappingStatus": "ADAPTER_VERIFIED",
+      "interactionStatus": "READY",
+      "writePlan": { "command": "SET_TEXT" }
+    },
+    "certificate.acquireDate": {
+      "matchType": "MATCH",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "certifications.certificate.acquisitionDate"
+      },
+      "autofillPolicy": "ALLOWED",
+      "mappingStatus": "ADAPTER_VERIFIED",
+      "interactionStatus": "READY",
+      "writePlan": { "command": "SET_TEXT" }
+    },
+    "certificate.registNumber": {
+      "matchType": "MATCH",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "certifications.certificate.registrationNo"
+      },
+      "autofillPolicy": "ALLOWED",
+      "mappingStatus": "ADAPTER_VERIFIED",
+      "interactionStatus": "READY",
+      "writePlan": { "command": "SET_TEXT" }
+    },
+    "languageSkill.language": {
+      "matchType": "MATCH",
+      "valueBinding": {
+        "type": "LOOKUP",
+        "profileFieldKey": "languages.languageSkill.language",
+        "optionMap": {
+          "영어": "영어",
+          "일본어": "일본어",
+          "중국어": "중국어",
+          "프랑스어": "프랑스어",
+          "독일어": "독일어",
+          "스페인어": "스페인어",
+          "포르투갈어": "포르투갈어",
+          "이탈리아어": "이탈리아어",
+          "네덜란드어": "네덜란드어",
+          "아랍어": "아랍어",
+          "말레이시아어": "말레이시아어",
+          "인도네시아어": "인도네시아어",
+          "베트남어": "베트남어",
+          "인도어": "인도어",
+          "태국어": "태국어",
+          "러시아어": "러시아어",
+          "이란어": "이란어",
+          "터키어": "터키어",
+          "핀란드어": "핀란드어",
+          "노르웨이어": "노르웨이어",
+          "헝가리어": "헝가리어",
+          "덴마크어": "덴마크어",
+          "미얀마어": "미얀마어",
+          "불가리아어": "불가리아어",
+          "폴란드어": "폴란드어",
+          "방글라데시어": "방글라데시어",
+          "타직어": "타직어",
+          "스와힐리어": "스와힐리어",
+          "키르키즈어": "키르키즈어"
+        }
+      },
+      "autofillPolicy": "CONDITIONAL",
+      "mappingStatus": "ADAPTER_VERIFIED",
+      "interactionStatus": "READY",
+      "writePlan": { "command": "SELECT_OPTION" }
+    }
+  }
+}
