@@ -1284,3 +1284,11 @@
 - 사람이 승인한 후보 1개를 [CF-513 bundle](../raw/issues/CF-513/manifest.md)에 기록했다. 최종 발표 자료와 전시 패널 PDF 원본을 `assets/`에 그대로 보존하고, payload에 SHA-256, 쪽별 구성, 발표 수치의 측정 조건과 비식별 확인 결과를 적었다.
 - 새 topic [최종 발표 자료와 전시 패널](topics/final-presentation.md)을 만들고 색인에 추가했다.
 - 실제 지원값, 계정, 세션, 대화 전문은 저장하지 않았다.
+
+## [2026-11-25] ingest | CF-515 공고 등록 완료 표시와 발송기 주기의 누락 자동 복구
+
+- Approval-Digest: 918029b3d2478708af28839edf84bd711b3bd301b23152860c9526732dccab75
+- Source-Revision: ea579f46
+- 사람이 승인한 후보 4개를 [CF-515 bundle](../raw/issues/CF-515/manifest.md)에 기록했다. 등록 완료 표시 규칙, 발송기 주기 보충, 선택 이유와 한계, 검증과 관측이다.
+- [공고 구독 알림](topics/job-posting-notifications.md)의 현재 상태와 변경 이유를 갱신하고, CF-439가 SQS 전환 설계로 미뤘던 자동 감지·복구 서술을 CF-515 결정으로 바꿨다.
+- 호스트 주소, 공고 링크, 계정, 구독 endpoint, 대화 전문은 저장하지 않았다.

@@ -6,9 +6,13 @@ import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.PersistenceCreator;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-/** 팀이 등록한 채용 공고. 링크가 자연 키이며 유일 인덱스로 중복 등록을 막는다. roles는 소분류 코드 배열, role은 그 라벨을 이은 표시 문자열이며 레거시 문서는 둘 다 null일 수 있다. */
+/**
+ * 팀이 등록한 채용 공고. 링크가 자연 키이며 유일 인덱스로 중복 등록을 막는다. roles는 소분류 코드 배열, role은 그 라벨을 이은 표시 문자열이며 레거시 문서는 둘 다 null일 수 있다.
+ * deliveriesReady는 등록 완료 표시다. 새 공고는 false로 저장하고 대상 구독의 발송 문서를 모두 저장한 뒤 true로 바꾼다. 필드가 없는(null) 기존 공고는 완료로 본다.
+ */
 @Document("job_postings")
 public record JobPosting(
     @Id String id,
@@ -18,8 +22,10 @@ public record JobPosting(
     String link,
     Instant opensAt,
     Instant closesAt,
-    Instant registeredAt
+    Instant registeredAt,
+    Boolean deliveriesReady
 ) {
+    @PersistenceCreator
     public JobPosting {
         Objects.requireNonNull(id);
         Objects.requireNonNull(company);
@@ -30,6 +36,13 @@ public record JobPosting(
         if (!opensAt.isBefore(closesAt)) { throw new IllegalArgumentException("Invalid posting period"); }
         roles = roles == null ? null : List.copyOf(roles);
     }
+
+    /** 완료 표시가 없는 기존 공고. */
+    public JobPosting(String id, String company, String role, List<String> roles, String link, Instant opensAt, Instant closesAt, Instant registeredAt) {
+        this(id, company, role, roles, link, opensAt, closesAt, registeredAt, null);
+    }
+
+    public JobPosting ready() { return new JobPosting(id, company, role, roles, link, opensAt, closesAt, registeredAt, true); }
 
     /** 알림 예정 시각: 등록 시각과 접수 시작 중 늦은 쪽. */
     public Instant scheduledAt() { return opensAt.isAfter(registeredAt) ? opensAt : registeredAt; }

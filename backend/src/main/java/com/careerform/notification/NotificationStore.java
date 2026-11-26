@@ -19,6 +19,12 @@ public interface NotificationStore {
 
     boolean deletePosting(String id);
 
+    /** 완료 표시가 false이고 마감 전(closesAt > now)인 공고를 등록 시각 순으로 limit개. 완료 표시가 없는 기존 공고는 빠진다. */
+    List<JobPosting> findIncompletePostings(Instant now, int limit);
+
+    /** 완료 표시가 false인 공고만 true로 바꾼다. 바꿨으면 true다. */
+    boolean markDeliveriesReady(String id);
+
     boolean insertSubscription(PushSubscription subscription);
 
     Optional<PushSubscription> findSubscription(String id);

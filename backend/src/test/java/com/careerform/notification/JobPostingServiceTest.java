@@ -47,6 +47,48 @@ class JobPostingServiceTest {
     }
 
     @Test
+    @DisplayName("등록은 공고를 미완료로 저장하고 발송 문서를 모두 저장한 뒤에 완료로 표시한다")
+    void marksPostingReadyOnlyAfterDeliveries() {
+        subscribe("s1"); subscribe("s2");
+        List<String> order = new ArrayList<>();
+        NotificationStore recording = StoreFaults.intercepting(store, (method, arguments) -> {
+            if (method.equals("insertPosting")) { order.add("insertPosting:" + ((JobPosting) arguments[0]).deliveriesReady()); }
+            if (method.equals("insertDeliveries") || method.equals("markDeliveriesReady")) { order.add(method); }
+        });
+        JobPostingService.Registered registered = assertInstanceOf(JobPostingService.Registered.class, new JobPostingService(recording, JobCategories.load(), clock)
+            .register(draft("https://careers.example.test/jobs/ready", NOW.minusSeconds(60), NOW.plusSeconds(86400))));
+        assertThat(order).containsExactly("insertPosting:false", "insertDeliveries", "markDeliveriesReady");
+        assertThat(registered.posting().deliveriesReady()).isTrue();
+        assertThat(store.findPosting(registered.posting().id())).contains(registered.posting());
+    }
+
+    @Test
+    @DisplayName("발송 문서 저장이 실패하면 공고는 미완료로 남는다")
+    void leavesPostingIncompleteWhenDeliveriesFail() {
+        subscribe("s1");
+        NotificationStore failing = StoreFaults.failing(store, "insertDeliveries");
+        assertThatThrownBy(() -> new JobPostingService(failing, JobCategories.load(), clock)
+            .register(draft("https://careers.example.test/jobs/failed", NOW.minusSeconds(60), NOW.plusSeconds(86400))))
+            .isInstanceOf(StoreFaults.InjectedFailure.class);
+        assertThat(store.findPostingByLink("https://careers.example.test/jobs/failed")).hasValueSatisfying(posting ->
+            assertThat(posting.deliveriesReady()).isFalse());
+        assertThat(store.findIncompletePostings(NOW, 10)).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("같은 링크 재등록으로 빠진 발송을 채운 미완료 공고는 완료로 바뀐다")
+    void refillMarksIncompletePostingReady() {
+        subscribe("s1");
+        JobPosting stranded = new JobPosting(Identifiers.random(), "합성 회사", "합성 직무", List.of("IT.BACKEND"), "https://careers.example.test/jobs/incomplete",
+            NOW.minusSeconds(60), NOW.plusSeconds(86400), NOW, false);
+        assertThat(store.insertPosting(stranded)).isTrue();
+        assertInstanceOf(JobPostingService.Duplicate.class,
+            service.register(draft("https://careers.example.test/jobs/incomplete", NOW.minusSeconds(60), NOW.plusSeconds(86400))));
+        assertThat(store.deliveries()).singleElement().satisfies(delivery -> assertThat(delivery.subscriptionId()).isEqualTo("s1"));
+        assertThat(store.findPosting(stranded.id()).orElseThrow().deliveriesReady()).isTrue();
+    }
+
+    @Test
     @DisplayName("접수 시작이 미래인 공고는 그 시각에 예약되고 그 전에는 대기 건이 집히지 않는다")
     void schedulesFuturePostingAtApplicationStart() {
         subscribe("s1");

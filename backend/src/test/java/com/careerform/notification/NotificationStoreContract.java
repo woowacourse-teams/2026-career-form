@@ -223,6 +223,48 @@ abstract class NotificationStoreContract {
     }
 
     @Test
+    @DisplayName("미완료 공고 조회는 완료 표시가 false이고 마감 전인 공고만 등록 순으로 주고, 완료 표시가 없는 기존 공고와 완료 공고는 빼고 한도를 지킨다")
+    void findsOpenIncompletePostings() {
+        NotificationStore store = store();
+        store.insertPosting(withReady(posting("second", "https://careers.example.test/jobs/second", NOW.minusSeconds(60), NOW.plusSeconds(3600)), false,
+            NOW.minusSeconds(30)));
+        store.insertPosting(withReady(posting("first", "https://careers.example.test/jobs/first", NOW.minusSeconds(60), NOW.plusSeconds(3600)), false,
+            NOW.minusSeconds(90)));
+        store.insertPosting(withReady(posting("closed", "https://careers.example.test/jobs/closed", NOW.minusSeconds(7200), NOW), false, NOW.minusSeconds(60)));
+        store.insertPosting(withReady(posting("ready", "https://careers.example.test/jobs/ready", NOW.minusSeconds(60), NOW.plusSeconds(3600)), true,
+            NOW.minusSeconds(60)));
+        store.insertPosting(posting("legacy", "https://careers.example.test/jobs/legacy", NOW.minusSeconds(60), NOW.plusSeconds(3600)));
+
+        assertThat(store.findIncompletePostings(NOW, 10)).extracting(JobPosting::id).containsExactly("first", "second");
+        assertThat(store.findIncompletePostings(NOW, 1)).extracting(JobPosting::id).containsExactly("first");
+        assertThat(store.findPosting("first").orElseThrow().deliveriesReady()).isFalse();
+        assertThat(store.findPosting("ready").orElseThrow().deliveriesReady()).isTrue();
+        assertThat(store.findPosting("legacy").orElseThrow().deliveriesReady()).isNull();
+    }
+
+    @Test
+    @DisplayName("완료 표시는 미완료 공고에서만 한 번 바뀌고 완료 표시가 없는 기존 공고와 없는 공고는 바꾸지 않는다")
+    void marksIncompletePostingReadyOnce() {
+        NotificationStore store = store();
+        store.insertPosting(withReady(posting("incomplete", "https://careers.example.test/jobs/incomplete", NOW.minusSeconds(60), NOW.plusSeconds(3600)),
+            false, NOW.minusSeconds(60)));
+        store.insertPosting(posting("legacy", "https://careers.example.test/jobs/legacy", NOW.minusSeconds(60), NOW.plusSeconds(3600)));
+
+        assertThat(store.markDeliveriesReady("incomplete")).isTrue();
+        assertThat(store.markDeliveriesReady("incomplete")).isFalse();
+        assertThat(store.markDeliveriesReady("legacy")).isFalse();
+        assertThat(store.markDeliveriesReady("missing")).isFalse();
+        assertThat(store.findPosting("incomplete").orElseThrow().deliveriesReady()).isTrue();
+        assertThat(store.findPosting("legacy").orElseThrow().deliveriesReady()).isNull();
+        assertThat(store.findIncompletePostings(NOW, 10)).isEmpty();
+    }
+
+    private static JobPosting withReady(JobPosting posting, boolean ready, Instant registeredAt) {
+        return new JobPosting(posting.id(), posting.company(), posting.role(), posting.roles(), posting.link(), posting.opensAt(), posting.closesAt(),
+            registeredAt, ready);
+    }
+
+    @Test
     @DisplayName("구독의 받을 직무는 갱신 시각과 함께 저장되고 null이면 미선택으로 돌아가며 없는 구독은 false다")
     void updatesSubscriptionRoles() {
         var store = store();
